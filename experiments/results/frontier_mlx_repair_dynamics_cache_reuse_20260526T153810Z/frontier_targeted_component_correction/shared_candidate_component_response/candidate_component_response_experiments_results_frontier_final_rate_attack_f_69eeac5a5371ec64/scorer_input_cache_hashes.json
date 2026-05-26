@@ -1,0 +1,70 @@
+{
+  "archive_sha256": "cbe7d79124ba2e01255a923f9c76751edb0b4836d38d57c89b772bc81dc6b862",
+  "array_sha256": {
+    "pair_indices": "b5d8a47e63045d3032bdc9da91c26e221e453a89f13c94049c6f5e850e49ba81",
+    "posenet_yuv6_pair": "98ba7a355f05a288475cfe21881a367c52aac22ef8a3a63e785a8d488dd6736f",
+    "segnet_last_rgb": "680432a33cfcc8bf9119d087b419973987d0c635190bc32d74581d94486aa3cf"
+  },
+  "artifacts": {},
+  "device_contract": {
+    "allowed_uses": [
+      "contest_linux_scorer_input_identity",
+      "local_mlx_training_transfer_calibration",
+      "surrogate_error_measurement_against_matching_auth_axis"
+    ],
+    "forbidden_uses": [
+      "auth_eval",
+      "score_claim",
+      "promotion",
+      "rank_or_kill",
+      "leaderboard_claim"
+    ]
+  },
+  "evidence_grade": "macOS-MLX-research-signal",
+  "evidence_tag": "[macOS-MLX research-signal]",
+  "frame_shape_hwc": [
+    874,
+    1164,
+    3
+  ],
+  "hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+  "hash_only": true,
+  "inflated_outputs_aggregate_sha256": "c1f53de892a1b54a286bf9b862e69b9e97e34da05d77a227373813f8dd401d61",
+  "omitted_artifacts_reason": "hash_only_manifest_no_tensor_payloads_written",
+  "pair_count": 600,
+  "pair_indices_shape": [
+    600,
+    2
+  ],
+  "posenet_yuv6_pair_shape": [
+    600,
+    12,
+    192,
+    256
+  ],
+  "producer_environment": {
+    "numpy_version": "2.4.4",
+    "platform_machine": "arm64",
+    "platform_system": "Darwin",
+    "python_version": "3.12.13",
+    "torch_version": "2.11.0"
+  },
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "raw_sha256": "e5d05ee72b4cf9c9a8699009bb97a508ef3826da21f5767acfe15c334a2afad1",
+  "ready_for_exact_eval_dispatch": false,
+  "schema_version": "mlx_scorer_input_cache_hashes.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "segnet_last_rgb_shape": [
+    600,
+    3,
+    384,
+    512
+  ],
+  "seq_len": 2,
+  "source": "/Users/adpena/Projects/pact/experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_targeted_component_correction/shared_candidate_component_response/candidate_component_response_experiments_results_frontier_final_rate_attack_f_69eeac5a5371ec64/local_cpu_advisory_work/inflated/0.raw",
+  "streaming_batch_pairs": 8,
+  "video_name": "0.mkv"
+}
