@@ -634,17 +634,22 @@ def _materializer_feedback_paths(root: Path, *, max_files: int) -> list[Path]:
     if not root.exists():
         raise FrontierRateAttackFeedbackError(f"feedback root does not exist: {root}")
     candidates: list[Path] = []
-    scanned_files = 0
+    scanned_candidates = 0
     for path in sorted(root.rglob("*")):
         if not path.is_file():
             continue
-        scanned_files += 1
-        if scanned_files > max_files:
+        rel_path = path.relative_to(root).as_posix()
+        is_candidate = path.name in {"sweep.json", "observations.jsonl"} or (
+            path.suffix in {".json", ".jsonl"} and "materializer" in rel_path
+        )
+        if not is_candidate:
+            continue
+        scanned_candidates += 1
+        if scanned_candidates > max_files:
             raise FrontierRateAttackFeedbackError(
                 f"{root}: materializer feedback discovery exceeded max_files={max_files}"
             )
-        if path.name in {"sweep.json", "observations.jsonl"} or (path.suffix in {".json", ".jsonl"} and "materializer" in path.as_posix()):
-            candidates.append(path)
+        candidates.append(path)
     return candidates
 
 
@@ -876,6 +881,10 @@ def discover_materializer_feedback_payloads(
     """Discover family-agnostic materializer feedback under frontier roots."""
 
     repo = Path(repo_root)
+    default_roots = not frontier_artifact_roots
+    roots: Sequence[str | Path] = (
+        frontier_artifact_roots if not default_roots else (repo / ".omx" / "research",)
+    )
     paths: list[Path] = []
     seen_paths: set[str] = set()
     for value in materializer_feedback_paths:
@@ -883,8 +892,10 @@ def discover_materializer_feedback_payloads(
         if path.as_posix() not in seen_paths:
             seen_paths.add(path.as_posix())
             paths.append(path)
-    for value in frontier_artifact_roots:
+    for value in roots:
         root = _resolve_path(value, repo_root=repo)
+        if default_roots and not root.exists():
+            continue
         for path in _materializer_feedback_paths(root, max_files=max_files_per_root):
             if path.as_posix() in seen_paths:
                 continue
@@ -985,7 +996,7 @@ def discover_materializer_feedback_payloads(
         "schema": MATERIALIZER_FEEDBACK_DISCOVERY_SCHEMA,
         "frontier_artifact_roots": [
             _repo_rel(_resolve_path(root, repo_root=repo), repo)
-            for root in frontier_artifact_roots
+            for root in roots
         ],
         "explicit_materializer_feedback_paths": [
             _repo_rel(_resolve_path(path, repo_root=repo), repo)
@@ -3328,6 +3339,29 @@ def _portfolio_materializer_backlog_row(
     }
 
 
+def _operation_materializer_bridge_selection_key(
+    item: tuple[Mapping[str, Any], Mapping[str, Any], str],
+) -> tuple[int, int, int, int, float, float, str]:
+    row, adapter, target_kind = item
+    source_kind = str(row.get("source_kind") or "")
+    evidence = row.get("evidence_summary")
+    has_target_evidence = (
+        isinstance(evidence, Mapping)
+        and str(evidence.get("target_kind") or "") == target_kind
+    )
+    concrete_signal = source_kind == "materializer_feedback" or has_target_evidence
+    saved_bytes = _portfolio_row_candidate_saved_bytes(row)
+    return (
+        0 if concrete_signal else 1,
+        0 if row.get("queue_executable") is True else 1,
+        0 if row.get("followup_signal") is True else 1,
+        0 if adapter.get("executable") is True else 1,
+        -float(saved_bytes),
+        -float(_finite_float_or_none(row.get("priority_score")) or 0.0),
+        str(row.get("operation_id") or ""),
+    )
+
+
 def build_frontier_operation_materializer_bridge(
     *,
     repo_root: str | Path,
@@ -3419,6 +3453,7 @@ def build_frontier_operation_materializer_bridge(
         bridge_rows.append(bridge_row)
         if adapter is not None:
             selected_rows.append((source_row, adapter, target_kind or ""))
+    selected_rows = sorted(selected_rows, key=_operation_materializer_bridge_selection_key)
     if candidate_limit is not None:
         selected_rows = selected_rows[:candidate_limit]
 
@@ -3470,6 +3505,13 @@ def build_frontier_operation_materializer_bridge(
         ],
         "top_materializer_targets": _unique_strings(
             row.get("target_kind") for row in bridge_rows[:8]
+        ),
+        "selected_source_operation_ids": [
+            str(row.get("operation_id") or "")
+            for row, _adapter, _target_kind in selected_rows
+        ],
+        "selected_materializer_targets": _unique_strings(
+            row.get("target_kind") for row in backlog_rows
         ),
         "materializer_backlog": materializer_backlog,
         "materializer_contexts": materializer_contexts,

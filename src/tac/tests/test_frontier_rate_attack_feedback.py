@@ -25,6 +25,7 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     build_frontier_receiver_repair_work_order,
     build_frontier_targeted_component_correction_work_order,
     discover_local_cpu_eureka_planning_signals,
+    discover_materializer_feedback_payloads,
 )
 from comma_lab.scheduler.frontier_rate_attack_feedback_cycle import (
     AUTOPILOT_RESULT_SCHEMA,
@@ -581,6 +582,39 @@ def _assert_false_authority(payload: dict[str, object]) -> None:
         assert payload[key] is False
 
 
+def test_materializer_feedback_default_discovery_scans_research_candidates_only(
+    tmp_path: Path,
+) -> None:
+    research_root = tmp_path / ".omx" / "research"
+    for index in range(8):
+        (research_root / f"memo_{index}.md").parent.mkdir(parents=True, exist_ok=True)
+        (research_root / f"memo_{index}.md").write_text("not json feedback\n")
+    _write_materializer_feedback(research_root / "frontier_artifacts")
+
+    payloads, source_paths, discovery = discover_materializer_feedback_payloads(
+        repo_root=tmp_path,
+        max_files_per_root=4,
+    )
+
+    assert len(payloads) == 2
+    assert len(source_paths) == 2
+    assert discovery["frontier_artifact_roots"] == [".omx/research"]
+    assert discovery["discovered_feedback_count"] == 2
+    assert discovery["scanned_candidate_path_count"] == 2
+    assert {
+        target
+        for row in discovery["discovered_feedback"]
+        for target in row["target_kinds"]
+    } == {
+        "packet_member_zip_header_elide_v1",
+        "packet_member_merge_v1",
+        "packet_member_recompress_v1",
+        "renderer_payload_dfl1_v1",
+        "tensor_factorize_v1",
+    }
+    _assert_false_authority(discovery)
+
+
 def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_queue(
     tmp_path: Path,
 ) -> None:
@@ -682,6 +716,14 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
     assert operation_materializer["executable_work_row_count"] == 0
     assert operation_materializer["materializer_backlog"]["schema"] == (
         "byte_shaving_materializer_backlog.v1"
+    )
+    assert operation_materializer["selected_materializer_targets"] == [
+        "renderer_payload_dfl1_v1",
+        "packet_member_merge_v1",
+    ]
+    assert all(
+        row["source_selection_samples"][0]["selection_kind"] == "materializer_feedback"
+        for row in operation_materializer["materializer_backlog"]["rows"]
     )
     assert operation_materializer["materializer_contexts"]["schema"] == (
         "byte_shaving_materializer_contexts.v1"
