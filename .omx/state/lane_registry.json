@@ -58511,6 +58511,88 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_slot_gc_t3_strategy_comprehensive_symposium_20260526",
+      "name": "T3 grand council comprehensive strategy review symposium",
+      "phase": 7.5,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/slot_gc_t3_strategy_comprehensive_symposium_landed_20260526.md commit 3ae0b700a"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/slot_gc_t3_strategy_comprehensive_symposium_landed_20260526.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_pr110_opt3_adaptive_arith_selector_index_stream_20260526",
+      "name": "PR110 OPT-3 adaptive arithmetic coder on FEC6 K=16 selector index stream",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "submissions/hnerv_fec6_fixed_huffman_k16/encoder/build_pr101_frame_exploit_selector_packet_arith.py + sister inflate-side proxy at src/fec7_arith_decoder.py; 30/30 tests PASS at submissions/hnerv_fec6_fixed_huffman_k16/tests/test_arith_selector_roundtrip.py; research_only=true per .omx/research/pr110_opt3_adaptive_arith_landed_20260526.md (empirical +5B WORSE; 0-order direction empirically saturated)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/pr110_opt3_adaptive_arith_landed_20260526.md + .omx/research/pr110_opt3_mode_distribution_20260526T170000Z.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -58520,5 +58602,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-26T15:50:02Z"
+  "updated_at": "2026-05-26T17:05:42Z"
 }
