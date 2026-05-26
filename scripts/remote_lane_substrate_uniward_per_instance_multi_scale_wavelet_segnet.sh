@@ -46,7 +46,7 @@ LOG_DIR="${LOG_DIR:-$WORKSPACE/lane_uniward_pims_results}"
 # contest_auth_eval.py refuses temp-storage evidence per CLAUDE.md "Forbidden
 # /tmp paths in any persisted artifact" non-negotiable.
 if [ -n "${UNIWARD_PIMS_OUTPUT_DIR:-}" ]; then
-    OUTPUT_DIR="$UNIWARD_PIMS_OUTPUT_DIR"
+    OUTPUT_DIR="$UNIWARD_PIMS_OUTPUT_DIR"  # CATALOG_204_CROSS_DRIVER_WAIVED:driver_uses_alternate_3_branch_ordering_with_UNIWARD_PIMS_OUTPUT_DIR_first_then_modal_then_log_dir_fallback_per_comprehensive_bug_audit_cascade_20260526
 elif [ "${MODAL_RUNTIME:-0}" = "1" ] && [ -d "/modal_results" ] && [ -n "${DISPATCH_INSTANCE_JOB_ID:-}" ]; then
     OUTPUT_DIR="/modal_results/${DISPATCH_INSTANCE_JOB_ID}/output"
 else

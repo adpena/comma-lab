@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 """pact_nerv_asymmetric_boundary architecture - asymmetric per-class boundary FiLM.
 
-Sister of NSCS06 v7 44% improvement per-class chroma anchors (105.15 → 58.89
+Sister of NSCS06 v7 44% improvement per-class chroma anchors (105.15 → 58.89  # DOCSTRING_PERCENT_CLAIM_OK:canonical_nscs06_v7_empirical_44pct_anchor_105_15_to_58_89_contest_CUDA_artifact_at_omx_research_nscs06_path_a_chroma_optical_flow_redesign_20260516_md
 contest-CUDA via cargo-cult-unwind methodology). The distinguishing primitive:
 asymmetric per-pair-per-SegNet-class boundary signal feeding FiLM γ+β
 modulation at the final upsample block.
@@ -73,7 +73,7 @@ class _DsUpBlock(nn.Module):
 class AsymmetricBoundaryFilm(nn.Module):
     """Asymmetric per-class boundary FiLM (γ + β; sister NSCS06 v7 chroma anchors).
 
-    Per the NSCS06 v6→v7 cargo-cult-unwind (44% improvement): per-class
+    Per the NSCS06 v6→v7 cargo-cult-unwind (44% improvement): per-class  # DOCSTRING_PERCENT_CLAIM_OK:canonical_nscs06_v6_to_v7_cargo_cult_unwind_methodology_empirical_44pct_anchor_artifact_at_omx_research_nscs06_path_a_chroma_optical_flow_redesign_20260516_md
     chroma anchors capture per-SegNet-class dispersion in the contest's
     response that per-pair-uniform conditioning misses. This module applies
     asymmetric FiLM γ+β modulation conditioned on a per-SegNet-class

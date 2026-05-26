@@ -1946,7 +1946,7 @@ def run_long_training(
         ... )
         >>> config = LongTrainingConfig(
         ...     substrate_id="my_substrate",
-        ...     lane_id="lane_my_substrate_l2_20260526",
+        ...     lane_id="lane_my_substrate_l2_20260526",  # FAKE_LANE_OK:test_fixture_or_docstring_or_dict_key_reference_to_lane_token_lane_my_substrate_l2_20260526_NOT_a_real_lane_registry_pre_registration_per_catalog_126_false_positive_per_comprehensive_bug_audit_cascade_20260526
         ...     epochs=100,
         ...     curriculum_stages=(
         ...         CurriculumStage(name="full", start_epoch=0, end_epoch=100),

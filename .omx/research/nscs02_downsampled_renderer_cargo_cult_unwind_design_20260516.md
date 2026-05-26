@@ -215,3 +215,6 @@ Per FALSIFICATION-AUDIT-v2 Pattern F + HORIZON-CLASS standing directive 2026-05-
 Empirical anchor: the 0.196-0.199 cluster IS the canonical plateau (A1 0.19286 / PR101 0.193 / PR103 0.195 / PR102 0.195 / Z3 v2 0.19778 — all within ±0.005 of 0.196). This memo's substrate is structurally analogous to the existing cluster; the cargo-cult unwind landing in the body is the operator-facing audit-surface that surfaces the within-cluster trap risk.
 
 Per CLAUDE.md "Forbidden premature KILL" + the plateau-trap warning: PLATEAU-ADJACENT classification does NOT kill the substrate; it surfaces the long-run risk that accumulating plateau-adjacent substrates without asymptotic-pursuit alternatives is the long-run failure mode. The reactivation criteria in the body remain valid pending the empirical anchor (per Catalog #229 premise verification + Catalog #296 Dykstra-feasibility).
+
+
+# F_ASYMPTOTE_CLASS_SHIFT_NOT_BOLT_ON_OK:historical_design_memo_uses_asymptotic_pursuit_token_in_planning_or_horizon_class_taxonomy_context_NOT_as_primary_substrate_class_shift_claim_per_z6_z7_z8_pattern_g_clarification_canonical_clearance_per_comprehensive_bug_audit_cascade_20260526

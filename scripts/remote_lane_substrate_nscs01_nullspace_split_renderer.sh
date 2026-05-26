@@ -225,6 +225,7 @@ EOF
 
 # Stage 4: train.
 log "Stage 4: running NSCS01 trainer (--smoke per recipe research_only=true)"
+set +e
 "$PYBIN" -u experiments/train_substrate_nscs01_nullspace_split_renderer.py \
     --smoke \
     --output-dir "$NSCS01_OUTPUT_DIR" \
@@ -237,6 +238,7 @@ log "Stage 4: running NSCS01 trainer (--smoke per recipe research_only=true)"
     2>&1 | tee -a "$LOG_DIR/train.log"
 
 TRAIN_RC=${PIPESTATUS[0]}
+set -e
 
 # Stage 5: completion log line — research_only smoke; no contest-CUDA score claim.
 if [ "$TRAIN_RC" -eq 0 ]; then

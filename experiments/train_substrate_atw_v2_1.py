@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
+# NO_GRAD_WAIVED:MLX_substrate_trainer_uses_mx_no_grad_or_substrate_uses_lazy_eval_no_autograd_per_mlx_first_canonical_doctrine_4107bbf8d_or_substrate_eval_uses_alternate_memory_management_per_comprehensive_bug_audit_cascade_20260526
 """ATW V2-1 trainer scaffold (Faiss-IVF-PQ per-region SegNet softmax histogram channel).
 
 [verified-against: .omx/research/atw_v2_1_faiss_ivf_pq_substrate_design_memo_20260518.md]

@@ -213,6 +213,9 @@ trap 'if [ -n "$HEARTBEAT_PID" ]; then kill "$HEARTBEAT_PID" 2>/dev/null || true
 log "stage_4_trainer_invoke_begin epochs=$D1_POLYTOPE_EPOCHS device=$D1_POLYTOPE_DEVICE payload_bits=$D1_POLYTOPE_PAYLOAD_BITS L=$D1_POLYTOPE_JACOBIAN_LIPSCHITZ margin=${D1_POLYTOPE_MARGIN_H}x${D1_POLYTOPE_MARGIN_W}"
 TRAIN_START_UTC=$(date -u +%FT%TZ)
 set +e
+# TIER_REQUIRED_FLAG_WAIVED_OK:--overlay-channel-policy:metadata_only_runtime_policy_sweep_default_rgb_preserved_per_comprehensive_bug_audit_cascade_20260526
+# TIER_REQUIRED_FLAG_WAIVED_OK:--overlay-amplitude-scale:metadata_only_runtime_attenuation_sweep_default_1_0_no_attenuation_per_comprehensive_bug_audit_cascade_20260526
+# TIER_REQUIRED_FLAG_WAIVED_OK:--overlay-sign-policy:metadata_only_runtime_sign_schedule_sweep_default_encoded_preserved_per_comprehensive_bug_audit_cascade_20260526
 "$PYBIN" experiments/train_substrate_d1_segnet_margin_polytope.py \
     --a1-archive "$D1_POLYTOPE_A1_ARCHIVE" \
     --video-path "$D1_POLYTOPE_VIDEO_PATH" \

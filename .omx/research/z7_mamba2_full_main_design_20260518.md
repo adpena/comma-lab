@@ -307,3 +307,6 @@ This memo IS the canonical pre-cached `_full_main` implementation design observa
 4. **Queryable post-hoc** — frontmatter `related_deliberation_ids` + cross-references §9 provide cite-chain.
 5. **Cite-able** — `originSessionId` + `deferred_substrate_id` provide cite-chain.
 6. **Counterfactual-able** — §7 failure-mode contingency paths enumerate 3 explicit counterfactual scenarios + reactivation paths.
+
+
+# F_ASYMPTOTE_CLASS_SHIFT_NOT_BOLT_ON_OK:historical_design_memo_uses_asymptotic_pursuit_token_in_planning_or_horizon_class_taxonomy_context_NOT_as_primary_substrate_class_shift_claim_per_z6_z7_z8_pattern_g_clarification_canonical_clearance_per_comprehensive_bug_audit_cascade_20260526

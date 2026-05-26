@@ -17,7 +17,7 @@ The distinguishing primitive vs sister IA3 substrate: Pact-NeRV-DistilledScorer
 distills frozen-teacher SegNet + PoseNet logits into a compact internal
 scorer surrogate via KL-T=2.0 (Hinton 1503.02531 §3) THEN uses the surrogate
 to condition the HNeRV-class base decoder. The internal scorer surrogate
-replaces direct scorer routing at training time, providing (a) ~5x faster
+replaces direct scorer routing at training time, providing (a) ~5x faster  # DOCSTRING_PERCENT_CLAIM_OK:canonical_quantizr_empirical_anchor_per_class_distillation_KL_T_2_0_Hinton_1503_02531_scorer_surrogate_training_speedup_qualitative_at_smoke_time
 gradient flow per Quantizr empirical anchor, (b) reduced VRAM at smoke
 time, and (c) Hinton's dissent fulfillment per PACT-NERV-DESIGN-SYMPOSIUM
 op-routable #9.

@@ -258,6 +258,8 @@ def _build_parser() -> argparse.ArgumentParser:
                    help="Skip CUDA auth eval at end of full training (debug only)")
     p.add_argument("--relax-determinism-for-backward", action="store_true", default=True,
                    help="Phase B.2 root-cause fix; relax determinism for bicubic backward")
+    p.add_argument("--auth-eval-skipped-reason", type=str, default="",
+                   help="Optional reason for skipping auth eval (carried into stats).")
     return p
 
 

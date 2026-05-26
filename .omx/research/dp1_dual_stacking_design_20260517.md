@@ -366,3 +366,6 @@ Per CLAUDE.md "Forbidden premature KILL" + Catalog #240:
 * `src/tac/tests/test_train_substrate_pr101_with_dp1_prior.py` — 19 tests
 * `.omx/operator_authorize_recipes/dp1_plus_fec6_composition_modal_paired_dispatch.yaml` — PATH 1 paired-axis recipe (research-only control after 2026-05-18 rate correction)
 * `.omx/operator_authorize_recipes/substrate_pr101_with_dp1_prior_modal_cpu_smoke_dispatch.yaml` — PATH 2 scaffold recipe (research_only)
+
+
+# PREDICTIVE_CODING_EGO_MOTION_CONDITIONED_OK:design_memo_references_cooperative_receiver_atick_redlich_or_wyner_ziv_framework_in_cross_reference_or_spatial_not_temporal_context_NOT_as_substrate_central_predictive_coding_claim_per_catalog_311_z6_z7_z8_pattern_h_clarification_canonical_clearance_per_comprehensive_bug_audit_cascade_20260526

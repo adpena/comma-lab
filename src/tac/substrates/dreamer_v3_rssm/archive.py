@@ -125,7 +125,7 @@ def _serialize_state_dict_fp16(sd: dict[str, Any]) -> bytes:
             arr = tensor.detach().cpu().numpy().astype(np.float32)
         else:
             arr = np.asarray(tensor, dtype=np.float32)
-        # Cast to fp16 for archive (saves 50% vs fp32)
+        # Cast to fp16 for archive (saves 50% vs fp32)  # DOCSTRING_PERCENT_CLAIM_OK:fp16_is_2_bytes_fp32_is_4_bytes_50_percent_savings_is_definitional_arithmetic_not_an_empirical_claim
         arr16 = arr.astype(np.float16)
         key_bytes = key.encode("utf-8")
         if len(key_bytes) > 0xFFFF:

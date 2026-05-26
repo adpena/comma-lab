@@ -235,6 +235,11 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--alpha-rate", type=float, default=25.0)
     p.add_argument("--beta-seg", type=float, default=100.0)
     p.add_argument("--gamma-pose", type=float, default=math.sqrt(10.0))
+    p.add_argument("--pose-weight-scale", type=float, default=1.0,
+                   help=(
+                       "Opt-in pose marginal tilt. Default 1.0 preserves the "
+                       "contest formula; PR106-derived 2.71x is experimental."
+                   ))
     p.add_argument("--lambda-pixel-0", type=float, default=0.05)
     p.add_argument("--lambda-pixel-1", type=float, default=0.20)
     p.add_argument("--skip-auth-eval", action="store_true")

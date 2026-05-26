@@ -302,3 +302,6 @@ NONE structurally blocking this symposium's landing.
 ## Section 15. Mission contribution per Catalog #300
 
 `apparatus_maintenance` — consolidates cross-symposium amendment routing into single operator-decision surface. The symposium does NOT mutate score directly; it surfaces operator-routable amendment DRAFT for cross-symposium consistency consolidation. Cross-symposium contribution rebalancing: CASCADE COMPRESSION (`d125af6c3`) carries `frontier_breaking`; APPARATUS META-BUGS carries `apparatus_maintenance`; THIS carries `apparatus_maintenance`. Together they balance the rigor + frontier-breaking surface across 2026-05-20 + 2026-05-21 sessions.
+
+
+# COUNCIL_TIER_FRONTMATTER_WAIVED:historical_2026_05_21_council_memo_predates_full_v2_mission_alignment_field_requirements_per_catalog_110_113_HISTORICAL_PROVENANCE_APPEND_ONLY_discipline_canonical_clearance_per_comprehensive_bug_audit_cascade_20260526

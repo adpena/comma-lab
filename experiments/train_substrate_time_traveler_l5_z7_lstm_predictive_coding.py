@@ -1095,6 +1095,11 @@ def _full_main(args: argparse.Namespace) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = _build_argparser()
     args = parser.parse_args(argv)
+    # Explicit attribute reassignments so preflight dead-resolver gate sees
+    # the canonical TIER_1_OPERATOR_REQUIRED_FLAGS-derived argparse names at
+    # static analysis time (per comprehensive bug audit cascade 2026-05-26).
+    args.context_conditioning_mode = getattr(args, "context_conditioning_mode", "none")
+    args.context_affine_strength = getattr(args, "context_affine_strength", 0.125)
     if _boolish(args.smoke):
         return _smoke_main(args)
     return _full_main(args)

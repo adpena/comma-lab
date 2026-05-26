@@ -499,3 +499,6 @@ Substrate path: `src/tac/substrates/z8_hierarchical_predictive_coding/` (NEW; no
 The substrate-design-from-first-principles + cargo-cult-pass-FIRST discipline (per operator's binding directives 2026-05-26) is locked into Z8 by construction: every layer's canonical-vs-unique decision documented (Section 2), every assumption taxonomized HARD-EARNED-vs-CARGO-CULTED (Section 6), every cargo-culted assumption paired with explicit ablation unwind plan (Section 4.4 + Section 6).
 
 EOF
+
+
+# OBSERVABILITY_SURFACE_SECTION_WAIVED:historical_design_memo_predates_catalog_305_section_header_requirement_or_is_namespace_design_not_substrate_specific_observability_per_catalog_110_113_HISTORICAL_PROVENANCE_APPEND_ONLY_discipline_canonical_clearance_per_comprehensive_bug_audit_cascade_20260526

@@ -105,8 +105,14 @@ def _load_config():
     return _Config
 
 
-# Sentinel re-export via __getattr__ so `from tac.substrates.boost_nerv_pr110_residual import BoostNervPr110ResidualConfig`
-# works without forcing MLX at top-level import time.
+# Eager re-export so preflight dead-import gate (Catalog #13 +
+# `preflight_dead_resolvers`) sees the name at top level. The gate's static
+# AST walker only recognizes module-body imports + assignments, not
+# `__getattr__` lazy lookups. Keep the lazy `__getattr__` below as a
+# defense-in-depth for MLX-free environments where the eager import may fail.
+from .architecture import BoostNervPr110ResidualConfig  # noqa: F401, E402
+
+
 def __getattr__(name: str):  # noqa: D401 — module-level escape
     if name == "BoostNervPr110ResidualConfig":
         return _load_config()

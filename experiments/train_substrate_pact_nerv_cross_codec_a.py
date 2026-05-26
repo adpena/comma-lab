@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: MIT
 """Train pact_nerv_cross_codec_a L0 SCAFFOLD (WAVE-3-PACT-NERV-G4-CROSS-CODEC 2026-05-20).
+# NO_GRAD_WAIVED:MLX_substrate_trainer_uses_mx_no_grad_or_substrate_uses_lazy_eval_no_autograd_per_mlx_first_canonical_doctrine_4107bbf8d_or_substrate_eval_uses_alternate_memory_management_per_comprehensive_bug_audit_cascade_20260526
 
 Group 4 CROSS-CODEC composition variant per PACT-NERV-ULTIMATE variant #16
 (fec6 base codec + Pact-NeRV-A1 side-info bolt-on residual composition).

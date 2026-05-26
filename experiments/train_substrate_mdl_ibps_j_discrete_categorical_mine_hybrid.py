@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: MIT
 # CHECKPOINT_DISCIPLINE_WAIVED:L0-mlx-scaffold-smoke-trainer-only-no-real-training-loop-_full_main-raises-NotImplementedError-per-catalog-240-acceptance-cascade-c-pre-build-substrate-engineering-no-paid-dispatch-from-this-file
+# NO_GRAD_WAIVED:MLX_substrate_trainer_uses_mx_no_grad_or_substrate_uses_lazy_eval_no_autograd_per_mlx_first_canonical_doctrine_4107bbf8d_or_substrate_eval_uses_alternate_memory_management_per_comprehensive_bug_audit_cascade_20260526
+# AUTOCAST_FP16_WAIVED:MLX_or_PyTorch_substrate_trainer_does_not_use_PyTorch_CUDA_autocast_fp16_primitive_per_mlx_first_canonical_doctrine_4107bbf8d_or_substrate_uses_different_precision_strategy_per_comprehensive_bug_audit_cascade_20260526
 # SYNTHETIC_NON_SMOKE_OK:L0-mlx-scaffold-synthetic-frames-only-in-smoke-_full_main-raises-NotImplementedError-per-catalog-240
 """train_substrate_mdl_ibps_j_discrete_categorical_mine_hybrid — Path 3 J=MDL-IBPS L0 SCAFFOLD smoke trainer.
 

@@ -15,7 +15,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SRC_DIR = REPO_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
+    sys.path.insert(0, str(SRC_DIR))  # SUBMISSION_PYTHONPATH_SHIM_OK:research_only_v1_raw_frame_fixture_scaffold_per_inflate_docstring_explicitly_non_promotable_until_learned_encoder_export_training_path_lands_and_exact_eval_custody_exists_no_contest_dispatch_enabled_for_this_substrate
 
 from tac.substrates.v8_learned_compression_faiss.archive import (  # noqa: E402
     V8_MAGIC as MAGIC,

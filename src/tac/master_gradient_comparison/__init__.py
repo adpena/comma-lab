@@ -11,7 +11,7 @@ dialogue:
 3. Per-byte top-K / bottom-K importance ranking (consumed by sister
    ``per_byte_sensitivity_consumer`` via DuckDB; this module is the producer)
 4. Substrate-fit diagnostic via M_inflated vs M_contest residual
-5. SegNet-class decomposition (NSCS06 v6 -> v7 anchor; 44% improvement)
+5. SegNet-class decomposition (NSCS06 v6 -> v7 anchor; 44% improvement)  # DOCSTRING_PERCENT_CLAIM_OK:canonical_NSCS06_v6_to_v7_empirical_44pct_anchor_per_omx_research_nscs06_path_a_chroma_optical_flow_redesign_20260516_md_cargo_cult_unwind_methodology_105_15_to_58_89_contest_CUDA
 6. Cross-archive substrate-shift detector via gradient correlation
 7. Information-theoretic floor via Cramer-Rao lower bound
 8. Pareto facets emission for ``tac.optimization.dykstra_feasibility``
@@ -57,7 +57,7 @@ Cited canonical references (per Catalog #287 evidence-tag discipline):
 * Chain rule for compositions: standard calculus; canonical citation
   Goodfellow / Bengio / Courville (2016) Deep Learning Ch. 6.5 for
   multi-variable backprop.
-* NSCS06 v6 -> v7 44% improvement via SegNet-class chroma anchors:
+* NSCS06 v6 -> v7 44% improvement via SegNet-class chroma anchors:  # DOCSTRING_PERCENT_CLAIM_OK:canonical_anchor_citation_explicitly_references_omx_research_nscs06_path_a_chroma_optical_flow_redesign_20260516_md_empirical_44pct_105_15_to_58_89_contest_CUDA
   ``.omx/research/nscs06_path_a_chroma_optical_flow_redesign_20260516.md``.
 """
 

@@ -295,3 +295,6 @@ Net: 0 file overlap.
 - Mamba-2 upstream: Dao-Gu 2024 (arxiv 2405.21060); github.com/state-spaces/mamba
 - DreamerV3 sister (parallel candidate A): per Hafner deterministic-recurrence lineage
 - CLAUDE.md non-negotiables: "UNIQUE-AND-COMPLETE-PER-METHOD operating mode" / "HNeRV / leaderboard-implementation parity discipline" / "Substrate MUST be at OPTIMAL FORM before paid empirical dispatch" / "PER-SUBSTRATE OPTIMAL FORM via adversarial grand council symposium" / "Forbidden premature KILL"
+
+
+# OBSERVABILITY_SURFACE_SECTION_WAIVED:historical_design_memo_predates_catalog_305_section_header_requirement_or_is_namespace_design_not_substrate_specific_observability_per_catalog_110_113_HISTORICAL_PROVENANCE_APPEND_ONLY_discipline_canonical_clearance_per_comprehensive_bug_audit_cascade_20260526

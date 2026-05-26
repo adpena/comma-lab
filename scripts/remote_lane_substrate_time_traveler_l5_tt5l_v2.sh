@@ -280,9 +280,11 @@ if [ "$TT5L_V2_ADVISORY_CPU_EXPLICITLY_WAIVED" = "true" ] || [ "$TT5L_V2_ADVISOR
 fi
 
 # Catalog #189 guarded expansion (defensive even though TRAINER_ARGS is always non-empty here)
+set +e
 "$PYBIN" -u "$TRAINER_PATH" ${TRAINER_ARGS[@]+"${TRAINER_ARGS[@]}"} \
     2>&1 | tee -a "$LOG_DIR/lane_tt5l_v2_run.log"
 RC=${PIPESTATUS[0]}
+set -e
 
 if [ "$RC" -ne 0 ]; then
     echo "[lane-tt5l-v2] trainer exited rc=$RC" >&2

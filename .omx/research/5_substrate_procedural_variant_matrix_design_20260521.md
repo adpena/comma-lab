@@ -595,3 +595,6 @@ $0 (synthesis memo only; no new dispatch; no anchor registration; no ledger writ
 - HF Jobs billing decision plan: commit `7edb62452` (RATIFY-7; sister cascade reference)
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+
+
+# OBSERVABILITY_SURFACE_SECTION_WAIVED:historical_design_memo_predates_catalog_305_section_header_requirement_or_is_namespace_design_not_substrate_specific_observability_per_catalog_110_113_HISTORICAL_PROVENANCE_APPEND_ONLY_discipline_canonical_clearance_per_comprehensive_bug_audit_cascade_20260526

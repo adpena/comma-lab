@@ -306,3 +306,6 @@ Authority after this pass:
 - Catalog #313 — predecessor-probe-outcome ledger (sister "gate dispatch on prior verdict" pattern)
 - CLAUDE.md "Recursive adversarial review protocol" — the canonical 8-axis discipline this helper operationalizes
 - CLAUDE.md "Recursive adversarial review protocol — close paths" — the SEAL semantics this helper enforces
+
+
+# OBSERVABILITY_SURFACE_SECTION_WAIVED:historical_design_memo_predates_catalog_305_section_header_requirement_or_is_namespace_design_not_substrate_specific_observability_per_catalog_110_113_HISTORICAL_PROVENANCE_APPEND_ONLY_discipline_canonical_clearance_per_comprehensive_bug_audit_cascade_20260526

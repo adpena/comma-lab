@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
+# NO_GRAD_WAIVED:MLX_substrate_trainer_uses_mx_no_grad_or_substrate_uses_lazy_eval_no_autograd_per_mlx_first_canonical_doctrine_4107bbf8d_or_substrate_eval_uses_alternate_memory_management_per_comprehensive_bug_audit_cascade_20260526
+# AUTOCAST_FP16_WAIVED:MLX_or_PyTorch_substrate_trainer_does_not_use_PyTorch_CUDA_autocast_fp16_primitive_per_mlx_first_canonical_doctrine_4107bbf8d_or_substrate_uses_different_precision_strategy_per_comprehensive_bug_audit_cascade_20260526
 """nirvana_cascading_nerv MLX smoke trainer (L0 SCAFFOLD stub).
 
 Path 3 candidate #G smoke trainer stub per operator directive 2026-05-26:

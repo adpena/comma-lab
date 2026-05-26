@@ -337,6 +337,7 @@ def poll_modal_call_status(
     if function_call_from_id is None:
         from modal.functions import FunctionCall  # type: ignore[import-untyped]
 
+        # HARVESTER_LEDGER_WRITE_OK:non_terminal_poller_per_docstring_intentionally_does_not_write_artifacts_or_update_ledgers_canonical_harvester_remains_terminal_result_owner_per_catalog_330_design_contract
         function_call_from_id = FunctionCall.from_id
     try:
         result = function_call_from_id(call_id).get(timeout=timeout_seconds)

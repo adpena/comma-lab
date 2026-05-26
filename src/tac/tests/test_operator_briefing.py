@@ -3621,7 +3621,7 @@ def test_distortion_axis_probe_summary_surfaces_wave2_signals(
             "verdict": "POSITIVE_SIGNAL_PLATEAU",
             "axis_tag": "[macOS-CPU advisory]",
             "evidence_grade": "macOS-CPU-advisory",
-            "lane_id": "lane_wave2",
+            "lane_id": "lane_wave2",  # FAKE_LANE_OK:test_fixture_or_docstring_or_dict_key_reference_to_lane_token_lane_wave2_NOT_a_real_lane_registry_pre_registration_per_catalog_126_false_positive_per_comprehensive_bug_audit_cascade_20260526
             "actual_signature": {
                 "per_window_results": {
                     "4": {
@@ -3657,7 +3657,7 @@ def test_distortion_axis_probe_summary_surfaces_wave2_signals(
             "verdict": "POSITIVE_SIGNAL_PER_SEGMENT_PARTIAL",
             "axis_tag": "[macOS-CPU advisory]",
             "evidence_grade": "macOS-CPU-advisory",
-            "lane_id": "lane_wave2",
+            "lane_id": "lane_wave2",  # FAKE_LANE_OK:test_fixture_or_docstring_or_dict_key_reference_to_lane_token_lane_wave2_NOT_a_real_lane_registry_pre_registration_per_catalog_126_false_positive_per_comprehensive_bug_audit_cascade_20260526
             "actual_signature": {
                 "min_segment_textured_avg_weight": 0.5233,
                 "spread_segment_textured_avg_weight": 0.4027,
@@ -3680,7 +3680,7 @@ def test_distortion_axis_probe_summary_surfaces_wave2_signals(
             "verdict": "POSITIVE_SIGNAL_BREAKS_THRESHOLD",
             "axis_tag": "[macOS-CPU advisory]",
             "evidence_grade": "macOS-CPU-advisory",
-            "lane_id": "lane_wave3",
+            "lane_id": "lane_wave3",  # FAKE_LANE_OK:test_fixture_or_docstring_or_dict_key_reference_to_lane_token_lane_wave3_NOT_a_real_lane_registry_pre_registration_per_catalog_126_false_positive_per_comprehensive_bug_audit_cascade_20260526
             "actual_signature": {
                 "min_segment_textured_avg_weight_combined": 0.2597,
                 "spread_segment_textured_avg_weight_combined": 0.3556,
@@ -4155,7 +4155,7 @@ def test_dispatch_claim_summary_formats_active_claim(monkeypatch):
             "stale_nonterminal": [],
             "unparsable_timestamp": [
                 {
-                    "lane_id": "lane_bad_time",
+                    "lane_id": "lane_bad_time",  # FAKE_LANE_OK:test_fixture_or_docstring_or_dict_key_reference_to_lane_token_lane_bad_time_NOT_a_real_lane_registry_pre_registration_per_catalog_126_false_positive_per_comprehensive_bug_audit_cascade_20260526
                     "instance_job_id": "bad-time-job",
                     "timestamp_utc": "not-a-time",
                     "status": "failed_modal_smoke_red",
@@ -4184,7 +4184,7 @@ def test_dispatch_claim_summary_formats_active_claim(monkeypatch):
 
     assert "unparsable_timestamp: 1" in text
     assert "UNPARSABLE TIMESTAMPS" in text
-    assert "lane_bad_time" in text
+    assert "lane_bad_time" in text  # FAKE_LANE_OK:test_fixture_or_docstring_or_dict_key_reference_to_lane_token_lane_bad_time_NOT_a_real_lane_registry_pre_registration_per_catalog_126_false_positive_per_comprehensive_bug_audit_cascade_20260526
     assert "invalid_lane_id: 1" in text
     assert "INVALID LANE IDS" in text
     assert "All-history claim hygiene: WARNING" in text

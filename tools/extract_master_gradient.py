@@ -2469,9 +2469,9 @@ def _validate_measurement_authority(
         raise SystemExit(
             f"{axis} cannot be written from advisory hardware_substrate={hardware_substrate!r}"
         )
-    if axis == "[contest-CUDA]" and device != "cuda":
+    if axis == "[contest-CUDA]" and device != "cuda":  # CUSTODY_VALIDATOR_OK:this_function_IS_master_gradient_axis_device_validator_raising_SystemExit_on_axis_device_mismatch_per_comprehensive_bug_audit_cascade_20260526
         raise SystemExit("[contest-CUDA] anchors require --device cuda")
-    if axis == "[contest-CPU]" and device != "cpu":
+    if axis == "[contest-CPU]" and device != "cpu":  # CUSTODY_VALIDATOR_OK:this_function_IS_master_gradient_axis_device_validator_raising_SystemExit_on_axis_device_mismatch_per_comprehensive_bug_audit_cascade_20260526
         raise SystemExit("[contest-CPU] anchors require --device cpu")
     if axis == "[macOS-CPU advisory]" and "darwin" not in hardware_lower:
         raise SystemExit(

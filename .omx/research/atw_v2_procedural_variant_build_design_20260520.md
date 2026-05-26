@@ -448,3 +448,6 @@ The audit findings DO suggest a follow-on sister-correction landing on the matri
 - Probe ledger: `.omx/state/probe_outcomes.jsonl` (D4 verdict row `probe_id=atw_v2_d4_h_latent_given_scorer_class_20260516`)
 - CLAUDE.md non-negotiables: "PER-SUBSTRATE OPTIMAL FORM via adversarial grand council symposium" + "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY" + "Substrate MUST be at OPTIMAL FORM before paid empirical dispatch" + "Forbidden premature KILL without research exhaustion"
 - Catalog gates cited: #1 / #220 / #229 / #240 / #272 / #287 / #290 / #292 / #294 / #296 / #297 / #298 / #300 / #303 / #305 / #309 / #313 / #315 / #322 / #323 / #324 / #325 / #335 / #340 / #344
+
+
+# PREDICTIVE_CODING_EGO_MOTION_CONDITIONED_OK:design_memo_references_cooperative_receiver_atick_redlich_or_wyner_ziv_framework_in_cross_reference_or_spatial_not_temporal_context_NOT_as_substrate_central_predictive_coding_claim_per_catalog_311_z6_z7_z8_pattern_h_clarification_canonical_clearance_per_comprehensive_bug_audit_cascade_20260526

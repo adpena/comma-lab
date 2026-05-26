@@ -112,8 +112,8 @@ def compute_nscs02_score_aware_loss(
         seg_in_pred = seg_scorer.preprocess_input(rendered_at_scorer)
         with torch.no_grad():
             seg_in_target = seg_scorer.preprocess_input(target_pair)
-            seg_target_logits = seg_scorer(seg_in_target)
-        seg_pred_logits = seg_scorer(seg_in_pred)
+            seg_target_logits = seg_scorer(seg_in_target)  # SCORER_PREPROCESS_HANDLED_OK:bare_seg_scorer_local_var_called_AFTER_preprocess_input_on_line_above_canonical_pattern_per_comprehensive_bug_audit_cascade_20260526
+        seg_pred_logits = seg_scorer(seg_in_pred)  # SCORER_PREPROCESS_HANDLED_OK:bare_seg_scorer_local_var_called_AFTER_preprocess_input_3_lines_above_canonical_pattern_per_comprehensive_bug_audit_cascade_20260526
         # 5-class soft-argmax disagreement via KL-distill (T=2.0 per Quantizr).
         T_distill = 2.0
         log_p_pred = F.log_softmax(seg_pred_logits / T_distill, dim=1)
@@ -126,8 +126,8 @@ def compute_nscs02_score_aware_loss(
         pose_in_pred = pose_scorer.preprocess_input(rendered_at_scorer)
         with torch.no_grad():
             pose_in_target = pose_scorer.preprocess_input(target_pair)
-            pose_target_out = pose_scorer(pose_in_target)
-        pose_pred_out = pose_scorer(pose_in_pred)
+            pose_target_out = pose_scorer(pose_in_target)  # SCORER_PREPROCESS_HANDLED_OK:bare_pose_scorer_local_var_called_AFTER_preprocess_input_on_line_above_canonical_pattern_per_comprehensive_bug_audit_cascade_20260526
+        pose_pred_out = pose_scorer(pose_in_pred)  # SCORER_PREPROCESS_HANDLED_OK:bare_pose_scorer_local_var_called_AFTER_preprocess_input_3_lines_above_canonical_pattern_per_comprehensive_bug_audit_cascade_20260526
         # Pose distortion = MSE on first 6 pose dims (matches upstream).
         pose_loss = sum(
             (pose_pred_out[k][..., : v.shape[-1] // 2] - pose_target_out[k][..., : v.shape[-1] // 2])

@@ -291,3 +291,6 @@ The original line 234 cited canonical equation as `residual_hybrid_boosting_savi
 - FIX-WAVE-R1 landing memo: `.omx/research/path_3_fix_wave_r1_close_findings_landed_20260526.md`
 - Source-code diffs: `src/tac/substrates/boost_nerv_pr110_residual/archive.py` line 8 + `src/tac/substrates/boost_nerv_pr110_residual/__init__.py` lines 40-47
 - Canonical equation registry: `tac.canonical_equations.query_equations()` (REGISTERED `procedural_predictor_plus_residual_correction_savings_v1` as of 2026-05-26)
+
+
+# PREDICTIVE_CODING_EGO_MOTION_CONDITIONED_OK:design_memo_references_cooperative_receiver_atick_redlich_or_wyner_ziv_framework_in_cross_reference_or_spatial_not_temporal_context_NOT_as_substrate_central_predictive_coding_claim_per_catalog_311_z6_z7_z8_pattern_h_clarification_canonical_clearance_per_comprehensive_bug_audit_cascade_20260526

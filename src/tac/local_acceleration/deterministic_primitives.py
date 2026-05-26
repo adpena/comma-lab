@@ -599,14 +599,14 @@ def portability_attestation_for_state_dict(
 #
 # Thread 1 (Kahan compensated summation): PARTIALLY_FIXABLE_MARGINAL
 #   per-scale empirical reductions: 0.0% / 10.3% / 22.4% (3 PR95 stages)
-#   Carmack MVP-first 5/5 step 2 falsification: predicted >50% reduction;
+#   Carmack MVP-first 5/5 step 2 falsification: predicted >50% reduction;  # DOCSTRING_PERCENT_CLAIM_OK:empirically_measured_pr95_3stage_falsification_anchor_Higham2002_theoretical_bound_REFUTED_per_carmack_mvp_first_5of5_methodology_predicted_vs_measured_documented_inline
 #   max observed 22.4% — Higham 2002 theoretical bound REFUTED at MLX/PyTorch
 #   CPU framework boundary because the dominant drift floor is NOT summation
 #   precision; it is per-stage kernel vectorization/SIMD order differences.
 #
 # Thread 2 (FP64 intermediate accumulation): PARTIALLY_FIXABLE_MARGINAL
 #   per-scale empirical reductions: 6.2% / 10.3% / 22.4% (same 3 stages)
-#   Carmack MVP-first 5/5 step 2 falsification: predicted >50% reduction;
+#   Carmack MVP-first 5/5 step 2 falsification: predicted >50% reduction;  # DOCSTRING_PERCENT_CLAIM_OK:empirically_measured_pr95_3stage_falsification_anchor_FP64_intermediate_advantage_REFUTED_per_carmack_mvp_first_5of5_methodology_predicted_vs_measured_documented_inline
 #   max observed 22.4% — 29-extra-mantissa-bit FP64 advantage REFUTED at the
 #   measured scale because Conv2d MLX/PyTorch divergence is NOT at the
 #   LSB-rounding-of-mul-add layer.
@@ -850,7 +850,7 @@ def kahan_conv2d_3x3(
     Per active exploration empirical anchor 2026-05-25: Kahan summation
     reduces Conv2d 3x3 max_abs drift by 0.0% / 10.3% / 22.4% across 3 PR95
     HNeRV decoder stages. The Carmack MVP-first 5/5 step 2 prediction
-    (Higham 2002 >50% reduction) is REFUTED at the MLX/PyTorch CPU boundary.
+    (Higham 2002 >50% reduction) is REFUTED at the MLX/PyTorch CPU boundary.  # DOCSTRING_PERCENT_CLAIM_OK:empirically_measured_pr95_3stage_anchor_2026_05_25_Higham_2002_theoretical_bound_REFUTED_documented_inline_per_carmack_mvp_first_5of5_falsification
 
     Args:
         input_nhwc: (N, H, W, C_in) float32 array.
@@ -924,7 +924,7 @@ def fp64_intermediate_conv2d_3x3(
     Per active exploration empirical anchor 2026-05-25: FP64 intermediate
     accumulation reduces Conv2d 3x3 max_abs drift by 6.2% / 10.3% / 22.4%
     across 3 PR95 HNeRV decoder stages. The Carmack MVP-first 5/5 step 2
-    prediction (29-extra-mantissa-bit >99% reduction) is REFUTED because the
+    prediction (29-extra-mantissa-bit >99% reduction) is REFUTED because the  # DOCSTRING_PERCENT_CLAIM_OK:empirically_measured_pr95_3stage_anchor_2026_05_25_29_extra_mantissa_bit_predicted_advantage_REFUTED_per_carmack_mvp_first_5of5_falsification_documented_inline
     dominant drift floor is NOT at the LSB-mul-add layer.
 
     Args:

@@ -349,7 +349,7 @@ def classify_recipe_routability(
             rationale=(
                 f"min_vram_gb={min_vram}GB fits MLX training comfort on "
                 f"M5 Max Metal GPU; MLX framework available + no "
-                f"incompatible primitives detected; ~2-3x faster than MPS "
+                f"incompatible primitives detected; ~2-3x faster than MPS "  # DOCSTRING_PERCENT_CLAIM_OK:routability_advisory_rationale_string_documenting_canonical_MLX_vs_MPS_qualitative_speedup_per_mlx_first_doctrine_4107bbf8d_non_promotable
                 f"typical; non-promotable per Catalog #1/#192/#317"
             ),
             estimated_cost_compression_usd=3.0,  # typical T4/A10G smoke cost saved

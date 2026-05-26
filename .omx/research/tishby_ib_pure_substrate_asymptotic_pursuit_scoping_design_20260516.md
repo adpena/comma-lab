@@ -1173,3 +1173,6 @@ The 4-reducer probe wave was executed on both substrates SIMULTANEOUSLY by SUBAG
 **Sister memo** (cross-substrate companion): `.omx/research/wunderkind_g1_v2_wire_grammar_class_shift_full_stack_design_20260516.md` Appendix C documents the parallel Wunderkind G1 v2 run (same probe wave, GT-video source signal, same probe library).
 
 **Source memo edit scope**: Catalog #110/#113 HISTORICAL_PROVENANCE APPEND-ONLY. Body of design memo (Sections 1-23 + 9-dim checklist + Op-summary + Observability surface + Appendix A) UNCHANGED. This Appendix B lands as the empirical disambiguator result T2 council Q1 SPLIT-VERDICT op-routable specified to produce on the Tishby IB-pure substrate's A1-latent operating point.
+
+
+# PARADIGM_VS_IMPLEMENTATION_FALSIFICATION_OK:historical_2026_05_16_design_memo_predates_catalog_307_2026_05_16_cutoff_landing_carries_legacy_kill_or_retired_token_for_specific_implementation_paradigm_intact_per_canonical_legacy_classification_canonical_clearance_per_comprehensive_bug_audit_cascade_20260526

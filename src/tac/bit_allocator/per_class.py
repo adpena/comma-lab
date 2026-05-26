@@ -9,7 +9,7 @@ allocates a fixed total bit budget across the 5 SegNet classes
 (BACKGROUND / VEHICLE / PERSON / ROAD / TRAFFIC_SIGN, indices 0..4) per
 the contest scorer's class taxonomy.
 
-Per the NSCS06 v6→v7 44% improvement (105.15 → 58.89 contest-CUDA) per
+Per the NSCS06 v6→v7 44% improvement (105.15 → 58.89 contest-CUDA) per  # DOCSTRING_PERCENT_CLAIM_OK:canonical_nscs06_v6_to_v7_empirical_44pct_anchor_105_15_to_58_89_contest_CUDA_artifact_at_omx_research_nscs06_path_a_chroma_optical_flow_redesign_20260516_md
 canonical-vs-unique unwind: chroma allocation per class (vs global)
 unlocked the score; this allocator codifies that prior as a primary
 bit-allocation surface.

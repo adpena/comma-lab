@@ -3642,7 +3642,7 @@ def validate_local_artifact_dir(
             raise ValueError(f"adjudication provenance device is not {eval_device}")
         if eval_device == "cpu" and adjudication_provenance.get("promotion_eligible") is True:
             raise ValueError("exact CPU adjudication must not be promotion_eligible")
-        if eval_device == "cpu" and adjudication_provenance.get("score_tag") != "[contest-CPU]":
+        if eval_device == "cpu" and adjudication_provenance.get("score_tag") != "[contest-CPU]":  # CUSTODY_VALIDATOR_OK:this_function_IS_lightning_batch_adjudication_provenance_validator_raising_on_score_tag_mismatch_per_comprehensive_bug_audit_cascade_20260526
             raise ValueError("exact CPU adjudication must carry [contest-CPU] score_tag")
         adjudication_lane_status = adjudication_provenance.get("lane_status")
         adjudication_component_gate_triggered = bool(

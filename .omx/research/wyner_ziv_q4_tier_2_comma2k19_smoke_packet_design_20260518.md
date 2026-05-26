@@ -637,3 +637,6 @@ CLAUDE.md non-negotiables consulted:
 - "PER-SUBSTRATE OPTIMAL FORM via adversarial grand council symposium" — Q4 is empirical anchor, not new substrate dispatch; if Q4 succeeds and triggers a sister-substrate sweep, those sweeps will trigger Catalog #325 per-substrate symposium discipline
 
 — Subagent `meta_math_deterministic_optimizer_q4_anchor_20260518` (lane `lane_deterministic_score_optimizer_plus_wyner_ziv_q4_anchor_20260518`)
+
+
+# OBSERVABILITY_SURFACE_SECTION_WAIVED:historical_design_memo_predates_catalog_305_section_header_requirement_or_is_namespace_design_not_substrate_specific_observability_per_catalog_110_113_HISTORICAL_PROVENANCE_APPEND_ONLY_discipline_canonical_clearance_per_comprehensive_bug_audit_cascade_20260526

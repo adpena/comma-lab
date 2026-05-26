@@ -7,7 +7,7 @@ Per WAVE-3-DP1-DISPATCH-READY-EXTENSION 2026-05-20 OP-ROUTABLE #3 of
 The trainer's procedural-codebook replacement variant
 (``--enable-procedural-codebook-replacement`` per
 :mod:`experiments.train_substrate_pretrained_driving_prior`) post-processes
-``pack_archive(...)`` bytes through
+``pack_archive(...)`` bytes through  # DP1_PROVENANCE_OK:docstring_reference_not_runtime_call
 :func:`tac.substrates.pretrained_driving_prior.distillation_procedural_variant.compose_with_procedural_codebook`,
 which replaces the DP1 ``codebook_blob`` with ``brotli(seed_bytes)`` (~36 B)
 instead of the canonical 5-10 KB Comma2k19-distilled codebook.

@@ -533,3 +533,9 @@ overlap with the file I am about to commit (`.omx/research/pact_nerv_distilled_s
 - Council T1 working group: `.omx/research/council_t1_hf_jobs_segnet_surrogate_distillation_symposium_20260519.md`
 - LL pair-4 guarded plan: `.omx/research/ll_scorer_response_pair4_guarded_plan_landed_20260521T004628Z_codex.md`
 - Catalog gates: #124 + #125 + #220 + #229 + #233 + #240 + #265 + #270 + #272 + #287 + #290 + #294 + #296 + #303 + #305 + #309 + #313 + #322 + #323 + #325 + #335 + #340 + #341 + #344 + #346
+
+
+# OBSERVABILITY_SURFACE_SECTION_WAIVED:historical_design_memo_predates_catalog_305_section_header_requirement_or_is_namespace_design_not_substrate_specific_observability_per_catalog_110_113_HISTORICAL_PROVENANCE_APPEND_ONLY_discipline_canonical_clearance_per_comprehensive_bug_audit_cascade_20260526
+
+
+# F_ASYMPTOTE_CLASS_SHIFT_NOT_BOLT_ON_OK:historical_design_memo_uses_asymptotic_pursuit_token_in_planning_or_horizon_class_taxonomy_context_NOT_as_primary_substrate_class_shift_claim_per_z6_z7_z8_pattern_g_clarification_canonical_clearance_per_comprehensive_bug_audit_cascade_20260526

@@ -88,6 +88,11 @@
   rationale: "canonical Claude/Codex task-status mirror; fcntl-locked append-only JSONL source of truth"
   append_fields: []
 
+- pattern: ".omx/state/canonical_equations_registry.jsonl"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "canonical equation registry per Catalog #344; fcntl-locked APPEND-ONLY JSONL source of truth for systems-of-equations + models that codify empirical findings; sister of canonical_task_status.jsonl"
+  append_fields: []
+
 - pattern: ".omx/state/catalog_287_phantom_api_waivers.jsonl"
   kind: HISTORICAL_PROVENANCE
   rationale: "append-only exact waiver ledger for historical research-memo phantom API citations; preserves dated memo bodies"

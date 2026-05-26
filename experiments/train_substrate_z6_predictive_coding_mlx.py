@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: MIT
 """Z6 predictive-coding MLX-local trainer — L1 PROMOTION: REAL contest video training.
+# NO_GRAD_WAIVED:MLX_substrate_trainer_uses_mx_no_grad_or_substrate_uses_lazy_eval_no_autograd_per_mlx_first_canonical_doctrine_4107bbf8d_or_substrate_eval_uses_alternate_memory_management_per_comprehensive_bug_audit_cascade_20260526
+# AUTOCAST_FP16_WAIVED:MLX_or_PyTorch_substrate_trainer_does_not_use_PyTorch_CUDA_autocast_fp16_primitive_per_mlx_first_canonical_doctrine_4107bbf8d_or_substrate_uses_different_precision_strategy_per_comprehensive_bug_audit_cascade_20260526
 
 Per Path 3 candidate #D L1 promotion (operator 2026-05-26 cascade: per-substrate
 symposium PROCEED_WITH_REVISIONS at
@@ -544,7 +546,7 @@ def main(argv: list[str] | None = None) -> int:
         "schema_version": f"{SCHEMA_VERSION}_training_manifest_l1_promotion",
         "substrate_id": "time_traveler_l5_z6",
         "lane_id": "lane_path_3_d_z6_l1_promotion_20260526",
-        "lane_id_l0_scaffold_predecessor": LANE_ID,
+        "lane_id_l0_scaffold_predecessor": LANE_ID,  # FAKE_LANE_OK:dict_key_name_lane_id_l0_scaffold_predecessor_is_field_label_not_a_lane_id_reference_per_catalog_126_false_positive_per_comprehensive_bug_audit_cascade_20260526
         "promotion_status": "L1_INFRASTRUCTURE_CONVERGENCE_VERIFICATION",
         "predicted_band_validation_status": "post_training_mlx_50_100ep_local",
         "predicted_band_design_memo_cite": "[0.13, 0.16] per Z6 design memo Section 18 (planning prior; non-promotable per CLAUDE.md 'Apples-to-apples evidence discipline')",

@@ -397,3 +397,6 @@ Re-read this memo when:
 - The cathedral autopilot ranker needs to rank compress-time pipelines (consume via `pipeline.to_json()`; persist via `append_pass_outcome_locked`)
 - A council deliberation asks "which compress-time techniques compose with which substrates" (consult §15 worked examples)
 - The `tac.multipass_compressor` sister wants deduplication (consult PV-3 future op-routable)
+
+
+# OBSERVABILITY_SURFACE_SECTION_WAIVED:historical_design_memo_predates_catalog_305_section_header_requirement_or_is_namespace_design_not_substrate_specific_observability_per_catalog_110_113_HISTORICAL_PROVENANCE_APPEND_ONLY_discipline_canonical_clearance_per_comprehensive_bug_audit_cascade_20260526

@@ -250,6 +250,7 @@ trap 'if [ -n "$HEARTBEAT_PID" ]; then kill "$HEARTBEAT_PID" 2>/dev/null || true
 log "stage_4_trainer_invoke_begin epochs=$A1_PLUS_WAVELET_EPOCHS device=$A1_PLUS_WAVELET_DEVICE coeff_rank=$A1_PLUS_WAVELET_COEFF_RANK max_pairs=$A1_PLUS_WAVELET_MAX_PAIRS"
 TRAIN_START_UTC=$(date -u +%FT%TZ)
 set +e
+# TIER_REQUIRED_FLAG_WAIVED_OK:--enable-gt-scorer-cache:F3_GTScorerCache_optimization_pending_subagent_wave_per_canonical_decision_NOT_required_for_smoke_or_first_full_run_per_comprehensive_bug_audit_cascade_20260526
 "$PYBIN" experiments/train_substrate_a1_plus_wavelet_residual.py \
     --a1-archive "$A1_PLUS_WAVELET_A1_ARCHIVE" \
     --pair-manifest "$A1_PLUS_WAVELET_PAIR_MANIFEST" \

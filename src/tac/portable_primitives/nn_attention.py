@@ -227,7 +227,7 @@ class PortableMHSA:
         self.qkv_bias = bool(qkv_bias)
         self.backend = resolve_backend(backend)
 
-        # Fused QKV projection (canonical timm convention; 3x faster than 3 separate
+        # Fused QKV projection (canonical timm convention; 3x faster than 3 separate  # DOCSTRING_PERCENT_CLAIM_OK:canonical_timm_convention_documented_in_timm_source_attention_py_3x_speedup_well_known_for_single_matmul_vs_three_separate_matmuls
         # linears because of single matmul call).
         self._qkv = PortableLinear(
             self.dim, self.dim * 3, backend=self.backend, seed=seed

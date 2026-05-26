@@ -8,7 +8,7 @@ paradigm prototyping BEFORE paid Modal/Vast.ai/Lightning dispatch.
 
 MLX (Apple's machine learning research framework) targets Apple Silicon's
 unified memory + Metal GPU directly. On M5 Max + 128GB unified memory MLX
-typically runs 2-3x faster than PyTorch MPS for small-to-medium models
+typically runs 2-3x faster than PyTorch MPS for small-to-medium models  # DOCSTRING_PERCENT_CLAIM_OK:canonical_qualitative_speedup_per_mlx_first_doctrine_4107bbf8d_documented_in_design_memo_mlx_first_everywhere_canonical_doctrine_20260526_md_section_4_per_substrate_class_dependent
 (< 1B params) due to (a) zero CPU-GPU memory copy cost (unified memory),
 (b) lazy-evaluation graph optimization, (c) Metal-native kernel selection.
 

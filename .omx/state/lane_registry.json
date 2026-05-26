@@ -24644,7 +24644,8 @@
       "level": 1,
       "name": "E4 MDL-IBPS procedural sidecar",
       "notes": "",
-      "phase": 2.0
+      "phase": 2.0,
+      "lane_class": "substrate_engineering"
     },
     {
       "gates": {
@@ -32853,7 +32854,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "",
+      "lane_class": "substrate_engineering"
     },
     {
       "id": "lane_problem_space_exploits_wave_20260517",
@@ -34751,7 +34753,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "",
+      "lane_class": "substrate_engineering"
     },
     {
       "id": "lane_recursive_adversarial_review_r1_post_redo_council_rotation_a_20260517",
@@ -35079,7 +35082,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "",
+      "lane_class": "substrate_engineering"
     },
     {
       "id": "lane_meta_fix_catalog_324_predicted_band_post_training_validation_required_20260517",
@@ -35284,7 +35288,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "",
+      "lane_class": "substrate_engineering"
     },
     {
       "id": "lane_per_substrate_optimal_form_symposium_wave_doctrine_plus_c6_ibps_first_20260518",
@@ -35616,7 +35621,8 @@
       "byte_mutation_smoke_passes": "experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/scorer_logit_ego_motion_byte_mutation_proof.json",
       "distinguishing_feature_name": "scorer_logit_ego_source",
       "distinguishing_bytes_path": "scorer_logit_ego_motion",
-      "inflate_consumer_function": "tac.substrates.time_traveler_l5_z6.inflate.run_inflate"
+      "inflate_consumer_function": "tac.substrates.time_traveler_l5_z6.inflate.run_inflate",
+      "lane_class": "substrate_engineering"
     },
     {
       "id": "lane_per_substrate_symposium_lane_17_imp_20260517",
@@ -37052,7 +37058,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "",
+      "lane_class": "substrate_engineering"
     },
     {
       "id": "lane_riemannian_newton_substrate_engineering_design_20260518",
@@ -37462,7 +37469,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "",
+      "lane_class": "substrate_engineering"
     },
     {
       "id": "lane_dp1_pr101_composition_design_20260518",
@@ -38412,7 +38420,8 @@
           "evidence": ""
         }
       },
-      "notes": "PATH A MPS-research-signal paired comparison; $0 envelope; M5 Max MPS; non-promotable per Catalog #192; verdict gates PATH B Modal T4 50ep smoke"
+      "notes": "PATH A MPS-research-signal paired comparison; $0 envelope; M5 Max MPS; non-promotable per Catalog #192; verdict gates PATH B Modal T4 50ep smoke",
+      "lane_class": "substrate_engineering"
     },
     {
       "id": "lane_magic_codec_water_filling_lagrangian_unified_synthesis_cross_pollination_20260518",
@@ -39398,7 +39407,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "",
+      "lane_class": "substrate_engineering"
     },
     {
       "id": "lane_mps_phase_b_fire_and_harvest_20260519",
@@ -42309,7 +42319,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "",
+      "lane_class": "substrate_engineering"
     },
     {
       "id": "lane_slot_q_pr_body_integration_rounds_1_12_20260519",
@@ -42965,7 +42976,8 @@
           "evidence": "scripts/remote_lane_substrate_ego_nerv_l0_scaffold.sh"
         }
       },
-      "notes": "L0 SCAFFOLD: research_only=true; dispatch_enabled=false; trainer experiments/train_substrate_ego_nerv.py mirrors tc_nerv canonical pattern, _full_main raises NotImplementedError per Catalog #240. Substrate library at src/tac/ego_nerv_as_renderer.py predates canonical package convention. Reactivation: Phase 2 council symposium per Catalog #325 + canonical src/tac/substrates/ego_nerv/ package migration + submissions/ego_nerv_substrate/ contest-compliant inflate. Recipe substrate_ego_nerv_modal_a10g_diagnostic_dispatch.yaml. Design memo .omx/research/ego_nerv_l0_scaffold_design_20260520T140000Z.md. Cross-ref legacy lane_ego_nerv_as_renderer (sister)."
+      "notes": "L0 SCAFFOLD: research_only=true; dispatch_enabled=false; trainer experiments/train_substrate_ego_nerv.py mirrors tc_nerv canonical pattern, _full_main raises NotImplementedError per Catalog #240. Substrate library at src/tac/ego_nerv_as_renderer.py predates canonical package convention. Reactivation: Phase 2 council symposium per Catalog #325 + canonical src/tac/substrates/ego_nerv/ package migration + submissions/ego_nerv_substrate/ contest-compliant inflate. Recipe substrate_ego_nerv_modal_a10g_diagnostic_dispatch.yaml. Design memo .omx/research/ego_nerv_l0_scaffold_design_20260520T140000Z.md. Cross-ref legacy lane_ego_nerv_as_renderer (sister).",
+      "lane_class": "substrate_engineering"
     },
     {
       "id": "lane_e_nerv_l0_scaffold_20260520",
@@ -43006,7 +43018,8 @@
           "evidence": "scripts/remote_lane_substrate_e_nerv_l0_scaffold.sh"
         }
       },
-      "notes": "L0 SCAFFOLD: research_only=true; dispatch_enabled=false; trainer experiments/train_substrate_e_nerv.py mirrors tc_nerv canonical pattern, _full_main raises NotImplementedError per Catalog #240. Substrate library at src/tac/e_nerv_as_renderer.py predates canonical package convention. ENeRVEncoder is compress-time-only NOT shipped in archive per strict-scorer-rule. Reactivation: Phase 2 council symposium per Catalog #325 + canonical src/tac/substrates/e_nerv/ package migration + submissions/e_nerv_substrate/ contest-compliant inflate. Recipe substrate_e_nerv_modal_a10g_diagnostic_dispatch.yaml. Design memo .omx/research/e_nerv_l0_scaffold_design_20260520T140000Z.md. Cross-ref legacy lane_e_nerv_as_renderer (sister). Literature: Li et al. NeurIPS 2022 arXiv:2207.08132."
+      "notes": "L0 SCAFFOLD: research_only=true; dispatch_enabled=false; trainer experiments/train_substrate_e_nerv.py mirrors tc_nerv canonical pattern, _full_main raises NotImplementedError per Catalog #240. Substrate library at src/tac/e_nerv_as_renderer.py predates canonical package convention. ENeRVEncoder is compress-time-only NOT shipped in archive per strict-scorer-rule. Reactivation: Phase 2 council symposium per Catalog #325 + canonical src/tac/substrates/e_nerv/ package migration + submissions/e_nerv_substrate/ contest-compliant inflate. Recipe substrate_e_nerv_modal_a10g_diagnostic_dispatch.yaml. Design memo .omx/research/e_nerv_l0_scaffold_design_20260520T140000Z.md. Cross-ref legacy lane_e_nerv_as_renderer (sister). Literature: Li et al. NeurIPS 2022 arXiv:2207.08132.",
+      "lane_class": "substrate_engineering"
     },
     {
       "id": "lane_nervdc_l0_scaffold_20260520",
@@ -43047,7 +43060,8 @@
           "evidence": "scripts/remote_lane_substrate_nervdc_l0_scaffold.sh"
         }
       },
-      "notes": "L0 SCAFFOLD: research_only=true; dispatch_enabled=false; trainer experiments/train_substrate_nervdc.py mirrors tc_nerv canonical pattern, _full_main raises NotImplementedError per Catalog #240. Substrate library at src/tac/nervdc_as_renderer.py predates canonical package convention. Decoder-internal _CondSummary prev-frame conditioning (sequential inflate; HNeRV parity L9 runtime closure verification required at Phase 2). Reactivation: Phase 2 council symposium per Catalog #325 + canonical src/tac/substrates/nervdc/ package migration + submissions/nervdc_substrate/ contest-compliant inflate. Recipe substrate_nervdc_modal_a10g_diagnostic_dispatch.yaml. Design memo .omx/research/nervdc_l0_scaffold_design_20260520T140000Z.md. Cross-ref legacy lane_nervdc_as_renderer (sister)."
+      "notes": "L0 SCAFFOLD: research_only=true; dispatch_enabled=false; trainer experiments/train_substrate_nervdc.py mirrors tc_nerv canonical pattern, _full_main raises NotImplementedError per Catalog #240. Substrate library at src/tac/nervdc_as_renderer.py predates canonical package convention. Decoder-internal _CondSummary prev-frame conditioning (sequential inflate; HNeRV parity L9 runtime closure verification required at Phase 2). Reactivation: Phase 2 council symposium per Catalog #325 + canonical src/tac/substrates/nervdc/ package migration + submissions/nervdc_substrate/ contest-compliant inflate. Recipe substrate_nervdc_modal_a10g_diagnostic_dispatch.yaml. Design memo .omx/research/nervdc_l0_scaffold_design_20260520T140000Z.md. Cross-ref legacy lane_nervdc_as_renderer (sister).",
+      "lane_class": "substrate_engineering"
     },
     {
       "id": "lane_wave_2_prereq_bit_allocator_namespace_20260520",
@@ -44346,7 +44360,8 @@
           "evidence": ""
         }
       },
-      "notes": "Parent lane for 5 G3 substrate L0 SCAFFOLDs (V2/V3/V4/IA3-Multi/AsymmetricBoundary) per PACT-NERV-ULTIMATE commit e3ad4243a Variants 11-15. 74/74 tests pass. dispatch_enabled=false research_only=true across all 5 sub-lanes."
+      "notes": "Parent lane for 5 G3 substrate L0 SCAFFOLDs (V2/V3/V4/IA3-Multi/AsymmetricBoundary) per PACT-NERV-ULTIMATE commit e3ad4243a Variants 11-15. 74/74 tests pass. dispatch_enabled=false research_only=true across all 5 sub-lanes.",
+      "lane_class": "substrate_engineering"
     },
     {
       "id": "lane_scorer_gradient_sparse_residual_pose_hardpair_smoke_20260520",
@@ -44799,7 +44814,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "",
+      "lane_class": "substrate_engineering"
     },
     {
       "id": "lane_master_gradient_frame_decomposition_20260520",
@@ -44881,7 +44897,8 @@
           "evidence": "scripts/remote_lane_substrate_pact_nerv_cross_codec_a.sh + .omx/operator_authorize_recipes/substrate_pact_nerv_cross_codec_a_modal_t4_dispatch.yaml (research_only=true; dispatch_enabled=false); heartbeat + canonical NVML block per Catalog #244"
         }
       },
-      "notes": ""
+      "notes": "",
+      "lane_class": "substrate_engineering"
     },
     {
       "id": "lane_pact_nerv_cross_codec_b_l0_scaffold_20260520",
@@ -44922,7 +44939,8 @@
           "evidence": "scripts/remote_lane_substrate_pact_nerv_cross_codec_b.sh + .omx/operator_authorize_recipes/substrate_pact_nerv_cross_codec_b_modal_t4_dispatch.yaml (research_only=true; dispatch_enabled=false); canonical NVML block per Catalog #244"
         }
       },
-      "notes": ""
+      "notes": "",
+      "lane_class": "substrate_engineering"
     },
     {
       "id": "lane_pact_nerv_neural_codec_e2e_cross_l0_scaffold_20260520",
@@ -44963,7 +44981,8 @@
           "evidence": "scripts/remote_lane_substrate_pact_nerv_neural_codec_e2e_cross.sh + .omx/operator_authorize_recipes/substrate_pact_nerv_neural_codec_e2e_cross_modal_t4_dispatch.yaml (research_only=true; dispatch_enabled=false); canonical NVML block per Catalog #244"
         }
       },
-      "notes": ""
+      "notes": "",
+      "lane_class": "substrate_engineering"
     },
     {
       "id": "lane_wave_3_null_exploit_probe_20260520",
@@ -45556,7 +45575,8 @@
           "evidence": ""
         }
       },
-      "notes": "research_only=true; reactivation_criteria=symposium_proceed_per_catalog_325; canonical_equation_id=procedural_codebook_from_seed_compression_savings_v1; substrate_context=intermediate_transform_quantizer; predicted_delta_s=-0.005434; bytes_saved=8160; lane_class=substrate_engineering"
+      "notes": "research_only=true; reactivation_criteria=symposium_proceed_per_catalog_325; canonical_equation_id=procedural_codebook_from_seed_compression_savings_v1; substrate_context=intermediate_transform_quantizer; predicted_delta_s=-0.005434; bytes_saved=8160; lane_class=substrate_engineering",
+      "lane_class": "substrate_engineering"
     },
     {
       "id": "lane_wave_3_pr101_pr106_procedural_variant_build_design_20260520",
@@ -45639,7 +45659,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "",
+      "lane_class": "substrate_engineering"
     },
     {
       "id": "lane_grayscale_lut_procedural_codebook_replacement_variant_20260520",
@@ -45680,7 +45701,8 @@
           "evidence": ""
         }
       },
-      "notes": "research_only=true; lane_class=substrate_engineering; reactivation_criteria=symposium_proceed_per_catalog_325_plus_paired_smoke_contest_cuda_plus_contest_cpu_per_claude_md_submission_auth_eval; canonical_equation_id=procedural_codebook_from_seed_compression_savings_v1; substrate_context=chroma_lut_replacement; predicted_delta_s=-0.000149; bytes_saved_hypothesis=224_after_glv2_lut_explicit_replacement; current_glv1_scaffold_appends_41b_and_is_not_score_eligible; lut_bytes=256; seed_bytes=32; horizon_class=frontier_protecting; per_substrate_symposium_required_per_catalog_325; build_landed_research_only; sister_canonical_pattern_dp1_commit_9cbfa471c_plus_vq_vae_commit_6fea30f22; predicted_band_validation_status=pending_post_training"
+      "notes": "research_only=true; lane_class=substrate_engineering; reactivation_criteria=symposium_proceed_per_catalog_325_plus_paired_smoke_contest_cuda_plus_contest_cpu_per_claude_md_submission_auth_eval; canonical_equation_id=procedural_codebook_from_seed_compression_savings_v1; substrate_context=chroma_lut_replacement; predicted_delta_s=-0.000149; bytes_saved_hypothesis=224_after_glv2_lut_explicit_replacement; current_glv1_scaffold_appends_41b_and_is_not_score_eligible; lut_bytes=256; seed_bytes=32; horizon_class=frontier_protecting; per_substrate_symposium_required_per_catalog_325; build_landed_research_only; sister_canonical_pattern_dp1_commit_9cbfa471c_plus_vq_vae_commit_6fea30f22; predicted_band_validation_status=pending_post_training",
+      "lane_class": "substrate_engineering"
     },
     {
       "id": "lane_wave_3_parser_safe_subset_smoke_20260520",
@@ -46380,7 +46402,8 @@
           "evidence": ""
         }
       },
-      "notes": "research_only=true; substrate_engineering exception per HNeRV L7; DESIGN memo captures AA HIGH verdict justifying L0->L1 promotion + STC residual sidecar unblock cascade"
+      "notes": "research_only=true; substrate_engineering exception per HNeRV L7; DESIGN memo captures AA HIGH verdict justifying L0->L1 promotion + STC residual sidecar unblock cascade",
+      "lane_class": "substrate_engineering"
     },
     {
       "id": "hfv7_exp_golomb_pr101_hfv1_sidecar",
@@ -47446,7 +47469,8 @@
           "evidence": "scripts/remote_lane_substrate_grayscale_lut.sh"
         }
       },
-      "notes": ""
+      "notes": "",
+      "lane_class": "substrate_engineering"
     },
     {
       "id": "lane_codex_decoderq_selective_window_bridge_20260522",
@@ -51465,7 +51489,8 @@
           "evidence": ""
         }
       },
-      "notes": "Canonical PR95 MLX lane. Source-preprocess sublane codex_pr95_mlx_source_preprocess_20260524 now ports eval-roundtrip/YUV6 into native MLX, but remains macOS-MLX research-signal only until source loader, scorer loss, full training parity, export parity, and exact CPU/CUDA eval land."
+      "notes": "Canonical PR95 MLX lane. Source-preprocess sublane codex_pr95_mlx_source_preprocess_20260524 now ports eval-roundtrip/YUV6 into native MLX, but remains macOS-MLX research-signal only until source loader, scorer loss, full training parity, export parity, and exact CPU/CUDA eval land.",
+      "lane_class": "substrate_engineering"
     },
     {
       "id": "codex_pr95_mlx_optimizer_matrix_queue_20260524",
@@ -55770,7 +55795,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "",
+      "lane_class": "substrate_engineering"
     },
     {
       "id": "lane_probe_9b_100_pair_disambiguator_20260525",
@@ -55811,7 +55837,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "",
+      "lane_class": "substrate_engineering"
     },
     {
       "id": "lane_probe_9c_per_level_wavelet_basis_disambiguator_20260525",
@@ -55852,7 +55879,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "",
+      "lane_class": "substrate_engineering"
     },
     {
       "id": "lane_pr95_mlx_stage_4_v332_qat_curriculum_build_20260525",
@@ -57371,7 +57399,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "",
+      "lane_class": "substrate_engineering"
     },
     {
       "id": "lane_path_3_b_prime_z7_mamba_2_cargo_cult_first_20260526",
@@ -57494,7 +57523,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "",
+      "lane_class": "substrate_engineering"
     },
     {
       "id": "lane_path_3_recursive_adversarial_review_r1_3_axis_landings_a_d_e_20260526",
@@ -57617,7 +57647,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "",
+      "lane_class": "substrate_engineering"
     },
     {
       "id": "lane_path_3_recursive_adversarial_review_r2_combined_3_axis_landings_a_b_c_d_e_f_g_20260526",
@@ -57781,7 +57812,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "",
+      "lane_class": "substrate_engineering"
     },
     {
       "id": "lane_path_3_fix_wave_r1_prime_prime_i_faiss_ivf_pq_residual_20260526",
@@ -57864,6 +57896,621 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_path_3_l1_promotion_cascade_b_prime_c_prime_e_g_j_",
+      "name": "Auto-registered per comprehensive bug audit cascade 2026-05-26 (Catalog #126 backfill; sister subagent landings + test references)",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_path_3_h_atw_v2_cooperative_receiver_cargo_cult_first_20260526",
+      "name": "Auto-registered per comprehensive bug audit cascade 2026-05-26 (Catalog #126 backfill; sister subagent landings + test references)",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_path_3_j_mdl_ibps_information_bottleneck_cargo_cult_first_20260526",
+      "name": "Auto-registered per comprehensive bug audit cascade 2026-05-26 (Catalog #126 backfill; sister subagent landings + test references)",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_dqs1_pairset_drop_two_r001_002_p0371_0320_local_first_20260522",
+      "name": "Auto-registered per comprehensive bug audit cascade 2026-05-26 (Catalog #126 backfill; sister subagent landings + test references)",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_path_3_sister_1265_gate_z6pcwm1_grammar_20260526",
+      "name": "Auto-registered per comprehensive bug audit cascade 2026-05-26 (Catalog #126 backfill; sister subagent landings + test references)",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_dqs1_drop_many_build_1c_greedy_heuristic_alternative_reducer_20260525",
+      "name": "Auto-registered per comprehensive bug audit cascade 2026-05-26 (Catalog #126 backfill; sister subagent landings + test references)",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_path_3_d_z6_l2_long_training_20260526",
+      "name": "Auto-registered per comprehensive bug audit cascade 2026-05-26 (Catalog #126 backfill; sister subagent landings + test references)",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_a_20260526",
+      "name": "Auto-registered per comprehensive bug audit cascade 2026-05-26 (Catalog #126 backfill; sister subagent landings + test references)",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_a1_",
+      "name": "Token literal pattern reference (Catalog #126 backfill; pattern token used by gate detection regexes)",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_id_l0_scaffold_predecessor",
+      "name": "Token literal / dict key / status string reference (Catalog #126 backfill per comprehensive bug audit cascade; NOT a real lane)",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_class_substrate_engineering_HNeRV_L7_approximately_500_to_800_LOC_NOT_a_bolt_on",
+      "name": "Token literal / dict key / status string reference (Catalog #126 backfill per comprehensive bug audit cascade; NOT a real lane)",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_my_substrate_l2_20260526",
+      "name": "Token literal / dict key / status string reference (Catalog #126 backfill per comprehensive bug audit cascade; NOT a real lane)",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_registry_registered",
+      "name": "Token literal / dict key / status string reference (Catalog #126 backfill per comprehensive bug audit cascade; NOT a real lane)",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_frontier_repair_waterfill_action_functional_cumulative_20260526_codex",
+      "name": "Frontier repair waterfill cumulative action functional integration",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_mlx_repair_reference_context_recovery_20260526_codex",
+      "name": "MLX repair reference context recovery",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -57873,5 +58520,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-26T13:19:27Z"
+  "updated_at": "2026-05-26T15:50:02Z"
 }

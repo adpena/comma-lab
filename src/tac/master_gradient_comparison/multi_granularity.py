@@ -1095,7 +1095,7 @@ def decompose_M_contest_per_segnet_class(
 ) -> dict[int, "np.ndarray"]:
     """Decompose M_contest by SegNet class.
 
-    Per exploit #5 (NSCS06 v6 -> v7 anchor; 44% improvement per
+    Per exploit #5 (NSCS06 v6 -> v7 anchor; 44% improvement per  # DOCSTRING_PERCENT_CLAIM_OK:canonical_nscs06_v6_to_v7_empirical_44pct_anchor_artifact_at_omx_research_nscs06_path_a_chroma_optical_flow_redesign_20260516_md_cited_inline_on_next_line
     ``.omx/research/nscs06_path_a_chroma_optical_flow_redesign_20260516.md``):
     the SegNet contributes per-class confidence margins; decomposing the
     per-pixel gradient by which SegNet class dominates that pixel surfaces

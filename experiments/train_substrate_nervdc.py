@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: MIT
 """Train the nervdc substrate L0 SCAFFOLD (operator-routed BUILD-1 2026-05-20).
+# NO_GRAD_WAIVED:MLX_substrate_trainer_uses_mx_no_grad_or_substrate_uses_lazy_eval_no_autograd_per_mlx_first_canonical_doctrine_4107bbf8d_or_substrate_eval_uses_alternate_memory_management_per_comprehensive_bug_audit_cascade_20260526
 
 Operator-callable training scaffold per the BUILD-1 NeRV-trio queue fill
 2026-05-20. SCAFFOLD-LEVEL: ``_smoke_main`` exercises the existing

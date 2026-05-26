@@ -2,7 +2,7 @@
 """Cathedral consumer for exploit #5 - per-SegNet-class chroma priority.
 
 Per RESPAWN-MG-7-BUNDLE 2026-05-20 + the NSCS06 v6 -> v7 empirical anchor
-(105.15 -> 58.89 contest-CUDA = 44% improvement in ONE iteration per
+(105.15 -> 58.89 contest-CUDA = 44% improvement in ONE iteration per  # DOCSTRING_PERCENT_CLAIM_OK:canonical_nscs06_v6_to_v7_empirical_44pct_anchor_105_15_to_58_89_contest_CUDA_artifact_explicitly_cited_inline_on_next_line
 ``.omx/research/nscs06_path_a_chroma_optical_flow_redesign_20260516.md``).
 Consumes ``M_contest`` decomposed per SegNet class via the producer's
 ``decompose_M_contest_per_segnet_class`` helper and surfaces per-class chroma

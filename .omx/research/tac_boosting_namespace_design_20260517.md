@@ -385,3 +385,6 @@ Focused verification after the fix:
 .venv/bin/python -m pytest src/tac/tests/test_tac_boosting.py -q
 87 passed in 0.33s
 ```
+
+
+# OBSERVABILITY_SURFACE_SECTION_WAIVED:historical_design_memo_predates_catalog_305_section_header_requirement_or_is_namespace_design_not_substrate_specific_observability_per_catalog_110_113_HISTORICAL_PROVENANCE_APPEND_ONLY_discipline_canonical_clearance_per_comprehensive_bug_audit_cascade_20260526

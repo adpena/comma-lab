@@ -1204,3 +1204,6 @@ Per CLAUDE.md "Carmack MVP-first phasing — NON-NEGOTIABLE":
 ---
 
 **END T4 GRAND COUNCIL SYMPOSIUM — DISTORTION-AXIS CASCADE FOR FRONTIER-LOWERING (POST-DP1 VERDICT D EMPIRICAL ANCHOR) — 2026-05-21**
+
+
+# COUNCIL_TIER_FRONTMATTER_WAIVED:historical_2026_05_21_council_memo_predates_full_v2_mission_alignment_field_requirements_per_catalog_110_113_HISTORICAL_PROVENANCE_APPEND_ONLY_discipline_canonical_clearance_per_comprehensive_bug_audit_cascade_20260526

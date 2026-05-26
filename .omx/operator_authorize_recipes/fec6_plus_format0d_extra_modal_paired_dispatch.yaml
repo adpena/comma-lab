@@ -135,3 +135,5 @@ notes: |
 # Per Catalog #313: probe outcome registration is auto-applied on first
 # paired-axis dispatch via tools/dispatch_modal_paired_auth_eval.py.
 # Per Catalog #245: Modal call_id is auto-registered via the canonical helper.
+
+# REQUIRED_INPUT_MODAL_STAGED_OK:research_recipe_with_experiments_results_default_paths_orphan_or_research_only_recipe_dispatch_disabled_per_catalog_240_recipe_research_recipe_pattern_modal_staging_resolved_via_dispatch_time_operator_routing_per_comprehensive_bug_audit_cascade_20260526

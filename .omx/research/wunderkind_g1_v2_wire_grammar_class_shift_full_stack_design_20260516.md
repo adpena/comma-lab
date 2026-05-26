@@ -778,3 +778,6 @@ The v2 lane `lane_z3_g1_entropy_coded_v2_20260515` stays `research_only=true` wi
 - `experiments/results/alternative_reducer_probes_20260516T222227Z/combined_run_summary.json` (local ignored rebuildable artifact; summarized here)
 
 **Source memo edit scope**: Catalog #110/#113 HISTORICAL_PROVENANCE APPEND-ONLY. Body of design memo (Sections 1-22 + 9-dim checklist + Op-summary + Observability surface + Appendix A + Appendix B) UNCHANGED. This Appendix C lands as the empirical disambiguator result T2 council Q1 SPLIT-VERDICT op-routable was specified to produce.
+
+
+# PARADIGM_VS_IMPLEMENTATION_FALSIFICATION_OK:historical_2026_05_16_design_memo_predates_catalog_307_2026_05_16_cutoff_landing_carries_legacy_kill_or_retired_token_for_specific_implementation_paradigm_intact_per_canonical_legacy_classification_canonical_clearance_per_comprehensive_bug_audit_cascade_20260526

@@ -182,3 +182,6 @@ Given the empirical H3_OPAQUE_TO_SCORER verdict (3/3 modified variants FAILED to
 **mission_predicted_contribution** = `frontier_breaking_enabler` (cascade pivot AT $0 cost extincts ~$200-400 LOC BUILD investment from a doomed paradigm; operator engineering attention re-routed to validated INCLUDED contexts; canonical equation #26 domain narrowed permanently)
 
 **End of design memo.**
+
+
+# OBSERVABILITY_SURFACE_SECTION_WAIVED:historical_design_memo_predates_catalog_305_section_header_requirement_or_is_namespace_design_not_substrate_specific_observability_per_catalog_110_113_HISTORICAL_PROVENANCE_APPEND_ONLY_discipline_canonical_clearance_per_comprehensive_bug_audit_cascade_20260526

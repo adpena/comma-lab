@@ -551,7 +551,7 @@ class Provenance:
         # Axis × hardware × grade canonical pairings
         # CUDA promotable requires CUDA hardware + CUDA axis
         if self.evidence_grade == ProvenanceEvidenceGrade.PROMOTABLE_EXACT_CONTEST_CUDA:
-            if self.measurement_axis != "[contest-CUDA]":
+            if self.measurement_axis != "[contest-CUDA]":  # CUSTODY_VALIDATOR_OK:this_function_IS_provenance_contract_validator_creating_promotable_grade_blockers_per_comprehensive_bug_audit_cascade_20260526
                 blockers.append(
                     "PROMOTABLE_EXACT_CONTEST_CUDA requires measurement_axis=[contest-CUDA]"
                 )
@@ -575,7 +575,7 @@ class Provenance:
 
         # CPU promotable requires CPU hardware + CPU axis
         if self.evidence_grade == ProvenanceEvidenceGrade.PROMOTABLE_EXACT_CONTEST_CPU:
-            if self.measurement_axis != "[contest-CPU]":
+            if self.measurement_axis != "[contest-CPU]":  # CUSTODY_VALIDATOR_OK:this_function_IS_provenance_contract_validator_creating_promotable_grade_blockers_per_comprehensive_bug_audit_cascade_20260526
                 blockers.append(
                     "PROMOTABLE_EXACT_CONTEST_CPU requires measurement_axis=[contest-CPU]"
                 )

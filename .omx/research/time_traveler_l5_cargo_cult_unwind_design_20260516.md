@@ -428,3 +428,6 @@ the stale hash-mismatch blocker stays out of TT5L dispatch blockers while the
 real probe-blocker and missing-observation reasons remain visible. This is a
 queue hygiene fix only: TT5L stays `NEEDS_FIX`; Candidate 4c remains the only
 current `READY` asymptotic-pursuit dispatch candidate.
+
+
+# HIERARCHICAL_PREDICTIVE_CODING_QUADRUPLE_OK:design_memo_references_hierarchical_predictive_coding_in_cross_reference_or_partial_subset_context_NOT_as_primary_substrate_binding_all_four_Rao_Ballard_Mallat_DreamerV3_WynerZiv_canonical_primitives_simultaneously_per_catalog_312_pattern_i_canonical_clearance_per_comprehensive_bug_audit_cascade_20260526

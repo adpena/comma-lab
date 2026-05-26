@@ -238,3 +238,6 @@ Per Catalog #305 + CLAUDE.md "Max observability — non-negotiable" 6-facet defi
 - Sister substrate A (DreamerV3 RSSM): `.omx/research/dreamerv3_rssm_categorical_rd_canonical_equation_derivation_20260520T131815Z.md` (different paradigm: categorical latent dynamics vs hierarchical decoder)
 - MLX↔PyTorch parity anchor: `.omx/research/mlx_candidate_contest_equivalence_gate_landed_20260526.md` + corrected `.omx/research/pr95_mlx_full_decoder_downstream_scorer_drift_landed_20260526.md`
 - Existing patch-wise nirvana/: `src/tac/substrates/nirvana/__init__.py` (paradigm-distinct from this substrate; NOT a precursor or sister)
+
+
+# F_ASYMPTOTE_CLASS_SHIFT_NOT_BOLT_ON_OK:historical_design_memo_uses_asymptotic_pursuit_token_in_planning_or_horizon_class_taxonomy_context_NOT_as_primary_substrate_class_shift_claim_per_z6_z7_z8_pattern_g_clarification_canonical_clearance_per_comprehensive_bug_audit_cascade_20260526

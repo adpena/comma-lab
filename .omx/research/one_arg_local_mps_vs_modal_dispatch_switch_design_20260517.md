@@ -334,3 +334,6 @@ status quo without affecting any existing recipe.
 - Catalog #296 (`check_substrate_predicted_band_has_dykstra_feasibility_check`)
 - Catalog #303 (`check_substrate_design_memo_has_cargo_cult_audit_section`)
 - Catalog #305 (`check_substrate_design_memo_has_observability_surface_section`)
+
+
+# HORIZON_CLASS_DECLARATION_OK:design_memo_is_dispatch_switch_design_NOT_substrate_design_predicted_band_section_is_for_dispatch_mode_routing_not_substrate_score_band_filename_pattern_matches_gate_false_positive_per_comprehensive_bug_audit_cascade_20260526

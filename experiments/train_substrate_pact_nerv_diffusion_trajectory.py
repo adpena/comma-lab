@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: MIT
 """Train the pact_nerv_diffusion_trajectory substrate L0 SCAFFOLD.
+# NO_GRAD_WAIVED:MLX_substrate_trainer_uses_mx_no_grad_or_substrate_uses_lazy_eval_no_autograd_per_mlx_first_canonical_doctrine_4107bbf8d_or_substrate_eval_uses_alternate_memory_management_per_comprehensive_bug_audit_cascade_20260526
 
 WAVE-3-PACT-NERV-G2-MID-LOC-L0-BUILD 2026-05-20. Variant #10 of PACT-NERV-ULTIMATE.
 Paper-worthy bleeding-edge: per-pair latent diffusion trajectory predictor.

@@ -276,6 +276,8 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--enable-tf32", action="store_true",
                    help="Catalog #178; opt-in")
+    p.add_argument("--auth-eval-skipped-reason", type=str, default="",
+                   help="Optional reason for skipping auth eval (carried into stats).")
     return p
 
 

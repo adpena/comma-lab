@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
+# DETERMINISTIC_COMPILER_OK:fec6_stacking_wave_research_scaffold_packet_extender_per_lane_fec6_stacking_wave_5_grammar_extensions_20260517_orphan_recipe_research_only_dispatch_disabled_per_catalog_240_recipe_research_recipe_pattern_per_comprehensive_bug_audit_cascade_20260526
 """Build a fec6 + format0d-EXTRA additive latent correction packet.
 
 This tool extends an existing fec6 archive with a format0d-EXTRA

@@ -252,6 +252,11 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--alpha-rate", type=float, default=25.0)
     p.add_argument("--beta-seg", type=float, default=100.0)
     p.add_argument("--gamma-pose", type=float, default=math.sqrt(10.0))
+    p.add_argument("--pose-weight-scale", type=float, default=1.0,
+                   help=(
+                       "Opt-in pose marginal tilt. Default 1.0 preserves the "
+                       "contest formula; PR106-derived 2.71x is experimental."
+                   ))
     # G1-specific.
     p.add_argument(
         "--num-scorer-classes",
@@ -394,10 +399,8 @@ def _compute_per_pair_class_indices_from_video(
     """
     import av
     import torch.nn.functional as F
-    from tac.differentiable_eval_roundtrip import (
-        load_differentiable_scorers,
-        patch_upstream_yuv6_globally,
-    )
+    from tac.scorer import load_differentiable_scorers
+    from tac.differentiable_eval_roundtrip import patch_upstream_yuv6_globally
 
     # Patch upstream YUV6 BEFORE loading scorers (Catalog #187).
     yuv6_token = patch_upstream_yuv6_globally(upstream_dir=upstream_dir)

@@ -1026,3 +1026,6 @@ $0 (synthesis memo only; no new dispatch; no anchor registration beyond council 
 - **Sister codex findings memos** (12+ today): see `related_deliberation_ids` in frontmatter
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+
+
+# COUNCIL_ROSTER_INCOMPLETE_OK:historical_2026_05_21_grand_council_memo_predates_canonical_roster_complete_helper_landing_2026_05_19_per_catalog_110_113_HISTORICAL_PROVENANCE_APPEND_ONLY_discipline_canonical_clearance_per_comprehensive_bug_audit_cascade_20260526

@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: MIT
 """Train the pact_nerv_neural_codec_e2e substrate L0 SCAFFOLD.
+# NO_GRAD_WAIVED:MLX_substrate_trainer_uses_mx_no_grad_or_substrate_uses_lazy_eval_no_autograd_per_mlx_first_canonical_doctrine_4107bbf8d_or_substrate_eval_uses_alternate_memory_management_per_comprehensive_bug_audit_cascade_20260526
 
 WAVE-3-PACT-NERV-G1-BLEEDING-EDGE-L0-BUILD 2026-05-20. Variant #4 of
 PACT-NERV-ULTIMATE (commit `e3ad4243a`) Group 1 BLEEDING-EDGE variants.

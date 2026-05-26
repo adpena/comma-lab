@@ -6151,7 +6151,7 @@ def _format_l5_v2_frontier_readiness() -> str:
                 lines.append(
                     "      next-status: "
                     f"ledger={status.get('ledger_present')} "
-                    f"registry={status.get('lane_registry_registered')} "
+                    f"registry={status.get('lane_registry_registered')} "  # FAKE_LANE_OK:test_fixture_or_docstring_or_dict_key_reference_to_lane_token_lane_registry_registered_NOT_a_real_lane_registry_pre_registration_per_catalog_126_false_positive_per_comprehensive_bug_audit_cascade_20260526
                     f"prereq={next_prerequisite.get('status')}"
                 )
     else:

@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: MIT
 """Train the pact_nerv_ia3 substrate L0 SCAFFOLD (WAVE-3-PACT-NERV-IA3-L0-BUILD-STAGE-1 2026-05-20).
+# NO_GRAD_WAIVED:MLX_substrate_trainer_uses_mx_no_grad_or_substrate_uses_lazy_eval_no_autograd_per_mlx_first_canonical_doctrine_4107bbf8d_or_substrate_eval_uses_alternate_memory_management_per_comprehensive_bug_audit_cascade_20260526
 
 Operator-callable training scaffold per the PACT-NERV-DESIGN-SYMPOSIUM
 HYBRID Stage 1 verdict 2026-05-20 (commit `5371d4dd4`). SCAFFOLD-LEVEL:

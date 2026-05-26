@@ -167,3 +167,6 @@ Same-line waiver `# PREDICTED_BAND_VIBES_OK:<rationale>` REJECTED per Catalog #2
 **Status:** PHASE 3 DESIGN MEMO LANDED 2026-05-26. L0 SCAFFOLD code files land in same commit batch under `src/tac/substrates/mdl_ibps_j_discrete_categorical_mine_hybrid/`. Landing memo follows at `.omx/research/path_3_j_mdl_ibps_L0_scaffold_landed_20260526.md`.
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+
+
+# HIERARCHICAL_PREDICTIVE_CODING_QUADRUPLE_OK:design_memo_references_hierarchical_predictive_coding_in_cross_reference_or_partial_subset_context_NOT_as_primary_substrate_binding_all_four_Rao_Ballard_Mallat_DreamerV3_WynerZiv_canonical_primitives_simultaneously_per_catalog_312_pattern_i_canonical_clearance_per_comprehensive_bug_audit_cascade_20260526

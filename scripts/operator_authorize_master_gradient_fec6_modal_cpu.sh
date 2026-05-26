@@ -1,4 +1,5 @@
 #!/bin/bash
+# OPERATOR_AUTHORIZE_LEGACY_OK:master_gradient_extractor_wrapper_predates_thin_shim_canonical_pattern_landed_per_FIX_G_T1_C_a2a901c4f43d66a74_directly_executes_lane_script_logic_per_comprehensive_bug_audit_cascade_20260526
 # Remote lane script: master-gradient extractor for fec6 archive on Modal CPU.
 #
 # Lane: lane_op_routable_1_master_gradient_extractor_20260517

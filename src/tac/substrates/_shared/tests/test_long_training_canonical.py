@@ -271,7 +271,7 @@ def test_long_training_config_rejects_lane_id_without_prefix(tmp_path: Path) -> 
 def test_long_training_config_rejects_mps_device(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="device='mps' is FORBIDDEN"):
         LongTrainingConfig(
-            substrate_id="x", lane_id="lane_x_20260526",
+            substrate_id="x", lane_id="lane_x_20260526",  # FAKE_LANE_OK:test_fixture_or_docstring_or_dict_key_reference_to_lane_token_lane_x_20260526_NOT_a_real_lane_registry_pre_registration_per_catalog_126_false_positive_per_comprehensive_bug_audit_cascade_20260526
             epochs=10,
             curriculum_stages=(CurriculumStage(name="s", start_epoch=0, end_epoch=10),),
             output_dir=tmp_path,
@@ -282,7 +282,7 @@ def test_long_training_config_rejects_mps_device(tmp_path: Path) -> None:
 def test_long_training_config_rejects_tmp_output_dir() -> None:
     with pytest.raises(ValueError, match="/tmp/-class transient prefix"):
         LongTrainingConfig(
-            substrate_id="x", lane_id="lane_x_20260526",
+            substrate_id="x", lane_id="lane_x_20260526",  # FAKE_LANE_OK:test_fixture_or_docstring_or_dict_key_reference_to_lane_token_lane_x_20260526_NOT_a_real_lane_registry_pre_registration_per_catalog_126_false_positive_per_comprehensive_bug_audit_cascade_20260526
             epochs=10,
             curriculum_stages=(CurriculumStage(name="s", start_epoch=0, end_epoch=10),),
             output_dir=Path("/tmp/bad_path"),
@@ -292,7 +292,7 @@ def test_long_training_config_rejects_tmp_output_dir() -> None:
 def test_long_training_config_rejects_non_contiguous_curriculum(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="must be contiguous"):
         LongTrainingConfig(
-            substrate_id="x", lane_id="lane_x_20260526",
+            substrate_id="x", lane_id="lane_x_20260526",  # FAKE_LANE_OK:test_fixture_or_docstring_or_dict_key_reference_to_lane_token_lane_x_20260526_NOT_a_real_lane_registry_pre_registration_per_catalog_126_false_positive_per_comprehensive_bug_audit_cascade_20260526
             epochs=20,
             curriculum_stages=(
                 CurriculumStage(name="s1", start_epoch=0, end_epoch=10),
@@ -305,7 +305,7 @@ def test_long_training_config_rejects_non_contiguous_curriculum(tmp_path: Path) 
 def test_long_training_config_rejects_curriculum_not_starting_at_zero(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="must start at epoch 0"):
         LongTrainingConfig(
-            substrate_id="x", lane_id="lane_x_20260526",
+            substrate_id="x", lane_id="lane_x_20260526",  # FAKE_LANE_OK:test_fixture_or_docstring_or_dict_key_reference_to_lane_token_lane_x_20260526_NOT_a_real_lane_registry_pre_registration_per_catalog_126_false_positive_per_comprehensive_bug_audit_cascade_20260526
             epochs=10,
             curriculum_stages=(CurriculumStage(name="s", start_epoch=5, end_epoch=10),),
             output_dir=tmp_path,
@@ -316,7 +316,7 @@ def test_long_training_config_rejects_ema_decay_outside_open_interval(tmp_path: 
     for bad_decay in [0.0, 1.0, -0.5, 1.5]:
         with pytest.raises(ValueError, match="ema_decay must be in"):
             LongTrainingConfig(
-                substrate_id="x", lane_id="lane_x_20260526",
+                substrate_id="x", lane_id="lane_x_20260526",  # FAKE_LANE_OK:test_fixture_or_docstring_or_dict_key_reference_to_lane_token_lane_x_20260526_NOT_a_real_lane_registry_pre_registration_per_catalog_126_false_positive_per_comprehensive_bug_audit_cascade_20260526
                 epochs=10,
                 curriculum_stages=(CurriculumStage(name="s", start_epoch=0, end_epoch=10),),
                 output_dir=tmp_path,
@@ -328,7 +328,7 @@ def test_long_training_config_rejects_unknown_ema_accumulation(tmp_path: Path) -
     with pytest.raises(ValueError, match="ema_accumulation must be one of"):
         LongTrainingConfig(
             substrate_id="x",
-            lane_id="lane_x_20260526",
+            lane_id="lane_x_20260526",  # FAKE_LANE_OK:test_fixture_or_docstring_or_dict_key_reference_to_lane_token_lane_x_20260526_NOT_a_real_lane_registry_pre_registration_per_catalog_126_false_positive_per_comprehensive_bug_audit_cascade_20260526
             epochs=10,
             curriculum_stages=(CurriculumStage(name="s", start_epoch=0, end_epoch=10),),
             output_dir=tmp_path,
@@ -338,7 +338,7 @@ def test_long_training_config_rejects_unknown_ema_accumulation(tmp_path: Path) -
 
 def test_long_training_config_stage_at_epoch_returns_correct_stage(tmp_path: Path) -> None:
     config = LongTrainingConfig(
-        substrate_id="x", lane_id="lane_x_20260526",
+        substrate_id="x", lane_id="lane_x_20260526",  # FAKE_LANE_OK:test_fixture_or_docstring_or_dict_key_reference_to_lane_token_lane_x_20260526_NOT_a_real_lane_registry_pre_registration_per_catalog_126_false_positive_per_comprehensive_bug_audit_cascade_20260526
         epochs=20,
         curriculum_stages=(
             CurriculumStage(name="early", start_epoch=0, end_epoch=10),
@@ -360,7 +360,7 @@ def test_long_training_config_curriculum_hash_is_stable(tmp_path: Path) -> None:
     assert c1.curriculum_hash() == c2.curriculum_hash()
     # Different curriculum should produce different hash:
     c3 = LongTrainingConfig(
-        substrate_id="x", lane_id="lane_x_20260526",
+        substrate_id="x", lane_id="lane_x_20260526",  # FAKE_LANE_OK:test_fixture_or_docstring_or_dict_key_reference_to_lane_token_lane_x_20260526_NOT_a_real_lane_registry_pre_registration_per_catalog_126_false_positive_per_comprehensive_bug_audit_cascade_20260526
         epochs=10,
         curriculum_stages=(CurriculumStage(name="DIFFERENT", start_epoch=0, end_epoch=10),),
         output_dir=tmp_path,
@@ -524,7 +524,7 @@ def test_checkpoint_writer_refuses_cross_substrate_resume(tmp_path: Path) -> Non
     # Write a checkpoint with DIFFERENT substrate.
     fake_meta = {
         "substrate_id": "substrate_b",
-        "lane_id": "lane_b_20260526",
+        "lane_id": "lane_b_20260526",  # FAKE_LANE_OK:test_fixture_or_docstring_or_dict_key_reference_to_lane_token_lane_b_20260526_NOT_a_real_lane_registry_pre_registration_per_catalog_126_false_positive_per_comprehensive_bug_audit_cascade_20260526
         "curriculum_hash": "a" * 64,
         "global_epoch": 5,
     }
@@ -537,7 +537,7 @@ def test_checkpoint_writer_refuses_cross_substrate_resume(tmp_path: Path) -> Non
 def test_checkpoint_writer_refuses_curriculum_mismatch(tmp_path: Path) -> None:
     writer = CheckpointWriter(
         checkpoint_dir=tmp_path / "ckpt",
-        substrate_id="sub", lane_id="lane_x_20260526",
+        substrate_id="sub", lane_id="lane_x_20260526",  # FAKE_LANE_OK:test_fixture_or_docstring_or_dict_key_reference_to_lane_token_lane_x_20260526_NOT_a_real_lane_registry_pre_registration_per_catalog_126_false_positive_per_comprehensive_bug_audit_cascade_20260526
         curriculum_hash="a" * 64,
     )
     fake_meta = {
@@ -555,7 +555,7 @@ def test_checkpoint_writer_rejects_invalid_curriculum_hash(tmp_path: Path) -> No
     with pytest.raises(ValueError, match="curriculum_hash must be 64-char hex"):
         CheckpointWriter(
             checkpoint_dir=tmp_path / "ckpt",
-            substrate_id="sub", lane_id="lane_x_20260526",
+            substrate_id="sub", lane_id="lane_x_20260526",  # FAKE_LANE_OK:test_fixture_or_docstring_or_dict_key_reference_to_lane_token_lane_x_20260526_NOT_a_real_lane_registry_pre_registration_per_catalog_126_false_positive_per_comprehensive_bug_audit_cascade_20260526
             curriculum_hash="too_short",
         )
 
@@ -623,7 +623,7 @@ def test_run_long_training_happy_path_returns_artifact(tmp_path: Path) -> None:
 def test_run_long_training_kahan_mode_records_artifact_and_checkpoint(tmp_path: Path) -> None:
     config = LongTrainingConfig(
         substrate_id="test_substrate",
-        lane_id="lane_test_substrate_kahan_20260526",
+        lane_id="lane_test_substrate_kahan_20260526",  # FAKE_LANE_OK:test_fixture_or_docstring_or_dict_key_reference_to_lane_token_lane_test_substrate_kahan_20260526_NOT_a_real_lane_registry_pre_registration_per_catalog_126_false_positive_per_comprehensive_bug_audit_cascade_20260526
         epochs=3,
         curriculum_stages=(CurriculumStage(name="s", start_epoch=0, end_epoch=3),),
         output_dir=tmp_path / "kahan_run",
@@ -738,7 +738,7 @@ def test_run_long_training_seed_pinning_is_byte_stable(tmp_path: Path) -> None:
 def test_run_long_training_transitions_through_stages(tmp_path: Path) -> None:
     config = LongTrainingConfig(
         substrate_id="test_sub",
-        lane_id="lane_test_sub_20260526",
+        lane_id="lane_test_sub_20260526",  # FAKE_LANE_OK:test_fixture_or_docstring_or_dict_key_reference_to_lane_token_lane_test_sub_20260526_NOT_a_real_lane_registry_pre_registration_per_catalog_126_false_positive_per_comprehensive_bug_audit_cascade_20260526
         epochs=4,
         curriculum_stages=(
             CurriculumStage(name="early", start_epoch=0, end_epoch=2, lr_scale=0.1),
@@ -766,7 +766,7 @@ def test_run_long_training_early_stops_on_patience_exceeded(tmp_path: Path) -> N
             return {"total": 1.0, "recon": 1.0}
 
     config = LongTrainingConfig(
-        substrate_id="x", lane_id="lane_x_20260526",
+        substrate_id="x", lane_id="lane_x_20260526",  # FAKE_LANE_OK:test_fixture_or_docstring_or_dict_key_reference_to_lane_token_lane_x_20260526_NOT_a_real_lane_registry_pre_registration_per_catalog_126_false_positive_per_comprehensive_bug_audit_cascade_20260526
         epochs=100,
         curriculum_stages=(CurriculumStage(name="s", start_epoch=0, end_epoch=100),),
         early_stopping_patience=3,
@@ -932,7 +932,7 @@ def test_validate_substrate_adapter_rejects_empty_substrate_id() -> None:
 def test_training_artifact_rejects_promotion_eligible_true(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="score_claim=True forbidden"):
         TrainingArtifact(
-            substrate_id="x", lane_id="lane_x_20260526",
+            substrate_id="x", lane_id="lane_x_20260526",  # FAKE_LANE_OK:test_fixture_or_docstring_or_dict_key_reference_to_lane_token_lane_x_20260526_NOT_a_real_lane_registry_pre_registration_per_catalog_126_false_positive_per_comprehensive_bug_audit_cascade_20260526
             config_snapshot={},
             ema_shadow_checkpoint_path=tmp_path / "ema.state",
             per_epoch_metrics=(),
@@ -953,7 +953,7 @@ def test_run_long_training_seed_determinism_loss_trace(tmp_path: Path) -> None:
     """Two runs with identical config + seed should produce identical loss traces."""
     def _run() -> list[float]:
         config = LongTrainingConfig(
-            substrate_id="seed_test", lane_id="lane_seed_test_20260526",
+            substrate_id="seed_test", lane_id="lane_seed_test_20260526",  # FAKE_LANE_OK:test_fixture_or_docstring_or_dict_key_reference_to_lane_token_lane_seed_test_20260526_NOT_a_real_lane_registry_pre_registration_per_catalog_126_false_positive_per_comprehensive_bug_audit_cascade_20260526
             epochs=4, seed=42,
             curriculum_stages=(CurriculumStage(name="s", start_epoch=0, end_epoch=4),),
             early_stopping_patience=100,

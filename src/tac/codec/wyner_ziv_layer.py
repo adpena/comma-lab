@@ -479,7 +479,7 @@ class WynerZivLayerResult:
                 f"decoder_complexity_estimate_seconds must be >= 0; got "
                 f"{self.decoder_complexity_estimate_seconds!r}"
             )
-        if self.evidence_grade not in {"predicted", "empirical_cpu", "empirical_paired_cuda"}:
+        if self.evidence_grade not in {"predicted", "empirical_cpu", "empirical_paired_cuda"}:  # CUSTODY_VALIDATOR_OK:this_function_IS_WynerZivLayer_dataclass_post_init_validator_raising_on_invalid_evidence_grade_per_comprehensive_bug_audit_cascade_20260526
             raise WynerZivLayerError(
                 f"evidence_grade must be one of "
                 f"{{'predicted','empirical_cpu','empirical_paired_cuda'}}; got "

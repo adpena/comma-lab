@@ -3,12 +3,12 @@
 
 Group 3 SELECTOR-PARADIGM-EXTENSIONS variant per PACT-NERV-ULTIMATE
 (commit ``e3ad4243a``) variant #15 + task-spec G3 family (asymmetric
-per-class boundary selector; sister of NSCS06 v7 44% improvement per-class
+per-class boundary selector; sister of NSCS06 v7 44% improvement per-class  # DOCSTRING_PERCENT_CLAIM_OK:canonical_nscs06_v7_empirical_44pct_anchor_sister_reference_artifact_at_omx_research_nscs06_path_a_chroma_optical_flow_redesign_20260516_md
 chroma anchors).
 
 Literature anchor: per_frame_difficulty_atlas_v1 canonical equation +
 asymmetric warp boundary detection. The NSCS06 v6→v7 cargo-cult-unwind
-achieved 44% improvement (105.15 → 58.89 contest-CUDA) via per-class
+achieved 44% improvement (105.15 → 58.89 contest-CUDA) via per-class  # DOCSTRING_PERCENT_CLAIM_OK:canonical_nscs06_v6_to_v7_empirical_44pct_anchor_105_15_to_58_89_contest_CUDA_artifact_at_omx_research_nscs06_path_a_chroma_optical_flow_redesign_20260516_md
 chroma anchors; the same pattern extends to per-pair-per-class asymmetric
 boundary detection at frame boundaries (when scene-class transitions occur).
 

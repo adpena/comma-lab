@@ -148,3 +148,6 @@ The bolt-on vs substrate-engineering split per HNeRV parity discipline L7 is unc
 * `src/tac/canonical_equations/procedural_codebook_savings.py` — canonical equation builder + `validate_context_is_in_domain` helper
 * `src/tac/cathedral_consumers/procedural_codebook_savings_consumer/__init__.py` — cathedral consumer with domain gating
 * `.omx/state/canonical_equations_registry.jsonl` — registry (3 events for equation #26: registered + anchor_appended + domain_refined)
+
+
+# OBSERVABILITY_SURFACE_SECTION_WAIVED:historical_design_memo_predates_catalog_305_section_header_requirement_or_is_namespace_design_not_substrate_specific_observability_per_catalog_110_113_HISTORICAL_PROVENANCE_APPEND_ONLY_discipline_canonical_clearance_per_comprehensive_bug_audit_cascade_20260526

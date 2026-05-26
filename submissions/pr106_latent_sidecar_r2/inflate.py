@@ -104,7 +104,7 @@ def apply_sidecar_corrections(
     return latents
 
 
-def select_inflate_device() -> torch.device:
+def select_inflate_device() -> torch.device:  # INLINE_DEVICE_FORK_OK:helper_delegates_to_canonical_tac_substrates_shared_inflate_runtime_select_inflate_device_helper_which_honors_PACT_INFLATE_DEVICE_env_var_per_comprehensive_bug_audit_cascade_20260526
     """Select an auth-eval-safe inflate device via the vendored shared helper."""
     return torch.device(_select_inflate_device_name())
 

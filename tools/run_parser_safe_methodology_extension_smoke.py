@@ -168,7 +168,7 @@ def _synthesize_dp1_archive() -> tuple[bytes, str]:
     )
     sd = {"renderer.weight": torch.zeros(8, 8)}
     residual = bytes([0] * (2 * 4))
-    blob = pack_archive(
+    blob = pack_archive(  # DP1_PROVENANCE_OK:parser_safe_synthesizer_fixture_minimal_valid_archive_not_distillation_output
         cb,
         sd,
         residual,
@@ -188,7 +188,7 @@ def _synthesize_vqv1_archive() -> tuple[bytes, str]:
 
     sd = {"codebook": torch.zeros(8, 8), "decoder.weight": torch.zeros(8, 8)}
     indices = torch.zeros(2, 2, 4, 6, dtype=torch.int64)
-    blob = pack_archive(sd, indices, {"a": 1}, codebook_size=8, embedding_dim=8)
+    blob = pack_archive(sd, indices, {"a": 1}, codebook_size=8, embedding_dim=8)  # DP1_PROVENANCE_OK:vq_vae_substrate_pack_archive_not_dp1_gate_false_positive_via_overlapping_import
     return blob, hashlib.sha256(blob).hexdigest()
 
 
@@ -205,7 +205,7 @@ def _synthesize_glv1_archive() -> tuple[bytes, str]:
         "head_rgb_1.weight": torch.zeros(8, 8),
     }
     gs = torch.zeros(2, 1, 8, 12, dtype=torch.uint8)
-    blob = pack_archive(
+    blob = pack_archive(  # DP1_PROVENANCE_OK:grayscale_lut_substrate_pack_archive_not_dp1_gate_false_positive_via_overlapping_import
         sd,
         gs,
         {"a": 1},
@@ -230,7 +230,7 @@ def _synthesize_atw2_archive() -> tuple[bytes, str]:
     latents = torch.zeros(2, 4)
     prior = torch.zeros(2, 16)
     cdf = torch.zeros(5, 256)
-    blob = pack_archive(enc, dec, wzh, dst, latents, prior, cdf, {"a": 1})
+    blob = pack_archive(enc, dec, wzh, dst, latents, prior, cdf, {"a": 1})  # DP1_PROVENANCE_OK:atw_codec_v2_substrate_pack_archive_not_dp1_gate_false_positive_via_overlapping_import
     return blob, hashlib.sha256(blob).hexdigest()
 
 

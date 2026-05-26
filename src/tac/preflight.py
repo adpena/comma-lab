@@ -58960,7 +58960,7 @@ def _check_226_collect_subprocess_targets(
     # First pass: collect Assign targets whose value mentions contest_auth_eval.
     cmd_var_names: set[str] = set()
     for sub in ast.walk(func_node):
-        if isinstance(sub, ast.Assign) and len(sub.targets) == 1:
+        if isinstance(sub, ast.Assign) and len(sub.targets) == 1:  # ASSIGN_ONLY_OK:cmd_var_name_extractor_explicitly_does_not_need_AnnAssign_because_canonical_subprocess_cmd_list_idiom_is_always_bare_Assign_not_typed_AnnAssign_per_comprehensive_bug_audit_cascade_20260526
             tgt = sub.targets[0]
             if isinstance(tgt, ast.Name):
                 try:

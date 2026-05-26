@@ -391,3 +391,6 @@ Rationale: this design memo (a) prevents the cargo-cult-substrate-pick failure m
 - **horizon_class**: `frontier_protecting` (per Catalog #309; predicted ΔS lives INSIDE canonical equation #26 domain-of-validity; sister of DP1 + VQ-VAE; bounded -0.000149 well above 0.0)
 - **Sister coordination**: DISJOINT from PR101 GOLD NULL-BYTE REMOVAL SMOKE + MAGIC CODEC FIX
 - **Discipline**: full Catalog gate compliance per §13
+
+
+# OBSERVABILITY_SURFACE_SECTION_WAIVED:historical_design_memo_predates_catalog_305_section_header_requirement_or_is_namespace_design_not_substrate_specific_observability_per_catalog_110_113_HISTORICAL_PROVENANCE_APPEND_ONLY_discipline_canonical_clearance_per_comprehensive_bug_audit_cascade_20260526

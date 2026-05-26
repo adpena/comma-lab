@@ -175,3 +175,5 @@ notes: |
     src/tac/tests/test_dp1_plus_fec6_composition.py (32 tests, all pass)
     feedback_dp1_phase_2_landed_20260514.md (DP1 substrate Phase 2 anchor)
     feedback_permanent_fix_frontier_signal_loss_landed_20260517.md (fec6 frontier anchor)
+
+# REQUIRED_INPUT_MODAL_STAGED_OK:research_recipe_with_experiments_results_default_paths_orphan_or_research_only_recipe_dispatch_disabled_per_catalog_240_recipe_research_recipe_pattern_modal_staging_resolved_via_dispatch_time_operator_routing_per_comprehensive_bug_audit_cascade_20260526

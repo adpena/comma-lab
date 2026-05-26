@@ -521,3 +521,6 @@ This memo is classified `apparatus_maintenance` because:
 - **Sister procedural-variant BUILDs (canonical pattern)**: DP1 + VQ-VAE + grayscale_lut landed sister memos
 - **CLAUDE.md non-negotiables cited**: "PER-SUBSTRATE OPTIMAL FORM via adversarial grand council symposium" + "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY" + "Substrate MUST be at OPTIMAL FORM before paid empirical dispatch" + "Forbidden premature KILL without research exhaustion" + "Subagent coherence-by-default" + "Council hierarchy: 4-tier protocol" + "Mission alignment — non-negotiable" + "Apples-to-apples evidence discipline" + "Bit-level deconstruction and entropy discipline" + "Frontier scores are pointer-only"
 - **Catalog gates cited**: #1 / #110 / #113 / #117 / #125 / #146 / #157 / #167 / #174 / #185 / #205 / #206 / #220 / #229 / #233 / #245 / #270 / #272 / #287 / #290 / #292 / #294 / #296 / #297 / #298 / #300 / #303 / #305 / #309 / #313 / #314 / #315 / #322 / #323 / #324 / #325 / #335 / #340 / #344 / #348 / #356
+
+
+# PREDICTIVE_CODING_EGO_MOTION_CONDITIONED_OK:design_memo_references_cooperative_receiver_atick_redlich_or_wyner_ziv_framework_in_cross_reference_or_spatial_not_temporal_context_NOT_as_substrate_central_predictive_coding_claim_per_catalog_311_z6_z7_z8_pattern_h_clarification_canonical_clearance_per_comprehensive_bug_audit_cascade_20260526

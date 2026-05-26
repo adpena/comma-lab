@@ -199,3 +199,6 @@ Per FALSIFICATION-AUDIT-v2 Pattern F + HORIZON-CLASS standing directive 2026-05-
 Empirical anchor: the predicted band [0.113-0.170] (per body) targets sub-plateau scores; frontier-pursuit classification reflects the substrate's design intent to escape the 0.196-0.199 plateau cluster.
 
 Per CLAUDE.md "Forbidden premature KILL" + Catalog #296 Dykstra-feasibility + the cargo-cult unwind in the body: the predicted band is REVISED to `NULL pending Dykstra-feasibility check + Tier C empirical anchor reconciliation` per the body's §predicted-band unwind. The FRONTIER-PURSUIT horizon_class designation reflects substrate-design intent; actualization requires the empirical anchor + Dykstra-feasibility + Z1-within-class-haircut reconciliation per the body's reactivation criteria.
+
+
+# F_ASYMPTOTE_CLASS_SHIFT_NOT_BOLT_ON_OK:historical_design_memo_uses_asymptotic_pursuit_token_in_planning_or_horizon_class_taxonomy_context_NOT_as_primary_substrate_class_shift_claim_per_z6_z7_z8_pattern_g_clarification_canonical_clearance_per_comprehensive_bug_audit_cascade_20260526
