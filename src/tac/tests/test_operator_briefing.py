@@ -1008,6 +1008,46 @@ def test_materializer_exact_ready_handoff_summary_surfaces_queue_owned_state(
     assert "next command:" in text
 
 
+def test_materializer_exact_ready_handoff_summary_counts_skipped_not_blocked(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    mod = _load_briefing_module()
+    monkeypatch.setattr(mod, "REPO_ROOT", tmp_path)
+    root = tmp_path / "experiments" / "results"
+    _write_json(
+        root / "run" / "exact_readiness_bridge_report.json",
+        {
+            "schema": "materializer_chain_exact_readiness_bridge_report.v1",
+            "candidate_count": 1,
+            "ready_candidate_count": 0,
+            "blocked_candidate_count": 0,
+            "skipped_candidate_count": 1,
+            "rows": [
+                {
+                    "candidate_id": "zero_delta_materializer",
+                    "readiness_verdict": "skipped_non_rate_positive_materializer",
+                    "exact_ready_queue_written": False,
+                    "blockers": [
+                        "materializer_candidate_not_rate_positive_for_exact_readiness"
+                    ],
+                }
+            ],
+        },
+    )
+    monkeypatch.setattr(mod, "MATERIALIZER_HANDOFF_SCAN_ROOTS", (root,))
+
+    summary = mod._materializer_exact_ready_handoff_summary()
+    text = mod._format_materializer_exact_ready_handoffs()
+
+    assert summary["bridge_report_count"] == 1
+    assert summary["bridge_ready_candidate_count"] == 0
+    assert summary["bridge_blocked_candidate_count"] == 0
+    assert summary["bridge_skipped_candidate_count"] == 1
+    assert summary["top_blockers"] == []
+    assert "blocked=0 skipped=1" in text
+
+
 def test_materializer_exact_ready_handoff_summary_gives_next_command_without_outputs(
     tmp_path: Path,
     monkeypatch,

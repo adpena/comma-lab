@@ -48,6 +48,7 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     TARGETED_COMPONENT_CORRECTION_WORK_ORDER_SCHEMA,
     TARGETED_DROP_MANY_STAGE_INPUTS_SCHEMA,
     FrontierRateAttackFeedbackError,
+    _exact_readiness_bridge_summary,
     build_frontier_autonomous_chain_optimization,
     build_frontier_autonomous_chain_optimization_queue,
     build_frontier_autonomous_chain_work_order,
@@ -152,6 +153,49 @@ def _write_jsonl(path: Path, rows: list[dict[str, object]]) -> Path:
         encoding="utf-8",
     )
     return path
+
+
+def test_exact_readiness_bridge_summary_keeps_skipped_materializers_out_of_blockers(
+    tmp_path: Path,
+) -> None:
+    bridge_path = _write_json(
+        tmp_path / "exact_readiness_bridge_report.json",
+        {
+            "schema": "materializer_chain_exact_readiness_bridge_report.v1",
+            "candidate_count": 1,
+            "ready_candidate_count": 0,
+            "blocked_candidate_count": 0,
+            "skipped_candidate_count": 1,
+            "rows": [
+                {
+                    "candidate_id": "zero_delta_materializer",
+                    "readiness_verdict": "skipped_non_rate_positive_materializer",
+                    "exact_ready_queue_written": False,
+                    "blockers": [
+                        "materializer_candidate_not_rate_positive_for_exact_readiness"
+                    ],
+                }
+            ],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_attempted": False,
+            "gpu_launched": False,
+        },
+    )
+
+    summary = _exact_readiness_bridge_summary([bridge_path], repo_root=tmp_path)
+
+    assert summary["candidate_count"] == 1
+    assert summary["actionable_candidate_count"] == 0
+    assert summary["blocked_candidate_count"] == 0
+    assert summary["skipped_candidate_count"] == 1
+    assert summary["top_blockers"] == []
+    assert summary["top_skip_reasons"] == [
+        "materializer_candidate_not_rate_positive_for_exact_readiness"
+    ]
+    assert summary["ready_for_chain_exact_readiness"] is False
 
 
 def _advisory(

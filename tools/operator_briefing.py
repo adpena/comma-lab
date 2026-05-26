@@ -1015,15 +1015,36 @@ def _materializer_handoff_summary_row(path: Path) -> dict[str, object]:
     if schema == "materializer_chain_exact_readiness_bridge_report.v1":
         rows = payload.get("rows")
         bridge_rows = rows if isinstance(rows, list) else []
-        ready_count = _safe_int(payload.get("ready_candidate_count")) or sum(
-            1
-            for row in bridge_rows
-            if isinstance(row, dict) and row.get("exact_ready_queue_written") is True
+        skipped_count = (
+            _safe_int(payload.get("skipped_candidate_count"))
+            if "skipped_candidate_count" in payload
+            else sum(
+                1
+                for row in bridge_rows
+                if isinstance(row, dict)
+                and str(row.get("readiness_verdict") or "").startswith("skipped")
+            )
         )
-        blocked_count = _safe_int(payload.get("blocked_candidate_count")) or sum(
-            1
-            for row in bridge_rows
-            if isinstance(row, dict) and row.get("exact_ready_queue_written") is not True
+        ready_count = (
+            _safe_int(payload.get("ready_candidate_count"))
+            if "ready_candidate_count" in payload
+            else sum(
+                1
+                for row in bridge_rows
+                if isinstance(row, dict)
+                and row.get("exact_ready_queue_written") is True
+            )
+        )
+        blocked_count = (
+            _safe_int(payload.get("blocked_candidate_count"))
+            if "blocked_candidate_count" in payload
+            else sum(
+                1
+                for row in bridge_rows
+                if isinstance(row, dict)
+                and row.get("exact_ready_queue_written") is not True
+                and not str(row.get("readiness_verdict") or "").startswith("skipped")
+            )
         )
         return {
             **base,
@@ -1031,6 +1052,7 @@ def _materializer_handoff_summary_row(path: Path) -> dict[str, object]:
             "schema": schema,
             "ready_candidate_count": ready_count,
             "blocked_candidate_count": blocked_count,
+            "skipped_candidate_count": skipped_count,
             "row_count": len(bridge_rows),
             "exact_ready_queue_paths": _row_exact_ready_queue_paths(bridge_rows),
             "blockers": [],
@@ -1365,6 +1387,9 @@ def _materializer_exact_ready_handoff_summary() -> dict[str, object]:
         "bridge_blocked_candidate_count": sum(
             _safe_int(row.get("blocked_candidate_count")) for row in bridge_rows
         ),
+        "bridge_skipped_candidate_count": sum(
+            _safe_int(row.get("skipped_candidate_count")) for row in bridge_rows
+        ),
         "consumer_report_count": len(consumer_rows),
         "consumer_authorized_candidate_count": consumer_authorized,
         "consumer_blocked_candidate_count": len(unique_consumer_blocked)
@@ -1410,7 +1435,8 @@ def _format_materializer_exact_ready_handoffs() -> str:
             "bridge reports: "
             f"{payload['bridge_report_count']} "
             f"(ready={payload['bridge_ready_candidate_count']} "
-            f"blocked={payload['bridge_blocked_candidate_count']})"
+            f"blocked={payload['bridge_blocked_candidate_count']} "
+            f"skipped={payload['bridge_skipped_candidate_count']})"
         ),
         (
             "consumer reports: "

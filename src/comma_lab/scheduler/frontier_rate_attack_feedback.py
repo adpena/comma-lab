@@ -157,6 +157,9 @@ TARGETED_DROP_MANY_STAGE_INPUTS_SCHEMA = (
 MATERIALIZER_EXACT_READINESS_BRIDGE_SCHEMA = (
     "materializer_chain_exact_readiness_bridge_report.v1"
 )
+MATERIALIZER_NON_RATE_POSITIVE_SKIP_BLOCKER = (
+    "materializer_candidate_not_rate_positive_for_exact_readiness"
+)
 RECEIVER_REPAIR_BACKLOG_SCHEMA = "frontier_rate_attack_receiver_repair_backlog.v1"
 RECEIVER_REPAIR_ROW_SCHEMA = "frontier_rate_attack_receiver_repair_row.v1"
 RECEIVER_REPAIR_WORK_ORDER_SCHEMA = (
@@ -1916,6 +1919,7 @@ def _exact_readiness_bridge_summary(
 ) -> dict[str, Any]:
     reports: list[dict[str, Any]] = []
     blocker_counts: dict[str, int] = {}
+    skip_reason_counts: dict[str, int] = {}
     missing_paths: list[str] = []
     invalid_paths: list[dict[str, str]] = []
     for path in bridge_paths:
@@ -1941,14 +1945,33 @@ def _exact_readiness_bridge_summary(
             )
             continue
         row_blockers: list[str] = []
+        row_skip_reasons: list[str] = []
         for row in payload.get("rows") or []:
             if not isinstance(row, Mapping):
                 continue
+            row_is_skipped = str(row.get("readiness_verdict") or "").startswith(
+                "skipped"
+            )
             for blocker in _string_list(row.get("blockers")):
-                row_blockers.append(blocker)
-                blocker_counts[blocker] = blocker_counts.get(blocker, 0) + 1
+                if row_is_skipped or blocker == MATERIALIZER_NON_RATE_POSITIVE_SKIP_BLOCKER:
+                    row_skip_reasons.append(blocker)
+                    skip_reason_counts[blocker] = skip_reason_counts.get(blocker, 0) + 1
+                else:
+                    row_blockers.append(blocker)
+                    blocker_counts[blocker] = blocker_counts.get(blocker, 0) + 1
         for blocker in _string_list(payload.get("dispatch_blockers")):
             blocker_counts[blocker] = blocker_counts.get(blocker, 0) + 1
+        bridge_rows = payload.get("rows") if isinstance(payload.get("rows"), list) else []
+        skipped_candidate_count = _finite_int_or_none(
+            payload.get("skipped_candidate_count")
+        )
+        if skipped_candidate_count is None:
+            skipped_candidate_count = sum(
+                1
+                for row in bridge_rows
+                if isinstance(row, Mapping)
+                and str(row.get("readiness_verdict") or "").startswith("skipped")
+            )
         reports.append(
             {
                 "path": _repo_rel(path, repo_root),
@@ -1961,27 +1984,34 @@ def _exact_readiness_bridge_summary(
                     payload.get("blocked_candidate_count")
                 )
                 or 0,
+                "skipped_candidate_count": skipped_candidate_count,
                 "candidate_ids": [
                     str(row.get("candidate_id") or "")
                     for row in payload.get("rows") or []
                     if isinstance(row, Mapping) and row.get("candidate_id")
                 ],
                 "row_blockers_sample": _unique_strings(row_blockers)[:12],
+                "row_skip_reasons_sample": _unique_strings(row_skip_reasons)[:12],
                 **FALSE_AUTHORITY,
             }
         )
     ready_count = sum(int(report["ready_candidate_count"]) for report in reports)
     candidate_count = sum(int(report["candidate_count"]) for report in reports)
     blocked_count = sum(int(report["blocked_candidate_count"]) for report in reports)
+    skipped_count = sum(int(report["skipped_candidate_count"]) for report in reports)
+    actionable_count = max(0, candidate_count - skipped_count)
     return {
         "schema": "frontier_rate_attack_materializer_exact_readiness_bridge_summary.v1",
         "bridge_report_count": len(reports),
         "candidate_count": candidate_count,
+        "actionable_candidate_count": actionable_count,
         "ready_candidate_count": ready_count,
         "blocked_candidate_count": blocked_count,
+        "skipped_candidate_count": skipped_count,
         "missing_bridge_report_paths": missing_paths,
         "invalid_bridge_report_paths": invalid_paths,
         "blocker_counts": dict(sorted(blocker_counts.items())),
+        "skip_reason_counts": dict(sorted(skip_reason_counts.items())),
         "top_blockers": [
             blocker
             for blocker, _count in sorted(
@@ -1989,8 +2019,17 @@ def _exact_readiness_bridge_summary(
                 key=lambda item: (-item[1], item[0]),
             )[:16]
         ],
+        "top_skip_reasons": [
+            reason
+            for reason, _count in sorted(
+                skip_reason_counts.items(),
+                key=lambda item: (-item[1], item[0]),
+            )[:16]
+        ],
         "reports": reports,
-        "ready_for_chain_exact_readiness": bool(candidate_count and ready_count == candidate_count),
+        "ready_for_chain_exact_readiness": bool(
+            actionable_count and ready_count == actionable_count
+        ),
         "allowed_use": "operation_portfolio_exact_readiness_planning_only",
         "forbidden_use": "score_claim_or_dispatch_authority",
         **FALSE_AUTHORITY,
@@ -3281,7 +3320,10 @@ def _materializer_operation_rows(
             ),
             repo_root=repo_root,
         )
-        if exact_readiness_bridge["bridge_report_count"]:
+        actionable_bridge_count = int(
+            exact_readiness_bridge.get("actionable_candidate_count") or 0
+        )
+        if exact_readiness_bridge["bridge_report_count"] and actionable_bridge_count:
             blockers.append("exact_readiness_bridge_report_not_ready")
             if exact_readiness_bridge["ready_candidate_count"]:
                 blockers.append("exact_readiness_bridge_has_ready_candidates_pending_authority")
@@ -3404,6 +3446,22 @@ def _materializer_chain_operation_rows(
     exact_candidate_count = sum(
         int(summary.get("candidate_count") or 0) for summary in exact_bridge_summaries
     )
+    exact_skipped_candidates = sum(
+        int(summary.get("skipped_candidate_count") or 0)
+        for summary in exact_bridge_summaries
+    )
+    exact_actionable_candidates = sum(
+        int(
+            summary.get("actionable_candidate_count")
+            if summary.get("actionable_candidate_count") is not None
+            else max(
+                0,
+                int(summary.get("candidate_count") or 0)
+                - int(summary.get("skipped_candidate_count") or 0),
+            )
+        )
+        for summary in exact_bridge_summaries
+    )
     exact_blocker_counts: dict[str, int] = {}
     for summary in exact_bridge_summaries:
         for blocker, count in (summary.get("blocker_counts") or {}).items():
@@ -3422,7 +3480,11 @@ def _materializer_chain_operation_rows(
         "chain_requires_exact_readiness_handoff_after_composition",
         *receiver_blockers,
     ]
-    if exact_bridge_summaries and exact_ready_candidates < exact_candidate_count:
+    if (
+        exact_bridge_summaries
+        and exact_actionable_candidates
+        and exact_ready_candidates < exact_actionable_candidates
+    ):
         blockers.append("chain_exact_readiness_bridges_have_no_ready_candidate")
     return [
         _operation_row(
@@ -3456,11 +3518,13 @@ def _materializer_chain_operation_rows(
                     ),
                     "bridge_report_count": len(exact_bridge_summaries),
                     "candidate_count": exact_candidate_count,
+                    "actionable_candidate_count": exact_actionable_candidates,
                     "ready_candidate_count": exact_ready_candidates,
                     "blocked_candidate_count": sum(
                         int(summary.get("blocked_candidate_count") or 0)
                         for summary in exact_bridge_summaries
                     ),
+                    "skipped_candidate_count": exact_skipped_candidates,
                     "top_blockers": [
                         blocker
                         for blocker, _count in sorted(
