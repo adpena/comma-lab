@@ -231,24 +231,39 @@ class _HNeRVStyleDecoder:
 
         h = self.final_conv(h)
 
-        # Resize to output_height x output_width via bilinear interpolation if needed
-        if h.shape[1] != self.cfg.output_height or h.shape[2] != self.cfg.output_width:
-            # MLX doesn't have a direct bilinear interpolate; fall back to per-axis
-            # repeat with averaging for upsample factor inference. For L0 SCAFFOLD,
-            # use simple nearest-neighbor as placeholder; production Phase 4 swaps in
-            # canonical MLX bilinear once #1265 gate confirms drift bound met.
-            target_h = self.cfg.output_height
-            target_w = self.cfg.output_width
-            current_h = h.shape[1]
-            current_w = h.shape[2]
-            # Compute integer upsample factors (rounded up)
-            scale_h = max(1, target_h // current_h)
-            scale_w = max(1, target_w // current_w)
-            if scale_h > 1 or scale_w > 1:
-                h = mx.repeat(h, scale_h, axis=1)
-                h = mx.repeat(h, scale_w, axis=2)
-            # Then crop to exact target
-            h = h[:, :target_h, :target_w, :]
+        # Resize to output_height x output_width via canonical PR95 bilinear helper.
+        #
+        # FIX-WAVE-R1''-H (2026-05-26): replaced ``mx.repeat`` nearest-neighbor
+        # upsample with canonical
+        # ``tac.local_acceleration.pr95_hnerv_mlx::bilinear_resize_nhwc`` which is
+        # empirically PyTorch-byte-stable (≤1e-5 abs drift vs
+        # ``F.interpolate(size=..., mode='bilinear', align_corners=False)``).
+        # Per R1'' CRITICAL finding H-R1''-1: prior ``mx.repeat`` 2-axis tile
+        # was the SAME ANTI-PATTERN that caused sister A=DreamerV3 ``max_abs=24.34``
+        # drift pre-FIX-WAVE-R1 (canonical fix at commit ``e1b101888``).
+        # Per Phase 3 §1 + §8 + CONSOLIDATE-OP-1 canonical MLX primitives wave
+        # (commit ``caf29acdb``): substrates MUST delegate to the canonical helper
+        # at MLX training time rather than re-implement local upsample copies.
+        #
+        # Catalog #295 self-containment is preserved because the canonical helper
+        # is imported only at MLX training time in ``mlx_renderer.py``; the
+        # substrate's inflate runtime at ``inflate.py`` is PyTorch-only and does
+        # NOT import MLX (PyTorch uses ``F.interpolate(mode='bilinear',
+        # align_corners=False)`` natively). The Catalog #295 contract scopes
+        # ``submissions/*/inflate.py`` PYTHONPATH self-containment; this
+        # substrate's MLX module is at
+        # ``src/tac/substrates/atw_v2_cooperative_receiver_v2/`` which is in-tree
+        # by definition.
+        target_h = self.cfg.output_height
+        target_w = self.cfg.output_width
+        if h.shape[1] != target_h or h.shape[2] != target_w:
+            from tac.local_acceleration.pr95_hnerv_mlx import (
+                bilinear_resize_nhwc,
+            )
+
+            h = bilinear_resize_nhwc(
+                h, target_h=target_h, target_w=target_w, align_corners=False
+            )
 
         h = mx.sigmoid(h)
         # Split: NHWC layout, channels last
