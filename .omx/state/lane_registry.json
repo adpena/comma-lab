@@ -58848,11 +58848,11 @@
       "id": "lane_uniward_per_pixel_score_conditional_sensitivity_distortion_attack_20260526",
       "name": "UNIWARD per-pixel score-conditional sensitivity (Fridrich-canonical pure-distortion attack; MLX-first numpy-portable; individually-fractal)",
       "phase": 2.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "src/tac/substrates/uniward_per_pixel_distortion/ scaffold 305 LOC + 12/12 tests pass macOS-MLX research-signal"
         },
         "real_archive_empirical": {
           "status": false,
@@ -58875,8 +58875,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/uniward_per_pixel_score_conditional_sensitivity_distortion_attack_landed_20260526.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -58893,5 +58893,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-26T19:44:12Z"
+  "updated_at": "2026-05-26T19:50:28Z"
 }
