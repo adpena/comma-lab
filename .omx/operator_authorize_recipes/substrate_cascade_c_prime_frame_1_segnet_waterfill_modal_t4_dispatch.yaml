@@ -1,0 +1,135 @@
+schema_version: 1
+name: substrate_cascade_c_prime_frame_1_segnet_waterfill_modal_t4_dispatch
+lane_id: lane_cascade_c_prime_option_a_build_scaffold_20260526
+summary: |
+  Cascade C' Atick-Redlich asymmetric scorer channel L0 SCAFFOLD dispatch on
+  Modal T4. Per Cascade C' synthesis parent landing (commit 2d5337f27;
+  subagent aa563bbb31adadfd6) + Cascade C' Modal validation DEFERRED-pending-
+  substrate-scaffold verdict (commit aa1a9cf32; subagent a1d16a40f4a722e26)
+  operator-routable Option A.
+
+  Atick-Redlich asymmetric channel theory: SegNet x[:,-1,...] slice creates
+  frame-0 (free seg cost) vs frame-1 (M seg cost + N' pose cost) asymmetric
+  channel. Per-pair Lagrangian dual routing decision per tac.findings_lagrangian
+  Phase 1-3 wire-in (Catalog #355). Cascade C' synthesis predicts
+  -0.058820 score delta at PR106 frontier operating point pose_avg=3.4e-5
+  with 25.2% per-pair frame-1 selection (matches sister #1324 PoseNet-null
+  22.3% within 3pp).
+
+  L0 SCAFFOLD pending Catalog #325 per-substrate symposium PROCEED verdict
+  (target window: 2026-05-26 -> 2026-06-09). Pre-symposium PAID dispatch
+  BLOCKED via research_only=true + dispatch_enabled=false. Operator-routable:
+  7th-order subagent builds MLX-first trainer + inflate.sh + smoke-before-full
+  invocation after per-substrate symposium PROCEED.
+
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+min_vram_gb: 16
+# Per Catalog #215: T4 substrates need T4 smoke. Closed-form routing per
+# Atick-Redlich asymmetric channel; T4 sufficient.
+min_smoke_gpu: T4
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - research_substrate
+canary_status: independent_substrate
+
+# SCAFFOLD STATE per Catalog #240: research_only=true + dispatch_enabled=false
+# Pre-symposium PAID dispatch BLOCKED. Trainer (_full_main) does NOT YET exist;
+# 7th-order subagent operator-routable.
+dispatch_enabled: false
+research_only: true
+
+dispatch_blockers:
+  - mlx_first_trainer_pending_7th_order_operator_routable
+  - inflate_sh_3arg_signature_pending_7th_order_operator_routable
+  - per_substrate_symposium_per_catalog_325_pending
+  - canonical_equation_344_anchor_proposal_pending_paired_cuda_validation
+  - smoke_before_full_per_catalog_167_pending_trainer_landing
+
+reactivation_criteria:
+  - per_substrate_symposium_per_catalog_325_lands_PROCEED_verdict_within_window_2026_05_26_to_2026_06_09
+  - mlx_first_trainer_lands_at_experiments_train_substrate_cascade_c_prime_frame_1_segnet_waterfill_py
+  - inflate_sh_lands_at_scripts_inflate_cascade_c_prime_frame_1_segnet_waterfill_sh_3arg_signature
+  - canonical_equation_344_anchor_lands_at_canonical_equations_registry_jsonl_after_paired_cuda_validation
+  - tier_c_density_post_training_validation_per_catalog_324_confirms_within_class_or_across_class_classification
+
+cost_band:
+  epochs: 1
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 0.50
+  platform_key: modal
+  gpu_key: T4
+
+predicted_score_target: null
+predicted_delta: "-0.058820 [macOS-MLX research-signal; paired-CUDA-pending]"
+predicted_delta_basis: |
+  Per Cascade C' synthesis (commit 2d5337f27; Option B 1-bit sidecar):
+    net_score_delta = -0.058820 at PR106 frontier pose_avg=3.4e-5
+    per-pair frame-1 routing distribution: 25.17% (cross-validates sister #1324
+      PoseNet-null 22.3% within 3pp)
+    routing-decision sidecar: 79 bytes (brotli-compressed 1-bit-per-pair packed)
+
+  Per CLAUDE.md "Apples-to-apples evidence discipline": this is a MLX-LOCAL
+  SYNTHESIS prediction using rng.gamma() distribution shapes derived from
+  sister #1324 PoseNet-null artifact + Atick-Redlich theory. Empirical
+  validation requires paired-CUDA Modal T4 dispatch via:
+    1. Build MLX-first trainer with per-pair Lagrangian dual routing
+    2. Smoke-before-full per Catalog #167 (T4 smoke before paid full)
+    3. Paired-CUDA + paired-CPU per CLAUDE.md "Submission auth eval" non-negotiable
+
+  Per Catalog #324: pre-empirical predicted band MUST be validated post-training
+  before any promotion. Literature shows 10-30× overestimation common
+  pre-empirical; even at 10× overestimate (-0.006), still PR111-PLAUSIBLE.
+
+predicted_band_validation_status: pending_post_training
+predicted_band_validation_reactivation_criterion: |
+  post-training Tier-C re-measurement on landed paired-CUDA smoke archive
+  sha via tools/mdl_scorer_conditional_ablation.py --tier c. Per Catalog
+  #324: predicted-band is REGISTERED HYPOTHESIS pending empirical validation.
+
+# Catalog #244 NVML/Modal/CUDA env hygiene block auto-emitted in the
+# remote driver (scripts/remote_lane_substrate_cascade_c_prime_frame_1_segnet_waterfill.sh).
+# Catalog #163 canonical sentinel REMOTE_ARCHIVE_ONLY_EVAL_SOURCE_ONLY=1
+# honored before sourcing scripts/remote_archive_only_eval.sh.
+
+# Trainer + driver wiring — PENDING 7th-order operator-routable iteration
+lane_script: scripts/remote_lane_substrate_cascade_c_prime_frame_1_segnet_waterfill.sh
+remote_driver: scripts/remote_lane_substrate_cascade_c_prime_frame_1_segnet_waterfill.sh
+trainer_path: experiments/train_substrate_cascade_c_prime_frame_1_segnet_waterfill.py
+
+modal:
+  lane_script: scripts/remote_lane_substrate_cascade_c_prime_frame_1_segnet_waterfill.sh
+  cost_band_trainer: experiments/train_substrate_cascade_c_prime_frame_1_segnet_waterfill.py
+  cost_band_epochs: 1
+  cost_band_batch_size: 1
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_cascade_c_prime_frame_1_segnet_waterfill.py
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+env_overrides:
+  CASCADE_C_PRIME_TRAINER_MODE: "full"
+  CASCADE_C_PRIME_DEVICE: "cuda"
+  CASCADE_C_PRIME_EPOCHS: "1"
+  SMOKE_ONLY: "0"
+
+# Catalog #325 symposium memo cross-reference (pending landing)
+per_substrate_symposium_memo: .omx/research/council_t2_cascade_c_prime_frame_1_segnet_waterfill_per_substrate_symposium_20260526.md
+per_substrate_symposium_verdict: PROCEED_WITH_REVISIONS
+per_substrate_symposium_window_start_utc: 2026-05-26T00:00:00Z
+per_substrate_symposium_window_end_utc: 2026-06-09T00:00:00Z
+
+# Catalog #344 canonical equation cross-reference (PROPOSED-pending-paired-CUDA per
+# .omx/research/cascade_c_prime_canonical_equation_344_anchor_proposal_20260526.md)
+canonical_equation_in_domain_context: cascade_c_prime_atick_redlich_asymmetric_scorer_channel
+canonical_equation_registry_path: .omx/state/canonical_equations_registry.jsonl
+canonical_equation_id: atick_redlich_asymmetric_scorer_channel_lagrangian_routing_savings_v1
+
+# Cascade C' synthesis parent landing memo cross-reference
+synthesis_parent_landing_commit: 2d5337f27
+synthesis_parent_subagent: aa563bbb31adadfd6
+synthesis_artifact_path: .omx/research/cascade_c_prime_artifacts_20260526/cascade_c_prime_atick_redlich_asymmetric_channel_smoke.json
