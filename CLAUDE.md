@@ -2712,6 +2712,58 @@ Both Rudin + Daubechies retain GRAND_COUNCIL sister seats (`Rudin_Grand` + `Daub
 
 Enforcement: `tac.canonical_council_roster.validate_council_dispatch_roster` returns `complete=False` (BLOCKING) at T2+ if ANY of the 4 co-leads is missing, surfaced via the new `missing_co_leads` field on `RosterValidationVerdict`. The shared-leadership-core omission is a structurally distinct alert from the existing sister-member-missing alert. Cross-ref `feedback_roster_maintenance_v2_daubechies_inner_council_plus_4_co_lead_structure_landed_20260519.md` (the landing memo).
 
+### Recursive self-reflection protocol — non-negotiable (Catalog #363; 2026-05-26)
+
+Per operator NON-NEGOTIABLE directive 2026-05-26 verbatim: *"the grand council is providing valuable information but perhaps the grand council itself must be instructed to deliberate and self reflect recursively"*.
+
+The protocol lifts CLAUDE.md "Recursive adversarial review protocol — close paths" 3-clean-pass counter from training-code review to the **council deliberation surface**: every T2+ council deliberation MUST recursively self-reflect on its OWN deliberation process, classifying each per-member surfaced assumption (already required by Catalog #292) into the canonical 4-value `empirical_verification_status` taxonomy. Verdicts depending on INFERRED/ASSUMED-class assumptions must EITHER empirically verify before landing OR downgrade verdict-status to `PROVISIONAL-PENDING-VERIFICATION`.
+
+**Empirical receipts (3+ instances within <2h on 2026-05-26):**
+
+1. **T3 grand council `7d04474cb` M3 RULED-OUT** — empirically falsified by sister TIER1-T3-OP1-OP4 source-inspection (`5b87fae77`) discovering Z6 uses MLX **AdamW** (not stateless SGD-with-EMA as the council assumed; AdamW carries β₁=0.9 + β₂=0.999 state buffers, so M3a + M3b mechanisms BOTH active — joint mechanism refined post-hoc to M1+M2+M3a+M3b).
+2. **T3 council M2 ~0.7-0.9 α dominance prediction** — empirically falsified by sister TIER1-T3-OP2-OP3 Carmack smoke (`05c07aa40`) showing canonical Kahan-EMA shadow wrapper provides 0× empirical mitigation at Z6 L2 fp32 1000ep (M2 contribution at fp32 ULP boundary ~3-6e-7 shadow divergence).
+3. **My own n=2 super-linear α∝epochs^1.45 extrapolation** — empirically falsified by sister DRIFT-VS-DEPTH-CHAR-D-Z6 (`60a9de751`) 5-anchor fit yielding α=0.47 sub-linear, saturating at ~2000ep.
+4. **K=COIN++ 5e-3 drift claim** (earlier 2026-05-26) — empirically falsified by sister R1''-K independent verification (commits leading to `2d59283d4`); actual O(1e-2) abs / O(1e-3) rel.
+
+All 4 verdicts achieved quorum-met + Catalog #346 complete=True + Catalog #292 assumption-statement-surfacing satisfied. **The structural blindness recurs at the sister surface**: existing gates enforce that assumptions ARE surfaced + classified HARD-EARNED-vs-CARGO-CULTED, but NOT that each surfaced assumption carries explicit `empirical_verification_status` AND that verdicts depending on INFERRED/ASSUMED-class assumptions are gated.
+
+**The 4-value canonical taxonomy** (1-to-1 with the 4 empirical receipts above):
+
+| Status | Evidence requirement | Verdict implication |
+|---|---|---|
+| `VERIFIED_VIA_SOURCE_INSPECTION` | Source file path + line range + content quote | No gate |
+| `VERIFIED_VIA_EMPIRICAL_ANCHOR` | Canonical posterior anchor (commit sha + posterior row id per Catalog #245 sister) | No gate |
+| `INFERRED_FROM_DOMAIN_LITERATURE` | Citation to paper / textbook / CLAUDE.md doctrine that supports the pattern | **GATE**: Round 2 must verify OR Round 3 downgrades to PROVISIONAL |
+| `ASSUMED_AWAITING_VERIFICATION` | Explicit acknowledgment of operating-within unverified | **GATE**: Round 2 must verify OR Round 3 downgrades |
+
+**3-clean-pass counter discipline** (lifted from training-code Recursive adversarial review protocol):
+
+- **Round 1** (topic deliberation): council deliberates per existing 4-tier protocol; each per-member assumption carries explicit `empirical_verification_status` field.
+- **Round 2** (self-reflection): council SELF-REFLECTS on Round 1; re-classifies each assumption's status after dedicated verification cycle attempt. Emits `council_self_reflection_round_N` canonical posterior anchor.
+- **Round 3** (resolution): material unverified assumptions trigger (a) empirical verification before landing, (b) verdict-status downgrade to PROVISIONAL-PENDING-VERIFICATION, OR (c) ESCALATE_TO_OPERATOR per Catalog #300.
+- **Cycle bounds** (per R12-D meta-finding lens-coverage): `MAX_SELF_REFLECTION_ROUNDS = 5`; SEAL when 3 consecutive rounds produce zero material unverified-assumption findings.
+
+**Required at T2+ deliberations**; T1 working-group recommendations are exempt (T1 findings feed downstream T2/T3 which inherit the discipline).
+
+**Canonical surfaces:**
+
+- `tac.council_continual_learning.EmpiricalVerificationStatus` (4-value sentinel constants) + `AssumptionEmpiricalVerification` (frozen dataclass) + `classify_assumption_verification_status_from_evidence` / `extract_unverified_assumptions` / `verdict_status_requires_provisional_marker` / `query_self_reflection_history_for_deliberation` canonical helpers.
+- Catalog #363 (`check_council_deliberation_has_empirical_verification_status`) — STRICT preflight gate refuses post-2026-05-26 council memos lacking the canonical taxonomy + Round 2/3 discipline tokens; same-line `# COUNCIL_EMPIRICAL_VERIFICATION_STATUS_WAIVED:<rationale>` waiver with non-placeholder rationale (≥4 chars; placeholder literals rejected per Catalog #287 sister discipline). WARN-ONLY at landing per "Strict-flip atomicity rule"; strict-flip planned after backfill brings live count to 0.
+
+**Sister cross-references:**
+
+- Catalog #292 (per-deliberation assumption-statement-surfacing axis; #363 enforces the sister per-assumption empirical-verification-status axis at a distinct sub-surface)
+- Catalog #291 (META-ASSUMPTION cadence — session-level cousin)
+- Catalog #300 (v2 frontmatter — canonical posterior schema; #363 records propagate via the existing `council_assumption_adversary_verdict` field structure extended with the 4-value taxonomy)
+- Catalog #340 / #314 (PREVENT vs DETECT sister gate pattern precedent that #363 lifts to the council-deliberation surface)
+- Catalog #346 (canonical roster validation — structurally distinct axis)
+- Catalog #287 (placeholder-rationale rejection sister discipline)
+- Catalog #344 (canonical equations registry — Round 2 verification path may register the verified assumption as a canonical equation when generalizable)
+- Canonical design memo: `.omx/research/council_recursive_self_reflection_protocol_design_20260526T133600Z.md`
+- Landing memo: `feedback_council_recursive_self_reflection_protocol_landed_20260526.md`
+
+Per CLAUDE.md "Forbidden premature KILL without research exhaustion": T3 council `7d04474cb` historical verdict is preserved per Catalog #110/#113 APPEND-ONLY; M2+M3 retroactive empirical-verification-status re-classification is operator-routable per the protocol's Round 3 mechanism (downgrade to PROVISIONAL-PENDING-VERIFICATION + reactivation criterion = post-DRIFT-VS-DEPTH-CHAR-completion re-deliberation).
+
 ## Experiment design — non-negotiable
 
 Every experiment MUST follow this process before touching any GPU:
