@@ -58679,6 +58679,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_pr110_opt3_variant_b_markov_context_coder_20260526",
+      "name": "PR110 OPT-3 Variant B Markov context coder",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "FEC8 1st-order Markov context coder landed; 56/56 tests pass; -4 bytes wire vs FEC6 fixed-Huff on live PR110 selector stream"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/pr110_opt3_variant_b_markov_landed_20260526.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -58688,5 +58729,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-26T17:18:05Z"
+  "updated_at": "2026-05-26T18:13:44Z"
 }
