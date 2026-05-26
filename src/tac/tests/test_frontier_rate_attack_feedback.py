@@ -83,6 +83,7 @@ from comma_lab.scheduler.frontier_rate_attack_feedback_cycle import (
     write_pairset_component_marginal_feedback_bundle,
     write_targeted_component_correction_post_auxiliary_artifacts,
 )
+from tac.fec6_selector_operator_space import FEC6_FIXED_K16_MODE_IDS
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -2964,6 +2965,12 @@ def test_targeted_component_correction_materialization_requests_group_responses(
         REPAIR_BUDGET_MATERIALIZATION_EXECUTION_ROW_SCHEMA
     )
     assert execution_report["ready_for_exact_eval_dispatch"] is False
+    repair_dynamics_prior = {
+        "schema": "frontier_rate_attack_repair_dynamics_palette_prior.v1",
+        **_false_authority(),
+        "source": "unit_test_repair_waterfill_palette",
+        "palette_modes": list(FEC6_FIXED_K16_MODE_IDS),
+    }
     repair_waterfill_queue = build_frontier_repair_budget_waterfill_queue(
         repo_root=REPO_ROOT,
         autonomous_chain_optimization=autonomous,
@@ -2972,6 +2979,7 @@ def test_targeted_component_correction_materialization_requests_group_responses(
         targeted_component_correction_response_harvest_path=harvest_path,
         receiver_closed_correction_budget=report["receiver_closed_correction_budget"],
         receiver_closed_correction_budget_path=receiver_budget_path,
+        repair_dynamics_palette_prior=repair_dynamics_prior,
         results_root=tmp_path / "results",
         queue_id="frontier_repair_waterfill_unit",
         chain_limit=1,
@@ -2993,6 +3001,10 @@ def test_targeted_component_correction_materialization_requests_group_responses(
     assert repair_waterfill_experiment["metadata"][
         "repair_allocation_action_term_schema"
     ] == REPAIR_BUDGET_WATERFILL_ALLOCATION_ACTION_TERM_SCHEMA
+    assert repair_waterfill_experiment["metadata"]["repair_dynamics_prior_active"] is True
+    assert repair_waterfill_experiment["metadata"]["repair_dynamics_palette_prior"][
+        "palette_modes"
+    ] == list(FEC6_FIXED_K16_MODE_IDS)
     _assert_false_authority(repair_waterfill_experiment["metadata"])
     repair_step = repair_waterfill_experiment["steps"][0]
     assert repair_step["command"][1] == (
@@ -3051,6 +3063,9 @@ def test_targeted_component_correction_materialization_requests_group_responses(
     assert binding_step["command"][1] == (
         "tools/build_frontier_repair_budget_materializer_binding_report.py"
     )
+    assert binding_step["command"].count("--repair-palette-mode") == len(
+        FEC6_FIXED_K16_MODE_IDS
+    )
     result = subprocess.run(
         [sys.executable, *binding_step["command"][1:]],
         cwd=REPO_ROOT,
@@ -3074,6 +3089,11 @@ def test_targeted_component_correction_materialization_requests_group_responses(
         == REPAIR_BUDGET_MATERIALIZER_BINDING_REPORT_SCHEMA
     )
     assert binding_materialized["candidate_archive_materialized"] is False
+    assert binding_materialized["repair_dynamics_palette_prior"]["mode_count"] == 16
+    assert (
+        "frame0_palette_modes_are_first_class_repair_operators"
+        in binding_materialized["repair_dynamics_palette_prior"]["repair_waterfill_hints"]
+    )
     _assert_false_authority(binding_materialized)
     execution_step = repair_waterfill_experiment["steps"][3]
     assert execution_step["command"][1] == (
@@ -3776,6 +3796,214 @@ def test_targeted_component_queue_carries_receiver_closed_reference_eval(
     )
 
 
+def test_targeted_component_acquisition_uses_explicit_repair_dynamics_palette_prior() -> None:
+    operation_portfolio = {
+        "schema": OPERATION_PORTFOLIO_SCHEMA,
+        **_false_authority(),
+        "component_behavior_summary": {
+            "schema": "frontier_rate_attack_component_behavior_summary.v1",
+            **_false_authority(),
+            "active": True,
+            "best_candidate_id": "pr110_palette_control",
+        },
+        "master_gradient_summary": {
+            "schema": "frontier_rate_attack_master_gradient_summary.v1",
+            **_false_authority(),
+            "active": True,
+        },
+        "targeted_correction_budget_summary": {
+            "schema": "frontier_rate_attack_targeted_correction_budget_summary.v1",
+            **_false_authority(),
+        },
+    }
+    receiver_budget = {
+        "schema": RECEIVER_CLOSED_CORRECTION_BUDGET_SCHEMA,
+        **_false_authority(),
+        "active": True,
+        "rows": [
+            {
+                **_false_authority(),
+                "candidate_id": "pr110_rate_win",
+                "target_kind": "renderer_payload_dfl1_v1",
+                "receiver_closed": True,
+                "saved_bytes_at_risk": 320,
+                "submission_dir": "submissions/pr110_rate_win",
+                "source_archive_path": "submissions/pr110/archive.zip",
+                "source_inflate_sh_path": "submissions/pr110/inflate.sh",
+                "correction_budget_gate": "receiver_closed_rate_budget",
+                "active_rate_floor_blocked": False,
+            }
+        ],
+    }
+    prior = {
+        "schema": "frontier_rate_attack_repair_dynamics_palette_prior.v1",
+        **_false_authority(),
+        "source": "unit_test_pr110_k16",
+        "palette_modes": list(FEC6_FIXED_K16_MODE_IDS),
+        "allowed_use": "repair_dynamics_prior_for_local_waterfill_planning_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+    }
+
+    acquisition = build_frontier_targeted_component_correction_acquisition(
+        operation_portfolio=operation_portfolio,
+        receiver_closed_correction_budget=receiver_budget,
+        repair_dynamics_palette_prior=prior,
+    )
+
+    assert acquisition["schema"] == TARGETED_COMPONENT_CORRECTION_ACQUISITION_SCHEMA
+    _assert_false_authority(acquisition)
+    assert acquisition["repair_dynamics_prior_active"] is True
+    assert acquisition["repair_dynamics_palette_prior"]["mode_count"] == 16
+    assert acquisition["repair_dynamics_palette_prior"]["zero_frame1_modes"] is True
+    assert acquisition["repair_dynamics_palette_probe_count"] >= 3
+    assert "repair_dynamics_palette_probe_required_before_budget_spend" in (
+        acquisition["blockers"]
+    )
+    families = {row["correction_family"] for row in acquisition["rows"]}
+    assert "repair_dynamics_frame0_palette_interaction_waterfill" in families
+    assert "repair_dynamics_chroma_luma_bias_basis_expansion" in families
+    assert "repair_dynamics_frame1_counterfactual_null_probe" in families
+    row = next(
+        row
+        for row in acquisition["rows"]
+        if row["correction_family"]
+        == "repair_dynamics_frame0_palette_interaction_waterfill"
+    )
+    _assert_false_authority(row)
+    assert "repair_dynamics_palette_prior" in row["prior_status"]["available_priors"]
+    assert row["repair_dynamics_context"]["zero_frame1_modes"] is True
+    assert row["budget_spend_allowed"] is False
+
+    work_order = build_frontier_targeted_component_correction_work_order(
+        targeted_component_correction_acquisition=acquisition,
+        acquisition_id=row["acquisition_id"],
+    )
+    _assert_false_authority(work_order)
+    assert work_order["repair_dynamics_prior_active"] is True
+    assert work_order["repair_dynamics_palette_prior"]["mode_count"] == 16
+    assert work_order["budget_spend_gate"]["budget_spend_allowed"] is False
+    hint_ids = {hint["action_id"] for hint in work_order["command_hints"]}
+    assert "build_repair_dynamics_palette_probe_matrix" in hint_ids
+
+
+def test_targeted_component_acquisition_does_not_default_to_pr110_palette() -> None:
+    acquisition = build_frontier_targeted_component_correction_acquisition(
+        operation_portfolio={
+            "schema": OPERATION_PORTFOLIO_SCHEMA,
+            **_false_authority(),
+            "component_behavior_summary": {
+                "schema": "frontier_rate_attack_component_behavior_summary.v1",
+                **_false_authority(),
+                "active": True,
+            },
+        },
+        receiver_closed_correction_budget={
+            "schema": RECEIVER_CLOSED_CORRECTION_BUDGET_SCHEMA,
+            **_false_authority(),
+            "active": True,
+            "rows": [
+                {
+                    **_false_authority(),
+                    "candidate_id": "generic_rate_win",
+                    "target_kind": "packet_member_merge_v1",
+                    "receiver_closed": True,
+                    "saved_bytes_at_risk": 128,
+                    "submission_dir": "submissions/generic_rate_win",
+                }
+            ],
+        },
+    )
+
+    assert acquisition["repair_dynamics_prior_active"] is False
+    assert acquisition["repair_dynamics_palette_prior"] == {}
+    assert acquisition["repair_dynamics_palette_probe_count"] == 0
+    assert not any(
+        str(row["correction_family"]).startswith("repair_dynamics_")
+        for row in acquisition["rows"]
+    )
+
+
+def test_targeted_component_acquisition_keeps_mixed_frame_palette_open() -> None:
+    acquisition = build_frontier_targeted_component_correction_acquisition(
+        operation_portfolio={
+            "schema": OPERATION_PORTFOLIO_SCHEMA,
+            **_false_authority(),
+            "component_behavior_summary": {
+                "schema": "frontier_rate_attack_component_behavior_summary.v1",
+                **_false_authority(),
+                "active": True,
+            },
+        },
+        receiver_closed_correction_budget={
+            "schema": RECEIVER_CLOSED_CORRECTION_BUDGET_SCHEMA,
+            **_false_authority(),
+            "active": True,
+            "rows": [
+                {
+                    **_false_authority(),
+                    "candidate_id": "mixed_frame_palette_rate_win",
+                    "target_kind": "packet_member_merge_v1",
+                    "receiver_closed": True,
+                    "saved_bytes_at_risk": 128,
+                    "submission_dir": "submissions/mixed_frame_palette_rate_win",
+                }
+            ],
+        },
+        repair_dynamics_palette_prior={
+            "schema": "frontier_rate_attack_repair_dynamics_palette_prior.v1",
+            **_false_authority(),
+            "source": "unit_test_mixed_frame_palette",
+            "palette_modes": [
+                "none",
+                "frame0_luma_bias_+1",
+                "frame1_luma_bias_+1",
+            ],
+        },
+    )
+
+    assert acquisition["repair_dynamics_prior_active"] is True
+    assert acquisition["repair_dynamics_palette_prior"]["zero_frame1_modes"] is False
+    families = {row["correction_family"] for row in acquisition["rows"]}
+    assert "repair_dynamics_frame0_palette_interaction_waterfill" in families
+    assert "repair_dynamics_frame1_counterfactual_null_probe" not in families
+
+
+def test_targeted_component_acquisition_refuses_truthy_repair_dynamics_authority() -> None:
+    with pytest.raises(ValueError, match="forbidden truthy authority fields"):
+        build_frontier_targeted_component_correction_acquisition(
+            operation_portfolio={
+                "schema": OPERATION_PORTFOLIO_SCHEMA,
+                **_false_authority(),
+                "component_behavior_summary": {
+                    "schema": "frontier_rate_attack_component_behavior_summary.v1",
+                    **_false_authority(),
+                    "active": True,
+                },
+            },
+            receiver_closed_correction_budget={
+                "schema": RECEIVER_CLOSED_CORRECTION_BUDGET_SCHEMA,
+                **_false_authority(),
+                "active": True,
+                "rows": [
+                    {
+                        **_false_authority(),
+                        "candidate_id": "bad_prior_rate_win",
+                        "target_kind": "packet_member_merge_v1",
+                        "receiver_closed": True,
+                        "saved_bytes_at_risk": 128,
+                        "submission_dir": "submissions/bad_prior_rate_win",
+                    }
+                ],
+            },
+            repair_dynamics_palette_prior={
+                "schema": "frontier_rate_attack_repair_dynamics_palette_prior.v1",
+                **_false_authority(),
+                "palette_modes": ["none"],
+                "score_claim": True,
+            },
+        )
+
+
 def test_frontier_feedback_compiler_turns_eureka_near_misses_into_beyond_drop_two_hints(
     tmp_path: Path,
 ) -> None:
@@ -4336,6 +4564,8 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
             "frontier_feedback_cli_unit",
             "--candidate-limit",
             "2",
+            "--repair-palette",
+            "fec6-fixed-k16",
         ],
         cwd=REPO_ROOT,
         text=True,
@@ -4358,12 +4588,24 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     assert payload["receiver_closed_correction_budget_summary"][
         "receiver_closed_saved_bytes_total"
     ] == 156
+    assert payload["repair_dynamics_prior_summary"][
+        "repair_dynamics_palette_prior_present"
+    ] is True
+    assert payload["repair_dynamics_prior_summary"]["repair_dynamics_prior_defaulted"] is False
+    assert payload["repair_dynamics_prior_summary"]["mode_count"] == 16
+    assert payload["repair_dynamics_prior_summary"]["zero_frame1_modes"] is True
     assert payload["targeted_component_correction_acquisition_summary"][
         "receiver_closed_saved_bytes_total"
     ] == 156
     assert payload["targeted_component_correction_acquisition_summary"][
         "queue_actionable_acquisition_count"
     ] >= 5
+    assert payload["targeted_component_correction_acquisition_summary"][
+        "repair_dynamics_prior_active"
+    ] is True
+    assert payload["targeted_component_correction_acquisition_summary"][
+        "repair_dynamics_palette_probe_count"
+    ] >= 3
     assert payload[
         "targeted_component_correction_materialization_request_summary"
     ]["row_count"] == 0
@@ -4385,6 +4627,7 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     receiver_repair_backlog_path = output_dir / "receiver_repair_backlog.json"
     receiver_closed_budget_path = output_dir / "receiver_closed_correction_budget.json"
     receiver_repair_queue_path = output_dir / "receiver_repair_queue.json"
+    repair_dynamics_prior_path = output_dir / "repair_dynamics_palette_prior.json"
     targeted_component_acquisition_path = (
         output_dir / "targeted_component_correction_acquisition.json"
     )
@@ -4417,6 +4660,7 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     assert receiver_repair_backlog_path.exists()
     assert receiver_closed_budget_path.exists()
     assert receiver_repair_queue_path.exists()
+    assert repair_dynamics_prior_path.exists()
     assert targeted_component_acquisition_path.exists()
     assert targeted_component_queue_path.exists()
     assert targeted_component_response_harvest_path.exists()
@@ -4438,6 +4682,9 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     )
     assert report["artifacts"]["receiver_closed_correction_budget"].endswith(
         "receiver_closed_correction_budget.json"
+    )
+    assert report["artifacts"]["repair_dynamics_palette_prior"].endswith(
+        "repair_dynamics_palette_prior.json"
     )
     assert report["artifacts"]["targeted_component_correction_acquisition"].endswith(
         "targeted_component_correction_acquisition.json"
@@ -4787,13 +5034,14 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
         ]
         is True
     )
-    assert {
+    selected_correction_families = {
         request["correction_family"]
         for experiment in targeted_component_queue["experiments"]
         for request in experiment["metadata"]["correction_requests"]
-    } == {
-        "segnet_posenet_waterfill_region_repair",
-        "drop_within_selected_set_masked_boundary",
+    }
+    assert selected_correction_families == {
+        "repair_dynamics_frame0_palette_interaction_waterfill",
+        "repair_dynamics_chroma_luma_bias_basis_expansion",
     }
     first_correction_step = targeted_component_queue["experiments"][0]["steps"][0]
     assert (
@@ -4833,6 +5081,22 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
         == TARGETED_COMPONENT_CORRECTION_WORK_ORDER_SCHEMA
     )
     _assert_false_authority(correction_work_order)
+    assert correction_work_order["repair_dynamics_prior_active"] is True
+    assert correction_work_order["repair_dynamics_palette_prior"]["mode_count"] == 16
+    repair_dynamics_hint = next(
+        hint
+        for hint in correction_work_order["command_hints"]
+        if hint["action_id"] == "build_repair_dynamics_palette_probe_matrix"
+    )
+    assert "tools/run_mlx_scorer_response_from_local_advisory.py" in (
+        repair_dynamics_hint["command_template"]
+    )
+    assert "--allow-gpu-research-signal" in repair_dynamics_hint["command_template"]
+    assert (
+        repair_dynamics_hint["output_contract"]
+        == "false_authority_macos_mlx_component_response_rows_for_grouped_"
+        "repair_dynamics_waterfill_planning"
+    )
     assert correction_work_order["budget_spend_gate"]["budget_spend_allowed"] is False
     step_ids = [
         step["id"] for step in targeted_component_queue["experiments"][0]["steps"]

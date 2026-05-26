@@ -4314,6 +4314,68 @@ def _targeted_component_correction_command_hints(
                 **FALSE_AUTHORITY,
             }
         )
+    if family.startswith("repair_dynamics_"):
+        hints.append(
+            {
+                "action_id": "build_repair_dynamics_palette_probe_matrix",
+                "command_template": [
+                    ".venv/bin/python",
+                    "tools/run_mlx_scorer_response_from_local_advisory.py",
+                    "--local-cpu-advisory",
+                    "<component_correction_dir>/local_cpu_advisory.json",
+                    "--reference-cache-dir",
+                    "<reference_mlx_scorer_input_cache_dir>",
+                    "--candidate-cache-dir",
+                    "<component_correction_dir>/mlx_scorer_input_cache",
+                    "--output",
+                    "<component_correction_dir>/repair_dynamics_mlx_response.json",
+                    "--repo-root",
+                    ".",
+                    "--batch-pairs",
+                    "1",
+                    "--device",
+                    "gpu",
+                    "--allow-gpu-research-signal",
+                    "--allow-local-cpu-advisory-cache-identity",
+                    "--components-dir",
+                    "<component_correction_dir>/repair_dynamics_mlx_components",
+                    "--response-family",
+                    "repair_dynamics_palette_probe",
+                ],
+                "blocked_until": [
+                    "local_cpu_advisory_cache_identity",
+                    "mlx_scorer_input_cache",
+                    "repair_dynamics_palette_prior",
+                    "palette_mode_adapter_or_equivalent_probe_modes",
+                    "local_mlx_scorer_response_runtime",
+                ],
+                "output_contract": (
+                    "false_authority_macos_mlx_component_response_rows_for_grouped_"
+                    "repair_dynamics_waterfill_planning"
+                ),
+                **FALSE_AUTHORITY,
+            }
+        )
+        hints.append(
+            {
+                "action_id": "build_repair_dynamics_component_work_order",
+                "command_template": [
+                    ".venv/bin/python",
+                    "tools/build_frontier_targeted_component_correction_work_order.py",
+                    "--targeted-component-correction-acquisition",
+                    "<targeted_component_correction_acquisition.json>",
+                    "--acquisition-id",
+                    str(row.get("acquisition_id") or "<repair_dynamics_acquisition_id>"),
+                    "--work-order-out",
+                    "<component_correction_dir>/repair_dynamics_work_order.json",
+                ],
+                "blocked_until": [
+                    "targeted_component_correction_acquisition",
+                    "repair_dynamics_acquisition_id",
+                ],
+                **FALSE_AUTHORITY,
+            }
+        )
     return hints
 
 
@@ -6712,6 +6774,8 @@ def _repair_dynamics_palette_prior(
 
 def _aggregate_repair_dynamics_priors(
     priors: Sequence[Mapping[str, Any]],
+    *,
+    source: str = "repair_budget_materializer_binding_report_aggregate",
 ) -> dict[str, Any]:
     modes: list[str] = []
     sources: list[str] = []
@@ -6724,7 +6788,7 @@ def _aggregate_repair_dynamics_priors(
             sources.append(source)
     aggregate = _repair_dynamics_palette_prior(
         modes,
-        source="repair_budget_materializer_binding_report_aggregate",
+        source=source,
     )
     if aggregate:
         aggregate["source_prior_count"] = len(priors)
@@ -7536,6 +7600,7 @@ def build_frontier_repair_budget_waterfill_queue(
     materializer_work_queue_path: str | Path | None = None,
     materializer_execution_queue: Mapping[str, Any] | None = None,
     materializer_execution_queue_path: str | Path | None = None,
+    repair_dynamics_palette_prior: Mapping[str, Any] | None = None,
     results_root: str | Path = DEFAULT_RESULTS_ROOT,
     queue_id: str = "frontier_repair_budget_waterfill_queue",
     chain_limit: int = 4,
@@ -7548,6 +7613,14 @@ def build_frontier_repair_budget_waterfill_queue(
         autonomous_chain_optimization,
         context="repair_budget_waterfill_queue_autonomous_chain",
     )
+    if isinstance(repair_dynamics_palette_prior, Mapping) and repair_dynamics_palette_prior:
+        require_no_truthy_authority_fields(
+            repair_dynamics_palette_prior,
+            context="repair_budget_waterfill_queue_repair_dynamics_palette_prior",
+        )
+    else:
+        repair_dynamics_palette_prior = {}
+    repair_palette_modes = _string_list(repair_dynamics_palette_prior.get("palette_modes"))
     rows = [
         row
         for row in autonomous_chain_optimization.get("rows") or []
@@ -7586,6 +7659,8 @@ def build_frontier_repair_budget_waterfill_queue(
                 "pipeline_side": "encoder_repair_allocator",
                 "accepted_response_count": 0,
                 "receiver_closed_saved_bytes_total": 0,
+                "repair_dynamics_prior_active": bool(repair_palette_modes),
+                "repair_dynamics_palette_prior": dict(repair_dynamics_palette_prior),
                 "rate_only_candidate_count": (
                     rate_plan.get("rate_only_candidate_count")
                 ),
@@ -7759,6 +7834,8 @@ def build_frontier_repair_budget_waterfill_queue(
             "pipeline_side": "encoder_repair_allocator",
             "accepted_response_count": accepted_count,
             "receiver_closed_saved_bytes_total": available_bytes,
+            "repair_dynamics_prior_active": bool(repair_palette_modes),
+            "repair_dynamics_palette_prior": dict(repair_dynamics_palette_prior),
             "rate_only_candidate_count": (
                 rate_plan.get("rate_only_candidate_count")
             ),
@@ -7954,6 +8031,11 @@ def build_frontier_repair_budget_waterfill_queue(
                                 if materializer_execution_queue_ref
                                 else []
                             ),
+                            *[
+                                item
+                                for mode in repair_palette_modes
+                                for item in ("--repair-palette-mode", mode)
+                            ],
                             "--overwrite",
                         ],
                         "requires": ["emit_repair_budget_materialization_plan"],
@@ -8484,6 +8566,7 @@ def _targeted_component_prior_status(
     component_summary: Mapping[str, Any],
     master_gradient: Mapping[str, Any],
     receiver_closed_correction_budget: Mapping[str, Any],
+    repair_dynamics_palette_prior: Mapping[str, Any],
 ) -> dict[str, Any]:
     available: list[str] = []
     missing: list[str] = []
@@ -8498,6 +8581,8 @@ def _targeted_component_prior_status(
             present = receiver_closed_correction_budget.get("active") is True
         elif prior == "master_gradient_or_inverse_scorer":
             present = master_gradient.get("active") is True
+        elif prior == "repair_dynamics_palette_prior":
+            present = bool(repair_dynamics_palette_prior)
         else:
             present = False
         if present:
@@ -8513,10 +8598,198 @@ def _targeted_component_prior_status(
     }
 
 
+def _repair_dynamics_prior_from_correction_budget(
+    *,
+    receiver_closed_correction_budget: Mapping[str, Any],
+    repair_dynamics_palette_prior: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    priors: list[Mapping[str, Any]] = []
+    if isinstance(repair_dynamics_palette_prior, Mapping) and repair_dynamics_palette_prior:
+        require_no_truthy_authority_fields(
+            repair_dynamics_palette_prior,
+            context="targeted_component_correction_manual_repair_dynamics_palette_prior",
+        )
+        priors.append(repair_dynamics_palette_prior)
+    for key in ("repair_dynamics_palette_prior", "repair_dynamics_prior"):
+        value = receiver_closed_correction_budget.get(key)
+        if isinstance(value, Mapping) and value:
+            require_no_truthy_authority_fields(
+                value,
+                context=f"targeted_component_correction_receiver_budget_{key}",
+            )
+            priors.append(value)
+    for index, row in enumerate(receiver_closed_correction_budget.get("rows") or []):
+        if not isinstance(row, Mapping):
+            continue
+        for key in ("repair_dynamics_palette_prior", "repair_dynamics_prior"):
+            value = row.get(key)
+            if isinstance(value, Mapping) and value:
+                require_no_truthy_authority_fields(
+                    value,
+                    context=(
+                        "targeted_component_correction_receiver_budget_row_"
+                        f"{index}_{key}"
+                    ),
+                )
+                priors.append(value)
+    return _aggregate_repair_dynamics_priors(
+        priors,
+        source="targeted_component_correction_repair_dynamics_prior_aggregate",
+    )
+
+
+def _repair_dynamics_targeted_component_family_seeds(
+    prior: Mapping[str, Any],
+) -> tuple[dict[str, Any], ...]:
+    if not prior:
+        return ()
+    family_counts = (
+        prior.get("mode_family_counts")
+        if isinstance(prior.get("mode_family_counts"), Mapping)
+        else {}
+    )
+    has_color_bias = any(
+        int(family_counts.get(key, 0) or 0)
+        for key in ("blue_chroma", "luma_bias", "rgb_bias")
+    )
+    seeds: list[dict[str, Any]] = [
+        {
+            "correction_family": "repair_dynamics_frame0_palette_interaction_waterfill",
+            "operation_levels": [
+                "pixel",
+                "region",
+                "boundary",
+                "frame",
+                "pair",
+                "batch",
+                "scorer_axis",
+            ],
+            "priority_base": 99.0,
+            "recommended_next_action": (
+                "probe_frame0_palette_color_geometry_interactions_as_grouped_repair_atoms"
+            ),
+            "targeted_dimensions": [
+                "pixel",
+                "region",
+                "boundary",
+                "frame",
+                "pair",
+                "batch",
+            ],
+            "required_priors": [
+                "component_marginal_rows",
+                "repair_dynamics_palette_prior",
+            ],
+        }
+    ]
+    if has_color_bias:
+        seeds.append(
+            {
+                "correction_family": "repair_dynamics_chroma_luma_bias_basis_expansion",
+                "operation_levels": [
+                    "pixel",
+                    "region",
+                    "frame",
+                    "pair",
+                    "batch",
+                    "scorer_axis",
+                ],
+                "priority_base": 97.0,
+                "recommended_next_action": (
+                    "expand_chroma_luma_rgb_bias_modes_before_more_pixel_leaf_search"
+                ),
+                "targeted_dimensions": [
+                    "pixel",
+                    "region",
+                    "frame",
+                    "pair",
+                    "batch",
+                ],
+                "required_priors": [
+                    "component_marginal_rows",
+                    "repair_dynamics_palette_prior",
+                ],
+            }
+        )
+    if prior.get("zero_frame1_modes") is True:
+        seeds.append(
+            {
+                "correction_family": "repair_dynamics_frame1_counterfactual_null_probe",
+                "operation_levels": [
+                    "frame",
+                    "pair",
+                    "batch",
+                    "scorer_axis",
+                ],
+                "priority_base": 94.0,
+                "recommended_next_action": (
+                    "measure_frame1_counterfactuals_to_classify_null_space_vs_search_gap"
+                ),
+                "targeted_dimensions": ["frame", "pair", "batch"],
+                "required_priors": [
+                    "component_marginal_rows",
+                    "repair_dynamics_palette_prior",
+                ],
+            }
+        )
+    return tuple(seeds)
+
+
+def _repair_dynamics_palette_context(prior: Mapping[str, Any]) -> dict[str, Any]:
+    if not prior:
+        return {}
+    return {
+        "schema": "frontier_rate_attack_repair_dynamics_palette_context.v1",
+        "source": prior.get("source"),
+        "source_prior_refs": list(prior.get("source_prior_refs") or []),
+        "mode_count": prior.get("mode_count"),
+        "non_identity_mode_count": prior.get("non_identity_mode_count"),
+        "frame_mode_counts": dict(
+            prior.get("frame_mode_counts")
+            if isinstance(prior.get("frame_mode_counts"), Mapping)
+            else {}
+        ),
+        "mode_family_counts": dict(
+            prior.get("mode_family_counts")
+            if isinstance(prior.get("mode_family_counts"), Mapping)
+            else {}
+        ),
+        "frame0_non_identity_fraction": prior.get("frame0_non_identity_fraction"),
+        "zero_frame1_modes": prior.get("zero_frame1_modes") is True,
+        "dominant_dynamics_interpretation": prior.get(
+            "dominant_dynamics_interpretation"
+        ),
+        "repair_waterfill_hints": list(prior.get("repair_waterfill_hints") or []),
+        "allowed_use": "compact_repair_dynamics_context_for_grouped_acquisition_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
+def _repair_dynamics_priority_bonus(
+    *,
+    family: str,
+    prior: Mapping[str, Any],
+) -> float:
+    if not prior or not family.startswith("repair_dynamics_"):
+        return 0.0
+    mode_count = _finite_int_or_none(prior.get("mode_count")) or 0
+    bonus = min(10.0, float(mode_count) / 2.0)
+    frame0_fraction = prior.get("frame0_non_identity_fraction")
+    if isinstance(frame0_fraction, (int, float)) and math.isfinite(float(frame0_fraction)):
+        bonus += 6.0 * float(frame0_fraction)
+    if prior.get("zero_frame1_modes") is True:
+        bonus += 3.0
+    if "counterfactual_null_probe" in family:
+        bonus -= 2.0
+    return bonus
+
+
 def build_frontier_targeted_component_correction_acquisition(
     *,
     operation_portfolio: Mapping[str, Any],
     receiver_closed_correction_budget: Mapping[str, Any],
+    repair_dynamics_palette_prior: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Turn receiver-closed rate wins into component-guarded correction requests."""
 
@@ -8548,6 +8821,15 @@ def build_frontier_targeted_component_correction_acquisition(
         for row in receiver_closed_correction_budget.get("rows") or []
         if isinstance(row, Mapping) and row.get("receiver_closed") is True
     ]
+    repair_dynamics_prior = _repair_dynamics_prior_from_correction_budget(
+        receiver_closed_correction_budget=receiver_closed_correction_budget,
+        repair_dynamics_palette_prior=repair_dynamics_palette_prior,
+    )
+    repair_dynamics_context = _repair_dynamics_palette_context(repair_dynamics_prior)
+    family_seeds = (
+        *_TARGETED_COMPONENT_CORRECTION_FAMILY_SEEDS,
+        *_repair_dynamics_targeted_component_family_seeds(repair_dynamics_prior),
+    )
     rows: list[dict[str, Any]] = []
     for budget_row in receiver_rows:
         saved_bytes = _finite_int_or_none(budget_row.get("saved_bytes_at_risk")) or 0
@@ -8564,12 +8846,13 @@ def build_frontier_targeted_component_correction_acquisition(
             budget_row.get("paired_exact_readiness_bridge_report_path") or ""
         )
         rate_credit = _rate_credit_score_units_for_saved_bytes(saved_bytes)
-        for seed in _TARGETED_COMPONENT_CORRECTION_FAMILY_SEEDS:
+        for seed in family_seeds:
             prior_status = _targeted_component_prior_status(
                 seed=seed,
                 component_summary=component_summary,
                 master_gradient=master_gradient,
                 receiver_closed_correction_budget=receiver_closed_correction_budget,
+                repair_dynamics_palette_prior=repair_dynamics_prior,
             )
             budget_spend_blockers = [
                 "candidate_specific_local_cpu_component_eval_required_before_budget_spend",
@@ -8587,6 +8870,7 @@ def build_frontier_targeted_component_correction_acquisition(
                     "segnet_posenet_component_behavior_rows_required_before_allocation"
                 )
             family = str(seed.get("correction_family") or "unknown_correction_family")
+            repair_dynamics_family = family.startswith("repair_dynamics_")
             acquisition_id = (
                 "targeted_component_correction_"
                 f"{_slug_token(candidate_id)}_{_slug_token(family)}"
@@ -8666,6 +8950,13 @@ def build_frontier_targeted_component_correction_acquisition(
                         "budget_spend_allowed": False,
                         **FALSE_AUTHORITY,
                     },
+                    "repair_dynamics_prior_active": bool(repair_dynamics_prior),
+                    "repair_dynamics_palette_prior": (
+                        dict(repair_dynamics_prior) if repair_dynamics_family else {}
+                    ),
+                    "repair_dynamics_context": (
+                        dict(repair_dynamics_context) if repair_dynamics_family else {}
+                    ),
                     "prior_status": prior_status,
                     "budget_spend_gate": {
                         "schema": (
@@ -8701,6 +8992,10 @@ def build_frontier_targeted_component_correction_acquisition(
                         float(seed.get("priority_base") or 0.0)
                         + float(saved_bytes) / 32.0
                         + rate_credit * 1_000_000.0
+                        + _repair_dynamics_priority_bonus(
+                            family=family,
+                            prior=repair_dynamics_prior,
+                        )
                         - float(len(prior_status["prior_blockers"])) * 4.0
                     ),
                     "allowed_use": (
@@ -8727,6 +9022,8 @@ def build_frontier_targeted_component_correction_acquisition(
         blockers.append("no_targeted_component_correction_rows")
     if component_summary.get("active") is not True:
         blockers.append("segnet_posenet_component_behavior_rows_required")
+    if repair_dynamics_prior:
+        blockers.append("repair_dynamics_palette_probe_required_before_budget_spend")
     if not any(row.get("queue_actionable") is True for row in rows):
         blockers.append("no_component_eval_queue_actionable_submission_dirs")
     blockers.append("component_eval_required_before_budget_spend")
@@ -8772,6 +9069,16 @@ def build_frontier_targeted_component_correction_acquisition(
             "best_score_delta_vs_baseline"
         ),
         "master_gradient_active": master_gradient.get("active") is True,
+        "repair_dynamics_prior_active": bool(repair_dynamics_prior),
+        "repair_dynamics_palette_prior": dict(repair_dynamics_prior),
+        "repair_dynamics_palette_probe_count": sum(
+            1
+            for row in rows
+            if str(row.get("correction_family") or "").startswith("repair_dynamics_")
+        ),
+        "repair_dynamics_repair_waterfill_hints": list(
+            repair_dynamics_prior.get("repair_waterfill_hints") or []
+        ),
         "targeted_dimensions": _unique_strings(
             [
                 dimension
@@ -8828,6 +9135,15 @@ def _targeted_component_correction_queue_metadata(
         ),
         "component_behavior_active": acquisition.get("component_behavior_active") is True,
         "master_gradient_active": acquisition.get("master_gradient_active") is True,
+        "repair_dynamics_prior_active": (
+            acquisition.get("repair_dynamics_prior_active") is True
+        ),
+        "repair_dynamics_palette_probe_count": acquisition.get(
+            "repair_dynamics_palette_probe_count"
+        ),
+        "repair_dynamics_repair_waterfill_hints": list(
+            acquisition.get("repair_dynamics_repair_waterfill_hints") or []
+        ),
         "top_acquisition_ids": list(acquisition.get("top_acquisition_ids") or []),
         "top_correction_families": list(acquisition.get("top_correction_families") or []),
         "blockers": list(acquisition.get("blockers") or []),
@@ -8897,6 +9213,17 @@ def build_frontier_targeted_component_correction_work_order(
         "closure_report_path": row.get("closure_report_path"),
         "paired_exact_readiness_bridge_report_path": row.get(
             "paired_exact_readiness_bridge_report_path"
+        ),
+        "repair_dynamics_prior_active": row.get("repair_dynamics_prior_active") is True,
+        "repair_dynamics_palette_prior": dict(
+            row.get("repair_dynamics_palette_prior")
+            if isinstance(row.get("repair_dynamics_palette_prior"), Mapping)
+            else {}
+        ),
+        "repair_dynamics_context": dict(
+            row.get("repair_dynamics_context")
+            if isinstance(row.get("repair_dynamics_context"), Mapping)
+            else {}
         ),
         "budget_spend_gate": row.get("budget_spend_gate"),
         "command_hints": _targeted_component_correction_command_hints(row),
@@ -15370,6 +15697,9 @@ def build_frontier_rate_attack_feedback_refresh(
     mlx_retention_action: str = "move",
     mlx_retention_cold_store_roots: Sequence[str] = (),
     mlx_retention_cold_store_reserve_gb: float = DEFAULT_RESERVE_FREE_GB,
+    repair_palette_modes: Sequence[str] = (),
+    repair_dynamics_palette_priors: Sequence[Mapping[str, Any]] = (),
+    repair_dynamics_prior_source_paths: Sequence[str] = (),
 ) -> dict[str, Any]:
     """Build a forest-level feedback refresh and optional DQS1 follow-up queue."""
 
@@ -15430,6 +15760,26 @@ def build_frontier_rate_attack_feedback_refresh(
         frontier_artifact_roots=frontier_artifact_roots,
         results_root=results_root,
     )
+    manual_repair_dynamics_palette_prior = _repair_dynamics_palette_prior(
+        repair_palette_modes,
+        source="frontier_rate_attack_feedback_refresh_repair_palette_modes",
+    )
+    supplied_repair_dynamics_priors: list[Mapping[str, Any]] = [
+        prior
+        for prior in repair_dynamics_palette_priors
+        if isinstance(prior, Mapping) and prior
+    ]
+    for index, prior in enumerate(supplied_repair_dynamics_priors):
+        require_no_truthy_authority_fields(
+            prior,
+            context=f"frontier_feedback_refresh_repair_dynamics_palette_prior:{index}",
+        )
+    if manual_repair_dynamics_palette_prior:
+        supplied_repair_dynamics_priors.append(manual_repair_dynamics_palette_prior)
+    repair_dynamics_palette_prior = _aggregate_repair_dynamics_priors(
+        supplied_repair_dynamics_priors,
+        source="frontier_rate_attack_feedback_refresh_repair_dynamics_prior_aggregate",
+    )
     operation_portfolio = build_frontier_operation_portfolio(
         repo_root=repo,
         materializer_feedback_payloads=payloads,
@@ -15457,6 +15807,7 @@ def build_frontier_rate_attack_feedback_refresh(
         build_frontier_targeted_component_correction_acquisition(
             operation_portfolio=operation_portfolio,
             receiver_closed_correction_budget=receiver_closed_correction_budget,
+            repair_dynamics_palette_prior=repair_dynamics_palette_prior,
         )
     )
     queue_payload: dict[str, Any] | None = None
@@ -15564,6 +15915,9 @@ def build_frontier_rate_attack_feedback_refresh(
         "operation_materializer_bridge": operation_materializer_bridge,
         "receiver_repair_backlog": receiver_repair_backlog,
         "receiver_closed_correction_budget": receiver_closed_correction_budget,
+        "repair_dynamics_palette_prior": repair_dynamics_palette_prior,
+        "repair_dynamics_prior_source_paths": list(repair_dynamics_prior_source_paths),
+        "manual_repair_dynamics_palette_prior": manual_repair_dynamics_palette_prior,
         "targeted_component_correction_acquisition": (
             targeted_component_correction_acquisition
         ),

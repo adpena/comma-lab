@@ -12,6 +12,7 @@ rank/kill, or dispatch paid exact eval.
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 import time
 from pathlib import Path
@@ -48,6 +49,7 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (  # noqa: E402
     build_frontier_targeted_component_correction_queue,
     build_frontier_targeted_component_correction_response_harvest,
 )
+from tac.fec6_selector_operator_space import FEC6_FIXED_K16_MODE_IDS  # noqa: E402
 from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY  # noqa: E402
 from tac.optimization.pair_frame_scorer_geometry_lattice import (  # noqa: E402
     PairFrameScorerGeometryLatticeError,
@@ -75,6 +77,56 @@ def _display_path(path: str | Path) -> str:
         return value.resolve(strict=False).relative_to(REPO_ROOT.resolve()).as_posix()
     except ValueError:
         return value.as_posix()
+
+
+def _dedupe_strings(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for value in values:
+        text = str(value).strip()
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        out.append(text)
+    return out
+
+
+def _repair_palette_modes_from_args(args: argparse.Namespace) -> list[str]:
+    modes = list(args.repair_palette_mode or [])
+    for palette_id in args.repair_palette or []:
+        if palette_id == "fec6-fixed-k16":
+            modes.extend(FEC6_FIXED_K16_MODE_IDS)
+    return _dedupe_strings(modes)
+
+
+def _load_repair_dynamics_priors(paths: list[Path]) -> tuple[list[dict[str, Any]], list[str]]:
+    priors: list[dict[str, Any]] = []
+    source_paths: list[str] = []
+    for path in paths:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            raise FrontierRateAttackFeedbackError(
+                f"repair dynamics prior must be a JSON object: {path}"
+            )
+        if isinstance(payload.get("repair_dynamics_palette_prior"), dict):
+            prior = dict(payload["repair_dynamics_palette_prior"])
+        elif isinstance(payload.get("manual_repair_dynamics_palette_prior"), dict):
+            prior = dict(payload["manual_repair_dynamics_palette_prior"])
+        elif isinstance(payload.get("palette_modes"), list):
+            prior = dict(payload)
+        else:
+            raise FrontierRateAttackFeedbackError(
+                "repair dynamics prior JSON must contain palette_modes or a "
+                f"repair_dynamics_palette_prior object: {path}"
+            )
+        prior.setdefault("source", _display_path(path))
+        require_no_truthy_authority_fields(
+            prior,
+            context=f"repair_dynamics_prior:{_display_path(path)}",
+        )
+        priors.append(prior)
+        source_paths.append(_display_path(path))
+    return priors, source_paths
 
 
 def _targeted_dqs1_child_queue_paths(queue: dict[str, Any]) -> list[str]:
@@ -201,6 +253,35 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=[],
         dest="dqs1_observation_jsonl",
         help="DQS1 local-first harvest observation JSONL. May repeat; rows are deduped.",
+    )
+    parser.add_argument(
+        "--repair-palette",
+        choices=("fec6-fixed-k16",),
+        action="append",
+        default=[],
+        help=(
+            "Named repair-dynamics palette prior to inject as local planning "
+            "signal. Currently supports the fixed PR110/FEC6 K=16 palette."
+        ),
+    )
+    parser.add_argument(
+        "--repair-dynamics-prior",
+        type=Path,
+        action="append",
+        default=[],
+        help=(
+            "False-authority repair-dynamics prior JSON to inject into targeted "
+            "component acquisition. May repeat."
+        ),
+    )
+    parser.add_argument(
+        "--repair-palette-mode",
+        action="append",
+        default=[],
+        help=(
+            "Manual repair-dynamics palette mode to inject as local planning "
+            "signal. May repeat; never grants score or dispatch authority."
+        ),
     )
     parser.add_argument(
         "--include-observed-dqs1-candidate",
@@ -507,6 +588,11 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
             queue_path = output_dir / "receiver_repair_queue.json"
             write_json_artifact(queue_path, repair_queue)
             artifacts["receiver_repair_queue"] = _display_path(queue_path)
+    repair_dynamics_prior = report.get("repair_dynamics_palette_prior")
+    if isinstance(repair_dynamics_prior, dict) and repair_dynamics_prior:
+        path = output_dir / "repair_dynamics_palette_prior.json"
+        write_json_artifact(path, repair_dynamics_prior)
+        artifacts["repair_dynamics_palette_prior"] = _display_path(path)
     receiver_closed_budget = report.get("receiver_closed_correction_budget")
     if isinstance(receiver_closed_budget, dict):
         path = output_dir / "receiver_closed_correction_budget.json"
@@ -756,6 +842,11 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
             ),
             materializer_execution_queue_path=artifacts.get(
                 "operation_materializer_execution_queue"
+            ),
+            repair_dynamics_palette_prior=(
+                report.get("repair_dynamics_palette_prior")
+                if isinstance(report.get("repair_dynamics_palette_prior"), dict)
+                else None
             ),
             results_root=str(report.get("results_root") or DEFAULT_RESULTS_ROOT),
             queue_id=(
@@ -1237,6 +1328,10 @@ def main(argv: list[str] | None = None) -> int:
                 else []
             ),
         ]
+        repair_dynamics_priors, repair_dynamics_source_paths = (
+            _load_repair_dynamics_priors(args.repair_dynamics_prior)
+        )
+        repair_palette_modes = _repair_palette_modes_from_args(args)
         report = build_frontier_rate_attack_feedback_refresh(
             repo_root=REPO_ROOT,
             frontier_artifact_roots=tuple(args.frontier_artifact_root),
@@ -1264,6 +1359,9 @@ def main(argv: list[str] | None = None) -> int:
             mlx_retention_action=args.mlx_retention_action,
             mlx_retention_cold_store_roots=tuple(args.mlx_retention_cold_store_root),
             mlx_retention_cold_store_reserve_gb=args.mlx_retention_cold_store_reserve_gb,
+            repair_palette_modes=tuple(repair_palette_modes),
+            repair_dynamics_palette_priors=tuple(repair_dynamics_priors),
+            repair_dynamics_prior_source_paths=tuple(repair_dynamics_source_paths),
         )
         if generated_pair_frame_lattice is not None:
             report["generated_pair_frame_geometry_lattice_path"] = _display_path(
@@ -1390,6 +1488,29 @@ def main(argv: list[str] | None = None) -> int:
                         else None
                     ),
                 },
+                "repair_dynamics_prior_summary": {
+                    "repair_dynamics_palette_prior_present": (
+                        bool(report.get("repair_dynamics_palette_prior"))
+                        if isinstance(report.get("repair_dynamics_palette_prior"), dict)
+                        else False
+                    ),
+                    "repair_dynamics_prior_source_count": len(
+                        report.get("repair_dynamics_prior_source_paths") or []
+                    ),
+                    "repair_dynamics_prior_defaulted": False,
+                    "mode_count": (
+                        report.get("repair_dynamics_palette_prior", {}).get("mode_count")
+                        if isinstance(report.get("repair_dynamics_palette_prior"), dict)
+                        else None
+                    ),
+                    "zero_frame1_modes": (
+                        report.get("repair_dynamics_palette_prior", {}).get(
+                            "zero_frame1_modes"
+                        )
+                        if isinstance(report.get("repair_dynamics_palette_prior"), dict)
+                        else None
+                    ),
+                },
                 "targeted_component_correction_acquisition_summary": {
                     "active": (
                         report.get(
@@ -1435,6 +1556,26 @@ def main(argv: list[str] | None = None) -> int:
                         report.get(
                             "targeted_component_correction_acquisition", {}
                         ).get("top_acquisition_ids")
+                        if isinstance(
+                            report.get("targeted_component_correction_acquisition"),
+                            dict,
+                        )
+                        else None
+                    ),
+                    "repair_dynamics_prior_active": (
+                        report.get(
+                            "targeted_component_correction_acquisition", {}
+                        ).get("repair_dynamics_prior_active")
+                        if isinstance(
+                            report.get("targeted_component_correction_acquisition"),
+                            dict,
+                        )
+                        else None
+                    ),
+                    "repair_dynamics_palette_probe_count": (
+                        report.get(
+                            "targeted_component_correction_acquisition", {}
+                        ).get("repair_dynamics_palette_probe_count")
                         if isinstance(
                             report.get("targeted_component_correction_acquisition"),
                             dict,
