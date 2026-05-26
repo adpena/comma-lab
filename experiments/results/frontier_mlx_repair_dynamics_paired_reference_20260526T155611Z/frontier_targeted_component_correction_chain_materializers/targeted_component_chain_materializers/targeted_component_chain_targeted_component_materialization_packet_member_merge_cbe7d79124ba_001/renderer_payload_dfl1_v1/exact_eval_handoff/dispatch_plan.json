@@ -31,7 +31,7 @@
   "experiment_queue_id": "frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z_targeted_chain_materializer_execution_r2_materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_renderer_payload_dfl1_v1_001_renderer_payload_dfl1_v1_exact_eval_dispatch",
   "experiment_queue_schema": "experiment_queue.v1",
   "field_selection_ready_for_exact_eval_dispatch": false,
-  "generated_at_utc": "2026-05-26T18:31:20Z",
+  "generated_at_utc": "2026-05-26T18:44:43Z",
   "gpu_launched": false,
   "hard_plan_blockers": [],
   "max_total_cost": 5.0,

@@ -23,8 +23,8 @@
     "runtime_consumption_proof_schema": "family_agnostic_runtime_consumption_proof_v1",
     "runtime_consumption_proof_sha256": "00059578315477c25dc2d246baf43211644599cf6c4e6c740be464ccee17225f",
     "runtime_consumption_proof_status": "present",
-    "runtime_content_tree_sha256": "34fd326c36e66e8cd07c2fc629e9c5117e2c62daad77c2a1f9389bd3cb9f6ee0",
-    "runtime_tree_sha256": "5ff08bf9dc166561eae8407e1cd2b9f61a2dc8bdc9e78438781fe7ab34fb300d",
+    "runtime_content_tree_sha256": "810feb4b3a88d0c927d55429632c465160ba8e8aacc59f1aa73e8e7fb23ec5b2",
+    "runtime_tree_sha256": "136e86c94ec5a36de00819237248ad420561f74700ffb7cb556609c3b014a75e",
     "score_affecting_change_proofs": [
       "archive_changed=true",
       "byte_different=true",
@@ -60,10 +60,10 @@
     "source_archive_bytes": 345802,
     "source_score_fields_stripped": [],
     "submission_dir": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission/renderer_payload_dfl1_e20295f0a662",
-    "submission_runtime_content_tree_sha256": "34fd326c36e66e8cd07c2fc629e9c5117e2c62daad77c2a1f9389bd3cb9f6ee0",
-    "submission_runtime_tree_sha256": "5ff08bf9dc166561eae8407e1cd2b9f61a2dc8bdc9e78438781fe7ab34fb300d"
+    "submission_runtime_content_tree_sha256": "810feb4b3a88d0c927d55429632c465160ba8e8aacc59f1aa73e8e7fb23ec5b2",
+    "submission_runtime_tree_sha256": "136e86c94ec5a36de00819237248ad420561f74700ffb7cb556609c3b014a75e"
   },
-  "generated_at_utc": "2026-05-26T18:31:19Z",
+  "generated_at_utc": "2026-05-26T18:44:42Z",
   "ready_for_exact_eval_dispatch": false,
   "schema": "optimizer_candidate_exact_eval_readiness_report_v1",
   "source_queue_path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/closed_source_queue.json",

@@ -21,7 +21,7 @@
   "experiment_queue_id": "frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z_targeted_chain_materializer_execution_r2",
   "experiment_queue_state_path": ".omx/state/experiment_queue_frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z_targeted_chain_materializer_execution_r2.sqlite",
   "field_selection_ready_for_exact_eval_dispatch": false,
-  "generated_at_utc": "2026-05-26T18:31:14Z",
+  "generated_at_utc": "2026-05-26T18:44:36Z",
   "gpu_launched": false,
   "promotable": false,
   "promotion_eligible": false,
@@ -38,7 +38,7 @@
         "blockers": [],
         "candidate_id": "renderer_payload_dfl1_e20295f0a662",
         "proof_path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/renderer_payload_dfl1_shell_parity/shell_inflate_parity.json",
-        "proof_sha256": "08bb7ab315cfd2a74f6990cad141e9d0712e0e15f63cba32fc10015df555eb07"
+        "proof_sha256": "ce5bb5b06fe85b87866d597dc3ce2b5f58cf6f4418c8feeaec88c45be48c977c"
       }
     ]
   },

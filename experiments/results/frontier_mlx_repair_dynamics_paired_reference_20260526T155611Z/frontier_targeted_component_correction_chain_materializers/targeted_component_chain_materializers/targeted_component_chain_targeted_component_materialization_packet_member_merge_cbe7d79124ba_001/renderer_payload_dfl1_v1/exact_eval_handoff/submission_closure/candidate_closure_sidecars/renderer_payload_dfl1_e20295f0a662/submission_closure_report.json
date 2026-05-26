@@ -107,7 +107,7 @@
   "exact_cuda_auth_eval": false,
   "field_selection_ready_for_exact_eval_dispatch": false,
   "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
-  "generated_at_utc": "2026-05-26T18:31:16Z",
+  "generated_at_utc": "2026-05-26T18:44:39Z",
   "gpu_launched": false,
   "materializer_submission_closure_kind": "source_runtime_static_closure_with_candidate_archive",
   "promotable": false,
@@ -134,7 +134,7 @@
         "bytes": 3803,
         "relative_path": "archive_manifest.json",
         "repo_relative_path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission/renderer_payload_dfl1_e20295f0a662/archive_manifest.json",
-        "sha256": "15e8e071956a6df08fc0c6284b04442a0725746673675eee067017ce9caf3bbf"
+        "sha256": "89153b32eaca9877ce75149082ae042d6c20acbe077a1068d5112d8faa8918a7"
       },
       {
         "bytes": 507,
@@ -1904,10 +1904,10 @@
       "tac_root_relative_path": "src/tac",
       "unresolved_modules": []
     },
-    "runtime_content_tree_sha256": "34fd326c36e66e8cd07c2fc629e9c5117e2c62daad77c2a1f9389bd3cb9f6ee0",
+    "runtime_content_tree_sha256": "810feb4b3a88d0c927d55429632c465160ba8e8aacc59f1aa73e8e7fb23ec5b2",
     "runtime_file_count": 18,
     "runtime_root": "/Users/adpena/Projects/pact/experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission/renderer_payload_dfl1_e20295f0a662",
-    "runtime_tree_sha256": "5ff08bf9dc166561eae8407e1cd2b9f61a2dc8bdc9e78438781fe7ab34fb300d",
+    "runtime_tree_sha256": "136e86c94ec5a36de00819237248ad420561f74700ffb7cb556609c3b014a75e",
     "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
     "upstream_evaluate_py": {
       "bytes": 6005,

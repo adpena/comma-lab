@@ -29,7 +29,7 @@
   "exact_cuda_auth_eval": false,
   "exact_readiness_out_dir": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/exact_readiness",
   "field_selection_ready_for_exact_eval_dispatch": false,
-  "generated_at_utc": "2026-05-26T18:31:19Z",
+  "generated_at_utc": "2026-05-26T18:44:42Z",
   "gpu_launched": false,
   "operator_clearable_source_blockers": [],
   "promotable": false,

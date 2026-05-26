@@ -14,7 +14,7 @@
   "exact_cuda_auth_eval": false,
   "field_selection_ready_for_exact_eval_dispatch": false,
   "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
-  "generated_at_utc": "2026-05-26T18:31:14Z",
+  "generated_at_utc": "2026-05-26T18:44:37Z",
   "gpu_launched": false,
   "materializer_id": "renderer_payload_dfl1_adapter",
   "members": [
