@@ -823,9 +823,11 @@ def test_operation_chain_queue_wires_byte_range_harvest_closure_and_readiness(
         "build_byte_range_submission_closure",
         "run_byte_range_exact_readiness_bridge",
     ]
+    assert experiment["steps"][1]["requires"] == ["emit_operation_chain_stage_plan"]
     harvest_step = experiment["steps"][3]
     run_chain_step = experiment["steps"][2]
     assert "--overwrite" in run_chain_step["command"]
+    assert run_chain_step["requires"] == ["emit_byte_range_stage_inputs"]
     assert harvest_step["command"][1] == "tools/harvest_materializer_chain_candidates.py"
     assert "--require-accepted" in harvest_step["command"]
     assert harvest_step["requires"] == ["run_byte_range_entropy_recode_chain"]
@@ -2959,6 +2961,24 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     assert report["artifacts"][
         "targeted_component_correction_materialization_requests"
     ].endswith("targeted_component_correction_materialization_requests.json")
+    assert report["artifacts"]["operation_materializer_bridge"].endswith(
+        "operation_materializer_bridge.json"
+    )
+    assert report["artifacts"]["operation_materializer_backlog"].endswith(
+        "operation_materializer_backlog.json"
+    )
+    assert report["artifacts"]["operation_materializer_contexts"].endswith(
+        "operation_materializer_contexts.json"
+    )
+    assert report["artifacts"]["operation_materializer_work_queue"].endswith(
+        "operation_materializer_work_queue.json"
+    )
+    assert report["artifacts"]["operation_chain_compiler_work_orders"].endswith(
+        "operation_chain_compiler_work_orders.json"
+    )
+    assert report["artifacts"]["operation_chain_compiler_queue"].endswith(
+        "operation_chain_compiler_queue.json"
+    )
     assert report["operator_commands"]["validate_followup_queue"][0] == ".venv/bin/python"
     assert (
         report["operator_commands"]["validate_receiver_repair_queue"][0]
@@ -2988,6 +3008,29 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
         "12",
         "--max-experiments",
         "4",
+        "--max-parallel",
+        "2",
+    ]
+    assert (
+        report["operator_commands"]["validate_operation_chain_compiler_queue"][0]
+        == ".venv/bin/python"
+    )
+    bounded_chain_run = report["operator_commands"][
+        "run_operation_chain_compiler_queue_bounded_local"
+    ]
+    assert bounded_chain_run[:4] == [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        report["artifacts"]["operation_chain_compiler_queue"],
+    ]
+    assert bounded_chain_run[4:] == [
+        "run-worker",
+        "--execute",
+        "--max-steps",
+        "16",
+        "--max-experiments",
+        "2",
         "--max-parallel",
         "2",
     ]
@@ -3523,6 +3566,21 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
             "12",
             "--max-experiments",
             "4",
+            "--max-parallel",
+            "2",
+        ]
+    )
+    assert (
+        initial_feedback_report["operator_commands"][
+            "run_operation_chain_compiler_queue_bounded_local"
+        ][4:]
+        == [
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            "16",
+            "--max-experiments",
+            "2",
             "--max-parallel",
             "2",
         ]

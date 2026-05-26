@@ -687,6 +687,34 @@ def write_frontier_refresh_artifacts(
             artifacts["operation_chain_compiler_queue"],
             "validate",
         ]
+        operator_commands["init_operation_chain_compiler_queue"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["operation_chain_compiler_queue"],
+            "init",
+        ]
+        operator_commands["status_operation_chain_compiler_queue"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["operation_chain_compiler_queue"],
+            "status",
+        ]
+        operator_commands["run_operation_chain_compiler_queue_bounded_local"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["operation_chain_compiler_queue"],
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            "16",
+            "--max-experiments",
+            "2",
+            "--max-parallel",
+            "2",
+        ]
     if "targeted_component_correction_queue" in artifacts:
         operator_commands["validate_targeted_component_correction_queue"] = [
             ".venv/bin/python",

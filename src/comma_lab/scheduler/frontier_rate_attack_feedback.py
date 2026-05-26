@@ -6496,6 +6496,7 @@ def build_frontier_operation_chain_compiler_queue(
             {
                 "id": "emit_byte_range_stage_inputs",
                 "kind": "command",
+                "requires": ["emit_operation_chain_stage_plan"],
                 "command": [
                     ".venv/bin/python",
                     BYTE_RANGE_STAGE_INPUTS_TOOL,
@@ -6542,6 +6543,7 @@ def build_frontier_operation_chain_compiler_queue(
                         "id": "run_byte_range_entropy_recode_chain",
                         "kind": "command",
                         "command": list(byte_range_inputs_preview["local_chain_command"]),
+                        "requires": ["emit_byte_range_stage_inputs"],
                         "resources": {"kind": "local_io_heavy"},
                         "timeout_seconds": 600,
                         "postconditions": [
@@ -9096,7 +9098,7 @@ def build_frontier_rate_attack_feedback_refresh(
             if action_summary_path is None
             else _repo_rel(_resolve_path(action_summary_path, repo_root=repo), repo)
         ),
-        "queue_id": queue_id if queue_payload is not None else None,
+        "queue_id": queue_id,
         "results_root": results_root,
         "selected_candidate_ids": selected_candidate_ids,
         "selected_pairset_acquisition": selected_pairset_acquisition,
