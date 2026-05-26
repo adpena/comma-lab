@@ -483,21 +483,32 @@ def main(argv: list[str] | None = None) -> int:
 
             auth_eval_axis = "cuda" if args.device in ("cuda", "gpu") else "cpu"
             auth_eval_json_path = args.output_dir / f"contest_auth_eval_{auth_eval_axis}.json"
+            contest_auth_eval_script = args.upstream_dir.parent / "experiments" / "contest_auth_eval.py"
+            if not contest_auth_eval_script.exists():
+                contest_auth_eval_script = REPO_ROOT / "experiments" / "contest_auth_eval.py"
             auth_eval_result = gate_auth_eval_call(
-                archive=submission_dir / "0.bin",
+                args=args,
+                archive_zip=submission_dir / "0.bin",
                 inflate_sh=top_inflate_sh,
-                json_out=auth_eval_json_path,
-                device=auth_eval_axis,
                 upstream_dir=args.upstream_dir,
-                lane_id=lane_id,
-                substrate_id=substrate_id,
+                output_json=auth_eval_json_path,
+                contest_auth_eval_script=contest_auth_eval_script,
+                substrate_tag=substrate_id,
+                device=auth_eval_axis,
+                required_score_axis=f"contest_{auth_eval_axis}",
             )
-            stats["auth_eval_score"] = auth_eval_result.get("final_score")
-            stats["auth_eval_score_axis"] = auth_eval_result.get("score_axis")
-            stats["auth_eval_score_claim_valid"] = bool(auth_eval_result.get("score_claim_valid", False))
-            stats["auth_eval_lane_tag"] = auth_eval_result.get("lane_tag", f"[contest-{auth_eval_axis.upper()}]")
-            stats["auth_eval_result_review_blockers"] = auth_eval_result.get("result_review_blockers", [])
-            _log(f"stage_7_auth_eval_done score={stats['auth_eval_score']} axis={stats['auth_eval_score_axis']}")
+            if auth_eval_result is not None:
+                stats["auth_eval_score"] = auth_eval_result.get("final_score")
+                stats["auth_eval_score_axis"] = auth_eval_result.get("score_axis")
+                stats["auth_eval_score_claim_valid"] = bool(auth_eval_result.get("score_claim_valid", False))
+                stats["auth_eval_lane_tag"] = auth_eval_result.get("lane_tag", f"[contest-{auth_eval_axis.upper()}]")
+                stats["auth_eval_result_review_blockers"] = auth_eval_result.get("result_review_blockers", [])
+                _log(f"stage_7_auth_eval_done score={stats['auth_eval_score']} axis={stats['auth_eval_score_axis']}")
+            else:
+                stats["auth_eval_score"] = None
+                stats["auth_eval_score_claim_valid"] = False
+                stats["auth_eval_skipped_reason"] = "gate_returned_none"
+                _log("stage_7_auth_eval_done score=None (gate returned None per smoke-skip semantics)")
         except Exception as exc:
             _log(f"stage_7_auth_eval_FAIL: {exc}")
             stats["auth_eval_score"] = None
