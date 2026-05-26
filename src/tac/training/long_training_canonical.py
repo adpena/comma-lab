@@ -107,22 +107,19 @@ from __future__ import annotations
 
 # CHECKPOINT_DISCIPLINE_WAIVED:canonical_infrastructure_module_no_subagent_dispatches_within_helper_body
 # FORMALIZATION_PENDING:queued_for_canonical_equation_registration_post_first_l2_run_per_catalog_344_protocol
-
-import dataclasses
 import fcntl
 import hashlib
 import json
-import os
 import time
 import traceback
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from itertools import pairwise
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
 __all__ = [
-    # Canonical constants
     "CANONICAL_EMA_DECAY",
     "CANONICAL_NON_PROMOTABLE_MARKERS",
     "DEFAULT_CHECKPOINT_INTERVAL_EPOCHS",
@@ -130,23 +127,19 @@ __all__ = [
     "DEFAULT_TELEMETRY_FLUSH_INTERVAL_EPOCHS",
     "PR95_8STAGE_CURRICULUM_DEFAULT",
     "TRAINING_ARTIFACT_SCHEMA_VERSION",
-    # Frozen dataclasses
+    "CheckpointWriter",
     "CurriculumStage",
+    "KahanCompensatedPolyakEMAShadow",
     "LongTrainingConfig",
-    "PerEpochMetrics",
-    "TrainingArtifact",
     "MultiArmDispatchResult",
-    # Substrate adapter Protocol
+    "OOMSafeStepRunner",
+    "PerEpochMetrics",
+    "PolyakEMAShadow",
     "SubstrateLongTrainingAdapter",
-    # Canonical entry-points
+    "TelemetrySink",
+    "TrainingArtifact",
     "run_long_training",
     "run_long_training_multi_arm",
-    # Canonical primitives (composable)
-    "PolyakEMAShadow",
-    "TelemetrySink",
-    "CheckpointWriter",
-    "OOMSafeStepRunner",
-    # Conformance helpers
     "validate_long_training_config",
     "validate_substrate_adapter",
 ]
@@ -191,7 +184,7 @@ _PLACEHOLDER_RATIONALE_TOKENS: frozenset[str] = frozenset({
 # tac.local_acceleration.pr95_hnerv_mlx_long_training for substrate-
 # agnostic reuse; the sister module's CANONICAL_8STAGE_CURRICULUM
 # remains the PR95-specific authority).
-PR95_8STAGE_CURRICULUM_DEFAULT: tuple["CurriculumStage", ...]  # forward-declared
+PR95_8STAGE_CURRICULUM_DEFAULT: tuple[CurriculumStage, ...]  # forward-declared
 
 
 # ---------------------------------------------------------------------------
@@ -519,7 +512,7 @@ class LongTrainingConfig:
                 f"first curriculum stage must start at epoch 0; "
                 f"got start_epoch={sorted_stages[0].start_epoch}"
             )
-        for prev, curr in zip(sorted_stages, sorted_stages[1:], strict=False):
+        for prev, curr in pairwise(sorted_stages):
             if prev.end_epoch != curr.start_epoch:
                 raise ValueError(
                     f"curriculum stages must be contiguous; gap or overlap "
@@ -579,12 +572,13 @@ class LongTrainingConfig:
             raise ValueError(
                 f"device must be one of {{'cuda', 'cpu', 'mlx'}}; got {self.device!r}"
             )
-        if self.resume_from_checkpoint is not None:
-            if not isinstance(self.resume_from_checkpoint, Path):
-                raise TypeError(
-                    f"resume_from_checkpoint must be Path; "
-                    f"got {type(self.resume_from_checkpoint).__name__}"
-                )
+        if self.resume_from_checkpoint is not None and not isinstance(
+            self.resume_from_checkpoint, Path
+        ):
+            raise TypeError(
+                f"resume_from_checkpoint must be Path; "
+                f"got {type(self.resume_from_checkpoint).__name__}"
+            )
         if self.notes:
             _validate_rationale_not_placeholder(self.notes, "LongTrainingConfig.notes")
 
@@ -1025,7 +1019,32 @@ class PolyakEMAShadow:
     the snapshot+restore pattern is used at export time only.
     """
 
-    def __init__(self, model: Any, decay: float = CANONICAL_EMA_DECAY):
+    def __init__(
+        self,
+        model: Any,
+        decay: float = CANONICAL_EMA_DECAY,
+        *,
+        enable_kahan: bool = False,
+    ):
+        """Construct canonical Polyak EMA shadow primitive.
+
+        Args:
+            model: substrate model (torch / MLX / duck-typed state_dict).
+            decay: Polyak EMA decay coefficient in (0, 1); per Catalog #2
+                NON-NEGOTIABLE canonical default = 0.997.
+            enable_kahan: when True, the per-tensor EMA shadow update uses
+                Kahan (1965) compensated summation to bound floating-point
+                truncation error at ULP-level instead of accumulating
+                O(N * ULP) over N updates. Per T3 grand council OP #2
+                (commit ``7d04474cb``) Class 1-SCOPED Kahan-EMA surgical
+                mitigation of M2 (EMA shadow drift accumulation through
+                Polyak 0.997 decay's ~333-step exponential moving average).
+                Defaults to False to preserve canonical backward
+                compatibility per Catalog #110/#113 APPEND-ONLY discipline;
+                the canonical wrapper class ``KahanCompensatedPolyakEMAShadow``
+                sets this flag True by default for callers who want the
+                hardened semantics by construction.
+        """
         if not (0.0 < decay < 1.0):
             raise ValueError(
                 f"decay must be in (0, 1); got {decay!r}. "
@@ -1034,17 +1053,27 @@ class PolyakEMAShadow:
         # Duck-type detection: torch uses state_dict(); MLX uses parameters()
         # + tree_flatten/tree_unflatten. We support BOTH canonical patterns.
         self._mlx_mode = self._detect_mlx_mode(model)
-        if not self._mlx_mode:
-            if not hasattr(model, "state_dict") or not callable(model.state_dict):
-                raise TypeError(
-                    f"model {type(model).__name__} must expose .state_dict() "
-                    "method (torch) OR .parameters() (MLX module); see "
-                    "PolyakEMAShadow duck-typing contract."
-                )
+        if not self._mlx_mode and (
+            not hasattr(model, "state_dict") or not callable(model.state_dict)
+        ):
+            raise TypeError(
+                f"model {type(model).__name__} must expose .state_dict() "
+                "method (torch) OR .parameters() (MLX module); see "
+                "PolyakEMAShadow duck-typing contract."
+            )
         self.decay = decay
+        self.enable_kahan = bool(enable_kahan)
         self._shadow: dict[str, Any] = self._clone_state_dict(
             self._get_flat_state(model)
         )
+        # Per Kahan 1965 compensated summation: a per-tensor compensation
+        # buffer captures the low-order bits truncated during each
+        # `shadow = decay*shadow + (1-decay)*live` update so the next update
+        # restores them before the next truncation. Initialized to zeros and
+        # only populated when ``enable_kahan=True``. The per-key zero-init
+        # is deferred to first update() so we can match each shadow tensor's
+        # type / shape via duck-typed subtraction `shadow - shadow`.
+        self._kahan_compensation: dict[str, Any] = {}
 
     @staticmethod
     def _detect_mlx_mode(model: Any) -> bool:
@@ -1089,7 +1118,25 @@ class PolyakEMAShadow:
         return cloned
 
     def update(self, model: Any) -> None:
-        """Update shadow via canonical Polyak averaging."""
+        """Update shadow via canonical Polyak averaging.
+
+        When ``enable_kahan=True``, the per-tensor update uses Kahan (1965)
+        compensated summation to bound truncation error at ULP-level
+        regardless of N updates. The canonical Kahan recurrence on
+        ``S_new = decay*S + (1-decay)*L`` (treating the update as a sum of
+        two terms with the compensation tracking the lost low-order bits):
+
+            y = (1-decay)*L - c_prev
+            t = decay*S + y
+            c_new = (t - decay*S) - y
+            S_new = t
+
+        Per T3 grand council OP #2 (commit ``7d04474cb``) the M2 mechanism
+        (EMA shadow drift accumulation through Polyak 0.997 decay's
+        ~333-step exponential moving average) is bounded by Kahan;
+        per Carmack 30-min smoke (OP #3) the empirical reduction ratio is
+        verifiable at $0 MLX-local on the Z6 L2 substrate.
+        """
         live_state = self._get_flat_state(model)
         for k, v in live_state.items():
             if k not in self._shadow:
@@ -1097,10 +1144,76 @@ class PolyakEMAShadow:
                 # discipline in the canonical EMA at tac.training.EMA.update.
                 self._shadow[k] = self._clone_state_dict({k: v})[k]
                 continue
-            # Duck-typed update: torch tensors support .mul_().add_();
-            # MLX arrays + numpy arrays need element-wise arithmetic;
-            # plain Python list/tuple need element-wise iteration.
             shadow_v = self._shadow[k]
+            if self.enable_kahan:
+                # Kahan-compensated path: route the SAME duck-typed dispatch
+                # tree as the naive path, but each branch threads c_prev /
+                # c_new compensation via element-wise arithmetic. Non-float
+                # buffers cannot accumulate truncation error meaningfully so
+                # we bypass Kahan for them (copy live directly).
+                try:
+                    if hasattr(shadow_v, "mul_") and hasattr(shadow_v, "add_"):
+                        # Torch path: explicit functional Kahan to retain
+                        # the compensation buffer; we sacrifice in-place
+                        # efficiency for ULP-bounded accumulation.
+                        if hasattr(v, "is_floating_point") and not v.is_floating_point():
+                            shadow_v.copy_(v)
+                            self._kahan_compensation.pop(k, None)
+                        else:
+                            c_prev = self._kahan_compensation.get(k)
+                            if c_prev is None:
+                                c_prev = shadow_v - shadow_v  # type-matched zero tensor
+                            y = (1.0 - self.decay) * v - c_prev
+                            decay_shadow = self.decay * shadow_v
+                            t = decay_shadow + y
+                            c_new = (t - decay_shadow) - y
+                            # In-place assign so downstream readers (drift_l2)
+                            # see the updated shadow without re-binding.
+                            shadow_v.copy_(t) if hasattr(shadow_v, "copy_") else None
+                            self._shadow[k] = t if not hasattr(shadow_v, "copy_") else shadow_v
+                            self._kahan_compensation[k] = c_new
+                    elif isinstance(shadow_v, list):
+                        # Plain Python list: element-wise Kahan.
+                        c_prev_list = self._kahan_compensation.get(k)
+                        if c_prev_list is None:
+                            c_prev_list = [0.0] * len(shadow_v)
+                        new_shadow: list[float] = []
+                        new_c: list[float] = []
+                        for sv, lv, cp in zip(shadow_v, v, c_prev_list, strict=False):
+                            y = (1.0 - self.decay) * float(lv) - cp
+                            decay_sv = self.decay * float(sv)
+                            t = decay_sv + y
+                            c_new_i = (t - decay_sv) - y
+                            new_shadow.append(t)
+                            new_c.append(c_new_i)
+                        self._shadow[k] = new_shadow
+                        self._kahan_compensation[k] = new_c
+                    else:
+                        # Functional path (MLX / numpy): construct new array.
+                        c_prev = self._kahan_compensation.get(k)
+                        if c_prev is None:
+                            c_prev = shadow_v - shadow_v
+                        y = (1.0 - self.decay) * v - c_prev
+                        decay_shadow = self.decay * shadow_v
+                        t = decay_shadow + y
+                        c_new = (t - decay_shadow) - y
+                        self._shadow[k] = t
+                        self._kahan_compensation[k] = c_new
+                except (AttributeError, TypeError, RuntimeError):
+                    # Duck-type failure: degrade to naive Polyak per the
+                    # canonical contract; discard this key's compensation so
+                    # a later successful Kahan step restarts from a typed zero
+                    # buffer instead of mixing stale arithmetic state.
+                    self._kahan_compensation.pop(k, None)
+                    if isinstance(shadow_v, (list, tuple)) and isinstance(v, (list, tuple)):
+                        self._shadow[k] = [
+                            self.decay * float(sv) + (1.0 - self.decay) * float(lv)
+                            for sv, lv in zip(shadow_v, v, strict=False)
+                        ]
+                    else:
+                        self._shadow[k] = self.decay * shadow_v + (1.0 - self.decay) * v
+                continue
+            # Naive (canonical backward-compat) Polyak path:
             try:
                 # Try in-place torch path first (efficient).
                 if hasattr(shadow_v, "mul_") and hasattr(shadow_v, "add_"):
@@ -1199,6 +1312,45 @@ class PolyakEMAShadow:
                 # Non-numeric value (e.g. dict / list / str); skip
                 continue
         return float(total ** 0.5)
+
+
+class KahanCompensatedPolyakEMAShadow(PolyakEMAShadow):
+    """Canonical Kahan-compensated Polyak EMA shadow primitive.
+
+    Sister of ``PolyakEMAShadow`` per Catalog #265 narrow public API:
+    callers who want the hardened M2-mitigated semantics by construction
+    instantiate this wrapper class instead of the canonical primitive;
+    callers who want the canonical backward-compatible behavior keep
+    using ``PolyakEMAShadow`` (which defaults ``enable_kahan=False``).
+
+    Per T3 grand council OP #2 (commit ``7d04474cb``) Class 1-SCOPED
+    Kahan-EMA surgical mitigation of M2 (EMA shadow drift accumulation
+    through Polyak 0.997 decay's ~333-step exponential moving average).
+    Per Kahan's classical 1965 result, error of N additions reduces
+    from O(N * ULP) to O(ULP); for Polyak EMA the effective window is
+    ``1 / (1 - decay) ≈ 333`` steps at the canonical 0.997 decay so
+    the unmitigated accumulation upper-bound is ~333 ULPs per shadow
+    element, while Kahan reduces this to ~1 ULP regardless of training
+    depth.
+
+    Per CLAUDE.md "consolidate everything into META layer or canonical
+    helpers" standing directive: this is a thin canonical wrapper that
+    inherits PolyakEMAShadow's full duck-typed surface (torch / MLX /
+    plain Python list / numpy) and only overrides the default
+    ``enable_kahan`` flag — zero LOC duplication, full API parity, and
+    every cross-substrate consumer (B' + C' + D + E + F + G + H + I +
+    J + K) inherits Kahan via the canonical L2 helper extension.
+
+    Per CLAUDE.md "EMA -- NON-NEGOTIABLE" + Quantizr PR101 anchor:
+    decay=0.997 is the canonical default. Per CLAUDE.md "Forbidden
+    empirical-claim-without-evidence-tag": empirical drift-reduction
+    ratio vs naive is verifiable at $0 MLX-local via
+    ``tools/smoke_kahan_ema_vs_naive_z6.py`` (T3 OP #3 Carmack 30-min
+    smoke).
+    """
+
+    def __init__(self, model: Any, decay: float = CANONICAL_EMA_DECAY):
+        super().__init__(model, decay=decay, enable_kahan=True)
 
 
 class TelemetrySink:
@@ -1366,8 +1518,8 @@ class CheckpointWriter:
             )
         if meta.get("curriculum_hash") != self.curriculum_hash:
             raise ValueError(
-                f"resume checkpoint curriculum_hash differs; refusing per "
-                f"Catalog #229 PV (curriculum must match for valid resume)."
+                "resume checkpoint curriculum_hash differs; refusing per "
+                "Catalog #229 PV (curriculum must match for valid resume)."
             )
         return meta
 
@@ -1399,7 +1551,7 @@ class OOMSafeStepRunner:
         if isinstance(exc, MemoryError):
             return True
         msg = str(exc).lower()
-        return "out of memory" in msg or "oom" in msg or "memory" in msg and "cuda" in msg
+        return "out of memory" in msg or "oom" in msg or ("memory" in msg and "cuda" in msg)
 
     def run_step(
         self,
@@ -1421,7 +1573,7 @@ class OOMSafeStepRunner:
         retries = 0
         last_exc: BaseException | None = None
         use_train_step = hasattr(adapter, "train_step") and callable(
-            getattr(adapter, "train_step")
+            adapter.train_step
         )
         while retries < self.max_retries and current_bs >= self.min_batch_size:
             try:

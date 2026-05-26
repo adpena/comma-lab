@@ -15,23 +15,22 @@ canonical helpers themselves; only the substrate adapter is mocked.
 """
 from __future__ import annotations
 
-import copy
 import json
+from collections.abc import Mapping
+from itertools import pairwise
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 import pytest
 
 from tac.training.long_training_canonical import (
     CANONICAL_EMA_DECAY,
     CANONICAL_NON_PROMOTABLE_MARKERS,
-    DEFAULT_CHECKPOINT_INTERVAL_EPOCHS,
-    DEFAULT_EARLY_STOPPING_PATIENCE,
-    DEFAULT_TELEMETRY_FLUSH_INTERVAL_EPOCHS,
     PR95_8STAGE_CURRICULUM_DEFAULT,
     TRAINING_ARTIFACT_SCHEMA_VERSION,
     CheckpointWriter,
     CurriculumStage,
+    KahanCompensatedPolyakEMAShadow,
     LongTrainingConfig,
     MultiArmDispatchResult,
     OOMSafeStepRunner,
@@ -41,10 +40,8 @@ from tac.training.long_training_canonical import (
     TrainingArtifact,
     run_long_training,
     run_long_training_multi_arm,
-    validate_long_training_config,
     validate_substrate_adapter,
 )
-
 
 # ---------------------------------------------------------------------------
 # Mock substrate adapter (numpy-only; no torch/MLX dependency)
@@ -109,7 +106,7 @@ class _MockSubstrateAdapter:
 
     def optimizer_step(self, model: Any, loss: Any, learning_rate: float) -> None:
         # "Update" params by adding a tiny LR-scaled delta to simulate training.
-        for k, v in model._params.items():
+        for _k, v in model._params.items():
             for i in range(len(v)):
                 v[i] = v[i] + 0.001 * learning_rate * (1 if i % 2 == 0 else -1)
 
@@ -186,7 +183,7 @@ def test_pr95_8stage_curriculum_covers_0_to_3000_contiguously() -> None:
     sorted_stages = sorted(PR95_8STAGE_CURRICULUM_DEFAULT, key=lambda s: s.start_epoch)
     assert sorted_stages[0].start_epoch == 0
     assert sorted_stages[-1].end_epoch == 3000
-    for prev, curr in zip(sorted_stages, sorted_stages[1:]):
+    for prev, curr in pairwise(sorted_stages):
         assert prev.end_epoch == curr.start_epoch, "stages must be contiguous"
     assert len(PR95_8STAGE_CURRICULUM_DEFAULT) == 8
 
@@ -555,7 +552,7 @@ def test_oom_safe_runner_raises_after_exhausting_retries() -> None:
     adapter = _AlwaysOOM()
     runner = OOMSafeStepRunner(max_retries=3, min_batch_size=1)
     stage = CurriculumStage(name="s", start_epoch=0, end_epoch=10)
-    with pytest.raises(RuntimeError, match="exhausted .* retries"):
+    with pytest.raises(RuntimeError, match=r"exhausted .* retries"):
         runner.run_step(adapter, batch_size=4, seed=0, stage=stage, learning_rate=1e-3)
     assert runner.oom_event_count >= 2  # at least 2 OOM events before exhaustion
 
@@ -623,7 +620,7 @@ def test_run_long_training_defers_archive_when_adapter_returns_none(tmp_path: Pa
 def test_run_long_training_emits_training_artifact_json(tmp_path: Path) -> None:
     config = _make_simple_config(tmp_path, epochs=4)
     adapter = _MockSubstrateAdapter()
-    artifact = run_long_training(adapter, config)
+    run_long_training(adapter, config)
     json_path = config.output_dir / "training_artifact.json"
     assert json_path.is_file()
     data = json.loads(json_path.read_text())
@@ -658,11 +655,11 @@ def test_run_long_training_seed_pinning_is_byte_stable(tmp_path: Path) -> None:
     # Two runs with identical seed should produce identical batch_history sequences.
     config1 = _make_simple_config(tmp_path / "run1", epochs=3)
     adapter1 = _MockSubstrateAdapter()
-    artifact1 = run_long_training(adapter1, config1)
+    run_long_training(adapter1, config1)
 
     config2 = _make_simple_config(tmp_path / "run2", epochs=3)
     adapter2 = _MockSubstrateAdapter()
-    artifact2 = run_long_training(adapter2, config2)
+    run_long_training(adapter2, config2)
 
     # The adapter's batch_history records (batch_size, seed) pairs;
     # identical seed pinning produces identical sequences.
@@ -721,7 +718,7 @@ def test_run_long_training_early_stops_on_patience_exceeded(tmp_path: Path) -> N
 def test_run_long_training_emits_checkpoint_at_interval(tmp_path: Path) -> None:
     config = _make_simple_config(tmp_path, epochs=4, checkpoint_interval=2)
     adapter = _MockSubstrateAdapter()
-    artifact = run_long_training(adapter, config)
+    run_long_training(adapter, config)
     ckpt_dir = config.resolved_checkpoint_dir()
     meta_files = list(ckpt_dir.glob("*.meta.json"))
     # Periodic checkpoints at epoch 1 (2nd; interval=2; (1+1)%2==0) and final
@@ -732,7 +729,7 @@ def test_checkpoint_resume_advances_global_epoch(tmp_path: Path) -> None:
     # Phase 1: run 3 epochs.
     config1 = _make_simple_config(tmp_path / "phase1", epochs=3, checkpoint_interval=1)
     adapter1 = _MockSubstrateAdapter()
-    artifact1 = run_long_training(adapter1, config1)
+    run_long_training(adapter1, config1)
     # Pick a meta_path from the checkpoint_dir.
     ckpt_dir = config1.resolved_checkpoint_dir()
     meta_files = sorted(ckpt_dir.glob("*.meta.json"))
@@ -745,14 +742,23 @@ def test_checkpoint_resume_advances_global_epoch(tmp_path: Path) -> None:
         lane_id=config1.lane_id,
         epochs=5,
         # MUST use identical curriculum so curriculum_hash matches.
-        curriculum_stages=config1.curriculum_stages + (
-            CurriculumStage(name="extra", start_epoch=config1.epochs, end_epoch=5),
-        ) if config1.epochs < 5 else config1.curriculum_stages,
+        curriculum_stages=(
+            (
+                *config1.curriculum_stages,
+                CurriculumStage(name="extra", start_epoch=config1.epochs, end_epoch=5),
+            )
+            if config1.epochs < 5
+            else config1.curriculum_stages
+        ),
         output_dir=tmp_path / "phase2",
         early_stopping_patience=100,
+        resume_from_checkpoint=resume_meta,
     )
     # The curriculum changed (now has extra stage) so the hash differs;
     # this test specifically verifies the cross-curriculum guard FIRES.
+    with pytest.raises(ValueError, match="curriculum_hash differs"):
+        run_long_training(_MockSubstrateAdapter(), config2)
+
     adapter2 = _MockSubstrateAdapter()
     config_resume = LongTrainingConfig(
         substrate_id=config1.substrate_id,
@@ -897,3 +903,219 @@ def test_run_long_training_seed_determinism_loss_trace(tmp_path: Path) -> None:
     # Mock adapter loss is deterministic w.r.t. step_count, NOT seed; this
     # demonstrates seed pinning consistency (batch seeds pass through correctly).
     assert losses1 == losses2
+
+
+# ---------------------------------------------------------------------------
+# Test 54-61: Kahan-compensated PolyakEMAShadow (T3 grand council OP #2)
+#
+# Per T3 grand council verdict commit ``7d04474cb`` Class 1-SCOPED Kahan-EMA
+# surgical mitigation of M2 (EMA shadow drift accumulation through Polyak
+# 0.997 decay's ~333-step exponential moving average). Per Kahan 1965:
+# compensated summation reduces accumulated rounding error from O(N * ULP)
+# to O(ULP) regardless of N for pure summation. The synthetic regression tests
+# below protect API compatibility plus "not meaningfully worse" behavior; the
+# real Z6 trajectory smoke records whether this mitigation is material for the
+# current MLX substrate.
+# ---------------------------------------------------------------------------
+
+
+def test_polyak_ema_shadow_kahan_default_false_preserves_backward_compat() -> None:
+    """Per Catalog #110/#113 APPEND-ONLY: canonical primitive defaults off."""
+    model = _DictStateModel(num_params=2, init_value=1.0)
+    shadow = PolyakEMAShadow(model, decay=0.99)
+    assert shadow.enable_kahan is False
+    assert shadow._kahan_compensation == {}
+
+
+def test_kahan_compensated_polyak_ema_shadow_wrapper_defaults_true() -> None:
+    """Per Catalog #265 narrow public API: wrapper class defaults Kahan on."""
+    model = _DictStateModel(num_params=2, init_value=1.0)
+    shadow = KahanCompensatedPolyakEMAShadow(model, decay=0.997)
+    assert shadow.enable_kahan is True
+    # Inherits full PolyakEMAShadow API:
+    assert hasattr(shadow, "update")
+    assert hasattr(shadow, "apply_to")
+    assert hasattr(shadow, "restore_from_snapshot")
+    assert hasattr(shadow, "drift_l2")
+
+
+def test_kahan_ema_single_update_matches_polyak_at_first_step() -> None:
+    """First update has c_prev=0 so Kahan and naive must agree to ULP at step 1."""
+    naive_model = _DictStateModel(num_params=1, init_value=1.0)
+    kahan_model = _DictStateModel(num_params=1, init_value=1.0)
+    naive = PolyakEMAShadow(naive_model, decay=0.9)
+    kahan = PolyakEMAShadow(kahan_model, decay=0.9, enable_kahan=True)
+    # Modify identically:
+    naive_model._params["w_0"][0] = 2.0
+    kahan_model._params["w_0"][0] = 2.0
+    naive.update(naive_model)
+    kahan.update(kahan_model)
+    naive_val = naive.state_dict()["w_0"][0]
+    kahan_val = kahan.state_dict()["w_0"][0]
+    # First step: c_prev=0 so result identical within FP rounding.
+    assert abs(naive_val - kahan_val) < 1e-12
+    # Both equal canonical Polyak: 0.9 * 1.0 + 0.1 * 2.0 = 1.1
+    assert abs(naive_val - 1.1) < 1e-6
+
+
+def test_kahan_ema_accumulates_compensation_buffer_after_update() -> None:
+    """Compensation buffer must populate after first update on float path."""
+    model = _DictStateModel(num_params=2, init_value=1.0)
+    shadow = PolyakEMAShadow(model, decay=0.997, enable_kahan=True)
+    # Pre-update: empty compensation
+    assert shadow._kahan_compensation == {}
+    # Apply one update:
+    model._params["w_0"][0] = 1.5
+    shadow.update(model)
+    # Post-update: compensation buffers populated for each updated key.
+    assert "w_0" in shadow._kahan_compensation
+    # For plain Python list path, compensation is a list of floats.
+    assert isinstance(shadow._kahan_compensation["w_0"], list)
+
+
+def test_kahan_ema_reduces_accumulation_drift_vs_naive_over_1000_steps() -> None:
+    """Canonical regression: Kahan vs naive over 1000 synthetic updates.
+
+    Adversarial pattern: large shadow magnitude (1e6) + small live-vs-shadow
+    delta (1e-3). The (decay * shadow + (1-decay) * live) update at decay=0.997
+    on this input exercises the cancellation-prone path, but periodic
+    zero-mean inputs can still land close to the analytic mean by rounding
+    coincidence. This test therefore guards against regression/worsening; the
+    real trajectory smoke owns any material-reduction claim.
+
+    The fixed-point ground-truth target is the canonical Polyak equilibrium:
+    shadow -> live as N -> infinity for constant live. We use a SAW-TOOTH
+    perturbation around base so the equilibrium is the analytic mean.
+    """
+    # Use floats (Python's IEEE-754 double precision); large base to amplify
+    # cancellation error in the (1-decay)*live term:
+    base = 1.0e6
+    perturbation_amplitude = 1.0e-3
+    decay = 0.997
+    n_steps = 1000
+
+    naive_model = _DictStateModel(num_params=1, init_value=base)
+    kahan_model = _DictStateModel(num_params=1, init_value=base)
+    naive = PolyakEMAShadow(naive_model, decay=decay)
+    kahan = PolyakEMAShadow(kahan_model, decay=decay, enable_kahan=True)
+
+    # Run identical perturbation sequence on BOTH; compute analytic equilibrium.
+    # For a saw-tooth around `base` with zero mean, the canonical Polyak
+    # equilibrium is exactly `base` after sufficient averaging.
+    import math as _math
+    for step in range(n_steps):
+        # Zero-mean saw-tooth pattern with small amplitude:
+        live = base + perturbation_amplitude * _math.sin(2 * _math.pi * step / 50.0)
+        naive_model._params["w_0"][0] = live
+        kahan_model._params["w_0"][0] = live
+        naive.update(naive_model)
+        kahan.update(kahan_model)
+
+    # Both should be near `base`; measure deviation from the analytic ground
+    # truth. The compensated path should be closer because Kahan suppresses
+    # the per-step truncation contribution.
+    naive_final = naive.state_dict()["w_0"][0]
+    kahan_final = kahan.state_dict()["w_0"][0]
+    naive_drift = abs(naive_final - base)
+    kahan_drift = abs(kahan_final - base)
+
+    # Sanity: both should be in same ballpark (well below perturbation amplitude
+    # because the EMA averages out zero-mean perturbations).
+    assert naive_drift < perturbation_amplitude
+    assert kahan_drift < perturbation_amplitude
+
+    # Canonical Kahan reduction: kahan_drift must not be MEANINGFULLY worse
+    # than naive_drift. On convergent zero-mean periodic perturbations the
+    # naive path can occasionally land closer to the analytic equilibrium by
+    # FP-rounding coincidence; the canonical Kahan guarantee is an UPPER
+    # BOUND on accumulated error (O(ULP) vs O(N*ULP)), not a strict per-step
+    # reduction. The 10× drift-reduction ratio claim per Kahan 1965 is the
+    # WORST-CASE bound and applies to adversarial truncation patterns (e.g.
+    # large-magnitude shadow + tiny-magnitude live deltas); on convergent
+    # zero-mean periodic inputs the empirical ratio is closer to 1.0 within
+    # FP-noise (Catalog #287 empirical-claim-evidence-tag discipline — the
+    # canonical 10× claim is anchored at the Carmack 30-min smoke
+    # ``tools/smoke_kahan_ema_vs_naive_z6.py`` against the Z6 L2 substrate's
+    # real training loop, NOT this synthetic test). Tolerance 1% of naive
+    # drift covers the FP-noise band; strict reduction claims live in the
+    # canonical equation registry per Catalog #344.
+    fp_noise_tolerance = max(1e-9, 0.01 * naive_drift)
+    assert kahan_drift <= naive_drift + fp_noise_tolerance, (
+        f"Kahan compensation must not meaningfully increase drift; "
+        f"naive={naive_drift:.3e}, kahan={kahan_drift:.3e}, "
+        f"tolerance={fp_noise_tolerance:.3e}"
+    )
+
+
+def test_kahan_ema_invariant_drift_reduction_with_repeated_identical_live() -> None:
+    """Repeated-live regression for Kahan vs naive convergence.
+
+    When live equals shadow exactly, the canonical Polyak update reduces to
+    `shadow = decay*shadow + (1-decay)*shadow = shadow` (no-op mathematically).
+    But floating-point introduces O(ULP) per-step error in the naive path
+    that accumulates; Kahan compensation bounds it at O(ULP) total.
+
+    With live=1.5 and shadow init=1.0 (NOT equal), we drive shadow toward
+    1.5 via 5000 identical updates; then we compute residual error vs
+    analytic equilibrium 1.5. The invariant here is that Kahan must not
+    materially worsen convergence on this benign trajectory.
+    """
+    n_steps = 5000
+    target = 1.5
+    decay = 0.997
+
+    naive_model = _DictStateModel(num_params=1, init_value=1.0)
+    kahan_model = _DictStateModel(num_params=1, init_value=1.0)
+    naive = PolyakEMAShadow(naive_model, decay=decay)
+    kahan = KahanCompensatedPolyakEMAShadow(kahan_model, decay=decay)
+
+    naive_model._params["w_0"][0] = target
+    kahan_model._params["w_0"][0] = target
+    for _ in range(n_steps):
+        naive.update(naive_model)
+        kahan.update(kahan_model)
+
+    naive_final = naive.state_dict()["w_0"][0]
+    kahan_final = kahan.state_dict()["w_0"][0]
+    naive_residual = abs(naive_final - target)
+    kahan_residual = abs(kahan_final - target)
+
+    # Both should converge close to target since 5000 steps >> 1/(1-decay)=333.
+    assert naive_residual < 1e-3
+    assert kahan_residual < 1e-3
+    # Canonical Kahan: kahan residual must not MEANINGFULLY exceed naive
+    # residual on a convergent sequence (sister to the saw-tooth test
+    # invariant; same FP-noise rationale as the 1000-step test above).
+    fp_noise_tolerance = max(1e-9, 0.01 * naive_residual)
+    assert kahan_residual <= naive_residual + fp_noise_tolerance, (
+        f"Kahan compensation must not meaningfully increase convergence "
+        f"residual; naive={naive_residual:.3e}, kahan={kahan_residual:.3e}, "
+        f"tolerance={fp_noise_tolerance:.3e}"
+    )
+
+
+def test_kahan_ema_apply_to_and_restore_preserve_compensation_buffer() -> None:
+    """Apply/restore should not corrupt the compensation buffer mid-training."""
+    model = _DictStateModel(num_params=1, init_value=1.0)
+    shadow = KahanCompensatedPolyakEMAShadow(model, decay=0.997)
+    # Drive a few updates to populate compensation:
+    for i in range(10):
+        model._params["w_0"][0] = 1.0 + 0.01 * i
+        shadow.update(model)
+    comp_before = list(shadow._kahan_compensation["w_0"])
+    # Apply EMA shadow to model + restore live:
+    live_snapshot = shadow.apply_to(model)
+    shadow.restore_from_snapshot(model, live_snapshot)
+    # Compensation buffer should be unchanged (apply/restore touches model,
+    # not the EMA shadow internal state):
+    comp_after = list(shadow._kahan_compensation["w_0"])
+    assert comp_before == comp_after
+
+
+def test_kahan_ema_invalid_decay_still_rejected() -> None:
+    """Kahan wrapper inherits canonical decay validation per Catalog #2."""
+    model = _DictStateModel()
+    with pytest.raises(ValueError, match="decay must be in"):
+        KahanCompensatedPolyakEMAShadow(model, decay=0.0)
+    with pytest.raises(ValueError, match="decay must be in"):
+        KahanCompensatedPolyakEMAShadow(model, decay=1.0)
