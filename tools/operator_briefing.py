@@ -1561,6 +1561,164 @@ def _authority_truthy_recursive(value: object, *, prefix: str = "") -> list[str]
     return bad
 
 
+def _queue_artifact_health(path_ref: object) -> dict[str, object]:
+    path = _repo_path_from_ref(path_ref)
+    if path is None:
+        return {
+            "path": "",
+            "present": False,
+            "status": "MISSING",
+            "queued_experiment_count": 0,
+            "frozen_experiment_count": 0,
+            "queue_actuation_ready_count": 0,
+            "missing_queue_artifact_key_count": 0,
+            **_false_authority_fields(),
+        }
+    rel = _repo_rel(path)
+    if not path.is_file():
+        return {
+            "path": rel,
+            "present": False,
+            "status": "MISSING",
+            "queued_experiment_count": 0,
+            "frozen_experiment_count": 0,
+            "queue_actuation_ready_count": 0,
+            "missing_queue_artifact_key_count": 0,
+            **_false_authority_fields(),
+        }
+    payload = _load_json_file(path)
+    if payload.get("_error"):
+        return {
+            "path": rel,
+            "present": True,
+            "status": "ERROR",
+            "error": payload["_error"],
+            "queued_experiment_count": 0,
+            "frozen_experiment_count": 0,
+            "queue_actuation_ready_count": 0,
+            "missing_queue_artifact_key_count": 0,
+            **_false_authority_fields(),
+        }
+    bad_authority = _authority_truthy_recursive(payload)
+    if bad_authority:
+        return {
+            "path": rel,
+            "present": True,
+            "status": "BLOCKED_AUTHORITY_LEAK",
+            "blockers": [f"truthy_authority:{key}" for key in bad_authority],
+            "queued_experiment_count": 0,
+            "frozen_experiment_count": 0,
+            "queue_actuation_ready_count": 0,
+            "missing_queue_artifact_key_count": 0,
+            **_false_authority_fields(),
+        }
+    experiments = (
+        payload.get("experiments") if isinstance(payload.get("experiments"), list) else []
+    )
+    queued = 0
+    frozen = 0
+    queue_actuation_ready = 0
+    missing_queue_artifact_keys = 0
+    for experiment in experiments:
+        if not isinstance(experiment, dict):
+            continue
+        status = str(experiment.get("status") or "")
+        if status == "queued":
+            queued += 1
+        elif status == "frozen":
+            frozen += 1
+        metadata = experiment.get("metadata")
+        if not isinstance(metadata, dict):
+            continue
+        if metadata.get("queue_actuation_ready") is True:
+            queue_actuation_ready += 1
+        missing = metadata.get("missing_queue_artifact_keys")
+        if isinstance(missing, list):
+            missing_queue_artifact_keys += len(missing)
+    if frozen:
+        status = "FROZEN"
+    elif queued:
+        status = "READY_LOCAL_QUEUE"
+    elif experiments:
+        status = "NO_QUEUED_EXPERIMENTS"
+    else:
+        status = "EMPTY"
+    return {
+        "path": rel,
+        "present": True,
+        "schema": str(payload.get("schema") or ""),
+        "queue_id": str(payload.get("queue_id") or ""),
+        "status": status,
+        "experiment_count": len(experiments),
+        "queued_experiment_count": queued,
+        "frozen_experiment_count": frozen,
+        "queue_actuation_ready_count": queue_actuation_ready,
+        "missing_queue_artifact_key_count": missing_queue_artifact_keys,
+        **_false_authority_fields(),
+    }
+
+
+def _autonomous_chain_action_surface(
+    autonomous_chain_optimization: object,
+) -> dict[str, object]:
+    if not isinstance(autonomous_chain_optimization, dict):
+        return {
+            "chain_count": 0,
+            "top_chain_ids": [],
+            "target_classes": [],
+            "rate_only_candidate_count": 0,
+            "rate_only_saved_bytes_total": 0,
+            "repair_waterfill_action_count": 0,
+            "concrete_repair_waterfill_action_count": 0,
+            "advisory_repair_waterfill_action_count": 0,
+            "action_functional_queue_integrated": False,
+            **_false_authority_fields(),
+        }
+    repair_actions = 0
+    concrete_repair_actions = 0
+    advisory_repair_actions = 0
+    for row in autonomous_chain_optimization.get("rows") or []:
+        if not isinstance(row, dict):
+            continue
+        for action in row.get("scheduler_actions") or []:
+            if not isinstance(action, dict):
+                continue
+            if action.get("id") != "fit_segnet_posenet_repair_waterfill_policy":
+                continue
+            repair_actions += 1
+            if (
+                action.get("advisory_only") is not True
+                and action.get("queue_artifact_key") == "repair_budget_waterfill_queue"
+            ):
+                concrete_repair_actions += 1
+            else:
+                advisory_repair_actions += 1
+    return {
+        "chain_count": _safe_int(autonomous_chain_optimization.get("chain_count")),
+        "top_chain_ids": [
+            str(value)
+            for value in autonomous_chain_optimization.get("top_chain_ids") or []
+            if str(value or "").strip()
+        ],
+        "target_classes": [
+            str(value)
+            for value in autonomous_chain_optimization.get("target_classes") or []
+            if str(value or "").strip()
+        ],
+        "rate_only_candidate_count": _safe_int(
+            autonomous_chain_optimization.get("rate_only_candidate_count")
+        ),
+        "rate_only_saved_bytes_total": _safe_int(
+            autonomous_chain_optimization.get("rate_only_saved_bytes_total")
+        ),
+        "repair_waterfill_action_count": repair_actions,
+        "concrete_repair_waterfill_action_count": concrete_repair_actions,
+        "advisory_repair_waterfill_action_count": advisory_repair_actions,
+        "action_functional_queue_integrated": concrete_repair_actions > 0,
+        **_false_authority_fields(),
+    }
+
+
 def _frontier_feedback_refresh_row(path: Path) -> dict[str, object]:
     payload = _load_json_file(path)
     rel = _repo_rel(path)
@@ -1598,6 +1756,26 @@ def _frontier_feedback_refresh_row(path: Path) -> dict[str, object]:
     cycle_command_parts = commands.get("run_frontier_feedback_cycle")
     eureka = eureka_payload
     queue_path = str(artifacts.get("dqs1_followup_queue") or "")
+    repair_waterfill_queue_path = str(
+        artifacts.get("repair_budget_waterfill_queue") or ""
+    )
+    autonomous_chain_queue_path = str(
+        artifacts.get("autonomous_chain_optimization_queue") or ""
+    )
+    rate_budget_preservation_plan_path = str(
+        artifacts.get("rate_budget_preservation_plan") or ""
+    )
+    autonomous_chain_path = str(artifacts.get("autonomous_chain_optimization") or "")
+    repair_waterfill_health = _queue_artifact_health(repair_waterfill_queue_path)
+    autonomous_chain_queue_health = _queue_artifact_health(autonomous_chain_queue_path)
+    autonomous_chain_surface = _autonomous_chain_action_surface(
+        payload.get("autonomous_chain_optimization")
+    )
+    rate_budget_plan = (
+        payload.get("rate_budget_preservation_plan")
+        if isinstance(payload.get("rate_budget_preservation_plan"), dict)
+        else {}
+    )
     retention = payload.get("retention_policy")
     retention_policy = retention if isinstance(retention, dict) else {}
     selected_candidate_ids = _first_list(payload, "selected_candidate_ids")
@@ -1610,12 +1788,68 @@ def _frontier_feedback_refresh_row(path: Path) -> dict[str, object]:
         if isinstance(row.get("pairset_acquisition_profile"), dict)
         and row["pairset_acquisition_profile"].get("active") is True
     ]
+    if autonomous_chain_queue_path and repair_waterfill_queue_path:
+        status = "AUTONOMOUS_CHAIN_QUEUE_READY"
+    elif autonomous_chain_queue_path:
+        status = "AUTONOMOUS_CHAIN_QUEUE_PARTIAL"
+    elif autonomous_chain_path:
+        status = "ACTION_FUNCTIONAL_BUILT_QUEUE_PENDING"
+    elif queue_path:
+        status = "READY_QUEUE"
+    else:
+        status = "BRIDGE_ONLY"
     return {
         "kind": "frontier_feedback_refresh",
         "path": rel,
         "schema": str(payload.get("schema") or ""),
-        "status": "READY_QUEUE" if queue_path else "BRIDGE_ONLY",
+        "status": status,
         "queue_path": queue_path,
+        "rate_budget_preservation_plan_path": rate_budget_preservation_plan_path,
+        "rate_budget_preservation_plan_present": bool(
+            rate_budget_preservation_plan_path or rate_budget_plan
+        ),
+        "rate_budget_preservation_candidate_count": _safe_int(
+            rate_budget_plan.get("rate_only_candidate_count")
+            or autonomous_chain_surface.get("rate_only_candidate_count")
+        ),
+        "rate_budget_preservation_saved_bytes_total": _safe_int(
+            rate_budget_plan.get("rate_only_saved_bytes_total")
+            or autonomous_chain_surface.get("rate_only_saved_bytes_total")
+        ),
+        "autonomous_chain_optimization_path": autonomous_chain_path,
+        "autonomous_chain_count": autonomous_chain_surface["chain_count"],
+        "autonomous_chain_top_chain_ids": autonomous_chain_surface["top_chain_ids"],
+        "autonomous_chain_target_classes": autonomous_chain_surface["target_classes"],
+        "repair_waterfill_action_count": autonomous_chain_surface[
+            "repair_waterfill_action_count"
+        ],
+        "concrete_repair_waterfill_action_count": autonomous_chain_surface[
+            "concrete_repair_waterfill_action_count"
+        ],
+        "advisory_repair_waterfill_action_count": autonomous_chain_surface[
+            "advisory_repair_waterfill_action_count"
+        ],
+        "action_functional_queue_integrated": autonomous_chain_surface[
+            "action_functional_queue_integrated"
+        ],
+        "repair_budget_waterfill_queue_path": repair_waterfill_queue_path,
+        "repair_budget_waterfill_queue_status": repair_waterfill_health["status"],
+        "repair_budget_waterfill_queued_experiment_count": repair_waterfill_health[
+            "queued_experiment_count"
+        ],
+        "repair_budget_waterfill_frozen_experiment_count": repair_waterfill_health[
+            "frozen_experiment_count"
+        ],
+        "autonomous_chain_optimization_queue_path": autonomous_chain_queue_path,
+        "autonomous_chain_optimization_queue_status": autonomous_chain_queue_health[
+            "status"
+        ],
+        "autonomous_chain_queue_actuation_ready_count": autonomous_chain_queue_health[
+            "queue_actuation_ready_count"
+        ],
+        "autonomous_chain_missing_queue_artifact_key_count": (
+            autonomous_chain_queue_health["missing_queue_artifact_key_count"]
+        ),
         "queue_id": str(payload.get("queue_id") or ""),
         "selected_candidate_ids": selected_candidate_ids,
         "selected_candidate_count": len(selected_candidate_ids),
@@ -1818,9 +2052,52 @@ def _frontier_feedback_cycle_summary() -> dict[str, object]:
         ),
         None,
     )
+    repair_waterfill_queue_count = sum(
+        1 for row in refresh_rows if row.get("repair_budget_waterfill_queue_path")
+    )
+    autonomous_chain_queue_count = sum(
+        1 for row in refresh_rows if row.get("autonomous_chain_optimization_queue_path")
+    )
+    autonomous_chain_artifact_count = sum(
+        1 for row in refresh_rows if int(row.get("autonomous_chain_count") or 0) > 0
+    )
+    action_functional_queue_integrated_count = sum(
+        1 for row in refresh_rows if row.get("action_functional_queue_integrated") is True
+    )
+    rate_budget_preservation_plan_count = sum(
+        1 for row in refresh_rows if row.get("rate_budget_preservation_plan_present")
+    )
     if error_rows:
         status = "BLOCKED"
         reason = f"{len(error_rows)} frontier feedback artifact(s) failed safe loading"
+    elif (
+        latest_refresh
+        and latest_refresh.get("repair_budget_waterfill_queue_path")
+        and latest_refresh.get("autonomous_chain_optimization_queue_path")
+    ):
+        if (
+            latest_refresh.get("repair_budget_waterfill_queue_status")
+            == "READY_LOCAL_QUEUE"
+            and latest_refresh.get("autonomous_chain_optimization_queue_status")
+            == "READY_LOCAL_QUEUE"
+        ):
+            status = "AUTONOMOUS_CHAIN_QUEUE_READY"
+            reason = (
+                "latest refresh emitted runnable rate-budget repair-waterfill "
+                "and autonomous many-op child queues"
+            )
+        else:
+            status = "AUTONOMOUS_CHAIN_QUEUE_BLOCKED"
+            reason = (
+                "latest refresh emitted the child queue artifacts, but one or "
+                "more are frozen or blocked"
+            )
+    elif latest_refresh and int(latest_refresh.get("autonomous_chain_count") or 0) > 0:
+        status = "ACTION_FUNCTIONAL_BUILT_QUEUE_PENDING"
+        reason = (
+            "latest refresh built the many-op action-functional surface but is "
+            "missing one or more child queue artifacts"
+        )
     elif latest_cycle and latest_cycle.get("status") in {
         "CAMPAIGN_QUEUE_READY",
         "POST_HARVEST_QUEUE_READY",
@@ -1853,6 +2130,13 @@ def _frontier_feedback_cycle_summary() -> dict[str, object]:
             for row in cycle_rows
             if row.get("status") in {"CAMPAIGN_QUEUE_READY", "POST_HARVEST_QUEUE_READY"}
         ),
+        "rate_budget_preservation_plan_count": rate_budget_preservation_plan_count,
+        "autonomous_chain_artifact_count": autonomous_chain_artifact_count,
+        "repair_budget_waterfill_queue_count": repair_waterfill_queue_count,
+        "autonomous_chain_queue_count": autonomous_chain_queue_count,
+        "action_functional_queue_integrated_count": (
+            action_functional_queue_integrated_count
+        ),
         "latest_cycle": latest_cycle or {},
         "latest_refresh": latest_refresh or {},
         "latest_eureka_refresh": latest_eureka_refresh or {},
@@ -1872,7 +2156,10 @@ def _format_frontier_feedback_cycle_summary() -> str:
             f"cycles={payload['cycle_report_count']} "
             f"refreshes={payload['refresh_report_count']} "
             f"ready_local={payload['ready_local_execution_count']} "
-            f"post_harvest={payload['post_harvest_queue_count']}"
+            f"post_harvest={payload['post_harvest_queue_count']} "
+            f"rate_preservation={payload['rate_budget_preservation_plan_count']} "
+            f"repair_waterfill_queues={payload['repair_budget_waterfill_queue_count']} "
+            f"autonomous_chain_queues={payload['autonomous_chain_queue_count']}"
         ),
     ]
     latest_cycle = payload.get("latest_cycle")
@@ -1901,6 +2188,24 @@ def _format_frontier_feedback_cycle_summary() -> str:
                 f"  selected_drop_many: {latest_refresh.get('selected_drop_many_candidate_count', 0)}",
                 f"  selected_geometry: {latest_refresh.get('selected_geometry_candidate_count', 0)}",
                 f"  dqs1_observations: {latest_refresh.get('dqs1_observation_count')}",
+                (
+                    "  rate_budget_preservation: "
+                    f"{latest_refresh.get('rate_budget_preservation_plan_present')} "
+                    f"candidates={latest_refresh.get('rate_budget_preservation_candidate_count', 0)} "
+                    f"bytes={latest_refresh.get('rate_budget_preservation_saved_bytes_total', 0)}"
+                ),
+                (
+                    "  autonomous_chain: "
+                    f"chains={latest_refresh.get('autonomous_chain_count', 0)} "
+                    f"targets={latest_refresh.get('autonomous_chain_target_classes', [])} "
+                    f"queue={latest_refresh.get('autonomous_chain_optimization_queue_status')}"
+                ),
+                (
+                    "  repair_waterfill: "
+                    f"actions={latest_refresh.get('repair_waterfill_action_count', 0)} "
+                    f"concrete={latest_refresh.get('concrete_repair_waterfill_action_count', 0)} "
+                    f"queue={latest_refresh.get('repair_budget_waterfill_queue_status')}"
+                ),
                 f"  eureka_signals: {latest_refresh.get('eureka_signal_count', 0)}",
                 f"  eureka_hints: {latest_refresh.get('eureka_planner_hint_count', 0)}",
                 f"  eureka_drop_many_counts: {latest_refresh.get('eureka_drop_many_counts', [])}",
@@ -6469,6 +6774,21 @@ def _dispatch_readiness() -> dict[str, object]:
             ],
             "post_harvest_queue_count": frontier_feedback_cycle[
                 "post_harvest_queue_count"
+            ],
+            "rate_budget_preservation_plan_count": frontier_feedback_cycle[
+                "rate_budget_preservation_plan_count"
+            ],
+            "autonomous_chain_artifact_count": frontier_feedback_cycle[
+                "autonomous_chain_artifact_count"
+            ],
+            "repair_budget_waterfill_queue_count": frontier_feedback_cycle[
+                "repair_budget_waterfill_queue_count"
+            ],
+            "autonomous_chain_queue_count": frontier_feedback_cycle[
+                "autonomous_chain_queue_count"
+            ],
+            "action_functional_queue_integrated_count": frontier_feedback_cycle[
+                "action_functional_queue_integrated_count"
             ],
             "next_command": frontier_feedback_cycle["next_command"],
             "ready_for_exact_eval_dispatch": False,

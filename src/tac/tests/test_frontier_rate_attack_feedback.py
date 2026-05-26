@@ -28,6 +28,8 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     RECEIVER_REPAIR_BACKLOG_SCHEMA,
     RECEIVER_REPAIR_ROW_SCHEMA,
     RECEIVER_REPAIR_WORK_ORDER_SCHEMA,
+    REPAIR_BUDGET_MATERIALIZATION_PLAN_ROW_SCHEMA,
+    REPAIR_BUDGET_MATERIALIZATION_PLAN_SCHEMA,
     REPAIR_BUDGET_WATERFILL_WORK_ORDER_SCHEMA,
     TARGETED_COMPONENT_CORRECTION_ACQUISITION_SCHEMA,
     TARGETED_COMPONENT_CORRECTION_CHAIN_MATERIALIZER_HANDOFF_SCHEMA,
@@ -45,6 +47,7 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     build_frontier_operation_chain_compiler_stage_plan,
     build_frontier_rate_attack_feedback_refresh,
     build_frontier_receiver_repair_work_order,
+    build_frontier_repair_budget_materialization_plan,
     build_frontier_repair_budget_waterfill_queue,
     build_frontier_repair_budget_waterfill_work_order,
     build_frontier_targeted_component_correction_acquisition,
@@ -2858,6 +2861,28 @@ def test_targeted_component_correction_materialization_requests_group_responses(
     assert "exact_axis_component_response_required_before_budget_spend" in (
         repair_waterfill_work_order["blockers"]
     )
+    materialization_plan = build_frontier_repair_budget_materialization_plan(
+        repair_budget_waterfill_work_order=repair_waterfill_work_order,
+        repair_budget_waterfill_work_order_path=tmp_path
+        / "repair_budget_waterfill_work_order.json",
+    )
+    assert materialization_plan["schema"] == REPAIR_BUDGET_MATERIALIZATION_PLAN_SCHEMA
+    _assert_false_authority(materialization_plan)
+    assert materialization_plan["candidate_archive_materialized"] is False
+    assert materialization_plan["rate_only_floor_preserved_before_repair_spend"] is True
+    assert materialization_plan["spent_budget_candidates_are_children_of_rate_only_floor"]
+    parent_row = materialization_plan["candidate_chain_rows"][0]
+    assert parent_row["schema"] == REPAIR_BUDGET_MATERIALIZATION_PLAN_ROW_SCHEMA
+    assert parent_row["candidate_kind"] == "rate_only_floor_parent"
+    assert parent_row["candidate_archive_materialized"] is False
+    child_rows = materialization_plan["candidate_chain_rows"][1:]
+    assert len(child_rows) == repair_waterfill_work_order["allocation_row_count"]
+    assert all(
+        row["parent_candidate_chain_id"] == parent_row["candidate_chain_id"]
+        for row in child_rows
+    )
+    assert all(row["candidate_kind"] == "spent_budget_repair_child" for row in child_rows)
+    assert all(row["budget_spend_allowed"] is False for row in child_rows)
     repair_waterfill_queue = build_frontier_repair_budget_waterfill_queue(
         repo_root=REPO_ROOT,
         autonomous_chain_optimization=autonomous,
@@ -2876,6 +2901,10 @@ def test_targeted_component_correction_materialization_requests_group_responses(
     assert repair_waterfill_experiment["status"] == "queued"
     assert repair_waterfill_experiment["metadata"]["pipeline_side"] == (
         "encoder_repair_allocator"
+    )
+    assert (
+        repair_waterfill_experiment["metadata"]["candidate_archive_materialized"]
+        is False
     )
     _assert_false_authority(repair_waterfill_experiment["metadata"])
     repair_step = repair_waterfill_experiment["steps"][0]
@@ -2900,6 +2929,37 @@ def test_targeted_component_correction_materialization_requests_group_responses(
     )
     assert repair_materialized["schema"] == REPAIR_BUDGET_WATERFILL_WORK_ORDER_SCHEMA
     _assert_false_authority(repair_materialized)
+    materialization_step = repair_waterfill_experiment["steps"][1]
+    assert materialization_step["command"][1] == (
+        "tools/build_frontier_repair_budget_materialization_plan.py"
+    )
+    result = subprocess.run(
+        [sys.executable, *materialization_step["command"][1:]],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    materialization_payload = json.loads(result.stdout)
+    assert materialization_payload["candidate_archive_materialized"] is False
+    materialization_plan_path = Path(
+        materialization_step["command"][
+            materialization_step["command"].index("--materialization-plan-out") + 1
+        ]
+    )
+    materialization_materialized = json.loads(
+        (REPO_ROOT / materialization_plan_path).read_text(encoding="utf-8")
+    )
+    assert (
+        materialization_materialized["schema"]
+        == REPAIR_BUDGET_MATERIALIZATION_PLAN_SCHEMA
+    )
+    assert materialization_materialized["parent_candidate_chain_id"] == (
+        parent_row["candidate_chain_id"]
+    )
+    assert materialization_materialized["candidate_archive_materialized"] is False
+    _assert_false_authority(materialization_materialized)
     chain_queue_path = _write_json(
         tmp_path / "targeted_component_correction_operation_chain_queue.json",
         chain_queue,
@@ -2952,6 +3012,61 @@ def test_targeted_component_correction_materialization_requests_group_responses(
         step["id"].startswith("run_") and step["command"][4] == "run-worker"
         for step in autonomous_experiment["steps"]
     )
+    blocked_repair_queue = build_frontier_repair_budget_waterfill_queue(
+        repo_root=REPO_ROOT,
+        autonomous_chain_optimization=autonomous,
+        autonomous_chain_optimization_path=autonomous_path,
+        results_root=tmp_path / "results",
+        queue_id="frontier_repair_waterfill_blocked_unit",
+        chain_limit=1,
+    )
+    assert blocked_repair_queue is not None
+    blocked_repair_experiment = blocked_repair_queue["experiments"][0]
+    assert blocked_repair_experiment["status"] == "frozen"
+    assert blocked_repair_experiment["metadata"]["queue_actuation_ready"] is False
+    assert "targeted_component_correction_response_harvest" in (
+        blocked_repair_experiment["metadata"]["missing_prerequisite_artifact_keys"]
+    )
+    _assert_false_authority(blocked_repair_experiment["metadata"])
+    blocked_repair_queue_path = _write_json(
+        tmp_path / "blocked_repair_budget_waterfill_queue.json",
+        blocked_repair_queue,
+    )
+    blocked_child_autonomous_queue = build_frontier_autonomous_chain_optimization_queue(
+        repo_root=REPO_ROOT,
+        autonomous_chain_optimization=autonomous,
+        autonomous_chain_optimization_path=autonomous_path,
+        artifact_paths_by_key={
+            "operation_materializer_execution_queue": chain_queue_path,
+            "repair_budget_waterfill_queue": blocked_repair_queue_path,
+            "receiver_repair_queue": chain_queue_path,
+            "targeted_component_correction_operation_chain_queue": chain_queue_path,
+            "targeted_component_correction_chain_materializer_execution_queue": (
+                chain_queue_path
+            ),
+        },
+        results_root=tmp_path / "results",
+        queue_id="frontier_autonomous_chain_blocked_child_unit",
+        chain_limit=1,
+    )
+    assert blocked_child_autonomous_queue is not None
+    blocked_child_experiment = blocked_child_autonomous_queue["experiments"][0]
+    assert blocked_child_experiment["status"] == "frozen"
+    blocked_child_metadata = blocked_child_experiment["metadata"]
+    assert blocked_child_metadata["missing_queue_artifact_keys"] == []
+    assert blocked_child_metadata["blocked_child_queue_artifact_keys"] == [
+        "repair_budget_waterfill_queue"
+    ]
+    assert (
+        "child_queue_not_runnable:repair_budget_waterfill_queue"
+        in blocked_child_metadata["queue_actuation_blockers"]
+    )
+    repair_child_health = blocked_child_metadata["child_queue_health_by_key"][
+        "repair_budget_waterfill_queue"
+    ]
+    assert repair_child_health["queued_experiment_count"] == 0
+    assert repair_child_health["frozen_experiment_count"] == 1
+    assert "child_queue_has_no_queued_experiments" in repair_child_health["blockers"]
     repair_refresh_autonomous = json.loads(json.dumps(autonomous))
     repair_refresh_row = repair_refresh_autonomous["rows"][0]
     repair_refresh_actions = repair_refresh_row["scheduler_actions"]

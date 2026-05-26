@@ -853,41 +853,41 @@ def write_frontier_refresh_artifacts(
         artifacts["autonomous_chain_optimization"] = repo_rel(path, repo_root)
         response_harvest = report.get("targeted_component_correction_response_harvest")
         receiver_closed_budget = report.get("receiver_closed_correction_budget")
-        if (
-            isinstance(response_harvest, Mapping)
-            and isinstance(receiver_closed_budget, Mapping)
-            and "targeted_component_correction_response_harvest" in artifacts
-            and "receiver_closed_correction_budget" in artifacts
-        ):
-            repair_waterfill_queue = build_frontier_repair_budget_waterfill_queue(
-                repo_root=repo_root,
-                autonomous_chain_optimization=autonomous_chain_optimization,
-                autonomous_chain_optimization_path=path,
-                targeted_component_correction_response_harvest=response_harvest,
-                targeted_component_correction_response_harvest_path=artifacts[
-                    "targeted_component_correction_response_harvest"
-                ],
-                receiver_closed_correction_budget=receiver_closed_budget,
-                receiver_closed_correction_budget_path=artifacts[
-                    "receiver_closed_correction_budget"
-                ],
-                results_root=str(report.get("results_root") or "experiments/results"),
-                queue_id=(
-                    f"{report.get('queue_id') or 'frontier_feedback'}_"
-                    "repair_budget_waterfill"
-                ),
-                chain_limit=int(report.get("candidate_limit") or 4),
+        repair_waterfill_queue = build_frontier_repair_budget_waterfill_queue(
+            repo_root=repo_root,
+            autonomous_chain_optimization=autonomous_chain_optimization,
+            autonomous_chain_optimization_path=path,
+            targeted_component_correction_response_harvest=(
+                response_harvest if isinstance(response_harvest, Mapping) else None
+            ),
+            targeted_component_correction_response_harvest_path=artifacts.get(
+                "targeted_component_correction_response_harvest"
+            ),
+            receiver_closed_correction_budget=(
+                receiver_closed_budget
+                if isinstance(receiver_closed_budget, Mapping)
+                else None
+            ),
+            receiver_closed_correction_budget_path=artifacts.get(
+                "receiver_closed_correction_budget"
+            ),
+            results_root=str(report.get("results_root") or "experiments/results"),
+            queue_id=(
+                f"{report.get('queue_id') or 'frontier_feedback'}_"
+                "repair_budget_waterfill"
+            ),
+            chain_limit=int(report.get("candidate_limit") or 4),
+        )
+        if isinstance(repair_waterfill_queue, Mapping):
+            repair_waterfill_queue_path = out / "repair_budget_waterfill_queue.json"
+            write_json_artifact(
+                repair_waterfill_queue_path,
+                dict(repair_waterfill_queue),
             )
-            if isinstance(repair_waterfill_queue, Mapping):
-                repair_waterfill_queue_path = out / "repair_budget_waterfill_queue.json"
-                write_json_artifact(
-                    repair_waterfill_queue_path,
-                    dict(repair_waterfill_queue),
-                )
-                artifacts["repair_budget_waterfill_queue"] = repo_rel(
-                    repair_waterfill_queue_path,
-                    repo_root,
-                )
+            artifacts["repair_budget_waterfill_queue"] = repo_rel(
+                repair_waterfill_queue_path,
+                repo_root,
+            )
         autonomous_queue = build_frontier_autonomous_chain_optimization_queue(
             repo_root=repo_root,
             autonomous_chain_optimization=autonomous_chain_optimization,

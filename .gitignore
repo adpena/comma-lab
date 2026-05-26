@@ -252,6 +252,9 @@ src/tac.egg-info/
 .omx/research/local_training_execution_plan*.json
 .omx/research/inverse_steganalysis_action_functional*.json
 .omx/research/inverse_steganalysis_action_functional*.md
+# Frontier feedback refresh runs are generated queue/artifact bundles. Keep
+# durable findings in dated memos or curated compact manifests.
+.omx/research/frontier_rate_attack_feedback_refresh_*/
 # Generated materializer harvest/exact-readiness/dispatch handoff JSON is
 # queue-owned local custody. Promote durable conclusions into dated memos
 # instead of accidentally tracking per-run handoff packets.

@@ -3370,6 +3370,162 @@ def test_operator_briefing_surfaces_frontier_feedback_cycle_autopolicy(
     assert "selected_geometry: 1" in text
 
 
+def test_operator_briefing_surfaces_repair_waterfill_action_functional_queue(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    mod = _load_briefing_module()
+    refresh_dir = tmp_path / "repair_refresh"
+    repair_queue = refresh_dir / "repair_budget_waterfill_queue.json"
+    autonomous_queue = refresh_dir / "autonomous_chain_optimization_queue.json"
+    _write_json(
+        repair_queue,
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "repair_waterfill_unit",
+            "controls": {"mode": "running", "local_first": True},
+            "experiments": [
+                {
+                    "id": "repair_waterfill_global",
+                    "status": "frozen",
+                    "priority": 1,
+                    "metadata": {
+                        "queue_actuation_ready": False,
+                        "missing_prerequisite_artifact_keys": [
+                            "targeted_component_correction_response_harvest"
+                        ],
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                        "rank_or_kill_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    },
+                    "steps": [
+                        {
+                            "id": "inspect_missing_prerequisites",
+                            "kind": "command",
+                            "command": [".venv/bin/python", "-m", "json.tool", "{}"],
+                        }
+                    ],
+                }
+            ],
+        },
+    )
+    _write_json(
+        autonomous_queue,
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "autonomous_chain_unit",
+            "controls": {"mode": "running", "local_first": True},
+            "experiments": [
+                {
+                    "id": "autonomous_chain_global",
+                    "status": "frozen",
+                    "priority": 1,
+                    "metadata": {
+                        "queue_actuation_ready": False,
+                        "blocked_child_queue_artifact_keys": [
+                            "repair_budget_waterfill_queue"
+                        ],
+                        "missing_queue_artifact_keys": [],
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                        "rank_or_kill_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    },
+                    "steps": [
+                        {
+                            "id": "inspect_blocked_child_queue",
+                            "kind": "command",
+                            "command": [".venv/bin/python", "-m", "json.tool", "{}"],
+                        }
+                    ],
+                }
+            ],
+        },
+    )
+    _write_json(
+        refresh_dir / "feedback_refresh_report.json",
+        {
+            "schema": "frontier_rate_attack_feedback_refresh.v1",
+            "queue_id": "frontier_feedback_repair_visibility",
+            "artifacts": {
+                "rate_budget_preservation_plan": str(
+                    refresh_dir / "rate_budget_preservation_plan.json"
+                ),
+                "repair_budget_waterfill_queue": str(repair_queue),
+                "autonomous_chain_optimization_queue": str(autonomous_queue),
+                "autonomous_chain_optimization": str(
+                    refresh_dir / "autonomous_chain_optimization.json"
+                ),
+            },
+            "rate_budget_preservation_plan": {
+                "schema": "frontier_rate_attack_rate_budget_preservation_plan.v1",
+                "rate_only_candidate_count": 17,
+                "rate_only_saved_bytes_total": 160,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "autonomous_chain_optimization": {
+                "schema": "frontier_rate_attack_autonomous_chain_optimization.v1",
+                "chain_count": 1,
+                "top_chain_ids": ["global_many_op_rate_distortion_receiver_campaign"],
+                "target_classes": ["packet_member", "archive_section", "tensor"],
+                "rate_only_candidate_count": 17,
+                "rate_only_saved_bytes_total": 160,
+                "rows": [
+                    {
+                        "scheduler_actions": [
+                            {
+                                "id": "fit_segnet_posenet_repair_waterfill_policy",
+                                "queue_artifact_key": "repair_budget_waterfill_queue",
+                                "advisory_only": False,
+                                "score_claim": False,
+                                "promotion_eligible": False,
+                                "rank_or_kill_eligible": False,
+                                "ready_for_exact_eval_dispatch": False,
+                            }
+                        ]
+                    }
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "score_claim": False,
+            "score_claim_valid": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_attempted": False,
+            "gpu_launched": False,
+        },
+    )
+    monkeypatch.setattr(mod, "FRONTIER_FEEDBACK_SCAN_ROOTS", (tmp_path,))
+
+    summary = mod._frontier_feedback_cycle_summary()
+
+    assert summary["status"] == "AUTONOMOUS_CHAIN_QUEUE_BLOCKED"
+    assert summary["rate_budget_preservation_plan_count"] == 1
+    assert summary["autonomous_chain_artifact_count"] == 1
+    assert summary["repair_budget_waterfill_queue_count"] == 1
+    assert summary["autonomous_chain_queue_count"] == 1
+    assert summary["action_functional_queue_integrated_count"] == 1
+    latest = summary["latest_refresh"]
+    assert latest["rate_budget_preservation_candidate_count"] == 17
+    assert latest["rate_budget_preservation_saved_bytes_total"] == 160
+    assert latest["concrete_repair_waterfill_action_count"] == 1
+    assert latest["repair_budget_waterfill_queue_status"] == "FROZEN"
+    assert latest["autonomous_chain_optimization_queue_status"] == "FROZEN"
+    assert latest["score_claim"] is False
+    assert latest["ready_for_exact_eval_dispatch"] is False
+    text = mod._format_frontier_feedback_cycle_summary()
+    assert "rate_budget_preservation: True candidates=17 bytes=160" in text
+    assert "repair_waterfill: actions=1 concrete=1 queue=FROZEN" in text
+
+
 def test_pr95_mlx_control_profile_summary_surfaces_queue_profile(
     tmp_path: Path,
     monkeypatch,

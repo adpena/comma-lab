@@ -187,6 +187,12 @@ REPAIR_BUDGET_WATERFILL_WORK_ORDER_SCHEMA = (
 REPAIR_BUDGET_WATERFILL_QUEUE_METADATA_SCHEMA = (
     "frontier_rate_attack_repair_budget_waterfill_queue_metadata.v1"
 )
+REPAIR_BUDGET_MATERIALIZATION_PLAN_SCHEMA = (
+    "frontier_rate_attack_repair_budget_materialization_plan.v1"
+)
+REPAIR_BUDGET_MATERIALIZATION_PLAN_ROW_SCHEMA = (
+    "frontier_rate_attack_repair_budget_materialization_plan_row.v1"
+)
 TARGETED_COMPONENT_CORRECTION_ACQUISITION_SCHEMA = (
     "frontier_rate_attack_targeted_component_correction_acquisition.v1"
 )
@@ -5937,15 +5943,302 @@ def build_frontier_repair_budget_waterfill_work_order(
     return payload
 
 
+def _repair_budget_rate_only_parent_row(
+    *,
+    chain_id: str,
+    rate_budget_preservation_plan: Mapping[str, Any],
+    work_order: Mapping[str, Any],
+) -> dict[str, Any]:
+    rate_rows = [
+        row
+        for row in rate_budget_preservation_plan.get("rows") or []
+        if isinstance(row, Mapping)
+        and row.get("schema") == RATE_BUDGET_PRESERVATION_ROW_SCHEMA
+        and row.get("preserve_as_rate_only_candidate") is True
+    ]
+    preservation_ids = _unique_strings(row.get("preservation_id") for row in rate_rows)
+    source_candidate_ids = _unique_strings(row.get("candidate_id") for row in rate_rows)
+    target_kinds = _unique_strings(row.get("target_kind") for row in rate_rows)
+    cumulative = (
+        rate_budget_preservation_plan.get("cumulative_rate_attack")
+        if isinstance(rate_budget_preservation_plan.get("cumulative_rate_attack"), Mapping)
+        else {}
+    )
+    saved_bytes_total = _finite_int_or_none(
+        cumulative.get("saved_bytes_total")
+    ) or sum(int(row.get("saved_bytes") or 0) for row in rate_rows)
+    rate_credit_total = _finite_float_or_none(
+        cumulative.get("rate_credit_score_units_total")
+    ) or sum(float(row.get("rate_credit_score_units") or 0.0) for row in rate_rows)
+    distortion_debt_total = sum(
+        float(row.get("distortion_debt_score_units") or 0.0) for row in rate_rows
+    )
+    net_delta_total = sum(
+        float(row.get("net_score_delta_score_units") or 0.0) for row in rate_rows
+    )
+    parent_candidate_chain_id = _bounded_content_key(
+        "repair_rate_floor_parent",
+        (chain_id, tuple(preservation_ids), saved_bytes_total, rate_credit_total),
+    )
+    blockers = [
+        "rate_only_candidate_archive_materialization_missing",
+        "receiver_runtime_consumption_proof_missing",
+        "full_frame_inflate_parity_required_before_exact_readiness",
+        "exact_auth_eval_required_before_score_or_promotion_claim",
+    ]
+    if not rate_rows:
+        blockers.append("no_rate_only_preservation_rows_available")
+    if saved_bytes_total <= 0:
+        blockers.append("no_rate_only_saved_bytes_available")
+    return {
+        "schema": REPAIR_BUDGET_MATERIALIZATION_PLAN_ROW_SCHEMA,
+        "candidate_kind": "rate_only_floor_parent",
+        "candidate_chain_id": parent_candidate_chain_id,
+        "chain_id": chain_id,
+        "materialization_order": 1,
+        "parent_candidate_chain_id": None,
+        "preservation_scope": "cumulative_rate_only_archive_before_repair_spend",
+        "preservation_ids": preservation_ids,
+        "source_candidate_ids": source_candidate_ids,
+        "target_kinds": target_kinds,
+        "saved_bytes_total": saved_bytes_total,
+        "rate_credit_score_units_total": rate_credit_total,
+        "distortion_debt_score_units_total": distortion_debt_total,
+        "net_score_delta_score_units_total": net_delta_total,
+        "rate_only_candidate_count": len(rate_rows),
+        "rate_only_candidate_remains_valid_even_if_child_regresses": True,
+        "rebrotli_default_after_rate_attack": bool(
+            work_order.get("preservation_contract", {}).get(
+                "rebrotli_default_after_rate_attack"
+            )
+            if isinstance(work_order.get("preservation_contract"), Mapping)
+            else False
+        ),
+        "candidate_archive_materialized": False,
+        "candidate_archive_path": None,
+        "runtime_consumption_proof_present": False,
+        "receiver_consumed": False,
+        "component_response_replayed": False,
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_materializer_execution": False,
+        "ready_for_exact_eval_dispatch": False,
+        "blockers": _unique_strings(blockers),
+        "allowed_use": "rate_only_floor_candidate_chain_planning_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_promotion_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
+def _repair_budget_spent_child_rows(
+    *,
+    chain_id: str,
+    parent_candidate_chain_id: str,
+    work_order: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for order, allocation in enumerate(work_order.get("allocation_rows") or [], start=2):
+        if not isinstance(allocation, Mapping):
+            continue
+        proposed_bytes = _finite_int_or_none(
+            allocation.get("proposed_encoder_repair_bytes")
+        ) or 0
+        requested_bytes = _finite_int_or_none(allocation.get("requested_repair_bytes")) or 0
+        improvement = _finite_float_or_none(
+            allocation.get("local_lagrangian_improvement_score_units")
+        )
+        candidate_chain_id = _bounded_content_key(
+            "repair_budget_spent_child",
+            (
+                chain_id,
+                parent_candidate_chain_id,
+                allocation.get("rank"),
+                allocation.get("candidate_id"),
+                allocation.get("correction_family"),
+                proposed_bytes,
+            ),
+        )
+        blockers = [
+            "parent_rate_only_archive_materialization_required",
+            "repair_candidate_archive_materialization_missing",
+            "receiver_runtime_consumption_proof_missing",
+            "component_response_replay_required_before_budget_spend",
+            "exact_auth_eval_required_before_score_or_promotion_claim",
+        ]
+        blockers.extend(_string_list(allocation.get("budget_spend_blockers")))
+        if proposed_bytes <= 0:
+            blockers.append("no_encoder_repair_bytes_allocated")
+        rows.append(
+            {
+                "schema": REPAIR_BUDGET_MATERIALIZATION_PLAN_ROW_SCHEMA,
+                "candidate_kind": "spent_budget_repair_child",
+                "candidate_chain_id": candidate_chain_id,
+                "chain_id": chain_id,
+                "materialization_order": order,
+                "parent_candidate_chain_id": parent_candidate_chain_id,
+                "parent_must_be_preserved_before_child": True,
+                "child_must_not_replace_parent_archive": True,
+                "allocation_rank": allocation.get("rank"),
+                "allocation_candidate_id": allocation.get("candidate_id"),
+                "acquisition_id": allocation.get("acquisition_id"),
+                "correction_family": allocation.get("correction_family"),
+                "targeted_dimensions": list(allocation.get("targeted_dimensions") or []),
+                "operation_levels": list(allocation.get("operation_levels") or []),
+                "requested_repair_bytes": requested_bytes,
+                "proposed_encoder_repair_bytes": proposed_bytes,
+                "remaining_receiver_closed_rate_credit_bytes_after": (
+                    allocation.get("remaining_receiver_closed_rate_credit_bytes_after")
+                ),
+                "local_lagrangian_improvement_score_units": improvement,
+                "measured_component_delta_score_units": (
+                    allocation.get("measured_component_delta_score_units")
+                ),
+                "measured_lagrangian_delta_score_units": (
+                    allocation.get("measured_lagrangian_delta_score_units")
+                ),
+                "source_response_artifact_path": allocation.get(
+                    "source_response_artifact_path"
+                ),
+                "acceptance_rule": (
+                    "child_candidate_can_supersede_parent_only_after_receiver_consumed_"
+                    "materialization_component_replay_and_exact_axis_confirmation"
+                ),
+                "candidate_archive_materialized": False,
+                "candidate_archive_path": None,
+                "runtime_consumption_proof_present": False,
+                "receiver_consumed": False,
+                "component_response_replayed": False,
+                "budget_spend_allowed": False,
+                "ready_for_budget_spend": False,
+                "ready_for_materializer_execution": False,
+                "ready_for_exact_eval_dispatch": False,
+                "blockers": _unique_strings(blockers),
+                "allowed_use": "spent_budget_repair_candidate_chain_planning_only",
+                "forbidden_use": (
+                    "score_claim_or_budget_spend_or_promotion_or_dispatch_authority"
+                ),
+                **FALSE_AUTHORITY,
+            }
+        )
+    return rows
+
+
+def build_frontier_repair_budget_materialization_plan(
+    *,
+    repair_budget_waterfill_work_order: Mapping[str, Any],
+    repair_budget_waterfill_work_order_path: str | Path | None = None,
+) -> dict[str, Any]:
+    """Turn repair-waterfill allocations into parent/child candidate custody."""
+
+    if (
+        repair_budget_waterfill_work_order.get("schema")
+        != REPAIR_BUDGET_WATERFILL_WORK_ORDER_SCHEMA
+    ):
+        raise FrontierRateAttackFeedbackError(
+            "repair budget waterfill work order has unexpected schema"
+        )
+    require_no_truthy_authority_fields(
+        repair_budget_waterfill_work_order,
+        context="repair_budget_materialization_plan_work_order",
+    )
+    chain_id = str(
+        repair_budget_waterfill_work_order.get("chain_id") or "unknown_chain"
+    )
+    rate_budget_preservation_plan = (
+        repair_budget_waterfill_work_order.get("rate_budget_preservation_plan")
+        if isinstance(
+            repair_budget_waterfill_work_order.get("rate_budget_preservation_plan"),
+            Mapping,
+        )
+        else {}
+    )
+    parent_row = _repair_budget_rate_only_parent_row(
+        chain_id=chain_id,
+        rate_budget_preservation_plan=rate_budget_preservation_plan,
+        work_order=repair_budget_waterfill_work_order,
+    )
+    child_rows = _repair_budget_spent_child_rows(
+        chain_id=chain_id,
+        parent_candidate_chain_id=str(parent_row.get("candidate_chain_id") or ""),
+        work_order=repair_budget_waterfill_work_order,
+    )
+    rows = [parent_row, *child_rows]
+    proposed_repair_bytes_total = sum(
+        int(row.get("proposed_encoder_repair_bytes") or 0)
+        for row in child_rows
+    )
+    blockers = [
+        "candidate_archives_not_materialized",
+        "receiver_runtime_consumption_proof_missing",
+        "full_frame_inflate_parity_required_before_exact_readiness",
+        "exact_auth_eval_required_before_score_or_promotion_claim",
+    ]
+    if proposed_repair_bytes_total <= 0:
+        blockers.append("no_spent_budget_child_bytes_allocated")
+    if not child_rows:
+        blockers.append("no_spent_budget_repair_child_rows")
+    payload = {
+        "schema": REPAIR_BUDGET_MATERIALIZATION_PLAN_SCHEMA,
+        "generated_at_utc": _utc_now(),
+        "chain_id": chain_id,
+        "source_work_order_path": str(repair_budget_waterfill_work_order_path or ""),
+        "source_work_order_schema": repair_budget_waterfill_work_order.get("schema"),
+        "candidate_chain_row_count": len(rows),
+        "rate_only_parent_candidate_count": 1,
+        "spent_budget_child_candidate_count": len(child_rows),
+        "parent_candidate_chain_id": parent_row.get("candidate_chain_id"),
+        "rate_only_floor_preserved_before_repair_spend": True,
+        "spent_budget_candidates_are_children_of_rate_only_floor": True,
+        "rate_only_candidate_remains_valid_even_if_child_regresses": True,
+        "rebrotli_default_after_rate_attack": parent_row.get(
+            "rebrotli_default_after_rate_attack"
+        )
+        is True,
+        "receiver_closed_saved_bytes_total": repair_budget_waterfill_work_order.get(
+            "receiver_closed_rate_credit", {}
+        ).get("receiver_closed_saved_bytes_total")
+        if isinstance(
+            repair_budget_waterfill_work_order.get("receiver_closed_rate_credit"),
+            Mapping,
+        )
+        else None,
+        "proposed_encoder_repair_bytes_total": proposed_repair_bytes_total,
+        "candidate_archive_materialized": False,
+        "runtime_consumption_proof_present": False,
+        "receiver_consumed": False,
+        "component_response_replayed": False,
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_materializer_execution": False,
+        "ready_for_exact_eval_dispatch": False,
+        "candidate_chain_rows": rows,
+        "blockers": _unique_strings(blockers),
+        "recommended_next_action": (
+            "materialize_rate_only_parent_archive_then_spent_budget_child_archives_"
+            "under_receiver_runtime_consumption_and_component_replay_gates"
+            if child_rows and proposed_repair_bytes_total > 0
+            else "collect_allocated_repair_bytes_before_candidate_archive_materialization"
+        ),
+        "allowed_use": "repair_budget_candidate_chain_materialization_planning_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_promotion_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        payload,
+        context=f"frontier_repair_budget_materialization_plan:{chain_id}",
+    )
+    return payload
+
+
 def build_frontier_repair_budget_waterfill_queue(
     *,
     repo_root: str | Path,
     autonomous_chain_optimization: Mapping[str, Any],
     autonomous_chain_optimization_path: str | Path,
-    targeted_component_correction_response_harvest: Mapping[str, Any],
-    targeted_component_correction_response_harvest_path: str | Path,
-    receiver_closed_correction_budget: Mapping[str, Any],
-    receiver_closed_correction_budget_path: str | Path,
+    targeted_component_correction_response_harvest: Mapping[str, Any] | None = None,
+    targeted_component_correction_response_harvest_path: str | Path | None = None,
+    receiver_closed_correction_budget: Mapping[str, Any] | None = None,
+    receiver_closed_correction_budget_path: str | Path | None = None,
     results_root: str | Path = DEFAULT_RESULTS_ROOT,
     queue_id: str = "frontier_repair_budget_waterfill_queue",
     chain_limit: int = 4,
@@ -5969,11 +6262,128 @@ def build_frontier_repair_budget_waterfill_queue(
 
     repo = Path(repo_root)
     source_path = _resolve_path(autonomous_chain_optimization_path, repo_root=repo)
+    missing_prerequisite_keys: list[str] = []
+    if not isinstance(targeted_component_correction_response_harvest, Mapping):
+        missing_prerequisite_keys.append("targeted_component_correction_response_harvest")
+    if not isinstance(receiver_closed_correction_budget, Mapping):
+        missing_prerequisite_keys.append("receiver_closed_correction_budget")
+    if missing_prerequisite_keys:
+        results_base = _resolve_path(str(results_root), repo_root=repo)
+        experiments: list[dict[str, Any]] = []
+        for priority, row in enumerate(rows, start=1):
+            chain_id = str(row.get("chain_id") or f"chain_{priority}")
+            metadata = {
+                "schema": REPAIR_BUDGET_WATERFILL_QUEUE_METADATA_SCHEMA,
+                "chain_id": chain_id,
+                "chain_family": row.get("chain_family"),
+                "pipeline_side": "encoder_repair_allocator",
+                "accepted_response_count": 0,
+                "receiver_closed_saved_bytes_total": 0,
+                "rate_only_candidate_count": (
+                    row.get("rate_budget_preservation_plan", {}).get(
+                        "rate_only_candidate_count"
+                    )
+                    if isinstance(row.get("rate_budget_preservation_plan"), Mapping)
+                    else None
+                ),
+                "rate_only_saved_bytes_total": (
+                    row.get("rate_budget_preservation_plan", {}).get(
+                        "rate_only_saved_bytes_total"
+                    )
+                    if isinstance(row.get("rate_budget_preservation_plan"), Mapping)
+                    else None
+                ),
+                "missing_prerequisite_artifact_keys": _unique_strings(
+                    missing_prerequisite_keys
+                ),
+                "queue_actuation_ready": False,
+                "queue_actuation_blockers": [
+                    f"missing_prerequisite_artifact:{key}"
+                    for key in _unique_strings(missing_prerequisite_keys)
+                ],
+                "preserve_rate_only_archive_before_budget_spend": True,
+                "budget_spend_allowed": False,
+                "ready_for_exact_eval_dispatch": False,
+                "source_artifact_paths": _unique_strings(
+                    [
+                        _repo_rel(source_path, repo),
+                        str(targeted_component_correction_response_harvest_path or ""),
+                        str(receiver_closed_correction_budget_path or ""),
+                    ]
+                ),
+                "allowed_use": "blocked_local_encoder_repair_waterfill_queue_only",
+                "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+                **FALSE_AUTHORITY,
+            }
+            require_no_truthy_authority_fields(
+                metadata,
+                context=f"blocked_repair_budget_waterfill_queue_metadata:{chain_id}",
+            )
+            experiments.append(
+                {
+                    "id": f"repair_waterfill_{_slug_token(chain_id)}",
+                    "priority": priority,
+                    "status": "frozen",
+                    "tags": [
+                        "frontier-rate-attack",
+                        "encoder-repair-allocator",
+                        "segnet-posenet-waterfill",
+                        "blocked-missing-prerequisite",
+                        "no-score-authority",
+                    ],
+                    "metadata": metadata,
+                    "steps": [
+                        {
+                            "id": "inspect_missing_repair_waterfill_prerequisites",
+                            "kind": "command",
+                            "command": [
+                                ".venv/bin/python",
+                                "-m",
+                                "json.tool",
+                                _repo_rel(source_path, repo),
+                            ],
+                            "resources": {"kind": "local_io_heavy"},
+                            "timeout_seconds": 60,
+                            "telemetry": {
+                                "input_artifact_paths": [_repo_rel(source_path, repo)],
+                            },
+                        }
+                    ],
+                }
+            )
+        return normalize_queue_definition(
+            {
+                "schema": QUEUE_SCHEMA,
+                "queue_id": queue_id,
+                "controls": {
+                    "mode": "running",
+                    "local_first": True,
+                    "max_concurrency": {"local_io_heavy": 1},
+                },
+                "metadata": {
+                    "schema": "frontier_rate_attack_repair_budget_waterfill_queue_blocked_metadata.v1",
+                    "queue_actuation_ready": False,
+                    "queue_actuation_blockers": [
+                        f"missing_prerequisite_artifact:{key}"
+                        for key in _unique_strings(missing_prerequisite_keys)
+                    ],
+                    "missing_prerequisite_artifact_keys": _unique_strings(
+                        missing_prerequisite_keys
+                    ),
+                    "results_root": _repo_rel(results_base, repo),
+                    **FALSE_AUTHORITY,
+                },
+                "experiments": experiments,
+            }
+        )
     harvest_path = _resolve_path(
-        targeted_component_correction_response_harvest_path,
+        targeted_component_correction_response_harvest_path or "",
         repo_root=repo,
     )
-    budget_path = _resolve_path(receiver_closed_correction_budget_path, repo_root=repo)
+    budget_path = _resolve_path(
+        receiver_closed_correction_budget_path or "",
+        repo_root=repo,
+    )
     results_base = _resolve_path(str(results_root), repo_root=repo)
     queue_root = results_base / "frontier_repair_budget_waterfill" / _slug_token(queue_id)
     accepted_count = len(
@@ -5993,7 +6403,13 @@ def build_frontier_repair_budget_waterfill_queue(
         work_order_path = (
             queue_root / _slug_token(chain_id) / "repair_budget_waterfill_work_order.json"
         )
+        materialization_plan_path = (
+            queue_root
+            / _slug_token(chain_id)
+            / "repair_budget_materialization_plan.json"
+        )
         work_order_ref = _repo_rel(work_order_path, repo)
+        materialization_plan_ref = _repo_rel(materialization_plan_path, repo)
         metadata = {
             "schema": REPAIR_BUDGET_WATERFILL_QUEUE_METADATA_SCHEMA,
             "chain_id": chain_id,
@@ -6029,6 +6445,8 @@ def build_frontier_repair_budget_waterfill_queue(
                 else {}
             ),
             "preserve_rate_only_archive_before_budget_spend": True,
+            "candidate_chain_materialization_plan_path": materialization_plan_ref,
+            "candidate_archive_materialized": False,
             "queue_actuation_ready": True,
             "budget_spend_allowed": False,
             "ready_for_exact_eval_dispatch": False,
@@ -6111,7 +6529,57 @@ def build_frontier_repair_budget_waterfill_queue(
                             ],
                             "include_postcondition_paths": True,
                         },
-                    }
+                    },
+                    {
+                        "id": "emit_repair_budget_materialization_plan",
+                        "kind": "command",
+                        "command": [
+                            ".venv/bin/python",
+                            "tools/build_frontier_repair_budget_materialization_plan.py",
+                            "--work-order",
+                            work_order_ref,
+                            "--materialization-plan-out",
+                            materialization_plan_ref,
+                            "--overwrite",
+                        ],
+                        "resources": {"kind": "local_io_heavy"},
+                        "timeout_seconds": 120,
+                        "postconditions": [
+                            {
+                                "type": "json_equals",
+                                "path": materialization_plan_ref,
+                                "key": "schema",
+                                "equals": REPAIR_BUDGET_MATERIALIZATION_PLAN_SCHEMA,
+                            },
+                            {
+                                "type": "json_false_authority",
+                                "path": materialization_plan_ref,
+                            },
+                            {
+                                "type": "json_equals",
+                                "path": materialization_plan_ref,
+                                "key": "candidate_archive_materialized",
+                                "equals": False,
+                            },
+                            {
+                                "type": "json_equals",
+                                "path": materialization_plan_ref,
+                                "key": "ready_for_exact_eval_dispatch",
+                                "equals": False,
+                            },
+                            {
+                                "type": "json_equals",
+                                "path": materialization_plan_ref,
+                                "key": "budget_spend_allowed",
+                                "equals": False,
+                            },
+                        ],
+                        "telemetry": {
+                            "artifact_paths": [materialization_plan_ref],
+                            "input_artifact_paths": [work_order_ref],
+                            "include_postcondition_paths": True,
+                        },
+                    },
                 ],
             }
         )
@@ -6131,6 +6599,64 @@ def build_frontier_repair_budget_waterfill_queue(
 
 def _autonomous_action_artifact_key(action: Mapping[str, Any]) -> str:
     return str(action.get("queue_artifact_key") or action.get("source_artifact_key") or "")
+
+
+def _child_queue_health(path: Path) -> dict[str, Any]:
+    if not path.is_file():
+        return {
+            "path": str(path),
+            "present": False,
+            "queued_experiment_count": 0,
+            "frozen_experiment_count": 0,
+            "disabled_experiment_count": 0,
+            "blockers": ["child_queue_artifact_missing"],
+            **FALSE_AUTHORITY,
+        }
+    try:
+        payload = _load_json(path)
+        require_no_truthy_authority_fields(
+            payload,
+            context=f"autonomous_chain_child_queue:{path}",
+        )
+    except (FrontierRateAttackFeedbackError, ExperimentQueueError) as exc:
+        return {
+            "path": str(path),
+            "present": True,
+            "queued_experiment_count": 0,
+            "frozen_experiment_count": 0,
+            "disabled_experiment_count": 0,
+            "blockers": [f"child_queue_artifact_invalid:{exc}"],
+            **FALSE_AUTHORITY,
+        }
+    experiments = (
+        payload.get("experiments") if isinstance(payload.get("experiments"), list) else []
+    )
+    queued = 0
+    frozen = 0
+    disabled = 0
+    for experiment in experiments:
+        if not isinstance(experiment, Mapping):
+            continue
+        status = str(experiment.get("status") or "")
+        if status == "queued":
+            queued += 1
+        elif status == "frozen":
+            frozen += 1
+        elif status == "disabled":
+            disabled += 1
+    blockers: list[str] = []
+    if queued <= 0:
+        blockers.append("child_queue_has_no_queued_experiments")
+    return {
+        "path": str(path),
+        "present": True,
+        "queue_id": str(payload.get("queue_id") or ""),
+        "queued_experiment_count": queued,
+        "frozen_experiment_count": frozen,
+        "disabled_experiment_count": disabled,
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
 
 
 def build_frontier_autonomous_chain_optimization_queue(
@@ -6229,6 +6755,8 @@ def build_frontier_autonomous_chain_optimization_queue(
         child_queue_paths: list[str] = []
         child_queue_run_step_ids: list[str] = []
         receiver_repair_run_step_ids: list[str] = []
+        child_queue_health_by_key: dict[str, dict[str, Any]] = {}
+        blocked_child_queue_artifact_keys: list[str] = []
         for action_index, action in enumerate(local_actions, start=1):
             queue_key = str(action.get("queue_artifact_key") or "")
             if not queue_key:
@@ -6243,6 +6771,13 @@ def build_frontier_autonomous_chain_optimization_queue(
             child_queue_path = _resolve_path(raw_child_queue, repo_root=repo)
             child_queue_ref = _repo_rel(child_queue_path, repo)
             child_queue_paths.append(child_queue_ref)
+            child_health = _child_queue_health(child_queue_path)
+            child_queue_health_by_key[queue_key] = {
+                **child_health,
+                "path": child_queue_ref,
+            }
+            if child_health.get("blockers"):
+                blocked_child_queue_artifact_keys.append(queue_key)
             slug = _slug_token(f"{action.get('id') or action_index}_{queue_key}")
             validate_step_id = f"validate_{slug}"
             steps.append(
@@ -6381,6 +6916,10 @@ def build_frontier_autonomous_chain_optimization_queue(
             f"missing_child_queue_artifact:{key}"
             for key in _unique_strings(missing_queue_artifact_keys)
         )
+        queue_actuation_blockers.extend(
+            f"child_queue_not_runnable:{key}"
+            for key in _unique_strings(blocked_child_queue_artifact_keys)
+        )
         if len(child_queue_paths) < len(local_actions):
             queue_actuation_blockers.append("not_all_local_actions_bound_to_child_queues")
         queue_actuation_ready = bool(local_actions) and not queue_actuation_blockers
@@ -6404,7 +6943,11 @@ def build_frontier_autonomous_chain_optimization_queue(
             "advisory_actions": advisory_actions,
             "advisory_action_count": len(advisory_actions),
             "child_queue_artifact_paths": child_queue_paths,
+            "child_queue_health_by_key": child_queue_health_by_key,
             "missing_queue_artifact_keys": _unique_strings(missing_queue_artifact_keys),
+            "blocked_child_queue_artifact_keys": _unique_strings(
+                blocked_child_queue_artifact_keys
+            ),
             "queue_actuation_ready": queue_actuation_ready,
             "queue_actuation_blockers": _unique_strings(queue_actuation_blockers),
             "post_repair_refresh_planned": post_repair_refresh_planned,
@@ -13611,6 +14154,8 @@ __all__ = [
     "RECEIVER_REPAIR_QUEUE_METADATA_SCHEMA",
     "RECEIVER_REPAIR_ROW_SCHEMA",
     "RECEIVER_REPAIR_WORK_ORDER_SCHEMA",
+    "REPAIR_BUDGET_MATERIALIZATION_PLAN_ROW_SCHEMA",
+    "REPAIR_BUDGET_MATERIALIZATION_PLAN_SCHEMA",
     "REPAIR_BUDGET_WATERFILL_QUEUE_METADATA_SCHEMA",
     "REPAIR_BUDGET_WATERFILL_WORK_ORDER_SCHEMA",
     "TARGETED_COMPONENT_CORRECTION_ACQUISITION_SCHEMA",
@@ -13637,6 +14182,7 @@ __all__ = [
     "build_frontier_receiver_repair_backlog",
     "build_frontier_receiver_repair_queue",
     "build_frontier_receiver_repair_work_order",
+    "build_frontier_repair_budget_materialization_plan",
     "build_frontier_repair_budget_waterfill_queue",
     "build_frontier_repair_budget_waterfill_work_order",
     "build_frontier_targeted_component_correction_acquisition",
