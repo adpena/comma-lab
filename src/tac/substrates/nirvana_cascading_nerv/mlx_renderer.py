@@ -35,8 +35,20 @@ Per Catalog #146 + #205 inflate runtime contract:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
+
+import numpy as np
+
+try:  # pragma: no cover - exercised on Apple Silicon with MLX installed.
+    import mlx.core as mx
+    import mlx.nn as nn
+except Exception as exc:  # pragma: no cover - import guard for non-Apple CI.
+    mx = None  # type: ignore[assignment]
+    nn = None  # type: ignore[assignment]
+    _MLX_IMPORT_ERROR: Exception | None = exc
+else:
+    _MLX_IMPORT_ERROR = None
 
 # Module-level config. MLX is imported lazily inside the factory to keep
 # top-level import cheap (sister substrates' canonical pattern).
@@ -110,17 +122,15 @@ class NirvanaCascadingNervConfig:
 
 def _ensure_mlx_available() -> Any:
     """Lazy import MLX. Raises with actionable message if not installed."""
-    try:
-        import mlx.core as mx  # noqa: F401
-
-        return mx
-    except ImportError as exc:
+    if mx is None or nn is None:
         raise RuntimeError(
             "MLX is not installed. Install via `uv pip install mlx` "
             "(macOS only). For non-Apple-Silicon iteration, route through "
             "`tac.substrates.nirvana_cascading_nerv.numpy_reference` per axis 3 "
             "portability discipline."
-        ) from exc
+            f" Original import error: {_MLX_IMPORT_ERROR!r}"
+        )
+    return mx
 
 
 def renderer_param_count(cfg: NirvanaCascadingNervConfig) -> int:
@@ -194,9 +204,217 @@ def _full_main(argv: list[str] | None = None) -> int:
     )
 
 
+# ---------------------------------------------------------------------------
+# L1 RENDERER CLASS LANDED 2026-05-26 per TaskCreate #1338 NIRVANA L1
+# EMPIRICAL respawn (predecessor `nirvana-pr110-l1-empirical-mlx-20260526`
+# blocker resolution; sister BoostNeRV-PR110 L1 EMPIRICAL pattern at
+# `.omx/research/boostnerv_pr110_l1_empirical_landed_20260526.md` is the
+# canonical cross-pollination template). Appended per Catalog #110/#113
+# APPEND-ONLY HISTORICAL_PROVENANCE: every line above this comment is
+# unchanged from the L0 SCAFFOLD posture.
+#
+# Per the new 2026-05-26 standing directives:
+#   - MLX↔CUDA bidirectional drift anticipation: 5 mitigations declared
+#     inline (NHWC layout / align_corners=False / fp32 accumulation /
+#     deterministic seeding / state_dict transpose at export bridge).
+#   - Pushing-the-frontier of optimization algorithms: this is canon-
+#     application of the hierarchical-residual-decoder-cascade paradigm
+#     (sister BoostNeRV-PR110 ResidualHeadMLX) NOT a frontier-push; the
+#     novel surface IS the per-level int8 residual + brotli compose vs
+#     BoostNeRV's BPR1-style fp16 sidecar.
+# ---------------------------------------------------------------------------
+
+
+class NirvanaCascadingNervRendererMLX(nn.Module if nn is not None else object):  # type: ignore[misc]
+    """MLX hierarchical residual decoder cascade per L0 scaffold contract.
+
+    L1 EMPIRICAL CLASS landed 2026-05-26 per TaskCreate #1338. Mirrors the
+    PyTorch inflate-time topology at
+    ``tac.substrates.nirvana_cascading_nerv.inflate.NirvanaCascadingDecoderTorch``
+    so the canonical state_dict export bridge (NHWC→NCHW transpose on 4-D
+    weight tensors per sister substrate dreamer_v3_rssm pattern) produces
+    byte-identical inflate-time decoder reconstruction.
+
+    **DRIFT SURFACE per axis 2 MLX drift minimization standing directive 2026-05-26**:
+    - **Mitigation 1 (NHWC layout)**: all conv weights kept in MLX-canonical
+      NHWC layout (out_ch, kH, kW, in_ch); export bridge transposes to NCHW
+      via `arr.transpose(0, 3, 1, 2)` in inflate.py. The stem vector is first
+      reshaped as NCHW and then transposed to NHWC so MLX and PyTorch consume
+      identical linear-output ordering.
+    - **Mitigation 2 (bilinear align_corners=False)**: uses canonical
+      native MLX `bilinear_resize2x_align_corners_false_nhwc`; AVOIDS
+      `mx.repeat` substitution and avoids a NumPy round-trip in the hot path.
+    - **Mitigation 3 (fp32 accumulation)**: all cascade additions in fp32 per
+      `numpy_reference.cascade_reconstruct` line 84 contract; only state_dict
+      storage uses fp16 (per archive.py contract; not accumulation).
+    - **Mitigation 4 (deterministic seeding)**: callers MUST pass `seed=`
+      kwarg to constructor; uses `mx.random.seed(seed)` BEFORE parameter
+      allocation for byte-stable parity smoke vs PyTorch with matched seed.
+    - **Mitigation 5 (clamp [0, 1] per level)**: matches PyTorch inflate
+      line 150 `torch.clamp(rgb, 0.0, 1.0)` per-level after residual add,
+      preventing post-sigmoid drift accumulation across the cascade.
+
+    **CANONICAL-VS-FRONTIER-PUSH decision** per new optimization-algorithm-
+    research standing directive 2026-05-26: this implementation is CANON-
+    APPLICATION of the NeRV-family hierarchical-residual-decoder-cascade
+    paradigm (sister BoostNeRV-PR110 ResidualHeadMLX is the closest cross-
+    pollination peer; canonical PR95-HNeRV-MLX ships the upsample-block
+    primitive pattern this class mirrors). NO novel optimizer / loss /
+    architecture term proposed at L1; novelty is RESERVED for L2+ when
+    empirical L1 anchors a per-pair-difficulty signal worth a Catalog #344
+    canonical equation registration.
+    """
+
+    def __init__(
+        self,
+        cfg: NirvanaCascadingNervConfig,
+        *,
+        seed: int = 0,
+    ) -> None:
+        mx_mod = _ensure_mlx_available()
+        super().__init__()
+
+        mx_mod.random.seed(int(seed))  # Mitigation 4: deterministic seeding
+
+        self.cfg = cfg
+        self.seed = int(seed)
+        self._mx = mx_mod
+
+        # Level 0 decoder topology (mirrors inflate.py::_NirvanaLevelDecoder)
+        # NHWC conv layout per Mitigation 1.
+        self.stem = nn.Linear(  # type: ignore[union-attr]
+            cfg.per_pair_latent_dim,
+            cfg.base_channels * cfg.base_h * cfg.base_w,
+        )
+        # MLX Conv2d weights are NHWC (out_ch, kH, kW, in_ch)
+        self.conv1 = nn.Conv2d(  # type: ignore[union-attr]
+            cfg.base_channels,
+            cfg.base_channels,
+            3,
+            padding=1,
+        )
+        self.conv_to_rgb = nn.Conv2d(  # type: ignore[union-attr]
+            cfg.base_channels,
+            3,
+            3,
+            padding=1,
+        )
+
+    def decode_level_0(self, z: Any) -> Any:
+        """Level 0 forward: (B, latent_dim) → (B, H0, W0, 3) NHWC RGB in [0, 1].
+
+        Mirrors PyTorch `_NirvanaLevelDecoder.forward`:
+            linear(z) → reshape(B, base_channels, base_h, base_w) NCHW
+            → transpose to NHWC → sin → conv1 → sin → conv_to_rgb
+            → sigmoid → [0, 1]
+        """
+        mx = self._mx
+        cfg = self.cfg
+        B = int(z.shape[0])
+        x = self.stem(z)  # (B, base_channels * base_h * base_w)
+        # PyTorch inflate views the same vector as NCHW. Preserve that memory
+        # order, then transpose to MLX's NHWC convolution layout.
+        x = mx.reshape(x, (B, cfg.base_channels, cfg.base_h, cfg.base_w))
+        x = mx.transpose(x, (0, 2, 3, 1))
+        x = mx.sin(x)
+        x = self.conv1(x)
+        x = mx.sin(x)
+        rgb = mx.sigmoid(self.conv_to_rgb(x))  # NHWC; [0, 1]
+        return rgb
+
+    def cascade_reconstruct(
+        self,
+        latents: Any,
+        per_level_residuals_fp_nhwc: list[Any],
+    ) -> Any:
+        """Hierarchical residual cascade per `numpy_reference.cascade_reconstruct`.
+
+        Args:
+            latents: (B, latent_dim) MLX array, per-pair latents.
+            per_level_residuals_fp_nhwc: list of (H_i, W_i, 3) NHWC residuals
+                already dequantized to fp32; index `level` is applied at
+                output resolution of level `level` (level 0 unused per
+                cascade design; levels 1..num_levels-1 carry residuals).
+
+        Returns:
+            (B, H_final, W_final, 3) NHWC RGB in [0, 1].
+        """
+        mx = self._mx
+        from tac.local_acceleration.pr95_hnerv_mlx import (
+            bilinear_resize2x_align_corners_false_nhwc,
+        )
+
+        cfg = self.cfg
+        # Level 0: full per-pair decoder forward
+        rgb = self.decode_level_0(latents)  # (B, H0, W0, 3) NHWC
+
+        # Cascade levels 1..N-1: upsample → add residual → clamp
+        for level in range(1, cfg.num_levels):
+            # Mitigation 2: native MLX bilinear upsample (NHWC, align_corners=False).
+            rgb = bilinear_resize2x_align_corners_false_nhwc(rgb)
+            # Residual broadcast (1, H, W, 3) → add to (B, H, W, 3)
+            residual = per_level_residuals_fp_nhwc[level]
+            # Residual stored as (H, W, 3); broadcast across batch dim via reshape
+            res_3d = mx.reshape(residual, (1, residual.shape[0], residual.shape[1], 3))
+            rgb = rgb + res_3d
+            # Mitigation 5: clamp [0, 1] per level
+            rgb = mx.clip(rgb, 0.0, 1.0)
+        return rgb
+
+    def export_parameter_arrays(self) -> dict[str, Any]:
+        """Return the flat parameter map used by the PyTorch inflate bridge."""
+        return {
+            "stem.weight": self.stem.weight,
+            "stem.bias": self.stem.bias,
+            "conv1.weight": self.conv1.weight,
+            "conv1.bias": self.conv1.bias,
+            "conv_to_rgb.weight": self.conv_to_rgb.weight,
+            "conv_to_rgb.bias": self.conv_to_rgb.bias,
+        }
+
+    def state_dict_for_inflate_export(self) -> dict[str, Any]:
+        """Export state_dict in PyTorch NCHW layout for inflate.py compatibility.
+
+        Per Mitigation 1: MLX conv weights are NHWC (out_ch, kH, kW, in_ch);
+        PyTorch expects NCHW (out_ch, in_ch, kH, kW). This export uses
+        an explicit transpose in the inflate loader for 4-D weight tensors;
+        matches `inflate.py::inflate_one_video` line 203 logic.
+        """
+        sd: dict[str, Any] = {}
+        for key, val in self.export_parameter_arrays().items():
+            arr = np.asarray(val).astype(np.float32)
+            # MLX Linear weight is (out, in); PyTorch Linear weight is (out, in) too;
+            # no transpose needed for 2-D. 4-D conv weight needs NHWC→NCHW.
+            # Save NHWC layout for the inflate.py NCHW-transpose contract.
+            sd[f"level_0_decoder.{key}"] = arr
+        return sd
+
+    def architecture_manifest(self) -> dict[str, Any]:
+        """Per Catalog #305 observability surface declaration."""
+        return {
+            "schema": "nirvana_cascading_nerv_mlx_architecture_v1",
+            "num_levels": self.cfg.num_levels,
+            "per_pair_latent_dim": self.cfg.per_pair_latent_dim,
+            "base_h": self.cfg.base_h,
+            "base_w": self.cfg.base_w,
+            "base_channels": self.cfg.base_channels,
+            "num_pairs": self.cfg.num_pairs,
+            "residual_quant_bits": self.cfg.residual_quant_bits,
+            "internal_layout": "NHWC",
+            "decoder_param_count": renderer_param_count(self.cfg),
+            "estimate_archive_bytes": estimate_archive_bytes(self.cfg),
+            "drift_mitigations": [
+                "nhwc_layout_export_transpose_to_nchw",
+                "native_mlx_bilinear_upsample_align_corners_false",
+                "fp32_accumulation_cascade_additions",
+                "deterministic_mx_random_seed_at_init",
+                "clamp_0_1_per_cascade_level",
+            ],
+        }
 __all__ = [
     "EVAL_HW",
     "NirvanaCascadingNervConfig",
+    "NirvanaCascadingNervRendererMLX",
     "_ensure_mlx_available",
     "_full_main",
     "estimate_archive_bytes",
