@@ -1,0 +1,92 @@
+{
+  "arms": {
+    "baseline": {
+      "composite_proxy": 6.48654489517212,
+      "eval_kl": 6.486544895172119,
+      "head_n_params": 0,
+      "sidecar_bytes": 0
+    },
+    "catalyst_composition": {
+      "composite_proxy": 6.373275347957118,
+      "eval_kl": 6.3732646942138675,
+      "head_n_params": 20,
+      "qat_final_train_kl": 6.4460248947143555,
+      "qat_initial_kl": 6.4460248947143555,
+      "qat_loss_curve_first_10": [
+        6.4460248947143555
+      ],
+      "qat_loss_curve_last_10": [
+        6.4460248947143555
+      ],
+      "qat_wall_seconds": 0.0038890838623046875,
+      "sidecar_bytes": 16
+    },
+    "path_a_alone": {
+      "composite_proxy": 6.3759143555254765,
+      "eval_kl": 6.375903701782226,
+      "head_n_params": 20,
+      "loss_curve_first_10": [
+        6.388815641403198
+      ],
+      "loss_curve_last_10": [
+        6.388815641403198
+      ],
+      "sidecar_bytes": 16,
+      "train_final_kl": 6.388815641403198,
+      "train_initial_kl": 6.388815641403198,
+      "train_wall_seconds": 0.00868988037109375
+    }
+  },
+  "canonical_equation_id": "hinton_kl_distill_enables_qat_catalyst_composition_savings_v1",
+  "canonical_provenance": {
+    "axis_tag": "[macOS-MLX research-signal]",
+    "evidence_grade": "macOS-MLX-research-signal",
+    "hardware_substrate": "macos_arm64",
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "score_claim_valid": false
+  },
+  "catalog_307_verdict": "DEFER_PENDING_QAT_STABILIZATION",
+  "configuration": {
+    "batch_size": 1,
+    "canonical_eval_size": [
+      384,
+      512
+    ],
+    "distillation_weight": 0.5,
+    "learning_rate": 0.5,
+    "n_frames": 2,
+    "path_a_n_epochs": 1,
+    "qat_lr_effective": 0.05,
+    "qat_lr_factor": 0.1,
+    "qat_n_epochs": 1,
+    "seed": 0,
+    "source_video_sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9",
+    "temperature": 2.0
+  },
+  "deltas": {
+    "delta_catalyst_composite_minus_baseline_composite": -0.11326954721500204,
+    "delta_catalyst_composite_minus_path_a_composite": -0.0026390075683586645,
+    "delta_catalyst_kl_minus_path_a_kl": -0.0026390075683586645,
+    "delta_catalyst_rate_minus_path_a_rate": 0.0,
+    "delta_path_a_kl_minus_baseline_kl": -0.11064119338989276
+  },
+  "lane_id": "lane_cascade_b_catalyst_sister_wave_2_production_scale_post_train_qat_real_segnet_20260526",
+  "schema_version": "cascade_b_catalyst_sister_wave_2_production_post_train_qat_verdict_v1_20260526",
+  "subagent_id": "cascade-b-catalyst-sister-wave-2-production-scale-600f-1000ep-plus-post-train-qat-fine-tune-real-segnet-fixture-recursive-doctrine-6th-order-mlx-first-numpy-portable-20260526",
+  "verdict_predicates": {
+    "catalyst_improves_over_baseline_composite": true,
+    "catalyst_improves_over_path_a_composite": true,
+    "catalyst_improves_over_path_a_kl": true,
+    "qat_stable": false
+  },
+  "wall_clock_seconds": {
+    "baseline_eval": 0.03153204917907715,
+    "decode": 0.10088825225830078,
+    "path_a_train": 0.00868988037109375,
+    "qat_fine_tune": 0.0038890838623046875,
+    "teacher_cache": 2.2745230197906494,
+    "total": 2.419522285461426
+  }
+}
