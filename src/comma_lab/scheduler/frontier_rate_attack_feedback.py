@@ -6589,6 +6589,7 @@ def _repair_waterfill_allocation_action_term(
             rank,
         ),
     )
+    rate_packet_context = _targeted_rate_packet_context(row)
     return {
         "schema": REPAIR_BUDGET_WATERFILL_ALLOCATION_ACTION_TERM_SCHEMA,
         "rank": rank,
@@ -6608,11 +6609,14 @@ def _repair_waterfill_allocation_action_term(
             "component_delta_score_units": component_delta,
             "lambda_delta_bytes_score_units": correction_rate_delta,
             "objective_delta_score_units": objective_delta,
+            **_targeted_rate_packet_context_fields(row),
+            "receiver_closed_rate_packet_context": dict(rate_packet_context),
             **FALSE_AUTHORITY,
         },
         "R_i": {
             "receiver_proof_kind": "receiver_consumed_spent_budget_child_archive",
             "parent_rate_only_floor_required": True,
+            "receiver_closed_rate_packet_context": dict(rate_packet_context),
             "component_response_replay_required": True,
             "parser_only_proof_rejected": True,
             "deterministic_adapter_only": True,
@@ -6675,6 +6679,7 @@ def _repair_waterfill_allocation_rows(
             blockers.append("correction_added_archive_bytes_missing")
         if proposed_bytes <= 0:
             blockers.append("no_receiver_closed_rate_credit_bytes_allocated")
+        rate_packet_context = _targeted_rate_packet_context(row)
         out.append(
             {
                 "schema": "frontier_rate_attack_repair_budget_waterfill_allocation_row.v1",
@@ -6710,6 +6715,8 @@ def _repair_waterfill_allocation_rows(
                 "estimated_receiver_closed_rate_credit_score_units": row.get(
                     "estimated_receiver_closed_rate_credit_score_units"
                 ),
+                **_targeted_rate_packet_context_fields(row),
+                "receiver_closed_rate_packet_context": dict(rate_packet_context),
                 "requested_repair_bytes": requested_bytes,
                 "proposed_encoder_repair_bytes": proposed_bytes,
                 "remaining_receiver_closed_rate_credit_bytes_after": remaining,
@@ -7399,6 +7406,15 @@ def _repair_budget_spent_child_rows(
                 "correction_family": allocation.get("correction_family"),
                 "targeted_dimensions": list(allocation.get("targeted_dimensions") or []),
                 "operation_levels": list(allocation.get("operation_levels") or []),
+                **_targeted_rate_packet_context_fields(allocation),
+                "receiver_closed_rate_packet_context": dict(
+                    allocation.get("receiver_closed_rate_packet_context")
+                    if isinstance(
+                        allocation.get("receiver_closed_rate_packet_context"),
+                        Mapping,
+                    )
+                    else _targeted_rate_packet_context(allocation)
+                ),
                 "allocation_action_term": dict(
                     allocation.get("allocation_action_term")
                     if isinstance(allocation.get("allocation_action_term"), Mapping)

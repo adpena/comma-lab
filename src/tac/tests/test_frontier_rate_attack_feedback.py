@@ -2133,6 +2133,55 @@ def test_receiver_closed_rate_packet_manifest_feeds_waterfill_budget(
     assert handoff_context["entropy_positions"] == [
         "at_entropy_coder_integer_codeword_boundary"
     ]
+    autonomous = {
+        "schema": AUTONOMOUS_CHAIN_OPTIMIZATION_SCHEMA,
+        **_false_authority(),
+        "rows": [
+            {
+                "chain_id": "rate_packet_repair_chain_unit",
+                "chain_family": "receiver_closed_rate_packet_repair_chain",
+                "optimization_objective": (
+                    "minimize_delta_segnet_plus_delta_posenet_plus_lambda_delta_bytes"
+                ),
+                "repair_budget_waterfill_plan": {
+                    "schema": "frontier_rate_attack_repair_budget_waterfill_plan.v1",
+                    **_false_authority(),
+                },
+                "rate_budget_preservation_plan": rate_plan,
+                **_false_authority(),
+            }
+        ],
+    }
+    repair_waterfill = build_frontier_repair_budget_waterfill_work_order(
+        autonomous_chain_optimization=autonomous,
+        chain_id="rate_packet_repair_chain_unit",
+        targeted_component_correction_response_harvest=harvest,
+        receiver_closed_correction_budget=budget,
+    )
+    _assert_false_authority(repair_waterfill)
+    allocation = repair_waterfill["allocation_rows"][0]
+    assert allocation["receiver_closed_rate_packet_context"][
+        "selector_payload_wire_delta_bytes"
+    ] == -10
+    assert allocation["allocation_action_term"]["T_i"][
+        "receiver_closed_rate_packet_context"
+    ]["candidate_compact_selector_codec"] == "fec8_static_second_order_markov_k16"
+    assert allocation["allocation_action_term"]["R_i"][
+        "receiver_closed_rate_packet_context"
+    ]["parent_compact_selector_codec"] == "fec6_fixed_huffman_k16"
+    materialization_plan = build_frontier_repair_budget_materialization_plan(
+        repair_budget_waterfill_work_order=repair_waterfill,
+        repair_budget_waterfill_work_order_path=tmp_path
+        / "rate_packet_repair_waterfill.json",
+    )
+    child_rows = [
+        row
+        for row in materialization_plan["candidate_chain_rows"]
+        if row["candidate_kind"] == "spent_budget_repair_child"
+    ]
+    assert child_rows[0]["receiver_closed_rate_packet_context"][
+        "entropy_position"
+    ] == "at_entropy_coder_integer_codeword_boundary"
 
 
 def test_receiver_closed_rate_packet_manifest_refuses_unverified_archive_file(
