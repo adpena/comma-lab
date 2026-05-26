@@ -1,0 +1,134 @@
+{
+  "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+  "axis_tag": "[macOS-CPU advisory]",
+  "bucket_flag_stream_overhead_bytes": {
+    "brotli_bytes": 79,
+    "raw_bytes": 75
+  },
+  "elapsed_seconds": 0.002665996551513672,
+  "entropy_bits_per_pair": {
+    "H_first_order_markov": 2.940206130866642,
+    "H_first_order_plus_deterministic_bucket": 1.9603371179062006,
+    "H_marginal": 3.2116176552784585,
+    "H_second_order_true_markov": 1.9787923370192624,
+    "ZERO_INFO_GAIN_DETERMINISTIC_BUCKET_VERIFICATION": {
+      "first_order_minus_bucket_aware": 0.9798690129604413,
+      "interpretation": "When bucket is deterministic-from-symbol, H(X|prev,bucket) <= H(X|prev). The reduction comes from the decoder knowing bucket, partitioning K=16 into {3,13} subsets. But we PAY 75B+ for the bucket flag stream."
+    }
+  },
+  "evidence_grade": "macOS-CPU advisory only",
+  "marginal_histogram": {
+    "0": 134,
+    "1": 35,
+    "10": 7,
+    "11": 16,
+    "12": 6,
+    "13": 92,
+    "14": 17,
+    "15": 1,
+    "2": 129,
+    "3": 9,
+    "4": 25,
+    "5": 13,
+    "6": 11,
+    "7": 71,
+    "8": 10,
+    "9": 24
+  },
+  "mode_names": [
+    "none",
+    "frame0_blue_chroma_amp_1",
+    "frame0_blue_chroma_amp_3",
+    "frame0_luma_bias_+1",
+    "frame0_luma_bias_-1",
+    "frame0_luma_bias_-2",
+    "frame0_luma_bias_-4",
+    "frame0_rgb_bias_m2_p1_p1",
+    "frame0_rgb_bias_m4_p2_p2",
+    "frame0_rgb_bias_p0_m1_p1",
+    "frame0_rgb_bias_p0_m2_p2",
+    "frame0_rgb_bias_p0_p1_m1",
+    "frame0_rgb_bias_p0_p2_m2",
+    "frame0_rgb_bias_p2_m1_m1",
+    "frame0_rgb_bias_p4_m2_m2",
+    "frame0_roll_dx+0_dy+1"
+  ],
+  "n_pairs": 600,
+  "n_pairs_in_posenet_null_bucket": 298,
+  "palette_k": 16,
+  "per_context_huffman_wire": {
+    "fec8_first_order_baseline": {
+      "bits_per_pair": 2.98330550918197,
+      "context_dim_label": "prev_mode",
+      "n_contexts": 16,
+      "n_pairs_coded": 599,
+      "n_pairs_skipped_for_initial_context": 1,
+      "total_wire_bits": 1787.0
+    },
+    "fec8_first_order_plus_p19_bucket": {
+      "bits_per_pair": 2.043405676126878,
+      "context_dim_label": "(prev_mode, posenet_null_bucket_now)",
+      "n_contexts": 31,
+      "n_pairs_coded": 599,
+      "n_pairs_skipped_for_initial_context": 1,
+      "total_wire_bits": 1224.0
+    },
+    "fec8_second_order_true": {
+      "bits_per_pair": 2.1103678929765888,
+      "context_dim_label": "(prev2_mode, prev1_mode)",
+      "n_contexts": 130,
+      "n_pairs_coded": 598,
+      "n_pairs_skipped_for_initial_context": 2,
+      "total_wire_bits": 1262.0
+    }
+  },
+  "posenet_null_bucket_membership": [
+    "none",
+    "frame0_blue_chroma_amp_1",
+    "frame0_blue_chroma_amp_3"
+  ],
+  "promotable": false,
+  "promotion_blockers": [
+    "local_cpu_only_compress_time_analysis",
+    "not_exact_cuda_auth_eval",
+    "no_byte_closed_archive_candidate",
+    "selector_bytes_not_charged_until_archive_swap_in",
+    "requires_full_600_pair_exact_cuda_before_any_score_use"
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "schema_version": "fec8_markov_2nd_order_p19_bucket_extension_v1",
+  "score_claim": false,
+  "selector_payload_bytes_observed": 249,
+  "selector_payload_sha256": "fc5c431b5d793c33e2f320076fe6f0dd76c2d91e3826ae4b05abfb4f86f453ca",
+  "shannon_floor_bytes": {
+    "H_bucket_aware_floor": 147,
+    "H_first_order_floor": 221,
+    "H_marginal_floor": 241,
+    "H_second_order_true_floor": 148
+  },
+  "structural_finding": "The prompted 'P19 PoseNet-null bucket' is a DETERMINISTIC FUNCTION of the symbol being coded (per Cascade C \u00a73 \u00b63 + cargo-cult audit row 3). Therefore H(X|prev,bucket(X)) <= H(X|prev) only because the decoder learns which K=16 subset X lives in BEFORE seeing X, and we PAY 75B+ for the bucket flag stream. Net: the bucket-flag overhead overwhelms any per-context Huffman codeword savings on a 600-pair stream where each pair pays ~3 bits and the bucket flag pays 1 bit. Empirical wire delta confirms structural prediction per Catalog #307 IMPLEMENTATION-LEVEL FALSIFICATION.",
+  "subagent_id": "fec8-markov-2nd-order-p19-posenet-null-bucket-extension-pr111-candidate-20260526",
+  "verdict_per_catalog_307": {
+    "PARADIGM_VERDICT": "PARADIGM_INTACT \u2014 entropy-positional orthogonality remains HARD-EARNED doctrine; bucket-deterministic-from-symbol design is the FALSIFIED implementation, NOT the orthogonality claim.",
+    "VARIANT_A_TRUE_2nd_order": "DIRECTIONAL_WIN",
+    "VARIANT_PROMPTED_p19_bucket": "DIRECTIONAL_WIN"
+  },
+  "wire_byte_sweep": {
+    "FEC6_fixed_huffman_K16_baseline": 249,
+    "FEC8_static_markov_1st_order_sister_1336": 245,
+    "VARIANT_A_TRUE_2nd_order_markov": 166,
+    "VARIANT_PROMPTED_fec8_1st_order_plus_p19_bucket_brotli": 240,
+    "VARIANT_PROMPTED_fec8_1st_order_plus_p19_bucket_raw": 236,
+    "delta_vs_fec6_baseline": {
+      "FEC8_static_markov_1st_order": -4,
+      "VARIANT_A_TRUE_2nd_order_markov": -83,
+      "VARIANT_PROMPTED_p19_bucket_brotli": -9,
+      "VARIANT_PROMPTED_p19_bucket_raw": -13
+    },
+    "delta_vs_fec8_1st_order_245B": {
+      "VARIANT_A_TRUE_2nd_order_markov": -79,
+      "VARIANT_PROMPTED_p19_bucket_brotli": -5,
+      "VARIANT_PROMPTED_p19_bucket_raw": -9
+    }
+  }
+}
