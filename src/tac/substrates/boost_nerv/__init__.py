@@ -124,4 +124,112 @@ __all__ = [
     "ScoreAwareLossWeights",
     "pack_archive",
     "parse_archive",
+    # WAVE-1 canonical posterior emission wire-in (2026-05-26)
+    "SUBSTRATE_ID",
+    "ARCHITECTURE_CLASS",
+    "CANONICAL_EQUATION_IDS",
+    "emit_landing_posterior_anchor",
 ]
+
+
+# ─── Canonical landing-time posterior emission (WAVE-1 wire-in 2026-05-26) ──
+# Per OPTIMIZATION-TOOLING-AUDIT roadmap commit `e757bb74c` META #1 + the
+# canonical helper at `tac.substrates._shared.posterior_emission_helper`:
+# lifts this substrate's L0 SCAFFOLD signal into the cathedral autopilot's
+# 62 auto-discovered consumers via the canonical posterior surfaces.
+
+SUBSTRATE_ID: str = "boost_nerv"
+ARCHITECTURE_CLASS: str = "boost_nerv_iterative_residual_chain_l0_scaffold_mlx"
+
+# Per WAVE-3 op-routable #3 the NEW canonical equation for this paradigm
+# is queued: boosting_residual_score_lowering_per_stage_v1 (E per the
+# audit). Until registered in tac.canonical_equations, the manifest row's
+# canonical_equation_ids carries the proposed-equation token so audit
+# tooling can trace the lineage per Catalog #344.
+CANONICAL_EQUATION_IDS: tuple[str, ...] = (
+    "boosting_residual_score_lowering_per_stage_v1_proposed_per_audit_e757bb74c_op_routable_3",
+)
+
+# FIX-WAVE-R1 closure 2026-05-26 empirical anchor (per audit per-substrate
+# consideration note): mlx_pytorch_decoder_parity max_abs measurement
+# post-fix is encoded here for cathedral consumer observability.
+MLX_PYTORCH_DECODER_PARITY_MAX_ABS_POST_FIX_WAVE_R1: float = 0.0054
+
+
+def emit_landing_posterior_anchor(
+    *,
+    archive_sha256: str | None = None,
+    archive_bytes: int = 11_000,
+    source_path: str | None = None,
+    predicted_score: float = 0.196,
+    predicted_d_seg: float | None = 0.00117,
+    predicted_d_pose: float | None = 0.000032,
+    notes: str = (
+        "L0 SCAFFOLD MLX landing per WAVE-1 canonical posterior emission wire-in "
+        "2026-05-26 (audit commit e757bb74c META #1 closure). BoostNeRV iterative "
+        "residual chain composing WITH any base substrate per Liu ECCV 2024. "
+        "FIX-WAVE-R1 closure max_abs=0.0054 empirically validated. Non-promotable "
+        "per CLAUDE.md MLX research-signal discipline."
+    ),
+    posterior_path: object | None = None,
+    posterior_lock_path: object | None = None,
+    manifest_path: object | None = None,
+):
+    """Emit canonical landing-time posterior anchor for this substrate.
+
+    Per WAVE-1-POSTERIOR-EMISSION-CANONICAL-WIRE-IN charter 2026-05-26 +
+    OPTIMIZATION-TOOLING-AUDIT META #1 CRITICAL finding closure: invokes
+    the canonical helper at
+    ``tac.substrates._shared.posterior_emission_helper.emit_substrate_landing_posterior_anchor``
+    with this substrate's canonical identifiers + canonical equation IDs
+    threaded through ``extra_manifest_fields`` for cathedral consumer
+    observability.
+
+    Lifts this substrate's signal into:
+    - ``.omx/state/continual_learning_posterior.json`` (refused as
+      advisory-grade per custody validator; bumps ``refused_anchor_count``)
+    - ``.omx/state/mps_research_signal_manifest.jsonl`` (canonical MLX
+      research-signal posterior; cathedral-queryable surface)
+
+    Per Catalog #287/#323/#341: anchor is non-promotable by construction.
+    Per Catalog #128 + #131 + #138 sister discipline: writes through
+    canonical fcntl-locked helpers only.
+    """
+    from tac.substrates._shared.posterior_emission_helper import (
+        emit_substrate_landing_posterior_anchor,
+        synthesize_substrate_archive_sha256,
+    )
+
+    sha = archive_sha256 or synthesize_substrate_archive_sha256(SUBSTRATE_ID)
+    src = source_path or (
+        "src/tac/substrates/boost_nerv/"
+        "__init__.py:emit_landing_posterior_anchor_l0_scaffold"
+    )
+
+    return emit_substrate_landing_posterior_anchor(
+        substrate_id=SUBSTRATE_ID,
+        archive_sha256=sha,
+        archive_bytes=int(archive_bytes),
+        source_path=src,
+        predicted_score=predicted_score,
+        predicted_d_seg=predicted_d_seg,
+        predicted_d_pose=predicted_d_pose,
+        architecture_class=ARCHITECTURE_CLASS,
+        notes=notes,
+        posterior_path=posterior_path,  # type: ignore[arg-type]
+        posterior_lock_path=posterior_lock_path,  # type: ignore[arg-type]
+        manifest_path=manifest_path,  # type: ignore[arg-type]
+        extra_manifest_fields={
+            "paradigm": "iterative_boosting_residual_chain_sidecar",
+            "lane_class": "substrate_engineering",
+            "horizon_class": "plateau_adjacent",
+            "canonical_equation_ids": list(CANONICAL_EQUATION_IDS),
+            "research_only": True,
+            "literature_anchor": "liu_eccv_2024_boostnerv",
+            "mlx_pytorch_decoder_parity_max_abs_post_fix_wave_r1": (
+                MLX_PYTORCH_DECODER_PARITY_MAX_ABS_POST_FIX_WAVE_R1
+            ),
+            "operator_fit_ranking": "HIGH_FIT_5_STAR",
+            "boosting_rounds_default": 2,
+        },
+    )

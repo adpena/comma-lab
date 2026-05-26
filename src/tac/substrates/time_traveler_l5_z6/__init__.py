@@ -241,4 +241,119 @@ __all__ = [
     "pack_archive",
     "parse_archive",
     "parse_z6pcwm1_archive_bytes",
+    # WAVE-1 canonical posterior emission wire-in (2026-05-26)
+    "SUBSTRATE_ID",
+    "ARCHITECTURE_CLASS",
+    "CANONICAL_EQUATION_IDS",
+    "emit_landing_posterior_anchor",
 ]
+
+
+# ─── Canonical landing-time posterior emission (WAVE-1 wire-in 2026-05-26) ──
+# Per OPTIMIZATION-TOOLING-AUDIT roadmap commit `e757bb74c` META #1 + the
+# canonical helper at `tac.substrates._shared.posterior_emission_helper`:
+# lifts this substrate's L1 signal into the cathedral autopilot's 62
+# auto-discovered consumers via the canonical posterior surfaces.
+#
+# Sister coordination: L1-PROMOTION-D-Z6 (commit `8833b9db5`) JUST landed
+# non-promotable markers + predicted_band_validation_status=
+# post_training_mlx_50_100ep_local per Catalog #324. This wire-in extends
+# the L1 posterior emission to the cathedral-consumer-discoverable surface.
+
+SUBSTRATE_ID: str = "time_traveler_l5_z6"
+ARCHITECTURE_CLASS: str = "z6_predictive_coding_film_conditioned_next_frame_l1_mlx"
+
+# Per WAVE-3 op-routable #3 the NEW canonical equation for this paradigm
+# is queued: predictive_coding_residual_capacity_v1 (B'/D/F shared per
+# the audit). Until registered in tac.canonical_equations, the manifest
+# row's canonical_equation_ids carries the proposed-equation token so
+# audit tooling can trace the lineage per Catalog #344.
+CANONICAL_EQUATION_IDS: tuple[str, ...] = (
+    "predictive_coding_residual_capacity_v1_proposed_per_audit_e757bb74c_op_routable_3",
+)
+
+
+def emit_landing_posterior_anchor(
+    *,
+    archive_sha256: str | None = None,
+    archive_bytes: int = 9_500,
+    source_path: str | None = None,
+    predicted_score: float = 0.190,
+    predicted_d_seg: float | None = 0.00112,
+    predicted_d_pose: float | None = 0.000027,
+    notes: str = (
+        "L1 MLX landing per WAVE-1 canonical posterior emission wire-in 2026-05-26 "
+        "(audit commit e757bb74c META #1 closure; sister L1-PROMOTION-D-Z6 commit "
+        "8833b9db5 cathedral-discoverable surface extension). Z6 FiLM-conditioned "
+        "predictive-coding next-frame predictor per Ballard 2007 ego-motion sister "
+        "to Atick-Redlich 1990. Non-promotable per CLAUDE.md MLX research-signal "
+        "discipline + Catalog #324 predicted_band_validation_status=post_training_"
+        "mlx_50_100ep_local."
+    ),
+    posterior_path: object | None = None,
+    posterior_lock_path: object | None = None,
+    manifest_path: object | None = None,
+):
+    """Emit canonical landing-time posterior anchor for this substrate.
+
+    Per WAVE-1-POSTERIOR-EMISSION-CANONICAL-WIRE-IN charter 2026-05-26 +
+    OPTIMIZATION-TOOLING-AUDIT META #1 CRITICAL finding closure: invokes
+    the canonical helper at
+    ``tac.substrates._shared.posterior_emission_helper.emit_substrate_landing_posterior_anchor``
+    with this substrate's canonical identifiers + canonical equation IDs
+    threaded through ``extra_manifest_fields`` for cathedral consumer
+    observability.
+
+    Lifts this substrate's signal into:
+    - ``.omx/state/continual_learning_posterior.json`` (refused as
+      advisory-grade per custody validator; bumps ``refused_anchor_count``)
+    - ``.omx/state/mps_research_signal_manifest.jsonl`` (canonical MLX
+      research-signal posterior; cathedral-queryable surface)
+
+    Per Catalog #287/#323/#341: anchor is non-promotable by construction.
+    Per Catalog #128 + #131 + #138 sister discipline: writes through
+    canonical fcntl-locked helpers only.
+    """
+    from tac.substrates._shared.posterior_emission_helper import (
+        emit_substrate_landing_posterior_anchor,
+        synthesize_substrate_archive_sha256,
+    )
+
+    sha = archive_sha256 or synthesize_substrate_archive_sha256(SUBSTRATE_ID)
+    src = source_path or (
+        "src/tac/substrates/time_traveler_l5_z6/"
+        "__init__.py:emit_landing_posterior_anchor_l1_extension"
+    )
+
+    return emit_substrate_landing_posterior_anchor(
+        substrate_id=SUBSTRATE_ID,
+        archive_sha256=sha,
+        archive_bytes=int(archive_bytes),
+        source_path=src,
+        predicted_score=predicted_score,
+        predicted_d_seg=predicted_d_seg,
+        predicted_d_pose=predicted_d_pose,
+        architecture_class=ARCHITECTURE_CLASS,
+        notes=notes,
+        posterior_path=posterior_path,  # type: ignore[arg-type]
+        posterior_lock_path=posterior_lock_path,  # type: ignore[arg-type]
+        manifest_path=manifest_path,  # type: ignore[arg-type]
+        extra_manifest_fields={
+            "paradigm": "predictive_coding_ego_motion_conditioned",
+            "lane_class": "substrate_engineering",
+            "horizon_class": "frontier_pursuit",
+            "canonical_equation_ids": list(CANONICAL_EQUATION_IDS),
+            "research_only": RESEARCH_ONLY,
+            "implementation_status": IMPLEMENTATION_STATUS,
+            "predicted_band_validation_status": (
+                "post_training_mlx_50_100ep_local_per_catalog_324_sister_l1_promotion_d_z6_8833b9db5"
+            ),
+            "z6_archive_target_bytes_min": TOTAL_ARCHIVE_TARGET_BYTES_MIN,
+            "z6_archive_target_bytes_max": TOTAL_ARCHIVE_TARGET_BYTES_MAX,
+            "z6_num_pairs": NUM_PAIRS,
+            "sister_l1_promotion_commit": "8833b9db5",
+            "ego_motion_canonical_anchor": (
+                "atick_redlich_1990_plus_ballard_2007_foe_projection"
+            ),
+        },
+    )

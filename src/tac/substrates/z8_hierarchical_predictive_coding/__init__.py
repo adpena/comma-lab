@@ -271,4 +271,117 @@ __all__ = [
     "parse_archive",
     "parse_z8hpc1_archive_bytes",
     "z8_decoder_param_count",
+    # WAVE-1 canonical posterior emission wire-in (2026-05-26)
+    "SUBSTRATE_ID",
+    "ARCHITECTURE_CLASS",
+    "emit_landing_posterior_anchor",
 ]
+
+
+# ─── Canonical landing-time posterior emission (WAVE-1 wire-in 2026-05-26) ──
+# Per OPTIMIZATION-TOOLING-AUDIT roadmap commit `e757bb74c` META #1 + the
+# canonical helper at `tac.substrates._shared.posterior_emission_helper`:
+# lifts this substrate's L0 SCAFFOLD signal into the cathedral autopilot's
+# 62 auto-discovered consumers via the canonical posterior surfaces.
+#
+# Sister coordination: FIX-WAVE-R1' (subagent aaac58a72ecbe338d) is
+# in-flight closing F=Z8 critical drift bugs in mlx_renderer.py +
+# tests/test_basic.py — this wire-in lives in __init__.py ONLY which is
+# disjoint from FIX-WAVE-R1''s files_touched. The pre-fix posterior
+# anchor is emitted with explicit pre-fix provenance citation per the
+# audit's per-substrate consideration. A post-fix anchor is operator-
+# routable follow-on per Catalog #110/#113 APPEND-ONLY HISTORICAL_PROVENANCE.
+
+SUBSTRATE_ID: str = "z8_hierarchical_predictive_coding"
+ARCHITECTURE_CLASS: str = "z8_hierarchical_predictive_coding_4_level_l0_scaffold_mlx"
+
+
+def emit_landing_posterior_anchor(
+    *,
+    archive_sha256: str | None = None,
+    archive_bytes: int = 12_000,
+    source_path: str | None = None,
+    predicted_score: float = 0.188,
+    predicted_d_seg: float | None = 0.00110,
+    predicted_d_pose: float | None = 0.000024,
+    notes: str = (
+        "L0 SCAFFOLD MLX landing per WAVE-1 canonical posterior emission wire-in "
+        "2026-05-26 (audit commit e757bb74c META #1 closure). Z8 hierarchical "
+        "predictive-coding 4-level canonical quadruple (RSSM + Mallat wavelet + "
+        "DreamerV3 categorical + Wyner-Ziv) per Catalog #312. FIX-WAVE-R1' in-"
+        "flight (subagent aaac58a72ecbe338d) closing mlx_pytorch_decoder_parity "
+        "max_abs=3.77 (pre-fix) drift; post-fix anchor operator-routable per "
+        "Catalog #110/#113 APPEND-ONLY. Non-promotable per CLAUDE.md MLX "
+        "research-signal discipline."
+    ),
+    posterior_path: object | None = None,
+    posterior_lock_path: object | None = None,
+    manifest_path: object | None = None,
+):
+    """Emit canonical landing-time posterior anchor for this substrate.
+
+    Per WAVE-1-POSTERIOR-EMISSION-CANONICAL-WIRE-IN charter 2026-05-26 +
+    OPTIMIZATION-TOOLING-AUDIT META #1 CRITICAL finding closure: invokes
+    the canonical helper at
+    ``tac.substrates._shared.posterior_emission_helper.emit_substrate_landing_posterior_anchor``
+    with this substrate's canonical identifiers + canonical equation IDs
+    threaded through ``extra_manifest_fields`` for cathedral consumer
+    observability.
+
+    Lifts this substrate's signal into:
+    - ``.omx/state/continual_learning_posterior.json`` (refused as
+      advisory-grade per custody validator; bumps ``refused_anchor_count``)
+    - ``.omx/state/mps_research_signal_manifest.jsonl`` (canonical MLX
+      research-signal posterior; cathedral-queryable surface)
+
+    Per Catalog #287/#323/#341: anchor is non-promotable by construction.
+    Per Catalog #128 + #131 + #138 sister discipline: writes through
+    canonical fcntl-locked helpers only.
+
+    PRE-FIX-WAVE-R1' anchor: the mlx_pytorch_decoder_parity max_abs=3.77
+    measurement is from the pre-fix scaffold; FIX-WAVE-R1' subagent
+    aaac58a72ecbe338d in-flight at landing time. Operator-routable
+    follow-on: emit post-fix anchor as a NEW row (APPEND-ONLY per
+    Catalog #110/#113) once FIX-WAVE-R1' lands.
+    """
+    from tac.substrates._shared.posterior_emission_helper import (
+        emit_substrate_landing_posterior_anchor,
+        synthesize_substrate_archive_sha256,
+    )
+
+    sha = archive_sha256 or synthesize_substrate_archive_sha256(SUBSTRATE_ID)
+    src = source_path or (
+        "src/tac/substrates/z8_hierarchical_predictive_coding/"
+        "__init__.py:emit_landing_posterior_anchor_l0_pre_fix_wave_r1_prime"
+    )
+
+    return emit_substrate_landing_posterior_anchor(
+        substrate_id=SUBSTRATE_ID,
+        archive_sha256=sha,
+        archive_bytes=int(archive_bytes),
+        source_path=src,
+        predicted_score=predicted_score,
+        predicted_d_seg=predicted_d_seg,
+        predicted_d_pose=predicted_d_pose,
+        architecture_class=ARCHITECTURE_CLASS,
+        notes=notes,
+        posterior_path=posterior_path,  # type: ignore[arg-type]
+        posterior_lock_path=posterior_lock_path,  # type: ignore[arg-type]
+        manifest_path=manifest_path,  # type: ignore[arg-type]
+        extra_manifest_fields={
+            "paradigm": "hierarchical_predictive_coding_canonical_quadruple",
+            "lane_class": "substrate_engineering",
+            "horizon_class": "asymptotic_pursuit",
+            "canonical_equation_ids": list(CANONICAL_EQUATION_IDS),
+            "research_only": RESEARCH_ONLY,
+            "implementation_status": IMPLEMENTATION_STATUS,
+            "z8_default_num_levels": DEFAULT_NUM_LEVELS,
+            "mlx_pytorch_decoder_parity_max_abs_pre_fix_wave_r1_prime": 3.77,
+            "fix_wave_r1_prime_in_flight_subagent": "aaac58a72ecbe338d",
+            "canonical_quadruple_primitives": (
+                "rao_ballard_hierarchy + mallat_wavelet + "
+                "dreamer_v3_categorical + wyner_ziv_side_information"
+            ),
+            "catalog_312_quadruple_anchor": True,
+        },
+    )

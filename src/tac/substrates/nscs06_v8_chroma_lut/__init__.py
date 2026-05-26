@@ -303,4 +303,106 @@ __all__ = [
     "verify_multi_scale_dykstra_feasibility",
     "verify_procedural_lut_in_domain",
     "verify_seed_mutation_changes_lut_bytes",
+    # WAVE-1 canonical posterior emission wire-in (2026-05-26)
+    "SUBSTRATE_ID",
+    "ARCHITECTURE_CLASS",
+    "CANONICAL_EQUATION_IDS",
+    "emit_landing_posterior_anchor",
 ]
+
+
+# ─── Canonical landing-time posterior emission (WAVE-1 wire-in 2026-05-26) ──
+# Per OPTIMIZATION-TOOLING-AUDIT roadmap commit `e757bb74c` META #1 + the
+# canonical helper at `tac.substrates._shared.posterior_emission_helper`:
+# lifts this substrate's L0 SCAFFOLD signal into the cathedral autopilot's
+# 62 auto-discovered consumers via the canonical posterior surfaces.
+
+SUBSTRATE_ID: str = "nscs06_v8_chroma_lut"
+ARCHITECTURE_CLASS: str = "nscs06_v8_chroma_lut_procedural_replacement_l0_scaffold_mlx"
+
+# NSCS06 v8 already references the canonical equation
+# procedural_codebook_from_seed_compression_savings_v1 via the
+# CANONICAL_EQUATION_26_IN_DOMAIN_CONTEXT module symbol from
+# .procedural_variant per Catalog #344 + #359 IN-DOMAIN context discipline.
+CANONICAL_EQUATION_IDS: tuple[str, ...] = (
+    "procedural_codebook_from_seed_compression_savings_v1",
+)
+
+
+def emit_landing_posterior_anchor(
+    *,
+    archive_sha256: str | None = None,
+    archive_bytes: int = 8_000,
+    source_path: str | None = None,
+    predicted_score: float = 0.198,
+    predicted_d_seg: float | None = 0.00118,
+    predicted_d_pose: float | None = 0.000030,
+    notes: str = (
+        "L0 SCAFFOLD MLX landing per WAVE-1 canonical posterior emission wire-in "
+        "2026-05-26 (audit commit e757bb74c META #1 closure). NSCS06 v8 chroma-LUT "
+        "procedural replacement variant; in-domain canonical equation #26 IN-DOMAIN "
+        "context per Catalog #359 routing discipline. Non-promotable per CLAUDE.md "
+        "MLX research-signal discipline."
+    ),
+    posterior_path: object | None = None,
+    posterior_lock_path: object | None = None,
+    manifest_path: object | None = None,
+):
+    """Emit canonical landing-time posterior anchor for this substrate.
+
+    Per WAVE-1-POSTERIOR-EMISSION-CANONICAL-WIRE-IN charter 2026-05-26 +
+    OPTIMIZATION-TOOLING-AUDIT META #1 CRITICAL finding closure: invokes
+    the canonical helper at
+    ``tac.substrates._shared.posterior_emission_helper.emit_substrate_landing_posterior_anchor``
+    with this substrate's canonical identifiers + canonical equation IDs
+    threaded through ``extra_manifest_fields`` for cathedral consumer
+    observability.
+
+    Lifts this substrate's signal into:
+    - ``.omx/state/continual_learning_posterior.json`` (refused as
+      advisory-grade per custody validator; bumps ``refused_anchor_count``)
+    - ``.omx/state/mps_research_signal_manifest.jsonl`` (canonical MLX
+      research-signal posterior; cathedral-queryable surface)
+
+    Per Catalog #287/#323/#341: anchor is non-promotable by construction.
+    Per Catalog #128 + #131 + #138 sister discipline: writes through
+    canonical fcntl-locked helpers only.
+    """
+    from tac.substrates._shared.posterior_emission_helper import (
+        emit_substrate_landing_posterior_anchor,
+        synthesize_substrate_archive_sha256,
+    )
+
+    sha = archive_sha256 or synthesize_substrate_archive_sha256(SUBSTRATE_ID)
+    src = source_path or (
+        "src/tac/substrates/nscs06_v8_chroma_lut/"
+        "__init__.py:emit_landing_posterior_anchor_l0_scaffold"
+    )
+
+    return emit_substrate_landing_posterior_anchor(
+        substrate_id=SUBSTRATE_ID,
+        archive_sha256=sha,
+        archive_bytes=int(archive_bytes),
+        source_path=src,
+        predicted_score=predicted_score,
+        predicted_d_seg=predicted_d_seg,
+        predicted_d_pose=predicted_d_pose,
+        architecture_class=ARCHITECTURE_CLASS,
+        notes=notes,
+        posterior_path=posterior_path,  # type: ignore[arg-type]
+        posterior_lock_path=posterior_lock_path,  # type: ignore[arg-type]
+        manifest_path=manifest_path,  # type: ignore[arg-type]
+        extra_manifest_fields={
+            "paradigm": "procedural_codebook_chroma_lut_replacement",
+            "lane_class": "substrate_engineering",
+            "horizon_class": "plateau_adjacent",
+            "canonical_equation_ids": list(CANONICAL_EQUATION_IDS),
+            "canonical_equation_26_in_domain_context": (
+                CANONICAL_EQUATION_26_IN_DOMAIN_CONTEXT
+            ),
+            "research_only": True,
+            "procedural_variant_available": PROCEDURAL_VARIANT_AVAILABLE,
+            "procedural_lut_sentinel_hex": PROCEDURAL_LUT_SENTINEL.hex(),
+            "substrate_contract_present": True,  # NSCS06 v8 has Catalog #241 contract
+        },
+    )

@@ -275,4 +275,113 @@ __all__ = [
     "V1_FALSIFICATION_MUTATED_BYTE_COUNT",
     "V1_FALSIFICATION_RAW_EQUAL",
     "V1_FALSIFICATION_TEST_NAME",
+    # WAVE-1 canonical posterior emission wire-in (2026-05-26)
+    "ARCHITECTURE_CLASS",
+    "CANONICAL_EQUATION_IDS",
+    "emit_landing_posterior_anchor",
 ]
+
+
+# ─── Canonical landing-time posterior emission (WAVE-1 wire-in 2026-05-26) ──
+# Per OPTIMIZATION-TOOLING-AUDIT roadmap commit `e757bb74c` META #1 + the
+# canonical helper at `tac.substrates._shared.posterior_emission_helper`:
+# lifts this substrate's L0 SCAFFOLD signal into the cathedral autopilot's
+# 62 auto-discovered consumers via the canonical posterior surfaces.
+
+ARCHITECTURE_CLASS: str = (
+    "atw_v2_cooperative_receiver_v2_ego_motion_foe_projection_l0_scaffold_mlx"
+)
+
+# Per WAVE-3 op-routable #3 the NEW canonical equation for this paradigm
+# is queued: cooperative_receiver_atick_redlich_score_savings_v1 (H per
+# the audit). Until registered in tac.canonical_equations, the manifest
+# row's canonical_equation_ids carries the proposed-equation token so
+# audit tooling can trace the lineage per Catalog #344.
+CANONICAL_EQUATION_IDS: tuple[str, ...] = (
+    "cooperative_receiver_atick_redlich_score_savings_v1_proposed_per_audit_e757bb74c_op_routable_3",
+)
+
+
+def emit_landing_posterior_anchor(
+    *,
+    archive_sha256: str | None = None,
+    archive_bytes: int = 8_500,
+    source_path: str | None = None,
+    predicted_score: float = 0.193,
+    predicted_d_seg: float | None = 0.00114,
+    predicted_d_pose: float | None = 0.000028,
+    notes: str = (
+        "L0 SCAFFOLD MLX landing per WAVE-1 canonical posterior emission wire-in "
+        "2026-05-26 (audit commit e757bb74c META #1 closure). ATW V2 cooperative-"
+        "receiver substrate with ego-motion FOE projection conditioning per "
+        "Ballard 2007 + Catalog #311; replaces per-class softmax falsified by D4 "
+        "INDEPENDENT verdict empirical anchor commit 057130de4. Non-promotable "
+        "per CLAUDE.md MLX research-signal discipline."
+    ),
+    posterior_path: object | None = None,
+    posterior_lock_path: object | None = None,
+    manifest_path: object | None = None,
+):
+    """Emit canonical landing-time posterior anchor for this substrate.
+
+    Per WAVE-1-POSTERIOR-EMISSION-CANONICAL-WIRE-IN charter 2026-05-26 +
+    OPTIMIZATION-TOOLING-AUDIT META #1 CRITICAL finding closure: invokes
+    the canonical helper at
+    ``tac.substrates._shared.posterior_emission_helper.emit_substrate_landing_posterior_anchor``
+    with this substrate's canonical identifiers + canonical equation IDs
+    threaded through ``extra_manifest_fields`` for cathedral consumer
+    observability.
+
+    Lifts this substrate's signal into:
+    - ``.omx/state/continual_learning_posterior.json`` (refused as
+      advisory-grade per custody validator; bumps ``refused_anchor_count``)
+    - ``.omx/state/mps_research_signal_manifest.jsonl`` (canonical MLX
+      research-signal posterior; cathedral-queryable surface)
+
+    Per Catalog #287/#323/#341: anchor is non-promotable by construction.
+    Per Catalog #128 + #131 + #138 sister discipline: writes through
+    canonical fcntl-locked helpers only.
+    """
+    from tac.substrates._shared.posterior_emission_helper import (
+        emit_substrate_landing_posterior_anchor,
+        synthesize_substrate_archive_sha256,
+    )
+
+    sha = archive_sha256 or synthesize_substrate_archive_sha256(SUBSTRATE_ID)
+    src = source_path or (
+        "src/tac/substrates/atw_v2_cooperative_receiver_v2/"
+        "__init__.py:emit_landing_posterior_anchor_l0_scaffold"
+    )
+
+    return emit_substrate_landing_posterior_anchor(
+        substrate_id=SUBSTRATE_ID,
+        archive_sha256=sha,
+        archive_bytes=int(archive_bytes),
+        source_path=src,
+        predicted_score=predicted_score,
+        predicted_d_seg=predicted_d_seg,
+        predicted_d_pose=predicted_d_pose,
+        architecture_class=ARCHITECTURE_CLASS,
+        notes=notes,
+        posterior_path=posterior_path,  # type: ignore[arg-type]
+        posterior_lock_path=posterior_lock_path,  # type: ignore[arg-type]
+        manifest_path=manifest_path,  # type: ignore[arg-type]
+        extra_manifest_fields={
+            "paradigm": "cooperative_receiver_ego_motion_foe_projection",
+            "lane_class": SUBSTRATE_CONTRACT_LANE_CLASS,
+            "horizon_class": HORIZON_CLASS,
+            "canonical_equation_ids": list(CANONICAL_EQUATION_IDS),
+            "research_only": RESEARCH_ONLY,
+            "dispatch_enabled": DISPATCH_ENABLED,
+            "implementation_status": IMPLEMENTATION_STATUS,
+            "substrate_contract_present": True,  # ATW V2 has registered_substrate.py
+            "canary_status": SUBSTRATE_CONTRACT_CANARY_STATUS,
+            "binding_anchor": LAYER_1_META_UNWIND_BINDING_ANCHOR,
+            "new_conditioning_variable": NEW_CONDITIONING_VARIABLE,
+            "conditioning_variable_citation": CONDITIONING_VARIABLE_CITATION,
+            "deprecated_conditioning_variable": DEPRECATED_CONDITIONING_VARIABLE,
+            "v1_falsification_anchor_commit": V1_FALSIFICATION_ANCHOR_COMMIT,
+            "v1_falsification_test_name": V1_FALSIFICATION_TEST_NAME,
+            "lane_id": LANE_ID,
+        },
+    )

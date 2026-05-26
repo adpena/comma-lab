@@ -208,4 +208,124 @@ __all__ = [
     "NIRVANA1_HEADER_LEN",
     "NirvanaCascadingNervConfig",
     "SISTER_SUBSTRATES",
+    # WAVE-1 canonical posterior emission wire-in (2026-05-26)
+    "SUBSTRATE_ID",
+    "ARCHITECTURE_CLASS",
+    "CANONICAL_EQUATION_IDS",
+    "emit_landing_posterior_anchor",
 ]
+
+
+# ─── Canonical landing-time posterior emission (WAVE-1 wire-in 2026-05-26) ──
+# Per OPTIMIZATION-TOOLING-AUDIT roadmap commit `e757bb74c` META #1 + the
+# canonical helper at `tac.substrates._shared.posterior_emission_helper`:
+# lifts this substrate's L0 SCAFFOLD signal into the cathedral autopilot's
+# 62 auto-discovered consumers via the canonical posterior surfaces.
+#
+# Sister coordination: FIX-WAVE-R1' (subagent aaac58a72ecbe338d) is
+# in-flight closing G=NIRVANA critical drift bugs in mlx_renderer.py +
+# landing memo footer — this wire-in lives in __init__.py ONLY which is
+# disjoint from FIX-WAVE-R1''s files_touched. The pre-fix posterior anchor
+# is emitted with explicit pre-fix provenance citation per the audit's
+# per-substrate consideration. A post-fix anchor is operator-routable
+# follow-on per Catalog #110/#113 APPEND-ONLY HISTORICAL_PROVENANCE.
+
+SUBSTRATE_ID: str = "nirvana_cascading_nerv"
+ARCHITECTURE_CLASS: str = (
+    "nirvana_cascading_nerv_hierarchical_residual_decoder_l0_scaffold_mlx"
+)
+
+# Per WAVE-3 op-routable #3 the NEW canonical equation for this paradigm
+# is queued: cascading_nerv_per_stage_residual_v1 (G per the audit).
+# Until registered in tac.canonical_equations, the manifest row's
+# canonical_equation_ids carries the proposed-equation token so audit
+# tooling can trace the lineage per Catalog #344.
+CANONICAL_EQUATION_IDS: tuple[str, ...] = (
+    "cascading_nerv_per_stage_residual_v1_proposed_per_audit_e757bb74c_op_routable_3",
+)
+
+
+def emit_landing_posterior_anchor(
+    *,
+    archive_sha256: str | None = None,
+    archive_bytes: int = 10_500,
+    source_path: str | None = None,
+    predicted_score: float = 0.192,
+    predicted_d_seg: float | None = 0.00113,
+    predicted_d_pose: float | None = 0.000026,
+    notes: str = (
+        "L0 SCAFFOLD MLX landing per WAVE-1 canonical posterior emission wire-in "
+        "2026-05-26 (audit commit e757bb74c META #1 closure). NIRVANA cascading "
+        "NeRV hierarchical residual decoder cascade with per-pair latent + per-"
+        "level residual heads. FIX-WAVE-R1' in-flight (subagent aaac58a72ecbe338d) "
+        "closing mlx_renderer.py drift; post-fix anchor operator-routable per "
+        "Catalog #110/#113 APPEND-ONLY. Non-promotable per CLAUDE.md MLX research-"
+        "signal discipline."
+    ),
+    posterior_path: object | None = None,
+    posterior_lock_path: object | None = None,
+    manifest_path: object | None = None,
+):
+    """Emit canonical landing-time posterior anchor for this substrate.
+
+    Per WAVE-1-POSTERIOR-EMISSION-CANONICAL-WIRE-IN charter 2026-05-26 +
+    OPTIMIZATION-TOOLING-AUDIT META #1 CRITICAL finding closure: invokes
+    the canonical helper at
+    ``tac.substrates._shared.posterior_emission_helper.emit_substrate_landing_posterior_anchor``
+    with this substrate's canonical identifiers + canonical equation IDs
+    threaded through ``extra_manifest_fields`` for cathedral consumer
+    observability.
+
+    Lifts this substrate's signal into:
+    - ``.omx/state/continual_learning_posterior.json`` (refused as
+      advisory-grade per custody validator; bumps ``refused_anchor_count``)
+    - ``.omx/state/mps_research_signal_manifest.jsonl`` (canonical MLX
+      research-signal posterior; cathedral-queryable surface)
+
+    Per Catalog #287/#323/#341: anchor is non-promotable by construction.
+    Per Catalog #128 + #131 + #138 sister discipline: writes through
+    canonical fcntl-locked helpers only.
+
+    PRE-FIX-WAVE-R1' anchor: the pre-fix scaffold; FIX-WAVE-R1' subagent
+    aaac58a72ecbe338d in-flight at landing time. Operator-routable
+    follow-on: emit post-fix anchor as a NEW row (APPEND-ONLY per
+    Catalog #110/#113) once FIX-WAVE-R1' lands.
+    """
+    from tac.substrates._shared.posterior_emission_helper import (
+        emit_substrate_landing_posterior_anchor,
+        synthesize_substrate_archive_sha256,
+    )
+
+    sha = archive_sha256 or synthesize_substrate_archive_sha256(SUBSTRATE_ID)
+    src = source_path or (
+        "src/tac/substrates/nirvana_cascading_nerv/"
+        "__init__.py:emit_landing_posterior_anchor_l0_pre_fix_wave_r1_prime"
+    )
+
+    return emit_substrate_landing_posterior_anchor(
+        substrate_id=SUBSTRATE_ID,
+        archive_sha256=sha,
+        archive_bytes=int(archive_bytes),
+        source_path=src,
+        predicted_score=predicted_score,
+        predicted_d_seg=predicted_d_seg,
+        predicted_d_pose=predicted_d_pose,
+        architecture_class=ARCHITECTURE_CLASS,
+        notes=notes,
+        posterior_path=posterior_path,  # type: ignore[arg-type]
+        posterior_lock_path=posterior_lock_path,  # type: ignore[arg-type]
+        manifest_path=manifest_path,  # type: ignore[arg-type]
+        extra_manifest_fields={
+            "paradigm": "hierarchical_cascading_residual_decoder",
+            "lane_class": "substrate_engineering",
+            "horizon_class": "frontier_pursuit",
+            "canonical_equation_ids": list(CANONICAL_EQUATION_IDS),
+            "research_only": True,
+            "nirvana_default_num_levels": DEFAULT_NUM_LEVELS,
+            "nirvana_default_per_pair_latent_dim": DEFAULT_PER_PAIR_LATENT_DIM,
+            "nirvana_default_base_h": DEFAULT_BASE_H,
+            "nirvana_default_base_w": DEFAULT_BASE_W,
+            "sister_substrates": list(SISTER_SUBSTRATES),
+            "fix_wave_r1_prime_in_flight_subagent": "aaac58a72ecbe338d",
+        },
+    )
