@@ -216,6 +216,105 @@ def _validate_queue(queue_path: str | Path) -> dict[str, Any]:
     )
 
 
+AUXILIARY_QUEUE_ARTIFACT_KEYS = (
+    "receiver_repair_queue",
+    "operation_chain_compiler_queue",
+    "targeted_component_correction_queue",
+    "targeted_component_correction_materialization_queue",
+    "targeted_component_correction_operation_chain_queue",
+)
+
+
+def _run_auxiliary_queue_execution(
+    *,
+    args: argparse.Namespace,
+    artifacts: dict[str, str],
+    stage_label: str,
+) -> dict[str, Any]:
+    """Run non-DQS1 queues emitted by a refresh in bounded local slices."""
+
+    rows: list[dict[str, Any]] = []
+    if not args.execute_auxiliary_queues:
+        return {
+            "schema": "frontier_rate_attack_auxiliary_queue_execution.v1",
+            "stage_label": stage_label,
+            "execute_auxiliary_queues": False,
+            "queue_count": 0,
+            "executed_queue_count": 0,
+            "rows": rows,
+            **FALSE_AUTHORITY,
+        }
+    for artifact_key in AUXILIARY_QUEUE_ARTIFACT_KEYS:
+        queue_path = artifacts.get(artifact_key)
+        if not queue_path:
+            continue
+        validate = _validate_queue(queue_path)
+        command = [
+            sys.executable,
+            "tools/experiment_queue.py",
+            "--queue",
+            _display_path(queue_path),
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            str(args.auxiliary_queue_max_steps),
+            "--max-experiments",
+            str(args.auxiliary_queue_max_experiments),
+            "--max-parallel",
+            str(args.auxiliary_queue_max_parallel),
+        ]
+        result = _run(command, label=f"{stage_label} auxiliary queue {artifact_key}")
+        rows.append(
+            {
+                "schema": "frontier_rate_attack_auxiliary_queue_execution_row.v1",
+                "stage_label": stage_label,
+                "artifact_key": artifact_key,
+                "queue_path": queue_path,
+                "validate": validate,
+                "command": command,
+                "result": {
+                    "started_count": result.get("started_count"),
+                    "completed_count": result.get("completed_count"),
+                    "success_count": result.get("success_count"),
+                    "failure_count": result.get("failure_count"),
+                    "skipped_count": result.get("skipped_count"),
+                    "pending_count": result.get("pending_count"),
+                    "ready_count": result.get("ready_count"),
+                    "running_count": result.get("running_count"),
+                    "elapsed_seconds": result.get("elapsed_seconds"),
+                    "stop_reason": result.get("stop_reason"),
+                    **FALSE_AUTHORITY,
+                },
+                **FALSE_AUTHORITY,
+            }
+        )
+    return {
+        "schema": "frontier_rate_attack_auxiliary_queue_execution.v1",
+        "stage_label": stage_label,
+        "execute_auxiliary_queues": True,
+        "queue_count": len(rows),
+        "executed_queue_count": sum(
+            1
+            for row in rows
+            if (
+                row["result"].get("started_count")
+                or row["result"].get("success_count")
+                or row["result"].get("failure_count")
+            )
+        ),
+        "failed_queue_count": sum(
+            1 for row in rows if row["result"].get("failure_count")
+        ),
+        "max_steps_per_queue": args.auxiliary_queue_max_steps,
+        "max_experiments_per_queue": args.auxiliary_queue_max_experiments,
+        "max_parallel_per_queue": args.auxiliary_queue_max_parallel,
+        "rows": rows,
+        "allowed_use": "bounded_local_auxiliary_queue_execution_trace_only",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
 def _build_refresh(
     *,
     args: argparse.Namespace,
@@ -495,6 +594,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Run the generated follow-up queue locally with bounded autopilot.",
     )
     parser.add_argument(
+        "--execute-auxiliary-queues",
+        action="store_true",
+        help=(
+            "Run emitted receiver/operation/targeted auxiliary queues in bounded "
+            "local slices and record the false-authority execution trace."
+        ),
+    )
+    parser.add_argument("--auxiliary-queue-max-steps", type=int, default=1)
+    parser.add_argument("--auxiliary-queue-max-experiments", type=int, default=1)
+    parser.add_argument("--auxiliary-queue-max-parallel", type=int, default=1)
+    parser.add_argument(
         "--autopilot-result-json",
         action="append",
         default=[],
@@ -588,6 +698,12 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit("--campaign-waves > 1 requires --execute-followup")
     if args.campaign_waves > 1 and args.state is not None:
         raise SystemExit("--campaign-waves > 1 cannot use a shared explicit --state")
+    if args.auxiliary_queue_max_steps < 1:
+        raise SystemExit("--auxiliary-queue-max-steps must be >= 1")
+    if args.auxiliary_queue_max_experiments < 1:
+        raise SystemExit("--auxiliary-queue-max-experiments must be >= 1")
+    if args.auxiliary_queue_max_parallel < 1:
+        raise SystemExit("--auxiliary-queue-max-parallel must be >= 1")
     stamp = utc_stamp()
     queue_id = args.queue_id or f"frontier_rate_attack_feedback_cycle_{stamp}"
     post_queue_id = args.post_harvest_queue_id or f"{queue_id}_post_harvest"
@@ -631,9 +747,15 @@ def main(argv: list[str] | None = None) -> int:
         queue_path = initial_artifacts.get("dqs1_followup_queue")
         if queue_path is not None:
             initial_validate = _validate_queue(queue_path)
+        initial_auxiliary_execution = _run_auxiliary_queue_execution(
+            args=args,
+            artifacts=initial_artifacts,
+            stage_label="initial_refresh",
+        )
 
         followup: dict[str, Any] = {
             "execute_followup": bool(args.execute_followup),
+            "execute_auxiliary_queues": bool(args.execute_auxiliary_queues),
             "queue_raw_retention_execute": _effective_raw_retention_execute(args),
             "post_harvest_retention_policy": (
                 "auto_disabled_when_queue_raw_retention_executes"
@@ -686,6 +808,7 @@ def main(argv: list[str] | None = None) -> int:
         post_report = None
         post_artifacts: dict[str, str] = {}
         post_validate = None
+        post_auxiliary_execution: dict[str, Any] | None = None
         campaign_waves: list[dict[str, Any]] = []
         campaign_stop_reason = "single_wave_only"
         post_observations: tuple[str | Path, ...] = initial_observation_context
@@ -739,6 +862,11 @@ def main(argv: list[str] | None = None) -> int:
             post_queue_path = post_artifacts.get("dqs1_followup_queue")
             if post_queue_path is not None:
                 post_validate = _validate_queue(post_queue_path)
+            post_auxiliary_execution = _run_auxiliary_queue_execution(
+                args=args,
+                artifacts=post_artifacts,
+                stage_label="post_harvest_refresh",
+            )
             campaign_stop_reason = "wave_limit_reached"
 
             current_queue_path = post_queue_path
@@ -896,6 +1024,7 @@ def main(argv: list[str] | None = None) -> int:
                 ),
                 "pairset_component_marginal": initial_component_marginal,
                 "queue_validate": initial_validate,
+                "auxiliary_queue_execution": initial_auxiliary_execution,
                 **FALSE_AUTHORITY,
             },
             "followup_execution": followup,
@@ -927,6 +1056,7 @@ def main(argv: list[str] | None = None) -> int:
                 ),
                 "pairset_component_marginal": post_component_marginal,
                 "queue_validate": post_validate,
+                "auxiliary_queue_execution": post_auxiliary_execution,
                 **FALSE_AUTHORITY,
             },
             "campaign_execution": {
@@ -956,6 +1086,7 @@ def main(argv: list[str] | None = None) -> int:
                 "targeted_component_materialization_requests_to_operation_chain_queue",
                 "targeted_component_operation_chain_to_materializer_handoff",
                 "targeted_operation_chain_queue_to_targeted_drop_many_child_queue",
+                "bounded_auxiliary_queue_artifacts_to_local_execution_trace",
             ],
             "allowed_use": "local_queue_owned_frontier_feedback_iteration_only",
             "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
@@ -1044,6 +1175,28 @@ def main(argv: list[str] | None = None) -> int:
                 else list(
                     post_report.get("targeted_drop_many_dqs1_child_queue_paths") or []
                 ),
+                "initial_auxiliary_queue_execution_summary": {
+                    "queue_count": initial_auxiliary_execution.get("queue_count"),
+                    "executed_queue_count": initial_auxiliary_execution.get(
+                        "executed_queue_count"
+                    ),
+                    "failed_queue_count": initial_auxiliary_execution.get(
+                        "failed_queue_count"
+                    ),
+                    **FALSE_AUTHORITY,
+                },
+                "post_harvest_auxiliary_queue_execution_summary": None
+                if post_report is None
+                else {
+                    "queue_count": post_auxiliary_execution.get("queue_count"),
+                    "executed_queue_count": post_auxiliary_execution.get(
+                        "executed_queue_count"
+                    ),
+                    "failed_queue_count": post_auxiliary_execution.get(
+                        "failed_queue_count"
+                    ),
+                    **FALSE_AUTHORITY,
+                },
                 **FALSE_AUTHORITY,
             }
         ),

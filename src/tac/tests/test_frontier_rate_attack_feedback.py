@@ -4117,6 +4117,13 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
             "frontier_feedback_cycle_unit_post",
             "--candidate-limit",
             "2",
+            "--execute-auxiliary-queues",
+            "--auxiliary-queue-max-steps",
+            "1",
+            "--auxiliary-queue-max-experiments",
+            "1",
+            "--auxiliary-queue-max-parallel",
+            "1",
         ],
         cwd=REPO_ROOT,
         text=True,
@@ -4136,6 +4143,13 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
         "pairset_drop_one_rank024_pair0112",
         "pairset_drop_one_rank025_pair0233",
     ]
+    assert payload["initial_auxiliary_queue_execution_summary"]["queue_count"] >= 3
+    assert payload["initial_auxiliary_queue_execution_summary"][
+        "executed_queue_count"
+    ] >= 1
+    assert payload["initial_auxiliary_queue_execution_summary"][
+        "failed_queue_count"
+    ] == 0
     assert payload[
         "initial_targeted_component_correction_chain_materializer_handoff_summary"
     ]["work_queue_row_count"] == 0
@@ -4191,6 +4205,24 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
             "run_targeted_component_correction_queue_bounded_local"
         ][4]
         == "run-worker"
+    )
+    assert cycle_report["initial_refresh"]["auxiliary_queue_execution"][
+        "execute_auxiliary_queues"
+    ] is True
+    assert cycle_report["initial_refresh"]["auxiliary_queue_execution"][
+        "failed_queue_count"
+    ] == 0
+    assert {
+        row["artifact_key"]
+        for row in cycle_report["initial_refresh"]["auxiliary_queue_execution"][
+            "rows"
+        ]
+    }.issuperset(
+        {
+            "receiver_repair_queue",
+            "operation_chain_compiler_queue",
+            "targeted_component_correction_queue",
+        }
     )
     assert (
         initial_feedback_report["operator_commands"][
@@ -4386,6 +4418,10 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
     )
     assert (
         "targeted_operation_chain_queue_to_targeted_drop_many_child_queue"
+        in cycle_report["integration_edges"]
+    )
+    assert (
+        "bounded_auxiliary_queue_artifacts_to_local_execution_trace"
         in cycle_report["integration_edges"]
     )
     assert (
