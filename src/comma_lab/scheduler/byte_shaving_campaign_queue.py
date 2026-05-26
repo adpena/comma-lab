@@ -61,6 +61,8 @@ from tac.packet_compiler.deterministic_compiler import (
 
 from .byte_shaving_materializer_registry import (
     ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+    ARCHIVE_SECTION_HEADER_ELIDE_TARGET_KIND,
+    ARCHIVE_SECTION_REORDER_TARGET_KIND,
     DQS1_PAIRSET_TARGET_KIND,
     INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER,
     INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY,
@@ -2977,6 +2979,58 @@ def _family_agnostic_materializer_queue_adapter(
     return command, blockers, telemetry, postconditions
 
 
+def _archive_section_contract_handoff(
+    context: Mapping[str, Any],
+    *,
+    target_kind: str,
+) -> tuple[list[str], dict[str, Any]]:
+    if target_kind == ARCHIVE_SECTION_HEADER_ELIDE_TARGET_KIND:
+        contract_key = "header_elision_contract"
+        blocker_prefix = "archive_section_header_elide"
+        receiver_contract_kind = "family_agnostic_archive_section_header_elide"
+    elif target_kind == ARCHIVE_SECTION_REORDER_TARGET_KIND:
+        contract_key = "section_order_contract"
+        blocker_prefix = "archive_section_reorder"
+        receiver_contract_kind = "family_agnostic_archive_section_reorder"
+    else:
+        return [f"archive_section_contract_handoff_unknown_target:{target_kind}"], {}
+
+    blockers: list[str] = _string_list_context_value(context, "context_blockers")
+    if _path_context_value(context, "archive_path") is None:
+        blockers.append("materializer_context_missing:archive_path")
+    if _path_context_value(context, "section_manifest") is None:
+        blockers.append("materializer_context_missing:section_manifest")
+    if _path_context_value(context, contract_key) is None:
+        blockers.append(f"materializer_context_missing:{contract_key}")
+    if _path_context_value(context, "runtime_consumption_proof") is None:
+        blockers.append("materializer_context_missing:runtime_consumption_proof")
+    blockers.append(f"{blocker_prefix}_materializer_requires_byte_closed_adapter")
+    blockers.append(f"{blocker_prefix}_receiver_contract_handoff_is_planning_only")
+    telemetry = {
+        "receiver_contract_work_order": {
+            "schema": "archive_section_receiver_contract_work_order.v1",
+            "target_kind": target_kind,
+            "receiver_contract_kind": receiver_contract_kind,
+            "required_context_fields": [
+                "archive_path",
+                "section_manifest",
+                contract_key,
+                "runtime_consumption_proof",
+            ],
+            "archive_path": _path_context_value(context, "archive_path"),
+            "section_manifest": _path_context_value(context, "section_manifest"),
+            contract_key: _path_context_value(context, contract_key),
+            "runtime_consumption_proof": _path_context_value(
+                context,
+                "runtime_consumption_proof",
+            ),
+            "next_required_adapter": f"{target_kind}_byte_closed_receiver_adapter",
+            **FALSE_AUTHORITY,
+        }
+    }
+    return ordered_unique(blockers), telemetry
+
+
 def _materializer_work_dispatch_blockers(target_kind: str) -> tuple[str, ...]:
     blockers = ["materializer_work_queue_local_proof_chain_only"]
     if target_kind == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND:
@@ -2984,6 +3038,20 @@ def _materializer_work_dispatch_blockers(target_kind: str) -> tuple[str, ...]:
             [
                 "archive_section_entropy_recode_requires_archive_preflight",
                 "archive_section_entropy_recode_requires_same_runtime_inflate_parity",
+            ]
+        )
+    if target_kind == ARCHIVE_SECTION_HEADER_ELIDE_TARGET_KIND:
+        blockers.extend(
+            [
+                "archive_section_header_elide_requires_implicit_constant_contract",
+                "archive_section_header_elide_requires_runtime_consumption_proof",
+            ]
+        )
+    if target_kind == ARCHIVE_SECTION_REORDER_TARGET_KIND:
+        blockers.extend(
+            [
+                "archive_section_reorder_requires_order_independence_contract",
+                "archive_section_reorder_requires_runtime_consumption_proof",
             ]
         )
     if target_kind == PACKET_MEMBER_RECOMPRESS_TARGET_KIND:
@@ -3450,6 +3518,26 @@ def build_materializer_work_queue(
                 target_kind=ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
                 schema=ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
                 )
+            )
+            blockers.extend(command_blockers)
+        elif (
+            unit_kind == "archive_section"
+            and operation_family == "section_header_elide"
+            and target_kind == ARCHIVE_SECTION_HEADER_ELIDE_TARGET_KIND
+        ):
+            command_blockers, telemetry = _archive_section_contract_handoff(
+                context,
+                target_kind=ARCHIVE_SECTION_HEADER_ELIDE_TARGET_KIND,
+            )
+            blockers.extend(command_blockers)
+        elif (
+            unit_kind == "archive_section"
+            and operation_family == "section_reorder"
+            and target_kind == ARCHIVE_SECTION_REORDER_TARGET_KIND
+        ):
+            command_blockers, telemetry = _archive_section_contract_handoff(
+                context,
+                target_kind=ARCHIVE_SECTION_REORDER_TARGET_KIND,
             )
             blockers.extend(command_blockers)
         elif (

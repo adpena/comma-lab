@@ -17,6 +17,10 @@ from comma_lab.scheduler.byte_shaving_campaign_queue import (
 from comma_lab.scheduler.byte_shaving_materializer_registry import (
     ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER,
     ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+    ARCHIVE_SECTION_HEADER_ELIDE_MATERIALIZER,
+    ARCHIVE_SECTION_HEADER_ELIDE_TARGET_KIND,
+    ARCHIVE_SECTION_REORDER_MATERIALIZER,
+    ARCHIVE_SECTION_REORDER_TARGET_KIND,
     BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER,
     BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND,
     INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER,
@@ -71,6 +75,54 @@ def _backlog() -> dict[str, object]:
                 "rank_or_kill_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
             }
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _archive_section_contract_backlog() -> dict[str, object]:
+    return {
+        "schema": "byte_shaving_materializer_backlog.v1",
+        "rows": [
+            {
+                "schema": "byte_shaving_materializer_backlog_row.v1",
+                "backlog_key": "archive_section_header_elide_fixture",
+                "backlog_rank": 1,
+                "unit_kind": "archive_section",
+                "operation_family": "section_header_elide",
+                "target_kind": ARCHIVE_SECTION_HEADER_ELIDE_TARGET_KIND,
+                "materializer_id": ARCHIVE_SECTION_HEADER_ELIDE_MATERIALIZER,
+                "operation_params": {
+                    "archive_path": "source.zip",
+                    "section_manifest": "sections.json",
+                },
+                "source_unit_ids": ["decoder_header"],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            {
+                "schema": "byte_shaving_materializer_backlog_row.v1",
+                "backlog_key": "archive_section_reorder_fixture",
+                "backlog_rank": 2,
+                "unit_kind": "archive_section",
+                "operation_family": "section_reorder",
+                "target_kind": ARCHIVE_SECTION_REORDER_TARGET_KIND,
+                "materializer_id": ARCHIVE_SECTION_REORDER_MATERIALIZER,
+                "operation_params": {
+                    "archive_path": "source.zip",
+                    "section_manifest": "sections.json",
+                },
+                "source_unit_ids": ["decoder_sections"],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
         ],
         "score_claim": False,
         "promotion_eligible": False,
@@ -494,6 +546,141 @@ def test_final_byte_context_compiler_emits_consumable_materializer_contexts(
     assert "--runtime-consumption-proof-out" in command
     proof_out_index = command.index("--runtime-consumption-proof-out")
     assert command[proof_out_index + 1].startswith(str(tmp_path / "out"))
+
+
+def test_final_byte_context_compiler_wires_archive_section_contract_handoffs(
+    tmp_path: Path,
+) -> None:
+    payload = build_final_byte_operation_contexts(
+        _archive_section_contract_backlog(),
+        artifact_map=None,
+        repo_root=tmp_path,
+        default_output_root=tmp_path / "out",
+    )
+
+    assert payload["unsupported_backlog_keys"] == []
+    assert payload["row_count"] == 2
+    header_context = next(
+        row["context"]
+        for row in payload["rows"]
+        if row["target_kind"] == ARCHIVE_SECTION_HEADER_ELIDE_TARGET_KIND
+    )
+    reorder_context = next(
+        row["context"]
+        for row in payload["rows"]
+        if row["target_kind"] == ARCHIVE_SECTION_REORDER_TARGET_KIND
+    )
+    assert header_context["archive_path"] == "source.zip"
+    assert header_context["section_manifest"] == "sections.json"
+    assert "materializer_context_missing:header_elision_contract" in (
+        header_context["context_blockers"]
+    )
+    assert "materializer_context_missing:runtime_consumption_proof" in (
+        header_context["context_blockers"]
+    )
+    assert "materializer_context_missing:section_order_contract" in (
+        reorder_context["context_blockers"]
+    )
+
+    work_queue = build_materializer_work_queue(
+        _archive_section_contract_backlog(),
+        repo_root=tmp_path,
+        contexts=materializer_contexts_from_payload(payload),
+        source_plan_path="plan.json",
+    )
+
+    assert work_queue["executable_row_count"] == 0
+    assert work_queue["blocked_row_count"] == 2
+    for row in work_queue["rows"]:
+        assert row["score_claim"] is False
+        assert row["ready_for_exact_eval_dispatch"] is False
+        assert not any(
+            blocker.startswith("materializer_work_queue_adapter_missing:")
+            for blocker in row["materialization_blockers"]
+        )
+        assert row["telemetry"]["receiver_contract_work_order"]["schema"] == (
+            "archive_section_receiver_contract_work_order.v1"
+        )
+
+    header_work = next(
+        row
+        for row in work_queue["rows"]
+        if row["target_kind"] == ARCHIVE_SECTION_HEADER_ELIDE_TARGET_KIND
+    )
+    assert "archive_section_header_elide_materializer_requires_byte_closed_adapter" in (
+        header_work["materialization_blockers"]
+    )
+    reorder_work = next(
+        row
+        for row in work_queue["rows"]
+        if row["target_kind"] == ARCHIVE_SECTION_REORDER_TARGET_KIND
+    )
+    assert "archive_section_reorder_materializer_requires_byte_closed_adapter" in (
+        reorder_work["materialization_blockers"]
+    )
+
+
+def test_final_byte_context_compiler_preserves_archive_section_contract_proof_signal(
+    tmp_path: Path,
+) -> None:
+    runtime_proof = tmp_path / "runtime_consumption_proof.json"
+    runtime_proof.write_text('{"runtime_consumption_proof_passed": true}\n')
+    backlog = json.loads(json.dumps(_archive_section_contract_backlog()))
+    rows = backlog["rows"]
+    rows[0]["operation_params"].update(
+        {
+            "header_elision_contract": "header_elision_contract.json",
+            "runtime_consumption_proof": str(runtime_proof),
+        }
+    )
+    rows[1]["operation_params"].update(
+        {
+            "section_order_contract": "section_order_contract.json",
+            "runtime_consumption_proof": str(runtime_proof),
+        }
+    )
+
+    payload = build_final_byte_operation_contexts(
+        backlog,
+        artifact_map=None,
+        repo_root=tmp_path,
+        default_output_root=tmp_path / "out",
+    )
+    for row in payload["rows"]:
+        assert "materializer_context_missing:runtime_consumption_proof" not in row["context"]["context_blockers"]
+        assert row["context"]["runtime_consumption_proof"] == str(runtime_proof)
+
+    work_queue = build_materializer_work_queue(
+        backlog,
+        repo_root=tmp_path,
+        contexts=materializer_contexts_from_payload(payload),
+        source_plan_path="plan.json",
+    )
+
+    header_work = next(
+        row
+        for row in work_queue["rows"]
+        if row["target_kind"] == ARCHIVE_SECTION_HEADER_ELIDE_TARGET_KIND
+    )
+    reorder_work = next(
+        row
+        for row in work_queue["rows"]
+        if row["target_kind"] == ARCHIVE_SECTION_REORDER_TARGET_KIND
+    )
+    for row in (header_work, reorder_work):
+        assert "materializer_context_missing:runtime_consumption_proof" not in (
+            row["materialization_blockers"]
+        )
+        assert row["executable"] is False
+        assert row["telemetry"]["receiver_contract_work_order"]["runtime_consumption_proof"] == (
+            str(runtime_proof)
+        )
+    assert header_work["telemetry"]["receiver_contract_work_order"]["header_elision_contract"] == (
+        "header_elision_contract.json"
+    )
+    assert reorder_work["telemetry"]["receiver_contract_work_order"]["section_order_contract"] == (
+        "section_order_contract.json"
+    )
 
 
 def test_final_byte_context_compiler_uses_existing_runtime_proof_as_input(

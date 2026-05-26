@@ -29,6 +29,8 @@ from .byte_shaving_campaign_queue import (
 )
 from .byte_shaving_materializer_registry import (
     ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+    ARCHIVE_SECTION_HEADER_ELIDE_TARGET_KIND,
+    ARCHIVE_SECTION_REORDER_TARGET_KIND,
     BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND,
     INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY,
     INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND,
@@ -464,6 +466,24 @@ def _archive_section_context_row(
         blockers.append("materializer_context_missing:output_archive")
     if section_manifest is None:
         blockers.append("materializer_context_missing:section_manifest")
+    target_kind = row.get("target_kind")
+    archive_section_contract_keys: tuple[str, ...] = ()
+    if target_kind == ARCHIVE_SECTION_HEADER_ELIDE_TARGET_KIND:
+        archive_section_contract_keys = ("header_elision_contract",)
+    elif target_kind == ARCHIVE_SECTION_REORDER_TARGET_KIND:
+        archive_section_contract_keys = ("section_order_contract",)
+    for key in archive_section_contract_keys:
+        value = _first_text(hints, (key,))
+        if value is None:
+            blockers.append(f"materializer_context_missing:{key}")
+        else:
+            context[key] = value
+    if archive_section_contract_keys:
+        runtime_proof = _proof_path_text(hints.get("runtime_consumption_proof"))
+        if runtime_proof is None or not _path_exists(runtime_proof, repo_root=repo_root):
+            blockers.append("materializer_context_missing:runtime_consumption_proof")
+        else:
+            context["runtime_consumption_proof"] = runtime_proof
     context.update(
         {
             "label": _first_text(hints, ("label", "candidate_id")) or _safe_work_id(str(row.get("backlog_key") or "")),
@@ -1081,8 +1101,20 @@ def _known_materializer_context_row(
         )
     if (
         row.get("unit_kind") == "archive_section"
-        and row.get("operation_family") == "section_entropy_recode"
-        and row.get("target_kind") == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND
+        and (
+            (
+                row.get("operation_family") == "section_entropy_recode"
+                and row.get("target_kind") == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND
+            )
+            or (
+                row.get("operation_family") == "section_header_elide"
+                and row.get("target_kind") == ARCHIVE_SECTION_HEADER_ELIDE_TARGET_KIND
+            )
+            or (
+                row.get("operation_family") == "section_reorder"
+                and row.get("target_kind") == ARCHIVE_SECTION_REORDER_TARGET_KIND
+            )
+        )
     ):
         return _archive_section_context_row(
             row,
