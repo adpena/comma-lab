@@ -57601,16 +57601,16 @@
           "evidence": ""
         },
         "strict_preflight": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "19 PyTorch parity tests in src/tac/substrates/time_traveler_l5_z6/tests/test_z6_mlx_renderer.py still PASS (0.65s wall-clock); CLAUDE.md MLX portable-local-substrate authority non-promotable contract honored throughout (axis_tag=[macOS-MLX research-signal] + score_claim=False + promotion_eligible=False + ready_for_exact_eval_dispatch=False); Catalog #287/#323 canonical Provenance threaded through training_manifest.json including 6 explicit blockers + Catalog #324 predicted_band_validation_status=post_training_mlx_50_100ep_local; Catalog #2 EMA NON-NEGOTIABLE honored via MLX-native EMA decay=0.997 + snapshot+restore pattern + EMA shadow as canonical inference checkpoint"
         },
         "three_clean_review": {
           "status": false,
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/path_3_d_z6_l1_promotion_landed_20260526.md (L1 promotion landing memo with full per-substrate symposium PROCEED_WITH_REVISIONS verdict + empirical convergence results table + canonical-vs-unique decision per layer + 9-dim checklist + observability surface + 6-hook wire-in + discipline applied + cross-references); sister .omx/research/path_3_d_z6_per_substrate_symposium_l1_promotion_20260526.md (Catalog #325 per-substrate symposium)"
         },
         "deploy_runbook": {
           "status": false,
@@ -57627,5 +57627,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-26T08:18:38Z"
+  "updated_at": "2026-05-26T08:22:10Z"
 }
