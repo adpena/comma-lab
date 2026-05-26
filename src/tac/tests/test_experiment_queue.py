@@ -10,9 +10,11 @@ from pathlib import Path
 import pytest
 
 from src.comma_lab.scheduler.experiment_queue import (
+    LOG_PATH_COMPONENT_MAX_CHARS,
     SCHEDULER_RUNTIME_POLICY_SCHEMA,
     ExperimentQueueError,
     _condition_passes,
+    _safe_log_path_component,
     apply_scheduler_runtime_policy,
     assert_canonical_state_for_execution,
     assert_no_orphaned_steps_for_execution,
@@ -150,6 +152,75 @@ def test_experiment_queue_executes_local_steps_and_gates_cloud(tmp_path: Path) -
         ]
         summary = queue_summary(conn, queue)
         assert summary["status_counts"] == {"queued": 1, "succeeded": 2}
+
+
+def test_worker_log_paths_shorten_long_queue_components(tmp_path: Path) -> None:
+    marker = tmp_path / "long_component_done.json"
+    queue_id = "frontier_rate_attack_" + ("q" * 220)
+    experiment_id = "materializer_work_" + ("x" * 260)
+    step_id = "targeted_component_correction_chain_materializer_execution_" + ("s" * 220)
+    queue = normalize_queue_definition(
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": queue_id,
+            "controls": {
+                "mode": "running",
+                "local_first": True,
+                "max_concurrency": {"local_cpu": 1},
+            },
+            "experiments": [
+                {
+                    "id": experiment_id,
+                    "steps": [
+                        {
+                            "id": step_id,
+                            "command": [
+                                sys.executable,
+                                "-c",
+                                (
+                                    "import pathlib; "
+                                    f"pathlib.Path({str(marker)!r}).write_text('ok')"
+                                ),
+                            ],
+                            "resources": {"kind": "local_cpu"},
+                            "postconditions": [
+                                {"type": "path_exists", "path": marker.name}
+                            ],
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+
+    with connect_state(tmp_path / "queue.sqlite") as conn:
+        initialize_queue_state(conn, queue)
+        result = run_queue_worker(
+            conn,
+            queue,
+            repo_root=tmp_path,
+            execute=True,
+            max_steps=1,
+            max_parallel=1,
+            log_root=tmp_path / "logs",
+            idle_sleep_seconds=0,
+            max_idle_cycles=0,
+        )
+        summary = queue_summary(conn, queue)
+
+    log_paths = list((tmp_path / "logs").rglob("*.log"))
+    assert result["success_count"] == 1
+    assert result["failure_count"] == 0
+    assert summary["status_counts"] == {"succeeded": 1}
+    assert len(log_paths) == 1
+    log_parts = log_paths[0].relative_to(tmp_path / "logs").parts[:-1]
+    assert all(len(part) <= LOG_PATH_COMPONENT_MAX_CHARS for part in log_parts)
+    assert log_parts == (
+        _safe_log_path_component(queue_id),
+        _safe_log_path_component(experiment_id),
+        _safe_log_path_component(step_id),
+    )
+    assert experiment_id not in str(log_paths[0])
 
 
 def test_experiment_queue_accepts_legacy_json_file_key_equals_postcondition(

@@ -220,10 +220,12 @@ def _validate_queue(queue_path: str | Path) -> dict[str, Any]:
 
 AUXILIARY_QUEUE_ARTIFACT_KEYS = (
     "receiver_repair_queue",
+    "operation_materializer_execution_queue",
     "operation_chain_compiler_queue",
     "targeted_component_correction_queue",
     "targeted_component_correction_materialization_queue",
     "targeted_component_correction_operation_chain_queue",
+    "targeted_component_correction_chain_materializer_execution_queue",
 )
 
 

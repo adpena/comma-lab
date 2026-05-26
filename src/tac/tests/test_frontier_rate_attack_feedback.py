@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import subprocess
 import sys
@@ -118,6 +119,24 @@ def _false_authority() -> dict[str, object]:
         "score_affecting_payload_changed": False,
         "charged_bits_changed": False,
     }
+
+
+def test_feedback_cycle_auxiliary_execution_includes_materializer_queues() -> None:
+    spec = importlib.util.spec_from_file_location(
+        "run_frontier_rate_attack_feedback_cycle",
+        REPO_ROOT / "tools" / "run_frontier_rate_attack_feedback_cycle.py",
+    )
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    assert "operation_materializer_execution_queue" in (
+        module.AUXILIARY_QUEUE_ARTIFACT_KEYS
+    )
+    assert "targeted_component_correction_chain_materializer_execution_queue" in (
+        module.AUXILIARY_QUEUE_ARTIFACT_KEYS
+    )
 
 
 def _write_json(path: Path, payload: object) -> Path:

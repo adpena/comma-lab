@@ -140,6 +140,59 @@ def _resolve_path(
     return candidates[0].resolve(strict=False)
 
 
+def _packet_manifest_runtime_dir_candidates(
+    manifest_path: Path,
+    *,
+    repo_root: Path,
+) -> list[Path]:
+    if not manifest_path.is_file():
+        return []
+    try:
+        payload = read_json(manifest_path)
+    except (OSError, ValueError, json.JSONDecodeError):
+        return []
+    if not isinstance(payload, Mapping):
+        return []
+
+    values: list[Any] = []
+    for key in (
+        "source_runtime_dir",
+        "source_submission_dir",
+        "submission_dir",
+        "runtime_root",
+    ):
+        values.append(payload.get(key))
+    runtime = payload.get("runtime")
+    if isinstance(runtime, Mapping):
+        for key in (
+            "source_runtime_dir",
+            "source_submission_dir",
+            "submission_dir",
+            "runtime_root",
+            "path",
+        ):
+            values.append(runtime.get(key))
+        runtime_manifest = runtime.get("manifest")
+        if isinstance(runtime_manifest, Mapping):
+            values.append(runtime_manifest.get("runtime_root"))
+
+    candidates: list[Path] = []
+    seen: set[str] = set()
+    for value in values:
+        resolved = _resolve_path(
+            value,
+            repo_root=repo_root,
+            queue_dir=manifest_path.parent,
+        )
+        if resolved is None:
+            continue
+        key = resolved.resolve(strict=False).as_posix()
+        if key not in seen:
+            seen.add(key)
+            candidates.append(resolved)
+    return candidates
+
+
 def _safe_slug(value: Any) -> str:
     text = str(value or "").strip().lower()
     out = "".join(ch if ch.isalnum() else "_" for ch in text)
@@ -245,10 +298,15 @@ def _derive_source_runtime_dir(
         "source_submission_dir",
         "submission_dir",
         "candidate_runtime_dir",
+        "candidate_submission_dir",
     ):
         resolved = _resolve_path(row.get(key), repo_root=repo_root, queue_dir=queue_dir)
         if resolved is not None:
             candidates.append(resolved)
+    for key in ("source_inflate_sh_path", "candidate_inflate_sh_path"):
+        resolved = _resolve_path(row.get(key), repo_root=repo_root, queue_dir=queue_dir)
+        if resolved is not None:
+            candidates.append(resolved.parent)
     for key in ("source_archive_path", "baseline_archive_path"):
         source_archive = _resolve_path(
             row.get(key),
@@ -256,7 +314,15 @@ def _derive_source_runtime_dir(
             queue_dir=queue_dir,
         )
         if source_archive is not None:
-            candidates.append(source_archive.parent)
+            packet_dir = source_archive.parent
+            candidates.append(packet_dir)
+            candidates.append(packet_dir / "submission_dir")
+            candidates.extend(
+                _packet_manifest_runtime_dir_candidates(
+                    packet_dir / "packet_manifest.json",
+                    repo_root=repo_root,
+                )
+            )
     for candidate in candidates:
         if candidate.is_dir() and (candidate / "inflate.sh").is_file():
             return candidate

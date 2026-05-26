@@ -31,6 +31,11 @@ LOCAL_RESOURCE_KINDS = {
 CLOUD_RESOURCE_KINDS = {"cloud_cpu", "cloud_gpu", "modal_cpu", "modal_gpu", "cuda_auth"}
 KNOWN_RESOURCE_KINDS = LOCAL_RESOURCE_KINDS | CLOUD_RESOURCE_KINDS
 SHA256_HEX = frozenset("0123456789abcdef")
+LOG_PATH_COMPONENT_MAX_CHARS = 96
+LOG_PATH_COMPONENT_HASH_CHARS = 16
+LOG_PATH_COMPONENT_ALLOWED_CHARS = frozenset(
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-"
+)
 DEFAULT_REQUIRED_FALSE_AUTHORITY_FIELDS = (
     "score_claim",
     "promotion_eligible",
@@ -2298,6 +2303,26 @@ def _make_worker_run_id(ready: ReadyStep) -> str:
     return hashlib.sha256(_json_text(payload).encode("utf-8")).hexdigest()[:16]
 
 
+def _safe_log_path_component(
+    value: str,
+    *,
+    max_chars: int = LOG_PATH_COMPONENT_MAX_CHARS,
+) -> str:
+    raw = str(value or "").strip() or "unnamed"
+    sanitized = "".join(
+        char if char in LOG_PATH_COMPONENT_ALLOWED_CHARS else "_" for char in raw
+    ).strip("._-")
+    sanitized = sanitized or "unnamed"
+    if len(sanitized) <= max_chars:
+        return sanitized
+    digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()[
+        :LOG_PATH_COMPONENT_HASH_CHARS
+    ]
+    head_len = max(1, max_chars - LOG_PATH_COMPONENT_HASH_CHARS - 1)
+    head = sanitized[:head_len].rstrip("._-") or "id"
+    return f"{head}_{digest}"
+
+
 def _make_step_log_path(
     *,
     repo: Path,
@@ -2309,7 +2334,12 @@ def _make_step_log_path(
     resolved_log_root = (
         Path(log_root) if log_root else repo / ".omx" / "state" / "experiment_queue_logs"
     )
-    log_dir = resolved_log_root / ready.queue_id / ready.experiment_id / ready.step_id
+    log_dir = (
+        resolved_log_root
+        / _safe_log_path_component(ready.queue_id)
+        / _safe_log_path_component(ready.experiment_id)
+        / _safe_log_path_component(ready.step_id)
+    )
     log_dir.mkdir(parents=True, exist_ok=True)
     return log_dir / f"{ts}_{worker_run_id}.log"
 
