@@ -1,0 +1,52 @@
+{
+  "alternative_reducers_per_catalog_308": [
+    {
+      "delta_vs_fec6": 91,
+      "name": "V1_3reg_4-4-8",
+      "total_wire": 340
+    },
+    {
+      "delta_vs_fec6": 83,
+      "name": "V2_2reg_4-12",
+      "total_wire": 332
+    },
+    {
+      "delta_vs_fec6": 94,
+      "name": "V3_4reg_2-2-4-8",
+      "total_wire": 343
+    }
+  ],
+  "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+  "axis_tag": "[macOS-CPU advisory]",
+  "baseline_fec6_wire_bytes": 249,
+  "deferred_per_claude_md": "Forbidden premature KILL without research exhaustion",
+  "entropy_position_lesson": "AT entropy coder (Lesson 2) bounded by integer-codeword; per-region partition does not operate BEFORE entropy coder (Lesson 1) because it preserves joint entropy",
+  "evidence_grade": "macOS-CPU-advisory-only",
+  "fec8_markov_sister_wire_bytes": 245,
+  "n_pairs": 600,
+  "paradigm_status": "INTACT",
+  "promotable": false,
+  "promotion_blockers": [
+    "encoding_statistics_not_score_claim",
+    "macos_cpu_advisory_per_catalog_192",
+    "no_contest_cuda_paired_dispatch",
+    "research_only_compress_time_analysis",
+    "implementation_level_falsification_per_catalog_307"
+  ],
+  "provenance": {
+    "compress_time_only": true,
+    "method": "live_pr110_fec6_decode_plus_per_region_codec_design_plus_alternative_reducers",
+    "subagent_id": "cascade-c-posenet-null-segnet-region-waterfill-per-region-selector-codec-20260526"
+  },
+  "ready_for_exact_eval_dispatch": false,
+  "root_cause": "per-region partition decomposes H(mode) into H(region)+H(mode|region) by chain rule; no information gain; adds region-idx stream overhead",
+  "schema_version": "cascade_c_reducer_alternatives_v1_20260526",
+  "score_claim": false,
+  "shannon_floor_K16_n600": 241,
+  "sister_extinction_recommendation": [
+    "fold PoseNet-null insight into FEC8 Markov transition matrix (extend #1336)",
+    "SegNet-class waterfill structurally valid as SCORER-DESIGN insight for future frame-1 selector iteration (sister axis)",
+    "PoseNet-null bottom-decile is RESEARCH SIGNAL for trainer-design per future c1a_l3 curriculum"
+  ],
+  "verdict_per_catalog_307": "IMPLEMENTATION-LEVEL FALSIFICATION"
+}

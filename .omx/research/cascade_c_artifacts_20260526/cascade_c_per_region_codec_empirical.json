@@ -1,0 +1,92 @@
+{
+  "archive_bytes_baseline": 178517,
+  "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+  "axis_tag": "[macOS-CPU advisory]",
+  "baseline_fec6_wire_bytes": 249,
+  "delta_vs_fec6": {
+    "canonical_formula": "25 * delta_wire_bytes / 37_545_489",
+    "delta_S_predicted_via_canonical_rate_formula": 6.059316473411759e-05,
+    "delta_wire_bytes": 91
+  },
+  "evidence_grade": "macOS-CPU-advisory-only",
+  "fec11_design": {
+    "magic": "FEC11\\x00\\x01",
+    "n_regions": 3,
+    "region_assignment_counts": {
+      "A": 426,
+      "B": 101,
+      "C": 73
+    },
+    "regions": {
+      "A": {
+        "bits_per_pair_in_region": 2,
+        "codes": [
+          0,
+          2,
+          7,
+          13
+        ],
+        "n_modes": 4
+      },
+      "B": {
+        "bits_per_pair_in_region": 2,
+        "codes": [
+          1,
+          4,
+          9,
+          14
+        ],
+        "n_modes": 4
+      },
+      "C": {
+        "bits_per_pair_in_region": 3,
+        "codes": [
+          3,
+          5,
+          6,
+          8,
+          10,
+          11,
+          12,
+          15
+        ],
+        "n_modes": 8
+      }
+    }
+  },
+  "fec6_header_bytes": 6,
+  "fec6_huff_stream_bytes": 243,
+  "information_theoretic_decomposition": {
+    "H_marginal_bits_per_pair": 3.2116176552784585,
+    "H_region_bits_per_pair": 1.1532806058752483,
+    "shannon_floor_bytes_n600": 241,
+    "wasted_region_idx_bits_per_pair": 0.8467193941247517
+  },
+  "n_pairs": 600,
+  "promotable": false,
+  "promotion_blockers": [
+    "encoding_statistics_not_score_claim",
+    "macos_cpu_advisory_per_catalog_192",
+    "no_contest_cuda_paired_dispatch",
+    "no_paired_inflate_runtime_validation",
+    "research_only_compress_time_analysis"
+  ],
+  "provenance": {
+    "compress_time_only": true,
+    "decoder_source": "tools/pr110_opt3_*.py + pr110_opt3_mode_distribution_20260526T170000Z.md reproducer",
+    "inflate_time_scorer_load": false,
+    "method": "live_pr110_fec6_decode_plus_per_region_codec_design",
+    "subagent_id": "cascade-c-posenet-null-segnet-region-waterfill-per-region-selector-codec-20260526"
+  },
+  "ready_for_exact_eval_dispatch": false,
+  "schema_version": "cascade_c_per_region_codec_v1_20260526",
+  "score_claim": false,
+  "wire_decomposition": {
+    "header_bytes": 30,
+    "mode_in_region_bits": 1273,
+    "mode_in_region_bytes": 160,
+    "region_idx_bits": 1200,
+    "region_idx_bytes": 150,
+    "total_wire_bytes": 340
+  }
+}
