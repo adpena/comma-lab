@@ -1799,6 +1799,8 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
     action_summary = _write_action_summary(tmp_path)
     artifact_root = tmp_path / "frontier_artifacts"
     _write_materializer_feedback(artifact_root)
+    results_root = tmp_path / "results"
+    _write_receiver_closed_budget_signal(tmp_path, results_root=results_root)
     baseline = _write_json(
         tmp_path / "baseline.json",
         _advisory(
@@ -1944,7 +1946,7 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
             "--output-dir",
             str(output_dir),
             "--results-root",
-            str(tmp_path / "results"),
+            str(results_root),
             "--queue-id",
             "frontier_feedback_cycle_unit",
             "--post-harvest-queue-id",
@@ -1986,6 +1988,36 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
     assert (
         output_dir / "post_followup_local_cpu_eureka_planning.json"
     ).is_file()
+    initial_artifacts = cycle_report["initial_refresh"]["artifacts"]
+    assert initial_artifacts["targeted_component_correction_acquisition"].endswith(
+        "targeted_component_correction_acquisition.json"
+    )
+    assert initial_artifacts["targeted_component_correction_queue"].endswith(
+        "targeted_component_correction_queue.json"
+    )
+    targeted_validate = subprocess.run(
+        [
+            sys.executable,
+            "tools/experiment_queue.py",
+            "--queue",
+            initial_artifacts["targeted_component_correction_queue"],
+            "validate",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert targeted_validate.returncode == 0, targeted_validate.stderr
+    targeted_queue = json.loads(
+        (
+            REPO_ROOT / initial_artifacts["targeted_component_correction_queue"]
+        ).read_text(encoding="utf-8")
+    )
+    assert targeted_queue["experiments"]
+    assert targeted_queue["experiments"][0]["steps"][0]["command"][1] == (
+        "tools/build_frontier_targeted_component_correction_work_order.py"
+    )
     component = cycle_report["post_harvest_refresh"]["pairset_component_marginal"]
     assert component["schema"] == "frontier_rate_attack_pairset_component_marginal_bundle.v1"
     assert component["active"] is True
@@ -2012,6 +2044,10 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
     ]
     assert (
         "exact_readiness_bridge_to_receiver_repair_backlog_and_correction_budget"
+        in cycle_report["integration_edges"]
+    )
+    assert (
+        "receiver_closed_correction_acquisition_to_local_component_correction_queue"
         in cycle_report["integration_edges"]
     )
 

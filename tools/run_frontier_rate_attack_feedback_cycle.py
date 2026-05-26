@@ -950,6 +950,7 @@ def main(argv: list[str] | None = None) -> int:
                 "operation_portfolio_to_chained_materializer_and_receiver_backlog",
                 "exact_readiness_bridge_to_receiver_repair_backlog_and_correction_budget",
                 "receiver_closed_rate_budget_to_targeted_segnet_posenet_correction_planning",
+                "receiver_closed_correction_acquisition_to_local_component_correction_queue",
             ],
             "allowed_use": "local_queue_owned_frontier_feedback_iteration_only",
             "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",

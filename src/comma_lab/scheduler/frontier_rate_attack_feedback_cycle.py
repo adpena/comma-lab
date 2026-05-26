@@ -47,7 +47,10 @@ from tac.repo_io import (
 )
 
 from .experiment_queue import ExperimentQueueError
-from .frontier_rate_attack_feedback import build_frontier_receiver_repair_queue
+from .frontier_rate_attack_feedback import (
+    build_frontier_receiver_repair_queue,
+    build_frontier_targeted_component_correction_queue,
+)
 
 FRONTIER_RATE_ATTACK_FEEDBACK_CYCLE_SCHEMA = "frontier_rate_attack_feedback_cycle.v1"
 FRONTIER_RATE_ATTACK_DQS1_OBSERVATION_BUNDLE_SCHEMA = (
@@ -497,6 +500,33 @@ def write_frontier_refresh_artifacts(
         path = out / "receiver_closed_correction_budget.json"
         write_json_artifact(path, dict(receiver_closed_budget))
         artifacts["receiver_closed_correction_budget"] = repo_rel(path, repo_root)
+    targeted_component_correction = report.get(
+        "targeted_component_correction_acquisition"
+    )
+    if isinstance(targeted_component_correction, Mapping):
+        path = out / "targeted_component_correction_acquisition.json"
+        write_json_artifact(path, dict(targeted_component_correction))
+        artifacts["targeted_component_correction_acquisition"] = repo_rel(
+            path,
+            repo_root,
+        )
+        correction_queue = build_frontier_targeted_component_correction_queue(
+            repo_root=repo_root,
+            targeted_component_correction_acquisition=targeted_component_correction,
+            targeted_component_correction_acquisition_path=path,
+            results_root=str(report.get("results_root") or "experiments/results"),
+            queue_id=(
+                f"{report.get('queue_id') or 'frontier_feedback'}_"
+                "component_correction"
+            ),
+        )
+        if isinstance(correction_queue, Mapping):
+            queue_path = out / "targeted_component_correction_queue.json"
+            write_json_artifact(queue_path, dict(correction_queue))
+            artifacts["targeted_component_correction_queue"] = repo_rel(
+                queue_path,
+                repo_root,
+            )
     selected_acquisition = report.get("selected_pairset_acquisition")
     if isinstance(selected_acquisition, Mapping):
         path = out / "dqs1_selected_pairset_acquisition.json"
@@ -545,6 +575,14 @@ def write_frontier_refresh_artifacts(
             "tools/experiment_queue.py",
             "--queue",
             artifacts["receiver_repair_queue"],
+            "validate",
+        ]
+    if "targeted_component_correction_queue" in artifacts:
+        operator_commands["validate_targeted_component_correction_queue"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["targeted_component_correction_queue"],
             "validate",
         ]
     if operator_commands:
