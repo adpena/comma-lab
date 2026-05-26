@@ -594,7 +594,7 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
     chain_bridge = chain_row["evidence_summary"]["exact_readiness_bridge_summary"]
     assert chain_bridge["bridge_report_count"] == 1
     assert chain_bridge["ready_candidate_count"] == 0
-    assert "inflate_sh_missing" in chain_bridge["top_blockers"]
+    assert "archive_manifest_missing" in chain_bridge["top_blockers"]
     assert "chain_exact_readiness_bridges_have_no_ready_candidate" in chain_row[
         "blockers"
     ]
@@ -605,7 +605,7 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
     )
     merge_bridge = merge_row["evidence_summary"]["exact_readiness_bridge"]
     assert merge_bridge["bridge_report_count"] == 1
-    assert "exact_readiness_bridge:inflate_sh_missing" in merge_row["blockers"]
+    assert "exact_readiness_bridge:archive_manifest_missing" in merge_row["blockers"]
     receiver_repair_backlog = report["receiver_repair_backlog"]
     assert receiver_repair_backlog["schema"] == RECEIVER_REPAIR_BACKLOG_SCHEMA
     _assert_false_authority(receiver_repair_backlog)
