@@ -3,7 +3,7 @@
 """Harvest dispatched Modal call IDs before their result cache expires.
 
 Default execution is read-only. Pass ``--execute`` to contact Modal, write
-harvest artifacts, append terminal claims, and refresh the summary file.
+harvest artifacts, append terminal claims, and merge-refresh the summary file.
 """
 from __future__ import annotations
 
@@ -43,8 +43,8 @@ def _parser() -> argparse.ArgumentParser:
         action="store_true",
         help=(
             "Contact Modal, harvest artifacts, append terminal claims, append cost "
-            "anchors, and rewrite the harvest summary. Without this flag the tool "
-            "only lists known lanes and exits without mutation."
+            "anchors, and merge-refresh the harvest summary. Without this flag "
+            "the tool only lists known lanes and exits without mutation."
         ),
     )
     parser.add_argument(
@@ -96,6 +96,57 @@ def _read_json(path: Path) -> dict[str, Any] | None:
     except (OSError, json.JSONDecodeError):
         return None
     return loaded if isinstance(loaded, dict) else None
+
+
+def _read_json_list(path: Path) -> list[dict[str, Any]]:
+    try:
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    if not isinstance(loaded, list):
+        return []
+    return [dict(item) for item in loaded if isinstance(item, dict)]
+
+
+def _summary_entry_key(row: dict[str, Any]) -> tuple[str, str]:
+    call_id = str(row.get("call_id") or "").strip()
+    label = str(row.get("label") or "").strip()
+    if call_id:
+        return ("call_id", call_id)
+    if label:
+        return ("label", label)
+    return ("object", json.dumps(row, sort_keys=True, default=str))
+
+
+def merge_modal_harvest_summary_rows(
+    existing: list[dict[str, Any]],
+    updates: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Return a non-lossy summary refresh.
+
+    A narrowed ``--call-id`` harvest should update just those call entries in
+    the global ``_modal_harvest_summary.json`` file, not replace unrelated
+    historical harvest rows.
+    """
+
+    updates_by_key = {_summary_entry_key(row): row for row in updates}
+    emitted: set[tuple[str, str]] = set()
+    merged: list[dict[str, Any]] = []
+    for row in existing:
+        key = _summary_entry_key(row)
+        replacement = updates_by_key.get(key)
+        if replacement is not None:
+            merged.append(replacement)
+            emitted.add(key)
+        else:
+            merged.append(row)
+    for row in updates:
+        key = _summary_entry_key(row)
+        if key in emitted:
+            continue
+        merged.append(row)
+        emitted.add(key)
+    return merged
 
 
 def _metadata_files(repo_root: Path) -> list[Path]:
@@ -1079,9 +1130,14 @@ def harvest_modal_calls(
         )
 
     summary_output.parent.mkdir(parents=True, exist_ok=True)
-    summary_output.write_text(json.dumps(summary, indent=2, default=str), encoding="utf-8")
+    existing_summary = _read_json_list(summary_output)
+    merged_summary = merge_modal_harvest_summary_rows(existing_summary, summary)
+    summary_output.write_text(
+        json.dumps(merged_summary, indent=2, default=str),
+        encoding="utf-8",
+    )
     print(f"\nSummary saved: {summary_output}")
-    return summary
+    return merged_summary
 
 
 def _print_from_ledger_view(

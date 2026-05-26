@@ -46,6 +46,27 @@ def _load_harvest_module():
     return mod
 
 
+def test_harvest_modal_summary_merge_preserves_unrelated_call_rows() -> None:
+    mod = _load_harvest_module()
+
+    merged = mod.merge_modal_harvest_summary_rows(
+        [
+            {"label": "old_a", "call_id": "fc-a", "status": "already_harvested"},
+            {"label": "old_b", "call_id": "fc-b", "status": "already_harvested"},
+        ],
+        [
+            {"label": "new_b", "call_id": "fc-b", "status": "harvested"},
+            {"label": "new_c", "call_id": "fc-c", "status": "harvested"},
+        ],
+    )
+
+    assert merged == [
+        {"label": "old_a", "call_id": "fc-a", "status": "already_harvested"},
+        {"label": "new_b", "call_id": "fc-b", "status": "harvested"},
+        {"label": "new_c", "call_id": "fc-c", "status": "harvested"},
+    ]
+
+
 def test_resolve_codec_dir_flat_layout(tmp_path: Path) -> None:
     """Flat layout: codec.py + model.py at root of pr101_source_dir."""
     mod = _load_build_module()
