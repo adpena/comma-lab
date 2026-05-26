@@ -1,0 +1,42 @@
+{
+  "schema": "frontier_mlx_repair_dynamics_component_queue_worker_stop.v1",
+  "queue_id": "frontier_mlx_repair_dynamics_component_queue_20260526T151051Z",
+  "attempted_at_utc": "2026-05-26T15:16:27Z",
+  "worker_result_schema": "experiment_queue_worker_result.v1",
+  "started_experiment_ids": [
+    "packet_member_merge_cbe7d79124ba"
+  ],
+  "success_count": 2,
+  "failure_count": 1,
+  "steps_succeeded": [
+    "emit_targeted_component_correction_work_order_01",
+    "emit_targeted_component_correction_work_order"
+  ],
+  "stopped_step": "local_cpu_component_advisory",
+  "stopped_step_returncode": -15,
+  "stop_reason": "operator_requested_mlx_only_commit_before_more_cpu_bridge_work",
+  "classification": "mlx_response_wired_but_queue_still_requires_cpu_cache_hash_bridge_before_mlx_response",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "mlx_response_generated": false,
+  "local_cpu_advisory_bridge_generated": true,
+  "component_work_order_generated": true,
+  "durable_queue_artifacts": [
+    ".omx/research/frontier_mlx_repair_dynamics_component_queue_20260526T151051Z/targeted_component_correction_acquisition.json",
+    ".omx/research/frontier_mlx_repair_dynamics_component_queue_20260526T151051Z/targeted_component_correction_queue.json",
+    ".omx/research/frontier_mlx_repair_dynamics_component_queue_20260526T151051Z/component_queue_result.json"
+  ],
+  "runtime_artifacts_not_promotional": [
+    "experiments/results/frontier_mlx_repair_dynamics_component_queue_20260526T151051Z/frontier_targeted_component_correction/frontier_mlx_repair_dynamics_component_queue_20260526t151051z/packet_member_merge_cbe7d79124ba/targeted_component_correction_packet_member_merge_cbe7d79124ba_repair_dynamics_frame0_palette_interaction_waterfill/work_order.json",
+    "experiments/results/frontier_mlx_repair_dynamics_component_queue_20260526T151051Z/frontier_targeted_component_correction/shared_candidate_component_response/candidate_component_response_experiments_results_frontier_final_rate_attack_f_69eeac5a5371ec64/local_cpu_advisory.json",
+    "experiments/results/frontier_mlx_repair_dynamics_component_queue_20260526T151051Z/frontier_targeted_component_correction/shared_candidate_component_response/candidate_component_response_experiments_results_frontier_final_rate_attack_f_69eeac5a5371ec64/scorer_input_cache_hashes.json"
+  ],
+  "worker_log_paths": [
+    ".omx/state/experiment_queue_logs/frontier_mlx_repair_dynamics_component_queue_20260526T151051Z/packet_member_merge_cbe7d79124ba/emit_targeted_component_correction_work_order_01/20260526T151627Z_e7eb608aa28d254e.log",
+    ".omx/state/experiment_queue_logs/frontier_mlx_repair_dynamics_component_queue_20260526T151051Z/packet_member_merge_cbe7d79124ba/emit_targeted_component_correction_work_order/20260526T151628Z_8b2166f7b5c16472.log",
+    ".omx/state/experiment_queue_logs/frontier_mlx_repair_dynamics_component_queue_20260526T151051Z/packet_member_merge_cbe7d79124ba/local_cpu_component_advisory/20260526T151628Z_ce98b733bf0aad49.log"
+  ],
+  "next_required_fix": "teach_targeted_component_queue_to_reuse_or_import_existing_false_authority_local_advisory_cache_identity_without_rerunning_cpu_eval_before_mlx_response"
+}
