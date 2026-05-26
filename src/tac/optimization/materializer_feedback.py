@@ -6,6 +6,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from tac.optimization.entropy_position import entropy_position_fields_for_row
 from tac.optimization.proxy_candidate_contract import (
     PROXY_FALSE_AUTHORITY_FIELDS,
     require_no_truthy_authority_fields,
@@ -259,6 +260,7 @@ def materializer_observation_from_manifest(
         if receiver_contract_satisfied or inflate_parity_satisfied
         else 0.0
     )
+    entropy_position = entropy_position_fields_for_row(result)
     selected_member_names = _string_sequence(result.get("selected_member_names"))
     selected_member_name = str(result.get("selected_member_name") or "").strip()
     if selected_member_name and selected_member_name not in selected_member_names:
@@ -288,6 +290,19 @@ def materializer_observation_from_manifest(
         },
         "archive_label": label,
         "target_kind": target_kind,
+        "entropy_position": entropy_position,
+        "entropy_position_id": entropy_position["entropy_position_id"],
+        "entropy_position_class": entropy_position["entropy_position_class"],
+        "entropy_phase": entropy_position["entropy_phase"],
+        "entropy_position_composition_key": (
+            entropy_position["entropy_position_composition_key"]
+        ),
+        "entropy_position_composition_rule": (
+            entropy_position["entropy_position_composition_rule"]
+        ),
+        "downstream_entropy_coder_rerun_recommended": (
+            entropy_position["downstream_entropy_coder_rerun_recommended"]
+        ),
         "materializer_id": result.get("materializer_id"),
         "portability_contract": result.get("portability_contract"),
         "receiver_contract_kind": result.get("receiver_contract_kind"),
@@ -354,6 +369,27 @@ def _false_authority_observation(row: Mapping[str, Any], *, source_path: str | N
     )
     if source_path and not out.get("source_path"):
         out["source_path"] = source_path
+    if out.get("target_kind") and not out.get("entropy_position"):
+        entropy_position = entropy_position_fields_for_row(out)
+        out["entropy_position"] = entropy_position
+        out.setdefault("entropy_position_id", entropy_position["entropy_position_id"])
+        out.setdefault(
+            "entropy_position_class",
+            entropy_position["entropy_position_class"],
+        )
+        out.setdefault("entropy_phase", entropy_position["entropy_phase"])
+        out.setdefault(
+            "entropy_position_composition_key",
+            entropy_position["entropy_position_composition_key"],
+        )
+        out.setdefault(
+            "entropy_position_composition_rule",
+            entropy_position["entropy_position_composition_rule"],
+        )
+        out.setdefault(
+            "downstream_entropy_coder_rerun_recommended",
+            entropy_position["downstream_entropy_coder_rerun_recommended"],
+        )
     out["observation_feedback_is_not_score_authority"] = True
     for key, value in MATERIALIZER_FALSE_AUTHORITY.items():
         out[key] = value
