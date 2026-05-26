@@ -9,20 +9,20 @@
   ],
   "budget_spend_allowed": false,
   "candidate_archive_materialized": false,
-  "candidate_chain_row_count": 5,
+  "candidate_chain_row_count": 6,
   "candidate_chain_rows": [
     {
       "action_functional_objective": "minimize_delta_segnet_plus_delta_posenet_plus_lambda_delta_bytes",
       "allowed_use": "rate_only_floor_candidate_chain_planning_only",
       "blockers": [
-        "rate_only_candidate_archive_materialization_missing",
-        "receiver_runtime_consumption_proof_missing",
         "full_frame_inflate_parity_required_before_exact_readiness",
         "exact_auth_eval_required_before_score_or_promotion_claim"
       ],
       "budget_spend_allowed": false,
-      "candidate_archive_materialized": false,
-      "candidate_archive_path": null,
+      "candidate_archive_bytes": 345544,
+      "candidate_archive_materialized": true,
+      "candidate_archive_path": "experiments/results/frontier_final_rate_attack/frontier_packet_merge_receiver_closed_20260526T015551Z/packet_member_merge_v1/submission_closure/submission/archive.zip",
+      "candidate_archive_sha256": "cbe7d79124ba2e01255a923f9c76751edb0b4836d38d57c89b772bc81dc6b862",
       "candidate_chain_id": "repair_rate_floor_parent_segnet_posenet_geometry_drop_many_campaign_674ddac7a7d8641e",
       "candidate_kind": "rate_only_floor_parent",
       "chain_id": "segnet_posenet_geometry_drop_many_campaign",
@@ -31,6 +31,31 @@
       "contest_cuda_auth_eval": false,
       "dispatch_attempted": false,
       "distortion_debt_score_units_total": 0.0,
+      "entropy_pipeline_positions": [
+        {
+          "allowed_use": "local_action_functional_ranking_feature",
+          "charged_bits_changed": false,
+          "composition_hint": "prefer_before_coder_distribution_shaping_then_at_coder_recode_then_container_overhead_cleanup",
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "entropy_pipeline_position": "after_entropy_coder_container_or_zip_grammar",
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "forbidden_use": "score_claim_or_dispatch_authority",
+          "gpu_launched": false,
+          "optimization_implication": "cannot_reduce_payload_entropy_unless_it_removes_container_or_runtime_grammar_overhead",
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "frontier_rate_attack_entropy_pipeline_position.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "target_kind": "packet_member_merge_v1"
+        }
+      ],
       "exact_cuda_auth_eval": false,
       "field_selection_ready_for_exact_eval_dispatch": false,
       "forbidden_use": "score_claim_or_budget_spend_or_promotion_or_dispatch_authority",
@@ -158,8 +183,41 @@
       "ready_for_exact_eval_dispatch": false,
       "ready_for_materializer_execution": false,
       "rebrotli_default_after_rate_attack": true,
-      "receiver_consumed": false,
-      "runtime_consumption_proof_present": false,
+      "receiver_closed_rate_credit_binding": {
+        "allowed_use": "rate_only_parent_materialization_evidence",
+        "archive_bytes": 345544,
+        "archive_path": "experiments/results/frontier_final_rate_attack/frontier_packet_merge_receiver_closed_20260526T015551Z/packet_member_merge_v1/submission_closure/submission/archive.zip",
+        "archive_sha256": "cbe7d79124ba2e01255a923f9c76751edb0b4836d38d57c89b772bc81dc6b862",
+        "candidate_id": "packet_member_merge_cbe7d79124ba",
+        "charged_bits_changed": false,
+        "closed_source_queue_path": "experiments/results/frontier_final_rate_attack/frontier_packet_merge_receiver_closed_20260526T015551Z/packet_member_merge_v1/submission_closure/closed_source_queue.json",
+        "closure_report_path": "experiments/results/frontier_final_rate_attack/frontier_packet_merge_receiver_closed_20260526T015551Z/packet_member_merge_v1/submission_closure/submission_closure_report.json",
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        "gpu_launched": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_closed": true,
+        "runtime_consumption_proof_path": "experiments/results/frontier_final_rate_attack/frontier_packet_merge_receiver_closed_20260526T015551Z/packet_member_merge_v1/submission_closure/submission/runtime_consumption_proof.json",
+        "saved_bytes": 258,
+        "schema": "frontier_rate_attack_receiver_closed_rate_credit_row.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_archive_path": "submissions/robust_current/archive_correct.zip",
+        "source_archive_sha256": "4dd46fed78ed064bc97c9b3205088e82838c03667394f7936c8ae8d20f9837ab",
+        "submission_dir": "experiments/results/frontier_final_rate_attack/frontier_packet_merge_receiver_closed_20260526T015551Z/packet_member_merge_v1/submission_closure/submission",
+        "target_kind": "packet_member_merge_v1"
+      },
+      "receiver_consumed": true,
+      "runtime_consumption_proof_path": "experiments/results/frontier_final_rate_attack/frontier_packet_merge_receiver_closed_20260526T015551Z/packet_member_merge_v1/submission_closure/submission/runtime_consumption_proof.json",
+      "runtime_consumption_proof_present": true,
       "saved_bytes_total": 258,
       "schema": "frontier_rate_attack_repair_budget_materialization_plan_row.v1",
       "score_affecting_payload_changed": false,
@@ -910,6 +968,172 @@
         "frame",
         "full_video"
       ]
+    },
+    {
+      "allowed_use": "structural_repair_cascade_candidate_planning_only",
+      "blockers": [
+        "parent_rate_only_archive_materialization_required",
+        "cascade_c_empirical_component_response_missing",
+        "per_region_selector_codec_materializer_missing",
+        "receiver_runtime_consumption_proof_missing",
+        "exact_auth_eval_required_before_score_or_promotion_claim"
+      ],
+      "budget_spend_allowed": false,
+      "candidate_archive_bytes": null,
+      "candidate_archive_materialized": false,
+      "candidate_archive_path": null,
+      "candidate_archive_sha256": null,
+      "candidate_chain_id": "repair_structural_cascade_child_segnet_posenet_geometry_drop_many_campaign_03070d318709fbf6",
+      "candidate_kind": "structural_repair_cascade_probe",
+      "cascade_id": "cascade_c_posenet_null_segnet_region_selector_codec",
+      "cascade_label": "Cascade C",
+      "cascade_opportunity": {
+        "allowed_use": "structural_repair_opportunity_for_queue_prioritization",
+        "blockers": [
+          "cascade_c_empirical_component_response_missing",
+          "per_region_selector_codec_materializer_missing",
+          "receiver_runtime_consumption_proof_missing",
+          "exact_auth_eval_required_before_score_or_promotion_claim"
+        ],
+        "budget_spend_allowed": false,
+        "canonical_mechanisms": [
+          {
+            "mechanism_id": "uniward_textured_region_undetectability",
+            "queue_obligation": "prefer_segnet_texture_or_class_regions_with_low_detector_margin",
+            "source_lineage": "Fridrich_inverse_steganalysis"
+          },
+          {
+            "mechanism_id": "detector_informed_embedding",
+            "queue_obligation": "rank_repairs_by_measured_segnet_posenet_response_not_visual_proxy",
+            "source_lineage": "Quantizr_TTO_scorer_informed_embedding"
+          },
+          {
+            "mechanism_id": "square_root_law_capacity",
+            "queue_obligation": "model_per_pair_payload_capacity_as_sublinear_in_safe_region_count",
+            "source_lineage": "Yousfi_Fridirich_capacity_bound"
+          },
+          {
+            "mechanism_id": "cnn_blind_spot_texture_and_dct_statistics",
+            "queue_obligation": "probe_segnet_stride2_subcell_regions_and_texture_statistics",
+            "source_lineage": "EfficientNet_stride2_stem_blind_spot_below_256x192"
+          }
+        ],
+        "cascade_id": "cascade_c_posenet_null_segnet_region_selector_codec",
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "estimate_status": "unestimated_structurally_novel",
+        "estimated_archive_bytes_delta": null,
+        "estimated_score_delta_score_units": null,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        "gpu_launched": false,
+        "label": "Cascade C",
+        "next_queue_action": "build_cascade_c_mlx_local_probe_queue_and_emit_component_response_rows",
+        "optimization_implication": "can move distortion budget where scorer response is lowest, then compress the chosen per-region decisions with a selector codec",
+        "pipeline_position": "scorer_entropy_repair_before_selector_codec",
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_budget_spend": false,
+        "ready_for_exact_eval_dispatch": false,
+        "ready_for_materializer_execution": false,
+        "required_empirical_landing": "MLX-local paired probe over PoseNet-null bottom-decile pairs, SegNet class-region masks, and per-region selector payload bytes",
+        "required_probe_measurements": [
+          "posenet_null_bottom_decile_pair_ids",
+          "segnet_class_region_mask_ids",
+          "segnet_logit_margin_or_detector_margin",
+          "texture_region_capacity_proxy",
+          "selector_payload_bits_per_region",
+          "receiver_consumed_runtime_replay_proof"
+        ],
+        "schema": "frontier_rate_attack_repair_cascade_opportunity_row.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_catalog_path": ".omx/research/entropy_position_cascade_exploit_catalog_20260526.md",
+        "source_hint": "P19 PoseNet-null bottom-decile + P18 SegNet-class-region waterfill + P11 per-region selector codec",
+        "source_relation": "PR110-OPT-5+7+10+12_UNTOUCHED",
+        "targeted_positions": [
+          {
+            "entropy_surface": "scorer_entropy",
+            "position_id": "P19",
+            "position_name": "PoseNet entropy",
+            "repair_role": "select_bottom_decile_posenet_null_pairs"
+          },
+          {
+            "entropy_surface": "scorer_entropy",
+            "position_id": "P18",
+            "position_name": "SegNet entropy",
+            "repair_role": "class_region_waterfill_over_segnet_margin"
+          },
+          {
+            "entropy_surface": "selector_codec_entropy",
+            "position_id": "P11",
+            "position_name": "selector_stream",
+            "repair_role": "per_region_selector_codec_for_replay"
+          }
+        ]
+      },
+      "chain_id": "segnet_posenet_geometry_drop_many_campaign",
+      "charged_bits_changed": false,
+      "child_must_not_replace_parent_archive": true,
+      "component_response_replayed": false,
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "estimate_status": "unestimated_structurally_novel",
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "forbidden_use": "score_claim_or_budget_spend_or_promotion_or_dispatch_authority",
+      "gpu_launched": false,
+      "local_lagrangian_improvement_score_units": null,
+      "materialization_order": 6,
+      "measured_component_delta_score_units": null,
+      "measured_lagrangian_delta_score_units": null,
+      "next_queue_action": "build_cascade_c_mlx_local_probe_queue_and_emit_component_response_rows",
+      "optimization_implication": "can move distortion budget where scorer response is lowest, then compress the chosen per-region decisions with a selector codec",
+      "parent_candidate_chain_id": "repair_rate_floor_parent_segnet_posenet_geometry_drop_many_campaign_674ddac7a7d8641e",
+      "parent_must_be_preserved_before_child": true,
+      "pipeline_position": "scorer_entropy_repair_before_selector_codec",
+      "promotable": false,
+      "promotion_eligible": false,
+      "proposed_encoder_repair_bytes": 0,
+      "rank_or_kill_eligible": false,
+      "ready_for_budget_spend": false,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_materializer_execution": false,
+      "receiver_consumed": false,
+      "requested_repair_bytes": null,
+      "required_empirical_landing": "MLX-local paired probe over PoseNet-null bottom-decile pairs, SegNet class-region masks, and per-region selector payload bytes",
+      "runtime_consumption_proof_present": false,
+      "schema": "frontier_rate_attack_repair_budget_materialization_plan_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "source_relation": "PR110-OPT-5+7+10+12_UNTOUCHED",
+      "targeted_positions": [
+        {
+          "entropy_surface": "scorer_entropy",
+          "position_id": "P19",
+          "position_name": "PoseNet entropy",
+          "repair_role": "select_bottom_decile_posenet_null_pairs"
+        },
+        {
+          "entropy_surface": "scorer_entropy",
+          "position_id": "P18",
+          "position_name": "SegNet entropy",
+          "repair_role": "class_region_waterfill_over_segnet_margin"
+        },
+        {
+          "entropy_surface": "selector_codec_entropy",
+          "position_id": "P11",
+          "position_name": "selector_stream",
+          "repair_role": "per_region_selector_codec_for_replay"
+        }
+      ]
     }
   ],
   "chain_id": "segnet_posenet_geometry_drop_many_campaign",
@@ -920,7 +1144,7 @@
   "exact_cuda_auth_eval": false,
   "field_selection_ready_for_exact_eval_dispatch": false,
   "forbidden_use": "score_claim_or_budget_spend_or_promotion_or_dispatch_authority",
-  "generated_at_utc": "2026-05-26T18:53:09Z",
+  "generated_at_utc": "2026-05-26T19:12:47Z",
   "gpu_launched": false,
   "operator_action_ledger_schema": "frontier_rate_attack_operator_action_ledger.v1",
   "operator_action_term_count": 1,
@@ -949,5 +1173,6 @@
   "source_work_order_path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_waterfill_work_order.json",
   "source_work_order_schema": "frontier_rate_attack_repair_budget_waterfill_work_order.v1",
   "spent_budget_candidates_are_children_of_rate_only_floor": true,
-  "spent_budget_child_candidate_count": 4
+  "spent_budget_child_candidate_count": 4,
+  "structural_repair_cascade_candidate_count": 1
 }

@@ -14,9 +14,12 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     REPAIR_BUDGET_MATERIALIZATION_PLAN_SCHEMA,
     REPAIR_BUDGET_MATERIALIZER_BINDING_REPORT_SCHEMA,
     REPAIR_BUDGET_MATERIALIZER_BINDING_ROW_SCHEMA,
+    REPAIR_BUDGET_WATERFILL_WORK_ORDER_SCHEMA,
+    REPAIR_CASCADE_OPPORTUNITY_ROW_SCHEMA,
     REPAIR_DYNAMICS_PALETTE_PRIOR_SCHEMA,
     TARGETED_COMPONENT_CORRECTION_RESPONSE_HARVEST_SCHEMA,
     build_frontier_repair_budget_materialization_execution_report,
+    build_frontier_repair_budget_materialization_plan,
     build_frontier_repair_budget_materializer_binding_report,
     build_frontier_repair_budget_waterfill_queue,
 )
@@ -311,6 +314,161 @@ def test_repair_budget_materializer_binding_report_preserves_parent_fail_closed(
     assert materialized["candidate_archive_materialized_count"] == 1
     assert materialized["repair_dynamics_prior_count"] == 2
     assert materialized["repair_dynamics_palette_prior"]["frame1_mode_count"] == 0
+
+
+def test_receiver_closed_rate_credit_materializes_rate_only_parent_locally(
+    tmp_path: Path,
+) -> None:
+    archive_path = tmp_path / "parent_archive.zip"
+    proof_path = tmp_path / "runtime_consumption_proof.json"
+    archive_path.write_bytes(b"PK\x05\x06" + b"\0" * 18)
+    proof_path.write_text('{"receiver_consumed": true}\n', encoding="utf-8")
+    work_order = {
+        "schema": REPAIR_BUDGET_WATERFILL_WORK_ORDER_SCHEMA,
+        "chain_id": "global_many_op_rate_distortion_receiver_campaign",
+        "rate_budget_preservation_plan": {
+            "rows": [
+                {
+                    "schema": "frontier_rate_attack_rate_budget_preservation_row.v1",
+                    "preservation_id": "preserve_packet_merge_fixture",
+                    "candidate_id": "materializer_packet_member_merge_v1",
+                    "target_kind": "packet_member_merge_v1",
+                    "saved_bytes": 258,
+                    "rate_credit_score_units": 0.0001717916099055202,
+                    "distortion_debt_score_units": 0.0,
+                    "net_score_delta_score_units": -0.0001717916099055202,
+                    "preserve_as_rate_only_candidate": True,
+                    **FALSE_AUTHORITY,
+                }
+            ],
+            "operator_action_ledger": {
+                "schema": "frontier_rate_attack_operator_action_ledger.v1",
+                "term_count": 1,
+                "terms": [],
+                **FALSE_AUTHORITY,
+            },
+            **FALSE_AUTHORITY,
+        },
+        "receiver_closed_rate_credit": {
+            "schema": "frontier_rate_attack_repair_waterfill_rate_credit.v1",
+            "receiver_closed_saved_bytes_total": 258,
+            "receiver_closed_rate_credit_rows": [
+                {
+                    "schema": "frontier_rate_attack_receiver_closed_rate_credit_row.v1",
+                    "candidate_id": "packet_member_merge_fixture",
+                    "target_kind": "packet_member_merge_v1",
+                    "saved_bytes": 258,
+                    "archive_path": str(archive_path),
+                    "archive_sha256": "c" * 64,
+                    "archive_bytes": archive_path.stat().st_size,
+                    "runtime_consumption_proof_path": str(proof_path),
+                    "receiver_closed": True,
+                    **FALSE_AUTHORITY,
+                }
+            ],
+            **FALSE_AUTHORITY,
+        },
+        "allocation_rows": [],
+        "repair_cascade_opportunity_rows": [
+            {
+                "schema": REPAIR_CASCADE_OPPORTUNITY_ROW_SCHEMA,
+                "cascade_id": "cascade_c_posenet_null_segnet_region_selector_codec",
+                "label": "Cascade C",
+                "source_relation": "PR110-OPT-5+7+10+12_UNTOUCHED",
+                "targeted_positions": [
+                    {"position_id": "P19", "entropy_surface": "scorer_entropy"},
+                    {"position_id": "P18", "entropy_surface": "scorer_entropy"},
+                    {"position_id": "P11", "entropy_surface": "selector_codec_entropy"},
+                ],
+                "pipeline_position": "scorer_entropy_repair_before_selector_codec",
+                "canonical_mechanisms": [
+                    {"mechanism_id": "uniward_textured_region_undetectability"},
+                    {"mechanism_id": "detector_informed_embedding"},
+                ],
+                "required_probe_measurements": [
+                    "posenet_null_bottom_decile_pair_ids",
+                    "segnet_class_region_mask_ids",
+                ],
+                "optimization_implication": "stack_scorer_repair_with_selector_codec",
+                "estimate_status": "unestimated_structurally_novel",
+                "required_empirical_landing": "mlx_local_probe",
+                "next_queue_action": "build_cascade_c_mlx_local_probe_queue",
+                "blockers": [
+                    "cascade_c_empirical_component_response_missing",
+                    "per_region_selector_codec_materializer_missing",
+                ],
+                **FALSE_AUTHORITY,
+            }
+        ],
+        **FALSE_AUTHORITY,
+    }
+
+    plan = build_frontier_repair_budget_materialization_plan(
+        repair_budget_waterfill_work_order=work_order,
+        repair_budget_waterfill_work_order_path=tmp_path / "work_order.json",
+    )
+
+    parent = plan["candidate_chain_rows"][0]
+    assert parent["candidate_kind"] == "rate_only_floor_parent"
+    assert parent["candidate_archive_materialized"] is True
+    assert parent["candidate_archive_path"] == str(archive_path)
+    assert parent["runtime_consumption_proof_present"] is True
+    assert parent["receiver_consumed"] is True
+    assert "rate_only_candidate_archive_materialization_missing" not in parent["blockers"]
+    assert "receiver_runtime_consumption_proof_missing" not in parent["blockers"]
+    entropy_positions = parent["entropy_pipeline_positions"]
+    assert entropy_positions[0]["target_kind"] == "packet_member_merge_v1"
+    assert entropy_positions[0]["entropy_pipeline_position"] == (
+        "after_entropy_coder_container_or_zip_grammar"
+    )
+    cascade = plan["candidate_chain_rows"][1]
+    assert cascade["candidate_kind"] == "structural_repair_cascade_probe"
+    assert cascade["cascade_id"] == "cascade_c_posenet_null_segnet_region_selector_codec"
+    assert cascade["source_relation"] == "PR110-OPT-5+7+10+12_UNTOUCHED"
+    assert cascade["targeted_positions"][0]["position_id"] == "P19"
+    assert cascade["pipeline_position"] == "scorer_entropy_repair_before_selector_codec"
+    assert cascade["cascade_opportunity"]["canonical_mechanisms"][0]["mechanism_id"] == (
+        "uniward_textured_region_undetectability"
+    )
+    assert "segnet_class_region_mask_ids" in cascade["cascade_opportunity"][
+        "required_probe_measurements"
+    ]
+    assert cascade["parent_candidate_chain_id"] == parent["candidate_chain_id"]
+    assert "cascade_c_empirical_component_response_missing" in cascade["blockers"]
+
+    binding_report = build_frontier_repair_budget_materializer_binding_report(
+        repo_root=REPO_ROOT,
+        repair_budget_materialization_plan=plan,
+        repair_budget_materialization_plan_path=tmp_path
+        / "repair_budget_materialization_plan.json",
+    )
+
+    binding_parent = binding_report["binding_rows"][0]
+    assert binding_parent["plan_row_receiver_closed_binding"] is True
+    assert binding_parent["candidate_archive_materialized"] is True
+    assert binding_parent["candidate_archive_sha256"] == "c" * 64
+    assert binding_parent["candidate_archive_bytes"] == archive_path.stat().st_size
+    assert binding_parent["receiver_consumed"] is True
+    assert binding_report["candidate_archive_materialized_count"] == 1
+    assert binding_report["receiver_consumed_count"] == 1
+
+    execution_report = build_frontier_repair_budget_materialization_execution_report(
+        repair_budget_materialization_plan=plan,
+        repair_budget_materialization_plan_path=tmp_path
+        / "repair_budget_materialization_plan.json",
+        materializer_binding_report=binding_report,
+        materializer_binding_report_path=tmp_path
+        / "repair_budget_materializer_binding_report.json",
+    )
+    execution_parent = execution_report["execution_rows"][0]
+    assert execution_parent["candidate_kind"] == "rate_only_floor_parent"
+    assert execution_parent["candidate_archive_sha256"] == "c" * 64
+    assert execution_parent["candidate_archive_bytes"] == archive_path.stat().st_size
+    assert execution_parent["ready_for_local_materialization"] is True
+    assert execution_parent["execution_status"] == (
+        "ready_for_receiver_closed_candidate_replay"
+    )
+    assert execution_report["ready_for_local_materialization_count"] == 1
 
 
 def test_repair_budget_waterfill_queue_emits_execution_audit_step(

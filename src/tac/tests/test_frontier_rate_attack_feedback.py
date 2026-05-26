@@ -1105,6 +1105,85 @@ def test_materializer_feedback_default_discovery_scans_research_candidates_only(
     _assert_false_authority(discovery)
 
 
+def test_materializer_feedback_discovery_accepts_queue_observation_top_k(
+    tmp_path: Path,
+) -> None:
+    queue_observation = _write_json(
+        tmp_path / "materializer_queue_observation.json",
+        {
+            "schema": "experiment_queue_observation.v1",
+            **_false_authority(),
+            "queue_id": "materializer_queue",
+            "healthy": True,
+            "succeeded_artifact_steps": [
+                {
+                    "experiment_id": "renderer_payload_dfl1",
+                    "step_id": "harvest_materializer_chains",
+                    "status": "succeeded",
+                    "resource_kind": "local_cpu",
+                    "source_unit_ids": ["renderer_payload_unit"],
+                    "source_selection_ids": ["renderer_payload_selection"],
+                    "expected_artifacts": [
+                        {
+                            "path": "source_queue.json",
+                            "json_schema": "optimizer_candidate_queue_v1",
+                            "optimizer_candidate_queue_materializer_row_count": 1,
+                            "optimizer_candidate_queue_materializer_rows": [
+                                {
+                                    "candidate_id": (
+                                        "renderer_payload_dfl1_e20295f0a662"
+                                    ),
+                                    "target_kind": "renderer_payload_dfl1_v1",
+                                    "materializer_id": (
+                                        "renderer_payload_dfl1_adapter"
+                                    ),
+                                    "receiver_contract_kind": (
+                                        "source_runtime_native_renderer_payload_dfl1"
+                                    ),
+                                    "receiver_contract_satisfied": True,
+                                    "candidate_archive": {
+                                        "bytes": 345_422,
+                                        "sha256": "e" * 64,
+                                    },
+                                    "serialized_archive_delta": {
+                                        "schema": (
+                                            "serialized_archive_delta_contract.v1"
+                                        ),
+                                        **_false_authority(),
+                                        "status": "realized_saving",
+                                        "realized_saved_bytes": 380,
+                                        "source_archive_bytes": 345_802,
+                                        "candidate_archive_bytes": 345_422,
+                                        "savings_realized": True,
+                                    },
+                                    "readiness_blockers": [],
+                                    **_false_authority(),
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ],
+        },
+    )
+
+    payloads, source_paths, discovery = discover_materializer_feedback_payloads(
+        repo_root=tmp_path,
+        materializer_feedback_paths=(queue_observation,),
+    )
+    observations = payloads[0]["observations"]
+
+    assert len(payloads) == 1
+    assert source_paths == ("materializer_queue_observation.json",)
+    assert discovery["discovered_feedback_count"] == 1
+    assert observations[0]["target_kind"] == "renderer_payload_dfl1_v1"
+    assert observations[0]["saved_bytes"] == 380
+    assert observations[0]["rate_positive"] is True
+    assert observations[0]["receiver_contract_satisfied"] is True
+    assert observations[0]["source_unit_ids"] == ["renderer_payload_unit"]
+    assert observations[0]["score_claim"] is False
+
+
 def test_frontier_feedback_binds_materializer_context_hints_into_work_queue(
     tmp_path: Path,
 ) -> None:
@@ -3052,11 +3131,38 @@ def test_targeted_component_correction_materialization_requests_group_responses(
     assert parent_row["operator_action_ledger_schema"] == OPERATOR_ACTION_LEDGER_SCHEMA
     assert parent_row["operator_action_terms"][0]["schema"] == OPERATOR_ACTION_TERM_SCHEMA
     assert parent_row["candidate_archive_materialized"] is False
-    child_rows = materialization_plan["candidate_chain_rows"][1:]
+    child_rows = [
+        row
+        for row in materialization_plan["candidate_chain_rows"][1:]
+        if row["candidate_kind"] == "spent_budget_repair_child"
+    ]
+    cascade_rows = [
+        row
+        for row in materialization_plan["candidate_chain_rows"][1:]
+        if row["candidate_kind"] == "structural_repair_cascade_probe"
+    ]
     assert len(child_rows) == repair_waterfill_work_order["allocation_row_count"]
+    assert materialization_plan["structural_repair_cascade_candidate_count"] == 1
+    assert cascade_rows[0]["cascade_id"] == (
+        "cascade_c_posenet_null_segnet_region_selector_codec"
+    )
+    assert cascade_rows[0]["source_relation"] == "PR110-OPT-5+7+10+12_UNTOUCHED"
+    cascade_mechanisms = {
+        item["mechanism_id"]
+        for item in cascade_rows[0]["cascade_opportunity"]["canonical_mechanisms"]
+    }
+    assert {
+        "uniward_textured_region_undetectability",
+        "detector_informed_embedding",
+        "square_root_law_capacity",
+        "cnn_blind_spot_texture_and_dct_statistics",
+    }.issubset(cascade_mechanisms)
+    assert "segnet_logit_margin_or_detector_margin" in cascade_rows[0][
+        "cascade_opportunity"
+    ]["required_probe_measurements"]
     assert all(
         row["parent_candidate_chain_id"] == parent_row["candidate_chain_id"]
-        for row in child_rows
+        for row in [*child_rows, *cascade_rows]
     )
     assert all(row["candidate_kind"] == "spent_budget_repair_child" for row in child_rows)
     assert all(row["budget_spend_allowed"] is False for row in child_rows)

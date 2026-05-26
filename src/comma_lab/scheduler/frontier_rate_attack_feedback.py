@@ -196,6 +196,9 @@ REPAIR_BUDGET_WATERFILL_QUEUE_METADATA_SCHEMA = (
 REPAIR_BUDGET_WATERFILL_ALLOCATION_ACTION_TERM_SCHEMA = (
     "frontier_rate_attack_repair_budget_waterfill_allocation_action_term.v1"
 )
+REPAIR_CASCADE_OPPORTUNITY_ROW_SCHEMA = (
+    "frontier_rate_attack_repair_cascade_opportunity_row.v1"
+)
 REPAIR_BUDGET_MATERIALIZATION_PLAN_SCHEMA = (
     "frontier_rate_attack_repair_budget_materialization_plan.v1"
 )
@@ -6161,6 +6164,104 @@ def _repair_waterfill_allocation_rows(
     return out
 
 
+def _repair_cascade_opportunity_rows() -> list[dict[str, Any]]:
+    """Operator-surfaced structural repair cascades that still need measurement."""
+
+    return [
+        {
+            "schema": REPAIR_CASCADE_OPPORTUNITY_ROW_SCHEMA,
+            "cascade_id": "cascade_c_posenet_null_segnet_region_selector_codec",
+            "label": "Cascade C",
+            "source_hint": (
+                "P19 PoseNet-null bottom-decile + P18 SegNet-class-region "
+                "waterfill + P11 per-region selector codec"
+            ),
+            "source_catalog_path": (
+                ".omx/research/entropy_position_cascade_exploit_catalog_20260526.md"
+            ),
+            "source_relation": "PR110-OPT-5+7+10+12_UNTOUCHED",
+            "estimated_score_delta_score_units": None,
+            "estimated_archive_bytes_delta": None,
+            "estimate_status": "unestimated_structurally_novel",
+            "targeted_positions": [
+                {
+                    "position_id": "P19",
+                    "position_name": "PoseNet entropy",
+                    "repair_role": "select_bottom_decile_posenet_null_pairs",
+                    "entropy_surface": "scorer_entropy",
+                },
+                {
+                    "position_id": "P18",
+                    "position_name": "SegNet entropy",
+                    "repair_role": "class_region_waterfill_over_segnet_margin",
+                    "entropy_surface": "scorer_entropy",
+                },
+                {
+                    "position_id": "P11",
+                    "position_name": "selector_stream",
+                    "repair_role": "per_region_selector_codec_for_replay",
+                    "entropy_surface": "selector_codec_entropy",
+                },
+            ],
+            "pipeline_position": "scorer_entropy_repair_before_selector_codec",
+            "canonical_mechanisms": [
+                {
+                    "mechanism_id": "uniward_textured_region_undetectability",
+                    "source_lineage": "Fridrich_inverse_steganalysis",
+                    "queue_obligation": "prefer_segnet_texture_or_class_regions_with_low_detector_margin",
+                },
+                {
+                    "mechanism_id": "detector_informed_embedding",
+                    "source_lineage": "Quantizr_TTO_scorer_informed_embedding",
+                    "queue_obligation": "rank_repairs_by_measured_segnet_posenet_response_not_visual_proxy",
+                },
+                {
+                    "mechanism_id": "square_root_law_capacity",
+                    "source_lineage": "Yousfi_Fridirich_capacity_bound",
+                    "queue_obligation": "model_per_pair_payload_capacity_as_sublinear_in_safe_region_count",
+                },
+                {
+                    "mechanism_id": "cnn_blind_spot_texture_and_dct_statistics",
+                    "source_lineage": "EfficientNet_stride2_stem_blind_spot_below_256x192",
+                    "queue_obligation": "probe_segnet_stride2_subcell_regions_and_texture_statistics",
+                },
+            ],
+            "required_probe_measurements": [
+                "posenet_null_bottom_decile_pair_ids",
+                "segnet_class_region_mask_ids",
+                "segnet_logit_margin_or_detector_margin",
+                "texture_region_capacity_proxy",
+                "selector_payload_bits_per_region",
+                "receiver_consumed_runtime_replay_proof",
+            ],
+            "optimization_implication": (
+                "can move distortion budget where scorer response is lowest, then "
+                "compress the chosen per-region decisions with a selector codec"
+            ),
+            "required_empirical_landing": (
+                "MLX-local paired probe over PoseNet-null bottom-decile pairs, "
+                "SegNet class-region masks, and per-region selector payload bytes"
+            ),
+            "next_queue_action": (
+                "build_cascade_c_mlx_local_probe_queue_and_emit_component_response_rows"
+            ),
+            "budget_spend_allowed": False,
+            "ready_for_budget_spend": False,
+            "ready_for_materializer_execution": False,
+            "ready_for_exact_eval_dispatch": False,
+            "blockers": [
+                "cascade_c_empirical_component_response_missing",
+                "per_region_selector_codec_materializer_missing",
+                "receiver_runtime_consumption_proof_missing",
+                "exact_auth_eval_required_before_score_or_promotion_claim",
+            ],
+            "allowed_use": "structural_repair_opportunity_for_queue_prioritization",
+            "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+            **FALSE_AUTHORITY,
+        }
+    ]
+
+
 def build_frontier_repair_budget_waterfill_work_order(
     *,
     autonomous_chain_optimization: Mapping[str, Any],
@@ -6239,6 +6340,10 @@ def build_frontier_repair_budget_waterfill_work_order(
         blockers.append("no_receiver_closed_rate_credit_bytes_available")
     if proposed_bytes_total <= 0:
         blockers.append("no_repair_bytes_allocated_by_local_waterfill")
+    receiver_closed_credit_rows = _receiver_closed_rate_credit_rows(
+        receiver_closed_correction_budget
+    )
+    cascade_opportunity_rows = _repair_cascade_opportunity_rows()
     payload = {
         "schema": REPAIR_BUDGET_WATERFILL_WORK_ORDER_SCHEMA,
         "generated_at_utc": autonomous_chain_optimization.get("generated_at_utc"),
@@ -6335,10 +6440,14 @@ def build_frontier_repair_budget_waterfill_work_order(
                 )
                 or []
             ),
+            "receiver_closed_rate_credit_rows": receiver_closed_credit_rows,
+            "receiver_closed_rate_credit_row_count": len(receiver_closed_credit_rows),
             **FALSE_AUTHORITY,
         },
         "accepted_response_count": len(accepted_rows),
         "allocation_row_count": len(allocation_rows),
+        "repair_cascade_opportunity_count": len(cascade_opportunity_rows),
+        "repair_cascade_opportunity_rows": cascade_opportunity_rows,
         "proposed_encoder_repair_bytes_total": proposed_bytes_total,
         "local_lagrangian_improvement_score_units_total": local_improvement_total,
         "allocation_rows": allocation_rows,
@@ -6363,6 +6472,152 @@ def build_frontier_repair_budget_waterfill_work_order(
     return payload
 
 
+def _receiver_closed_rate_credit_rows(
+    receiver_closed_correction_budget: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for row in receiver_closed_correction_budget.get("rows") or []:
+        if not isinstance(row, Mapping):
+            continue
+        submission_dir = str(row.get("submission_dir") or "").strip()
+        archive_path = str(
+            row.get("candidate_archive_path")
+            or row.get("archive_path")
+            or row.get("archive_zip_path")
+            or ""
+        ).strip()
+        if not archive_path and submission_dir:
+            archive_path = f"{submission_dir.rstrip('/')}/archive.zip"
+        runtime_proof_path = str(
+            row.get("runtime_consumption_proof_path")
+            or row.get("receiver_runtime_consumption_proof_path")
+            or ""
+        ).strip()
+        if not runtime_proof_path and submission_dir:
+            runtime_proof_path = (
+                f"{submission_dir.rstrip('/')}/runtime_consumption_proof.json"
+            )
+        rows.append(
+            {
+                "schema": "frontier_rate_attack_receiver_closed_rate_credit_row.v1",
+                "candidate_id": row.get("candidate_id"),
+                "target_kind": row.get("target_kind"),
+                "saved_bytes": row.get("saved_bytes_at_risk")
+                or row.get("receiver_closed_saved_bytes")
+                or row.get("saved_bytes"),
+                "archive_path": archive_path or None,
+                "archive_sha256": row.get("archive_sha256")
+                or row.get("candidate_archive_sha256"),
+                "archive_bytes": row.get("archive_bytes")
+                or row.get("candidate_archive_bytes"),
+                "runtime_consumption_proof_path": runtime_proof_path or None,
+                "receiver_closed": row.get("receiver_closed") is True,
+                "closed_source_queue_path": row.get("closed_source_queue_path"),
+                "closure_report_path": row.get("closure_report_path"),
+                "submission_dir": row.get("submission_dir"),
+                "source_archive_path": row.get("source_archive_path"),
+                "source_archive_sha256": row.get("source_archive_sha256"),
+                "allowed_use": "rate_only_parent_materialization_evidence",
+                "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+                **FALSE_AUTHORITY,
+            }
+        )
+    return rows
+
+
+def _matching_receiver_closed_rate_credit_row(
+    *,
+    work_order: Mapping[str, Any],
+    target_kinds: Sequence[str],
+    source_candidate_ids: Sequence[str],
+    rate_row_count: int,
+) -> Mapping[str, Any]:
+    if rate_row_count != 1:
+        return {}
+    credit = (
+        work_order.get("receiver_closed_rate_credit")
+        if isinstance(work_order.get("receiver_closed_rate_credit"), Mapping)
+        else {}
+    )
+    rows = [
+        row
+        for row in credit.get("receiver_closed_rate_credit_rows") or []
+        if isinstance(row, Mapping)
+    ]
+    target_set = set(target_kinds)
+    candidate_set = set(source_candidate_ids)
+    for row in rows:
+        if str(row.get("target_kind") or "") in target_set:
+            return row
+        if str(row.get("candidate_id") or "") in candidate_set:
+            return row
+    return {}
+
+
+def _entropy_pipeline_position(target_kind: str) -> str:
+    if target_kind in {
+        PACKET_MEMBER_MERGE_TARGET_KIND,
+        PACKET_MEMBER_REORDER_TARGET_KIND,
+        PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+        ARCHIVE_SECTION_HEADER_ELIDE_TARGET_KIND,
+        ARCHIVE_SECTION_REORDER_TARGET_KIND,
+    }:
+        return "after_entropy_coder_container_or_zip_grammar"
+    if target_kind in {
+        ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+        BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND,
+    }:
+        return "at_entropy_coder"
+    if target_kind in {
+        RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+        TENSOR_FACTORIZE_TARGET_KIND,
+        TENSOR_PRUNE_TARGET_KIND,
+        TENSOR_QUANTIZE_TARGET_KIND,
+        TENSOR_SHARED_CODEBOOK_TARGET_KIND,
+        ARCHIVE_SECTION_PROCEDURALIZE_TARGET_KIND,
+    }:
+        return "before_entropy_coder_distribution_shaping"
+    return "unknown_entropy_pipeline_position"
+
+
+def _entropy_pipeline_position_rows(target_kinds: Sequence[str]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for target_kind in _unique_strings(target_kinds):
+        position = _entropy_pipeline_position(target_kind)
+        if position == "before_entropy_coder_distribution_shaping":
+            opportunity = (
+                "can_change_symbol_distribution_before_coding_and_stack_with_"
+                "downstream_entropy_recode"
+            )
+        elif position == "at_entropy_coder":
+            opportunity = (
+                "can_attack_codeword_integer_boundary_and_model_mismatch_directly"
+            )
+        elif position == "after_entropy_coder_container_or_zip_grammar":
+            opportunity = (
+                "cannot_reduce_payload_entropy_unless_it_removes_container_or_runtime_"
+                "grammar_overhead"
+            )
+        else:
+            opportunity = "requires_empirical_stage_classification_before_ranking"
+        rows.append(
+            {
+                "schema": "frontier_rate_attack_entropy_pipeline_position.v1",
+                "target_kind": target_kind,
+                "entropy_pipeline_position": position,
+                "optimization_implication": opportunity,
+                "composition_hint": (
+                    "prefer_before_coder_distribution_shaping_then_at_coder_recode_"
+                    "then_container_overhead_cleanup"
+                ),
+                "allowed_use": "local_action_functional_ranking_feature",
+                "forbidden_use": "score_claim_or_dispatch_authority",
+                **FALSE_AUTHORITY,
+            }
+        )
+    return rows
+
+
 def _repair_budget_rate_only_parent_row(
     *,
     chain_id: str,
@@ -6379,6 +6634,7 @@ def _repair_budget_rate_only_parent_row(
     preservation_ids = _unique_strings(row.get("preservation_id") for row in rate_rows)
     source_candidate_ids = _unique_strings(row.get("candidate_id") for row in rate_rows)
     target_kinds = _unique_strings(row.get("target_kind") for row in rate_rows)
+    entropy_positions = _entropy_pipeline_position_rows(target_kinds)
     cumulative = (
         rate_budget_preservation_plan.get("cumulative_rate_attack")
         if isinstance(rate_budget_preservation_plan.get("cumulative_rate_attack"), Mapping)
@@ -6405,12 +6661,36 @@ def _repair_budget_rate_only_parent_row(
         "repair_rate_floor_parent",
         (chain_id, tuple(preservation_ids), saved_bytes_total, rate_credit_total),
     )
+    receiver_credit = _matching_receiver_closed_rate_credit_row(
+        work_order=work_order,
+        target_kinds=target_kinds,
+        source_candidate_ids=source_candidate_ids,
+        rate_row_count=len(rate_rows),
+    )
+    archive_path = str(receiver_credit.get("archive_path") or "").strip()
+    archive_sha = str(receiver_credit.get("archive_sha256") or "").strip()
+    runtime_proof_path = str(
+        receiver_credit.get("runtime_consumption_proof_path") or ""
+    ).strip()
+    archive_materialized = bool(archive_path and archive_sha)
+    runtime_proof_present = bool(runtime_proof_path) or (
+        receiver_credit.get("receiver_closed") is True
+    )
+    receiver_consumed = bool(
+        archive_materialized
+        and runtime_proof_present
+        and receiver_credit.get("receiver_closed") is True
+    )
     blockers = [
-        "rate_only_candidate_archive_materialization_missing",
-        "receiver_runtime_consumption_proof_missing",
         "full_frame_inflate_parity_required_before_exact_readiness",
         "exact_auth_eval_required_before_score_or_promotion_claim",
     ]
+    if not archive_materialized:
+        blockers.append("rate_only_candidate_archive_materialization_missing")
+    if not runtime_proof_present or not receiver_consumed:
+        blockers.append("receiver_runtime_consumption_proof_missing")
+    if len(rate_rows) > 1:
+        blockers.append("cumulative_rate_only_archive_composition_required")
     if not rate_rows:
         blockers.append("no_rate_only_preservation_rows_available")
     if saved_bytes_total <= 0:
@@ -6426,6 +6706,7 @@ def _repair_budget_rate_only_parent_row(
         "preservation_ids": preservation_ids,
         "source_candidate_ids": source_candidate_ids,
         "target_kinds": target_kinds,
+        "entropy_pipeline_positions": entropy_positions,
         "operator_action_ledger_schema": operator_action_ledger.get("schema"),
         "operator_action_term_schema": operator_action_ledger.get("term_schema"),
         "operator_action_term_count": operator_action_ledger.get("term_count"),
@@ -6444,10 +6725,14 @@ def _repair_budget_rate_only_parent_row(
             if isinstance(work_order.get("preservation_contract"), Mapping)
             else False
         ),
-        "candidate_archive_materialized": False,
-        "candidate_archive_path": None,
-        "runtime_consumption_proof_present": False,
-        "receiver_consumed": False,
+        "receiver_closed_rate_credit_binding": dict(receiver_credit),
+        "candidate_archive_materialized": archive_materialized,
+        "candidate_archive_path": archive_path or None,
+        "candidate_archive_sha256": archive_sha or None,
+        "candidate_archive_bytes": receiver_credit.get("archive_bytes"),
+        "runtime_consumption_proof_path": runtime_proof_path or None,
+        "runtime_consumption_proof_present": runtime_proof_present,
+        "receiver_consumed": receiver_consumed,
         "component_response_replayed": False,
         "budget_spend_allowed": False,
         "ready_for_budget_spend": False,
@@ -6558,6 +6843,79 @@ def _repair_budget_spent_child_rows(
     return rows
 
 
+def _repair_budget_structural_cascade_child_rows(
+    *,
+    chain_id: str,
+    parent_candidate_chain_id: str,
+    work_order: Mapping[str, Any],
+    start_order: int,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for offset, cascade in enumerate(
+        work_order.get("repair_cascade_opportunity_rows") or [],
+        start=0,
+    ):
+        if not isinstance(cascade, Mapping):
+            continue
+        cascade_id = str(cascade.get("cascade_id") or "").strip()
+        if not cascade_id:
+            continue
+        candidate_chain_id = _bounded_content_key(
+            "repair_structural_cascade_child",
+            (chain_id, parent_candidate_chain_id, cascade_id),
+        )
+        rows.append(
+            {
+                "schema": REPAIR_BUDGET_MATERIALIZATION_PLAN_ROW_SCHEMA,
+                "candidate_kind": "structural_repair_cascade_probe",
+                "candidate_chain_id": candidate_chain_id,
+                "chain_id": chain_id,
+                "materialization_order": start_order + offset,
+                "parent_candidate_chain_id": parent_candidate_chain_id,
+                "parent_must_be_preserved_before_child": True,
+                "child_must_not_replace_parent_archive": True,
+                "cascade_opportunity": dict(cascade),
+                "cascade_id": cascade_id,
+                "cascade_label": cascade.get("label"),
+                "source_relation": cascade.get("source_relation"),
+                "targeted_positions": list(cascade.get("targeted_positions") or []),
+                "pipeline_position": cascade.get("pipeline_position"),
+                "optimization_implication": cascade.get("optimization_implication"),
+                "estimate_status": cascade.get("estimate_status"),
+                "required_empirical_landing": cascade.get("required_empirical_landing"),
+                "next_queue_action": cascade.get("next_queue_action"),
+                "requested_repair_bytes": None,
+                "proposed_encoder_repair_bytes": 0,
+                "local_lagrangian_improvement_score_units": None,
+                "measured_component_delta_score_units": None,
+                "measured_lagrangian_delta_score_units": None,
+                "candidate_archive_materialized": False,
+                "candidate_archive_path": None,
+                "candidate_archive_sha256": None,
+                "candidate_archive_bytes": None,
+                "runtime_consumption_proof_present": False,
+                "receiver_consumed": False,
+                "component_response_replayed": False,
+                "budget_spend_allowed": False,
+                "ready_for_budget_spend": False,
+                "ready_for_materializer_execution": False,
+                "ready_for_exact_eval_dispatch": False,
+                "blockers": _unique_strings(
+                    [
+                        "parent_rate_only_archive_materialization_required",
+                        *(_string_list(cascade.get("blockers"))),
+                    ]
+                ),
+                "allowed_use": "structural_repair_cascade_candidate_planning_only",
+                "forbidden_use": (
+                    "score_claim_or_budget_spend_or_promotion_or_dispatch_authority"
+                ),
+                **FALSE_AUTHORITY,
+            }
+        )
+    return rows
+
+
 def build_frontier_repair_budget_materialization_plan(
     *,
     repair_budget_waterfill_work_order: Mapping[str, Any],
@@ -6602,7 +6960,13 @@ def build_frontier_repair_budget_materialization_plan(
         parent_candidate_chain_id=str(parent_row.get("candidate_chain_id") or ""),
         work_order=repair_budget_waterfill_work_order,
     )
-    rows = [parent_row, *child_rows]
+    cascade_rows = _repair_budget_structural_cascade_child_rows(
+        chain_id=chain_id,
+        parent_candidate_chain_id=str(parent_row.get("candidate_chain_id") or ""),
+        work_order=repair_budget_waterfill_work_order,
+        start_order=2 + len(child_rows),
+    )
+    rows = [parent_row, *child_rows, *cascade_rows]
     proposed_repair_bytes_total = sum(
         int(row.get("proposed_encoder_repair_bytes") or 0)
         for row in child_rows
@@ -6626,6 +6990,7 @@ def build_frontier_repair_budget_materialization_plan(
         "candidate_chain_row_count": len(rows),
         "rate_only_parent_candidate_count": 1,
         "spent_budget_child_candidate_count": len(child_rows),
+        "structural_repair_cascade_candidate_count": len(cascade_rows),
         "parent_candidate_chain_id": parent_row.get("candidate_chain_id"),
         "operator_action_ledger_schema": operator_action_ledger.get("schema"),
         "operator_action_term_count": operator_action_ledger.get("term_count"),
@@ -7052,7 +7417,30 @@ def _repair_budget_materializer_binding_row(
         if str(record.get("target_kind") or "") in required_target_kind_set
     ]
     direct_ready = [record for record in direct_matches if _direct_manifest_ready(record)]
+    plan_row_ready = (
+        candidate_kind == "rate_only_floor_parent"
+        and plan_row.get("candidate_archive_materialized") is True
+        and plan_row.get("receiver_consumed") is True
+    )
     selected = direct_ready[0] if direct_ready else {}
+    if not selected and plan_row_ready:
+        selected = {
+            "schema": "frontier_rate_attack_plan_row_receiver_closed_binding.v1",
+            "manifest_path": plan_row.get("source_work_order_path") or "",
+            "candidate_archive_path": plan_row.get("candidate_archive_path"),
+            "candidate_archive_sha256": plan_row.get("candidate_archive_sha256"),
+            "candidate_archive_bytes": plan_row.get("candidate_archive_bytes"),
+            "runtime_consumption_proof_path": plan_row.get(
+                "runtime_consumption_proof_path"
+            ),
+            "runtime_consumption_proof_present": plan_row.get(
+                "runtime_consumption_proof_present"
+            )
+            is True,
+            "receiver_consumed": True,
+            "repair_dynamics_prior": {},
+            **FALSE_AUTHORITY,
+        }
     blockers: list[str] = []
     if not candidate_chain_id:
         blockers.append("candidate_chain_id_missing")
@@ -7061,7 +7449,7 @@ def _repair_budget_materializer_binding_row(
             blockers.append("child_parent_candidate_chain_id_mismatch")
         if parent_candidate_chain_id not in bound_parent_ids:
             blockers.append("parent_rate_only_archive_materialization_required")
-    if direct_ready:
+    if direct_ready or plan_row_ready:
         if candidate_kind == "rate_only_floor_parent":
             bound_parent_ids.add(candidate_chain_id)
     elif direct_matches:
@@ -7082,6 +7470,7 @@ def _repair_budget_materializer_binding_row(
         "materialization_order": plan_row.get("materialization_order"),
         "parent_candidate_chain_id": plan_row.get("parent_candidate_chain_id"),
         "direct_manifest_count": len(direct_matches),
+        "plan_row_receiver_closed_binding": plan_row_ready,
         "coverage_manifest_count": len(coverage_matches),
         "required_operator_action_term_count": len(required_term_ids),
         "covered_operator_action_term_count": (
@@ -7114,6 +7503,7 @@ def _repair_budget_materializer_binding_row(
         ),
         "candidate_archive_path": selected.get("candidate_archive_path"),
         "candidate_archive_sha256": selected.get("candidate_archive_sha256"),
+        "candidate_archive_bytes": selected.get("candidate_archive_bytes"),
         "runtime_consumption_proof_path": selected.get(
             "runtime_consumption_proof_path"
         ),
@@ -7122,7 +7512,9 @@ def _repair_budget_materializer_binding_row(
             if isinstance(selected.get("repair_dynamics_prior"), Mapping)
             else {}
         ),
-        "runtime_consumption_proof_present": bool(selected),
+        "runtime_consumption_proof_present": bool(
+            selected.get("runtime_consumption_proof_present", bool(selected))
+        ),
         "receiver_consumed": receiver_consumed,
         "component_response_replayed": (
             plan_row.get("component_response_replayed") is True
@@ -7367,6 +7759,8 @@ def _repair_budget_materialization_execution_row(
         if parent_candidate_chain_id not in materialized_parent_ids:
             blockers.append("parent_rate_only_archive_materialization_required")
     archive_path = str(row.get("candidate_archive_path") or "").strip()
+    archive_sha = str(row.get("candidate_archive_sha256") or "").strip()
+    archive_bytes = row.get("candidate_archive_bytes")
     archive_materialized = row.get("candidate_archive_materialized") is True
     runtime_proof_present = row.get("runtime_consumption_proof_present") is True
     receiver_consumed = row.get("receiver_consumed") is True
@@ -7375,6 +7769,10 @@ def _repair_budget_materialization_execution_row(
         archive_path = str(
             binding_row.get("candidate_archive_path") or archive_path or ""
         ).strip()
+        archive_sha = str(
+            binding_row.get("candidate_archive_sha256") or archive_sha or ""
+        ).strip()
+        archive_bytes = binding_row.get("candidate_archive_bytes") or archive_bytes
         archive_materialized = (
             archive_materialized
             or binding_row.get("candidate_archive_materialized") is True
@@ -7414,7 +7812,6 @@ def _repair_budget_materialization_execution_row(
             candidate_kind == "rate_only_floor_parent"
             or component_replayed
         )
-        and not blockers
     )
     return {
         "schema": REPAIR_BUDGET_MATERIALIZATION_EXECUTION_ROW_SCHEMA,
@@ -7428,6 +7825,8 @@ def _repair_budget_materialization_execution_row(
             or candidate_kind == "spent_budget_repair_child"
         ),
         "candidate_archive_path": archive_path or None,
+        "candidate_archive_sha256": archive_sha or None,
+        "candidate_archive_bytes": archive_bytes,
         "candidate_archive_materialized": archive_materialized,
         "runtime_consumption_proof_present": runtime_proof_present,
         "receiver_consumed": receiver_consumed,

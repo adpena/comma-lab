@@ -3,13 +3,12 @@
   "binding_rows": [
     {
       "allowed_use": "repair_budget_materializer_binding_row_for_execution_audit",
-      "blockers": [
-        "candidate_chain_materializer_manifest_missing"
-      ],
+      "blockers": [],
       "budget_spend_allowed": false,
-      "candidate_archive_materialized": false,
-      "candidate_archive_path": null,
-      "candidate_archive_sha256": null,
+      "candidate_archive_bytes": 345544,
+      "candidate_archive_materialized": true,
+      "candidate_archive_path": "experiments/results/frontier_final_rate_attack/frontier_packet_merge_receiver_closed_20260526T015551Z/packet_member_merge_v1/submission_closure/submission/archive.zip",
+      "candidate_archive_sha256": "cbe7d79124ba2e01255a923f9c76751edb0b4836d38d57c89b772bc81dc6b862",
       "candidate_chain_id": "repair_rate_floor_parent_portfolio_materializer_context_closure_campaign_21e2bcb8000259b8",
       "candidate_kind": "rate_only_floor_parent",
       "chain_id": "portfolio_materializer_context_closure_campaign",
@@ -28,13 +27,14 @@
       "gpu_launched": false,
       "materialization_order": 1,
       "parent_candidate_chain_id": null,
+      "plan_row_receiver_closed_binding": true,
       "promotable": false,
       "promotion_eligible": false,
       "rank_or_kill_eligible": false,
       "ready_for_budget_spend": false,
       "ready_for_exact_eval_dispatch": false,
-      "ready_for_materialization_execution_audit": false,
-      "receiver_consumed": false,
+      "ready_for_materialization_execution_audit": true,
+      "receiver_consumed": true,
       "repair_dynamics_prior": {},
       "required_operator_action_ids": [
         "operator_action_term_rate_budget_preserve_materializer_packet_member_a63655e5405434eb"
@@ -43,8 +43,8 @@
       "required_target_kinds": [
         "packet_member_merge_v1"
       ],
-      "runtime_consumption_proof_path": null,
-      "runtime_consumption_proof_present": false,
+      "runtime_consumption_proof_path": "experiments/results/frontier_final_rate_attack/frontier_packet_merge_receiver_closed_20260526T015551Z/packet_member_merge_v1/submission_closure/submission/runtime_consumption_proof.json",
+      "runtime_consumption_proof_present": true,
       "schema": "frontier_rate_attack_repair_budget_materializer_binding_row.v1",
       "score_affecting_payload_changed": false,
       "score_claim": false,
@@ -54,10 +54,10 @@
     {
       "allowed_use": "repair_budget_materializer_binding_row_for_execution_audit",
       "blockers": [
-        "parent_rate_only_archive_materialization_required",
         "candidate_chain_materializer_manifest_missing"
       ],
       "budget_spend_allowed": false,
+      "candidate_archive_bytes": null,
       "candidate_archive_materialized": false,
       "candidate_archive_path": null,
       "candidate_archive_sha256": null,
@@ -79,6 +79,7 @@
       "gpu_launched": false,
       "materialization_order": 2,
       "parent_candidate_chain_id": "repair_rate_floor_parent_portfolio_materializer_context_closure_campaign_21e2bcb8000259b8",
+      "plan_row_receiver_closed_binding": false,
       "promotable": false,
       "promotion_eligible": false,
       "rank_or_kill_eligible": false,
@@ -101,10 +102,10 @@
     {
       "allowed_use": "repair_budget_materializer_binding_row_for_execution_audit",
       "blockers": [
-        "parent_rate_only_archive_materialization_required",
         "candidate_chain_materializer_manifest_missing"
       ],
       "budget_spend_allowed": false,
+      "candidate_archive_bytes": null,
       "candidate_archive_materialized": false,
       "candidate_archive_path": null,
       "candidate_archive_sha256": null,
@@ -126,6 +127,7 @@
       "gpu_launched": false,
       "materialization_order": 3,
       "parent_candidate_chain_id": "repair_rate_floor_parent_portfolio_materializer_context_closure_campaign_21e2bcb8000259b8",
+      "plan_row_receiver_closed_binding": false,
       "promotable": false,
       "promotion_eligible": false,
       "rank_or_kill_eligible": false,
@@ -148,10 +150,10 @@
     {
       "allowed_use": "repair_budget_materializer_binding_row_for_execution_audit",
       "blockers": [
-        "parent_rate_only_archive_materialization_required",
         "candidate_chain_materializer_manifest_missing"
       ],
       "budget_spend_allowed": false,
+      "candidate_archive_bytes": null,
       "candidate_archive_materialized": false,
       "candidate_archive_path": null,
       "candidate_archive_sha256": null,
@@ -173,6 +175,7 @@
       "gpu_launched": false,
       "materialization_order": 4,
       "parent_candidate_chain_id": "repair_rate_floor_parent_portfolio_materializer_context_closure_campaign_21e2bcb8000259b8",
+      "plan_row_receiver_closed_binding": false,
       "promotable": false,
       "promotion_eligible": false,
       "rank_or_kill_eligible": false,
@@ -195,10 +198,10 @@
     {
       "allowed_use": "repair_budget_materializer_binding_row_for_execution_audit",
       "blockers": [
-        "parent_rate_only_archive_materialization_required",
         "candidate_chain_materializer_manifest_missing"
       ],
       "budget_spend_allowed": false,
+      "candidate_archive_bytes": null,
       "candidate_archive_materialized": false,
       "candidate_archive_path": null,
       "candidate_archive_sha256": null,
@@ -220,6 +223,55 @@
       "gpu_launched": false,
       "materialization_order": 5,
       "parent_candidate_chain_id": "repair_rate_floor_parent_portfolio_materializer_context_closure_campaign_21e2bcb8000259b8",
+      "plan_row_receiver_closed_binding": false,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_budget_spend": false,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_materialization_execution_audit": false,
+      "receiver_consumed": false,
+      "repair_dynamics_prior": {},
+      "required_operator_action_ids": [],
+      "required_operator_action_term_count": 0,
+      "required_target_kinds": [],
+      "runtime_consumption_proof_path": null,
+      "runtime_consumption_proof_present": false,
+      "schema": "frontier_rate_attack_repair_budget_materializer_binding_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false
+    },
+    {
+      "allowed_use": "repair_budget_materializer_binding_row_for_execution_audit",
+      "blockers": [
+        "candidate_chain_materializer_manifest_missing"
+      ],
+      "budget_spend_allowed": false,
+      "candidate_archive_bytes": null,
+      "candidate_archive_materialized": false,
+      "candidate_archive_path": null,
+      "candidate_archive_sha256": null,
+      "candidate_chain_id": "repair_structural_cascade_child_portfolio_materializer_context_closure_campaign_538f839d85c4dfca",
+      "candidate_kind": "structural_repair_cascade_probe",
+      "chain_id": "portfolio_materializer_context_closure_campaign",
+      "charged_bits_changed": false,
+      "component_response_replayed": false,
+      "contest_cuda_auth_eval": false,
+      "coverage_manifest_count": 0,
+      "coverage_manifest_paths": [],
+      "covered_operator_action_term_count": 0,
+      "direct_manifest_count": 0,
+      "direct_manifest_paths": [],
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+      "gpu_launched": false,
+      "materialization_order": 6,
+      "parent_candidate_chain_id": "repair_rate_floor_parent_portfolio_materializer_context_closure_campaign_21e2bcb8000259b8",
+      "plan_row_receiver_closed_binding": false,
       "promotable": false,
       "promotion_eligible": false,
       "rank_or_kill_eligible": false,
@@ -243,13 +295,12 @@
   "blockers": [
     "exact_auth_eval_required_before_score_or_promotion_claim",
     "candidate_chain_materializer_manifest_missing",
-    "parent_rate_only_archive_materialization_required",
     "not_all_candidate_chain_rows_bound_to_receiver_consumed_manifests"
   ],
   "budget_spend_allowed": false,
   "candidate_archive_materialized": false,
-  "candidate_archive_materialized_count": 0,
-  "candidate_chain_row_count": 5,
+  "candidate_archive_materialized_count": 1,
+  "candidate_chain_row_count": 6,
   "chain_id": "portfolio_materializer_context_closure_campaign",
   "charged_bits_changed": false,
   "contest_cuda_auth_eval": false,
@@ -257,7 +308,7 @@
   "exact_cuda_auth_eval": false,
   "field_selection_ready_for_exact_eval_dispatch": false,
   "forbidden_use": "score_claim_or_budget_spend_or_promotion_or_dispatch_authority",
-  "generated_at_utc": "2026-05-26T18:53:07Z",
+  "generated_at_utc": "2026-05-26T19:12:45Z",
   "gpu_launched": false,
   "materializer_execution_queue_path": "",
   "materializer_execution_queue_summary": {
@@ -312,7 +363,7 @@
   "ready_for_budget_spend": false,
   "ready_for_exact_eval_dispatch": false,
   "ready_for_materializer_execution": false,
-  "receiver_consumed_count": 0,
+  "receiver_consumed_count": 1,
   "recommended_next_action": "run_or_compose_receiver_consumed_materializer_manifests_for_each_repair_budget_candidate_chain_row",
   "repair_dynamics_palette_prior": {
     "action_functional_implications": [
@@ -390,7 +441,7 @@
     "zero_frame1_modes": true
   },
   "repair_dynamics_prior_count": 1,
-  "runtime_consumption_proof_present_count": 0,
+  "runtime_consumption_proof_present_count": 1,
   "schema": "frontier_rate_attack_repair_budget_materializer_binding_report.v1",
   "score_affecting_payload_changed": false,
   "score_claim": false,
