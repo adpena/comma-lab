@@ -58720,6 +58720,88 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_nscs06_v8_trainer_v3_wire_in_cls_bytes_routing_20260526",
+      "name": "NSCS06 v8 trainer cls_bytes routing wire-in",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "experiments/train_substrate_nscs06_v8_chroma_lut.py Stage 5b cls_lowres NEAREST downsample + Stage 9 v2 callsite routed through pack_archive(cls_bytes=); v1 callsite untouched (codec-incompatible per archive.py line 353); 206/206 substrate tests pass (197 prior + 9 new); evidence_grade=predicted; score_claim=False; promotable=False; axis_tag=[prediction]"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/nscs06_v8_trainer_v3_wire_in_landed_20260526.md + .omx/research/nscs06_v8_trainer_v3_wire_in_pre_execution_gate_report_20260526.md + src/tac/substrates/nscs06_v8_chroma_lut/tests/test_trainer_v3_wire_in.py (9 dedicated tests)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true (code wire-in only; trainer plumbing change; no GPU dispatch; sister of cls_stream wire-in landing 581b7b129 + 545beb35c)"
+    },
+    {
+      "id": "lane_z7_mamba_2_v2_l1_empirical_mlx_fair_shake_20260526",
+      "name": "Z7-Mamba-2-v2 L1 EMPIRICAL MLX fair-shake (per UNIQUE-AND-COMPLETE-PER-METHOD)",
+      "phase": 4.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "experiments/train_substrate_z7_mamba2_v2_mlx.py + 4 empirical MLX runs at .omx/tmp/z7_mamba2_v2_l1_*/; canonical 50p x 15ep anchor sha ed79819194c8517e (loss 0.340194 -> 0.048467 = 85.8% MONOTONIC); CC-A ablation 2x speedup; commit 2a0094fb7"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/z7_mamba_2_l1_empirical_mlx_fair_shake_landed_20260526.md + pre_execution_gate_report; commit 2a0094fb7"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -58729,5 +58811,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-26T18:13:44Z"
+  "updated_at": "2026-05-26T18:50:48Z"
 }

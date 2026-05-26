@@ -727,12 +727,46 @@ def _full_main(args: argparse.Namespace) -> int:
             f"pose_quantized_bytes_{len(pose_bytes)}_chunk_{int(args.scorer_chunk_size)}"
         )
 
+        # Stage 5b: derive per-cell SegNet class labels at low-res for the
+        # CH08 v3 cls_stream slot (Catalog #233 L1→L2 promotion canonical
+        # 4-gate unblocker per T3 council #1335 REVISION #2 Yousfi BLOCKER).
+        # NEAREST downsample (point-sample top-left pixel of each
+        # `args.grayscale_downsample`-sized cell) is the canonical sister of
+        # inflate.py's `Image.NEAREST` upsample; the pair forms a lossless
+        # round-trip for the "uniform-cls" boundary invariant enforced by
+        # `tests/test_cls_stream_wire_in.py::test_inflate_v3_with_uniform_class_matches_v2`.
+        # cls_full shape (n_pairs, H, W) was built at Stage 4; lowres shape
+        # MUST match Stage 5 gray_lowres (n_pairs, h_g, w_g).
+        cls_lowres = cls_full[
+            :,
+            : h_g * args.grayscale_downsample : args.grayscale_downsample,
+            : w_g * args.grayscale_downsample : args.grayscale_downsample,
+        ]
+        if cls_lowres.shape != (n_pairs, h_g, w_g):
+            raise RuntimeError(
+                f"cls_lowres shape {cls_lowres.shape} != ({n_pairs}, {h_g}, {w_g}) "
+                f"— Stage 5b NEAREST downsample shape invariant violated"
+            )
+        cls_bytes = np.ascontiguousarray(cls_lowres, dtype=np.uint8).tobytes()
+        cls_lowres_sha = _sha256_bytes(cls_bytes)
+        _stage(
+            f"cls_lowres_nearest_downsample_shape_{cls_lowres.shape}_sha_{cls_lowres_sha[:8]}"
+        )
+
         # Stage 8: (already invoked above as RATIFY-3 pre-smoke + Dykstra)
 
-        # Stage 9: pack CH08 v2 archive (procedural-seed variant per canonical eq #26)
+        # Stage 9: pack CH08 v3 archive (procedural-seed + cls_stream per T3
+        # council #1335 PROCEED_WITH_REVISIONS REVISION #2 Yousfi BLOCKER).
+        # v3 supersedes the v2 emission per sister cls_stream wire-in landing
+        # (commits 581b7b129 + 545beb35c); the v1 inline-LUT branch is
+        # codec-incompatible with v3 cls_stream so it omits cls_bytes (the
+        # cargo-cult #5 cls=0 uniform inflate fallback is preserved for v1).
         if args.variant == "v2_procedural_seed":
-            # Default v2: 32-byte PCG64 seed replaces the inline LUT slot.
-            # Per canonical equation #26 closed form, predicted ΔS = -0.002706.
+            # Default v2/v3: 32-byte PCG64 seed replaces the inline LUT slot.
+            # Per canonical equation #26 closed form, predicted ΔS = -0.002706
+            # (REPLACEMENT savings, unchanged). v3 adds cls_stream ADDITIVE
+            # bytes; total rate-axis ΔS is the empirical question per the
+            # paired Modal T4 dispatch decision (Catalog #246).
             # The seed is HASH-derived from the chroma LUT bytes so it is
             # deterministic AND distinguishing per Catalog #272.
             import hashlib
@@ -747,8 +781,9 @@ def _full_main(args: argparse.Namespace) -> int:
                 grayscale_bytes=gray_lowres.tobytes(),
                 pose_quant_scale=args.pose_quant_scale,
                 chroma_seed=seed,
+                cls_bytes=cls_bytes,
             )
-            archive_variant_tag = "v2_procedural_seed"
+            archive_variant_tag = "v3_procedural_seed_with_cls_stream"
         else:
             # v1: inline 4096-byte LUT (full chroma table; no compression).
             bin_bytes = pack_archive(
