@@ -358,7 +358,7 @@
             "locality_controls"
           ],
           "resources": {
-            "kind": "local_cpu"
+            "kind": "local_io_heavy"
           },
           "timeout_seconds": 1200
         },
@@ -702,7 +702,7 @@
             "locality_controls"
           ],
           "resources": {
-            "kind": "local_cpu"
+            "kind": "local_io_heavy"
           },
           "timeout_seconds": 1200
         },

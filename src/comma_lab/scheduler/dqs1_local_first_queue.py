@@ -66,6 +66,7 @@ DEFAULT_LOCALITY_STEP_TIMEOUT_SECONDS = 2400
 DEFAULT_LOCALITY_INFLATE_TIMEOUT_SECONDS = 1200
 DEFAULT_LOCALITY_GLOBAL_INFLATE_TIMEOUT_SECONDS = 1800
 DEFAULT_LOCALITY_MAX_INFLATE_PARALLELISM = 2
+DEFAULT_LOCAL_CPU_ADVISORY_RESOURCE_KIND = "local_io_heavy"
 DEFAULT_SCHEDULER_PREFLIGHT_EXPERIMENT_ID = "dqs1_scheduler_preflight"
 SAFE_OPERATOR_ACTION = "materialize_pairset_archive_and_run_local_controls"
 LOCAL_CPU_CONTEST_DRIFT_EUREKA_SCHEMA = EUREKA_SIGNAL_SCHEMA
@@ -1618,7 +1619,7 @@ def build_dqs1_local_first_queue(
                 "1800",
                 "--keep-work-dir",
             ],
-            "resources": {"kind": "local_cpu"},
+            "resources": {"kind": DEFAULT_LOCAL_CPU_ADVISORY_RESOURCE_KIND},
             "postconditions": [
                 _false_authority_postcondition(
                     f"{materialized_root}/local_cpu_advisory.json",

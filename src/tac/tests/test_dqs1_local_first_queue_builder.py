@@ -348,6 +348,10 @@ def test_dqs1_queue_builder_skips_completed_local_advisory_candidate(tmp_path: P
     assert "--reuse-existing-inflates" in locality_command
     advisory = steps_by_id["local_cpu_advisory"]
     advisory_command = advisory["command"]
+    assert (
+        advisory["resources"]["kind"]
+        == dqs1_queue.DEFAULT_LOCAL_CPU_ADVISORY_RESOURCE_KIND
+    )
     assert advisory["timeout_seconds"] == 3600
     assert advisory_command[advisory_command.index("--inflate-timeout") + 1] == "1800"
     assert advisory_command[advisory_command.index("--evaluate-timeout") + 1] == "1800"
@@ -2142,6 +2146,11 @@ def test_checked_in_dqs1_queue_keeps_eureka_append_only_contract() -> None:
             == str(dqs1_queue.DEFAULT_LOCALITY_MAX_INFLATE_PARALLELISM)
         )
         assert "--reuse-existing-inflates" in locality["command"]
+        advisory = steps["local_cpu_advisory"]
+        assert (
+            advisory["resources"]["kind"]
+            == dqs1_queue.DEFAULT_LOCAL_CPU_ADVISORY_RESOURCE_KIND
+        )
         raw_retention = steps["plan_raw_artifact_retention"]
         assert raw_retention["resources"]["kind"] == "local_io_heavy"
         assert raw_retention["timeout_seconds"] == 1200
