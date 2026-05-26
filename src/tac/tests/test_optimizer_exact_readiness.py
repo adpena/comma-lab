@@ -107,6 +107,52 @@ def test_family_agnostic_runtime_proof_requires_runtime_consumption_signal(
     assert "runtime_consumption_proof_not_proven" in blockers
 
 
+def test_runtime_adapter_ready_proof_binds_candidate_runtime_tree_sha(
+    tmp_path: Path,
+) -> None:
+    proof = _write_json(
+        tmp_path / "adapter_proof.json",
+        {
+            "schema": "family_agnostic_runtime_consumption_proof_v1",
+            "target_kind": "packet_member_merge_v1",
+            "materializer_id": "packet_member_merge_adapter",
+            "receiver_contract_kind": "family_agnostic_packet_member_merge",
+            "runtime_consumption_proof_passed": True,
+            "receiver_contract_satisfied": True,
+            "candidate_archive_sha256": "a" * 64,
+            "runtime_adapter_manifest": {
+                "runtime_adapter_ready": True,
+                "runtime_tree_sha256": "b" * 64,
+            },
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+
+    blockers, facts = validate_runtime_consumption_proof(
+        {
+            "target_kind": "packet_member_merge_v1",
+            "materializer_id": "packet_member_merge_adapter",
+            "receiver_contract_kind": "family_agnostic_packet_member_merge",
+            "runtime_adapter_ready": True,
+            "candidate_runtime_tree_sha256": "c" * 64,
+            "runtime_consumption_proof_required": True,
+            "runtime_consumption_proof_status": "present",
+            "runtime_consumption_proof_path": str(proof),
+        },
+        repo_root=tmp_path,
+        queue_dir=tmp_path,
+        submission_dir=None,
+        archive_sha256="a" * 64,
+    )
+
+    assert facts["runtime_consumption_proof_runtime_tree_sha256"] == "b" * 64
+    assert facts["candidate_row_adapter_runtime_tree_sha256"] == "c" * 64
+    assert "runtime_consumption_proof_runtime_tree_sha_mismatch" in blockers
+
+
 def test_byte_range_runtime_proof_clears_receiver_schema_blocker(
     tmp_path: Path,
 ) -> None:

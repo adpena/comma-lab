@@ -299,6 +299,7 @@ def adapt_family_agnostic_materializer_manifest_to_candidate(
         schema=schema,
         archive_sha=candidate_archive["sha256"],
     )
+    runtime_proof = _load_optional_runtime_proof(proof_path, repo_root=repo_root)
     row = {
         "candidate_id": candidate_id,
         "lane_id": str(manifest.get("lane_id") or f"materializer_harvest::{schema}"),
@@ -351,9 +352,10 @@ def adapt_family_agnostic_materializer_manifest_to_candidate(
         "runtime_consumption_proof_path": proof_path,
         **_submission_runtime_harvest_fields(manifest),
         **_packet_member_merge_harvest_fields(manifest),
+        **_tensor_factorize_harvest_fields(manifest, runtime_proof=runtime_proof),
         **_renderer_payload_dfl1_harvest_fields(
             manifest,
-            runtime_proof=_load_optional_runtime_proof(proof_path, repo_root=repo_root),
+            runtime_proof=runtime_proof,
             repo_root=repo_root,
         ),
         "local_advisory_axes": _local_advisory_axes(manifest),
@@ -431,6 +433,36 @@ def _packet_member_merge_harvest_fields(manifest: Mapping[str, Any]) -> dict[str
     if runtime_tree_sha is not None:
         fields["candidate_runtime_tree_sha256"] = runtime_tree_sha
         fields["packet_member_merge_receiver_runtime_tree_sha256"] = runtime_tree_sha
+    return fields
+
+
+def _tensor_factorize_harvest_fields(
+    manifest: Mapping[str, Any],
+    *,
+    runtime_proof: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    if manifest.get("schema") != TENSOR_FACTORIZE_SCHEMA:
+        return {}
+    runtime = manifest.get("tensor_factorize_receiver_runtime")
+    if not isinstance(runtime, Mapping) and isinstance(runtime_proof, Mapping):
+        runtime = runtime_proof.get("runtime_adapter_manifest")
+    if not isinstance(runtime, Mapping):
+        return {}
+    fields: dict[str, Any] = {"tensor_factorize_receiver_runtime": dict(runtime)}
+    runtime_dir = _nonempty_string(runtime.get("runtime_dir"))
+    if runtime_dir is not None:
+        fields["candidate_runtime_dir"] = runtime_dir
+        fields["tensor_factorize_runtime_dir"] = runtime_dir
+    runtime_manifest_path = _nonempty_string(runtime.get("runtime_manifest_path"))
+    if runtime_manifest_path is not None:
+        fields["tensor_factorize_runtime_manifest_path"] = runtime_manifest_path
+    source_runtime_dir = _nonempty_string(runtime.get("source_runtime_dir"))
+    if source_runtime_dir is not None:
+        fields["tensor_factorize_source_runtime_dir"] = source_runtime_dir
+    runtime_tree_sha = _string_or_none(runtime.get("runtime_tree_sha256"))
+    if runtime_tree_sha is not None:
+        fields["candidate_runtime_tree_sha256"] = runtime_tree_sha
+        fields["tensor_factorize_receiver_runtime_tree_sha256"] = runtime_tree_sha
     return fields
 
 
@@ -629,7 +661,37 @@ def _chain_runtime_context_fields(chain: Mapping[str, Any]) -> dict[str, Any]:
         value = _nonempty_string(chain.get(key))
         if value is not None:
             out[key] = value
+    runtime_tree_sha = _chain_runtime_tree_sha256(chain)
+    if runtime_tree_sha is not None:
+        out["candidate_runtime_tree_sha256"] = runtime_tree_sha
+        if chain.get("schema") == "byte_range_entropy_recode_chain_v1":
+            out["byte_range_entropy_recode_runtime_tree_sha256"] = runtime_tree_sha
     return out
+
+
+def _chain_runtime_tree_sha256(chain: Mapping[str, Any]) -> str | None:
+    for key in ("candidate_runtime_tree_sha256", "runtime_tree_sha256"):
+        value = _string_or_none(chain.get(key))
+        if value is not None:
+            return value
+    steps = chain.get("chain_steps")
+    if not isinstance(steps, list):
+        return None
+    preferred_steps = ("build_runtime_adapter", "build_receiver_proof")
+    for preferred in preferred_steps:
+        for step in steps:
+            if not isinstance(step, Mapping) or step.get("step_id") != preferred:
+                continue
+            value = _string_or_none(step.get("runtime_tree_sha256"))
+            if value is not None:
+                return value
+    for step in steps:
+        if not isinstance(step, Mapping):
+            continue
+        value = _string_or_none(step.get("runtime_tree_sha256"))
+        if value is not None:
+            return value
+    return None
 
 
 def _candidate_id(chain: Mapping[str, Any], *, schema: str, archive_sha: str) -> str:

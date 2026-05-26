@@ -401,7 +401,8 @@ def run_tensor_factorize_receiver_smoke(
     with tempfile.TemporaryDirectory(prefix="tensor-factorize-smoke-") as tmp:
         archive_dir = Path(tmp) / "archive"
         archive_dir.mkdir()
-        shutil.copy2(archive, archive_dir / ARCHIVE_NAME)
+        with zipfile.ZipFile(archive, "r") as zf:
+            zf.extractall(archive_dir)
         command = [
             str(runtime / WRAPPER_SH),
             str(archive_dir),
@@ -794,15 +795,56 @@ def _try_decode_tensor_packet(payload: bytes) -> bytes | None:
         return None
 
 
+def _write_member_file(root: Path, name: str, payload: bytes) -> None:
+    destination = (root / name).resolve()
+    root_resolved = root.resolve()
+    if destination != root_resolved and root_resolved not in destination.parents:
+        raise RuntimeError(f"refusing unsafe reconstructed member path: {name}")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_bytes(payload)
+
+
+def _write_reconstructed_payload(
+    target: zipfile.ZipFile,
+    member_root: Path,
+    name: str,
+    payload: bytes,
+) -> None:
+    replacement = _try_decode_tensor_packet(payload)
+    out_payload = payload if replacement is None else replacement
+    target.writestr(name, out_payload)
+    _write_member_file(member_root, name, out_payload)
+
+
 def _expand_archive(source_archive: Path, output_archive: Path) -> None:
+    member_root = output_archive.parent
     with zipfile.ZipFile(source_archive, "r") as source, zipfile.ZipFile(output_archive, "w") as target:
         for info in source.infolist():
             if info.is_dir():
                 target.mkdir(info)
+                (member_root / info.filename).mkdir(parents=True, exist_ok=True)
                 continue
             payload = source.read(info.filename)
-            replacement = _try_decode_tensor_packet(payload)
-            target.writestr(info, payload if replacement is None else replacement)
+            _write_reconstructed_payload(
+                target,
+                member_root,
+                info.filename,
+                payload,
+            )
+
+
+def _expand_archive_dir(source_dir: Path, output_archive: Path) -> None:
+    member_root = output_archive.parent
+    with zipfile.ZipFile(output_archive, "w") as target:
+        for path in sorted(source_dir.rglob("*"), key=lambda item: item.relative_to(source_dir).as_posix()):
+            if path.is_dir():
+                continue
+            _write_reconstructed_payload(
+                target,
+                member_root,
+                path.relative_to(source_dir).as_posix(),
+                path.read_bytes(),
+            )
 
 
 def main(argv: list[str]) -> int:
@@ -810,14 +852,15 @@ def main(argv: list[str]) -> int:
         raise SystemExit("usage: inflate.py <archive_dir> <output_dir> <file_list>")
     archive_dir, output_dir, file_list = map(Path, argv)
     source_archive = archive_dir / "archive.zip"
-    if not source_archive.is_file():
-        raise SystemExit(f"archive.zip not found: {source_archive}")
     here = Path(__file__).resolve().parent
     source_runtime = here / "source_runtime"
     with tempfile.TemporaryDirectory(prefix="tensor-factorize-receiver-") as tmp:
         shadow_dir = Path(tmp) / "archive"
         shadow_dir.mkdir()
-        _expand_archive(source_archive, shadow_dir / "archive.zip")
+        if source_archive.is_file():
+            _expand_archive(source_archive, shadow_dir / "archive.zip")
+        else:
+            _expand_archive_dir(archive_dir, shadow_dir / "archive.zip")
         inflate_sh = source_runtime / "inflate.sh"
         inflate_py = source_runtime / "inflate.py"
         if inflate_sh.is_file():

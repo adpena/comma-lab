@@ -11,6 +11,7 @@ that closure while preserving the planning-only authority boundary.
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import shutil
 import stat
@@ -25,7 +26,7 @@ from tac.optimization.proxy_candidate_contract import (
     require_no_truthy_authority_fields,
 )
 from tac.optimizer.exact_readiness import runtime_dependency_manifest
-from tac.repo_io import json_text, read_json, sha256_file
+from tac.repo_io import json_text, read_json, sha256_file, tree_sha256
 from tac.zipwire_archive import inspect_zip_headers
 
 SUBMISSION_CLOSURE_REPORT_SCHEMA = "materializer_submission_runtime_closure_report.v1"
@@ -261,6 +262,117 @@ def _derive_source_runtime_dir(
             return candidate
     raise MaterializerSubmissionClosureError(
         "source_runtime_dir_missing_or_inflate_sh_missing"
+    )
+
+
+def _mapping_value(payload: Mapping[str, Any], key: str) -> Mapping[str, Any]:
+    value = payload.get(key)
+    return value if isinstance(value, Mapping) else {}
+
+
+def _proof_runtime_adapter_manifest(proof_payload: Mapping[str, Any]) -> Mapping[str, Any]:
+    return _mapping_value(proof_payload, "runtime_adapter_manifest")
+
+
+def _runtime_adapter_candidate_values(
+    row: Mapping[str, Any],
+    proof_payload: Mapping[str, Any],
+) -> list[Any]:
+    values: list[Any] = []
+    proof_adapter = _proof_runtime_adapter_manifest(proof_payload)
+    for payload in (
+        proof_adapter,
+        _mapping_value(proof_payload, "packet_member_merge_receiver_runtime"),
+        _mapping_value(proof_payload, "tensor_factorize_receiver_runtime"),
+        _mapping_value(proof_payload, "renderer_payload_dfl1_receiver_runtime"),
+        _mapping_value(row, "packet_member_merge_receiver_runtime"),
+        _mapping_value(row, "tensor_factorize_receiver_runtime"),
+        _mapping_value(row, "renderer_payload_dfl1_receiver_runtime"),
+        row,
+    ):
+        for key in (
+            "runtime_dir",
+            "candidate_runtime_dir",
+            "packet_member_merge_runtime_dir",
+            "tensor_factorize_runtime_dir",
+            "renderer_payload_dfl1_candidate_runtime_dir",
+        ):
+            values.append(payload.get(key))
+    return values
+
+
+def _runtime_adapter_expected_shas(
+    row: Mapping[str, Any],
+    proof_payload: Mapping[str, Any],
+) -> set[str]:
+    shas: set[str] = set()
+    for payload in (
+        _proof_runtime_adapter_manifest(proof_payload),
+        _mapping_value(proof_payload, "packet_member_merge_receiver_runtime"),
+        _mapping_value(proof_payload, "tensor_factorize_receiver_runtime"),
+        _mapping_value(proof_payload, "renderer_payload_dfl1_receiver_runtime"),
+        _mapping_value(row, "packet_member_merge_receiver_runtime"),
+        _mapping_value(row, "tensor_factorize_receiver_runtime"),
+        _mapping_value(row, "renderer_payload_dfl1_receiver_runtime"),
+        row,
+    ):
+        for key in (
+            "runtime_tree_sha256",
+            "candidate_runtime_tree_sha256",
+            "packet_member_merge_receiver_runtime_tree_sha256",
+            "tensor_factorize_receiver_runtime_tree_sha256",
+            "renderer_payload_dfl1_runtime_tree_sha256",
+        ):
+            value = payload.get(key)
+            if isinstance(value, str) and len(value) == 64:
+                shas.add(value.lower())
+    return shas
+
+
+def _resolve_runtime_adapter_dir(
+    row: Mapping[str, Any],
+    *,
+    proof_payload: Mapping[str, Any],
+    repo_root: Path,
+    queue_dir: Path,
+) -> Path:
+    candidates: list[Path] = []
+    seen: set[str] = set()
+    for value in _runtime_adapter_candidate_values(row, proof_payload):
+        resolved = _resolve_path(value, repo_root=repo_root, queue_dir=queue_dir)
+        if resolved is None:
+            continue
+        key = resolved.resolve(strict=False).as_posix()
+        if key not in seen:
+            seen.add(key)
+            candidates.append(resolved)
+    if not candidates:
+        raise MaterializerSubmissionClosureError("runtime_adapter_dir_missing")
+
+    expected_shas = _runtime_adapter_expected_shas(row, proof_payload)
+    existing: list[Path] = []
+    mismatches: list[dict[str, Any]] = []
+    for candidate in candidates:
+        if not candidate.is_dir() or not (candidate / "inflate.sh").is_file():
+            continue
+        existing.append(candidate)
+        runtime_sha = tree_sha256(candidate).lower()
+        if not expected_shas or runtime_sha in expected_shas:
+            return candidate
+        mismatches.append(
+            {
+                "path": _repo_rel(candidate, repo_root),
+                "runtime_tree_sha256": runtime_sha,
+            }
+        )
+    if mismatches:
+        raise MaterializerSubmissionClosureError(
+            "runtime_adapter_tree_sha_mismatch:" + json.dumps(mismatches, sort_keys=True)
+        )
+    if existing:
+        return existing[0]
+    raise MaterializerSubmissionClosureError(
+        "runtime_adapter_dir_missing_or_inflate_sh_missing"
     )
 
 
@@ -589,12 +701,6 @@ def build_materializer_submission_runtime_closure(
     if expected_bytes is not None and archive_bytes != expected_bytes:
         raise MaterializerSubmissionClosureError("candidate_archive_bytes_mismatch")
 
-    source_runtime = _derive_source_runtime_dir(
-        row,
-        repo_root=repo,
-        queue_dir=queue_dir,
-        source_runtime_dir=source_runtime_dir,
-    )
     submission_dir = _resolve_path(submission_dir_out, repo_root=repo)
     closed_queue_path = _resolve_path(closed_source_queue_out, repo_root=repo)
     closure_report_path = _resolve_path(closure_report_out, repo_root=repo)
@@ -602,22 +708,42 @@ def build_materializer_submission_runtime_closure(
         raise MaterializerSubmissionClosureError("closure_output_path_missing")
     _prepare_submission_dir(submission_dir, overwrite=overwrite, repo_root=repo)
 
-    copied_runtime_files = _copy_runtime_tree(source_runtime, submission_dir)
-    if not (submission_dir / "inflate.sh").is_file():
-        raise MaterializerSubmissionClosureError("copied_runtime_inflate_sh_missing")
-
-    archive_out = submission_dir / "archive.zip"
-    shutil.copy2(candidate_archive, archive_out)
     proof_source = _resolve_path(
         row.get("runtime_consumption_proof_path"),
         repo_root=repo,
         queue_dir=queue_dir,
     )
-    proof_out = submission_dir / "runtime_consumption_proof.json"
-    if proof_source is not None and proof_source.is_file():
-        shutil.copy2(proof_source, proof_out)
-    else:
+    if proof_source is None or not proof_source.is_file():
         raise MaterializerSubmissionClosureError("runtime_consumption_proof_missing")
+    proof_payload = read_json(proof_source)
+    if not isinstance(proof_payload, Mapping):
+        raise MaterializerSubmissionClosureError("runtime_consumption_proof_not_object")
+
+    if runtime_adapter_ready:
+        runtime_source = _resolve_runtime_adapter_dir(
+            row,
+            proof_payload=proof_payload,
+            repo_root=repo,
+            queue_dir=queue_dir,
+        )
+        closure_kind = "runtime_adapter_closure_with_candidate_archive"
+    else:
+        runtime_source = _derive_source_runtime_dir(
+            row,
+            repo_root=repo,
+            queue_dir=queue_dir,
+            source_runtime_dir=source_runtime_dir,
+        )
+        closure_kind = "source_runtime_static_closure_with_candidate_archive"
+
+    copied_runtime_files = _copy_runtime_tree(runtime_source, submission_dir)
+    if not (submission_dir / "inflate.sh").is_file():
+        raise MaterializerSubmissionClosureError("copied_runtime_inflate_sh_missing")
+
+    archive_out = submission_dir / "archive.zip"
+    shutil.copy2(candidate_archive, archive_out)
+    proof_out = submission_dir / "runtime_consumption_proof.json"
+    shutil.copy2(proof_source, proof_out)
 
     _write_report_txt(
         submission_dir=submission_dir,
@@ -634,6 +760,8 @@ def build_materializer_submission_runtime_closure(
     archive_manifest_path = submission_dir / "archive_manifest.json"
     _write_json(archive_manifest_path, archive_manifest)
     runtime_manifest = runtime_dependency_manifest(submission_dir, repo)
+    adapter_manifest = _proof_runtime_adapter_manifest(proof_payload)
+    adapter_runtime_tree_sha = tree_sha256(runtime_source) if runtime_adapter_ready else None
 
     closed_row = dict(row)
     closed_row.update(
@@ -647,6 +775,7 @@ def build_materializer_submission_runtime_closure(
             "candidate_archive_bytes": archive_bytes,
             "submission_dir": _repo_rel(submission_dir, repo),
             "archive_manifest_path": _repo_rel(archive_manifest_path, repo),
+            "runtime_source_dir": _repo_rel(runtime_source, repo),
             "runtime_tree_sha256": runtime_manifest["runtime_tree_sha256"],
             "runtime_content_tree_sha256": runtime_manifest[
                 "runtime_content_tree_sha256"
@@ -657,9 +786,7 @@ def build_materializer_submission_runtime_closure(
                 closure_report_path,
                 repo,
             ),
-            "materializer_submission_closure_kind": (
-                "source_runtime_static_closure_with_candidate_archive"
-            ),
+            "materializer_submission_closure_kind": closure_kind,
             "candidate_archive_path_unverified": False,
             "evidence_semantics": (
                 "byte_closed_submission_runtime_closure_pending_exact_readiness"
@@ -671,6 +798,21 @@ def build_materializer_submission_runtime_closure(
             **FALSE_AUTHORITY,
         }
     )
+    if runtime_adapter_ready:
+        closed_row.update(
+            {
+                "candidate_runtime_dir": _repo_rel(runtime_source, repo),
+                "candidate_runtime_tree_sha256": adapter_runtime_tree_sha,
+                "runtime_adapter_manifest": dict(adapter_manifest),
+            }
+        )
+        adapter_schema = adapter_manifest.get("schema")
+        if adapter_schema == "packet_member_merge_receiver_runtime.v1":
+            closed_row["packet_member_merge_receiver_runtime"] = dict(adapter_manifest)
+        elif adapter_schema == "tensor_factorize_receiver_runtime.v1":
+            closed_row["tensor_factorize_receiver_runtime"] = dict(adapter_manifest)
+        elif adapter_schema == "renderer_payload_dfl1_receiver_runtime.v1":
+            closed_row["renderer_payload_dfl1_receiver_runtime"] = dict(adapter_manifest)
     closed_queue = _closed_queue_payload(
         source_queue=queue_payload,
         source_row=row,
@@ -692,7 +834,9 @@ def build_materializer_submission_runtime_closure(
             "candidate_id": row.get("candidate_id"),
             "target_kind": row.get("target_kind"),
             "submission_dir": _repo_rel(submission_dir, repo),
-            "source_runtime_dir": _repo_rel(source_runtime, repo),
+            "source_runtime_dir": _repo_rel(runtime_source, repo),
+            "runtime_source_dir": _repo_rel(runtime_source, repo),
+            "materializer_submission_closure_kind": closure_kind,
             "archive_path": _repo_rel(archive_out, repo),
             "archive_sha256": archive_sha,
             "archive_bytes": archive_bytes,

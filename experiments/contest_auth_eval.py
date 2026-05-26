@@ -848,7 +848,10 @@ def _resolve_auth_artifact_output_under_work_dir(
     """Resolve auth-side MLX artifact paths without escaping eval custody."""
 
     work_root = work_dir.resolve()
-    target = output_path if output_path.is_absolute() else work_root / output_path
+    if allow_outside_work_dir:
+        target = output_path if output_path.is_absolute() else Path.cwd() / output_path
+    else:
+        target = output_path if output_path.is_absolute() else work_root / output_path
     resolved = target.resolve(strict=False)
     if allow_outside_work_dir:
         return resolved
@@ -1175,6 +1178,7 @@ def _run_inflate(inflate_sh: Path, archive_dir: Path, inflated_dir: Path,
     env.setdefault("PYTHON", sys.executable)
     env.setdefault("PYTHON_BIN", sys.executable)
     env.setdefault("PACT_PYTHON_BIN", sys.executable)
+    env.setdefault("UV_PYTHON", sys.executable)
     if extra_env:
         env.update(extra_env)
         print(f"[inflate] diagnostic env override keys: {sorted(extra_env)}")

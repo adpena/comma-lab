@@ -577,6 +577,46 @@ def test_packet_member_merge_materializer_harvest_preserves_receiver_runtime(
     ]
 
 
+def test_candidate_queue_merge_prefers_adapter_ready_runtime_contract(
+    tmp_path: Path,
+) -> None:
+    ready_manifest = _packet_member_merge_materializer_manifest(tmp_path)
+    stale_payload = json.loads(ready_manifest.read_text(encoding="utf-8"))
+    stale_payload.update(
+        {
+            "runtime_adapter_ready": False,
+            "receiver_contract_satisfied": False,
+            "candidate_runtime_adapter_blocker_cleared": False,
+            "candidate_runtime_dir": "outputs/stale_source_runtime",
+            "candidate_runtime_tree_sha256": "a" * 64,
+            "packet_member_merge_runtime_dir": "outputs/stale_source_runtime",
+            "packet_member_merge_receiver_runtime_tree_sha256": "a" * 64,
+            "packet_member_merge_receiver_runtime": {
+                "runtime_dir": "outputs/stale_source_runtime",
+                "runtime_tree_sha256": "a" * 64,
+            },
+        }
+    )
+    stale_manifest = _write_json(
+        tmp_path / "outputs/stale_packet_member_merge_materializer.json",
+        stale_payload,
+    )
+
+    queue = build_candidate_queue([stale_manifest, ready_manifest], repo_root=tmp_path)
+    row = queue["top_k"][0]
+
+    assert queue["n_candidates"] == 1
+    assert row["runtime_adapter_ready"] is True
+    assert row["receiver_contract_satisfied"] is True
+    assert row["candidate_runtime_adapter_blocker_cleared"] is True
+    assert row["candidate_runtime_dir"] == "outputs/candidate.runtime"
+    assert row["candidate_runtime_tree_sha256"] == "b" * 64
+    assert row["packet_member_merge_receiver_runtime"]["runtime_dir"] == (
+        "outputs/candidate.runtime"
+    )
+    assert row["packet_member_merge_receiver_runtime_tree_sha256"] == "b" * 64
+
+
 def test_materializer_chain_harvest_preserves_runtime_context(
     tmp_path: Path,
 ) -> None:

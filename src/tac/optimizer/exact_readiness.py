@@ -1445,6 +1445,61 @@ def _byte_range_runtime_proof_ranges_present(proof: Mapping[str, Any]) -> bool:
     return isinstance(ranges, list) and any(isinstance(row, Mapping) for row in ranges)
 
 
+def _runtime_proof_adapter_tree_sha(proof: Mapping[str, Any]) -> str | None:
+    adapter = proof.get("runtime_adapter_manifest")
+    if isinstance(adapter, Mapping) and is_sha256(adapter.get("runtime_tree_sha256")):
+        return str(adapter["runtime_tree_sha256"]).lower()
+    for key in ("runtime_tree_sha256", "candidate_runtime_tree_sha256"):
+        value = proof.get(key)
+        if is_sha256(value):
+            return str(value).lower()
+    return None
+
+
+def _row_adapter_runtime_tree_sha(row: Mapping[str, Any]) -> str | None:
+    for key in (
+        "candidate_runtime_tree_sha256",
+        "packet_member_merge_receiver_runtime_tree_sha256",
+        "tensor_factorize_receiver_runtime_tree_sha256",
+        "renderer_payload_dfl1_runtime_tree_sha256",
+    ):
+        value = row.get(key)
+        if is_sha256(value):
+            return str(value).lower()
+    for key in (
+        "runtime_adapter_manifest",
+        "packet_member_merge_receiver_runtime",
+        "tensor_factorize_receiver_runtime",
+        "renderer_payload_dfl1_receiver_runtime",
+    ):
+        value = row.get(key)
+        if isinstance(value, Mapping) and is_sha256(value.get("runtime_tree_sha256")):
+            return str(value["runtime_tree_sha256"]).lower()
+    return None
+
+
+def _runtime_adapter_tree_sha_blockers(
+    row: Mapping[str, Any],
+    proof: Mapping[str, Any],
+    *,
+    facts: dict[str, Any],
+) -> list[str]:
+    if row.get("runtime_adapter_ready") is not True:
+        return []
+    proof_sha = _runtime_proof_adapter_tree_sha(proof)
+    row_sha = _row_adapter_runtime_tree_sha(row)
+    facts["runtime_consumption_proof_runtime_tree_sha256"] = proof_sha
+    facts["candidate_row_adapter_runtime_tree_sha256"] = row_sha
+    blockers: list[str] = []
+    if proof_sha is None:
+        blockers.append("runtime_consumption_proof_runtime_tree_sha_missing")
+    if row_sha is None:
+        blockers.append("candidate_row_runtime_tree_sha_missing_for_runtime_adapter")
+    if proof_sha is not None and row_sha is not None and proof_sha != row_sha:
+        blockers.append("runtime_consumption_proof_runtime_tree_sha_mismatch")
+    return blockers
+
+
 def validate_runtime_consumption_proof(
     row: Mapping[str, Any],
     *,
@@ -1552,6 +1607,9 @@ def validate_runtime_consumption_proof(
                 blockers.append("runtime_consumption_proof_archive_sha_missing")
             elif proof_archive_sha != archive_sha256:
                 blockers.append("runtime_consumption_proof_archive_sha_mismatch")
+        blockers.extend(
+            _runtime_adapter_tree_sha_blockers(row, proof_raw, facts=facts)
+        )
         expected_member_sha = row.get("candidate_member_sha256")
         if is_sha256(expected_member_sha):
             proof_member_sha = _family_agnostic_runtime_proof_member_sha(proof_raw)
@@ -1598,6 +1656,9 @@ def validate_runtime_consumption_proof(
                 blockers.append("runtime_consumption_proof_archive_sha_missing")
             elif proof_archive_sha != archive_sha256:
                 blockers.append("runtime_consumption_proof_archive_sha_mismatch")
+        blockers.extend(
+            _runtime_adapter_tree_sha_blockers(row, proof_raw, facts=facts)
+        )
         expected_member_sha = row.get("candidate_member_sha256")
         if is_sha256(expected_member_sha):
             proof_member_sha = _byte_range_runtime_proof_member_sha(proof_raw)

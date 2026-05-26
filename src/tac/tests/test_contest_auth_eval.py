@@ -545,8 +545,8 @@ def test_run_inflate_defaults_python_to_current_interpreter(
     Public PR101/A1-style packets import dependencies such as brotli from the
     evaluator environment. If contest_auth_eval is launched with
     `.venv/bin/python`, the inflate subprocess should inherit that interpreter
-    unless the caller explicitly overrides `PYTHON`, `PYTHON_BIN`, or
-    `PACT_PYTHON_BIN`.
+    unless the caller explicitly overrides `PYTHON`, `PYTHON_BIN`,
+    `PACT_PYTHON_BIN`, or `UV_PYTHON`.
     """
     captured: dict[str, str] = {}
     video_names = tmp_path / "names.txt"
@@ -568,6 +568,7 @@ def test_run_inflate_defaults_python_to_current_interpreter(
     monkeypatch.delenv("PYTHON", raising=False)
     monkeypatch.delenv("PYTHON_BIN", raising=False)
     monkeypatch.delenv("PACT_PYTHON_BIN", raising=False)
+    monkeypatch.delenv("UV_PYTHON", raising=False)
     monkeypatch.setattr(cae.subprocess, "run", fake_run)
 
     cae._run_inflate(inflate_sh, archive_dir, inflated_dir, video_names, timeout=5)
@@ -575,6 +576,7 @@ def test_run_inflate_defaults_python_to_current_interpreter(
     assert captured["PYTHON"] == sys.executable
     assert captured["PYTHON_BIN"] == sys.executable
     assert captured["PACT_PYTHON_BIN"] == sys.executable
+    assert captured["UV_PYTHON"] == sys.executable
 
 
 def test_run_inflate_applies_diagnostic_env_to_inflate_only(
@@ -611,6 +613,28 @@ def test_run_inflate_applies_diagnostic_env_to_inflate_only(
     )
 
     assert captured["CUDA_VISIBLE_DEVICES"] == ""
+
+
+def test_auth_artifact_output_outside_work_dir_resolves_relative_to_cwd(
+    cae,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    work_dir = tmp_path / "work"
+    cwd = tmp_path / "repo"
+    work_dir.mkdir()
+    cwd.mkdir()
+    monkeypatch.chdir(cwd)
+
+    resolved = cae._resolve_auth_artifact_output_under_work_dir(
+        work_dir,
+        Path("queue/artifact.json"),
+        label="scorer-input hash artifact",
+        allow_outside_work_dir=True,
+    )
+
+    assert resolved == cwd / "queue" / "artifact.json"
+    assert not str(resolved).startswith(str(work_dir))
 
 
 def test_parse_inflate_env_overrides_allowlist(cae) -> None:

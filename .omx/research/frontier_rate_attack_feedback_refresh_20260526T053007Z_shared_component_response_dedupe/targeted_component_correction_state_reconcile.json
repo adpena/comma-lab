@@ -1,0 +1,967 @@
+{
+  "after": {
+    "mode": "running",
+    "orphaned_step_count": 25,
+    "orphaned_steps": [
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_drop_within_selected_set_masked_boundary",
+        "last_event": {
+          "orphaned_by_queue_definition": "frontier_rate_attack_feedback_materialization_requests_codex_component_correction",
+          "previous_status": "queued",
+          "reason": "grouped_targeted_component_queue_replaces_per_family_duplicate_cpu_mlx_steps"
+        },
+        "status": "skipped",
+        "step_id": "build_mlx_component_cache",
+        "updated_at_utc": "2026-05-26T05:31:11Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_drop_within_selected_set_masked_boundary",
+        "last_event": {
+          "orphaned_by_queue_definition": "frontier_rate_attack_feedback_materialization_requests_codex_component_correction",
+          "previous_status": "queued",
+          "reason": "grouped_targeted_component_queue_replaces_per_family_duplicate_cpu_mlx_steps"
+        },
+        "status": "skipped",
+        "step_id": "emit_targeted_component_correction_work_order",
+        "updated_at_utc": "2026-05-26T05:31:11Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_drop_within_selected_set_masked_boundary",
+        "last_event": {
+          "orphaned_by_queue_definition": "frontier_rate_attack_feedback_materialization_requests_codex_component_correction",
+          "previous_status": "queued",
+          "reason": "grouped_targeted_component_queue_replaces_per_family_duplicate_cpu_mlx_steps"
+        },
+        "status": "skipped",
+        "step_id": "harvest_targeted_component_correction_response",
+        "updated_at_utc": "2026-05-26T05:31:11Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_drop_within_selected_set_masked_boundary",
+        "last_event": {
+          "orphaned_by_queue_definition": "frontier_rate_attack_feedback_materialization_requests_codex_component_correction",
+          "previous_status": "queued",
+          "reason": "grouped_targeted_component_queue_replaces_per_family_duplicate_cpu_mlx_steps"
+        },
+        "status": "skipped",
+        "step_id": "local_cpu_component_advisory",
+        "updated_at_utc": "2026-05-26T05:31:11Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_drop_within_selected_set_masked_boundary",
+        "last_event": {
+          "orphaned_by_queue_definition": "frontier_rate_attack_feedback_materialization_requests_codex_component_correction",
+          "previous_status": "queued",
+          "reason": "grouped_targeted_component_queue_replaces_per_family_duplicate_cpu_mlx_steps"
+        },
+        "status": "skipped",
+        "step_id": "local_mlx_component_response",
+        "updated_at_utc": "2026-05-26T05:31:11Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_full_video_batch_residual_budget_reallocation",
+        "last_event": {
+          "orphaned_by_queue_definition": "frontier_rate_attack_feedback_materialization_requests_codex_component_correction",
+          "previous_status": "queued",
+          "reason": "grouped_targeted_component_queue_replaces_per_family_duplicate_cpu_mlx_steps"
+        },
+        "status": "skipped",
+        "step_id": "build_mlx_component_cache",
+        "updated_at_utc": "2026-05-26T05:31:11Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_full_video_batch_residual_budget_reallocation",
+        "last_event": {
+          "orphaned_by_queue_definition": "frontier_rate_attack_feedback_materialization_requests_codex_component_correction",
+          "previous_status": "queued",
+          "reason": "grouped_targeted_component_queue_replaces_per_family_duplicate_cpu_mlx_steps"
+        },
+        "status": "skipped",
+        "step_id": "emit_targeted_component_correction_work_order",
+        "updated_at_utc": "2026-05-26T05:31:11Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_full_video_batch_residual_budget_reallocation",
+        "last_event": {
+          "orphaned_by_queue_definition": "frontier_rate_attack_feedback_materialization_requests_codex_component_correction",
+          "previous_status": "queued",
+          "reason": "grouped_targeted_component_queue_replaces_per_family_duplicate_cpu_mlx_steps"
+        },
+        "status": "skipped",
+        "step_id": "harvest_targeted_component_correction_response",
+        "updated_at_utc": "2026-05-26T05:31:11Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_full_video_batch_residual_budget_reallocation",
+        "last_event": {
+          "orphaned_by_queue_definition": "frontier_rate_attack_feedback_materialization_requests_codex_component_correction",
+          "previous_status": "queued",
+          "reason": "grouped_targeted_component_queue_replaces_per_family_duplicate_cpu_mlx_steps"
+        },
+        "status": "skipped",
+        "step_id": "local_cpu_component_advisory",
+        "updated_at_utc": "2026-05-26T05:31:11Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_full_video_batch_residual_budget_reallocation",
+        "last_event": {
+          "orphaned_by_queue_definition": "frontier_rate_attack_feedback_materialization_requests_codex_component_correction",
+          "previous_status": "queued",
+          "reason": "grouped_targeted_component_queue_replaces_per_family_duplicate_cpu_mlx_steps"
+        },
+        "status": "skipped",
+        "step_id": "local_mlx_component_response",
+        "updated_at_utc": "2026-05-26T05:31:11Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_inverse_scorer_cell_basis_expansion",
+        "last_event": {
+          "orphaned_by_queue_definition": "frontier_rate_attack_feedback_materialization_requests_codex_component_correction",
+          "previous_status": "queued",
+          "reason": "grouped_targeted_component_queue_replaces_per_family_duplicate_cpu_mlx_steps"
+        },
+        "status": "skipped",
+        "step_id": "build_mlx_component_cache",
+        "updated_at_utc": "2026-05-26T05:31:11Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_inverse_scorer_cell_basis_expansion",
+        "last_event": {
+          "orphaned_by_queue_definition": "frontier_rate_attack_feedback_materialization_requests_codex_component_correction",
+          "previous_status": "queued",
+          "reason": "grouped_targeted_component_queue_replaces_per_family_duplicate_cpu_mlx_steps"
+        },
+        "status": "skipped",
+        "step_id": "emit_targeted_component_correction_work_order",
+        "updated_at_utc": "2026-05-26T05:31:11Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_inverse_scorer_cell_basis_expansion",
+        "last_event": {
+          "orphaned_by_queue_definition": "frontier_rate_attack_feedback_materialization_requests_codex_component_correction",
+          "previous_status": "queued",
+          "reason": "grouped_targeted_component_queue_replaces_per_family_duplicate_cpu_mlx_steps"
+        },
+        "status": "skipped",
+        "step_id": "harvest_targeted_component_correction_response",
+        "updated_at_utc": "2026-05-26T05:31:11Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_inverse_scorer_cell_basis_expansion",
+        "last_event": {
+          "orphaned_by_queue_definition": "frontier_rate_attack_feedback_materialization_requests_codex_component_correction",
+          "previous_status": "queued",
+          "reason": "grouped_targeted_component_queue_replaces_per_family_duplicate_cpu_mlx_steps"
+        },
+        "status": "skipped",
+        "step_id": "local_cpu_component_advisory",
+        "updated_at_utc": "2026-05-26T05:31:11Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_inverse_scorer_cell_basis_expansion",
+        "last_event": {
+          "orphaned_by_queue_definition": "frontier_rate_attack_feedback_materialization_requests_codex_component_correction",
+          "previous_status": "queued",
+          "reason": "grouped_targeted_component_queue_replaces_per_family_duplicate_cpu_mlx_steps"
+        },
+        "status": "skipped",
+        "step_id": "local_mlx_component_response",
+        "updated_at_utc": "2026-05-26T05:31:11Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_pose_stable_pair_frame_motion_correction",
+        "last_event": {
+          "orphaned_by_queue_definition": "frontier_rate_attack_feedback_materialization_requests_codex_component_correction",
+          "previous_status": "queued",
+          "reason": "grouped_targeted_component_queue_replaces_per_family_duplicate_cpu_mlx_steps"
+        },
+        "status": "skipped",
+        "step_id": "build_mlx_component_cache",
+        "updated_at_utc": "2026-05-26T05:31:11Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_pose_stable_pair_frame_motion_correction",
+        "last_event": {
+          "orphaned_by_queue_definition": "frontier_rate_attack_feedback_materialization_requests_codex_component_correction",
+          "previous_status": "queued",
+          "reason": "grouped_targeted_component_queue_replaces_per_family_duplicate_cpu_mlx_steps"
+        },
+        "status": "skipped",
+        "step_id": "emit_targeted_component_correction_work_order",
+        "updated_at_utc": "2026-05-26T05:31:11Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_pose_stable_pair_frame_motion_correction",
+        "last_event": {
+          "orphaned_by_queue_definition": "frontier_rate_attack_feedback_materialization_requests_codex_component_correction",
+          "previous_status": "queued",
+          "reason": "grouped_targeted_component_queue_replaces_per_family_duplicate_cpu_mlx_steps"
+        },
+        "status": "skipped",
+        "step_id": "harvest_targeted_component_correction_response",
+        "updated_at_utc": "2026-05-26T05:31:11Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_pose_stable_pair_frame_motion_correction",
+        "last_event": {
+          "orphaned_by_queue_definition": "frontier_rate_attack_feedback_materialization_requests_codex_component_correction",
+          "previous_status": "queued",
+          "reason": "grouped_targeted_component_queue_replaces_per_family_duplicate_cpu_mlx_steps"
+        },
+        "status": "skipped",
+        "step_id": "local_cpu_component_advisory",
+        "updated_at_utc": "2026-05-26T05:31:11Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_pose_stable_pair_frame_motion_correction",
+        "last_event": {
+          "orphaned_by_queue_definition": "frontier_rate_attack_feedback_materialization_requests_codex_component_correction",
+          "previous_status": "queued",
+          "reason": "grouped_targeted_component_queue_replaces_per_family_duplicate_cpu_mlx_steps"
+        },
+        "status": "skipped",
+        "step_id": "local_mlx_component_response",
+        "updated_at_utc": "2026-05-26T05:31:11Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_segnet_posenet_waterfill_region_repair",
+        "last_event": {
+          "orphaned_by_queue_definition": "frontier_rate_attack_feedback_materialization_requests_codex_component_correction",
+          "previous_status": "queued",
+          "reason": "grouped_targeted_component_queue_replaces_per_family_duplicate_cpu_mlx_steps"
+        },
+        "status": "skipped",
+        "step_id": "build_mlx_component_cache",
+        "updated_at_utc": "2026-05-26T05:31:11Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_segnet_posenet_waterfill_region_repair",
+        "last_event": {
+          "orphaned_by_queue_definition": "frontier_rate_attack_feedback_materialization_requests_codex_component_correction",
+          "previous_status": "queued",
+          "reason": "grouped_targeted_component_queue_replaces_per_family_duplicate_cpu_mlx_steps"
+        },
+        "status": "skipped",
+        "step_id": "emit_targeted_component_correction_work_order",
+        "updated_at_utc": "2026-05-26T05:31:11Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_segnet_posenet_waterfill_region_repair",
+        "last_event": {
+          "orphaned_by_queue_definition": "frontier_rate_attack_feedback_materialization_requests_codex_component_correction",
+          "previous_status": "queued",
+          "reason": "grouped_targeted_component_queue_replaces_per_family_duplicate_cpu_mlx_steps"
+        },
+        "status": "skipped",
+        "step_id": "harvest_targeted_component_correction_response",
+        "updated_at_utc": "2026-05-26T05:31:11Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_segnet_posenet_waterfill_region_repair",
+        "last_event": {
+          "orphaned_by_queue_definition": "frontier_rate_attack_feedback_materialization_requests_codex_component_correction",
+          "previous_status": "queued",
+          "reason": "grouped_targeted_component_queue_replaces_per_family_duplicate_cpu_mlx_steps"
+        },
+        "status": "skipped",
+        "step_id": "local_cpu_component_advisory",
+        "updated_at_utc": "2026-05-26T05:31:11Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_segnet_posenet_waterfill_region_repair",
+        "last_event": {
+          "orphaned_by_queue_definition": "frontier_rate_attack_feedback_materialization_requests_codex_component_correction",
+          "previous_status": "queued",
+          "reason": "grouped_targeted_component_queue_replaces_per_family_duplicate_cpu_mlx_steps"
+        },
+        "status": "skipped",
+        "step_id": "local_mlx_component_response",
+        "updated_at_utc": "2026-05-26T05:31:11Z"
+      }
+    ],
+    "queue_id": "frontier_rate_attack_feedback_materialization_requests_codex_component_correction",
+    "ready_steps": [
+      {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_frontier_targeted_component_correction_work_order.py",
+          "--targeted-component-correction-acquisition",
+          ".omx/research/frontier_rate_attack_feedback_refresh_20260526T053007Z_shared_component_response_dedupe/targeted_component_correction_acquisition.json",
+          "--acquisition-id",
+          "targeted_component_correction_packet_member_merge_cbe7d79124ba_segnet_posenet_waterfill_region_repair",
+          "--work-order-out",
+          "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_targeted_component_correction/frontier_rate_attack_feedback_materialization_requests_codex_component_correction/packet_member_merge_cbe7d79124ba/targeted_component_correction_packet_member_merge_cbe7d79124ba_segnet_posenet_waterfill_region_repair/work_order.json",
+          "--overwrite"
+        ],
+        "experiment_id": "packet_member_merge_cbe7d79124ba",
+        "priority": 1,
+        "queue_id": "frontier_rate_attack_feedback_materialization_requests_codex_component_correction",
+        "resource_kind": "local_io_heavy",
+        "step_hashes": {
+          "command_hash": "6f38aef86bf128414b575d167384e9338a71c7a6afe6097a92aa64943084e950",
+          "definition_hash": "2c842add1c315c9a48eef57baa81512a1a8c8b3b83107c2d66394181ebfc479e",
+          "postcondition_hash": "69241661dcf1f9f793d1cc2d664b9f6d5a12e955f752389fb1bd80b001801bc0"
+        },
+        "step_id": "emit_targeted_component_correction_work_order_01"
+      }
+    ],
+    "schema": "experiment_queue_summary.v1",
+    "status_counts": {
+      "queued": 14
+    },
+    "step_count": 14,
+    "steps": [
+      {
+        "attempts": 0,
+        "experiment_id": "packet_member_merge_cbe7d79124ba",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "build_mlx_component_cache",
+        "updated_at_utc": "2026-05-26T05:30:53Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "packet_member_merge_cbe7d79124ba",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "emit_targeted_component_correction_work_order",
+        "updated_at_utc": "2026-05-26T05:30:53Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "packet_member_merge_cbe7d79124ba",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "emit_targeted_component_correction_work_order_01",
+        "updated_at_utc": "2026-05-26T05:30:53Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "packet_member_merge_cbe7d79124ba",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "emit_targeted_component_correction_work_order_02",
+        "updated_at_utc": "2026-05-26T05:30:53Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "packet_member_merge_cbe7d79124ba",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "emit_targeted_component_correction_work_order_03",
+        "updated_at_utc": "2026-05-26T05:30:53Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "packet_member_merge_cbe7d79124ba",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "emit_targeted_component_correction_work_order_04",
+        "updated_at_utc": "2026-05-26T05:30:53Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "packet_member_merge_cbe7d79124ba",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "emit_targeted_component_correction_work_order_05",
+        "updated_at_utc": "2026-05-26T05:30:53Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "packet_member_merge_cbe7d79124ba",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "harvest_targeted_component_correction_response_01",
+        "updated_at_utc": "2026-05-26T05:30:53Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "packet_member_merge_cbe7d79124ba",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "harvest_targeted_component_correction_response_02",
+        "updated_at_utc": "2026-05-26T05:30:53Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "packet_member_merge_cbe7d79124ba",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "harvest_targeted_component_correction_response_03",
+        "updated_at_utc": "2026-05-26T05:30:53Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "packet_member_merge_cbe7d79124ba",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "harvest_targeted_component_correction_response_04",
+        "updated_at_utc": "2026-05-26T05:30:53Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "packet_member_merge_cbe7d79124ba",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "harvest_targeted_component_correction_response_05",
+        "updated_at_utc": "2026-05-26T05:30:53Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "packet_member_merge_cbe7d79124ba",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "local_cpu_component_advisory",
+        "updated_at_utc": "2026-05-26T05:30:53Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "packet_member_merge_cbe7d79124ba",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "local_mlx_component_response",
+        "updated_at_utc": "2026-05-26T05:30:53Z"
+      }
+    ]
+  },
+  "before": {
+    "mode": "running",
+    "orphaned_step_count": 25,
+    "orphaned_steps": [
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_drop_within_selected_set_masked_boundary",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "build_mlx_component_cache",
+        "updated_at_utc": "2026-05-26T05:23:48Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_drop_within_selected_set_masked_boundary",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "emit_targeted_component_correction_work_order",
+        "updated_at_utc": "2026-05-26T05:23:48Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_drop_within_selected_set_masked_boundary",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "harvest_targeted_component_correction_response",
+        "updated_at_utc": "2026-05-26T05:23:48Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_drop_within_selected_set_masked_boundary",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "local_cpu_component_advisory",
+        "updated_at_utc": "2026-05-26T05:23:48Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_drop_within_selected_set_masked_boundary",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "local_mlx_component_response",
+        "updated_at_utc": "2026-05-26T05:23:48Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_full_video_batch_residual_budget_reallocation",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "build_mlx_component_cache",
+        "updated_at_utc": "2026-05-26T05:23:48Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_full_video_batch_residual_budget_reallocation",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "emit_targeted_component_correction_work_order",
+        "updated_at_utc": "2026-05-26T05:23:48Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_full_video_batch_residual_budget_reallocation",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "harvest_targeted_component_correction_response",
+        "updated_at_utc": "2026-05-26T05:23:48Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_full_video_batch_residual_budget_reallocation",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "local_cpu_component_advisory",
+        "updated_at_utc": "2026-05-26T05:23:48Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_full_video_batch_residual_budget_reallocation",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "local_mlx_component_response",
+        "updated_at_utc": "2026-05-26T05:23:48Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_inverse_scorer_cell_basis_expansion",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "build_mlx_component_cache",
+        "updated_at_utc": "2026-05-26T05:23:48Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_inverse_scorer_cell_basis_expansion",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "emit_targeted_component_correction_work_order",
+        "updated_at_utc": "2026-05-26T05:23:48Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_inverse_scorer_cell_basis_expansion",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "harvest_targeted_component_correction_response",
+        "updated_at_utc": "2026-05-26T05:23:48Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_inverse_scorer_cell_basis_expansion",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "local_cpu_component_advisory",
+        "updated_at_utc": "2026-05-26T05:23:48Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_inverse_scorer_cell_basis_expansion",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "local_mlx_component_response",
+        "updated_at_utc": "2026-05-26T05:23:48Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_pose_stable_pair_frame_motion_correction",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "build_mlx_component_cache",
+        "updated_at_utc": "2026-05-26T05:23:48Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_pose_stable_pair_frame_motion_correction",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "emit_targeted_component_correction_work_order",
+        "updated_at_utc": "2026-05-26T05:23:48Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_pose_stable_pair_frame_motion_correction",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "harvest_targeted_component_correction_response",
+        "updated_at_utc": "2026-05-26T05:23:48Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_pose_stable_pair_frame_motion_correction",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "local_cpu_component_advisory",
+        "updated_at_utc": "2026-05-26T05:23:48Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_pose_stable_pair_frame_motion_correction",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "local_mlx_component_response",
+        "updated_at_utc": "2026-05-26T05:23:48Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_segnet_posenet_waterfill_region_repair",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "build_mlx_component_cache",
+        "updated_at_utc": "2026-05-26T05:23:48Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_segnet_posenet_waterfill_region_repair",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "emit_targeted_component_correction_work_order",
+        "updated_at_utc": "2026-05-26T05:23:48Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_segnet_posenet_waterfill_region_repair",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "harvest_targeted_component_correction_response",
+        "updated_at_utc": "2026-05-26T05:23:48Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_segnet_posenet_waterfill_region_repair",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "local_cpu_component_advisory",
+        "updated_at_utc": "2026-05-26T05:23:48Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_segnet_posenet_waterfill_region_repair",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "local_mlx_component_response",
+        "updated_at_utc": "2026-05-26T05:23:48Z"
+      }
+    ],
+    "queue_id": "frontier_rate_attack_feedback_materialization_requests_codex_component_correction",
+    "ready_steps": [
+      {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_frontier_targeted_component_correction_work_order.py",
+          "--targeted-component-correction-acquisition",
+          ".omx/research/frontier_rate_attack_feedback_refresh_20260526T053007Z_shared_component_response_dedupe/targeted_component_correction_acquisition.json",
+          "--acquisition-id",
+          "targeted_component_correction_packet_member_merge_cbe7d79124ba_segnet_posenet_waterfill_region_repair",
+          "--work-order-out",
+          "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_targeted_component_correction/frontier_rate_attack_feedback_materialization_requests_codex_component_correction/packet_member_merge_cbe7d79124ba/targeted_component_correction_packet_member_merge_cbe7d79124ba_segnet_posenet_waterfill_region_repair/work_order.json",
+          "--overwrite"
+        ],
+        "experiment_id": "packet_member_merge_cbe7d79124ba",
+        "priority": 1,
+        "queue_id": "frontier_rate_attack_feedback_materialization_requests_codex_component_correction",
+        "resource_kind": "local_io_heavy",
+        "step_hashes": {
+          "command_hash": "6f38aef86bf128414b575d167384e9338a71c7a6afe6097a92aa64943084e950",
+          "definition_hash": "2c842add1c315c9a48eef57baa81512a1a8c8b3b83107c2d66394181ebfc479e",
+          "postcondition_hash": "69241661dcf1f9f793d1cc2d664b9f6d5a12e955f752389fb1bd80b001801bc0"
+        },
+        "step_id": "emit_targeted_component_correction_work_order_01"
+      }
+    ],
+    "schema": "experiment_queue_summary.v1",
+    "status_counts": {
+      "queued": 14
+    },
+    "step_count": 14,
+    "steps": [
+      {
+        "attempts": 0,
+        "experiment_id": "packet_member_merge_cbe7d79124ba",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "build_mlx_component_cache",
+        "updated_at_utc": "2026-05-26T05:30:53Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "packet_member_merge_cbe7d79124ba",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "emit_targeted_component_correction_work_order",
+        "updated_at_utc": "2026-05-26T05:30:53Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "packet_member_merge_cbe7d79124ba",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "emit_targeted_component_correction_work_order_01",
+        "updated_at_utc": "2026-05-26T05:30:53Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "packet_member_merge_cbe7d79124ba",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "emit_targeted_component_correction_work_order_02",
+        "updated_at_utc": "2026-05-26T05:30:53Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "packet_member_merge_cbe7d79124ba",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "emit_targeted_component_correction_work_order_03",
+        "updated_at_utc": "2026-05-26T05:30:53Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "packet_member_merge_cbe7d79124ba",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "emit_targeted_component_correction_work_order_04",
+        "updated_at_utc": "2026-05-26T05:30:53Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "packet_member_merge_cbe7d79124ba",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "emit_targeted_component_correction_work_order_05",
+        "updated_at_utc": "2026-05-26T05:30:53Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "packet_member_merge_cbe7d79124ba",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "harvest_targeted_component_correction_response_01",
+        "updated_at_utc": "2026-05-26T05:30:53Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "packet_member_merge_cbe7d79124ba",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "harvest_targeted_component_correction_response_02",
+        "updated_at_utc": "2026-05-26T05:30:53Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "packet_member_merge_cbe7d79124ba",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "harvest_targeted_component_correction_response_03",
+        "updated_at_utc": "2026-05-26T05:30:53Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "packet_member_merge_cbe7d79124ba",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "harvest_targeted_component_correction_response_04",
+        "updated_at_utc": "2026-05-26T05:30:53Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "packet_member_merge_cbe7d79124ba",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "harvest_targeted_component_correction_response_05",
+        "updated_at_utc": "2026-05-26T05:30:53Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "packet_member_merge_cbe7d79124ba",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "local_cpu_component_advisory",
+        "updated_at_utc": "2026-05-26T05:30:53Z"
+      },
+      {
+        "attempts": 0,
+        "experiment_id": "packet_member_merge_cbe7d79124ba",
+        "last_event": null,
+        "status": "queued",
+        "step_id": "local_mlx_component_response",
+        "updated_at_utc": "2026-05-26T05:30:53Z"
+      }
+    ]
+  },
+  "blocking_orphan_count_after": 0,
+  "blocking_orphan_count_before": 25,
+  "promotion_eligible": false,
+  "queue_id": "frontier_rate_attack_feedback_materialization_requests_codex_component_correction",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "reason": "grouped_targeted_component_queue_replaces_per_family_duplicate_cpu_mlx_steps",
+  "retired_step_count": 25,
+  "retired_steps": [
+    {
+      "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_drop_within_selected_set_masked_boundary",
+      "new_status": "skipped",
+      "previous_status": "queued",
+      "step_id": "build_mlx_component_cache"
+    },
+    {
+      "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_drop_within_selected_set_masked_boundary",
+      "new_status": "skipped",
+      "previous_status": "queued",
+      "step_id": "emit_targeted_component_correction_work_order"
+    },
+    {
+      "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_drop_within_selected_set_masked_boundary",
+      "new_status": "skipped",
+      "previous_status": "queued",
+      "step_id": "harvest_targeted_component_correction_response"
+    },
+    {
+      "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_drop_within_selected_set_masked_boundary",
+      "new_status": "skipped",
+      "previous_status": "queued",
+      "step_id": "local_cpu_component_advisory"
+    },
+    {
+      "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_drop_within_selected_set_masked_boundary",
+      "new_status": "skipped",
+      "previous_status": "queued",
+      "step_id": "local_mlx_component_response"
+    },
+    {
+      "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_full_video_batch_residual_budget_reallocation",
+      "new_status": "skipped",
+      "previous_status": "queued",
+      "step_id": "build_mlx_component_cache"
+    },
+    {
+      "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_full_video_batch_residual_budget_reallocation",
+      "new_status": "skipped",
+      "previous_status": "queued",
+      "step_id": "emit_targeted_component_correction_work_order"
+    },
+    {
+      "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_full_video_batch_residual_budget_reallocation",
+      "new_status": "skipped",
+      "previous_status": "queued",
+      "step_id": "harvest_targeted_component_correction_response"
+    },
+    {
+      "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_full_video_batch_residual_budget_reallocation",
+      "new_status": "skipped",
+      "previous_status": "queued",
+      "step_id": "local_cpu_component_advisory"
+    },
+    {
+      "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_full_video_batch_residual_budget_reallocation",
+      "new_status": "skipped",
+      "previous_status": "queued",
+      "step_id": "local_mlx_component_response"
+    },
+    {
+      "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_inverse_scorer_cell_basis_expansion",
+      "new_status": "skipped",
+      "previous_status": "queued",
+      "step_id": "build_mlx_component_cache"
+    },
+    {
+      "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_inverse_scorer_cell_basis_expansion",
+      "new_status": "skipped",
+      "previous_status": "queued",
+      "step_id": "emit_targeted_component_correction_work_order"
+    },
+    {
+      "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_inverse_scorer_cell_basis_expansion",
+      "new_status": "skipped",
+      "previous_status": "queued",
+      "step_id": "harvest_targeted_component_correction_response"
+    },
+    {
+      "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_inverse_scorer_cell_basis_expansion",
+      "new_status": "skipped",
+      "previous_status": "queued",
+      "step_id": "local_cpu_component_advisory"
+    },
+    {
+      "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_inverse_scorer_cell_basis_expansion",
+      "new_status": "skipped",
+      "previous_status": "queued",
+      "step_id": "local_mlx_component_response"
+    },
+    {
+      "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_pose_stable_pair_frame_motion_correction",
+      "new_status": "skipped",
+      "previous_status": "queued",
+      "step_id": "build_mlx_component_cache"
+    },
+    {
+      "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_pose_stable_pair_frame_motion_correction",
+      "new_status": "skipped",
+      "previous_status": "queued",
+      "step_id": "emit_targeted_component_correction_work_order"
+    },
+    {
+      "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_pose_stable_pair_frame_motion_correction",
+      "new_status": "skipped",
+      "previous_status": "queued",
+      "step_id": "harvest_targeted_component_correction_response"
+    },
+    {
+      "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_pose_stable_pair_frame_motion_correction",
+      "new_status": "skipped",
+      "previous_status": "queued",
+      "step_id": "local_cpu_component_advisory"
+    },
+    {
+      "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_pose_stable_pair_frame_motion_correction",
+      "new_status": "skipped",
+      "previous_status": "queued",
+      "step_id": "local_mlx_component_response"
+    },
+    {
+      "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_segnet_posenet_waterfill_region_repair",
+      "new_status": "skipped",
+      "previous_status": "queued",
+      "step_id": "build_mlx_component_cache"
+    },
+    {
+      "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_segnet_posenet_waterfill_region_repair",
+      "new_status": "skipped",
+      "previous_status": "queued",
+      "step_id": "emit_targeted_component_correction_work_order"
+    },
+    {
+      "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_segnet_posenet_waterfill_region_repair",
+      "new_status": "skipped",
+      "previous_status": "queued",
+      "step_id": "harvest_targeted_component_correction_response"
+    },
+    {
+      "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_segnet_posenet_waterfill_region_repair",
+      "new_status": "skipped",
+      "previous_status": "queued",
+      "step_id": "local_cpu_component_advisory"
+    },
+    {
+      "experiment_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_segnet_posenet_waterfill_region_repair",
+      "new_status": "skipped",
+      "previous_status": "queued",
+      "step_id": "local_mlx_component_response"
+    }
+  ],
+  "schema": "experiment_queue_state_reconciliation.v1",
+  "score_claim": false,
+  "state": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_frontier_rate_attack_feedback_materialization_requests_codex_component_correction.sqlite"
+}

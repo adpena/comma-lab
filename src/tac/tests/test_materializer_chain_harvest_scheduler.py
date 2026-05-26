@@ -197,6 +197,7 @@ def _chain_manifest(
     *,
     authority_overrides: dict[str, object] | None = None,
 ) -> Path:
+    runtime_tree_sha = "1" * 64
     source_archive = _write_bytes(
         external_root / "source" / "archive.zip",
         b"source archive bytes",
@@ -230,6 +231,7 @@ def _chain_manifest(
         "receiver_proof_ready": True,
         "receiver_contract_satisfied": True,
         "candidate_runtime_adapter_blocker_cleared": True,
+        "candidate_runtime_dir": str(external_root / "candidate_runtime"),
         "readiness_blockers": ["exact_cuda_auth_eval_missing"],
         "dispatch_blockers": [
             "byte_range_entropy_recode_chain_is_not_dispatch_authorization",
@@ -241,6 +243,11 @@ def _chain_manifest(
                 "step_id": "materialize_candidate",
                 "status": "succeeded",
                 "artifact": artifact_record,
+            },
+            {
+                "step_id": "build_runtime_adapter",
+                "status": "succeeded",
+                "runtime_tree_sha256": runtime_tree_sha,
             }
         ],
         "next_required_gates": ["contest_auth_eval"],
@@ -562,6 +569,8 @@ def test_harvest_work_queue_chain_manifest_into_source_queue(
     assert row["realized_saved_bytes"] > 0
     assert row["signal_semantics"] == "realized_archive_saving"
     assert row["quality_spend_allowed"] is False
+    assert row["candidate_runtime_tree_sha256"] == "1" * 64
+    assert row["byte_range_entropy_recode_runtime_tree_sha256"] == "1" * 64
     assert row["ready_for_exact_eval_dispatch"] is False
     assert row["score_claim"] is False
     assert str(external) in row["candidate_archive_path"]
@@ -1683,6 +1692,17 @@ def test_harvest_family_agnostic_tensor_factorize_receiver_proof(
     assert row["candidate_member_name"] == "weights.npy"
     assert row["runtime_consumption_proof_status"] == "present"
     assert row["runtime_consumption_proof_path"] == str(proof)
+    assert row["candidate_runtime_dir"] == runtime_manifest["runtime_dir"]
+    assert row["tensor_factorize_runtime_dir"] == runtime_manifest["runtime_dir"]
+    assert row["candidate_runtime_tree_sha256"] == runtime_manifest[
+        "runtime_tree_sha256"
+    ]
+    assert row["tensor_factorize_receiver_runtime_tree_sha256"] == runtime_manifest[
+        "runtime_tree_sha256"
+    ]
+    assert row["tensor_factorize_receiver_runtime"]["runtime_dir"] == (
+        runtime_manifest["runtime_dir"]
+    )
     assert row["runtime_adapter_ready"] is True
     assert row["receiver_contract_satisfied"] is True
     assert row["candidate_runtime_adapter_blocker_cleared"] is True

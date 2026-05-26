@@ -83,6 +83,28 @@ SCORE_AFFECTING_BOOLEAN_FIELDS: frozenset[str] = frozenset(
         "score_affecting_runtime_changed",
     }
 )
+RUNTIME_ADAPTER_CONTRACT_FIELDS: frozenset[str] = frozenset(
+    {
+        "candidate_runtime_dir",
+        "candidate_runtime_tree_sha256",
+        "packet_member_merge_runtime_dir",
+        "packet_member_merge_receiver_runtime",
+        "packet_member_merge_receiver_runtime_tree_sha256",
+        "packet_member_merge_source_runtime_dir",
+        "runtime_adapter_manifest",
+        "tensor_factorize_receiver_runtime",
+        "tensor_factorize_receiver_runtime_tree_sha256",
+        "tensor_factorize_runtime_dir",
+        "tensor_factorize_source_runtime_dir",
+    }
+)
+RUNTIME_ADAPTER_BOOLEAN_FIELDS: frozenset[str] = frozenset(
+    {
+        "candidate_runtime_adapter_blocker_cleared",
+        "receiver_contract_satisfied",
+        "runtime_adapter_ready",
+    }
+)
 UNKNOWN_CANDIDATES_REASON = "unsupported_candidates_schema_requires_explicit_adapter_or_codec_op_param_sweep_manifest_v1"
 
 
@@ -237,9 +259,18 @@ def _merge_candidate(
     existing: dict[str, Any], incoming: dict[str, Any]
 ) -> dict[str, Any]:
     merged = dict(existing)
+    incoming_adapter_ready = incoming.get("runtime_adapter_ready") is True
     for key, value in incoming.items():
         if key == "source_paths" or key == "dispatch_blockers":
             merged[key] = _ordered_unique([*merged.get(key, []), *value])
+        elif incoming_adapter_ready and key in RUNTIME_ADAPTER_CONTRACT_FIELDS:
+            if value is not None and value not in ("", [], {}):
+                merged[key] = value
+        elif key in RUNTIME_ADAPTER_BOOLEAN_FIELDS:
+            if merged.get(key) is True or value is True:
+                merged[key] = True
+            elif key not in merged and value is False:
+                merged[key] = False
         elif key in SCORE_AFFECTING_BOOLEAN_FIELDS:
             if merged.get(key) is True or value is True:
                 merged[key] = True
