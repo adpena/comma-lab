@@ -1,11 +1,13 @@
 ---
 schema_version: path_3_candidate_inventory_v1
 created_utc: 2026-05-26T16:30:00Z
+amended_utc: 2026-05-26T17:45:00Z
 operator_directive_anchor: "We have so much research we can really push now that we have validated MLX"
 operator_decision: "Hold + queue inventory only" (2026-05-26)
 binding_methodology_directives:
   - "The MLX first requirement might also force us out of the issue we were having before where we had great ideas but we're building them as Boltons to the same substrates over and over again; we want to design the substrate and curriculum and then optimize the design the whole stack around it for extreme optimization and performance and optimal score lowering" (2026-05-26)
   - "Never simply extend unless a rigorous adversarial cargo cult pass has been done first" (2026-05-26)
+  - "we also need adversarial review against all landing recursive for math and scientific and engineering rigor and for MLX drift minimization and portability via numpy" (2026-05-26 AMENDMENT)
 council_tier: T1
 council_attendees: [Shannon, PR95Author, Time-Traveler]
 council_quorum_met: true
@@ -34,7 +36,7 @@ related_deliberation_ids:
 
 Every brief MUST include:
 
-1. **BINDING OPERATOR DIRECTIVES section** quoting both 2026-05-26 reframings verbatim
+1. **BINDING OPERATOR DIRECTIVES section** quoting all THREE 2026-05-26 reframings verbatim (bolt-on→substrate-design + cargo-cult-pass-FIRST + adversarial-review-recursive-3-axis AMENDMENT)
 2. **3-phase methodology** if candidate is EXTENSION (Phases: cargo-cult pass → substrate-design decision → L0 SCAFFOLD); OR **2-phase methodology** if candidate is FRESH design (Phases: substrate-design decision → L0 SCAFFOLD)
 3. **Catalog #290 canonical-vs-unique decision per layer** required in design memo
 4. **Catalog #294 9-dimension success checklist** required in design memo
@@ -54,6 +56,38 @@ Every brief MUST include:
 18. **CLAUDE.md "Executing actions with care"**: L0 SCAFFOLD = design + skeleton + memos ONLY; NO `gh pr create`, NO `gh release create`, NO Modal/Vast/Lightning dispatch
 19. **All artifacts** carry `[macOS-MLX research-signal]` + `score_claim=false` + `promotion_eligible=false` + `ready_for_exact_eval_dispatch=false`
 20. **Sister coordination citation** (current in-flight: A/B'/C'/D/E + any prior-landed candidates from this wave)
+
+## NEW 3-axis discipline (binding amendment 2026-05-26 per operator directive #3)
+
+Every brief MUST also include these 3 sections in the design memo:
+
+### Axis 1: Math + scientific + engineering rigor per layer
+- **Math**: cite first-principles derivation (Shannon R(D) / Cramer-Rao / Cauchy-Schwarz / Atick-Redlich retinal MI / Tishby IB / Wyner-Ziv side-info)
+- **Scientific**: cite canonical paper + canonical equation registry entry per Catalog #344
+- **Engineering**: cite operational justification (Catalog # / empirical receipt / sister-substrate evidence + per-substrate symposium per Catalog #325)
+- Per-layer HARD-EARNED (≥1 citation on ALL 3 axes) vs CARGO-CULTED (missing ≥1 axis) classification table
+
+### Axis 2: MLX drift minimization per primitive
+- Reference #1255 MLX drift mitigation findings: NOT_FIXABLE_VIA_PRIMITIVE_SUBSTITUTION but characterize tolerance per-primitive
+- AVOID known-drift patterns: `align_corners=True` bilinear vs PyTorch default False; `mx.repeat` 2x upsample vs canonical `bilinear_resize2x_align_corners_false_nhwc` (sister A=DreamerV3 documented max_abs=24.34 caused by this anti-pattern); `mx.softmax` without epsilon; non-Kahan summation per Catalog #962 / slot 16 engineering corrections; fp16 matmul without explicit fp32 accumulation
+- Per-MLX-primitive expected drift bound vs PyTorch reference + mitigation strategy + canonical helper citation
+- Smoke test MUST include MLX↔PyTorch parity max_abs measurement per channel + per layer
+
+### Axis 3: Portability via numpy per primitive
+- Every MLX primitive should have sister numpy reference implementation at `numpy_reference.py` module OR documented non-portability rationale
+- Substrate operable on CPU-only test rigs without MLX dependency (use numpy reference path)
+- Enables: (a) GHA CPU CI testing without MLX install, (b) sister cathedral consumer cross-validation, (c) operator-portable diagnostic on non-Apple-Silicon hardware
+- Tests MUST include MLX↔numpy reference parity (byte-identical or documented tolerance) alongside MLX↔PyTorch parity tests
+
+## Recursive adversarial review protocol (binding per amendment 2026-05-26)
+
+Per CLAUDE.md "Recursive adversarial review protocol — close paths":
+- 3 consecutive clean-pass cycles required before code is cleared for paid CUDA dispatch
+- Round 1 (R1) covers 3 landed (A/D/E); R1' covers next batch (B'/F/G/H/C') when those land
+- Each round: 3 council member axes (Shannon+Dykstra+Tao math rigor / Carmack+Hotz+Quantizr MLX drift / MacKay+Selfcomp+Contrarian numpy portability)
+- Findings → FIX-WAVE-Rn successor subagent BEFORE next round
+- Clean-pass counter resets to 0 on ANY findings round
+- Counter advances 1/3 → 2/3 → 3/3 on clean rounds; 3/3 = paid CUDA dispatch authorized
 
 ## Tier 1 paradigm-class-shift (highest EV; spawn first)
 
