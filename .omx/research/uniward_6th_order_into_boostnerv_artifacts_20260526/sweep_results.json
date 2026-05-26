@@ -1,0 +1,135 @@
+{
+  "schema_version": "uniward_6th_order_into_boostnerv_capacity_constrained_empirical_v1",
+  "subagent_id": "uniward-6th-order-integration-into-boostnerv-pr110-residual-capacity-constrained-substrate-recursive-doctrine-mlx-first-numpy-portable-20260526",
+  "lane_id": "lane_uniward_6th_order_integration_into_boostnerv_pr110_residual_20260526",
+  "measurement_utc": "2026-05-26T20:53:14Z",
+  "fixture": {
+    "video_path": "/Users/adpena/Projects/pact/upstream/videos/0.mkv",
+    "n_pairs": 50,
+    "spatial_h": 96,
+    "spatial_w": 128,
+    "epochs": 30,
+    "learning_rate": 0.05,
+    "seed": 42,
+    "ema_decay": 0.997,
+    "uniward_lambda": 0.01
+  },
+  "scorer_metadata": {
+    "loader": "tac.scorer.load_differentiable_scorers (canonical per Catalog #164/#226)",
+    "pose_params": 13902140,
+    "seg_params": 9543831,
+    "device": "cpu"
+  },
+  "boostnerv_substrate_config": {
+    "residual_hidden_dim": 12,
+    "pr110_latent_dim": 24,
+    "boosting_gain_clamp": 0.05,
+    "residual_spatial_h": 96,
+    "residual_spatial_w": 128,
+    "num_boosting_rounds": 1,
+    "theoretical_params_per_round": 1971,
+    "consumer_scope": "read_only_consumer_import_per_catalog_230"
+  },
+  "real_scorer_gradient_source": {
+    "cache_path": ".omx/research/uniward_per_pixel_n_plus_1_artifacts_20260526/real_scorer_gradients_cache.npz",
+    "sister_lane": "lane_uniward_per_pixel_n_plus_1_real_scorer_empirical_20260526",
+    "sister_commit": "3316721639"
+  },
+  "weight_map_stats": {
+    "min": 0.05212165415287018,
+    "max": 1.0273325443267822,
+    "mean": 1.0,
+    "dynamic_range_ratio": 19.710283279418945
+  },
+  "baseline_arm": {
+    "arm_name": "BASELINE",
+    "epochs_measured": [
+      0,
+      30
+    ],
+    "measurements_per_epoch": {
+      "0": {
+        "seg_distortion_mean": 0.43249829947948454,
+        "pose_distortion_mean": 9.783151355804875e-05,
+        "seg_contribution_canonical": 43.249829947948456,
+        "pose_contribution_canonical": 0.0312780295987533,
+        "wall_clock_s": 0.0
+      },
+      "30": {
+        "seg_distortion_mean": 0.4325362265110016,
+        "pose_distortion_mean": 5.537285263926606e-05,
+        "seg_contribution_canonical": 43.25362265110016,
+        "pose_contribution_canonical": 0.02353143698104008,
+        "wall_clock_s": 87.09929704666138,
+        "loss_value": 0.01059738639742136
+      }
+    },
+    "final_seg_distortion_mean": 0.4325362265110016,
+    "final_pose_distortion_mean": 5.537285263926606e-05,
+    "residual_head_params": 1971,
+    "z_latents_params": 1200
+  },
+  "variant_arm": {
+    "arm_name": "VARIANT_UNIWARD_INTO_BOOSTNERV",
+    "epochs_measured": [
+      0,
+      30
+    ],
+    "measurements_per_epoch": {
+      "0": {
+        "seg_distortion_mean": 0.43249829947948454,
+        "pose_distortion_mean": 9.783151355804875e-05,
+        "seg_contribution_canonical": 43.249829947948456,
+        "pose_contribution_canonical": 0.0312780295987533,
+        "wall_clock_s": 0.0
+      },
+      "30": {
+        "seg_distortion_mean": 0.4325371623039246,
+        "pose_distortion_mean": 5.5587969909538516e-05,
+        "seg_contribution_canonical": 43.253716230392456,
+        "pose_contribution_canonical": 0.023577101159713953,
+        "wall_clock_s": 69.07722020149231,
+        "loss_value": 0.010623308829963207
+      }
+    },
+    "final_seg_distortion_mean": 0.4325371623039246,
+    "final_pose_distortion_mean": 5.5587969909538516e-05,
+    "residual_head_params": 1971,
+    "z_latents_params": 1200
+  },
+  "per_axis_comparison": {
+    "seg_baseline_final": 0.4325362265110016,
+    "seg_variant_final": 0.4325371623039246,
+    "seg_ratio_variant_over_baseline": 1.0000021635018423,
+    "seg_improved_below_0p99": false,
+    "seg_regressed_above_1p05": false,
+    "pose_baseline_final": 5.537285263926606e-05,
+    "pose_variant_final": 5.5587969909538516e-05,
+    "pose_ratio_variant_over_baseline": 1.0038848869079198,
+    "pose_improved_below_0p99": false,
+    "pose_regressed_above_1p05": false,
+    "contest_partial_baseline": 43.2771540880812,
+    "contest_partial_variant": 43.27729333155217,
+    "contest_partial_delta": 0.000139243470975714
+  },
+  "verdict": "PARADIGM-NULL-NO-EFFECT-AT-CAPACITY-CONSTRAINED-SUBSTRATE",
+  "total_wall_clock_s": 298.90908193588257,
+  "provenance": {
+    "evidence_grade": "macOS-MLX research-signal",
+    "score_claim": false,
+    "promotable": false,
+    "axis_tag": "[predicted]",
+    "hardware_substrate": "darwin_arm64_m5_max_mlx_local",
+    "measurement_axis": "[macOS-MLX research-signal]",
+    "hook_numbers_fired": [
+      1,
+      2,
+      4,
+      5,
+      6
+    ],
+    "model_id": "uniward_6th_order_into_boostnerv_v1_2026-05-26",
+    "captured_at_utc": "2026-05-26T20:53:14Z",
+    "inputs_sha256": "real_scorer_anchored_from_n_plus_1_cache_50pair_30ep_96x128_seed_42"
+  }
+}
