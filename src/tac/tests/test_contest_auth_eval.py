@@ -637,6 +637,132 @@ def test_auth_artifact_output_outside_work_dir_resolves_relative_to_cwd(
     assert not str(resolved).startswith(str(work_dir))
 
 
+def test_existing_contest_auth_eval_reuse_requires_matching_inputs(
+    cae,
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"archive")
+    runtime_dir = tmp_path / "runtime"
+    runtime_dir.mkdir()
+    upstream_dir = tmp_path / "upstream"
+    upstream_dir.mkdir()
+    inflate_sh = runtime_dir / "inflate.sh"
+    inflate_sh.write_text("#!/usr/bin/env bash\n")
+    inflate_py = runtime_dir / "inflate.py"
+    inflate_py.write_text("print('inflate v1')\n")
+    names = tmp_path / "names.txt"
+    names.write_text("0.mkv\n")
+    runtime_manifest = cae._runtime_dependency_manifest(inflate_sh, upstream_dir)
+    cache_hashes = tmp_path / "scorer_hashes.json"
+    cache_hashes.write_text(
+        json.dumps(
+            {
+                "schema_version": "mlx_scorer_input_cache_hashes.v1",
+                "archive_sha256": cae._sha256(archive, prefix=0),
+                "score_claim": False,
+            }
+        )
+    )
+    result_path = tmp_path / "contest_auth_eval.json"
+    result_path.write_text(
+        json.dumps(
+            {
+                "canonical_score": 1.0,
+                "final_score": 1.0,
+                "avg_posenet_dist": 0.0,
+                "avg_segnet_dist": 0.0,
+                "rate_unscaled": 0.0,
+                "n_samples": 600,
+                "archive_size_bytes": archive.stat().st_size,
+                "score_axis": "cpu_advisory",
+                "evidence_semantics": "non_contest_cpu_auth_eval_advisory",
+                "score_claim": False,
+                "score_claim_valid": False,
+                "exact_cuda_eval_complete": False,
+                "cpu_leaderboard_reproduction_eligible": False,
+                "promotion_eligible": False,
+                "promotable": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+                "gpu_launched": False,
+                "field_selection_ready_for_exact_eval_dispatch": False,
+                "provenance": {
+                    "archive_sha256": cae._sha256(archive, prefix=0),
+                    "inflate_script_sha256": cae._sha256(inflate_sh, prefix=0),
+                    "device": "cpu",
+                    "video_names_file": str(names),
+                    "inflate_runtime_manifest": runtime_manifest,
+                    "platform_system": "Darwin",
+                    "platform_machine": "arm64",
+                },
+            }
+        )
+    )
+
+    result, blockers = cae._existing_contest_auth_eval_reuse_blockers(
+        result_path=result_path,
+        archive=archive,
+        inflate_sh=inflate_sh,
+        upstream_dir=upstream_dir,
+        device="cpu",
+        video_names_file=names,
+        expected_runtime_tree_sha256=runtime_manifest["runtime_tree_sha256"],
+        scorer_input_cache_hashes_out=cache_hashes,
+    )
+
+    assert result is not None
+    assert blockers == []
+
+    payload = json.loads(result_path.read_text(encoding="utf-8"))
+    payload["promotion_eligible"] = True
+    result_path.write_text(json.dumps(payload))
+    _result, blockers = cae._existing_contest_auth_eval_reuse_blockers(
+        result_path=result_path,
+        archive=archive,
+        inflate_sh=inflate_sh,
+        upstream_dir=upstream_dir,
+        device="cpu",
+        video_names_file=names,
+        expected_runtime_tree_sha256=runtime_manifest["runtime_tree_sha256"],
+        scorer_input_cache_hashes_out=cache_hashes,
+    )
+    assert "truthy_authority_field:promotion_eligible" in blockers
+
+    payload["promotion_eligible"] = False
+    result_path.write_text(json.dumps(payload))
+    inflate_py.write_text("print('inflate v2')\n")
+    _result, blockers = cae._existing_contest_auth_eval_reuse_blockers(
+        result_path=result_path,
+        archive=archive,
+        inflate_sh=inflate_sh,
+        upstream_dir=upstream_dir,
+        device="cpu",
+        video_names_file=names,
+        expected_runtime_tree_sha256=runtime_manifest["runtime_tree_sha256"],
+        scorer_input_cache_hashes_out=cache_hashes,
+    )
+    assert "runtime_tree_sha256_mismatch" in blockers
+    assert "runtime_content_tree_sha256_mismatch" in blockers
+
+    inflate_py.write_text("print('inflate v1')\n")
+    archive.write_bytes(b"changed")
+    _result, blockers = cae._existing_contest_auth_eval_reuse_blockers(
+        result_path=result_path,
+        archive=archive,
+        inflate_sh=inflate_sh,
+        upstream_dir=upstream_dir,
+        device="cpu",
+        video_names_file=names,
+        expected_runtime_tree_sha256=runtime_manifest["runtime_tree_sha256"],
+        scorer_input_cache_hashes_out=cache_hashes,
+    )
+
+    assert "archive_sha256_mismatch" in blockers
+    assert "scorer_input_cache_hashes_archive_sha256_mismatch" in blockers
+
+
 def test_parse_inflate_env_overrides_allowlist(cae) -> None:
     parsed = cae._parse_inflate_env_overrides(
         ["CUDA_VISIBLE_DEVICES=", "PACT_FORCE_INFLATE_DEVICE=cpu", "INFLATE_MODE=probe"]

@@ -62,6 +62,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
             "when the local advisory audit passes."
         ),
     )
+    parser.add_argument(
+        "--reuse-valid-cache",
+        action="store_true",
+        help=(
+            "If output cache files and audit already exist, validate them "
+            "against the supplied local CPU advisory and return success instead "
+            "of refusing existing multi-GB cache outputs."
+        ),
+    )
     return parser
 
 
@@ -73,12 +82,23 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit("--batch-pairs must be >= 1")
     if args.large_cache_pair_threshold < 1:
         raise SystemExit("--large-cache-pair-threshold must be >= 1")
+    advisory = _load_json_object(args.local_cpu_advisory)
+    _require_local_cpu_advisory(advisory, args.local_cpu_advisory)
+    if args.reuse_valid_cache:
+        reused = _reuse_existing_cache_if_valid(
+            cache_dir=args.output_cache_dir,
+            audit_output=args.audit_output,
+            advisory=advisory,
+            local_cpu_advisory=args.local_cpu_advisory,
+            expected_pair_count=args.expected_pair_count,
+        )
+        if reused:
+            print(json.dumps(reused, sort_keys=True))
+            return 0
     _refuse_existing_cache_outputs(args.output_cache_dir)
     if args.audit_output.exists():
         raise SystemExit(f"refusing to overwrite audit artifact: {args.audit_output}")
 
-    advisory = _load_json_object(args.local_cpu_advisory)
-    _require_local_cpu_advisory(advisory, args.local_cpu_advisory)
     raw_surface = _raw_surface_from_local_advisory(advisory, args.local_cpu_advisory)
     pair_count = _raw_pair_count(raw_surface["raw_path"])
     if pair_count > args.large_cache_pair_threshold and not args.allow_large_tensor_cache:
@@ -142,6 +162,62 @@ def _load_json_object(path: Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise SystemExit(f"{path}: expected JSON object")
     return payload
+
+
+def _reuse_existing_cache_if_valid(
+    *,
+    cache_dir: Path,
+    audit_output: Path,
+    advisory: dict[str, Any],
+    local_cpu_advisory: Path,
+    expected_pair_count: int,
+) -> dict[str, Any] | None:
+    existing = [name for name in _CACHE_FILES if (cache_dir / name).exists()]
+    if not existing and not audit_output.exists():
+        return None
+    missing = [name for name in _CACHE_FILES if not (cache_dir / name).exists()]
+    if missing:
+        raise SystemExit(
+            f"refusing partial existing MLX cache in {cache_dir}: missing {missing}"
+        )
+    if not audit_output.is_file():
+        raise SystemExit(f"existing MLX cache lacks audit artifact: {audit_output}")
+    manifest_path = cache_dir / "manifest.json"
+    manifest = _load_json_object(manifest_path)
+    audit = audit_mlx_scorer_input_cache_against_local_cpu_advisory(
+        manifest,
+        advisory,
+        expected_pair_count=expected_pair_count,
+    )
+    existing_audit = _load_json_object(audit_output)
+    if audit.get("passed") is not True:
+        raise SystemExit(
+            "existing MLX cache failed local advisory identity audit: "
+            f"{audit.get('blockers')}"
+        )
+    if existing_audit.get("passed") is not True:
+        raise SystemExit(
+            f"existing MLX cache audit artifact is not pass=true: {audit_output}"
+        )
+    if existing_audit.get("verdict") != audit.get("verdict"):
+        raise SystemExit(
+            "existing MLX cache audit verdict mismatch: "
+            f"stored={existing_audit.get('verdict')} current={audit.get('verdict')}"
+        )
+    return {
+        "cache_dir": str(cache_dir),
+        "manifest": str(manifest_path),
+        "audit_output": str(audit_output),
+        "audit_passed": True,
+        "audit_verdict": audit["verdict"],
+        "pair_count": manifest["pair_count"],
+        "reused_existing_cache": True,
+        "local_cpu_advisory": str(local_cpu_advisory),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
 
 
 def _require_local_cpu_advisory(payload: dict[str, Any], path: Path) -> None:

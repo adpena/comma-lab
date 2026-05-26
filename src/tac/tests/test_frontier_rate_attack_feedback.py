@@ -1686,6 +1686,115 @@ def test_targeted_component_response_harvest_derives_paired_local_cpu_deltas(
     ]
 
 
+def test_targeted_component_response_harvest_derives_paired_local_mlx_deltas(
+    tmp_path: Path,
+) -> None:
+    action_summary = _write_action_summary(tmp_path)
+    artifact_root = tmp_path / "frontier_artifacts"
+    _write_materializer_feedback(artifact_root)
+    results_root = tmp_path / "results"
+    _write_receiver_closed_budget_signal(tmp_path, results_root=results_root)
+
+    report = build_frontier_rate_attack_feedback_refresh(
+        repo_root=tmp_path,
+        frontier_artifact_roots=(artifact_root,),
+        action_summary_path=action_summary,
+        results_root=str(results_root),
+        queue_id="frontier_feedback_paired_mlx_response_delta_unit",
+        candidate_limit=2,
+    )
+    work_order = build_frontier_targeted_component_correction_work_order(
+        targeted_component_correction_acquisition=report[
+            "targeted_component_correction_acquisition"
+        ],
+        acquisition_id=report["targeted_component_correction_acquisition"][
+            "top_acquisition_ids"
+        ][0],
+    )
+    candidate_advisory = {
+        "schema_version": "contest_auth_eval_result.v1",
+        **_false_authority(),
+        "score_axis": "cpu_advisory",
+        "evidence_semantics": "non_contest_cpu_auth_eval_advisory",
+        "archive_size_bytes": 345_544,
+        "avg_posenet_dist": 0.001,
+        "avg_segnet_dist": 0.0008,
+    }
+    reference_advisory = {
+        "schema_version": "contest_auth_eval_result.v1",
+        **_false_authority(),
+        "score_axis": "cpu_advisory",
+        "evidence_semantics": "non_contest_cpu_auth_eval_advisory",
+        "archive_size_bytes": 345_802,
+        "avg_posenet_dist": 0.001,
+        "avg_segnet_dist": 0.001,
+    }
+    candidate_mlx = {
+        "schema_version": "mlx_scorer_response.v1",
+        **_false_authority(),
+        "score_axis": "[macOS-MLX research-signal]",
+        "response_family": "targeted_component_correction_receiver_closed_budget",
+        "archive_size_bytes": 345_544,
+        "avg_posenet_dist": 0.001,
+        "avg_segnet_dist": 0.0007,
+    }
+    reference_mlx = {
+        "schema_version": "mlx_scorer_response.v1",
+        **_false_authority(),
+        "score_axis": "[macOS-MLX research-signal]",
+        "response_family": "targeted_component_correction_receiver_closed_reference",
+        "archive_size_bytes": 345_802,
+        "avg_posenet_dist": 0.001,
+        "avg_segnet_dist": 0.001,
+    }
+
+    row = build_frontier_targeted_component_correction_response_harvest_from_artifacts(
+        work_order=work_order,
+        local_cpu_advisory=candidate_advisory,
+        reference_local_cpu_advisory=reference_advisory,
+        local_mlx_response=candidate_mlx,
+        reference_local_mlx_response=reference_mlx,
+        work_order_path="work_order.json",
+        local_cpu_advisory_path="candidate_local_cpu_advisory.json",
+        reference_local_cpu_advisory_path="reference_local_cpu_advisory.json",
+        local_mlx_response_path="candidate_mlx.json",
+        reference_local_mlx_response_path="reference_mlx.json",
+        response_artifact_path="component_correction_response_harvest.json",
+    )
+
+    _assert_false_authority(row)
+    assert row["local_mlx_component_terms"]["segnet_delta_score_units"] == pytest.approx(
+        -0.03
+    )
+    assert row["local_mlx_component_terms"]["posenet_delta_score_units"] == pytest.approx(
+        0.0
+    )
+    assert row["local_mlx_paired_reference_terms"][
+        "receiver_closed_archive_byte_delta_vs_reference"
+    ] == -258
+    assert row["local_mlx_vs_local_cpu_drift_terms"][
+        "mlx_minus_local_cpu_segnet_score_units"
+    ] == pytest.approx(-0.01)
+    assert row["local_mlx_vs_local_cpu_paired_delta_drift_terms"][
+        "mlx_minus_local_cpu_segnet_delta_score_units"
+    ] == pytest.approx(-0.01)
+    assert row["local_mlx_vs_local_cpu_paired_delta_drift_terms"][
+        "mlx_minus_local_cpu_paired_lagrangian_delta_score_units"
+    ] == pytest.approx(-0.01)
+    assert row["reference_local_mlx_response_path"] == "reference_mlx.json"
+    assert "local_mlx_component_delta_missing" not in row["budget_spend_blockers"]
+    harvest = build_frontier_targeted_component_correction_response_harvest(
+        repo_root=tmp_path,
+        response_rows=(row,),
+    )
+    assert harvest["mlx_cpu_drift_summary"]["absolute_score_drift_max_abs"] == (
+        pytest.approx(0.01)
+    )
+    assert harvest["mlx_cpu_drift_summary"][
+        "paired_lagrangian_delta_drift_max_abs"
+    ] == pytest.approx(0.01)
+
+
 def test_targeted_component_response_harvest_cli_accepts_reference_advisory(
     tmp_path: Path,
 ) -> None:
@@ -1736,6 +1845,8 @@ def test_targeted_component_response_harvest_cli_accepts_reference_advisory(
         },
     )
     output = tmp_path / "component_correction_response_harvest.json"
+    materialization_requests = tmp_path / "materialization_requests.json"
+    materialization_queue = tmp_path / "materialization_queue.json"
 
     result = subprocess.run(
         [
@@ -1749,6 +1860,14 @@ def test_targeted_component_response_harvest_cli_accepts_reference_advisory(
             str(reference_path),
             "--output",
             str(output),
+            "--materialization-requests-output",
+            str(materialization_requests),
+            "--materialization-queue-output",
+            str(materialization_queue),
+            "--materialization-queue-id",
+            "targeted_component_materialization_cli_unit",
+            "--results-root",
+            str(tmp_path / "results"),
             "--repo-root",
             str(tmp_path),
         ],
@@ -1759,6 +1878,9 @@ def test_targeted_component_response_harvest_cli_accepts_reference_advisory(
     )
 
     assert result.returncode == 0, result.stderr
+    stdout = json.loads(result.stdout)
+    assert stdout["materialization_request_count"] == 1
+    assert stdout["materialization_queue_experiment_count"] == 1
     payload = json.loads(output.read_text(encoding="utf-8"))
     assert payload["schema"] == TARGETED_COMPONENT_CORRECTION_RESPONSE_HARVEST_SCHEMA
     _assert_false_authority(payload)
@@ -1771,6 +1893,23 @@ def test_targeted_component_response_harvest_cli_accepts_reference_advisory(
     assert row["reference_local_cpu_advisory_path"].endswith(
         "reference_local_cpu_advisory.json"
     )
+    requests = json.loads(materialization_requests.read_text(encoding="utf-8"))
+    assert (
+        requests["schema"]
+        == TARGETED_COMPONENT_CORRECTION_MATERIALIZATION_REQUESTS_SCHEMA
+    )
+    assert requests["row_count"] == 1
+    _assert_false_authority(requests)
+    request = requests["rows"][0]
+    assert (
+        request["schema"]
+        == TARGETED_COMPONENT_CORRECTION_MATERIALIZATION_REQUEST_ROW_SCHEMA
+    )
+    assert request["ready_for_materializer_execution"] is False
+    queue = json.loads(materialization_queue.read_text(encoding="utf-8"))
+    assert len(queue["experiments"]) == 1
+    assert queue["experiments"][0]["metadata"]["ready_for_budget_spend"] is False
+    assert queue["materialization_request_summary"]["score_claim"] is False
 
 
 def test_targeted_component_response_harvest_expands_grouped_request_metadata(
@@ -2287,28 +2426,47 @@ def test_targeted_component_queue_carries_receiver_closed_reference_eval(
     experiment = queue["experiments"][0]
     step_ids = [step["id"] for step in experiment["steps"]]
     assert "local_cpu_reference_advisory" in step_ids
+    assert "build_reference_mlx_component_cache" in step_ids
+    assert "reference_local_mlx_component_response" in step_ids
     steps_by_id = {step["id"]: step for step in experiment["steps"]}
     reference_step = steps_by_id["local_cpu_reference_advisory"]
     assert (
         "--allow-scorer-input-cache-artifact-output-outside-work-dir"
         in reference_step["command"]
     )
+    assert "--reuse-valid-json-out" in reference_step["command"]
     assert any(
         condition.get("path", "").endswith("reference_scorer_input_cache_hashes.json")
         and condition.get("key") == "schema_version"
         for condition in reference_step["postconditions"]
     )
+    assert not any(
+        path.endswith("reference_local_cpu_advisory_work")
+        for path in reference_step["telemetry"]["artifact_paths"]
+    )
+    assert reference_step["telemetry"].get("recursive") is not True
     component_step = steps_by_id["local_cpu_component_advisory"]
     assert (
         "--allow-scorer-input-cache-artifact-output-outside-work-dir"
         in component_step["command"]
     )
+    assert "--reuse-valid-json-out" in component_step["command"]
     assert any(
         condition.get("path", "").endswith("scorer_input_cache_hashes.json")
         and condition.get("key") == "schema_version"
         for condition in component_step["postconditions"]
     )
+    assert not any(
+        path.endswith("local_cpu_advisory_work")
+        for path in component_step["telemetry"]["artifact_paths"]
+    )
+    assert component_step["telemetry"].get("recursive") is not True
     assert experiment["metadata"]["reference_component_eval_available"] is True
+    assert "--reuse-valid-cache" in steps_by_id["build_mlx_component_cache"]["command"]
+    assert (
+        "--reuse-valid-cache"
+        in steps_by_id["build_reference_mlx_component_cache"]["command"]
+    )
     assert experiment["metadata"]["reference_archive_path"] == (
         "source_submission/archive_correct.zip"
     )
@@ -2319,10 +2477,23 @@ def test_targeted_component_queue_carries_receiver_closed_reference_eval(
     ]
     assert harvest_steps
     assert "--reference-local-cpu-advisory" in harvest_steps[0]["command"]
+    assert "--reference-local-mlx-response" in harvest_steps[0]["command"]
     assert "local_cpu_reference_advisory" in harvest_steps[0]["requires"]
+    assert "reference_local_mlx_component_response" in harvest_steps[0]["requires"]
     request = experiment["metadata"]["correction_requests"][0]
+    assert "shared_candidate_component_response" in request["shared_component_response_dir"]
+    assert "shared_reference_component_response" in (
+        request["reference_shared_component_response_dir"]
+    )
     assert request["reference_local_cpu_advisory_path"].endswith(
         "reference_local_cpu_advisory.json"
+    )
+    assert request["reference_local_mlx_response_path"].endswith(
+        "reference_mlx_scorer_response.json"
+    )
+    assert experiment["metadata"]["reference_local_cpu_advisory_path"].startswith(
+        "queue_results/frontier_targeted_component_correction/"
+        "shared_reference_component_response/"
     )
 
 

@@ -103,6 +103,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Root to scan for frontier materializer sweep.json/observations.jsonl artifacts.",
     )
     parser.add_argument(
+        "--max-files-per-root",
+        type=int,
+        default=4096,
+        help=(
+            "Maximum candidate files to inspect per discovered artifact root. "
+            "Raise this for noisy .omx/research refreshes instead of forcing "
+            "operators to enumerate every root by hand."
+        ),
+    )
+    parser.add_argument(
         "--local-cpu-eureka-root",
         action="append",
         default=[],
@@ -773,6 +783,7 @@ def main(argv: list[str] | None = None) -> int:
             materializer_feedback_paths=tuple(args.materializer_feedback),
             pair_frame_geometry_paths=tuple(pair_frame_geometry_paths),
             dqs1_observation_paths=tuple(args.dqs1_observation_jsonl),
+            max_files_per_root=args.max_files_per_root,
             action_summary_path=action_summary_path,
             results_root=args.results_root,
             queue_id=queue_id,

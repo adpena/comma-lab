@@ -33,14 +33,12 @@ carries ``score_claim=False``, ``promotable=False``,
 ``ready_for_exact_eval_dispatch=False``, ``axis_tag="[macOS-MLX research-signal]"``.
 """
 
-# NOTE 2026-05-26: This tool is INCOMPLETE. It computes scorer outputs on
-# decoder-resolution (384x512) frames but the contest evaluator requires
-# camera-resolution (874x1164) frames. The missing step is the F.interpolate
-# bicubic upscale + uint8 cast (per submissions/hnerv_muon/inflate.py).
-# Per #1257 GREEN (inflate-output byte-identical for MLX-roundtripped vs source),
-# the operationally relevant contest-score-difference is empirically ZERO for
-# the production archive path. This tool would be the during-training MLX
-# scorer signal measurement, not the production contest score.
+# UPDATED 2026-05-26: Camera-size upscale step added per canonical
+# submissions/hnerv_muon/inflate.py contract. The tool now mirrors the full
+# inflate.sh → DistortionNet pipeline at decoder-resolution frame production,
+# then F.interpolate(bicubic, size=(874, 1164)) + clamp + uint8 cast,
+# then DistortionNet.compute_distortion against ground-truth uint8 frames
+# at camera resolution from upstream/videos/0.mkv.
 
 from __future__ import annotations
 
@@ -58,13 +56,17 @@ sys.path.insert(0, str(REPO_ROOT / "upstream"))
 import numpy as np  # noqa: E402
 
 
+CAMERA_H, CAMERA_W = 874, 1164  # canonical upstream.frame_utils.camera_size = (1164, 874)
+
+
 def _decode_ground_truth_frames(video_path: Path, n_pairs: int) -> np.ndarray:
     """Decode N pairs (2N frames) from upstream/videos/0.mkv via pyav.
 
-    Returns (N, 2, 3, H=384, W=512) float32 in [0, 255] range, mirroring
-    the contest inflate output shape per upstream.frame_utils.camera_size.
+    Returns (N, 2, H=874, W=1164, 3) uint8 — matching the canonical contest
+    evaluator's batch_gt shape (per upstream/evaluate.py line 77 assertion).
     """
     import av
+    from frame_utils import yuv420_to_rgb
 
     container = av.open(str(video_path))
     stream = container.streams.video[0]
@@ -73,18 +75,33 @@ def _decode_ground_truth_frames(video_path: Path, n_pairs: int) -> np.ndarray:
     for frame in container.decode(stream):
         if len(frames) >= needed:
             break
-        img = frame.to_ndarray(format="rgb24")  # (H, W, 3) uint8
-        # Canonical contest size per upstream.frame_utils.camera_size = (512, 384)
-        if img.shape[:2] != (384, 512):
+        img = yuv420_to_rgb(frame).numpy()  # (H, W, 3) uint8, scorer path
+        if img.shape[:2] != (CAMERA_H, CAMERA_W):
             raise RuntimeError(
-                f"Expected (384, 512, 3), got {img.shape} - upstream contest video has different camera_size?"
+                f"Expected ({CAMERA_H}, {CAMERA_W}, 3), got {img.shape} - upstream contest video has different camera_size?"
             )
-        frames.append(img.astype(np.float32).transpose(2, 0, 1))  # (3, 384, 512)
+        frames.append(img)  # (H, W, 3) uint8
     container.close()
     if len(frames) < needed:
         raise RuntimeError(f"only got {len(frames)} frames, needed {needed}")
-    arr = np.stack(frames[:needed], axis=0)  # (2N, 3, 384, 512)
-    return arr.reshape(n_pairs, 2, 3, 384, 512)
+    arr = np.stack(frames[:needed], axis=0)  # (2N, H, W, 3) uint8
+    return arr.reshape(n_pairs, 2, CAMERA_H, CAMERA_W, 3)
+
+
+def _upscale_decoder_output_to_camera_uint8(decoder_rgb: np.ndarray) -> np.ndarray:
+    """Mirror canonical submissions/hnerv_muon/inflate.py upscale + uint8 cast.
+
+    Input: (N, 2, 3, 384, 512) float32 in [0, 255] from HNeRVDecoder.
+    Output: (N, 2, CAMERA_H, CAMERA_W, 3) uint8 — matches contest batch_comp.
+    """
+    import torch
+    import torch.nn.functional as F
+
+    N = decoder_rgb.shape[0]
+    flat = torch.from_numpy(decoder_rgb.astype(np.float32, copy=True)).reshape(N * 2, 3, 384, 512)
+    up = F.interpolate(flat, size=(CAMERA_H, CAMERA_W), mode="bicubic", align_corners=False)
+    frames_uint8 = up.clamp(0, 255).round().to(torch.uint8).permute(0, 2, 3, 1).contiguous()
+    return frames_uint8.numpy().reshape(N, 2, CAMERA_H, CAMERA_W, 3)
 
 
 def _render_pair_batch_mlx_vs_pytorch(archive_zip: Path, n_pairs: int) -> tuple[np.ndarray, np.ndarray]:
@@ -117,21 +134,19 @@ def _render_pair_batch_mlx_vs_pytorch(archive_zip: Path, n_pairs: int) -> tuple[
     return rgb_mlx, rgb_torch
 
 
-def _quantize_uint8(rgb: np.ndarray) -> np.ndarray:
-    """Canonical contest uint8 quantization at inflate boundary."""
-    return np.clip(rgb, 0.0, 255.0).round().astype(np.uint8).astype(np.float32)
-
-
 def _compute_contest_distortion(
     *, candidate_pairs: np.ndarray, gt_pairs: np.ndarray, distortion_net
 ) -> tuple[np.ndarray, np.ndarray]:
     """Run upstream DistortionNet.compute_distortion(candidate, gt) on N pairs.
 
+    Inputs: (N, 2, H=874, W=1164, 3) uint8 — matching contest evaluator shape.
     Returns (posenet_dist, segnet_dist) each shaped (N,).
     """
     import torch
-    cand_t = torch.from_numpy(candidate_pairs.astype(np.float32, copy=True))
-    gt_t = torch.from_numpy(gt_pairs.astype(np.float32, copy=True))
+    # Contest evaluator does .to(device) on uint8 tensors directly; DistortionNet
+    # internally casts via .float() inside preprocess_input.
+    cand_t = torch.from_numpy(candidate_pairs)  # uint8
+    gt_t = torch.from_numpy(gt_pairs)  # uint8
     with torch.inference_mode():
         posenet_dist, segnet_dist = distortion_net.compute_distortion(cand_t, gt_t)
     return posenet_dist.detach().cpu().numpy(), segnet_dist.detach().cpu().numpy()
@@ -155,35 +170,44 @@ def main() -> int:
     args.output_json.parent.mkdir(parents=True, exist_ok=True)
 
     t0 = time.perf_counter()
-    print(f"[step 1/4] Render MLX + PyTorch pairs (N={args.n_pairs}) from archive")
-    rgb_mlx, rgb_torch = _render_pair_batch_mlx_vs_pytorch(args.archive_zip, args.n_pairs)
-    uint8_mlx = _quantize_uint8(rgb_mlx)
-    uint8_torch = _quantize_uint8(rgb_torch)
-    print(f"  shapes: mlx={uint8_mlx.shape}, torch={uint8_torch.shape}")
+    print(f"[step 1/5] Render MLX + PyTorch decoder-resolution pairs (N={args.n_pairs}) from archive")
+    rgb_mlx_dec, rgb_torch_dec = _render_pair_batch_mlx_vs_pytorch(args.archive_zip, args.n_pairs)
+    print(f"  decoder-resolution shapes: mlx={rgb_mlx_dec.shape}, torch={rgb_torch_dec.shape}")
     print(f"  rendered in {time.perf_counter() - t0:.1f}s")
 
     t1 = time.perf_counter()
-    print(f"[step 2/4] Decode ground-truth pairs from {args.video_path.name}")
-    rgb_gt = _decode_ground_truth_frames(args.video_path, args.n_pairs)
-    print(f"  gt shape: {rgb_gt.shape}, range [{rgb_gt.min():.1f}, {rgb_gt.max():.1f}]")
-    print(f"  decoded in {time.perf_counter() - t1:.1f}s")
+    print(f"[step 2/5] Upscale decoder→camera resolution via bicubic + uint8 cast (canonical inflate.py)")
+    uint8_mlx_cam = _upscale_decoder_output_to_camera_uint8(rgb_mlx_dec)
+    uint8_torch_cam = _upscale_decoder_output_to_camera_uint8(rgb_torch_dec)
+    print(f"  camera-resolution shapes: mlx={uint8_mlx_cam.shape}, torch={uint8_torch_cam.shape}")
+    print(f"  upscaled in {time.perf_counter() - t1:.1f}s")
+    # Quick sanity: how many uint8 pixels disagree between MLX-upscaled vs PyTorch-upscaled at camera resolution?
+    cross_diff = np.abs(uint8_mlx_cam.astype(np.int32) - uint8_torch_cam.astype(np.int32))
+    cross_flips = int((cross_diff > 0).sum())
+    print(f"  MLX-vs-PyTorch uint8 pixel flips at camera res: {cross_flips} of {cross_diff.size} ({100*cross_flips/cross_diff.size:.4f}%)")
 
     t2 = time.perf_counter()
-    print(f"[step 3/4] Build DistortionNet (canonical upstream PoseNet + SegNet)")
+    print(f"[step 3/5] Decode ground-truth camera-resolution pairs from {args.video_path.name}")
+    rgb_gt = _decode_ground_truth_frames(args.video_path, args.n_pairs)
+    print(f"  gt shape: {rgb_gt.shape}, dtype={rgb_gt.dtype}")
+    print(f"  decoded in {time.perf_counter() - t2:.1f}s")
+
+    t3 = time.perf_counter()
+    print(f"[step 4/5] Build DistortionNet (canonical upstream PoseNet + SegNet)")
     from modules import DistortionNet  # type: ignore
     distortion_net = DistortionNet().eval()
     distortion_net.load_state_dicts(str(args.posenet_sd), str(args.segnet_sd), "cpu")
-    print(f"  built in {time.perf_counter() - t2:.1f}s")
+    print(f"  built in {time.perf_counter() - t3:.1f}s")
 
-    t3 = time.perf_counter()
-    print(f"[step 4/4] Compute d_pose + d_seg for MLX-vs-GT and PyTorch-vs-GT")
+    t4 = time.perf_counter()
+    print(f"[step 5/5] Compute d_pose + d_seg for MLX-vs-GT and PyTorch-vs-GT")
     posenet_dist_mlx, segnet_dist_mlx = _compute_contest_distortion(
-        candidate_pairs=uint8_mlx, gt_pairs=rgb_gt, distortion_net=distortion_net,
+        candidate_pairs=uint8_mlx_cam, gt_pairs=rgb_gt, distortion_net=distortion_net,
     )
     posenet_dist_pt, segnet_dist_pt = _compute_contest_distortion(
-        candidate_pairs=uint8_torch, gt_pairs=rgb_gt, distortion_net=distortion_net,
+        candidate_pairs=uint8_torch_cam, gt_pairs=rgb_gt, distortion_net=distortion_net,
     )
-    print(f"  scored in {time.perf_counter() - t3:.1f}s")
+    print(f"  scored in {time.perf_counter() - t4:.1f}s")
 
     # Contest-score components (rate term cancels because archive bytes identical)
     d_pose_mlx_avg = float(posenet_dist_mlx.mean())

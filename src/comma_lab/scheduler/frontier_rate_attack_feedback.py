@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import time
@@ -3748,6 +3749,20 @@ def _slug_token(value: Any) -> str:
     return "_".join(part for part in out.split("_") if part) or "unknown"
 
 
+def _bounded_content_key(
+    prefix: str,
+    parts: Sequence[Any],
+    *,
+    slug_chars: int = 48,
+) -> str:
+    raw = "\0".join(str(part or "") for part in parts)
+    digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
+    display_source = next((str(part or "") for part in parts if str(part or "")), "")
+    display = _slug_token(display_source)[:slug_chars].strip("_")
+    stem = _slug_token(prefix)
+    return f"{stem}_{display}_{digest}" if display else f"{stem}_{digest}"
+
+
 def _rate_credit_score_units_for_saved_bytes(saved_bytes: int) -> float:
     return abs(rate_delta_for_archive_byte_delta(-int(saved_bytes)))
 
@@ -4694,6 +4709,44 @@ def _advisory_posenet_score_units(payload: Mapping[str, Any]) -> float | None:
     )
 
 
+def _advisory_rate_score_units(payload: Mapping[str, Any]) -> float | None:
+    value = _first_finite_float(
+        payload,
+        ("score_rate_contribution", "rate_score_contribution", "rate"),
+    )
+    if value is not None:
+        return value
+    archive_bytes = _advisory_archive_size_bytes(payload)
+    if archive_bytes is None:
+        return None
+    return rate_delta_for_archive_byte_delta(archive_bytes)
+
+
+def _advisory_total_score_units(payload: Mapping[str, Any]) -> float | None:
+    value = _first_finite_float(
+        payload,
+        ("canonical_score", "score_recomputed_from_components", "final_score"),
+    )
+    if value is not None:
+        return value
+    seg = _advisory_segnet_score_units(payload)
+    pose = _advisory_posenet_score_units(payload)
+    rate = _advisory_rate_score_units(payload)
+    if seg is None or pose is None or rate is None:
+        return None
+    return seg + pose + rate
+
+
+def _advisory_axis_score_terms(payload: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "score_units": _advisory_total_score_units(payload),
+        "segnet_score_units": _advisory_segnet_score_units(payload),
+        "posenet_score_units": _advisory_posenet_score_units(payload),
+        "rate_score_units": _advisory_rate_score_units(payload),
+        "archive_size_bytes": _advisory_archive_size_bytes(payload),
+    }
+
+
 def _targeted_component_response_delta_source(
     payload: Mapping[str, Any],
 ) -> Mapping[str, Any]:
@@ -4824,16 +4877,116 @@ def _targeted_component_response_paired_delta_terms(
     }
 
 
+def _targeted_component_response_mlx_cpu_drift_terms(
+    *,
+    mlx: Mapping[str, Any],
+    local_cpu: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Measure absolute MLX-vs-local-CPU scorer drift for the same artifact."""
+
+    mlx_terms = _advisory_axis_score_terms(mlx)
+    cpu_terms = _advisory_axis_score_terms(local_cpu)
+    out: dict[str, Any] = {
+        "schema": "targeted_component_mlx_cpu_absolute_drift_terms.v1",
+        "mlx_axis_score_terms": mlx_terms,
+        "local_cpu_axis_score_terms": cpu_terms,
+        "delta_source_keys": sorted(
+            [
+                *(f"mlx.{key}" for key in mlx),
+                *(f"local_cpu.{key}" for key in local_cpu),
+            ]
+        ),
+    }
+    component_abs_sum = 0.0
+    component_count = 0
+    for key in (
+        "score_units",
+        "segnet_score_units",
+        "posenet_score_units",
+        "rate_score_units",
+    ):
+        mlx_value = mlx_terms.get(key)
+        cpu_value = cpu_terms.get(key)
+        delta_key = f"mlx_minus_local_cpu_{key}"
+        delta = (
+            None
+            if mlx_value is None or cpu_value is None
+            else float(mlx_value) - float(cpu_value)
+        )
+        out[delta_key] = delta
+        if key != "score_units" and delta is not None:
+            component_abs_sum += abs(float(delta))
+            component_count += 1
+    out["component_abs_drift_sum_score_units"] = (
+        component_abs_sum if component_count else None
+    )
+    return out
+
+
+def _targeted_component_response_paired_mlx_cpu_delta_drift_terms(
+    *,
+    mlx_paired: Mapping[str, Any] | None,
+    local_cpu_paired: Mapping[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Measure whether MLX preserves the CPU candidate-vs-reference delta."""
+
+    if mlx_paired is None or local_cpu_paired is None:
+        return None
+    out: dict[str, Any] = {
+        "schema": "targeted_component_mlx_cpu_paired_delta_drift_terms.v1",
+        "delta_source_keys": sorted(
+            [
+                *(f"mlx_paired.{key}" for key in mlx_paired),
+                *(f"local_cpu_paired.{key}" for key in local_cpu_paired),
+            ]
+        ),
+    }
+    lagrangian_sum = 0.0
+    available = True
+    for key in (
+        "segnet_delta_score_units",
+        "posenet_delta_score_units",
+        "receiver_closed_rate_delta_score_units",
+    ):
+        mlx_value = _finite_float_or_none(mlx_paired.get(key))
+        cpu_value = _finite_float_or_none(local_cpu_paired.get(key))
+        delta_key = f"mlx_minus_local_cpu_{key}"
+        if mlx_value is None or cpu_value is None:
+            out[delta_key] = None
+            available = False
+            continue
+        delta = float(mlx_value) - float(cpu_value)
+        out[delta_key] = delta
+        lagrangian_sum += delta
+    out["mlx_minus_local_cpu_paired_lagrangian_delta_score_units"] = (
+        lagrangian_sum if available else None
+    )
+    out["paired_delta_abs_drift_sum_score_units"] = (
+        sum(
+            abs(float(out[f"mlx_minus_local_cpu_{key}"]))
+            for key in (
+                "segnet_delta_score_units",
+                "posenet_delta_score_units",
+                "receiver_closed_rate_delta_score_units",
+            )
+            if out.get(f"mlx_minus_local_cpu_{key}") is not None
+        )
+    )
+    return out
+
+
 def build_frontier_targeted_component_correction_response_harvest_from_artifacts(
     *,
     work_order: Mapping[str, Any],
     local_cpu_advisory: Mapping[str, Any] | None = None,
     reference_local_cpu_advisory: Mapping[str, Any] | None = None,
     local_mlx_response: Mapping[str, Any] | None = None,
+    reference_local_mlx_response: Mapping[str, Any] | None = None,
     work_order_path: str | Path | None = None,
     local_cpu_advisory_path: str | Path | None = None,
     reference_local_cpu_advisory_path: str | Path | None = None,
     local_mlx_response_path: str | Path | None = None,
+    reference_local_mlx_response_path: str | Path | None = None,
     response_artifact_path: str | Path | None = None,
     reference_role: str = "receiver_closed_source_reference",
 ) -> dict[str, Any]:
@@ -4865,6 +5018,11 @@ def build_frontier_targeted_component_correction_response_harvest_from_artifacts
         require_no_truthy_authority_fields(
             local_mlx_response,
             context="targeted_component_correction_local_mlx_response",
+        )
+    if reference_local_mlx_response is not None:
+        require_no_truthy_authority_fields(
+            reference_local_mlx_response,
+            context="targeted_component_correction_reference_local_mlx_response",
         )
 
     acquisition_id = str(work_order.get("acquisition_id") or "unknown_acquisition")
@@ -4961,6 +5119,8 @@ def build_frontier_targeted_component_correction_response_harvest_from_artifacts
 
     mlx_axis = None
     mlx_terms: dict[str, Any] | None = None
+    mlx_paired_reference_terms: dict[str, Any] | None = None
+    reference_mlx_axis = None
     if local_mlx_response is None:
         blockers.append("local_mlx_component_response_missing_for_spend_filter")
     else:
@@ -4968,11 +5128,74 @@ def build_frontier_targeted_component_correction_response_harvest_from_artifacts
         if mlx_axis != "[macOS-MLX research-signal]":
             blockers.append("local_mlx_component_response_axis_not_research_signal")
         mlx_terms = _targeted_component_response_delta_terms(local_mlx_response)
+        if reference_local_mlx_response is not None:
+            reference_mlx_axis = str(reference_local_mlx_response.get("score_axis") or "")
+            if reference_mlx_axis != "[macOS-MLX research-signal]":
+                blockers.append(
+                    "reference_local_mlx_component_response_axis_not_research_signal"
+                )
+            mlx_paired_reference_terms = (
+                _targeted_component_response_paired_delta_terms(
+                    candidate=local_mlx_response,
+                    reference=reference_local_mlx_response,
+                    reference_role=reference_role,
+                )
+            )
+            if (
+                mlx_terms["segnet_delta_score_units"] is None
+                and mlx_paired_reference_terms["segnet_delta_score_units"] is not None
+            ):
+                mlx_terms["segnet_delta_score_units"] = (
+                    mlx_paired_reference_terms["segnet_delta_score_units"]
+                )
+            if (
+                mlx_terms["posenet_delta_score_units"] is None
+                and mlx_paired_reference_terms["posenet_delta_score_units"] is not None
+            ):
+                mlx_terms["posenet_delta_score_units"] = (
+                    mlx_paired_reference_terms["posenet_delta_score_units"]
+                )
+            if mlx_terms["correction_rate_delta_score_units"] is None:
+                mlx_terms["correction_rate_delta_score_units"] = (
+                    mlx_paired_reference_terms["correction_rate_delta_score_units"]
+                )
+            if mlx_terms["correction_added_archive_bytes"] is None:
+                mlx_terms["correction_added_archive_bytes"] = (
+                    mlx_paired_reference_terms["correction_added_archive_bytes"]
+                )
+            mlx_terms["paired_reference_role"] = reference_role
+            mlx_terms["paired_reference_delta_source_keys"] = list(
+                mlx_paired_reference_terms["delta_source_keys"]
+            )
         if (
             mlx_terms["segnet_delta_score_units"] is None
             or mlx_terms["posenet_delta_score_units"] is None
         ):
             blockers.append("local_mlx_component_delta_missing")
+
+    mlx_cpu_drift_terms = (
+        _targeted_component_response_mlx_cpu_drift_terms(
+            mlx=local_mlx_response,
+            local_cpu=local_cpu_advisory,
+        )
+        if local_mlx_response is not None and local_cpu_advisory is not None
+        else None
+    )
+    reference_mlx_cpu_drift_terms = (
+        _targeted_component_response_mlx_cpu_drift_terms(
+            mlx=reference_local_mlx_response,
+            local_cpu=reference_local_cpu_advisory,
+        )
+        if reference_local_mlx_response is not None
+        and reference_local_cpu_advisory is not None
+        else None
+    )
+    paired_mlx_cpu_delta_drift_terms = (
+        _targeted_component_response_paired_mlx_cpu_delta_drift_terms(
+            mlx_paired=mlx_paired_reference_terms,
+            local_cpu_paired=local_paired_reference_terms,
+        )
+    )
 
     measured_component_delta = None
     measured_lagrangian_delta = None
@@ -5029,6 +5252,7 @@ def build_frontier_targeted_component_correction_response_harvest_from_artifacts
         "local_cpu_score_axis": local_axis,
         "reference_local_cpu_score_axis": reference_local_axis,
         "local_mlx_score_axis": mlx_axis,
+        "reference_local_mlx_score_axis": reference_mlx_axis,
         "saved_bytes_budget": saved_bytes,
         "estimated_receiver_closed_rate_credit_score_units": rate_credit,
         "operation_levels": list(work_order.get("operation_levels") or []),
@@ -5039,6 +5263,19 @@ def build_frontier_targeted_component_correction_response_harvest_from_artifacts
         "local_cpu_component_terms": local_terms,
         "local_cpu_paired_reference_terms": local_paired_reference_terms,
         "local_mlx_component_terms": mlx_terms,
+        "local_mlx_paired_reference_terms": mlx_paired_reference_terms,
+        "local_mlx_vs_local_cpu_drift_terms": mlx_cpu_drift_terms,
+        "reference_local_mlx_vs_local_cpu_drift_terms": (
+            reference_mlx_cpu_drift_terms
+        ),
+        "local_mlx_vs_local_cpu_paired_delta_drift_terms": (
+            paired_mlx_cpu_delta_drift_terms
+        ),
+        "reference_local_mlx_response_path": (
+            None
+            if reference_local_mlx_response_path is None
+            else str(reference_local_mlx_response_path)
+        ),
         "measured_component_delta_score_units": measured_component_delta,
         "measured_lagrangian_delta_score_units": measured_lagrangian_delta,
         "budget_credit_remaining_score_units": budget_credit_remaining,
@@ -5123,6 +5360,11 @@ def _targeted_component_response_rows_from_queue(
                 or metadata.get("local_mlx_response_path")
                 or ""
             )
+            reference_local_mlx_path_text = str(
+                request.get("reference_local_mlx_response_path")
+                or metadata.get("reference_local_mlx_response_path")
+                or ""
+            )
             if not work_order_path_text:
                 continue
             work_order_path = _resolve_path(work_order_path_text, repo_root=repo_root)
@@ -5139,6 +5381,11 @@ def _targeted_component_response_rows_from_queue(
             local_mlx_path = (
                 _resolve_path(local_mlx_path_text, repo_root=repo_root)
                 if local_mlx_path_text
+                else None
+            )
+            reference_local_mlx_path = (
+                _resolve_path(reference_local_mlx_path_text, repo_root=repo_root)
+                if reference_local_mlx_path_text
                 else None
             )
             response_path = (
@@ -5169,6 +5416,9 @@ def _targeted_component_response_rows_from_queue(
                         reference_local_cpu_path_text or None
                     ),
                     "local_mlx_response_path": local_mlx_path_text or None,
+                    "reference_local_mlx_response_path": (
+                        reference_local_mlx_path_text or None
+                    ),
                     "response_artifact_path": response_path_text or None,
                     "saved_bytes_budget": request.get("saved_bytes_budget")
                     or metadata.get("saved_bytes_budget"),
@@ -5215,12 +5465,19 @@ def _targeted_component_response_rows_from_queue(
                 if local_mlx_path is not None and local_mlx_path.exists()
                 else None
             )
+            reference_local_mlx = (
+                _load_json(reference_local_mlx_path)
+                if reference_local_mlx_path is not None
+                and reference_local_mlx_path.exists()
+                else None
+            )
             rows.append(
                 build_frontier_targeted_component_correction_response_harvest_from_artifacts(
                     work_order=work_order,
                     local_cpu_advisory=local_cpu,
                     reference_local_cpu_advisory=reference_local_cpu,
                     local_mlx_response=local_mlx,
+                    reference_local_mlx_response=reference_local_mlx,
                     work_order_path=_repo_rel(work_order_path, repo_root),
                     local_cpu_advisory_path=(
                         None
@@ -5236,6 +5493,11 @@ def _targeted_component_response_rows_from_queue(
                         None
                         if local_mlx_path is None
                         else _repo_rel(local_mlx_path, repo_root)
+                    ),
+                    reference_local_mlx_response_path=(
+                        None
+                        if reference_local_mlx_path is None
+                        else _repo_rel(reference_local_mlx_path, repo_root)
                     ),
                     response_artifact_path=(
                         None
@@ -5324,6 +5586,25 @@ def build_frontier_targeted_component_correction_response_harvest(
         blockers.append("no_targeted_component_correction_response_rows")
     if blocked:
         blockers.append("response_rows_blocked_before_budget_spend")
+    absolute_score_drifts: list[float] = []
+    paired_delta_drifts: list[float] = []
+    for row in rows:
+        terms = row.get("local_mlx_vs_local_cpu_drift_terms")
+        if isinstance(terms, Mapping):
+            value = _finite_float_or_none(
+                terms.get("mlx_minus_local_cpu_score_units")
+            )
+            if value is not None:
+                absolute_score_drifts.append(abs(value))
+        paired_terms = row.get("local_mlx_vs_local_cpu_paired_delta_drift_terms")
+        if isinstance(paired_terms, Mapping):
+            value = _finite_float_or_none(
+                paired_terms.get(
+                    "mlx_minus_local_cpu_paired_lagrangian_delta_score_units"
+                )
+            )
+            if value is not None:
+                paired_delta_drifts.append(abs(value))
     return {
         "schema": TARGETED_COMPONENT_CORRECTION_RESPONSE_HARVEST_SCHEMA,
         "generated_at_utc": _utc_now(),
@@ -5337,6 +5618,23 @@ def build_frontier_targeted_component_correction_response_harvest(
         "ready_for_budget_spend_count": 0,
         "candidate_ids": candidate_ids,
         "correction_families": families,
+        "mlx_cpu_drift_summary": {
+            "schema": "targeted_component_mlx_cpu_drift_summary.v1",
+            "absolute_score_drift_row_count": len(absolute_score_drifts),
+            "absolute_score_drift_max_abs": (
+                max(absolute_score_drifts) if absolute_score_drifts else None
+            ),
+            "paired_delta_drift_row_count": len(paired_delta_drifts),
+            "paired_lagrangian_delta_drift_max_abs": (
+                max(paired_delta_drifts) if paired_delta_drifts else None
+            ),
+            "interpretation": (
+                "absolute MLX-vs-local-CPU offsets may be nonzero; paired "
+                "candidate-vs-reference delta drift is the MLX acquisition "
+                "quality signal for receiver-closed rate attacks"
+            ),
+            **FALSE_AUTHORITY,
+        },
         "top_local_acquisition_ids": [
             str(row.get("acquisition_id") or "")
             for row in sorted(
@@ -6998,13 +7296,6 @@ def build_frontier_targeted_component_correction_queue(
         candidate_rows = rows_by_candidate[candidate_id]
         primary_row = candidate_rows[0]
         candidate_dir = queue_root / _slug_token(candidate_id)
-        shared_dir = candidate_dir / "shared_component_response"
-        local_cpu_advisory = shared_dir / "local_cpu_advisory.json"
-        local_cpu_work_dir = shared_dir / "local_cpu_advisory_work"
-        scorer_hashes = shared_dir / "scorer_input_cache_hashes.json"
-        reference_local_cpu_advisory = shared_dir / "reference_local_cpu_advisory.json"
-        reference_local_cpu_work_dir = shared_dir / "reference_local_cpu_advisory_work"
-        reference_scorer_hashes = shared_dir / "reference_scorer_input_cache_hashes.json"
         submission_dir = str(primary_row.get("submission_dir") or "")
         archive_path = str(
             primary_row.get("archive_path") or f"{submission_dir}/archive.zip"
@@ -7012,6 +7303,23 @@ def build_frontier_targeted_component_correction_queue(
         inflate_sh_path = str(
             primary_row.get("inflate_sh_path") or f"{submission_dir}/inflate.sh"
         )
+        candidate_cache_key = _bounded_content_key(
+            "candidate_component_response",
+            (
+                primary_row.get("archive_sha256"),
+                archive_path,
+                inflate_sh_path,
+            ),
+        )
+        shared_dir = (
+            results_base
+            / "frontier_targeted_component_correction"
+            / "shared_candidate_component_response"
+            / candidate_cache_key
+        )
+        local_cpu_advisory = shared_dir / "local_cpu_advisory.json"
+        local_cpu_work_dir = shared_dir / "local_cpu_advisory_work"
+        scorer_hashes = shared_dir / "scorer_input_cache_hashes.json"
         reference_archive_path = str(primary_row.get("source_archive_path") or "")
         reference_inflate_sh_path = str(
             primary_row.get("source_inflate_sh_path")
@@ -7024,7 +7332,31 @@ def build_frontier_targeted_component_correction_queue(
         reference_eval_available = bool(
             reference_archive_path and reference_inflate_sh_path
         )
+        reference_cache_key = _bounded_content_key(
+            "reference_component_response",
+            (
+                primary_row.get("source_archive_sha256"),
+                reference_archive_path,
+                reference_inflate_sh_path,
+            ),
+        )
+        reference_shared_dir = (
+            results_base
+            / "frontier_targeted_component_correction"
+            / "shared_reference_component_response"
+            / reference_cache_key
+        )
+        reference_local_cpu_advisory = (
+            reference_shared_dir / "reference_local_cpu_advisory.json"
+        )
+        reference_local_cpu_work_dir = (
+            reference_shared_dir / "reference_local_cpu_advisory_work"
+        )
+        reference_scorer_hashes = (
+            reference_shared_dir / "reference_scorer_input_cache_hashes.json"
+        )
         local_mlx_response: Path | None = None
+        reference_local_mlx_response: Path | None = None
         request_metadata: list[dict[str, Any]] = []
         steps: list[dict[str, Any]] = []
         work_order_step_ids: list[str] = []
@@ -7063,6 +7395,8 @@ def build_frontier_targeted_component_correction_queue(
                         repo,
                     ),
                     "local_cpu_advisory_path": _repo_rel(local_cpu_advisory, repo),
+                    "candidate_cache_key": candidate_cache_key,
+                    "shared_component_response_dir": _repo_rel(shared_dir, repo),
                     "reference_local_cpu_advisory_path": (
                         _repo_rel(reference_local_cpu_advisory, repo)
                         if reference_eval_available
@@ -7075,10 +7409,25 @@ def build_frontier_targeted_component_correction_queue(
                         if isinstance(row.get("reference_component_eval_context"), Mapping)
                         else {}
                     ),
+                    "reference_cache_key": reference_cache_key,
+                    "reference_shared_component_response_dir": (
+                        _repo_rel(reference_shared_dir, repo)
+                        if reference_eval_available
+                        else None
+                    ),
                     "local_mlx_response_path": (
                         None
                         if not include_mlx_response
                         else _repo_rel(shared_dir / "mlx_scorer_response.json", repo)
+                    ),
+                    "reference_local_mlx_response_path": (
+                        _repo_rel(
+                            reference_shared_dir
+                            / "reference_mlx_scorer_response.json",
+                            repo,
+                        )
+                        if include_mlx_response and reference_eval_available
+                        else None
                     ),
                     "budget_spend_ready": False,
                     "budget_spend_gate": dict(
@@ -7184,6 +7533,7 @@ def build_frontier_targeted_component_correction_queue(
                         _repo_rel(reference_local_cpu_work_dir, repo),
                         "--json-out",
                         _repo_rel(reference_local_cpu_advisory, repo),
+                        "--reuse-valid-json-out",
                         "--inflate-timeout",
                         "1800",
                         "--evaluate-timeout",
@@ -7216,14 +7566,12 @@ def build_frontier_targeted_component_correction_queue(
                     "telemetry": {
                         "artifact_paths": [
                             _repo_rel(reference_local_cpu_advisory, repo),
-                            _repo_rel(reference_local_cpu_work_dir, repo),
                             _repo_rel(reference_scorer_hashes, repo),
                         ],
                         "input_artifact_paths": [
                             reference_archive_path,
                             reference_inflate_sh_path,
                         ],
-                        "recursive": True,
                         "include_postcondition_paths": True,
                     },
                 }
@@ -7250,6 +7598,7 @@ def build_frontier_targeted_component_correction_queue(
                     _repo_rel(local_cpu_work_dir, repo),
                     "--json-out",
                     _repo_rel(local_cpu_advisory, repo),
+                    "--reuse-valid-json-out",
                     "--inflate-timeout",
                     "1800",
                     "--evaluate-timeout",
@@ -7282,7 +7631,6 @@ def build_frontier_targeted_component_correction_queue(
                 "telemetry": {
                     "artifact_paths": [
                         _repo_rel(local_cpu_advisory, repo),
-                        _repo_rel(local_cpu_work_dir, repo),
                         _repo_rel(scorer_hashes, repo),
                     ],
                     "input_artifact_paths": [
@@ -7293,7 +7641,6 @@ def build_frontier_targeted_component_correction_queue(
                             for request in request_metadata
                         ],
                     ],
-                    "recursive": True,
                     "include_postcondition_paths": True,
                 },
             },
@@ -7303,9 +7650,29 @@ def build_frontier_targeted_component_correction_queue(
             mlx_cache_audit = shared_dir / "mlx_scorer_input_cache_audit.json"
             mlx_response = shared_dir / "mlx_scorer_response.json"
             local_mlx_response = mlx_response
+            reference_mlx_cache_dir = (
+                reference_shared_dir / "reference_mlx_scorer_input_cache"
+            )
+            reference_mlx_cache_audit = (
+                reference_shared_dir / "reference_mlx_scorer_input_cache_audit.json"
+            )
+            reference_mlx_response = (
+                reference_shared_dir / "reference_mlx_scorer_response.json"
+            )
+            reference_local_mlx_response = (
+                reference_mlx_response if reference_eval_available else None
+            )
             for request in request_metadata:
                 request["local_mlx_response_path"] = _repo_rel(mlx_response, repo)
+                if reference_eval_available:
+                    request["reference_local_mlx_response_path"] = _repo_rel(
+                        reference_mlx_response,
+                        repo,
+                    )
             mlx_components_dir = shared_dir / "mlx_components"
+            reference_mlx_components_dir = (
+                reference_shared_dir / "reference_mlx_components"
+            )
             build_cache_command = [
                 ".venv/bin/python",
                 "tools/build_mlx_scorer_input_cache_from_local_advisory.py",
@@ -7321,6 +7688,7 @@ def build_frontier_targeted_component_correction_queue(
                 "1",
                 "--allow-large-tensor-cache",
                 "--stamp-cache-manifest-on-pass",
+                "--reuse-valid-cache",
             ]
             mlx_response_command = [
                 ".venv/bin/python",
@@ -7347,6 +7715,121 @@ def build_frontier_targeted_component_correction_queue(
             ]
             if mlx_device == "gpu":
                 mlx_response_command.append("--allow-gpu-research-signal")
+            reference_mlx_steps: list[dict[str, Any]] = []
+            if reference_eval_available:
+                reference_build_cache_command = [
+                    ".venv/bin/python",
+                    "tools/build_mlx_scorer_input_cache_from_local_advisory.py",
+                    "--local-cpu-advisory",
+                    _repo_rel(reference_local_cpu_advisory, repo),
+                    "--output-cache-dir",
+                    _repo_rel(reference_mlx_cache_dir, repo),
+                    "--audit-output",
+                    _repo_rel(reference_mlx_cache_audit, repo),
+                    "--expected-pair-count",
+                    "600",
+                    "--batch-pairs",
+                    "1",
+                    "--allow-large-tensor-cache",
+                    "--stamp-cache-manifest-on-pass",
+                    "--reuse-valid-cache",
+                ]
+                reference_mlx_response_command = [
+                    ".venv/bin/python",
+                    "tools/run_mlx_scorer_response_from_local_advisory.py",
+                    "--local-cpu-advisory",
+                    _repo_rel(reference_local_cpu_advisory, repo),
+                    "--reference-cache-dir",
+                    str(mlx_reference_cache_dir),
+                    "--candidate-cache-dir",
+                    _repo_rel(reference_mlx_cache_dir, repo),
+                    "--output",
+                    _repo_rel(reference_mlx_response, repo),
+                    "--repo-root",
+                    ".",
+                    "--batch-pairs",
+                    "1",
+                    "--device",
+                    mlx_device,
+                    "--allow-local-cpu-advisory-cache-identity",
+                    "--components-dir",
+                    _repo_rel(reference_mlx_components_dir, repo),
+                    "--response-family",
+                    "targeted_component_correction_receiver_closed_reference",
+                ]
+                if mlx_device == "gpu":
+                    reference_mlx_response_command.append("--allow-gpu-research-signal")
+                reference_mlx_steps = [
+                    {
+                        "id": "build_reference_mlx_component_cache",
+                        "kind": "command",
+                        "requires": ["local_cpu_reference_advisory"],
+                        "command": reference_build_cache_command,
+                        "resources": {"kind": "local_cpu"},
+                        "timeout_seconds": 1800,
+                        "postconditions": [
+                            {
+                                "type": "json_equals",
+                                "path": _repo_rel(reference_mlx_cache_audit, repo),
+                                "key": "passed",
+                                "equals": True,
+                            },
+                            {
+                                "type": "json_false_authority",
+                                "path": _repo_rel(reference_mlx_cache_audit, repo),
+                            },
+                            {
+                                "type": "json_false_authority",
+                                "path": _repo_rel(
+                                    reference_mlx_cache_dir / "manifest.json",
+                                    repo,
+                                ),
+                            },
+                        ],
+                        "telemetry": {
+                            "artifact_paths": [
+                                _repo_rel(reference_mlx_cache_dir, repo),
+                                _repo_rel(reference_mlx_cache_audit, repo),
+                            ],
+                            "input_artifact_paths": [
+                                _repo_rel(reference_local_cpu_advisory, repo)
+                            ],
+                            "recursive": True,
+                            "include_postcondition_paths": True,
+                        },
+                    },
+                    {
+                        "id": "reference_local_mlx_component_response",
+                        "kind": "command",
+                        "requires": ["build_reference_mlx_component_cache"],
+                        "command": reference_mlx_response_command,
+                        "resources": {
+                            "kind": "local_mlx" if mlx_device == "gpu" else "local_cpu"
+                        },
+                        "timeout_seconds": 900,
+                        "postconditions": [
+                            {
+                                "type": "json_false_authority",
+                                "path": _repo_rel(reference_mlx_response, repo),
+                                "axis_key": "score_axis",
+                                "axis_equals": "[macOS-MLX research-signal]",
+                            }
+                        ],
+                        "telemetry": {
+                            "artifact_paths": [
+                                _repo_rel(reference_mlx_response, repo),
+                                _repo_rel(reference_mlx_components_dir, repo),
+                            ],
+                            "input_artifact_paths": [
+                                _repo_rel(reference_local_cpu_advisory, repo),
+                                str(mlx_reference_cache_dir),
+                                _repo_rel(reference_mlx_cache_dir, repo),
+                            ],
+                            "recursive": True,
+                            "include_postcondition_paths": True,
+                        },
+                    },
+                ]
             steps.extend(
                 [
                     {
@@ -7413,6 +7896,7 @@ def build_frontier_targeted_component_correction_queue(
                             "include_postcondition_paths": True,
                         },
                     },
+                    *reference_mlx_steps,
                 ]
             )
         for row_index, request in enumerate(request_metadata, start=1):
@@ -7450,6 +7934,13 @@ def build_frontier_targeted_component_correction_queue(
                 harvest_command.extend(
                     ["--local-mlx-response", _repo_rel(local_mlx_response, repo)]
                 )
+                if reference_local_mlx_response is not None:
+                    harvest_command.extend(
+                        [
+                            "--reference-local-mlx-response",
+                            _repo_rel(reference_local_mlx_response, repo),
+                        ]
+                    )
                 harvest_requires = [
                     "local_mlx_component_response",
                     *(
@@ -7457,8 +7948,17 @@ def build_frontier_targeted_component_correction_queue(
                         if reference_eval_available
                         else []
                     ),
+                    *(
+                        ["reference_local_mlx_component_response"]
+                        if reference_local_mlx_response is not None
+                        else []
+                    ),
                 ]
                 harvest_input_paths.append(_repo_rel(local_mlx_response, repo))
+                if reference_local_mlx_response is not None:
+                    harvest_input_paths.append(
+                        _repo_rel(reference_local_mlx_response, repo)
+                    )
             steps.append(
                 {
                     "id": f"harvest_targeted_component_correction_response_{row_index:02d}",
@@ -7528,6 +8028,8 @@ def build_frontier_targeted_component_correction_queue(
                     "submission_dir": primary_row.get("submission_dir"),
                     "work_dir": _repo_rel(candidate_dir, repo),
                     "local_cpu_advisory_path": _repo_rel(local_cpu_advisory, repo),
+                    "candidate_cache_key": candidate_cache_key,
+                    "shared_component_response_dir": _repo_rel(shared_dir, repo),
                     "reference_local_cpu_advisory_path": (
                         _repo_rel(reference_local_cpu_advisory, repo)
                         if reference_eval_available
@@ -7536,10 +8038,21 @@ def build_frontier_targeted_component_correction_queue(
                     "reference_archive_path": reference_archive_path or None,
                     "reference_inflate_sh_path": reference_inflate_sh_path or None,
                     "reference_component_eval_available": reference_eval_available,
+                    "reference_cache_key": reference_cache_key,
+                    "reference_shared_component_response_dir": (
+                        _repo_rel(reference_shared_dir, repo)
+                        if reference_eval_available
+                        else None
+                    ),
                     "local_mlx_response_path": (
                         None
                         if local_mlx_response is None
                         else _repo_rel(local_mlx_response, repo)
+                    ),
+                    "reference_local_mlx_response_path": (
+                        None
+                        if reference_local_mlx_response is None
+                        else _repo_rel(reference_local_mlx_response, repo)
                     ),
                     "local_mlx_response_enabled": include_mlx_response,
                     "mlx_device": mlx_device,
@@ -8883,6 +9396,7 @@ def build_frontier_rate_attack_feedback_refresh(
     materializer_feedback_paths: Sequence[str | Path] = (),
     pair_frame_geometry_paths: Sequence[str | Path] = (),
     dqs1_observation_paths: Sequence[str | Path] = (),
+    max_files_per_root: int = 4096,
     action_summary_path: str | Path | None = None,
     results_root: str = DEFAULT_RESULTS_ROOT,
     queue_id: str = DEFAULT_QUEUE_ID,
@@ -8906,16 +9420,20 @@ def build_frontier_rate_attack_feedback_refresh(
     repo = Path(repo_root)
     if candidate_limit < 1:
         raise FrontierRateAttackFeedbackError("candidate_limit must be >= 1")
+    if max_files_per_root < 1:
+        raise FrontierRateAttackFeedbackError("max_files_per_root must be >= 1")
     payloads, source_paths, discovery = discover_materializer_feedback_payloads(
         repo_root=repo,
         frontier_artifact_roots=frontier_artifact_roots,
         materializer_feedback_paths=materializer_feedback_paths,
+        max_files_per_root=max_files_per_root,
     )
     pair_frame_requests, pair_frame_source_paths, pair_frame_discovery = (
         discover_pair_frame_geometry_queue_requests(
             repo_root=repo,
             frontier_artifact_roots=frontier_artifact_roots,
             pair_frame_geometry_paths=pair_frame_geometry_paths,
+            max_files_per_root=max_files_per_root,
         )
     )
     default_eureka_root = repo / ".omx" / "research"
@@ -8930,6 +9448,7 @@ def build_frontier_rate_attack_feedback_refresh(
     eureka_planning = discover_local_cpu_eureka_planning_signals(
         repo_root=repo,
         frontier_artifact_roots=resolved_eureka_roots,
+        max_files_per_root=max_files_per_root,
         strict_authority=strict_eureka_authority,
     )
     dqs1_observation_discovery = discover_dqs1_observation_jsonl_paths(

@@ -1,0 +1,708 @@
+{
+  "controls": {
+    "local_first": true,
+    "max_concurrency": {
+      "local_cpu": 1,
+      "local_io_heavy": 1,
+      "local_mlx": 0,
+      "modal_cpu": 0,
+      "modal_gpu": 0
+    },
+    "mode": "running"
+  },
+  "experiments": [
+    {
+      "id": "chain_dfl1_merge_header_elide_minimal_envelope",
+      "lane_id": "lane_frontier_operation_chain_compiler_20260526",
+      "metadata": {
+        "allowed_use": "operation_chain_compiler_queue_metadata_only",
+        "budget_spend_allowed": false,
+        "byte_range_chain_manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_dfl1_merge_header_elide_minimal_envelope/byte_range_entropy_recode_chain/byte_range_entropy_recode_chain_manifest.json",
+        "byte_range_closed_source_queue_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_dfl1_merge_header_elide_minimal_envelope/byte_range_entropy_recode_chain/exact_eval_handoff/submission_closure/closed_source_queue.json",
+        "byte_range_exact_readiness_bridge_report_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_dfl1_merge_header_elide_minimal_envelope/byte_range_entropy_recode_chain/exact_eval_handoff/exact_readiness_bridge_report.json",
+        "byte_range_exact_readiness_handoff_enabled": false,
+        "byte_range_harvest_report_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_dfl1_merge_header_elide_minimal_envelope/byte_range_entropy_recode_chain/exact_eval_handoff/harvest_report.json",
+        "byte_range_harvest_source_queue_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_dfl1_merge_header_elide_minimal_envelope/byte_range_entropy_recode_chain/exact_eval_handoff/source_queue.json",
+        "byte_range_local_chain_queueable": false,
+        "byte_range_rate_budget_policy": {
+          "allowed_use": "local_byte_range_chain_rate_budget_planning_after_receiver_proof_only",
+          "budget_spend_allowed": false,
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "forbidden_use": "score_claim_or_dispatch_or_budget_spend_authority",
+          "freed_bytes_can_fund": [
+            "segnet_boundary_repair",
+            "posenet_geometry_repair",
+            "full_video_residual_reallocation"
+          ],
+          "freed_bytes_destination": "targeted_component_correction_acquisition",
+          "gpu_launched": false,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "frontier_rate_attack_stage_rate_budget_policy.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "spend_requires": [
+            "receiver_contract_satisfied",
+            "exact_readiness_bridge",
+            "component_eval_under_segnet_posenet_guard",
+            "total_lagrangian_improvement"
+          ]
+        },
+        "byte_range_stage_inputs_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_dfl1_merge_header_elide_minimal_envelope/byte_range_stage_inputs.json",
+        "byte_range_submission_closure_report_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_dfl1_merge_header_elide_minimal_envelope/byte_range_entropy_recode_chain/exact_eval_handoff/submission_closure/submission_closure_report.json",
+        "chain_target_count": 2,
+        "chain_targets": [
+          "renderer_payload_dfl1_v1",
+          "packet_member_merge_v1"
+        ],
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "execution_ready": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "forbidden_use": "score_claim_or_dispatch_authority",
+        "gpu_launched": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "frontier_rate_attack_operation_chain_compiler_queue_metadata.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_operation_family": "combined_receiver_byte_chain",
+        "source_operation_id": "chain_dfl1_merge_header_elide_minimal_envelope",
+        "stage_plan_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_dfl1_merge_header_elide_minimal_envelope/stage_plan.json",
+        "targeted_correction_budget": {}
+      },
+      "priority": 1,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_frontier_operation_chain_stage_plan.py",
+            "--operation-chain-compiler-work-orders",
+            ".omx/research/frontier_rate_attack_feedback_refresh_20260526T073640Z_reference_mlx_cache_reuse/operation_chain_compiler_work_orders.json",
+            "--source-operation-id",
+            "chain_dfl1_merge_header_elide_minimal_envelope",
+            "--stage-plan-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_dfl1_merge_header_elide_minimal_envelope/stage_plan.json",
+            "--overwrite"
+          ],
+          "id": "emit_operation_chain_stage_plan",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "frontier_rate_attack_operation_chain_compiler_stage_plan.v1",
+              "key": "schema",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_dfl1_merge_header_elide_minimal_envelope/stage_plan.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_dfl1_merge_header_elide_minimal_envelope/stage_plan.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "execution_ready",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_dfl1_merge_header_elide_minimal_envelope/stage_plan.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_dfl1_merge_header_elide_minimal_envelope/stage_plan.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/frontier_rate_attack_feedback_refresh_20260526T073640Z_reference_mlx_cache_reuse/operation_chain_compiler_work_orders.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_frontier_byte_range_stage_inputs.py",
+            "--operation-chain-stage-plan",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_dfl1_merge_header_elide_minimal_envelope/stage_plan.json",
+            "--stage-inputs-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_dfl1_merge_header_elide_minimal_envelope/byte_range_stage_inputs.json",
+            "--chain-output-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_dfl1_merge_header_elide_minimal_envelope/byte_range_entropy_recode_chain",
+            "--overwrite"
+          ],
+          "id": "emit_byte_range_stage_inputs",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "frontier_rate_attack_byte_range_stage_inputs.v1",
+              "key": "schema",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_dfl1_merge_header_elide_minimal_envelope/byte_range_stage_inputs.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_dfl1_merge_header_elide_minimal_envelope/byte_range_stage_inputs.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "exact_execution_ready",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_dfl1_merge_header_elide_minimal_envelope/byte_range_stage_inputs.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "emit_operation_chain_stage_plan"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_dfl1_merge_header_elide_minimal_envelope/byte_range_stage_inputs.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_dfl1_merge_header_elide_minimal_envelope/stage_plan.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "operation_chain_compiler",
+        "multisurface_materializer_chain",
+        "receiver_runtime",
+        "targeted_correction_budget"
+      ]
+    },
+    {
+      "id": "chain_registered_multisurface_materializer_program",
+      "lane_id": "lane_frontier_operation_chain_compiler_20260526",
+      "metadata": {
+        "allowed_use": "operation_chain_compiler_queue_metadata_only",
+        "budget_spend_allowed": false,
+        "byte_range_chain_manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/byte_range_entropy_recode_chain_manifest.json",
+        "byte_range_closed_source_queue_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/submission_closure/closed_source_queue.json",
+        "byte_range_exact_readiness_bridge_report_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/exact_readiness_bridge_report.json",
+        "byte_range_exact_readiness_handoff_enabled": true,
+        "byte_range_harvest_report_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/harvest_report.json",
+        "byte_range_harvest_source_queue_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/source_queue.json",
+        "byte_range_local_chain_queueable": true,
+        "byte_range_rate_budget_policy": {
+          "allowed_use": "local_byte_range_chain_rate_budget_planning_after_receiver_proof_only",
+          "budget_spend_allowed": false,
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "forbidden_use": "score_claim_or_dispatch_or_budget_spend_authority",
+          "freed_bytes_can_fund": [
+            "segnet_boundary_repair",
+            "posenet_geometry_repair",
+            "full_video_residual_reallocation"
+          ],
+          "freed_bytes_destination": "targeted_component_correction_acquisition",
+          "gpu_launched": false,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "frontier_rate_attack_stage_rate_budget_policy.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "spend_requires": [
+            "receiver_contract_satisfied",
+            "exact_readiness_bridge",
+            "component_eval_under_segnet_posenet_guard",
+            "total_lagrangian_improvement"
+          ]
+        },
+        "byte_range_stage_inputs_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_stage_inputs.json",
+        "byte_range_submission_closure_report_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/submission_closure/submission_closure_report.json",
+        "chain_target_count": 9,
+        "chain_targets": [
+          "byte_range_entropy_recode_v1",
+          "archive_section_header_elide_v1",
+          "archive_section_reorder_v1",
+          "archive_section_proceduralize_v1",
+          "tensor_quantize_v1",
+          "tensor_prune_v1",
+          "tensor_shared_codebook_v1",
+          "packet_member_reorder_v1",
+          "inverse_steganalysis_high_level_operation_set_v1"
+        ],
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "execution_ready": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "forbidden_use": "score_claim_or_dispatch_authority",
+        "gpu_launched": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "frontier_rate_attack_operation_chain_compiler_queue_metadata.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_operation_family": "registered_multisurface_materializer_chain",
+        "source_operation_id": "chain_registered_multisurface_materializer_program",
+        "stage_plan_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/stage_plan.json",
+        "targeted_correction_budget": {
+          "active": true,
+          "blockers": [
+            "requires_component_measured_rate_credit_for_repair_budget",
+            "some_materializer_saved_bytes_still_require_receiver_runtime_proof_before_spend",
+            "receiver_closed_materializer_bytes_require_component_eval_before_correction_spend",
+            "receiver_closed_materializer_bytes_still_require_exact_auth_eval_before_score_claim",
+            "requires_segnet_posenet_component_behavior_rows"
+          ],
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "local_drop_saved_bytes_total": 0,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_closed_materializer_saved_bytes_total": 258,
+          "schema": "frontier_rate_attack_targeted_correction_budget_summary.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false
+        }
+      },
+      "priority": 2,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_frontier_operation_chain_stage_plan.py",
+            "--operation-chain-compiler-work-orders",
+            ".omx/research/frontier_rate_attack_feedback_refresh_20260526T073640Z_reference_mlx_cache_reuse/operation_chain_compiler_work_orders.json",
+            "--source-operation-id",
+            "chain_registered_multisurface_materializer_program",
+            "--stage-plan-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/stage_plan.json",
+            "--overwrite"
+          ],
+          "id": "emit_operation_chain_stage_plan",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "frontier_rate_attack_operation_chain_compiler_stage_plan.v1",
+              "key": "schema",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/stage_plan.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/stage_plan.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "execution_ready",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/stage_plan.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/stage_plan.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/frontier_rate_attack_feedback_refresh_20260526T073640Z_reference_mlx_cache_reuse/operation_chain_compiler_work_orders.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_frontier_byte_range_stage_inputs.py",
+            "--operation-chain-stage-plan",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/stage_plan.json",
+            "--stage-inputs-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_stage_inputs.json",
+            "--chain-output-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain",
+            "--overwrite"
+          ],
+          "id": "emit_byte_range_stage_inputs",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "frontier_rate_attack_byte_range_stage_inputs.v1",
+              "key": "schema",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_stage_inputs.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_stage_inputs.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "exact_execution_ready",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_stage_inputs.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "emit_operation_chain_stage_plan"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_stage_inputs.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/stage_plan.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_byte_range_entropy_recode_chain.py",
+            "--schema-manifest",
+            "experiments/results/hnerv_pr103_lc_ac_schema_refresh_20260510_codex/manifest.json",
+            "--source-runtime-dir",
+            "submissions/hnerv_lc_ac",
+            "--output-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain",
+            "--overwrite",
+            "--beam-probe-report",
+            ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/stem_weight_beam_probe_mid32.json",
+            "--beam-probe-report",
+            ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_0_weight_beam_probe_mid32.json",
+            "--beam-probe-report",
+            ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_1_weight_beam_probe_mid32.json",
+            "--beam-probe-report",
+            ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_2_weight_beam_probe_mid32.json",
+            "--beam-probe-report",
+            ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_3_weight_beam_probe_mid32.json",
+            "--beam-probe-report",
+            ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/latent_hi_bytes_beam_probe.json",
+            "--source-archive",
+            "experiments/results/public_pr_intake_full/public_pr103_intake_20260505_auto/archive.zip",
+            "--global-combo-report",
+            ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_mid32_plus_latent_hi_probe.json",
+            "--member-name",
+            "x"
+          ],
+          "id": "run_byte_range_entropy_recode_chain",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "byte_range_entropy_recode_chain_v1",
+              "key": "schema",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/byte_range_entropy_recode_chain_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/byte_range_entropy_recode_chain_manifest.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/byte_range_entropy_recode_chain_manifest.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "emit_byte_range_stage_inputs"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/byte_range_entropy_recode_chain_manifest.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_stage_inputs.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 600
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/harvest_materializer_chain_candidates.py",
+            "--repo-root",
+            "/Users/adpena/Projects/pact",
+            "--chain-manifest",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/byte_range_entropy_recode_chain_manifest.json",
+            "--source-queue-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/source_queue.json",
+            "--report-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/harvest_report.json",
+            "--require-accepted",
+            "--overwrite"
+          ],
+          "id": "harvest_byte_range_entropy_recode_chain",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "optimizer_candidate_queue_v1",
+              "key": "schema",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/source_queue.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [
+                "score_claim_valid",
+                "score_claim_eligible",
+                "promotable",
+                "ready_for_exact_eval_dispatch",
+                "field_selection_ready_for_exact_eval_dispatch",
+                "exact_eval_ready",
+                "exact_eval_dispatch_ready",
+                "exact_cuda_auth_eval",
+                "contest_cuda_auth_eval",
+                "dispatch_attempted",
+                "dispatch_packet_ready",
+                "gpu_launched",
+                "score_affecting_payload_changed",
+                "charged_bits_changed"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/source_queue.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": "materializer_chain_harvest_report.v1",
+              "key": "schema",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/harvest_report.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/harvest_report.json",
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "run_byte_range_entropy_recode_chain"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/source_queue.json",
+              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/harvest_report.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/byte_range_entropy_recode_chain_manifest.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 180
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_materializer_submission_closure.py",
+            "--source-queue",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/source_queue.json",
+            "--submission-dir-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/submission_closure/submission",
+            "--closed-source-queue-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/submission_closure/closed_source_queue.json",
+            "--closure-report-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/submission_closure/submission_closure_report.json",
+            "--overwrite"
+          ],
+          "id": "build_byte_range_submission_closure",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "optimizer_candidate_queue_v1",
+              "key": "schema",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/submission_closure/closed_source_queue.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [
+                "score_claim_valid",
+                "score_claim_eligible",
+                "promotable",
+                "ready_for_exact_eval_dispatch",
+                "field_selection_ready_for_exact_eval_dispatch",
+                "exact_eval_ready",
+                "exact_eval_dispatch_ready",
+                "exact_cuda_auth_eval",
+                "contest_cuda_auth_eval",
+                "dispatch_attempted",
+                "dispatch_packet_ready",
+                "gpu_launched",
+                "score_affecting_payload_changed",
+                "charged_bits_changed"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/submission_closure/closed_source_queue.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": "materializer_submission_runtime_closure_report.v1",
+              "key": "schema",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/submission_closure/submission_closure_report.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/submission_closure/submission_closure_report.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/submission_closure/submission_closure_report.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "harvest_byte_range_entropy_recode_chain"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/submission_closure/submission",
+              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/submission_closure/closed_source_queue.json",
+              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/submission_closure/submission_closure_report.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/source_queue.json",
+              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/byte_range_entropy_recode_chain_manifest.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": true
+          },
+          "timeout_seconds": 180
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_materializer_exact_readiness_bridge.py",
+            "--source-queue",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/submission_closure/closed_source_queue.json",
+            "--exact-readiness-out-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/exact_readiness",
+            "--bridge-report-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/exact_readiness_bridge_report.json",
+            "--overwrite",
+            "--force-recompute"
+          ],
+          "id": "run_byte_range_exact_readiness_bridge",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "materializer_chain_exact_readiness_bridge_report.v1",
+              "key": "schema",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/exact_readiness_bridge_report.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/exact_readiness_bridge_report.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/exact_readiness_bridge_report.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "build_byte_range_submission_closure"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/exact_readiness",
+              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/exact_readiness_bridge_report.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/submission_closure/closed_source_queue.json",
+              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/submission_closure/submission_closure_report.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": true
+          },
+          "timeout_seconds": 180
+        }
+      ],
+      "tags": [
+        "operation_chain_compiler",
+        "multisurface_materializer_chain",
+        "receiver_runtime",
+        "targeted_correction_budget"
+      ]
+    }
+  ],
+  "queue_id": "frontier_rate_attack_reference_mlx_cache_reuse_20260526T073640Z_chain_compiler",
+  "schema": "experiment_queue.v1"
+}

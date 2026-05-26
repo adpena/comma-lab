@@ -43,6 +43,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import fcntl
 import hashlib
 import json
 import os
@@ -875,6 +876,148 @@ def _validate_expected_runtime_tree(prov: dict, expected_runtime_tree_sha256: st
             "inflate runtime tree hash mismatch: "
             f"expected={expected_runtime_tree_sha256} actual={actual}"
         )
+
+
+def _existing_contest_auth_eval_reuse_blockers(
+    *,
+    result_path: Path,
+    archive: Path,
+    inflate_sh: Path,
+    upstream_dir: Path,
+    device: str,
+    video_names_file: Path,
+    expected_runtime_tree_sha256: str | None = None,
+    scorer_input_cache_hashes_out: Path | None = None,
+) -> tuple[dict | None, list[str]]:
+    """Validate whether a durable auth-eval JSON can be reused.
+
+    This is intentionally conservative. Reuse is a queue/DX optimization, not
+    authority promotion: the cached payload must still carry its original axis
+    and false-authority fields.
+    """
+
+    blockers: list[str] = []
+    if not result_path.is_file():
+        return None, ["contest_auth_eval_json_missing"]
+    try:
+        result = json.loads(result_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return None, [f"contest_auth_eval_json_unreadable:{exc}"]
+    if not isinstance(result, dict):
+        return None, ["contest_auth_eval_json_not_object"]
+
+    prov = result.get("provenance")
+    if not isinstance(prov, dict):
+        blockers.append("provenance_missing")
+        prov = {}
+
+    expected_archive_sha = _sha256(archive, prefix=0)
+    if prov.get("archive_sha256") != expected_archive_sha:
+        blockers.append("archive_sha256_mismatch")
+    if result.get("archive_size_bytes") != archive.stat().st_size:
+        blockers.append("archive_size_bytes_mismatch")
+
+    expected_inflate_sha = _sha256(inflate_sh, prefix=0)
+    if prov.get("inflate_script_sha256") != expected_inflate_sha:
+        blockers.append("inflate_script_sha256_mismatch")
+    if str(prov.get("device") or "") != str(device):
+        blockers.append("device_mismatch")
+    if Path(str(prov.get("video_names_file") or "")).resolve(strict=False) != video_names_file.resolve(strict=False):
+        blockers.append("video_names_file_mismatch")
+    manifest = prov.get("inflate_runtime_manifest")
+    if not isinstance(manifest, dict):
+        blockers.append("inflate_runtime_manifest_missing")
+        manifest = {}
+    actual_runtime_tree = manifest.get("runtime_tree_sha256")
+    actual_runtime_content_tree = manifest.get("runtime_content_tree_sha256")
+    live_runtime_manifest = _runtime_dependency_manifest(inflate_sh, upstream_dir)
+    live_runtime_tree = live_runtime_manifest.get("runtime_tree_sha256")
+    live_runtime_content_tree = live_runtime_manifest.get(
+        "runtime_content_tree_sha256"
+    )
+    if actual_runtime_tree != live_runtime_tree:
+        blockers.append("runtime_tree_sha256_mismatch")
+    if actual_runtime_content_tree != live_runtime_content_tree:
+        blockers.append("runtime_content_tree_sha256_mismatch")
+    if (
+        expected_runtime_tree_sha256
+        and actual_runtime_tree != expected_runtime_tree_sha256
+    ):
+        blockers.append("expected_runtime_tree_sha256_mismatch")
+
+    if result.get("canonical_score") is None:
+        blockers.append("canonical_score_missing")
+    if result.get("score_axis") is None:
+        blockers.append("score_axis_missing")
+    n_samples = result.get("n_samples")
+    if isinstance(n_samples, bool) or not isinstance(n_samples, int) or n_samples < 1:
+        blockers.append("n_samples_missing_or_invalid")
+        n_samples = 0
+    expected_contract = _auth_eval_evidence_contract(
+        device,
+        n_samples,
+        prov,
+    )
+    for key in (
+        "score_axis",
+        "evidence_semantics",
+        "score_claim",
+        "score_claim_valid",
+        "exact_cuda_eval_complete",
+        "cpu_leaderboard_reproduction_eligible",
+    ):
+        if result.get(key) != expected_contract.get(key):
+            blockers.append(f"evidence_contract_{key}_mismatch")
+    for key in (
+        "promotion_eligible",
+        "promotable",
+        "rank_or_kill_eligible",
+        "ready_for_exact_eval_dispatch",
+        "dispatch_attempted",
+        "gpu_launched",
+        "field_selection_ready_for_exact_eval_dispatch",
+    ):
+        if result.get(key) is True:
+            blockers.append(f"truthy_authority_field:{key}")
+
+    if scorer_input_cache_hashes_out is not None:
+        if not scorer_input_cache_hashes_out.is_file():
+            blockers.append("scorer_input_cache_hashes_missing")
+        else:
+            try:
+                cache_manifest = json.loads(
+                    scorer_input_cache_hashes_out.read_text(encoding="utf-8")
+                )
+            except (OSError, json.JSONDecodeError) as exc:
+                blockers.append(f"scorer_input_cache_hashes_unreadable:{exc}")
+                cache_manifest = {}
+            if isinstance(cache_manifest, dict):
+                if (
+                    cache_manifest.get("schema_version")
+                    != "mlx_scorer_input_cache_hashes.v1"
+                ):
+                    blockers.append("scorer_input_cache_hashes_schema_mismatch")
+                if cache_manifest.get("archive_sha256") != expected_archive_sha:
+                    blockers.append("scorer_input_cache_hashes_archive_sha256_mismatch")
+                if cache_manifest.get("score_claim") is True:
+                    blockers.append("scorer_input_cache_hashes_truthy_score_claim")
+            else:
+                blockers.append("scorer_input_cache_hashes_not_object")
+
+    return result, blockers
+
+
+def _print_reused_contest_auth_eval_result(result: dict, *, result_path: Path) -> None:
+    print(f"[contest_auth_eval] reusing valid durable JSON: {result_path}")
+    print(f"\nRESULT_JSON: {json.dumps(result)}")
+    print("\n=== CONTEST AUTH EVAL (REUSED) ===")
+    print(f"  Canonical score: {float(result['canonical_score']):.12f}")
+    print(f"  Reported final:  {float(result['final_score']):.4f}")
+    print(f"  PoseNet dist:   {float(result['avg_posenet_dist']):.6f}")
+    print(f"  SegNet dist:    {float(result['avg_segnet_dist']):.6f}")
+    print(f"  Rate (unscaled): {float(result['rate_unscaled']):.6f}")
+    print(f"  Archive bytes:  {int(result['archive_size_bytes']):,}")
+    print(f"  Durable JSON:   {result_path}")
 
 
 def _extract_archive(archive: Path, dest: Path) -> list[str]:
@@ -1772,6 +1915,16 @@ def main() -> int:
                         help="Working directory (default: tempfile)")
     parser.add_argument("--json-out", type=Path, default=None,
                         help="Optional durable copy of contest_auth_eval.json.")
+    parser.add_argument(
+        "--reuse-valid-json-out",
+        action="store_true",
+        help=(
+            "If --json-out already exists and matches the requested archive, "
+            "inflate runtime, device, video list, and optional scorer hash "
+            "artifact, reuse it instead of re-running inflate/evaluate. A "
+            "per-output fcntl lock prevents duplicate local queue workers."
+        ),
+    )
     parser.add_argument("--allow-temp-work-dir", action="store_true",
                         help="Allow temp-dir evidence for diagnostic scratch only; "
                              "never use for score custody.")
@@ -1907,6 +2060,42 @@ def main() -> int:
             video_names_file = alt
         else:
             raise SystemExit(f"--video-names-file does not exist: {video_names_file}")
+
+    reuse_lock_fh = None
+    if args.reuse_valid_json_out:
+        if args.json_out is None:
+            raise SystemExit("--reuse-valid-json-out requires --json-out")
+        lock_path = args.json_out.resolve().with_name(args.json_out.name + ".lock")
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        reuse_lock_fh = lock_path.open("a+")
+        fcntl.flock(reuse_lock_fh.fileno(), fcntl.LOCK_EX)
+        existing_result, reuse_blockers = _existing_contest_auth_eval_reuse_blockers(
+            result_path=args.json_out.resolve(),
+            archive=archive,
+            inflate_sh=inflate_sh,
+            upstream_dir=args.upstream_dir.resolve(strict=False),
+            device=args.device,
+            video_names_file=video_names_file,
+            expected_runtime_tree_sha256=args.expected_runtime_tree_sha256,
+            scorer_input_cache_hashes_out=(
+                args.scorer_input_cache_hashes_out.resolve()
+                if args.scorer_input_cache_hashes_out is not None
+                and args.allow_scorer_input_cache_artifact_output_outside_work_dir
+                else args.scorer_input_cache_hashes_out
+            ),
+        )
+        if existing_result is not None and not reuse_blockers:
+            _print_reused_contest_auth_eval_result(
+                existing_result,
+                result_path=args.json_out.resolve(),
+            )
+            fcntl.flock(reuse_lock_fh.fileno(), fcntl.LOCK_UN)
+            reuse_lock_fh.close()
+            return 0
+        print(
+            "[contest_auth_eval] cached durable JSON not reusable; running eval. "
+            f"blockers={reuse_blockers}"
+        )
 
     _ensure_uv_available()
     try:
@@ -2060,6 +2249,9 @@ def main() -> int:
         if cleanup:
             print(f"[contest_auth_eval] cleaning up {work_dir}")
             shutil.rmtree(work_dir, ignore_errors=True)
+        if reuse_lock_fh is not None and not reuse_lock_fh.closed:
+            fcntl.flock(reuse_lock_fh.fileno(), fcntl.LOCK_UN)
+            reuse_lock_fh.close()
 
 
 if __name__ == "__main__":

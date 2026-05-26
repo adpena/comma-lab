@@ -561,6 +561,31 @@ def test_build_mlx_cache_from_local_advisory_cli_stamps_manifest(tmp_path: Path)
     assert audit["verdict"] == "PASS_CACHE_LOCAL_CPU_ADVISORY_IDENTITY"
     assert audit["score_claim"] is False
 
+    reused = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "build_mlx_scorer_input_cache_from_local_advisory.py"),
+            "--local-cpu-advisory",
+            str(advisory),
+            "--output-cache-dir",
+            str(output_cache),
+            "--audit-output",
+            str(audit_output),
+            "--expected-pair-count",
+            "1",
+            "--batch-pairs",
+            "1",
+            "--stamp-cache-manifest-on-pass",
+            "--reuse-valid-cache",
+        ],
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    reused_stdout = json.loads(reused.stdout)
+    assert reused_stdout["reused_existing_cache"] is True
+    assert reused_stdout["audit_passed"] is True
+
 
 def test_contest_auth_eval_tensor_artifact_is_guarded_and_updates_provenance(
     tmp_path: Path,
