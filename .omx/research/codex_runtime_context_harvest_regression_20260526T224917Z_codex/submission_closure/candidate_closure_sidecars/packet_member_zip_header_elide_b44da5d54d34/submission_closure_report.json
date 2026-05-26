@@ -1,0 +1,192 @@
+{
+  "allowed_use": "exact_readiness_static_submission_closure_only",
+  "archive_bytes": 178507,
+  "archive_manifest_path": ".omx/research/codex_runtime_context_harvest_regression_20260526T224917Z_codex/submission_closure/submission_dir/packet_member_zip_header_elide_b44da5d54d34/archive_manifest.json",
+  "archive_path": ".omx/research/codex_runtime_context_harvest_regression_20260526T224917Z_codex/submission_closure/submission_dir/packet_member_zip_header_elide_b44da5d54d34/archive.zip",
+  "archive_sha256": "b44da5d54d34ce094c8fca7a37172b9ea6546d8a56eb960afa86252f56d11844",
+  "candidate_id": "packet_member_zip_header_elide_b44da5d54d34",
+  "charged_bits_changed": false,
+  "closed_source_queue_path": ".omx/research/codex_runtime_context_harvest_regression_20260526T224917Z_codex/submission_closure/candidate_closure_sidecars/packet_member_zip_header_elide_b44da5d54d34/closed_source_queue.json",
+  "closure_queue_schema": "optimizer_candidate_queue_v1",
+  "contest_cuda_auth_eval": false,
+  "copied_runtime_file_count": 7,
+  "copied_runtime_files": [
+    {
+      "bytes": 30120,
+      "relative_path": "encoder/build_pr101_frame_exploit_selector_packet_markov.py",
+      "sha256": "a06212314bb530d733e8d1b9c6953b85ba146fe9c287914f6cea04b17d295aaf"
+    },
+    {
+      "bytes": 16665,
+      "relative_path": "inflate.py",
+      "sha256": "1ade0fb8f78968f2ab2fb33be559e6e0ced070fa03edd632ef2b68f70c1ca33d"
+    },
+    {
+      "bytes": 818,
+      "relative_path": "inflate.sh",
+      "sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c"
+    },
+    {
+      "bytes": 16734,
+      "relative_path": "src/codec.py",
+      "sha256": "637fa5e4b47bfb2595358903dfaafbbc7a7ca48d5f7ccd81c06d1397e060bb72"
+    },
+    {
+      "bytes": 2138,
+      "relative_path": "src/fec8_markov_decoder.py",
+      "sha256": "21ed11d8ea7c084627cf4c56cf517bb480d7be8f4d6fa13ab458c149c78624e4"
+    },
+    {
+      "bytes": 7558,
+      "relative_path": "src/frame_selector.py",
+      "sha256": "8bde9a1c9926b0758d341aed0e86d66f4ac460d4a18e5464a92ff04d9792e50f"
+    },
+    {
+      "bytes": 2197,
+      "relative_path": "src/model.py",
+      "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+    }
+  ],
+  "deployment_target": "desktop_research",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "optimizer_candidate_queue_is_planning_only",
+    "requires_exact_eval_readiness_gate",
+    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+    "requires_non_proxy_score_evidence_before_promotion",
+    "submission_closure_report_is_not_dispatch_authority",
+    "run_exact_readiness_bridge_on_closed_source_queue",
+    "lane_claim_required_before_gpu_or_remote_eval",
+    "contest_exact_auth_eval_required_before_score_claim"
+  ],
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+  "generated_at_utc": "2026-05-26T22:51:48Z",
+  "gpu_launched": false,
+  "materializer_submission_closure_kind": "runtime_adapter_closure_with_candidate_archive",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "runtime_consumption_proof_path": ".omx/research/codex_runtime_context_harvest_regression_20260526T224917Z_codex/submission_closure/submission_dir/packet_member_zip_header_elide_b44da5d54d34/runtime_consumption_proof.json",
+  "runtime_manifest": {
+    "external_dependency_roots": [],
+    "files": [
+      {
+        "bytes": 3180,
+        "relative_path": "archive_manifest.json",
+        "repo_relative_path": ".omx/research/codex_runtime_context_harvest_regression_20260526T224917Z_codex/submission_closure/submission_dir/packet_member_zip_header_elide_b44da5d54d34/archive_manifest.json",
+        "sha256": "96b5a5ed727915e03f613c2c974d577ac55252ae019e359d5ae528adb6f77146"
+      },
+      {
+        "bytes": 30120,
+        "relative_path": "encoder/build_pr101_frame_exploit_selector_packet_markov.py",
+        "repo_relative_path": ".omx/research/codex_runtime_context_harvest_regression_20260526T224917Z_codex/submission_closure/submission_dir/packet_member_zip_header_elide_b44da5d54d34/encoder/build_pr101_frame_exploit_selector_packet_markov.py",
+        "sha256": "a06212314bb530d733e8d1b9c6953b85ba146fe9c287914f6cea04b17d295aaf"
+      },
+      {
+        "bytes": 16665,
+        "relative_path": "inflate.py",
+        "repo_relative_path": ".omx/research/codex_runtime_context_harvest_regression_20260526T224917Z_codex/submission_closure/submission_dir/packet_member_zip_header_elide_b44da5d54d34/inflate.py",
+        "sha256": "1ade0fb8f78968f2ab2fb33be559e6e0ced070fa03edd632ef2b68f70c1ca33d"
+      },
+      {
+        "bytes": 818,
+        "relative_path": "inflate.sh",
+        "repo_relative_path": ".omx/research/codex_runtime_context_harvest_regression_20260526T224917Z_codex/submission_closure/submission_dir/packet_member_zip_header_elide_b44da5d54d34/inflate.sh",
+        "sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c"
+      },
+      {
+        "bytes": 472,
+        "relative_path": "report.txt",
+        "repo_relative_path": ".omx/research/codex_runtime_context_harvest_regression_20260526T224917Z_codex/submission_closure/submission_dir/packet_member_zip_header_elide_b44da5d54d34/report.txt",
+        "sha256": "f5b1d8d0604347a14b643fd5e4b094e366ff1ac81fd961d873bc6b56a68a670c"
+      },
+      {
+        "bytes": 9170,
+        "relative_path": "runtime_consumption_proof.json",
+        "repo_relative_path": ".omx/research/codex_runtime_context_harvest_regression_20260526T224917Z_codex/submission_closure/submission_dir/packet_member_zip_header_elide_b44da5d54d34/runtime_consumption_proof.json",
+        "sha256": "8b354638a951b40d4a4241d34b6549216eca6a58197d7973ef6f6db02fa3e211"
+      },
+      {
+        "bytes": 16734,
+        "relative_path": "src/codec.py",
+        "repo_relative_path": ".omx/research/codex_runtime_context_harvest_regression_20260526T224917Z_codex/submission_closure/submission_dir/packet_member_zip_header_elide_b44da5d54d34/src/codec.py",
+        "sha256": "637fa5e4b47bfb2595358903dfaafbbc7a7ca48d5f7ccd81c06d1397e060bb72"
+      },
+      {
+        "bytes": 2138,
+        "relative_path": "src/fec8_markov_decoder.py",
+        "repo_relative_path": ".omx/research/codex_runtime_context_harvest_regression_20260526T224917Z_codex/submission_closure/submission_dir/packet_member_zip_header_elide_b44da5d54d34/src/fec8_markov_decoder.py",
+        "sha256": "21ed11d8ea7c084627cf4c56cf517bb480d7be8f4d6fa13ab458c149c78624e4"
+      },
+      {
+        "bytes": 7558,
+        "relative_path": "src/frame_selector.py",
+        "repo_relative_path": ".omx/research/codex_runtime_context_harvest_regression_20260526T224917Z_codex/submission_closure/submission_dir/packet_member_zip_header_elide_b44da5d54d34/src/frame_selector.py",
+        "sha256": "8bde9a1c9926b0758d341aed0e86d66f4ac460d4a18e5464a92ff04d9792e50f"
+      },
+      {
+        "bytes": 2197,
+        "relative_path": "src/model.py",
+        "repo_relative_path": ".omx/research/codex_runtime_context_harvest_regression_20260526T224917Z_codex/submission_closure/submission_dir/packet_member_zip_header_elide_b44da5d54d34/src/model.py",
+        "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+      }
+    ],
+    "repo_local_tac_import_manifest": {
+      "discovery": "static_ast_recursive_import_closure",
+      "file_count": 0,
+      "files": [],
+      "module_count": 0,
+      "parse_errors": [],
+      "root_import_modules": [],
+      "runtime_root_name": "packet_member_zip_header_elide_b44da5d54d34",
+      "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+      "tac_root_relative_path": "src/tac",
+      "unresolved_modules": []
+    },
+    "runtime_content_tree_sha256": "75e951ee2d83cc1003f8fc726c4ad568c1d2982a5c2dc638e66710fa2c1d4c5a",
+    "runtime_file_count": 10,
+    "runtime_root": "/Users/adpena/Projects/pact/.omx/research/codex_runtime_context_harvest_regression_20260526T224917Z_codex/submission_closure/submission_dir/packet_member_zip_header_elide_b44da5d54d34",
+    "runtime_tree_sha256": "aa1a44aa6786a3c71d36842933ba6cd38eec0ca85bbcafeed10a371617360ada",
+    "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+    "upstream_evaluate_py": {
+      "bytes": 6005,
+      "relative_path": "evaluate.py",
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    }
+  },
+  "runtime_source_dir": "experiments/results/pr101_frame_exploit_selector_fec8_static_second_order_k16_clean_20260526_codex/submission_dir",
+  "saved_bytes_at_risk": 0,
+  "schema": "materializer_submission_runtime_closure_report.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "source_queue_path": ".omx/research/codex_runtime_context_harvest_regression_20260526T224917Z_codex/source_queue.json",
+  "source_runtime_adapter_ready": true,
+  "source_runtime_dir": "experiments/results/pr101_frame_exploit_selector_fec8_static_second_order_k16_clean_20260526_codex/submission_dir",
+  "submission_dir": ".omx/research/codex_runtime_context_harvest_regression_20260526T224917Z_codex/submission_closure/submission_dir/packet_member_zip_header_elide_b44da5d54d34",
+  "target_kind": "packet_member_zip_header_elide_v1",
+  "target_modes": [
+    "contest_exact_eval_planning"
+  ],
+  "targeted_correction_budget_signal": {
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "freed_bytes_require_receiver_and_exact_readiness_before_spend": true,
+    "gpu_launched": false,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "saved_bytes_at_risk": 0,
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false
+  },
+  "tool": "tac.optimizer.materializer_submission_closure"
+}

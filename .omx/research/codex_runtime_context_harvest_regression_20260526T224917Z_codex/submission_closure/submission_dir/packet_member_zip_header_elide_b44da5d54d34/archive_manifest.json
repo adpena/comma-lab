@@ -1,0 +1,79 @@
+{
+  "allowed_use": "archive_manifest_for_exact_readiness_static_custody_only",
+  "archive_bytes": 178507,
+  "archive_path": ".omx/research/codex_runtime_context_harvest_regression_20260526T224917Z_codex/submission_closure/submission_dir/packet_member_zip_header_elide_b44da5d54d34/archive.zip",
+  "archive_sha256": "b44da5d54d34ce094c8fca7a37172b9ea6546d8a56eb960afa86252f56d11844",
+  "candidate_archive": {
+    "bytes": 178507,
+    "path": ".omx/research/codex_runtime_context_harvest_regression_20260526T224917Z_codex/submission_closure/submission_dir/packet_member_zip_header_elide_b44da5d54d34/archive.zip",
+    "sha256": "b44da5d54d34ce094c8fca7a37172b9ea6546d8a56eb960afa86252f56d11844"
+  },
+  "candidate_id": "packet_member_zip_header_elide_b44da5d54d34",
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+  "generated_at_utc": "2026-05-26T22:51:48Z",
+  "gpu_launched": false,
+  "materializer_id": "packet_member_zip_header_elide_adapter",
+  "members": [
+    {
+      "bytes": 178407,
+      "compress_type": 0,
+      "compressed_bytes": 178407,
+      "member_name": "x",
+      "name": "x",
+      "sha256": "f7eadf49b7835dd6bc5ff96668a243b7e99e85ce55b06379d26af6ae9d0d3106",
+      "uncompressed_bytes": 178407,
+      "zip_compressed_bytes": 178407,
+      "zip_compression_method": 0,
+      "zip_uncompressed_bytes": 178407
+    }
+  ],
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "realized_saved_bytes": 0,
+  "receiver_contract_kind": "family_agnostic_packet_member_zip_header_elide",
+  "schema": "materializer_submission_runtime_closure_archive_manifest.v1",
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "serialized_archive_delta": {
+    "archive_delta_bytes": 0,
+    "blockers": [],
+    "candidate_archive_bytes": 178507,
+    "dispatch_attempted": false,
+    "gpu_launched": false,
+    "modeled_cost_bytes": null,
+    "modeled_saved_bytes": null,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "rate_only_control": false,
+    "ready_for_exact_eval_dispatch": false,
+    "realized_saved_bytes": 0,
+    "require_realized_saving": false,
+    "savings_realized": false,
+    "schema": "serialized_archive_delta_contract.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "source_archive_bytes": 178507,
+    "status": "zero_delta"
+  },
+  "source_archive": {
+    "bytes": 178507,
+    "path": "experiments/results/pr101_frame_exploit_selector_fec8_static_second_order_k16_clean_20260526_codex/archive.zip",
+    "sha256": "b44da5d54d34ce094c8fca7a37172b9ea6546d8a56eb960afa86252f56d11844"
+  },
+  "source_queue_path": ".omx/research/codex_runtime_context_harvest_regression_20260526T224917Z_codex/source_queue.json",
+  "target_kind": "packet_member_zip_header_elide_v1",
+  "zipwire": {
+    "blockers": [],
+    "duplicate_member_names": [],
+    "member_count": 1,
+    "zip_strict": true
+  }
+}

@@ -47,10 +47,12 @@ from tac.optimization.byte_range_entropy_recode_chain import (
 )
 from tac.optimization.family_agnostic_materializers import (
     PACKET_MEMBER_RECOMPRESS_SCHEMA,
+    PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
     RENDERER_PAYLOAD_DFL1_SCHEMA,
     TENSOR_FACTORIZE_SCHEMA,
     materialize_archive_section_entropy_recode_candidate,
     materialize_packet_member_recompress_candidate,
+    materialize_packet_member_zip_header_elide_candidate,
     materialize_renderer_payload_dfl1_candidate,
     materialize_tensor_factorize_candidate,
 )
@@ -577,6 +579,105 @@ def test_harvest_work_queue_chain_manifest_into_source_queue(
     assert str(external) in row["candidate_archive_path"]
 
 
+def test_harvest_work_queue_binds_runtime_context_into_source_row(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    external = tmp_path / "VertigoDataTier"
+    chain = _chain_manifest(external)
+    proof = repo / "submissions" / "candidate" / "runtime_consumption_proof.json"
+    work_queue = _write_json(
+        repo / "materializer_work_queue.json",
+        {
+            "schema": MATERIALIZER_WORK_QUEUE_SCHEMA,
+            "tool": "fixture",
+            "row_count": 1,
+            "executable_row_count": 1,
+            "blocked_row_count": 0,
+            "rows": [
+                {
+                    "schema": "byte_shaving_materializer_work_row.v1",
+                    "work_id": "Materializer Work Fixture",
+                    "work_rank": 1,
+                    "backlog_key": "fixture",
+                    "unit_kind": "byte_range",
+                    "operation_family": "entropy_recode",
+                    "target_kind": "byte_range_entropy_recode_v1",
+                    "resource_kind": "local_cpu",
+                    "executable": True,
+                    "materializer_context_closure_plan": {
+                        "schema": "fixture_materializer_context_closure_plan.v1",
+                        "receiver_proof_request": {
+                            "source_runtime_dir": "submissions/robust_current",
+                            "source_inflate_sh_path": (
+                                "submissions/robust_current/inflate.sh"
+                            ),
+                            "runtime_consumption_proof_path": (
+                                proof.relative_to(repo).as_posix()
+                            ),
+                        },
+                        "receiver_runtime_binding_context": {
+                            "candidate_submission_dir": "submissions/candidate",
+                            "candidate_inflate_sh_path": (
+                                "submissions/candidate/inflate.sh"
+                            ),
+                        },
+                    },
+                    "postconditions": [
+                        {
+                            "type": "materializer_chain_complete",
+                            "path": str(chain),
+                            "schema": CHAIN_SCHEMA,
+                        }
+                    ],
+                    **_false_authority(),
+                }
+            ],
+            **_false_authority(),
+        },
+    )
+
+    result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        work_queue_path=work_queue,
+        require_succeeded_state=False,
+    )
+
+    row = result["source_queue"]["top_k"][0]
+    assert result["report"]["accepted_manifest_count"] == 1
+    assert row["source_runtime_dir"] == "submissions/robust_current"
+    assert row["source_submission_dir"] == "submissions/robust_current"
+    assert row["packet_member_merge_source_runtime_dir"] == (
+        "submissions/robust_current"
+    )
+    assert row["renderer_payload_dfl1_source_runtime_dir"] == (
+        "submissions/robust_current"
+    )
+    assert row["tensor_factorize_source_runtime_dir"] == "submissions/robust_current"
+    assert row["source_inflate_sh_path"] == "submissions/robust_current/inflate.sh"
+    assert row["candidate_submission_dir"] == "submissions/candidate"
+    assert row["candidate_inflate_sh_path"] == "submissions/candidate/inflate.sh"
+    assert row["runtime_consumption_proof_path"] == (
+        proof.relative_to(repo).as_posix()
+    )
+    assert row["materializer_harvest_runtime_context_sources"] == [
+        {
+            "source": "materializer_work_queue_row",
+            "work_queue_path": "materializer_work_queue.json",
+            "work_id": "Materializer Work Fixture",
+        }
+    ]
+    assert {
+        "source_runtime_dir",
+        "candidate_submission_dir",
+        "candidate_inflate_sh_path",
+        "runtime_consumption_proof_path",
+    }.issubset(set(row["materializer_harvest_runtime_context_applied_fields"]))
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
 def test_harvest_work_queue_explicit_chain_manifest_filters_sibling_rows(
     tmp_path: Path,
 ) -> None:
@@ -751,6 +852,117 @@ def test_harvest_work_queue_family_agnostic_candidate_manifest(
     ]
     assert "runtime_consumption_proof_missing" in row["dispatch_blockers"]
     assert row["runtime_consumption_proof_status"] == "missing"
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_harvest_work_queue_runtime_context_reaches_family_agnostic_source_queue(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    archive = repo / "source.zip"
+    output = repo / "candidate.zip"
+    proof = repo / "runtime_consumption_proof.json"
+    manifest_path = repo / "packet_member_zip_header_elide_candidate.json"
+    runtime_dir = _write_simple_shell_runtime(repo / "submission_dir")
+    inflate_sh = runtime_dir / "inflate.sh"
+    info = zipfile.ZipInfo("payload.bin", date_time=(1980, 1, 1, 0, 0, 0))
+    info.compress_type = zipfile.ZIP_STORED
+    info.extra = b"\x55\x54\x05\x00\x01\x00\x00\x00\x00"
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr(info, b"payload" * 32, compress_type=zipfile.ZIP_STORED)
+        zf.comment = b"deterministic header metadata"
+    manifest = materialize_packet_member_zip_header_elide_candidate(
+        archive_path=archive,
+        output_archive=output,
+        member_name="payload.bin",
+        runtime_consumption_proof_out=proof,
+        repo_root=repo,
+        allow_size_regression=True,
+    )
+    manifest["candidate_id"] = "zip_header_elide_runtime_context_fixture"
+    _write_json(manifest_path, manifest)
+    work_queue = _write_json(
+        repo / "materializer_work_queue.json",
+        {
+            "schema": MATERIALIZER_WORK_QUEUE_SCHEMA,
+            "tool": "fixture",
+            "row_count": 1,
+            "executable_row_count": 1,
+            "blocked_row_count": 0,
+            "rows": [
+                {
+                    "schema": "byte_shaving_materializer_work_row.v1",
+                    "work_id": "Runtime Context Work Fixture",
+                    "work_rank": 1,
+                    "backlog_key": "runtime_context_fixture",
+                    "unit_kind": "packet_member",
+                    "operation_family": "zip_header_elide",
+                    "target_kind": "packet_member_zip_header_elide_v1",
+                    "resource_kind": "local_cpu",
+                    "executable": True,
+                    "postconditions": [
+                        {
+                            "type": "json_completion_contract",
+                            "path": str(manifest_path),
+                            "required_equals": {
+                                "schema": PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
+                            },
+                            "required_true": ["byte_closed_candidate_emitted"],
+                        }
+                    ],
+                    "receiver_runtime_binding_context": {
+                        "candidate_archive_path": str(output),
+                        "candidate_submission_dir": str(runtime_dir),
+                        "candidate_inflate_sh_path": str(inflate_sh),
+                        **_false_authority(),
+                    },
+                    "materializer_context_closure_plan": {
+                        "receiver_proof_request": {
+                            "source_runtime_dir": str(runtime_dir),
+                            "source_inflate_sh_path": str(inflate_sh),
+                            "runtime_consumption_proof_out": str(proof),
+                            **_false_authority(),
+                        },
+                        "receiver_runtime_binding_context": {
+                            "candidate_archive_path": str(output),
+                            "candidate_submission_dir": str(runtime_dir),
+                            "candidate_inflate_sh_path": str(inflate_sh),
+                            **_false_authority(),
+                        },
+                        **_false_authority(),
+                    },
+                    **_false_authority(),
+                }
+            ],
+            **_false_authority(),
+        },
+    )
+
+    result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        work_queue_path=work_queue,
+        require_succeeded_state=False,
+    )
+
+    row = result["source_queue"]["top_k"][0]
+    assert result["report"]["accepted_manifest_count"] == 1
+    assert row["candidate_id"] == "zip_header_elide_runtime_context_fixture"
+    assert row["schema"] == PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA
+    assert row["source_runtime_dir"] == str(runtime_dir)
+    assert row["source_submission_dir"] == str(runtime_dir)
+    assert row["source_inflate_sh_path"] == str(inflate_sh)
+    assert row["candidate_submission_dir"] == str(runtime_dir)
+    assert row["candidate_inflate_sh_path"] == str(inflate_sh)
+    assert row["packet_member_merge_source_runtime_dir"] == str(runtime_dir)
+    assert row["tensor_factorize_source_runtime_dir"] == str(runtime_dir)
+    assert row["renderer_payload_dfl1_source_runtime_dir"] == str(runtime_dir)
+    assert "source_runtime_dir" in row[
+        "materializer_harvest_runtime_context_applied_fields"
+    ]
+    assert row["materializer_harvest_runtime_context_sources"][0]["work_id"] == (
+        "Runtime Context Work Fixture"
+    )
     assert row["ready_for_exact_eval_dispatch"] is False
 
 

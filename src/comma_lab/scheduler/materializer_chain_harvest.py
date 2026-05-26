@@ -90,6 +90,21 @@ CHAIN_MANIFEST_NAME_BY_SCHEMA = {
     INVERSE_SCORER_CELL_CHAIN_SCHEMA: INVERSE_SCORER_CELL_CHAIN_MANIFEST_NAME,
 }
 KNOWN_CHAIN_MANIFEST_NAMES = frozenset(CHAIN_MANIFEST_NAME_BY_SCHEMA.values())
+RUNTIME_CONTEXT_PATH_FIELDS = (
+    "source_runtime_dir",
+    "source_submission_dir",
+    "source_inflate_sh_path",
+    "candidate_runtime_dir",
+    "candidate_submission_dir",
+    "candidate_inflate_sh_path",
+    "candidate_archive_path",
+    "inflate_runtime_dir",
+    "packet_member_merge_source_runtime_dir",
+    "renderer_payload_dfl1_source_runtime_dir",
+    "tensor_factorize_source_runtime_dir",
+    "runtime_consumption_proof_path",
+    "runtime_consumption_proof_out",
+)
 
 
 def harvest_materializer_chain_manifests(
@@ -128,6 +143,7 @@ def harvest_materializer_chain_manifests(
     )
 
     accepted_paths: list[Path] = []
+    accepted_discoveries: list[dict[str, Any]] = []
     inspected_rows: list[dict[str, Any]] = []
     seen_paths: set[Path] = set()
     for discovery in discoveries:
@@ -170,6 +186,7 @@ def harvest_materializer_chain_manifests(
             continue
         row["accepted"] = True
         accepted_paths.append(path)
+        accepted_discoveries.append(dict(discovery))
         inspected_rows.append(row)
 
     source_queue = apply_proxy_evidence_boundary(
@@ -180,6 +197,7 @@ def harvest_materializer_chain_manifests(
             "exact_readiness_promotion_required_before_dispatch",
         ],
     )
+    _apply_discovery_runtime_context(source_queue, accepted_discoveries, repo_root=repo)
     dfl1_sidecar_report = _apply_renderer_payload_dfl1_sidecar_parity_proofs(
         source_queue,
         renderer_payload_dfl1_inflate_parity_proofs,
@@ -614,6 +632,110 @@ def _mirror_dfl1_sidecar_overlay_to_queue_lists(
                     row[key] = source[key]
 
 
+def _apply_discovery_runtime_context(
+    source_queue: dict[str, Any],
+    discoveries: Sequence[Mapping[str, Any]],
+    *,
+    repo_root: Path,
+) -> None:
+    runtime_context_by_path: dict[str, dict[str, Any]] = {}
+    for discovery in discoveries:
+        context = _runtime_context_from_discovery(discovery)
+        if not context:
+            continue
+        manifest_path = _resolve_path(discovery["path"], repo_root=repo_root)
+        runtime_context_by_path[_repo_rel(manifest_path, repo_root)] = context
+    if not runtime_context_by_path:
+        return
+
+    for list_name in ("top_k", "top_k_forensic", "dispatch_ready"):
+        for row in source_queue.get(list_name) or []:
+            if not isinstance(row, dict):
+                continue
+            context = _runtime_context_for_queue_row(
+                row,
+                runtime_context_by_path,
+                repo_root=repo_root,
+            )
+            if context is None:
+                continue
+            _overlay_runtime_context(row, context)
+
+
+def _runtime_context_for_queue_row(
+    row: Mapping[str, Any],
+    runtime_context_by_path: Mapping[str, Mapping[str, Any]],
+    *,
+    repo_root: Path,
+) -> Mapping[str, Any] | None:
+    candidate_paths: list[str] = []
+    for key in ("source_manifest_path", "source_path", "manifest_path"):
+        value = _nonempty_text(row.get(key))
+        if value is not None:
+            candidate_paths.append(
+                _repo_rel(_resolve_path(value, repo_root=repo_root), repo_root)
+            )
+    for value in row.get("source_paths") or []:
+        text = _nonempty_text(value)
+        if text is not None:
+            candidate_paths.append(
+                _repo_rel(_resolve_path(text, repo_root=repo_root), repo_root)
+            )
+    for path in ordered_unique(candidate_paths):
+        context = runtime_context_by_path.get(path)
+        if context is not None:
+            return context
+    return None
+
+
+def _overlay_runtime_context(row: dict[str, Any], context: Mapping[str, Any]) -> None:
+    applied: list[str] = []
+    for key in RUNTIME_CONTEXT_PATH_FIELDS:
+        value = _nonempty_text(context.get(key))
+        if value is None:
+            continue
+        if _nonempty_text(row.get(key)) is None:
+            row[key] = value
+            applied.append(key)
+    sources = [
+        source
+        for source in context.get("materializer_harvest_runtime_context_sources") or []
+        if isinstance(source, Mapping)
+    ]
+    if sources:
+        existing = [
+            source
+            for source in row.get("materializer_harvest_runtime_context_sources") or []
+            if isinstance(source, Mapping)
+        ]
+        seen = {
+            json.dumps(source, sort_keys=True, separators=(",", ":"))
+            for source in existing
+        }
+        merged_sources = list(existing)
+        for source in sources:
+            key = json.dumps(source, sort_keys=True, separators=(",", ":"))
+            if key in seen:
+                continue
+            seen.add(key)
+            merged_sources.append(dict(source))
+        row["materializer_harvest_runtime_context_sources"] = merged_sources
+    if applied:
+        row["materializer_harvest_runtime_context_applied_fields"] = ordered_unique(
+            [
+                *[
+                    str(field)
+                    for field in row.get(
+                        "materializer_harvest_runtime_context_applied_fields"
+                    )
+                    or []
+                    if str(field)
+                ],
+                *applied,
+            ]
+        )
+
+
 def _is_renderer_payload_dfl1_row(row: Mapping[str, Any]) -> bool:
     return (
         row.get("schema") == RENDERER_PAYLOAD_DFL1_SCHEMA
@@ -754,6 +876,12 @@ def _work_queue_manifest_candidates(
         except ValueError as exc:
             raise ExperimentQueueError(str(exc)) from exc
         work_id = str(raw_row.get("work_id") or "")
+        runtime_context = _runtime_context_from_work_queue_row(
+            raw_row,
+            work_id=work_id or None,
+            work_queue_path=work_queue_path,
+            repo_root=repo_root,
+        )
         for condition in raw_row.get("postconditions") or []:
             if not isinstance(condition, Mapping):
                 continue
@@ -784,6 +912,7 @@ def _work_queue_manifest_candidates(
                         source="materializer_work_queue_sweep_postcondition",
                         work_queue_path=work_queue_path,
                         backlog_key=raw_row.get("backlog_key"),
+                        runtime_context=runtime_context,
                     )
                 )
                 continue
@@ -799,9 +928,146 @@ def _work_queue_manifest_candidates(
                     "schema": schema,
                     "work_id": work_id or None,
                     "backlog_key": raw_row.get("backlog_key"),
+                    "runtime_context": dict(runtime_context),
                 }
             )
     return discoveries
+
+
+def _runtime_context_from_work_queue_row(
+    row: Mapping[str, Any],
+    *,
+    work_id: str | None,
+    work_queue_path: Path,
+    repo_root: Path,
+) -> dict[str, Any]:
+    closure = _mapping(row.get("materializer_context_closure_plan"))
+    proof = _mapping(closure.get("receiver_proof_request"))
+    closure_binding = _mapping(closure.get("receiver_runtime_binding_context"))
+    top_binding = _mapping(row.get("receiver_runtime_binding_context"))
+    renderer_context = _mapping(row.get("renderer_payload_dfl1_parity_context"))
+
+    context: dict[str, Any] = {}
+    for key in RUNTIME_CONTEXT_PATH_FIELDS:
+        if key.startswith("source_") or key.endswith("_source_runtime_dir"):
+            value = _first_text(
+                row.get(key),
+                closure.get(key),
+                proof.get(key),
+                renderer_context.get(key),
+            )
+        else:
+            value = _first_text(
+                row.get(key),
+                closure.get(key),
+                proof.get(key),
+                closure_binding.get(key),
+                top_binding.get(key),
+                renderer_context.get(key),
+            )
+        if value is not None:
+            context[key] = value
+
+    source_runtime = _first_text(
+        proof.get("source_runtime_dir"),
+        closure.get("source_runtime_dir"),
+        row.get("source_runtime_dir"),
+        renderer_context.get("source_runtime_dir"),
+        renderer_context.get("renderer_payload_dfl1_source_runtime_dir"),
+        closure_binding.get("source_runtime_dir"),
+        closure_binding.get("candidate_submission_dir"),
+        top_binding.get("source_runtime_dir"),
+        top_binding.get("candidate_submission_dir"),
+        row.get("candidate_submission_dir"),
+        row.get("source_submission_dir"),
+    )
+    if source_runtime is not None:
+        context["source_runtime_dir"] = source_runtime
+        context["source_submission_dir"] = source_runtime
+        context["packet_member_merge_source_runtime_dir"] = source_runtime
+        context["renderer_payload_dfl1_source_runtime_dir"] = source_runtime
+        context["tensor_factorize_source_runtime_dir"] = source_runtime
+    source_inflate = _first_text(
+        proof.get("source_inflate_sh_path"),
+        closure.get("source_inflate_sh_path"),
+        row.get("source_inflate_sh_path"),
+        renderer_context.get("source_inflate_sh_path"),
+        closure_binding.get("candidate_inflate_sh_path"),
+        top_binding.get("candidate_inflate_sh_path"),
+        row.get("candidate_inflate_sh_path"),
+    )
+    if source_inflate is None and source_runtime is not None:
+        source_inflate = (Path(source_runtime) / "inflate.sh").as_posix()
+    if source_inflate is None:
+        source_inflate = _first_text(
+            closure_binding.get("source_inflate_sh_path"),
+            top_binding.get("source_inflate_sh_path"),
+        )
+    if source_inflate is not None:
+        context["source_inflate_sh_path"] = source_inflate
+
+    candidate_submission = _first_text(
+        closure_binding.get("candidate_submission_dir"),
+        top_binding.get("candidate_submission_dir"),
+        row.get("candidate_submission_dir"),
+        closure.get("candidate_submission_dir"),
+    )
+    if candidate_submission is not None:
+        context["candidate_submission_dir"] = candidate_submission
+    candidate_inflate = _first_text(
+        closure_binding.get("candidate_inflate_sh_path"),
+        top_binding.get("candidate_inflate_sh_path"),
+        row.get("candidate_inflate_sh_path"),
+        closure.get("candidate_inflate_sh_path"),
+    )
+    if candidate_inflate is not None:
+        context["candidate_inflate_sh_path"] = candidate_inflate
+    candidate_archive = _first_text(
+        closure_binding.get("candidate_archive_path"),
+        top_binding.get("candidate_archive_path"),
+        row.get("candidate_archive_path"),
+        closure.get("candidate_archive_path"),
+    )
+    if candidate_archive is not None:
+        context["candidate_archive_path"] = candidate_archive
+
+    if context:
+        context["materializer_harvest_runtime_context_sources"] = [
+            {
+                "source": "materializer_work_queue_row",
+                "work_queue_path": _repo_rel(work_queue_path, repo_root),
+                "work_id": work_id,
+            }
+        ]
+    return context
+
+
+def _runtime_context_from_discovery(discovery: Mapping[str, Any]) -> dict[str, Any]:
+    raw = discovery.get("runtime_context")
+    return dict(raw) if isinstance(raw, Mapping) else {}
+
+
+def _mapping(value: Any) -> Mapping[str, Any]:
+    return value if isinstance(value, Mapping) else {}
+
+
+def _nonempty_text(value: Any) -> str | None:
+    if isinstance(value, Path):
+        text = value.as_posix()
+    elif isinstance(value, str):
+        text = value
+    else:
+        return None
+    text = text.strip()
+    return text or None
+
+
+def _first_text(*values: Any) -> str | None:
+    for value in values:
+        text = _nonempty_text(value)
+        if text is not None:
+            return text
+    return None
 
 
 def _parse_sweep_manifest_spec(raw_spec: str | Path) -> tuple[str | None, str | Path]:
@@ -828,6 +1094,7 @@ def _sweep_manifest_candidates(
     source: str,
     work_queue_path: Path | None = None,
     backlog_key: Any = None,
+    runtime_context: Mapping[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     path = _resolve_path(sweep_manifest_path, repo_root=repo_root)
     if not path.is_file():
@@ -880,6 +1147,7 @@ def _sweep_manifest_candidates(
                 "schema": None,
                 "work_id": work_id,
                 "backlog_key": backlog_key,
+                "runtime_context": dict(runtime_context or {}),
             }
         )
     return discoveries
