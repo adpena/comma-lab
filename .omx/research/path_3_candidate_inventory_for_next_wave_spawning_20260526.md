@@ -243,11 +243,13 @@ Per CLAUDE.md "Recursive adversarial review protocol — close paths":
 
 **Wall-clock**: ~4-6h.
 
-## Spawn discipline
+## Spawn discipline (AMENDED 2026-05-26 per cascade doctrine adoption + operator concurrency cap update)
 
-- **DO NOT spawn until current 5-subagent wave (A/B'/C'/D/E) starts landing** to preserve operator attention budget + minimize sister-collision risk per Catalog #302/#314/#340
-- **PRIORITY ORDER**: Tier 1 (F → G → H) → Tier 2 (I → J → K) → Tier 3 (L → M → N → O) as operator authorizes each wave
-- **Concurrency cap**: ≤5 simultaneous Path 3 subagents per Catalog #302 sister-subagent-scope-overlap protection
+**This inventory is SUPERSEDED by canonical cascade doctrine** at `.omx/research/path_3_canonical_substrate_development_cascade_doctrine_20260526.md` (adopted 2026-05-26 per operator binding directive *"Document that and adopt as canonical"*). The Tier 3 L=TT5L / M=Wyner-Ziv / N=NSCS06 v8 Path B / O=Z6-v2 spawn queue is **DEFERRED** per cascade doctrine pacing discipline rule #1: 11 LANDED substrates already cover sufficient paradigm diversity; pivot to L1-PROMOTION-CASCADE + L2-LONG-TRAINING-CASCADE on existing substrates BEFORE spawning more L0 SCAFFOLDs.
+
+- **PIVOT** per cascade doctrine: L1-PROMOTION-CASCADE (E + G + C' + B' + J priority order per cascade doctrine) → L2-LONG-TRAINING-CASCADE concurrent on M-series Apple Silicon → L3 HYPERPARAMETER SWEEPS → L4 ARCHITECTURAL ITERATION → L5 OPTIMIZATION → L6 CONVERGED CANDIDATE → bridge calibration + final submission (paid CUDA boundary at L6+ only)
+- **PRIORITY ORDER** (now superseded by cascade doctrine spawn order): Tier 1 + Tier 2 LANDED; Tier 3 DEFERRED pending ≥3 of 11 substrates passing L3
+- **Concurrency cap**: **≤4 simultaneous Path 3 subagents** per operator pacing directive 2026-05-26 *"Continue all in parallel but use no more than 4 subagents at a time total"* (supersedes prior ≤5 per Catalog #302)
 - **Each spawn**: read Catalog #229 PV state of canonical files; cite all sister subagents in Catalog #230 ownership map; honor Catalog #340 sister-checkpoint guard at commit-time
 - **MLX-first gate**: every candidate MUST pass `tools/gate_mlx_candidate_contest_equivalence.py` threshold 0.001 BEFORE any paid CUDA dispatch authorization
 - **Cargo-cult-pass FIRST**: every EXTENSION candidate (B', C', H, I, J, L, M, N, O) MUST run 3-phase methodology; every FRESH design (A, D, E, F, G, K) uses 2-phase methodology per operator binding directives
