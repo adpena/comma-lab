@@ -3463,7 +3463,8 @@ def _submission_closure_candidate_ids_for_source_queue(
 
     queue_path = _resolve_path(source_queue_path, repo_root=repo_root)
     if not queue_path.is_file():
-        return []
+        fallback = [candidate_id for candidate_id in candidate_ids if candidate_id]
+        return fallback or [None]
     payload = _load_json(queue_path)
     allowed = {str(candidate_id) for candidate_id in candidate_ids if str(candidate_id)}
     out: list[str | None] = []
