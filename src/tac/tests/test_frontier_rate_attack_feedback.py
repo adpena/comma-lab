@@ -84,6 +84,9 @@ from comma_lab.scheduler.frontier_rate_attack_feedback_cycle import (
     write_targeted_component_correction_post_auxiliary_artifacts,
 )
 from tac.fec6_selector_operator_space import FEC6_FIXED_K16_MODE_IDS
+from tac.optimization.repair_dynamics_palette_probe import (
+    REPAIR_DYNAMICS_PALETTE_PROBE_MATRIX_SCHEMA,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -3796,6 +3799,154 @@ def test_targeted_component_queue_carries_receiver_closed_reference_eval(
     )
 
 
+def test_targeted_component_queue_imports_false_authority_component_response_cache(
+    tmp_path: Path,
+) -> None:
+    acquisition = {
+        "schema": TARGETED_COMPONENT_CORRECTION_ACQUISITION_SCHEMA,
+        "active": True,
+        "row_count": 1,
+        "queue_actionable_acquisition_count": 1,
+        "rows": [
+            {
+                "acquisition_id": "component_cache_import_row",
+                "candidate_id": "candidate_cache_import",
+                "correction_family": "segnet_posenet_waterfill_region_repair",
+                "target_kind": "renderer_payload_dfl1_v1",
+                "operation_levels": ["region"],
+                "targeted_dimensions": ["segnet", "posenet"],
+                "saved_bytes_budget": 512,
+                "estimated_rate_credit_score_units": 0.000001,
+                "submission_dir": "submissions/candidate_cache_import",
+                "archive_path": "submissions/candidate_cache_import/archive.zip",
+                "archive_sha256": "c" * 64,
+                "inflate_sh_path": "submissions/candidate_cache_import/inflate.sh",
+                "source_archive_path": "source_submission/archive_correct.zip",
+                "source_archive_sha256": "d" * 64,
+                "source_inflate_sh_path": "source_submission/inflate.sh",
+                "queue_actionable": True,
+                "priority_score": 1.0,
+                **_false_authority(),
+            }
+        ],
+        **_false_authority(),
+    }
+    acquisition_path = _write_json(
+        tmp_path / "targeted_acquisition.json",
+        acquisition,
+    )
+    probe_queue = build_frontier_targeted_component_correction_queue(
+        repo_root=tmp_path,
+        targeted_component_correction_acquisition=acquisition,
+        targeted_component_correction_acquisition_path=acquisition_path,
+        results_root=tmp_path / "probe_results",
+        queue_id="component_cache_probe",
+        candidate_limit=1,
+        include_mlx_response=False,
+    )
+    assert probe_queue is not None
+    probe_metadata = probe_queue["experiments"][0]["metadata"]
+    candidate_cache_key = probe_metadata["candidate_cache_key"]
+    reference_cache_key = probe_metadata["reference_cache_key"]
+    cache_root = tmp_path / "component_cache_root"
+    candidate_cache_dir = (
+        cache_root / "shared_candidate_component_response" / candidate_cache_key
+    )
+    reference_cache_dir = (
+        cache_root / "shared_reference_component_response" / reference_cache_key
+    )
+    candidate_cache_dir.mkdir(parents=True)
+    reference_cache_dir.mkdir(parents=True)
+    advisory = {
+        "schema": "unit_local_cpu_advisory.v1",
+        "score_axis": "cpu_advisory",
+        "evidence_semantics": "non_contest_cpu_auth_eval_advisory",
+        "archive_size_bytes": 123456,
+        **_false_authority(),
+    }
+    hashes = {
+        "schema_version": "mlx_scorer_input_cache_hashes.v1",
+        **_false_authority(),
+    }
+    _write_json(candidate_cache_dir / "local_cpu_advisory.json", advisory)
+    _write_json(candidate_cache_dir / "scorer_input_cache_hashes.json", hashes)
+    _write_json(reference_cache_dir / "reference_local_cpu_advisory.json", advisory)
+    _write_json(
+        reference_cache_dir / "reference_scorer_input_cache_hashes.json",
+        hashes,
+    )
+    candidate_mlx_cache = candidate_cache_dir / "mlx_scorer_input_cache"
+    reference_mlx_cache = reference_cache_dir / "reference_mlx_scorer_input_cache"
+    candidate_mlx_cache.mkdir()
+    reference_mlx_cache.mkdir()
+    _write_json(candidate_mlx_cache / "manifest.json", {"passed": True, **_false_authority()})
+    _write_json(
+        reference_mlx_cache / "manifest.json",
+        {"passed": True, **_false_authority()},
+    )
+    _write_json(
+        candidate_cache_dir / "mlx_scorer_input_cache_audit.json",
+        {"passed": True, **_false_authority()},
+    )
+    _write_json(
+        reference_cache_dir / "reference_mlx_scorer_input_cache_audit.json",
+        {"passed": True, **_false_authority()},
+    )
+
+    queue = build_frontier_targeted_component_correction_queue(
+        repo_root=tmp_path,
+        targeted_component_correction_acquisition=acquisition,
+        targeted_component_correction_acquisition_path=acquisition_path,
+        results_root=tmp_path / "queue_results",
+        queue_id="component_cache_import_unit",
+        candidate_limit=1,
+        component_response_cache_roots=[cache_root],
+    )
+
+    assert queue is not None
+    experiment = queue["experiments"][0]
+    steps_by_id = {step["id"]: step for step in experiment["steps"]}
+    assert "import_local_cpu_component_advisory_cache" in steps_by_id
+    assert "import_local_cpu_reference_advisory_cache" in steps_by_id
+    assert "local_cpu_component_advisory" not in steps_by_id
+    assert "local_cpu_reference_advisory" not in steps_by_id
+    assert "reuse_mlx_component_cache" in steps_by_id
+    assert "reuse_reference_mlx_component_cache" in steps_by_id
+    assert "build_mlx_component_cache" not in steps_by_id
+    assert "build_reference_mlx_component_cache" not in steps_by_id
+    assert steps_by_id["reuse_mlx_component_cache"]["requires"] == [
+        "import_local_cpu_component_advisory_cache"
+    ]
+    assert steps_by_id["reuse_reference_mlx_component_cache"]["requires"] == [
+        "import_local_cpu_reference_advisory_cache"
+    ]
+    assert steps_by_id["local_mlx_component_response"]["requires"] == [
+        "reuse_mlx_component_cache"
+    ]
+    assert steps_by_id["reference_local_mlx_component_response"]["requires"] == [
+        "reuse_reference_mlx_component_cache"
+    ]
+    component_step = steps_by_id["import_local_cpu_component_advisory_cache"]
+    reference_step = steps_by_id["import_local_cpu_reference_advisory_cache"]
+    assert component_step["command"][1] == "tools/import_frontier_component_response_cache.py"
+    assert reference_step["command"][1] == "tools/import_frontier_component_response_cache.py"
+    assert component_step["requires"] == ["emit_targeted_component_correction_work_order"]
+    assert reference_step["requires"] == ["emit_targeted_component_correction_work_order"]
+    request = experiment["metadata"]["correction_requests"][0]
+    assert request["local_cpu_advisory_reuse_mode"] == (
+        "import_false_authority_component_response_cache"
+    )
+    assert request["reference_local_cpu_advisory_reuse_mode"] == (
+        "import_false_authority_component_response_cache"
+    )
+    assert request["local_mlx_cache_reuse_mode"] == (
+        "reuse_false_authority_mlx_scorer_input_cache"
+    )
+    assert request["reference_local_mlx_cache_reuse_mode"] == (
+        "reuse_false_authority_mlx_scorer_input_cache"
+    )
+
+
 def test_targeted_component_acquisition_uses_explicit_repair_dynamics_palette_prior() -> None:
     operation_portfolio = {
         "schema": OPERATION_PORTFOLIO_SCHEMA,
@@ -4692,6 +4843,22 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     assert report["artifacts"]["targeted_component_correction_queue"].endswith(
         "targeted_component_correction_queue.json"
     )
+    targeted_queue = json.loads(
+        targeted_component_queue_path.read_text(encoding="utf-8")
+    )
+    repair_probe_steps = [
+        step
+        for experiment in targeted_queue["experiments"]
+        for step in experiment["steps"]
+        if step["id"].startswith("emit_repair_dynamics_palette_probe_matrix")
+    ]
+    assert repair_probe_steps
+    assert repair_probe_steps[0]["command"][1] == (
+        "tools/build_repair_dynamics_palette_probe_matrix.py"
+    )
+    assert repair_probe_steps[0]["postconditions"][0]["equals"] == (
+        REPAIR_DYNAMICS_PALETTE_PROBE_MATRIX_SCHEMA
+    )
     assert report["artifacts"][
         "targeted_component_correction_response_harvest"
     ].endswith("targeted_component_correction_response_harvest.json")
@@ -5088,14 +5255,13 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
         for hint in correction_work_order["command_hints"]
         if hint["action_id"] == "build_repair_dynamics_palette_probe_matrix"
     )
-    assert "tools/run_mlx_scorer_response_from_local_advisory.py" in (
+    assert "tools/build_repair_dynamics_palette_probe_matrix.py" in (
         repair_dynamics_hint["command_template"]
     )
-    assert "--allow-gpu-research-signal" in repair_dynamics_hint["command_template"]
+    assert "--matrix-out" in repair_dynamics_hint["command_template"]
     assert (
         repair_dynamics_hint["output_contract"]
-        == "false_authority_macos_mlx_component_response_rows_for_grouped_"
-        "repair_dynamics_waterfill_planning"
+        == "false_authority_repair_dynamics_palette_probe_matrix"
     )
     assert correction_work_order["budget_spend_gate"]["budget_spend_allowed"] is False
     step_ids = [

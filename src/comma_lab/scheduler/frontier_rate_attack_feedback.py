@@ -42,6 +42,9 @@ from tac.optimization.pairset_component_marginal import (
     rate_delta_for_archive_byte_delta,
 )
 from tac.optimization.proxy_candidate_contract import require_no_truthy_authority_fields
+from tac.optimization.repair_dynamics_palette_probe import (
+    REPAIR_DYNAMICS_PALETTE_PROBE_MATRIX_SCHEMA,
+)
 
 from .byte_shaving_campaign_queue import (
     MATERIALIZER_BACKLOG_SCHEMA,
@@ -4320,38 +4323,25 @@ def _targeted_component_correction_command_hints(
                 "action_id": "build_repair_dynamics_palette_probe_matrix",
                 "command_template": [
                     ".venv/bin/python",
-                    "tools/run_mlx_scorer_response_from_local_advisory.py",
-                    "--local-cpu-advisory",
-                    "<component_correction_dir>/local_cpu_advisory.json",
-                    "--reference-cache-dir",
-                    "<reference_mlx_scorer_input_cache_dir>",
-                    "--candidate-cache-dir",
-                    "<component_correction_dir>/mlx_scorer_input_cache",
-                    "--output",
-                    "<component_correction_dir>/repair_dynamics_mlx_response.json",
-                    "--repo-root",
-                    ".",
-                    "--batch-pairs",
-                    "1",
+                    "tools/build_repair_dynamics_palette_probe_matrix.py",
+                    "--work-order",
+                    "<component_correction_dir>/repair_dynamics_work_order.json",
+                    "--matrix-out",
+                    "<component_correction_dir>/repair_dynamics_palette_probe_matrix.json",
+                    "--probe-output-dir",
+                    "<component_correction_dir>/repair_dynamics_palette_probe",
                     "--device",
-                    "gpu",
-                    "--allow-gpu-research-signal",
-                    "--allow-local-cpu-advisory-cache-identity",
-                    "--components-dir",
-                    "<component_correction_dir>/repair_dynamics_mlx_components",
-                    "--response-family",
-                    "repair_dynamics_palette_probe",
+                    "mlx",
+                    "--n-pairs",
+                    "48",
                 ],
                 "blocked_until": [
-                    "local_cpu_advisory_cache_identity",
-                    "mlx_scorer_input_cache",
+                    "repair_dynamics_work_order",
                     "repair_dynamics_palette_prior",
-                    "palette_mode_adapter_or_equivalent_probe_modes",
-                    "local_mlx_scorer_response_runtime",
+                    "receiver_closed_archive",
                 ],
                 "output_contract": (
-                    "false_authority_macos_mlx_component_response_rows_for_grouped_"
-                    "repair_dynamics_waterfill_planning"
+                    "false_authority_repair_dynamics_palette_probe_matrix"
                 ),
                 **FALSE_AUTHORITY,
             }
@@ -8785,6 +8775,89 @@ def _repair_dynamics_priority_bonus(
     return bonus
 
 
+def _repair_operator_portfolio(
+    *,
+    rows: Sequence[Mapping[str, Any]],
+    repair_dynamics_prior: Mapping[str, Any],
+) -> dict[str, Any]:
+    families = _unique_strings(row.get("correction_family") for row in rows)
+    stacks: list[dict[str, Any]] = []
+    if repair_dynamics_prior:
+        stacks.extend(
+            [
+                {
+                    "stack_id": "frame0_palette_then_region_boundary_waterfill",
+                    "operator_families": [
+                        "repair_dynamics_frame0_palette_interaction_waterfill",
+                        "segnet_posenet_waterfill_region_repair",
+                    ],
+                    "rationale": (
+                        "measure global color_geometry calibration before spending "
+                        "bytes on localized SegNet/PoseNet region repair"
+                    ),
+                    "requires_same_axis_component_response": True,
+                    **FALSE_AUTHORITY,
+                },
+                {
+                    "stack_id": "motion_then_palette_interaction_probe",
+                    "operator_families": [
+                        "pose_stable_pair_frame_motion_correction",
+                        "repair_dynamics_frame0_palette_interaction_waterfill",
+                    ],
+                    "rationale": (
+                        "separate pair-frame motion repair from frame0 color "
+                        "calibration before trusting either marginal alone"
+                    ),
+                    "requires_same_axis_component_response": True,
+                    **FALSE_AUTHORITY,
+                },
+                {
+                    "stack_id": "inverse_basis_then_palette_family_expansion",
+                    "operator_families": [
+                        "inverse_scorer_cell_basis_expansion",
+                        "repair_dynamics_chroma_luma_bias_basis_expansion",
+                    ],
+                    "rationale": (
+                        "let inverse-scorer cells propose basis directions, then "
+                        "test nearby chroma/luma/RGB repair atoms under MLX"
+                    ),
+                    "requires_same_axis_component_response": True,
+                    **FALSE_AUTHORITY,
+                },
+            ]
+        )
+    if "full_video_batch_residual_budget_reallocation" in families:
+        stacks.append(
+            {
+                "stack_id": "full_video_residual_then_component_waterfill",
+                "operator_families": [
+                    "full_video_batch_residual_budget_reallocation",
+                    "segnet_posenet_waterfill_region_repair",
+                ],
+                "rationale": (
+                    "test whether full-video residual budget movement composes "
+                    "with localized component repair instead of increasing distortion"
+                ),
+                "requires_same_axis_component_response": True,
+                **FALSE_AUTHORITY,
+            }
+        )
+    return {
+        "schema": "frontier_rate_attack_repair_operator_portfolio.v1",
+        "operator_family_count": len(families),
+        "operator_families": families,
+        "stack_candidate_count": len(stacks),
+        "stack_candidates": stacks,
+        "acceptance_rule": (
+            "compose_only_if_measured_delta_segnet_plus_delta_posenet_plus_delta_rate_"
+            "is_negative_under_same_axis_for_the_stack"
+        ),
+        "allowed_use": "component_response_guided_repair_stack_planning_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
 def build_frontier_targeted_component_correction_acquisition(
     *,
     operation_portfolio: Mapping[str, Any],
@@ -9078,6 +9151,10 @@ def build_frontier_targeted_component_correction_acquisition(
         ),
         "repair_dynamics_repair_waterfill_hints": list(
             repair_dynamics_prior.get("repair_waterfill_hints") or []
+        ),
+        "repair_operator_portfolio": _repair_operator_portfolio(
+            rows=rows,
+            repair_dynamics_prior=repair_dynamics_prior,
         ),
         "targeted_dimensions": _unique_strings(
             [
@@ -13518,6 +13595,76 @@ def _targeted_component_correction_queue_selection_policy(
     }
 
 
+def _component_response_cache_source(
+    *,
+    repo_root: Path,
+    cache_roots: Sequence[str | Path],
+    cache_key: str,
+    role: str,
+) -> dict[str, Any] | None:
+    if not cache_key:
+        return None
+    if role == "reference":
+        advisory_name = "reference_local_cpu_advisory.json"
+        hashes_name = "reference_scorer_input_cache_hashes.json"
+        mlx_cache_name = "reference_mlx_scorer_input_cache"
+        mlx_audit_name = "reference_mlx_scorer_input_cache_audit.json"
+        shared_name = "shared_reference_component_response"
+    else:
+        advisory_name = "local_cpu_advisory.json"
+        hashes_name = "scorer_input_cache_hashes.json"
+        mlx_cache_name = "mlx_scorer_input_cache"
+        mlx_audit_name = "mlx_scorer_input_cache_audit.json"
+        shared_name = "shared_candidate_component_response"
+    candidate_dirs: list[Path] = []
+    for root in cache_roots:
+        root_path = _resolve_path(root, repo_root=repo_root)
+        candidate_dirs.extend(
+            [
+                root_path,
+                root_path / cache_key,
+                root_path / shared_name / cache_key,
+                root_path
+                / "frontier_targeted_component_correction"
+                / shared_name
+                / cache_key,
+            ]
+        )
+    seen: set[Path] = set()
+    for source_dir in candidate_dirs:
+        resolved = source_dir.resolve(strict=False)
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        advisory = resolved / advisory_name
+        hashes = resolved / hashes_name
+        if advisory.is_file() and hashes.is_file():
+            source: dict[str, str | bool] = {
+                "role": role,
+                "source_dir": _repo_rel(resolved, repo_root),
+                "source_local_cpu_advisory": _repo_rel(advisory, repo_root),
+                "source_scorer_input_cache_hashes": _repo_rel(hashes, repo_root),
+                "reuse_mode": "import_false_authority_component_response_cache",
+                **FALSE_AUTHORITY,
+            }
+            mlx_cache_dir = resolved / mlx_cache_name
+            mlx_cache_audit = resolved / mlx_audit_name
+            if (mlx_cache_dir / "manifest.json").is_file() and mlx_cache_audit.is_file():
+                source["source_mlx_scorer_input_cache"] = _repo_rel(
+                    mlx_cache_dir,
+                    repo_root,
+                )
+                source["source_mlx_scorer_input_cache_audit"] = _repo_rel(
+                    mlx_cache_audit,
+                    repo_root,
+                )
+                source["mlx_cache_reuse_mode"] = (
+                    "reuse_false_authority_mlx_scorer_input_cache"
+                )
+            return source
+    return None
+
+
 def build_frontier_targeted_component_correction_queue(
     *,
     repo_root: str | Path,
@@ -13533,6 +13680,7 @@ def build_frontier_targeted_component_correction_queue(
     mlx_reference_cache_dir: str | Path = DEFAULT_MLX_REFERENCE_CACHE_DIR,
     mlx_device: str = "gpu",
     include_mlx_response: bool = True,
+    component_response_cache_roots: Sequence[str | Path] = (),
 ) -> dict[str, Any] | None:
     """Compile receiver-closed budget rows into local CPU/MLX component probes."""
 
@@ -13558,6 +13706,14 @@ def build_frontier_targeted_component_correction_queue(
     selection_policy = _targeted_component_correction_queue_selection_policy(
         selected_rows=selected_rows,
         candidate_limit=candidate_limit,
+    )
+    repair_operator_portfolio = (
+        targeted_component_correction_acquisition.get("repair_operator_portfolio")
+        if isinstance(
+            targeted_component_correction_acquisition.get("repair_operator_portfolio"),
+            Mapping,
+        )
+        else {}
     )
     acquisition_path = _resolve_path(
         targeted_component_correction_acquisition_path,
@@ -13603,6 +13759,17 @@ def build_frontier_targeted_component_correction_queue(
         local_cpu_advisory = shared_dir / "local_cpu_advisory.json"
         local_cpu_work_dir = shared_dir / "local_cpu_advisory_work"
         scorer_hashes = shared_dir / "scorer_input_cache_hashes.json"
+        component_cache_source = _component_response_cache_source(
+            repo_root=repo,
+            cache_roots=component_response_cache_roots,
+            cache_key=candidate_cache_key,
+            role="candidate",
+        )
+        component_advisory_step_id = (
+            "import_local_cpu_component_advisory_cache"
+            if component_cache_source is not None
+            else "local_cpu_component_advisory"
+        )
         reference_archive_path = str(primary_row.get("source_archive_path") or "")
         reference_inflate_sh_path = str(
             primary_row.get("source_inflate_sh_path")
@@ -13638,11 +13805,26 @@ def build_frontier_targeted_component_correction_queue(
         reference_scorer_hashes = (
             reference_shared_dir / "reference_scorer_input_cache_hashes.json"
         )
+        reference_cache_source = (
+            _component_response_cache_source(
+                repo_root=repo,
+                cache_roots=component_response_cache_roots,
+                cache_key=reference_cache_key,
+                role="reference",
+            )
+            if reference_eval_available
+            else None
+        )
+        reference_advisory_step_id = (
+            "import_local_cpu_reference_advisory_cache"
+            if reference_cache_source is not None
+            else "local_cpu_reference_advisory"
+        )
         local_mlx_response: Path | None = None
         reference_local_mlx_response: Path | None = None
         request_metadata: list[dict[str, Any]] = []
         steps: list[dict[str, Any]] = []
-        work_order_step_ids: list[str] = []
+        request_ready_step_ids: list[str] = []
         for row_index, row in enumerate(candidate_rows, start=1):
             acquisition_id = str(
                 row.get("acquisition_id")
@@ -13650,11 +13832,19 @@ def build_frontier_targeted_component_correction_queue(
             )
             request_dir = candidate_dir / _slug_token(acquisition_id)
             work_order_path = request_dir / "work_order.json"
+            repair_dynamics_probe_matrix_path = (
+                request_dir / "repair_dynamics_palette_probe_matrix.json"
+            )
+            repair_dynamics_probe_output_dir = request_dir / "repair_dynamics_palette_probe"
             response_harvest_path = (
                 request_dir / "component_correction_response_harvest.json"
             )
             work_order_step_id = f"emit_targeted_component_correction_work_order_{row_index:02d}"
-            work_order_step_ids.append(work_order_step_id)
+            repair_dynamics_probe_step_id = (
+                f"emit_repair_dynamics_palette_probe_matrix_{row_index:02d}"
+            )
+            request_ready_step_ids.append(work_order_step_id)
+            repair_dynamics_prior_active = row.get("repair_dynamics_prior_active") is True
             request_metadata.append(
                 {
                     "schema": (
@@ -13673,16 +13863,46 @@ def build_frontier_targeted_component_correction_queue(
                     ),
                     "work_dir": _repo_rel(request_dir, repo),
                     "work_order_path": _repo_rel(work_order_path, repo),
+                    "repair_dynamics_prior_active": repair_dynamics_prior_active,
+                    "repair_dynamics_palette_probe_matrix_path": (
+                        _repo_rel(repair_dynamics_probe_matrix_path, repo)
+                        if repair_dynamics_prior_active
+                        else None
+                    ),
                     "component_correction_response_harvest_path": _repo_rel(
                         response_harvest_path,
                         repo,
                     ),
                     "local_cpu_advisory_path": _repo_rel(local_cpu_advisory, repo),
+                    "local_cpu_advisory_reuse_mode": (
+                        component_cache_source.get("reuse_mode")
+                        if isinstance(component_cache_source, Mapping)
+                        else "queue_owned_local_cpu_component_advisory"
+                    ),
+                    "local_cpu_advisory_source_path": (
+                        component_cache_source.get("source_local_cpu_advisory")
+                        if isinstance(component_cache_source, Mapping)
+                        else None
+                    ),
                     "candidate_cache_key": candidate_cache_key,
                     "shared_component_response_dir": _repo_rel(shared_dir, repo),
                     "reference_local_cpu_advisory_path": (
                         _repo_rel(reference_local_cpu_advisory, repo)
                         if reference_eval_available
+                        else None
+                    ),
+                    "reference_local_cpu_advisory_reuse_mode": (
+                        reference_cache_source.get("reuse_mode")
+                        if isinstance(reference_cache_source, Mapping)
+                        else (
+                            "queue_owned_local_cpu_component_advisory"
+                            if reference_eval_available
+                            else None
+                        )
+                    ),
+                    "reference_local_cpu_advisory_source_path": (
+                        reference_cache_source.get("source_local_cpu_advisory")
+                        if isinstance(reference_cache_source, Mapping)
                         else None
                     ),
                     "reference_archive_path": reference_archive_path or None,
@@ -13762,20 +13982,82 @@ def build_frontier_targeted_component_correction_queue(
                     ],
                     "telemetry": {
                         "artifact_paths": [_repo_rel(work_order_path, repo)],
-                        "input_artifact_paths": [
-                            _repo_rel(acquisition_path, repo),
-                            str(row.get("closure_report_path") or ""),
-                            str(row.get("paired_exact_readiness_bridge_report_path") or ""),
-                        ],
+                        "input_artifact_paths": _unique_strings(
+                            [
+                                _repo_rel(acquisition_path, repo),
+                                row.get("closure_report_path"),
+                                row.get("paired_exact_readiness_bridge_report_path"),
+                            ]
+                        ),
                         "include_postcondition_paths": True,
                     },
                 }
             )
+            if repair_dynamics_prior_active:
+                request_ready_step_ids.append(repair_dynamics_probe_step_id)
+                steps.append(
+                    {
+                        "id": repair_dynamics_probe_step_id,
+                        "kind": "command",
+                        "requires": [work_order_step_id],
+                        "command": [
+                            ".venv/bin/python",
+                            "tools/build_repair_dynamics_palette_probe_matrix.py",
+                            "--work-order",
+                            _repo_rel(work_order_path, repo),
+                            "--matrix-out",
+                            _repo_rel(repair_dynamics_probe_matrix_path, repo),
+                            "--probe-output-dir",
+                            _repo_rel(repair_dynamics_probe_output_dir, repo),
+                            "--device",
+                            "mlx",
+                            "--n-pairs",
+                            "48",
+                            "--overwrite",
+                        ],
+                        "resources": {"kind": "local_io_heavy"},
+                        "timeout_seconds": 120,
+                        "postconditions": [
+                            {
+                                "type": "json_equals",
+                                "path": _repo_rel(
+                                    repair_dynamics_probe_matrix_path,
+                                    repo,
+                                ),
+                                "key": "schema",
+                                "equals": REPAIR_DYNAMICS_PALETTE_PROBE_MATRIX_SCHEMA,
+                            },
+                            {
+                                "type": "json_false_authority",
+                                "path": _repo_rel(
+                                    repair_dynamics_probe_matrix_path,
+                                    repo,
+                                ),
+                            },
+                            {
+                                "type": "json_equals",
+                                "path": _repo_rel(
+                                    repair_dynamics_probe_matrix_path,
+                                    repo,
+                                ),
+                                "key": "ready_for_exact_eval_dispatch",
+                                "equals": False,
+                            },
+                        ],
+                        "telemetry": {
+                            "artifact_paths": [
+                                _repo_rel(repair_dynamics_probe_matrix_path, repo)
+                            ],
+                            "input_artifact_paths": [_repo_rel(work_order_path, repo)],
+                            "include_postcondition_paths": True,
+                        },
+                    }
+                )
         steps.append(
             {
                 "id": "emit_targeted_component_correction_work_order",
                 "kind": "command",
-                "requires": work_order_step_ids,
+                "requires": request_ready_step_ids,
                 "command": [
                     ".venv/bin/python",
                     "-c",
@@ -13793,7 +14075,61 @@ def build_frontier_targeted_component_correction_queue(
                 "timeout_seconds": 120,
             },
         )
-        if reference_eval_available:
+        if reference_eval_available and reference_cache_source is not None:
+            steps.append(
+                {
+                    "id": reference_advisory_step_id,
+                    "kind": "command",
+                    "requires": ["emit_targeted_component_correction_work_order"],
+                    "command": [
+                        ".venv/bin/python",
+                        "tools/import_frontier_component_response_cache.py",
+                        "--source-local-cpu-advisory",
+                        str(reference_cache_source["source_local_cpu_advisory"]),
+                        "--source-scorer-input-cache-hashes",
+                        str(reference_cache_source["source_scorer_input_cache_hashes"]),
+                        "--local-cpu-advisory-out",
+                        _repo_rel(reference_local_cpu_advisory, repo),
+                        "--scorer-input-cache-hashes-out",
+                        _repo_rel(reference_scorer_hashes, repo),
+                        "--role",
+                        "reference",
+                        "--overwrite",
+                    ],
+                    "resources": {"kind": "local_io_heavy"},
+                    "timeout_seconds": 120,
+                    "postconditions": [
+                        {
+                            "type": "json_false_authority",
+                            "path": _repo_rel(reference_local_cpu_advisory, repo),
+                            "axis_key": "score_axis",
+                            "axis_equals": "cpu_advisory",
+                        },
+                        {
+                            "type": "json_equals",
+                            "path": _repo_rel(reference_scorer_hashes, repo),
+                            "key": "schema_version",
+                            "equals": "mlx_scorer_input_cache_hashes.v1",
+                        },
+                        {
+                            "type": "json_false_authority",
+                            "path": _repo_rel(reference_scorer_hashes, repo),
+                        },
+                    ],
+                    "telemetry": {
+                        "artifact_paths": [
+                            _repo_rel(reference_local_cpu_advisory, repo),
+                            _repo_rel(reference_scorer_hashes, repo),
+                        ],
+                        "input_artifact_paths": [
+                            str(reference_cache_source["source_local_cpu_advisory"]),
+                            str(reference_cache_source["source_scorer_input_cache_hashes"]),
+                        ],
+                        "include_postcondition_paths": True,
+                    },
+                }
+            )
+        elif reference_eval_available:
             steps.append(
                 {
                     "id": "local_cpu_reference_advisory",
@@ -13859,80 +14195,161 @@ def build_frontier_targeted_component_correction_queue(
                     },
                 }
             )
-        steps.append(
-            {
-                "id": "local_cpu_component_advisory",
-                "kind": "command",
-                "requires": ["emit_targeted_component_correction_work_order"],
-                "command": [
-                    ".venv/bin/python",
-                    "experiments/contest_auth_eval.py",
-                    "--archive",
-                    archive_path,
-                    "--inflate-sh",
-                    inflate_sh_path,
-                    "--upstream-dir",
-                    str(upstream_dir),
-                    "--video-names-file",
-                    str(video_names_file),
-                    "--device",
-                    "cpu",
-                    "--work-dir",
-                    _repo_rel(local_cpu_work_dir, repo),
-                    "--json-out",
-                    _repo_rel(local_cpu_advisory, repo),
-                    "--reuse-valid-json-out",
-                    "--inflate-timeout",
-                    "1800",
-                    "--evaluate-timeout",
-                    "1800",
-                    "--keep-work-dir",
-                    "--scorer-input-cache-hashes-out",
-                    _repo_rel(scorer_hashes, repo),
-                    "--allow-scorer-input-cache-artifact-output-outside-work-dir",
-                ],
-                "resources": {"kind": "local_cpu"},
-                "timeout_seconds": 3900,
-                "postconditions": [
-                    {
-                        "type": "json_false_authority",
-                        "path": _repo_rel(local_cpu_advisory, repo),
-                        "axis_key": "score_axis",
-                        "axis_equals": "cpu_advisory",
-                    },
-                    {
-                        "type": "json_equals",
-                        "path": _repo_rel(scorer_hashes, repo),
-                        "key": "schema_version",
-                        "equals": "mlx_scorer_input_cache_hashes.v1",
-                    },
-                    {
-                        "type": "json_false_authority",
-                        "path": _repo_rel(scorer_hashes, repo),
-                    }
-                ],
-                "telemetry": {
-                    "artifact_paths": [
+        if component_cache_source is not None:
+            steps.append(
+                {
+                    "id": component_advisory_step_id,
+                    "kind": "command",
+                    "requires": ["emit_targeted_component_correction_work_order"],
+                    "command": [
+                        ".venv/bin/python",
+                        "tools/import_frontier_component_response_cache.py",
+                        "--source-local-cpu-advisory",
+                        str(component_cache_source["source_local_cpu_advisory"]),
+                        "--source-scorer-input-cache-hashes",
+                        str(component_cache_source["source_scorer_input_cache_hashes"]),
+                        "--local-cpu-advisory-out",
                         _repo_rel(local_cpu_advisory, repo),
+                        "--scorer-input-cache-hashes-out",
                         _repo_rel(scorer_hashes, repo),
+                        "--role",
+                        "candidate",
+                        "--overwrite",
                     ],
-                    "input_artifact_paths": [
-                        archive_path,
-                        inflate_sh_path,
-                        *[
-                            str(request.get("work_order_path") or "")
-                            for request in request_metadata
+                    "resources": {"kind": "local_io_heavy"},
+                    "timeout_seconds": 120,
+                    "postconditions": [
+                        {
+                            "type": "json_false_authority",
+                            "path": _repo_rel(local_cpu_advisory, repo),
+                            "axis_key": "score_axis",
+                            "axis_equals": "cpu_advisory",
+                        },
+                        {
+                            "type": "json_equals",
+                            "path": _repo_rel(scorer_hashes, repo),
+                            "key": "schema_version",
+                            "equals": "mlx_scorer_input_cache_hashes.v1",
+                        },
+                        {
+                            "type": "json_false_authority",
+                            "path": _repo_rel(scorer_hashes, repo),
+                        },
+                    ],
+                    "telemetry": {
+                        "artifact_paths": [
+                            _repo_rel(local_cpu_advisory, repo),
+                            _repo_rel(scorer_hashes, repo),
                         ],
-                    ],
-                    "include_postcondition_paths": True,
+                        "input_artifact_paths": [
+                            str(component_cache_source["source_local_cpu_advisory"]),
+                            str(component_cache_source["source_scorer_input_cache_hashes"]),
+                            *[
+                                str(request.get("work_order_path") or "")
+                                for request in request_metadata
+                            ],
+                        ],
+                        "include_postcondition_paths": True,
+                    },
                 },
-            },
-        )
+            )
+        else:
+            steps.append(
+                {
+                    "id": "local_cpu_component_advisory",
+                    "kind": "command",
+                    "requires": ["emit_targeted_component_correction_work_order"],
+                    "command": [
+                        ".venv/bin/python",
+                        "experiments/contest_auth_eval.py",
+                        "--archive",
+                        archive_path,
+                        "--inflate-sh",
+                        inflate_sh_path,
+                        "--upstream-dir",
+                        str(upstream_dir),
+                        "--video-names-file",
+                        str(video_names_file),
+                        "--device",
+                        "cpu",
+                        "--work-dir",
+                        _repo_rel(local_cpu_work_dir, repo),
+                        "--json-out",
+                        _repo_rel(local_cpu_advisory, repo),
+                        "--reuse-valid-json-out",
+                        "--inflate-timeout",
+                        "1800",
+                        "--evaluate-timeout",
+                        "1800",
+                        "--keep-work-dir",
+                        "--scorer-input-cache-hashes-out",
+                        _repo_rel(scorer_hashes, repo),
+                        "--allow-scorer-input-cache-artifact-output-outside-work-dir",
+                    ],
+                    "resources": {"kind": "local_cpu"},
+                    "timeout_seconds": 3900,
+                    "postconditions": [
+                        {
+                            "type": "json_false_authority",
+                            "path": _repo_rel(local_cpu_advisory, repo),
+                            "axis_key": "score_axis",
+                            "axis_equals": "cpu_advisory",
+                        },
+                        {
+                            "type": "json_equals",
+                            "path": _repo_rel(scorer_hashes, repo),
+                            "key": "schema_version",
+                            "equals": "mlx_scorer_input_cache_hashes.v1",
+                        },
+                        {
+                            "type": "json_false_authority",
+                            "path": _repo_rel(scorer_hashes, repo),
+                        }
+                    ],
+                    "telemetry": {
+                        "artifact_paths": [
+                            _repo_rel(local_cpu_advisory, repo),
+                            _repo_rel(scorer_hashes, repo),
+                        ],
+                        "input_artifact_paths": [
+                            archive_path,
+                            inflate_sh_path,
+                            *[
+                                str(request.get("work_order_path") or "")
+                                for request in request_metadata
+                            ],
+                        ],
+                        "include_postcondition_paths": True,
+                    },
+                },
+            )
         if include_mlx_response:
             mlx_cache_dir = shared_dir / "mlx_scorer_input_cache"
             mlx_cache_audit = shared_dir / "mlx_scorer_input_cache_audit.json"
             mlx_response = shared_dir / "mlx_scorer_response.json"
             local_mlx_response = mlx_response
+            reused_mlx_cache_path = (
+                str(component_cache_source.get("source_mlx_scorer_input_cache") or "")
+                if isinstance(component_cache_source, Mapping)
+                else ""
+            )
+            reused_mlx_cache_audit_path = (
+                str(
+                    component_cache_source.get("source_mlx_scorer_input_cache_audit")
+                    or ""
+                )
+                if isinstance(component_cache_source, Mapping)
+                else ""
+            )
+            mlx_cache_input_path = reused_mlx_cache_path or _repo_rel(mlx_cache_dir, repo)
+            mlx_cache_audit_input_path = (
+                reused_mlx_cache_audit_path or _repo_rel(mlx_cache_audit, repo)
+            )
+            mlx_cache_step_id = (
+                "reuse_mlx_component_cache"
+                if reused_mlx_cache_path and reused_mlx_cache_audit_path
+                else "build_mlx_component_cache"
+            )
             reference_mlx_cache_dir = (
                 reference_shared_dir / "reference_mlx_scorer_input_cache"
             )
@@ -13945,12 +14362,53 @@ def build_frontier_targeted_component_correction_queue(
             reference_local_mlx_response = (
                 reference_mlx_response if reference_eval_available else None
             )
+            reused_reference_mlx_cache_path = (
+                str(reference_cache_source.get("source_mlx_scorer_input_cache") or "")
+                if isinstance(reference_cache_source, Mapping)
+                else ""
+            )
+            reused_reference_mlx_cache_audit_path = (
+                str(
+                    reference_cache_source.get("source_mlx_scorer_input_cache_audit")
+                    or ""
+                )
+                if isinstance(reference_cache_source, Mapping)
+                else ""
+            )
+            reference_mlx_cache_input_path = (
+                reused_reference_mlx_cache_path
+                or _repo_rel(reference_mlx_cache_dir, repo)
+            )
+            reference_mlx_cache_audit_input_path = (
+                reused_reference_mlx_cache_audit_path
+                or _repo_rel(reference_mlx_cache_audit, repo)
+            )
+            reference_mlx_cache_step_id = (
+                "reuse_reference_mlx_component_cache"
+                if reused_reference_mlx_cache_path
+                and reused_reference_mlx_cache_audit_path
+                else "build_reference_mlx_component_cache"
+            )
             for request in request_metadata:
                 request["local_mlx_response_path"] = _repo_rel(mlx_response, repo)
+                request["local_mlx_cache_path"] = mlx_cache_input_path
+                request["local_mlx_cache_reuse_mode"] = (
+                    component_cache_source.get("mlx_cache_reuse_mode")
+                    if isinstance(component_cache_source, Mapping)
+                    else None
+                )
                 if reference_eval_available:
                     request["reference_local_mlx_response_path"] = _repo_rel(
                         reference_mlx_response,
                         repo,
+                    )
+                    request["reference_local_mlx_cache_path"] = (
+                        reference_mlx_cache_input_path
+                    )
+                    request["reference_local_mlx_cache_reuse_mode"] = (
+                        reference_cache_source.get("mlx_cache_reuse_mode")
+                        if isinstance(reference_cache_source, Mapping)
+                        else None
                     )
             mlx_components_dir = shared_dir / "mlx_components"
             reference_mlx_components_dir = (
@@ -13981,7 +14439,7 @@ def build_frontier_targeted_component_correction_queue(
                 "--reference-cache-dir",
                 str(mlx_reference_cache_dir),
                 "--candidate-cache-dir",
-                _repo_rel(mlx_cache_dir, repo),
+                mlx_cache_input_path,
                 "--output",
                 _repo_rel(mlx_response, repo),
                 "--repo-root",
@@ -14025,7 +14483,7 @@ def build_frontier_targeted_component_correction_queue(
                     "--reference-cache-dir",
                     str(mlx_reference_cache_dir),
                     "--candidate-cache-dir",
-                    _repo_rel(reference_mlx_cache_dir, repo),
+                    reference_mlx_cache_input_path,
                     "--output",
                     _repo_rel(reference_mlx_response, repo),
                     "--repo-root",
@@ -14044,35 +14502,60 @@ def build_frontier_targeted_component_correction_queue(
                     reference_mlx_response_command.append("--allow-gpu-research-signal")
                 reference_mlx_steps = [
                     {
-                        "id": "build_reference_mlx_component_cache",
+                        "id": reference_mlx_cache_step_id,
                         "kind": "command",
-                        "requires": ["local_cpu_reference_advisory"],
-                        "command": reference_build_cache_command,
-                        "resources": {"kind": "local_cpu"},
-                        "timeout_seconds": 1800,
+                        "requires": [reference_advisory_step_id],
+                        "command": (
+                            [
+                                ".venv/bin/python",
+                                "-c",
+                                (
+                                    "import json; print(json.dumps({'schema': "
+                                    "'frontier_rate_attack_reused_mlx_component_cache.v1', "
+                                    "'role': 'reference', 'score_claim': False, "
+                                    "'promotion_eligible': False, "
+                                    "'rank_or_kill_eligible': False, "
+                                    "'ready_for_exact_eval_dispatch': False}))"
+                                ),
+                            ]
+                            if reused_reference_mlx_cache_path
+                            and reused_reference_mlx_cache_audit_path
+                            else reference_build_cache_command
+                        ),
+                        "resources": {
+                            "kind": (
+                                "local_io_heavy"
+                                if reused_reference_mlx_cache_path
+                                and reused_reference_mlx_cache_audit_path
+                                else "local_cpu"
+                            )
+                        },
+                        "timeout_seconds": (
+                            120
+                            if reused_reference_mlx_cache_path
+                            and reused_reference_mlx_cache_audit_path
+                            else 1800
+                        ),
                         "postconditions": [
                             {
                                 "type": "json_equals",
-                                "path": _repo_rel(reference_mlx_cache_audit, repo),
+                                "path": reference_mlx_cache_audit_input_path,
                                 "key": "passed",
                                 "equals": True,
                             },
                             {
                                 "type": "json_false_authority",
-                                "path": _repo_rel(reference_mlx_cache_audit, repo),
+                                "path": reference_mlx_cache_audit_input_path,
                             },
                             {
                                 "type": "json_false_authority",
-                                "path": _repo_rel(
-                                    reference_mlx_cache_dir / "manifest.json",
-                                    repo,
-                                ),
+                                "path": f"{reference_mlx_cache_input_path}/manifest.json",
                             },
                         ],
                         "telemetry": {
                             "artifact_paths": [
-                                _repo_rel(reference_mlx_cache_dir, repo),
-                                _repo_rel(reference_mlx_cache_audit, repo),
+                                reference_mlx_cache_input_path,
+                                reference_mlx_cache_audit_input_path,
                             ],
                             "input_artifact_paths": [
                                 _repo_rel(reference_local_cpu_advisory, repo)
@@ -14084,7 +14567,7 @@ def build_frontier_targeted_component_correction_queue(
                     {
                         "id": "reference_local_mlx_component_response",
                         "kind": "command",
-                        "requires": ["build_reference_mlx_component_cache"],
+                        "requires": [reference_mlx_cache_step_id],
                         "command": reference_mlx_response_command,
                         "resources": {
                             "kind": "local_mlx" if mlx_device == "gpu" else "local_cpu"
@@ -14106,7 +14589,7 @@ def build_frontier_targeted_component_correction_queue(
                             "input_artifact_paths": [
                                 _repo_rel(reference_local_cpu_advisory, repo),
                                 str(mlx_reference_cache_dir),
-                                _repo_rel(reference_mlx_cache_dir, repo),
+                                reference_mlx_cache_input_path,
                             ],
                             "recursive": True,
                             "include_postcondition_paths": True,
@@ -14116,32 +14599,57 @@ def build_frontier_targeted_component_correction_queue(
             steps.extend(
                 [
                     {
-                        "id": "build_mlx_component_cache",
+                        "id": mlx_cache_step_id,
                         "kind": "command",
-                        "requires": ["local_cpu_component_advisory"],
-                        "command": build_cache_command,
-                        "resources": {"kind": "local_cpu"},
-                        "timeout_seconds": 1800,
+                        "requires": [component_advisory_step_id],
+                        "command": (
+                            [
+                                ".venv/bin/python",
+                                "-c",
+                                (
+                                    "import json; print(json.dumps({'schema': "
+                                    "'frontier_rate_attack_reused_mlx_component_cache.v1', "
+                                    "'role': 'candidate', 'score_claim': False, "
+                                    "'promotion_eligible': False, "
+                                    "'rank_or_kill_eligible': False, "
+                                    "'ready_for_exact_eval_dispatch': False}))"
+                                ),
+                            ]
+                            if reused_mlx_cache_path and reused_mlx_cache_audit_path
+                            else build_cache_command
+                        ),
+                        "resources": {
+                            "kind": (
+                                "local_io_heavy"
+                                if reused_mlx_cache_path and reused_mlx_cache_audit_path
+                                else "local_cpu"
+                            )
+                        },
+                        "timeout_seconds": (
+                            120
+                            if reused_mlx_cache_path and reused_mlx_cache_audit_path
+                            else 1800
+                        ),
                         "postconditions": [
                             {
                                 "type": "json_equals",
-                                "path": _repo_rel(mlx_cache_audit, repo),
+                                "path": mlx_cache_audit_input_path,
                                 "key": "passed",
                                 "equals": True,
                             },
                             {
                                 "type": "json_false_authority",
-                                "path": _repo_rel(mlx_cache_audit, repo),
+                                "path": mlx_cache_audit_input_path,
                             },
                             {
                                 "type": "json_false_authority",
-                                "path": _repo_rel(mlx_cache_dir / "manifest.json", repo),
+                                "path": f"{mlx_cache_input_path}/manifest.json",
                             },
                         ],
                         "telemetry": {
                             "artifact_paths": [
-                                _repo_rel(mlx_cache_dir, repo),
-                                _repo_rel(mlx_cache_audit, repo),
+                                mlx_cache_input_path,
+                                mlx_cache_audit_input_path,
                             ],
                             "input_artifact_paths": [_repo_rel(local_cpu_advisory, repo)],
                             "recursive": True,
@@ -14151,7 +14659,7 @@ def build_frontier_targeted_component_correction_queue(
                     {
                         "id": "local_mlx_component_response",
                         "kind": "command",
-                        "requires": ["build_mlx_component_cache"],
+                        "requires": [mlx_cache_step_id],
                         "command": mlx_response_command,
                         "resources": {
                             "kind": "local_mlx" if mlx_device == "gpu" else "local_cpu"
@@ -14173,7 +14681,7 @@ def build_frontier_targeted_component_correction_queue(
                             "input_artifact_paths": [
                                 _repo_rel(local_cpu_advisory, repo),
                                 str(mlx_reference_cache_dir),
-                                _repo_rel(mlx_cache_dir, repo),
+                                mlx_cache_input_path,
                             ],
                             "recursive": True,
                             "include_postcondition_paths": True,
@@ -14199,7 +14707,7 @@ def build_frontier_targeted_component_correction_queue(
                 "--repo-root",
                 ".",
             ]
-            harvest_requires = ["local_cpu_component_advisory"]
+            harvest_requires = [component_advisory_step_id]
             harvest_input_paths = [
                 work_order_path_text,
                 _repo_rel(local_cpu_advisory, repo),
@@ -14211,7 +14719,7 @@ def build_frontier_targeted_component_correction_queue(
                         _repo_rel(reference_local_cpu_advisory, repo),
                     ]
                 )
-                harvest_requires.append("local_cpu_reference_advisory")
+                harvest_requires.append(reference_advisory_step_id)
                 harvest_input_paths.append(_repo_rel(reference_local_cpu_advisory, repo))
             if local_mlx_response is not None:
                 harvest_command.extend(
@@ -14227,7 +14735,7 @@ def build_frontier_targeted_component_correction_queue(
                 harvest_requires = [
                     "local_mlx_component_response",
                     *(
-                        ["local_cpu_reference_advisory"]
+                        [reference_advisory_step_id]
                         if reference_eval_available
                         else []
                     ),
@@ -14311,11 +14819,39 @@ def build_frontier_targeted_component_correction_queue(
                     "submission_dir": primary_row.get("submission_dir"),
                     "work_dir": _repo_rel(candidate_dir, repo),
                     "local_cpu_advisory_path": _repo_rel(local_cpu_advisory, repo),
+                    "local_cpu_advisory_step_id": component_advisory_step_id,
+                    "local_cpu_advisory_reuse_mode": (
+                        component_cache_source.get("reuse_mode")
+                        if isinstance(component_cache_source, Mapping)
+                        else "queue_owned_local_cpu_component_advisory"
+                    ),
+                    "local_cpu_advisory_source_path": (
+                        component_cache_source.get("source_local_cpu_advisory")
+                        if isinstance(component_cache_source, Mapping)
+                        else None
+                    ),
                     "candidate_cache_key": candidate_cache_key,
                     "shared_component_response_dir": _repo_rel(shared_dir, repo),
                     "reference_local_cpu_advisory_path": (
                         _repo_rel(reference_local_cpu_advisory, repo)
                         if reference_eval_available
+                        else None
+                    ),
+                    "reference_local_cpu_advisory_step_id": (
+                        reference_advisory_step_id if reference_eval_available else None
+                    ),
+                    "reference_local_cpu_advisory_reuse_mode": (
+                        reference_cache_source.get("reuse_mode")
+                        if isinstance(reference_cache_source, Mapping)
+                        else (
+                            "queue_owned_local_cpu_component_advisory"
+                            if reference_eval_available
+                            else None
+                        )
+                    ),
+                    "reference_local_cpu_advisory_source_path": (
+                        reference_cache_source.get("source_local_cpu_advisory")
+                        if isinstance(reference_cache_source, Mapping)
                         else None
                     ),
                     "reference_archive_path": reference_archive_path or None,
@@ -14332,10 +14868,28 @@ def build_frontier_targeted_component_correction_queue(
                         if local_mlx_response is None
                         else _repo_rel(local_mlx_response, repo)
                     ),
+                    "local_mlx_cache_path": (
+                        None if local_mlx_response is None else mlx_cache_input_path
+                    ),
+                    "local_mlx_cache_reuse_mode": (
+                        component_cache_source.get("mlx_cache_reuse_mode")
+                        if isinstance(component_cache_source, Mapping)
+                        else None
+                    ),
                     "reference_local_mlx_response_path": (
                         None
                         if reference_local_mlx_response is None
                         else _repo_rel(reference_local_mlx_response, repo)
+                    ),
+                    "reference_local_mlx_cache_path": (
+                        reference_mlx_cache_input_path
+                        if reference_local_mlx_response is not None
+                        else None
+                    ),
+                    "reference_local_mlx_cache_reuse_mode": (
+                        reference_cache_source.get("mlx_cache_reuse_mode")
+                        if isinstance(reference_cache_source, Mapping)
+                        else None
                     ),
                     "local_mlx_response_enabled": include_mlx_response,
                     "mlx_device": mlx_device,
@@ -14343,6 +14897,7 @@ def build_frontier_targeted_component_correction_queue(
                     "deduped_full_local_cpu_eval_count": max(0, len(candidate_rows) - 1),
                     "budget_spend_ready": False,
                     "selection_policy": dict(selection_policy),
+                    "repair_operator_portfolio": dict(repair_operator_portfolio),
                     "allowed_use": (
                         "targeted_component_correction_queue_metadata_only"
                     ),
@@ -15700,6 +16255,7 @@ def build_frontier_rate_attack_feedback_refresh(
     repair_palette_modes: Sequence[str] = (),
     repair_dynamics_palette_priors: Sequence[Mapping[str, Any]] = (),
     repair_dynamics_prior_source_paths: Sequence[str] = (),
+    component_response_cache_roots: Sequence[str | Path] = (),
 ) -> dict[str, Any]:
     """Build a forest-level feedback refresh and optional DQS1 follow-up queue."""
 
@@ -15918,6 +16474,10 @@ def build_frontier_rate_attack_feedback_refresh(
         "repair_dynamics_palette_prior": repair_dynamics_palette_prior,
         "repair_dynamics_prior_source_paths": list(repair_dynamics_prior_source_paths),
         "manual_repair_dynamics_palette_prior": manual_repair_dynamics_palette_prior,
+        "component_response_cache_roots": [
+            _repo_rel(_resolve_path(root, repo_root=repo), repo)
+            for root in component_response_cache_roots
+        ],
         "targeted_component_correction_acquisition": (
             targeted_component_correction_acquisition
         ),

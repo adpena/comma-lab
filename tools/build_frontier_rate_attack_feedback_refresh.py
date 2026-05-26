@@ -292,6 +292,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--local-cpu-concurrency", type=int, default=1)
     parser.add_argument("--local-io-concurrency", type=int, default=1)
     parser.add_argument(
+        "--component-response-cache-root",
+        type=Path,
+        action="append",
+        default=[],
+        help=(
+            "Root containing prior false-authority local CPU advisory/cache-hash "
+            "artifacts for targeted component correction queue reuse. May repeat."
+        ),
+    )
+    parser.add_argument(
         "--skip-raw-retention-plan",
         action="store_true",
         help="Do not add the raw/inflated artifact retention planning step.",
@@ -615,6 +625,9 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
                 "component_correction"
             ),
             candidate_limit=int(report.get("candidate_limit") or 4),
+            component_response_cache_roots=tuple(
+                report.get("component_response_cache_roots") or ()
+            ),
         )
         if isinstance(correction_queue, dict):
             queue_path = output_dir / "targeted_component_correction_queue.json"
@@ -1362,6 +1375,7 @@ def main(argv: list[str] | None = None) -> int:
             repair_palette_modes=tuple(repair_palette_modes),
             repair_dynamics_palette_priors=tuple(repair_dynamics_priors),
             repair_dynamics_prior_source_paths=tuple(repair_dynamics_source_paths),
+            component_response_cache_roots=tuple(args.component_response_cache_root),
         )
         if generated_pair_frame_lattice is not None:
             report["generated_pair_frame_geometry_lattice_path"] = _display_path(
