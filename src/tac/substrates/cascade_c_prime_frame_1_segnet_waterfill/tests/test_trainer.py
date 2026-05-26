@@ -13,9 +13,10 @@ sister subagent C paired-CUDA Modal smoke per revision #3.
 """
 from __future__ import annotations
 
+import importlib.util
 import json
-import sys
 import tempfile
+import zipfile
 from pathlib import Path
 
 import numpy as np
@@ -37,7 +38,6 @@ from tac.substrates.cascade_c_prime_frame_1_segnet_waterfill.tier_c_hook import 
     DEFAULT_TIER_C_TOOL_PATH,
     FORMALIZATION_PENDING_VERDICT,
     TierCAblationHookVerdict,
-    TierCAblationProbeRequest,
     build_tier_c_ablation_probe_request,
     classify_tier_c_density_verdict,
 )
@@ -45,7 +45,6 @@ from tac.substrates.cascade_c_prime_frame_1_segnet_waterfill.trainer import (
     DEFAULT_MLX_AXIS_TAG,
     MLX_NON_PROMOTABLE_PROVENANCE,
     MLXFirstTrainerConfig,
-    MLXFirstTrainerError,
     MLXFirstTrainerVerdict,
     is_mlx_available,
     run_mlx_first_compress_pass,
@@ -55,6 +54,42 @@ from tac.substrates.cascade_c_prime_frame_1_segnet_waterfill.trainer import (
 def _mlx_available() -> bool:
     """Sister of trainer.is_mlx_available; used for skip decorators."""
     return is_mlx_available()
+
+
+def _repo_root() -> Path:
+    for parent in Path(__file__).resolve().parents:
+        if (
+            parent
+            / "experiments"
+            / "train_substrate_cascade_c_prime_frame_1_segnet_waterfill.py"
+        ).exists():
+            return parent
+    raise AssertionError("repo root not found")
+
+
+def _trainer_wrapper_source() -> str:
+    return (
+        _repo_root()
+        / "experiments"
+        / "train_substrate_cascade_c_prime_frame_1_segnet_waterfill.py"
+    ).read_text(encoding="utf-8")
+
+
+def _load_trainer_wrapper():
+    path = (
+        _repo_root()
+        / "experiments"
+        / "train_substrate_cascade_c_prime_frame_1_segnet_waterfill.py"
+    )
+    spec = importlib.util.spec_from_file_location(
+        "cascade_c_prime_frame_1_segnet_waterfill_trainer_wrapper",
+        path,
+    )
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 # ---------------------------------------------------------------------------
@@ -190,6 +225,37 @@ class TestNonPromotableProvenance:
         assert any("paired" in b for b in blockers)
 
 
+class TestTrainerWrapperContestArchiveContract:
+    def test_deterministic_archive_zip_wraps_payload_as_zero_bin(self, tmp_path: Path):
+        wrapper = _load_trainer_wrapper()
+        archive_zip = tmp_path / "archive.zip"
+
+        size, digest = wrapper._write_deterministic_archive_zip(
+            archive_zip,
+            member_name="0.bin",
+            member_bytes=b"payload",
+        )
+
+        assert size == archive_zip.stat().st_size
+        assert len(digest) == 64
+        with zipfile.ZipFile(archive_zip) as zf:
+            infos = zf.infolist()
+            assert [info.filename for info in infos] == ["0.bin"]
+            assert infos[0].compress_type == zipfile.ZIP_STORED
+            assert infos[0].date_time == (1980, 1, 1, 0, 0, 0)
+            assert zf.read("0.bin") == b"payload"
+
+    def test_wrapper_auth_eval_uses_contest_archive_zip_path(self):
+        source = _trainer_wrapper_source()
+        assert 'archive_zip_path = submission_dir / "archive.zip"' in source
+        assert "archive_zip=archive_zip_path" in source
+        assert 'archive_zip=submission_dir / "0.bin"' not in source
+        assert '"archive_payload_sha256"' in source
+        assert '"archive_payload_bytes"' in source
+        assert "auth_eval_cuda_score" in source
+        assert "auth_eval_cpu_score" in source
+
+
 # ---------------------------------------------------------------------------
 # MLX-local compress-pass smoke
 # ---------------------------------------------------------------------------
@@ -232,7 +298,7 @@ class TestMLXLocalCompressPassSmoke:
         cfg = MLXFirstTrainerConfig(n_pairs=12, n_frame_0_modes=4, n_frame_1_modes=2, seed=7)
         with tempfile.TemporaryDirectory() as td:
             out = Path(td)
-            v = run_mlx_first_compress_pass(cfg=cfg, output_dir=out, emit_json_sidecar=True)
+            run_mlx_first_compress_pass(cfg=cfg, output_dir=out, emit_json_sidecar=True)
             sidecar = out / "mlx_first_compress_pass_verdict.json"
             assert sidecar.exists()
             payload = json.loads(sidecar.read_text())

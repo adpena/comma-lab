@@ -69,7 +69,7 @@ on the SAME archive bytes per CLAUDE.md "Apples-to-apples evidence discipline"
 |---|---|---|
 | MLX-LOCAL compress -0.058820 prediction replicates on paired-CUDA | CARGO-CULTED (10-30× lit overestimate; Catalog #324 pending_post_training) | this trainer's paired-CUDA Modal dispatch IS the validation surface |
 | Lane script's --device cuda flag selects Modal T4 device | HARD-EARNED (Catalog #205 select_inflate_device handles env override) | Modal recipe sets MODAL_GPU=T4 + CASCADE_C_PRIME_DEVICE=cuda |
-| Auth eval gate canonical CLI signature preserves contest contract | HARD-EARNED (Catalog #226 sister gate refuses hand-rolled subprocess) | gate_auth_eval_call(archive=..., inflate_sh=..., json_out=...) |
+| Auth eval gate canonical CLI signature preserves contest contract | HARD-EARNED (Catalog #226 sister gate refuses hand-rolled subprocess) | gate_auth_eval_call(args=..., archive_zip=..., output_json=..., contest_auth_eval_script=...) |
 
 ## Predicted ΔS band (per Catalog #296)
 
@@ -92,10 +92,12 @@ on the SAME archive bytes per CLAUDE.md "Apples-to-apples evidence discipline"
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import sys
 import time
+import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -153,6 +155,23 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
 # Currently NO such paths; this declaration is reserved for sister-extension
 # substrates that consume cached PR110 base archives.
 TIER_1_EXTRA_MOUNT_PATHS: tuple[str, ...] = ()
+
+
+def _write_deterministic_archive_zip(
+    archive_zip_path: Path,
+    *,
+    member_name: str,
+    member_bytes: bytes,
+) -> tuple[int, str]:
+    """Write the contest rate container with fixed ZIP metadata."""
+    archive_zip_path.parent.mkdir(parents=True, exist_ok=True)
+    info = zipfile.ZipInfo(filename=member_name, date_time=(1980, 1, 1, 0, 0, 0))
+    info.compress_type = zipfile.ZIP_STORED
+    info.external_attr = 0o644 << 16
+    with zipfile.ZipFile(archive_zip_path, "w") as zf:
+        zf.writestr(info, member_bytes)
+    archive_zip_bytes = archive_zip_path.read_bytes()
+    return len(archive_zip_bytes), hashlib.sha256(archive_zip_bytes).hexdigest()
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -345,12 +364,13 @@ def main(argv: list[str] | None = None) -> int:
         _log(f"FATAL archive_pack: {exc}")
         return 4
 
-    import hashlib
-
-    archive_sha = hashlib.sha256(archive_bytes).hexdigest()
+    archive_payload_sha = hashlib.sha256(archive_bytes).hexdigest()
     archive_bin_path = args.output_dir / "0.bin"
     archive_bin_path.write_bytes(archive_bytes)
-    _log(f"stage_4_archive_pack_done bytes={len(archive_bytes)} sha256={archive_sha[:16]}...")
+    _log(
+        "stage_4_archive_pack_done "
+        f"payload_bytes={len(archive_bytes)} payload_sha256={archive_payload_sha[:16]}..."
+    )
 
     # Stage 5: emit contest-compliant inflate runtime per HNeRV parity L4 + Catalog #146.
     # The canonical inflate runtime is vendored under output/submission/ via the
@@ -436,8 +456,19 @@ def main(argv: list[str] | None = None) -> int:
     )
     os.chmod(top_inflate_sh, 0o755)
 
-    # Copy the packed archive into the submission_dir for inflate.sh consumption.
+    # Copy the packed payload into the submission_dir for inflate.sh consumption,
+    # then wrap it in the contest rate container consumed by auth_eval.
     (submission_dir / "0.bin").write_bytes(archive_bytes)
+    archive_zip_path = submission_dir / "archive.zip"
+    archive_zip_bytes, archive_zip_sha = _write_deterministic_archive_zip(
+        archive_zip_path,
+        member_name="0.bin",
+        member_bytes=archive_bytes,
+    )
+    _log(
+        "stage_5_archive_zip_emit_done "
+        f"bytes={archive_zip_bytes} sha256={archive_zip_sha[:16]}..."
+    )
     _log(f"stage_5_inflate_runtime_emit_done dir={submission_dir}")
 
     # Stage 6: stats.json emission per CLAUDE.md "Internal-consistency assertions in stats files".
@@ -455,8 +486,12 @@ def main(argv: list[str] | None = None) -> int:
         "device": args.device,
         "smoke": args.smoke,
         "hardware_substrate": hardware_substrate,
-        "archive_sha256": archive_sha,
-        "archive_bytes": len(archive_bytes),
+        "archive_sha256": archive_zip_sha,
+        "archive_bytes": archive_zip_bytes,
+        "archive_zip_path": str(archive_zip_path),
+        "archive_member_name": "0.bin",
+        "archive_payload_sha256": archive_payload_sha,
+        "archive_payload_bytes": len(archive_bytes),
         "compress_elapsed_seconds": elapsed_compress,
         "total_elapsed_seconds": elapsed_total,
         "frame_1_routing_pct": frame_1_pct,
@@ -488,7 +523,7 @@ def main(argv: list[str] | None = None) -> int:
                 contest_auth_eval_script = REPO_ROOT / "experiments" / "contest_auth_eval.py"
             auth_eval_result = gate_auth_eval_call(
                 args=args,
-                archive_zip=submission_dir / "0.bin",
+                archive_zip=archive_zip_path,
                 inflate_sh=top_inflate_sh,
                 upstream_dir=args.upstream_dir,
                 output_json=auth_eval_json_path,
@@ -496,12 +531,22 @@ def main(argv: list[str] | None = None) -> int:
                 substrate_tag=substrate_id,
                 device=auth_eval_axis,
                 required_score_axis=f"contest_{auth_eval_axis}",
+                return_non_cuda_result=True,
             )
             if auth_eval_result is not None:
-                stats["auth_eval_score"] = auth_eval_result.get("final_score")
-                stats["auth_eval_score_axis"] = auth_eval_result.get("score_axis")
-                stats["auth_eval_score_claim_valid"] = bool(auth_eval_result.get("score_claim_valid", False))
-                stats["auth_eval_lane_tag"] = auth_eval_result.get("lane_tag", f"[contest-{auth_eval_axis.upper()}]")
+                stats["auth_eval_score"] = (
+                    auth_eval_result.get("auth_eval_cuda_score")
+                    or auth_eval_result.get("auth_eval_cpu_score")
+                    or auth_eval_result.get("auth_eval_score")
+                )
+                stats["auth_eval_score_axis"] = auth_eval_result.get("auth_eval_score_axis")
+                stats["auth_eval_score_claim_valid"] = bool(
+                    auth_eval_result.get("auth_eval_score_claim_valid", False)
+                )
+                stats["auth_eval_lane_tag"] = auth_eval_result.get(
+                    "auth_eval_lane_tag", f"[contest-{auth_eval_axis.upper()}]"
+                )
+                stats["auth_eval_json_path"] = auth_eval_result.get("auth_eval_json_path")
                 stats["auth_eval_result_review_blockers"] = auth_eval_result.get("result_review_blockers", [])
                 _log(f"stage_7_auth_eval_done score={stats['auth_eval_score']} axis={stats['auth_eval_score_axis']}")
             else:
@@ -522,8 +567,8 @@ def main(argv: list[str] | None = None) -> int:
 
     axis_label = "CUDA" if args.device in ("cuda", "gpu") else "CPU"
     _log(
-        f"DONE lane={lane_id} archive_sha={archive_sha[:16]}... "
-        f"bytes={len(archive_bytes)} score={stats.get('auth_eval_score')} "
+        f"DONE lane={lane_id} archive_sha={archive_zip_sha[:16]}... "
+        f"bytes={archive_zip_bytes} score={stats.get('auth_eval_score')} "
         f"axis=[contest-{axis_label}] elapsed={elapsed_total:.1f}s"
     )
     return 0

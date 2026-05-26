@@ -1,0 +1,53 @@
+{
+  "axis_tag": "[macOS-MLX research-signal]",
+  "config": {
+    "frame_0_seg_floor": 0.0,
+    "n_frame_0_modes": 16,
+    "n_frame_1_modes": 8,
+    "n_pairs": 8,
+    "perturbation_scale_pose": 5e-07,
+    "perturbation_scale_seg": 1e-05,
+    "pose_avg_baseline": 3.4e-05,
+    "seed": 20260526
+  },
+  "elapsed_seconds": 0.029220104217529297,
+  "frame_1_count": 0,
+  "frame_1_pct": 0.0,
+  "hardware_substrate": "macos_arm64",
+  "n_pairs": 8,
+  "predicted_archive_bytes_delta": 79,
+  "provenance": {
+    "axis_tag": "[macOS-MLX research-signal]",
+    "blockers": [
+      "macos_mlx_research_signal_not_contest_authority",
+      "requires_paired_contest_cpu_plus_cuda_for_score_claim",
+      "requires_pass_verdict_from_gate_mlx_candidate_contest_equivalence",
+      "requires_paired_cuda_validation_per_per_substrate_symposium_revision_3"
+    ],
+    "canonical_equation_proposal": "atick_redlich_asymmetric_scorer_channel_lagrangian_routing_savings_v1",
+    "canonical_equation_status": "FORMALIZATION_PENDING",
+    "contest_equivalence_gate_required_before_dispatch": true,
+    "evidence_grade": "MLX-research-signal",
+    "lane_id": "lane_cascade_c_prime_option_a_build_scaffold_20260526",
+    "per_substrate_symposium_revision": "revision_1_mlx_first_trainer_landing",
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "run_utc": "2026-05-26T22:57:42Z",
+    "score_claim": false,
+    "substrate_id": "cascade_c_prime_frame_1_segnet_waterfill"
+  },
+  "score_claim": false,
+  "state_dict_keys": [
+    "frame_0_menu_indices",
+    "frame_1_menu_indices",
+    "per_pair_score_delta",
+    "pose_deltas_uint8",
+    "routing_decision",
+    "selected_lagrangian",
+    "selected_pose_delta",
+    "selected_seg_delta"
+  ],
+  "total_score_delta_mlx_research_signal": 0.0
+}
