@@ -172,7 +172,14 @@ def harvest_materializer_chain_manifests(
         accepted_paths.append(path)
         inspected_rows.append(row)
 
-    source_queue = build_candidate_queue(accepted_paths, repo_root=repo, top_k=top_k)
+    source_queue = apply_proxy_evidence_boundary(
+        build_candidate_queue(accepted_paths, repo_root=repo, top_k=top_k),
+        dispatch_blockers=[
+            "materializer_chain_harvest_source_queue_is_planning_only",
+            "submission_runtime_closure_required_before_dispatch",
+            "exact_readiness_promotion_required_before_dispatch",
+        ],
+    )
     dfl1_sidecar_report = _apply_renderer_payload_dfl1_sidecar_parity_proofs(
         source_queue,
         renderer_payload_dfl1_inflate_parity_proofs,

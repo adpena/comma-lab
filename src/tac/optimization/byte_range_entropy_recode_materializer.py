@@ -266,8 +266,13 @@ def build_byte_range_entropy_recode_receiver_proof(
     )
     return {
         "schema": RECEIVER_PROOF_SCHEMA,
+        "materializer_id": MATERIALIZER_ID,
+        "target_kind": TARGET_KIND,
         "receiver_contract_id": RECEIVER_CONTRACT_ID,
         "receiver_contract_kind": RECEIVER_CONTRACT_KIND,
+        "receiver_contract_satisfied": not blockers,
+        "runtime_consumption_proof_passed": not blockers,
+        "passed": not blockers,
         "ready_for_exact_eval_runtime": not blockers,
         "runtime_adapter_manifest": adapter_record,
         "candidate_manifest": candidate_record,

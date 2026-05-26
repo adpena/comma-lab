@@ -547,6 +547,14 @@ def test_harvest_work_queue_chain_manifest_into_source_queue(
     assert report["source_queue_dispatch_ready_count"] == 0
     assert report["rows"][0]["state_rows"][0]["status"] == "succeeded"
     assert queue["dispatch_ready_count"] == 0
+    assert queue["score_claim"] is False
+    assert queue["promotion_eligible"] is False
+    assert queue["rank_or_kill_eligible"] is False
+    assert queue["ready_for_exact_eval_dispatch"] is False
+    assert (
+        "materializer_chain_harvest_source_queue_is_planning_only"
+        in queue["dispatch_blockers"]
+    )
     assert row["candidate_id"] == "external_materializer_candidate"
     assert row["archive_candidate_verified"] is True
     assert row["materializer_rate_outcome"] == "realized_saving"
@@ -1907,6 +1915,10 @@ def test_harvest_cli_writes_report_and_source_queue(tmp_path: Path) -> None:
     report = json.loads(report_out.read_text(encoding="utf-8"))
     assert source_queue["n_candidates"] == 1
     assert source_queue["dispatch_ready_count"] == 0
+    assert source_queue["score_claim"] is False
+    assert source_queue["promotion_eligible"] is False
+    assert source_queue["rank_or_kill_eligible"] is False
+    assert source_queue["ready_for_exact_eval_dispatch"] is False
     assert report["accepted_manifest_count"] == 1
     assert report["ready_for_exact_eval_dispatch"] is False
 

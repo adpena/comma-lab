@@ -24,6 +24,7 @@ from tac.optimization.byte_range_entropy_recode_materializer import (
     CANDIDATE_SCHEMA,
     MATERIALIZER_ID,
     RECEIVER_CONTRACT_ID,
+    RECEIVER_CONTRACT_KIND,
     RECEIVER_PROOF_SCHEMA,
     TARGET_KIND,
     build_byte_range_entropy_recode_plan,
@@ -190,6 +191,11 @@ def test_byte_range_entropy_receiver_proof_transcodes_pr103_runtime_adapter(
     )
 
     assert proof["schema"] == RECEIVER_PROOF_SCHEMA
+    assert proof["target_kind"] == TARGET_KIND
+    assert proof["materializer_id"] == MATERIALIZER_ID
+    assert proof["receiver_contract_id"] == RECEIVER_CONTRACT_ID
+    assert proof["receiver_contract_kind"] == RECEIVER_CONTRACT_KIND
+    assert proof["runtime_consumption_proof_passed"] is True
     assert proof["ready_for_exact_eval_runtime"] is True
     assert proof["candidate_archive_sha256"] == sha256_file(fixture["candidate_archive"])
     assert proof["candidate_member_sha256"] == "b" * 64
@@ -262,9 +268,21 @@ def test_byte_range_entropy_chain_runs_materialize_adapter_proof_verify(
     )
 
     assert chain["schema"] == CHAIN_SCHEMA
+    assert chain["target_kind"] == TARGET_KIND
+    assert chain["materializer_id"] == MATERIALIZER_ID
+    assert chain["receiver_contract_id"] == RECEIVER_CONTRACT_ID
+    assert chain["receiver_contract_kind"] == RECEIVER_CONTRACT_KIND
     assert chain["byte_closed_candidate_emitted"] is True
+    assert chain["runtime_adapter_ready"] is True
+    assert chain["receiver_proof_ready"] is True
     assert chain["receiver_contract_satisfied"] is True
     assert chain["candidate_runtime_adapter_blocker_cleared"] is True
+    assert chain["candidate_runtime_dir"].endswith("chain/runtime_adapter")
+    assert chain["runtime_consumption_proof_required"] is True
+    assert chain["runtime_consumption_proof_status"] == "present"
+    assert chain["runtime_consumption_proof_path"].endswith(
+        "chain/byte_range_receiver_proof.json"
+    )
     assert "candidate_runtime_adapter_missing" not in chain["readiness_blockers"]
     assert "candidate_inflate_output_parity_missing" in chain["readiness_blockers"]
     assert "inflate_or_full_frame_parity" in chain["next_required_gates"]
@@ -275,6 +293,20 @@ def test_byte_range_entropy_chain_runs_materialize_adapter_proof_verify(
     assert chain["artifacts"]["byte_range_candidate_manifest"]["sha256"]
     assert chain["artifacts"]["pr103_candidate_manifest"]["sha256"]
     assert chain["score_claim"] is False
+
+    rerun_chain = build_byte_range_entropy_recode_chain(
+        schema_manifest=fixture["manifest"],
+        beam_probe_reports=(beam,),
+        source_runtime_dir=runtime,
+        output_dir=tmp_path / "chain",
+        repo_root=tmp_path,
+        layout=fixture["layout"],
+        stream_specs=fixture["stream_specs"],
+        hi_symbol_count=fixture["hi_symbol_count"],
+        overwrite=True,
+    )
+    assert rerun_chain["receiver_contract_satisfied"] is True
+    assert rerun_chain["runtime_consumption_proof_status"] == "present"
 
 
 def _receiver_proof_fixture(tmp_path: Path) -> dict[str, Path]:

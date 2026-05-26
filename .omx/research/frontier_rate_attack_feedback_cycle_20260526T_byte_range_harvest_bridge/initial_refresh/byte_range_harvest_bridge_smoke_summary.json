@@ -1,0 +1,97 @@
+{
+  "allowed_use": "queue_owned_byte_range_materializer_handoff_and_blocked_correction_budget_signal",
+  "artifacts": {
+    "bridge_report": {
+      "bytes": 3563,
+      "path": "experiments/results/frontier_operation_chain_compiler/frontier_feedback_cycle_byte_range_harvest_bridge_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/exact_readiness_bridge_report.json",
+      "sha256": "7114eb6d667e58fc955799e5e0c2ef74ac578d317b1aada1f3a4ee509377758f"
+    },
+    "budget_smoke": {
+      "bytes": 18298,
+      "path": ".omx/research/frontier_rate_attack_feedback_cycle_20260526T_byte_range_harvest_bridge/initial_refresh/receiver_closed_correction_budget_smoke.json",
+      "sha256": "0a40250e9a19b89f8925786c71cc59c9c8ad867d228d575472736021d048744f"
+    },
+    "chain": {
+      "bytes": 15196,
+      "path": "experiments/results/frontier_operation_chain_compiler/frontier_feedback_cycle_byte_range_harvest_bridge_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/byte_range_entropy_recode_chain_manifest.json",
+      "sha256": "e95543ff7b5abcec0f9507aa1d6a266e71056d957726455ae871ace98cc13e1c"
+    },
+    "closed_source_queue": {
+      "bytes": 29518,
+      "path": "experiments/results/frontier_operation_chain_compiler/frontier_feedback_cycle_byte_range_harvest_bridge_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/submission_closure/closed_source_queue.json",
+      "sha256": "8073eb6e0b24950e55a51250260f68145b0edbdaf56224200d50520529da9b3f"
+    },
+    "closure_report": {
+      "bytes": 11414,
+      "path": "experiments/results/frontier_operation_chain_compiler/frontier_feedback_cycle_byte_range_harvest_bridge_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/submission_closure/submission_closure_report.json",
+      "sha256": "fee5b2bfa4fb37cb0a452504f64eec873a69fc93a2a3ee7a83ff4aaed9599ef7"
+    },
+    "harvest_report": {
+      "bytes": 2530,
+      "path": "experiments/results/frontier_operation_chain_compiler/frontier_feedback_cycle_byte_range_harvest_bridge_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/harvest_report.json",
+      "sha256": "b92411feca66897e751071e5d2551adb682518346ca7b2f9384a81c94ea5b937"
+    },
+    "queue": {
+      "bytes": 31851,
+      "path": ".omx/research/frontier_rate_attack_feedback_cycle_20260526T_byte_range_harvest_bridge/initial_refresh/operation_chain_compiler_queue.json",
+      "sha256": "edc50b6dcca997895df6fedcd3238302037e3758d520a34666b16802a2faf1b4"
+    },
+    "source_queue": {
+      "bytes": 17856,
+      "path": "experiments/results/frontier_operation_chain_compiler/frontier_feedback_cycle_byte_range_harvest_bridge_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/source_queue.json",
+      "sha256": "4155ff3821e0b76ec34210d7b55fefe561a207f7e58ca1b66df82effec83ae81"
+    }
+  },
+  "bridge_blocked_candidate_count": 1,
+  "bridge_blockers": [
+    "unknown_uncleared_source_dispatch_blocker:candidate_inflate_output_parity_missing",
+    "unknown_uncleared_source_dispatch_blocker:strict_pre_submission_compliance_json_missing",
+    "unknown_uncleared_source_dispatch_blocker:lane_dispatch_claim_missing",
+    "unknown_uncleared_source_dispatch_blocker:full_frame_render_output_parity_missing",
+    "unknown_uncleared_source_dispatch_blocker:shell_inflate_output_parity_missing"
+  ],
+  "bridge_candidate_count": 1,
+  "bridge_ready_candidate_count": 0,
+  "budget_spend_allowed": false,
+  "byte_range_budget_row": {
+    "critical_blockers": [
+      "unknown_uncleared_source_dispatch_blocker:candidate_inflate_output_parity_missing",
+      "unknown_uncleared_source_dispatch_blocker:strict_pre_submission_compliance_json_missing",
+      "unknown_uncleared_source_dispatch_blocker:lane_dispatch_claim_missing",
+      "unknown_uncleared_source_dispatch_blocker:full_frame_render_output_parity_missing",
+      "unknown_uncleared_source_dispatch_blocker:shell_inflate_output_parity_missing"
+    ],
+    "ready_for_budget_spend": false,
+    "receiver_closed": false,
+    "release_to_targeted_correction_planning": false,
+    "saved_bytes_at_risk": 16
+  },
+  "candidate_archive_bytes": 178207,
+  "chain_manifest_path": "experiments/results/frontier_operation_chain_compiler/frontier_feedback_cycle_byte_range_harvest_bridge_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/byte_range_entropy_recode_chain_manifest.json",
+  "closure_candidate_count": 1,
+  "exact_readiness_bridge_report_path": "experiments/results/frontier_operation_chain_compiler/frontier_feedback_cycle_byte_range_harvest_bridge_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/exact_readiness_bridge_report.json",
+  "forbidden_use": "score_claim_or_dispatch_or_promotion_or_targeted_correction_spend_authority",
+  "harvest_accepted_manifest_count": 1,
+  "harvest_report_path": "experiments/results/frontier_operation_chain_compiler/frontier_feedback_cycle_byte_range_harvest_bridge_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/harvest_report.json",
+  "harvest_source_queue_candidate_count": 1,
+  "harvest_source_queue_dispatch_ready_count": 0,
+  "materializer_id": "byte_range_entropy_recode_adapter",
+  "promotion_eligible": false,
+  "queue_artifact_path": ".omx/research/frontier_rate_attack_feedback_cycle_20260526T_byte_range_harvest_bridge/initial_refresh/operation_chain_compiler_queue.json",
+  "queue_id": "frontier_feedback_cycle_byte_range_harvest_bridge_chain_compiler",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "realized_saved_bytes": 16,
+  "receiver_closed_correction_budget_smoke_path": ".omx/research/frontier_rate_attack_feedback_cycle_20260526T_byte_range_harvest_bridge/initial_refresh/receiver_closed_correction_budget_smoke.json",
+  "receiver_contract_id": "byte_range_entropy_recode_receiver.v1",
+  "receiver_contract_kind": "archive_charged_byte_range_entropy_recode",
+  "receiver_contract_satisfied": true,
+  "runtime_adapter_ready": true,
+  "runtime_consumption_proof_status": "present",
+  "schema": "frontier_rate_attack_byte_range_harvest_bridge_smoke.v1",
+  "score_claim": false,
+  "source_archive_bytes": 178223,
+  "step_count": 6,
+  "submission_closure_report_path": "experiments/results/frontier_operation_chain_compiler/frontier_feedback_cycle_byte_range_harvest_bridge_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/submission_closure/submission_closure_report.json",
+  "target_kind": "byte_range_entropy_recode_v1"
+}

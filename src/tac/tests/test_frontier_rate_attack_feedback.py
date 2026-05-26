@@ -13,6 +13,8 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     FEEDBACK_REFRESH_SCHEMA,
     LOCAL_CPU_EUREKA_DISCOVERY_SCHEMA,
     OPERATION_CHAIN_COMPILER_STAGE_PLAN_SCHEMA,
+    OPERATION_CHAIN_COMPILER_WORK_ORDER_SCHEMA,
+    OPERATION_CHAIN_COMPILER_WORK_ORDERS_SCHEMA,
     OPERATION_MATERIALIZER_BRIDGE_SCHEMA,
     OPERATION_PORTFOLIO_SCHEMA,
     OPERATION_PORTFOLIO_TAXONOMY_SCHEMA,
@@ -29,6 +31,7 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     build_frontier_rate_attack_feedback_refresh,
     build_frontier_receiver_repair_work_order,
     build_frontier_targeted_component_correction_work_order,
+    build_receiver_closed_correction_budget,
     discover_local_cpu_eureka_planning_signals,
     discover_materializer_feedback_payloads,
 )
@@ -727,6 +730,129 @@ def test_byte_range_stage_inputs_bind_existing_receiver_chain_context(
     assert written["ready_for_exact_eval_dispatch"] is False
 
 
+def _write_default_byte_range_chain_context(repo: Path) -> None:
+    source_archive = repo / "source_archive.zip"
+    source_archive.write_bytes(b"PK\x05\x06" + b"\0" * 18)
+    _write_json(
+        repo
+        / "experiments/results/hnerv_pr103_lc_ac_schema_refresh_20260510_codex/manifest.json",
+        {
+            "source_archive": {
+                "path": source_archive.relative_to(repo).as_posix(),
+                "member_name": "x",
+            },
+            **_false_authority(),
+        },
+    )
+    _write_json(
+        repo
+        / ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/stem_weight_beam_probe_mid32.json",
+        {"schema": "fixture_beam_probe.v1", **_false_authority()},
+    )
+    runtime = repo / "submissions/hnerv_lc_ac"
+    runtime.mkdir(parents=True)
+    (runtime / "inflate.py").write_text("print('inflate')\n", encoding="utf-8")
+    (runtime / "inflate.sh").write_text("#!/bin/sh\n", encoding="utf-8")
+
+
+def _byte_range_operation_chain_work_orders() -> dict[str, object]:
+    return {
+        "schema": OPERATION_CHAIN_COMPILER_WORK_ORDERS_SCHEMA,
+        **_false_authority(),
+        "work_orders": [
+            {
+                "schema": OPERATION_CHAIN_COMPILER_WORK_ORDER_SCHEMA,
+                **_false_authority(),
+                "source_operation_id": "chain_registered_multisurface_materializer_program",
+                "source_operation_family": "registered_multisurface_materializer_chain",
+                "chain_targets": ["byte_range_entropy_recode_v1"],
+                "stage_plan": [
+                    {
+                        "stage": "payload_grammar_and_entropy",
+                        "targets": ["byte_range_entropy_recode_v1"],
+                        "required_before_execution": [
+                            "schema_manifest",
+                            "beam_probe_reports",
+                            "source_runtime_dir",
+                        ],
+                    }
+                ],
+                "targeted_correction_budget": {
+                    "schema": "frontier_rate_attack_targeted_correction_budget_summary.v1",
+                    **_false_authority(),
+                    "active": True,
+                    "receiver_closed_materializer_saved_bytes_total": 16,
+                },
+            }
+        ],
+    }
+
+
+def test_operation_chain_queue_wires_byte_range_harvest_closure_and_readiness(
+    tmp_path: Path,
+) -> None:
+    _write_default_byte_range_chain_context(tmp_path)
+    work_orders = _byte_range_operation_chain_work_orders()
+    work_orders_path = _write_json(tmp_path / "operation_chain_work_orders.json", work_orders)
+
+    queue = build_frontier_operation_chain_compiler_queue(
+        repo_root=tmp_path,
+        operation_chain_compiler_work_orders=work_orders,
+        operation_chain_compiler_work_orders_path=work_orders_path,
+        results_root=tmp_path / "results",
+        queue_id="byte_range_handoff_queue",
+    )
+
+    experiment = queue["experiments"][0]
+    step_ids = [step["id"] for step in experiment["steps"]]
+    assert step_ids == [
+        "emit_operation_chain_stage_plan",
+        "emit_byte_range_stage_inputs",
+        "run_byte_range_entropy_recode_chain",
+        "harvest_byte_range_entropy_recode_chain",
+        "build_byte_range_submission_closure",
+        "run_byte_range_exact_readiness_bridge",
+    ]
+    harvest_step = experiment["steps"][3]
+    run_chain_step = experiment["steps"][2]
+    assert "--overwrite" in run_chain_step["command"]
+    assert harvest_step["command"][1] == "tools/harvest_materializer_chain_candidates.py"
+    assert "--require-accepted" in harvest_step["command"]
+    assert harvest_step["requires"] == ["run_byte_range_entropy_recode_chain"]
+    closure_step = experiment["steps"][4]
+    assert closure_step["command"][1] == "tools/build_materializer_submission_closure.py"
+    assert closure_step["requires"] == ["harvest_byte_range_entropy_recode_chain"]
+    bridge_step = experiment["steps"][5]
+    assert bridge_step["command"][1] == "tools/run_materializer_exact_readiness_bridge.py"
+    assert bridge_step["requires"] == ["build_byte_range_submission_closure"]
+    assert "--force-recompute" in bridge_step["command"]
+    assert any(
+        postcondition["type"] == "json_false_authority"
+        for postcondition in harvest_step["postconditions"]
+    )
+    assert any(
+        postcondition["type"] == "json_false_authority"
+        for postcondition in closure_step["postconditions"]
+    )
+    assert any(
+        postcondition["type"] == "json_false_authority"
+        for postcondition in bridge_step["postconditions"]
+    )
+    metadata = experiment["metadata"]
+    assert metadata["byte_range_exact_readiness_handoff_enabled"] is True
+    assert metadata["byte_range_harvest_source_queue_path"].endswith(
+        "exact_eval_handoff/source_queue.json"
+    )
+    assert metadata["byte_range_submission_closure_report_path"].endswith(
+        "submission_closure/submission_closure_report.json"
+    )
+    assert metadata["byte_range_exact_readiness_bridge_report_path"].endswith(
+        "exact_eval_handoff/exact_readiness_bridge_report.json"
+    )
+    assert metadata["byte_range_rate_budget_policy"]["budget_spend_allowed"] is False
+    _assert_false_authority(metadata)
+
+
 def test_materializer_feedback_default_discovery_scans_research_candidates_only(
     tmp_path: Path,
 ) -> None:
@@ -1411,6 +1537,93 @@ def test_receiver_closed_correction_budget_refuses_static_runtime_gaps(
     assert "materializer_saved_bytes_require_receiver_runtime_proof_before_spend" in (
         correction_budget["blockers"]
     )
+
+
+def test_receiver_closed_correction_budget_pairs_handoff_root_bridge(
+    tmp_path: Path,
+) -> None:
+    results_root = tmp_path / "results"
+    candidate_id = "byte_range_entropy_recode_8460014d7085"
+    handoff = (
+        results_root
+        / "frontier_operation_chain_compiler"
+        / "byte_range_handoff_queue"
+        / "chain_registered_multisurface_materializer_program"
+        / "byte_range_entropy_recode_chain"
+        / "exact_eval_handoff"
+    )
+    closure_report = handoff / "submission_closure" / "submission" / candidate_id / (
+        "submission_closure_report.json"
+    )
+    _write_json(
+        closure_report,
+        {
+            "schema": "materializer_submission_runtime_closure_report.v1",
+            **_false_authority(),
+            "candidate_id": candidate_id,
+            "target_kind": "byte_range_entropy_recode_v1",
+            "archive_sha256": "8" * 64,
+            "archive_bytes": 178207,
+            "closed_source_queue_path": (
+                handoff / "submission_closure" / "closed_source_queue.json"
+            ).relative_to(tmp_path).as_posix(),
+            "submission_dir": closure_report.parent.relative_to(tmp_path).as_posix(),
+            "saved_bytes_at_risk": 16,
+            "targeted_correction_budget_signal": {
+                "freed_bytes_require_receiver_and_exact_readiness_before_spend": True,
+                "saved_bytes_at_risk": 16,
+                **_false_authority(),
+            },
+            "allowed_use": "exact_readiness_static_submission_closure_only",
+            "forbidden_use": (
+                "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+            ),
+        },
+    )
+    _write_json(
+        handoff / "exact_readiness_bridge_report.json",
+        {
+            "schema": "materializer_chain_exact_readiness_bridge_report.v1",
+            **_false_authority(),
+            "source_queue_path": (
+                handoff / "submission_closure" / "closed_source_queue.json"
+            ).relative_to(tmp_path).as_posix(),
+            "candidate_count": 1,
+            "ready_candidate_count": 0,
+            "blocked_candidate_count": 1,
+            "dispatch_blockers": ["bridge_report_is_not_dispatch_authority"],
+            "rows": [
+                {
+                    **_false_authority(),
+                    "candidate_id": candidate_id,
+                    "readiness_verdict": "blocked",
+                    "blockers": [
+                        (
+                            "unknown_uncleared_source_dispatch_blocker:"
+                            "full_frame_render_output_parity_missing"
+                        )
+                    ],
+                }
+            ],
+        },
+    )
+
+    budget = build_receiver_closed_correction_budget(
+        repo_root=tmp_path,
+        results_root=results_root,
+    )
+
+    row = next(item for item in budget["rows"] if item["candidate_id"] == candidate_id)
+    assert row["paired_exact_readiness_bridge_report_path"].endswith(
+        "exact_eval_handoff/exact_readiness_bridge_report.json"
+    )
+    assert "paired_exact_readiness_bridge_report_missing" not in row["critical_blockers"]
+    assert (
+        "unknown_uncleared_source_dispatch_blocker:full_frame_render_output_parity_missing"
+        in row["critical_blockers"]
+    )
+    assert row["receiver_closed"] is False
+    assert row["release_to_targeted_correction_planning"] is False
 
 
 def test_frontier_feedback_compiler_turns_eureka_near_misses_into_beyond_drop_two_hints(

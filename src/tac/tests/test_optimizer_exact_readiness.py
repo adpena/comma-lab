@@ -19,6 +19,21 @@ from tac.hdm8_selector_cuda_gate import (
     HDM8_SELECTOR_CUDA_COMPONENT_GATE_SCHEMA,
     SELECTOR_CUDA_TRANSFER_CALIBRATION_SCHEMA,
 )
+from tac.optimization.byte_range_entropy_recode_materializer import (
+    MATERIALIZER_ID as BYTE_RANGE_MATERIALIZER_ID,
+)
+from tac.optimization.byte_range_entropy_recode_materializer import (
+    RECEIVER_CONTRACT_ID as BYTE_RANGE_RECEIVER_CONTRACT_ID,
+)
+from tac.optimization.byte_range_entropy_recode_materializer import (
+    RECEIVER_CONTRACT_KIND as BYTE_RANGE_RECEIVER_CONTRACT_KIND,
+)
+from tac.optimization.byte_range_entropy_recode_materializer import (
+    RECEIVER_PROOF_SCHEMA as BYTE_RANGE_RECEIVER_PROOF_SCHEMA,
+)
+from tac.optimization.byte_range_entropy_recode_materializer import (
+    TARGET_KIND as BYTE_RANGE_TARGET_KIND,
+)
 from tac.optimization.serialized_archive_economics import (
     CANDIDATE_ARCHIVE_LARGER_BLOCKER,
     MISSING_ARCHIVE_BYTES_BLOCKER,
@@ -90,6 +105,62 @@ def test_family_agnostic_runtime_proof_requires_runtime_consumption_signal(
         "family_agnostic_runtime_consumption_proof_v1"
     )
     assert "runtime_consumption_proof_not_proven" in blockers
+
+
+def test_byte_range_runtime_proof_clears_receiver_schema_blocker(
+    tmp_path: Path,
+) -> None:
+    proof = _write_json(
+        tmp_path / "byte_range_receiver_proof.json",
+        {
+            "schema": BYTE_RANGE_RECEIVER_PROOF_SCHEMA,
+            "target_kind": BYTE_RANGE_TARGET_KIND,
+            "materializer_id": BYTE_RANGE_MATERIALIZER_ID,
+            "receiver_contract_id": BYTE_RANGE_RECEIVER_CONTRACT_ID,
+            "receiver_contract_kind": BYTE_RANGE_RECEIVER_CONTRACT_KIND,
+            "runtime_consumption_proof_passed": True,
+            "ready_for_exact_eval_runtime": True,
+            "runtime_consumption_probe": {"passed": True},
+            "decoder_state_parity_proof": {"passed": True},
+            "candidate_archive_sha256": "a" * 64,
+            "candidate_member_sha256": "b" * 64,
+            "archive_byte_ranges": [
+                {
+                    "archive_member_name": "x",
+                    "section_name": "ac_histograms_brotli",
+                    "candidate_start": 2,
+                    "candidate_end": 10,
+                }
+            ],
+            "blockers": [],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+
+    blockers, facts = validate_runtime_consumption_proof(
+        {
+            "target_kind": BYTE_RANGE_TARGET_KIND,
+            "materializer_id": BYTE_RANGE_MATERIALIZER_ID,
+            "receiver_contract_id": BYTE_RANGE_RECEIVER_CONTRACT_ID,
+            "receiver_contract_kind": BYTE_RANGE_RECEIVER_CONTRACT_KIND,
+            "candidate_member_sha256": "b" * 64,
+            "runtime_consumption_proof_required": True,
+            "runtime_consumption_proof_status": "present",
+            "runtime_consumption_proof_path": str(proof),
+        },
+        repo_root=tmp_path,
+        queue_dir=tmp_path,
+        submission_dir=None,
+        archive_sha256="a" * 64,
+    )
+
+    assert facts["runtime_consumption_proof_schema"] == BYTE_RANGE_RECEIVER_PROOF_SCHEMA
+    assert facts["runtime_consumption_proof_archive_sha256"] == "a" * 64
+    assert "runtime_consumption_proof_schema_unsupported" not in blockers
+    assert blockers == []
 
 
 def _load_parallel_dispatch_tool():

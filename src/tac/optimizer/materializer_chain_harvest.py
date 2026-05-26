@@ -133,6 +133,7 @@ def adapt_materializer_chain_manifest_to_candidate(
         "schema": schema,
         "target_kind": chain.get("target_kind"),
         "materializer_id": chain.get("materializer_id"),
+        "receiver_contract_id": chain.get("receiver_contract_id"),
         "receiver_contract_kind": chain.get("receiver_contract_kind"),
         "source_manifest_path": _repo_rel(source_path, repo_root),
         "source_paths": [_repo_rel(source_path, repo_root)],

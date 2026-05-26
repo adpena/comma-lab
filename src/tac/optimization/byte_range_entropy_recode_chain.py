@@ -8,6 +8,7 @@ actuator surface, not score authority.
 
 from __future__ import annotations
 
+import shutil
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
@@ -20,6 +21,10 @@ from tac.hnerv_pr103_lc_ac_schema import (
 )
 from tac.optimization.byte_range_entropy_recode_materializer import (
     FALSE_AUTHORITY,
+    MATERIALIZER_ID,
+    RECEIVER_CONTRACT_ID,
+    RECEIVER_CONTRACT_KIND,
+    TARGET_KIND,
     build_byte_range_entropy_recode_receiver_proof,
     materialize_byte_range_entropy_recode_candidate,
     verify_byte_range_entropy_recode_candidate_manifest,
@@ -69,13 +74,14 @@ def build_byte_range_entropy_recode_chain(
     hi_symbol_count: int = HI_SYMBOL_COUNT,
     retune_brotli_sections: Sequence[str] = (),
     min_free_bytes: int = 0,
+    overwrite: bool = False,
 ) -> dict[str, Any]:
     """Run materialization -> adapter -> receiver proof -> verified manifest."""
 
     repo = Path(repo_root) if repo_root is not None else Path.cwd()
     out = _repo_path(Path(output_dir), repo)
     runtime_source = _repo_path(Path(source_runtime_dir), repo)
-    _prepare_new_output_dir(out)
+    _prepare_new_output_dir(out, overwrite=overwrite)
 
     candidate_archive_path = out / CANDIDATE_ARCHIVE_NAME
     byte_range_candidate_manifest_path = out / BYTE_RANGE_CANDIDATE_MANIFEST_NAME
@@ -152,6 +158,7 @@ def build_byte_range_entropy_recode_chain(
         output_dir=out,
         byte_range_candidate_manifest_path=byte_range_candidate_manifest_path,
         pr103_candidate_manifest_path=pr103_candidate_manifest_path,
+        runtime_adapter_dir=runtime_adapter_dir,
         runtime_adapter_manifest_path=runtime_adapter_manifest_path,
         receiver_proof_path=receiver_proof_path,
         verified_candidate_path=verified_candidate_path,
@@ -170,6 +177,7 @@ def _chain_manifest(
     output_dir: Path,
     byte_range_candidate_manifest_path: Path,
     pr103_candidate_manifest_path: Path,
+    runtime_adapter_dir: Path,
     runtime_adapter_manifest_path: Path,
     receiver_proof_path: Path,
     verified_candidate_path: Path,
@@ -198,9 +206,26 @@ def _chain_manifest(
         "candidate_runtime_adapter_missing" not in verified_blockers
         and verified.get("receiver_contract_satisfied") is True
     )
+    receiver_contract_satisfied = verified.get("receiver_contract_satisfied") is True
+    receiver_proof_ready = receiver_proof.get("ready_for_exact_eval_runtime") is True
+    runtime_adapter_ready = (
+        candidate_runtime_blocker_cleared
+        and receiver_contract_satisfied
+        and receiver_proof_ready
+    )
     return {
         "schema": CHAIN_SCHEMA,
         "output_dir": repo_relative(output_dir, repo),
+        "target_kind": TARGET_KIND,
+        "materializer_id": MATERIALIZER_ID,
+        "receiver_contract_id": RECEIVER_CONTRACT_ID,
+        "receiver_contract_kind": RECEIVER_CONTRACT_KIND,
+        "candidate_runtime_dir": repo_relative(runtime_adapter_dir, repo),
+        "runtime_consumption_proof_required": True,
+        "runtime_consumption_proof_status": (
+            "present" if receiver_contract_satisfied and receiver_proof_ready else "missing"
+        ),
+        "runtime_consumption_proof_path": repo_relative(receiver_proof_path, repo),
         "source_archive": source_archive,
         "source_archive_sha256": source_archive.get("sha256")
         or source_archive.get("archive_sha256")
@@ -214,11 +239,9 @@ def _chain_manifest(
         "serialized_archive_delta": serialized_archive_delta,
         "byte_closed_candidate_emitted": candidate.get("byte_closed_candidate_emitted")
         is True,
-        "runtime_adapter_ready": not adapter_blockers,
-        "receiver_proof_ready": receiver_proof.get("ready_for_exact_eval_runtime")
-        is True,
-        "receiver_contract_satisfied": verified.get("receiver_contract_satisfied")
-        is True,
+        "runtime_adapter_ready": runtime_adapter_ready,
+        "receiver_proof_ready": receiver_proof_ready,
+        "receiver_contract_satisfied": receiver_contract_satisfied,
         "candidate_runtime_adapter_blocker_cleared": candidate_runtime_blocker_cleared,
         "full_frame_or_shell_parity_required": any(
             blocker
@@ -318,8 +341,15 @@ def _next_required_gates(blockers: Sequence[str]) -> list[str]:
     return gates
 
 
-def _prepare_new_output_dir(path: Path) -> None:
+def _prepare_new_output_dir(path: Path, *, overwrite: bool = False) -> None:
     if path.exists():
+        if overwrite:
+            if path.is_dir() and not path.is_symlink():
+                shutil.rmtree(path)
+            else:
+                path.unlink()
+            path.mkdir(parents=True, exist_ok=True)
+            return
         raise ByteRangeEntropyRecodeChainError(
             f"output directory already exists; choose a new chain directory: {path}"
         )

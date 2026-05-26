@@ -30,6 +30,21 @@ from tac.hnerv_frontier_defaults import (
     ACTIVE_SCORE_FRONTIER_LABEL,
     ACTIVE_SCORE_FRONTIER_SCORE,
 )
+from tac.optimization.byte_range_entropy_recode_materializer import (
+    MATERIALIZER_ID as BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER_ID,
+)
+from tac.optimization.byte_range_entropy_recode_materializer import (
+    RECEIVER_CONTRACT_ID as BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_ID,
+)
+from tac.optimization.byte_range_entropy_recode_materializer import (
+    RECEIVER_CONTRACT_KIND as BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_KIND,
+)
+from tac.optimization.byte_range_entropy_recode_materializer import (
+    RECEIVER_PROOF_SCHEMA as BYTE_RANGE_ENTROPY_RECODE_RECEIVER_PROOF_SCHEMA,
+)
+from tac.optimization.byte_range_entropy_recode_materializer import (
+    TARGET_KIND as BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND,
+)
 from tac.optimization.family_agnostic_materializers import (
     verify_renderer_payload_dfl1_full_frame_inflate_parity_proof,
 )
@@ -1399,6 +1414,37 @@ def _family_agnostic_runtime_proof_member_sha(proof: Mapping[str, Any]) -> str |
     return str(value).lower() if is_sha256(value) else None
 
 
+def _byte_range_runtime_proof_passed(proof: Mapping[str, Any]) -> bool:
+    blockers = proof.get("blockers")
+    if isinstance(blockers, list) and blockers:
+        return False
+    runtime_probe = proof.get("runtime_consumption_probe")
+    decoder_parity = proof.get("decoder_state_parity_proof")
+    return (
+        proof.get("ready_for_exact_eval_runtime") is True
+        and proof.get("runtime_consumption_proof_passed") is True
+        and isinstance(runtime_probe, Mapping)
+        and runtime_probe.get("passed") is True
+        and isinstance(decoder_parity, Mapping)
+        and decoder_parity.get("passed") is True
+    )
+
+
+def _byte_range_runtime_proof_archive_sha(proof: Mapping[str, Any]) -> str | None:
+    value = proof.get("candidate_archive_sha256") or proof.get("archive_sha256")
+    return str(value).lower() if is_sha256(value) else None
+
+
+def _byte_range_runtime_proof_member_sha(proof: Mapping[str, Any]) -> str | None:
+    value = proof.get("candidate_member_sha256") or proof.get("member_sha256")
+    return str(value).lower() if is_sha256(value) else None
+
+
+def _byte_range_runtime_proof_ranges_present(proof: Mapping[str, Any]) -> bool:
+    ranges = proof.get("archive_byte_ranges")
+    return isinstance(ranges, list) and any(isinstance(row, Mapping) for row in ranges)
+
+
 def validate_runtime_consumption_proof(
     row: Mapping[str, Any],
     *,
@@ -1516,6 +1562,54 @@ def validate_runtime_consumption_proof(
                 blockers.append("runtime_consumption_proof_candidate_member_sha_missing")
             elif proof_member_sha != str(expected_member_sha).lower():
                 blockers.append("runtime_consumption_proof_candidate_member_sha_mismatch")
+        for false_authority_field in (
+            field
+            for field in FAMILY_AGNOSTIC_RUNTIME_PROOF_REQUIRED_FALSE_AUTHORITY_FIELDS
+            if field in proof_raw
+        ):
+            if proof_raw.get(false_authority_field) is not False:
+                blockers.append(
+                    f"runtime_consumption_proof_false_authority_violation:{false_authority_field}"
+                )
+    elif proof_schema == BYTE_RANGE_ENTROPY_RECODE_RECEIVER_PROOF_SCHEMA:
+        if not _byte_range_runtime_proof_passed(proof_raw):
+            blockers.append("runtime_consumption_proof_not_proven")
+        expected_fields = {
+            "target_kind": BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND,
+            "materializer_id": BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER_ID,
+            "receiver_contract_id": BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_ID,
+            "receiver_contract_kind": BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_KIND,
+        }
+        for field, canonical_expected in expected_fields.items():
+            expected = row.get(field) or canonical_expected
+            if not isinstance(expected, str) or not expected.strip():
+                blockers.append(f"candidate_row_{field}_missing_for_byte_range_runtime_proof")
+                continue
+            observed = proof_raw.get(field)
+            facts[f"runtime_consumption_proof_{field}"] = observed
+            if not isinstance(observed, str) or not observed.strip():
+                blockers.append(f"runtime_consumption_proof_{field}_missing")
+            elif observed.strip() != expected.strip():
+                blockers.append(f"runtime_consumption_proof_{field}_mismatch")
+        proof_archive_sha = _byte_range_runtime_proof_archive_sha(proof_raw)
+        facts["runtime_consumption_proof_archive_sha256"] = proof_archive_sha
+        if archive_sha256 is not None:
+            if proof_archive_sha is None:
+                blockers.append("runtime_consumption_proof_archive_sha_missing")
+            elif proof_archive_sha != archive_sha256:
+                blockers.append("runtime_consumption_proof_archive_sha_mismatch")
+        expected_member_sha = row.get("candidate_member_sha256")
+        if is_sha256(expected_member_sha):
+            proof_member_sha = _byte_range_runtime_proof_member_sha(proof_raw)
+            facts["runtime_consumption_proof_candidate_member_sha256"] = (
+                proof_member_sha
+            )
+            if proof_member_sha is None:
+                blockers.append("runtime_consumption_proof_candidate_member_sha_missing")
+            elif proof_member_sha != str(expected_member_sha).lower():
+                blockers.append("runtime_consumption_proof_candidate_member_sha_mismatch")
+        if not _byte_range_runtime_proof_ranges_present(proof_raw):
+            blockers.append("runtime_consumption_proof_byte_ranges_missing")
         for false_authority_field in (
             field
             for field in FAMILY_AGNOSTIC_RUNTIME_PROOF_REQUIRED_FALSE_AUTHORITY_FIELDS

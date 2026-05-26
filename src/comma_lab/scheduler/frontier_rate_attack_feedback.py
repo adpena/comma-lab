@@ -117,11 +117,13 @@ RECEIVER_REPAIR_QUEUE_METADATA_SCHEMA = (
 MATERIALIZER_EXACT_READINESS_BRIDGE_TOOL = (
     "tools/run_materializer_exact_readiness_bridge.py"
 )
+MATERIALIZER_CHAIN_HARVEST_TOOL = "tools/harvest_materializer_chain_candidates.py"
 MATERIALIZER_SUBMISSION_CLOSURE_TOOL = (
     "tools/build_materializer_submission_closure.py"
 )
 BYTE_RANGE_STAGE_INPUTS_TOOL = "tools/build_frontier_byte_range_stage_inputs.py"
 BYTE_RANGE_CHAIN_TOOL = "tools/run_byte_range_entropy_recode_chain.py"
+MATERIALIZER_CHAIN_HARVEST_REPORT_SCHEMA = "materializer_chain_harvest_report.v1"
 MATERIALIZER_SUBMISSION_CLOSURE_REPORT_SCHEMA = (
     "materializer_submission_runtime_closure_report.v1"
 )
@@ -1859,14 +1861,46 @@ def _receiver_closed_budget_safe_blocker(blocker: str) -> bool:
     )
 
 
-def _paired_submission_closure_bridge_path(closure_report_path: Path) -> Path:
+def _paired_submission_closure_bridge_paths(closure_report_path: Path) -> list[Path]:
     closure_dir = closure_report_path.parent
+    paths: list[Path] = []
     if closure_dir.name.startswith("submission_closure"):
         suffix = closure_dir.name.removeprefix("submission_closure")
-        return closure_dir.parent / f"exact_readiness_bridge{suffix}" / (
-            "exact_readiness_bridge_report.json"
+        paths.extend(
+            [
+                closure_dir.parent / f"exact_readiness_bridge{suffix}" / (
+                    "exact_readiness_bridge_report.json"
+                ),
+                closure_dir.parent / "exact_readiness_bridge_report.json",
+            ]
         )
-    return closure_dir / "exact_readiness_bridge_report.json"
+    for parent in closure_report_path.parents:
+        if parent.name.startswith("submission_closure"):
+            suffix = parent.name.removeprefix("submission_closure")
+            paths.extend(
+                [
+                    parent.parent
+                    / f"exact_readiness_bridge{suffix}"
+                    / "exact_readiness_bridge_report.json",
+                    parent.parent / "exact_readiness_bridge_report.json",
+                ]
+            )
+            break
+    paths.append(closure_dir / "exact_readiness_bridge_report.json")
+
+    deduped: list[Path] = []
+    seen: set[str] = set()
+    for path in paths:
+        key = path.resolve(strict=False).as_posix()
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(path)
+    return deduped
+
+
+def _paired_submission_closure_bridge_path(closure_report_path: Path) -> Path:
+    return _paired_submission_closure_bridge_paths(closure_report_path)[0]
 
 
 def _discover_submission_closure_report_paths(
@@ -1882,6 +1916,7 @@ def _discover_submission_closure_report_paths(
     roots.extend(
         [
             resolved_results / "frontier_final_rate_attack",
+            resolved_results / "frontier_operation_chain_compiler",
             resolved_results / "frontier_operation_portfolio",
             resolved_results / "frontier_operation_portfolio" / "frontier_receiver_repair",
         ]
@@ -1953,7 +1988,11 @@ def _submission_closure_budget_row(
     if saved is None:
         saved = 0
 
-    bridge_path = _paired_submission_closure_bridge_path(closure_report_path)
+    bridge_paths = _paired_submission_closure_bridge_paths(closure_report_path)
+    bridge_path = next(
+        (candidate for candidate in bridge_paths if candidate.is_file()),
+        bridge_paths[0],
+    )
     bridge_blockers: list[str] = []
     critical_blockers: list[str] = []
     bridge_candidate_count = 0
@@ -4615,6 +4654,7 @@ def _byte_range_stage_command(
         _repo_rel(source_runtime_dir, repo_root),
         "--output-dir",
         _repo_rel(output_dir, repo_root),
+        "--overwrite",
     ]
     for report in beam_probe_reports:
         command.extend(["--beam-probe-report", _repo_rel(report, repo_root)])
@@ -4715,9 +4755,6 @@ def build_frontier_byte_range_stage_inputs(
         context_blockers.append("byte_range_stage_missing:source_archive")
     if not selected_member_name:
         context_blockers.append("byte_range_stage_missing:member_name")
-    if output_dir.exists():
-        context_blockers.append("byte_range_stage_chain_output_dir_already_exists")
-
     local_chain_queueable = not context_blockers
     chain_command: list[str] = []
     if (
@@ -4889,6 +4926,21 @@ def build_frontier_operation_chain_compiler_queue(
         stage_plan_path = work_dir / "stage_plan.json"
         byte_range_stage_inputs_path = work_dir / "byte_range_stage_inputs.json"
         byte_range_chain_output_dir = work_dir / "byte_range_entropy_recode_chain"
+        byte_range_handoff_dir = byte_range_chain_output_dir / "exact_eval_handoff"
+        byte_range_harvest_source_queue_path = byte_range_handoff_dir / "source_queue.json"
+        byte_range_harvest_report_path = byte_range_handoff_dir / "harvest_report.json"
+        byte_range_submission_closure_dir = byte_range_handoff_dir / "submission_closure"
+        byte_range_submission_dir = byte_range_submission_closure_dir / "submission"
+        byte_range_closed_source_queue_path = (
+            byte_range_submission_closure_dir / "closed_source_queue.json"
+        )
+        byte_range_closure_report_path = (
+            byte_range_submission_closure_dir / "submission_closure_report.json"
+        )
+        byte_range_readiness_dir = byte_range_handoff_dir / "exact_readiness"
+        byte_range_bridge_report_path = (
+            byte_range_handoff_dir / "exact_readiness_bridge_report.json"
+        )
         target_kinds = _unique_strings(row.get("chain_targets") or [])
         stage_plan_preview = build_frontier_operation_chain_compiler_stage_plan(
             operation_chain_compiler_work_orders={
@@ -4986,47 +5038,221 @@ def build_frontier_operation_chain_compiler_queue(
             },
         ]
         if byte_range_inputs_preview.get("local_chain_queueable") is True:
-            steps.append(
-                {
-                    "id": "run_byte_range_entropy_recode_chain",
-                    "kind": "command",
-                    "command": list(byte_range_inputs_preview["local_chain_command"]),
-                    "resources": {"kind": "local_io_heavy"},
-                    "timeout_seconds": 600,
-                    "postconditions": [
-                        {
-                            "type": "json_equals",
-                            "path": str(
-                                byte_range_inputs_preview["chain_manifest_path"]
-                            ),
-                            "key": "schema",
-                            "equals": "byte_range_entropy_recode_chain_v1",
-                        },
-                        {
-                            "type": "json_false_authority",
-                            "path": str(
-                                byte_range_inputs_preview["chain_manifest_path"]
-                            ),
-                        },
-                        {
-                            "type": "json_equals",
-                            "path": str(
-                                byte_range_inputs_preview["chain_manifest_path"]
-                            ),
-                            "key": "ready_for_exact_eval_dispatch",
-                            "equals": False,
-                        },
-                    ],
-                    "telemetry": {
-                        "artifact_paths": [
-                            str(byte_range_inputs_preview["chain_manifest_path"]),
+            chain_manifest_path = str(byte_range_inputs_preview["chain_manifest_path"])
+            steps.extend(
+                [
+                    {
+                        "id": "run_byte_range_entropy_recode_chain",
+                        "kind": "command",
+                        "command": list(byte_range_inputs_preview["local_chain_command"]),
+                        "resources": {"kind": "local_io_heavy"},
+                        "timeout_seconds": 600,
+                        "postconditions": [
+                            {
+                                "type": "json_equals",
+                                "path": chain_manifest_path,
+                                "key": "schema",
+                                "equals": "byte_range_entropy_recode_chain_v1",
+                            },
+                            {
+                                "type": "json_false_authority",
+                                "path": chain_manifest_path,
+                            },
+                            {
+                                "type": "json_equals",
+                                "path": chain_manifest_path,
+                                "key": "ready_for_exact_eval_dispatch",
+                                "equals": False,
+                            },
                         ],
-                        "input_artifact_paths": [
-                            _repo_rel(byte_range_stage_inputs_path, repo),
-                        ],
-                        "include_postcondition_paths": True,
+                        "telemetry": {
+                            "artifact_paths": [chain_manifest_path],
+                            "input_artifact_paths": [
+                                _repo_rel(byte_range_stage_inputs_path, repo),
+                            ],
+                            "include_postcondition_paths": True,
+                        },
                     },
-                }
+                    {
+                        "id": "harvest_byte_range_entropy_recode_chain",
+                        "kind": "command",
+                        "command": [
+                            ".venv/bin/python",
+                            MATERIALIZER_CHAIN_HARVEST_TOOL,
+                            "--repo-root",
+                            repo.as_posix(),
+                            "--chain-manifest",
+                            chain_manifest_path,
+                            "--source-queue-out",
+                            _repo_rel(byte_range_harvest_source_queue_path, repo),
+                            "--report-out",
+                            _repo_rel(byte_range_harvest_report_path, repo),
+                            "--require-accepted",
+                            "--overwrite",
+                        ],
+                        "requires": ["run_byte_range_entropy_recode_chain"],
+                        "resources": {"kind": "local_io_heavy"},
+                        "timeout_seconds": 180,
+                        "postconditions": [
+                            {
+                                "type": "json_equals",
+                                "path": _repo_rel(
+                                    byte_range_harvest_source_queue_path,
+                                    repo,
+                                ),
+                                "key": "schema",
+                                "equals": "optimizer_candidate_queue_v1",
+                            },
+                            {
+                                "type": "json_false_authority",
+                                "path": _repo_rel(
+                                    byte_range_harvest_source_queue_path,
+                                    repo,
+                                ),
+                                "false_or_missing": list(
+                                    QUEUE_FALSE_AUTHORITY_FALSE_OR_MISSING_FIELDS
+                                ),
+                            },
+                            {
+                                "type": "json_equals",
+                                "path": _repo_rel(byte_range_harvest_report_path, repo),
+                                "key": "schema",
+                                "equals": MATERIALIZER_CHAIN_HARVEST_REPORT_SCHEMA,
+                            },
+                            {
+                                "type": "json_false_authority",
+                                "path": _repo_rel(byte_range_harvest_report_path, repo),
+                            },
+                        ],
+                        "telemetry": {
+                            "artifact_paths": [
+                                _repo_rel(byte_range_harvest_source_queue_path, repo),
+                                _repo_rel(byte_range_harvest_report_path, repo),
+                            ],
+                            "input_artifact_paths": [chain_manifest_path],
+                            "include_postcondition_paths": True,
+                        },
+                    },
+                    {
+                        "id": "build_byte_range_submission_closure",
+                        "kind": "command",
+                        "command": [
+                            ".venv/bin/python",
+                            MATERIALIZER_SUBMISSION_CLOSURE_TOOL,
+                            "--source-queue",
+                            _repo_rel(byte_range_harvest_source_queue_path, repo),
+                            "--submission-dir-out",
+                            _repo_rel(byte_range_submission_dir, repo),
+                            "--closed-source-queue-out",
+                            _repo_rel(byte_range_closed_source_queue_path, repo),
+                            "--closure-report-out",
+                            _repo_rel(byte_range_closure_report_path, repo),
+                            "--overwrite",
+                        ],
+                        "requires": ["harvest_byte_range_entropy_recode_chain"],
+                        "resources": {"kind": "local_io_heavy"},
+                        "timeout_seconds": 180,
+                        "postconditions": [
+                            {
+                                "type": "json_equals",
+                                "path": _repo_rel(
+                                    byte_range_closed_source_queue_path,
+                                    repo,
+                                ),
+                                "key": "schema",
+                                "equals": "optimizer_candidate_queue_v1",
+                            },
+                            {
+                                "type": "json_false_authority",
+                                "path": _repo_rel(
+                                    byte_range_closed_source_queue_path,
+                                    repo,
+                                ),
+                                "false_or_missing": list(
+                                    QUEUE_FALSE_AUTHORITY_FALSE_OR_MISSING_FIELDS
+                                ),
+                            },
+                            {
+                                "type": "json_equals",
+                                "path": _repo_rel(byte_range_closure_report_path, repo),
+                                "key": "schema",
+                                "equals": MATERIALIZER_SUBMISSION_CLOSURE_REPORT_SCHEMA,
+                            },
+                            {
+                                "type": "json_false_authority",
+                                "path": _repo_rel(byte_range_closure_report_path, repo),
+                            },
+                            {
+                                "type": "json_equals",
+                                "path": _repo_rel(byte_range_closure_report_path, repo),
+                                "key": "ready_for_exact_eval_dispatch",
+                                "equals": False,
+                            },
+                        ],
+                        "telemetry": {
+                            "artifact_paths": [
+                                _repo_rel(byte_range_submission_dir, repo),
+                                _repo_rel(byte_range_closed_source_queue_path, repo),
+                                _repo_rel(byte_range_closure_report_path, repo),
+                            ],
+                            "input_artifact_paths": [
+                                _repo_rel(byte_range_harvest_source_queue_path, repo),
+                                chain_manifest_path,
+                            ],
+                            "recursive": True,
+                            "include_postcondition_paths": True,
+                        },
+                    },
+                    {
+                        "id": "run_byte_range_exact_readiness_bridge",
+                        "kind": "command",
+                        "command": [
+                            ".venv/bin/python",
+                            MATERIALIZER_EXACT_READINESS_BRIDGE_TOOL,
+                            "--source-queue",
+                            _repo_rel(byte_range_closed_source_queue_path, repo),
+                            "--exact-readiness-out-dir",
+                            _repo_rel(byte_range_readiness_dir, repo),
+                            "--bridge-report-out",
+                            _repo_rel(byte_range_bridge_report_path, repo),
+                            "--overwrite",
+                            "--force-recompute",
+                        ],
+                        "requires": ["build_byte_range_submission_closure"],
+                        "resources": {"kind": "local_cpu"},
+                        "timeout_seconds": 180,
+                        "postconditions": [
+                            {
+                                "type": "json_equals",
+                                "path": _repo_rel(byte_range_bridge_report_path, repo),
+                                "key": "schema",
+                                "equals": MATERIALIZER_EXACT_READINESS_BRIDGE_SCHEMA,
+                            },
+                            {
+                                "type": "json_false_authority",
+                                "path": _repo_rel(byte_range_bridge_report_path, repo),
+                            },
+                            {
+                                "type": "json_equals",
+                                "path": _repo_rel(byte_range_bridge_report_path, repo),
+                                "key": "ready_for_exact_eval_dispatch",
+                                "equals": False,
+                            },
+                        ],
+                        "telemetry": {
+                            "artifact_paths": [
+                                _repo_rel(byte_range_readiness_dir, repo),
+                                _repo_rel(byte_range_bridge_report_path, repo),
+                            ],
+                            "input_artifact_paths": [
+                                _repo_rel(byte_range_closed_source_queue_path, repo),
+                                _repo_rel(byte_range_closure_report_path, repo),
+                            ],
+                            "recursive": True,
+                            "include_postcondition_paths": True,
+                        },
+                    },
+                ]
             )
         experiments.append(
             {
@@ -5055,6 +5281,29 @@ def build_frontier_operation_chain_compiler_queue(
                         byte_range_inputs_preview.get("chain_manifest_path")
                     ),
                     "byte_range_local_chain_queueable": (
+                        byte_range_inputs_preview.get("local_chain_queueable") is True
+                    ),
+                    "byte_range_harvest_source_queue_path": _repo_rel(
+                        byte_range_harvest_source_queue_path,
+                        repo,
+                    ),
+                    "byte_range_harvest_report_path": _repo_rel(
+                        byte_range_harvest_report_path,
+                        repo,
+                    ),
+                    "byte_range_submission_closure_report_path": _repo_rel(
+                        byte_range_closure_report_path,
+                        repo,
+                    ),
+                    "byte_range_closed_source_queue_path": _repo_rel(
+                        byte_range_closed_source_queue_path,
+                        repo,
+                    ),
+                    "byte_range_exact_readiness_bridge_report_path": _repo_rel(
+                        byte_range_bridge_report_path,
+                        repo,
+                    ),
+                    "byte_range_exact_readiness_handoff_enabled": (
                         byte_range_inputs_preview.get("local_chain_queueable") is True
                     ),
                     "byte_range_rate_budget_policy": dict(
@@ -5087,7 +5336,7 @@ def build_frontier_operation_chain_compiler_queue(
                 "mode": "running",
                 "local_first": True,
                 "max_concurrency": {
-                    "local_cpu": 0,
+                    "local_cpu": 1,
                     "local_io_heavy": 1,
                     "local_mlx": 0,
                     "modal_cpu": 0,

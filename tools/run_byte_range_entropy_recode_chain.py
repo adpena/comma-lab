@@ -61,6 +61,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Exit 1 unless the runtime receiver contract is satisfied.",
     )
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Replace an existing output directory before rebuilding the chain.",
+    )
     return parser.parse_args(argv)
 
 
@@ -86,6 +91,7 @@ def main(argv: list[str] | None = None) -> int:
             repo_root=REPO_ROOT,
             retune_brotli_sections=args.retune_brotli_section,
             min_free_bytes=args.min_free_bytes,
+            overwrite=args.overwrite,
         )
     except (OSError, ByteRangeEntropyRecodeChainError) as exc:
         print(f"FATAL: byte-range entropy recode chain failed: {exc}", file=sys.stderr)
