@@ -34,6 +34,8 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (  # noqa: E402
     FrontierRateAttackFeedbackError,
     build_frontier_rate_attack_feedback_refresh,
     build_frontier_receiver_repair_queue,
+    build_frontier_targeted_component_correction_materialization_queue,
+    build_frontier_targeted_component_correction_materialization_requests,
     build_frontier_targeted_component_correction_queue,
     build_frontier_targeted_component_correction_response_harvest,
 )
@@ -273,6 +275,47 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
             artifacts["targeted_component_correction_response_harvest"] = (
                 _display_path(response_harvest_path)
             )
+            materialization_requests = (
+                build_frontier_targeted_component_correction_materialization_requests(
+                    targeted_component_correction_response_harvest=response_harvest,
+                    candidate_limit=int(report.get("candidate_limit") or 4),
+                )
+            )
+            report[
+                "targeted_component_correction_materialization_requests"
+            ] = materialization_requests
+            materialization_requests_path = (
+                output_dir
+                / "targeted_component_correction_materialization_requests.json"
+            )
+            write_json_artifact(materialization_requests_path, materialization_requests)
+            artifacts[
+                "targeted_component_correction_materialization_requests"
+            ] = _display_path(materialization_requests_path)
+            materialization_queue = (
+                build_frontier_targeted_component_correction_materialization_queue(
+                    repo_root=REPO_ROOT,
+                    targeted_component_correction_response_harvest=response_harvest,
+                    targeted_component_correction_response_harvest_path=(
+                        response_harvest_path
+                    ),
+                    results_root=str(report.get("results_root") or DEFAULT_RESULTS_ROOT),
+                    queue_id=(
+                        f"{report.get('queue_id') or 'frontier_feedback'}_"
+                        "component_materialization"
+                    ),
+                    candidate_limit=int(report.get("candidate_limit") or 4),
+                )
+            )
+            if isinstance(materialization_queue, dict):
+                materialization_queue_path = (
+                    output_dir
+                    / "targeted_component_correction_materialization_queue.json"
+                )
+                write_json_artifact(materialization_queue_path, materialization_queue)
+                artifacts[
+                    "targeted_component_correction_materialization_queue"
+                ] = _display_path(materialization_queue_path)
     bridge = report.get("materializer_feedback_bridge")
     if isinstance(bridge, dict):
         path = output_dir / "materializer_feedback_bridge.json"
@@ -339,6 +382,25 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
             "-m",
             "json.tool",
             artifacts["targeted_component_correction_response_harvest"],
+        ]
+    if "targeted_component_correction_materialization_requests" in artifacts:
+        operator_commands[
+            "inspect_targeted_component_correction_materialization_requests"
+        ] = [
+            ".venv/bin/python",
+            "-m",
+            "json.tool",
+            artifacts["targeted_component_correction_materialization_requests"],
+        ]
+    if "targeted_component_correction_materialization_queue" in artifacts:
+        operator_commands[
+            "validate_targeted_component_correction_materialization_queue"
+        ] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["targeted_component_correction_materialization_queue"],
+            "validate",
         ]
     if operator_commands:
         report_to_write["operator_commands"] = operator_commands
@@ -586,6 +648,60 @@ def main(argv: list[str] | None = None) -> int:
                         ).get("blocked_response_count")
                         if isinstance(
                             report.get("targeted_component_correction_response_harvest"),
+                            dict,
+                        )
+                        else None
+                    ),
+                },
+                "targeted_component_correction_materialization_request_summary": {
+                    "active": (
+                        report.get(
+                            "targeted_component_correction_materialization_requests",
+                            {},
+                        ).get("active")
+                        if isinstance(
+                            report.get(
+                                "targeted_component_correction_materialization_requests"
+                            ),
+                            dict,
+                        )
+                        else None
+                    ),
+                    "row_count": (
+                        report.get(
+                            "targeted_component_correction_materialization_requests",
+                            {},
+                        ).get("row_count")
+                        if isinstance(
+                            report.get(
+                                "targeted_component_correction_materialization_requests"
+                            ),
+                            dict,
+                        )
+                        else None
+                    ),
+                    "accepted_response_count": (
+                        report.get(
+                            "targeted_component_correction_materialization_requests",
+                            {},
+                        ).get("accepted_response_count")
+                        if isinstance(
+                            report.get(
+                                "targeted_component_correction_materialization_requests"
+                            ),
+                            dict,
+                        )
+                        else None
+                    ),
+                    "ready_for_budget_spend_count": (
+                        report.get(
+                            "targeted_component_correction_materialization_requests",
+                            {},
+                        ).get("ready_for_budget_spend_count")
+                        if isinstance(
+                            report.get(
+                                "targeted_component_correction_materialization_requests"
+                            ),
                             dict,
                         )
                         else None

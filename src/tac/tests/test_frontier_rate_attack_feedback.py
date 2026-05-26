@@ -23,6 +23,8 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     RECEIVER_REPAIR_ROW_SCHEMA,
     RECEIVER_REPAIR_WORK_ORDER_SCHEMA,
     TARGETED_COMPONENT_CORRECTION_ACQUISITION_SCHEMA,
+    TARGETED_COMPONENT_CORRECTION_MATERIALIZATION_REQUEST_ROW_SCHEMA,
+    TARGETED_COMPONENT_CORRECTION_MATERIALIZATION_REQUESTS_SCHEMA,
     TARGETED_COMPONENT_CORRECTION_RESPONSE_HARVEST_SCHEMA,
     TARGETED_COMPONENT_CORRECTION_WORK_ORDER_SCHEMA,
     FrontierRateAttackFeedbackError,
@@ -31,6 +33,9 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     build_frontier_operation_chain_compiler_stage_plan,
     build_frontier_rate_attack_feedback_refresh,
     build_frontier_receiver_repair_work_order,
+    build_frontier_targeted_component_correction_materialization_queue,
+    build_frontier_targeted_component_correction_materialization_request,
+    build_frontier_targeted_component_correction_materialization_requests,
     build_frontier_targeted_component_correction_queue,
     build_frontier_targeted_component_correction_response_harvest,
     build_frontier_targeted_component_correction_response_harvest_from_artifacts,
@@ -1584,6 +1589,139 @@ def test_targeted_component_correction_response_harvest_measures_lagrangian(
     ]
 
 
+def test_targeted_component_correction_materialization_requests_group_responses(
+    tmp_path: Path,
+) -> None:
+    action_summary = _write_action_summary(tmp_path)
+    artifact_root = tmp_path / "frontier_artifacts"
+    _write_materializer_feedback(artifact_root)
+    results_root = tmp_path / "results"
+    _write_receiver_closed_budget_signal(tmp_path, results_root=results_root)
+
+    report = build_frontier_rate_attack_feedback_refresh(
+        repo_root=tmp_path,
+        frontier_artifact_roots=(artifact_root,),
+        action_summary_path=action_summary,
+        results_root=str(results_root),
+        queue_id="frontier_feedback_materialization_request_unit",
+        candidate_limit=3,
+    )
+    targeted_component = report["targeted_component_correction_acquisition"]
+    work_orders = [
+        build_frontier_targeted_component_correction_work_order(
+            targeted_component_correction_acquisition=targeted_component,
+            acquisition_id=acquisition_id,
+        )
+        for acquisition_id in targeted_component["top_acquisition_ids"][:2]
+    ]
+    local_cpu_advisory = {
+        "schema_version": "contest_auth_eval_result.v1",
+        **_false_authority(),
+        "score_axis": "cpu_advisory",
+        "evidence_semantics": "non_contest_cpu_auth_eval_advisory",
+        "component_deltas": {
+            "segnet_delta": -0.00012,
+            "posenet_delta": 0.00001,
+            "archive_byte_delta_vs_receiver_closed_candidate": 12,
+        },
+    }
+    response_rows = [
+        build_frontier_targeted_component_correction_response_harvest_from_artifacts(
+            work_order=work_order,
+            local_cpu_advisory=local_cpu_advisory,
+            work_order_path=f"work_order_{index}.json",
+            local_cpu_advisory_path=f"local_cpu_advisory_{index}.json",
+            response_artifact_path=f"component_correction_response_harvest_{index}.json",
+        )
+        for index, work_order in enumerate(work_orders, start=1)
+    ]
+    harvest = build_frontier_targeted_component_correction_response_harvest(
+        repo_root=tmp_path,
+        response_rows=response_rows,
+    )
+
+    requests = build_frontier_targeted_component_correction_materialization_requests(
+        targeted_component_correction_response_harvest=harvest,
+        candidate_limit=1,
+    )
+
+    assert (
+        requests["schema"]
+        == TARGETED_COMPONENT_CORRECTION_MATERIALIZATION_REQUESTS_SCHEMA
+    )
+    _assert_false_authority(requests)
+    assert requests["accepted_response_count"] == 2
+    assert requests["row_count"] == 1
+    assert requests["ready_for_budget_spend_count"] == 0
+    request = requests["rows"][0]
+    assert (
+        request["schema"]
+        == TARGETED_COMPONENT_CORRECTION_MATERIALIZATION_REQUEST_ROW_SCHEMA
+    )
+    _assert_false_authority(request)
+    assert request["accepted_response_count"] == 2
+    assert set(request["accepted_correction_families"]) == {
+        row["correction_family"] for row in response_rows
+    }
+    assert {"pixel", "region", "boundary", "frame", "pair"}.issubset(
+        set(request["operation_levels"])
+    )
+    assert "receiver_consumed_correction_materializer_missing" in request[
+        "budget_spend_blockers"
+    ]
+    assert request["ready_for_materializer_execution"] is False
+    assert request["ready_for_budget_spend"] is False
+    assert request["budget_spend_allowed"] is False
+    assert request["receiver_materialization_contract"][
+        "parser_only_or_planner_only_signal_is_insufficient"
+    ] is True
+
+    selected = build_frontier_targeted_component_correction_materialization_request(
+        targeted_component_correction_response_harvest=harvest,
+        materialization_request_id=request["materialization_request_id"],
+        candidate_limit=1,
+    )
+    assert selected["materialization_request_id"] == request["materialization_request_id"]
+    _assert_false_authority(selected)
+
+    harvest_path = tmp_path / "targeted_component_correction_response_harvest.json"
+    harvest_path.write_text(json.dumps(harvest), encoding="utf-8")
+    queue = build_frontier_targeted_component_correction_materialization_queue(
+        repo_root=REPO_ROOT,
+        targeted_component_correction_response_harvest=harvest,
+        targeted_component_correction_response_harvest_path=harvest_path,
+        results_root=tmp_path / "results",
+        queue_id="frontier_feedback_materialization_request_unit",
+        candidate_limit=1,
+    )
+    assert queue is not None
+    assert len(queue["experiments"]) == 1
+    step = queue["experiments"][0]["steps"][0]
+    assert (
+        step["command"][1]
+        == "tools/build_frontier_targeted_component_correction_materialization_request.py"
+    )
+    result = subprocess.run(
+        [sys.executable, *step["command"][1:]],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["bytes_written"] > 0
+    request_path = Path(
+        step["command"][step["command"].index("--request-out") + 1]
+    )
+    materialized_request = json.loads(request_path.read_text(encoding="utf-8"))
+    assert (
+        materialized_request["schema"]
+        == TARGETED_COMPONENT_CORRECTION_MATERIALIZATION_REQUEST_ROW_SCHEMA
+    )
+    _assert_false_authority(materialized_request)
+
+
 def test_frontier_feedback_discovers_dqs1_observation_jsonls_from_artifact_roots(
     tmp_path: Path,
 ) -> None:
@@ -2322,6 +2460,12 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     assert payload["targeted_component_correction_acquisition_summary"][
         "queue_actionable_acquisition_count"
     ] >= 5
+    assert payload[
+        "targeted_component_correction_materialization_request_summary"
+    ]["row_count"] == 0
+    assert payload[
+        "targeted_component_correction_materialization_request_summary"
+    ]["ready_for_budget_spend_count"] == 0
     queue_path = output_dir / "dqs1_followup_queue.json"
     bridge_path = output_dir / "materializer_feedback_bridge.json"
     receiver_repair_backlog_path = output_dir / "receiver_repair_backlog.json"
@@ -2336,6 +2480,9 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     targeted_component_response_harvest_path = (
         output_dir / "targeted_component_correction_response_harvest.json"
     )
+    targeted_component_materialization_requests_path = (
+        output_dir / "targeted_component_correction_materialization_requests.json"
+    )
     report_path = output_dir / "feedback_refresh_report.json"
     assert queue_path.exists()
     assert bridge_path.exists()
@@ -2345,6 +2492,7 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     assert targeted_component_acquisition_path.exists()
     assert targeted_component_queue_path.exists()
     assert targeted_component_response_harvest_path.exists()
+    assert targeted_component_materialization_requests_path.exists()
     assert report_path.exists()
     report = json.loads(report_path.read_text(encoding="utf-8"))
     assert report["artifacts"]["dqs1_followup_queue"].endswith("dqs1_followup_queue.json")
@@ -2366,6 +2514,9 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     assert report["artifacts"][
         "targeted_component_correction_response_harvest"
     ].endswith("targeted_component_correction_response_harvest.json")
+    assert report["artifacts"][
+        "targeted_component_correction_materialization_requests"
+    ].endswith("targeted_component_correction_materialization_requests.json")
     assert report["operator_commands"]["validate_followup_queue"][0] == ".venv/bin/python"
     assert (
         report["operator_commands"]["validate_receiver_repair_queue"][0]
@@ -2380,6 +2531,12 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     assert (
         report["operator_commands"][
             "inspect_targeted_component_correction_response_harvest"
+        ][0]
+        == ".venv/bin/python"
+    )
+    assert (
+        report["operator_commands"][
+            "inspect_targeted_component_correction_materialization_requests"
         ][0]
         == ".venv/bin/python"
     )
@@ -2432,11 +2589,21 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     targeted_component_response_harvest = json.loads(
         targeted_component_response_harvest_path.read_text(encoding="utf-8")
     )
+    targeted_component_materialization_requests = json.loads(
+        targeted_component_materialization_requests_path.read_text(encoding="utf-8")
+    )
     assert targeted_component_response_harvest["schema"] == (
         TARGETED_COMPONENT_CORRECTION_RESPONSE_HARVEST_SCHEMA
     )
     assert targeted_component_response_harvest["row_count"] == 2
     assert targeted_component_response_harvest["ready_for_budget_spend_count"] == 0
+    assert targeted_component_materialization_requests["schema"] == (
+        TARGETED_COMPONENT_CORRECTION_MATERIALIZATION_REQUESTS_SCHEMA
+    )
+    assert targeted_component_materialization_requests["row_count"] == 0
+    assert targeted_component_materialization_requests[
+        "ready_for_budget_spend_count"
+    ] == 0
     assert len(targeted_component_queue["experiments"]) == 2
     assert targeted_component_queue["selection_policy"]["policy"] == (
         "bounded_candidate_family_round_robin"

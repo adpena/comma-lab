@@ -151,6 +151,15 @@ TARGETED_COMPONENT_CORRECTION_RESPONSE_ROW_SCHEMA = (
 TARGETED_COMPONENT_CORRECTION_RESPONSE_HARVEST_SCHEMA = (
     "frontier_rate_attack_targeted_component_correction_response_harvest.v1"
 )
+TARGETED_COMPONENT_CORRECTION_MATERIALIZATION_REQUEST_ROW_SCHEMA = (
+    "frontier_rate_attack_targeted_component_correction_materialization_request_row.v1"
+)
+TARGETED_COMPONENT_CORRECTION_MATERIALIZATION_REQUESTS_SCHEMA = (
+    "frontier_rate_attack_targeted_component_correction_materialization_requests.v1"
+)
+TARGETED_COMPONENT_CORRECTION_MATERIALIZATION_QUEUE_METADATA_SCHEMA = (
+    "frontier_rate_attack_targeted_component_correction_materialization_queue_metadata.v1"
+)
 QUEUE_FALSE_AUTHORITY_FALSE_OR_MISSING_FIELDS = tuple(
     field
     for field in DEFAULT_FALSE_OR_MISSING_AUTHORITY_FIELDS
@@ -4342,6 +4351,8 @@ def build_frontier_targeted_component_correction_work_order(
         "candidate_id": candidate_id,
         "target_kind": row.get("target_kind"),
         "correction_family": row.get("correction_family"),
+        "operation_levels": list(row.get("operation_levels") or []),
+        "targeted_dimensions": list(row.get("targeted_dimensions") or []),
         "sibling_correction_families": _unique_strings(
             sibling.get("correction_family") for sibling in sibling_rows
         ),
@@ -4653,6 +4664,11 @@ def build_frontier_targeted_component_correction_response_harvest_from_artifacts
         "local_mlx_score_axis": mlx_axis,
         "saved_bytes_budget": saved_bytes,
         "estimated_receiver_closed_rate_credit_score_units": rate_credit,
+        "operation_levels": list(work_order.get("operation_levels") or []),
+        "targeted_dimensions": list(work_order.get("targeted_dimensions") or []),
+        "sibling_correction_families": list(
+            work_order.get("sibling_correction_families") or []
+        ),
         "local_cpu_component_terms": local_terms,
         "local_mlx_component_terms": mlx_terms,
         "measured_component_delta_score_units": measured_component_delta,
@@ -4672,6 +4688,16 @@ def build_frontier_targeted_component_correction_response_harvest_from_artifacts
             ]
         ),
         "verdict": verdict,
+        "command_hints": dict(
+            work_order.get("command_hints")
+            if isinstance(work_order.get("command_hints"), Mapping)
+            else {}
+        ),
+        "wire_in_hooks": dict(
+            work_order.get("wire_in_hooks")
+            if isinstance(work_order.get("wire_in_hooks"), Mapping)
+            else {}
+        ),
         "allowed_use": (
             "targeted_component_correction_response_harvest_local_acquisition_only"
         ),
@@ -4910,6 +4936,536 @@ def build_frontier_targeted_component_correction_response_harvest(
         ),
         **FALSE_AUTHORITY,
     }
+
+
+def _targeted_component_family_seed(correction_family: Any) -> Mapping[str, Any]:
+    family = str(correction_family or "")
+    for seed in _TARGETED_COMPONENT_CORRECTION_FAMILY_SEEDS:
+        if str(seed.get("correction_family") or "") == family:
+            return seed
+    return {}
+
+
+def _targeted_component_response_operation_levels(
+    row: Mapping[str, Any],
+) -> list[str]:
+    levels = _unique_strings(_string_list(row.get("operation_levels")))
+    if levels:
+        return levels
+    seed = _targeted_component_family_seed(row.get("correction_family"))
+    return _unique_strings(_string_list(seed.get("operation_levels")))
+
+
+def _targeted_component_response_targeted_dimensions(
+    row: Mapping[str, Any],
+) -> list[str]:
+    dimensions = _unique_strings(_string_list(row.get("targeted_dimensions")))
+    if dimensions:
+        return dimensions
+    seed = _targeted_component_family_seed(row.get("correction_family"))
+    return _unique_strings(_string_list(seed.get("targeted_dimensions")))
+
+
+def _targeted_component_response_sort_key(row: Mapping[str, Any]) -> tuple[float, str]:
+    delta = _finite_float_or_none(row.get("measured_lagrangian_delta_score_units"))
+    return (
+        float(delta) if delta is not None else 0.0,
+        str(row.get("acquisition_id") or ""),
+    )
+
+
+def _accepted_targeted_component_response_rows(
+    targeted_component_correction_response_harvest: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    if (
+        targeted_component_correction_response_harvest.get("schema")
+        != TARGETED_COMPONENT_CORRECTION_RESPONSE_HARVEST_SCHEMA
+    ):
+        raise FrontierRateAttackFeedbackError(
+            "targeted component correction response harvest has unexpected schema"
+        )
+    require_no_truthy_authority_fields(
+        targeted_component_correction_response_harvest,
+        context="targeted_component_correction_materialization_response_harvest",
+    )
+    accepted: list[dict[str, Any]] = []
+    for index, row in enumerate(
+        targeted_component_correction_response_harvest.get("rows") or []
+    ):
+        if not isinstance(row, Mapping):
+            continue
+        require_no_truthy_authority_fields(
+            row,
+            context=f"targeted_component_correction_materialization_response_row:{index}",
+        )
+        if (
+            row.get("negative_measured_lagrangian_delta") is True
+            and row.get("local_acquisition_recommended") is True
+        ):
+            accepted.append(dict(row))
+    return sorted(accepted, key=_targeted_component_response_sort_key)
+
+
+def _targeted_component_materializer_basis_entry(
+    row: Mapping[str, Any],
+) -> dict[str, Any]:
+    family = str(row.get("correction_family") or "unknown_correction_family")
+    seed = _targeted_component_family_seed(family)
+    return {
+        "schema": (
+            "frontier_rate_attack_targeted_component_correction_materializer_"
+            "basis_entry.v1"
+        ),
+        "source_acquisition_id": row.get("acquisition_id"),
+        "correction_family": family,
+        "operation_levels": _targeted_component_response_operation_levels(row),
+        "targeted_dimensions": _targeted_component_response_targeted_dimensions(row),
+        "recommended_next_action": (
+            seed.get("recommended_next_action")
+            or "compile_receiver_consumed_targeted_correction_materializer"
+        ),
+        "measured_lagrangian_delta_score_units": row.get(
+            "measured_lagrangian_delta_score_units"
+        ),
+        "measured_component_delta_score_units": row.get(
+            "measured_component_delta_score_units"
+        ),
+        "budget_credit_remaining_score_units": row.get(
+            "budget_credit_remaining_score_units"
+        ),
+        "saved_bytes_budget": row.get("saved_bytes_budget"),
+        "work_order_path": row.get("work_order_path"),
+        "local_cpu_advisory_path": row.get("local_cpu_advisory_path"),
+        "local_mlx_response_path": row.get("local_mlx_response_path"),
+        "response_artifact_path": row.get("response_artifact_path"),
+        "command_hints": dict(
+            row.get("command_hints")
+            if isinstance(row.get("command_hints"), Mapping)
+            else {}
+        ),
+        "wire_in_hooks": dict(
+            row.get("wire_in_hooks")
+            if isinstance(row.get("wire_in_hooks"), Mapping)
+            else {}
+        ),
+        "allowed_use": (
+            "local_targeted_component_correction_materializer_basis_only"
+        ),
+        "forbidden_use": (
+            "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+        ),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _build_targeted_component_materialization_request_row(
+    *,
+    candidate_id: str,
+    candidate_rows: Sequence[Mapping[str, Any]],
+    request_rank: int,
+) -> dict[str, Any]:
+    rows = sorted(candidate_rows, key=_targeted_component_response_sort_key)
+    basis = [_targeted_component_materializer_basis_entry(row) for row in rows]
+    request_id = (
+        "targeted_component_materialization_"
+        f"{_slug_token(candidate_id)}_{request_rank:03d}"
+    )
+    operation_levels = _unique_strings(
+        [level for entry in basis for level in entry.get("operation_levels") or []]
+    )
+    targeted_dimensions = _unique_strings(
+        [
+            dimension
+            for entry in basis
+            for dimension in entry.get("targeted_dimensions") or []
+        ]
+    )
+    saved_bytes_budget = max(
+        int(row.get("saved_bytes_budget") or 0) for row in rows
+    )
+    rate_credit = max(
+        float(row.get("estimated_receiver_closed_rate_credit_score_units") or 0.0)
+        for row in rows
+    )
+    lagrangian_sum = sum(
+        float(row.get("measured_lagrangian_delta_score_units") or 0.0)
+        for row in rows
+    )
+    best_row = rows[0]
+    blockers = _unique_strings(
+        [
+            "receiver_consumed_correction_materializer_missing",
+            "full_frame_inflate_parity_required_before_budget_spend",
+            "exact_axis_component_response_required_before_budget_spend",
+            "exact_auth_eval_required_before_score_or_promotion_claim",
+            "generated_request_is_local_materialization_only",
+            *[
+                blocker
+                for row in rows
+                for blocker in _string_list(row.get("budget_spend_blockers"))
+            ],
+        ]
+    )
+    row = {
+        "schema": TARGETED_COMPONENT_CORRECTION_MATERIALIZATION_REQUEST_ROW_SCHEMA,
+        "generated_at_utc": _utc_now(),
+        "materialization_request_id": request_id,
+        "candidate_id": candidate_id,
+        "source_acquisition_ids": _unique_strings(
+            [row.get("acquisition_id") for row in rows]
+        ),
+        "accepted_correction_families": _unique_strings(
+            [row.get("correction_family") for row in rows]
+        ),
+        "accepted_response_count": len(rows),
+        "operation_levels": operation_levels,
+        "targeted_dimensions": targeted_dimensions,
+        "saved_bytes_budget": saved_bytes_budget,
+        "estimated_receiver_closed_rate_credit_score_units": rate_credit,
+        "measured_lagrangian_delta_score_units_sum": lagrangian_sum,
+        "best_measured_lagrangian_delta_score_units": best_row.get(
+            "measured_lagrangian_delta_score_units"
+        ),
+        "budget_credit_remaining_score_units_min": min(
+            float(row.get("budget_credit_remaining_score_units") or 0.0)
+            for row in rows
+        ),
+        "materializer_chain_basis": basis,
+        "receiver_materialization_contract": {
+            "schema": (
+                "frontier_rate_attack_receiver_consumed_targeted_correction_"
+                "contract.v1"
+            ),
+            "receiver_consumed_transform_required": True,
+            "source_runtime_adapter_proof_required": True,
+            "full_frame_inflate_parity_required": True,
+            "segnet_posenet_component_response_required": True,
+            "exact_auth_eval_required_before_score_claim": True,
+            "parser_only_or_planner_only_signal_is_insufficient": True,
+            "allowed_use": (
+                "receiver_consumed_targeted_correction_materialization_contract"
+            ),
+            "forbidden_use": (
+                "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+            ),
+            **FALSE_AUTHORITY,
+        },
+        "queue_consumer": (
+            "frontier_targeted_component_correction_materialization_queue"
+        ),
+        "ready_for_materializer_execution": False,
+        "ready_for_budget_spend": False,
+        "budget_spend_allowed": False,
+        "budget_spend_blockers": blockers,
+        "recommended_next_action": (
+            "compile_and_run_receiver_consumed_targeted_correction_chain_for_"
+            "accepted_local_lagrangian_rows"
+        ),
+        "allowed_use": (
+            "local_targeted_component_correction_materialization_request_only"
+        ),
+        "forbidden_use": (
+            "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+        ),
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        row,
+        context=f"targeted_component_correction_materialization_request:{request_id}",
+    )
+    return row
+
+
+def build_frontier_targeted_component_correction_materialization_requests(
+    *,
+    targeted_component_correction_response_harvest: Mapping[str, Any],
+    candidate_limit: int = 4,
+    family_limit_per_candidate: int = 8,
+) -> dict[str, Any]:
+    """Compile negative local correction responses into grouped request rows."""
+
+    if candidate_limit < 1:
+        raise FrontierRateAttackFeedbackError("candidate_limit must be >= 1")
+    if family_limit_per_candidate < 1:
+        raise FrontierRateAttackFeedbackError("family_limit_per_candidate must be >= 1")
+    accepted_rows = _accepted_targeted_component_response_rows(
+        targeted_component_correction_response_harvest
+    )
+    rows_by_candidate: dict[str, list[dict[str, Any]]] = {}
+    for row in accepted_rows:
+        candidate_id = str(row.get("candidate_id") or "unknown_candidate")
+        rows_by_candidate.setdefault(candidate_id, []).append(row)
+    candidate_order = sorted(
+        rows_by_candidate,
+        key=lambda candidate: (
+            sum(
+                float(row.get("measured_lagrangian_delta_score_units") or 0.0)
+                for row in rows_by_candidate[candidate]
+            ),
+            candidate,
+        ),
+    )[:candidate_limit]
+    request_rows = [
+        _build_targeted_component_materialization_request_row(
+            candidate_id=candidate,
+            candidate_rows=rows_by_candidate[candidate][:family_limit_per_candidate],
+            request_rank=index,
+        )
+        for index, candidate in enumerate(candidate_order, start=1)
+    ]
+    for index, row in enumerate(request_rows):
+        require_no_truthy_authority_fields(
+            row,
+            context=f"targeted_component_correction_materialization_request_row:{index}",
+        )
+    blockers = ["exact_auth_eval_required_before_score_or_promotion_claim"]
+    if not accepted_rows:
+        blockers.append("no_negative_local_lagrangian_response_rows")
+    else:
+        blockers.extend(
+            [
+                "receiver_consumed_correction_materializer_missing",
+                "exact_axis_component_response_required_before_budget_spend",
+            ]
+        )
+    return {
+        "schema": TARGETED_COMPONENT_CORRECTION_MATERIALIZATION_REQUESTS_SCHEMA,
+        "generated_at_utc": _utc_now(),
+        "active": bool(request_rows),
+        "response_harvest_schema": (
+            targeted_component_correction_response_harvest.get("schema")
+        ),
+        "accepted_response_count": len(accepted_rows),
+        "row_count": len(request_rows),
+        "candidate_count": len(candidate_order),
+        "requested_correction_family_count": len(
+            _unique_strings(
+                [
+                    family
+                    for row in request_rows
+                    for family in row.get("accepted_correction_families") or []
+                ]
+            )
+        ),
+        "ready_for_budget_spend_count": 0,
+        "candidate_limit": candidate_limit,
+        "family_limit_per_candidate": family_limit_per_candidate,
+        "top_materialization_request_ids": [
+            str(row.get("materialization_request_id") or "") for row in request_rows[:8]
+        ],
+        "blockers": _unique_strings(blockers),
+        "rows": request_rows,
+        "allowed_use": (
+            "queue_owned_targeted_component_correction_materialization_requests_only"
+        ),
+        "forbidden_use": (
+            "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+        ),
+        **FALSE_AUTHORITY,
+    }
+
+
+def build_frontier_targeted_component_correction_materialization_request(
+    *,
+    targeted_component_correction_response_harvest: Mapping[str, Any],
+    materialization_request_id: str,
+    candidate_limit: int = 4,
+    family_limit_per_candidate: int = 8,
+) -> dict[str, Any]:
+    """Return one grouped targeted-correction materialization request row."""
+
+    requests = build_frontier_targeted_component_correction_materialization_requests(
+        targeted_component_correction_response_harvest=(
+            targeted_component_correction_response_harvest
+        ),
+        candidate_limit=candidate_limit,
+        family_limit_per_candidate=family_limit_per_candidate,
+    )
+    for row in requests.get("rows") or []:
+        if (
+            isinstance(row, Mapping)
+            and str(row.get("materialization_request_id") or "")
+            == materialization_request_id
+        ):
+            selected = dict(row)
+            require_no_truthy_authority_fields(
+                selected,
+                context=(
+                    "targeted_component_correction_materialization_request:"
+                    f"{materialization_request_id}"
+                ),
+            )
+            return selected
+    raise FrontierRateAttackFeedbackError(
+        f"unknown targeted component correction materialization request: "
+        f"{materialization_request_id}"
+    )
+
+
+def build_frontier_targeted_component_correction_materialization_queue(
+    *,
+    repo_root: str | Path,
+    targeted_component_correction_response_harvest: Mapping[str, Any],
+    targeted_component_correction_response_harvest_path: str | Path,
+    results_root: str | Path = DEFAULT_RESULTS_ROOT,
+    queue_id: str = "frontier_targeted_component_correction_materialization_queue",
+    candidate_limit: int = 4,
+    family_limit_per_candidate: int = 8,
+) -> dict[str, Any] | None:
+    """Queue local request emission for accepted targeted correction responses."""
+
+    repo = Path(repo_root)
+    response_harvest_path = _resolve_path(
+        targeted_component_correction_response_harvest_path,
+        repo_root=repo,
+    )
+    requests = build_frontier_targeted_component_correction_materialization_requests(
+        targeted_component_correction_response_harvest=(
+            targeted_component_correction_response_harvest
+        ),
+        candidate_limit=candidate_limit,
+        family_limit_per_candidate=family_limit_per_candidate,
+    )
+    request_rows = [
+        row for row in requests.get("rows") or [] if isinstance(row, Mapping)
+    ]
+    if not request_rows:
+        return None
+    results_base = _resolve_path(str(results_root), repo_root=repo)
+    queue_root = results_base / "frontier_targeted_component_correction_materialize" / (
+        _slug_token(queue_id)
+    )
+    experiments: list[dict[str, Any]] = []
+    for priority, row in enumerate(request_rows, start=1):
+        request_id = str(row.get("materialization_request_id") or f"request_{priority}")
+        candidate_id = str(row.get("candidate_id") or request_id)
+        work_dir = queue_root / _slug_token(candidate_id) / _slug_token(request_id)
+        request_path = work_dir / "materialization_request.json"
+        steps = [
+            {
+                "id": "emit_targeted_component_correction_materialization_request",
+                "kind": "command",
+                "command": [
+                    ".venv/bin/python",
+                    "tools/build_frontier_targeted_component_correction_materialization_request.py",
+                    "--targeted-component-correction-response-harvest",
+                    _repo_rel(response_harvest_path, repo),
+                    "--materialization-request-id",
+                    request_id,
+                    "--request-out",
+                    _repo_rel(request_path, repo),
+                    "--candidate-limit",
+                    str(candidate_limit),
+                    "--family-limit-per-candidate",
+                    str(family_limit_per_candidate),
+                    "--overwrite",
+                ],
+                "resources": {"kind": "local_io_heavy"},
+                "timeout_seconds": 120,
+                "postconditions": [
+                    {
+                        "type": "json_equals",
+                        "path": _repo_rel(request_path, repo),
+                        "key": "schema",
+                        "equals": (
+                            TARGETED_COMPONENT_CORRECTION_MATERIALIZATION_REQUEST_ROW_SCHEMA
+                        ),
+                    },
+                    {
+                        "type": "json_false_authority",
+                        "path": _repo_rel(request_path, repo),
+                    },
+                    {
+                        "type": "json_equals",
+                        "path": _repo_rel(request_path, repo),
+                        "key": "ready_for_budget_spend",
+                        "equals": False,
+                    },
+                    {
+                        "type": "json_equals",
+                        "path": _repo_rel(request_path, repo),
+                        "key": "ready_for_materializer_execution",
+                        "equals": False,
+                    },
+                ],
+                "telemetry": {
+                    "artifact_paths": [_repo_rel(request_path, repo)],
+                    "input_artifact_paths": [_repo_rel(response_harvest_path, repo)],
+                    "include_postcondition_paths": True,
+                },
+            }
+        ]
+        experiments.append(
+            {
+                "id": _slug_token(request_id),
+                "status": "queued",
+                "priority": priority,
+                "lane_id": "lane_frontier_targeted_component_materialization_20260526",
+                "tags": [
+                    "targeted_component_correction",
+                    "materialization_request",
+                    "receiver_consumed_budget",
+                    *[
+                        str(family)
+                        for family in row.get("accepted_correction_families") or []
+                    ],
+                ],
+                "metadata": {
+                    "schema": (
+                        TARGETED_COMPONENT_CORRECTION_MATERIALIZATION_QUEUE_METADATA_SCHEMA
+                    ),
+                    "materialization_request_id": request_id,
+                    "candidate_id": candidate_id,
+                    "accepted_correction_families": list(
+                        row.get("accepted_correction_families") or []
+                    ),
+                    "operation_levels": list(row.get("operation_levels") or []),
+                    "targeted_dimensions": list(row.get("targeted_dimensions") or []),
+                    "response_harvest_path": _repo_rel(response_harvest_path, repo),
+                    "materialization_request_path": _repo_rel(request_path, repo),
+                    "ready_for_materializer_execution": False,
+                    "ready_for_budget_spend": False,
+                    "budget_spend_allowed": False,
+                    "allowed_use": (
+                        "targeted_component_correction_materialization_queue_"
+                        "metadata_only"
+                    ),
+                    "forbidden_use": "score_claim_or_dispatch_authority",
+                    **FALSE_AUTHORITY,
+                },
+                "steps": steps,
+            }
+        )
+    queue = normalize_queue_definition(
+        {
+            "schema": QUEUE_SCHEMA,
+            "queue_id": queue_id,
+            "controls": {
+                "mode": "running",
+                "local_first": True,
+                "max_concurrency": {
+                    "local_io_heavy": 1,
+                    "local_cpu": 1,
+                    "local_mlx": 0,
+                    "modal_cpu": 0,
+                    "modal_gpu": 0,
+                },
+            },
+            "experiments": experiments,
+        }
+    )
+    queue["materialization_request_summary"] = {
+        "schema": TARGETED_COMPONENT_CORRECTION_MATERIALIZATION_REQUESTS_SCHEMA,
+        "row_count": requests.get("row_count"),
+        "accepted_response_count": requests.get("accepted_response_count"),
+        "ready_for_budget_spend_count": 0,
+        "allowed_use": (
+            "targeted_component_correction_materialization_queue_summary_only"
+        ),
+        "forbidden_use": "score_claim_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    return queue
 
 
 def _operation_chain_work_order_by_id(
@@ -7928,6 +8484,9 @@ __all__ = [
     "RECEIVER_REPAIR_ROW_SCHEMA",
     "RECEIVER_REPAIR_WORK_ORDER_SCHEMA",
     "TARGETED_COMPONENT_CORRECTION_ACQUISITION_SCHEMA",
+    "TARGETED_COMPONENT_CORRECTION_MATERIALIZATION_QUEUE_METADATA_SCHEMA",
+    "TARGETED_COMPONENT_CORRECTION_MATERIALIZATION_REQUESTS_SCHEMA",
+    "TARGETED_COMPONENT_CORRECTION_MATERIALIZATION_REQUEST_ROW_SCHEMA",
     "TARGETED_COMPONENT_CORRECTION_QUEUE_METADATA_SCHEMA",
     "TARGETED_COMPONENT_CORRECTION_RESPONSE_HARVEST_SCHEMA",
     "TARGETED_COMPONENT_CORRECTION_RESPONSE_ROW_SCHEMA",
@@ -7941,6 +8500,9 @@ __all__ = [
     "build_frontier_receiver_repair_queue",
     "build_frontier_receiver_repair_work_order",
     "build_frontier_targeted_component_correction_acquisition",
+    "build_frontier_targeted_component_correction_materialization_queue",
+    "build_frontier_targeted_component_correction_materialization_request",
+    "build_frontier_targeted_component_correction_materialization_requests",
     "build_frontier_targeted_component_correction_queue",
     "build_frontier_targeted_component_correction_response_harvest",
     "build_frontier_targeted_component_correction_response_harvest_from_artifacts",
