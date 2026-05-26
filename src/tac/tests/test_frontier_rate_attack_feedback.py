@@ -4136,6 +4136,10 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
         "pairset_drop_one_rank024_pair0112",
         "pairset_drop_one_rank025_pair0233",
     ]
+    assert payload[
+        "initial_targeted_component_correction_chain_materializer_handoff_summary"
+    ]["work_queue_row_count"] == 0
+    assert payload["initial_targeted_drop_many_dqs1_child_queue_paths"] == []
     observation_jsonl = Path(payload["observation_jsonl"])
     if not observation_jsonl.is_absolute():
         observation_jsonl = REPO_ROOT / observation_jsonl
@@ -4168,6 +4172,9 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
     assert initial_artifacts[
         "targeted_component_correction_operation_chain_work_orders"
     ].endswith("targeted_component_correction_operation_chain_work_orders.json")
+    assert initial_artifacts[
+        "targeted_component_correction_chain_materializer_handoff"
+    ].endswith("targeted_component_correction_chain_materializer_handoff.json")
     initial_feedback_report = json.loads(
         (REPO_ROOT / initial_artifacts["feedback_refresh_report"]).read_text(
             encoding="utf-8"
@@ -4314,6 +4321,25 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
         "frontier_rate_attack_operation_chain_compiler_work_orders.v1"
     )
     _assert_false_authority(targeted_operation_chain_work_orders)
+    targeted_chain_handoff = json.loads(
+        (
+            REPO_ROOT
+            / initial_artifacts[
+                "targeted_component_correction_chain_materializer_handoff"
+            ]
+        ).read_text(encoding="utf-8")
+    )
+    assert targeted_chain_handoff["schema"] == (
+        "frontier_rate_attack_targeted_component_correction_chain_materializer_handoff.v1"
+    )
+    _assert_false_authority(targeted_chain_handoff)
+    assert targeted_chain_handoff["work_queue_row_count"] == 0
+    assert (
+        initial_feedback_report["operator_commands"][
+            "inspect_targeted_component_correction_chain_materializer_handoff"
+        ][0]
+        == ".venv/bin/python"
+    )
     component = cycle_report["post_harvest_refresh"]["pairset_component_marginal"]
     assert component["schema"] == "frontier_rate_attack_pairset_component_marginal_bundle.v1"
     assert component["active"] is True
@@ -4352,6 +4378,14 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
     )
     assert (
         "targeted_component_materialization_requests_to_operation_chain_queue"
+        in cycle_report["integration_edges"]
+    )
+    assert (
+        "targeted_component_operation_chain_to_materializer_handoff"
+        in cycle_report["integration_edges"]
+    )
+    assert (
+        "targeted_operation_chain_queue_to_targeted_drop_many_child_queue"
         in cycle_report["integration_edges"]
     )
     assert (

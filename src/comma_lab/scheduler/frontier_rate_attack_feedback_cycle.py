@@ -52,6 +52,7 @@ from .frontier_rate_attack_feedback import (
     OPERATION_CHAIN_COMPILER_WORK_ORDERS_SCHEMA,
     build_frontier_operation_chain_compiler_queue,
     build_frontier_receiver_repair_queue,
+    build_frontier_targeted_component_correction_chain_materializer_handoff,
     build_frontier_targeted_component_correction_chain_work_orders,
     build_frontier_targeted_component_correction_materialization_queue,
     build_frontier_targeted_component_correction_materialization_requests,
@@ -280,6 +281,23 @@ def _unique_paths(paths: Iterable[Path]) -> tuple[Path, ...]:
         seen.add(key)
         out.append(path)
     return tuple(out)
+
+
+def _targeted_dqs1_child_queue_paths(queue: Mapping[str, Any]) -> list[str]:
+    paths: list[str] = []
+    seen: set[str] = set()
+    for experiment in queue.get("experiments") or []:
+        if not isinstance(experiment, Mapping):
+            continue
+        metadata = experiment.get("metadata")
+        if not isinstance(metadata, Mapping):
+            continue
+        value = metadata.get("targeted_drop_many_dqs1_followup_queue_path")
+        if not isinstance(value, str) or not value.strip() or value in seen:
+            continue
+        seen.add(value)
+        paths.append(value)
+    return paths
 
 
 def _mapping(value: Any) -> Mapping[str, Any]:
@@ -538,6 +556,9 @@ def write_frontier_refresh_artifacts(
                 operation_chain_compiler_work_orders_path=chain_path,
                 results_root=str(report.get("results_root") or "experiments/results"),
                 queue_id=f"{report.get('queue_id') or 'frontier_feedback'}_chain_compiler",
+                dqs1_observation_source_paths=tuple(
+                    report.get("dqs1_observation_source_paths") or ()
+                ),
             )
             if isinstance(chain_queue, Mapping):
                 chain_queue_path = out / "operation_chain_compiler_queue.json"
@@ -697,6 +718,9 @@ def write_frontier_refresh_artifacts(
                     "component_operation_chain"
                 ),
                 candidate_limit=int(report.get("candidate_limit") or 4),
+                dqs1_observation_source_paths=tuple(
+                    report.get("dqs1_observation_source_paths") or ()
+                ),
             )
             if isinstance(targeted_chain_queue, Mapping):
                 targeted_chain_queue_path = (
@@ -706,6 +730,34 @@ def write_frontier_refresh_artifacts(
                 artifacts[
                     "targeted_component_correction_operation_chain_queue"
                 ] = repo_rel(targeted_chain_queue_path, repo_root)
+                report["targeted_drop_many_dqs1_child_queue_paths"] = (
+                    _targeted_dqs1_child_queue_paths(targeted_chain_queue)
+                )
+            targeted_chain_materializer_handoff = (
+                build_frontier_targeted_component_correction_chain_materializer_handoff(
+                    repo_root=repo_root,
+                    targeted_component_correction_chain_work_orders=(
+                        targeted_chain_work_orders
+                    ),
+                    default_output_root=(
+                        Path(str(report.get("results_root") or "experiments/results"))
+                        / "frontier_targeted_component_correction_chain_materializers"
+                    ),
+                )
+            )
+            targeted_chain_materializer_handoff_path = (
+                out / "targeted_component_correction_chain_materializer_handoff.json"
+            )
+            write_json_artifact(
+                targeted_chain_materializer_handoff_path,
+                dict(targeted_chain_materializer_handoff),
+            )
+            artifacts[
+                "targeted_component_correction_chain_materializer_handoff"
+            ] = repo_rel(targeted_chain_materializer_handoff_path, repo_root)
+            report["targeted_component_correction_chain_materializer_handoff"] = (
+                targeted_chain_materializer_handoff
+            )
     selected_acquisition = report.get("selected_pairset_acquisition")
     if isinstance(selected_acquisition, Mapping):
         path = out / "dqs1_selected_pairset_acquisition.json"
@@ -909,6 +961,47 @@ def write_frontier_refresh_artifacts(
             "4",
             "--max-parallel",
             "2",
+        ]
+        child_queue_paths = [
+            str(path)
+            for path in report_to_write.get("targeted_drop_many_dqs1_child_queue_paths")
+            or []
+        ]
+        if child_queue_paths:
+            first_child_queue = child_queue_paths[0]
+            operator_commands[
+                "validate_targeted_drop_many_dqs1_child_queue_after_chain_run"
+            ] = [
+                ".venv/bin/python",
+                "tools/experiment_queue.py",
+                "--queue",
+                first_child_queue,
+                "validate",
+            ]
+            operator_commands[
+                "run_targeted_drop_many_dqs1_child_queue_bounded_local_after_chain_run"
+            ] = [
+                ".venv/bin/python",
+                "tools/experiment_queue.py",
+                "--queue",
+                first_child_queue,
+                "run-worker",
+                "--execute",
+                "--max-steps",
+                "8",
+                "--max-experiments",
+                "2",
+                "--max-parallel",
+                "2",
+            ]
+    if "targeted_component_correction_chain_materializer_handoff" in artifacts:
+        operator_commands[
+            "inspect_targeted_component_correction_chain_materializer_handoff"
+        ] = [
+            ".venv/bin/python",
+            "-m",
+            "json.tool",
+            artifacts["targeted_component_correction_chain_materializer_handoff"],
         ]
     if operator_commands:
         report_to_write["operator_commands"] = operator_commands

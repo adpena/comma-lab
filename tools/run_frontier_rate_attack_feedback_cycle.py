@@ -954,6 +954,8 @@ def main(argv: list[str] | None = None) -> int:
                 "receiver_closed_correction_acquisition_to_local_component_correction_queue",
                 "targeted_component_correction_queue_to_response_harvest_and_materialization_requests",
                 "targeted_component_materialization_requests_to_operation_chain_queue",
+                "targeted_component_operation_chain_to_materializer_handoff",
+                "targeted_operation_chain_queue_to_targeted_drop_many_child_queue",
             ],
             "allowed_use": "local_queue_owned_frontier_feedback_iteration_only",
             "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
@@ -992,6 +994,56 @@ def main(argv: list[str] | None = None) -> int:
                 "post_harvest_component_marginal_action_summary": None
                 if post_component_marginal is None
                 else post_component_marginal.get("action_summary_json"),
+                "initial_targeted_component_correction_chain_materializer_handoff_summary": (
+                    None
+                    if not isinstance(
+                        initial_report.get(
+                            "targeted_component_correction_chain_materializer_handoff"
+                        ),
+                        dict,
+                    )
+                    else {
+                        "work_queue_row_count": initial_report[
+                            "targeted_component_correction_chain_materializer_handoff"
+                        ].get("work_queue_row_count"),
+                        "executable_work_row_count": initial_report[
+                            "targeted_component_correction_chain_materializer_handoff"
+                        ].get("executable_work_row_count"),
+                        "unregistered_chain_target_count": initial_report[
+                            "targeted_component_correction_chain_materializer_handoff"
+                        ].get("unregistered_chain_target_count"),
+                    }
+                ),
+                "post_harvest_targeted_component_correction_chain_materializer_handoff_summary": (
+                    None
+                    if post_report is None
+                    or not isinstance(
+                        post_report.get(
+                            "targeted_component_correction_chain_materializer_handoff"
+                        ),
+                        dict,
+                    )
+                    else {
+                        "work_queue_row_count": post_report[
+                            "targeted_component_correction_chain_materializer_handoff"
+                        ].get("work_queue_row_count"),
+                        "executable_work_row_count": post_report[
+                            "targeted_component_correction_chain_materializer_handoff"
+                        ].get("executable_work_row_count"),
+                        "unregistered_chain_target_count": post_report[
+                            "targeted_component_correction_chain_materializer_handoff"
+                        ].get("unregistered_chain_target_count"),
+                    }
+                ),
+                "initial_targeted_drop_many_dqs1_child_queue_paths": list(
+                    initial_report.get("targeted_drop_many_dqs1_child_queue_paths")
+                    or []
+                ),
+                "post_harvest_targeted_drop_many_dqs1_child_queue_paths": []
+                if post_report is None
+                else list(
+                    post_report.get("targeted_drop_many_dqs1_child_queue_paths") or []
+                ),
                 **FALSE_AUTHORITY,
             }
         ),
