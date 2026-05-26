@@ -2040,7 +2040,93 @@ def test_receiver_closed_rate_packet_manifest_feeds_waterfill_budget(
         "fec8_static_second_order_markov_k16"
     )
     assert targeted_row["parent_compact_selector_codec"] == "fec6_fixed_huffman_k16"
+    assert targeted_row["selector_payload_wire_delta_bytes"] == -10
+    assert targeted_row["entropy_position"] == (
+        "at_entropy_coder_integer_codeword_boundary"
+    )
     _assert_false_authority(targeted_row)
+
+    work_order = build_frontier_targeted_component_correction_work_order(
+        targeted_component_correction_acquisition=targeted,
+        acquisition_id=targeted_row["acquisition_id"],
+    )
+    _assert_false_authority(work_order)
+    assert work_order["receiver_closed_rate_packet_context"][
+        "candidate_compact_selector_codec"
+    ] == "fec8_static_second_order_markov_k16"
+    assert work_order["receiver_closed_rate_packet_context"][
+        "parent_compact_selector_codec"
+    ] == "fec6_fixed_huffman_k16"
+    assert work_order["receiver_closed_rate_packet_context"][
+        "selector_payload_wire_delta_bytes"
+    ] == -10
+    local_cpu_advisory = {
+        "schema_version": "contest_auth_eval_result.v1",
+        **_false_authority(),
+        "score_axis": "cpu_advisory",
+        "evidence_semantics": "non_contest_cpu_auth_eval_advisory",
+        "component_deltas": {
+            "segnet_delta": -0.00012,
+            "posenet_delta": 0.00001,
+            "archive_byte_delta_vs_receiver_closed_candidate": 0,
+        },
+    }
+    response_row = (
+        build_frontier_targeted_component_correction_response_harvest_from_artifacts(
+            work_order=work_order,
+            local_cpu_advisory=local_cpu_advisory,
+            work_order_path="work_order.json",
+            local_cpu_advisory_path="local_cpu_advisory.json",
+            response_artifact_path="component_response.json",
+        )
+    )
+    _assert_false_authority(response_row)
+    assert response_row["negative_measured_lagrangian_delta"] is True
+    assert response_row["receiver_closed_rate_packet_context"][
+        "rate_packet_manifest_path"
+    ].endswith("fec8_candidate/packet_manifest.json")
+    harvest = build_frontier_targeted_component_correction_response_harvest(
+        repo_root=tmp_path,
+        response_rows=[response_row],
+    )
+    requests = build_frontier_targeted_component_correction_materialization_requests(
+        targeted_component_correction_response_harvest=harvest,
+        candidate_limit=1,
+    )
+    request_row = requests["rows"][0]
+    _assert_false_authority(request_row)
+    assert request_row["receiver_closed_saved_bytes"] == 10
+    assert request_row["rate_packet_manifest_paths"][0].endswith(
+        "fec8_candidate/packet_manifest.json"
+    )
+    assert request_row["candidate_compact_selector_codecs"] == [
+        "fec8_static_second_order_markov_k16"
+    ]
+    chain_work_orders = build_frontier_targeted_component_correction_chain_work_orders(
+        targeted_component_correction_materialization_requests=requests,
+        request_limit=1,
+    )
+    chain_budget = chain_work_orders["work_orders"][0]["targeted_correction_budget"]
+    _assert_false_authority(chain_budget)
+    assert chain_budget["receiver_closed_saved_bytes"] == 10
+    assert chain_budget["receiver_closed_rate_packet_contexts"][0][
+        "selector_payload_wire_delta_bytes"
+    ] == -10
+    handoff = build_frontier_targeted_component_correction_chain_materializer_handoff(
+        repo_root=tmp_path,
+        targeted_component_correction_chain_work_orders=chain_work_orders,
+        default_output_root=tmp_path / "chain_materializers",
+        target_limit=1,
+    )
+    assert handoff["materializer_backlog_row_count"] == 1
+    _assert_false_authority(handoff)
+    handoff_context = handoff["materializer_backlog"]["rows"][0]["operation_params"]
+    assert handoff_context["receiver_closed_rate_packet_context"][
+        "candidate_compact_selector_codec"
+    ] == "fec8_static_second_order_markov_k16"
+    assert handoff_context["entropy_positions"] == [
+        "at_entropy_coder_integer_codeword_boundary"
+    ]
 
 
 def test_receiver_closed_rate_packet_manifest_refuses_unverified_archive_file(

@@ -10000,6 +10000,36 @@ def build_frontier_targeted_component_correction_acquisition(
                     "parent_compact_selector_codec": budget_row.get(
                         "parent_compact_selector_codec"
                     ),
+                    "selector_policy_mode": budget_row.get("selector_policy_mode"),
+                    "archive_byte_delta_vs_parent": budget_row.get(
+                        "archive_byte_delta_vs_parent"
+                    ),
+                    "selector_payload_wire_bytes": budget_row.get(
+                        "selector_payload_wire_bytes"
+                    ),
+                    "parent_selector_payload_wire_bytes": budget_row.get(
+                        "parent_selector_payload_wire_bytes"
+                    ),
+                    "selector_payload_wire_delta_bytes": budget_row.get(
+                        "selector_payload_wire_delta_bytes"
+                    ),
+                    "selector_code_bits_total": budget_row.get(
+                        "selector_code_bits_total"
+                    ),
+                    "parent_selector_code_bits_total": budget_row.get(
+                        "parent_selector_code_bits_total"
+                    ),
+                    "selector_avg_bits_per_pair": budget_row.get(
+                        "selector_avg_bits_per_pair"
+                    ),
+                    "parent_selector_avg_bits_per_pair": budget_row.get(
+                        "parent_selector_avg_bits_per_pair"
+                    ),
+                    "palette_size": budget_row.get("palette_size"),
+                    "n_pairs": budget_row.get("n_pairs"),
+                    "compact_palette_mode_ids": budget_row.get(
+                        "compact_palette_mode_ids"
+                    ),
                     "entropy_position": budget_row.get("entropy_position"),
                     "ready_for_budget_spend": False,
                     "budget_spend_allowed": False,
@@ -10334,9 +10364,12 @@ def build_frontier_targeted_component_correction_work_order(
             sibling.get("correction_family") for sibling in sibling_rows
         ),
         "saved_bytes_budget": row.get("saved_bytes_budget"),
+        "receiver_closed_saved_bytes": row.get("receiver_closed_saved_bytes"),
         "estimated_rate_credit_score_units": row.get(
             "estimated_rate_credit_score_units"
         ),
+        **_targeted_rate_packet_context_fields(row),
+        "receiver_closed_rate_packet_context": _targeted_rate_packet_context(row),
         "submission_dir": row.get("submission_dir"),
         "archive_path": row.get("archive_path"),
         "inflate_sh_path": row.get("inflate_sh_path"),
@@ -11112,7 +11145,12 @@ def build_frontier_targeted_component_correction_response_harvest_from_artifacts
         "local_mlx_score_axis": mlx_axis,
         "reference_local_mlx_score_axis": reference_mlx_axis,
         "saved_bytes_budget": saved_bytes,
+        "receiver_closed_saved_bytes": work_order.get("receiver_closed_saved_bytes"),
         "estimated_receiver_closed_rate_credit_score_units": rate_credit,
+        **_targeted_rate_packet_context_fields(work_order),
+        "receiver_closed_rate_packet_context": _targeted_rate_packet_context(
+            work_order
+        ),
         "candidate_archive_path": work_order.get("archive_path"),
         "candidate_inflate_sh_path": work_order.get("inflate_sh_path"),
         "candidate_submission_dir": work_order.get("submission_dir"),
@@ -11270,6 +11308,8 @@ def _targeted_component_response_rows_from_queue(
                 if response_path_text
                 else None
             )
+            request_context_source = dict(metadata)
+            request_context_source.update(dict(request))
             missing = [
                 _repo_rel(path, repo_root)
                 for path in (work_order_path, local_cpu_path, reference_local_cpu_path)
@@ -11299,10 +11339,18 @@ def _targeted_component_response_rows_from_queue(
                     "response_artifact_path": response_path_text or None,
                     "saved_bytes_budget": request.get("saved_bytes_budget")
                     or metadata.get("saved_bytes_budget"),
+                    "receiver_closed_saved_bytes": request.get(
+                        "receiver_closed_saved_bytes"
+                    )
+                    or metadata.get("receiver_closed_saved_bytes"),
                     "estimated_receiver_closed_rate_credit_score_units": request.get(
                         "estimated_rate_credit_score_units"
                     )
                     or metadata.get("estimated_rate_credit_score_units"),
+                    **_targeted_rate_packet_context_fields(request_context_source),
+                    "receiver_closed_rate_packet_context": (
+                        _targeted_rate_packet_context(request_context_source)
+                    ),
                     "measured_component_delta_score_units": None,
                     "measured_lagrangian_delta_score_units": None,
                     "budget_credit_remaining_score_units": None,
@@ -11575,6 +11623,66 @@ def _targeted_component_response_sort_key(row: Mapping[str, Any]) -> tuple[float
     )
 
 
+_TARGETED_RATE_PACKET_CONTEXT_KEYS = (
+    "receiver_closed_saved_bytes",
+    "rate_packet_manifest_path",
+    "parent_rate_packet_manifest_path",
+    "candidate_compact_selector_codec",
+    "parent_compact_selector_codec",
+    "selector_policy_mode",
+    "archive_byte_delta_vs_parent",
+    "selector_payload_wire_bytes",
+    "parent_selector_payload_wire_bytes",
+    "selector_payload_wire_delta_bytes",
+    "selector_code_bits_total",
+    "parent_selector_code_bits_total",
+    "selector_avg_bits_per_pair",
+    "parent_selector_avg_bits_per_pair",
+    "palette_size",
+    "n_pairs",
+    "compact_palette_mode_ids",
+    "entropy_position",
+)
+
+
+def _targeted_rate_packet_context_fields(payload: Mapping[str, Any]) -> dict[str, Any]:
+    fields: dict[str, Any] = {}
+    for key in _TARGETED_RATE_PACKET_CONTEXT_KEYS:
+        value = payload.get(key)
+        if value in (None, ""):
+            continue
+        if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+            fields[key] = list(value)
+        else:
+            fields[key] = value
+    return fields
+
+
+def _targeted_rate_packet_context(payload: Mapping[str, Any]) -> dict[str, Any]:
+    fields = _targeted_rate_packet_context_fields(payload)
+    if not any(
+        fields.get(key)
+        for key in (
+            "rate_packet_manifest_path",
+            "candidate_compact_selector_codec",
+            "entropy_position",
+        )
+    ):
+        return {}
+    return {
+        "schema": "targeted_component_receiver_closed_rate_packet_context.v1",
+        **fields,
+        "context_status": "receiver_closed_rate_packet_entropy_context_available",
+        "pipeline_side": "encoder_rate_packet_repair_budget_allocator",
+        "receiver_role": "deterministic_decode_only_no_eval_time_adaptation",
+        "allowed_use": (
+            "receiver_closed_rate_packet_context_for_local_repair_chain_planning"
+        ),
+        "forbidden_use": "score_claim_or_dispatch_or_budget_spend_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
 def _accepted_targeted_component_response_rows(
     targeted_component_correction_response_harvest: Mapping[str, Any],
 ) -> list[dict[str, Any]]:
@@ -11658,6 +11766,9 @@ def _targeted_component_materializer_basis_entry(
             else {}
         ),
         "saved_bytes_budget": row.get("saved_bytes_budget"),
+        "receiver_closed_saved_bytes": row.get("receiver_closed_saved_bytes"),
+        **_targeted_rate_packet_context_fields(row),
+        "receiver_closed_rate_packet_context": _targeted_rate_packet_context(row),
         "work_order_path": row.get("work_order_path"),
         "local_cpu_advisory_path": row.get("local_cpu_advisory_path"),
         "local_mlx_response_path": row.get("local_mlx_response_path"),
@@ -11821,6 +11932,19 @@ def _build_targeted_component_materialization_request_row(
     saved_bytes_budget = max(
         int(row.get("saved_bytes_budget") or 0) for row in rows
     )
+    receiver_closed_saved_bytes = max(
+        int(row.get("receiver_closed_saved_bytes") or row.get("saved_bytes_budget") or 0)
+        for row in rows
+    )
+    rate_packet_contexts: list[dict[str, Any]] = []
+    for entry in basis:
+        context = entry.get("receiver_closed_rate_packet_context")
+        if isinstance(context, Mapping) and context.get("schema"):
+            rate_packet_contexts.append(dict(context))
+            continue
+        context = _targeted_rate_packet_context(entry)
+        if context:
+            rate_packet_contexts.append(context)
     rate_credit = max(
         float(row.get("estimated_receiver_closed_rate_credit_score_units") or 0.0)
         for row in rows
@@ -11859,6 +11983,25 @@ def _build_targeted_component_materialization_request_row(
         "operation_levels": operation_levels,
         "targeted_dimensions": targeted_dimensions,
         "saved_bytes_budget": saved_bytes_budget,
+        "receiver_closed_saved_bytes": receiver_closed_saved_bytes,
+        "receiver_closed_rate_packet_contexts": rate_packet_contexts,
+        "rate_packet_manifest_paths": _unique_basis_strings(
+            basis,
+            ("rate_packet_manifest_path",),
+        ),
+        "parent_rate_packet_manifest_paths": _unique_basis_strings(
+            basis,
+            ("parent_rate_packet_manifest_path",),
+        ),
+        "candidate_compact_selector_codecs": _unique_basis_strings(
+            basis,
+            ("candidate_compact_selector_codec",),
+        ),
+        "parent_compact_selector_codecs": _unique_basis_strings(
+            basis,
+            ("parent_compact_selector_codec",),
+        ),
+        "entropy_positions": _unique_basis_strings(basis, ("entropy_position",)),
         "estimated_receiver_closed_rate_credit_score_units": rate_credit,
         "measured_lagrangian_delta_score_units_sum": lagrangian_sum,
         "best_measured_lagrangian_delta_score_units": best_row.get(
@@ -12344,6 +12487,13 @@ def _targeted_component_chain_work_order(
                 "budget_credit_remaining_score_units"
             ),
             "saved_bytes_budget": entry.get("saved_bytes_budget"),
+            "receiver_closed_saved_bytes": entry.get("receiver_closed_saved_bytes"),
+            **_targeted_rate_packet_context_fields(entry),
+            "receiver_closed_rate_packet_context": dict(
+                entry.get("receiver_closed_rate_packet_context")
+                if isinstance(entry.get("receiver_closed_rate_packet_context"), Mapping)
+                else {}
+            ),
             "local_cpu_score_delta_summary": dict(
                 entry.get("local_cpu_score_delta_summary")
                 if isinstance(entry.get("local_cpu_score_delta_summary"), Mapping)
@@ -12399,6 +12549,25 @@ def _targeted_component_chain_work_order(
             "operation_levels": list(row.get("operation_levels") or []),
             "targeted_dimensions": list(row.get("targeted_dimensions") or []),
             "saved_bytes_budget": row.get("saved_bytes_budget"),
+            "receiver_closed_saved_bytes": row.get("receiver_closed_saved_bytes"),
+            "receiver_closed_rate_packet_contexts": [
+                dict(context)
+                for context in row.get("receiver_closed_rate_packet_contexts") or []
+                if isinstance(context, Mapping)
+            ],
+            "rate_packet_manifest_paths": list(
+                row.get("rate_packet_manifest_paths") or []
+            ),
+            "parent_rate_packet_manifest_paths": list(
+                row.get("parent_rate_packet_manifest_paths") or []
+            ),
+            "candidate_compact_selector_codecs": list(
+                row.get("candidate_compact_selector_codecs") or []
+            ),
+            "parent_compact_selector_codecs": list(
+                row.get("parent_compact_selector_codecs") or []
+            ),
+            "entropy_positions": list(row.get("entropy_positions") or []),
             "estimated_receiver_closed_rate_credit_score_units": row.get(
                 "estimated_receiver_closed_rate_credit_score_units"
             ),
@@ -12893,6 +13062,22 @@ def _targeted_chain_materializer_portfolio_row(
         output_hint["archive_path"] = archive_path
         output_hint["source_archive"] = archive_path
     output_hint["targeted_correction_budget"] = dict(budget)
+    output_hint["receiver_closed_rate_packet_contexts"] = [
+        dict(context)
+        for context in budget.get("receiver_closed_rate_packet_contexts") or []
+        if isinstance(context, Mapping)
+    ]
+    if output_hint["receiver_closed_rate_packet_contexts"]:
+        output_hint["receiver_closed_rate_packet_context"] = dict(
+            output_hint["receiver_closed_rate_packet_contexts"][0]
+        )
+    output_hint["rate_packet_manifest_paths"] = list(
+        budget.get("rate_packet_manifest_paths") or []
+    )
+    output_hint["candidate_compact_selector_codecs"] = list(
+        budget.get("candidate_compact_selector_codecs") or []
+    )
+    output_hint["entropy_positions"] = list(budget.get("entropy_positions") or [])
     output_hint["target_kind"] = target_kind
     output_hint["materializer_id"] = adapter.get("materializer_id")
     output_hint["receiver_contract_id"] = adapter.get("receiver_contract_id")
