@@ -1,0 +1,137 @@
+{
+  "analysis": {
+    "aggregate_advantage_vs_unified": 0.0,
+    "aggregate_tier_split_mean_component_delta": -0.006863829802518685,
+    "axis_tag": "[macOS-CPU advisory]",
+    "k_unified": 16,
+    "promotion_blockers": [
+      "local_cpu_or_mps_proxy_not_score_evidence",
+      "not_exact_cuda_auth_eval",
+      "no_byte_closed_archive_candidate",
+      "selector_bytes_not_charged",
+      "requires_full_600_pair_exact_cuda_before_any_score_use"
+    ],
+    "seg_guard_delta": 0.0,
+    "tier_definitions": [
+      [
+        "easy_lower_third",
+        0.0,
+        0.3333333333333333
+      ],
+      [
+        "middle_third",
+        0.3333333333333333,
+        0.6666666666666666
+      ],
+      [
+        "hard_upper_third",
+        0.6666666666666666,
+        1.0
+      ]
+    ],
+    "tier_results": [
+      {
+        "axis_tag": "[macOS-CPU advisory]",
+        "n_pairs": 0,
+        "quantile_range": [
+          0.0,
+          0.3333333333333333
+        ],
+        "tier_menu": [],
+        "tier_menu_mean_component_delta": 0.0,
+        "tier_menu_size_k": 6,
+        "tier_name": "easy_lower_third",
+        "tier_vs_unified_advantage": 0.0,
+        "unified_menu_on_tier_mean_component_delta": 0.0
+      },
+      {
+        "axis_tag": "[macOS-CPU advisory]",
+        "n_pairs": 0,
+        "quantile_range": [
+          0.3333333333333333,
+          0.6666666666666666
+        ],
+        "tier_menu": [],
+        "tier_menu_mean_component_delta": 0.0,
+        "tier_menu_size_k": 6,
+        "tier_name": "middle_third",
+        "tier_vs_unified_advantage": 0.0,
+        "unified_menu_on_tier_mean_component_delta": 0.0
+      },
+      {
+        "axis_tag": "[macOS-CPU advisory]",
+        "n_pairs": 2,
+        "quantile_range": [
+          0.6666666666666666,
+          1.0
+        ],
+        "tier_menu": [
+          "frame0_widened_chroma_g+1_amp2",
+          "frame0_widened_chroma_b-1_amp3",
+          "frame0_widened_chroma_b-1_amp2",
+          "frame0_widened_lattice_rgb_bias_p0_p2_m2",
+          "frame0_widened_lattice_rgb_bias_m4_p2_p2",
+          "frame0_widened_luma_bias_+1"
+        ],
+        "tier_menu_mean_component_delta": -0.006863829802518685,
+        "tier_menu_size_k": 6,
+        "tier_name": "hard_upper_third",
+        "tier_vs_unified_advantage": 0.0,
+        "unified_menu_on_tier_mean_component_delta": -0.006863829802518685
+      }
+    ],
+    "unified_menu": [
+      "frame0_widened_chroma_g+1_amp2",
+      "frame0_widened_chroma_b-1_amp3",
+      "frame0_widened_chroma_b-1_amp2",
+      "frame0_widened_lattice_rgb_bias_p0_p2_m2",
+      "frame0_widened_lattice_rgb_bias_m4_p2_p2",
+      "frame0_widened_luma_bias_+1",
+      "frame0_widened_lattice_rgb_bias_p0_p1_m1",
+      "frame0_widened_luma_bias_+2",
+      "frame0_widened_chroma_g+1_amp1",
+      "frame0_widened_noise_sigma_2.0_seed_1",
+      "frame0_widened_dct_u0_v2_amp_2",
+      "frame0_widened_chroma_g+1_amp3",
+      "frame0_widened_noise_sigma_1.5_seed_1",
+      "frame0_widened_chroma_r-1_amp2",
+      "frame0_widened_lattice_rgb_bias_m2_p1_p1",
+      "frame0_widened_noise_sigma_2.0_seed_3"
+    ],
+    "unified_menu_mean_component_delta": -0.006863829802518685
+  },
+  "provenance": {
+    "archive_bytes": 178517,
+    "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+    "axis_tag": "[macOS-CPU advisory]",
+    "command": [
+      "/Users/adpena/Projects/pact/.venv/bin/python",
+      "/Users/adpena/Projects/pact/tools/pr110_frame0_optimization_bundle_sweep.py",
+      "--n-pairs",
+      "2",
+      "--batch-size",
+      "2",
+      "--device",
+      "cpu",
+      "--output-dir",
+      ".omx/tmp/pr110_bundle_smoke_n2"
+    ],
+    "device": "cpu",
+    "evidence_grade": "macOS-CPU advisory only",
+    "git_head": "0f4d2f2fa87cd6c4825b336ca8b2daad6299c951",
+    "measurement_hardware": "darwin_arm64_macos_cpu_advisory",
+    "n_pairs_sampled": 2,
+    "pair_ids": [
+      0,
+      1
+    ],
+    "promotion_blockers": [
+      "local_cpu_or_mps_proxy_not_score_evidence",
+      "not_exact_cuda_auth_eval",
+      "no_byte_closed_archive_candidate",
+      "selector_bytes_not_charged",
+      "requires_full_600_pair_exact_cuda_before_any_score_use"
+    ],
+    "repo_root": "/Users/adpena/Projects/pact"
+  }
+}

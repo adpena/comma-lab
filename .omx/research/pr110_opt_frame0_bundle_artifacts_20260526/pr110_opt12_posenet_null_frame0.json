@@ -1,0 +1,395 @@
+{
+  "analysis": {
+    "axis_tag": "[macOS-CPU advisory]",
+    "pose_null_decile": [
+      {
+        "abs_pose_delta": 1.2484088074415922e-07,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_dct_chroma",
+        "mode_id": "frame0_widened_dct_u1_v2_amp_1",
+        "pose_delta": -1.2484088074415922e-07,
+        "score_delta_proxy": -2.8113307148441846e-05,
+        "seg_delta": 0.0
+      },
+      {
+        "abs_pose_delta": 3.3040851121768355e-07,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_blue_chroma",
+        "mode_id": "frame0_widened_blue_chroma_amp_2",
+        "pose_delta": 3.3040851121768355e-07,
+        "score_delta_proxy": 7.423462640848699e-05,
+        "seg_delta": 0.0
+      },
+      {
+        "abs_pose_delta": 3.470304363872856e-07,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_dct_chroma",
+        "mode_id": "frame0_widened_dct_u1_v2_amp_2",
+        "pose_delta": -3.470304363872856e-07,
+        "score_delta_proxy": -7.823717650654038e-05,
+        "seg_delta": 0.0
+      },
+      {
+        "abs_pose_delta": 3.6114943213760853e-07,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_blue_chroma",
+        "mode_id": "frame0_widened_blue_chroma_amp_1",
+        "pose_delta": 3.6114943213760853e-07,
+        "score_delta_proxy": 8.112878515637023e-05,
+        "seg_delta": 0.0
+      },
+      {
+        "abs_pose_delta": 3.893073881044984e-07,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_dct_chroma",
+        "mode_id": "frame0_widened_dct_u2_v2_amp_1",
+        "pose_delta": -3.893073881044984e-07,
+        "score_delta_proxy": -8.778731459876954e-05,
+        "seg_delta": 0.0
+      },
+      {
+        "abs_pose_delta": 4.231842467561364e-07,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_dct_chroma",
+        "mode_id": "frame0_widened_dct_u2_v1_amp_1",
+        "pose_delta": -4.231842467561364e-07,
+        "score_delta_proxy": -9.544289191043553e-05,
+        "seg_delta": 0.0
+      },
+      {
+        "abs_pose_delta": 4.3627915147226304e-07,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_gaussian_noise",
+        "mode_id": "frame0_widened_noise_sigma_0.5_seed_4",
+        "pose_delta": -4.3627915147226304e-07,
+        "score_delta_proxy": -9.840282131765021e-05,
+        "seg_delta": 0.0
+      },
+      {
+        "abs_pose_delta": 5.86358510190621e-07,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_blue_chroma",
+        "mode_id": "frame0_widened_blue_chroma_amp_3",
+        "pose_delta": 5.86358510190621e-07,
+        "score_delta_proxy": 0.00013157077568176634,
+        "seg_delta": 0.0
+      }
+    ],
+    "pose_null_decile_count": 8,
+    "pose_null_quantile": 0.1,
+    "promotion_blockers": [
+      "local_cpu_or_mps_proxy_not_score_evidence",
+      "not_exact_cuda_auth_eval",
+      "no_byte_closed_archive_candidate",
+      "selector_bytes_not_charged",
+      "requires_full_600_pair_exact_cuda_before_any_score_use"
+    ],
+    "ranked_top_n_by_abs_pose": [
+      {
+        "abs_pose_delta": 1.2484088074415922e-07,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_dct_chroma",
+        "mode_id": "frame0_widened_dct_u1_v2_amp_1",
+        "pose_delta": -1.2484088074415922e-07,
+        "score_delta_proxy": -2.8113307148441846e-05,
+        "seg_delta": 0.0
+      },
+      {
+        "abs_pose_delta": 3.3040851121768355e-07,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_blue_chroma",
+        "mode_id": "frame0_widened_blue_chroma_amp_2",
+        "pose_delta": 3.3040851121768355e-07,
+        "score_delta_proxy": 7.423462640848699e-05,
+        "seg_delta": 0.0
+      },
+      {
+        "abs_pose_delta": 3.470304363872856e-07,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_dct_chroma",
+        "mode_id": "frame0_widened_dct_u1_v2_amp_2",
+        "pose_delta": -3.470304363872856e-07,
+        "score_delta_proxy": -7.823717650654038e-05,
+        "seg_delta": 0.0
+      },
+      {
+        "abs_pose_delta": 3.6114943213760853e-07,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_blue_chroma",
+        "mode_id": "frame0_widened_blue_chroma_amp_1",
+        "pose_delta": 3.6114943213760853e-07,
+        "score_delta_proxy": 8.112878515637023e-05,
+        "seg_delta": 0.0
+      },
+      {
+        "abs_pose_delta": 3.893073881044984e-07,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_dct_chroma",
+        "mode_id": "frame0_widened_dct_u2_v2_amp_1",
+        "pose_delta": -3.893073881044984e-07,
+        "score_delta_proxy": -8.778731459876954e-05,
+        "seg_delta": 0.0
+      },
+      {
+        "abs_pose_delta": 4.231842467561364e-07,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_dct_chroma",
+        "mode_id": "frame0_widened_dct_u2_v1_amp_1",
+        "pose_delta": -4.231842467561364e-07,
+        "score_delta_proxy": -9.544289191043553e-05,
+        "seg_delta": 0.0
+      },
+      {
+        "abs_pose_delta": 4.3627915147226304e-07,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_gaussian_noise",
+        "mode_id": "frame0_widened_noise_sigma_0.5_seed_4",
+        "pose_delta": -4.3627915147226304e-07,
+        "score_delta_proxy": -9.840282131765021e-05,
+        "seg_delta": 0.0
+      },
+      {
+        "abs_pose_delta": 5.86358510190621e-07,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_blue_chroma",
+        "mode_id": "frame0_widened_blue_chroma_amp_3",
+        "pose_delta": 5.86358510190621e-07,
+        "score_delta_proxy": 0.00013157077568176634,
+        "seg_delta": 0.0
+      },
+      {
+        "abs_pose_delta": 8.405768312513828e-07,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_dct_chroma",
+        "mode_id": "frame0_widened_dct_u2_v2_amp_2",
+        "pose_delta": -8.405768312513828e-07,
+        "score_delta_proxy": -0.00018998465529981856,
+        "seg_delta": 0.0
+      },
+      {
+        "abs_pose_delta": 1.0457733878865838e-06,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_dct_chroma",
+        "mode_id": "frame0_widened_dct_u2_v1_amp_2",
+        "pose_delta": -1.0457733878865838e-06,
+        "score_delta_proxy": -0.0002366119206060613,
+        "seg_delta": 0.0
+      },
+      {
+        "abs_pose_delta": 1.1319643817842007e-06,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_dct_chroma",
+        "mode_id": "frame0_widened_dct_u1_v1_amp_1",
+        "pose_delta": -1.1319643817842007e-06,
+        "score_delta_proxy": -0.00025622681492856736,
+        "seg_delta": 0.0
+      },
+      {
+        "abs_pose_delta": 1.187280759040732e-06,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_quant_step",
+        "mode_id": "frame0_widened_quant_step_7",
+        "pose_delta": -1.187280759040732e-06,
+        "score_delta_proxy": -0.00026882466116953663,
+        "seg_delta": 0.0
+      },
+      {
+        "abs_pose_delta": 1.210855771205388e-06,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_rgb_bias",
+        "mode_id": "frame0_widened_chroma_b-1_amp1",
+        "pose_delta": -1.210855771205388e-06,
+        "score_delta_proxy": -0.00027419587277086044,
+        "seg_delta": 0.0
+      },
+      {
+        "abs_pose_delta": 1.840944605646655e-06,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_gaussian_noise",
+        "mode_id": "frame0_widened_noise_sigma_1.0_seed_4",
+        "pose_delta": -1.840944605646655e-06,
+        "score_delta_proxy": -0.00041824249999319885,
+        "seg_delta": 0.0
+      },
+      {
+        "abs_pose_delta": 1.8529863154981285e-06,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_quant_step",
+        "mode_id": "frame0_widened_quant_step_4",
+        "pose_delta": -1.8529863154981285e-06,
+        "score_delta_proxy": -0.0004210046643578491,
+        "seg_delta": 0.0
+      },
+      {
+        "abs_pose_delta": 2.0500610844464973e-06,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_quant_step",
+        "mode_id": "frame0_widened_quant_step_2",
+        "pose_delta": 2.0500610844464973e-06,
+        "score_delta_proxy": 0.00045667409991975716,
+        "seg_delta": 0.0
+      },
+      {
+        "abs_pose_delta": 2.1291689336067066e-06,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_dct_chroma",
+        "mode_id": "frame0_widened_dct_u2_v0_amp_1",
+        "pose_delta": 2.1291689336067066e-06,
+        "score_delta_proxy": 0.0004741120913594188,
+        "seg_delta": 0.0
+      },
+      {
+        "abs_pose_delta": 2.15555883187335e-06,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_hadamard_chroma",
+        "mode_id": "frame0_widened_hadamard_chroma_amp_1",
+        "pose_delta": 2.15555883187335e-06,
+        "score_delta_proxy": 0.00047992631933155283,
+        "seg_delta": 0.0
+      },
+      {
+        "abs_pose_delta": 2.477569069014862e-06,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_dct_chroma",
+        "mode_id": "frame0_widened_dct_u1_v1_amp_2",
+        "pose_delta": -2.477569069014862e-06,
+        "score_delta_proxy": -0.0005647564920418235,
+        "seg_delta": 0.0
+      },
+      {
+        "abs_pose_delta": 2.7918440537177958e-06,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_gaussian_noise",
+        "mode_id": "frame0_widened_noise_sigma_0.5_seed_3",
+        "pose_delta": -2.7918440537177958e-06,
+        "score_delta_proxy": -0.0006374510858066784,
+        "seg_delta": 0.0
+      },
+      {
+        "abs_pose_delta": 2.8093090804759413e-06,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_dct_chroma",
+        "mode_id": "frame0_widened_dct_u2_v0_amp_2",
+        "pose_delta": 2.8093090804759413e-06,
+        "score_delta_proxy": 0.0006234882417980037,
+        "seg_delta": 0.0
+      },
+      {
+        "abs_pose_delta": 2.989361746585928e-06,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_gaussian_noise",
+        "mode_id": "frame0_widened_noise_sigma_1.0_seed_2",
+        "pose_delta": -2.989361746585928e-06,
+        "score_delta_proxy": -0.0006832642641464159,
+        "seg_delta": 0.0
+      },
+      {
+        "abs_pose_delta": 3.1552835935144685e-06,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_gaussian_noise",
+        "mode_id": "frame0_widened_noise_sigma_1.0_seed_3",
+        "pose_delta": -3.1552835935144685e-06,
+        "score_delta_proxy": -0.0007218244160727416,
+        "seg_delta": 0.0
+      },
+      {
+        "abs_pose_delta": 3.312770786578767e-06,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_gaussian_noise",
+        "mode_id": "frame0_widened_noise_sigma_0.5_seed_2",
+        "pose_delta": -3.312770786578767e-06,
+        "score_delta_proxy": -0.0007584884550823068,
+        "seg_delta": 0.0
+      },
+      {
+        "abs_pose_delta": 3.9548976928927004e-06,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_hadamard_chroma",
+        "mode_id": "frame0_widened_hadamard_chroma_amp_2",
+        "pose_delta": 3.9548976928927004e-06,
+        "score_delta_proxy": 0.0008729042563252742,
+        "seg_delta": 0.0
+      },
+      {
+        "abs_pose_delta": 4.899298801319674e-06,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_dct_chroma",
+        "mode_id": "frame0_widened_dct_u1_v0_amp_1",
+        "pose_delta": 4.899298801319674e-06,
+        "score_delta_proxy": 0.001076509810629983,
+        "seg_delta": 0.0
+      },
+      {
+        "abs_pose_delta": 5.236684955889359e-06,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_luma_bias",
+        "mode_id": "frame0_widened_luma_bias_+3",
+        "pose_delta": -5.236684955889359e-06,
+        "score_delta_proxy": -0.0012115536328349552,
+        "seg_delta": 0.0
+      },
+      {
+        "abs_pose_delta": 5.291496563586406e-06,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_luma_bias",
+        "mode_id": "frame0_widened_luma_bias_-3",
+        "pose_delta": -5.291496563586406e-06,
+        "score_delta_proxy": -0.0012246045483515766,
+        "seg_delta": 0.0
+      },
+      {
+        "abs_pose_delta": 5.732286808779463e-06,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_hadamard_chroma",
+        "mode_id": "frame0_widened_hadamard_chroma_amp_3",
+        "pose_delta": 5.732286808779463e-06,
+        "score_delta_proxy": 0.0012546296905326104,
+        "seg_delta": 0.0
+      },
+      {
+        "abs_pose_delta": 5.912790584261529e-06,
+        "axis_tag": "[macOS-CPU advisory]",
+        "family": "frame0_gaussian_noise",
+        "mode_id": "frame0_widened_noise_sigma_0.5_seed_1",
+        "pose_delta": -5.912790584261529e-06,
+        "score_delta_proxy": -0.0013731089886647452,
+        "seg_delta": 0.0
+      }
+    ],
+    "top_n": 30
+  },
+  "provenance": {
+    "archive_bytes": 178517,
+    "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+    "axis_tag": "[macOS-CPU advisory]",
+    "command": [
+      "/Users/adpena/Projects/pact/.venv/bin/python",
+      "/Users/adpena/Projects/pact/tools/pr110_frame0_optimization_bundle_sweep.py",
+      "--n-pairs",
+      "2",
+      "--batch-size",
+      "2",
+      "--device",
+      "cpu",
+      "--output-dir",
+      ".omx/tmp/pr110_bundle_smoke_n2"
+    ],
+    "device": "cpu",
+    "evidence_grade": "macOS-CPU advisory only",
+    "git_head": "0f4d2f2fa87cd6c4825b336ca8b2daad6299c951",
+    "measurement_hardware": "darwin_arm64_macos_cpu_advisory",
+    "n_pairs_sampled": 2,
+    "pair_ids": [
+      0,
+      1
+    ],
+    "promotion_blockers": [
+      "local_cpu_or_mps_proxy_not_score_evidence",
+      "not_exact_cuda_auth_eval",
+      "no_byte_closed_archive_candidate",
+      "selector_bytes_not_charged",
+      "requires_full_600_pair_exact_cuda_before_any_score_use"
+    ],
+    "repo_root": "/Users/adpena/Projects/pact"
+  }
+}
