@@ -1,0 +1,4209 @@
+{
+  "controls": {
+    "local_first": true,
+    "max_concurrency": {
+      "local_cpu": 1,
+      "local_io_heavy": 1,
+      "local_mlx": 1,
+      "modal_cpu": 0,
+      "modal_gpu": 0
+    },
+    "mode": "running"
+  },
+  "experiments": [
+    {
+      "id": "pairset_geometry_lowimpact_k003_h26140419e5",
+      "lane_id": "lane_dqs1_pairset_geometry_lowimpact_k003_h26140419e5_local_first_20260525",
+      "metadata": {
+        "action_summary_path": "/Users/adpena/Projects/pact/.omx/research/codex_eureka_beyond_drop_two_acquisition_20260525T143351Z/action_summary.json",
+        "frontier_operation_portfolio": {
+          "allowed_use": "queue_metadata_pointer_to_operation_portfolio_artifact",
+          "best_component_behavior_candidate_id": null,
+          "best_component_behavior_score_delta_vs_baseline": null,
+          "blocked_operation_count": 20,
+          "charged_bits_changed": false,
+          "component_behavior_active": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "followup_signal_operation_count": 3,
+          "forbidden_use": "score_claim_or_dispatch_authority",
+          "gpu_launched": false,
+          "operation_count": 22,
+          "operation_portfolio_schema": "frontier_rate_attack_operation_portfolio.v1",
+          "promotable": false,
+          "promotion_eligible": false,
+          "queue_executable_operation_count": 2,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_closed_correction_budget_active": false,
+          "receiver_closed_materializer_budget_candidate_count": 0,
+          "receiver_closed_materializer_saved_bytes_total": 0,
+          "schema": "frontier_rate_attack_operation_portfolio_queue_metadata.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "targeted_correction_budget_active": false,
+          "targeted_correction_budget_saved_bytes_total": 0,
+          "top_followup_signal_operation_ids": [
+            "pair_frame_geometry_queue_requests",
+            "chain_registered_multisurface_materializer_program",
+            "pair_batch_full_video_low_impact_drop_surface"
+          ],
+          "top_operation_ids": [
+            "pair_frame_geometry_queue_requests",
+            "chain_registered_multisurface_materializer_program",
+            "materializer_backlog_byte_range_entropy_recode_v1",
+            "materializer_backlog_archive_section_header_elide_v1",
+            "materializer_backlog_archive_section_reorder_v1",
+            "materializer_backlog_archive_section_proceduralize_v1",
+            "materializer_backlog_tensor_quantize_v1",
+            "materializer_backlog_tensor_prune_v1"
+          ],
+          "top_queue_executable_operation_ids": [
+            "pair_frame_geometry_queue_requests",
+            "pair_batch_full_video_low_impact_drop_surface"
+          ]
+        },
+        "frontier_receiver_closed_correction_budget": {
+          "active": false,
+          "allowed_use": "queue_metadata_pointer_to_receiver_closed_correction_budget",
+          "blockers": [
+            "no_receiver_closed_materializer_budget_candidates_discovered"
+          ],
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "forbidden_use": "score_claim_or_dispatch_authority",
+          "gpu_launched": false,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_closed_budget_source_targets": [],
+          "receiver_closed_candidate_count": 0,
+          "receiver_closed_correction_budget_schema": "frontier_rate_attack_receiver_closed_correction_budget.v1",
+          "receiver_closed_saved_bytes_max": 0,
+          "receiver_closed_saved_bytes_total": 0,
+          "schema": "frontier_rate_attack_receiver_closed_correction_budget_queue_metadata.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false
+        },
+        "frontier_receiver_repair_backlog": {
+          "allowed_use": "queue_metadata_pointer_to_receiver_repair_backlog_artifact",
+          "authority_gate_repair_count": 0,
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "forbidden_use": "score_claim_or_dispatch_authority",
+          "gpu_launched": false,
+          "local_drop_saved_bytes_total": 0,
+          "materializer_rate_positive_saved_bytes_total": 0,
+          "promotable": false,
+          "promotion_eligible": false,
+          "queue_actionable_repair_count": 32,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_repair_backlog_schema": "frontier_rate_attack_receiver_repair_backlog.v1",
+          "row_count": 39,
+          "schema": "frontier_rate_attack_receiver_repair_backlog_queue_metadata.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "targeted_correction_budget_active": false,
+          "top_repair_families": [
+            "runtime_consumption_proof_repair"
+          ],
+          "top_repair_ids": [
+            "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof",
+            "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_requires_single_composed_receiver_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_byte_range_entropy_recode_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_archive_section_header_elide_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_archive_section_reorder_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_archive_section_proceduralize_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_tensor_quantize_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_tensor_prune_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof"
+          ],
+          "top_source_operation_ids": [
+            "chain_registered_multisurface_materializer_program",
+            "materializer_backlog_byte_range_entropy_recode_v1",
+            "materializer_backlog_archive_section_header_elide_v1",
+            "materializer_backlog_archive_section_reorder_v1",
+            "materializer_backlog_archive_section_proceduralize_v1",
+            "materializer_backlog_tensor_quantize_v1",
+            "materializer_backlog_tensor_prune_v1"
+          ]
+        },
+        "frontier_targeted_component_correction_acquisition": {
+          "active": false,
+          "allowed_use": "queue_metadata_pointer_to_targeted_component_correction_acquisition",
+          "blockers": [
+            "no_receiver_closed_rate_budget_rows",
+            "no_targeted_component_correction_rows",
+            "segnet_posenet_component_behavior_rows_required",
+            "no_component_eval_queue_actionable_submission_dirs",
+            "component_eval_required_before_budget_spend",
+            "exact_auth_eval_required_before_score_or_promotion_claim"
+          ],
+          "charged_bits_changed": false,
+          "component_behavior_active": false,
+          "component_correction_row_count": 0,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "estimated_rate_credit_score_units_total": 0,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "forbidden_use": "score_claim_or_dispatch_authority",
+          "gpu_launched": false,
+          "master_gradient_active": true,
+          "promotable": false,
+          "promotion_eligible": false,
+          "queue_actionable_acquisition_count": 0,
+          "queue_actionable_row_count": 0,
+          "rank_or_kill_eligible": false,
+          "ready_for_budget_spend_count": 0,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_closed_candidate_count": 0,
+          "receiver_closed_saved_bytes_total": 0,
+          "row_count": 0,
+          "schema": "frontier_rate_attack_targeted_component_correction_queue_metadata.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "targeted_component_correction_acquisition_schema": "frontier_rate_attack_targeted_component_correction_acquisition.v1",
+          "top_acquisition_ids": [],
+          "top_correction_families": []
+        },
+        "portfolio_path": "/Users/adpena/Projects/pact/.omx/research/frontier_rate_attack_feedback_refresh_20260526T071254Z_generated_pair_frame_lattice/pair_frame_scorer_geometry_lattice.json",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "dqs1_local_first_experiment_metadata.v1",
+        "score_claim": false,
+        "selected_pair_indices": [
+          26,
+          59,
+          68,
+          98,
+          109,
+          112,
+          134,
+          151,
+          167,
+          229,
+          242,
+          257,
+          259,
+          296,
+          320,
+          327,
+          371,
+          412,
+          430,
+          440,
+          459,
+          467,
+          479,
+          492,
+          496,
+          501,
+          520,
+          544,
+          588
+        ],
+        "skipped_candidates": [],
+        "source_custody_preserved": true,
+        "source_metadata": {
+          "allowed_use": "local_first_queue_selection_only",
+          "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+          "pair_frame_geometry_request": {
+            "allowed_use": "queue_executable_local_dqs1_pairset_drop_probe_only",
+            "candidate_id": "pairset_geometry_lowimpact_k003_h26140419e5",
+            "dispatch_attempted": false,
+            "dropped_pair_indices": [
+              376,
+              378,
+              555
+            ],
+            "forbidden_use": "score_claim_or_dispatch_or_promotion_authority",
+            "generation_policy": "drop lowest scorer-geometry-cost DQS1 pairs and let local queue measure the real SegNet/PoseNet trade",
+            "geometry_coverage": 1.0,
+            "geometry_covered_dropped_pair_count": 3,
+            "gpu_launched": false,
+            "operator_next_action": "materialize_pairset_archive_and_run_local_controls",
+            "promotable": false,
+            "promotion_eligible": false,
+            "queue_executable": true,
+            "queue_family": "dqs1_pairset_local_first",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "pair_frame_geometry_queue_executable_drop_request.v1",
+            "score_claim": false,
+            "score_claim_valid": false,
+            "selected_pair_count": 29,
+            "selected_pair_indices": [
+              26,
+              59,
+              68,
+              98,
+              109,
+              112,
+              134,
+              151,
+              167,
+              229,
+              242,
+              257,
+              259,
+              296,
+              320,
+              327,
+              371,
+              412,
+              430,
+              440,
+              459,
+              467,
+              479,
+              492,
+              496,
+              501,
+              520,
+              544,
+              588
+            ],
+            "selector_kind": "pair_frame_geometry_low_impact_drop_many"
+          },
+          "pair_frame_geometry_request_source_path": ".omx/research/frontier_rate_attack_feedback_refresh_20260526T071254Z_generated_pair_frame_lattice/pair_frame_scorer_geometry_lattice.json",
+          "promotion_eligible": false,
+          "queue_source_kind": "pair_frame_scorer_geometry_lattice",
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "dqs1_pair_frame_geometry_queue_request_metadata.v1",
+          "score_claim": false,
+          "selected_pair_count": 29,
+          "selected_pair_indices": [
+            26,
+            59,
+            68,
+            98,
+            109,
+            112,
+            134,
+            151,
+            167,
+            229,
+            242,
+            257,
+            259,
+            296,
+            320,
+            327,
+            371,
+            412,
+            430,
+            440,
+            459,
+            467,
+            479,
+            492,
+            496,
+            501,
+            520,
+            544,
+            588
+          ]
+        }
+      },
+      "priority": 3,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_decoder_q_selective_window_bridge_plan.py",
+            "--selection",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/mlx_effective_spend_triage_observed_window_selection_top32.json",
+            "--candidate-manifest",
+            "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/mutation_manifest.json",
+            "--lane-id",
+            "lane_dqs1_pairset_geometry_lowimpact_k003_h26140419e5_local_first_20260525",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h26140419e5/decoder_q_selective_window_bridge_plan.json",
+            "--md-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h26140419e5/decoder_q_selective_window_bridge_plan.md"
+          ],
+          "id": "build_bridge_plan",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h26140419e5/decoder_q_selective_window_bridge_plan.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/plan_decoder_q_selective_runtime_packet.py",
+            "--bridge-plan",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h26140419e5/decoder_q_selective_window_bridge_plan.json",
+            "--base-archive",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k003_h26140419e5.json",
+            "--md-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k003_h26140419e5.md",
+            "--frame-policy",
+            "pair_all_frames",
+            "--selected-pairs",
+            "26,59,68,98,109,112,134,151,167,229,242,257,259,296,320,327,371,412,430,440,459,467,479,492,496,501,520,544,588"
+          ],
+          "id": "plan_packet",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k003_h26140419e5.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "build_bridge_plan"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/materialize_decoder_q_selective_runtime_candidate.py",
+            "--plan",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k003_h26140419e5.json",
+            "--base-submission-dir",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+            "--output-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h26140419e5/submission_dir",
+            "--frame-policy",
+            "pair_all_frames",
+            "--manifest-output",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h26140419e5/materialization_manifest.json"
+          ],
+          "id": "materialize",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h26140419e5/materialization_manifest.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "plan_packet"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_decoder_q_selective_runtime_locality_controls.py",
+            "--parent-submission-dir",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+            "--global-mutated-archive",
+            "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/archive.zip",
+            "--selective-submission-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h26140419e5/submission_dir",
+            "--selected-pairs",
+            "26,59,68,98,109,112,134,151,167,229,242,257,259,296,320,327,371,412,430,440,459,467,479,492,496,501,520,544,588",
+            "--frame-policy",
+            "pair_all_frames",
+            "--timeout-seconds",
+            "540",
+            "--global-timeout-seconds",
+            "840",
+            "--max-inflate-parallelism",
+            "3",
+            "--reuse-existing-inflates",
+            "--work-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h26140419e5/locality_work",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h26140419e5/locality_controls.json"
+          ],
+          "id": "locality_controls",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": true,
+              "key": "locality_controls_passed",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h26140419e5/locality_controls.json",
+              "type": "json_equals"
+            },
+            {
+              "axis_equals": "[locality-control no-score]",
+              "axis_key": "score_axis",
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h26140419e5/locality_controls.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "materialize"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 960
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "experiments/contest_auth_eval.py",
+            "--archive",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h26140419e5/submission_dir/archive.zip",
+            "--inflate-sh",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h26140419e5/submission_dir/inflate.sh",
+            "--upstream-dir",
+            "upstream",
+            "--video-names-file",
+            "upstream/public_test_video_names.txt",
+            "--device",
+            "cpu",
+            "--work-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h26140419e5/local_cpu_advisory_work",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h26140419e5/local_cpu_advisory.json",
+            "--inflate-timeout",
+            "1800",
+            "--evaluate-timeout",
+            "1800",
+            "--keep-work-dir"
+          ],
+          "id": "local_cpu_advisory",
+          "kind": "command",
+          "postconditions": [
+            {
+              "axis_equals": "cpu_advisory",
+              "axis_key": "score_axis",
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h26140419e5/local_cpu_advisory.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "locality_controls"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 3600
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/compact_experiment_artifacts.py",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h26140419e5",
+            "--min-bytes",
+            "1",
+            "--json-output",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h26140419e5/raw_artifact_retention_plan.json"
+          ],
+          "id": "plan_raw_artifact_retention",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": 0,
+              "key": "plan.blocked_candidate_count",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h26140419e5/raw_artifact_retention_plan.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h26140419e5/raw_artifact_retention_plan.json",
+              "required_false": [
+                "plan.score_claim",
+                "plan.promotion_eligible",
+                "plan.ready_for_exact_eval_dispatch"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "local_cpu_advisory"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 1200
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/calibrate_local_cpu_contest_drift.py",
+            "--calibration-json",
+            ".omx/research/local_cpu_contest_drift_calibration_dqs1_fec6_20260522T194800Z.json",
+            "--candidate-id",
+            "pairset_geometry_lowimpact_k003_h26140419e5",
+            "--candidate-local-json",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h26140419e5/local_cpu_advisory.json",
+            "--auth-frontier-score-from-pointer",
+            "--eureka-out",
+            ".omx/research/local_cpu_contest_drift_eureka_pairset_geometry_lowimpact_k003_h26140419e5_20260525T143351Z.json",
+            "--min-margin",
+            "0.0"
+          ],
+          "id": "local_cpu_contest_drift_eureka",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "local_cpu_contest_drift_eureka_signal.v1",
+              "key": "schema",
+              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_geometry_lowimpact_k003_h26140419e5_20260525T143351Z.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [],
+              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_geometry_lowimpact_k003_h26140419e5_20260525T143351Z.json",
+              "required_false": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "score_claim",
+                "score_claim_valid",
+                "score_claim_eligible",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "promotable",
+                "gpu_launched",
+                "field_selection_ready_for_exact_eval_dispatch",
+                "exact_cuda_auth_eval",
+                "contest_cuda_auth_eval",
+                "score_affecting_payload_changed",
+                "charged_bits_changed"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "local_cpu_advisory"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "dqs1",
+        "pairset",
+        "local-first",
+        "no-score-authority"
+      ]
+    },
+    {
+      "id": "pairset_geometry_lowimpact_k004_h8b2ce76737",
+      "lane_id": "lane_dqs1_pairset_geometry_lowimpact_k004_h8b2ce76737_local_first_20260525",
+      "metadata": {
+        "action_summary_path": "/Users/adpena/Projects/pact/.omx/research/codex_eureka_beyond_drop_two_acquisition_20260525T143351Z/action_summary.json",
+        "frontier_operation_portfolio": {
+          "allowed_use": "queue_metadata_pointer_to_operation_portfolio_artifact",
+          "best_component_behavior_candidate_id": null,
+          "best_component_behavior_score_delta_vs_baseline": null,
+          "blocked_operation_count": 20,
+          "charged_bits_changed": false,
+          "component_behavior_active": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "followup_signal_operation_count": 3,
+          "forbidden_use": "score_claim_or_dispatch_authority",
+          "gpu_launched": false,
+          "operation_count": 22,
+          "operation_portfolio_schema": "frontier_rate_attack_operation_portfolio.v1",
+          "promotable": false,
+          "promotion_eligible": false,
+          "queue_executable_operation_count": 2,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_closed_correction_budget_active": false,
+          "receiver_closed_materializer_budget_candidate_count": 0,
+          "receiver_closed_materializer_saved_bytes_total": 0,
+          "schema": "frontier_rate_attack_operation_portfolio_queue_metadata.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "targeted_correction_budget_active": false,
+          "targeted_correction_budget_saved_bytes_total": 0,
+          "top_followup_signal_operation_ids": [
+            "pair_frame_geometry_queue_requests",
+            "chain_registered_multisurface_materializer_program",
+            "pair_batch_full_video_low_impact_drop_surface"
+          ],
+          "top_operation_ids": [
+            "pair_frame_geometry_queue_requests",
+            "chain_registered_multisurface_materializer_program",
+            "materializer_backlog_byte_range_entropy_recode_v1",
+            "materializer_backlog_archive_section_header_elide_v1",
+            "materializer_backlog_archive_section_reorder_v1",
+            "materializer_backlog_archive_section_proceduralize_v1",
+            "materializer_backlog_tensor_quantize_v1",
+            "materializer_backlog_tensor_prune_v1"
+          ],
+          "top_queue_executable_operation_ids": [
+            "pair_frame_geometry_queue_requests",
+            "pair_batch_full_video_low_impact_drop_surface"
+          ]
+        },
+        "frontier_receiver_closed_correction_budget": {
+          "active": false,
+          "allowed_use": "queue_metadata_pointer_to_receiver_closed_correction_budget",
+          "blockers": [
+            "no_receiver_closed_materializer_budget_candidates_discovered"
+          ],
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "forbidden_use": "score_claim_or_dispatch_authority",
+          "gpu_launched": false,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_closed_budget_source_targets": [],
+          "receiver_closed_candidate_count": 0,
+          "receiver_closed_correction_budget_schema": "frontier_rate_attack_receiver_closed_correction_budget.v1",
+          "receiver_closed_saved_bytes_max": 0,
+          "receiver_closed_saved_bytes_total": 0,
+          "schema": "frontier_rate_attack_receiver_closed_correction_budget_queue_metadata.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false
+        },
+        "frontier_receiver_repair_backlog": {
+          "allowed_use": "queue_metadata_pointer_to_receiver_repair_backlog_artifact",
+          "authority_gate_repair_count": 0,
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "forbidden_use": "score_claim_or_dispatch_authority",
+          "gpu_launched": false,
+          "local_drop_saved_bytes_total": 0,
+          "materializer_rate_positive_saved_bytes_total": 0,
+          "promotable": false,
+          "promotion_eligible": false,
+          "queue_actionable_repair_count": 32,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_repair_backlog_schema": "frontier_rate_attack_receiver_repair_backlog.v1",
+          "row_count": 39,
+          "schema": "frontier_rate_attack_receiver_repair_backlog_queue_metadata.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "targeted_correction_budget_active": false,
+          "top_repair_families": [
+            "runtime_consumption_proof_repair"
+          ],
+          "top_repair_ids": [
+            "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof",
+            "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_requires_single_composed_receiver_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_byte_range_entropy_recode_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_archive_section_header_elide_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_archive_section_reorder_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_archive_section_proceduralize_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_tensor_quantize_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_tensor_prune_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof"
+          ],
+          "top_source_operation_ids": [
+            "chain_registered_multisurface_materializer_program",
+            "materializer_backlog_byte_range_entropy_recode_v1",
+            "materializer_backlog_archive_section_header_elide_v1",
+            "materializer_backlog_archive_section_reorder_v1",
+            "materializer_backlog_archive_section_proceduralize_v1",
+            "materializer_backlog_tensor_quantize_v1",
+            "materializer_backlog_tensor_prune_v1"
+          ]
+        },
+        "frontier_targeted_component_correction_acquisition": {
+          "active": false,
+          "allowed_use": "queue_metadata_pointer_to_targeted_component_correction_acquisition",
+          "blockers": [
+            "no_receiver_closed_rate_budget_rows",
+            "no_targeted_component_correction_rows",
+            "segnet_posenet_component_behavior_rows_required",
+            "no_component_eval_queue_actionable_submission_dirs",
+            "component_eval_required_before_budget_spend",
+            "exact_auth_eval_required_before_score_or_promotion_claim"
+          ],
+          "charged_bits_changed": false,
+          "component_behavior_active": false,
+          "component_correction_row_count": 0,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "estimated_rate_credit_score_units_total": 0,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "forbidden_use": "score_claim_or_dispatch_authority",
+          "gpu_launched": false,
+          "master_gradient_active": true,
+          "promotable": false,
+          "promotion_eligible": false,
+          "queue_actionable_acquisition_count": 0,
+          "queue_actionable_row_count": 0,
+          "rank_or_kill_eligible": false,
+          "ready_for_budget_spend_count": 0,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_closed_candidate_count": 0,
+          "receiver_closed_saved_bytes_total": 0,
+          "row_count": 0,
+          "schema": "frontier_rate_attack_targeted_component_correction_queue_metadata.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "targeted_component_correction_acquisition_schema": "frontier_rate_attack_targeted_component_correction_acquisition.v1",
+          "top_acquisition_ids": [],
+          "top_correction_families": []
+        },
+        "portfolio_path": "/Users/adpena/Projects/pact/.omx/research/frontier_rate_attack_feedback_refresh_20260526T071254Z_generated_pair_frame_lattice/pair_frame_scorer_geometry_lattice.json",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "dqs1_local_first_experiment_metadata.v1",
+        "score_claim": false,
+        "selected_pair_indices": [
+          26,
+          59,
+          68,
+          98,
+          109,
+          112,
+          134,
+          151,
+          167,
+          229,
+          242,
+          257,
+          259,
+          296,
+          320,
+          327,
+          371,
+          412,
+          430,
+          459,
+          467,
+          479,
+          492,
+          496,
+          501,
+          520,
+          544,
+          588
+        ],
+        "skipped_candidates": [],
+        "source_custody_preserved": true,
+        "source_metadata": {
+          "allowed_use": "local_first_queue_selection_only",
+          "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+          "pair_frame_geometry_request": {
+            "allowed_use": "queue_executable_local_dqs1_pairset_drop_probe_only",
+            "candidate_id": "pairset_geometry_lowimpact_k004_h8b2ce76737",
+            "dispatch_attempted": false,
+            "dropped_pair_indices": [
+              376,
+              378,
+              440,
+              555
+            ],
+            "forbidden_use": "score_claim_or_dispatch_or_promotion_authority",
+            "generation_policy": "drop lowest scorer-geometry-cost DQS1 pairs and let local queue measure the real SegNet/PoseNet trade",
+            "geometry_coverage": 1.0,
+            "geometry_covered_dropped_pair_count": 4,
+            "gpu_launched": false,
+            "operator_next_action": "materialize_pairset_archive_and_run_local_controls",
+            "promotable": false,
+            "promotion_eligible": false,
+            "queue_executable": true,
+            "queue_family": "dqs1_pairset_local_first",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "pair_frame_geometry_queue_executable_drop_request.v1",
+            "score_claim": false,
+            "score_claim_valid": false,
+            "selected_pair_count": 28,
+            "selected_pair_indices": [
+              26,
+              59,
+              68,
+              98,
+              109,
+              112,
+              134,
+              151,
+              167,
+              229,
+              242,
+              257,
+              259,
+              296,
+              320,
+              327,
+              371,
+              412,
+              430,
+              459,
+              467,
+              479,
+              492,
+              496,
+              501,
+              520,
+              544,
+              588
+            ],
+            "selector_kind": "pair_frame_geometry_low_impact_drop_many"
+          },
+          "pair_frame_geometry_request_source_path": ".omx/research/frontier_rate_attack_feedback_refresh_20260526T071254Z_generated_pair_frame_lattice/pair_frame_scorer_geometry_lattice.json",
+          "promotion_eligible": false,
+          "queue_source_kind": "pair_frame_scorer_geometry_lattice",
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "dqs1_pair_frame_geometry_queue_request_metadata.v1",
+          "score_claim": false,
+          "selected_pair_count": 28,
+          "selected_pair_indices": [
+            26,
+            59,
+            68,
+            98,
+            109,
+            112,
+            134,
+            151,
+            167,
+            229,
+            242,
+            257,
+            259,
+            296,
+            320,
+            327,
+            371,
+            412,
+            430,
+            459,
+            467,
+            479,
+            492,
+            496,
+            501,
+            520,
+            544,
+            588
+          ]
+        }
+      },
+      "priority": 4,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_decoder_q_selective_window_bridge_plan.py",
+            "--selection",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/mlx_effective_spend_triage_observed_window_selection_top32.json",
+            "--candidate-manifest",
+            "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/mutation_manifest.json",
+            "--lane-id",
+            "lane_dqs1_pairset_geometry_lowimpact_k004_h8b2ce76737_local_first_20260525",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h8b2ce76737/decoder_q_selective_window_bridge_plan.json",
+            "--md-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h8b2ce76737/decoder_q_selective_window_bridge_plan.md"
+          ],
+          "id": "build_bridge_plan",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h8b2ce76737/decoder_q_selective_window_bridge_plan.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/plan_decoder_q_selective_runtime_packet.py",
+            "--bridge-plan",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h8b2ce76737/decoder_q_selective_window_bridge_plan.json",
+            "--base-archive",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k004_h8b2ce76737.json",
+            "--md-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k004_h8b2ce76737.md",
+            "--frame-policy",
+            "pair_all_frames",
+            "--selected-pairs",
+            "26,59,68,98,109,112,134,151,167,229,242,257,259,296,320,327,371,412,430,459,467,479,492,496,501,520,544,588"
+          ],
+          "id": "plan_packet",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k004_h8b2ce76737.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "build_bridge_plan"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/materialize_decoder_q_selective_runtime_candidate.py",
+            "--plan",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k004_h8b2ce76737.json",
+            "--base-submission-dir",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+            "--output-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h8b2ce76737/submission_dir",
+            "--frame-policy",
+            "pair_all_frames",
+            "--manifest-output",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h8b2ce76737/materialization_manifest.json"
+          ],
+          "id": "materialize",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h8b2ce76737/materialization_manifest.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "plan_packet"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_decoder_q_selective_runtime_locality_controls.py",
+            "--parent-submission-dir",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+            "--global-mutated-archive",
+            "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/archive.zip",
+            "--selective-submission-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h8b2ce76737/submission_dir",
+            "--selected-pairs",
+            "26,59,68,98,109,112,134,151,167,229,242,257,259,296,320,327,371,412,430,459,467,479,492,496,501,520,544,588",
+            "--frame-policy",
+            "pair_all_frames",
+            "--timeout-seconds",
+            "540",
+            "--global-timeout-seconds",
+            "840",
+            "--max-inflate-parallelism",
+            "3",
+            "--reuse-existing-inflates",
+            "--work-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h8b2ce76737/locality_work",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h8b2ce76737/locality_controls.json"
+          ],
+          "id": "locality_controls",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": true,
+              "key": "locality_controls_passed",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h8b2ce76737/locality_controls.json",
+              "type": "json_equals"
+            },
+            {
+              "axis_equals": "[locality-control no-score]",
+              "axis_key": "score_axis",
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h8b2ce76737/locality_controls.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "materialize"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 960
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "experiments/contest_auth_eval.py",
+            "--archive",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h8b2ce76737/submission_dir/archive.zip",
+            "--inflate-sh",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h8b2ce76737/submission_dir/inflate.sh",
+            "--upstream-dir",
+            "upstream",
+            "--video-names-file",
+            "upstream/public_test_video_names.txt",
+            "--device",
+            "cpu",
+            "--work-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h8b2ce76737/local_cpu_advisory_work",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h8b2ce76737/local_cpu_advisory.json",
+            "--inflate-timeout",
+            "1800",
+            "--evaluate-timeout",
+            "1800",
+            "--keep-work-dir"
+          ],
+          "id": "local_cpu_advisory",
+          "kind": "command",
+          "postconditions": [
+            {
+              "axis_equals": "cpu_advisory",
+              "axis_key": "score_axis",
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h8b2ce76737/local_cpu_advisory.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "locality_controls"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 3600
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/compact_experiment_artifacts.py",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h8b2ce76737",
+            "--min-bytes",
+            "1",
+            "--json-output",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h8b2ce76737/raw_artifact_retention_plan.json"
+          ],
+          "id": "plan_raw_artifact_retention",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": 0,
+              "key": "plan.blocked_candidate_count",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h8b2ce76737/raw_artifact_retention_plan.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h8b2ce76737/raw_artifact_retention_plan.json",
+              "required_false": [
+                "plan.score_claim",
+                "plan.promotion_eligible",
+                "plan.ready_for_exact_eval_dispatch"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "local_cpu_advisory"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 1200
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/calibrate_local_cpu_contest_drift.py",
+            "--calibration-json",
+            ".omx/research/local_cpu_contest_drift_calibration_dqs1_fec6_20260522T194800Z.json",
+            "--candidate-id",
+            "pairset_geometry_lowimpact_k004_h8b2ce76737",
+            "--candidate-local-json",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h8b2ce76737/local_cpu_advisory.json",
+            "--auth-frontier-score-from-pointer",
+            "--eureka-out",
+            ".omx/research/local_cpu_contest_drift_eureka_pairset_geometry_lowimpact_k004_h8b2ce76737_20260525T143351Z.json",
+            "--min-margin",
+            "0.0"
+          ],
+          "id": "local_cpu_contest_drift_eureka",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "local_cpu_contest_drift_eureka_signal.v1",
+              "key": "schema",
+              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_geometry_lowimpact_k004_h8b2ce76737_20260525T143351Z.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [],
+              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_geometry_lowimpact_k004_h8b2ce76737_20260525T143351Z.json",
+              "required_false": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "score_claim",
+                "score_claim_valid",
+                "score_claim_eligible",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "promotable",
+                "gpu_launched",
+                "field_selection_ready_for_exact_eval_dispatch",
+                "exact_cuda_auth_eval",
+                "contest_cuda_auth_eval",
+                "score_affecting_payload_changed",
+                "charged_bits_changed"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "local_cpu_advisory"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "dqs1",
+        "pairset",
+        "local-first",
+        "no-score-authority"
+      ]
+    },
+    {
+      "id": "pairset_geometry_lowimpact_k006_h2866d55ee6",
+      "lane_id": "lane_dqs1_pairset_geometry_lowimpact_k006_h2866d55ee6_local_first_20260525",
+      "metadata": {
+        "action_summary_path": "/Users/adpena/Projects/pact/.omx/research/codex_eureka_beyond_drop_two_acquisition_20260525T143351Z/action_summary.json",
+        "frontier_operation_portfolio": {
+          "allowed_use": "queue_metadata_pointer_to_operation_portfolio_artifact",
+          "best_component_behavior_candidate_id": null,
+          "best_component_behavior_score_delta_vs_baseline": null,
+          "blocked_operation_count": 20,
+          "charged_bits_changed": false,
+          "component_behavior_active": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "followup_signal_operation_count": 3,
+          "forbidden_use": "score_claim_or_dispatch_authority",
+          "gpu_launched": false,
+          "operation_count": 22,
+          "operation_portfolio_schema": "frontier_rate_attack_operation_portfolio.v1",
+          "promotable": false,
+          "promotion_eligible": false,
+          "queue_executable_operation_count": 2,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_closed_correction_budget_active": false,
+          "receiver_closed_materializer_budget_candidate_count": 0,
+          "receiver_closed_materializer_saved_bytes_total": 0,
+          "schema": "frontier_rate_attack_operation_portfolio_queue_metadata.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "targeted_correction_budget_active": false,
+          "targeted_correction_budget_saved_bytes_total": 0,
+          "top_followup_signal_operation_ids": [
+            "pair_frame_geometry_queue_requests",
+            "chain_registered_multisurface_materializer_program",
+            "pair_batch_full_video_low_impact_drop_surface"
+          ],
+          "top_operation_ids": [
+            "pair_frame_geometry_queue_requests",
+            "chain_registered_multisurface_materializer_program",
+            "materializer_backlog_byte_range_entropy_recode_v1",
+            "materializer_backlog_archive_section_header_elide_v1",
+            "materializer_backlog_archive_section_reorder_v1",
+            "materializer_backlog_archive_section_proceduralize_v1",
+            "materializer_backlog_tensor_quantize_v1",
+            "materializer_backlog_tensor_prune_v1"
+          ],
+          "top_queue_executable_operation_ids": [
+            "pair_frame_geometry_queue_requests",
+            "pair_batch_full_video_low_impact_drop_surface"
+          ]
+        },
+        "frontier_receiver_closed_correction_budget": {
+          "active": false,
+          "allowed_use": "queue_metadata_pointer_to_receiver_closed_correction_budget",
+          "blockers": [
+            "no_receiver_closed_materializer_budget_candidates_discovered"
+          ],
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "forbidden_use": "score_claim_or_dispatch_authority",
+          "gpu_launched": false,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_closed_budget_source_targets": [],
+          "receiver_closed_candidate_count": 0,
+          "receiver_closed_correction_budget_schema": "frontier_rate_attack_receiver_closed_correction_budget.v1",
+          "receiver_closed_saved_bytes_max": 0,
+          "receiver_closed_saved_bytes_total": 0,
+          "schema": "frontier_rate_attack_receiver_closed_correction_budget_queue_metadata.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false
+        },
+        "frontier_receiver_repair_backlog": {
+          "allowed_use": "queue_metadata_pointer_to_receiver_repair_backlog_artifact",
+          "authority_gate_repair_count": 0,
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "forbidden_use": "score_claim_or_dispatch_authority",
+          "gpu_launched": false,
+          "local_drop_saved_bytes_total": 0,
+          "materializer_rate_positive_saved_bytes_total": 0,
+          "promotable": false,
+          "promotion_eligible": false,
+          "queue_actionable_repair_count": 32,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_repair_backlog_schema": "frontier_rate_attack_receiver_repair_backlog.v1",
+          "row_count": 39,
+          "schema": "frontier_rate_attack_receiver_repair_backlog_queue_metadata.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "targeted_correction_budget_active": false,
+          "top_repair_families": [
+            "runtime_consumption_proof_repair"
+          ],
+          "top_repair_ids": [
+            "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof",
+            "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_requires_single_composed_receiver_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_byte_range_entropy_recode_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_archive_section_header_elide_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_archive_section_reorder_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_archive_section_proceduralize_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_tensor_quantize_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_tensor_prune_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof"
+          ],
+          "top_source_operation_ids": [
+            "chain_registered_multisurface_materializer_program",
+            "materializer_backlog_byte_range_entropy_recode_v1",
+            "materializer_backlog_archive_section_header_elide_v1",
+            "materializer_backlog_archive_section_reorder_v1",
+            "materializer_backlog_archive_section_proceduralize_v1",
+            "materializer_backlog_tensor_quantize_v1",
+            "materializer_backlog_tensor_prune_v1"
+          ]
+        },
+        "frontier_targeted_component_correction_acquisition": {
+          "active": false,
+          "allowed_use": "queue_metadata_pointer_to_targeted_component_correction_acquisition",
+          "blockers": [
+            "no_receiver_closed_rate_budget_rows",
+            "no_targeted_component_correction_rows",
+            "segnet_posenet_component_behavior_rows_required",
+            "no_component_eval_queue_actionable_submission_dirs",
+            "component_eval_required_before_budget_spend",
+            "exact_auth_eval_required_before_score_or_promotion_claim"
+          ],
+          "charged_bits_changed": false,
+          "component_behavior_active": false,
+          "component_correction_row_count": 0,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "estimated_rate_credit_score_units_total": 0,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "forbidden_use": "score_claim_or_dispatch_authority",
+          "gpu_launched": false,
+          "master_gradient_active": true,
+          "promotable": false,
+          "promotion_eligible": false,
+          "queue_actionable_acquisition_count": 0,
+          "queue_actionable_row_count": 0,
+          "rank_or_kill_eligible": false,
+          "ready_for_budget_spend_count": 0,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_closed_candidate_count": 0,
+          "receiver_closed_saved_bytes_total": 0,
+          "row_count": 0,
+          "schema": "frontier_rate_attack_targeted_component_correction_queue_metadata.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "targeted_component_correction_acquisition_schema": "frontier_rate_attack_targeted_component_correction_acquisition.v1",
+          "top_acquisition_ids": [],
+          "top_correction_families": []
+        },
+        "portfolio_path": "/Users/adpena/Projects/pact/.omx/research/frontier_rate_attack_feedback_refresh_20260526T071254Z_generated_pair_frame_lattice/pair_frame_scorer_geometry_lattice.json",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "dqs1_local_first_experiment_metadata.v1",
+        "score_claim": false,
+        "selected_pair_indices": [
+          26,
+          59,
+          68,
+          98,
+          109,
+          112,
+          134,
+          151,
+          167,
+          229,
+          242,
+          257,
+          259,
+          296,
+          320,
+          327,
+          412,
+          430,
+          459,
+          467,
+          492,
+          496,
+          501,
+          520,
+          544,
+          588
+        ],
+        "skipped_candidates": [],
+        "source_custody_preserved": true,
+        "source_metadata": {
+          "allowed_use": "local_first_queue_selection_only",
+          "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+          "pair_frame_geometry_request": {
+            "allowed_use": "queue_executable_local_dqs1_pairset_drop_probe_only",
+            "candidate_id": "pairset_geometry_lowimpact_k006_h2866d55ee6",
+            "dispatch_attempted": false,
+            "dropped_pair_indices": [
+              371,
+              376,
+              378,
+              440,
+              479,
+              555
+            ],
+            "forbidden_use": "score_claim_or_dispatch_or_promotion_authority",
+            "generation_policy": "drop lowest scorer-geometry-cost DQS1 pairs and let local queue measure the real SegNet/PoseNet trade",
+            "geometry_coverage": 1.0,
+            "geometry_covered_dropped_pair_count": 6,
+            "gpu_launched": false,
+            "operator_next_action": "materialize_pairset_archive_and_run_local_controls",
+            "promotable": false,
+            "promotion_eligible": false,
+            "queue_executable": true,
+            "queue_family": "dqs1_pairset_local_first",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "pair_frame_geometry_queue_executable_drop_request.v1",
+            "score_claim": false,
+            "score_claim_valid": false,
+            "selected_pair_count": 26,
+            "selected_pair_indices": [
+              26,
+              59,
+              68,
+              98,
+              109,
+              112,
+              134,
+              151,
+              167,
+              229,
+              242,
+              257,
+              259,
+              296,
+              320,
+              327,
+              412,
+              430,
+              459,
+              467,
+              492,
+              496,
+              501,
+              520,
+              544,
+              588
+            ],
+            "selector_kind": "pair_frame_geometry_low_impact_drop_many"
+          },
+          "pair_frame_geometry_request_source_path": ".omx/research/frontier_rate_attack_feedback_refresh_20260526T071254Z_generated_pair_frame_lattice/pair_frame_scorer_geometry_lattice.json",
+          "promotion_eligible": false,
+          "queue_source_kind": "pair_frame_scorer_geometry_lattice",
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "dqs1_pair_frame_geometry_queue_request_metadata.v1",
+          "score_claim": false,
+          "selected_pair_count": 26,
+          "selected_pair_indices": [
+            26,
+            59,
+            68,
+            98,
+            109,
+            112,
+            134,
+            151,
+            167,
+            229,
+            242,
+            257,
+            259,
+            296,
+            320,
+            327,
+            412,
+            430,
+            459,
+            467,
+            492,
+            496,
+            501,
+            520,
+            544,
+            588
+          ]
+        }
+      },
+      "priority": 6,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_decoder_q_selective_window_bridge_plan.py",
+            "--selection",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/mlx_effective_spend_triage_observed_window_selection_top32.json",
+            "--candidate-manifest",
+            "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/mutation_manifest.json",
+            "--lane-id",
+            "lane_dqs1_pairset_geometry_lowimpact_k006_h2866d55ee6_local_first_20260525",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h2866d55ee6/decoder_q_selective_window_bridge_plan.json",
+            "--md-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h2866d55ee6/decoder_q_selective_window_bridge_plan.md"
+          ],
+          "id": "build_bridge_plan",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h2866d55ee6/decoder_q_selective_window_bridge_plan.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/plan_decoder_q_selective_runtime_packet.py",
+            "--bridge-plan",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h2866d55ee6/decoder_q_selective_window_bridge_plan.json",
+            "--base-archive",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k006_h2866d55ee6.json",
+            "--md-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k006_h2866d55ee6.md",
+            "--frame-policy",
+            "pair_all_frames",
+            "--selected-pairs",
+            "26,59,68,98,109,112,134,151,167,229,242,257,259,296,320,327,412,430,459,467,492,496,501,520,544,588"
+          ],
+          "id": "plan_packet",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k006_h2866d55ee6.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "build_bridge_plan"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/materialize_decoder_q_selective_runtime_candidate.py",
+            "--plan",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k006_h2866d55ee6.json",
+            "--base-submission-dir",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+            "--output-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h2866d55ee6/submission_dir",
+            "--frame-policy",
+            "pair_all_frames",
+            "--manifest-output",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h2866d55ee6/materialization_manifest.json"
+          ],
+          "id": "materialize",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h2866d55ee6/materialization_manifest.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "plan_packet"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_decoder_q_selective_runtime_locality_controls.py",
+            "--parent-submission-dir",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+            "--global-mutated-archive",
+            "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/archive.zip",
+            "--selective-submission-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h2866d55ee6/submission_dir",
+            "--selected-pairs",
+            "26,59,68,98,109,112,134,151,167,229,242,257,259,296,320,327,412,430,459,467,492,496,501,520,544,588",
+            "--frame-policy",
+            "pair_all_frames",
+            "--timeout-seconds",
+            "540",
+            "--global-timeout-seconds",
+            "840",
+            "--max-inflate-parallelism",
+            "3",
+            "--reuse-existing-inflates",
+            "--work-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h2866d55ee6/locality_work",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h2866d55ee6/locality_controls.json"
+          ],
+          "id": "locality_controls",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": true,
+              "key": "locality_controls_passed",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h2866d55ee6/locality_controls.json",
+              "type": "json_equals"
+            },
+            {
+              "axis_equals": "[locality-control no-score]",
+              "axis_key": "score_axis",
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h2866d55ee6/locality_controls.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "materialize"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 960
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "experiments/contest_auth_eval.py",
+            "--archive",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h2866d55ee6/submission_dir/archive.zip",
+            "--inflate-sh",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h2866d55ee6/submission_dir/inflate.sh",
+            "--upstream-dir",
+            "upstream",
+            "--video-names-file",
+            "upstream/public_test_video_names.txt",
+            "--device",
+            "cpu",
+            "--work-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h2866d55ee6/local_cpu_advisory_work",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h2866d55ee6/local_cpu_advisory.json",
+            "--inflate-timeout",
+            "1800",
+            "--evaluate-timeout",
+            "1800",
+            "--keep-work-dir"
+          ],
+          "id": "local_cpu_advisory",
+          "kind": "command",
+          "postconditions": [
+            {
+              "axis_equals": "cpu_advisory",
+              "axis_key": "score_axis",
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h2866d55ee6/local_cpu_advisory.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "locality_controls"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 3600
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/compact_experiment_artifacts.py",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h2866d55ee6",
+            "--min-bytes",
+            "1",
+            "--json-output",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h2866d55ee6/raw_artifact_retention_plan.json"
+          ],
+          "id": "plan_raw_artifact_retention",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": 0,
+              "key": "plan.blocked_candidate_count",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h2866d55ee6/raw_artifact_retention_plan.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h2866d55ee6/raw_artifact_retention_plan.json",
+              "required_false": [
+                "plan.score_claim",
+                "plan.promotion_eligible",
+                "plan.ready_for_exact_eval_dispatch"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "local_cpu_advisory"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 1200
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/calibrate_local_cpu_contest_drift.py",
+            "--calibration-json",
+            ".omx/research/local_cpu_contest_drift_calibration_dqs1_fec6_20260522T194800Z.json",
+            "--candidate-id",
+            "pairset_geometry_lowimpact_k006_h2866d55ee6",
+            "--candidate-local-json",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h2866d55ee6/local_cpu_advisory.json",
+            "--auth-frontier-score-from-pointer",
+            "--eureka-out",
+            ".omx/research/local_cpu_contest_drift_eureka_pairset_geometry_lowimpact_k006_h2866d55ee6_20260525T143351Z.json",
+            "--min-margin",
+            "0.0"
+          ],
+          "id": "local_cpu_contest_drift_eureka",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "local_cpu_contest_drift_eureka_signal.v1",
+              "key": "schema",
+              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_geometry_lowimpact_k006_h2866d55ee6_20260525T143351Z.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [],
+              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_geometry_lowimpact_k006_h2866d55ee6_20260525T143351Z.json",
+              "required_false": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "score_claim",
+                "score_claim_valid",
+                "score_claim_eligible",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "promotable",
+                "gpu_launched",
+                "field_selection_ready_for_exact_eval_dispatch",
+                "exact_cuda_auth_eval",
+                "contest_cuda_auth_eval",
+                "score_affecting_payload_changed",
+                "charged_bits_changed"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "local_cpu_advisory"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "dqs1",
+        "pairset",
+        "local-first",
+        "no-score-authority"
+      ]
+    },
+    {
+      "id": "pairset_geometry_lowimpact_k008_h5122a378ca",
+      "lane_id": "lane_dqs1_pairset_geometry_lowimpact_k008_h5122a378ca_local_first_20260525",
+      "metadata": {
+        "action_summary_path": "/Users/adpena/Projects/pact/.omx/research/codex_eureka_beyond_drop_two_acquisition_20260525T143351Z/action_summary.json",
+        "frontier_operation_portfolio": {
+          "allowed_use": "queue_metadata_pointer_to_operation_portfolio_artifact",
+          "best_component_behavior_candidate_id": null,
+          "best_component_behavior_score_delta_vs_baseline": null,
+          "blocked_operation_count": 20,
+          "charged_bits_changed": false,
+          "component_behavior_active": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "followup_signal_operation_count": 3,
+          "forbidden_use": "score_claim_or_dispatch_authority",
+          "gpu_launched": false,
+          "operation_count": 22,
+          "operation_portfolio_schema": "frontier_rate_attack_operation_portfolio.v1",
+          "promotable": false,
+          "promotion_eligible": false,
+          "queue_executable_operation_count": 2,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_closed_correction_budget_active": false,
+          "receiver_closed_materializer_budget_candidate_count": 0,
+          "receiver_closed_materializer_saved_bytes_total": 0,
+          "schema": "frontier_rate_attack_operation_portfolio_queue_metadata.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "targeted_correction_budget_active": false,
+          "targeted_correction_budget_saved_bytes_total": 0,
+          "top_followup_signal_operation_ids": [
+            "pair_frame_geometry_queue_requests",
+            "chain_registered_multisurface_materializer_program",
+            "pair_batch_full_video_low_impact_drop_surface"
+          ],
+          "top_operation_ids": [
+            "pair_frame_geometry_queue_requests",
+            "chain_registered_multisurface_materializer_program",
+            "materializer_backlog_byte_range_entropy_recode_v1",
+            "materializer_backlog_archive_section_header_elide_v1",
+            "materializer_backlog_archive_section_reorder_v1",
+            "materializer_backlog_archive_section_proceduralize_v1",
+            "materializer_backlog_tensor_quantize_v1",
+            "materializer_backlog_tensor_prune_v1"
+          ],
+          "top_queue_executable_operation_ids": [
+            "pair_frame_geometry_queue_requests",
+            "pair_batch_full_video_low_impact_drop_surface"
+          ]
+        },
+        "frontier_receiver_closed_correction_budget": {
+          "active": false,
+          "allowed_use": "queue_metadata_pointer_to_receiver_closed_correction_budget",
+          "blockers": [
+            "no_receiver_closed_materializer_budget_candidates_discovered"
+          ],
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "forbidden_use": "score_claim_or_dispatch_authority",
+          "gpu_launched": false,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_closed_budget_source_targets": [],
+          "receiver_closed_candidate_count": 0,
+          "receiver_closed_correction_budget_schema": "frontier_rate_attack_receiver_closed_correction_budget.v1",
+          "receiver_closed_saved_bytes_max": 0,
+          "receiver_closed_saved_bytes_total": 0,
+          "schema": "frontier_rate_attack_receiver_closed_correction_budget_queue_metadata.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false
+        },
+        "frontier_receiver_repair_backlog": {
+          "allowed_use": "queue_metadata_pointer_to_receiver_repair_backlog_artifact",
+          "authority_gate_repair_count": 0,
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "forbidden_use": "score_claim_or_dispatch_authority",
+          "gpu_launched": false,
+          "local_drop_saved_bytes_total": 0,
+          "materializer_rate_positive_saved_bytes_total": 0,
+          "promotable": false,
+          "promotion_eligible": false,
+          "queue_actionable_repair_count": 32,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_repair_backlog_schema": "frontier_rate_attack_receiver_repair_backlog.v1",
+          "row_count": 39,
+          "schema": "frontier_rate_attack_receiver_repair_backlog_queue_metadata.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "targeted_correction_budget_active": false,
+          "top_repair_families": [
+            "runtime_consumption_proof_repair"
+          ],
+          "top_repair_ids": [
+            "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof",
+            "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_requires_single_composed_receiver_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_byte_range_entropy_recode_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_archive_section_header_elide_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_archive_section_reorder_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_archive_section_proceduralize_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_tensor_quantize_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_tensor_prune_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof"
+          ],
+          "top_source_operation_ids": [
+            "chain_registered_multisurface_materializer_program",
+            "materializer_backlog_byte_range_entropy_recode_v1",
+            "materializer_backlog_archive_section_header_elide_v1",
+            "materializer_backlog_archive_section_reorder_v1",
+            "materializer_backlog_archive_section_proceduralize_v1",
+            "materializer_backlog_tensor_quantize_v1",
+            "materializer_backlog_tensor_prune_v1"
+          ]
+        },
+        "frontier_targeted_component_correction_acquisition": {
+          "active": false,
+          "allowed_use": "queue_metadata_pointer_to_targeted_component_correction_acquisition",
+          "blockers": [
+            "no_receiver_closed_rate_budget_rows",
+            "no_targeted_component_correction_rows",
+            "segnet_posenet_component_behavior_rows_required",
+            "no_component_eval_queue_actionable_submission_dirs",
+            "component_eval_required_before_budget_spend",
+            "exact_auth_eval_required_before_score_or_promotion_claim"
+          ],
+          "charged_bits_changed": false,
+          "component_behavior_active": false,
+          "component_correction_row_count": 0,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "estimated_rate_credit_score_units_total": 0,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "forbidden_use": "score_claim_or_dispatch_authority",
+          "gpu_launched": false,
+          "master_gradient_active": true,
+          "promotable": false,
+          "promotion_eligible": false,
+          "queue_actionable_acquisition_count": 0,
+          "queue_actionable_row_count": 0,
+          "rank_or_kill_eligible": false,
+          "ready_for_budget_spend_count": 0,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_closed_candidate_count": 0,
+          "receiver_closed_saved_bytes_total": 0,
+          "row_count": 0,
+          "schema": "frontier_rate_attack_targeted_component_correction_queue_metadata.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "targeted_component_correction_acquisition_schema": "frontier_rate_attack_targeted_component_correction_acquisition.v1",
+          "top_acquisition_ids": [],
+          "top_correction_families": []
+        },
+        "portfolio_path": "/Users/adpena/Projects/pact/.omx/research/frontier_rate_attack_feedback_refresh_20260526T071254Z_generated_pair_frame_lattice/pair_frame_scorer_geometry_lattice.json",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "dqs1_local_first_experiment_metadata.v1",
+        "score_claim": false,
+        "selected_pair_indices": [
+          26,
+          59,
+          68,
+          98,
+          109,
+          112,
+          134,
+          151,
+          167,
+          229,
+          257,
+          259,
+          296,
+          320,
+          327,
+          412,
+          430,
+          459,
+          467,
+          492,
+          496,
+          501,
+          520,
+          544
+        ],
+        "skipped_candidates": [],
+        "source_custody_preserved": true,
+        "source_metadata": {
+          "allowed_use": "local_first_queue_selection_only",
+          "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+          "pair_frame_geometry_request": {
+            "allowed_use": "queue_executable_local_dqs1_pairset_drop_probe_only",
+            "candidate_id": "pairset_geometry_lowimpact_k008_h5122a378ca",
+            "dispatch_attempted": false,
+            "dropped_pair_indices": [
+              242,
+              371,
+              376,
+              378,
+              440,
+              479,
+              555,
+              588
+            ],
+            "forbidden_use": "score_claim_or_dispatch_or_promotion_authority",
+            "generation_policy": "drop lowest scorer-geometry-cost DQS1 pairs and let local queue measure the real SegNet/PoseNet trade",
+            "geometry_coverage": 1.0,
+            "geometry_covered_dropped_pair_count": 8,
+            "gpu_launched": false,
+            "operator_next_action": "materialize_pairset_archive_and_run_local_controls",
+            "promotable": false,
+            "promotion_eligible": false,
+            "queue_executable": true,
+            "queue_family": "dqs1_pairset_local_first",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "pair_frame_geometry_queue_executable_drop_request.v1",
+            "score_claim": false,
+            "score_claim_valid": false,
+            "selected_pair_count": 24,
+            "selected_pair_indices": [
+              26,
+              59,
+              68,
+              98,
+              109,
+              112,
+              134,
+              151,
+              167,
+              229,
+              257,
+              259,
+              296,
+              320,
+              327,
+              412,
+              430,
+              459,
+              467,
+              492,
+              496,
+              501,
+              520,
+              544
+            ],
+            "selector_kind": "pair_frame_geometry_low_impact_drop_many"
+          },
+          "pair_frame_geometry_request_source_path": ".omx/research/frontier_rate_attack_feedback_refresh_20260526T071254Z_generated_pair_frame_lattice/pair_frame_scorer_geometry_lattice.json",
+          "promotion_eligible": false,
+          "queue_source_kind": "pair_frame_scorer_geometry_lattice",
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "dqs1_pair_frame_geometry_queue_request_metadata.v1",
+          "score_claim": false,
+          "selected_pair_count": 24,
+          "selected_pair_indices": [
+            26,
+            59,
+            68,
+            98,
+            109,
+            112,
+            134,
+            151,
+            167,
+            229,
+            257,
+            259,
+            296,
+            320,
+            327,
+            412,
+            430,
+            459,
+            467,
+            492,
+            496,
+            501,
+            520,
+            544
+          ]
+        }
+      },
+      "priority": 8,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_decoder_q_selective_window_bridge_plan.py",
+            "--selection",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/mlx_effective_spend_triage_observed_window_selection_top32.json",
+            "--candidate-manifest",
+            "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/mutation_manifest.json",
+            "--lane-id",
+            "lane_dqs1_pairset_geometry_lowimpact_k008_h5122a378ca_local_first_20260525",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_h5122a378ca/decoder_q_selective_window_bridge_plan.json",
+            "--md-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_h5122a378ca/decoder_q_selective_window_bridge_plan.md"
+          ],
+          "id": "build_bridge_plan",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_h5122a378ca/decoder_q_selective_window_bridge_plan.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/plan_decoder_q_selective_runtime_packet.py",
+            "--bridge-plan",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_h5122a378ca/decoder_q_selective_window_bridge_plan.json",
+            "--base-archive",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k008_h5122a378ca.json",
+            "--md-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k008_h5122a378ca.md",
+            "--frame-policy",
+            "pair_all_frames",
+            "--selected-pairs",
+            "26,59,68,98,109,112,134,151,167,229,257,259,296,320,327,412,430,459,467,492,496,501,520,544"
+          ],
+          "id": "plan_packet",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k008_h5122a378ca.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "build_bridge_plan"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/materialize_decoder_q_selective_runtime_candidate.py",
+            "--plan",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k008_h5122a378ca.json",
+            "--base-submission-dir",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+            "--output-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_h5122a378ca/submission_dir",
+            "--frame-policy",
+            "pair_all_frames",
+            "--manifest-output",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_h5122a378ca/materialization_manifest.json"
+          ],
+          "id": "materialize",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_h5122a378ca/materialization_manifest.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "plan_packet"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_decoder_q_selective_runtime_locality_controls.py",
+            "--parent-submission-dir",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+            "--global-mutated-archive",
+            "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/archive.zip",
+            "--selective-submission-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_h5122a378ca/submission_dir",
+            "--selected-pairs",
+            "26,59,68,98,109,112,134,151,167,229,257,259,296,320,327,412,430,459,467,492,496,501,520,544",
+            "--frame-policy",
+            "pair_all_frames",
+            "--timeout-seconds",
+            "540",
+            "--global-timeout-seconds",
+            "840",
+            "--max-inflate-parallelism",
+            "3",
+            "--reuse-existing-inflates",
+            "--work-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_h5122a378ca/locality_work",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_h5122a378ca/locality_controls.json"
+          ],
+          "id": "locality_controls",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": true,
+              "key": "locality_controls_passed",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_h5122a378ca/locality_controls.json",
+              "type": "json_equals"
+            },
+            {
+              "axis_equals": "[locality-control no-score]",
+              "axis_key": "score_axis",
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_h5122a378ca/locality_controls.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "materialize"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 960
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "experiments/contest_auth_eval.py",
+            "--archive",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_h5122a378ca/submission_dir/archive.zip",
+            "--inflate-sh",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_h5122a378ca/submission_dir/inflate.sh",
+            "--upstream-dir",
+            "upstream",
+            "--video-names-file",
+            "upstream/public_test_video_names.txt",
+            "--device",
+            "cpu",
+            "--work-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_h5122a378ca/local_cpu_advisory_work",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_h5122a378ca/local_cpu_advisory.json",
+            "--inflate-timeout",
+            "1800",
+            "--evaluate-timeout",
+            "1800",
+            "--keep-work-dir"
+          ],
+          "id": "local_cpu_advisory",
+          "kind": "command",
+          "postconditions": [
+            {
+              "axis_equals": "cpu_advisory",
+              "axis_key": "score_axis",
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_h5122a378ca/local_cpu_advisory.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "locality_controls"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 3600
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/compact_experiment_artifacts.py",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_h5122a378ca",
+            "--min-bytes",
+            "1",
+            "--json-output",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_h5122a378ca/raw_artifact_retention_plan.json"
+          ],
+          "id": "plan_raw_artifact_retention",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": 0,
+              "key": "plan.blocked_candidate_count",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_h5122a378ca/raw_artifact_retention_plan.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_h5122a378ca/raw_artifact_retention_plan.json",
+              "required_false": [
+                "plan.score_claim",
+                "plan.promotion_eligible",
+                "plan.ready_for_exact_eval_dispatch"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "local_cpu_advisory"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 1200
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/calibrate_local_cpu_contest_drift.py",
+            "--calibration-json",
+            ".omx/research/local_cpu_contest_drift_calibration_dqs1_fec6_20260522T194800Z.json",
+            "--candidate-id",
+            "pairset_geometry_lowimpact_k008_h5122a378ca",
+            "--candidate-local-json",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_h5122a378ca/local_cpu_advisory.json",
+            "--auth-frontier-score-from-pointer",
+            "--eureka-out",
+            ".omx/research/local_cpu_contest_drift_eureka_pairset_geometry_lowimpact_k008_h5122a378ca_20260525T143351Z.json",
+            "--min-margin",
+            "0.0"
+          ],
+          "id": "local_cpu_contest_drift_eureka",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "local_cpu_contest_drift_eureka_signal.v1",
+              "key": "schema",
+              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_geometry_lowimpact_k008_h5122a378ca_20260525T143351Z.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [],
+              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_geometry_lowimpact_k008_h5122a378ca_20260525T143351Z.json",
+              "required_false": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "score_claim",
+                "score_claim_valid",
+                "score_claim_eligible",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "promotable",
+                "gpu_launched",
+                "field_selection_ready_for_exact_eval_dispatch",
+                "exact_cuda_auth_eval",
+                "contest_cuda_auth_eval",
+                "score_affecting_payload_changed",
+                "charged_bits_changed"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "local_cpu_advisory"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "dqs1",
+        "pairset",
+        "local-first",
+        "no-score-authority"
+      ]
+    },
+    {
+      "id": "pairset_geometry_lowimpact_k012_h4bdbac6259",
+      "lane_id": "lane_dqs1_pairset_geometry_lowimpact_k012_h4bdbac6259_local_first_20260525",
+      "metadata": {
+        "action_summary_path": "/Users/adpena/Projects/pact/.omx/research/codex_eureka_beyond_drop_two_acquisition_20260525T143351Z/action_summary.json",
+        "frontier_operation_portfolio": {
+          "allowed_use": "queue_metadata_pointer_to_operation_portfolio_artifact",
+          "best_component_behavior_candidate_id": null,
+          "best_component_behavior_score_delta_vs_baseline": null,
+          "blocked_operation_count": 20,
+          "charged_bits_changed": false,
+          "component_behavior_active": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "followup_signal_operation_count": 3,
+          "forbidden_use": "score_claim_or_dispatch_authority",
+          "gpu_launched": false,
+          "operation_count": 22,
+          "operation_portfolio_schema": "frontier_rate_attack_operation_portfolio.v1",
+          "promotable": false,
+          "promotion_eligible": false,
+          "queue_executable_operation_count": 2,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_closed_correction_budget_active": false,
+          "receiver_closed_materializer_budget_candidate_count": 0,
+          "receiver_closed_materializer_saved_bytes_total": 0,
+          "schema": "frontier_rate_attack_operation_portfolio_queue_metadata.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "targeted_correction_budget_active": false,
+          "targeted_correction_budget_saved_bytes_total": 0,
+          "top_followup_signal_operation_ids": [
+            "pair_frame_geometry_queue_requests",
+            "chain_registered_multisurface_materializer_program",
+            "pair_batch_full_video_low_impact_drop_surface"
+          ],
+          "top_operation_ids": [
+            "pair_frame_geometry_queue_requests",
+            "chain_registered_multisurface_materializer_program",
+            "materializer_backlog_byte_range_entropy_recode_v1",
+            "materializer_backlog_archive_section_header_elide_v1",
+            "materializer_backlog_archive_section_reorder_v1",
+            "materializer_backlog_archive_section_proceduralize_v1",
+            "materializer_backlog_tensor_quantize_v1",
+            "materializer_backlog_tensor_prune_v1"
+          ],
+          "top_queue_executable_operation_ids": [
+            "pair_frame_geometry_queue_requests",
+            "pair_batch_full_video_low_impact_drop_surface"
+          ]
+        },
+        "frontier_receiver_closed_correction_budget": {
+          "active": false,
+          "allowed_use": "queue_metadata_pointer_to_receiver_closed_correction_budget",
+          "blockers": [
+            "no_receiver_closed_materializer_budget_candidates_discovered"
+          ],
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "forbidden_use": "score_claim_or_dispatch_authority",
+          "gpu_launched": false,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_closed_budget_source_targets": [],
+          "receiver_closed_candidate_count": 0,
+          "receiver_closed_correction_budget_schema": "frontier_rate_attack_receiver_closed_correction_budget.v1",
+          "receiver_closed_saved_bytes_max": 0,
+          "receiver_closed_saved_bytes_total": 0,
+          "schema": "frontier_rate_attack_receiver_closed_correction_budget_queue_metadata.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false
+        },
+        "frontier_receiver_repair_backlog": {
+          "allowed_use": "queue_metadata_pointer_to_receiver_repair_backlog_artifact",
+          "authority_gate_repair_count": 0,
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "forbidden_use": "score_claim_or_dispatch_authority",
+          "gpu_launched": false,
+          "local_drop_saved_bytes_total": 0,
+          "materializer_rate_positive_saved_bytes_total": 0,
+          "promotable": false,
+          "promotion_eligible": false,
+          "queue_actionable_repair_count": 32,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_repair_backlog_schema": "frontier_rate_attack_receiver_repair_backlog.v1",
+          "row_count": 39,
+          "schema": "frontier_rate_attack_receiver_repair_backlog_queue_metadata.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "targeted_correction_budget_active": false,
+          "top_repair_families": [
+            "runtime_consumption_proof_repair"
+          ],
+          "top_repair_ids": [
+            "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof",
+            "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_requires_single_composed_receiver_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_byte_range_entropy_recode_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_archive_section_header_elide_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_archive_section_reorder_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_archive_section_proceduralize_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_tensor_quantize_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_tensor_prune_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof"
+          ],
+          "top_source_operation_ids": [
+            "chain_registered_multisurface_materializer_program",
+            "materializer_backlog_byte_range_entropy_recode_v1",
+            "materializer_backlog_archive_section_header_elide_v1",
+            "materializer_backlog_archive_section_reorder_v1",
+            "materializer_backlog_archive_section_proceduralize_v1",
+            "materializer_backlog_tensor_quantize_v1",
+            "materializer_backlog_tensor_prune_v1"
+          ]
+        },
+        "frontier_targeted_component_correction_acquisition": {
+          "active": false,
+          "allowed_use": "queue_metadata_pointer_to_targeted_component_correction_acquisition",
+          "blockers": [
+            "no_receiver_closed_rate_budget_rows",
+            "no_targeted_component_correction_rows",
+            "segnet_posenet_component_behavior_rows_required",
+            "no_component_eval_queue_actionable_submission_dirs",
+            "component_eval_required_before_budget_spend",
+            "exact_auth_eval_required_before_score_or_promotion_claim"
+          ],
+          "charged_bits_changed": false,
+          "component_behavior_active": false,
+          "component_correction_row_count": 0,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "estimated_rate_credit_score_units_total": 0,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "forbidden_use": "score_claim_or_dispatch_authority",
+          "gpu_launched": false,
+          "master_gradient_active": true,
+          "promotable": false,
+          "promotion_eligible": false,
+          "queue_actionable_acquisition_count": 0,
+          "queue_actionable_row_count": 0,
+          "rank_or_kill_eligible": false,
+          "ready_for_budget_spend_count": 0,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_closed_candidate_count": 0,
+          "receiver_closed_saved_bytes_total": 0,
+          "row_count": 0,
+          "schema": "frontier_rate_attack_targeted_component_correction_queue_metadata.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "targeted_component_correction_acquisition_schema": "frontier_rate_attack_targeted_component_correction_acquisition.v1",
+          "top_acquisition_ids": [],
+          "top_correction_families": []
+        },
+        "portfolio_path": "/Users/adpena/Projects/pact/.omx/research/frontier_rate_attack_feedback_refresh_20260526T071254Z_generated_pair_frame_lattice/pair_frame_scorer_geometry_lattice.json",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "dqs1_local_first_experiment_metadata.v1",
+        "score_claim": false,
+        "selected_pair_indices": [
+          26,
+          59,
+          68,
+          98,
+          109,
+          112,
+          134,
+          151,
+          167,
+          229,
+          257,
+          320,
+          327,
+          412,
+          459,
+          467,
+          492,
+          496,
+          501,
+          520
+        ],
+        "skipped_candidates": [],
+        "source_custody_preserved": true,
+        "source_metadata": {
+          "allowed_use": "local_first_queue_selection_only",
+          "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+          "pair_frame_geometry_request": {
+            "allowed_use": "queue_executable_local_dqs1_pairset_drop_probe_only",
+            "candidate_id": "pairset_geometry_lowimpact_k012_h4bdbac6259",
+            "dispatch_attempted": false,
+            "dropped_pair_indices": [
+              242,
+              259,
+              296,
+              371,
+              376,
+              378,
+              430,
+              440,
+              479,
+              544,
+              555,
+              588
+            ],
+            "forbidden_use": "score_claim_or_dispatch_or_promotion_authority",
+            "generation_policy": "drop lowest scorer-geometry-cost DQS1 pairs and let local queue measure the real SegNet/PoseNet trade",
+            "geometry_coverage": 1.0,
+            "geometry_covered_dropped_pair_count": 12,
+            "gpu_launched": false,
+            "operator_next_action": "materialize_pairset_archive_and_run_local_controls",
+            "promotable": false,
+            "promotion_eligible": false,
+            "queue_executable": true,
+            "queue_family": "dqs1_pairset_local_first",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "pair_frame_geometry_queue_executable_drop_request.v1",
+            "score_claim": false,
+            "score_claim_valid": false,
+            "selected_pair_count": 20,
+            "selected_pair_indices": [
+              26,
+              59,
+              68,
+              98,
+              109,
+              112,
+              134,
+              151,
+              167,
+              229,
+              257,
+              320,
+              327,
+              412,
+              459,
+              467,
+              492,
+              496,
+              501,
+              520
+            ],
+            "selector_kind": "pair_frame_geometry_low_impact_drop_many"
+          },
+          "pair_frame_geometry_request_source_path": ".omx/research/frontier_rate_attack_feedback_refresh_20260526T071254Z_generated_pair_frame_lattice/pair_frame_scorer_geometry_lattice.json",
+          "promotion_eligible": false,
+          "queue_source_kind": "pair_frame_scorer_geometry_lattice",
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "dqs1_pair_frame_geometry_queue_request_metadata.v1",
+          "score_claim": false,
+          "selected_pair_count": 20,
+          "selected_pair_indices": [
+            26,
+            59,
+            68,
+            98,
+            109,
+            112,
+            134,
+            151,
+            167,
+            229,
+            257,
+            320,
+            327,
+            412,
+            459,
+            467,
+            492,
+            496,
+            501,
+            520
+          ]
+        }
+      },
+      "priority": 12,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_decoder_q_selective_window_bridge_plan.py",
+            "--selection",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/mlx_effective_spend_triage_observed_window_selection_top32.json",
+            "--candidate-manifest",
+            "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/mutation_manifest.json",
+            "--lane-id",
+            "lane_dqs1_pairset_geometry_lowimpact_k012_h4bdbac6259_local_first_20260525",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k012_h4bdbac6259/decoder_q_selective_window_bridge_plan.json",
+            "--md-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k012_h4bdbac6259/decoder_q_selective_window_bridge_plan.md"
+          ],
+          "id": "build_bridge_plan",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k012_h4bdbac6259/decoder_q_selective_window_bridge_plan.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/plan_decoder_q_selective_runtime_packet.py",
+            "--bridge-plan",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k012_h4bdbac6259/decoder_q_selective_window_bridge_plan.json",
+            "--base-archive",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k012_h4bdbac6259.json",
+            "--md-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k012_h4bdbac6259.md",
+            "--frame-policy",
+            "pair_all_frames",
+            "--selected-pairs",
+            "26,59,68,98,109,112,134,151,167,229,257,320,327,412,459,467,492,496,501,520"
+          ],
+          "id": "plan_packet",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k012_h4bdbac6259.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "build_bridge_plan"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/materialize_decoder_q_selective_runtime_candidate.py",
+            "--plan",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k012_h4bdbac6259.json",
+            "--base-submission-dir",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+            "--output-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k012_h4bdbac6259/submission_dir",
+            "--frame-policy",
+            "pair_all_frames",
+            "--manifest-output",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k012_h4bdbac6259/materialization_manifest.json"
+          ],
+          "id": "materialize",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k012_h4bdbac6259/materialization_manifest.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "plan_packet"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_decoder_q_selective_runtime_locality_controls.py",
+            "--parent-submission-dir",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+            "--global-mutated-archive",
+            "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/archive.zip",
+            "--selective-submission-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k012_h4bdbac6259/submission_dir",
+            "--selected-pairs",
+            "26,59,68,98,109,112,134,151,167,229,257,320,327,412,459,467,492,496,501,520",
+            "--frame-policy",
+            "pair_all_frames",
+            "--timeout-seconds",
+            "540",
+            "--global-timeout-seconds",
+            "840",
+            "--max-inflate-parallelism",
+            "3",
+            "--reuse-existing-inflates",
+            "--work-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k012_h4bdbac6259/locality_work",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k012_h4bdbac6259/locality_controls.json"
+          ],
+          "id": "locality_controls",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": true,
+              "key": "locality_controls_passed",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k012_h4bdbac6259/locality_controls.json",
+              "type": "json_equals"
+            },
+            {
+              "axis_equals": "[locality-control no-score]",
+              "axis_key": "score_axis",
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k012_h4bdbac6259/locality_controls.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "materialize"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 960
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "experiments/contest_auth_eval.py",
+            "--archive",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k012_h4bdbac6259/submission_dir/archive.zip",
+            "--inflate-sh",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k012_h4bdbac6259/submission_dir/inflate.sh",
+            "--upstream-dir",
+            "upstream",
+            "--video-names-file",
+            "upstream/public_test_video_names.txt",
+            "--device",
+            "cpu",
+            "--work-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k012_h4bdbac6259/local_cpu_advisory_work",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k012_h4bdbac6259/local_cpu_advisory.json",
+            "--inflate-timeout",
+            "1800",
+            "--evaluate-timeout",
+            "1800",
+            "--keep-work-dir"
+          ],
+          "id": "local_cpu_advisory",
+          "kind": "command",
+          "postconditions": [
+            {
+              "axis_equals": "cpu_advisory",
+              "axis_key": "score_axis",
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k012_h4bdbac6259/local_cpu_advisory.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "locality_controls"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 3600
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/compact_experiment_artifacts.py",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k012_h4bdbac6259",
+            "--min-bytes",
+            "1",
+            "--json-output",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k012_h4bdbac6259/raw_artifact_retention_plan.json"
+          ],
+          "id": "plan_raw_artifact_retention",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": 0,
+              "key": "plan.blocked_candidate_count",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k012_h4bdbac6259/raw_artifact_retention_plan.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k012_h4bdbac6259/raw_artifact_retention_plan.json",
+              "required_false": [
+                "plan.score_claim",
+                "plan.promotion_eligible",
+                "plan.ready_for_exact_eval_dispatch"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "local_cpu_advisory"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 1200
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/calibrate_local_cpu_contest_drift.py",
+            "--calibration-json",
+            ".omx/research/local_cpu_contest_drift_calibration_dqs1_fec6_20260522T194800Z.json",
+            "--candidate-id",
+            "pairset_geometry_lowimpact_k012_h4bdbac6259",
+            "--candidate-local-json",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k012_h4bdbac6259/local_cpu_advisory.json",
+            "--auth-frontier-score-from-pointer",
+            "--eureka-out",
+            ".omx/research/local_cpu_contest_drift_eureka_pairset_geometry_lowimpact_k012_h4bdbac6259_20260525T143351Z.json",
+            "--min-margin",
+            "0.0"
+          ],
+          "id": "local_cpu_contest_drift_eureka",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "local_cpu_contest_drift_eureka_signal.v1",
+              "key": "schema",
+              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_geometry_lowimpact_k012_h4bdbac6259_20260525T143351Z.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [],
+              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_geometry_lowimpact_k012_h4bdbac6259_20260525T143351Z.json",
+              "required_false": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "score_claim",
+                "score_claim_valid",
+                "score_claim_eligible",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "promotable",
+                "gpu_launched",
+                "field_selection_ready_for_exact_eval_dispatch",
+                "exact_cuda_auth_eval",
+                "contest_cuda_auth_eval",
+                "score_affecting_payload_changed",
+                "charged_bits_changed"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "local_cpu_advisory"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "dqs1",
+        "pairset",
+        "local-first",
+        "no-score-authority"
+      ]
+    },
+    {
+      "id": "pairset_geometry_lowimpact_k016_h33130b677c",
+      "lane_id": "lane_dqs1_pairset_geometry_lowimpact_k016_h33130b677c_local_first_20260525",
+      "metadata": {
+        "action_summary_path": "/Users/adpena/Projects/pact/.omx/research/codex_eureka_beyond_drop_two_acquisition_20260525T143351Z/action_summary.json",
+        "frontier_operation_portfolio": {
+          "allowed_use": "queue_metadata_pointer_to_operation_portfolio_artifact",
+          "best_component_behavior_candidate_id": null,
+          "best_component_behavior_score_delta_vs_baseline": null,
+          "blocked_operation_count": 20,
+          "charged_bits_changed": false,
+          "component_behavior_active": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "followup_signal_operation_count": 3,
+          "forbidden_use": "score_claim_or_dispatch_authority",
+          "gpu_launched": false,
+          "operation_count": 22,
+          "operation_portfolio_schema": "frontier_rate_attack_operation_portfolio.v1",
+          "promotable": false,
+          "promotion_eligible": false,
+          "queue_executable_operation_count": 2,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_closed_correction_budget_active": false,
+          "receiver_closed_materializer_budget_candidate_count": 0,
+          "receiver_closed_materializer_saved_bytes_total": 0,
+          "schema": "frontier_rate_attack_operation_portfolio_queue_metadata.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "targeted_correction_budget_active": false,
+          "targeted_correction_budget_saved_bytes_total": 0,
+          "top_followup_signal_operation_ids": [
+            "pair_frame_geometry_queue_requests",
+            "chain_registered_multisurface_materializer_program",
+            "pair_batch_full_video_low_impact_drop_surface"
+          ],
+          "top_operation_ids": [
+            "pair_frame_geometry_queue_requests",
+            "chain_registered_multisurface_materializer_program",
+            "materializer_backlog_byte_range_entropy_recode_v1",
+            "materializer_backlog_archive_section_header_elide_v1",
+            "materializer_backlog_archive_section_reorder_v1",
+            "materializer_backlog_archive_section_proceduralize_v1",
+            "materializer_backlog_tensor_quantize_v1",
+            "materializer_backlog_tensor_prune_v1"
+          ],
+          "top_queue_executable_operation_ids": [
+            "pair_frame_geometry_queue_requests",
+            "pair_batch_full_video_low_impact_drop_surface"
+          ]
+        },
+        "frontier_receiver_closed_correction_budget": {
+          "active": false,
+          "allowed_use": "queue_metadata_pointer_to_receiver_closed_correction_budget",
+          "blockers": [
+            "no_receiver_closed_materializer_budget_candidates_discovered"
+          ],
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "forbidden_use": "score_claim_or_dispatch_authority",
+          "gpu_launched": false,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_closed_budget_source_targets": [],
+          "receiver_closed_candidate_count": 0,
+          "receiver_closed_correction_budget_schema": "frontier_rate_attack_receiver_closed_correction_budget.v1",
+          "receiver_closed_saved_bytes_max": 0,
+          "receiver_closed_saved_bytes_total": 0,
+          "schema": "frontier_rate_attack_receiver_closed_correction_budget_queue_metadata.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false
+        },
+        "frontier_receiver_repair_backlog": {
+          "allowed_use": "queue_metadata_pointer_to_receiver_repair_backlog_artifact",
+          "authority_gate_repair_count": 0,
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "forbidden_use": "score_claim_or_dispatch_authority",
+          "gpu_launched": false,
+          "local_drop_saved_bytes_total": 0,
+          "materializer_rate_positive_saved_bytes_total": 0,
+          "promotable": false,
+          "promotion_eligible": false,
+          "queue_actionable_repair_count": 32,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_repair_backlog_schema": "frontier_rate_attack_receiver_repair_backlog.v1",
+          "row_count": 39,
+          "schema": "frontier_rate_attack_receiver_repair_backlog_queue_metadata.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "targeted_correction_budget_active": false,
+          "top_repair_families": [
+            "runtime_consumption_proof_repair"
+          ],
+          "top_repair_ids": [
+            "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof",
+            "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_requires_single_composed_receiver_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_byte_range_entropy_recode_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_archive_section_header_elide_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_archive_section_reorder_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_archive_section_proceduralize_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_tensor_quantize_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_tensor_prune_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof"
+          ],
+          "top_source_operation_ids": [
+            "chain_registered_multisurface_materializer_program",
+            "materializer_backlog_byte_range_entropy_recode_v1",
+            "materializer_backlog_archive_section_header_elide_v1",
+            "materializer_backlog_archive_section_reorder_v1",
+            "materializer_backlog_archive_section_proceduralize_v1",
+            "materializer_backlog_tensor_quantize_v1",
+            "materializer_backlog_tensor_prune_v1"
+          ]
+        },
+        "frontier_targeted_component_correction_acquisition": {
+          "active": false,
+          "allowed_use": "queue_metadata_pointer_to_targeted_component_correction_acquisition",
+          "blockers": [
+            "no_receiver_closed_rate_budget_rows",
+            "no_targeted_component_correction_rows",
+            "segnet_posenet_component_behavior_rows_required",
+            "no_component_eval_queue_actionable_submission_dirs",
+            "component_eval_required_before_budget_spend",
+            "exact_auth_eval_required_before_score_or_promotion_claim"
+          ],
+          "charged_bits_changed": false,
+          "component_behavior_active": false,
+          "component_correction_row_count": 0,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "estimated_rate_credit_score_units_total": 0,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "forbidden_use": "score_claim_or_dispatch_authority",
+          "gpu_launched": false,
+          "master_gradient_active": true,
+          "promotable": false,
+          "promotion_eligible": false,
+          "queue_actionable_acquisition_count": 0,
+          "queue_actionable_row_count": 0,
+          "rank_or_kill_eligible": false,
+          "ready_for_budget_spend_count": 0,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_closed_candidate_count": 0,
+          "receiver_closed_saved_bytes_total": 0,
+          "row_count": 0,
+          "schema": "frontier_rate_attack_targeted_component_correction_queue_metadata.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "targeted_component_correction_acquisition_schema": "frontier_rate_attack_targeted_component_correction_acquisition.v1",
+          "top_acquisition_ids": [],
+          "top_correction_families": []
+        },
+        "portfolio_path": "/Users/adpena/Projects/pact/.omx/research/frontier_rate_attack_feedback_refresh_20260526T071254Z_generated_pair_frame_lattice/pair_frame_scorer_geometry_lattice.json",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "dqs1_local_first_experiment_metadata.v1",
+        "score_claim": false,
+        "selected_pair_indices": [
+          26,
+          59,
+          68,
+          98,
+          109,
+          112,
+          134,
+          151,
+          167,
+          257,
+          320,
+          327,
+          492,
+          496,
+          501,
+          520
+        ],
+        "skipped_candidates": [],
+        "source_custody_preserved": true,
+        "source_metadata": {
+          "allowed_use": "local_first_queue_selection_only",
+          "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+          "pair_frame_geometry_request": {
+            "allowed_use": "queue_executable_local_dqs1_pairset_drop_probe_only",
+            "candidate_id": "pairset_geometry_lowimpact_k016_h33130b677c",
+            "dispatch_attempted": false,
+            "dropped_pair_indices": [
+              229,
+              242,
+              259,
+              296,
+              371,
+              376,
+              378,
+              412,
+              430,
+              440,
+              459,
+              467,
+              479,
+              544,
+              555,
+              588
+            ],
+            "forbidden_use": "score_claim_or_dispatch_or_promotion_authority",
+            "generation_policy": "drop lowest scorer-geometry-cost DQS1 pairs and let local queue measure the real SegNet/PoseNet trade",
+            "geometry_coverage": 1.0,
+            "geometry_covered_dropped_pair_count": 16,
+            "gpu_launched": false,
+            "operator_next_action": "materialize_pairset_archive_and_run_local_controls",
+            "promotable": false,
+            "promotion_eligible": false,
+            "queue_executable": true,
+            "queue_family": "dqs1_pairset_local_first",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "pair_frame_geometry_queue_executable_drop_request.v1",
+            "score_claim": false,
+            "score_claim_valid": false,
+            "selected_pair_count": 16,
+            "selected_pair_indices": [
+              26,
+              59,
+              68,
+              98,
+              109,
+              112,
+              134,
+              151,
+              167,
+              257,
+              320,
+              327,
+              492,
+              496,
+              501,
+              520
+            ],
+            "selector_kind": "pair_frame_geometry_low_impact_drop_many"
+          },
+          "pair_frame_geometry_request_source_path": ".omx/research/frontier_rate_attack_feedback_refresh_20260526T071254Z_generated_pair_frame_lattice/pair_frame_scorer_geometry_lattice.json",
+          "promotion_eligible": false,
+          "queue_source_kind": "pair_frame_scorer_geometry_lattice",
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "dqs1_pair_frame_geometry_queue_request_metadata.v1",
+          "score_claim": false,
+          "selected_pair_count": 16,
+          "selected_pair_indices": [
+            26,
+            59,
+            68,
+            98,
+            109,
+            112,
+            134,
+            151,
+            167,
+            257,
+            320,
+            327,
+            492,
+            496,
+            501,
+            520
+          ]
+        }
+      },
+      "priority": 16,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_decoder_q_selective_window_bridge_plan.py",
+            "--selection",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/mlx_effective_spend_triage_observed_window_selection_top32.json",
+            "--candidate-manifest",
+            "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/mutation_manifest.json",
+            "--lane-id",
+            "lane_dqs1_pairset_geometry_lowimpact_k016_h33130b677c_local_first_20260525",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k016_h33130b677c/decoder_q_selective_window_bridge_plan.json",
+            "--md-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k016_h33130b677c/decoder_q_selective_window_bridge_plan.md"
+          ],
+          "id": "build_bridge_plan",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k016_h33130b677c/decoder_q_selective_window_bridge_plan.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/plan_decoder_q_selective_runtime_packet.py",
+            "--bridge-plan",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k016_h33130b677c/decoder_q_selective_window_bridge_plan.json",
+            "--base-archive",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k016_h33130b677c.json",
+            "--md-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k016_h33130b677c.md",
+            "--frame-policy",
+            "pair_all_frames",
+            "--selected-pairs",
+            "26,59,68,98,109,112,134,151,167,257,320,327,492,496,501,520"
+          ],
+          "id": "plan_packet",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k016_h33130b677c.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "build_bridge_plan"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/materialize_decoder_q_selective_runtime_candidate.py",
+            "--plan",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k016_h33130b677c.json",
+            "--base-submission-dir",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+            "--output-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k016_h33130b677c/submission_dir",
+            "--frame-policy",
+            "pair_all_frames",
+            "--manifest-output",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k016_h33130b677c/materialization_manifest.json"
+          ],
+          "id": "materialize",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k016_h33130b677c/materialization_manifest.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "plan_packet"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_decoder_q_selective_runtime_locality_controls.py",
+            "--parent-submission-dir",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+            "--global-mutated-archive",
+            "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/archive.zip",
+            "--selective-submission-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k016_h33130b677c/submission_dir",
+            "--selected-pairs",
+            "26,59,68,98,109,112,134,151,167,257,320,327,492,496,501,520",
+            "--frame-policy",
+            "pair_all_frames",
+            "--timeout-seconds",
+            "540",
+            "--global-timeout-seconds",
+            "840",
+            "--max-inflate-parallelism",
+            "3",
+            "--reuse-existing-inflates",
+            "--work-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k016_h33130b677c/locality_work",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k016_h33130b677c/locality_controls.json"
+          ],
+          "id": "locality_controls",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": true,
+              "key": "locality_controls_passed",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k016_h33130b677c/locality_controls.json",
+              "type": "json_equals"
+            },
+            {
+              "axis_equals": "[locality-control no-score]",
+              "axis_key": "score_axis",
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k016_h33130b677c/locality_controls.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "materialize"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 960
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "experiments/contest_auth_eval.py",
+            "--archive",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k016_h33130b677c/submission_dir/archive.zip",
+            "--inflate-sh",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k016_h33130b677c/submission_dir/inflate.sh",
+            "--upstream-dir",
+            "upstream",
+            "--video-names-file",
+            "upstream/public_test_video_names.txt",
+            "--device",
+            "cpu",
+            "--work-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k016_h33130b677c/local_cpu_advisory_work",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k016_h33130b677c/local_cpu_advisory.json",
+            "--inflate-timeout",
+            "1800",
+            "--evaluate-timeout",
+            "1800",
+            "--keep-work-dir"
+          ],
+          "id": "local_cpu_advisory",
+          "kind": "command",
+          "postconditions": [
+            {
+              "axis_equals": "cpu_advisory",
+              "axis_key": "score_axis",
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k016_h33130b677c/local_cpu_advisory.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "locality_controls"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 3600
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/compact_experiment_artifacts.py",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k016_h33130b677c",
+            "--min-bytes",
+            "1",
+            "--json-output",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k016_h33130b677c/raw_artifact_retention_plan.json"
+          ],
+          "id": "plan_raw_artifact_retention",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": 0,
+              "key": "plan.blocked_candidate_count",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k016_h33130b677c/raw_artifact_retention_plan.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k016_h33130b677c/raw_artifact_retention_plan.json",
+              "required_false": [
+                "plan.score_claim",
+                "plan.promotion_eligible",
+                "plan.ready_for_exact_eval_dispatch"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "local_cpu_advisory"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 1200
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/calibrate_local_cpu_contest_drift.py",
+            "--calibration-json",
+            ".omx/research/local_cpu_contest_drift_calibration_dqs1_fec6_20260522T194800Z.json",
+            "--candidate-id",
+            "pairset_geometry_lowimpact_k016_h33130b677c",
+            "--candidate-local-json",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k016_h33130b677c/local_cpu_advisory.json",
+            "--auth-frontier-score-from-pointer",
+            "--eureka-out",
+            ".omx/research/local_cpu_contest_drift_eureka_pairset_geometry_lowimpact_k016_h33130b677c_20260525T143351Z.json",
+            "--min-margin",
+            "0.0"
+          ],
+          "id": "local_cpu_contest_drift_eureka",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "local_cpu_contest_drift_eureka_signal.v1",
+              "key": "schema",
+              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_geometry_lowimpact_k016_h33130b677c_20260525T143351Z.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [],
+              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_geometry_lowimpact_k016_h33130b677c_20260525T143351Z.json",
+              "required_false": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "score_claim",
+                "score_claim_valid",
+                "score_claim_eligible",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "promotable",
+                "gpu_launched",
+                "field_selection_ready_for_exact_eval_dispatch",
+                "exact_cuda_auth_eval",
+                "contest_cuda_auth_eval",
+                "score_affecting_payload_changed",
+                "charged_bits_changed"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "local_cpu_advisory"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "dqs1",
+        "pairset",
+        "local-first",
+        "no-score-authority"
+      ]
+    }
+  ],
+  "queue_id": "frontier_rate_attack_generated_pair_frame_lattice_20260526T071254Z",
+  "schema": "experiment_queue.v1"
+}

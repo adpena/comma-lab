@@ -43,6 +43,16 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (  # noqa: E402
     build_frontier_targeted_component_correction_response_harvest,
 )
 from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY  # noqa: E402
+from tac.optimization.pair_frame_scorer_geometry_lattice import (  # noqa: E402
+    PairFrameScorerGeometryLatticeError,
+    build_pair_frame_scorer_geometry_lattice,
+)
+from tac.optimization.pair_frame_scorer_geometry_lattice import (  # noqa: E402
+    load_json_object as load_pair_frame_json_object,
+)
+from tac.optimization.pair_frame_scorer_geometry_lattice import (  # noqa: E402
+    write_json as write_pair_frame_json,
+)
 from tac.optimization.proxy_candidate_contract import (  # noqa: E402
     require_no_truthy_authority_fields,
 )
@@ -59,6 +69,18 @@ def _display_path(path: str | Path) -> str:
         return value.resolve(strict=False).relative_to(REPO_ROOT.resolve()).as_posix()
     except ValueError:
         return value.as_posix()
+
+
+def _parse_csv_ints(text: str | None) -> list[int] | None:
+    if text is None:
+        return None
+    try:
+        parsed = [int(part.strip()) for part in text.split(",") if part.strip()]
+    except ValueError as exc:
+        raise PairFrameScorerGeometryLatticeError(
+            "--pair-frame-drop-counts must be a comma-separated integer list"
+        ) from exc
+    return parsed or None
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -101,6 +123,43 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "queue-executable requests should seed the DQS1 follow-up queue. "
             "May repeat."
         ),
+    )
+    parser.add_argument(
+        "--pair-frame-pairset-acquisition",
+        type=Path,
+        default=None,
+        help=(
+            "decoder_q_pairset_acquisition.v1 JSON to compile into a "
+            "pair-frame scorer-geometry lattice inside this refresh before "
+            "building the DQS1 follow-up queue."
+        ),
+    )
+    parser.add_argument(
+        "--pair-frame-curriculum",
+        type=Path,
+        default=None,
+        help="Optional frame-pair curriculum JSON for generated pair-frame geometry.",
+    )
+    parser.add_argument(
+        "--pair-component-xray",
+        type=Path,
+        action="append",
+        default=[],
+        help=(
+            "Optional pair_component_error_xray_v1 JSON for generated "
+            "pair-frame geometry. May repeat."
+        ),
+    )
+    parser.add_argument(
+        "--pair-frame-drop-counts",
+        default="3,4,6,8,12,16",
+        help="Comma-separated drop counts for generated pair-frame geometry requests.",
+    )
+    parser.add_argument(
+        "--pair-frame-max-requests",
+        type=int,
+        default=32,
+        help="Maximum generated pair-frame geometry queue requests.",
     )
     parser.add_argument(
         "--dqs1-observation-jsonl",
@@ -194,9 +253,80 @@ def _action_summary_path(value: str) -> Path | None:
     return Path(value)
 
 
+def _build_generated_pair_frame_lattice(
+    *,
+    output_dir: Path,
+    pairset_acquisition_path: Path | None,
+    frame_pair_curriculum_path: Path | None,
+    pair_component_xray_paths: tuple[Path, ...],
+    drop_counts: str | None,
+    max_requests: int,
+) -> tuple[Path | None, dict[str, Any] | None]:
+    if pairset_acquisition_path is None:
+        return None, None
+    if max_requests < 1:
+        raise PairFrameScorerGeometryLatticeError(
+            "--pair-frame-max-requests must be >= 1"
+        )
+    output_dir.mkdir(parents=True, exist_ok=True)
+    payload = build_pair_frame_scorer_geometry_lattice(
+        load_pair_frame_json_object(pairset_acquisition_path),
+        frame_pair_curriculum=(
+            None
+            if frame_pair_curriculum_path is None
+            else load_pair_frame_json_object(frame_pair_curriculum_path)
+        ),
+        pair_component_xrays=tuple(
+            load_pair_frame_json_object(path) for path in pair_component_xray_paths
+        ),
+        drop_counts=_parse_csv_ints(drop_counts),
+        max_requests=max_requests,
+    )
+    path = output_dir / "pair_frame_scorer_geometry_lattice.json"
+    write_pair_frame_json(path, payload)
+    summary = {
+        "schema": "frontier_rate_attack_generated_pair_frame_geometry_lattice.v1",
+        "pairset_acquisition_path": _display_path(pairset_acquisition_path),
+        "frame_pair_curriculum_path": (
+            None
+            if frame_pair_curriculum_path is None
+            else _display_path(frame_pair_curriculum_path)
+        ),
+        "pair_component_xray_paths": [
+            _display_path(path) for path in pair_component_xray_paths
+        ],
+        "lattice_path": _display_path(path),
+        "row_count": payload.get("summary", {}).get("row_count")
+        if isinstance(payload.get("summary"), dict)
+        else None,
+        "queue_executable_request_count": payload.get("summary", {}).get(
+            "queue_executable_request_count"
+        )
+        if isinstance(payload.get("summary"), dict)
+        else None,
+        "geometry_coverage": payload.get("coverage", {}).get("geometry_coverage")
+        if isinstance(payload.get("coverage"), dict)
+        else None,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "gpu_launched": False,
+    }
+    require_no_truthy_authority_fields(
+        summary,
+        context="generated_pair_frame_geometry_lattice_summary",
+    )
+    return path, summary
+
+
 def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
     output_dir.mkdir(parents=True, exist_ok=True)
     artifacts: dict[str, str] = {}
+    generated_lattice_path = report.get("generated_pair_frame_geometry_lattice_path")
+    if isinstance(generated_lattice_path, str) and generated_lattice_path:
+        artifacts["generated_pair_frame_geometry_lattice"] = generated_lattice_path
     discovery = report.get("discovery")
     if isinstance(discovery, dict):
         path = output_dir / "materializer_feedback_discovery.json"
@@ -618,12 +748,30 @@ def main(argv: list[str] | None = None) -> int:
     )
     try:
         action_summary_path = _action_summary_path(args.action_summary)
+        generated_pair_frame_lattice, generated_pair_frame_lattice_summary = (
+            _build_generated_pair_frame_lattice(
+                output_dir=output_dir,
+                pairset_acquisition_path=args.pair_frame_pairset_acquisition,
+                frame_pair_curriculum_path=args.pair_frame_curriculum,
+                pair_component_xray_paths=tuple(args.pair_component_xray),
+                drop_counts=args.pair_frame_drop_counts,
+                max_requests=args.pair_frame_max_requests,
+            )
+        )
+        pair_frame_geometry_paths = [
+            *args.pair_frame_geometry_lattice,
+            *(
+                [generated_pair_frame_lattice]
+                if generated_pair_frame_lattice is not None
+                else []
+            ),
+        ]
         report = build_frontier_rate_attack_feedback_refresh(
             repo_root=REPO_ROOT,
             frontier_artifact_roots=tuple(args.frontier_artifact_root),
             local_cpu_eureka_roots=tuple(args.local_cpu_eureka_root),
             materializer_feedback_paths=tuple(args.materializer_feedback),
-            pair_frame_geometry_paths=tuple(args.pair_frame_geometry_lattice),
+            pair_frame_geometry_paths=tuple(pair_frame_geometry_paths),
             dqs1_observation_paths=tuple(args.dqs1_observation_jsonl),
             action_summary_path=action_summary_path,
             results_root=args.results_root,
@@ -645,11 +793,19 @@ def main(argv: list[str] | None = None) -> int:
             mlx_retention_cold_store_roots=tuple(args.mlx_retention_cold_store_root),
             mlx_retention_cold_store_reserve_gb=args.mlx_retention_cold_store_reserve_gb,
         )
+        if generated_pair_frame_lattice is not None:
+            report["generated_pair_frame_geometry_lattice_path"] = _display_path(
+                generated_pair_frame_lattice
+            )
+            report["generated_pair_frame_geometry_lattice"] = (
+                generated_pair_frame_lattice_summary
+            )
         artifacts = _write_outputs(output_dir, report)
     except (
         ArtifactWriteError,
         ExperimentQueueError,
         FrontierRateAttackFeedbackError,
+        PairFrameScorerGeometryLatticeError,
         OSError,
     ) as exc:
         print(f"FATAL: frontier rate-attack feedback refresh failed: {exc}", file=sys.stderr)
@@ -667,6 +823,9 @@ def main(argv: list[str] | None = None) -> int:
                 ),
                 "pair_frame_geometry_queue_request_count": report.get(
                     "pair_frame_geometry_queue_request_count"
+                ),
+                "generated_pair_frame_geometry_lattice": report.get(
+                    "generated_pair_frame_geometry_lattice"
                 ),
                 "dqs1_observation_count": report.get("dqs1_observation_count"),
                 "selected_candidate_ids": report.get("selected_candidate_ids"),

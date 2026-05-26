@@ -1106,6 +1106,9 @@ def select_dqs1_local_first_candidates(
         if len(selections) >= candidate_limit:
             return tuple(selections)
 
+    if selections:
+        return tuple(selections)
+
     reasons = ", ".join(f"{item['candidate_id']}:{item['reason']}" for item in skipped)
     raise ExperimentQueueError(f"no safe DQS1 local-first candidate found; skipped {reasons}")
 

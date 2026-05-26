@@ -1,0 +1,33 @@
+{
+  "active": false,
+  "allowed_use": "local_advisory_acquisition_prior_only",
+  "best_conservative_gap_vs_auth_frontier": null,
+  "best_projected_gap_vs_auth_frontier": null,
+  "candidate_family_counts": {},
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "duplicate_signal_count": 0,
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+  "frontier_artifact_roots": [
+    ".omx/research/codex_eureka_beyond_drop_two_acquisition_20260525T143351Z"
+  ],
+  "gpu_launched": false,
+  "ignored_signal_candidates": [],
+  "near_frontier_observe_only_count": 0,
+  "planner_hint_count": 0,
+  "planner_hints": [],
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "frontier_rate_attack_local_cpu_eureka_discovery.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "signal_count": 0,
+  "signal_rows": []
+}
