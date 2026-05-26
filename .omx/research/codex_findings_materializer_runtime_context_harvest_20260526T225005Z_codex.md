@@ -73,12 +73,21 @@ Observed harvested row:
 - `runtime_consumption_proof_status`: `present`
 - `receiver_contract_satisfied`: `true`
 
-Exact-readiness remained fail-closed for this candidate with:
+Exact-readiness now skips this candidate before promotion because it is
+non-rate-positive:
 
-- `unknown_uncleared_source_dispatch_blocker:candidate_not_rate_positive`
-- `score_affecting_change_proof_missing`
+- `ready_candidate_count`: `0`
+- `skipped_candidate_count`: `1`
+- `blocked_candidate_count`: `0`
+- row verdict: `skipped_non_rate_positive_materializer`
+- blocker: `materializer_candidate_not_rate_positive_for_exact_readiness`
 
-No source-runtime-missing closure blocker remained.
+No source-runtime-missing closure blocker remained, and zero/negative
+materializer economics no longer produce unrelated exact-readiness blockers
+such as `score_affecting_change_proof_missing`.
+The skipped per-candidate report still preserves archive/runtime custody facts,
+including source runtime path, source archive SHA, receiver proof status, and
+runtime tree hashes when present.
 The follow-up narrowing pass also removed a false runtime-adapter blocker by
 not copying work-row `candidate_runtime_dir` into static family-agnostic ZIP
 transforms. The closure now classifies this live candidate as
@@ -101,7 +110,7 @@ Verification:
 
 Results:
 
-- `57 passed`
+- `58 passed`
 - `ruff`: all checks passed
 
 ## Next Integration Hooks
@@ -113,4 +122,6 @@ proof completeness for this specific candidate class:
 2. Add score-affecting change proof and runtime-tree SHA fields where they are
    relevant for positive materializer candidates.
 3. Feed rate-negative materializer outcomes into the chain planner as negative
-   acquisition data, not exact-eval candidates.
+   acquisition data, not exact-eval candidates. The bridge now emits explicit
+   `skipped_non_rate_positive_materializer` rows so acquisition can consume the
+   result without polluting exact-readiness blocker telemetry.

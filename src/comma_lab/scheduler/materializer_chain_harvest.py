@@ -323,6 +323,7 @@ def run_exact_readiness_bridge_for_harvested_queue(
     )
     report_rows: list[dict[str, Any]] = []
     ready_count = 0
+    skipped_count = 0
     for row in rows:
         candidate_id = str(row.get("candidate_id") or "")
         if not candidate_id:
@@ -330,6 +331,44 @@ def run_exact_readiness_bridge_for_harvested_queue(
         slug = _safe_slug(candidate_id)
         per_candidate_report_path = out_dir / f"{slug}.exact_readiness_report.json"
         exact_ready_queue_path = out_dir / f"{slug}.exact_ready_queue.json"
+        skip_reason = _exact_readiness_skip_reason_for_harvested_row(row)
+        if skip_reason is not None:
+            readiness_report = {
+                "schema": "optimizer_candidate_exact_eval_readiness_report_v1",
+                "tool": "tools/promote_optimizer_candidate_for_exact_eval.py",
+                "generated_at_utc": _utc_now(),
+                "source_queue_path": _repo_rel(queue_path, repo),
+                "candidate_id": candidate_id,
+                "ready_for_exact_eval_dispatch": False,
+                "blockers": [skip_reason],
+                "facts": {
+                    "materializer_exact_readiness_skipped": True,
+                    "materializer_exact_readiness_skip_reason": skip_reason,
+                    "rate_positive": row.get("rate_positive"),
+                    "realized_saved_bytes": row.get("realized_saved_bytes"),
+                    "serialized_archive_delta": row.get("serialized_archive_delta"),
+                    **_exact_readiness_skip_custody_facts(row),
+                },
+            }
+            per_candidate_report_path.write_text(
+                exact_readiness_json_dumps(readiness_report),
+                encoding="utf-8",
+            )
+            skipped_count += 1
+            report_rows.append(
+                {
+                    "candidate_id": candidate_id,
+                    "readiness_verdict": "skipped_non_rate_positive_materializer",
+                    "exact_ready_queue_written": False,
+                    "exact_readiness_report_path": _repo_rel(
+                        per_candidate_report_path,
+                        repo,
+                    ),
+                    "exact_ready_queue_path": None,
+                    "blockers": [skip_reason],
+                }
+            )
+            continue
         try:
             result = promote_candidate_for_exact_eval(
                 queue_path,
@@ -390,7 +429,8 @@ def run_exact_readiness_bridge_for_harvested_queue(
             "exact_readiness_out_dir": _repo_rel(out_dir, repo),
             "candidate_count": len(rows),
             "ready_candidate_count": ready_count,
-            "blocked_candidate_count": len(rows) - ready_count,
+            "skipped_candidate_count": skipped_count,
+            "blocked_candidate_count": len(rows) - ready_count - skipped_count,
             "clearable_source_blockers": clearable_source_blockers,
             "operator_clearable_source_blockers": extra_clearable_source_blockers,
             "dispatch_claims_path": _repo_rel(resolved_dispatch_claims_path, repo),
@@ -436,6 +476,102 @@ def _validated_bridge_extra_clearable_source_blockers(
             + ",".join(sorted(not_allowed))
         )
     return extras
+
+
+def _exact_readiness_skip_reason_for_harvested_row(
+    row: Mapping[str, Any],
+) -> str | None:
+    if not _is_materializer_candidate_row(row):
+        return None
+    if row.get("rate_positive") is False:
+        return "materializer_candidate_not_rate_positive_for_exact_readiness"
+    saved_bytes = row.get("realized_saved_bytes")
+    if isinstance(saved_bytes, bool):
+        return None
+    if isinstance(saved_bytes, int | float) and saved_bytes <= 0:
+        return "materializer_candidate_not_rate_positive_for_exact_readiness"
+    delta = row.get("serialized_archive_delta")
+    if isinstance(delta, Mapping):
+        if delta.get("rate_positive") is False:
+            return "materializer_candidate_not_rate_positive_for_exact_readiness"
+        delta_saved = delta.get("realized_saved_bytes")
+        if (
+            isinstance(delta_saved, int | float)
+            and not isinstance(delta_saved, bool)
+            and delta_saved <= 0
+        ):
+            return "materializer_candidate_not_rate_positive_for_exact_readiness"
+        for key in ("status", "materializer_rate_outcome", "expected_status"):
+            value = str(delta.get(key) or "").strip().lower()
+            if value in {"zero_delta", "size_regression", "not_rate_positive"}:
+                return "materializer_candidate_not_rate_positive_for_exact_readiness"
+    blockers = [
+        *_text_values(row.get("dispatch_blockers")),
+        *_text_values(row.get("readiness_blockers")),
+        *_text_values(row.get("blockers")),
+    ]
+    if any(
+        blocker == "candidate_not_rate_positive"
+        or blocker.endswith(":candidate_not_rate_positive")
+        for blocker in blockers
+    ):
+        return "materializer_candidate_not_rate_positive_for_exact_readiness"
+    return None
+
+
+def _exact_readiness_skip_custody_facts(row: Mapping[str, Any]) -> dict[str, Any]:
+    keys = (
+        "archive_bytes",
+        "archive_path",
+        "archive_sha256",
+        "candidate_archive_bytes",
+        "candidate_archive_path",
+        "candidate_archive_sha256",
+        "candidate_member_bytes",
+        "candidate_member_name",
+        "candidate_member_sha256",
+        "charged_bits_changed",
+        "materializer_rate_outcome",
+        "receiver_contract_satisfied",
+        "runtime_consumption_proof_path",
+        "runtime_consumption_proof_required",
+        "runtime_consumption_proof_status",
+        "runtime_content_tree_sha256",
+        "runtime_tree_sha256",
+        "score_affecting_change_proof",
+        "score_affecting_payload_changed",
+        "source_archive_bytes",
+        "source_archive_path",
+        "source_archive_sha256",
+        "source_inflate_sh_path",
+        "source_member_bytes",
+        "source_member_name",
+        "source_member_sha256",
+        "source_runtime_dir",
+        "source_submission_dir",
+        "submission_dir",
+        "submission_runtime_content_tree_sha256",
+        "submission_runtime_tree_sha256",
+    )
+    return {key: row.get(key) for key in keys if key in row}
+
+
+def _is_materializer_candidate_row(row: Mapping[str, Any]) -> bool:
+    schema = str(row.get("schema") or "")
+    materializer_id = str(row.get("materializer_id") or "")
+    target_kind = str(row.get("target_kind") or "")
+    candidate_family = str(row.get("candidate_family") or "")
+    return (
+        "materializer" in schema
+        or bool(materializer_id)
+        or (
+            target_kind.endswith("_v1")
+            and (
+                "materializer" in candidate_family
+                or "serialized_archive_delta" in row
+            )
+        )
+    )
 
 
 def _apply_renderer_payload_dfl1_sidecar_parity_proofs(

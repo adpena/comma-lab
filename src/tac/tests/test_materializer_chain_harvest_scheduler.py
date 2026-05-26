@@ -3058,6 +3058,73 @@ def test_exact_readiness_bridge_writes_blocked_report_without_ready_queue(
     assert (repo / row["exact_readiness_report_path"]).is_file()
 
 
+def test_exact_readiness_bridge_skips_non_rate_positive_materializer_rows(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    source_queue_out = repo / "source_queue.json"
+    _write_json(
+        source_queue_out,
+        {
+            "schema": "optimizer_candidate_queue_v1",
+            "n_candidates": 1,
+            "top_k_count": 1,
+            "dispatch_ready_count": 0,
+            "dispatch_ready": [],
+            "top_k": [
+                {
+                    "schema": "packet_member_zip_header_elide_candidate.v1",
+                    "candidate_id": "zero_delta_materializer_fixture",
+                    "materializer_id": "packet_member_zip_header_elide_adapter",
+                    "target_kind": "packet_member_zip_header_elide_v1",
+                    "rate_positive": False,
+                    "realized_saved_bytes": 0,
+                    "source_archive_sha256": "0" * 64,
+                    "source_runtime_dir": "submission_dir",
+                    "runtime_consumption_proof_status": "present",
+                    "serialized_archive_delta": {
+                        "schema": "serialized_archive_delta_contract.v1",
+                        "rate_positive": False,
+                        "realized_saved_bytes": 0,
+                        "status": "zero_delta",
+                    },
+                    "dispatch_blockers": ["candidate_not_rate_positive"],
+                    **_false_authority(),
+                }
+            ],
+            "top_k_forensic": [],
+            **_false_authority(),
+        },
+    )
+
+    bridge = run_exact_readiness_bridge_for_harvested_queue(
+        repo_root=repo,
+        source_queue_path=source_queue_out,
+        exact_readiness_out_dir=repo / "exact_readiness",
+        active_floor_archive_bytes=None,
+    )
+
+    assert bridge["ready_candidate_count"] == 0
+    assert bridge["skipped_candidate_count"] == 1
+    assert bridge["blocked_candidate_count"] == 0
+    row = bridge["rows"][0]
+    assert row["readiness_verdict"] == "skipped_non_rate_positive_materializer"
+    assert row["exact_ready_queue_written"] is False
+    assert row["exact_ready_queue_path"] is None
+    assert row["blockers"] == [
+        "materializer_candidate_not_rate_positive_for_exact_readiness"
+    ]
+    report = json.loads(
+        (repo / row["exact_readiness_report_path"]).read_text(encoding="utf-8")
+    )
+    assert report["facts"]["materializer_exact_readiness_skipped"] is True
+    assert report["facts"]["rate_positive"] is False
+    assert report["facts"]["source_archive_sha256"] == "0" * 64
+    assert report["facts"]["source_runtime_dir"] == "submission_dir"
+    assert report["facts"]["runtime_consumption_proof_status"] == "present"
+
+
 def test_exact_readiness_bridge_blocks_stale_runtime_consumption_proof(
     tmp_path: Path,
 ) -> None:

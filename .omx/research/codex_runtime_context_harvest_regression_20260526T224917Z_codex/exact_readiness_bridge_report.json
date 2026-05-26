@@ -1,5 +1,5 @@
 {
-  "blocked_candidate_count": 1,
+  "blocked_candidate_count": 0,
   "candidate_count": 1,
   "charged_bits_changed": false,
   "clearable_source_blockers": [
@@ -29,7 +29,7 @@
   "exact_cuda_auth_eval": false,
   "exact_readiness_out_dir": ".omx/research/codex_runtime_context_harvest_regression_20260526T224917Z_codex/exact_readiness",
   "field_selection_ready_for_exact_eval_dispatch": false,
-  "generated_at_utc": "2026-05-26T22:57:12Z",
+  "generated_at_utc": "2026-05-26T23:41:28Z",
   "gpu_launched": false,
   "operator_clearable_source_blockers": [],
   "promotable": false,
@@ -40,14 +40,13 @@
   "rows": [
     {
       "blockers": [
-        "unknown_uncleared_source_dispatch_blocker:candidate_not_rate_positive",
-        "score_affecting_change_proof_missing"
+        "materializer_candidate_not_rate_positive_for_exact_readiness"
       ],
       "candidate_id": "packet_member_zip_header_elide_b44da5d54d34",
       "exact_readiness_report_path": ".omx/research/codex_runtime_context_harvest_regression_20260526T224917Z_codex/exact_readiness/packet_member_zip_header_elide_b44da5d54d34.exact_readiness_report.json",
       "exact_ready_queue_path": null,
       "exact_ready_queue_written": false,
-      "readiness_verdict": "blocked"
+      "readiness_verdict": "skipped_non_rate_positive_materializer"
     }
   ],
   "schema": "materializer_chain_exact_readiness_bridge_report.v1",
@@ -55,6 +54,7 @@
   "score_claim": false,
   "score_claim_eligible": false,
   "score_claim_valid": false,
+  "skipped_candidate_count": 1,
   "source_queue_path": ".omx/research/codex_runtime_context_harvest_regression_20260526T224917Z_codex/submission_closure/closed_source_queue.json",
   "target_modes": [
     "contest_exact_eval_planning"
