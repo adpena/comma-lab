@@ -77,6 +77,10 @@ from tac.canonical_equations.equation import (
     EmpiricalAnchor,
     InvalidEquationError,
 )
+from tac.canonical_equations.mlx_matmul_m_series_floor import (
+    build_mlx_matmul_drift_m_series_canonical_floor_v1,
+    classify_mlx_matmul_drift,
+)
 from tac.canonical_equations.mlx_pytorch_drift import (
     build_equation_from_result_json as build_mlx_pytorch_drift_equation_from_result_json,
 )
@@ -151,11 +155,13 @@ __all__ = [
     "auto_recalibrate_from_continual_learning_posterior",
     "bootstrap_posterior_from_anchor_residuals",
     "build_all_initial_equations",
+    "build_mlx_matmul_drift_m_series_canonical_floor_v1",
     "build_mlx_pytorch_drift_equation_from_result_json",
     "build_mlx_pytorch_full_decoder_downstream_scorer_drift_propagation_v1",
     "build_pairset_component_marginal_score_decomposition_v1",
     "build_procedural_predictor_plus_residual_correction_savings_v1",
     "build_scorer_input_cache_hash_identity_v1",
+    "classify_mlx_matmul_drift",
     "compute_predicted_band_from_posterior",
     "get_equation_by_id",
     "load_equation_registry_strict",
