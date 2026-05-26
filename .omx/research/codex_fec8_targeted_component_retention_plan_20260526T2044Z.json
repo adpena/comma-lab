@@ -1,0 +1,336 @@
+{
+  "artifact_catalog_metadata": {
+    "artifact_paths": [
+      ".omx/research/codex_fec8_targeted_component_retention_plan_20260526T2044Z.json",
+      ".omx/research/codex_fec8_targeted_component_retention_plan_20260526T2044Z.json.journal.jsonl"
+    ],
+    "cleanup_plan_path": ".omx/research/codex_fec8_targeted_component_retention_plan_20260526T2044Z.json",
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "gpu_launched": false,
+    "journal_path": ".omx/research/codex_fec8_targeted_component_retention_plan_20260526T2044Z.json.journal.jsonl",
+    "lifecycle_kind": "HISTORICAL_PROVENANCE",
+    "policy_id": "operator_storage_waterfall.v1",
+    "policy_schema": "comma_lab.operator_storage_waterfall.v1",
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "comma_lab.operator_storage_waterfall_artifact_catalog_metadata.v1",
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "storage_plan_path": null,
+    "tracked_local_boundary": {
+      ".omx/research/codex_fec8_targeted_component_retention_plan_20260526T2044Z.json": {
+        "artifact_kind_registry_pattern": ".omx/research/**/*.json*",
+        "git_boundary": "trackable_when_promoted",
+        "lifecycle_kind": "HISTORICAL_PROVENANCE",
+        "local_only": false
+      },
+      ".omx/research/codex_fec8_targeted_component_retention_plan_20260526T2044Z.json.journal.jsonl": {
+        "artifact_kind_registry_pattern": ".omx/research/**/*.json*",
+        "git_boundary": "trackable_when_promoted",
+        "lifecycle_kind": "HISTORICAL_PROVENANCE",
+        "local_only": false
+      }
+    }
+  },
+  "execution": {
+    "action": "move",
+    "cold_store_contract": null,
+    "cold_store_contracts": [
+      {
+        "device_id": 16777274,
+        "free_bytes": 1630213738496,
+        "path": "/Volumes/VertigoDataTier/pact_cold_store",
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "repo_device_id": 16777234,
+        "repo_root": "/Users/adpena/Projects/pact",
+        "required_bytes": 107374182400,
+        "reserve_bytes": 107374182400,
+        "same_device_as_repo": false,
+        "schema": "comma_lab.artifact_retention_cold_store_contract.v1",
+        "score_claim": false,
+        "tier_index": 0,
+        "write_probe_passed": true
+      },
+      {
+        "device_id": 16777269,
+        "free_bytes": 1484419235840,
+        "path": "/Volumes/APDataStore/pact_cold_store",
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "repo_device_id": 16777234,
+        "repo_root": "/Users/adpena/Projects/pact",
+        "required_bytes": 107374182400,
+        "reserve_bytes": 107374182400,
+        "same_device_as_repo": false,
+        "schema": "comma_lab.artifact_retention_cold_store_contract.v1",
+        "score_claim": false,
+        "tier_index": 1,
+        "write_probe_passed": true
+      }
+    ],
+    "cold_store_reserve_bytes": 107374182400,
+    "cold_store_root": null,
+    "cold_store_roots": [
+      "/Volumes/VertigoDataTier/pact_cold_store",
+      "/Volumes/APDataStore/pact_cold_store"
+    ],
+    "executed_bytes": 7324819200,
+    "executed_count": 2,
+    "generated_at_utc": "2026-05-26T20:50:26.402596+00:00",
+    "journal_path": ".omx/research/codex_fec8_targeted_component_retention_plan_20260526T2044Z.json.journal.jsonl",
+    "local_bytes_reclaimed": 7324819200,
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "rows": [
+      {
+        "action": "move",
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_targeted_component_correction/shared_candidate_component_response/candidate_component_response_b44da5d54d34ce094c8fca7a37172b9ea6546d8a56eb960a_8ce37fe75a2286a7/local_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "b44da5d54d34ce094c8fca7a37172b9ea6546d8a56eb960afa86252f56d11844",
+          "command": null,
+          "eval_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_targeted_component_correction/shared_candidate_component_response/candidate_component_response_b44da5d54d34ce094c8fca7a37172b9ea6546d8a56eb960a_8ce37fe75a2286a7/local_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "079d28af638004746bb55737450a3e5476dbe2c2abe254a2646376cccff34e94",
+          "inflated_outputs_manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_targeted_component_correction/shared_candidate_component_response/candidate_component_response_b44da5d54d34ce094c8fca7a37172b9ea6546d8a56eb960a_8ce37fe75a2286a7/local_cpu_advisory_work/inflated_outputs_manifest.json",
+          "inflated_outputs_manifest_sha256": "297330937aebbae8f197bf5a0347ea9a5a431c7bbd385e80da11e55dc3eab2d6",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_targeted_component_correction/shared_candidate_component_response/candidate_component_response_b44da5d54d34ce094c8fca7a37172b9ea6546d8a56eb960a_8ce37fe75a2286a7/local_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "27106ee2c18d6b456b3f73d489752f1bc59a6f0e1588e6af03e405c6aba1cea0"
+        },
+        "certified_rebuildable": true,
+        "cold_store_free_bytes_after_planned": 1626551328896,
+        "cold_store_free_bytes_before_planned": 1630213738496,
+        "cold_store_path": "/Volumes/VertigoDataTier/pact_cold_store/experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_targeted_component_correction/shared_candidate_component_response/candidate_component_response_b44da5d54d34ce094c8fca7a37172b9ea6546d8a56eb960a_8ce37fe75a2286a7/local_cpu_advisory_work/inflated",
+        "cold_store_reserve_bytes": 107374182400,
+        "cold_store_root": "/Volumes/VertigoDataTier/pact_cold_store",
+        "cold_store_tier_index": 0,
+        "cold_store_verification": {
+          "bytes_estimate": 3662409600,
+          "destination_device_id": 16777274,
+          "destination_digest": {
+            "bytes": 3662409600,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 3662409600,
+                "path": "0.raw",
+                "sha256": "d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c"
+              }
+            ],
+            "sha256": "9438f3f0feeaad151f3de05e5b9f58a64302e3f44cbedd6f93b78246cbab3571"
+          },
+          "method": "copy_verify_delete",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "same_device_as_source": false,
+          "schema": "comma_lab.artifact_retention_cold_store_copy.v1",
+          "score_claim": false,
+          "source_device_id": 16777234,
+          "source_digest": {
+            "bytes": 3662409600,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 3662409600,
+                "path": "0.raw",
+                "sha256": "d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c"
+              }
+            ],
+            "sha256": "9438f3f0feeaad151f3de05e5b9f58a64302e3f44cbedd6f93b78246cbab3571"
+          }
+        },
+        "kind": "local_cpu_advisory_inflated_raw",
+        "local_bytes_reclaimed": 3662409600,
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_targeted_component_correction/shared_candidate_component_response/candidate_component_response_b44da5d54d34ce094c8fca7a37172b9ea6546d8a56eb960a_8ce37fe75a2286a7/local_cpu_advisory_work/inflated",
+        "preflight_revalidated": true,
+        "status": "moved"
+      },
+      {
+        "action": "move",
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_targeted_component_correction/shared_reference_component_response/reference_component_response_6bae0201fb082457a02c69565531aba4c5942669c384fdc4_e570e28337a7f4ec/reference_local_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+          "command": null,
+          "eval_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_targeted_component_correction/shared_reference_component_response/reference_component_response_6bae0201fb082457a02c69565531aba4c5942669c384fdc4_e570e28337a7f4ec/reference_local_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "7b678606b092e5f434d5767edfdf8ba3f33c0ca6268645dc843b5c6ce49d931a",
+          "inflated_outputs_manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_targeted_component_correction/shared_reference_component_response/reference_component_response_6bae0201fb082457a02c69565531aba4c5942669c384fdc4_e570e28337a7f4ec/reference_local_cpu_advisory_work/inflated_outputs_manifest.json",
+          "inflated_outputs_manifest_sha256": "e4e98744e5e5de44924f1fa3ca5fd3e7c77de0f846c136614559c9363b7b4bb2",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_targeted_component_correction/shared_reference_component_response/reference_component_response_6bae0201fb082457a02c69565531aba4c5942669c384fdc4_e570e28337a7f4ec/reference_local_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "c3feec51899847d67887375cd56a14581c9bd76622a87c7aa92b2daf0ec57623"
+        },
+        "certified_rebuildable": true,
+        "cold_store_free_bytes_after_planned": 1622888919296,
+        "cold_store_free_bytes_before_planned": 1626551328896,
+        "cold_store_path": "/Volumes/VertigoDataTier/pact_cold_store/experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_targeted_component_correction/shared_reference_component_response/reference_component_response_6bae0201fb082457a02c69565531aba4c5942669c384fdc4_e570e28337a7f4ec/reference_local_cpu_advisory_work/inflated",
+        "cold_store_reserve_bytes": 107374182400,
+        "cold_store_root": "/Volumes/VertigoDataTier/pact_cold_store",
+        "cold_store_tier_index": 0,
+        "cold_store_verification": {
+          "bytes_estimate": 3662409600,
+          "destination_device_id": 16777274,
+          "destination_digest": {
+            "bytes": 3662409600,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 3662409600,
+                "path": "0.raw",
+                "sha256": "d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c"
+              }
+            ],
+            "sha256": "9438f3f0feeaad151f3de05e5b9f58a64302e3f44cbedd6f93b78246cbab3571"
+          },
+          "method": "copy_verify_delete",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "same_device_as_source": false,
+          "schema": "comma_lab.artifact_retention_cold_store_copy.v1",
+          "score_claim": false,
+          "source_device_id": 16777234,
+          "source_digest": {
+            "bytes": 3662409600,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 3662409600,
+                "path": "0.raw",
+                "sha256": "d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c"
+              }
+            ],
+            "sha256": "9438f3f0feeaad151f3de05e5b9f58a64302e3f44cbedd6f93b78246cbab3571"
+          }
+        },
+        "kind": "local_cpu_advisory_inflated_raw",
+        "local_bytes_reclaimed": 3662409600,
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_targeted_component_correction/shared_reference_component_response/reference_component_response_6bae0201fb082457a02c69565531aba4c5942669c384fdc4_e570e28337a7f4ec/reference_local_cpu_advisory_work/inflated",
+        "preflight_revalidated": true,
+        "status": "moved"
+      }
+    ],
+    "schema": "comma_lab.artifact_retention_execution.v1",
+    "score_claim": false,
+    "skipped_count": 0,
+    "tiered_cold_store": true
+  },
+  "operator_storage_policy": {
+    "cold_store_roots": [
+      "/Volumes/VertigoDataTier/pact_cold_store",
+      "/Volumes/APDataStore/pact_cold_store"
+    ],
+    "cold_store_subdir": "cold_store",
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "explicit_cold_store_override": true,
+    "explicit_storage_tier_override": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "gpu_launched": false,
+    "local_disk_enabled": false,
+    "local_disk_enabled_by_default": false,
+    "local_disk_requires_explicit_opt_in": true,
+    "policy_id": "operator_storage_waterfall.v1",
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "comma_lab.operator_storage_waterfall.v1",
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "storage_tier_cli_specs": [
+      "vertigo=/Volumes/VertigoDataTier/pact",
+      "apdatastore=/Volumes/APDataStore/pact"
+    ],
+    "work_tier_order": [
+      {
+        "allow_local_disk": false,
+        "name": "vertigo",
+        "priority": 0,
+        "root": "/Volumes/VertigoDataTier/pact",
+        "source": "operator_policy"
+      },
+      {
+        "allow_local_disk": false,
+        "name": "apdatastore",
+        "priority": 1,
+        "root": "/Volumes/APDataStore/pact",
+        "source": "operator_policy"
+      }
+    ]
+  },
+  "plan": {
+    "blocked_candidate_count": 0,
+    "blocked_candidates": [],
+    "candidate_count": 2,
+    "candidates": [
+      {
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_targeted_component_correction/shared_candidate_component_response/candidate_component_response_b44da5d54d34ce094c8fca7a37172b9ea6546d8a56eb960a_8ce37fe75a2286a7/local_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "b44da5d54d34ce094c8fca7a37172b9ea6546d8a56eb960afa86252f56d11844",
+          "command": null,
+          "eval_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_targeted_component_correction/shared_candidate_component_response/candidate_component_response_b44da5d54d34ce094c8fca7a37172b9ea6546d8a56eb960a_8ce37fe75a2286a7/local_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "079d28af638004746bb55737450a3e5476dbe2c2abe254a2646376cccff34e94",
+          "inflated_outputs_manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_targeted_component_correction/shared_candidate_component_response/candidate_component_response_b44da5d54d34ce094c8fca7a37172b9ea6546d8a56eb960a_8ce37fe75a2286a7/local_cpu_advisory_work/inflated_outputs_manifest.json",
+          "inflated_outputs_manifest_sha256": "297330937aebbae8f197bf5a0347ea9a5a431c7bbd385e80da11e55dc3eab2d6",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_targeted_component_correction/shared_candidate_component_response/candidate_component_response_b44da5d54d34ce094c8fca7a37172b9ea6546d8a56eb960a_8ce37fe75a2286a7/local_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "27106ee2c18d6b456b3f73d489752f1bc59a6f0e1588e6af03e405c6aba1cea0"
+        },
+        "certified_rebuildable": true,
+        "kind": "local_cpu_advisory_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_targeted_component_correction/shared_candidate_component_response/candidate_component_response_b44da5d54d34ce094c8fca7a37172b9ea6546d8a56eb960a_8ce37fe75a2286a7/local_cpu_advisory_work/inflated"
+      },
+      {
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_targeted_component_correction/shared_reference_component_response/reference_component_response_6bae0201fb082457a02c69565531aba4c5942669c384fdc4_e570e28337a7f4ec/reference_local_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+          "command": null,
+          "eval_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_targeted_component_correction/shared_reference_component_response/reference_component_response_6bae0201fb082457a02c69565531aba4c5942669c384fdc4_e570e28337a7f4ec/reference_local_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "7b678606b092e5f434d5767edfdf8ba3f33c0ca6268645dc843b5c6ce49d931a",
+          "inflated_outputs_manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_targeted_component_correction/shared_reference_component_response/reference_component_response_6bae0201fb082457a02c69565531aba4c5942669c384fdc4_e570e28337a7f4ec/reference_local_cpu_advisory_work/inflated_outputs_manifest.json",
+          "inflated_outputs_manifest_sha256": "e4e98744e5e5de44924f1fa3ca5fd3e7c77de0f846c136614559c9363b7b4bb2",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_targeted_component_correction/shared_reference_component_response/reference_component_response_6bae0201fb082457a02c69565531aba4c5942669c384fdc4_e570e28337a7f4ec/reference_local_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "c3feec51899847d67887375cd56a14581c9bd76622a87c7aa92b2daf0ec57623"
+        },
+        "certified_rebuildable": true,
+        "kind": "local_cpu_advisory_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_targeted_component_correction/shared_reference_component_response/reference_component_response_6bae0201fb082457a02c69565531aba4c5942669c384fdc4_e570e28337a7f4ec/reference_local_cpu_advisory_work/inflated"
+      }
+    ],
+    "exclude_paths": [],
+    "generated_at_utc": "2026-05-26T20:47:12.453410+00:00",
+    "include_kinds": [
+      "inverse_scorer_inflate_parity_raw_output",
+      "local_cpu_advisory_extracted_scratch",
+      "local_cpu_advisory_inflated_raw",
+      "locality_inflated_raw"
+    ],
+    "min_bytes": 1073741824,
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "repo_root": "/Users/adpena/Projects/pact",
+    "roots": [
+      "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_targeted_component_correction/shared_candidate_component_response/candidate_component_response_b44da5d54d34ce094c8fca7a37172b9ea6546d8a56eb960a_8ce37fe75a2286a7",
+      "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_targeted_component_correction/shared_reference_component_response/reference_component_response_6bae0201fb082457a02c69565531aba4c5942669c384fdc4_e570e28337a7f4ec"
+    ],
+    "schema": "comma_lab.artifact_retention_plan.v1",
+    "score_claim": false,
+    "total_reclaimable_bytes": 7324819200
+  }
+}
