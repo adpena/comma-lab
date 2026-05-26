@@ -1304,6 +1304,46 @@ def test_promotes_family_agnostic_packet_member_proof_with_member_binding(
     assert row["promotion_eligible"] is False
 
 
+def test_family_agnostic_runtime_proof_allows_truthy_change_evidence(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    _write_family_agnostic_runtime_proof(
+        submission,
+        archive_sha,
+        extra_fields={
+            "score_affecting_payload_changed": True,
+            "charged_bits_changed": True,
+        },
+    )
+    _add_required_runtime_proof_fields(queue, submission, tmp_path, status="present")
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["report"]["ready_for_exact_eval_dispatch"] is True
+    blockers = result["report"]["blockers"]
+    assert (
+        "runtime_consumption_proof_false_authority_violation:"
+        "score_affecting_payload_changed"
+        not in blockers
+    )
+    assert (
+        "runtime_consumption_proof_false_authority_violation:charged_bits_changed"
+        not in blockers
+    )
+    row = result["promoted_queue"]["dispatch_ready"][0]
+    assert row["score_claim"] is False
+    assert row["promotion_eligible"] is False
+    assert row["rank_or_kill_eligible"] is False
+    assert row["ready_for_exact_eval_dispatch"] is True
+
+
 def test_promotes_dfl1_candidate_only_with_verified_shell_parity_artifact(
     tmp_path: Path,
 ) -> None:

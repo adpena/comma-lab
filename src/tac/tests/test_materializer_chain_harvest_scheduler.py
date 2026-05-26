@@ -58,12 +58,19 @@ from tac.optimization.proxy_candidate_contract import truthy_authority_field_vio
 from tac.optimization.serialized_archive_economics import (
     build_serialized_archive_delta_contract,
 )
+from tac.optimization.tensor_factorize_receiver import (
+    build_tensor_factorize_receiver_runtime,
+    build_tensor_factorize_runtime_consumption_proof,
+)
 from tools.run_family_agnostic_materializer_sweep import (
     build_materializer_empirical_sweep,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TOOL = REPO_ROOT / "tools" / "harvest_materializer_chain_candidates.py"
+EXACT_READINESS_BRIDGE_TOOL = (
+    REPO_ROOT / "tools" / "run_materializer_exact_readiness_bridge.py"
+)
 DISPATCH_PLAN_TOOL = REPO_ROOT / "tools" / "build_materializer_exact_eval_dispatch_plan.py"
 SHELL_PARITY_TOOL = REPO_ROOT / "tools" / "prove_shell_inflate_parity.py"
 
@@ -1585,29 +1592,75 @@ def test_harvest_family_agnostic_tensor_factorize_receiver_proof(
     repo.mkdir()
     archive = repo / "source.zip"
     output = repo / "candidate.zip"
+    consumed_output = repo / "candidate_consumed.zip"
     proof = repo / "runtime_consumption_proof.json"
+    runtime_dir = repo / "runtime"
+    runtime_manifest_out = repo / "runtime_adapter.json"
     manifest_path = repo / "family_candidate.json"
     tensor_path = repo / "weights.npy"
+    source_runtime = repo / "source_runtime"
     vector_a = np.arange(128, dtype=np.float32)[:, None]
     vector_b = np.linspace(0.25, 2.0, 128, dtype=np.float32)[None, :]
     np.save(tensor_path, vector_a @ vector_b)
     with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
         zf.writestr("weights.npy", tensor_path.read_bytes())
+    source_runtime.mkdir()
+    (source_runtime / "inflate.py").write_text(
+        "\n".join(
+            [
+                "import io, sys, zipfile",
+                "from pathlib import Path",
+                "import numpy as np",
+                "archive_dir, output_dir, file_list = sys.argv[1:4]",
+                "out = Path(output_dir)",
+                "out.mkdir(parents=True, exist_ok=True)",
+                "with zipfile.ZipFile(Path(archive_dir) / 'archive.zip', 'r') as zf:",
+                "    tensor = np.load(io.BytesIO(zf.read('weights.npy')), allow_pickle=False)",
+                "(out / file_list).write_text(f'{float(np.sum(tensor)):.6f}', encoding='utf-8')",
+            ]
+        ),
+        encoding="utf-8",
+    )
     manifest = materialize_tensor_factorize_candidate(
         archive_path=archive,
         tensor_manifest={"member_name": "weights.npy"},
         factorization_contract={
             "rank": 1,
             "cooperative_receiver_id": "fixture_tensor_factorize_receiver",
-            "receiver_adapter_kind": "npz_svd_low_rank_v1",
+            "receiver_adapter_kind": "shadow_archive_tensor_factorize_receiver",
             "max_abs_error_tolerance": 1.0e-3,
         },
         output_archive=output,
-        runtime_consumption_proof_out=proof,
         repo_root=repo,
     )
-    manifest["candidate_id"] = "family_agnostic_tensor_factorize_with_proof"
-    _write_json(manifest_path, manifest)
+    runtime_manifest = build_tensor_factorize_receiver_runtime(
+        source_runtime_dir=source_runtime,
+        candidate_manifest=manifest,
+        runtime_dir_out=runtime_dir,
+        runtime_manifest_out=runtime_manifest_out,
+        repo_root=repo,
+    )
+    runtime_proof = build_tensor_factorize_runtime_consumption_proof(
+        runtime_adapter_manifest=runtime_manifest,
+        candidate_manifest=manifest,
+        repo_root=repo,
+    )
+    _write_json(proof, runtime_proof)
+    consumed_manifest = materialize_tensor_factorize_candidate(
+        archive_path=archive,
+        tensor_manifest={"member_name": "weights.npy"},
+        factorization_contract={
+            "rank": 1,
+            "cooperative_receiver_id": "fixture_tensor_factorize_receiver",
+            "receiver_adapter_kind": "shadow_archive_tensor_factorize_receiver",
+            "max_abs_error_tolerance": 1.0e-3,
+        },
+        output_archive=consumed_output,
+        runtime_consumption_proof=proof,
+        repo_root=repo,
+    )
+    consumed_manifest["candidate_id"] = "family_agnostic_tensor_factorize_with_proof"
+    _write_json(manifest_path, consumed_manifest)
 
     result = harvest_materializer_chain_manifests(
         repo_root=repo,
@@ -1894,6 +1947,93 @@ def test_exact_readiness_bridge_promotes_valid_harvested_source_queue(
     assert promoted["ready_for_exact_eval_dispatch"] is True
     assert promoted["score_claim"] is False
     assert promoted["dispatch_claim_required_before_gpu_or_remote_eval"] is True
+
+
+def test_exact_readiness_bridge_cli_writes_false_authority_report(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    chain = _exact_ready_chain_manifest(repo)
+    source_queue_out = repo / "source_queue.json"
+    bridge_report_out = repo / "bridge" / "exact_readiness_bridge_report.json"
+    harvest_result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[chain],
+    )
+    _write_json(source_queue_out, harvest_result["source_queue"])
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(EXACT_READINESS_BRIDGE_TOOL),
+            "--source-queue",
+            str(source_queue_out),
+            "--exact-readiness-out-dir",
+            str(repo / "exact_readiness"),
+            "--bridge-report-out",
+            str(bridge_report_out),
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["schema"] == "materializer_exact_readiness_bridge_cli_result.v1"
+    assert payload["candidate_count"] == 1
+    assert payload["ready_candidate_count"] == 1
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    bridge = json.loads(bridge_report_out.read_text(encoding="utf-8"))
+    assert bridge["schema"] == EXACT_READINESS_BRIDGE_SCHEMA
+    assert bridge["ready_candidate_count"] == 1
+    assert truthy_authority_field_violations(bridge) == []
+    retry = subprocess.run(
+        [
+            sys.executable,
+            str(EXACT_READINESS_BRIDGE_TOOL),
+            "--source-queue",
+            str(source_queue_out),
+            "--exact-readiness-out-dir",
+            str(repo / "exact_readiness"),
+            "--bridge-report-out",
+            str(bridge_report_out),
+            "--overwrite",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert retry.returncode == 0, retry.stderr
+    retry_payload = json.loads(retry.stdout)
+    assert retry_payload["skipped_existing_bridge_report"] is True
+
+    mismatched_candidate = subprocess.run(
+        [
+            sys.executable,
+            str(EXACT_READINESS_BRIDGE_TOOL),
+            "--source-queue",
+            str(source_queue_out),
+            "--exact-readiness-out-dir",
+            str(repo / "exact_readiness"),
+            "--bridge-report-out",
+            str(bridge_report_out),
+            "--candidate-id",
+            "not_in_existing_report",
+            "--overwrite",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert mismatched_candidate.returncode == 2
+    assert "exact_readiness_candidate_id_missing" in mismatched_candidate.stderr
 
 
 def test_materializer_dispatch_plan_dry_run_does_not_write_claim(

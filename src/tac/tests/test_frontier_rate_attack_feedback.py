@@ -272,11 +272,61 @@ def _write_materializer_feedback(root: Path) -> Path:
             ],
         },
     )
+    repo = root.parent
+    exact_handoff_dir = root / "receiver_smoke" / "exact_eval_handoff"
+    exact_readiness_report = _write_json(
+        exact_handoff_dir / "receiver_smoke_candidate.exact_readiness_report.json",
+        {
+            "schema": "optimizer_candidate_exact_eval_readiness_report_v1",
+            **_false_authority(),
+            "candidate_id": "receiver_smoke_candidate",
+            "ready_for_exact_eval_dispatch": False,
+            "blockers": [
+                "inflate_sh_missing",
+                "runtime_tree_sha256_missing",
+            ],
+        },
+    )
+    source_queue = _write_json(
+        exact_handoff_dir / "source_queue.json",
+        {
+            "schema": "optimizer_candidate_queue_v1",
+            **_false_authority(),
+            "top_k": [
+                {
+                    **_false_authority(),
+                    "candidate_id": "receiver_smoke_candidate",
+                    "target_kind": "packet_member_zip_header_elide_v1",
+                    "candidate_archive_path": (
+                        "experiments/results/receiver_smoke/candidate.zip"
+                    ),
+                    "candidate_archive_sha256": "a" * 64,
+                    "source_archive_path": (
+                        "experiments/results/receiver_smoke/source.zip"
+                    ),
+                    "source_archive_sha256": "b" * 64,
+                    "source_manifest_path": (
+                        "experiments/results/receiver_smoke/source_manifest.json"
+                    ),
+                    "runtime_consumption_proof_path": None,
+                    "receiver_contract_kind": "packet_member_zip_header_elide_v1",
+                    "receiver_contract_satisfied": False,
+                    "runtime_adapter_ready": False,
+                    "readiness_blockers": [
+                        "inflate_sh_missing",
+                        "runtime_tree_sha256_missing",
+                    ],
+                }
+            ],
+            "dispatch_ready": [],
+        },
+    )
     _write_json(
         root / "receiver_smoke" / "exact_eval_handoff" / "exact_readiness_bridge_report.json",
         {
             "schema": "materializer_chain_exact_readiness_bridge_report.v1",
             **_false_authority(),
+            "source_queue_path": source_queue.relative_to(repo).as_posix(),
             "candidate_count": 1,
             "ready_candidate_count": 0,
             "blocked_candidate_count": 1,
@@ -292,6 +342,10 @@ def _write_materializer_feedback(root: Path) -> Path:
                         "inflate_sh_missing",
                         "runtime_tree_sha256_missing",
                     ],
+                    "exact_readiness_report_path": exact_readiness_report.relative_to(
+                        repo
+                    ).as_posix(),
+                    "exact_ready_queue_path": None,
                 }
             ],
         },
@@ -594,6 +648,10 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
     _assert_false_authority(work_order)
     assert work_order["bridge_report_paths"] == first_repair["bridge_report_paths"]
     assert work_order["bridge_details"]["bridge_reports"]
+    assert work_order["bridge_details"]["source_queue_paths"] == [
+        "frontier_artifacts/receiver_smoke/exact_eval_handoff/source_queue.json"
+    ]
+    assert work_order["bridge_details"]["candidate_rows"]
     assert work_order["budget_spend_gate"][
         "ready_for_targeted_correction_budget_spend"
     ] is False
@@ -1305,6 +1363,35 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     }
     if len(actionable_sources) >= len(selected_sources):
         assert len(selected_sources) == len(set(selected_sources))
+    bridge_steps = [
+        step
+        for experiment in repair_queue["experiments"]
+        for step in experiment["steps"]
+        if str(step["id"]).startswith("run_exact_readiness_bridge")
+    ]
+    assert bridge_steps
+    bridge_step = bridge_steps[0]
+    assert bridge_step["command"][1] == "tools/run_materializer_exact_readiness_bridge.py"
+    assert "--source-queue" in bridge_step["command"]
+    assert "--bridge-report-out" in bridge_step["command"]
+    assert "--overwrite" in bridge_step["command"]
+    assert "--force-recompute" in bridge_step["command"]
+    assert "emit_receiver_repair_work_order" in bridge_step["requires"]
+    assert any(
+        postcondition["type"] == "json_false_authority"
+        for postcondition in bridge_step["postconditions"]
+    )
+    assert any(
+        postcondition["type"] == "json_equals"
+        and postcondition["key"] == "ready_for_exact_eval_dispatch"
+        and postcondition["equals"] is False
+        for postcondition in bridge_step["postconditions"]
+    )
+    assert any(
+        experiment["metadata"]["exact_readiness_bridge_step_count"] > 0
+        and experiment["metadata"]["source_queue_paths"]
+        for experiment in repair_queue["experiments"]
+    )
     first_step = repair_queue["experiments"][0]["steps"][0]
     assert first_step["command"][1] == "tools/build_frontier_receiver_repair_work_order.py"
     work_order_command = [sys.executable, *first_step["command"][1:]]

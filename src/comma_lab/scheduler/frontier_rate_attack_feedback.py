@@ -79,6 +79,9 @@ RECEIVER_REPAIR_WORK_ORDER_SCHEMA = (
 RECEIVER_REPAIR_QUEUE_METADATA_SCHEMA = (
     "frontier_rate_attack_receiver_repair_queue_metadata.v1"
 )
+MATERIALIZER_EXACT_READINESS_BRIDGE_TOOL = (
+    "tools/run_materializer_exact_readiness_bridge.py"
+)
 
 _OPERATION_LEVELS = (
     "bit",
@@ -3232,6 +3235,17 @@ def build_frontier_receiver_repair_queue(
         repair_id = str(row.get("repair_id") or f"receiver_repair_{priority}")
         repair_dir = queue_root / _slug_token(repair_id)
         work_order_path = repair_dir / "work_order.json"
+        bridge_details = _bridge_report_details(
+            bridge_report_paths=_string_list(row.get("bridge_report_paths")),
+            candidate_ids=_string_list(row.get("candidate_ids")),
+            repo_root=repo,
+        )
+        exact_readiness_steps = _receiver_repair_exact_readiness_bridge_steps(
+            row=row,
+            bridge_details=bridge_details,
+            repair_dir=repair_dir,
+            repo_root=repo,
+        )
         experiments.append(
             {
                 "id": _slug_token(repair_id),
@@ -3253,6 +3267,10 @@ def build_frontier_receiver_repair_queue(
                     "source_queue_consumer": row.get("source_queue_consumer"),
                     "candidate_ids": list(row.get("candidate_ids") or []),
                     "bridge_report_paths": list(row.get("bridge_report_paths") or []),
+                    "source_queue_paths": list(
+                        bridge_details.get("source_queue_paths") or []
+                    ),
+                    "exact_readiness_bridge_step_count": len(exact_readiness_steps),
                     "saved_bytes_at_risk": row.get("saved_bytes_at_risk"),
                     "correction_budget_context": dict(
                         row.get("correction_budget_context")
@@ -3307,7 +3325,8 @@ def build_frontier_receiver_repair_queue(
                             ],
                             "include_postcondition_paths": True,
                         },
-                    }
+                    },
+                    *exact_readiness_steps,
                 ],
             }
         )
@@ -3332,6 +3351,80 @@ def build_frontier_receiver_repair_queue(
             **FALSE_AUTHORITY,
         }
     )
+
+
+def _receiver_repair_exact_readiness_bridge_steps(
+    *,
+    row: Mapping[str, Any],
+    bridge_details: Mapping[str, Any],
+    repair_dir: Path,
+    repo_root: Path,
+) -> list[dict[str, Any]]:
+    source_queue_paths = _string_list(bridge_details.get("source_queue_paths"))
+    if not source_queue_paths:
+        return []
+    candidate_ids = _string_list(row.get("candidate_ids"))
+    steps: list[dict[str, Any]] = []
+    for index, source_queue_path in enumerate(source_queue_paths, start=1):
+        suffix = "" if len(source_queue_paths) == 1 else f"_{index}"
+        bridge_dir = repair_dir / f"exact_readiness_bridge{suffix}"
+        bridge_report_path = bridge_dir / "exact_readiness_bridge_report.json"
+        readiness_dir = bridge_dir / "exact_readiness"
+        command = [
+            ".venv/bin/python",
+            MATERIALIZER_EXACT_READINESS_BRIDGE_TOOL,
+            "--source-queue",
+            source_queue_path,
+            "--exact-readiness-out-dir",
+            _repo_rel(readiness_dir, repo_root),
+            "--bridge-report-out",
+            _repo_rel(bridge_report_path, repo_root),
+            "--overwrite",
+            "--force-recompute",
+        ]
+        for candidate_id in candidate_ids:
+            command.extend(["--candidate-id", candidate_id])
+        steps.append(
+            {
+                "id": f"run_exact_readiness_bridge{suffix}",
+                "kind": "command",
+                "command": command,
+                "requires": ["emit_receiver_repair_work_order"],
+                "resources": {"kind": "local_cpu"},
+                "timeout_seconds": 120,
+                "postconditions": [
+                    {
+                        "type": "json_equals",
+                        "path": _repo_rel(bridge_report_path, repo_root),
+                        "key": "schema",
+                        "equals": MATERIALIZER_EXACT_READINESS_BRIDGE_SCHEMA,
+                    },
+                    {
+                        "type": "json_false_authority",
+                        "path": _repo_rel(bridge_report_path, repo_root),
+                    },
+                    {
+                        "type": "json_equals",
+                        "path": _repo_rel(bridge_report_path, repo_root),
+                        "key": "ready_for_exact_eval_dispatch",
+                        "equals": False,
+                    },
+                ],
+                "telemetry": {
+                    "artifact_paths": [
+                        _repo_rel(bridge_report_path, repo_root),
+                        _repo_rel(readiness_dir, repo_root),
+                    ],
+                    "input_artifact_paths": [
+                        source_queue_path,
+                        *list(row.get("bridge_report_paths") or []),
+                    ],
+                    "recursive": True,
+                    "include_postcondition_paths": True,
+                },
+            }
+        )
+    return steps
 
 
 def _queue_summary(queue: Mapping[str, Any]) -> dict[str, Any]:

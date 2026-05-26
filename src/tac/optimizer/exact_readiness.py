@@ -195,6 +195,11 @@ INVERSE_SCORER_REQUIRED_FALSE_AUTHORITY_FIELDS = tuple(
     for field in PROXY_FALSE_AUTHORITY_FIELDS
     if field not in {"score_affecting_payload_changed", "charged_bits_changed"}
 )
+FAMILY_AGNOSTIC_RUNTIME_PROOF_REQUIRED_FALSE_AUTHORITY_FIELDS = tuple(
+    field
+    for field in PROXY_FALSE_AUTHORITY_FIELDS
+    if field not in {"score_affecting_payload_changed", "charged_bits_changed"}
+)
 RENDERER_PAYLOAD_DFL1_CLEARABLE_SOURCE_BLOCKERS = frozenset(
     {
         RENDERER_PAYLOAD_DFL1_FULL_FRAME_BLOCKER,
@@ -1514,7 +1519,9 @@ def validate_runtime_consumption_proof(
             elif proof_member_sha != str(expected_member_sha).lower():
                 blockers.append("runtime_consumption_proof_candidate_member_sha_mismatch")
         for false_authority_field in (
-            field for field in PROXY_FALSE_AUTHORITY_FIELDS if field in proof_raw
+            field
+            for field in FAMILY_AGNOSTIC_RUNTIME_PROOF_REQUIRED_FALSE_AUTHORITY_FIELDS
+            if field in proof_raw
         ):
             if proof_raw.get(false_authority_field) is not False:
                 blockers.append(

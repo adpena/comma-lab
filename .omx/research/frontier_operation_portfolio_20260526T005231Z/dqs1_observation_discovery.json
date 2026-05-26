@@ -1,0 +1,33 @@
+{
+  "active": true,
+  "allowed_use": "local_advisory_observation_replanning_only",
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "discovered_observation_count": 7,
+  "discovered_observation_jsonl_paths": [
+    ".omx/research/codex_frontier_rate_attack_feedback_cycle_harvest_closure_20260525T223819Z/dqs1_harvest_observations/dqs1_local_first_harvest_observations_20260525T223819Z.jsonl",
+    ".omx/research/dqs1_local_first_harvest_observations_20260523T121036Z.jsonl",
+    ".omx/research/dqs1_local_first_harvest_observations_20260523T123200Z.jsonl",
+    ".omx/research/dqs1_local_first_harvest_observations_20260523T125445Z.jsonl",
+    ".omx/research/dqs1_local_first_harvest_observations_20260523T130907Z.jsonl",
+    ".omx/research/dqs1_local_first_harvest_observations_20260523T133010Z.jsonl",
+    ".omx/research/dqs1_local_first_harvest_observations_20260524T065107Z.jsonl"
+  ],
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+  "frontier_artifact_roots": [
+    ".omx/research"
+  ],
+  "gpu_launched": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "frontier_rate_attack_dqs1_observation_discovery.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false
+}
