@@ -3141,6 +3141,7 @@ def test_materializer_work_queue_wraps_packet_member_merge_empirical_sweep(
     archive = tmp_path / "source.zip"
     packet_manifest = tmp_path / "packet_members.json"
     merge_contract = tmp_path / "merge_contract.json"
+    source_runtime = tmp_path / "source_runtime"
     sweep_dir = tmp_path / "merge_sweep"
     sweep_json = sweep_dir / "sweep.json"
     observations_jsonl = sweep_dir / "observations.jsonl"
@@ -3165,6 +3166,7 @@ def test_materializer_work_queue_wraps_packet_member_merge_empirical_sweep(
                 "sweep_archives": [f"merge={archive}"],
                 "packet_member_manifest": str(packet_manifest),
                 "merge_contract": str(merge_contract),
+                "packet_member_merge_source_runtime_dir": str(source_runtime),
                 "member_names": ["renderer.bin", "masks.mkv"],
                 "merged_member_name": "p",
                 "sweep_output_dir": str(sweep_dir),
@@ -3187,6 +3189,9 @@ def test_materializer_work_queue_wraps_packet_member_merge_empirical_sweep(
     assert ["--merge-contract", str(merge_contract)] in [
         row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
     ]
+    assert ["--packet-member-merge-source-runtime-dir", str(source_runtime)] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
     assert ["--member-names", "renderer.bin"] in [
         row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
     ]
@@ -3203,6 +3208,7 @@ def test_materializer_work_queue_wraps_packet_member_merge_empirical_sweep(
         str(archive),
         str(packet_manifest),
         str(merge_contract),
+        str(source_runtime),
     ]
 
 

@@ -2716,6 +2716,20 @@ def _family_agnostic_materializer_sweep_command(
             input_paths.append(merge_contract)
             if command:
                 command.extend(["--merge-contract", merge_contract])
+        source_runtime = _path_context_value(
+            context,
+            "packet_member_merge_source_runtime_dir",
+        )
+        if source_runtime is None:
+            source_runtime = _path_context_value(context, "source_runtime_dir")
+        if source_runtime is None:
+            source_runtime = _path_context_value(context, "inflate_runtime_dir")
+        if source_runtime is not None:
+            input_paths.append(source_runtime)
+            if command:
+                command.extend(["--packet-member-merge-source-runtime-dir", source_runtime])
+        if command and context.get("allow_packet_member_merge_runtime_sidecars") is True:
+            command.append("--allow-packet-member-merge-runtime-sidecars")
         member_selection = _context_string_any(
             context,
             ("member_selection", "zip_member_selection", "packet_member_selection"),

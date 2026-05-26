@@ -23,6 +23,8 @@ from tac.optimization.family_agnostic_materializers import (  # noqa: E402
     ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER_ID,
     ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
     PACKET_MEMBER_MERGE_MATERIALIZER_ID,
+    PACKET_MEMBER_MERGE_RECEIVER_CONTRACT_KIND,
+    PACKET_MEMBER_MERGE_RUNTIME_ADAPTER_PROOF_KIND,
     PACKET_MEMBER_MERGE_TARGET_KIND,
     PACKET_MEMBER_RECOMPRESS_MATERIALIZER_ID,
     PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
@@ -39,9 +41,15 @@ from tac.optimization.family_agnostic_materializers import (  # noqa: E402
     materialize_packet_member_zip_header_elide_candidate,
     materialize_renderer_payload_dfl1_candidate,
     materialize_tensor_factorize_candidate,
+    verify_runtime_consumption_proof,
 )
 from tac.optimization.materializer_feedback import (  # noqa: E402
     materializer_observation_from_manifest,
+)
+from tac.optimization.packet_member_merge_receiver import (  # noqa: E402
+    PacketMemberMergeReceiverError,
+    build_packet_member_merge_receiver_runtime,
+    build_packet_member_merge_runtime_consumption_proof,
 )
 from tac.repo_io import (  # noqa: E402
     ArtifactWriteError,
@@ -104,6 +112,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--packet-member-manifest", type=Path)
     parser.add_argument("--merge-contract", type=Path)
     parser.add_argument("--merged-member-name")
+    parser.add_argument("--packet-member-merge-source-runtime-dir", type=Path)
+    parser.add_argument(
+        "--allow-packet-member-merge-runtime-sidecars",
+        action="store_true",
+    )
     parser.add_argument("--payload-member-name", default="p")
     parser.add_argument("--full-frame-inflate-parity-proof", type=Path)
     parser.add_argument("--header-elision-contract", type=Path)
@@ -141,6 +154,12 @@ def main(argv: list[str] | None = None) -> int:
             factorization_contract=args.factorization_contract,
             merge_contract=args.merge_contract,
             merged_member_name=args.merged_member_name,
+            packet_member_merge_source_runtime_dir=(
+                args.packet_member_merge_source_runtime_dir
+            ),
+            allow_packet_member_merge_runtime_sidecars=(
+                args.allow_packet_member_merge_runtime_sidecars
+            ),
             payload_member_name=args.payload_member_name,
             full_frame_inflate_parity_proof=args.full_frame_inflate_parity_proof,
             rank=args.rank,
@@ -163,7 +182,13 @@ def main(argv: list[str] | None = None) -> int:
                 expected_existing_sha256=args.expected_existing_observation_jsonl_sha256,
                 min_free_bytes=args.min_free_bytes,
             )
-    except (OSError, ArtifactWriteError, FamilyAgnosticMaterializerError, ValueError) as exc:
+    except (
+        OSError,
+        ArtifactWriteError,
+        FamilyAgnosticMaterializerError,
+        PacketMemberMergeReceiverError,
+        ValueError,
+    ) as exc:
         print(f"FATAL: materializer sweep failed: {exc}", file=sys.stderr)
         return 2
     print(json_text(payload), end="")
@@ -184,6 +209,8 @@ def build_materializer_empirical_sweep(
     packet_member_manifest: str | Path | Mapping[str, Any] | None = None,
     merge_contract: str | Path | Mapping[str, Any] | None = None,
     merged_member_name: str | None = None,
+    packet_member_merge_source_runtime_dir: str | Path | None = None,
+    allow_packet_member_merge_runtime_sidecars: bool = False,
     payload_member_name: str = "p",
     full_frame_inflate_parity_proof: str | Path | Mapping[str, Any] | None = None,
     header_elision_contract: str | Path | Mapping[str, Any] | None = None,
@@ -244,6 +271,10 @@ def build_materializer_empirical_sweep(
             packet_member_manifest=packet_member_manifest,
             merge_contract=merge_contract,
             merged_member_name=merged_member_name,
+            packet_member_merge_source_runtime_dir=packet_member_merge_source_runtime_dir,
+            allow_packet_member_merge_runtime_sidecars=(
+                allow_packet_member_merge_runtime_sidecars
+            ),
             payload_member_name=payload_member_name,
             full_frame_inflate_parity_proof=full_frame_inflate_parity_proof,
             member_name=member_name,
@@ -307,6 +338,8 @@ def _materialize_target(
     packet_member_manifest: str | Path | Mapping[str, Any] | None,
     merge_contract: str | Path | Mapping[str, Any] | None,
     merged_member_name: str | None,
+    packet_member_merge_source_runtime_dir: str | Path | None,
+    allow_packet_member_merge_runtime_sidecars: bool,
     payload_member_name: str,
     full_frame_inflate_parity_proof: str | Path | Mapping[str, Any] | None,
     member_name: str | None,
@@ -338,7 +371,10 @@ def _materialize_target(
             min_free_bytes=min_free_bytes,
         )
     if target_kind == PACKET_MEMBER_MERGE_TARGET_KIND:
-        return materialize_packet_member_merge_candidate(
+        materializer_proof_path = (
+            None if packet_member_merge_source_runtime_dir is not None else proof_path
+        )
+        result = materialize_packet_member_merge_candidate(
             archive_path=archive,
             output_archive=candidate_path,
             packet_member_manifest=packet_member_manifest,
@@ -347,11 +383,79 @@ def _materialize_target(
             all_members=all_members,
             merge_contract=merge_contract,
             merged_member_name=merged_member_name,
-            runtime_consumption_proof_out=proof_path,
+            runtime_consumption_proof_out=materializer_proof_path,
             repo_root=REPO_ROOT,
             allow_overwrite=allow_overwrite,
             min_free_bytes=min_free_bytes,
         )
+        if packet_member_merge_source_runtime_dir is None:
+            return result
+        runtime_dir = candidate_path.with_suffix(".runtime")
+        runtime_manifest_path = candidate_path.with_suffix(".runtime_adapter.json")
+        runtime_manifest = build_packet_member_merge_receiver_runtime(
+            source_runtime_dir=packet_member_merge_source_runtime_dir,
+            candidate_manifest=result,
+            runtime_dir_out=runtime_dir,
+            runtime_manifest_out=runtime_manifest_path,
+            repo_root=REPO_ROOT,
+            allow_runtime_sidecars=allow_packet_member_merge_runtime_sidecars,
+            allow_overwrite=allow_overwrite,
+            min_free_bytes=min_free_bytes,
+        )
+        runtime_proof = build_packet_member_merge_runtime_consumption_proof(
+            runtime_adapter_manifest=runtime_manifest,
+            candidate_manifest=result,
+            repo_root=REPO_ROOT,
+        )
+        write_json_artifact(
+            proof_path,
+            runtime_proof,
+            allow_overwrite=allow_overwrite,
+            min_free_bytes=min_free_bytes,
+        )
+        receiver_verification = verify_runtime_consumption_proof(
+            runtime_consumption_proof=runtime_proof,
+            required_candidate_archive_sha256=result["candidate_archive"]["sha256"],
+            required_candidate_member_sha256=result["candidate_member"]["sha256"],
+            required_proof_kind=PACKET_MEMBER_MERGE_RUNTIME_ADAPTER_PROOF_KIND,
+            required_receiver_contract_kind=PACKET_MEMBER_MERGE_RECEIVER_CONTRACT_KIND,
+            required_target_kind=PACKET_MEMBER_MERGE_TARGET_KIND,
+            required_materializer_id=PACKET_MEMBER_MERGE_MATERIALIZER_ID,
+            repo_root=REPO_ROOT,
+        )
+        result["packet_member_merge_receiver_runtime"] = runtime_manifest
+        result["receiver_verification"] = receiver_verification
+        result["runtime_consumption_proof_path"] = proof_path.as_posix()
+        result["reconstruction_proof_satisfied"] = (
+            receiver_verification["receiver_contract_satisfied"] is True
+        )
+        result["receiver_contract_satisfied"] = (
+            receiver_verification["receiver_contract_satisfied"] is True
+            and receiver_verification.get("runtime_adapter_ready") is True
+        )
+        result["runtime_adapter_ready"] = (
+            receiver_verification.get("runtime_adapter_ready") is True
+        )
+        result["readiness_blockers"] = [
+            str(blocker)
+            for blocker in result.get("readiness_blockers") or []
+            if blocker
+            not in {
+                "runtime_consumption_proof_missing",
+                "runtime_consumption_proof_not_passed",
+                "packet_member_merge_receiver_contract_not_satisfied",
+                "packet_member_merge_exact_readiness_refused_until_byte_closed_runtime_adapter_lands",
+            }
+        ]
+        result["readiness_blockers"].extend(
+            str(blocker) for blocker in receiver_verification.get("blockers") or []
+        )
+        if result["receiver_contract_satisfied"] is not True:
+            result["readiness_blockers"].append(
+                "packet_member_merge_receiver_contract_not_satisfied"
+            )
+        result["readiness_blockers"] = list(dict.fromkeys(result["readiness_blockers"]))
+        return result
     if target_kind == PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND:
         return materialize_packet_member_zip_header_elide_candidate(
             archive_path=archive,

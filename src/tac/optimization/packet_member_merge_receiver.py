@@ -380,7 +380,7 @@ def run_packet_member_merge_receiver_smoke(
     runtime_dir: str | Path,
     candidate_archive: str | Path,
     output_dir: str | Path,
-    file_list: str = "0.mkv",
+    file_list: str | Path = "0.mkv",
     timeout_seconds: int = 60,
 ) -> dict[str, Any]:
     """Execute the compiled receiver runtime against a candidate archive."""
@@ -390,14 +390,19 @@ def run_packet_member_merge_receiver_smoke(
     out_dir = Path(output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="packet-member-merge-smoke-") as tmp:
+        tmp_root = Path(tmp)
         archive_dir = Path(tmp) / "archive"
         archive_dir.mkdir()
         shutil.copy2(archive, archive_dir / MERGED_ARCHIVE_NAME)
+        file_list_path, file_list_entries, file_list_fixture_kind = _smoke_file_list_path(
+            file_list,
+            tmp_root=tmp_root,
+        )
         command = [
             str(runtime / WRAPPER_SH),
             str(archive_dir),
             str(out_dir),
-            file_list,
+            str(file_list_path),
         ]
         proc = subprocess.run(
             command,
@@ -413,8 +418,34 @@ def run_packet_member_merge_receiver_smoke(
         "stdout_tail": proc.stdout[-4000:],
         "stderr_tail": proc.stderr[-4000:],
         "command": command,
+        "file_list_entries": file_list_entries,
+        "file_list_fixture_kind": file_list_fixture_kind,
         **FALSE_AUTHORITY,
     }
+
+
+def _smoke_file_list_path(
+    file_list: str | Path,
+    *,
+    tmp_root: Path,
+) -> tuple[Path, list[str], str]:
+    """Return a contest-contract file-list path for receiver smoke execution."""
+
+    path = Path(file_list)
+    if path.is_file():
+        entries = [
+            line.strip()
+            for line in path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+        return path, entries, "caller_supplied_file_list_path"
+    raw = str(file_list).strip()
+    entries = [line.strip() for line in raw.splitlines() if line.strip()]
+    if not entries:
+        entries = ["0.mkv"]
+    fixture = tmp_root / "file_list.txt"
+    fixture.write_text("".join(f"{entry}\n" for entry in entries), encoding="utf-8")
+    return fixture, entries, "generated_file_list_fixture"
 
 
 def _reconstruction_identity(

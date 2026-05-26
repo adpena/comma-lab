@@ -237,6 +237,60 @@ def test_materializer_empirical_sweep_supports_packet_member_merge(
     assert Path(row["candidate_archive_path"]).is_file()
 
 
+def test_materializer_empirical_sweep_supports_packet_member_merge_runtime_adapter(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "merge.zip"
+    source_runtime = tmp_path / "source_runtime"
+    source_runtime.mkdir()
+    _write_merge_zip(archive)
+    (source_runtime / "inflate.py").write_text(
+        "\n".join(
+            [
+                "import sys, zipfile",
+                "from pathlib import Path",
+                "archive_dir, output_dir, file_list = sys.argv[1:4]",
+                "entries = Path(file_list).read_text(encoding='utf-8').splitlines()",
+                "out = Path(output_dir)",
+                "out.mkdir(parents=True, exist_ok=True)",
+                "with zipfile.ZipFile(Path(archive_dir) / 'archive.zip', 'r') as zf:",
+                "    payload = zf.read('renderer.bin') + zf.read('masks.mkv')",
+                "for entry in entries or ['0.mkv']:",
+                "    (out / Path(entry).with_suffix('.raw').name).write_bytes(payload)",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    payload = build_materializer_empirical_sweep(
+        target_kind="packet_member_merge_v1",
+        archives=[f"merge={archive}"],
+        output_dir=tmp_path / "sweep",
+        member_names=("renderer.bin", "masks.mkv"),
+        merged_member_name="p",
+        packet_member_merge_source_runtime_dir=source_runtime,
+    )
+
+    row = payload["observations"][0]
+    manifest = json.loads(Path(row["manifest_path"]).read_text(encoding="utf-8"))
+    proof = Path(row["runtime_consumption_proof_path"])
+    assert row["receiver_contract_satisfied"] is True
+    assert row["observed_score_gain"] > 0
+    assert row["recommended_planner_action"] == (
+        "keep_rate_positive_candidate_for_inflate_parity_gate"
+    )
+    assert proof.is_file()
+    assert manifest["packet_member_merge_receiver_runtime"][
+        "runtime_adapter_ready"
+    ] is True
+    assert manifest["runtime_adapter_ready"] is True
+    assert manifest["receiver_verification"]["runtime_adapter_ready"] is True
+    assert (
+        "packet_member_merge_receiver_contract_not_satisfied"
+        not in manifest["readiness_blockers"]
+    )
+
+
 def test_materializer_empirical_sweep_supports_renderer_payload_dfl1(
     tmp_path: Path,
 ) -> None:
@@ -389,3 +443,66 @@ def test_materializer_empirical_sweep_cli_writes_json_and_jsonl(
     assert Path(rows[0]["candidate_archive_path"]).is_file()
     assert stdout_payload["score_claim"] is False
     assert stdout_payload["ready_for_exact_eval_dispatch"] is False
+
+
+def test_materializer_empirical_sweep_cli_writes_packet_merge_runtime_adapter(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "merge.zip"
+    source_runtime = tmp_path / "source_runtime"
+    output_dir = tmp_path / "sweep"
+    output_json = tmp_path / "sweep.json"
+    _write_merge_zip(archive)
+    source_runtime.mkdir()
+    (source_runtime / "inflate.py").write_text(
+        "\n".join(
+            [
+                "import sys, zipfile",
+                "from pathlib import Path",
+                "archive_dir, output_dir, file_list = sys.argv[1:4]",
+                "out = Path(output_dir)",
+                "out.mkdir(parents=True, exist_ok=True)",
+                "with zipfile.ZipFile(Path(archive_dir) / 'archive.zip', 'r') as zf:",
+                "    payload = zf.read('renderer.bin') + zf.read('masks.mkv')",
+                "(out / '0.raw').write_bytes(payload)",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "run_family_agnostic_materializer_sweep.py"),
+            "--target-kind",
+            "packet_member_merge_v1",
+            "--archive",
+            f"merge={archive}",
+            "--output-dir",
+            str(output_dir),
+            "--output-json",
+            str(output_json),
+            "--member-names",
+            "renderer.bin",
+            "--member-names",
+            "masks.mkv",
+            "--merged-member-name",
+            "p",
+            "--packet-member-merge-source-runtime-dir",
+            str(source_runtime),
+        ],
+        check=True,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+    )
+
+    stdout_payload = json.loads(completed.stdout)
+    row = stdout_payload["observations"][0]
+    manifest = json.loads(Path(row["manifest_path"]).read_text(encoding="utf-8"))
+    assert row["receiver_contract_satisfied"] is True
+    assert Path(row["runtime_consumption_proof_path"]).is_file()
+    assert manifest["packet_member_merge_receiver_runtime"][
+        "runtime_adapter_ready"
+    ] is True
+    assert manifest["receiver_verification"]["runtime_adapter_ready"] is True

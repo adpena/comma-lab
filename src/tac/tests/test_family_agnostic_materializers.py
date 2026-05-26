@@ -433,9 +433,10 @@ def test_packet_member_merge_receiver_runtime_proves_consumed_transform(
                 "archive_dir, output_dir, file_list = sys.argv[1:4]",
                 "out = Path(output_dir)",
                 "out.mkdir(parents=True, exist_ok=True)",
+                "entry = Path(file_list).read_text(encoding='utf-8').strip()",
                 "with zipfile.ZipFile(Path(archive_dir) / 'archive.zip', 'r') as zf:",
                 "    payload = zf.read('side_a.bin') + zf.read('side_b.bin') + zf.read('keep.bin')",
-                "(out / file_list).write_bytes(payload)",
+                "(out / entry).write_bytes(payload)",
             ]
         ),
         encoding="utf-8",
