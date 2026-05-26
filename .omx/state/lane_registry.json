@@ -57042,6 +57042,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "codex_byte_range_stage_inputs_20260526",
+      "name": "Byte-range stage inputs queue execution",
+      "phase": 1.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_byte_range_stage_inputs_queue_20260526T040646Z_codex.md"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/frontier_rate_attack_feedback_cycle_20260526T_byte_range_stage_inputs/initial_refresh/byte_range_stage_inputs_smoke_summary.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_frontier_rate_attack_feedback.py"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_byte_range_stage_inputs_queue_20260526T040646Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -57051,5 +57092,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-26T03:54:48Z"
+  "updated_at": "2026-05-26T04:08:13Z"
 }

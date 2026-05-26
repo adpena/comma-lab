@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from comma_lab.scheduler.frontier_rate_attack_feedback import (
+    BYTE_RANGE_STAGE_INPUTS_SCHEMA,
     FEEDBACK_REFRESH_SCHEMA,
     LOCAL_CPU_EUREKA_DISCOVERY_SCHEMA,
     OPERATION_CHAIN_COMPILER_STAGE_PLAN_SCHEMA,
@@ -22,6 +23,7 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     TARGETED_COMPONENT_CORRECTION_ACQUISITION_SCHEMA,
     TARGETED_COMPONENT_CORRECTION_WORK_ORDER_SCHEMA,
     FrontierRateAttackFeedbackError,
+    build_frontier_byte_range_stage_inputs,
     build_frontier_operation_chain_compiler_queue,
     build_frontier_operation_chain_compiler_stage_plan,
     build_frontier_rate_attack_feedback_refresh,
@@ -585,6 +587,146 @@ def _assert_false_authority(payload: dict[str, object]) -> None:
         assert payload[key] is False
 
 
+def _operation_chain_stage_plan_payload() -> dict[str, object]:
+    return {
+        "schema": OPERATION_CHAIN_COMPILER_STAGE_PLAN_SCHEMA,
+        **_false_authority(),
+        "source_operation_id": "chain_registered_multisurface_materializer_program",
+        "source_operation_family": "registered_multisurface_materializer_chain",
+        "chain_targets": ["byte_range_entropy_recode_v1"],
+        "targeted_correction_budget": {
+            "schema": "frontier_rate_attack_targeted_correction_budget_summary.v1",
+            **_false_authority(),
+            "active": True,
+            "receiver_closed_materializer_saved_bytes_total": 156,
+        },
+        "stage_rows": [
+            {
+                "schema": "frontier_rate_attack_operation_chain_stage_row.v1",
+                **_false_authority(),
+                "stage_index": 1,
+                "stage_id": "payload_grammar_and_entropy",
+                "targets": ["byte_range_entropy_recode_v1"],
+                "required_before_execution": [
+                    "schema_manifest",
+                    "beam_probe_reports",
+                    "source_runtime_dir",
+                ],
+                "stage_ready_for_execution": False,
+                "blockers": [
+                    "payload_grammar_and_entropy_requires:schema_manifest",
+                    "payload_grammar_and_entropy_requires:beam_probe_reports",
+                    "payload_grammar_and_entropy_requires:source_runtime_dir",
+                ],
+            }
+        ],
+        "blockers": [
+            "operation_chain_stage_plan_requires_materializer_context_binding",
+            "operation_chain_stage_plan_requires_single_runtime_consumption_proof",
+        ],
+        "execution_ready": False,
+    }
+
+
+def test_byte_range_stage_inputs_bind_existing_receiver_chain_context(
+    tmp_path: Path,
+) -> None:
+    source_archive = _write_json(tmp_path / "manifest_source.json", {"ok": True})
+    source_archive.write_bytes(b"PK\x05\x06" + b"\0" * 18)
+    schema_manifest = _write_json(
+        tmp_path / "schema_manifest.json",
+        {
+            "source_archive": {
+                "path": source_archive.as_posix(),
+                "member_name": "x",
+            },
+            **_false_authority(),
+        },
+    )
+    beam_probe = _write_json(tmp_path / "stem_weight_beam_probe.json", {"ok": True})
+    combo_report = _write_json(tmp_path / "global_combo_probe.json", {"ok": True})
+    runtime_dir = tmp_path / "runtime"
+    runtime_dir.mkdir()
+    (runtime_dir / "inflate.py").write_text("BR_LEN = 1\n", encoding="utf-8")
+    (runtime_dir / "inflate.sh").write_text("#!/bin/sh\n", encoding="utf-8")
+    chain_output_dir = tmp_path / "byte_range_chain"
+    stage_plan = _operation_chain_stage_plan_payload()
+
+    payload = build_frontier_byte_range_stage_inputs(
+        repo_root=tmp_path,
+        operation_chain_stage_plan=stage_plan,
+        schema_manifest=schema_manifest,
+        beam_probe_reports=(beam_probe,),
+        source_runtime_dir=runtime_dir,
+        source_archive=source_archive,
+        global_combo_report=combo_report,
+        chain_output_dir=chain_output_dir,
+    )
+
+    assert payload["schema"] == BYTE_RANGE_STAGE_INPUTS_SCHEMA
+    _assert_false_authority(payload)
+    assert payload["local_chain_queueable"] is True
+    assert payload["exact_execution_ready"] is False
+    assert payload["budget_spend_allowed"] is False
+    assert payload["materializer_context"]["context_blockers"] == []
+    assert payload["materializer_context"]["schema_manifest"] == (
+        "schema_manifest.json"
+    )
+    assert payload["materializer_context"]["beam_probe_reports"] == [
+        "stem_weight_beam_probe.json"
+    ]
+    assert payload["materializer_context"]["global_combo_report"] == (
+        "global_combo_probe.json"
+    )
+    assert payload["materializer_context"]["member_name"] == "x"
+    assert payload["local_chain_command"][:2] == [
+        ".venv/bin/python",
+        "tools/run_byte_range_entropy_recode_chain.py",
+    ]
+    assert "--source-runtime-dir" in payload["local_chain_command"]
+    assert "byte_range_stage_requires_receiver_proof_after_local_chain" in (
+        payload["blockers"]
+    )
+    assert payload["rate_budget_policy"]["budget_spend_allowed"] is False
+    assert "segnet_boundary_repair" in payload["rate_budget_policy"]["freed_bytes_can_fund"]
+
+    stage_plan_path = _write_json(tmp_path / "stage_plan.json", stage_plan)
+    cli_out = tmp_path / "stage_inputs_cli.json"
+    result = subprocess.run(
+        [
+            sys.executable,
+            "tools/build_frontier_byte_range_stage_inputs.py",
+            "--operation-chain-stage-plan",
+            str(stage_plan_path),
+            "--stage-inputs-out",
+            str(cli_out),
+            "--schema-manifest",
+            str(schema_manifest),
+            "--beam-probe-report",
+            str(beam_probe),
+            "--source-runtime-dir",
+            str(runtime_dir),
+            "--source-archive",
+            str(source_archive),
+            "--global-combo-report",
+            str(combo_report),
+            "--chain-output-dir",
+            str(tmp_path / "byte_range_chain_cli"),
+            "--overwrite",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    cli_payload = json.loads(result.stdout)
+    assert cli_payload["local_chain_queueable"] is True
+    written = json.loads(cli_out.read_text(encoding="utf-8"))
+    assert written["schema"] == BYTE_RANGE_STAGE_INPUTS_SCHEMA
+    assert written["ready_for_exact_eval_dispatch"] is False
+
+
 def test_materializer_feedback_default_discovery_scans_research_candidates_only(
     tmp_path: Path,
 ) -> None:
@@ -910,10 +1052,25 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
     assert chain_queue is not None
     assert chain_queue["schema"] == "experiment_queue.v1"
     assert chain_queue["experiments"][0]["metadata"]["execution_ready"] is False
+    assert chain_queue["experiments"][0]["metadata"][
+        "byte_range_local_chain_queueable"
+    ] is False
+    assert chain_queue["experiments"][0]["metadata"][
+        "byte_range_stage_inputs_path"
+    ].endswith("byte_range_stage_inputs.json")
+    assert chain_queue["experiments"][0]["metadata"][
+        "byte_range_rate_budget_policy"
+    ]["budget_spend_allowed"] is False
     _assert_false_authority(chain_queue["experiments"][0]["metadata"])
     assert chain_queue["experiments"][0]["steps"][0]["postconditions"][0][
         "equals"
     ] == OPERATION_CHAIN_COMPILER_STAGE_PLAN_SCHEMA
+    assert chain_queue["experiments"][0]["steps"][1]["command"][1] == (
+        "tools/build_frontier_byte_range_stage_inputs.py"
+    )
+    assert chain_queue["experiments"][0]["steps"][1]["postconditions"][0][
+        "equals"
+    ] == BYTE_RANGE_STAGE_INPUTS_SCHEMA
     assert all(
         row["source_selection_samples"][0]["selection_kind"] == "materializer_feedback"
         for row in operation_materializer["materializer_backlog"]["rows"]

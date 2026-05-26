@@ -1,0 +1,282 @@
+{
+  "artifacts": {
+    "byte_range_candidate_manifest": {
+      "bytes": 23383,
+      "path": "experiments/results/frontier_operation_chain_compiler/frontier_feedback_cycle_byte_range_stage_inputs_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/byte_range_candidate_manifest.json",
+      "sha256": "63036acdd4ba5cba28da6ea27963257440fb0da8fcf6c84565ae9b0787e2390b"
+    },
+    "pr103_candidate_manifest": {
+      "bytes": 15441,
+      "path": "experiments/results/frontier_operation_chain_compiler/frontier_feedback_cycle_byte_range_stage_inputs_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/pr103_candidate_manifest.json",
+      "sha256": "2dcd122f9f036b79a5c19240ba9386f4d53e43ce29c7300d71ae93386d156222"
+    },
+    "receiver_proof": {
+      "bytes": 11470,
+      "path": "experiments/results/frontier_operation_chain_compiler/frontier_feedback_cycle_byte_range_stage_inputs_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/byte_range_receiver_proof.json",
+      "sha256": "9453b7d90ab6422a8ea9adc2a7f6115a2a12a6cc5a0b0ac3263a8a123c7aec28"
+    },
+    "runtime_adapter_manifest": {
+      "bytes": 14760,
+      "path": "experiments/results/frontier_operation_chain_compiler/frontier_feedback_cycle_byte_range_stage_inputs_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/pr103_runtime_adapter_manifest.json",
+      "sha256": "41149d3a033a1f038eb8a18c042cf88e362611404aa2b061ed7917c450277465"
+    },
+    "verified_candidate": {
+      "bytes": 3979,
+      "path": "experiments/results/frontier_operation_chain_compiler/frontier_feedback_cycle_byte_range_stage_inputs_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/byte_range_verified_candidate.json",
+      "sha256": "7e58eae25795b5ef63242495e8af8026d6dfc1206ab55c347c74474bccbbfb13"
+    }
+  },
+  "byte_closed_candidate_emitted": true,
+  "candidate_archive": {
+    "bytes": 178207,
+    "dispatch_attempted": false,
+    "member_bytes": 178107,
+    "member_name": "x",
+    "member_sha256": "8a4481272b6216e1d6111033347b3e5a4f104b0101d555eacef05c0c81e08d95",
+    "path": "experiments/results/frontier_operation_chain_compiler/frontier_feedback_cycle_byte_range_stage_inputs_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/candidate_archive.zip",
+    "provided": true,
+    "ready_for_exact_eval_dispatch": false,
+    "score_claim": false,
+    "sha256": "8460014d70855ce9226285f80513d6d743ed23723870a6a38b009cfca40f423e"
+  },
+  "candidate_archive_bytes": 178207,
+  "candidate_archive_sha256": "8460014d70855ce9226285f80513d6d743ed23723870a6a38b009cfca40f423e",
+  "candidate_member_sha256": "8a4481272b6216e1d6111033347b3e5a4f104b0101d555eacef05c0c81e08d95",
+  "candidate_runtime_adapter_blocker_cleared": true,
+  "chain_steps": [
+    {
+      "archive": {
+        "bytes": 178207,
+        "dispatch_attempted": false,
+        "member_bytes": 178107,
+        "member_name": "x",
+        "member_sha256": "8a4481272b6216e1d6111033347b3e5a4f104b0101d555eacef05c0c81e08d95",
+        "path": "experiments/results/frontier_operation_chain_compiler/frontier_feedback_cycle_byte_range_stage_inputs_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/candidate_archive.zip",
+        "provided": true,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "sha256": "8460014d70855ce9226285f80513d6d743ed23723870a6a38b009cfca40f423e"
+      },
+      "artifact": {
+        "bytes": 23383,
+        "path": "experiments/results/frontier_operation_chain_compiler/frontier_feedback_cycle_byte_range_stage_inputs_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/byte_range_candidate_manifest.json",
+        "sha256": "63036acdd4ba5cba28da6ea27963257440fb0da8fcf6c84565ae9b0787e2390b"
+      },
+      "pr103_candidate_artifact": {
+        "bytes": 15441,
+        "path": "experiments/results/frontier_operation_chain_compiler/frontier_feedback_cycle_byte_range_stage_inputs_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/pr103_candidate_manifest.json",
+        "sha256": "2dcd122f9f036b79a5c19240ba9386f4d53e43ce29c7300d71ae93386d156222"
+      },
+      "schema": "byte_range_entropy_recode_candidate_v1",
+      "status": "succeeded",
+      "step_id": "materialize_candidate"
+    },
+    {
+      "artifact": {
+        "bytes": 14760,
+        "path": "experiments/results/frontier_operation_chain_compiler/frontier_feedback_cycle_byte_range_stage_inputs_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/pr103_runtime_adapter_manifest.json",
+        "sha256": "41149d3a033a1f038eb8a18c042cf88e362611404aa2b061ed7917c450277465"
+      },
+      "readiness_blockers": [
+        "strict_pre_submission_compliance_json_missing",
+        "full_frame_render_output_parity_missing",
+        "shell_inflate_output_parity_missing",
+        "lane_dispatch_claim_missing",
+        "exact_cuda_auth_eval_missing"
+      ],
+      "runtime_tree_sha256": "93d0dbecdbff59daeb64b11760b9cd5454ccd8e22f9d9bec6c71217c6ec6f3a6",
+      "schema": "pr103_lc_ac_runtime_adapter_v1",
+      "status": "succeeded",
+      "step_id": "build_runtime_adapter"
+    },
+    {
+      "artifact": {
+        "bytes": 11470,
+        "path": "experiments/results/frontier_operation_chain_compiler/frontier_feedback_cycle_byte_range_stage_inputs_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/byte_range_receiver_proof.json",
+        "sha256": "9453b7d90ab6422a8ea9adc2a7f6115a2a12a6cc5a0b0ac3263a8a123c7aec28"
+      },
+      "ready_for_exact_eval_runtime": true,
+      "schema": "byte_range_entropy_recode_receiver_proof_v1",
+      "status": "succeeded",
+      "step_id": "build_receiver_proof"
+    },
+    {
+      "artifact": {
+        "bytes": 3979,
+        "path": "experiments/results/frontier_operation_chain_compiler/frontier_feedback_cycle_byte_range_stage_inputs_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/byte_range_verified_candidate.json",
+        "sha256": "7e58eae25795b5ef63242495e8af8026d6dfc1206ab55c347c74474bccbbfb13"
+      },
+      "readiness_blockers": [
+        "candidate_inflate_output_parity_missing",
+        "strict_pre_submission_compliance_json_missing",
+        "lane_dispatch_claim_missing",
+        "exact_cuda_auth_eval_missing"
+      ],
+      "receiver_contract_satisfied": true,
+      "schema": "byte_range_entropy_recode_candidate_receiver_verified_v1",
+      "status": "succeeded",
+      "step_id": "verify_candidate_with_receiver_proof"
+    }
+  ],
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "byte_range_entropy_recode_chain_is_not_dispatch_authorization",
+    "candidate_inflate_output_parity_missing",
+    "strict_pre_submission_compliance_json_missing",
+    "lane_dispatch_claim_missing",
+    "exact_cuda_auth_eval_missing",
+    "full_frame_render_output_parity_missing",
+    "shell_inflate_output_parity_missing"
+  ],
+  "full_frame_or_shell_parity_required": true,
+  "gpu_launched": false,
+  "next_required_gates": [
+    "inflate_or_full_frame_parity",
+    "strict_pre_submission_compliance",
+    "lane_dispatch_claim",
+    "contest_auth_eval"
+  ],
+  "output_dir": "experiments/results/frontier_operation_chain_compiler/frontier_feedback_cycle_byte_range_stage_inputs_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "readiness_blockers": [
+    "candidate_inflate_output_parity_missing",
+    "strict_pre_submission_compliance_json_missing",
+    "lane_dispatch_claim_missing",
+    "exact_cuda_auth_eval_missing",
+    "full_frame_render_output_parity_missing",
+    "shell_inflate_output_parity_missing"
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_satisfied": true,
+  "receiver_proof_ready": true,
+  "runtime_adapter_ready": false,
+  "schema": "byte_range_entropy_recode_chain_v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "serialized_archive_delta": {
+    "archive_delta_bytes": -16,
+    "blockers": [],
+    "candidate_archive_bytes": 178207,
+    "dispatch_attempted": false,
+    "gpu_launched": false,
+    "modeled_cost_bytes": null,
+    "modeled_saved_bytes": null,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "rate_only_control": false,
+    "ready_for_exact_eval_dispatch": false,
+    "realized_saved_bytes": 16,
+    "require_realized_saving": true,
+    "savings_realized": true,
+    "schema": "serialized_archive_delta_contract.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "source_archive_bytes": 178223,
+    "status": "realized_saving"
+  },
+  "source_archive": {
+    "bytes": 178223,
+    "member_bytes": 178123,
+    "member_name": "x",
+    "member_sha256": "dd92b065b8fbd2bfe9de837eb110a971c2675ecca4247e2658b4628b464d72ec",
+    "path": "experiments/results/public_pr_intake_full/public_pr103_intake_20260505_auto/archive.zip",
+    "sha256": "31881b2d23d027e6619f2d8df2fe35d4d207d08882ec673d6c1b7ff119f18c30"
+  },
+  "source_archive_bytes": 178223,
+  "source_archive_sha256": "31881b2d23d027e6619f2d8df2fe35d4d207d08882ec673d6c1b7ff119f18c30",
+  "tool_run_manifest": {
+    "argv": [
+      "--schema-manifest",
+      "experiments/results/hnerv_pr103_lc_ac_schema_refresh_20260510_codex/manifest.json",
+      "--source-runtime-dir",
+      "submissions/hnerv_lc_ac",
+      "--output-dir",
+      "experiments/results/frontier_operation_chain_compiler/frontier_feedback_cycle_byte_range_stage_inputs_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain",
+      "--beam-probe-report",
+      ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/stem_weight_beam_probe_mid32.json",
+      "--beam-probe-report",
+      ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_0_weight_beam_probe_mid32.json",
+      "--beam-probe-report",
+      ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_1_weight_beam_probe_mid32.json",
+      "--beam-probe-report",
+      ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_2_weight_beam_probe_mid32.json",
+      "--beam-probe-report",
+      ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_3_weight_beam_probe_mid32.json",
+      "--beam-probe-report",
+      ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/latent_hi_bytes_beam_probe.json",
+      "--source-archive",
+      "experiments/results/public_pr_intake_full/public_pr103_intake_20260505_auto/archive.zip",
+      "--global-combo-report",
+      ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_mid32_plus_latent_hi_probe.json",
+      "--member-name",
+      "x"
+    ],
+    "canonical_payload_without_tool_manifest_sha256": "4720384f516d698b943bd7a261fa5ff152e6672c2b917abcb39070daef87b0a2",
+    "dispatch_attempted": false,
+    "input_files": [
+      {
+        "bytes": 26522,
+        "path": "experiments/results/hnerv_pr103_lc_ac_schema_refresh_20260510_codex/manifest.json",
+        "sha256": "2639e904ced829eeefb885c4f6a8019543277b9a4d19eb85d895c4427b95702f"
+      },
+      {
+        "bytes": 46317,
+        "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/stem_weight_beam_probe_mid32.json",
+        "sha256": "67d28ab00290a379e08ab3dcb6b5a9c8200d58ea2f9b0a3ffd6cc7961751ee33"
+      },
+      {
+        "bytes": 46541,
+        "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_0_weight_beam_probe_mid32.json",
+        "sha256": "112ab84ace64dd6cbf2dd17e9a3ddc3cbbc45395645b4584b4ffc19bfea168cd"
+      },
+      {
+        "bytes": 46521,
+        "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_1_weight_beam_probe_mid32.json",
+        "sha256": "7d993f53de7c6eb793234f167038e9dcffd49e351571b758ce95872d994d7332"
+      },
+      {
+        "bytes": 46488,
+        "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_2_weight_beam_probe_mid32.json",
+        "sha256": "bf6e108dd74adfd2f94fa95f7e63f1e131bfaa2e32fa869774709ba12646fea9"
+      },
+      {
+        "bytes": 46467,
+        "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_3_weight_beam_probe_mid32.json",
+        "sha256": "9c963564a58fab99b09bb8fd83b3517158cab29ec9f8fe9bdcbc7e125a5b5c97"
+      },
+      {
+        "bytes": 40171,
+        "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/latent_hi_bytes_beam_probe.json",
+        "sha256": "ebc474cbb04632a4eb2208bbb33f203731683781189603c7a61147b0a0c0624f"
+      },
+      {
+        "bytes": 9173,
+        "path": "submissions/hnerv_lc_ac/inflate.py",
+        "sha256": "72a7d6f5481ccbab9596561892063dc17220d49a2b79d6bcf18db95a2b0b3c0b"
+      },
+      {
+        "bytes": 425,
+        "path": "submissions/hnerv_lc_ac/inflate.sh",
+        "sha256": "95bfd7d06f373ba45a2b4f4199ce0683117f656b514ed8bedd2f99ef61e37fe1"
+      },
+      {
+        "bytes": 94252,
+        "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_mid32_plus_latent_hi_probe.json",
+        "sha256": "ec4e03f6bfdebbb54df38ec1ceba93a148f870b3814cddf036c8979250eb699f"
+      },
+      {
+        "bytes": 178223,
+        "path": "experiments/results/public_pr_intake_full/public_pr103_intake_20260505_auto/archive.zip",
+        "sha256": "31881b2d23d027e6619f2d8df2fe35d4d207d08882ec673d6c1b7ff119f18c30"
+      }
+    ],
+    "output_path": "experiments/results/frontier_operation_chain_compiler/frontier_feedback_cycle_byte_range_stage_inputs_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/byte_range_entropy_recode_chain_manifest.json",
+    "ready_for_exact_eval_dispatch": false,
+    "schema_version": 1,
+    "score_claim": false,
+    "tool": "tools/run_byte_range_entropy_recode_chain.py"
+  }
+}

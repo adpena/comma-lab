@@ -1,0 +1,26 @@
+{
+  "budget_spend_allowed": false,
+  "candidate_archive_bytes": 178207,
+  "chain_manifest_path": "experiments/results/frontier_operation_chain_compiler/frontier_feedback_cycle_byte_range_stage_inputs_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/byte_range_entropy_recode_chain_manifest.json",
+  "local_chain_queueable": true,
+  "promotion_eligible": false,
+  "queue_path": ".omx/research/frontier_rate_attack_feedback_cycle_20260526T_byte_range_stage_inputs/initial_refresh/operation_chain_compiler_queue.json",
+  "rank_or_kill_eligible": false,
+  "readiness_blockers": [
+    "candidate_inflate_output_parity_missing",
+    "strict_pre_submission_compliance_json_missing",
+    "lane_dispatch_claim_missing",
+    "exact_cuda_auth_eval_missing",
+    "full_frame_render_output_parity_missing",
+    "shell_inflate_output_parity_missing"
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "realized_saved_bytes": 16,
+  "receiver_contract_satisfied": true,
+  "schema": "frontier_rate_attack_byte_range_stage_inputs_smoke_summary.v1",
+  "score_claim": false,
+  "source_archive_bytes": 178223,
+  "stage_inputs_path": "experiments/results/frontier_operation_chain_compiler/frontier_feedback_cycle_byte_range_stage_inputs_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_stage_inputs.json",
+  "worker_steps_started": 3,
+  "worker_success_count": 3
+}

@@ -102,6 +102,7 @@ OPERATION_CHAIN_COMPILER_STAGE_PLAN_SCHEMA = (
 OPERATION_CHAIN_COMPILER_QUEUE_METADATA_SCHEMA = (
     "frontier_rate_attack_operation_chain_compiler_queue_metadata.v1"
 )
+BYTE_RANGE_STAGE_INPUTS_SCHEMA = "frontier_rate_attack_byte_range_stage_inputs.v1"
 MATERIALIZER_EXACT_READINESS_BRIDGE_SCHEMA = (
     "materializer_chain_exact_readiness_bridge_report.v1"
 )
@@ -119,6 +120,8 @@ MATERIALIZER_EXACT_READINESS_BRIDGE_TOOL = (
 MATERIALIZER_SUBMISSION_CLOSURE_TOOL = (
     "tools/build_materializer_submission_closure.py"
 )
+BYTE_RANGE_STAGE_INPUTS_TOOL = "tools/build_frontier_byte_range_stage_inputs.py"
+BYTE_RANGE_CHAIN_TOOL = "tools/run_byte_range_entropy_recode_chain.py"
 MATERIALIZER_SUBMISSION_CLOSURE_REPORT_SCHEMA = (
     "materializer_submission_runtime_closure_report.v1"
 )
@@ -144,6 +147,28 @@ QUEUE_FALSE_AUTHORITY_FALSE_OR_MISSING_FIELDS = tuple(
     field
     for field in DEFAULT_FALSE_OR_MISSING_AUTHORITY_FIELDS
     if field != "dispatch_ready"
+)
+
+_DEFAULT_BYTE_RANGE_SCHEMA_MANIFEST_PATHS = (
+    "experiments/results/hnerv_pr103_lc_ac_schema_refresh_20260510_codex/manifest.json",
+    "experiments/results/hnerv_pr103_lc_ac_schema_20260507_codex/manifest.json",
+)
+_DEFAULT_BYTE_RANGE_BEAM_PROBE_REPORT_PATHS = (
+    ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/stem_weight_beam_probe_mid32.json",
+    ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_0_weight_beam_probe_mid32.json",
+    ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_1_weight_beam_probe_mid32.json",
+    ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_2_weight_beam_probe_mid32.json",
+    ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_3_weight_beam_probe_mid32.json",
+    ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/latent_hi_bytes_beam_probe.json",
+)
+_DEFAULT_BYTE_RANGE_GLOBAL_COMBO_REPORT_PATHS = (
+    ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_mid32_plus_latent_hi_probe.json",
+    ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_plus_latent_hi_probe.json",
+)
+_DEFAULT_BYTE_RANGE_SOURCE_RUNTIME_DIR_PATHS = (
+    "submissions/hnerv_lc_ac",
+    "experiments/results/public_pr_intake_full/public_pr103_intake_20260505_auto/source/submissions/hnerv_lc_ac",
+    "experiments/results/public_pr_archive_release_view/public_pr103_intake_20260505_auto/source/submissions/hnerv_lc_ac",
 )
 
 _OPERATION_LEVELS = (
@@ -4474,6 +4499,356 @@ def build_frontier_operation_chain_compiler_stage_plan(
     return plan
 
 
+def _stage_row_by_id(
+    operation_chain_stage_plan: Mapping[str, Any],
+    stage_id: str,
+) -> Mapping[str, Any] | None:
+    for row in operation_chain_stage_plan.get("stage_rows") or []:
+        if not isinstance(row, Mapping):
+            continue
+        if str(row.get("stage_id") or "") == stage_id:
+            return row
+    return None
+
+
+def _first_existing_repo_file(
+    repo: Path,
+    candidates: Sequence[str | Path],
+) -> Path | None:
+    for candidate in candidates:
+        path = _resolve_path(candidate, repo_root=repo)
+        if path.is_file():
+            return path
+    return None
+
+
+def _existing_repo_files(
+    repo: Path,
+    candidates: Sequence[str | Path],
+) -> list[Path]:
+    paths: list[Path] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        path = _resolve_path(candidate, repo_root=repo)
+        key = path.resolve(strict=False).as_posix()
+        if key in seen or not path.is_file():
+            continue
+        seen.add(key)
+        paths.append(path)
+    return paths
+
+
+def _first_existing_byte_range_runtime_dir(
+    repo: Path,
+    candidates: Sequence[str | Path],
+) -> Path | None:
+    for candidate in candidates:
+        path = _resolve_path(candidate, repo_root=repo)
+        if (
+            path.is_dir()
+            and (path / "inflate.py").is_file()
+            and (path / "inflate.sh").is_file()
+        ):
+            return path
+    return None
+
+
+def _byte_range_source_from_schema_manifest(
+    schema_manifest: Path | None,
+    *,
+    repo_root: Path,
+) -> tuple[Path | None, str]:
+    if schema_manifest is None:
+        return None, ""
+    try:
+        payload = _load_json(schema_manifest)
+    except FrontierRateAttackFeedbackError:
+        return None, ""
+    source = payload.get("source_archive")
+    if not isinstance(source, Mapping):
+        return None, ""
+    source_path = source.get("path")
+    resolved = (
+        _resolve_path(str(source_path), repo_root=repo_root)
+        if isinstance(source_path, str) and source_path.strip()
+        else None
+    )
+    if resolved is not None and not resolved.is_file():
+        resolved = None
+    return resolved, str(source.get("member_name") or "")
+
+
+def _byte_range_path_records(
+    paths: Sequence[Path],
+    *,
+    repo_root: Path,
+    kind: str,
+) -> list[dict[str, Any]]:
+    return [
+        {
+            "kind": kind,
+            "path": _repo_rel(path, repo_root),
+            "exists": path.exists(),
+            **FALSE_AUTHORITY,
+        }
+        for path in paths
+    ]
+
+
+def _byte_range_stage_command(
+    *,
+    schema_manifest: Path,
+    beam_probe_reports: Sequence[Path],
+    source_runtime_dir: Path,
+    output_dir: Path,
+    source_archive: Path | None,
+    global_combo_report: Path | None,
+    member_name: str,
+    repo_root: Path,
+) -> list[str]:
+    command = [
+        ".venv/bin/python",
+        BYTE_RANGE_CHAIN_TOOL,
+        "--schema-manifest",
+        _repo_rel(schema_manifest, repo_root),
+        "--source-runtime-dir",
+        _repo_rel(source_runtime_dir, repo_root),
+        "--output-dir",
+        _repo_rel(output_dir, repo_root),
+    ]
+    for report in beam_probe_reports:
+        command.extend(["--beam-probe-report", _repo_rel(report, repo_root)])
+    if source_archive is not None:
+        command.extend(["--source-archive", _repo_rel(source_archive, repo_root)])
+    if global_combo_report is not None:
+        command.extend(["--global-combo-report", _repo_rel(global_combo_report, repo_root)])
+    if member_name:
+        command.extend(["--member-name", member_name])
+    return command
+
+
+def build_frontier_byte_range_stage_inputs(
+    *,
+    repo_root: str | Path,
+    operation_chain_stage_plan: Mapping[str, Any],
+    stage_id: str = "payload_grammar_and_entropy",
+    schema_manifest: str | Path | None = None,
+    beam_probe_reports: Sequence[str | Path] = (),
+    source_runtime_dir: str | Path | None = None,
+    source_archive: str | Path | None = None,
+    global_combo_report: str | Path | None = None,
+    member_name: str | None = None,
+    chain_output_dir: str | Path | None = None,
+) -> dict[str, Any]:
+    """Bind byte-range entropy-recode stage inputs into a queue-consumable packet."""
+
+    repo = Path(repo_root)
+    require_no_truthy_authority_fields(
+        operation_chain_stage_plan,
+        context="operation_chain_stage_plan",
+    )
+    if operation_chain_stage_plan.get("schema") != OPERATION_CHAIN_COMPILER_STAGE_PLAN_SCHEMA:
+        raise FrontierRateAttackFeedbackError(
+            "operation chain stage plan schema mismatch"
+        )
+    stage_row = _stage_row_by_id(operation_chain_stage_plan, stage_id)
+    stage_targets = _string_list(stage_row.get("targets")) if stage_row else []
+    target_present = "byte_range_entropy_recode_v1" in stage_targets
+
+    schema_path = (
+        _resolve_path(schema_manifest, repo_root=repo)
+        if schema_manifest is not None
+        else _first_existing_repo_file(repo, _DEFAULT_BYTE_RANGE_SCHEMA_MANIFEST_PATHS)
+    )
+    beam_paths = (
+        [_resolve_path(path, repo_root=repo) for path in beam_probe_reports]
+        if beam_probe_reports
+        else _existing_repo_files(repo, _DEFAULT_BYTE_RANGE_BEAM_PROBE_REPORT_PATHS)
+    )
+    runtime_path = (
+        _resolve_path(source_runtime_dir, repo_root=repo)
+        if source_runtime_dir is not None
+        else _first_existing_byte_range_runtime_dir(
+            repo,
+            _DEFAULT_BYTE_RANGE_SOURCE_RUNTIME_DIR_PATHS,
+        )
+    )
+    default_source_archive, default_member_name = _byte_range_source_from_schema_manifest(
+        schema_path if schema_path is not None and schema_path.is_file() else None,
+        repo_root=repo,
+    )
+    source_archive_path = (
+        _resolve_path(source_archive, repo_root=repo)
+        if source_archive is not None
+        else default_source_archive
+    )
+    combo_path = (
+        _resolve_path(global_combo_report, repo_root=repo)
+        if global_combo_report is not None
+        else _first_existing_repo_file(repo, _DEFAULT_BYTE_RANGE_GLOBAL_COMBO_REPORT_PATHS)
+    )
+    output_dir = (
+        _resolve_path(chain_output_dir, repo_root=repo)
+        if chain_output_dir is not None
+        else _resolve_path(
+            "experiments/results/frontier_operation_chain_compiler/"
+            f"{_slug_token(stage_id)}_byte_range_entropy_recode_chain",
+            repo_root=repo,
+        )
+    )
+    selected_member_name = str(member_name or default_member_name or "")
+
+    context_blockers: list[str] = []
+    if stage_row is None:
+        context_blockers.append(f"operation_chain_stage_missing:{stage_id}")
+    if not target_present:
+        context_blockers.append("byte_range_entropy_recode_target_missing_from_stage")
+    if schema_path is None or not schema_path.is_file():
+        context_blockers.append("byte_range_stage_missing:schema_manifest")
+    if not beam_paths or any(not path.is_file() for path in beam_paths):
+        context_blockers.append("byte_range_stage_missing:beam_probe_reports")
+    if runtime_path is None or not runtime_path.is_dir():
+        context_blockers.append("byte_range_stage_missing:source_runtime_dir")
+    elif not (runtime_path / "inflate.py").is_file() or not (runtime_path / "inflate.sh").is_file():
+        context_blockers.append("byte_range_stage_runtime_missing_inflate_entrypoint")
+    if source_archive_path is None or not source_archive_path.is_file():
+        context_blockers.append("byte_range_stage_missing:source_archive")
+    if not selected_member_name:
+        context_blockers.append("byte_range_stage_missing:member_name")
+    if output_dir.exists():
+        context_blockers.append("byte_range_stage_chain_output_dir_already_exists")
+
+    local_chain_queueable = not context_blockers
+    chain_command: list[str] = []
+    if (
+        local_chain_queueable
+        and schema_path is not None
+        and runtime_path is not None
+        and source_archive_path is not None
+    ):
+        chain_command = _byte_range_stage_command(
+            schema_manifest=schema_path,
+            beam_probe_reports=beam_paths,
+            source_runtime_dir=runtime_path,
+            output_dir=output_dir,
+            source_archive=source_archive_path,
+            global_combo_report=combo_path,
+            member_name=selected_member_name,
+            repo_root=repo,
+        )
+
+    materializer_context = {
+        "schema_manifest": _repo_rel(schema_path, repo) if schema_path else "",
+        "beam_probe_reports": [_repo_rel(path, repo) for path in beam_paths],
+        "source_runtime_dir": _repo_rel(runtime_path, repo) if runtime_path else "",
+        "source_archive": (
+            _repo_rel(source_archive_path, repo) if source_archive_path else ""
+        ),
+        "global_combo_report": _repo_rel(combo_path, repo) if combo_path else "",
+        "member_name": selected_member_name,
+        "output_dir": _repo_rel(output_dir, repo),
+        "chain_output_dir": _repo_rel(output_dir, repo),
+        "fail_if_receiver_blocked": False,
+        "context_blockers": _unique_strings(context_blockers),
+        **FALSE_AUTHORITY,
+    }
+    payload = {
+        "schema": BYTE_RANGE_STAGE_INPUTS_SCHEMA,
+        "generated_at_utc": _utc_now(),
+        "source_operation_id": operation_chain_stage_plan.get("source_operation_id"),
+        "stage_id": stage_id,
+        "stage_targets": stage_targets,
+        "target_present": target_present,
+        "required_before_execution": (
+            _string_list(stage_row.get("required_before_execution"))
+            if stage_row
+            else []
+        ),
+        "materializer_target_kind": "byte_range_entropy_recode_v1",
+        "materializer_context": materializer_context,
+        "input_artifacts": [
+            *_byte_range_path_records(
+                [schema_path] if schema_path is not None else [],
+                repo_root=repo,
+                kind="schema_manifest",
+            ),
+            *_byte_range_path_records(
+                beam_paths,
+                repo_root=repo,
+                kind="beam_probe_report",
+            ),
+            *_byte_range_path_records(
+                [combo_path] if combo_path is not None else [],
+                repo_root=repo,
+                kind="global_combo_report",
+            ),
+            *_byte_range_path_records(
+                [source_archive_path] if source_archive_path is not None else [],
+                repo_root=repo,
+                kind="source_archive",
+            ),
+            *_byte_range_path_records(
+                [runtime_path] if runtime_path is not None else [],
+                repo_root=repo,
+                kind="source_runtime_dir",
+            ),
+        ],
+        "local_chain_queueable": local_chain_queueable,
+        "local_chain_command": chain_command,
+        "chain_manifest_path": _repo_rel(
+            output_dir / "byte_range_entropy_recode_chain_manifest.json",
+            repo,
+        ),
+        "rate_budget_policy": {
+            "schema": "frontier_rate_attack_stage_rate_budget_policy.v1",
+            "freed_bytes_destination": "targeted_component_correction_acquisition",
+            "freed_bytes_can_fund": [
+                "segnet_boundary_repair",
+                "posenet_geometry_repair",
+                "full_video_residual_reallocation",
+            ],
+            "spend_requires": [
+                "receiver_contract_satisfied",
+                "exact_readiness_bridge",
+                "component_eval_under_segnet_posenet_guard",
+                "total_lagrangian_improvement",
+            ],
+            "budget_spend_allowed": False,
+            "allowed_use": (
+                "local_byte_range_chain_rate_budget_planning_after_receiver_proof_only"
+            ),
+            "forbidden_use": "score_claim_or_dispatch_or_budget_spend_authority",
+            **FALSE_AUTHORITY,
+        },
+        "targeted_correction_budget": dict(
+            operation_chain_stage_plan.get("targeted_correction_budget")
+            if isinstance(
+                operation_chain_stage_plan.get("targeted_correction_budget"),
+                Mapping,
+            )
+            else {}
+        ),
+        "blockers": _unique_strings(
+            [
+                *context_blockers,
+                "byte_range_stage_requires_receiver_proof_after_local_chain",
+                "byte_range_stage_requires_exact_readiness_bridge_after_local_chain",
+                "byte_range_stage_rate_budget_requires_component_spend_gate",
+            ]
+        ),
+        "exact_execution_ready": False,
+        "budget_spend_allowed": False,
+        "allowed_use": "queue_owned_byte_range_stage_input_binding_only",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        payload,
+        context=f"byte_range_stage_inputs:{stage_id}",
+    )
+    return payload
+
+
 def build_frontier_operation_chain_compiler_queue(
     *,
     repo_root: str | Path,
@@ -4512,7 +4887,147 @@ def build_frontier_operation_chain_compiler_queue(
         source_operation_id = str(row.get("source_operation_id") or f"chain_{priority}")
         work_dir = queue_root / _slug_token(source_operation_id)
         stage_plan_path = work_dir / "stage_plan.json"
+        byte_range_stage_inputs_path = work_dir / "byte_range_stage_inputs.json"
+        byte_range_chain_output_dir = work_dir / "byte_range_entropy_recode_chain"
         target_kinds = _unique_strings(row.get("chain_targets") or [])
+        stage_plan_preview = build_frontier_operation_chain_compiler_stage_plan(
+            operation_chain_compiler_work_orders={
+                "schema": OPERATION_CHAIN_COMPILER_WORK_ORDERS_SCHEMA,
+                "work_orders": [row],
+                **FALSE_AUTHORITY,
+            },
+            source_operation_id=source_operation_id,
+        )
+        byte_range_inputs_preview = build_frontier_byte_range_stage_inputs(
+            repo_root=repo,
+            operation_chain_stage_plan=stage_plan_preview,
+            chain_output_dir=byte_range_chain_output_dir,
+        )
+        steps: list[dict[str, Any]] = [
+            {
+                "id": "emit_operation_chain_stage_plan",
+                "kind": "command",
+                "command": [
+                    ".venv/bin/python",
+                    "tools/build_frontier_operation_chain_stage_plan.py",
+                    "--operation-chain-compiler-work-orders",
+                    _repo_rel(work_orders_path, repo),
+                    "--source-operation-id",
+                    source_operation_id,
+                    "--stage-plan-out",
+                    _repo_rel(stage_plan_path, repo),
+                    "--overwrite",
+                ],
+                "resources": {"kind": "local_io_heavy"},
+                "timeout_seconds": 120,
+                "postconditions": [
+                    {
+                        "type": "json_equals",
+                        "path": _repo_rel(stage_plan_path, repo),
+                        "key": "schema",
+                        "equals": OPERATION_CHAIN_COMPILER_STAGE_PLAN_SCHEMA,
+                    },
+                    {
+                        "type": "json_false_authority",
+                        "path": _repo_rel(stage_plan_path, repo),
+                    },
+                    {
+                        "type": "json_equals",
+                        "path": _repo_rel(stage_plan_path, repo),
+                        "key": "execution_ready",
+                        "equals": False,
+                    },
+                ],
+                "telemetry": {
+                    "artifact_paths": [_repo_rel(stage_plan_path, repo)],
+                    "input_artifact_paths": [_repo_rel(work_orders_path, repo)],
+                    "include_postcondition_paths": True,
+                },
+            },
+            {
+                "id": "emit_byte_range_stage_inputs",
+                "kind": "command",
+                "command": [
+                    ".venv/bin/python",
+                    BYTE_RANGE_STAGE_INPUTS_TOOL,
+                    "--operation-chain-stage-plan",
+                    _repo_rel(stage_plan_path, repo),
+                    "--stage-inputs-out",
+                    _repo_rel(byte_range_stage_inputs_path, repo),
+                    "--chain-output-dir",
+                    _repo_rel(byte_range_chain_output_dir, repo),
+                    "--overwrite",
+                ],
+                "resources": {"kind": "local_io_heavy"},
+                "timeout_seconds": 120,
+                "postconditions": [
+                    {
+                        "type": "json_equals",
+                        "path": _repo_rel(byte_range_stage_inputs_path, repo),
+                        "key": "schema",
+                        "equals": BYTE_RANGE_STAGE_INPUTS_SCHEMA,
+                    },
+                    {
+                        "type": "json_false_authority",
+                        "path": _repo_rel(byte_range_stage_inputs_path, repo),
+                    },
+                    {
+                        "type": "json_equals",
+                        "path": _repo_rel(byte_range_stage_inputs_path, repo),
+                        "key": "exact_execution_ready",
+                        "equals": False,
+                    },
+                ],
+                "telemetry": {
+                    "artifact_paths": [_repo_rel(byte_range_stage_inputs_path, repo)],
+                    "input_artifact_paths": [_repo_rel(stage_plan_path, repo)],
+                    "include_postcondition_paths": True,
+                },
+            },
+        ]
+        if byte_range_inputs_preview.get("local_chain_queueable") is True:
+            steps.append(
+                {
+                    "id": "run_byte_range_entropy_recode_chain",
+                    "kind": "command",
+                    "command": list(byte_range_inputs_preview["local_chain_command"]),
+                    "resources": {"kind": "local_io_heavy"},
+                    "timeout_seconds": 600,
+                    "postconditions": [
+                        {
+                            "type": "json_equals",
+                            "path": str(
+                                byte_range_inputs_preview["chain_manifest_path"]
+                            ),
+                            "key": "schema",
+                            "equals": "byte_range_entropy_recode_chain_v1",
+                        },
+                        {
+                            "type": "json_false_authority",
+                            "path": str(
+                                byte_range_inputs_preview["chain_manifest_path"]
+                            ),
+                        },
+                        {
+                            "type": "json_equals",
+                            "path": str(
+                                byte_range_inputs_preview["chain_manifest_path"]
+                            ),
+                            "key": "ready_for_exact_eval_dispatch",
+                            "equals": False,
+                        },
+                    ],
+                    "telemetry": {
+                        "artifact_paths": [
+                            str(byte_range_inputs_preview["chain_manifest_path"]),
+                        ],
+                        "input_artifact_paths": [
+                            _repo_rel(byte_range_stage_inputs_path, repo),
+                        ],
+                        "include_postcondition_paths": True,
+                    },
+                }
+            )
         experiments.append(
             {
                 "id": _slug_token(source_operation_id),
@@ -4532,6 +5047,24 @@ def build_frontier_operation_chain_compiler_queue(
                     "chain_target_count": len(target_kinds),
                     "chain_targets": target_kinds,
                     "stage_plan_path": _repo_rel(stage_plan_path, repo),
+                    "byte_range_stage_inputs_path": _repo_rel(
+                        byte_range_stage_inputs_path,
+                        repo,
+                    ),
+                    "byte_range_chain_manifest_path": (
+                        byte_range_inputs_preview.get("chain_manifest_path")
+                    ),
+                    "byte_range_local_chain_queueable": (
+                        byte_range_inputs_preview.get("local_chain_queueable") is True
+                    ),
+                    "byte_range_rate_budget_policy": dict(
+                        byte_range_inputs_preview.get("rate_budget_policy")
+                        if isinstance(
+                            byte_range_inputs_preview.get("rate_budget_policy"),
+                            Mapping,
+                        )
+                        else {}
+                    ),
                     "targeted_correction_budget": dict(
                         row.get("targeted_correction_budget")
                         if isinstance(row.get("targeted_correction_budget"), Mapping)
@@ -4543,48 +5076,7 @@ def build_frontier_operation_chain_compiler_queue(
                     "forbidden_use": "score_claim_or_dispatch_authority",
                     **FALSE_AUTHORITY,
                 },
-                "steps": [
-                    {
-                        "id": "emit_operation_chain_stage_plan",
-                        "kind": "command",
-                        "command": [
-                            ".venv/bin/python",
-                            "tools/build_frontier_operation_chain_stage_plan.py",
-                            "--operation-chain-compiler-work-orders",
-                            _repo_rel(work_orders_path, repo),
-                            "--source-operation-id",
-                            source_operation_id,
-                            "--stage-plan-out",
-                            _repo_rel(stage_plan_path, repo),
-                            "--overwrite",
-                        ],
-                        "resources": {"kind": "local_io_heavy"},
-                        "timeout_seconds": 120,
-                        "postconditions": [
-                            {
-                                "type": "json_equals",
-                                "path": _repo_rel(stage_plan_path, repo),
-                                "key": "schema",
-                                "equals": OPERATION_CHAIN_COMPILER_STAGE_PLAN_SCHEMA,
-                            },
-                            {
-                                "type": "json_false_authority",
-                                "path": _repo_rel(stage_plan_path, repo),
-                            },
-                            {
-                                "type": "json_equals",
-                                "path": _repo_rel(stage_plan_path, repo),
-                                "key": "execution_ready",
-                                "equals": False,
-                            },
-                        ],
-                        "telemetry": {
-                            "artifact_paths": [_repo_rel(stage_plan_path, repo)],
-                            "input_artifact_paths": [_repo_rel(work_orders_path, repo)],
-                            "include_postcondition_paths": True,
-                        },
-                    }
-                ],
+                "steps": steps,
             }
         )
     return normalize_queue_definition(
@@ -6546,6 +7038,7 @@ __all__ = [
     "TARGETED_COMPONENT_CORRECTION_QUEUE_METADATA_SCHEMA",
     "TARGETED_COMPONENT_CORRECTION_WORK_ORDER_SCHEMA",
     "FrontierRateAttackFeedbackError",
+    "build_frontier_byte_range_stage_inputs",
     "build_frontier_operation_materializer_bridge",
     "build_frontier_operation_portfolio",
     "build_frontier_rate_attack_feedback_refresh",
