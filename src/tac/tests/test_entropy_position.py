@@ -36,6 +36,19 @@ def test_context_can_route_inverse_scorer_to_posenet_position() -> None:
     assert row["downstream_entropy_coder_rerun_recommended"] is True
 
 
+def test_higher_order_markov_routes_to_p14() -> None:
+    direct = classify_entropy_position("higher_order_markov_selector_recode_v1")
+    family = classify_entropy_position(
+        "selector_stream_context_recode_v1",
+        operation_family="fec8_static_second_order_markov2",
+    )
+
+    assert direct["entropy_position_id"] == "P14"
+    assert direct["entropy_position_class"] == AT_ENTROPY_CODER
+    assert family["entropy_position_id"] == "P14"
+    assert family["entropy_position_name"] == "higher_order_context"
+
+
 def test_meta_and_unknown_rows_fail_closed_for_position_bonus() -> None:
     meta = classify_entropy_position("inverse_steganalysis_high_level_operation_set_v1")
     unknown = classify_entropy_position("new_future_materializer_v99")

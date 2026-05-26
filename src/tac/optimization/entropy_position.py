@@ -217,6 +217,7 @@ _TARGET_KIND_POSITION_OVERRIDES: dict[str, str] = {
     "frame_pair_geometry_transform_v1": "P17",
     "inverse_scorer_cell_candidate_v1": "P18",
     "inverse_steganalysis_high_level_operation_set_v1": "P20",
+    "higher_order_markov_selector_recode_v1": "P14",
     "markov_context_selector_recode_v1": "P13",
     "packet_member_merge_v1": "P16",
     "packet_member_recompress_v1": "P15",
@@ -231,6 +232,9 @@ _TARGET_KIND_POSITION_OVERRIDES: dict[str, str] = {
 }
 
 _OPERATION_FAMILY_POSITION_OVERRIDES: dict[str, str] = {
+    "second_order": "P14",
+    "higher_order": "P14",
+    "markov2": "P14",
     "huffman": "P13",
     "markov": "P13",
     "ans": "P13",
@@ -266,11 +270,13 @@ def classify_entropy_position(
     normalized_family = str(operation_family or "").strip() or None
     context = payload_context if isinstance(payload_context, Mapping) else {}
     explicit_position = _explicit_position_id(context)
+    family_position = _position_from_operation_family(normalized_family)
     position_id = (
         explicit_position
         or _position_from_context(context)
+        or ("P14" if family_position == "P14" else None)
         or _TARGET_KIND_POSITION_OVERRIDES.get(normalized_target)
-        or _position_from_operation_family(normalized_family)
+        or family_position
     )
     if position_id in _POSITIONS:
         return _POSITIONS[position_id].to_dict(

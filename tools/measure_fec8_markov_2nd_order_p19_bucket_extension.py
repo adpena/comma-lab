@@ -6,24 +6,23 @@ Cascade C (commit ``4cde71f12``) + FEC8 1st-order Markov (#1336 commit
 ``6474afde7``). Local macOS M5 MAX execution per "Remember all on MLX" standing
 directive.
 
-Measures THREE entropy-position candidates against FEC6 249B + FEC8 245B baselines:
+Measures THREE entropy-position candidates against live FEC6 and FEC8 baselines:
 
   VARIANT-PROMPTED (per prompt): per-pair PoseNet-null BUCKET as
     ``bucket_t = (mode_t in {none, blue_chroma_*})`` deterministic-from-symbol.
     Header: 1-bit-per-pair flag stream (600 bits = 75 B raw; brotli-tested).
-    Predicted: +75 B WORSE than FEC8 1st-order (structurally falsified per
-    pre-execution gate report §1.3 — bucket is a function of the symbol).
+    Empirical status: estimated directional win after flag overhead, but not yet
+    implemented as a receiver decoder variant.
 
   VARIANT-A-TRUE2ND (per Catalog #308 Alternative A): TRUE 2nd-order Markov
     ``H(mode_t | mode_{t-1}, mode_{t-2})`` with 256 (=16x16) per-context
     adaptive Laplace-smoothed models. No bucket flag stream; the prior 2
-    symbols suffice as context. Predicted: marginal -1 to -3 B vs FEC8 1st-
-    order (diminishing returns at 600 pairs / 256 contexts ~ 2.3 obs/context).
+    symbols suffice as context. Empirical status: implemented receiver-decode-only
+    static second-order FEC8 variant, measured head-to-head against FEC8 1st-order.
 
   VARIANT-A-STATIC: same TRUE 2nd-order Markov but seeded from observed
     EMPIRICAL_PAIR_TRANSITION_COUNTS as shared-prior table (Wyner-Ziv-style).
-    Predicted: indistinguishable from VARIANT-A-TRUE2ND at this scale; ZERO
-    wire cost for the prior because it is shared decoder-side.
+    Status: canonicalized as the implemented static second-order FEC8 variant.
 
 [macOS-CPU advisory] axis tag per Catalog #192. NO contest-axis claim. Sister
 to ``submissions/hnerv_fec6_fixed_huffman_k16/encoder/build_pr101_frame_exploit_selector_packet_markov.py``.
@@ -47,8 +46,17 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
+FEC8_ENCODER_DIR = REPO_ROOT / "submissions/hnerv_fec6_fixed_huffman_k16/encoder"
+if str(FEC8_ENCODER_DIR) not in sys.path:
+    sys.path.insert(0, str(FEC8_ENCODER_DIR))
 
 # Reuse canonical FEC6 decoder per Catalog #229 (canonical helper, not re-implementation).
+from build_pr101_frame_exploit_selector_packet_markov import (  # type: ignore[import-not-found]  # noqa: E402
+    decode_fec8_markov_selector,
+    encode_fec8_markov_selector_static,
+    encode_fec8_markov_selector_static_second_order,
+)
+
 from tools.pr101_fec6_wrapper_profile import (  # noqa: E402  (path inserted above)
     FEC6_FIXED_K16_MODE_IDS,
     decode_fec6_fixed_huffman_codes,
@@ -361,13 +369,27 @@ def main() -> int:
     )
 
     bucket_overhead = _compute_bucket_flag_stream_overhead(codes)
+    fec8_static_payload = encode_fec8_markov_selector_static(
+        codes,
+        n_pairs=len(codes),
+    )
+    fec8_static_second_order_payload = encode_fec8_markov_selector_static_second_order(
+        codes,
+        n_pairs=len(codes),
+    )
+    if decode_fec8_markov_selector(fec8_static_payload) != codes:
+        raise SystemExit("FEC8 static roundtrip failed")
+    if decode_fec8_markov_selector(fec8_static_second_order_payload) != codes:
+        raise SystemExit("FEC8 static 2nd-order roundtrip failed")
 
     # Total wire bytes per variant (magic + variant + n_pairs).
     header_bytes_fec8 = 8
 
-    fec8_2nd_order_true_wire = header_bytes_fec8 + math.ceil(
+    fec8_1st_order_wire = len(fec8_static_payload)
+    fec8_2nd_order_true_unpriced_wire = header_bytes_fec8 + math.ceil(
         fec8_second_order_true["total_wire_bits"] / 8
     )
+    fec8_2nd_order_true_wire = len(fec8_static_second_order_payload)
     fec8_p19_bucket_wire = (
         header_bytes_fec8
         + bucket_overhead["brotli_bytes"]
@@ -380,7 +402,6 @@ def main() -> int:
     )
 
     # Cross-check: live FEC6 selector_payload is 249 B (canonical anchor).
-    # Live FEC8 1st-order from sister #1336 is 245 B.
     measurements = {
         "schema_version": "fec8_markov_2nd_order_p19_bucket_extension_v1",
         "axis_tag": "[macOS-CPU advisory]",
@@ -421,6 +442,14 @@ def main() -> int:
             ),
             "H_bucket_aware_floor": math.ceil(H_bucket_aware * (len(codes) - 1) / 8),
         },
+        "implemented_codec_wire_bytes": {
+            "FEC8_static_markov_1st_order": fec8_1st_order_wire,
+            "FEC8_static_markov_2nd_order": fec8_2nd_order_true_wire,
+            "FEC8_static_markov_2nd_order_delta_vs_1st_order": (
+                fec8_2nd_order_true_wire - fec8_1st_order_wire
+            ),
+            "roundtrip_verified": True,
+        },
         "per_context_huffman_wire": {
             "fec8_first_order_baseline": fec8_first_order,
             "fec8_second_order_true": fec8_second_order_true,
@@ -429,31 +458,47 @@ def main() -> int:
         "bucket_flag_stream_overhead_bytes": bucket_overhead,
         "wire_byte_sweep": {
             "FEC6_fixed_huffman_K16_baseline": fec6_wire_bytes,
-            "FEC8_static_markov_1st_order_sister_1336": 245,
+            "FEC8_static_markov_1st_order_sister_1336": fec8_1st_order_wire,
             "VARIANT_PROMPTED_fec8_1st_order_plus_p19_bucket_raw": fec8_p19_bucket_wire_raw,
             "VARIANT_PROMPTED_fec8_1st_order_plus_p19_bucket_brotli": fec8_p19_bucket_wire,
             "VARIANT_A_TRUE_2nd_order_markov": fec8_2nd_order_true_wire,
+            "VARIANT_A_TRUE_2nd_order_unpriced_per_context_huffman": (
+                fec8_2nd_order_true_unpriced_wire
+            ),
             "delta_vs_fec6_baseline": {
-                "FEC8_static_markov_1st_order": 245 - fec6_wire_bytes,
+                "FEC8_static_markov_1st_order": fec8_1st_order_wire
+                - fec6_wire_bytes,
                 "VARIANT_PROMPTED_p19_bucket_brotli": fec8_p19_bucket_wire - fec6_wire_bytes,
                 "VARIANT_PROMPTED_p19_bucket_raw": fec8_p19_bucket_wire_raw - fec6_wire_bytes,
                 "VARIANT_A_TRUE_2nd_order_markov": fec8_2nd_order_true_wire - fec6_wire_bytes,
+                "VARIANT_A_TRUE_2nd_order_unpriced_per_context_huffman": (
+                    fec8_2nd_order_true_unpriced_wire - fec6_wire_bytes
+                ),
             },
-            "delta_vs_fec8_1st_order_245B": {
-                "VARIANT_PROMPTED_p19_bucket_brotli": fec8_p19_bucket_wire - 245,
-                "VARIANT_PROMPTED_p19_bucket_raw": fec8_p19_bucket_wire_raw - 245,
-                "VARIANT_A_TRUE_2nd_order_markov": fec8_2nd_order_true_wire - 245,
+            "delta_vs_fec8_1st_order": {
+                "VARIANT_PROMPTED_p19_bucket_brotli": (
+                    fec8_p19_bucket_wire - fec8_1st_order_wire
+                ),
+                "VARIANT_PROMPTED_p19_bucket_raw": (
+                    fec8_p19_bucket_wire_raw - fec8_1st_order_wire
+                ),
+                "VARIANT_A_TRUE_2nd_order_markov": (
+                    fec8_2nd_order_true_wire - fec8_1st_order_wire
+                ),
+                "VARIANT_A_TRUE_2nd_order_unpriced_per_context_huffman": (
+                    fec8_2nd_order_true_unpriced_wire - fec8_1st_order_wire
+                ),
             },
         },
         "verdict_per_catalog_307": {
             "VARIANT_PROMPTED_p19_bucket": (
-                "IMPLEMENTATION_LEVEL_FALSIFICATION"
-                if fec8_p19_bucket_wire >= 245
-                else "DIRECTIONAL_WIN"
+                "DIRECTIONAL_WIN_ESTIMATED_NOT_IMPLEMENTED"
+                if fec8_p19_bucket_wire < fec8_1st_order_wire
+                else "IMPLEMENTATION_LEVEL_FALSIFICATION"
             ),
             "VARIANT_A_TRUE_2nd_order": (
                 "DIRECTIONAL_WIN"
-                if fec8_2nd_order_true_wire < 245
+                if fec8_2nd_order_true_wire < fec8_1st_order_wire
                 else (
                     "IMPLEMENTATION_LEVEL_FALSIFICATION"
                     if fec8_2nd_order_true_wire > 249
@@ -462,20 +507,21 @@ def main() -> int:
             ),
             "PARADIGM_VERDICT": (
                 "PARADIGM_INTACT — entropy-positional orthogonality remains "
-                "HARD-EARNED doctrine; bucket-deterministic-from-symbol design "
-                "is the FALSIFIED implementation, NOT the orthogonality claim."
+                "HARD-EARNED doctrine; deterministic-from-symbol P19 bucket is "
+                "weaker than true second-order context but not a measured loss "
+                "under the current wire estimator."
             ),
         },
         "structural_finding": (
-            "The prompted 'P19 PoseNet-null bucket' is a DETERMINISTIC FUNCTION "
-            "of the symbol being coded (per Cascade C §3 ¶3 + cargo-cult audit "
-            "row 3). Therefore H(X|prev,bucket(X)) <= H(X|prev) only because "
-            "the decoder learns which K=16 subset X lives in BEFORE seeing X, "
-            "and we PAY 75B+ for the bucket flag stream. Net: the bucket-flag "
-            "overhead overwhelms any per-context Huffman codeword savings on a "
-            "600-pair stream where each pair pays ~3 bits and the bucket flag "
-            "pays 1 bit. Empirical wire delta confirms structural prediction "
-            "per Catalog #307 IMPLEMENTATION-LEVEL FALSIFICATION."
+            "The prompted P19 bucket is deterministic-from-symbol, so it is not "
+            "exogenous scorer side information. If transmitted before the symbol "
+            "it can still partition the alphabet enough to show an estimated "
+            "win versus FEC8 static 1st-order after bucket overhead, but it is "
+            "weaker than true second-order context. The implemented FEC8 static "
+            "2nd-order variant is receiver-decode-only, byte-stable, and wins "
+            "against FEC8 static 1st-order on the live selector stream while "
+            "remaining false-authority until archive swap-in and exact CPU/CUDA "
+            "auth eval."
         ),
         "promotion_blockers": [
             "local_cpu_only_compress_time_analysis",
@@ -496,11 +542,11 @@ def main() -> int:
     print(f"[fec8-markov-2nd-order-p19] wrote {out_path}")
     print(
         f"[fec8-markov-2nd-order-p19] FEC6={fec6_wire_bytes}B, "
-        f"FEC8-1st={245}B, "
+        f"FEC8-1st={fec8_1st_order_wire}B, "
         f"VARIANT-PROMPTED-bucket={fec8_p19_bucket_wire}B "
-        f"(delta vs FEC8={fec8_p19_bucket_wire - 245:+d}, vs FEC6={fec8_p19_bucket_wire - fec6_wire_bytes:+d}), "
+        f"(delta vs FEC8={fec8_p19_bucket_wire - fec8_1st_order_wire:+d}, vs FEC6={fec8_p19_bucket_wire - fec6_wire_bytes:+d}), "
         f"VARIANT-A-true-2nd={fec8_2nd_order_true_wire}B "
-        f"(delta vs FEC8={fec8_2nd_order_true_wire - 245:+d}, vs FEC6={fec8_2nd_order_true_wire - fec6_wire_bytes:+d})"
+        f"(delta vs FEC8={fec8_2nd_order_true_wire - fec8_1st_order_wire:+d}, vs FEC6={fec8_2nd_order_true_wire - fec6_wire_bytes:+d})"
     )
     return 0
 

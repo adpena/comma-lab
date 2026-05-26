@@ -5,7 +5,7 @@
     "brotli_bytes": 79,
     "raw_bytes": 75
   },
-  "elapsed_seconds": 0.002665996551513672,
+  "elapsed_seconds": 0.006433010101318359,
   "entropy_bits_per_pair": {
     "H_first_order_markov": 2.940206130866642,
     "H_first_order_plus_deterministic_bucket": 1.9603371179062006,
@@ -17,6 +17,12 @@
     }
   },
   "evidence_grade": "macOS-CPU advisory only",
+  "implemented_codec_wire_bytes": {
+    "FEC8_static_markov_1st_order": 245,
+    "FEC8_static_markov_2nd_order": 239,
+    "FEC8_static_markov_2nd_order_delta_vs_1st_order": -6,
+    "roundtrip_verified": true
+  },
   "marginal_histogram": {
     "0": 134,
     "1": 35,
@@ -106,27 +112,30 @@
     "H_marginal_floor": 241,
     "H_second_order_true_floor": 148
   },
-  "structural_finding": "The prompted 'P19 PoseNet-null bucket' is a DETERMINISTIC FUNCTION of the symbol being coded (per Cascade C \u00a73 \u00b63 + cargo-cult audit row 3). Therefore H(X|prev,bucket(X)) <= H(X|prev) only because the decoder learns which K=16 subset X lives in BEFORE seeing X, and we PAY 75B+ for the bucket flag stream. Net: the bucket-flag overhead overwhelms any per-context Huffman codeword savings on a 600-pair stream where each pair pays ~3 bits and the bucket flag pays 1 bit. Empirical wire delta confirms structural prediction per Catalog #307 IMPLEMENTATION-LEVEL FALSIFICATION.",
+  "structural_finding": "The prompted P19 bucket is deterministic-from-symbol, so it is not exogenous scorer side information. If transmitted before the symbol it can still partition the alphabet enough to show an estimated win versus FEC8 static 1st-order after bucket overhead, but it is weaker than true second-order context. The implemented FEC8 static 2nd-order variant is receiver-decode-only, byte-stable, and wins against FEC8 static 1st-order on the live selector stream while remaining false-authority until archive swap-in and exact CPU/CUDA auth eval.",
   "subagent_id": "fec8-markov-2nd-order-p19-posenet-null-bucket-extension-pr111-candidate-20260526",
   "verdict_per_catalog_307": {
-    "PARADIGM_VERDICT": "PARADIGM_INTACT \u2014 entropy-positional orthogonality remains HARD-EARNED doctrine; bucket-deterministic-from-symbol design is the FALSIFIED implementation, NOT the orthogonality claim.",
+    "PARADIGM_VERDICT": "PARADIGM_INTACT \u2014 entropy-positional orthogonality remains HARD-EARNED doctrine; deterministic-from-symbol P19 bucket is weaker than true second-order context but not a measured loss under the current wire estimator.",
     "VARIANT_A_TRUE_2nd_order": "DIRECTIONAL_WIN",
-    "VARIANT_PROMPTED_p19_bucket": "DIRECTIONAL_WIN"
+    "VARIANT_PROMPTED_p19_bucket": "DIRECTIONAL_WIN_ESTIMATED_NOT_IMPLEMENTED"
   },
   "wire_byte_sweep": {
     "FEC6_fixed_huffman_K16_baseline": 249,
     "FEC8_static_markov_1st_order_sister_1336": 245,
-    "VARIANT_A_TRUE_2nd_order_markov": 166,
+    "VARIANT_A_TRUE_2nd_order_markov": 239,
+    "VARIANT_A_TRUE_2nd_order_unpriced_per_context_huffman": 166,
     "VARIANT_PROMPTED_fec8_1st_order_plus_p19_bucket_brotli": 240,
     "VARIANT_PROMPTED_fec8_1st_order_plus_p19_bucket_raw": 236,
     "delta_vs_fec6_baseline": {
       "FEC8_static_markov_1st_order": -4,
-      "VARIANT_A_TRUE_2nd_order_markov": -83,
+      "VARIANT_A_TRUE_2nd_order_markov": -10,
+      "VARIANT_A_TRUE_2nd_order_unpriced_per_context_huffman": -83,
       "VARIANT_PROMPTED_p19_bucket_brotli": -9,
       "VARIANT_PROMPTED_p19_bucket_raw": -13
     },
-    "delta_vs_fec8_1st_order_245B": {
-      "VARIANT_A_TRUE_2nd_order_markov": -79,
+    "delta_vs_fec8_1st_order": {
+      "VARIANT_A_TRUE_2nd_order_markov": -6,
+      "VARIANT_A_TRUE_2nd_order_unpriced_per_context_huffman": -79,
       "VARIANT_PROMPTED_p19_bucket_brotli": -5,
       "VARIANT_PROMPTED_p19_bucket_raw": -9
     }

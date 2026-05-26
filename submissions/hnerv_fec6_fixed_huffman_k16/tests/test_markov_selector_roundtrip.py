@@ -4,9 +4,10 @@ Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against" +
 HNeRV parity discipline L11 (no-op detector — prove the targeted bytes changed
 AND were consumed by inflate). These tests prove:
 
-  * FEC8 STATIC + ADAPTIVE encoders + decoders are byte-stable round-trip.
-  * Head-to-head: FEC8 STATIC vs FEC8 ADAPTIVE vs FEC6 fixed-Huff vs FEC7 0-order
-    arith on the LIVE 600-pair PR110 selector stream.
+  * FEC8 STATIC + ADAPTIVE + STATIC 2nd-order encoders + decoders are
+    byte-stable round-trip.
+  * Head-to-head: FEC8 STATIC variants vs FEC8 ADAPTIVE vs FEC6 fixed-Huff vs
+    FEC7 0-order arith on the LIVE 600-pair PR110 selector stream.
   * The empirical 16x16 transition table baked into source matches the canonical
     anchor at ``.omx/research/pr110_opt_3b_markov_transition_matrix_20260526.json``.
 
@@ -40,19 +41,21 @@ from build_pr101_frame_exploit_selector_packet_arith import (  # type: ignore[im
 )
 from build_pr101_frame_exploit_selector_packet_markov import (  # type: ignore[import-not-found]  # noqa: E402
     EMPIRICAL_MARGINAL_COUNTS,
+    EMPIRICAL_SECOND_ORDER_TRANSITION_COUNTS,
     EMPIRICAL_TRANSITION_COUNTS,
     FEC8_MAGIC,
     FEC8_VARIANT_ADAPTIVE,
     FEC8_VARIANT_STATIC,
+    FEC8_VARIANT_STATIC_SECOND_ORDER,
     PALETTE_K,
     decode_fec8_markov_selector,
     encode_fec8_markov_selector_adaptive,
     encode_fec8_markov_selector_static,
+    encode_fec8_markov_selector_static_second_order,
 )
 from fec8_markov_decoder import (  # type: ignore[import-not-found]  # noqa: E402
     decode_fec8_markov_selector as decode_via_inflate_module,
 )
-
 
 # -- canonical FEC6 decoder (copy of inflate.py for measurement) --------------------
 
@@ -222,6 +225,66 @@ def test_adaptive_edge_strictly_alternating() -> None:
     assert decoded == codes
 
 
+# -- synthetic round-trip tests (STATIC 2nd-order variant) -------------------------
+
+
+@pytest.mark.parametrize("seed", [0, 1, 42, 1234, 99999])
+def test_static_second_order_roundtrip_uniform(seed: int) -> None:
+    import random
+
+    rng = random.Random(seed)
+    n = 600
+    codes = [rng.randrange(PALETTE_K) for _ in range(n)]
+    payload = encode_fec8_markov_selector_static_second_order(codes, n_pairs=n)
+    assert payload[:4] == FEC8_MAGIC
+    assert payload[4:6] == FEC8_VARIANT_STATIC_SECOND_ORDER
+    (header_n,) = struct.unpack_from("<H", payload, 6)
+    assert header_n == n
+    decoded = decode_fec8_markov_selector(payload)
+    assert decoded == codes
+
+
+@pytest.mark.parametrize("dominant", list(range(PALETTE_K)))
+def test_static_second_order_roundtrip_dominant_mode(dominant: int) -> None:
+    import random
+
+    rng = random.Random(dominant)
+    n = 600
+    codes = []
+    for _ in range(n):
+        if rng.random() < 0.9:
+            codes.append(dominant)
+        else:
+            codes.append(rng.randrange(PALETTE_K))
+    payload = encode_fec8_markov_selector_static_second_order(codes, n_pairs=n)
+    decoded = decode_fec8_markov_selector(payload)
+    assert decoded == codes
+
+
+def test_static_second_order_edge_all_zeros() -> None:
+    n = 600
+    codes = [0] * n
+    payload = encode_fec8_markov_selector_static_second_order(codes, n_pairs=n)
+    decoded = decode_fec8_markov_selector(payload)
+    assert decoded == codes
+
+
+def test_static_second_order_edge_max_index() -> None:
+    n = 600
+    codes = [PALETTE_K - 1] * n
+    payload = encode_fec8_markov_selector_static_second_order(codes, n_pairs=n)
+    decoded = decode_fec8_markov_selector(payload)
+    assert decoded == codes
+
+
+def test_static_second_order_edge_strictly_alternating() -> None:
+    n = 600
+    codes = [i % PALETTE_K for i in range(n)]
+    payload = encode_fec8_markov_selector_static_second_order(codes, n_pairs=n)
+    decoded = decode_fec8_markov_selector(payload)
+    assert decoded == codes
+
+
 # -- input validation -------------------------------------------------------------
 
 
@@ -234,6 +297,13 @@ def test_invalid_code_raises() -> None:
         encode_fec8_markov_selector_adaptive([0, 1, PALETTE_K], n_pairs=3)
     with pytest.raises(ValueError):
         encode_fec8_markov_selector_adaptive([0, 1, -1], n_pairs=3)
+    with pytest.raises(ValueError):
+        encode_fec8_markov_selector_static_second_order(
+            [0, 1, PALETTE_K],
+            n_pairs=3,
+        )
+    with pytest.raises(ValueError):
+        encode_fec8_markov_selector_static_second_order([0, 1, -1], n_pairs=3)
 
 
 def test_mismatched_n_pairs_raises() -> None:
@@ -241,6 +311,8 @@ def test_mismatched_n_pairs_raises() -> None:
         encode_fec8_markov_selector_static([0, 1, 2], n_pairs=4)
     with pytest.raises(ValueError):
         encode_fec8_markov_selector_adaptive([0, 1, 2], n_pairs=4)
+    with pytest.raises(ValueError):
+        encode_fec8_markov_selector_static_second_order([0, 1, 2], n_pairs=4)
 
 
 def test_truncated_payload_raises() -> None:
@@ -267,6 +339,15 @@ def test_inflate_module_proxies_canonical_decoder() -> None:
     decoded_via_inflate_adaptive = decode_via_inflate_module(payload_adaptive)
     assert decoded_via_inflate_adaptive == codes
 
+    payload_second_order = encode_fec8_markov_selector_static_second_order(
+        codes,
+        n_pairs=n,
+    )
+    decoded_via_inflate_second_order = decode_via_inflate_module(
+        payload_second_order
+    )
+    assert decoded_via_inflate_second_order == codes
+
 
 # -- canonical anchor consistency -------------------------------------------------
 
@@ -292,6 +373,18 @@ def test_baked_transition_table_matches_canonical_anchor() -> None:
         )
 
 
+def test_baked_second_order_table_matches_live_fec6_triples() -> None:
+    codes, _ = _load_live_codes_and_fec6_payload()
+
+    expected = Counter(zip(codes[:-2], codes[1:-1], codes[2:], strict=True))
+    baked = Counter()
+    for prev2, prev1, nxt, count in EMPIRICAL_SECOND_ORDER_TRANSITION_COUNTS:
+        baked[(prev2, prev1, nxt)] += count
+
+    assert sum(baked.values()) == len(codes) - 2
+    assert baked == expected
+
+
 # -- live FEC6 stream measurement + head-to-head ---------------------------------
 
 
@@ -305,6 +398,16 @@ def test_live_fec6_codes_roundtrip_through_markov_static() -> None:
 def test_live_fec6_codes_roundtrip_through_markov_adaptive() -> None:
     codes, _ = _load_live_codes_and_fec6_payload()
     payload = encode_fec8_markov_selector_adaptive(codes, n_pairs=len(codes))
+    decoded = decode_fec8_markov_selector(payload)
+    assert decoded == codes
+
+
+def test_live_fec6_codes_roundtrip_through_markov_static_second_order() -> None:
+    codes, _ = _load_live_codes_and_fec6_payload()
+    payload = encode_fec8_markov_selector_static_second_order(
+        codes,
+        n_pairs=len(codes),
+    )
     decoded = decode_fec8_markov_selector(payload)
     assert decoded == codes
 
@@ -327,17 +430,22 @@ def test_live_head_to_head_fec6_vs_fec7_vs_fec8_static_vs_fec8_adaptive() -> Non
     fec7_payload = encode_fec7_arith_selector(codes, n_pairs=n)
     fec8_static_payload = encode_fec8_markov_selector_static(codes, n_pairs=n)
     fec8_adaptive_payload = encode_fec8_markov_selector_adaptive(codes, n_pairs=n)
+    fec8_static_second_order_payload = (
+        encode_fec8_markov_selector_static_second_order(codes, n_pairs=n)
+    )
 
     fec6_size = len(fec6_payload)
     fec7_size = len(fec7_payload)
     fec8_static_size = len(fec8_static_payload)
     fec8_adaptive_size = len(fec8_adaptive_payload)
+    fec8_static_second_order_size = len(fec8_static_second_order_payload)
 
     # Encoder must produce sensible byte counts (i.e. not blow up to >2x the input bound)
     upper_bound = 2 * fec6_size
     assert fec7_size < upper_bound
     assert fec8_static_size < upper_bound
     assert fec8_adaptive_size < upper_bound
+    assert fec8_static_second_order_size < upper_bound
 
     # Static should not be dramatically worse than adaptive — both must be within +/- 32 bytes
     # of each other (a 600-symbol stream split across 16 contexts has limited adaptation room)
@@ -345,6 +453,10 @@ def test_live_head_to_head_fec6_vs_fec7_vs_fec8_static_vs_fec8_adaptive() -> Non
     assert abs(diff_static_vs_adaptive) <= 32, (
         f"FEC8 static {fec8_static_size}B vs adaptive {fec8_adaptive_size}B; "
         f"diff {diff_static_vs_adaptive:+d} outside expected +/- 32 byte band"
+    )
+    assert fec8_static_second_order_size <= fec8_static_size, (
+        f"FEC8 static 2nd-order {fec8_static_second_order_size}B should not exceed "
+        f"static 1st-order {fec8_static_size}B on the live stream"
     )
 
     # Consistency check on input distribution (must match analysis anchor)

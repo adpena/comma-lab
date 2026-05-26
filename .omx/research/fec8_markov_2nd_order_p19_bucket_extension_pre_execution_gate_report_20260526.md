@@ -24,15 +24,18 @@ Measured local advisory result:
 - FEC8 first-order sister anchor: `245B`
 - Prompted P19 bucket variant: `240B` with brotli flag stream, `236B` with raw
   bit-packed flag stream (`-5B` / `-9B` vs FEC8)
-- True second-order Markov variant: `166B` (`-79B` vs FEC8)
+- True second-order Markov implemented FEC8 static variant: `239B` (`-6B` vs
+  FEC8, `-10B` vs FEC6)
+- True second-order Markov unpriced per-context Huffman floor: `166B` (`-79B`
+  vs FEC8), retained only as a floor/estimator, not as implemented wire bytes
 
 Updated verdict: the pre-gate "zero conditional-entropy gain" claim is
 incorrect for the transmitted-bucket operational codec. The prompted P19 bucket
 is a directional local-codec win but remains non-authoritative:
 `score_claim=false`, no byte-closed archive swap-in, no receiver/runtime parity,
-and no exact auth-axis evaluation. The higher-value follow-up is to promote the
-true second-order Markov result into a receiver-proven selector materializer and
-then rerun outer packing/brotli after the symbol stream changes.
+and no exact auth-axis evaluation. The higher-value follow-up is now archive
+swap-in plus receiver/runtime parity for the implemented static second-order
+selector variant, then outer packing/brotli after the symbol stream changes.
 
 ---
 

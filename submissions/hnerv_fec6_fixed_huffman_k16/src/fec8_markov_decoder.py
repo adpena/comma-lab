@@ -1,4 +1,4 @@
-"""SISTER inflate-side decoder for FEC8 1st-order Markov context-coded selector stream.
+"""SISTER inflate-side decoder for FEC8 Markov context-coded selector stream.
 
 This is the inflate-time consumer; it re-exports ``decode_fec8_markov_selector``
 from the canonical encoder module so the encoder + decoder cannot drift
@@ -20,9 +20,10 @@ selector_payload magic dispatch with::
 The K=16 mode palette (``FEC6_FIXED_K16_MODE_IDS``) is shared between FEC6, FEC7,
 and FEC8 wire formats; only the entropy-coding layer differs.
 
-The FEC8 variant byte at offset 4..5 selects between the STATIC seed (b"\\x00\\x01"
-— hard-coded ``EMPIRICAL_TRANSITION_COUNTS`` table baked into source) and the
-ADAPTIVE seed (b"\\x00\\x02" — uniform Laplace prior, online convergence). Both
+The FEC8 variant byte at offset 4..5 selects between the STATIC seed
+(b"\\x00\\x01" — hard-coded ``EMPIRICAL_TRANSITION_COUNTS``), the ADAPTIVE seed
+(b"\\x00\\x02" — uniform Laplace prior, online convergence), and the STATIC
+2nd-order seed (b"\\x00\\x03" — hard-coded sparse triple-count prior). All
 variants are decoded by the same ``decode_fec8_markov_selector`` entry point.
 
 # SPDX-License-Identifier: MIT
@@ -43,14 +44,16 @@ from build_pr101_frame_exploit_selector_packet_markov import (  # type: ignore[i
     FEC8_MAGIC,
     FEC8_VARIANT_ADAPTIVE,
     FEC8_VARIANT_STATIC,
+    FEC8_VARIANT_STATIC_SECOND_ORDER,
     PALETTE_K,
     decode_fec8_markov_selector,
 )
 
 __all__ = [
     "FEC8_MAGIC",
-    "FEC8_VARIANT_STATIC",
     "FEC8_VARIANT_ADAPTIVE",
+    "FEC8_VARIANT_STATIC",
+    "FEC8_VARIANT_STATIC_SECOND_ORDER",
     "PALETTE_K",
     "decode_fec8_markov_selector",
 ]
