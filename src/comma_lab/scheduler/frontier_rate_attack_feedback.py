@@ -7937,6 +7937,67 @@ def _aggregate_repair_dynamics_priors(
     return aggregate
 
 
+def _first_nonempty_text(*values: Any) -> str:
+    for value in values:
+        text = str(value or "").strip()
+        if text:
+            return text
+    return ""
+
+
+def _component_response_replay_manifest_record(
+    manifest: Mapping[str, Any],
+) -> dict[str, Any]:
+    replay = (
+        manifest.get("component_response_replay")
+        if isinstance(manifest.get("component_response_replay"), Mapping)
+        else {}
+    )
+    replayed_claim = (
+        manifest.get("component_response_replayed") is True
+        or replay.get("component_response_replayed") is True
+        or replay.get("response_replayed") is True
+        or replay.get("replayed") is True
+        or replay.get("proof_present") is True
+    )
+    replay_path = _first_nonempty_text(
+        manifest.get("component_response_replay_path"),
+        manifest.get("component_response_replay_artifact_path"),
+        replay.get("path"),
+        replay.get("artifact_path"),
+        replay.get("report_path"),
+        replay.get("proof_path"),
+        replay.get("source_response_artifact_path"),
+        replay.get("candidate_response_artifact_path"),
+    )
+    axis_tag = _first_nonempty_text(
+        manifest.get("component_response_replay_axis_tag"),
+        replay.get("axis_tag"),
+        replay.get("evidence_axis"),
+        replay.get("axis"),
+    )
+    evidence_grade = _first_nonempty_text(
+        manifest.get("component_response_replay_evidence_grade"),
+        replay.get("evidence_grade"),
+        replay.get("authority_grade"),
+    )
+    blockers = [
+        *_string_list(manifest.get("component_response_replay_blockers")),
+        *_string_list(replay.get("blockers")),
+    ]
+    if replayed_claim and not replay_path:
+        blockers.append("component_response_replay_artifact_path_missing")
+    if replayed_claim and not axis_tag:
+        blockers.append("component_response_replay_axis_tag_missing")
+    return {
+        "component_response_replayed": bool(replayed_claim and replay_path),
+        "component_response_replay_path": replay_path or None,
+        "component_response_replay_axis_tag": axis_tag or None,
+        "component_response_replay_evidence_grade": evidence_grade or None,
+        "component_response_replay_blockers": _unique_strings(blockers),
+    }
+
+
 def _materializer_manifest_record(
     *,
     manifest: Mapping[str, Any],
@@ -7983,6 +8044,13 @@ def _materializer_manifest_record(
         selector_palette_modes,
         source=str(manifest_path or manifest.get("archive_sha256") or "inline_manifest"),
     )
+    component_replay = _component_response_replay_manifest_record(manifest)
+    readiness_blockers = _unique_strings(
+        [
+            *_string_list(manifest.get("readiness_blockers")),
+            *_string_list(component_replay.get("component_response_replay_blockers")),
+        ]
+    )
     return {
         "schema": "frontier_rate_attack_materializer_manifest_binding_input.v1",
         "manifest_path": str(manifest_path or ""),
@@ -8001,7 +8069,19 @@ def _materializer_manifest_record(
         "receiver_contract_kind": manifest.get("receiver_contract_kind"),
         "receiver_contract_satisfied": receiver_contract_satisfied,
         "runtime_adapter_ready": manifest.get("runtime_adapter_ready") is True,
-        "readiness_blockers": _string_list(manifest.get("readiness_blockers")),
+        "component_response_replayed": component_replay[
+            "component_response_replayed"
+        ],
+        "component_response_replay_path": component_replay[
+            "component_response_replay_path"
+        ],
+        "component_response_replay_axis_tag": component_replay[
+            "component_response_replay_axis_tag"
+        ],
+        "component_response_replay_evidence_grade": component_replay[
+            "component_response_replay_evidence_grade"
+        ],
+        "readiness_blockers": readiness_blockers,
         "selector_palette_modes": selector_palette_modes,
         "repair_dynamics_prior": repair_dynamics_prior,
         "candidate_archive_materialized": bool(
@@ -8206,6 +8286,11 @@ def _repair_budget_materializer_binding_row(
         blockers.extend(_string_list(record.get("readiness_blockers")))
     candidate_archive_materialized = bool(selected)
     receiver_consumed = bool(selected)
+    component_response_replayed = (
+        plan_row.get("component_response_replayed") is True
+        or candidate_kind == "rate_only_floor_parent"
+        or selected.get("component_response_replayed") is True
+    )
     return {
         "schema": REPAIR_BUDGET_MATERIALIZER_BINDING_ROW_SCHEMA,
         "candidate_chain_id": candidate_chain_id,
@@ -8260,9 +8345,18 @@ def _repair_budget_materializer_binding_row(
             selected.get("runtime_consumption_proof_present", bool(selected))
         ),
         "receiver_consumed": receiver_consumed,
-        "component_response_replayed": (
-            plan_row.get("component_response_replayed") is True
-            or candidate_kind == "rate_only_floor_parent"
+        "component_response_replayed": component_response_replayed,
+        "component_response_replay_path": (
+            selected.get("component_response_replay_path")
+            or plan_row.get("component_response_replay_path")
+        ),
+        "component_response_replay_axis_tag": (
+            selected.get("component_response_replay_axis_tag")
+            or plan_row.get("component_response_replay_axis_tag")
+        ),
+        "component_response_replay_evidence_grade": (
+            selected.get("component_response_replay_evidence_grade")
+            or plan_row.get("component_response_replay_evidence_grade")
         ),
         "candidate_archive_materialized": candidate_archive_materialized,
         "ready_for_materialization_execution_audit": candidate_archive_materialized
@@ -8513,6 +8607,13 @@ def _repair_budget_materialization_execution_row(
     runtime_proof_present = row.get("runtime_consumption_proof_present") is True
     receiver_consumed = row.get("receiver_consumed") is True
     component_replayed = row.get("component_response_replayed") is True
+    component_replay_path = str(row.get("component_response_replay_path") or "").strip()
+    component_replay_axis_tag = str(
+        row.get("component_response_replay_axis_tag") or ""
+    ).strip()
+    component_replay_evidence_grade = str(
+        row.get("component_response_replay_evidence_grade") or ""
+    ).strip()
     if isinstance(binding_row, Mapping):
         archive_path = str(
             binding_row.get("candidate_archive_path") or archive_path or ""
@@ -8536,6 +8637,21 @@ def _repair_budget_materialization_execution_row(
             component_replayed
             or binding_row.get("component_response_replayed") is True
         )
+        component_replay_path = str(
+            binding_row.get("component_response_replay_path")
+            or component_replay_path
+            or ""
+        ).strip()
+        component_replay_axis_tag = str(
+            binding_row.get("component_response_replay_axis_tag")
+            or component_replay_axis_tag
+            or ""
+        ).strip()
+        component_replay_evidence_grade = str(
+            binding_row.get("component_response_replay_evidence_grade")
+            or component_replay_evidence_grade
+            or ""
+        ).strip()
     if archive_materialized and candidate_kind == "rate_only_floor_parent":
         materialized_parent_ids.add(candidate_chain_id)
     if not archive_materialized:
@@ -8548,17 +8664,29 @@ def _repair_budget_materialization_execution_row(
         blockers.append("receiver_consumed_false")
     if candidate_kind == "spent_budget_repair_child" and not component_replayed:
         blockers.append("component_response_replayed_false")
+    if candidate_kind == "spent_budget_repair_child" and component_replayed:
+        if not component_replay_path:
+            blockers.append("component_response_replay_path_missing")
+        if not component_replay_axis_tag:
+            blockers.append("component_response_replay_axis_tag_missing")
     if row.get("budget_spend_allowed") is True:
         blockers.append("budget_spend_authority_forbidden")
     if row.get("ready_for_exact_eval_dispatch") is True:
         blockers.append("exact_dispatch_authority_forbidden")
+    component_replay_ready = (
+        component_replayed
+        and (
+            candidate_kind != "spent_budget_repair_child"
+            or bool(component_replay_path)
+        )
+    )
     ready_for_local_materialization = (
         archive_materialized
         and runtime_proof_present
         and receiver_consumed
         and (
             candidate_kind == "rate_only_floor_parent"
-            or component_replayed
+            or component_replay_ready
         )
     )
     return {
@@ -8579,6 +8707,11 @@ def _repair_budget_materialization_execution_row(
         "runtime_consumption_proof_present": runtime_proof_present,
         "receiver_consumed": receiver_consumed,
         "component_response_replayed": component_replayed,
+        "component_response_replay_path": component_replay_path or None,
+        "component_response_replay_axis_tag": component_replay_axis_tag or None,
+        "component_response_replay_evidence_grade": (
+            component_replay_evidence_grade or None
+        ),
         "ready_for_local_materialization": ready_for_local_materialization,
         "ready_for_materializer_execution": False,
         "ready_for_budget_spend": False,
