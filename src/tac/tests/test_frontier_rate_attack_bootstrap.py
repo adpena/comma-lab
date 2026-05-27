@@ -1009,6 +1009,9 @@ def test_post_feedback_child_queue_execution_preserves_deferred_frozen_plan(
     ]
     assert report["activation_plan_count"] == 0
     assert report["deferred_activation_plan_count"] == 1
+    assert report["deferred_activation_posterior_append_report_count"] == 1
+    assert report["activation_posterior_append_report_count"] == 1
+    assert report["activation_posterior_appended_count"] == 1
     deferred = report["deferred_activation_plans"][0]
     assert deferred["artifact_key"] == "autonomous_chain_optimization_queue"
     activation_plan = json.loads(
@@ -1023,6 +1026,20 @@ def test_post_feedback_child_queue_execution_preserves_deferred_frozen_plan(
         "harvest_targeted_component_response_rows",
         "thaw_queue_definition_after_prerequisite_evidence_lands",
     }
+    append_report = json.loads(
+        (tmp_path / deferred["activation_posterior_append_report_path"]).read_text(
+            encoding="utf-8"
+        )
+    )
+    assert append_report["appended_count"] == 1
+    posterior_path = tmp_path / ".omx/state/repair_campaign_stackability_posterior.jsonl"
+    posterior_rows = [
+        json.loads(line)
+        for line in posterior_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert len(posterior_rows) == 1
+    assert posterior_rows[0]["typed_response_id"] == "activation_plan:autonomous:auto"
 
 
 def test_post_feedback_child_queue_execution_preserves_observer_artifacts(
@@ -1308,6 +1325,21 @@ def test_post_feedback_child_queue_execution_classifies_frozen_child_queue(
     assert signal["local_planning_update"]["planner_feature_vector"][
         "has_receiver_closed_budget_request"
     ] is True
+    assert report["activation_posterior_append_report_count"] == 1
+    assert report["activation_posterior_appended_count"] == 1
+    append_report_path = tmp_path / run["activation_posterior_append_report_path"]
+    append_report = json.loads(append_report_path.read_text(encoding="utf-8"))
+    assert append_report["appended_count"] == 1
+    posterior_path = tmp_path / ".omx/state/repair_campaign_stackability_posterior.jsonl"
+    posterior_rows = [
+        json.loads(line)
+        for line in posterior_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert len(posterior_rows) == 1
+    assert posterior_rows[0]["typed_response_id"] == (
+        "activation_plan:child_queue_frozen:blocked_until_receiver_ready"
+    )
 
 
 def test_post_feedback_child_queue_execution_revalidates_observer_identity(

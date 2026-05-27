@@ -21,6 +21,9 @@ from tac.optimization.proxy_candidate_contract import require_no_truthy_authorit
 from tac.optimization.repair_campaign_learning_signal import (
     build_repair_campaign_activation_plan_learning_signal_report,
 )
+from tac.optimization.repair_campaign_posterior import (
+    append_repair_campaign_blocked_learning_signal_report,
+)
 from tac.repo_io import ArtifactWriteResult, sha256_bytes, write_json_artifact, write_text_artifact
 
 from .experiment_queue import default_state_path
@@ -386,6 +389,37 @@ def _write_child_queue_activation_learning_signal_report(
     return signal_report
 
 
+def _append_activation_learning_signal_report_to_posterior(
+    *,
+    signal_report: Mapping[str, Any],
+    signal_report_path: str | Path,
+    output_path: Path,
+    repo_root: Path,
+) -> dict[str, Any]:
+    posterior_path = (
+        repo_root / ".omx" / "state" / "repair_campaign_stackability_posterior.jsonl"
+    )
+    lock_path = (
+        repo_root / ".omx" / "state" / ".repair_campaign_stackability_posterior.lock"
+    )
+    append_report = append_repair_campaign_blocked_learning_signal_report(
+        blocked_learning_signal_report_path=signal_report_path,
+        blocked_learning_signal_report=signal_report,
+        posterior_path=posterior_path,
+        lock_path=lock_path,
+        repo_root=repo_root,
+    )
+    require_no_truthy_authority_fields(
+        append_report,
+        context="child_queue_activation_posterior_append_report",
+    )
+    write_result = write_json_artifact(output_path, append_report)
+    append_report["artifact_path"] = _repo_rel(output_path, repo_root)
+    append_report["artifact_sha256"] = write_result.sha256
+    append_report["artifact_bytes"] = write_result.bytes_written
+    return append_report
+
+
 def _queue_identity_from_path(path: Path) -> dict[str, str]:
     payload = _load_json_object(path)
     if payload.get("schema") != "experiment_queue.v1":
@@ -627,6 +661,7 @@ def run_experiment_queue_once(
     disabled_after = _observation_status_count(observation, "disabled")
     activation_plan: dict[str, Any] | None = None
     activation_learning_signal_report: dict[str, Any] | None = None
+    activation_posterior_append_report: dict[str, Any] | None = None
     if frozen_after or paused_after or disabled_after:
         activation_plan = _write_child_queue_activation_plan(
             queue_path=queue,
@@ -640,6 +675,19 @@ def run_experiment_queue_once(
                     activation_plan_path=str(activation_plan["artifact_path"]),
                     output_path=(
                         observer_path.parent / "activation_learning_signal_report.json"
+                    ),
+                    repo_root=repo,
+                )
+            )
+            activation_posterior_append_report = (
+                _append_activation_learning_signal_report_to_posterior(
+                    signal_report=activation_learning_signal_report,
+                    signal_report_path=str(
+                        activation_learning_signal_report["artifact_path"]
+                    ),
+                    output_path=(
+                        observer_path.parent
+                        / "activation_posterior_append_report.json"
                     ),
                     repo_root=repo,
                 )
@@ -712,6 +760,22 @@ def run_experiment_queue_once(
         )
         if activation_learning_signal_report is not None
         else None,
+        "activation_posterior_append_report": activation_posterior_append_report,
+        "activation_posterior_append_report_path": activation_posterior_append_report.get(
+            "artifact_path"
+        )
+        if activation_posterior_append_report is not None
+        else None,
+        "activation_posterior_appended_count": (
+            activation_posterior_append_report.get("appended_count")
+            if activation_posterior_append_report is not None
+            else None
+        ),
+        "activation_posterior_skipped_duplicate_count": (
+            activation_posterior_append_report.get("skipped_duplicate_count")
+            if activation_posterior_append_report is not None
+            else None
+        ),
         "allowed_use": "bounded_local_post_feedback_queue_execution_only",
         "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
         **FALSE_AUTHORITY,
@@ -787,6 +851,18 @@ def execute_post_feedback_child_queues(
                 repo_root=repo,
             )
         )
+        activation_posterior_append_report = (
+            _append_activation_learning_signal_report_to_posterior(
+                signal_report=activation_learning_signal_report,
+                signal_report_path=str(
+                    activation_learning_signal_report["artifact_path"]
+                ),
+                output_path=(
+                    observation_dir / key / "activation_posterior_append_report.json"
+                ),
+                repo_root=repo,
+            )
+        )
         deferred_activation_plans.append(
             {
                 "artifact_key": key,
@@ -799,6 +875,15 @@ def execute_post_feedback_child_queues(
                 ),
                 "activation_learning_signal_report_sha256": (
                     activation_learning_signal_report.get("artifact_sha256")
+                ),
+                "activation_posterior_append_report_path": (
+                    activation_posterior_append_report.get("artifact_path")
+                ),
+                "activation_posterior_appended_count": (
+                    activation_posterior_append_report.get("appended_count")
+                ),
+                "activation_posterior_skipped_duplicate_count": (
+                    activation_posterior_append_report.get("skipped_duplicate_count")
                 ),
                 "blocked_experiment_count": activation_plan.get(
                     "blocked_experiment_count"
@@ -834,6 +919,38 @@ def execute_post_feedback_child_queues(
             1
             for plan in deferred_activation_plans
             if plan.get("activation_learning_signal_report_path")
+        ),
+        "selected_activation_posterior_append_report_count": sum(
+            1 for run in runs if run.get("activation_posterior_append_report_path")
+        ),
+        "deferred_activation_posterior_append_report_count": sum(
+            1
+            for plan in deferred_activation_plans
+            if plan.get("activation_posterior_append_report_path")
+        ),
+        "activation_posterior_append_report_count": sum(
+            1 for run in runs if run.get("activation_posterior_append_report_path")
+        )
+        + sum(
+            1
+            for plan in deferred_activation_plans
+            if plan.get("activation_posterior_append_report_path")
+        ),
+        "activation_posterior_appended_count": sum(
+            int(run.get("activation_posterior_appended_count") or 0)
+            for run in runs
+        )
+        + sum(
+            int(plan.get("activation_posterior_appended_count") or 0)
+            for plan in deferred_activation_plans
+        ),
+        "activation_posterior_skipped_duplicate_count": sum(
+            int(run.get("activation_posterior_skipped_duplicate_count") or 0)
+            for run in runs
+        )
+        + sum(
+            int(plan.get("activation_posterior_skipped_duplicate_count") or 0)
+            for plan in deferred_activation_plans
         ),
         "max_steps": max_steps,
         "max_parallel": max_parallel,
