@@ -8,6 +8,12 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from tac.optimization.pair_frame_scorer_geometry_lattice_5d_canvas_coverage import (
+    COVERAGE_AUDIT_SCHEMA,
+    CanvasCoverageAuditError,
+    audit_5d_canvas_coverage,
+    load_5d_canvas_json,
+)
 from tac.optimization.pair_frame_scorer_geometry_lattice_5d_canvas_extended_operators import (
     EXTENDED_OPERATION_CANONICAL_EQUATION_IDS,
     ExtendedOperation,
@@ -76,6 +82,33 @@ def _operator_args(operation: ExtendedOperation) -> list[str]:
     raise ExperimentQueueError(f"unsupported extended operator {operation!r}")
 
 
+def _canvas_coverage_audit(canvas: Path) -> dict[str, Any]:
+    if not canvas.exists():
+        return {
+            "schema": COVERAGE_AUDIT_SCHEMA,
+            "verdict": "densification_required",
+            "blockers": ["canvas_path_missing_for_coverage_audit"],
+            "work_orders": [],
+            "work_order_count": 0,
+            "allowed_use": "local_planning_and_experiment_queue_acquisition_only",
+            "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
+            **FALSE_AUTHORITY,
+        }
+    try:
+        return audit_5d_canvas_coverage(load_5d_canvas_json(canvas))
+    except CanvasCoverageAuditError as exc:
+        return {
+            "schema": COVERAGE_AUDIT_SCHEMA,
+            "verdict": "densification_required",
+            "blockers": [f"coverage_audit_failed:{exc}"],
+            "work_orders": [],
+            "work_order_count": 0,
+            "allowed_use": "local_planning_and_experiment_queue_acquisition_only",
+            "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
+            **FALSE_AUTHORITY,
+        }
+
+
 def build_pair_frame_5d_extended_operator_queue(
     *,
     repo_root: str | Path,
@@ -108,6 +141,7 @@ def build_pair_frame_5d_extended_operator_queue(
     out_root = _resolve_path(output_root, repo_root=repo)
     canvas_ref = _repo_rel(canvas, repo)
     out_ref_root = _repo_rel(out_root, repo)
+    coverage_audit = _canvas_coverage_audit(canvas)
     experiments: list[dict[str, Any]] = []
     for priority, operation in enumerate(ExtendedOperation, start=1):
         op_slug = _slug(operation.value)
@@ -120,6 +154,7 @@ def build_pair_frame_5d_extended_operator_queue(
                 EXTENDED_OPERATION_CANONICAL_EQUATION_IDS[operation]
             ),
             "canvas_path": canvas_ref,
+            "canvas_coverage_audit": coverage_audit,
             "output_path": output_ref,
             "output_root": out_ref_root,
             "allowed_use": "local_encoder_side_5d_extended_operator_planning_only",
@@ -198,6 +233,7 @@ def build_pair_frame_5d_extended_operator_queue(
                 "schema": PAIR_FRAME_5D_EXTENDED_OPERATOR_QUEUE_SCHEMA,
                 "canvas_path": canvas_ref,
                 "operator_count": len(experiments),
+                "canvas_coverage_audit": coverage_audit,
                 "allowed_use": "local_encoder_side_5d_extended_operator_planning_only",
                 **FALSE_AUTHORITY,
             },
