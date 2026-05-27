@@ -59745,6 +59745,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_mlx_harness_posenet_teacher_binding_20260527",
+      "name": "MLX harness PoseNet teacher binding",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "PoseNet teacher build_mlx_posenet_pair_teacher + LearnablePoseStudentHead + pose_distillation_mse_loss + fail-closed both-scorer invariant; src/tac/substrates/_shared/mlx_score_aware/{bundle,loss,adapter}.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "[macOS-MLX research-signal] gradient-reachable test (cos 0.185<0.5 finite nonzero); 12 pose tests + 6 segnet tests + 58 hinton tests pass"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/mlx_harness_posenet_teacher_binding_landed_20260527T193000Z.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -59754,5 +59795,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-27T19:02:13Z"
+  "updated_at": "2026-05-27T19:29:55Z"
 }
