@@ -20,13 +20,25 @@ from tac.optimization.repair_campaign_posterior import (
     DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_PATH,
     REPAIR_CAMPAIGN_BLOCKED_POSTERIOR_APPEND_REPORT_SCHEMA,
 )
-from tac.optimization.repair_campaign_scorer import REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA
+from tac.optimization.repair_campaign_scorer import (
+    REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA,
+    build_repair_campaign_posterior_prior_summary,
+)
 
 REPAIR_CAMPAIGN_SCORE_QUEUE_METADATA_SCHEMA = (
     "repair_campaign_score_queue_metadata.v1"
 )
 REPAIR_CAMPAIGN_SCORE_EXPERIMENT_METADATA_SCHEMA = (
     "repair_campaign_score_experiment_metadata.v1"
+)
+REPAIR_CAMPAIGN_SCORE_QUEUE_SUMMARY_SCHEMA = (
+    "frontier_rate_attack_repair_campaign_score_queue_summary.v1"
+)
+REPAIR_POSTERIOR_ACQUISITION_FOLLOWUP_QUEUE_METADATA_SCHEMA = (
+    "repair_posterior_acquisition_followup_queue_metadata.v1"
+)
+REPAIR_POSTERIOR_ACQUISITION_FOLLOWUP_EXPERIMENT_METADATA_SCHEMA = (
+    "repair_posterior_acquisition_followup_experiment_metadata.v1"
 )
 DEFAULT_STACKABILITY_WORKER_MAX_STEPS = 8
 DEFAULT_STACKABILITY_WORKER_MAX_EXPERIMENTS = 2
@@ -36,6 +48,10 @@ DEFAULT_CASCADE_MLX_PROBE_WORKER_MAX_STEPS = 4
 DEFAULT_CASCADE_MLX_PROBE_WORKER_MAX_EXPERIMENTS = 2
 DEFAULT_CASCADE_MLX_PROBE_WORKER_MAX_PARALLEL = 1
 DEFAULT_CASCADE_MLX_PROBE_WORKER_TIMEOUT_SECONDS = 300
+DEFAULT_POSTERIOR_FOLLOWUP_WORKER_MAX_STEPS = 12
+DEFAULT_POSTERIOR_FOLLOWUP_WORKER_MAX_EXPERIMENTS = 4
+DEFAULT_POSTERIOR_FOLLOWUP_WORKER_MAX_PARALLEL = 2
+DEFAULT_POSTERIOR_FOLLOWUP_WORKER_TIMEOUT_SECONDS = 900
 
 
 class RepairCampaignScoreQueueError(ValueError):
@@ -90,6 +106,10 @@ def _string_list(value: Any) -> list[str]:
     return [text] if text else []
 
 
+def _mapping(value: Any) -> Mapping[str, Any]:
+    return value if isinstance(value, Mapping) else {}
+
+
 def _positive_int(value: Any) -> int | None:
     if isinstance(value, bool) or value is None:
         return None
@@ -98,6 +118,44 @@ def _positive_int(value: Any) -> int | None:
     except (TypeError, ValueError):
         return None
     return parsed if parsed > 0 else 0
+
+
+def _posterior_route_executable_queue_keys(
+    route: Mapping[str, Any],
+) -> list[str]:
+    """Map posterior acquisition routes to queue artifacts that can act on them."""
+
+    queue_key = str(route.get("queue_artifact_key") or "").strip()
+    action = str(route.get("activation_action") or "").strip()
+    mapped: list[str] = []
+    if queue_key in {
+        "repair_budget_waterfill_queue",
+        "repair_campaign_score_queue",
+        "receiver_repair_queue",
+        "operation_chain_compiler_queue",
+        "operation_materializer_execution_queue",
+        "targeted_component_correction_queue",
+        "targeted_component_correction_materialization_queue",
+        "targeted_component_correction_operation_chain_queue",
+        "targeted_component_correction_chain_materializer_execution_queue",
+        "autonomous_chain_optimization_queue",
+    }:
+        mapped.append(queue_key)
+    if queue_key == "targeted_component_correction_response_harvest":
+        mapped.append("targeted_component_correction_queue")
+    if queue_key == "receiver_closed_correction_budget":
+        mapped.append("receiver_repair_queue")
+    if queue_key == "repair_cascade_mlx_probe_queue":
+        mapped.append("repair_campaign_score_queue")
+    if queue_key == "exact_auth_eval_handoff":
+        return []
+    if action == "materialize_missing_repair_campaign_artifacts":
+        mapped.append("repair_budget_waterfill_queue")
+    if action == "materialize_missing_local_mlx_custody":
+        mapped.append("repair_campaign_score_queue")
+    if action == "route_component_response_to_exact_axis_replay":
+        mapped.append("targeted_component_correction_queue")
+    return ordered_unique(mapped)
 
 
 def _work_order_path_from_experiment(experiment: Mapping[str, Any]) -> str:
@@ -779,10 +837,349 @@ def build_repair_campaign_score_queue(
     )
 
 
+def summarize_repair_campaign_score_queue(
+    *,
+    repair_campaign_score_queue: Mapping[str, Any],
+    queue_path: str | Path,
+    posterior_path: str | Path | None,
+) -> dict[str, Any]:
+    """Project a score queue and posterior into the feedback-refresh report."""
+
+    metadata = _mapping(repair_campaign_score_queue.get("metadata"))
+    posterior_prior_summary = build_repair_campaign_posterior_prior_summary(
+        posterior_path=posterior_path,
+    )
+    summary = {
+        "schema": REPAIR_CAMPAIGN_SCORE_QUEUE_SUMMARY_SCHEMA,
+        "queue_id": repair_campaign_score_queue.get("queue_id"),
+        "experiment_count": len(
+            repair_campaign_score_queue.get("experiments") or []
+        ),
+        "ready_experiment_count": metadata.get("ready_experiment_count"),
+        "blocked_experiment_count": metadata.get("blocked_experiment_count"),
+        "campaign_scorer_uses_posterior_priors": metadata.get(
+            "campaign_scorer_uses_posterior_priors"
+        ),
+        "posterior_prior_summary": posterior_prior_summary,
+        "posterior_acquisition_followup_route_count": (
+            posterior_prior_summary.get("acquisition_followup_route_count")
+        ),
+        "posterior_acquisition_followup_routes": (
+            posterior_prior_summary.get("acquisition_followup_routes") or []
+        ),
+        "queue_path": str(queue_path),
+        "allowed_use": "default_repair_campaign_scorer_queue_planning_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        summary,
+        context="repair_campaign_score_queue_summary",
+    )
+    return summary
+
+
+def _posterior_followup_experiment(
+    *,
+    route: Mapping[str, Any],
+    route_index: int,
+    artifact_paths_by_key: Mapping[str, str | Path],
+    repo_root: str | Path,
+    queue_root: Path,
+    priority: int,
+) -> dict[str, Any]:
+    route_id = str(
+        route.get("activation_action")
+        or route.get("recommended_acquisition_policy")
+        or f"posterior_route_{route_index}"
+    )
+    route_slug = _slug(route_id)
+    executable_queue_keys = _posterior_route_executable_queue_keys(route)
+    required_key = str(route.get("queue_artifact_key") or "").strip()
+    missing_artifact_keys: list[str] = []
+    blockers: list[str] = []
+    steps: list[dict[str, Any]] = []
+    required_artifact = artifact_paths_by_key.get(required_key)
+    if required_key and required_artifact is None:
+        missing_artifact_keys.append(required_key)
+    if required_key == "exact_auth_eval_handoff":
+        blockers.append("exact_auth_eval_handoff_requires_contest_axis_claim")
+    if required_artifact is not None and required_key not in executable_queue_keys:
+        steps.append(
+            {
+                "id": f"inspect_{route_slug}_{_slug(required_key)}",
+                "kind": "command",
+                "command": [
+                    ".venv/bin/python",
+                    "-m",
+                    "json.tool",
+                    str(required_artifact),
+                ],
+                "resources": {"kind": "local_cpu"},
+                "timeout_seconds": 120,
+                "telemetry": {
+                    "input_artifact_paths": [str(required_artifact)],
+                },
+            }
+        )
+    for queue_key in executable_queue_keys:
+        queue_ref = artifact_paths_by_key.get(queue_key)
+        if queue_ref is None:
+            missing_artifact_keys.append(queue_key)
+            continue
+        validate_step_id = f"validate_{route_slug}_{_slug(queue_key)}"
+        worker_result_path = (
+            queue_root / route_slug / f"{_slug(queue_key)}_worker_result.json"
+        )
+        worker_result_ref = _repo_rel(worker_result_path, repo_root)
+        steps.append(
+            {
+                "id": validate_step_id,
+                "kind": "command",
+                "command": [
+                    ".venv/bin/python",
+                    "tools/experiment_queue.py",
+                    "--queue",
+                    str(queue_ref),
+                    "validate",
+                ],
+                "resources": {"kind": "local_cpu"},
+                "timeout_seconds": 120,
+                "telemetry": {
+                    "input_artifact_paths": [str(queue_ref)],
+                },
+            }
+        )
+        steps.append(
+            {
+                "id": f"run_{route_slug}_{_slug(queue_key)}_bounded_local",
+                "kind": "command",
+                "requires": [validate_step_id],
+                "command": [
+                    ".venv/bin/python",
+                    "tools/experiment_queue.py",
+                    "--queue",
+                    str(queue_ref),
+                    "run-worker",
+                    "--execute",
+                    "--max-steps",
+                    str(DEFAULT_POSTERIOR_FOLLOWUP_WORKER_MAX_STEPS),
+                    "--max-experiments",
+                    str(DEFAULT_POSTERIOR_FOLLOWUP_WORKER_MAX_EXPERIMENTS),
+                    "--max-parallel",
+                    str(DEFAULT_POSTERIOR_FOLLOWUP_WORKER_MAX_PARALLEL),
+                    "--output",
+                    worker_result_ref,
+                ],
+                "resources": {"kind": "local_io_heavy"},
+                "timeout_seconds": DEFAULT_POSTERIOR_FOLLOWUP_WORKER_TIMEOUT_SECONDS,
+                "postconditions": [
+                    {
+                        "type": "json_equals",
+                        "path": worker_result_ref,
+                        "key": "schema",
+                        "equals": "experiment_queue_worker_result.v1",
+                    },
+                    {
+                        "type": "json_equals",
+                        "path": worker_result_ref,
+                        "key": "failure_count",
+                        "equals": 0,
+                    },
+                ],
+                "telemetry": {
+                    "artifact_paths": [worker_result_ref],
+                    "input_artifact_paths": [str(queue_ref)],
+                    "include_postcondition_paths": True,
+                },
+            }
+        )
+    queue_actuation_ready = bool(steps) and not blockers
+    if not steps:
+        blockers.append("no_available_local_queue_or_artifact_for_posterior_route")
+    if missing_artifact_keys:
+        blockers.extend(
+            f"missing_prerequisite_artifact:{key}"
+            for key in ordered_unique(missing_artifact_keys)
+        )
+    metadata = {
+        "schema": REPAIR_POSTERIOR_ACQUISITION_FOLLOWUP_EXPERIMENT_METADATA_SCHEMA,
+        "posterior_route": dict(route),
+        "posterior_route_index": route_index,
+        "recommended_acquisition_policy": route.get("recommended_acquisition_policy"),
+        "activation_action": route.get("activation_action"),
+        "required_evidence_surface": route.get("required_evidence_surface"),
+        "route_queue_artifact_key": required_key or None,
+        "executable_queue_artifact_keys": executable_queue_keys,
+        "missing_prerequisite_artifact_keys": ordered_unique(missing_artifact_keys),
+        "queue_actuation_ready": queue_actuation_ready,
+        "queue_actuation_blockers": ordered_unique(blockers),
+        "budget_spend_allowed": False,
+        "ready_for_exact_eval_dispatch": False,
+        "allowed_use": "repair_posterior_acquisition_followup_local_queue_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        metadata,
+        context=f"repair_posterior_acquisition_followup_metadata:{route_id}",
+    )
+    if not steps:
+        steps = [
+            {
+                "id": "inspect_missing_posterior_followup_prerequisites",
+                "kind": "command",
+                "command": [
+                    ".venv/bin/python",
+                    "-c",
+                    (
+                        "import json; print(json.dumps({"
+                        "'ready_for_exact_eval_dispatch': False,"
+                        "'budget_spend_allowed': False,"
+                        f"'blockers': {ordered_unique(blockers)!r}"
+                        "}, sort_keys=True))"
+                    ),
+                ],
+                "resources": {"kind": "local_cpu"},
+                "timeout_seconds": 30,
+                "telemetry": {"include_postcondition_paths": True},
+            }
+        ]
+    return {
+        "id": f"repair_posterior_followup_{route_slug}",
+        "priority": priority,
+        "status": "queued" if queue_actuation_ready else "frozen",
+        "tags": [
+            "frontier-rate-attack",
+            "repair-posterior-acquisition",
+            "queue-owned-feedback",
+            "no-score-authority",
+        ],
+        "metadata": metadata,
+        "steps": steps,
+    }
+
+
+def build_repair_posterior_acquisition_followup_queue(
+    *,
+    repo_root: str | Path,
+    posterior_prior_summary: Mapping[str, Any],
+    artifact_paths_by_key: Mapping[str, str | Path],
+    results_root: str | Path,
+    queue_id: str = "repair_posterior_acquisition_followup_queue",
+    route_limit: int | None = None,
+) -> dict[str, Any]:
+    """Build the queue that turns posterior routes into executable local work."""
+
+    require_no_truthy_authority_fields(
+        posterior_prior_summary,
+        context="repair_posterior_acquisition_followup_queue_input",
+    )
+    routes = [
+        route
+        for route in posterior_prior_summary.get("acquisition_followup_routes") or []
+        if isinstance(route, Mapping)
+    ]
+    if route_limit is not None:
+        routes = routes[: max(0, int(route_limit))]
+    queue_root = (
+        _resolve(results_root, repo_root)
+        / "repair_posterior_acquisition_followup_queue"
+        / _slug(queue_id)
+    )
+    experiments = [
+        _posterior_followup_experiment(
+            route=route,
+            route_index=index,
+            artifact_paths_by_key=artifact_paths_by_key,
+            repo_root=repo_root,
+            queue_root=queue_root,
+            priority=index,
+        )
+        for index, route in enumerate(routes, start=1)
+    ]
+    ready_count = sum(
+        1
+        for experiment in experiments
+        if _mapping(experiment.get("metadata")).get("queue_actuation_ready") is True
+    )
+    metadata = {
+        "schema": REPAIR_POSTERIOR_ACQUISITION_FOLLOWUP_QUEUE_METADATA_SCHEMA,
+        "posterior_prior_summary_schema": posterior_prior_summary.get("schema"),
+        "posterior_path": posterior_prior_summary.get("posterior_path"),
+        "posterior_row_count": posterior_prior_summary.get("posterior_row_count"),
+        "posterior_acquisition_followup_route_count": len(routes),
+        "available_artifact_keys": sorted(str(key) for key in artifact_paths_by_key),
+        "experiment_count": len(experiments),
+        "ready_experiment_count": ready_count,
+        "blocked_experiment_count": len(experiments) - ready_count,
+        "results_root": _repo_rel(queue_root, repo_root),
+        "budget_spend_allowed": False,
+        "ready_for_exact_eval_dispatch": False,
+        "allowed_use": "queue_owned_repair_posterior_acquisition_followups",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        metadata,
+        context="repair_posterior_acquisition_followup_queue_metadata",
+    )
+    return normalize_queue_definition(
+        {
+            "schema": QUEUE_SCHEMA,
+            "queue_id": queue_id,
+            "controls": {
+                "mode": "running",
+                "local_first": True,
+                "max_concurrency": {"local_io_heavy": 2, "local_cpu": 2},
+            },
+            "metadata": metadata,
+            "experiments": experiments,
+        }
+    )
+
+
+def summarize_repair_posterior_acquisition_followup_queue(
+    *,
+    repair_posterior_followup_queue: Mapping[str, Any],
+    queue_path: str | Path,
+) -> dict[str, Any]:
+    """Project a posterior-followup queue into the feedback-refresh report."""
+
+    metadata = _mapping(repair_posterior_followup_queue.get("metadata"))
+    summary = {
+        "schema": "repair_posterior_acquisition_followup_queue_summary.v1",
+        "queue_id": repair_posterior_followup_queue.get("queue_id"),
+        "experiment_count": len(
+            repair_posterior_followup_queue.get("experiments") or []
+        ),
+        "ready_experiment_count": metadata.get("ready_experiment_count"),
+        "blocked_experiment_count": metadata.get("blocked_experiment_count"),
+        "posterior_acquisition_followup_route_count": metadata.get(
+            "posterior_acquisition_followup_route_count"
+        ),
+        "queue_path": str(queue_path),
+        "allowed_use": "repair_posterior_acquisition_followup_queue_planning_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        summary,
+        context="repair_posterior_acquisition_followup_queue_summary",
+    )
+    return summary
+
+
 __all__ = [
     "DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_PATH",
     "REPAIR_CAMPAIGN_SCORE_EXPERIMENT_METADATA_SCHEMA",
     "REPAIR_CAMPAIGN_SCORE_QUEUE_METADATA_SCHEMA",
+    "REPAIR_CAMPAIGN_SCORE_QUEUE_SUMMARY_SCHEMA",
+    "REPAIR_POSTERIOR_ACQUISITION_FOLLOWUP_EXPERIMENT_METADATA_SCHEMA",
+    "REPAIR_POSTERIOR_ACQUISITION_FOLLOWUP_QUEUE_METADATA_SCHEMA",
     "RepairCampaignScoreQueueError",
     "build_repair_campaign_score_queue",
+    "build_repair_posterior_acquisition_followup_queue",
+    "summarize_repair_campaign_score_queue",
+    "summarize_repair_posterior_acquisition_followup_queue",
 ]

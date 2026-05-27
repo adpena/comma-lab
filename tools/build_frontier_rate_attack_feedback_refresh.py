@@ -65,6 +65,9 @@ from comma_lab.scheduler.pair_frame_5d_extended_operator_queue import (  # noqa:
 from comma_lab.scheduler.repair_campaign_score_queue import (  # noqa: E402
     DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_PATH,
     build_repair_campaign_score_queue,
+    build_repair_posterior_acquisition_followup_queue,
+    summarize_repair_campaign_score_queue,
+    summarize_repair_posterior_acquisition_followup_queue,
 )
 from tac.fec6_selector_operator_space import FEC6_FIXED_K16_MODE_IDS  # noqa: E402
 from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY  # noqa: E402
@@ -80,9 +83,6 @@ from tac.optimization.pair_frame_scorer_geometry_lattice import (  # noqa: E402
 )
 from tac.optimization.proxy_candidate_contract import (  # noqa: E402
     require_no_truthy_authority_fields,
-)
-from tac.optimization.repair_campaign_scorer import (  # noqa: E402
-    build_repair_campaign_posterior_prior_summary,
 )
 from tac.repo_io import ArtifactWriteError, json_text, write_json_artifact  # noqa: E402
 
@@ -1294,40 +1294,41 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
             artifacts["repair_campaign_score_queue"] = _display_path(
                 repair_campaign_score_queue_path
             )
-            posterior_prior_summary = build_repair_campaign_posterior_prior_summary(
+            score_queue_summary = summarize_repair_campaign_score_queue(
+                repair_campaign_score_queue=repair_campaign_score_queue,
+                queue_path=artifacts["repair_campaign_score_queue"],
                 posterior_path=DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_PATH,
             )
-            report["repair_campaign_score_queue_summary"] = {
-                "schema": "frontier_rate_attack_repair_campaign_score_queue_summary.v1",
-                "queue_id": repair_campaign_score_queue.get("queue_id"),
-                "experiment_count": len(
-                    repair_campaign_score_queue.get("experiments") or []
+            report["repair_campaign_score_queue_summary"] = score_queue_summary
+            posterior_followup_queue = build_repair_posterior_acquisition_followup_queue(
+                repo_root=REPO_ROOT,
+                posterior_prior_summary=score_queue_summary["posterior_prior_summary"],
+                artifact_paths_by_key=artifacts,
+                results_root=str(report.get("results_root") or DEFAULT_RESULTS_ROOT),
+                queue_id=(
+                    f"{report.get('queue_id') or 'frontier_feedback'}_"
+                    "repair_posterior_acquisition_followup"
                 ),
-                "ready_experiment_count": repair_campaign_score_queue.get(
-                    "metadata",
-                    {},
-                ).get("ready_experiment_count"),
-                "blocked_experiment_count": repair_campaign_score_queue.get(
-                    "metadata",
-                    {},
-                ).get("blocked_experiment_count"),
-                "campaign_scorer_uses_posterior_priors": repair_campaign_score_queue.get(
-                    "metadata",
-                    {},
-                ).get("campaign_scorer_uses_posterior_priors"),
-                "posterior_prior_summary": posterior_prior_summary,
-                "posterior_acquisition_followup_route_count": (
-                    posterior_prior_summary.get("acquisition_followup_route_count")
-                ),
-                "posterior_acquisition_followup_routes": (
-                    posterior_prior_summary.get("acquisition_followup_routes") or []
-                ),
-                "queue_path": artifacts["repair_campaign_score_queue"],
-                "allowed_use": (
-                    "default_repair_campaign_scorer_queue_planning_only"
-                ),
-                **FALSE_AUTHORITY,
-            }
+                route_limit=int(report.get("candidate_limit") or 4),
+            )
+            posterior_followup_queue_path = (
+                output_dir / "repair_posterior_acquisition_followup_queue.json"
+            )
+            write_json_artifact(
+                posterior_followup_queue_path,
+                posterior_followup_queue,
+            )
+            artifacts["repair_posterior_acquisition_followup_queue"] = _display_path(
+                posterior_followup_queue_path
+            )
+            report["repair_posterior_acquisition_followup_queue_summary"] = (
+                summarize_repair_posterior_acquisition_followup_queue(
+                    repair_posterior_followup_queue=posterior_followup_queue,
+                    queue_path=artifacts[
+                        "repair_posterior_acquisition_followup_queue"
+                    ],
+                )
+            )
         autonomous_queue = build_frontier_autonomous_chain_optimization_queue(
             repo_root=REPO_ROOT,
             autonomous_chain_optimization=autonomous_chain_optimization,
@@ -1757,6 +1758,37 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
             "2",
             "--max-parallel",
             "1",
+        ]
+    if "repair_posterior_acquisition_followup_queue" in artifacts:
+        operator_commands["validate_repair_posterior_acquisition_followup_queue"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["repair_posterior_acquisition_followup_queue"],
+            "validate",
+        ]
+        operator_commands["init_repair_posterior_acquisition_followup_queue"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["repair_posterior_acquisition_followup_queue"],
+            "init",
+        ]
+        operator_commands[
+            "run_repair_posterior_acquisition_followup_queue_bounded_local"
+        ] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["repair_posterior_acquisition_followup_queue"],
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            "12",
+            "--max-experiments",
+            "4",
+            "--max-parallel",
+            "2",
         ]
     if "pair_frame_5d_extended_operator_queue" in artifacts:
         operator_commands["validate_pair_frame_5d_extended_operator_queue"] = [

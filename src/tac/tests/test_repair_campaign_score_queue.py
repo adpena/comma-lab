@@ -11,7 +11,13 @@ from comma_lab.scheduler.repair_campaign_score_queue import (
     DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_PATH,
     REPAIR_CAMPAIGN_SCORE_EXPERIMENT_METADATA_SCHEMA,
     REPAIR_CAMPAIGN_SCORE_QUEUE_METADATA_SCHEMA,
+    REPAIR_CAMPAIGN_SCORE_QUEUE_SUMMARY_SCHEMA,
+    REPAIR_POSTERIOR_ACQUISITION_FOLLOWUP_EXPERIMENT_METADATA_SCHEMA,
+    REPAIR_POSTERIOR_ACQUISITION_FOLLOWUP_QUEUE_METADATA_SCHEMA,
     build_repair_campaign_score_queue,
+    build_repair_posterior_acquisition_followup_queue,
+    summarize_repair_campaign_score_queue,
+    summarize_repair_posterior_acquisition_followup_queue,
 )
 from tac.optimization.repair_campaign_learning_signal import (
     REPAIR_CAMPAIGN_BLOCKED_LEARNING_SIGNAL_REPORT_SCHEMA,
@@ -20,7 +26,11 @@ from tac.optimization.repair_campaign_learning_signal import (
 from tac.optimization.repair_campaign_posterior import (
     REPAIR_CAMPAIGN_BLOCKED_POSTERIOR_APPEND_REPORT_SCHEMA,
 )
-from tac.optimization.repair_campaign_scorer import REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA
+from tac.optimization.repair_campaign_scorer import (
+    REPAIR_CAMPAIGN_POSTERIOR_ACQUISITION_FOLLOWUP_SCHEMA,
+    REPAIR_CAMPAIGN_POSTERIOR_PRIOR_SUMMARY_SCHEMA,
+    REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -335,6 +345,109 @@ def test_repair_campaign_score_queue_can_bind_posterior_prior_input(
         DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_PATH.name
         == "repair_campaign_stackability_posterior.jsonl"
     )
+    summary = summarize_repair_campaign_score_queue(
+        repair_campaign_score_queue=queue,
+        queue_path=tmp_path / "repair_campaign_score_queue.json",
+        posterior_path=posterior_path,
+    )
+    assert summary["schema"] == REPAIR_CAMPAIGN_SCORE_QUEUE_SUMMARY_SCHEMA
+    assert summary["campaign_scorer_uses_posterior_priors"] is True
+    assert summary["posterior_prior_summary"][
+        "schema"
+    ] == REPAIR_CAMPAIGN_POSTERIOR_PRIOR_SUMMARY_SCHEMA
+
+
+def test_repair_posterior_acquisition_followup_queue_routes_to_child_queue(
+    tmp_path: Path,
+) -> None:
+    response_harvest_path = tmp_path / "targeted_response_harvest.json"
+    targeted_queue_path = tmp_path / "targeted_queue.json"
+    response_harvest_path.write_text('{"schema":"response_harvest.v1"}\n')
+    targeted_queue_path.write_text(
+        json.dumps(
+            {
+                "schema": QUEUE_SCHEMA,
+                "queue_id": "targeted_component_correction_queue",
+                "controls": {"mode": "running"},
+                "metadata": _false_authority(),
+                "experiments": [],
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    route = {
+        "schema": REPAIR_CAMPAIGN_POSTERIOR_ACQUISITION_FOLLOWUP_SCHEMA,
+        "recommended_acquisition_policy": (
+            "increase_priority_for_targeted_component_response_harvest"
+        ),
+        "observation_count": 2,
+        "family_ids": ["region_boundary_repair"],
+        "typed_response_ids": ["typed_001"],
+        "priority_score": 100,
+        "activation_action": "harvest_targeted_component_response_rows",
+        "queue_artifact_key": "targeted_component_correction_response_harvest",
+        "required_evidence_surface": "targeted_component_correction_response_harvest",
+        "missing_artifact_total": 0,
+        "blocker_total": 0,
+        **_false_authority(),
+    }
+    posterior_summary = {
+        "schema": REPAIR_CAMPAIGN_POSTERIOR_PRIOR_SUMMARY_SCHEMA,
+        "posterior_path": str(tmp_path / "posterior.jsonl"),
+        "posterior_row_count": 2,
+        "family_prior_count": 0,
+        "family_priors": [],
+        "acquisition_followup_route_count": 1,
+        "acquisition_followup_routes": [route],
+        "allowed_use": "unit_test",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **_false_authority(),
+    }
+
+    queue = build_repair_posterior_acquisition_followup_queue(
+        repo_root=tmp_path,
+        posterior_prior_summary=posterior_summary,
+        artifact_paths_by_key={
+            "targeted_component_correction_response_harvest": response_harvest_path,
+            "targeted_component_correction_queue": targeted_queue_path,
+        },
+        results_root=tmp_path / "results",
+        queue_id="unit_repair_posterior_followup",
+    )
+
+    assert queue["schema"] == QUEUE_SCHEMA
+    assert (
+        queue["metadata"]["schema"]
+        == REPAIR_POSTERIOR_ACQUISITION_FOLLOWUP_QUEUE_METADATA_SCHEMA
+    )
+    assert queue["metadata"]["ready_experiment_count"] == 1
+    experiment = queue["experiments"][0]
+    assert experiment["status"] == "queued"
+    assert (
+        experiment["metadata"]["schema"]
+        == REPAIR_POSTERIOR_ACQUISITION_FOLLOWUP_EXPERIMENT_METADATA_SCHEMA
+    )
+    assert experiment["metadata"]["queue_actuation_ready"] is True
+    assert experiment["metadata"]["executable_queue_artifact_keys"] == [
+        "targeted_component_correction_queue"
+    ]
+    step_commands = [step["command"] for step in experiment["steps"]]
+    assert any(command[:3] == [".venv/bin/python", "-m", "json.tool"] for command in step_commands)
+    assert any(
+        "tools/experiment_queue.py" in command
+        and "run-worker" in command
+        and str(targeted_queue_path) in command
+        for command in step_commands
+    )
+    summary = summarize_repair_posterior_acquisition_followup_queue(
+        repair_posterior_followup_queue=queue,
+        queue_path=tmp_path / "repair_posterior_acquisition_followup_queue.json",
+    )
+    assert summary["posterior_acquisition_followup_route_count"] == 1
+    assert summary["ready_experiment_count"] == 1
 
 
 def test_repair_campaign_score_queue_cli_writes_and_score_step_runs(

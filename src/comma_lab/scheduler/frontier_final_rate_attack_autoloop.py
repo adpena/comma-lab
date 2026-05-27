@@ -47,6 +47,7 @@ POST_FEEDBACK_CHILD_QUEUE_PRIORITY = (
     "targeted_component_correction_operation_chain_queue",
     "autonomous_chain_optimization_queue",
     "repair_campaign_score_queue",
+    "repair_posterior_acquisition_followup_queue",
     "repair_budget_waterfill_queue",
     "receiver_repair_queue",
     "targeted_component_correction_queue",

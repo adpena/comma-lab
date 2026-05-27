@@ -11235,6 +11235,33 @@ def build_frontier_autonomous_chain_optimization_queue(
                     **FALSE_AUTHORITY,
                 }
             )
+        if (
+            "repair_posterior_acquisition_followup_queue" in artifact_paths_by_key
+            and not any(
+                action.get("queue_artifact_key")
+                == "repair_posterior_acquisition_followup_queue"
+                for action in local_actions
+            )
+        ):
+            local_actions.append(
+                {
+                    "id": "run_repair_posterior_acquisition_followup_routes",
+                    "queue_artifact_key": (
+                        "repair_posterior_acquisition_followup_queue"
+                    ),
+                    "purpose": (
+                        "act_on_repair_stackability_posterior_routes_without_"
+                        "manual_reinterpretation"
+                    ),
+                    "bounded_local_execution": True,
+                    "advisory_only": False,
+                    "requires_exact_auth_before_score_claim": True,
+                    "max_steps": 12,
+                    "max_experiments": 4,
+                    "max_parallel": 2,
+                    **FALSE_AUTHORITY,
+                }
+            )
         advisory_actions = [
             dict(action)
             for action in row.get("scheduler_actions") or []

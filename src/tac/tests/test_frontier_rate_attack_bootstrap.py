@@ -896,6 +896,45 @@ def test_post_feedback_child_queue_selection_prefers_runnable_before_frozen(
     ]
 
 
+def test_post_feedback_child_queue_selection_runs_posterior_followup_before_waterfill(
+    tmp_path: Path,
+) -> None:
+    followup = tmp_path / "repair_posterior_acquisition_followup_queue.json"
+    waterfill = tmp_path / "repair_budget_waterfill_queue.json"
+    _write_json(
+        followup,
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "posterior_followup",
+            "experiments": [{"id": "posterior", "status": "queued", "steps": []}],
+        },
+    )
+    _write_json(
+        waterfill,
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "waterfill",
+            "experiments": [{"id": "waterfill", "status": "queued", "steps": []}],
+        },
+    )
+
+    selected = select_post_feedback_child_queue_artifacts(
+        {
+            "repair_budget_waterfill_queue": str(waterfill),
+            "repair_posterior_acquisition_followup_queue": str(followup),
+        },
+        repo_root=tmp_path,
+        limit=1,
+    )
+
+    assert selected == [
+        {
+            "artifact_key": "repair_posterior_acquisition_followup_queue",
+            "queue_path": "repair_posterior_acquisition_followup_queue.json",
+        }
+    ]
+
+
 def test_post_feedback_child_queue_execution_preserves_deferred_frozen_plan(
     tmp_path: Path,
 ) -> None:
