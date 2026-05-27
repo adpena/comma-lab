@@ -294,6 +294,25 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--post-feedback-child-queue-limit", type=int, default=4)
     parser.add_argument("--post-feedback-child-queue-max-steps", type=int, default=8)
     parser.add_argument("--post-feedback-child-queue-max-parallel", type=int, default=1)
+    parser.add_argument(
+        "--require-post-feedback-portfolio-coverage",
+        dest="require_post_feedback_portfolio_coverage",
+        action="store_true",
+        help=(
+            "Require the post-execute feedback refresh to emit portfolio coverage "
+            "before running generated child queues."
+        ),
+    )
+    parser.add_argument(
+        "--allow-missing-post-feedback-portfolio-coverage",
+        dest="require_post_feedback_portfolio_coverage",
+        action="store_false",
+        help=(
+            "Allow legacy child-queue execution without portfolio coverage. This "
+            "keeps execution advisory but is not the default final-rate path."
+        ),
+    )
+    parser.set_defaults(require_post_feedback_portfolio_coverage=True)
     parser.add_argument("--poll-interval-seconds", type=float, default=0.05)
     parser.add_argument("--idle-sleep-seconds", type=float, default=0.0)
     parser.add_argument("--max-idle-cycles", type=int, default=1)
@@ -827,6 +846,9 @@ def main(argv: list[str] | None = None) -> int:
                                     poll_interval_seconds=args.poll_interval_seconds,
                                     idle_sleep_seconds=args.idle_sleep_seconds,
                                     max_idle_cycles=args.max_idle_cycles,
+                                    require_portfolio_coverage=(
+                                        args.require_post_feedback_portfolio_coverage
+                                    ),
                                 )
                                 execution_report["post_execute_feedback_child_queues"] = (
                                     child_queue_runs

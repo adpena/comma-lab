@@ -32,6 +32,7 @@ from comma_lab.scheduler.byte_shaving_materializer_registry import (
 from comma_lab.scheduler.frontier_final_rate_attack_autoloop import (
     POST_FEEDBACK_CHILD_QUEUE_ACTIVATION_PLAN_SCHEMA,
     POST_FEEDBACK_CHILD_QUEUE_RUNS_SCHEMA,
+    POST_FEEDBACK_PORTFOLIO_COVERAGE_PREFLIGHT_SCHEMA,
     execute_post_feedback_child_queues,
     select_post_feedback_child_queue_artifacts,
 )
@@ -118,6 +119,47 @@ def _load_frontier_queue_builder_tool_module():
 def _write_json(path: Path, payload: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _valid_portfolio_coverage_payload() -> dict[str, object]:
+    return {
+        "schema": "frontier_rate_attack_portfolio_coverage.v1",
+        "queue_id": "feedback-refresh",
+        "pathway_count": 5,
+        "bound_pathway_count": 2,
+        "rows": [],
+        "deferred_registry_target_bindings": [
+            {
+                "target_kind": DQS1_PAIRSET_TARGET_KIND,
+                "pathway_id": "dqs1_local_first_feedback",
+                "binding_status": "bound",
+                "artifact_paths": ["dqs1_followup_queue.json"],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            {
+                "target_kind": INVERSE_SCORER_CELL_TARGET_KIND,
+                "pathway_id": "inverse_steganalysis_acquisition",
+                "binding_status": "bound",
+                "artifact_paths": ["targeted_component_correction_queue.json"],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+        ],
+        "coverage_ready_for_bounded_local_followup": True,
+        "allowed_use": "queue_owned_frontier_rate_attack_portfolio_planning_only",
+        "forbidden_use": (
+            "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+        ),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
 
 
 def _assert_false_authority(payload: dict[str, object]) -> None:
@@ -1128,6 +1170,140 @@ def test_post_feedback_child_queue_execution_preserves_deferred_frozen_plan(
     ]
     assert len(posterior_rows) == 1
     assert posterior_rows[0]["typed_response_id"] == "activation_plan:autonomous:auto"
+
+
+def test_post_feedback_child_queue_execution_refuses_missing_required_portfolio_coverage(
+    tmp_path: Path,
+) -> None:
+    queue = tmp_path / "operation_chain_compiler_queue.json"
+    queue_payload = {
+        "schema": "experiment_queue.v1",
+        "queue_id": "child_queue_requires_portfolio",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "experiments": [{"id": "op", "status": "queued", "steps": []}],
+    }
+    _write_json(queue, queue_payload)
+    commands: list[list[str]] = []
+
+    def fake_run(command: list[str]) -> dict[str, object]:
+        commands.append(command)
+        return {
+            "command": command,
+            "returncode": 0,
+            "elapsed_seconds": 0.0,
+            "stdout": "",
+            "stderr": "",
+        }
+
+    report = execute_post_feedback_child_queues(
+        repo_root=tmp_path,
+        feedback_artifacts={"operation_chain_compiler_queue": str(queue)},
+        output_dir=tmp_path / "out",
+        max_steps=3,
+        max_parallel=1,
+        limit=4,
+        run_command=fake_run,
+        require_portfolio_coverage=True,
+    )
+
+    assert commands == []
+    assert report["candidate_queue_count"] == 1
+    assert report["selected_queue_count"] == 0
+    assert report["executed_queue_count"] == 0
+    assert report["preflight_blocked_execution"] is True
+    preflight = report["portfolio_coverage_preflight"]
+    assert preflight["schema"] == POST_FEEDBACK_PORTFOLIO_COVERAGE_PREFLIGHT_SCHEMA
+    assert preflight["valid"] is False
+    assert preflight["blockers"] == [
+        "frontier_rate_attack_portfolio_coverage_artifact_missing"
+    ]
+    assert report["portfolio_coverage_preflight_blocker_count"] == 1
+    _assert_false_authority(report)
+    assert (tmp_path / report["artifact_path"]).exists()
+
+
+def test_post_feedback_child_queue_execution_accepts_required_portfolio_coverage(
+    tmp_path: Path,
+) -> None:
+    queue = tmp_path / "operation_chain_compiler_queue.json"
+    portfolio = tmp_path / "frontier_rate_attack_portfolio_coverage.json"
+    queue_payload = {
+        "schema": "experiment_queue.v1",
+        "queue_id": "child_queue_with_portfolio",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "experiments": [],
+    }
+    _write_json(queue, queue_payload)
+    _write_json(portfolio, _valid_portfolio_coverage_payload())
+
+    def fake_run(command: list[str]) -> dict[str, object]:
+        stdout = ""
+        if "run-worker" in command:
+            stdout = json.dumps(
+                {
+                    "schema": "experiment_queue_worker_result.v1",
+                    "steps_started": 1,
+                    "success_count": 1,
+                    "failure_count": 0,
+                }
+            )
+        elif "observe" in command:
+            stdout = json.dumps(
+                {
+                    "schema": "experiment_queue_observation.v1",
+                    "queue_id": "child_queue_with_portfolio",
+                    "queue_sha256": stable_json_sha256(queue_payload),
+                    "observe_read_only": True,
+                    "healthy": True,
+                    "status_counts": {"succeeded": 1},
+                    "blockers": [],
+                }
+            )
+        return {
+            "command": command,
+            "returncode": 0,
+            "elapsed_seconds": 0.0,
+            "stdout": stdout,
+            "stderr": "",
+        }
+
+    report = execute_post_feedback_child_queues(
+        repo_root=tmp_path,
+        feedback_artifacts={
+            "operation_chain_compiler_queue": str(queue),
+            "frontier_rate_attack_portfolio_coverage": str(portfolio),
+        },
+        output_dir=tmp_path / "out",
+        max_steps=3,
+        max_parallel=1,
+        limit=4,
+        run_command=fake_run,
+        require_portfolio_coverage=True,
+    )
+
+    assert report["portfolio_coverage_preflight_valid"] is True
+    assert report["preflight_blocked_execution"] is False
+    assert report["selected_queue_count"] == 1
+    assert report["executed_queue_count"] == 1
+    assert report["failed_command_count"] == 0
+    preflight = report["portfolio_coverage_preflight"]
+    assert preflight["artifact_path"] == "frontier_rate_attack_portfolio_coverage.json"
+    assert preflight["coverage_ready_for_bounded_local_followup"] is True
+    assert preflight["bound_pathway_count"] == 2
+    assert {
+        row["target_kind"]: row["binding_status"]
+        for row in preflight["deferred_binding_statuses"]
+    } == {
+        DQS1_PAIRSET_TARGET_KIND: "bound",
+        INVERSE_SCORER_CELL_TARGET_KIND: "bound",
+    }
+    assert report["queue_runs"][0]["observer_revalidation_valid"] is True
 
 
 def test_post_feedback_child_queue_execution_preserves_observer_artifacts(

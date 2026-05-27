@@ -38,6 +38,19 @@ POST_FEEDBACK_CHILD_QUEUE_RUN_SCHEMA = (
 POST_FEEDBACK_CHILD_QUEUE_ACTIVATION_PLAN_SCHEMA = (
     "frontier_final_rate_attack_child_queue_activation_plan.v1"
 )
+POST_FEEDBACK_PORTFOLIO_COVERAGE_PREFLIGHT_SCHEMA = (
+    "frontier_final_rate_attack_portfolio_coverage_preflight.v1"
+)
+POST_FEEDBACK_PORTFOLIO_COVERAGE_SCHEMA = (
+    "frontier_rate_attack_portfolio_coverage.v1"
+)
+POST_FEEDBACK_PORTFOLIO_COVERAGE_ARTIFACT_KEY = (
+    "frontier_rate_attack_portfolio_coverage"
+)
+POST_FEEDBACK_PORTFOLIO_REQUIRED_DEFERRED_TARGET_KINDS = (
+    "dqs1_pairset_drop_pair",
+    "inverse_scorer_cell_candidate_v1",
+)
 
 POST_FEEDBACK_CHILD_QUEUE_PRIORITY = (
     "operation_materializer_execution_queue",
@@ -337,6 +350,143 @@ def _child_queue_artifact_candidates(
         )
     )
     return candidates
+
+
+def _portfolio_coverage_preflight(
+    artifacts: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    require: bool,
+) -> dict[str, Any]:
+    blockers: list[str] = []
+    artifact_path: str | None = None
+    artifact_sha256: str | None = None
+    payload_identity_sha256: str | None = None
+    coverage_ready: bool | None = None
+    bound_pathway_count: int | None = None
+    binding_statuses: list[dict[str, Any]] = []
+    payload: dict[str, Any] | None = None
+    raw_path = artifacts.get(POST_FEEDBACK_PORTFOLIO_COVERAGE_ARTIFACT_KEY)
+    if not isinstance(raw_path, str) or not raw_path.strip():
+        if require:
+            blockers.append("frontier_rate_attack_portfolio_coverage_artifact_missing")
+    else:
+        path = _resolve_path(raw_path, repo_root=repo_root)
+        artifact_path = _repo_rel(path, repo_root)
+        if not path.is_file():
+            blockers.append("frontier_rate_attack_portfolio_coverage_artifact_not_file")
+        else:
+            try:
+                artifact_sha256 = sha256_bytes(path.read_bytes())
+                payload = _load_json_object(path)
+                payload_identity_sha256 = stable_json_sha256(payload)
+            except (OSError, ValueError) as exc:
+                blockers.append(f"frontier_rate_attack_portfolio_coverage_invalid:{exc}")
+
+    if payload is not None:
+        if payload.get("schema") != POST_FEEDBACK_PORTFOLIO_COVERAGE_SCHEMA:
+            blockers.append("frontier_rate_attack_portfolio_coverage_schema_mismatch")
+        try:
+            require_no_truthy_authority_fields(
+                payload,
+                context="frontier_rate_attack_portfolio_coverage_preflight",
+            )
+        except ValueError as exc:
+            blockers.append(f"frontier_rate_attack_portfolio_coverage_false_authority:{exc}")
+        coverage_ready = payload.get("coverage_ready_for_bounded_local_followup") is True
+        raw_bound_pathway_count = payload.get("bound_pathway_count")
+        if isinstance(raw_bound_pathway_count, int) and not isinstance(
+            raw_bound_pathway_count,
+            bool,
+        ):
+            bound_pathway_count = raw_bound_pathway_count
+        elif raw_bound_pathway_count is not None:
+            blockers.append("frontier_rate_attack_portfolio_bound_pathway_count_invalid")
+        if require and coverage_ready is not True:
+            blockers.append(
+                "frontier_rate_attack_portfolio_not_ready_for_bounded_local_followup"
+            )
+        if require and (bound_pathway_count is None or bound_pathway_count < 1):
+            blockers.append("frontier_rate_attack_portfolio_bound_pathway_count_zero")
+        raw_bindings = payload.get("deferred_registry_target_bindings")
+        if isinstance(raw_bindings, Sequence) and not isinstance(
+            raw_bindings,
+            (str, bytes, bytearray),
+        ):
+            bindings = [row for row in raw_bindings if isinstance(row, Mapping)]
+        else:
+            bindings = []
+            blockers.append("frontier_rate_attack_portfolio_deferred_bindings_missing")
+        by_target: dict[str, Mapping[str, Any]] = {}
+        for row in bindings:
+            target_kind = str(row.get("target_kind") or "")
+            if target_kind and target_kind not in by_target:
+                by_target[target_kind] = row
+        for target_kind in POST_FEEDBACK_PORTFOLIO_REQUIRED_DEFERRED_TARGET_KINDS:
+            row = by_target.get(target_kind)
+            if row is None:
+                binding_statuses.append(
+                    {
+                        "target_kind": target_kind,
+                        "binding_status": "missing",
+                        "artifact_path_count": 0,
+                    }
+                )
+                if require:
+                    blockers.append(
+                        f"frontier_rate_attack_portfolio_deferred_binding_missing:{target_kind}"
+                    )
+                continue
+            status = str(row.get("binding_status") or "")
+            artifact_paths = [
+                str(path)
+                for path in row.get("artifact_paths") or []
+                if isinstance(path, str) and path
+            ]
+            binding_statuses.append(
+                {
+                    "target_kind": target_kind,
+                    "binding_status": status,
+                    "artifact_path_count": len(artifact_paths),
+                }
+            )
+            if require and status != "bound":
+                blockers.append(
+                    "frontier_rate_attack_portfolio_deferred_binding_not_bound:"
+                    f"{target_kind}:{status or 'missing_status'}"
+                )
+            if require and not artifact_paths:
+                blockers.append(
+                    "frontier_rate_attack_portfolio_deferred_binding_artifacts_missing:"
+                    f"{target_kind}"
+                )
+
+    preflight = {
+        "schema": POST_FEEDBACK_PORTFOLIO_COVERAGE_PREFLIGHT_SCHEMA,
+        "generated_at_utc": _utc_now(),
+        "required": require,
+        "valid": not blockers,
+        "blockers": blockers,
+        "artifact_key": POST_FEEDBACK_PORTFOLIO_COVERAGE_ARTIFACT_KEY,
+        "artifact_path": artifact_path,
+        "artifact_sha256": artifact_sha256,
+        "payload_identity_sha256": payload_identity_sha256,
+        "payload_schema": payload.get("schema") if payload is not None else None,
+        "coverage_ready_for_bounded_local_followup": coverage_ready,
+        "bound_pathway_count": bound_pathway_count,
+        "required_deferred_target_kinds": list(
+            POST_FEEDBACK_PORTFOLIO_REQUIRED_DEFERRED_TARGET_KINDS
+        ),
+        "deferred_binding_statuses": binding_statuses,
+        "allowed_use": "local_portfolio_coverage_preflight_only",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        preflight,
+        context="frontier_rate_attack_portfolio_coverage_preflight",
+    )
+    return preflight
 
 
 def _write_child_queue_activation_plan(
@@ -832,19 +982,32 @@ def execute_post_feedback_child_queues(
     idle_sleep_seconds: float = 0.0,
     max_idle_cycles: int = 1,
     run_command: RunCommand | None = None,
+    require_portfolio_coverage: bool = False,
 ) -> dict[str, Any]:
     """Run selected post-feedback queues and persist a single custody report."""
 
     repo = Path(repo_root)
     out = _resolve_path(output_dir, repo_root=repo)
+    portfolio_preflight = _portfolio_coverage_preflight(
+        feedback_artifacts,
+        repo_root=repo,
+        require=require_portfolio_coverage,
+    )
     candidates = _child_queue_artifact_candidates(feedback_artifacts, repo_root=repo)
-    selected = [
-        {
-            "artifact_key": str(row["artifact_key"]),
-            "queue_path": str(row["queue_path"]),
-        }
-        for row in candidates[:limit]
-    ]
+    preflight_blocks_execution = (
+        require_portfolio_coverage and portfolio_preflight["valid"] is not True
+    )
+    selected = (
+        []
+        if preflight_blocks_execution
+        else [
+            {
+                "artifact_key": str(row["artifact_key"]),
+                "queue_path": str(row["queue_path"]),
+            }
+            for row in candidates[:limit]
+        ]
+    )
     runs: list[dict[str, Any]] = []
     observation_dir = out / "post_execute_feedback_child_queue_observations"
     for row in selected:
@@ -864,7 +1027,8 @@ def execute_post_feedback_child_queues(
         run["artifact_key"] = key
         runs.append(run)
     deferred_activation_plans: list[dict[str, Any]] = []
-    for row in candidates[limit:]:
+    deferred_candidates = [] if preflight_blocks_execution else candidates[limit:]
+    for row in deferred_candidates:
         status_counts = row.get("definition_status_counts")
         if not isinstance(status_counts, Mapping):
             continue
@@ -931,6 +1095,14 @@ def execute_post_feedback_child_queues(
     report = {
         "schema": POST_FEEDBACK_CHILD_QUEUE_RUNS_SCHEMA,
         "generated_at_utc": _utc_now(),
+        "portfolio_coverage_preflight": portfolio_preflight,
+        "portfolio_coverage_required": require_portfolio_coverage,
+        "portfolio_coverage_preflight_valid": portfolio_preflight["valid"] is True,
+        "portfolio_coverage_preflight_blocker_count": len(
+            portfolio_preflight["blockers"]
+        ),
+        "preflight_blocked_execution": preflight_blocks_execution,
+        "candidate_queue_count": len(candidates),
         "selected_queue_count": len(selected),
         "executed_queue_count": len(runs),
         "failed_queue_count": sum(1 for run in runs if int(run.get("failed_command_count") or 0) > 0),
@@ -1011,6 +1183,7 @@ __all__ = [
     "POST_FEEDBACK_CHILD_QUEUE_ACTIVATION_PLAN_SCHEMA",
     "POST_FEEDBACK_CHILD_QUEUE_PRIORITY",
     "POST_FEEDBACK_CHILD_QUEUE_RUNS_SCHEMA",
+    "POST_FEEDBACK_PORTFOLIO_COVERAGE_PREFLIGHT_SCHEMA",
     "execute_post_feedback_child_queues",
     "run_experiment_queue_once",
     "select_post_feedback_child_queue_artifacts",
