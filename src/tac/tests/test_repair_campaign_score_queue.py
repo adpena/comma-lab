@@ -221,6 +221,12 @@ def test_build_repair_campaign_score_queue_from_waterfill_work_order(
     assert experiment["metadata"][
         "repair_campaign_stackability_worker_result_path"
     ].endswith("repair_campaign_stackability_worker_result.json")
+    assert experiment["metadata"][
+        "repair_cascade_mlx_probe_queue_path"
+    ].endswith("repair_cascade_mlx_probe_queue.json")
+    assert experiment["metadata"][
+        "repair_cascade_mlx_probe_worker_result_path"
+    ].endswith("repair_cascade_mlx_probe_worker_result.json")
     assert experiment["metadata"]["continual_learning_followup_default"] is True
     assert experiment["metadata"]["stackability_worker_limits"] == {
         "schema": "repair_campaign_stackability_worker_limits.v1",
@@ -229,6 +235,36 @@ def test_build_repair_campaign_score_queue_from_waterfill_work_order(
         "max_parallel": 1,
         "timeout_seconds": 900,
     }
+    assert experiment["metadata"]["cascade_mlx_probe_followup_default"] is True
+    cascade_step = next(
+        step
+        for step in experiment["steps"]
+        if step["id"] == "build_repair_cascade_mlx_probe_queue"
+    )
+    assert cascade_step["requires"] == ["score_repair_campaign_from_typed_ledger"]
+    assert cascade_step["command"][:2] == [
+        ".venv/bin/python",
+        "tools/build_repair_cascade_mlx_probe_queue.py",
+    ]
+    assert experiment["metadata"]["repair_cascade_mlx_probe_queue_path"] in (
+        cascade_step["command"]
+    )
+    validate_cascade_step = next(
+        step
+        for step in experiment["steps"]
+        if step["id"] == "validate_repair_cascade_mlx_probe_queue"
+    )
+    assert validate_cascade_step["requires"] == [
+        "build_repair_cascade_mlx_probe_queue"
+    ]
+    worker_cascade_step = next(
+        step
+        for step in experiment["steps"]
+        if step["id"] == "run_repair_cascade_mlx_probe_queue_bounded_local"
+    )
+    assert worker_cascade_step["requires"] == [
+        "validate_repair_cascade_mlx_probe_queue"
+    ]
     validate_step = next(
         step
         for step in experiment["steps"]

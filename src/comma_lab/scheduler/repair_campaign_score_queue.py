@@ -32,6 +32,10 @@ DEFAULT_STACKABILITY_WORKER_MAX_STEPS = 8
 DEFAULT_STACKABILITY_WORKER_MAX_EXPERIMENTS = 2
 DEFAULT_STACKABILITY_WORKER_MAX_PARALLEL = 1
 DEFAULT_STACKABILITY_WORKER_TIMEOUT_SECONDS = 900
+DEFAULT_CASCADE_MLX_PROBE_WORKER_MAX_STEPS = 4
+DEFAULT_CASCADE_MLX_PROBE_WORKER_MAX_EXPERIMENTS = 2
+DEFAULT_CASCADE_MLX_PROBE_WORKER_MAX_PARALLEL = 1
+DEFAULT_CASCADE_MLX_PROBE_WORKER_TIMEOUT_SECONDS = 300
 
 
 class RepairCampaignScoreQueueError(ValueError):
@@ -160,6 +164,17 @@ def _score_experiment(
         stackability_worker_result_path,
         repo_root,
     )
+    cascade_mlx_probe_queue_path = (
+        queue_root / _slug(chain_id) / "repair_cascade_mlx_probe_queue.json"
+    )
+    cascade_mlx_probe_queue_ref = _repo_rel(cascade_mlx_probe_queue_path, repo_root)
+    cascade_mlx_probe_worker_result_path = (
+        queue_root / _slug(chain_id) / "repair_cascade_mlx_probe_worker_result.json"
+    )
+    cascade_mlx_probe_worker_result_ref = _repo_rel(
+        cascade_mlx_probe_worker_result_path,
+        repo_root,
+    )
     blocked_learning_signal_report_path = (
         queue_root / _slug(chain_id) / "repair_campaign_blocked_learning_signal_report.json"
     )
@@ -212,6 +227,10 @@ def _score_experiment(
         "repair_campaign_stackability_worker_result_path": (
             stackability_worker_result_ref
         ),
+        "repair_cascade_mlx_probe_queue_path": cascade_mlx_probe_queue_ref,
+        "repair_cascade_mlx_probe_worker_result_path": (
+            cascade_mlx_probe_worker_result_ref
+        ),
         "repair_campaign_blocked_learning_signal_report_path": (
             blocked_learning_signal_report_ref
         ),
@@ -230,6 +249,14 @@ def _score_experiment(
             "max_experiments": DEFAULT_STACKABILITY_WORKER_MAX_EXPERIMENTS,
             "max_parallel": DEFAULT_STACKABILITY_WORKER_MAX_PARALLEL,
             "timeout_seconds": DEFAULT_STACKABILITY_WORKER_TIMEOUT_SECONDS,
+        },
+        "cascade_mlx_probe_followup_default": True,
+        "cascade_mlx_probe_worker_limits": {
+            "schema": "repair_cascade_mlx_probe_worker_limits.v1",
+            "max_steps": DEFAULT_CASCADE_MLX_PROBE_WORKER_MAX_STEPS,
+            "max_experiments": DEFAULT_CASCADE_MLX_PROBE_WORKER_MAX_EXPERIMENTS,
+            "max_parallel": DEFAULT_CASCADE_MLX_PROBE_WORKER_MAX_PARALLEL,
+            "timeout_seconds": DEFAULT_CASCADE_MLX_PROBE_WORKER_TIMEOUT_SECONDS,
         },
         "queue_actuation_ready": not blockers,
         "queue_actuation_blockers": ordered_unique(blockers),
@@ -463,6 +490,102 @@ def _score_experiment(
                 "telemetry": {
                     "artifact_paths": [stackability_queue_ref],
                     "input_artifact_paths": [score_report_ref],
+                    "include_postcondition_paths": True,
+                },
+            },
+            {
+                "id": "build_repair_cascade_mlx_probe_queue",
+                "kind": "command",
+                "requires": ["score_repair_campaign_from_typed_ledger"],
+                "command": [
+                    ".venv/bin/python",
+                    "tools/build_repair_cascade_mlx_probe_queue.py",
+                    "--source-payload",
+                    score_report_ref,
+                    "--probe-queue-out",
+                    cascade_mlx_probe_queue_ref,
+                    "--results-root",
+                    str(results_root),
+                    "--queue-id",
+                    f"{_slug(chain_id)}_repair_cascade_mlx_probe",
+                    "--overwrite",
+                ],
+                "resources": {"kind": "local_cpu"},
+                "timeout_seconds": 120,
+                "postconditions": [
+                    {
+                        "type": "json_equals",
+                        "path": cascade_mlx_probe_queue_ref,
+                        "key": "schema",
+                        "equals": QUEUE_SCHEMA,
+                    },
+                    {
+                        "type": "json_false_authority",
+                        "path": cascade_mlx_probe_queue_ref,
+                    },
+                ],
+                "telemetry": {
+                    "artifact_paths": [cascade_mlx_probe_queue_ref],
+                    "input_artifact_paths": [score_report_ref],
+                    "include_postcondition_paths": True,
+                },
+            },
+            {
+                "id": "validate_repair_cascade_mlx_probe_queue",
+                "kind": "command",
+                "requires": ["build_repair_cascade_mlx_probe_queue"],
+                "command": [
+                    ".venv/bin/python",
+                    "tools/experiment_queue.py",
+                    "--queue",
+                    cascade_mlx_probe_queue_ref,
+                    "validate",
+                ],
+                "resources": {"kind": "local_cpu"},
+                "timeout_seconds": 120,
+                "telemetry": {
+                    "input_artifact_paths": [cascade_mlx_probe_queue_ref],
+                },
+            },
+            {
+                "id": "run_repair_cascade_mlx_probe_queue_bounded_local",
+                "kind": "command",
+                "requires": ["validate_repair_cascade_mlx_probe_queue"],
+                "command": [
+                    ".venv/bin/python",
+                    "tools/experiment_queue.py",
+                    "--queue",
+                    cascade_mlx_probe_queue_ref,
+                    "run-worker",
+                    "--execute",
+                    "--max-steps",
+                    str(DEFAULT_CASCADE_MLX_PROBE_WORKER_MAX_STEPS),
+                    "--max-experiments",
+                    str(DEFAULT_CASCADE_MLX_PROBE_WORKER_MAX_EXPERIMENTS),
+                    "--max-parallel",
+                    str(DEFAULT_CASCADE_MLX_PROBE_WORKER_MAX_PARALLEL),
+                    "--output",
+                    cascade_mlx_probe_worker_result_ref,
+                ],
+                "resources": {"kind": "local_cpu"},
+                "timeout_seconds": DEFAULT_CASCADE_MLX_PROBE_WORKER_TIMEOUT_SECONDS,
+                "postconditions": [
+                    {
+                        "type": "json_equals",
+                        "path": cascade_mlx_probe_worker_result_ref,
+                        "key": "schema",
+                        "equals": "experiment_queue_worker_result.v1",
+                    },
+                    {
+                        "type": "json_equals",
+                        "path": cascade_mlx_probe_worker_result_ref,
+                        "key": "failure_count",
+                        "equals": 0,
+                    },
+                ],
+                "telemetry": {
+                    "artifact_paths": [cascade_mlx_probe_worker_result_ref],
+                    "input_artifact_paths": [cascade_mlx_probe_queue_ref, score_report_ref],
                     "include_postcondition_paths": True,
                 },
             },
