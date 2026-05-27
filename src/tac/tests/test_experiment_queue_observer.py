@@ -230,6 +230,67 @@ def test_observer_marks_existing_artifact_failed_when_postcondition_fails(
     assert "0/1" in markdown
 
 
+def test_observer_revalidates_required_runtime_identity_claim(
+    tmp_path: Path,
+) -> None:
+    artifact = tmp_path / "runtime_contract.json"
+    runtime_dir = tmp_path / "candidate_runtime"
+    runtime_dir.mkdir()
+    (runtime_dir / "inflate.sh").write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+    artifact.write_text(
+        json.dumps(
+            {
+                "schema": "runtime_contract.v1",
+                "runtime_dir": runtime_dir.as_posix(),
+                "runtime_tree_sha256": tree_sha256(runtime_dir),
+            }
+        ),
+        encoding="utf-8",
+    )
+    state = tmp_path / "queue.sqlite"
+    queue = _queue(artifact)
+    queue["experiments"][0]["steps"][0]["postconditions"] = [
+        {
+            "type": "json_completion_contract",
+            "path": artifact.as_posix(),
+            "required_runtime_adapter_identity": True,
+        }
+    ]
+
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'succeeded',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-05-27T18:45:00Z'
+            WHERE queue_id = 'observer_test'
+              AND experiment_id = 'exp0'
+              AND step_id = 'smoke'
+            """,
+            (json.dumps({"command": ["python", "-c", "print('hello queue')"]}),),
+        )
+        conn.commit()
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=0,
+    )
+
+    assert observation["healthy"] is False
+    artifact_record = observation["succeeded_artifact_failure_steps"][0]["expected_artifacts"][0]
+    assert artifact_record["postcondition_passed"] is False
+    assert (
+        "json_completion_contract_runtime_identity_runtime_adapter_identity_claim_missing"
+        in artifact_record["artifact_revalidation_blockers"]
+    )
+    assert artifact_record["artifact_revalidation"]["runtime_identity"]["valid"] is False
+
+
 def test_observer_reports_definition_drift_without_mutating_state(
     tmp_path: Path,
 ) -> None:

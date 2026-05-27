@@ -78,15 +78,21 @@ def runtime_adapter_identity_blockers(
     *,
     repo_root: str | Path,
     context: str = "runtime_adapter",
+    require_claimed: bool = False,
 ) -> list[str]:
     """Return fail-closed blockers for claimed runtime-adapter identity.
 
     A ready runtime adapter must be anchored to a live directory tree with an
     explicit tree hash, or to a concrete adapter file with a matching file hash
     for source-native receiver adapters.
+
+    ``require_claimed`` is for authority boundaries where runtime identity is a
+    mandatory postcondition; missing readiness claims must fail closed there.
     """
 
     if not runtime_adapter_identity_claimed(payload):
+        if require_claimed:
+            return [f"{context}_runtime_adapter_identity_claim_missing"]
         return []
 
     repo = Path(repo_root)

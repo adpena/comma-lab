@@ -314,11 +314,13 @@ def _runtime_identity_blockers(
     *,
     repo_root: Path,
     context: str,
+    require_claimed: bool = False,
 ) -> list[str]:
     return runtime_adapter_identity_blockers(
         payload,
         repo_root=repo_root,
         context=context,
+        require_claimed=require_claimed,
     )
 
 
@@ -1316,6 +1318,24 @@ def _artifact_postcondition_revalidation(
                 for item in false_authority.get("blockers", [])
                 if str(item)
             )
+    if payload is not None and bool(condition.get("required_runtime_adapter_identity")):
+        runtime_identity = {
+            "schema": "runtime_adapter_identity_revalidation.v1",
+            "required": True,
+            "blockers": _runtime_identity_blockers(
+                payload,
+                repo_root=repo_root,
+                context=f"{postcondition_type}_runtime_identity",
+                require_claimed=True,
+            ),
+        }
+        runtime_identity["valid"] = not runtime_identity["blockers"]
+        details["runtime_identity"] = runtime_identity
+        blockers.extend(
+            str(item)
+            for item in runtime_identity.get("blockers", [])
+            if str(item)
+        )
     if payload is not None and _payload_has_materializer_contract(payload):
         materializer = _materializer_payload_revalidation(
             payload,

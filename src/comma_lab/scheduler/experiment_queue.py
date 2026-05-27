@@ -1332,6 +1332,7 @@ def _json_completion_contract(
         payload,
         repo_root=repo_root,
         context="json_completion_contract",
+        require_claimed=True,
     ):
         return False
     for index, raw_pair in enumerate(condition.get("required_less_than", []) or []):
@@ -1388,6 +1389,7 @@ def _materializer_chain_complete(
         payload,
         repo_root=repo_root,
         context="materializer_chain_complete",
+        require_claimed=True,
     ):
         return False
     if bool(condition.get("required_serialized_archive_saving")):

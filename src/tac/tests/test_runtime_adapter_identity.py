@@ -15,6 +15,32 @@ def _runtime_dir(path: Path) -> Path:
     return path
 
 
+def test_runtime_adapter_identity_strict_mode_requires_ready_claim(
+    tmp_path: Path,
+) -> None:
+    runtime = _runtime_dir(tmp_path / "runtime")
+    actual_tree_sha = tree_sha256(runtime)
+    payload = {
+        "runtime_dir": runtime.as_posix(),
+        "runtime_tree_sha256": actual_tree_sha,
+    }
+
+    assert (
+        runtime_adapter_identity_blockers(
+            payload,
+            repo_root=tmp_path,
+            context="unit",
+        )
+        == []
+    )
+    assert runtime_adapter_identity_blockers(
+        payload,
+        repo_root=tmp_path,
+        context="unit",
+        require_claimed=True,
+    ) == ["unit_runtime_adapter_identity_claim_missing"]
+
+
 def test_runtime_adapter_identity_blocks_expected_runtime_tree_mismatch(
     tmp_path: Path,
 ) -> None:

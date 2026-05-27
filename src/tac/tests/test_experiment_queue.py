@@ -2552,6 +2552,32 @@ def test_json_completion_contract_required_less_than_is_strict(
     assert _condition_passes(condition, repo_root=tmp_path) is False
 
 
+def test_json_completion_contract_required_runtime_identity_is_fail_closed(
+    tmp_path: Path,
+) -> None:
+    manifest = tmp_path / "manifest.json"
+    runtime = _postcondition_runtime(tmp_path / "candidate_runtime")
+    condition = {
+        "type": "json_completion_contract",
+        "path": manifest.name,
+        "required_runtime_adapter_identity": True,
+    }
+
+    manifest.write_text(json.dumps(runtime), encoding="utf-8")
+    assert _condition_passes(condition, repo_root=tmp_path) is False
+
+    manifest.write_text(
+        json.dumps({"runtime_adapter_ready": True, **runtime}),
+        encoding="utf-8",
+    )
+    assert _condition_passes(condition, repo_root=tmp_path) is True
+
+    opt_out = dict(condition)
+    opt_out["required_runtime_adapter_identity"] = False
+    manifest.write_text(json.dumps(runtime), encoding="utf-8")
+    assert _condition_passes(opt_out, repo_root=tmp_path) is True
+
+
 def test_materializer_chain_complete_allows_downstream_readiness_blockers(
     tmp_path: Path,
 ) -> None:
