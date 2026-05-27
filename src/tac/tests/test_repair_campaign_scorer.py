@@ -105,6 +105,7 @@ def _work_order(tmp_path: Path) -> dict[str, object]:
                     },
                     "local_mlx_response_path": str(mlx),
                     "reference_local_mlx_response_path": str(ref),
+                    "segnet_class_region_mask_ids": ["road_boundary"],
                     "interaction_scope": {
                         "pair_indices": [7, 9],
                         "region_ids": ["road_boundary"],
@@ -363,6 +364,10 @@ def test_score_repair_campaign_ranks_ready_mlx_and_names_missing_artifacts(
     assert first["per_op_bytes_delta"] == -4
     assert first["component_response_terms"]["segnet_delta_score_units"] == -0.0007
     assert first["component_response_terms"]["posenet_delta_score_units"] == -0.0003
+    custody_values = {
+        item["key"] for item in first["execution_gate"]["local_mlx_custody_values"]
+    }
+    assert "segnet_class_region_mask_ids" in custody_values
     action = first["multiscale_action_row"]
     assert action["schema"] == REPAIR_CAMPAIGN_MULTISCALE_ACTION_ROW_SCHEMA
     assert action["active_scales"] == [
@@ -438,6 +443,78 @@ def test_score_repair_campaign_ranks_ready_mlx_and_names_missing_artifacts(
         blocked["execution_gate"]["missing_artifacts"]
     )
     assert "per_region_selector_codec_replay_missing" in report["missing_artifacts"]
+
+
+def test_score_repair_campaign_blocks_missing_family_required_value_artifacts(
+    tmp_path: Path,
+) -> None:
+    work_order = _work_order(tmp_path)
+    first = work_order["typed_response_ledger"]["rows"][0]  # type: ignore[index]
+    del first["segnet_class_region_mask_ids"]
+
+    report = score_repair_campaign(payload=work_order, repo_root=tmp_path)
+
+    row = next(item for item in report["rows"] if item["typed_response_id"] == "segnet_region_ready")
+    assert row["execution_gate"]["recommended_queue_status"] == "blocked_missing_artifact"
+    assert "segnet_class_region_mask_ids:missing_or_empty" in (
+        row["execution_gate"]["missing_artifacts"]
+    )
+    assert report["optimizer_decision"]["selected_allocation_count"] == 0
+    blocked = next(
+        item
+        for item in report["optimizer_decision"]["blocked_allocation_rows"]
+        if item["typed_response_id"] == "segnet_region_ready"
+    )
+    assert "local_mlx_advisory_custody_missing" in blocked["blockers"]
+    assert "segnet_class_region_mask_ids:missing_or_empty" in blocked["missing_artifacts"]
+
+
+def test_score_repair_campaign_blocks_symlinked_local_mlx_custody(
+    tmp_path: Path,
+) -> None:
+    work_order = _work_order(tmp_path)
+    first = work_order["typed_response_ledger"]["rows"][0]  # type: ignore[index]
+    local_mlx_path = Path(first["local_mlx_response_path"])
+    local_mlx_link = tmp_path / "segnet_mlx_response_link.json"
+    local_mlx_link.symlink_to(local_mlx_path)
+    first["local_mlx_response_path"] = str(local_mlx_link)
+
+    report = score_repair_campaign(payload=work_order, repo_root=tmp_path)
+
+    row = next(item for item in report["rows"] if item["typed_response_id"] == "segnet_region_ready")
+    assert row["execution_gate"]["recommended_queue_status"] == "blocked_missing_artifact"
+    assert "local_mlx_response_path:path_is_symlink" in (
+        row["execution_gate"]["missing_artifacts"]
+    )
+    assert report["optimizer_decision"]["selected_allocation_count"] == 0
+
+
+def test_score_repair_campaign_blocks_truthy_authority_in_local_mlx_custody(
+    tmp_path: Path,
+) -> None:
+    work_order = _work_order(tmp_path)
+    first = work_order["typed_response_ledger"]["rows"][0]  # type: ignore[index]
+    local_mlx_path = Path(first["local_mlx_response_path"])
+    local_mlx_path.write_text(
+        json.dumps(
+            {
+                "schema": "mlx_scorer_response.v1",
+                "score_claim": True,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = score_repair_campaign(payload=work_order, repo_root=tmp_path)
+
+    row = next(item for item in report["rows"] if item["typed_response_id"] == "segnet_region_ready")
+    assert row["execution_gate"]["recommended_queue_status"] == "blocked_missing_artifact"
+    assert any(
+        str(item).startswith("local_mlx_response_path:false_authority_violation:")
+        for item in row["execution_gate"]["missing_artifacts"]
+    )
+    assert report["optimizer_decision"]["selected_allocation_count"] == 0
 
 
 def test_score_repair_campaign_revalidates_existing_runtime_proof_artifact(

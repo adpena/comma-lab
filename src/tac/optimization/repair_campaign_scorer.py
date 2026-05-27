@@ -1240,6 +1240,74 @@ def _path_status(
     }
 
 
+def _nonempty_value(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, Mapping | list | tuple | set):
+        return bool(value)
+    return True
+
+
+def _value_status(row: Mapping[str, Any], key: str) -> dict[str, Any]:
+    value = row.get(key)
+    return {
+        "key": key,
+        "present": key in row,
+        "nonempty": _nonempty_value(value),
+        "value_type": type(value).__name__ if value is not None else None,
+    }
+
+
+def _json_false_authority_path_blockers(
+    status: Mapping[str, Any],
+    *,
+    repo_root: str | Path | None,
+) -> list[str]:
+    key = str(status.get("key") or "local_mlx_custody_path")
+    path_text = str(status.get("path") or "").strip()
+    if not path_text:
+        return []
+    path = _resolve_repo_path(path_text, repo_root)
+    if path.suffix != ".json" or status.get("is_file") is not True or status.get("is_symlink") is True:
+        return []
+    try:
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return [f"{key}:json_invalid"]
+    if not isinstance(loaded, Mapping):
+        return [f"{key}:json_not_object"]
+    try:
+        require_no_truthy_authority_fields(
+            loaded,
+            context=f"repair_campaign_local_mlx_custody:{key}",
+        )
+    except ValueError as exc:
+        return [f"{key}:false_authority_violation:{exc}"]
+    return []
+
+
+def _local_custody_status_blockers(
+    status: Mapping[str, Any],
+    *,
+    repo_root: str | Path | None,
+) -> list[str]:
+    key = str(status.get("key") or "local_mlx_custody_path")
+    blockers: list[str] = []
+    if status.get("exists") is not True:
+        blockers.append(f"{key}:missing_or_unverified")
+        return blockers
+    if status.get("is_symlink") is True:
+        blockers.append(f"{key}:path_is_symlink")
+        return blockers
+    if status.get("is_file") is not True:
+        blockers.append(f"{key}:path_not_file")
+        return blockers
+    blockers.extend(_json_false_authority_path_blockers(status, repo_root=repo_root))
+    return blockers
+
+
 def _runtime_consumption_proof_validation(
     row: Mapping[str, Any],
     *,
@@ -1360,13 +1428,31 @@ def _execution_gate(
         _path_status(row, key, repo_root=repo_root)
         for key in local_keys
     ]
-    local_required = [item["key"] for item in local_status]
-    local_ready = bool(local_required) and all(item["exists"] for item in local_status)
-    missing = [
-        f"{item['key']}:missing_or_unverified"
+    required_value_keys = ordered_unique(
+        [
+            key
+            for key in _string_list(prior.get("required_local_artifacts"))
+            if not key.endswith("_path")
+        ]
+    )
+    value_status = [_value_status(row, key) for key in required_value_keys]
+    local_path_blockers = ordered_unique(
+        blocker
         for item in local_status
-        if not item["exists"]
+        for blocker in _local_custody_status_blockers(item, repo_root=repo_root)
+    )
+    local_value_blockers = [
+        f"{item['key']}:missing_or_empty"
+        for item in value_status
+        if item["nonempty"] is not True
     ]
+    local_required = [item["key"] for item in local_status]
+    local_ready = (
+        bool(local_required)
+        and not local_path_blockers
+        and not local_value_blockers
+    )
+    missing = [*local_path_blockers, *local_value_blockers]
     exact_missing = [
         "receiver_consumed_candidate_archive",
         "runtime_consumption_proof_path",
@@ -1387,6 +1473,7 @@ def _execution_gate(
         "schema": "repair_campaign_execution_gate.v1",
         "local_mlx_advisory_custody_ready": local_ready,
         "local_mlx_custody_paths": local_status,
+        "local_mlx_custody_values": value_status,
         "recommended_queue_status": (
             "ready_for_local_mlx_advisory_execution"
             if local_ready

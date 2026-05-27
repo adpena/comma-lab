@@ -87,6 +87,7 @@ def _work_order(tmp_path: Path) -> dict[str, object]:
                     "objective_delta_score_units": -0.0010,
                     "local_mlx_response_path": str(mlx),
                     "reference_local_mlx_response_path": str(ref),
+                    "segnet_class_region_mask_ids": ["road_boundary"],
                     **_false_authority(),
                 },
                 {
