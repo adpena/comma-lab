@@ -1,0 +1,552 @@
+{
+  "blocked_row_count": 2,
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "deployment_target": "desktop_research",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "optimizer_candidate_queue_is_planning_only",
+    "requires_exact_eval_readiness_gate",
+    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+    "requires_non_proxy_score_evidence_before_promotion"
+  ],
+  "exact_cuda_auth_eval": false,
+  "executable_row_count": 2,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "generated_at_utc": "2026-05-27T15:37:37Z",
+  "gpu_launched": false,
+  "grouped_archive_state_executable_request_count": 0,
+  "grouped_archive_state_materializer_requests": [],
+  "grouped_archive_state_request_count": 0,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "row_count": 4,
+  "rows": [
+    {
+      "backlog_key": "frontier_operation_portfolio:materializer_packet_member_recompress_v1:packet_member_recompress_v1",
+      "backlog_rank": 1,
+      "candidate_saved_bytes_sum": 0,
+      "charged_bits_changed": false,
+      "command": [
+        ".venv/bin/python",
+        "tools/run_family_agnostic_materializer.py",
+        "--target-kind",
+        "packet_member_recompress_v1",
+        "--archive-path",
+        "/Users/adpena/Projects/pact/experiments/results/v14_v2_dqs1_plus_fec10_substituted_20260526T023000Z/submission_dir/archive.zip",
+        "--output-archive",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_rate_attack_feedback/repair_score_queue_20260527T1840Z/frontier_operation_materializer/frontier_rate_attack_feedback_repair_score_queue_20260527t1840z/materializer_work_frontier_operation_portfolio_materializer_packet_member_recompress_v1_packet_member_recompress_v1.zip",
+        "--output-manifest",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_rate_attack_feedback/repair_score_queue_20260527T1840Z/frontier_operation_materializer/frontier_rate_attack_feedback_repair_score_queue_20260527t1840z/materializer_work_frontier_operation_portfolio_materializer_packet_member_recompress_v1_packet_member_recompress_v1.json",
+        "--runtime-consumption-proof",
+        "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_regen_20260527T1620Z/results/frontier_final_rate_attack_regen_20260527T1620Z/packet_member_recompress_v1/rows/001_current_contest_cpu_frontier_0a3abfe645c4/candidate.runtime_consumption_proof.json"
+      ],
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "materializer_work_queue_local_proof_chain_only",
+        "packet_member_recompress_requires_archive_preflight",
+        "packet_member_recompress_requires_runtime_consumption_proof",
+        "exact_auth_eval_required_before_score_claim"
+      ],
+      "exact_cuda_auth_eval": false,
+      "executable": true,
+      "expected_score_gain_sum": -20.0,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "materialization_blockers": [],
+      "materializer_context_closure_plan": null,
+      "materializer_id": "packet_member_recompress_adapter",
+      "operation_family": "member_recompress",
+      "packet_ir_blocker_counts": {
+        "candidate_not_rate_positive": 1,
+        "exact_readiness_bridge:bridge_report_is_not_dispatch_authority": 1,
+        "exact_readiness_bridge:lane_claim_required_before_gpu_or_remote_eval": 1,
+        "exact_readiness_bridge:optimizer_candidate_queue_is_planning_only": 1,
+        "exact_readiness_bridge:requires_exact_eval_readiness_gate": 1,
+        "exact_readiness_bridge:requires_lane_dispatch_claim_before_gpu_or_remote_eval": 1,
+        "exact_readiness_bridge:requires_non_proxy_score_evidence_before_promotion": 1,
+        "same_archive_target_member_negative_rate_feedback": 1
+      },
+      "packet_ir_lowered_row_count": null,
+      "postconditions": [
+        {
+          "equals": "packet_member_recompress_candidate.v1",
+          "key": "schema",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_rate_attack_feedback/repair_score_queue_20260527T1840Z/frontier_operation_materializer/frontier_rate_attack_feedback_repair_score_queue_20260527t1840z/materializer_work_frontier_operation_portfolio_materializer_packet_member_recompress_v1_packet_member_recompress_v1.json",
+          "type": "json_equals"
+        },
+        {
+          "false_or_missing": [
+            "ready_for_exact_eval_dispatch",
+            "dispatch_attempted",
+            "gpu_launched"
+          ],
+          "forbidden_statuses": [
+            "failed"
+          ],
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_rate_attack_feedback/repair_score_queue_20260527T1840Z/frontier_operation_materializer/frontier_rate_attack_feedback_repair_score_queue_20260527t1840z/materializer_work_frontier_operation_portfolio_materializer_packet_member_recompress_v1_packet_member_recompress_v1.json",
+          "required_artifact_records": [
+            "candidate_archive"
+          ],
+          "required_equals": {
+            "receiver_verification.schema": "family_agnostic_runtime_consumption_proof_verification.v1",
+            "schema": "packet_member_recompress_candidate.v1",
+            "serialized_archive_delta.schema": "serialized_archive_delta_contract.v1"
+          },
+          "required_false": [
+            "score_claim",
+            "promotion_eligible",
+            "rank_or_kill_eligible"
+          ],
+          "required_nonempty": [
+            "runtime_consumption_proof_path"
+          ],
+          "required_nonempty_unless_true": [],
+          "required_positive_int": [
+            "candidate_archive.bytes",
+            "candidate_member.bytes",
+            "serialized_archive_delta.source_archive_bytes",
+            "serialized_archive_delta.candidate_archive_bytes"
+          ],
+          "required_runtime_adapter_identity": true,
+          "required_sha256": [
+            "candidate_archive.sha256",
+            "candidate_member.sha256"
+          ],
+          "required_true": [
+            "byte_closed_candidate_emitted",
+            "receiver_contract_satisfied",
+            "receiver_verification.receiver_contract_satisfied"
+          ],
+          "type": "json_completion_contract"
+        }
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_contract_id": "packet_member_recompress_v1.receiver.v1",
+      "receiver_contract_kind": "family_agnostic_packet_member_recompress",
+      "receiver_runtime_binding_context": null,
+      "renderer_payload_dfl1_parity_context": null,
+      "repo_root": ".",
+      "resource_kind": "local_cpu",
+      "schema": "byte_shaving_materializer_work_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "source_backlog_key": null,
+      "source_packet_ir_operation_indices": [],
+      "source_packet_ir_operation_indices_by_unit": {},
+      "source_packet_ir_operation_set_ids": [],
+      "source_packet_ir_source_operation_set_ids": [],
+      "source_plan_path": null,
+      "source_selection_ids": [
+        "materializer_packet_member_recompress_v1"
+      ],
+      "source_unit_ids": [
+        "materializer_packet_member_recompress_v1"
+      ],
+      "target_kind": "packet_member_recompress_v1",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ],
+      "telemetry": {
+        "artifact_paths": [
+          "/Volumes/VertigoDataTier/experiments/results/frontier_rate_attack_feedback/repair_score_queue_20260527T1840Z/frontier_operation_materializer/frontier_rate_attack_feedback_repair_score_queue_20260527t1840z/materializer_work_frontier_operation_portfolio_materializer_packet_member_recompress_v1_packet_member_recompress_v1.zip",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_rate_attack_feedback/repair_score_queue_20260527T1840Z/frontier_operation_materializer/frontier_rate_attack_feedback_repair_score_queue_20260527t1840z/materializer_work_frontier_operation_portfolio_materializer_packet_member_recompress_v1_packet_member_recompress_v1.json"
+        ],
+        "family_agnostic_materializer_contract": {
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "family_agnostic_materializer_command_contract.v1",
+          "score_claim": false,
+          "target_kind": "packet_member_recompress_v1"
+        },
+        "include_postcondition_paths": true,
+        "input_artifact_paths": [
+          "/Users/adpena/Projects/pact/experiments/results/v14_v2_dqs1_plus_fec10_substituted_20260526T023000Z/submission_dir/archive.zip",
+          "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_regen_20260527T1620Z/results/frontier_final_rate_attack_regen_20260527T1620Z/packet_member_recompress_v1/rows/001_current_contest_cpu_frontier_0a3abfe645c4/candidate.runtime_consumption_proof.json"
+        ],
+        "pullback_artifact_paths": [
+          "/Volumes/VertigoDataTier/experiments/results/frontier_rate_attack_feedback/repair_score_queue_20260527T1840Z/frontier_operation_materializer/frontier_rate_attack_feedback_repair_score_queue_20260527t1840z/materializer_work_frontier_operation_portfolio_materializer_packet_member_recompress_v1_packet_member_recompress_v1.zip",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_rate_attack_feedback/repair_score_queue_20260527T1840Z/frontier_operation_materializer/frontier_rate_attack_feedback_repair_score_queue_20260527t1840z/materializer_work_frontier_operation_portfolio_materializer_packet_member_recompress_v1_packet_member_recompress_v1.json"
+        ]
+      },
+      "tool": "tools/run_family_agnostic_materializer.py",
+      "unit_kind": "packet_member",
+      "work_id": "materializer_work_frontier_operation_portfolio_materializer_packet_member_recompress_v1_packet_member_recompress_v1",
+      "work_rank": 1
+    },
+    {
+      "backlog_key": "frontier_operation_portfolio:materializer_packet_member_zip_header_elide_v1:packet_member_zip_header_elide_v1",
+      "backlog_rank": 2,
+      "candidate_saved_bytes_sum": 0,
+      "charged_bits_changed": false,
+      "command": [
+        ".venv/bin/python",
+        "tools/run_family_agnostic_materializer.py",
+        "--target-kind",
+        "packet_member_zip_header_elide_v1",
+        "--archive-path",
+        "/Users/adpena/Projects/pact/experiments/results/v14_v2_dqs1_plus_fec10_substituted_20260526T023000Z/submission_dir/archive.zip",
+        "--output-archive",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_rate_attack_feedback/repair_score_queue_20260527T1840Z/frontier_operation_materializer/frontier_rate_attack_feedback_repair_score_queue_20260527t1840z/materializer_work_frontier_operation_portfolio_materializer_packet_member_zip_header_elide_v1_packet_member_zip_header_elide_v1.zip",
+        "--output-manifest",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_rate_attack_feedback/repair_score_queue_20260527T1840Z/frontier_operation_materializer/frontier_rate_attack_feedback_repair_score_queue_20260527t1840z/materializer_work_frontier_operation_portfolio_materializer_packet_member_zip_header_elide_v1_packet_member_zip_header_elide_v1.json",
+        "--runtime-consumption-proof",
+        "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_regen_20260527T1620Z/results/frontier_final_rate_attack_regen_20260527T1620Z/packet_member_zip_header_elide_v1/rows/001_current_contest_cpu_frontier_0a3abfe645c4/candidate.runtime_consumption_proof.json"
+      ],
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "materializer_work_queue_local_proof_chain_only",
+        "packet_member_zip_header_elide_requires_archive_preflight",
+        "packet_member_zip_header_elide_requires_runtime_consumption_proof",
+        "exact_auth_eval_required_before_score_claim"
+      ],
+      "exact_cuda_auth_eval": false,
+      "executable": true,
+      "expected_score_gain_sum": -20.0,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "materialization_blockers": [],
+      "materializer_context_closure_plan": null,
+      "materializer_id": "packet_member_zip_header_elide_adapter",
+      "operation_family": "zip_header_elide",
+      "packet_ir_blocker_counts": {
+        "candidate_not_rate_positive": 1,
+        "exact_readiness_bridge:bridge_report_is_not_dispatch_authority": 1,
+        "exact_readiness_bridge:lane_claim_required_before_gpu_or_remote_eval": 1,
+        "exact_readiness_bridge:optimizer_candidate_queue_is_planning_only": 1,
+        "exact_readiness_bridge:requires_exact_eval_readiness_gate": 1,
+        "exact_readiness_bridge:requires_lane_dispatch_claim_before_gpu_or_remote_eval": 1,
+        "exact_readiness_bridge:requires_non_proxy_score_evidence_before_promotion": 1,
+        "same_archive_target_member_negative_rate_feedback": 1
+      },
+      "packet_ir_lowered_row_count": null,
+      "postconditions": [
+        {
+          "equals": "packet_member_zip_header_elide_candidate.v1",
+          "key": "schema",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_rate_attack_feedback/repair_score_queue_20260527T1840Z/frontier_operation_materializer/frontier_rate_attack_feedback_repair_score_queue_20260527t1840z/materializer_work_frontier_operation_portfolio_materializer_packet_member_zip_header_elide_v1_packet_member_zip_header_elide_v1.json",
+          "type": "json_equals"
+        },
+        {
+          "false_or_missing": [
+            "ready_for_exact_eval_dispatch",
+            "dispatch_attempted",
+            "gpu_launched"
+          ],
+          "forbidden_statuses": [
+            "failed"
+          ],
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_rate_attack_feedback/repair_score_queue_20260527T1840Z/frontier_operation_materializer/frontier_rate_attack_feedback_repair_score_queue_20260527t1840z/materializer_work_frontier_operation_portfolio_materializer_packet_member_zip_header_elide_v1_packet_member_zip_header_elide_v1.json",
+          "required_artifact_records": [
+            "candidate_archive"
+          ],
+          "required_equals": {
+            "receiver_verification.schema": "family_agnostic_runtime_consumption_proof_verification.v1",
+            "schema": "packet_member_zip_header_elide_candidate.v1",
+            "serialized_archive_delta.schema": "serialized_archive_delta_contract.v1"
+          },
+          "required_false": [
+            "score_claim",
+            "promotion_eligible",
+            "rank_or_kill_eligible"
+          ],
+          "required_nonempty": [
+            "runtime_consumption_proof_path"
+          ],
+          "required_nonempty_unless_true": [],
+          "required_positive_int": [
+            "candidate_archive.bytes",
+            "candidate_member.bytes",
+            "serialized_archive_delta.source_archive_bytes",
+            "serialized_archive_delta.candidate_archive_bytes"
+          ],
+          "required_runtime_adapter_identity": true,
+          "required_sha256": [
+            "candidate_archive.sha256",
+            "candidate_member.sha256"
+          ],
+          "required_true": [
+            "byte_closed_candidate_emitted",
+            "receiver_contract_satisfied",
+            "receiver_verification.receiver_contract_satisfied"
+          ],
+          "type": "json_completion_contract"
+        }
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_contract_id": "packet_member_zip_header_elide_v1.receiver.v1",
+      "receiver_contract_kind": "family_agnostic_packet_member_zip_header_elide",
+      "receiver_runtime_binding_context": null,
+      "renderer_payload_dfl1_parity_context": null,
+      "repo_root": ".",
+      "resource_kind": "local_cpu",
+      "schema": "byte_shaving_materializer_work_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "source_backlog_key": null,
+      "source_packet_ir_operation_indices": [],
+      "source_packet_ir_operation_indices_by_unit": {},
+      "source_packet_ir_operation_set_ids": [],
+      "source_packet_ir_source_operation_set_ids": [],
+      "source_plan_path": null,
+      "source_selection_ids": [
+        "materializer_packet_member_zip_header_elide_v1"
+      ],
+      "source_unit_ids": [
+        "materializer_packet_member_zip_header_elide_v1"
+      ],
+      "target_kind": "packet_member_zip_header_elide_v1",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ],
+      "telemetry": {
+        "artifact_paths": [
+          "/Volumes/VertigoDataTier/experiments/results/frontier_rate_attack_feedback/repair_score_queue_20260527T1840Z/frontier_operation_materializer/frontier_rate_attack_feedback_repair_score_queue_20260527t1840z/materializer_work_frontier_operation_portfolio_materializer_packet_member_zip_header_elide_v1_packet_member_zip_header_elide_v1.zip",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_rate_attack_feedback/repair_score_queue_20260527T1840Z/frontier_operation_materializer/frontier_rate_attack_feedback_repair_score_queue_20260527t1840z/materializer_work_frontier_operation_portfolio_materializer_packet_member_zip_header_elide_v1_packet_member_zip_header_elide_v1.json"
+        ],
+        "family_agnostic_materializer_contract": {
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "family_agnostic_materializer_command_contract.v1",
+          "score_claim": false,
+          "target_kind": "packet_member_zip_header_elide_v1"
+        },
+        "include_postcondition_paths": true,
+        "input_artifact_paths": [
+          "/Users/adpena/Projects/pact/experiments/results/v14_v2_dqs1_plus_fec10_substituted_20260526T023000Z/submission_dir/archive.zip",
+          "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_regen_20260527T1620Z/results/frontier_final_rate_attack_regen_20260527T1620Z/packet_member_zip_header_elide_v1/rows/001_current_contest_cpu_frontier_0a3abfe645c4/candidate.runtime_consumption_proof.json"
+        ],
+        "pullback_artifact_paths": [
+          "/Volumes/VertigoDataTier/experiments/results/frontier_rate_attack_feedback/repair_score_queue_20260527T1840Z/frontier_operation_materializer/frontier_rate_attack_feedback_repair_score_queue_20260527t1840z/materializer_work_frontier_operation_portfolio_materializer_packet_member_zip_header_elide_v1_packet_member_zip_header_elide_v1.zip",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_rate_attack_feedback/repair_score_queue_20260527T1840Z/frontier_operation_materializer/frontier_rate_attack_feedback_repair_score_queue_20260527t1840z/materializer_work_frontier_operation_portfolio_materializer_packet_member_zip_header_elide_v1_packet_member_zip_header_elide_v1.json"
+        ]
+      },
+      "tool": "tools/run_family_agnostic_materializer.py",
+      "unit_kind": "packet_member",
+      "work_id": "materializer_work_frontier_operation_portfolio_materializer_packet_member_zip_header_elide_v1_packet_member_zip_header_elide_v1",
+      "work_rank": 2
+    },
+    {
+      "backlog_key": "frontier_operation_portfolio:materializer_backlog_byte_range_entropy_recode_v1:byte_range_entropy_recode_v1",
+      "backlog_rank": 3,
+      "candidate_saved_bytes_sum": 0,
+      "charged_bits_changed": false,
+      "command": [],
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "materializer_context_missing:schema_manifest",
+        "materializer_context_missing:beam_probe_reports",
+        "materializer_context_missing:source_runtime_dir"
+      ],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_score_gain_sum": 34.9,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "materialization_blockers": [
+        "materializer_context_missing:schema_manifest",
+        "materializer_context_missing:beam_probe_reports",
+        "materializer_context_missing:source_runtime_dir"
+      ],
+      "materializer_context_closure_plan": null,
+      "materializer_id": "byte_range_entropy_recode_adapter",
+      "operation_family": "entropy_recode",
+      "packet_ir_blocker_counts": {
+        "missing_executable_materializer_or_receiver_binding": 1,
+        "requires_queue_context_and_runtime_consumption_proof": 1
+      },
+      "packet_ir_lowered_row_count": null,
+      "postconditions": [],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_contract_id": "byte_range_entropy_recode_receiver.v1",
+      "receiver_contract_kind": "archive_charged_byte_range_entropy_recode",
+      "receiver_runtime_binding_context": null,
+      "renderer_payload_dfl1_parity_context": null,
+      "repo_root": ".",
+      "resource_kind": "local_cpu",
+      "schema": "byte_shaving_materializer_work_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "source_backlog_key": null,
+      "source_packet_ir_operation_indices": [],
+      "source_packet_ir_operation_indices_by_unit": {},
+      "source_packet_ir_operation_set_ids": [],
+      "source_packet_ir_source_operation_set_ids": [],
+      "source_plan_path": null,
+      "source_selection_ids": [
+        "materializer_backlog_byte_range_entropy_recode_v1"
+      ],
+      "source_unit_ids": [
+        "materializer_backlog_byte_range_entropy_recode_v1"
+      ],
+      "target_kind": "byte_range_entropy_recode_v1",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ],
+      "telemetry": {},
+      "tool": null,
+      "unit_kind": "byte_range",
+      "work_id": "materializer_work_frontier_operation_portfolio_materializer_backlog_byte_range_entropy_recode_v1_byte_range_entropy_recode_v1",
+      "work_rank": 3
+    },
+    {
+      "backlog_key": "frontier_operation_portfolio:materializer_backlog_archive_section_header_elide_v1:archive_section_header_elide_v1",
+      "backlog_rank": 4,
+      "candidate_saved_bytes_sum": 0,
+      "charged_bits_changed": false,
+      "command": [],
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "materializer_context_missing:archive_path",
+        "materializer_context_missing:section_manifest",
+        "materializer_context_missing:header_elision_contract",
+        "materializer_context_missing:runtime_consumption_proof",
+        "archive_section_header_elide_materializer_requires_byte_closed_adapter",
+        "archive_section_header_elide_receiver_contract_handoff_is_planning_only"
+      ],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_score_gain_sum": 34.8,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "materialization_blockers": [
+        "materializer_context_missing:archive_path",
+        "materializer_context_missing:section_manifest",
+        "materializer_context_missing:header_elision_contract",
+        "materializer_context_missing:runtime_consumption_proof",
+        "archive_section_header_elide_materializer_requires_byte_closed_adapter",
+        "archive_section_header_elide_receiver_contract_handoff_is_planning_only"
+      ],
+      "materializer_context_closure_plan": null,
+      "materializer_id": "archive_section_header_elide_adapter",
+      "operation_family": "section_header_elide",
+      "packet_ir_blocker_counts": {
+        "missing_executable_materializer_or_receiver_binding": 1,
+        "requires_queue_context_and_runtime_consumption_proof": 1
+      },
+      "packet_ir_lowered_row_count": null,
+      "postconditions": [],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_contract_id": "archive_section_header_elide_v1.receiver.v1",
+      "receiver_contract_kind": "family_agnostic_archive_section_header_elide",
+      "receiver_runtime_binding_context": null,
+      "renderer_payload_dfl1_parity_context": null,
+      "repo_root": ".",
+      "resource_kind": "local_cpu",
+      "schema": "byte_shaving_materializer_work_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "source_backlog_key": null,
+      "source_packet_ir_operation_indices": [],
+      "source_packet_ir_operation_indices_by_unit": {},
+      "source_packet_ir_operation_set_ids": [],
+      "source_packet_ir_source_operation_set_ids": [],
+      "source_plan_path": null,
+      "source_selection_ids": [
+        "materializer_backlog_archive_section_header_elide_v1"
+      ],
+      "source_unit_ids": [
+        "materializer_backlog_archive_section_header_elide_v1"
+      ],
+      "target_kind": "archive_section_header_elide_v1",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ],
+      "telemetry": {
+        "receiver_contract_work_order": {
+          "archive_path": null,
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "header_elision_contract": null,
+          "next_required_adapter": "archive_section_header_elide_v1_byte_closed_receiver_adapter",
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_contract_kind": "family_agnostic_archive_section_header_elide",
+          "required_context_fields": [
+            "archive_path",
+            "section_manifest",
+            "header_elision_contract",
+            "runtime_consumption_proof"
+          ],
+          "runtime_consumption_proof": null,
+          "schema": "archive_section_receiver_contract_work_order.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "section_manifest": null,
+          "target_kind": "archive_section_header_elide_v1"
+        }
+      },
+      "tool": null,
+      "unit_kind": "archive_section",
+      "work_id": "materializer_work_frontier_operation_portfolio_materializer_backlog_archive_section_header_elide_v1_archive_section_header_elide_v1",
+      "work_rank": 4
+    }
+  ],
+  "schema": "byte_shaving_materializer_work_queue.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "source_backlog_schema": "byte_shaving_materializer_backlog.v1",
+  "source_plan_path": null,
+  "target_modes": [
+    "contest_exact_eval_planning"
+  ],
+  "tool": "comma_lab.scheduler.byte_shaving_campaign_queue"
+}

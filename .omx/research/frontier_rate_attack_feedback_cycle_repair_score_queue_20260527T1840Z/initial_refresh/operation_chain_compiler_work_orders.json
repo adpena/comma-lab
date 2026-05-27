@@ -1,0 +1,150 @@
+{
+  "allowed_use": "queue_owned_operation_chain_compiler_work_orders_only",
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+  "generated_at_utc": "2026-05-27T15:37:37Z",
+  "gpu_launched": false,
+  "operation_materializer_bridge_schema": "frontier_rate_attack_operation_materializer_bridge.v1",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "frontier_rate_attack_operation_chain_compiler_work_orders.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "work_order_count": 1,
+  "work_orders": [
+    {
+      "allowed_use": "operation_chain_compiler_work_order_planning_only",
+      "chain_targets": [
+        "byte_range_entropy_recode_v1",
+        "archive_section_header_elide_v1",
+        "archive_section_reorder_v1",
+        "archive_section_proceduralize_v1",
+        "tensor_quantize_v1",
+        "tensor_prune_v1",
+        "tensor_shared_codebook_v1",
+        "packet_member_reorder_v1",
+        "inverse_steganalysis_high_level_operation_set_v1"
+      ],
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+      "gpu_launched": false,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_before_execution": [
+        "per_stage_materializer_contexts",
+        "single_composed_receiver_runtime_consumption_proof",
+        "chain_exact_readiness_bridge",
+        "targeted_component_budget_spend_gate"
+      ],
+      "schema": "frontier_rate_attack_operation_chain_compiler_work_order.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "source_bridge_blockers": [
+        "chain_requires_registered_materializer_context_binding",
+        "chain_requires_single_composed_receiver_runtime_consumption_proof",
+        "chain_requires_component_marginal_rows_before_budget_reallocation",
+        "chain_requires_exact_readiness_handoff_after_composition",
+        "chain_missing_contract:payload_grammar_schema_manifest",
+        "chain_missing_contract:archive_section_header_elision_contract",
+        "chain_missing_contract:archive_section_order_independence_contract",
+        "chain_missing_contract:tensor_sensitivity_rank_quant_prune_contract",
+        "chain_missing_contract:shared_codebook_dictionary_contract",
+        "chain_missing_contract:single_composed_receiver_runtime_consumption_proof",
+        "chain_missing_contract:chain_exact_readiness_handoff_after_composition",
+        "operation_portfolio_chain_requires_chain_compiler_work_order"
+      ],
+      "source_bridge_row_index": 0,
+      "source_operation_family": "registered_multisurface_materializer_chain",
+      "source_operation_id": "chain_registered_multisurface_materializer_program",
+      "stage_plan": [
+        {
+          "required_before_execution": [
+            "schema_manifest",
+            "beam_probe_reports",
+            "source_runtime_dir"
+          ],
+          "stage": "payload_grammar_and_entropy",
+          "targets": [
+            "byte_range_entropy_recode_v1"
+          ]
+        },
+        {
+          "required_before_execution": [
+            "header_elision_contract",
+            "section_order_contract",
+            "runtime_consumption_proof"
+          ],
+          "stage": "archive_section_receiver_contracts",
+          "targets": [
+            "archive_section_header_elide_v1",
+            "archive_section_reorder_v1",
+            "archive_section_proceduralize_v1"
+          ]
+        },
+        {
+          "required_before_execution": [
+            "component_sensitivity_rows",
+            "receiver_exact_reconstruction_contract"
+          ],
+          "stage": "tensor_scorer_sensitive_layout",
+          "targets": [
+            "tensor_quantize_v1",
+            "tensor_prune_v1",
+            "tensor_shared_codebook_v1"
+          ]
+        },
+        {
+          "required_before_execution": [
+            "member_lookup_proof",
+            "inverse_scorer_action_surface_binding"
+          ],
+          "stage": "packet_member_lookup_and_high_level_action_sets",
+          "targets": [
+            "packet_member_reorder_v1",
+            "inverse_steganalysis_high_level_operation_set_v1"
+          ]
+        }
+      ],
+      "targeted_correction_budget": {
+        "active": false,
+        "blockers": [
+          "requires_component_measured_rate_credit_for_repair_budget",
+          "requires_segnet_posenet_component_behavior_rows"
+        ],
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "local_drop_saved_bytes_total": 0,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_closed_materializer_saved_bytes_total": 0,
+        "schema": "frontier_rate_attack_targeted_correction_budget_summary.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false
+      }
+    }
+  ]
+}
