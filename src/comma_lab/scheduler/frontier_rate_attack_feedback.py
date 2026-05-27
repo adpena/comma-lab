@@ -9928,6 +9928,7 @@ def build_frontier_repair_budget_waterfill_queue(
     materializer_execution_queue: Mapping[str, Any] | None = None,
     materializer_execution_queue_path: str | Path | None = None,
     repair_dynamics_palette_prior: Mapping[str, Any] | None = None,
+    target_optimization_profile_metadata: Mapping[str, Any] | None = None,
     results_root: str | Path = DEFAULT_RESULTS_ROOT,
     queue_id: str = "frontier_repair_budget_waterfill_queue",
     chain_limit: int = 4,
@@ -9947,6 +9948,17 @@ def build_frontier_repair_budget_waterfill_queue(
         )
     else:
         repair_dynamics_palette_prior = {}
+    target_profile_metadata = (
+        dict(target_optimization_profile_metadata)
+        if isinstance(target_optimization_profile_metadata, Mapping)
+        and target_optimization_profile_metadata
+        else {}
+    )
+    if target_profile_metadata:
+        require_no_truthy_authority_fields(
+            target_profile_metadata,
+            context="repair_budget_waterfill_queue_target_optimization_profile",
+        )
     repair_palette_modes = _string_list(repair_dynamics_palette_prior.get("palette_modes"))
     rows = [
         row
@@ -9959,6 +9971,19 @@ def build_frontier_repair_budget_waterfill_queue(
 
     repo = Path(repo_root)
     source_path = _resolve_path(autonomous_chain_optimization_path, repo_root=repo)
+    materializer_work_queue_ref = (
+        _repo_rel(_resolve_path(materializer_work_queue_path, repo_root=repo), repo)
+        if materializer_work_queue_path is not None
+        else ""
+    )
+    materializer_execution_queue_ref = (
+        _repo_rel(
+            _resolve_path(materializer_execution_queue_path, repo_root=repo),
+            repo,
+        )
+        if materializer_execution_queue_path is not None
+        else ""
+    )
     missing_prerequisite_keys: list[str] = []
     if not isinstance(targeted_component_correction_response_harvest, Mapping):
         missing_prerequisite_keys.append("targeted_component_correction_response_harvest")
@@ -9988,6 +10013,9 @@ def build_frontier_repair_budget_waterfill_queue(
                 "receiver_closed_saved_bytes_total": 0,
                 "repair_dynamics_prior_active": bool(repair_palette_modes),
                 "repair_dynamics_palette_prior": dict(repair_dynamics_palette_prior),
+                "frontier_target_optimization_profile": dict(
+                    target_profile_metadata
+                ),
                 "rate_only_candidate_count": (
                     rate_plan.get("rate_only_candidate_count")
                 ),
@@ -10004,6 +10032,19 @@ def build_frontier_repair_budget_waterfill_queue(
                 ),
                 "typed_response_row_schema": REPAIR_BUDGET_TYPED_RESPONSE_ROW_SCHEMA,
                 "typed_response_row_count": 0,
+                "materializer_work_queue_schema": (
+                    materializer_work_queue.get("schema")
+                    if isinstance(materializer_work_queue, Mapping)
+                    else None
+                ),
+                "materializer_execution_queue_schema": (
+                    materializer_execution_queue.get("schema")
+                    if isinstance(materializer_execution_queue, Mapping)
+                    else None
+                ),
+                "materializer_work_queue_path": materializer_work_queue_ref or None,
+                "materializer_execution_queue_path": materializer_execution_queue_ref
+                or None,
                 "missing_prerequisite_artifact_keys": _unique_strings(
                     missing_prerequisite_keys
                 ),
@@ -10073,6 +10114,9 @@ def build_frontier_repair_budget_waterfill_queue(
                 },
                 "metadata": {
                     "schema": "frontier_rate_attack_repair_budget_waterfill_queue_blocked_metadata.v1",
+                    "frontier_target_optimization_profile": dict(
+                        target_profile_metadata
+                    ),
                     "queue_actuation_ready": False,
                     "queue_actuation_blockers": [
                         f"missing_prerequisite_artifact:{key}"
@@ -10080,6 +10124,11 @@ def build_frontier_repair_budget_waterfill_queue(
                     ],
                     "missing_prerequisite_artifact_keys": _unique_strings(
                         missing_prerequisite_keys
+                    ),
+                    "materializer_work_queue_path": materializer_work_queue_ref
+                    or None,
+                    "materializer_execution_queue_path": (
+                        materializer_execution_queue_ref or None
                     ),
                     "results_root": _repo_rel(results_base, repo),
                     **FALSE_AUTHORITY,
@@ -10108,6 +10157,161 @@ def build_frontier_repair_budget_waterfill_queue(
         )
         or 0
     )
+    waterfill_blockers: list[str] = []
+    if accepted_count <= 0:
+        waterfill_blockers.append("no_accepted_targeted_component_correction_responses")
+        waterfill_blockers.extend(
+            _string_list(targeted_component_correction_response_harvest.get("blockers"))
+        )
+    if available_bytes <= 0:
+        waterfill_blockers.append("no_receiver_closed_saved_bytes_available")
+        waterfill_blockers.extend(_string_list(receiver_closed_correction_budget.get("blockers")))
+    waterfill_blockers = _unique_strings(waterfill_blockers)
+    if waterfill_blockers:
+        experiments: list[dict[str, Any]] = []
+        for priority, row in enumerate(rows, start=1):
+            chain_id = str(row.get("chain_id") or f"chain_{priority}")
+            rate_plan = (
+                row.get("rate_budget_preservation_plan")
+                if isinstance(row.get("rate_budget_preservation_plan"), Mapping)
+                else {}
+            )
+            operator_action_ledger = (
+                rate_plan.get("operator_action_ledger")
+                if isinstance(rate_plan.get("operator_action_ledger"), Mapping)
+                else {}
+            )
+            metadata = {
+                "schema": REPAIR_BUDGET_WATERFILL_QUEUE_METADATA_SCHEMA,
+                "chain_id": chain_id,
+                "chain_family": row.get("chain_family"),
+                "pipeline_side": "encoder_repair_allocator",
+                "accepted_response_count": accepted_count,
+                "receiver_closed_saved_bytes_total": available_bytes,
+                "repair_dynamics_prior_active": bool(repair_palette_modes),
+                "repair_dynamics_palette_prior": dict(repair_dynamics_palette_prior),
+                "frontier_target_optimization_profile": dict(
+                    target_profile_metadata
+                ),
+                "rate_only_candidate_count": (
+                    rate_plan.get("rate_only_candidate_count")
+                ),
+                "rate_only_saved_bytes_total": (
+                    rate_plan.get("rate_only_saved_bytes_total")
+                ),
+                "operator_action_ledger_schema": operator_action_ledger.get("schema"),
+                "operator_action_term_count": operator_action_ledger.get("term_count"),
+                "repair_allocation_action_term_schema": (
+                    REPAIR_BUDGET_WATERFILL_ALLOCATION_ACTION_TERM_SCHEMA
+                ),
+                "typed_response_ledger_schema": (
+                    REPAIR_BUDGET_TYPED_RESPONSE_LEDGER_SCHEMA
+                ),
+                "typed_response_row_schema": REPAIR_BUDGET_TYPED_RESPONSE_ROW_SCHEMA,
+                "typed_response_row_count": accepted_count,
+                "materializer_work_queue_schema": (
+                    materializer_work_queue.get("schema")
+                    if isinstance(materializer_work_queue, Mapping)
+                    else None
+                ),
+                "materializer_execution_queue_schema": (
+                    materializer_execution_queue.get("schema")
+                    if isinstance(materializer_execution_queue, Mapping)
+                    else None
+                ),
+                "materializer_work_queue_path": materializer_work_queue_ref or None,
+                "materializer_execution_queue_path": materializer_execution_queue_ref
+                or None,
+                "queue_actuation_ready": False,
+                "queue_actuation_blockers": waterfill_blockers,
+                "preserve_rate_only_archive_before_budget_spend": True,
+                "budget_spend_allowed": False,
+                "ready_for_exact_eval_dispatch": False,
+                "source_artifact_paths": [
+                    _repo_rel(source_path, repo),
+                    _repo_rel(harvest_path, repo),
+                    _repo_rel(budget_path, repo),
+                ],
+                "allowed_use": "blocked_local_encoder_repair_waterfill_queue_only",
+                "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+                **FALSE_AUTHORITY,
+            }
+            require_no_truthy_authority_fields(
+                metadata,
+                context=(
+                    "blocked_empty_response_repair_budget_waterfill_queue_metadata:"
+                    f"{chain_id}"
+                ),
+            )
+            experiments.append(
+                {
+                    "id": f"repair_waterfill_{_slug_token(chain_id)}",
+                    "priority": priority,
+                    "status": "frozen",
+                    "tags": [
+                        "frontier-rate-attack",
+                        "encoder-repair-allocator",
+                        "segnet-posenet-waterfill",
+                        "blocked-no-actionable-response",
+                        "no-score-authority",
+                    ],
+                    "metadata": metadata,
+                    "steps": [
+                        {
+                            "id": "inspect_blocked_repair_waterfill_response_prerequisites",
+                            "kind": "command",
+                            "command": [
+                                ".venv/bin/python",
+                                "-m",
+                                "json.tool",
+                                _repo_rel(harvest_path, repo),
+                            ],
+                            "resources": {"kind": "local_io_heavy"},
+                            "timeout_seconds": 60,
+                            "telemetry": {
+                                "input_artifact_paths": [
+                                    _repo_rel(source_path, repo),
+                                    _repo_rel(harvest_path, repo),
+                                    _repo_rel(budget_path, repo),
+                                ],
+                                "include_postcondition_paths": True,
+                            },
+                        }
+                    ],
+                }
+            )
+        return normalize_queue_definition(
+            {
+                "schema": QUEUE_SCHEMA,
+                "queue_id": queue_id,
+                "controls": {
+                    "mode": "running",
+                    "local_first": True,
+                    "max_concurrency": {"local_io_heavy": 1},
+                },
+                "metadata": {
+                    "schema": (
+                        "frontier_rate_attack_repair_budget_waterfill_queue_"
+                        "blocked_metadata.v1"
+                    ),
+                    "frontier_target_optimization_profile": dict(
+                        target_profile_metadata
+                    ),
+                    "queue_actuation_ready": False,
+                    "queue_actuation_blockers": waterfill_blockers,
+                    "accepted_response_count": accepted_count,
+                    "receiver_closed_saved_bytes_total": available_bytes,
+                    "materializer_work_queue_path": materializer_work_queue_ref
+                    or None,
+                    "materializer_execution_queue_path": (
+                        materializer_execution_queue_ref or None
+                    ),
+                    "results_root": _repo_rel(results_base, repo),
+                    **FALSE_AUTHORITY,
+                },
+                "experiments": experiments,
+            }
+        )
     experiments: list[dict[str, Any]] = []
     for priority, row in enumerate(rows, start=1):
         chain_id = str(row.get("chain_id") or f"chain_{priority}")
@@ -10155,19 +10359,6 @@ def build_frontier_repair_budget_waterfill_queue(
             repo,
         )
         execution_report_ref = _repo_rel(execution_report_path, repo)
-        materializer_work_queue_ref = (
-            _repo_rel(_resolve_path(materializer_work_queue_path, repo_root=repo), repo)
-            if materializer_work_queue_path is not None
-            else ""
-        )
-        materializer_execution_queue_ref = (
-            _repo_rel(
-                _resolve_path(materializer_execution_queue_path, repo_root=repo),
-                repo,
-            )
-            if materializer_execution_queue_path is not None
-            else ""
-        )
         metadata = {
             "schema": REPAIR_BUDGET_WATERFILL_QUEUE_METADATA_SCHEMA,
             "chain_id": chain_id,
@@ -10177,6 +10368,7 @@ def build_frontier_repair_budget_waterfill_queue(
             "receiver_closed_saved_bytes_total": available_bytes,
             "repair_dynamics_prior_active": bool(repair_palette_modes),
             "repair_dynamics_palette_prior": dict(repair_dynamics_palette_prior),
+            "frontier_target_optimization_profile": dict(target_profile_metadata),
             "rate_only_candidate_count": (
                 rate_plan.get("rate_only_candidate_count")
             ),
@@ -10549,6 +10741,18 @@ def build_frontier_repair_budget_waterfill_queue(
         {
             "schema": QUEUE_SCHEMA,
             "queue_id": queue_id,
+            "metadata": {
+                "schema": "frontier_rate_attack_repair_budget_waterfill_queue_metadata.v1",
+                "frontier_target_optimization_profile": dict(
+                    target_profile_metadata
+                ),
+                "queue_actuation_ready": True,
+                "budget_spend_allowed": False,
+                "ready_for_exact_eval_dispatch": False,
+                "allowed_use": "repair_waterfill_queue_target_binding_metadata",
+                "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+                **FALSE_AUTHORITY,
+            },
             "controls": {
                 "mode": "running",
                 "local_first": True,
@@ -11013,6 +11217,7 @@ def build_frontier_autonomous_chain_optimization_queue(
         {
             "schema": QUEUE_SCHEMA,
             "queue_id": queue_id,
+            **FALSE_AUTHORITY,
             "controls": {
                 "mode": "running",
                 "local_first": True,
@@ -11784,6 +11989,122 @@ def _targeted_component_correction_queue_metadata(
         "forbidden_use": "score_claim_or_dispatch_authority",
         **FALSE_AUTHORITY,
     }
+
+
+def _blocked_targeted_component_correction_queue(
+    *,
+    repo_root: Path,
+    targeted_component_correction_acquisition: Mapping[str, Any],
+    targeted_component_correction_acquisition_path: str | Path,
+    results_root: str | Path,
+    queue_id: str,
+    candidate_limit: int,
+) -> dict[str, Any]:
+    acquisition_path = _resolve_path(
+        targeted_component_correction_acquisition_path,
+        repo_root=repo_root,
+    )
+    results_base = _resolve_path(str(results_root), repo_root=repo_root)
+    acquisition_metadata = _targeted_component_correction_queue_metadata(
+        targeted_component_correction_acquisition
+    )
+    blockers = _unique_strings(
+        [
+            "targeted_component_correction_selected_rows_empty",
+            "no_queue_actionable_targeted_component_correction_rows",
+            *list(targeted_component_correction_acquisition.get("blockers") or []),
+        ]
+    )
+    queue_metadata = {
+        "schema": (
+            "frontier_rate_attack_targeted_component_correction_queue_blocked_"
+            "metadata.v1"
+        ),
+        "targeted_component_correction_acquisition": acquisition_metadata,
+        "queue_actuation_ready": False,
+        "queue_actuation_blockers": blockers,
+        "selected_row_count": 0,
+        "candidate_limit": candidate_limit,
+        "results_root": _repo_rel(results_base, repo_root),
+        "source_artifact_paths": [_repo_rel(acquisition_path, repo_root)],
+        "allowed_use": "blocked_targeted_component_correction_queue_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        queue_metadata,
+        context="blocked_targeted_component_correction_queue_metadata",
+    )
+    experiment_metadata = {
+        **queue_metadata,
+        "schema": TARGETED_COMPONENT_CORRECTION_QUEUE_METADATA_SCHEMA,
+        "pipeline_side": "targeted_component_correction_acquisition",
+        "budget_spend_ready": False,
+        "budget_spend_allowed": False,
+        "component_response_harvest_available": False,
+        "missing_response_reason": "no_selected_targeted_component_correction_rows",
+        "allowed_use": "blocked_targeted_component_correction_queue_metadata_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        experiment_metadata,
+        context="blocked_targeted_component_correction_queue_experiment_metadata",
+    )
+    return normalize_queue_definition(
+        {
+            "schema": QUEUE_SCHEMA,
+            "queue_id": queue_id,
+            "controls": {
+                "mode": "running",
+                "local_first": True,
+                "max_concurrency": {
+                    "local_cpu": 0,
+                    "local_io_heavy": 1,
+                    "local_mlx": 0,
+                    "modal_cpu": 0,
+                    "modal_gpu": 0,
+                },
+            },
+            "metadata": queue_metadata,
+            "experiments": [
+                {
+                    "id": "inspect_empty_targeted_component_correction_selection",
+                    "priority": 1,
+                    "status": "frozen",
+                    "tags": [
+                        "frontier-rate-attack",
+                        "targeted-component-correction",
+                        "blocked-empty-selection",
+                        "no-score-authority",
+                    ],
+                    "metadata": experiment_metadata,
+                    "steps": [
+                        {
+                            "id": "inspect_targeted_component_correction_acquisition_blockers",
+                            "kind": "command",
+                            "command": [
+                                ".venv/bin/python",
+                                "-m",
+                                "json.tool",
+                                _repo_rel(acquisition_path, repo_root),
+                            ],
+                            "resources": {"kind": "local_io_heavy"},
+                            "timeout_seconds": 60,
+                            "telemetry": {
+                                "input_artifact_paths": [
+                                    _repo_rel(acquisition_path, repo_root)
+                                ],
+                                "include_postcondition_paths": True,
+                            },
+                        }
+                    ],
+                }
+            ],
+            **FALSE_AUTHORITY,
+        }
+    )
+
 
 def build_frontier_targeted_component_correction_work_order(
     *,
@@ -12946,6 +13267,31 @@ def _targeted_component_response_rows_from_existing_harvests(
     return rows
 
 
+def _targeted_component_correction_queue_blockers(
+    queue: Mapping[str, Any],
+) -> list[str]:
+    blockers: list[Any] = []
+    metadata = queue.get("metadata")
+    if isinstance(metadata, Mapping):
+        blockers.extend(_string_list(metadata.get("blockers")))
+        blockers.extend(_string_list(metadata.get("queue_actuation_blockers")))
+        acquisition = metadata.get("targeted_component_correction_acquisition")
+        if isinstance(acquisition, Mapping):
+            blockers.extend(_string_list(acquisition.get("blockers")))
+    for experiment in queue.get("experiments") or []:
+        if not isinstance(experiment, Mapping):
+            continue
+        if str(experiment.get("status") or "") == "frozen":
+            blockers.append(
+                f"targeted_component_correction_experiment_frozen:{experiment.get('id')}"
+            )
+        experiment_metadata = experiment.get("metadata")
+        if isinstance(experiment_metadata, Mapping):
+            blockers.extend(_string_list(experiment_metadata.get("blockers")))
+            blockers.extend(_string_list(experiment_metadata.get("queue_actuation_blockers")))
+    return _unique_strings(blockers)
+
+
 def build_frontier_targeted_component_correction_response_harvest(
     *,
     repo_root: str | Path,
@@ -12957,10 +13303,14 @@ def build_frontier_targeted_component_correction_response_harvest(
 
     repo = Path(repo_root)
     rows: list[dict[str, Any]] = [dict(row) for row in response_rows]
+    queue_blockers: list[str] = []
     if targeted_component_correction_queue is not None:
         require_no_truthy_authority_fields(
             targeted_component_correction_queue,
             context="targeted_component_correction_response_queue_input",
+        )
+        queue_blockers = _targeted_component_correction_queue_blockers(
+            targeted_component_correction_queue
         )
         rows.extend(
             _targeted_component_response_rows_from_queue(
@@ -12968,7 +13318,7 @@ def build_frontier_targeted_component_correction_response_harvest(
                 queue=targeted_component_correction_queue,
             )
         )
-    if not rows:
+    if not rows and not queue_blockers:
         rows.extend(
             _targeted_component_response_rows_from_existing_harvests(
                 repo_root=repo,
@@ -12997,6 +13347,8 @@ def build_frontier_targeted_component_correction_response_harvest(
     blockers = ["exact_auth_eval_required_before_score_or_promotion_claim"]
     if not rows:
         blockers.append("no_targeted_component_correction_response_rows")
+    if queue_blockers:
+        blockers.extend(queue_blockers)
     if blocked:
         blockers.append("response_rows_blocked_before_budget_spend")
     absolute_score_drifts: list[float] = []
@@ -13031,6 +13383,7 @@ def build_frontier_targeted_component_correction_response_harvest(
         "ready_for_budget_spend_count": 0,
         "candidate_ids": candidate_ids,
         "correction_families": families,
+        "source_targeted_component_correction_queue_blockers": queue_blockers,
         "mlx_cpu_drift_summary": {
             "schema": "targeted_component_mlx_cpu_drift_summary.v1",
             "absolute_score_drift_row_count": len(absolute_score_drifts),
@@ -13062,7 +13415,11 @@ def build_frontier_targeted_component_correction_response_harvest(
             "materialize_exact_axis_receiver_consumed_correction_candidates_for_"
             "negative_local_lagrangian_rows"
             if accepted
-            else "run_targeted_component_correction_queue_until_response_rows_exist"
+            else (
+                "resolve_targeted_component_correction_queue_blockers"
+                if queue_blockers
+                else "run_targeted_component_correction_queue_until_response_rows_exist"
+            )
         ),
         "rows": rows,
         "allowed_use": (
@@ -16796,7 +17153,18 @@ def build_frontier_targeted_component_correction_queue(
         candidate_limit=candidate_limit,
     )
     if not selected_rows:
-        return None
+        return _blocked_targeted_component_correction_queue(
+            repo_root=repo,
+            targeted_component_correction_acquisition=(
+                targeted_component_correction_acquisition
+            ),
+            targeted_component_correction_acquisition_path=(
+                targeted_component_correction_acquisition_path
+            ),
+            results_root=results_root,
+            queue_id=queue_id,
+            candidate_limit=candidate_limit,
+        )
     selection_policy = _targeted_component_correction_queue_selection_policy(
         selected_rows=selected_rows,
         candidate_limit=candidate_limit,
@@ -19404,6 +19772,9 @@ def build_frontier_rate_attack_feedback_refresh(
         target_video_paths=target_video_paths,
         target_corpus_manifest_path=target_corpus_manifest_path,
     )
+    target_profile_metadata = target_optimization_profile_queue_metadata(
+        target_optimization_profile
+    )
     payloads, source_paths, discovery = discover_materializer_feedback_payloads(
         repo_root=repo,
         frontier_artifact_roots=frontier_artifact_roots,
@@ -19547,9 +19918,6 @@ def build_frontier_rate_attack_feedback_refresh(
                 metadata = experiment.setdefault("metadata", {})
                 if isinstance(metadata, dict):
                     metadata["frontier_feedback_eureka_planning"] = eureka_planning
-        target_profile_metadata = target_optimization_profile_queue_metadata(
-            target_optimization_profile
-        )
         for experiment in queue_payload.get("experiments", []):
             if not isinstance(experiment, dict):
                 continue
@@ -19608,6 +19976,7 @@ def build_frontier_rate_attack_feedback_refresh(
         "generated_at_utc": _utc_now(),
         "candidate_limit": candidate_limit,
         "target_optimization_profile": target_optimization_profile,
+        "target_optimization_profile_metadata": target_profile_metadata,
         "discovery": discovery,
         "pair_frame_geometry_discovery": pair_frame_discovery,
         "pair_frame_geometry_request_source_paths": list(pair_frame_source_paths),

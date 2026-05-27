@@ -1,0 +1,131 @@
+{
+  "artifacts": {
+    "autonomous_chain_optimization_queue": ".omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z/initial_refresh/autonomous_chain_optimization_queue.json",
+    "repair_budget_waterfill_queue": ".omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z/initial_refresh/repair_budget_waterfill_queue.json",
+    "repair_campaign_score_queue": ".omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z/initial_refresh/repair_campaign_score_queue.json",
+    "targeted_component_correction_queue": ".omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z/initial_refresh/targeted_component_correction_queue.json",
+    "targeted_component_correction_response_harvest": ".omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z/initial_refresh/targeted_component_correction_response_harvest.json"
+  },
+  "checks": {
+    "autonomous_chain_optimization_queue": {
+      "active": null,
+      "blocked_experiment_count": null,
+      "first_experiment_status": "frozen",
+      "promotion_eligible": false,
+      "queue_actuation_blockers": [
+        "child_queue_not_runnable:repair_budget_waterfill_queue"
+      ],
+      "queue_actuation_ready": false,
+      "queue_id": "frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z_autonomous_chain_optimization",
+      "rank_or_kill_eligible": false,
+      "ready_experiment_count": null,
+      "ready_for_exact_eval_dispatch": false,
+      "recommended_next_action": null,
+      "row_count": null,
+      "schema": "experiment_queue.v1",
+      "score_claim": false
+    },
+    "repair_budget_waterfill_queue": {
+      "active": null,
+      "blocked_experiment_count": null,
+      "first_experiment_status": "frozen",
+      "promotion_eligible": false,
+      "queue_actuation_blockers": [
+        "no_accepted_targeted_component_correction_responses",
+        "exact_auth_eval_required_before_score_or_promotion_claim",
+        "no_targeted_component_correction_response_rows",
+        "targeted_component_correction_selected_rows_empty",
+        "no_queue_actionable_targeted_component_correction_rows",
+        "no_receiver_closed_rate_budget_rows",
+        "no_targeted_component_correction_rows",
+        "no_component_eval_queue_actionable_submission_dirs",
+        "component_eval_required_before_budget_spend",
+        "targeted_component_correction_experiment_frozen:inspect_empty_targeted_component_correction_selection",
+        "no_receiver_closed_saved_bytes_available",
+        "no_receiver_closed_materializer_budget_candidates_discovered"
+      ],
+      "queue_actuation_ready": false,
+      "queue_id": "frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z_repair_budget_waterfill",
+      "rank_or_kill_eligible": false,
+      "ready_experiment_count": null,
+      "ready_for_exact_eval_dispatch": false,
+      "recommended_next_action": null,
+      "row_count": null,
+      "schema": "experiment_queue.v1",
+      "score_claim": false
+    },
+    "repair_campaign_score_queue": {
+      "active": null,
+      "blocked_experiment_count": 2,
+      "first_experiment_status": "frozen",
+      "promotion_eligible": false,
+      "queue_actuation_blockers": null,
+      "queue_actuation_ready": null,
+      "queue_id": "frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z_repair_campaign_score",
+      "rank_or_kill_eligible": false,
+      "ready_experiment_count": 0,
+      "ready_for_exact_eval_dispatch": false,
+      "recommended_next_action": null,
+      "row_count": null,
+      "schema": "experiment_queue.v1",
+      "score_claim": false
+    },
+    "targeted_component_correction_queue": {
+      "active": null,
+      "blocked_experiment_count": null,
+      "first_experiment_status": "frozen",
+      "promotion_eligible": false,
+      "queue_actuation_blockers": [
+        "targeted_component_correction_selected_rows_empty",
+        "no_queue_actionable_targeted_component_correction_rows",
+        "no_receiver_closed_rate_budget_rows",
+        "no_targeted_component_correction_rows",
+        "no_component_eval_queue_actionable_submission_dirs",
+        "component_eval_required_before_budget_spend",
+        "exact_auth_eval_required_before_score_or_promotion_claim"
+      ],
+      "queue_actuation_ready": false,
+      "queue_id": "frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z_component_correction",
+      "rank_or_kill_eligible": false,
+      "ready_experiment_count": null,
+      "ready_for_exact_eval_dispatch": false,
+      "recommended_next_action": null,
+      "row_count": null,
+      "schema": "experiment_queue.v1",
+      "score_claim": false
+    },
+    "targeted_component_correction_response_harvest": {
+      "active": false,
+      "blocked_experiment_count": null,
+      "first_experiment_status": null,
+      "promotion_eligible": false,
+      "queue_actuation_blockers": [
+        "exact_auth_eval_required_before_score_or_promotion_claim",
+        "no_targeted_component_correction_response_rows",
+        "targeted_component_correction_selected_rows_empty",
+        "no_queue_actionable_targeted_component_correction_rows",
+        "no_receiver_closed_rate_budget_rows",
+        "no_targeted_component_correction_rows",
+        "no_component_eval_queue_actionable_submission_dirs",
+        "component_eval_required_before_budget_spend",
+        "targeted_component_correction_experiment_frozen:inspect_empty_targeted_component_correction_selection"
+      ],
+      "queue_actuation_ready": null,
+      "queue_id": null,
+      "rank_or_kill_eligible": false,
+      "ready_experiment_count": null,
+      "ready_for_exact_eval_dispatch": false,
+      "recommended_next_action": "resolve_targeted_component_correction_queue_blockers",
+      "row_count": 0,
+      "schema": "frontier_rate_attack_targeted_component_correction_response_harvest.v1",
+      "score_claim": false
+    }
+  },
+  "cycle_report": ".omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z/frontier_rate_attack_feedback_cycle.json",
+  "output_dir": ".omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z",
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "frontier_rate_attack_empty_targeted_harvest_proof_summary.v1",
+  "score_claim": false
+}

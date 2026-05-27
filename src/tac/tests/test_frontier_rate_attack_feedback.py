@@ -3061,6 +3061,139 @@ def test_targeted_component_response_harvest_expands_grouped_request_metadata(
     )
 
 
+def test_empty_targeted_component_correction_queue_emits_blocked_harvest(
+    tmp_path: Path,
+) -> None:
+    acquisition = {
+        "schema": TARGETED_COMPONENT_CORRECTION_ACQUISITION_SCHEMA,
+        "active": False,
+        "row_count": 0,
+        "component_correction_row_count": 0,
+        "queue_actionable_acquisition_count": 0,
+        "queue_actionable_row_count": 0,
+        "ready_for_budget_spend_count": 0,
+        "receiver_closed_saved_bytes_total": 0,
+        "estimated_rate_credit_score_units_total": 0.0,
+        "component_behavior_active": False,
+        "master_gradient_active": False,
+        "repair_dynamics_prior_active": False,
+        "blockers": [
+            "no_receiver_closed_rate_budget_rows",
+            "no_targeted_component_correction_rows",
+        ],
+        "top_acquisition_ids": [],
+        "top_correction_families": [],
+        "rows": [],
+        **_false_authority(),
+    }
+    acquisition_path = _write_json(
+        tmp_path / "targeted_component_correction_acquisition.json",
+        acquisition,
+    )
+
+    queue = build_frontier_targeted_component_correction_queue(
+        repo_root=tmp_path,
+        targeted_component_correction_acquisition=acquisition,
+        targeted_component_correction_acquisition_path=acquisition_path,
+        results_root=tmp_path / "results",
+        queue_id="targeted_component_empty_selection_unit",
+        candidate_limit=2,
+    )
+
+    assert queue is not None
+    assert queue["schema"] == "experiment_queue.v1"
+    assert queue["metadata"]["queue_actuation_ready"] is False
+    _assert_false_authority(queue["metadata"])
+    assert "targeted_component_correction_selected_rows_empty" in queue["metadata"][
+        "queue_actuation_blockers"
+    ]
+    assert queue["experiments"][0]["status"] == "frozen"
+    assert queue["experiments"][0]["metadata"]["selected_row_count"] == 0
+    _assert_false_authority(queue["experiments"][0]["metadata"])
+
+    harvest = build_frontier_targeted_component_correction_response_harvest(
+        repo_root=tmp_path,
+        targeted_component_correction_queue=queue,
+        results_root=tmp_path / "results",
+    )
+
+    assert harvest["schema"] == TARGETED_COMPONENT_CORRECTION_RESPONSE_HARVEST_SCHEMA
+    _assert_false_authority(harvest)
+    assert harvest["row_count"] == 0
+    assert harvest["active"] is False
+    assert harvest["ready_for_budget_spend_count"] == 0
+    assert harvest["recommended_next_action"] == (
+        "resolve_targeted_component_correction_queue_blockers"
+    )
+    assert "targeted_component_correction_selected_rows_empty" in harvest[
+        "blockers"
+    ]
+    assert "no_targeted_component_correction_response_rows" in harvest["blockers"]
+    assert "targeted_component_correction_response_harvest" not in " ".join(
+        harvest["blockers"]
+    )
+
+    autonomous = {
+        "schema": AUTONOMOUS_CHAIN_OPTIMIZATION_SCHEMA,
+        "rows": [
+            {
+                "schema": AUTONOMOUS_CHAIN_OPTIMIZATION_ROW_SCHEMA,
+                "chain_id": "empty_targeted_response_chain",
+                "chain_family": "unit_empty_response_waterfill",
+                "rate_budget_preservation_plan": {
+                    "schema": RATE_BUDGET_PRESERVATION_PLAN_SCHEMA,
+                    "rate_only_candidate_count": 1,
+                    "rate_only_saved_bytes_total": 4,
+                    "operator_action_ledger": {
+                        "schema": OPERATOR_ACTION_LEDGER_SCHEMA,
+                        "term_count": 0,
+                        "terms": [],
+                        **_false_authority(),
+                    },
+                    **_false_authority(),
+                },
+                **_false_authority(),
+            }
+        ],
+        **_false_authority(),
+    }
+    autonomous_path = _write_json(tmp_path / "autonomous.json", autonomous)
+    receiver_budget = {
+        "schema": RECEIVER_CLOSED_CORRECTION_BUDGET_SCHEMA,
+        "receiver_closed_saved_bytes_total": 0,
+        "blockers": ["no_receiver_closed_rate_budget_rows"],
+        "rows": [],
+        **_false_authority(),
+    }
+    receiver_budget_path = _write_json(tmp_path / "receiver_budget.json", receiver_budget)
+    harvest_path = _write_json(tmp_path / "response_harvest.json", harvest)
+
+    waterfill_queue = build_frontier_repair_budget_waterfill_queue(
+        repo_root=tmp_path,
+        autonomous_chain_optimization=autonomous,
+        autonomous_chain_optimization_path=autonomous_path,
+        targeted_component_correction_response_harvest=harvest,
+        targeted_component_correction_response_harvest_path=harvest_path,
+        receiver_closed_correction_budget=receiver_budget,
+        receiver_closed_correction_budget_path=receiver_budget_path,
+        results_root=tmp_path / "results",
+        queue_id="empty_targeted_response_waterfill_unit",
+        chain_limit=1,
+    )
+
+    assert waterfill_queue is not None
+    assert waterfill_queue["experiments"][0]["status"] == "frozen"
+    waterfill_metadata = waterfill_queue["experiments"][0]["metadata"]
+    _assert_false_authority(waterfill_metadata)
+    assert waterfill_metadata["queue_actuation_ready"] is False
+    assert "no_accepted_targeted_component_correction_responses" in (
+        waterfill_metadata["queue_actuation_blockers"]
+    )
+    assert "targeted_component_correction_response_harvest" not in " ".join(
+        waterfill_metadata["queue_actuation_blockers"]
+    )
+
+
 def test_targeted_component_correction_materialization_requests_group_responses(
     tmp_path: Path,
 ) -> None:
@@ -6311,6 +6444,13 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     assert autonomous_chain_optimization_queue_path.exists()
     assert report_path.exists()
     report = json.loads(report_path.read_text(encoding="utf-8"))
+    target_metadata = report["target_optimization_profile_metadata"]
+    assert target_metadata["schema"] == (
+        "frontier_rate_attack_target_optimization_profile_queue_metadata.v1"
+    )
+    assert target_metadata["target_profile_id"] == "contest_video_0"
+    assert target_metadata["target_mode"] == "contest_video_overfit"
+    _assert_false_authority(target_metadata)
     assert report["artifacts"]["dqs1_followup_queue"].endswith("dqs1_followup_queue.json")
     assert report["artifacts"]["receiver_repair_backlog"].endswith(
         "receiver_repair_backlog.json"
@@ -6525,44 +6665,30 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
         repair_campaign_score_queue_path.read_text(encoding="utf-8")
     )
     assert repair_waterfill_queue_artifact["schema"] == "experiment_queue.v1"
+    assert repair_waterfill_queue_artifact["metadata"][
+        "frontier_target_optimization_profile"
+    ] == target_metadata
     assert repair_waterfill_queue_artifact["experiments"][0]["metadata"][
         "pipeline_side"
     ] == "encoder_repair_allocator"
     repair_waterfill_metadata = repair_waterfill_queue_artifact["experiments"][0][
         "metadata"
     ]
+    assert (
+        repair_waterfill_metadata["frontier_target_optimization_profile"]
+        == target_metadata
+    )
     assert repair_waterfill_metadata["materializer_work_queue_path"].endswith(
         "targeted_component_correction_chain_materializer_work_queue.json"
     )
-    replay_command = repair_waterfill_queue_artifact["experiments"][0]["steps"][2][
-        "command"
-    ]
-    assert replay_command[1] == (
-        "tools/build_frontier_repair_budget_child_component_replay_manifests.py"
+    assert repair_waterfill_queue_artifact["experiments"][0]["status"] == "frozen"
+    assert repair_waterfill_metadata["queue_actuation_ready"] is False
+    assert "no_accepted_targeted_component_correction_responses" in (
+        repair_waterfill_metadata["queue_actuation_blockers"]
     )
-    assert replay_command[
-        replay_command.index("--output-manifest") + 1
-    ].endswith("repair_budget_child_component_replay_manifests.json")
-    binding_command = repair_waterfill_queue_artifact["experiments"][0]["steps"][3][
-        "command"
-    ]
-    assert binding_command[
-        binding_command.index("--materializer-manifest") + 1
-    ].endswith("repair_budget_child_component_replay_manifests.json")
-    assert binding_command[
-        binding_command.index("--materializer-work-queue") + 1
-    ].endswith("targeted_component_correction_chain_materializer_work_queue.json")
-    if "targeted_component_correction_chain_materializer_execution_queue" in report[
-        "artifacts"
-    ]:
-        assert repair_waterfill_metadata[
-            "materializer_execution_queue_path"
-        ].endswith("targeted_component_correction_chain_materializer_execution_queue.json")
-        assert binding_command[
-            binding_command.index("--materializer-execution-queue") + 1
-        ].endswith(
-            "targeted_component_correction_chain_materializer_execution_queue.json"
-        )
+    assert repair_waterfill_queue_artifact["experiments"][0]["steps"][0][
+        "id"
+    ] == "inspect_blocked_repair_waterfill_response_prerequisites"
     _assert_false_authority(
         repair_waterfill_queue_artifact["experiments"][0]["metadata"]
     )

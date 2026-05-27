@@ -1240,6 +1240,11 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
                 if isinstance(report.get("repair_dynamics_palette_prior"), dict)
                 else None
             ),
+            target_optimization_profile_metadata=(
+                report.get("target_optimization_profile_metadata")
+                if isinstance(report.get("target_optimization_profile_metadata"), dict)
+                else None
+            ),
             results_root=str(report.get("results_root") or DEFAULT_RESULTS_ROOT),
             queue_id=(
                 f"{report.get('queue_id') or 'frontier_feedback'}_"
