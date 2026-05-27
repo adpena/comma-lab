@@ -1,0 +1,214 @@
+{
+  "allowed_use": "local_planning_and_experiment_queue_acquisition_only",
+  "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+  "best_predicted_delta_score": 0.001,
+  "blockers": [
+    "missing_cpu_cuda_axis:contest_cpu",
+    "receiver_runtime_diversity_missing",
+    "pair_coverage_below_grouped_search_floor:0.001667<0.050000",
+    "frame_coverage_below_grouped_search_floor:0.000833<0.050000",
+    "no_negative_predicted_delta_cells",
+    "only_single_feasible_pair_anchor",
+    "only_single_feasible_frame_anchor"
+  ],
+  "canonical_frame_count": 1200,
+  "canonical_pair_count": 600,
+  "canvas_schema": "pair_frame_scorer_geometry_lattice_5d_canvas.v0_scaffold",
+  "consumer_name": "pair_frame_scorer_geometry_lattice_5d_canvas_coverage",
+  "consumer_version": "0.1.0",
+  "cpu_cuda_axis_counts": {
+    "contest_cuda_t4": 3
+  },
+  "dispatch_packet_ready": false,
+  "feasible_by_cpu_cuda_axis": {
+    "contest_cuda_t4": 3
+  },
+  "feasible_by_receiver_runtime": {
+    "raw_residual": 3
+  },
+  "feasible_cell_count": 3,
+  "feasible_frame_count": 1,
+  "feasible_pair_count": 1,
+  "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
+  "frame_coverage_fraction": 0.0008333333333333334,
+  "min_frame_coverage_for_grouped_search": 0.05,
+  "min_pair_coverage_for_grouped_search": 0.05,
+  "negative_by_cpu_cuda_axis": {},
+  "negative_cell_count": 0,
+  "negative_cells_total_predicted_byte_cost": 0,
+  "negative_frame_count": 0,
+  "negative_pair_count": 0,
+  "nonnegative_feasible_cell_count": 3,
+  "pair_coverage_fraction": 0.0016666666666666668,
+  "populated_cell_count": 3,
+  "populated_cell_coverage_fraction": 1.3888888888888888e-07,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_runtime_counts": {
+    "raw_residual": 3
+  },
+  "reproduction_claim": false,
+  "reproduction_equivalence": false,
+  "schema": "pair_frame_scorer_geometry_lattice_5d_canvas_coverage_audit.v1",
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "scorer_axis_counts": {
+    "posenet_6d": 1,
+    "rate_term": 1,
+    "segnet_5class": 1
+  },
+  "total_possible_cells": 21600000,
+  "unique_frame_count": 1,
+  "unique_pair_count": 1,
+  "verdict": "densification_required",
+  "work_order_count": 5,
+  "work_orders": [
+    {
+      "allowed_use": "experiment_queue_v1_planning_input_only",
+      "consumer": "paired_auth_eval_consumer",
+      "dispatch_packet_ready": false,
+      "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
+      "id": "populate_missing_paired_cpu_cuda_axis_anchors",
+      "priority": 1,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "reason": "5D canvas cannot calibrate scorer-axis drift without both contest axes",
+      "reproduction_claim": false,
+      "reproduction_equivalence": false,
+      "schema": "pair_frame_scorer_geometry_lattice_5d_canvas_coverage_work_order.v1",
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "suggested_next_tools": [
+        ".venv/bin/python tools/paired_auth_eval_cli.py",
+        ".venv/bin/python tools/populate_5d_canvas_cli.py --latest"
+      ],
+      "target": {
+        "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+        "missing_cpu_cuda_axes": [
+          "contest_cpu"
+        ]
+      }
+    },
+    {
+      "allowed_use": "experiment_queue_v1_planning_input_only",
+      "consumer": "master_gradient_pair_acquisition",
+      "dispatch_packet_ready": false,
+      "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
+      "id": "densify_pair_coverage_for_grouped_search",
+      "priority": 2,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "reason": "pair coverage too sparse for replace-many or temporal interaction search",
+      "reproduction_claim": false,
+      "reproduction_equivalence": false,
+      "schema": "pair_frame_scorer_geometry_lattice_5d_canvas_coverage_work_order.v1",
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "suggested_next_tools": [
+        "tac.master_gradient_anchors targeted per-pair acquisition",
+        ".venv/bin/python tools/populate_5d_canvas_cli.py --latest"
+      ],
+      "target": {
+        "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+        "current_unique_pairs": 1,
+        "target_unique_pairs_floor": 30
+      }
+    },
+    {
+      "allowed_use": "experiment_queue_v1_planning_input_only",
+      "consumer": "per_frame_sensitivity_consumer",
+      "dispatch_packet_ready": false,
+      "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
+      "id": "densify_frame_coverage_for_masked_and_feathered_search",
+      "priority": 3,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "reason": "frame coverage too sparse for SegNet/PoseNet region waterfill",
+      "reproduction_claim": false,
+      "reproduction_equivalence": false,
+      "schema": "pair_frame_scorer_geometry_lattice_5d_canvas_coverage_work_order.v1",
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "suggested_next_tools": [
+        "tac.cathedral_consumers.per_frame_sensitivity_consumer",
+        ".venv/bin/python tools/populate_5d_canvas_cli.py --latest"
+      ],
+      "target": {
+        "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+        "current_unique_frames": 1,
+        "target_unique_frames_floor": 60
+      }
+    },
+    {
+      "allowed_use": "experiment_queue_v1_planning_input_only",
+      "consumer": "inverse_steganalysis_acquisition",
+      "dispatch_packet_ready": false,
+      "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
+      "id": "acquire_negative_delta_cells_before_operator_fanout",
+      "priority": 4,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "reason": "all feasible cells are score-worsening or neutral; fanout will be empty until acquisition targets scorer-null directions",
+      "reproduction_claim": false,
+      "reproduction_equivalence": false,
+      "schema": "pair_frame_scorer_geometry_lattice_5d_canvas_coverage_work_order.v1",
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "suggested_next_tools": [
+        "tac.optimization.scorer_inverse_decision_surface",
+        "master-gradient constrained PoseNet-null / SegNet-region waterfill",
+        ".venv/bin/python tools/apply_8_extended_operators_to_5d_canvas_cli.py --operator all"
+      ],
+      "target": {
+        "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+        "best_observed_delta": 0.001,
+        "feasible_cell_count": 3
+      }
+    },
+    {
+      "allowed_use": "experiment_queue_v1_planning_input_only",
+      "consumer": "cooperative_receiver_integration",
+      "dispatch_packet_ready": false,
+      "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
+      "id": "populate_receiver_runtime_mode_diversity",
+      "priority": 5,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "reason": "only one receiver_runtime mode is present; repair/masked/feathered interactions cannot be compared",
+      "reproduction_claim": false,
+      "reproduction_equivalence": false,
+      "schema": "pair_frame_scorer_geometry_lattice_5d_canvas_coverage_work_order.v1",
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "suggested_next_tools": [
+        "tac.optimization.cooperative_receiver_integration",
+        ".venv/bin/python tools/populate_5d_canvas_cli.py --latest"
+      ],
+      "target": {
+        "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+        "present_receiver_runtimes": [
+          "raw_residual"
+        ]
+      }
+    }
+  ],
+  "worst_predicted_delta_score": 0.004755
+}

@@ -1,0 +1,18 @@
+{
+  "audit_memo_reference": ".omx/research/drop_many_replace_composition_apparatus_state_audit_20260526.md",
+  "blockers": [
+    "no_cells_for_receiver_runtime:smoothed_residual"
+  ],
+  "candidates": [],
+  "candidates_emitted": 0,
+  "canonical_equation_id_pending": "synthesize_frame_via_atick_redlich_cooperative_receiver_v1",
+  "canvas_archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+  "canvas_cells": 3,
+  "consumer_name": "pair_frame_scorer_geometry_lattice_5d_canvas_extended_operators",
+  "consumer_version": "0.1.0-scaffold",
+  "feasible_pair_count": 0,
+  "operator": "synthesize_frame",
+  "receiver_runtime": "smoothed_residual",
+  "schema": "extended_operator_candidates.v0",
+  "top_n_requested": 4
+}

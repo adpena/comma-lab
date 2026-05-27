@@ -56,6 +56,9 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (  # noqa: E402
     build_frontier_targeted_component_correction_queue,
     build_frontier_targeted_component_correction_response_harvest,
 )
+from comma_lab.scheduler.pair_frame_5d_extended_operator_queue import (  # noqa: E402
+    build_pair_frame_5d_extended_operator_queue,
+)
 from tac.fec6_selector_operator_space import FEC6_FIXED_K16_MODE_IDS  # noqa: E402
 from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY  # noqa: E402
 from tac.optimization.pair_frame_scorer_geometry_lattice import (  # noqa: E402
@@ -72,6 +75,10 @@ from tac.optimization.proxy_candidate_contract import (  # noqa: E402
     require_no_truthy_authority_fields,
 )
 from tac.repo_io import ArtifactWriteError, json_text, write_json_artifact  # noqa: E402
+
+PAIR_FRAME_5D_CANVAS_POPULATED_SCHEMA = (
+    "pair_frame_scorer_geometry_lattice_5d_canvas_populated_v1"
+)
 
 
 def _utc_stamp() -> str:
@@ -165,6 +172,79 @@ def _parse_csv_ints(text: str | None) -> list[int] | None:
     return parsed or None
 
 
+def _valid_pair_frame_5d_canvas_path(path: Path) -> bool:
+    if not path.is_file() or path.is_symlink():
+        return False
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return False
+    return (
+        isinstance(payload, dict)
+        and payload.get("schema") == PAIR_FRAME_5D_CANVAS_POPULATED_SCHEMA
+        and isinstance(payload.get("archive_sha256"), str)
+        and isinstance(payload.get("cells"), list)
+    )
+
+
+def _resolve_repo_path(value: str | Path) -> Path:
+    path = Path(value).expanduser()
+    return path if path.is_absolute() else REPO_ROOT / path
+
+
+def _discover_pair_frame_5d_canvas_paths(
+    roots: list[str | Path],
+    *,
+    max_files_per_root: int,
+) -> list[Path]:
+    seen: set[str] = set()
+    out: list[Path] = []
+    patterns = (
+        "*populated_5d_canvas*.json",
+        "*pair_frame*5d*canvas*.json",
+        "*5d_canvas*.json",
+    )
+    for raw_root in roots:
+        root = _resolve_repo_path(raw_root)
+        candidates: list[Path] = []
+        if root.is_file():
+            candidates = [root]
+        elif root.is_dir():
+            for pattern in patterns:
+                candidates.extend(root.rglob(pattern))
+                if len(candidates) >= max_files_per_root:
+                    break
+        for path in sorted(candidates, key=lambda p: str(p))[:max_files_per_root]:
+            if not _valid_pair_frame_5d_canvas_path(path):
+                continue
+            key = str(path.resolve(strict=False))
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(path)
+    return out
+
+
+def _pair_frame_5d_queue_coverage_audit(
+    queue: dict[str, Any],
+) -> dict[str, Any] | None:
+    for container in (queue.get("controls"), queue.get("metadata")):
+        if isinstance(container, dict):
+            audit = container.get("canvas_coverage_audit")
+            if isinstance(audit, dict):
+                return audit
+    for experiment in queue.get("experiments") or []:
+        if not isinstance(experiment, dict):
+            continue
+        metadata = experiment.get("metadata")
+        if not isinstance(metadata, dict):
+            continue
+        audit = metadata.get("canvas_coverage_audit")
+        if isinstance(audit, dict):
+            return audit
+    return None
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--queue-id", default=None)
@@ -234,6 +314,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "Explicit pair-frame scorer-geometry lattice JSON whose "
             "queue-executable requests should seed the DQS1 follow-up queue. "
             "May repeat."
+        ),
+    )
+    parser.add_argument(
+        "--pair-frame-5d-canvas",
+        type=Path,
+        action="append",
+        default=[],
+        help=(
+            "Populated 5D pair-frame scorer-geometry canvas JSON. When present, "
+            "the refresh emits an 8-operator extended-canvas queue and wires it "
+            "into the autonomous chain queue as a local child artifact."
         ),
     )
     parser.add_argument(
@@ -550,6 +641,55 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
         path = output_dir / "pair_frame_geometry_discovery.json"
         write_json_artifact(path, pair_frame)
         artifacts["pair_frame_geometry_discovery"] = _display_path(path)
+    pair_frame_5d_canvas_paths = [
+        _resolve_repo_path(path)
+        for path in report.get("pair_frame_5d_canvas_paths") or []
+        if isinstance(path, str | Path)
+        and _valid_pair_frame_5d_canvas_path(_resolve_repo_path(path))
+    ]
+    if pair_frame_5d_canvas_paths:
+        pair_frame_5d_canvas = pair_frame_5d_canvas_paths[0]
+        pair_frame_5d_queue = build_pair_frame_5d_extended_operator_queue(
+            repo_root=REPO_ROOT,
+            canvas_path=pair_frame_5d_canvas,
+            output_root=output_dir / "pair_frame_5d_extended_operator_outputs",
+            queue_id=(
+                f"{report.get('queue_id') or 'frontier_feedback'}_"
+                "pair_frame_5d_extended_operators"
+            ),
+            top_n=int(report.get("candidate_limit") or 4),
+        )
+        pair_frame_5d_queue_path = output_dir / "pair_frame_5d_extended_operator_queue.json"
+        write_json_artifact(pair_frame_5d_queue_path, pair_frame_5d_queue)
+        coverage_audit = _pair_frame_5d_queue_coverage_audit(pair_frame_5d_queue)
+        if coverage_audit is not None:
+            coverage_audit_path = output_dir / "pair_frame_5d_canvas_coverage_audit.json"
+            write_json_artifact(coverage_audit_path, coverage_audit)
+            artifacts["pair_frame_5d_canvas_coverage_audit"] = _display_path(
+                coverage_audit_path
+            )
+        artifacts["pair_frame_5d_canvas"] = _display_path(pair_frame_5d_canvas)
+        artifacts["pair_frame_5d_extended_operator_queue"] = _display_path(
+            pair_frame_5d_queue_path
+        )
+        report["pair_frame_5d_canvas_path"] = _display_path(pair_frame_5d_canvas)
+        report["pair_frame_5d_extended_operator_queue_summary"] = {
+            "schema": "frontier_rate_attack_pair_frame_5d_extended_operator_queue_summary.v1",
+            "queue_id": pair_frame_5d_queue.get("queue_id"),
+            "canvas_path": _display_path(pair_frame_5d_canvas),
+            "experiment_count": len(pair_frame_5d_queue.get("experiments") or []),
+            "operator_count": len(pair_frame_5d_queue.get("experiments") or []),
+            "coverage_verdict": (
+                coverage_audit.get("verdict") if coverage_audit is not None else None
+            ),
+            "coverage_work_order_count": (
+                coverage_audit.get("work_order_count")
+                if coverage_audit is not None
+                else None
+            ),
+            "allowed_use": "local_encoder_side_5d_extended_operator_planning_only",
+            **FALSE_AUTHORITY,
+        }
     eureka_planning = report.get("local_cpu_eureka_planning")
     if isinstance(eureka_planning, dict):
         path = output_dir / "local_cpu_eureka_planning.json"
@@ -1378,6 +1518,37 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
             "--max-parallel",
             "1",
         ]
+    if "pair_frame_5d_extended_operator_queue" in artifacts:
+        operator_commands["validate_pair_frame_5d_extended_operator_queue"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["pair_frame_5d_extended_operator_queue"],
+            "validate",
+        ]
+        operator_commands["init_pair_frame_5d_extended_operator_queue"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["pair_frame_5d_extended_operator_queue"],
+            "init",
+        ]
+        operator_commands[
+            "run_pair_frame_5d_extended_operator_queue_bounded_local"
+        ] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["pair_frame_5d_extended_operator_queue"],
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            "8",
+            "--max-experiments",
+            "8",
+            "--max-parallel",
+            "1",
+        ]
     if "autonomous_chain_optimization_queue" in artifacts:
         operator_commands["validate_autonomous_chain_optimization_queue"] = [
             ".venv/bin/python",
@@ -1449,6 +1620,20 @@ def main(argv: list[str] | None = None) -> int:
                 else []
             ),
         ]
+        explicit_pair_frame_5d_canvas_paths = [
+            _resolve_repo_path(path)
+            for path in args.pair_frame_5d_canvas
+            if _valid_pair_frame_5d_canvas_path(_resolve_repo_path(path))
+        ]
+        pair_frame_5d_canvas_paths = explicit_pair_frame_5d_canvas_paths or (
+            _discover_pair_frame_5d_canvas_paths(
+                [
+                    *args.frontier_artifact_root,
+                    args.results_root,
+                ],
+                max_files_per_root=args.max_files_per_root,
+            )
+        )
         repair_dynamics_priors, repair_dynamics_source_paths = (
             _load_repair_dynamics_priors(args.repair_dynamics_prior)
         )
@@ -1494,6 +1679,10 @@ def main(argv: list[str] | None = None) -> int:
             report["generated_pair_frame_geometry_lattice"] = (
                 generated_pair_frame_lattice_summary
             )
+        if pair_frame_5d_canvas_paths:
+            report["pair_frame_5d_canvas_paths"] = [
+                _display_path(path) for path in pair_frame_5d_canvas_paths
+            ]
         artifacts = _write_outputs(output_dir, report)
     except (
         ArtifactWriteError,

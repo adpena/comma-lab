@@ -1,0 +1,18 @@
+{
+  "audit_memo_reference": ".omx/research/drop_many_replace_composition_apparatus_state_audit_20260526.md",
+  "blockers": [
+    "no_negative_predicted_delta_cells"
+  ],
+  "candidates": [],
+  "candidates_emitted": 0,
+  "canonical_equation_id_pending": "replace_many_via_beam_search_per_axis_decomposition_v1",
+  "canvas_archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+  "canvas_cells": 3,
+  "consumer_name": "pair_frame_scorer_geometry_lattice_5d_canvas_extended_operators",
+  "consumer_version": "0.1.0-scaffold",
+  "feasible_pair_count": 1,
+  "operator": "replace_many",
+  "receiver_runtime": "raw_residual",
+  "schema": "extended_operator_candidates.v0",
+  "top_n_requested": 4
+}

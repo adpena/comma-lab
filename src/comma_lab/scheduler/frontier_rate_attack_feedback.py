@@ -9980,6 +9980,28 @@ def build_frontier_autonomous_chain_optimization_queue(
             for action in row.get("scheduler_actions") or []
             if isinstance(action, Mapping) and not bool(action.get("advisory_only"))
         ]
+        if (
+            "pair_frame_5d_extended_operator_queue" in artifact_paths_by_key
+            and not any(
+                action.get("queue_artifact_key")
+                == "pair_frame_5d_extended_operator_queue"
+                for action in local_actions
+            )
+        ):
+            local_actions.append(
+                {
+                    "id": "run_pair_frame_5d_extended_operator_queue",
+                    "queue_artifact_key": "pair_frame_5d_extended_operator_queue",
+                    "purpose": (
+                        "fire_all_8_pair_frame_5d_extended_operators_against_"
+                        "populated_canvas"
+                    ),
+                    "bounded_local_execution": True,
+                    "advisory_only": False,
+                    "requires_exact_auth_before_score_claim": True,
+                    **FALSE_AUTHORITY,
+                }
+            )
         advisory_actions = [
             dict(action)
             for action in row.get("scheduler_actions") or []

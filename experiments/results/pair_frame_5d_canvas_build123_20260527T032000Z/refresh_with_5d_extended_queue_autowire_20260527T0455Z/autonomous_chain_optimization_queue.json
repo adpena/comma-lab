@@ -1,0 +1,2146 @@
+{
+  "controls": {
+    "local_first": true,
+    "max_concurrency": {
+      "local_io_heavy": 1
+    },
+    "mode": "running"
+  },
+  "experiments": [
+    {
+      "id": "autonomous_chain_global_many_op_rate_distortion_receiver_campaign",
+      "lane_id": null,
+      "metadata": {
+        "advisory_action_count": 1,
+        "advisory_actions": [
+          {
+            "advisory_only": true,
+            "advisory_reason": "bridge intent only until a concrete many-op candidate archive and exact-readiness artifact exist",
+            "bounded_local_execution": false,
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "id": "replay_component_response_and_exact_readiness_bridge",
+            "promotable": false,
+            "promotion_eligible": false,
+            "purpose": "convert_local_many_op_candidate_into_exact_axis_request_only",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "requires_exact_auth_before_score_claim": true,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_artifact_key": "materializer_chain_exact_readiness_bridge"
+          }
+        ],
+        "allowed_use": "local_many_op_chain_actuation_queue_only",
+        "blocked_child_queue_artifact_keys": [],
+        "chain_family": "rate_distortion_receiver_closed_many_op_campaign",
+        "chain_id": "global_many_op_rate_distortion_receiver_campaign",
+        "charged_bits_changed": false,
+        "child_queue_artifact_paths": [
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_materializer_execution_queue.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/repair_budget_waterfill_queue.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/pair_frame_5d_extended_operator_queue.json"
+        ],
+        "child_queue_health_by_key": {
+          "operation_materializer_execution_queue": {
+            "blockers": [],
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "disabled_experiment_count": 0,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "frozen_experiment_count": 0,
+            "gpu_launched": false,
+            "path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_materializer_execution_queue.json",
+            "present": true,
+            "promotable": false,
+            "promotion_eligible": false,
+            "queue_id": "frontier_rate_attack_feedback_dqs1_followup_20260527T044435Z_operation_materializer_execution",
+            "queued_experiment_count": 1,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false
+          },
+          "pair_frame_5d_extended_operator_queue": {
+            "blockers": [],
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "disabled_experiment_count": 0,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "frozen_experiment_count": 0,
+            "gpu_launched": false,
+            "path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/pair_frame_5d_extended_operator_queue.json",
+            "present": true,
+            "promotable": false,
+            "promotion_eligible": false,
+            "queue_id": "frontier_rate_attack_feedback_dqs1_followup_20260527T044435Z_pair_frame_5d_extended_operators",
+            "queued_experiment_count": 8,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false
+          },
+          "repair_budget_waterfill_queue": {
+            "blockers": [],
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "disabled_experiment_count": 0,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "frozen_experiment_count": 0,
+            "gpu_launched": false,
+            "path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/repair_budget_waterfill_queue.json",
+            "present": true,
+            "promotable": false,
+            "promotion_eligible": false,
+            "queue_id": "frontier_rate_attack_feedback_dqs1_followup_20260527T044435Z_repair_budget_waterfill",
+            "queued_experiment_count": 3,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false
+          }
+        },
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        "gpu_launched": false,
+        "local_queue_action_count": 3,
+        "local_queue_actions": [
+          {
+            "advisory_only": false,
+            "bounded_local_execution": true,
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "id": "run_operation_materializer_context_closure_queue",
+            "promotable": false,
+            "promotion_eligible": false,
+            "purpose": "bind portfolio materializer contexts across packet_archive_tensor_targets",
+            "queue_artifact_key": "operation_materializer_execution_queue",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "requires_exact_auth_before_score_claim": true,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false
+          },
+          {
+            "advisory_only": false,
+            "bounded_local_execution": true,
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "id": "fit_segnet_posenet_repair_waterfill_policy",
+            "promotable": false,
+            "promotion_eligible": false,
+            "purpose": "estimate_where_drop_many_distortion_debt_should_be_repaired_from_receiver_closed_rate_budget",
+            "queue_artifact_key": "repair_budget_waterfill_queue",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "requires_exact_auth_before_score_claim": true,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false
+          },
+          {
+            "advisory_only": false,
+            "bounded_local_execution": true,
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "id": "run_pair_frame_5d_extended_operator_queue",
+            "promotable": false,
+            "promotion_eligible": false,
+            "purpose": "fire_all_8_pair_frame_5d_extended_operators_against_populated_canvas",
+            "queue_artifact_key": "pair_frame_5d_extended_operator_queue",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "requires_exact_auth_before_score_claim": true,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false
+          }
+        ],
+        "missing_queue_artifact_keys": [],
+        "pipeline_stages": [
+          {
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "id": "select_many_operator_chain",
+            "owner": "queue_owned_autonomous_optimizer",
+            "pipeline_side": "encoder_planner",
+            "promotable": false,
+            "promotion_eligible": false,
+            "purpose": "choose packet/archive/tensor/frame/pair/batch operators jointly",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_chain_id": "global_many_op_rate_distortion_receiver_campaign",
+            "writes_submission_runtime": false
+          },
+          {
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "id": "apply_rate_attack_materializers",
+            "owner": "local_child_queues",
+            "pipeline_side": "encoder_materializer",
+            "promotable": false,
+            "promotion_eligible": false,
+            "purpose": "execute receiver-closed byte-saving transforms before packaging",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_chain_id": "global_many_op_rate_distortion_receiver_campaign",
+            "writes_submission_runtime": true
+          },
+          {
+            "budget_spend_allowed": false,
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "id": "preserve_rate_only_floor_archive",
+            "owner": "rate_budget_preservation_plan",
+            "pipeline_side": "encoder_archive_builder",
+            "promotable": false,
+            "promotion_eligible": false,
+            "purpose": "emit immutable rate-only checkpoint before any distortion-side budget reinvestment",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_chain_id": "global_many_op_rate_distortion_receiver_campaign",
+            "writes_submission_runtime": true
+          },
+          {
+            "budget_spend_allowed": false,
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "id": "allocate_repair_budget",
+            "owner": "component_marginal_waterfill_policy",
+            "pipeline_side": "encoder_repair_allocator",
+            "promotable": false,
+            "promotion_eligible": false,
+            "purpose": "spend freed bytes only where SegNet/PoseNet marginal repair helps",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_chain_id": "global_many_op_rate_distortion_receiver_campaign",
+            "writes_submission_runtime": true
+          },
+          {
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "id": "emit_byte_closed_archive",
+            "owner": "archive_packaging_queue",
+            "pipeline_side": "encoder_archive_builder",
+            "promotable": false,
+            "promotion_eligible": false,
+            "purpose": "package transformed payload and deterministic receiver runtime",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_chain_id": "global_many_op_rate_distortion_receiver_campaign",
+            "writes_submission_runtime": true
+          },
+          {
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "id": "consume_transformed_packet",
+            "owner": "inflate_runtime_adapter",
+            "pipeline_side": "receiver_decode_only",
+            "promotable": false,
+            "promotion_eligible": false,
+            "purpose": "deterministically decode encoder-authored transforms without scorer access",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_chain_id": "global_many_op_rate_distortion_receiver_campaign",
+            "writes_submission_runtime": false
+          },
+          {
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "id": "measure_exact_axis_and_feedback",
+            "owner": "contest_axis_eval_harvest",
+            "pipeline_side": "exact_eval_feedback",
+            "promotable": false,
+            "promotion_eligible": false,
+            "purpose": "measure archive/runtime on contest CPU/CUDA axis before any score claim",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_chain_id": "global_many_op_rate_distortion_receiver_campaign",
+            "writes_submission_runtime": false
+          }
+        ],
+        "post_repair_refresh_planned": false,
+        "post_repair_refresh_report_path": "",
+        "priority_score": 240.0,
+        "promotable": false,
+        "promotion_eligible": false,
+        "queue_actuation_blockers": [],
+        "queue_actuation_ready": true,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "frontier_rate_attack_autonomous_chain_optimization_queue_metadata.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_artifact_paths": [
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/autonomous_chain_optimization.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/materializer_feedback_discovery.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/dqs1_observation_discovery.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/pair_frame_geometry_discovery.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/pair_frame_5d_canvas_coverage_audit.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/pair_frame_5d_extended_operator_queue.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/local_cpu_eureka_planning.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_portfolio.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/rate_budget_preservation_plan.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_materializer_bridge.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_chain_compiler_work_orders.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_chain_compiler_queue.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_materializer_backlog.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_materializer_contexts.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_materializer_work_queue.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_materializer_execution_queue.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/receiver_repair_backlog.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/receiver_repair_queue.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/receiver_closed_correction_budget.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/targeted_component_correction_acquisition.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/targeted_component_correction_queue.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/targeted_component_correction_response_harvest.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/targeted_component_correction_materialization_requests.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/targeted_component_correction_operation_chain_work_orders.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/targeted_component_correction_chain_materializer_handoff.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/targeted_component_correction_chain_materializer_work_queue.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/autonomous_chain_optimization.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/repair_budget_waterfill_queue.json"
+        ]
+      },
+      "priority": 1,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_frontier_autonomous_chain_work_order.py",
+            "--autonomous-chain-optimization",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/autonomous_chain_optimization.json",
+            "--chain-id",
+            "global_many_op_rate_distortion_receiver_campaign",
+            "--work-order-out",
+            "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/autonomous_chain_work_order.json",
+            "--overwrite",
+            "--child-queue-artifact-path",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_materializer_execution_queue.json",
+            "--child-queue-artifact-path",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/repair_budget_waterfill_queue.json",
+            "--child-queue-artifact-path",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/pair_frame_5d_extended_operator_queue.json",
+            "--queue-actuation-ready"
+          ],
+          "id": "emit_autonomous_chain_work_order",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "frontier_rate_attack_autonomous_chain_work_order.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/autonomous_chain_work_order.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/autonomous_chain_work_order.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/autonomous_chain_work_order.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/autonomous_chain_work_order.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/autonomous_chain_optimization.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_materializer_execution_queue.json",
+            "validate"
+          ],
+          "id": "validate_run_operation_materializer_context_closure_queue_operation_materializer_execution_queue",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [
+            "emit_autonomous_chain_work_order"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_materializer_execution_queue.json",
+              "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/autonomous_chain_work_order.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_materializer_execution_queue.json",
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            "8",
+            "--max-experiments",
+            "2",
+            "--max-parallel",
+            "1",
+            "--output",
+            "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/run_operation_materializer_context_closure_queue_operation_materializer_execution_queue_worker_result.json"
+          ],
+          "id": "run_run_operation_materializer_context_closure_queue_operation_materializer_execution_queue_bounded_local",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "experiment_queue_worker_result.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/run_operation_materializer_context_closure_queue_operation_materializer_execution_queue_worker_result.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 0,
+              "key": "failure_count",
+              "path": "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/run_operation_materializer_context_closure_queue_operation_materializer_execution_queue_worker_result.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "validate_run_operation_materializer_context_closure_queue_operation_materializer_execution_queue"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/run_operation_materializer_context_closure_queue_operation_materializer_execution_queue_worker_result.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_materializer_execution_queue.json",
+              "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/autonomous_chain_work_order.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 900
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/repair_budget_waterfill_queue.json",
+            "validate"
+          ],
+          "id": "validate_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [
+            "emit_autonomous_chain_work_order"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/repair_budget_waterfill_queue.json",
+              "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/autonomous_chain_work_order.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/repair_budget_waterfill_queue.json",
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            "8",
+            "--max-experiments",
+            "2",
+            "--max-parallel",
+            "1",
+            "--output",
+            "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_worker_result.json"
+          ],
+          "id": "run_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_bounded_local",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "experiment_queue_worker_result.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_worker_result.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 0,
+              "key": "failure_count",
+              "path": "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_worker_result.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "validate_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_worker_result.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/repair_budget_waterfill_queue.json",
+              "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/autonomous_chain_work_order.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 900
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/pair_frame_5d_extended_operator_queue.json",
+            "validate"
+          ],
+          "id": "validate_run_pair_frame_5d_extended_operator_queue_pair_frame_5d_extended_operator_queue",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [
+            "emit_autonomous_chain_work_order"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/pair_frame_5d_extended_operator_queue.json",
+              "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/autonomous_chain_work_order.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/pair_frame_5d_extended_operator_queue.json",
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            "8",
+            "--max-experiments",
+            "2",
+            "--max-parallel",
+            "1",
+            "--output",
+            "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/run_pair_frame_5d_extended_operator_queue_pair_frame_5d_extended_operator_queue_worker_result.json"
+          ],
+          "id": "run_run_pair_frame_5d_extended_operator_queue_pair_frame_5d_extended_operator_queue_bounded_local",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "experiment_queue_worker_result.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/run_pair_frame_5d_extended_operator_queue_pair_frame_5d_extended_operator_queue_worker_result.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 0,
+              "key": "failure_count",
+              "path": "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/run_pair_frame_5d_extended_operator_queue_pair_frame_5d_extended_operator_queue_worker_result.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "validate_run_pair_frame_5d_extended_operator_queue_pair_frame_5d_extended_operator_queue"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/run_pair_frame_5d_extended_operator_queue_pair_frame_5d_extended_operator_queue_worker_result.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/pair_frame_5d_extended_operator_queue.json",
+              "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/autonomous_chain_work_order.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 900
+        }
+      ],
+      "tags": [
+        "frontier-rate-attack",
+        "autonomous-many-op-chain",
+        "encoder-side-actuation",
+        "no-score-authority"
+      ]
+    },
+    {
+      "id": "autonomous_chain_portfolio_materializer_context_closure_campaign",
+      "lane_id": null,
+      "metadata": {
+        "advisory_action_count": 1,
+        "advisory_actions": [
+          {
+            "advisory_only": true,
+            "advisory_reason": "bridge intent only until a concrete many-op candidate archive and exact-readiness artifact exist",
+            "bounded_local_execution": false,
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "id": "replay_component_response_and_exact_readiness_bridge",
+            "promotable": false,
+            "promotion_eligible": false,
+            "purpose": "convert_local_many_op_candidate_into_exact_axis_request_only",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "requires_exact_auth_before_score_claim": true,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_artifact_key": "materializer_chain_exact_readiness_bridge"
+          }
+        ],
+        "allowed_use": "local_many_op_chain_actuation_queue_only",
+        "blocked_child_queue_artifact_keys": [],
+        "chain_family": "portfolio_to_materializer_context_closure_campaign",
+        "chain_id": "portfolio_materializer_context_closure_campaign",
+        "charged_bits_changed": false,
+        "child_queue_artifact_paths": [
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_materializer_execution_queue.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/repair_budget_waterfill_queue.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/pair_frame_5d_extended_operator_queue.json"
+        ],
+        "child_queue_health_by_key": {
+          "operation_materializer_execution_queue": {
+            "blockers": [],
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "disabled_experiment_count": 0,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "frozen_experiment_count": 0,
+            "gpu_launched": false,
+            "path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_materializer_execution_queue.json",
+            "present": true,
+            "promotable": false,
+            "promotion_eligible": false,
+            "queue_id": "frontier_rate_attack_feedback_dqs1_followup_20260527T044435Z_operation_materializer_execution",
+            "queued_experiment_count": 1,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false
+          },
+          "pair_frame_5d_extended_operator_queue": {
+            "blockers": [],
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "disabled_experiment_count": 0,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "frozen_experiment_count": 0,
+            "gpu_launched": false,
+            "path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/pair_frame_5d_extended_operator_queue.json",
+            "present": true,
+            "promotable": false,
+            "promotion_eligible": false,
+            "queue_id": "frontier_rate_attack_feedback_dqs1_followup_20260527T044435Z_pair_frame_5d_extended_operators",
+            "queued_experiment_count": 8,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false
+          },
+          "repair_budget_waterfill_queue": {
+            "blockers": [],
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "disabled_experiment_count": 0,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "frozen_experiment_count": 0,
+            "gpu_launched": false,
+            "path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/repair_budget_waterfill_queue.json",
+            "present": true,
+            "promotable": false,
+            "promotion_eligible": false,
+            "queue_id": "frontier_rate_attack_feedback_dqs1_followup_20260527T044435Z_repair_budget_waterfill",
+            "queued_experiment_count": 3,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false
+          }
+        },
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        "gpu_launched": false,
+        "local_queue_action_count": 3,
+        "local_queue_actions": [
+          {
+            "advisory_only": false,
+            "bounded_local_execution": true,
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "id": "run_operation_materializer_context_closure_queue",
+            "promotable": false,
+            "promotion_eligible": false,
+            "purpose": "bind portfolio materializer contexts across packet_archive_tensor_targets",
+            "queue_artifact_key": "operation_materializer_execution_queue",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "requires_exact_auth_before_score_claim": true,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false
+          },
+          {
+            "advisory_only": false,
+            "bounded_local_execution": true,
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "id": "fit_segnet_posenet_repair_waterfill_policy",
+            "promotable": false,
+            "promotion_eligible": false,
+            "purpose": "estimate_where_drop_many_distortion_debt_should_be_repaired_from_receiver_closed_rate_budget",
+            "queue_artifact_key": "repair_budget_waterfill_queue",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "requires_exact_auth_before_score_claim": true,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false
+          },
+          {
+            "advisory_only": false,
+            "bounded_local_execution": true,
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "id": "run_pair_frame_5d_extended_operator_queue",
+            "promotable": false,
+            "promotion_eligible": false,
+            "purpose": "fire_all_8_pair_frame_5d_extended_operators_against_populated_canvas",
+            "queue_artifact_key": "pair_frame_5d_extended_operator_queue",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "requires_exact_auth_before_score_claim": true,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false
+          }
+        ],
+        "missing_queue_artifact_keys": [],
+        "pipeline_stages": [
+          {
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "id": "select_many_operator_chain",
+            "owner": "queue_owned_autonomous_optimizer",
+            "pipeline_side": "encoder_planner",
+            "promotable": false,
+            "promotion_eligible": false,
+            "purpose": "choose packet/archive/tensor/frame/pair/batch operators jointly",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_chain_id": "portfolio_materializer_context_closure_campaign",
+            "writes_submission_runtime": false
+          },
+          {
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "id": "apply_rate_attack_materializers",
+            "owner": "local_child_queues",
+            "pipeline_side": "encoder_materializer",
+            "promotable": false,
+            "promotion_eligible": false,
+            "purpose": "execute receiver-closed byte-saving transforms before packaging",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_chain_id": "portfolio_materializer_context_closure_campaign",
+            "writes_submission_runtime": true
+          },
+          {
+            "budget_spend_allowed": false,
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "id": "preserve_rate_only_floor_archive",
+            "owner": "rate_budget_preservation_plan",
+            "pipeline_side": "encoder_archive_builder",
+            "promotable": false,
+            "promotion_eligible": false,
+            "purpose": "emit immutable rate-only checkpoint before any distortion-side budget reinvestment",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_chain_id": "portfolio_materializer_context_closure_campaign",
+            "writes_submission_runtime": true
+          },
+          {
+            "budget_spend_allowed": false,
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "id": "allocate_repair_budget",
+            "owner": "component_marginal_waterfill_policy",
+            "pipeline_side": "encoder_repair_allocator",
+            "promotable": false,
+            "promotion_eligible": false,
+            "purpose": "spend freed bytes only where SegNet/PoseNet marginal repair helps",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_chain_id": "portfolio_materializer_context_closure_campaign",
+            "writes_submission_runtime": true
+          },
+          {
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "id": "emit_byte_closed_archive",
+            "owner": "archive_packaging_queue",
+            "pipeline_side": "encoder_archive_builder",
+            "promotable": false,
+            "promotion_eligible": false,
+            "purpose": "package transformed payload and deterministic receiver runtime",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_chain_id": "portfolio_materializer_context_closure_campaign",
+            "writes_submission_runtime": true
+          },
+          {
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "id": "consume_transformed_packet",
+            "owner": "inflate_runtime_adapter",
+            "pipeline_side": "receiver_decode_only",
+            "promotable": false,
+            "promotion_eligible": false,
+            "purpose": "deterministically decode encoder-authored transforms without scorer access",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_chain_id": "portfolio_materializer_context_closure_campaign",
+            "writes_submission_runtime": false
+          },
+          {
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "id": "measure_exact_axis_and_feedback",
+            "owner": "contest_axis_eval_harvest",
+            "pipeline_side": "exact_eval_feedback",
+            "promotable": false,
+            "promotion_eligible": false,
+            "purpose": "measure archive/runtime on contest CPU/CUDA axis before any score claim",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_chain_id": "portfolio_materializer_context_closure_campaign",
+            "writes_submission_runtime": false
+          }
+        ],
+        "post_repair_refresh_planned": false,
+        "post_repair_refresh_report_path": "",
+        "priority_score": 204.0,
+        "promotable": false,
+        "promotion_eligible": false,
+        "queue_actuation_blockers": [],
+        "queue_actuation_ready": true,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "frontier_rate_attack_autonomous_chain_optimization_queue_metadata.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_artifact_paths": [
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/autonomous_chain_optimization.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/materializer_feedback_discovery.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/dqs1_observation_discovery.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/pair_frame_geometry_discovery.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/pair_frame_5d_canvas_coverage_audit.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/pair_frame_5d_extended_operator_queue.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/local_cpu_eureka_planning.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_portfolio.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/rate_budget_preservation_plan.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_materializer_bridge.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_chain_compiler_work_orders.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_chain_compiler_queue.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_materializer_backlog.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_materializer_contexts.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_materializer_work_queue.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_materializer_execution_queue.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/receiver_repair_backlog.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/receiver_repair_queue.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/receiver_closed_correction_budget.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/targeted_component_correction_acquisition.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/targeted_component_correction_queue.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/targeted_component_correction_response_harvest.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/targeted_component_correction_materialization_requests.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/targeted_component_correction_operation_chain_work_orders.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/targeted_component_correction_chain_materializer_handoff.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/targeted_component_correction_chain_materializer_work_queue.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/autonomous_chain_optimization.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/repair_budget_waterfill_queue.json"
+        ]
+      },
+      "priority": 2,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_frontier_autonomous_chain_work_order.py",
+            "--autonomous-chain-optimization",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/autonomous_chain_optimization.json",
+            "--chain-id",
+            "portfolio_materializer_context_closure_campaign",
+            "--work-order-out",
+            "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/autonomous_chain_work_order.json",
+            "--overwrite",
+            "--child-queue-artifact-path",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_materializer_execution_queue.json",
+            "--child-queue-artifact-path",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/repair_budget_waterfill_queue.json",
+            "--child-queue-artifact-path",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/pair_frame_5d_extended_operator_queue.json",
+            "--queue-actuation-ready"
+          ],
+          "id": "emit_autonomous_chain_work_order",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "frontier_rate_attack_autonomous_chain_work_order.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/autonomous_chain_work_order.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/autonomous_chain_work_order.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/autonomous_chain_work_order.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/autonomous_chain_work_order.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/autonomous_chain_optimization.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_materializer_execution_queue.json",
+            "validate"
+          ],
+          "id": "validate_run_operation_materializer_context_closure_queue_operation_materializer_execution_queue",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [
+            "emit_autonomous_chain_work_order"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_materializer_execution_queue.json",
+              "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/autonomous_chain_work_order.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_materializer_execution_queue.json",
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            "8",
+            "--max-experiments",
+            "2",
+            "--max-parallel",
+            "1",
+            "--output",
+            "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/run_operation_materializer_context_closure_queue_operation_materializer_execution_queue_worker_result.json"
+          ],
+          "id": "run_run_operation_materializer_context_closure_queue_operation_materializer_execution_queue_bounded_local",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "experiment_queue_worker_result.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/run_operation_materializer_context_closure_queue_operation_materializer_execution_queue_worker_result.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 0,
+              "key": "failure_count",
+              "path": "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/run_operation_materializer_context_closure_queue_operation_materializer_execution_queue_worker_result.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "validate_run_operation_materializer_context_closure_queue_operation_materializer_execution_queue"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/run_operation_materializer_context_closure_queue_operation_materializer_execution_queue_worker_result.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_materializer_execution_queue.json",
+              "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/autonomous_chain_work_order.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 900
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/repair_budget_waterfill_queue.json",
+            "validate"
+          ],
+          "id": "validate_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [
+            "emit_autonomous_chain_work_order"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/repair_budget_waterfill_queue.json",
+              "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/autonomous_chain_work_order.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/repair_budget_waterfill_queue.json",
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            "8",
+            "--max-experiments",
+            "2",
+            "--max-parallel",
+            "1",
+            "--output",
+            "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_worker_result.json"
+          ],
+          "id": "run_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_bounded_local",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "experiment_queue_worker_result.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_worker_result.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 0,
+              "key": "failure_count",
+              "path": "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_worker_result.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "validate_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_worker_result.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/repair_budget_waterfill_queue.json",
+              "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/autonomous_chain_work_order.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 900
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/pair_frame_5d_extended_operator_queue.json",
+            "validate"
+          ],
+          "id": "validate_run_pair_frame_5d_extended_operator_queue_pair_frame_5d_extended_operator_queue",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [
+            "emit_autonomous_chain_work_order"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/pair_frame_5d_extended_operator_queue.json",
+              "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/autonomous_chain_work_order.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/pair_frame_5d_extended_operator_queue.json",
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            "8",
+            "--max-experiments",
+            "2",
+            "--max-parallel",
+            "1",
+            "--output",
+            "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/run_pair_frame_5d_extended_operator_queue_pair_frame_5d_extended_operator_queue_worker_result.json"
+          ],
+          "id": "run_run_pair_frame_5d_extended_operator_queue_pair_frame_5d_extended_operator_queue_bounded_local",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "experiment_queue_worker_result.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/run_pair_frame_5d_extended_operator_queue_pair_frame_5d_extended_operator_queue_worker_result.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 0,
+              "key": "failure_count",
+              "path": "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/run_pair_frame_5d_extended_operator_queue_pair_frame_5d_extended_operator_queue_worker_result.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "validate_run_pair_frame_5d_extended_operator_queue_pair_frame_5d_extended_operator_queue"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/run_pair_frame_5d_extended_operator_queue_pair_frame_5d_extended_operator_queue_worker_result.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/pair_frame_5d_extended_operator_queue.json",
+              "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/autonomous_chain_work_order.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 900
+        }
+      ],
+      "tags": [
+        "frontier-rate-attack",
+        "autonomous-many-op-chain",
+        "encoder-side-actuation",
+        "no-score-authority"
+      ]
+    },
+    {
+      "id": "autonomous_chain_segnet_posenet_geometry_drop_many_campaign",
+      "lane_id": null,
+      "metadata": {
+        "advisory_action_count": 1,
+        "advisory_actions": [
+          {
+            "advisory_only": true,
+            "advisory_reason": "bridge intent only until a concrete many-op candidate archive and exact-readiness artifact exist",
+            "bounded_local_execution": false,
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "id": "replay_component_response_and_exact_readiness_bridge",
+            "promotable": false,
+            "promotion_eligible": false,
+            "purpose": "convert_local_many_op_candidate_into_exact_axis_request_only",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "requires_exact_auth_before_score_claim": true,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_artifact_key": "materializer_chain_exact_readiness_bridge"
+          }
+        ],
+        "allowed_use": "local_many_op_chain_actuation_queue_only",
+        "blocked_child_queue_artifact_keys": [],
+        "chain_family": "component_response_geometry_pair_batch_campaign",
+        "chain_id": "segnet_posenet_geometry_drop_many_campaign",
+        "charged_bits_changed": false,
+        "child_queue_artifact_paths": [
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_materializer_execution_queue.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/repair_budget_waterfill_queue.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/pair_frame_5d_extended_operator_queue.json"
+        ],
+        "child_queue_health_by_key": {
+          "operation_materializer_execution_queue": {
+            "blockers": [],
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "disabled_experiment_count": 0,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "frozen_experiment_count": 0,
+            "gpu_launched": false,
+            "path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_materializer_execution_queue.json",
+            "present": true,
+            "promotable": false,
+            "promotion_eligible": false,
+            "queue_id": "frontier_rate_attack_feedback_dqs1_followup_20260527T044435Z_operation_materializer_execution",
+            "queued_experiment_count": 1,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false
+          },
+          "pair_frame_5d_extended_operator_queue": {
+            "blockers": [],
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "disabled_experiment_count": 0,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "frozen_experiment_count": 0,
+            "gpu_launched": false,
+            "path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/pair_frame_5d_extended_operator_queue.json",
+            "present": true,
+            "promotable": false,
+            "promotion_eligible": false,
+            "queue_id": "frontier_rate_attack_feedback_dqs1_followup_20260527T044435Z_pair_frame_5d_extended_operators",
+            "queued_experiment_count": 8,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false
+          },
+          "repair_budget_waterfill_queue": {
+            "blockers": [],
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "disabled_experiment_count": 0,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "frozen_experiment_count": 0,
+            "gpu_launched": false,
+            "path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/repair_budget_waterfill_queue.json",
+            "present": true,
+            "promotable": false,
+            "promotion_eligible": false,
+            "queue_id": "frontier_rate_attack_feedback_dqs1_followup_20260527T044435Z_repair_budget_waterfill",
+            "queued_experiment_count": 3,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false
+          }
+        },
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        "gpu_launched": false,
+        "local_queue_action_count": 3,
+        "local_queue_actions": [
+          {
+            "advisory_only": false,
+            "bounded_local_execution": true,
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "id": "run_operation_materializer_context_closure_queue",
+            "promotable": false,
+            "promotion_eligible": false,
+            "purpose": "bind portfolio materializer contexts across packet_archive_tensor_targets",
+            "queue_artifact_key": "operation_materializer_execution_queue",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "requires_exact_auth_before_score_claim": true,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false
+          },
+          {
+            "advisory_only": false,
+            "bounded_local_execution": true,
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "id": "fit_segnet_posenet_repair_waterfill_policy",
+            "promotable": false,
+            "promotion_eligible": false,
+            "purpose": "estimate_where_drop_many_distortion_debt_should_be_repaired_from_receiver_closed_rate_budget",
+            "queue_artifact_key": "repair_budget_waterfill_queue",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "requires_exact_auth_before_score_claim": true,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false
+          },
+          {
+            "advisory_only": false,
+            "bounded_local_execution": true,
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "id": "run_pair_frame_5d_extended_operator_queue",
+            "promotable": false,
+            "promotion_eligible": false,
+            "purpose": "fire_all_8_pair_frame_5d_extended_operators_against_populated_canvas",
+            "queue_artifact_key": "pair_frame_5d_extended_operator_queue",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "requires_exact_auth_before_score_claim": true,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false
+          }
+        ],
+        "missing_queue_artifact_keys": [],
+        "pipeline_stages": [
+          {
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "id": "select_many_operator_chain",
+            "owner": "queue_owned_autonomous_optimizer",
+            "pipeline_side": "encoder_planner",
+            "promotable": false,
+            "promotion_eligible": false,
+            "purpose": "choose packet/archive/tensor/frame/pair/batch operators jointly",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_chain_id": "segnet_posenet_geometry_drop_many_campaign",
+            "writes_submission_runtime": false
+          },
+          {
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "id": "apply_rate_attack_materializers",
+            "owner": "local_child_queues",
+            "pipeline_side": "encoder_materializer",
+            "promotable": false,
+            "promotion_eligible": false,
+            "purpose": "execute receiver-closed byte-saving transforms before packaging",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_chain_id": "segnet_posenet_geometry_drop_many_campaign",
+            "writes_submission_runtime": true
+          },
+          {
+            "budget_spend_allowed": false,
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "id": "preserve_rate_only_floor_archive",
+            "owner": "rate_budget_preservation_plan",
+            "pipeline_side": "encoder_archive_builder",
+            "promotable": false,
+            "promotion_eligible": false,
+            "purpose": "emit immutable rate-only checkpoint before any distortion-side budget reinvestment",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_chain_id": "segnet_posenet_geometry_drop_many_campaign",
+            "writes_submission_runtime": true
+          },
+          {
+            "budget_spend_allowed": false,
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "id": "allocate_repair_budget",
+            "owner": "component_marginal_waterfill_policy",
+            "pipeline_side": "encoder_repair_allocator",
+            "promotable": false,
+            "promotion_eligible": false,
+            "purpose": "spend freed bytes only where SegNet/PoseNet marginal repair helps",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_chain_id": "segnet_posenet_geometry_drop_many_campaign",
+            "writes_submission_runtime": true
+          },
+          {
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "id": "emit_byte_closed_archive",
+            "owner": "archive_packaging_queue",
+            "pipeline_side": "encoder_archive_builder",
+            "promotable": false,
+            "promotion_eligible": false,
+            "purpose": "package transformed payload and deterministic receiver runtime",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_chain_id": "segnet_posenet_geometry_drop_many_campaign",
+            "writes_submission_runtime": true
+          },
+          {
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "id": "consume_transformed_packet",
+            "owner": "inflate_runtime_adapter",
+            "pipeline_side": "receiver_decode_only",
+            "promotable": false,
+            "promotion_eligible": false,
+            "purpose": "deterministically decode encoder-authored transforms without scorer access",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_chain_id": "segnet_posenet_geometry_drop_many_campaign",
+            "writes_submission_runtime": false
+          },
+          {
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "id": "measure_exact_axis_and_feedback",
+            "owner": "contest_axis_eval_harvest",
+            "pipeline_side": "exact_eval_feedback",
+            "promotable": false,
+            "promotion_eligible": false,
+            "purpose": "measure archive/runtime on contest CPU/CUDA axis before any score claim",
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_chain_id": "segnet_posenet_geometry_drop_many_campaign",
+            "writes_submission_runtime": false
+          }
+        ],
+        "post_repair_refresh_planned": false,
+        "post_repair_refresh_report_path": "",
+        "priority_score": 136.0,
+        "promotable": false,
+        "promotion_eligible": false,
+        "queue_actuation_blockers": [],
+        "queue_actuation_ready": true,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "frontier_rate_attack_autonomous_chain_optimization_queue_metadata.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_artifact_paths": [
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/autonomous_chain_optimization.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/materializer_feedback_discovery.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/dqs1_observation_discovery.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/pair_frame_geometry_discovery.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/pair_frame_5d_canvas_coverage_audit.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/pair_frame_5d_extended_operator_queue.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/local_cpu_eureka_planning.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_portfolio.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/rate_budget_preservation_plan.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_materializer_bridge.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_chain_compiler_work_orders.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_chain_compiler_queue.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_materializer_backlog.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_materializer_contexts.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_materializer_work_queue.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_materializer_execution_queue.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/receiver_repair_backlog.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/receiver_repair_queue.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/receiver_closed_correction_budget.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/targeted_component_correction_acquisition.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/targeted_component_correction_queue.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/targeted_component_correction_response_harvest.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/targeted_component_correction_materialization_requests.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/targeted_component_correction_operation_chain_work_orders.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/targeted_component_correction_chain_materializer_handoff.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/targeted_component_correction_chain_materializer_work_queue.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/autonomous_chain_optimization.json",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/repair_budget_waterfill_queue.json"
+        ]
+      },
+      "priority": 3,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_frontier_autonomous_chain_work_order.py",
+            "--autonomous-chain-optimization",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/autonomous_chain_optimization.json",
+            "--chain-id",
+            "segnet_posenet_geometry_drop_many_campaign",
+            "--work-order-out",
+            "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/autonomous_chain_work_order.json",
+            "--overwrite",
+            "--child-queue-artifact-path",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_materializer_execution_queue.json",
+            "--child-queue-artifact-path",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/repair_budget_waterfill_queue.json",
+            "--child-queue-artifact-path",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/pair_frame_5d_extended_operator_queue.json",
+            "--queue-actuation-ready"
+          ],
+          "id": "emit_autonomous_chain_work_order",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "frontier_rate_attack_autonomous_chain_work_order.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/autonomous_chain_work_order.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/autonomous_chain_work_order.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/autonomous_chain_work_order.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/autonomous_chain_work_order.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/autonomous_chain_optimization.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_materializer_execution_queue.json",
+            "validate"
+          ],
+          "id": "validate_run_operation_materializer_context_closure_queue_operation_materializer_execution_queue",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [
+            "emit_autonomous_chain_work_order"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_materializer_execution_queue.json",
+              "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/autonomous_chain_work_order.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_materializer_execution_queue.json",
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            "8",
+            "--max-experiments",
+            "2",
+            "--max-parallel",
+            "1",
+            "--output",
+            "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/run_operation_materializer_context_closure_queue_operation_materializer_execution_queue_worker_result.json"
+          ],
+          "id": "run_run_operation_materializer_context_closure_queue_operation_materializer_execution_queue_bounded_local",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "experiment_queue_worker_result.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/run_operation_materializer_context_closure_queue_operation_materializer_execution_queue_worker_result.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 0,
+              "key": "failure_count",
+              "path": "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/run_operation_materializer_context_closure_queue_operation_materializer_execution_queue_worker_result.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "validate_run_operation_materializer_context_closure_queue_operation_materializer_execution_queue"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/run_operation_materializer_context_closure_queue_operation_materializer_execution_queue_worker_result.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/operation_materializer_execution_queue.json",
+              "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/autonomous_chain_work_order.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 900
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/repair_budget_waterfill_queue.json",
+            "validate"
+          ],
+          "id": "validate_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [
+            "emit_autonomous_chain_work_order"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/repair_budget_waterfill_queue.json",
+              "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/autonomous_chain_work_order.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/repair_budget_waterfill_queue.json",
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            "8",
+            "--max-experiments",
+            "2",
+            "--max-parallel",
+            "1",
+            "--output",
+            "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_worker_result.json"
+          ],
+          "id": "run_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_bounded_local",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "experiment_queue_worker_result.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_worker_result.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 0,
+              "key": "failure_count",
+              "path": "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_worker_result.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "validate_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_worker_result.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/repair_budget_waterfill_queue.json",
+              "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/autonomous_chain_work_order.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 900
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/pair_frame_5d_extended_operator_queue.json",
+            "validate"
+          ],
+          "id": "validate_run_pair_frame_5d_extended_operator_queue_pair_frame_5d_extended_operator_queue",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [
+            "emit_autonomous_chain_work_order"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/pair_frame_5d_extended_operator_queue.json",
+              "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/autonomous_chain_work_order.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/pair_frame_5d_extended_operator_queue.json",
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            "8",
+            "--max-experiments",
+            "2",
+            "--max-parallel",
+            "1",
+            "--output",
+            "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/run_pair_frame_5d_extended_operator_queue_pair_frame_5d_extended_operator_queue_worker_result.json"
+          ],
+          "id": "run_run_pair_frame_5d_extended_operator_queue_pair_frame_5d_extended_operator_queue_bounded_local",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "experiment_queue_worker_result.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/run_pair_frame_5d_extended_operator_queue_pair_frame_5d_extended_operator_queue_worker_result.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 0,
+              "key": "failure_count",
+              "path": "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/run_pair_frame_5d_extended_operator_queue_pair_frame_5d_extended_operator_queue_worker_result.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "validate_run_pair_frame_5d_extended_operator_queue_pair_frame_5d_extended_operator_queue"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/run_pair_frame_5d_extended_operator_queue_pair_frame_5d_extended_operator_queue_worker_result.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/refresh_with_5d_extended_queue_autowire_20260527T0455Z/pair_frame_5d_extended_operator_queue.json",
+              "experiments/results/frontier_autonomous_chain_optimization/frontier_rate_attack_feedback_dqs1_followup_20260527t044435z_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/autonomous_chain_work_order.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 900
+        }
+      ],
+      "tags": [
+        "frontier-rate-attack",
+        "autonomous-many-op-chain",
+        "encoder-side-actuation",
+        "no-score-authority"
+      ]
+    }
+  ],
+  "queue_id": "frontier_rate_attack_feedback_dqs1_followup_20260527T044435Z_autonomous_chain_optimization",
+  "schema": "experiment_queue.v1"
+}

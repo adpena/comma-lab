@@ -63,6 +63,9 @@ from .frontier_rate_attack_feedback import (
     build_frontier_targeted_component_correction_queue,
     build_frontier_targeted_component_correction_response_harvest,
 )
+from .pair_frame_5d_extended_operator_queue import (
+    build_pair_frame_5d_extended_operator_queue,
+)
 
 FRONTIER_RATE_ATTACK_FEEDBACK_CYCLE_SCHEMA = "frontier_rate_attack_feedback_cycle.v1"
 FRONTIER_RATE_ATTACK_DQS1_OBSERVATION_BUNDLE_SCHEMA = (
@@ -73,6 +76,9 @@ FRONTIER_RATE_ATTACK_PAIRSET_COMPONENT_MARGINAL_BUNDLE_SCHEMA = (
 )
 PAIRSET_COMPONENT_MARGINAL_ACTION_SUMMARY_SCHEMA = (
     "pairset_component_marginal_canonicalization_summary.v1"
+)
+PAIR_FRAME_5D_CANVAS_POPULATED_SCHEMA = (
+    "pair_frame_scorer_geometry_lattice_5d_canvas_populated_v1"
 )
 AUTOPILOT_RESULT_SCHEMA = "dqs1_local_first_autopilot_result.v1"
 DQS1_DROP_MANY_GREEDY_VERDICT_DISCOVERY_SCHEMA = (
@@ -470,6 +476,82 @@ def harvest_paths_from_autopilot_result_files(
     return _unique_paths(collected)
 
 
+def _valid_pair_frame_5d_canvas_path(
+    value: str | Path,
+    *,
+    repo_root: str | Path,
+) -> Path | None:
+    path = resolve_repo_path(value, repo_root=repo_root)
+    if not path.is_file() or path.is_symlink():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None
+    if not isinstance(payload, Mapping):
+        return None
+    if payload.get("schema") != PAIR_FRAME_5D_CANVAS_POPULATED_SCHEMA:
+        return None
+    if not isinstance(payload.get("archive_sha256"), str):
+        return None
+    if not isinstance(payload.get("cells"), list):
+        return None
+    return path
+
+
+def _pair_frame_5d_canvas_paths_from_report(
+    report: Mapping[str, Any],
+    *,
+    repo_root: str | Path,
+) -> list[Path]:
+    candidates: list[str | Path] = []
+    raw_paths = report.get("pair_frame_5d_canvas_paths")
+    if isinstance(raw_paths, Sequence) and not isinstance(raw_paths, str | bytes):
+        candidates.extend(raw_paths)
+    raw_path = report.get("pair_frame_5d_canvas_path")
+    if isinstance(raw_path, str | Path):
+        candidates.append(raw_path)
+    seen: set[str] = set()
+    valid: list[Path] = []
+    for candidate in candidates:
+        if not isinstance(candidate, str | Path):
+            continue
+        path = _valid_pair_frame_5d_canvas_path(candidate, repo_root=repo_root)
+        if path is None:
+            continue
+        key = str(path.resolve(strict=False))
+        if key in seen:
+            continue
+        seen.add(key)
+        valid.append(path)
+    return valid
+
+
+def _pair_frame_5d_queue_coverage_audit(
+    queue: Mapping[str, Any],
+) -> Mapping[str, Any] | None:
+    controls = queue.get("controls")
+    if isinstance(controls, Mapping):
+        audit = controls.get("canvas_coverage_audit")
+        if isinstance(audit, Mapping):
+            return audit
+    metadata = queue.get("metadata")
+    if isinstance(metadata, Mapping):
+        audit = metadata.get("canvas_coverage_audit")
+        if isinstance(audit, Mapping):
+            return audit
+    for experiment in queue.get("experiments") or []:
+        if not isinstance(experiment, Mapping):
+            continue
+        experiment_metadata = experiment.get("metadata")
+        if not isinstance(experiment_metadata, Mapping):
+            continue
+        audit = experiment_metadata.get("canvas_coverage_audit")
+        if isinstance(audit, Mapping):
+            return audit
+    return None
+
+
 def write_frontier_refresh_artifacts(
     *,
     output_dir: str | Path,
@@ -498,6 +580,58 @@ def write_frontier_refresh_artifacts(
         path = out / "pair_frame_geometry_discovery.json"
         write_json_artifact(path, dict(pair_frame))
         artifacts["pair_frame_geometry_discovery"] = repo_rel(path, repo_root)
+    pair_frame_5d_canvas_paths = _pair_frame_5d_canvas_paths_from_report(
+        report,
+        repo_root=repo_root,
+    )
+    if pair_frame_5d_canvas_paths:
+        pair_frame_5d_canvas = pair_frame_5d_canvas_paths[0]
+        pair_frame_5d_queue = build_pair_frame_5d_extended_operator_queue(
+            repo_root=repo_root,
+            canvas_path=pair_frame_5d_canvas,
+            output_root=out / "pair_frame_5d_extended_operator_outputs",
+            queue_id=(
+                f"{report.get('queue_id') or 'frontier_feedback'}_"
+                "pair_frame_5d_extended_operators"
+            ),
+            top_n=int(report.get("candidate_limit") or 4),
+        )
+        pair_frame_5d_queue_path = out / "pair_frame_5d_extended_operator_queue.json"
+        write_json_artifact(pair_frame_5d_queue_path, pair_frame_5d_queue)
+        coverage_audit = _pair_frame_5d_queue_coverage_audit(pair_frame_5d_queue)
+        if coverage_audit is not None:
+            coverage_audit_path = out / "pair_frame_5d_canvas_coverage_audit.json"
+            write_json_artifact(coverage_audit_path, dict(coverage_audit))
+            artifacts["pair_frame_5d_canvas_coverage_audit"] = repo_rel(
+                coverage_audit_path,
+                repo_root,
+            )
+        artifacts["pair_frame_5d_canvas"] = repo_rel(pair_frame_5d_canvas, repo_root)
+        artifacts["pair_frame_5d_extended_operator_queue"] = repo_rel(
+            pair_frame_5d_queue_path,
+            repo_root,
+        )
+        report["pair_frame_5d_canvas_path"] = repo_rel(
+            pair_frame_5d_canvas,
+            repo_root,
+        )
+        report["pair_frame_5d_extended_operator_queue_summary"] = {
+            "schema": "frontier_rate_attack_pair_frame_5d_extended_operator_queue_summary.v1",
+            "queue_id": pair_frame_5d_queue.get("queue_id"),
+            "canvas_path": repo_rel(pair_frame_5d_canvas, repo_root),
+            "experiment_count": len(pair_frame_5d_queue.get("experiments") or []),
+            "operator_count": len(pair_frame_5d_queue.get("experiments") or []),
+            "coverage_verdict": (
+                coverage_audit.get("verdict") if coverage_audit is not None else None
+            ),
+            "coverage_work_order_count": (
+                coverage_audit.get("work_order_count")
+                if coverage_audit is not None
+                else None
+            ),
+            "allowed_use": "local_encoder_side_5d_extended_operator_planning_only",
+            **FALSE_AUTHORITY,
+        }
     eureka_planning = report.get("local_cpu_eureka_planning")
     if isinstance(eureka_planning, Mapping):
         path = out / "local_cpu_eureka_planning.json"
@@ -1269,6 +1403,37 @@ def write_frontier_refresh_artifacts(
             "8",
             "--max-experiments",
             "2",
+            "--max-parallel",
+            "1",
+        ]
+    if "pair_frame_5d_extended_operator_queue" in artifacts:
+        operator_commands["validate_pair_frame_5d_extended_operator_queue"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["pair_frame_5d_extended_operator_queue"],
+            "validate",
+        ]
+        operator_commands["init_pair_frame_5d_extended_operator_queue"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["pair_frame_5d_extended_operator_queue"],
+            "init",
+        ]
+        operator_commands[
+            "run_pair_frame_5d_extended_operator_queue_bounded_local"
+        ] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["pair_frame_5d_extended_operator_queue"],
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            "8",
+            "--max-experiments",
+            "8",
             "--max-parallel",
             "1",
         ]
