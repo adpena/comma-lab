@@ -1,0 +1,267 @@
+{
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "deployment_target": "desktop_research",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "optimizer_candidate_queue_is_planning_only",
+    "requires_exact_eval_readiness_gate",
+    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+    "requires_non_proxy_score_evidence_before_promotion",
+    "frontier_rate_attack_contexts_are_local_only"
+  ],
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "generated_at_utc": "2026-05-27T16:20:16Z",
+  "gpu_launched": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "queue_id": "frontier_final_rate_attack_archive_repack_local_20260527T1621Z",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "rows": [
+    {
+      "backlog_key": "frontier_rate_attack:archive_zip_repack_v1",
+      "context": {
+        "allow_overwrite": true,
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "min_free_bytes": 0,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "sweep_archive_specs": [
+          "current_contest_cpu_frontier=experiments/results/v14_v2_dqs1_plus_fec10_substituted_20260526T023000Z/submission_dir/archive.zip"
+        ],
+        "sweep_observation_jsonl": "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_archive_repack_local_20260527T1621Z/local_results/frontier_final_rate_attack_archive_repack_local_20260527T1621Z/archive_zip_repack_v1/observations.jsonl",
+        "sweep_output_dir": "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_archive_repack_local_20260527T1621Z/local_results/frontier_final_rate_attack_archive_repack_local_20260527T1621Z/archive_zip_repack_v1",
+        "sweep_output_json": "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_archive_repack_local_20260527T1621Z/local_results/frontier_final_rate_attack_archive_repack_local_20260527T1621Z/archive_zip_repack_v1/sweep.json",
+        "target_optimization_profile": {
+          "allowed_use": "queue_metadata_pointer_to_target_optimization_profile",
+          "blockers": [],
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "declared_overfit_allowed": true,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "forbidden_use": "score_claim_or_dispatch_authority",
+          "gpu_launched": false,
+          "profile_ready": true,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "frontier_rate_attack_target_optimization_profile_queue_metadata.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "target_corpus_manifest_path": null,
+          "target_mode": "contest_video_overfit",
+          "target_profile_id": "contest_video_0",
+          "target_profile_schema": "frontier_rate_attack_target_optimization_profile.v1",
+          "target_video_paths": [
+            "upstream/videos/0.mkv"
+          ],
+          "target_video_sha256s": [
+            "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9"
+          ]
+        },
+        "zip_compression_methods": [
+          "stored",
+          "deflated"
+        ],
+        "zip_compresslevels": [
+          "1",
+          "6",
+          "9"
+        ]
+      },
+      "materializer_id": "archive_zip_repack_adapter",
+      "target_kind": "archive_zip_repack_v1"
+    },
+    {
+      "backlog_key": "frontier_rate_attack:packet_member_zip_header_elide_v1",
+      "context": {
+        "allow_overwrite": true,
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "member_name": "x",
+        "min_free_bytes": 0,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "sweep_archive_specs": [
+          "current_contest_cpu_frontier=experiments/results/v14_v2_dqs1_plus_fec10_substituted_20260526T023000Z/submission_dir/archive.zip"
+        ],
+        "sweep_observation_jsonl": "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_archive_repack_local_20260527T1621Z/local_results/frontier_final_rate_attack_archive_repack_local_20260527T1621Z/packet_member_zip_header_elide_v1/observations.jsonl",
+        "sweep_output_dir": "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_archive_repack_local_20260527T1621Z/local_results/frontier_final_rate_attack_archive_repack_local_20260527T1621Z/packet_member_zip_header_elide_v1",
+        "sweep_output_json": "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_archive_repack_local_20260527T1621Z/local_results/frontier_final_rate_attack_archive_repack_local_20260527T1621Z/packet_member_zip_header_elide_v1/sweep.json",
+        "target_optimization_profile": {
+          "allowed_use": "queue_metadata_pointer_to_target_optimization_profile",
+          "blockers": [],
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "declared_overfit_allowed": true,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "forbidden_use": "score_claim_or_dispatch_authority",
+          "gpu_launched": false,
+          "profile_ready": true,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "frontier_rate_attack_target_optimization_profile_queue_metadata.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "target_corpus_manifest_path": null,
+          "target_mode": "contest_video_overfit",
+          "target_profile_id": "contest_video_0",
+          "target_profile_schema": "frontier_rate_attack_target_optimization_profile.v1",
+          "target_video_paths": [
+            "upstream/videos/0.mkv"
+          ],
+          "target_video_sha256s": [
+            "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9"
+          ]
+        }
+      },
+      "materializer_id": "packet_member_zip_header_elide_adapter",
+      "target_kind": "packet_member_zip_header_elide_v1"
+    },
+    {
+      "backlog_key": "frontier_rate_attack:packet_member_recompress_v1",
+      "context": {
+        "allow_overwrite": true,
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "member_name": "x",
+        "min_free_bytes": 0,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "sweep_archive_specs": [
+          "current_contest_cpu_frontier=experiments/results/v14_v2_dqs1_plus_fec10_substituted_20260526T023000Z/submission_dir/archive.zip"
+        ],
+        "sweep_observation_jsonl": "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_archive_repack_local_20260527T1621Z/local_results/frontier_final_rate_attack_archive_repack_local_20260527T1621Z/packet_member_recompress_v1/observations.jsonl",
+        "sweep_output_dir": "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_archive_repack_local_20260527T1621Z/local_results/frontier_final_rate_attack_archive_repack_local_20260527T1621Z/packet_member_recompress_v1",
+        "sweep_output_json": "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_archive_repack_local_20260527T1621Z/local_results/frontier_final_rate_attack_archive_repack_local_20260527T1621Z/packet_member_recompress_v1/sweep.json",
+        "target_optimization_profile": {
+          "allowed_use": "queue_metadata_pointer_to_target_optimization_profile",
+          "blockers": [],
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "declared_overfit_allowed": true,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "forbidden_use": "score_claim_or_dispatch_authority",
+          "gpu_launched": false,
+          "profile_ready": true,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "frontier_rate_attack_target_optimization_profile_queue_metadata.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "target_corpus_manifest_path": null,
+          "target_mode": "contest_video_overfit",
+          "target_profile_id": "contest_video_0",
+          "target_profile_schema": "frontier_rate_attack_target_optimization_profile.v1",
+          "target_video_paths": [
+            "upstream/videos/0.mkv"
+          ],
+          "target_video_sha256s": [
+            "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9"
+          ]
+        },
+        "zip_compression_methods": [
+          "stored",
+          "deflated"
+        ],
+        "zip_compresslevels": [
+          "1",
+          "6",
+          "9"
+        ]
+      },
+      "materializer_id": "packet_member_recompress_adapter",
+      "target_kind": "packet_member_recompress_v1"
+    }
+  ],
+  "schema": "byte_shaving_materializer_contexts.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "target_modes": [
+    "contest_exact_eval_planning"
+  ],
+  "target_optimization_profile": {
+    "allowed_use": "queue_metadata_pointer_to_target_optimization_profile",
+    "blockers": [],
+    "charged_bits_changed": false,
+    "contest_cuda_auth_eval": false,
+    "declared_overfit_allowed": true,
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "forbidden_use": "score_claim_or_dispatch_authority",
+    "gpu_launched": false,
+    "profile_ready": true,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "frontier_rate_attack_target_optimization_profile_queue_metadata.v1",
+    "score_affecting_payload_changed": false,
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "target_corpus_manifest_path": null,
+    "target_mode": "contest_video_overfit",
+    "target_profile_id": "contest_video_0",
+    "target_profile_schema": "frontier_rate_attack_target_optimization_profile.v1",
+    "target_video_paths": [
+      "upstream/videos/0.mkv"
+    ],
+    "target_video_sha256s": [
+      "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9"
+    ]
+  }
+}

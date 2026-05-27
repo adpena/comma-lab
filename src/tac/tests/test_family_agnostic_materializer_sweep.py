@@ -419,16 +419,15 @@ def test_materializer_empirical_sweep_supports_archive_section_entropy_recode(
     assert row["section_recode"]["selected_section_names"] == ["payload_brotli"]
     assert row["saved_bytes"] > 0
     assert row["rate_positive"] is True
-    assert row["receiver_contract_satisfied"] is False
-    assert row["observed_score_gain"] == 0.0
-    assert "section_length_changed_requires_runtime_consumption_proof" in (
-        row["readiness_blockers"]
-    )
+    assert row["receiver_contract_satisfied"] is True
+    assert row["observed_score_gain"] > 0.0
+    assert row["readiness_blockers"] == []
     assert row["recommended_planner_action"] == (
-        "repair_receiver_contract_before_exact_readiness"
+        "keep_rate_positive_candidate_for_inflate_parity_gate"
     )
     assert row["score_claim"] is False
     assert Path(row["candidate_archive_path"]).is_file()
+    assert Path(row["runtime_consumption_proof_path"]).is_file()
 
 
 def test_materializer_empirical_sweep_cli_writes_json_and_jsonl(

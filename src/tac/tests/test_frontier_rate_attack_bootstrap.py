@@ -19,6 +19,7 @@ from comma_lab.scheduler.byte_shaving_campaign_queue import (
 )
 from comma_lab.scheduler.byte_shaving_materializer_registry import (
     ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+    ARCHIVE_ZIP_REPACK_TARGET_KIND,
     PACKET_MEMBER_MERGE_TARGET_KIND,
     PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
@@ -142,6 +143,28 @@ def test_frontier_bootstrap_builds_queue_with_experiment_metadata(tmp_path: Path
         assert metadata["score_claim"] is False
         assert metadata["ready_for_exact_eval_dispatch"] is False
         assert metadata["exact_readiness_followup_requested"] is False
+
+
+def test_frontier_bootstrap_default_targets_include_archive_zip_repack(
+    tmp_path: Path,
+) -> None:
+    archive_path = _write_archive(tmp_path / "archive.zip", member_name="payload.bin")
+    record = archive_record(
+        label="frontier",
+        archive_path=archive_path,
+        repo_root=tmp_path,
+        source_kind="unit_test",
+    )
+
+    payloads = build_frontier_rate_attack_payloads(
+        repo_root=tmp_path,
+        queue_id="frontier_final_rate_attack_default_targets",
+        archive_records=[record],
+        results_root=tmp_path / "results",
+        include_optional_target_blockers=False,
+    )
+
+    assert ARCHIVE_ZIP_REPACK_TARGET_KIND in payloads["bootstrap"]["executable_target_kinds"]
 
 
 def test_frontier_bootstrap_propagates_declared_video_scope_to_queue(
@@ -363,7 +386,7 @@ def test_frontier_bootstrap_omits_receiver_targets_per_archive_without_freezing_
 
     bootstrap = payloads["bootstrap"]
     assert bootstrap["executable_target_kinds"] == [
-        PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND
+        PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
     ]
     omissions = {
         (row["target_kind"], row["archive_label"]): row

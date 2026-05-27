@@ -113,6 +113,14 @@ FALSE_AUTHORITY: dict[str, bool] = {
     "promotable": False,
 }
 
+MATERIALIZER_RECEIVER_FEEDBACK_ARTIFACT_SCHEMAS = frozenset(
+    {
+        "archive_section_entropy_recode_candidate.v1",
+        "archive_zip_repack_candidate.v1",
+        "byte_range_entropy_recode_verified_candidate.v1",
+    }
+)
+
 ACTION_EXECUTE_FEEDBACK_FOLLOWUP = "execute_feedback_followup_queue"
 ACTION_RUN_NEXT_ITERATION = "run_next_materializer_campaign_iteration"
 ACTION_INSPECT_EXACT_HANDOFFS = "inspect_exact_readiness_handoffs"
@@ -319,10 +327,7 @@ def _is_materializer_receiver_feedback_step(step: Mapping[str, Any]) -> bool:
     return any(
         isinstance(artifact, Mapping)
         and _nonempty_str(artifact.get("json_schema"))
-        in {
-            "archive_section_entropy_recode_candidate.v1",
-            "byte_range_entropy_recode_verified_candidate.v1",
-        }
+        in MATERIALIZER_RECEIVER_FEEDBACK_ARTIFACT_SCHEMAS
         and _string_list(artifact.get("readiness_blockers"))
         for artifact in _as_list(step.get("expected_artifacts"))
     )

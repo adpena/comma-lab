@@ -389,6 +389,79 @@ def test_queue_observation_recovery_plan_records_receiver_negative_artifact_feed
     assert receiver_groups[0]["ready_for_exact_eval_dispatch"] is False
 
 
+def test_queue_observation_recovery_plan_records_archive_zip_repack_blocker_feedback() -> None:
+    plan = build_queue_observation_recovery_plan(
+        {
+            "schema": "experiment_queue_observation.v1",
+            "queue_id": "campaign_queue",
+            "healthy": False,
+            "blockers": [
+                "experiment_queue_observation_artifact_postcondition_failures:1"
+            ],
+            "succeeded_artifact_failure_steps": [
+                {
+                    "experiment_id": "exp0",
+                    "step_id": "archive_zip_repack",
+                    "status": "succeeded",
+                    "target_kind": "archive_zip_repack_v1",
+                    "materializer_id": "archive_zip_repack_adapter",
+                    "receiver_contract_kind": "family_agnostic_archive_zip_repack",
+                    "expected_artifacts": [
+                        {
+                            "path": "archive_zip_repack/candidate.json",
+                            "exists": True,
+                            "postcondition_passed": False,
+                            "json_schema": "archive_zip_repack_candidate.v1",
+                            "receiver_contract_satisfied": True,
+                            "readiness_blockers": ["candidate_not_rate_positive"],
+                            "receiver_verification": {
+                                "schema": (
+                                    "family_agnostic_runtime_consumption_proof_"
+                                    "verification.v1"
+                                ),
+                                "receiver_contract_satisfied": True,
+                                "blockers": [],
+                            },
+                        }
+                    ],
+                }
+            ],
+        },
+        queue_path="queue.json",
+        state_path="queue.sqlite",
+    )
+
+    actions = {item["action"]: item for item in plan["actions"]}
+    feedback = actions["record_materializer_receiver_feedback"]
+
+    assert "rewind_succeeded_step_with_artifact_failure" not in actions
+    assert feedback["required"] is False
+    assert feedback["command"] is None
+    assert feedback["target_kind"] == "archive_zip_repack_v1"
+    assert feedback["materializer_id"] == "archive_zip_repack_adapter"
+    assert feedback["receiver_contract_kind"] == "family_agnostic_archive_zip_repack"
+    assert feedback["expected_artifact_paths"] == [
+        "archive_zip_repack/candidate.json"
+    ]
+    assert (
+        "materializer_readiness_blocker:candidate_not_rate_positive"
+        in feedback["blocker_sources"]
+    )
+    receiver_groups = [
+        group
+        for group in plan["grouped_blockers"]
+        if group["scope_kind"] == "materializer_receiver"
+    ]
+    assert receiver_groups
+    assert receiver_groups[0]["scope_value"] == (
+        "archive_zip_repack_adapter:family_agnostic_archive_zip_repack"
+    )
+    assert receiver_groups[0]["recommended_planning_effect"] == (
+        "advisory_maintenance_only"
+    )
+    assert receiver_groups[0]["ready_for_exact_eval_dispatch"] is False
+
+
 def test_feedback_replan_policy_executes_safe_followup_queue() -> None:
     policy = build_queue_feedback_replan_policy(
         _run_summary(),

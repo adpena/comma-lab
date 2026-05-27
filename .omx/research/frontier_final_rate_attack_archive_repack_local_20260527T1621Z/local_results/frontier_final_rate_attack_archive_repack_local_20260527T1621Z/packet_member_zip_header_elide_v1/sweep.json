@@ -1,0 +1,188 @@
+{
+  "archive_count": 1,
+  "blockers": [
+    "materializer_sweep_found_no_rate_positive_archives"
+  ],
+  "dispatch_attempted": false,
+  "gpu_launched": false,
+  "materializer_id": "packet_member_zip_header_elide_adapter",
+  "max_saved_bytes": 0,
+  "observation_count": 1,
+  "observations": [
+    {
+      "archive_delta_status": "no_realized_delta",
+      "archive_label": "current_contest_cpu_frontier",
+      "artifact_bytes": 178546,
+      "axis": "[local-materializer-proof]",
+      "backlog_keys": [],
+      "cache_identity": {
+        "cache_sha256": "0a3abfe645c4fac0df9ea89237f25dd9bfc6b2471b897c36d7437795d27d1403",
+        "source_archive_sha256": "0a3abfe645c4fac0df9ea89237f25dd9bfc6b2471b897c36d7437795d27d1403"
+      },
+      "candidate_archive_bytes": 178546,
+      "candidate_archive_path": "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_archive_repack_local_20260527T1621Z/local_results/frontier_final_rate_attack_archive_repack_local_20260527T1621Z/packet_member_zip_header_elide_v1/rows/001_current_contest_cpu_frontier_0a3abfe645c4/candidate.zip",
+      "candidate_archive_sha256": "0a3abfe645c4fac0df9ea89237f25dd9bfc6b2471b897c36d7437795d27d1403",
+      "candidate_id": "001_current_contest_cpu_frontier_0a3abfe645c4",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "downstream_entropy_coder_rerun_recommended": false,
+      "entropy_phase": "runtime",
+      "entropy_position": {
+        "downstream_entropy_coder_rerun_recommended": false,
+        "entropy_information_effect": "changes_runtime_or_receiver_payload_overhead",
+        "entropy_phase": "runtime",
+        "entropy_position_class": "after_entropy_coder_container_runtime_overhead",
+        "entropy_position_composition_key": "P16_runtime_payload",
+        "entropy_position_composition_rule": "can_save_overhead_but_requires_runtime_consumption_proof",
+        "entropy_position_id": "P16",
+        "entropy_position_name": "runtime_payload_and_inflate",
+        "operation_family": null,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "entropy_position_classification.v1",
+        "score_claim": false,
+        "target_kind": "packet_member_zip_header_elide_v1"
+      },
+      "entropy_position_class": "after_entropy_coder_container_runtime_overhead",
+      "entropy_position_composition_key": "P16_runtime_payload",
+      "entropy_position_composition_rule": "can_save_overhead_but_requires_runtime_consumption_proof",
+      "entropy_position_id": "P16",
+      "exact_cuda_auth_eval": false,
+      "factorization": {},
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "inflate_parity_satisfied": false,
+      "manifest_path": "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_archive_repack_local_20260527T1621Z/local_results/frontier_final_rate_attack_archive_repack_local_20260527T1621Z/packet_member_zip_header_elide_v1/rows/001_current_contest_cpu_frontier_0a3abfe645c4/candidate.json",
+      "materializer_id": "packet_member_zip_header_elide_adapter",
+      "observation_feedback_is_not_score_authority": true,
+      "observation_id": "001_current_contest_cpu_frontier_0a3abfe645c4",
+      "observation_kind": "family_agnostic_materializer_empirical_observation",
+      "observed_rate_gain": 0.0,
+      "observed_score_gain": 0.0,
+      "portability_contract": {
+        "deterministic_surface": "python_stdlib_raw_zip32_wire_rewrite",
+        "implementation_language": "python",
+        "materializer_id": "packet_member_zip_header_elide_adapter",
+        "notes": null,
+        "portability_class": "portable_python_reference",
+        "promotion_authority": false,
+        "rank_or_kill_authority": false,
+        "required_python_modules": [
+          "struct",
+          "zipfile"
+        ],
+        "requires_cuda": false,
+        "requires_gpu": false,
+        "requires_metal": false,
+        "requires_mlx": false,
+        "requires_mps": false,
+        "schema": "family_agnostic_materializer_portability_contract.v1",
+        "score_authority": false,
+        "target_kind": "packet_member_zip_header_elide_v1",
+        "unsupported_features": [
+          "zip64",
+          "data_descriptors",
+          "duplicate_member_names"
+        ]
+      },
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rate_positive": false,
+      "readiness_blockers": [
+        "candidate_not_rate_positive"
+      ],
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_contract_kind": "family_agnostic_packet_member_zip_header_elide",
+      "receiver_contract_satisfied": true,
+      "receiver_verification_blockers": [],
+      "recommended_planner_action": "demote_matching_archive_class_for_header_elide",
+      "resource_kind": "local_cpu",
+      "runtime_consumption_proof_path": "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_archive_repack_local_20260527T1621Z/local_results/frontier_final_rate_attack_archive_repack_local_20260527T1621Z/packet_member_zip_header_elide_v1/rows/001_current_contest_cpu_frontier_0a3abfe645c4/candidate.runtime_consumption_proof.json",
+      "runtime_identity": {
+        "runtime_contract_sha256": "305767e49f67e9005ab8ae257dd4e1eb4dedaf803273a629da6728679217fefc",
+        "scorer_version": "family_agnostic_materializer_empirical_sweep.v1"
+      },
+      "saved_bytes": 0,
+      "savings_realized": false,
+      "schema": "family_agnostic_materializer_empirical_observation.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "section_recode": {},
+      "selected_compression": {},
+      "selected_elision": {
+        "candidate_archive_bytes": 178546,
+        "elided_header_bytes": 0,
+        "saved_bytes": 0,
+        "selected_member_names": [
+          "x"
+        ],
+        "source_archive_bytes": 178546,
+        "strip_archive_comment": true,
+        "strip_member_comment": true,
+        "strip_member_extra": true
+      },
+      "selected_materialization": {
+        "candidate_archive_bytes": 178546,
+        "elided_header_bytes": 0,
+        "saved_bytes": 0,
+        "selected_member_names": [
+          "x"
+        ],
+        "source_archive_bytes": 178546,
+        "strip_archive_comment": true,
+        "strip_member_comment": true,
+        "strip_member_extra": true
+      },
+      "selected_materialization_key": "selected_elision",
+      "selected_member_name": "x",
+      "selected_member_names": [
+        "x"
+      ],
+      "selected_merge": {},
+      "selected_payload": {},
+      "selected_repack": {},
+      "selection_scope": "single_member",
+      "serialized_archive_delta": {},
+      "source_archive_bytes": 178546,
+      "source_archive_path": "/Users/adpena/Projects/pact/experiments/results/v14_v2_dqs1_plus_fec10_substituted_20260526T023000Z/submission_dir/archive.zip",
+      "source_archive_sha256": "0a3abfe645c4fac0df9ea89237f25dd9bfc6b2471b897c36d7437795d27d1403",
+      "source_path": "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_archive_repack_local_20260527T1621Z/local_results/frontier_final_rate_attack_archive_repack_local_20260527T1621Z/packet_member_zip_header_elide_v1/rows/001_current_contest_cpu_frontier_0a3abfe645c4/candidate.json",
+      "source_selection_ids": [],
+      "source_unit_ids": [
+        "x"
+      ],
+      "target_kind": "packet_member_zip_header_elide_v1",
+      "work_ids": []
+    }
+  ],
+  "planner_feedback": {
+    "blocker_counts": {
+      "candidate_not_rate_positive": 1
+    },
+    "observation_kind": "materializer_rate_observation",
+    "rate_nonpositive_count": 1,
+    "rate_positive_count": 0,
+    "ready_for_exact_eval_dispatch": false,
+    "receiver_negative_count": 0,
+    "recommended_acquisition_rule": "demote_packet_member_zip_header_elide_v1_for_matching_archive_class",
+    "schema": "family_agnostic_materializer_planner_feedback.v1",
+    "score_claim": false,
+    "target_kind": "packet_member_zip_header_elide_v1"
+  },
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "rate_nonpositive_count": 1,
+  "rate_positive_count": 0,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "family_agnostic_materializer_empirical_sweep.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "target_kind": "packet_member_zip_header_elide_v1",
+  "total_positive_saved_bytes": 0
+}
