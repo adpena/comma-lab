@@ -78,6 +78,7 @@ def main(argv: list[str] | None = None) -> int:
             repair_budget_materialization_plan_path=args.materialization_plan,
             response_harvests_by_path=_load_response_harvests(plan),
             candidate_chain_ids=tuple(args.candidate_chain_id),
+            repo_root=REPO_ROOT,
         )
         output_manifest = _resolve_repo_path(args.output_manifest)
         expected_existing_sha256 = None

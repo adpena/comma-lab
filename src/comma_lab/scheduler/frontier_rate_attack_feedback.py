@@ -91,6 +91,17 @@ from .frontier_rate_attack_target_profile import (
     target_optimization_profile_queue_metadata,
 )
 
+_DEFAULT_REPO_ROOT = Path(__file__).resolve().parents[3]
+RUNTIME_CONSUMPTION_PROOF_REVALIDATION_SCHEMA = (
+    "frontier_rate_attack_runtime_consumption_proof_revalidation.v1"
+)
+RUNTIME_CONSUMPTION_PROOF_SUCCESS_FIELDS = (
+    "passed",
+    "runtime_consumption_proof_passed",
+    "full_frame_inflate_parity_satisfied",
+    "source_runtime_unpacker_parse_satisfied",
+)
+
 FEEDBACK_REFRESH_SCHEMA = "frontier_rate_attack_feedback_refresh.v1"
 FRONTIER_RATE_ATTACK_FEEDBACK_REFRESH_SCHEMA = FEEDBACK_REFRESH_SCHEMA
 PAIR_FRAME_GEOMETRY_DISCOVERY_SCHEMA = (
@@ -788,6 +799,173 @@ def _load_jsonl(path: Path) -> list[dict[str, Any]]:
             )
         rows.append(row)
     return rows
+
+
+def _sha256_or_none(value: Any) -> str | None:
+    text = str(value or "").strip().lower()
+    if len(text) == 64 and all(char in "0123456789abcdef" for char in text):
+        return text
+    return None
+
+
+def _proof_candidate_archive_sha256(proof: Mapping[str, Any]) -> str | None:
+    candidate_archive = proof.get("candidate_archive")
+    if isinstance(candidate_archive, Mapping):
+        nested = _sha256_or_none(candidate_archive.get("sha256"))
+        if nested is not None:
+            return nested
+    for key in ("candidate_archive_sha256", "archive_sha256"):
+        value = _sha256_or_none(proof.get(key))
+        if value is not None:
+            return value
+    return None
+
+
+def _runtime_consumption_proof_revalidation(
+    *,
+    proof_path_text: str | Path | None,
+    repo_root: str | Path = _DEFAULT_REPO_ROOT,
+    expected_candidate_archive_sha256: str | None = None,
+    context: str = "runtime_consumption_proof",
+) -> dict[str, Any]:
+    """Revalidate receiver proof from the JSON artifact, never from queue booleans."""
+
+    blockers: list[str] = []
+    proof_payload: dict[str, Any] = {}
+    proof_path = str(proof_path_text or "").strip()
+    resolved_path: Path | None = None
+    if not proof_path:
+        blockers.append(f"{context}_path_missing")
+    else:
+        resolved_path = _resolve_path(proof_path, repo_root=Path(repo_root))
+        if not resolved_path.is_file():
+            blockers.append(f"{context}_file_missing")
+        elif resolved_path.suffix != ".json":
+            blockers.append(f"{context}_json_file_required")
+        else:
+            try:
+                proof_payload = _load_json(resolved_path)
+            except FrontierRateAttackFeedbackError:
+                blockers.append(f"{context}_json_invalid")
+            else:
+                try:
+                    require_no_truthy_authority_fields(
+                        proof_payload,
+                        context=f"{context}:{proof_path}",
+                    )
+                except ValueError:
+                    blockers.append(f"{context}_truthy_authority_present")
+                payload_blockers = _string_list(proof_payload.get("blockers"))
+                if payload_blockers:
+                    blockers.append(f"{context}_json_blockers_present")
+                    blockers.extend(
+                        f"{context}:{blocker}" for blocker in payload_blockers
+                    )
+                if not any(
+                    proof_payload.get(key) is True
+                    for key in RUNTIME_CONSUMPTION_PROOF_SUCCESS_FIELDS
+                ):
+                    blockers.append(f"{context}_success_flag_missing")
+                if not (
+                    proof_payload.get("receiver_contract_satisfied") is True
+                    or proof_payload.get("runtime_consumption_proof_passed") is True
+                ):
+                    blockers.append(f"{context}_receiver_contract_not_satisfied")
+                for key in (
+                    "passed",
+                    "runtime_consumption_proof_passed",
+                    "receiver_contract_satisfied",
+                ):
+                    if key in proof_payload and proof_payload.get(key) is not True:
+                        blockers.append(f"{context}_{key}_not_true")
+                expected_sha = _sha256_or_none(expected_candidate_archive_sha256)
+                proof_sha = _proof_candidate_archive_sha256(proof_payload)
+                if expected_sha is not None:
+                    if proof_sha is None:
+                        blockers.append(f"{context}_candidate_archive_sha256_missing")
+                    elif proof_sha != expected_sha:
+                        blockers.append(f"{context}_candidate_archive_sha256_mismatch")
+    valid = not blockers
+    return {
+        "schema": RUNTIME_CONSUMPTION_PROOF_REVALIDATION_SCHEMA,
+        "context": context,
+        "proof_path": proof_path or None,
+        "resolved_proof_path": str(resolved_path) if resolved_path is not None else None,
+        "proof_file_present": bool(resolved_path is not None and resolved_path.is_file()),
+        "proof_present": valid,
+        "proof_valid": valid,
+        "proof_schema": proof_payload.get("schema"),
+        "expected_candidate_archive_sha256": _sha256_or_none(
+            expected_candidate_archive_sha256
+        ),
+        "candidate_archive_sha256": _proof_candidate_archive_sha256(proof_payload),
+        "receiver_contract_satisfied": bool(
+            valid
+            and (
+                proof_payload.get("receiver_contract_satisfied") is True
+                or proof_payload.get("runtime_consumption_proof_passed") is True
+            )
+        ),
+        "runtime_consumption_proof_passed": bool(
+            valid
+            and any(
+                proof_payload.get(key) is True
+                for key in RUNTIME_CONSUMPTION_PROOF_SUCCESS_FIELDS
+            )
+        ),
+        "blockers": _unique_strings(blockers),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _candidate_archive_revalidation(
+    *,
+    archive_path_text: str | Path | None,
+    archive_sha256: str | None,
+    archive_bytes: Any = None,
+    repo_root: str | Path = _DEFAULT_REPO_ROOT,
+    context: str = "candidate_archive",
+) -> dict[str, Any]:
+    blockers: list[str] = []
+    archive_path = str(archive_path_text or "").strip()
+    expected_sha = _sha256_or_none(archive_sha256)
+    resolved_path: Path | None = None
+    actual_sha: str | None = None
+    if not archive_path:
+        blockers.append(f"{context}_path_missing")
+    elif expected_sha is None:
+        blockers.append(f"{context}_sha256_missing")
+    else:
+        resolved_path = _resolve_path(archive_path, repo_root=Path(repo_root))
+        if not resolved_path.is_file():
+            blockers.append(f"{context}_file_missing")
+        else:
+            actual_sha = _sha256_file(resolved_path)
+            if actual_sha != expected_sha:
+                blockers.append(f"{context}_file_sha256_mismatch")
+            elif (
+                isinstance(archive_bytes, int)
+                and not isinstance(archive_bytes, bool)
+                and resolved_path.stat().st_size != archive_bytes
+            ):
+                blockers.append(f"{context}_file_bytes_mismatch")
+    valid = not blockers
+    return {
+        "schema": "frontier_rate_attack_candidate_archive_revalidation.v1",
+        "context": context,
+        "archive_path": archive_path or None,
+        "resolved_archive_path": (
+            str(resolved_path) if resolved_path is not None else None
+        ),
+        "expected_sha256": expected_sha,
+        "actual_sha256": actual_sha,
+        "archive_file_present": bool(
+            resolved_path is not None and resolved_path.is_file()
+        ),
+        "archive_valid": valid,
+        "blockers": _unique_strings(blockers),
+        **FALSE_AUTHORITY,
+    }
 
 
 def _finite_float_or_none(value: object) -> float | None:
@@ -7914,6 +8092,7 @@ def _repair_budget_rate_only_parent_row(
     chain_id: str,
     rate_budget_preservation_plan: Mapping[str, Any],
     work_order: Mapping[str, Any],
+    repo_root: str | Path = _DEFAULT_REPO_ROOT,
 ) -> dict[str, Any]:
     rate_rows = [
         row
@@ -7960,22 +8139,37 @@ def _repair_budget_rate_only_parent_row(
     )
     archive_path = str(receiver_credit.get("archive_path") or "").strip()
     archive_sha = str(receiver_credit.get("archive_sha256") or "").strip()
+    archive_bytes = receiver_credit.get("archive_bytes")
     runtime_proof_path = str(
         receiver_credit.get("runtime_consumption_proof_path") or ""
     ).strip()
-    archive_materialized = bool(archive_path and archive_sha)
-    runtime_proof_present = bool(runtime_proof_path) or (
-        receiver_credit.get("receiver_closed") is True
+    archive_revalidation = _candidate_archive_revalidation(
+        archive_path_text=archive_path,
+        archive_sha256=archive_sha,
+        archive_bytes=archive_bytes,
+        repo_root=repo_root,
+        context="receiver_closed_rate_credit_archive",
     )
+    proof_revalidation = _runtime_consumption_proof_revalidation(
+        proof_path_text=runtime_proof_path,
+        repo_root=repo_root,
+        expected_candidate_archive_sha256=archive_sha,
+        context="receiver_closed_rate_credit_runtime_consumption_proof",
+    )
+    archive_materialized = archive_revalidation["archive_valid"] is True
+    runtime_proof_present = proof_revalidation["proof_valid"] is True
     receiver_consumed = bool(
         archive_materialized
         and runtime_proof_present
         and receiver_credit.get("receiver_closed") is True
+        and proof_revalidation["receiver_contract_satisfied"] is True
     )
     blockers = [
         "full_frame_inflate_parity_required_before_exact_readiness",
         "exact_auth_eval_required_before_score_or_promotion_claim",
     ]
+    blockers.extend(_string_list(archive_revalidation.get("blockers")))
+    blockers.extend(_string_list(proof_revalidation.get("blockers")))
     if not archive_materialized:
         blockers.append("rate_only_candidate_archive_materialization_missing")
     if not runtime_proof_present or not receiver_consumed:
@@ -8020,9 +8214,11 @@ def _repair_budget_rate_only_parent_row(
         "candidate_archive_materialized": archive_materialized,
         "candidate_archive_path": archive_path or None,
         "candidate_archive_sha256": archive_sha or None,
-        "candidate_archive_bytes": receiver_credit.get("archive_bytes"),
+        "candidate_archive_bytes": archive_bytes,
+        "candidate_archive_revalidation": archive_revalidation,
         "runtime_consumption_proof_path": runtime_proof_path or None,
         "runtime_consumption_proof_present": runtime_proof_present,
+        "runtime_consumption_proof_revalidation": proof_revalidation,
         "receiver_consumed": receiver_consumed,
         "component_response_replayed": False,
         "budget_spend_allowed": False,
@@ -8264,6 +8460,7 @@ def build_frontier_repair_budget_materialization_plan(
     *,
     repair_budget_waterfill_work_order: Mapping[str, Any],
     repair_budget_waterfill_work_order_path: str | Path | None = None,
+    repo_root: str | Path = _DEFAULT_REPO_ROOT,
 ) -> dict[str, Any]:
     """Turn repair-waterfill allocations into parent/child candidate custody."""
 
@@ -8298,6 +8495,7 @@ def build_frontier_repair_budget_materialization_plan(
         chain_id=chain_id,
         rate_budget_preservation_plan=rate_budget_preservation_plan,
         work_order=repair_budget_waterfill_work_order,
+        repo_root=repo_root,
     )
     child_rows = _repair_budget_spent_child_rows(
         chain_id=chain_id,
@@ -8428,6 +8626,7 @@ def _repair_child_component_replay_manifest(
     materialization_plan_path: str | Path | None,
     response_harvest_path: str | Path,
     response_harvest: Mapping[str, Any],
+    repo_root: str | Path = _DEFAULT_REPO_ROOT,
 ) -> dict[str, Any]:
     require_no_truthy_authority_fields(
         response_harvest,
@@ -8461,10 +8660,17 @@ def _repair_child_component_replay_manifest(
     runtime_proof_path = str(
         child_row.get("runtime_consumption_proof_path") or ""
     ).strip()
-    receiver_consumed = child_row.get("receiver_consumed") is True
-    receiver_proof_present = (
-        child_row.get("runtime_consumption_proof_present") is True
-        or bool(runtime_proof_path)
+    proof_revalidation = _runtime_consumption_proof_revalidation(
+        proof_path_text=runtime_proof_path,
+        repo_root=repo_root,
+        expected_candidate_archive_sha256=archive_sha,
+        context="child_runtime_consumption_proof",
+    )
+    receiver_proof_present = proof_revalidation["proof_valid"] is True
+    receiver_consumed = bool(
+        child_row.get("receiver_consumed") is True
+        and receiver_proof_present
+        and proof_revalidation["receiver_contract_satisfied"] is True
     )
     archive_materialized = (
         child_row.get("candidate_archive_materialized") is True
@@ -8473,6 +8679,7 @@ def _repair_child_component_replay_manifest(
     )
     if not archive_materialized:
         blockers.append("repair_candidate_archive_materialization_missing")
+    blockers.extend(_string_list(proof_revalidation.get("blockers")))
     if not receiver_proof_present or not receiver_consumed:
         blockers.append("receiver_runtime_consumption_proof_missing")
     replayed = bool(local_mlx_response_path and axis_tag == "[macOS-MLX research-signal]")
@@ -8514,6 +8721,7 @@ def _repair_child_component_replay_manifest(
             "proof_present": receiver_proof_present,
             "receiver_contract_satisfied": receiver_consumed,
             "runtime_consumption_proof_passed": receiver_consumed,
+            "proof_revalidation": proof_revalidation,
             **FALSE_AUTHORITY,
         },
         "component_response_replayed": replayed,
@@ -8560,6 +8768,7 @@ def build_frontier_repair_budget_child_component_replay_manifests(
     repair_budget_materialization_plan_path: str | Path | None = None,
     response_harvests_by_path: Mapping[str | Path, Mapping[str, Any]] | None = None,
     candidate_chain_ids: Sequence[str] = (),
+    repo_root: str | Path = _DEFAULT_REPO_ROOT,
 ) -> dict[str, Any]:
     """Emit replay-evidence manifests for repair-budget child plan rows."""
 
@@ -8606,6 +8815,7 @@ def build_frontier_repair_budget_child_component_replay_manifests(
                 materialization_plan_path=repair_budget_materialization_plan_path,
                 response_harvest_path=response_path,
                 response_harvest=response_harvest,
+                repo_root=repo_root,
             )
         )
     if not manifests:
@@ -8965,27 +9175,13 @@ def _materializer_manifest_record(
                     readiness_blockers.append("candidate_archive_file_bytes_mismatch")
                 else:
                     candidate_archive_verified = True
-    runtime_proof_verified = False
-    if runtime_proof_path:
-        proof_path = _resolve_path(runtime_proof_path, repo_root=repo_root)
-        if not proof_path.is_file():
-            proof_blockers.append("runtime_consumption_proof_file_missing")
-        else:
-            runtime_proof_verified = True
-            try:
-                proof_payload = _load_json(proof_path)
-            except FrontierRateAttackFeedbackError:
-                proof_blockers.append("runtime_consumption_proof_json_invalid")
-            else:
-                proof_blockers.extend(
-                    f"runtime_consumption_proof:{blocker}"
-                    for blocker in _string_list(proof_payload.get("blockers"))
-                )
-    elif (
-        receiver_verification.get("proof_present") is True
-        or receiver_verification.get("runtime_consumption_proof_passed") is True
-    ):
-        proof_blockers.append("runtime_consumption_proof_path_missing")
+    proof_revalidation = _runtime_consumption_proof_revalidation(
+        proof_path_text=runtime_proof_path,
+        repo_root=repo_root,
+        expected_candidate_archive_sha256=candidate_archive_sha,
+        context="runtime_consumption_proof",
+    )
+    proof_blockers.extend(_string_list(proof_revalidation.get("blockers")))
     receiver_blockers = [
         f"receiver_verification:{blocker}"
         for blocker in _string_list(receiver_verification.get("blockers"))
@@ -8993,10 +9189,11 @@ def _materializer_manifest_record(
     readiness_blockers.extend(proof_blockers)
     readiness_blockers.extend(receiver_blockers)
     readiness_blockers = _unique_strings(readiness_blockers)
-    runtime_proof_present = runtime_proof_verified
+    runtime_proof_present = proof_revalidation["proof_valid"] is True
     receiver_consumed = bool(
-        runtime_proof_verified
+        runtime_proof_present
         and receiver_contract_satisfied
+        and proof_revalidation["receiver_contract_satisfied"] is True
         and not proof_blockers
         and not receiver_blockers
     )
@@ -9015,6 +9212,7 @@ def _materializer_manifest_record(
         "source_archive_sha256": source_archive.get("sha256"),
         "runtime_consumption_proof_path": runtime_proof_path or None,
         "runtime_consumption_proof_present": runtime_proof_present,
+        "runtime_consumption_proof_revalidation": proof_revalidation,
         "receiver_contract_kind": manifest.get("receiver_contract_kind"),
         "receiver_contract_satisfied": receiver_contract_satisfied,
         "runtime_adapter_ready": manifest.get("runtime_adapter_ready") is True,
@@ -9333,6 +9531,10 @@ def _repair_budget_materializer_binding_row(
         "runtime_consumption_proof_path": selected.get(
             "runtime_consumption_proof_path"
         ),
+        "runtime_consumption_proof_revalidation": (
+            selected.get("runtime_consumption_proof_revalidation")
+            or plan_row.get("runtime_consumption_proof_revalidation")
+        ),
         "repair_dynamics_prior": dict(
             selected.get("repair_dynamics_prior")
             if isinstance(selected.get("repair_dynamics_prior"), Mapping)
@@ -9628,12 +9830,9 @@ def _repair_budget_materialization_execution_row(
             or binding_row.get("candidate_archive_materialized") is True
         )
         runtime_proof_present = (
-            runtime_proof_present
-            or binding_row.get("runtime_consumption_proof_present") is True
+            binding_row.get("runtime_consumption_proof_present") is True
         )
-        receiver_consumed = (
-            receiver_consumed or binding_row.get("receiver_consumed") is True
-        )
+        receiver_consumed = binding_row.get("receiver_consumed") is True
         component_replayed = (
             component_replayed
             or binding_row.get("component_response_replayed") is True

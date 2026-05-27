@@ -56,6 +56,7 @@ def main(argv: list[str] | None = None) -> int:
         materialization_plan = build_frontier_repair_budget_materialization_plan(
             repair_budget_waterfill_work_order=_load_json(work_order_path),
             repair_budget_waterfill_work_order_path=args.work_order,
+            repo_root=REPO_ROOT,
         )
         materialization_plan_out = _resolve_repo_path(args.materialization_plan_out)
         expected_existing_sha256 = None

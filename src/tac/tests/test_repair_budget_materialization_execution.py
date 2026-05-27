@@ -51,6 +51,31 @@ def _sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _write_runtime_consumption_proof(
+    proof_path: Path,
+    *,
+    archive_path: Path,
+    archive_sha256: str,
+) -> Path:
+    return _write_json(
+        proof_path,
+        {
+            "schema": "family_agnostic_runtime_consumption_proof_v1",
+            "candidate_archive": {
+                "path": str(archive_path),
+                "sha256": archive_sha256,
+                "bytes": archive_path.stat().st_size,
+            },
+            "candidate_archive_sha256": archive_sha256,
+            "receiver_contract_satisfied": True,
+            "runtime_consumption_proof_passed": True,
+            "passed": True,
+            "blockers": [],
+            **FALSE_AUTHORITY,
+        },
+    )
+
+
 def _materialization_plan() -> dict[str, object]:
     parent_id = "repair_rate_floor_parent_abc123"
     child_id = "repair_budget_spent_child_def456"
@@ -128,8 +153,12 @@ def _receiver_consumed_manifest(
     archive_path = tmp_path / f"{candidate_chain_id}.zip"
     proof_path = tmp_path / f"{candidate_chain_id}.proof.json"
     archive_path.write_bytes(b"PK\x05\x06" + b"\0" * 18)
-    proof_path.write_text('{"receiver_consumed": true}\n', encoding="utf-8")
     archive_sha = _sha256_file(archive_path)
+    _write_runtime_consumption_proof(
+        proof_path,
+        archive_path=archive_path,
+        archive_sha256=archive_sha,
+    )
     manifest: dict[str, object] = {
         "schema": "frontier_rate_attack_materializer_manifest_fixture.v1",
         "materializer_id": "fixture_receiver_consumed_materializer",
@@ -215,6 +244,7 @@ def _component_response_harvest(
                 "measured_component_delta_score_units": -0.0004,
                 "measured_lagrangian_delta_score_units": -0.0006,
                 "negative_measured_lagrangian_delta": True,
+                "local_acquisition_recommended": True,
                 "budget_spend_blockers": [
                     "exact_axis_component_response_required_before_budget_spend",
                     "receiver_runtime_materialization_required_before_budget_spend",
@@ -418,6 +448,38 @@ def test_repair_budget_materializer_binding_refuses_schema_only_manifest_boolean
     assert "direct_materializer_manifest_not_receiver_consumed" in parent_row["blockers"]
     assert "candidate_archive_file_missing" in parent_row["blockers"]
     assert "runtime_consumption_proof_file_missing" in parent_row["blockers"]
+    assert binding_report["candidate_archive_materialized_count"] == 0
+    assert binding_report["receiver_consumed_count"] == 0
+
+
+def test_repair_budget_materializer_binding_revalidates_runtime_proof_payload(
+    tmp_path: Path,
+) -> None:
+    plan = _materialization_plan()
+    parent_id = str(plan["parent_candidate_chain_id"])
+    manifest = _receiver_consumed_manifest(
+        tmp_path,
+        candidate_chain_id=parent_id,
+    )
+    proof_path = Path(str(manifest["runtime_consumption_proof_path"]))
+    proof_path.write_text('{"receiver_consumed": true}\n', encoding="utf-8")
+
+    binding_report = build_frontier_repair_budget_materializer_binding_report(
+        repo_root=REPO_ROOT,
+        repair_budget_materialization_plan=plan,
+        materializer_manifests=[manifest],
+    )
+
+    parent_row = binding_report["binding_rows"][0]
+    assert parent_row["candidate_archive_materialized"] is False
+    assert parent_row["runtime_consumption_proof_present"] is False
+    assert parent_row["receiver_consumed"] is False
+    assert "direct_materializer_manifest_not_receiver_consumed" in parent_row["blockers"]
+    assert "runtime_consumption_proof_success_flag_missing" in parent_row["blockers"]
+    assert (
+        "runtime_consumption_proof_receiver_contract_not_satisfied"
+        in parent_row["blockers"]
+    )
     assert binding_report["candidate_archive_materialized_count"] == 0
     assert binding_report["receiver_consumed_count"] == 0
 
@@ -632,7 +694,12 @@ def test_receiver_closed_rate_credit_materializes_rate_only_parent_locally(
     archive_path = tmp_path / "parent_archive.zip"
     proof_path = tmp_path / "runtime_consumption_proof.json"
     archive_path.write_bytes(b"PK\x05\x06" + b"\0" * 18)
-    proof_path.write_text('{"receiver_consumed": true}\n', encoding="utf-8")
+    archive_sha = _sha256_file(archive_path)
+    _write_runtime_consumption_proof(
+        proof_path,
+        archive_path=archive_path,
+        archive_sha256=archive_sha,
+    )
     work_order = {
         "schema": REPAIR_BUDGET_WATERFILL_WORK_ORDER_SCHEMA,
         "chain_id": "global_many_op_rate_distortion_receiver_campaign",
@@ -669,7 +736,7 @@ def test_receiver_closed_rate_credit_materializes_rate_only_parent_locally(
                     "target_kind": "packet_member_merge_v1",
                     "saved_bytes": 258,
                     "archive_path": str(archive_path),
-                    "archive_sha256": "c" * 64,
+                    "archive_sha256": archive_sha,
                     "archive_bytes": archive_path.stat().st_size,
                     "runtime_consumption_proof_path": str(proof_path),
                     "receiver_closed": True,
@@ -776,7 +843,7 @@ def test_receiver_closed_rate_credit_materializes_rate_only_parent_locally(
     binding_parent = binding_report["binding_rows"][0]
     assert binding_parent["plan_row_receiver_closed_binding"] is True
     assert binding_parent["candidate_archive_materialized"] is True
-    assert binding_parent["candidate_archive_sha256"] == "c" * 64
+    assert binding_parent["candidate_archive_sha256"] == archive_sha
     assert binding_parent["candidate_archive_bytes"] == archive_path.stat().st_size
     assert binding_parent["receiver_consumed"] is True
     assert binding_report["candidate_archive_materialized_count"] == 1
@@ -792,7 +859,7 @@ def test_receiver_closed_rate_credit_materializes_rate_only_parent_locally(
     )
     execution_parent = execution_report["execution_rows"][0]
     assert execution_parent["candidate_kind"] == "rate_only_floor_parent"
-    assert execution_parent["candidate_archive_sha256"] == "c" * 64
+    assert execution_parent["candidate_archive_sha256"] == archive_sha
     assert execution_parent["candidate_archive_bytes"] == archive_path.stat().st_size
     assert execution_parent["ready_for_local_materialization"] is True
     assert execution_parent["execution_status"] == (
@@ -822,17 +889,13 @@ def test_repair_budget_waterfill_queue_emits_execution_audit_step(
     )
     harvest_path = _write_json(
         tmp_path / "harvest.json",
-        {
-            "schema": TARGETED_COMPONENT_CORRECTION_RESPONSE_HARVEST_SCHEMA,
-            "rows": [],
-            **FALSE_AUTHORITY,
-        },
+        _component_response_harvest(),
     )
     budget_path = _write_json(
         tmp_path / "receiver_closed_budget.json",
         {
             "schema": "frontier_rate_attack_receiver_closed_correction_budget.v1",
-            "receiver_closed_saved_bytes_total": 0,
+            "receiver_closed_saved_bytes_total": 64,
             **FALSE_AUTHORITY,
         },
     )
