@@ -12,14 +12,16 @@ everything).
 Phase 2 lands ``compression_pipeline`` (Layer 0 per Phase 1 audit
 specification memo at
 ``.omx/research/canonical_submission_pipeline_specification_memo_20260526.md``).
+Phase 3 lands ``archive_grammar`` (Layer 1 per Phase 1 audit spec memo).
 
-Per the 11th ORDER-MATTERS standing directive: this Layer 0 is the
-canonical FIRST encoder pipeline orchestrator — every future submission
-phase (Phase 3 archive_grammar / Phase 4 builder / Phase 5 compliance /
-Phase 6 paired_auth_eval / Phase 7 operator runbook CLI / Phase 8
-Catalog #362 STRICT preflight gate / Phase 9 cathedral consumer /
-Phase 10 PR111-candidate end-to-end regression) consumes
-:class:`CompressionPipelineResult` directly.
+Per the 11th ORDER-MATTERS standing directive: Layer 0 is the canonical
+FIRST encoder pipeline orchestrator + Layer 1 is the canonical SECOND
+archive grammar builder. Every future submission phase (Phase 4 builder
+/ Phase 5 compliance / Phase 6 paired_auth_eval / Phase 7 operator
+runbook CLI / Phase 8 Catalog #362 STRICT preflight gate / Phase 9
+cathedral consumer / Phase 10 PR111-candidate end-to-end regression)
+consumes :class:`CompressionPipelineResult` + :class:`ArchiveGrammarManifest`
+directly.
 
 Per the 12th canonicalization × standardization × ease-of-contest-
 compliance trinity: this package's API is canonical-frozen-dataclass-
@@ -31,15 +33,20 @@ sister of :mod:`tac.deploy.modal.call_id_ledger` (Catalog #245),
 Per the 8th MLX-first numpy-portable standing directive: training routes
 through MLX-first encoder on Apple Silicon; weights export to portable
 ``.npz`` for numpy-only inflate per HNeRV parity L4 (≤200 LOC, ≤2 deps).
+Per HNeRV parity L3: archive grammar is monolithic single-file ``0.bin``
+(or explicitly justified multi-file).
 
 Quick start::
 
     from tac.submission_packet import (
+        ArchiveGrammarManifest,
+        ArchiveSectionSpec,
         CompressionPipelineResult,
+        build_archive_grammar_from_compression_pipeline_result,
         build_compression_pipeline,
     )
 
-    result = build_compression_pipeline(
+    pipeline_result = build_compression_pipeline(
         lane_id="lane_pr111_candidate_20260601",
         video_path=Path("upstream/videos/0.mkv"),
         substrate_trainer=Path("experiments/train_substrate_nscs06_v8_chroma_lut.py"),
@@ -48,7 +55,12 @@ Quick start::
         qat_enabled=True,
         output_dir=Path("experiments/results/pr111_candidate"),
     )
-    print(result.weights_export_path, result.weights_sha256[:12])
+    grammar = build_archive_grammar_from_compression_pipeline_result(
+        compression_pipeline_result=pipeline_result,
+        archive_path=Path("experiments/results/pr111_candidate/archive.zip"),
+        monolithic_single_file=True,
+    )
+    print(grammar.archive_sha256[:12], grammar.section_specs[0].section_name)
 
 Discipline cross-references:
   * Catalog #245 / #313 / #344 / #354 / #355 canonical 4-layer pattern
@@ -65,12 +77,35 @@ Discipline cross-references:
   * Catalog #340 sister-checkpoint guard
   * Catalog #356 per-axis decomposition (if Tier B available)
   * Catalog #365 + #366 + #367 just-landed STRICT gates respected
+  * Catalog #139 + #105 + #266 + #272 archive bytes consumed by inflate
+  * Catalog #220 substrate L1+ scaffold operational mechanism declaration
   * CLAUDE.md "Beauty, simplicity, and developer experience"
   * CLAUDE.md "Subagent coherence-by-default"
   * CLAUDE.md "HNeRV / leaderboard-implementation parity discipline"
 """
 from __future__ import annotations
 
+from tac.submission_packet.archive_grammar import (
+    ARCHIVE_GRAMMAR_SCHEMA_VERSION,
+    BYTE_MUTATION_SMOKE_MIN_BYTES,
+    CANONICAL_ARCHIVE_NAME,
+    CANONICAL_MONOLITHIC_MEMBER_NAME,
+    PHASE_3_LAYER_VERSION,
+    ArchiveGrammarError,
+    ArchiveGrammarManifest,
+    ArchiveSectionSpec,
+    ByteMutationSmokeVerdict,
+    OperationalMechanismStatus,
+    SectionKind,
+    build_archive_grammar_from_compression_pipeline_result,
+    derive_archive_grammar_provenance,
+    discover_section_specs_from_archive,
+    emit_parser_section_manifest_sidecar,
+    verify_byte_mutation_smoke_via_canonical_helper,
+)
+from tac.submission_packet.archive_grammar import (
+    CANONICAL_EQUATION_ID as ARCHIVE_GRAMMAR_CANONICAL_EQUATION_ID,
+)
 from tac.submission_packet.compression_pipeline import (
     CANONICAL_EQUATION_ID,
     COMPRESSION_PIPELINE_SCHEMA_VERSION,
@@ -87,6 +122,7 @@ from tac.submission_packet.compression_pipeline import (
 )
 
 __all__ = [
+    # Phase 2 (Layer 0)
     "CANONICAL_EQUATION_ID",
     "COMPRESSION_PIPELINE_SCHEMA_VERSION",
     "HardwareSubstrateClass",
@@ -99,4 +135,22 @@ __all__ = [
     "derive_compression_pipeline_provenance",
     "validate_recipe_trainer_pair",
     "verify_compression_pipeline_protocol_complete",
+    # Phase 3 (Layer 1)
+    "ARCHIVE_GRAMMAR_CANONICAL_EQUATION_ID",
+    "ARCHIVE_GRAMMAR_SCHEMA_VERSION",
+    "BYTE_MUTATION_SMOKE_MIN_BYTES",
+    "CANONICAL_ARCHIVE_NAME",
+    "CANONICAL_MONOLITHIC_MEMBER_NAME",
+    "PHASE_3_LAYER_VERSION",
+    "ArchiveGrammarError",
+    "ArchiveGrammarManifest",
+    "ArchiveSectionSpec",
+    "ByteMutationSmokeVerdict",
+    "OperationalMechanismStatus",
+    "SectionKind",
+    "build_archive_grammar_from_compression_pipeline_result",
+    "derive_archive_grammar_provenance",
+    "discover_section_specs_from_archive",
+    "emit_parser_section_manifest_sidecar",
+    "verify_byte_mutation_smoke_via_canonical_helper",
 ]
