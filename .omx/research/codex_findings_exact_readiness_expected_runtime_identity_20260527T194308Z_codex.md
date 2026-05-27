@@ -22,13 +22,24 @@ submission-closure consumers instead of stopping at materializer harvest.
   identity fields as applied, preserving provenance without creating false
   conflicts.
 
+## Authority
+
+This is a custody and automation guard only. It does not claim score, promote a
+candidate, rank or kill a row, launch paid work, or mark proxy/local/MLX rows
+ready for exact eval dispatch.
+
 ## Validation
 
-- `.venv/bin/ruff check src/comma_lab/scheduler/materializer_chain_harvest.py src/tac/optimization/packet_member_merge_receiver.py src/tac/optimization/tensor_factorize_receiver.py src/tac/optimizer/exact_readiness.py src/tac/optimizer/materializer_submission_closure.py src/tac/tests/test_frontier_rate_attack_bootstrap.py src/tac/tests/test_materializer_submission_closure.py src/tac/tests/test_optimizer_exact_readiness.py`
+- `.venv/bin/python -m ruff check src/comma_lab/scheduler/materializer_chain_harvest.py src/tac/optimization/packet_member_merge_receiver.py src/tac/optimization/tensor_factorize_receiver.py src/tac/optimizer/exact_readiness.py src/tac/optimizer/materializer_submission_closure.py src/tac/tests/test_frontier_rate_attack_bootstrap.py src/tac/tests/test_materializer_submission_closure.py src/tac/tests/test_optimizer_exact_readiness.py`
 - `.venv/bin/python -m py_compile src/comma_lab/scheduler/materializer_chain_harvest.py src/tac/optimization/packet_member_merge_receiver.py src/tac/optimization/tensor_factorize_receiver.py src/tac/optimizer/exact_readiness.py src/tac/optimizer/materializer_submission_closure.py src/tac/tests/test_frontier_rate_attack_bootstrap.py src/tac/tests/test_materializer_submission_closure.py src/tac/tests/test_optimizer_exact_readiness.py`
-- `.venv/bin/python -m pytest src/tac/tests/test_optimizer_exact_readiness.py src/tac/tests/test_materializer_submission_closure.py src/tac/tests/test_frontier_rate_attack_bootstrap.py -q`
+- `.venv/bin/python -m pytest src/tac/tests/test_optimizer_exact_readiness.py src/tac/tests/test_materializer_submission_closure.py src/tac/tests/test_materializer_chain_harvest_scheduler.py src/tac/tests/test_experiment_queue_observer.py src/tac/tests/test_family_agnostic_materializers.py src/tac/tests/test_frontier_rate_attack_bootstrap.py -q`
 
-Final focused result: `97 passed`.
+Final focused result: `239 passed`.
+
+- `.venv/bin/python tools/lane_maturity.py validate`
+  - `1443 lane(s) validated cleanly`
+- `.venv/bin/python tools/review_gate_hook.py`
+  - passed
 
 ## Next Integration
 
