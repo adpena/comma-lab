@@ -19,6 +19,9 @@ from comma_lab.scheduler.repair_campaign_score_queue import (
     summarize_repair_campaign_score_queue,
     summarize_repair_posterior_acquisition_followup_queue,
 )
+from tac.optimization.repair_campaign_chain_contract import (
+    REPAIR_CAMPAIGN_ENTROPY_STAGE_CHAIN_CONTRACT_SCHEMA,
+)
 from tac.optimization.repair_campaign_learning_signal import (
     REPAIR_CAMPAIGN_BLOCKED_LEARNING_SIGNAL_REPORT_SCHEMA,
     REPAIR_CAMPAIGN_CHILD_QUEUE_ACTIVATION_PLAN_SCHEMA,
@@ -191,6 +194,20 @@ def test_build_repair_campaign_score_queue_from_waterfill_work_order(
     command = experiment["steps"][1]["command"]
     assert command[:2] == [".venv/bin/python", "tools/score_repair_campaign.py"]
     assert str(work_order_path) in command
+    chain_contract_step = next(
+        step
+        for step in experiment["steps"]
+        if step["id"] == "build_repair_campaign_entropy_stage_chain_contract"
+    )
+    assert chain_contract_step["requires"] == [
+        "score_repair_campaign_from_typed_ledger"
+    ]
+    assert experiment["metadata"][
+        "repair_campaign_entropy_stage_chain_contract_path"
+    ].endswith("repair_campaign_entropy_stage_chain_contract.json")
+    assert experiment["metadata"][
+        "repair_campaign_entropy_stage_chain_contract_schema"
+    ] == REPAIR_CAMPAIGN_ENTROPY_STAGE_CHAIN_CONTRACT_SCHEMA
     blocked_signal_step = next(
         step
         for step in experiment["steps"]
@@ -225,7 +242,7 @@ def test_build_repair_campaign_score_queue_from_waterfill_work_order(
         "tools/build_repair_campaign_stackability_queue.py",
     ]
     assert stackability_step["requires"] == [
-        "score_repair_campaign_from_typed_ledger"
+        "build_repair_campaign_entropy_stage_chain_contract"
     ]
     assert experiment["metadata"]["repair_campaign_stackability_queue_path"] in (
         stackability_command
@@ -253,7 +270,7 @@ def test_build_repair_campaign_score_queue_from_waterfill_work_order(
         if step["id"] == "build_repair_campaign_byte_closed_materialization_queue"
     )
     assert materialization_step["requires"] == [
-        "score_repair_campaign_from_typed_ledger"
+        "build_repair_campaign_entropy_stage_chain_contract"
     ]
     assert materialization_step["command"][:2] == [
         ".venv/bin/python",
@@ -299,7 +316,9 @@ def test_build_repair_campaign_score_queue_from_waterfill_work_order(
         for step in experiment["steps"]
         if step["id"] == "build_repair_cascade_mlx_probe_queue"
     )
-    assert cascade_step["requires"] == ["score_repair_campaign_from_typed_ledger"]
+    assert cascade_step["requires"] == [
+        "build_repair_campaign_entropy_stage_chain_contract"
+    ]
     assert cascade_step["command"][:2] == [
         ".venv/bin/python",
         "tools/build_repair_cascade_mlx_probe_queue.py",
@@ -714,6 +733,28 @@ def test_repair_campaign_score_queue_cli_writes_and_score_step_runs(
     assert report["rows"][0]["typed_response_id"] == "segnet_region_ready"
     assert report["ready_for_local_mlx_advisory_execution_count"] == 1
     assert report["optimizer_decision"]["blocked_allocation_count"] == 1
+    chain_contract_command = next(
+        step["command"]
+        for step in queue["experiments"][0]["steps"]
+        if step["id"] == "build_repair_campaign_entropy_stage_chain_contract"
+    )
+    chain_contract_result = subprocess.run(
+        [sys.executable, *chain_contract_command[1:]],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert chain_contract_result.returncode == 0, chain_contract_result.stderr
+    chain_contract_path = Path(
+        queue["experiments"][0]["metadata"][
+            "repair_campaign_entropy_stage_chain_contract_path"
+        ]
+    )
+    chain_contract = json.loads(chain_contract_path.read_text(encoding="utf-8"))
+    assert chain_contract["schema"] == REPAIR_CAMPAIGN_ENTROPY_STAGE_CHAIN_CONTRACT_SCHEMA
+    assert chain_contract["chain_node_count"] == 1
+    assert chain_contract["ready_for_exact_eval_dispatch"] is False
     blocked_signal_command = next(
         step["command"]
         for step in queue["experiments"][0]["steps"]

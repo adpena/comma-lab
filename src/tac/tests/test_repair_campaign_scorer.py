@@ -11,6 +11,11 @@ from tac.fec6_selector_operator_space import FEC6_FIXED_K16_MODE_IDS
 from tac.optimization.family_agnostic_materializers import (
     RUNTIME_CONSUMPTION_PROOF_SCHEMA,
 )
+from tac.optimization.repair_campaign_chain_contract import (
+    REPAIR_CAMPAIGN_ENTROPY_STAGE_CHAIN_CONTRACT_SCHEMA,
+    REPAIR_CAMPAIGN_ENTROPY_STAGE_CHAIN_NODE_SCHEMA,
+    build_repair_campaign_entropy_stage_chain_contract,
+)
 from tac.optimization.repair_campaign_learning_signal import (
     build_repair_campaign_blocked_learning_signal_report,
 )
@@ -516,6 +521,52 @@ def test_score_repair_campaign_ranks_ready_mlx_and_names_missing_artifacts(
         blocked["execution_gate"]["missing_artifacts"]
     )
     assert "per_region_selector_codec_replay_missing" in report["missing_artifacts"]
+
+
+def test_entropy_stage_chain_contract_requires_replay_receiver_and_exact_handoff(
+    tmp_path: Path,
+) -> None:
+    report = score_repair_campaign(payload=_work_order(tmp_path), repo_root=tmp_path)
+    score_report_path = tmp_path / "repair_campaign_score_report.json"
+    score_report_path.write_text(
+        json.dumps(report, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    contract = build_repair_campaign_entropy_stage_chain_contract(
+        score_report=report,
+        score_report_path=score_report_path,
+        repo_root=tmp_path,
+    )
+
+    assert contract["schema"] == REPAIR_CAMPAIGN_ENTROPY_STAGE_CHAIN_CONTRACT_SCHEMA
+    assert contract["node_schema"] == REPAIR_CAMPAIGN_ENTROPY_STAGE_CHAIN_NODE_SCHEMA
+    assert contract["selected_allocation_count"] == 1
+    assert contract["chain_node_count"] == 1
+    assert contract["ready_for_exact_eval_dispatch"] is False
+    assert contract["local_mlx_rows_are_advisory_only"] is True
+    assert contract["deterministic_replay_bundle_required_for_local_mlx_rows"] is True
+    assert "deterministic_local_mlx_replay_bundle_required" in contract["blockers"]
+    node = contract["ordered_chain_nodes"][0]
+    assert node["typed_response_id"] == "segnet_region_ready"
+    assert node["entropy_pipeline_stage_index"] == 0
+    assert node["deterministic_replay_bundle_required"] is True
+    assert node["deterministic_replay_bundle_satisfied"] is False
+    assert node["exact_eval_handoff_ready"] is False
+    assert [stage["stage_id"] for stage in node["chain_stage_sequence"]] == [
+        "planner_score_queue",
+        "local_mlx_deterministic_replay_bundle",
+        "byte_closed_materializer",
+        "receiver_decode_only_runtime_proof",
+        "component_response_replay",
+        "exact_eval_handoff",
+    ]
+    assert node["chain_stage_sequence"][1]["artifact_schema"] == (
+        "repair_campaign_stackability_replay_bundle.v1"
+    )
+    assert "archive_bound_runtime_consumption_proof_missing_or_unverified" in (
+        node["blockers"]
+    )
 
 
 def test_score_repair_campaign_blocks_missing_family_required_value_artifacts(

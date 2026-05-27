@@ -15,6 +15,9 @@ from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
     require_no_truthy_authority_fields,
 )
+from tac.optimization.repair_campaign_chain_contract import (
+    REPAIR_CAMPAIGN_ENTROPY_STAGE_CHAIN_CONTRACT_SCHEMA,
+)
 from tac.optimization.repair_campaign_learning_signal import (
     REPAIR_CAMPAIGN_BLOCKED_LEARNING_SIGNAL_REPORT_SCHEMA,
 )
@@ -243,6 +246,41 @@ def _repair_materialization_child_rollup(
     }
 
 
+def _repair_chain_contract_rollup(
+    *,
+    experiments: Sequence[Mapping[str, Any]],
+    repo_root: str | Path,
+) -> dict[str, Any]:
+    paths: list[str] = []
+    artifact_count = 0
+    node_count = 0
+    blocker_counts: Counter[str] = Counter()
+    for experiment in experiments:
+        metadata = _mapping(experiment.get("metadata"))
+        path = str(
+            metadata.get("repair_campaign_entropy_stage_chain_contract_path") or ""
+        ).strip()
+        if path:
+            paths.append(path)
+        contract = _load_json_if_present(path, repo_root)
+        if not contract:
+            continue
+        artifact_count += 1
+        node_count += _positive_int(contract.get("chain_node_count")) or 0
+        blocker_counts.update(_string_list(contract.get("blockers")))
+    return {
+        "schema": "repair_campaign_entropy_stage_chain_contract_rollup.v1",
+        "chain_contract_paths": ordered_unique(paths),
+        "chain_contract_artifact_count": artifact_count,
+        "chain_contract_node_count": node_count,
+        "chain_contract_blocker_histogram": dict(sorted(blocker_counts.items())),
+        "local_mlx_rows_are_advisory_only": True,
+        "budget_spend_allowed": False,
+        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
+    }
+
+
 def _posterior_route_executable_queue_keys(
     route: Mapping[str, Any],
 ) -> list[str]:
@@ -339,6 +377,10 @@ def _score_experiment(
         queue_root / _slug(chain_id) / "repair_campaign_score_report.json"
     )
     score_report_ref = _repo_rel(score_report_path, repo_root)
+    chain_contract_path = (
+        queue_root / _slug(chain_id) / "repair_campaign_entropy_stage_chain_contract.json"
+    )
+    chain_contract_ref = _repo_rel(chain_contract_path, repo_root)
     stackability_queue_path = (
         queue_root / _slug(chain_id) / "repair_campaign_stackability_queue.json"
     )
@@ -449,6 +491,10 @@ def _score_experiment(
             "timeout_seconds": DEFAULT_WATERFILL_SOURCE_WORKER_TIMEOUT_SECONDS,
         },
         "repair_campaign_score_report_path": score_report_ref,
+        "repair_campaign_entropy_stage_chain_contract_path": chain_contract_ref,
+        "repair_campaign_entropy_stage_chain_contract_schema": (
+            REPAIR_CAMPAIGN_ENTROPY_STAGE_CHAIN_CONTRACT_SCHEMA
+        ),
         "repair_campaign_stackability_queue_path": stackability_queue_ref,
         "repair_campaign_stackability_worker_result_path": (
             stackability_worker_result_ref
@@ -733,6 +779,45 @@ def _score_experiment(
                 },
             },
             {
+                "id": "build_repair_campaign_entropy_stage_chain_contract",
+                "kind": "command",
+                "requires": ["score_repair_campaign_from_typed_ledger"],
+                "command": [
+                    ".venv/bin/python",
+                    "tools/build_repair_campaign_entropy_stage_chain_contract.py",
+                    "--score-report",
+                    score_report_ref,
+                    "--chain-contract-out",
+                    chain_contract_ref,
+                    "--overwrite",
+                ],
+                "resources": {"kind": "local_cpu"},
+                "timeout_seconds": 120,
+                "postconditions": [
+                    {
+                        "type": "json_equals",
+                        "path": chain_contract_ref,
+                        "key": "schema",
+                        "equals": REPAIR_CAMPAIGN_ENTROPY_STAGE_CHAIN_CONTRACT_SCHEMA,
+                    },
+                    {
+                        "type": "json_false_authority",
+                        "path": chain_contract_ref,
+                    },
+                    {
+                        "type": "json_equals",
+                        "path": chain_contract_ref,
+                        "key": "ready_for_exact_eval_dispatch",
+                        "equals": False,
+                    },
+                ],
+                "telemetry": {
+                    "artifact_paths": [chain_contract_ref],
+                    "input_artifact_paths": [score_report_ref],
+                    "include_postcondition_paths": True,
+                },
+            },
+            {
                 "id": "append_blocked_repair_campaign_learning_posterior",
                 "kind": "command",
                 "requires": ["build_repair_campaign_blocked_learning_signals"],
@@ -784,7 +869,7 @@ def _score_experiment(
             {
                 "id": "build_repair_campaign_byte_closed_materialization_queue",
                 "kind": "command",
-                "requires": ["score_repair_campaign_from_typed_ledger"],
+                "requires": ["build_repair_campaign_entropy_stage_chain_contract"],
                 "command": [
                     ".venv/bin/python",
                     "tools/build_repair_campaign_byte_closed_materialization_queue.py",
@@ -827,7 +912,11 @@ def _score_experiment(
                 ],
                 "telemetry": {
                     "artifact_paths": [materialization_queue_ref],
-                    "input_artifact_paths": [score_report_ref, work_order_ref],
+                    "input_artifact_paths": [
+                        score_report_ref,
+                        chain_contract_ref,
+                        work_order_ref,
+                    ],
                     "include_postcondition_paths": True,
                 },
             },
@@ -901,7 +990,7 @@ def _score_experiment(
             {
                 "id": "build_repair_campaign_stackability_queue",
                 "kind": "command",
-                "requires": ["score_repair_campaign_from_typed_ledger"],
+                "requires": ["build_repair_campaign_entropy_stage_chain_contract"],
                 "command": [
                     ".venv/bin/python",
                     "tools/build_repair_campaign_stackability_queue.py",
@@ -932,14 +1021,14 @@ def _score_experiment(
                 ],
                 "telemetry": {
                     "artifact_paths": [stackability_queue_ref],
-                    "input_artifact_paths": [score_report_ref],
+                    "input_artifact_paths": [score_report_ref, chain_contract_ref],
                     "include_postcondition_paths": True,
                 },
             },
             {
                 "id": "build_repair_cascade_mlx_probe_queue",
                 "kind": "command",
-                "requires": ["score_repair_campaign_from_typed_ledger"],
+                "requires": ["build_repair_campaign_entropy_stage_chain_contract"],
                 "command": [
                     ".venv/bin/python",
                     "tools/build_repair_cascade_mlx_probe_queue.py",
@@ -970,7 +1059,7 @@ def _score_experiment(
                 ],
                 "telemetry": {
                     "artifact_paths": [cascade_mlx_probe_queue_ref],
-                    "input_artifact_paths": [score_report_ref],
+                    "input_artifact_paths": [score_report_ref, chain_contract_ref],
                     "include_postcondition_paths": True,
                 },
             },
@@ -1029,7 +1118,11 @@ def _score_experiment(
                 ],
                 "telemetry": {
                     "artifact_paths": [cascade_mlx_probe_worker_result_ref],
-                    "input_artifact_paths": [cascade_mlx_probe_queue_ref, score_report_ref],
+                    "input_artifact_paths": [
+                        cascade_mlx_probe_queue_ref,
+                        score_report_ref,
+                        chain_contract_ref,
+                    ],
                     "include_postcondition_paths": True,
                 },
             },
@@ -1223,6 +1316,10 @@ def summarize_repair_campaign_score_queue(
         experiments=score_experiments,
         repo_root=Path.cwd(),
     )
+    chain_contract_rollup = _repair_chain_contract_rollup(
+        experiments=score_experiments,
+        repo_root=Path.cwd(),
+    )
     summary = {
         "schema": REPAIR_CAMPAIGN_SCORE_QUEUE_SUMMARY_SCHEMA,
         "queue_id": repair_campaign_score_queue.get("queue_id"),
@@ -1238,6 +1335,16 @@ def summarize_repair_campaign_score_queue(
         ),
         "posterior_acquisition_followup_routes": (
             posterior_prior_summary.get("acquisition_followup_routes") or []
+        ),
+        "entropy_stage_chain_contract_rollup": chain_contract_rollup,
+        "entropy_stage_chain_contract_paths": chain_contract_rollup.get(
+            "chain_contract_paths"
+        ),
+        "entropy_stage_chain_contract_artifact_count": chain_contract_rollup.get(
+            "chain_contract_artifact_count"
+        ),
+        "entropy_stage_chain_contract_node_count": chain_contract_rollup.get(
+            "chain_contract_node_count"
         ),
         "byte_closed_materialization_followup_default": metadata.get(
             "byte_closed_materialization_followup_default"
