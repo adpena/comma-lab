@@ -42,17 +42,28 @@ CLAUDE.md compliance: deterministic, no /tmp, no scorer load.
 
 from __future__ import annotations
 
-import io
 import json
-import pickle
 import struct
 from dataclasses import dataclass
 
 import brotli  # type: ignore[import-not-found]
+import numpy as np
 import torch
 
+from tac.substrates._shared.numpy_portable_inflate import (
+    pack_state_dict_numpy,
+    unpack_state_dict_numpy,
+)
+
 NRV1_MAGIC: bytes = b"NRV1"
-NRV1_SCHEMA_VERSION: int = 1
+# Schema v2 (numpy-portable bridge, 2026-05-27): the DECODER_BLOB internal
+# encoding is now a torch-free numpy-native ``{key: fp16 ndarray}`` blob (was
+# ``brotli(pickle(torch_tensors))`` in v1). Per the 8th MLX-first standing
+# directive ``torch`` is FORBIDDEN at inflate time, and a torch-tensor pickle
+# requires ``torch`` to unpickle. The numpy-native blob (canonical
+# ``pack_state_dict_numpy`` bridge) lets ``parse_archive_numpy`` read weights
+# with NO torch dependency so the shipped inflate runtime is numpy/PIL-portable.
+NRV1_SCHEMA_VERSION: int = 2
 
 NRV1_HEADER_FMT: str = "<4sBHHBBHIII"
 NRV1_HEADER_SIZE: int = struct.calcsize(NRV1_HEADER_FMT)
@@ -78,21 +89,34 @@ class NirvanaArchive:
 
 
 def _serialize_state_dict(sd: dict[str, torch.Tensor]) -> bytes:
-    buf = io.BytesIO()
-    sd_cpu = {
-        k: v.detach().to("cpu", dtype=torch.float16).contiguous()
+    """Serialize a torch state_dict into the torch-free numpy-native NRV1-v2 blob.
+
+    Uses the canonical ``pack_state_dict_numpy`` bridge (fp16 ``{key: ndarray}``,
+    no pickle) wrapped in brotli. The result contains ZERO
+    ``torch._utils._rebuild_tensor`` GLOBAL refs so ``parse_archive_numpy`` can
+    read it with NO torch import (8th MLX-first standing directive).
+    """
+    np_sd = {
+        k: v.detach().to("cpu", dtype=torch.float16).contiguous().numpy()
         for k, v in sd.items()
     }
-    pickle.dump(sd_cpu, buf, protocol=4)
-    return bytes(brotli.compress(buf.getvalue(), quality=BROTLI_QUALITY))
+    return bytes(brotli.compress(pack_state_dict_numpy(np_sd, dtype="fp16"), quality=BROTLI_QUALITY))
+
+
+def _deserialize_numpy_state_dict(blob: bytes) -> dict[str, np.ndarray]:
+    """Torch-free deserialize of the NRV1-v2 numpy-native decoder blob.
+
+    Returns ``{key: fp32 ndarray}``. The shipped numpy-portable inflate runtime
+    calls this (no torch import).
+    """
+    np_sd = unpack_state_dict_numpy(brotli.decompress(blob))
+    return {k: v.astype(np.float32) for k, v in np_sd.items()}
 
 
 def _deserialize_state_dict(blob: bytes) -> dict[str, torch.Tensor]:
-    raw = brotli.decompress(blob)
-    sd = pickle.loads(raw)
-    if not isinstance(sd, dict):
-        raise ValueError("decoder_state_dict blob did not unpickle to a dict")
-    return sd
+    """Torch-side deserialize (training/eval parity): wraps numpy arrays."""
+    np_sd = _deserialize_numpy_state_dict(blob)
+    return {k: torch.from_numpy(v.astype("float32")) for k, v in np_sd.items()}
 
 
 def _quantize_latents_to_int16(
@@ -226,6 +250,90 @@ def parse_archive(blob: bytes) -> NirvanaArchive:
     latents = _dequantize_latents(q_latents, scale, zp)
 
     return NirvanaArchive(
+        decoder_state_dict=sd,
+        latents=latents,
+        meta=meta,
+        schema_version=int(version),
+        patch_grid_h=int(patch_grid_h),
+        patch_grid_w=int(patch_grid_w),
+        patch_embed_dim=int(patch_embed_dim),
+    )
+
+
+@dataclass(frozen=True)
+class NirvanaArchiveNumpy:
+    """Torch-free parsed NRV1 archive — the numpy-portable inflate-time contract.
+
+    Sister of :class:`NirvanaArchive` but with ``np.ndarray`` weights / latents
+    so the shipped inflate runtime needs ONLY numpy + brotli (no torch) per the
+    8th MLX-first standing directive.
+    """
+
+    decoder_state_dict: dict[str, np.ndarray]
+    latents: np.ndarray
+    meta: dict[str, object]
+    schema_version: int
+    patch_grid_h: int
+    patch_grid_w: int
+    patch_embed_dim: int
+
+
+def parse_archive_numpy(blob: bytes) -> NirvanaArchiveNumpy:
+    """Torch-free parse of an NRV1-v2 archive for the numpy-portable inflate.
+
+    Identical section walk to :func:`parse_archive` but reconstructs weights +
+    latents as numpy arrays with NO torch import. Per the 8th MLX-first
+    directive's bridge contract the shipped inflate runtime reads weights via
+    this path so the runtime tree carries only numpy + brotli.
+    """
+    if len(blob) < NRV1_HEADER_SIZE:
+        raise ValueError(
+            f"archive too short ({len(blob)} bytes; need >= {NRV1_HEADER_SIZE})"
+        )
+    (
+        magic,
+        version,
+        latent_dim,
+        num_pairs,
+        patch_grid_h,
+        patch_grid_w,
+        patch_embed_dim,
+        decoder_len,
+        latent_len,
+        meta_len,
+    ) = struct.unpack(NRV1_HEADER_FMT, blob[:NRV1_HEADER_SIZE])
+    if magic != NRV1_MAGIC:
+        raise ValueError(f"bad magic: {magic!r} (expected {NRV1_MAGIC!r})")
+    if version != NRV1_SCHEMA_VERSION:
+        raise ValueError(f"unsupported schema version: {version}")
+
+    expected_latent_bytes = num_pairs * latent_dim * 2
+    if latent_len != expected_latent_bytes:
+        raise ValueError(
+            f"latent_len {latent_len} != num_pairs*latent_dim*2 = {expected_latent_bytes}"
+        )
+
+    end_header = NRV1_HEADER_SIZE
+    end_decoder = end_header + decoder_len
+    end_latents = end_decoder + latent_len
+    end_meta = end_latents + meta_len
+    if end_meta != len(blob):
+        raise ValueError(
+            f"archive size {len(blob)} != expected {end_meta} from header"
+        )
+
+    sd = _deserialize_numpy_state_dict(blob[end_header:end_decoder])
+    meta = json.loads(blob[end_latents:end_meta].decode("utf-8"))
+
+    q = np.frombuffer(blob[end_decoder:end_latents], dtype=np.int16).reshape(
+        num_pairs, latent_dim
+    )
+    scale = float(meta.pop("_quant_scale"))
+    zp = float(meta.pop("_quant_zero_point"))
+    # dequant mirrors _dequantize_latents: (q + 32767) * scale + zero_point
+    latents = (q.astype(np.float32) + 32767.0) * scale + zp
+
+    return NirvanaArchiveNumpy(
         decoder_state_dict=sd,
         latents=latents,
         meta=meta,

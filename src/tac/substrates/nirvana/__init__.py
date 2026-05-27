@@ -108,17 +108,21 @@ from .architecture import (
 )
 from .archive import (
     NirvanaArchive,
+    NirvanaArchiveNumpy,
     pack_archive,
     parse_archive,
+    parse_archive_numpy,
 )
 from .score_aware_loss import NirvanaScoreAwareLoss, ScoreAwareLossWeights
 
 __all__ = [
     "NirvanaArchive",
+    "NirvanaArchiveNumpy",
     "NirvanaConfig",
     "NirvanaScoreAwareLoss",
     "NirvanaSubstrate",
     "ScoreAwareLossWeights",
     "pack_archive",
     "parse_archive",
+    "parse_archive_numpy",
 ]
