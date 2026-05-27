@@ -252,6 +252,7 @@ def build_tensor_factorize_receiver_runtime(
         "reconstruction_identity": identity,
         "runtime_dir": runtime_dir.as_posix(),
         "runtime_tree_sha256": runtime_tree_sha,
+        "expected_runtime_tree_sha256": runtime_tree_sha,
         "source_runtime_dir": source_runtime.as_posix(),
         "source_runtime_tree_sha256": tree_sha256(source_runtime),
         "copied_source_runtime": copied_runtime_manifest,

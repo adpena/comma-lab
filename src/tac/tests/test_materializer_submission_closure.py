@@ -497,6 +497,7 @@ def test_materializer_submission_closure_uses_proof_backed_runtime_adapter(
                     "runtime_adapter_ready": True,
                     "runtime_dir": adapter_runtime.relative_to(repo).as_posix(),
                     "runtime_tree_sha256": adapter_runtime_sha,
+                    "expected_runtime_tree_sha256": adapter_runtime_sha,
                 },
                 **FALSE_AUTHORITY,
             }
@@ -538,6 +539,7 @@ def test_materializer_submission_closure_uses_proof_backed_runtime_adapter(
                         "packet_member_merge_receiver_runtime": {
                             "runtime_dir": adapter_runtime.relative_to(repo).as_posix(),
                             "runtime_tree_sha256": adapter_runtime_sha,
+                            "expected_runtime_tree_sha256": adapter_runtime_sha,
                         },
                         "candidate_archive_path": candidate_archive.relative_to(
                             repo

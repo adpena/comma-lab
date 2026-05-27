@@ -922,6 +922,72 @@ def test_post_feedback_child_queue_execution_preserves_observer_artifacts(
     assert worker_command[worker_command.index("--max-steps") + 1] == "3"
 
 
+def test_post_feedback_child_queue_execution_reports_stalled_queued_work(
+    tmp_path: Path,
+) -> None:
+    queue = tmp_path / "operation_chain_compiler_queue.json"
+    _write_json(
+        queue,
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "child_queue_stalled",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "experiments": [],
+        },
+    )
+
+    def fake_run(command: list[str]) -> dict[str, object]:
+        stdout = ""
+        if "run-worker" in command:
+            stdout = json.dumps(
+                {
+                    "schema": "experiment_queue_worker_result.v1",
+                    "steps_started": 0,
+                    "success_count": 0,
+                    "failure_count": 0,
+                }
+            )
+        elif "observe" in command:
+            stdout = json.dumps(
+                {
+                    "schema": "experiment_queue_observation.v1",
+                    "queue_id": "child_queue_stalled",
+                    "healthy": True,
+                    "status_counts": {"queued": 2},
+                    "blockers": [],
+                }
+            )
+        return {
+            "command": command,
+            "returncode": 0,
+            "elapsed_seconds": 0.0,
+            "stdout": stdout,
+            "stderr": "",
+        }
+
+    report = execute_post_feedback_child_queues(
+        repo_root=tmp_path,
+        feedback_artifacts={"operation_chain_compiler_queue": str(queue)},
+        output_dir=tmp_path / "out",
+        max_steps=3,
+        max_parallel=1,
+        limit=4,
+        run_command=fake_run,
+    )
+
+    run = report["queue_runs"][0]
+    assert report["stalled_queue_count"] == 1
+    assert run["steps_started"] == 0
+    assert run["progress_made"] is False
+    assert run["progress_blockers"] == [
+        "child_queue_worker_started_zero_steps_with_queued_work"
+    ]
+    assert run["queue_healthy"] is True
+
+
 def test_frontier_bootstrap_results_root_probe_requires_readable_file(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

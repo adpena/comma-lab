@@ -150,6 +150,13 @@ def test_runtime_adapter_ready_proof_binds_candidate_runtime_tree_sha(
 
     assert facts["runtime_consumption_proof_runtime_tree_sha256"] == "b" * 64
     assert facts["candidate_row_adapter_runtime_tree_sha256"] == "c" * 64
+    assert facts["runtime_consumption_proof_expected_runtime_tree_sha256"] is None
+    assert facts["candidate_row_expected_runtime_tree_sha256"] is None
+    assert "runtime_consumption_proof_expected_runtime_tree_sha_missing" in blockers
+    assert (
+        "candidate_row_expected_runtime_tree_sha_missing_for_runtime_adapter"
+        in blockers
+    )
     assert "runtime_consumption_proof_runtime_tree_sha_mismatch" in blockers
 
 
@@ -171,6 +178,7 @@ def test_byte_range_runtime_proof_clears_receiver_schema_blocker(
             "candidate_archive_sha256": "a" * 64,
             "candidate_member_sha256": "b" * 64,
             "runtime_tree_sha256": "c" * 64,
+            "expected_runtime_tree_sha256": "c" * 64,
             "archive_byte_ranges": [
                 {
                     "archive_member_name": "x",
@@ -196,6 +204,7 @@ def test_byte_range_runtime_proof_clears_receiver_schema_blocker(
             "candidate_member_sha256": "b" * 64,
             "runtime_adapter_ready": True,
             "candidate_runtime_tree_sha256": "c" * 64,
+            "expected_runtime_tree_sha256": "c" * 64,
             "runtime_consumption_proof_required": True,
             "runtime_consumption_proof_status": "present",
             "runtime_consumption_proof_path": str(proof),
@@ -210,6 +219,8 @@ def test_byte_range_runtime_proof_clears_receiver_schema_blocker(
     assert facts["runtime_consumption_proof_archive_sha256"] == "a" * 64
     assert facts["runtime_consumption_proof_runtime_tree_sha256"] == "c" * 64
     assert facts["candidate_row_adapter_runtime_tree_sha256"] == "c" * 64
+    assert facts["runtime_consumption_proof_expected_runtime_tree_sha256"] == "c" * 64
+    assert facts["candidate_row_expected_runtime_tree_sha256"] == "c" * 64
     assert "runtime_consumption_proof_schema_unsupported" not in blockers
     assert blockers == []
 
@@ -605,6 +616,11 @@ def _write_family_agnostic_runtime_proof(
         "receiver_contract_kind": "family_agnostic_packet_member_recompress",
         "receiver_contract_satisfied": proven,
         "runtime_consumption_proof_passed": proven,
+        "passed": proven,
+        "runtime_consumption_probe": {
+            "passed": proven,
+            "receiver_contract_probe_passed": proven,
+        },
         "score_claim": False,
         "ready_for_exact_eval_dispatch": False,
         "dispatch_attempted": False,

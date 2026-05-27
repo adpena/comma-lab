@@ -386,11 +386,6 @@ def _runtime_adapter_expected_shas(
             "expected_runtime_tree_sha256",
             "expected_inflate_runtime_tree_sha256",
             "expected_candidate_runtime_tree_sha256",
-            "runtime_tree_sha256",
-            "candidate_runtime_tree_sha256",
-            "packet_member_merge_receiver_runtime_tree_sha256",
-            "tensor_factorize_receiver_runtime_tree_sha256",
-            "renderer_payload_dfl1_runtime_tree_sha256",
         ):
             value = payload.get(key)
             if isinstance(value, str) and len(value) == 64:

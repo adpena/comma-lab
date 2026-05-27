@@ -1575,6 +1575,22 @@ def _runtime_proof_adapter_tree_sha(proof: Mapping[str, Any]) -> str | None:
     return None
 
 
+def _runtime_proof_expected_adapter_tree_sha(proof: Mapping[str, Any]) -> str | None:
+    adapter = proof.get("runtime_adapter_manifest")
+    for payload in (adapter, proof):
+        if not isinstance(payload, Mapping):
+            continue
+        for key in (
+            "expected_runtime_tree_sha256",
+            "expected_inflate_runtime_tree_sha256",
+            "expected_candidate_runtime_tree_sha256",
+        ):
+            value = payload.get(key)
+            if is_sha256(value):
+                return str(value).lower()
+    return None
+
+
 def _row_adapter_runtime_tree_sha(row: Mapping[str, Any]) -> str | None:
     for key in (
         "candidate_runtime_tree_sha256",
@@ -1597,6 +1613,35 @@ def _row_adapter_runtime_tree_sha(row: Mapping[str, Any]) -> str | None:
     return None
 
 
+def _row_expected_adapter_runtime_tree_sha(row: Mapping[str, Any]) -> str | None:
+    for key in (
+        "expected_runtime_tree_sha256",
+        "expected_inflate_runtime_tree_sha256",
+        "expected_candidate_runtime_tree_sha256",
+    ):
+        value = row.get(key)
+        if is_sha256(value):
+            return str(value).lower()
+    for key in (
+        "runtime_adapter_manifest",
+        "packet_member_merge_receiver_runtime",
+        "tensor_factorize_receiver_runtime",
+        "renderer_payload_dfl1_receiver_runtime",
+    ):
+        value = row.get(key)
+        if not isinstance(value, Mapping):
+            continue
+        for nested_key in (
+            "expected_runtime_tree_sha256",
+            "expected_inflate_runtime_tree_sha256",
+            "expected_candidate_runtime_tree_sha256",
+        ):
+            nested_value = value.get(nested_key)
+            if is_sha256(nested_value):
+                return str(nested_value).lower()
+    return None
+
+
 def _runtime_adapter_tree_sha_blockers(
     row: Mapping[str, Any],
     proof: Mapping[str, Any],
@@ -1606,16 +1651,34 @@ def _runtime_adapter_tree_sha_blockers(
     if row.get("runtime_adapter_ready") is not True:
         return []
     proof_sha = _runtime_proof_adapter_tree_sha(proof)
+    proof_expected_sha = _runtime_proof_expected_adapter_tree_sha(proof)
     row_sha = _row_adapter_runtime_tree_sha(row)
+    row_expected_sha = _row_expected_adapter_runtime_tree_sha(row)
     facts["runtime_consumption_proof_runtime_tree_sha256"] = proof_sha
+    facts["runtime_consumption_proof_expected_runtime_tree_sha256"] = proof_expected_sha
     facts["candidate_row_adapter_runtime_tree_sha256"] = row_sha
+    facts["candidate_row_expected_runtime_tree_sha256"] = row_expected_sha
     blockers: list[str] = []
     if proof_sha is None:
         blockers.append("runtime_consumption_proof_runtime_tree_sha_missing")
+    if proof_expected_sha is None:
+        blockers.append("runtime_consumption_proof_expected_runtime_tree_sha_missing")
     if row_sha is None:
         blockers.append("candidate_row_runtime_tree_sha_missing_for_runtime_adapter")
+    if row_expected_sha is None:
+        blockers.append("candidate_row_expected_runtime_tree_sha_missing_for_runtime_adapter")
+    if proof_sha is not None and proof_expected_sha is not None and proof_sha != proof_expected_sha:
+        blockers.append("runtime_consumption_proof_expected_runtime_tree_sha_mismatch")
+    if row_sha is not None and row_expected_sha is not None and row_sha != row_expected_sha:
+        blockers.append("candidate_row_expected_runtime_tree_sha_mismatch")
     if proof_sha is not None and row_sha is not None and proof_sha != row_sha:
         blockers.append("runtime_consumption_proof_runtime_tree_sha_mismatch")
+    if (
+        proof_expected_sha is not None
+        and row_expected_sha is not None
+        and proof_expected_sha != row_expected_sha
+    ):
+        blockers.append("runtime_consumption_proof_expected_runtime_tree_sha_mismatch")
     return blockers
 
 

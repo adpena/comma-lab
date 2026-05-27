@@ -870,6 +870,9 @@ def _overlay_runtime_context(row: dict[str, Any], context: Mapping[str, Any]) ->
             row[key] = value
             applied.append(key)
             continue
+        if existing == value:
+            applied.append(key)
+            continue
         if existing != value:
             identity_conflicts.append(
                 f"materializer_harvest_runtime_context_tree_sha256_conflict:{key}"
