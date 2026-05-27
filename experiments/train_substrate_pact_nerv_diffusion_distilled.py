@@ -33,6 +33,12 @@ from pathlib import Path
 from typing import Any
 
 from tac.substrate_registry import SubstrateContract, register_substrate
+from tac.substrates._shared.smoke_auth_eval_gate import (
+    gate_auth_eval_call as _canon_gate_auth_eval_call,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    build_optimized_training_context as _canon_build_optimized_training_context,
+)
 from tac.substrates._shared.trainer_skeleton import (
     detect_hardware_substrate as _canon_detect_hardware_substrate,
 )
@@ -55,11 +61,14 @@ from tac.substrates._shared.trainer_skeleton import (
     utc_now_iso as _canonical_utc_now_iso,
 )
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_VIDEO_PATH = REPO_ROOT / "upstream" / "videos" / "0.mkv"
 DEFAULT_UPSTREAM_DIR = REPO_ROOT / "upstream"
 SUBSTRATE_TAG = "pact_nerv_diffusion_distilled"
+EVAL_HW = (384, 512)
+N_PAIRS_FULL = 600
+CONTEST_NORMALIZER = 37_545_489.0
+CONTEST_AUTH_EVAL_SCRIPT = REPO_ROOT / "experiments" / "contest_auth_eval.py"
 
 
 TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
@@ -125,6 +134,20 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--latent-dim", type=int, default=8)
     p.add_argument("--teacher-num-timesteps", type=int, default=4)
     p.add_argument("--noise-conditioning-dim", type=int, default=8)
+    p.add_argument("--lr", type=float, default=5e-4)
+    p.add_argument("--weight-decay", type=float, default=0.0)
+    p.add_argument("--grad-clip", type=float, default=1.0)
+    p.add_argument("--ema-decay", type=float, default=0.997)
+    p.add_argument("--alpha-rate", type=float, default=25.0)
+    p.add_argument("--beta-seg", type=float, default=100.0)
+    p.add_argument("--gamma-pose", type=float, default=1.0)
+    p.add_argument("--pose-weight-scale", type=float, default=1.0)
+    p.add_argument("--noise-std", type=float, default=0.5)
+    p.add_argument("--max-pairs", type=int, default=None)
+    p.add_argument("--val-pair-count", type=int, default=64)
+    p.add_argument("--val-every-epochs", type=int, default=10)
+    p.add_argument("--skip-archive-build", action="store_true", default=False)
+    p.add_argument("--skip-auth-eval", action="store_true", default=False)
     p.add_argument("--device", choices=["cuda", "cpu"], default="cpu")
     p.add_argument("--smoke", action="store_true")
     p.add_argument("--enable-autocast-fp16", action="store_true", default=False)
@@ -256,33 +279,232 @@ def _smoke_main(args: argparse.Namespace) -> int:
 
 
 def _full_main(args: argparse.Namespace) -> int:
-    """Full training entry point — REFUSED at L0 SCAFFOLD posture.
+    """Full score-aware training entry point — CUDA-required; paid-GPU gated.
 
-    Reactivation criteria (per HNeRV parity discipline L2 export-first):
-    1. PACT-NERV symposium Stage 1 dispatch operator-gated approval per
-       CLAUDE.md "PER-SUBSTRATE OPTIMAL FORM via adversarial grand
-       council symposium" (Catalog #325).
-    2. Cargo-cult audit per Catalog #303 surfaces the CARGO-CULTED choices
-       documented in `src/tac/substrates/pact_nerv_diffusion_distilled/__init__.py`.
-    3. 9-dim checklist evidence per Catalog #294 + observability surface
-       per Catalog #305 + Dykstra feasibility predicted-band per Catalog #296.
-    4. T-step teacher trained per Salimans-Ho 2022 (arXiv:2202.00512); 1-step
-       student distilled per Song 2303.01469 §3 consistency loss; T-sweep
-       over {1, 2, 4, 8, 16} per L1 ablation.
-    5. Score-aware training loop with EMA + canonical auth-eval helper
-       invocation per Catalog #226.
-    6. Operator-frontier-override per Catalog #300 Mission alignment
-       Consequence 1 OR Stage 1 approval converts `research_only=true` to
-       `false` in the recipe + this trainer's `SubstrateContract`.
+    PACT-NERV-FULL-MAIN-CLUSTER-2 2026-05-27: routes the substrate-AGNOSTIC
+    training loop through the canonical ``tac.substrates._shared.pact_nerv_full_main``
+    helper (mirrors the implemented ``ia3``/``vq`` sisters); the UNIQUE
+    DiffusionDistilled distinguishing feature stays in this substrate's architecture +
+    archive + score-aware loss. The ``NotImplementedError`` is extinguished;
+    PAID DISPATCH is still gated by ``dispatch_enabled: false`` + ``research_only:
+    true`` on the recipe per Catalog #325 until the per-substrate symposium
+    clears it (code complete, trigger gated — the canonical "implement all
+    without firing council-gated paid paths" resolution).
+
+    Honored end-to-end: real contest video (Catalog #114); patch yuv6 BEFORE
+    scorer construction (eval_roundtrip non-negotiable); ``load_differentiable_
+    scorers`` (no scorer at inflate); score-domain Lagrangian via the variant
+    loss → Catalog #164 dispatch; EMA shadow (Quantizr 0.997); CUDA-required
+    (``device_or_die`` rejects MPS per Catalog #1); CUDA auth-eval via canonical
+    ``gate_auth_eval_call`` (Catalog #226); posterior-update via
+    ``posterior_update_locked`` (Catalog #128); contest-compliant numpy/PIL
+    runtime (Catalog #146 + #295).
+
+    Reactivation criteria for PAID DISPATCH (per HNeRV parity L2): PACT-NERV
+    symposium Stage 1 operator-gated approval (Catalog #325) + cargo-cult audit
+    (Catalog #303) + 9-dim checklist (#294) + Dykstra band (#296); recipe
+    ``research_only`` flips to false + ``dispatch_enabled`` to true.
     """
-    raise NotImplementedError(
-        "[pact_nerv_diffusion_distilled] full training path is OPERATOR-GATED "
-        "per Catalog #240 + #315 + #325. This is an L0 SCAFFOLD trainer; "
-        "substrate is research_only until PACT-NERV symposium Stage 1 "
-        "dispatch lands the T-step diffusion teacher + 1-step student "
-        "consistency-model distillation."
+    from tac.differentiable_eval_roundtrip import (
+        patch_upstream_yuv6_globally,
+        unpatch_upstream_yuv6,
+    )
+    from tac.scorer import load_differentiable_scorers
+    from tac.substrates._shared.pact_nerv_full_main import (
+        build_archive_zip,
+        closed_form_weight_byte_proxy,
+        decode_pairs_for_training,
+        run_pact_nerv_score_aware_training,
+        write_contest_runtime,
+    )
+    from tac.substrates.pact_nerv_diffusion_distilled import (
+        PactNervDiffusionDistilledConfig,
+        PactNervDiffusionDistilledScoreAwareLoss,
+        PactNervDiffusionDistilledSubstrate,
+        ScoreAwareLossWeights,
+        pack_archive,
     )
 
+    _pin_seeds(args.seed)
+    device = _device_or_die(args.device, smoke=False)
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    stage_log: list[dict[str, Any]] = []
+    yuv6_token = patch_upstream_yuv6_globally()
+    try:
+        posenet, segnet = load_differentiable_scorers(args.upstream_dir, device=device)
+        for p in list(posenet.parameters()) + list(segnet.parameters()):
+            p.requires_grad_(False)
+        posenet.eval()
+        segnet.eval()
+
+        print(f"[full:{SUBSTRATE_TAG}] decoding pairs from {args.video_path} ...")
+        pair_tensor = decode_pairs_for_training(
+            args.video_path, substrate_tag=SUBSTRATE_TAG, n_pairs=N_PAIRS_FULL,
+            max_pairs=args.max_pairs, repo_root=REPO_ROOT,
+        ).to(device)
+        n_pairs = int(pair_tensor.shape[0])
+        print(f"[full:{SUBSTRATE_TAG}] decoded {n_pairs} pairs at {EVAL_HW}")
+
+        cfg = PactNervDiffusionDistilledConfig(
+            latent_dim=args.latent_dim, sin_frequency=30.0,
+            num_pairs=n_pairs,
+            output_height=EVAL_HW[0], output_width=EVAL_HW[1],
+        )
+        model = PactNervDiffusionDistilledSubstrate(cfg).to(device)
+        print(f"[full:{SUBSTRATE_TAG}] params: {model.num_parameters():,}")
+
+        weights = ScoreAwareLossWeights(
+            alpha_rate=args.alpha_rate, beta_seg=args.beta_seg,
+            gamma_pose=args.gamma_pose, pose_weight_scale=args.pose_weight_scale,
+            contest_normalizer=CONTEST_NORMALIZER,
+        )
+        loss_fn = PactNervDiffusionDistilledScoreAwareLoss(
+            seg_scorer=segnet, pose_scorer=posenet, weights=weights
+        )
+
+        opt_ctx = _canon_build_optimized_training_context(
+            args, scorers=(posenet, segnet), gt_pairs=pair_tensor,
+            substrate_model=model, device=device,
+        )
+        gt_cache = opt_ctx.gt_cache
+        archive_bytes_proxy = closed_form_weight_byte_proxy(model)
+
+        def _compute_loss(
+            m, idx, gt_0, gt_1, abp, *, gt_pose_batch, gt_seg_batch, gt_seg_already_probs
+        ):
+            rgb_0, rgb_1 = m(idx)
+            return loss_fn(
+                rgb_0 * 255.0, rgb_1 * 255.0, gt_0, gt_1, abp,
+                apply_eval_roundtrip=True, noise_std=args.noise_std,
+                gt_pose_batch=gt_pose_batch, gt_seg_batch=gt_seg_batch,
+                gt_seg_already_probs=gt_seg_already_probs,
+            )
+
+        result = run_pact_nerv_score_aware_training(
+            model=model, pair_tensor=pair_tensor, compute_loss=_compute_loss,
+            archive_bytes_proxy=archive_bytes_proxy, device=device,
+            output_dir=args.output_dir, substrate_tag=SUBSTRATE_TAG,
+            epochs=args.epochs, batch_size=args.batch_size, lr=args.lr,
+            weight_decay=args.weight_decay, grad_clip=args.grad_clip,
+            ema_decay=args.ema_decay, val_pair_count=args.val_pair_count,
+            val_every_epochs=args.val_every_epochs, gt_cache=gt_cache,
+            stage_log=stage_log, config_asdict=asdict(cfg),
+        )
+        print(
+            f"[full:{SUBSTRATE_TAG}] train done: best_val_lag="
+            f"{result.best_val_lagrangian:.6f} elapsed={result.train_elapsed_sec:.1f}s"
+        )
+
+        archive_sha = ""
+        archive_bytes = 0
+        archive_zip_path = args.output_dir / "archive.zip"
+        if not args.skip_archive_build:
+            sd = result.best_ema_state_dict
+            latents = sd["latents"].detach().cpu()
+            student_sd = {k: v for k, v in sd.items() if k != "latents"}
+            meta = {
+                "embed_dim": cfg.embed_dim, "initial_grid_h": cfg.initial_grid_h,
+                "initial_grid_w": cfg.initial_grid_w,
+                "decoder_channels": list(cfg.decoder_channels),
+                "sin_frequency": cfg.sin_frequency,
+                "num_upsample_blocks": cfg.num_upsample_blocks,
+                "output_height": cfg.output_height, "output_width": cfg.output_width,
+                "teacher_num_timesteps": cfg.teacher_num_timesteps,
+                "noise_conditioning_dim": cfg.noise_conditioning_dim,
+            }
+            bin_bytes = pack_archive(student_sd, latents, meta)
+            (args.output_dir / "0.bin").write_bytes(bin_bytes)
+            archive_sha = _sha256_bytes(bin_bytes)
+            archive_bytes = len(bin_bytes)
+            submission_dir = args.output_dir / "submission"
+            write_contest_runtime(
+                submission_dir, substrate_pkg_name="pact_nerv_diffusion_distilled",
+                repo_root=REPO_ROOT,
+            )
+            (submission_dir / "0.bin").write_bytes(bin_bytes)
+            build_archive_zip(
+                archive_zip_path, bin_bytes=bin_bytes, submission_dir=submission_dir
+            )
+            print(f"[full:{SUBSTRATE_TAG}] wrote 0.bin ({archive_bytes} B) + archive.zip")
+
+        auth_eval_result_path: Path | None = None
+        contest_cuda_score: float | None = None
+        if not args.skip_auth_eval and archive_zip_path.is_file():
+            auth_eval_result_path = args.output_dir / "contest_auth_eval_cuda.json"
+            auth_result = _canon_gate_auth_eval_call(
+                args=args, archive_zip=archive_zip_path,
+                inflate_sh=args.output_dir / "submission" / "inflate.sh",
+                upstream_dir=args.upstream_dir, output_json=auth_eval_result_path,
+                contest_auth_eval_script=CONTEST_AUTH_EVAL_SCRIPT,
+                substrate_tag=SUBSTRATE_TAG, device=device,
+            )
+            if auth_result is not None:
+                contest_cuda_score = auth_result["auth_eval_cuda_score"]
+                print(f"[full:{SUBSTRATE_TAG}] [contest-CUDA] score = {contest_cuda_score}")
+
+        if contest_cuda_score is not None and archive_sha:
+            try:
+                from tac.continual_learning import (
+                    ContestResult,
+                    posterior_update_locked,
+                )
+
+                _detected = _canon_detect_hardware_substrate(
+                    axis="cuda", substrate_tag=SUBSTRATE_TAG,
+                    provenance_path=args.output_dir / "provenance.json",
+                    env_var_candidates=("PACT_NERV_DIFFUSION_DISTILLED_GPU", "MODAL_GPU"),
+                )
+                update = posterior_update_locked(
+                    ContestResult(
+                        axis="cuda", hardware_substrate=_detected,
+                        architecture_class="lane_pact_nerv_diffusion_distilled_l0_scaffold_20260520",
+                        score_value=contest_cuda_score, evidence_tag="[contest-CUDA]",
+                        archive_sha256=archive_sha, archive_bytes=archive_bytes,
+                        notes=f"pact_nerv_diffusion_distilled first-anchor; epochs={args.epochs}",
+                        observed_at_utc=_utc_now_iso(),
+                    )
+                )
+                print(f"[full:{SUBSTRATE_TAG}] posterior_update accepted={update.accepted}")
+            except Exception as exc:
+                print(f"[full:{SUBSTRATE_TAG}] posterior_update failed: {exc}", file=sys.stderr)
+
+        provenance = {
+            "schema": "pact_nerv_diffusion_distilled_full_provenance_v1",
+            "generated_at": _utc_now_iso(),
+            "git_head": _git_head_sha(),
+            "trainer": "experiments/train_substrate_pact_nerv_diffusion_distilled.py",
+            "lane_id": "lane_pact_nerv_diffusion_distilled_l0_scaffold_20260520",
+            "substrate_tag": SUBSTRATE_TAG,
+            "args": {k: (str(v) if isinstance(v, Path) else v) for k, v in vars(args).items()},
+            "pytorch_version": _canonical_torch_version_string(),
+            "device": str(device),
+            "num_pairs_decoded": result.n_pairs,
+            "best_val_lagrangian": (
+                result.best_val_lagrangian
+                if result.best_val_lagrangian == result.best_val_lagrangian else None
+            ),
+            "best_epoch": result.best_epoch,
+            "train_elapsed_sec": result.train_elapsed_sec,
+            "archive_sha256": archive_sha,
+            "archive_bytes": archive_bytes,
+            "auth_eval_cuda_score": contest_cuda_score,
+            "auth_eval_json_path": (
+                str(auth_eval_result_path) if auth_eval_result_path else None
+            ),
+            "stage_log": stage_log,
+            "custody_status": "ci-rebuildable",
+            "score_claim": contest_cuda_score is not None,
+            "score_axis_tag": "[contest-CUDA]" if contest_cuda_score is not None else None,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+        (args.output_dir / "provenance.json").write_text(
+            json.dumps(provenance, indent=2, sort_keys=True), encoding="utf-8"
+        )
+        print(f"[full:{SUBSTRATE_TAG}] wrote {args.output_dir / 'provenance.json'}")
+        return 0
+    finally:
+        unpatch_upstream_yuv6(yuv6_token)
 
 PACT_NERV_DIFFUSION_DISTILLED_SUBSTRATE_CONTRACT = SubstrateContract(
     id="pact_nerv_diffusion_distilled",

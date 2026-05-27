@@ -183,6 +183,7 @@ def test_archive_rejects_bad_schema_version() -> None:
 
 def test_score_aware_loss_canonical_routing_tokens_present() -> None:
     import inspect
+
     from tac.substrates.pact_nerv_neural_codec_e2e_cross import score_aware_loss as sal
     src = inspect.getsource(sal)
     assert "score_pair_components_dispatch" in src
@@ -217,23 +218,27 @@ def test_score_aware_loss_refuses_apply_eval_roundtrip_false() -> None:
         raise AssertionError("expected ValueError on apply_eval_roundtrip=False")
 
 
-def test_trainer_full_main_raises_not_implemented_at_l0_scaffold() -> None:
-    import argparse
+def test_trainer_full_main_implemented_and_cuda_gated(tmp_path) -> None:
+    """PACT-NERV-FULL-MAIN-CLUSTER-2 2026-05-27: _full_main IMPLEMENTED + CUDA-gated."""
     import importlib
-    trainer = importlib.import_module(
-        "experiments.train_substrate_pact_nerv_neural_codec_e2e_cross"
+    import inspect
+
+    import pytest
+
+    trainer = importlib.import_module("experiments.train_substrate_pact_nerv_neural_codec_e2e_cross")
+    src = inspect.getsource(trainer._full_main)
+    assert "raise NotImplementedError" not in src
+    assert "run_pact_nerv_score_aware_training" in src
+    args = trainer._build_parser().parse_args(
+        ["--output-dir", str(tmp_path / "out"), "--device", "cpu"]
     )
-    ns = argparse.Namespace(output_dir=None, epochs=1, smoke=False, device="cpu")
-    try:
-        trainer._full_main(ns)
-    except NotImplementedError as exc:
-        assert "OPERATOR-GATED" in str(exc) or "L0 SCAFFOLD" in str(exc)
-    else:
-        raise AssertionError("expected NotImplementedError")
+    with pytest.raises(SystemExit):
+        trainer._full_main(args)
 
 
 def test_trainer_routes_through_canonical_scorer_loss_helper() -> None:
     import inspect
+
     from tac.substrates.pact_nerv_neural_codec_e2e_cross import score_aware_loss as sal
     src = inspect.getsource(sal)
     assert "score_pair_components_dispatch" in src
@@ -242,6 +247,7 @@ def test_trainer_routes_through_canonical_scorer_loss_helper() -> None:
 
 def test_trainer_patches_differentiable_eval_roundtrip_before_scorer() -> None:
     import inspect
+
     import experiments.train_substrate_pact_nerv_neural_codec_e2e_cross as trainer_module
     src = inspect.getsource(trainer_module._smoke_main)
     assert "patch_upstream_yuv6_globally" in src
@@ -249,6 +255,7 @@ def test_trainer_patches_differentiable_eval_roundtrip_before_scorer() -> None:
 
 def test_recipe_research_only_and_dispatch_disabled() -> None:
     from pathlib import Path
+
     import yaml  # type: ignore[import-untyped]
     recipe = yaml.safe_load(
         (Path(__file__).resolve().parents[5]
