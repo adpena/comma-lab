@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import importlib.util
 import json
 import subprocess
 import sys
@@ -48,6 +49,7 @@ from tac.optimization.family_agnostic_materializers import (
 from tac.repo_io import sha256_file
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+QUEUE_BUILDER_TOOL = REPO_ROOT / "tools" / "build_frontier_final_rate_attack_queue.py"
 
 
 AUTHORITY_KEYS = (
@@ -79,6 +81,24 @@ def _write_stored_archive(path: Path, *, member_name: str, payload: bytes) -> Pa
     with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as archive:
         archive.writestr(member_name, payload)
     return path
+
+
+def _load_frontier_queue_builder_tool_module():
+    spec = importlib.util.spec_from_file_location(
+        "build_frontier_final_rate_attack_queue_tool",
+        QUEUE_BUILDER_TOOL,
+    )
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    original_path = list(sys.path)
+    try:
+        sys.path.insert(0, str(REPO_ROOT))
+        sys.path.insert(0, str(REPO_ROOT / "tools"))
+        spec.loader.exec_module(module)
+    finally:
+        sys.path[:] = original_path
+    return module
 
 
 def _write_json(path: Path, payload: object) -> None:
@@ -597,6 +617,101 @@ def test_frontier_bootstrap_cli_writes_valid_queue(tmp_path: Path) -> None:
         check=False,
     )
     assert validate.returncode == 0, validate.stderr
+
+
+def test_frontier_bootstrap_execute_observer_signal_artifacts_are_planner_owned(
+    tmp_path: Path,
+) -> None:
+    module = _load_frontier_queue_builder_tool_module()
+    output_dir = tmp_path / "out"
+    observation = {
+        "schema": "experiment_queue_observation.v1",
+        "queue_id": "frontier_final_rate_attack_signal_unit",
+        "queue_sha256": "a" * 64,
+        "healthy": True,
+        "status_counts": {"succeeded": 1},
+        "blockers": [],
+        "state_watermark": {
+            "queue_id": "frontier_final_rate_attack_signal_unit",
+            "updated_at_utc": "2026-05-27T00:00:00Z",
+        },
+        "succeeded_artifact_steps": [
+            {
+                "experiment_id": "materializer_work_frontier_rate_attack_zip_header",
+                "step_id": "build_materializer_submission_closure",
+                "resource_kind": "local_cpu",
+                "candidate_ids": ["zip_header_candidate"],
+                "expected_artifacts": [
+                    {
+                        "path": str(tmp_path / "submission_closure.json"),
+                        "optimizer_candidate_queue_materializer_rows": [
+                            {
+                                "candidate_id": "zip_header_candidate",
+                                "target_kind": PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+                                "materializer_id": "family_agnostic_materializer",
+                                "receiver_contract_kind": "archive_runtime_consumption",
+                                "receiver_contract_satisfied": True,
+                                "serialized_archive_delta_status": "realized_saving",
+                                "serialized_archive_delta_savings_realized": True,
+                                "serialized_archive_delta_realized_saved_bytes": 7,
+                                "serialized_archive_delta_source_archive_bytes": 101,
+                                "serialized_archive_delta_candidate_archive_bytes": 94,
+                                "score_claim": False,
+                                "promotion_eligible": False,
+                                "rank_or_kill_eligible": False,
+                                "ready_for_exact_eval_dispatch": False,
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+    observe_result = {
+        "returncode": 0,
+        "stdout": json.dumps(observation),
+        "stderr": "",
+    }
+
+    result = module._write_execution_observer_signal_artifacts(
+        output_dir=output_dir,
+        observe_result=observe_result,
+    )
+
+    observer_path = output_dir / "observer_revalidation.json"
+    signal_path = output_dir / "materializer_signal_observations.jsonl"
+    harvest_path = output_dir / "final_rate_attack_signal_harvest.json"
+    assert result["artifacts"]["observer_revalidation"].endswith("observer_revalidation.json")
+    assert observer_path.exists()
+    assert signal_path.exists()
+    assert harvest_path.exists()
+
+    rows = [
+        json.loads(line)
+        for line in signal_path.read_text(encoding="utf-8").splitlines()
+        if line
+    ]
+    assert rows
+    materializer_rows = [
+        row
+        for row in rows
+        if row["observation_kind"] in {
+            "family_agnostic_materializer_empirical_observation",
+            "materializer_chain_archive_delta",
+        }
+    ]
+    assert materializer_rows
+    assert all(row["score_claim"] is False for row in rows)
+    assert all(row["ready_for_exact_eval_dispatch"] is False for row in rows)
+
+    harvest = json.loads(harvest_path.read_text(encoding="utf-8"))
+    assert harvest["schema"] == module.SIGNAL_HARVEST_SCHEMA
+    assert harvest["score_claim"] is False
+    assert harvest["promotion_eligible"] is False
+    assert harvest["ready_for_exact_eval_dispatch"] is False
+    assert harvest["queue_healthy"] is True
+    assert harvest["materializer_rate_positive_count"] >= 1
+    assert harvest["materializer_saved_bytes_sum"] >= 7
 
 
 def test_frontier_bootstrap_cli_derives_merge_contract_for_receiver_targets(

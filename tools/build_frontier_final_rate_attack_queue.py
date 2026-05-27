@@ -11,6 +11,7 @@ only; exact auth eval is still required before any score or promotion claim.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import subprocess
 import sys
@@ -42,7 +43,22 @@ from comma_lab.scheduler.frontier_rate_attack_target_profile import (  # noqa: E
     FrontierRateAttackTargetProfileError,
     build_frontier_target_optimization_profile,
 )
-from tac.repo_io import ArtifactWriteError, json_text, write_json_artifact  # noqa: E402
+from tac.optimization.inverse_steganalysis_acquisition import (  # noqa: E402
+    FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_KIND,
+    MATERIALIZER_ARCHIVE_DELTA_OBSERVATION_KIND,
+    observations_from_queue_observation,
+)
+from tac.repo_io import (  # noqa: E402
+    ArtifactWriteError,
+    json_line,
+    json_text,
+    sha256_bytes,
+    write_json_artifact,
+    write_text_artifact,
+)
+
+SIGNAL_HARVEST_SCHEMA = "frontier_final_rate_attack_signal_harvest.v1"
+QUEUE_OBSERVER_SIGNAL_AXIS = "[local-final-rate-attack-queue advisory]"
 
 
 def _utc_stamp() -> str:
@@ -280,6 +296,151 @@ def _write_outputs(output_dir: Path, payloads: dict[str, Any]) -> dict[str, str]
     return {key: _display_path(path) for key, path in paths.items()}
 
 
+def _sha256_or_fallback(value: Any, fallback: str) -> str:
+    if isinstance(value, str) and len(value) == 64:
+        lowered = value.lower()
+        if all(item in "0123456789abcdef" for item in lowered):
+            return lowered
+    return fallback
+
+
+def _json_payload_from_stdout(result: dict[str, Any], *, label: str) -> dict[str, Any]:
+    try:
+        payload = json.loads(str(result.get("stdout") or ""))
+    except json.JSONDecodeError as exc:
+        raise FrontierRateAttackBootstrapError(
+            f"{label} command returned invalid JSON stdout: {exc}"
+        ) from exc
+    if not isinstance(payload, dict):
+        raise FrontierRateAttackBootstrapError(f"{label} command stdout must be a JSON object")
+    return payload
+
+
+def _signal_counts_by_key(rows: list[dict[str, Any]], key: str) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for row in rows:
+        value = row.get(key)
+        if value is None:
+            value = "none"
+        text = str(value)
+        counts[text] = counts.get(text, 0) + 1
+    return dict(sorted(counts.items()))
+
+
+def _build_signal_harvest(
+    *,
+    observation: dict[str, Any],
+    observations: list[dict[str, Any]],
+    observer_path: Path,
+    signal_path: Path,
+) -> dict[str, Any]:
+    materializer_kinds = {
+        FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_KIND,
+        MATERIALIZER_ARCHIVE_DELTA_OBSERVATION_KIND,
+    }
+    materializer_rows = [
+        row for row in observations if str(row.get("observation_kind") or "") in materializer_kinds
+    ]
+    saved_values = [
+        int(row.get("saved_bytes") or 0)
+        for row in materializer_rows
+        if row.get("saved_bytes") is not None
+    ]
+    rate_positive_rows = [row for row in materializer_rows if row.get("rate_positive") is True]
+    rate_nonpositive_rows = [
+        row for row in materializer_rows if row.get("rate_positive") is not True
+    ]
+    materializer_blocking_rows = [
+        row
+        for row in materializer_rows
+        if row.get("receiver_contract_satisfied") is not True
+        or (row.get("rate_positive") is not True and row.get("quality_spend_allowed") is not True)
+    ]
+    return {
+        "schema": SIGNAL_HARVEST_SCHEMA,
+        "queue_id": observation.get("queue_id"),
+        "observer_revalidation_path": _display_path(observer_path),
+        "signal_observations_path": _display_path(signal_path),
+        "queue_healthy": observation.get("healthy") is True,
+        "queue_status_counts": dict(observation.get("status_counts") or {}),
+        "queue_blockers": list(observation.get("blockers") or []),
+        "observation_count": len(observations),
+        "observation_kind_counts": _signal_counts_by_key(observations, "observation_kind"),
+        "materializer_observation_count": len(materializer_rows),
+        "materializer_target_kind_counts": _signal_counts_by_key(
+            materializer_rows,
+            "target_kind",
+        ),
+        "materializer_rate_positive_count": len(rate_positive_rows),
+        "materializer_rate_nonpositive_count": len(rate_nonpositive_rows),
+        "materializer_blocking_feedback_count": len(materializer_blocking_rows),
+        "materializer_saved_bytes_sum": sum(saved_values),
+        "materializer_saved_bytes_max": max(saved_values) if saved_values else None,
+        "materializer_archive_delta_status_counts": _signal_counts_by_key(
+            materializer_rows,
+            "archive_delta_status",
+        ),
+        "allowed_use": "local_final_rate_attack_planning_feedback_only",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _write_execution_observer_signal_artifacts(
+    *,
+    output_dir: Path,
+    observe_result: dict[str, Any],
+    min_free_bytes: int = 0,
+) -> dict[str, Any]:
+    observation = _json_payload_from_stdout(observe_result, label="experiment queue observe")
+    observation_sha256 = sha256_bytes(json_text(observation).encode("utf-8"))
+    queue_sha256 = _sha256_or_fallback(observation.get("queue_sha256"), observation_sha256)
+    observer_path = output_dir / "observer_revalidation.json"
+    signal_path = output_dir / "materializer_signal_observations.jsonl"
+    harvest_path = output_dir / "final_rate_attack_signal_harvest.json"
+    write_json_artifact(
+        observer_path,
+        observation,
+        min_free_bytes=min_free_bytes,
+    )
+    observations = observations_from_queue_observation(
+        observation,
+        runtime_identity={
+            "runtime_contract_sha256": queue_sha256,
+            "runtime_contract_kind": "experiment_queue_definition",
+        },
+        cache_identity={
+            "cache_sha256": observation_sha256,
+            "cache_key": f"{observation.get('queue_id')}:{observation_sha256}",
+        },
+        axis=QUEUE_OBSERVER_SIGNAL_AXIS,
+        source_path=_display_path(observer_path),
+    )
+    write_text_artifact(
+        signal_path,
+        "".join(json_line(row) for row in observations),
+        min_free_bytes=min_free_bytes,
+    )
+    harvest = _build_signal_harvest(
+        observation=observation,
+        observations=observations,
+        observer_path=observer_path,
+        signal_path=signal_path,
+    )
+    write_json_artifact(harvest_path, harvest, min_free_bytes=min_free_bytes)
+    return {
+        "harvest": harvest,
+        "artifacts": {
+            "observer_revalidation": _display_path(observer_path),
+            "materializer_signal_observations": _display_path(signal_path),
+            "final_rate_attack_signal_harvest": _display_path(harvest_path),
+        },
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     stamp = _utc_stamp()
@@ -474,6 +635,14 @@ def main(argv: list[str] | None = None) -> int:
                 "rank_or_kill_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
             }
+            if results[-1]["returncode"] == 0:
+                observer_signal = _write_execution_observer_signal_artifacts(
+                    output_dir=output_dir,
+                    observe_result=results[-1],
+                    min_free_bytes=args.min_free_bytes,
+                )
+                artifact_paths.update(observer_signal["artifacts"])
+                execution_report["observer_signal_harvest"] = observer_signal["harvest"]
             report_path = output_dir / "execution_report.json"
             write_json_artifact(report_path, execution_report)
             artifact_paths["execution_report"] = _display_path(report_path)
