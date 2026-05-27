@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
@@ -12,6 +13,9 @@ from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY
 from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
     require_no_truthy_authority_fields,
+)
+from tac.optimization.repair_campaign_replay_bundle import (
+    REPAIR_CAMPAIGN_STACKABILITY_REPLAY_BUNDLE_SCHEMA,
 )
 from tac.optimization.repair_campaign_scorer import (
     REPAIR_CAMPAIGN_OPTIMIZER_DECISION_SCHEMA,
@@ -128,6 +132,12 @@ def _stackability_experiment(
         / "repair_campaign_stackability_probe.json"
     )
     probe_ref = _repo_rel(probe_path, repo_root)
+    replay_bundle_path = (
+        queue_root
+        / _slug(typed_response_id)
+        / "repair_campaign_stackability_replay_bundle.json"
+    )
+    replay_bundle_ref = _repo_rel(replay_bundle_path, repo_root)
     allocation_blockers: list[str] = []
     if not typed_response_id:
         allocation_blockers.append("typed_response_id_missing")
@@ -148,6 +158,8 @@ def _stackability_experiment(
         "allocated_repair_bytes": _safe_int(allocation.get("allocated_repair_bytes")),
         "probe_output_path": probe_ref,
         "stackability_probe_schema": REPAIR_CAMPAIGN_STACKABILITY_PROBE_SCHEMA,
+        "replay_bundle_path": replay_bundle_ref,
+        "replay_bundle_schema": REPAIR_CAMPAIGN_STACKABILITY_REPLAY_BUNDLE_SCHEMA,
         "queue_actuation_ready": queue_actuation_ready,
         "queue_actuation_blockers": blockers,
         "local_mlx_advisory_custody_required": True,
@@ -189,21 +201,22 @@ def _stackability_experiment(
             }
         ]
     else:
+        probe_command = [
+            ".venv/bin/python",
+            "tools/run_repair_campaign_stackability_probe.py",
+            "--score-report",
+            str(score_report_path),
+            "--typed-response-id",
+            typed_response_id,
+            "--output",
+            probe_ref,
+            "--overwrite",
+        ]
         steps = [
             {
                 "id": "emit_repair_campaign_stackability_probe",
                 "kind": "command",
-                "command": [
-                    ".venv/bin/python",
-                    "tools/run_repair_campaign_stackability_probe.py",
-                    "--score-report",
-                    str(score_report_path),
-                    "--typed-response-id",
-                    typed_response_id,
-                    "--output",
-                    probe_ref,
-                    "--overwrite",
-                ],
+                "command": probe_command,
                 "resources": {"kind": "local_cpu"},
                 "timeout_seconds": 120,
                 "postconditions": [
@@ -239,6 +252,49 @@ def _stackability_experiment(
                 "telemetry": {
                     "artifact_paths": [probe_ref],
                     "input_artifact_paths": [str(score_report_path)],
+                    "include_postcondition_paths": True,
+                },
+            },
+            {
+                "id": "build_repair_campaign_stackability_replay_bundle",
+                "kind": "command",
+                "requires": ["emit_repair_campaign_stackability_probe"],
+                "command": [
+                    ".venv/bin/python",
+                    "tools/build_repair_campaign_stackability_replay_bundle.py",
+                    "--score-report",
+                    str(score_report_path),
+                    "--probe",
+                    probe_ref,
+                    "--bundle-out",
+                    replay_bundle_ref,
+                    "--probe-command-json",
+                    json.dumps(probe_command, separators=(",", ":")),
+                    "--overwrite",
+                ],
+                "resources": {"kind": "local_cpu"},
+                "timeout_seconds": 120,
+                "postconditions": [
+                    {
+                        "type": "json_equals",
+                        "path": replay_bundle_ref,
+                        "key": "schema",
+                        "equals": REPAIR_CAMPAIGN_STACKABILITY_REPLAY_BUNDLE_SCHEMA,
+                    },
+                    {
+                        "type": "json_false_authority",
+                        "path": replay_bundle_ref,
+                    },
+                    {
+                        "type": "json_equals",
+                        "path": replay_bundle_ref,
+                        "key": "ready_for_exact_eval_dispatch",
+                        "equals": False,
+                    },
+                ],
+                "telemetry": {
+                    "artifact_paths": [replay_bundle_ref],
+                    "input_artifact_paths": [str(score_report_path), probe_ref],
                     "include_postcondition_paths": True,
                 },
             }

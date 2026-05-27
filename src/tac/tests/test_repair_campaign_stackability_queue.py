@@ -10,6 +10,12 @@ from comma_lab.scheduler.repair_campaign_stackability_queue import (
     REPAIR_CAMPAIGN_STACKABILITY_QUEUE_METADATA_SCHEMA,
     build_repair_campaign_stackability_queue,
 )
+from tac.optimization.repair_campaign_replay_bundle import (
+    REPAIR_CAMPAIGN_STACKABILITY_REPLAY_BUNDLE_DIFF_SCHEMA,
+    REPAIR_CAMPAIGN_STACKABILITY_REPLAY_BUNDLE_SCHEMA,
+    build_repair_campaign_stackability_replay_bundle,
+    diff_repair_campaign_stackability_replay_bundles,
+)
 from tac.optimization.repair_campaign_scorer import (
     REPAIR_CAMPAIGN_STACKABILITY_PROBE_SCHEMA,
     build_repair_campaign_stackability_probe,
@@ -153,6 +159,9 @@ def test_stackability_queue_emits_executable_local_probe(tmp_path: Path) -> None
     assert queue["metadata"]["blocked_experiment_count"] == 0
     experiment = queue["experiments"][0]
     assert experiment["status"] == "queued"
+    assert experiment["metadata"]["replay_bundle_path"].endswith(
+        "repair_campaign_stackability_replay_bundle.json"
+    )
     command = [
         sys.executable if item == ".venv/bin/python" else str(item)
         for item in experiment["steps"][0]["command"]
@@ -173,6 +182,123 @@ def test_stackability_queue_emits_executable_local_probe(tmp_path: Path) -> None
     assert artifact["stackability_ready"] is True
     assert artifact["budget_spend_allowed"] is False
     assert artifact["ready_for_exact_eval_dispatch"] is False
+    bundle_command = [
+        sys.executable if item == ".venv/bin/python" else str(item)
+        for item in experiment["steps"][1]["command"]
+    ]
+    bundle_result = subprocess.run(
+        bundle_command,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert bundle_result.returncode == 0, bundle_result.stderr
+    bundle = json.loads(
+        Path(experiment["metadata"]["replay_bundle_path"]).read_text(encoding="utf-8")
+    )
+    assert bundle["schema"] == REPAIR_CAMPAIGN_STACKABILITY_REPLAY_BUNDLE_SCHEMA
+    assert bundle["replay_argv"] == experiment["steps"][0]["command"]
+    assert bundle["hash_manifest_sha256"]
+    assert bundle["source_records_sha256"]
+    assert bundle["replay_argv_sha256"]
+    assert bundle["execution_context_sha256"]
+    assert bundle["environment"]["schema"] == "safe_replay_environment_capture.v1"
+    assert bundle["budget_spend_allowed"] is False
+    assert bundle["ready_for_exact_eval_dispatch"] is False
+
+
+def test_stackability_replay_bundle_diff_detects_environment_drift(
+    tmp_path: Path,
+) -> None:
+    report = score_repair_campaign(payload=_work_order(tmp_path), repo_root=tmp_path)
+    report_path = tmp_path / "repair_campaign_score_report.json"
+    probe_path = tmp_path / "repair_campaign_stackability_probe.json"
+    report_path.write_text(
+        json.dumps(report, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    probe = build_repair_campaign_stackability_probe(
+        score_report=report,
+        typed_response_id="segnet_region_ready",
+        repo_root=tmp_path,
+    )
+    probe_path.write_text(
+        json.dumps(probe, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    replay_argv = [
+        ".venv/bin/python",
+        "tools/run_repair_campaign_stackability_probe.py",
+        "--score-report",
+        str(report_path),
+        "--typed-response-id",
+        "segnet_region_ready",
+        "--output",
+        str(probe_path),
+        "--overwrite",
+    ]
+
+    left = build_repair_campaign_stackability_replay_bundle(
+        score_report_path=report_path,
+        probe_path=probe_path,
+        score_report=report,
+        probe=probe,
+        replay_argv=replay_argv,
+        invocation_argv=["python", "bundle"],
+        repo_root=tmp_path,
+        environment={"MLX_VISIBLE_DEVICES": "all", "API_TOKEN": "secret"},
+    )
+    right = build_repair_campaign_stackability_replay_bundle(
+        score_report_path=report_path,
+        probe_path=probe_path,
+        score_report=report,
+        probe=probe,
+        replay_argv=replay_argv,
+        invocation_argv=["python", "bundle"],
+        repo_root=tmp_path,
+        environment={"MLX_VISIBLE_DEVICES": "none", "API_TOKEN": "changed"},
+    )
+
+    assert left["environment"]["env"]["API_TOKEN"] == "[REDACTED]"
+    diff = diff_repair_campaign_stackability_replay_bundles(left, right)
+    assert diff["schema"] == REPAIR_CAMPAIGN_STACKABILITY_REPLAY_BUNDLE_DIFF_SCHEMA
+    assert diff["stable_replay_identity_matched"] is True
+    assert diff["execution_context_matched"] is False
+    assert diff["matched"] is False
+    assert diff["changed_environment_keys"] == ["MLX_VISIBLE_DEVICES"]
+    assert diff["budget_spend_allowed"] is False
+    assert diff["ready_for_exact_eval_dispatch"] is False
+
+    left_path = tmp_path / "left_replay_bundle.json"
+    right_path = tmp_path / "right_replay_bundle.json"
+    diff_path = tmp_path / "replay_bundle_diff.json"
+    left_path.write_text(json.dumps(left, indent=2, sort_keys=True) + "\n")
+    right_path.write_text(json.dumps(right, indent=2, sort_keys=True) + "\n")
+    command = [
+        sys.executable,
+        "tools/diff_repair_campaign_stackability_replay_bundle.py",
+        "--left",
+        str(left_path),
+        "--right",
+        str(right_path),
+        "--diff-out",
+        str(diff_path),
+        "--overwrite",
+    ]
+    result = subprocess.run(
+        command,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    cli_result = json.loads(result.stdout)
+    cli_diff = json.loads(diff_path.read_text(encoding="utf-8"))
+    assert cli_result["matched"] is False
+    assert cli_diff["schema"] == REPAIR_CAMPAIGN_STACKABILITY_REPLAY_BUNDLE_DIFF_SCHEMA
+    assert cli_diff["changed_environment_keys"] == ["MLX_VISIBLE_DEVICES"]
 
 
 def test_stackability_queue_freezes_bad_selected_allocation_with_exact_missing_names(
