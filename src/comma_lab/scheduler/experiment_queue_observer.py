@@ -36,6 +36,8 @@ from tac.optimization.runtime_adapter_identity import (
 )
 from tac.optimization.serialized_archive_economics import SERIALIZED_ARCHIVE_DELTA_SCHEMA
 
+from .json_identity import stable_json_sha256
+
 OBSERVATION_SCHEMA = "experiment_queue_observation.v1"
 LOCAL_TRAINING_SIGNAL_OBSERVATION_SCHEMA = "local_training_signal_observation.v1"
 FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_SCHEMA = "family_agnostic_materializer_empirical_observation.v1"
@@ -81,17 +83,6 @@ def _repo_rel(path: Path, repo_root: Path) -> str:
         return path.resolve().relative_to(repo_root.resolve()).as_posix()
     except ValueError:
         return path.as_posix()
-
-
-def _stable_json_sha256(payload: Mapping[str, Any]) -> str:
-    encoded = json.dumps(
-        payload,
-        sort_keys=True,
-        separators=(",", ":"),
-        ensure_ascii=True,
-        default=str,
-    ).encode("utf-8")
-    return hashlib.sha256(encoded).hexdigest()
 
 
 def _json_load_lenient(path: Path) -> Mapping[str, Any] | None:
@@ -1850,7 +1841,7 @@ def observe_experiment_queue(
         "schema": OBSERVATION_SCHEMA,
         "generated_at_utc": _utc_now(),
         "queue_id": summary["queue_id"],
-        "queue_sha256": _stable_json_sha256(queue),
+        "queue_sha256": stable_json_sha256(queue),
         "mode": summary["mode"],
         "state": _repo_rel(state_path, repo_root),
         "state_watermark": state_watermark,

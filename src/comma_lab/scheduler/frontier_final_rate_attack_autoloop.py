@@ -18,9 +18,10 @@ from typing import Any
 
 from tac.optimization.byte_shaving_campaign import FALSE_AUTHORITY
 from tac.optimization.proxy_candidate_contract import require_no_truthy_authority_fields
-from tac.repo_io import sha256_bytes, write_json_artifact, write_text_artifact
+from tac.repo_io import ArtifactWriteResult, sha256_bytes, write_json_artifact, write_text_artifact
 
 from .experiment_queue import default_state_path
+from .json_identity import stable_json_sha256
 
 POST_FEEDBACK_CHILD_QUEUE_RUNS_SCHEMA = (
     "frontier_final_rate_attack_post_feedback_child_queue_runs.v1"
@@ -95,7 +96,7 @@ def _json_stdout_object(result: Mapping[str, Any] | None) -> dict[str, Any] | No
     return payload if isinstance(payload, dict) else None
 
 
-def _queue_id_from_path(path: Path) -> str:
+def _queue_identity_from_path(path: Path) -> dict[str, str]:
     payload = _load_json_object(path)
     if payload.get("schema") != "experiment_queue.v1":
         raise ValueError(f"{path}: expected experiment_queue.v1")
@@ -109,7 +110,65 @@ def _queue_id_from_path(path: Path) -> str:
     queue_id = str(payload.get("queue_id") or "").strip()
     if not queue_id:
         raise ValueError(f"{path}: experiment_queue.v1 missing queue_id")
-    return queue_id
+    return {"queue_id": queue_id, "queue_sha256": stable_json_sha256(payload)}
+
+
+def _observer_revalidation(
+    *,
+    queue_id: str,
+    queue_sha256: str,
+    observation: Mapping[str, Any] | None,
+    observer_path: Path,
+    observer_write_result: ArtifactWriteResult | None,
+    repo_root: Path,
+) -> dict[str, Any]:
+    blockers: list[str] = []
+    observed_queue_id: str | None = None
+    observed_queue_sha256: str | None = None
+    observed_schema: str | None = None
+    observe_read_only: bool | None = None
+    if observation is None:
+        blockers.append("observer_payload_missing_or_not_json_object")
+    else:
+        observed_schema = str(observation.get("schema") or "")
+        observed_queue_id = str(observation.get("queue_id") or "")
+        observed_queue_sha256 = str(observation.get("queue_sha256") or "")
+        observe_read_only = observation.get("observe_read_only") is True
+        if observed_schema != "experiment_queue_observation.v1":
+            blockers.append("observer_schema_mismatch")
+        if observed_queue_id != queue_id:
+            blockers.append("observer_queue_id_mismatch")
+        if not observed_queue_sha256:
+            blockers.append("observer_queue_sha256_missing")
+        elif observed_queue_sha256 != queue_sha256:
+            blockers.append("observer_queue_sha256_mismatch")
+        if observe_read_only is not True:
+            blockers.append("observer_read_only_flag_missing")
+    if observer_write_result is None:
+        blockers.append("observer_revalidation_artifact_not_written")
+    return {
+        "schema": "frontier_final_rate_attack_child_queue_observer_revalidation.v1",
+        "valid": not blockers,
+        "blockers": blockers,
+        "expected_queue_id": queue_id,
+        "observed_queue_id": observed_queue_id,
+        "expected_queue_sha256": queue_sha256,
+        "observed_queue_sha256": observed_queue_sha256,
+        "observed_schema": observed_schema,
+        "observe_read_only": observe_read_only,
+        "observer_revalidation_path": (
+            _repo_rel(observer_path, repo_root) if observer_write_result is not None else None
+        ),
+        "observer_revalidation_sha256": (
+            observer_write_result.sha256 if observer_write_result is not None else None
+        ),
+        "observer_revalidation_bytes": (
+            observer_write_result.bytes_written if observer_write_result is not None else None
+        ),
+        "allowed_use": "local_observer_custody_revalidation_only",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
 
 
 def _write_command_streams(
@@ -195,7 +254,9 @@ def run_experiment_queue_once(
     repo = Path(repo_root)
     queue = _resolve_path(queue_path, repo_root=repo)
     observer_path = _resolve_path(observer_output_path, repo_root=repo)
-    queue_id = _queue_id_from_path(queue)
+    queue_identity = _queue_identity_from_path(queue)
+    queue_id = queue_identity["queue_id"]
+    queue_sha256 = queue_identity["queue_sha256"]
     state_path = default_state_path(repo, queue_id)
     runner = run_command or (lambda command: _run_command(command, repo_root=repo))
     queue_ref = _repo_rel(queue, repo)
@@ -257,11 +318,12 @@ def run_experiment_queue_once(
             break
 
     observation: dict[str, Any] | None = None
+    observer_write_result: ArtifactWriteResult | None = None
     worker_result = _json_stdout_object(results[2] if len(results) > 2 else None)
     if len(results) == len(commands) and int(results[-1].get("returncode") or 0) == 0:
         observation = _json_stdout_object(results[-1])
         if observation is not None:
-            write_json_artifact(observer_path, observation)
+            observer_write_result = write_json_artifact(observer_path, observation)
 
     command_records = _write_command_streams(
         results=results,
@@ -287,16 +349,39 @@ def run_experiment_queue_once(
                 queued_after = raw_queued
     progress_made = None if steps_started is None else steps_started > 0
     progress_blockers = []
+    observer_revalidation = _observer_revalidation(
+        queue_id=queue_id,
+        queue_sha256=queue_sha256,
+        observation=observation,
+        observer_path=observer_path,
+        observer_write_result=observer_write_result,
+        repo_root=repo,
+    )
+    observer_revalidation_blockers = [
+        str(blocker)
+        for blocker in observer_revalidation.get("blockers", [])
+        if str(blocker)
+    ]
+    if observer_revalidation_blockers:
+        progress_made = False
+        progress_blockers.extend(
+            f"observer_revalidation:{blocker}"
+            for blocker in observer_revalidation_blockers
+        )
     if progress_made is False and queued_after > 0:
         progress_blockers.append("child_queue_worker_started_zero_steps_with_queued_work")
     return {
         "schema": POST_FEEDBACK_CHILD_QUEUE_RUN_SCHEMA,
         "queue_id": queue_id,
+        "queue_sha256": queue_sha256,
         "queue_path": queue_ref,
         "state_path": state_ref,
         "observer_revalidation_path": (
             _repo_rel(observer_path, repo) if observation is not None else None
         ),
+        "observer_revalidation": observer_revalidation,
+        "observer_revalidation_valid": observer_revalidation.get("valid") is True,
+        "observer_revalidation_blockers": observer_revalidation_blockers,
         "commands": command_records,
         "failed_command_count": failed_count,
         "steps_started": steps_started,
@@ -358,6 +443,9 @@ def execute_post_feedback_child_queues(
         "executed_queue_count": len(runs),
         "failed_queue_count": sum(1 for run in runs if int(run.get("failed_command_count") or 0) > 0),
         "failed_command_count": sum(int(run.get("failed_command_count") or 0) for run in runs),
+        "observer_revalidation_failed_count": sum(
+            1 for run in runs if run.get("observer_revalidation_valid") is not True
+        ),
         "stalled_queue_count": sum(
             1 for run in runs if run.get("progress_made") is False and run.get("queue_status_counts", {}).get("queued", 0)
         ),

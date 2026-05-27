@@ -48,6 +48,7 @@ from comma_lab.scheduler.frontier_rate_attack_target_profile import (
     TARGET_OPTIMIZATION_PROFILE_QUEUE_METADATA_SCHEMA,
     build_frontier_target_optimization_profile,
 )
+from comma_lab.scheduler.json_identity import stable_json_sha256
 from tac.optimization.family_agnostic_materializers import (
     RENDERER_PAYLOAD_DFL1_MEMBER_NAMES,
 )
@@ -848,18 +849,16 @@ def test_post_feedback_child_queue_execution_preserves_observer_artifacts(
     tmp_path: Path,
 ) -> None:
     queue = tmp_path / "operation_chain_compiler_queue.json"
-    _write_json(
-        queue,
-        {
-            "schema": "experiment_queue.v1",
-            "queue_id": "child_queue_unit",
-            "score_claim": False,
-            "promotion_eligible": False,
-            "rank_or_kill_eligible": False,
-            "ready_for_exact_eval_dispatch": False,
-            "experiments": [],
-        },
-    )
+    queue_payload = {
+        "schema": "experiment_queue.v1",
+        "queue_id": "child_queue_unit",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "experiments": [],
+    }
+    _write_json(queue, queue_payload)
     commands: list[list[str]] = []
 
     def fake_run(command: list[str]) -> dict[str, object]:
@@ -870,6 +869,8 @@ def test_post_feedback_child_queue_execution_preserves_observer_artifacts(
                 {
                     "schema": "experiment_queue_observation.v1",
                     "queue_id": "child_queue_unit",
+                    "queue_sha256": stable_json_sha256(queue_payload),
+                    "observe_read_only": True,
                     "healthy": True,
                     "status_counts": {"succeeded": 1},
                     "blockers": [],
@@ -905,12 +906,15 @@ def test_post_feedback_child_queue_execution_preserves_observer_artifacts(
     assert report["schema"] == POST_FEEDBACK_CHILD_QUEUE_RUNS_SCHEMA
     assert report["selected_queue_count"] == 1
     assert report["failed_command_count"] == 0
+    assert report["observer_revalidation_failed_count"] == 0
     assert report["stalled_queue_count"] == 0
     assert report["score_claim"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
     run = report["queue_runs"][0]
     assert run["artifact_key"] == "operation_chain_compiler_queue"
     assert run["queue_healthy"] is True
+    assert run["observer_revalidation_valid"] is True
+    assert run["observer_revalidation_blockers"] == []
     assert run["steps_started"] == 1
     assert run["progress_made"] is True
     assert run["observer_revalidation_path"].endswith(
@@ -926,18 +930,16 @@ def test_post_feedback_child_queue_execution_reports_stalled_queued_work(
     tmp_path: Path,
 ) -> None:
     queue = tmp_path / "operation_chain_compiler_queue.json"
-    _write_json(
-        queue,
-        {
-            "schema": "experiment_queue.v1",
-            "queue_id": "child_queue_stalled",
-            "score_claim": False,
-            "promotion_eligible": False,
-            "rank_or_kill_eligible": False,
-            "ready_for_exact_eval_dispatch": False,
-            "experiments": [],
-        },
-    )
+    queue_payload = {
+        "schema": "experiment_queue.v1",
+        "queue_id": "child_queue_stalled",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "experiments": [],
+    }
+    _write_json(queue, queue_payload)
 
     def fake_run(command: list[str]) -> dict[str, object]:
         stdout = ""
@@ -955,6 +957,8 @@ def test_post_feedback_child_queue_execution_reports_stalled_queued_work(
                 {
                     "schema": "experiment_queue_observation.v1",
                     "queue_id": "child_queue_stalled",
+                    "queue_sha256": stable_json_sha256(queue_payload),
+                    "observe_read_only": True,
                     "healthy": True,
                     "status_counts": {"queued": 2},
                     "blockers": [],
@@ -986,6 +990,76 @@ def test_post_feedback_child_queue_execution_reports_stalled_queued_work(
         "child_queue_worker_started_zero_steps_with_queued_work"
     ]
     assert run["queue_healthy"] is True
+
+
+def test_post_feedback_child_queue_execution_revalidates_observer_identity(
+    tmp_path: Path,
+) -> None:
+    queue = tmp_path / "operation_chain_compiler_queue.json"
+    queue_payload = {
+        "schema": "experiment_queue.v1",
+        "queue_id": "child_queue_identity",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "experiments": [],
+    }
+    _write_json(queue, queue_payload)
+
+    def fake_run(command: list[str]) -> dict[str, object]:
+        stdout = ""
+        if "run-worker" in command:
+            stdout = json.dumps(
+                {
+                    "schema": "experiment_queue_worker_result.v1",
+                    "steps_started": 1,
+                    "success_count": 1,
+                    "failure_count": 0,
+                }
+            )
+        elif "observe" in command:
+            stdout = json.dumps(
+                {
+                    "schema": "experiment_queue_observation.v1",
+                    "queue_id": "wrong_child_queue",
+                    "queue_sha256": "0" * 64,
+                    "observe_read_only": True,
+                    "healthy": True,
+                    "status_counts": {"succeeded": 1},
+                    "blockers": [],
+                }
+            )
+        return {
+            "command": command,
+            "returncode": 0,
+            "elapsed_seconds": 0.0,
+            "stdout": stdout,
+            "stderr": "",
+        }
+
+    report = execute_post_feedback_child_queues(
+        repo_root=tmp_path,
+        feedback_artifacts={"operation_chain_compiler_queue": str(queue)},
+        output_dir=tmp_path / "out",
+        max_steps=3,
+        max_parallel=1,
+        limit=4,
+        run_command=fake_run,
+    )
+
+    run = report["queue_runs"][0]
+    assert report["observer_revalidation_failed_count"] == 1
+    assert run["observer_revalidation_valid"] is False
+    assert run["observer_revalidation_blockers"] == [
+        "observer_queue_id_mismatch",
+        "observer_queue_sha256_mismatch",
+    ]
+    assert run["progress_made"] is False
+    assert run["observer_revalidation"]["expected_queue_sha256"] == stable_json_sha256(
+        queue_payload
+    )
+    assert run["observer_revalidation"]["observer_revalidation_sha256"]
 
 
 def test_frontier_bootstrap_results_root_probe_requires_readable_file(

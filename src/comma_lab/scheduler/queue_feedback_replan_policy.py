@@ -24,6 +24,7 @@ from .experiment_queue import (
     ExperimentQueueError,
     normalize_queue_definition,
 )
+from .json_identity import stable_json_sha256
 
 QUEUE_FEEDBACK_REPLAN_POLICY_SCHEMA = "queue_feedback_replan_policy.v1"
 QUEUE_FEEDBACK_REPLAN_CHILD_QUEUE_VALIDATION_SCHEMA = (
@@ -153,17 +154,6 @@ def _safe_int(value: Any) -> int:
         return 0
 
 
-def _stable_json_sha256(payload: Mapping[str, Any]) -> str:
-    encoded = json.dumps(
-        payload,
-        sort_keys=True,
-        separators=(",", ":"),
-        ensure_ascii=True,
-        default=str,
-    ).encode("utf-8")
-    return hashlib.sha256(encoded).hexdigest()
-
-
 def _stable_json_file_sha256(path: str | None) -> str | None:
     path_text = _nonempty_str(path)
     if path_text is None:
@@ -178,7 +168,7 @@ def _stable_json_file_sha256(path: str | None) -> str | None:
         payload = normalize_queue_definition(payload)
     except ExperimentQueueError:
         return None
-    return _stable_json_sha256(payload)
+    return stable_json_sha256(payload)
 
 
 def _file_sha256(path: Path) -> str | None:
@@ -1332,7 +1322,7 @@ def validate_feedback_followup_queue(
             "schema": QUEUE_FEEDBACK_REPLAN_CHILD_QUEUE_VALIDATION_SCHEMA,
             "queue_schema": _nonempty_str(child_queue.get("schema")),
             "queue_id": _nonempty_str(child_queue.get("queue_id")),
-            "queue_sha256": _stable_json_sha256(child_queue),
+            "queue_sha256": stable_json_sha256(child_queue),
             "run_dir": run_dir,
             "control_mode": control_mode,
             "local_first": local_first,
@@ -1896,7 +1886,7 @@ def validate_queue_observation_recovery_queue(
             "schema": QUEUE_OBSERVATION_RECOVERY_QUEUE_VALIDATION_SCHEMA,
             "queue_schema": _nonempty_str(recovery_queue.get("schema")),
             "queue_id": _nonempty_str(recovery_queue.get("queue_id")),
-            "queue_sha256": _stable_json_sha256(recovery_queue),
+            "queue_sha256": stable_json_sha256(recovery_queue),
             "control_mode": control_mode,
             "local_first": local_first,
             "max_concurrency": dict(max_concurrency)
@@ -2015,7 +2005,7 @@ def build_queue_observation_recovery_queue(
         {
             "schema": QUEUE_OBSERVATION_RECOVERY_QUEUE_METADATA_SCHEMA,
             "source_policy_path": source_policy_path,
-            "source_policy_sha256": _stable_json_sha256(policy),
+            "source_policy_sha256": stable_json_sha256(policy),
             "source_run_path": policy.get("source_run_path"),
             "source_queue_id": policy.get("queue_id"),
             "source_queue_path": policy.get("queue_path"),
@@ -2175,7 +2165,7 @@ def build_queue_feedback_replan_continuation_queue(
         {
             "schema": QUEUE_FEEDBACK_REPLAN_CONTINUATION_METADATA_SCHEMA,
             "source_policy_path": source_policy_path,
-            "source_policy_sha256": _stable_json_sha256(policy),
+            "source_policy_sha256": stable_json_sha256(policy),
             "source_run_path": policy.get("source_run_path"),
             "source_queue_id": policy.get("queue_id"),
             "source_queue_path": policy.get("queue_path"),
@@ -2360,7 +2350,7 @@ def build_queue_feedback_candidate_widening_queue(
         {
             "schema": QUEUE_FEEDBACK_CANDIDATE_WIDENING_METADATA_SCHEMA,
             "source_policy_path": source_policy_path,
-            "source_policy_sha256": _stable_json_sha256(policy),
+            "source_policy_sha256": stable_json_sha256(policy),
             "source_run_path": policy.get("source_run_path"),
             "source_queue_id": policy.get("queue_id"),
             "source_queue_path": policy.get("queue_path"),
@@ -2563,7 +2553,7 @@ def build_queue_feedback_candidate_actuation_planning_queue(
         {
             "schema": QUEUE_FEEDBACK_CANDIDATE_ACTUATION_PLANNING_METADATA_SCHEMA,
             "source_policy_path": source_policy_path,
-            "source_policy_sha256": _stable_json_sha256(policy),
+            "source_policy_sha256": stable_json_sha256(policy),
             "source_run_path": policy.get("source_run_path"),
             "source_queue_id": policy.get("queue_id"),
             "policy_decision": policy.get("decision"),
