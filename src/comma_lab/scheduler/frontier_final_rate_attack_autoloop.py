@@ -18,6 +18,9 @@ from typing import Any
 
 from tac.optimization.byte_shaving_campaign import FALSE_AUTHORITY
 from tac.optimization.proxy_candidate_contract import require_no_truthy_authority_fields
+from tac.optimization.repair_campaign_learning_signal import (
+    build_repair_campaign_activation_plan_learning_signal_report,
+)
 from tac.repo_io import ArtifactWriteResult, sha256_bytes, write_json_artifact, write_text_artifact
 
 from .experiment_queue import default_state_path
@@ -117,7 +120,7 @@ def _observation_status_count(
 def _strings_from(value: Any) -> list[str]:
     if not isinstance(value, list):
         return []
-    return [str(item) for item in value if str(item)]
+    return [item.strip() for item in value if isinstance(item, str) and item.strip()]
 
 
 def _step_artifact_refs(step: Mapping[str, Any]) -> dict[str, Any]:
@@ -272,6 +275,117 @@ def _child_queue_activation_plan(
     }
 
 
+def _queue_definition_status_counts(queue_payload: Mapping[str, Any]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for experiment in queue_payload.get("experiments") or []:
+        if not isinstance(experiment, Mapping):
+            continue
+        status = str(experiment.get("status") or "queued")
+        counts[status] = counts.get(status, 0) + 1
+    return dict(sorted(counts.items()))
+
+
+def _queue_selection_rank(status_counts: Mapping[str, Any]) -> int:
+    """Prefer runnable child queues over empty/frozen advisory queues."""
+
+    try:
+        queued = int(status_counts.get("queued") or 0)
+    except (TypeError, ValueError):
+        queued = 0
+    if queued > 0:
+        return 0
+    if any(status_counts.get(status) for status in ("frozen", "paused", "disabled")):
+        return 2
+    return 1
+
+
+def _child_queue_artifact_candidates(
+    artifacts: Mapping[str, Any],
+    *,
+    repo_root: Path,
+) -> list[dict[str, Any]]:
+    candidates: list[dict[str, Any]] = []
+    for priority_index, artifact_key in enumerate(POST_FEEDBACK_CHILD_QUEUE_PRIORITY):
+        raw_path = artifacts.get(artifact_key)
+        if not isinstance(raw_path, str) or not raw_path.strip():
+            continue
+        path = _resolve_path(raw_path, repo_root=repo_root)
+        if not path.is_file():
+            continue
+        queue_payload = _load_json_object(path)
+        if queue_payload.get("schema") != "experiment_queue.v1":
+            continue
+        status_counts = _queue_definition_status_counts(queue_payload)
+        candidates.append(
+            {
+                "artifact_key": artifact_key,
+                "queue_path": _repo_rel(path, repo_root),
+                "priority_index": priority_index,
+                "selection_rank": _queue_selection_rank(status_counts),
+                "definition_status_counts": status_counts,
+            }
+        )
+    candidates.sort(
+        key=lambda row: (
+            int(row["selection_rank"]),
+            int(row["priority_index"]),
+            str(row["artifact_key"]),
+        )
+    )
+    return candidates
+
+
+def _write_child_queue_activation_plan(
+    *,
+    queue_path: Path,
+    output_path: Path,
+    repo_root: Path,
+) -> dict[str, Any] | None:
+    queue_payload = _load_json_object(queue_path)
+    identity = _queue_identity_from_path(queue_path)
+    activation_plan = _child_queue_activation_plan(
+        queue_path=queue_path,
+        queue_payload=queue_payload,
+        queue_id=identity["queue_id"],
+        queue_sha256=identity["queue_sha256"],
+        repo_root=repo_root,
+    )
+    if not activation_plan["blocked_experiment_count"]:
+        return None
+    require_no_truthy_authority_fields(
+        activation_plan,
+        context="child_queue_activation_plan",
+    )
+    write_result = write_json_artifact(output_path, activation_plan)
+    activation_plan["artifact_path"] = _repo_rel(output_path, repo_root)
+    activation_plan["artifact_sha256"] = write_result.sha256
+    activation_plan["artifact_bytes"] = write_result.bytes_written
+    return activation_plan
+
+
+def _write_child_queue_activation_learning_signal_report(
+    *,
+    activation_plan: Mapping[str, Any],
+    activation_plan_path: str | Path,
+    output_path: Path,
+    repo_root: Path,
+) -> dict[str, Any]:
+    signal_report = build_repair_campaign_activation_plan_learning_signal_report(
+        activation_plan_path=activation_plan_path,
+        activation_plan=activation_plan,
+        repo_root=repo_root,
+    )
+    require_no_truthy_authority_fields(
+        signal_report,
+        context="child_queue_activation_learning_signal_report",
+    )
+    write_result = write_json_artifact(output_path, signal_report)
+    signal_report["artifact_path"] = _repo_rel(output_path, repo_root)
+    signal_report["artifact_sha256"] = write_result.sha256
+    signal_report["artifact_bytes"] = write_result.bytes_written
+    return signal_report
+
+
 def _queue_identity_from_path(path: Path) -> dict[str, str]:
     payload = _load_json_object(path)
     if payload.get("schema") != "experiment_queue.v1":
@@ -390,23 +504,14 @@ def select_post_feedback_child_queue_artifacts(
     if limit < 1:
         raise ValueError("limit must be >= 1")
     repo = Path(repo_root)
-    selected: list[dict[str, str]] = []
-    for artifact_key in POST_FEEDBACK_CHILD_QUEUE_PRIORITY:
-        raw_path = artifacts.get(artifact_key)
-        if not isinstance(raw_path, str) or not raw_path.strip():
-            continue
-        path = _resolve_path(raw_path, repo_root=repo)
-        if not path.is_file():
-            continue
-        selected.append(
-            {
-                "artifact_key": artifact_key,
-                "queue_path": _repo_rel(path, repo),
-            }
-        )
-        if len(selected) >= limit:
-            break
-    return selected
+    candidates = _child_queue_artifact_candidates(artifacts, repo_root=repo)
+    return [
+        {
+            "artifact_key": str(row["artifact_key"]),
+            "queue_path": str(row["queue_path"]),
+        }
+        for row in candidates[:limit]
+    ]
 
 
 def run_experiment_queue_once(
@@ -521,26 +626,23 @@ def run_experiment_queue_once(
     paused_after = _observation_status_count(observation, "paused")
     disabled_after = _observation_status_count(observation, "disabled")
     activation_plan: dict[str, Any] | None = None
-    activation_plan_write_result: ArtifactWriteResult | None = None
+    activation_learning_signal_report: dict[str, Any] | None = None
     if frozen_after or paused_after or disabled_after:
-        queue_payload = _load_json_object(queue)
-        activation_plan = _child_queue_activation_plan(
+        activation_plan = _write_child_queue_activation_plan(
             queue_path=queue,
-            queue_payload=queue_payload,
-            queue_id=queue_id,
-            queue_sha256=queue_sha256,
+            output_path=observer_path.parent / "activation_plan.json",
             repo_root=repo,
         )
-        if activation_plan["blocked_experiment_count"]:
-            activation_plan_path = observer_path.parent / "activation_plan.json"
-            activation_plan_write_result = write_json_artifact(
-                activation_plan_path,
-                activation_plan,
-            )
-            activation_plan["artifact_path"] = _repo_rel(activation_plan_path, repo)
-            activation_plan["artifact_sha256"] = activation_plan_write_result.sha256
-            activation_plan["artifact_bytes"] = (
-                activation_plan_write_result.bytes_written
+        if activation_plan is not None and activation_plan.get("artifact_path"):
+            activation_learning_signal_report = (
+                _write_child_queue_activation_learning_signal_report(
+                    activation_plan=activation_plan,
+                    activation_plan_path=str(activation_plan["artifact_path"]),
+                    output_path=(
+                        observer_path.parent / "activation_learning_signal_report.json"
+                    ),
+                    repo_root=repo,
+                )
             )
     progress_made = None if steps_started is None else steps_started > 0
     progress_blockers = []
@@ -599,6 +701,17 @@ def run_experiment_queue_once(
         "activation_plan_sha256": activation_plan.get("artifact_sha256")
         if activation_plan is not None
         else None,
+        "activation_learning_signal_report": activation_learning_signal_report,
+        "activation_learning_signal_report_path": activation_learning_signal_report.get(
+            "artifact_path"
+        )
+        if activation_learning_signal_report is not None
+        else None,
+        "activation_learning_signal_report_sha256": activation_learning_signal_report.get(
+            "artifact_sha256"
+        )
+        if activation_learning_signal_report is not None
+        else None,
         "allowed_use": "bounded_local_post_feedback_queue_execution_only",
         "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
         **FALSE_AUTHORITY,
@@ -622,11 +735,14 @@ def execute_post_feedback_child_queues(
 
     repo = Path(repo_root)
     out = _resolve_path(output_dir, repo_root=repo)
-    selected = select_post_feedback_child_queue_artifacts(
-        feedback_artifacts,
-        repo_root=repo,
-        limit=limit,
-    )
+    candidates = _child_queue_artifact_candidates(feedback_artifacts, repo_root=repo)
+    selected = [
+        {
+            "artifact_key": str(row["artifact_key"]),
+            "queue_path": str(row["queue_path"]),
+        }
+        for row in candidates[:limit]
+    ]
     runs: list[dict[str, Any]] = []
     observation_dir = out / "post_execute_feedback_child_queue_observations"
     for row in selected:
@@ -645,6 +761,50 @@ def execute_post_feedback_child_queues(
         )
         run["artifact_key"] = key
         runs.append(run)
+    deferred_activation_plans: list[dict[str, Any]] = []
+    for row in candidates[limit:]:
+        status_counts = row.get("definition_status_counts")
+        if not isinstance(status_counts, Mapping):
+            continue
+        if _queue_selection_rank(status_counts) != 2:
+            continue
+        key = str(row["artifact_key"])
+        queue_path = _resolve_path(str(row["queue_path"]), repo_root=repo)
+        activation_plan = _write_child_queue_activation_plan(
+            queue_path=queue_path,
+            output_path=observation_dir / key / "activation_plan.json",
+            repo_root=repo,
+        )
+        if activation_plan is None:
+            continue
+        activation_learning_signal_report = (
+            _write_child_queue_activation_learning_signal_report(
+                activation_plan=activation_plan,
+                activation_plan_path=str(activation_plan["artifact_path"]),
+                output_path=(
+                    observation_dir / key / "activation_learning_signal_report.json"
+                ),
+                repo_root=repo,
+            )
+        )
+        deferred_activation_plans.append(
+            {
+                "artifact_key": key,
+                "queue_path": str(row["queue_path"]),
+                "definition_status_counts": dict(status_counts),
+                "activation_plan_path": activation_plan.get("artifact_path"),
+                "activation_plan_sha256": activation_plan.get("artifact_sha256"),
+                "activation_learning_signal_report_path": (
+                    activation_learning_signal_report.get("artifact_path")
+                ),
+                "activation_learning_signal_report_sha256": (
+                    activation_learning_signal_report.get("artifact_sha256")
+                ),
+                "blocked_experiment_count": activation_plan.get(
+                    "blocked_experiment_count"
+                ),
+            }
+        )
     report = {
         "schema": POST_FEEDBACK_CHILD_QUEUE_RUNS_SCHEMA,
         "generated_at_utc": _utc_now(),
@@ -666,10 +826,20 @@ def execute_post_feedback_child_queues(
             and run.get("queue_status_counts", {}).get("frozen", 0)
         ),
         "activation_plan_count": sum(1 for run in runs if run.get("activation_plan_path")),
+        "activation_learning_signal_report_count": sum(
+            1 for run in runs if run.get("activation_learning_signal_report_path")
+        ),
+        "deferred_activation_plan_count": len(deferred_activation_plans),
+        "deferred_activation_learning_signal_report_count": sum(
+            1
+            for plan in deferred_activation_plans
+            if plan.get("activation_learning_signal_report_path")
+        ),
         "max_steps": max_steps,
         "max_parallel": max_parallel,
         "limit": limit,
         "selected_queues": selected,
+        "deferred_activation_plans": deferred_activation_plans,
         "queue_runs": runs,
         "allowed_use": "post_feedback_bounded_local_autoloop_custody_only",
         "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",

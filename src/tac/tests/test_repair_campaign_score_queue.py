@@ -15,6 +15,7 @@ from comma_lab.scheduler.repair_campaign_score_queue import (
 )
 from tac.optimization.repair_campaign_learning_signal import (
     REPAIR_CAMPAIGN_BLOCKED_LEARNING_SIGNAL_REPORT_SCHEMA,
+    REPAIR_CAMPAIGN_CHILD_QUEUE_ACTIVATION_PLAN_SCHEMA,
 )
 from tac.optimization.repair_campaign_posterior import (
     REPAIR_CAMPAIGN_BLOCKED_POSTERIOR_APPEND_REPORT_SCHEMA,
@@ -548,4 +549,91 @@ def test_repair_campaign_score_queue_defers_missing_work_order_to_prerequisite_s
     )
     assert experiment["steps"][0]["id"] == (
         "assert_repair_budget_waterfill_work_order_materialized"
+    )
+
+
+def test_blocked_learning_signal_cli_accepts_child_queue_activation_plan(
+    tmp_path: Path,
+) -> None:
+    activation_plan_path = tmp_path / "activation_plan.json"
+    signal_report_path = tmp_path / "activation_signal_report.json"
+    activation_plan = {
+        "schema": REPAIR_CAMPAIGN_CHILD_QUEUE_ACTIVATION_PLAN_SCHEMA,
+        "queue_id": "repair_budget_waterfill_queue",
+        "queue_sha256": "a" * 64,
+        "queue_path": "repair_budget_waterfill_queue.json",
+        "blocked_experiment_count": 1,
+        "blocked_experiments": [
+            {
+                "experiment_id": "repair_waterfill_chain",
+                "status": "frozen",
+                "tags": ["segnet-posenet-waterfill", "no-score-authority"],
+                "activation_blockers": [
+                    "no_targeted_component_correction_response_rows",
+                    "no_receiver_closed_saved_bytes_available",
+                ],
+                "activation_actions": [
+                    {
+                        "blocker": "no_targeted_component_correction_response_rows",
+                        "activation_action": (
+                            "harvest_targeted_component_response_rows"
+                        ),
+                        "evidence_surface": (
+                            "targeted_component_correction_response_harvest"
+                        ),
+                    },
+                    {
+                        "blocker": "no_receiver_closed_saved_bytes_available",
+                        "activation_action": (
+                            "materialize_receiver_closed_rate_budget_credit"
+                        ),
+                        "evidence_surface": "receiver_closed_correction_budget",
+                    },
+                ],
+                "step_count": 1,
+                "step_evidence_refs": [
+                    {
+                        "step_id": "inspect_blocked_repair_waterfill",
+                        "telemetry_input_artifact_paths": [
+                            "targeted_component_correction_response_harvest.json"
+                        ],
+                        "postcondition_paths": ["repair_budget_waterfill.json"],
+                    }
+                ],
+            }
+        ],
+        **_false_authority(),
+    }
+    activation_plan_path.write_text(
+        json.dumps(activation_plan, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "tools/build_repair_campaign_blocked_learning_signals.py",
+            "--activation-plan",
+            str(activation_plan_path),
+            "--blocked-signal-report-out",
+            str(signal_report_path),
+            "--overwrite",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    cli_result = json.loads(result.stdout)
+    assert cli_result["source_kind"] == "activation_plan"
+    report = json.loads(signal_report_path.read_text(encoding="utf-8"))
+    assert report["schema"] == REPAIR_CAMPAIGN_BLOCKED_LEARNING_SIGNAL_REPORT_SCHEMA
+    assert report["blocked_signal_count"] == 1
+    signal = report["learning_signal_rows"][0]
+    assert signal["learning_signal_kind"] == "blocked_child_queue_activation_plan"
+    assert signal["family_id"] == "segnet-posenet-waterfill"
+    assert signal["local_planning_update"]["recommended_acquisition_policy"] == (
+        "increase_priority_for_targeted_component_response_harvest"
     )

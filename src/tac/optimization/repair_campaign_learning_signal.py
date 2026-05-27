@@ -29,6 +29,9 @@ REPAIR_CAMPAIGN_LOCAL_PLANNING_UPDATE_SCHEMA = (
 REPAIR_CAMPAIGN_BLOCKED_LEARNING_SIGNAL_REPORT_SCHEMA = (
     "repair_campaign_blocked_learning_signal_report.v1"
 )
+REPAIR_CAMPAIGN_CHILD_QUEUE_ACTIVATION_PLAN_SCHEMA = (
+    "frontier_final_rate_attack_child_queue_activation_plan.v1"
+)
 
 
 class RepairCampaignLearningSignalError(ValueError):
@@ -101,13 +104,226 @@ def _stable_sha256(payload: Mapping[str, Any]) -> str:
 
 def _blocked_policy(blockers: Sequence[Any], missing_artifacts: Sequence[Any]) -> str:
     joined = " ".join([*_string_list(blockers), *_string_list(missing_artifacts)])
+    if "targeted_component" in joined or "component_response" in joined:
+        return "increase_priority_for_targeted_component_response_harvest"
     if "receiver_closed_rate_credit" in joined:
         return "hold_until_receiver_closed_rate_credit_available"
+    if "receiver_closed" in joined or "saved_bytes" in joined:
+        return "hold_until_receiver_closed_rate_credit_available"
+    if "exact_auth_eval" in joined:
+        return "hold_until_byte_closed_exact_auth_handoff_available"
     if "non_improving_local_objective_delta" in joined:
         return "decrease_family_priority_until_new_component_response_signal"
     if "local_mlx" in joined:
         return "materialize_missing_local_mlx_custody_before_stackability"
     return "materialize_missing_repair_campaign_artifacts"
+
+
+def build_repair_campaign_activation_plan_learning_signal_report(
+    *,
+    activation_plan_path: str | Path,
+    activation_plan: Mapping[str, Any],
+    repo_root: str | Path,
+) -> dict[str, Any]:
+    """Build posterior-consumable signals from a frozen child-queue activation plan."""
+
+    if activation_plan.get("schema") != REPAIR_CAMPAIGN_CHILD_QUEUE_ACTIVATION_PLAN_SCHEMA:
+        raise RepairCampaignLearningSignalError(
+            "activation plan must be frontier_final_rate_attack_child_queue_activation_plan.v1"
+        )
+    require_no_truthy_authority_fields(
+        activation_plan,
+        context="repair_campaign_activation_plan_learning_signal_input",
+    )
+    source_artifact = _file_record(
+        "child_queue_activation_plan",
+        activation_plan_path,
+        repo_root=repo_root,
+    )
+    signal_rows: list[dict[str, Any]] = []
+    hard_blockers = [
+        "activation_plan_learning_signal_is_not_score_authority",
+        "component_response_or_receiver_credit_required_before_budget_spend",
+        "exact_axis_eval_required_before_promotion_or_dispatch",
+    ]
+    queue_id = str(activation_plan.get("queue_id") or "unknown_child_queue")
+    queue_sha = str(activation_plan.get("queue_sha256") or "")
+    for index, experiment in enumerate(
+        activation_plan.get("blocked_experiments") or [],
+        start=1,
+    ):
+        if not isinstance(experiment, Mapping):
+            continue
+        experiment_id = str(experiment.get("experiment_id") or f"blocked_{index}")
+        blockers = ordered_unique(
+            [
+                *_string_list(experiment.get("activation_blockers")),
+                *hard_blockers,
+            ]
+        )
+        action_rows = [
+            row
+            for row in experiment.get("activation_actions") or []
+            if isinstance(row, Mapping)
+        ]
+        action_labels = ordered_unique(
+            _string_list(
+                [
+                    row.get("activation_action")
+                    for row in action_rows
+                    if row.get("activation_action")
+                ]
+            )
+        )
+        evidence_surfaces = ordered_unique(
+            _string_list(
+                [
+                    row.get("evidence_surface")
+                    for row in action_rows
+                    if row.get("evidence_surface")
+                ]
+            )
+        )
+        step_refs = [
+            row
+            for row in experiment.get("step_evidence_refs") or []
+            if isinstance(row, Mapping)
+        ]
+        telemetry_inputs: list[str] = []
+        postcondition_paths: list[str] = []
+        for step in step_refs:
+            telemetry_inputs.extend(
+                _string_list(step.get("telemetry_input_artifact_paths"))
+            )
+            postcondition_paths.extend(_string_list(step.get("postcondition_paths")))
+        missing_artifacts = ordered_unique([*telemetry_inputs, *postcondition_paths])
+        tags = _string_list(experiment.get("tags"))
+        family_id = next(
+            (
+                tag
+                for tag in tags
+                if tag
+                not in {
+                    "frontier-rate-attack",
+                    "no-score-authority",
+                    "blocked-no-actionable-response",
+                }
+            ),
+            "child_queue_activation",
+        )
+        identity = {
+            "schema": "repair_campaign_activation_plan_learning_identity.v1",
+            "queue_id": queue_id,
+            "queue_sha256": queue_sha,
+            "experiment_id": experiment_id,
+            "blockers": blockers,
+            "activation_actions": action_labels,
+            "evidence_surfaces": evidence_surfaces,
+            "missing_artifacts": missing_artifacts,
+            "source_activation_plan_sha256": source_artifact.get("sha256"),
+        }
+        feature_vector = {
+            "blocked_experiment_count": _safe_int(
+                activation_plan.get("blocked_experiment_count")
+            ),
+            "activation_blocker_count": len(blockers),
+            "activation_action_count": len(action_labels),
+            "evidence_surface_count": len(evidence_surfaces),
+            "missing_artifact_count": len(missing_artifacts),
+            "step_count": _safe_int(experiment.get("step_count")),
+            "has_targeted_component_response_request": any(
+                "targeted_component" in item or "component_response" in item
+                for item in [*blockers, *evidence_surfaces, *missing_artifacts]
+            ),
+            "has_receiver_closed_budget_request": any(
+                "receiver_closed" in item or "saved_bytes" in item
+                for item in [*blockers, *evidence_surfaces, *missing_artifacts]
+            ),
+            "has_exact_auth_eval_request": any(
+                "exact_auth_eval" in item for item in [*blockers, *evidence_surfaces]
+            ),
+            "activation_actions": action_labels,
+            "evidence_surfaces": evidence_surfaces,
+        }
+        signal = {
+            "schema": REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA,
+            "learning_signal_kind": "blocked_child_queue_activation_plan",
+            "typed_response_id": f"activation_plan:{queue_id}:{experiment_id}",
+            "candidate_id": experiment_id,
+            "family_id": family_id,
+            "component_response_axis": "blocked_or_unmeasured_component_response_axis",
+            "evidence_grade": "blocked_queue_activation_plan_only",
+            "source_artifacts": [source_artifact],
+            "replay_identity": {
+                "schema": "repair_campaign_activation_plan_replay_identity.v1",
+                "replay_identity_kind": "blocked_child_queue_activation_plan",
+                "hash_manifest_sha256": _stable_sha256(identity),
+                "source_records_sha256": _stable_sha256(
+                    {
+                        "schema": "repair_campaign_activation_plan_source.v1",
+                        "source_artifact": source_artifact,
+                    }
+                ),
+                "replay_argv_sha256": None,
+                "execution_context_sha256": None,
+                "environment_sha256": None,
+            },
+            "local_planning_update": {
+                "schema": REPAIR_CAMPAIGN_LOCAL_PLANNING_UPDATE_SCHEMA,
+                "posterior_surface": "repair_campaign_stackability_local_mlx_posterior",
+                "local_planning_update_ready": True,
+                "recommended_acquisition_policy": _blocked_policy(
+                    blockers,
+                    missing_artifacts,
+                ),
+                "recommended_stackability_followup": (
+                    "do_not_run_stackability_until_activation_blockers_clear"
+                ),
+                "planner_feature_vector": feature_vector,
+                "posterior_update_blockers": hard_blockers,
+                "budget_spend_allowed": False,
+                "ready_for_budget_spend": False,
+                "ready_for_exact_eval_dispatch": False,
+                **FALSE_AUTHORITY,
+            },
+            "blockers": blockers,
+            "missing_artifacts": missing_artifacts,
+            "budget_spend_allowed": False,
+            "ready_for_budget_spend": False,
+            "ready_for_exact_eval_dispatch": False,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "allowed_use": "blocked_activation_plan_acquisition_update_only",
+            "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+            **FALSE_AUTHORITY,
+        }
+        require_no_truthy_authority_fields(
+            signal,
+            context=f"repair_campaign_activation_plan_learning_signal:{experiment_id}",
+        )
+        signal_rows.append(signal)
+    report = {
+        "schema": REPAIR_CAMPAIGN_BLOCKED_LEARNING_SIGNAL_REPORT_SCHEMA,
+        "source_activation_plan": source_artifact,
+        "blocked_signal_count": len(signal_rows),
+        "learning_signal_rows": signal_rows,
+        "learning_signal_schema": REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA,
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "allowed_use": "blocked_activation_plan_learning_signal_bundle_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        report,
+        context="repair_campaign_activation_plan_learning_signal_report",
+    )
+    return report
 
 
 def build_repair_campaign_blocked_learning_signal_report(
@@ -454,9 +670,11 @@ def build_repair_campaign_learning_signal(
 
 __all__ = [
     "REPAIR_CAMPAIGN_BLOCKED_LEARNING_SIGNAL_REPORT_SCHEMA",
+    "REPAIR_CAMPAIGN_CHILD_QUEUE_ACTIVATION_PLAN_SCHEMA",
     "REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA",
     "REPAIR_CAMPAIGN_LOCAL_PLANNING_UPDATE_SCHEMA",
     "RepairCampaignLearningSignalError",
+    "build_repair_campaign_activation_plan_learning_signal_report",
     "build_repair_campaign_blocked_learning_signal_report",
     "build_repair_campaign_learning_signal",
 ]

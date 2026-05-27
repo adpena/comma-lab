@@ -24,12 +24,37 @@ evidence that would make the frozen encoder-side allocator executable.
   runtime identity as state variables.
 - The artifact is strictly false-authority: no score claim, no promotion, no
   rank/kill, and no paid dispatch authority.
+- Child queue selection now prefers runnable queue definitions before frozen,
+  paused, or disabled queue definitions. With a bounded child-queue limit, the
+  loop executes available receiver/materializer repair work first and still
+  writes activation plans for deferred frozen queues so no blocker signal is
+  lost.
+- Activation plans now also compile into
+  `repair_campaign_blocked_learning_signal_report.v1` rows. The repair-campaign
+  blocked-learning CLI accepts `--activation-plan`, so frozen child-queue
+  blockers become posterior-consumable acquisition signals instead of
+  operator-only prose.
 
 ## Verification
 
 - `.venv/bin/ruff check src/comma_lab/scheduler/frontier_final_rate_attack_autoloop.py src/tac/tests/test_frontier_rate_attack_bootstrap.py`
-- `.venv/bin/python -m pytest src/tac/tests/test_frontier_rate_attack_bootstrap.py -q`
-  - Result: 28 passed.
+- `.venv/bin/python -m py_compile src/comma_lab/scheduler/frontier_final_rate_attack_autoloop.py`
+- `PYTHONPATH=. .venv/bin/pytest src/tac/tests/test_frontier_rate_attack_bootstrap.py -q`
+  - Result: 30 passed in 4.39s.
+- `.venv/bin/ruff check src/comma_lab/scheduler/frontier_final_rate_attack_autoloop.py src/tac/optimization/repair_campaign_learning_signal.py tools/build_repair_campaign_blocked_learning_signals.py src/tac/tests/test_frontier_rate_attack_bootstrap.py src/tac/tests/test_repair_campaign_score_queue.py`
+- `PYTHONPATH=. .venv/bin/pytest src/tac/tests/test_repair_campaign_score_queue.py -q`
+  - Result: 5 passed in 4.19s.
+- Bounded queue-owned smoke:
+  `.venv/bin/python tools/build_frontier_final_rate_attack_queue.py --output-dir .omx/research/frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z --results-root /Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z --queue-id frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z --max-steps 8 --max-parallel 2 --execute --post-execute-feedback-refresh --execute-post-feedback-queues --post-feedback-child-queue-limit 2 --post-feedback-child-queue-max-steps 1 --post-feedback-child-queue-max-parallel 1 --post-execute-feedback-candidate-limit 16 --post-execute-feedback-max-files-per-root 64`
+  - Result: `failed_command_count=0`, feedback refresh return code `0`.
+  - Executed runnable child queues: `operation_chain_compiler_queue` and
+    `receiver_repair_queue`; both made progress and both observer
+    revalidations were valid.
+  - Deferred activation plans preserved four frozen queues:
+    `autonomous_chain_optimization_queue`, `repair_campaign_score_queue`,
+    `repair_budget_waterfill_queue`, and
+    `targeted_component_correction_queue`.
+  - Footprint: 2.6M under `.omx/research`, 1.3M under VertigoDataTier.
 
 ## Next Integration
 

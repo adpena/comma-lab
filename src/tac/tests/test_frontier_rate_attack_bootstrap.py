@@ -53,6 +53,9 @@ from comma_lab.scheduler.json_identity import stable_json_sha256
 from tac.optimization.family_agnostic_materializers import (
     RENDERER_PAYLOAD_DFL1_MEMBER_NAMES,
 )
+from tac.optimization.repair_campaign_learning_signal import (
+    REPAIR_CAMPAIGN_BLOCKED_LEARNING_SIGNAL_REPORT_SCHEMA,
+)
 from tac.repo_io import sha256_file
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -846,6 +849,182 @@ def test_post_feedback_child_queue_selection_is_keyed_and_bounded(
     ]
 
 
+def test_post_feedback_child_queue_selection_prefers_runnable_before_frozen(
+    tmp_path: Path,
+) -> None:
+    operation = tmp_path / "operation_chain_compiler_queue.json"
+    autonomous = tmp_path / "autonomous_chain_optimization_queue.json"
+    receiver = tmp_path / "receiver_repair_queue.json"
+    _write_json(
+        operation,
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "operation",
+            "experiments": [{"id": "op", "status": "queued", "steps": []}],
+        },
+    )
+    _write_json(
+        autonomous,
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "autonomous",
+            "experiments": [{"id": "auto", "status": "frozen", "steps": []}],
+        },
+    )
+    _write_json(
+        receiver,
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "receiver",
+            "experiments": [{"id": "rx", "status": "queued", "steps": []}],
+        },
+    )
+
+    selected = select_post_feedback_child_queue_artifacts(
+        {
+            "autonomous_chain_optimization_queue": str(autonomous),
+            "operation_chain_compiler_queue": str(operation),
+            "receiver_repair_queue": str(receiver),
+        },
+        repo_root=tmp_path,
+        limit=2,
+    )
+
+    assert [row["artifact_key"] for row in selected] == [
+        "operation_chain_compiler_queue",
+        "receiver_repair_queue",
+    ]
+
+
+def test_post_feedback_child_queue_execution_preserves_deferred_frozen_plan(
+    tmp_path: Path,
+) -> None:
+    operation = tmp_path / "operation_chain_compiler_queue.json"
+    receiver = tmp_path / "receiver_repair_queue.json"
+    autonomous = tmp_path / "autonomous_chain_optimization_queue.json"
+    payloads = {
+        operation: {
+            "schema": "experiment_queue.v1",
+            "queue_id": "operation",
+            "experiments": [{"id": "op", "status": "queued", "steps": []}],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        receiver: {
+            "schema": "experiment_queue.v1",
+            "queue_id": "receiver",
+            "experiments": [{"id": "rx", "status": "queued", "steps": []}],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        autonomous: {
+            "schema": "experiment_queue.v1",
+            "queue_id": "autonomous",
+            "experiments": [
+                {
+                    "id": "auto",
+                    "status": "frozen",
+                    "metadata": {
+                        "queue_actuation_blockers": [
+                            "no_receiver_closed_saved_bytes_available",
+                            "no_targeted_component_correction_rows",
+                        ],
+                    },
+                    "steps": [
+                        {
+                            "id": "inspect",
+                            "command": ["python", "-c", "print('inspect')"],
+                            "telemetry": {
+                                "input_artifact_paths": [
+                                    "receiver_closed_correction_budget.json"
+                                ]
+                            },
+                        }
+                    ],
+                }
+            ],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    }
+    for path, payload in payloads.items():
+        _write_json(path, payload)
+
+    def fake_run(command: list[str]) -> dict[str, object]:
+        stdout = ""
+        queue_arg = command[command.index("--queue") + 1] if "--queue" in command else ""
+        queue_payload = payloads.get(tmp_path / queue_arg)
+        if "run-worker" in command:
+            stdout = json.dumps(
+                {
+                    "schema": "experiment_queue_worker_result.v1",
+                    "steps_started": 1,
+                    "success_count": 1,
+                    "failure_count": 0,
+                }
+            )
+        elif "observe" in command and queue_payload is not None:
+            stdout = json.dumps(
+                {
+                    "schema": "experiment_queue_observation.v1",
+                    "queue_id": queue_payload["queue_id"],
+                    "queue_sha256": stable_json_sha256(queue_payload),
+                    "observe_read_only": True,
+                    "healthy": True,
+                    "status_counts": {"succeeded": 1},
+                    "blockers": [],
+                }
+            )
+        return {
+            "command": command,
+            "returncode": 0,
+            "elapsed_seconds": 0.0,
+            "stdout": stdout,
+            "stderr": "",
+        }
+
+    report = execute_post_feedback_child_queues(
+        repo_root=tmp_path,
+        feedback_artifacts={
+            "operation_chain_compiler_queue": str(operation),
+            "receiver_repair_queue": str(receiver),
+            "autonomous_chain_optimization_queue": str(autonomous),
+        },
+        output_dir=tmp_path / "out",
+        max_steps=3,
+        max_parallel=1,
+        limit=2,
+        run_command=fake_run,
+    )
+
+    assert [row["artifact_key"] for row in report["selected_queues"]] == [
+        "operation_chain_compiler_queue",
+        "receiver_repair_queue",
+    ]
+    assert report["activation_plan_count"] == 0
+    assert report["deferred_activation_plan_count"] == 1
+    deferred = report["deferred_activation_plans"][0]
+    assert deferred["artifact_key"] == "autonomous_chain_optimization_queue"
+    activation_plan = json.loads(
+        (tmp_path / deferred["activation_plan_path"]).read_text(encoding="utf-8")
+    )
+    assert activation_plan["schema"] == POST_FEEDBACK_CHILD_QUEUE_ACTIVATION_PLAN_SCHEMA
+    assert activation_plan["blocked_experiment_count"] == 1
+    assert {
+        action["activation_action"] for action in activation_plan["activation_actions"]
+    } == {
+        "materialize_receiver_closed_rate_budget_credit",
+        "harvest_targeted_component_response_rows",
+        "thaw_queue_definition_after_prerequisite_evidence_lands",
+    }
+
+
 def test_post_feedback_child_queue_execution_preserves_observer_artifacts(
     tmp_path: Path,
 ) -> None:
@@ -1116,6 +1295,19 @@ def test_post_feedback_child_queue_execution_classifies_frozen_child_queue(
         "receiver_closed_correction_budget.json",
     ]
     assert step_refs["postcondition_paths"] == ["repair_budget_waterfill.json"]
+    assert report["activation_learning_signal_report_count"] == 1
+    signal_report_path = tmp_path / run["activation_learning_signal_report_path"]
+    signal_report = json.loads(signal_report_path.read_text(encoding="utf-8"))
+    assert signal_report["schema"] == REPAIR_CAMPAIGN_BLOCKED_LEARNING_SIGNAL_REPORT_SCHEMA
+    assert signal_report["blocked_signal_count"] == 1
+    signal = signal_report["learning_signal_rows"][0]
+    assert signal["learning_signal_kind"] == "blocked_child_queue_activation_plan"
+    assert signal["local_planning_update"]["recommended_acquisition_policy"] == (
+        "increase_priority_for_targeted_component_response_harvest"
+    )
+    assert signal["local_planning_update"]["planner_feature_vector"][
+        "has_receiver_closed_budget_request"
+    ] is True
 
 
 def test_post_feedback_child_queue_execution_revalidates_observer_identity(
