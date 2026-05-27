@@ -281,8 +281,18 @@ def test_adapter_export_state_dict_writes_portable_npz(tmp_path: Path) -> None:
     adapter = MlxScoreAwareAdapter(bundle, substrate_id="dreamer_v3_rssm")
     target = tmp_path / "ckpt.state"
     adapter.export_state_dict(adapter.model, target)
-    npz = target.with_suffix(target.suffix + ".mlx.npz")
-    assert npz.is_file()
+    # REFACTOR-WAVE 2026-05-27: export_state_dict now writes a canonical
+    # numpy-portable state_dict blob (.npsd) via the LANDED bridge
+    # pack_state_dict_numpy (commit 980808776) instead of an allow_pickle .npz.
+    blob = target.with_suffix(target.suffix + ".npsd")
+    assert blob.is_file()
+    # Round-trips byte-stably with ZERO framework import.
+    from tac.substrates._shared.numpy_portable_inflate import (
+        unpack_state_dict_numpy,
+    )
+
+    restored = unpack_state_dict_numpy(blob.read_bytes())
+    assert len(restored) > 0
 
 
 @mlx_only

@@ -1,0 +1,213 @@
+# SPDX-License-Identifier: MIT
+"""Generic Style-B MLX adapter satisfying ``SubstrateLongTrainingAdapter``.
+
+# NO_GRAD_WAIVED:MLX_substrate_adapter_uses_mlx_value_and_grad_lazy_eval_no_pytorch_autograd_per_mlx_first_canonical_doctrine_8th_standing_directive
+
+Separation of concerns: this module owns ONLY the bridge between a substrate
+``RendererBundle`` and the canonical L2 harness
+``tac.training.long_training_canonical.run_long_training``. It generalizes the
+proven Z6 ``Z6LongTrainingAdapter`` so each substrate ``_full_main`` is ~30 LOC
+of config + one harness call. The training LOOP / EMA shadow / OOM-safe step /
+early-stop / telemetry / Provenance / posterior anchor all live in
+``run_long_training`` (DELEGATED, not duplicated — per CLAUDE.md "Beauty,
+simplicity, and developer experience" + the prompt's COMPOSE-do-not-duplicate
+directive).
+
+Style B (combined ``train_step``) is used because MLX's ``value_and_grad``
+requires a combined value+grad+update step (the canonical helper prefers
+``train_step`` when present per the Protocol contract).
+
+[verified-against: tac.training.long_training_canonical.SubstrateLongTrainingAdapter Protocol]
+[verified-against: tac.substrates.time_traveler_l5_z6.long_training_adapter.Z6LongTrainingAdapter proven Style-B reference]
+"""
+from __future__ import annotations
+
+from collections.abc import Mapping
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
+
+from tac.substrates._shared.mlx_score_aware.device_gate import (
+    require_mlx_for_harness,
+)
+from tac.substrates._shared.mlx_score_aware.loss import score_aware_loss
+
+if TYPE_CHECKING:
+    from tac.substrates._shared.mlx_score_aware.bundle import RendererBundle
+
+
+class MlxScoreAwareAdapter:
+    """Generic Style-B MLX adapter satisfying ``SubstrateLongTrainingAdapter``.
+
+    This is the substrate-AGNOSTIC bridge between any substrate ``RendererBundle``
+    and the canonical L2 harness. It generalizes the proven Z6
+    ``Z6LongTrainingAdapter`` so each substrate's ``_full_main`` is ~30 LOC of
+    config + one harness call.
+    """
+
+    def __init__(
+        self,
+        bundle: RendererBundle,
+        *,
+        substrate_id: str,
+    ) -> None:
+        mx = require_mlx_for_harness()
+        import mlx.nn as mlx_nn
+        import mlx.optimizers as mlx_optim
+
+        self._mx = mx
+        self._mlx_nn = mlx_nn
+        self._mlx_optim = mlx_optim
+        self.bundle = bundle
+        self.model = bundle.model
+        self.substrate_id = substrate_id
+        self._optimizer: Any = None
+        self._optimizer_lr: float | None = None
+
+    def sample_batch(self, batch_size: int, seed: int) -> Any:
+        """Sample a deterministic batch of pair indices (Catalog #229 PV)."""
+        import numpy as np
+
+        mx = self._mx
+        num_pairs = self.bundle.num_pairs
+        size = min(max(1, batch_size), num_pairs)
+        rng = np.random.RandomState(seed)
+        sampled = rng.choice(num_pairs, size=size, replace=False)
+        return mx.array(sampled.astype("int32"))
+
+    def loss_fn(
+        self,
+        model: Any,
+        batch: Any,
+        loss_weights: Mapping[str, float],
+    ) -> Mapping[str, float]:
+        """Style A diagnostic loss (no grad/update); Style B train_step is used.
+
+        Provided for Protocol conformance + sister tooling that wants a pure
+        loss read. The canonical helper detects ``train_step`` and bypasses
+        this.
+        """
+        mx = self._mx
+        _total, parts = score_aware_loss(
+            self.bundle, batch, loss_weights=loss_weights
+        )
+        out: dict[str, float] = {}
+        for name, value in parts.items():
+            mx.eval(value)
+            out[name] = float(value.item())
+        return out
+
+    def optimizer_step(
+        self, model: Any, loss: Any, learning_rate: float
+    ) -> None:
+        """Style A stub; this adapter uses Style B ``train_step``.
+
+        Per CLAUDE.md "Comment-only contracts are FORBIDDEN": this raises so a
+        caller cannot silently no-op. The canonical helper detects
+        ``train_step`` and never calls this.
+        """
+        raise NotImplementedError(
+            "MlxScoreAwareAdapter uses Style B train_step "
+            "(combined value+grad+update for MLX value_and_grad). The "
+            "canonical helper prefers train_step when present; this "
+            "optimizer_step is a Protocol-conformance stub only."
+        )
+
+    def train_step(
+        self,
+        batch: Any,
+        learning_rate: float,
+        loss_weights: Mapping[str, float],
+    ) -> Mapping[str, float]:
+        """Style B combined value+grad+update (canonical MLX training step)."""
+        mx = self._mx
+        mlx_nn = self._mlx_nn
+        mlx_optim = self._mlx_optim
+        if self._optimizer is None or self._optimizer_lr != learning_rate:
+            self._optimizer = mlx_optim.AdamW(learning_rate=learning_rate)
+            self._optimizer_lr = learning_rate
+
+        def _loss_fn_inner(model: Any) -> Any:
+            # NOTE: score_aware_loss reads bundle.model; the value_and_grad
+            # closure differentiates ``self.model`` which IS bundle.model.
+            total, _parts = score_aware_loss(
+                self.bundle, batch, loss_weights=loss_weights
+            )
+            return total
+
+        loss_and_grad_fn = mlx_nn.value_and_grad(self.model, _loss_fn_inner)
+        loss_value, grads = loss_and_grad_fn(self.model)
+        self._optimizer.update(self.model, grads)
+        mx.eval(self.model.parameters(), self._optimizer.state)
+        return {"total": float(loss_value.item())}
+
+    def export_state_dict(self, model: Any, path: Path) -> None:
+        """Export the model state for checkpointing.
+
+        Two paths:
+
+        1. If the substrate wired ``export_state_dict_fn`` (its MLX->PyTorch
+           bridge per Catalog #1251), delegate to it (the promotion path).
+        2. Otherwise write a numpy-portable MLX-native checkpoint via the
+           canonical bridge serializer ``pack_state_dict_numpy`` (commit
+           ``980808776``) so the checkpoint round-trips byte-stably with ZERO
+           framework import — sister of the substrate's own numpy-portable
+           inflate. This keeps checkpointing functional for any MLX substrate
+           while the PyTorch promotion bridge is a later deliverable; the
+           checkpoint is non-promotable research signal per Catalog #192.
+        """
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if self.bundle.export_state_dict_fn is not None:
+            self.bundle.export_state_dict_fn(model, path)
+            return
+        import numpy as np
+
+        from tac.substrates._shared.numpy_portable_inflate import (
+            pack_state_dict_numpy,
+        )
+
+        flat: dict[str, np.ndarray] = {}
+
+        def _flatten(prefix: str, obj: Any) -> None:
+            if isinstance(obj, dict):
+                for k, v in obj.items():
+                    _flatten(f"{prefix}.{k}" if prefix else str(k), v)
+            elif isinstance(obj, list):
+                for i, v in enumerate(obj):
+                    _flatten(f"{prefix}.{i}" if prefix else str(i), v)
+            elif hasattr(obj, "shape"):
+                flat[prefix] = np.asarray(obj)
+
+        _flatten("", model.parameters())
+        # Canonical numpy-portable state_dict blob (no PyTorch / pickle); fp32
+        # for checkpoint fidelity (the archive grammar owns fp16 storage).
+        blob = pack_state_dict_numpy(flat, dtype="fp32")
+        blob_path = path.with_suffix(path.suffix + ".npsd")
+        blob_path.write_bytes(blob)
+
+    def export_archive(
+        self, model: Any, output_dir: Path
+    ) -> tuple[Path, str, int] | None:
+        """Export the substrate's numpy-portable archive (0.bin)."""
+        if self.bundle.export_archive_fn is None:
+            return None
+        output_dir.mkdir(parents=True, exist_ok=True)
+        return self.bundle.export_archive_fn(model, output_dir)
+
+    def score_aware_components(
+        self, model: Any, batch: Any
+    ) -> Mapping[str, float] | None:
+        """Per-axis decomposition is DEFERRED to the PyTorch sister L2 path.
+
+        Per the Z6 reference adapter + per-substrate symposium discipline:
+        true contest-grade per-axis SegNet/PoseNet decomposition routes
+        through the PyTorch sister (Catalog #164 + #226). The MLX L2 trainer
+        is reconstruction-proxy + Hinton-KL-surrogate only; per-axis is the
+        L3+ sister cascade's responsibility. Returns ``None`` (observability-
+        only; never fails the run).
+        """
+        return None
+
+
+__all__ = [
+    "MlxScoreAwareAdapter",
+]
