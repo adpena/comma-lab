@@ -28,6 +28,9 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from comma_lab.scheduler.experiment_queue import default_state_path  # noqa: E402
+from comma_lab.scheduler.frontier_final_rate_attack_autoloop import (  # noqa: E402
+    execute_post_feedback_child_queues,
+)
 from comma_lab.scheduler.frontier_rate_attack_bootstrap import (  # noqa: E402
     DEFAULT_EXECUTABLE_TARGET_KINDS,
     DEFAULT_FRONTIER_POINTER,
@@ -272,6 +275,25 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "The default keeps this ingestion pass focused on queue signal."
         ),
     )
+    parser.add_argument(
+        "--execute-post-feedback-queues",
+        dest="execute_post_feedback_queues",
+        action="store_true",
+        help=(
+            "After feedback refresh, run a bounded set of generated local child "
+            "queues and preserve their observer artifacts."
+        ),
+    )
+    parser.add_argument(
+        "--skip-execute-post-feedback-queues",
+        dest="execute_post_feedback_queues",
+        action="store_false",
+        help="Do not automatically run post-feedback child queues.",
+    )
+    parser.set_defaults(execute_post_feedback_queues=True)
+    parser.add_argument("--post-feedback-child-queue-limit", type=int, default=4)
+    parser.add_argument("--post-feedback-child-queue-max-steps", type=int, default=8)
+    parser.add_argument("--post-feedback-child-queue-max-parallel", type=int, default=1)
     parser.add_argument("--poll-interval-seconds", type=float, default=0.05)
     parser.add_argument("--idle-sleep-seconds", type=float, default=0.0)
     parser.add_argument("--max-idle-cycles", type=int, default=1)
@@ -792,9 +814,34 @@ def main(argv: list[str] | None = None) -> int:
                         if isinstance(feedback_payload.get("artifacts"), dict):
                             for key, value in feedback_payload["artifacts"].items():
                                 artifact_paths[f"post_execute_feedback_{key}"] = value
+                            if args.execute_post_feedback_queues:
+                                child_queue_runs = execute_post_feedback_child_queues(
+                                    repo_root=REPO_ROOT,
+                                    feedback_artifacts=feedback_payload["artifacts"],
+                                    output_dir=output_dir,
+                                    max_steps=args.post_feedback_child_queue_max_steps,
+                                    max_parallel=args.post_feedback_child_queue_max_parallel,
+                                    limit=args.post_feedback_child_queue_limit,
+                                    poll_interval_seconds=args.poll_interval_seconds,
+                                    idle_sleep_seconds=args.idle_sleep_seconds,
+                                    max_idle_cycles=args.max_idle_cycles,
+                                )
+                                execution_report["post_execute_feedback_child_queues"] = (
+                                    child_queue_runs
+                                )
+                                artifact_path = child_queue_runs.get("artifact_path")
+                                if isinstance(artifact_path, str):
+                                    artifact_paths[
+                                        "post_execute_feedback_child_queue_runs"
+                                    ] = artifact_path
             execution_report["failed_command_count"] = sum(
                 1 for result in results if result["returncode"] != 0
             )
+            child_runs = execution_report.get("post_execute_feedback_child_queues")
+            if isinstance(child_runs, dict):
+                execution_report["failed_command_count"] += int(
+                    child_runs.get("failed_command_count") or 0
+                )
             report_path = output_dir / "execution_report.json"
             write_json_artifact(report_path, execution_report)
             artifact_paths["execution_report"] = _display_path(report_path)

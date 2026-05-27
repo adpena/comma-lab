@@ -27,6 +27,11 @@ from comma_lab.scheduler.byte_shaving_materializer_registry import (
     RENDERER_PAYLOAD_DFL1_TARGET_KIND,
     TENSOR_FACTORIZE_TARGET_KIND,
 )
+from comma_lab.scheduler.frontier_final_rate_attack_autoloop import (
+    POST_FEEDBACK_CHILD_QUEUE_RUNS_SCHEMA,
+    execute_post_feedback_child_queues,
+    select_post_feedback_child_queue_artifacts,
+)
 from comma_lab.scheduler.frontier_rate_attack_bootstrap import (
     BOOTSTRAP_SCHEMA,
     DERIVED_PACKET_MEMBER_MERGE_CONTRACT_SCHEMA,
@@ -811,6 +816,98 @@ def test_post_execute_feedback_refresh_command_is_bounded_to_queue_signal(
     )
     assert "--skip-raw-retention-plan" in command
     assert "--skip-mlx-retention-plan" in command
+
+
+def test_post_feedback_child_queue_selection_is_keyed_and_bounded(
+    tmp_path: Path,
+) -> None:
+    first = tmp_path / "operation_chain_compiler_queue.json"
+    second = tmp_path / "autonomous_chain_optimization_queue.json"
+    _write_json(first, {"schema": "experiment_queue.v1", "queue_id": "first"})
+    _write_json(second, {"schema": "experiment_queue.v1", "queue_id": "second"})
+
+    selected = select_post_feedback_child_queue_artifacts(
+        {
+            "random_queue": str(tmp_path / "random_queue.json"),
+            "autonomous_chain_optimization_queue": str(second),
+            "operation_chain_compiler_queue": str(first),
+        },
+        repo_root=tmp_path,
+        limit=1,
+    )
+
+    assert selected == [
+        {
+            "artifact_key": "operation_chain_compiler_queue",
+            "queue_path": "operation_chain_compiler_queue.json",
+        }
+    ]
+
+
+def test_post_feedback_child_queue_execution_preserves_observer_artifacts(
+    tmp_path: Path,
+) -> None:
+    queue = tmp_path / "operation_chain_compiler_queue.json"
+    _write_json(
+        queue,
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "child_queue_unit",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "experiments": [],
+        },
+    )
+    commands: list[list[str]] = []
+
+    def fake_run(command: list[str]) -> dict[str, object]:
+        commands.append(command)
+        stdout = ""
+        if "observe" in command:
+            stdout = json.dumps(
+                {
+                    "schema": "experiment_queue_observation.v1",
+                    "queue_id": "child_queue_unit",
+                    "healthy": True,
+                    "status_counts": {"succeeded": 1},
+                    "blockers": [],
+                }
+            )
+        return {
+            "command": command,
+            "returncode": 0,
+            "elapsed_seconds": 0.0,
+            "stdout": stdout,
+            "stderr": "",
+        }
+
+    report = execute_post_feedback_child_queues(
+        repo_root=tmp_path,
+        feedback_artifacts={"operation_chain_compiler_queue": str(queue)},
+        output_dir=tmp_path / "out",
+        max_steps=3,
+        max_parallel=1,
+        limit=4,
+        run_command=fake_run,
+    )
+
+    assert report["schema"] == POST_FEEDBACK_CHILD_QUEUE_RUNS_SCHEMA
+    assert report["selected_queue_count"] == 1
+    assert report["failed_command_count"] == 0
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+    run = report["queue_runs"][0]
+    assert run["artifact_key"] == "operation_chain_compiler_queue"
+    assert run["queue_healthy"] is True
+    assert run["observer_revalidation_path"].endswith(
+        "post_execute_feedback_child_queue_observations/"
+        "operation_chain_compiler_queue/observer_revalidation.json"
+    )
+    assert (tmp_path / run["observer_revalidation_path"]).exists()
+    worker_command = commands[2]
+    assert worker_command[worker_command.index("--max-steps") + 1] == "3"
 
 
 def test_frontier_bootstrap_results_root_probe_requires_readable_file(
