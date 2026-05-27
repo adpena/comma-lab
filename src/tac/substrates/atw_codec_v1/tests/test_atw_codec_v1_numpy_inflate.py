@@ -16,13 +16,18 @@ from pathlib import Path
 import numpy as np
 import torch
 
+from tac.substrates.atw_codec_v1.architecture import ATWCodec, ATWCodecConfig
 from tac.substrates.atw_codec_v1.archive import (
     pack_archive,
     parse_archive,
     parse_archive_numpy,
 )
-from tac.substrates.atw_codec_v1.architecture import ATWCodec, ATWCodecConfig
-from tac.substrates.atw_codec_v1.inflate import _decode_pair, _wz_predict
+from tac.substrates.atw_codec_v1.inflate import (
+    _decode_pair,
+    _raw_output_path_numpy,
+    _read_single_member_archive_bytes,
+    _wz_predict,
+)
 
 _INFLATE_PATH = Path(__file__).resolve().parents[1] / "inflate.py"
 _ARCHIVE_PATH = Path(__file__).resolve().parents[1] / "archive.py"
@@ -178,3 +183,33 @@ def test_wz_residual_is_operationally_consumed() -> None:
         out_h=cfg.output_height, out_w=cfg.output_width,
     )
     assert np.abs(rgb_with - rgb_without).max() > 1e-6
+
+
+def test_numpy_inflate_preserves_single_member_archive_reader(tmp_path: Path) -> None:
+    archive_dir = tmp_path / "archive"
+    archive_dir.mkdir()
+    zero_bin = archive_dir / "0.bin"
+    zero_bin.write_bytes(b"ATW1")
+    assert _read_single_member_archive_bytes(archive_dir) == b"ATW1"
+    zero_bin.unlink()
+    (archive_dir / "x").write_bytes(b"ATW1X")
+    assert _read_single_member_archive_bytes(archive_dir) == b"ATW1X"
+    zero_bin.write_bytes(b"ATW1")
+    try:
+        _read_single_member_archive_bytes(archive_dir)
+    except ValueError as exc:
+        assert "ambiguous archive members" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("ambiguous archive members should fail closed")
+
+
+def test_numpy_inflate_raw_output_path_is_contest_safe(tmp_path: Path) -> None:
+    output = _raw_output_path_numpy(tmp_path / "out", "videos/0.mkv")
+    assert output == (tmp_path / "out" / "videos" / "0.raw").resolve(strict=False)
+    for unsafe in ("", "../escape.mkv", "/tmp/escape.mkv", "a//b.mkv"):
+        try:
+            _raw_output_path_numpy(tmp_path / "out", unsafe)
+        except ValueError:
+            pass
+        else:  # pragma: no cover
+            raise AssertionError(f"unsafe path accepted: {unsafe!r}")

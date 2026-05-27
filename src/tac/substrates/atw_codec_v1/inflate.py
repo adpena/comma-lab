@@ -132,6 +132,44 @@ def inflate_one_video(archive_bytes: bytes, output_raw_path: Path) -> int:
     return frames_written
 
 
+def _raw_output_path_numpy(output_dir: Path, video_name: str) -> Path:
+    """Torch-free copy of the contest-safe raw output path helper."""
+    raw = str(video_name).replace("\\", "/").strip()
+    rel = Path(raw)
+    if (
+        not raw
+        or "//" in raw
+        or rel.is_absolute()
+        or any(part in {"", ".."} for part in rel.parts)
+    ):
+        raise ValueError(f"unsafe file_list video name for raw output: {video_name!r}")
+    root = output_dir.resolve(strict=False)
+    target = (output_dir / rel.with_suffix(".raw")).resolve(strict=False)
+    try:
+        target.relative_to(root)
+    except ValueError as exc:
+        raise ValueError(
+            f"file_list video name escapes output directory: {video_name!r}"
+        ) from exc
+    return target
+
+
+def _read_single_member_archive_bytes(archive_dir: Path) -> bytes:
+    """Read the single contest archive member, failing on ambiguity."""
+    zero_bin = archive_dir / "0.bin"
+    x_member = archive_dir / "x"
+    present = [path for path in (zero_bin, x_member) if path.is_file()]
+    if len(present) != 1:
+        if not present:
+            raise FileNotFoundError(
+                f"expected exactly one archive member at {zero_bin} or {x_member}"
+            )
+        raise ValueError(
+            f"ambiguous archive members present: {zero_bin} and {x_member}"
+        )
+    return present[0].read_bytes()
+
+
 def main_cli() -> int:
     """CLI: ``inflate.py <archive_dir> <output_dir> <file_list>`` (Catalog #146)."""
     if len(sys.argv) < 4:
@@ -145,17 +183,16 @@ def main_cli() -> int:
     file_list_path = Path(sys.argv[3])
 
     file_list = file_list_path.read_text(encoding="utf-8").strip().splitlines()
-    archive_bytes = (archive_dir / "0.bin").read_bytes()
+    archive_bytes = _read_single_member_archive_bytes(archive_dir)
     for fname in file_list:
         name = fname.strip()
         if not name:
             continue
-        base = Path(name).stem
-        inflate_one_video(archive_bytes, output_dir / f"{base}.raw")
+        inflate_one_video(archive_bytes, _raw_output_path_numpy(output_dir, name))
     return 0
 
 
-__all__ = ["inflate_one_video", "main_cli"]
+__all__ = ["_read_single_member_archive_bytes", "inflate_one_video", "main_cli"]
 
 
 if __name__ == "__main__":  # pragma: no cover — CLI smoke

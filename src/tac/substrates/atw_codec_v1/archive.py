@@ -134,7 +134,7 @@ def _serialize_state_dict(sd: dict[str, torch.Tensor]) -> bytes:
     return bytes(brotli.compress(raw, quality=_BROTLI_QUALITY))
 
 
-def _deserialize_numpy_state_dict(blob: bytes) -> dict[str, "np.ndarray"]:
+def _deserialize_numpy_state_dict(blob: bytes) -> dict[str, np.ndarray]:
     """Torch-free deserialize of the ATW1 length-prefixed fp16 state_dict blob.
 
     Reads the EXACT same byte format ``_serialize_state_dict`` produces, but
@@ -146,7 +146,7 @@ def _deserialize_numpy_state_dict(blob: bytes) -> dict[str, "np.ndarray"]:
     if not blob:
         return {}
     raw = brotli.decompress(blob)
-    sd: dict[str, "np.ndarray"] = {}
+    sd: dict[str, np.ndarray] = {}
     pos = 0
     while pos < len(raw):
         if pos + 2 > len(raw):
@@ -470,12 +470,12 @@ class ATWCodecArchiveNumpy:
     is provenance-only (kept for parity with the torch-side parse).
     """
 
-    encoder_state_dict: dict[str, "np.ndarray"]
-    decoder_state_dict: dict[str, "np.ndarray"]
-    wz_side_info_head_state_dict: dict[str, "np.ndarray"]
-    latent_residual: "np.ndarray"
+    encoder_state_dict: dict[str, np.ndarray]
+    decoder_state_dict: dict[str, np.ndarray]
+    wz_side_info_head_state_dict: dict[str, np.ndarray]
+    latent_residual: np.ndarray
     """``(num_pairs, latent_dim)`` fp32 dequantized z_residual."""
-    scorer_class_prior_table: "np.ndarray"
+    scorer_class_prior_table: np.ndarray
     """``(num_pairs, scorer_class_prior_dim)`` fp32 scorer class prior table."""
     meta: dict[str, object]
     schema_version: int
