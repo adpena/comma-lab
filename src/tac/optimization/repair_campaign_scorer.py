@@ -25,6 +25,7 @@ REPAIR_CAMPAIGN_OPTIMIZER_DECISION_SCHEMA = "repair_campaign_optimizer_decision.
 REPAIR_CAMPAIGN_OPTIMIZER_ALLOCATION_ROW_SCHEMA = (
     "repair_campaign_optimizer_allocation_row.v1"
 )
+REPAIR_CAMPAIGN_STACKABILITY_PROBE_SCHEMA = "repair_campaign_stackability_probe.v1"
 REPAIR_OPERATOR_FAMILY_PRIORS_SCHEMA = "repair_operator_family_priors.v1"
 REPAIR_OPERATOR_FAMILY_PRIOR_ROW_SCHEMA = "repair_operator_family_prior_row.v1"
 
@@ -418,6 +419,8 @@ def _build_optimizer_decision(
                 "acquisition_id": row.get("acquisition_id"),
                 "family_id": row.get("family_id"),
                 "correction_family": row.get("correction_family"),
+                "targeted_dimensions": _string_list(row.get("targeted_dimensions")),
+                "operation_levels": _string_list(row.get("operation_levels")),
                 "campaign_rank": row.get("campaign_rank"),
                 "entropy_position_label": row.get("entropy_position_label"),
                 "requested_repair_bytes": requested_bytes,
@@ -429,6 +432,10 @@ def _build_optimizer_decision(
                 "scaled_expected_local_improvement_score_units": scaled_improvement,
                 "campaign_score": row.get("campaign_score"),
                 "interaction_penalty": row.get("interaction_penalty"),
+                "interaction_scope": dict(_mapping(row.get("interaction_scope"))),
+                "stacking_interaction_terms": dict(
+                    _mapping(row.get("stacking_interaction_terms"))
+                ),
                 "selection_rationale": (
                     "greedy_campaign_score_waterfill_under_receiver_closed_byte_credit"
                 ),
@@ -507,6 +514,196 @@ def _build_optimizer_decision(
     return decision
 
 
+def _find_mapping_by_typed_response_id(
+    rows: Sequence[Any],
+    *,
+    typed_response_id: str,
+) -> Mapping[str, Any]:
+    for row in rows:
+        if not isinstance(row, Mapping):
+            continue
+        if str(row.get("typed_response_id") or "") == typed_response_id:
+            return row
+    return {}
+
+
+def build_repair_campaign_stackability_probe(
+    *,
+    score_report: Mapping[str, Any],
+    typed_response_id: str,
+    repo_root: str | Path | None = None,
+) -> dict[str, Any]:
+    """Build an executable local stackability probe from an optimizer allocation.
+
+    The probe is still advisory. It proves the allocation is backed by local MLX
+    response custody before a queue spends additional local work on stacking or
+    remeasurement, but it never becomes a score, budget, promotion, or dispatch
+    authority.
+    """
+
+    typed_id = str(typed_response_id or "").strip()
+    if not typed_id:
+        raise RepairCampaignScorerError("typed_response_id is required")
+    if score_report.get("schema") != REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA:
+        raise RepairCampaignScorerError(
+            "stackability probe requires repair_campaign_score_report.v1"
+        )
+    require_no_truthy_authority_fields(
+        score_report,
+        context="repair_campaign_stackability_probe_input",
+    )
+    decision = _mapping(score_report.get("optimizer_decision"))
+    if decision.get("schema") != REPAIR_CAMPAIGN_OPTIMIZER_DECISION_SCHEMA:
+        raise RepairCampaignScorerError(
+            "score report missing repair_campaign_optimizer_decision.v1"
+        )
+    allocation = _find_mapping_by_typed_response_id(
+        decision.get("selected_allocation_rows") or [],
+        typed_response_id=typed_id,
+    )
+    score_row = _find_mapping_by_typed_response_id(
+        score_report.get("rows") or [],
+        typed_response_id=typed_id,
+    )
+    blockers: list[str] = []
+    missing_artifacts: list[str] = []
+    if not allocation:
+        blockers.append("optimizer_selected_allocation_missing")
+    if not score_row:
+        blockers.append("source_score_row_missing")
+
+    allocated_bytes = _safe_int(allocation.get("allocated_repair_bytes"))
+    if allocated_bytes <= 0:
+        blockers.append("allocated_repair_bytes_missing")
+
+    gate = _mapping(score_row.get("execution_gate"))
+    custody_paths = [
+        item
+        for item in gate.get("local_mlx_custody_paths") or []
+        if isinstance(item, Mapping)
+    ]
+    required_keys = {"local_mlx_response_path", "reference_local_mlx_response_path"}
+    required_status = [
+        item for item in custody_paths if str(item.get("key") or "") in required_keys
+    ]
+    if not required_status:
+        blockers.append("local_mlx_required_custody_paths_missing")
+    for item in required_status:
+        if item.get("exists") is not True:
+            key = str(item.get("key") or "unknown_local_mlx_path")
+            missing_artifacts.append(f"{key}:missing_or_unverified")
+            path_text = str(item.get("path") or "").strip()
+            if path_text and not _repo_path_exists(path_text, repo_root):
+                missing_artifacts.append(f"{key}:{path_text}")
+    if gate.get("local_mlx_advisory_custody_ready") is not True:
+        blockers.append("local_mlx_advisory_custody_missing")
+    missing_artifacts.extend(_string_list(gate.get("missing_artifacts")))
+
+    entropy_position = str(
+        allocation.get("entropy_position_label")
+        or score_row.get("entropy_position_label")
+        or "unknown_entropy_pipeline_position"
+    )
+    stackability_ready = not blockers
+    status = (
+        "ready_for_local_mlx_stackability_probe"
+        if stackability_ready
+        else "blocked_missing_artifact"
+    )
+    probe = {
+        "schema": REPAIR_CAMPAIGN_STACKABILITY_PROBE_SCHEMA,
+        "typed_response_id": typed_id,
+        "status": status,
+        "source_score_report_schema": score_report.get("schema"),
+        "source_optimizer_decision_schema": decision.get("schema"),
+        "component_response_axis": "[macOS-MLX research-signal]",
+        "probe_execution_mode": (
+            "local_manifest_probe_from_existing_mlx_advisory_custody"
+        ),
+        "stackability_ready": stackability_ready,
+        "optimizer_allocation": dict(allocation),
+        "source_score_row": dict(score_row),
+        "allocated_repair_bytes": allocated_bytes,
+        "receiver_closed_rate_credit_bytes": _safe_int(
+            decision.get("receiver_closed_rate_credit_bytes")
+        ),
+        "remaining_receiver_closed_rate_credit_bytes_after": _safe_int(
+            allocation.get("remaining_receiver_closed_rate_credit_bytes_after")
+        ),
+        "expected_local_improvement_score_units": _safe_float(
+            allocation.get("scaled_expected_local_improvement_score_units")
+        )
+        or 0.0,
+        "entropy_position_label": entropy_position,
+        "entropy_position_class": (
+            "pre_entropy_distribution_shaping"
+            if entropy_position.startswith("before_entropy_coder")
+            else (
+                "scorer_entropy_before_selector_codec"
+                if entropy_position == "scorer_entropy_repair_before_selector_codec"
+                else (
+                    "entropy_coder_boundary"
+                    if entropy_position.startswith("at_entropy_coder")
+                    else (
+                        "post_entropy_container"
+                        if entropy_position.startswith("after_entropy_coder")
+                        else "selector_or_unknown_entropy_position"
+                    )
+                )
+            )
+        ),
+        "interaction_penalty": _safe_float(
+            allocation.get("interaction_penalty")
+            if allocation
+            else score_row.get("interaction_penalty")
+        )
+        or 0.0,
+        "interaction_scope": dict(
+            _mapping(
+                allocation.get("interaction_scope")
+                if allocation
+                else score_row.get("interaction_scope")
+            )
+        ),
+        "stacking_interaction_terms": dict(
+            _mapping(
+                allocation.get("stacking_interaction_terms")
+                if allocation
+                else score_row.get("stacking_interaction_terms")
+            )
+        ),
+        "local_mlx_custody_paths": [dict(item) for item in custody_paths],
+        "missing_artifacts": ordered_unique(missing_artifacts),
+        "blockers": ordered_unique(
+            [
+                *blockers,
+                "local_mlx_probe_is_not_score_authority",
+                "exact_axis_component_response_required_before_budget_spend",
+                "receiver_runtime_materialization_required_before_exact_dispatch",
+                "stacking_interactions_must_be_remeasured_after_materialization",
+            ]
+        ),
+        "hard_constraints": [
+            "allocated_bytes_must_not_exceed_receiver_closed_rate_credit",
+            "local_mlx_response_is_planning_signal_only",
+            "repair_probe_must_not_modify_receiver_runtime",
+            "exact_auth_eval_required_before_score_or_promotion_claim",
+            "post_materialization_stackability_must_be_remeasured",
+        ],
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        "allowed_use": "local_mlx_repair_stackability_probe_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        probe,
+        context=f"repair_campaign_stackability_probe:{typed_id}",
+    )
+    return probe
+
+
 def score_repair_campaign(
     *,
     payload: Mapping[str, Any],
@@ -555,6 +752,8 @@ def score_repair_campaign(
             "correction_family": row.get("correction_family"),
             "family_id": prior.get("family_id") or "unclassified_repair_family",
             "family_prior": dict(prior),
+            "targeted_dimensions": _string_list(row.get("targeted_dimensions")),
+            "operation_levels": _string_list(row.get("operation_levels")),
             "entropy_position_label": entropy_position,
             "entropy_position_weight": entropy_weight,
             "requested_repair_bytes": requested_bytes,
@@ -564,6 +763,13 @@ def score_repair_campaign(
             "family_prior_multiplier": family_multiplier,
             "interaction_penalty": interaction_penalty,
             "campaign_score": campaign_score,
+            "marginal_response_curves": dict(
+                _mapping(row.get("marginal_response_curves"))
+            ),
+            "interaction_scope": dict(_mapping(row.get("interaction_scope"))),
+            "stacking_interaction_terms": dict(
+                _mapping(row.get("stacking_interaction_terms"))
+            ),
             "execution_gate": gate,
             "recommended_next_action": (
                 "run_local_mlx_repair_stackability_probe"
@@ -631,9 +837,11 @@ __all__ = [
     "REPAIR_CAMPAIGN_OPTIMIZER_DECISION_SCHEMA",
     "REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA",
     "REPAIR_CAMPAIGN_SCORE_ROW_SCHEMA",
+    "REPAIR_CAMPAIGN_STACKABILITY_PROBE_SCHEMA",
     "REPAIR_OPERATOR_FAMILY_PRIORS_SCHEMA",
     "REPAIR_OPERATOR_FAMILY_PRIOR_ROW_SCHEMA",
     "RepairCampaignScorerError",
+    "build_repair_campaign_stackability_probe",
     "repair_operator_family_priors",
     "score_repair_campaign",
 ]

@@ -199,6 +199,12 @@ from .repair_campaign_score_queue import (
     RepairCampaignScoreQueueError,
     build_repair_campaign_score_queue,
 )
+from .repair_campaign_stackability_queue import (
+    REPAIR_CAMPAIGN_STACKABILITY_EXPERIMENT_METADATA_SCHEMA,
+    REPAIR_CAMPAIGN_STACKABILITY_QUEUE_METADATA_SCHEMA,
+    RepairCampaignStackabilityQueueError,
+    build_repair_campaign_stackability_queue,
+)
 from .ssh_experiment_queue_executor import (
     SSH_ARTIFACT_MOBILITY_SCHEMA,
     SSH_EXECUTION_RESULT_SCHEMA,
@@ -275,6 +281,8 @@ __all__ = [
     "REGISTRY_SCHEMA",
     "REPAIR_CAMPAIGN_SCORE_EXPERIMENT_METADATA_SCHEMA",
     "REPAIR_CAMPAIGN_SCORE_QUEUE_METADATA_SCHEMA",
+    "REPAIR_CAMPAIGN_STACKABILITY_EXPERIMENT_METADATA_SCHEMA",
+    "REPAIR_CAMPAIGN_STACKABILITY_QUEUE_METADATA_SCHEMA",
     "SCHEDULER_RUNTIME_POLICY_SCHEMA",
     "SSH_ARTIFACT_MOBILITY_SCHEMA",
     "SSH_EXECUTION_RESULT_SCHEMA",
@@ -298,6 +306,7 @@ __all__ = [
     "PlatformSpec",
     "ReadyStep",
     "RepairCampaignScoreQueueError",
+    "RepairCampaignStackabilityQueueError",
     "RunRecord",
     "SchedulerStatusReport",
     "TrackStatus",
@@ -332,6 +341,7 @@ __all__ = [
     "build_remote_git_preflight_command",
     "build_remote_shell_command",
     "build_repair_campaign_score_queue",
+    "build_repair_campaign_stackability_queue",
     "build_rsync_pull_command",
     "build_rsync_push_command",
     "collect_exact_ready_queue_paths",

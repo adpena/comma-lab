@@ -43,8 +43,14 @@ def _work_order(tmp_path: Path) -> dict[str, object]:
     ref.write_text('{"schema":"mlx_scorer_response.v1"}\n', encoding="utf-8")
     return {
         "schema": "frontier_rate_attack_repair_budget_waterfill_work_order.v1",
+        "receiver_closed_rate_credit": {
+            "schema": "frontier_rate_attack_repair_waterfill_rate_credit.v1",
+            "receiver_closed_saved_bytes_total": 40,
+            **_false_authority(),
+        },
         "typed_response_ledger": {
             "schema": "frontier_rate_attack_repair_budget_typed_response_ledger.v1",
+            "available_receiver_closed_rate_credit_bytes": 40,
             "rows": [
                 {
                     "schema": (
@@ -151,6 +157,17 @@ def test_build_repair_campaign_score_queue_from_waterfill_work_order(
     command = experiment["steps"][1]["command"]
     assert command[:2] == [".venv/bin/python", "tools/score_repair_campaign.py"]
     assert str(work_order_path) in command
+    stackability_command = experiment["steps"][2]["command"]
+    assert stackability_command[:2] == [
+        ".venv/bin/python",
+        "tools/build_repair_campaign_stackability_queue.py",
+    ]
+    assert experiment["steps"][2]["requires"] == [
+        "score_repair_campaign_from_typed_ledger"
+    ]
+    assert experiment["metadata"]["repair_campaign_stackability_queue_path"] in (
+        stackability_command
+    )
     assert experiment["steps"][1]["requires"] == [
         "assert_repair_budget_waterfill_work_order_materialized"
     ]
@@ -231,6 +248,22 @@ def test_repair_campaign_score_queue_cli_writes_and_score_step_runs(
     assert report["schema"] == REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA
     assert report["rows"][0]["typed_response_id"] == "segnet_region_ready"
     assert report["ready_for_local_mlx_advisory_execution_count"] == 1
+    stackability_command = queue["experiments"][0]["steps"][2]["command"]
+    stackability_result = subprocess.run(
+        [sys.executable, *stackability_command[1:]],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert stackability_result.returncode == 0, stackability_result.stderr
+    stackability_queue_path = Path(
+        queue["experiments"][0]["metadata"]["repair_campaign_stackability_queue_path"]
+    )
+    assert stackability_queue_path.is_file()
+    stackability_queue = json.loads(stackability_queue_path.read_text(encoding="utf-8"))
+    assert stackability_queue["schema"] == QUEUE_SCHEMA
+    assert stackability_queue["metadata"]["ready_experiment_count"] == 1
 
 
 def test_repair_campaign_score_queue_defers_missing_work_order_to_prerequisite_step(

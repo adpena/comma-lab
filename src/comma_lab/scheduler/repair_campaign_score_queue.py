@@ -118,6 +118,7 @@ def _score_experiment(
     source_experiment: Mapping[str, Any],
     source_queue_path: str | Path,
     repo_root: str | Path,
+    results_root: str | Path,
     queue_root: Path,
     priority: int,
 ) -> dict[str, Any]:
@@ -136,6 +137,10 @@ def _score_experiment(
         queue_root / _slug(chain_id) / "repair_campaign_score_report.json"
     )
     score_report_ref = _repo_rel(score_report_path, repo_root)
+    stackability_queue_path = (
+        queue_root / _slug(chain_id) / "repair_campaign_stackability_queue.json"
+    )
+    stackability_queue_ref = _repo_rel(stackability_queue_path, repo_root)
     blockers = []
     if not work_order_ref:
         blockers.append("repair_budget_waterfill_work_order_path_missing")
@@ -165,7 +170,9 @@ def _score_experiment(
             work_order_exists_at_build
         ),
         "repair_campaign_score_report_path": score_report_ref,
+        "repair_campaign_stackability_queue_path": stackability_queue_ref,
         "campaign_scorer_default": True,
+        "stackability_followup_default": True,
         "queue_actuation_ready": not blockers,
         "queue_actuation_blockers": ordered_unique(blockers),
         "source_queue_actuation_blockers": _string_list(
@@ -282,7 +289,44 @@ def _score_experiment(
                     "input_artifact_paths": [work_order_ref],
                     "include_postcondition_paths": True,
                 },
-            }
+            },
+            {
+                "id": "build_repair_campaign_stackability_queue",
+                "kind": "command",
+                "requires": ["score_repair_campaign_from_typed_ledger"],
+                "command": [
+                    ".venv/bin/python",
+                    "tools/build_repair_campaign_stackability_queue.py",
+                    "--score-report",
+                    score_report_ref,
+                    "--stackability-queue-out",
+                    stackability_queue_ref,
+                    "--results-root",
+                    str(results_root),
+                    "--queue-id",
+                    f"{_slug(chain_id)}_repair_stackability",
+                    "--overwrite",
+                ],
+                "resources": {"kind": "local_cpu"},
+                "timeout_seconds": 120,
+                "postconditions": [
+                    {
+                        "type": "json_equals",
+                        "path": stackability_queue_ref,
+                        "key": "schema",
+                        "equals": QUEUE_SCHEMA,
+                    },
+                    {
+                        "type": "json_false_authority",
+                        "path": stackability_queue_ref,
+                    },
+                ],
+                "telemetry": {
+                    "artifact_paths": [stackability_queue_ref],
+                    "input_artifact_paths": [score_report_ref],
+                    "include_postcondition_paths": True,
+                },
+            },
         ]
     return {
         "id": f"score_repair_campaign_{_slug(chain_id)}",
@@ -333,6 +377,7 @@ def build_repair_campaign_score_queue(
             source_experiment=experiment,
             source_queue_path=repair_budget_waterfill_queue_path,
             repo_root=repo_root,
+            results_root=results_root,
             queue_root=queue_root,
             priority=priority,
         )
