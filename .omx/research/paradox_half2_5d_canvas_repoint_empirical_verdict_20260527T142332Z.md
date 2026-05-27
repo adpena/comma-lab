@@ -135,3 +135,48 @@ Sister subagent `a299da55b207c9e64` (PACT-NeRV `_full_main` cluster) is STILL RU
 - **Catalog #110/#113 APPEND-ONLY**: NEW memo + NEW function + NEW test file + NEW sweep flag; NO mutation of the prior verdict memo, the producer memo, or sister artifacts.
 - **Catalog #314/#340 sister-checkpoint guard**: scope disjoint from the PACT-NeRV sister; commit via canonical serializer with POST-EDIT `--expected-content-sha256`.
 - **Catalog #206 checkpoint discipline**: 4 in-progress + 1 complete checkpoints via `tools/subagent_checkpoint.py`.
+
+---
+
+## APPEND-ONLY CORRECTION FOOTER (2026-05-27T15:40Z) — RANK-1 TAUTOLOGY DIAGNOSED + FIXED + RE-RUN
+
+- agent: claude (`rank1_fix_5d_canvas_20260527`) — explicit operator-routed fix of the rank-1 problem-spec tautology the rigor review `.omx/research/master_gradient_analysis_rigor_signal_review_20260527T151020Z.md` (commit `21014faa7`) exposed.
+- lane_id: `lane_rank1_multiop_problem_spec_full_rank_fix_20260527`
+- discipline: Catalog #110/#113 APPEND-ONLY (the body above is UNMODIFIED; this footer is the only addition) + #307 (paradigm-vs-implementation) + #192/#127/#323 (canonical Provenance non-promotable macOS-MLX research-signal) + #287 (every claim has a NUMBER).
+- scope: $0 — MLX-local / numpy / CPU only. NO paid dispatch.
+
+### The diagnosis the body above MIS-ATTRIBUTED
+
+The body's verdict (`multi-op synergy negligible`) was DIRECTIONALLY right but its STATED MECHANISM — "the Dykstra polytope solver confirms the operator gradients are **near-collinear** at the frontier" (body §"CRITICAL HONESTY" point 3) — was a **rank-1 tautology of `_build_multiop_problem_spec`, NOT an empirical property of the score surface.** Per the rigor review CRUX 3: every operator gradient was built as `(seg_aggregate, pose_aggregate, rate_aggregate) × scalar_leverage_i` — all 5 productive operators were scalar multiples of ONE shared vector → operator-gradient matrix **RANK 1**, max cosine-distance **0.0**. A rank-1 operator basis has **zero synergy-axis polytope volume FOR ANY INPUT** (per-pair or aggregate, MLX or PyTorch-authority), so the synergy term `-7.6e-13` was the arithmetic image of a rank-1 input, NOT a measurement.
+
+### The fix
+
+`tools/canvas_multiop_composition_closed_form_prediction_sweep.py::_build_multiop_problem_spec` now derives each operator's per-axis gradient `(|d_seg|, |d_pose|, |d_rate|)` from that operator's OWN per-pair footprint via its best candidate's Catalog #356 `AxisDecomposition` (NEW helper `_operator_axis_gradient_from_decomposition`). Different operators touch different pairs/bytes/regions, so their aggregate axis DIRECTIONS are genuinely distinct. The legacy rank-1 construction is preserved behind `rank1_legacy=True` (CLI `--rank1-legacy`) for the apples-to-apples before/after comparison ONLY. Per-operator fallback to the shared-aggregate × leverage value when an operator lacks a decomposition (so the spec never crashes). NEW helper `operator_gradient_matrix_rank(spec)` is the regression surface. NEW test `src/tac/tests/test_canvas_multiop_problem_spec_rank.py` (10 tests, all pass) ASSERTS the full-rank spec produces rank > 1 with distinct footprints — so the rank-1 tautology cannot silently return — and that the legacy path remains rank 1.
+
+### The genuine re-run verdict (full-600 artifact, FULL-RANK spec)
+
+| quantity | rank-1 LEGACY (the tautology) | FULL-RANK (the fix) |
+|---|---|---|
+| `problem_spec_kind` | `rank1_legacy_shared_aggregate_x_scalar` | `full_rank_per_operator_axis_decomposition` |
+| **operator-gradient matrix rank** | **1** | **3** |
+| max pairwise cosine-distance | 0.0 | ~0.9997 (`reorder_pair` rate-axis footprint orthogonal to seg/pose-only ops) |
+| Dykstra feasible / residual / iters | True / 1.25e-13 / 159 | True / 0.0 / 2 |
+| **`predicted_multiop_extra_delta` (SYNERGY)** | **−1.46e-12** | **−2.13e-07** |
+| V14-V2 frontier crossing threshold | −7.66e-6 | −7.66e-6 |
+| synergy vs threshold | ~6 orders below | **35.9× below (2.78% of threshold)** |
+
+**The genuine number: full-rank multi-op SYNERGY = −2.13e-07.** That is **1.5×10⁵× larger** than the rank-1 tautology's −1.46e-12 — the rank-1 collapse was annihilating the genuine signal by ~5 orders of magnitude. BUT the genuine synergy is still **35.9× BELOW** the V14-V2 frontier-crossing threshold (−7.66e-6); it is **2.78%** of the threshold. The synergy is dominated by `reorder_pair`'s rate-axis −8-byte footprint being orthogonal to the seg/pose-only operators (`replace_many` / `merge_pair` / `motion_conditional` / `temporal_coherence`).
+
+### Per Catalog #307 — corrected classification
+
+- The body's `MULTIOP_BEATS_V14V2` raw verdict label remains a **label-artifact** (the `predicted_multiop_delta_score` sum is dominated by `best_single_op_delta = −0.0359`, a LEVERAGE-magnitude sum, NOT a realizable score). UNCHANGED.
+- The synergy≈0 EVIDENCE is **re-classified from `near-collinear-operator-gradients-at-the-frontier` (IMPLEMENTATION-LEVEL rank-1 tautology) to a GENUINE FULL-RANK MEASUREMENT: synergy is REAL (−2.13e-07) but ~36× too small to cross V14-V2 on its own.**
+- The strategic conclusion (`single-op rate-attack is Pareto-optimal; class-shift is the only sub-single-op-Pareto lever`) **now holds on a genuine measurement, not a tautology.** The multi-op DISTORTION route does **NOT** reopen: synergy is real but sub-threshold by ~36×, so paid FIRE-phase spend on a multi-op composition remains NOT worth it. A single-op (drop-one / replace-one) candidate per Catalog #246 paired contest-CUDA/CPU exact-eval remains the only path to a realizable score; Track-A class-shift remains the only remaining lever for genuinely-new gains.
+
+### Provenance (Catalog #323)
+
+Every number above is `evidence_grade=macOS-MLX research-signal` / `axis_tag=[predicted]` / `score_claim=false` / `promotable=false` / `hardware_substrate=darwin_arm64_m5_max_macos_mlx_advisory`. Sources: two live full-600 sweep runs (`--rank1-legacy` vs default) + the live-artifact regression test. NOT a contest score; Catalog #246 paired exact-eval remains the only score/frontier/PR path.
+
+### Catalog #313 probe-outcome row
+
+`canvas_multiop_composition_per_pair_heuristic_prior_repoint_sweep_20260527` — a NEW corrected `adjudicated` row appended (APPEND-ONLY; the prior rank-1-metric row is preserved): `verdict=DEFER`, `metric_value=−2.13e-07` (FULL_RANK), `operator_gradient_matrix_rank_full=3` / `_legacy=1`, `full_rank_synergy_below_threshold_factor=35.9`.

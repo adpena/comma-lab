@@ -213,21 +213,76 @@ def _summarize_candidates(op_value: str, cands: list) -> OperatorCandidateSummar
     )
 
 
+def _operator_axis_gradient_from_decomposition(
+    summary: OperatorCandidateSummary,
+) -> tuple[float, float, float] | None:
+    """Return ``(|d_seg|, |d_pose|, |d_rate|)`` from an operator's OWN per-pair
+    footprint via its ``best_axis_decomposition``, or ``None`` if absent.
+
+    This is the FULL-RANK fix's core. Each productive operator's best candidate
+    carries a Catalog #356 ``AxisDecomposition`` (``predicted_d_seg_delta`` /
+    ``predicted_d_pose_delta`` / ``predicted_archive_bytes_delta``) derived from
+    the SPECIFIC pairs/bytes/regions that operator touches. Different operators
+    touch different per-pair cells, so their aggregate ``(d_seg, d_pose, d_rate)``
+    DIRECTIONS are genuinely distinct — giving a full-rank (or at least
+    rank > 1) operator-gradient basis. This is what `_build_multiop_problem_spec`
+    must consume INSTEAD OF the shared ``(seg_aggregate, pose_aggregate,
+    rate_aggregate) × scalar_leverage`` rank-1 collapse.
+    """
+    dec = summary.best_axis_decomposition
+    if not isinstance(dec, dict):
+        return None
+    try:
+        seg = abs(float(dec.get("predicted_d_seg_delta", 0.0)))
+        pose = abs(float(dec.get("predicted_d_pose_delta", 0.0)))
+        # archive_bytes_delta is a signed int byte count; magnitude is its
+        # rate-axis footprint. The rate-axis component is non-zero only for
+        # operators that change archive bytes (e.g. reorder_pair) — exactly the
+        # signal that breaks the rank-1 collapse.
+        rate = abs(float(dec.get("predicted_archive_bytes_delta", 0.0)))
+    except (TypeError, ValueError):
+        return None
+    # A genuinely productive operator should have SOME nonzero axis footprint.
+    if seg == 0.0 and pose == 0.0 and rate == 0.0:
+        return None
+    return (seg, pose, rate)
+
+
 def _build_multiop_problem_spec(
     canvas,
     summaries: list[OperatorCandidateSummary],
     frontier_sha: str,
+    *,
+    rank1_legacy: bool = False,
 ) -> PareDLPProblemSpec:
     """Build a Pareto polytope problem spec treating each productive operator
     as a substrate-axis in the multi-op composition.
 
-    The per-axis gradient L2 norms are derived from the canvas's archive-aggregate
-    cells: a productive operator that produces candidates contributes its best
-    (|d_seg|, |d_pose|, |rate|) magnitude as the gradient norm on that axis.
+    **FULL-RANK fix (default; closes the rank-1 tautology exposed by the rigor
+    review ``21014faa7`` / ``master_gradient_analysis_rigor_signal_review_
+    20260527T151020Z.md``).** Each operator's per-axis gradient
+    ``(|d_seg|, |d_pose|, |d_rate|)`` is derived from that operator's OWN
+    per-pair cell footprint via its best candidate's Catalog #356
+    ``AxisDecomposition``. Different operators touch different pairs/bytes/regions,
+    so their aggregate axis DIRECTIONS are genuinely distinct, giving a
+    full-rank (or >1-rank) operator-gradient basis whose feasible polytope HAS
+    synergy-axis volume — so the Dykstra synergy term becomes a genuine
+    MEASUREMENT rather than the arithmetic image of a rank-1 input.
+
+    Falls back per-operator to the shared-aggregate × leverage value ONLY when a
+    given operator lacks an axis decomposition (so the spec never crashes and
+    degenerate operators do not silently distort the basis).
+
+    **Legacy rank-1 path (``rank1_legacy=True``).** Reproduces the original
+    ``(seg_aggregate, pose_aggregate, rate_aggregate) × scalar_leverage``
+    construction (every operator a scalar multiple of one shared direction →
+    matrix rank 1 → zero synergy-axis polytope volume FOR ANY input → the
+    Dykstra "synergy ≈ 0" is a TAUTOLOGY, not a measurement). Retained ONLY for
+    the apples-to-apples before/after rank comparison; NEVER the production path.
     """
-    seg = abs(_axis_cell_value(canvas, ScorerAxis.SEGNET_5CLASS))
-    pose = abs(_axis_cell_value(canvas, ScorerAxis.POSENET_6D))
-    rate = abs(_axis_cell_value(canvas, ScorerAxis.RATE_TERM))
+    seg_agg = abs(_axis_cell_value(canvas, ScorerAxis.SEGNET_5CLASS))
+    pose_agg = abs(_axis_cell_value(canvas, ScorerAxis.POSENET_6D))
+    rate_agg = abs(_axis_cell_value(canvas, ScorerAxis.RATE_TERM))
 
     productive = [s for s in summaries if s.n_candidates > 0 and "ERROR" not in s.operation]
     if not productive:
@@ -235,16 +290,26 @@ def _build_multiop_problem_spec(
         productive = summaries[:1]
 
     shas = [f"{frontier_sha[:12]}::{s.operation}" for s in productive]
-    # Per-axis gradient L2 norms: weight the canvas-aggregate per-axis magnitude
-    # by the operator's best predicted score reduction (more reduction => more
-    # leverage on that operator-substrate's axis).
     norms: list[tuple[float, float, float]] = []
     per_axis_caps: list[tuple[float, float, float]] = []
     aggregate_caps: list[float] = []
     for s in productive:
         leverage = max(abs(s.best_predicted_delta_score), 1e-9)
-        norms.append((seg * leverage, pose * leverage, rate * leverage))
-        # Per-axis byte-budget caps: 10% of the canvas archive byte scale.
+        if rank1_legacy:
+            # LEGACY rank-1 tautology: shared aggregate direction × scalar.
+            axis_norm = (seg_agg * leverage, pose_agg * leverage, rate_agg * leverage)
+        else:
+            # FULL-RANK: derive each operator's per-axis direction from its OWN
+            # per-pair footprint (Catalog #356 AxisDecomposition). Fall back to
+            # the shared-aggregate × leverage ONLY when the decomposition is
+            # absent so the spec is robust.
+            from_dec = _operator_axis_gradient_from_decomposition(s)
+            if from_dec is not None:
+                axis_norm = from_dec
+            else:
+                axis_norm = (seg_agg * leverage, pose_agg * leverage, rate_agg * leverage)
+        norms.append(axis_norm)
+        # Per-axis byte-budget caps: bounded by the operator's own byte cost.
         cap = max(abs(s.best_predicted_byte_cost), 1.0)
         per_axis_caps.append((cap, cap, cap))
         aggregate_caps.append(cap * 3.0)
@@ -266,6 +331,22 @@ def _build_multiop_problem_spec(
         target_aggregate_delta_s=None,
         measurement_axes=tuple("[predicted]" for _ in productive),
     )
+
+
+def operator_gradient_matrix_rank(spec: PareDLPProblemSpec) -> int:
+    """Return the numpy matrix rank of the operator-gradient basis.
+
+    A rank-1 operator basis has ZERO synergy-axis polytope volume for ANY input,
+    so the Dykstra synergy term is a tautology. This helper is the regression
+    surface that asserts the FULL-RANK fix produces rank > 1 when operators have
+    distinct footprints.
+    """
+    import numpy as np
+
+    mat = np.array(spec.per_axis_gradient_l2_norms, dtype=float)
+    if mat.size == 0:
+        return 0
+    return int(np.linalg.matrix_rank(mat))
 
 
 def _axis_cell_value(canvas, scorer_axis: ScorerAxis) -> float:
@@ -306,6 +387,18 @@ def main(argv: list[str] | None = None) -> int:
         type=int,
         default=None,
         help="Optional cap on number of per-pair cells to populate (default: all).",
+    )
+    parser.add_argument(
+        "--rank1-legacy",
+        action="store_true",
+        help=(
+            "Reproduce the ORIGINAL rank-1 problem-spec construction (every "
+            "operator gradient = shared (seg,pose,rate) aggregate x scalar "
+            "leverage). Retained ONLY for the apples-to-apples before/after "
+            "rank comparison that documents the rank-1 tautology the rigor "
+            "review exposed. NEVER the production path; the default builds the "
+            "FULL-RANK spec from each operator's own per-pair footprint."
+        ),
     )
     args = parser.parse_args(argv)
 
@@ -377,7 +470,10 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     # Step 4: build problem spec + run Dykstra solver.
-    spec = _build_multiop_problem_spec(canvas, summaries, frontier_sha)
+    spec = _build_multiop_problem_spec(
+        canvas, summaries, frontier_sha, rank1_legacy=args.rank1_legacy
+    )
+    operator_gradient_rank = operator_gradient_matrix_rank(spec)
     solution = solve_pareto_polytope_via_dykstra_projections(spec, max_iterations=200, tol=1e-9)
 
     alloc_obj = solution.allocation  # UnifiedBitBudgetAllocation
@@ -453,6 +549,16 @@ def main(argv: list[str] | None = None) -> int:
             else None
         ),
         "canvas_cell_count": cell_count,
+        # Rank-1-tautology diagnostic: the operator-gradient basis rank. rank==1
+        # => zero synergy-axis polytope volume FOR ANY input => synergy term is a
+        # tautology, not a measurement. The FULL-RANK fix derives each operator's
+        # axis direction from its own per-pair footprint so rank can exceed 1.
+        "problem_spec_kind": (
+            "rank1_legacy_shared_aggregate_x_scalar"
+            if args.rank1_legacy
+            else "full_rank_per_operator_axis_decomposition"
+        ),
+        "operator_gradient_matrix_rank": operator_gradient_rank,
         "dqs1_baseline_contest_cpu": DQS1_BASELINE_CONTEST_CPU,
         "v14_v2_frontier_crossing_delta": V14_V2_FRONTIER_CROSSING_DELTA,
         "best_single_op_delta_score": best_single_op_delta,

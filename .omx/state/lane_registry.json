@@ -59499,6 +59499,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_rank1_multiop_problem_spec_full_rank_fix_20260527",
+      "name": "Rank-1 multiop problem-spec full-rank fix (paradox Half 2)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "full-rank _build_multiop_problem_spec fix lands in tools/canvas_multiop_composition_closed_form_prediction_sweep.py with operator_gradient_matrix_rank helper; rank 1 to 3"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_paradox_half2_closed_single_op_pareto_optimal_class_shift_only_lever_20260527.md correction footer + verdict memo APPEND-ONLY footer"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -59508,5 +59549,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-27T15:28:10Z"
+  "updated_at": "2026-05-27T15:38:34Z"
 }
