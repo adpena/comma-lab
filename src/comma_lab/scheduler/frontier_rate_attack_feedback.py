@@ -11127,6 +11127,32 @@ def build_frontier_autonomous_chain_optimization_queue(
                     **FALSE_AUTHORITY,
                 }
             )
+        if (
+            "repair_campaign_score_queue" in artifact_paths_by_key
+            and not any(
+                action.get("queue_artifact_key") == "repair_campaign_score_queue"
+                for action in local_actions
+            )
+        ):
+            local_actions.append(
+                {
+                    "id": (
+                        "score_repair_campaign_and_update_stackability_posterior"
+                    ),
+                    "queue_artifact_key": "repair_campaign_score_queue",
+                    "purpose": (
+                        "score_repair_waterfill_ledger_then_run_stackability_"
+                        "replay_learning_and_posterior_update"
+                    ),
+                    "bounded_local_execution": True,
+                    "advisory_only": False,
+                    "requires_exact_auth_before_score_claim": True,
+                    "max_steps": 12,
+                    "max_experiments": 2,
+                    "max_parallel": 1,
+                    **FALSE_AUTHORITY,
+                }
+            )
         advisory_actions = [
             dict(action)
             for action in row.get("scheduler_actions") or []
@@ -11178,6 +11204,7 @@ def build_frontier_autonomous_chain_optimization_queue(
         child_queue_paths: list[str] = []
         child_queue_run_step_ids: list[str] = []
         receiver_repair_run_step_ids: list[str] = []
+        child_queue_run_step_id_by_key: dict[str, str] = {}
         child_queue_health_by_key: dict[str, dict[str, Any]] = {}
         blocked_child_queue_artifact_keys: list[str] = []
         for action_index, action in enumerate(local_actions, start=1):
@@ -11259,7 +11286,22 @@ def build_frontier_autonomous_chain_optimization_queue(
                         "--output",
                         child_worker_result_ref,
                     ],
-                    "requires": [validate_step_id],
+                    "requires": _unique_strings(
+                        [
+                            validate_step_id,
+                            *(
+                                [
+                                    child_queue_run_step_id_by_key[
+                                        "repair_budget_waterfill_queue"
+                                    ]
+                                ]
+                                if queue_key == "repair_campaign_score_queue"
+                                and "repair_budget_waterfill_queue"
+                                in child_queue_run_step_id_by_key
+                                else []
+                            ),
+                        ]
+                    ),
                     "resources": {"kind": "local_io_heavy"},
                     "timeout_seconds": 900,
                     "postconditions": [
@@ -11287,6 +11329,7 @@ def build_frontier_autonomous_chain_optimization_queue(
                 }
             )
             child_queue_run_step_ids.append(run_step_id)
+            child_queue_run_step_id_by_key[queue_key] = run_step_id
             if queue_key == "receiver_repair_queue":
                 receiver_repair_run_step_ids.append(run_step_id)
         post_repair_refresh_planned = False

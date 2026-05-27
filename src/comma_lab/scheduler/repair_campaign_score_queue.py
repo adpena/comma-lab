@@ -21,6 +21,10 @@ REPAIR_CAMPAIGN_SCORE_QUEUE_METADATA_SCHEMA = (
 REPAIR_CAMPAIGN_SCORE_EXPERIMENT_METADATA_SCHEMA = (
     "repair_campaign_score_experiment_metadata.v1"
 )
+DEFAULT_STACKABILITY_WORKER_MAX_STEPS = 8
+DEFAULT_STACKABILITY_WORKER_MAX_EXPERIMENTS = 2
+DEFAULT_STACKABILITY_WORKER_MAX_PARALLEL = 1
+DEFAULT_STACKABILITY_WORKER_TIMEOUT_SECONDS = 900
 
 
 class RepairCampaignScoreQueueError(ValueError):
@@ -141,6 +145,13 @@ def _score_experiment(
         queue_root / _slug(chain_id) / "repair_campaign_stackability_queue.json"
     )
     stackability_queue_ref = _repo_rel(stackability_queue_path, repo_root)
+    stackability_worker_result_path = (
+        queue_root / _slug(chain_id) / "repair_campaign_stackability_worker_result.json"
+    )
+    stackability_worker_result_ref = _repo_rel(
+        stackability_worker_result_path,
+        repo_root,
+    )
     blockers = []
     if not work_order_ref:
         blockers.append("repair_budget_waterfill_work_order_path_missing")
@@ -171,8 +182,19 @@ def _score_experiment(
         ),
         "repair_campaign_score_report_path": score_report_ref,
         "repair_campaign_stackability_queue_path": stackability_queue_ref,
+        "repair_campaign_stackability_worker_result_path": (
+            stackability_worker_result_ref
+        ),
         "campaign_scorer_default": True,
         "stackability_followup_default": True,
+        "continual_learning_followup_default": True,
+        "stackability_worker_limits": {
+            "schema": "repair_campaign_stackability_worker_limits.v1",
+            "max_steps": DEFAULT_STACKABILITY_WORKER_MAX_STEPS,
+            "max_experiments": DEFAULT_STACKABILITY_WORKER_MAX_EXPERIMENTS,
+            "max_parallel": DEFAULT_STACKABILITY_WORKER_MAX_PARALLEL,
+            "timeout_seconds": DEFAULT_STACKABILITY_WORKER_TIMEOUT_SECONDS,
+        },
         "queue_actuation_ready": not blockers,
         "queue_actuation_blockers": ordered_unique(blockers),
         "source_queue_actuation_blockers": _string_list(
@@ -324,6 +346,65 @@ def _score_experiment(
                 "telemetry": {
                     "artifact_paths": [stackability_queue_ref],
                     "input_artifact_paths": [score_report_ref],
+                    "include_postcondition_paths": True,
+                },
+            },
+            {
+                "id": "validate_repair_campaign_stackability_queue",
+                "kind": "command",
+                "requires": ["build_repair_campaign_stackability_queue"],
+                "command": [
+                    ".venv/bin/python",
+                    "tools/experiment_queue.py",
+                    "--queue",
+                    stackability_queue_ref,
+                    "validate",
+                ],
+                "resources": {"kind": "local_cpu"},
+                "timeout_seconds": 120,
+                "telemetry": {
+                    "input_artifact_paths": [stackability_queue_ref],
+                },
+            },
+            {
+                "id": "run_repair_campaign_stackability_queue_bounded_local",
+                "kind": "command",
+                "requires": ["validate_repair_campaign_stackability_queue"],
+                "command": [
+                    ".venv/bin/python",
+                    "tools/experiment_queue.py",
+                    "--queue",
+                    stackability_queue_ref,
+                    "run-worker",
+                    "--execute",
+                    "--max-steps",
+                    str(DEFAULT_STACKABILITY_WORKER_MAX_STEPS),
+                    "--max-experiments",
+                    str(DEFAULT_STACKABILITY_WORKER_MAX_EXPERIMENTS),
+                    "--max-parallel",
+                    str(DEFAULT_STACKABILITY_WORKER_MAX_PARALLEL),
+                    "--output",
+                    stackability_worker_result_ref,
+                ],
+                "resources": {"kind": "local_cpu"},
+                "timeout_seconds": DEFAULT_STACKABILITY_WORKER_TIMEOUT_SECONDS,
+                "postconditions": [
+                    {
+                        "type": "json_equals",
+                        "path": stackability_worker_result_ref,
+                        "key": "schema",
+                        "equals": "experiment_queue_worker_result.v1",
+                    },
+                    {
+                        "type": "json_equals",
+                        "path": stackability_worker_result_ref,
+                        "key": "failure_count",
+                        "equals": 0,
+                    },
+                ],
+                "telemetry": {
+                    "artifact_paths": [stackability_worker_result_ref],
+                    "input_artifact_paths": [stackability_queue_ref, score_report_ref],
                     "include_postcondition_paths": True,
                 },
             },

@@ -6922,6 +6922,39 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     assert autonomous_queue_artifact["schema"] == "experiment_queue.v1"
     autonomous_queue_metadata = autonomous_queue_artifact["experiments"][0]["metadata"]
     _assert_false_authority(autonomous_queue_metadata)
+    autonomous_child_keys = {
+        action.get("queue_artifact_key")
+        for action in autonomous_queue_metadata["local_queue_actions"]
+    }
+    assert "repair_campaign_score_queue" in autonomous_child_keys
+    assert (
+        "repair_campaign_score_queue"
+        in autonomous_queue_metadata["child_queue_health_by_key"]
+    )
+    assert any(
+        path.endswith("repair_campaign_score_queue.json")
+        for path in autonomous_queue_metadata["child_queue_artifact_paths"]
+    )
+    autonomous_steps = autonomous_queue_artifact["experiments"][0]["steps"]
+    repair_waterfill_run_step = next(
+        step
+        for step in autonomous_steps
+        if step["id"].startswith("run_")
+        and any(
+            str(item).endswith("repair_budget_waterfill_queue.json")
+            for item in step.get("command", [])
+        )
+    )
+    repair_score_run_step = next(
+        step
+        for step in autonomous_steps
+        if step["id"].startswith("run_")
+        and any(
+            str(item).endswith("repair_campaign_score_queue.json")
+            for item in step.get("command", [])
+        )
+    )
+    assert repair_waterfill_run_step["id"] in repair_score_run_step["requires"]
     if autonomous_queue_artifact["experiments"][0]["status"] == "queued":
         assert autonomous_queue_metadata["queue_actuation_ready"] is True
         assert autonomous_queue_metadata["missing_queue_artifact_keys"] == []

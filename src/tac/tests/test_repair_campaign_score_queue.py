@@ -168,6 +168,32 @@ def test_build_repair_campaign_score_queue_from_waterfill_work_order(
     assert experiment["metadata"]["repair_campaign_stackability_queue_path"] in (
         stackability_command
     )
+    assert experiment["metadata"][
+        "repair_campaign_stackability_worker_result_path"
+    ].endswith("repair_campaign_stackability_worker_result.json")
+    assert experiment["metadata"]["continual_learning_followup_default"] is True
+    assert experiment["metadata"]["stackability_worker_limits"] == {
+        "schema": "repair_campaign_stackability_worker_limits.v1",
+        "max_steps": 8,
+        "max_experiments": 2,
+        "max_parallel": 1,
+        "timeout_seconds": 900,
+    }
+    assert experiment["steps"][3]["id"] == (
+        "validate_repair_campaign_stackability_queue"
+    )
+    assert experiment["steps"][3]["requires"] == [
+        "build_repair_campaign_stackability_queue"
+    ]
+    assert experiment["steps"][4]["id"] == (
+        "run_repair_campaign_stackability_queue_bounded_local"
+    )
+    assert experiment["steps"][4]["requires"] == [
+        "validate_repair_campaign_stackability_queue"
+    ]
+    assert experiment["metadata"]["repair_campaign_stackability_queue_path"] in (
+        experiment["steps"][4]["command"]
+    )
     assert experiment["steps"][1]["requires"] == [
         "assert_repair_budget_waterfill_work_order_materialized"
     ]
@@ -264,6 +290,39 @@ def test_repair_campaign_score_queue_cli_writes_and_score_step_runs(
     stackability_queue = json.loads(stackability_queue_path.read_text(encoding="utf-8"))
     assert stackability_queue["schema"] == QUEUE_SCHEMA
     assert stackability_queue["metadata"]["ready_experiment_count"] == 1
+    validate_command = queue["experiments"][0]["steps"][3]["command"]
+    validate_result = subprocess.run(
+        [sys.executable, *validate_command[1:]],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert validate_result.returncode == 0, validate_result.stderr
+    worker_command = queue["experiments"][0]["steps"][4]["command"]
+    worker_result = subprocess.run(
+        [sys.executable, *worker_command[1:]],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert worker_result.returncode == 0, worker_result.stderr
+    worker_result_path = Path(
+        queue["experiments"][0]["metadata"][
+            "repair_campaign_stackability_worker_result_path"
+        ]
+    )
+    worker_payload = json.loads(worker_result_path.read_text(encoding="utf-8"))
+    assert worker_payload["schema"] == "experiment_queue_worker_result.v1"
+    assert worker_payload["failure_count"] == 0
+    stackability_experiment = stackability_queue["experiments"][0]
+    assert Path(stackability_experiment["metadata"]["probe_output_path"]).is_file()
+    assert Path(stackability_experiment["metadata"]["replay_bundle_path"]).is_file()
+    assert Path(stackability_experiment["metadata"]["learning_signal_path"]).is_file()
+    assert Path(
+        stackability_experiment["metadata"]["posterior_append_report_path"]
+    ).is_file()
 
 
 def test_repair_campaign_score_queue_defers_missing_work_order_to_prerequisite_step(
