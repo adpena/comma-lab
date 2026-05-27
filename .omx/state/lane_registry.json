@@ -26623,7 +26623,7 @@
         },
         "memory_entry": {
           "status": true,
-          "evidence": "feedback_time_traveler_l5_staircase_steps_2_3_landed_20260514.md (~/.claude/projects/-Users-adpena-Projects-pact/memory/)"
+          "evidence": ".omx/research/class_shift_full_main_cluster_landed_20260527T155737Z.md"
         },
         "real_archive_empirical": {
           "evidence": "",
@@ -30540,7 +30540,7 @@
         },
         "memory_entry": {
           "status": true,
-          "evidence": ".omx/research/atw_codec_v1_cargo_cult_unwind_design_20260516.md"
+          "evidence": ".omx/research/class_shift_full_main_cluster_landed_20260527T155737Z.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -43469,8 +43469,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/class_shift_full_main_cluster_landed_20260527T155737Z.md"
         },
         "deploy_runbook": {
           "status": true,
@@ -43510,8 +43510,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/class_shift_full_main_cluster_landed_20260527T155737Z.md"
         },
         "deploy_runbook": {
           "status": true,
@@ -43551,8 +43551,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/class_shift_full_main_cluster_landed_20260527T155737Z.md"
         },
         "deploy_runbook": {
           "status": true,
@@ -59549,5 +59549,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-27T15:38:34Z"
+  "updated_at": "2026-05-27T15:59:01Z"
 }
