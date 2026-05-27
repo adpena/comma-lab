@@ -6,6 +6,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from tac.fec6_selector_operator_space import FEC6_FIXED_K16_MODE_IDS
 from tac.optimization.repair_campaign_learning_signal import (
     build_repair_campaign_blocked_learning_signal_report,
 )
@@ -134,6 +135,87 @@ def _work_order(tmp_path: Path) -> dict[str, object]:
     }
 
 
+def _palette_work_order(tmp_path: Path) -> dict[str, object]:
+    mlx = tmp_path / "palette_mlx_response.json"
+    ref = tmp_path / "palette_reference_mlx_response.json"
+    probe_matrix = tmp_path / "repair_dynamics_palette_probe_matrix.json"
+    mlx.write_text('{"schema":"mlx_scorer_response.v1"}\n', encoding="utf-8")
+    ref.write_text('{"schema":"mlx_scorer_response.v1"}\n', encoding="utf-8")
+    probe_matrix.write_text(
+        '{"schema":"frontier_rate_attack_repair_dynamics_palette_probe_matrix.v1"}\n',
+        encoding="utf-8",
+    )
+    return {
+        "schema": "frontier_rate_attack_repair_budget_waterfill_work_order.v1",
+        "receiver_closed_rate_credit": {
+            "schema": "frontier_rate_attack_repair_waterfill_rate_credit.v1",
+            "receiver_closed_saved_bytes_total": 16,
+            **_false_authority(),
+        },
+        "typed_response_ledger": {
+            "schema": "frontier_rate_attack_repair_budget_typed_response_ledger.v1",
+            "available_receiver_closed_rate_credit_bytes": 16,
+            "rows": [
+                {
+                    "schema": (
+                        "frontier_rate_attack_repair_budget_typed_response_row.v1"
+                    ),
+                    "typed_response_id": "palette_frame0_k16_ready",
+                    "candidate_id": "repair_dynamics_frame0_palette_interaction",
+                    "acquisition_id": "palette_frame0_acq",
+                    "correction_family": (
+                        "repair_dynamics_frame0_palette_interaction_waterfill"
+                    ),
+                    "targeted_dimensions": ["palette", "frame0", "posenet"],
+                    "operation_levels": [
+                        "pixel",
+                        "boundary",
+                        "region",
+                        "frame",
+                        "pair",
+                        "batch",
+                    ],
+                    "entropy_position_label": (
+                        "before_entropy_coder_distribution_shaping"
+                    ),
+                    "requested_repair_bytes": 12,
+                    "objective_delta_score_units": -0.0009,
+                    "local_mlx_component_terms": {
+                        "segnet_delta_score_units": -0.0002,
+                        "posenet_delta_score_units": -0.0007,
+                        **_false_authority(),
+                    },
+                    "local_mlx_response_path": str(mlx),
+                    "reference_local_mlx_response_path": str(ref),
+                    "repair_dynamics_palette_probe_matrix_path": str(probe_matrix),
+                    "repair_dynamics_palette_prior": {
+                        "schema": (
+                            "frontier_rate_attack_repair_dynamics_palette_prior.v1"
+                        ),
+                        "source": "unit_live_6bae0201_archive_manifest",
+                        "palette_modes": list(FEC6_FIXED_K16_MODE_IDS),
+                        **_false_authority(),
+                    },
+                    "interaction_scope": {
+                        "pixel_count": 4096,
+                        "region_ids": ["pose_sensitive_boundary"],
+                        "pair_indices": [3, 4, 5],
+                        "batch_count": 1,
+                        **_false_authority(),
+                    },
+                    "stacking_interaction_terms": {
+                        "must_remeasure_with_parent_and_sibling_repairs": True,
+                        **_false_authority(),
+                    },
+                    **_false_authority(),
+                },
+            ],
+            **_false_authority(),
+        },
+        **_false_authority(),
+    }
+
+
 def test_repair_operator_family_priors_are_first_class_false_authority() -> None:
     priors = repair_operator_family_priors()
 
@@ -148,6 +230,13 @@ def test_repair_operator_family_priors_are_first_class_false_authority() -> None
     }.issubset(family_ids)
     assert priors["ready_for_exact_eval_dispatch"] is False
     assert all(row["score_claim"] is False for row in priors["rows"])
+    palette = next(
+        row for row in priors["rows"] if row["family_id"] == "palette_frame_asymmetry_prior"
+    )
+    assert palette["empirical_canonical_palette"]["mode_count"] == 16
+    assert palette["empirical_canonical_palette"]["frame0_mode_count"] == 15
+    assert palette["empirical_canonical_palette"]["frame1_mode_count"] == 0
+    assert palette["empirical_canonical_palette"]["zero_frame1_modes"] is True
 
 
 def test_score_repair_campaign_preserves_cascade_opportunity_as_blocked_signal(
@@ -343,6 +432,64 @@ def test_score_repair_campaign_ranks_ready_mlx_and_names_missing_artifacts(
         blocked["execution_gate"]["missing_artifacts"]
     )
     assert "per_region_selector_codec_replay_missing" in report["missing_artifacts"]
+
+
+def test_score_repair_campaign_uses_palette_frame_asymmetry_context(
+    tmp_path: Path,
+) -> None:
+    report = score_repair_campaign(
+        payload=_palette_work_order(tmp_path),
+        repo_root=tmp_path,
+    )
+
+    assert report["ready_for_local_mlx_advisory_execution_count"] == 1
+    row = report["rows"][0]
+    assert row["typed_response_id"] == "palette_frame0_k16_ready"
+    assert row["family_id"] == "palette_frame_asymmetry_prior"
+    context = row["palette_dynamics_context"]
+    assert context["mode_count"] == 16
+    assert context["identity_mode_count"] == 1
+    assert context["frame0_mode_count"] == 15
+    assert context["frame1_mode_count"] == 0
+    assert context["frame0_non_identity_fraction"] == 1.0
+    assert context["zero_frame1_modes"] is True
+    assert context["dominant_dynamics_interpretation"] == (
+        "frame0_global_color_geometry_calibration_prior"
+    )
+    assert row["palette_frame_asymmetry_multiplier"] > 1.0
+    assert "frame0_palette_repairs_are_global_interaction_terms" in (
+        row["hard_legal_runtime_constraints"]
+    )
+    assert "frame1_palette_repairs_require_counterfactual_probe" in (
+        row["hard_legal_runtime_constraints"]
+    )
+    custody_keys = {
+        item["key"] for item in row["execution_gate"]["local_mlx_custody_paths"]
+    }
+    assert {
+        "local_mlx_response_path",
+        "reference_local_mlx_response_path",
+        "repair_dynamics_palette_probe_matrix_path",
+    }.issubset(custody_keys)
+    action = row["multiscale_action_row"]
+    assert action["palette_dynamics_context"]["mode_count"] == 16
+    assert action["action_functional"]["palette_frame_asymmetry_multiplier"] == (
+        row["palette_frame_asymmetry_multiplier"]
+    )
+    assert action["active_scales"] == [
+        "byte",
+        "pixel",
+        "boundary",
+        "region",
+        "frame",
+        "pair",
+        "batch",
+    ]
+    allocation = report["optimizer_decision"]["selected_allocation_rows"][0]
+    assert allocation["palette_dynamics_context"]["zero_frame1_modes"] is True
+    assert allocation["palette_frame_asymmetry_multiplier"] == (
+        row["palette_frame_asymmetry_multiplier"]
+    )
 
 
 def test_score_repair_campaign_folds_stackability_posterior_into_priors(

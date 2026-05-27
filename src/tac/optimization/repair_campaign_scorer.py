@@ -13,6 +13,7 @@ from math import isfinite
 from pathlib import Path
 from typing import Any
 
+from tac.fec6_selector_operator_space import FEC6_FIXED_K16_MODE_IDS
 from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY
 from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
@@ -47,6 +48,9 @@ _WORK_ORDER_SCHEMA = "frontier_rate_attack_repair_budget_waterfill_work_order.v1
 _REPAIR_CASCADE_OPPORTUNITY_ROW_SCHEMA = (
     "frontier_rate_attack_repair_cascade_opportunity_row.v1"
 )
+_REPAIR_DYNAMICS_PALETTE_PRIOR_SCHEMA = (
+    "frontier_rate_attack_repair_dynamics_palette_prior.v1"
+)
 
 _ENTROPY_POSITION_WEIGHTS: dict[str, float] = {
     "before_entropy_coder_distribution_shaping": 1.20,
@@ -69,6 +73,7 @@ _SCALE_ORDER: tuple[str, ...] = (
     "batch",
     "full_video",
 )
+_NON_SIGNAL_SCOPE_KEYS = frozenset(FALSE_AUTHORITY)
 
 
 class RepairCampaignScorerError(ValueError):
@@ -127,9 +132,175 @@ def _repo_path_exists(path_text: str, repo_root: str | Path | None) -> bool:
     return path.exists()
 
 
+def _palette_mode_frame_index(mode: str) -> int | None:
+    if not mode.startswith("frame"):
+        return None
+    suffix = mode[len("frame") :]
+    number = suffix.split("_", 1)[0]
+    return int(number) if number.isdigit() else None
+
+
+def _palette_mode_family(mode: str) -> str:
+    if mode == "none":
+        return "identity"
+    if "blue_chroma" in mode:
+        return "blue_chroma"
+    if "luma_bias" in mode:
+        return "luma_bias"
+    if "rgb_bias" in mode:
+        return "rgb_bias"
+    if "roll_" in mode:
+        return "geometry_roll"
+    return "other"
+
+
+def _palette_dynamics_from_modes(
+    modes: Sequence[str],
+    *,
+    source: str,
+) -> dict[str, Any]:
+    palette_modes = ordered_unique(_string_list(modes))
+    frame_counts: dict[str, int] = {}
+    family_counts: dict[str, int] = {}
+    for mode in palette_modes:
+        frame_index = _palette_mode_frame_index(mode)
+        frame_key = f"frame{frame_index}" if frame_index is not None else "no_frame"
+        frame_counts[frame_key] = frame_counts.get(frame_key, 0) + 1
+        family = _palette_mode_family(mode)
+        family_counts[family] = family_counts.get(family, 0) + 1
+    total = len(palette_modes)
+    identity_count = family_counts.get("identity", 0)
+    non_identity_total = max(0, total - identity_count)
+    frame0_count = frame_counts.get("frame0", 0)
+    frame1_count = frame_counts.get("frame1", 0)
+    return {
+        "schema": _REPAIR_DYNAMICS_PALETTE_PRIOR_SCHEMA,
+        "source": source,
+        "palette_modes": palette_modes,
+        "mode_count": total,
+        "identity_mode_count": identity_count,
+        "non_identity_mode_count": non_identity_total,
+        "frame_mode_counts": dict(sorted(frame_counts.items())),
+        "mode_family_counts": dict(sorted(family_counts.items())),
+        "frame0_mode_count": frame0_count,
+        "frame1_mode_count": frame1_count,
+        "frame0_mode_fraction": frame0_count / total if total else 0.0,
+        "frame0_non_identity_fraction": (
+            frame0_count / non_identity_total if non_identity_total else 0.0
+        ),
+        "zero_frame1_modes": frame1_count == 0,
+        "dominant_dynamics_interpretation": (
+            "frame0_global_color_geometry_calibration_prior"
+            if frame0_count and frame1_count == 0
+            else "mixed_or_unclassified_palette_prior"
+        ),
+        "repair_waterfill_hints": ordered_unique(
+            [
+                *(
+                    ["frame0_palette_modes_are_first_class_repair_operators"]
+                    if frame0_count
+                    else []
+                ),
+                *(
+                    ["empirical_non_identity_palette_is_all_frame0"]
+                    if non_identity_total and frame0_count == non_identity_total
+                    else []
+                ),
+                *(
+                    ["do_not_assume_frame1_direct_repair_mode_exists"]
+                    if frame1_count == 0
+                    else []
+                ),
+            ]
+        ),
+        "budget_spend_allowed": False,
+        "ready_for_exact_eval_dispatch": False,
+        "allowed_use": "repair_campaign_palette_dynamics_prior_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
+def _canonical_k16_palette_dynamics() -> dict[str, Any]:
+    return _palette_dynamics_from_modes(
+        FEC6_FIXED_K16_MODE_IDS,
+        source="live_6bae0201_archive_manifest_fec6_fixed_k16_palette",
+    )
+
+
+def _repair_dynamics_palette_context(
+    row: Mapping[str, Any],
+    prior: Mapping[str, Any],
+) -> dict[str, Any]:
+    value = row.get("repair_dynamics_palette_prior")
+    if isinstance(value, Mapping) and value:
+        require_no_truthy_authority_fields(
+            value,
+            context="repair_campaign_row_repair_dynamics_palette_prior",
+        )
+        modes = _string_list(value.get("palette_modes"))
+        context = (
+            _palette_dynamics_from_modes(
+                modes,
+                source=str(value.get("source") or "typed_response_palette_prior"),
+            )
+            if modes
+            else dict(value)
+        )
+        context["source_prior_schema"] = value.get("schema")
+        context["explicit_row_prior"] = True
+    elif prior.get("family_id") == "palette_frame_asymmetry_prior":
+        context = dict(_mapping(prior.get("empirical_canonical_palette")))
+        context["explicit_row_prior"] = False
+    else:
+        return {}
+    context.setdefault("schema", _REPAIR_DYNAMICS_PALETTE_PRIOR_SCHEMA)
+    context.setdefault("mode_count", _safe_int(context.get("mode_count")))
+    context.setdefault("frame0_mode_count", _safe_int(context.get("frame0_mode_count")))
+    context.setdefault("frame1_mode_count", _safe_int(context.get("frame1_mode_count")))
+    context.setdefault(
+        "zero_frame1_modes",
+        context.get("frame1_mode_count") == 0,
+    )
+    context.update(
+        {
+            "action_functional_role": (
+                "global_frame0_color_geometry_interaction_prior"
+            ),
+            "required_remeasurement": (
+                "same_axis_stackability_probe_before_budget_spend"
+            ),
+            "allowed_use": "repair_campaign_palette_context_for_local_ranking_only",
+            "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+            **FALSE_AUTHORITY,
+        }
+    )
+    require_no_truthy_authority_fields(
+        context,
+        context="repair_campaign_palette_dynamics_context",
+    )
+    return context
+
+
+def _palette_frame_asymmetry_multiplier(context: Mapping[str, Any]) -> float:
+    if not context:
+        return 1.0
+    mode_count = _safe_int(context.get("mode_count"))
+    frame0_fraction = _safe_float(context.get("frame0_non_identity_fraction"))
+    if frame0_fraction is None:
+        frame0_fraction = _safe_float(context.get("frame0_mode_fraction")) or 0.0
+    multiplier = 1.0
+    multiplier += min(0.04, mode_count / 400.0)
+    multiplier += 0.04 * max(0.0, min(1.0, frame0_fraction))
+    if context.get("zero_frame1_modes") is True:
+        multiplier += 0.025
+    return max(1.0, min(1.12, multiplier))
+
+
 def repair_operator_family_priors() -> dict[str, Any]:
     """Return first-class repair families the scorer understands."""
 
+    canonical_palette = _canonical_k16_palette_dynamics()
     rows = [
         {
             "schema": REPAIR_OPERATOR_FAMILY_PRIOR_ROW_SCHEMA,
@@ -199,10 +370,31 @@ def repair_operator_family_priors() -> dict[str, Any]:
             "campaign_prior_multiplier": 1.10,
             "required_local_artifacts": [
                 "local_mlx_response_path",
+                "reference_local_mlx_response_path",
                 "repair_dynamics_palette_probe_matrix_path",
             ],
             "missing_artifact_label": "palette_frame_asymmetry_probe_missing",
             "stackability_role": "frame0_pose_repair_using_canonical_k16_palette",
+            "empirical_canonical_palette": canonical_palette,
+            "mathematical_prior": {
+                "schema": "repair_campaign_palette_asymmetry_mathematical_prior.v1",
+                "observation": (
+                    "canonical K16 palette has one identity mode, fifteen frame0 "
+                    "non-identity modes, and zero frame1 modes"
+                ),
+                "action_functional_effect": (
+                    "treat frame0 palette operators as global interaction terms "
+                    "spanning pixel, boundary, region, frame, pair, batch, and "
+                    "scorer axes"
+                ),
+                "hard_constraint": (
+                    "frame1 repair modes require counterfactual measurement before "
+                    "allocation because no live frame1 palette mode exists"
+                ),
+                "budget_spend_allowed": False,
+                "ready_for_exact_eval_dispatch": False,
+                **FALSE_AUTHORITY,
+            },
             **FALSE_AUTHORITY,
         },
         {
@@ -380,7 +572,11 @@ def _ordered_scales(values: Sequence[str]) -> list[str]:
 
 
 def _has_any_key(mapping: Mapping[str, Any], fragments: Sequence[str]) -> bool:
-    lowered = [str(key).lower() for key in mapping]
+    lowered = [
+        str(key).lower()
+        for key in mapping
+        if str(key) not in _NON_SIGNAL_SCOPE_KEYS
+    ]
     return any(any(fragment in key for fragment in fragments) for key in lowered)
 
 
@@ -395,6 +591,7 @@ def _multiscale_action_row(
     component_response_terms: Mapping[str, Any],
     interaction_penalty: float,
     hard_constraints: Sequence[str],
+    palette_dynamics_context: Mapping[str, Any],
 ) -> dict[str, Any]:
     scope = _mapping(source_row.get("interaction_scope"))
     stack_terms = _mapping(source_row.get("stacking_interaction_terms"))
@@ -510,7 +707,11 @@ def _multiscale_action_row(
                 entropy_position,
                 _ENTROPY_POSITION_WEIGHTS["unknown_entropy_pipeline_position"],
             ),
+            "palette_frame_asymmetry_multiplier": _palette_frame_asymmetry_multiplier(
+                palette_dynamics_context
+            ),
         },
+        "palette_dynamics_context": dict(palette_dynamics_context),
         "interaction_scope": dict(scope),
         "stacking_interaction_terms": dict(stack_terms),
         "remeasure_required_before_budget_spend": remeasure_required,
@@ -841,20 +1042,12 @@ def _execution_gate(
         _path_status(row, key, repo_root=repo_root)
         for key in local_keys
     ]
-    local_required = [
-        item["key"]
-        for item in local_status
-        if item["key"] in {"local_mlx_response_path", "reference_local_mlx_response_path"}
-    ]
-    local_ready = bool(local_required) and all(
-        item["exists"]
-        for item in local_status
-        if item["key"] in set(local_required)
-    )
+    local_required = [item["key"] for item in local_status]
+    local_ready = bool(local_required) and all(item["exists"] for item in local_status)
     missing = [
         f"{item['key']}:missing_or_unverified"
         for item in local_status
-        if item["key"] in set(local_required) and not item["exists"]
+        if not item["exists"]
     ]
     exact_missing = [
         "receiver_consumed_candidate_archive",
@@ -868,6 +1061,10 @@ def _execution_gate(
     if blocker_label and not local_ready:
         missing.append(blocker_label)
     missing.extend(_string_list(row.get("missing_artifacts")))
+    palette_context = _repair_dynamics_palette_context(row, prior)
+    if palette_context and not row.get("repair_dynamics_palette_probe_matrix_path"):
+        local_ready = False
+        missing.append("repair_dynamics_palette_probe_matrix_path:missing_or_unverified")
     return {
         "schema": "repair_campaign_execution_gate.v1",
         "local_mlx_advisory_custody_ready": local_ready,
@@ -879,6 +1076,7 @@ def _execution_gate(
         ),
         "missing_artifacts": ordered_unique(missing),
         "exact_missing_artifacts_if_not_local": exact_missing if not local_ready else [],
+        "palette_dynamics_context": dict(palette_context),
         "budget_spend_allowed": False,
         "ready_for_exact_eval_dispatch": False,
         "allowed_use": "local_repair_campaign_execution_gate_only",
@@ -1039,6 +1237,12 @@ def _build_optimizer_decision(
                     "posterior_prior_multiplier": row.get(
                         "posterior_prior_multiplier"
                     ),
+                    "palette_frame_asymmetry_multiplier": row.get(
+                        "palette_frame_asymmetry_multiplier"
+                    ),
+                    "palette_dynamics_context": dict(
+                        _mapping(row.get("palette_dynamics_context"))
+                    ),
                     "posterior_family_prior": dict(
                         _mapping(row.get("posterior_family_prior"))
                     ),
@@ -1103,6 +1307,12 @@ def _build_optimizer_decision(
                 "campaign_score": row.get("campaign_score"),
                 "posterior_prior_multiplier": row.get(
                     "posterior_prior_multiplier"
+                ),
+                "palette_frame_asymmetry_multiplier": row.get(
+                    "palette_frame_asymmetry_multiplier"
+                ),
+                "palette_dynamics_context": dict(
+                    _mapping(row.get("palette_dynamics_context"))
                 ),
                 "posterior_family_prior": dict(
                     _mapping(row.get("posterior_family_prior"))
@@ -1331,6 +1541,21 @@ def build_repair_campaign_stackability_probe(
                 else score_row.get("multiscale_action_row")
             )
         ),
+        "palette_dynamics_context": dict(
+            _mapping(
+                allocation.get("palette_dynamics_context")
+                if allocation
+                else score_row.get("palette_dynamics_context")
+            )
+        ),
+        "palette_frame_asymmetry_multiplier": (
+            _safe_float(
+                allocation.get("palette_frame_asymmetry_multiplier")
+                if allocation
+                else score_row.get("palette_frame_asymmetry_multiplier")
+            )
+            or 1.0
+        ),
         "entropy_position_label": entropy_position,
         "entropy_position_class": (
             "pre_entropy_distribution_shaping"
@@ -1445,7 +1670,21 @@ def score_repair_campaign(
         per_op_bytes_delta = _per_op_bytes_delta(row)
         component_response_terms = _component_response_terms(row)
         receiver_proof = _receiver_proof_status(row, repo_root=repo_root)
+        palette_dynamics_context = _repair_dynamics_palette_context(row, prior)
         hard_constraints = _hard_legal_runtime_constraints(row)
+        if palette_dynamics_context:
+            hard_constraints = ordered_unique(
+                [
+                    *hard_constraints,
+                    "frame0_palette_repairs_are_global_interaction_terms",
+                    "palette_frame_asymmetry_requires_same_axis_stackability_remeasure",
+                    *(
+                        ["frame1_palette_repairs_require_counterfactual_probe"]
+                        if palette_dynamics_context.get("zero_frame1_modes") is True
+                        else []
+                    ),
+                ]
+            )
         multiscale_action = _multiscale_action_row(
             source_row=row,
             prior=prior,
@@ -1456,6 +1695,7 @@ def score_repair_campaign(
             component_response_terms=component_response_terms,
             interaction_penalty=interaction_penalty,
             hard_constraints=hard_constraints,
+            palette_dynamics_context=palette_dynamics_context,
         )
         bytes_denominator = requested_bytes if requested_bytes > 0 else 1
         improvement_per_byte = improvement / bytes_denominator
@@ -1468,11 +1708,15 @@ def score_repair_campaign(
             if posterior_family_prior
             else 1.0
         ) or 1.0
+        palette_multiplier = _palette_frame_asymmetry_multiplier(
+            palette_dynamics_context
+        )
         campaign_score = (
             improvement_per_byte
             * entropy_weight
             * family_multiplier
             * posterior_prior_multiplier
+            * palette_multiplier
             * (1.0 - interaction_penalty)
         )
         gate = _execution_gate(row, prior, repo_root=repo_root)
@@ -1509,6 +1753,8 @@ def score_repair_campaign(
             "hard_legal_runtime_constraints": hard_constraints,
             "family_prior_multiplier": family_multiplier,
             "posterior_prior_multiplier": posterior_prior_multiplier,
+            "palette_frame_asymmetry_multiplier": palette_multiplier,
+            "palette_dynamics_context": dict(palette_dynamics_context),
             "posterior_family_prior": dict(posterior_family_prior),
             "interaction_penalty": interaction_penalty,
             "campaign_score": campaign_score,

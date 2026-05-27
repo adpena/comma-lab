@@ -184,6 +184,7 @@ def build_repair_campaign_blocked_learning_signal_report(
         }
         identity_sha = _stable_sha256(identity)
         component_terms = _mapping(row.get("component_response_terms"))
+        palette_context = _mapping(row.get("palette_dynamics_context"))
         feature_vector = {
             "allocated_repair_bytes": 0,
             "requested_repair_bytes": _safe_int(row.get("requested_repair_bytes")),
@@ -203,6 +204,15 @@ def build_repair_campaign_blocked_learning_signal_report(
             "entropy_position_label": row.get("entropy_position_label"),
             "targeted_dimensions": _string_list(row.get("targeted_dimensions")),
             "operation_levels": _string_list(row.get("operation_levels")),
+            "palette_frame_asymmetry_multiplier": _safe_float(
+                row.get("palette_frame_asymmetry_multiplier")
+            ),
+            "palette_zero_frame1_modes": palette_context.get("zero_frame1_modes")
+            is True,
+            "palette_frame0_non_identity_fraction": _safe_float(
+                palette_context.get("frame0_non_identity_fraction")
+            ),
+            "palette_mode_count": _safe_int(palette_context.get("mode_count")),
         }
         signal = {
             "schema": REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA,
@@ -333,6 +343,7 @@ def build_repair_campaign_learning_signal(
 
     allocation = _mapping(probe.get("optimizer_allocation"))
     score_row = _mapping(probe.get("source_score_row"))
+    palette_context = _mapping(probe.get("palette_dynamics_context"))
     family_id = str(allocation.get("family_id") or score_row.get("family_id") or "")
     entropy_position = str(probe.get("entropy_position_label") or "")
     expected_improvement = _safe_float(
@@ -407,6 +418,15 @@ def build_repair_campaign_learning_signal(
                 "operation_levels": _string_list(
                     allocation.get("operation_levels") or score_row.get("operation_levels")
                 ),
+                "palette_frame_asymmetry_multiplier": _safe_float(
+                    probe.get("palette_frame_asymmetry_multiplier")
+                ),
+                "palette_zero_frame1_modes": palette_context.get("zero_frame1_modes")
+                is True,
+                "palette_frame0_non_identity_fraction": _safe_float(
+                    palette_context.get("frame0_non_identity_fraction")
+                ),
+                "palette_mode_count": _safe_int(palette_context.get("mode_count")),
             },
             "posterior_update_blockers": hard_blockers,
             "budget_spend_allowed": False,
