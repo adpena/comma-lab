@@ -20,6 +20,10 @@ from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
     require_no_truthy_authority_fields,
 )
+from tac.optimization.repair_campaign_chain_contract import (
+    REPAIR_CAMPAIGN_REQUIRED_OPTIMIZER_SOLVER,
+    require_interaction_aware_optimizer_decision,
+)
 from tac.optimization.repair_campaign_scorer import REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA
 from tac.repo_io import sha256_file
 
@@ -441,6 +445,10 @@ def build_repair_campaign_family_materializer_manifest(
         context="repair_family_materializer_score_report",
     )
     decision = _mapping(score_report.get("optimizer_decision"))
+    require_interaction_aware_optimizer_decision(
+        decision,
+        context="repair_campaign_family_materializer_manifest",
+    )
     allocation = _find_by_typed_or_candidate(
         decision.get("selected_allocation_rows") or [],
         typed_response_id=typed_response_id,
@@ -557,6 +565,9 @@ def build_repair_campaign_family_materializer_manifest(
         "source_materialization_plan_schema": materialization_plan.get("schema"),
         "source_score_report_path": None if score_report_path is None else str(score_report_path),
         "source_score_report_schema": score_report.get("schema"),
+        "source_optimizer_solver": decision.get("solver"),
+        "required_optimizer_solver": REPAIR_CAMPAIGN_REQUIRED_OPTIMIZER_SOLVER,
+        "stale_solver_contract_rejected": True,
         "byte_closed_candidate_emitted": byte_closed,
         "candidate_archive": archive,
         "runtime_consumption_proof_path": proof_path or None,

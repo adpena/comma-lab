@@ -13,6 +13,9 @@ from comma_lab.scheduler.repair_campaign_stackability_queue import (
     REPAIR_CAMPAIGN_STACKABILITY_QUEUE_METADATA_SCHEMA,
     build_repair_campaign_stackability_queue,
 )
+from tac.optimization.repair_campaign_chain_contract import (
+    RepairCampaignChainContractError,
+)
 from tac.optimization.repair_campaign_learning_signal import (
     REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA,
 )
@@ -212,6 +215,12 @@ def test_stackability_queue_emits_executable_local_probe(tmp_path: Path) -> None
     assert experiment["metadata"]["multiscale_action_row"]["interaction_dynamics"][
         "cross_scale_edge_count"
     ] == dynamics["cross_scale_edge_count"]
+    assert queue["metadata"]["source_optimizer_solver"] == (
+        "interaction_aware_entropy_stage_waterfill_v1"
+    )
+    assert queue["metadata"]["operator_visible_automation_rollup"][
+        "stale_solver_contract_rejected"
+    ] is True
     command = [
         sys.executable if item == ".venv/bin/python" else str(item)
         for item in experiment["steps"][0]["command"]
@@ -359,6 +368,22 @@ def test_stackability_queue_emits_executable_local_probe(tmp_path: Path) -> None
     assert duplicate_report["appended"] is False
     assert duplicate_report["skipped_duplicate"] is True
     assert len(duplicate_rows) == 1
+
+
+def test_stackability_queue_rejects_stale_optimizer_solver_contract(
+    tmp_path: Path,
+) -> None:
+    report = score_repair_campaign(payload=_work_order(tmp_path), repo_root=tmp_path)
+    report["optimizer_decision"]["solver"] = "greedy_campaign_score_waterfill_v1"
+
+    with pytest.raises(RepairCampaignChainContractError, match="requires solver"):
+        build_repair_campaign_stackability_queue(
+            repo_root=REPO_ROOT,
+            score_report=report,
+            score_report_path=tmp_path / "repair_campaign_score_report.json",
+            results_root=tmp_path / "results",
+            queue_id="stale_stackability_solver",
+        )
 
 
 def test_stackability_replay_bundle_diff_detects_environment_drift(

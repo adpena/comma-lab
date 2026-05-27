@@ -1267,6 +1267,27 @@ def _posterior_acquisition_route(policy: str) -> dict[str, Any]:
             "queue_artifact_key": "receiver_closed_correction_budget",
             "required_evidence_surface": "receiver_closed_correction_budget",
         }
+    if policy == "increase_receiver_closed_rate_credit_or_rebudget_earlier_entropy_stage":
+        return {
+            "priority_score": 94,
+            "activation_action": "rebudget_receiver_credit_to_earliest_entropy_stage",
+            "queue_artifact_key": "repair_budget_waterfill_queue",
+            "required_evidence_surface": "receiver_closed_correction_budget",
+        }
+    if policy == "prioritize_stackability_remeasurement_before_additional_budget":
+        return {
+            "priority_score": 88,
+            "activation_action": "remeasure_stackability_interactions_before_budget_spend",
+            "queue_artifact_key": "repair_campaign_stackability_queue",
+            "required_evidence_surface": "repair_campaign_stackability_replay_bundle",
+        }
+    if policy == "rebuild_entropy_stage_chain_contract_before_budget_spend":
+        return {
+            "priority_score": 86,
+            "activation_action": "rebuild_entropy_stage_chain_contract",
+            "queue_artifact_key": "repair_campaign_score_queue",
+            "required_evidence_surface": "repair_campaign_entropy_stage_chain_contract",
+        }
     if policy == "hold_until_byte_closed_exact_auth_handoff_available":
         return {
             "priority_score": 80,

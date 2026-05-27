@@ -330,6 +330,7 @@ def _posterior_route_executable_queue_keys(
     if queue_key in {
         "repair_budget_waterfill_queue",
         "repair_campaign_score_queue",
+        "repair_campaign_stackability_queue",
         "receiver_repair_queue",
         "operation_chain_compiler_queue",
         "operation_materializer_execution_queue",
@@ -351,6 +352,12 @@ def _posterior_route_executable_queue_keys(
     if action == "materialize_missing_repair_campaign_artifacts":
         mapped.append("repair_budget_waterfill_queue")
     if action == "materialize_missing_local_mlx_custody":
+        mapped.append("repair_campaign_score_queue")
+    if action == "rebudget_receiver_credit_to_earliest_entropy_stage":
+        mapped.append("repair_budget_waterfill_queue")
+    if action == "remeasure_stackability_interactions_before_budget_spend":
+        mapped.append("repair_campaign_stackability_queue")
+    if action == "rebuild_entropy_stage_chain_contract":
         mapped.append("repair_campaign_score_queue")
     if action == "route_component_response_to_exact_axis_replay":
         mapped.append("targeted_component_correction_queue")
@@ -1286,6 +1293,23 @@ def build_repair_campaign_score_queue(
         for experiment in experiments
         if experiment["metadata"].get("queue_actuation_ready") is True
     )
+    automation_rollup = {
+        "schema": "repair_campaign_score_operator_automation_rollup.v1",
+        "queue_id": queue_id,
+        "experiment_count": len(experiments),
+        "ready_experiment_count": ready_count,
+        "blocked_experiment_count": len(experiments) - ready_count,
+        "required_optimizer_solver": REPAIR_CAMPAIGN_REQUIRED_OPTIMIZER_SOLVER,
+        "stale_solver_contract_rejected_by_child_queues": True,
+        "chain_contract_followup_default": True,
+        "stackability_followup_default": True,
+        "byte_closed_materialization_followup_default": True,
+        "cascade_mlx_probe_followup_default": True,
+        "continual_learning_followup_default": True,
+        "budget_spend_allowed": False,
+        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
+    }
     metadata = {
         "schema": REPAIR_CAMPAIGN_SCORE_QUEUE_METADATA_SCHEMA,
         "source_queue_path": str(repair_budget_waterfill_queue_path),
@@ -1308,6 +1332,7 @@ def build_repair_campaign_score_queue(
         "ready_experiment_count": ready_count,
         "blocked_experiment_count": len(experiments) - ready_count,
         "results_root": _repo_rel(queue_root, repo_root),
+        "operator_visible_automation_rollup": automation_rollup,
         "budget_spend_allowed": False,
         "ready_for_exact_eval_dispatch": False,
         "allowed_use": "repair_campaign_score_queue_for_local_planning",
@@ -1358,6 +1383,43 @@ def summarize_repair_campaign_score_queue(
         experiments=score_experiments,
         repo_root=Path.cwd(),
     )
+    autonomous_score_floor_loop_rollup = {
+        "schema": "repair_campaign_autonomous_score_floor_loop_rollup.v1",
+        "planner_score_queue_ready": (
+            _positive_int(metadata.get("ready_experiment_count")) or 0
+        )
+        > 0,
+        "chain_compiler_requires_current_solver": True,
+        "required_optimizer_solver": REPAIR_CAMPAIGN_REQUIRED_OPTIMIZER_SOLVER,
+        "stale_solver_contract_count": chain_contract_rollup.get(
+            "stale_optimizer_solver_contract_count"
+        ),
+        "mlx_triage_axis": "[macOS-MLX research-signal]",
+        "mlx_triage_advisory_only": True,
+        "byte_closed_materializer_followup_default": metadata.get(
+            "byte_closed_materialization_followup_default"
+        )
+        is True,
+        "byte_closed_materialization_ready_child_count": materialization_rollup.get(
+            "materialization_ready_child_count"
+        ),
+        "byte_closed_materialization_blocked_child_count": materialization_rollup.get(
+            "materialization_blocked_child_count"
+        ),
+        "receiver_decode_only_proof_required": True,
+        "exact_eval_handoff_fail_closed": True,
+        "posterior_budget_routing_active": (
+            _positive_int(
+                posterior_prior_summary.get("acquisition_followup_route_count")
+            )
+            or 0
+        )
+        > 0,
+        "posterior_routes_update_from_positive_and_negative_results": True,
+        "budget_spend_allowed": False,
+        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
+    }
     summary = {
         "schema": REPAIR_CAMPAIGN_SCORE_QUEUE_SUMMARY_SCHEMA,
         "queue_id": repair_campaign_score_queue.get("queue_id"),
@@ -1403,6 +1465,7 @@ def summarize_repair_campaign_score_queue(
         "byte_closed_materialization_posterior_appended_count": (
             materialization_rollup.get("materialization_posterior_appended_count")
         ),
+        "autonomous_score_floor_loop_rollup": autonomous_score_floor_loop_rollup,
         "queue_path": str(queue_path),
         "allowed_use": "default_repair_campaign_scorer_queue_planning_only",
         "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",

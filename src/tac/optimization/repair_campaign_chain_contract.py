@@ -108,6 +108,23 @@ def _stage_record(
     }
 
 
+def require_interaction_aware_optimizer_decision(
+    decision: Mapping[str, Any],
+    *,
+    context: str,
+) -> None:
+    """Require the current interaction-aware entropy-stage optimizer contract."""
+
+    if decision.get("schema") != REPAIR_CAMPAIGN_OPTIMIZER_DECISION_SCHEMA:
+        raise RepairCampaignChainContractError(
+            f"{context}: score report missing repair_campaign_optimizer_decision.v1"
+        )
+    if decision.get("solver") != REPAIR_CAMPAIGN_REQUIRED_OPTIMIZER_SOLVER:
+        raise RepairCampaignChainContractError(
+            f"{context}: requires solver {REPAIR_CAMPAIGN_REQUIRED_OPTIMIZER_SOLVER}"
+        )
+
+
 def _node_for_allocation(
     allocation: Mapping[str, Any],
     *,
@@ -237,13 +254,10 @@ def build_repair_campaign_entropy_stage_chain_contract(
         context="repair_campaign_entropy_stage_chain_contract_input",
     )
     decision = _mapping(score_report.get("optimizer_decision"))
-    if decision.get("schema") != REPAIR_CAMPAIGN_OPTIMIZER_DECISION_SCHEMA:
-        raise RepairCampaignChainContractError("score report missing repair_campaign_optimizer_decision.v1")
-    if decision.get("solver") != REPAIR_CAMPAIGN_REQUIRED_OPTIMIZER_SOLVER:
-        raise RepairCampaignChainContractError(
-            "chain contract requires interaction-aware entropy-stage optimizer "
-            f"solver {REPAIR_CAMPAIGN_REQUIRED_OPTIMIZER_SOLVER}"
-        )
+    require_interaction_aware_optimizer_decision(
+        decision,
+        context="repair_campaign_entropy_stage_chain_contract",
+    )
     allocations = sorted(
         [row for row in decision.get("selected_allocation_rows") or [] if isinstance(row, Mapping)],
         key=_allocation_sort_key,
@@ -326,4 +340,5 @@ __all__ = [
     "REPAIR_CAMPAIGN_REQUIRED_OPTIMIZER_SOLVER",
     "RepairCampaignChainContractError",
     "build_repair_campaign_entropy_stage_chain_contract",
+    "require_interaction_aware_optimizer_decision",
 ]

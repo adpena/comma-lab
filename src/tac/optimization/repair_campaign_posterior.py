@@ -78,6 +78,37 @@ def _safe_float(value: Any) -> float:
         return 0.0
 
 
+def _safe_int(value: Any) -> int:
+    if value is None or isinstance(value, bool):
+        return 0
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _family_priority_direction(policy: str) -> str:
+    if policy.startswith(("increase_", "prioritize_", "rebuild_")):
+        return "increase"
+    if policy.startswith("decrease_"):
+        return "decrease"
+    return "hold"
+
+
+def _budget_routing_hint(policy: str, feature_vector: Mapping[str, Any]) -> str:
+    if feature_vector.get("receiver_credit_exhausted") is True:
+        return "rebudget_receiver_closed_credit_before_exact_axis_spend"
+    if feature_vector.get("stackability_remeasure_required") is True:
+        return "spend_local_mlx_remeasurement_before_archive_materialization"
+    if feature_vector.get("entropy_stage_contract_miss") is True:
+        return "rebuild_entropy_stage_chain_contract_before_materialization"
+    if "exact_auth_eval" in policy or "exact_axis" in policy:
+        return "hold_budget_until_byte_closed_exact_axis_handoff"
+    if policy.startswith("prioritize_byte_closed"):
+        return "route_budget_to_byte_closed_materializer_after_custody"
+    return "local_acquisition_update_only"
+
+
 def _source_signal_record(
     signal_path: str | Path,
     *,
@@ -153,17 +184,34 @@ def build_repair_campaign_stackability_posterior_row(
         "acquisition_policy_delta": {
             "schema": "repair_campaign_acquisition_policy_delta.v1",
             "recommended_acquisition_policy": acquisition_policy,
-            "family_priority_direction": (
-                "increase"
-                if acquisition_policy
-                == "increase_priority_for_exact_axis_component_response_replay"
-                else "hold"
+            "family_priority_direction": _family_priority_direction(
+                acquisition_policy
             ),
             "expected_local_improvement_score_units": _safe_float(
                 feature_vector.get("expected_local_improvement_score_units")
             ),
             "improvement_per_allocated_byte": _safe_float(
                 feature_vector.get("improvement_per_allocated_byte")
+            ),
+            "entropy_pipeline_stage_index": _safe_int(
+                feature_vector.get("entropy_pipeline_stage_index")
+            ),
+            "interaction_order": _safe_int(feature_vector.get("interaction_order")),
+            "selection_blocker_class": feature_vector.get(
+                "selection_blocker_class"
+            ),
+            "receiver_credit_exhausted": (
+                feature_vector.get("receiver_credit_exhausted") is True
+            ),
+            "stackability_remeasure_required": (
+                feature_vector.get("stackability_remeasure_required") is True
+            ),
+            "entropy_stage_contract_miss": (
+                feature_vector.get("entropy_stage_contract_miss") is True
+            ),
+            "posterior_budget_routing_hint": _budget_routing_hint(
+                acquisition_policy,
+                feature_vector,
             ),
             "budget_spend_allowed": False,
             "ready_for_exact_eval_dispatch": False,

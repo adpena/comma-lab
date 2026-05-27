@@ -33,11 +33,70 @@ REPAIR_CASCADE_MLX_PROBE_EXPERIMENT_METADATA_SCHEMA = (
 )
 REPAIR_CASCADE_MLX_PROBE_SPEC_SCHEMA = "repair_cascade_mlx_probe_spec.v1"
 REPAIR_CASCADE_MLX_PROBE_RESULT_SCHEMA = "repair_cascade_mlx_probe_result.v1"
+REPAIR_CASCADE_MLX_REPAIR_FAMILY_CAMPAIGN_SCHEMA = (
+    "repair_cascade_mlx_repair_family_campaign.v1"
+)
 REPAIR_CASCADE_OPPORTUNITY_ROW_SCHEMA = (
     "frontier_rate_attack_repair_cascade_opportunity_row.v1"
 )
 REPAIR_BUDGET_WATERFILL_WORK_ORDER_SCHEMA = (
     "frontier_rate_attack_repair_budget_waterfill_work_order.v1"
+)
+
+_CANONICAL_MLX_REPAIR_FAMILY_CAMPAIGNS: tuple[dict[str, Any], ...] = (
+    {
+        "family_id": "posenet_null_bottom_decile",
+        "label": "PoseNet-null bottom-decile repair",
+        "entropy_position_label": "scorer_entropy_repair_before_selector_codec",
+        "entropy_position_class": "scorer_entropy_before_selector_codec",
+        "operator_stage": "P19",
+        "required_measurements": ("posenet_null_bottom_decile_pair_ids",),
+        "required_artifact_keys": ("posenet_null_bottom_decile_pair_ids_path",),
+        "materializer_family_id": "posenet_null_bottom_decile",
+    },
+    {
+        "family_id": "segnet_class_region_waterfill",
+        "label": "SegNet class-region waterfill",
+        "entropy_position_label": "scorer_entropy_repair_before_selector_codec",
+        "entropy_position_class": "scorer_entropy_before_selector_codec",
+        "operator_stage": "P18",
+        "required_measurements": ("segnet_class_region_mask_ids",),
+        "required_artifact_keys": ("segnet_class_region_mask_ids_path",),
+        "materializer_family_id": "segnet_class_region_waterfill",
+    },
+    {
+        "family_id": "per_region_selector_codec",
+        "label": "per-region selector codec",
+        "entropy_position_label": "selector_codec_entropy",
+        "entropy_position_class": "selector_codec_entropy",
+        "operator_stage": "P11",
+        "required_measurements": ("selector_payload_bits_per_region",),
+        "required_artifact_keys": (
+            "selector_payload_bits_per_region_path",
+            "runtime_consumption_proof_path",
+        ),
+        "materializer_family_id": "per_region_selector_codec",
+    },
+    {
+        "family_id": "frame0_k16_palette_asymmetry",
+        "label": "frame0 K16 palette asymmetry",
+        "entropy_position_label": "before_entropy_coder_distribution_shaping",
+        "entropy_position_class": "pre_entropy_distribution_shaping",
+        "operator_stage": "K16",
+        "required_measurements": ("frame0_k16_palette_response_curve",),
+        "required_artifact_keys": ("repair_dynamics_palette_probe_matrix_path",),
+        "materializer_family_id": "palette_frame_asymmetry_prior",
+    },
+    {
+        "family_id": "entropy_boundary_probe",
+        "label": "pre-coder and coder-boundary entropy probe",
+        "entropy_position_label": "at_entropy_coder_integer_codeword_boundary",
+        "entropy_position_class": "entropy_coder_boundary",
+        "operator_stage": "entropy_boundary",
+        "required_measurements": ("entropy_boundary_probe_manifest",),
+        "required_artifact_keys": ("entropy_boundary_probe_manifest_path",),
+        "materializer_family_id": "entropy_boundary_probe",
+    },
 )
 
 
@@ -177,6 +236,79 @@ def _artifact_status(
     }
 
 
+def _campaign_artifact_status(
+    artifact_status: Sequence[Mapping[str, Any]],
+    keys: Sequence[str],
+) -> list[dict[str, Any]]:
+    by_key = {str(item.get("key") or ""): item for item in artifact_status}
+    return [
+        {
+            "key": key,
+            "path": by_key.get(key, {}).get("path"),
+            "exists": by_key.get(key, {}).get("exists") is True,
+        }
+        for key in keys
+    ]
+
+
+def _canonical_repair_family_campaign_rows(
+    *,
+    cascade: Mapping[str, Any],
+    artifact_status: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    targeted_position_ids = ordered_unique(
+        str(row.get("position_id") or "")
+        for row in _targeted_positions(cascade)
+        if str(row.get("position_id") or "").strip()
+    )
+    rows: list[dict[str, Any]] = []
+    for index, campaign in enumerate(_CANONICAL_MLX_REPAIR_FAMILY_CAMPAIGNS, start=1):
+        required_artifact_keys = _string_list(campaign.get("required_artifact_keys"))
+        campaign_status = _campaign_artifact_status(
+            artifact_status,
+            required_artifact_keys,
+        )
+        missing = ordered_unique(
+            f"{item['key']}:missing_or_unverified"
+            for item in campaign_status
+            if item.get("exists") is not True
+        )
+        row = {
+            "schema": REPAIR_CASCADE_MLX_REPAIR_FAMILY_CAMPAIGN_SCHEMA,
+            "campaign_order": index,
+            "cascade_id": cascade.get("cascade_id"),
+            "family_id": campaign["family_id"],
+            "materializer_family_id": campaign["materializer_family_id"],
+            "label": campaign["label"],
+            "operator_stage": campaign["operator_stage"],
+            "targeted_position_ids": targeted_position_ids,
+            "entropy_position_label": campaign["entropy_position_label"],
+            "entropy_position_class": campaign["entropy_position_class"],
+            "required_measurements": _string_list(campaign.get("required_measurements")),
+            "required_artifact_keys": required_artifact_keys,
+            "artifact_status": campaign_status,
+            "missing_artifacts": missing,
+            "campaign_execution_mode": "local_mlx_advisory_only",
+            "component_response_axis": "[macOS-MLX research-signal]",
+            "byte_closed_materializer_required": True,
+            "receiver_decode_only_proof_required": True,
+            "exact_axis_replay_required_before_score_or_budget": True,
+            "ready_for_local_mlx_advisory_execution": not missing,
+            "budget_spend_allowed": False,
+            "ready_for_budget_spend": False,
+            "ready_for_exact_eval_dispatch": False,
+            "allowed_use": "repair_family_mlx_advisory_campaign_row_only",
+            "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+            **FALSE_AUTHORITY,
+        }
+        require_no_truthy_authority_fields(
+            row,
+            context=f"repair_cascade_mlx_family_campaign:{campaign['family_id']}",
+        )
+        rows.append(row)
+    return rows
+
+
 def build_repair_cascade_mlx_probe_spec(
     *,
     source_payload: Mapping[str, Any],
@@ -206,11 +338,17 @@ def build_repair_cascade_mlx_probe_spec(
             "segnet_class_region_mask_ids_path",
             "selector_payload_bits_per_region_path",
             "runtime_consumption_proof_path",
+            "repair_dynamics_palette_probe_matrix_path",
+            "entropy_boundary_probe_manifest_path",
         ]
     )
     artifact_status = [
         _artifact_status(cascade, key, repo_root=repo_root) for key in artifact_keys
     ]
+    repair_family_campaign_rows = _canonical_repair_family_campaign_rows(
+        cascade=cascade,
+        artifact_status=artifact_status,
+    )
     missing = ordered_unique(
         [
             f"{item['key']}:missing_or_unverified"
@@ -238,6 +376,13 @@ def build_repair_cascade_mlx_probe_spec(
         "required_probe_measurements": measurements,
         "required_local_mlx_artifacts": artifact_keys,
         "local_mlx_artifact_status": artifact_status,
+        "repair_family_campaign_schema": (
+            REPAIR_CASCADE_MLX_REPAIR_FAMILY_CAMPAIGN_SCHEMA
+        ),
+        "repair_family_campaign_count": len(repair_family_campaign_rows),
+        "repair_family_campaign_rows": repair_family_campaign_rows,
+        "campaign_execution_mode": "local_mlx_advisory_only",
+        "local_mlx_rows_are_advisory_only": True,
         "missing_local_mlx_artifacts": missing,
         "probe_measurement_plan": [
             {
@@ -343,6 +488,11 @@ def build_repair_cascade_mlx_probe_result(
         ]
     )
     spec_blockers = _string_list(probe_spec.get("blockers"))
+    repair_family_campaign_rows = [
+        dict(row)
+        for row in probe_spec.get("repair_family_campaign_rows") or []
+        if isinstance(row, Mapping)
+    ]
     blockers = ordered_unique(
         [
             *missing,
@@ -373,6 +523,13 @@ def build_repair_cascade_mlx_probe_result(
             probe_spec.get("required_probe_measurements")
         ),
         "probe_measurement_plan": list(probe_spec.get("probe_measurement_plan") or []),
+        "repair_family_campaign_schema": probe_spec.get(
+            "repair_family_campaign_schema"
+        ),
+        "repair_family_campaign_count": len(repair_family_campaign_rows),
+        "repair_family_campaign_rows": repair_family_campaign_rows,
+        "campaign_execution_mode": probe_spec.get("campaign_execution_mode"),
+        "local_mlx_rows_are_advisory_only": True,
         "local_mlx_probe_execution_ready": not missing,
         "local_mlx_probe_executed": False,
         "component_response_row_emitted": False,
@@ -452,6 +609,11 @@ def build_repair_cascade_mlx_learning_signal(
         for row in probe_result.get("probe_measurement_plan") or []
         if isinstance(row, Mapping)
     ]
+    repair_family_campaign_rows = [
+        dict(row)
+        for row in probe_result.get("repair_family_campaign_rows") or []
+        if isinstance(row, Mapping)
+    ]
     measurements = _string_list(probe_result.get("required_probe_measurements"))
     ready = probe_result.get("local_mlx_probe_execution_ready") is True
     recommended_policy = (
@@ -469,6 +631,7 @@ def build_repair_cascade_mlx_learning_signal(
         "blockers": blockers,
         "required_probe_measurements": measurements,
         "targeted_positions": targeted_positions,
+        "repair_family_campaign_rows": repair_family_campaign_rows,
     }
     signal = {
         "schema": REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA,
@@ -514,6 +677,17 @@ def build_repair_cascade_mlx_learning_signal(
                 "blocker_count": len(blockers),
                 "required_probe_measurement_count": len(measurements),
                 "probe_measurement_plan_count": len(measurement_plan),
+                "repair_family_campaign_count": len(repair_family_campaign_rows),
+                "repair_family_ids": ordered_unique(
+                    str(row.get("family_id") or "")
+                    for row in repair_family_campaign_rows
+                    if str(row.get("family_id") or "").strip()
+                ),
+                "repair_family_ready_count": sum(
+                    1
+                    for row in repair_family_campaign_rows
+                    if row.get("ready_for_local_mlx_advisory_execution") is True
+                ),
                 "targeted_position_count": len(targeted_positions),
                 "position_ids": position_ids,
                 "entropy_surfaces": entropy_surfaces,
@@ -625,6 +799,14 @@ def _cascade_experiment(
             REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_APPEND_REPORT_SCHEMA
         ),
         "required_probe_measurements": missing,
+        "repair_family_campaign_schema": (
+            REPAIR_CASCADE_MLX_REPAIR_FAMILY_CAMPAIGN_SCHEMA
+        ),
+        "repair_family_campaign_count": len(_CANONICAL_MLX_REPAIR_FAMILY_CAMPAIGNS),
+        "repair_family_campaign_family_ids": [
+            str(row["family_id"]) for row in _CANONICAL_MLX_REPAIR_FAMILY_CAMPAIGNS
+        ],
+        "campaign_execution_mode": "local_mlx_advisory_only",
         "local_mlx_advisory_custody_required": True,
         "component_response_axis": "[macOS-MLX research-signal]",
         "queue_actuation_ready": True,
@@ -943,6 +1125,12 @@ def build_repair_cascade_mlx_probe_queue(
         "posterior_append_report_schema": (
             REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_APPEND_REPORT_SCHEMA
         ),
+        "repair_family_campaign_schema": (
+            REPAIR_CASCADE_MLX_REPAIR_FAMILY_CAMPAIGN_SCHEMA
+        ),
+        "repair_family_campaign_count_per_cascade": len(
+            _CANONICAL_MLX_REPAIR_FAMILY_CAMPAIGNS
+        ),
         "queue_actuation_blockers": blockers,
         "local_mlx_advisory_custody_required": True,
         "component_response_axis": "[macOS-MLX research-signal]",
@@ -977,6 +1165,7 @@ __all__ = [
     "REPAIR_CASCADE_MLX_PROBE_QUEUE_METADATA_SCHEMA",
     "REPAIR_CASCADE_MLX_PROBE_RESULT_SCHEMA",
     "REPAIR_CASCADE_MLX_PROBE_SPEC_SCHEMA",
+    "REPAIR_CASCADE_MLX_REPAIR_FAMILY_CAMPAIGN_SCHEMA",
     "RepairCascadeMlxProbeQueueError",
     "build_repair_cascade_mlx_learning_signal",
     "build_repair_cascade_mlx_probe_queue",

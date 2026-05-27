@@ -6,8 +6,14 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
+from tac.optimization.repair_campaign_chain_contract import (
+    RepairCampaignChainContractError,
+)
 from tac.optimization.repair_campaign_learning_signal import (
     REPAIR_CAMPAIGN_BLOCKED_LEARNING_SIGNAL_REPORT_SCHEMA,
+    build_repair_campaign_blocked_learning_signal_report,
     build_repair_campaign_materialization_learning_signal_report,
 )
 from tac.optimization.repair_campaign_posterior import (
@@ -293,5 +299,79 @@ def test_materialization_gate_learning_signal_updates_posterior(
 
     assert append_report["appended_count"] == 1
     assert posterior_rows[0]["typed_response_id"] == "segnet_region_ready"
+    assert posterior_rows[0]["acquisition_policy_delta"][
+        "family_priority_direction"
+    ] == "increase"
+    assert posterior_rows[0]["acquisition_policy_delta"][
+        "posterior_budget_routing_hint"
+    ] == "route_budget_to_byte_closed_materializer_after_custody"
     route = summary["acquisition_followup_routes"][0]
     assert route["activation_action"] == "implement_or_run_repair_family_byte_transform"
+
+
+def test_blocked_credit_exhaustion_updates_posterior_budget_routing(
+    tmp_path: Path,
+) -> None:
+    payload = _repair_payload(tmp_path)
+    payload["receiver_closed_rate_credit"]["receiver_closed_saved_bytes_total"] = 0
+    payload["typed_response_ledger"]["available_receiver_closed_rate_credit_bytes"] = 0
+    score_report = score_repair_campaign(payload=payload, repo_root=tmp_path)
+    score_report_path = _write_json(tmp_path / "score_report.json", score_report)
+
+    signal_report = build_repair_campaign_blocked_learning_signal_report(
+        score_report_path=score_report_path,
+        score_report=score_report,
+        repo_root=tmp_path,
+    )
+    signal = signal_report["learning_signal_rows"][0]
+    update = signal["local_planning_update"]
+
+    assert update["recommended_acquisition_policy"] == (
+        "increase_receiver_closed_rate_credit_or_rebudget_earlier_entropy_stage"
+    )
+    assert update["planner_feature_vector"]["selection_blocker_class"] == (
+        "receiver_credit_exhausted"
+    )
+    assert update["planner_feature_vector"]["receiver_credit_exhausted"] is True
+
+    signal_report_path = _write_json(tmp_path / "blocked_signals.json", signal_report)
+    posterior_path = tmp_path / "posterior.jsonl"
+    append_repair_campaign_blocked_learning_signal_report(
+        blocked_learning_signal_report_path=signal_report_path,
+        blocked_learning_signal_report=signal_report,
+        posterior_path=posterior_path,
+        lock_path=tmp_path / ".posterior.lock",
+        repo_root=tmp_path,
+    )
+    posterior_rows = load_repair_campaign_stackability_posterior_rows(posterior_path)
+    summary = build_repair_campaign_posterior_prior_summary(
+        posterior_path=posterior_path,
+    )
+    route = summary["acquisition_followup_routes"][0]
+
+    assert posterior_rows[0]["acquisition_policy_delta"][
+        "posterior_budget_routing_hint"
+    ] == "rebudget_receiver_closed_credit_before_exact_axis_spend"
+    assert route["activation_action"] == (
+        "rebudget_receiver_credit_to_earliest_entropy_stage"
+    )
+    assert route["queue_artifact_key"] == "repair_budget_waterfill_queue"
+
+
+def test_family_materializer_rejects_stale_optimizer_solver_contract(
+    tmp_path: Path,
+) -> None:
+    score_report = score_repair_campaign(payload=_repair_payload(tmp_path), repo_root=tmp_path)
+    score_report["optimizer_decision"]["solver"] = "greedy_campaign_score_waterfill_v1"
+    plan = _plan_from_score_report(score_report)
+
+    with pytest.raises(RepairCampaignChainContractError, match="requires solver"):
+        build_repair_campaign_family_materializer_manifest(
+            repo_root=tmp_path,
+            materialization_plan=plan,
+            score_report=score_report,
+            materialization_plan_path=tmp_path / "plan.json",
+            score_report_path=tmp_path / "score_report.json",
+            typed_response_id="segnet_region_ready",
+            candidate_id="segnet_class_region_waterfill",
+        )

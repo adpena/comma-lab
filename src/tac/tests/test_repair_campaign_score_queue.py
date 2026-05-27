@@ -414,6 +414,9 @@ def test_repair_campaign_score_queue_can_bind_posterior_prior_input(
         posterior_path
     )
     assert queue["metadata"]["campaign_scorer_uses_posterior_priors"] is True
+    assert queue["metadata"]["operator_visible_automation_rollup"][
+        "byte_closed_materialization_followup_default"
+    ] is True
     assert (
         DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_PATH.name
         == "repair_campaign_stackability_posterior.jsonl"
@@ -570,6 +573,14 @@ def test_repair_campaign_score_queue_can_bind_posterior_prior_input(
     assert summary["byte_closed_materialization_rollup"][
         "materialization_posterior_signal_count"
     ] == 2
+    loop = summary["autonomous_score_floor_loop_rollup"]
+    assert loop["schema"] == "repair_campaign_autonomous_score_floor_loop_rollup.v1"
+    assert loop["chain_compiler_requires_current_solver"] is True
+    assert loop["stale_solver_contract_count"] == 0
+    assert loop["mlx_triage_advisory_only"] is True
+    assert loop["exact_eval_handoff_fail_closed"] is True
+    assert loop["posterior_routes_update_from_positive_and_negative_results"] is True
+    assert loop["ready_for_exact_eval_dispatch"] is False
 
 
 def test_repair_posterior_acquisition_followup_queue_routes_to_child_queue(

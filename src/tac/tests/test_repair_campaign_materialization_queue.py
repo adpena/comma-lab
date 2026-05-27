@@ -6,6 +6,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 from comma_lab.scheduler.experiment_queue import QUEUE_SCHEMA
 from comma_lab.scheduler.repair_campaign_materialization_queue import (
     REPAIR_CAMPAIGN_BYTE_CLOSED_MATERIALIZATION_EXPERIMENT_METADATA_SCHEMA,
@@ -13,6 +15,9 @@ from comma_lab.scheduler.repair_campaign_materialization_queue import (
     REPAIR_CAMPAIGN_BYTE_CLOSED_MATERIALIZATION_QUEUE_METADATA_SCHEMA,
     REPAIR_CAMPAIGN_FAMILY_MATERIALIZER_MANIFEST_SCHEMA,
     build_repair_campaign_byte_closed_materialization_queue,
+)
+from tac.optimization.repair_campaign_chain_contract import (
+    RepairCampaignChainContractError,
 )
 from tac.optimization.repair_campaign_learning_signal import (
     REPAIR_CAMPAIGN_BLOCKED_LEARNING_SIGNAL_REPORT_SCHEMA,
@@ -141,6 +146,12 @@ def test_byte_closed_materialization_queue_emits_archive_bound_steps(
         "can_shape_coder_input_distribution"
     ] is True
     assert experiment["metadata"]["entropy_pipeline_materialization_order"] == 1
+    assert queue["metadata"]["source_optimizer_solver"] == (
+        "interaction_aware_entropy_stage_waterfill_v1"
+    )
+    assert queue["metadata"]["operator_visible_automation_rollup"][
+        "exact_eval_handoff_fail_closed_until_custody_complete"
+    ] is True
     assert [step["id"] for step in experiment["steps"]] == [
         "emit_repair_budget_materialization_plan",
         "emit_repair_family_materializer_manifest",
@@ -222,6 +233,25 @@ def test_byte_closed_materialization_queue_orders_allocations_by_entropy_stage(
     assert queue["metadata"]["entropy_pipeline_materialization_order"][1][
         "entropy_pipeline_stage_index"
     ] == 2
+
+
+def test_byte_closed_materialization_queue_rejects_stale_optimizer_solver_contract(
+    tmp_path: Path,
+) -> None:
+    work_order = _work_order(tmp_path)
+    work_order_path = _write_json(tmp_path / "work_order.json", work_order)
+    report = score_repair_campaign(payload=work_order, repo_root=tmp_path)
+    report["optimizer_decision"]["solver"] = "greedy_campaign_score_waterfill_v1"
+
+    with pytest.raises(RepairCampaignChainContractError, match="requires solver"):
+        build_repair_campaign_byte_closed_materialization_queue(
+            repo_root=REPO_ROOT,
+            score_report=report,
+            score_report_path=tmp_path / "score_report.json",
+            work_order_path=work_order_path,
+            results_root=tmp_path / "results",
+            queue_id="stale_repair_materialization_solver",
+        )
 
 
 def test_byte_closed_materialization_queue_cli_writes_queue(tmp_path: Path) -> None:

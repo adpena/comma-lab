@@ -11,6 +11,7 @@ from comma_lab.scheduler.repair_cascade_mlx_probe_queue import (
     REPAIR_CASCADE_MLX_PROBE_QUEUE_METADATA_SCHEMA,
     REPAIR_CASCADE_MLX_PROBE_RESULT_SCHEMA,
     REPAIR_CASCADE_MLX_PROBE_SPEC_SCHEMA,
+    REPAIR_CASCADE_MLX_REPAIR_FAMILY_CAMPAIGN_SCHEMA,
     build_repair_cascade_mlx_learning_signal,
     build_repair_cascade_mlx_probe_queue,
     build_repair_cascade_mlx_probe_result,
@@ -113,6 +114,24 @@ def test_repair_cascade_mlx_probe_spec_names_exact_missing_artifacts(
     )
     assert "segnet_class_region_mask_ids" in spec["required_probe_measurements"]
     assert all(row["score_claim"] is False for row in spec["probe_measurement_plan"])
+    assert spec["repair_family_campaign_schema"] == (
+        REPAIR_CASCADE_MLX_REPAIR_FAMILY_CAMPAIGN_SCHEMA
+    )
+    assert spec["repair_family_campaign_count"] == 5
+    assert {
+        row["family_id"] for row in spec["repair_family_campaign_rows"]
+    } == {
+        "posenet_null_bottom_decile",
+        "segnet_class_region_waterfill",
+        "per_region_selector_codec",
+        "frame0_k16_palette_asymmetry",
+        "entropy_boundary_probe",
+    }
+    assert all(
+        row["campaign_execution_mode"] == "local_mlx_advisory_only"
+        and row["ready_for_exact_eval_dispatch"] is False
+        for row in spec["repair_family_campaign_rows"]
+    )
 
 
 def test_repair_cascade_mlx_probe_result_records_missing_mlx_inputs(
@@ -141,6 +160,7 @@ def test_repair_cascade_mlx_probe_result_records_missing_mlx_inputs(
     assert "local_mlx_response_path:missing_or_unverified" in (
         result["missing_local_mlx_artifacts"]
     )
+    assert result["repair_family_campaign_count"] == 5
     assert result["score_claim"] is False
     assert result["ready_for_exact_eval_dispatch"] is False
 
@@ -177,6 +197,8 @@ def test_repair_cascade_mlx_learning_signal_records_multiscale_blockers(
     )
     features = signal["local_planning_update"]["planner_feature_vector"]
     assert features["targeted_position_count"] == 3
+    assert features["repair_family_campaign_count"] == 5
+    assert "frame0_k16_palette_asymmetry" in features["repair_family_ids"]
     assert "scorer_entropy" in features["entropy_surfaces"]
     assert "selector_codec" in features["operation_levels"]
     assert "local_mlx_probe_artifacts_missing" in signal["blockers"]
@@ -202,6 +224,7 @@ def test_repair_cascade_mlx_probe_queue_from_score_report_runs_spec_step(
     assert queue["schema"] == QUEUE_SCHEMA
     assert queue["metadata"]["schema"] == REPAIR_CASCADE_MLX_PROBE_QUEUE_METADATA_SCHEMA
     assert queue["metadata"]["structural_repair_cascade_count"] == 1
+    assert queue["metadata"]["repair_family_campaign_count_per_cascade"] == 5
     experiment = queue["experiments"][0]
     assert experiment["status"] == "queued"
     assert experiment["metadata"]["component_response_axis"] == (
@@ -278,6 +301,7 @@ def test_repair_cascade_mlx_probe_queue_from_score_report_runs_spec_step(
     assert spec_path.is_file()
     spec = json.loads(spec_path.read_text(encoding="utf-8"))
     assert spec["schema"] == REPAIR_CASCADE_MLX_PROBE_SPEC_SCHEMA
+    assert spec["repair_family_campaign_count"] == 5
     assert "local_mlx_response_path:missing_or_unverified" in (
         spec["missing_local_mlx_artifacts"]
     )

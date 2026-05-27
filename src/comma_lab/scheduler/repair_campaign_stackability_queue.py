@@ -14,6 +14,10 @@ from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
     require_no_truthy_authority_fields,
 )
+from tac.optimization.repair_campaign_chain_contract import (
+    REPAIR_CAMPAIGN_REQUIRED_OPTIMIZER_SOLVER,
+    require_interaction_aware_optimizer_decision,
+)
 from tac.optimization.repair_campaign_learning_signal import (
     REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA,
 )
@@ -27,7 +31,6 @@ from tac.optimization.repair_campaign_replay_bundle import (
     REPAIR_CAMPAIGN_STACKABILITY_REPLAY_RERUN_SCHEMA,
 )
 from tac.optimization.repair_campaign_scorer import (
-    REPAIR_CAMPAIGN_OPTIMIZER_DECISION_SCHEMA,
     REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA,
     REPAIR_CAMPAIGN_STACKABILITY_PROBE_SCHEMA,
 )
@@ -609,10 +612,10 @@ def build_repair_campaign_stackability_queue(
         context="repair_campaign_stackability_queue_input",
     )
     decision = _mapping(score_report.get("optimizer_decision"))
-    if decision.get("schema") != REPAIR_CAMPAIGN_OPTIMIZER_DECISION_SCHEMA:
-        raise RepairCampaignStackabilityQueueError(
-            "score report missing repair_campaign_optimizer_decision.v1"
-        )
+    require_interaction_aware_optimizer_decision(
+        decision,
+        context="repair_campaign_stackability_queue",
+    )
     allocations = [
         row
         for row in decision.get("selected_allocation_rows") or []
@@ -664,11 +667,30 @@ def build_repair_campaign_stackability_queue(
     )
     if not allocations:
         blockers.append("optimizer_selected_allocation_rows_empty")
+    automation_rollup = {
+        "schema": "repair_campaign_stackability_operator_automation_rollup.v1",
+        "queue_id": queue_id,
+        "selected_allocation_count": len(allocations),
+        "ready_experiment_count": ready_count,
+        "blocked_experiment_count": len(experiments) - ready_count,
+        "required_optimizer_solver": REPAIR_CAMPAIGN_REQUIRED_OPTIMIZER_SOLVER,
+        "source_optimizer_solver": decision.get("solver"),
+        "stale_solver_contract_rejected": True,
+        "local_mlx_rows_are_advisory_only": True,
+        "posterior_append_default": True,
+        "queue_actuation_blockers": ordered_unique(blockers),
+        "budget_spend_allowed": False,
+        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
+    }
     metadata = {
         "schema": REPAIR_CAMPAIGN_STACKABILITY_QUEUE_METADATA_SCHEMA,
         "source_score_report_path": str(score_report_path),
         "source_score_report_schema": score_report.get("schema"),
         "source_optimizer_decision_schema": decision.get("schema"),
+        "source_optimizer_solver": decision.get("solver"),
+        "required_optimizer_solver": REPAIR_CAMPAIGN_REQUIRED_OPTIMIZER_SOLVER,
+        "stale_solver_contract_rejected": True,
         "queue_id": queue_id,
         "experiment_count": len(experiments),
         "ready_experiment_count": ready_count,
@@ -681,6 +703,7 @@ def build_repair_campaign_stackability_queue(
             REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_APPEND_REPORT_SCHEMA
         ),
         "queue_actuation_blockers": ordered_unique(blockers),
+        "operator_visible_automation_rollup": automation_rollup,
         "local_mlx_advisory_custody_required": True,
         "component_response_axis": "[macOS-MLX research-signal]",
         "budget_spend_allowed": False,

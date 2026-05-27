@@ -12,11 +12,13 @@ from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
     require_no_truthy_authority_fields,
 )
+from tac.optimization.repair_campaign_chain_contract import (
+    require_interaction_aware_optimizer_decision,
+)
 from tac.optimization.repair_campaign_replay_bundle import (
     REPAIR_CAMPAIGN_STACKABILITY_REPLAY_BUNDLE_SCHEMA,
 )
 from tac.optimization.repair_campaign_scorer import (
-    REPAIR_CAMPAIGN_OPTIMIZER_DECISION_SCHEMA,
     REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA,
     REPAIR_CAMPAIGN_STACKABILITY_PROBE_SCHEMA,
 )
@@ -72,6 +74,39 @@ def _safe_int(value: Any) -> int:
         return 0
 
 
+def _policy_blocker_class(blockers: Sequence[Any], missing_artifacts: Sequence[Any]) -> str:
+    joined = " ".join([*_string_list(blockers), *_string_list(missing_artifacts)])
+    if "receiver_closed_rate_credit_exhausted" in joined:
+        return "receiver_credit_exhausted"
+    if "receiver_closed" in joined or "saved_bytes" in joined:
+        return "receiver_credit_missing"
+    if "stacking" in joined or "interaction" in joined or "remeasure" in joined:
+        return "stackability_interaction_remeasure"
+    if "entropy_pipeline" in joined or "entropy_stage" in joined:
+        return "entropy_stage_contract_miss"
+    if "exact_auth_eval" in joined:
+        return "exact_axis_handoff_missing"
+    if "local_mlx" in joined:
+        return "local_mlx_custody_missing"
+    if "component_response" in joined or "targeted_component" in joined:
+        return "component_response_missing"
+    return "generic_artifact_or_queue_blocker"
+
+
+def _entropy_pipeline(row: Mapping[str, Any]) -> Mapping[str, Any]:
+    direct = _mapping(row.get("entropy_pipeline_position"))
+    if direct:
+        return direct
+    return _mapping(_mapping(row.get("multiscale_action_row")).get("entropy_pipeline_position"))
+
+
+def _interaction_order(row: Mapping[str, Any]) -> int:
+    direct = _safe_int(row.get("interaction_order"))
+    if direct:
+        return direct
+    return _safe_int(_mapping(row.get("multiscale_action_row")).get("interaction_order"))
+
+
 def _resolve(path: str | Path, *, repo_root: str | Path) -> Path:
     value = Path(path).expanduser()
     return value if value.is_absolute() else Path(repo_root) / value
@@ -104,6 +139,12 @@ def _stable_sha256(payload: Mapping[str, Any]) -> str:
 
 def _blocked_policy(blockers: Sequence[Any], missing_artifacts: Sequence[Any]) -> str:
     joined = " ".join([*_string_list(blockers), *_string_list(missing_artifacts)])
+    if "receiver_closed_rate_credit_exhausted" in joined:
+        return "increase_receiver_closed_rate_credit_or_rebudget_earlier_entropy_stage"
+    if "stacking" in joined or "interaction" in joined or "remeasure" in joined:
+        return "prioritize_stackability_remeasurement_before_additional_budget"
+    if "entropy_pipeline" in joined or "entropy_stage" in joined:
+        return "rebuild_entropy_stage_chain_contract_before_budget_spend"
     if "targeted_component" in joined or "component_response" in joined:
         return "increase_priority_for_targeted_component_response_harvest"
     if "receiver_closed_rate_credit" in joined:
@@ -258,6 +299,7 @@ def build_repair_campaign_materialization_learning_signal_report(
     )
     entropy_stage = _mapping(manifest.get("active_entropy_stage"))
     fractal_scope = _mapping(manifest.get("fractal_optimization_scope"))
+    policy_blocker_class = _policy_blocker_class(blockers, blockers)
     identity = {
         "schema": "repair_materialization_learning_identity.v1",
         "typed_response_id": typed_response_id,
@@ -290,8 +332,22 @@ def build_repair_campaign_materialization_learning_signal_report(
         "entropy_position_label": manifest.get("entropy_position_label"),
         "entropy_stage_order": entropy_stage.get("order"),
         "entropy_stage_class": entropy_stage.get("class"),
+        "entropy_pipeline_stage_index": _safe_int(
+            entropy_stage.get("stage_index") or entropy_stage.get("order")
+        ),
+        "entropy_pipeline_information_effect_class": entropy_stage.get(
+            "information_effect"
+        ),
         "fractal_active_levels": _string_list(fractal_scope.get("active_levels")),
         "fractal_ordered_levels": _string_list(fractal_scope.get("ordered_levels")),
+        "selection_blocker_class": policy_blocker_class,
+        "receiver_credit_exhausted": policy_blocker_class == "receiver_credit_exhausted",
+        "stackability_remeasure_required": (
+            policy_blocker_class == "stackability_interaction_remeasure"
+        ),
+        "entropy_stage_contract_miss": (
+            policy_blocker_class == "entropy_stage_contract_miss"
+        ),
     }
     component_axis = target_row.get("component_response_replay_axis_tag")
     if component_response_replayed and not component_axis:
@@ -469,6 +525,7 @@ def build_repair_campaign_activation_plan_learning_signal_report(
             )
             postcondition_paths.extend(_string_list(step.get("postcondition_paths")))
         missing_artifacts = ordered_unique([*telemetry_inputs, *postcondition_paths])
+        policy_blocker_class = _policy_blocker_class(blockers, missing_artifacts)
         tags = _string_list(experiment.get("tags"))
         family_id = next(
             (
@@ -516,6 +573,16 @@ def build_repair_campaign_activation_plan_learning_signal_report(
             ),
             "activation_actions": action_labels,
             "evidence_surfaces": evidence_surfaces,
+            "selection_blocker_class": policy_blocker_class,
+            "receiver_credit_exhausted": (
+                policy_blocker_class == "receiver_credit_exhausted"
+            ),
+            "stackability_remeasure_required": (
+                policy_blocker_class == "stackability_interaction_remeasure"
+            ),
+            "entropy_stage_contract_miss": (
+                policy_blocker_class == "entropy_stage_contract_miss"
+            ),
         }
         signal = {
             "schema": REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA,
@@ -615,10 +682,10 @@ def build_repair_campaign_blocked_learning_signal_report(
         context="repair_campaign_blocked_learning_signal_report_input",
     )
     decision = _mapping(score_report.get("optimizer_decision"))
-    if decision.get("schema") != REPAIR_CAMPAIGN_OPTIMIZER_DECISION_SCHEMA:
-        raise RepairCampaignLearningSignalError(
-            "score report missing repair_campaign_optimizer_decision.v1"
-        )
+    require_interaction_aware_optimizer_decision(
+        decision,
+        context="repair_campaign_blocked_learning_signal_report",
+    )
     source_artifact = _file_record(
         "repair_campaign_score_report",
         score_report_path,
@@ -660,6 +727,8 @@ def build_repair_campaign_blocked_learning_signal_report(
                 *hard_blockers,
             ]
         )
+        entropy_pipeline = _entropy_pipeline(row)
+        policy_blocker_class = _policy_blocker_class(blockers, missing_artifacts)
         identity = {
             "schema": "repair_campaign_blocked_learning_identity.v1",
             "typed_response_id": typed_response_id,
@@ -701,6 +770,32 @@ def build_repair_campaign_blocked_learning_signal_report(
                 palette_context.get("frame0_non_identity_fraction")
             ),
             "palette_mode_count": _safe_int(palette_context.get("mode_count")),
+            "entropy_pipeline_stage_index": _safe_int(
+                row.get("entropy_pipeline_stage_index")
+                or entropy_pipeline.get("stage_index")
+            ),
+            "entropy_position_class": entropy_pipeline.get("entropy_position_class"),
+            "entropy_pipeline_information_effect_class": entropy_pipeline.get(
+                "information_effect_class"
+            ),
+            "interaction_order": _interaction_order(row),
+            "interaction_aware_selection_score": _safe_float(
+                row.get("interaction_aware_selection_score")
+            ),
+            "remeasure_required_before_budget_spend": (
+                row.get("remeasure_required_before_budget_spend") is True
+            ),
+            "selection_blocker_class": policy_blocker_class,
+            "receiver_credit_exhausted": (
+                policy_blocker_class == "receiver_credit_exhausted"
+            ),
+            "stackability_remeasure_required": (
+                policy_blocker_class == "stackability_interaction_remeasure"
+                or row.get("remeasure_required_before_budget_spend") is True
+            ),
+            "entropy_stage_contract_miss": (
+                policy_blocker_class == "entropy_stage_contract_miss"
+            ),
         }
         signal = {
             "schema": REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA,
@@ -821,6 +916,10 @@ def build_repair_campaign_learning_signal(
             payload,
             context=f"repair_campaign_learning_signal_input:{label}",
         )
+    require_interaction_aware_optimizer_decision(
+        _mapping(score_report.get("optimizer_decision")),
+        context="repair_campaign_learning_signal",
+    )
     typed_response_id = str(probe.get("typed_response_id") or "").strip()
     if not typed_response_id:
         raise RepairCampaignLearningSignalError("probe missing typed_response_id")
@@ -832,6 +931,7 @@ def build_repair_campaign_learning_signal(
     allocation = _mapping(probe.get("optimizer_allocation"))
     score_row = _mapping(probe.get("source_score_row"))
     palette_context = _mapping(probe.get("palette_dynamics_context"))
+    entropy_pipeline = _mapping(probe.get("entropy_pipeline_position")) or _entropy_pipeline(allocation)
     family_id = str(allocation.get("family_id") or score_row.get("family_id") or "")
     entropy_position = str(probe.get("entropy_position_label") or "")
     expected_improvement = _safe_float(
@@ -897,8 +997,28 @@ def build_repair_campaign_learning_signal(
                 "expected_local_improvement_score_units": expected_improvement,
                 "improvement_per_allocated_byte": improvement_per_allocated_byte,
                 "interaction_penalty": _safe_float(probe.get("interaction_penalty")),
+                "interaction_order": _safe_int(
+                    probe.get("interaction_order")
+                    or allocation.get("interaction_order")
+                    or score_row.get("interaction_order")
+                ),
+                "interaction_aware_selection_score": _safe_float(
+                    allocation.get("interaction_aware_selection_score")
+                    or score_row.get("interaction_aware_selection_score")
+                ),
+                "remeasure_required_before_budget_spend": (
+                    allocation.get("remeasure_required_before_budget_spend") is True
+                    or score_row.get("remeasure_required_before_budget_spend") is True
+                ),
                 "entropy_position_label": entropy_position,
                 "entropy_position_class": probe.get("entropy_position_class"),
+                "entropy_pipeline_stage_index": _safe_int(
+                    probe.get("entropy_pipeline_stage_index")
+                    or entropy_pipeline.get("stage_index")
+                ),
+                "entropy_pipeline_information_effect_class": entropy_pipeline.get(
+                    "information_effect_class"
+                ),
                 "targeted_dimensions": _string_list(
                     allocation.get("targeted_dimensions")
                     or score_row.get("targeted_dimensions")
