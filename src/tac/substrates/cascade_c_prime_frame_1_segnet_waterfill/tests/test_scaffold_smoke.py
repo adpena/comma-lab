@@ -14,7 +14,6 @@ from tac.substrates.cascade_c_prime_frame_1_segnet_waterfill import (
 from tac.substrates.cascade_c_prime_frame_1_segnet_waterfill.architecture import (
     FRAME_0,
     FRAME_1,
-    PerPairRoutingDecision,
     compute_per_pair_lagrangian_dual_routing,
 )
 from tac.substrates.cascade_c_prime_frame_1_segnet_waterfill.archive import (
@@ -22,6 +21,11 @@ from tac.substrates.cascade_c_prime_frame_1_segnet_waterfill.archive import (
     POSE_DIMS,
     pack_archive,
     parse_archive,
+)
+from tac.substrates.cascade_c_prime_frame_1_segnet_waterfill.inflate import (
+    CONTEST_RAW_BYTES,
+    contest_output_shape_for_archive,
+    inflate_one_video,
 )
 
 
@@ -121,6 +125,27 @@ class TestArchiveRoundtrip:
         bad = b"BOGS" + b"\x01" + b"\x00" * 100
         with pytest.raises(ValueError, match="bad magic"):
             parse_archive(bad)
+
+
+class TestInflateRuntimeContestContract:
+    def test_scaffold_inflate_writes_full_contest_raw_contract(self, tmp_path):
+        """Wave-3 regression: receiver must emit 1164x874x1200 RGB raw bytes."""
+        archive_bytes, *_ = TestArchiveRoundtrip()._build_synthetic_archive(n_pairs=8)
+
+        raw_path = inflate_one_video(archive_bytes, tmp_path / "0")
+
+        assert raw_path.name == "0.raw"
+        assert raw_path.stat().st_size == CONTEST_RAW_BYTES
+        with raw_path.open("rb") as fh:
+            assert fh.read(16) == b"\x00" * 16
+            fh.seek(CONTEST_RAW_BYTES - 16)
+            assert fh.read(16) == b"\x00" * 16
+
+    def test_contest_output_shape_is_padded_for_local_smokes(self):
+        archive_bytes, *_ = TestArchiveRoundtrip()._build_synthetic_archive(n_pairs=8)
+        parsed = parse_archive(archive_bytes)
+
+        assert contest_output_shape_for_archive(parsed) == (1200, 874, 1164, 3)
 
 
 class TestByteMutationSmoke:

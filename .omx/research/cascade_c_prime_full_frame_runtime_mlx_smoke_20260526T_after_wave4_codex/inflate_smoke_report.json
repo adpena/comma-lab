@@ -1,0 +1,15 @@
+{
+  "allocated_blocks_512b": 0,
+  "axis_tag": "[macOS-MLX research-signal]",
+  "expected_raw_bytes": 3662409600,
+  "head_16_zero": true,
+  "promotion_eligible": false,
+  "raw_bytes": 3662409600,
+  "raw_path": "/tmp/cascade_c_prime_full_frame_inflate.222Z3l/out/0.raw",
+  "raw_size_matches_contest_contract": true,
+  "ready_for_exact_eval_dispatch": false,
+  "schema_version": "cascade_c_prime_full_frame_inflate_smoke.v1",
+  "score_claim": false,
+  "sparse_zero_writer": true,
+  "tail_16_zero": true
+}
