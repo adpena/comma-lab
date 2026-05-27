@@ -84,13 +84,21 @@ def _default_results_root() -> Path:
 
 
 def _can_create_child(root: Path) -> bool:
-    probe = root / f".pact_write_probe_{os.getpid()}"
+    probe = root / f".pact_write_read_probe_{os.getpid()}"
+    payload = '{"probe":"frontier_final_rate_attack_results_root"}\n'
     try:
         root.mkdir(parents=True, exist_ok=True)
-        probe.mkdir()
-        probe.rmdir()
+        probe.write_text(payload, encoding="utf-8")
+        if probe.read_text(encoding="utf-8") != payload:
+            return False
     except OSError:
         return False
+    finally:
+        try:
+            if probe.exists():
+                probe.unlink()
+        except OSError:
+            pass
     return True
 
 
@@ -204,12 +212,24 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--local-cpu-concurrency", type=int, default=2)
     parser.add_argument(
         "--include-exact-readiness-followup",
+        dest="include_exact_readiness_followup",
         action="store_true",
         help=(
             "Append harvest/exact-readiness/dispatch-plan follow-up steps after "
-            "harvestable materializer rows."
+            "harvestable materializer rows. This is the default for the final-rate "
+            "attack entry point."
         ),
     )
+    parser.add_argument(
+        "--no-exact-readiness-followup",
+        dest="include_exact_readiness_followup",
+        action="store_false",
+        help=(
+            "Emit only the materializer execution queue, without chained harvest/"
+            "exact-readiness/dispatch-plan handoff."
+        ),
+    )
+    parser.set_defaults(include_exact_readiness_followup=True)
     parser.add_argument(
         "--exact-readiness-followup-require-ready",
         action="store_true",
@@ -218,6 +238,40 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--max-steps", type=int, default=64)
     parser.add_argument("--max-parallel", type=int, default=0)
     parser.add_argument("--execute", action="store_true")
+    parser.add_argument(
+        "--post-execute-feedback-refresh",
+        dest="post_execute_feedback_refresh",
+        action="store_true",
+        help=(
+            "After --execute observer harvest, immediately fold materializer signal "
+            "back into the canonical frontier feedback/planner artifacts."
+        ),
+    )
+    parser.add_argument(
+        "--skip-post-execute-feedback-refresh",
+        dest="post_execute_feedback_refresh",
+        action="store_false",
+        help="Do not run the post-execute frontier feedback refresh.",
+    )
+    parser.set_defaults(post_execute_feedback_refresh=True)
+    parser.add_argument(
+        "--post-execute-feedback-action-summary",
+        default="none",
+        help=(
+            "Action summary passed to the post-execute feedback refresh. Defaults "
+            "to none so final-rate signal ingestion is bounded to this queue run."
+        ),
+    )
+    parser.add_argument("--post-execute-feedback-candidate-limit", type=int, default=4)
+    parser.add_argument("--post-execute-feedback-max-files-per-root", type=int, default=64)
+    parser.add_argument(
+        "--post-execute-feedback-retention-plan",
+        action="store_true",
+        help=(
+            "Include raw/MLX retention planning in the post-execute feedback refresh. "
+            "The default keeps this ingestion pass focused on queue signal."
+        ),
+    )
     parser.add_argument("--poll-interval-seconds", type=float, default=0.05)
     parser.add_argument("--idle-sleep-seconds", type=float, default=0.0)
     parser.add_argument("--max-idle-cycles", type=int, default=1)
@@ -291,6 +345,17 @@ def _write_outputs(output_dir: Path, payloads: dict[str, Any]) -> dict[str, str]
             "--max-parallel",
             "<P>",
         ],
+        "refresh_feedback_after_execute": _post_execute_feedback_refresh_command(
+            queue_id=str(bootstrap.get("queue_id") or "frontier_final_rate_attack"),
+            output_dir=output_dir,
+            results_root=Path(str(bootstrap.get("results_root") or "experiments/results")),
+            signal_harvest_path=output_dir / "final_rate_attack_signal_harvest.json",
+            action_summary="none",
+            candidate_limit=4,
+            local_cpu_concurrency=1,
+            max_files_per_root=64,
+            include_retention_plan=False,
+        ),
     }
     write_json_artifact(paths["bootstrap"], bootstrap)
     return {key: _display_path(path) for key, path in paths.items()}
@@ -439,6 +504,49 @@ def _write_execution_observer_signal_artifacts(
             "final_rate_attack_signal_harvest": _display_path(harvest_path),
         },
     }
+
+
+def _post_execute_feedback_refresh_command(
+    *,
+    queue_id: str,
+    output_dir: Path,
+    results_root: Path,
+    signal_harvest_path: Path,
+    action_summary: str,
+    candidate_limit: int,
+    local_cpu_concurrency: int,
+    max_files_per_root: int,
+    include_retention_plan: bool,
+) -> list[str]:
+    command = [
+        ".venv/bin/python",
+        "tools/build_frontier_rate_attack_feedback_refresh.py",
+        "--queue-id",
+        f"{queue_id}_post_execute_feedback",
+        "--output-dir",
+        _display_path(output_dir / "post_execute_feedback_refresh"),
+        "--results-root",
+        _display_path(results_root),
+        "--action-summary",
+        action_summary,
+        "--materializer-feedback",
+        _display_path(signal_harvest_path),
+        "--frontier-artifact-root",
+        _display_path(signal_harvest_path),
+        "--local-cpu-eureka-root",
+        _display_path(signal_harvest_path),
+        "--candidate-limit",
+        str(candidate_limit),
+        "--local-cpu-concurrency",
+        str(local_cpu_concurrency),
+        "--local-io-concurrency",
+        "1",
+        "--max-files-per-root",
+        str(max_files_per_root),
+    ]
+    if not include_retention_plan:
+        command.extend(["--skip-raw-retention-plan", "--skip-mlx-retention-plan"])
+    return command
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -624,25 +732,69 @@ def main(argv: list[str] | None = None) -> int:
                 ],
             ]
             results = [_run_command(command) for command in commands]
+            observe_result = results[-1]
             execution_report = {
                 "schema": "frontier_final_rate_attack_execution_report.v1",
                 "queue_id": queue_id,
                 "state_path": _display_path(state_path),
                 "commands": results,
-                "failed_command_count": sum(1 for result in results if result["returncode"] != 0),
+                "failed_command_count": 0,
                 "score_claim": False,
                 "promotion_eligible": False,
                 "rank_or_kill_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
             }
-            if results[-1]["returncode"] == 0:
+            if observe_result["returncode"] == 0:
                 observer_signal = _write_execution_observer_signal_artifacts(
                     output_dir=output_dir,
-                    observe_result=results[-1],
+                    observe_result=observe_result,
                     min_free_bytes=args.min_free_bytes,
                 )
                 artifact_paths.update(observer_signal["artifacts"])
                 execution_report["observer_signal_harvest"] = observer_signal["harvest"]
+                if args.post_execute_feedback_refresh:
+                    feedback_command = _post_execute_feedback_refresh_command(
+                        queue_id=queue_id,
+                        output_dir=output_dir,
+                        results_root=Path(results_root),
+                        signal_harvest_path=(
+                            output_dir / "final_rate_attack_signal_harvest.json"
+                        ),
+                        action_summary=args.post_execute_feedback_action_summary,
+                        candidate_limit=args.post_execute_feedback_candidate_limit,
+                        local_cpu_concurrency=args.local_cpu_concurrency,
+                        max_files_per_root=args.post_execute_feedback_max_files_per_root,
+                        include_retention_plan=args.post_execute_feedback_retention_plan,
+                    )
+                    feedback_result = _run_command(feedback_command)
+                    results.append(feedback_result)
+                    execution_report["post_execute_feedback_refresh"] = {
+                        "schema": "frontier_final_rate_attack_post_execute_feedback_refresh.v1",
+                        "enabled": True,
+                        "command": feedback_command,
+                        "output_dir": _display_path(
+                            output_dir / "post_execute_feedback_refresh"
+                        ),
+                        "returncode": feedback_result["returncode"],
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                        "rank_or_kill_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    }
+                    if feedback_result["returncode"] == 0:
+                        feedback_payload = _json_payload_from_stdout(
+                            feedback_result,
+                            label="post-execute feedback refresh",
+                        )
+                        execution_report["post_execute_feedback_refresh"][
+                            "feedback_refresh_artifacts"
+                        ] = feedback_payload.get("artifacts")
+                        if isinstance(feedback_payload.get("artifacts"), dict):
+                            for key, value in feedback_payload["artifacts"].items():
+                                artifact_paths[f"post_execute_feedback_{key}"] = value
+            execution_report["failed_command_count"] = sum(
+                1 for result in results if result["returncode"] != 0
+            )
             report_path = output_dir / "execution_report.json"
             write_json_artifact(report_path, execution_report)
             artifact_paths["execution_report"] = _display_path(report_path)

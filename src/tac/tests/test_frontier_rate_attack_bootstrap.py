@@ -619,6 +619,70 @@ def test_frontier_bootstrap_cli_writes_valid_queue(tmp_path: Path) -> None:
     assert validate.returncode == 0, validate.stderr
 
 
+def test_frontier_bootstrap_cli_defaults_to_end_to_end_rate_attack_queue(
+    tmp_path: Path,
+) -> None:
+    archive_path = _write_archive(tmp_path / "archive.zip", member_name="payload.bin")
+    output_dir = tmp_path / "out"
+    result = subprocess.run(
+        [
+            sys.executable,
+            "tools/build_frontier_final_rate_attack_queue.py",
+            "--no-current-frontier",
+            "--archive",
+            f"frontier={archive_path}",
+            "--output-dir",
+            str(output_dir),
+            "--results-root",
+            str(tmp_path / "results"),
+            "--queue-id",
+            "frontier_final_rate_attack_default_e2e",
+            "--target-kind",
+            PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+            "--member-name",
+            "payload.bin",
+            "--no-optional-target-blockers",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    bootstrap = json.loads(
+        (output_dir / "frontier_rate_attack_bootstrap.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    queue = json.loads((output_dir / "experiment_queue.json").read_text(encoding="utf-8"))
+    experiment = queue["experiments"][0]
+    assert bootstrap["exact_readiness_followup_requested"] is True
+    assert experiment["metadata"]["exact_readiness_followup_requested"] is True
+    assert experiment["metadata"]["exact_readiness_followup_enabled"] is True
+    assert [step["id"] for step in experiment["steps"]] == [
+        MATERIALIZER_EXECUTION_STEP_ID,
+        MATERIALIZER_HARVEST_STEP_ID,
+        MATERIALIZER_SUBMISSION_CLOSURE_STEP_ID,
+        MATERIALIZER_EXACT_READINESS_BRIDGE_STEP_ID,
+        MATERIALIZER_DISPATCH_PLAN_STEP_ID,
+    ]
+    refresh_command = bootstrap["operator_commands"]["refresh_feedback_after_execute"]
+    assert refresh_command[1] == "tools/build_frontier_rate_attack_feedback_refresh.py"
+    assert "--materializer-feedback" in refresh_command
+    assert refresh_command[
+        refresh_command.index("--materializer-feedback") + 1
+    ].endswith("final_rate_attack_signal_harvest.json")
+    assert refresh_command[
+        refresh_command.index("--frontier-artifact-root") + 1
+    ].endswith("final_rate_attack_signal_harvest.json")
+    assert refresh_command[
+        refresh_command.index("--local-cpu-eureka-root") + 1
+    ].endswith("final_rate_attack_signal_harvest.json")
+    assert "--skip-raw-retention-plan" in refresh_command
+    assert "--skip-mlx-retention-plan" in refresh_command
+
+
 def test_frontier_bootstrap_execute_observer_signal_artifacts_are_planner_owned(
     tmp_path: Path,
 ) -> None:
@@ -712,6 +776,59 @@ def test_frontier_bootstrap_execute_observer_signal_artifacts_are_planner_owned(
     assert harvest["queue_healthy"] is True
     assert harvest["materializer_rate_positive_count"] >= 1
     assert harvest["materializer_saved_bytes_sum"] >= 7
+
+
+def test_post_execute_feedback_refresh_command_is_bounded_to_queue_signal(
+    tmp_path: Path,
+) -> None:
+    module = _load_frontier_queue_builder_tool_module()
+
+    command = module._post_execute_feedback_refresh_command(
+        queue_id="frontier_final_rate_attack_unit",
+        output_dir=tmp_path / "out",
+        results_root=tmp_path / "results",
+        signal_harvest_path=tmp_path / "out" / "final_rate_attack_signal_harvest.json",
+        action_summary="none",
+        candidate_limit=4,
+        local_cpu_concurrency=2,
+        max_files_per_root=32,
+        include_retention_plan=False,
+    )
+
+    assert command[1] == "tools/build_frontier_rate_attack_feedback_refresh.py"
+    assert command[command.index("--action-summary") + 1] == "none"
+    assert command[command.index("--candidate-limit") + 1] == "4"
+    assert command[command.index("--local-cpu-concurrency") + 1] == "2"
+    assert command[command.index("--max-files-per-root") + 1] == "32"
+    assert command[command.index("--materializer-feedback") + 1].endswith(
+        "final_rate_attack_signal_harvest.json"
+    )
+    assert command[command.index("--frontier-artifact-root") + 1].endswith(
+        "final_rate_attack_signal_harvest.json"
+    )
+    assert command[command.index("--local-cpu-eureka-root") + 1].endswith(
+        "final_rate_attack_signal_harvest.json"
+    )
+    assert "--skip-raw-retention-plan" in command
+    assert "--skip-mlx-retention-plan" in command
+
+
+def test_frontier_bootstrap_results_root_probe_requires_readable_file(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = _load_frontier_queue_builder_tool_module()
+    original_read_text = Path.read_text
+
+    def deny_probe_read(path: Path, *args: object, **kwargs: object) -> str:
+        if path.name.startswith(".pact_write_read_probe_"):
+            raise PermissionError("read denied")
+        return original_read_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", deny_probe_read)
+
+    assert module._can_create_child(tmp_path) is False
+    assert not any(tmp_path.glob(".pact_write_read_probe_*"))
 
 
 def test_frontier_bootstrap_cli_derives_merge_contract_for_receiver_targets(
