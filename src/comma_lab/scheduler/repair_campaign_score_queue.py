@@ -62,6 +62,11 @@ def _resolve(path: str | Path, repo_root: str | Path) -> Path:
     return value if value.is_absolute() else Path(repo_root) / value
 
 
+def _posterior_lock_path(posterior_path: str | Path, repo_root: str | Path) -> Path:
+    resolved = _resolve(posterior_path, repo_root)
+    return resolved.with_name(f".{resolved.name}.lock")
+
+
 def _command_arg(command: Sequence[Any], flag: str) -> str:
     values = [str(item) for item in command]
     try:
@@ -194,6 +199,12 @@ def _score_experiment(
         if posterior_path is not None
         else None
     )
+    posterior_lock_ref = None
+    if posterior_path is not None:
+        posterior_lock_ref = _repo_rel(
+            _posterior_lock_path(posterior_path, repo_root),
+            repo_root,
+        )
     blockers = []
     if not work_order_ref:
         blockers.append("repair_budget_waterfill_work_order_path_missing")
@@ -238,6 +249,7 @@ def _score_experiment(
             blocked_posterior_append_report_ref
         ),
         "repair_campaign_stackability_posterior_path": posterior_ref,
+        "repair_campaign_stackability_posterior_lock_path": posterior_lock_ref,
         "campaign_scorer_default": True,
         "campaign_scorer_uses_posterior_priors": posterior_ref is not None,
         "stackability_followup_default": True,
@@ -426,6 +438,16 @@ def _score_experiment(
                     "tools/append_repair_campaign_blocked_posterior.py",
                     "--blocked-learning-signal-report",
                     blocked_learning_signal_report_ref,
+                    *(
+                        ["--posterior-path", posterior_ref]
+                        if posterior_ref is not None
+                        else []
+                    ),
+                    *(
+                        ["--lock-path", posterior_lock_ref]
+                        if posterior_lock_ref is not None
+                        else []
+                    ),
                     "--report-out",
                     blocked_posterior_append_report_ref,
                     "--overwrite",
@@ -719,6 +741,11 @@ def build_repair_campaign_score_queue(
         "campaign_scorer_uses_posterior_priors": posterior_path is not None,
         "repair_campaign_stackability_posterior_path": (
             _repo_rel(_resolve(posterior_path, repo_root), repo_root)
+            if posterior_path is not None
+            else None
+        ),
+        "repair_campaign_stackability_posterior_lock_path": (
+            _repo_rel(_posterior_lock_path(posterior_path, repo_root), repo_root)
             if posterior_path is not None
             else None
         ),

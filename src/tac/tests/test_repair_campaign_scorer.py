@@ -14,6 +14,7 @@ from tac.optimization.repair_campaign_scorer import (
     REPAIR_CAMPAIGN_MULTISCALE_ACTION_LEDGER_SCHEMA,
     REPAIR_CAMPAIGN_MULTISCALE_ACTION_ROW_SCHEMA,
     REPAIR_CAMPAIGN_OPTIMIZER_DECISION_SCHEMA,
+    REPAIR_CAMPAIGN_POSTERIOR_ACQUISITION_FOLLOWUP_SCHEMA,
     REPAIR_CAMPAIGN_POSTERIOR_PRIOR_SUMMARY_SCHEMA,
     REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA,
     REPAIR_CAMPAIGN_SCORE_ROW_SCHEMA,
@@ -545,6 +546,29 @@ def test_score_repair_campaign_folds_stackability_posterior_into_priors(
                         **_false_authority(),
                     }
                 ),
+                json.dumps(
+                    {
+                        "schema": "repair_campaign_stackability_posterior_row.v1",
+                        "typed_response_id": (
+                            "activation_plan:repair_queue:repair_waterfill_chain"
+                        ),
+                        "candidate_id": "repair_waterfill_chain",
+                        "family_id": "segnet-posenet-waterfill",
+                        "evidence_grade": "blocked_queue_activation_plan_only",
+                        "acquisition_policy_delta": {
+                            "recommended_acquisition_policy": (
+                                "increase_priority_for_targeted_component_response_harvest"
+                            ),
+                            "family_priority_direction": "hold",
+                            **_false_authority(),
+                        },
+                        "planner_feature_vector": {
+                            "missing_artifact_count": 3,
+                            "blocker_count": 5,
+                        },
+                        **_false_authority(),
+                    }
+                ),
             ]
         )
         + "\n",
@@ -560,8 +584,27 @@ def test_score_repair_campaign_folds_stackability_posterior_into_priors(
 
     summary = with_posterior["posterior_prior_summary"]
     assert summary["schema"] == REPAIR_CAMPAIGN_POSTERIOR_PRIOR_SUMMARY_SCHEMA
-    assert summary["posterior_row_count"] == 2
-    assert summary["family_prior_count"] == 2
+    assert summary["posterior_row_count"] == 3
+    assert summary["family_prior_count"] == 3
+    assert summary["acquisition_followup_route_count"] == 3
+    followup = summary["acquisition_followup_routes"][0]
+    assert followup["schema"] == REPAIR_CAMPAIGN_POSTERIOR_ACQUISITION_FOLLOWUP_SCHEMA
+    assert followup["recommended_acquisition_policy"] == (
+        "increase_priority_for_targeted_component_response_harvest"
+    )
+    assert followup["activation_action"] == "harvest_targeted_component_response_rows"
+    assert followup["queue_artifact_key"] == (
+        "targeted_component_correction_response_harvest"
+    )
+    assert followup["required_evidence_surface"] == (
+        "targeted_component_correction_response_harvest"
+    )
+    assert followup["family_ids"] == ["segnet-posenet-waterfill"]
+    assert followup["typed_response_ids"] == [
+        "activation_plan:repair_queue:repair_waterfill_chain"
+    ]
+    assert followup["missing_artifact_total"] == 3
+    assert followup["blocker_total"] == 5
     row = with_posterior["rows"][0]
     assert row["typed_response_id"] == "segnet_region_ready"
     assert row["posterior_prior_multiplier"] > 1.0
@@ -573,7 +616,7 @@ def test_score_repair_campaign_folds_stackability_posterior_into_priors(
     ]
     assert with_posterior["optimizer_decision"]["posterior_prior_summary"][
         "posterior_row_count"
-    ] == 2
+    ] == 3
 
 
 def test_repair_campaign_stackability_probe_requires_mlx_custody(

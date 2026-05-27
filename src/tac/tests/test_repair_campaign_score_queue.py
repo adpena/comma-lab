@@ -343,6 +343,7 @@ def test_repair_campaign_score_queue_cli_writes_and_score_step_runs(
     work_order_path = tmp_path / "waterfill_work_order.json"
     waterfill_queue_path = tmp_path / "repair_budget_waterfill_queue.json"
     score_queue_path = tmp_path / "repair_campaign_score_queue.json"
+    posterior_path = tmp_path / "repair_campaign_stackability_posterior.jsonl"
     work_order_path.write_text(
         json.dumps(_work_order(tmp_path), indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
@@ -364,6 +365,8 @@ def test_repair_campaign_score_queue_cli_writes_and_score_step_runs(
             str(tmp_path / "results"),
             "--queue-id",
             "unit_repair_campaign_score_queue",
+            "--posterior",
+            str(posterior_path),
             "--overwrite",
         ],
         cwd=REPO_ROOT,
@@ -377,6 +380,12 @@ def test_repair_campaign_score_queue_cli_writes_and_score_step_runs(
     assert cli_result["ready_for_exact_eval_dispatch"] is False
     assert cli_result["ready_experiment_count"] == 1
     queue = json.loads(score_queue_path.read_text(encoding="utf-8"))
+    assert queue["metadata"]["repair_campaign_stackability_posterior_path"] == str(
+        posterior_path
+    )
+    assert queue["metadata"]["repair_campaign_stackability_posterior_lock_path"] == str(
+        posterior_path.with_name(f".{posterior_path.name}.lock")
+    )
     prerequisite_command = queue["experiments"][0]["steps"][0]["command"]
     prerequisite = subprocess.run(
         [sys.executable, *prerequisite_command[1:]],
@@ -443,6 +452,12 @@ def test_repair_campaign_score_queue_cli_writes_and_score_step_runs(
         for step in queue["experiments"][0]["steps"]
         if step["id"] == "append_blocked_repair_campaign_learning_posterior"
     )
+    assert "--posterior-path" in blocked_append_command
+    assert str(posterior_path) in blocked_append_command
+    assert "--lock-path" in blocked_append_command
+    assert str(posterior_path.with_name(f".{posterior_path.name}.lock")) in (
+        blocked_append_command
+    )
     blocked_append_result = subprocess.run(
         [sys.executable, *blocked_append_command[1:]],
         cwd=REPO_ROOT,
@@ -463,6 +478,8 @@ def test_repair_campaign_score_queue_cli_writes_and_score_step_runs(
         REPAIR_CAMPAIGN_BLOCKED_POSTERIOR_APPEND_REPORT_SCHEMA
     )
     assert blocked_append_report["signal_count"] == 1
+    assert blocked_append_report["posterior_path"] == str(posterior_path)
+    assert posterior_path.is_file()
     stackability_command = next(
         step["command"]
         for step in queue["experiments"][0]["steps"]

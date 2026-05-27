@@ -35,6 +35,9 @@ REPAIR_CAMPAIGN_POSTERIOR_PRIOR_SUMMARY_SCHEMA = (
 REPAIR_CAMPAIGN_POSTERIOR_FAMILY_PRIOR_SCHEMA = (
     "repair_campaign_posterior_family_prior.v1"
 )
+REPAIR_CAMPAIGN_POSTERIOR_ACQUISITION_FOLLOWUP_SCHEMA = (
+    "repair_campaign_posterior_acquisition_followup.v1"
+)
 REPAIR_CAMPAIGN_MULTISCALE_ACTION_LEDGER_SCHEMA = (
     "repair_campaign_multiscale_action_ledger.v1"
 )
@@ -810,11 +813,23 @@ def _posterior_prior_summary(
     posterior_rows: Sequence[Mapping[str, Any]],
 ) -> dict[str, Any]:
     grouped: dict[str, list[Mapping[str, Any]]] = {}
+    acquisition_rows_by_policy: dict[str, list[Mapping[str, Any]]] = {}
     for row in posterior_rows:
         if not isinstance(row, Mapping):
             continue
         family_id = str(row.get("family_id") or "unclassified_repair_family")
         grouped.setdefault(family_id, []).append(row)
+        policy = str(
+            _mapping(row.get("acquisition_policy_delta")).get(
+                "recommended_acquisition_policy"
+            )
+            or _mapping(row.get("local_planning_update")).get(
+                "recommended_acquisition_policy"
+            )
+            or ""
+        )
+        if policy:
+            acquisition_rows_by_policy.setdefault(policy, []).append(row)
 
     family_rows: list[dict[str, Any]] = []
     for family_id, rows in sorted(grouped.items()):
@@ -914,12 +929,24 @@ def _posterior_prior_summary(
             }
         )
 
+    acquisition_followups = [
+        _posterior_acquisition_followup(policy, rows)
+        for policy, rows in sorted(acquisition_rows_by_policy.items())
+    ]
+    acquisition_followups.sort(
+        key=lambda row: (
+            -int(row.get("priority_score") or 0),
+            str(row.get("recommended_acquisition_policy") or ""),
+        )
+    )
     summary = {
         "schema": REPAIR_CAMPAIGN_POSTERIOR_PRIOR_SUMMARY_SCHEMA,
         "posterior_path": str(posterior_path) if posterior_path is not None else None,
         "posterior_row_count": len(posterior_rows),
         "family_prior_count": len(family_rows),
         "family_priors": family_rows,
+        "acquisition_followup_route_count": len(acquisition_followups),
+        "acquisition_followup_routes": acquisition_followups,
         "budget_spend_allowed": False,
         "ready_for_exact_eval_dispatch": False,
         "allowed_use": "repair_campaign_posterior_prior_for_local_scoring_only",
@@ -931,6 +958,107 @@ def _posterior_prior_summary(
         context="repair_campaign_posterior_prior_summary",
     )
     return summary
+
+
+def _posterior_acquisition_route(policy: str) -> dict[str, Any]:
+    if policy == "increase_priority_for_targeted_component_response_harvest":
+        return {
+            "priority_score": 100,
+            "activation_action": "harvest_targeted_component_response_rows",
+            "queue_artifact_key": "targeted_component_correction_response_harvest",
+            "required_evidence_surface": "targeted_component_correction_response_harvest",
+        }
+    if policy == "hold_until_receiver_closed_rate_credit_available":
+        return {
+            "priority_score": 90,
+            "activation_action": "materialize_receiver_closed_rate_budget_credit",
+            "queue_artifact_key": "receiver_closed_correction_budget",
+            "required_evidence_surface": "receiver_closed_correction_budget",
+        }
+    if policy == "hold_until_byte_closed_exact_auth_handoff_available":
+        return {
+            "priority_score": 80,
+            "activation_action": "route_byte_closed_candidate_to_exact_auth_eval_handoff",
+            "queue_artifact_key": "exact_auth_eval_handoff",
+            "required_evidence_surface": "contest_cpu_or_cuda_auth_axis_payload",
+        }
+    if policy == "materialize_missing_local_mlx_custody_before_stackability":
+        return {
+            "priority_score": 70,
+            "activation_action": "materialize_missing_local_mlx_custody",
+            "queue_artifact_key": "repair_cascade_mlx_probe_queue",
+            "required_evidence_surface": "local_mlx_research_signal",
+        }
+    if policy == "materialize_missing_repair_campaign_artifacts":
+        return {
+            "priority_score": 60,
+            "activation_action": "materialize_missing_repair_campaign_artifacts",
+            "queue_artifact_key": "repair_budget_waterfill_queue",
+            "required_evidence_surface": "repair_budget_waterfill_work_order",
+        }
+    if policy == "increase_priority_for_exact_axis_component_response_replay":
+        return {
+            "priority_score": 55,
+            "activation_action": "route_component_response_to_exact_axis_replay",
+            "queue_artifact_key": "targeted_component_correction_response_harvest",
+            "required_evidence_surface": "exact_axis_component_response_artifact",
+        }
+    return {
+        "priority_score": 40,
+        "activation_action": "inspect_repair_posterior_policy",
+        "queue_artifact_key": "repair_campaign_score_queue",
+        "required_evidence_surface": "repair_campaign_stackability_posterior",
+    }
+
+
+def _posterior_acquisition_followup(
+    policy: str,
+    rows: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    route = _posterior_acquisition_route(policy)
+    family_ids = ordered_unique(
+        str(row.get("family_id") or "unclassified_repair_family") for row in rows
+    )
+    typed_response_ids = ordered_unique(
+        str(row.get("typed_response_id") or "")
+        for row in rows
+        if row.get("typed_response_id")
+    )
+    missing_artifact_total = 0
+    blocker_total = 0
+    for row in rows:
+        feature_vector = _mapping(row.get("planner_feature_vector"))
+        if not feature_vector:
+            feature_vector = _mapping(
+                _mapping(row.get("local_planning_update")).get(
+                    "planner_feature_vector"
+                )
+            )
+        missing_artifact_total += _safe_int(feature_vector.get("missing_artifact_count"))
+        blocker_total += _safe_int(feature_vector.get("blocker_count"))
+    followup = {
+        "schema": REPAIR_CAMPAIGN_POSTERIOR_ACQUISITION_FOLLOWUP_SCHEMA,
+        "recommended_acquisition_policy": policy,
+        "observation_count": len(rows),
+        "family_ids": family_ids,
+        "typed_response_ids": typed_response_ids,
+        "priority_score": route["priority_score"],
+        "activation_action": route["activation_action"],
+        "queue_artifact_key": route["queue_artifact_key"],
+        "required_evidence_surface": route["required_evidence_surface"],
+        "missing_artifact_total": missing_artifact_total,
+        "blocker_total": blocker_total,
+        "budget_spend_allowed": False,
+        "ready_for_exact_eval_dispatch": False,
+        "allowed_use": "repair_campaign_posterior_acquisition_followup_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        followup,
+        context=f"repair_campaign_posterior_acquisition_followup:{policy}",
+    )
+    return followup
 
 
 def _posterior_family_prior(
@@ -1844,6 +1972,7 @@ __all__ = [
     "REPAIR_CAMPAIGN_MULTISCALE_ACTION_ROW_SCHEMA",
     "REPAIR_CAMPAIGN_OPTIMIZER_ALLOCATION_ROW_SCHEMA",
     "REPAIR_CAMPAIGN_OPTIMIZER_DECISION_SCHEMA",
+    "REPAIR_CAMPAIGN_POSTERIOR_ACQUISITION_FOLLOWUP_SCHEMA",
     "REPAIR_CAMPAIGN_POSTERIOR_FAMILY_PRIOR_SCHEMA",
     "REPAIR_CAMPAIGN_POSTERIOR_PRIOR_SUMMARY_SCHEMA",
     "REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA",
