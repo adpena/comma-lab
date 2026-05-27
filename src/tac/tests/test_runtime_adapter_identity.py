@@ -120,3 +120,55 @@ def test_runtime_adapter_identity_blocks_nested_expected_runtime_tree_mismatch(
     )
 
     assert "unit_expected_runtime_tree_sha256_mismatch" in blockers
+
+
+def test_runtime_adapter_identity_blocks_nested_runtime_tree_conflict(
+    tmp_path: Path,
+) -> None:
+    runtime = _runtime_dir(tmp_path / "runtime")
+    actual_tree_sha = tree_sha256(runtime)
+    stale_tree_sha = "d" * 64
+
+    blockers = runtime_adapter_identity_blockers(
+        {
+            "runtime_adapter_ready": True,
+            "runtime_dir": runtime.as_posix(),
+            "runtime_tree_sha256": actual_tree_sha,
+            "expected_runtime_tree_sha256": actual_tree_sha,
+            "receiver_verification": {
+                "runtime_adapter_ready": True,
+                "runtime_tree_sha256": stale_tree_sha,
+                "expected_runtime_tree_sha256": actual_tree_sha,
+            },
+        },
+        repo_root=tmp_path,
+        context="unit",
+    )
+
+    assert "unit_runtime_tree_sha256_conflict" in blockers
+
+
+def test_runtime_adapter_identity_blocks_nested_expected_runtime_tree_conflict(
+    tmp_path: Path,
+) -> None:
+    runtime = _runtime_dir(tmp_path / "runtime")
+    actual_tree_sha = tree_sha256(runtime)
+    stale_tree_sha = "e" * 64
+
+    blockers = runtime_adapter_identity_blockers(
+        {
+            "runtime_adapter_ready": True,
+            "runtime_dir": runtime.as_posix(),
+            "runtime_tree_sha256": actual_tree_sha,
+            "expected_runtime_tree_sha256": actual_tree_sha,
+            "receiver_verification": {
+                "runtime_adapter_ready": True,
+                "runtime_tree_sha256": actual_tree_sha,
+                "expected_runtime_tree_sha256": stale_tree_sha,
+            },
+        },
+        repo_root=tmp_path,
+        context="unit",
+    )
+
+    assert "unit_expected_runtime_tree_sha256_conflict" in blockers

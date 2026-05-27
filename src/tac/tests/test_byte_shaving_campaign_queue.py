@@ -3829,6 +3829,7 @@ def test_materializer_chain_completion_contract_rejects_schema_only_and_failure(
                 "candidate_runtime_adapter_blocker_cleared": True,
                 "candidate_runtime_dir": runtime_dir.as_posix(),
                 "candidate_runtime_tree_sha256": runtime_tree_sha,
+                "expected_runtime_tree_sha256": runtime_tree_sha,
                 "readiness_blockers": [],
                 "artifacts": {
                     "candidate_manifest": candidate_manifest,
@@ -3856,6 +3857,17 @@ def test_materializer_chain_completion_contract_rejects_schema_only_and_failure(
     )
     assert _condition_passes(postconditions[1], repo_root=tmp_path) is True
     assert _condition_passes(postconditions[2], repo_root=tmp_path) is True
+
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    payload["receiver_verification"] = {
+        "runtime_adapter_ready": True,
+        "runtime_tree_sha256": "d" * 64,
+        "expected_runtime_tree_sha256": runtime_tree_sha,
+    }
+    manifest.write_text(json.dumps(payload), encoding="utf-8")
+
+    assert _condition_passes(postconditions[1], repo_root=tmp_path) is True
+    assert _condition_passes(postconditions[2], repo_root=tmp_path) is False
 
 
 def test_inverse_surface_cells_compile_to_action_functional_work_queue(

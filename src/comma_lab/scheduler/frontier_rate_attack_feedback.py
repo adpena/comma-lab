@@ -10635,6 +10635,9 @@ def build_frontier_repair_budget_waterfill_queue(
             / _slug_token(chain_id)
             / "repair_budget_child_component_replay_manifests.json"
         )
+        repair_cascade_mlx_probe_queue_path = (
+            queue_root / _slug_token(chain_id) / "repair_cascade_mlx_probe_queue.json"
+        )
         execution_report_path = (
             queue_root
             / _slug_token(chain_id)
@@ -10648,6 +10651,10 @@ def build_frontier_repair_budget_waterfill_queue(
         )
         child_component_replay_manifests_ref = _repo_rel(
             child_component_replay_manifests_path,
+            repo,
+        )
+        repair_cascade_mlx_probe_queue_ref = _repo_rel(
+            repair_cascade_mlx_probe_queue_path,
             repo,
         )
         execution_report_ref = _repo_rel(execution_report_path, repo)
@@ -10688,6 +10695,9 @@ def build_frontier_repair_budget_waterfill_queue(
             "candidate_chain_materializer_binding_report_path": (
                 materializer_binding_report_ref
             ),
+            "repair_cascade_mlx_probe_queue_path": repair_cascade_mlx_probe_queue_ref,
+            "repair_cascade_mlx_probe_queue_required": True,
+            "repair_cascade_mlx_probe_queue_axis": "[macOS-MLX research-signal]",
             "candidate_chain_execution_report_path": execution_report_ref,
             "candidate_archive_materialized": False,
             "materializer_work_queue_schema": (
@@ -11024,6 +11034,83 @@ def build_frontier_repair_budget_waterfill_queue(
                                 materializer_binding_report_ref,
                             ],
                             "include_postcondition_paths": True,
+                        },
+                    },
+                    {
+                        "id": "emit_repair_cascade_mlx_probe_queue",
+                        "kind": "command",
+                        "command": [
+                            ".venv/bin/python",
+                            "tools/build_repair_cascade_mlx_probe_queue.py",
+                            "--source-payload",
+                            work_order_ref,
+                            "--probe-queue-out",
+                            repair_cascade_mlx_probe_queue_ref,
+                            "--results-root",
+                            _repo_rel(results_base, repo),
+                            "--queue-id",
+                            (
+                                f"{queue_id}_{_slug_token(chain_id)}_"
+                                "repair_cascade_mlx_probe"
+                            ),
+                            "--overwrite",
+                        ],
+                        "requires": ["emit_repair_budget_waterfill_work_order"],
+                        "resources": {"kind": "local_cpu"},
+                        "timeout_seconds": 120,
+                        "postconditions": [
+                            {
+                                "type": "json_equals",
+                                "path": repair_cascade_mlx_probe_queue_ref,
+                                "key": "schema",
+                                "equals": QUEUE_SCHEMA,
+                            }
+                        ],
+                        "telemetry": {
+                            "artifact_paths": [repair_cascade_mlx_probe_queue_ref],
+                            "input_artifact_paths": [work_order_ref],
+                            "include_postcondition_paths": True,
+                        },
+                    },
+                    {
+                        "id": "validate_repair_cascade_mlx_probe_queue",
+                        "kind": "command",
+                        "command": [
+                            ".venv/bin/python",
+                            "tools/experiment_queue.py",
+                            "--queue",
+                            repair_cascade_mlx_probe_queue_ref,
+                            "validate",
+                        ],
+                        "requires": ["emit_repair_cascade_mlx_probe_queue"],
+                        "resources": {"kind": "local_cpu"},
+                        "timeout_seconds": 120,
+                        "telemetry": {
+                            "input_artifact_paths": [repair_cascade_mlx_probe_queue_ref],
+                        },
+                    },
+                    {
+                        "id": "run_repair_cascade_mlx_probe_queue_bounded_local",
+                        "kind": "command",
+                        "command": [
+                            ".venv/bin/python",
+                            "tools/experiment_queue.py",
+                            "--queue",
+                            repair_cascade_mlx_probe_queue_ref,
+                            "run-worker",
+                            "--execute",
+                            "--max-steps",
+                            "4",
+                            "--max-experiments",
+                            "1",
+                            "--max-parallel",
+                            "1",
+                        ],
+                        "requires": ["validate_repair_cascade_mlx_probe_queue"],
+                        "resources": {"kind": "local_cpu"},
+                        "timeout_seconds": 300,
+                        "telemetry": {
+                            "input_artifact_paths": [repair_cascade_mlx_probe_queue_ref],
                         },
                     },
                 ],

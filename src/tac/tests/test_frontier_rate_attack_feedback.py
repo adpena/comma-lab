@@ -4183,6 +4183,12 @@ def test_targeted_component_correction_materialization_requests_group_responses(
     assert repair_waterfill_experiment["metadata"]["repair_dynamics_palette_prior"][
         "palette_modes"
     ] == list(FEC6_FIXED_K16_MODE_IDS)
+    assert repair_waterfill_experiment["metadata"][
+        "repair_cascade_mlx_probe_queue_path"
+    ].endswith("repair_cascade_mlx_probe_queue.json")
+    assert repair_waterfill_experiment["metadata"][
+        "repair_cascade_mlx_probe_queue_axis"
+    ] == "[macOS-MLX research-signal]"
     _assert_false_authority(repair_waterfill_experiment["metadata"])
     repair_step = repair_waterfill_experiment["steps"][0]
     assert repair_step["command"][1] == (
@@ -4209,6 +4215,52 @@ def test_targeted_component_correction_materialization_requests_group_responses(
         REPAIR_BUDGET_TYPED_RESPONSE_LEDGER_SCHEMA
     )
     _assert_false_authority(repair_materialized)
+    cascade_queue_step = next(
+        step
+        for step in repair_waterfill_experiment["steps"]
+        if step["id"] == "emit_repair_cascade_mlx_probe_queue"
+    )
+    assert cascade_queue_step["requires"] == [
+        "emit_repair_budget_waterfill_work_order"
+    ]
+    assert cascade_queue_step["command"][1] == (
+        "tools/build_repair_cascade_mlx_probe_queue.py"
+    )
+    assert cascade_queue_step["command"][
+        cascade_queue_step["command"].index("--source-payload") + 1
+    ] == repair_work_order_path.as_posix()
+    result = subprocess.run(
+        [sys.executable, *cascade_queue_step["command"][1:]],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    cascade_queue_path = Path(
+        cascade_queue_step["command"][
+            cascade_queue_step["command"].index("--probe-queue-out") + 1
+        ]
+    )
+    cascade_queue = json.loads(
+        (REPO_ROOT / cascade_queue_path).read_text(encoding="utf-8")
+    )
+    assert cascade_queue["schema"] == "experiment_queue.v1"
+    assert cascade_queue["metadata"]["component_response_axis"] == (
+        "[macOS-MLX research-signal]"
+    )
+    assert cascade_queue["metadata"]["structural_repair_cascade_count"] == 1
+    validate_cascade_step = next(
+        step
+        for step in repair_waterfill_experiment["steps"]
+        if step["id"] == "validate_repair_cascade_mlx_probe_queue"
+    )
+    assert validate_cascade_step["command"][:4] == [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        cascade_queue_path.as_posix(),
+    ]
     materialization_step = repair_waterfill_experiment["steps"][1]
     assert materialization_step["command"][1] == (
         "tools/build_frontier_repair_budget_materialization_plan.py"

@@ -65,12 +65,8 @@ def runtime_adapter_identity_claimed(payload: Mapping[str, Any]) -> bool:
 def runtime_adapter_tree_sha256_from_mapping(mapping: Mapping[str, Any]) -> str | None:
     """Return the first explicit runtime-tree SHA-256 in ``mapping``."""
 
-    for candidate in _iter_runtime_identity_mappings(mapping):
-        for key in RUNTIME_TREE_SHA_FIELDS:
-            value = _sha256_or_none(candidate.get(key))
-            if value is not None:
-                return value
-    return None
+    values = _runtime_adapter_tree_sha256_values_from_mapping(mapping)
+    return values[0] if values else None
 
 
 def runtime_adapter_identity_blockers(
@@ -99,8 +95,14 @@ def runtime_adapter_identity_blockers(
     blockers: list[str] = []
     runtime_dirs = _runtime_dir_paths(payload, repo_root=repo)
     if runtime_dirs:
-        observed_tree_sha = runtime_adapter_tree_sha256_from_mapping(payload)
-        expected_tree_sha = _runtime_adapter_expected_tree_sha256_from_mapping(payload)
+        observed_tree_shas = _runtime_adapter_tree_sha256_values_from_mapping(payload)
+        expected_tree_shas = _runtime_adapter_expected_tree_sha256_values_from_mapping(payload)
+        observed_tree_sha = observed_tree_shas[0] if observed_tree_shas else None
+        expected_tree_sha = expected_tree_shas[0] if expected_tree_shas else None
+        if len(observed_tree_shas) > 1:
+            blockers.append(f"{context}_runtime_tree_sha256_conflict")
+        if len(expected_tree_shas) > 1:
+            blockers.append(f"{context}_expected_runtime_tree_sha256_conflict")
         if expected_tree_sha is None:
             blockers.append(f"{context}_expected_runtime_tree_sha256_missing")
         if observed_tree_sha is None and expected_tree_sha is None:
@@ -145,17 +147,36 @@ def runtime_adapter_identity_blockers(
     return blockers
 
 
-def _runtime_adapter_expected_tree_sha256_from_mapping(
+def _runtime_adapter_tree_sha256_values_from_mapping(
     mapping: Mapping[str, Any],
-) -> str | None:
-    """Return the first explicit expected runtime-tree SHA-256 in ``mapping``."""
+) -> list[str]:
+    """Return ordered unique observed runtime-tree SHA-256 values."""
 
+    return _sha256_values_from_identity_mappings(mapping, RUNTIME_TREE_SHA_FIELDS)
+
+
+def _runtime_adapter_expected_tree_sha256_values_from_mapping(
+    mapping: Mapping[str, Any],
+) -> list[str]:
+    """Return ordered unique expected runtime-tree SHA-256 values."""
+
+    return _sha256_values_from_identity_mappings(mapping, RUNTIME_EXPECTED_TREE_SHA_FIELDS)
+
+
+def _sha256_values_from_identity_mappings(
+    mapping: Mapping[str, Any],
+    fields: Iterable[str],
+) -> list[str]:
+    values: list[str] = []
+    seen: set[str] = set()
     for candidate in _iter_runtime_identity_mappings(mapping):
-        for key in RUNTIME_EXPECTED_TREE_SHA_FIELDS:
+        for key in fields:
             value = _sha256_or_none(candidate.get(key))
-            if value is not None:
-                return value
-    return None
+            if value is None or value in seen:
+                continue
+            seen.add(value)
+            values.append(value)
+    return values
 
 
 def _expected_runtime_tree_identity_blockers(
