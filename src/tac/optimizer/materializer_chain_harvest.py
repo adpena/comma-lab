@@ -80,6 +80,80 @@ class MaterializerChainHarvestError(ValueError):
     """Raised when a materializer chain cannot be harvested safely."""
 
 
+def revalidate_runtime_consumption_proof_for_candidate(
+    candidate: Mapping[str, Any],
+    *,
+    repo_root: str | Path,
+) -> dict[str, Any]:
+    """Re-open a harvested row's runtime proof and bind it to live runtime identity.
+
+    Work-queue rows may provide receiver proof paths after a manifest has already
+    been adapted into optimizer-row shape. This helper makes that late-bound
+    path executable evidence instead of a carried ``proof_present`` flag.
+    """
+
+    repo = Path(repo_root)
+    proof_path = _candidate_runtime_proof_path(candidate)
+    candidate_archive_sha256 = _string_or_none(
+        candidate.get("candidate_archive_sha256") or candidate.get("archive_sha256")
+    )
+    blockers: list[str] = []
+    runtime_proof: Mapping[str, Any] = {}
+    if candidate_archive_sha256 is None:
+        blockers.append("runtime_consumption_proof_candidate_archive_sha_missing")
+    if candidate_archive_sha256 is not None:
+        runtime_proof, blockers = _load_runtime_proof_with_blockers(
+            proof_path,
+            repo_root=repo,
+            candidate_archive_sha256=candidate_archive_sha256,
+            required_target_kind=candidate.get("target_kind"),
+            required_materializer_id=candidate.get("materializer_id"),
+            required_receiver_contract_kind=candidate.get("receiver_contract_kind"),
+        )
+    proof_present = bool(runtime_proof)
+    if proof_present and not blockers:
+        identity_payload = dict(candidate)
+        identity_payload["runtime_adapter_ready"] = True
+        identity_payload["candidate_runtime_adapter_blocker_cleared"] = True
+        blockers.extend(
+            f"runtime_consumption_proof:{blocker}"
+            for blocker in runtime_adapter_identity_blockers(
+                identity_payload,
+                repo_root=repo,
+                context="harvested_candidate_runtime",
+                require_claimed=True,
+            )
+        )
+    blockers = ordered_unique(blockers)
+    proof_clean = proof_present and not blockers
+    resolved_proof_path = _resolve_path(proof_path, repo_root=repo) if proof_path else None
+    status = (
+        "revalidated"
+        if proof_clean
+        else "blocked"
+        if proof_present
+        else "missing"
+    )
+    return {
+        "schema": "materializer_runtime_consumption_proof_revalidation.v1",
+        "runtime_consumption_proof_status": status,
+        "runtime_consumption_proof_path": proof_path,
+        "runtime_consumption_proof_schema": runtime_proof.get("schema")
+        if proof_present
+        else None,
+        "runtime_consumption_proof_sha256": _sha256_file(resolved_proof_path)
+        if resolved_proof_path is not None
+        and resolved_proof_path.is_file()
+        and not resolved_proof_path.is_symlink()
+        else None,
+        "candidate_archive_sha256": candidate_archive_sha256,
+        "receiver_contract_satisfied": proof_clean,
+        "runtime_adapter_ready": proof_clean,
+        "proof_present": proof_present,
+        "blockers": blockers,
+    }
+
+
 def adapt_materializer_chain_manifest_to_candidate(
     chain: Mapping[str, Any],
     *,
@@ -931,6 +1005,16 @@ def _chain_runtime_proof_path(chain: Mapping[str, Any]) -> str | None:
     return _nonempty_string(receiver_map.get("proof_path"))
 
 
+def _candidate_runtime_proof_path(candidate: Mapping[str, Any]) -> str | None:
+    for key in ("runtime_consumption_proof_path", "runtime_consumption_proof_out"):
+        proof_path = _nonempty_string(candidate.get(key))
+        if proof_path is not None:
+            return proof_path
+    receiver_verification = candidate.get("receiver_verification")
+    receiver_map = receiver_verification if isinstance(receiver_verification, Mapping) else {}
+    return _nonempty_string(receiver_map.get("proof_path"))
+
+
 def _chain_runtime_context_fields(
     chain: Mapping[str, Any],
     *,
@@ -1394,4 +1478,5 @@ __all__ = [
     "adapt_family_agnostic_materializer_manifest_to_candidate",
     "adapt_materializer_chain_manifest_to_candidate",
     "adapt_materializer_manifest_to_candidate",
+    "revalidate_runtime_consumption_proof_for_candidate",
 ]

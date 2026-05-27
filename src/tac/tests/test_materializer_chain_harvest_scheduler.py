@@ -354,6 +354,38 @@ def _write_runtime_bound_pr101_proof(
     )
 
 
+def _write_generic_runtime_consumption_proof(
+    path: Path,
+    *,
+    archive_sha: str,
+    target_kind: str | None = None,
+    materializer_id: str | None = None,
+    receiver_contract_kind: str | None = None,
+) -> Path:
+    payload: dict[str, object] = {
+        "schema": RUNTIME_CONSUMPTION_PROOF_SCHEMA,
+        "proof_kind": "fixture_generic_runtime_consumption_proof",
+        "candidate_archive_sha256": archive_sha,
+        "receiver_contract_satisfied": True,
+        "runtime_consumption_proof_passed": True,
+        "passed": True,
+        "runtime_consumption_probe": {
+            "schema": "fixture_runtime_consumption_probe.v1",
+            "passed": True,
+        },
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+    }
+    if target_kind is not None:
+        payload["target_kind"] = target_kind
+    if materializer_id is not None:
+        payload["materializer_id"] = materializer_id
+    if receiver_contract_kind is not None:
+        payload["receiver_contract_kind"] = receiver_contract_kind
+    return _write_json(path, payload)
+
+
 def _exact_ready_chain_manifest(
     repo: Path,
     *,
@@ -683,6 +715,12 @@ def test_harvest_work_queue_binds_runtime_context_into_source_row(
     assert row["runtime_consumption_proof_path"] == (
         proof.relative_to(repo).as_posix()
     )
+    assert row["runtime_consumption_proof_status"] == "missing"
+    assert row["runtime_consumption_proof_revalidation"]["blockers"] == [
+        "runtime_consumption_proof_file_missing"
+    ]
+    assert "runtime_consumption_proof_file_missing" in row["readiness_blockers"]
+    assert row["receiver_contract_satisfied"] is False
     assert row["runtime_tree_sha256"] == runtime_tree_sha
     assert row["expected_runtime_tree_sha256"] == runtime_tree_sha
     assert row["materializer_harvest_runtime_context_sources"] == [
@@ -701,6 +739,93 @@ def test_harvest_work_queue_binds_runtime_context_into_source_row(
         "expected_runtime_tree_sha256",
     }.issubset(set(row["materializer_harvest_runtime_context_applied_fields"]))
     assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_harvest_work_queue_runtime_context_revalidates_receiver_proof_path(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    external = tmp_path / "VertigoDataTier"
+    chain = _chain_manifest(external)
+    chain_payload = json.loads(chain.read_text(encoding="utf-8"))
+    runtime_tree_sha = tree_sha256(external / "candidate_runtime")
+    proof = _write_generic_runtime_consumption_proof(
+        repo / "submissions" / "candidate" / "runtime_consumption_proof.json",
+        archive_sha=str(chain_payload["candidate_archive_sha256"]),
+    )
+    work_queue = _write_json(
+        repo / "materializer_work_queue.json",
+        {
+            "schema": MATERIALIZER_WORK_QUEUE_SCHEMA,
+            "tool": "fixture",
+            "row_count": 1,
+            "executable_row_count": 1,
+            "blocked_row_count": 0,
+            "rows": [
+                {
+                    "schema": "byte_shaving_materializer_work_row.v1",
+                    "work_id": "Materializer Work Fixture",
+                    "work_rank": 1,
+                    "backlog_key": "fixture",
+                    "unit_kind": "byte_range",
+                    "operation_family": "entropy_recode",
+                    "target_kind": "byte_range_entropy_recode_v1",
+                    "resource_kind": "local_cpu",
+                    "executable": True,
+                    "materializer_context_closure_plan": {
+                        "schema": "fixture_materializer_context_closure_plan.v1",
+                        "receiver_proof_request": {
+                            "runtime_consumption_proof_path": (
+                                proof.relative_to(repo).as_posix()
+                            ),
+                        },
+                        "receiver_runtime_binding_context": {
+                            "candidate_runtime": {
+                                "runtime_tree_sha256": runtime_tree_sha
+                            },
+                            "expected_runtime_tree_sha256": runtime_tree_sha,
+                        },
+                    },
+                    "postconditions": [
+                        {
+                            "type": "materializer_chain_complete",
+                            "path": str(chain),
+                            "schema": CHAIN_SCHEMA,
+                        }
+                    ],
+                    **_false_authority(),
+                }
+            ],
+            **_false_authority(),
+        },
+    )
+
+    result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        work_queue_path=work_queue,
+        require_succeeded_state=False,
+    )
+
+    row = result["source_queue"]["top_k"][0]
+    revalidation_report = result["report"]["runtime_consumption_proof_revalidation"]
+    assert revalidation_report["candidate_count"] == 1
+    assert revalidation_report["revalidated_candidate_count"] == 1
+    assert revalidation_report["blocked_candidate_count"] == 0
+    assert row["runtime_consumption_proof_path"] == proof.relative_to(repo).as_posix()
+    assert row["runtime_consumption_proof_status"] == "revalidated"
+    assert row["runtime_consumption_proof_revalidation"]["blockers"] == []
+    assert row["runtime_consumption_proof_revalidation"][
+        "receiver_contract_satisfied"
+    ] is True
+    assert row["receiver_contract_satisfied"] is True
+    assert row["runtime_adapter_ready"] is True
+    assert row["candidate_runtime_adapter_blocker_cleared"] is True
+    assert "runtime_consumption_proof_path_missing" not in row["readiness_blockers"]
+    assert "materializer_chain_receiver_contract_not_satisfied" not in row[
+        "dispatch_blockers"
+    ]
     assert row["ready_for_exact_eval_dispatch"] is False
 
 

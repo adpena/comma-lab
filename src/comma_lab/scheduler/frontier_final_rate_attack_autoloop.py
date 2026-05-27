@@ -452,6 +452,10 @@ def _observer_revalidation(
     observed_queue_sha256: str | None = None
     observed_schema: str | None = None
     observe_read_only: bool | None = None
+    observed_healthy: bool | None = None
+    observed_blockers: list[str] = []
+    observed_blocker_count: int | None = None
+    observed_artifact_failure_count: int | None = None
     if observation is None:
         blockers.append("observer_payload_missing_or_not_json_object")
     else:
@@ -459,6 +463,24 @@ def _observer_revalidation(
         observed_queue_id = str(observation.get("queue_id") or "")
         observed_queue_sha256 = str(observation.get("queue_sha256") or "")
         observe_read_only = observation.get("observe_read_only") is True
+        observed_healthy = observation.get("healthy") is True
+        raw_observed_blockers = observation.get("blockers")
+        if isinstance(raw_observed_blockers, Sequence) and not isinstance(
+            raw_observed_blockers,
+            (str, bytes, bytearray),
+        ):
+            observed_blockers = [
+                str(blocker) for blocker in raw_observed_blockers if str(blocker)
+            ]
+        raw_blocker_count = observation.get("blocker_count")
+        if isinstance(raw_blocker_count, int) and not isinstance(raw_blocker_count, bool):
+            observed_blocker_count = raw_blocker_count
+        raw_artifact_failures = observation.get("succeeded_artifact_failure_steps")
+        if isinstance(raw_artifact_failures, Sequence) and not isinstance(
+            raw_artifact_failures,
+            (str, bytes, bytearray),
+        ):
+            observed_artifact_failure_count = len(raw_artifact_failures)
         if observed_schema != "experiment_queue_observation.v1":
             blockers.append("observer_schema_mismatch")
         if observed_queue_id != queue_id:
@@ -469,6 +491,17 @@ def _observer_revalidation(
             blockers.append("observer_queue_sha256_mismatch")
         if observe_read_only is not True:
             blockers.append("observer_read_only_flag_missing")
+        if observed_healthy is not True:
+            blockers.append("observer_queue_unhealthy")
+        if observed_blockers:
+            blockers.extend(f"observer_blocker:{blocker}" for blocker in observed_blockers)
+        if observed_blocker_count is not None and observed_blocker_count > 0:
+            blockers.append("observer_blocker_count_nonzero")
+        if (
+            observed_artifact_failure_count is not None
+            and observed_artifact_failure_count > 0
+        ):
+            blockers.append("observer_artifact_postcondition_failures_present")
     if observer_write_result is None:
         blockers.append("observer_revalidation_artifact_not_written")
     return {
@@ -481,6 +514,10 @@ def _observer_revalidation(
         "observed_queue_sha256": observed_queue_sha256,
         "observed_schema": observed_schema,
         "observe_read_only": observe_read_only,
+        "observed_healthy": observed_healthy,
+        "observed_blockers": observed_blockers,
+        "observed_blocker_count": observed_blocker_count,
+        "observed_artifact_failure_count": observed_artifact_failure_count,
         "observer_revalidation_path": (
             _repo_rel(observer_path, repo_root) if observer_write_result is not None else None
         ),

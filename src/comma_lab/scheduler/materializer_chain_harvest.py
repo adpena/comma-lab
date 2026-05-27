@@ -57,6 +57,7 @@ from tac.optimizer.materializer_chain_harvest import (
     SUPPORTED_MATERIALIZER_MANIFEST_SCHEMAS,
     MaterializerChainHarvestError,
     adapt_materializer_manifest_to_candidate,
+    revalidate_runtime_consumption_proof_for_candidate,
 )
 from tac.repo_io import sha256_file
 
@@ -132,6 +133,18 @@ RUNTIME_CONTEXT_IDENTITY_FIELDS = tuple(
     )
 )
 _SHA256_HEX = frozenset("0123456789abcdef")
+RUNTIME_PROOF_REVALIDATION_STALE_BLOCKERS = frozenset(
+    {
+        "family_agnostic_receiver_contract_not_satisfied",
+        "materializer_chain_receiver_contract_not_satisfied",
+        "packet_member_recompress_receiver_contract_not_satisfied",
+        "packet_member_zip_header_elide_receiver_contract_not_satisfied",
+        "runtime_consumption_proof_missing",
+        "runtime_consumption_proof_not_passed",
+        "runtime_consumption_proof_path_missing",
+        "runtime_consumption_proof_file_missing",
+    }
+)
 
 
 def harvest_materializer_chain_manifests(
@@ -225,6 +238,12 @@ def harvest_materializer_chain_manifests(
         ],
     )
     _apply_discovery_runtime_context(source_queue, accepted_discoveries, repo_root=repo)
+    runtime_proof_revalidation_report = (
+        _apply_runtime_consumption_proof_revalidation_for_runtime_context(
+            source_queue,
+            repo_root=repo,
+        )
+    )
     dfl1_sidecar_report = _apply_renderer_payload_dfl1_sidecar_parity_proofs(
         source_queue,
         renderer_payload_dfl1_inflate_parity_proofs,
@@ -259,6 +278,9 @@ def harvest_materializer_chain_manifests(
             "source_queue_schema": source_queue["schema"],
             "source_queue_candidate_count": source_queue["n_candidates"],
             "source_queue_dispatch_ready_count": source_queue["dispatch_ready_count"],
+            "runtime_consumption_proof_revalidation": (
+                runtime_proof_revalidation_report
+            ),
             "renderer_payload_dfl1_sidecar_parity": dfl1_sidecar_report,
             "score_claim": False,
             "promotion_eligible": False,
@@ -590,7 +612,9 @@ def _is_materializer_candidate_row(row: Mapping[str, Any]) -> bool:
     target_kind = str(row.get("target_kind") or "")
     candidate_family = str(row.get("candidate_family") or "")
     return (
-        "materializer" in schema
+        schema in CHAIN_MANIFEST_NAME_BY_SCHEMA
+        or schema in SUPPORTED_MATERIALIZER_MANIFEST_SCHEMAS
+        or "materializer" in schema
         or bool(materializer_id)
         or (
             target_kind.endswith("_v1")
@@ -941,6 +965,131 @@ def _overlay_runtime_context(row: dict[str, Any], context: Mapping[str, Any]) ->
                 ]
             )
         row["ready_for_exact_eval_dispatch"] = False
+
+
+def _apply_runtime_consumption_proof_revalidation_for_runtime_context(
+    source_queue: dict[str, Any],
+    *,
+    repo_root: Path,
+) -> dict[str, Any]:
+    rows: list[dict[str, Any]] = []
+    applied_ids: set[str] = set()
+    blocked_ids: set[str] = set()
+    for list_name in ("top_k", "top_k_forensic", "dispatch_ready"):
+        for row in source_queue.get(list_name) or []:
+            if not isinstance(row, dict) or not _is_materializer_candidate_row(row):
+                continue
+            if not _runtime_context_proof_revalidation_required(row):
+                continue
+            revalidation = revalidate_runtime_consumption_proof_for_candidate(
+                row,
+                repo_root=repo_root,
+            )
+            _overlay_runtime_proof_revalidation(row, revalidation)
+            candidate_id = str(row.get("candidate_id") or "")
+            if revalidation.get("receiver_contract_satisfied") is True:
+                applied_ids.add(candidate_id)
+            else:
+                blocked_ids.add(candidate_id)
+            rows.append(
+                {
+                    "list_name": list_name,
+                    "candidate_id": candidate_id,
+                    "runtime_consumption_proof_path": revalidation.get(
+                        "runtime_consumption_proof_path"
+                    ),
+                    "runtime_consumption_proof_status": revalidation.get(
+                        "runtime_consumption_proof_status"
+                    ),
+                    "receiver_contract_satisfied": revalidation.get(
+                        "receiver_contract_satisfied"
+                    )
+                    is True,
+                    "blockers": list(revalidation.get("blockers") or []),
+                }
+            )
+    return {
+        "candidate_count": len(applied_ids | blocked_ids),
+        "row_count": len(rows),
+        "revalidated_candidate_count": len(applied_ids),
+        "blocked_candidate_count": len(blocked_ids),
+        "rows": rows,
+    }
+
+
+def _overlay_runtime_proof_revalidation(
+    row: dict[str, Any],
+    revalidation: Mapping[str, Any],
+) -> None:
+    blockers = _text_values(revalidation.get("blockers"))
+    proof_status = _nonempty_text(revalidation.get("runtime_consumption_proof_status"))
+    proof_path = _nonempty_text(revalidation.get("runtime_consumption_proof_path"))
+    row["runtime_consumption_proof_revalidation"] = dict(revalidation)
+    if proof_status is not None:
+        row["runtime_consumption_proof_status"] = proof_status
+    if proof_path is not None:
+        row["runtime_consumption_proof_path"] = proof_path
+    proof_sha = _sha256_text(revalidation.get("runtime_consumption_proof_sha256"))
+    if proof_sha is not None:
+        row["runtime_consumption_proof_sha256"] = proof_sha
+    proof_schema = _nonempty_text(revalidation.get("runtime_consumption_proof_schema"))
+    if proof_schema is not None:
+        row["runtime_consumption_proof_schema"] = proof_schema
+    if revalidation.get("receiver_contract_satisfied") is True:
+        row["receiver_contract_satisfied"] = True
+        row["runtime_adapter_ready"] = True
+        row["candidate_runtime_adapter_blocker_cleared"] = True
+        for key in ("readiness_blockers", "dispatch_blockers", "blockers"):
+            if key in row:
+                row[key] = [
+                    blocker
+                    for blocker in _text_values(row.get(key))
+                    if not _runtime_proof_revalidation_stale_blocker(blocker)
+                ]
+        return
+
+    row["receiver_contract_satisfied"] = False
+    row["runtime_adapter_ready"] = False
+    row["candidate_runtime_adapter_blocker_cleared"] = False
+    for key in ("readiness_blockers", "dispatch_blockers", "blockers"):
+        row[key] = ordered_unique(
+            [
+                *[
+                    blocker
+                    for blocker in _text_values(row.get(key))
+                    if blocker != "runtime_consumption_proof_path_missing"
+                ],
+                *blockers,
+            ]
+        )
+
+
+def _runtime_context_proof_revalidation_required(row: Mapping[str, Any]) -> bool:
+    if _nonempty_text(
+        row.get("runtime_consumption_proof_path")
+        or row.get("runtime_consumption_proof_out")
+    ) is None:
+        return False
+    applied_fields = {
+        str(field)
+        for field in row.get("materializer_harvest_runtime_context_applied_fields")
+        or []
+        if str(field)
+    }
+    return (
+        "runtime_consumption_proof_path" in applied_fields
+        or "runtime_consumption_proof_out" in applied_fields
+    )
+
+
+def _runtime_proof_revalidation_stale_blocker(blocker: str) -> bool:
+    if blocker in RUNTIME_PROOF_REVALIDATION_STALE_BLOCKERS:
+        return True
+    if blocker.startswith("runtime_consumption_proof"):
+        return True
+    if blocker.startswith("receiver_verification:runtime_consumption_proof"):
+        return True
+    return blocker.endswith("_receiver_contract_not_satisfied")
 
 
 def _is_renderer_payload_dfl1_row(row: Mapping[str, Any]) -> bool:

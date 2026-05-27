@@ -1162,6 +1162,90 @@ def test_post_feedback_child_queue_execution_preserves_observer_artifacts(
     assert worker_command[worker_command.index("--max-steps") + 1] == "3"
 
 
+def test_post_feedback_child_queue_revalidation_rejects_unhealthy_observer(
+    tmp_path: Path,
+) -> None:
+    queue = tmp_path / "operation_chain_compiler_queue.json"
+    queue_payload = {
+        "schema": "experiment_queue.v1",
+        "queue_id": "child_queue_unhealthy",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "experiments": [],
+    }
+    _write_json(queue, queue_payload)
+
+    def fake_run(command: list[str]) -> dict[str, object]:
+        stdout = ""
+        if "observe" in command:
+            stdout = json.dumps(
+                {
+                    "schema": "experiment_queue_observation.v1",
+                    "queue_id": "child_queue_unhealthy",
+                    "queue_sha256": stable_json_sha256(queue_payload),
+                    "observe_read_only": True,
+                    "healthy": False,
+                    "blocker_count": 1,
+                    "blockers": [
+                        "experiment_queue_observation_artifact_postcondition_failures:1"
+                    ],
+                    "succeeded_artifact_failure_steps": [
+                        {
+                            "experiment_id": "bad_child",
+                            "step_id": "materializer_harvest",
+                        }
+                    ],
+                    "status_counts": {"succeeded": 1},
+                }
+            )
+        elif "run-worker" in command:
+            stdout = json.dumps(
+                {
+                    "schema": "experiment_queue_worker_result.v1",
+                    "steps_started": 1,
+                    "success_count": 1,
+                    "failure_count": 0,
+                }
+            )
+        return {
+            "command": command,
+            "returncode": 0,
+            "elapsed_seconds": 0.0,
+            "stdout": stdout,
+            "stderr": "",
+        }
+
+    report = execute_post_feedback_child_queues(
+        repo_root=tmp_path,
+        feedback_artifacts={"operation_chain_compiler_queue": str(queue)},
+        output_dir=tmp_path / "out",
+        max_steps=3,
+        max_parallel=1,
+        limit=4,
+        run_command=fake_run,
+    )
+
+    run = report["queue_runs"][0]
+    assert report["observer_revalidation_failed_count"] == 1
+    assert run["queue_healthy"] is False
+    assert run["observer_revalidation_valid"] is False
+    assert run["progress_made"] is False
+    assert run["observer_revalidation_blockers"] == [
+        "observer_queue_unhealthy",
+        (
+            "observer_blocker:"
+            "experiment_queue_observation_artifact_postcondition_failures:1"
+        ),
+        "observer_blocker_count_nonzero",
+        "observer_artifact_postcondition_failures_present",
+    ]
+    assert run["observer_revalidation"]["observed_healthy"] is False
+    assert run["observer_revalidation"]["observed_blocker_count"] == 1
+    assert run["observer_revalidation"]["observed_artifact_failure_count"] == 1
+
+
 def test_post_feedback_child_queue_execution_reports_stalled_queued_work(
     tmp_path: Path,
 ) -> None:
