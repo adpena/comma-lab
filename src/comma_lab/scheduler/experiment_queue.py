@@ -1383,7 +1383,8 @@ def _materializer_chain_complete(
         return False
     if not _artifact_record_valid(payload.get("candidate_archive"), repo_root=repo_root):
         return False
-    if bool(condition.get("required_runtime_adapter_identity")) and runtime_adapter_identity_blockers(
+    require_runtime_identity = condition.get("required_runtime_adapter_identity") is not False
+    if require_runtime_identity and runtime_adapter_identity_blockers(
         payload,
         repo_root=repo_root,
         context="materializer_chain_complete",

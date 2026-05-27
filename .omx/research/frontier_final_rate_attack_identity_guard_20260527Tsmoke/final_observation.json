@@ -1,0 +1,1980 @@
+{
+  "auto_parallelism": {
+    "idle_declared_resources": {},
+    "local_only": {
+      "max_parallel": 2,
+      "resource_limits": {
+        "local_cpu": 2
+      }
+    },
+    "used_resource_kinds": [
+      "local_cpu"
+    ],
+    "with_cloud": {
+      "max_parallel": 2,
+      "resource_limits": {
+        "local_cpu": 2
+      }
+    }
+  },
+  "blocked_steps": [],
+  "blocker_count": 0,
+  "blockers": [],
+  "definition_drift": {
+    "changed_step_count": 0,
+    "changed_steps": [],
+    "missing_hash_step_count": 0,
+    "missing_hash_steps": [],
+    "missing_step_count": 0,
+    "missing_steps": [],
+    "read_only": true,
+    "schema": "experiment_queue_definition_drift.v1"
+  },
+  "failed_steps": [],
+  "generated_at_utc": "2026-05-27T15:36:49Z",
+  "healthy": true,
+  "local_training_signal_observation_count": 0,
+  "local_training_signal_observations": [],
+  "mode": "running",
+  "observe_read_only": true,
+  "orphaned_step_count": 0,
+  "orphaned_steps": [],
+  "performance": {
+    "backlog_key_by_experiment": {
+      "materializer_work_frontier_rate_attack_packet_member_recompress_v1": "frontier_rate_attack:packet_member_recompress_v1",
+      "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1": "frontier_rate_attack:packet_member_zip_header_elide_v1"
+    },
+    "by_backlog_key": {
+      "frontier_rate_attack:packet_member_recompress_v1": {
+        "artifact_record_bytes_mean": 77996.8,
+        "artifact_record_bytes_sum": 389984,
+        "artifact_record_count": 12,
+        "artifact_record_raw_bytes_mean": 77996.8,
+        "artifact_record_raw_bytes_sum": 389984,
+        "backlog_keys": [
+          "frontier_rate_attack:packet_member_recompress_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.7710150419989077,
+        "elapsed_seconds_mean": 0.46948920019931395,
+        "elapsed_seconds_min": 0.07008345899885171,
+        "elapsed_seconds_sum": 2.3474460009965696,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 2107.6,
+        "log_bytes_sum": 10538,
+        "resource_kind_counts": {
+          "local_cpu": 5
+        },
+        "run_count": 5,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan",
+          "build_materializer_submission_closure",
+          "harvest_materializer_chains",
+          "materialize_local_proof_chain",
+          "run_materializer_exact_readiness_bridge"
+        ],
+        "success_count": 5,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+        ]
+      },
+      "frontier_rate_attack:packet_member_zip_header_elide_v1": {
+        "artifact_record_bytes_mean": 79397.8,
+        "artifact_record_bytes_sum": 396989,
+        "artifact_record_count": 12,
+        "artifact_record_raw_bytes_mean": 79397.8,
+        "artifact_record_raw_bytes_sum": 396989,
+        "backlog_keys": [
+          "frontier_rate_attack:packet_member_zip_header_elide_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.766096874998766,
+        "elapsed_seconds_mean": 0.4643219165998744,
+        "elapsed_seconds_min": 0.06449970799985749,
+        "elapsed_seconds_sum": 2.321609582999372,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 2214.6,
+        "log_bytes_sum": 11073,
+        "resource_kind_counts": {
+          "local_cpu": 5
+        },
+        "run_count": 5,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan",
+          "build_materializer_submission_closure",
+          "harvest_materializer_chains",
+          "materialize_local_proof_chain",
+          "run_materializer_exact_readiness_bridge"
+        ],
+        "success_count": 5,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ]
+      }
+    },
+    "by_experiment": {
+      "materializer_work_frontier_rate_attack_packet_member_recompress_v1": {
+        "artifact_record_bytes_mean": 77996.8,
+        "artifact_record_bytes_sum": 389984,
+        "artifact_record_count": 12,
+        "artifact_record_raw_bytes_mean": 77996.8,
+        "artifact_record_raw_bytes_sum": 389984,
+        "backlog_keys": [
+          "frontier_rate_attack:packet_member_recompress_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.7710150419989077,
+        "elapsed_seconds_mean": 0.46948920019931395,
+        "elapsed_seconds_min": 0.07008345899885171,
+        "elapsed_seconds_sum": 2.3474460009965696,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 2107.6,
+        "log_bytes_sum": 10538,
+        "resource_kind_counts": {
+          "local_cpu": 5
+        },
+        "run_count": 5,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan",
+          "build_materializer_submission_closure",
+          "harvest_materializer_chains",
+          "materialize_local_proof_chain",
+          "run_materializer_exact_readiness_bridge"
+        ],
+        "success_count": 5,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+        ]
+      },
+      "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1": {
+        "artifact_record_bytes_mean": 79397.8,
+        "artifact_record_bytes_sum": 396989,
+        "artifact_record_count": 12,
+        "artifact_record_raw_bytes_mean": 79397.8,
+        "artifact_record_raw_bytes_sum": 396989,
+        "backlog_keys": [
+          "frontier_rate_attack:packet_member_zip_header_elide_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.766096874998766,
+        "elapsed_seconds_mean": 0.4643219165998744,
+        "elapsed_seconds_min": 0.06449970799985749,
+        "elapsed_seconds_sum": 2.321609582999372,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 2214.6,
+        "log_bytes_sum": 11073,
+        "resource_kind_counts": {
+          "local_cpu": 5
+        },
+        "run_count": 5,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan",
+          "build_materializer_submission_closure",
+          "harvest_materializer_chains",
+          "materialize_local_proof_chain",
+          "run_materializer_exact_readiness_bridge"
+        ],
+        "success_count": 5,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ]
+      }
+    },
+    "by_resource_kind": {
+      "local_cpu": {
+        "artifact_record_bytes_mean": 78697.3,
+        "artifact_record_bytes_sum": 786973,
+        "artifact_record_count": 24,
+        "artifact_record_raw_bytes_mean": 78697.3,
+        "artifact_record_raw_bytes_sum": 786973,
+        "backlog_keys": [
+          "frontier_rate_attack:packet_member_recompress_v1",
+          "frontier_rate_attack:packet_member_zip_header_elide_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.7710150419989077,
+        "elapsed_seconds_mean": 0.46690555839959413,
+        "elapsed_seconds_min": 0.06449970799985749,
+        "elapsed_seconds_sum": 4.669055583995942,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1",
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 2161.1,
+        "log_bytes_sum": 21611,
+        "resource_kind_counts": {
+          "local_cpu": 10
+        },
+        "run_count": 10,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan",
+          "build_materializer_submission_closure",
+          "harvest_materializer_chains",
+          "materialize_local_proof_chain",
+          "run_materializer_exact_readiness_bridge"
+        ],
+        "success_count": 10,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1",
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ]
+      }
+    },
+    "by_source_selection_id": {
+      "current_contest_cpu_frontier": {
+        "artifact_record_bytes_mean": 78697.3,
+        "artifact_record_bytes_sum": 786973,
+        "artifact_record_count": 24,
+        "artifact_record_raw_bytes_mean": 78697.3,
+        "artifact_record_raw_bytes_sum": 786973,
+        "backlog_keys": [
+          "frontier_rate_attack:packet_member_recompress_v1",
+          "frontier_rate_attack:packet_member_zip_header_elide_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.7710150419989077,
+        "elapsed_seconds_mean": 0.46690555839959413,
+        "elapsed_seconds_min": 0.06449970799985749,
+        "elapsed_seconds_sum": 4.669055583995942,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1",
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 2161.1,
+        "log_bytes_sum": 21611,
+        "resource_kind_counts": {
+          "local_cpu": 10
+        },
+        "run_count": 10,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan",
+          "build_materializer_submission_closure",
+          "harvest_materializer_chains",
+          "materialize_local_proof_chain",
+          "run_materializer_exact_readiness_bridge"
+        ],
+        "success_count": 10,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1",
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ]
+      }
+    },
+    "by_source_unit_id": {
+      "current_contest_cpu_frontier": {
+        "artifact_record_bytes_mean": 78697.3,
+        "artifact_record_bytes_sum": 786973,
+        "artifact_record_count": 24,
+        "artifact_record_raw_bytes_mean": 78697.3,
+        "artifact_record_raw_bytes_sum": 786973,
+        "backlog_keys": [
+          "frontier_rate_attack:packet_member_recompress_v1",
+          "frontier_rate_attack:packet_member_zip_header_elide_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.7710150419989077,
+        "elapsed_seconds_mean": 0.46690555839959413,
+        "elapsed_seconds_min": 0.06449970799985749,
+        "elapsed_seconds_sum": 4.669055583995942,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1",
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 2161.1,
+        "log_bytes_sum": 21611,
+        "resource_kind_counts": {
+          "local_cpu": 10
+        },
+        "run_count": 10,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan",
+          "build_materializer_submission_closure",
+          "harvest_materializer_chains",
+          "materialize_local_proof_chain",
+          "run_materializer_exact_readiness_bridge"
+        ],
+        "success_count": 10,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1",
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ]
+      }
+    },
+    "by_step": {
+      "materializer_work_frontier_rate_attack_packet_member_recompress_v1.build_exact_eval_dispatch_plan": {
+        "artifact_record_bytes_mean": 4215.0,
+        "artifact_record_bytes_sum": 4215,
+        "artifact_record_count": 2,
+        "artifact_record_raw_bytes_mean": 4215.0,
+        "artifact_record_raw_bytes_sum": 4215,
+        "backlog_keys": [
+          "frontier_rate_attack:packet_member_recompress_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.7710150419989077,
+        "elapsed_seconds_mean": 0.7710150419989077,
+        "elapsed_seconds_min": 0.7710150419989077,
+        "elapsed_seconds_sum": 0.7710150419989077,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 315.0,
+        "log_bytes_sum": 315,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan"
+        ],
+        "success_count": 1,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+        ]
+      },
+      "materializer_work_frontier_rate_attack_packet_member_recompress_v1.build_materializer_submission_closure": {
+        "artifact_record_bytes_mean": 339627.0,
+        "artifact_record_bytes_sum": 339627,
+        "artifact_record_count": 3,
+        "artifact_record_raw_bytes_mean": 339627.0,
+        "artifact_record_raw_bytes_sum": 339627,
+        "backlog_keys": [
+          "frontier_rate_attack:packet_member_recompress_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.19116824999946402,
+        "elapsed_seconds_mean": 0.19116824999946402,
+        "elapsed_seconds_min": 0.19116824999946402,
+        "elapsed_seconds_sum": 0.19116824999946402,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 1096.0,
+        "log_bytes_sum": 1096,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_materializer_submission_closure"
+        ],
+        "success_count": 1,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+        ]
+      },
+      "materializer_work_frontier_rate_attack_packet_member_recompress_v1.harvest_materializer_chains": {
+        "artifact_record_bytes_mean": 24344.0,
+        "artifact_record_bytes_sum": 24344,
+        "artifact_record_count": 2,
+        "artifact_record_raw_bytes_mean": 24344.0,
+        "artifact_record_raw_bytes_sum": 24344,
+        "backlog_keys": [
+          "frontier_rate_attack:packet_member_recompress_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.6604447079989768,
+        "elapsed_seconds_mean": 0.6604447079989768,
+        "elapsed_seconds_min": 0.6604447079989768,
+        "elapsed_seconds_sum": 0.6604447079989768,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 535.0,
+        "log_bytes_sum": 535,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "harvest_materializer_chains"
+        ],
+        "success_count": 1,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+        ]
+      },
+      "materializer_work_frontier_rate_attack_packet_member_recompress_v1.materialize_local_proof_chain": {
+        "artifact_record_bytes_mean": 13780.0,
+        "artifact_record_bytes_sum": 13780,
+        "artifact_record_count": 3,
+        "artifact_record_raw_bytes_mean": 13780.0,
+        "artifact_record_raw_bytes_sum": 13780,
+        "backlog_keys": [
+          "frontier_rate_attack:packet_member_recompress_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.07008345899885171,
+        "elapsed_seconds_mean": 0.07008345899885171,
+        "elapsed_seconds_min": 0.07008345899885171,
+        "elapsed_seconds_sum": 0.07008345899885171,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 7997.0,
+        "log_bytes_sum": 7997,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "materialize_local_proof_chain"
+        ],
+        "success_count": 1,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+        ]
+      },
+      "materializer_work_frontier_rate_attack_packet_member_recompress_v1.run_materializer_exact_readiness_bridge": {
+        "artifact_record_bytes_mean": 8018.0,
+        "artifact_record_bytes_sum": 8018,
+        "artifact_record_count": 2,
+        "artifact_record_raw_bytes_mean": 8018.0,
+        "artifact_record_raw_bytes_sum": 8018,
+        "backlog_keys": [
+          "frontier_rate_attack:packet_member_recompress_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.6547345420003694,
+        "elapsed_seconds_mean": 0.6547345420003694,
+        "elapsed_seconds_min": 0.6547345420003694,
+        "elapsed_seconds_sum": 0.6547345420003694,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 595.0,
+        "log_bytes_sum": 595,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "run_materializer_exact_readiness_bridge"
+        ],
+        "success_count": 1,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+        ]
+      },
+      "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1.build_exact_eval_dispatch_plan": {
+        "artifact_record_bytes_mean": 4233.0,
+        "artifact_record_bytes_sum": 4233,
+        "artifact_record_count": 2,
+        "artifact_record_raw_bytes_mean": 4233.0,
+        "artifact_record_raw_bytes_sum": 4233,
+        "backlog_keys": [
+          "frontier_rate_attack:packet_member_zip_header_elide_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.766096874998766,
+        "elapsed_seconds_mean": 0.766096874998766,
+        "elapsed_seconds_min": 0.766096874998766,
+        "elapsed_seconds_sum": 0.766096874998766,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 321.0,
+        "log_bytes_sum": 321,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan"
+        ],
+        "success_count": 1,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ]
+      },
+      "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1.build_materializer_submission_closure": {
+        "artifact_record_bytes_mean": 345777.0,
+        "artifact_record_bytes_sum": 345777,
+        "artifact_record_count": 3,
+        "artifact_record_raw_bytes_mean": 345777.0,
+        "artifact_record_raw_bytes_sum": 345777,
+        "backlog_keys": [
+          "frontier_rate_attack:packet_member_zip_header_elide_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.18518070800018904,
+        "elapsed_seconds_mean": 0.18518070800018904,
+        "elapsed_seconds_min": 0.18518070800018904,
+        "elapsed_seconds_sum": 0.18518070800018904,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 1114.0,
+        "log_bytes_sum": 1114,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_materializer_submission_closure"
+        ],
+        "success_count": 1,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ]
+      },
+      "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1.harvest_materializer_chains": {
+        "artifact_record_bytes_mean": 24282.0,
+        "artifact_record_bytes_sum": 24282,
+        "artifact_record_count": 2,
+        "artifact_record_raw_bytes_mean": 24282.0,
+        "artifact_record_raw_bytes_sum": 24282,
+        "backlog_keys": [
+          "frontier_rate_attack:packet_member_zip_header_elide_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.6559311250002793,
+        "elapsed_seconds_mean": 0.6559311250002793,
+        "elapsed_seconds_min": 0.6559311250002793,
+        "elapsed_seconds_sum": 0.6559311250002793,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 547.0,
+        "log_bytes_sum": 547,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "harvest_materializer_chains"
+        ],
+        "success_count": 1,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ]
+      },
+      "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1.materialize_local_proof_chain": {
+        "artifact_record_bytes_mean": 14589.0,
+        "artifact_record_bytes_sum": 14589,
+        "artifact_record_count": 3,
+        "artifact_record_raw_bytes_mean": 14589.0,
+        "artifact_record_raw_bytes_sum": 14589,
+        "backlog_keys": [
+          "frontier_rate_attack:packet_member_zip_header_elide_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.06449970799985749,
+        "elapsed_seconds_mean": 0.06449970799985749,
+        "elapsed_seconds_min": 0.06449970799985749,
+        "elapsed_seconds_sum": 0.06449970799985749,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 8490.0,
+        "log_bytes_sum": 8490,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "materialize_local_proof_chain"
+        ],
+        "success_count": 1,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ]
+      },
+      "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1.run_materializer_exact_readiness_bridge": {
+        "artifact_record_bytes_mean": 8108.0,
+        "artifact_record_bytes_sum": 8108,
+        "artifact_record_count": 2,
+        "artifact_record_raw_bytes_mean": 8108.0,
+        "artifact_record_raw_bytes_sum": 8108,
+        "backlog_keys": [
+          "frontier_rate_attack:packet_member_zip_header_elide_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.6499011670002801,
+        "elapsed_seconds_mean": 0.6499011670002801,
+        "elapsed_seconds_min": 0.6499011670002801,
+        "elapsed_seconds_sum": 0.6499011670002801,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 601.0,
+        "log_bytes_sum": 601,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "run_materializer_exact_readiness_bridge"
+        ],
+        "success_count": 1,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ]
+      }
+    },
+    "by_work_id": {
+      "materializer_work_frontier_rate_attack_packet_member_recompress_v1": {
+        "artifact_record_bytes_mean": 77996.8,
+        "artifact_record_bytes_sum": 389984,
+        "artifact_record_count": 12,
+        "artifact_record_raw_bytes_mean": 77996.8,
+        "artifact_record_raw_bytes_sum": 389984,
+        "backlog_keys": [
+          "frontier_rate_attack:packet_member_recompress_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.7710150419989077,
+        "elapsed_seconds_mean": 0.46948920019931395,
+        "elapsed_seconds_min": 0.07008345899885171,
+        "elapsed_seconds_sum": 2.3474460009965696,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 2107.6,
+        "log_bytes_sum": 10538,
+        "resource_kind_counts": {
+          "local_cpu": 5
+        },
+        "run_count": 5,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan",
+          "build_materializer_submission_closure",
+          "harvest_materializer_chains",
+          "materialize_local_proof_chain",
+          "run_materializer_exact_readiness_bridge"
+        ],
+        "success_count": 5,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+        ]
+      },
+      "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1": {
+        "artifact_record_bytes_mean": 79397.8,
+        "artifact_record_bytes_sum": 396989,
+        "artifact_record_count": 12,
+        "artifact_record_raw_bytes_mean": 79397.8,
+        "artifact_record_raw_bytes_sum": 396989,
+        "backlog_keys": [
+          "frontier_rate_attack:packet_member_zip_header_elide_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.766096874998766,
+        "elapsed_seconds_mean": 0.4643219165998744,
+        "elapsed_seconds_min": 0.06449970799985749,
+        "elapsed_seconds_sum": 2.321609582999372,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 2214.6,
+        "log_bytes_sum": 11073,
+        "resource_kind_counts": {
+          "local_cpu": 5
+        },
+        "run_count": 5,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan",
+          "build_materializer_submission_closure",
+          "harvest_materializer_chains",
+          "materialize_local_proof_chain",
+          "run_materializer_exact_readiness_bridge"
+        ],
+        "success_count": 5,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ]
+      }
+    },
+    "candidate_id_by_experiment": {
+      "materializer_work_frontier_rate_attack_packet_member_recompress_v1": [
+        "current_contest_cpu_frontier"
+      ],
+      "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1": [
+        "current_contest_cpu_frontier"
+      ]
+    },
+    "event_count": 10,
+    "promotion_eligible": false,
+    "queue_id": "frontier_final_rate_attack_identity_guard_20260527Tsmoke",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "experiment_queue_performance_summary.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "source_selection_ids_by_experiment": {
+      "materializer_work_frontier_rate_attack_packet_member_recompress_v1": [
+        "current_contest_cpu_frontier"
+      ],
+      "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1": [
+        "current_contest_cpu_frontier"
+      ]
+    },
+    "source_unit_ids_by_experiment": {
+      "materializer_work_frontier_rate_attack_packet_member_recompress_v1": [
+        "current_contest_cpu_frontier"
+      ],
+      "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1": [
+        "current_contest_cpu_frontier"
+      ]
+    },
+    "telemetry_only": true,
+    "work_id_by_experiment": {
+      "materializer_work_frontier_rate_attack_packet_member_recompress_v1": "materializer_work_frontier_rate_attack_packet_member_recompress_v1",
+      "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1": "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+    }
+  },
+  "queue_id": "frontier_final_rate_attack_identity_guard_20260527Tsmoke",
+  "queue_sha256": "93c31a9b3963ccb576f5bad66cb5335df6610f1a823d27aa1682d44a4c94506a",
+  "queued_steps": [],
+  "ready_steps": [],
+  "running_steps": [],
+  "runtime_policy": {
+    "advisory_only": true,
+    "apply_requires_explicit_call": true,
+    "backpressure": {
+      "local_io_heavy": {
+        "reason": "limit_file_tree_hashing_and_artifact_pullback_pressure",
+        "recommended_concurrency": 4
+      }
+    },
+    "current_max_concurrency": {
+      "local_cpu": 2
+    },
+    "dispatch_attempted": false,
+    "dispatch_packet_ready": false,
+    "generated_from_schema": "experiment_queue_performance_summary.v1",
+    "gpu_launched": false,
+    "input_event_count": 10,
+    "machine_capacity": {
+      "local_cpu": 18,
+      "local_io_heavy": 4,
+      "local_mlx": 1,
+      "local_mps": 1
+    },
+    "promotable": false,
+    "promotion_eligible": false,
+    "queue_id": "frontier_final_rate_attack_identity_guard_20260527Tsmoke",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "recommended_max_concurrency": {
+      "local_cpu": 18
+    },
+    "recommended_timeout_seconds_by_resource": {
+      "local_cpu": 30
+    },
+    "resource_policies": {
+      "local_cpu": {
+        "advisory_only": true,
+        "concurrency_reason": "use_detected_local_cpu_capacity",
+        "current_concurrency": 2,
+        "current_timeout_seconds_max": null,
+        "dispatch_packet_ready": false,
+        "elapsed_seconds_p50": 0.6547345420003694,
+        "elapsed_seconds_p95": 0.7710150419989077,
+        "observed_failure_count": 0,
+        "observed_run_count": 10,
+        "observed_timeout_count": 0,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "recommended_concurrency": 18,
+        "recommended_timeout_seconds": 30,
+        "resource_kind": "local_cpu",
+        "score_claim": false,
+        "timeout_multiplier": 3.0
+      }
+    },
+    "schema": "scheduler_runtime_policy.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "telemetry_only": true
+  },
+  "schema": "experiment_queue_observation.v1",
+  "state": ".omx/state/experiment_queue_frontier_final_rate_attack_identity_guard_20260527Tsmoke.sqlite",
+  "state_watermark": {
+    "control_mode": "running",
+    "control_updated_at_utc": "2026-05-27T15:36:09Z",
+    "event_count": 35,
+    "max_event_id": 35,
+    "max_step_updated_at_utc": "2026-05-27T15:36:30Z",
+    "queue_id": "frontier_final_rate_attack_identity_guard_20260527Tsmoke",
+    "schema": "experiment_queue_state_watermark.v1",
+    "state_path": ".omx/state/experiment_queue_frontier_final_rate_attack_identity_guard_20260527Tsmoke.sqlite",
+    "step_state_count": 10
+  },
+  "status_counts": {
+    "succeeded": 10
+  },
+  "step_count": 10,
+  "succeeded_artifact_failure_steps": [],
+  "succeeded_artifact_steps": [
+    {
+      "attempts": 1,
+      "backlog_keys": [
+        "frontier_rate_attack:packet_member_recompress_v1"
+      ],
+      "candidate_saved_bytes_sum": 0,
+      "expected_artifact_paths": [
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_recompress_v1/exact_eval_handoff/submission_closure/closed_source_queue.json",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_recompress_v1/exact_eval_handoff/submission_closure/submission_closure_report.json",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_recompress_v1/exact_eval_handoff/submission_closure/submission"
+      ],
+      "expected_artifacts": [
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 28090,
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "exists": true,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "json_schema": "optimizer_candidate_queue_v1",
+          "mtime_utc": "2026-05-27T15:36:29Z",
+          "optimizer_candidate_queue_materializer_row_count": 1,
+          "optimizer_candidate_queue_materializer_rows": [
+            {
+              "artifact_revalidation": {
+                "blockers": [],
+                "candidate_archive": {
+                  "actual_bytes": 178546,
+                  "actual_sha256": "0a3abfe645c4fac0df9ea89237f25dd9bfc6b2471b897c36d7437795d27d1403",
+                  "blockers": [],
+                  "expected_bytes": 178546,
+                  "expected_sha256": "0a3abfe645c4fac0df9ea89237f25dd9bfc6b2471b897c36d7437795d27d1403",
+                  "label": "optimizer_candidate_queue_top_k_0_candidate_archive",
+                  "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_recompress_v1/exact_eval_handoff/submission_closure/submission/packet_member_recompress_0a3abfe645c4/archive.zip",
+                  "schema": "observer_file_custody_revalidation.v1",
+                  "valid": true
+                },
+                "schema": "observer_materializer_payload_revalidation.v1",
+                "valid": true
+              },
+              "candidate_archive": {
+                "bytes": 178546,
+                "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_recompress_v1/exact_eval_handoff/submission_closure/submission/packet_member_recompress_0a3abfe645c4/archive.zip",
+                "sha256": "0a3abfe645c4fac0df9ea89237f25dd9bfc6b2471b897c36d7437795d27d1403"
+              },
+              "candidate_id": "packet_member_recompress_0a3abfe645c4",
+              "contest_cuda_auth_eval": false,
+              "dispatch_attempted": false,
+              "exact_cuda_auth_eval": false,
+              "field_selection_ready_for_exact_eval_dispatch": false,
+              "gpu_launched": false,
+              "materializer_charged_bits_changed": false,
+              "materializer_delta_source": "serialized_archive_delta",
+              "materializer_id": "packet_member_recompress_adapter",
+              "materializer_score_affecting_payload_changed": false,
+              "optimizer_candidate_queue_row_index": 0,
+              "promotable": false,
+              "promotion_eligible": false,
+              "rank_or_kill_eligible": false,
+              "readiness_blockers": [
+                "candidate_not_rate_positive"
+              ],
+              "ready_for_exact_eval_dispatch": false,
+              "receiver_contract_kind": "family_agnostic_packet_member_recompress",
+              "receiver_contract_satisfied": true,
+              "score_claim": false,
+              "score_claim_eligible": false,
+              "score_claim_valid": false,
+              "serialized_archive_delta": {
+                "archive_delta_bytes": 0,
+                "blockers": [],
+                "candidate_archive_bytes": 178546,
+                "dispatch_attempted": false,
+                "gpu_launched": false,
+                "modeled_cost_bytes": null,
+                "modeled_saved_bytes": null,
+                "promotable": false,
+                "promotion_eligible": false,
+                "rank_or_kill_eligible": false,
+                "rate_only_control": false,
+                "ready_for_exact_eval_dispatch": false,
+                "realized_saved_bytes": 0,
+                "require_realized_saving": false,
+                "savings_realized": false,
+                "schema": "serialized_archive_delta_contract.v1",
+                "score_claim": false,
+                "score_claim_valid": false,
+                "source_archive_bytes": 178546,
+                "status": "zero_delta"
+              },
+              "serialized_archive_delta_candidate_archive_bytes": 178546,
+              "serialized_archive_delta_realized_saved_bytes": 0,
+              "serialized_archive_delta_saved_bytes": 0,
+              "serialized_archive_delta_savings_realized": false,
+              "serialized_archive_delta_source_archive_bytes": 178546,
+              "serialized_archive_delta_status": "zero_delta",
+              "source_archive": {
+                "bytes": 178546,
+                "path": "experiments/results/v14_v2_dqs1_plus_fec10_substituted_20260526T023000Z/submission_dir/archive.zip",
+                "sha256": "0a3abfe645c4fac0df9ea89237f25dd9bfc6b2471b897c36d7437795d27d1403"
+              },
+              "target_kind": "packet_member_recompress_v1"
+            }
+          ],
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_recompress_v1/exact_eval_handoff/submission_closure/closed_source_queue.json",
+          "postcondition_passed": true,
+          "postcondition_type": "json_equals",
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 16454,
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "exists": true,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "json_schema": "materializer_submission_runtime_closure_report.v1",
+          "mtime_utc": "2026-05-27T15:36:29Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_recompress_v1/exact_eval_handoff/submission_closure/submission_closure_report.json",
+          "postcondition_passed": true,
+          "postcondition_type": "json_equals",
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false
+        }
+      ],
+      "expected_score_gain_sum": 0.0,
+      "experiment_id": "materializer_work_frontier_rate_attack_packet_member_recompress_v1",
+      "log_exists": true,
+      "log_path": ".omx/state/experiment_queue_logs/frontier_final_rate_attack_identity_guard_20260527Tsmoke/materializer_work_frontier_rate_attack_packet_member_recompress_v1/build_materializer_submission_closure/20260527T153629Z_3e540665e1cbb96b.log",
+      "log_tail": [],
+      "materializer_id": "packet_member_recompress_adapter",
+      "operation_family": "member_recompress",
+      "pid": 52123,
+      "processes": [],
+      "receiver_contract_id": "packet_member_recompress_v1.receiver.v1",
+      "receiver_contract_kind": "family_agnostic_packet_member_recompress",
+      "resource_kind": "local_cpu",
+      "source_selection_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "source_unit_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "status": "succeeded",
+      "step_id": "build_materializer_submission_closure",
+      "target_kind": "packet_member_recompress_v1",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "unit_kind": "packet_member",
+      "updated_at_utc": "2026-05-27T15:36:29Z",
+      "work_ids": [
+        "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+      ],
+      "worker_run_id": "3e540665e1cbb96b"
+    },
+    {
+      "attempts": 1,
+      "backlog_keys": [
+        "frontier_rate_attack:packet_member_recompress_v1"
+      ],
+      "candidate_saved_bytes_sum": 0,
+      "expected_artifact_paths": [
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_recompress_v1/exact_eval_handoff/source_queue.json",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_recompress_v1/exact_eval_handoff/harvest_report.json"
+      ],
+      "expected_artifacts": [
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 16664,
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "exists": true,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "json_schema": "optimizer_candidate_queue_v1",
+          "mtime_utc": "2026-05-27T15:36:10Z",
+          "optimizer_candidate_queue_materializer_row_count": 1,
+          "optimizer_candidate_queue_materializer_rows": [
+            {
+              "artifact_revalidation": {
+                "blockers": [],
+                "candidate_archive": {
+                  "actual_bytes": 178546,
+                  "actual_sha256": "0a3abfe645c4fac0df9ea89237f25dd9bfc6b2471b897c36d7437795d27d1403",
+                  "blockers": [],
+                  "expected_bytes": 178546,
+                  "expected_sha256": "0a3abfe645c4fac0df9ea89237f25dd9bfc6b2471b897c36d7437795d27d1403",
+                  "label": "optimizer_candidate_queue_top_k_0_candidate_archive",
+                  "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_recompress_v1/rows/001_current_contest_cpu_frontier_0a3abfe645c4/candidate.zip",
+                  "schema": "observer_file_custody_revalidation.v1",
+                  "valid": true
+                },
+                "schema": "observer_materializer_payload_revalidation.v1",
+                "valid": true
+              },
+              "candidate_archive": {
+                "bytes": 178546,
+                "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_recompress_v1/rows/001_current_contest_cpu_frontier_0a3abfe645c4/candidate.zip",
+                "sha256": "0a3abfe645c4fac0df9ea89237f25dd9bfc6b2471b897c36d7437795d27d1403"
+              },
+              "candidate_id": "packet_member_recompress_0a3abfe645c4",
+              "contest_cuda_auth_eval": false,
+              "dispatch_attempted": false,
+              "exact_cuda_auth_eval": false,
+              "field_selection_ready_for_exact_eval_dispatch": false,
+              "gpu_launched": false,
+              "materializer_charged_bits_changed": false,
+              "materializer_delta_source": "serialized_archive_delta",
+              "materializer_id": "packet_member_recompress_adapter",
+              "materializer_score_affecting_payload_changed": false,
+              "optimizer_candidate_queue_row_index": 0,
+              "promotable": false,
+              "promotion_eligible": false,
+              "rank_or_kill_eligible": false,
+              "readiness_blockers": [
+                "candidate_not_rate_positive"
+              ],
+              "ready_for_exact_eval_dispatch": false,
+              "receiver_contract_kind": "family_agnostic_packet_member_recompress",
+              "receiver_contract_satisfied": true,
+              "score_claim": false,
+              "score_claim_eligible": false,
+              "score_claim_valid": false,
+              "serialized_archive_delta": {
+                "archive_delta_bytes": 0,
+                "blockers": [],
+                "candidate_archive_bytes": 178546,
+                "dispatch_attempted": false,
+                "gpu_launched": false,
+                "modeled_cost_bytes": null,
+                "modeled_saved_bytes": null,
+                "promotable": false,
+                "promotion_eligible": false,
+                "rank_or_kill_eligible": false,
+                "rate_only_control": false,
+                "ready_for_exact_eval_dispatch": false,
+                "realized_saved_bytes": 0,
+                "require_realized_saving": false,
+                "savings_realized": false,
+                "schema": "serialized_archive_delta_contract.v1",
+                "score_claim": false,
+                "score_claim_valid": false,
+                "source_archive_bytes": 178546,
+                "status": "zero_delta"
+              },
+              "serialized_archive_delta_candidate_archive_bytes": 178546,
+              "serialized_archive_delta_realized_saved_bytes": 0,
+              "serialized_archive_delta_saved_bytes": 0,
+              "serialized_archive_delta_savings_realized": false,
+              "serialized_archive_delta_source_archive_bytes": 178546,
+              "serialized_archive_delta_status": "zero_delta",
+              "source_archive": {
+                "bytes": 178546,
+                "path": "experiments/results/v14_v2_dqs1_plus_fec10_substituted_20260526T023000Z/submission_dir/archive.zip",
+                "sha256": "0a3abfe645c4fac0df9ea89237f25dd9bfc6b2471b897c36d7437795d27d1403"
+              },
+              "target_kind": "packet_member_recompress_v1"
+            }
+          ],
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_recompress_v1/exact_eval_handoff/source_queue.json",
+          "postcondition_passed": true,
+          "postcondition_type": "json_equals",
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 7680,
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "exists": true,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "json_schema": "materializer_chain_harvest_report.v1",
+          "mtime_utc": "2026-05-27T15:36:10Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_recompress_v1/exact_eval_handoff/harvest_report.json",
+          "postcondition_passed": true,
+          "postcondition_type": "json_equals",
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false
+        }
+      ],
+      "expected_score_gain_sum": 0.0,
+      "experiment_id": "materializer_work_frontier_rate_attack_packet_member_recompress_v1",
+      "log_exists": true,
+      "log_path": ".omx/state/experiment_queue_logs/frontier_final_rate_attack_identity_guard_20260527Tsmoke/materializer_work_frontier_rate_attack_packet_member_recompress_v1/harvest_materializer_chains/20260527T153610Z_5f7a28f53560391f.log",
+      "log_tail": [],
+      "materializer_id": "packet_member_recompress_adapter",
+      "operation_family": "member_recompress",
+      "pid": 50711,
+      "processes": [],
+      "receiver_contract_id": "packet_member_recompress_v1.receiver.v1",
+      "receiver_contract_kind": "family_agnostic_packet_member_recompress",
+      "resource_kind": "local_cpu",
+      "source_selection_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "source_unit_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "status": "succeeded",
+      "step_id": "harvest_materializer_chains",
+      "target_kind": "packet_member_recompress_v1",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "unit_kind": "packet_member",
+      "updated_at_utc": "2026-05-27T15:36:10Z",
+      "work_ids": [
+        "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+      ],
+      "worker_run_id": "5f7a28f53560391f"
+    },
+    {
+      "attempts": 1,
+      "backlog_keys": [
+        "frontier_rate_attack:packet_member_recompress_v1"
+      ],
+      "candidate_saved_bytes_sum": 0,
+      "expected_artifact_paths": [
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_recompress_v1/sweep.json",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_recompress_v1/observations.jsonl",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_recompress_v1",
+        "experiments/results/v14_v2_dqs1_plus_fec10_substituted_20260526T023000Z/submission_dir/archive.zip"
+      ],
+      "expected_artifacts": [
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 7997,
+          "dispatch_attempted": false,
+          "exists": true,
+          "gpu_launched": false,
+          "json_schema": "family_agnostic_materializer_empirical_sweep.v1",
+          "materializer_id": "packet_member_recompress_adapter",
+          "mtime_utc": "2026-05-27T15:36:10Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_recompress_v1/sweep.json",
+          "postcondition_passed": true,
+          "postcondition_type": "json_equals",
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_claim": false,
+          "score_claim_valid": false,
+          "target_kind": "packet_member_recompress_v1"
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_completion_contract",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 7997,
+          "dispatch_attempted": false,
+          "exists": true,
+          "gpu_launched": false,
+          "json_schema": "family_agnostic_materializer_empirical_sweep.v1",
+          "materializer_id": "packet_member_recompress_adapter",
+          "mtime_utc": "2026-05-27T15:36:10Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_recompress_v1/sweep.json",
+          "postcondition_passed": true,
+          "postcondition_type": "json_completion_contract",
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_claim": false,
+          "score_claim_valid": false,
+          "target_kind": "packet_member_recompress_v1"
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "jsonl_false_authority": {
+              "blockers": [],
+              "row_count": 1,
+              "schema": "observer_jsonl_false_authority_revalidation.v1",
+              "valid": true
+            },
+            "postcondition_type": "jsonl_false_authority",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 5623,
+          "exists": true,
+          "mtime_utc": "2026-05-27T15:36:10Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_recompress_v1/observations.jsonl",
+          "postcondition_passed": true,
+          "postcondition_schema_equals": "family_agnostic_materializer_empirical_observation.v1",
+          "postcondition_type": "jsonl_false_authority"
+        }
+      ],
+      "expected_score_gain_sum": 0.0,
+      "experiment_id": "materializer_work_frontier_rate_attack_packet_member_recompress_v1",
+      "log_exists": true,
+      "log_path": ".omx/state/experiment_queue_logs/frontier_final_rate_attack_identity_guard_20260527Tsmoke/materializer_work_frontier_rate_attack_packet_member_recompress_v1/materialize_local_proof_chain/20260527T153610Z_6f28e07a919252e0.log",
+      "log_tail": [],
+      "materializer_id": "packet_member_recompress_adapter",
+      "operation_family": "member_recompress",
+      "pid": 50709,
+      "processes": [],
+      "receiver_contract_id": "packet_member_recompress_v1.receiver.v1",
+      "receiver_contract_kind": "family_agnostic_packet_member_recompress",
+      "resource_kind": "local_cpu",
+      "source_selection_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "source_unit_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "status": "succeeded",
+      "step_id": "materialize_local_proof_chain",
+      "target_kind": "packet_member_recompress_v1",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "unit_kind": "packet_member",
+      "updated_at_utc": "2026-05-27T15:36:10Z",
+      "work_ids": [
+        "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+      ],
+      "worker_run_id": "6f28e07a919252e0"
+    },
+    {
+      "attempts": 1,
+      "backlog_keys": [
+        "frontier_rate_attack:packet_member_zip_header_elide_v1"
+      ],
+      "candidate_saved_bytes_sum": 0,
+      "expected_artifact_paths": [
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_zip_header_elide_v1/exact_eval_handoff/submission_closure/closed_source_queue.json",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_zip_header_elide_v1/exact_eval_handoff/submission_closure/submission_closure_report.json",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_zip_header_elide_v1/exact_eval_handoff/submission_closure/submission"
+      ],
+      "expected_artifacts": [
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 28426,
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "exists": true,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "json_schema": "optimizer_candidate_queue_v1",
+          "mtime_utc": "2026-05-27T15:36:29Z",
+          "optimizer_candidate_queue_materializer_row_count": 1,
+          "optimizer_candidate_queue_materializer_rows": [
+            {
+              "artifact_revalidation": {
+                "blockers": [],
+                "candidate_archive": {
+                  "actual_bytes": 178546,
+                  "actual_sha256": "0a3abfe645c4fac0df9ea89237f25dd9bfc6b2471b897c36d7437795d27d1403",
+                  "blockers": [],
+                  "expected_bytes": 178546,
+                  "expected_sha256": "0a3abfe645c4fac0df9ea89237f25dd9bfc6b2471b897c36d7437795d27d1403",
+                  "label": "optimizer_candidate_queue_top_k_0_candidate_archive",
+                  "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_zip_header_elide_v1/exact_eval_handoff/submission_closure/submission/packet_member_zip_header_elide_0a3abfe645c4/archive.zip",
+                  "schema": "observer_file_custody_revalidation.v1",
+                  "valid": true
+                },
+                "schema": "observer_materializer_payload_revalidation.v1",
+                "valid": true
+              },
+              "candidate_archive": {
+                "bytes": 178546,
+                "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_zip_header_elide_v1/exact_eval_handoff/submission_closure/submission/packet_member_zip_header_elide_0a3abfe645c4/archive.zip",
+                "sha256": "0a3abfe645c4fac0df9ea89237f25dd9bfc6b2471b897c36d7437795d27d1403"
+              },
+              "candidate_id": "packet_member_zip_header_elide_0a3abfe645c4",
+              "contest_cuda_auth_eval": false,
+              "dispatch_attempted": false,
+              "exact_cuda_auth_eval": false,
+              "field_selection_ready_for_exact_eval_dispatch": false,
+              "gpu_launched": false,
+              "materializer_charged_bits_changed": false,
+              "materializer_delta_source": "serialized_archive_delta",
+              "materializer_id": "packet_member_zip_header_elide_adapter",
+              "materializer_score_affecting_payload_changed": false,
+              "optimizer_candidate_queue_row_index": 0,
+              "promotable": false,
+              "promotion_eligible": false,
+              "rank_or_kill_eligible": false,
+              "readiness_blockers": [
+                "candidate_not_rate_positive"
+              ],
+              "ready_for_exact_eval_dispatch": false,
+              "receiver_contract_kind": "family_agnostic_packet_member_zip_header_elide",
+              "receiver_contract_satisfied": true,
+              "score_claim": false,
+              "score_claim_eligible": false,
+              "score_claim_valid": false,
+              "serialized_archive_delta": {
+                "archive_delta_bytes": 0,
+                "blockers": [],
+                "candidate_archive_bytes": 178546,
+                "dispatch_attempted": false,
+                "gpu_launched": false,
+                "modeled_cost_bytes": null,
+                "modeled_saved_bytes": null,
+                "promotable": false,
+                "promotion_eligible": false,
+                "rank_or_kill_eligible": false,
+                "rate_only_control": false,
+                "ready_for_exact_eval_dispatch": false,
+                "realized_saved_bytes": 0,
+                "require_realized_saving": false,
+                "savings_realized": false,
+                "schema": "serialized_archive_delta_contract.v1",
+                "score_claim": false,
+                "score_claim_valid": false,
+                "source_archive_bytes": 178546,
+                "status": "zero_delta"
+              },
+              "serialized_archive_delta_candidate_archive_bytes": 178546,
+              "serialized_archive_delta_realized_saved_bytes": 0,
+              "serialized_archive_delta_saved_bytes": 0,
+              "serialized_archive_delta_savings_realized": false,
+              "serialized_archive_delta_source_archive_bytes": 178546,
+              "serialized_archive_delta_status": "zero_delta",
+              "source_archive": {
+                "bytes": 178546,
+                "path": "experiments/results/v14_v2_dqs1_plus_fec10_substituted_20260526T023000Z/submission_dir/archive.zip",
+                "sha256": "0a3abfe645c4fac0df9ea89237f25dd9bfc6b2471b897c36d7437795d27d1403"
+              },
+              "target_kind": "packet_member_zip_header_elide_v1"
+            }
+          ],
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_zip_header_elide_v1/exact_eval_handoff/submission_closure/closed_source_queue.json",
+          "postcondition_passed": true,
+          "postcondition_type": "json_equals",
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 16718,
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "exists": true,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "json_schema": "materializer_submission_runtime_closure_report.v1",
+          "mtime_utc": "2026-05-27T15:36:29Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_zip_header_elide_v1/exact_eval_handoff/submission_closure/submission_closure_report.json",
+          "postcondition_passed": true,
+          "postcondition_type": "json_equals",
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false
+        }
+      ],
+      "expected_score_gain_sum": 0.0,
+      "experiment_id": "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1",
+      "log_exists": true,
+      "log_path": ".omx/state/experiment_queue_logs/frontier_final_rate_attack_identity_guard_20260527Tsmoke/materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1/build_materializer_submission_closure/20260527T153629Z_3bff9eee2b6c6812.log",
+      "log_tail": [],
+      "materializer_id": "packet_member_zip_header_elide_adapter",
+      "operation_family": "zip_header_elide",
+      "pid": 52124,
+      "processes": [],
+      "receiver_contract_id": "packet_member_zip_header_elide_v1.receiver.v1",
+      "receiver_contract_kind": "family_agnostic_packet_member_zip_header_elide",
+      "resource_kind": "local_cpu",
+      "source_selection_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "source_unit_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "status": "succeeded",
+      "step_id": "build_materializer_submission_closure",
+      "target_kind": "packet_member_zip_header_elide_v1",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "unit_kind": "packet_member",
+      "updated_at_utc": "2026-05-27T15:36:29Z",
+      "work_ids": [
+        "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+      ],
+      "worker_run_id": "3bff9eee2b6c6812"
+    },
+    {
+      "attempts": 1,
+      "backlog_keys": [
+        "frontier_rate_attack:packet_member_zip_header_elide_v1"
+      ],
+      "candidate_saved_bytes_sum": 0,
+      "expected_artifact_paths": [
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_zip_header_elide_v1/exact_eval_handoff/source_queue.json",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_zip_header_elide_v1/exact_eval_handoff/harvest_report.json"
+      ],
+      "expected_artifacts": [
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 16820,
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "exists": true,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "json_schema": "optimizer_candidate_queue_v1",
+          "mtime_utc": "2026-05-27T15:36:10Z",
+          "optimizer_candidate_queue_materializer_row_count": 1,
+          "optimizer_candidate_queue_materializer_rows": [
+            {
+              "artifact_revalidation": {
+                "blockers": [],
+                "candidate_archive": {
+                  "actual_bytes": 178546,
+                  "actual_sha256": "0a3abfe645c4fac0df9ea89237f25dd9bfc6b2471b897c36d7437795d27d1403",
+                  "blockers": [],
+                  "expected_bytes": 178546,
+                  "expected_sha256": "0a3abfe645c4fac0df9ea89237f25dd9bfc6b2471b897c36d7437795d27d1403",
+                  "label": "optimizer_candidate_queue_top_k_0_candidate_archive",
+                  "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_zip_header_elide_v1/rows/001_current_contest_cpu_frontier_0a3abfe645c4/candidate.zip",
+                  "schema": "observer_file_custody_revalidation.v1",
+                  "valid": true
+                },
+                "schema": "observer_materializer_payload_revalidation.v1",
+                "valid": true
+              },
+              "candidate_archive": {
+                "bytes": 178546,
+                "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_zip_header_elide_v1/rows/001_current_contest_cpu_frontier_0a3abfe645c4/candidate.zip",
+                "sha256": "0a3abfe645c4fac0df9ea89237f25dd9bfc6b2471b897c36d7437795d27d1403"
+              },
+              "candidate_id": "packet_member_zip_header_elide_0a3abfe645c4",
+              "contest_cuda_auth_eval": false,
+              "dispatch_attempted": false,
+              "exact_cuda_auth_eval": false,
+              "field_selection_ready_for_exact_eval_dispatch": false,
+              "gpu_launched": false,
+              "materializer_charged_bits_changed": false,
+              "materializer_delta_source": "serialized_archive_delta",
+              "materializer_id": "packet_member_zip_header_elide_adapter",
+              "materializer_score_affecting_payload_changed": false,
+              "optimizer_candidate_queue_row_index": 0,
+              "promotable": false,
+              "promotion_eligible": false,
+              "rank_or_kill_eligible": false,
+              "readiness_blockers": [
+                "candidate_not_rate_positive"
+              ],
+              "ready_for_exact_eval_dispatch": false,
+              "receiver_contract_kind": "family_agnostic_packet_member_zip_header_elide",
+              "receiver_contract_satisfied": true,
+              "score_claim": false,
+              "score_claim_eligible": false,
+              "score_claim_valid": false,
+              "serialized_archive_delta": {
+                "archive_delta_bytes": 0,
+                "blockers": [],
+                "candidate_archive_bytes": 178546,
+                "dispatch_attempted": false,
+                "gpu_launched": false,
+                "modeled_cost_bytes": null,
+                "modeled_saved_bytes": null,
+                "promotable": false,
+                "promotion_eligible": false,
+                "rank_or_kill_eligible": false,
+                "rate_only_control": false,
+                "ready_for_exact_eval_dispatch": false,
+                "realized_saved_bytes": 0,
+                "require_realized_saving": false,
+                "savings_realized": false,
+                "schema": "serialized_archive_delta_contract.v1",
+                "score_claim": false,
+                "score_claim_valid": false,
+                "source_archive_bytes": 178546,
+                "status": "zero_delta"
+              },
+              "serialized_archive_delta_candidate_archive_bytes": 178546,
+              "serialized_archive_delta_realized_saved_bytes": 0,
+              "serialized_archive_delta_saved_bytes": 0,
+              "serialized_archive_delta_savings_realized": false,
+              "serialized_archive_delta_source_archive_bytes": 178546,
+              "serialized_archive_delta_status": "zero_delta",
+              "source_archive": {
+                "bytes": 178546,
+                "path": "experiments/results/v14_v2_dqs1_plus_fec10_substituted_20260526T023000Z/submission_dir/archive.zip",
+                "sha256": "0a3abfe645c4fac0df9ea89237f25dd9bfc6b2471b897c36d7437795d27d1403"
+              },
+              "target_kind": "packet_member_zip_header_elide_v1"
+            }
+          ],
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_zip_header_elide_v1/exact_eval_handoff/source_queue.json",
+          "postcondition_passed": true,
+          "postcondition_type": "json_equals",
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 7462,
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "exists": true,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "json_schema": "materializer_chain_harvest_report.v1",
+          "mtime_utc": "2026-05-27T15:36:10Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_zip_header_elide_v1/exact_eval_handoff/harvest_report.json",
+          "postcondition_passed": true,
+          "postcondition_type": "json_equals",
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false
+        }
+      ],
+      "expected_score_gain_sum": 0.0,
+      "experiment_id": "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1",
+      "log_exists": true,
+      "log_path": ".omx/state/experiment_queue_logs/frontier_final_rate_attack_identity_guard_20260527Tsmoke/materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1/harvest_materializer_chains/20260527T153610Z_e5baf94c5f9d53e1.log",
+      "log_tail": [],
+      "materializer_id": "packet_member_zip_header_elide_adapter",
+      "operation_family": "zip_header_elide",
+      "pid": 50712,
+      "processes": [],
+      "receiver_contract_id": "packet_member_zip_header_elide_v1.receiver.v1",
+      "receiver_contract_kind": "family_agnostic_packet_member_zip_header_elide",
+      "resource_kind": "local_cpu",
+      "source_selection_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "source_unit_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "status": "succeeded",
+      "step_id": "harvest_materializer_chains",
+      "target_kind": "packet_member_zip_header_elide_v1",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "unit_kind": "packet_member",
+      "updated_at_utc": "2026-05-27T15:36:10Z",
+      "work_ids": [
+        "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+      ],
+      "worker_run_id": "e5baf94c5f9d53e1"
+    },
+    {
+      "attempts": 1,
+      "backlog_keys": [
+        "frontier_rate_attack:packet_member_zip_header_elide_v1"
+      ],
+      "candidate_saved_bytes_sum": 0,
+      "expected_artifact_paths": [
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_zip_header_elide_v1/sweep.json",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_zip_header_elide_v1/observations.jsonl",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_zip_header_elide_v1",
+        "experiments/results/v14_v2_dqs1_plus_fec10_substituted_20260526T023000Z/submission_dir/archive.zip"
+      ],
+      "expected_artifacts": [
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 8490,
+          "dispatch_attempted": false,
+          "exists": true,
+          "gpu_launched": false,
+          "json_schema": "family_agnostic_materializer_empirical_sweep.v1",
+          "materializer_id": "packet_member_zip_header_elide_adapter",
+          "mtime_utc": "2026-05-27T15:36:10Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_zip_header_elide_v1/sweep.json",
+          "postcondition_passed": true,
+          "postcondition_type": "json_equals",
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_claim": false,
+          "score_claim_valid": false,
+          "target_kind": "packet_member_zip_header_elide_v1"
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_completion_contract",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 8490,
+          "dispatch_attempted": false,
+          "exists": true,
+          "gpu_launched": false,
+          "json_schema": "family_agnostic_materializer_empirical_sweep.v1",
+          "materializer_id": "packet_member_zip_header_elide_adapter",
+          "mtime_utc": "2026-05-27T15:36:10Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_zip_header_elide_v1/sweep.json",
+          "postcondition_passed": true,
+          "postcondition_type": "json_completion_contract",
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_claim": false,
+          "score_claim_valid": false,
+          "target_kind": "packet_member_zip_header_elide_v1"
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "jsonl_false_authority": {
+              "blockers": [],
+              "row_count": 1,
+              "schema": "observer_jsonl_false_authority_revalidation.v1",
+              "valid": true
+            },
+            "postcondition_type": "jsonl_false_authority",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 5939,
+          "exists": true,
+          "mtime_utc": "2026-05-27T15:36:10Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/identity_guard_20260527Tsmoke/frontier_final_rate_attack_identity_guard_20260527Tsmoke/packet_member_zip_header_elide_v1/observations.jsonl",
+          "postcondition_passed": true,
+          "postcondition_schema_equals": "family_agnostic_materializer_empirical_observation.v1",
+          "postcondition_type": "jsonl_false_authority"
+        }
+      ],
+      "expected_score_gain_sum": 0.0,
+      "experiment_id": "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1",
+      "log_exists": true,
+      "log_path": ".omx/state/experiment_queue_logs/frontier_final_rate_attack_identity_guard_20260527Tsmoke/materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1/materialize_local_proof_chain/20260527T153610Z_97da8e41a7afbac4.log",
+      "log_tail": [],
+      "materializer_id": "packet_member_zip_header_elide_adapter",
+      "operation_family": "zip_header_elide",
+      "pid": 50710,
+      "processes": [],
+      "receiver_contract_id": "packet_member_zip_header_elide_v1.receiver.v1",
+      "receiver_contract_kind": "family_agnostic_packet_member_zip_header_elide",
+      "resource_kind": "local_cpu",
+      "source_selection_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "source_unit_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "status": "succeeded",
+      "step_id": "materialize_local_proof_chain",
+      "target_kind": "packet_member_zip_header_elide_v1",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "unit_kind": "packet_member",
+      "updated_at_utc": "2026-05-27T15:36:10Z",
+      "work_ids": [
+        "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+      ],
+      "worker_run_id": "97da8e41a7afbac4"
+    }
+  ],
+  "succeeded_signal_steps": [],
+  "suggested_commands": {
+    "pause": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control paused --reason '<reason>'",
+    "refresh": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> observe --tail-lines 20",
+    "resume": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control running --reason '<reason>'",
+    "run_worker": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> run-worker --execute"
+  }
+}

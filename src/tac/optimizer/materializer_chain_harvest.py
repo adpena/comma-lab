@@ -954,23 +954,32 @@ def _chain_runtime_adapter_identity_blockers(
     ):
         return []
     runtime_dirs = _chain_runtime_dir_paths(chain, repo_root=repo_root)
-    actual_runtime_tree_sha = _chain_runtime_dir_tree_sha256(
-        chain,
-        repo_root=repo_root,
-    )
     expected_runtime_tree_sha = _chain_runtime_tree_sha256(chain)
     blockers: list[str] = []
-    if not runtime_dirs or not any(path.is_dir() for path in runtime_dirs):
+    if not runtime_dirs:
         blockers.append("runtime_adapter_dir_missing")
-    if any(path.is_symlink() for path in runtime_dirs):
-        blockers.append("runtime_adapter_dir_is_symlink")
-    if actual_runtime_tree_sha is None:
-        blockers.append("runtime_tree_sha256_live_runtime_dir_unverifiable")
     if expected_runtime_tree_sha is None:
         blockers.append("runtime_tree_sha256_missing")
-    elif actual_runtime_tree_sha is not None and actual_runtime_tree_sha != expected_runtime_tree_sha:
-        blockers.append("runtime_tree_sha256_mismatch")
-    return blockers
+    live_runtime_checked = False
+    for runtime_dir in runtime_dirs:
+        if runtime_dir.is_symlink():
+            blockers.append("runtime_adapter_dir_is_symlink")
+            continue
+        if not runtime_dir.is_dir():
+            blockers.append("runtime_adapter_dir_missing")
+            continue
+        if not (runtime_dir / "inflate.sh").is_file():
+            blockers.append("runtime_adapter_dir_missing_inflate_sh")
+            continue
+        live_runtime_checked = True
+        if expected_runtime_tree_sha is None:
+            continue
+        actual_runtime_tree_sha = tree_sha256(runtime_dir).lower()
+        if actual_runtime_tree_sha != expected_runtime_tree_sha:
+            blockers.append("runtime_tree_sha256_mismatch")
+    if not live_runtime_checked:
+        blockers.append("runtime_tree_sha256_live_runtime_dir_unverifiable")
+    return ordered_unique(blockers)
 
 
 def _chain_runtime_dir_paths(

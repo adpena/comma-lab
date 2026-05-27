@@ -828,6 +828,34 @@ def test_harvest_rejects_chain_manifest_stale_runtime_tree_identity(
     )
 
 
+def test_harvest_rejects_chain_manifest_stale_candidate_runtime_dir_even_with_valid_alias(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    external = tmp_path / "VertigoDataTier"
+    chain = _chain_manifest(external)
+    payload = json.loads(chain.read_text(encoding="utf-8"))
+    live_runtime = external / "candidate_runtime"
+    payload["runtime_dir"] = str(live_runtime)
+    payload["candidate_runtime_dir"] = str(external / "stale_candidate_runtime")
+    payload["candidate_runtime_tree_sha256"] = tree_sha256(live_runtime)
+    chain.write_text(json.dumps(payload), encoding="utf-8")
+
+    result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[chain],
+    )
+
+    assert result["report"]["accepted_manifest_count"] == 0
+    assert result["source_queue"]["n_candidates"] == 0
+    assert any(
+        "runtime_adapter_identity_blocked:runtime_adapter_dir_missing"
+        in blocker
+        for blocker in result["report"]["rows"][0]["blockers"]
+    )
+
+
 def test_harvest_family_agnostic_declaration_only_proof_is_not_receiver_ready(
     tmp_path: Path,
 ) -> None:

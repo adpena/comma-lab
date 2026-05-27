@@ -40,6 +40,7 @@ from src.comma_lab.scheduler.experiment_queue import (
     set_control_mode,
     worker_resource_limits,
 )
+from tac.repo_io import tree_sha256
 
 
 def _queue(tmp_path: Path) -> dict[str, object]:
@@ -2509,6 +2510,17 @@ def _postcondition_artifact(path: Path, payload: bytes = b"artifact") -> dict[st
     }
 
 
+def _postcondition_runtime(path: Path) -> dict[str, object]:
+    path.mkdir(parents=True, exist_ok=True)
+    inflate = path / "inflate.sh"
+    inflate.write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+    inflate.chmod(inflate.stat().st_mode | 0o100)
+    return {
+        "candidate_runtime_dir": str(path),
+        "candidate_runtime_tree_sha256": tree_sha256(path),
+    }
+
+
 def test_json_completion_contract_required_less_than_is_strict(
     tmp_path: Path,
 ) -> None:
@@ -2546,6 +2558,7 @@ def test_materializer_chain_complete_allows_downstream_readiness_blockers(
     manifest = tmp_path / "chain.json"
     archive = _postcondition_artifact(tmp_path / "candidate.zip", b"candidate")
     proof = _postcondition_artifact(tmp_path / "receiver_proof.json", b"proof")
+    runtime = _postcondition_runtime(tmp_path / "candidate_runtime")
     payload = {
         "schema": "chain.v1",
         "candidate_archive": archive,
@@ -2555,6 +2568,7 @@ def test_materializer_chain_complete_allows_downstream_readiness_blockers(
         "runtime_adapter_ready": True,
         "receiver_contract_satisfied": True,
         "candidate_runtime_adapter_blocker_cleared": True,
+        **runtime,
         "readiness_blockers": [
             "candidate_inflate_output_parity_missing",
             "exact_auth_eval_required_before_score_claim",
@@ -2586,6 +2600,7 @@ def test_materializer_chain_complete_defaults_block_truthy_alias_fields(
     manifest = tmp_path / "chain.json"
     archive = _postcondition_artifact(tmp_path / "candidate.zip", b"candidate")
     proof = _postcondition_artifact(tmp_path / "receiver_proof.json", b"proof")
+    runtime = _postcondition_runtime(tmp_path / "candidate_runtime")
     base_payload = {
         "schema": "chain.v1",
         "candidate_archive": archive,
@@ -2595,6 +2610,7 @@ def test_materializer_chain_complete_defaults_block_truthy_alias_fields(
         "runtime_adapter_ready": True,
         "receiver_contract_satisfied": True,
         "candidate_runtime_adapter_blocker_cleared": True,
+        **runtime,
         "readiness_blockers": ["exact_auth_eval_required_before_score_claim"],
         "artifacts": {"receiver_proof": proof},
         "chain_steps": [{"status": "succeeded", "artifact": proof}],
@@ -2626,7 +2642,7 @@ def test_materializer_chain_complete_defaults_block_truthy_alias_fields(
     assert _condition_passes(condition, repo_root=tmp_path) is True
 
 
-def test_materializer_chain_complete_explicit_false_or_missing_override_is_exact(
+def test_materializer_chain_complete_requires_runtime_identity_by_default(
     tmp_path: Path,
 ) -> None:
     manifest = tmp_path / "chain.json"
@@ -2641,6 +2657,45 @@ def test_materializer_chain_complete_explicit_false_or_missing_override_is_exact
         "runtime_adapter_ready": True,
         "receiver_contract_satisfied": True,
         "candidate_runtime_adapter_blocker_cleared": True,
+        "readiness_blockers": ["exact_auth_eval_required_before_score_claim"],
+        "artifacts": {"receiver_proof": proof},
+        "chain_steps": [{"status": "succeeded", "artifact": proof}],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    condition = {
+        "type": "materializer_chain_complete",
+        "path": manifest.name,
+        "schema": "chain.v1",
+    }
+
+    manifest.write_text(json.dumps(payload), encoding="utf-8")
+    assert _condition_passes(condition, repo_root=tmp_path) is False
+
+    opt_out = dict(condition)
+    opt_out["required_runtime_adapter_identity"] = False
+    assert _condition_passes(opt_out, repo_root=tmp_path) is True
+
+
+def test_materializer_chain_complete_explicit_false_or_missing_override_is_exact(
+    tmp_path: Path,
+) -> None:
+    manifest = tmp_path / "chain.json"
+    archive = _postcondition_artifact(tmp_path / "candidate.zip", b"candidate")
+    proof = _postcondition_artifact(tmp_path / "receiver_proof.json", b"proof")
+    runtime = _postcondition_runtime(tmp_path / "candidate_runtime")
+    payload = {
+        "schema": "chain.v1",
+        "candidate_archive": archive,
+        "candidate_archive_sha256": archive["sha256"],
+        "candidate_archive_bytes": archive["bytes"],
+        "byte_closed_candidate_emitted": True,
+        "runtime_adapter_ready": True,
+        "receiver_contract_satisfied": True,
+        "candidate_runtime_adapter_blocker_cleared": True,
+        **runtime,
         "readiness_blockers": [],
         "artifacts": {"receiver_proof": proof},
         "chain_steps": [{"status": "succeeded", "artifact": proof}],
@@ -2666,6 +2721,7 @@ def test_materializer_chain_complete_requires_serialized_archive_saving_status(
     manifest = tmp_path / "chain.json"
     archive = _postcondition_artifact(tmp_path / "candidate.zip", b"candidate")
     proof = _postcondition_artifact(tmp_path / "receiver_proof.json", b"proof")
+    runtime = _postcondition_runtime(tmp_path / "candidate_runtime")
     payload = {
         "schema": "chain.v1",
         "candidate_archive": archive,
@@ -2677,6 +2733,7 @@ def test_materializer_chain_complete_requires_serialized_archive_saving_status(
         "runtime_adapter_ready": True,
         "receiver_contract_satisfied": True,
         "candidate_runtime_adapter_blocker_cleared": True,
+        **runtime,
         "readiness_blockers": [],
         "artifacts": {"receiver_proof": proof},
         "chain_steps": [{"status": "succeeded", "artifact": proof}],

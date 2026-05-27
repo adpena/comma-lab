@@ -3737,6 +3737,13 @@ def test_materializer_chain_completion_contract_rejects_schema_only_and_failure(
     archive = _write_artifact(tmp_path / "candidate_archive.zip", b"archive-bytes")
     candidate_manifest = _write_artifact(tmp_path / "candidate_manifest.json")
     receiver_proof = _write_artifact(tmp_path / "receiver_proof.json")
+    runtime_dir = tmp_path / "candidate_runtime"
+    runtime_dir.mkdir()
+    (runtime_dir / "inflate.sh").write_text(
+        "#!/usr/bin/env bash\nexit 0\n",
+        encoding="utf-8",
+    )
+    runtime_tree_sha = tree_sha256(runtime_dir)
     manifest.write_text(
         json.dumps(
             {
@@ -3749,6 +3756,8 @@ def test_materializer_chain_completion_contract_rejects_schema_only_and_failure(
                 "receiver_proof_ready": True,
                 "receiver_contract_satisfied": True,
                 "candidate_runtime_adapter_blocker_cleared": True,
+                "candidate_runtime_dir": runtime_dir.as_posix(),
+                "candidate_runtime_tree_sha256": runtime_tree_sha,
                 "readiness_blockers": [],
                 "artifacts": {
                     "candidate_manifest": candidate_manifest,
