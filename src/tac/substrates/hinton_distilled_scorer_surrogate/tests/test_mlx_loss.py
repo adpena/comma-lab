@@ -24,13 +24,19 @@ mx = pytest.importorskip("mlx.core")
 from tac.local_acceleration import EVIDENCE_GRADE_MLX  # noqa: E402
 from tac.substrates.hinton_distilled_scorer_surrogate import (  # noqa: E402
     DEFAULT_DISTILLATION_TEMPERATURE,
+    DEFAULT_POSE_DIMS,
+    DEFAULT_POSE_POOL_GRID,
     DEFAULT_SEGNET_CLASSES,
     HintonMlxCustomLossFnConfig,
+    LearnablePoseStudentHead,
     MockTeacherLogitsProvider,
+    RealPoseNetTeacherCache,
+    build_learnable_pose_student_head,
     build_real_segnet_teacher_cache,
     hinton_distilled_kl_t2_loss,
     kl_divergence_between_softmax,
     make_hinton_custom_loss_fn,
+    pose_distillation_mse_loss,
     softmax_with_temperature,
 )
 from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (  # noqa: E402
@@ -105,6 +111,99 @@ def test_hinton_kl_rejects_nonpositive_temperature() -> None:
     b = mx.array([[2.0, 1.0]])
     with pytest.raises(ValueError, match="temperature must be > 0"):
         hinton_distilled_kl_t2_loss(a, b, temperature=0.0)
+
+
+def test_pose_distillation_mse_loss_matches_continuous_pose_mse() -> None:
+    student = mx.array([[1.0, 2.0, 3.0], [0.0, 0.5, 1.0]])
+    teacher = mx.array([[1.0, 0.0, 3.0], [1.0, 0.5, 2.0]])
+    loss = pose_distillation_mse_loss(student, teacher)
+    assert float(loss.item()) == pytest.approx(
+        (0.0 + 4.0 + 0.0 + 1.0 + 0.0 + 1.0) / 6.0
+    )
+
+
+def test_pose_distillation_mse_loss_supports_per_dim_scale() -> None:
+    student = mx.array([[2.0, 4.0]])
+    teacher = mx.array([[0.0, 0.0]])
+    loss = pose_distillation_mse_loss(
+        student,
+        teacher,
+        per_dim_scale=mx.array([2.0, 4.0]),
+    )
+    assert float(loss.item()) == pytest.approx(1.0)
+
+
+def test_real_posenet_teacher_cache_indexes_pair_pose() -> None:
+    cache = RealPoseNetTeacherCache(
+        teacher_pose_np=mx.array(
+            [[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]],
+        ),
+        num_pairs=2,
+        pose_dims=3,
+        per_dim_scale=mx.array([1.0, 2.0, 3.0]),
+        upstream_posenet_safetensors_sha256="a" * 64,
+        cache_build_seconds=1.25,
+    )
+    out = cache.teacher_pose_for_indices(mx.array([1, 0], dtype=mx.int32))
+    assert out.shape == (2, 3)
+    assert tuple(cache.per_dim_scale.shape) == (3,)
+    assert cache.upstream_posenet_safetensors_sha256 == "a" * 64
+    assert cache.cache_build_seconds == pytest.approx(1.25)
+
+
+def test_real_posenet_teacher_cache_rejects_shape_mismatch() -> None:
+    with pytest.raises(ValueError, match="teacher_pose_np must have shape"):
+        RealPoseNetTeacherCache(
+            teacher_pose_np=mx.zeros((2, 4)),
+            num_pairs=2,
+            pose_dims=3,
+        )
+
+
+def test_real_posenet_teacher_cache_rejects_scale_shape_mismatch() -> None:
+    with pytest.raises(ValueError, match="per_dim_scale must have shape"):
+        RealPoseNetTeacherCache(
+            teacher_pose_np=mx.zeros((2, 3)),
+            num_pairs=2,
+            pose_dims=3,
+            per_dim_scale=mx.zeros((4,)),
+        )
+
+
+def test_build_learnable_pose_student_head_returns_canonical_shape() -> None:
+    assert DEFAULT_POSE_DIMS == 6
+    assert DEFAULT_POSE_POOL_GRID == 4
+    head = build_learnable_pose_student_head(seed=7)
+    assert head.weight.shape == (2 * 4 * 4 * 3, 6)
+    assert head.bias.shape == (6,)
+    rgb_0 = mx.ones((2, 8, 8, 3))
+    rgb_1 = mx.zeros((2, 8, 8, 3))
+    out = head(rgb_0, rgb_1)
+    assert out.shape == (2, 6)
+
+
+def test_learnable_pose_student_head_forward_with_params_matches_call() -> None:
+    head = build_learnable_pose_student_head(pose_dims=2, pool_grid=2, seed=3)
+    rgb_0 = mx.ones((1, 4, 4, 3))
+    rgb_1 = mx.zeros((1, 4, 4, 3))
+    out_call = head(rgb_0, rgb_1)
+    out_params = head.forward_with_params(
+        rgb_0,
+        rgb_1,
+        {"weight": head.weight, "bias": head.bias},
+    )
+    assert float(mx.max(mx.abs(out_call - out_params)).item()) < 1e-7
+
+
+def test_learnable_pose_student_head_rejects_too_small_spatial_grid() -> None:
+    head = LearnablePoseStudentHead(
+        weight=mx.zeros((2 * 4 * 4 * 3, 6)),
+        bias=mx.zeros((6,)),
+        pose_dims=6,
+        pool_grid=4,
+    )
+    with pytest.raises(ValueError, match="too small"):
+        head(mx.ones((1, 3, 8, 3)), mx.ones((1, 3, 8, 3)))
 
 
 def test_mock_teacher_logits_shape() -> None:

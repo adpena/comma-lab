@@ -11,6 +11,7 @@ from tac.substrates._shared.mlx_score_aware import (
     MlxScoreAwareHarnessError,
     RendererBundle,
     assert_numpy_portable_inflate,
+    build_mlx_posenet_pair_teacher,
     decode_frames_nhwc01,
     is_mlx_available,
     require_mlx_for_harness,
@@ -180,6 +181,7 @@ def test_real_scorer_distill_selects_contest_segnet_frame_by_default() -> None:
         distillation_weight=1.0,
         scorer_teacher=_Teacher(),
         learnable_student_head=head,
+        allow_segnet_only_research=True,
     )
     score_aware_loss(bundle, mx.array([0, 1]))
     assert head.last_mean == pytest.approx(1.0)
@@ -195,9 +197,100 @@ def test_real_scorer_distill_selects_contest_segnet_frame_by_default() -> None:
         scorer_teacher=_Teacher(),
         learnable_student_head=frame_0_head,
         segnet_teacher_frame_index=0,
+        allow_segnet_only_research=True,
     )
     score_aware_loss(frame_0_bundle, mx.array([0, 1]))
     assert frame_0_head.last_mean == pytest.approx(0.0)
+
+
+def test_pose_distill_composes_real_pose_teacher_and_head() -> None:
+    target_0, target_1 = _targets()
+
+    class _PoseTeacher:
+        pose_dims = 6
+
+        def teacher_pose_for_indices(self, idx):
+            return mx.zeros((idx.shape[0], self.pose_dims))
+
+    class _PoseHead:
+        def __init__(self) -> None:
+            self.seen_means = None
+
+        def __call__(self, rgb_0, rgb_1):
+            self.seen_means = (_scalar(mx.mean(rgb_0)), _scalar(mx.mean(rgb_1)))
+            return mx.ones((rgb_0.shape[0], 6))
+
+    head = _PoseHead()
+    bundle = RendererBundle(
+        model=ReconstructPairModel(target_0, target_1),
+        target_rgb_0=target_0,
+        target_rgb_1=target_1,
+        num_pairs=2,
+        forward_convention="reconstruct_pair_nchw01",
+        pose_distillation_weight=2.0,
+        pose_scorer_teacher=_PoseTeacher(),
+        learnable_pose_student_head=head,
+    )
+    total, parts = score_aware_loss(bundle, mx.array([0, 1]))
+    assert _scalar(parts["recon"]) < 1e-10
+    assert _scalar(parts["pose_distill"]) == pytest.approx(1.0)
+    assert _scalar(total) == pytest.approx(2.0)
+    assert head.seen_means == pytest.approx(
+        (_scalar(mx.mean(target_0)), _scalar(mx.mean(target_1)))
+    )
+
+
+def test_build_mlx_posenet_pair_teacher_uses_upstream_pair_scale(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import torch
+
+    observed: dict[str, float] = {}
+
+    class _FakePoseNet:
+        def eval(self) -> None:
+            observed["eval_called"] = 1.0
+
+        def preprocess_input(self, x: torch.Tensor) -> torch.Tensor:
+            observed["input_max"] = float(x.max().item())
+            observed["shape_t"] = float(x.shape[1])
+            return x
+
+        def __call__(self, x: torch.Tensor) -> dict[str, torch.Tensor]:
+            b = x.shape[0]
+            return {"pose": torch.arange(12, dtype=torch.float32).repeat(b, 1)}
+
+    def _fake_load_default_scorers(_upstream_dir: str, *, device: str):
+        observed["device_is_cpu"] = 1.0 if device == "cpu" else 0.0
+        return _FakePoseNet(), object()
+
+    import tac.scorer
+
+    monkeypatch.setattr(tac.scorer, "load_default_scorers", _fake_load_default_scorers)
+    target_0 = mx.ones((1, 384, 512, 3))
+    target_1 = mx.zeros((1, 384, 512, 3))
+    bundle = RendererBundle(
+        model=object(),
+        target_rgb_0=target_0,
+        target_rgb_1=target_1,
+        num_pairs=1,
+        pose_dims=6,
+    )
+
+    cache = build_mlx_posenet_pair_teacher(bundle, upstream_dir="upstream", device="cpu")
+
+    assert observed["eval_called"] == 1.0
+    assert observed["device_is_cpu"] == 1.0
+    assert observed["input_max"] == 255.0
+    assert observed["shape_t"] == 2.0
+    assert cache.num_pairs == 1
+    assert cache.pose_dims == 6
+    assert tuple(cache.per_dim_scale.shape) == (6,)
+    np.testing.assert_allclose(np.array(cache.per_dim_scale), np.full((6,), 1e-3))
+    np.testing.assert_allclose(
+        np.array(cache.teacher_pose_for_indices(mx.array([0]))),
+        np.arange(6, dtype=np.float32).reshape(1, 6),
+    )
 
 
 def test_numpy_portable_inflate_gate_uses_fail_closed_error_type() -> None:

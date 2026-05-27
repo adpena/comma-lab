@@ -137,6 +137,40 @@ def test_adapter_train_step_reduces_loss_over_steps() -> None:
 
 
 @mlx_only
+def test_adapter_trains_pose_head_jointly() -> None:
+    import mlx.core as mx
+
+    from tac.substrates.hinton_distilled_scorer_surrogate import (
+        RealPoseNetTeacherCache,
+        build_learnable_pose_student_head,
+    )
+
+    base = _tiny_dreamer_bundle(num_pairs=4, distill=0.0)
+    pose_teacher = RealPoseNetTeacherCache(
+        teacher_pose_np=mx.ones((4, 6)),
+        num_pairs=4,
+        pose_dims=6,
+    )
+    pose_head = build_learnable_pose_student_head(seed=11)
+    bundle = RendererBundle(
+        model=base.model,
+        target_rgb_0=base.target_rgb_0,
+        target_rgb_1=base.target_rgb_1,
+        num_pairs=base.num_pairs,
+        forward_convention=base.forward_convention,
+        pose_distillation_weight=0.5,
+        pose_scorer_teacher=pose_teacher,
+        learnable_pose_student_head=pose_head,
+    )
+    adapter = MlxScoreAwareAdapter(bundle, substrate_id="dreamer_v3_rssm")
+    batch = mx.array([0, 1, 2, 3], dtype=mx.int32)
+    w0 = mx.array(pose_head.weight)
+    adapter.train_step(batch, learning_rate=1e-2, loss_weights={})
+    moved = float(mx.max(mx.abs(pose_head.weight - w0)).item())
+    assert moved > 0.0, "pose head params must train jointly (sibling step)"
+
+
+@mlx_only
 def test_adapter_satisfies_protocol() -> None:
     from tac.training.long_training_canonical import validate_substrate_adapter
 

@@ -44,6 +44,7 @@ from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
 from tac.substrates._shared.mlx_score_aware.bundle import (
     FORWARD_CONVENTIONS,
     MlxRenderer,
+    PoseScorerTeacherProvider,
     RendererBundle,
     ScorerTeacherProvider,
 )
@@ -58,6 +59,7 @@ from tac.substrates._shared.mlx_score_aware.harness import (
     run_mlx_score_aware_full_main,
 )
 from tac.substrates._shared.mlx_score_aware.loss import (
+    build_mlx_posenet_pair_teacher,
     build_mlx_segnet_pair_teacher,
     decode_frames_nhwc01,
     score_aware_loss,
@@ -80,9 +82,11 @@ __all__ = [
     "MlxRenderer",
     "MlxScoreAwareAdapter",
     "MlxScoreAwareHarnessError",
+    "PoseScorerTeacherProvider",
     "RendererBundle",
     "ScorerTeacherProvider",
     "assert_numpy_portable_inflate",
+    "build_mlx_posenet_pair_teacher",
     "build_mlx_segnet_pair_teacher",
     "decode_frames_nhwc01",
     "decode_mlx_targets",

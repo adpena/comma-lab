@@ -167,6 +167,46 @@ def score_aware_loss(
         total = total + bundle.distillation_weight * distill
         parts["distill"] = distill
 
+    if bundle.pose_distillation_weight > 0.0:
+        # PRODUCTION pose path (Catalog #164 + the C6 IBPS / DreamerV3 lesson,
+        # POSE axis): the pose term BINDS THE REAL POSENET. The student is the
+        # learnable pose head on the DECODED frame PAIR (gradient-bearing:
+        # pose-MSE -> pose_head(decoded_0, decoded_1) -> renderer params); the
+        # teacher is the REAL contest PoseNet's pose on this pair's TWO TARGET
+        # frames (gradient-blocked). Backprop through the full ported FastViT
+        # PoseNet would NaN in MLX's second-order autograd composed with the
+        # renderer's PixelShuffle/bilinear backward (identical to the SegNet
+        # finding); the learnable-head surrogate gives a FINITE, scorer-bound
+        # gradient. ``bundle.__post_init__`` already enforces that
+        # pose_scorer_teacher + learnable_pose_student_head are both wired.
+        from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (
+            pose_distillation_mse_loss,
+        )
+
+        pose_head = bundle.learnable_pose_student_head
+        if pose_head is None or bundle.pose_scorer_teacher is None:
+            raise ValueError(
+                "pose_distillation_weight > 0 without pose_scorer_teacher + "
+                "learnable_pose_student_head; RendererBundle.__post_init__ "
+                "should have rejected this."
+            )
+        student_pose = pose_head(rgb_0, rgb_1)
+        teacher_pose = mx.stop_gradient(
+            bundle.pose_scorer_teacher.teacher_pose_for_indices(idx)
+        )
+        # Standardize per-dim by the teacher's per-dim std (canonical scale-
+        # stable pose objective) when the teacher cache supplies it.
+        per_dim_scale = getattr(
+            bundle.pose_scorer_teacher, "per_dim_scale", None
+        )
+        pose_distill = pose_distillation_mse_loss(
+            student_pose=student_pose,
+            teacher_pose=teacher_pose,
+            per_dim_scale=per_dim_scale,
+        )
+        total = total + bundle.pose_distillation_weight * pose_distill
+        parts["pose_distill"] = pose_distill
+
     if bundle.extra_loss_terms is not None:
         extra = bundle.extra_loss_terms(bundle.model, idx)
         for name, term in extra.items():
@@ -269,7 +309,139 @@ def build_mlx_segnet_pair_teacher(
     )
 
 
+def build_mlx_posenet_pair_teacher(
+    bundle: RendererBundle,
+    *,
+    upstream_dir: Any = "upstream",
+    device: str = "cpu",
+) -> Any:
+    """Build a real-PyTorch-PoseNet per-pair teacher cache for the harness.
+
+    The POSE axis sister of :func:`build_mlx_segnet_pair_teacher` — PoseNet is
+    DOMINANT at the frontier (per CLAUDE.md "SegNet vs PoseNet importance").
+    Loads the real upstream PyTorch PoseNet, runs ONE gradient-free PoseNet
+    forward per pair's TWO TARGET frames (the contest PoseNet consumes the
+    FULL pair, not a single frame), and caches the per-pair pose vector (first
+    ``bundle.pose_dims`` of the 12-dim pose head) indexed by PAIR index. The
+    cache satisfies the
+    :class:`tac.substrates._shared.mlx_score_aware.bundle.PoseScorerTeacherProvider`
+    protocol so it threads directly into ``RendererBundle.pose_scorer_teacher``.
+
+    This is the teacher target the learnable pose-student head is distilled
+    toward (MSE); the renderer gradient then flows pose-MSE -> pose_head(decoded
+    pair) -> renderer, binding the renderer to the REAL PoseNet's ego-motion
+    estimate (NOT a pixel-MSE-redundant direction).
+
+    The real PoseNet ``preprocess_input`` interpolates each frame to
+    ``(384, 512)`` then applies ``rgb_to_yuv6`` per frame -> 6 channels -> a
+    ``(B, 12, H', W')`` YUV6 pair. SegNet-size targets ``(384, 512)`` are the
+    canonical contest eval size so the interpolate is a no-op on spatial dims.
+
+    Args:
+        bundle: the harness RendererBundle. Targets MUST be NHWC ``[0, 1]`` at
+            SegNet/contest size ``(384, 512)``. ``bundle.pose_dims`` selects how
+            many pose dims to cache (default 6).
+        upstream_dir: path to the upstream repo (contains the PoseNet weights).
+        device: PyTorch device for the PoseNet weight load + forward (``cpu``
+            per CLAUDE.md "MPS auth eval is NOISE" — no MPS for the teacher;
+            MPS PoseNet drift is 23x).
+
+    Returns:
+        a :class:`RealPoseNetTeacherCache` keyed by PAIR index so its
+        ``teacher_pose_for_indices(idx)`` aligns with the harness batch.
+
+    Raises:
+        MlxScoreAwareHarnessError: targets are not at contest ``(384, 512)``.
+    """
+    import hashlib
+    import time
+    from pathlib import Path
+
+    import numpy as np
+    import torch
+
+    from tac.scorer import load_default_scorers
+    from tac.substrates._shared.mlx_score_aware.device_gate import (
+        MlxScoreAwareHarnessError,
+    )
+    from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (
+        RealPoseNetTeacherCache,
+    )
+
+    mx = require_mlx_for_harness()
+    n_pairs, h, w, _c = bundle.target_rgb_0.shape
+    n_pairs_1, h1, w1, _c1 = bundle.target_rgb_1.shape
+    if (h, w) != (384, 512) or (h1, w1) != (384, 512):
+        raise MlxScoreAwareHarnessError(
+            f"build_mlx_posenet_pair_teacher requires both target frames at "
+            f"contest size (384, 512); got frame0 ({h}, {w}) frame1 "
+            f"({h1}, {w1}). Decode the harness targets at the canonical eval size."
+        )
+    if n_pairs != n_pairs_1:
+        raise MlxScoreAwareHarnessError(
+            f"target_rgb_0 ({n_pairs}) and target_rgb_1 ({n_pairs_1}) pair "
+            "counts must match."
+        )
+    t0 = time.time()
+    upstream_path = Path(upstream_dir)
+    posenet_path = upstream_path / "models" / "posenet.safetensors"
+    posenet_sha = (
+        hashlib.sha256(posenet_path.read_bytes()).hexdigest()
+        if posenet_path.is_file()
+        else None
+    )
+    posenet, _segnet = load_default_scorers(str(upstream_path), device=device)
+    posenet.eval()
+    pose_dims = int(bundle.pose_dims)
+    # Both target frames as numpy (n_pairs, 384, 512, 3) in [0, 1] -> 0..255.
+    tgt0 = np.array(bundle.target_rgb_0) * 255.0
+    tgt1 = np.array(bundle.target_rgb_1) * 255.0
+    chunk = 16
+    pose_chunks = []
+    with torch.inference_mode():
+        for start in range(0, n_pairs, chunk):
+            end = min(start + chunk, n_pairs)
+            f0 = tgt0[start:end]  # (b, 384, 512, 3)
+            f1 = tgt1[start:end]
+            # PoseNet.preprocess_input expects (b, t=2, c=3, H, W) per
+            # upstream/modules.py — NCHW frames stacked over the time axis.
+            f0_nchw = np.transpose(f0, (0, 3, 1, 2))  # (b, 3, 384, 512)
+            f1_nchw = np.transpose(f1, (0, 3, 1, 2))
+            stacked = np.stack([f0_nchw, f1_nchw], axis=1)  # (b, 2, 3, 384, 512)
+            x = torch.from_numpy(stacked.astype(np.float32)).to(device)
+            x_pre = posenet.preprocess_input(x)  # (b, 12, 192, 256) YUV6 pair
+            out = posenet(x_pre)  # dict; 'pose' head (b, 12)
+            if pose_dims > int(out["pose"].shape[-1]):
+                raise MlxScoreAwareHarnessError(
+                    f"bundle.pose_dims={pose_dims} exceeds PoseNet pose head "
+                    f"width {int(out['pose'].shape[-1])}."
+                )
+            pose = out["pose"][..., :pose_dims]  # (b, pose_dims)
+            pose_chunks.append(pose.detach().cpu().numpy().astype(np.float32))
+    pose_np = np.concatenate(pose_chunks, axis=0)  # (n_pairs, pose_dims)
+    # Canonical BOUNDED-AMPLIFICATION per-dim scale for the standardized pose-MSE
+    # divisor (see pose_distillation_mse_loss PER-DIM SCALING). The raw per-dim
+    # std spans ~3 orders of magnitude (dim 0 std ~0.9, the rotation dims ~0.001);
+    # dividing by the raw std would AMPLIFY the near-constant dims ~1000x and make
+    # them dominate. Floor the scale at 10% of the MAX std so the amplification
+    # ratio is capped at 10x — each dim contributes comparably WITHOUT a
+    # near-constant dim's tiny error blowing up the loss. This is the canonical
+    # robust standardization (Mahalanobis-like with bounded condition number).
+    raw_std = np.std(pose_np, axis=0).astype(np.float32)
+    scale_floor = max(float(raw_std.max()) * 0.1, 1.0e-3)
+    per_dim_scale = np.maximum(raw_std, scale_floor)
+    return RealPoseNetTeacherCache(
+        teacher_pose_np=mx.array(pose_np),
+        num_pairs=int(pose_np.shape[0]),
+        pose_dims=int(pose_np.shape[1]),
+        per_dim_scale=mx.array(per_dim_scale),
+        upstream_posenet_safetensors_sha256=posenet_sha,
+        cache_build_seconds=time.time() - t0,
+    )
+
+
 __all__ = [
+    "build_mlx_posenet_pair_teacher",
     "build_mlx_segnet_pair_teacher",
     "decode_frames_nhwc01",
     "score_aware_loss",

@@ -246,6 +246,7 @@ def test_real_scorer_distill_grad_is_reachable_finite_nonzero_and_scorer_bound()
         model=model, target_rgb_0=t0, target_rgb_1=t1, num_pairs=num_pairs,
         forward_convention="call_b2chw_255", distillation_weight=0.5,
         scorer_teacher=teacher, learnable_student_head=head,
+        allow_segnet_only_research=True,
     )
 
     g_distill = _distill_only_grad(model, real_bundle, idx)
@@ -302,6 +303,7 @@ def test_real_scorer_distill_grad_differs_from_mock() -> None:
         model=model, target_rgb_0=t0, target_rgb_1=t1, num_pairs=num_pairs,
         forward_convention="call_b2chw_255", distillation_weight=0.5,
         scorer_teacher=teacher, learnable_student_head=head,
+        allow_segnet_only_research=True,
     )
     mock_bundle = RendererBundle(
         model=model, target_rgb_0=t0, target_rgb_1=t1, num_pairs=num_pairs,
@@ -347,6 +349,7 @@ def test_adapter_trains_head_jointly_and_reduces_loss() -> None:
         model=model, target_rgb_0=t0, target_rgb_1=t1, num_pairs=num_pairs,
         forward_convention="call_b2chw_255", distillation_weight=0.5,
         scorer_teacher=teacher, learnable_student_head=head,
+        allow_segnet_only_research=True,
     )
     adapter = MlxScoreAwareAdapter(bundle, substrate_id="dreamer_v3_rssm")
     batch = mx.arange(num_pairs, dtype=mx.int32)

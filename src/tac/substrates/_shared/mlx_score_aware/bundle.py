@@ -89,6 +89,40 @@ class ScorerTeacherProvider(Protocol):
         """Return teacher logits ``(B, H', W', num_classes)`` for pair batch ``idx``."""
 
 
+@runtime_checkable
+class PoseScorerTeacherProvider(Protocol):
+    """Structural type for a REAL contest-PoseNet teacher (gradient-blocked).
+
+    The POSE axis sister of :class:`ScorerTeacherProvider`. PoseNet is the
+    DOMINANT scorer component at the frontier (per CLAUDE.md "SegNet vs PoseNet
+    importance — operating-point dependent": below pose_avg ~ 2.5e-4 the pose
+    marginal exceeds SegNet's; at the ~0.192 frontier pose is ~2.71x more
+    important by marginal-value-per-byte). The SegNet-only verification run
+    drifted pose +10.6 precisely because no pose teacher was wired.
+
+    Unlike SegNet (per-pixel class logits, KL-distilled), the contest PoseNet
+    emits a GLOBAL per-pair 6-dim ego-motion pose vector and its distortion is
+    MSE on the first 6 dims. So a ``PoseScorerTeacherProvider`` returns, for a
+    batch of pair indices, the teacher pose the learnable pose-student head is
+    distilled toward (via MSE). The teacher is gradient-blocked by the loss
+    (``mx.stop_gradient``); only the pose head + renderer carry gradient.
+
+    Canonical implementation: a precomputed real-MLX-PoseNet teacher pose cache
+    indexed by pair index (one PoseNet forward per pair's TWO target frames,
+    gradient-free, built ONCE pre-training) per Catalog #164 + the C6 IBPS /
+    DreamerV3 lesson.
+
+    The contract: ``teacher_pose_for_indices(idx)`` returns an MLX float32 array
+    ``(B, pose_dims)`` matching the pose head's output shape so the pose-MSE
+    distillation term is well-defined.
+    """
+
+    pose_dims: int
+
+    def teacher_pose_for_indices(self, idx: Any) -> Any:
+        """Return teacher pose ``(B, pose_dims)`` for pair batch ``idx``."""
+
+
 @dataclass
 class RendererBundle:
     """Substrate-specific renderer + targets + optional extra-loss callback.
@@ -153,6 +187,35 @@ class RendererBundle:
             frame-0 research probes; the default must stay contest-aligned.
         distillation_temperature: Hinton-KL temperature ``T`` (default 2.0).
         distillation_num_classes: SegNet surrogate class count (default 5).
+        pose_distillation_weight: weight ``lambda_pose`` on the gradient-reachable
+            POSE-MSE score-aware surrogate term. ``0.0`` disables it. PoseNet is
+            DOMINANT at the frontier (per CLAUDE.md "SegNet vs PoseNet
+            importance"); a frontier-targeting candidate should bind BOTH the
+            SegNet (``distillation_weight``) AND the PoseNet
+            (``pose_distillation_weight``) teachers.
+        pose_scorer_teacher: the REAL contest-PoseNet teacher (a
+            :class:`PoseScorerTeacherProvider`). When set AND
+            ``pose_distillation_weight > 0`` the pose term BINDS THE REAL
+            POSENET: student = ``learnable_pose_student_head(decoded_0,
+            decoded_1)``; teacher =
+            ``stop_gradient(pose_scorer_teacher.teacher_pose_for_indices(idx))``.
+            Gradient flows pose-MSE -> pose_head(decoded pair) -> renderer params.
+            ``learnable_pose_student_head`` MUST also be set.
+        learnable_pose_student_head: the gradient-bearing pose head
+            (:class:`tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss.LearnablePoseStudentHead`)
+            mapping the decoded frame pair -> ``(B, pose_dims)``. REQUIRED when
+            ``pose_scorer_teacher`` is set; trains jointly via the adapter's
+            sibling optimizer (identical to the SegNet head).
+        pose_dims: contest pose dimensionality (default 6 — the first 6 of the
+            12-dim PoseNet pose head, matching ``compute_distortion``).
+        allow_segnet_only_research: EXPLICIT opt-in to bind ONLY the SegNet
+            teacher (``distillation_weight > 0`` with a real ``scorer_teacher``)
+            WITHOUT a PoseNet teacher. Default ``False`` — the bundle FAILS
+            CLOSED so a SegNet-bound candidate that does NOT also bind PoseNet is
+            REFUSED (PoseNet is dominant at the frontier; the SegNet-only
+            verification run drifted pose +10.6). Set ``True`` ONLY for
+            deliberate SegNet-axis research that explicitly accepts the pose axis
+            is unbound.
         export_state_dict_fn: optional ``(model, path) -> None`` PyTorch-export
             bridge; threaded into the adapter's ``export_state_dict``.
         export_archive_fn: optional ``(model, output_dir) -> (path, sha, bytes)``
@@ -174,6 +237,11 @@ class RendererBundle:
     segnet_teacher_frame_index: int = 1
     distillation_temperature: float = 2.0
     distillation_num_classes: int = 5
+    pose_distillation_weight: float = 0.0
+    pose_scorer_teacher: Any | None = None
+    learnable_pose_student_head: Any | None = None
+    pose_dims: int = 6
+    allow_segnet_only_research: bool = False
     export_state_dict_fn: Callable[[Any, Path], None] | None = None
     export_archive_fn: (
         Callable[[Any, Path], tuple[Path, str, int] | None] | None
@@ -210,6 +278,15 @@ class RendererBundle:
                 f"{self.segnet_teacher_frame_index}. Default 1 matches "
                 "upstream SegNet.preprocess_input last-frame slicing."
             )
+        if self.pose_distillation_weight < 0.0:
+            raise MlxScoreAwareHarnessError(
+                f"pose_distillation_weight must be >= 0 (0.0 disables); got "
+                f"{self.pose_distillation_weight}"
+            )
+        if self.pose_dims < 1:
+            raise MlxScoreAwareHarnessError(
+                f"pose_dims must be >= 1; got {self.pose_dims}"
+            )
         # C6 IBPS / DreamerV3 scorer-blindness fail-closed (Catalog #164):
         # if a distillation term is active it MUST bind the real scorer via
         # ``scorer_teacher`` + ``learnable_student_head`` UNLESS the caller
@@ -239,11 +316,61 @@ class RendererBundle:
                     "the scorer-blind mock for a $0 no-real-SegNet smoke (the "
                     "result is reconstruction-proxy, NOT scorer-bound)."
                 )
+        # POSE axis fail-closed (the dominant-at-frontier scorer component): a
+        # pose distillation term MUST bind the REAL PoseNet via
+        # ``pose_scorer_teacher`` + ``learnable_pose_student_head``. There is no
+        # pose mock (pose is a continuous ego-motion vector, not a class
+        # distribution, so the SegNet pixel-cosine mock has no pose analogue);
+        # a pose distill term without a real teacher is unconditionally refused.
+        if self.pose_distillation_weight > 0.0:
+            if self.pose_scorer_teacher is None:
+                raise MlxScoreAwareHarnessError(
+                    "pose_distillation_weight > 0 but no real pose_scorer_teacher "
+                    "is wired. Pose distillation requires a REAL PoseNet teacher "
+                    "(there is no scorer-blind pose mock — pose is a continuous "
+                    "ego-motion vector). Build one via "
+                    "tac.substrates._shared.mlx_score_aware.build_mlx_posenet_pair_teacher."
+                )
+            if self.learnable_pose_student_head is None:
+                raise MlxScoreAwareHarnessError(
+                    "pose_scorer_teacher is set but learnable_pose_student_head "
+                    "is None; the real-pose-bound distillation requires a "
+                    "gradient-bearing pose head (per Catalog #164). Build one via "
+                    "tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss."
+                    "build_learnable_pose_student_head(pose_dims=<D>)."
+                )
+        # FRONTIER both-scorer invariant: PoseNet is dominant at the ~0.192
+        # frontier (CLAUDE.md "SegNet vs PoseNet importance"). A SegNet-bound
+        # candidate that does NOT also bind PoseNet is REFUSED unless the caller
+        # EXPLICITLY opts into SegNet-only research. This structurally extincts
+        # the "bind SegNet, leave pose drifting (+10.6)" half-foundation that the
+        # SegNet-only verification run exhibited.
+        segnet_bound = (
+            self.distillation_weight > 0.0 and self.scorer_teacher is not None
+        )
+        pose_bound = (
+            self.pose_distillation_weight > 0.0
+            and self.pose_scorer_teacher is not None
+        )
+        if segnet_bound and not pose_bound and not self.allow_segnet_only_research:
+            raise MlxScoreAwareHarnessError(
+                "the bundle binds the REAL SegNet teacher but NOT a PoseNet "
+                "teacher. PoseNet is DOMINANT at the contest frontier (per "
+                "CLAUDE.md 'SegNet vs PoseNet importance — operating-point "
+                "dependent': below pose_avg ~ 2.5e-4 the pose marginal exceeds "
+                "SegNet's; the SegNet-only verification run drifted pose +10.6). "
+                "Either (a) ALSO wire pose_scorer_teacher + "
+                "learnable_pose_student_head + pose_distillation_weight > 0 "
+                "(the canonical frontier-binding path), OR (b) set "
+                "allow_segnet_only_research=True to EXPLICITLY accept a "
+                "SegNet-axis-only research run (the pose axis is unbound)."
+            )
 
 
 __all__ = [
     "FORWARD_CONVENTIONS",
     "MlxRenderer",
+    "PoseScorerTeacherProvider",
     "RendererBundle",
     "ScorerTeacherProvider",
 ]

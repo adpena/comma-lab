@@ -176,6 +176,127 @@ def hinton_distilled_kl_t2_loss(
     return kl * (temperature * temperature)
 
 
+def pose_distillation_mse_loss(
+    student_pose: Any,
+    teacher_pose: Any,
+    *,
+    per_dim_scale: Any = None,
+) -> Any:
+    """Canonical pose-distillation MSE loss (the POSE axis sister of KL T=2.0).
+
+    The contest PoseNet distortion is the mean-squared-error between the two
+    poses' first 6 dims (``upstream/modules.py`` PoseNet.compute_distortion:
+    ``(out1[h.name][..., :h.out//2] - out2[h.name][..., :h.out//2]).pow(2).mean``).
+    So the pose distillation target is NOT a softmax/KL (pose is a continuous
+    ego-motion vector, NOT a class distribution); it is a direct MSE between the
+    student's predicted pose and the REAL PoseNet's teacher pose. Distilling the
+    student toward the teacher pose (gradient-blocked) pulls the renderer toward
+    frames whose REAL PoseNet pose matches the target's.
+
+    PER-DIM SCALING (why ``per_dim_scale`` matters): the real PoseNet pose dims
+    have wildly different magnitudes — empirically dim 0 (a depth/forward
+    translation term) has mean ~34 and std ~0.6 while the 5 rotation/lateral
+    dims have std ~0.01. A raw MSE is dominated ENTIRELY by dim 0's offset, so
+    the 5 informative ego-motion dims receive ~no gradient AND the loss scale
+    (O(180)) swamps the recon (O(0.006)) + SegNet-KL (O(3)) terms — at weight
+    0.5 the pose gradient destroys reconstruction (empirically recon_mse 0.006
+    -> 0.244). Standardizing the squared error by the teacher's per-dim std
+    makes each pose dim contribute proportionally to its informativeness (a
+    Mahalanobis-like distance) AND yields a scale-stable loss O(1) comparable to
+    the other terms. This is the canonical scorer-bound pose objective.
+
+    Args:
+        student_pose: MLX float32 ``(B, pose_dims)`` predicted pose
+            (gradient-bearing through the learnable pose head -> renderer).
+        teacher_pose: MLX float32 ``(B, pose_dims)`` real-PoseNet teacher pose
+            (caller must pass ``mx.stop_gradient(...)`` to block the teacher).
+        per_dim_scale: optional MLX float32 ``(pose_dims,)`` per-dim divisor
+            applied to the error (the canonical choice is the teacher per-dim
+            std, supplied by the teacher cache via ``per_dim_scale``). ``None``
+            recovers the raw unstandardized MSE.
+
+    Returns:
+        Scalar MLX array — ``mean(((student - teacher) / scale) ** 2)``
+        (raw ``mean((student - teacher) ** 2)`` when ``per_dim_scale`` is None).
+    """
+    _require_mlx()
+    diff = student_pose - teacher_pose
+    if per_dim_scale is not None:
+        diff = diff / mx.maximum(per_dim_scale, _NUMERIC_FLOOR)
+    return mx.mean(diff * diff)
+
+
+# ---------------------------------------------------------------------------
+# Canonical real-PoseNet teacher cache (the POSE axis sister of
+# RealSegNetTeacherLogitsCache). Holds the REAL contest PoseNet's pose for every
+# pair, pre-computed gradient-free pre-training, indexed by PAIR index.
+# ---------------------------------------------------------------------------
+
+
+@dataclasses.dataclass(frozen=True)
+class RealPoseNetTeacherCache:
+    """Pre-computed real upstream-PyTorch PoseNet pose indexed by PAIR index.
+
+    Wraps an MLX float32 array ``(num_pairs, pose_dims)`` where each row is the
+    REAL contest PoseNet's pose (first ``pose_dims`` of the 12-dim pose head) on
+    the corresponding pair's TWO TARGET frames. Built ONCE pre-training (one
+    PoseNet forward per pair, gradient-free, CPU per CLAUDE.md "MPS auth eval is
+    NOISE") then indexed by batch ``idx`` during training — pure MLX lookup, no
+    PyTorch round-trip per step.
+
+    Satisfies the
+    :class:`tac.substrates._shared.mlx_score_aware.bundle.PoseScorerTeacherProvider`
+    protocol (``pose_dims`` + ``teacher_pose_for_indices``).
+
+    Per CLAUDE.md "MLX portable-local-substrate authority" + Catalog #192: holds
+    ``[macOS-MLX research-signal]`` data; NO contest-score authority on its own.
+    """
+
+    teacher_pose_np: Any  # MLX float32 (num_pairs, pose_dims)
+    num_pairs: int
+    pose_dims: int
+    #: MLX float32 ``(pose_dims,)`` per-dim std of the teacher poses, used as the
+    #: canonical ``per_dim_scale`` divisor in :func:`pose_distillation_mse_loss`
+    #: so the dominant-magnitude pose dim does not swamp the loss (see that
+    #: function's PER-DIM SCALING note). Computed by the builder; ``None`` falls
+    #: back to raw unstandardized MSE.
+    per_dim_scale: Any = None
+    upstream_posenet_safetensors_sha256: str | None = None
+    cache_build_seconds: float | None = None
+
+    def __post_init__(self) -> None:
+        _require_mlx()
+        if self.num_pairs < 1:
+            raise ValueError(f"num_pairs must be >= 1; got {self.num_pairs}")
+        if self.pose_dims < 1:
+            raise ValueError(f"pose_dims must be >= 1; got {self.pose_dims}")
+        if tuple(self.teacher_pose_np.shape) != (self.num_pairs, self.pose_dims):
+            raise ValueError(
+                "teacher_pose_np must have shape "
+                f"({self.num_pairs}, {self.pose_dims}); got "
+                f"{self.teacher_pose_np.shape!r}"
+            )
+        if self.per_dim_scale is not None and tuple(
+            self.per_dim_scale.shape
+        ) != (self.pose_dims,):
+            raise ValueError(
+                f"per_dim_scale must have shape ({self.pose_dims},); got "
+                f"{self.per_dim_scale.shape!r}"
+            )
+
+    def teacher_pose_for_indices(self, indices: Any) -> Any:
+        """Look up real PoseNet teacher pose via MLX integer indexing.
+
+        Args:
+            indices: MLX int32 ``(B,)`` pair-index batch.
+
+        Returns:
+            MLX float32 ``(B, pose_dims)``.
+        """
+        _require_mlx()
+        return self.teacher_pose_np[indices]
+
+
 # ---------------------------------------------------------------------------
 # Teacher logits provider protocol + canonical mock for $0 macOS-MLX smoke
 # ---------------------------------------------------------------------------
@@ -567,7 +688,7 @@ class HintonMlxCustomLossFnConfig:
     # external to this dataclass (see canonical training loop extension at
     # `tools/run_hinton_mlx_long_training_smoke.py`'s
     # ``--learnable-student-head`` branch and the CASCADE B landing memo).
-    learnable_student_head: "LearnableConv1x1StudentHead | None" = None
+    learnable_student_head: LearnableConv1x1StudentHead | None = None
 
     def __post_init__(self) -> None:
         if self.real_teacher_cache is not None and self.real_teacher_cache.num_classes != self.student_head_out_channels:
@@ -789,6 +910,219 @@ def build_learnable_student_head(
         weight=weight,
         bias=bias,
         num_classes=num_classes,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Canonical PoseNet pose-distillation student head (MLX-HARNESS-POSENET-TEACHER-
+# BINDING 2026-05-27). Sister of the SegNet ``LearnableConv1x1StudentHead`` for
+# the POSE axis — the dominant-at-frontier scorer component (per CLAUDE.md
+# "SegNet vs PoseNet importance — operating-point dependent": below
+# pose_avg ~ 2.5e-4 the pose marginal exceeds SegNet's; at the ~0.192 frontier
+# pose is ~2.71x more important by marginal-value-per-byte).
+#
+# Why a DIFFERENT student shape than the SegNet head: the contest PoseNet emits
+# a GLOBAL per-pair 6-dim pose vector (NOT per-pixel logits), and pose
+# distortion is MSE on the first 6 pose dims (NOT argmax-disagreement / KL). So
+# the pose student maps the DECODED FRAME PAIR -> a 6-dim pose vector and is
+# distilled toward the REAL PoseNet's pose on the TARGET pair via MSE.
+#
+# Why a learnable head (NOT full-PoseNet backprop): identical to the SegNet
+# finding — backprop through the full ported MLX FastViT PoseNet composed with
+# the renderer's PixelShuffle/bilinear backward NaNs in MLX's second-order
+# autograd (the first-order grad-to-input IS finite; the second-order
+# composition is not). The learnable pose head gives a FINITE, genuinely
+# scorer-bound gradient: it learns decoded-pair-RGB -> real-PoseNet-pose, so the
+# renderer is pulled toward frames whose REAL PoseNet pose matches the target's,
+# NOT toward a pixel-MSE-redundant direction.
+#
+# Per CLAUDE.md "MLX portable-local-substrate authority" + Catalog #192: the
+# head is [macOS-MLX research-signal]; it carries no contest-score authority on
+# its own. Its ~few-hundred float32 params export via the canonical
+# MLX->PyTorch bridge with the same byte-level invariants as the SegNet head.
+# ---------------------------------------------------------------------------
+
+
+#: Canonical contest pose dimensionality used for distortion (first 6 of the
+#: PoseNet ``pose`` head per ``upstream/modules.py`` ``compute_distortion``
+#: ``out[..., : h.out // 2]`` with the 12-dim pose head).
+DEFAULT_POSE_DIMS: int = 6
+#: Canonical pooled-grid resolution for the pose student's per-frame spatial
+#: feature. PoseNet pose is a global ego-motion estimate; a coarse 4x4 grid of
+#: per-channel means is sufficient signal for the linear pose projection while
+#: keeping the head tiny + the gradient finite.
+DEFAULT_POSE_POOL_GRID: int = 4
+
+
+@dataclasses.dataclass
+class LearnablePoseStudentHead:
+    """Canonical learnable pose-distillation student head.
+
+    Maps a DECODED FRAME PAIR ``(rgb_0, rgb_1)`` (each ``(B, H, W, 3)`` in
+    ``[0, 1]``) to a ``(B, pose_dims)`` pose vector via a coarse spatial pool +
+    linear projection. Distilled (MSE) toward the REAL PoseNet's pose on the
+    pair's TARGET frames.
+
+    Architecture (deliberately minimal so the gradient is finite + the head is
+    cheap to train jointly with the renderer):
+
+      * Per frame: average-pool the ``(B, H, W, 3)`` RGB to a
+        ``(B, grid, grid, 3)`` coarse grid (canonical global-ego-motion
+        feature), then flatten to ``(B, grid*grid*3)``.
+      * Concatenate both frames' pooled features -> ``(B, 2*grid*grid*3)``.
+      * Linear projection ``feature @ weight + bias`` -> ``(B, pose_dims)``.
+
+    Parameters:
+      * ``weight`` (mx.array, shape ``(feature_dim, pose_dims)``) where
+        ``feature_dim = 2 * grid * grid * 3``.
+      * ``bias`` (mx.array, shape ``(pose_dims,)``).
+
+    For the canonical ``grid=4`` + ``pose_dims=6``: ``feature_dim = 96`` and
+    total params ``= 96 * 6 + 6 = 582``.
+
+    Not frozen (MLX arrays are mutable references); the harness trains the head
+    jointly via a sibling ``mx.value_and_grad`` step, identical to the SegNet
+    head.
+    """
+
+    weight: Any  # mx.array (feature_dim, pose_dims)
+    bias: Any  # mx.array (pose_dims,)
+    pose_dims: int = DEFAULT_POSE_DIMS
+    pool_grid: int = DEFAULT_POSE_POOL_GRID
+
+    def __post_init__(self) -> None:
+        _require_mlx()
+        if self.pose_dims < 1:
+            raise ValueError(f"pose_dims must be >= 1; got {self.pose_dims}")
+        if self.pool_grid < 1:
+            raise ValueError(f"pool_grid must be >= 1; got {self.pool_grid}")
+        if self.weight.shape[-1] != self.pose_dims:
+            raise ValueError(
+                f"weight last dim must equal pose_dims={self.pose_dims}; "
+                f"got weight.shape={self.weight.shape!r}"
+            )
+        if self.bias.shape[-1] != self.pose_dims:
+            raise ValueError(
+                f"bias last dim must equal pose_dims={self.pose_dims}; "
+                f"got bias.shape={self.bias.shape!r}"
+            )
+        expected_feat = 2 * self.pool_grid * self.pool_grid * 3
+        if self.weight.shape[0] != expected_feat:
+            raise ValueError(
+                f"weight first dim must equal 2*pool_grid^2*3={expected_feat} "
+                f"(both frames, coarse {self.pool_grid}x{self.pool_grid} RGB "
+                f"pool); got weight.shape={self.weight.shape!r}"
+            )
+
+    def _pool_frame(self, rgb_bhwc: Any) -> Any:
+        """Average-pool ``(B, H, W, 3)`` -> flattened ``(B, grid*grid*3)``.
+
+        Uses adaptive averaging via reshape+mean to a ``pool_grid`` x
+        ``pool_grid`` grid. Spatial dims need not be divisible by ``pool_grid``;
+        the canonical path crops to the largest divisible extent (a sub-pixel
+        loss negligible for a global ego-motion feature).
+        """
+        _require_mlx()
+        b, h, w, c = rgb_bhwc.shape
+        g = self.pool_grid
+        # Crop to the largest h, w divisible by g (canonical coarse pool).
+        h2 = (h // g) * g
+        w2 = (w // g) * g
+        cropped = rgb_bhwc[:, :h2, :w2, :]
+        fh = h2 // g
+        fw = w2 // g
+        if fh < 1 or fw < 1:
+            raise ValueError(
+                f"spatial dims {(h, w)} are too small for pool_grid={g}; "
+                "need at least one pixel per pooled cell."
+            )
+        # (B, g, fh, g, fw, C) -> mean over the within-cell axes.
+        reshaped = mx.reshape(cropped, (b, g, fh, g, fw, c))
+        pooled = mx.mean(reshaped, axis=(2, 4))  # (B, g, g, C)
+        return mx.reshape(pooled, (b, g * g * c))
+
+    def forward_with_params(
+        self,
+        rgb_0_bhwc: Any,
+        rgb_1_bhwc: Any,
+        params: dict[str, Any],
+    ) -> Any:
+        """Map a decoded pair to pose using an explicit parameter dict.
+
+        The sibling optimizer in the MLX score-aware adapter differentiates
+        with respect to ``{"weight": ..., "bias": ...}`` rather than mutating
+        ``self`` inside the gradient closure. Keeping this helper on the head
+        prevents the adapter from depending on private pooling internals.
+        """
+        _require_mlx()
+        f0 = self._pool_frame(rgb_0_bhwc)
+        f1 = self._pool_frame(rgb_1_bhwc)
+        feat = mx.concatenate([f0, f1], axis=-1)
+        return feat @ params["weight"] + params["bias"]
+
+    def __call__(self, rgb_0_bhwc: Any, rgb_1_bhwc: Any) -> Any:
+        """Map the decoded frame pair to a ``(B, pose_dims)`` pose vector.
+
+        Args:
+            rgb_0_bhwc: decoded frame 0 ``(B, H, W, 3)`` in ``[0, 1]``.
+            rgb_1_bhwc: decoded frame 1 ``(B, H, W, 3)`` in ``[0, 1]``.
+
+        Returns:
+            MLX float32 ``(B, pose_dims)`` predicted pose.
+        """
+        return self.forward_with_params(
+            rgb_0_bhwc,
+            rgb_1_bhwc,
+            {"weight": self.weight, "bias": self.bias},
+        )
+
+    def parameters_dict(self) -> dict[str, Any]:
+        """Canonical parameter dict for optimizer + MLX->PyTorch export."""
+        return {
+            "learnable_pose_student_head.weight": self.weight,
+            "learnable_pose_student_head.bias": self.bias,
+        }
+
+
+def build_learnable_pose_student_head(
+    *,
+    pose_dims: int = DEFAULT_POSE_DIMS,
+    pool_grid: int = DEFAULT_POSE_POOL_GRID,
+    seed: int = 0,
+    init_scale: float = 0.05,
+) -> LearnablePoseStudentHead:
+    """Construct a canonical :class:`LearnablePoseStudentHead` deterministically.
+
+    Args:
+        pose_dims: Number of pose dims the head emits (default 6 — the contest
+            pose distortion uses the first 6 of the 12-dim PoseNet pose head).
+        pool_grid: Coarse spatial pool resolution per frame (default 4x4).
+        seed: Deterministic init seed (Catalog #305 diff-able-across-runs).
+        init_scale: Gaussian init stddev. Default 0.05 — small so initial pose
+            predictions land near zero (the teacher pose vectors are O(0.1)
+            ego-motion values, so a small init keeps the first MSE gradient
+            well-scaled).
+
+    Returns:
+        :class:`LearnablePoseStudentHead` with deterministic weight + bias.
+    """
+    _require_mlx()
+    if pose_dims < 1:
+        raise ValueError(f"pose_dims must be >= 1; got {pose_dims}")
+    if pool_grid < 1:
+        raise ValueError(f"pool_grid must be >= 1; got {pool_grid}")
+    if init_scale <= 0.0:
+        raise ValueError(f"init_scale must be > 0; got {init_scale}")
+    feature_dim = 2 * pool_grid * pool_grid * 3
+    rng_key = mx.random.key(seed)
+    key_w, key_b = mx.random.split(rng_key)
+    weight = mx.random.normal(shape=(feature_dim, pose_dims), key=key_w) * init_scale
+    bias = mx.random.normal(shape=(pose_dims,), key=key_b) * (init_scale * 0.5)
+    return LearnablePoseStudentHead(
+        weight=weight,
+        bias=bias,
+        pose_dims=pose_dims,
+        pool_grid=pool_grid,
     )
 
 

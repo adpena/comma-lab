@@ -71,6 +71,12 @@ class MlxScoreAwareAdapter:
         self._head_optimizer: Any = None
         self._head_optimizer_lr: float | None = None
         self._head_opt_state: dict[str, Any] = {}
+        # Sibling optimizer for the learnable POSE student head (real-PoseNet-
+        # bound distillation path per Catalog #164, POSE axis). Same joint-
+        # training pattern as the SegNet head: the pose head's params descend
+        # the SAME pose-MSE distill loss via a sibling mx.value_and_grad step.
+        self._pose_head_optimizer: Any = None
+        self._pose_head_optimizer_lr: float | None = None
 
     def sample_batch(self, batch_size: int, seed: int) -> Any:
         """Sample a deterministic batch of pair indices (Catalog #229 PV)."""
@@ -156,7 +162,10 @@ class MlxScoreAwareAdapter:
         loss_value, grads = loss_and_grad_fn(self.model)
         self._optimizer.update(self.model, grads)
 
-        # Sibling student-head step (real-scorer-bound distillation only).
+        # Accumulate the MLX arrays the single trailing mx.eval must realize.
+        eval_targets: list[Any] = [self.model.parameters(), self._optimizer.state]
+
+        # Sibling SegNet student-head step (real-scorer-bound distillation only).
         head = self.bundle.learnable_student_head
         if (
             self.bundle.distillation_weight > 0.0
@@ -210,15 +219,72 @@ class MlxScoreAwareAdapter:
             # updated arrays are the optimizer's view, so write them back.
             head.weight = head_params["weight"]
             head.bias = head_params["bias"]
-            mx.eval(
-                self.model.parameters(),
-                self._optimizer.state,
-                head.weight,
-                head.bias,
-                self._head_optimizer.state,
+            eval_targets.extend(
+                [head.weight, head.bias, self._head_optimizer.state]
             )
-        else:
-            mx.eval(self.model.parameters(), self._optimizer.state)
+
+        # Sibling POSE student-head step (real-PoseNet-bound distillation only).
+        pose_head = self.bundle.learnable_pose_student_head
+        if (
+            self.bundle.pose_distillation_weight > 0.0
+            and self.bundle.pose_scorer_teacher is not None
+            and pose_head is not None
+        ):
+            if (
+                self._pose_head_optimizer is None
+                or self._pose_head_optimizer_lr != learning_rate
+            ):
+                self._pose_head_optimizer = mlx_optim.AdamW(
+                    learning_rate=learning_rate
+                )
+                self._pose_head_optimizer_lr = learning_rate
+
+            def _pose_head_loss_fn(pose_params: Mapping[str, Any]) -> Any:
+                # Re-derive the pose-MSE distill term as a pure function of the
+                # pose head params so MLX differentiates the pose head ONLY
+                # (renderer held via stop_gradient on the decoded pair; teacher
+                # already gradient-blocked).
+                from tac.substrates._shared.mlx_score_aware.loss import (
+                    decode_frames_nhwc01,
+                )
+                from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (
+                    pose_distillation_mse_loss,
+                )
+
+                rgb_0, rgb_1 = decode_frames_nhwc01(self.bundle, batch)
+                rgb_0 = mx.stop_gradient(rgb_0)
+                rgb_1 = mx.stop_gradient(rgb_1)
+                student_pose = pose_head.forward_with_params(
+                    rgb_0,
+                    rgb_1,
+                    {
+                        "weight": pose_params["weight"],
+                        "bias": pose_params["bias"],
+                    },
+                )
+                teacher_pose = mx.stop_gradient(
+                    self.bundle.pose_scorer_teacher.teacher_pose_for_indices(batch)
+                )
+                return self.bundle.pose_distillation_weight * pose_distillation_mse_loss(
+                    student_pose=student_pose,
+                    teacher_pose=teacher_pose,
+                    per_dim_scale=getattr(
+                        self.bundle.pose_scorer_teacher,
+                        "per_dim_scale",
+                        None,
+                    ),
+                )
+
+            pose_params = {"weight": pose_head.weight, "bias": pose_head.bias}
+            _ploss, pgrads = mx.value_and_grad(_pose_head_loss_fn)(pose_params)
+            self._pose_head_optimizer.update(pose_params, pgrads)
+            pose_head.weight = pose_params["weight"]
+            pose_head.bias = pose_params["bias"]
+            eval_targets.extend(
+                [pose_head.weight, pose_head.bias, self._pose_head_optimizer.state]
+            )
+
+        mx.eval(*eval_targets)
         return {"total": float(loss_value.item())}
 
     def export_state_dict(self, model: Any, path: Path) -> None:
