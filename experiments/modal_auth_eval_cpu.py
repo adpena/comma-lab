@@ -227,21 +227,24 @@ def _validate_uploaded_runtime_tree_expectation(
     expected_runtime_tree_sha256: str,
     submission_dir_path: Path | None,
     inflate_sh_rel: str,
-) -> None:
-    if submission_dir_path is None:
-        return
+) -> tuple[str, str]:
     expected_runtime_tree_sha256 = str(expected_runtime_tree_sha256 or "").strip().lower()
+    if submission_dir_path is None:
+        return expected_runtime_tree_sha256, ""
     if not expected_runtime_tree_sha256:
         raise SystemExit(
             "FATAL: --expected-runtime-tree-sha256 is required when "
             "--submission-dir is uploaded. Compute the Modal-projected runtime "
             "tree hash with the canonical runtime manifest helper before "
-            "dispatch."
+            "dispatch, or pass --expected-runtime-tree-sha256 auto to bind "
+            "the computed Modal upload tree hash."
         )
     remote_tree_sha256, content_tree_sha256 = _expected_uploaded_runtime_tree_sha256(
         submission_dir_path=submission_dir_path,
         inflate_sh_rel=inflate_sh_rel,
     )
+    if expected_runtime_tree_sha256 == "auto":
+        return remote_tree_sha256, content_tree_sha256
     if expected_runtime_tree_sha256 != remote_tree_sha256:
         raise SystemExit(
             "FATAL: --expected-runtime-tree-sha256 does not match the Modal "
@@ -251,6 +254,7 @@ def _validate_uploaded_runtime_tree_expectation(
             f"{expected_runtime_tree_sha256}. "
             f"runtime_content_tree_sha256={content_tree_sha256}"
         )
+    return expected_runtime_tree_sha256, content_tree_sha256
 
 
 def _probe_cpu_environment() -> dict[str, Any]:
@@ -1025,10 +1029,12 @@ def main(
         )
     except ModalAuthEvalPairingError as exc:
         raise SystemExit(f"FATAL: {exc}") from exc
-    _validate_uploaded_runtime_tree_expectation(
-        expected_runtime_tree_sha256=expected_runtime_tree_sha256,
-        submission_dir_path=submission_dir_path,
-        inflate_sh_rel=inflate_sh_rel,
+    expected_runtime_tree_sha256, expected_runtime_content_tree_sha256 = (
+        _validate_uploaded_runtime_tree_expectation(
+            expected_runtime_tree_sha256=expected_runtime_tree_sha256,
+            submission_dir_path=submission_dir_path,
+            inflate_sh_rel=inflate_sh_rel,
+        )
     )
 
     local_summary = {
@@ -1045,6 +1051,7 @@ def main(
         "submission_dir_zip_sha256": submission_dir_zip_sha256,
         "source_repo_commit": source_repo_commit,
         "expected_runtime_tree_sha256": expected_runtime_tree_sha256,
+        "expected_runtime_content_tree_sha256": expected_runtime_content_tree_sha256,
         "scorer_input_cache_hashes_requested": bool(scorer_input_cache_hashes),
         "scorer_input_cache_hash_batch_pairs": int(scorer_input_cache_hash_batch_pairs),
         "scorer_input_cache_tensors_requested": bool(scorer_input_cache_tensors),

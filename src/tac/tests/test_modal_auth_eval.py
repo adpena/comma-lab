@@ -713,6 +713,47 @@ def test_modal_cpu_auth_eval_requires_runtime_hash_for_uploaded_runtime(
     assert "--expected-runtime-tree-sha256 is required" in str(exc.value)
 
 
+def test_modal_cuda_auth_eval_auto_runtime_hash_binds_projected_hash(
+    mod,
+    tmp_path,
+    monkeypatch,
+) -> None:
+    remote_hash = "1" * 64
+    content_hash = "2" * 64
+    monkeypatch.setattr(
+        mod,
+        "_expected_uploaded_runtime_tree_sha256",
+        lambda **_kwargs: (remote_hash, content_hash),
+    )
+
+    assert mod._validate_uploaded_runtime_tree_expectation(
+        expected_runtime_tree_sha256="auto",
+        submission_dir_path=tmp_path,
+        inflate_sh_rel="inflate.sh",
+    ) == (remote_hash, content_hash)
+
+
+def test_modal_cpu_auth_eval_auto_runtime_hash_binds_projected_hash(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    pytest.importorskip("modal", reason="modal SDK not installed")
+    cpu_mod = _load_cpu_module()
+    remote_hash = "3" * 64
+    content_hash = "4" * 64
+    monkeypatch.setattr(
+        cpu_mod,
+        "_expected_uploaded_runtime_tree_sha256",
+        lambda **_kwargs: (remote_hash, content_hash),
+    )
+
+    assert cpu_mod._validate_uploaded_runtime_tree_expectation(
+        expected_runtime_tree_sha256="auto",
+        submission_dir_path=tmp_path,
+        inflate_sh_rel="inflate.sh",
+    ) == (remote_hash, content_hash)
+
+
 def test_modal_runtime_upload_skips_host_metadata_files(tmp_path):
     """Runtime zips skip host metadata files before hidden-path validation."""
     runtime = tmp_path / "runtime"
