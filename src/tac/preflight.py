@@ -2243,6 +2243,26 @@ def preflight_all(
         check_substrate_inflate_consumes_real_trained_weights_not_synthetic_frame_base(
             strict=False, verbose=verbose,
         )
+        # 2026-05-26 Catalog #370 — CANONICAL-SUBMISSION-PIPELINE PHASE 8
+        # STRICT preflight gate per `.omx/research/canonical_submission_
+        # pipeline_specification_memo_20260526.md` §3 Phase 8 + operator
+        # NON-NEGOTIABLE 9th amendment Layer 6. Refuses `submissions/*/`
+        # directories containing PR-facing artifacts (PR_BODY*.md /
+        # PR_DESCRIPTION.md / README.md with PR-title or PR-body sentinel
+        # tokens) WITHOUT all 4 canonical verdict sidecars present + clean:
+        # Phase 4 SubmissionBundleResult + Phase 5 LintVerdict + Phase 6
+        # ComplianceVerdict + Phase 7 PairedAuthEvalVerdict. Same-line
+        # `# PR_SUBMISSION_NO_CANONICAL_COMPLIANCE_OK:<rationale>` waiver
+        # accepted in README.md / PR_BODY*.md first 30 lines (placeholder
+        # rejected per Catalog #287). Initial wire-in WARN-ONLY per
+        # CLAUDE.md "Strict-flip atomicity rule" + Phase 1 spec memo §3
+        # Phase 8 acceptance contract; strict-flip pending Phase 10 PR101
+        # baseline migration + first NEW submission both PACKET-CLEAN.
+        # Sister of Catalog #146 + #205 + #208 + #295 + #335 + #341 + #361
+        # + #287 + #176 + #185 + #299 + #348.
+        check_no_pr_submission_without_canonical_compliance_verdict(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-15 Catalog #249 - phantom-score directory class permanent fix.
         # Per the Z3 v2 FULL Modal A100 dispatch 2026-05-15T11:41:15Z empirical
         # anchor: trainer hardcoded `result_json_path = out_dir /
@@ -44187,7 +44207,7 @@ def _check_151_extract_tier_manifests(trainer_path: Path) -> dict[str, dict]:
     META-CATALOG-152-FIX 2026-05-12: substrate trainers (sane_hnerv, balle,
     SIREN, Cool-Chic, VQ-VAE, hybrid_renderer_residual, self_compress_nn,
     TCNeRV, BlockNeRV, FFNeRV, DSNeRV, HiNeRV, ...) declare the manifest as
-    `TIER_<N>_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {...}`,
+    `TIER_<N>_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, object]] = {...}`,
     which is `ast.AnnAssign`, NOT `ast.Assign`. The previous extractor walked
     only `ast.Assign` and silently returned `{}` for every annotated declaration
     -- making Catalog #151 + #152 STRICT modes structurally false-OK across the
@@ -48187,7 +48207,7 @@ def check_substrate_dispatch_uses_smoke_before_full_pattern(
 # `_check_151_extract_tier_manifests` AST walker filtered `ast.Assign` only.
 # Substrate trainers (sane_hnerv, balle, SIREN, Cool-Chic, VQ-VAE, hybrid_*,
 # self_compress, TCNeRV, BlockNeRV, FFNeRV, DSNeRV, HiNeRV) declare the
-# manifest as `TIER_<N>_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]]
+# manifest as `TIER_<N>_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, object]]
 # = {...}` (`ast.AnnAssign`), so 12/12 substrate trainers silently returned
 # empty manifests -- making Catalog #151 + #152 STRICT modes structurally
 # false-OK across the entire substrate canvas. WAVE-1-A (VQ-VAE subagent)
@@ -80027,6 +80047,702 @@ def check_substrate_inflate_consumes_real_trained_weights_not_synthetic_frame_ba
             f"bases (Catalog #369 — INFLATE CONSUMES REAL TRAINED WEIGHTS "
             f"NOT SYNTHETIC FRAME BASE per Cascade C' WAVE-6 e215ee555 "
             f"anchor + 11th ORDER Dim 2); first 3:\n  "
+            + "\n  ".join(violations[:3])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #370 — check_no_pr_submission_without_canonical_compliance_verdict
+#
+# CANONICAL-SUBMISSION-PIPELINE PHASE 8 (Layer 6) STRICT preflight gate per
+# `.omx/research/canonical_submission_pipeline_specification_memo_20260526.md`
+# §3 Phase 8 + operator NON-NEGOTIABLE 9th amendment Layer 6 + Phase 5 op-
+# routable resolution (catalog # #370 claimed at session start was reserved
+# for THIS gate per Option A resolution).
+#
+# Refuses any `submissions/*/` directory (excluding `submissions/exact_current/`
+# per CLAUDE.md mutation frontier; excluding `_intake_` vendored clones)
+# containing PR-facing artifacts (PR_BODY.md / PR_BODY_*.md / README.md
+# containing PR-title or PR-body-shaped content) WITHOUT one of the canonical
+# 4-verdict chain sidecars present + clean:
+#
+#   1. Phase 4 builder verdict `SubmissionBundleResult` (overall_pass)
+#      Canonical sidecar: `experiments/results/<lane>/submission_bundle_result_*.json`
+#      OR `<submission_dir>/submission_bundle_result.json`
+#   2. Phase 5 linter verdict `LintVerdict` (overall_clean)
+#      Canonical sidecar: `experiments/results/<lane>/lint_verdict_*.json`
+#      OR `<submission_dir>/lint_verdict.json`
+#   3. Phase 6 compliance verdict `ComplianceVerdict` (overall_clean)
+#      Canonical sidecar: `reports/pr_pre_submission/compliance_report_*.json`
+#      OR `<submission_dir>/compliance_verdict.json`
+#      OR `<submission_dir>/pre_submission_compliance.contest_final.json`
+#   4. Phase 7 paired_auth_eval verdict `PairedAuthEvalVerdict` (PAIRED_PASS)
+#      Canonical sidecar: `experiments/results/<lane>/paired_auth_eval_verdict_*.json`
+#      OR `<submission_dir>/paired_auth_eval_verdict.json`
+#      OR sister `<submission_dir>/dual_eval_adjudicated.json` (PR101+PR102
+#      precedent canonical paired-axis evidence shape)
+#
+# Per CLAUDE.md "Operator gates must be wired and used" non-negotiable: every
+# missing canonical verdict raises with named blocker citing WHICH verdict is
+# missing AND canonical CLI command to generate it (operator-actionable
+# remediation hint per Catalog #270 sister discipline).
+#
+# Same-line waiver `# PR_SUBMISSION_NO_CANONICAL_COMPLIANCE_OK:<rationale>`
+# accepted in the submission directory's README.md first 30 lines OR any
+# PR_BODY*.md first 30 lines. Placeholder rationales rejected per Catalog #287
+# sister discipline (`<rationale>` / `<reason>` literals + bare-no-rationale +
+# rationales <4 chars).
+#
+# Per CLAUDE.md "Strict-flip atomicity rule" + Phase 1 spec memo §3 Phase 8:
+# "WARN-ONLY initially per CLAUDE.md 'Strict-flip atomicity rule'; strict-flip
+# pending PR101 baseline + 1 new submission both PACKET-CLEAN." This wire-in
+# is therefore WARN-ONLY (strict=False) until Phase 10 baseline migration +
+# first NEW submission both canonical-pipeline-complete.
+#
+# Bug class anchor: 2026-05-19 PR101 submission_dir was hand-edited across 4
+# sister subagents (Slot K + L + M + J) over ~3h wall-clock with no canonical
+# pipeline structurally enforcing the 4-verdict chain. Per Phase 1 spec memo
+# §1 Why: "6+ phases x multiple iterations x manual hand-editing per surface
+# = the canonical anti-pattern." The structural extinction at this gate
+# prevents future PR111+ submissions from shipping without all 4 canonical
+# verdicts being present + clean.
+#
+# Sister of:
+#   - Catalog #146 (contest-compliant inflate runtime template; design surface)
+#   - Catalog #205 (canonical select_inflate_device; per-file surface)
+#   - Catalog #208 (docs no-local-absolute-paths; per-file surface)
+#   - Catalog #295 (PYTHONPATH self-containment; per-file surface)
+#   - Catalog #335 (canonical cathedral consumer contract; companion sister)
+#   - Catalog #341 (Tier A canonical-routing markers; sister consumer)
+#   - Catalog #361 (Modal artifact filter preserves submission_dir; META surface)
+#   - Catalog #287 (placeholder-rationale rejection)
+#   - Catalog #176 (META-meta: STRICT-callsites-have-CLAUDE.md-row)
+#   - Catalog #185 (META-meta-meta: Live count: 0 verified empirically)
+#   - Catalog #299 (catalog quota brake under 400; current 370 well under)
+#   - Catalog #348 (retroactive sweep for new gate; companion memo emitted)
+#
+# Together they close the canonical-submission-pipeline 7-layer architecture
+# at Layer 6 (STRICT gate). Phase 7 sister (paired_auth_eval) lands Layer 5;
+# Phase 4 (builder) + Phase 5 (linter) + Phase 6 (compliance) already landed.
+# Phase 10 (operator-runbook end-to-end CLI) consumes THIS gate's verdict via
+# the canonical 4-verdict-chain validation at pre-`gh pr create` time.
+#
+# Per the 12th canonicalization x standardization x ease-of-contest-compliance
+# trinity + the 13th OPTIMAL-TRIO standing directive: THIS gate IS the
+# structural enforcement of the 4-layer-verdict-chain default-path so future
+# PR111+ submissions are STRUCTURALLY incapable of shipping without going
+# through the canonical Phase 4 + 5 + 6 + 7 verdict chain.
+#
+# Live count at landing: scanned + reported via gate output (warn-only initial
+# wire-in surfaces baseline). The 5 known submission packets with README.md +
+# PR-body shape will surface; the canonical fix is for each to acquire all 4
+# verdict sidecars via Phases 4-7 helpers OR add the same-line waiver with
+# substantive rationale documenting why the submission predates the canonical
+# pipeline.
+#
+# Memory: feedback_phase_8_strict_gate_catalog_370_canonical_submission_compliance_landed_20260526.md.
+# Lane: lane_phase_8_strict_gate_canonical_submission_compliance_20260526.
+# Retroactive sweep memo: .omx/research/retroactive_sweep_for_catalog_370_*.md.
+# ============================================================================
+
+_CHECK_370_EXEMPT_PATH_MARKERS: tuple[str, ...] = (
+    "submissions/exact_current",  # pinned upstream snapshot per CLAUDE.md
+    "_intake_",                    # vendored public-PR clones
+    ".omx/oss_export/",
+    "vendored",
+    "/tests/",
+    "/test_",
+    "build/lib/",
+    "reports/raw/",
+)
+
+# Submission-directory file patterns indicating PR-facing artifacts (any
+# match places the submission into Catalog #370 scope).
+_CHECK_370_PR_FACING_FILENAMES: tuple[str, ...] = (
+    "PR_BODY.md",
+    "PR_BODY_CANONICAL.md",
+    "PR_BODY_UPSTREAM_TEMPLATE_CONFORMANT.md",
+    "PR_DESCRIPTION.md",
+    "README.md",  # README.md alone qualifies when it contains PR-title pattern
+)
+
+# Sentinel tokens in README.md that elevate it to PR-facing status (when
+# README.md exists but does NOT contain these, the submission is treated as
+# a research artifact rather than PR-facing).
+_CHECK_370_PR_FACING_README_TOKENS: tuple[str, ...] = (
+    "# PR ",
+    "## PR ",
+    "submission packet",
+    "Submission packet",
+    "Submission Packet",
+    "## Submission",
+    "## Score",
+    "## Reproducibility",
+    "## Attribution",
+    "## Citations",
+    "contest archive",
+    "Contest archive",
+    "Inflate runtime",
+    "## inflate",
+    "## Inflate",
+    "## Archive",
+    "archive.zip",
+    "## Limitations",
+    "## Operational notes",
+    "## Hardware",
+    "## Auth eval",
+    "## Eval",
+    "[contest-CPU]",
+    "[contest-CUDA]",
+    "commaai/comma_video_compression_challenge",
+)
+
+# Canonical Phase 4-7 verdict sidecar filename patterns. The gate accepts
+# either the canonical persisted location under `experiments/results/<lane>/`
+# OR a sidecar alongside the submission_dir itself.
+_CHECK_370_PHASE_4_SIDECAR_FILENAMES: tuple[str, ...] = (
+    "submission_bundle_result.json",
+    "submission_bundle_result_v1.json",
+    "submission_bundle_v1.json",
+    "submission_bundle.json",
+)
+_CHECK_370_PHASE_4_SIDECAR_GLOBS: tuple[str, ...] = (
+    "submission_bundle_result_*.json",
+    "submission_bundle_*.json",
+)
+
+_CHECK_370_PHASE_5_SIDECAR_FILENAMES: tuple[str, ...] = (
+    "lint_verdict.json",
+    "lint_verdict_v1.json",
+    "submission_lint_verdict.json",
+)
+_CHECK_370_PHASE_5_SIDECAR_GLOBS: tuple[str, ...] = (
+    "lint_verdict_*.json",
+    "submission_lint_verdict_*.json",
+)
+
+_CHECK_370_PHASE_6_SIDECAR_FILENAMES: tuple[str, ...] = (
+    "compliance_verdict.json",
+    "compliance_verdict_v1.json",
+    "compliance_report.json",
+    "pre_submission_compliance.contest_final.json",
+    "pre_submission_compliance.json",
+)
+_CHECK_370_PHASE_6_SIDECAR_GLOBS: tuple[str, ...] = (
+    "compliance_verdict_*.json",
+    "compliance_report_*.json",
+)
+
+_CHECK_370_PHASE_7_SIDECAR_FILENAMES: tuple[str, ...] = (
+    "paired_auth_eval_verdict.json",
+    "paired_auth_eval_verdict_v1.json",
+    # PR101+PR102 medal-class precedent: dual_eval_adjudicated.json carries
+    # both contest-CPU + contest-CUDA scores on the same archive sha. The
+    # paired_auth_eval canonical helper (Phase 7, in-flight at landing)
+    # produces this artifact directly + persists the verdict sidecar.
+    "dual_eval_adjudicated.json",
+)
+_CHECK_370_PHASE_7_SIDECAR_GLOBS: tuple[str, ...] = (
+    "paired_auth_eval_verdict_*.json",
+    "dual_eval_adjudicated_*.json",
+)
+
+# Canonical clean-verdict marker tokens per phase (each phase's canonical
+# helper persists a verdict JSON with these keys).
+_CHECK_370_PHASE_4_CLEAN_TOKENS: tuple[str, ...] = (
+    '"overall_pass": true',
+    '"overall_pass":true',
+    '"overall_clean": true',  # Phase 4 sometimes uses overall_clean too
+    '"overall_clean":true',
+)
+_CHECK_370_PHASE_5_CLEAN_TOKENS: tuple[str, ...] = (
+    '"overall_clean": true',
+    '"overall_clean":true',
+)
+_CHECK_370_PHASE_6_CLEAN_TOKENS: tuple[str, ...] = (
+    '"overall_clean": true',
+    '"overall_clean":true',
+    '"overall_pass": true',
+    '"overall_pass":true',
+)
+_CHECK_370_PHASE_7_CLEAN_TOKENS: tuple[str, ...] = (
+    '"verdict": "PAIRED_PASS"',
+    '"verdict":"PAIRED_PASS"',
+    '"overall_pass": true',
+    '"overall_pass":true',
+)
+
+# Phase numbers + human-readable labels used in violation messages.
+_CHECK_370_PHASES = (
+    ("phase_4_builder", "Phase 4 (builder)"),
+    ("phase_5_linter", "Phase 5 (linter)"),
+    ("phase_6_compliance", "Phase 6 (compliance)"),
+    ("phase_7_paired_auth_eval", "Phase 7 (paired_auth_eval)"),
+)
+
+# Canonical CLI commands to generate each missing verdict (per CLAUDE.md
+# "Operator gates must be wired and used" actionable error messages).
+_CHECK_370_PHASE_REMEDIATION = {
+    "phase_4_builder": (
+        ".venv/bin/python tools/submission_bundle_cli.py "
+        "--lane-id <lane> --submission-dir submissions/<sub>/ "
+        "--archive-sha256 <sha> --json-out experiments/results/<lane>/"
+        "submission_bundle_result.json"
+    ),
+    "phase_5_linter": (
+        ".venv/bin/python tools/submission_linter_cli.py "
+        "--from-submission-bundle experiments/results/<lane>/"
+        "submission_bundle_result.json --json-out experiments/results/"
+        "<lane>/lint_verdict.json"
+    ),
+    "phase_6_compliance": (
+        ".venv/bin/python tools/submission_compliance_cli.py "
+        "--from-submission-bundle experiments/results/<lane>/"
+        "submission_bundle_result.json --contest-final-strict --json-out "
+        "experiments/results/<lane>/compliance_verdict.json"
+    ),
+    "phase_7_paired_auth_eval": (
+        ".venv/bin/python tools/paired_auth_eval_cli.py "
+        "--from-submission-bundle experiments/results/<lane>/"
+        "submission_bundle_result.json --execute --json-out "
+        "experiments/results/<lane>/paired_auth_eval_verdict.json"
+    ),
+}
+
+_CHECK_370_WAIVER_RE = re.compile(
+    r"#\s*PR_SUBMISSION_NO_CANONICAL_COMPLIANCE_OK\s*:\s*(?P<rationale>[^\n]+)"
+)
+_CHECK_370_WAIVER_PLACEHOLDERS: frozenset[str] = frozenset({
+    "<rationale>", "<reason>", ""
+})
+_CHECK_370_WAIVER_MIN_RATIONALE_LEN = 4
+_CHECK_370_WAIVER_LOOKBACK_LINES = 30
+
+
+def _check_370_iter_submission_dirs(repo_root: Path) -> list[Path]:
+    """Return submission_dir candidates under `submissions/` (sorted)."""
+    sub_dir = repo_root / "submissions"
+    if not sub_dir.exists():
+        return []
+    out: list[Path] = []
+    for fp in sub_dir.iterdir():
+        if fp.is_dir():
+            out.append(fp)
+    return sorted(out)
+
+
+def _check_370_path_in_scope(path: Path, repo_root: Path) -> bool:
+    """Return True if ``path`` is in scope (not exempt)."""
+    try:
+        rel = str(path.relative_to(repo_root)).replace("\\", "/")
+    except ValueError:
+        return False
+    for marker in _CHECK_370_EXEMPT_PATH_MARKERS:
+        if marker in rel:
+            return False
+    return True
+
+
+def _check_370_submission_has_pr_facing_artifact(
+    submission_dir: Path,
+) -> tuple[bool, list[str]]:
+    """Return (has_pr_facing, list_of_pr_facing_paths_relative_to_submission_dir).
+
+    A submission_dir is treated as PR-facing when EITHER:
+      * It contains a file matching `PR_BODY*.md` / `PR_DESCRIPTION.md`
+        (existence alone is enough).
+      * It contains `README.md` AND the README body carries at least one
+        sentinel token indicating PR-facing intent (per
+        :data:`_CHECK_370_PR_FACING_README_TOKENS`).
+    """
+    found: list[str] = []
+    # PR_BODY*.md / PR_DESCRIPTION.md presence is the strongest signal.
+    for filename in _CHECK_370_PR_FACING_FILENAMES:
+        if filename == "README.md":
+            continue  # handled separately below
+        fp = submission_dir / filename
+        if fp.is_file():
+            found.append(filename)
+    # Also accept any file matching PR_BODY*.md glob (e.g. PR_BODY_DRAFT.md).
+    for fp in submission_dir.glob("PR_BODY*.md"):
+        if fp.is_file() and fp.name not in found:
+            found.append(fp.name)
+    # README.md requires content-based qualification.
+    readme = submission_dir / "README.md"
+    if readme.is_file():
+        try:
+            text = readme.read_text(encoding="utf-8", errors="replace")
+        except Exception:
+            text = ""
+        for token in _CHECK_370_PR_FACING_README_TOKENS:
+            if token in text:
+                found.append("README.md")
+                break
+    return (len(found) > 0, found)
+
+
+def _check_370_iter_pr_facing_files(submission_dir: Path) -> list[Path]:
+    """Return the PR-facing files inside a submission_dir (for waiver scan)."""
+    files: list[Path] = []
+    for filename in _CHECK_370_PR_FACING_FILENAMES:
+        fp = submission_dir / filename
+        if fp.is_file():
+            files.append(fp)
+    for fp in submission_dir.glob("PR_BODY*.md"):
+        if fp.is_file() and fp not in files:
+            files.append(fp)
+    return files
+
+
+def _check_370_pr_facing_file_carries_waiver(path: Path) -> bool:
+    """Return True if file's first N lines carry a valid Catalog #370 waiver."""
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except Exception:
+        return False
+    lines = text.splitlines()[: _CHECK_370_WAIVER_LOOKBACK_LINES]
+    for line in lines:
+        match = _CHECK_370_WAIVER_RE.search(line)
+        if not match:
+            continue
+        rationale = match.group("rationale").strip()
+        # Strip trailing closing-HTML-comment first (the canonical pattern is
+        # ``<!-- # PR_SUBMISSION_NO_CANONICAL_COMPLIANCE_OK:<rationale> -->``
+        # so the trailing ` -->` is part of the wrapper, not the rationale).
+        if rationale.endswith("-->"):
+            rationale = rationale[:-3].rstrip()
+        # Strip residual whitespace + trailing hash / parens / slash chars
+        # (canonical Markdown-comment terminators) WITHOUT eating angle
+        # brackets so that the literal ``<rationale>`` / ``<reason>``
+        # placeholders are preserved for the Catalog #287 placeholder check.
+        rationale = rationale.rstrip("#)/ \t")
+        if rationale in _CHECK_370_WAIVER_PLACEHOLDERS:
+            continue
+        if len(rationale) < _CHECK_370_WAIVER_MIN_RATIONALE_LEN:
+            continue
+        return True
+    return False
+
+
+def _check_370_submission_has_waiver(submission_dir: Path) -> bool:
+    """Return True if any PR-facing file in submission_dir carries a valid waiver."""
+    for fp in _check_370_iter_pr_facing_files(submission_dir):
+        if _check_370_pr_facing_file_carries_waiver(fp):
+            return True
+    return False
+
+
+def _check_370_find_phase_sidecar(
+    submission_dir: Path,
+    repo_root: Path,
+    filename_set: tuple[str, ...],
+    glob_set: tuple[str, ...],
+) -> Path | None:
+    """Find the most-recent canonical-helper sidecar JSON for a given phase.
+
+    Searches in order:
+      1. Inside the submission_dir itself (canonical-helper-emitted sidecar).
+      2. Inside `experiments/results/<submission_dir.name>*/`.
+      3. Inside `reports/pr_pre_submission/` (Phase 6 convention).
+      4. Inside `experiments/results/**/`+ glob fallback (substrate-tagged).
+
+    Returns the most-recently-modified matching path, or None if no sidecar
+    is found.
+    """
+    candidates: list[Path] = []
+
+    # Search 1: directly inside submission_dir (canonical sidecar location).
+    for filename in filename_set:
+        fp = submission_dir / filename
+        if fp.is_file():
+            candidates.append(fp)
+    for glob_pat in glob_set:
+        for fp in submission_dir.glob(glob_pat):
+            if fp.is_file() and fp not in candidates:
+                candidates.append(fp)
+
+    # Search 2: experiments/results/<submission_dir.name>* (lane-tagged).
+    results_dir = repo_root / "experiments" / "results"
+    if results_dir.exists():
+        submission_name = submission_dir.name
+        # Use exact + prefix match. Avoid scanning unrelated experiment results
+        # by anchoring the glob to the submission_dir's basename.
+        for lane_dir in results_dir.glob(f"{submission_name}*"):
+            if not lane_dir.is_dir():
+                continue
+            for filename in filename_set:
+                fp = lane_dir / filename
+                if fp.is_file():
+                    candidates.append(fp)
+            for glob_pat in glob_set:
+                for fp in lane_dir.glob(glob_pat):
+                    if fp.is_file() and fp not in candidates:
+                        candidates.append(fp)
+
+    # Search 3: reports/pr_pre_submission/ (Phase 6 canonical persistence).
+    pr_pre_sub = repo_root / "reports" / "pr_pre_submission"
+    if pr_pre_sub.exists():
+        for glob_pat in glob_set:
+            for fp in pr_pre_sub.glob(glob_pat):
+                if fp.is_file() and fp not in candidates:
+                    candidates.append(fp)
+
+    if not candidates:
+        return None
+
+    # Return the most-recently-modified sidecar.
+    return max(candidates, key=lambda p: p.stat().st_mtime)
+
+
+def _check_370_sidecar_is_clean(
+    sidecar_path: Path, clean_tokens: tuple[str, ...]
+) -> bool:
+    """Return True if sidecar JSON contains any of the canonical clean tokens."""
+    try:
+        text = sidecar_path.read_text(encoding="utf-8", errors="replace")
+    except Exception:
+        return False
+    for token in clean_tokens:
+        if token in text:
+            return True
+    return False
+
+
+def _check_370_evaluate_submission(
+    submission_dir: Path, repo_root: Path
+) -> dict[str, dict[str, object]]:
+    """Evaluate the 4-verdict chain for a submission_dir.
+
+    Returns dict mapping each phase key to:
+        {"present": bool, "clean": bool, "sidecar_path": Path | None}
+    """
+    phase_results: dict[str, dict[str, object]] = {}
+
+    phase_4_sc = _check_370_find_phase_sidecar(
+        submission_dir, repo_root,
+        _CHECK_370_PHASE_4_SIDECAR_FILENAMES,
+        _CHECK_370_PHASE_4_SIDECAR_GLOBS,
+    )
+    phase_results["phase_4_builder"] = {
+        "present": phase_4_sc is not None,
+        "clean": phase_4_sc is not None and _check_370_sidecar_is_clean(
+            phase_4_sc, _CHECK_370_PHASE_4_CLEAN_TOKENS
+        ),
+        "sidecar_path": phase_4_sc,
+    }
+
+    phase_5_sc = _check_370_find_phase_sidecar(
+        submission_dir, repo_root,
+        _CHECK_370_PHASE_5_SIDECAR_FILENAMES,
+        _CHECK_370_PHASE_5_SIDECAR_GLOBS,
+    )
+    phase_results["phase_5_linter"] = {
+        "present": phase_5_sc is not None,
+        "clean": phase_5_sc is not None and _check_370_sidecar_is_clean(
+            phase_5_sc, _CHECK_370_PHASE_5_CLEAN_TOKENS
+        ),
+        "sidecar_path": phase_5_sc,
+    }
+
+    phase_6_sc = _check_370_find_phase_sidecar(
+        submission_dir, repo_root,
+        _CHECK_370_PHASE_6_SIDECAR_FILENAMES,
+        _CHECK_370_PHASE_6_SIDECAR_GLOBS,
+    )
+    phase_results["phase_6_compliance"] = {
+        "present": phase_6_sc is not None,
+        "clean": phase_6_sc is not None and _check_370_sidecar_is_clean(
+            phase_6_sc, _CHECK_370_PHASE_6_CLEAN_TOKENS
+        ),
+        "sidecar_path": phase_6_sc,
+    }
+
+    phase_7_sc = _check_370_find_phase_sidecar(
+        submission_dir, repo_root,
+        _CHECK_370_PHASE_7_SIDECAR_FILENAMES,
+        _CHECK_370_PHASE_7_SIDECAR_GLOBS,
+    )
+    phase_results["phase_7_paired_auth_eval"] = {
+        "present": phase_7_sc is not None,
+        "clean": phase_7_sc is not None and _check_370_sidecar_is_clean(
+            phase_7_sc, _CHECK_370_PHASE_7_CLEAN_TOKENS
+        ),
+        "sidecar_path": phase_7_sc,
+    }
+    return phase_results
+
+
+def _check_370_format_violation(
+    submission_rel: str,
+    pr_facing_files: list[str],
+    phase_results: dict[str, dict[str, object]],
+) -> str:
+    """Format a structured violation message with remediation hints."""
+    missing_phases: list[tuple[str, str]] = []
+    unclean_phases: list[tuple[str, str]] = []
+    for phase_key, phase_label in _CHECK_370_PHASES:
+        state = phase_results[phase_key]
+        if not state["present"]:
+            missing_phases.append((phase_key, phase_label))
+        elif not state["clean"]:
+            unclean_phases.append((phase_key, phase_label))
+
+    parts: list[str] = []
+    parts.append(
+        f"[Catalog #370] {submission_rel}/: PR-facing artifact(s) "
+        f"{pr_facing_files!r} present without canonical 4-verdict chain."
+    )
+    if missing_phases:
+        parts.append(
+            "  MISSING canonical verdict sidecar(s):"
+        )
+        for phase_key, phase_label in missing_phases:
+            remediation = _CHECK_370_PHASE_REMEDIATION.get(phase_key, "")
+            parts.append(f"    - {phase_label}")
+            if remediation:
+                parts.append(f"        Run: {remediation}")
+    if unclean_phases:
+        parts.append(
+            "  PRESENT but NOT clean (overall_pass / overall_clean / "
+            "PAIRED_PASS marker absent):"
+        )
+        for phase_key, phase_label in unclean_phases:
+            sidecar = phase_results[phase_key].get("sidecar_path")
+            parts.append(f"    - {phase_label}")
+            if sidecar is not None:
+                parts.append(f"        Sidecar: {sidecar}")
+    parts.append(
+        "  Either (a) generate every missing canonical verdict via the "
+        "canonical helpers above; (b) add the same-line waiver "
+        "`# PR_SUBMISSION_NO_CANONICAL_COMPLIANCE_OK:<rationale>` in the "
+        "submission's README.md or PR_BODY*.md first 30 lines with "
+        "non-placeholder rationale (>=4 chars; placeholder rejected per "
+        "Catalog #287); (c) if this is a research artifact NOT intended "
+        "for upstream PR submission, strip the PR-facing tokens from "
+        "README.md so the gate treats it as out-of-scope."
+    )
+    return "\n".join(parts)
+
+
+def check_no_pr_submission_without_canonical_compliance_verdict(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #370 - refuse PR submissions without canonical 4-verdict chain.
+
+    Phase 8 (Layer 6) of the canonical submission pipeline per
+    ``.omx/research/canonical_submission_pipeline_specification_memo_20260526.md``
+    §3 Phase 8.
+
+    Scans ``submissions/*/`` directories (excluding
+    ``submissions/exact_current/`` per CLAUDE.md mutation frontier; excluding
+    ``_intake_`` vendored clones) for PR-facing artifacts (``PR_BODY*.md`` /
+    ``PR_DESCRIPTION.md`` / ``README.md`` with PR-title or PR-body sentinel
+    tokens). For each PR-facing submission, refuses unless ALL 4 canonical
+    verdict sidecars are present + clean:
+
+      1. Phase 4 ``SubmissionBundleResult`` (overall_pass=true)
+      2. Phase 5 ``LintVerdict`` (overall_clean=true)
+      3. Phase 6 ``ComplianceVerdict`` (overall_clean=true)
+      4. Phase 7 ``PairedAuthEvalVerdict`` (verdict=PAIRED_PASS)
+
+    Acceptance cascade:
+      (a) all 4 sidecars present + clean (the canonical default-path);
+      (b) same-line ``# PR_SUBMISSION_NO_CANONICAL_COMPLIANCE_OK:<rationale>``
+          waiver in README.md or PR_BODY*.md first 30 lines (non-placeholder
+          rationale >=4 chars; placeholder rejected per Catalog #287);
+      (c) submission is not PR-facing (no PR_BODY*.md AND README.md lacks
+          PR-facing sentinel tokens).
+
+    Sister of Catalog #146 + #205 + #208 + #295 + #335 + #341 + #361 + #287 +
+    #176 + #185 + #299 + #348 per Phase 1 spec memo §4 catalog cross-references
+    matrix.
+
+    Args:
+        repo_root: Optional repo root override (defaults to
+            :data:`REPO_ROOT`). Accepted as ``str`` or ``Path``.
+        strict: If True, raise :class:`PreflightError` on any violation.
+        verbose: If True, print per-submission verdict to stdout.
+
+    Returns:
+        List of violation messages (empty list = clean).
+
+    Raises:
+        PreflightError: If ``strict=True`` and any violations exist.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+
+    submission_dirs = _check_370_iter_submission_dirs(root)
+    violations: list[str] = []
+    in_scope_count = 0
+    pr_facing_count = 0
+    clean_count = 0
+    waived_count = 0
+
+    for submission_dir in submission_dirs:
+        if not _check_370_path_in_scope(submission_dir, root):
+            continue
+        in_scope_count += 1
+        try:
+            rel = str(submission_dir.relative_to(root)).replace("\\", "/")
+        except ValueError:
+            continue
+        has_pr_facing, pr_facing_files = _check_370_submission_has_pr_facing_artifact(
+            submission_dir
+        )
+        if not has_pr_facing:
+            continue
+        pr_facing_count += 1
+
+        # Acceptance (b): same-line waiver in PR-facing file.
+        if _check_370_submission_has_waiver(submission_dir):
+            waived_count += 1
+            continue
+
+        # Acceptance (a): all 4 canonical verdicts present + clean.
+        phase_results = _check_370_evaluate_submission(submission_dir, root)
+        all_clean = all(
+            phase_results[phase_key]["present"] and phase_results[phase_key]["clean"]
+            for phase_key, _phase_label in _CHECK_370_PHASES
+        )
+        if all_clean:
+            clean_count += 1
+            continue
+
+        # Violation: PR-facing artifact present without canonical 4-verdict chain.
+        violations.append(
+            _check_370_format_violation(rel, pr_facing_files, phase_results)
+        )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [catalog-370] WARN: {len(violations)} PR-facing "
+                f"submission(s) without canonical 4-verdict chain "
+                f"(scope={in_scope_count} / pr_facing={pr_facing_count} / "
+                f"clean={clean_count} / waived={waived_count}; "
+                f"strict={strict})"
+            )
+        else:
+            print(
+                f"  [catalog-370] OK ({in_scope_count} submissions in scope / "
+                f"{pr_facing_count} PR-facing / {clean_count} clean / "
+                f"{waived_count} waived)"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            f"check_no_pr_submission_without_canonical_compliance_verdict: "
+            f"{len(violations)} PR-facing submission(s) ship without canonical "
+            f"4-verdict chain (Phase 4 builder + Phase 5 linter + Phase 6 "
+            f"compliance + Phase 7 paired_auth_eval). Catalog #370 STRICT "
+            f"gate enforces the canonical-submission-pipeline 7-layer "
+            f"architecture per spec memo §3 Phase 8. First 3 violations:\n  "
             + "\n  ".join(violations[:3])
         )
     return violations
