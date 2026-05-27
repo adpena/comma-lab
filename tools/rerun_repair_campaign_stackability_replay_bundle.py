@@ -21,6 +21,11 @@ from typing import Any
 try:
     from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
 except ModuleNotFoundError:  # pragma: no cover
+    _TOOL_DIR = Path(__file__).resolve().parent
+    _REPO_ROOT = _TOOL_DIR.parent
+    for _path in (str(_REPO_ROOT), str(_TOOL_DIR)):
+        if _path not in sys.path:
+            sys.path.insert(0, _path)
     from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
 
 REPO_ROOT = repo_root_from_tool(__file__)
