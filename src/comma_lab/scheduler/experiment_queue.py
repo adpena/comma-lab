@@ -405,7 +405,7 @@ def normalize_queue_definition(payload: Mapping[str, Any]) -> dict[str, Any]:
                 )
             step["requires"] = normalized_requires
     _assert_no_dependency_cycles(normalized_experiments)
-    return {
+    normalized: dict[str, Any] = {
         "schema": QUEUE_SCHEMA,
         "queue_id": queue_id,
         "controls": {
@@ -415,6 +415,9 @@ def normalize_queue_definition(payload: Mapping[str, Any]) -> dict[str, Any]:
         },
         "experiments": normalized_experiments,
     }
+    if "metadata" in payload:
+        normalized["metadata"] = _optional_mapping(payload.get("metadata"), "metadata")
+    return normalized
 
 
 def _assert_no_dependency_cycles(experiments: list[dict[str, Any]]) -> None:

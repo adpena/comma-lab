@@ -982,6 +982,33 @@ def test_experiment_queue_normalizes_input_artifact_paths() -> None:
     assert telemetry["input_artifact_paths"] == ["input/a.json"]
 
 
+def test_experiment_queue_preserves_queue_level_metadata() -> None:
+    payload = {
+        "schema": "experiment_queue.v1",
+        "queue_id": "metadata_queue",
+        "metadata": {
+            "schema": "unit_queue_metadata.v1",
+            "blocked_work_order_ids": ["external_anchor"],
+            "score_claim": False,
+        },
+        "experiments": [
+            {
+                "id": "candidate",
+                "steps": [
+                    {
+                        "id": "materialize",
+                        "command": [sys.executable, "-c", "print('ok')"],
+                    }
+                ],
+            }
+        ],
+    }
+
+    queue = normalize_queue_definition(payload)
+
+    assert queue["metadata"] == payload["metadata"]
+
+
 def test_experiment_queue_rejects_malformed_input_artifact_paths() -> None:
     payload = {
         "schema": "experiment_queue.v1",
