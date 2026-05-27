@@ -160,6 +160,12 @@ from .models import (
     SchedulerStatusReport,
     TrackStatus,
 )
+from .pair_frame_5d_coverage_acquisition_queue import (
+    PAIR_FRAME_5D_COVERAGE_ACQUISITION_PLAN_SCHEMA,
+    PAIR_FRAME_5D_COVERAGE_ACQUISITION_QUEUE_SCHEMA,
+    build_coverage_acquisition_plan,
+    build_pair_frame_5d_coverage_acquisition_queue,
+)
 from .queue_feedback_replan_policy import (
     ACTION_QUEUE_OBSERVATION_MAINTENANCE,
     ACTION_RECOVER_QUEUE_HEALTH,
@@ -237,6 +243,8 @@ __all__ = [
     "MLX_RUNTIME_TELEMETRY_STATE_DISCOVERY_POLICY_SCHEMA",
     "PACKET_MEMBER_RECOMPRESS_MATERIALIZER",
     "PACKET_MEMBER_RECOMPRESS_TARGET_KIND",
+    "PAIR_FRAME_5D_COVERAGE_ACQUISITION_PLAN_SCHEMA",
+    "PAIR_FRAME_5D_COVERAGE_ACQUISITION_QUEUE_SCHEMA",
     "QUEUE_FEEDBACK_REPLAN_CHILD_QUEUE_VALIDATION_SCHEMA",
     "QUEUE_FEEDBACK_REPLAN_CONTINUATION_METADATA_SCHEMA",
     "QUEUE_FEEDBACK_REPLAN_POLICY_SCHEMA",
@@ -273,6 +281,7 @@ __all__ = [
     "apply_scheduler_runtime_policy",
     "assert_canonical_state_for_execution",
     "assert_no_orphaned_steps_for_execution",
+    "build_coverage_acquisition_plan",
     "build_frontier_byte_range_stage_inputs",
     "build_frontier_operation_chain_compiler_queue",
     "build_frontier_operation_chain_compiler_stage_plan",
@@ -288,6 +297,7 @@ __all__ = [
     "build_mlx_learned_sweep_autopilot_batch_queue",
     "build_mlx_learned_sweep_autopilot_queue",
     "build_mlx_scorer_response_execution_queue",
+    "build_pair_frame_5d_coverage_acquisition_queue",
     "build_queue_feedback_replan_continuation_queue",
     "build_queue_feedback_replan_policy",
     "build_queue_observation_recovery_plan",

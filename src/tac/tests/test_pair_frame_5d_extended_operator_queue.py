@@ -16,6 +16,9 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
 from comma_lab.scheduler.frontier_rate_attack_feedback_cycle import (
     write_frontier_refresh_artifacts,
 )
+from comma_lab.scheduler.pair_frame_5d_coverage_acquisition_queue import (
+    build_pair_frame_5d_coverage_acquisition_queue,
+)
 from comma_lab.scheduler.pair_frame_5d_extended_operator_queue import (
     PAIR_FRAME_5D_EXTENDED_OPERATOR_QUEUE_SCHEMA,
     build_pair_frame_5d_extended_operator_queue,
@@ -26,6 +29,10 @@ from tac.optimization.pair_frame_scorer_geometry_lattice_5d_canvas import (
     PairFrameScorerGeometryLattice,
     ReceiverRuntime,
     ScorerAxis,
+)
+from tac.optimization.pair_frame_scorer_geometry_lattice_5d_canvas_coverage import (
+    COVERAGE_AUDIT_SCHEMA,
+    WORK_ORDER_SCHEMA,
 )
 from tac.optimization.pair_frame_scorer_geometry_lattice_5d_canvas_extended_operators import (
     ExtendedOperation,
@@ -80,6 +87,35 @@ def _write_canvas(path: pathlib.Path) -> None:
 def _write_json(path: pathlib.Path, payload: object) -> pathlib.Path:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
     return path
+
+
+def _coverage_work_order(order_id: str, *, priority: int = 1) -> dict[str, object]:
+    return {
+        "schema": WORK_ORDER_SCHEMA,
+        "id": order_id,
+        "priority": priority,
+        "reason": f"unit {order_id}",
+        "consumer": "unit_consumer",
+        "target": {"archive_sha256": "c" * 64},
+        "suggested_next_tools": [],
+        "allowed_use": "experiment_queue_v1_planning_input_only",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
+        **_FALSE_AUTHORITY,
+    }
+
+
+def _coverage_audit(*work_orders: dict[str, object]) -> dict[str, object]:
+    return {
+        "schema": COVERAGE_AUDIT_SCHEMA,
+        "archive_sha256": "c" * 64,
+        "verdict": "densification_required",
+        "work_order_count": len(work_orders),
+        "work_orders": list(work_orders),
+        "blockers": [],
+        "allowed_use": "local_planning_and_experiment_queue_acquisition_only",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
+        **_FALSE_AUTHORITY,
+    }
 
 
 def test_build_pair_frame_5d_extended_operator_queue_shape(
@@ -176,11 +212,17 @@ def test_refresh_artifacts_emit_pair_frame_5d_extended_operator_queue(
     assert queue_ref.endswith("pair_frame_5d_extended_operator_queue.json")
     audit_ref = artifacts["pair_frame_5d_canvas_coverage_audit"]
     assert audit_ref.endswith("pair_frame_5d_canvas_coverage_audit.json")
+    acquisition_queue_ref = artifacts["pair_frame_5d_coverage_acquisition_queue"]
+    assert acquisition_queue_ref.endswith("pair_frame_5d_coverage_acquisition_queue.json")
     queue = json.loads((_REPO_ROOT / queue_ref).read_text(encoding="utf-8"))
     audit = json.loads((_REPO_ROOT / audit_ref).read_text(encoding="utf-8"))
+    acquisition_queue = json.loads(
+        (_REPO_ROOT / acquisition_queue_ref).read_text(encoding="utf-8")
+    )
     assert len(queue["experiments"]) == 8
     assert audit["verdict"] == "densification_required"
     assert audit["score_claim"] is False
+    assert len(acquisition_queue["experiments"]) == audit["work_order_count"] + 1
     report = json.loads(
         (output_dir / "feedback_refresh_report.json").read_text(encoding="utf-8")
     )
@@ -189,6 +231,18 @@ def test_refresh_artifacts_emit_pair_frame_5d_extended_operator_queue(
     )
     assert (
         report["pair_frame_5d_extended_operator_queue_summary"]["coverage_verdict"]
+        == "densification_required"
+    )
+    assert (
+        report["pair_frame_5d_extended_operator_queue_summary"][
+            "coverage_acquisition_queue"
+        ]
+        == acquisition_queue_ref
+    )
+    assert (
+        report["pair_frame_5d_coverage_acquisition_queue_summary"][
+            "coverage_verdict"
+        ]
         == "densification_required"
     )
     assert (
@@ -215,7 +269,28 @@ def test_autonomous_parent_queue_binds_pair_frame_5d_child_when_present(
         queue_id="unit_pair_frame_5d_child",
         top_n=4,
     )
-    child_queue_path = _write_json(tmp_path / "pair_frame_5d_child_queue.json", child_queue)
+    child_queue_path = _write_json(
+        tmp_path / "pair_frame_5d_child_queue.json",
+        child_queue,
+    )
+    coverage_audit_path = _write_json(
+        tmp_path / "pair_frame_5d_coverage_audit.json",
+        _coverage_audit(
+            _coverage_work_order("densify_pair_coverage_for_grouped_search"),
+        ),
+    )
+    coverage_queue = build_pair_frame_5d_coverage_acquisition_queue(
+        repo_root=_REPO_ROOT,
+        coverage_audit_path=coverage_audit_path,
+        canvas_path=canvas_path,
+        output_root=tmp_path / "coverage_outputs",
+        queue_id="unit_pair_frame_5d_coverage_child",
+        top_n=4,
+    )
+    coverage_queue_path = _write_json(
+        tmp_path / "pair_frame_5d_coverage_child_queue.json",
+        coverage_queue,
+    )
     autonomous = {
         "schema": AUTONOMOUS_CHAIN_OPTIMIZATION_SCHEMA,
         "generated_at_utc": "2026-05-27T00:00:00Z",
@@ -246,6 +321,7 @@ def test_autonomous_parent_queue_binds_pair_frame_5d_child_when_present(
         autonomous_chain_optimization=autonomous,
         autonomous_chain_optimization_path=autonomous_path,
         artifact_paths_by_key={
+            "pair_frame_5d_coverage_acquisition_queue": coverage_queue_path,
             "pair_frame_5d_extended_operator_queue": child_queue_path,
         },
         results_root=tmp_path / "results",
@@ -260,10 +336,23 @@ def test_autonomous_parent_queue_binds_pair_frame_5d_child_when_present(
     assert metadata["queue_actuation_ready"] is True
     assert metadata["missing_queue_artifact_keys"] == []
     assert metadata["local_queue_actions"][0]["queue_artifact_key"] == (
+        "pair_frame_5d_coverage_acquisition_queue"
+    )
+    assert metadata["local_queue_actions"][0]["max_steps"] == 16
+    assert metadata["local_queue_actions"][1]["queue_artifact_key"] == (
         "pair_frame_5d_extended_operator_queue"
     )
     assert any(
         step["id"].startswith("run_")
         and any("pair_frame_5d_child_queue.json" in arg for arg in step["command"])
+        for step in experiment["steps"]
+    )
+    assert any(
+        step["id"].startswith("run_")
+        and any(
+            "pair_frame_5d_coverage_child_queue.json" in arg
+            for arg in step["command"]
+        )
+        and "16" in step["command"]
         for step in experiment["steps"]
     )

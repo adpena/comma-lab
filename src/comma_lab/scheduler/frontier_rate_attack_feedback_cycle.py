@@ -63,6 +63,9 @@ from .frontier_rate_attack_feedback import (
     build_frontier_targeted_component_correction_queue,
     build_frontier_targeted_component_correction_response_harvest,
 )
+from .pair_frame_5d_coverage_acquisition_queue import (
+    build_pair_frame_5d_coverage_acquisition_queue,
+)
 from .pair_frame_5d_extended_operator_queue import (
     build_pair_frame_5d_extended_operator_queue,
 )
@@ -606,6 +609,48 @@ def write_frontier_refresh_artifacts(
                 coverage_audit_path,
                 repo_root,
             )
+            if int(coverage_audit.get("work_order_count") or 0) > 0:
+                coverage_acquisition_queue = (
+                    build_pair_frame_5d_coverage_acquisition_queue(
+                        repo_root=repo_root,
+                        coverage_audit_path=coverage_audit_path,
+                        canvas_path=pair_frame_5d_canvas,
+                        output_root=out / "pair_frame_5d_coverage_acquisition",
+                        queue_id=(
+                            f"{report.get('queue_id') or 'frontier_feedback'}_"
+                            "pair_frame_5d_coverage_acquisition"
+                        ),
+                        top_n=int(report.get("candidate_limit") or 4),
+                    )
+                )
+                coverage_acquisition_queue_path = (
+                    out / "pair_frame_5d_coverage_acquisition_queue.json"
+                )
+                write_json_artifact(
+                    coverage_acquisition_queue_path,
+                    dict(coverage_acquisition_queue),
+                )
+                artifacts["pair_frame_5d_coverage_acquisition_queue"] = repo_rel(
+                    coverage_acquisition_queue_path,
+                    repo_root,
+                )
+                report["pair_frame_5d_coverage_acquisition_queue_summary"] = {
+                    "schema": (
+                        "frontier_rate_attack_pair_frame_5d_coverage_"
+                        "acquisition_queue_summary.v1"
+                    ),
+                    "queue_id": coverage_acquisition_queue.get("queue_id"),
+                    "coverage_audit_path": repo_rel(coverage_audit_path, repo_root),
+                    "experiment_count": len(
+                        coverage_acquisition_queue.get("experiments") or []
+                    ),
+                    "work_order_count": coverage_audit.get("work_order_count"),
+                    "coverage_verdict": coverage_audit.get("verdict"),
+                    "allowed_use": (
+                        "local_encoder_side_coverage_acquisition_planning_only"
+                    ),
+                    **FALSE_AUTHORITY,
+                }
         artifacts["pair_frame_5d_canvas"] = repo_rel(pair_frame_5d_canvas, repo_root)
         artifacts["pair_frame_5d_extended_operator_queue"] = repo_rel(
             pair_frame_5d_queue_path,
@@ -628,6 +673,9 @@ def write_frontier_refresh_artifacts(
                 coverage_audit.get("work_order_count")
                 if coverage_audit is not None
                 else None
+            ),
+            "coverage_acquisition_queue": artifacts.get(
+                "pair_frame_5d_coverage_acquisition_queue"
             ),
             "allowed_use": "local_encoder_side_5d_extended_operator_planning_only",
             **FALSE_AUTHORITY,
@@ -1434,6 +1482,37 @@ def write_frontier_refresh_artifacts(
             "8",
             "--max-experiments",
             "8",
+            "--max-parallel",
+            "1",
+        ]
+    if "pair_frame_5d_coverage_acquisition_queue" in artifacts:
+        operator_commands["validate_pair_frame_5d_coverage_acquisition_queue"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["pair_frame_5d_coverage_acquisition_queue"],
+            "validate",
+        ]
+        operator_commands["init_pair_frame_5d_coverage_acquisition_queue"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["pair_frame_5d_coverage_acquisition_queue"],
+            "init",
+        ]
+        operator_commands[
+            "run_pair_frame_5d_coverage_acquisition_queue_bounded_local"
+        ] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["pair_frame_5d_coverage_acquisition_queue"],
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            "16",
+            "--max-experiments",
+            "6",
             "--max-parallel",
             "1",
         ]

@@ -56,6 +56,9 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (  # noqa: E402
     build_frontier_targeted_component_correction_queue,
     build_frontier_targeted_component_correction_response_harvest,
 )
+from comma_lab.scheduler.pair_frame_5d_coverage_acquisition_queue import (  # noqa: E402
+    build_pair_frame_5d_coverage_acquisition_queue,
+)
 from comma_lab.scheduler.pair_frame_5d_extended_operator_queue import (  # noqa: E402
     build_pair_frame_5d_extended_operator_queue,
 )
@@ -649,6 +652,7 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
     ]
     if pair_frame_5d_canvas_paths:
         pair_frame_5d_canvas = pair_frame_5d_canvas_paths[0]
+        coverage_acquisition_queue: dict[str, Any] | None = None
         pair_frame_5d_queue = build_pair_frame_5d_extended_operator_queue(
             repo_root=REPO_ROOT,
             canvas_path=pair_frame_5d_canvas,
@@ -668,6 +672,30 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
             artifacts["pair_frame_5d_canvas_coverage_audit"] = _display_path(
                 coverage_audit_path
             )
+            if int(coverage_audit.get("work_order_count") or 0) > 0:
+                coverage_acquisition_queue = (
+                    build_pair_frame_5d_coverage_acquisition_queue(
+                        repo_root=REPO_ROOT,
+                        coverage_audit_path=coverage_audit_path,
+                        canvas_path=pair_frame_5d_canvas,
+                        output_root=output_dir / "pair_frame_5d_coverage_acquisition",
+                        queue_id=(
+                            f"{report.get('queue_id') or 'frontier_feedback'}_"
+                            "pair_frame_5d_coverage_acquisition"
+                        ),
+                        top_n=int(report.get("candidate_limit") or 4),
+                    )
+                )
+                coverage_acquisition_queue_path = (
+                    output_dir / "pair_frame_5d_coverage_acquisition_queue.json"
+                )
+                write_json_artifact(
+                    coverage_acquisition_queue_path,
+                    coverage_acquisition_queue,
+                )
+                artifacts["pair_frame_5d_coverage_acquisition_queue"] = _display_path(
+                    coverage_acquisition_queue_path
+                )
         artifacts["pair_frame_5d_canvas"] = _display_path(pair_frame_5d_canvas)
         artifacts["pair_frame_5d_extended_operator_queue"] = _display_path(
             pair_frame_5d_queue_path
@@ -687,9 +715,31 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
                 if coverage_audit is not None
                 else None
             ),
+            "coverage_acquisition_queue": artifacts.get(
+                "pair_frame_5d_coverage_acquisition_queue"
+            ),
             "allowed_use": "local_encoder_side_5d_extended_operator_planning_only",
             **FALSE_AUTHORITY,
         }
+        if coverage_acquisition_queue is not None and coverage_audit is not None:
+            report["pair_frame_5d_coverage_acquisition_queue_summary"] = {
+                "schema": (
+                    "frontier_rate_attack_pair_frame_5d_"
+                    "coverage_acquisition_queue_summary.v1"
+                ),
+                "queue_id": coverage_acquisition_queue.get("queue_id"),
+                "coverage_audit_path": artifacts.get(
+                    "pair_frame_5d_canvas_coverage_audit"
+                ),
+                "canvas_path": _display_path(pair_frame_5d_canvas),
+                "experiment_count": len(
+                    coverage_acquisition_queue.get("experiments") or []
+                ),
+                "work_order_count": coverage_audit.get("work_order_count"),
+                "coverage_verdict": coverage_audit.get("verdict"),
+                "allowed_use": "local_encoder_side_5d_coverage_acquisition_only",
+                **FALSE_AUTHORITY,
+            }
     eureka_planning = report.get("local_cpu_eureka_planning")
     if isinstance(eureka_planning, dict):
         path = output_dir / "local_cpu_eureka_planning.json"
@@ -1546,6 +1596,37 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
             "8",
             "--max-experiments",
             "8",
+            "--max-parallel",
+            "1",
+        ]
+    if "pair_frame_5d_coverage_acquisition_queue" in artifacts:
+        operator_commands["validate_pair_frame_5d_coverage_acquisition_queue"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["pair_frame_5d_coverage_acquisition_queue"],
+            "validate",
+        ]
+        operator_commands["init_pair_frame_5d_coverage_acquisition_queue"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["pair_frame_5d_coverage_acquisition_queue"],
+            "init",
+        ]
+        operator_commands[
+            "run_pair_frame_5d_coverage_acquisition_queue_bounded_local"
+        ] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["pair_frame_5d_coverage_acquisition_queue"],
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            "16",
+            "--max-experiments",
+            "6",
             "--max-parallel",
             "1",
         ]

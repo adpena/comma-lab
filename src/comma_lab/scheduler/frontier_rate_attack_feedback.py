@@ -9981,6 +9981,31 @@ def build_frontier_autonomous_chain_optimization_queue(
             if isinstance(action, Mapping) and not bool(action.get("advisory_only"))
         ]
         if (
+            "pair_frame_5d_coverage_acquisition_queue" in artifact_paths_by_key
+            and not any(
+                action.get("queue_artifact_key")
+                == "pair_frame_5d_coverage_acquisition_queue"
+                for action in local_actions
+            )
+        ):
+            local_actions.append(
+                {
+                    "id": "run_pair_frame_5d_coverage_acquisition_queue",
+                    "queue_artifact_key": "pair_frame_5d_coverage_acquisition_queue",
+                    "purpose": (
+                        "consume_5d_coverage_work_orders_refresh_canvas_and_"
+                        "refire_extended_operators"
+                    ),
+                    "bounded_local_execution": True,
+                    "advisory_only": False,
+                    "requires_exact_auth_before_score_claim": True,
+                    "max_steps": 16,
+                    "max_experiments": 6,
+                    "max_parallel": 1,
+                    **FALSE_AUTHORITY,
+                }
+            )
+        if (
             "pair_frame_5d_extended_operator_queue" in artifact_paths_by_key
             and not any(
                 action.get("queue_artifact_key")
@@ -10103,6 +10128,17 @@ def build_frontier_autonomous_chain_optimization_queue(
             run_step_id = f"run_{slug}_bounded_local"
             child_worker_result_path = work_dir / f"{slug}_worker_result.json"
             child_worker_result_ref = _repo_rel(child_worker_result_path, repo)
+            child_max_steps = _finite_int_or_none(action.get("max_steps")) or 8
+            child_max_experiments = (
+                _finite_int_or_none(action.get("max_experiments")) or 2
+            )
+            child_max_parallel = _finite_int_or_none(action.get("max_parallel")) or 1
+            if child_max_steps < 1:
+                child_max_steps = 8
+            if child_max_experiments < 1:
+                child_max_experiments = 2
+            if child_max_parallel < 1:
+                child_max_parallel = 1
             steps.append(
                 {
                     "id": run_step_id,
@@ -10115,11 +10151,11 @@ def build_frontier_autonomous_chain_optimization_queue(
                         "run-worker",
                         "--execute",
                         "--max-steps",
-                        "8",
+                        str(child_max_steps),
                         "--max-experiments",
-                        "2",
+                        str(child_max_experiments),
                         "--max-parallel",
-                        "1",
+                        str(child_max_parallel),
                         "--output",
                         child_worker_result_ref,
                     ],
