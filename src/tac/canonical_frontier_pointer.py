@@ -677,7 +677,7 @@ def auto_refresh_canonical_frontier_after_dispatch_outcome(
         return None
 
     try:
-        return refresh_canonical_frontier_from_local_state(
+        refreshed = refresh_canonical_frontier_from_local_state(
             repo_root=repo_root_path,
             write=True,
             pre_existing_pointer=prior,
@@ -687,3 +687,27 @@ def auto_refresh_canonical_frontier_after_dispatch_outcome(
         # ledger write has already succeeded; pointer refresh failure is a
         # downstream observability concern and must not propagate.
         return None
+
+    # AUTO-TRIGGER-MLX-PER-PAIR-WIRE-IN (de-orphan the MLX per-pair extractor
+    # per operator directive 2026-05-27 + the 7th AUTOMATED+COMPOUNDING+OPTIMAL
+    # standing directive + CLAUDE.md "Results must become system intelligence").
+    # When the frontier archive changes, auto-schedule the $0 MLX-local per-pair
+    # heuristic-prior extraction so the 5D canvas / Dykstra Pareto solver /
+    # bit_allocator always have per-pair signal for the CURRENT frontier.
+    # Sister of the Catalog #1100 ``append_anchor_locked`` post-anchor consumer
+    # fan-out pattern. Fail-quiet per the canonical contract: the pointer
+    # refresh already succeeded; the MLX schedule is a downstream
+    # observability-only signal (NON-PROMOTABLE per Catalog #192/#127/#323) and
+    # must NOT block / raise from the dispatch-outcome path. Default emits a
+    # ``scheduled`` row (the heavy extraction runs out-of-band via the canonical
+    # CLI; $0 MLX-local); idempotent per frontier sha.
+    try:
+        from tac.master_gradient_mlx_pipeline import (
+            auto_schedule_mlx_per_pair_extraction_for_frontier,
+        )
+
+        auto_schedule_mlx_per_pair_extraction_for_frontier(repo_root=repo_root_path)
+    except Exception:  # noqa: BLE001 — fail-quiet; observability-only downstream
+        pass
+
+    return refreshed
