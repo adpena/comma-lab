@@ -22,6 +22,7 @@ from tac.optimization.family_agnostic_materializers import (
     PACKET_MEMBER_RECOMPRESS_SCHEMA,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
     RENDERER_PAYLOAD_DFL1_SCHEMA,
+    RUNTIME_CONSUMPTION_PROOF_SCHEMA,
     TENSOR_FACTORIZE_SCHEMA,
     verify_runtime_consumption_proof,
 )
@@ -30,7 +31,12 @@ from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
     require_no_truthy_authority_fields,
 )
-from tac.optimization.runtime_adapter_identity import runtime_adapter_identity_blockers
+from tac.optimization.runtime_adapter_identity import (
+    RUNTIME_DIR_FIELDS,
+    RUNTIME_TREE_SHA_FIELDS,
+    runtime_adapter_identity_blockers,
+    runtime_adapter_identity_claimed,
+)
 from tac.optimization.serialized_archive_economics import (
     build_serialized_archive_delta_contract,
 )
@@ -63,6 +69,7 @@ LOCAL_ADVISORY_AXIS_TOKENS = (
     "mlx-research-signal",
     "locality-control",
 )
+PR101_RUNTIME_CONSUMPTION_PROOF_SCHEMA = "pr101_kaggle_proxy_runtime_consumption_proof_v1"
 
 
 class MaterializerChainHarvestError(ValueError):
@@ -107,6 +114,23 @@ def adapt_materializer_chain_manifest_to_candidate(
         raise MaterializerChainHarvestError("serialized_archive_delta_blocked:" + ",".join(delta_blockers))
     _validate_chain_artifacts(chain, repo_root=repo_root)
 
+    raw_proof_path = _chain_runtime_proof_path(chain)
+    runtime_proof, proof_blockers = _load_runtime_proof_with_blockers(
+        raw_proof_path,
+        repo_root=repo_root,
+        candidate_archive_sha256=candidate_archive["sha256"],
+        required_target_kind=chain.get("target_kind"),
+        required_materializer_id=chain.get("materializer_id"),
+        required_receiver_contract_kind=chain.get("receiver_contract_kind"),
+    )
+    proof_file_present = bool(runtime_proof)
+    proof_clean = proof_file_present and not proof_blockers
+    receiver_satisfied = chain.get("receiver_contract_satisfied") is True and proof_clean
+    runtime_adapter_ready = chain.get("runtime_adapter_ready") is True and proof_clean
+    candidate_runtime_adapter_blocker_cleared = (
+        chain.get("candidate_runtime_adapter_blocker_cleared") is True
+        and proof_clean
+    )
     source_sha = _string_or_none(source_archive.get("sha256"))
     source_bytes = _positive_int(source_archive.get("bytes"))
     archive_changed = source_sha is not None and candidate_archive["sha256"] != source_sha
@@ -155,14 +179,24 @@ def adapt_materializer_chain_manifest_to_candidate(
             byte_changed=byte_changed,
         ),
         "byte_closed_candidate_emitted": True,
-        "runtime_adapter_ready": True,
-        "receiver_contract_satisfied": True,
-        "candidate_runtime_adapter_blocker_cleared": True,
-        "readiness_blockers": _string_list(chain.get("readiness_blockers")),
+        "runtime_adapter_ready": runtime_adapter_ready,
+        "receiver_contract_satisfied": receiver_satisfied,
+        "candidate_runtime_adapter_blocker_cleared": candidate_runtime_adapter_blocker_cleared,
+        "readiness_blockers": ordered_unique(
+            [
+                *_string_list(chain.get("readiness_blockers")),
+                *proof_blockers,
+            ]
+        ),
         "next_required_gates": _string_list(chain.get("next_required_gates")),
         "chain_artifact_count": len(chain.get("artifacts") or {}),
         "chain_step_count": len(chain.get("chain_steps") or []),
-        **_runtime_consumption_proof_fields(chain),
+        **_runtime_consumption_proof_fields(
+            chain,
+            proof_path=raw_proof_path,
+            proof_file_present=proof_file_present,
+            runtime_proof=runtime_proof,
+        ),
         **_chain_runtime_context_fields(chain, repo_root=repo_root),
         "local_advisory_axes": _local_advisory_axes(chain),
         "local_advisory_axes_semantics": ("non_authoritative_planning_signal_only_not_score_claim"),
@@ -177,6 +211,8 @@ def adapt_materializer_chain_manifest_to_candidate(
             "materialized_archive_runtime_custody_required",
             "exact_readiness_promotion_required",
             "exact_auth_eval_result_required_before_score_claim",
+            *([] if receiver_satisfied else ["materializer_chain_receiver_contract_not_satisfied"]),
+            *proof_blockers,
             *_string_list(chain.get("readiness_blockers")),
             *_string_list(chain.get("dispatch_blockers")),
         ],
@@ -261,11 +297,19 @@ def adapt_family_agnostic_materializer_manifest_to_candidate(
         and proof_clean
         and not receiver_blockers
     )
-    # At this queue boundary the flag means "no runtime-adapter blocker remains",
-    # not necessarily "a separate adapter file exists".  Identity-style
-    # materializers can have no generated adapter while still being ready once
-    # the runtime-consumption proof is file-backed and verifier-clean.
-    runtime_adapter_ready = receiver_satisfied
+    runtime_identity_blockers = _family_agnostic_runtime_identity_blockers(
+        manifest,
+        runtime_proof=runtime_proof,
+        repo_root=repo_root,
+    )
+    runtime_adapter_ready = (
+        receiver_satisfied
+        and _family_agnostic_runtime_adapter_claimed(
+            manifest,
+            runtime_proof=runtime_proof,
+        )
+        and not runtime_identity_blockers
+    )
     candidate_member = _zip_member_record_from_manifest(
         manifest,
         "candidate_member",
@@ -294,6 +338,7 @@ def adapt_family_agnostic_materializer_manifest_to_candidate(
             *_string_list(manifest.get("readiness_blockers")),
             *[f"receiver_verification:{blocker}" for blocker in receiver_blockers],
             *proof_blockers,
+            *runtime_identity_blockers,
         ]
     )
     row = {
@@ -392,6 +437,104 @@ def _submission_runtime_harvest_fields(manifest: Mapping[str, Any]) -> dict[str,
     if inflate_runtime_dir is not None and "source_runtime_dir" not in fields:
         fields["source_runtime_dir"] = inflate_runtime_dir
     return fields
+
+
+def _family_agnostic_runtime_adapter_claimed(
+    manifest: Mapping[str, Any],
+    *,
+    runtime_proof: Mapping[str, Any],
+) -> bool:
+    return _concrete_runtime_adapter_identity_claimed(
+        manifest,
+    ) or _concrete_runtime_adapter_identity_claimed(
+        runtime_proof,
+    )
+
+
+def _family_agnostic_runtime_identity_blockers(
+    manifest: Mapping[str, Any],
+    *,
+    runtime_proof: Mapping[str, Any],
+    repo_root: Path,
+) -> list[str]:
+    blockers: list[str] = []
+    proof_claims_identity = _concrete_runtime_adapter_identity_claimed(runtime_proof)
+    if _concrete_runtime_adapter_identity_claimed(manifest) and not proof_claims_identity:
+        blockers.extend(
+            runtime_adapter_identity_blockers(
+                manifest,
+                repo_root=repo_root,
+                context="family_agnostic_materializer_manifest",
+            )
+        )
+    if proof_claims_identity:
+        blockers.extend(
+            f"runtime_consumption_proof:{blocker}"
+            for blocker in runtime_adapter_identity_blockers(
+                runtime_proof,
+                repo_root=repo_root,
+                context="runtime_consumption_proof",
+            )
+        )
+    return ordered_unique(blockers)
+
+
+_RUNTIME_ADAPTER_FILE_PATH_FIELDS = (
+    "path",
+    "runtime_adapter_path",
+    "source_runtime_unpacker_path",
+)
+_RUNTIME_ADAPTER_FILE_SHA_FIELDS = (
+    "sha256",
+    "runtime_adapter_sha256",
+    "source_sha256",
+)
+_RUNTIME_NESTED_MAPPING_FIELDS = (
+    "runtime_adapter_manifest",
+    "receiver_verification",
+    "runtime_manifest",
+    "candidate_runtime",
+    "packet_member_merge_receiver_runtime",
+    "tensor_factorize_receiver_runtime",
+    "renderer_payload_dfl1_receiver_runtime",
+    "full_frame_inflate_parity_verification",
+)
+
+
+def _concrete_runtime_adapter_identity_claimed(payload: Mapping[str, Any]) -> bool:
+    if not runtime_adapter_identity_claimed(payload):
+        return False
+    for mapping in _iter_runtime_identity_mappings(payload):
+        if any(_nonempty_string(mapping.get(key)) is not None for key in RUNTIME_DIR_FIELDS):
+            return True
+        if any(_string_or_none(mapping.get(key)) is not None for key in RUNTIME_TREE_SHA_FIELDS):
+            return True
+        has_file_path = any(
+            _nonempty_string(mapping.get(key)) is not None
+            for key in _RUNTIME_ADAPTER_FILE_PATH_FIELDS
+        )
+        has_file_sha = any(
+            _string_or_none(mapping.get(key)) is not None
+            for key in _RUNTIME_ADAPTER_FILE_SHA_FIELDS
+        )
+        if has_file_path or has_file_sha:
+            return True
+    return False
+
+
+def _iter_runtime_identity_mappings(value: Any) -> Iterable[Mapping[str, Any]]:
+    if not isinstance(value, Mapping):
+        return
+    yield value
+    for key in _RUNTIME_NESTED_MAPPING_FIELDS:
+        nested = value.get(key)
+        if isinstance(nested, Mapping):
+            yield from _iter_runtime_identity_mappings(nested)
+    for nested in value.values():
+        if isinstance(nested, list | tuple):
+            for item in nested:
+                if isinstance(item, Mapping):
+                    yield from _iter_runtime_identity_mappings(item)
 
 
 def _packet_member_merge_harvest_fields(manifest: Mapping[str, Any]) -> dict[str, Any]:
@@ -551,17 +694,32 @@ def _load_runtime_proof_with_blockers(
     except ValueError as exc:
         blockers.append(f"runtime_consumption_proof_false_authority:{exc}")
     blockers.extend(f"runtime_consumption_proof:{blocker}" for blocker in _string_list(payload.get("blockers")))
-    verification = verify_runtime_consumption_proof(
-        runtime_consumption_proof=payload,
-        required_candidate_archive_sha256=candidate_archive_sha256,
-        required_target_kind=(required_target_kind if isinstance(required_target_kind, str) else None),
-        required_materializer_id=(required_materializer_id if isinstance(required_materializer_id, str) else None),
-        required_receiver_contract_kind=(
-            required_receiver_contract_kind if isinstance(required_receiver_contract_kind, str) else None
-        ),
-        repo_root=repo_root,
-    )
-    blockers.extend(f"runtime_consumption_proof:{blocker}" for blocker in _string_list(verification.get("blockers")))
+    schema = str(payload.get("schema") or "")
+    if schema == RUNTIME_CONSUMPTION_PROOF_SCHEMA:
+        verification = verify_runtime_consumption_proof(
+            runtime_consumption_proof=payload,
+            required_candidate_archive_sha256=candidate_archive_sha256,
+            required_target_kind=(required_target_kind if isinstance(required_target_kind, str) else None),
+            required_materializer_id=(required_materializer_id if isinstance(required_materializer_id, str) else None),
+            required_receiver_contract_kind=(
+                required_receiver_contract_kind if isinstance(required_receiver_contract_kind, str) else None
+            ),
+            repo_root=repo_root,
+        )
+        blockers.extend(
+            f"runtime_consumption_proof:{blocker}"
+            for blocker in _string_list(verification.get("blockers"))
+        )
+    elif schema == PR101_RUNTIME_CONSUMPTION_PROOF_SCHEMA:
+        blockers.extend(
+            _pr101_runtime_consumption_proof_blockers(
+                payload,
+                repo_root=repo_root,
+                candidate_archive_sha256=candidate_archive_sha256,
+            )
+        )
+    else:
+        blockers.append(f"runtime_consumption_proof_schema_unsupported:{schema}")
     blockers.extend(
         f"runtime_consumption_proof:{blocker}"
         for blocker in runtime_adapter_identity_blockers(
@@ -578,10 +736,96 @@ def _load_runtime_proof_with_blockers(
     return payload, ordered_unique(blockers)
 
 
+def _pr101_runtime_consumption_proof_blockers(
+    proof: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    candidate_archive_sha256: str,
+) -> list[str]:
+    blockers: list[str] = []
+    if proof.get("runtime_consumption_proven_for_supported_bias_params") is not True:
+        blockers.append("runtime_consumption_proof:pr101_supported_bias_params_not_proven")
+    if proof.get("inflate_sh_routes_to_packet_inflate_py") is not True:
+        blockers.append("runtime_consumption_proof:pr101_inflate_route_not_proven")
+    archive_sha = _runtime_proof_archive_sha(proof)
+    if archive_sha != candidate_archive_sha256:
+        blockers.append("runtime_consumption_proof:pr101_archive_sha_mismatch")
+
+    manifest_path = _nonempty_string(proof.get("manifest_path"))
+    if manifest_path is None:
+        blockers.append("runtime_consumption_proof:pr101_manifest_path_missing")
+    else:
+        resolved_manifest = _resolve_path(manifest_path, repo_root=repo_root)
+        if resolved_manifest.is_symlink():
+            blockers.append("runtime_consumption_proof:pr101_manifest_is_symlink")
+        elif not resolved_manifest.is_file():
+            blockers.append("runtime_consumption_proof:pr101_manifest_missing")
+        else:
+            expected_manifest_sha = _string_or_none(proof.get("manifest_sha256"))
+            if expected_manifest_sha is None:
+                blockers.append("runtime_consumption_proof:pr101_manifest_sha_missing")
+            elif _sha256_file(resolved_manifest) != expected_manifest_sha:
+                blockers.append("runtime_consumption_proof:pr101_manifest_sha_mismatch")
+
+    packet_dir = _nonempty_string(proof.get("packet_dir"))
+    if packet_dir is None:
+        blockers.append("runtime_consumption_proof:pr101_packet_dir_missing")
+        return blockers
+    resolved_packet_dir = _resolve_path(packet_dir, repo_root=repo_root)
+    if resolved_packet_dir.is_symlink():
+        blockers.append("runtime_consumption_proof:pr101_packet_dir_is_symlink")
+        return blockers
+    if not resolved_packet_dir.is_dir():
+        blockers.append("runtime_consumption_proof:pr101_packet_dir_missing")
+        return blockers
+
+    wrapper = proof.get("inflate_wrapper_route_proof")
+    wrapper_map = wrapper if isinstance(wrapper, Mapping) else {}
+    if wrapper_map.get("wrapper_invoked_packet_inflate_py") is not True:
+        blockers.append("runtime_consumption_proof:pr101_wrapper_route_not_proven")
+    blockers.extend(
+        _pr101_runtime_file_sha_blockers(
+            resolved_packet_dir / "inflate.sh",
+            expected_sha=_string_or_none(wrapper_map.get("inflate_sh_sha256")),
+            label="inflate_sh",
+        )
+    )
+    blockers.extend(
+        _pr101_runtime_file_sha_blockers(
+            resolved_packet_dir / "inflate.py",
+            expected_sha=_string_or_none(wrapper_map.get("packet_inflate_py_sha256")),
+            label="inflate_py",
+        )
+    )
+    return blockers
+
+
+def _pr101_runtime_file_sha_blockers(
+    path: Path,
+    *,
+    expected_sha: str | None,
+    label: str,
+) -> list[str]:
+    if expected_sha is None:
+        return [f"runtime_consumption_proof:pr101_{label}_sha_missing"]
+    if path.is_symlink():
+        return [f"runtime_consumption_proof:pr101_{label}_is_symlink"]
+    if not path.is_file():
+        return [f"runtime_consumption_proof:pr101_{label}_missing"]
+    if _sha256_file(path) != expected_sha:
+        return [f"runtime_consumption_proof:pr101_{label}_sha_mismatch"]
+    return []
+
+
 def _runtime_proof_archive_sha(proof: Mapping[str, Any]) -> str | None:
     candidate_archive = proof.get("candidate_archive")
     if isinstance(candidate_archive, Mapping):
         value = candidate_archive.get("sha256") or candidate_archive.get("archive_sha256")
+        if isinstance(value, str) and len(value.strip()) == 64:
+            return value.strip().lower()
+    archive_unchanged = proof.get("archive_unchanged_proof")
+    if isinstance(archive_unchanged, Mapping):
+        value = archive_unchanged.get("archive_sha256") or archive_unchanged.get("sha256")
         if isinstance(value, str) and len(value.strip()) == 64:
             return value.strip().lower()
     for key in ("candidate_archive_sha256", "archive_sha256"):
@@ -641,24 +885,34 @@ def _member_candidate_fields(prefix: str, member: Mapping[str, Any]) -> dict[str
     }
 
 
-def _runtime_consumption_proof_fields(chain: Mapping[str, Any]) -> dict[str, Any]:
+def _runtime_consumption_proof_fields(
+    chain: Mapping[str, Any],
+    *,
+    proof_path: str | None,
+    proof_file_present: bool,
+    runtime_proof: Mapping[str, Any],
+) -> dict[str, Any]:
     out: dict[str, Any] = {}
-    for key in (
-        "runtime_consumption_proof_required",
-        "runtime_consumption_proof_status",
-        "runtime_consumption_proof_path",
-    ):
-        if key in chain:
-            out[key] = chain[key]
-    if "runtime_consumption_proof_path" not in out:
-        artifacts = chain.get("artifacts")
-        receiver = artifacts.get("receiver_proof") if isinstance(artifacts, Mapping) else None
-        proof_path = _nonempty_string(receiver.get("path")) if isinstance(receiver, Mapping) else None
-        if proof_path is not None:
-            out["runtime_consumption_proof_required"] = True
-            out["runtime_consumption_proof_status"] = "present"
-            out["runtime_consumption_proof_path"] = proof_path
+    out["runtime_consumption_proof_required"] = True
+    out["runtime_consumption_proof_status"] = "present" if proof_file_present else "missing"
+    out["runtime_consumption_proof_path"] = proof_path
+    if proof_file_present and proof_path is not None:
+        out["runtime_consumption_proof_schema"] = runtime_proof.get("schema")
     return out
+
+
+def _chain_runtime_proof_path(chain: Mapping[str, Any]) -> str | None:
+    proof_path = _nonempty_string(chain.get("runtime_consumption_proof_path"))
+    if proof_path is not None:
+        return proof_path
+    artifacts = chain.get("artifacts")
+    receiver = artifacts.get("receiver_proof") if isinstance(artifacts, Mapping) else None
+    proof_path = _nonempty_string(receiver.get("path")) if isinstance(receiver, Mapping) else None
+    if proof_path is not None:
+        return proof_path
+    receiver_verification = chain.get("receiver_verification")
+    receiver_map = receiver_verification if isinstance(receiver_verification, Mapping) else {}
+    return _nonempty_string(receiver_map.get("proof_path"))
 
 
 def _chain_runtime_context_fields(
@@ -1042,6 +1296,11 @@ def _nonempty_string(value: Any) -> str | None:
     if isinstance(value, str) and value.strip():
         return value.strip()
     return None
+
+
+def _resolve_path(value: str, *, repo_root: Path) -> Path:
+    path = Path(value)
+    return path if path.is_absolute() else repo_root / path
 
 
 def _axis_token(value: str) -> str:

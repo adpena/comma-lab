@@ -580,6 +580,14 @@ def test_harvest_work_queue_chain_manifest_into_source_queue(
     assert row["byte_range_entropy_recode_runtime_tree_sha256"] == row[
         "candidate_runtime_tree_sha256"
     ]
+    assert row["runtime_adapter_ready"] is False
+    assert row["receiver_contract_satisfied"] is False
+    assert row["candidate_runtime_adapter_blocker_cleared"] is False
+    assert row["runtime_consumption_proof_status"] == "missing"
+    assert "runtime_consumption_proof_path_missing" in row["readiness_blockers"]
+    assert "materializer_chain_receiver_contract_not_satisfied" in row[
+        "dispatch_blockers"
+    ]
     assert row["ready_for_exact_eval_dispatch"] is False
     assert row["score_claim"] is False
     assert str(external) in row["candidate_archive_path"]
@@ -1084,6 +1092,8 @@ def test_harvest_family_agnostic_sweep_manifest_revalidates_candidate_manifests(
     assert row["realized_saved_bytes"] > 0
     assert row["runtime_consumption_proof_status"] == "present"
     assert row["receiver_contract_satisfied"] is True
+    assert row["runtime_adapter_ready"] is False
+    assert row["candidate_runtime_adapter_blocker_cleared"] is False
     assert row["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
 
@@ -1180,9 +1190,9 @@ def test_harvest_family_agnostic_packet_recompress_payload_identity_proof(
     assert row["source_member_sha256"] == manifest["source_member"]["sha256"]
     assert row["runtime_consumption_proof_status"] == "present"
     assert row["runtime_consumption_proof_path"] == str(proof)
-    assert row["runtime_adapter_ready"] is True
     assert row["receiver_contract_satisfied"] is True
-    assert row["candidate_runtime_adapter_blocker_cleared"] is True
+    assert row["runtime_adapter_ready"] is False
+    assert row["candidate_runtime_adapter_blocker_cleared"] is False
     assert "runtime_consumption_proof_missing" not in row["dispatch_blockers"]
     assert "family_agnostic_receiver_contract_not_satisfied" not in (
         row["dispatch_blockers"]
@@ -2014,8 +2024,9 @@ def test_dfl1_materializer_consumes_full_frame_shell_parity_proof(
         chain_manifest_paths=[manifest_path],
     )
     row = harvest_result["source_queue"]["top_k"][0]
-    assert row["runtime_adapter_ready"] is True
     assert row["receiver_contract_satisfied"] is True
+    assert row["runtime_adapter_ready"] is True
+    assert row["candidate_runtime_adapter_blocker_cleared"] is True
     assert row["full_frame_inflate_parity_proven"] is True
     assert "family_agnostic_receiver_contract_not_satisfied" not in (
         row["dispatch_blockers"]
@@ -2113,8 +2124,9 @@ def test_harvest_family_agnostic_archive_section_raw_identity_proof(
     assert row["candidate_member_name"] == "0.raw"
     assert row["runtime_consumption_proof_status"] == "present"
     assert row["runtime_consumption_proof_path"] == str(proof)
-    assert row["runtime_adapter_ready"] is True
     assert row["receiver_contract_satisfied"] is True
+    assert row["runtime_adapter_ready"] is False
+    assert row["candidate_runtime_adapter_blocker_cleared"] is False
     assert "runtime_consumption_proof_missing" not in row["dispatch_blockers"]
     assert "family_agnostic_receiver_contract_not_satisfied" not in (
         row["dispatch_blockers"]
@@ -2224,8 +2236,8 @@ def test_harvest_family_agnostic_tensor_factorize_receiver_proof(
     assert row["tensor_factorize_receiver_runtime"]["runtime_dir"] == (
         runtime_manifest["runtime_dir"]
     )
-    assert row["runtime_adapter_ready"] is True
     assert row["receiver_contract_satisfied"] is True
+    assert row["runtime_adapter_ready"] is True
     assert row["candidate_runtime_adapter_blocker_cleared"] is True
     assert "runtime_consumption_proof_missing" not in row["dispatch_blockers"]
     assert "family_agnostic_receiver_contract_not_satisfied" not in (
@@ -2475,6 +2487,9 @@ def test_exact_readiness_bridge_promotes_valid_harvested_source_queue(
         repo_root=repo,
         chain_manifest_paths=[chain],
     )
+    harvest_row = harvest_result["source_queue"]["top_k"][0]
+    assert harvest_row["receiver_contract_satisfied"] is True
+    assert harvest_row["runtime_adapter_ready"] is True
     _write_json(source_queue_out, harvest_result["source_queue"])
 
     bridge = run_exact_readiness_bridge_for_harvested_queue(
@@ -2514,6 +2529,9 @@ def test_exact_readiness_bridge_cli_writes_false_authority_report(
         repo_root=repo,
         chain_manifest_paths=[chain],
     )
+    harvest_row = harvest_result["source_queue"]["top_k"][0]
+    assert harvest_row["receiver_contract_satisfied"] is True
+    assert harvest_row["runtime_adapter_ready"] is True
     _write_json(source_queue_out, harvest_result["source_queue"])
 
     result = subprocess.run(
@@ -2600,6 +2618,9 @@ def test_materializer_dispatch_plan_dry_run_does_not_write_claim(
         repo_root=repo,
         chain_manifest_paths=[chain],
     )
+    harvest_row = harvest_result["source_queue"]["top_k"][0]
+    assert harvest_row["receiver_contract_satisfied"] is True
+    assert harvest_row["runtime_adapter_ready"] is True
     _write_json(source_queue_out, harvest_result["source_queue"])
     bridge = run_exact_readiness_bridge_for_harvested_queue(
         repo_root=repo,
@@ -3209,6 +3230,12 @@ def test_exact_readiness_bridge_blocks_stale_runtime_consumption_proof(
     harvest_result = harvest_materializer_chain_manifests(
         repo_root=repo,
         chain_manifest_paths=[chain],
+    )
+    harvest_row = harvest_result["source_queue"]["top_k"][0]
+    assert harvest_row["receiver_contract_satisfied"] is False
+    assert harvest_row["runtime_adapter_ready"] is False
+    assert "runtime_consumption_proof:pr101_inflate_sh_sha_mismatch" in (
+        harvest_row["readiness_blockers"]
     )
     _write_json(source_queue_out, harvest_result["source_queue"])
 
