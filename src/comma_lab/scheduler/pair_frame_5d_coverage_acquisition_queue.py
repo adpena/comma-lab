@@ -11,6 +11,8 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+
 from tac.deploy.modal.paired_dispatch import (
     PAIRED_AUTH_EVAL_DEFAULT_CLAIM_AGENT,
     PAIRED_AUTH_EVAL_DISPATCH_TOOL,
@@ -19,7 +21,9 @@ from tac.deploy.modal.paired_dispatch import (
 from tac.deploy.modal.paired_dispatch_contract import (
     paired_auth_eval_dispatch_command_blockers,
 )
+from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 from tac.local_acceleration.mlx_cache_audit import cache_audit_stamp_blockers
+from tac.local_acceleration.mlx_preprocess import ARRAY_HASH_DOMAIN
 from tac.optimization.pair_frame_scorer_geometry_lattice_5d_canvas_coverage import (
     COVERAGE_AUDIT_SCHEMA,
     WORK_ORDER_SCHEMA,
@@ -86,6 +90,15 @@ MLX_CACHE_FALSE_AUTHORITY_FIELDS = (
     "rank_or_kill_eligible",
     "ready_for_exact_eval_dispatch",
 )
+MLX_CACHE_FORBIDDEN_TRUTHY_AUTHORITY_FIELDS = (
+    "score_claim_eligible",
+    "dispatch_packet_ready",
+    "dispatch_attempted",
+    "gpu_launched",
+    "field_selection_ready_for_exact_eval_dispatch",
+    "exact_cuda_auth_eval",
+    "contest_cuda_auth_eval",
+)
 
 
 def _slug(value: object) -> str:
@@ -102,6 +115,18 @@ def _repo_rel(path: Path, repo_root: Path) -> str:
 def _resolve_path(value: str | Path, *, repo_root: Path) -> Path:
     path = Path(value).expanduser()
     return path if path.is_absolute() else repo_root / path
+
+
+def _dedupe_paths_as_repo_refs(paths: Sequence[str | Path], *, repo_root: Path) -> list[str]:
+    refs: list[str] = []
+    seen: set[str] = set()
+    for raw in paths:
+        ref = _repo_rel(_resolve_path(raw, repo_root=repo_root), repo_root)
+        if ref in seen:
+            continue
+        seen.add(ref)
+        refs.append(ref)
+    return refs
 
 
 def _load_json_object(path: Path) -> dict[str, Any]:
@@ -450,6 +475,65 @@ def _load_submission_bundle_contract(
         return None, [f"submission_bundle_result_contract_invalid:{type(exc).__name__}"]
 
 
+def _resolve_bundle_path(
+    value: str | Path,
+    *,
+    repo_root: Path,
+    bundle_result_path: Path,
+) -> Path:
+    path = Path(value).expanduser()
+    if path.is_absolute():
+        return path
+    repo_candidate = repo_root / path
+    bundle_candidate = bundle_result_path.parent / path
+    if repo_candidate.exists() or not bundle_candidate.exists():
+        return repo_candidate
+    return bundle_candidate
+
+
+def _submission_bundle_file_blockers(
+    bundle: Any,
+    *,
+    bundle_result_path: Path,
+    repo_root: Path,
+) -> list[str]:
+    blockers: list[str] = []
+    submission_dir = _resolve_bundle_path(
+        bundle.submission_dir,
+        repo_root=repo_root,
+        bundle_result_path=bundle_result_path,
+    )
+    if not submission_dir.is_dir():
+        blockers.append("submission_bundle_submission_dir_not_found")
+
+    archive_zip = submission_dir / "archive.zip"
+    if not archive_zip.is_file():
+        blockers.append("submission_bundle_archive_zip_missing")
+    else:
+        actual_bytes = archive_zip.stat().st_size
+        if actual_bytes != int(bundle.archive_bytes):
+            blockers.append("submission_bundle_archive_bytes_mismatch")
+        if _sha256_file(archive_zip) != str(bundle.archive_sha256):
+            blockers.append("submission_bundle_archive_sha256_mismatch")
+
+    required_paths = {
+        "inflate_sh_path": bundle.inflate_sh_path,
+        "inflate_py_path": bundle.inflate_py_path,
+        "readme_md_path": bundle.readme_md_path,
+        "report_txt_path": bundle.report_txt_path,
+        "archive_manifest_path": bundle.archive_manifest_path,
+    }
+    for label, raw_path in required_paths.items():
+        resolved = _resolve_bundle_path(
+            raw_path,
+            repo_root=repo_root,
+            bundle_result_path=bundle_result_path,
+        )
+        if not resolved.is_file():
+            blockers.append(f"submission_bundle_{label}_not_found")
+    return blockers
+
+
 def _select_submission_bundle_for_archive(
     *,
     archive_sha256: str,
@@ -475,6 +559,14 @@ def _select_submission_bundle_for_archive(
         bundle, bundle_blockers = _load_submission_bundle_contract(resolved)
         if bundle_blockers:
             blockers.extend(bundle_blockers)
+            continue
+        file_blockers = _submission_bundle_file_blockers(
+            bundle,
+            bundle_result_path=resolved,
+            repo_root=repo_root,
+        )
+        if file_blockers:
+            blockers.extend(file_blockers)
             continue
         bundle_sha = str(bundle.archive_sha256)
         if archive_sha256 and bundle_sha != archive_sha256:
@@ -527,6 +619,50 @@ def _manifest_artifact_file_blockers(
     return blockers
 
 
+def _array_sha256(array: np.ndarray) -> str:
+    contiguous = np.ascontiguousarray(array)
+    digest = hashlib.sha256()
+    digest.update(str(contiguous.dtype).encode("utf-8"))
+    digest.update(
+        json.dumps(list(contiguous.shape), separators=(",", ":")).encode("utf-8")
+    )
+    digest.update(contiguous.tobytes())
+    return digest.hexdigest()
+
+
+def _npy_shape_blockers(
+    *,
+    cache_dir: Path,
+    manifest: Mapping[str, Any],
+    key: str,
+    pair_count: int | None,
+) -> list[str]:
+    path = cache_dir / REQUIRED_MLX_CACHE_ARRAY_FILES[key]
+    if not path.is_file():
+        return []
+    try:
+        array = np.load(path, mmap_mode="r")
+    except (OSError, ValueError) as exc:
+        return [f"mlx_cache_{key}_array_load_failed:{type(exc).__name__}"]
+    shape = list(array.shape)
+    expected_shape = manifest.get(f"{key}_shape")
+    blockers: list[str] = []
+    if expected_shape != shape:
+        blockers.append(f"mlx_cache_{key}_shape_mismatch")
+    if pair_count is not None and (not shape or int(shape[0]) != pair_count):
+        blockers.append(f"mlx_cache_{key}_first_dim_pair_count_mismatch")
+    if key == "pair_indices":
+        if len(shape) != 2 or int(shape[1]) != 2:
+            blockers.append("mlx_cache_pair_indices_shape_not_n_by_2")
+        arrays = manifest.get("array_sha256")
+        expected_hash = arrays.get(key) if isinstance(arrays, Mapping) else None
+        if isinstance(expected_hash, str) and expected_hash:
+            actual_hash = _array_sha256(np.asarray(array))
+            if actual_hash != expected_hash:
+                blockers.append("mlx_cache_pair_indices_array_sha256_mismatch")
+    return blockers
+
+
 def _mlx_cache_manifest_blockers(
     cache_dir: Path,
     *,
@@ -542,6 +678,14 @@ def _mlx_cache_manifest_blockers(
         return None, [f"mlx_cache_manifest_invalid:{type(exc).__name__}"]
 
     blockers: list[str] = []
+    if manifest.get("schema_version") != "mlx_scorer_input_cache.v1":
+        blockers.append("mlx_cache_schema_version_not_mlx_scorer_input_cache_v1")
+    if manifest.get("evidence_grade") != EVIDENCE_GRADE_MLX:
+        blockers.append(f"mlx_cache_evidence_grade_not_{EVIDENCE_GRADE_MLX}")
+    if manifest.get("evidence_tag") != EVIDENCE_TAG_MLX:
+        blockers.append("mlx_cache_evidence_tag_not_mlx_research_signal")
+    if manifest.get("hash_domain") != ARRAY_HASH_DOMAIN:
+        blockers.append("mlx_cache_hash_domain_not_canonical_array_sha256")
     if manifest.get("hash_only") is True:
         blockers.append("mlx_cache_hash_only_no_tensors")
     arrays = manifest.get("array_sha256")
@@ -565,18 +709,39 @@ def _mlx_cache_manifest_blockers(
         )
     for key in (
         "archive_sha256",
-        "raw_sha256",
         "inflated_outputs_aggregate_sha256",
-        "hash_domain",
     ):
         if not isinstance(manifest.get(key), str) or not manifest.get(key):
             blockers.append(f"mlx_cache_{key}_missing")
+    source_kind = manifest.get("source_kind")
+    if candidate or source_kind != "video":
+        if not isinstance(manifest.get("raw_sha256"), str) or not manifest.get("raw_sha256"):
+            blockers.append("mlx_cache_raw_sha256_missing")
+    elif not isinstance(manifest.get("source_video_sha256"), str) or not manifest.get(
+        "source_video_sha256"
+    ):
+        blockers.append("reference_mlx_cache_source_video_sha256_missing")
     pair_count = manifest.get("pair_count")
     if isinstance(pair_count, bool) or not isinstance(pair_count, int) or pair_count < 1:
         blockers.append("mlx_cache_pair_count_missing_or_invalid")
+        pair_count_int = None
+    else:
+        pair_count_int = int(pair_count)
     for field in MLX_CACHE_FALSE_AUTHORITY_FIELDS:
         if manifest.get(field) is not False:
             blockers.append(f"mlx_cache_manifest_{field}_not_false")
+    for field in MLX_CACHE_FORBIDDEN_TRUTHY_AUTHORITY_FIELDS:
+        if manifest.get(field) not in (None, False):
+            blockers.append(f"mlx_cache_manifest_{field}_truthy")
+    for key in sorted(REQUIRED_MLX_CACHE_ARRAY_KEYS):
+        blockers.extend(
+            _npy_shape_blockers(
+                cache_dir=cache_dir,
+                manifest=manifest,
+                key=key,
+                pair_count=pair_count_int,
+            )
+        )
 
     if candidate:
         auth_blockers = cache_audit_stamp_blockers(
@@ -760,6 +925,13 @@ def _exact_axis_request_readiness(
     except (KeyError, TypeError, ValueError) as exc:
         blockers.append(f"submission_bundle_result_contract_invalid:{type(exc).__name__}")
         return blockers, None
+    blockers.extend(
+        _submission_bundle_file_blockers(
+            bundle_result,
+            bundle_result_path=submission_bundle_path,
+            repo_root=repo_root,
+        )
+    )
     request_sha = str(request.get("archive_sha256") or "")
     bundle_sha = str(bundle_result.archive_sha256)
     if request_sha and bundle_sha and request_sha != bundle_sha:
@@ -1085,6 +1257,25 @@ def build_coverage_followup_input_binding_report(
                     and not isinstance(archive_size_bytes, bool)
                     and archive_size_bytes > 0
                 ):
+                    bundle, bundle_bytes, bundle_blockers, considered = (
+                        _select_submission_bundle_for_archive(
+                            archive_sha256=str(request.get("archive_sha256") or ""),
+                            repo_root=repo,
+                            explicit_path=explicit_bundle,
+                            search_roots=roots,
+                        )
+                    )
+                    row["candidate_submission_bundle_count"] = considered
+                    if bundle is not None:
+                        bundle_ref = _repo_rel(bundle, repo)
+                        row["selected_submission_bundle_path"] = bundle_ref
+                        selected_bundle_paths.add(bundle_ref)
+                    if bundle_bytes is None:
+                        blockers.extend(
+                            f"archive_size:{blocker}" for blocker in bundle_blockers
+                        )
+                    elif int(archive_size_bytes) != bundle_bytes:
+                        blockers.append("archive_size:explicit_size_mismatch_bundle")
                     row["selected_archive_size_bytes"] = int(archive_size_bytes)
                     selected_archive_size_bytes.add(int(archive_size_bytes))
                 else:
@@ -1136,6 +1327,15 @@ def build_coverage_followup_input_binding_report(
         selected_inputs["archive_size_bytes"] = next(iter(selected_archive_size_bytes))
     elif len(selected_archive_size_bytes) > 1:
         global_blockers.append("multiple_archive_size_byte_values_selected")
+    if global_blockers:
+        for row in rows:
+            if row.get("ready_for_readiness_refresh") is True:
+                row["ready_for_readiness_refresh"] = False
+                blockers = row.setdefault("blockers", [])
+                if isinstance(blockers, list):
+                    blockers.extend(
+                        f"global:{blocker}" for blocker in global_blockers
+                    )
 
     ready_count = sum(1 for row in rows if row["ready_for_readiness_refresh"])
     report = {
@@ -1565,6 +1765,7 @@ def build_pair_frame_5d_coverage_acquisition_queue(
     local_mlx_concurrency: int = 1,
     local_io_concurrency: int = 1,
     status: str = "queued",
+    followup_search_roots: Sequence[str | Path] | None = None,
 ) -> dict[str, Any]:
     """Build queue-owned acquisition work from a 5D coverage audit."""
 
@@ -1591,6 +1792,13 @@ def build_pair_frame_5d_coverage_acquisition_queue(
     audit_ref = _repo_rel(audit_path, repo)
     canvas_ref = _repo_rel(canvas, repo)
     out_ref = _repo_rel(out_root, repo)
+    followup_search_root_refs = _dedupe_paths_as_repo_refs(
+        [out_ref, *(followup_search_roots or [])],
+        repo_root=repo,
+    )
+    followup_search_root_args: list[str] = []
+    for root_ref in followup_search_root_refs:
+        followup_search_root_args.extend(["--search-root", root_ref])
     experiments: list[dict[str, Any]] = []
     plan_step_refs: list[str] = []
     executable_work_order_ids: list[str] = []
@@ -1722,6 +1930,7 @@ def build_pair_frame_5d_coverage_acquisition_queue(
                 "followup_execution_worker_result_path": (
                     followup_execution_worker_result_ref
                 ),
+                "followup_search_roots": followup_search_root_refs,
                 "blocked_work_order_ids": blocked_work_order_ids,
                 "allowed_use": (
                     "local_encoder_side_coverage_followup_readiness_and_"
@@ -1739,8 +1948,7 @@ def build_pair_frame_5d_coverage_acquisition_queue(
                         "tools/bind_5d_coverage_followup_inputs.py",
                         "--plans-dir",
                         f"{out_ref}/plans",
-                        "--search-root",
-                        out_ref,
+                        *followup_search_root_args,
                         "--output",
                         followup_input_binding_report_ref,
                         "--refreshed-readiness-output",
@@ -2083,6 +2291,11 @@ def build_pair_frame_5d_coverage_acquisition_queue(
                 "plan_classes_by_work_order": plan_classes_by_work_order,
                 "followup_readiness_report_path": followup_readiness_report_ref,
                 "followup_execution_queue_path": followup_execution_queue_ref,
+                "followup_input_binding_report_path": followup_input_binding_report_ref,
+                "followup_execution_worker_result_path": (
+                    followup_execution_worker_result_ref
+                ),
+                "followup_search_roots": followup_search_root_refs,
                 "allowed_use": "local_encoder_side_coverage_acquisition_planning_only",
                 **FALSE_AUTHORITY,
             },

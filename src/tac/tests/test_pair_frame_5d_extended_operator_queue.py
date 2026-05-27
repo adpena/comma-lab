@@ -253,8 +253,23 @@ def test_refresh_artifacts_emit_pair_frame_5d_extended_operator_queue(
         "followup_execution_queue_planned_by_queue"
     ] is True
     assert report["pair_frame_5d_coverage_acquisition_queue_summary"][
+        "followup_readiness_refresh_planned_by_queue"
+    ] is True
+    assert report["pair_frame_5d_coverage_acquisition_queue_summary"][
         "followup_execution_bounded_local_run_completed"
     ] is False
+    assert report["pair_frame_5d_coverage_acquisition_queue_summary"][
+        "followup_readiness_report_path"
+    ].endswith("pair_frame_5d_coverage_acquisition/followup_readiness_report.json")
+    assert report["pair_frame_5d_coverage_acquisition_queue_summary"][
+        "followup_search_roots"
+    ][0].endswith("refresh/pair_frame_5d_coverage_acquisition")
+    assert any(
+        root.endswith("results")
+        for root in report["pair_frame_5d_coverage_acquisition_queue_summary"][
+            "followup_search_roots"
+        ]
+    )
     assert (
         report["pair_frame_5d_coverage_acquisition_queue_summary"][
             "coverage_verdict"
@@ -289,6 +304,27 @@ def test_refresh_artifacts_emit_pair_frame_5d_extended_operator_queue(
         followup_queue_ref,
         "run-worker",
     ]
+    followup_run = report["operator_commands"][
+        "run_pair_frame_5d_followup_execution_queue_bounded_local_after_acquisition"
+    ]
+    assert followup_run[-2:] == [
+        "--output",
+        report["pair_frame_5d_coverage_acquisition_queue_summary"][
+            "followup_execution_worker_result_path"
+        ],
+    ]
+    assert report["operator_commands"][
+        "inspect_pair_frame_5d_followup_input_binding_report_after_acquisition"
+    ][-1].endswith("followup_input_binding_report.json")
+    assert report["operator_commands"][
+        "inspect_pair_frame_5d_followup_readiness_report_after_acquisition"
+    ][-1].endswith("followup_readiness_report.json")
+    acquisition_run = report["operator_commands"][
+        "run_pair_frame_5d_coverage_acquisition_queue_bounded_local"
+    ]
+    assert acquisition_run[
+        acquisition_run.index("--max-experiments") + 1
+    ] == "8"
 
 
 def test_autonomous_parent_queue_binds_pair_frame_5d_child_when_present(

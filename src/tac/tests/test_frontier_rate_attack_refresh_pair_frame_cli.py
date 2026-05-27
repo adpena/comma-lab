@@ -9,6 +9,13 @@ from pathlib import Path
 from tac.optimization.decoder_q_pairset_acquisition import (
     build_decoder_q_pairset_acquisition_plan,
 )
+from tac.optimization.pair_frame_scorer_geometry_lattice_5d_canvas import (
+    CpuCudaAxis,
+    PairFrameScorerGeometryCell,
+    PairFrameScorerGeometryLattice,
+    ReceiverRuntime,
+    ScorerAxis,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -78,6 +85,31 @@ def _component_xray(pair_count: int = 8) -> dict[str, object]:
             for pair in range(pair_count)
         ],
     }
+
+
+def _write_5d_canvas(path: Path) -> Path:
+    cell = PairFrameScorerGeometryCell(
+        pair_idx=0,
+        frame_idx=0,
+        scorer_axis=ScorerAxis.SEGNET_5CLASS,
+        receiver_runtime=ReceiverRuntime.RAW_RESIDUAL,
+        cpu_cuda_axis=CpuCudaAxis.CONTEST_CPU,
+        predicted_delta_score=-0.01,
+        predicted_byte_cost=0,
+        receiver_feasibility=True,
+    )
+    canvas = PairFrameScorerGeometryLattice(
+        archive_sha256="c" * 64,
+        cells={cell.coordinate: cell},
+    )
+    return _write_json(
+        path,
+        {
+            "schema": "pair_frame_scorer_geometry_lattice_5d_canvas_populated_v1",
+            "archive_sha256": canvas.archive_sha256,
+            "cells": [item.as_dict() for item in canvas._cells.values()],
+        },
+    )
 
 
 def _action_summary(repo: Path) -> Path:
@@ -195,3 +227,67 @@ def test_refresh_cli_builds_pair_frame_lattice_and_wires_queue(tmp_path: Path) -
         "queue_source_kind"
     ] == "pair_frame_scorer_geometry_lattice"
     assert queue["experiments"][0]["metadata"]["score_claim"] is False
+
+
+def test_refresh_cli_wires_pair_frame_5d_followup_search_roots_and_commands(
+    tmp_path: Path,
+) -> None:
+    canvas_path = _write_5d_canvas(tmp_path / "populated_5d_canvas.json")
+    frontier_artifact_root = tmp_path / "frontier_artifacts"
+    extra_followup_root = tmp_path / "component_cache_root"
+    frontier_artifact_root.mkdir()
+    extra_followup_root.mkdir()
+    output_dir = tmp_path / "refresh"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "tools/build_frontier_rate_attack_feedback_refresh.py",
+            "--action-summary",
+            str(_action_summary(tmp_path)),
+            "--frontier-artifact-root",
+            str(frontier_artifact_root),
+            "--pair-frame-5d-canvas",
+            str(canvas_path),
+            "--pair-frame-5d-followup-search-root",
+            str(extra_followup_root),
+            "--output-dir",
+            str(output_dir),
+            "--results-root",
+            str(tmp_path / "results"),
+            "--queue-id",
+            "frontier_feedback_pair_frame_5d_unit",
+            "--candidate-limit",
+            "4",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    summary = payload["pair_frame_5d_coverage_acquisition_queue_summary"]
+    assert summary["followup_readiness_refresh_planned_by_queue"] is True
+    assert any(root.endswith("component_cache_root") for root in summary["followup_search_roots"])
+    assert summary["followup_readiness_report_path"].endswith(
+        "followup_readiness_report.json"
+    )
+
+    report = json.loads(
+        (output_dir / "feedback_refresh_report.json").read_text(encoding="utf-8")
+    )
+    assert report["operator_commands"][
+        "inspect_pair_frame_5d_followup_input_binding_report_after_acquisition"
+    ][-1].endswith("followup_input_binding_report.json")
+    assert report["operator_commands"][
+        "inspect_pair_frame_5d_followup_readiness_report_after_acquisition"
+    ][-1].endswith("followup_readiness_report.json")
+    run_cmd = report["operator_commands"][
+        "run_pair_frame_5d_followup_execution_queue_bounded_local_after_acquisition"
+    ]
+    assert run_cmd[-2:] == [
+        "--output",
+        summary["followup_execution_worker_result_path"],
+    ]

@@ -124,6 +124,37 @@ def resolve_repo_path(path: str | Path, *, repo_root: str | Path) -> Path:
     return value.resolve(strict=False)
 
 
+def _extend_followup_roots(
+    roots: list[str | Path],
+    values: object,
+) -> None:
+    if isinstance(values, str | Path):
+        roots.append(values)
+    elif isinstance(values, Sequence):
+        roots.extend(value for value in values if isinstance(value, str | Path))
+
+
+def _pair_frame_5d_followup_search_roots(
+    report: Mapping[str, Any],
+    *,
+    output_dir: Path,
+    repo_root: str | Path,
+) -> list[str | Path]:
+    roots: list[str | Path] = [
+        output_dir,
+        Path(str(report.get("results_root") or "experiments/results")),
+    ]
+    _extend_followup_roots(roots, report.get("component_response_cache_roots"))
+    for key in ("discovery", "pair_frame_geometry_discovery"):
+        discovery = report.get(key)
+        if isinstance(discovery, Mapping):
+            _extend_followup_roots(roots, discovery.get("frontier_artifact_roots"))
+    submissions = Path(repo_root) / "submissions"
+    if submissions.exists():
+        roots.append(submissions)
+    return roots
+
+
 def load_json_object(path: str | Path) -> dict[str, Any]:
     target = Path(path)
     try:
@@ -610,6 +641,11 @@ def write_frontier_refresh_artifacts(
                 repo_root,
             )
             if int(coverage_audit.get("work_order_count") or 0) > 0:
+                coverage_followup_search_roots = _pair_frame_5d_followup_search_roots(
+                    report,
+                    output_dir=out,
+                    repo_root=repo_root,
+                )
                 coverage_acquisition_queue = (
                     build_pair_frame_5d_coverage_acquisition_queue(
                         repo_root=repo_root,
@@ -621,6 +657,7 @@ def write_frontier_refresh_artifacts(
                             "pair_frame_5d_coverage_acquisition"
                         ),
                         top_n=int(report.get("candidate_limit") or 4),
+                        followup_search_roots=coverage_followup_search_roots,
                     )
                 )
                 coverage_acquisition_queue_path = (
@@ -630,6 +667,11 @@ def write_frontier_refresh_artifacts(
                     out
                     / "pair_frame_5d_coverage_acquisition"
                     / "followup_execution_queue.json"
+                )
+                followup_readiness_report_path = (
+                    out
+                    / "pair_frame_5d_coverage_acquisition"
+                    / "followup_readiness_report.json"
                 )
                 followup_input_binding_report_path = (
                     out
@@ -643,6 +685,10 @@ def write_frontier_refresh_artifacts(
                 )
                 followup_input_binding_report_ref = repo_rel(
                     followup_input_binding_report_path,
+                    repo_root,
+                )
+                followup_readiness_report_ref = repo_rel(
+                    followup_readiness_report_path,
                     repo_root,
                 )
                 followup_execution_queue_ref = repo_rel(
@@ -674,11 +720,19 @@ def write_frontier_refresh_artifacts(
                     "followup_input_binding_report_path": (
                         followup_input_binding_report_ref
                     ),
+                    "followup_readiness_report_path": followup_readiness_report_ref,
                     "followup_execution_queue_path": followup_execution_queue_ref,
                     "followup_execution_worker_result_path": (
                         followup_execution_worker_result_ref
                     ),
+                    "followup_search_roots": (
+                        coverage_acquisition_queue.get("metadata", {}).get(
+                            "followup_search_roots",
+                            [],
+                        )
+                    ),
                     "followup_input_binding_planned_by_queue": True,
+                    "followup_readiness_refresh_planned_by_queue": True,
                     "followup_execution_queue_planned_by_queue": True,
                     "followup_execution_bounded_local_run_completed": False,
                     "work_order_count": coverage_audit.get("work_order_count"),
@@ -1550,7 +1604,7 @@ def write_frontier_refresh_artifacts(
             "--max-steps",
             "16",
             "--max-experiments",
-            "6",
+            "8",
             "--max-parallel",
             "1",
         ]
@@ -1562,6 +1616,42 @@ def write_frontier_refresh_artifacts(
             if isinstance(coverage_summary, Mapping)
             else None
         )
+        followup_worker_result = (
+            coverage_summary.get("followup_execution_worker_result_path")
+            if isinstance(coverage_summary, Mapping)
+            else None
+        )
+        followup_input_binding_report = (
+            coverage_summary.get("followup_input_binding_report_path")
+            if isinstance(coverage_summary, Mapping)
+            else None
+        )
+        followup_readiness_report = (
+            coverage_summary.get("followup_readiness_report_path")
+            if isinstance(coverage_summary, Mapping)
+            else None
+        )
+        if (
+            isinstance(followup_input_binding_report, str)
+            and followup_input_binding_report
+        ):
+            operator_commands[
+                "inspect_pair_frame_5d_followup_input_binding_report_after_acquisition"
+            ] = [
+                ".venv/bin/python",
+                "-m",
+                "json.tool",
+                followup_input_binding_report,
+            ]
+        if isinstance(followup_readiness_report, str) and followup_readiness_report:
+            operator_commands[
+                "inspect_pair_frame_5d_followup_readiness_report_after_acquisition"
+            ] = [
+                ".venv/bin/python",
+                "-m",
+                "json.tool",
+                followup_readiness_report,
+            ]
         if isinstance(followup_execution_queue, str) and followup_execution_queue:
             operator_commands[
                 "validate_pair_frame_5d_followup_execution_queue_after_acquisition"
@@ -1587,7 +1677,11 @@ def write_frontier_refresh_artifacts(
                 "2",
                 "--max-parallel",
                 "1",
-            ]
+            ] + (
+                ["--output", followup_worker_result]
+                if isinstance(followup_worker_result, str) and followup_worker_result
+                else []
+            )
     if "autonomous_chain_optimization_queue" in artifacts:
         operator_commands["validate_autonomous_chain_optimization_queue"] = [
             ".venv/bin/python",

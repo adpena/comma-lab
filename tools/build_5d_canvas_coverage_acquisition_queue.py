@@ -35,6 +35,16 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--local-mlx-concurrency", type=int, default=1)
     parser.add_argument("--local-io-concurrency", type=int, default=1)
     parser.add_argument(
+        "--followup-search-root",
+        action="append",
+        type=Path,
+        default=[],
+        help=(
+            "Additional artifact root searched by the follow-up input binder. "
+            "May be supplied more than once."
+        ),
+    )
+    parser.add_argument(
         "--status",
         choices=("queued", "frozen", "disabled"),
         default="queued",
@@ -81,6 +91,7 @@ def main(argv: list[str] | None = None) -> int:
         local_mlx_concurrency=args.local_mlx_concurrency,
         local_io_concurrency=args.local_io_concurrency,
         status=args.status,
+        followup_search_roots=args.followup_search_root,
     )
     _write_text_atomic(queue_path, json.dumps(queue, indent=2, sort_keys=True) + "\n")
     print(

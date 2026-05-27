@@ -108,6 +108,34 @@ def _dedupe_strings(values: list[str]) -> list[str]:
     return out
 
 
+def _extend_followup_roots(roots: list[str | Path], values: object) -> None:
+    if isinstance(values, str | Path):
+        roots.append(values)
+    elif isinstance(values, list | tuple):
+        roots.extend(value for value in values if isinstance(value, str | Path))
+
+
+def _pair_frame_5d_followup_search_roots(
+    report: dict[str, Any],
+    *,
+    output_dir: Path,
+) -> list[str | Path]:
+    roots: list[str | Path] = [
+        output_dir,
+        Path(str(report.get("results_root") or DEFAULT_RESULTS_ROOT)),
+    ]
+    _extend_followup_roots(roots, report.get("component_response_cache_roots"))
+    _extend_followup_roots(roots, report.get("pair_frame_5d_followup_search_roots"))
+    for key in ("discovery", "pair_frame_geometry_discovery"):
+        discovery = report.get(key)
+        if isinstance(discovery, dict):
+            _extend_followup_roots(roots, discovery.get("frontier_artifact_roots"))
+    submissions = REPO_ROOT / "submissions"
+    if submissions.exists():
+        roots.append(submissions)
+    return roots
+
+
 def _repair_palette_modes_from_args(args: argparse.Namespace) -> list[str]:
     modes = list(args.repair_palette_mode or [])
     for palette_id in args.repair_palette or []:
@@ -328,6 +356,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "Populated 5D pair-frame scorer-geometry canvas JSON. When present, "
             "the refresh emits an 8-operator extended-canvas queue and wires it "
             "into the autonomous chain queue as a local child artifact."
+        ),
+    )
+    parser.add_argument(
+        "--pair-frame-5d-followup-search-root",
+        type=Path,
+        action="append",
+        default=[],
+        help=(
+            "Additional artifact/cache root searched by the 5D follow-up input "
+            "binder. May repeat."
         ),
     )
     parser.add_argument(
@@ -673,6 +711,10 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
                 coverage_audit_path
             )
             if int(coverage_audit.get("work_order_count") or 0) > 0:
+                coverage_followup_search_roots = _pair_frame_5d_followup_search_roots(
+                    report,
+                    output_dir=output_dir,
+                )
                 coverage_acquisition_queue = (
                     build_pair_frame_5d_coverage_acquisition_queue(
                         repo_root=REPO_ROOT,
@@ -684,6 +726,7 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
                             "pair_frame_5d_coverage_acquisition"
                         ),
                         top_n=int(report.get("candidate_limit") or 4),
+                        followup_search_roots=coverage_followup_search_roots,
                     )
                 )
                 coverage_acquisition_queue_path = (
@@ -693,6 +736,11 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
                     output_dir
                     / "pair_frame_5d_coverage_acquisition"
                     / "followup_input_binding_report.json"
+                )
+                followup_readiness_report_path = (
+                    output_dir
+                    / "pair_frame_5d_coverage_acquisition"
+                    / "followup_readiness_report.json"
                 )
                 followup_execution_queue_path = (
                     output_dir
@@ -753,13 +801,21 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
                 "followup_input_binding_report_path": _display_path(
                     followup_input_binding_report_path
                 ),
+                "followup_readiness_report_path": _display_path(
+                    followup_readiness_report_path
+                ),
                 "followup_execution_queue_path": _display_path(
                     followup_execution_queue_path
                 ),
                 "followup_execution_worker_result_path": _display_path(
                     followup_execution_worker_result_path
                 ),
+                "followup_search_roots": coverage_acquisition_queue.get(
+                    "metadata",
+                    {},
+                ).get("followup_search_roots", []),
                 "followup_input_binding_planned_by_queue": True,
+                "followup_readiness_refresh_planned_by_queue": True,
                 "followup_execution_queue_planned_by_queue": True,
                 "followup_execution_bounded_local_run_completed": False,
                 "work_order_count": coverage_audit.get("work_order_count"),
@@ -1656,10 +1712,84 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
             "--max-steps",
             "16",
             "--max-experiments",
-            "6",
+            "8",
             "--max-parallel",
             "1",
         ]
+        coverage_summary = report_to_write.get(
+            "pair_frame_5d_coverage_acquisition_queue_summary"
+        )
+        followup_execution_queue = (
+            coverage_summary.get("followup_execution_queue_path")
+            if isinstance(coverage_summary, dict)
+            else None
+        )
+        followup_worker_result = (
+            coverage_summary.get("followup_execution_worker_result_path")
+            if isinstance(coverage_summary, dict)
+            else None
+        )
+        followup_input_binding_report = (
+            coverage_summary.get("followup_input_binding_report_path")
+            if isinstance(coverage_summary, dict)
+            else None
+        )
+        followup_readiness_report = (
+            coverage_summary.get("followup_readiness_report_path")
+            if isinstance(coverage_summary, dict)
+            else None
+        )
+        if (
+            isinstance(followup_input_binding_report, str)
+            and followup_input_binding_report
+        ):
+            operator_commands[
+                "inspect_pair_frame_5d_followup_input_binding_report_after_acquisition"
+            ] = [
+                ".venv/bin/python",
+                "-m",
+                "json.tool",
+                followup_input_binding_report,
+            ]
+        if isinstance(followup_readiness_report, str) and followup_readiness_report:
+            operator_commands[
+                "inspect_pair_frame_5d_followup_readiness_report_after_acquisition"
+            ] = [
+                ".venv/bin/python",
+                "-m",
+                "json.tool",
+                followup_readiness_report,
+            ]
+        if isinstance(followup_execution_queue, str) and followup_execution_queue:
+            operator_commands[
+                "validate_pair_frame_5d_followup_execution_queue_after_acquisition"
+            ] = [
+                ".venv/bin/python",
+                "tools/experiment_queue.py",
+                "--queue",
+                followup_execution_queue,
+                "validate",
+            ]
+            operator_commands[
+                "run_pair_frame_5d_followup_execution_queue_bounded_local_after_acquisition"
+            ] = [
+                ".venv/bin/python",
+                "tools/experiment_queue.py",
+                "--queue",
+                followup_execution_queue,
+                "run-worker",
+                "--execute",
+                "--max-steps",
+                "4",
+                "--max-experiments",
+                "2",
+                "--max-parallel",
+                "1",
+            ] + (
+                ["--output", followup_worker_result]
+                if isinstance(followup_worker_result, str) and followup_worker_result
+                else []
+            )
     if "autonomous_chain_optimization_queue" in artifacts:
         operator_commands["validate_autonomous_chain_optimization_queue"] = [
             ".venv/bin/python",
@@ -1794,6 +1924,10 @@ def main(argv: list[str] | None = None) -> int:
             report["pair_frame_5d_canvas_paths"] = [
                 _display_path(path) for path in pair_frame_5d_canvas_paths
             ]
+        if args.pair_frame_5d_followup_search_root:
+            report["pair_frame_5d_followup_search_roots"] = [
+                _display_path(path) for path in args.pair_frame_5d_followup_search_root
+            ]
         artifacts = _write_outputs(output_dir, report)
     except (
         ArtifactWriteError,
@@ -1824,6 +1958,9 @@ def main(argv: list[str] | None = None) -> int:
                 "dqs1_observation_count": report.get("dqs1_observation_count"),
                 "selected_candidate_ids": report.get("selected_candidate_ids"),
                 "queue_summary": report.get("queue_summary"),
+                "pair_frame_5d_coverage_acquisition_queue_summary": report.get(
+                    "pair_frame_5d_coverage_acquisition_queue_summary"
+                ),
                 "operation_portfolio_summary": {
                     "operation_count": (
                         report.get("operation_portfolio", {}).get("operation_count")

@@ -383,6 +383,7 @@ def _build_refresh(
         mlx_retention_action=args.mlx_retention_action,
         mlx_retention_cold_store_roots=tuple(args.mlx_retention_cold_store_root),
         mlx_retention_cold_store_reserve_gb=args.mlx_retention_cold_store_reserve_gb,
+        component_response_cache_roots=tuple(args.component_response_cache_root),
     )
 
 
@@ -541,6 +542,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--materializer-feedback", action="append", default=[])
     parser.add_argument("--pair-frame-geometry-lattice", action="append", default=[])
+    parser.add_argument(
+        "--component-response-cache-root",
+        action="append",
+        default=[],
+        help=(
+            "Artifact root containing reusable component-response MLX caches. "
+            "Forwarded into refresh reports so 5D follow-up input binding can "
+            "discover audited candidate/reference caches."
+        ),
+    )
     parser.add_argument(
         "--dqs1-observation-jsonl",
         "--dqs1-observations",

@@ -242,6 +242,15 @@ def cache_audit_stamp_blockers(
     if not isinstance(stamp, dict):
         return [f"{stamp_key}_not_object"]
     blockers: list[str] = []
+    expected_schema = (
+        SCHEMA_VERSION
+        if expected_verdict == PASS_VERDICT
+        else LOCAL_CPU_ADVISORY_SCHEMA_VERSION
+        if expected_verdict == PASS_LOCAL_CPU_ADVISORY_VERDICT
+        else None
+    )
+    if expected_schema is not None and stamp.get("schema_version") != expected_schema:
+        blockers.append(f"{stamp_key}_schema_version_not_{expected_schema}")
     if stamp.get("verdict") != expected_verdict:
         blockers.append(f"{stamp_key}_verdict_not_{expected_verdict}")
     if stamp.get("passed") is not True:
@@ -275,6 +284,8 @@ def cache_audit_stamp_blockers(
                     audit = payload
     if audit is None:
         return blockers
+    if expected_schema is not None and audit.get("schema_version") != expected_schema:
+        blockers.append(f"{stamp_key}_audit_schema_version_not_{expected_schema}")
     if audit.get("verdict") != expected_verdict:
         blockers.append(f"{stamp_key}_audit_verdict_not_{expected_verdict}")
     if audit.get("passed") is not True:
