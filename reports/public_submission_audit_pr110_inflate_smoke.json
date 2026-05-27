@@ -1,0 +1,158 @@
+{
+  "archive_bytes": 178517,
+  "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+  "archive_url": "https://github.com/adpena/comma_video_compression_challenge/releases/download/fec6-frontier-submission-20260520/archive.zip",
+  "axis_tag": "[predicted]",
+  "body_patch_suggestions": [],
+  "canonical_helper_invocation": "tac.submission_packet.audit_public_submission_pr",
+  "checked_commands": [
+    {
+      "args": [
+        "git",
+        "clone",
+        "--depth",
+        "1",
+        "--branch",
+        "hnerv_fec6_fixed_huffman_k16",
+        "https://github.com/adpena/comma_video_compression_challenge.git",
+        "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/public_pr_audit_lvscwjix/head"
+      ],
+      "cwd": null,
+      "returncode": 0,
+      "stderr_preview": "Cloning into '/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/public_pr_audit_lvscwjix/head'...\nFiltering content:  80% (4/5), 36.73 MiB | 10.40 MiB/s\nFiltering content: 100% (5/5), 36.73 MiB | 10.40 MiB/s\nFiltering content: 100% (5/5), 126.70 MiB | 28.61 MiB/s\nFiltering content: 100% (5/5), 126.70 MiB | 25.30 MiB/s, done.\n",
+      "stdout_preview": ""
+    },
+    {
+      "args": [
+        "python3",
+        "-m",
+        "compileall",
+        "-q",
+        "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/public_pr_audit_lvscwjix/head/submissions/hnerv_fec6_fixed_huffman_k16"
+      ],
+      "cwd": "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/public_pr_audit_lvscwjix/head",
+      "returncode": 0,
+      "stderr_preview": "",
+      "stdout_preview": ""
+    },
+    {
+      "args": [
+        "bash",
+        "-n",
+        "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/public_pr_audit_lvscwjix/head/submissions/hnerv_fec6_fixed_huffman_k16/inflate.sh"
+      ],
+      "cwd": "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/public_pr_audit_lvscwjix/head",
+      "returncode": 0,
+      "stderr_preview": "",
+      "stdout_preview": ""
+    },
+    {
+      "args": [
+        "bash",
+        "-n",
+        "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/public_pr_audit_lvscwjix/head/submissions/hnerv_fec6_fixed_huffman_k16/compress.sh"
+      ],
+      "cwd": "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/public_pr_audit_lvscwjix/head",
+      "returncode": 0,
+      "stderr_preview": "",
+      "stdout_preview": ""
+    },
+    {
+      "args": [
+        "bash",
+        "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/public_pr_audit_lvscwjix/head/submissions/hnerv_fec6_fixed_huffman_k16/compress.sh",
+        "--help"
+      ],
+      "cwd": "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/public_pr_audit_lvscwjix/head",
+      "returncode": 0,
+      "stderr_preview": "",
+      "stdout_preview": "usage: build_pr101_frame_exploit_selector_packet.py [-h]\n                                                    --artifact-dir ARTIFACT_DIR\n                                                    --archive ARCHIVE\n                                                    --source-runtime SOURCE_RUNTIME\n                                                    --output-dir OUTPUT_DIR\n                                                    [--json-out JSON_OUT]\n                                                    [--over"
+    },
+    {
+      "args": [
+        "python3",
+        "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/public_pr_audit_lvscwjix/head/submissions/hnerv_fec6_fixed_huffman_k16/encoder/build_pr101_frame_exploit_selector_packet.py",
+        "--help"
+      ],
+      "cwd": "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/public_pr_audit_lvscwjix/head",
+      "returncode": 0,
+      "stderr_preview": "",
+      "stdout_preview": "usage: build_pr101_frame_exploit_selector_packet.py [-h]\n                                                    --artifact-dir ARTIFACT_DIR\n                                                    --archive ARCHIVE\n                                                    --source-runtime SOURCE_RUNTIME\n                                                    --output-dir OUTPUT_DIR\n                                                    [--json-out JSON_OUT]\n                                                    [--over"
+    },
+    {
+      "args": [
+        "python3",
+        "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/public_pr_audit_lvscwjix/head/submissions/hnerv_fec6_fixed_huffman_k16/encoder/frame_exploit_segnet_posenet_sweep.py",
+        "--help"
+      ],
+      "cwd": "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/public_pr_audit_lvscwjix/head",
+      "returncode": 0,
+      "stderr_preview": "",
+      "stdout_preview": "usage: frame_exploit_segnet_posenet_sweep.py [-h]\n                                             --candidate-raw CANDIDATE_RAW\n                                             --gt-video GT_VIDEO\n                                             --upstream UPSTREAM\n                                             [--baseline-json BASELINE_JSON]\n                                             [--archive-bytes ARCHIVE_BYTES]\n                                             --output-dir OUTPUT_DIR\n                      "
+    },
+    {
+      "args": [
+        "bash",
+        "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/public_pr_audit_lvscwjix/head/submissions/hnerv_fec6_fixed_huffman_k16/inflate.sh",
+        "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/public_pr_audit_lvscwjix/head/_audit_archive_data",
+        "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/public_pr_audit_lvscwjix/head/_audit_inflate_out",
+        "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/public_pr_audit_lvscwjix/head/_audit_video_names.txt"
+      ],
+      "cwd": "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/public_pr_audit_lvscwjix/head",
+      "returncode": 0,
+      "stderr_preview": "",
+      "stdout_preview": "Inflating 0.mkv ... saved 1200 frames\n"
+    }
+  ],
+  "elapsed_seconds": 48.397025,
+  "error_count": 0,
+  "evidence_grade": "[predicted; public-submission-pr-audit]",
+  "findings": [],
+  "head_sha": "f2843e2b901543edd3afbce844a3fd71d83af7f7",
+  "inflate_smoke": {
+    "expected_output_sha256": "d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c",
+    "ok": true,
+    "raw_path": null,
+    "raw_sha256": "d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c",
+    "video_name": "0.mkv"
+  },
+  "info_count": 0,
+  "measurement_utc": "2026-05-27T15:18:28Z",
+  "overall_clean": true,
+  "pr_number": 110,
+  "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/110",
+  "promotable": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema_version": "public_submission_pr_audit_v1_20260527",
+  "score_claim": false,
+  "submission_name": "hnerv_fec6_fixed_huffman_k16",
+  "target_repo": "commaai/comma_video_compression_challenge",
+  "warn_count": 0,
+  "work_dir": null,
+  "zip_audit": {
+    "blockers": [],
+    "members": [
+      {
+        "compress_size": 178417,
+        "compress_type": 0,
+        "crc": 3299285626,
+        "date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "extra_len": 0,
+        "file_size": 178417,
+        "filename": "x"
+      }
+    ],
+    "ok": true,
+    "path": "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/public_pr_audit_lvscwjix/archive.zip",
+    "sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+    "size_bytes": 178517,
+    "warnings": []
+  }
+}

@@ -196,6 +196,19 @@ from tac.submission_packet.paired_auth_eval import (
     plan_paired_auth_eval,
     reconstruct_verdict_from_disk,
 )
+from tac.submission_packet.public_pr_audit import (
+    PUBLIC_PR_AUDIT_SCHEMA_VERSION,
+    AuditFinding,
+    InflateSmokeProof,
+    PublicSubmissionAuditConfig,
+    PublicSubmissionAuditResult,
+    ZipAudit,
+    audit_public_submission_pr,
+    extract_archive_sha256,
+    extract_archive_url,
+    extract_submission_name,
+    parse_github_release_asset_url,
+)
 
 __all__ = [  # noqa: RUF022 - grouped by pipeline phase, not alphabetically.
     # Phase 2 (Layer 0)
@@ -291,4 +304,16 @@ __all__ = [  # noqa: RUF022 - grouped by pipeline phase, not alphabetically.
     "derive_paired_auth_eval_provenance",
     "plan_paired_auth_eval",
     "reconstruct_verdict_from_disk",
+    # Phase 8 - public PR audit orchestration
+    "PUBLIC_PR_AUDIT_SCHEMA_VERSION",
+    "AuditFinding",
+    "InflateSmokeProof",
+    "PublicSubmissionAuditConfig",
+    "PublicSubmissionAuditResult",
+    "ZipAudit",
+    "audit_public_submission_pr",
+    "extract_archive_sha256",
+    "extract_archive_url",
+    "extract_submission_name",
+    "parse_github_release_asset_url",
 ]

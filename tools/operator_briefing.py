@@ -40,6 +40,7 @@ DASHBOARD = TOOLS / "score_dashboard.py"
 RECONCILER = TOOLS / "predicted_vs_actual_reconciler.py"
 CLAIM_DISPATCH = TOOLS / "claim_lane_dispatch.py"
 CLOUD_PROVIDER_READINESS = TOOLS / "cloud_provider_readiness.py"
+PUBLIC_SUBMISSION_AUDIT = TOOLS / "audit_public_submission_pr.py"
 PROVIDER_READINESS_LATEST = REPO_ROOT / "experiments/results/cloud_provider_readiness_latest.json"
 PR91_HPM1_READINESS = TOOLS / "audit_pr91_hpm1_readiness.py"
 PR91_HPM1_RUNTIME_CONTRACT = TOOLS / "audit_pr91_hpm1_runtime_contract.py"
@@ -5338,6 +5339,54 @@ def _format_provider_readiness(refresh: bool = False) -> str:
     return "\n".join(lines)
 
 
+def _public_submission_audit_status() -> dict[str, object]:
+    """Surface the public-PR audit command without doing network work."""
+
+    reports = sorted(
+        (REPO_ROOT / "reports").glob("public_submission_audit_pr*.json"),
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
+    )
+    latest = _load_json_file(reports[0]) if reports else {}
+    latest_path = _repo_rel(reports[0]) if reports else None
+    return {
+        "tool": _repo_rel(PUBLIC_SUBMISSION_AUDIT),
+        "tool_present": PUBLIC_SUBMISSION_AUDIT.is_file(),
+        "latest_report": latest_path,
+        "latest_report_overall_clean": latest.get("overall_clean") if latest else None,
+        "latest_report_head_sha": latest.get("head_sha") if latest else None,
+        "next_command": (
+            ".venv/bin/python tools/audit_public_submission_pr.py --pr <PR_NUMBER> "
+            "--output-json reports/public_submission_audit_pr<PR_NUMBER>.json"
+        ),
+        "optional_inflate_smoke": (
+            "add --inflate-smoke --expected-output-sha256 <raw_sha> "
+            "--python-bin .venv/bin/python"
+        ),
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _format_public_submission_audit_status() -> str:
+    payload = _public_submission_audit_status()
+    lines = [
+        "Public submission audit is a pre-review hygiene gate, not score authority.",
+        f"tool: {payload['tool']} present={payload['tool_present']}",
+        f"next: {payload['next_command']}",
+        f"inflate_smoke: {payload['optional_inflate_smoke']}",
+    ]
+    if payload.get("latest_report"):
+        lines.append(
+            "latest_report: "
+            f"{payload['latest_report']} clean={payload.get('latest_report_overall_clean')} "
+            f"head={payload.get('latest_report_head_sha')}"
+        )
+    else:
+        lines.append("latest_report: none")
+    return "\n".join(lines)
+
+
 def _codex_inbox_summary() -> dict[str, object]:
     from tac.codex_to_claude_inbox import inbox_summary
 
@@ -7033,6 +7082,7 @@ def main(argv: list[str] | None = None) -> int:
             "cooperative_receiver_solver_integration": (
                 _cooperative_receiver_solver_integration()
             ),
+            "public_submission_audit": _public_submission_audit_status(),
             "byte_shaving_acquisition": _byte_shaving_acquisition_summary(),
             "frontier_feedback_cycle": _frontier_feedback_cycle_summary(),
             "pr95_mlx_control_profiles": _pr95_mlx_control_profile_summary(),
@@ -7112,6 +7162,10 @@ def main(argv: list[str] | None = None) -> int:
             "Cloud provider readiness — cached exact/proxy boundary",
             _format_provider_readiness(refresh=args.refresh_provider_readiness),
         ))
+    parts.append(_section(
+        "Public submission PR audit — release/bundle/wording hygiene",
+        _format_public_submission_audit_status(),
+    ))
     if not args.skip_pareto:
         parts.append(_section(
             "Phase 1 — Pre-dispatch: apogee_intN Pareto frontier",

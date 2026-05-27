@@ -95,6 +95,9 @@ Currently runs:
   Gate #32: tools/check_tac_terminology.py --strict
            (TAC means Task-Aware Compression; codec/compression and
             tac/comma_lab boundaries stay canonical)
+  Gate #33: tools/audit_public_submission_pr.py --self-test --format json
+           (public PR audit automation stays importable and no-network
+            parser checks remain wired into operator flows)
   Lane #1: tools/dispatch_dryrun_apogee_intN.py --all-pareto-frontier
            --allow-forensic-byte-only
            (self-protection check: Apogee intN remains byte-only and blocked
@@ -215,6 +218,7 @@ TOOLS = REPO / "tools"
 SHELL_HAZARDS = TOOLS / "check_dispatch_cli_shell_hazards.py"
 CANONICAL_TASK_STATUS_AUDIT = TOOLS / "check_canonical_task_status_no_dangling_transitions.py"
 TAC_TERMINOLOGY_AUDIT = TOOLS / "check_tac_terminology.py"
+PUBLIC_SUBMISSION_PR_AUDIT = TOOLS / "audit_public_submission_pr.py"
 REVERSE_ENGINEERING_AUDIT = TOOLS / "audit_reverse_engineering_tree.py"
 HIDDEN_GEMS_REGISTRY = TOOLS / "list_hidden_gems.py"
 HIDDEN_GEMS_READINESS = TOOLS / "audit_hidden_gem_readiness.py"
@@ -4088,6 +4092,18 @@ def main(argv: list[str] | None = None) -> int:
             ),
             "  ✓ Gate #32: TAC terminology canonicalization — PASSED",
             "  ✗ Gate #32: TAC terminology canonicalization — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            33,
+            "public submission PR audit automation",
+            lambda: _run_gate(
+                "public submission PR audit automation",
+                PUBLIC_SUBMISSION_PR_AUDIT,
+                ["--self-test", "--format", "json"],
+            ),
+            "  ✓ Gate #33: public submission PR audit automation — PASSED",
+            "  ✗ Gate #33: public submission PR audit automation — FAILED",
         ),
     ]
     lane_steps = [
