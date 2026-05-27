@@ -40,6 +40,21 @@ Exact contest CPU/CUDA anchors remain mandatory before promotion or score claims
 - `PYTHONPATH=. .venv/bin/pytest src/tac/tests/test_frontier_rate_attack_bootstrap.py -q`
 - `PYTHONPATH=. .venv/bin/pytest src/tac/tests/test_frontier_rate_attack_feedback.py -q`
 - `PYTHONPATH=. .venv/bin/pytest src/tac/tests/test_frontier_rate_attack_bootstrap.py src/tac/tests/test_frontier_rate_attack_feedback.py src/tac/tests/test_repair_campaign_scorer.py src/tac/tests/test_repair_campaign_score_queue.py -q`
+- Smoke:
+  `.venv/bin/python tools/build_frontier_rate_attack_feedback_refresh.py --output-dir .omx/research/frontier_rate_attack_feedback_posterior_followup_smoke_20260527T204225Z --results-root /Volumes/VertigoDataTier/pact/frontier_rate_attack_feedback_posterior_followup_smoke_20260527T204225Z --frontier-artifact-root .omx/research/frontier_final_rate_attack_activation_posterior_smoke_20260527T2021Z --candidate-limit 2 --max-files-per-root 64 --local-cpu-concurrency 1 --local-io-concurrency 1 --action-summary latest`
+  produced `repair_posterior_acquisition_followup_queue.json`.
+- Smoke queue validation:
+  `.venv/bin/python tools/experiment_queue.py --queue .omx/research/frontier_rate_attack_feedback_posterior_followup_smoke_20260527T204225Z/repair_posterior_acquisition_followup_queue.json validate`
+  returned valid with 2 experiments and 5 steps.
+
+## Smoke Signal
+
+The generated queue had 2 ready posterior-followup experiments from 3 posterior
+routes. The top route was
+`increase_priority_for_targeted_component_response_harvest`, mapped to
+`targeted_component_correction_queue`, with no missing prerequisite artifacts.
+This proves the previous route-only signal now advances into executable local
+queue work.
 
 ## Remaining Work
 

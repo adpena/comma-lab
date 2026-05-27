@@ -6684,6 +6684,9 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     autonomous_chain_optimization_path = output_dir / "autonomous_chain_optimization.json"
     repair_budget_waterfill_queue_path = output_dir / "repair_budget_waterfill_queue.json"
     repair_campaign_score_queue_path = output_dir / "repair_campaign_score_queue.json"
+    repair_posterior_followup_queue_path = (
+        output_dir / "repair_posterior_acquisition_followup_queue.json"
+    )
     autonomous_chain_optimization_queue_path = (
         output_dir / "autonomous_chain_optimization_queue.json"
     )
@@ -6704,6 +6707,7 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     assert autonomous_chain_optimization_path.exists()
     assert repair_budget_waterfill_queue_path.exists()
     assert repair_campaign_score_queue_path.exists()
+    assert repair_posterior_followup_queue_path.exists()
     assert autonomous_chain_optimization_queue_path.exists()
     assert report_path.exists()
     report = json.loads(report_path.read_text(encoding="utf-8"))
@@ -6786,10 +6790,19 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     assert report["artifacts"]["repair_campaign_score_queue"].endswith(
         "repair_campaign_score_queue.json"
     )
+    assert report["artifacts"]["repair_posterior_acquisition_followup_queue"].endswith(
+        "repair_posterior_acquisition_followup_queue.json"
+    )
     assert report["repair_campaign_score_queue_summary"]["queue_path"].endswith(
         "repair_campaign_score_queue.json"
     )
     _assert_false_authority(report["repair_campaign_score_queue_summary"])
+    assert report["repair_posterior_acquisition_followup_queue_summary"][
+        "queue_path"
+    ].endswith("repair_posterior_acquisition_followup_queue.json")
+    _assert_false_authority(
+        report["repair_posterior_acquisition_followup_queue_summary"]
+    )
     assert report["artifacts"]["autonomous_chain_optimization_queue"].endswith(
         "autonomous_chain_optimization_queue.json"
     )
@@ -6899,6 +6912,15 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
         "tools/experiment_queue.py",
         "--queue",
         report["artifacts"]["repair_campaign_score_queue"],
+        "validate",
+    ]
+    assert report["operator_commands"][
+        "validate_repair_posterior_acquisition_followup_queue"
+    ] == [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        report["artifacts"]["repair_posterior_acquisition_followup_queue"],
         "validate",
     ]
     repair_score_run = report["operator_commands"][
@@ -7012,6 +7034,7 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
         for action in autonomous_queue_metadata["local_queue_actions"]
     }
     assert "repair_campaign_score_queue" in autonomous_child_keys
+    assert "repair_posterior_acquisition_followup_queue" in autonomous_child_keys
     assert (
         "repair_campaign_score_queue"
         in autonomous_queue_metadata["child_queue_health_by_key"]
@@ -7782,10 +7805,21 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
     assert initial_artifacts["repair_budget_waterfill_queue"].endswith(
         "repair_budget_waterfill_queue.json"
     )
+    assert initial_artifacts["repair_posterior_acquisition_followup_queue"].endswith(
+        "repair_posterior_acquisition_followup_queue.json"
+    )
     initial_feedback_report = json.loads(
         (REPO_ROOT / initial_artifacts["feedback_refresh_report"]).read_text(
             encoding="utf-8"
         )
+    )
+    assert initial_feedback_report[
+        "repair_posterior_acquisition_followup_queue_summary"
+    ]["queue_path"].endswith("repair_posterior_acquisition_followup_queue.json")
+    _assert_false_authority(
+        initial_feedback_report[
+            "repair_posterior_acquisition_followup_queue_summary"
+        ]
     )
     initial_dqs1_queue = json.loads(
         (REPO_ROOT / initial_feedback_report["artifacts"]["dqs1_followup_queue"]).read_text(
