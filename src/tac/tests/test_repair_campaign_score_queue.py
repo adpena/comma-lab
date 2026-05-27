@@ -276,6 +276,12 @@ def test_build_repair_campaign_score_queue_from_waterfill_work_order(
     assert worker_cascade_step["requires"] == [
         "validate_repair_cascade_mlx_probe_queue"
     ]
+    assert (
+        worker_cascade_step["command"][
+            worker_cascade_step["command"].index("--max-steps") + 1
+        ]
+        == "5"
+    )
     validate_step = next(
         step
         for step in experiment["steps"]
@@ -710,9 +716,14 @@ def test_repair_campaign_score_queue_defers_missing_work_order_to_prerequisite_s
         experiment["metadata"]["repair_budget_waterfill_work_order_exists_at_build"]
         is False
     )
-    assert experiment["steps"][0]["id"] == (
+    assert experiment["steps"][0]["id"] == "validate_repair_budget_waterfill_source_queue"
+    assert experiment["steps"][1]["id"] == "run_repair_budget_waterfill_source_queue"
+    assert experiment["steps"][2]["id"] == (
         "assert_repair_budget_waterfill_work_order_materialized"
     )
+    assert experiment["steps"][2]["requires"] == [
+        "run_repair_budget_waterfill_source_queue"
+    ]
 
 
 def test_blocked_learning_signal_cli_accepts_child_queue_activation_plan(

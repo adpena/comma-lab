@@ -3369,10 +3369,17 @@ def test_empty_targeted_component_correction_queue_emits_blocked_harvest(
     )
 
     assert waterfill_queue is not None
-    assert waterfill_queue["experiments"][0]["status"] == "frozen"
+    assert waterfill_queue["experiments"][0]["status"] == "queued"
     waterfill_metadata = waterfill_queue["experiments"][0]["metadata"]
     _assert_false_authority(waterfill_metadata)
-    assert waterfill_metadata["queue_actuation_ready"] is False
+    assert waterfill_metadata["queue_actuation_ready"] is True
+    assert waterfill_metadata["budget_waterfill_ready"] is False
+    assert waterfill_metadata["repair_budget_waterfill_work_order_path"].endswith(
+        "repair_budget_waterfill_work_order.json"
+    )
+    assert waterfill_metadata["repair_cascade_mlx_probe_queue_path"].endswith(
+        "repair_cascade_mlx_probe_queue.json"
+    )
     assert "no_accepted_targeted_component_correction_responses" in (
         waterfill_metadata["queue_actuation_blockers"]
     )
@@ -7031,14 +7038,19 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     assert repair_waterfill_metadata["materializer_work_queue_path"].endswith(
         "targeted_component_correction_chain_materializer_work_queue.json"
     )
-    assert repair_waterfill_queue_artifact["experiments"][0]["status"] == "frozen"
-    assert repair_waterfill_metadata["queue_actuation_ready"] is False
+    assert repair_waterfill_queue_artifact["experiments"][0]["status"] == "queued"
+    assert repair_waterfill_metadata["queue_actuation_ready"] is True
+    assert repair_waterfill_metadata["budget_waterfill_ready"] is False
     assert "no_accepted_targeted_component_correction_responses" in (
         repair_waterfill_metadata["queue_actuation_blockers"]
     )
-    assert repair_waterfill_queue_artifact["experiments"][0]["steps"][0][
-        "id"
-    ] == "inspect_blocked_repair_waterfill_response_prerequisites"
+    repair_waterfill_step_ids = [
+        step["id"] for step in repair_waterfill_queue_artifact["experiments"][0]["steps"]
+    ]
+    assert repair_waterfill_step_ids[:2] == [
+        "emit_repair_budget_waterfill_work_order",
+        "emit_repair_cascade_mlx_probe_queue",
+    ]
     _assert_false_authority(
         repair_waterfill_queue_artifact["experiments"][0]["metadata"]
     )
@@ -7054,6 +7066,12 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     if repair_score_experiment["status"] == "queued":
         repair_score_steps = repair_score_experiment["steps"]
         assert repair_score_steps[0]["id"] == (
+            "validate_repair_budget_waterfill_source_queue"
+        )
+        assert repair_score_steps[1]["id"] == (
+            "run_repair_budget_waterfill_source_queue"
+        )
+        assert repair_score_steps[2]["id"] == (
             "assert_repair_budget_waterfill_work_order_materialized"
         )
         repair_score_step = next(

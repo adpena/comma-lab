@@ -10473,6 +10473,19 @@ def build_frontier_repair_budget_waterfill_queue(
                 if isinstance(rate_plan.get("operator_action_ledger"), Mapping)
                 else {}
             )
+            work_order_path = (
+                queue_root
+                / _slug_token(chain_id)
+                / "repair_budget_waterfill_work_order.json"
+            )
+            repair_cascade_mlx_probe_queue_path = (
+                queue_root / _slug_token(chain_id) / "repair_cascade_mlx_probe_queue.json"
+            )
+            work_order_ref = _repo_rel(work_order_path, repo)
+            repair_cascade_mlx_probe_queue_ref = _repo_rel(
+                repair_cascade_mlx_probe_queue_path,
+                repo,
+            )
             metadata = {
                 "schema": REPAIR_BUDGET_WATERFILL_QUEUE_METADATA_SCHEMA,
                 "chain_id": chain_id,
@@ -10514,7 +10527,15 @@ def build_frontier_repair_budget_waterfill_queue(
                 "materializer_work_queue_path": materializer_work_queue_ref or None,
                 "materializer_execution_queue_path": materializer_execution_queue_ref
                 or None,
-                "queue_actuation_ready": False,
+                "repair_budget_waterfill_work_order_path": work_order_ref,
+                "repair_cascade_mlx_probe_queue_path": (
+                    repair_cascade_mlx_probe_queue_ref
+                ),
+                "repair_cascade_mlx_probe_queue_required": True,
+                "repair_cascade_mlx_probe_queue_axis": "[macOS-MLX research-signal]",
+                "queue_actuation_ready": True,
+                "budget_waterfill_ready": False,
+                "budget_waterfill_blockers": waterfill_blockers,
                 "queue_actuation_blockers": waterfill_blockers,
                 "preserve_rate_only_archive_before_budget_spend": True,
                 "budget_spend_allowed": False,
@@ -10539,28 +10560,60 @@ def build_frontier_repair_budget_waterfill_queue(
                 {
                     "id": f"repair_waterfill_{_slug_token(chain_id)}",
                     "priority": priority,
-                    "status": "frozen",
+                    "status": "queued",
                     "tags": [
                         "frontier-rate-attack",
                         "encoder-repair-allocator",
                         "segnet-posenet-waterfill",
                         "blocked-no-actionable-response",
+                        "local-cascade-probe-custody",
                         "no-score-authority",
                     ],
                     "metadata": metadata,
                     "steps": [
                         {
-                            "id": "inspect_blocked_repair_waterfill_response_prerequisites",
+                            "id": "emit_repair_budget_waterfill_work_order",
                             "kind": "command",
                             "command": [
                                 ".venv/bin/python",
-                                "-m",
-                                "json.tool",
+                                "tools/build_frontier_repair_budget_waterfill_work_order.py",
+                                "--autonomous-chain-optimization",
+                                _repo_rel(source_path, repo),
+                                "--chain-id",
+                                chain_id,
+                                "--targeted-component-correction-response-harvest",
                                 _repo_rel(harvest_path, repo),
+                                "--receiver-closed-correction-budget",
+                                _repo_rel(budget_path, repo),
+                                "--work-order-out",
+                                work_order_ref,
+                                "--overwrite",
                             ],
                             "resources": {"kind": "local_io_heavy"},
-                            "timeout_seconds": 60,
+                            "timeout_seconds": 120,
+                            "postconditions": [
+                                {
+                                    "type": "json_equals",
+                                    "path": work_order_ref,
+                                    "key": "schema",
+                                    "equals": REPAIR_BUDGET_WATERFILL_WORK_ORDER_SCHEMA,
+                                },
+                                {"type": "json_false_authority", "path": work_order_ref},
+                                {
+                                    "type": "json_equals",
+                                    "path": work_order_ref,
+                                    "key": "ready_for_exact_eval_dispatch",
+                                    "equals": False,
+                                },
+                                {
+                                    "type": "json_equals",
+                                    "path": work_order_ref,
+                                    "key": "budget_spend_allowed",
+                                    "equals": False,
+                                },
+                            ],
                             "telemetry": {
+                                "artifact_paths": [work_order_ref],
                                 "input_artifact_paths": [
                                     _repo_rel(source_path, repo),
                                     _repo_rel(harvest_path, repo),
@@ -10568,7 +10621,92 @@ def build_frontier_repair_budget_waterfill_queue(
                                 ],
                                 "include_postcondition_paths": True,
                             },
-                        }
+                        },
+                        {
+                            "id": "emit_repair_cascade_mlx_probe_queue",
+                            "kind": "command",
+                            "command": [
+                                ".venv/bin/python",
+                                "tools/build_repair_cascade_mlx_probe_queue.py",
+                                "--source-payload",
+                                work_order_ref,
+                                "--probe-queue-out",
+                                repair_cascade_mlx_probe_queue_ref,
+                                "--results-root",
+                                _repo_rel(results_base, repo),
+                                "--queue-id",
+                                (
+                                    f"{queue_id}_{_slug_token(chain_id)}_"
+                                    "repair_cascade_mlx_probe"
+                                ),
+                                "--overwrite",
+                            ],
+                            "requires": ["emit_repair_budget_waterfill_work_order"],
+                            "resources": {"kind": "local_cpu"},
+                            "timeout_seconds": 120,
+                            "postconditions": [
+                                {
+                                    "type": "json_equals",
+                                    "path": repair_cascade_mlx_probe_queue_ref,
+                                    "key": "schema",
+                                    "equals": QUEUE_SCHEMA,
+                                },
+                                {
+                                    "type": "json_false_authority",
+                                    "path": repair_cascade_mlx_probe_queue_ref,
+                                },
+                            ],
+                            "telemetry": {
+                                "artifact_paths": [repair_cascade_mlx_probe_queue_ref],
+                                "input_artifact_paths": [work_order_ref],
+                                "include_postcondition_paths": True,
+                            },
+                        },
+                        {
+                            "id": "validate_repair_cascade_mlx_probe_queue",
+                            "kind": "command",
+                            "command": [
+                                ".venv/bin/python",
+                                "tools/experiment_queue.py",
+                                "--queue",
+                                repair_cascade_mlx_probe_queue_ref,
+                                "validate",
+                            ],
+                            "requires": ["emit_repair_cascade_mlx_probe_queue"],
+                            "resources": {"kind": "local_cpu"},
+                            "timeout_seconds": 120,
+                            "telemetry": {
+                                "input_artifact_paths": [
+                                    repair_cascade_mlx_probe_queue_ref
+                                ],
+                            },
+                        },
+                        {
+                            "id": "run_repair_cascade_mlx_probe_queue_bounded_local",
+                            "kind": "command",
+                            "command": [
+                                ".venv/bin/python",
+                                "tools/experiment_queue.py",
+                                "--queue",
+                                repair_cascade_mlx_probe_queue_ref,
+                                "run-worker",
+                                "--execute",
+                                "--max-steps",
+                                "5",
+                                "--max-experiments",
+                                "1",
+                                "--max-parallel",
+                                "1",
+                            ],
+                            "requires": ["validate_repair_cascade_mlx_probe_queue"],
+                            "resources": {"kind": "local_cpu"},
+                            "timeout_seconds": 420,
+                            "telemetry": {
+                                "input_artifact_paths": [
+                                    repair_cascade_mlx_probe_queue_ref
+                                ],
+                            },
+                        },
                     ],
                 }
             )
@@ -10591,6 +10729,7 @@ def build_frontier_repair_budget_waterfill_queue(
                     ),
                     "queue_actuation_ready": False,
                     "queue_actuation_blockers": waterfill_blockers,
+                    "local_cascade_probe_custody_ready": True,
                     "accepted_response_count": accepted_count,
                     "receiver_closed_saved_bytes_total": available_bytes,
                     "materializer_work_queue_path": materializer_work_queue_ref

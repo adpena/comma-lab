@@ -315,6 +315,71 @@ def test_observer_revalidates_required_runtime_identity_claim(
     assert artifact_record["artifact_revalidation"]["runtime_identity"]["valid"] is False
 
 
+def test_observer_rejects_completion_contract_without_custody_proof(
+    tmp_path: Path,
+) -> None:
+    artifact = tmp_path / "completion.json"
+    artifact.write_text(
+        json.dumps(
+            {
+                "schema": "completion_report.v1",
+                "status": "succeeded",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    state = tmp_path / "queue.sqlite"
+    queue = _queue(artifact)
+    queue["experiments"][0]["steps"][0]["postconditions"] = [
+        {
+            "type": "json_completion_contract",
+            "path": artifact.as_posix(),
+            "required_equals": {"schema": "completion_report.v1"},
+        }
+    ]
+
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'succeeded',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-05-27T21:15:00Z'
+            WHERE queue_id = 'observer_test'
+              AND experiment_id = 'exp0'
+              AND step_id = 'smoke'
+            """,
+            (json.dumps({"command": ["python", "-c", "print('hello queue')"]}),),
+        )
+        conn.commit()
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=0,
+    )
+
+    assert observation["healthy"] is False
+    artifact_record = observation["succeeded_artifact_failure_steps"][0][
+        "expected_artifacts"
+    ][0]
+    assert artifact_record["postcondition_passed"] is False
+    assert "json_completion_contract_candidate_archive_custody_missing" in (
+        artifact_record["artifact_revalidation_blockers"]
+    )
+    required_custody = artifact_record["artifact_revalidation"][
+        "required_archive_runtime_receiver_custody"
+    ]
+    assert required_custody["valid"] is False
+
+
 def test_observer_reports_definition_drift_without_mutating_state(
     tmp_path: Path,
 ) -> None:

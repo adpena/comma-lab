@@ -72,6 +72,11 @@ PROOF_SUCCESS_FIELDS = (
     "full_frame_inflate_parity_satisfied",
     "source_runtime_unpacker_parse_satisfied",
 )
+ARCHIVE_RUNTIME_RECEIVER_CUSTODY_POSTCONDITION_TYPES = frozenset(
+    {
+        "json_completion_contract",
+    }
+)
 
 
 def _utc_now() -> str:
@@ -487,6 +492,67 @@ def _generic_custody_payload_revalidation(
     blockers.extend(_runtime_identity_blockers(payload, repo_root=repo_root, context=context))
     out = {
         "schema": "observer_generic_custody_payload_revalidation.v1",
+        "valid": not blockers,
+        "blockers": _dedupe_strings(blockers),
+    }
+    if candidate_validation is not None:
+        out["candidate_archive"] = candidate_validation
+    return out
+
+
+def _postcondition_requires_archive_runtime_receiver_custody(
+    condition: Mapping[str, Any],
+) -> bool:
+    postcondition_type = str(condition.get("type") or "")
+    return (
+        postcondition_type in ARCHIVE_RUNTIME_RECEIVER_CUSTODY_POSTCONDITION_TYPES
+        or condition.get("required_archive_runtime_receiver_custody") is True
+        or condition.get("required_archive_runtime_custody") is True
+        or condition.get("required_receiver_custody") is True
+    )
+
+
+def _required_archive_runtime_receiver_custody_revalidation(
+    payload: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    context: str,
+) -> dict[str, Any]:
+    blockers: list[str] = []
+    candidate_archive = _candidate_archive_record(payload)
+    candidate_validation: dict[str, Any] | None = None
+    if not candidate_archive:
+        blockers.append(f"{context}_candidate_archive_custody_missing")
+    else:
+        candidate_validation = _file_custody_revalidation(
+            candidate_archive,
+            repo_root=repo_root,
+            label=f"{context}_candidate_archive",
+            require_bytes=True,
+            require_sha256=True,
+        )
+        blockers.extend(
+            str(item)
+            for item in candidate_validation.get("blockers") or []
+            if str(item)
+        )
+    blockers.extend(
+        _runtime_identity_blockers(
+            payload,
+            repo_root=repo_root,
+            context=context,
+            require_claimed=True,
+        )
+    )
+    blockers.extend(
+        _receiver_runtime_proof_blockers(
+            payload,
+            repo_root=repo_root,
+            context=context,
+        )
+    )
+    out = {
+        "schema": "observer_required_archive_runtime_receiver_custody_revalidation.v1",
         "valid": not blockers,
         "blockers": _dedupe_strings(blockers),
     }
@@ -1323,6 +1389,23 @@ def _artifact_postcondition_revalidation(
             blockers.extend(
                 str(item)
                 for item in false_authority.get("blockers", [])
+                if str(item)
+            )
+    if _postcondition_requires_archive_runtime_receiver_custody(condition):
+        if payload is None:
+            blockers.append(f"{postcondition_type}_custody_payload_not_object")
+        else:
+            required_custody = (
+                _required_archive_runtime_receiver_custody_revalidation(
+                    payload,
+                    repo_root=repo_root,
+                    context=postcondition_type,
+                )
+            )
+            details["required_archive_runtime_receiver_custody"] = required_custody
+            blockers.extend(
+                str(item)
+                for item in required_custody.get("blockers", [])
                 if str(item)
             )
     if payload is not None and bool(condition.get("required_runtime_adapter_identity")):

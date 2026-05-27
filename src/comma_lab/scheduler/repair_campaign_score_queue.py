@@ -44,7 +44,7 @@ DEFAULT_STACKABILITY_WORKER_MAX_STEPS = 8
 DEFAULT_STACKABILITY_WORKER_MAX_EXPERIMENTS = 2
 DEFAULT_STACKABILITY_WORKER_MAX_PARALLEL = 1
 DEFAULT_STACKABILITY_WORKER_TIMEOUT_SECONDS = 900
-DEFAULT_CASCADE_MLX_PROBE_WORKER_MAX_STEPS = 4
+DEFAULT_CASCADE_MLX_PROBE_WORKER_MAX_STEPS = 5
 DEFAULT_CASCADE_MLX_PROBE_WORKER_MAX_EXPERIMENTS = 2
 DEFAULT_CASCADE_MLX_PROBE_WORKER_MAX_PARALLEL = 1
 DEFAULT_CASCADE_MLX_PROBE_WORKER_TIMEOUT_SECONDS = 300
@@ -52,6 +52,10 @@ DEFAULT_POSTERIOR_FOLLOWUP_WORKER_MAX_STEPS = 12
 DEFAULT_POSTERIOR_FOLLOWUP_WORKER_MAX_EXPERIMENTS = 4
 DEFAULT_POSTERIOR_FOLLOWUP_WORKER_MAX_PARALLEL = 2
 DEFAULT_POSTERIOR_FOLLOWUP_WORKER_TIMEOUT_SECONDS = 900
+DEFAULT_WATERFILL_SOURCE_WORKER_MAX_STEPS = 8
+DEFAULT_WATERFILL_SOURCE_WORKER_MAX_EXPERIMENTS = 2
+DEFAULT_WATERFILL_SOURCE_WORKER_MAX_PARALLEL = 1
+DEFAULT_WATERFILL_SOURCE_WORKER_TIMEOUT_SECONDS = 300
 
 
 class RepairCampaignScoreQueueError(ValueError):
@@ -252,6 +256,11 @@ def _score_experiment(
         blocked_posterior_append_report_path,
         repo_root,
     )
+    source_queue_ref = _repo_rel(_resolve(source_queue_path, repo_root), repo_root)
+    source_worker_result_path = (
+        queue_root / _slug(chain_id) / "repair_budget_waterfill_source_worker_result.json"
+    )
+    source_worker_result_ref = _repo_rel(source_worker_result_path, repo_root)
     posterior_ref = (
         _repo_rel(_resolve(posterior_path, repo_root), repo_root)
         if posterior_path is not None
@@ -291,6 +300,20 @@ def _score_experiment(
         "repair_budget_waterfill_work_order_exists_at_build": (
             work_order_exists_at_build
         ),
+        "repair_budget_waterfill_source_queue_path": source_queue_ref,
+        "repair_budget_waterfill_source_worker_result_path": (
+            source_worker_result_ref
+        ),
+        "waterfill_source_worker_default": bool(
+            work_order_ref and not work_order_exists_at_build
+        ),
+        "waterfill_source_worker_limits": {
+            "schema": "repair_budget_waterfill_source_worker_limits.v1",
+            "max_steps": DEFAULT_WATERFILL_SOURCE_WORKER_MAX_STEPS,
+            "max_experiments": DEFAULT_WATERFILL_SOURCE_WORKER_MAX_EXPERIMENTS,
+            "max_parallel": DEFAULT_WATERFILL_SOURCE_WORKER_MAX_PARALLEL,
+            "timeout_seconds": DEFAULT_WATERFILL_SOURCE_WORKER_TIMEOUT_SECONDS,
+        },
         "repair_campaign_score_report_path": score_report_ref,
         "repair_campaign_stackability_queue_path": stackability_queue_ref,
         "repair_campaign_stackability_worker_result_path": (
@@ -381,10 +404,80 @@ def _score_experiment(
             }
         ]
     else:
+        prerequisite_steps: list[dict[str, Any]] = []
+        assert_requires: list[str] = []
+        if not work_order_exists_at_build:
+            validate_source_step_id = "validate_repair_budget_waterfill_source_queue"
+            run_source_step_id = "run_repair_budget_waterfill_source_queue"
+            prerequisite_steps.extend(
+                [
+                    {
+                        "id": validate_source_step_id,
+                        "kind": "command",
+                        "command": [
+                            ".venv/bin/python",
+                            "tools/experiment_queue.py",
+                            "--queue",
+                            source_queue_ref,
+                            "validate",
+                        ],
+                        "resources": {"kind": "local_cpu"},
+                        "timeout_seconds": 120,
+                        "telemetry": {
+                            "input_artifact_paths": [source_queue_ref],
+                        },
+                    },
+                    {
+                        "id": run_source_step_id,
+                        "kind": "command",
+                        "requires": [validate_source_step_id],
+                        "command": [
+                            ".venv/bin/python",
+                            "tools/experiment_queue.py",
+                            "--queue",
+                            source_queue_ref,
+                            "run-worker",
+                            "--execute",
+                            "--max-steps",
+                            str(DEFAULT_WATERFILL_SOURCE_WORKER_MAX_STEPS),
+                            "--max-experiments",
+                            str(DEFAULT_WATERFILL_SOURCE_WORKER_MAX_EXPERIMENTS),
+                            "--max-parallel",
+                            str(DEFAULT_WATERFILL_SOURCE_WORKER_MAX_PARALLEL),
+                            "--output",
+                            source_worker_result_ref,
+                        ],
+                        "resources": {"kind": "local_io_heavy"},
+                        "timeout_seconds": DEFAULT_WATERFILL_SOURCE_WORKER_TIMEOUT_SECONDS,
+                        "postconditions": [
+                            {
+                                "type": "json_equals",
+                                "path": source_worker_result_ref,
+                                "key": "schema",
+                                "equals": "experiment_queue_worker_result.v1",
+                            },
+                            {
+                                "type": "json_equals",
+                                "path": source_worker_result_ref,
+                                "key": "failure_count",
+                                "equals": 0,
+                            },
+                        ],
+                        "telemetry": {
+                            "artifact_paths": [source_worker_result_ref],
+                            "input_artifact_paths": [source_queue_ref],
+                            "include_postcondition_paths": True,
+                        },
+                    },
+                ]
+            )
+            assert_requires = [run_source_step_id]
         steps = [
+            *prerequisite_steps,
             {
                 "id": "assert_repair_budget_waterfill_work_order_materialized",
                 "kind": "command",
+                **({"requires": assert_requires} if assert_requires else {}),
                 "command": [
                     ".venv/bin/python",
                     "-c",
