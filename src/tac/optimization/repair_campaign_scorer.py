@@ -38,6 +38,9 @@ REPAIR_CAMPAIGN_POSTERIOR_FAMILY_PRIOR_SCHEMA = (
 _TYPED_LEDGER_SCHEMA = "frontier_rate_attack_repair_budget_typed_response_ledger.v1"
 _TYPED_ROW_SCHEMA = "frontier_rate_attack_repair_budget_typed_response_row.v1"
 _WORK_ORDER_SCHEMA = "frontier_rate_attack_repair_budget_waterfill_work_order.v1"
+_REPAIR_CASCADE_OPPORTUNITY_ROW_SCHEMA = (
+    "frontier_rate_attack_repair_cascade_opportunity_row.v1"
+)
 
 _ENTROPY_POSITION_WEIGHTS: dict[str, float] = {
     "before_entropy_coder_distribution_shaping": 1.20,
@@ -613,6 +616,7 @@ def _execution_gate(
     blocker_label = str(prior.get("missing_artifact_label") or "")
     if blocker_label and not local_ready:
         missing.append(blocker_label)
+    missing.extend(_string_list(row.get("missing_artifacts")))
     return {
         "schema": "repair_campaign_execution_gate.v1",
         "local_mlx_advisory_custody_ready": local_ready,
@@ -639,6 +643,8 @@ def _typed_rows(payload: Mapping[str, Any]) -> list[Mapping[str, Any]]:
     elif schema == _WORK_ORDER_SCHEMA:
         ledger = payload.get("typed_response_ledger")
         if not isinstance(ledger, Mapping):
+            if payload.get("repair_cascade_opportunity_rows"):
+                return []
             raise RepairCampaignScorerError("work order missing typed_response_ledger")
         rows = ledger.get("rows")
     else:
@@ -646,6 +652,82 @@ def _typed_rows(payload: Mapping[str, Any]) -> list[Mapping[str, Any]]:
             f"unsupported repair campaign scorer input schema: {schema or '<missing>'}"
         )
     return [row for row in rows or [] if isinstance(row, Mapping)]
+
+
+def _cascade_opportunity_rows(payload: Mapping[str, Any]) -> list[dict[str, Any]]:
+    if str(payload.get("schema") or "") != _WORK_ORDER_SCHEMA:
+        return []
+    rows: list[dict[str, Any]] = []
+    for index, cascade in enumerate(
+        payload.get("repair_cascade_opportunity_rows") or [],
+        start=1,
+    ):
+        if not isinstance(cascade, Mapping):
+            continue
+        if cascade.get("schema") != _REPAIR_CASCADE_OPPORTUNITY_ROW_SCHEMA:
+            continue
+        cascade_id = str(cascade.get("cascade_id") or f"cascade_opportunity_{index}")
+        targeted_positions = [
+            item for item in cascade.get("targeted_positions") or [] if isinstance(item, Mapping)
+        ]
+        targeted_dimensions = ordered_unique(
+            [
+                "segnet",
+                "posenet",
+                "selector_stream",
+                *[
+                    str(item.get("entropy_surface") or "").strip()
+                    for item in targeted_positions
+                    if str(item.get("entropy_surface") or "").strip()
+                ],
+            ]
+        )
+        required_measurements = _string_list(cascade.get("required_probe_measurements"))
+        blockers = ordered_unique(
+            [
+                *_string_list(cascade.get("blockers")),
+                "structural_cascade_typed_component_response_missing",
+                "local_mlx_structural_cascade_probe_missing",
+            ]
+        )
+        rows.append(
+            {
+                "schema": _REPAIR_CASCADE_OPPORTUNITY_ROW_SCHEMA,
+                "source_row_kind": "repair_cascade_opportunity",
+                "typed_response_id": f"structural_repair_cascade:{cascade_id}",
+                "candidate_id": cascade_id,
+                "acquisition_id": cascade.get("next_queue_action"),
+                "correction_family": "entropy_position_cascade",
+                "family_id_hint": "entropy_position_cascade",
+                "targeted_dimensions": targeted_dimensions,
+                "operation_levels": [
+                    "structural_repair_cascade",
+                    "mlx_local_component_probe",
+                    "selector_codec_stackability",
+                ],
+                "entropy_position_label": (
+                    cascade.get("pipeline_position")
+                    or "scorer_entropy_repair_before_selector_codec"
+                ),
+                "requested_repair_bytes": 0,
+                "objective_delta_score_units": None,
+                "cascade_id": cascade_id,
+                "cascade_label": cascade.get("label"),
+                "source_relation": cascade.get("source_relation"),
+                "source_hint": cascade.get("source_hint"),
+                "required_probe_measurements": required_measurements,
+                "missing_artifacts": blockers,
+                "blockers": blockers,
+                "source_structural_opportunity": dict(cascade),
+                "budget_spend_allowed": False,
+                "ready_for_budget_spend": False,
+                "ready_for_exact_eval_dispatch": False,
+                "allowed_use": "structural_repair_cascade_scoring_input_only",
+                "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+                **FALSE_AUTHORITY,
+            }
+        )
+    return rows
 
 
 def _receiver_closed_rate_credit_bytes(payload: Mapping[str, Any]) -> int:
@@ -677,7 +759,7 @@ def _build_optimizer_decision(
         requested_bytes = _safe_int(row.get("requested_repair_bytes"))
         improvement = _safe_float(row.get("improvement_score_units")) or 0.0
         typed_response_id = str(row.get("typed_response_id") or "")
-        blockers: list[str] = []
+        blockers: list[str] = _string_list(row.get("source_blockers"))
         if not ready:
             blockers.append("local_mlx_advisory_custody_missing")
         if requested_bytes <= 0:
@@ -720,6 +802,7 @@ def _build_optimizer_decision(
                     "execution_gate": dict(gate),
                     "missing_artifacts": ordered_unique(
                         [
+                            *_string_list(row.get("source_missing_artifacts")),
                             *_string_list(gate.get("missing_artifacts")),
                             *_string_list(
                                 receiver_proof_status.get("missing_artifacts")
@@ -1068,8 +1151,14 @@ def score_repair_campaign(
         posterior_path=posterior_path,
         posterior_rows=posterior_rows,
     )
+    campaign_input_rows = [*_typed_rows(payload), *_cascade_opportunity_rows(payload)]
+    structural_opportunity_count = sum(
+        1
+        for row in campaign_input_rows
+        if row.get("source_row_kind") == "repair_cascade_opportunity"
+    )
     rows: list[dict[str, Any]] = []
-    for index, row in enumerate(_typed_rows(payload), start=1):
+    for index, row in enumerate(campaign_input_rows, start=1):
         require_no_truthy_authority_fields(
             row,
             context=f"repair_campaign_scorer_row:{index}",
@@ -1115,12 +1204,20 @@ def score_repair_campaign(
         scored_row = {
             "schema": REPAIR_CAMPAIGN_SCORE_ROW_SCHEMA,
             "source_row_schema": row.get("schema"),
+            "source_row_kind": row.get("source_row_kind") or "typed_response",
             "rank_input_order": index,
             "typed_response_id": row.get("typed_response_id"),
             "candidate_id": row.get("candidate_id"),
             "acquisition_id": row.get("acquisition_id"),
             "correction_family": row.get("correction_family"),
             "family_id": prior.get("family_id") or "unclassified_repair_family",
+            "cascade_id": row.get("cascade_id"),
+            "source_relation": row.get("source_relation"),
+            "source_structural_opportunity": dict(
+                _mapping(row.get("source_structural_opportunity"))
+            ),
+            "source_missing_artifacts": _string_list(row.get("missing_artifacts")),
+            "source_blockers": _string_list(row.get("blockers")),
             "family_prior": dict(prior),
             "targeted_dimensions": _string_list(row.get("targeted_dimensions")),
             "operation_levels": _string_list(row.get("operation_levels")),
@@ -1201,6 +1298,7 @@ def score_repair_campaign(
         "ready_for_local_mlx_advisory_execution_count": len(ready_rows),
         "blocked_missing_artifact_count": len(rows) - len(ready_rows),
         "operator_family_priors": repair_operator_family_priors(),
+        "structural_repair_opportunity_count": structural_opportunity_count,
         "missing_artifacts": missing_artifacts,
         "optimizer_decision": optimizer_decision,
         "rows": rows,

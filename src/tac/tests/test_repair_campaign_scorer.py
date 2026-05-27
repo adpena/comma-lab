@@ -6,6 +6,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+from tac.optimization.repair_campaign_learning_signal import (
+    build_repair_campaign_blocked_learning_signal_report,
+)
 from tac.optimization.repair_campaign_scorer import (
     REPAIR_CAMPAIGN_OPTIMIZER_DECISION_SCHEMA,
     REPAIR_CAMPAIGN_POSTERIOR_PRIOR_SUMMARY_SCHEMA,
@@ -139,6 +142,93 @@ def test_repair_operator_family_priors_are_first_class_false_authority() -> None
     }.issubset(family_ids)
     assert priors["ready_for_exact_eval_dispatch"] is False
     assert all(row["score_claim"] is False for row in priors["rows"])
+
+
+def test_score_repair_campaign_preserves_cascade_opportunity_as_blocked_signal(
+    tmp_path: Path,
+) -> None:
+    work_order = {
+        "schema": "frontier_rate_attack_repair_budget_waterfill_work_order.v1",
+        "receiver_closed_rate_credit": {
+            "schema": "frontier_rate_attack_repair_waterfill_rate_credit.v1",
+            "receiver_closed_saved_bytes_total": 24,
+            **_false_authority(),
+        },
+        "repair_cascade_opportunity_rows": [
+            {
+                "schema": "frontier_rate_attack_repair_cascade_opportunity_row.v1",
+                "cascade_id": "cascade_c_posenet_null_segnet_region_selector_codec",
+                "label": "Cascade C",
+                "source_relation": "PR110-OPT-5+7+10+12_UNTOUCHED",
+                "pipeline_position": "scorer_entropy_repair_before_selector_codec",
+                "targeted_positions": [
+                    {"position_id": "P19", "entropy_surface": "scorer_entropy"},
+                    {"position_id": "P18", "entropy_surface": "scorer_entropy"},
+                    {"position_id": "P11", "entropy_surface": "selector_codec_entropy"},
+                ],
+                "required_probe_measurements": [
+                    "posenet_null_bottom_decile_pair_ids",
+                    "segnet_class_region_mask_ids",
+                    "selector_payload_bits_per_region",
+                ],
+                "next_queue_action": (
+                    "build_cascade_c_mlx_local_probe_queue_and_emit_component_"
+                    "response_rows"
+                ),
+                "blockers": [
+                    "cascade_c_empirical_component_response_missing",
+                    "per_region_selector_codec_materializer_missing",
+                ],
+                **_false_authority(),
+            }
+        ],
+        **_false_authority(),
+    }
+
+    report = score_repair_campaign(payload=work_order, repo_root=tmp_path)
+
+    assert report["row_count"] == 1
+    assert report["structural_repair_opportunity_count"] == 1
+    assert report["ready_for_local_mlx_advisory_execution_count"] == 0
+    row = report["rows"][0]
+    assert row["source_row_kind"] == "repair_cascade_opportunity"
+    assert row["family_id"] == "entropy_position_cascade"
+    assert row["cascade_id"] == "cascade_c_posenet_null_segnet_region_selector_codec"
+    assert row["entropy_position_label"] == (
+        "scorer_entropy_repair_before_selector_codec"
+    )
+    assert "cascade_c_empirical_component_response_missing" in (
+        row["execution_gate"]["missing_artifacts"]
+    )
+    assert "entropy_position_cascade_probe_missing" in (
+        row["execution_gate"]["missing_artifacts"]
+    )
+    decision = report["optimizer_decision"]
+    assert decision["selected_allocation_count"] == 0
+    assert decision["blocked_allocation_count"] == 1
+    blocked = decision["blocked_allocation_rows"][0]
+    assert blocked["family_id"] == "entropy_position_cascade"
+    assert "local_mlx_structural_cascade_probe_missing" in (
+        blocked["missing_artifacts"]
+    )
+    assert "requested_repair_bytes_missing" in blocked["blockers"]
+
+    score_report_path = tmp_path / "repair_campaign_score_report.json"
+    score_report_path.write_text(
+        json.dumps(report, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    blocked_learning = build_repair_campaign_blocked_learning_signal_report(
+        score_report_path=score_report_path,
+        score_report=report,
+        repo_root=tmp_path,
+    )
+    signal = blocked_learning["learning_signal_rows"][0]
+    assert signal["family_id"] == "entropy_position_cascade"
+    assert "cascade_c_empirical_component_response_missing" in (
+        signal["missing_artifacts"]
+    )
+    assert signal["ready_for_exact_eval_dispatch"] is False
 
 
 def test_score_repair_campaign_ranks_ready_mlx_and_names_missing_artifacts(
