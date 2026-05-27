@@ -1424,6 +1424,91 @@ def test_materializer_feedback_discovery_accepts_queue_observation_top_k(
     assert observations[0]["score_claim"] is False
 
 
+def test_materializer_feedback_discovery_accepts_final_rate_signal_harvest(
+    tmp_path: Path,
+) -> None:
+    signal_path = tmp_path / "signals" / "rate_signal_rows.jsonl"
+    signal_path.parent.mkdir(parents=True, exist_ok=True)
+    rows = [
+        {
+            "schema": "inverse_steganalysis_observation.v1",
+            "observation_kind": "materializer_chain_archive_delta",
+            "observation_id": "archive_repack_zero_delta",
+            "candidate_id": "archive_repack_candidate",
+            "axis": "[local-final-rate-attack-queue advisory]",
+            "target_kind": "archive_zip_repack_v1",
+            "materializer_id": "archive_zip_repack_adapter",
+            "saved_bytes": 0,
+            "observed_rate_gain": 0.0,
+            "observed_score_gain": 0.0,
+            "rate_positive": False,
+            "receiver_contract_satisfied": True,
+            "archive_delta_status": "zero_delta",
+            "artifact_bytes": 2048,
+            "resource_kind": "local_cpu",
+            **_false_authority(),
+        },
+        {
+            "schema": "family_agnostic_materializer_empirical_observation.v1",
+            "observation_kind": "family_agnostic_materializer_empirical_observation",
+            "observation_id": "zip_header_positive",
+            "candidate_id": "zip_header_candidate",
+            "axis": "[local-final-rate-attack-queue advisory]",
+            "target_kind": "packet_member_zip_header_elide_v1",
+            "materializer_id": "packet_member_zip_header_elide_adapter",
+            "saved_bytes": 7,
+            "observed_rate_gain": 7 / 10_000_000.0,
+            "observed_score_gain": 7 / 10_000_000.0,
+            "rate_positive": True,
+            "receiver_contract_satisfied": True,
+            "archive_delta_status": "realized_saving",
+            "artifact_bytes": 2048,
+            "resource_kind": "local_cpu",
+            **_false_authority(),
+        },
+    ]
+    signal_path.write_text(
+        "".join(json.dumps(row, sort_keys=True) + "\n" for row in rows),
+        encoding="utf-8",
+    )
+    harvest_path = _write_json(
+        tmp_path / "final_rate_attack_signal_harvest.json",
+        {
+            "schema": "frontier_final_rate_attack_signal_harvest.v1",
+            **_false_authority(),
+            "queue_id": "frontier_final_rate_attack_unit",
+            "queue_healthy": True,
+            "materializer_observation_count": 2,
+            "signal_observations_path": signal_path.relative_to(tmp_path).as_posix(),
+            "allowed_use": "local_final_rate_attack_planning_feedback_only",
+            "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
+        },
+    )
+
+    payloads, source_paths, discovery = discover_materializer_feedback_payloads(
+        repo_root=tmp_path,
+        materializer_feedback_paths=(harvest_path,),
+    )
+    observations = payloads[0]["observations"]
+
+    assert len(payloads) == 1
+    assert source_paths == ("final_rate_attack_signal_harvest.json",)
+    assert discovery["discovered_feedback_count"] == 1
+    assert payloads[0]["source_payload_schema"] == (
+        "frontier_final_rate_attack_signal_harvest.v1"
+    )
+    assert {row["observation_kind"] for row in observations} == {
+        "family_agnostic_materializer_empirical_observation",
+        "materializer_chain_archive_delta",
+    }
+    assert {row["target_kind"] for row in observations} == {
+        "archive_zip_repack_v1",
+        "packet_member_zip_header_elide_v1",
+    }
+    assert sum(1 for row in observations if row.get("rate_positive") is True) == 1
+    assert all(row["score_claim"] is False for row in observations)
+
+
 def test_frontier_feedback_binds_materializer_context_hints_into_work_queue(
     tmp_path: Path,
 ) -> None:

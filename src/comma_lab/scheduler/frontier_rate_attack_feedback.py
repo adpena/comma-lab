@@ -23,6 +23,13 @@ from tac.optimization.dqs1_materializer_feedback_bridge import (
     FALSE_AUTHORITY,
     build_dqs1_materializer_feedback_bridge,
 )
+from tac.optimization.inverse_steganalysis_acquisition import (
+    FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_KIND,
+    MATERIALIZER_ARCHIVE_DELTA_OBSERVATION_KIND,
+)
+from tac.optimization.inverse_steganalysis_acquisition import (
+    OBSERVATION_SCHEMA as INVERSE_STEGANALYSIS_OBSERVATION_SCHEMA,
+)
 from tac.optimization.local_cpu_contest_drift import (
     EUREKA_SIGNAL_SCHEMA,
     LocalCPUContestDriftError,
@@ -117,6 +124,13 @@ MATERIALIZER_FEEDBACK_DISCOVERY_SCHEMA = (
 )
 DISCOVERED_MATERIALIZER_FEEDBACK_SCHEMA = (
     "frontier_rate_attack_discovered_materializer_feedback.v1"
+)
+FINAL_RATE_ATTACK_SIGNAL_HARVEST_SCHEMA = "frontier_final_rate_attack_signal_harvest.v1"
+MATERIALIZER_FEEDBACK_OBSERVATION_KINDS = frozenset(
+    {
+        FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_KIND,
+        MATERIALIZER_ARCHIVE_DELTA_OBSERVATION_KIND,
+    }
 )
 LOCAL_CPU_EUREKA_DISCOVERY_SCHEMA = "frontier_rate_attack_local_cpu_eureka_discovery.v1"
 LOCAL_CPU_EUREKA_PLANNER_HINT_SCHEMA = "frontier_rate_attack_local_cpu_eureka_planner_hint.v1"
@@ -1009,7 +1023,14 @@ def _is_materializer_feedback_payload(payload: Mapping[str, Any]) -> bool:
         FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_SCHEMA,
     }:
         return True
-    if observation_kind == "family_agnostic_materializer_empirical_observation":
+    if (
+        schema == INVERSE_STEGANALYSIS_OBSERVATION_SCHEMA
+        and observation_kind in MATERIALIZER_FEEDBACK_OBSERVATION_KINDS
+    ):
+        return True
+    if schema == FINAL_RATE_ATTACK_SIGNAL_HARVEST_SCHEMA:
+        return bool(str(payload.get("signal_observations_path") or "").strip())
+    if observation_kind in MATERIALIZER_FEEDBACK_OBSERVATION_KINDS:
         return True
     observations = payload.get("observations")
     if observations is None:
@@ -1033,8 +1054,18 @@ def _materializer_feedback_paths(root: Path, *, max_files: int) -> list[Path]:
         if not path.is_file():
             continue
         rel_path = path.relative_to(root).as_posix()
-        is_candidate = path.name in {"sweep.json", "observations.jsonl"} or (
-            path.suffix in {".json", ".jsonl"} and "materializer" in rel_path
+        is_candidate = (
+            path.name
+            in {
+                "sweep.json",
+                "observations.jsonl",
+                "materializer_signal_observations.jsonl",
+                "final_rate_attack_signal_harvest.json",
+            }
+            or (
+                path.suffix in {".json", ".jsonl"}
+                and ("materializer" in rel_path or "final_rate_attack_signal" in rel_path)
+            )
         )
         if not is_candidate:
             continue
@@ -1047,7 +1078,11 @@ def _materializer_feedback_paths(root: Path, *, max_files: int) -> list[Path]:
     return candidates
 
 
-def _payload_from_materializer_feedback_path(path: Path) -> dict[str, Any] | None:
+def _payload_from_materializer_feedback_path(
+    path: Path,
+    *,
+    repo_root: Path,
+) -> dict[str, Any] | None:
     if path.suffix == ".jsonl":
         rows = _load_jsonl(path)
         materializer_rows = [
@@ -1067,6 +1102,28 @@ def _payload_from_materializer_feedback_path(path: Path) -> dict[str, Any] | Non
             **FALSE_AUTHORITY,
         }
     payload = _load_json(path)
+    if payload.get("schema") == FINAL_RATE_ATTACK_SIGNAL_HARVEST_SCHEMA:
+        require_no_truthy_authority_fields(
+            payload,
+            context="frontier_rate_attack_feedback.final_rate_signal_harvest",
+        )
+        signal_path_text = str(payload.get("signal_observations_path") or "").strip()
+        if not signal_path_text:
+            return None
+        signal_path = _resolve_path(signal_path_text, repo_root=repo_root)
+        if not signal_path.is_file():
+            raise FrontierRateAttackFeedbackError(
+                f"{path}: final-rate signal harvest references missing "
+                f"signal_observations_path: {signal_path_text}"
+            )
+        signal_payload = _payload_from_materializer_feedback_path(
+            signal_path,
+            repo_root=repo_root,
+        )
+        if signal_payload is not None:
+            signal_payload["source_payload_schema"] = FINAL_RATE_ATTACK_SIGNAL_HARVEST_SCHEMA
+            signal_payload["source_signal_harvest_path"] = _repo_rel(path, repo_root)
+        return signal_payload
     if not _is_materializer_feedback_payload(payload):
         return None
     require_no_truthy_authority_fields(
@@ -1304,7 +1361,7 @@ def discover_materializer_feedback_payloads(
     duplicate_observation_count = 0
     for path in paths:
         try:
-            payload = _payload_from_materializer_feedback_path(path)
+            payload = _payload_from_materializer_feedback_path(path, repo_root=repo)
         except ValueError as exc:
             raise FrontierRateAttackFeedbackError(f"{path}: {exc}") from exc
         rel_path = _repo_rel(path, repo)
@@ -1355,7 +1412,9 @@ def discover_materializer_feedback_payloads(
         payloads.append(
             {
                 "schema": FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_SWEEP_SCHEMA,
-                "source_payload_schema": payload.get("schema"),
+                "source_payload_schema": (
+                    payload.get("source_payload_schema") or payload.get("schema")
+                ),
                 "source_format": payload.get("source_format") or path.suffix.lstrip("."),
                 "observations": unique_rows,
                 **FALSE_AUTHORITY,
