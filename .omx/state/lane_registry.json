@@ -44101,7 +44101,7 @@
       "gates": {
         "impl_complete": {
           "status": true,
-          "evidence": "src/tac/substrates/pact_nerv_selector_v3/ package + experiments/train_substrate_pact_nerv_selector_v3.py + .omx/operator_authorize_recipes/substrate_pact_nerv_selector_v3_modal_t4_dispatch.yaml; tests pass; PACT-NERV-ULTIMATE G3 variant; archive_grammar declared; research_only=true dispatch_enabled=false score_improvement_mechanism_status=RESEARCH_ONLY"
+          "evidence": "experiments/train_substrate_pact_nerv_selector_v3.py"
         },
         "real_archive_empirical": {
           "status": false,
@@ -44124,8 +44124,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/pact_nerv_full_main_cluster_2_landed_20260527T152657Z.md"
         },
         "deploy_runbook": {
           "status": true,
@@ -44158,7 +44158,7 @@
       "gates": {
         "impl_complete": {
           "status": true,
-          "evidence": "src/tac/substrates/pact_nerv_selector_v4/ package + experiments/train_substrate_pact_nerv_selector_v4.py + .omx/operator_authorize_recipes/substrate_pact_nerv_selector_v4_modal_t4_dispatch.yaml; tests pass; PACT-NERV-ULTIMATE G3 variant; archive_grammar declared; research_only=true dispatch_enabled=false score_improvement_mechanism_status=RESEARCH_ONLY"
+          "evidence": "experiments/train_substrate_pact_nerv_selector_v4.py"
         },
         "real_archive_empirical": {
           "status": false,
@@ -44181,8 +44181,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/pact_nerv_full_main_cluster_2_landed_20260527T152657Z.md"
         },
         "deploy_runbook": {
           "status": true,
@@ -44215,7 +44215,7 @@
       "gates": {
         "impl_complete": {
           "status": true,
-          "evidence": "src/tac/substrates/pact_nerv_ia3_multi/ package + experiments/train_substrate_pact_nerv_ia3_multi.py + .omx/operator_authorize_recipes/substrate_pact_nerv_ia3_multi_modal_t4_dispatch.yaml; tests pass; PACT-NERV-ULTIMATE G3 variant; archive_grammar declared; research_only=true dispatch_enabled=false score_improvement_mechanism_status=RESEARCH_ONLY"
+          "evidence": "experiments/train_substrate_pact_nerv_ia3_multi.py"
         },
         "real_archive_empirical": {
           "status": false,
@@ -44238,8 +44238,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/pact_nerv_full_main_cluster_2_landed_20260527T152657Z.md"
         },
         "deploy_runbook": {
           "status": true,
@@ -44272,7 +44272,7 @@
       "gates": {
         "impl_complete": {
           "status": true,
-          "evidence": "src/tac/substrates/pact_nerv_asymmetric_boundary/ package + experiments/train_substrate_pact_nerv_asymmetric_boundary.py + .omx/operator_authorize_recipes/substrate_pact_nerv_asymmetric_boundary_modal_t4_dispatch.yaml; tests pass; PACT-NERV-ULTIMATE G3 variant; archive_grammar declared; research_only=true dispatch_enabled=false score_improvement_mechanism_status=RESEARCH_ONLY"
+          "evidence": "experiments/train_substrate_pact_nerv_asymmetric_boundary.py"
         },
         "real_archive_empirical": {
           "status": false,
@@ -44295,8 +44295,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/pact_nerv_full_main_cluster_2_landed_20260527T152657Z.md"
         },
         "deploy_runbook": {
           "status": true,
@@ -44615,7 +44615,7 @@
       "gates": {
         "impl_complete": {
           "status": true,
-          "evidence": "src/tac/substrates/pact_nerv_bayesian/ + experiments/train_substrate_pact_nerv_bayesian.py + scripts/remote_lane_substrate_pact_nerv_bayesian.sh + .omx/operator_authorize_recipes/substrate_pact_nerv_bayesian_modal_t4_dispatch.yaml; tests pass; PACT-NERV-ULTIMATE G2 variant Group 2 mid-LOC; archive_grammar=PBN monolithic 0.bin (21-byte header); research_only=true dispatch_enabled=false; literature=Blundell 2015 Bayes by Backprop arXiv:1505.05424"
+          "evidence": "experiments/train_substrate_pact_nerv_bayesian.py"
         },
         "real_archive_empirical": {
           "status": false,
@@ -44638,8 +44638,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/pact_nerv_full_main_cluster_2_landed_20260527T152657Z.md"
         },
         "deploy_runbook": {
           "status": true,
@@ -44671,7 +44671,7 @@
       "gates": {
         "impl_complete": {
           "status": true,
-          "evidence": "src/tac/substrates/pact_nerv_multi_modal/ + experiments/train_substrate_pact_nerv_multi_modal.py + scripts/remote_lane_substrate_pact_nerv_multi_modal.sh + .omx/operator_authorize_recipes/substrate_pact_nerv_multi_modal_modal_t4_dispatch.yaml; tests pass; PACT-NERV-ULTIMATE G2 variant Group 2 mid-LOC; archive_grammar=PMM monolithic 0.bin (36-byte header); research_only=true dispatch_enabled=false; literature=Baltrusaitis 2019 + Radford 2021 CLIP arXiv:2103.00020"
+          "evidence": "experiments/train_substrate_pact_nerv_multi_modal.py"
         },
         "real_archive_empirical": {
           "status": false,
@@ -44694,8 +44694,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/pact_nerv_full_main_cluster_2_landed_20260527T152657Z.md"
         },
         "deploy_runbook": {
           "status": true,
@@ -44727,7 +44727,7 @@
       "gates": {
         "impl_complete": {
           "status": true,
-          "evidence": "src/tac/substrates/pact_nerv_diffusion_trajectory/ + experiments/train_substrate_pact_nerv_diffusion_trajectory.py + scripts/remote_lane_substrate_pact_nerv_diffusion_trajectory.sh + .omx/operator_authorize_recipes/substrate_pact_nerv_diffusion_trajectory_modal_t4_dispatch.yaml; tests pass; PACT-NERV-ULTIMATE G2 variant Group 2 mid-LOC; archive_grammar=PDT monolithic 0.bin (22-byte header); research_only=true dispatch_enabled=false; literature=Rombach 2022 LDM arXiv:2112.10752 + Blattmann 2023 video LDM"
+          "evidence": "experiments/train_substrate_pact_nerv_diffusion_trajectory.py"
         },
         "real_archive_empirical": {
           "status": false,
@@ -44750,8 +44750,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/pact_nerv_full_main_cluster_2_landed_20260527T152657Z.md"
         },
         "deploy_runbook": {
           "status": true,
@@ -44866,7 +44866,7 @@
       "gates": {
         "impl_complete": {
           "status": true,
-          "evidence": "src/tac/substrates/pact_nerv_cross_codec_a/__init__.py + architecture.py + archive.py + inflate.py + score_aware_loss.py + tests/ (15 tests pass); trainer experiments/train_substrate_pact_nerv_cross_codec_a.py with _full_main raising NotImplementedError per Catalog #240; research_only=true per HNeRV parity L2"
+          "evidence": "experiments/train_substrate_pact_nerv_cross_codec_a.py"
         },
         "real_archive_empirical": {
           "status": false,
@@ -44890,7 +44890,7 @@
         },
         "memory_entry": {
           "status": true,
-          "evidence": ".omx/research/pact_nerv_cross_codec_a_l0_scaffold_design_20260520T214500Z.md (design memo per Catalog #290/#294/#296/#303/#305/#309)"
+          "evidence": ".omx/research/pact_nerv_full_main_cluster_2_landed_20260527T152657Z.md"
         },
         "deploy_runbook": {
           "status": true,
@@ -44908,7 +44908,7 @@
       "gates": {
         "impl_complete": {
           "status": true,
-          "evidence": "src/tac/substrates/pact_nerv_cross_codec_b/__init__.py + architecture.py + archive.py + inflate.py + score_aware_loss.py + tests/ (16 tests pass); trainer experiments/train_substrate_pact_nerv_cross_codec_b.py with _full_main raising NotImplementedError per Catalog #240; research_only=true"
+          "evidence": "experiments/train_substrate_pact_nerv_cross_codec_b.py"
         },
         "real_archive_empirical": {
           "status": false,
@@ -44932,7 +44932,7 @@
         },
         "memory_entry": {
           "status": true,
-          "evidence": ".omx/research/pact_nerv_cross_codec_b_l0_scaffold_design_20260520T214500Z.md (design memo per Catalog #290/#294/#296/#303/#305/#309)"
+          "evidence": ".omx/research/pact_nerv_full_main_cluster_2_landed_20260527T152657Z.md"
         },
         "deploy_runbook": {
           "status": true,
@@ -44950,7 +44950,7 @@
       "gates": {
         "impl_complete": {
           "status": true,
-          "evidence": "src/tac/substrates/pact_nerv_neural_codec_e2e_cross/__init__.py + architecture.py + archive.py + inflate.py + score_aware_loss.py + tests/ (17 tests pass); trainer experiments/train_substrate_pact_nerv_neural_codec_e2e_cross.py with _full_main raising NotImplementedError per Catalog #240; research_only=true; end-to-end neural codec composition with Balle hyperprior gate"
+          "evidence": "experiments/train_substrate_pact_nerv_neural_codec_e2e_cross.py"
         },
         "real_archive_empirical": {
           "status": false,
@@ -44974,7 +44974,7 @@
         },
         "memory_entry": {
           "status": true,
-          "evidence": ".omx/research/pact_nerv_neural_codec_e2e_cross_l0_scaffold_design_20260520T214500Z.md (design memo per Catalog #290/#294/#296/#303/#305/#309; horizon_class=frontier_pursuit)"
+          "evidence": ".omx/research/pact_nerv_full_main_cluster_2_landed_20260527T152657Z.md"
         },
         "deploy_runbook": {
           "status": true,
@@ -45089,7 +45089,7 @@
       "gates": {
         "impl_complete": {
           "status": true,
-          "evidence": "src/tac/substrates/pact_nerv_moe/ + experiments/train_substrate_pact_nerv_moe.py + scripts/remote_lane_substrate_pact_nerv_moe.sh + .omx/operator_authorize_recipes/substrate_pact_nerv_moe_modal_t4_dispatch.yaml; tests pass; PACT-NERV-ULTIMATE G1 BLEEDING-EDGE variant Group 1; research_only=true dispatch_enabled=false"
+          "evidence": "experiments/train_substrate_pact_nerv_moe.py"
         },
         "real_archive_empirical": {
           "status": false,
@@ -45112,8 +45112,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/pact_nerv_full_main_cluster_2_landed_20260527T152657Z.md"
         },
         "deploy_runbook": {
           "status": true,
@@ -45145,7 +45145,7 @@
       "gates": {
         "impl_complete": {
           "status": true,
-          "evidence": "src/tac/substrates/pact_nerv_diffusion_distilled/ + experiments/train_substrate_pact_nerv_diffusion_distilled.py + scripts/remote_lane_substrate_pact_nerv_diffusion_distilled.sh + .omx/operator_authorize_recipes/substrate_pact_nerv_diffusion_distilled_modal_t4_dispatch.yaml; tests pass; PACT-NERV-ULTIMATE G1 BLEEDING-EDGE variant Group 1; research_only=true dispatch_enabled=false"
+          "evidence": "experiments/train_substrate_pact_nerv_diffusion_distilled.py"
         },
         "real_archive_empirical": {
           "status": false,
@@ -45168,8 +45168,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/pact_nerv_full_main_cluster_2_landed_20260527T152657Z.md"
         },
         "deploy_runbook": {
           "status": true,
@@ -59508,5 +59508,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-27T15:16:51Z"
+  "updated_at": "2026-05-27T15:28:10Z"
 }
