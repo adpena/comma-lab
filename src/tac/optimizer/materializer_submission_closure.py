@@ -383,6 +383,9 @@ def _runtime_adapter_expected_shas(
         row,
     ):
         for key in (
+            "expected_runtime_tree_sha256",
+            "expected_inflate_runtime_tree_sha256",
+            "expected_candidate_runtime_tree_sha256",
             "runtime_tree_sha256",
             "candidate_runtime_tree_sha256",
             "packet_member_merge_receiver_runtime_tree_sha256",
@@ -416,6 +419,10 @@ def _resolve_runtime_adapter_dir(
         raise MaterializerSubmissionClosureError("runtime_adapter_dir_missing")
 
     expected_shas = _runtime_adapter_expected_shas(row, proof_payload)
+    if not expected_shas:
+        raise MaterializerSubmissionClosureError(
+            "runtime_adapter_expected_tree_sha_missing"
+        )
     existing: list[Path] = []
     mismatches: list[dict[str, Any]] = []
     for candidate in candidates:
@@ -423,7 +430,7 @@ def _resolve_runtime_adapter_dir(
             continue
         existing.append(candidate)
         runtime_sha = tree_sha256(candidate).lower()
-        if not expected_shas or runtime_sha in expected_shas:
+        if runtime_sha in expected_shas:
             return candidate
         mismatches.append(
             {

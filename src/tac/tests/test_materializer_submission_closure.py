@@ -44,6 +44,15 @@ def _write_zip(path: Path, payload: bytes) -> None:
         zf.writestr("payload.bin", payload)
 
 
+def _runtime_consumption_probe() -> dict[str, object]:
+    return {
+        "schema": "family_agnostic_runtime_consumption_probe.v1",
+        "passed": True,
+        "blockers": [],
+        "inflate_probe_passed": True,
+    }
+
+
 def test_materializer_submission_closure_clears_static_readiness_blockers(
     tmp_path: Path,
 ) -> None:
@@ -90,6 +99,7 @@ def test_materializer_submission_closure_clears_static_readiness_blockers(
                 "receiver_contract_satisfied": True,
                 "runtime_consumption_proof_passed": True,
                 "passed": True,
+                "runtime_consumption_probe": _runtime_consumption_probe(),
                 "candidate_archive_sha256": candidate_sha,
                 **FALSE_AUTHORITY,
             }
@@ -240,6 +250,7 @@ def test_materializer_submission_closure_discovers_source_packet_submission_dir(
                 "receiver_contract_satisfied": True,
                 "runtime_consumption_proof_passed": True,
                 "passed": True,
+                "runtime_consumption_probe": _runtime_consumption_probe(),
                 "candidate_archive_sha256": candidate_sha,
                 **FALSE_AUTHORITY,
             }
@@ -479,6 +490,7 @@ def test_materializer_submission_closure_uses_proof_backed_runtime_adapter(
                 "receiver_contract_satisfied": True,
                 "runtime_consumption_proof_passed": True,
                 "passed": True,
+                "runtime_consumption_probe": _runtime_consumption_probe(),
                 "runtime_adapter_ready": True,
                 "candidate_archive_sha256": candidate_sha,
                 "runtime_adapter_manifest": {
@@ -610,6 +622,118 @@ def test_materializer_submission_closure_uses_proof_backed_runtime_adapter(
     )
 
 
+def test_materializer_submission_closure_refuses_adapter_without_expected_tree_sha(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path
+    adapter_runtime = repo / "artifacts" / "adapter_runtime"
+    adapter_runtime.mkdir(parents=True)
+    adapter_inflate = adapter_runtime / "inflate.sh"
+    adapter_inflate.write_text(
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "echo adapter-runtime > \"$2/adapter_marker.txt\"\n",
+        encoding="utf-8",
+    )
+    adapter_inflate.chmod(adapter_inflate.stat().st_mode | os.X_OK)
+
+    source_archive = repo / "artifacts" / "source.zip"
+    candidate_archive = repo / "artifacts" / "candidate.zip"
+    _write_zip(source_archive, b"A" * 40)
+    _write_zip(candidate_archive, b"B" * 24)
+    candidate_sha = _sha256(candidate_archive)
+    source_sha = _sha256(source_archive)
+
+    proof_path = repo / "artifacts" / "runtime_consumption_proof.json"
+    proof_path.write_text(
+        json.dumps(
+            {
+                "schema": "family_agnostic_runtime_consumption_proof_v1",
+                "target_kind": "packet_member_merge_v1",
+                "materializer_id": "packet_member_merge_adapter",
+                "receiver_contract_kind": "family_agnostic_packet_member_merge",
+                "receiver_contract_satisfied": True,
+                "runtime_consumption_proof_passed": True,
+                "passed": True,
+                "runtime_adapter_ready": True,
+                "candidate_archive_sha256": candidate_sha,
+                "runtime_adapter_manifest": {
+                    "runtime_adapter_ready": True,
+                    "runtime_dir": adapter_runtime.relative_to(repo).as_posix(),
+                },
+                **FALSE_AUTHORITY,
+            }
+        ),
+        encoding="utf-8",
+    )
+    source_queue_path = repo / "artifacts" / "source_queue.json"
+    source_queue_path.write_text(
+        json.dumps(
+            {
+                "schema": "optimizer_candidate_queue_v1",
+                **FALSE_AUTHORITY,
+                "n_candidates": 1,
+                "top_k_count": 1,
+                "dispatch_ready_count": 0,
+                "dispatch_ready": [],
+                "top_k": [
+                    {
+                        "schema": "packet_member_merge_candidate.v1",
+                        **FALSE_AUTHORITY,
+                        "candidate_id": "packet_member_merge_fixture",
+                        "target_kind": "packet_member_merge_v1",
+                        "materializer_id": "packet_member_merge_adapter",
+                        "receiver_contract_kind": (
+                            "family_agnostic_packet_member_merge"
+                        ),
+                        "receiver_contract_satisfied": True,
+                        "runtime_adapter_ready": True,
+                        "runtime_consumption_proof_required": True,
+                        "runtime_consumption_proof_status": "present",
+                        "runtime_consumption_proof_path": (
+                            proof_path.relative_to(repo).as_posix()
+                        ),
+                        "candidate_archive_path": (
+                            candidate_archive.relative_to(repo).as_posix()
+                        ),
+                        "candidate_archive_sha256": candidate_sha,
+                        "candidate_archive_bytes": candidate_archive.stat().st_size,
+                        "source_archive_path": source_archive.relative_to(
+                            repo
+                        ).as_posix(),
+                        "source_archive_sha256": source_sha,
+                        "source_archive_bytes": source_archive.stat().st_size,
+                        "score_affecting_payload_changed": True,
+                        "charged_bits_changed": True,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = build_materializer_submission_runtime_closure(
+        repo_root=repo,
+        source_queue_path=source_queue_path,
+        candidate_id="packet_member_merge_fixture",
+        submission_dir_out=repo / "closure" / "submission",
+        closed_source_queue_out=repo / "closure" / "closed_source_queue.json",
+        closure_report_out=repo / "closure" / "submission_closure_report.json",
+    )
+
+    assert report["source_runtime_adapter_ready"] is False
+    assert "runtime_adapter_expected_tree_sha_missing" in report["closure_blockers"]
+    assert not (repo / "closure" / "submission" / "inflate.sh").exists()
+    closed_queue = json.loads(
+        (repo / "closure" / "closed_source_queue.json").read_text(encoding="utf-8")
+    )
+    closed_row = closed_queue["top_k"][0]
+    assert "runtime_adapter_expected_tree_sha_missing" in (
+        closed_row["materializer_submission_closure_blockers"]
+    )
+    assert closed_row["ready_for_exact_eval_dispatch"] is False
+
+
 def test_materializer_submission_closure_closes_all_source_queue_rows(
     tmp_path: Path,
 ) -> None:
@@ -646,6 +770,7 @@ def test_materializer_submission_closure_closes_all_source_queue_rows(
                     "receiver_contract_satisfied": True,
                     "runtime_consumption_proof_passed": True,
                     "passed": True,
+                    "runtime_consumption_probe": _runtime_consumption_probe(),
                     "candidate_archive_sha256": candidate_sha,
                     **FALSE_AUTHORITY,
                 }
