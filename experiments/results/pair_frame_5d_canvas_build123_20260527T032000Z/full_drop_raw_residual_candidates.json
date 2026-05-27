@@ -1,0 +1,13 @@
+{
+  "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+  "audit_memo": ".omx/research/drop_many_replace_composition_apparatus_state_audit_20260526.md",
+  "build_memo": ".omx/research/build_2_3_operation_generators_landed_20260526.md",
+  "candidate_count": 0,
+  "candidates": [],
+  "canvas_cell_count": 3,
+  "design_memo": ".omx/research/pair_frame_scorer_geometry_lattice_design_memo_20260525.md",
+  "operation": "full_drop",
+  "produced_by": "tools/apply_operation_to_5d_canvas_cli.py",
+  "receiver_runtime_override": "raw_residual",
+  "schema": "pair_frame_scorer_geometry_lattice_candidate_manifest.v0"
+}
