@@ -21,6 +21,10 @@ from tac.optimization.proxy_candidate_contract import (
 
 REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA = "repair_campaign_score_report.v1"
 REPAIR_CAMPAIGN_SCORE_ROW_SCHEMA = "repair_campaign_score_row.v1"
+REPAIR_CAMPAIGN_OPTIMIZER_DECISION_SCHEMA = "repair_campaign_optimizer_decision.v1"
+REPAIR_CAMPAIGN_OPTIMIZER_ALLOCATION_ROW_SCHEMA = (
+    "repair_campaign_optimizer_allocation_row.v1"
+)
 REPAIR_OPERATOR_FAMILY_PRIORS_SCHEMA = "repair_operator_family_priors.v1"
 REPAIR_OPERATOR_FAMILY_PRIOR_ROW_SCHEMA = "repair_operator_family_prior_row.v1"
 
@@ -351,6 +355,158 @@ def _typed_rows(payload: Mapping[str, Any]) -> list[Mapping[str, Any]]:
     return [row for row in rows or [] if isinstance(row, Mapping)]
 
 
+def _receiver_closed_rate_credit_bytes(payload: Mapping[str, Any]) -> int:
+    direct = _safe_int(payload.get("available_receiver_closed_rate_credit_bytes"))
+    if direct > 0:
+        return direct
+    credit = _mapping(payload.get("receiver_closed_rate_credit"))
+    from_credit = _safe_int(credit.get("receiver_closed_saved_bytes_total"))
+    if from_credit > 0:
+        return from_credit
+    ledger = _mapping(payload.get("typed_response_ledger"))
+    from_ledger = _safe_int(ledger.get("available_receiver_closed_rate_credit_bytes"))
+    return max(0, from_ledger)
+
+
+def _build_optimizer_decision(
+    *,
+    payload: Mapping[str, Any],
+    rows: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    available_bytes = _receiver_closed_rate_credit_bytes(payload)
+    remaining = available_bytes
+    selected_rows: list[dict[str, Any]] = []
+    blocked_rows: list[dict[str, Any]] = []
+    for row in rows:
+        gate = _mapping(row.get("execution_gate"))
+        ready = gate.get("recommended_queue_status") == "ready_for_local_mlx_advisory_execution"
+        requested_bytes = _safe_int(row.get("requested_repair_bytes"))
+        improvement = _safe_float(row.get("improvement_score_units")) or 0.0
+        typed_response_id = str(row.get("typed_response_id") or "")
+        blockers: list[str] = []
+        if not ready:
+            blockers.append("local_mlx_advisory_custody_missing")
+        if requested_bytes <= 0:
+            blockers.append("requested_repair_bytes_missing")
+        if improvement <= 0.0:
+            blockers.append("non_improving_local_objective_delta")
+        if remaining <= 0:
+            blockers.append("receiver_closed_rate_credit_exhausted")
+        if blockers:
+            blocked_rows.append(
+                {
+                    "typed_response_id": typed_response_id,
+                    "candidate_id": row.get("candidate_id"),
+                    "family_id": row.get("family_id"),
+                    "campaign_rank": row.get("campaign_rank"),
+                    "blockers": ordered_unique(blockers),
+                    "budget_spend_allowed": False,
+                    "ready_for_exact_eval_dispatch": False,
+                    **FALSE_AUTHORITY,
+                }
+            )
+            continue
+        allocated = min(remaining, requested_bytes)
+        remaining -= allocated
+        allocation_fraction = allocated / requested_bytes if requested_bytes > 0 else 0.0
+        scaled_improvement = improvement * allocation_fraction
+        selected_rows.append(
+            {
+                "schema": REPAIR_CAMPAIGN_OPTIMIZER_ALLOCATION_ROW_SCHEMA,
+                "typed_response_id": typed_response_id,
+                "candidate_id": row.get("candidate_id"),
+                "acquisition_id": row.get("acquisition_id"),
+                "family_id": row.get("family_id"),
+                "correction_family": row.get("correction_family"),
+                "campaign_rank": row.get("campaign_rank"),
+                "entropy_position_label": row.get("entropy_position_label"),
+                "requested_repair_bytes": requested_bytes,
+                "allocated_repair_bytes": allocated,
+                "allocation_fraction": allocation_fraction,
+                "remaining_receiver_closed_rate_credit_bytes_after": remaining,
+                "objective_delta_score_units": row.get("objective_delta_score_units"),
+                "expected_local_improvement_score_units": improvement,
+                "scaled_expected_local_improvement_score_units": scaled_improvement,
+                "campaign_score": row.get("campaign_score"),
+                "interaction_penalty": row.get("interaction_penalty"),
+                "selection_rationale": (
+                    "greedy_campaign_score_waterfill_under_receiver_closed_byte_credit"
+                ),
+                "component_response_axis": "[macOS-MLX research-signal]",
+                "budget_spend_allowed": False,
+                "ready_for_budget_spend": False,
+                "ready_for_exact_eval_dispatch": False,
+                "allowed_use": "local_mlx_repair_optimizer_selection_only",
+                "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+                **FALSE_AUTHORITY,
+            }
+        )
+    allocated_total = sum(int(row.get("allocated_repair_bytes") or 0) for row in selected_rows)
+    expected_improvement_total = sum(
+        float(row.get("scaled_expected_local_improvement_score_units") or 0.0)
+        for row in selected_rows
+    )
+    entropy_histogram: dict[str, int] = {}
+    family_histogram: dict[str, int] = {}
+    for row in selected_rows:
+        entropy = str(row.get("entropy_position_label") or "unknown_entropy_pipeline_position")
+        family = str(row.get("family_id") or "unclassified_repair_family")
+        entropy_histogram[entropy] = entropy_histogram.get(entropy, 0) + 1
+        family_histogram[family] = family_histogram.get(family, 0) + 1
+    blockers = [
+        "local_mlx_repair_optimizer_is_not_budget_spend_authority",
+        "receiver_runtime_materialization_required_before_budget_spend",
+        "exact_axis_component_response_required_before_budget_spend",
+        "exact_auth_eval_required_before_score_or_promotion_claim",
+        "stacking_interactions_must_be_remeasured_after_materialization",
+    ]
+    if available_bytes <= 0:
+        blockers.append("receiver_closed_rate_credit_missing")
+    if not selected_rows:
+        blockers.append("no_repair_rows_selected_under_current_constraints")
+    decision = {
+        "schema": REPAIR_CAMPAIGN_OPTIMIZER_DECISION_SCHEMA,
+        "input_schema": payload.get("schema"),
+        "objective": "minimize_delta_segnet_plus_delta_posenet_plus_lambda_delta_bytes",
+        "solver": "greedy_campaign_score_waterfill_v1",
+        "receiver_closed_rate_credit_bytes": available_bytes,
+        "selected_allocation_count": len(selected_rows),
+        "blocked_allocation_count": len(blocked_rows),
+        "allocated_repair_bytes_total": allocated_total,
+        "unallocated_receiver_closed_rate_credit_bytes": remaining,
+        "expected_local_improvement_score_units_total": expected_improvement_total,
+        "entropy_position_allocation_histogram": dict(sorted(entropy_histogram.items())),
+        "family_allocation_histogram": dict(sorted(family_histogram.items())),
+        "selected_allocation_rows": selected_rows,
+        "blocked_allocation_rows": blocked_rows,
+        "hard_constraints": [
+            "allocated_bytes_must_not_exceed_receiver_closed_rate_credit",
+            "local_mlx_response_is_planning_signal_only",
+            "parent_rate_only_archive_must_materialize_first",
+            "receiver_consumes_materialized_runtime_output",
+            "component_response_replayed_before_budget_spend",
+            "exact_auth_eval_required_before_score_or_promotion_claim",
+        ],
+        "blockers": ordered_unique(blockers),
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        "recommended_next_action": (
+            "emit_local_mlx_repair_stackability_probe_queue"
+            if selected_rows
+            else "materialize_missing_repair_campaign_artifacts"
+        ),
+        "allowed_use": "queue_owned_repair_campaign_optimizer_decision_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        decision,
+        context="repair_campaign_optimizer_decision",
+    )
+    return decision
+
+
 def score_repair_campaign(
     *,
     payload: Mapping[str, Any],
@@ -446,9 +602,11 @@ def score_repair_campaign(
         for row in rows
         for artifact in _string_list(row["execution_gate"].get("missing_artifacts"))
     )
+    optimizer_decision = _build_optimizer_decision(payload=payload, rows=rows)
     report = {
         "schema": REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA,
         "row_schema": REPAIR_CAMPAIGN_SCORE_ROW_SCHEMA,
+        "optimizer_decision_schema": REPAIR_CAMPAIGN_OPTIMIZER_DECISION_SCHEMA,
         "default_campaign_scorer": True,
         "input_schema": payload.get("schema"),
         "row_count": len(rows),
@@ -456,6 +614,7 @@ def score_repair_campaign(
         "blocked_missing_artifact_count": len(rows) - len(ready_rows),
         "operator_family_priors": repair_operator_family_priors(),
         "missing_artifacts": missing_artifacts,
+        "optimizer_decision": optimizer_decision,
         "rows": rows,
         "budget_spend_allowed": False,
         "ready_for_exact_eval_dispatch": False,
@@ -468,6 +627,8 @@ def score_repair_campaign(
 
 
 __all__ = [
+    "REPAIR_CAMPAIGN_OPTIMIZER_ALLOCATION_ROW_SCHEMA",
+    "REPAIR_CAMPAIGN_OPTIMIZER_DECISION_SCHEMA",
     "REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA",
     "REPAIR_CAMPAIGN_SCORE_ROW_SCHEMA",
     "REPAIR_OPERATOR_FAMILY_PRIORS_SCHEMA",

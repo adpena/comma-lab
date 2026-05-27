@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 from tac.optimization.repair_campaign_scorer import (
+    REPAIR_CAMPAIGN_OPTIMIZER_DECISION_SCHEMA,
     REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA,
     REPAIR_CAMPAIGN_SCORE_ROW_SCHEMA,
     REPAIR_OPERATOR_FAMILY_PRIORS_SCHEMA,
@@ -43,8 +44,14 @@ def _work_order(tmp_path: Path) -> dict[str, object]:
     ref.write_text('{"schema":"mlx_scorer_response.v1"}\n', encoding="utf-8")
     return {
         "schema": "frontier_rate_attack_repair_budget_waterfill_work_order.v1",
+        "receiver_closed_rate_credit": {
+            "schema": "frontier_rate_attack_repair_waterfill_rate_credit.v1",
+            "receiver_closed_saved_bytes_total": 40,
+            **_false_authority(),
+        },
         "typed_response_ledger": {
             "schema": "frontier_rate_attack_repair_budget_typed_response_ledger.v1",
+            "available_receiver_closed_rate_credit_bytes": 40,
             "rows": [
                 {
                     "schema": (
@@ -122,6 +129,17 @@ def test_score_repair_campaign_ranks_ready_mlx_and_names_missing_artifacts(
     assert report["ready_for_local_mlx_advisory_execution_count"] == 1
     assert report["blocked_missing_artifact_count"] == 1
     assert report["ready_for_exact_eval_dispatch"] is False
+    decision = report["optimizer_decision"]
+    assert decision["schema"] == REPAIR_CAMPAIGN_OPTIMIZER_DECISION_SCHEMA
+    assert decision["receiver_closed_rate_credit_bytes"] == 40
+    assert decision["selected_allocation_count"] == 1
+    assert decision["allocated_repair_bytes_total"] == 32
+    assert decision["unallocated_receiver_closed_rate_credit_bytes"] == 8
+    assert decision["selected_allocation_rows"][0]["typed_response_id"] == (
+        "segnet_region_ready"
+    )
+    assert decision["budget_spend_allowed"] is False
+    assert decision["ready_for_exact_eval_dispatch"] is False
     first = report["rows"][0]
     assert first["schema"] == REPAIR_CAMPAIGN_SCORE_ROW_SCHEMA
     assert first["typed_response_id"] == "segnet_region_ready"
