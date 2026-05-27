@@ -6773,6 +6773,7 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     autonomous_chain_optimization_queue_path = (
         output_dir / "autonomous_chain_optimization_queue.json"
     )
+    portfolio_coverage_path = output_dir / "frontier_rate_attack_portfolio_coverage.json"
     report_path = output_dir / "feedback_refresh_report.json"
     assert queue_path.exists()
     assert bridge_path.exists()
@@ -6792,8 +6793,29 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     assert repair_campaign_score_queue_path.exists()
     assert repair_posterior_followup_queue_path.exists()
     assert autonomous_chain_optimization_queue_path.exists()
+    assert portfolio_coverage_path.exists()
     assert report_path.exists()
     report = json.loads(report_path.read_text(encoding="utf-8"))
+    portfolio_coverage = json.loads(portfolio_coverage_path.read_text(encoding="utf-8"))
+    assert payload["artifacts"]["frontier_rate_attack_portfolio_coverage"].endswith(
+        "frontier_rate_attack_portfolio_coverage.json"
+    )
+    assert portfolio_coverage["schema"] == FRONTIER_RATE_ATTACK_PORTFOLIO_COVERAGE_SCHEMA
+    assert portfolio_coverage["coverage_ready_for_bounded_local_followup"] is True
+    portfolio_bindings = {
+        row["target_kind"]: row
+        for row in portfolio_coverage["deferred_registry_target_bindings"]
+    }
+    assert portfolio_bindings["dqs1_pairset_drop_pair"]["binding_status"] == "bound"
+    assert (
+        portfolio_bindings["inverse_scorer_cell_candidate_v1"]["binding_status"]
+        == "bound"
+    )
+    _assert_false_authority(portfolio_coverage)
+    assert (
+        report["frontier_rate_attack_portfolio_coverage"]["schema"]
+        == FRONTIER_RATE_ATTACK_PORTFOLIO_COVERAGE_SCHEMA
+    )
     target_metadata = report["target_optimization_profile_metadata"]
     assert target_metadata["schema"] == (
         "frontier_rate_attack_target_optimization_profile_queue_metadata.v1"
@@ -6907,6 +6929,12 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     assert report["artifacts"]["operation_chain_compiler_queue"].endswith(
         "operation_chain_compiler_queue.json"
     )
+    assert report["artifacts"]["frontier_rate_attack_portfolio_coverage"].endswith(
+        "frontier_rate_attack_portfolio_coverage.json"
+    )
+    assert report["operator_commands"][
+        "inspect_frontier_rate_attack_portfolio_coverage"
+    ][-1].endswith("frontier_rate_attack_portfolio_coverage.json")
     assert report["operator_commands"]["validate_followup_queue"][0] == ".venv/bin/python"
     assert (
         report["operator_commands"]["validate_receiver_repair_queue"][0]

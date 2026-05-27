@@ -56,6 +56,9 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (  # noqa: E402
     build_frontier_targeted_component_correction_queue,
     build_frontier_targeted_component_correction_response_harvest,
 )
+from comma_lab.scheduler.frontier_rate_attack_feedback_cycle import (  # noqa: E402
+    build_frontier_rate_attack_portfolio_coverage,
+)
 from comma_lab.scheduler.pair_frame_5d_coverage_acquisition_queue import (  # noqa: E402
     build_pair_frame_5d_coverage_acquisition_queue,
 )
@@ -1358,10 +1361,27 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
         write_json_artifact(path, queue)
         artifacts["dqs1_followup_queue"] = _display_path(path)
 
+    portfolio_coverage = build_frontier_rate_attack_portfolio_coverage(
+        report=report,
+        artifacts=artifacts,
+    )
+    portfolio_coverage_path = output_dir / "frontier_rate_attack_portfolio_coverage.json"
+    write_json_artifact(portfolio_coverage_path, portfolio_coverage)
+    artifacts["frontier_rate_attack_portfolio_coverage"] = _display_path(
+        portfolio_coverage_path
+    )
+
     report_path = output_dir / "feedback_refresh_report.json"
     report_to_write = dict(report)
+    report_to_write["frontier_rate_attack_portfolio_coverage"] = portfolio_coverage
     report_to_write["artifacts"] = dict(artifacts)
     operator_commands: dict[str, Any] = {}
+    operator_commands["inspect_frontier_rate_attack_portfolio_coverage"] = [
+        ".venv/bin/python",
+        "-m",
+        "json.tool",
+        artifacts["frontier_rate_attack_portfolio_coverage"],
+    ]
     if "dqs1_followup_queue" in artifacts:
         operator_commands.update(
             {
