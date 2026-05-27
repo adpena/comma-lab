@@ -2424,6 +2424,215 @@ def test_json_false_authority_explicit_false_or_missing_override_is_exact(
     assert _condition_passes(condition, repo_root=tmp_path) is True
 
 
+def test_json_false_authority_rejects_receiver_contract_without_live_proof(
+    tmp_path: Path,
+) -> None:
+    advisory = tmp_path / "advisory.json"
+    archive = _postcondition_artifact(tmp_path / "candidate.zip", b"candidate")
+    advisory.write_text(
+        json.dumps(
+            {
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "candidate_archive": archive,
+                "receiver_contract_satisfied": True,
+                "receiver_verification": {
+                    "receiver_contract_satisfied": True,
+                    "proof_present": True,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    condition = {
+        "type": "json_false_authority",
+        "path": advisory.name,
+    }
+
+    assert _condition_passes(condition, repo_root=tmp_path) is False
+
+
+def test_json_false_authority_accepts_receiver_contract_with_live_proof(
+    tmp_path: Path,
+) -> None:
+    advisory = tmp_path / "advisory.json"
+    archive = _postcondition_artifact(tmp_path / "candidate.zip", b"candidate")
+    proof = tmp_path / "receiver_proof.json"
+    proof.write_text(
+        json.dumps(
+            {
+                "schema": "family_agnostic_runtime_consumption_proof_v1",
+                "candidate_archive": archive,
+                "receiver_contract_satisfied": True,
+                "runtime_consumption_proof_passed": True,
+                "passed": True,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    advisory.write_text(
+        json.dumps(
+            {
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "candidate_archive": archive,
+                "receiver_contract_satisfied": True,
+                "runtime_consumption_proof_path": proof.name,
+                "receiver_verification": {
+                    "receiver_contract_satisfied": True,
+                    "proof_present": True,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    condition = {
+        "type": "json_false_authority",
+        "path": advisory.name,
+    }
+
+    assert _condition_passes(condition, repo_root=tmp_path) is True
+
+
+def test_json_false_authority_rejects_receiver_proof_authority_leak(
+    tmp_path: Path,
+) -> None:
+    advisory = tmp_path / "advisory.json"
+    archive = _postcondition_artifact(tmp_path / "candidate.zip", b"candidate")
+    proof = tmp_path / "receiver_proof.json"
+    proof.write_text(
+        json.dumps(
+            {
+                "schema": "family_agnostic_runtime_consumption_proof_v1",
+                "candidate_archive": archive,
+                "receiver_contract_satisfied": True,
+                "runtime_consumption_proof_passed": True,
+                "passed": True,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": True,
+            }
+        ),
+        encoding="utf-8",
+    )
+    advisory.write_text(
+        json.dumps(
+            {
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "candidate_archive": archive,
+                "receiver_contract_satisfied": True,
+                "runtime_consumption_proof_path": proof.name,
+                "receiver_verification": {
+                    "receiver_contract_satisfied": True,
+                    "proof_present": True,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    condition = {
+        "type": "json_false_authority",
+        "path": advisory.name,
+    }
+
+    assert _condition_passes(condition, repo_root=tmp_path) is False
+
+
+def test_json_false_authority_rejects_receiver_proof_archive_mismatch(
+    tmp_path: Path,
+) -> None:
+    advisory = tmp_path / "advisory.json"
+    archive = _postcondition_artifact(tmp_path / "candidate.zip", b"candidate")
+    other_archive = _postcondition_artifact(tmp_path / "other.zip", b"other")
+    proof = tmp_path / "receiver_proof.json"
+    proof.write_text(
+        json.dumps(
+            {
+                "schema": "family_agnostic_runtime_consumption_proof_v1",
+                "candidate_archive": other_archive,
+                "receiver_contract_satisfied": True,
+                "runtime_consumption_proof_passed": True,
+                "passed": True,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    advisory.write_text(
+        json.dumps(
+            {
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "candidate_archive": archive,
+                "receiver_contract_satisfied": True,
+                "runtime_consumption_proof_path": proof.name,
+                "receiver_verification": {
+                    "receiver_contract_satisfied": True,
+                    "proof_present": True,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    condition = {
+        "type": "json_false_authority",
+        "path": advisory.name,
+    }
+
+    assert _condition_passes(condition, repo_root=tmp_path) is False
+
+
+def test_jsonl_false_authority_rejects_custody_row_with_only_proof_present(
+    tmp_path: Path,
+) -> None:
+    advisory = tmp_path / "observations.jsonl"
+    archive = _postcondition_artifact(tmp_path / "candidate.zip", b"candidate")
+    advisory.write_text(
+        json.dumps(
+            {
+                "schema": "mlx_dynamic_sweep_observation.v1",
+                "score_claim": False,
+                "score_claim_valid": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "promotable": False,
+                "ready_for_exact_eval_dispatch": False,
+                "candidate_archive": archive,
+                "receiver_contract_satisfied": True,
+                "receiver_verification": {
+                    "receiver_contract_satisfied": True,
+                    "proof_present": True,
+                },
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    condition = {
+        "type": "jsonl_false_authority",
+        "path": advisory.name,
+        "schema_equals": "mlx_dynamic_sweep_observation.v1",
+    }
+
+    assert _condition_passes(condition, repo_root=tmp_path) is False
+
+
 def test_json_array_contains_postcondition_checks_dotted_list_value(
     tmp_path: Path,
 ) -> None:
@@ -2595,6 +2804,74 @@ def test_json_completion_contract_required_runtime_identity_is_fail_closed(
     opt_out["required_runtime_adapter_identity"] = False
     manifest.write_text(json.dumps(runtime), encoding="utf-8")
     assert _condition_passes(opt_out, repo_root=tmp_path) is True
+
+
+def test_json_completion_contract_rejects_receiver_contract_without_live_proof(
+    tmp_path: Path,
+) -> None:
+    manifest = tmp_path / "manifest.json"
+    archive = _postcondition_artifact(tmp_path / "candidate.zip", b"candidate")
+    condition = {
+        "type": "json_completion_contract",
+        "path": manifest.name,
+        "required_true": ["receiver_contract_satisfied"],
+    }
+    manifest.write_text(
+        json.dumps(
+            {
+                "candidate_archive": archive,
+                "receiver_contract_satisfied": True,
+                "receiver_verification": {
+                    "receiver_contract_satisfied": True,
+                    "proof_present": True,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert _condition_passes(condition, repo_root=tmp_path) is False
+
+
+def test_json_completion_contract_accepts_receiver_contract_with_live_proof(
+    tmp_path: Path,
+) -> None:
+    manifest = tmp_path / "manifest.json"
+    archive = _postcondition_artifact(tmp_path / "candidate.zip", b"candidate")
+    proof = tmp_path / "receiver_proof.json"
+    proof.write_text(
+        json.dumps(
+            {
+                "schema": "family_agnostic_runtime_consumption_proof_v1",
+                "candidate_archive": archive,
+                "receiver_contract_satisfied": True,
+                "runtime_consumption_proof_passed": True,
+                "passed": True,
+            }
+        ),
+        encoding="utf-8",
+    )
+    condition = {
+        "type": "json_completion_contract",
+        "path": manifest.name,
+        "required_true": ["receiver_contract_satisfied"],
+    }
+    manifest.write_text(
+        json.dumps(
+            {
+                "candidate_archive": archive,
+                "receiver_contract_satisfied": True,
+                "runtime_consumption_proof_path": proof.name,
+                "receiver_verification": {
+                    "receiver_contract_satisfied": True,
+                    "proof_present": True,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert _condition_passes(condition, repo_root=tmp_path) is True
 
 
 def test_materializer_chain_complete_allows_downstream_readiness_blockers(

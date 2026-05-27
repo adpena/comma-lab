@@ -13,6 +13,7 @@ from pathlib import Path
 from posixpath import normpath
 from typing import Any
 
+from tac.optimization.proxy_candidate_contract import truthy_authority_field_violations
 from tac.optimization.runtime_adapter_identity import runtime_adapter_identity_blockers
 
 QUEUE_SCHEMA = "experiment_queue.v1"
@@ -65,6 +66,23 @@ SCHEDULER_RUNTIME_POLICY_FORBIDDEN_AUTHORITY_FIELDS = tuple(
             *DEFAULT_FALSE_OR_MISSING_AUTHORITY_FIELDS,
         )
     )
+)
+RUNTIME_PROOF_PATH_FIELDS = (
+    "runtime_consumption_proof_path",
+    "full_frame_inflate_parity_proof_path",
+    "renderer_payload_dfl1_full_frame_inflate_parity_proof_path",
+    "proof_path",
+)
+RUNTIME_PROOF_MAPPING_FIELDS = (
+    "runtime_consumption_proof",
+    "full_frame_inflate_parity_proof",
+    "proof",
+)
+PROOF_SUCCESS_FIELDS = (
+    "passed",
+    "runtime_consumption_proof_passed",
+    "full_frame_inflate_parity_satisfied",
+    "source_runtime_unpacker_parse_satisfied",
 )
 
 
@@ -1140,6 +1158,218 @@ def _artifact_record_valid(record: Any, *, repo_root: Path) -> bool:
     return path.stat().st_size == expected_bytes and _sha256_file(path) == str(expected_sha).lower()
 
 
+def _candidate_archive_record(payload: Mapping[str, Any]) -> dict[str, Any]:
+    candidate = payload.get("candidate_archive")
+    out: dict[str, Any] = dict(candidate) if isinstance(candidate, Mapping) else {}
+    for source_key, target_key in (
+        ("candidate_archive_path", "path"),
+        ("archive_path", "path"),
+        ("candidate_archive_bytes", "bytes"),
+        ("archive_bytes", "bytes"),
+        ("candidate_archive_sha256", "sha256"),
+        ("archive_sha256", "sha256"),
+    ):
+        if target_key not in out and source_key in payload:
+            out[target_key] = payload[source_key]
+    return {key: value for key, value in out.items() if value not in (None, "")}
+
+
+def _candidate_archive_sha256(payload: Mapping[str, Any]) -> str | None:
+    value = _candidate_archive_record(payload).get("sha256")
+    if _is_sha256(value):
+        return str(value).strip().lower()
+    return None
+
+
+def _runtime_proof_records(payload: Mapping[str, Any]) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+
+    def add_from_mapping(mapping: Mapping[str, Any], *, nested_receiver: bool = False) -> None:
+        for path_key in RUNTIME_PROOF_PATH_FIELDS:
+            path_value = mapping.get(path_key)
+            if not isinstance(path_value, str) or not path_value.strip():
+                continue
+            base = path_key[: -len("_path")] if path_key.endswith("_path") else path_key
+            record: dict[str, Any] = {"path": path_value}
+            for source_key, target_key in (
+                (f"{base}_bytes", "bytes"),
+                (f"{base}_sha256", "sha256"),
+                ("proof_bytes", "bytes"),
+                ("proof_sha256", "sha256"),
+            ):
+                if target_key not in record and source_key in mapping:
+                    record[target_key] = mapping[source_key]
+            records.append(record)
+        for mapping_key in RUNTIME_PROOF_MAPPING_FIELDS:
+            value = mapping.get(mapping_key)
+            if isinstance(value, Mapping):
+                record = _candidate_archive_record(value)
+                if "path" in value:
+                    record["path"] = value["path"]
+                if record:
+                    records.append(record)
+        receiver = mapping.get("receiver_verification")
+        if isinstance(receiver, Mapping) and not nested_receiver:
+            add_from_mapping(receiver, nested_receiver=True)
+
+    add_from_mapping(payload)
+    return records
+
+
+def _proof_candidate_archive_sha256(proof: Mapping[str, Any]) -> str | None:
+    candidate_archive = proof.get("candidate_archive")
+    if isinstance(candidate_archive, Mapping) and _is_sha256(candidate_archive.get("sha256")):
+        return str(candidate_archive["sha256"]).strip().lower()
+    for key in ("candidate_archive_sha256", "archive_sha256"):
+        if _is_sha256(proof.get(key)):
+            return str(proof[key]).strip().lower()
+    return None
+
+
+def _json_mapping_file(path: Path) -> Mapping[str, Any] | None:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    return payload if isinstance(payload, Mapping) else None
+
+
+def _proof_record_valid(
+    record: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    expected_candidate_archive_sha256: str | None,
+    require_runtime_identity: bool,
+) -> bool:
+    path_value = record.get("path")
+    if not isinstance(path_value, str) or not path_value.strip():
+        return False
+    path = _resolve_postcondition_path(path_value, repo_root=repo_root)
+    if path.is_symlink() or not path.is_file() or path.suffix != ".json":
+        return False
+    expected_bytes = record.get("bytes")
+    if expected_bytes is not None:
+        parsed_bytes = _positive_int(expected_bytes)
+        if parsed_bytes is None or path.stat().st_size != parsed_bytes:
+            return False
+    expected_sha = record.get("sha256")
+    if expected_sha is not None and (
+        not _is_sha256(expected_sha) or _sha256_file(path) != str(expected_sha).strip().lower()
+    ):
+        return False
+    proof = _json_mapping_file(path)
+    if proof is None:
+        return False
+    if isinstance(proof.get("blockers"), list) and proof["blockers"]:
+        return False
+    if truthy_authority_field_violations(proof):
+        return False
+    if not any(proof.get(key) is True for key in PROOF_SUCCESS_FIELDS):
+        return False
+    if expected_candidate_archive_sha256 is not None:
+        proof_archive_sha = _proof_candidate_archive_sha256(proof)
+        if proof_archive_sha != expected_candidate_archive_sha256:
+            return False
+    runtime_manifest = proof.get("runtime_adapter_manifest")
+    proof_claims_runtime = proof.get("runtime_adapter_ready") is True or (
+        isinstance(runtime_manifest, Mapping)
+        and runtime_manifest.get("runtime_adapter_ready") is True
+    )
+    if require_runtime_identity:
+        if runtime_adapter_identity_blockers(
+            proof,
+            repo_root=repo_root,
+            context="postcondition_proof",
+            require_claimed=True,
+        ):
+            return False
+    elif proof_claims_runtime and runtime_adapter_identity_blockers(
+        proof,
+        repo_root=repo_root,
+        context="postcondition_proof",
+    ):
+        return False
+    for key in ("passed", "runtime_consumption_proof_passed", "receiver_contract_satisfied"):
+        if key in proof and proof.get(key) is not True:
+            return False
+    return True
+
+
+def _payload_claims_receiver_runtime_custody(payload: Mapping[str, Any]) -> bool:
+    receiver = payload.get("receiver_verification")
+    if isinstance(receiver, Mapping):
+        if (
+            receiver.get("receiver_contract_satisfied") is True
+            or receiver.get("proof_present") is True
+        ):
+            return True
+        if _runtime_proof_records(receiver):
+            return True
+    if _runtime_proof_records(payload):
+        return True
+    return any(payload.get(key) is True for key in ("receiver_contract_satisfied", "proof_present"))
+
+
+def _runtime_adapter_ready_claim_valid(payload: Mapping[str, Any], *, repo_root: Path) -> bool:
+    receiver = payload.get("receiver_verification")
+    receiver = receiver if isinstance(receiver, Mapping) else {}
+    if payload.get("runtime_adapter_ready") is not True and receiver.get("runtime_adapter_ready") is not True:
+        return True
+    return not runtime_adapter_identity_blockers(
+        payload,
+        repo_root=repo_root,
+        context="postcondition_runtime_adapter",
+        require_claimed=True,
+    )
+
+
+def _receiver_runtime_custody_valid(
+    payload: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    require_claimed: bool = False,
+    require_runtime_identity: bool = False,
+) -> bool:
+    if not _payload_claims_receiver_runtime_custody(payload) and not require_claimed:
+        return True
+    if not _artifact_record_valid(_candidate_archive_record(payload), repo_root=repo_root):
+        return False
+    receiver = payload.get("receiver_verification")
+    receiver = receiver if isinstance(receiver, Mapping) else {}
+    if isinstance(receiver.get("blockers"), list) and receiver["blockers"]:
+        return False
+    if (
+        payload.get("receiver_contract_satisfied") is not True
+        and receiver.get("receiver_contract_satisfied") is not True
+    ):
+        return False
+    proof_records = _runtime_proof_records(payload)
+    if not proof_records:
+        return False
+    proof_require_runtime_identity = (
+        require_runtime_identity
+        or payload.get("runtime_adapter_ready") is True
+        or receiver.get("runtime_adapter_ready") is True
+    )
+    if runtime_adapter_identity_blockers(
+        payload,
+        repo_root=repo_root,
+        context="postcondition_payload",
+        require_claimed=require_runtime_identity,
+    ):
+        return False
+    expected_archive_sha = _candidate_archive_sha256(payload)
+    return all(
+        _proof_record_valid(
+            record,
+            repo_root=repo_root,
+            expected_candidate_archive_sha256=expected_archive_sha,
+            require_runtime_identity=proof_require_runtime_identity,
+        )
+        for record in proof_records
+    )
+
+
 def _false_authority_payload_valid(
     payload: Mapping[str, Any],
     *,
@@ -1203,6 +1433,10 @@ def _jsonl_false_authority_valid(
                 required_false=required_false,
                 false_or_missing=false_or_missing,
             ):
+                return False
+            if not _receiver_runtime_custody_valid(payload, repo_root=repo_root):
+                return False
+            if not _runtime_adapter_ready_claim_valid(payload, repo_root=repo_root):
                 return False
             seen_rows += 1
     return seen_rows > 0 if require_nonempty else True
@@ -1333,6 +1567,31 @@ def _json_completion_contract(
         repo_root=repo_root,
         context="json_completion_contract",
         require_claimed=True,
+    ):
+        return False
+    if not _runtime_adapter_ready_claim_valid(payload, repo_root=repo_root):
+        return False
+    require_archive_runtime_receiver_custody = condition.get("required_archive_runtime_receiver_custody") is True
+    require_archive_runtime_custody = condition.get("required_archive_runtime_custody") is True
+    require_receiver_custody = condition.get("required_receiver_custody") is True
+    if (
+        require_archive_runtime_receiver_custody
+        or require_archive_runtime_custody
+        or require_receiver_custody
+        or _payload_claims_receiver_runtime_custody(payload)
+    ) and not _receiver_runtime_custody_valid(
+        payload,
+        repo_root=repo_root,
+        require_claimed=(
+            require_archive_runtime_receiver_custody
+            or require_archive_runtime_custody
+            or require_receiver_custody
+        ),
+        require_runtime_identity=(
+            require_archive_runtime_receiver_custody
+            or require_archive_runtime_custody
+            or bool(condition.get("required_runtime_adapter_identity"))
+        ),
     ):
         return False
     for index, raw_pair in enumerate(condition.get("required_less_than", []) or []):
@@ -1485,6 +1744,10 @@ def _condition_passes(condition: Mapping[str, Any], *, repo_root: Path) -> bool:
             required_false=required_false,
             false_or_missing=false_or_missing,
         ):
+            return False
+        if not _receiver_runtime_custody_valid(payload, repo_root=repo_root):
+            return False
+        if not _runtime_adapter_ready_claim_valid(payload, repo_root=repo_root):
             return False
         axis_key = condition.get("axis_key")
         if axis_key is not None:
