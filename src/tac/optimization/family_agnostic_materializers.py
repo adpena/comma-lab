@@ -22,6 +22,15 @@ from typing import Any
 
 import brotli
 
+from tac.optimization.materializer_schemas import (
+    ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
+    ARCHIVE_ZIP_REPACK_SCHEMA,
+    PACKET_MEMBER_MERGE_SCHEMA,
+    PACKET_MEMBER_RECOMPRESS_SCHEMA,
+    PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
+    RENDERER_PAYLOAD_DFL1_SCHEMA,
+    TENSOR_FACTORIZE_SCHEMA,
+)
 from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
     require_no_truthy_authority_fields,
@@ -30,15 +39,14 @@ from tac.optimization.runtime_adapter_identity import runtime_adapter_identity_b
 from tac.optimization.serialized_archive_economics import (
     build_serialized_archive_delta_contract,
 )
-from tac.repo_io import read_json, sha256_bytes, sha256_file, write_bytes_artifact, write_json_artifact
+from tac.repo_io import (
+    read_json,
+    sha256_bytes,
+    sha256_file,
+    write_bytes_artifact,
+    write_json_artifact,
+)
 
-ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA = "archive_section_entropy_recode_candidate.v1"
-ARCHIVE_ZIP_REPACK_SCHEMA = "archive_zip_repack_candidate.v1"
-PACKET_MEMBER_RECOMPRESS_SCHEMA = "packet_member_recompress_candidate.v1"
-PACKET_MEMBER_MERGE_SCHEMA = "packet_member_merge_candidate.v1"
-RENDERER_PAYLOAD_DFL1_SCHEMA = "renderer_payload_dfl1_candidate.v1"
-PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA = "packet_member_zip_header_elide_candidate.v1"
-TENSOR_FACTORIZE_SCHEMA = "tensor_factorize_candidate.v1"
 RUNTIME_CONSUMPTION_PROOF_SCHEMA = "family_agnostic_runtime_consumption_proof_v1"
 ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND = "archive_section_entropy_recode_v1"
 ARCHIVE_ZIP_REPACK_TARGET_KIND = "archive_zip_repack_v1"

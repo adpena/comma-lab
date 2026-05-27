@@ -12,6 +12,9 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+from tac.optimization.materializer_schemas import (
+    MATERIALIZER_RECEIVER_FEEDBACK_ARTIFACT_SCHEMAS,
+)
 from tac.optimization.proxy_candidate_contract import truthy_authority_field_violations
 
 from .experiment_queue import (
@@ -112,14 +115,6 @@ FALSE_AUTHORITY: dict[str, bool] = {
     "contest_cuda_auth_eval": False,
     "promotable": False,
 }
-
-MATERIALIZER_RECEIVER_FEEDBACK_ARTIFACT_SCHEMAS = frozenset(
-    {
-        "archive_section_entropy_recode_candidate.v1",
-        "archive_zip_repack_candidate.v1",
-        "byte_range_entropy_recode_verified_candidate.v1",
-    }
-)
 
 ACTION_EXECUTE_FEEDBACK_FOLLOWUP = "execute_feedback_followup_queue"
 ACTION_RUN_NEXT_ITERATION = "run_next_materializer_campaign_iteration"

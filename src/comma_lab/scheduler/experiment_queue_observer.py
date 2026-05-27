@@ -27,6 +27,9 @@ from tac.optimization.materializer_feedback import (
     MATERIALIZER_FALSE_AUTHORITY,
     materializer_archive_delta,
 )
+from tac.optimization.materializer_schemas import (
+    FAMILY_AGNOSTIC_MATERIALIZER_CANDIDATE_SCHEMAS,
+)
 from tac.optimization.proxy_candidate_contract import truthy_authority_field_violations
 from tac.optimization.runtime_adapter_identity import (
     runtime_adapter_identity_blockers,
@@ -41,17 +44,6 @@ OPTIMIZER_CANDIDATE_QUEUE_SCHEMA = "optimizer_candidate_queue_v1"
 PR95_MLX_PACKAGE_SCHEMA = "pr95_mlx_pytorch_state_dict_to_contest_archive.v1"
 PR95_MLX_LONG_TRAINING_PLAN_SCHEMA = "pr95_mlx_long_training_plan.v1"
 HINTON_MLX_LONG_TRAINING_SMOKE_SCHEMA = "hinton_mlx_long_training_smoke_verdict.v1"
-FAMILY_AGNOSTIC_MATERIALIZER_CANDIDATE_SCHEMAS = frozenset(
-    {
-        "archive_section_entropy_recode_candidate.v1",
-        "archive_zip_repack_candidate.v1",
-        "packet_member_merge_candidate.v1",
-        "packet_member_recompress_candidate.v1",
-        "packet_member_zip_header_elide_candidate.v1",
-        "renderer_payload_dfl1_candidate.v1",
-        "tensor_factorize_candidate.v1",
-    }
-)
 REQUIRED_MATERIALIZER_FEEDBACK_FALSE_AUTHORITY_FIELDS = (
     "score_claim",
     "promotion_eligible",

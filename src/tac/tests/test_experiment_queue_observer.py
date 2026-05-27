@@ -1244,6 +1244,14 @@ def test_observer_surfaces_succeeded_single_family_materializer_manifests(
             "section_recode",
         ),
         (
+            "archive_zip_repack",
+            "archive_zip_repack_candidate.v1",
+            "archive_zip_repack_v1",
+            "archive_zip_repack_adapter",
+            "family_agnostic_archive_zip_repack",
+            "selected_repack",
+        ),
+        (
             "packet_member_merge",
             "packet_member_merge_candidate.v1",
             "packet_member_merge_v1",
