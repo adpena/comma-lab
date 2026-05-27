@@ -176,6 +176,12 @@ def test_cli_preserves_heuristic_without_master_gradient_anchor(monkeypatch, tmp
     assert sidecar["determinism"]["seed"] == 20260527
     assert sidecar["determinism"]["numpy_seeded"] is True
     assert "--call-id" in sidecar["argv"]
+    replay = json.loads(out.with_suffix(".npy.replay_bundle.json").read_text(encoding="utf-8"))
+    assert replay["schema"] == "mlx_master_gradient_replay_bundle.v1"
+    assert replay["output"]["npy_sha256"] == sidecar["npy_sha256"]
+    assert replay["environment"]["schema"] == "safe_replay_environment_capture.v1"
+    assert replay["calibration_gate"]["ready_for_exact_eval_dispatch"] is False
+    assert "contest_cpu_or_cuda_auth_axis_payload_missing" in replay["calibration_gate"]["blockers"]
     assert "source_runtime_full_frame_parity_missing" in sidecar["master_gradient_anchor_blockers"]
     assert sidecar["score_claim"] is False
     assert sidecar["ready_for_exact_eval_dispatch"] is False
@@ -248,3 +254,36 @@ def test_cli_writes_mlx_manifest_as_false_authority(monkeypatch, tmp_path: Path)
     assert row["master_gradient_anchor_written"] is False
     assert row["npy_sha256"] == hashlib.sha256((tmp_path / "gradient.npy").read_bytes()).hexdigest()
     assert row["determinism"]["seed"] == 20260527
+    assert row["replay_bundle_sha256"]
+    assert row["calibration_gate"]["ready_for_exact_eval_dispatch"] is False
+
+
+def test_mlx_replay_diff_reports_hash_and_env_mismatch(tmp_path: Path) -> None:
+    tool_path = REPO_ROOT / "tools" / "diff_mlx_master_gradient_replay.py"
+    spec = importlib.util.spec_from_file_location("diff_mlx_master_gradient_replay_under_test", tool_path)
+    assert spec is not None and spec.loader is not None
+    tool = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(tool)
+
+    left = {
+        "schema": "mlx_master_gradient_replay_bundle.v1",
+        "archive": {"sha256": "a" * 64},
+        "output": {"npy_sha256": "b" * 64, "npy_shape": [5, 2, 3]},
+        "determinism": {"seed": 20260527},
+        "git_head": "abc123",
+        "environment": {"env": {"PYTHONHASHSEED": "0"}},
+        "calibration_gate": {"ready_for_exact_eval_dispatch": False},
+    }
+    right = json.loads(json.dumps(left))
+
+    matched = tool.diff_replay_payloads(left, right)
+    assert matched["matched"] is True
+    assert matched["score_claim"] is False
+
+    right["output"]["npy_sha256"] = "c" * 64
+    right["environment"]["env"]["PYTHONHASHSEED"] = "1"
+    diff = tool.diff_replay_payloads(left, right)
+
+    assert diff["matched"] is False
+    assert "output.npy_sha256" in diff["mismatches"]
+    assert diff["changed_environment_keys"] == ["PYTHONHASHSEED"]

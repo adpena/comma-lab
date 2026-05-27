@@ -35,6 +35,7 @@ import fcntl
 import hashlib
 import json
 import os
+import platform
 import subprocess
 import sys
 from collections.abc import Sequence
@@ -60,6 +61,24 @@ from tac.master_gradient_mlx_extractor import (  # noqa: E402
     build_mlx_master_gradient_anchor,
     extract_mlx_per_pair_master_gradient,
     mlx_master_gradient_anchor_blockers,
+)
+
+REPLAY_BUNDLE_SCHEMA = "mlx_master_gradient_replay_bundle.v1"
+REPLAY_ENV_REDACT_TOKENS = (
+    "AUTH",
+    "COOKIE",
+    "CREDENTIAL",
+    "KEY",
+    "PASS",
+    "PASSWORD",
+    "SECRET",
+    "SESSION",
+    "TOKEN",
+)
+MLX_RESEARCH_SIGNAL_CALIBRATION_BLOCKERS = (
+    "mlx_research_signal_not_score_or_dispatch_authority",
+    "contest_cpu_or_cuda_auth_axis_payload_missing",
+    "contest_axis_calibration_required_before_rank_kill_or_spend_authority",
 )
 
 
@@ -132,6 +151,80 @@ def _set_best_effort_determinism(seed: int) -> dict[str, object]:
             "output hashes are recorded for rerun comparison."
         ),
     }
+
+
+def _capture_environment() -> dict[str, object]:
+    captured: dict[str, str] = {}
+    redacted: list[str] = []
+    for key, value in sorted(os.environ.items()):
+        upper_key = key.upper()
+        if any(token in upper_key for token in REPLAY_ENV_REDACT_TOKENS):
+            captured[key] = "[REDACTED]"
+            redacted.append(key)
+        else:
+            captured[key] = value
+    return {
+        "schema": "safe_replay_environment_capture.v1",
+        "policy": (
+            "all environment keys captured for replay diagnostics; values for "
+            "credential-like keys are redacted before writing artifacts"
+        ),
+        "env": captured,
+        "redacted_keys": redacted,
+    }
+
+
+def _write_replay_bundle(
+    *,
+    bundle_path: Path,
+    sidecar: dict[str, object],
+    sidecar_path: Path,
+    sidecar_sha256: str,
+    argv_for_manifest: Sequence[str],
+    environment: dict[str, object],
+) -> tuple[Path, str]:
+    bundle_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "schema": REPLAY_BUNDLE_SCHEMA,
+        "generated_at_utc": _utc_now(),
+        "tool": "tools/extract_master_gradient_mlx.py",
+        "canonical_helper": sidecar["canonical_helper"],
+        "cwd": str(REPO_ROOT),
+        "argv": list(argv_for_manifest),
+        "python": {
+            "executable": sys.executable,
+            "version": sys.version,
+            "platform": platform.platform(),
+        },
+        "environment": environment,
+        "git_head": sidecar.get("git_head"),
+        "git_status_short": sidecar.get("git_status_short"),
+        "archive": {
+            "path": sidecar["archive_path"],
+            "sha256": sidecar["archive_sha256"],
+            "bytes": sidecar["archive_bytes_count"],
+        },
+        "output": {
+            "npy_path": sidecar["npy_path"],
+            "npy_sha256": sidecar["npy_sha256"],
+            "npy_shape": sidecar["npy_shape"],
+            "sidecar_path": str(sidecar_path),
+            "sidecar_sha256": sidecar_sha256,
+        },
+        "determinism": sidecar["determinism"],
+        "calibration_gate": {
+            "schema": "mlx_research_signal_to_contest_dispatch_calibration_gate.v1",
+            "evidence_tag": EVIDENCE_TAG_MLX,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "target_contest_axes": ["contest-CPU", "contest-CUDA"],
+            "blockers": list(MLX_RESEARCH_SIGNAL_CALIBRATION_BLOCKERS),
+        },
+    }
+    bundle_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return bundle_path, _sha256_file(bundle_path)
 
 
 def _locked_save_npy(out_path: Path, arr: np.ndarray) -> None:
@@ -260,6 +353,20 @@ def main(argv: Sequence[str] | None = None) -> int:
         default=None,
         help="Optional extraction call id / run label for the master-gradient anchor.",
     )
+    parser.add_argument(
+        "--replay-bundle-path",
+        type=Path,
+        default=None,
+        help=(
+            "Replay bundle JSON path. Defaults to <out>.replay_bundle.json and "
+            "records argv/env/hash custody for deterministic rerun diffing."
+        ),
+    )
+    parser.add_argument(
+        "--no-replay-bundle",
+        action="store_true",
+        help="Skip replay bundle emission (tests/scratch only).",
+    )
     parser.add_argument("--verbose", action="store_true", help="Per-tensor FD progress logging.")
     argv_for_manifest = list(argv) if argv is not None else sys.argv[1:]
     args = parser.parse_args(argv)
@@ -272,6 +379,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         raise SystemExit("--pair-batch-size must be positive")
 
     determinism = _set_best_effort_determinism(args.seed)
+    environment = _capture_environment()
 
     try:
         result = extract_mlx_per_pair_master_gradient(
@@ -351,12 +459,23 @@ def main(argv: Sequence[str] | None = None) -> int:
         "codec_grammar": result.metadata["codec_grammar"],
         "captured_at_utc": captured_at_utc,
         "determinism": determinism,
+        "environment": environment,
         "argv": argv_for_manifest,
         "git_head": _git_output(["rev-parse", "HEAD"]),
         "git_status_short": _git_output(["status", "--short"]),
         "master_gradient_anchor_path": str(args.anchor_jsonl),
         "master_gradient_anchor_written": anchor_written,
         "master_gradient_anchor_blockers": anchor_blockers,
+        "calibration_gate": {
+            "schema": "mlx_research_signal_to_contest_dispatch_calibration_gate.v1",
+            "evidence_tag": EVIDENCE_TAG_MLX,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "target_contest_axes": ["contest-CPU", "contest-CUDA"],
+            "blockers": list(MLX_RESEARCH_SIGNAL_CALIBRATION_BLOCKERS),
+        },
         "tool": "tools/extract_master_gradient_mlx.py",
         "canonical_helper": "tac.master_gradient_mlx_extractor.extract_mlx_per_pair_master_gradient",
         "non_promotable_note": (
@@ -375,6 +494,22 @@ def main(argv: Sequence[str] | None = None) -> int:
             sidecar_path.write_text(json.dumps(sidecar, indent=2, sort_keys=True) + "\n")
         finally:
             fcntl.flock(lock_fh.fileno(), fcntl.LOCK_UN)
+    sidecar_sha256 = _sha256_file(sidecar_path)
+
+    replay_bundle_path: Path | None = None
+    replay_bundle_sha256: str | None = None
+    if not args.no_replay_bundle:
+        replay_bundle_path = args.replay_bundle_path or args.out.with_suffix(
+            args.out.suffix + ".replay_bundle.json"
+        )
+        replay_bundle_path, replay_bundle_sha256 = _write_replay_bundle(
+            bundle_path=replay_bundle_path,
+            sidecar=sidecar,
+            sidecar_path=sidecar_path,
+            sidecar_sha256=sidecar_sha256,
+            argv_for_manifest=argv_for_manifest,
+            environment=environment,
+        )
 
     # Append the NON-PROMOTABLE manifest row to the canonical MLX research-signal posterior.
     if not args.no_manifest:
@@ -408,6 +543,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             "master_gradient_anchor_blockers": anchor_blockers,
             "captured_at_utc": sidecar["captured_at_utc"],
             "determinism": determinism,
+            "environment": environment,
+            "replay_bundle_path": str(replay_bundle_path) if replay_bundle_path else None,
+            "replay_bundle_sha256": replay_bundle_sha256,
+            "calibration_gate": sidecar["calibration_gate"],
             "git_head": sidecar["git_head"],
         }
         _append_jsonl_locked(manifest_row, output_path=args.manifest_jsonl)
@@ -418,6 +557,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "out": str(args.out),
                 "sidecar": str(sidecar_path),
                 "npy_sha256": npy_sha256,
+                "replay_bundle": str(replay_bundle_path) if replay_bundle_path else None,
+                "replay_bundle_sha256": replay_bundle_sha256,
                 "shape": list(result.per_pair_per_byte.shape),
                 "archive_sha256": result.archive_sha256[:24],
                 "n_pairs_used": result.n_pairs_used,
