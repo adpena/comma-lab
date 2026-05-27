@@ -187,6 +187,20 @@ def _patch_runtime_module(path: Path, *, scale: int, alpha: int) -> None:
     path.write_text(text, encoding="utf-8")
 
 
+def _patch_inflate_no_bytecode(path: Path) -> None:
+    text = path.read_text(encoding="utf-8")
+    if "PYTHONDONTWRITEBYTECODE" in text:
+        return
+    lines = text.splitlines(keepends=True)
+    export_line = "export PYTHONDONTWRITEBYTECODE=1\n"
+    if lines and lines[0].startswith("#!"):
+        lines.insert(1, export_line)
+        patched = "".join(lines)
+    else:
+        patched = export_line + text
+    path.write_text(patched, encoding="utf-8")
+
+
 def _write_stored_archive(archive_path: Path, *, member_name: str, payload: bytes) -> None:
     info = zipfile.ZipInfo(member_name)
     info.compress_type = zipfile.ZIP_STORED
@@ -260,6 +274,7 @@ def build_feca_selector_reparameterized_candidate(
         candidate_dir,
         ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
     )
+    _patch_inflate_no_bytecode(candidate_dir / "inflate.sh")
 
     source_archive = source_dir / "archive.zip"
     candidate_archive = candidate_dir / "archive.zip"
