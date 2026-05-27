@@ -3417,6 +3417,7 @@ def test_operator_briefing_surfaces_repair_waterfill_action_functional_queue(
     mod = _load_briefing_module()
     refresh_dir = tmp_path / "repair_refresh"
     repair_queue = refresh_dir / "repair_budget_waterfill_queue.json"
+    repair_score_queue = refresh_dir / "repair_campaign_score_queue.json"
     autonomous_queue = refresh_dir / "autonomous_chain_optimization_queue.json"
     _write_json(
         repair_queue,
@@ -3442,6 +3443,35 @@ def test_operator_briefing_surfaces_repair_waterfill_action_functional_queue(
                     "steps": [
                         {
                             "id": "inspect_missing_prerequisites",
+                            "kind": "command",
+                            "command": [".venv/bin/python", "-m", "json.tool", "{}"],
+                        }
+                    ],
+                }
+            ],
+        },
+    )
+    _write_json(
+        repair_score_queue,
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "repair_score_unit",
+            "controls": {"mode": "running", "local_first": True},
+            "experiments": [
+                {
+                    "id": "score_repair_campaign_global",
+                    "status": "queued",
+                    "priority": 1,
+                    "metadata": {
+                        "queue_actuation_ready": True,
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                        "rank_or_kill_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    },
+                    "steps": [
+                        {
+                            "id": "score_then_run_stackability_learning",
                             "kind": "command",
                             "command": [".venv/bin/python", "-m", "json.tool", "{}"],
                         }
@@ -3493,6 +3523,7 @@ def test_operator_briefing_surfaces_repair_waterfill_action_functional_queue(
                     refresh_dir / "rate_budget_preservation_plan.json"
                 ),
                 "repair_budget_waterfill_queue": str(repair_queue),
+                "repair_campaign_score_queue": str(repair_score_queue),
                 "autonomous_chain_optimization_queue": str(autonomous_queue),
                 "autonomous_chain_optimization": str(
                     refresh_dir / "autonomous_chain_optimization.json"
@@ -3551,6 +3582,7 @@ def test_operator_briefing_surfaces_repair_waterfill_action_functional_queue(
     assert summary["rate_budget_preservation_plan_count"] == 1
     assert summary["autonomous_chain_artifact_count"] == 1
     assert summary["repair_budget_waterfill_queue_count"] == 1
+    assert summary["repair_campaign_score_queue_count"] == 1
     assert summary["autonomous_chain_queue_count"] == 1
     assert summary["action_functional_queue_integrated_count"] == 1
     latest = summary["latest_refresh"]
@@ -3559,12 +3591,15 @@ def test_operator_briefing_surfaces_repair_waterfill_action_functional_queue(
     assert latest["concrete_repair_waterfill_action_count"] == 1
     assert latest["status"] == "AUTONOMOUS_CHAIN_QUEUE_BLOCKED"
     assert latest["repair_budget_waterfill_queue_status"] == "FROZEN"
+    assert latest["repair_campaign_score_queue_status"] == "READY_LOCAL_QUEUE"
+    assert latest["repair_campaign_score_queued_experiment_count"] == 1
     assert latest["autonomous_chain_optimization_queue_status"] == "FROZEN"
     assert latest["score_claim"] is False
     assert latest["ready_for_exact_eval_dispatch"] is False
     text = mod._format_frontier_feedback_cycle_summary()
     assert "rate_budget_preservation: True candidates=17 bytes=160" in text
     assert "repair_waterfill: actions=1 concrete=1 queue=FROZEN" in text
+    assert "repair_score: queue=READY_LOCAL_QUEUE queued=1 frozen=0" in text
 
 
 def test_pr95_mlx_control_profile_summary_surfaces_queue_profile(

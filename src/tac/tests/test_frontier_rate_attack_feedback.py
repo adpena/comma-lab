@@ -7346,6 +7346,109 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     assert work_order_payload_retry["skipped_identical_existing_artifact"] is True
 
 
+def test_autonomous_queue_repair_score_waits_for_waterfill_independent_of_action_order(
+    tmp_path: Path,
+) -> None:
+    def child_queue(queue_id: str) -> dict[str, object]:
+        return {
+            "schema": "experiment_queue.v1",
+            "queue_id": queue_id,
+            "controls": {"mode": "running"},
+            "metadata": _false_authority(),
+            "experiments": [
+                {
+                    "id": f"{queue_id}_exp",
+                    "priority": 1,
+                    "status": "queued",
+                    "metadata": _false_authority(),
+                    "steps": [
+                        {
+                            "id": "noop",
+                            "kind": "command",
+                            "command": [sys.executable, "-c", "print('ok')"],
+                            "resources": {"kind": "local_cpu"},
+                        }
+                    ],
+                }
+            ],
+        }
+
+    waterfill_queue_path = _write_json(
+        tmp_path / "repair_budget_waterfill_queue.json",
+        child_queue("repair_budget_waterfill_queue"),
+    )
+    score_queue_path = _write_json(
+        tmp_path / "repair_campaign_score_queue.json",
+        child_queue("repair_campaign_score_queue"),
+    )
+    autonomous_path = _write_json(
+        tmp_path / "autonomous_chain_optimization.json",
+        {
+            "schema": AUTONOMOUS_CHAIN_OPTIMIZATION_SCHEMA,
+            "rows": [
+                {
+                    "schema": AUTONOMOUS_CHAIN_OPTIMIZATION_ROW_SCHEMA,
+                    "chain_id": "reversed_repair_score_order",
+                    "scheduler_actions": [
+                        {
+                            "id": "score_first_in_input",
+                            "queue_artifact_key": "repair_campaign_score_queue",
+                            "bounded_local_execution": True,
+                            "advisory_only": False,
+                            **_false_authority(),
+                        },
+                        {
+                            "id": "waterfill_second_in_input",
+                            "queue_artifact_key": "repair_budget_waterfill_queue",
+                            "bounded_local_execution": True,
+                            "advisory_only": False,
+                            **_false_authority(),
+                        },
+                    ],
+                    **_false_authority(),
+                }
+            ],
+            **_false_authority(),
+        },
+    )
+
+    queue = build_frontier_autonomous_chain_optimization_queue(
+        repo_root=tmp_path,
+        autonomous_chain_optimization=json.loads(
+            autonomous_path.read_text(encoding="utf-8")
+        ),
+        autonomous_chain_optimization_path=autonomous_path,
+        artifact_paths_by_key={
+            "repair_budget_waterfill_queue": waterfill_queue_path,
+            "repair_campaign_score_queue": score_queue_path,
+        },
+        results_root=tmp_path / "results",
+        queue_id="unit_reversed_repair_score_order",
+    )
+
+    assert queue is not None
+    steps = queue["experiments"][0]["steps"]
+    waterfill_run_step = next(
+        step
+        for step in steps
+        if step["id"].startswith("run_")
+        and any(
+            str(item).endswith("repair_budget_waterfill_queue.json")
+            for item in step.get("command", [])
+        )
+    )
+    score_run_step = next(
+        step
+        for step in steps
+        if step["id"].startswith("run_")
+        and any(
+            str(item).endswith("repair_campaign_score_queue.json")
+            for item in step.get("command", [])
+        )
+    )
+    assert waterfill_run_step["id"] in score_run_step["requires"]
+
+
 def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Path) -> None:
     action_summary = _write_action_summary(tmp_path)
     artifact_root = tmp_path / "frontier_artifacts"

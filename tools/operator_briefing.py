@@ -1786,6 +1786,9 @@ def _frontier_feedback_refresh_row(path: Path) -> dict[str, object]:
     repair_waterfill_queue_path = str(
         artifacts.get("repair_budget_waterfill_queue") or ""
     )
+    repair_campaign_score_queue_path = str(
+        artifacts.get("repair_campaign_score_queue") or ""
+    )
     autonomous_chain_queue_path = str(
         artifacts.get("autonomous_chain_optimization_queue") or ""
     )
@@ -1794,6 +1797,9 @@ def _frontier_feedback_refresh_row(path: Path) -> dict[str, object]:
     )
     autonomous_chain_path = str(artifacts.get("autonomous_chain_optimization") or "")
     repair_waterfill_health = _queue_artifact_health(repair_waterfill_queue_path)
+    repair_campaign_score_health = _queue_artifact_health(
+        repair_campaign_score_queue_path
+    )
     autonomous_chain_queue_health = _queue_artifact_health(autonomous_chain_queue_path)
     autonomous_chain_surface = _autonomous_chain_action_surface(
         payload.get("autonomous_chain_optimization")
@@ -1816,10 +1822,16 @@ def _frontier_feedback_refresh_row(path: Path) -> dict[str, object]:
         and row["pairset_acquisition_profile"].get("active") is True
     ]
     if autonomous_chain_queue_path and repair_waterfill_queue_path:
-        if (
-            repair_waterfill_health["status"] == "READY_LOCAL_QUEUE"
-            and autonomous_chain_queue_health["status"] == "READY_LOCAL_QUEUE"
-        ):
+        child_statuses = [
+            repair_waterfill_health["status"],
+            autonomous_chain_queue_health["status"],
+            *(
+                [repair_campaign_score_health["status"]]
+                if repair_campaign_score_queue_path
+                else []
+            ),
+        ]
+        if all(status == "READY_LOCAL_QUEUE" for status in child_statuses):
             status = "AUTONOMOUS_CHAIN_QUEUE_READY"
         else:
             status = "AUTONOMOUS_CHAIN_QUEUE_BLOCKED"
@@ -1875,6 +1887,14 @@ def _frontier_feedback_refresh_row(path: Path) -> dict[str, object]:
             "queued_experiment_count"
         ],
         "repair_budget_waterfill_frozen_experiment_count": repair_waterfill_health[
+            "frozen_experiment_count"
+        ],
+        "repair_campaign_score_queue_path": repair_campaign_score_queue_path,
+        "repair_campaign_score_queue_status": repair_campaign_score_health["status"],
+        "repair_campaign_score_queued_experiment_count": repair_campaign_score_health[
+            "queued_experiment_count"
+        ],
+        "repair_campaign_score_frozen_experiment_count": repair_campaign_score_health[
             "frozen_experiment_count"
         ],
         "autonomous_chain_optimization_queue_path": autonomous_chain_queue_path,
@@ -2092,6 +2112,9 @@ def _frontier_feedback_cycle_summary() -> dict[str, object]:
     repair_waterfill_queue_count = sum(
         1 for row in refresh_rows if row.get("repair_budget_waterfill_queue_path")
     )
+    repair_campaign_score_queue_count = sum(
+        1 for row in refresh_rows if row.get("repair_campaign_score_queue_path")
+    )
     autonomous_chain_queue_count = sum(
         1 for row in refresh_rows if row.get("autonomous_chain_optimization_queue_path")
     )
@@ -2112,15 +2135,21 @@ def _frontier_feedback_cycle_summary() -> dict[str, object]:
         and latest_refresh.get("repair_budget_waterfill_queue_path")
         and latest_refresh.get("autonomous_chain_optimization_queue_path")
     ):
+        score_queue_ready = (
+            not latest_refresh.get("repair_campaign_score_queue_path")
+            or latest_refresh.get("repair_campaign_score_queue_status")
+            == "READY_LOCAL_QUEUE"
+        )
         if (
             latest_refresh.get("repair_budget_waterfill_queue_status")
             == "READY_LOCAL_QUEUE"
             and latest_refresh.get("autonomous_chain_optimization_queue_status")
             == "READY_LOCAL_QUEUE"
+            and score_queue_ready
         ):
             status = "AUTONOMOUS_CHAIN_QUEUE_READY"
             reason = (
-                "latest refresh emitted runnable rate-budget repair-waterfill "
+                "latest refresh emitted runnable repair-waterfill, repair-score, "
                 "and autonomous many-op child queues"
             )
         else:
@@ -2170,6 +2199,7 @@ def _frontier_feedback_cycle_summary() -> dict[str, object]:
         "rate_budget_preservation_plan_count": rate_budget_preservation_plan_count,
         "autonomous_chain_artifact_count": autonomous_chain_artifact_count,
         "repair_budget_waterfill_queue_count": repair_waterfill_queue_count,
+        "repair_campaign_score_queue_count": repair_campaign_score_queue_count,
         "autonomous_chain_queue_count": autonomous_chain_queue_count,
         "action_functional_queue_integrated_count": (
             action_functional_queue_integrated_count
@@ -2196,6 +2226,7 @@ def _format_frontier_feedback_cycle_summary() -> str:
             f"post_harvest={payload['post_harvest_queue_count']} "
             f"rate_preservation={payload['rate_budget_preservation_plan_count']} "
             f"repair_waterfill_queues={payload['repair_budget_waterfill_queue_count']} "
+            f"repair_score_queues={payload['repair_campaign_score_queue_count']} "
             f"autonomous_chain_queues={payload['autonomous_chain_queue_count']}"
         ),
     ]
@@ -2242,6 +2273,12 @@ def _format_frontier_feedback_cycle_summary() -> str:
                     f"actions={latest_refresh.get('repair_waterfill_action_count', 0)} "
                     f"concrete={latest_refresh.get('concrete_repair_waterfill_action_count', 0)} "
                     f"queue={latest_refresh.get('repair_budget_waterfill_queue_status')}"
+                ),
+                (
+                    "  repair_score: "
+                    f"queue={latest_refresh.get('repair_campaign_score_queue_status')} "
+                    f"queued={latest_refresh.get('repair_campaign_score_queued_experiment_count', 0)} "
+                    f"frozen={latest_refresh.get('repair_campaign_score_frozen_experiment_count', 0)}"
                 ),
                 f"  eureka_signals: {latest_refresh.get('eureka_signal_count', 0)}",
                 f"  eureka_hints: {latest_refresh.get('eureka_planner_hint_count', 0)}",
@@ -6868,6 +6905,9 @@ def _dispatch_readiness() -> dict[str, object]:
             ],
             "repair_budget_waterfill_queue_count": frontier_feedback_cycle[
                 "repair_budget_waterfill_queue_count"
+            ],
+            "repair_campaign_score_queue_count": frontier_feedback_cycle[
+                "repair_campaign_score_queue_count"
             ],
             "autonomous_chain_queue_count": frontier_feedback_cycle[
                 "autonomous_chain_queue_count"
