@@ -96,6 +96,21 @@ def _json_stdout_object(result: Mapping[str, Any] | None) -> dict[str, Any] | No
     return payload if isinstance(payload, dict) else None
 
 
+def _observation_status_count(
+    observation: Mapping[str, Any] | None,
+    status: str,
+) -> int:
+    if observation is None:
+        return 0
+    status_counts = observation.get("status_counts")
+    if not isinstance(status_counts, Mapping):
+        return 0
+    raw_count = status_counts.get(status)
+    if not isinstance(raw_count, int) or isinstance(raw_count, bool):
+        return 0
+    return raw_count
+
+
 def _queue_identity_from_path(path: Path) -> dict[str, str]:
     payload = _load_json_object(path)
     if payload.get("schema") != "experiment_queue.v1":
@@ -340,13 +355,10 @@ def run_experiment_queue_once(
             step_results = worker_result.get("step_results")
             if isinstance(step_results, list):
                 steps_started = len(step_results)
-    queued_after = 0
-    if observation is not None:
-        status_counts = observation.get("status_counts")
-        if isinstance(status_counts, Mapping):
-            raw_queued = status_counts.get("queued")
-            if isinstance(raw_queued, int) and not isinstance(raw_queued, bool):
-                queued_after = raw_queued
+    queued_after = _observation_status_count(observation, "queued")
+    frozen_after = _observation_status_count(observation, "frozen")
+    paused_after = _observation_status_count(observation, "paused")
+    disabled_after = _observation_status_count(observation, "disabled")
     progress_made = None if steps_started is None else steps_started > 0
     progress_blockers = []
     observer_revalidation = _observer_revalidation(
@@ -368,8 +380,15 @@ def run_experiment_queue_once(
             f"observer_revalidation:{blocker}"
             for blocker in observer_revalidation_blockers
         )
-    if progress_made is False and queued_after > 0:
-        progress_blockers.append("child_queue_worker_started_zero_steps_with_queued_work")
+    if progress_made is False:
+        if queued_after > 0:
+            progress_blockers.append("child_queue_worker_started_zero_steps_with_queued_work")
+        elif frozen_after > 0:
+            progress_blockers.append("child_queue_remaining_work_frozen_by_definition")
+        elif paused_after > 0:
+            progress_blockers.append("child_queue_remaining_work_paused_by_definition")
+        elif disabled_after > 0:
+            progress_blockers.append("child_queue_remaining_work_disabled_by_definition")
     return {
         "schema": POST_FEEDBACK_CHILD_QUEUE_RUN_SCHEMA,
         "queue_id": queue_id,
@@ -448,6 +467,13 @@ def execute_post_feedback_child_queues(
         ),
         "stalled_queue_count": sum(
             1 for run in runs if run.get("progress_made") is False and run.get("queue_status_counts", {}).get("queued", 0)
+        ),
+        "frozen_noop_queue_count": sum(
+            1
+            for run in runs
+            if run.get("progress_made") is False
+            and not run.get("queue_status_counts", {}).get("queued", 0)
+            and run.get("queue_status_counts", {}).get("frozen", 0)
         ),
         "max_steps": max_steps,
         "max_parallel": max_parallel,

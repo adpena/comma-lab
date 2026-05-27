@@ -992,6 +992,85 @@ def test_post_feedback_child_queue_execution_reports_stalled_queued_work(
     assert run["queue_healthy"] is True
 
 
+def test_post_feedback_child_queue_execution_classifies_frozen_child_queue(
+    tmp_path: Path,
+) -> None:
+    queue = tmp_path / "autonomous_chain_optimization_queue.json"
+    queue_payload = {
+        "schema": "experiment_queue.v1",
+        "queue_id": "child_queue_frozen",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "experiments": [
+            {
+                "id": "blocked_until_receiver_ready",
+                "status": "frozen",
+                "priority": 10,
+                "steps": [
+                    {
+                        "id": "materialize",
+                        "command": ["python", "-c", "print('frozen')"],
+                    }
+                ],
+            }
+        ],
+    }
+    _write_json(queue, queue_payload)
+
+    def fake_run(command: list[str]) -> dict[str, object]:
+        stdout = ""
+        if "run-worker" in command:
+            stdout = json.dumps(
+                {
+                    "schema": "experiment_queue_worker_result.v1",
+                    "steps_started": 0,
+                    "success_count": 0,
+                    "failure_count": 0,
+                }
+            )
+        elif "observe" in command:
+            stdout = json.dumps(
+                {
+                    "schema": "experiment_queue_observation.v1",
+                    "queue_id": "child_queue_frozen",
+                    "queue_sha256": stable_json_sha256(queue_payload),
+                    "observe_read_only": True,
+                    "healthy": True,
+                    "status_counts": {"frozen": 1},
+                    "blockers": [],
+                }
+            )
+        return {
+            "command": command,
+            "returncode": 0,
+            "elapsed_seconds": 0.0,
+            "stdout": stdout,
+            "stderr": "",
+        }
+
+    report = execute_post_feedback_child_queues(
+        repo_root=tmp_path,
+        feedback_artifacts={"autonomous_chain_optimization_queue": str(queue)},
+        output_dir=tmp_path / "out",
+        max_steps=3,
+        max_parallel=1,
+        limit=4,
+        run_command=fake_run,
+    )
+
+    run = report["queue_runs"][0]
+    assert report["stalled_queue_count"] == 0
+    assert report["frozen_noop_queue_count"] == 1
+    assert run["steps_started"] == 0
+    assert run["progress_made"] is False
+    assert run["progress_blockers"] == [
+        "child_queue_remaining_work_frozen_by_definition"
+    ]
+    assert run["queue_status_counts"] == {"frozen": 1}
+
+
 def test_post_feedback_child_queue_execution_revalidates_observer_identity(
     tmp_path: Path,
 ) -> None:

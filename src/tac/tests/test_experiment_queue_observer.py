@@ -184,6 +184,30 @@ def test_observer_surfaces_running_step_log_tail_and_artifacts(tmp_path: Path) -
     assert "healthy" in markdown
 
 
+def test_observer_surfaces_frozen_definition_status(tmp_path: Path) -> None:
+    artifact = tmp_path / "artifact.json"
+    queue = _queue(artifact)
+    queue["experiments"][0]["status"] = "frozen"
+    state = tmp_path / "queue.sqlite"
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=1,
+    )
+
+    assert observation["healthy"] is True
+    assert observation["status_counts"] == {"frozen": 1}
+    assert observation["queued_steps"] == []
+    assert len(observation["frozen_steps"]) == 1
+    assert observation["frozen_steps"][0]["status"] == "frozen"
+    assert observation["frozen_steps"][0]["stored_status"] == "queued"
+    assert observation["ready_steps"] == []
+
+
 def test_observer_marks_existing_artifact_failed_when_postcondition_fails(
     tmp_path: Path,
 ) -> None:

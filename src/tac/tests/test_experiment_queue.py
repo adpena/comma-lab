@@ -707,6 +707,23 @@ def test_experiment_queue_pause_freeze_and_rewind(tmp_path: Path) -> None:
         assert queue_summary(conn, queue)["status_counts"] == {"queued": 3}
 
 
+def test_experiment_queue_summary_reports_definition_frozen_steps(
+    tmp_path: Path,
+) -> None:
+    queue = _queue(tmp_path)
+    queue["experiments"][0]["status"] = "frozen"
+    with connect_state(tmp_path / "queue.sqlite") as conn:
+        initialize_queue_state(conn, queue)
+        ready = ready_steps(conn, queue)
+        summary = queue_summary(conn, queue)
+
+    assert ready == []
+    assert summary["status_counts"] == {"frozen": 3}
+    assert {step["stored_status"] for step in summary["steps"]} == {"queued"}
+    assert {step["status"] for step in summary["steps"]} == {"frozen"}
+    assert {step["experiment_status"] for step in summary["steps"]} == {"frozen"}
+
+
 def test_initialize_queue_state_requeues_dependents_on_upstream_definition_drift(
     tmp_path: Path,
 ) -> None:
@@ -2515,9 +2532,11 @@ def _postcondition_runtime(path: Path) -> dict[str, object]:
     inflate = path / "inflate.sh"
     inflate.write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
     inflate.chmod(inflate.stat().st_mode | 0o100)
+    runtime_tree_sha256 = tree_sha256(path)
     return {
         "candidate_runtime_dir": str(path),
-        "candidate_runtime_tree_sha256": tree_sha256(path),
+        "candidate_runtime_tree_sha256": runtime_tree_sha256,
+        "expected_runtime_tree_sha256": runtime_tree_sha256,
     }
 
 

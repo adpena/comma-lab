@@ -3235,9 +3235,29 @@ def queue_summary(
     ).fetchall()
     active_rows = [row for row in rows if (str(row["experiment_id"]), str(row["step_id"])) in active_keys]
     orphaned_rows = [row for row in rows if (str(row["experiment_id"]), str(row["step_id"])) not in active_keys]
+    experiment_status_by_id = {
+        str(experiment["id"]): str(experiment["status"])
+        for experiment in queue["experiments"]
+    }
+
+    def effective_status(row: sqlite3.Row) -> str:
+        stored_status = str(row["status"])
+        experiment_status = experiment_status_by_id.get(
+            str(row["experiment_id"]),
+            "queued",
+        )
+        if stored_status == "queued" and experiment_status in {
+            "paused",
+            "frozen",
+            "disabled",
+        }:
+            return experiment_status
+        return stored_status
+
     by_status: dict[str, int] = {}
     for row in active_rows:
-        by_status[str(row["status"])] = by_status.get(str(row["status"]), 0) + 1
+        status = effective_status(row)
+        by_status[status] = by_status.get(status, 0) + 1
     return {
         "schema": "experiment_queue_summary.v1",
         "queue_id": queue_id,
@@ -3250,7 +3270,9 @@ def queue_summary(
             {
                 "experiment_id": row["experiment_id"],
                 "step_id": row["step_id"],
-                "status": row["status"],
+                "status": effective_status(row),
+                "stored_status": row["status"],
+                "experiment_status": experiment_status_by_id.get(str(row["experiment_id"])),
                 "attempts": row["attempts"],
                 "updated_at_utc": row["updated_at_utc"],
                 "last_event": json.loads(row["last_event_json"]) if row["last_event_json"] else None,

@@ -1455,6 +1455,8 @@ def _step_observation(
         "experiment_id": experiment_id,
         "step_id": step_id,
         "status": step_state.get("status"),
+        "stored_status": step_state.get("stored_status"),
+        "experiment_status": step_state.get("experiment_status"),
         "attempts": step_state.get("attempts"),
         "updated_at_utc": step_state.get("updated_at_utc"),
         "resource_kind": None,
@@ -1775,7 +1777,16 @@ def observe_experiment_queue(
         if not isinstance(step_state, Mapping):
             continue
         status = step_state.get("status")
-        if status not in {"running", "failed", "queued", "blocked", "succeeded"}:
+        if status not in {
+            "running",
+            "failed",
+            "queued",
+            "blocked",
+            "succeeded",
+            "paused",
+            "frozen",
+            "disabled",
+        }:
             continue
         key = (
             str(step_state.get("experiment_id") or ""),
@@ -1830,6 +1841,9 @@ def observe_experiment_queue(
     failed = [step for step in active_steps if step.get("status") == "failed"]
     queued = [step for step in active_steps if step.get("status") == "queued"]
     blocked = [step for step in active_steps if step.get("status") == "blocked"]
+    paused = [step for step in active_steps if step.get("status") == "paused"]
+    frozen = [step for step in active_steps if step.get("status") == "frozen"]
+    disabled = [step for step in active_steps if step.get("status") == "disabled"]
     blockers = _observation_blockers(
         definition_drift=definition_drift,
         performance=performance,
@@ -1861,6 +1875,9 @@ def observe_experiment_queue(
         "failed_steps": failed,
         "queued_steps": queued,
         "blocked_steps": blocked,
+        "paused_steps": paused,
+        "frozen_steps": frozen,
+        "disabled_steps": disabled,
         "succeeded_artifact_steps": succeeded_artifact_steps,
         "succeeded_signal_steps": succeeded_signal_steps,
         "local_training_signal_observations": local_training_signal_observations,
@@ -1967,6 +1984,9 @@ def render_observation_markdown(observation: Mapping[str, Any]) -> str:
         *list(observation.get("failed_steps") or []),
         *list(observation.get("queued_steps") or []),
         *list(observation.get("blocked_steps") or []),
+        *list(observation.get("paused_steps") or []),
+        *list(observation.get("frozen_steps") or []),
+        *list(observation.get("disabled_steps") or []),
         *list(observation.get("succeeded_signal_steps") or []),
         *list(observation.get("succeeded_artifact_failure_steps") or []),
     ]
