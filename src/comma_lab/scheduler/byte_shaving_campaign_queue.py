@@ -4264,6 +4264,46 @@ def _materializer_exact_readiness_skip_reason(
     return None
 
 
+def _safe_materializer_handoff_component(value: str, *, fallback: str = "row") -> str:
+    return re.sub(r"[^a-z0-9_]+", "_", value.lower()).strip("_") or fallback
+
+
+def _manifest_parent_collision_keys(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    repo_root: Path,
+    include_exact_readiness_followup: bool,
+) -> set[str]:
+    if not include_exact_readiness_followup:
+        return set()
+    parent_counts: Counter[str] = Counter()
+    for row in rows:
+        postconditions = _normalize_materializer_queue_postconditions(row.get("postconditions"))
+        if _materializer_exact_readiness_skip_reason(row, postconditions) is not None:
+            continue
+        manifest_ref_path, _manifest_ref_kind, _saw_manifest_postcondition = (
+            _harvestable_materializer_manifest_reference(postconditions)
+        )
+        if manifest_ref_path is None:
+            continue
+        parent = _resolve_repo_path(manifest_ref_path, repo_root=repo_root).parent
+        parent_counts[parent.resolve(strict=False).as_posix()] += 1
+    return {path for path, count in parent_counts.items() if count > 1}
+
+
+def _materializer_exact_readiness_handoff_dir(
+    *,
+    materializer_manifest_path: Path,
+    experiment_id: str,
+    shared_manifest_parent_keys: set[str],
+) -> Path:
+    base = materializer_manifest_path.parent / "exact_eval_handoff"
+    parent_key = materializer_manifest_path.parent.resolve(strict=False).as_posix()
+    if parent_key not in shared_manifest_parent_keys:
+        return base
+    return base / _safe_materializer_handoff_component(experiment_id)
+
+
 def _materializer_exact_readiness_followup_steps(
     *,
     queue_id: str,
@@ -4976,6 +5016,11 @@ def build_materializer_execution_queue(
         executable_rows = executable_rows[:limit]
     if not executable_rows:
         raise ExperimentQueueError("no executable materializer work rows")
+    shared_manifest_parent_keys = _manifest_parent_collision_keys(
+        executable_rows,
+        repo_root=repo,
+        include_exact_readiness_followup=include_exact_readiness_followup,
+    )
     expected_output_root = (
         _expected_materializer_workload_root(
             results_root=scheduler_results_root,
@@ -5023,7 +5068,11 @@ def build_materializer_execution_queue(
                 manifest_ref_path,
                 repo_root=repo,
             )
-            handoff_dir = materializer_manifest_path.parent / "exact_eval_handoff"
+            handoff_dir = _materializer_exact_readiness_handoff_dir(
+                materializer_manifest_path=materializer_manifest_path,
+                experiment_id=str(row.get("work_id") or row.get("backlog_key") or index),
+                shared_manifest_parent_keys=shared_manifest_parent_keys,
+            )
             if not _path_under_root(handoff_dir, expected_output_root):
                 raise ExperimentQueueError(
                     "materializer exact-readiness follow-up path outside "
@@ -5133,6 +5182,11 @@ def build_materializer_execution_queue(
                 manifest_ref_path,
                 repo_root=repo,
             )
+            handoff_dir = _materializer_exact_readiness_handoff_dir(
+                materializer_manifest_path=materializer_manifest_path,
+                experiment_id=experiment_id,
+                shared_manifest_parent_keys=shared_manifest_parent_keys,
+            )
             steps.extend(
                 _materializer_exact_readiness_followup_steps(
                     queue_id=queue_id,
@@ -5142,8 +5196,7 @@ def build_materializer_execution_queue(
                     source_state_path=_resolve_repo_path(state_ref, repo_root=repo),
                     work_row=row,
                     postconditions=postconditions,
-                    handoff_dir=materializer_manifest_path.parent
-                    / "exact_eval_handoff",
+                    handoff_dir=handoff_dir,
                     materializer_step_id=MATERIALIZER_EXECUTION_STEP_ID,
                     step_timeout_seconds=step_timeout_seconds,
                     require_ready=exact_readiness_followup_require_ready,

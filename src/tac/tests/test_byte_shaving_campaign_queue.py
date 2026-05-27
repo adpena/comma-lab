@@ -4873,6 +4873,89 @@ def test_materializer_execution_queue_can_append_exact_readiness_followups(
     ]
 
 
+def test_materializer_execution_queue_isolates_followups_for_shared_manifest_parent(
+    tmp_path: Path,
+) -> None:
+    shared_dir = tmp_path / "shared_candidates"
+    work_queue = {
+        "schema": MATERIALIZER_WORK_QUEUE_SCHEMA,
+        "rows": [
+            {
+                "schema": "byte_shaving_materializer_work_row.v1",
+                "work_id": "candidate_a",
+                "work_rank": 1,
+                "target_kind": PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+                "materializer_id": PACKET_MEMBER_RECOMPRESS_MATERIALIZER,
+                "receiver_contract_kind": "family_agnostic_packet_member_recompress",
+                "resource_kind": "local_cpu",
+                "executable": True,
+                "command": [".venv/bin/python", "tools/run_family_agnostic_materializer.py", "--a"],
+                "postconditions": [
+                    {
+                        "type": "json_completion_contract",
+                        "path": str(shared_dir / "candidate_a.json"),
+                        "required_equals": {
+                            "schema": "packet_member_recompress_candidate.v1",
+                        },
+                    }
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            {
+                "schema": "byte_shaving_materializer_work_row.v1",
+                "work_id": "candidate_b",
+                "work_rank": 2,
+                "target_kind": PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+                "materializer_id": PACKET_MEMBER_ZIP_HEADER_ELIDE_MATERIALIZER,
+                "receiver_contract_kind": "family_agnostic_packet_member_zip_header_elide",
+                "resource_kind": "local_cpu",
+                "executable": True,
+                "command": [".venv/bin/python", "tools/run_family_agnostic_materializer.py", "--b"],
+                "postconditions": [
+                    {
+                        "type": "json_completion_contract",
+                        "path": str(shared_dir / "candidate_b.json"),
+                        "required_equals": {
+                            "schema": "packet_member_zip_header_elide_candidate.v1",
+                        },
+                    }
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    execution_queue = build_materializer_execution_queue(
+        work_queue,
+        queue_id="shared_parent_fixture",
+        repo_root=tmp_path,
+        source_work_queue_path=tmp_path / "work_queue.json",
+        include_exact_readiness_followup=True,
+    )
+
+    harvest_commands = [
+        experiment["steps"][1]["command"]
+        for experiment in execution_queue["experiments"]
+    ]
+    assert "shared_candidates/exact_eval_handoff/candidate_a/source_queue.json" in (
+        harvest_commands[0]
+    )
+    assert "shared_candidates/exact_eval_handoff/candidate_b/source_queue.json" in (
+        harvest_commands[1]
+    )
+    assert harvest_commands[0] != harvest_commands[1]
+
+
 def test_materializer_execution_queue_guards_family_overwrite_with_existing_hashes(
     tmp_path: Path,
 ) -> None:

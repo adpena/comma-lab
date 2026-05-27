@@ -1,0 +1,73 @@
+{
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "deployment_target": "desktop_research",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "optimizer_candidate_queue_is_planning_only",
+    "requires_exact_eval_readiness_gate",
+    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+    "requires_non_proxy_score_evidence_before_promotion",
+    "derived_section_manifests_are_local_materializer_inputs_only"
+  ],
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "generated_at_utc": "2026-05-27T16:41:24Z",
+  "gpu_launched": false,
+  "manifest_count": 1,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "ready_manifest_count": 0,
+  "rows": [
+    {
+      "archive_label": "current_contest_cpu_frontier",
+      "archive_path": "experiments/results/v14_v2_dqs1_plus_fec10_substituted_20260526T023000Z/submission_dir/archive.zip",
+      "archive_sha256": "0a3abfe645c4fac0df9ea89237f25dd9bfc6b2471b897c36d7437795d27d1403",
+      "blockers": [
+        "section_manifest_derivation_failed:PR101 FEC6 selector magic mismatch: b'FECa'"
+      ],
+      "brotli_probe_rows": [],
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "section_manifest_derivation_failed:PR101 FEC6 selector magic mismatch: b'FECa'"
+      ],
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_materializer_target": false,
+      "schema": "frontier_rate_attack_derived_section_manifest.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "section_manifest_path": null,
+      "section_manifest_sha256": null,
+      "selected_section_count": 0,
+      "selected_section_names": [],
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    }
+  ],
+  "schema": "frontier_rate_attack_derived_section_manifest_batch.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "target_modes": [
+    "contest_exact_eval_planning"
+  ]
+}
