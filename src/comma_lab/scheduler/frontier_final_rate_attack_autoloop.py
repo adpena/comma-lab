@@ -85,6 +85,16 @@ def _load_json_object(path: Path) -> dict[str, Any]:
     return payload
 
 
+def _json_stdout_object(result: Mapping[str, Any] | None) -> dict[str, Any] | None:
+    if result is None:
+        return None
+    try:
+        payload = json.loads(str(result.get("stdout") or ""))
+    except json.JSONDecodeError:
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
 def _queue_id_from_path(path: Path) -> str:
     payload = _load_json_object(path)
     if payload.get("schema") != "experiment_queue.v1":
@@ -247,13 +257,10 @@ def run_experiment_queue_once(
             break
 
     observation: dict[str, Any] | None = None
+    worker_result = _json_stdout_object(results[2] if len(results) > 2 else None)
     if len(results) == len(commands) and int(results[-1].get("returncode") or 0) == 0:
-        try:
-            loaded = json.loads(str(results[-1].get("stdout") or ""))
-        except json.JSONDecodeError:
-            loaded = None
-        if isinstance(loaded, dict):
-            observation = loaded
+        observation = _json_stdout_object(results[-1])
+        if observation is not None:
             write_json_artifact(observer_path, observation)
 
     command_records = _write_command_streams(
@@ -262,6 +269,26 @@ def run_experiment_queue_once(
         repo_root=repo,
     )
     failed_count = sum(1 for result in results if int(result.get("returncode") or 0) != 0)
+    steps_started: int | None = None
+    if worker_result is not None:
+        raw_steps_started = worker_result.get("steps_started")
+        if isinstance(raw_steps_started, int) and not isinstance(raw_steps_started, bool):
+            steps_started = raw_steps_started
+        else:
+            step_results = worker_result.get("step_results")
+            if isinstance(step_results, list):
+                steps_started = len(step_results)
+    queued_after = 0
+    if observation is not None:
+        status_counts = observation.get("status_counts")
+        if isinstance(status_counts, Mapping):
+            raw_queued = status_counts.get("queued")
+            if isinstance(raw_queued, int) and not isinstance(raw_queued, bool):
+                queued_after = raw_queued
+    progress_made = None if steps_started is None else steps_started > 0
+    progress_blockers = []
+    if progress_made is False and queued_after > 0:
+        progress_blockers.append("child_queue_worker_started_zero_steps_with_queued_work")
     return {
         "schema": POST_FEEDBACK_CHILD_QUEUE_RUN_SCHEMA,
         "queue_id": queue_id,
@@ -272,6 +299,9 @@ def run_experiment_queue_once(
         ),
         "commands": command_records,
         "failed_command_count": failed_count,
+        "steps_started": steps_started,
+        "progress_made": progress_made,
+        "progress_blockers": progress_blockers,
         "queue_healthy": observation.get("healthy") is True if observation else False,
         "queue_status_counts": dict(observation.get("status_counts") or {}) if observation else {},
         "queue_blockers": list(observation.get("blockers") or []) if observation else [],
@@ -328,6 +358,9 @@ def execute_post_feedback_child_queues(
         "executed_queue_count": len(runs),
         "failed_queue_count": sum(1 for run in runs if int(run.get("failed_command_count") or 0) > 0),
         "failed_command_count": sum(int(run.get("failed_command_count") or 0) for run in runs),
+        "stalled_queue_count": sum(
+            1 for run in runs if run.get("progress_made") is False and run.get("queue_status_counts", {}).get("queued", 0)
+        ),
         "max_steps": max_steps,
         "max_parallel": max_parallel,
         "limit": limit,

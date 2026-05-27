@@ -875,6 +875,15 @@ def test_post_feedback_child_queue_execution_preserves_observer_artifacts(
                     "blockers": [],
                 }
             )
+        elif "run-worker" in command:
+            stdout = json.dumps(
+                {
+                    "schema": "experiment_queue_worker_result.v1",
+                    "steps_started": 1,
+                    "success_count": 1,
+                    "failure_count": 0,
+                }
+            )
         return {
             "command": command,
             "returncode": 0,
@@ -896,11 +905,14 @@ def test_post_feedback_child_queue_execution_preserves_observer_artifacts(
     assert report["schema"] == POST_FEEDBACK_CHILD_QUEUE_RUNS_SCHEMA
     assert report["selected_queue_count"] == 1
     assert report["failed_command_count"] == 0
+    assert report["stalled_queue_count"] == 0
     assert report["score_claim"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
     run = report["queue_runs"][0]
     assert run["artifact_key"] == "operation_chain_compiler_queue"
     assert run["queue_healthy"] is True
+    assert run["steps_started"] == 1
+    assert run["progress_made"] is True
     assert run["observer_revalidation_path"].endswith(
         "post_execute_feedback_child_queue_observations/"
         "operation_chain_compiler_queue/observer_revalidation.json"
