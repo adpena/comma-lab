@@ -61,6 +61,9 @@ from tac.packet_compiler.deterministic_compiler import (
     PACKET_IR_OPERATION_SET_SCHEMA,
     packetir_operation_set_bridge_contract,
 )
+from tac.packet_compiler.feca_selector_reparameterize import (
+    FECA_REPARAMETERIZATION_MANIFEST_SCHEMA,
+)
 from tac.repo_io import sha256_file
 
 from .byte_shaving_materializer_registry import (
@@ -70,6 +73,7 @@ from .byte_shaving_materializer_registry import (
     ARCHIVE_SECTION_REORDER_TARGET_KIND,
     ARCHIVE_ZIP_REPACK_TARGET_KIND,
     DQS1_PAIRSET_TARGET_KIND,
+    FECA_SELECTOR_REPARAMETERIZE_TARGET_KIND,
     INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER,
     INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY,
     INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND,
@@ -118,6 +122,7 @@ BYTE_RANGE_CHAIN_TOOL = "tools/run_byte_range_entropy_recode_chain.py"
 FAMILY_AGNOSTIC_MATERIALIZER_TOOL = "tools/run_family_agnostic_materializer.py"
 FAMILY_AGNOSTIC_MATERIALIZER_SWEEP_TOOL = "tools/run_family_agnostic_materializer_sweep.py"
 GROUPED_ARCHIVE_STATE_MATERIALIZER_TOOL = "tools/run_grouped_family_agnostic_materializer.py"
+FECA_SELECTOR_REPARAMETERIZATION_TOOL = "tools/build_feca_selector_reparameterized_candidate.py"
 SHELL_INFLATE_PARITY_TOOL = "tools/prove_shell_inflate_parity.py"
 INVERSE_ACTION_FUNCTIONAL_TOOL = "tools/build_inverse_steganalysis_action_functional.py"
 INVERSE_SCORER_CELL_TOOL = "tools/materialize_inverse_scorer_cell_candidate.py"
@@ -151,6 +156,7 @@ HARVESTABLE_MATERIALIZER_MANIFEST_SCHEMAS = frozenset(
         PACKET_MEMBER_MERGE_SCHEMA,
         PACKET_MEMBER_RECOMPRESS_SCHEMA,
         PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
+        FECA_REPARAMETERIZATION_MANIFEST_SCHEMA,
         RENDERER_PAYLOAD_DFL1_SCHEMA,
         TENSOR_FACTORIZE_SCHEMA,
     }
@@ -1819,6 +1825,53 @@ def _byte_range_chain_command(context: Mapping[str, Any]) -> tuple[list[str], li
     if context.get("fail_if_receiver_blocked") is True:
         command.append("--fail-if-receiver-blocked")
     return command, []
+
+
+def _feca_selector_reparameterization_command(
+    context: Mapping[str, Any],
+) -> tuple[list[str], list[str], dict[str, Any]]:
+    blockers: list[str] = []
+    source_submission_dir = _path_context_value(context, "source_submission_dir")
+    if source_submission_dir is None:
+        source_submission_dir = _path_context_value(context, "candidate_submission_dir")
+    if source_submission_dir is None:
+        blockers.append("materializer_context_missing:source_submission_dir")
+    output_dir = _path_context_value(context, "output_dir")
+    if output_dir is None:
+        blockers.append("materializer_context_missing:output_dir")
+    if blockers:
+        return [], blockers, {}
+
+    assert source_submission_dir is not None
+    assert output_dir is not None
+    command = [
+        ".venv/bin/python",
+        FECA_SELECTOR_REPARAMETERIZATION_TOOL,
+        "--source-submission-dir",
+        source_submission_dir,
+        "--output-dir",
+        output_dir,
+    ]
+    for key, flag in (("scale", "--scale"), ("scales", "--scale"), ("alpha", "--alpha"), ("alphas", "--alpha")):
+        values = context.get(key)
+        if values is None:
+            continue
+        if isinstance(values, list | tuple):
+            for value in values:
+                command.extend([flag, str(value)])
+        else:
+            command.extend([flag, str(values)])
+    if context.get("overwrite") is True or context.get("allow_overwrite") is True:
+        command.append("--overwrite")
+    manifest_path = str(Path(output_dir) / "feca_selector_reparameterization_manifest.json")
+    telemetry = {
+        "artifact_paths": [output_dir],
+        "input_artifact_paths": [source_submission_dir],
+        "pullback_artifact_paths": [output_dir],
+        "include_postcondition_paths": True,
+        "feca_selector_reparameterization_manifest": manifest_path,
+    }
+    return command, [], telemetry
 
 
 def _inverse_scorer_action_functional_command(
@@ -3866,6 +3919,24 @@ def build_materializer_work_queue(
                 )
             )
             blockers.extend(command_blockers)
+        elif (
+            unit_kind == "selector_stream"
+            and operation_family == "selector_context_recode"
+            and target_kind == FECA_SELECTOR_REPARAMETERIZE_TARGET_KIND
+        ):
+            command, command_blockers, telemetry = (
+                _feca_selector_reparameterization_command(context)
+            )
+            blockers.extend(command_blockers)
+            output_dir = _path_context_value(context, "output_dir")
+            if command and output_dir is not None:
+                postconditions = _materializer_candidate_postconditions(
+                    manifest_path=str(
+                        Path(output_dir) / "feca_selector_reparameterization_manifest.json"
+                    ),
+                    schema=FECA_REPARAMETERIZATION_MANIFEST_SCHEMA,
+                    target_kind=FECA_SELECTOR_REPARAMETERIZE_TARGET_KIND,
+                )
         elif (
             unit_kind == "tensor"
             and operation_family == "factorize_tensor"

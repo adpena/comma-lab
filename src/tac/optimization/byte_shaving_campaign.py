@@ -99,6 +99,12 @@ INVERSE_ACTION_COMPILER_TARGET_DEFAULTS: dict[str, dict[str, Any]] = {
         "materializer": "archive_section_entropy_recode_adapter",
         "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
     },
+    "selector_stream_context_recode_v1": {
+        "unit_kind": "selector_stream",
+        "operation_family": "selector_context_recode",
+        "materializer": "feca_selector_reparameterize_adapter",
+        "receiver_contract_kind": "source_runtime_native_feca_selector_recode",
+    },
     "archive_section_header_elide_v1": {
         "unit_kind": "archive_section",
         "operation_family": "section_header_elide",
@@ -428,6 +434,9 @@ DEFAULT_OPERATION_FAMILIES: dict[str, tuple[str, ...]] = {
         "member_merge",
         "native_renderer_payload",
     ),
+    "selector_stream": (
+        "selector_context_recode",
+    ),
     "scorer_response_row": (
         "materialize_scorer_response_candidate",
         "probe_followup_neighbor",
@@ -467,6 +476,7 @@ DEFAULT_OPERATION_ORDER_PRIORS: dict[str, int] = {
     "delta_encode": 40,
     "entropy_recode": 40,
     "section_entropy_recode": 40,
+    "selector_context_recode": 40,
     "archive_zip_repack": 40,
     "member_recompress": 40,
     "literal_elide": 50,
@@ -485,6 +495,7 @@ PACKET_IR_BYTE_CLOSED_UNIT_KINDS = frozenset(
         "archive",
         "byte_range",
         "packet_member",
+        "selector_stream",
         "tensor",
     }
 )
@@ -503,6 +514,7 @@ PACKET_IR_OPERATION_PHASE_BY_FAMILY: dict[str, str] = {
     "prune_tensor": "representation",
     "quantize_tensor": "quantization",
     "section_entropy_recode": "arithmetic",
+    "selector_context_recode": "arithmetic",
     "section_header_elide": "pack",
     "section_proceduralize": "prediction",
     "section_reorder": "pack",

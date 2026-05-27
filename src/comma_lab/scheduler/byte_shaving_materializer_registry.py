@@ -80,6 +80,8 @@ PACKET_MEMBER_MERGE_MATERIALIZER = "packet_member_merge_adapter"
 PACKET_MEMBER_MERGE_TARGET_KIND = "packet_member_merge_v1"
 RENDERER_PAYLOAD_DFL1_MATERIALIZER = "renderer_payload_dfl1_adapter"
 RENDERER_PAYLOAD_DFL1_TARGET_KIND = "renderer_payload_dfl1_v1"
+FECA_SELECTOR_REPARAMETERIZE_MATERIALIZER = "feca_selector_reparameterize_adapter"
+FECA_SELECTOR_REPARAMETERIZE_TARGET_KIND = "selector_stream_context_recode_v1"
 
 
 @dataclass(frozen=True)
@@ -565,6 +567,29 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
         implementation_module="tac.optimization.family_agnostic_materializers",
         materialize_function="materialize_renderer_payload_dfl1_candidate",
     ),
+    MaterializerAdapter(
+        materializer_id=FECA_SELECTOR_REPARAMETERIZE_MATERIALIZER,
+        unit_kind="selector_stream",
+        operation_family="selector_context_recode",
+        target_kind=FECA_SELECTOR_REPARAMETERIZE_TARGET_KIND,
+        executable=True,
+        description=(
+            "Source-runtime-native FECa selector-stream context recode. This "
+            "operates at the selector entropy position, patches the matching "
+            "runtime decoder constant, and requires full-frame inflate parity "
+            "plus exact auth eval before promotion."
+        ),
+        receiver_contract_id=f"{FECA_SELECTOR_REPARAMETERIZE_TARGET_KIND}.receiver.v1",
+        receiver_contract_kind="source_runtime_native_feca_selector_recode",
+        cooperative_receiver_required=True,
+        materialization_resource_kind="local_cpu",
+        required_context_fields=(
+            "source_submission_dir",
+            "output_dir",
+        ),
+        implementation_module="tac.packet_compiler.feca_selector_reparameterize",
+        materialize_function="build_feca_selector_reparameterized_candidate",
+    ),
 )
 
 _ADAPTERS_BY_TARGET_KEY: dict[tuple[str, str, str], MaterializerAdapter] = {
@@ -810,6 +835,8 @@ __all__ = [
     "DQS1_PAIRSET_TARGET_KIND",
     "DQS1_RECEIVER_CONTRACT_ID",
     "DQS1_RECEIVER_CONTRACT_KIND",
+    "FECA_SELECTOR_REPARAMETERIZE_MATERIALIZER",
+    "FECA_SELECTOR_REPARAMETERIZE_TARGET_KIND",
     "INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER",
     "INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY",
     "INVERSE_ACTION_HIGH_LEVEL_RECEIVER_CONTRACT_ID",

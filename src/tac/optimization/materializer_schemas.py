@@ -11,6 +11,7 @@ PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA = "packet_member_zip_header_elide_candidat
 RENDERER_PAYLOAD_DFL1_SCHEMA = "renderer_payload_dfl1_candidate.v1"
 TENSOR_FACTORIZE_SCHEMA = "tensor_factorize_candidate.v1"
 BYTE_RANGE_ENTROPY_RECODE_VERIFIED_SCHEMA = "byte_range_entropy_recode_verified_candidate.v1"
+FECA_SELECTOR_REPARAMETERIZATION_SCHEMA = "feca_selector_reparameterization_manifest.v1"
 
 FAMILY_AGNOSTIC_MATERIALIZER_CANDIDATE_SCHEMAS = frozenset(
     {
@@ -21,6 +22,7 @@ FAMILY_AGNOSTIC_MATERIALIZER_CANDIDATE_SCHEMAS = frozenset(
         PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
         RENDERER_PAYLOAD_DFL1_SCHEMA,
         TENSOR_FACTORIZE_SCHEMA,
+        FECA_SELECTOR_REPARAMETERIZATION_SCHEMA,
     }
 )
 
