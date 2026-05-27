@@ -17,6 +17,7 @@ from tac.optimization.proxy_candidate_contract import (
 )
 from tac.optimization.repair_campaign_chain_contract import (
     REPAIR_CAMPAIGN_ENTROPY_STAGE_CHAIN_CONTRACT_SCHEMA,
+    REPAIR_CAMPAIGN_REQUIRED_OPTIMIZER_SOLVER,
 )
 from tac.optimization.repair_campaign_learning_signal import (
     REPAIR_CAMPAIGN_BLOCKED_LEARNING_SIGNAL_REPORT_SCHEMA,
@@ -255,6 +256,10 @@ def _repair_chain_contract_rollup(
     artifact_count = 0
     node_count = 0
     blocker_counts: Counter[str] = Counter()
+    optimizer_solver_counts: Counter[str] = Counter()
+    interaction_order_counts: Counter[str] = Counter()
+    optimizer_candidate_evaluation_row_count = 0
+    stale_optimizer_solver_contract_count = 0
     for experiment in experiments:
         metadata = _mapping(experiment.get("metadata"))
         path = str(
@@ -267,12 +272,45 @@ def _repair_chain_contract_rollup(
             continue
         artifact_count += 1
         node_count += _positive_int(contract.get("chain_node_count")) or 0
+        solver = str(contract.get("optimizer_solver") or "<missing>")
+        optimizer_solver_counts[solver] += 1
+        if solver != REPAIR_CAMPAIGN_REQUIRED_OPTIMIZER_SOLVER:
+            stale_optimizer_solver_contract_count += 1
+        optimizer_candidate_evaluation_row_count += len(
+            [
+                row
+                for row in contract.get("optimizer_candidate_evaluation_order") or []
+                if isinstance(row, Mapping)
+            ]
+        )
         blocker_counts.update(_string_list(contract.get("blockers")))
+        interaction_order_counts.update(
+            {
+                str(key): _positive_int(value) or 0
+                for key, value in _mapping(
+                    contract.get("interaction_order_chain_histogram")
+                ).items()
+            }
+        )
     return {
         "schema": "repair_campaign_entropy_stage_chain_contract_rollup.v1",
         "chain_contract_paths": ordered_unique(paths),
         "chain_contract_artifact_count": artifact_count,
         "chain_contract_node_count": node_count,
+        "required_optimizer_solver": REPAIR_CAMPAIGN_REQUIRED_OPTIMIZER_SOLVER,
+        "optimizer_solver_histogram": dict(sorted(optimizer_solver_counts.items())),
+        "stale_optimizer_solver_contract_count": (
+            stale_optimizer_solver_contract_count
+        ),
+        "chain_contracts_require_interaction_aware_optimizer": (
+            artifact_count > 0 and stale_optimizer_solver_contract_count == 0
+        ),
+        "optimizer_candidate_evaluation_row_count": (
+            optimizer_candidate_evaluation_row_count
+        ),
+        "interaction_order_chain_histogram": dict(
+            sorted(interaction_order_counts.items())
+        ),
         "chain_contract_blocker_histogram": dict(sorted(blocker_counts.items())),
         "local_mlx_rows_are_advisory_only": True,
         "budget_spend_allowed": False,

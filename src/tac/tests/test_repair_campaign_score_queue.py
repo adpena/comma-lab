@@ -21,6 +21,7 @@ from comma_lab.scheduler.repair_campaign_score_queue import (
 )
 from tac.optimization.repair_campaign_chain_contract import (
     REPAIR_CAMPAIGN_ENTROPY_STAGE_CHAIN_CONTRACT_SCHEMA,
+    REPAIR_CAMPAIGN_REQUIRED_OPTIMIZER_SOLVER,
 )
 from tac.optimization.repair_campaign_learning_signal import (
     REPAIR_CAMPAIGN_BLOCKED_LEARNING_SIGNAL_REPORT_SCHEMA,
@@ -432,6 +433,34 @@ def test_repair_campaign_score_queue_can_bind_posterior_prior_input(
         experiment["metadata"]["repair_campaign_byte_closed_materialization_queue_path"]
     )
     materialization_queue_path.parent.mkdir(parents=True, exist_ok=True)
+    chain_contract_path = Path(
+        experiment["metadata"]["repair_campaign_entropy_stage_chain_contract_path"]
+    )
+    chain_contract_path.parent.mkdir(parents=True, exist_ok=True)
+    chain_contract_path.write_text(
+        json.dumps(
+            {
+                "schema": REPAIR_CAMPAIGN_ENTROPY_STAGE_CHAIN_CONTRACT_SCHEMA,
+                "optimizer_solver": REPAIR_CAMPAIGN_REQUIRED_OPTIMIZER_SOLVER,
+                "required_optimizer_solver": REPAIR_CAMPAIGN_REQUIRED_OPTIMIZER_SOLVER,
+                "chain_node_count": 1,
+                "optimizer_candidate_evaluation_order": [
+                    {
+                        "typed_response_id": "segnet_region_ready",
+                        "entropy_pipeline_stage_index": 0,
+                        **_false_authority(),
+                    }
+                ],
+                "interaction_order_chain_histogram": {"9": 1},
+                "blockers": ["deterministic_local_mlx_replay_bundle_required"],
+                **_false_authority(),
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     materialization_append_report_path = (
         tmp_path / "materialization_child_posterior_append_report.json"
     )
@@ -525,6 +554,19 @@ def test_repair_campaign_score_queue_can_bind_posterior_prior_input(
         "runtime_proof_missing": 1,
     }
     assert summary["byte_closed_materialization_posterior_appended_count"] == 1
+    assert summary["entropy_stage_chain_contract_artifact_count"] == 1
+    assert summary["entropy_stage_chain_contract_rollup"][
+        "optimizer_solver_histogram"
+    ] == {REPAIR_CAMPAIGN_REQUIRED_OPTIMIZER_SOLVER: 1}
+    assert summary["entropy_stage_chain_contract_rollup"][
+        "chain_contracts_require_interaction_aware_optimizer"
+    ] is True
+    assert summary["entropy_stage_chain_contract_rollup"][
+        "optimizer_candidate_evaluation_row_count"
+    ] == 1
+    assert summary["entropy_stage_chain_contract_rollup"][
+        "interaction_order_chain_histogram"
+    ] == {"9": 1}
     assert summary["byte_closed_materialization_rollup"][
         "materialization_posterior_signal_count"
     ] == 2
