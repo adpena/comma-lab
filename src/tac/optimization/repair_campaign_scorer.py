@@ -1965,6 +1965,65 @@ def _receiver_closed_rate_credit_bytes(payload: Mapping[str, Any]) -> int:
     return max(0, from_ledger)
 
 
+def _row_entropy_stage_index(row: Mapping[str, Any]) -> int:
+    for container in (row, _mapping(row.get("multiscale_action_row"))):
+        entropy_pipeline = _mapping(container.get("entropy_pipeline_position"))
+        value = entropy_pipeline.get("stage_index")
+        if value is None or isinstance(value, bool):
+            continue
+        try:
+            return max(0, int(value))
+        except (TypeError, ValueError):
+            continue
+    entropy_position = str(row.get("entropy_position_label") or "").strip()
+    if entropy_position:
+        return _safe_int(
+            _entropy_pipeline_position_descriptor(entropy_position).get("stage_index")
+        )
+    return len(_ENTROPY_PIPELINE_STAGE_ORDER) - 1
+
+
+def _row_interaction_order(row: Mapping[str, Any]) -> int:
+    action = _mapping(row.get("multiscale_action_row"))
+    direct = _safe_int(action.get("interaction_order"))
+    if direct > 0:
+        return direct
+    return len(ordered_unique(_string_list(row.get("operation_levels"))))
+
+
+def _row_remeasure_required_before_budget_spend(row: Mapping[str, Any]) -> bool:
+    action = _mapping(row.get("multiscale_action_row"))
+    stack_terms = _mapping(row.get("stacking_interaction_terms"))
+    return (
+        action.get("remeasure_required_before_budget_spend") is True
+        or stack_terms.get("must_remeasure_with_parent_and_sibling_repairs") is True
+    )
+
+
+def _interaction_aware_selection_score(row: Mapping[str, Any]) -> float:
+    campaign_score = max(0.0, _safe_float(row.get("campaign_score")) or 0.0)
+    interaction_penalty = max(0.0, _safe_float(row.get("interaction_penalty")) or 0.0)
+    interaction_order = _row_interaction_order(row)
+    dampener = 1.0
+    dampener += min(0.20, max(0, interaction_order - 1) * 0.01)
+    dampener += min(0.15, interaction_penalty * 0.5)
+    if _row_remeasure_required_before_budget_spend(row):
+        dampener += 0.02
+    return campaign_score / dampener if dampener > 0.0 else campaign_score
+
+
+def _optimizer_selection_sort_key(row: Mapping[str, Any]) -> tuple[bool, int, float, int, str]:
+    gate = _mapping(row.get("execution_gate"))
+    ready = gate.get("recommended_queue_status") == "ready_for_local_mlx_advisory_execution"
+    return (
+        not ready,
+        _row_entropy_stage_index(row),
+        -_interaction_aware_selection_score(row),
+        _row_interaction_order(row),
+        str(row.get("typed_response_id") or row.get("candidate_id") or ""),
+    )
+
+
 def _build_optimizer_decision(
     *,
     payload: Mapping[str, Any],
@@ -1975,12 +2034,38 @@ def _build_optimizer_decision(
     remaining = available_bytes
     selected_rows: list[dict[str, Any]] = []
     blocked_rows: list[dict[str, Any]] = []
-    for row in rows:
+    candidate_rows = sorted(rows, key=_optimizer_selection_sort_key)
+    candidate_evaluation_order: list[dict[str, Any]] = []
+    for optimizer_index, row in enumerate(candidate_rows, start=1):
         gate = _mapping(row.get("execution_gate"))
         ready = gate.get("recommended_queue_status") == "ready_for_local_mlx_advisory_execution"
         requested_bytes = _safe_int(row.get("requested_repair_bytes"))
         improvement = _safe_float(row.get("improvement_score_units")) or 0.0
         typed_response_id = str(row.get("typed_response_id") or "")
+        entropy_stage_index = _row_entropy_stage_index(row)
+        interaction_order = _row_interaction_order(row)
+        selection_score = _interaction_aware_selection_score(row)
+        candidate_evaluation_order.append(
+            {
+                "optimizer_candidate_evaluation_index": optimizer_index,
+                "typed_response_id": typed_response_id,
+                "candidate_id": row.get("candidate_id"),
+                "campaign_rank": row.get("campaign_rank"),
+                "queue_status": gate.get("recommended_queue_status"),
+                "entropy_pipeline_stage_index": entropy_stage_index,
+                "entropy_position_label": row.get("entropy_position_label"),
+                "interaction_order": interaction_order,
+                "remeasure_required_before_budget_spend": (
+                    _row_remeasure_required_before_budget_spend(row)
+                ),
+                "interaction_aware_selection_score": selection_score,
+                "campaign_score": row.get("campaign_score"),
+                "requested_repair_bytes": requested_bytes,
+                "budget_spend_allowed": False,
+                "ready_for_exact_eval_dispatch": False,
+                **FALSE_AUTHORITY,
+            }
+        )
         blockers: list[str] = _string_list(row.get("source_blockers"))
         if not ready:
             blockers.append("local_mlx_advisory_custody_missing")
@@ -2007,10 +2092,13 @@ def _build_optimizer_decision(
                     "entropy_pipeline_position": dict(
                         _mapping(row.get("entropy_pipeline_position"))
                     ),
+                    "entropy_pipeline_stage_index": entropy_stage_index,
+                    "optimizer_candidate_evaluation_index": optimizer_index,
                     "requested_repair_bytes": requested_bytes,
                     "objective_delta_score_units": row.get("objective_delta_score_units"),
                     "expected_local_improvement_score_units": improvement,
                     "campaign_score": row.get("campaign_score"),
+                    "interaction_aware_selection_score": selection_score,
                     "posterior_prior_multiplier": row.get(
                         "posterior_prior_multiplier"
                     ),
@@ -2049,6 +2137,10 @@ def _build_optimizer_decision(
                         ]
                     ),
                     "interaction_penalty": row.get("interaction_penalty"),
+                    "interaction_order": interaction_order,
+                    "remeasure_required_before_budget_spend": (
+                        _row_remeasure_required_before_budget_spend(row)
+                    ),
                     "interaction_scope": dict(_mapping(row.get("interaction_scope"))),
                     "stacking_interaction_terms": dict(
                         _mapping(row.get("stacking_interaction_terms"))
@@ -2081,6 +2173,8 @@ def _build_optimizer_decision(
                 "entropy_pipeline_position": dict(
                     _mapping(row.get("entropy_pipeline_position"))
                 ),
+                "entropy_pipeline_stage_index": entropy_stage_index,
+                "optimizer_candidate_evaluation_index": optimizer_index,
                 "requested_repair_bytes": requested_bytes,
                 "allocated_repair_bytes": allocated,
                 "allocation_fraction": allocation_fraction,
@@ -2089,6 +2183,7 @@ def _build_optimizer_decision(
                 "expected_local_improvement_score_units": improvement,
                 "scaled_expected_local_improvement_score_units": scaled_improvement,
                 "campaign_score": row.get("campaign_score"),
+                "interaction_aware_selection_score": selection_score,
                 "posterior_prior_multiplier": row.get(
                     "posterior_prior_multiplier"
                 ),
@@ -2123,12 +2218,16 @@ def _build_optimizer_decision(
                     row.get("hard_legal_runtime_constraints")
                 ),
                 "interaction_penalty": row.get("interaction_penalty"),
+                "interaction_order": interaction_order,
+                "remeasure_required_before_budget_spend": (
+                    _row_remeasure_required_before_budget_spend(row)
+                ),
                 "interaction_scope": dict(_mapping(row.get("interaction_scope"))),
                 "stacking_interaction_terms": dict(
                     _mapping(row.get("stacking_interaction_terms"))
                 ),
                 "selection_rationale": (
-                    "greedy_campaign_score_waterfill_under_receiver_closed_byte_credit"
+                    "interaction_aware_entropy_stage_waterfill_under_receiver_closed_byte_credit"
                 ),
                 "component_response_axis": "[macOS-MLX research-signal]",
                 "budget_spend_allowed": False,
@@ -2147,6 +2246,7 @@ def _build_optimizer_decision(
     entropy_histogram: dict[str, int] = {}
     entropy_stage_histogram: dict[str, int] = {}
     family_histogram: dict[str, int] = {}
+    interaction_order_histogram: dict[str, int] = {}
     for row in selected_rows:
         entropy = str(row.get("entropy_position_label") or "unknown_entropy_pipeline_position")
         entropy_pipeline = _mapping(row.get("entropy_pipeline_position"))
@@ -2160,6 +2260,10 @@ def _build_optimizer_decision(
             entropy_stage_histogram.get(entropy_stage, 0) + 1
         )
         family_histogram[family] = family_histogram.get(family, 0) + 1
+        interaction_order = str(_safe_int(row.get("interaction_order")))
+        interaction_order_histogram[interaction_order] = (
+            interaction_order_histogram.get(interaction_order, 0) + 1
+        )
     blockers = [
         "local_mlx_repair_optimizer_is_not_budget_spend_authority",
         "receiver_runtime_materialization_required_before_budget_spend",
@@ -2175,7 +2279,16 @@ def _build_optimizer_decision(
         "schema": REPAIR_CAMPAIGN_OPTIMIZER_DECISION_SCHEMA,
         "input_schema": payload.get("schema"),
         "objective": "minimize_delta_segnet_plus_delta_posenet_plus_lambda_delta_bytes",
-        "solver": "greedy_campaign_score_waterfill_v1",
+        "solver": "interaction_aware_entropy_stage_waterfill_v1",
+        "entropy_stage_ordered_selection": True,
+        "interaction_aware_selection": True,
+        "selection_sort_order": [
+            "queue_readiness",
+            "entropy_pipeline_stage_index",
+            "interaction_aware_selection_score_desc",
+            "interaction_order",
+            "typed_response_id",
+        ],
         "receiver_closed_rate_credit_bytes": available_bytes,
         "selected_allocation_count": len(selected_rows),
         "blocked_allocation_count": len(blocked_rows),
@@ -2187,6 +2300,10 @@ def _build_optimizer_decision(
             sorted(entropy_stage_histogram.items())
         ),
         "family_allocation_histogram": dict(sorted(family_histogram.items())),
+        "interaction_order_allocation_histogram": dict(
+            sorted(interaction_order_histogram.items())
+        ),
+        "optimizer_candidate_evaluation_order": candidate_evaluation_order,
         "selected_allocation_rows": selected_rows,
         "blocked_allocation_rows": blocked_rows,
         "posterior_prior_summary": dict(posterior_summary),
@@ -2591,7 +2708,9 @@ def score_repair_campaign(
         key=lambda item: (
             item["execution_gate"]["recommended_queue_status"]
             != "ready_for_local_mlx_advisory_execution",
-            -float(item.get("campaign_score") or 0.0),
+            _row_entropy_stage_index(item),
+            -_interaction_aware_selection_score(item),
+            _row_interaction_order(item),
             str(item.get("typed_response_id") or item.get("candidate_id") or ""),
         )
     )

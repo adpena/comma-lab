@@ -523,6 +523,72 @@ def test_score_repair_campaign_ranks_ready_mlx_and_names_missing_artifacts(
     assert "per_region_selector_codec_replay_missing" in report["missing_artifacts"]
 
 
+def test_score_repair_campaign_allocates_by_entropy_stage_before_scalar_score(
+    tmp_path: Path,
+) -> None:
+    work_order = _work_order(tmp_path)
+    work_order["receiver_closed_rate_credit"]["receiver_closed_saved_bytes_total"] = 32
+    ledger = work_order["typed_response_ledger"]
+    ledger["available_receiver_closed_rate_credit_bytes"] = 32
+    selector_row = json.loads(json.dumps(ledger["rows"][0]))
+    selector_row.update(
+        {
+            "typed_response_id": "selector_codec_ready",
+            "candidate_id": "per_region_selector_codec_ready",
+            "acquisition_id": "selector_ready_acq",
+            "correction_family": "per_region_selector_codec",
+            "targeted_dimensions": ["selector_stream", "region"],
+            "operation_levels": ["region", "entropy_coder"],
+            "entropy_position_label": "selector_codec_entropy",
+            "requested_repair_bytes": 32,
+            "objective_delta_score_units": -0.02,
+            "selector_payload_bits_per_region": {"road_boundary": 16},
+            "receiver_consumed_runtime_replay_proof": {
+                "schema": "unit_receiver_replay_presence.v1",
+                "status": "present",
+                **_false_authority(),
+            },
+        }
+    )
+    ledger["rows"].append(selector_row)
+
+    report = score_repair_campaign(payload=work_order, repo_root=tmp_path)
+    decision = report["optimizer_decision"]
+
+    assert decision["solver"] == "interaction_aware_entropy_stage_waterfill_v1"
+    assert decision["entropy_stage_ordered_selection"] is True
+    assert decision["interaction_aware_selection"] is True
+    assert decision["selection_sort_order"][:3] == [
+        "queue_readiness",
+        "entropy_pipeline_stage_index",
+        "interaction_aware_selection_score_desc",
+    ]
+    assert report["rows"][0]["typed_response_id"] == "segnet_region_ready"
+    assert report["rows"][1]["typed_response_id"] == "selector_codec_ready"
+    assert report["rows"][1]["campaign_score"] > report["rows"][0]["campaign_score"]
+    assert [
+        row["typed_response_id"]
+        for row in decision["optimizer_candidate_evaluation_order"][:2]
+    ] == ["segnet_region_ready", "selector_codec_ready"]
+    assert decision["selected_allocation_count"] == 1
+    allocation = decision["selected_allocation_rows"][0]
+    assert allocation["typed_response_id"] == "segnet_region_ready"
+    assert allocation["entropy_pipeline_stage_index"] == 0
+    assert allocation["selection_rationale"] == (
+        "interaction_aware_entropy_stage_waterfill_under_receiver_closed_byte_credit"
+    )
+    blocked_selector = next(
+        row
+        for row in decision["blocked_allocation_rows"]
+        if row["typed_response_id"] == "selector_codec_ready"
+    )
+    assert blocked_selector["entropy_pipeline_stage_index"] == 2
+    assert blocked_selector["interaction_aware_selection_score"] > (
+        allocation["interaction_aware_selection_score"]
+    )
+    assert "receiver_closed_rate_credit_exhausted" in blocked_selector["blockers"]
+
+
 def test_entropy_stage_chain_contract_requires_replay_receiver_and_exact_handoff(
     tmp_path: Path,
 ) -> None:

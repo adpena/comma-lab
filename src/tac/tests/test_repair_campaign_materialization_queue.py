@@ -195,9 +195,13 @@ def test_byte_closed_materialization_queue_orders_allocations_by_entropy_stage(
     report = score_repair_campaign(payload=work_order, repo_root=tmp_path)
     report_path = _write_json(tmp_path / "score_report.json", report)
 
+    assert [
+        row["typed_response_id"]
+        for row in report["optimizer_decision"]["selected_allocation_rows"]
+    ] == ["segnet_region_ready", "selector_codec_ready"]
     assert report["optimizer_decision"]["selected_allocation_rows"][0][
-        "typed_response_id"
-    ] == "selector_codec_ready"
+        "selection_rationale"
+    ] == "interaction_aware_entropy_stage_waterfill_under_receiver_closed_byte_credit"
 
     queue = build_repair_campaign_byte_closed_materialization_queue(
         repo_root=REPO_ROOT,
