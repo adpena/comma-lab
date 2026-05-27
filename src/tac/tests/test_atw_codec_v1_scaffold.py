@@ -753,11 +753,31 @@ def test_smoke_trainer_runs_end_to_end(tmp_path: Path) -> None:
     assert stats["atw1_magic_ok"] is True
 
 
-def test_full_trainer_raises_not_implemented(tmp_path: Path) -> None:
-    """_full_main is council-gated per Catalog #220 cascade."""
-    from experiments.train_substrate_atw_codec_v1 import main
+def test_full_trainer_implemented_and_cuda_gated(tmp_path: Path) -> None:
+    """CLASS-SHIFT-FULL-MAIN-CLUSTER 2026-05-27: _full_main IMPLEMENTED + CUDA-gated.
 
-    with pytest.raises(NotImplementedError, match="council-gated"):
+    The L1 SCAFFOLD NotImplementedError is extinguished: ``_full_main`` routes
+    the canonical score-aware training loop through
+    ``run_pact_nerv_score_aware_training``. Per CLAUDE.md "MPS auth eval is
+    NOISE" + Catalog #1, the full (non-smoke) path is CUDA-required; invoking
+    it with ``--device cpu`` refuses via ``device_or_die`` (SystemExit). PAID
+    DISPATCH stays gated by ``dispatch_enabled: false`` + ``research_only:
+    true`` + ``lane_class=substrate_engineering`` on the recipe per Catalog
+    #220 + #325 (code complete, trigger gated).
+    """
+    import inspect
+
+    from experiments.train_substrate_atw_codec_v1 import _full_main, main
+
+    src = inspect.getsource(_full_main)
+    assert "raise NotImplementedError" not in src, (
+        "_full_main NotImplementedError must be extinguished per "
+        "CLASS-SHIFT-FULL-MAIN-CLUSTER"
+    )
+    assert "run_pact_nerv_score_aware_training" in src, (
+        "_full_main must route through the canonical shared training loop"
+    )
+    with pytest.raises(SystemExit):
         main([
             "--output-dir", str(tmp_path / "should_not_exist"),
             "--epochs", "1",
