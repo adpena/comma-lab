@@ -38,6 +38,7 @@ from pathlib import Path
 import numpy as np
 
 from .archive import (
+    CCPF_VERSION_V2,
     POSE_DIMS,
     CascadeCPrimeArchive,
     parse_archive,
@@ -180,6 +181,60 @@ def _affine_warp_frame1_from_frame0(
     return out
 
 
+def _upsample_real_frame_0_reference_lowres(
+    ref_lowres: np.ndarray, *, height: int, width: int
+) -> np.ndarray:
+    """WAVE-7 v2: bilinear-upsample the real frame_0 reference to output resolution.
+
+    Per CLAUDE.md 11th ORDER directive (trainer-FIRST + inflate-SECOND): the v2
+    archive ships a real RGB frame_0 reference at low-res (96x128 default;
+    36864 bytes) decoded from ``upstream/videos/0.mkv`` at trainer time. The
+    inflate path bilinear-upsamples to output resolution (874x1164) so SegNet
+    + PoseNet evaluate REAL contest signal rather than synthetic sinusoidal
+    proxy.
+
+    Per HNeRV parity L4 (~200 LOC inflate budget) + L7 substrate_engineering
+    exception: bilinear upsample is the canonical numpy-portable reconstruction
+    primitive (sister NSCS06 v8 grayscale upsample via PIL.Image.resize +
+    Image.BILINEAR; here we use direct numpy bilinear to avoid the Pillow dep).
+
+    Inputs:
+        ref_lowres: (ref_h, ref_w, 3) uint8 RGB reference frame
+        height, width: target upsample resolution (output frame dimensions)
+
+    Returns:
+        frame_0: (height, width, 3) uint8 RGB upsampled reference
+    """
+    if ref_lowres.ndim != 3 or ref_lowres.shape[2] != 3:
+        raise ValueError(
+            f"ref_lowres must be (H, W, 3); got {ref_lowres.shape}"
+        )
+    src_h, src_w, _ = ref_lowres.shape
+    if src_h == height and src_w == width:
+        return ref_lowres.astype(np.uint8, copy=True)
+    # Bilinear upsample per-channel (numpy-only; sister NSCS06 v8 uses PIL but
+    # we hold to <=2 ext deps numpy+brotli per HNeRV parity L4 budget).
+    src = ref_lowres.astype(np.float32)
+    # Target row/col fractional source coordinates (preserve aspect via per-axis scale)
+    sx = (np.arange(width, dtype=np.float32) * (src_w - 1)) / max(width - 1, 1)
+    sy = (np.arange(height, dtype=np.float32) * (src_h - 1)) / max(height - 1, 1)
+    x0 = np.floor(sx).astype(np.int32)
+    y0 = np.floor(sy).astype(np.int32)
+    x1 = np.minimum(x0 + 1, src_w - 1)
+    y1 = np.minimum(y0 + 1, src_h - 1)
+    fx = (sx - x0)[None, :, None]
+    fy = (sy - y0)[:, None, None]
+    # Gather corners via broadcast indexing
+    f00 = src[np.ix_(y0, x0)]
+    f01 = src[np.ix_(y0, x1)]
+    f10 = src[np.ix_(y1, x0)]
+    f11 = src[np.ix_(y1, x1)]
+    top = f00 * (1.0 - fx) + f01 * fx
+    bot = f10 * (1.0 - fx) + f11 * fx
+    out = (top * (1.0 - fy) + bot * fy).clip(0.0, 255.0).astype(np.uint8)
+    return out
+
+
 def _render_frame_0_base(height: int, width: int) -> np.ndarray:
     """Render a deterministic per-substrate frame_0 base with spatial texture.
 
@@ -300,13 +355,19 @@ def inflate_one_video(archive_bytes: bytes, output_stem: Path) -> Path:
     out_path = output_stem.with_suffix(".raw")
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # WAVE-5 MVP-fix: per-pair render loop (canonical sister NSCS06 v8 pattern).
-    # Render frame_0 base ONCE (mid-gray L0 SCAFFOLD; vendored real reference
-    # frames are a Catalog #220 SCAFFOLD_DEFERRED_INTEGRATION 7th-order item).
-    # Reuse the same frame_0 across pairs because the L0 SCAFFOLD does not yet
-    # carry per-pair reference frame bytes; the warp variation comes from the
-    # per-pair pose_delta operationally applied.
-    frame_0_base = _render_frame_0_base(height, width)
+    # WAVE-7 ORDER-correct: per-pair render loop with REAL frame_0 reference at v2.
+    # V2 archives ship a vendored real RGB frame_0 reference at low-res; the
+    # inflate path bilinear-upsamples to output resolution so SegNet+PoseNet
+    # evaluate REAL contest signal per the 11th ORDER directive (trainer-FIRST
+    # + inflate-SECOND). V1 archives fall back to WAVE-5 synthetic textured
+    # base (sinusoidal grid + radial gradient) which preserves backward-compat
+    # for any pre-WAVE-7 archive bytes still in the wild.
+    if arc.version == CCPF_VERSION_V2 and arc.frame_0_reference_lowres is not None:
+        frame_0_base = _upsample_real_frame_0_reference_lowres(
+            arc.frame_0_reference_lowres, height=height, width=width
+        )
+    else:
+        frame_0_base = _render_frame_0_base(height, width)
 
     with out_path.open("wb") as fh:
         encoded_pairs = arc.n_pairs

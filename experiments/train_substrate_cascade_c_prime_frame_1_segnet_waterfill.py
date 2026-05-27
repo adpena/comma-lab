@@ -157,6 +157,92 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
 TIER_1_EXTRA_MOUNT_PATHS: tuple[str, ...] = ()
 
 
+def _decode_real_frame_0_lowres_from_contest_video(
+    video_path: Path,
+    *,
+    ref_h: int = 96,
+    ref_w: int = 128,
+):
+    """WAVE-7 ORDER-correct: decode REAL frame_0 from upstream/videos/0.mkv at low-res.
+
+    Returns ``np.ndarray`` of shape ``(ref_h, ref_w, 3)`` uint8 RGB (numpy is
+    lazy-imported inside the function body to keep this module's import-time
+    footprint minimal per CLAUDE.md "Beauty, simplicity, and developer
+    experience" non-negotiable).
+
+    Per CLAUDE.md 11th standing directive ORDER discipline (trainer-FIRST +
+    inflate-SECOND): the trainer reads the canonical first frame from the
+    contest video via pyav, downsamples to (ref_h, ref_w, 3) uint8 RGB, and
+    ships it as the v2 archive ``frame_0_reference_lowres`` block.
+
+    The inflate path bilinear-upsamples the low-res reference to output
+    resolution (874x1164) so SegNet+PoseNet evaluate REAL contest signal
+    rather than the WAVE-5 synthetic textured base.
+
+    Per Catalog #213 Comma2k19 canonical helper non-negotiable: this decode
+    reads ONLY the contest video at the canonical ``upstream/videos/0.mkv``
+    path; if the path is absent (e.g. on a fresh Modal worker before mount
+    completes) the caller MUST fall through to v1 (synthetic base).
+
+    Per HNeRV parity L1 score-aware (trains against real contest video): the
+    frame_0 reference IS the canonical input distribution for both SegNet
+    (last-frame slice) and PoseNet (paired-frame YUV6).
+
+    Args:
+        video_path: path to upstream/videos/0.mkv (the contest video).
+        ref_h: low-res height (default 96; matches sister NSCS06 v8 grayscale_h).
+        ref_w: low-res width (default 128; matches sister NSCS06 v8 grayscale_w).
+
+    Returns:
+        ref_lowres: (ref_h, ref_w, 3) uint8 RGB numpy array; the canonical
+        first frame of upstream/videos/0.mkv downsampled via pyav-native
+        scaler.
+
+    Raises:
+        FileNotFoundError: video_path is missing.
+        RuntimeError: pyav not installed, or video yielded zero frames.
+    """
+    import numpy as np
+
+    if not video_path.is_file():
+        raise FileNotFoundError(
+            f"WAVE-7 ORDER-correct trainer requires real contest video at {video_path}; "
+            "fall back to v1 (synthetic base) if upstream/videos/0.mkv is unavailable"
+        )
+    try:
+        import av
+    except Exception as exc:
+        raise RuntimeError(
+            "pyav (`av`) is required for WAVE-7 ORDER-correct trainer to decode "
+            "real frame_0 from upstream/videos/0.mkv; run `uv pip install av`"
+        ) from exc
+
+    container = av.open(str(video_path))
+    try:
+        stream = container.streams.video[0]
+        first_frame = None
+        for frame in container.decode(stream):
+            first_frame = frame
+            break
+        if first_frame is None:
+            raise RuntimeError(
+                f"WAVE-7 ORDER-correct: {video_path} yielded zero frames"
+            )
+        # pyav-native reformat to (ref_w, ref_h) RGB24 (av.Frame.to_ndarray uses
+        # libswscale bilinear when format conversion is requested).
+        ref_frame = first_frame.reformat(
+            width=ref_w, height=ref_h, format="rgb24"
+        )
+        ref_rgb_hwc = ref_frame.to_ndarray()
+        assert ref_rgb_hwc.shape == (ref_h, ref_w, 3), (
+            f"WAVE-7 ORDER-correct: pyav reformat shape mismatch; "
+            f"expected ({ref_h}, {ref_w}, 3) got {ref_rgb_hwc.shape}"
+        )
+        return ref_rgb_hwc.astype(np.uint8, copy=True)
+    finally:
+        container.close()
+
+
 def _write_deterministic_archive_zip(
     archive_zip_path: Path,
     *,
@@ -350,7 +436,49 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     # Stage 4: pack CH-CCP-FRAME1-WATERFILL archive (canonical archive.pack_archive).
+    # WAVE-7 ORDER-correct: prefer v2 (real frame_0 reference from
+    # upstream/videos/0.mkv) when the contest video is available; fall back to
+    # v1 (synthetic base at inflate) when the video is missing (e.g. Modal
+    # worker pre-mount). The v2 archive grows by ~36864 bytes (96x128 RGB)
+    # which is ~+0.0245 rate-axis cost; sister cargo-cult audit expects
+    # seg+pose-axis improvement from real signal to exceed rate cost (the
+    # empirical question per WAVE-7 cheap smoke decision per Catalog #246).
     _log("stage_4_archive_pack_begin")
+    from tac.substrates.cascade_c_prime_frame_1_segnet_waterfill.archive import (
+        CCPF_VERSION_V1 as _CCPF_V1,
+        CCPF_VERSION_V2 as _CCPF_V2,
+        REF_FRAME_LOWRES_H_DEFAULT as _REF_H,
+        REF_FRAME_LOWRES_W_DEFAULT as _REF_W,
+    )
+
+    frame_0_reference_lowres = None
+    archive_version = _CCPF_V1
+    try:
+        if args.video_path.is_file():
+            frame_0_reference_lowres = _decode_real_frame_0_lowres_from_contest_video(
+                args.video_path, ref_h=_REF_H, ref_w=_REF_W
+            )
+            archive_version = _CCPF_V2
+            _log(
+                f"stage_4_real_frame_0_decoded shape={frame_0_reference_lowres.shape} "
+                f"dtype={frame_0_reference_lowres.dtype} mean={float(frame_0_reference_lowres.mean()):.2f} "
+                f"std={float(frame_0_reference_lowres.std()):.2f}"
+            )
+        else:
+            _log(
+                f"stage_4_real_frame_0_decode_SKIPPED video_path={args.video_path} not found; "
+                "falling back to v1 archive (synthetic base at inflate)"
+            )
+    except Exception as exc:
+        # Per 11th ORDER directive: real-video decode failure is NOT fatal;
+        # the inflate path falls back to synthetic base (WAVE-5 behavior).
+        _log(
+            f"stage_4_real_frame_0_decode_FAILED ({type(exc).__name__}: {exc}); "
+            "falling back to v1 archive (synthetic base at inflate)"
+        )
+        frame_0_reference_lowres = None
+        archive_version = _CCPF_V1
+
     try:
         archive_bytes = pack_archive(
             routing_decision=state_dict["routing_decision"],
@@ -359,6 +487,8 @@ def main(argv: list[str] | None = None) -> int:
             pose_deltas_uint8=state_dict["pose_deltas_uint8"],
             frame_0_menu_size=cfg.n_frame_0_modes,
             frame_1_menu_size=cfg.n_frame_1_modes,
+            version=archive_version,
+            frame_0_reference_lowres=frame_0_reference_lowres,
         )
     except Exception as exc:
         _log(f"FATAL archive_pack: {exc}")
@@ -369,7 +499,8 @@ def main(argv: list[str] | None = None) -> int:
     archive_bin_path.write_bytes(archive_bytes)
     _log(
         "stage_4_archive_pack_done "
-        f"payload_bytes={len(archive_bytes)} payload_sha256={archive_payload_sha[:16]}..."
+        f"version={archive_version} payload_bytes={len(archive_bytes)} "
+        f"payload_sha256={archive_payload_sha[:16]}..."
     )
 
     # Stage 5: emit contest-compliant inflate runtime per HNeRV parity L4 + Catalog #146.
