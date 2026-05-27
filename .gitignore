@@ -51,6 +51,13 @@ experiments/queue_state*.db-*
 .omx/research/**/queue_state*.sqlite-*
 .omx/research/**/queue_state*.db
 .omx/research/**/queue_state*.db-*
+# Artifact-local experiment-queue state is replayable from the committed queue
+# JSON plus result manifests. Commit compact ledgers/memos, not SQLite worker
+# state that can go stale or collide with regenerated queue ids.
+.omx/research/**/*_queue.sqlite
+.omx/research/**/*_queue.sqlite-*
+.omx/research/**/*_queue.db
+.omx/research/**/*_queue.db-*
 .omx/research/**/*.lock
 
 # Large binary files (GitHub 100MB limit)
@@ -268,6 +275,14 @@ src/tac.egg-info/
 .omx/research/materializer_exact_eval_consumer_report_*.json
 .omx/research/materializer_exact_eval_consumer_queue_*.json
 .omx/research/materializer_exact_eval_consumer_experiment_queue_*.json
+# Final-rate attack ledgers may commit compact manifests/reports, but exact
+# handoff submission closures and duplicate candidate archives are generated
+# replay payloads. Keep them in local/external artifact custody unless promoted
+# into a deliberate evidence pack.
+.omx/research/frontier_final_rate_attack_*/**/exact_eval_handoff/dispatch_plan.json
+.omx/research/frontier_final_rate_attack_*/**/exact_eval_handoff/dispatch_queue.json
+.omx/research/frontier_final_rate_attack_*/**/exact_eval_handoff/submission_closure/
+.omx/research/frontier_final_rate_attack_*/**/rows/**/candidate.zip
 .omx/research/byte_shaving_materializer_campaign_*/
 .omx/research/codex_receiver_negative_queue_feedback_*/
 .omx/research/mlx_acquisition_batches/

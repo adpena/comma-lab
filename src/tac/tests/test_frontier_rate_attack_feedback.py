@@ -43,6 +43,7 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     REPAIR_BUDGET_TYPED_RESPONSE_ROW_SCHEMA,
     REPAIR_BUDGET_WATERFILL_ALLOCATION_ACTION_TERM_SCHEMA,
     REPAIR_BUDGET_WATERFILL_WORK_ORDER_SCHEMA,
+    TARGET_OPTIMIZATION_PROFILE_SCHEMA,
     TARGETED_COMPONENT_CORRECTION_ACQUISITION_SCHEMA,
     TARGETED_COMPONENT_CORRECTION_CHAIN_MATERIALIZER_HANDOFF_SCHEMA,
     TARGETED_COMPONENT_CORRECTION_MATERIALIZATION_REQUEST_ROW_SCHEMA,
@@ -66,6 +67,7 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     build_frontier_repair_budget_materializer_binding_report,
     build_frontier_repair_budget_waterfill_queue,
     build_frontier_repair_budget_waterfill_work_order,
+    build_frontier_target_optimization_profile,
     build_frontier_targeted_component_correction_acquisition,
     build_frontier_targeted_component_correction_chain_materializer_handoff,
     build_frontier_targeted_component_correction_chain_work_orders,
@@ -1092,6 +1094,90 @@ def test_byte_range_stage_inputs_infer_target_bound_single_member_name(
     assert "byte_range_stage_missing:source_runtime_dir" not in context[
         "context_blockers"
     ]
+
+
+def test_byte_range_stage_inputs_disable_pr103_defaults_for_unbound_chain(
+    tmp_path: Path,
+) -> None:
+    _write_default_byte_range_chain_context(tmp_path)
+    stage_plan = _operation_chain_stage_plan_payload()
+    stage_plan["missing_contracts"] = ["payload_grammar_schema_manifest"]
+    stage_plan["source_bridge_blockers"] = [
+        "chain_missing_contract:payload_grammar_schema_manifest"
+    ]
+
+    payload = build_frontier_byte_range_stage_inputs(
+        repo_root=tmp_path,
+        operation_chain_stage_plan=stage_plan,
+        chain_output_dir=tmp_path / "byte_range_chain",
+    )
+
+    context = payload["materializer_context"]
+    assert payload["local_chain_queueable"] is False
+    assert context["default_pr103_context_disabled"] is True
+    assert context["default_pr103_context_disable_reason"] == (
+        "unbound_chain_missing_payload_grammar_contract"
+    )
+    assert context["schema_manifest"] == ""
+    assert context["beam_probe_reports"] == []
+    assert context["source_archive"] == ""
+    assert (
+        "byte_range_stage_default_pr103_context_disabled_for_unbound_chain"
+        in context["context_blockers"]
+    )
+    assert "byte_range_stage_missing:schema_manifest" in context["context_blockers"]
+
+
+def test_target_optimization_profile_declares_contest_video_without_hardcoding(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path
+    # Keep this test hermetic without relying on the real contest video.
+    video_path = repo / "upstream" / "videos" / "0.mkv"
+    video_path.parent.mkdir(parents=True, exist_ok=True)
+    video_bytes = b"contest-video-target"
+    video_path.write_bytes(video_bytes)
+
+    profile = build_frontier_target_optimization_profile(
+        repo_root=repo,
+        target_profile_id="unit_contest_video",
+        target_mode="contest_video_overfit",
+        target_video_paths=("upstream/videos/0.mkv",),
+    )
+
+    assert profile["schema"] == TARGET_OPTIMIZATION_PROFILE_SCHEMA
+    assert profile["target_mode"] == "contest_video_overfit"
+    assert profile["declared_overfit_allowed"] is True
+    assert profile["profile_ready"] is True
+    assert profile["blockers"] == []
+    assert profile["target_videos"][0]["path"] == "upstream/videos/0.mkv"
+    assert profile["target_videos"][0]["sha256"] == hashlib.sha256(
+        video_bytes
+    ).hexdigest()
+    assert profile["portability_contract"][
+        "contest_specialization_is_declared_data_not_hardcoded_tool_behavior"
+    ] is True
+    _assert_false_authority(profile)
+
+
+def test_target_optimization_profile_corpus_mode_requires_manifest(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "upstream" / "videos").mkdir(parents=True)
+    (tmp_path / "upstream" / "videos" / "0.mkv").write_bytes(b"video")
+
+    profile = build_frontier_target_optimization_profile(
+        repo_root=tmp_path,
+        target_profile_id="unit_corpus_missing",
+        target_mode="corpus_generalization",
+        target_video_paths=("upstream/videos/0.mkv",),
+    )
+
+    assert profile["schema"] == TARGET_OPTIMIZATION_PROFILE_SCHEMA
+    assert profile["declared_overfit_allowed"] is False
+    assert profile["profile_ready"] is False
+    assert "target_corpus_manifest_required_for_mode" in profile["blockers"]
+    _assert_false_authority(profile)
 
 
 def _write_default_byte_range_chain_context(repo: Path) -> None:
@@ -4104,6 +4190,12 @@ def test_repair_waterfill_work_order_builds_typed_response_ledger(
                 "operation_levels": ["frame", "region"],
                 "selected_pair_indices": [7, 9],
                 "selected_region_ids": ["road_boundary"],
+                "local_cpu_advisory_path": "candidate_local_cpu.json",
+                "local_mlx_response_path": "candidate_local_mlx.json",
+                "reference_local_mlx_response_path": "reference_local_mlx.json",
+                "response_artifact_path": "seg_region_response.json",
+                "local_mlx_score_axis": "[macOS-MLX research-signal]",
+                "reference_local_mlx_score_axis": "[macOS-MLX research-signal]",
                 "local_cpu_component_terms": {
                     "segnet_delta_score_units": -0.0012,
                     "posenet_delta_score_units": 0.0001,
@@ -4170,11 +4262,20 @@ def test_repair_waterfill_work_order_builds_typed_response_ledger(
         "at_entropy_coder": 1,
         "before_entropy_coder_distribution_shaping": 1,
     }
+    assert ledger["mlx_advisory_custody_row_count"] == 1
+    assert ledger["missing_mlx_advisory_custody_row_count"] == 1
+    assert "missing_local_advisory_artifact:local_mlx_response_path" in ledger[
+        "missing_local_advisory_artifact_blockers"
+    ]
     first_typed = ledger["rows"][0]
     assert first_typed["schema"] == REPAIR_BUDGET_TYPED_RESPONSE_ROW_SCHEMA
     assert first_typed["entropy_position_label"] == (
         "before_entropy_coder_distribution_shaping"
     )
+    assert first_typed["mlx_advisory_custody_present"] is True
+    assert first_typed["local_advisory_custody"][
+        "paired_mlx_advisory_custody_present"
+    ] is True
     assert first_typed["marginal_response_curves"]["objective"][
         "improvement_per_byte"
     ] > 0.0
@@ -4191,7 +4292,13 @@ def test_repair_waterfill_work_order_builds_typed_response_ledger(
     assert first_allocation["allocation_action_term"]["T_i"][
         "entropy_position_label"
     ] == "before_entropy_coder_distribution_shaping"
+    assert first_allocation["allocation_action_term"]["T_i"][
+        "mlx_advisory_custody_present"
+    ] is True
     assert work_order["allocation_rows"][1]["proposed_encoder_repair_bytes"] == 8
+    assert "missing_local_advisory_artifact:local_mlx_response_path" in work_order[
+        "allocation_rows"
+    ][1]["budget_spend_blockers"]
 
     plan = build_frontier_repair_budget_materialization_plan(
         repair_budget_waterfill_work_order=work_order,
@@ -4206,6 +4313,10 @@ def test_repair_waterfill_work_order_builds_typed_response_ledger(
     assert child_rows[0]["entropy_position_label"] == (
         "before_entropy_coder_distribution_shaping"
     )
+    assert child_rows[0]["mlx_advisory_custody_present"] is True
+    assert "missing_local_advisory_artifact:local_mlx_response_path" in child_rows[
+        1
+    ]["blockers"]
     _assert_false_authority(work_order)
     _assert_false_authority(plan)
 

@@ -1,0 +1,157 @@
+{
+  "artifact_write": {
+    "allow_overwrite": false,
+    "bytes_written": 178546,
+    "free_bytes_before": 586038177792,
+    "path": "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_regen_20260527T1620Z/results/frontier_final_rate_attack_regen_20260527T1620Z/packet_member_recompress_v1/rows/001_current_contest_cpu_frontier_0a3abfe645c4/candidate.zip",
+    "sha256": "0a3abfe645c4fac0df9ea89237f25dd9bfc6b2471b897c36d7437795d27d1403"
+  },
+  "byte_closed_candidate_emitted": true,
+  "candidate_archive": {
+    "bytes": 178546,
+    "path": "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_regen_20260527T1620Z/results/frontier_final_rate_attack_regen_20260527T1620Z/packet_member_recompress_v1/rows/001_current_contest_cpu_frontier_0a3abfe645c4/candidate.zip",
+    "sha256": "0a3abfe645c4fac0df9ea89237f25dd9bfc6b2471b897c36d7437795d27d1403"
+  },
+  "candidate_member": {
+    "bytes": 178446,
+    "name": "x",
+    "sha256": "7afe6c263742bdc546c815537be71589372fdfc2dd7fb6825a09309a5d72c4f7",
+    "zip_compressed_bytes": 178446,
+    "zip_compressed_payload_sha256": "7afe6c263742bdc546c815537be71589372fdfc2dd7fb6825a09309a5d72c4f7",
+    "zip_compressed_sha256": "7afe6c263742bdc546c815537be71589372fdfc2dd7fb6825a09309a5d72c4f7",
+    "zip_compression_method": "stored"
+  },
+  "candidate_trials": [
+    {
+      "archive_bytes": 178546,
+      "archive_sha256": "0a3abfe645c4fac0df9ea89237f25dd9bfc6b2471b897c36d7437795d27d1403",
+      "compression_method": "stored",
+      "compresslevel": null
+    },
+    {
+      "archive_bytes": 178601,
+      "archive_sha256": "39a99118a61daa07f842e0ec0f36fbf5772e9bb514a785fd4648dbe68471eb1c",
+      "compression_method": "deflated",
+      "compresslevel": 1
+    },
+    {
+      "archive_bytes": 178601,
+      "archive_sha256": "ce37668871a6450744bf728f03af983d427cfa405a90d0bdf9eeed1dd8983abd",
+      "compression_method": "deflated",
+      "compresslevel": 6
+    },
+    {
+      "archive_bytes": 178601,
+      "archive_sha256": "ce37668871a6450744bf728f03af983d427cfa405a90d0bdf9eeed1dd8983abd",
+      "compression_method": "deflated",
+      "compresslevel": 9
+    }
+  ],
+  "dispatch_attempted": false,
+  "gpu_launched": false,
+  "materializer_id": "packet_member_recompress_adapter",
+  "portability_contract": {
+    "deterministic_surface": "python_stdlib_zipfile_member_rewrite",
+    "implementation_language": "python",
+    "materializer_id": "packet_member_recompress_adapter",
+    "notes": null,
+    "portability_class": "portable_python_reference",
+    "promotion_authority": false,
+    "rank_or_kill_authority": false,
+    "required_python_modules": [
+      "zipfile"
+    ],
+    "requires_cuda": false,
+    "requires_gpu": false,
+    "requires_metal": false,
+    "requires_mlx": false,
+    "requires_mps": false,
+    "schema": "family_agnostic_materializer_portability_contract.v1",
+    "score_authority": false,
+    "target_kind": "packet_member_recompress_v1",
+    "unsupported_features": []
+  },
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "readiness_blockers": [
+    "candidate_not_rate_positive"
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_id": "packet_member_recompress_v1.receiver.v1",
+  "receiver_contract_kind": "family_agnostic_packet_member_recompress",
+  "receiver_contract_satisfied": true,
+  "receiver_verification": {
+    "blockers": [],
+    "candidate_archive_sha256": "0a3abfe645c4fac0df9ea89237f25dd9bfc6b2471b897c36d7437795d27d1403",
+    "candidate_member_sha256": "7afe6c263742bdc546c815537be71589372fdfc2dd7fb6825a09309a5d72c4f7",
+    "candidate_member_sha256s": {},
+    "materializer_id": "packet_member_recompress_adapter",
+    "proof_kind": "packet_member_recompress_payload_identity_receiver_proof.v1",
+    "proof_path": "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_regen_20260527T1620Z/results/frontier_final_rate_attack_regen_20260527T1620Z/packet_member_recompress_v1/rows/001_current_contest_cpu_frontier_0a3abfe645c4/candidate.runtime_consumption_proof.json",
+    "proof_present": true,
+    "proof_schema": "family_agnostic_runtime_consumption_proof_v1",
+    "receiver_contract_kind": "family_agnostic_packet_member_recompress",
+    "receiver_contract_satisfied": true,
+    "runtime_adapter_ready": false,
+    "runtime_adapter_sha256": null,
+    "schema": "family_agnostic_runtime_consumption_proof_verification.v1",
+    "target_kind": "packet_member_recompress_v1"
+  },
+  "runtime_consumption_proof_path": "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_regen_20260527T1620Z/results/frontier_final_rate_attack_regen_20260527T1620Z/packet_member_recompress_v1/rows/001_current_contest_cpu_frontier_0a3abfe645c4/candidate.runtime_consumption_proof.json",
+  "runtime_consumption_proof_write": {
+    "allow_overwrite": false,
+    "bytes_written": 3493,
+    "free_bytes_before": 586037997568,
+    "path": "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_regen_20260527T1620Z/results/frontier_final_rate_attack_regen_20260527T1620Z/packet_member_recompress_v1/rows/001_current_contest_cpu_frontier_0a3abfe645c4/candidate.runtime_consumption_proof.json",
+    "sha256": "377f0b37a0e6b474dced9540c62d4137f9dc20f0371cf32edf3e3205b1f41c32"
+  },
+  "schema": "packet_member_recompress_candidate.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "selected_compression": {
+    "candidate_archive_bytes": 178546,
+    "compression_method": "stored",
+    "compresslevel": null,
+    "saved_bytes": 0,
+    "source_archive_bytes": 178546
+  },
+  "selected_member_name": "x",
+  "serialized_archive_delta": {
+    "archive_delta_bytes": 0,
+    "blockers": [],
+    "candidate_archive_bytes": 178546,
+    "dispatch_attempted": false,
+    "gpu_launched": false,
+    "modeled_cost_bytes": null,
+    "modeled_saved_bytes": 0,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "rate_only_control": false,
+    "ready_for_exact_eval_dispatch": false,
+    "realized_saved_bytes": 0,
+    "require_realized_saving": false,
+    "savings_realized": false,
+    "schema": "serialized_archive_delta_contract.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "source_archive_bytes": 178546,
+    "status": "zero_delta"
+  },
+  "source_archive": {
+    "bytes": 178546,
+    "path": "/Users/adpena/Projects/pact/experiments/results/v14_v2_dqs1_plus_fec10_substituted_20260526T023000Z/submission_dir/archive.zip",
+    "sha256": "0a3abfe645c4fac0df9ea89237f25dd9bfc6b2471b897c36d7437795d27d1403"
+  },
+  "source_member": {
+    "bytes": 178446,
+    "name": "x",
+    "sha256": "7afe6c263742bdc546c815537be71589372fdfc2dd7fb6825a09309a5d72c4f7",
+    "zip_compressed_bytes": 178446,
+    "zip_compressed_payload_sha256": "7afe6c263742bdc546c815537be71589372fdfc2dd7fb6825a09309a5d72c4f7",
+    "zip_compressed_sha256": "7afe6c263742bdc546c815537be71589372fdfc2dd7fb6825a09309a5d72c4f7",
+    "zip_compression_method": "stored"
+  },
+  "target_kind": "packet_member_recompress_v1"
+}

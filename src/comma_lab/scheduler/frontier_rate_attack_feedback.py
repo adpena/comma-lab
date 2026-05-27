@@ -88,6 +88,9 @@ from .final_byte_operation_contexts import build_final_byte_operation_contexts
 
 FEEDBACK_REFRESH_SCHEMA = "frontier_rate_attack_feedback_refresh.v1"
 FRONTIER_RATE_ATTACK_FEEDBACK_REFRESH_SCHEMA = FEEDBACK_REFRESH_SCHEMA
+TARGET_OPTIMIZATION_PROFILE_SCHEMA = (
+    "frontier_rate_attack_target_optimization_profile.v1"
+)
 PAIR_FRAME_GEOMETRY_DISCOVERY_SCHEMA = (
     "frontier_rate_attack_pair_frame_geometry_discovery.v1"
 )
@@ -726,6 +729,14 @@ RENDERER_PAYLOAD_DFL1_REQUIRED_MEMBERS = (
     "masks.mkv",
     "optimized_poses.pt",
 )
+DEFAULT_CONTEST_TARGET_VIDEO = Path("upstream/videos/0.mkv")
+_TARGET_OPTIMIZATION_MODES = frozenset(
+    {
+        "contest_video_overfit",
+        "corpus_generalization",
+        "hybrid_contest_plus_corpus",
+    }
+)
 
 
 def _utc_now() -> str:
@@ -752,6 +763,167 @@ def _sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _target_video_record(
+    path: str | Path,
+    *,
+    repo_root: Path,
+    role: str,
+) -> dict[str, Any]:
+    resolved = _resolve_path(path, repo_root=repo_root)
+    exists = resolved.is_file()
+    return {
+        "schema": "frontier_rate_attack_target_video_record.v1",
+        "path": _repo_rel(resolved, repo_root),
+        "role": role,
+        "exists": exists,
+        "sha256": _sha256_file(resolved) if exists else None,
+        "bytes": resolved.stat().st_size if exists else None,
+        "allowed_use": "declared_optimization_target_video_only",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
+def build_frontier_target_optimization_profile(
+    *,
+    repo_root: str | Path,
+    target_profile_id: str = "contest_video_0",
+    target_mode: str = "contest_video_overfit",
+    target_video_paths: Sequence[str | Path] = (),
+    target_corpus_manifest_path: str | Path | None = None,
+) -> dict[str, Any]:
+    """Declare the video/corpus target for queue-owned optimization.
+
+    The contest can intentionally overfit to its declared video, but this profile
+    keeps that specialization explicit and portable instead of letting tools
+    silently bake one path into materializers, sweeps, or receiver contracts.
+    """
+
+    repo = Path(repo_root)
+    mode = str(target_mode or "").strip()
+    if mode not in _TARGET_OPTIMIZATION_MODES:
+        raise FrontierRateAttackFeedbackError(
+            "target_mode must be one of "
+            f"{sorted(_TARGET_OPTIMIZATION_MODES)}; got {target_mode!r}"
+        )
+    profile_id = str(target_profile_id or "").strip()
+    if not profile_id:
+        raise FrontierRateAttackFeedbackError("target_profile_id must be non-empty")
+    raw_video_paths = tuple(target_video_paths) or (DEFAULT_CONTEST_TARGET_VIDEO,)
+    videos = [
+        _target_video_record(
+            path,
+            repo_root=repo,
+            role="primary_contest_target" if index == 0 else "auxiliary_target",
+        )
+        for index, path in enumerate(raw_video_paths)
+    ]
+    corpus_manifest = None
+    if target_corpus_manifest_path is not None:
+        manifest_path = _resolve_path(target_corpus_manifest_path, repo_root=repo)
+        manifest_exists = manifest_path.is_file()
+        corpus_manifest = {
+            "schema": "frontier_rate_attack_target_corpus_manifest_ref.v1",
+            "path": _repo_rel(manifest_path, repo),
+            "exists": manifest_exists,
+            "sha256": _sha256_file(manifest_path) if manifest_exists else None,
+            "bytes": manifest_path.stat().st_size if manifest_exists else None,
+            "allowed_use": "declared_generalization_corpus_pointer_only",
+            "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
+            **FALSE_AUTHORITY,
+        }
+
+    blockers: list[str] = []
+    if not videos:
+        blockers.append("target_profile_requires_at_least_one_video")
+    for video in videos:
+        if video.get("exists") is not True:
+            blockers.append(f"target_video_missing:{video.get('path')}")
+    if mode in {"corpus_generalization", "hybrid_contest_plus_corpus"}:
+        if corpus_manifest is None:
+            blockers.append("target_corpus_manifest_required_for_mode")
+        elif corpus_manifest.get("exists") is not True:
+            blockers.append(
+                f"target_corpus_manifest_missing:{corpus_manifest.get('path')}"
+            )
+
+    profile = {
+        "schema": TARGET_OPTIMIZATION_PROFILE_SCHEMA,
+        "generated_at_utc": _utc_now(),
+        "target_profile_id": profile_id,
+        "target_mode": mode,
+        "declared_overfit_allowed": mode
+        in {"contest_video_overfit", "hybrid_contest_plus_corpus"},
+        "target_video_count": len(videos),
+        "target_videos": videos,
+        "target_corpus_manifest": corpus_manifest,
+        "portability_contract": {
+            "schema": "frontier_rate_attack_target_portability_contract.v1",
+            "contest_specialization_is_declared_data_not_hardcoded_tool_behavior": True,
+            "materializers_must_consume_target_profile_or_runtime_contracts": True,
+            "corpus_runs_must_bind_manifest_before_execution": True,
+            "default_contest_video_path": DEFAULT_CONTEST_TARGET_VIDEO.as_posix(),
+            "allowed_use": "target_binding_contract_for_queue_owned_optimization",
+            "forbidden_use": "score_claim_or_dispatch_authority",
+            **FALSE_AUTHORITY,
+        },
+        "optimization_policy": {
+            "schema": "frontier_rate_attack_target_optimization_policy.v1",
+            "contest_policy": (
+                "overfit_to_declared_target_video_for_contest_score_when_mode_allows"
+            ),
+            "generalization_policy": (
+                "reuse_same_materializer_search_and_receiver_contracts_on_declared_"
+                "video_or_corpus_inputs"
+            ),
+            "blocked_behavior": (
+                "implicit_path_defaults_that_bind_non_target_archives_or_pr_specific_"
+                "contexts_without_profile_contract"
+            ),
+            "allowed_use": "planner_target_policy_only",
+            "forbidden_use": "score_claim_or_rank_kill_authority",
+            **FALSE_AUTHORITY,
+        },
+        "blockers": _unique_strings(blockers),
+        "profile_ready": not blockers,
+        "allowed_use": "queue_owned_target_optimization_binding_only",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        profile,
+        context=f"frontier_target_optimization_profile:{profile_id}",
+    )
+    return profile
+
+
+def _target_optimization_profile_queue_metadata(
+    profile: Mapping[str, Any],
+) -> dict[str, Any]:
+    return {
+        "schema": "frontier_rate_attack_target_optimization_profile_queue_metadata.v1",
+        "target_profile_schema": profile.get("schema"),
+        "target_profile_id": profile.get("target_profile_id"),
+        "target_mode": profile.get("target_mode"),
+        "declared_overfit_allowed": profile.get("declared_overfit_allowed") is True,
+        "target_video_paths": [
+            str(row.get("path") or "")
+            for row in profile.get("target_videos") or []
+            if isinstance(row, Mapping)
+        ],
+        "target_corpus_manifest_path": (
+            profile.get("target_corpus_manifest", {}).get("path")
+            if isinstance(profile.get("target_corpus_manifest"), Mapping)
+            else None
+        ),
+        "profile_ready": profile.get("profile_ready") is True,
+        "blockers": _string_list(profile.get("blockers")),
+        "allowed_use": "queue_metadata_pointer_to_target_optimization_profile",
+        "forbidden_use": "score_claim_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -6813,6 +6985,96 @@ def _repair_response_marginal_curve(
     }
 
 
+def _repair_response_local_advisory_custody(row: Mapping[str, Any]) -> dict[str, Any]:
+    """Record local advisory artifacts, or name the exact missing artifact keys."""
+
+    response_path = row.get("response_artifact_path") or row.get("source_harvest_path")
+    artifact_rows = [
+        ("local_cpu_advisory_path", row.get("local_cpu_advisory_path"), True),
+        (
+            "reference_local_cpu_advisory_path",
+            row.get("reference_local_cpu_advisory_path"),
+            False,
+        ),
+        ("local_mlx_response_path", row.get("local_mlx_response_path"), True),
+        (
+            "reference_local_mlx_response_path",
+            row.get("reference_local_mlx_response_path"),
+            False,
+        ),
+        ("response_artifact_path", response_path, True),
+    ]
+    artifacts: list[dict[str, Any]] = []
+    missing: list[str] = []
+    for artifact_key, raw_path, required in artifact_rows:
+        path_text = str(raw_path or "").strip()
+        present = bool(path_text)
+        if required and not present:
+            missing.append(artifact_key)
+        artifacts.append(
+            {
+                "schema": "frontier_rate_attack_local_advisory_artifact_ref.v1",
+                "artifact_key": artifact_key,
+                "path": path_text or None,
+                "required_for_local_execution": required,
+                "declared": present,
+                "allowed_use": "local_advisory_custody_pointer_only",
+                "forbidden_use": "score_claim_or_dispatch_authority",
+                **FALSE_AUTHORITY,
+            }
+        )
+
+    mlx_axis = str(row.get("local_mlx_score_axis") or "").strip()
+    reference_mlx_axis = str(row.get("reference_local_mlx_score_axis") or "").strip()
+    mlx_path_present = any(
+        item["artifact_key"] == "local_mlx_response_path" and item["declared"]
+        for item in artifacts
+    )
+    reference_mlx_path_present = any(
+        item["artifact_key"] == "reference_local_mlx_response_path"
+        and item["declared"]
+        for item in artifacts
+    )
+    axis_ok = mlx_axis == "[macOS-MLX research-signal]"
+    reference_axis_ok = (
+        not reference_mlx_path_present
+        or reference_mlx_axis == "[macOS-MLX research-signal]"
+    )
+    blockers = [f"missing_local_advisory_artifact:{key}" for key in missing]
+    if mlx_path_present and not axis_ok:
+        blockers.append("local_mlx_response_axis_not_research_signal")
+    if reference_mlx_path_present and not reference_axis_ok:
+        blockers.append("reference_local_mlx_response_axis_not_research_signal")
+    mlx_custody_present = mlx_path_present and axis_ok
+    return {
+        "schema": "frontier_rate_attack_repair_response_local_advisory_custody.v1",
+        "artifact_refs": artifacts,
+        "declared_artifact_keys": [
+            item["artifact_key"] for item in artifacts if item["declared"]
+        ],
+        "missing_required_artifact_keys": missing,
+        "missing_required_artifact_count": len(missing),
+        "missing_artifact_blockers": _unique_strings(blockers),
+        "local_mlx_score_axis": mlx_axis or None,
+        "reference_local_mlx_score_axis": reference_mlx_axis or None,
+        "mlx_advisory_custody_present": mlx_custody_present,
+        "paired_mlx_advisory_custody_present": (
+            mlx_custody_present and reference_mlx_path_present and reference_axis_ok
+        ),
+        "local_execution_signal": (
+            "mlx_advisory_custody_present"
+            if mlx_custody_present
+            else "missing_mlx_advisory_custody_exact_artifact_named"
+        ),
+        "score_axis": "[macOS-MLX research-signal]" if mlx_custody_present else None,
+        "budget_spend_allowed": False,
+        "ready_for_exact_eval_dispatch": False,
+        "allowed_use": "local_mlx_advisory_custody_for_repair_waterfill_planning",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
 def _repair_waterfill_added_bytes(row: Mapping[str, Any]) -> int | None:
     terms = row.get("local_cpu_component_terms")
     if isinstance(terms, Mapping):
@@ -6895,6 +7157,7 @@ def _repair_budget_typed_response_ledger(
             objective_delta=objective_delta,
         )
         interaction_scope = _repair_response_interaction_scope(row)
+        local_advisory_custody = _repair_response_local_advisory_custody(row)
         normalized.update(
             {
                 "schema": REPAIR_BUDGET_TYPED_RESPONSE_ROW_SCHEMA,
@@ -6930,6 +7193,16 @@ def _repair_budget_typed_response_ledger(
                 "objective_delta_score_units": objective_delta,
                 "marginal_response_curves": marginal_curves,
                 "interaction_scope": interaction_scope,
+                "local_advisory_custody": local_advisory_custody,
+                "mlx_advisory_custody_present": local_advisory_custody[
+                    "mlx_advisory_custody_present"
+                ],
+                "missing_local_advisory_artifacts": list(
+                    local_advisory_custody["missing_required_artifact_keys"]
+                ),
+                "missing_local_advisory_artifact_blockers": list(
+                    local_advisory_custody["missing_artifact_blockers"]
+                ),
                 "stacking_interaction_terms": {
                     "schema": (
                         "frontier_rate_attack_repair_response_stacking_"
@@ -6983,6 +7256,14 @@ def _repair_budget_typed_response_ledger(
         if isinstance(row.get("marginal_response_curves"), Mapping)
         and isinstance(row["marginal_response_curves"].get("objective"), Mapping)
     )
+    mlx_custody_count = sum(
+        1 for row in typed_rows if row.get("mlx_advisory_custody_present") is True
+    )
+    missing_local_advisory_artifacts = _unique_strings(
+        item
+        for row in typed_rows
+        for item in _string_list(row.get("missing_local_advisory_artifact_blockers"))
+    )
     payload = {
         "schema": REPAIR_BUDGET_TYPED_RESPONSE_LEDGER_SCHEMA,
         "row_schema": REPAIR_BUDGET_TYPED_RESPONSE_ROW_SCHEMA,
@@ -7001,6 +7282,9 @@ def _repair_budget_typed_response_ledger(
         ),
         "entropy_position_histogram": dict(sorted(entropy_histogram.items())),
         "objective_improvement_score_units_total": objective_improvement_total,
+        "mlx_advisory_custody_row_count": mlx_custody_count,
+        "missing_mlx_advisory_custody_row_count": len(typed_rows) - mlx_custody_count,
+        "missing_local_advisory_artifact_blockers": missing_local_advisory_artifacts,
         "hard_constraints": [
             "rate_only_floor_preserved_as_parent_candidate",
             "receiver_closed_rate_credit_is_a_hard_byte_budget",
@@ -7104,6 +7388,14 @@ def _repair_waterfill_allocation_action_term(
                 if isinstance(row.get("interaction_scope"), Mapping)
                 else {}
             ),
+            "local_advisory_custody": dict(
+                row.get("local_advisory_custody")
+                if isinstance(row.get("local_advisory_custody"), Mapping)
+                else {}
+            ),
+            "mlx_advisory_custody_present": (
+                row.get("mlx_advisory_custody_present") is True
+            ),
             "stacking_interaction_terms": dict(
                 row.get("stacking_interaction_terms")
                 if isinstance(row.get("stacking_interaction_terms"), Mapping)
@@ -7189,6 +7481,7 @@ def _repair_waterfill_allocation_rows(
             blockers.append("correction_added_archive_bytes_missing")
         if proposed_bytes <= 0:
             blockers.append("no_receiver_closed_rate_credit_bytes_allocated")
+        blockers.extend(_string_list(row.get("missing_local_advisory_artifact_blockers")))
         rate_packet_context = _targeted_rate_packet_context(row)
         out.append(
             {
@@ -7238,6 +7531,20 @@ def _repair_waterfill_allocation_rows(
                     row.get("interaction_scope")
                     if isinstance(row.get("interaction_scope"), Mapping)
                     else {}
+                ),
+                "local_advisory_custody": dict(
+                    row.get("local_advisory_custody")
+                    if isinstance(row.get("local_advisory_custody"), Mapping)
+                    else {}
+                ),
+                "mlx_advisory_custody_present": (
+                    row.get("mlx_advisory_custody_present") is True
+                ),
+                "missing_local_advisory_artifacts": _string_list(
+                    row.get("missing_local_advisory_artifacts")
+                ),
+                "missing_local_advisory_artifact_blockers": _string_list(
+                    row.get("missing_local_advisory_artifact_blockers")
                 ),
                 "stacking_interaction_terms": dict(
                     row.get("stacking_interaction_terms")
@@ -7994,6 +8301,20 @@ def _repair_budget_spent_child_rows(
                     allocation.get("interaction_scope")
                     if isinstance(allocation.get("interaction_scope"), Mapping)
                     else {}
+                ),
+                "local_advisory_custody": dict(
+                    allocation.get("local_advisory_custody")
+                    if isinstance(allocation.get("local_advisory_custody"), Mapping)
+                    else {}
+                ),
+                "mlx_advisory_custody_present": (
+                    allocation.get("mlx_advisory_custody_present") is True
+                ),
+                "missing_local_advisory_artifacts": _string_list(
+                    allocation.get("missing_local_advisory_artifacts")
+                ),
+                "missing_local_advisory_artifact_blockers": _string_list(
+                    allocation.get("missing_local_advisory_artifact_blockers")
                 ),
                 "stacking_interaction_terms": dict(
                     allocation.get("stacking_interaction_terms")
@@ -15076,7 +15397,23 @@ def build_frontier_byte_range_stage_inputs(
         )
         if bound_inflate is not None:
             bound_runtime_dir = bound_inflate.parent
-    disable_default_byte_range_context = target_bound_chain
+    missing_contracts = _string_list(operation_chain_stage_plan.get("missing_contracts"))
+    source_bridge_blockers = _string_list(
+        operation_chain_stage_plan.get("source_bridge_blockers")
+    )
+    unbound_chain_requires_payload_grammar = (
+        "payload_grammar_schema_manifest" in missing_contracts
+        or "chain_missing_contract:payload_grammar_schema_manifest"
+        in source_bridge_blockers
+    )
+    disable_default_byte_range_context = (
+        target_bound_chain or unbound_chain_requires_payload_grammar
+    )
+    default_context_disable_reason = ""
+    if target_bound_chain:
+        default_context_disable_reason = "target_bound_chain"
+    elif unbound_chain_requires_payload_grammar:
+        default_context_disable_reason = "unbound_chain_missing_payload_grammar_contract"
 
     schema_path = (
         _resolve_path(schema_manifest, repo_root=repo)
@@ -15165,9 +15502,19 @@ def build_frontier_byte_range_stage_inputs(
         context_blockers.append(f"operation_chain_stage_missing:{stage_id}")
     if not target_present:
         context_blockers.append("byte_range_entropy_recode_target_missing_from_stage")
-    if disable_default_byte_range_context:
+    if target_bound_chain:
         context_blockers.append(
             "byte_range_stage_default_pr103_context_disabled_for_target_bound_chain"
+        )
+    elif (
+        unbound_chain_requires_payload_grammar
+        and schema_manifest is None
+        and not beam_probe_reports
+        and source_runtime_dir is None
+        and source_archive is None
+    ):
+        context_blockers.append(
+            "byte_range_stage_default_pr103_context_disabled_for_unbound_chain"
         )
     if schema_path is None or not schema_path.is_file():
         context_blockers.append("byte_range_stage_missing:schema_manifest")
@@ -15223,6 +15570,7 @@ def build_frontier_byte_range_stage_inputs(
         "fail_if_receiver_blocked": False,
         "context_blockers": _unique_strings(context_blockers),
         "default_pr103_context_disabled": disable_default_byte_range_context,
+        "default_pr103_context_disable_reason": default_context_disable_reason,
         "targeted_component_runtime_binding": targeted_binding,
         **FALSE_AUTHORITY,
     }
@@ -19206,6 +19554,10 @@ def build_frontier_rate_attack_feedback_refresh(
     component_response_cache_roots: Sequence[str | Path] = (),
     receiver_closed_rate_packet_paths: Sequence[str | Path] = (),
     receiver_closed_rate_parent_paths: Sequence[str | Path] = (),
+    target_profile_id: str = "contest_video_0",
+    target_mode: str = "contest_video_overfit",
+    target_video_paths: Sequence[str | Path] = (),
+    target_corpus_manifest_path: str | Path | None = None,
 ) -> dict[str, Any]:
     """Build a forest-level feedback refresh and optional DQS1 follow-up queue."""
 
@@ -19214,6 +19566,13 @@ def build_frontier_rate_attack_feedback_refresh(
         raise FrontierRateAttackFeedbackError("candidate_limit must be >= 1")
     if max_files_per_root < 1:
         raise FrontierRateAttackFeedbackError("max_files_per_root must be >= 1")
+    target_optimization_profile = build_frontier_target_optimization_profile(
+        repo_root=repo,
+        target_profile_id=target_profile_id,
+        target_mode=target_mode,
+        target_video_paths=target_video_paths,
+        target_corpus_manifest_path=target_corpus_manifest_path,
+    )
     payloads, source_paths, discovery = discover_materializer_feedback_payloads(
         repo_root=repo,
         frontier_artifact_roots=frontier_artifact_roots,
@@ -19357,6 +19716,17 @@ def build_frontier_rate_attack_feedback_refresh(
                 metadata = experiment.setdefault("metadata", {})
                 if isinstance(metadata, dict):
                     metadata["frontier_feedback_eureka_planning"] = eureka_planning
+        target_profile_metadata = _target_optimization_profile_queue_metadata(
+            target_optimization_profile
+        )
+        for experiment in queue_payload.get("experiments", []):
+            if not isinstance(experiment, dict):
+                continue
+            metadata = experiment.setdefault("metadata", {})
+            if isinstance(metadata, dict):
+                metadata["frontier_target_optimization_profile"] = (
+                    target_profile_metadata
+                )
         if operation_portfolio.get("operation_count"):
             portfolio_metadata = _operation_portfolio_queue_metadata(
                 operation_portfolio
@@ -19406,6 +19776,7 @@ def build_frontier_rate_attack_feedback_refresh(
         "schema": FEEDBACK_REFRESH_SCHEMA,
         "generated_at_utc": _utc_now(),
         "candidate_limit": candidate_limit,
+        "target_optimization_profile": target_optimization_profile,
         "discovery": discovery,
         "pair_frame_geometry_discovery": pair_frame_discovery,
         "pair_frame_geometry_request_source_paths": list(pair_frame_source_paths),
@@ -19530,6 +19901,7 @@ __all__ = [
     "TARGETED_COMPONENT_CORRECTION_RESPONSE_ROW_SCHEMA",
     "TARGETED_COMPONENT_CORRECTION_WORK_ORDER_SCHEMA",
     "TARGETED_DROP_MANY_STAGE_INPUTS_SCHEMA",
+    "TARGET_OPTIMIZATION_PROFILE_SCHEMA",
     "FrontierRateAttackFeedbackError",
     "attach_frontier_autonomous_chain_optimization",
     "build_frontier_autonomous_chain_optimization",
@@ -19550,6 +19922,7 @@ __all__ = [
     "build_frontier_repair_budget_materializer_binding_report",
     "build_frontier_repair_budget_waterfill_queue",
     "build_frontier_repair_budget_waterfill_work_order",
+    "build_frontier_target_optimization_profile",
     "build_frontier_targeted_component_correction_acquisition",
     "build_frontier_targeted_component_correction_chain_materializer_handoff",
     "build_frontier_targeted_component_correction_chain_work_orders",

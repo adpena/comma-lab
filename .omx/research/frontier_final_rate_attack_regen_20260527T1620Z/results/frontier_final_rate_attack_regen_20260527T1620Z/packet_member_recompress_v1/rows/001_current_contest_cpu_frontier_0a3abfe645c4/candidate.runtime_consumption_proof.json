@@ -1,0 +1,73 @@
+{
+  "candidate_archive": {
+    "bytes": 178546,
+    "path": "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_regen_20260527T1620Z/results/frontier_final_rate_attack_regen_20260527T1620Z/packet_member_recompress_v1/rows/001_current_contest_cpu_frontier_0a3abfe645c4/candidate.zip",
+    "sha256": "0a3abfe645c4fac0df9ea89237f25dd9bfc6b2471b897c36d7437795d27d1403"
+  },
+  "candidate_archive_sha256": "0a3abfe645c4fac0df9ea89237f25dd9bfc6b2471b897c36d7437795d27d1403",
+  "candidate_member": {
+    "bytes": 178446,
+    "name": "x",
+    "sha256": "7afe6c263742bdc546c815537be71589372fdfc2dd7fb6825a09309a5d72c4f7",
+    "zip_compressed_bytes": 178446,
+    "zip_compressed_payload_sha256": "7afe6c263742bdc546c815537be71589372fdfc2dd7fb6825a09309a5d72c4f7",
+    "zip_compressed_sha256": "7afe6c263742bdc546c815537be71589372fdfc2dd7fb6825a09309a5d72c4f7",
+    "zip_compression_method": "stored"
+  },
+  "candidate_member_payload_identical_to_source": true,
+  "candidate_member_sha256": "7afe6c263742bdc546c815537be71589372fdfc2dd7fb6825a09309a5d72c4f7",
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "gpu_launched": false,
+  "materializer_id": "packet_member_recompress_adapter",
+  "member_sha256": "7afe6c263742bdc546c815537be71589372fdfc2dd7fb6825a09309a5d72c4f7",
+  "passed": true,
+  "promotable": false,
+  "promotion_eligible": false,
+  "proof_kind": "packet_member_recompress_payload_identity_receiver_proof.v1",
+  "proof_scope": "zip_member_payload_identity_after_archive_recompression",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_id": "packet_member_recompress_v1.receiver.v1",
+  "receiver_contract_kind": "family_agnostic_packet_member_recompress",
+  "receiver_contract_satisfied": true,
+  "runtime_consumption_probe": {
+    "candidate_member_bytes": 178446,
+    "candidate_member_sha256": "7afe6c263742bdc546c815537be71589372fdfc2dd7fb6825a09309a5d72c4f7",
+    "passed": true,
+    "schema": "packet_member_payload_identity_probe.v1",
+    "source_member_bytes": 178446,
+    "source_member_sha256": "7afe6c263742bdc546c815537be71589372fdfc2dd7fb6825a09309a5d72c4f7"
+  },
+  "runtime_consumption_proof_passed": true,
+  "schema": "family_agnostic_runtime_consumption_proof_v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_valid": false,
+  "selected_compression": {
+    "candidate_archive_bytes": 178546,
+    "compression_method": "stored",
+    "compresslevel": null,
+    "saved_bytes": 0,
+    "source_archive_bytes": 178546
+  },
+  "selected_member_name": "x",
+  "source_archive": {
+    "bytes": 178546,
+    "path": "/Users/adpena/Projects/pact/experiments/results/v14_v2_dqs1_plus_fec10_substituted_20260526T023000Z/submission_dir/archive.zip",
+    "sha256": "0a3abfe645c4fac0df9ea89237f25dd9bfc6b2471b897c36d7437795d27d1403"
+  },
+  "source_member": {
+    "bytes": 178446,
+    "name": "x",
+    "sha256": "7afe6c263742bdc546c815537be71589372fdfc2dd7fb6825a09309a5d72c4f7",
+    "zip_compressed_bytes": 178446,
+    "zip_compressed_payload_sha256": "7afe6c263742bdc546c815537be71589372fdfc2dd7fb6825a09309a5d72c4f7",
+    "zip_compressed_sha256": "7afe6c263742bdc546c815537be71589372fdfc2dd7fb6825a09309a5d72c4f7",
+    "zip_compression_method": "stored"
+  },
+  "source_member_sha256": "7afe6c263742bdc546c815537be71589372fdfc2dd7fb6825a09309a5d72c4f7",
+  "target_kind": "packet_member_recompress_v1"
+}

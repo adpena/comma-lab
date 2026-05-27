@@ -229,6 +229,79 @@ AUXILIARY_QUEUE_ARTIFACT_KEYS = (
 )
 
 
+def _state_equivalent(path: str, expected: Path) -> bool:
+    candidate = resolve_repo_path(path, repo_root=REPO_ROOT)
+    return candidate == expected or candidate.as_posix() == expected.as_posix()
+
+
+def _rewrite_auxiliary_queue_embedded_state(
+    *,
+    queue_path: str | Path,
+    queue_state_path: Path,
+    stage_label: str,
+    artifact_key: str,
+) -> tuple[str, int]:
+    """Make embedded queue-harvest commands use the same isolated state.
+
+    Some generated child queues contain follow-up commands that read the queue
+    state directly, e.g. materializer harvest steps. When the feedback runner
+    executes the child queue with an artifact-local sqlite state, those embedded
+    commands must read that same state or they will observe an empty canonical
+    state and fail despite the preceding step succeeding.
+    """
+
+    resolved_queue_path = resolve_repo_path(queue_path, repo_root=REPO_ROOT)
+    payload = load_json_object(resolved_queue_path)
+    queue_id = str(payload.get("queue_id") or "").strip()
+    if not queue_id:
+        return _display_path(resolved_queue_path), 0
+
+    canonical_state_path = resolve_repo_path(
+        f".omx/state/experiment_queue_{queue_id}.sqlite",
+        repo_root=REPO_ROOT,
+    )
+    state_ref = _display_path(queue_state_path)
+    rewrite_count = 0
+    for experiment in payload.get("experiments") or []:
+        if not isinstance(experiment, dict):
+            continue
+        for step in experiment.get("steps") or []:
+            if not isinstance(step, dict):
+                continue
+            command = step.get("command")
+            if not isinstance(command, list):
+                continue
+            command_items = [str(item) for item in command]
+            changed = False
+            for index, item in enumerate(command_items[:-1]):
+                if item != "--state":
+                    continue
+                if _state_equivalent(command_items[index + 1], canonical_state_path):
+                    command_items[index + 1] = state_ref
+                    rewrite_count += 1
+                    changed = True
+            if changed:
+                step["command"] = command_items
+
+    if rewrite_count == 0:
+        return _display_path(resolved_queue_path), 0
+
+    payload["artifact_local_state_rewrite"] = {
+        "schema": "frontier_rate_attack_auxiliary_queue_state_rewrite.v1",
+        "stage_label": stage_label,
+        "artifact_key": artifact_key,
+        "source_queue_path": _display_path(resolved_queue_path),
+        "state_path": state_ref,
+        "rewritten_state_argument_count": rewrite_count,
+        **FALSE_AUTHORITY,
+    }
+    rewritten_path = resolved_queue_path.with_name(
+        f"{resolved_queue_path.stem}.artifact_state.json"
+    )
+    write_json_artifact(rewritten_path, payload)
+    return _display_path(rewritten_path), rewrite_count
+
+
 def _run_auxiliary_queue_execution(
     *,
     args: argparse.Namespace,
@@ -252,15 +325,23 @@ def _run_auxiliary_queue_execution(
         queue_path = artifacts.get(artifact_key)
         if not queue_path:
             continue
-        validate = _validate_queue(queue_path)
         queue_state_path = resolve_repo_path(queue_path, repo_root=REPO_ROOT).with_suffix(
             ".sqlite"
         )
+        execution_queue_path, embedded_state_rewrite_count = (
+            _rewrite_auxiliary_queue_embedded_state(
+                queue_path=queue_path,
+                queue_state_path=queue_state_path,
+                stage_label=stage_label,
+                artifact_key=artifact_key,
+            )
+        )
+        validate = _validate_queue(execution_queue_path)
         command = [
             sys.executable,
             "tools/experiment_queue.py",
             "--queue",
-            _display_path(queue_path),
+            _display_path(execution_queue_path),
             "--state",
             _display_path(queue_state_path),
             "run-worker",
@@ -285,7 +366,9 @@ def _run_auxiliary_queue_execution(
                 "stage_label": stage_label,
                 "artifact_key": artifact_key,
                 "queue_path": queue_path,
+                "execution_queue_path": execution_queue_path,
                 "state_path": _display_path(queue_state_path),
+                "embedded_state_rewrite_count": embedded_state_rewrite_count,
                 "validate": validate,
                 "command": command,
                 "result": {
@@ -396,6 +479,10 @@ def _build_refresh(
         mlx_retention_cold_store_roots=tuple(args.mlx_retention_cold_store_root),
         mlx_retention_cold_store_reserve_gb=args.mlx_retention_cold_store_reserve_gb,
         component_response_cache_roots=tuple(args.component_response_cache_root),
+        target_profile_id=args.target_profile_id,
+        target_mode=args.target_mode,
+        target_video_paths=tuple(args.target_video),
+        target_corpus_manifest_path=args.target_corpus_manifest,
     )
 
 
@@ -734,6 +821,44 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=DEFAULT_BASELINE_ARCHIVE_SIZE_BYTES,
     )
     parser.add_argument("--baseline-candidate-id", default=DEFAULT_BASELINE_CANDIDATE_ID)
+    parser.add_argument(
+        "--target-profile-id",
+        default="contest_video_0",
+        help=(
+            "Stable id for the declared target optimization profile. This makes "
+            "contest-video overfitting explicit instead of hardcoded."
+        ),
+    )
+    parser.add_argument(
+        "--target-mode",
+        choices=(
+            "contest_video_overfit",
+            "corpus_generalization",
+            "hybrid_contest_plus_corpus",
+        ),
+        default="contest_video_overfit",
+        help=(
+            "Optimization target semantics. Contest mode permits overfitting to "
+            "declared target videos; corpus modes require a corpus manifest."
+        ),
+    )
+    parser.add_argument(
+        "--target-video",
+        action="append",
+        default=[],
+        help=(
+            "Declared target video path. May repeat. Defaults to upstream/videos/0.mkv "
+            "when omitted."
+        ),
+    )
+    parser.add_argument(
+        "--target-corpus-manifest",
+        default=None,
+        help=(
+            "Corpus manifest for generalization/hybrid runs, e.g. comma10k19. "
+            "The manifest is a target contract pointer, not score authority."
+        ),
+    )
     return parser.parse_args(argv)
 
 
