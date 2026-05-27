@@ -50,6 +50,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=None,
         help="Optional maximum number of waterfill rows to convert.",
     )
+    parser.add_argument(
+        "--posterior",
+        type=Path,
+        help="Optional repair stackability posterior JSONL for scorer prior feedback.",
+    )
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args(argv)
 
@@ -72,6 +77,7 @@ def main(argv: list[str] | None = None) -> int:
             results_root=args.results_root,
             queue_id=args.queue_id,
             experiment_limit=args.experiment_limit,
+            posterior_path=args.posterior,
         )
         score_queue_out = _resolve(args.score_queue_out)
         expected_existing_sha256 = None
@@ -107,6 +113,7 @@ def main(argv: list[str] | None = None) -> int:
                     args.repair_budget_waterfill_queue
                 ),
                 "score_queue_out": str(args.score_queue_out),
+                "posterior": str(args.posterior) if args.posterior else None,
                 "queue_id": score_queue["queue_id"],
                 "experiment_count": len(score_queue["experiments"]),
                 "ready_experiment_count": score_queue["metadata"][

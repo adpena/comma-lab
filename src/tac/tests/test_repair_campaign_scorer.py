@@ -8,6 +8,7 @@ from pathlib import Path
 
 from tac.optimization.repair_campaign_scorer import (
     REPAIR_CAMPAIGN_OPTIMIZER_DECISION_SCHEMA,
+    REPAIR_CAMPAIGN_POSTERIOR_PRIOR_SUMMARY_SCHEMA,
     REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA,
     REPAIR_CAMPAIGN_SCORE_ROW_SCHEMA,
     REPAIR_CAMPAIGN_STACKABILITY_PROBE_SCHEMA,
@@ -215,6 +216,90 @@ def test_score_repair_campaign_ranks_ready_mlx_and_names_missing_artifacts(
         blocked["execution_gate"]["missing_artifacts"]
     )
     assert "per_region_selector_codec_replay_missing" in report["missing_artifacts"]
+
+
+def test_score_repair_campaign_folds_stackability_posterior_into_priors(
+    tmp_path: Path,
+) -> None:
+    posterior_path = tmp_path / "repair_campaign_stackability_posterior.jsonl"
+    posterior_path.write_text(
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "schema": "repair_campaign_stackability_posterior_row.v1",
+                        "typed_response_id": "segnet_region_prior_a",
+                        "candidate_id": "segnet_class_region_waterfill",
+                        "family_id": "segnet_class_region_waterfill",
+                        "evidence_grade": "local_mlx_research_signal_only",
+                        "acquisition_policy_delta": {
+                            "recommended_acquisition_policy": (
+                                "increase_priority_for_exact_axis_component_response_replay"
+                            ),
+                            "family_priority_direction": "increase",
+                            **_false_authority(),
+                        },
+                        "planner_feature_vector": {
+                            "expected_local_improvement_score_units": 0.002,
+                            "improvement_per_allocated_byte": 0.00005,
+                            "missing_artifact_count": 0,
+                            "blocker_count": 4,
+                        },
+                        **_false_authority(),
+                    }
+                ),
+                json.dumps(
+                    {
+                        "schema": "repair_campaign_stackability_posterior_row.v1",
+                        "typed_response_id": "selector_blocked_prior",
+                        "candidate_id": "per_region_selector_codec",
+                        "family_id": "per_region_selector_codec",
+                        "evidence_grade": "blocked_local_planning_signal_only",
+                        "acquisition_policy_delta": {
+                            "recommended_acquisition_policy": (
+                                "materialize_missing_local_mlx_custody_before_stackability"
+                            ),
+                            "family_priority_direction": "hold",
+                            **_false_authority(),
+                        },
+                        "planner_feature_vector": {
+                            "expected_local_improvement_score_units": 0.0002,
+                            "improvement_per_allocated_byte": 0.0,
+                            "missing_artifact_count": 6,
+                            "blocker_count": 10,
+                        },
+                        **_false_authority(),
+                    }
+                ),
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    baseline = score_repair_campaign(payload=_work_order(tmp_path), repo_root=tmp_path)
+    with_posterior = score_repair_campaign(
+        payload=_work_order(tmp_path),
+        repo_root=tmp_path,
+        posterior_path=posterior_path,
+    )
+
+    summary = with_posterior["posterior_prior_summary"]
+    assert summary["schema"] == REPAIR_CAMPAIGN_POSTERIOR_PRIOR_SUMMARY_SCHEMA
+    assert summary["posterior_row_count"] == 2
+    assert summary["family_prior_count"] == 2
+    row = with_posterior["rows"][0]
+    assert row["typed_response_id"] == "segnet_region_ready"
+    assert row["posterior_prior_multiplier"] > 1.0
+    assert row["posterior_family_prior"]["observation_count"] == 1
+    assert row["campaign_score"] > baseline["rows"][0]["campaign_score"]
+    allocation = with_posterior["optimizer_decision"]["selected_allocation_rows"][0]
+    assert allocation["posterior_prior_multiplier"] == row[
+        "posterior_prior_multiplier"
+    ]
+    assert with_posterior["optimizer_decision"]["posterior_prior_summary"][
+        "posterior_row_count"
+    ] == 2
 
 
 def test_repair_campaign_stackability_probe_requires_mlx_custody(

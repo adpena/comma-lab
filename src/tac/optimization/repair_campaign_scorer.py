@@ -28,6 +28,12 @@ REPAIR_CAMPAIGN_OPTIMIZER_ALLOCATION_ROW_SCHEMA = (
 REPAIR_CAMPAIGN_STACKABILITY_PROBE_SCHEMA = "repair_campaign_stackability_probe.v1"
 REPAIR_OPERATOR_FAMILY_PRIORS_SCHEMA = "repair_operator_family_priors.v1"
 REPAIR_OPERATOR_FAMILY_PRIOR_ROW_SCHEMA = "repair_operator_family_prior_row.v1"
+REPAIR_CAMPAIGN_POSTERIOR_PRIOR_SUMMARY_SCHEMA = (
+    "repair_campaign_posterior_prior_summary.v1"
+)
+REPAIR_CAMPAIGN_POSTERIOR_FAMILY_PRIOR_SCHEMA = (
+    "repair_campaign_posterior_family_prior.v1"
+)
 
 _TYPED_LEDGER_SCHEMA = "frontier_rate_attack_repair_budget_typed_response_ledger.v1"
 _TYPED_ROW_SCHEMA = "frontier_rate_attack_repair_budget_typed_response_row.v1"
@@ -331,6 +337,160 @@ def _component_response_terms(row: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _load_posterior_rows(
+    posterior_path: str | Path | None,
+) -> list[dict[str, Any]]:
+    if posterior_path is None:
+        return []
+    from tac.optimization.repair_campaign_posterior import (
+        load_repair_campaign_stackability_posterior_rows,
+    )
+
+    return load_repair_campaign_stackability_posterior_rows(posterior_path)
+
+
+def _posterior_prior_summary(
+    *,
+    posterior_path: str | Path | None,
+    posterior_rows: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    grouped: dict[str, list[Mapping[str, Any]]] = {}
+    for row in posterior_rows:
+        if not isinstance(row, Mapping):
+            continue
+        family_id = str(row.get("family_id") or "unclassified_repair_family")
+        grouped.setdefault(family_id, []).append(row)
+
+    family_rows: list[dict[str, Any]] = []
+    for family_id, rows in sorted(grouped.items()):
+        increase_count = 0
+        hold_count = 0
+        blocked_count = 0
+        improvement_per_byte_values: list[float] = []
+        expected_improvement_values: list[float] = []
+        missing_artifact_total = 0
+        blocker_total = 0
+        policy_counts: dict[str, int] = {}
+        for row in rows:
+            policy = str(
+                _mapping(row.get("acquisition_policy_delta")).get(
+                    "recommended_acquisition_policy"
+                )
+                or _mapping(row.get("local_planning_update")).get(
+                    "recommended_acquisition_policy"
+                )
+                or ""
+            )
+            if policy:
+                policy_counts[policy] = policy_counts.get(policy, 0) + 1
+            direction = str(
+                _mapping(row.get("acquisition_policy_delta")).get(
+                    "family_priority_direction"
+                )
+                or ""
+            )
+            if direction == "increase":
+                increase_count += 1
+            else:
+                hold_count += 1
+            if str(row.get("evidence_grade") or "").startswith("blocked_"):
+                blocked_count += 1
+            feature_vector = _mapping(row.get("planner_feature_vector"))
+            local_update = _mapping(row.get("local_planning_update"))
+            if not feature_vector:
+                feature_vector = _mapping(local_update.get("planner_feature_vector"))
+            improvement_per_byte = _safe_float(
+                feature_vector.get("improvement_per_allocated_byte")
+            )
+            if improvement_per_byte is not None and improvement_per_byte > 0.0:
+                improvement_per_byte_values.append(improvement_per_byte)
+            expected_improvement = _safe_float(
+                feature_vector.get("expected_local_improvement_score_units")
+            )
+            if expected_improvement is not None and expected_improvement > 0.0:
+                expected_improvement_values.append(expected_improvement)
+            missing_artifact_total += _safe_int(
+                feature_vector.get("missing_artifact_count")
+            )
+            blocker_total += _safe_int(feature_vector.get("blocker_count"))
+
+        observation_count = len(rows)
+        blocked_fraction = blocked_count / observation_count if observation_count else 0.0
+        increase_fraction = (
+            increase_count / observation_count if observation_count else 0.0
+        )
+        mean_improvement_per_byte = (
+            sum(improvement_per_byte_values) / len(improvement_per_byte_values)
+            if improvement_per_byte_values
+            else 0.0
+        )
+        mean_expected_improvement = (
+            sum(expected_improvement_values) / len(expected_improvement_values)
+            if expected_improvement_values
+            else 0.0
+        )
+        multiplier = 1.0 + (0.16 * increase_fraction) - (0.10 * blocked_fraction)
+        if mean_improvement_per_byte > 0.0:
+            multiplier += min(0.18, mean_improvement_per_byte * 4000.0)
+        multiplier = max(0.70, min(1.35, multiplier))
+        family_rows.append(
+            {
+                "schema": REPAIR_CAMPAIGN_POSTERIOR_FAMILY_PRIOR_SCHEMA,
+                "family_id": family_id,
+                "observation_count": observation_count,
+                "increase_count": increase_count,
+                "hold_count": hold_count,
+                "blocked_count": blocked_count,
+                "blocked_fraction": blocked_fraction,
+                "increase_fraction": increase_fraction,
+                "mean_improvement_per_allocated_byte": mean_improvement_per_byte,
+                "mean_expected_local_improvement_score_units": (
+                    mean_expected_improvement
+                ),
+                "missing_artifact_total": missing_artifact_total,
+                "blocker_total": blocker_total,
+                "policy_counts": dict(sorted(policy_counts.items())),
+                "family_priority_multiplier": multiplier,
+                "budget_spend_allowed": False,
+                "ready_for_exact_eval_dispatch": False,
+                "allowed_use": "posterior_repair_campaign_family_prior_only",
+                "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+                **FALSE_AUTHORITY,
+            }
+        )
+
+    summary = {
+        "schema": REPAIR_CAMPAIGN_POSTERIOR_PRIOR_SUMMARY_SCHEMA,
+        "posterior_path": str(posterior_path) if posterior_path is not None else None,
+        "posterior_row_count": len(posterior_rows),
+        "family_prior_count": len(family_rows),
+        "family_priors": family_rows,
+        "budget_spend_allowed": False,
+        "ready_for_exact_eval_dispatch": False,
+        "allowed_use": "repair_campaign_posterior_prior_for_local_scoring_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        summary,
+        context="repair_campaign_posterior_prior_summary",
+    )
+    return summary
+
+
+def _posterior_family_prior(
+    summary: Mapping[str, Any],
+    *,
+    family_id: str,
+) -> Mapping[str, Any]:
+    for row in summary.get("family_priors") or []:
+        if not isinstance(row, Mapping):
+            continue
+        if str(row.get("family_id") or "") == family_id:
+            return row
+    return {}
+
+
 def _receiver_proof_status(
     row: Mapping[str, Any],
     *,
@@ -505,6 +665,7 @@ def _build_optimizer_decision(
     *,
     payload: Mapping[str, Any],
     rows: Sequence[Mapping[str, Any]],
+    posterior_summary: Mapping[str, Any],
 ) -> dict[str, Any]:
     available_bytes = _receiver_closed_rate_credit_bytes(payload)
     remaining = available_bytes
@@ -542,6 +703,12 @@ def _build_optimizer_decision(
                     "objective_delta_score_units": row.get("objective_delta_score_units"),
                     "expected_local_improvement_score_units": improvement,
                     "campaign_score": row.get("campaign_score"),
+                    "posterior_prior_multiplier": row.get(
+                        "posterior_prior_multiplier"
+                    ),
+                    "posterior_family_prior": dict(
+                        _mapping(row.get("posterior_family_prior"))
+                    ),
                     "per_op_bytes_delta": row.get("per_op_bytes_delta"),
                     "component_response_terms": dict(
                         _mapping(row.get("component_response_terms"))
@@ -597,6 +764,12 @@ def _build_optimizer_decision(
                 "expected_local_improvement_score_units": improvement,
                 "scaled_expected_local_improvement_score_units": scaled_improvement,
                 "campaign_score": row.get("campaign_score"),
+                "posterior_prior_multiplier": row.get(
+                    "posterior_prior_multiplier"
+                ),
+                "posterior_family_prior": dict(
+                    _mapping(row.get("posterior_family_prior"))
+                ),
                 "per_op_bytes_delta": row.get("per_op_bytes_delta"),
                 "component_response_terms": dict(
                     _mapping(row.get("component_response_terms"))
@@ -662,6 +835,7 @@ def _build_optimizer_decision(
         "family_allocation_histogram": dict(sorted(family_histogram.items())),
         "selected_allocation_rows": selected_rows,
         "blocked_allocation_rows": blocked_rows,
+        "posterior_prior_summary": dict(posterior_summary),
         "hard_constraints": [
             "allocated_bytes_must_not_exceed_receiver_closed_rate_credit",
             "local_mlx_response_is_planning_signal_only",
@@ -884,10 +1058,16 @@ def score_repair_campaign(
     *,
     payload: Mapping[str, Any],
     repo_root: str | Path | None = None,
+    posterior_path: str | Path | None = None,
 ) -> dict[str, Any]:
     """Score repair typed rows for the next queue-owned local campaign slice."""
 
     require_no_truthy_authority_fields(payload, context="repair_campaign_scorer_input")
+    posterior_rows = _load_posterior_rows(posterior_path)
+    posterior_summary = _posterior_prior_summary(
+        posterior_path=posterior_path,
+        posterior_rows=posterior_rows,
+    )
     rows: list[dict[str, Any]] = []
     for index, row in enumerate(_typed_rows(payload), start=1):
         require_no_truthy_authority_fields(
@@ -915,10 +1095,20 @@ def score_repair_campaign(
         hard_constraints = _hard_legal_runtime_constraints(row)
         bytes_denominator = requested_bytes if requested_bytes > 0 else 1
         improvement_per_byte = improvement / bytes_denominator
+        posterior_family_prior = _posterior_family_prior(
+            posterior_summary,
+            family_id=str(prior.get("family_id") or "unclassified_repair_family"),
+        )
+        posterior_prior_multiplier = (
+            _safe_float(posterior_family_prior.get("family_priority_multiplier"))
+            if posterior_family_prior
+            else 1.0
+        ) or 1.0
         campaign_score = (
             improvement_per_byte
             * entropy_weight
             * family_multiplier
+            * posterior_prior_multiplier
             * (1.0 - interaction_penalty)
         )
         gate = _execution_gate(row, prior, repo_root=repo_root)
@@ -945,6 +1135,8 @@ def score_repair_campaign(
             "receiver_proof_status": receiver_proof,
             "hard_legal_runtime_constraints": hard_constraints,
             "family_prior_multiplier": family_multiplier,
+            "posterior_prior_multiplier": posterior_prior_multiplier,
+            "posterior_family_prior": dict(posterior_family_prior),
             "interaction_penalty": interaction_penalty,
             "campaign_score": campaign_score,
             "marginal_response_curves": dict(
@@ -992,13 +1184,19 @@ def score_repair_campaign(
         for row in rows
         for artifact in _string_list(row["execution_gate"].get("missing_artifacts"))
     )
-    optimizer_decision = _build_optimizer_decision(payload=payload, rows=rows)
+    optimizer_decision = _build_optimizer_decision(
+        payload=payload,
+        rows=rows,
+        posterior_summary=posterior_summary,
+    )
     report = {
         "schema": REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA,
         "row_schema": REPAIR_CAMPAIGN_SCORE_ROW_SCHEMA,
         "optimizer_decision_schema": REPAIR_CAMPAIGN_OPTIMIZER_DECISION_SCHEMA,
         "default_campaign_scorer": True,
         "input_schema": payload.get("schema"),
+        "posterior_path": str(posterior_path) if posterior_path is not None else None,
+        "posterior_prior_summary": posterior_summary,
         "row_count": len(rows),
         "ready_for_local_mlx_advisory_execution_count": len(ready_rows),
         "blocked_missing_artifact_count": len(rows) - len(ready_rows),
@@ -1019,6 +1217,8 @@ def score_repair_campaign(
 __all__ = [
     "REPAIR_CAMPAIGN_OPTIMIZER_ALLOCATION_ROW_SCHEMA",
     "REPAIR_CAMPAIGN_OPTIMIZER_DECISION_SCHEMA",
+    "REPAIR_CAMPAIGN_POSTERIOR_FAMILY_PRIOR_SCHEMA",
+    "REPAIR_CAMPAIGN_POSTERIOR_PRIOR_SUMMARY_SCHEMA",
     "REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA",
     "REPAIR_CAMPAIGN_SCORE_ROW_SCHEMA",
     "REPAIR_CAMPAIGN_STACKABILITY_PROBE_SCHEMA",

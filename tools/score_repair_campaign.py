@@ -33,6 +33,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--work-order", required=True, type=Path)
     parser.add_argument("--score-report-out", required=True, type=Path)
+    parser.add_argument(
+        "--posterior",
+        type=Path,
+        help="Optional repair stackability posterior JSONL to fold into local scoring priors.",
+    )
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args(argv)
 
@@ -48,7 +53,12 @@ def main(argv: list[str] | None = None) -> int:
         payload = json.loads(work_order_path.read_text(encoding="utf-8"))
         if not isinstance(payload, dict):
             raise RepairCampaignScorerError("work order must be a JSON object")
-        report = score_repair_campaign(payload=payload, repo_root=REPO_ROOT)
+        posterior_path = _resolve(args.posterior) if args.posterior else None
+        report = score_repair_campaign(
+            payload=payload,
+            repo_root=REPO_ROOT,
+            posterior_path=posterior_path,
+        )
         report_out = _resolve(args.score_report_out)
         expected_existing_sha256 = None
         write_result = None
@@ -76,6 +86,7 @@ def main(argv: list[str] | None = None) -> int:
                 "schema": "repair_campaign_score_cli_result.v1",
                 "work_order": str(args.work_order),
                 "score_report_out": str(args.score_report_out),
+                "posterior": str(args.posterior) if args.posterior else None,
                 "bytes_written": (
                     write_result.bytes_written if write_result is not None else 0
                 ),

@@ -63,6 +63,7 @@ from comma_lab.scheduler.pair_frame_5d_extended_operator_queue import (  # noqa:
     build_pair_frame_5d_extended_operator_queue,
 )
 from comma_lab.scheduler.repair_campaign_score_queue import (  # noqa: E402
+    DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_PATH,
     build_repair_campaign_score_queue,
 )
 from tac.fec6_selector_operator_space import FEC6_FIXED_K16_MODE_IDS  # noqa: E402
@@ -1278,6 +1279,7 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
                     "repair_campaign_score"
                 ),
                 experiment_limit=int(report.get("candidate_limit") or 4),
+                posterior_path=DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_PATH,
             )
             repair_campaign_score_queue_path = (
                 output_dir / "repair_campaign_score_queue.json"

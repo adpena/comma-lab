@@ -8,6 +8,7 @@ from pathlib import Path
 
 from comma_lab.scheduler.experiment_queue import QUEUE_SCHEMA
 from comma_lab.scheduler.repair_campaign_score_queue import (
+    DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_PATH,
     REPAIR_CAMPAIGN_SCORE_EXPERIMENT_METADATA_SCHEMA,
     REPAIR_CAMPAIGN_SCORE_QUEUE_METADATA_SCHEMA,
     build_repair_campaign_score_queue,
@@ -258,6 +259,45 @@ def test_build_repair_campaign_score_queue_from_waterfill_work_order(
         "key": "schema",
         "equals": REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA,
     } in postconditions
+
+
+def test_repair_campaign_score_queue_can_bind_posterior_prior_input(
+    tmp_path: Path,
+) -> None:
+    work_order_path = tmp_path / "waterfill_work_order.json"
+    posterior_path = tmp_path / "repair_campaign_stackability_posterior.jsonl"
+    posterior_path.write_text("", encoding="utf-8")
+    work_order_path.write_text(
+        json.dumps(_work_order(tmp_path), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    queue = build_repair_campaign_score_queue(
+        repo_root=REPO_ROOT,
+        repair_budget_waterfill_queue=_waterfill_queue(work_order_path),
+        repair_budget_waterfill_queue_path=tmp_path / "repair_budget_waterfill_queue.json",
+        results_root=tmp_path / "results",
+        queue_id="unit_repair_campaign_score_queue",
+        posterior_path=posterior_path,
+    )
+
+    experiment = queue["experiments"][0]
+    command = next(
+        step["command"]
+        for step in experiment["steps"]
+        if step["id"] == "score_repair_campaign_from_typed_ledger"
+    )
+    assert "--posterior" in command
+    assert str(posterior_path) in command
+    assert experiment["metadata"]["campaign_scorer_uses_posterior_priors"] is True
+    assert experiment["metadata"]["repair_campaign_stackability_posterior_path"] == str(
+        posterior_path
+    )
+    assert queue["metadata"]["campaign_scorer_uses_posterior_priors"] is True
+    assert (
+        DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_PATH.name
+        == "repair_campaign_stackability_posterior.jsonl"
+    )
 
 
 def test_repair_campaign_score_queue_cli_writes_and_score_step_runs(

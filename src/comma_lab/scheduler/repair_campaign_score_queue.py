@@ -17,6 +17,7 @@ from tac.optimization.repair_campaign_learning_signal import (
     REPAIR_CAMPAIGN_BLOCKED_LEARNING_SIGNAL_REPORT_SCHEMA,
 )
 from tac.optimization.repair_campaign_posterior import (
+    DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_PATH,
     REPAIR_CAMPAIGN_BLOCKED_POSTERIOR_APPEND_REPORT_SCHEMA,
 )
 from tac.optimization.repair_campaign_scorer import REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA
@@ -131,6 +132,7 @@ def _score_experiment(
     results_root: str | Path,
     queue_root: Path,
     priority: int,
+    posterior_path: str | Path | None,
 ) -> dict[str, Any]:
     metadata = (
         source_experiment.get("metadata")
@@ -172,6 +174,11 @@ def _score_experiment(
         blocked_posterior_append_report_path,
         repo_root,
     )
+    posterior_ref = (
+        _repo_rel(_resolve(posterior_path, repo_root), repo_root)
+        if posterior_path is not None
+        else None
+    )
     blockers = []
     if not work_order_ref:
         blockers.append("repair_budget_waterfill_work_order_path_missing")
@@ -211,7 +218,9 @@ def _score_experiment(
         "repair_campaign_blocked_posterior_append_report_path": (
             blocked_posterior_append_report_ref
         ),
+        "repair_campaign_stackability_posterior_path": posterior_ref,
         "campaign_scorer_default": True,
+        "campaign_scorer_uses_posterior_priors": posterior_ref is not None,
         "stackability_followup_default": True,
         "continual_learning_followup_default": True,
         "blocked_learning_followup_default": True,
@@ -241,6 +250,17 @@ def _score_experiment(
         experiment_metadata,
         context=f"repair_campaign_score_experiment_metadata:{chain_id}",
     )
+    score_command = [
+        ".venv/bin/python",
+        "tools/score_repair_campaign.py",
+        "--work-order",
+        work_order_ref,
+        "--score-report-out",
+        score_report_ref,
+        "--overwrite",
+    ]
+    if posterior_ref is not None:
+        score_command.extend(["--posterior", posterior_ref])
     steps: list[dict[str, Any]]
     if blockers:
         steps = [
@@ -298,15 +318,7 @@ def _score_experiment(
                 "requires": [
                     "assert_repair_budget_waterfill_work_order_materialized"
                 ],
-                "command": [
-                    ".venv/bin/python",
-                    "tools/score_repair_campaign.py",
-                    "--work-order",
-                    work_order_ref,
-                    "--score-report-out",
-                    score_report_ref,
-                    "--overwrite",
-                ],
+                "command": score_command,
                 "resources": {"kind": "local_io_heavy"},
                 "timeout_seconds": 120,
                 "postconditions": [
@@ -537,6 +549,7 @@ def build_repair_campaign_score_queue(
     results_root: str | Path,
     queue_id: str = "repair_campaign_score_queue",
     experiment_limit: int | None = None,
+    posterior_path: str | Path | None = None,
 ) -> dict[str, Any]:
     """Build a queue that scores repair-waterfill work orders."""
 
@@ -566,6 +579,7 @@ def build_repair_campaign_score_queue(
             results_root=results_root,
             queue_root=queue_root,
             priority=priority,
+            posterior_path=posterior_path,
         )
         for priority, experiment in enumerate(source_experiments, start=1)
     ]
@@ -579,6 +593,12 @@ def build_repair_campaign_score_queue(
         "source_queue_path": str(repair_budget_waterfill_queue_path),
         "source_queue_id": repair_budget_waterfill_queue.get("queue_id"),
         "campaign_scorer_default": True,
+        "campaign_scorer_uses_posterior_priors": posterior_path is not None,
+        "repair_campaign_stackability_posterior_path": (
+            _repo_rel(_resolve(posterior_path, repo_root), repo_root)
+            if posterior_path is not None
+            else None
+        ),
         "score_report_schema": REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA,
         "experiment_count": len(experiments),
         "ready_experiment_count": ready_count,
@@ -610,6 +630,7 @@ def build_repair_campaign_score_queue(
 
 
 __all__ = [
+    "DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_PATH",
     "REPAIR_CAMPAIGN_SCORE_EXPERIMENT_METADATA_SCHEMA",
     "REPAIR_CAMPAIGN_SCORE_QUEUE_METADATA_SCHEMA",
     "RepairCampaignScoreQueueError",
