@@ -42,6 +42,7 @@ from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
     require_no_truthy_authority_fields,
 )
+from tac.optimization.runtime_adapter_identity import RUNTIME_TREE_SHA_FIELDS
 from tac.optimizer.candidate_queue import build_candidate_queue
 from tac.optimizer.exact_readiness import (
     ACTIVE_FLOOR_ARCHIVE_BYTES,
@@ -104,6 +105,33 @@ RUNTIME_CONTEXT_PATH_FIELDS = (
     "runtime_consumption_proof_path",
     "runtime_consumption_proof_out",
 )
+RUNTIME_CONTEXT_NESTED_IDENTITY_FIELDS = (
+    "runtime_manifest",
+    "candidate_runtime",
+    "receiver_verification",
+    "packet_member_merge_receiver_runtime",
+    "tensor_factorize_receiver_runtime",
+    "renderer_payload_dfl1_receiver_runtime",
+)
+RUNTIME_CONTEXT_IDENTITY_FIELDS = tuple(
+    ordered_unique(
+        [
+            *RUNTIME_TREE_SHA_FIELDS,
+            "runtime_content_tree_sha256",
+            "candidate_runtime_content_tree_sha256",
+            "submission_runtime_tree_sha256",
+            "submission_runtime_content_tree_sha256",
+            "expected_runtime_tree_sha256",
+            "expected_inflate_runtime_tree_sha256",
+            "expected_candidate_runtime_tree_sha256",
+            "byte_range_entropy_recode_runtime_tree_sha256",
+            "packet_member_merge_receiver_runtime_tree_sha256",
+            "tensor_factorize_receiver_runtime_tree_sha256",
+            "renderer_payload_dfl1_runtime_tree_sha256",
+        ]
+    )
+)
+_SHA256_HEX = frozenset("0123456789abcdef")
 
 
 def harvest_materializer_chain_manifests(
@@ -825,6 +853,7 @@ def _runtime_context_for_queue_row(
 
 def _overlay_runtime_context(row: dict[str, Any], context: Mapping[str, Any]) -> None:
     applied: list[str] = []
+    identity_conflicts: list[str] = []
     for key in RUNTIME_CONTEXT_PATH_FIELDS:
         value = _nonempty_text(context.get(key))
         if value is None:
@@ -832,6 +861,19 @@ def _overlay_runtime_context(row: dict[str, Any], context: Mapping[str, Any]) ->
         if _nonempty_text(row.get(key)) is None:
             row[key] = value
             applied.append(key)
+    for key in RUNTIME_CONTEXT_IDENTITY_FIELDS:
+        value = _sha256_text(context.get(key))
+        if value is None:
+            continue
+        existing = _sha256_text(row.get(key))
+        if existing is None:
+            row[key] = value
+            applied.append(key)
+            continue
+        if existing != value:
+            identity_conflicts.append(
+                f"materializer_harvest_runtime_context_tree_sha256_conflict:{key}"
+            )
     sources = [
         source
         for source in context.get("materializer_harvest_runtime_context_sources") or []
@@ -869,6 +911,33 @@ def _overlay_runtime_context(row: dict[str, Any], context: Mapping[str, Any]) ->
                 *applied,
             ]
         )
+    if identity_conflicts:
+        row["materializer_harvest_runtime_context_identity_blockers"] = (
+            ordered_unique(
+                [
+                    *[
+                        str(blocker)
+                        for blocker in row.get(
+                            "materializer_harvest_runtime_context_identity_blockers"
+                        )
+                        or []
+                        if str(blocker)
+                    ],
+                    *identity_conflicts,
+                ]
+            )
+        )
+        row["runtime_adapter_ready"] = False
+        row["candidate_runtime_adapter_blocker_cleared"] = False
+        row["receiver_contract_satisfied"] = False
+        for key in ("readiness_blockers", "dispatch_blockers", "blockers"):
+            row[key] = ordered_unique(
+                [
+                    *_text_values(row.get(key)),
+                    *identity_conflicts,
+                ]
+            )
+        row["ready_for_exact_eval_dispatch"] = False
 
 
 def _is_renderer_payload_dfl1_row(row: Mapping[str, Any]) -> bool:
@@ -1103,6 +1172,47 @@ def _runtime_context_from_work_queue_row(
         if value is not None:
             context[key] = value
 
+    identity_sources = list(
+        _runtime_identity_source_mappings(
+            row,
+            closure,
+            proof,
+            closure_binding,
+            top_binding,
+            renderer_context,
+        )
+    )
+    for key in RUNTIME_CONTEXT_IDENTITY_FIELDS:
+        value = _first_sha256_text(*(source.get(key) for source in identity_sources))
+        if value is not None:
+            context[key] = value
+    for key, nested_key in (
+        ("candidate_runtime_tree_sha256", "candidate_runtime"),
+        ("runtime_tree_sha256", "runtime_manifest"),
+        (
+            "packet_member_merge_receiver_runtime_tree_sha256",
+            "packet_member_merge_receiver_runtime",
+        ),
+        (
+            "tensor_factorize_receiver_runtime_tree_sha256",
+            "tensor_factorize_receiver_runtime",
+        ),
+        (
+            "renderer_payload_dfl1_runtime_tree_sha256",
+            "renderer_payload_dfl1_receiver_runtime",
+        ),
+    ):
+        if key in context:
+            continue
+        value = _first_sha256_text(
+            *(
+                _mapping(source.get(nested_key)).get("runtime_tree_sha256")
+                for source in identity_sources
+            )
+        )
+        if value is not None:
+            context[key] = value
+
     source_runtime = _first_text(
         proof.get("source_runtime_dir"),
         closure.get("source_runtime_dir"),
@@ -1182,6 +1292,21 @@ def _runtime_context_from_discovery(discovery: Mapping[str, Any]) -> dict[str, A
     return dict(raw) if isinstance(raw, Mapping) else {}
 
 
+def _runtime_identity_source_mappings(
+    *mappings: Mapping[str, Any],
+) -> list[Mapping[str, Any]]:
+    out: list[Mapping[str, Any]] = []
+    for mapping in mappings:
+        if not isinstance(mapping, Mapping):
+            continue
+        out.append(mapping)
+        for key in RUNTIME_CONTEXT_NESTED_IDENTITY_FIELDS:
+            nested = mapping.get(key)
+            if isinstance(nested, Mapping):
+                out.append(nested)
+    return out
+
+
 def _mapping(value: Any) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
 
@@ -1200,6 +1325,24 @@ def _nonempty_text(value: Any) -> str | None:
 def _first_text(*values: Any) -> str | None:
     for value in values:
         text = _nonempty_text(value)
+        if text is not None:
+            return text
+    return None
+
+
+def _sha256_text(value: Any) -> str | None:
+    text = _nonempty_text(value)
+    if text is None:
+        return None
+    lowered = text.lower()
+    if len(lowered) == 64 and all(ch in _SHA256_HEX for ch in lowered):
+        return lowered
+    return None
+
+
+def _first_sha256_text(*values: Any) -> str | None:
+    for value in values:
+        text = _sha256_text(value)
         if text is not None:
             return text
     return None
