@@ -43592,8 +43592,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/pact_nerv_full_main_implementation_cluster_landed_20260527.md"
         },
         "deploy_runbook": {
           "status": true,
@@ -44067,8 +44067,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/pact_nerv_full_main_implementation_cluster_landed_20260527.md"
         },
         "deploy_runbook": {
           "status": true,
@@ -44526,8 +44526,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/pact_nerv_full_main_implementation_cluster_landed_20260527.md"
         },
         "deploy_runbook": {
           "status": true,
@@ -44582,8 +44582,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/pact_nerv_full_main_implementation_cluster_landed_20260527.md"
         },
         "deploy_runbook": {
           "status": true,
@@ -45056,8 +45056,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/pact_nerv_full_main_implementation_cluster_landed_20260527.md"
         },
         "deploy_runbook": {
           "status": true,
@@ -45224,8 +45224,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/pact_nerv_full_main_implementation_cluster_landed_20260527.md"
         },
         "deploy_runbook": {
           "status": true,
@@ -59335,6 +59335,88 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_mlx_per_pair_master_gradient_authoritative_artifacts_20260527",
+      "name": "MLX per-pair per-axis master gradient TOOL + authoritative frontier artifacts",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/extract_master_gradient_mlx.py + src/tac/master_gradient_mlx_extractor.py + 18 tests pass"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/mlx_per_pair_master_gradient_authoritative_artifacts_landed_20260527.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_stub_audit_and_fix_wave_20260527",
+      "name": "STUB-AUDIT-AND-FIX wave: auto_recalibrate orphan-stub fix + Catalog #371",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/canonical_equations/registry.py auto_recalibrate refit; commit ef262a515"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #371 check_no_orphan_auto_trigger_stub_with_satisfied_condition strict; commit ef262a515"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_stub_audit_and_fix_wave_landed_20260527.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -59344,5 +59426,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-27T13:34:50Z"
+  "updated_at": "2026-05-27T14:31:33Z"
 }
