@@ -52,6 +52,10 @@ from .byte_shaving_materializer_registry import (
     registry_manifest,
 )
 from .experiment_queue import ExperimentQueueError, normalize_queue_definition
+from .frontier_rate_attack_target_profile import (
+    TARGET_OPTIMIZATION_PROFILE_SCHEMA,
+    target_optimization_profile_queue_metadata,
+)
 
 BOOTSTRAP_SCHEMA = "frontier_final_rate_attack_bootstrap.v1"
 DERIVED_PACKET_MEMBER_MERGE_CONTRACT_SCHEMA = (
@@ -1002,6 +1006,8 @@ def build_frontier_rate_attack_payloads(
     source_work_queue_path: str | Path | None = None,
     include_exact_readiness_followup: bool = False,
     exact_readiness_followup_require_ready: bool = False,
+    target_optimization_profile: Mapping[str, Any] | None = None,
+    require_target_profile_ready: bool = False,
 ) -> dict[str, Any]:
     """Compile archives and materializer targets into durable queue payloads."""
 
@@ -1019,6 +1025,30 @@ def build_frontier_rate_attack_payloads(
     checked_records = [dict(record) for record in archive_records]
     for index, record in enumerate(checked_records):
         require_no_truthy_authority_fields(record, context=f"archive_records[{index}]")
+    target_profile_payload: dict[str, Any] | None = None
+    target_profile_metadata: dict[str, Any] | None = None
+    if target_optimization_profile is not None:
+        if target_optimization_profile.get("schema") != TARGET_OPTIMIZATION_PROFILE_SCHEMA:
+            raise FrontierRateAttackBootstrapError(
+                "target_optimization_profile schema mismatch"
+            )
+        require_no_truthy_authority_fields(
+            target_optimization_profile,
+            context="frontier_rate_attack_bootstrap.target_optimization_profile",
+        )
+        target_profile_payload = dict(target_optimization_profile)
+        target_profile_metadata = target_optimization_profile_queue_metadata(
+            target_profile_payload
+        )
+        if (
+            require_target_profile_ready
+            and target_profile_metadata.get("profile_ready") is not True
+        ):
+            blockers = ", ".join(str(item) for item in target_profile_metadata.get("blockers") or [])
+            raise FrontierRateAttackBootstrapError(
+                "target optimization profile is not ready"
+                + (f": {blockers}" if blockers else "")
+            )
     output_root = _resolve_path(results_root, repo_root=repo) / queue_id
     shared_member = member_name or _shared_single_member_name(checked_records)
     requested_targets = ordered_unique(
@@ -1054,7 +1084,14 @@ def build_frontier_rate_attack_payloads(
                 "backlog_key": backlog_key,
                 "target_kind": target_kind,
                 "materializer_id": adapter.get("materializer_id"),
-                "context": dict(context),
+                "context": {
+                    **dict(context),
+                    **(
+                        {"target_optimization_profile": target_profile_metadata}
+                        if target_profile_metadata is not None
+                        else {}
+                    ),
+                },
             }
         )
         backlog_rows.append(
@@ -1093,6 +1130,27 @@ def build_frontier_rate_attack_payloads(
                         }
                         for record in source_records[:8]
                     ],
+                    **(
+                        {
+                            "target_profile_id": target_profile_metadata.get(
+                                "target_profile_id"
+                            ),
+                            "target_mode": target_profile_metadata.get("target_mode"),
+                            "declared_overfit_allowed": target_profile_metadata.get(
+                                "declared_overfit_allowed"
+                            )
+                            is True,
+                            "target_video_paths": target_profile_metadata.get(
+                                "target_video_paths"
+                            )
+                            or [],
+                            "target_corpus_manifest_path": target_profile_metadata.get(
+                                "target_corpus_manifest_path"
+                            ),
+                        }
+                        if target_profile_metadata is not None
+                        else {}
+                    ),
                     **FALSE_AUTHORITY,
                 },
                 dispatch_blockers=("frontier_rate_attack_local_materializer_sweep_only",),
@@ -1404,6 +1462,11 @@ def build_frontier_rate_attack_payloads(
             "generated_at_utc": _utc_now(),
             "queue_id": queue_id,
             "rows": contexts_rows,
+            **(
+                {"target_optimization_profile": target_profile_metadata}
+                if target_profile_metadata is not None
+                else {}
+            ),
             **FALSE_AUTHORITY,
         },
         dispatch_blockers=("frontier_rate_attack_contexts_are_local_only",),
@@ -1446,6 +1509,11 @@ def build_frontier_rate_attack_payloads(
             "archive_labels": [record["label"] for record in checked_records],
             "target_kinds": [row["target_kind"] for row in backlog_rows],
             "target_omissions": target_omissions,
+            **(
+                {"target_optimization_profile": target_profile_metadata}
+                if target_profile_metadata is not None
+                else {}
+            ),
             "exact_readiness_followup_requested": bool(
                 include_exact_readiness_followup
             ),
@@ -1468,6 +1536,8 @@ def build_frontier_rate_attack_payloads(
     for experiment in queue["experiments"]:
         metadata = dict(experiment.get("metadata") or {})
         metadata["frontier_rate_attack_bootstrap"] = queue_metadata
+        if target_profile_metadata is not None:
+            metadata["frontier_target_optimization_profile"] = target_profile_metadata
         experiment["metadata"] = metadata
     queue = normalize_queue_definition(queue)
     bootstrap = apply_proxy_evidence_boundary(
@@ -1477,6 +1547,15 @@ def build_frontier_rate_attack_payloads(
             "queue_id": queue_id,
             "archive_count": len(checked_records),
             "archives": checked_records,
+            **(
+                {
+                    "target_optimization_profile": target_profile_payload,
+                    "target_optimization_profile_metadata": target_profile_metadata,
+                }
+                if target_profile_payload is not None
+                and target_profile_metadata is not None
+                else {}
+            ),
             "executable_target_count": len(backlog_rows),
             "executable_target_kinds": [row["target_kind"] for row in backlog_rows],
             "target_omissions": target_omissions,

@@ -37,6 +37,10 @@ from comma_lab.scheduler.frontier_rate_attack_bootstrap import (
     parse_archive_spec,
     resolve_current_frontier_archive,
 )
+from comma_lab.scheduler.frontier_rate_attack_target_profile import (
+    TARGET_OPTIMIZATION_PROFILE_QUEUE_METADATA_SCHEMA,
+    build_frontier_target_optimization_profile,
+)
 from tac.optimization.family_agnostic_materializers import (
     RENDERER_PAYLOAD_DFL1_MEMBER_NAMES,
 )
@@ -138,6 +142,91 @@ def test_frontier_bootstrap_builds_queue_with_experiment_metadata(tmp_path: Path
         assert metadata["score_claim"] is False
         assert metadata["ready_for_exact_eval_dispatch"] is False
         assert metadata["exact_readiness_followup_requested"] is False
+
+
+def test_frontier_bootstrap_propagates_declared_video_scope_to_queue(
+    tmp_path: Path,
+) -> None:
+    video_path = tmp_path / "upstream" / "videos" / "0.mkv"
+    video_path.parent.mkdir(parents=True, exist_ok=True)
+    video_path.write_bytes(b"declared contest target")
+    archive_path = _write_archive(tmp_path / "archive.zip", member_name="payload.bin")
+    record = archive_record(
+        label="frontier",
+        archive_path=archive_path,
+        repo_root=tmp_path,
+        source_kind="unit_test",
+    )
+    profile = build_frontier_target_optimization_profile(
+        repo_root=tmp_path,
+        target_profile_id="unit_contest_video",
+        target_mode="contest_video_overfit",
+        target_video_paths=("upstream/videos/0.mkv",),
+    )
+
+    payloads = build_frontier_rate_attack_payloads(
+        repo_root=tmp_path,
+        queue_id="frontier_final_rate_attack_target_scope",
+        archive_records=[record],
+        results_root=tmp_path / "results",
+        target_kinds=(PACKET_MEMBER_RECOMPRESS_TARGET_KIND,),
+        include_optional_target_blockers=False,
+        member_name="payload.bin",
+        target_optimization_profile=profile,
+        require_target_profile_ready=True,
+    )
+
+    target_metadata = payloads["bootstrap"]["target_optimization_profile_metadata"]
+    assert target_metadata["schema"] == TARGET_OPTIMIZATION_PROFILE_QUEUE_METADATA_SCHEMA
+    assert target_metadata["target_profile_id"] == "unit_contest_video"
+    assert target_metadata["target_mode"] == "contest_video_overfit"
+    assert target_metadata["declared_overfit_allowed"] is True
+    assert target_metadata["target_video_paths"] == ["upstream/videos/0.mkv"]
+    assert payloads["contexts"]["target_optimization_profile"] == target_metadata
+    assert payloads["contexts"]["rows"][0]["context"][
+        "target_optimization_profile"
+    ] == target_metadata
+    assert payloads["backlog"]["rows"][0]["target_profile_id"] == "unit_contest_video"
+    experiment_metadata = payloads["queue"]["experiments"][0]["metadata"]
+    assert (
+        experiment_metadata["frontier_target_optimization_profile"]
+        == target_metadata
+    )
+    _assert_false_authority(target_metadata)
+
+
+def test_frontier_bootstrap_refuses_unready_required_target_profile(
+    tmp_path: Path,
+) -> None:
+    archive_path = _write_archive(tmp_path / "archive.zip", member_name="payload.bin")
+    record = archive_record(
+        label="frontier",
+        archive_path=archive_path,
+        repo_root=tmp_path,
+        source_kind="unit_test",
+    )
+    profile = build_frontier_target_optimization_profile(
+        repo_root=tmp_path,
+        target_profile_id="unit_corpus_missing",
+        target_mode="corpus_generalization",
+        target_video_paths=("upstream/videos/0.mkv",),
+    )
+
+    with pytest.raises(
+        FrontierRateAttackBootstrapError,
+        match="target optimization profile is not ready",
+    ):
+        build_frontier_rate_attack_payloads(
+            repo_root=tmp_path,
+            queue_id="frontier_final_rate_attack_unready_target_scope",
+            archive_records=[record],
+            results_root=tmp_path / "results",
+            target_kinds=(PACKET_MEMBER_RECOMPRESS_TARGET_KIND,),
+            include_optional_target_blockers=False,
+            member_name="payload.bin",
+            target_optimization_profile=profile,
+            require_target_profile_ready=True,
+        )
 
 
 def test_frontier_bootstrap_binds_merge_and_dfl1_contexts_per_archive(
@@ -444,7 +533,16 @@ def test_frontier_bootstrap_cli_writes_valid_queue(tmp_path: Path) -> None:
     bootstrap = json.loads(bootstrap_path.read_text(encoding="utf-8"))
     assert bootstrap["archive_count"] == 1
     assert bootstrap["archives"][0]["sha256"] == sha256_file(archive_path)
+    assert bootstrap["target_optimization_profile_metadata"]["target_mode"] == (
+        "contest_video_overfit"
+    )
+    assert bootstrap["target_optimization_profile_metadata"][
+        "declared_overfit_allowed"
+    ] is True
     queue = json.loads(queue_path.read_text(encoding="utf-8"))
+    assert queue["experiments"][0]["metadata"][
+        "frontier_target_optimization_profile"
+    ]["target_mode"] == "contest_video_overfit"
     assert queue["experiments"][0]["metadata"][
         "exact_readiness_followup_enabled"
     ] is True

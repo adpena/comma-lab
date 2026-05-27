@@ -38,6 +38,10 @@ from comma_lab.scheduler.frontier_rate_attack_bootstrap import (  # noqa: E402
     parse_archive_spec,
     resolve_current_frontier_archive,
 )
+from comma_lab.scheduler.frontier_rate_attack_target_profile import (  # noqa: E402
+    FrontierRateAttackTargetProfileError,
+    build_frontier_target_optimization_profile,
+)
 from tac.repo_io import ArtifactWriteError, json_text, write_json_artifact  # noqa: E402
 
 
@@ -148,6 +152,33 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--tensor-factorize-rank", type=int, default=None)
     parser.add_argument("--zip-compression-method", action="append", default=[])
     parser.add_argument("--zip-compresslevel", action="append", type=int, default=[])
+    parser.add_argument("--target-profile-id", default="contest_video_0")
+    parser.add_argument(
+        "--target-mode",
+        default="contest_video_overfit",
+        help=(
+            "Optimization target mode: contest_video_overfit, "
+            "corpus_generalization, or hybrid_contest_plus_corpus."
+        ),
+    )
+    parser.add_argument(
+        "--target-video",
+        action="append",
+        default=[],
+        help=(
+            "Declared optimization target video path. Defaults to the canonical "
+            "contest video when omitted."
+        ),
+    )
+    parser.add_argument("--target-corpus-manifest", default=None)
+    parser.add_argument(
+        "--allow-unready-target-profile",
+        action="store_true",
+        help=(
+            "Emit blocker-bearing planning artifacts even if the declared target "
+            "profile is missing its video/corpus inputs."
+        ),
+    )
     parser.add_argument("--min-free-bytes", type=int, default=0)
     parser.add_argument(
         "--allow-materializer-overwrite",
@@ -271,6 +302,13 @@ def main(argv: list[str] | None = None) -> int:
             archive_records.append(dict(frontier_resolution["archive_record"]))
         for spec in args.archive:
             archive_records.append(parse_archive_spec(spec, repo_root=REPO_ROOT))
+        target_optimization_profile = build_frontier_target_optimization_profile(
+            repo_root=REPO_ROOT,
+            target_profile_id=args.target_profile_id,
+            target_mode=args.target_mode,
+            target_video_paths=tuple(args.target_video),
+            target_corpus_manifest_path=args.target_corpus_manifest,
+        )
         target_kinds = tuple(args.target_kind or DEFAULT_EXECUTABLE_TARGET_KINDS)
         derived_section_manifests = None
         derived_merge_contract = None
@@ -352,6 +390,8 @@ def main(argv: list[str] | None = None) -> int:
             exact_readiness_followup_require_ready=(
                 args.exact_readiness_followup_require_ready
             ),
+            target_optimization_profile=target_optimization_profile,
+            require_target_profile_ready=not args.allow_unready_target_profile,
         )
         if frontier_resolution is not None:
             payloads["bootstrap"]["frontier_resolution"] = frontier_resolution
@@ -453,6 +493,7 @@ def main(argv: list[str] | None = None) -> int:
         OSError,
         ArtifactWriteError,
         FrontierRateAttackBootstrapError,
+        FrontierRateAttackTargetProfileError,
         subprocess.SubprocessError,
     ) as exc:
         print(f"FATAL: frontier final-rate attack bootstrap failed: {exc}", file=sys.stderr)
