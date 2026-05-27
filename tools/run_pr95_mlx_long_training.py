@@ -90,6 +90,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Run the MLX smoke path. Requires --smoke-mode.",
     )
+    parser.add_argument(
+        "--execute",
+        action="store_true",
+        help=(
+            "Run the MLX training path using the configured curriculum. "
+            "Without --smoke-mode this executes the full stage epoch counts."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -116,6 +124,10 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(raw_argv)
     if args.execute_smoke and not args.smoke_mode:
         raise SystemExit("--execute-smoke requires --smoke-mode")
+    if args.execute and args.execute_smoke:
+        raise SystemExit("pass only one of --execute or --execute-smoke")
+    if args.execute and args.smoke_mode:
+        raise SystemExit("--execute runs the configured long curriculum; use --execute-smoke with --smoke-mode")
 
     config = _config_from_args(args)
     source_sha = None
@@ -127,14 +139,14 @@ def main(argv: list[str] | None = None) -> int:
     if args.hash_source_video and config.source_video_path.is_file():
         source_sha = compute_video_sha256(config.source_video_path)
 
-    if args.execute_smoke:
+    if args.execute or args.execute_smoke:
         pipeline = MLXLongTrainingPipeline(config)
         pipeline.setup()
         telemetry = pipeline.run_curriculum()
         source_sha = telemetry.source_video_sha256
         source_frame_count = telemetry.source_video_frame_count
         checkpoint_artifacts = pipeline.checkpoint_artifacts
-        mode = "executed_smoke"
+        mode = "executed_smoke" if config.smoke_mode else "executed_local_mlx"
 
     output_report = _repo_path(args.output_report)
     queue_command = [

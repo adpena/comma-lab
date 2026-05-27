@@ -498,3 +498,75 @@ def test_run_pr95_mlx_long_training_plan_cli_writes_report(
     assert report["telemetry_path"].endswith("telemetry.jsonl")
     for key, value in PR95_MLX_LONG_TRAINING_FALSE_AUTHORITY.items():
         assert report[key] is value
+
+
+def test_run_pr95_mlx_long_training_cli_has_explicit_full_execute_mode(
+    tmp_path: Path,
+) -> None:
+    report_path = tmp_path / "long_training_execute_plan.json"
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "run_pr95_mlx_long_training.py"),
+            "--output-report",
+            str(report_path),
+            "--source-video-path",
+            "upstream/videos/0.mkv",
+            "--telemetry-path",
+            str(tmp_path / "telemetry.jsonl"),
+            "--max-frames",
+            "1200",
+            "--checkpoint-every-epochs",
+            "400",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=60,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    command = report["recommended_execution"]["python_command_args"]
+    assert "--execute" not in command
+    assert "--execute-smoke" not in command
+    assert report["total_epochs"] == 3000
+    assert report["recommended_execution"]["resource_kind"] == "local_cpu"
+
+    conflict = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "run_pr95_mlx_long_training.py"),
+            "--output-report",
+            str(tmp_path / "conflict.json"),
+            "--execute",
+            "--execute-smoke",
+            "--smoke-mode",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=60,
+    )
+    assert conflict.returncode != 0
+    assert "pass only one of --execute or --execute-smoke" in conflict.stderr
+
+    ambiguous_smoke = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "run_pr95_mlx_long_training.py"),
+            "--output-report",
+            str(tmp_path / "ambiguous_smoke.json"),
+            "--execute",
+            "--smoke-mode",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=60,
+    )
+    assert ambiguous_smoke.returncode != 0
+    assert "--execute runs the configured long curriculum" in ambiguous_smoke.stderr
