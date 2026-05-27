@@ -180,6 +180,19 @@ from tac.submission_packet.linter import (
 from tac.submission_packet.linter import (
     CANONICAL_EQUATION_ID as LINTER_CANONICAL_EQUATION_ID,
 )
+from tac.submission_packet.paired_auth_eval import (
+    PAIRED_AUTH_EVAL_SCHEMA_VERSION,
+    PHASE_7_LAYER_VERSION,
+    PairedAuthEvalError,
+    PairedAuthEvalVerdict,
+    PairedAuthEvalVerdictKind,
+    derive_paired_auth_eval_provenance,
+    plan_paired_auth_eval,
+    reconstruct_verdict_from_disk,
+)
+from tac.submission_packet.paired_auth_eval import (
+    CANONICAL_EQUATION_ID as PAIRED_AUTH_EVAL_CANONICAL_EQUATION_ID,
+)
 
 __all__ = [
     # Phase 2 (Layer 0)
@@ -264,4 +277,14 @@ __all__ = [
     "lint_readme",
     "lint_submission_bundle",
     "lint_tone",
+    # Phase 7 (Layer 5) - paired auth-eval orchestrator (this lane)
+    "PAIRED_AUTH_EVAL_CANONICAL_EQUATION_ID",
+    "PAIRED_AUTH_EVAL_SCHEMA_VERSION",
+    "PHASE_7_LAYER_VERSION",
+    "PairedAuthEvalError",
+    "PairedAuthEvalVerdict",
+    "PairedAuthEvalVerdictKind",
+    "derive_paired_auth_eval_provenance",
+    "plan_paired_auth_eval",
+    "reconstruct_verdict_from_disk",
 ]
