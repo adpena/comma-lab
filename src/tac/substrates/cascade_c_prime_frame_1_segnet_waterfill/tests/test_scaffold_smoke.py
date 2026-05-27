@@ -129,7 +129,19 @@ class TestArchiveRoundtrip:
 
 class TestInflateRuntimeContestContract:
     def test_scaffold_inflate_writes_full_contest_raw_contract(self, tmp_path):
-        """Wave-3 regression: receiver must emit 1164x874x1200 RGB raw bytes."""
+        """WAVE-5 regression: receiver emits 1164x874x1200 RGB raw bytes per
+        Catalog #146 contest contract; encoded pairs carry per-pair rendered
+        (frame_0, frame_1) bytes; trailing frames are zero-padded to honor
+        the upstream evaluator's frame-count contract.
+
+        Per WAVE-5 MVP-fix landing memo (sister of
+        cascade_c_prime_wave_4_empirical_anchor_diagnostic_cpu_89_21_implementation_falsification_20260526.md):
+        the prior assertion that the FIRST 16 bytes are all-zero is the WAVE-4
+        bug class signature (`_write_sparse_zero_raw` placeholder); the fix
+        operationalizes per-pair rendering so encoded-pair regions are
+        non-zero (textured frame_0 base + pose-delta-driven affine warp) and
+        only the trailing-padding region remains zero-padded.
+        """
         archive_bytes, *_ = TestArchiveRoundtrip()._build_synthetic_archive(n_pairs=8)
 
         raw_path = inflate_one_video(archive_bytes, tmp_path / "0")
@@ -137,9 +149,22 @@ class TestInflateRuntimeContestContract:
         assert raw_path.name == "0.raw"
         assert raw_path.stat().st_size == CONTEST_RAW_BYTES
         with raw_path.open("rb") as fh:
-            assert fh.read(16) == b"\x00" * 16
+            # First 16 bytes are WITHIN the encoded-pair region (pair 0 frame_0
+            # textured base); per WAVE-5 MVP-fix these MUST be non-zero so the
+            # per-pair render is operational rather than the WAVE-4 placeholder.
+            first_16 = fh.read(16)
+            assert first_16 != b"\x00" * 16, (
+                "WAVE-4 bug class regression: encoded-pair region is all-zero "
+                "indicating `_write_sparse_zero_raw` placeholder revived; per "
+                "WAVE-5 MVP-fix the per-pair render writes textured frame_0 + "
+                "pose-delta-warped frame_1 bytes."
+            )
+            # Trailing-padding region (after encoded pairs) MUST be zero-padded
+            # to honor the contest raw byte-count contract per Catalog #146.
             fh.seek(CONTEST_RAW_BYTES - 16)
-            assert fh.read(16) == b"\x00" * 16
+            assert fh.read(16) == b"\x00" * 16, (
+                "trailing padding region must be zero per contest raw frame-count contract"
+            )
 
     def test_contest_output_shape_is_padded_for_local_smokes(self):
         archive_bytes, *_ = TestArchiveRoundtrip()._build_synthetic_archive(n_pairs=8)
