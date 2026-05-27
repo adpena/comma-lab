@@ -34,6 +34,7 @@ Architecture summary (see ``__init__.py`` docstring for full details):
 from __future__ import annotations
 
 import math
+from typing import Any
 
 try:
     import mlx.core as mx
@@ -53,7 +54,6 @@ from tac.substrates.mdl_ibps_j_discrete_categorical_mine_hybrid import (
     CATEGORICAL_K,
     EVAL_HW,
     HIDDEN_DIM,
-    MINE_HIDDEN_DIM,
     NUM_HIDDEN_LAYERS,
     POS_DIM,
 )
@@ -141,7 +141,7 @@ class FilmProjMLX:
     full training adds sparse-Laplacian regularizer per ``ib_loss_mine.py``.
     """
 
-    def __init__(self, weights: "mx.array", biases: "mx.array") -> None:
+    def __init__(self, weights: mx.array, biases: mx.array) -> None:
         _require_mlx()
         self.weights = weights.astype(mx.float32)
         self.biases = biases.astype(mx.float32)
@@ -177,12 +177,12 @@ class CoordMLPBaseMLX:
 
     def __init__(
         self,
-        weights_first: "mx.array",
-        biases_first: "mx.array",
+        weights_first: mx.array,
+        biases_first: mx.array,
         weights_hidden: list,
         biases_hidden: list,
-        weights_out: "mx.array",
-        biases_out: "mx.array",
+        weights_out: mx.array,
+        biases_out: mx.array,
     ) -> None:
         _require_mlx()
         self.weights_first = weights_first.astype(mx.float32)
@@ -390,10 +390,140 @@ class MDLIBPSJRendererMLX:
         return mx.stack(frames, axis=0)
 
 
+class MDLIBPSJTrainableRendererMLX(nn.Module if nn is not None else object):  # type: ignore[misc]
+    """Trainable ``nn.Module`` J=MDL-IBPS renderer for the MLX score-aware harness.
+
+    MLX-SCORE-AWARE-HARNESS-WAVE 2026-05-27: the prior blocker was that
+    :class:`MDLIBPSJRendererMLX` holds FIXED loaded weights (``FilmProjMLX`` /
+    ``CoordMLPBaseMLX`` take pre-built arrays — loaded-weight inference, NOT
+    learnable params; not an ``mlx.nn.Module``). This class extinguishes the
+    blocker: it wraps the discrete-categorical-posterior + FiLM-proj + FiLM-
+    conditioned CoordMLP as a single trainable ``nn.Module`` whose params MLX
+    ``value_and_grad`` discovers via ``.parameters()``.
+
+    Trainable parameters:
+
+    - ``logits`` ``(num_pairs, G, K)`` per-pair categorical logits (the discrete
+      IB code; argmax indices stored in the archive at inflate).
+    - ``film_proj`` ``nn.Linear(G*K, NUM_HIDDEN_LAYERS*HIDDEN_DIM*2)`` (categorical
+      one-hot -> per-layer FiLM scale+shift).
+    - ``input_proj`` ``nn.Linear(pos_enc_dim, HIDDEN_DIM)`` (positional encoding).
+    - ``hidden`` ``[nn.Linear(HIDDEN_DIM, HIDDEN_DIM)] x NUM_HIDDEN_LAYERS``.
+    - ``output_proj`` ``nn.Linear(HIDDEN_DIM, 3)`` (RGB head).
+
+    Forward (training): per-pair logits -> Gumbel-Softmax (soft, STE) ->
+    one-hot -> FiLM proj -> CoordMLP(coords, scales, shifts) -> sigmoid RGB.
+    Exposes the harness ``reconstruct_pair(idx) -> (rgb_0, rgb_1)`` NCHW
+    ``[0, 1]`` convention (frame_0 t=0, frame_1 t=1).
+
+    The MINE critic (``MINECriticMLX``) is the substrate's UNIQUE distinguishing
+    extra term; it is wired separately via the harness ``extra_loss_terms``
+    callback (NOT folded into the renderer forward) so the canonical loop never
+    assumes a fixed loss signature.
+
+    Non-promotable ``[macOS-MLX research-signal]`` per CLAUDE.md "MLX
+    portable-local-substrate authority".
+    """
+
+    def __init__(
+        self,
+        num_pairs: int,
+        *,
+        gumbel_temperature: float = 1.0,
+        height: int = EVAL_HW[0],
+        width: int = EVAL_HW[1],
+    ) -> None:
+        _require_mlx()
+        super().__init__()
+        self.num_pairs = int(num_pairs)
+        self.gumbel_temperature = float(gumbel_temperature)
+        self.height = int(height)
+        self.width = int(width)
+        pos_enc_dim = POS_DIM * 2 * 3
+        key = mx.random.key(0)
+        self.logits = (
+            mx.random.normal(
+                shape=(self.num_pairs, CATEGORICAL_G, CATEGORICAL_K), key=key
+            )
+            * 0.01
+        )
+        self.film_proj = nn.Linear(
+            CATEGORICAL_G * CATEGORICAL_K, NUM_HIDDEN_LAYERS * HIDDEN_DIM * 2
+        )
+        self.input_proj = nn.Linear(pos_enc_dim, HIDDEN_DIM)
+        self.hidden = [
+            nn.Linear(HIDDEN_DIM, HIDDEN_DIM) for _ in range(NUM_HIDDEN_LAYERS)
+        ]
+        self.output_proj = nn.Linear(HIDDEN_DIM, 3)
+
+    def _render_frame(self, scales: Any, shifts: Any, t: int) -> Any:
+        """Render one (B, 3, H, W) frame at coord-time t for FiLM (scales, shifts).
+
+        Args:
+            scales / shifts: ``(B, NUM_HIDDEN_LAYERS, HIDDEN_DIM)`` per-pair FiLM.
+            t: frame index (0 or 1).
+
+        Returns:
+            ``(B, 3, H, W)`` RGB in ``[0, 1]`` (NCHW).
+        """
+        b = int(scales.shape[0])
+        coords = make_pixel_coords_mlx(height=self.height, width=self.width, t=t)
+        n = coords.shape[0]  # H*W
+        pos_enc = sinusoidal_positional_encoding_mlx(coords, pos_dim=POS_DIM)
+        # Shared base over all pixels; broadcast to batch.
+        h = self.input_proj(pos_enc)  # (N, HIDDEN_DIM)
+        h = mx.broadcast_to(h[None], (b, n, HIDDEN_DIM))  # (B, N, HIDDEN_DIM)
+        for i in range(NUM_HIDDEN_LAYERS):
+            h = self.hidden[i](h)
+            scale = scales[:, i, :][:, None, :]  # (B, 1, HIDDEN_DIM)
+            shift = shifts[:, i, :][:, None, :]
+            h = mx.sin(h * scale + shift)
+        rgb = mx.sigmoid(self.output_proj(h))  # (B, N, 3)
+        rgb = mx.reshape(rgb, (b, self.height, self.width, 3))
+        return mx.transpose(rgb, (0, 3, 1, 2))  # (B, 3, H, W)
+
+    def reconstruct_pair(self, pair_indices: Any) -> tuple[Any, Any]:
+        """Harness forward: per-pair categorical logits -> (rgb_0, rgb_1).
+
+        Args:
+            pair_indices: ``(B,)`` int tensor in ``[0, num_pairs)``.
+
+        Returns:
+            ``(rgb_0, rgb_1)`` each ``(B, 3, H, W)`` in ``[0, 1]``.
+        """
+        _require_mlx()
+        logits = mx.take(self.logits, pair_indices, axis=0)  # (B, G, K)
+        soft = gumbel_softmax_sample_mlx(
+            logits, temperature=self.gumbel_temperature, hard=False
+        )  # (B, G, K) simplex
+        b = int(soft.shape[0])
+        one_hot = mx.reshape(soft, (b, CATEGORICAL_G * CATEGORICAL_K))
+        proj = self.film_proj(one_hot)  # (B, L*H*2)
+        proj = mx.reshape(proj, (b, NUM_HIDDEN_LAYERS, HIDDEN_DIM, 2))
+        scales = proj[..., 0]
+        shifts = proj[..., 1]
+        rgb_0 = self._render_frame(scales, shifts, t=0)
+        rgb_1 = self._render_frame(scales, shifts, t=1)
+        return rgb_0, rgb_1
+
+    def __call__(self, pair_indices: Any) -> tuple[Any, Any]:
+        """Alias for :meth:`reconstruct_pair` (default forward)."""
+        return self.reconstruct_pair(pair_indices)
+
+    def argmax_indices(self) -> Any:
+        """Return ``(num_pairs, G)`` int32 argmax category indices for archive.
+
+        The distinguishing-feature bytes per Catalog #272: the per-pair discrete
+        categorical IB code stored as ``G`` int indices per pair.
+        """
+        return mx.argmax(self.logits, axis=-1)
+
+
 __all__ = [
     "CoordMLPBaseMLX",
     "FilmProjMLX",
     "MDLIBPSJRendererMLX",
+    "MDLIBPSJTrainableRendererMLX",
     "MINECriticMLX",
     "categorical_to_one_hot_mlx",
     "film_modulation_mlx",

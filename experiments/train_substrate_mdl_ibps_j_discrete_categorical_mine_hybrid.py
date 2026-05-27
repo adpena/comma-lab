@@ -3,13 +3,18 @@
 # NO_GRAD_WAIVED:MLX_substrate_trainer_uses_mx_no_grad_or_substrate_uses_lazy_eval_no_autograd_per_mlx_first_canonical_doctrine_4107bbf8d_or_substrate_eval_uses_alternate_memory_management_per_comprehensive_bug_audit_cascade_20260526
 # AUTOCAST_FP16_WAIVED:MLX_or_PyTorch_substrate_trainer_does_not_use_PyTorch_CUDA_autocast_fp16_primitive_per_mlx_first_canonical_doctrine_4107bbf8d_or_substrate_uses_different_precision_strategy_per_comprehensive_bug_audit_cascade_20260526
 # SYNTHETIC_NON_SMOKE_OK:L0-mlx-scaffold-synthetic-frames-only-in-smoke-_full_main-raises-NotImplementedError-per-catalog-240
-"""train_substrate_mdl_ibps_j_discrete_categorical_mine_hybrid — Path 3 J=MDL-IBPS L0 SCAFFOLD smoke trainer.
+"""train_substrate_mdl_ibps_j_discrete_categorical_mine_hybrid — Path 3 J=MDL-IBPS MLX trainer.
 
-Per Catalog #240 acceptance cascade (c) pre-build substrate-engineering:
-``_full_main`` raises NotImplementedError until L1+ wires the canonical
-PyTorch port + score-aware loss routing + real frame loader + Catalog #319
-deliverability proof + Catalog #270 dispatch optimization protocol +
-PER-SUBSTRATE OPTIMAL FORM symposium per Catalog #325.
+MLX-SCORE-AWARE-HARNESS-WAVE 2026-05-27: ``--mode full`` is UNBLOCKED — it routes
+the trainable ``MDLIBPSJTrainableRendererMLX`` nn.Module (discrete categorical
+posterior + Gumbel-Softmax + FiLM-conditioned CoordMLP) through the canonical
+``tac.substrates._shared.mlx_score_aware`` harness (real contest video +
+reconstruction MSE + Hinton-KL T=2.0 scorer surrogate + canonical EMA /
+Provenance / posterior anchor). MLX-LOCAL ($0 M5 Max); non-promotable
+``[macOS-MLX research-signal]``; per Catalog #325 any paid-dispatch recipe stays
+``dispatch_enabled: false`` + ``research_only: true`` until the per-substrate
+symposium clears. The MINE critic MI term + per-axis + MLX->PyTorch bridge +
+paired CUDA/CPU anchor remain DEFERRED to the PyTorch sister L2.
 
 ``_smoke_main`` runs MLX-side primitives on synthetic data; produces NO
 score claims (artifacts tagged ``[macOS-MLX research-signal]`` per
@@ -111,6 +116,19 @@ def _build_parser() -> argparse.ArgumentParser:
                         default=int(os.environ.get("J_MDL_IBPS_SEED", "42")))
     parser.add_argument("--num-pairs", type=int, default=8,
                         help="L0 smoke uses tiny synthetic batch (8 pairs) for shape validation")
+    parser.add_argument("--output-dir", type=str,
+                        default=os.environ.get("J_MDL_IBPS_OUTPUT_DIR", ""),
+                        help="Output dir for --mode full MLX score-aware training artifacts.")
+    parser.add_argument("--video-path", type=Path,
+                        default=Path(os.environ.get("J_MDL_IBPS_VIDEO_PATH", "upstream/videos/0.mkv")),
+                        help="Real contest video for --mode full score-aware training (Catalog #114).")
+    parser.add_argument("--full-lr", type=float, default=1e-3,
+                        help="Learning rate for --mode full MLX score-aware training.")
+    parser.add_argument("--gumbel-temperature", type=float, default=1.0,
+                        help="Gumbel-Softmax temperature τ for the categorical posterior.")
+    parser.add_argument("--distillation-weight", type=float, default=0.5,
+                        help="Weight on the gradient-reachable Hinton-KL T=2.0 scorer "
+                        "surrogate term in the --mode full score-aware loss (0.0 disables).")
     return parser
 
 
@@ -146,7 +164,6 @@ def _smoke_main(args: argparse.Namespace) -> int:
         SUBSTRATE_ID,
     )
     from tac.substrates.mdl_ibps_j_discrete_categorical_mine_hybrid.numpy_reference import (
-        CoordMLPBaseNumpy,
         categorical_to_one_hot_numpy,
         kl_gaussian_to_standard_normal_numpy,
         make_pixel_coords_numpy,
@@ -231,59 +248,118 @@ def _smoke_main(args: argparse.Namespace) -> int:
 
 
 def _full_main(args: argparse.Namespace) -> int:
-    """Pre-build substrate-engineering scaffold per Catalog #240 acceptance (c).
+    """MLX-first score-aware full training via the canonical MLX harness.
 
-    L1+ promotion requires:
-    1. PyTorch port wire-in (`inflate.py::inflate_substrate` is the export-side
-       canonical helper; train-side PyTorch port + state_dict export-bridge per
-       sister #1251 + #1257).
-    2. Score-aware loss via ``tac.substrates._shared.score_aware_common`` per
-       Catalog #164 (route through canonical helper; eval-roundtrip mandatory
-       per CLAUDE.md "eval_roundtrip" non-negotiable).
-    3. Real frame loader from upstream/videos/0.mkv (NOT synthetic per CLAUDE.md
-       "Forbidden make_synthetic_pair_batch in non-smoke").
-    4. Catalog #319 deliverability_proof generation post-training.
-    5. Catalog #270 dispatch optimization protocol Tier 1 + Tier 2 + Tier 3
-       declarations.
-    6. PER-SUBSTRATE OPTIMAL FORM via adversarial grand council symposium
-       (Catalog #325) for the J variant (Phase 1 cargo-cult audit at
-       `.omx/research/path_3_j_mdl_ibps_cargo_cult_audit_of_c6_scaffold_20260526.md`
-       is the predecessor input; per-substrate symposium with operator-frontier-
-       override per Catalog #199 is required BEFORE paid dispatch).
-    7. Catalog #324 predicted_band_validation_status MUST flip from
-       `pending_post_training` to either `validated_post_training` (with
-       post-training Tier-C anchor proving ACROSS_CLASS) or remain
-       `pending_post_training` + `research_only: true` + `dispatch_enabled: false`.
+    MLX-SCORE-AWARE-HARNESS-WAVE 2026-05-27: this ``_full_main`` is UNBLOCKED.
+    The prior ``NotImplementedError`` (Catalog #240(c)) is replaced by a route
+    through the canonical substrate-AGNOSTIC harness
+    ``tac.substrates._shared.mlx_score_aware.run_mlx_score_aware_full_main``. The
+    unblock required landing the discrete-categorical-posterior + FiLM-proj +
+    FiLM-conditioned CoordMLP as a single trainable ``mlx.nn.Module``
+    (``MDLIBPSJTrainableRendererMLX``) — the prior blocker was that
+    ``MDLIBPSJRendererMLX`` held FIXED loaded weights (not learnable; not an
+    ``nn.Module``).
 
-    Until then this function refuses dispatch per CLAUDE.md "Substrate
-    scaffolds MUST be COMPLETE or RESEARCH-ONLY" + Catalog #240
-    research_only acceptance cascade (b) + pre-build substrate-engineering
-    cascade (c).
+    ## Canonical-vs-unique decision per layer (Catalog #290)
+
+    - ADOPT_CANONICAL_BECAUSE_SERVES: training loop / EMA / score-aware loss /
+      Provenance / posterior anchor (the harness + ``run_long_training``).
+    - FORK_BECAUSE_PRINCIPLED_MISMATCH (this substrate's UNIQUE primitive): the
+      discrete categorical posterior (G=12 groups x K=16; 48 bits/pair) +
+      Gumbel-Softmax + FiLM-conditioned CoordMLP
+      (``mlx_renderer.MDLIBPSJTrainableRendererMLX``).
+
+    ## Dispatch gating (Catalog #325)
+
+    MLX-LOCAL ONLY ($0 M5 Max); the harness fails closed on a non-MLX host (NO
+    CPU/CUDA paid-dispatch leak per Catalog #1 + #317). Any recipe stays
+    ``dispatch_enabled: false`` + ``research_only: true``; output is
+    non-promotable ``[macOS-MLX research-signal]`` per Catalog #192/#341.
+
+    Still DEFERRED to the PyTorch sister L2 / paid-dispatch path: the MINE
+    critic mutual-information term (the substrate's secondary distinguishing
+    feature; the per-pair categorical posterior IS the primary primitive that
+    trains here), per-axis SegNet/PoseNet decomposition, MLX->PyTorch export
+    bridge (#1251), Catalog #319 deliverability_proof, Catalog #270 Tier 1/2/3
+    dispatch-protocol declarations, paired [contest-CUDA]+[contest-CPU] anchor,
+    Catalog #324 post-training Tier-C predicted_band validation.
     """
-    raise NotImplementedError(
-        "Path 3 J=MDL-IBPS DISCRETE-CATEGORICAL-MINE-HYBRID L0 SCAFFOLD: "
-        "_full_main is council-gated per Catalog #240 acceptance cascade (c) "
-        "pre-build substrate-engineering. L1+ pathway requires:\n"
-        "  1. PyTorch port wire-in (inflate.py:inflate_substrate is export "
-        "side; train-side PyTorch port + state_dict bridge required)\n"
-        "  2. Score-aware loss via tac.substrates._shared.score_aware_common "
-        "per Catalog #164 (eval_roundtrip mandatory)\n"
-        "  3. Real frame loader from upstream/videos/0.mkv (Catalog #114)\n"
-        "  4. Catalog #319 deliverability_proof post-training\n"
-        "  5. Catalog #270 dispatch optimization protocol Tier 1 + 2 + 3 declarations\n"
-        "  6. PER-SUBSTRATE OPTIMAL FORM symposium for J variant per Catalog "
-        "#325 + operator-frontier-override per Catalog #199 BEFORE paid dispatch\n"
-        "  7. Catalog #324 predicted_band_validation_status must NOT regress "
-        "to phantom_random_init (CC-J-1 unwind canonical anchor)\n"
-        "Run with --smoke for MLX-local L0 scaffold validation."
+    from tac.substrates._shared.mlx_score_aware import (
+        RendererBundle,
+        decode_mlx_targets,
+        run_mlx_score_aware_full_main,
     )
+    from tac.substrates.mdl_ibps_j_discrete_categorical_mine_hybrid import (
+        EVAL_HW,
+        LANE_ID,
+    )
+    from tac.substrates.mdl_ibps_j_discrete_categorical_mine_hybrid.mlx_renderer import (
+        MDLIBPSJTrainableRendererMLX,
+    )
+
+    if not args.output_dir:
+        raise SystemExit(
+            "--output-dir is required for --mode full training "
+            "(Catalog #151 TIER_1_OPERATOR_REQUIRED_FLAGS)."
+        )
+
+    model = MDLIBPSJTrainableRendererMLX(
+        num_pairs=int(args.num_pairs),
+        gumbel_temperature=float(args.gumbel_temperature),
+        height=EVAL_HW[0],
+        width=EVAL_HW[1],
+    )
+    target_rgb_0, target_rgb_1 = decode_mlx_targets(
+        args.video_path,
+        num_pairs=int(args.num_pairs),
+        output_height=EVAL_HW[0],
+        output_width=EVAL_HW[1],
+    )
+    bundle = RendererBundle(
+        model=model,
+        target_rgb_0=target_rgb_0,
+        target_rgb_1=target_rgb_1,
+        num_pairs=int(args.num_pairs),
+        forward_convention="reconstruct_pair_nchw01",
+        distillation_weight=float(args.distillation_weight),
+    )
+    artifact = run_mlx_score_aware_full_main(
+        bundle=bundle,
+        substrate_id="mdl_ibps_j_discrete_categorical_mine_hybrid",
+        lane_id=LANE_ID,
+        output_dir=Path(args.output_dir),
+        epochs=int(args.epochs),
+        batch_pair_indices_per_step=min(int(args.num_pairs), 4),
+        learning_rate=float(args.full_lr),
+        seed=int(args.seed),
+        notes=(
+            "J=MDL-IBPS discrete-categorical MLX-first score-aware full training "
+            "via canonical mlx_score_aware harness; real contest video + "
+            "reconstruction + Hinton-KL T=2.0 scorer surrogate + discrete "
+            "categorical posterior (G=12 K=16 48bits/pair); non-promotable "
+            "[macOS-MLX research-signal] per Catalog #192/#317/#341; MINE critic "
+            "+ per-axis + MLX->PyTorch bridge + paired CUDA/CPU anchor DEFERRED "
+            "to sister L2."
+        ),
+    )
+    print(
+        f"[mdl_ibps_j:_full_main] DONE epochs={artifact.total_epochs_completed} "
+        f"promotable={artifact.promotable} "
+        f"wall={artifact.total_wall_clock_seconds:.1f}s "
+        f"artifact={Path(args.output_dir) / 'training_artifact.json'}"
+    )
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
-    if bool(args.smoke) or args.mode == "smoke":
-        return _smoke_main(args)
-    return _full_main(args)
+    # Explicit `--mode full` selects full MLX score-aware training (the harness
+    # path). `--mode full` overrides the smoke default (which is True at L0 per
+    # Catalog #326) so the bug-class "smoke default masks full intent" cannot
+    # fire. Otherwise default to smoke.
+    if args.mode == "full":
+        return _full_main(args)
+    return _smoke_main(args)
 
 
 if __name__ == "__main__":  # pragma: no cover - CLI smoke
