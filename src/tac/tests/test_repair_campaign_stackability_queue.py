@@ -139,6 +139,18 @@ def test_stackability_probe_preserves_optimizer_signal_and_authority(
     assert "local_mlx_probe_is_not_score_authority" in probe["blockers"]
 
 
+def test_repair_campaign_learning_signal_is_public_optimization_export() -> None:
+    from tac.optimization import (
+        REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA as exported_schema,
+    )
+    from tac.optimization import (
+        build_repair_campaign_learning_signal as exported_builder,
+    )
+
+    assert exported_schema == REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA
+    assert callable(exported_builder)
+
+
 def test_stackability_queue_emits_executable_local_probe(tmp_path: Path) -> None:
     report = score_repair_campaign(payload=_work_order(tmp_path), repo_root=tmp_path)
     report_path = tmp_path / "repair_campaign_score_report.json"

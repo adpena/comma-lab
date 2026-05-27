@@ -184,6 +184,22 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         "tac.optimization.byte_shaving_signal_surface_builder",
         "build_byte_shaving_signal_surface",
     ),
+    "REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA": (
+        "tac.optimization.repair_campaign_learning_signal",
+        "REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA",
+    ),
+    "REPAIR_CAMPAIGN_LOCAL_PLANNING_UPDATE_SCHEMA": (
+        "tac.optimization.repair_campaign_learning_signal",
+        "REPAIR_CAMPAIGN_LOCAL_PLANNING_UPDATE_SCHEMA",
+    ),
+    "RepairCampaignLearningSignalError": (
+        "tac.optimization.repair_campaign_learning_signal",
+        "RepairCampaignLearningSignalError",
+    ),
+    "build_repair_campaign_learning_signal": (
+        "tac.optimization.repair_campaign_learning_signal",
+        "build_repair_campaign_learning_signal",
+    ),
     "observations_from_queue_observation": (
         "tac.optimization.inverse_steganalysis_acquisition",
         "observations_from_queue_observation",
