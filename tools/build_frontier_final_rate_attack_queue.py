@@ -316,6 +316,7 @@ def _write_outputs(output_dir: Path, payloads: dict[str, Any]) -> dict[str, str]
     output_dir.mkdir(parents=True, exist_ok=True)
     paths = {
         "bootstrap": output_dir / "frontier_rate_attack_bootstrap.json",
+        "target_coverage": output_dir / "frontier_rate_attack_target_coverage.json",
         "materializer_contexts": output_dir / "materializer_contexts.json",
         "materializer_backlog": output_dir / "materializer_backlog.json",
         "materializer_work_queue": output_dir / "materializer_work_queue.json",
@@ -328,6 +329,7 @@ def _write_outputs(output_dir: Path, payloads: dict[str, Any]) -> dict[str, str]
             output_dir / "derived_packet_member_merge_contract.json"
         )
     write_json_artifact(paths["materializer_contexts"], payloads["contexts"])
+    write_json_artifact(paths["target_coverage"], payloads["target_coverage"])
     write_json_artifact(paths["materializer_backlog"], payloads["backlog"])
     write_json_artifact(paths["materializer_work_queue"], payloads["work_queue"])
     write_json_artifact(paths["experiment_queue"], payloads["queue"])

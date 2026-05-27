@@ -45,6 +45,8 @@ from .byte_shaving_campaign_queue import (
 from .byte_shaving_materializer_registry import (
     ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
     ARCHIVE_ZIP_REPACK_TARGET_KIND,
+    DQS1_PAIRSET_TARGET_KIND,
+    INVERSE_SCORER_CELL_TARGET_KIND,
     PACKET_MEMBER_MERGE_TARGET_KIND,
     PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
@@ -59,6 +61,7 @@ from .frontier_rate_attack_target_profile import (
 )
 
 BOOTSTRAP_SCHEMA = "frontier_final_rate_attack_bootstrap.v1"
+TARGET_COVERAGE_SCHEMA = "frontier_final_rate_attack_target_coverage.v1"
 DERIVED_PACKET_MEMBER_MERGE_CONTRACT_SCHEMA = (
     "frontier_rate_attack_derived_packet_member_merge_contract.v1"
 )
@@ -78,6 +81,23 @@ DEFAULT_OPTIONAL_TARGET_KINDS = (
     ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
     TENSOR_FACTORIZE_TARGET_KIND,
 )
+ARCHIVE_RATE_ATTACK_SUPPORTED_TARGET_KINDS = (
+    *DEFAULT_EXECUTABLE_TARGET_KINDS,
+    *DEFAULT_OPTIONAL_TARGET_KINDS,
+)
+FRONTIER_RATE_ATTACK_DEFERRED_TARGET_RATIONALES = {
+    DQS1_PAIRSET_TARGET_KIND: (
+        "DQS1 pairset drops require pair-index acquisition and scorer feedback; "
+        "they are queued through the DQS1 local-first feedback cycle rather than "
+        "the archive-only final-rate bootstrap."
+    ),
+    INVERSE_SCORER_CELL_TARGET_KIND: (
+        "Inverse-scorer cell candidates require raw-video, action-functional, "
+        "candidate-template, and inflate-parity context; they are queued through "
+        "the inverse-steganalysis acquisition chain rather than the archive-only "
+        "final-rate bootstrap."
+    ),
+}
 _AXIS_POINTER_KEYS = {
     "contest_cpu": "our_local_frontier_contest_cpu",
     "contest-cpu": "our_local_frontier_contest_cpu",
@@ -848,10 +868,88 @@ def resolve_current_frontier_archive(
 
 
 def _adapter_by_target_kind(target_kind: str) -> dict[str, Any]:
-    for row in registry_manifest()["adapters"]:
-        if row.get("target_kind") == target_kind:
-            return dict(row)
+    adapters = _registry_adapters_by_target_kind()
+    if target_kind in adapters:
+        return dict(adapters[target_kind])
     raise FrontierRateAttackBootstrapError(f"materializer target kind is not registered: {target_kind}")
+
+
+def _registry_adapters_by_target_kind() -> dict[str, dict[str, Any]]:
+    return {
+        str(row["target_kind"]): dict(row)
+        for row in registry_manifest()["adapters"]
+        if str(row.get("target_kind") or "")
+    }
+
+
+def _registry_candidate_executable_target_kinds() -> list[str]:
+    return sorted(
+        target_kind
+        for target_kind, row in _registry_adapters_by_target_kind().items()
+        if row.get("executable") is True
+        and row.get("emits_candidate_archive") is True
+        and row.get("planning_only") is not True
+    )
+
+
+def _target_coverage_report(
+    *,
+    requested_target_kinds: Sequence[str],
+    backlog_rows: Sequence[Mapping[str, Any]],
+    target_omissions: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    registry_candidates = _registry_candidate_executable_target_kinds()
+    supported = ordered_unique(ARCHIVE_RATE_ATTACK_SUPPORTED_TARGET_KINDS)
+    included = ordered_unique(
+        str(row.get("target_kind") or "")
+        for row in backlog_rows
+        if str(row.get("target_kind") or "")
+    )
+    context_omitted = ordered_unique(
+        str(row.get("target_kind") or "")
+        for row in target_omissions
+        if str(row.get("target_kind") or "")
+    )
+    deferred_rows: list[dict[str, Any]] = []
+    unclassified: list[str] = []
+    for target_kind in registry_candidates:
+        if target_kind in supported:
+            continue
+        rationale = FRONTIER_RATE_ATTACK_DEFERRED_TARGET_RATIONALES.get(target_kind)
+        if rationale is None:
+            unclassified.append(target_kind)
+            continue
+        deferred_rows.append(
+            {
+                "target_kind": target_kind,
+                "rationale": rationale,
+                "deferred_to": (
+                    "dqs1_local_first_feedback_cycle"
+                    if target_kind == DQS1_PAIRSET_TARGET_KIND
+                    else "inverse_steganalysis_acquisition_chain"
+                ),
+            }
+        )
+    blockers = [
+        f"unclassified_executable_candidate_materializer:{target_kind}"
+        for target_kind in unclassified
+    ]
+    return apply_proxy_evidence_boundary(
+        {
+            "schema": TARGET_COVERAGE_SCHEMA,
+            "requested_target_kinds": ordered_unique(requested_target_kinds),
+            "archive_rate_supported_target_kinds": supported,
+            "registry_candidate_executable_target_kinds": registry_candidates,
+            "included_target_kinds": included,
+            "context_omitted_target_kinds": context_omitted,
+            "deferred_registry_target_rows": deferred_rows,
+            "unclassified_executable_candidate_target_kinds": unclassified,
+            "coverage_complete": not blockers,
+            **FALSE_AUTHORITY,
+        },
+        dispatch_blockers=blockers
+        or ("frontier_rate_attack_target_coverage_is_local_planning_signal",),
+    )
 
 
 def _archive_specs(records: Sequence[Mapping[str, Any]]) -> list[str]:
@@ -1461,6 +1559,22 @@ def build_frontier_rate_attack_payloads(
             "no executable frontier-rate materializer targets; blockers: "
             + json.dumps(target_omissions, sort_keys=True)
         )
+    target_coverage = _target_coverage_report(
+        requested_target_kinds=requested_targets,
+        backlog_rows=backlog_rows,
+        target_omissions=target_omissions,
+    )
+    if target_coverage.get("coverage_complete") is not True:
+        raise FrontierRateAttackBootstrapError(
+            "unclassified executable candidate materializer targets: "
+            + ", ".join(
+                str(item)
+                for item in target_coverage.get(
+                    "unclassified_executable_candidate_target_kinds"
+                )
+                or []
+            )
+        )
     contexts_payload = apply_proxy_evidence_boundary(
         {
             "schema": MATERIALIZER_CONTEXTS_SCHEMA,
@@ -1514,6 +1628,7 @@ def build_frontier_rate_attack_payloads(
             "archive_labels": [record["label"] for record in checked_records],
             "target_kinds": [row["target_kind"] for row in backlog_rows],
             "target_omissions": target_omissions,
+            "target_coverage": target_coverage,
             **(
                 {"target_optimization_profile": target_profile_metadata}
                 if target_profile_metadata is not None
@@ -1564,6 +1679,7 @@ def build_frontier_rate_attack_payloads(
             "executable_target_count": len(backlog_rows),
             "executable_target_kinds": [row["target_kind"] for row in backlog_rows],
             "target_omissions": target_omissions,
+            "target_coverage": target_coverage,
             "results_root": _repo_rel(output_root, repo),
             "shared_member_name": shared_member,
             "queue_schema": queue.get("schema"),
@@ -1594,10 +1710,12 @@ def build_frontier_rate_attack_payloads(
         "backlog": backlog,
         "work_queue": work_queue,
         "queue": queue,
+        "target_coverage": target_coverage,
     }
 
 
 __all__ = [
+    "ARCHIVE_RATE_ATTACK_SUPPORTED_TARGET_KINDS",
     "BOOTSTRAP_SCHEMA",
     "DEFAULT_EXECUTABLE_TARGET_KINDS",
     "DEFAULT_FRONTIER_POINTER",
@@ -1607,6 +1725,7 @@ __all__ = [
     "DERIVED_SECTION_MANIFEST_SCHEMA",
     "FRONTIER_ARCHIVE_RECORD_SCHEMA",
     "FRONTIER_ARCHIVE_RESOLUTION_SCHEMA",
+    "TARGET_COVERAGE_SCHEMA",
     "FrontierRateAttackBootstrapError",
     "archive_record",
     "build_frontier_rate_attack_payloads",

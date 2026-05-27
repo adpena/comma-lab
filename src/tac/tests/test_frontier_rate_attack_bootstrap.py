@@ -21,6 +21,8 @@ from comma_lab.scheduler.byte_shaving_campaign_queue import (
 from comma_lab.scheduler.byte_shaving_materializer_registry import (
     ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
     ARCHIVE_ZIP_REPACK_TARGET_KIND,
+    DQS1_PAIRSET_TARGET_KIND,
+    INVERSE_SCORER_CELL_TARGET_KIND,
     PACKET_MEMBER_MERGE_TARGET_KIND,
     PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
@@ -34,9 +36,11 @@ from comma_lab.scheduler.frontier_final_rate_attack_autoloop import (
     select_post_feedback_child_queue_artifacts,
 )
 from comma_lab.scheduler.frontier_rate_attack_bootstrap import (
+    ARCHIVE_RATE_ATTACK_SUPPORTED_TARGET_KINDS,
     BOOTSTRAP_SCHEMA,
     DERIVED_PACKET_MEMBER_MERGE_CONTRACT_SCHEMA,
     DERIVED_SECTION_MANIFEST_BATCH_SCHEMA,
+    TARGET_COVERAGE_SCHEMA,
     FrontierRateAttackBootstrapError,
     archive_record,
     build_frontier_rate_attack_payloads,
@@ -195,6 +199,51 @@ def test_frontier_bootstrap_default_targets_include_archive_zip_repack(
     )
 
     assert ARCHIVE_ZIP_REPACK_TARGET_KIND in payloads["bootstrap"]["executable_target_kinds"]
+
+
+def test_frontier_bootstrap_target_coverage_accounts_for_registry_executables(
+    tmp_path: Path,
+) -> None:
+    archive_path = _write_archive(tmp_path / "archive.zip", member_name="payload.bin")
+    record = archive_record(
+        label="frontier",
+        archive_path=archive_path,
+        repo_root=tmp_path,
+        source_kind="unit_test",
+    )
+
+    payloads = build_frontier_rate_attack_payloads(
+        repo_root=tmp_path,
+        queue_id="frontier_final_rate_attack_target_coverage",
+        archive_records=[record],
+        results_root=tmp_path / "results",
+        include_optional_target_blockers=True,
+    )
+
+    coverage = payloads["target_coverage"]
+    assert coverage["schema"] == TARGET_COVERAGE_SCHEMA
+    assert coverage["coverage_complete"] is True
+    assert coverage["unclassified_executable_candidate_target_kinds"] == []
+    assert coverage["archive_rate_supported_target_kinds"] == list(
+        ARCHIVE_RATE_ATTACK_SUPPORTED_TARGET_KINDS
+    )
+    assert ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND in coverage[
+        "context_omitted_target_kinds"
+    ]
+    assert TENSOR_FACTORIZE_TARGET_KIND in coverage["context_omitted_target_kinds"]
+    deferred = {
+        row["target_kind"]: row
+        for row in coverage["deferred_registry_target_rows"]
+    }
+    assert DQS1_PAIRSET_TARGET_KIND in deferred
+    assert deferred[DQS1_PAIRSET_TARGET_KIND]["deferred_to"] == (
+        "dqs1_local_first_feedback_cycle"
+    )
+    assert INVERSE_SCORER_CELL_TARGET_KIND in deferred
+    assert deferred[INVERSE_SCORER_CELL_TARGET_KIND]["deferred_to"] == (
+        "inverse_steganalysis_acquisition_chain"
+    )
+    _assert_false_authority(coverage)
 
 
 def test_frontier_bootstrap_propagates_declared_video_scope_to_queue(
