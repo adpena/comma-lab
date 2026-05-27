@@ -123,16 +123,29 @@ subagents consume the populated canvas downstream.
    `SMOOTHED_RESIDUAL` / `FULL_DROP` modes are queried via
    `query_receiver_runtime_feasibility` per BUILD-1 design.
 
-4. **Pair-aggregate decomposition** — CARGO-CULTED-PENDING-EMPIRICAL:
-   the master gradient ledger emits archive-level aggregate
-   `operating_point`; per-pair decomposition requires
-   `tac.master_gradient.predict_delta_s_per_pair` per
-   `n_pairs_used` subset measurements. BUILD-1 populates the canvas
-   at the ARCHIVE-AGGREGATE coordinate (`pair_idx=0`,
-   `frame_idx=0`) per anchor; sister `bind_pair_component_xray`
-   per-pair populator is BUILD-1-PHASE-2 (out of BUILD-1 scope; see
-   `populate_per_pair_cells_from_gradient_array` deferred to future
-   per-pair gradient extraction wave).
+4. **Per-pair decomposition** — HEURISTIC-PRIOR-LANDED (was
+   CARGO-CULTED-PENDING-EMPIRICAL until the per-pair gradient artifact
+   landed): the archive-AGGREGATE `master_gradient_anchors.jsonl`
+   `operating_point` path (`_build_cells_from_anchor`) builds ONE
+   coordinate (`pair_idx=0`, `frame_idx=0`) per anchor. The per-pair
+   path `populate_per_pair_cells_from_gradient_array` consumes the
+   `(N_archive_bytes, N_pairs, 3)` MLX per-pair master-gradient artifact
+   (`.omx/state/master_gradient_fec6_frontier_mlx_per_pair_*.npy`) and
+   builds ONE coordinate per distinct `pair_idx` — the ≥2-distinct-
+   coordinate structure the 12-operator multi-op composition sweep needs.
+   The artifact is a **macOS-MLX research-signal HEURISTIC PRIOR** (NOT a
+   HARD-EARNED authority anchor) per CLAUDE.md "MLX portable-local-
+   substrate authority" + Catalog #192/#127/#323: every per-pair cell
+   carries `build_provenance_for_macos_cpu_advisory` Provenance with
+   `score_claim=false` / `promotion_eligible=false` /
+   `evidence_grade="macOS-MLX research-signal"` / `axis_tag="[predicted]"`.
+   The per-tensor-FD-projected-per-byte artifact attributes uniformly
+   across the decompressed mantissa span, NOT the true archive-byte
+   domain (the heuristic's 3 anchor blockers per the producer memo); it
+   is a probe-RANKING prior for the closed-form PREDICTION sweep, NOT a
+   contest score. The PyTorch-autograd `tools/extract_master_gradient.py`
+   remains the authority surface. See
+   `.omx/research/mlx_per_pair_master_gradient_authoritative_artifacts_landed_20260527.md`.
 
 ## Predicted ΔS band (Catalog #296)
 
@@ -185,6 +198,7 @@ from tac.master_gradient import (
     load_anchors_strict,
 )
 from tac.optimization.pair_frame_scorer_geometry_lattice_5d_canvas import (
+    CANONICAL_FRAME_COUNT,
     CANVAS_SCHEMA,
     CELL_SCHEMA,
     CpuCudaAxis,
@@ -193,7 +207,10 @@ from tac.optimization.pair_frame_scorer_geometry_lattice_5d_canvas import (
     ReceiverRuntime,
     ScorerAxis,
 )
-from tac.provenance.builders import build_provenance_for_predicted
+from tac.provenance.builders import (
+    build_provenance_for_macos_cpu_advisory,
+    build_provenance_for_predicted,
+)
 from tac.provenance.validator import provenance_to_dict
 
 # ---------------------------------------------------------------------------
@@ -659,6 +676,295 @@ def populate_5d_canvas_from_master_gradient_anchors(
 
 
 # ---------------------------------------------------------------------------
+# Per-pair populator: consume the MLX per-pair master-gradient HEURISTIC PRIOR.
+#
+# Per cargo-cult audit assumption 4 (HEURISTIC-PRIOR-LANDED): consumes the
+# `(N_archive_bytes, N_pairs, 3)` MLX per-pair artifact + builds ONE coordinate
+# per distinct `pair_idx` — the >=2-distinct-coordinate structure the
+# 12-operator multi-op composition sweep needs. NON-PROMOTABLE macOS-MLX
+# research-signal per CLAUDE.md "MLX portable-local-substrate authority" +
+# Catalog #192/#127/#323.
+# ---------------------------------------------------------------------------
+
+# Canonical MLX per-pair heuristic-prior schema (producer memo
+# `.omx/research/mlx_per_pair_master_gradient_authoritative_artifacts_landed_20260527.md`).
+_MLX_PER_PAIR_HEURISTIC_SCHEMA = "mlx_tensor_fd_gradient_heuristic_v1_20260527"
+_MLX_PER_PAIR_EVIDENCE_GRADE = "macOS-MLX research-signal"
+
+
+def populate_per_pair_cells_from_gradient_array(
+    gradient_npy_path: Path | str,
+    *,
+    archive_sha256: str | None = None,
+    meta_json_path: Path | None = None,
+    output_path: Path | None = None,
+    write_sidecar: bool = True,
+    cpu_cuda_axis: CpuCudaAxis = CpuCudaAxis.CONTEST_CPU,
+    max_pairs: int | None = None,
+    repo_root: Path | None = None,
+) -> PopulatedCanvasManifest:
+    """Populate the 5D canvas from an MLX per-pair master-gradient HEURISTIC PRIOR.
+
+    Per cargo-cult audit assumption 4 (HEURISTIC-PRIOR-LANDED): this is the
+    per-pair sister of `populate_5d_canvas_from_master_gradient_anchors`. Where
+    the archive-aggregate path builds ONE coordinate (`pair_idx=0`,
+    `frame_idx=0`) per anchor, this path consumes the
+    `(N_archive_bytes, N_pairs, 3_axes)` per-pair artifact and builds ONE
+    coordinate per distinct `pair_idx`, aggregating the per-byte sensitivity
+    over the byte axis into a per-pair `(d_seg, d_pose, rate)` magnitude.
+
+    The artifact is a **macOS-MLX research-signal HEURISTIC PRIOR**, NOT a
+    HARD-EARNED authority anchor (per CLAUDE.md "MLX portable-local-substrate
+    authority" + Catalog #192/#127/#323). Every cell carries
+    `build_provenance_for_macos_cpu_advisory` Provenance with
+    `score_claim=false` / `promotion_eligible=false` /
+    `evidence_grade="macOS-MLX research-signal"` / `axis_tag="[predicted]"`.
+    The PyTorch-autograd `tools/extract_master_gradient.py` remains the
+    authority surface; this per-pair STRUCTURE is the Half-2 unblock for the
+    closed-form PREDICTION sweep (which itself gates whether the paid
+    contest-CUDA/CPU FIRE-phase per Catalog #246 is worth it), NOT a contest
+    score.
+
+    Shape contract: the artifact MUST be `(N_bytes, N_pairs, 3)` float with
+    axes `(seg, pose, rate)` matching the producer memo. The rate column is
+    expected to be all-zero (byte-value sensitivities do not move the rate
+    term) but a non-zero rate column is accepted verbatim.
+
+    Args:
+        gradient_npy_path: path to the `.npy` per-pair gradient artifact.
+        archive_sha256: optional override; default read from the sidecar
+            `.npy.meta.json` `archive_sha256` field (Catalog #323 cite-able).
+        meta_json_path: optional override for the sidecar meta path
+            (default: `<gradient_npy_path>.meta.json`).
+        output_path: optional override for the canvas sidecar path.
+        write_sidecar: if True (default), persist canvas to canonical sidecar.
+        cpu_cuda_axis: which 1:1 contest-compliant axis the artifact's scorer
+            oracle measured against. The MLX oracle is a macOS-local forward
+            port; the per-pair STRUCTURE is the same per-pair leverage map the
+            contest-CPU axis would produce, so the default is CONTEST_CPU.
+            The Provenance carries `evidence_grade="macOS-MLX research-signal"`
+            so downstream consumers NEVER promote it.
+        max_pairs: optional cap on the number of pairs to populate (default:
+            all pairs in the artifact).
+        repo_root: optional repo root override.
+
+    Returns:
+        `PopulatedCanvasManifest` with the per-pair canvas + Provenance.
+
+    Raises:
+        PopulatorError: if the artifact is missing / wrong shape / corrupt
+            sidecar (per Catalog #138 fail-closed).
+    """
+    import numpy as np  # local import: numpy is a heavy dep; keep module-light.
+
+    if not isinstance(cpu_cuda_axis, CpuCudaAxis):
+        raise PopulatorError(
+            f"cpu_cuda_axis must be CpuCudaAxis, got {type(cpu_cuda_axis).__name__}"
+        )
+
+    root = (repo_root or _resolve_repo_root()).resolve()
+    npy_path = Path(gradient_npy_path)
+    if not npy_path.is_absolute():
+        npy_path = (root / npy_path).resolve()
+    if not npy_path.exists():
+        raise PopulatorError(f"per-pair gradient artifact not found at {npy_path}")
+
+    # Resolve + read the sidecar meta (Catalog #323 cite-able provenance).
+    meta_path = (
+        Path(meta_json_path)
+        if meta_json_path is not None
+        else npy_path.with_suffix(npy_path.suffix + ".meta.json")
+    )
+    meta: dict[str, Any] = {}
+    if meta_path.exists():
+        try:
+            with open(meta_path, encoding="utf-8") as f:
+                loaded = json.load(f)
+            if isinstance(loaded, dict):
+                meta = loaded
+        except json.JSONDecodeError as exc:
+            raise PopulatorError(
+                f"per-pair gradient sidecar {meta_path} carries corrupt JSON: {exc}"
+            ) from exc
+
+    # Fail-closed if the sidecar declares it is NOT the MLX heuristic-prior
+    # schema we expect (Catalog #229 premise verification + #138).
+    sidecar_schema = meta.get("schema_version")
+    if sidecar_schema is not None and sidecar_schema != _MLX_PER_PAIR_HEURISTIC_SCHEMA:
+        raise PopulatorError(
+            f"per-pair gradient sidecar {meta_path} schema mismatch: got "
+            f"{sidecar_schema!r}, expected {_MLX_PER_PAIR_HEURISTIC_SCHEMA!r}; "
+            "this populator path consumes the MLX per-pair heuristic-prior "
+            "artifact ONLY (NON-PROMOTABLE per Catalog #192/#127/#323)"
+        )
+
+    target_sha = (
+        str(archive_sha256)
+        if archive_sha256 is not None
+        else str(meta.get("archive_sha256", ""))
+    )
+    if not target_sha:
+        raise PopulatorError(
+            "archive_sha256 not provided and absent from sidecar; cannot key "
+            "the per-pair canvas"
+        )
+
+    # Load the per-pair gradient array.
+    try:
+        arr = np.load(npy_path)
+    except Exception as exc:  # numpy raises a variety of errors on bad input.
+        raise PopulatorError(
+            f"failed to load per-pair gradient artifact {npy_path}: {exc!r}"
+        ) from exc
+    if arr.ndim != 3 or arr.shape[2] != 3:
+        raise PopulatorError(
+            f"per-pair gradient artifact {npy_path} must be shape "
+            f"(N_bytes, N_pairs, 3), got {tuple(arr.shape)}"
+        )
+    n_bytes, n_pairs, _ = arr.shape
+    if n_pairs <= 0 or n_bytes <= 0:
+        raise PopulatorError(
+            f"per-pair gradient artifact {npy_path} carries empty axes "
+            f"(shape {tuple(arr.shape)})"
+        )
+
+    # Aggregate per-byte sensitivity over the byte axis into per-pair
+    # (d_seg, d_pose, rate) magnitudes. axis 0 = byte; axis 1 = pair; axis 2 =
+    # (seg, pose, rate). This is the canonical per-pair leverage the 12
+    # operators compose over.
+    per_pair = arr.sum(axis=0)  # shape (N_pairs, 3) float64
+    n_to_populate = (
+        min(int(max_pairs), n_pairs) if max_pairs is not None else n_pairs
+    )
+
+    # Canonical macOS-MLX advisory Provenance (NON-PROMOTABLE heuristic prior).
+    advisory_source = str(meta.get("npy_path", str(npy_path)))
+    advisory_captured = meta.get("captured_at_utc") or _now_iso()
+    prov = build_provenance_for_macos_cpu_advisory(
+        archive_sha256=target_sha,
+        source_path=advisory_source,
+        captured_at_utc=advisory_captured,
+    )
+    prov_dict = provenance_to_dict(prov)
+    # Attach diagnostic + heuristic-prior fields per Catalog #305 observability.
+    prov_dict["heuristic_prior"] = True
+    prov_dict["mlx_per_pair_schema_version"] = (
+        sidecar_schema or _MLX_PER_PAIR_HEURISTIC_SCHEMA
+    )
+    prov_dict["gradient_tensor_kind"] = meta.get("gradient_tensor_kind")
+    prov_dict["gradient_byte_domain"] = meta.get("gradient_byte_domain")
+    prov_dict["master_gradient_anchor_written"] = bool(
+        meta.get("master_gradient_anchor_written", False)
+    )
+    prov_dict["master_gradient_anchor_blockers"] = meta.get(
+        "master_gradient_anchor_blockers"
+    )
+    prov_dict["n_bytes"] = int(n_bytes)
+    prov_dict["n_pairs_total"] = int(meta.get("n_pairs_total", n_pairs))
+    prov_dict["n_pairs_used"] = int(meta.get("n_pairs_used", n_pairs))
+    prov_dict["hardware_substrate"] = meta.get(
+        "hardware_substrate", "darwin_arm64_m5_max_macos_mlx_advisory"
+    )
+    prov_dict["measurement_method"] = meta.get("measurement_method")
+    prov_dict["is_authoritative_contest_axis"] = False
+    prov_dict["contest_axis_authority_violation_reason"] = (
+        "macos_mlx_research_signal_heuristic_prior_not_authoritative_per_"
+        "catalog_192_127_323"
+    )
+
+    cells_by_coord: dict[tuple, PairFrameScorerGeometryCell] = {}
+    for pair_idx in range(n_to_populate):
+        d_seg = float(per_pair[pair_idx, 0])
+        d_pose = float(per_pair[pair_idx, 1])
+        rate = float(per_pair[pair_idx, 2])
+        # frame_idx = first frame of the pair (2 * pair_idx), clamped per the
+        # scaffold cell's [0, CANONICAL_FRAME_COUNT) invariant.
+        frame_idx = min(pair_idx * 2, CANONICAL_FRAME_COUNT - 1)
+        for scorer_axis, signed_delta in (
+            (ScorerAxis.SEGNET_5CLASS, d_seg),
+            (ScorerAxis.POSENET_6D, d_pose),
+            (ScorerAxis.RATE_TERM, rate),
+        ):
+            cell = PairFrameScorerGeometryCell(
+                pair_idx=pair_idx,
+                frame_idx=frame_idx,
+                scorer_axis=scorer_axis,
+                receiver_runtime=ReceiverRuntime.RAW_RESIDUAL,
+                cpu_cuda_axis=cpu_cuda_axis,
+                predicted_delta_score=signed_delta,
+                predicted_byte_cost=0,
+                receiver_feasibility=True,
+                catalog_323_provenance=dict(prov_dict),
+            )
+            cells_by_coord[cell.coordinate] = cell
+
+    canvas = PairFrameScorerGeometryLattice(
+        archive_sha256=target_sha, cells=cells_by_coord
+    )
+
+    manifest_prov_dict = dict(prov_dict)
+    manifest_prov_dict["gradient_npy_path"] = str(npy_path)
+    manifest_prov_dict["gradient_npy_sha256"] = meta.get("npy_sha256")
+    manifest_prov_dict["pairs_populated"] = n_to_populate
+
+    sidecar_path: Path | None = None
+    if write_sidecar:
+        if output_path is not None:
+            sidecar_path = Path(output_path).resolve()
+        else:
+            sidecar_dir = root / EMPIRICAL_LATTICE_DIR
+            utc_compact = _dt.datetime.now(_dt.UTC).strftime("%Y%m%dT%H%M%SZ")
+            sidecar_path = (
+                sidecar_dir / f"{target_sha[:12]}_perpair_{utc_compact}.json"
+            )
+
+        payload = {
+            "schema": POPULATOR_SCHEMA_VERSION,
+            "canvas_schema": CANVAS_SCHEMA,
+            "cell_schema": CELL_SCHEMA,
+            "archive_sha256": target_sha,
+            "cells_populated": len(cells_by_coord),
+            "anchors_consumed": n_to_populate,
+            "anchors_skipped_non_authoritative": 0,
+            "source_kind": "mlx_per_pair_heuristic_prior",
+            "gradient_npy_path": str(npy_path),
+            "gradient_npy_sha256": meta.get("npy_sha256"),
+            "pairs_populated": n_to_populate,
+            "cells": [c.as_dict() for c in cells_by_coord.values()],
+            "manifest_provenance": manifest_prov_dict,
+            # Catalog #341 canonical non-promotable markers.
+            "predicted_delta_adjustment": 0.0,
+            "promotable": False,
+            "axis_tag": "[predicted]",
+            "score_claim": False,
+            "score_claim_valid": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "rank_or_kill_eligible": False,
+            "tier_a_rationale": (
+                "MLX per-pair master-gradient HEURISTIC PRIOR per CLAUDE.md "
+                "'MLX portable-local-substrate authority' + Catalog "
+                "#192/#127/#323; NON-PROMOTABLE; gates closed-form PREDICTION "
+                "sweep ONLY (Half-2 paradox closer); FIRE-phase per Catalog "
+                "#246 remains the only path to a score/frontier/PR claim"
+            ),
+        }
+        lock_path = root / EMPIRICAL_LATTICE_LOCK
+        with _populator_lock(lock_path):
+            _atomic_write_json(sidecar_path, payload)
+
+    return PopulatedCanvasManifest(
+        canvas=canvas,
+        archive_sha256=target_sha,
+        cells_populated=len(cells_by_coord),
+        anchors_consumed=n_to_populate,
+        anchors_skipped_non_authoritative=0,
+        output_path=sidecar_path,
+        catalog_323_provenance=manifest_prov_dict,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Canonical reader: load_empirical_lattice (sister of canonical writer).
 # ---------------------------------------------------------------------------
 
@@ -829,4 +1135,5 @@ __all__ = [
     "list_distinct_archives_in_ledger",
     "load_empirical_lattice",
     "populate_5d_canvas_from_master_gradient_anchors",
+    "populate_per_pair_cells_from_gradient_array",
 ]

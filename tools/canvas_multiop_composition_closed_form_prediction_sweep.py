@@ -29,6 +29,7 @@ promotable=false + axis_tag="[predicted]" per Catalog #323/#341.
 
 from __future__ import annotations
 
+import argparse
 import json
 import math
 from dataclasses import dataclass
@@ -60,6 +61,7 @@ from tac.optimization.pair_frame_scorer_geometry_lattice_5d_canvas_extended_oper
 )
 from tac.optimization.pair_frame_scorer_geometry_lattice_5d_canvas_populator import (
     populate_5d_canvas_from_master_gradient_anchors,
+    populate_per_pair_cells_from_gradient_array,
 )
 from tac.pareto_polytope_unified_solver.solver import (
     PareDLPProblemSpec,
@@ -281,43 +283,84 @@ def _axis_cell_value(canvas, scorer_axis: ScorerAxis) -> float:
     return 0.0
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--per-pair-gradient-npy",
+        type=str,
+        default=None,
+        help=(
+            "Path to the MLX per-pair master-gradient HEURISTIC-PRIOR artifact "
+            "(.npy shape (N_bytes, N_pairs, 3)). When provided, the sweep "
+            "re-points the canvas population to the per-pair path "
+            "(populate_per_pair_cells_from_gradient_array) which gives the "
+            ">=2-distinct-coordinate structure the 12 operators need. "
+            "NON-PROMOTABLE macOS-MLX research-signal per Catalog #192/#127/#323. "
+            "When omitted, the sweep uses the archive-AGGREGATE path "
+            "(populate_5d_canvas_from_master_gradient_anchors) for backward "
+            "compatibility with the original PARADOX-CLOSER Half 2 run."
+        ),
+    )
+    parser.add_argument(
+        "--max-pairs",
+        type=int,
+        default=None,
+        help="Optional cap on number of per-pair cells to populate (default: all).",
+    )
+    args = parser.parse_args(argv)
+
     repo_root = _resolve_repo_root()
-    frontier_sha, which = _find_frontier_archive_sha(repo_root)
 
-    # Step 2: populate canvas (advisory anchors skipped by default; if the only
-    # anchors for the frontier sha are advisory, opt them in for the closed-form
-    # prediction — the output is non-promotable [predicted] by construction).
-    try:
-        manifest = populate_5d_canvas_from_master_gradient_anchors(
-            archive_sha256=frontier_sha,
+    # Step 2: populate canvas. PER-PAIR path (re-pointed source) vs the original
+    # archive-AGGREGATE path.
+    if args.per_pair_gradient_npy:
+        # Re-pointed per-pair HEURISTIC-PRIOR path (the Half-2 resolution unblock).
+        manifest = populate_per_pair_cells_from_gradient_array(
+            args.per_pair_gradient_npy,
             repo_root=repo_root,
             write_sidecar=False,
-            skip_non_authoritative=True,
-        )
-        skip_mode = "authoritative_only"
-    except Exception:
-        manifest = populate_5d_canvas_from_master_gradient_anchors(
-            archive_sha256=frontier_sha,
-            repo_root=repo_root,
-            write_sidecar=False,
-            skip_non_authoritative=False,
-        )
-        skip_mode = "advisory_included_predicted_nonpromotable"
-
-    canvas = manifest.canvas
-    cell_count = canvas.cell_count()
-    if cell_count == 0:
-        # Retry including advisory anchors so the closed-form prediction has cells.
-        manifest = populate_5d_canvas_from_master_gradient_anchors(
-            archive_sha256=frontier_sha,
-            repo_root=repo_root,
-            write_sidecar=False,
-            skip_non_authoritative=False,
+            max_pairs=args.max_pairs,
         )
         canvas = manifest.canvas
+        frontier_sha = manifest.archive_sha256
+        which = "mlx_per_pair_heuristic_prior"
+        skip_mode = "per_pair_heuristic_prior_macos_mlx_advisory_nonpromotable"
         cell_count = canvas.cell_count()
-        skip_mode = "advisory_included_predicted_nonpromotable"
+    else:
+        frontier_sha, which = _find_frontier_archive_sha(repo_root)
+        # Advisory anchors skipped by default; if the only anchors for the
+        # frontier sha are advisory, opt them in for the closed-form prediction
+        # — the output is non-promotable [predicted] by construction.
+        try:
+            manifest = populate_5d_canvas_from_master_gradient_anchors(
+                archive_sha256=frontier_sha,
+                repo_root=repo_root,
+                write_sidecar=False,
+                skip_non_authoritative=True,
+            )
+            skip_mode = "authoritative_only"
+        except Exception:
+            manifest = populate_5d_canvas_from_master_gradient_anchors(
+                archive_sha256=frontier_sha,
+                repo_root=repo_root,
+                write_sidecar=False,
+                skip_non_authoritative=False,
+            )
+            skip_mode = "advisory_included_predicted_nonpromotable"
+
+        canvas = manifest.canvas
+        cell_count = canvas.cell_count()
+        if cell_count == 0:
+            # Retry including advisory anchors so the closed-form prediction has cells.
+            manifest = populate_5d_canvas_from_master_gradient_anchors(
+                archive_sha256=frontier_sha,
+                repo_root=repo_root,
+                write_sidecar=False,
+                skip_non_authoritative=False,
+            )
+            canvas = manifest.canvas
+            cell_count = canvas.cell_count()
+            skip_mode = "advisory_included_predicted_nonpromotable"
 
     # Step 3: run all 12 operators.
     summaries = _run_all_12_operators(canvas, top_n=32)
@@ -393,6 +436,22 @@ def main() -> int:
         "frontier_archive_sha256": frontier_sha,
         "frontier_archive_which": which,
         "populator_skip_mode": skip_mode,
+        "populator_source_kind": (
+            "mlx_per_pair_heuristic_prior"
+            if args.per_pair_gradient_npy
+            else "master_gradient_anchors_archive_aggregate"
+        ),
+        "per_pair_gradient_npy": args.per_pair_gradient_npy,
+        "per_pair_gradient_npy_sha256": (
+            manifest.catalog_323_provenance.get("gradient_npy_sha256")
+            if args.per_pair_gradient_npy
+            else None
+        ),
+        "per_pair_pairs_populated": (
+            manifest.catalog_323_provenance.get("pairs_populated")
+            if args.per_pair_gradient_npy
+            else None
+        ),
         "canvas_cell_count": cell_count,
         "dqs1_baseline_contest_cpu": DQS1_BASELINE_CONTEST_CPU,
         "v14_v2_frontier_crossing_delta": V14_V2_FRONTIER_CROSSING_DELTA,
