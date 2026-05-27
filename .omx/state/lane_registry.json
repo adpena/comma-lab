@@ -59545,11 +59545,11 @@
       "id": "lane_mlx_score_aware_harness_plus_6_substrate_unlock_20260527",
       "name": "MLX score-aware harness + 6 substrate unlock",
       "phase": 3.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "src/tac/substrates/_shared/mlx_score_aware_full_main.py canonical MLX harness + dreamer+z8 _full_main wired (commits 9635ca39a + 6ebf95408); 23/23 tests"
         },
         "real_archive_empirical": {
           "status": false,
@@ -59572,8 +59572,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/mlx_score_aware_harness_plus_6_substrate_unlock_landed_20260527T161848Z.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -59631,5 +59631,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-27T16:13:29Z"
+  "updated_at": "2026-05-27T16:19:56Z"
 }
