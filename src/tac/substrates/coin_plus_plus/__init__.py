@@ -114,17 +114,21 @@ from .architecture import (
 )
 from .archive import (
     CoinplusplusArchive,
+    CoinplusplusArchiveNumpy,
     pack_archive,
     parse_archive,
+    parse_archive_numpy,
 )
 from .score_aware_loss import CoinplusplusScoreAwareLoss, ScoreAwareLossWeights
 
 __all__ = [
     "CoinplusplusArchive",
+    "CoinplusplusArchiveNumpy",
     "CoinplusplusConfig",
     "CoinplusplusScoreAwareLoss",
     "CoinplusplusSubstrate",
     "ScoreAwareLossWeights",
     "pack_archive",
     "parse_archive",
+    "parse_archive_numpy",
 ]

@@ -40,15 +40,24 @@ from __future__ import annotations
 
 import io
 import json
-import pickle
 import struct
 from dataclasses import dataclass
 
 import brotli  # type: ignore[import-not-found]
+import numpy as np
 import torch
 
 CPP1_MAGIC: bytes = b"CPP1"
-CPP1_SCHEMA_VERSION: int = 1
+# Schema v2 (PACT-NeRV numpy-portable bridge, 2026-05-27): the BASE_MLP_BLOB
+# internal encoding is now a torch-free numpy-native ``{key: fp16 array}``
+# serialization (was ``brotli(pickle(torch_tensors))`` in v1). Per the 8th
+# MLX-first standing directive: ``torch`` is FORBIDDEN at inflate time, and a
+# torch-tensor pickle requires ``torch`` to unpickle (it embeds
+# ``torch._utils._rebuild_tensor_v2`` GLOBAL refs). The numpy-native blob lets
+# ``parse_archive_numpy`` read weights with NO torch dependency so the shipped
+# inflate runtime is numpy/PIL-portable. The torch-side ``parse_archive`` wraps
+# the same numpy arrays in ``torch.from_numpy`` for training-side parity.
+CPP1_SCHEMA_VERSION: int = 2
 
 CPP1_HEADER_FMT: str = "<4sBHHIII"
 CPP1_HEADER_SIZE: int = struct.calcsize(CPP1_HEADER_FMT)
@@ -73,21 +82,80 @@ class CoinplusplusArchive:
 
 
 def _serialize_state_dict(sd: dict[str, torch.Tensor]) -> bytes:
-    buf = io.BytesIO()
-    sd_cpu = {
-        k: v.detach().to("cpu", dtype=torch.float16).contiguous()
+    """Serialize a torch state_dict into the torch-free numpy-native CPP1-v2 blob.
+
+    The blob is ``np.savez``-style but hand-rolled so the inflate-time reader
+    needs ONLY numpy (no ``np.load`` allow_pickle, no torch). Layout (inside the
+    brotli envelope)::
+
+        u32 LE  num_entries
+        repeat num_entries:
+            u16 LE  key_len
+            key     utf-8 bytes
+            u8      ndim
+            ndim x u32 LE  shape dims
+            f16 raw  prod(shape) fp16 values (little-endian, C-order)
+    """
+    np_sd = {
+        k: v.detach().to("cpu", dtype=torch.float16).contiguous().numpy()
         for k, v in sd.items()
     }
-    pickle.dump(sd_cpu, buf, protocol=4)
+    return _serialize_numpy_state_dict(np_sd)
+
+
+def _serialize_numpy_state_dict(np_sd: dict[str, "np.ndarray"]) -> bytes:
+    buf = io.BytesIO()
+    buf.write(struct.pack("<I", len(np_sd)))
+    for key, arr in np_sd.items():
+        a = np.ascontiguousarray(arr, dtype=np.float16)
+        key_bytes = key.encode("utf-8")
+        buf.write(struct.pack("<H", len(key_bytes)))
+        buf.write(key_bytes)
+        buf.write(struct.pack("<B", a.ndim))
+        for dim in a.shape:
+            buf.write(struct.pack("<I", int(dim)))
+        buf.write(a.tobytes(order="C"))
     return bytes(brotli.compress(buf.getvalue(), quality=BROTLI_QUALITY))
 
 
-def _deserialize_state_dict(blob: bytes) -> dict[str, torch.Tensor]:
+def _deserialize_numpy_state_dict(blob: bytes) -> dict[str, "np.ndarray"]:
+    """Torch-free deserialize of the CPP1-v2 numpy-native state_dict blob.
+
+    Returns ``{key: fp16 ndarray}``. Used by the numpy-portable inflate path
+    (NO torch import). The shipped inflate runtime calls this.
+    """
     raw = brotli.decompress(blob)
-    sd = pickle.loads(raw)
-    if not isinstance(sd, dict):
-        raise ValueError("base_mlp_state_dict blob did not unpickle to a dict")
-    return sd
+    mv = memoryview(raw)
+    off = 0
+    (num_entries,) = struct.unpack_from("<I", mv, off)
+    off += 4
+    out: dict[str, "np.ndarray"] = {}
+    for _ in range(num_entries):
+        (key_len,) = struct.unpack_from("<H", mv, off)
+        off += 2
+        key = bytes(mv[off : off + key_len]).decode("utf-8")
+        off += key_len
+        (ndim,) = struct.unpack_from("<B", mv, off)
+        off += 1
+        shape: list[int] = []
+        for _d in range(ndim):
+            (dim,) = struct.unpack_from("<I", mv, off)
+            off += 4
+            shape.append(int(dim))
+        count = 1
+        for dim in shape:
+            count *= dim
+        nbytes = count * 2  # fp16 = 2 bytes
+        arr = np.frombuffer(mv[off : off + nbytes], dtype=np.float16).copy()
+        off += nbytes
+        out[key] = arr.reshape(shape) if shape else arr.reshape(())
+    return out
+
+
+def _deserialize_state_dict(blob: bytes) -> dict[str, torch.Tensor]:
+    """Torch-side deserialize (training/eval parity): wraps numpy arrays."""
+    np_sd = _deserialize_numpy_state_dict(blob)
+    return {k: torch.from_numpy(v.astype("float32")) for k, v in np_sd.items()}
 
 
 def _quantize_modulations_to_int8(
@@ -216,6 +284,93 @@ def parse_archive(blob: bytes) -> CoinplusplusArchive:
 
     return CoinplusplusArchive(
         base_mlp_state_dict=sd,
+        modulations=modulations,
+        meta=meta,
+        schema_version=int(version),
+        modulation_dim=int(modulation_dim),
+    )
+
+
+@dataclass(frozen=True)
+class CoinplusplusArchiveNumpy:
+    """Torch-free parsed archive — the numpy-portable inflate-time contract.
+
+    Sister of ``CoinplusplusArchive`` but with ``np.ndarray`` weights so the
+    shipped inflate runtime needs ONLY numpy (no torch) per the 8th MLX-first
+    standing directive.
+    """
+
+    base_mlp_state_dict: dict[str, "np.ndarray"]
+    """Shared base coord-MLP state_dict as {key: fp32 ndarray}."""
+
+    modulations: "np.ndarray"
+    """Per-pair modulation vectors (num_pairs x modulation_dim), fp32."""
+
+    meta: dict[str, object]
+    schema_version: int
+    modulation_dim: int
+
+
+def parse_archive_numpy(blob: bytes) -> CoinplusplusArchiveNumpy:
+    """Torch-free parse of a CPP1-v2 archive for the numpy-portable inflate.
+
+    Identical section walk to ``parse_archive`` but reconstructs weights +
+    modulations as numpy arrays with NO torch import. Per the 8th MLX-first
+    directive's bridge contract: the shipped inflate runtime reads weights via
+    this path so the runtime tree carries only numpy + brotli + PIL.
+    """
+    if len(blob) < CPP1_HEADER_SIZE:
+        raise ValueError(
+            f"archive too short ({len(blob)} bytes; need >= {CPP1_HEADER_SIZE})"
+        )
+    (
+        magic,
+        version,
+        modulation_dim,
+        num_pairs,
+        base_mlp_len,
+        modulation_len,
+        meta_len,
+    ) = struct.unpack(CPP1_HEADER_FMT, blob[:CPP1_HEADER_SIZE])
+    if magic != CPP1_MAGIC:
+        raise ValueError(f"bad magic: {magic!r} (expected {CPP1_MAGIC!r})")
+    if version != CPP1_SCHEMA_VERSION:
+        raise ValueError(f"unsupported schema version: {version}")
+
+    expected_modulation_bytes = num_pairs * modulation_dim * 1  # int8 = 1 byte
+    if modulation_len != expected_modulation_bytes:
+        raise ValueError(
+            f"modulation_len {modulation_len} != num_pairs*modulation_dim*1 = "
+            f"{expected_modulation_bytes}"
+        )
+
+    end_header = CPP1_HEADER_SIZE
+    end_base_mlp = end_header + base_mlp_len
+    end_modulations = end_base_mlp + modulation_len
+    end_meta = end_modulations + meta_len
+    if end_meta != len(blob):
+        raise ValueError(
+            f"archive size {len(blob)} != expected {end_meta} from header"
+        )
+
+    base_mlp_blob = blob[end_header:end_base_mlp]
+    modulation_blob = blob[end_base_mlp:end_modulations]
+    meta_blob = blob[end_modulations:end_meta]
+
+    np_sd_fp16 = _deserialize_numpy_state_dict(base_mlp_blob)
+    np_sd = {k: v.astype(np.float32) for k, v in np_sd_fp16.items()}
+    meta = json.loads(meta_blob.decode("utf-8"))
+
+    q = np.frombuffer(modulation_blob, dtype=np.int8).reshape(
+        num_pairs, modulation_dim
+    )
+    scale = float(meta.pop("_quant_scale"))
+    zp = float(meta.pop("_quant_zero_point"))
+    # dequant mirrors _dequantize_modulations: (q + 128) * scale + zero_point
+    modulations = (q.astype(np.float32) + 128.0) * scale + zp
+
+    return CoinplusplusArchiveNumpy(
+        base_mlp_state_dict=np_sd,
         modulations=modulations,
         meta=meta,
         schema_version=int(version),
