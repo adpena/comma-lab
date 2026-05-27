@@ -43,6 +43,8 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     REPAIR_BUDGET_TYPED_RESPONSE_ROW_SCHEMA,
     REPAIR_BUDGET_WATERFILL_ALLOCATION_ACTION_TERM_SCHEMA,
     REPAIR_BUDGET_WATERFILL_WORK_ORDER_SCHEMA,
+    TARGET_OPTIMIZATION_PROFILE_METADATA_SCHEMA,
+    TARGET_OPTIMIZATION_PROFILE_QUEUE_METADATA_SCHEMA,
     TARGET_OPTIMIZATION_PROFILE_SCHEMA,
     TARGETED_COMPONENT_CORRECTION_ACQUISITION_SCHEMA,
     TARGETED_COMPONENT_CORRECTION_CHAIN_MATERIALIZER_HANDOFF_SCHEMA,
@@ -1930,6 +1932,27 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
     assert correction_work_order["lagrangian_acceptance_rule"][
         "component_eval_required"
     ] is True
+
+    target_profile_metadata = {
+        "schema": TARGET_OPTIMIZATION_PROFILE_METADATA_SCHEMA,
+        **_false_authority(),
+        "profile_id": "targeted_work_order_profile_unit",
+        "optimization_target": "segnet_posenet_repair_under_rate_budget",
+    }
+    correction_work_order_with_profile = (
+        build_frontier_targeted_component_correction_work_order(
+            targeted_component_correction_acquisition=targeted_component,
+            acquisition_id=first_acquisition_id,
+            target_optimization_profile_metadata=target_profile_metadata,
+        )
+    )
+    assert (
+        correction_work_order_with_profile["frontier_target_optimization_profile"]
+        == target_profile_metadata
+    )
+    _assert_false_authority(
+        correction_work_order_with_profile["frontier_target_optimization_profile"]
+    )
     assert operation_portfolio["top_operation_ids"][0] == (
         "dqs1_component_coupled_pair_batch_expansion"
     )
@@ -2189,6 +2212,9 @@ def test_receiver_closed_rate_packet_manifest_feeds_waterfill_budget(
         receiver_closed_rate_packet_paths=(candidate_manifest,),
         receiver_closed_rate_parent_paths=(parent_manifest,),
     )
+    target_metadata = report["target_optimization_profile_metadata"]
+    assert target_metadata["schema"] == TARGET_OPTIMIZATION_PROFILE_QUEUE_METADATA_SCHEMA
+    _assert_false_authority(target_metadata)
     rate_plan = report["rate_budget_preservation_plan"]
     assert rate_plan["schema"] == RATE_BUDGET_PRESERVATION_PLAN_SCHEMA
     _assert_false_authority(rate_plan)
@@ -2242,8 +2268,10 @@ def test_receiver_closed_rate_packet_manifest_feeds_waterfill_budget(
     work_order = build_frontier_targeted_component_correction_work_order(
         targeted_component_correction_acquisition=targeted,
         acquisition_id=targeted_row["acquisition_id"],
+        target_optimization_profile_metadata=target_metadata,
     )
     _assert_false_authority(work_order)
+    assert work_order["frontier_target_optimization_profile"] == target_metadata
     assert work_order["receiver_closed_rate_packet_context"][
         "candidate_compact_selector_codec"
     ] == "fec8_static_second_order_markov_k16"
@@ -2274,6 +2302,7 @@ def test_receiver_closed_rate_packet_manifest_feeds_waterfill_budget(
         )
     )
     _assert_false_authority(response_row)
+    assert response_row["frontier_target_optimization_profile"] == target_metadata
     assert response_row["negative_measured_lagrangian_delta"] is True
     assert response_row["receiver_closed_rate_packet_context"][
         "rate_packet_manifest_path"
@@ -2282,12 +2311,15 @@ def test_receiver_closed_rate_packet_manifest_feeds_waterfill_budget(
         repo_root=tmp_path,
         response_rows=[response_row],
     )
+    assert harvest["frontier_target_optimization_profile"] == target_metadata
     requests = build_frontier_targeted_component_correction_materialization_requests(
         targeted_component_correction_response_harvest=harvest,
         candidate_limit=1,
     )
+    assert requests["frontier_target_optimization_profile"] == target_metadata
     request_row = requests["rows"][0]
     _assert_false_authority(request_row)
+    assert request_row["frontier_target_optimization_profile"] == target_metadata
     assert request_row["receiver_closed_saved_bytes"] == 10
     assert request_row["rate_packet_manifest_paths"][0].endswith(
         "fec8_candidate/packet_manifest.json"
@@ -2299,8 +2331,14 @@ def test_receiver_closed_rate_packet_manifest_feeds_waterfill_budget(
         targeted_component_correction_materialization_requests=requests,
         request_limit=1,
     )
+    assert chain_work_orders["frontier_target_optimization_profile"] == target_metadata
+    assert (
+        chain_work_orders["work_orders"][0]["frontier_target_optimization_profile"]
+        == target_metadata
+    )
     chain_budget = chain_work_orders["work_orders"][0]["targeted_correction_budget"]
     _assert_false_authority(chain_budget)
+    assert chain_budget["frontier_target_optimization_profile"] == target_metadata
     assert chain_budget["receiver_closed_saved_bytes"] == 10
     assert chain_budget["receiver_closed_rate_packet_contexts"][0][
         "selector_payload_wire_delta_bytes"
@@ -2313,7 +2351,13 @@ def test_receiver_closed_rate_packet_manifest_feeds_waterfill_budget(
     )
     assert handoff["materializer_backlog_row_count"] == 1
     _assert_false_authority(handoff)
+    assert handoff["frontier_target_optimization_profile"] == target_metadata
+    assert (
+        handoff["materializer_backlog"]["frontier_target_optimization_profile"]
+        == target_metadata
+    )
     handoff_context = handoff["materializer_backlog"]["rows"][0]["operation_params"]
+    assert handoff_context["frontier_target_optimization_profile"] == target_metadata
     assert handoff_context["receiver_closed_rate_packet_context"][
         "candidate_compact_selector_codec"
     ] == "fec8_static_second_order_markov_k16"

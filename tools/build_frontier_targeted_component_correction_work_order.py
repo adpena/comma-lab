@@ -39,6 +39,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--acquisition-id", required=True)
     parser.add_argument("--work-order-out", required=True, type=Path)
+    parser.add_argument(
+        "--target-optimization-profile-metadata-json",
+        default=None,
+        help=(
+            "Compact JSON target-profile metadata propagated from the queue root. "
+            "It remains false-authority planning metadata."
+        ),
+    )
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args(argv)
 
@@ -54,10 +62,18 @@ def main(argv: list[str] | None = None) -> int:
             raise FrontierRateAttackFeedbackError(
                 "targeted component correction acquisition must be a JSON object"
             )
+        target_metadata = {}
+        if args.target_optimization_profile_metadata_json:
+            target_metadata = json.loads(args.target_optimization_profile_metadata_json)
+            if not isinstance(target_metadata, dict):
+                raise FrontierRateAttackFeedbackError(
+                    "target optimization profile metadata JSON must be an object"
+                )
         work_order = build_frontier_targeted_component_correction_work_order(
             targeted_component_correction_acquisition=acquisition,
             acquisition_id=args.acquisition_id,
             repo_root=REPO_ROOT,
+            target_optimization_profile_metadata=target_metadata,
         )
         work_order_out = args.work_order_out
         if not work_order_out.is_absolute():

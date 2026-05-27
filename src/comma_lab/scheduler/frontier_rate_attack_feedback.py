@@ -86,6 +86,7 @@ from .experiment_queue import (
 )
 from .final_byte_operation_contexts import build_final_byte_operation_contexts
 from .frontier_rate_attack_target_profile import (
+    TARGET_OPTIMIZATION_PROFILE_QUEUE_METADATA_SCHEMA,
     TARGET_OPTIMIZATION_PROFILE_SCHEMA,
     build_frontier_target_optimization_profile,
     target_optimization_profile_queue_metadata,
@@ -169,6 +170,16 @@ OPERATION_CHAIN_COMPILER_QUEUE_METADATA_SCHEMA = (
 BYTE_RANGE_STAGE_INPUTS_SCHEMA = "frontier_rate_attack_byte_range_stage_inputs.v1"
 TARGETED_DROP_MANY_STAGE_INPUTS_SCHEMA = (
     "frontier_rate_attack_targeted_drop_many_stage_inputs.v1"
+)
+TARGET_OPTIMIZATION_PROFILE_METADATA_SCHEMA = (
+    "frontier_target_optimization_profile_metadata.v1"
+)
+TARGET_OPTIMIZATION_PROFILE_METADATA_SCHEMAS = frozenset(
+    {
+        TARGET_OPTIMIZATION_PROFILE_METADATA_SCHEMA,
+        TARGET_OPTIMIZATION_PROFILE_QUEUE_METADATA_SCHEMA,
+        TARGET_OPTIMIZATION_PROFILE_SCHEMA,
+    }
 )
 MATERIALIZER_EXACT_READINESS_BRIDGE_SCHEMA = (
     "materializer_chain_exact_readiness_bridge_report.v1"
@@ -12326,6 +12337,7 @@ def build_frontier_targeted_component_correction_work_order(
     targeted_component_correction_acquisition: Mapping[str, Any],
     acquisition_id: str,
     repo_root: str | Path | None = None,
+    target_optimization_profile_metadata: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a single receiver-budget component-correction work order."""
 
@@ -12372,6 +12384,12 @@ def build_frontier_targeted_component_correction_work_order(
             else None
         )
     )
+    target_profile_metadata = _target_profile_metadata_from_payloads(
+        target_optimization_profile_metadata,
+        row,
+        targeted_component_correction_acquisition,
+        context=f"targeted_component_correction_work_order:{acquisition_id}",
+    )
     work_order = {
         "schema": TARGETED_COMPONENT_CORRECTION_WORK_ORDER_SCHEMA,
         "generated_at_utc": str(
@@ -12384,6 +12402,7 @@ def build_frontier_targeted_component_correction_work_order(
         "correction_family": row.get("correction_family"),
         "operation_levels": list(row.get("operation_levels") or []),
         "targeted_dimensions": list(row.get("targeted_dimensions") or []),
+        "frontier_target_optimization_profile": dict(target_profile_metadata),
         "sibling_correction_families": _unique_strings(
             sibling.get("correction_family") for sibling in sibling_rows
         ),
@@ -12896,6 +12915,7 @@ def build_frontier_targeted_component_correction_response_harvest_from_artifacts
     reference_local_mlx_response_path: str | Path | None = None,
     response_artifact_path: str | Path | None = None,
     reference_role: str = "receiver_closed_source_reference",
+    target_optimization_profile_metadata: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Harvest one component-correction response into a false-authority row."""
 
@@ -12936,6 +12956,11 @@ def build_frontier_targeted_component_correction_response_harvest_from_artifacts
     candidate_id = str(work_order.get("candidate_id") or "unknown_candidate")
     correction_family = str(
         work_order.get("correction_family") or "unknown_correction_family"
+    )
+    target_profile_metadata = _target_profile_metadata_from_payloads(
+        target_optimization_profile_metadata,
+        work_order,
+        context=f"targeted_component_correction_response_row:{acquisition_id}",
     )
     saved_bytes = _finite_int_or_none(work_order.get("saved_bytes_budget")) or 0
     rate_credit = _finite_float_or_none(
@@ -13149,6 +13174,7 @@ def build_frontier_targeted_component_correction_response_harvest_from_artifacts
         "acquisition_id": acquisition_id,
         "candidate_id": candidate_id,
         "correction_family": correction_family,
+        "frontier_target_optimization_profile": dict(target_profile_metadata),
         "work_order_path": None if work_order_path is None else str(work_order_path),
         "local_cpu_advisory_path": (
             None if local_cpu_advisory_path is None else str(local_cpu_advisory_path)
@@ -13263,6 +13289,10 @@ def _targeted_component_response_rows_from_queue(
     queue: Mapping[str, Any],
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
+    queue_target_profile_metadata = _target_profile_metadata_from_payloads(
+        queue,
+        context="targeted_component_correction_response_queue",
+    )
     for experiment in queue.get("experiments") or []:
         if not isinstance(experiment, Mapping):
             continue
@@ -13334,6 +13364,13 @@ def _targeted_component_response_rows_from_queue(
             )
             request_context_source = dict(metadata)
             request_context_source.update(dict(request))
+            request_target_profile_metadata = _target_profile_metadata_from_payloads(
+                request,
+                metadata,
+                queue,
+                queue_target_profile_metadata,
+                context="targeted_component_correction_response_queue_request",
+            )
             missing = [
                 _repo_rel(path, repo_root)
                 for path in (work_order_path, local_cpu_path, reference_local_cpu_path)
@@ -13347,6 +13384,9 @@ def _targeted_component_response_rows_from_queue(
                     "candidate_id": request.get("candidate_id")
                     or metadata.get("candidate_id"),
                     "correction_family": request.get("correction_family"),
+                    "frontier_target_optimization_profile": dict(
+                        request_target_profile_metadata
+                    ),
                     "operation_levels": list(request.get("operation_levels") or []),
                     "targeted_dimensions": list(
                         request.get("targeted_dimensions") or []
@@ -13452,6 +13492,9 @@ def _targeted_component_response_rows_from_queue(
                         None
                         if response_path is None
                         else _repo_rel(response_path, repo_root)
+                    ),
+                    target_optimization_profile_metadata=(
+                        request_target_profile_metadata
                     ),
                 )
             )
@@ -13559,6 +13602,11 @@ def build_frontier_targeted_component_correction_response_harvest(
     ]
     candidate_ids = _unique_strings(row.get("candidate_id") for row in rows)
     families = _unique_strings(row.get("correction_family") for row in rows)
+    target_profile_metadata = _target_profile_metadata_from_payloads(
+        targeted_component_correction_queue,
+        *rows,
+        context="targeted_component_correction_response_harvest",
+    )
     blockers = ["exact_auth_eval_required_before_score_or_promotion_claim"]
     if not rows:
         blockers.append("no_targeted_component_correction_response_rows")
@@ -13598,6 +13646,7 @@ def build_frontier_targeted_component_correction_response_harvest(
         "ready_for_budget_spend_count": 0,
         "candidate_ids": candidate_ids,
         "correction_families": families,
+        "frontier_target_optimization_profile": dict(target_profile_metadata),
         "source_targeted_component_correction_queue_blockers": queue_blockers,
         "mlx_cpu_drift_summary": {
             "schema": "targeted_component_mlx_cpu_drift_summary.v1",
@@ -13743,6 +13792,44 @@ def _targeted_rate_packet_context(payload: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _target_profile_metadata_from_payloads(
+    *payloads: Mapping[str, Any] | None,
+    context: str,
+) -> dict[str, Any]:
+    """Return the first target-profile metadata payload carried by queue artifacts."""
+
+    for payload in payloads:
+        if not isinstance(payload, Mapping):
+            continue
+        if payload.get("schema") in TARGET_OPTIMIZATION_PROFILE_METADATA_SCHEMAS:
+            copied = dict(payload)
+            require_no_truthy_authority_fields(
+                copied,
+                context=f"{context}.frontier_target_optimization_profile",
+            )
+            return copied
+        candidates = (
+            payload.get("frontier_target_optimization_profile"),
+            payload.get("target_optimization_profile_metadata"),
+        )
+        metadata = payload.get("metadata")
+        if isinstance(metadata, Mapping):
+            candidates = (
+                *candidates,
+                metadata.get("frontier_target_optimization_profile"),
+                metadata.get("target_optimization_profile_metadata"),
+            )
+        for candidate in candidates:
+            if isinstance(candidate, Mapping) and candidate:
+                copied = dict(candidate)
+                require_no_truthy_authority_fields(
+                    copied,
+                    context=f"{context}.frontier_target_optimization_profile",
+                )
+                return copied
+    return {}
+
+
 def _accepted_targeted_component_response_rows(
     targeted_component_correction_response_harvest: Mapping[str, Any],
 ) -> list[dict[str, Any]]:
@@ -13779,6 +13866,10 @@ def _targeted_component_materializer_basis_entry(
     row: Mapping[str, Any],
 ) -> dict[str, Any]:
     family = str(row.get("correction_family") or "unknown_correction_family")
+    target_profile_metadata = _target_profile_metadata_from_payloads(
+        row,
+        context="targeted_component_materializer_basis_entry",
+    )
     seed = _targeted_component_family_seed(family)
     command_hints = row.get("command_hints")
     normalized_command_hints: list[dict[str, Any]] | dict[str, Any]
@@ -13800,6 +13891,7 @@ def _targeted_component_materializer_basis_entry(
         ),
         "source_acquisition_id": row.get("acquisition_id"),
         "correction_family": family,
+        "frontier_target_optimization_profile": dict(target_profile_metadata),
         "operation_levels": _targeted_component_response_operation_levels(row),
         "targeted_dimensions": _targeted_component_response_targeted_dimensions(row),
         "recommended_next_action": (
@@ -13972,6 +14064,11 @@ def _build_targeted_component_materialization_request_row(
 ) -> dict[str, Any]:
     rows = sorted(candidate_rows, key=_targeted_component_response_sort_key)
     basis = [_targeted_component_materializer_basis_entry(row) for row in rows]
+    target_profile_metadata = _target_profile_metadata_from_payloads(
+        *basis,
+        *rows,
+        context="targeted_component_materialization_request",
+    )
     runtime_binding_context = (
         _targeted_component_receiver_runtime_binding_context(basis)
     )
@@ -14033,6 +14130,7 @@ def _build_targeted_component_materialization_request_row(
         "generated_at_utc": _utc_now(),
         "materialization_request_id": request_id,
         "candidate_id": candidate_id,
+        "frontier_target_optimization_profile": dict(target_profile_metadata),
         "source_acquisition_ids": _unique_strings(
             [row.get("acquisition_id") for row in rows]
         ),
@@ -14143,6 +14241,11 @@ def build_frontier_targeted_component_correction_materialization_requests(
     accepted_rows = _accepted_targeted_component_response_rows(
         targeted_component_correction_response_harvest
     )
+    target_profile_metadata = _target_profile_metadata_from_payloads(
+        targeted_component_correction_response_harvest,
+        *accepted_rows,
+        context="targeted_component_correction_materialization_requests",
+    )
     rows_by_candidate: dict[str, list[dict[str, Any]]] = {}
     for row in accepted_rows:
         candidate_id = str(row.get("candidate_id") or "unknown_candidate")
@@ -14190,6 +14293,7 @@ def build_frontier_targeted_component_correction_materialization_requests(
         "accepted_response_count": len(accepted_rows),
         "row_count": len(request_rows),
         "candidate_count": len(candidate_order),
+        "frontier_target_optimization_profile": dict(target_profile_metadata),
         "requested_correction_family_count": len(
             _unique_strings(
                 [
@@ -14368,6 +14472,16 @@ def build_frontier_targeted_component_correction_materialization_queue(
                     ),
                     "materialization_request_id": request_id,
                     "candidate_id": candidate_id,
+                    "frontier_target_optimization_profile": dict(
+                        _target_profile_metadata_from_payloads(
+                            row,
+                            requests,
+                            context=(
+                                "targeted_component_correction_materialization_"
+                                "queue_metadata"
+                            ),
+                        )
+                    ),
                     "accepted_correction_families": list(
                         row.get("accepted_correction_families") or []
                     ),
@@ -14406,10 +14520,46 @@ def build_frontier_targeted_component_correction_materialization_queue(
             "experiments": experiments,
         }
     )
+    queue["metadata"] = {
+        "schema": (
+            "frontier_rate_attack_targeted_component_correction_"
+            "materialization_queue_root_metadata.v1"
+        ),
+        "frontier_target_optimization_profile": dict(
+            _target_profile_metadata_from_payloads(
+                requests,
+                *request_rows,
+                context="targeted_component_correction_materialization_queue",
+            )
+        ),
+        "response_harvest_path": _repo_rel(response_harvest_path, repo),
+        "request_row_count": len(request_rows),
+        "ready_for_materializer_execution": False,
+        "ready_for_budget_spend": False,
+        "budget_spend_allowed": False,
+        "allowed_use": (
+            "targeted_component_correction_materialization_queue_metadata_only"
+        ),
+        "forbidden_use": "score_claim_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        queue["metadata"],
+        context="targeted_component_correction_materialization_queue_metadata",
+    )
     queue["materialization_request_summary"] = {
         "schema": TARGETED_COMPONENT_CORRECTION_MATERIALIZATION_REQUESTS_SCHEMA,
         "row_count": requests.get("row_count"),
         "accepted_response_count": requests.get("accepted_response_count"),
+        "frontier_target_optimization_profile": dict(
+            _target_profile_metadata_from_payloads(
+                requests,
+                *request_rows,
+                context=(
+                    "targeted_component_correction_materialization_queue_summary"
+                ),
+            )
+        ),
         "ready_for_budget_spend_count": 0,
         "allowed_use": (
             "targeted_component_correction_materialization_queue_summary_only"
@@ -14417,6 +14567,10 @@ def build_frontier_targeted_component_correction_materialization_queue(
         "forbidden_use": "score_claim_or_dispatch_authority",
         **FALSE_AUTHORITY,
     }
+    require_no_truthy_authority_fields(
+        queue["materialization_request_summary"],
+        context="targeted_component_correction_materialization_queue_summary",
+    )
     return queue
 
 
@@ -14521,6 +14675,10 @@ def _targeted_component_chain_work_order(
     rank: int,
 ) -> dict[str, Any]:
     request_id = str(row.get("materialization_request_id") or f"request_{rank}")
+    target_profile_metadata = _target_profile_metadata_from_payloads(
+        row,
+        context=f"targeted_component_chain_work_order:{request_id}",
+    )
     source_operation_id = f"targeted_component_chain_{_slug_token(request_id)}"
     runtime_binding_context = dict(
         row.get("receiver_runtime_binding_context")
@@ -14588,6 +14746,7 @@ def _targeted_component_chain_work_order(
             "targeted_component_correction_receiver_consumed_multi_op_chain"
         ),
         "source_materialization_request_id": request_id,
+        "frontier_target_optimization_profile": dict(target_profile_metadata),
         "chain_targets": _targeted_component_chain_targets(row),
         "required_before_execution": [
             "per_stage_materializer_contexts",
@@ -14601,6 +14760,7 @@ def _targeted_component_chain_work_order(
             "schema": "frontier_rate_attack_targeted_chain_budget.v1",
             "materialization_request_id": request_id,
             "candidate_id": row.get("candidate_id"),
+            "frontier_target_optimization_profile": dict(target_profile_metadata),
             "source_acquisition_ids": list(row.get("source_acquisition_ids") or []),
             "accepted_correction_families": list(
                 row.get("accepted_correction_families") or []
@@ -14717,6 +14877,11 @@ def build_frontier_targeted_component_correction_chain_work_orders(
         or []
         if isinstance(row, Mapping)
     ][:request_limit]
+    target_profile_metadata = _target_profile_metadata_from_payloads(
+        targeted_component_correction_materialization_requests,
+        *request_rows,
+        context="targeted_component_correction_chain_work_orders",
+    )
     work_orders: list[dict[str, Any]] = []
     for rank, row in enumerate(request_rows, start=1):
         require_no_truthy_authority_fields(
@@ -14742,6 +14907,7 @@ def build_frontier_targeted_component_correction_chain_work_orders(
             targeted_component_correction_materialization_requests.get("schema")
         ),
         "source_family": "targeted_component_correction_materialization_requests",
+        "frontier_target_optimization_profile": dict(target_profile_metadata),
         "active": bool(work_orders),
         "work_order_count": len(work_orders),
         "request_count": len(request_rows),
@@ -15081,6 +15247,11 @@ def _targeted_chain_materializer_portfolio_row(
         if isinstance(work_order.get("targeted_correction_budget"), Mapping)
         else {}
     )
+    target_profile_metadata = _target_profile_metadata_from_payloads(
+        work_order,
+        budget,
+        context=f"targeted_chain_materializer_portfolio_row:{source_operation_id}",
+    )
     saved_bytes = _finite_int_or_none(budget.get("saved_bytes_budget")) or 0
     lagrangian = _finite_float_or_none(
         budget.get("measured_lagrangian_delta_score_units_sum")
@@ -15122,6 +15293,9 @@ def _targeted_chain_materializer_portfolio_row(
         output_hint["archive_path"] = archive_path
         output_hint["source_archive"] = archive_path
     output_hint["targeted_correction_budget"] = dict(budget)
+    output_hint["frontier_target_optimization_profile"] = dict(
+        target_profile_metadata
+    )
     output_hint["receiver_closed_rate_packet_contexts"] = [
         dict(context)
         for context in budget.get("receiver_closed_rate_packet_contexts") or []
@@ -15207,6 +15381,7 @@ def _targeted_chain_materializer_portfolio_row(
             "source_materialization_request_id": work_order.get(
                 "source_materialization_request_id"
             ),
+            "frontier_target_optimization_profile": dict(target_profile_metadata),
             "targeted_correction_budget": dict(budget),
             "chain_targets": list(work_order.get("chain_targets") or []),
             "best_context_hint": output_hint,
@@ -15252,6 +15427,10 @@ def build_frontier_targeted_component_correction_chain_materializer_handoff(
     require_no_truthy_authority_fields(
         targeted_component_correction_chain_work_orders,
         context="targeted_component_chain_materializer_handoff_work_orders",
+    )
+    target_profile_metadata = _target_profile_metadata_from_payloads(
+        targeted_component_correction_chain_work_orders,
+        context="targeted_component_chain_materializer_handoff",
     )
     adapters_by_target = _materializer_registry_adapters_by_target()
     backlog_rows: list[dict[str, Any]] = []
@@ -15301,6 +15480,7 @@ def build_frontier_targeted_component_correction_chain_materializer_handoff(
         "source_schema": targeted_component_correction_chain_work_orders.get(
             "schema"
         ),
+        "frontier_target_optimization_profile": dict(target_profile_metadata),
         "backlog_row_count": len(backlog_rows),
         "registered_chain_target_count": len(_unique_strings(registered_targets)),
         "unregistered_chain_target_count": len(_unique_strings(unregistered_targets)),
@@ -15343,6 +15523,7 @@ def build_frontier_targeted_component_correction_chain_materializer_handoff(
         "source_schema": targeted_component_correction_chain_work_orders.get(
             "schema"
         ),
+        "frontier_target_optimization_profile": dict(target_profile_metadata),
         "source_operation_ids": _unique_strings(source_operation_ids),
         "registered_chain_targets": _unique_strings(registered_targets),
         "unregistered_chain_targets": _unique_strings(unregistered_targets),
@@ -15405,6 +15586,13 @@ def _operation_chain_work_order_by_id(
 
 def _operation_chain_stage_rows(work_order: Mapping[str, Any]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
+    target_profile_metadata = _target_profile_metadata_from_payloads(
+        work_order,
+        work_order.get("targeted_correction_budget")
+        if isinstance(work_order.get("targeted_correction_budget"), Mapping)
+        else None,
+        context="operation_chain_stage_rows",
+    )
     for index, stage in enumerate(work_order.get("stage_plan") or [], start=1):
         if not isinstance(stage, Mapping):
             continue
@@ -15419,6 +15607,9 @@ def _operation_chain_stage_rows(work_order: Mapping[str, Any]) -> list[dict[str,
                 "schema": "frontier_rate_attack_operation_chain_stage_row.v1",
                 "stage_index": index,
                 "stage_id": stage_id,
+                "frontier_target_optimization_profile": dict(
+                    target_profile_metadata
+                ),
                 "targets": _string_list(stage.get("targets")),
                 "required_before_execution": required,
                 "stage_ready_for_execution": False,
@@ -15458,6 +15649,13 @@ def build_frontier_operation_chain_compiler_stage_plan(
         if blocker.startswith("chain_missing_contract:")
     ]
     target_kinds = _unique_strings(work_order.get("chain_targets") or [])
+    target_profile_metadata = _target_profile_metadata_from_payloads(
+        work_order,
+        work_order.get("targeted_correction_budget")
+        if isinstance(work_order.get("targeted_correction_budget"), Mapping)
+        else None,
+        context=f"operation_chain_compiler_stage_plan:{source_operation_id}",
+    )
     stage_target_counts: dict[str, int] = {}
     for row in stage_rows:
         for target in _string_list(row.get("targets")):
@@ -15482,6 +15680,7 @@ def build_frontier_operation_chain_compiler_stage_plan(
         "generated_at_utc": _utc_now(),
         "source_operation_id": source_operation_id,
         "source_operation_family": work_order.get("source_operation_family"),
+        "frontier_target_optimization_profile": dict(target_profile_metadata),
         "chain_targets": target_kinds,
         "stage_count": len(stage_rows),
         "covered_target_count": len(stage_target_counts),
@@ -15500,18 +15699,27 @@ def build_frontier_operation_chain_compiler_stage_plan(
             {
                 "queue_consumer": "byte_shaving_campaign_queue",
                 "handoff_reason": "bind_per_stage_materializer_contexts",
+                "frontier_target_optimization_profile": dict(
+                    target_profile_metadata
+                ),
                 "target_kinds": target_kinds,
                 **FALSE_AUTHORITY,
             },
             {
                 "queue_consumer": "frontier_receiver_repair_queue",
                 "handoff_reason": "prove_single_runtime_consumption_after_composition",
+                "frontier_target_optimization_profile": dict(
+                    target_profile_metadata
+                ),
                 "required_before_budget_spend": True,
                 **FALSE_AUTHORITY,
             },
             {
                 "queue_consumer": "frontier_targeted_component_correction_queue",
                 "handoff_reason": "spend_receiver_closed_rate_budget_only_after_component_eval",
+                "frontier_target_optimization_profile": dict(
+                    target_profile_metadata
+                ),
                 "budget_spend_allowed": False,
                 **FALSE_AUTHORITY,
             },
@@ -15771,6 +15979,13 @@ def build_frontier_byte_range_stage_inputs(
         )
     stage_row = _stage_row_by_id(operation_chain_stage_plan, stage_id)
     stage_targets = _string_list(stage_row.get("targets")) if stage_row else []
+    target_profile_metadata = _target_profile_metadata_from_payloads(
+        operation_chain_stage_plan,
+        operation_chain_stage_plan.get("targeted_correction_budget")
+        if isinstance(operation_chain_stage_plan.get("targeted_correction_budget"), Mapping)
+        else None,
+        context="byte_range_stage_inputs_target_profile",
+    )
     target_present = "byte_range_entropy_recode_v1" in stage_targets
     targeted_binding = _targeted_component_byte_range_binding(
         operation_chain_stage_plan
@@ -15982,6 +16197,7 @@ def build_frontier_byte_range_stage_inputs(
         "generated_at_utc": _utc_now(),
         "source_operation_id": operation_chain_stage_plan.get("source_operation_id"),
         "stage_id": stage_id,
+        "frontier_target_optimization_profile": dict(target_profile_metadata),
         "stage_targets": stage_targets,
         "target_present": target_present,
         "required_before_execution": (
@@ -16140,6 +16356,13 @@ def build_frontier_targeted_drop_many_stage_inputs(
         operation_chain_stage_plan,
         stage_id=stage_id,
     )
+    target_profile_metadata = _target_profile_metadata_from_payloads(
+        operation_chain_stage_plan,
+        operation_chain_stage_plan.get("targeted_correction_budget")
+        if isinstance(operation_chain_stage_plan.get("targeted_correction_budget"), Mapping)
+        else None,
+        context="targeted_drop_many_stage_inputs_target_profile",
+    )
     drop_many_family_targets = [
         "drop_within_selected_set_masked_boundary",
         "inverse_scorer_cell_basis_expansion",
@@ -16260,6 +16483,7 @@ def build_frontier_targeted_drop_many_stage_inputs(
         "generated_at_utc": _utc_now(),
         "source_operation_id": operation_chain_stage_plan.get("source_operation_id"),
         "stage_id": stage_id,
+        "frontier_target_optimization_profile": dict(target_profile_metadata),
         "stage_targets": stage_targets,
         "selected_family_targets": selected_family_targets,
         "target_present": target_present,
@@ -16345,6 +16569,10 @@ def build_frontier_operation_chain_compiler_queue(
     require_no_truthy_authority_fields(
         operation_chain_compiler_work_orders,
         context="operation_chain_compiler_queue_input",
+    )
+    target_profile_metadata = _target_profile_metadata_from_payloads(
+        operation_chain_compiler_work_orders,
+        context="operation_chain_compiler_queue",
     )
     work_order_rows = [
         row
@@ -16973,6 +17201,13 @@ def build_frontier_operation_chain_compiler_queue(
                     "schema": OPERATION_CHAIN_COMPILER_QUEUE_METADATA_SCHEMA,
                     "source_operation_id": source_operation_id,
                     "source_operation_family": row.get("source_operation_family"),
+                    "frontier_target_optimization_profile": dict(
+                        _target_profile_metadata_from_payloads(
+                            row,
+                            target_profile_metadata,
+                            context="operation_chain_compiler_queue_experiment",
+                        )
+                    ),
                     "chain_target_count": len(target_kinds),
                     "chain_targets": target_kinds,
                     "stage_plan_path": _repo_rel(stage_plan_path, repo),
@@ -17100,6 +17335,17 @@ def build_frontier_operation_chain_compiler_queue(
                     "modal_cpu": 0,
                     "modal_gpu": 0,
                 },
+            },
+            "metadata": {
+                "schema": OPERATION_CHAIN_COMPILER_QUEUE_METADATA_SCHEMA,
+                "frontier_target_optimization_profile": dict(
+                    target_profile_metadata
+                ),
+                "work_order_count": len(work_order_rows),
+                "candidate_limit": candidate_limit,
+                "allowed_use": "operation_chain_compiler_queue_metadata_only",
+                "forbidden_use": "score_claim_or_dispatch_authority",
+                **FALSE_AUTHORITY,
             },
             "experiments": experiments,
             "allowed_use": "queue_owned_operation_chain_compiler_stage_plans_only",
@@ -17566,6 +17812,28 @@ def build_frontier_targeted_component_correction_queue(
                 repair_dynamics_prior_active
                 and row_correction_family.startswith("repair_dynamics_")
             )
+            work_order_command = [
+                ".venv/bin/python",
+                "tools/build_frontier_targeted_component_correction_work_order.py",
+                "--targeted-component-correction-acquisition",
+                _repo_rel(acquisition_path, repo),
+                "--acquisition-id",
+                acquisition_id,
+                "--work-order-out",
+                _repo_rel(work_order_path, repo),
+                "--overwrite",
+            ]
+            if target_profile_metadata:
+                work_order_command.extend(
+                    [
+                        "--target-optimization-profile-metadata-json",
+                        json.dumps(
+                            target_profile_metadata,
+                            sort_keys=True,
+                            separators=(",", ":"),
+                        ),
+                    ]
+                )
             request_metadata.append(
                 {
                     "schema": (
@@ -17675,17 +17943,7 @@ def build_frontier_targeted_component_correction_queue(
                 {
                     "id": work_order_step_id,
                     "kind": "command",
-                    "command": [
-                        ".venv/bin/python",
-                        "tools/build_frontier_targeted_component_correction_work_order.py",
-                        "--targeted-component-correction-acquisition",
-                        _repo_rel(acquisition_path, repo),
-                        "--acquisition-id",
-                        acquisition_id,
-                        "--work-order-out",
-                        _repo_rel(work_order_path, repo),
-                        "--overwrite",
-                    ],
+                    "command": work_order_command,
                     "resources": {"kind": "local_io_heavy"},
                     "timeout_seconds": 120,
                     "postconditions": [
@@ -20361,6 +20619,9 @@ __all__ = [
     "TARGETED_COMPONENT_CORRECTION_RESPONSE_ROW_SCHEMA",
     "TARGETED_COMPONENT_CORRECTION_WORK_ORDER_SCHEMA",
     "TARGETED_DROP_MANY_STAGE_INPUTS_SCHEMA",
+    "TARGET_OPTIMIZATION_PROFILE_METADATA_SCHEMA",
+    "TARGET_OPTIMIZATION_PROFILE_METADATA_SCHEMAS",
+    "TARGET_OPTIMIZATION_PROFILE_QUEUE_METADATA_SCHEMA",
     "TARGET_OPTIMIZATION_PROFILE_SCHEMA",
     "FrontierRateAttackFeedbackError",
     "attach_frontier_autonomous_chain_optimization",
