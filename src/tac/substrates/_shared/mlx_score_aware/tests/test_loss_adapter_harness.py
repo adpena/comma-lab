@@ -48,6 +48,11 @@ def _tiny_dreamer_bundle(num_pairs: int = 4, distill: float = 0.5) -> RendererBu
     model = DreamerV3RSSMSubstrateMLX(cfg)
     t0 = mx.zeros((num_pairs, 384, 512, 3))
     t1 = mx.zeros((num_pairs, 384, 512, 3))
+    # When a distillation term is active these helper bundles use the
+    # scorer-BLIND mock (no real SegNet staged in the unit-test fast path), so
+    # they must EXPLICITLY opt in via allow_mock_scorer_teacher per the C6 IBPS
+    # fail-closed invariant. The real-scorer-bound path is exercised in
+    # test_scorer_binding.py with a real SegNet teacher.
     return RendererBundle(
         model=model,
         target_rgb_0=t0,
@@ -55,6 +60,7 @@ def _tiny_dreamer_bundle(num_pairs: int = 4, distill: float = 0.5) -> RendererBu
         num_pairs=num_pairs,
         forward_convention="call_b2chw_255",
         distillation_weight=distill,
+        allow_mock_scorer_teacher=distill > 0.0,
     )
 
 

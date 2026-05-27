@@ -62,6 +62,15 @@ class MlxScoreAwareAdapter:
         self.substrate_id = substrate_id
         self._optimizer: Any = None
         self._optimizer_lr: float | None = None
+        # Sibling optimizer for the learnable student head (real-scorer-bound
+        # distillation path per Catalog #164). The head's ~20 params train
+        # JOINTLY with the renderer: the renderer is differentiated by the
+        # canonical nn.value_and_grad(self.model, ...) closure; the head's
+        # weight + bias arrays are differentiated by a sibling mx.value_and_grad
+        # on a {weight, bias} dict so both descend the SAME score-aware loss.
+        self._head_optimizer: Any = None
+        self._head_optimizer_lr: float | None = None
+        self._head_opt_state: dict[str, Any] = {}
 
     def sample_batch(self, batch_size: int, seed: int) -> Any:
         """Sample a deterministic batch of pair indices (Catalog #229 PV)."""
@@ -118,7 +127,16 @@ class MlxScoreAwareAdapter:
         learning_rate: float,
         loss_weights: Mapping[str, float],
     ) -> Mapping[str, float]:
-        """Style B combined value+grad+update (canonical MLX training step)."""
+        """Style B combined value+grad+update (canonical MLX training step).
+
+        Trains the renderer via the canonical ``nn.value_and_grad(self.model,
+        ...)`` step. When the real-scorer-bound distillation path is active
+        (``bundle.scorer_teacher`` + ``bundle.learnable_student_head`` set), the
+        student head's ~20 params train JOINTLY on the SAME score-aware loss via
+        a sibling ``mx.value_and_grad`` AdamW step — so the renderer is pulled
+        toward what the REAL SegNet rewards (Catalog #164 + C6 IBPS lesson),
+        not toward a scorer-blind pixel-cosine.
+        """
         mx = self._mx
         mlx_nn = self._mlx_nn
         mlx_optim = self._mlx_optim
@@ -137,7 +155,70 @@ class MlxScoreAwareAdapter:
         loss_and_grad_fn = mlx_nn.value_and_grad(self.model, _loss_fn_inner)
         loss_value, grads = loss_and_grad_fn(self.model)
         self._optimizer.update(self.model, grads)
-        mx.eval(self.model.parameters(), self._optimizer.state)
+
+        # Sibling student-head step (real-scorer-bound distillation only).
+        head = self.bundle.learnable_student_head
+        if (
+            self.bundle.distillation_weight > 0.0
+            and self.bundle.scorer_teacher is not None
+            and head is not None
+        ):
+            if (
+                self._head_optimizer is None
+                or self._head_optimizer_lr != learning_rate
+            ):
+                self._head_optimizer = mlx_optim.AdamW(learning_rate=learning_rate)
+                self._head_optimizer_lr = learning_rate
+                self._head_opt_state = {}
+
+            def _head_loss_fn(head_params: Mapping[str, Any]) -> Any:
+                # Re-derive the distill term as a pure function of the head
+                # params so MLX differentiates the head ONLY (renderer is held
+                # via stop_gradient on the decoded frames + the teacher is
+                # already gradient-blocked).
+                from tac.substrates._shared.mlx_score_aware.loss import (
+                    decode_frames_nhwc01,
+                )
+                from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (
+                    hinton_distilled_kl_t2_loss,
+                )
+
+                rgb_0, rgb_1 = decode_frames_nhwc01(self.bundle, batch)
+                seg_rgb = (
+                    rgb_1
+                    if self.bundle.segnet_teacher_frame_index == 1
+                    else rgb_0
+                )
+                seg_rgb = mx.stop_gradient(seg_rgb)
+                student = (
+                    mx.einsum("bhwc,ck->bhwk", seg_rgb, head_params["weight"])
+                    + head_params["bias"]
+                )
+                teacher = mx.stop_gradient(
+                    self.bundle.scorer_teacher.teacher_logits_for_indices(batch)
+                )
+                return self.bundle.distillation_weight * hinton_distilled_kl_t2_loss(
+                    student_logits=student,
+                    teacher_logits=teacher,
+                    temperature=self.bundle.distillation_temperature,
+                )
+
+            head_params = {"weight": head.weight, "bias": head.bias}
+            _hloss, hgrads = mx.value_and_grad(_head_loss_fn)(head_params)
+            self._head_optimizer.update(head_params, hgrads)
+            # AdamW.update mutates head_params in place via tree semantics; the
+            # updated arrays are the optimizer's view, so write them back.
+            head.weight = head_params["weight"]
+            head.bias = head_params["bias"]
+            mx.eval(
+                self.model.parameters(),
+                self._optimizer.state,
+                head.weight,
+                head.bias,
+                self._head_optimizer.state,
+            )
+        else:
+            mx.eval(self.model.parameters(), self._optimizer.state)
         return {"total": float(loss_value.item())}
 
     def export_state_dict(self, model: Any, path: Path) -> None:

@@ -195,6 +195,7 @@ def _tiny_dreamer_bundle(num_pairs: int = 4, distill: float = 0.5):
         num_pairs=num_pairs,
         forward_convention="call_b2chw_255",
         distillation_weight=distill,
+        allow_mock_scorer_teacher=distill > 0.0,
     )
 
 

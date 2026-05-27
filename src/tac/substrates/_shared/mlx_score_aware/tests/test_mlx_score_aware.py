@@ -141,6 +141,7 @@ def test_score_aware_loss_recon_distill_and_extra_terms_are_composed() -> None:
         extra_loss_terms=extra_loss,
         extra_loss_weights={"regularizer": 0.25},
         distillation_weight=1.0,
+        allow_mock_scorer_teacher=True,
     )
     total, parts = score_aware_loss(bundle, mx.array([0, 1]))
     assert _scalar(parts["recon"]) < 1e-10
@@ -148,6 +149,55 @@ def test_score_aware_loss_recon_distill_and_extra_terms_are_composed() -> None:
     assert _scalar(parts["regularizer"]) == pytest.approx(2.0)
     assert _scalar(total) == pytest.approx(0.5, abs=1e-6)
     assert _scalar(parts["total"]) == pytest.approx(_scalar(total), abs=1e-7)
+
+
+def test_real_scorer_distill_selects_contest_segnet_frame_by_default() -> None:
+    target_0 = mx.zeros((2, 4, 4, 3))
+    target_1 = mx.ones((2, 4, 4, 3))
+
+    class _Teacher:
+        num_classes = 5
+
+        def teacher_logits_for_indices(self, idx):
+            return mx.zeros((idx.shape[0], 4, 4, self.num_classes))
+
+    class _RecordingHead:
+        def __init__(self) -> None:
+            self.last_mean = None
+
+        def __call__(self, frames):
+            self.last_mean = _scalar(mx.mean(frames))
+            b, h, w, _c = frames.shape
+            return mx.zeros((b, h, w, 5))
+
+    head = _RecordingHead()
+    bundle = RendererBundle(
+        model=ReconstructPairModel(target_0, target_1),
+        target_rgb_0=target_0,
+        target_rgb_1=target_1,
+        num_pairs=2,
+        forward_convention="reconstruct_pair_nchw01",
+        distillation_weight=1.0,
+        scorer_teacher=_Teacher(),
+        learnable_student_head=head,
+    )
+    score_aware_loss(bundle, mx.array([0, 1]))
+    assert head.last_mean == pytest.approx(1.0)
+
+    frame_0_head = _RecordingHead()
+    frame_0_bundle = RendererBundle(
+        model=ReconstructPairModel(target_0, target_1),
+        target_rgb_0=target_0,
+        target_rgb_1=target_1,
+        num_pairs=2,
+        forward_convention="reconstruct_pair_nchw01",
+        distillation_weight=1.0,
+        scorer_teacher=_Teacher(),
+        learnable_student_head=frame_0_head,
+        segnet_teacher_frame_index=0,
+    )
+    score_aware_loss(frame_0_bundle, mx.array([0, 1]))
+    assert frame_0_head.last_mean == pytest.approx(0.0)
 
 
 def test_numpy_portable_inflate_gate_uses_fail_closed_error_type() -> None:

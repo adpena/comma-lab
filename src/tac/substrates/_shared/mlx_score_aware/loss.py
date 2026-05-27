@@ -9,10 +9,11 @@ assumes a fixed model signature.
 
 The score-aware term is the canonical Hinton-distilled surrogate per
 CLAUDE.md "eval_roundtrip -- NON-NEGOTIABLE" + Catalog #164 sister discipline:
-the teacher is the deterministic ``MockTeacherLogitsProvider`` projection on the
-TARGET frame (stop-gradient), the student is the same projection on the DECODED
-frame (gradient-bearing). Gradient flows KL -> decoded -> renderer params; the
-stop-gradient on the teacher avoids the self-KL false positive.
+the production teacher is the real MLX SegNet logits cache on the contest
+SegNet frame (default pair frame 1, matching upstream ``x[:, -1, ...]``), the
+student is a learnable head on the decoded frame, and gradient flows KL ->
+decoded -> renderer params. The explicit mock path is allowed only for
+scorer-blind smoke tests.
 
 [verified-against: tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss.hinton_distilled_kl_t2_loss canonical scorer surrogate]
 """
@@ -108,23 +109,61 @@ def score_aware_loss(
 
     if bundle.distillation_weight > 0.0:
         from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (
-            MockTeacherLogitsProvider,
             hinton_distilled_kl_t2_loss,
         )
 
-        provider = MockTeacherLogitsProvider(
-            num_classes=bundle.distillation_num_classes,
-        )
-        # Student consumes the DECODED frame_0; teacher consumes the TARGET
-        # frame_0 (stop-gradient). Gradient flows KL -> student_logits ->
-        # decoded -> renderer params.
-        student_logits = provider.teacher_logits(rgb_0)
-        teacher_logits = mx.stop_gradient(provider.teacher_logits(gt_0))
-        distill = hinton_distilled_kl_t2_loss(
-            student_logits=student_logits,
-            teacher_logits=teacher_logits,
-            temperature=bundle.distillation_temperature,
-        )
+        if bundle.scorer_teacher is not None:
+            # PRODUCTION path (Catalog #164 + C6 IBPS / DreamerV3 lesson): the
+            # distill term BINDS THE REAL SCORER. The student is the learnable
+            # 1x1-conv head on the DECODED contest SegNet frame
+            # (gradient-bearing: KL -> head(decoded) -> renderer params); the
+            # teacher is the REAL contest SegNet's per-pixel class distribution
+            # on this pair's TARGET SegNet frame (gradient-blocked). Backprop
+            # through the FULL ported SegNet would
+            # be ideal but produces NaN gradients in MLX's second-order autograd
+            # composition with the renderer's PixelShuffle/bilinear backward;
+            # the learnable-head-distilled-from-real-SegNet-teacher surrogate
+            # gives a FINITE, genuinely scorer-bound gradient (the head learns
+            # decoded-RGB -> real-SegNet-class-logits, so the renderer gradient
+            # is pulled toward what the real scorer rewards, NOT toward a fixed
+            # cosine of pixel means).
+            head = bundle.learnable_student_head
+            if head is None:  # defensive; bundle.__post_init__ already enforces.
+                raise ValueError(
+                    "scorer_teacher set without learnable_student_head; "
+                    "RendererBundle.__post_init__ should have rejected this."
+                )
+            seg_rgb = rgb_1 if bundle.segnet_teacher_frame_index == 1 else rgb_0
+            student_logits = head(seg_rgb)
+            teacher_logits = mx.stop_gradient(
+                bundle.scorer_teacher.teacher_logits_for_indices(idx)
+            )
+            distill = hinton_distilled_kl_t2_loss(
+                student_logits=student_logits,
+                teacher_logits=teacher_logits,
+                temperature=bundle.distillation_temperature,
+            )
+        else:
+            # SCORER-BLIND mock fallback — reachable ONLY when
+            # ``allow_mock_scorer_teacher=True`` (bundle.__post_init__ fails
+            # closed otherwise). The MockTeacherLogitsProvider is a fixed cosine
+            # of RGB pixel means with NO SegNet weights; the distill gradient is
+            # ~parallel to the recon gradient (scorer-blind). Kept for $0
+            # no-real-SegNet smokes that explicitly accept reconstruction-proxy.
+            from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (
+                MockTeacherLogitsProvider,
+            )
+
+            provider = MockTeacherLogitsProvider(
+                num_classes=bundle.distillation_num_classes,
+            )
+            student_logits = provider.teacher_logits(rgb_0)
+            teacher_logits = mx.stop_gradient(provider.teacher_logits(gt_0))
+            distill = hinton_distilled_kl_t2_loss(
+                student_logits=student_logits,
+                teacher_logits=teacher_logits,
+                temperature=bundle.distillation_temperature,
+            )
         total = total + bundle.distillation_weight * distill
         parts["distill"] = distill
 
@@ -139,7 +178,99 @@ def score_aware_loss(
     return total, parts
 
 
+def build_mlx_segnet_pair_teacher(
+    bundle: RendererBundle,
+    *,
+    upstream_dir: Any = "upstream",
+    device: str = "cpu",
+) -> Any:
+    """Build a real-MLX-SegNet per-pair teacher cache for the harness.
+
+    The canonical scorer-bound teacher per Catalog #164 + the C6 IBPS /
+    DreamerV3 RSSM scorer-blindness lesson. Loads the real upstream PyTorch
+    SegNet, ports it to MLX (pure-MLX op graph), runs ONE gradient-free SegNet
+    forward per pair's TARGET SegNet frame, and caches the per-pixel class
+    logits indexed by PAIR index. The cache satisfies the
+    :class:`tac.substrates._shared.mlx_score_aware.bundle.ScorerTeacherProvider`
+    protocol (``num_classes`` + ``teacher_logits_for_indices``) so it threads
+    directly into ``RendererBundle.scorer_teacher``.
+
+    This is the teacher target the learnable student head is distilled toward;
+    the renderer gradient then flows KL -> head(decoded) -> renderer, binding
+    the renderer to the REAL SegNet's class boundaries (NOT a pixel-cosine).
+
+    NOTE on resolution: the SegNet logits are at SegNet's canonical
+    ``(384, 512)`` output. The learnable student head preserves the decoded
+    frame's spatial dims, so the bundle's targets MUST be ``(384, 512)`` for
+    the student/teacher shapes to align (the canonical contest eval size).
+
+    Args:
+        bundle: the harness RendererBundle. Its
+            ``segnet_teacher_frame_index`` selects which target frame supplies
+            teacher logits; default ``1`` matches upstream SegNet last-frame
+            slicing. Targets MUST be NHWC ``[0, 1]`` at SegNet size.
+        upstream_dir: path to the upstream repo (contains the SegNet weights).
+        device: PyTorch device for the SegNet weight load + MLX port (``cpu``
+            per CLAUDE.md "MPS auth eval is NOISE" — no MPS for the teacher).
+
+    Returns:
+        a :class:`RealSegNetTeacherLogitsCache` keyed by PAIR index (so its
+        ``teacher_logits_for_indices(idx)`` aligns with the harness batch).
+
+    Raises:
+        MlxScoreAwareHarnessError: targets are not at SegNet's ``(384, 512)``.
+    """
+    import numpy as np
+
+    from tac.local_acceleration.mlx_scorer_adapters import MLXSegNetAdapter
+    from tac.scorer import load_default_scorers
+    from tac.substrates._shared.mlx_score_aware.device_gate import (
+        MlxScoreAwareHarnessError,
+    )
+    from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (
+        RealSegNetTeacherLogitsCache,
+    )
+
+    mx = require_mlx_for_harness()
+    tgt = (
+        bundle.target_rgb_1
+        if bundle.segnet_teacher_frame_index == 1
+        else bundle.target_rgb_0
+    )
+    n_pairs, h, w, _c = tgt.shape
+    if (h, w) != (384, 512):
+        raise MlxScoreAwareHarnessError(
+            f"build_mlx_segnet_pair_teacher requires targets at SegNet size "
+            f"(384, 512) for student/teacher shape alignment; got ({h}, {w}). "
+            "Decode the harness targets at the canonical contest eval size."
+        )
+    _posenet, segnet = load_default_scorers(str(upstream_dir), device=device)
+    segnet.eval()
+    mlx_segnet = MLXSegNetAdapter(segnet)
+    # One gradient-free SegNet forward per pair target SegNet frame, chunked to
+    # keep memory bounded. SegNet preprocess expects RGB in 0..255 (no internal
+    # /255 per the upstream cache builder convention), so scale the [0,1]
+    # target up.
+    chunk = 16
+    logits_chunks = []
+    for start in range(0, n_pairs, chunk):
+        end = min(start + chunk, n_pairs)
+        x = tgt[start:end] * 255.0  # (b, 384, 512, 3) MLX
+        out = mx.stop_gradient(mlx_segnet(x))  # (b, 384, 512, K) MLX
+        mx.eval(out)
+        logits_chunks.append(np.array(out).astype(np.float32))
+    logits_np = np.concatenate(logits_chunks, axis=0)  # (n_pairs, 384, 512, K)
+    return RealSegNetTeacherLogitsCache(
+        teacher_logits_thwk=mx.array(logits_np),
+        frame_count=int(logits_np.shape[0]),
+        height=int(logits_np.shape[1]),
+        width=int(logits_np.shape[2]),
+        num_classes=int(logits_np.shape[3]),
+    )
+
+
 __all__ = [
+    "build_mlx_segnet_pair_teacher",
     "decode_frames_nhwc01",
     "score_aware_loss",
 ]

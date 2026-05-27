@@ -68,6 +68,17 @@ def test_rejects_bad_num_classes() -> None:
         )
 
 
+def test_rejects_bad_segnet_teacher_frame_index() -> None:
+    with pytest.raises(MlxScoreAwareHarnessError, match="segnet_teacher_frame_index"):
+        RendererBundle(
+            model=object(),
+            target_rgb_0=None,
+            target_rgb_1=None,
+            num_pairs=4,
+            segnet_teacher_frame_index=2,
+        )
+
+
 def test_accepts_canonical_conventions_with_defaults() -> None:
     for conv in ("reconstruct_pair_nchw01", "call_b2chw_255"):
         b = RendererBundle(
@@ -81,3 +92,4 @@ def test_accepts_canonical_conventions_with_defaults() -> None:
         assert b.distillation_weight == 0.0
         assert b.distillation_temperature == 2.0
         assert b.distillation_num_classes == 5
+        assert b.segnet_teacher_frame_index == 1
