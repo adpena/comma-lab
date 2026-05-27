@@ -189,29 +189,37 @@ def test_byte_mutation_changes_inflate_output_no_op_proof() -> None:
     assert not torch.allclose(arc_a.ego_poses[0, 0], arc_b.ego_poses[0, 0], atol=1e-6)
 
 
-def test_trainer_full_main_raises_not_implemented_at_l0_scaffold() -> None:
-    """L0 SCAFFOLD posture: trainer _full_main MUST raise NotImplementedError.
+def test_trainer_full_main_implemented_and_cuda_gated(tmp_path) -> None:
+    """PACT-NERV-FULL-MAIN-WAVE 2026-05-27: _full_main is IMPLEMENTED + CUDA-gated.
 
-    Per Catalog #240 (recipe-vs-trainer-state consistency) + Catalog #315
-    (OPTIMAL FORM before paid dispatch) + Catalog #325 (per-substrate
-    symposium): the pact_nerv_ia3 trainer's full path is council-gated
-    until Stage 1 dispatch operator-gated.
+    The L0 SCAFFOLD NotImplementedError is extinguished: ``_full_main`` now
+    runs the canonical score-aware training loop. Per CLAUDE.md "MPS auth
+    eval is NOISE" + Catalog #1, the full (non-smoke) path is CUDA-required;
+    invoking it with ``--device cpu`` (no ``--smoke``) refuses via the
+    canonical ``device_or_die`` gate (SystemExit), proving the path wires
+    correctly without firing any paid GPU. The PAID DISPATCH stays gated by
+    ``dispatch_enabled: false`` + ``research_only: true`` on the recipe per
+    Catalog #325 (code complete, trigger gated).
     """
-    import argparse
     import importlib
+    import inspect
 
     trainer = importlib.import_module("experiments.train_substrate_pact_nerv_ia3")
-    ns = argparse.Namespace(output_dir=None, epochs=1, smoke=False, device="cpu")
-    try:
-        trainer._full_main(ns)
-    except NotImplementedError as exc:
-        assert (
-            "OPERATOR-GATED" in str(exc)
-            or "L0 SCAFFOLD" in str(exc)
-            or "Stage 1" in str(exc)
-        )
-    else:  # pragma: no cover
-        raise AssertionError("expected NotImplementedError per L0 SCAFFOLD posture")
+    # No NotImplementedError anywhere in the _full_main body.
+    src = inspect.getsource(trainer._full_main)
+    assert "raise NotImplementedError" not in src, (
+        "_full_main NotImplementedError must be extinguished per "
+        "PACT-NERV-FULL-MAIN-WAVE"
+    )
+    assert "run_pact_nerv_score_aware_training" in src, (
+        "_full_main must route through the canonical shared training loop"
+    )
+    # Invoking full path on CPU refuses via device_or_die (CUDA-required).
+    args = trainer._build_parser().parse_args(
+        ["--output-dir", str(tmp_path / "out"), "--device", "cpu"]
+    )
+    with __import__("pytest").raises(SystemExit):
+        trainer._full_main(args)
 
 
 def test_trainer_routes_through_canonical_scorer_loss_helper() -> None:
