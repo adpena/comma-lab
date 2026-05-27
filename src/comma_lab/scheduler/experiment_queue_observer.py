@@ -28,8 +28,10 @@ from tac.optimization.materializer_feedback import (
     materializer_archive_delta,
 )
 from tac.optimization.proxy_candidate_contract import truthy_authority_field_violations
+from tac.optimization.runtime_adapter_identity import (
+    runtime_adapter_identity_blockers,
+)
 from tac.optimization.serialized_archive_economics import SERIALIZED_ARCHIVE_DELTA_SCHEMA
-from tac.repo_io import tree_sha256
 
 OBSERVATION_SCHEMA = "experiment_queue_observation.v1"
 LOCAL_TRAINING_SIGNAL_OBSERVATION_SCHEMA = "local_training_signal_observation.v1"
@@ -68,19 +70,6 @@ RUNTIME_PROOF_MAPPING_FIELDS = (
     "runtime_consumption_proof",
     "full_frame_inflate_parity_proof",
     "proof",
-)
-RUNTIME_DIR_FIELDS = (
-    "candidate_runtime_dir",
-    "runtime_dir",
-    "inflate_runtime_dir",
-    "source_runtime_dir",
-)
-RUNTIME_TREE_SHA_FIELDS = (
-    "candidate_runtime_tree_sha256",
-    "runtime_tree_sha256",
-    "inflate_runtime_tree_sha256",
-    "runtime_adapter_sha256",
-    "runtime_adapter_tree_sha256",
 )
 PROOF_SUCCESS_FIELDS = (
     "passed",
@@ -328,70 +317,17 @@ def _proof_candidate_archive_sha256(proof: Mapping[str, Any]) -> str | None:
     return None
 
 
-def _runtime_tree_sha256_from_mapping(mapping: Mapping[str, Any]) -> str | None:
-    for key in RUNTIME_TREE_SHA_FIELDS:
-        if _is_sha256(mapping.get(key)):
-            return str(mapping[key]).strip().lower()
-    for nested_key in (
-        "runtime_adapter_manifest",
-        "receiver_verification",
-        "runtime_manifest",
-        "candidate_runtime",
-    ):
-        nested = mapping.get(nested_key)
-        if isinstance(nested, Mapping):
-            value = _runtime_tree_sha256_from_mapping(nested)
-            if value is not None:
-                return value
-    return None
-
-
 def _runtime_identity_blockers(
     payload: Mapping[str, Any],
     *,
     repo_root: Path,
     context: str,
 ) -> list[str]:
-    runtime_claimed = payload.get("runtime_adapter_ready") is True or payload.get(
-        "candidate_runtime_adapter_blocker_cleared"
-    ) is True
-    receiver = payload.get("receiver_verification")
-    if isinstance(receiver, Mapping):
-        runtime_claimed = runtime_claimed or receiver.get("runtime_adapter_ready") is True
-    if not runtime_claimed:
-        return []
-
-    blockers: list[str] = []
-    expected_sha = _runtime_tree_sha256_from_mapping(payload)
-    if expected_sha is None:
-        blockers.append(f"{context}_runtime_tree_sha256_missing")
-    runtime_dirs = [
-        _resolve_payload_path(payload.get(key), repo_root=repo_root)
-        for key in RUNTIME_DIR_FIELDS
-        if isinstance(payload.get(key), str) and str(payload.get(key)).strip()
-    ]
-    runtime_dirs = [path for path in runtime_dirs if path is not None]
-    if not runtime_dirs:
-        blockers.append(f"{context}_runtime_dir_missing_for_tree_identity")
-        return blockers
-    live_tree_checked = False
-    for runtime_dir in runtime_dirs:
-        if runtime_dir.is_symlink():
-            blockers.append(f"{context}_runtime_dir_is_symlink")
-            continue
-        if not runtime_dir.is_dir():
-            blockers.append(f"{context}_runtime_dir_missing")
-            continue
-        if not (runtime_dir / "inflate.sh").is_file():
-            blockers.append(f"{context}_runtime_dir_missing_inflate_sh")
-            continue
-        live_tree_checked = True
-        actual_sha = tree_sha256(runtime_dir).lower()
-        if expected_sha is not None and actual_sha != expected_sha:
-            blockers.append(f"{context}_runtime_tree_sha256_mismatch")
-    if not live_tree_checked:
-        blockers.append(f"{context}_runtime_tree_live_identity_unverified")
-    return blockers
+    return runtime_adapter_identity_blockers(
+        payload,
+        repo_root=repo_root,
+        context=context,
+    )
 
 
 def _proof_record_blockers(
@@ -432,11 +368,17 @@ def _proof_record_blockers(
         elif proof_archive_sha != expected_candidate_archive_sha256:
             blockers.append(f"{context}_proof_candidate_archive_sha256_mismatch")
     runtime_manifest = proof.get("runtime_adapter_manifest")
-    if (
-        proof.get("runtime_adapter_ready") is True
-        or (isinstance(runtime_manifest, Mapping) and runtime_manifest.get("runtime_adapter_ready") is True)
-    ) and _runtime_tree_sha256_from_mapping(proof) is None:
-        blockers.append(f"{context}_proof_runtime_tree_sha256_missing")
+    if proof.get("runtime_adapter_ready") is True or (
+        isinstance(runtime_manifest, Mapping)
+        and runtime_manifest.get("runtime_adapter_ready") is True
+    ):
+        blockers.extend(
+            runtime_adapter_identity_blockers(
+                proof,
+                repo_root=repo_root,
+                context=f"{context}_proof",
+            )
+        )
     for key in (
         "passed",
         "runtime_consumption_proof_passed",

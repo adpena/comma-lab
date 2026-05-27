@@ -30,6 +30,7 @@ from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
     require_no_truthy_authority_fields,
 )
+from tac.optimization.runtime_adapter_identity import runtime_adapter_identity_blockers
 from tac.optimization.serialized_archive_economics import (
     build_serialized_archive_delta_contract,
 )
@@ -52,9 +53,7 @@ SUPPORTED_FAMILY_AGNOSTIC_MATERIALIZER_SCHEMAS = frozenset(
         TENSOR_FACTORIZE_SCHEMA,
     }
 )
-SUPPORTED_MATERIALIZER_MANIFEST_SCHEMAS = (
-    SUPPORTED_CHAIN_SCHEMAS | SUPPORTED_FAMILY_AGNOSTIC_MATERIALIZER_SCHEMAS
-)
+SUPPORTED_MATERIALIZER_MANIFEST_SCHEMAS = SUPPORTED_CHAIN_SCHEMAS | SUPPORTED_FAMILY_AGNOSTIC_MATERIALIZER_SCHEMAS
 TOOL_NAME = "tools/build_optimizer_candidate_queue.py"
 LOCAL_ADVISORY_AXIS_TOKENS = (
     "macos-cpu-advisory",
@@ -103,38 +102,20 @@ def adapt_materializer_chain_manifest_to_candidate(
         repo_root=repo_root,
     )
     if runtime_identity_blockers:
-        raise MaterializerChainHarvestError(
-            "runtime_adapter_identity_blocked:"
-            + ",".join(runtime_identity_blockers)
-        )
+        raise MaterializerChainHarvestError("runtime_adapter_identity_blocked:" + ",".join(runtime_identity_blockers))
     if delta_blockers:
-        raise MaterializerChainHarvestError(
-            "serialized_archive_delta_blocked:" + ",".join(delta_blockers)
-        )
+        raise MaterializerChainHarvestError("serialized_archive_delta_blocked:" + ",".join(delta_blockers))
     _validate_chain_artifacts(chain, repo_root=repo_root)
 
     source_sha = _string_or_none(source_archive.get("sha256"))
     source_bytes = _positive_int(source_archive.get("bytes"))
-    archive_changed = (
-        source_sha is not None and candidate_archive["sha256"] != source_sha
-    )
-    byte_changed = (
-        source_bytes is not None and candidate_archive["bytes"] != source_bytes
-    )
+    archive_changed = source_sha is not None and candidate_archive["sha256"] != source_sha
+    byte_changed = source_bytes is not None and candidate_archive["bytes"] != source_bytes
     delta_status = str(delta_facts.get("expected_status") or "").strip()
     realized_saved_bytes = delta_facts.get("computed_realized_saved_bytes")
-    rate_positive = (
-        delta_status == "realized_saving"
-        and delta_facts.get("expected_savings_realized") is True
-    )
-    rate_semantics = (
-        "realized_archive_saving"
-        if rate_positive
-        else "successful_quality_spend_not_byte_saving_progress"
-    )
-    candidate_id = _candidate_id(
-        chain, schema=schema, archive_sha=candidate_archive["sha256"]
-    )
+    rate_positive = delta_status == "realized_saving" and delta_facts.get("expected_savings_realized") is True
+    rate_semantics = "realized_archive_saving" if rate_positive else "successful_quality_spend_not_byte_saving_progress"
+    candidate_id = _candidate_id(chain, schema=schema, archive_sha=candidate_archive["sha256"])
     row = {
         "candidate_id": candidate_id,
         "lane_id": str(chain.get("lane_id") or f"materializer_harvest::{schema}"),
@@ -159,8 +140,7 @@ def adapt_materializer_chain_manifest_to_candidate(
         "source_archive_path": source_archive.get("path"),
         "serialized_archive_delta": dict(chain.get("serialized_archive_delta") or {}),
         "serialized_archive_delta_validated": delta_facts,
-        "materializer_rate_outcome": chain.get("materializer_rate_outcome")
-        or delta_status,
+        "materializer_rate_outcome": chain.get("materializer_rate_outcome") or delta_status,
         "rate_positive": rate_positive,
         "realized_saved_bytes": realized_saved_bytes,
         "signal_semantics": chain.get("signal_semantics") or rate_semantics,
@@ -185,13 +165,8 @@ def adapt_materializer_chain_manifest_to_candidate(
         **_runtime_consumption_proof_fields(chain),
         **_chain_runtime_context_fields(chain, repo_root=repo_root),
         "local_advisory_axes": _local_advisory_axes(chain),
-        "local_advisory_axes_semantics": (
-            "non_authoritative_planning_signal_only_not_score_claim"
-        ),
-        "evidence_semantics": (
-            "materializer_chain_harvest_candidate_pending_exact_readiness:"
-            f"{rate_semantics}"
-        ),
+        "local_advisory_axes_semantics": ("non_authoritative_planning_signal_only_not_score_claim"),
+        "evidence_semantics": (f"materializer_chain_harvest_candidate_pending_exact_readiness:{rate_semantics}"),
         "evidence_grade": "[materializer-chain-harvest-no-score]",
         "harvested_at_utc": _utc_now(),
     }
@@ -245,9 +220,7 @@ def adapt_family_agnostic_materializer_manifest_to_candidate(
 
     schema = str(manifest.get("schema") or "")
     if schema not in SUPPORTED_FAMILY_AGNOSTIC_MATERIALIZER_SCHEMAS:
-        raise MaterializerChainHarvestError(
-            f"unsupported_family_agnostic_materializer_schema:{schema!r}"
-        )
+        raise MaterializerChainHarvestError(f"unsupported_family_agnostic_materializer_schema:{schema!r}")
     _require_false_authority(manifest, label="family_agnostic_materializer_manifest")
     if manifest.get("byte_closed_candidate_emitted") is not True:
         raise MaterializerChainHarvestError("byte_closed_candidate_emitted_not_true")
@@ -256,29 +229,18 @@ def adapt_family_agnostic_materializer_manifest_to_candidate(
     source_archive = _archive_record(manifest, "source_archive", repo_root=repo_root)
     source_sha = _string_or_none(source_archive.get("sha256"))
     source_bytes = _positive_int(source_archive.get("bytes"))
-    archive_changed = (
-        source_sha is not None and candidate_archive["sha256"] != source_sha
-    )
-    byte_changed = (
-        source_bytes is not None and candidate_archive["bytes"] != source_bytes
-    )
+    archive_changed = source_sha is not None and candidate_archive["sha256"] != source_sha
+    byte_changed = source_bytes is not None and candidate_archive["bytes"] != source_bytes
     serialized_delta = build_serialized_archive_delta_contract(
         source_archive=source_archive,
         candidate_archive=candidate_archive,
     )
     delta_status = str(serialized_delta.get("status") or "").strip()
     realized_saved_bytes = serialized_delta.get("realized_saved_bytes")
-    rate_positive = (
-        delta_status == "realized_saving"
-        and serialized_delta.get("savings_realized") is True
-    )
+    rate_positive = delta_status == "realized_saving" and serialized_delta.get("savings_realized") is True
     receiver_verification = manifest.get("receiver_verification")
-    receiver_map = (
-        receiver_verification if isinstance(receiver_verification, Mapping) else {}
-    )
-    raw_proof_path = (
-        receiver_map.get("proof_path") or manifest.get("runtime_consumption_proof_path")
-    )
+    receiver_map = receiver_verification if isinstance(receiver_verification, Mapping) else {}
+    raw_proof_path = receiver_map.get("proof_path") or manifest.get("runtime_consumption_proof_path")
     proof_path = raw_proof_path.strip() if isinstance(raw_proof_path, str) else None
     runtime_proof, proof_blockers = _load_runtime_proof_with_blockers(
         proof_path,
@@ -294,8 +256,7 @@ def adapt_family_agnostic_materializer_manifest_to_candidate(
     receiver_satisfied = (
         manifest.get("receiver_contract_satisfied") is True
         and (
-            receiver_map.get("receiver_contract_satisfied") is True
-            or "receiver_contract_satisfied" not in receiver_map
+            receiver_map.get("receiver_contract_satisfied") is True or "receiver_contract_satisfied" not in receiver_map
         )
         and proof_clean
         and not receiver_blockers
@@ -331,10 +292,7 @@ def adapt_family_agnostic_materializer_manifest_to_candidate(
     readiness_blockers = ordered_unique(
         [
             *_string_list(manifest.get("readiness_blockers")),
-            *[
-                f"receiver_verification:{blocker}"
-                for blocker in receiver_blockers
-            ],
+            *[f"receiver_verification:{blocker}" for blocker in receiver_blockers],
             *proof_blockers,
         ]
     )
@@ -362,14 +320,11 @@ def adapt_family_agnostic_materializer_manifest_to_candidate(
         **_member_candidate_fields("candidate", candidate_member),
         **_member_candidate_fields("source", source_member),
         "serialized_archive_delta": serialized_delta,
-        "materializer_rate_outcome": manifest.get("materializer_rate_outcome")
-        or delta_status,
+        "materializer_rate_outcome": manifest.get("materializer_rate_outcome") or delta_status,
         "rate_positive": rate_positive,
         "realized_saved_bytes": realized_saved_bytes,
         "signal_semantics": (
-            "realized_archive_saving"
-            if rate_positive
-            else "successful_quality_spend_not_byte_saving_progress"
+            "realized_archive_saving" if rate_positive else "successful_quality_spend_not_byte_saving_progress"
         ),
         "score_affecting_payload_changed": archive_changed,
         "charged_bits_changed": byte_changed,
@@ -397,12 +352,8 @@ def adapt_family_agnostic_materializer_manifest_to_candidate(
             repo_root=repo_root,
         ),
         "local_advisory_axes": _local_advisory_axes(manifest),
-        "local_advisory_axes_semantics": (
-            "non_authoritative_planning_signal_only_not_score_claim"
-        ),
-        "evidence_semantics": (
-            "family_agnostic_materializer_candidate_pending_exact_readiness"
-        ),
+        "local_advisory_axes_semantics": ("non_authoritative_planning_signal_only_not_score_claim"),
+        "evidence_semantics": ("family_agnostic_materializer_candidate_pending_exact_readiness"),
         "evidence_grade": "[family-agnostic-materializer-no-score]",
         "harvested_at_utc": _utc_now(),
     }
@@ -413,11 +364,7 @@ def adapt_family_agnostic_materializer_manifest_to_candidate(
             "materialized_archive_runtime_custody_required",
             "exact_readiness_promotion_required",
             "exact_auth_eval_result_required_before_score_claim",
-            *(
-                []
-                if receiver_satisfied
-                else ["family_agnostic_receiver_contract_not_satisfied"]
-            ),
+            *([] if receiver_satisfied else ["family_agnostic_receiver_contract_not_satisfied"]),
             *readiness_blockers,
             *_string_list(manifest.get("dispatch_blockers")),
         ],
@@ -513,9 +460,7 @@ def _renderer_payload_dfl1_harvest_fields(
     if manifest.get("schema") != RENDERER_PAYLOAD_DFL1_SCHEMA:
         return {}
     fields: dict[str, Any] = {
-        "renderer_payload_dfl1_anatomy_semantics": (
-            "non_authoritative_planning_signal_only"
-        ),
+        "renderer_payload_dfl1_anatomy_semantics": ("non_authoritative_planning_signal_only"),
         "selected_member_names": _string_list(manifest.get("selected_member_names")),
     }
     raw_payload_member_name = manifest.get("payload_member_name")
@@ -541,51 +486,35 @@ def _renderer_payload_dfl1_harvest_fields(
         )
         proof_path = _nonempty_string(parity_verification.get("proof_path"))
         if proof_path is not None:
-            fields["renderer_payload_dfl1_full_frame_inflate_parity_proof_path"] = (
-                proof_path
-            )
+            fields["renderer_payload_dfl1_full_frame_inflate_parity_proof_path"] = proof_path
             resolved_proof = Path(proof_path)
             if not resolved_proof.is_absolute():
                 resolved_proof = repo_root / resolved_proof
             if resolved_proof.is_file() and not resolved_proof.is_symlink():
-                fields[
-                    "renderer_payload_dfl1_full_frame_inflate_parity_proof_sha256"
-                ] = _sha256_file(resolved_proof)
+                fields["renderer_payload_dfl1_full_frame_inflate_parity_proof_sha256"] = _sha256_file(resolved_proof)
         fields["renderer_payload_dfl1_full_frame_inflate_parity_satisfied"] = (
             parity_verification.get("full_frame_inflate_parity_satisfied") is True
         )
     payload_table = runtime_proof.get("payload_table")
     if isinstance(payload_table, Mapping):
         fields["payload_table"] = dict(payload_table)
-    runtime_parity_verification = runtime_proof.get(
-        "full_frame_inflate_parity_verification"
-    )
+    runtime_parity_verification = runtime_proof.get("full_frame_inflate_parity_verification")
     if isinstance(runtime_parity_verification, Mapping):
-        fields["runtime_full_frame_inflate_parity_verification"] = dict(
-            runtime_parity_verification
-        )
+        fields["runtime_full_frame_inflate_parity_verification"] = dict(runtime_parity_verification)
     if runtime_proof.get("source_runtime_unpacker_parse_satisfied") is True:
         fields["source_runtime_unpacker_parse_satisfied"] = True
     reconstructed = runtime_proof.get("reconstructed_member_sha256s")
     if isinstance(reconstructed, Mapping):
         fields["reconstructed_member_sha256s"] = {
-            str(name): str(sha)
-            for name, sha in reconstructed.items()
-            if str(name) and str(sha)
+            str(name): str(sha) for name, sha in reconstructed.items() if str(name) and str(sha)
         }
     runtime_probe = runtime_proof.get("runtime_consumption_probe")
-    native_probe = (
-        runtime_probe.get("native_unpacker_probe")
-        if isinstance(runtime_probe, Mapping)
-        else None
-    )
+    native_probe = runtime_probe.get("native_unpacker_probe") if isinstance(runtime_probe, Mapping) else None
     if isinstance(native_probe, Mapping):
         native_member_sha256s = native_probe.get("member_sha256s")
         if isinstance(native_member_sha256s, Mapping):
             fields["native_unpacker_member_sha256s"] = {
-                str(name): str(sha)
-                for name, sha in native_member_sha256s.items()
-                if str(name) and str(sha)
+                str(name): str(sha) for name, sha in native_member_sha256s.items() if str(name) and str(sha)
             }
     return fields
 
@@ -621,29 +550,25 @@ def _load_runtime_proof_with_blockers(
         )
     except ValueError as exc:
         blockers.append(f"runtime_consumption_proof_false_authority:{exc}")
-    blockers.extend(
-        f"runtime_consumption_proof:{blocker}"
-        for blocker in _string_list(payload.get("blockers"))
-    )
+    blockers.extend(f"runtime_consumption_proof:{blocker}" for blocker in _string_list(payload.get("blockers")))
     verification = verify_runtime_consumption_proof(
         runtime_consumption_proof=payload,
         required_candidate_archive_sha256=candidate_archive_sha256,
-        required_target_kind=(
-            required_target_kind if isinstance(required_target_kind, str) else None
-        ),
-        required_materializer_id=(
-            required_materializer_id if isinstance(required_materializer_id, str) else None
-        ),
+        required_target_kind=(required_target_kind if isinstance(required_target_kind, str) else None),
+        required_materializer_id=(required_materializer_id if isinstance(required_materializer_id, str) else None),
         required_receiver_contract_kind=(
-            required_receiver_contract_kind
-            if isinstance(required_receiver_contract_kind, str)
-            else None
+            required_receiver_contract_kind if isinstance(required_receiver_contract_kind, str) else None
         ),
         repo_root=repo_root,
     )
+    blockers.extend(f"runtime_consumption_proof:{blocker}" for blocker in _string_list(verification.get("blockers")))
     blockers.extend(
         f"runtime_consumption_proof:{blocker}"
-        for blocker in _string_list(verification.get("blockers"))
+        for blocker in runtime_adapter_identity_blockers(
+            payload,
+            repo_root=repo_root,
+            context="runtime_consumption_proof",
+        )
     )
     proof_archive_sha = _runtime_proof_archive_sha(payload)
     if proof_archive_sha is None:
@@ -656,9 +581,7 @@ def _load_runtime_proof_with_blockers(
 def _runtime_proof_archive_sha(proof: Mapping[str, Any]) -> str | None:
     candidate_archive = proof.get("candidate_archive")
     if isinstance(candidate_archive, Mapping):
-        value = candidate_archive.get("sha256") or candidate_archive.get(
-            "archive_sha256"
-        )
+        value = candidate_archive.get("sha256") or candidate_archive.get("archive_sha256")
         if isinstance(value, str) and len(value.strip()) == 64:
             return value.strip().lower()
     for key in ("candidate_archive_sha256", "archive_sha256"):
@@ -729,16 +652,8 @@ def _runtime_consumption_proof_fields(chain: Mapping[str, Any]) -> dict[str, Any
             out[key] = chain[key]
     if "runtime_consumption_proof_path" not in out:
         artifacts = chain.get("artifacts")
-        receiver = (
-            artifacts.get("receiver_proof")
-            if isinstance(artifacts, Mapping)
-            else None
-        )
-        proof_path = (
-            _nonempty_string(receiver.get("path"))
-            if isinstance(receiver, Mapping)
-            else None
-        )
+        receiver = artifacts.get("receiver_proof") if isinstance(artifacts, Mapping) else None
+        proof_path = _nonempty_string(receiver.get("path")) if isinstance(receiver, Mapping) else None
         if proof_path is not None:
             out["runtime_consumption_proof_required"] = True
             out["runtime_consumption_proof_status"] = "present"
@@ -793,14 +708,13 @@ def _chain_runtime_adapter_identity_blockers(
     blockers: list[str] = []
     if not runtime_dirs or not any(path.is_dir() for path in runtime_dirs):
         blockers.append("runtime_adapter_dir_missing")
+    if any(path.is_symlink() for path in runtime_dirs):
+        blockers.append("runtime_adapter_dir_is_symlink")
     if actual_runtime_tree_sha is None:
         blockers.append("runtime_tree_sha256_live_runtime_dir_unverifiable")
     if expected_runtime_tree_sha is None:
         blockers.append("runtime_tree_sha256_missing")
-    elif (
-        actual_runtime_tree_sha is not None
-        and actual_runtime_tree_sha != expected_runtime_tree_sha
-    ):
+    elif actual_runtime_tree_sha is not None and actual_runtime_tree_sha != expected_runtime_tree_sha:
         blockers.append("runtime_tree_sha256_mismatch")
     return blockers
 
@@ -950,14 +864,10 @@ def _serialized_delta_archive_custody_blockers(
     source_bytes = _positive_int(delta_facts.get("source_archive_bytes"))
     candidate_bytes = _positive_int(delta_facts.get("candidate_archive_bytes"))
     if source_bytes != source_archive["bytes"]:
-        blockers.append(
-            "serialized_archive_delta_source_bytes_mismatch:"
-            f"{source_bytes}!={source_archive['bytes']}"
-        )
+        blockers.append(f"serialized_archive_delta_source_bytes_mismatch:{source_bytes}!={source_archive['bytes']}")
     if candidate_bytes != candidate_archive["bytes"]:
         blockers.append(
-            "serialized_archive_delta_candidate_bytes_mismatch:"
-            f"{candidate_bytes}!={candidate_archive['bytes']}"
+            f"serialized_archive_delta_candidate_bytes_mismatch:{candidate_bytes}!={candidate_archive['bytes']}"
         )
     return blockers
 
@@ -1092,9 +1002,7 @@ def _string_list(value: Any) -> list[str]:
         return []
     if isinstance(value, str):
         return [value] if value else []
-    if isinstance(value, Iterable) and not isinstance(
-        value, Mapping | bytes | bytearray
-    ):
+    if isinstance(value, Iterable) and not isinstance(value, Mapping | bytes | bytearray):
         return ordered_unique(str(item) for item in value if str(item))
     return [str(value)]
 

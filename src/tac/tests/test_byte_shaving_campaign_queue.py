@@ -135,6 +135,7 @@ from tac.optimization.inverse_steganalysis_operation_set_compiler import (
     packet_ir_operation_set_from_compiler_hint,
 )
 from tac.packet_compiler.deterministic_compiler import PACKET_IR_OPERATION_SET_SCHEMA
+from tac.repo_io import tree_sha256
 from tools import build_byte_shaving_campaign_queue as queue_cli
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -188,9 +189,7 @@ def _run_queue_tool(
         raise AssertionError(f"unexpected queue tool command: {args!r}")
     result = _run_cli(queue_cli.main, [str(item) for item in args[2:]])
     if check and result.returncode != 0:
-        raise AssertionError(
-            f"CLI failed with {result.returncode}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
-        )
+        raise AssertionError(f"CLI failed with {result.returncode}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}")
     return result
 
 
@@ -1292,10 +1291,7 @@ def test_materializer_registry_has_family_agnostic_fail_closed_targets() -> None
     )
     assert packet_merge.adapter is not None
     assert "merge_contract" in packet_merge.adapter.required_context_fields
-    assert (
-        "packet_member_merge_source_runtime_dir"
-        in packet_merge.adapter.required_context_fields
-    )
+    assert "packet_member_merge_source_runtime_dir" in packet_merge.adapter.required_context_fields
 
     fail_closed_cases = [
         (
@@ -1485,11 +1481,7 @@ def test_compile_dqs1_byte_shaving_plan_materializes_pairset_selector_units(
         partial_materialization_rationale="unit-test direct pairset selector",
     )
 
-    row = next(
-        item
-        for item in compiled["executable_rows"]
-        if item["selection_kind"] == "ranked_unit"
-    )
+    row = next(item for item in compiled["executable_rows"] if item["selection_kind"] == "ranked_unit")
     assert row["selection_id"] == "dqs1_pairset_drop_many_k002"
     assert row["dropped_pair_indices"] == [320, 371]
     assert row["selected_pair_indices"] == [101, 501]
@@ -1498,13 +1490,9 @@ def test_compile_dqs1_byte_shaving_plan_materializes_pairset_selector_units(
     assert row["materializer_resolutions"][0]["selected_operation_blockers"] == []
     assert row["score_claim"] is False
     portfolio_row = next(
-        item
-        for item in compiled["portfolio"]["operator_action_rows"]
-        if item["candidate_id"] == row["candidate_id"]
+        item for item in compiled["portfolio"]["operator_action_rows"] if item["candidate_id"] == row["candidate_id"]
     )
-    assert portfolio_row["source_metadata"]["allowed_use"] == (
-        "dqs1_local_first_materialization_only"
-    )
+    assert portfolio_row["source_metadata"]["allowed_use"] == ("dqs1_local_first_materialization_only")
     assert portfolio_row["ready_for_exact_eval_dispatch"] is False
 
 
@@ -1671,20 +1659,12 @@ def test_inverse_action_dfl1_packet_ir_context_reaches_executable_work_queue(
                             "output_archive": str(tmp_path / "candidate_packet.zip"),
                             "output_manifest": str(tmp_path / "candidate_packet.json"),
                             "payload_member_name": "p",
-                            "renderer_payload_dfl1_source_runtime_dir": str(
-                                tmp_path / "source_runtime"
-                            ),
-                            "renderer_payload_dfl1_candidate_runtime_dir": str(
-                                tmp_path / "candidate_runtime"
-                            ),
-                            "renderer_payload_dfl1_full_frame_file_list_entries": [
-                                "0.raw"
-                            ],
+                            "renderer_payload_dfl1_source_runtime_dir": str(tmp_path / "source_runtime"),
+                            "renderer_payload_dfl1_candidate_runtime_dir": str(tmp_path / "candidate_runtime"),
+                            "renderer_payload_dfl1_full_frame_file_list_entries": ["0.raw"],
                             "renderer_payload_dfl1_expected_full_frame_file_list_sha256": expected_sha,
                             "renderer_payload_dfl1_expected_full_frame_entry_count": 1,
-                            "renderer_payload_dfl1_full_frame_file_list_source": (
-                                "inline_inverse_action_fixture"
-                            ),
+                            "renderer_payload_dfl1_full_frame_file_list_source": ("inline_inverse_action_fixture"),
                         }
                     ],
                 },
@@ -1724,24 +1704,12 @@ def test_inverse_action_dfl1_packet_ir_context_reaches_executable_work_queue(
     )
     assert context_payload["blocked_context_count"] == 0
     context = context_payload["rows"][0]["context"]
-    assert context["renderer_payload_dfl1_source_runtime_dir"] == str(
-        tmp_path / "source_runtime"
-    )
-    assert context["renderer_payload_dfl1_candidate_runtime_dir"] == str(
-        tmp_path / "candidate_runtime"
-    )
-    assert context["renderer_payload_dfl1_full_frame_file_list_entries"] == [
-        "0.raw"
-    ]
-    assert (
-        context["renderer_payload_dfl1_expected_full_frame_file_list_sha256"]
-        == expected_sha
-    )
+    assert context["renderer_payload_dfl1_source_runtime_dir"] == str(tmp_path / "source_runtime")
+    assert context["renderer_payload_dfl1_candidate_runtime_dir"] == str(tmp_path / "candidate_runtime")
+    assert context["renderer_payload_dfl1_full_frame_file_list_entries"] == ["0.raw"]
+    assert context["renderer_payload_dfl1_expected_full_frame_file_list_sha256"] == expected_sha
     assert context["renderer_payload_dfl1_expected_full_frame_entry_count"] == 1
-    assert (
-        context["renderer_payload_dfl1_full_frame_file_list_source"]
-        == "inline_inverse_action_fixture"
-    )
+    assert context["renderer_payload_dfl1_full_frame_file_list_source"] == "inline_inverse_action_fixture"
 
     work_queue = build_materializer_work_queue(
         backlog,
@@ -1805,9 +1773,7 @@ def test_direct_mlx_compiler_hint_reaches_materializer_work_queue(
     backlog = compiled["materializer_backlog"]
     work_queue = compiled["materializer_work_queue"]
 
-    assert {
-        operation["target_kind"] for operation in packet_ir["operations"]
-    } == {
+    assert {operation["target_kind"] for operation in packet_ir["operations"]} == {
         ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
         PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
     }
@@ -1815,23 +1781,17 @@ def test_direct_mlx_compiler_hint_reaches_materializer_work_queue(
     assert backlog["packet_ir_lowered_row_count"] >= 2
     assert work_queue["row_count"] == 2
     assert work_queue["blocked_row_count"] == 2
-    assert {
-        row["target_kind"] for row in work_queue["rows"]
-    } == {
+    assert {row["target_kind"] for row in work_queue["rows"]} == {
         ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
         PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
     }
     backlog_by_target = {row["target_kind"]: row for row in backlog["rows"]}
-    assert backlog_by_target[ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND][
-        "operation_params"
-    ]["archive_section"] == "decoder_blob"
-    assert backlog_by_target[PACKET_MEMBER_RECOMPRESS_TARGET_KIND][
-        "operation_params"
-    ]["member_name"] == "0.bin"
-    assert any(
-        packet_ir["operation_set_id"] in row["source_packet_ir_operation_set_ids"]
-        for row in work_queue["rows"]
+    assert (
+        backlog_by_target[ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND]["operation_params"]["archive_section"]
+        == "decoder_blob"
     )
+    assert backlog_by_target[PACKET_MEMBER_RECOMPRESS_TARGET_KIND]["operation_params"]["member_name"] == "0.bin"
+    assert any(packet_ir["operation_set_id"] in row["source_packet_ir_operation_set_ids"] for row in work_queue["rows"])
     assert compiled["score_claim"] is False
     assert backlog["score_claim"] is False
     assert work_queue["score_claim"] is False
@@ -1854,19 +1814,16 @@ def test_dynamic_sparse_channel_gate_hint_reaches_materializer_work_queue(
     assert packet_ir["schema"] == PACKET_IR_OPERATION_SET_SCHEMA
     assert packet_ir["score_claim"] is False
     assert {
-        operation["params"]["dynamic_sparse_channel_gate"]["channel_id"]
-        for operation in packet_ir["operations"]
+        operation["params"]["dynamic_sparse_channel_gate"]["channel_id"] for operation in packet_ir["operations"]
     } == {"value", "residual"}
     assert compiled["packet_ir_materializer_backlog_row_count"] >= 2
     assert work_queue["row_count"] == 2
     assert work_queue["ready_for_exact_eval_dispatch"] is False
     rows_by_target = {row["target_kind"]: row for row in backlog["rows"]}
-    value_gate = rows_by_target[PACKET_MEMBER_RECOMPRESS_TARGET_KIND]["operation_params"][
+    value_gate = rows_by_target[PACKET_MEMBER_RECOMPRESS_TARGET_KIND]["operation_params"]["dynamic_sparse_channel_gate"]
+    residual_gate = rows_by_target[ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND]["operation_params"][
         "dynamic_sparse_channel_gate"
     ]
-    residual_gate = rows_by_target[ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND][
-        "operation_params"
-    ]["dynamic_sparse_channel_gate"]
     assert value_gate["source_id"] == "h9"
     assert value_gate["channel_id"] == "value"
     assert value_gate["score_claim"] is False
@@ -1903,12 +1860,8 @@ def test_dynamic_sparse_observation_feedback_hint_reaches_materializer_work_queu
     assert work_queue["ready_for_exact_eval_dispatch"] is False
     backlog_row = backlog["rows"][0]
     assert backlog_row["target_kind"] == PACKET_MEMBER_RECOMPRESS_TARGET_KIND
-    assert backlog_row["operation_params"]["dynamic_sparse_observation_feedback"][
-        "score_claim"
-    ] is False
-    assert backlog_row["operation_params"]["dynamic_sparse_channel_gate"][
-        "score_claim"
-    ] is False
+    assert backlog_row["operation_params"]["dynamic_sparse_observation_feedback"]["score_claim"] is False
+    assert backlog_row["operation_params"]["dynamic_sparse_channel_gate"]["score_claim"] is False
     assert backlog["score_claim"] is False
     assert work_queue["score_claim"] is False
 
@@ -1944,22 +1897,12 @@ def test_materializer_work_queue_lowers_high_level_inverse_action_context(
         for row in queue["rows"]
         for blocker in row["materialization_blockers"]
     )
-    concrete = next(
-        row
-        for row in queue["rows"]
-        if row["target_kind"] == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND
-    )
+    concrete = next(row for row in queue["rows"] if row["target_kind"] == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND)
     assert concrete["executable"] is True
     assert concrete["tool"] == "tools/run_family_agnostic_materializer.py"
-    assert concrete["source_packet_ir_operation_set_ids"] == [
-        "packetir_compiled_high_level_section"
-    ]
+    assert concrete["source_packet_ir_operation_set_ids"] == ["packetir_compiled_high_level_section"]
     assert concrete["source_backlog_key"] == "inverse_action_inverse_surface_pair0007"
-    high_level = next(
-        row
-        for row in queue["rows"]
-        if row["target_kind"] == INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND
-    )
+    high_level = next(row for row in queue["rows"] if row["target_kind"] == INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND)
     assert high_level["executable"] is False
     assert (
         "inverse_action_high_level_context_lowered_to_packet_ir_materializer_rows"
@@ -2419,6 +2362,12 @@ def test_materializer_work_queue_builds_byte_range_chain_command(
     assert _condition_passes(row["postconditions"][2], repo_root=Path("/")) is False
 
     payload["serialized_archive_delta"] = {"status": "realized_saving"}
+    runtime_dir = output_dir / "candidate_runtime"
+    runtime_dir.mkdir()
+    (runtime_dir / "inflate.sh").write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+    runtime_tree_sha = tree_sha256(runtime_dir)
+    payload["candidate_runtime_dir"] = runtime_dir.as_posix()
+    payload["candidate_runtime_tree_sha256"] = runtime_tree_sha
     manifest.write_text(json.dumps(payload), encoding="utf-8")
     assert _condition_passes(row["postconditions"][1], repo_root=Path("/")) is True
     assert _condition_passes(row["postconditions"][2], repo_root=Path("/")) is True
@@ -2445,9 +2394,7 @@ def test_materializer_work_queue_wraps_archive_section_entropy_recode_adapter(
     section_manifest = tmp_path / "sections.json"
     output_archive = tmp_path / "candidate.zip"
     manifest = tmp_path / "candidate.json"
-    runtime_proof = manifest.with_name(
-        f"{manifest.stem}.runtime_consumption_proof.json"
-    )
+    runtime_proof = manifest.with_name(f"{manifest.stem}.runtime_consumption_proof.json")
     queue = build_materializer_work_queue(
         compiled["materializer_backlog"],
         repo_root=tmp_path,
@@ -2510,9 +2457,7 @@ def test_materializer_work_queue_wraps_archive_section_entropy_recode_adapter(
         "candidate_archive.sha256",
         "candidate_member.sha256",
     ]
-    assert completion_contract["required_nonempty"] == [
-        "runtime_consumption_proof_path"
-    ]
+    assert completion_contract["required_nonempty"] == ["runtime_consumption_proof_path"]
     assert row["telemetry"]["artifact_paths"] == [
         str(output_archive),
         str(manifest),
@@ -2622,9 +2567,7 @@ def test_materializer_work_queue_wraps_packet_member_and_tensor_family_adapters(
     assert queue["schema"] == MATERIALIZER_WORK_QUEUE_SCHEMA
     assert queue["executable_row_count"] == 2
     packet_row, tensor_row = queue["rows"]
-    packet_runtime_proof = packet_out_manifest.with_name(
-        f"{packet_out_manifest.stem}.runtime_consumption_proof.json"
-    )
+    packet_runtime_proof = packet_out_manifest.with_name(f"{packet_out_manifest.stem}.runtime_consumption_proof.json")
     assert packet_row["tool"] == "tools/run_family_agnostic_materializer.py"
     assert [
         "--target-kind",
@@ -2634,8 +2577,7 @@ def test_materializer_work_queue_wraps_packet_member_and_tensor_family_adapters(
         packet_row["command"][index : index + 2] for index in range(len(packet_row["command"]) - 1)
     ]
     assert ["--runtime-consumption-proof-out", str(packet_runtime_proof)] in [
-        packet_row["command"][index : index + 2]
-        for index in range(len(packet_row["command"]) - 1)
+        packet_row["command"][index : index + 2] for index in range(len(packet_row["command"]) - 1)
     ]
     _assert_typed_postconditions(
         packet_row["postconditions"],
@@ -2652,9 +2594,7 @@ def test_materializer_work_queue_wraps_packet_member_and_tensor_family_adapters(
     assert packet_row["score_claim"] is False
     assert packet_row["ready_for_exact_eval_dispatch"] is False
 
-    tensor_runtime_proof = tensor_out_manifest.with_name(
-        f"{tensor_out_manifest.stem}.runtime_consumption_proof.json"
-    )
+    tensor_runtime_proof = tensor_out_manifest.with_name(f"{tensor_out_manifest.stem}.runtime_consumption_proof.json")
     assert tensor_row["tool"] == "tools/run_family_agnostic_materializer.py"
     assert [
         "--target-kind",
@@ -2664,8 +2604,7 @@ def test_materializer_work_queue_wraps_packet_member_and_tensor_family_adapters(
         tensor_row["command"][index : index + 2] for index in range(len(tensor_row["command"]) - 1)
     ]
     assert ["--runtime-consumption-proof-out", str(tensor_runtime_proof)] in [
-        tensor_row["command"][index : index + 2]
-        for index in range(len(tensor_row["command"]) - 1)
+        tensor_row["command"][index : index + 2] for index in range(len(tensor_row["command"]) - 1)
     ]
     _assert_typed_postconditions(
         tensor_row["postconditions"],
@@ -2727,10 +2666,7 @@ def test_materializer_work_queue_wires_tensor_factorize_receiver_runtime(
     )
 
     row = queue["rows"][0]
-    command_pairs = [
-        row["command"][index : index + 2]
-        for index in range(len(row["command"]) - 1)
-    ]
+    command_pairs = [row["command"][index : index + 2] for index in range(len(row["command"]) - 1)]
     assert ["--tensor-factorize-source-runtime-dir", str(source_runtime)] in command_pairs
     assert ["--tensor-factorize-runtime-dir-out", str(runtime_dir)] in command_pairs
     assert [
@@ -2791,12 +2727,7 @@ def test_materializer_work_queue_emits_grouped_archive_state_requests(
         repo_root=tmp_path,
         default_output_root=tmp_path / "contexts",
     )
-    assert (
-        contexts_payload["rows"][0]["context"][
-            "source_packet_ir_operation_indices_by_unit"
-        ]
-        == {"section_a": 2}
-    )
+    assert contexts_payload["rows"][0]["context"]["source_packet_ir_operation_indices_by_unit"] == {"section_a": 2}
     queue = build_materializer_work_queue(
         backlog,
         repo_root=tmp_path,
@@ -2914,9 +2845,7 @@ def test_grouped_family_agnostic_materializer_chains_archive_state(
         out_archive = Path(command[command.index("--output-archive") + 1])
         out_manifest = Path(command[command.index("--output-manifest") + 1])
         out_archive.parent.mkdir(parents=True, exist_ok=True)
-        out_archive.write_bytes(
-            f"candidate-from-{Path(command[command.index('--archive-path') + 1]).name}".encode()
-        )
+        out_archive.write_bytes(f"candidate-from-{Path(command[command.index('--archive-path') + 1]).name}".encode())
         out_manifest.write_text(
             json.dumps(
                 {
@@ -2927,9 +2856,7 @@ def test_grouped_family_agnostic_materializer_chains_archive_state(
                         "receiver_contract_satisfied": True,
                     },
                     "readiness_blockers": [],
-                    "runtime_consumption_proof_path": str(
-                        out_manifest.with_suffix(".proof.json")
-                    ),
+                    "runtime_consumption_proof_path": str(out_manifest.with_suffix(".proof.json")),
                     **_false_authority(),
                 }
             ),
@@ -3131,9 +3058,7 @@ def test_materializer_work_queue_wraps_family_agnostic_empirical_sweep(
     assert experiment["metadata"]["exact_readiness_followup_enabled"] is True
     assert experiment["metadata"]["exact_readiness_followup_skipped_reason"] is None
     harvest_step = experiment["steps"][1]
-    sweep_arg = harvest_step["command"][
-        harvest_step["command"].index("--sweep-manifest") + 1
-    ]
+    sweep_arg = harvest_step["command"][harvest_step["command"].index("--sweep-manifest") + 1]
     assert sweep_arg.startswith(f"{experiment['id']}=")
     assert sweep_arg.endswith("sweep/sweep.json")
     assert "--chain-manifest" not in harvest_step["command"]
@@ -3205,9 +3130,10 @@ def test_materializer_work_queue_wraps_packet_member_merge_empirical_sweep(
     assert ["--merged-member-name", "p"] in [
         row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
     ]
-    assert row["telemetry"]["family_agnostic_materializer_sweep_contract"][
-        "target_kind"
-    ] == PACKET_MEMBER_MERGE_TARGET_KIND
+    assert (
+        row["telemetry"]["family_agnostic_materializer_sweep_contract"]["target_kind"]
+        == PACKET_MEMBER_MERGE_TARGET_KIND
+    )
     assert row["telemetry"]["input_artifact_paths"] == [
         str(archive),
         str(packet_manifest),
@@ -3272,9 +3198,10 @@ def test_materializer_work_queue_wraps_renderer_payload_dfl1_empirical_sweep(
         row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
     ]
     assert row["command"].count("--member-names") == 3
-    assert row["telemetry"]["family_agnostic_materializer_sweep_contract"][
-        "target_kind"
-    ] == RENDERER_PAYLOAD_DFL1_TARGET_KIND
+    assert (
+        row["telemetry"]["family_agnostic_materializer_sweep_contract"]["target_kind"]
+        == RENDERER_PAYLOAD_DFL1_TARGET_KIND
+    )
     assert row["telemetry"]["input_artifact_paths"] == [
         str(archive),
         str(packet_manifest),
@@ -3321,9 +3248,7 @@ def test_materializer_work_queue_wraps_packet_member_zip_header_elide(
         source_plan_path="plan.json",
     )
 
-    runtime_proof = out_manifest.with_name(
-        f"{out_manifest.stem}.runtime_consumption_proof.json"
-    )
+    runtime_proof = out_manifest.with_name(f"{out_manifest.stem}.runtime_consumption_proof.json")
     row = queue["rows"][0]
     assert queue["executable_row_count"] == 1
     assert row["tool"] == "tools/run_family_agnostic_materializer.py"
@@ -3358,9 +3283,7 @@ def test_materializer_work_queue_wraps_packet_member_zip_header_elide(
         str(header_contract),
     ]
     assert str(runtime_proof) in row["telemetry"]["artifact_paths"]
-    assert "packet_member_zip_header_elide_requires_runtime_consumption_proof" in (
-        row["dispatch_blockers"]
-    )
+    assert "packet_member_zip_header_elide_requires_runtime_consumption_proof" in (row["dispatch_blockers"])
     assert row["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
 
@@ -3406,9 +3329,7 @@ def test_materializer_work_queue_wraps_packet_member_merge(
         source_plan_path="plan.json",
     )
 
-    runtime_proof = out_manifest.with_name(
-        f"{out_manifest.stem}.runtime_consumption_proof.json"
-    )
+    runtime_proof = out_manifest.with_name(f"{out_manifest.stem}.runtime_consumption_proof.json")
     runtime_dir = out_manifest.with_name(f"{out_manifest.stem}.runtime")
     runtime_manifest = out_manifest.with_name(f"{out_manifest.stem}.runtime_adapter.json")
     row = queue["rows"][0]
@@ -3457,9 +3378,7 @@ def test_materializer_work_queue_wraps_packet_member_merge(
     assert str(runtime_proof) in row["telemetry"]["artifact_paths"]
     assert str(runtime_dir) in row["telemetry"]["artifact_paths"]
     assert str(runtime_manifest) in row["telemetry"]["artifact_paths"]
-    assert "packet_member_merge_requires_cooperative_receiver_runtime_adapter" in (
-        row["dispatch_blockers"]
-    )
+    assert "packet_member_merge_requires_cooperative_receiver_runtime_adapter" in (row["dispatch_blockers"])
     assert row["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
 
@@ -3503,9 +3422,7 @@ def test_materializer_work_queue_wraps_renderer_payload_dfl1(
         source_plan_path="plan.json",
     )
 
-    runtime_proof = out_manifest.with_name(
-        f"{out_manifest.stem}.runtime_consumption_proof.json"
-    )
+    runtime_proof = out_manifest.with_name(f"{out_manifest.stem}.runtime_consumption_proof.json")
     row = queue["rows"][0]
     assert queue["executable_row_count"] == 1
     assert row["tool"] == "tools/run_family_agnostic_materializer.py"
@@ -3545,9 +3462,7 @@ def test_materializer_work_queue_wraps_renderer_payload_dfl1(
         str(parity_proof),
     ]
     assert str(runtime_proof) in row["telemetry"]["artifact_paths"]
-    assert "renderer_payload_dfl1_requires_source_runtime_unpack_proof" in (
-        row["dispatch_blockers"]
-    )
+    assert "renderer_payload_dfl1_requires_source_runtime_unpack_proof" in (row["dispatch_blockers"])
     assert row["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
 
@@ -3586,9 +3501,7 @@ def test_materializer_work_queue_wraps_native_renderer_payload_dfl1(
         source_plan_path="plan.json",
     )
 
-    runtime_proof = out_manifest.with_name(
-        f"{out_manifest.stem}.runtime_consumption_proof.json"
-    )
+    runtime_proof = out_manifest.with_name(f"{out_manifest.stem}.runtime_consumption_proof.json")
     row = queue["rows"][0]
     assert queue["executable_row_count"] == 1
     assert row["tool"] == "tools/run_family_agnostic_materializer.py"
@@ -3612,9 +3525,7 @@ def test_materializer_work_queue_wraps_native_renderer_payload_dfl1(
     )
     assert row["telemetry"]["input_artifact_paths"] == [str(archive)]
     assert str(runtime_proof) in row["telemetry"]["artifact_paths"]
-    assert "renderer_payload_dfl1_requires_source_runtime_unpack_proof" in (
-        row["dispatch_blockers"]
-    )
+    assert "renderer_payload_dfl1_requires_source_runtime_unpack_proof" in (row["dispatch_blockers"])
     assert row["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
 
@@ -3661,8 +3572,7 @@ def test_materializer_work_queue_blocks_dfl1_when_archive_members_are_absent(
     assert row["tool"] is None
     assert row["command"] == []
     assert row["materialization_blockers"] == [
-        "renderer_payload_dfl1_archive_members_missing:"
-        "renderer.bin,masks.mkv,optimized_poses.pt"
+        "renderer_payload_dfl1_archive_members_missing:renderer.bin,masks.mkv,optimized_poses.pt"
     ]
     assert row["materialization_blockers"][0] in row["dispatch_blockers"]
     assert row["score_claim"] is False
@@ -4832,19 +4742,14 @@ def test_materializer_execution_queue_can_append_exact_readiness_followups(
     ]
     assert "--chain-manifest" in harvest_step["command"]
     assert ["--work-queue", "materializer_work_queue.json"] in [
-        harvest_step["command"][index : index + 2]
-        for index in range(len(harvest_step["command"]) - 1)
+        harvest_step["command"][index : index + 2] for index in range(len(harvest_step["command"]) - 1)
     ]
     assert [
         "--state",
         ".omx/state/experiment_queue_materializer_exec_fixture.sqlite",
-    ] in [
-        harvest_step["command"][index : index + 2]
-        for index in range(len(harvest_step["command"]) - 1)
-    ]
+    ] in [harvest_step["command"][index : index + 2] for index in range(len(harvest_step["command"]) - 1)]
     assert ["--queue-id", "materializer_exec_fixture"] in [
-        harvest_step["command"][index : index + 2]
-        for index in range(len(harvest_step["command"]) - 1)
+        harvest_step["command"][index : index + 2] for index in range(len(harvest_step["command"]) - 1)
     ]
     assert "--allow-unfinished-state" not in harvest_step["command"]
     assert "--overwrite" in harvest_step["command"]
@@ -4865,17 +4770,11 @@ def test_materializer_execution_queue_can_append_exact_readiness_followups(
     assert [
         "--source-queue",
         "chain_out/exact_eval_handoff/source_queue.json",
-    ] in [
-        closure_step["command"][index : index + 2]
-        for index in range(len(closure_step["command"]) - 1)
-    ]
+    ] in [closure_step["command"][index : index + 2] for index in range(len(closure_step["command"]) - 1)]
     assert [
         "--source-queue",
         "chain_out/exact_eval_handoff/submission_closure/closed_source_queue.json",
-    ] in [
-        bridge_step["command"][index : index + 2]
-        for index in range(len(bridge_step["command"]) - 1)
-    ]
+    ] in [bridge_step["command"][index : index + 2] for index in range(len(bridge_step["command"]) - 1)]
     assert "--dispatch-mode" not in dispatch_step["command"]
     assert "--allow-paid-dispatch-queue" not in dispatch_step["command"]
     assert "--overwrite" in dispatch_step["command"]
@@ -5050,10 +4949,7 @@ def test_materializer_execution_queue_builds_dfl1_parity_followup(
         MATERIALIZER_DISPATCH_PLAN_STEP_ID,
     ]
     materialize_step, parity_step, harvest_step, closure_step, bridge_step, dispatch_step = steps
-    proof_path = (
-        "exact_eval_handoff/renderer_payload_dfl1_shell_parity/"
-        "shell_inflate_parity.json"
-    )
+    proof_path = "exact_eval_handoff/renderer_payload_dfl1_shell_parity/shell_inflate_parity.json"
     assert parity_step["requires"] == [MATERIALIZER_EXECUTION_STEP_ID]
     assert parity_step["resources"]["kind"] == "local_io_heavy"
     assert parity_step["timeout_seconds"] == 600
@@ -5062,28 +4958,22 @@ def test_materializer_execution_queue_builds_dfl1_parity_followup(
         "tools/prove_shell_inflate_parity.py",
     ]
     assert ["--left-archive", str(archive)] in [
-        parity_step["command"][index : index + 2]
-        for index in range(len(parity_step["command"]) - 1)
+        parity_step["command"][index : index + 2] for index in range(len(parity_step["command"]) - 1)
     ]
     assert ["--right-archive", str(output)] in [
-        parity_step["command"][index : index + 2]
-        for index in range(len(parity_step["command"]) - 1)
+        parity_step["command"][index : index + 2] for index in range(len(parity_step["command"]) - 1)
     ]
     assert ["--file-list", str(file_list)] in [
-        parity_step["command"][index : index + 2]
-        for index in range(len(parity_step["command"]) - 1)
+        parity_step["command"][index : index + 2] for index in range(len(parity_step["command"]) - 1)
     ]
     assert ["--expected-full-frame-file-list-sha256", "c" * 64] in [
-        parity_step["command"][index : index + 2]
-        for index in range(len(parity_step["command"]) - 1)
+        parity_step["command"][index : index + 2] for index in range(len(parity_step["command"]) - 1)
     ]
     assert ["--expected-full-frame-entry-count", "2"] in [
-        parity_step["command"][index : index + 2]
-        for index in range(len(parity_step["command"]) - 1)
+        parity_step["command"][index : index + 2] for index in range(len(parity_step["command"]) - 1)
     ]
     assert ["--full-frame-file-list-source", "fixture_full_file_list"] in [
-        parity_step["command"][index : index + 2]
-        for index in range(len(parity_step["command"]) - 1)
+        parity_step["command"][index : index + 2] for index in range(len(parity_step["command"]) - 1)
     ]
     assert "--full-frame-file-list-claim" in parity_step["command"]
     assert {
@@ -5117,17 +5007,11 @@ def test_materializer_execution_queue_builds_dfl1_parity_followup(
     assert [
         "--renderer-payload-dfl1-inflate-parity-proof",
         proof_path,
-    ] in [
-        harvest_step["command"][index : index + 2]
-        for index in range(len(harvest_step["command"]) - 1)
-    ]
+    ] in [harvest_step["command"][index : index + 2] for index in range(len(harvest_step["command"]) - 1)]
     assert [
         "--allowed-artifact-root",
         "exact_eval_handoff/renderer_payload_dfl1_shell_parity",
-    ] in [
-        harvest_step["command"][index : index + 2]
-        for index in range(len(harvest_step["command"]) - 1)
-    ]
+    ] in [harvest_step["command"][index : index + 2] for index in range(len(harvest_step["command"]) - 1)]
     assert closure_step["requires"] == [MATERIALIZER_HARVEST_STEP_ID]
     assert bridge_step["requires"] == [MATERIALIZER_SUBMISSION_CLOSURE_STEP_ID]
     assert dispatch_step["requires"] == [MATERIALIZER_EXACT_READINESS_BRIDGE_STEP_ID]
@@ -5144,14 +5028,8 @@ def test_materializer_execution_queue_builds_dfl1_parity_followup(
     assert "runtime_adapter_ready" not in materialize_required_true
     assert "receiver_verification.runtime_adapter_ready" not in materialize_required_true
     assert "full_frame_inflate_parity_proven" not in materialize_required_true
-    assert (
-        "full_frame_inflate_parity_verification.full_frame_inflate_parity_satisfied"
-        not in materialize_required_true
-    )
-    assert (
-        "renderer_payload_dfl1_inflate_parity_satisfied"
-        not in materialize_required_true
-    )
+    assert "full_frame_inflate_parity_verification.full_frame_inflate_parity_satisfied" not in materialize_required_true
+    assert "renderer_payload_dfl1_inflate_parity_satisfied" not in materialize_required_true
     assert execution_queue["controls"]["max_concurrency"]["local_io_heavy"] == 1
     metadata = execution_queue["experiments"][0]["metadata"]
     assert metadata["renderer_payload_dfl1_parity_followup_requested"] is True
@@ -5475,19 +5353,14 @@ def test_materializer_execution_queue_appends_exact_followup_for_archive_section
     harvest_step = experiment["steps"][1]
     assert "--chain-manifest" in harvest_step["command"]
     assert ["--work-queue", "section_work_queue.json"] in [
-        harvest_step["command"][index : index + 2]
-        for index in range(len(harvest_step["command"]) - 1)
+        harvest_step["command"][index : index + 2] for index in range(len(harvest_step["command"]) - 1)
     ]
     assert [
         "--state",
         ".omx/state/experiment_queue_packet_section_transform_exec_fixture.sqlite",
-    ] in [
-        harvest_step["command"][index : index + 2]
-        for index in range(len(harvest_step["command"]) - 1)
-    ]
+    ] in [harvest_step["command"][index : index + 2] for index in range(len(harvest_step["command"]) - 1)]
     assert ["--queue-id", "packet_section_transform_exec_fixture"] in [
-        harvest_step["command"][index : index + 2]
-        for index in range(len(harvest_step["command"]) - 1)
+        harvest_step["command"][index : index + 2] for index in range(len(harvest_step["command"]) - 1)
     ]
     assert "candidate.json" in harvest_step["command"]
     assert "exact_eval_handoff/source_queue.json" in " ".join(harvest_step["command"])
@@ -6225,16 +6098,12 @@ def test_byte_shaving_campaign_queue_cli_wires_generated_dfl1_parity_followup(
                         "archive_path": str(tmp_path / "source.zip"),
                         "packet_member_manifest": str(tmp_path / "members.json"),
                         "renderer_payload_dfl1_source_runtime_dir": str(runtime_dir),
-                        "renderer_payload_dfl1_candidate_runtime_dir": str(
-                            candidate_runtime_dir
-                        ),
+                        "renderer_payload_dfl1_candidate_runtime_dir": str(candidate_runtime_dir),
                         "file_list_entries": ["0.raw", "1.raw"],
                         "expected_full_frame_file_list_sha256": "a" * 64,
                         "expected_full_frame_entry_count": 2,
                         "full_frame_file_list_source": "fixture_full_file_list",
-                        "renderer_payload_dfl1_inflate_parity_output_dir": str(
-                            parity_dir
-                        ),
+                        "renderer_payload_dfl1_inflate_parity_output_dir": str(parity_dir),
                         "member_names": [
                             "renderer.bin",
                             "masks.mkv",
@@ -6296,45 +6165,22 @@ def test_byte_shaving_campaign_queue_cli_wires_generated_dfl1_parity_followup(
     assert stdout["materializer_contexts_blocked_count"] == 0
     execution_summary = stdout["materializer_execution_queue"]
     assert execution_summary["experiment_count"] == 1
-    assert (
-        execution_summary["renderer_payload_dfl1_parity_followup_required"]
-        is True
-    )
-    assert (
-        execution_summary["renderer_payload_dfl1_parity_followup_requested_count"]
-        == 1
-    )
-    assert (
-        execution_summary["renderer_payload_dfl1_parity_followup_enabled_count"]
-        == 1
-    )
-    assert (
-        execution_summary["renderer_payload_dfl1_parity_followup_blocked_count"]
-        == 0
-    )
-    assert (
-        execution_summary["renderer_payload_dfl1_parity_followup_blocker_summaries"]
-        == []
-    )
+    assert execution_summary["renderer_payload_dfl1_parity_followup_required"] is True
+    assert execution_summary["renderer_payload_dfl1_parity_followup_requested_count"] == 1
+    assert execution_summary["renderer_payload_dfl1_parity_followup_enabled_count"] == 1
+    assert execution_summary["renderer_payload_dfl1_parity_followup_blocked_count"] == 0
+    assert execution_summary["renderer_payload_dfl1_parity_followup_blocker_summaries"] == []
     contexts = json.loads(contexts_path.read_text(encoding="utf-8"))
     context = contexts["rows"][0]["context"]
     assert context["renderer_payload_dfl1_source_runtime_dir"] == str(runtime_dir)
-    assert context["renderer_payload_dfl1_candidate_runtime_dir"] == str(
-        candidate_runtime_dir
-    )
+    assert context["renderer_payload_dfl1_candidate_runtime_dir"] == str(candidate_runtime_dir)
     assert context["renderer_payload_dfl1_full_frame_file_list_entries"] == [
         "0.raw",
         "1.raw",
     ]
-    assert (
-        context["renderer_payload_dfl1_expected_full_frame_file_list_sha256"]
-        == "a" * 64
-    )
+    assert context["renderer_payload_dfl1_expected_full_frame_file_list_sha256"] == "a" * 64
     assert context["renderer_payload_dfl1_expected_full_frame_entry_count"] == 2
-    assert (
-        context["renderer_payload_dfl1_full_frame_file_list_source"]
-        == "fixture_full_file_list"
-    )
+    assert context["renderer_payload_dfl1_full_frame_file_list_source"] == "fixture_full_file_list"
     work = json.loads(work_queue.read_text(encoding="utf-8"))
     row = work["rows"][0]
     assert row["renderer_payload_dfl1_parity_context"] == {
@@ -6361,27 +6207,20 @@ def test_byte_shaving_campaign_queue_cli_wires_generated_dfl1_parity_followup(
     parity_step = steps[1]
     assert "--overwrite" in parity_step["command"]
     assert ["--file-list-entry", "0.raw"] in [
-        parity_step["command"][index : index + 2]
-        for index in range(len(parity_step["command"]) - 1)
+        parity_step["command"][index : index + 2] for index in range(len(parity_step["command"]) - 1)
     ]
     assert [
         "--output-dir",
         parity_dir.relative_to(tmp_path).as_posix(),
-    ] in [
-        parity_step["command"][index : index + 2]
-        for index in range(len(parity_step["command"]) - 1)
-    ]
+    ] in [parity_step["command"][index : index + 2] for index in range(len(parity_step["command"]) - 1)]
     assert ["--expected-full-frame-file-list-sha256", "a" * 64] in [
-        parity_step["command"][index : index + 2]
-        for index in range(len(parity_step["command"]) - 1)
+        parity_step["command"][index : index + 2] for index in range(len(parity_step["command"]) - 1)
     ]
     assert ["--expected-full-frame-entry-count", "2"] in [
-        parity_step["command"][index : index + 2]
-        for index in range(len(parity_step["command"]) - 1)
+        parity_step["command"][index : index + 2] for index in range(len(parity_step["command"]) - 1)
     ]
     assert ["--full-frame-file-list-source", "fixture_full_file_list"] in [
-        parity_step["command"][index : index + 2]
-        for index in range(len(parity_step["command"]) - 1)
+        parity_step["command"][index : index + 2] for index in range(len(parity_step["command"]) - 1)
     ]
     assert "--allow-overwrite" in steps[0]["command"]
     harvest_step = steps[2]
@@ -6389,17 +6228,11 @@ def test_byte_shaving_campaign_queue_cli_wires_generated_dfl1_parity_followup(
     assert [
         "--renderer-payload-dfl1-inflate-parity-proof",
         f"{parity_dir.relative_to(tmp_path).as_posix()}/shell_inflate_parity.json",
-    ] in [
-        harvest_step["command"][index : index + 2]
-        for index in range(len(harvest_step["command"]) - 1)
-    ]
+    ] in [harvest_step["command"][index : index + 2] for index in range(len(harvest_step["command"]) - 1)]
     assert [
         "--allowed-artifact-root",
         parity_dir.relative_to(tmp_path).as_posix(),
-    ] in [
-        harvest_step["command"][index : index + 2]
-        for index in range(len(harvest_step["command"]) - 1)
-    ]
+    ] in [harvest_step["command"][index : index + 2] for index in range(len(harvest_step["command"]) - 1)]
     dispatch_step = steps[5]
     metadata = loaded_execution_queue["experiments"][0]["metadata"]
     assert "--overwrite" in dispatch_step["command"]
@@ -6416,6 +6249,9 @@ def test_renderer_payload_dfl1_postconditions_require_runtime_and_full_frame_par
     archive = tmp_path / "candidate.zip"
     archive.write_bytes(b"candidate dfl1 bytes")
     archive_sha = hashlib.sha256(archive.read_bytes()).hexdigest()
+    native_unpacker = tmp_path / "unpack_renderer_payload.py"
+    native_unpacker.write_text("def _parse_payload(payload):\n    return {}, {}\n", encoding="utf-8")
+    native_unpacker_sha = hashlib.sha256(native_unpacker.read_bytes()).hexdigest()
     manifest_path = tmp_path / "candidate.json"
     payload = {
         "schema": RENDERER_PAYLOAD_DFL1_SCHEMA,
@@ -6463,26 +6299,23 @@ def test_renderer_payload_dfl1_postconditions_require_runtime_and_full_frame_par
         require_dfl1_full_frame_parity=True,
     )
 
-    assert not all(
-        _condition_passes(condition, repo_root=tmp_path)
-        for condition in postconditions
-    )
+    assert not all(_condition_passes(condition, repo_root=tmp_path) for condition in postconditions)
 
     payload["receiver_contract_satisfied"] = True
     payload["runtime_adapter_ready"] = True
     payload["receiver_verification"]["receiver_contract_satisfied"] = True
     payload["receiver_verification"]["runtime_adapter_ready"] = True
+    payload["receiver_verification"]["runtime_adapter_manifest"] = {
+        "runtime_adapter_ready": True,
+        "path": native_unpacker.name,
+        "sha256": native_unpacker_sha,
+    }
     payload["full_frame_inflate_parity_proven"] = True
-    payload["full_frame_inflate_parity_verification"][
-        "full_frame_inflate_parity_satisfied"
-    ] = True
+    payload["full_frame_inflate_parity_verification"]["full_frame_inflate_parity_satisfied"] = True
     payload["renderer_payload_dfl1_inflate_parity_satisfied"] = True
     manifest_path.write_text(json.dumps(payload), encoding="utf-8")
 
-    assert all(
-        _condition_passes(condition, repo_root=tmp_path)
-        for condition in postconditions
-    )
+    assert all(_condition_passes(condition, repo_root=tmp_path) for condition in postconditions)
 
 
 def test_tensor_factorize_postconditions_require_runtime_adapter_ready(
@@ -6491,6 +6324,10 @@ def test_tensor_factorize_postconditions_require_runtime_adapter_ready(
     archive = tmp_path / "candidate.zip"
     archive.write_bytes(b"candidate tensor-factorize bytes")
     archive_sha = hashlib.sha256(archive.read_bytes()).hexdigest()
+    runtime = tmp_path / "candidate_runtime"
+    runtime.mkdir()
+    (runtime / "inflate.sh").write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+    runtime_tree_sha = tree_sha256(runtime)
     manifest_path = tmp_path / "candidate.json"
     payload = {
         "schema": TENSOR_FACTORIZE_SCHEMA,
@@ -6532,27 +6369,30 @@ def test_tensor_factorize_postconditions_require_runtime_adapter_ready(
         target_kind=TENSOR_FACTORIZE_TARGET_KIND,
     )
 
-    assert not all(
-        _condition_passes(condition, repo_root=tmp_path)
-        for condition in postconditions
-    )
+    assert not all(_condition_passes(condition, repo_root=tmp_path) for condition in postconditions)
 
     payload["runtime_adapter_ready"] = True
     payload["receiver_verification"]["runtime_adapter_ready"] = True
     manifest_path.write_text(json.dumps(payload), encoding="utf-8")
 
-    assert not all(
-        _condition_passes(condition, repo_root=tmp_path)
-        for condition in postconditions
-    )
+    assert not all(_condition_passes(condition, repo_root=tmp_path) for condition in postconditions)
 
-    payload["receiver_verification"]["runtime_adapter_sha256"] = "d" * 64
+    payload["receiver_verification"]["runtime_adapter_sha256"] = runtime_tree_sha
+    payload["receiver_verification"]["runtime_adapter_tree_sha256"] = runtime_tree_sha
+    payload["tensor_factorize_receiver_runtime"] = {
+        "runtime_adapter_ready": True,
+        "runtime_dir": runtime.name,
+        "runtime_tree_sha256": runtime_tree_sha,
+    }
     manifest_path.write_text(json.dumps(payload), encoding="utf-8")
 
-    assert all(
-        _condition_passes(condition, repo_root=tmp_path)
-        for condition in postconditions
-    )
+    assert all(_condition_passes(condition, repo_root=tmp_path) for condition in postconditions)
+
+    payload["tensor_factorize_receiver_runtime"]["runtime_tree_sha256"] = "d" * 64
+    payload["receiver_verification"]["runtime_adapter_tree_sha256"] = "d" * 64
+    manifest_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    assert not all(_condition_passes(condition, repo_root=tmp_path) for condition in postconditions)
 
 
 def test_inverse_action_compiler_hint_runs_family_agnostic_materializer(
@@ -6646,13 +6486,9 @@ def test_inverse_action_compiler_hint_runs_family_agnostic_materializer(
     }
     signal = build_signal_surface_from_inverse_action_functional(action_payload)
     plan = build_byte_shaving_campaign_plan(signal, max_k=1)
-    assert signal["water_bucket_materialization_portfolio"]["actuation_modes"] == [
-        "compiled_operation_set"
-    ]
+    assert signal["water_bucket_materialization_portfolio"]["actuation_modes"] == ["compiled_operation_set"]
     assert plan["materialization_bridge"]["compiled_operation_set_count"] == 1
-    assert plan["materialization_bridge"][
-        "queue_consumable_packet_ir_operation_set_count"
-    ] == 1
+    assert plan["materialization_bridge"]["queue_consumable_packet_ir_operation_set_count"] == 1
     plan_path.write_text(json.dumps(plan), encoding="utf-8")
 
     artifact_map_path.write_text(
@@ -6742,9 +6578,7 @@ def test_inverse_action_compiler_hint_runs_family_agnostic_materializer(
         check=True,
     )
     manifest = json.loads(smoke.stdout)
-    persisted_manifest = json.loads(
-        Path(context["output_manifest"]).read_text(encoding="utf-8")
-    )
+    persisted_manifest = json.loads(Path(context["output_manifest"]).read_text(encoding="utf-8"))
     assert persisted_manifest["schema"] == ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA
     assert manifest["schema"] == ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA
     assert manifest["byte_closed_candidate_emitted"] is True

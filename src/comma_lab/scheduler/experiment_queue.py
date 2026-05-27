@@ -13,6 +13,8 @@ from pathlib import Path
 from posixpath import normpath
 from typing import Any
 
+from tac.optimization.runtime_adapter_identity import runtime_adapter_identity_blockers
+
 QUEUE_SCHEMA = "experiment_queue.v1"
 STATE_SCHEMA = "experiment_queue_state.v1"
 SCHEDULER_RUNTIME_POLICY_SCHEMA = "scheduler_runtime_policy.v1"
@@ -33,9 +35,7 @@ KNOWN_RESOURCE_KINDS = LOCAL_RESOURCE_KINDS | CLOUD_RESOURCE_KINDS
 SHA256_HEX = frozenset("0123456789abcdef")
 LOG_PATH_COMPONENT_MAX_CHARS = 96
 LOG_PATH_COMPONENT_HASH_CHARS = 16
-LOG_PATH_COMPONENT_ALLOWED_CHARS = frozenset(
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-"
-)
+LOG_PATH_COMPONENT_ALLOWED_CHARS = frozenset("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-")
 DEFAULT_REQUIRED_FALSE_AUTHORITY_FIELDS = (
     "score_claim",
     "promotion_eligible",
@@ -198,8 +198,7 @@ def _resource_kind_value(value: object, label: str) -> str:
     if kind in KNOWN_RESOURCE_KINDS or kind.startswith("cloud_"):
         return kind
     raise ExperimentQueueError(
-        f"{label} unsupported resource kind {kind!r}; known kinds are "
-        f"{sorted(KNOWN_RESOURCE_KINDS)}"
+        f"{label} unsupported resource kind {kind!r}; known kinds are {sorted(KNOWN_RESOURCE_KINDS)}"
     )
 
 
@@ -215,8 +214,7 @@ def _load_json_compatible(path: Path) -> dict[str, Any]:
     except json.JSONDecodeError as exc:
         if path.suffix.lower() in {".yaml", ".yml"}:
             raise ExperimentQueueError(
-                f"{path}: YAML queue files must be JSON-compatible until PyYAML "
-                "is explicitly added as a dependency"
+                f"{path}: YAML queue files must be JSON-compatible until PyYAML is explicitly added as a dependency"
             ) from exc
         raise ExperimentQueueError(f"{path}: invalid JSON: {exc.msg}") from exc
     if not isinstance(payload, dict):
@@ -245,9 +243,7 @@ def _normalize_step(raw: Mapping[str, Any], *, experiment_id: str, index: int) -
     normalized_postconditions: list[dict[str, Any]] = []
     for condition_index, condition in enumerate(postconditions):
         if not isinstance(condition, Mapping):
-            raise ExperimentQueueError(
-                f"{step_id}.postconditions[{condition_index}] must be an object"
-            )
+            raise ExperimentQueueError(f"{step_id}.postconditions[{condition_index}] must be an object")
         normalized_postconditions.append(dict(condition))
     telemetry = _optional_mapping(raw.get("telemetry"), f"{step_id}.telemetry")
     telemetry_artifact_paths = _string_list(
@@ -271,9 +267,7 @@ def _normalize_step(raw: Mapping[str, Any], *, experiment_id: str, index: int) -
     if artifact_mobility:
         schema = artifact_mobility.get("schema", "experiment_queue_artifact_mobility.v1")
         if schema != "experiment_queue_artifact_mobility.v1":
-            raise ExperimentQueueError(
-                f"{step_id}.artifact_mobility.schema unsupported: {schema!r}"
-            )
+            raise ExperimentQueueError(f"{step_id}.artifact_mobility.schema unsupported: {schema!r}")
         artifact_mobility = {**artifact_mobility, "schema": schema}
     return {
         "id": step_id,
@@ -289,9 +283,7 @@ def _normalize_step(raw: Mapping[str, Any], *, experiment_id: str, index: int) -
             "input_artifact_paths": telemetry_input_artifact_paths,
             "recursive": telemetry_recursive,
             "max_recursive_entries": telemetry_max_entries,
-            "include_postcondition_paths": bool(
-                telemetry.get("include_postcondition_paths", True)
-            ),
+            "include_postcondition_paths": bool(telemetry.get("include_postcondition_paths", True)),
         },
         "artifact_mobility": artifact_mobility,
     }
@@ -351,9 +343,7 @@ def normalize_queue_definition(payload: Mapping[str, Any]) -> dict[str, Any]:
             seen_step_ids.add(step_id)
         if duplicate_step_ids:
             duplicates = sorted(duplicate_step_ids)
-            raise ExperimentQueueError(
-                f"{experiment_id}.steps contains duplicate step id(s): {duplicates}"
-            )
+            raise ExperimentQueueError(f"{experiment_id}.steps contains duplicate step id(s): {duplicates}")
         normalized_experiments.append(
             {
                 "id": experiment_id,
@@ -400,9 +390,7 @@ def normalize_queue_definition(payload: Mapping[str, Any]) -> dict[str, Any]:
                     )
                 )
             if unknown:
-                raise ExperimentQueueError(
-                    f"{experiment_id}.{step['id']} requires unknown step(s): {sorted(unknown)}"
-                )
+                raise ExperimentQueueError(f"{experiment_id}.{step['id']} requires unknown step(s): {sorted(unknown)}")
             step["requires"] = normalized_requires
     _assert_no_dependency_cycles(normalized_experiments)
     normalized: dict[str, Any] = {
@@ -422,9 +410,7 @@ def normalize_queue_definition(payload: Mapping[str, Any]) -> dict[str, Any]:
 
 def _assert_no_dependency_cycles(experiments: list[dict[str, Any]]) -> None:
     by_key = {
-        (str(experiment["id"]), str(step["id"])): step
-        for experiment in experiments
-        for step in experiment["steps"]
+        (str(experiment["id"]), str(step["id"])): step for experiment in experiments for step in experiment["steps"]
     }
     memo: set[tuple[str, str]] = set()
     active: set[tuple[str, str]] = set()
@@ -450,11 +436,7 @@ def _downstream_step_ids_from_experiments(
     experiment_id: str,
     step_id: str,
 ) -> list[tuple[str, str]]:
-    step_keys = {
-        (str(experiment["id"]), str(step["id"]))
-        for experiment in experiments
-        for step in experiment["steps"]
-    }
+    step_keys = {(str(experiment["id"]), str(step["id"])) for experiment in experiments for step in experiment["steps"]}
     root = (experiment_id, step_id)
     if root not in step_keys:
         raise ExperimentQueueError(f"unknown step: {experiment_id}.{step_id}")
@@ -561,10 +543,7 @@ def _create_schema(conn: sqlite3.Connection) -> None:
         );
         """
     )
-    columns = {
-        str(row["name"])
-        for row in conn.execute("PRAGMA table_info(step_state)").fetchall()
-    }
+    columns = {str(row["name"]) for row in conn.execute("PRAGMA table_info(step_state)").fetchall()}
     for column in (
         "definition_hash",
         "command_hash",
@@ -667,8 +646,7 @@ def initialize_queue_state(conn: sqlite3.Connection, queue: Mapping[str, Any]) -
             missing_hash = any(value is None for value in previous_hashes.values())
             missing_resource_kind = row["resource_kind"] is None
             changed_hash = any(
-                previous_hashes[key] is not None and previous_hashes[key] != hashes[key]
-                for key in hashes
+                previous_hashes[key] is not None and previous_hashes[key] != hashes[key] for key in hashes
             )
             if (missing_hash or missing_resource_kind) and not changed_hash:
                 conn.execute(
@@ -817,8 +795,7 @@ def _raise_on_running_definition_drift(conn: sqlite3.Connection, queue: Mapping[
                 "postcondition_hash": row["postcondition_hash"],
             }
             changed_hash = any(
-                previous_hashes[key] is not None and previous_hashes[key] != hashes[key]
-                for key in hashes
+                previous_hashes[key] is not None and previous_hashes[key] != hashes[key] for key in hashes
             )
             if not changed_hash:
                 continue
@@ -1301,9 +1278,7 @@ def _json_completion_contract(
             return False
     for index, raw_item in enumerate(condition.get("required_nonempty_unless_true", []) or []):
         if not isinstance(raw_item, Mapping):
-            raise ExperimentQueueError(
-                f"postcondition.required_nonempty_unless_true[{index}] must be an object"
-            )
+            raise ExperimentQueueError(f"postcondition.required_nonempty_unless_true[{index}] must be an object")
         key = _require_text(
             raw_item.get("key"),
             f"postcondition.required_nonempty_unless_true[{index}].key",
@@ -1353,11 +1328,15 @@ def _json_completion_contract(
             return False
         if not _artifact_record_valid(record, repo_root=repo_root):
             return False
+    if bool(condition.get("required_runtime_adapter_identity")) and runtime_adapter_identity_blockers(
+        payload,
+        repo_root=repo_root,
+        context="json_completion_contract",
+    ):
+        return False
     for index, raw_pair in enumerate(condition.get("required_less_than", []) or []):
         if not isinstance(raw_pair, Mapping):
-            raise ExperimentQueueError(
-                f"postcondition.required_less_than[{index}] must be an object"
-            )
+            raise ExperimentQueueError(f"postcondition.required_less_than[{index}] must be an object")
         left_key = _require_text(
             raw_pair.get("left"),
             f"postcondition.required_less_than[{index}].left",
@@ -1396,15 +1375,19 @@ def _materializer_chain_complete(
         return False
     if payload.get("candidate_runtime_adapter_blocker_cleared") is not True:
         return False
-    if bool(condition.get("forbid_readiness_blockers")) and payload.get(
-        "readiness_blockers"
-    ):
+    if bool(condition.get("forbid_readiness_blockers")) and payload.get("readiness_blockers"):
         return False
     if not _is_sha256(payload.get("candidate_archive_sha256")):
         return False
     if _positive_int(payload.get("candidate_archive_bytes")) is None:
         return False
     if not _artifact_record_valid(payload.get("candidate_archive"), repo_root=repo_root):
+        return False
+    if bool(condition.get("required_runtime_adapter_identity")) and runtime_adapter_identity_blockers(
+        payload,
+        repo_root=repo_root,
+        context="materializer_chain_complete",
+    ):
         return False
     if bool(condition.get("required_serialized_archive_saving")):
         source_bytes = _positive_int(payload.get("source_archive_bytes"))
@@ -1754,9 +1737,7 @@ def reconcile_stale_running_steps(
                 }
             )
             continue
-        if pid is None and (
-            age_seconds is None or age_seconds < stale_after_seconds
-        ):
+        if pid is None and (age_seconds is None or age_seconds < stale_after_seconds):
             skipped.append(
                 {
                     "experiment_id": experiment_id,
@@ -1768,9 +1749,7 @@ def reconcile_stale_running_steps(
             continue
 
         failed_conditions, postcondition_errors = _evaluate_postconditions(step, repo=repo)
-        succeeded = not failed_conditions and not postcondition_errors and bool(
-            step.get("postconditions")
-        )
+        succeeded = not failed_conditions and not postcondition_errors and bool(step.get("postconditions"))
         recovery_event = {
             **event,
             "stale_running_reconciled": True,
@@ -1780,9 +1759,7 @@ def reconcile_stale_running_steps(
             "resource_kind": resource_kind,
             "age_seconds": age_seconds,
             "timed_out": timed_out,
-            "execution_error": None
-            if succeeded
-            else "stale_running_process_missing",
+            "execution_error": None if succeeded else "stale_running_process_missing",
             "failed_postconditions": failed_conditions,
             "postcondition_errors": postcondition_errors,
         }
@@ -1850,9 +1827,7 @@ def _claim_step_running(
 ) -> str | None:
     queue_id = str(queue["queue_id"])
     if ready.queue_id != queue_id:
-        raise ExperimentQueueError(
-            f"ready step queue_id {ready.queue_id!r} does not match active queue {queue_id!r}"
-        )
+        raise ExperimentQueueError(f"ready step queue_id {ready.queue_id!r} does not match active queue {queue_id!r}")
     step, experiment_metadata = _lookup_step_with_experiment_metadata(
         queue,
         ready.experiment_id,
@@ -1937,11 +1912,7 @@ def _claim_step_running(
                 },
             )
         if row["resource_kind"] != step_resource_kind:
-            reason = (
-                "resource_kind_missing"
-                if row["resource_kind"] is None
-                else "resource_kind_changed"
-            )
+            reason = "resource_kind_missing" if row["resource_kind"] is None else "resource_kind_changed"
             return _record_step_claim_refusal(
                 conn,
                 ready=ready,
@@ -2138,9 +2109,7 @@ def run_ready_step(
                 failed_conditions.append(condition)
         except (ExperimentQueueError, OSError, json.JSONDecodeError) as exc:
             failed_conditions.append(condition)
-            postcondition_errors.append(
-                {"condition": _json_text(condition), "error": f"{type(exc).__name__}: {exc}"}
-            )
+            postcondition_errors.append({"condition": _json_text(condition), "error": f"{type(exc).__name__}: {exc}"})
     succeeded = returncode == 0 and not timed_out and not execution_error and not failed_conditions
     telemetry = _step_telemetry_event(step, repo=repo, log_path=log_path)
     event = {
@@ -2312,15 +2281,11 @@ def _safe_log_path_component(
     max_chars: int = LOG_PATH_COMPONENT_MAX_CHARS,
 ) -> str:
     raw = str(value or "").strip() or "unnamed"
-    sanitized = "".join(
-        char if char in LOG_PATH_COMPONENT_ALLOWED_CHARS else "_" for char in raw
-    ).strip("._-")
+    sanitized = "".join(char if char in LOG_PATH_COMPONENT_ALLOWED_CHARS else "_" for char in raw).strip("._-")
     sanitized = sanitized or "unnamed"
     if len(sanitized) <= max_chars:
         return sanitized
-    digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()[
-        :LOG_PATH_COMPONENT_HASH_CHARS
-    ]
+    digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:LOG_PATH_COMPONENT_HASH_CHARS]
     head_len = max(1, max_chars - LOG_PATH_COMPONENT_HASH_CHARS - 1)
     head = sanitized[:head_len].rstrip("._-") or "id"
     return f"{head}_{digest}"
@@ -2334,9 +2299,7 @@ def _make_step_log_path(
     worker_run_id: str,
 ) -> Path:
     ts = _utc_now().replace(":", "").replace("-", "")
-    resolved_log_root = (
-        Path(log_root) if log_root else repo / ".omx" / "state" / "experiment_queue_logs"
-    )
+    resolved_log_root = Path(log_root) if log_root else repo / ".omx" / "state" / "experiment_queue_logs"
     log_dir = (
         resolved_log_root
         / _safe_log_path_component(ready.queue_id)
@@ -2391,9 +2354,7 @@ def _evaluate_postconditions(
                 failed_conditions.append(condition)
         except (ExperimentQueueError, OSError, json.JSONDecodeError) as exc:
             failed_conditions.append(condition)
-            postcondition_errors.append(
-                {"condition": _json_text(condition), "error": f"{type(exc).__name__}: {exc}"}
-            )
+            postcondition_errors.append({"condition": _json_text(condition), "error": f"{type(exc).__name__}: {exc}"})
     return failed_conditions, postcondition_errors
 
 
@@ -2530,9 +2491,7 @@ def _step_telemetry_event(
         "log_bytes": log_bytes,
         "artifact_records": artifacts,
         "artifact_record_count": len(artifacts),
-        "recursive_truncated": any(
-            bool(record.get("recursive_truncated")) for record in artifacts
-        ),
+        "recursive_truncated": any(bool(record.get("recursive_truncated")) for record in artifacts),
     }
 
 
@@ -2616,9 +2575,7 @@ def _start_ready_step_process(
         **running_event,
         "pid": process.pid,
         "started_at_utc": _utc_now(),
-        "timeout_deadline_epoch_seconds": (
-            time.time() + timeout_seconds if timeout_seconds > 0 else None
-        ),
+        "timeout_deadline_epoch_seconds": (time.time() + timeout_seconds if timeout_seconds > 0 else None),
     }
     _record_process_started(conn, ready=ready, event=started_event)
     return (
@@ -2656,9 +2613,7 @@ def _finalize_running_step_process(
         timed_out = True
         running.process.kill()
         returncode = running.process.wait()
-        running.log_handle.write(
-            f"\n[experiment-queue] timeout after {running.timeout_seconds}s\n".encode()
-        )
+        running.log_handle.write(f"\n[experiment-queue] timeout after {running.timeout_seconds}s\n".encode())
     if (
         returncode is None
         and running.terminate_requested_monotonic is not None
@@ -2735,9 +2690,7 @@ def _request_running_process_termination(
 
 def _active_step_keys(queue: Mapping[str, Any]) -> set[tuple[str, str]]:
     return {
-        (str(experiment["id"]), str(step["id"]))
-        for experiment in queue["experiments"]
-        for step in experiment["steps"]
+        (str(experiment["id"]), str(step["id"])) for experiment in queue["experiments"] for step in experiment["steps"]
     }
 
 
@@ -2752,11 +2705,7 @@ def orphaned_step_rows(conn: sqlite3.Connection, queue: Mapping[str, Any]) -> li
         """,
         (queue_id,),
     ).fetchall()
-    return [
-        row
-        for row in rows
-        if (str(row["experiment_id"]), str(row["step_id"])) not in active_keys
-    ]
+    return [row for row in rows if (str(row["experiment_id"]), str(row["step_id"])) not in active_keys]
 
 
 def assert_no_orphaned_steps_for_execution(
@@ -2767,15 +2716,9 @@ def assert_no_orphaned_steps_for_execution(
 ) -> None:
     if allow_orphaned_state:
         return
-    orphaned = [
-        row
-        for row in orphaned_step_rows(conn, queue)
-        if str(row["status"]) in BLOCKING_ORPHAN_STATUSES
-    ]
+    orphaned = [row for row in orphaned_step_rows(conn, queue) if str(row["status"]) in BLOCKING_ORPHAN_STATUSES]
     if orphaned:
-        preview = ", ".join(
-            f"{row['experiment_id']}.{row['step_id']}={row['status']}" for row in orphaned[:5]
-        )
+        preview = ", ".join(f"{row['experiment_id']}.{row['step_id']}={row['status']}" for row in orphaned[:5])
         suffix = "" if len(orphaned) <= 5 else f", ... +{len(orphaned) - 5} more"
         raise ExperimentQueueError(
             f"queue {queue['queue_id']!r} state has {len(orphaned)} orphaned step row(s): "
@@ -2799,8 +2742,7 @@ def retire_orphaned_steps(
             continue
         if status == "running":
             raise ExperimentQueueError(
-                f"refusing to retire running orphaned step "
-                f"{row['experiment_id']}.{row['step_id']}"
+                f"refusing to retire running orphaned step {row['experiment_id']}.{row['step_id']}"
             )
         event = {
             "reason": reason,
@@ -2865,11 +2807,7 @@ def run_queue_worker(
 ) -> dict[str, Any]:
     if isinstance(max_steps, bool) or not isinstance(max_steps, int) or max_steps < 0:
         raise ExperimentQueueError("max_steps must be a non-negative integer")
-    if (
-        isinstance(max_idle_cycles, bool)
-        or not isinstance(max_idle_cycles, int)
-        or max_idle_cycles < 0
-    ):
+    if isinstance(max_idle_cycles, bool) or not isinstance(max_idle_cycles, int) or max_idle_cycles < 0:
         raise ExperimentQueueError("max_idle_cycles must be a non-negative integer")
     if idle_sleep_seconds < 0:
         raise ExperimentQueueError("idle_sleep_seconds must be non-negative")
@@ -2884,9 +2822,7 @@ def run_queue_worker(
     if shutdown_grace_seconds < 0:
         raise ExperimentQueueError("shutdown_grace_seconds must be non-negative")
     if max_experiments is not None and (
-        isinstance(max_experiments, bool)
-        or not isinstance(max_experiments, int)
-        or max_experiments <= 0
+        isinstance(max_experiments, bool) or not isinstance(max_experiments, int) or max_experiments <= 0
     ):
         raise ExperimentQueueError("max_experiments must be a positive integer or None")
 
@@ -2906,9 +2842,7 @@ def run_queue_worker(
             return active_queue
         refreshed = reload_queue()
         if str(refreshed["queue_id"]) != queue_id:
-            raise ExperimentQueueError(
-                f"reloaded queue_id changed from {queue_id!r} to {refreshed['queue_id']!r}"
-            )
+            raise ExperimentQueueError(f"reloaded queue_id changed from {queue_id!r} to {refreshed['queue_id']!r}")
         initialize_queue_state(conn, refreshed)
         assert_no_orphaned_steps_for_execution(conn, refreshed, allow_orphaned_state=allow_orphaned_state)
         if execute:
@@ -2981,8 +2915,7 @@ def run_queue_worker(
         return [
             step
             for step in ready
-            if step.experiment_id in worker_experiment_ids
-            or len(worker_experiment_ids) < max_experiments
+            if step.experiment_id in worker_experiment_ids or len(worker_experiment_ids) < max_experiments
         ]
 
     if not execute:
@@ -3297,16 +3230,8 @@ def queue_summary(
         """,
         (queue_id,),
     ).fetchall()
-    active_rows = [
-        row
-        for row in rows
-        if (str(row["experiment_id"]), str(row["step_id"])) in active_keys
-    ]
-    orphaned_rows = [
-        row
-        for row in rows
-        if (str(row["experiment_id"]), str(row["step_id"])) not in active_keys
-    ]
+    active_rows = [row for row in rows if (str(row["experiment_id"]), str(row["step_id"])) in active_keys]
+    orphaned_rows = [row for row in rows if (str(row["experiment_id"]), str(row["step_id"])) not in active_keys]
     by_status: dict[str, int] = {}
     for row in active_rows:
         by_status[str(row["status"])] = by_status.get(str(row["status"]), 0) + 1
@@ -3317,10 +3242,7 @@ def queue_summary(
         "step_count": len(active_rows),
         "orphaned_step_count": len(orphaned_rows),
         "status_counts": by_status,
-        "ready_steps": [
-            step.to_dict()
-            for step in ready_steps(conn, queue, repo_root=repo_root)
-        ],
+        "ready_steps": [step.to_dict() for step in ready_steps(conn, queue, repo_root=repo_root)],
         "steps": [
             {
                 "experiment_id": row["experiment_id"],
@@ -3492,9 +3414,7 @@ def _dependency_reconciliation_blockers(
             blockers.append(f"dependency_missing:{dep_experiment_id}.{dep_step_id}")
             continue
         if str(dep_row["status"]) != "succeeded":
-            blockers.append(
-                f"dependency_not_succeeded:{dep_experiment_id}.{dep_step_id}:{dep_row['status']}"
-            )
+            blockers.append(f"dependency_not_succeeded:{dep_experiment_id}.{dep_step_id}:{dep_row['status']}")
             continue
         dep_step = step_lookup.get((dep_experiment_id, dep_step_id))
         if dep_step is None:
@@ -3618,12 +3538,8 @@ def _add_performance_sample(
         bucket["elapsed_seconds_sum"] += elapsed_seconds
         current_min = bucket["elapsed_seconds_min"]
         current_max = bucket["elapsed_seconds_max"]
-        bucket["elapsed_seconds_min"] = (
-            elapsed_seconds if current_min is None else min(current_min, elapsed_seconds)
-        )
-        bucket["elapsed_seconds_max"] = (
-            elapsed_seconds if current_max is None else max(current_max, elapsed_seconds)
-        )
+        bucket["elapsed_seconds_min"] = elapsed_seconds if current_min is None else min(current_min, elapsed_seconds)
+        bucket["elapsed_seconds_max"] = elapsed_seconds if current_max is None else max(current_max, elapsed_seconds)
     bucket["artifact_record_count"] += artifact_count
     bucket["artifact_record_bytes_sum"] += artifact_bytes
     bucket["artifact_record_raw_bytes_sum"] += artifact_raw_bytes
@@ -3634,10 +3550,7 @@ def _add_performance_sample(
 def _finalize_performance_bucket(bucket: dict[str, Any]) -> dict[str, Any]:
     run_count = int(bucket["run_count"])
     elapsed_sum = float(bucket["elapsed_seconds_sum"])
-    resource_counts = {
-        str(key): int(value)
-        for key, value in dict(bucket.get("resource_kind_counts") or {}).items()
-    }
+    resource_counts = {str(key): int(value) for key, value in dict(bucket.get("resource_kind_counts") or {}).items()}
     dominant_resource_kind = None
     if resource_counts:
         dominant_resource_kind = sorted(
@@ -3649,9 +3562,7 @@ def _finalize_performance_bucket(bucket: dict[str, Any]) -> dict[str, Any]:
         "resource_kind_counts": resource_counts,
         "dominant_resource_kind": dominant_resource_kind,
         "elapsed_seconds_mean": elapsed_sum / run_count if run_count else None,
-        "artifact_record_bytes_mean": (
-            int(bucket["artifact_record_bytes_sum"]) / run_count if run_count else None
-        ),
+        "artifact_record_bytes_mean": (int(bucket["artifact_record_bytes_sum"]) / run_count if run_count else None),
         "artifact_record_raw_bytes_mean": (
             int(bucket["artifact_record_raw_bytes_sum"]) / run_count if run_count else None
         ),
@@ -3764,11 +3675,7 @@ def queue_performance_summary(
             continue
         step = step_lookup.get((experiment_id, step_id), {})
         experiment = experiment_lookup.get(experiment_id, {})
-        metadata = (
-            experiment.get("metadata")
-            if isinstance(experiment.get("metadata"), Mapping)
-            else {}
-        )
+        metadata = experiment.get("metadata") if isinstance(experiment.get("metadata"), Mapping) else {}
         candidate_ids = _performance_candidate_ids(experiment_id, metadata)
         candidate_id_by_experiment.setdefault(experiment_id, list(candidate_ids))
         work_id = _metadata_string(metadata.get("work_id"))
@@ -3780,9 +3687,7 @@ def queue_performance_summary(
         source_unit_ids = _metadata_string_list(metadata.get("source_unit_ids"))
         if source_unit_ids:
             source_unit_ids_by_experiment.setdefault(experiment_id, source_unit_ids)
-        source_selection_ids = _metadata_string_list(
-            metadata.get("source_selection_ids")
-        )
+        source_selection_ids = _metadata_string_list(metadata.get("source_selection_ids"))
         if source_selection_ids:
             source_selection_ids_by_experiment.setdefault(
                 experiment_id,
@@ -3855,39 +3760,18 @@ def queue_performance_summary(
         "candidate_id_by_experiment": dict(sorted(candidate_id_by_experiment.items())),
         "work_id_by_experiment": dict(sorted(work_id_by_experiment.items())),
         "backlog_key_by_experiment": dict(sorted(backlog_key_by_experiment.items())),
-        "source_unit_ids_by_experiment": dict(
-            sorted(source_unit_ids_by_experiment.items())
-        ),
-        "source_selection_ids_by_experiment": dict(
-            sorted(source_selection_ids_by_experiment.items())
-        ),
-        "by_resource_kind": {
-            key: _finalize_performance_bucket(value)
-            for key, value in sorted(by_resource.items())
-        },
-        "by_experiment": {
-            key: _finalize_performance_bucket(value)
-            for key, value in sorted(by_experiment.items())
-        },
-        "by_step": {
-            key: _finalize_performance_bucket(value)
-            for key, value in sorted(by_step.items())
-        },
-        "by_work_id": {
-            key: _finalize_performance_bucket(value)
-            for key, value in sorted(by_work_id.items())
-        },
-        "by_backlog_key": {
-            key: _finalize_performance_bucket(value)
-            for key, value in sorted(by_backlog_key.items())
-        },
+        "source_unit_ids_by_experiment": dict(sorted(source_unit_ids_by_experiment.items())),
+        "source_selection_ids_by_experiment": dict(sorted(source_selection_ids_by_experiment.items())),
+        "by_resource_kind": {key: _finalize_performance_bucket(value) for key, value in sorted(by_resource.items())},
+        "by_experiment": {key: _finalize_performance_bucket(value) for key, value in sorted(by_experiment.items())},
+        "by_step": {key: _finalize_performance_bucket(value) for key, value in sorted(by_step.items())},
+        "by_work_id": {key: _finalize_performance_bucket(value) for key, value in sorted(by_work_id.items())},
+        "by_backlog_key": {key: _finalize_performance_bucket(value) for key, value in sorted(by_backlog_key.items())},
         "by_source_unit_id": {
-            key: _finalize_performance_bucket(value)
-            for key, value in sorted(by_source_unit_id.items())
+            key: _finalize_performance_bucket(value) for key, value in sorted(by_source_unit_id.items())
         },
         "by_source_selection_id": {
-            key: _finalize_performance_bucket(value)
-            for key, value in sorted(by_source_selection_id.items())
+            key: _finalize_performance_bucket(value) for key, value in sorted(by_source_selection_id.items())
         },
     }
 
@@ -3977,9 +3861,7 @@ def derive_scheduler_runtime_policy(
             "elapsed_seconds_p95": _percentile(elapsed_values, 0.95),
             "recommended_timeout_seconds": recommended_timeout,
             "timeout_multiplier": timeout_multiplier,
-            "current_timeout_seconds_max": _max_or_none(
-                _step_timeouts_for_resource(queue, kind)
-            ),
+            "current_timeout_seconds_max": _max_or_none(_step_timeouts_for_resource(queue, kind)),
             "advisory_only": True,
             "score_claim": False,
             "promotion_eligible": False,
@@ -4037,19 +3919,14 @@ def apply_scheduler_runtime_policy(
     """Return a queue definition with explicit advisory runtime policy applied."""
 
     if policy.get("schema") != SCHEDULER_RUNTIME_POLICY_SCHEMA:
-        raise ExperimentQueueError(
-            f"runtime policy schema must be {SCHEDULER_RUNTIME_POLICY_SCHEMA}"
-        )
+        raise ExperimentQueueError(f"runtime policy schema must be {SCHEDULER_RUNTIME_POLICY_SCHEMA}")
     violations = _truthy_authority_field_paths(
         policy,
         fields=frozenset(SCHEDULER_RUNTIME_POLICY_FORBIDDEN_AUTHORITY_FIELDS),
         path="runtime_policy",
     )
     if violations:
-        raise ExperimentQueueError(
-            "runtime policy must not carry truthy authority fields: "
-            + ", ".join(violations)
-        )
+        raise ExperimentQueueError("runtime policy must not carry truthy authority fields: " + ", ".join(violations))
     updated = json.loads(json.dumps(queue))
     controls = updated.setdefault("controls", {})
     if apply_concurrency:
@@ -4062,9 +3939,7 @@ def apply_scheduler_runtime_policy(
     if apply_timeouts:
         timeout_by_resource = {
             str(kind): int(value)
-            for kind, value in dict(
-                policy.get("recommended_timeout_seconds_by_resource") or {}
-            ).items()
+            for kind, value in dict(policy.get("recommended_timeout_seconds_by_resource") or {}).items()
             if _finite_int(value) is not None and int(value) > 0
         }
         for experiment in updated.get("experiments", []):
@@ -4263,8 +4138,7 @@ def queue_definition_drift(conn: sqlite3.Connection, queue: Mapping[str, Any]) -
             missing_hash = any(value is None for value in previous_hashes.values())
             missing_resource_kind = row["resource_kind"] is None
             changed_hash = any(
-                previous_hashes[key] is not None and previous_hashes[key] != hashes[key]
-                for key in hashes
+                previous_hashes[key] is not None and previous_hashes[key] != hashes[key] for key in hashes
             )
             if (missing_hash or missing_resource_kind) and not changed_hash:
                 missing_hash_steps.append(

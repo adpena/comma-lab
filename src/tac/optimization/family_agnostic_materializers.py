@@ -26,6 +26,7 @@ from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
     require_no_truthy_authority_fields,
 )
+from tac.optimization.runtime_adapter_identity import runtime_adapter_identity_blockers
 from tac.optimization.serialized_archive_economics import (
     build_serialized_archive_delta_contract,
 )
@@ -53,31 +54,15 @@ PACKET_MEMBER_MERGE_MATERIALIZER_ID = "packet_member_merge_adapter"
 RENDERER_PAYLOAD_DFL1_MATERIALIZER_ID = "renderer_payload_dfl1_adapter"
 PACKET_MEMBER_ZIP_HEADER_ELIDE_MATERIALIZER_ID = "packet_member_zip_header_elide_adapter"
 TENSOR_FACTORIZE_MATERIALIZER_ID = "tensor_factorize_adapter"
-ARCHIVE_SECTION_ENTROPY_RECODE_PROOF_KIND = (
-    "archive_section_entropy_recode_raw_payload_identity_receiver_proof.v1"
-)
-ARCHIVE_SECTION_ENTROPY_RECODE_RECEIVER_CONTRACT_KIND = (
-    "family_agnostic_archive_section_entropy_recode"
-)
-PACKET_MEMBER_RECOMPRESS_PROOF_KIND = (
-    "packet_member_recompress_payload_identity_receiver_proof.v1"
-)
-PACKET_MEMBER_RECOMPRESS_RECEIVER_CONTRACT_KIND = (
-    "family_agnostic_packet_member_recompress"
-)
-PACKET_MEMBER_ZIP_HEADER_ELIDE_PROOF_KIND = (
-    "packet_member_zip_header_elide_payload_identity_receiver_proof.v1"
-)
-PACKET_MEMBER_ZIP_HEADER_ELIDE_RECEIVER_CONTRACT_KIND = (
-    "family_agnostic_packet_member_zip_header_elide"
-)
-TENSOR_FACTORIZE_PROOF_KIND = (
-    "tensor_factorize_cooperative_receiver_reconstruction_proof.v1"
-)
+ARCHIVE_SECTION_ENTROPY_RECODE_PROOF_KIND = "archive_section_entropy_recode_raw_payload_identity_receiver_proof.v1"
+ARCHIVE_SECTION_ENTROPY_RECODE_RECEIVER_CONTRACT_KIND = "family_agnostic_archive_section_entropy_recode"
+PACKET_MEMBER_RECOMPRESS_PROOF_KIND = "packet_member_recompress_payload_identity_receiver_proof.v1"
+PACKET_MEMBER_RECOMPRESS_RECEIVER_CONTRACT_KIND = "family_agnostic_packet_member_recompress"
+PACKET_MEMBER_ZIP_HEADER_ELIDE_PROOF_KIND = "packet_member_zip_header_elide_payload_identity_receiver_proof.v1"
+PACKET_MEMBER_ZIP_HEADER_ELIDE_RECEIVER_CONTRACT_KIND = "family_agnostic_packet_member_zip_header_elide"
+TENSOR_FACTORIZE_PROOF_KIND = "tensor_factorize_cooperative_receiver_reconstruction_proof.v1"
 TENSOR_FACTORIZE_RECEIVER_CONTRACT_KIND = "family_agnostic_tensor_factorize"
-PACKET_MEMBER_MERGE_RUNTIME_ADAPTER_PROOF_KIND = (
-    "packet_member_merge_runtime_adapter_consumption_proof.v1"
-)
+PACKET_MEMBER_MERGE_RUNTIME_ADAPTER_PROOF_KIND = "packet_member_merge_runtime_adapter_consumption_proof.v1"
 PACKET_MEMBER_MERGE_RECEIVER_CONTRACT_KIND = "family_agnostic_packet_member_merge"
 PACKET_MEMBER_MERGE_PAYLOAD_MAGIC = b"TAC_PACKET_MEMBER_MERGE_V1\0"
 PACKET_MEMBER_MERGE_BINARY_PAYLOAD_MAGIC = b"TAC_PACKET_MEMBER_MERGE_BIN1\0"
@@ -172,9 +157,7 @@ def materialize_packet_member_recompress_candidate(
     archive = _resolve_path(archive_path, repo=repo)
     output = _resolve_path(output_archive, repo=repo)
     proof_out = (
-        _resolve_path(runtime_consumption_proof_out, repo=repo)
-        if runtime_consumption_proof_out is not None
-        else None
+        _resolve_path(runtime_consumption_proof_out, repo=repo) if runtime_consumption_proof_out is not None else None
     )
     manifest = _load_mapping(packet_member_manifest, repo=repo)
     target_member = _select_member_name(
@@ -192,8 +175,8 @@ def materialize_packet_member_recompress_candidate(
 
     candidates: list[dict[str, Any]] = []
     for method in _normalized_compression_methods(compression_methods):
-        levels = (None,) if method == zipfile.ZIP_STORED else _ordered_unique_ints(
-            int(level) for level in compresslevels
+        levels = (
+            (None,) if method == zipfile.ZIP_STORED else _ordered_unique_ints(int(level) for level in compresslevels)
         )
         for level in levels:
             payload = _zip_archive_bytes_with_replacement(
@@ -301,24 +284,13 @@ def materialize_packet_member_recompress_candidate(
             candidate_archive=candidate_record,
             saved_bytes=saved_bytes,
         ),
-        "candidate_trials": [
-            {
-                key: value
-                for key, value in trial.items()
-                if key != "payload"
-            }
-            for trial in candidates
-        ],
+        "candidate_trials": [{key: value for key, value in trial.items() if key != "payload"} for trial in candidates],
         "receiver_verification": receiver_verification,
         "runtime_consumption_proof_path": (
             proof_out.as_posix() if proof_out is not None else receiver_verification.get("proof_path")
         ),
-        "runtime_consumption_proof_write": (
-            proof_write_result.__dict__ if proof_write_result is not None else None
-        ),
-        "receiver_contract_satisfied": (
-            receiver_verification["receiver_contract_satisfied"] is True
-        ),
+        "runtime_consumption_proof_write": (proof_write_result.__dict__ if proof_write_result is not None else None),
+        "receiver_contract_satisfied": (receiver_verification["receiver_contract_satisfied"] is True),
         "readiness_blockers": readiness_blockers,
         "artifact_write": write_result.__dict__,
         **FALSE_AUTHORITY,
@@ -336,9 +308,7 @@ def _packet_member_recompress_runtime_consumption_proof(
 ) -> dict[str, Any]:
     source_member_sha = _clean_str(source_member.get("sha256"))
     candidate_member_sha = _clean_str(candidate_member.get("sha256"))
-    member_payload_identical = (
-        source_member_sha is not None and candidate_member_sha == source_member_sha
-    )
+    member_payload_identical = source_member_sha is not None and candidate_member_sha == source_member_sha
     return {
         "schema": RUNTIME_CONSUMPTION_PROOF_SCHEMA,
         "proof_kind": PACKET_MEMBER_RECOMPRESS_PROOF_KIND,
@@ -413,9 +383,7 @@ def materialize_packet_member_merge_candidate(
     archive = _resolve_path(archive_path, repo=repo)
     output = _resolve_path(output_archive, repo=repo)
     proof_out = (
-        _resolve_path(runtime_consumption_proof_out, repo=repo)
-        if runtime_consumption_proof_out is not None
-        else None
+        _resolve_path(runtime_consumption_proof_out, repo=repo) if runtime_consumption_proof_out is not None else None
     )
     manifest = _load_mapping(packet_member_manifest, repo=repo)
     contract = _load_mapping(merge_contract, repo=repo)
@@ -428,9 +396,7 @@ def materialize_packet_member_merge_candidate(
         all_members=all_members,
     )
     if len(target_members) < 2:
-        raise FamilyAgnosticMaterializerError(
-            "packet_member_merge_v1 requires at least two selected members"
-        )
+        raise FamilyAgnosticMaterializerError("packet_member_merge_v1 requires at least two selected members")
     target_merged_member_name = _merged_member_name(
         archive,
         explicit=merged_member_name,
@@ -438,22 +404,12 @@ def materialize_packet_member_merge_candidate(
         selected_member_names=target_members,
     )
     source_record = _archive_record(archive)
-    selected_entries = [
-        _merge_member_entry(archive, target_member)
-        for target_member in target_members
-    ]
-    selected_payloads = [
-        (str(entry["name"]), bytes(entry["payload"]))
-        for entry in selected_entries
-    ]
+    selected_entries = [_merge_member_entry(archive, target_member) for target_member in target_members]
+    selected_payloads = [(str(entry["name"]), bytes(entry["payload"])) for entry in selected_entries]
     source_member_records = [
-        _member_record(archive, target_member, payload=payload)
-        for target_member, payload in selected_payloads
+        _member_record(archive, target_member, payload=payload) for target_member, payload in selected_payloads
     ]
-    source_member_sha256s = {
-        str(row["name"]): str(row["sha256"])
-        for row in source_member_records
-    }
+    source_member_sha256s = {str(row["name"]): str(row["sha256"]) for row in source_member_records}
     non_selected_member_records = [
         _member_record(archive, target_member)
         for target_member in _zip_member_names(archive)
@@ -543,9 +499,7 @@ def materialize_packet_member_merge_candidate(
         )
         runtime_probe = runtime_proof_payload.get("runtime_consumption_probe")
         if isinstance(runtime_probe, Mapping):
-            local_reconstruction_proof_satisfied = (
-                runtime_probe.get("internal_reconstruction_passed") is True
-            )
+            local_reconstruction_proof_satisfied = runtime_probe.get("internal_reconstruction_passed") is True
         proof_write_result = write_json_artifact(
             proof_out,
             runtime_proof_payload,
@@ -565,9 +519,7 @@ def materialize_packet_member_merge_candidate(
         repo_root=repo,
     )
     if receiver_verification.get("runtime_adapter_ready") is not True:
-        blockers.append(
-            "packet_member_merge_exact_readiness_refused_until_byte_closed_runtime_adapter_lands"
-        )
+        blockers.append("packet_member_merge_exact_readiness_refused_until_byte_closed_runtime_adapter_lands")
     readiness_blockers = _readiness_blockers(
         blockers,
         receiver_verification,
@@ -620,20 +572,14 @@ def materialize_packet_member_merge_candidate(
             saved_bytes=saved_bytes,
         ),
         "candidate_trials": [
-            {
-                key: value
-                for key, value in trial.items()
-                if key not in {"payload", "merge_payload", "merge_table"}
-            }
+            {key: value for key, value in trial.items() if key not in {"payload", "merge_payload", "merge_table"}}
             for trial in candidate_trials
         ],
         "receiver_verification": receiver_verification,
         "runtime_consumption_proof_path": (
             proof_out.as_posix() if proof_out is not None else receiver_verification.get("proof_path")
         ),
-        "runtime_consumption_proof_write": (
-            proof_write_result.__dict__ if proof_write_result is not None else None
-        ),
+        "runtime_consumption_proof_write": (proof_write_result.__dict__ if proof_write_result is not None else None),
         "reconstruction_proof_satisfied": (
             local_reconstruction_proof_satisfied
             if local_reconstruction_proof_satisfied is not None
@@ -677,9 +623,7 @@ def materialize_renderer_payload_dfl1_candidate(
     archive = _resolve_path(archive_path, repo=repo)
     output = _resolve_path(output_archive, repo=repo)
     proof_out = (
-        _resolve_path(runtime_consumption_proof_out, repo=repo)
-        if runtime_consumption_proof_out is not None
-        else None
+        _resolve_path(runtime_consumption_proof_out, repo=repo) if runtime_consumption_proof_out is not None else None
     )
     manifest = _load_mapping(packet_member_manifest, repo=repo)
     target_members = _renderer_payload_dfl1_member_names(
@@ -693,19 +637,15 @@ def materialize_renderer_payload_dfl1_candidate(
     )
     selected_entries = [_merge_member_entry(archive, name) for name in target_members]
     unsupported = [
-        str(entry["name"])
-        for entry in selected_entries
-        if int(entry["zip_compress_type"]) != zipfile.ZIP_DEFLATED
+        str(entry["name"]) for entry in selected_entries if int(entry["zip_compress_type"]) != zipfile.ZIP_DEFLATED
     ]
     if unsupported:
         raise FamilyAgnosticMaterializerError(
-            "renderer_payload_dfl1_v1 requires source ZIP_DEFLATED members: "
-            + ", ".join(unsupported)
+            "renderer_payload_dfl1_v1 requires source ZIP_DEFLATED members: " + ", ".join(unsupported)
         )
     source_record = _archive_record(archive)
     source_member_records = [
-        _member_record(archive, str(entry["name"]), payload=bytes(entry["payload"]))
-        for entry in selected_entries
+        _member_record(archive, str(entry["name"]), payload=bytes(entry["payload"])) for entry in selected_entries
     ]
     payload = _renderer_payload_dfl1_payload(selected_entries)
     candidate_trials: list[dict[str, Any]] = []
@@ -752,23 +692,15 @@ def materialize_renderer_payload_dfl1_candidate(
     )
     candidate_record = _archive_record(output)
     candidate_member_record = _member_record(output, output_member)
-    full_frame_parity_verification = (
-        verify_renderer_payload_dfl1_full_frame_inflate_parity_proof(
-            full_frame_inflate_parity_proof=full_frame_inflate_parity_proof,
-            required_source_archive_sha256=source_record["sha256"],
-            required_candidate_archive_sha256=candidate_record["sha256"],
-            repo_root=repo,
-        )
+    full_frame_parity_verification = verify_renderer_payload_dfl1_full_frame_inflate_parity_proof(
+        full_frame_inflate_parity_proof=full_frame_inflate_parity_proof,
+        required_source_archive_sha256=source_record["sha256"],
+        required_candidate_archive_sha256=candidate_record["sha256"],
+        repo_root=repo,
     )
-    if (
-        full_frame_parity_verification.get("full_frame_inflate_parity_satisfied")
-        is not True
-    ):
+    if full_frame_parity_verification.get("full_frame_inflate_parity_satisfied") is not True:
         blockers.append("renderer_payload_dfl1_full_frame_inflate_parity_missing")
-        blockers.extend(
-            str(blocker)
-            for blocker in full_frame_parity_verification.get("blockers") or []
-        )
+        blockers.extend(str(blocker) for blocker in full_frame_parity_verification.get("blockers") or [])
     proof_write_result = None
     runtime_proof_ref: str | Path | Mapping[str, Any] | None = runtime_consumption_proof
     if proof_out is not None:
@@ -846,34 +778,23 @@ def materialize_renderer_payload_dfl1_candidate(
             saved_bytes=saved_bytes,
         ),
         "candidate_trials": [
-            {key: value for key, value in trial.items() if key != "payload"}
-            for trial in candidate_trials
+            {key: value for key, value in trial.items() if key != "payload"} for trial in candidate_trials
         ],
         "receiver_verification": receiver_verification,
         "full_frame_inflate_parity_verification": full_frame_parity_verification,
         "full_frame_inflate_parity_proven": (
-            full_frame_parity_verification.get("full_frame_inflate_parity_satisfied")
-            is True
+            full_frame_parity_verification.get("full_frame_inflate_parity_satisfied") is True
         ),
-        "renderer_payload_dfl1_inflate_parity_proof_path": (
-            full_frame_parity_verification.get("proof_path")
-        ),
-        "renderer_payload_dfl1_inflate_parity_proof_sha256": (
-            full_frame_parity_verification.get("proof_sha256")
-        ),
+        "renderer_payload_dfl1_inflate_parity_proof_path": (full_frame_parity_verification.get("proof_path")),
+        "renderer_payload_dfl1_inflate_parity_proof_sha256": (full_frame_parity_verification.get("proof_sha256")),
         "renderer_payload_dfl1_inflate_parity_satisfied": (
-            full_frame_parity_verification.get("full_frame_inflate_parity_satisfied")
-            is True
+            full_frame_parity_verification.get("full_frame_inflate_parity_satisfied") is True
         ),
         "runtime_consumption_proof_path": (
             proof_out.as_posix() if proof_out is not None else receiver_verification.get("proof_path")
         ),
-        "runtime_consumption_proof_write": (
-            proof_write_result.__dict__ if proof_write_result is not None else None
-        ),
-        "reconstruction_proof_satisfied": (
-            receiver_verification["receiver_contract_satisfied"] is True
-        ),
+        "runtime_consumption_proof_write": (proof_write_result.__dict__ if proof_write_result is not None else None),
+        "reconstruction_proof_satisfied": (receiver_verification["receiver_contract_satisfied"] is True),
         "receiver_contract_satisfied": (
             receiver_verification["receiver_contract_satisfied"] is True
             and receiver_verification.get("runtime_adapter_ready") is True
@@ -903,10 +824,7 @@ def _packet_member_merge_runtime_consumption_proof(
     contract: Mapping[str, Any],
 ) -> dict[str, Any]:
     reconstruction = parse_packet_member_merge_payload(merge_payload)
-    reconstructed_member_sha256s = {
-        name: sha256_bytes(payload)
-        for name, payload in reconstruction["members"].items()
-    }
+    reconstructed_member_sha256s = {name: sha256_bytes(payload) for name, payload in reconstruction["members"].items()}
     selected_member_proofs = []
     all_selected_reconstructable = True
     for name in selected_member_names:
@@ -924,9 +842,7 @@ def _packet_member_merge_runtime_consumption_proof(
             }
         )
     source_non_selected = {str(row.get("name")): row for row in source_non_selected_members}
-    candidate_non_selected = {
-        str(row.get("name")): row for row in candidate_non_selected_members
-    }
+    candidate_non_selected = {str(row.get("name")): row for row in candidate_non_selected_members}
     non_selected_member_proofs = []
     all_non_selected_payloads_identical = True
     all_non_selected_compressed_payloads_identical = True
@@ -936,21 +852,14 @@ def _packet_member_merge_runtime_consumption_proof(
         candidate_sha = _clean_str(candidate_row.get("sha256"))
         payload_passed = source_sha is not None and candidate_sha == source_sha
         source_compressed_sha = _clean_str(
-            source_row.get("zip_compressed_payload_sha256")
-            or source_row.get("zip_compressed_sha256")
+            source_row.get("zip_compressed_payload_sha256") or source_row.get("zip_compressed_sha256")
         )
         candidate_compressed_sha = _clean_str(
-            candidate_row.get("zip_compressed_payload_sha256")
-            or candidate_row.get("zip_compressed_sha256")
+            candidate_row.get("zip_compressed_payload_sha256") or candidate_row.get("zip_compressed_sha256")
         )
-        compressed_passed = (
-            source_compressed_sha is not None
-            and candidate_compressed_sha == source_compressed_sha
-        )
+        compressed_passed = source_compressed_sha is not None and candidate_compressed_sha == source_compressed_sha
         passed = payload_passed and compressed_passed
-        all_non_selected_payloads_identical = (
-            all_non_selected_payloads_identical and payload_passed
-        )
+        all_non_selected_payloads_identical = all_non_selected_payloads_identical and payload_passed
         all_non_selected_compressed_payloads_identical = (
             all_non_selected_compressed_payloads_identical and compressed_passed
         )
@@ -1025,8 +934,7 @@ def _packet_member_merge_runtime_consumption_proof(
             "declared": receiver_declared,
             "runtime_adapter_ready": False,
             "reconstruction_formula": (
-                "parse merge table, slice concatenated payload by offset/length, "
-                "write original member names"
+                "parse merge table, slice concatenated payload by offset/length, write original member names"
             ),
         },
         "runtime_consumption_probe": {
@@ -1036,12 +944,8 @@ def _packet_member_merge_runtime_consumption_proof(
             "selected_member_proofs": selected_member_proofs,
             "non_selected_member_proofs": non_selected_member_proofs,
             "all_selected_members_reconstructable": all_selected_reconstructable,
-            "all_non_selected_member_payloads_identical": (
-                all_non_selected_payloads_identical
-            ),
-            "all_non_selected_member_zip_streams_identical": (
-                all_non_selected_compressed_payloads_identical
-            ),
+            "all_non_selected_member_payloads_identical": (all_non_selected_payloads_identical),
+            "all_non_selected_member_zip_streams_identical": (all_non_selected_compressed_payloads_identical),
             "cooperative_receiver_declared": receiver_declared,
             "runtime_adapter_ready": False,
         },
@@ -1092,9 +996,7 @@ def materialize_packet_member_zip_header_elide_candidate(
     archive = _resolve_path(archive_path, repo=repo)
     output = _resolve_path(output_archive, repo=repo)
     proof_out = (
-        _resolve_path(runtime_consumption_proof_out, repo=repo)
-        if runtime_consumption_proof_out is not None
-        else None
+        _resolve_path(runtime_consumption_proof_out, repo=repo) if runtime_consumption_proof_out is not None else None
     )
     manifest = _load_mapping(packet_member_manifest, repo=repo)
     contract = _load_mapping(header_elision_contract, repo=repo)
@@ -1109,10 +1011,7 @@ def materialize_packet_member_zip_header_elide_candidate(
     primary_member = target_members[0]
     source_member_bytes = _zip_member_bytes(archive, primary_member)
     source_record = _archive_record(archive)
-    source_member_records = [
-        _member_record(archive, target_member)
-        for target_member in target_members
-    ]
+    source_member_records = [_member_record(archive, target_member) for target_member in target_members]
     source_member_record = _member_record(
         archive,
         primary_member,
@@ -1141,10 +1040,7 @@ def materialize_packet_member_zip_header_elide_candidate(
         min_free_bytes=min_free_bytes,
     )
     candidate_record = _archive_record(output)
-    candidate_member_records = [
-        _member_record(output, target_member)
-        for target_member in target_members
-    ]
+    candidate_member_records = [_member_record(output, target_member) for target_member in target_members]
     candidate_member_record = _member_record(output, primary_member)
     candidate_headers = [_zip_header_record(output, target_member) for target_member in target_members]
     candidate_header = _zip_header_record(output, primary_member)
@@ -1186,13 +1082,8 @@ def materialize_packet_member_zip_header_elide_candidate(
     receiver_verification = verify_runtime_consumption_proof(
         runtime_consumption_proof=runtime_proof_ref,
         required_candidate_archive_sha256=candidate_record["sha256"],
-        required_candidate_member_sha256=(
-            source_member_record["sha256"] if len(target_members) == 1 else None
-        ),
-        required_candidate_member_sha256s={
-            str(row["name"]): str(row["sha256"])
-            for row in source_member_records
-        },
+        required_candidate_member_sha256=(source_member_record["sha256"] if len(target_members) == 1 else None),
+        required_candidate_member_sha256s={str(row["name"]): str(row["sha256"]) for row in source_member_records},
         required_proof_kind=PACKET_MEMBER_ZIP_HEADER_ELIDE_PROOF_KIND,
         required_receiver_contract_kind=PACKET_MEMBER_ZIP_HEADER_ELIDE_RECEIVER_CONTRACT_KIND,
         required_target_kind=PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
@@ -1232,9 +1123,9 @@ def materialize_packet_member_zip_header_elide_candidate(
         "candidate_zip_header_summary": candidate_header_summary,
         "selected_member_name": primary_member,
         "selected_member_names": target_members,
-        "selection_scope": "all_members" if all_members else (
-            "multi_member" if len(target_members) > 1 else "single_member"
-        ),
+        "selection_scope": "all_members"
+        if all_members
+        else ("multi_member" if len(target_members) > 1 else "single_member"),
         "selected_elision": {
             **elision_options,
             "selected_member_names": target_members,
@@ -1255,12 +1146,8 @@ def materialize_packet_member_zip_header_elide_candidate(
         "runtime_consumption_proof_path": (
             proof_out.as_posix() if proof_out is not None else receiver_verification.get("proof_path")
         ),
-        "runtime_consumption_proof_write": (
-            proof_write_result.__dict__ if proof_write_result is not None else None
-        ),
-        "receiver_contract_satisfied": (
-            receiver_verification["receiver_contract_satisfied"] is True
-        ),
+        "runtime_consumption_proof_write": (proof_write_result.__dict__ if proof_write_result is not None else None),
+        "receiver_contract_satisfied": (receiver_verification["receiver_contract_satisfied"] is True),
         "readiness_blockers": readiness_blockers,
         "artifact_write": write_result.__dict__,
         **FALSE_AUTHORITY,
@@ -1288,9 +1175,7 @@ def _packet_member_zip_header_elide_runtime_consumption_proof(
 ) -> dict[str, Any]:
     source_member_sha = _clean_str(source_member.get("sha256"))
     candidate_member_sha = _clean_str(candidate_member.get("sha256"))
-    member_payload_identical = (
-        source_member_sha is not None and candidate_member_sha == source_member_sha
-    )
+    member_payload_identical = source_member_sha is not None and candidate_member_sha == source_member_sha
     source_by_name = {str(row.get("name")): row for row in source_members}
     candidate_by_name = {str(row.get("name")): row for row in candidate_members}
     member_proofs: list[dict[str, Any]] = []
@@ -1307,8 +1192,7 @@ def _packet_member_zip_header_elide_runtime_consumption_proof(
         candidate_compressed_sha = _clean_str(candidate_row.get("zip_compressed_sha256"))
         payload_identical = source_sha is not None and candidate_sha == source_sha
         compressed_stream_identical = (
-            source_compressed_sha is not None
-            and candidate_compressed_sha == source_compressed_sha
+            source_compressed_sha is not None and candidate_compressed_sha == source_compressed_sha
         )
         all_member_payloads_identical = all_member_payloads_identical and payload_identical
         all_member_compressed_streams_identical = (
@@ -1325,25 +1209,17 @@ def _packet_member_zip_header_elide_runtime_consumption_proof(
                 "candidate_zip_compressed_bytes": candidate_compressed_bytes,
                 "candidate_zip_compressed_sha256": candidate_compressed_sha,
                 "source_zip_compressed_sha256": source_compressed_sha,
-                "candidate_compressed_stream_identical_to_source": (
-                    compressed_stream_identical
-                ),
+                "candidate_compressed_stream_identical_to_source": (compressed_stream_identical),
                 "candidate_compressed_stream_length_identical_to_source": (
-                    source_compressed_bytes is not None
-                    and candidate_compressed_bytes == source_compressed_bytes
+                    source_compressed_bytes is not None and candidate_compressed_bytes == source_compressed_bytes
                 ),
                 "passed": payload_identical and compressed_stream_identical,
             }
         )
-    elided_header_bytes = (
-        int(source_header_summary.get("total_elidable_header_bytes", 0))
-        - int(candidate_header_summary.get("total_elidable_header_bytes", 0))
+    elided_header_bytes = int(source_header_summary.get("total_elidable_header_bytes", 0)) - int(
+        candidate_header_summary.get("total_elidable_header_bytes", 0)
     )
-    passed = (
-        all_member_payloads_identical
-        and all_member_compressed_streams_identical
-        and elided_header_bytes >= 0
-    )
+    passed = all_member_payloads_identical and all_member_compressed_streams_identical and elided_header_bytes >= 0
     candidate_member_sha256s = {
         str(row.get("name")): row.get("sha256")
         for row in candidate_members
@@ -1385,12 +1261,8 @@ def _packet_member_zip_header_elide_runtime_consumption_proof(
         "source_member_sha256": source_member_sha,
         "candidate_member_payload_identical_to_source": member_payload_identical,
         "all_member_payloads_identical_to_source": all_member_payloads_identical,
-        "all_member_compressed_streams_identical_to_source": (
-            all_member_compressed_streams_identical
-        ),
-        "all_member_compressed_stream_lengths_identical_to_source": (
-            all_member_compressed_streams_identical
-        ),
+        "all_member_compressed_streams_identical_to_source": (all_member_compressed_streams_identical),
+        "all_member_compressed_stream_lengths_identical_to_source": (all_member_compressed_streams_identical),
         "selected_elision": dict(selected_elision),
         "header_elision_contract": dict(contract),
         "runtime_consumption_probe": {
@@ -1402,12 +1274,8 @@ def _packet_member_zip_header_elide_runtime_consumption_proof(
             "source_member_bytes": source_member.get("bytes"),
             "source_elidable_header_bytes": source_header.get("total_elidable_header_bytes"),
             "candidate_elidable_header_bytes": candidate_header.get("total_elidable_header_bytes"),
-            "source_total_elidable_header_bytes": (
-                source_header_summary.get("total_elidable_header_bytes")
-            ),
-            "candidate_total_elidable_header_bytes": (
-                candidate_header_summary.get("total_elidable_header_bytes")
-            ),
+            "source_total_elidable_header_bytes": (source_header_summary.get("total_elidable_header_bytes")),
+            "candidate_total_elidable_header_bytes": (candidate_header_summary.get("total_elidable_header_bytes")),
             "elided_header_bytes": elided_header_bytes,
             "member_proofs": member_proofs,
         },
@@ -1455,9 +1323,7 @@ def materialize_archive_section_entropy_recode_candidate(
     archive = _resolve_path(archive_path, repo=repo)
     output = _resolve_path(output_archive, repo=repo)
     proof_out = (
-        _resolve_path(runtime_consumption_proof_out, repo=repo)
-        if runtime_consumption_proof_out is not None
-        else None
+        _resolve_path(runtime_consumption_proof_out, repo=repo) if runtime_consumption_proof_out is not None else None
     )
     manifest = _require_mapping(section_manifest, repo=repo)
     target_member = _select_member_name(archive, explicit=None, manifest=manifest)
@@ -1473,7 +1339,7 @@ def materialize_archive_section_entropy_recode_candidate(
         if selected and name not in selected:
             section_outputs.append({**section, "selected": False, "changed": False})
             continue
-        payload = member_payload[int(section["offset"]): int(section["offset"]) + int(section["length"])]
+        payload = member_payload[int(section["offset"]) : int(section["offset"]) + int(section["length"])]
         if sha256_bytes(payload) != str(section["sha256"]):
             section_outputs.append(
                 {
@@ -1571,17 +1437,12 @@ def materialize_archive_section_entropy_recode_candidate(
         required_candidate_archive_sha256=candidate_record["sha256"],
         required_candidate_member_sha256=candidate_member["sha256"],
         required_proof_kind=ARCHIVE_SECTION_ENTROPY_RECODE_PROOF_KIND,
-        required_receiver_contract_kind=(
-            ARCHIVE_SECTION_ENTROPY_RECODE_RECEIVER_CONTRACT_KIND
-        ),
+        required_receiver_contract_kind=(ARCHIVE_SECTION_ENTROPY_RECODE_RECEIVER_CONTRACT_KIND),
         required_target_kind=ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
         required_materializer_id=ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER_ID,
         repo_root=repo,
     )
-    if (
-        changed_lengths
-        and receiver_verification.get("receiver_contract_satisfied") is not True
-    ):
+    if changed_lengths and receiver_verification.get("receiver_contract_satisfied") is not True:
         blockers.append("section_length_changed_requires_runtime_consumption_proof")
     readiness_blockers = _readiness_blockers(
         blockers,
@@ -1622,15 +1483,11 @@ def materialize_archive_section_entropy_recode_candidate(
         ),
         "sections": section_outputs,
         "receiver_verification": receiver_verification,
-        "receiver_contract_satisfied": (
-            receiver_verification["receiver_contract_satisfied"] is True
-        ),
+        "receiver_contract_satisfied": (receiver_verification["receiver_contract_satisfied"] is True),
         "runtime_consumption_proof_path": (
             proof_out.as_posix() if proof_out is not None else receiver_verification.get("proof_path")
         ),
-        "runtime_consumption_proof_write": (
-            proof_write_result.__dict__ if proof_write_result is not None else None
-        ),
+        "runtime_consumption_proof_write": (proof_write_result.__dict__ if proof_write_result is not None else None),
         "readiness_blockers": readiness_blockers,
         "artifact_write": write_result.__dict__,
         **FALSE_AUTHORITY,
@@ -1658,10 +1515,8 @@ def _archive_section_entropy_recode_runtime_consumption_proof(
         source_length = int(section["length"])
         candidate_length = int(section.get("candidate_length", source_length))
         candidate_offset = source_offset + cumulative_delta
-        source_payload = source_member_payload[source_offset:source_offset + source_length]
-        candidate_payload = candidate_member_payload[
-            candidate_offset: candidate_offset + candidate_length
-        ]
+        source_payload = source_member_payload[source_offset : source_offset + source_length]
+        candidate_payload = candidate_member_payload[candidate_offset : candidate_offset + candidate_length]
         source_sha = sha256_bytes(source_payload)
         candidate_sha = sha256_bytes(candidate_payload)
         source_raw_sha = _brotli_raw_sha256(source_payload)
@@ -1780,9 +1635,7 @@ def materialize_tensor_factorize_candidate(
     archive = _resolve_path(archive_path, repo=repo)
     output = _resolve_path(output_archive, repo=repo)
     proof_out = (
-        _resolve_path(runtime_consumption_proof_out, repo=repo)
-        if runtime_consumption_proof_out is not None
-        else None
+        _resolve_path(runtime_consumption_proof_out, repo=repo) if runtime_consumption_proof_out is not None else None
     )
     manifest = _require_mapping(tensor_manifest, repo=repo)
     contract = _require_mapping(factorization_contract, repo=repo)
@@ -1878,9 +1731,7 @@ def materialize_tensor_factorize_candidate(
         repo_root=repo,
     )
     if receiver_verification.get("runtime_adapter_ready") is not True:
-        blockers.append(
-            "tensor_factorize_exact_readiness_refused_until_byte_closed_runtime_adapter_lands"
-        )
+        blockers.append("tensor_factorize_exact_readiness_refused_until_byte_closed_runtime_adapter_lands")
     if receiver_verification.get("receiver_contract_satisfied") is not True:
         blockers.append("tensor_factorized_payload_requires_cooperative_receiver")
     readiness_blockers = _readiness_blockers(
@@ -1935,9 +1786,7 @@ def materialize_tensor_factorize_candidate(
         "runtime_consumption_proof_path": (
             proof_out.as_posix() if proof_out is not None else receiver_verification.get("proof_path")
         ),
-        "runtime_consumption_proof_write": (
-            proof_write_result.__dict__ if proof_write_result is not None else None
-        ),
+        "runtime_consumption_proof_write": (proof_write_result.__dict__ if proof_write_result is not None else None),
         "readiness_blockers": readiness_blockers,
         "artifact_write": write_result.__dict__,
         **FALSE_AUTHORITY,
@@ -1992,13 +1841,10 @@ def _tensor_factorize_runtime_consumption_proof(
     )
     runtime_adapter_manifest_raw = contract.get("runtime_adapter_manifest")
     runtime_adapter_manifest = (
-        dict(runtime_adapter_manifest_raw)
-        if isinstance(runtime_adapter_manifest_raw, Mapping)
-        else {}
+        dict(runtime_adapter_manifest_raw) if isinstance(runtime_adapter_manifest_raw, Mapping) else {}
     )
     runtime_adapter_ready = (
-        contract.get("runtime_adapter_ready") is True
-        or runtime_adapter_manifest.get("runtime_adapter_ready") is True
+        contract.get("runtime_adapter_ready") is True or runtime_adapter_manifest.get("runtime_adapter_ready") is True
     )
     if cooperative_receiver_id is not None:
         runtime_adapter_manifest.setdefault(
@@ -2027,11 +1873,7 @@ def _tensor_factorize_runtime_consumption_proof(
         relative_passed = True if tolerance_declared else max_relative_error == 0.0
     else:
         relative_passed = max_relative_error <= max_relative_tolerance
-    finite = (
-        math.isfinite(max_abs_error)
-        and math.isfinite(rmse)
-        and math.isfinite(max_relative_error)
-    )
+    finite = math.isfinite(max_abs_error) and math.isfinite(rmse) and math.isfinite(max_relative_error)
     receiver_declared = cooperative_receiver_id is not None and receiver_adapter_kind is not None
     reconstruction_passed = finite and abs_passed and relative_passed and receiver_declared
     passed = reconstruction_passed and runtime_adapter_manifest["runtime_adapter_ready"] is True
@@ -2151,19 +1993,23 @@ def verify_runtime_consumption_proof(
         blockers.append("runtime_consumption_proof_receiver_contract_kind_mismatch")
     if required_target_kind is not None and proof.get("target_kind") != required_target_kind:
         blockers.append("runtime_consumption_proof_target_kind_mismatch")
-    if (
-        required_materializer_id is not None
-        and proof.get("materializer_id") != required_materializer_id
-    ):
+    if required_materializer_id is not None and proof.get("materializer_id") != required_materializer_id:
         blockers.append("runtime_consumption_proof_materializer_id_mismatch")
     runtime_adapter_manifest = proof.get("runtime_adapter_manifest")
     runtime_adapter_ready = proof.get("runtime_adapter_ready") is True or (
-        isinstance(runtime_adapter_manifest, Mapping)
-        and runtime_adapter_manifest.get("runtime_adapter_ready") is True
+        isinstance(runtime_adapter_manifest, Mapping) and runtime_adapter_manifest.get("runtime_adapter_ready") is True
     )
     runtime_adapter_sha256 = _runtime_adapter_manifest_sha256(runtime_adapter_manifest)
     if runtime_adapter_ready and runtime_adapter_sha256 is None:
         blockers.append("runtime_adapter_ready_requires_sha256")
+        runtime_adapter_ready = False
+    identity_blockers = runtime_adapter_identity_blockers(
+        proof,
+        repo_root=repo,
+        context="runtime_adapter",
+    )
+    if identity_blockers:
+        blockers.extend(identity_blockers)
         runtime_adapter_ready = False
     verifier_target_kind = required_target_kind or _clean_str(proof.get("target_kind"))
     target_specific_blockers = _target_specific_runtime_consumption_blockers(
@@ -2194,13 +2040,9 @@ def verify_runtime_consumption_proof(
         for name, required_sha in required_candidate_member_sha256s.items():
             candidate_sha = member_sha_map.get(str(name))
             if not candidate_sha:
-                blockers.append(
-                    f"runtime_consumption_proof_candidate_member_sha_missing:{name}"
-                )
+                blockers.append(f"runtime_consumption_proof_candidate_member_sha_missing:{name}")
             elif candidate_sha != str(required_sha):
-                blockers.append(
-                    f"runtime_consumption_proof_candidate_member_sha_mismatch:{name}"
-                )
+                blockers.append(f"runtime_consumption_proof_candidate_member_sha_mismatch:{name}")
     return {
         "schema": "family_agnostic_runtime_consumption_proof_verification.v1",
         "receiver_contract_satisfied": not blockers,
@@ -2327,28 +2169,22 @@ def verify_renderer_payload_dfl1_full_frame_inflate_parity_proof(
     if not parity_scope_kind:
         blockers.append("shell_inflate_parity_scope_kind_missing")
     contest_full_sample_claim = proof.get("contest_full_sample_claim") is True
-    contest_full_sample_parity_claim = (
-        proof.get("contest_full_sample_parity_claim") is True
-    )
+    contest_full_sample_parity_claim = proof.get("contest_full_sample_parity_claim") is True
     if contest_full_sample_claim:
         if parity_scope_kind != SHELL_INFLATE_PARITY_SCOPE_CONTEST_FULL_SAMPLE:
-            blockers.append(
-                "shell_inflate_parity_contest_full_sample_scope_kind_mismatch"
-            )
+            blockers.append("shell_inflate_parity_contest_full_sample_scope_kind_mismatch")
         if not contest_full_sample_parity_claim:
-            blockers.append(
-                "shell_inflate_parity_contest_full_sample_parity_claim_not_true"
-            )
+            blockers.append("shell_inflate_parity_contest_full_sample_parity_claim_not_true")
     elif contest_full_sample_parity_claim:
         blockers.append("shell_inflate_parity_contest_full_sample_claim_missing")
     full_frame_source = _clean_str(proof.get("full_frame_file_list_source"))
-    expected_file_list_sha = _clean_str(
-        proof.get("expected_full_frame_file_list_sha256")
-    )
+    expected_file_list_sha = _clean_str(proof.get("expected_full_frame_file_list_sha256"))
     if not full_frame_source:
         blockers.append("shell_inflate_parity_full_frame_file_list_source_missing")
-    if expected_file_list_sha is None or len(expected_file_list_sha) != 64 or any(
-        char not in "0123456789abcdef" for char in expected_file_list_sha
+    if (
+        expected_file_list_sha is None
+        or len(expected_file_list_sha) != 64
+        or any(char not in "0123456789abcdef" for char in expected_file_list_sha)
     ):
         blockers.append("shell_inflate_parity_expected_file_list_sha256_missing")
     if proof.get("full_frame_file_list_sha256_match") is not True:
@@ -2367,9 +2203,7 @@ def verify_renderer_payload_dfl1_full_frame_inflate_parity_proof(
         if proof.get(key) is not True:
             blockers.append(f"shell_inflate_parity_{key}_not_true")
     proof_blockers = proof.get("blockers")
-    if isinstance(proof_blockers, Sequence) and not isinstance(
-        proof_blockers, (bytes, bytearray, str)
-    ):
+    if isinstance(proof_blockers, Sequence) and not isinstance(proof_blockers, (bytes, bytearray, str)):
         blockers.extend(str(blocker) for blocker in proof_blockers if str(blocker))
     elif proof_blockers:
         blockers.append("shell_inflate_parity_blockers_not_list")
@@ -2431,8 +2265,7 @@ def verify_renderer_payload_dfl1_full_frame_inflate_parity_proof(
         "candidate_side_label": candidate_side.get("label") if candidate_side else None,
         "submission_tree_sha256": left_tree if left_tree == right_tree else None,
         "output_manifest_sha256": _clean_str(left.get("output_manifest_sha256"))
-        if _clean_str(left.get("output_manifest_sha256"))
-        == _clean_str(right.get("output_manifest_sha256"))
+        if _clean_str(left.get("output_manifest_sha256")) == _clean_str(right.get("output_manifest_sha256"))
         else None,
         "blockers": ordered_unique(blockers),
         **FALSE_AUTHORITY,
@@ -2448,15 +2281,9 @@ def _match_parity_archive_sides(
 ) -> tuple[Mapping[str, Any] | None, Mapping[str, Any] | None]:
     left_sha = _clean_str(left.get("archive_sha256"))
     right_sha = _clean_str(right.get("archive_sha256"))
-    if (
-        left_sha == required_source_archive_sha256
-        and right_sha == required_candidate_archive_sha256
-    ):
+    if left_sha == required_source_archive_sha256 and right_sha == required_candidate_archive_sha256:
         return left, right
-    if (
-        right_sha == required_source_archive_sha256
-        and left_sha == required_candidate_archive_sha256
-    ):
+    if right_sha == required_source_archive_sha256 and left_sha == required_candidate_archive_sha256:
         return right, left
     return None, None
 
@@ -2587,9 +2414,7 @@ def _select_member_name(
             return value
     members = _zip_member_names(archive)
     if len(members) != 1:
-        raise FamilyAgnosticMaterializerError(
-            "member_name is required when archive does not have exactly one member"
-        )
+        raise FamilyAgnosticMaterializerError("member_name is required when archive does not have exactly one member")
     return members[0]
 
 
@@ -2671,14 +2496,11 @@ def _require_unique_existing_member_names(archive: Path, names: Sequence[str]) -
         counts[name] = counts.get(name, 0) + 1
     missing = [name for name in requested if name not in counts]
     if missing:
-        raise FamilyAgnosticMaterializerError(
-            "selected ZIP member not found: " + ", ".join(missing)
-        )
+        raise FamilyAgnosticMaterializerError("selected ZIP member not found: " + ", ".join(missing))
     duplicate_selected = [name for name in requested if counts.get(name, 0) != 1]
     if duplicate_selected:
         raise FamilyAgnosticMaterializerError(
-            "zip header elision requires selected member names to be unique: "
-            + ", ".join(duplicate_selected)
+            "zip header elision requires selected member names to be unique: " + ", ".join(duplicate_selected)
         )
     return list(requested)
 
@@ -2693,9 +2515,7 @@ def _zip_member_bytes(archive: Path, member_name: str) -> bytes:
         try:
             return zf.read(member_name)
         except KeyError as exc:
-            raise FamilyAgnosticMaterializerError(
-                f"archive member not found: {member_name}"
-            ) from exc
+            raise FamilyAgnosticMaterializerError(f"archive member not found: {member_name}") from exc
 
 
 def _source_zip_compression(archive: Path, member_name: str) -> int:
@@ -2766,13 +2586,10 @@ def _merged_member_name(
     existing = set(_zip_member_names(archive))
     if candidate in existing:
         raise FamilyAgnosticMaterializerError(
-            "merged_member_name must not collide with an existing archive member: "
-            f"{candidate}"
+            f"merged_member_name must not collide with an existing archive member: {candidate}"
         )
     if candidate in set(selected_member_names):
-        raise FamilyAgnosticMaterializerError(
-            "merged_member_name must be distinct from selected member names"
-        )
+        raise FamilyAgnosticMaterializerError("merged_member_name must be distinct from selected member names")
     return candidate
 
 
@@ -2785,9 +2602,7 @@ def _merge_contract_compression(contract: Mapping[str, Any]) -> int:
         return zipfile.ZIP_STORED
     methods = _normalized_compression_methods((raw,))
     if len(methods) != 1:
-        raise FamilyAgnosticMaterializerError(
-            f"unsupported packet_member_merge compression method: {raw}"
-        )
+        raise FamilyAgnosticMaterializerError(f"unsupported packet_member_merge compression method: {raw}")
     return methods[0]
 
 
@@ -2883,8 +2698,7 @@ def _renderer_payload_dfl1_member_names(
     selected = _require_unique_existing_member_names(archive, selected)
     if tuple(selected) != RENDERER_PAYLOAD_DFL1_MEMBER_NAMES:
         raise FamilyAgnosticMaterializerError(
-            "renderer_payload_dfl1_v1 requires fixed-order members: "
-            + ", ".join(RENDERER_PAYLOAD_DFL1_MEMBER_NAMES)
+            "renderer_payload_dfl1_v1 requires fixed-order members: " + ", ".join(RENDERER_PAYLOAD_DFL1_MEMBER_NAMES)
         )
     return selected
 
@@ -2900,8 +2714,7 @@ def _renderer_payload_dfl1_payload_member_name(
         )
     if name in set(_zip_member_names(archive)):
         raise FamilyAgnosticMaterializerError(
-            "renderer_payload_dfl1 payload member must not collide with source member: "
-            f"{name}"
+            f"renderer_payload_dfl1 payload member must not collide with source member: {name}"
         )
     return name
 
@@ -2910,16 +2723,10 @@ def _renderer_payload_dfl1_payload(
     selected_entries: Sequence[Mapping[str, Any]],
 ) -> bytes:
     if len(selected_entries) != len(RENDERER_PAYLOAD_DFL1_MEMBER_NAMES):
-        raise FamilyAgnosticMaterializerError(
-            "renderer_payload_dfl1_v1 requires exactly three selected entries"
-        )
+        raise FamilyAgnosticMaterializerError("renderer_payload_dfl1_v1 requires exactly three selected entries")
     if any(int(entry["zip_compress_type"]) != zipfile.ZIP_DEFLATED for entry in selected_entries):
-        raise FamilyAgnosticMaterializerError(
-            "renderer_payload_dfl1_v1 can only carry ZIP raw-deflate member streams"
-        )
-    return RENDERER_PAYLOAD_DFL1_MAGIC + b"".join(
-        bytes(entry["zip_compressed_payload"]) for entry in selected_entries
-    )
+        raise FamilyAgnosticMaterializerError("renderer_payload_dfl1_v1 can only carry ZIP raw-deflate member streams")
+    return RENDERER_PAYLOAD_DFL1_MAGIC + b"".join(bytes(entry["zip_compressed_payload"]) for entry in selected_entries)
 
 
 def parse_renderer_payload_dfl1_payload(
@@ -2933,10 +2740,8 @@ def parse_renderer_payload_dfl1_payload(
         raise FamilyAgnosticMaterializerError("renderer payload DFL1 has bad magic")
     names = list(member_names)
     if len(names) != len(RENDERER_PAYLOAD_DFL1_MEMBER_NAMES):
-        raise FamilyAgnosticMaterializerError(
-            "renderer payload DFL1 parser requires exactly three member names"
-        )
-    remaining = payload[len(RENDERER_PAYLOAD_DFL1_MAGIC):]
+        raise FamilyAgnosticMaterializerError("renderer payload DFL1 parser requires exactly three member names")
+    remaining = payload[len(RENDERER_PAYLOAD_DFL1_MAGIC) :]
     out: dict[str, bytes] = {}
     members = []
     offset = 0
@@ -2958,9 +2763,7 @@ def parse_renderer_payload_dfl1_payload(
         offset += consumed
         remaining = remaining[consumed:]
     if remaining:
-        raise FamilyAgnosticMaterializerError(
-            "renderer payload DFL1 has trailing bytes"
-        )
+        raise FamilyAgnosticMaterializerError("renderer payload DFL1 has trailing bytes")
     table = {
         "schema": "renderer_payload_dfl1_table.v1",
         "payload_codec": "native_fixed_order_raw_deflate_sequence_v1",
@@ -2970,9 +2773,7 @@ def parse_renderer_payload_dfl1_payload(
         "binary_table_bytes": len(RENDERER_PAYLOAD_DFL1_MAGIC),
         "binary_table_sha256": sha256_bytes(RENDERER_PAYLOAD_DFL1_MAGIC),
         "concatenated_payload_bytes": len(payload) - len(RENDERER_PAYLOAD_DFL1_MAGIC),
-        "concatenated_payload_sha256": sha256_bytes(
-            payload[len(RENDERER_PAYLOAD_DFL1_MAGIC):]
-        ),
+        "concatenated_payload_sha256": sha256_bytes(payload[len(RENDERER_PAYLOAD_DFL1_MAGIC) :]),
         "merged_payload_sha256": sha256_bytes(payload),
     }
     return {"table": table, "members": out}
@@ -3000,10 +2801,7 @@ def _renderer_payload_dfl1_runtime_consumption_proof(
         selected_member_names=selected_member_names,
     )
     expected = {str(row["name"]): str(row["sha256"]) for row in source_members}
-    actual = {
-        name: sha256_bytes(member_payload)
-        for name, member_payload in reconstruction["members"].items()
-    }
+    actual = {name: sha256_bytes(member_payload) for name, member_payload in reconstruction["members"].items()}
     member_proofs = [
         {
             "member_name": name,
@@ -3030,10 +2828,7 @@ def _renderer_payload_dfl1_runtime_consumption_proof(
         and all(row["passed"] is True for row in native_member_proofs)
         and native_probe["passed"] is True
     )
-    full_frame_parity_satisfied = (
-        full_frame_parity_verification.get("full_frame_inflate_parity_satisfied")
-        is True
-    )
+    full_frame_parity_satisfied = full_frame_parity_verification.get("full_frame_inflate_parity_satisfied") is True
     proof_passed = reconstruction_passed and full_frame_parity_satisfied
     runtime_adapter_manifest = dict(native_probe["runtime_adapter_manifest"])
     runtime_adapter_manifest["runtime_adapter_ready"] = proof_passed
@@ -3122,10 +2917,7 @@ def _renderer_payload_dfl1_native_unpacker_probe(
     except Exception as exc:  # pragma: no cover - defensive import/probe diagnostics
         blockers.append(f"native_unpacker_parse_failed:{exc}")
         native_members = {}
-    member_sha256s = {
-        str(name): sha256_bytes(bytes(data))
-        for name, data in native_members.items()
-    }
+    member_sha256s = {str(name): sha256_bytes(bytes(data)) for name, data in native_members.items()}
     missing = [name for name in selected_member_names if name not in member_sha256s]
     if missing:
         blockers.append("native_unpacker_missing_members:" + ",".join(missing))
@@ -3231,9 +3023,7 @@ def _packet_member_merge_binary_payload(
     payload_codec: str,
 ) -> dict[str, Any]:
     if payload_codec != "source_zip_compressed_stream_binary_table_v1":
-        raise FamilyAgnosticMaterializerError(
-            f"unsupported packet member merge binary codec: {payload_codec}"
-        )
+        raise FamilyAgnosticMaterializerError(f"unsupported packet member merge binary codec: {payload_codec}")
     table_chunks = [PACKET_MEMBER_MERGE_BINARY_PAYLOAD_MAGIC]
     table_chunks.append(_encode_uvarint(len(selected_entries)))
     payload_chunks = []
@@ -3319,9 +3109,7 @@ def _packet_member_merge_payload(
                 "zip_compression_method": str(entry["zip_compression_method"]),
             }
         else:
-            raise FamilyAgnosticMaterializerError(
-                f"unsupported packet member merge payload codec: {payload_codec}"
-            )
+            raise FamilyAgnosticMaterializerError(f"unsupported packet member merge payload codec: {payload_codec}")
         chunks.append(payload)
         members.append(member_row)
         offset += len(payload)
@@ -3336,10 +3124,7 @@ def _packet_member_merge_payload(
     }
     table_payload = _canonical_json_bytes(table)
     payload = (
-        PACKET_MEMBER_MERGE_PAYLOAD_MAGIC
-        + struct.pack("<Q", len(table_payload))
-        + table_payload
-        + concatenated_payload
+        PACKET_MEMBER_MERGE_PAYLOAD_MAGIC + struct.pack("<Q", len(table_payload)) + table_payload + concatenated_payload
     )
     return {
         "payload_codec": payload_codec,
@@ -3389,10 +3174,8 @@ def _parse_packet_member_merge_json_payload(payload: bytes) -> dict[str, Any]:
         offset = int(row.get("offset"))
         length = int(row.get("length"))
         if offset < 0 or length < 0 or offset + length > len(concatenated_payload):
-            raise FamilyAgnosticMaterializerError(
-                f"merged member table row bounds out of range: {name}"
-            )
-        encoded_member_payload = concatenated_payload[offset:offset + length]
+            raise FamilyAgnosticMaterializerError(f"merged member table row bounds out of range: {name}")
+        encoded_member_payload = concatenated_payload[offset : offset + length]
         if payload_codec == "raw_member_payload_v1":
             member_payload = encoded_member_payload
         elif payload_codec in {
@@ -3400,26 +3183,17 @@ def _parse_packet_member_merge_json_payload(payload: bytes) -> dict[str, Any]:
             "source_zip_compressed_stream_binary_table_v1",
         }:
             expected_compressed_sha = _clean_str(row.get("compressed_sha256"))
-            if (
-                expected_compressed_sha is not None
-                and sha256_bytes(encoded_member_payload) != expected_compressed_sha
-            ):
-                raise FamilyAgnosticMaterializerError(
-                    f"merged member compressed stream SHA mismatch: {name}"
-                )
+            if expected_compressed_sha is not None and sha256_bytes(encoded_member_payload) != expected_compressed_sha:
+                raise FamilyAgnosticMaterializerError(f"merged member compressed stream SHA mismatch: {name}")
             member_payload = _decompress_zip_member_payload(
                 encoded_member_payload,
                 compress_type=int(row.get("zip_compress_type")),
                 member_name=name,
             )
         else:
-            raise FamilyAgnosticMaterializerError(
-                f"unsupported merged member payload codec: {payload_codec}"
-            )
+            raise FamilyAgnosticMaterializerError(f"unsupported merged member payload codec: {payload_codec}")
         if sha256_bytes(member_payload) != _clean_str(row.get("sha256")):
-            raise FamilyAgnosticMaterializerError(
-                f"merged member reconstructed payload SHA mismatch: {name}"
-            )
+            raise FamilyAgnosticMaterializerError(f"merged member reconstructed payload SHA mismatch: {name}")
         out[name] = member_payload
     return {"table": dict(table), "members": out}
 
@@ -3440,9 +3214,7 @@ def _parse_packet_member_merge_binary_payload(payload: bytes) -> dict[str, Any]:
         )
         name_end = cursor + name_length
         if name_end > len(payload):
-            raise FamilyAgnosticMaterializerError(
-                "packet member merge binary table name extends past payload"
-            )
+            raise FamilyAgnosticMaterializerError("packet member merge binary table name extends past payload")
         name = payload[cursor:name_end].decode("utf-8")
         cursor = name_end
         compress_type, cursor = _decode_uvarint(
@@ -3477,19 +3249,15 @@ def _parse_packet_member_merge_binary_payload(payload: bytes) -> dict[str, Any]:
         name = str(row["name"])
         compressed_length = int(row["length"])
         if compressed_length < 0 or offset + compressed_length > len(concatenated_payload):
-            raise FamilyAgnosticMaterializerError(
-                f"packet member merge binary row bounds out of range: {name}"
-            )
-        encoded_member_payload = concatenated_payload[offset:offset + compressed_length]
+            raise FamilyAgnosticMaterializerError(f"packet member merge binary row bounds out of range: {name}")
+        encoded_member_payload = concatenated_payload[offset : offset + compressed_length]
         member_payload = _decompress_zip_member_payload(
             encoded_member_payload,
             compress_type=int(row["zip_compress_type"]),
             member_name=name,
         )
         if len(member_payload) != int(row["uncompressed_length"]):
-            raise FamilyAgnosticMaterializerError(
-                f"packet member merge binary row length mismatch: {name}"
-            )
+            raise FamilyAgnosticMaterializerError(f"packet member merge binary row length mismatch: {name}")
         normalized_row = {
             "name": name,
             "offset": offset,
@@ -3503,9 +3271,7 @@ def _parse_packet_member_merge_binary_payload(payload: bytes) -> dict[str, Any]:
         out[name] = member_payload
         offset += compressed_length
     if offset != len(concatenated_payload):
-        raise FamilyAgnosticMaterializerError(
-            "packet member merge binary payload has trailing bytes"
-        )
+        raise FamilyAgnosticMaterializerError("packet member merge binary payload has trailing bytes")
     binary_table = payload[:binary_table_bytes]
     table = {
         "schema": "packet_member_merge_table.v1",
@@ -3538,9 +3304,7 @@ def _parse_packet_member_merge_deflate_sequence_payload(payload: bytes) -> dict[
         )
         name_end = cursor + name_length
         if name_end > len(payload):
-            raise FamilyAgnosticMaterializerError(
-                "packet member merge deflate sequence name extends past payload"
-            )
+            raise FamilyAgnosticMaterializerError("packet member merge deflate sequence name extends past payload")
         names.append(payload[cursor:name_end].decode("utf-8"))
         cursor = name_end
     stream = payload[cursor:]
@@ -3566,9 +3330,7 @@ def _parse_packet_member_merge_deflate_sequence_payload(payload: bytes) -> dict[
         offset += consumed
         remaining = remaining[consumed:]
         if index == len(names) - 1 and remaining:
-            raise FamilyAgnosticMaterializerError(
-                "packet member merge deflate sequence has trailing bytes"
-            )
+            raise FamilyAgnosticMaterializerError("packet member merge deflate sequence has trailing bytes")
     table = {
         "schema": "packet_member_merge_table.v1",
         "payload_codec": "fixed_order_raw_deflate_sequence_v1",
@@ -3598,14 +3360,10 @@ def _decompress_next_zip_deflate_stream(
             f"merged member deflate stream could not be decompressed: {member_name}"
         ) from exc
     if not decompressor.eof:
-        raise FamilyAgnosticMaterializerError(
-            f"merged member deflate stream did not terminate: {member_name}"
-        )
+        raise FamilyAgnosticMaterializerError(f"merged member deflate stream did not terminate: {member_name}")
     consumed = len(payload) - len(decompressor.unused_data)
     if consumed <= 0:
-        raise FamilyAgnosticMaterializerError(
-            f"merged member deflate stream consumed no bytes: {member_name}"
-        )
+        raise FamilyAgnosticMaterializerError(f"merged member deflate stream consumed no bytes: {member_name}")
     return decoded, consumed
 
 
@@ -3702,11 +3460,7 @@ def _zip_archive_bytes_with_header_elision(
     for info in infos:
         selected = info.filename in selected_names
         parts = _raw_zip_member_parts(raw, info)
-        local_extra = (
-            b""
-            if selected and strip_member_extra
-            else parts["local_extra"]
-        )
+        local_extra = b"" if selected and strip_member_extra else parts["local_extra"]
         member_offset = cursor
         local_header = struct.pack(
             "<IHHHHHIIIHH",
@@ -3727,11 +3481,7 @@ def _zip_archive_bytes_with_header_elision(
         cursor += len(local_chunk)
 
         central_extra = b"" if selected and strip_member_extra else (info.extra or b"")
-        central_comment = (
-            b""
-            if selected and strip_member_comment
-            else (getattr(info, "comment", b"") or b"")
-        )
+        central_comment = b"" if selected and strip_member_comment else (getattr(info, "comment", b"") or b"")
         central_chunks.append(
             _zip_central_directory_header(
                 info,
@@ -3760,22 +3510,12 @@ def _zip_archive_bytes_with_header_elision(
 
 def _raw_zip_member_parts(raw: bytes, info: zipfile.ZipInfo) -> dict[str, Any]:
     if info.flag_bits & 0x08:
-        raise FamilyAgnosticMaterializerError(
-            f"zip header elision does not support data descriptors: {info.filename}"
-        )
-    if (
-        info.file_size >= 0xFFFF_FFFF
-        or info.compress_size >= 0xFFFF_FFFF
-        or info.header_offset >= 0xFFFF_FFFF
-    ):
-        raise FamilyAgnosticMaterializerError(
-            f"zip header elision does not support ZIP64 members: {info.filename}"
-        )
+        raise FamilyAgnosticMaterializerError(f"zip header elision does not support data descriptors: {info.filename}")
+    if info.file_size >= 0xFFFF_FFFF or info.compress_size >= 0xFFFF_FFFF or info.header_offset >= 0xFFFF_FFFF:
+        raise FamilyAgnosticMaterializerError(f"zip header elision does not support ZIP64 members: {info.filename}")
     offset = int(info.header_offset)
     if offset < 0 or offset + 30 > len(raw):
-        raise FamilyAgnosticMaterializerError(
-            f"local header offset out of range for {info.filename}: {offset}"
-        )
+        raise FamilyAgnosticMaterializerError(f"local header offset out of range for {info.filename}: {offset}")
     (
         signature,
         version_needed,
@@ -3790,29 +3530,19 @@ def _raw_zip_member_parts(raw: bytes, info: zipfile.ZipInfo) -> dict[str, Any]:
         extra_len,
     ) = struct.unpack_from("<IHHHHHIIIHH", raw, offset)
     if signature != 0x0403_4B50:
-        raise FamilyAgnosticMaterializerError(
-            f"bad local ZIP header signature for {info.filename}: offset={offset}"
-        )
+        raise FamilyAgnosticMaterializerError(f"bad local ZIP header signature for {info.filename}: offset={offset}")
     if int(flag_bits) & 0x08:
-        raise FamilyAgnosticMaterializerError(
-            f"zip header elision does not support data descriptors: {info.filename}"
-        )
+        raise FamilyAgnosticMaterializerError(f"zip header elision does not support data descriptors: {info.filename}")
     if int(compressed_bytes) != int(info.compress_size):
-        raise FamilyAgnosticMaterializerError(
-            f"local/central compressed size mismatch for {info.filename}"
-        )
+        raise FamilyAgnosticMaterializerError(f"local/central compressed size mismatch for {info.filename}")
     if int(uncompressed_bytes) != int(info.file_size):
-        raise FamilyAgnosticMaterializerError(
-            f"local/central uncompressed size mismatch for {info.filename}"
-        )
+        raise FamilyAgnosticMaterializerError(f"local/central uncompressed size mismatch for {info.filename}")
     name_start = offset + 30
     name_end = name_start + int(name_len)
     extra_end = name_end + int(extra_len)
     payload_end = extra_end + int(compressed_bytes)
     if name_end > len(raw) or extra_end > len(raw) or payload_end > len(raw):
-        raise FamilyAgnosticMaterializerError(
-            f"local ZIP member bounds out of range for {info.filename}"
-        )
+        raise FamilyAgnosticMaterializerError(f"local ZIP member bounds out of range for {info.filename}")
     return {
         "version_needed": int(version_needed),
         "flag_bits": int(flag_bits),
@@ -3837,9 +3567,7 @@ def _zip_central_directory_header(
     local_header_offset: int,
 ) -> bytes:
     if local_header_offset >= 0xFFFF_FFFF:
-        raise FamilyAgnosticMaterializerError(
-            f"zip header elision does not support ZIP64 offsets: {info.filename}"
-        )
+        raise FamilyAgnosticMaterializerError(f"zip header elision does not support ZIP64 offsets: {info.filename}")
     version_made_by = (int(info.create_system) << 8) | int(info.create_version)
     central = struct.pack(
         "<IHHHHHHIIIHHHHHII",
@@ -3944,8 +3672,7 @@ def _decompress_zip_member_payload(
                 f"merged member deflate stream could not be decompressed: {member_name}"
             ) from exc
     raise FamilyAgnosticMaterializerError(
-        "packet_member_merge_v1 does not support reconstructing ZIP compression "
-        f"method {compress_type}: {member_name}"
+        f"packet_member_merge_v1 does not support reconstructing ZIP compression method {compress_type}: {member_name}"
     )
 
 
@@ -3961,9 +3688,7 @@ def _zip_header_record(archive: Path, member_name: str) -> dict[str, Any]:
             "member_extra_bytes": len(member_extra),
             "member_comment_bytes": len(member_comment),
             "archive_comment_bytes": len(archive_comment),
-            "total_elidable_header_bytes": (
-                len(member_extra) + len(member_comment) + len(archive_comment)
-            ),
+            "total_elidable_header_bytes": (len(member_extra) + len(member_comment) + len(archive_comment)),
             "header_offset": info.header_offset,
             "flag_bits": info.flag_bits,
             "create_system": info.create_system,
@@ -3987,9 +3712,7 @@ def _zip_header_summary(archive: Path, member_names: Sequence[str]) -> dict[str,
         "member_extra_bytes": member_extra_bytes,
         "member_comment_bytes": member_comment_bytes,
         "archive_comment_bytes": archive_comment_bytes,
-        "total_elidable_header_bytes": (
-            member_extra_bytes + member_comment_bytes + archive_comment_bytes
-        ),
+        "total_elidable_header_bytes": (member_extra_bytes + member_comment_bytes + archive_comment_bytes),
     }
 
 

@@ -3337,6 +3337,7 @@ def _materializer_chain_postconditions(
         chain_contract["required_serialized_archive_saving"] = True
     if require_inflate_parity:
         chain_contract["required_inflate_parity"] = True
+    chain_contract["required_runtime_adapter_identity"] = True
     return [
         {
             "type": "json_equals",
@@ -3363,6 +3364,7 @@ def _materializer_chain_postconditions(
             "required_positive_int": required_positive_int,
             "required_artifact_records": ["candidate_archive"],
             "required_less_than": required_less_than,
+            "required_runtime_adapter_identity": True,
             "forbidden_statuses": ["failed"],
         },
         chain_contract,
@@ -3410,6 +3412,7 @@ def _grouped_archive_state_materializer_postconditions(
                 "source_archive_bytes",
             ],
             "required_artifact_records": ["candidate_archive", "final_candidate_archive"],
+            "required_runtime_adapter_identity": True,
             "forbidden_statuses": ["failed"],
         },
     ]
@@ -3544,6 +3547,7 @@ def _materializer_candidate_postconditions(
             "required_sha256": required_sha256,
             "required_positive_int": required_positive_int,
             "required_artifact_records": ["candidate_archive"],
+            "required_runtime_adapter_identity": True,
             "forbidden_statuses": ["failed"],
         },
     ]

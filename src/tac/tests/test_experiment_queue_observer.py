@@ -672,9 +672,7 @@ def test_observer_surfaces_pr95_mlx_package_report_readiness(
     )
     artifact_record = observation["running_steps"][0]["expected_artifacts"][0]
 
-    assert artifact_record["json_schema"] == (
-        "pr95_mlx_pytorch_state_dict_to_contest_archive.v1"
-    )
+    assert artifact_record["json_schema"] == ("pr95_mlx_pytorch_state_dict_to_contest_archive.v1")
     assert artifact_record["pr95_mlx_package_report"] is True
     assert artifact_record["archive_sha256"] == "a" * 64
     assert artifact_record["archive_bytes"] == 230_345
@@ -711,9 +709,7 @@ def test_observer_surfaces_pr95_mlx_long_training_plan(
                 "total_epochs": 3000,
                 "smoke_mode": True,
                 "training_fidelity_class": "rgb_frame_mse_local_mlx_research_mvp",
-                "training_fidelity_status": (
-                    "local_rgb_frame_mse_mvp_not_segnet_posenet_scorer_faithful"
-                ),
+                "training_fidelity_status": ("local_rgb_frame_mse_mvp_not_segnet_posenet_scorer_faithful"),
                 "reproduction_equivalence": False,
                 "reproduction_claim": False,
                 "pr95_1to1_reproduction_claim": False,
@@ -772,17 +768,12 @@ def test_observer_surfaces_pr95_mlx_long_training_plan(
     assert artifact_record["lane_id"] == "lane_pr95_mlx_long_training_test"
     assert artifact_record["source_video_frame_count_scope"] == "full_video_decode"
     assert artifact_record["max_frames"] is None
-    assert (
-        artifact_record["training_fidelity_class"]
-        == "rgb_frame_mse_local_mlx_research_mvp"
-    )
+    assert artifact_record["training_fidelity_class"] == "rgb_frame_mse_local_mlx_research_mvp"
     assert artifact_record["candidate_registry_count"] == 6
     assert artifact_record["reproduction_equivalence"] is False
     assert artifact_record["reproduction_claim"] is False
     assert artifact_record["pr95_1to1_reproduction_claim"] is False
-    assert artifact_record["reproduction_equivalence_class"] == (
-        "not_pr95_1to1_rgb_mse_mvp"
-    )
+    assert artifact_record["reproduction_equivalence_class"] == ("not_pr95_1to1_rgb_mse_mvp")
     assert artifact_record["ready_for_exact_eval_dispatch"] is False
     assert artifact_record["exact_readiness_refusal"]["ready"] is False
     assert artifact_record["readiness_blockers"] == [
@@ -837,9 +828,7 @@ def test_observer_surfaces_hinton_mlx_long_training_smoke(
     )
     state = tmp_path / "queue.sqlite"
     queue = _queue(artifact)
-    queue["experiments"][0]["steps"][0]["postconditions"][0]["equals"] = (
-        "hinton_mlx_long_training_smoke_verdict.v1"
-    )
+    queue["experiments"][0]["steps"][0]["postconditions"][0]["equals"] = "hinton_mlx_long_training_smoke_verdict.v1"
     queue["experiments"][0]["steps"][0]["telemetry"] = {
         "artifact_paths": [artifact.as_posix()],
     }
@@ -872,12 +861,8 @@ def test_observer_surfaces_hinton_mlx_long_training_smoke(
     assert artifact_record["json_schema"] == "hinton_mlx_long_training_smoke_verdict.v1"
     assert artifact_record["hinton_mlx_long_training_smoke"] is True
     assert artifact_record["local_training_queue_signal"] == "LOCAL_MLX_QUEUE_READY"
-    assert artifact_record["paid_dispatch_authorization_signal"].startswith(
-        "PAID_DISPATCH_BLOCKED"
-    )
-    assert artifact_record["convergence_verdict"]["verdict"] == (
-        "CONVERGES_CONSISTENTLY"
-    )
+    assert artifact_record["paid_dispatch_authorization_signal"].startswith("PAID_DISPATCH_BLOCKED")
+    assert artifact_record["convergence_verdict"]["verdict"] == ("CONVERGES_CONSISTENTLY")
     assert artifact_record["ready_for_exact_eval_dispatch"] is False
     assert artifact_record["readiness_blockers"] == [
         "scorer_loss_is_kl_to_mock_teacher_logits_not_contest_segnet",
@@ -913,9 +898,7 @@ def test_observer_surfaces_hinton_mlx_long_training_smoke(
     assert signal["schema"] == "local_training_signal_observation.v1"
     assert signal["source_schema"] == "hinton_mlx_long_training_smoke_verdict.v1"
     assert signal["local_training_queue_signal"] == "LOCAL_MLX_QUEUE_READY"
-    assert signal["recommended_next_action"] == (
-        "build_contest_teacher_or_strict_surrogate_queue_before_paid_dispatch"
-    )
+    assert signal["recommended_next_action"] == ("build_contest_teacher_or_strict_surrogate_queue_before_paid_dispatch")
     assert signal["score_claim"] is False
     assert signal["promotion_eligible"] is False
     assert signal["ready_for_exact_eval_dispatch"] is False
@@ -993,9 +976,7 @@ def test_observer_refuses_local_training_signal_without_readiness_blockers(
     assert observation["healthy"] is False
     assert observation["succeeded_signal_steps"] == []
     assert observation["local_training_signal_observation_count"] == 0
-    artifact_record = observation["succeeded_artifact_failure_steps"][0][
-        "expected_artifacts"
-    ][0]
+    artifact_record = observation["succeeded_artifact_failure_steps"][0]["expected_artifacts"][0]
     assert any(
         "requires_readiness_blockers_or_exact_readiness_refusal" in blocker
         for blocker in artifact_record["artifact_revalidation_blockers"]
@@ -1059,10 +1040,7 @@ def test_observer_real_pr95_queue_owns_drift_trace_and_package_artifacts(
         repo_root=REPO_ROOT,
         tail_lines=1,
     )
-    records = {
-        record["path"]: record
-        for record in observation["running_steps"][0]["expected_artifacts"]
-    }
+    records = {record["path"]: record for record in observation["running_steps"][0]["expected_artifacts"]}
 
     package = records[
         ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/"
@@ -1249,9 +1227,7 @@ def test_observer_surfaces_succeeded_materializer_feedback_artifact(
     assert succeeded["source_unit_ids"] == ["packet_payload_bin"]
     assert artifact["path"] == "observations.jsonl"
     assert artifact["postcondition_type"] == "jsonl_false_authority"
-    assert artifact["postcondition_schema_equals"] == (
-        "family_agnostic_materializer_empirical_observation.v1"
-    )
+    assert artifact["postcondition_schema_equals"] == ("family_agnostic_materializer_empirical_observation.v1")
     assert artifact["postcondition_passed"] is True
 
 
@@ -1336,9 +1312,7 @@ def test_observer_surfaces_succeeded_single_family_materializer_manifests(
                     "receiver_contract_satisfied": True,
                     "source_archive": {"bytes": 1000 + index, "sha256": f"{index}" * 64},
                     "candidate_archive": candidate_archive,
-                    "runtime_consumption_proof_path": receiver_verification[
-                        "proof_path"
-                    ],
+                    "runtime_consumption_proof_path": receiver_verification["proof_path"],
                     "receiver_verification": receiver_verification,
                     delta_key: {
                         "source_archive_bytes": 1000 + index,
@@ -1685,13 +1659,147 @@ def test_observer_rejects_materializer_with_only_proof_present_flag(
     failed_step = observation["succeeded_artifact_failure_steps"][0]
     artifact = failed_step["expected_artifacts"][0]
     assert artifact["postcondition_passed"] is False
-    assert "experiment_queue_observation_artifact_postcondition_failures:1" in (
-        observation["blockers"]
-    )
+    assert "experiment_queue_observation_artifact_postcondition_failures:1" in (observation["blockers"])
     assert (
         "json_false_authority_materializer_runtime_or_receiver_proof_path_missing"
         in artifact["artifact_revalidation_blockers"]
     )
+
+
+def test_observer_rejects_materializer_stale_runtime_tree_identity(
+    tmp_path: Path,
+) -> None:
+    manifest = tmp_path / "stale_runtime_materializer.json"
+    candidate_archive = _write_artifact_bytes(
+        tmp_path / "stale_runtime_candidate.zip",
+        b"stale runtime candidate bytes",
+    )
+    runtime_dir = tmp_path / "candidate_runtime"
+    runtime_dir.mkdir()
+    (runtime_dir / "inflate.sh").write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+    proof = tmp_path / "runtime_consumption_proof.json"
+    stale_tree_sha = "b" * 64
+    proof.write_text(
+        json.dumps(
+            {
+                "schema": "family_agnostic_runtime_consumption_proof_v1",
+                "candidate_archive": dict(candidate_archive),
+                "candidate_archive_sha256": candidate_archive["sha256"],
+                "receiver_contract_satisfied": True,
+                "runtime_consumption_proof_passed": True,
+                "passed": True,
+                "runtime_adapter_ready": True,
+                "runtime_adapter_manifest": {
+                    "runtime_adapter_ready": True,
+                    "runtime_dir": runtime_dir.as_posix(),
+                    "runtime_tree_sha256": stale_tree_sha,
+                },
+                "score_claim": False,
+                "score_claim_valid": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "promotable": False,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+                "gpu_launched": False,
+                "blockers": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    manifest.write_text(
+        json.dumps(
+            {
+                "schema": "packet_member_merge_candidate.v1",
+                "target_kind": "packet_member_merge_v1",
+                "materializer_id": "packet_member_merge_adapter",
+                "receiver_contract_kind": "family_agnostic_packet_member_merge",
+                "receiver_contract_satisfied": True,
+                "runtime_adapter_ready": True,
+                "candidate_archive": candidate_archive,
+                "runtime_consumption_proof_path": proof.as_posix(),
+                "receiver_verification": {
+                    "schema": "family_agnostic_runtime_consumption_proof_verification.v1",
+                    "receiver_contract_satisfied": True,
+                    "runtime_adapter_ready": True,
+                    "proof_present": True,
+                    "proof_path": proof.as_posix(),
+                    "runtime_adapter_tree_sha256": stale_tree_sha,
+                    "blockers": [],
+                },
+                "packet_member_merge_receiver_runtime": {
+                    "runtime_adapter_ready": True,
+                    "runtime_dir": runtime_dir.as_posix(),
+                    "runtime_tree_sha256": stale_tree_sha,
+                },
+                "serialized_archive_delta": {
+                    "schema": "serialized_archive_delta_contract.v1",
+                    "source_archive_bytes": 128,
+                    "candidate_archive_bytes": candidate_archive["bytes"],
+                    "realized_saved_bytes": 8,
+                    "savings_realized": True,
+                    "status": "realized_saving",
+                },
+                "score_claim": False,
+                "score_claim_valid": False,
+                "score_claim_eligible": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "promotable": False,
+                "ready_for_exact_eval_dispatch": False,
+                "field_selection_ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+                "gpu_launched": False,
+                "exact_cuda_auth_eval": False,
+                "contest_cuda_auth_eval": False,
+                "score_affecting_payload_changed": True,
+                "charged_bits_changed": True,
+            }
+        ),
+        encoding="utf-8",
+    )
+    state = tmp_path / "queue.sqlite"
+    queue = _queue(manifest)
+    queue["experiments"][0]["steps"][0]["postconditions"] = [
+        {
+            "type": "json_false_authority",
+            "path": manifest.as_posix(),
+            "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+            ],
+        }
+    ]
+
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'succeeded',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-05-27T15:30:00Z'
+            WHERE queue_id = 'observer_test'
+              AND experiment_id = 'exp0'
+              AND step_id = 'smoke'
+            """,
+            (json.dumps({"command": ["python", "tools/run_family_agnostic_materializer.py"]}),),
+        )
+        conn.commit()
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=0,
+    )
+
+    assert observation["healthy"] is False
+    artifact = observation["succeeded_artifact_failure_steps"][0]["expected_artifacts"][0]
+    assert any("runtime_tree_sha256_mismatch" in blocker for blocker in artifact["artifact_revalidation_blockers"])
 
 
 def test_observer_surfaces_optimizer_candidate_queue_materializer_top_k(
@@ -1723,20 +1831,14 @@ def test_observer_surfaces_optimizer_candidate_queue_materializer_top_k(
                         "candidate_id": "renderer_payload_dfl1_e20295f0a662",
                         "target_kind": "renderer_payload_dfl1_v1",
                         "materializer_id": "renderer_payload_dfl1_adapter",
-                        "receiver_contract_kind": (
-                            "source_runtime_native_renderer_payload_dfl1"
-                        ),
+                        "receiver_contract_kind": ("source_runtime_native_renderer_payload_dfl1"),
                         "receiver_contract_satisfied": True,
                         "score_affecting_payload_changed": True,
                         "charged_bits_changed": True,
                         "full_frame_inflate_parity_proven": True,
-                        "renderer_payload_dfl1_full_frame_inflate_parity_satisfied": (
-                            True
-                        ),
+                        "renderer_payload_dfl1_full_frame_inflate_parity_satisfied": (True),
                         "candidate_archive": candidate_archive,
-                        "runtime_consumption_proof_path": receiver_verification[
-                            "proof_path"
-                        ],
+                        "runtime_consumption_proof_path": receiver_verification["proof_path"],
                         "receiver_verification": receiver_verification,
                         "serialized_archive_delta": {
                             "schema": "serialized_archive_delta_contract.v1",
@@ -1869,9 +1971,7 @@ def test_observer_refuses_optimizer_top_k_row_without_nested_revalidation(
                         "candidate_id": "missing_receiver_runtime",
                         "target_kind": "renderer_payload_dfl1_v1",
                         "materializer_id": "renderer_payload_dfl1_adapter",
-                        "receiver_contract_kind": (
-                            "source_runtime_native_renderer_payload_dfl1"
-                        ),
+                        "receiver_contract_kind": ("source_runtime_native_renderer_payload_dfl1"),
                         "receiver_contract_satisfied": True,
                         "candidate_archive": {
                             "path": (tmp_path / "missing_candidate.zip").as_posix(),
@@ -1950,9 +2050,7 @@ def test_observer_refuses_optimizer_top_k_row_without_nested_revalidation(
 
     assert observation["healthy"] is False
     assert observation["succeeded_artifact_steps"] == []
-    artifact = observation["succeeded_artifact_failure_steps"][0][
-        "expected_artifacts"
-    ][0]
+    artifact = observation["succeeded_artifact_failure_steps"][0]["expected_artifacts"][0]
     assert artifact.get("optimizer_candidate_queue_materializer_row_count") is None
     blockers = artifact["artifact_revalidation_blockers"]
     assert any("candidate_archive_file_missing" in blocker for blocker in blockers)
