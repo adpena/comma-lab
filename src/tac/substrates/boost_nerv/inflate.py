@@ -138,6 +138,45 @@ def inflate_one_video(archive_bytes: bytes, output_dir: Path) -> None:
             Image.fromarray(arr).save(output_dir / f"{frame_idx}.png")
 
 
+def _png_output_dir_numpy(output_dir: Path, video_name: str) -> Path:
+    """Torch-free safe output directory for one relative file-list entry."""
+    raw = str(video_name).replace("\\", "/").strip()
+    rel = Path(raw)
+    if (
+        not raw
+        or "//" in raw
+        or rel.is_absolute()
+        or any(part in {"", ".."} for part in rel.parts)
+    ):
+        raise ValueError(f"unsafe file_list video name for PNG output: {video_name!r}")
+    root = output_dir.resolve(strict=False)
+    candidate = output_dir / rel.with_suffix("")
+    target = candidate.resolve(strict=False)
+    try:
+        target.relative_to(root)
+    except ValueError as exc:
+        raise ValueError(
+            f"file_list video name escapes output directory: {video_name!r}"
+        ) from exc
+    return target
+
+
+def _read_single_member_archive_bytes(archive_dir: Path) -> bytes:
+    """Read the single contest archive member, failing on missing/ambiguous input."""
+    zero_bin = archive_dir / "0.bin"
+    x_member = archive_dir / "x"
+    present = [path for path in (zero_bin, x_member) if path.is_file()]
+    if len(present) != 1:
+        if not present:
+            raise FileNotFoundError(
+                f"expected exactly one archive member at {zero_bin} or {x_member}"
+            )
+        raise ValueError(
+            f"ambiguous archive members present: {zero_bin} and {x_member}"
+        )
+    return present[0].read_bytes()
+
+
 def main_cli() -> int:
     """CLI: inflate.py <archive_dir> <output_dir> <file_list> per Catalog #146."""
     if len(sys.argv) < 4:
@@ -148,14 +187,21 @@ def main_cli() -> int:
     file_list_path = Path(sys.argv[3])
 
     file_list = file_list_path.read_text(encoding="utf-8").strip().splitlines()
-    archive_bytes = (archive_dir / "0.bin").read_bytes()
+    archive_bytes = _read_single_member_archive_bytes(archive_dir)
     for fname in file_list:
-        base = Path(fname).stem
-        inflate_one_video(archive_bytes, output_dir / base)
+        name = fname.strip()
+        if not name:
+            continue
+        inflate_one_video(archive_bytes, _png_output_dir_numpy(output_dir, name))
     return 0
 
 
-__all__ = ["inflate_one_video", "main_cli"]
+__all__ = [
+    "_png_output_dir_numpy",
+    "_read_single_member_archive_bytes",
+    "inflate_one_video",
+    "main_cli",
+]
 
 
 if __name__ == "__main__":  # pragma: no cover — CLI smoke

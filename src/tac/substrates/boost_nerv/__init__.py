@@ -119,20 +119,19 @@ from .archive import (
 from .score_aware_loss import BoostnervScoreAwareLoss, ScoreAwareLossWeights
 
 __all__ = [
+    "ARCHITECTURE_CLASS",
+    "CANONICAL_EQUATION_IDS",
+    "SUBSTRATE_ID",
     "BoostnervArchive",
     "BoostnervArchiveNumpy",
     "BoostnervConfig",
     "BoostnervScoreAwareLoss",
     "BoostnervSubstrate",
     "ScoreAwareLossWeights",
+    "emit_landing_posterior_anchor",
     "pack_archive",
     "parse_archive",
     "parse_archive_numpy",
-    # WAVE-1 canonical posterior emission wire-in (2026-05-26)
-    "SUBSTRATE_ID",
-    "ARCHITECTURE_CLASS",
-    "CANONICAL_EQUATION_IDS",
-    "emit_landing_posterior_anchor",
 ]
 
 

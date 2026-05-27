@@ -24,7 +24,11 @@ from tac.substrates.boost_nerv.archive import (
     parse_archive,
     parse_archive_numpy,
 )
-from tac.substrates.boost_nerv.inflate import inflate_one_video
+from tac.substrates.boost_nerv.inflate import (
+    _png_output_dir_numpy,
+    _read_single_member_archive_bytes,
+    inflate_one_video,
+)
 
 _INFLATE_PATH = Path(__file__).resolve().parents[1] / "inflate.py"
 _ARCHIVE_PATH = Path(__file__).resolve().parents[1] / "archive.py"
@@ -106,6 +110,16 @@ def test_parse_archive_numpy_is_torch_free_in_code() -> None:
                     assert inner.value.id != "torch", node.name
 
 
+def test_archive_module_has_no_top_level_torch_or_mlx_import() -> None:
+    tree = ast.parse(_ARCHIVE_PATH.read_text(encoding="utf-8"))
+    for node in tree.body:
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                assert not alias.name.startswith(("torch", "mlx")), alias.name
+        if isinstance(node, ast.ImportFrom) and node.module:
+            assert not node.module.startswith(("torch", "mlx")), node.module
+
+
 def test_numpy_parse_matches_torch_parse_exactly() -> None:
     _model, blob = _build_model_and_blob()
     at = parse_archive(blob)
@@ -151,3 +165,48 @@ def test_inflate_one_video_writes_pngs() -> None:
             png = out / f"{frame_idx}.png"
             assert png.is_file(), png
             assert png.stat().st_size > 0
+
+
+def test_read_single_member_archive_bytes_accepts_0_bin_or_x() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        (root / "0.bin").write_bytes(b"zero")
+        assert _read_single_member_archive_bytes(root) == b"zero"
+        (root / "0.bin").unlink()
+        (root / "x").write_bytes(b"x")
+        assert _read_single_member_archive_bytes(root) == b"x"
+
+
+def test_read_single_member_archive_bytes_rejects_missing_or_ambiguous() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        try:
+            _read_single_member_archive_bytes(root)
+        except FileNotFoundError as exc:
+            assert "expected exactly one archive member" in str(exc)
+        else:  # pragma: no cover
+            raise AssertionError("expected missing archive member to fail")
+
+        (root / "0.bin").write_bytes(b"zero")
+        (root / "x").write_bytes(b"x")
+        try:
+            _read_single_member_archive_bytes(root)
+        except ValueError as exc:
+            assert "ambiguous archive members" in str(exc)
+        else:  # pragma: no cover
+            raise AssertionError("expected ambiguous archive members to fail")
+
+
+def test_png_output_dir_preserves_safe_relative_subdir_and_rejects_escape() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        assert _png_output_dir_numpy(root, "sub/video.mkv") == (
+            root / "sub" / "video"
+        ).resolve(strict=False)
+        for bad in ("", "../video.mkv", "/tmp/video.mkv", "a//b.mkv"):
+            try:
+                _png_output_dir_numpy(root, bad)
+            except ValueError:
+                pass
+            else:  # pragma: no cover
+                raise AssertionError(f"expected unsafe name to fail: {bad!r}")

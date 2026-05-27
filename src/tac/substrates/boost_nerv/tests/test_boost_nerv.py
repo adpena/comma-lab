@@ -9,8 +9,13 @@ NotImplementedError per the L0 SCAFFOLD posture (Catalog #240).
 
 from __future__ import annotations
 
-import torch
+from pathlib import Path
 
+import numpy as np
+import torch
+from PIL import Image
+
+from tac.substrates._shared.numpy_portable_inflate import assert_inflate_is_numpy_portable
 from tac.substrates.boost_nerv.architecture import (
     BoostnervConfig,
     BoostnervSubstrate,
@@ -21,7 +26,11 @@ from tac.substrates.boost_nerv.archive import (
     BSV1_SCHEMA_VERSION,
     pack_archive,
     parse_archive,
+    parse_archive_numpy,
 )
+from tac.substrates.boost_nerv.inflate import inflate_one_video
+
+_INFLATE_PATH = Path(__file__).resolve().parents[1] / "inflate.py"
 
 
 def _smoke_cfg() -> BoostnervConfig:
@@ -85,6 +94,68 @@ def test_archive_pack_then_parse_roundtrip_recovers_tensors():
     quant_range = max(float(latents.max() - latents.min()), 1e-12)
     step = quant_range / 65534.0
     assert torch.allclose(arc.latents, latents, atol=step * 2.0)
+
+
+def test_numpy_parse_matches_torch_parse_roundtrip():
+    cfg = _smoke_cfg()
+    torch.manual_seed(3)
+    model = BoostnervSubstrate(cfg)
+    sd = model.state_dict()
+    decoder_sd = {k: v for k, v in sd.items() if k != "latents"}
+    blob = pack_archive(
+        decoder_sd,
+        sd["latents"].clone(),
+        _smoke_meta(cfg),
+        num_boosting_rounds=cfg.num_boosting_rounds,
+    )
+
+    torch_arc = parse_archive(blob)
+    numpy_arc = parse_archive_numpy(blob)
+
+    assert numpy_arc.schema_version == torch_arc.schema_version
+    assert numpy_arc.num_boosting_rounds == torch_arc.num_boosting_rounds
+    assert np.abs(torch_arc.latents.numpy() - numpy_arc.latents).max() < 1e-5
+    assert set(numpy_arc.decoder_state_dict) == set(torch_arc.decoder_state_dict)
+    for key, value in numpy_arc.decoder_state_dict.items():
+        assert np.abs(torch_arc.decoder_state_dict[key].numpy() - value).max() < 1e-5
+
+
+def test_numpy_inflate_matches_torch_roundtrip_pngs(tmp_path):
+    cfg = _smoke_cfg()
+    torch.manual_seed(17)
+    model = BoostnervSubstrate(cfg).eval()
+    sd = model.state_dict()
+    decoder_sd = {k: v for k, v in sd.items() if k != "latents"}
+    blob = pack_archive(
+        decoder_sd,
+        sd["latents"].clone(),
+        _smoke_meta(cfg),
+        num_boosting_rounds=cfg.num_boosting_rounds,
+    )
+    arc = parse_archive(blob)
+
+    rebuilt = BoostnervSubstrate(cfg).eval()
+    rebuilt.load_state_dict(arc.decoder_state_dict, strict=False)
+    with torch.no_grad():
+        rebuilt.latents.copy_(arc.latents.to(rebuilt.latents.dtype))
+        rgb_0, rgb_1 = rebuilt(torch.tensor([0], dtype=torch.long))
+
+    inflate_one_video(blob, tmp_path)
+
+    for frame_idx, rgb in ((0, rgb_0), (1, rgb_1)):
+        actual = np.asarray(Image.open(tmp_path / f"{frame_idx}.png"))
+        expected = (
+            (rgb[0].clamp(0.0, 1.0).permute(1, 2, 0).numpy() * 255.0)
+            .round()
+            .clip(0, 255)
+            .astype(np.uint8)
+        )
+        assert actual.shape == expected.shape
+        assert np.abs(actual.astype(np.int16) - expected.astype(np.int16)).max() <= 2
+
+
+def test_boost_nerv_inflate_is_numpy_portable() -> None:
+    assert_inflate_is_numpy_portable(_INFLATE_PATH)
 
 
 def test_header_size_invariant_is_22_bytes():

@@ -7,14 +7,14 @@ Catalog #124 STRICT archive-grammar 8 fields declared in package
 ::
 
     MAGIC(4)               b"BSV1"  BoostNeRV Variant 1
-    VERSION(1)             u8       schema version (currently 1)
+    VERSION(1)             u8       schema version (currently 2)
     LATENT_DIM(2)          u16      cfg.latent_dim
     NUM_PAIRS(2)           u16      cfg.num_pairs
     NUM_BOOSTING_ROUNDS(1) u8       cfg.num_boosting_rounds (0..255; canonical 2)
     DECODER_BLOB_LEN(4)    u32      brotli base + boosting decoder state_dict len
     LATENT_BLOB_LEN(4)     u32      raw int16 latents bytes len
     META_BLOB_LEN(4)       u32      utf-8 json meta bytes len
-    DECODER_BLOB           ...      brotli(quality=9) of pickled state_dict
+    DECODER_BLOB           ...      brotli(quality=9) of numpy-native state_dict
                                     (includes base decoder + boosting_heads)
     LATENT_BLOB            ...      int16 latents row-major
     META_BLOB              ...      json: {"sin_freq": ..., "decoder_channels": [...],
@@ -43,12 +43,13 @@ from __future__ import annotations
 import json
 import struct
 from dataclasses import dataclass
+from typing import Any
 
 import brotli  # type: ignore[import-not-found]
 import numpy as np
-import torch
 
 from tac.substrates._shared.numpy_portable_inflate import (
+    as_numpy_array,
     pack_state_dict_numpy,
     unpack_state_dict_numpy,
 )
@@ -72,34 +73,31 @@ BROTLI_QUALITY: int = 9
 
 @dataclass(frozen=True)
 class BoostnervArchive:
-    """Parsed archive structure — the inflate-time data contract."""
+    """Parsed archive structure - the inflate-time data contract."""
 
-    decoder_state_dict: dict[str, torch.Tensor]
+    decoder_state_dict: dict[str, Any]
     """Decoder state_dict (base decoder + boosting heads; all model weights
     except per-pair latents). The boosting head keys are logically-grouped
     as "boosting_residual_heads" per Catalog #124 manifest."""
 
-    latents: torch.Tensor
+    latents: Any
     meta: dict[str, object]
     schema_version: int
     num_boosting_rounds: int
 
 
-def _serialize_state_dict(sd: dict[str, torch.Tensor]) -> bytes:
+def _serialize_state_dict(sd: dict[str, Any]) -> bytes:
     """Serialize a torch state_dict into the torch-free numpy-native BSV1-v2 blob.
 
     Uses the canonical ``pack_state_dict_numpy`` bridge (fp16 ``{key: ndarray}``,
     no pickle) wrapped in brotli — ZERO ``torch._utils._rebuild_tensor`` refs so
     ``parse_archive_numpy`` reads it with NO torch import (8th MLX-first directive).
     """
-    np_sd = {
-        k: v.detach().to("cpu", dtype=torch.float16).contiguous().numpy()
-        for k, v in sd.items()
-    }
+    np_sd = {k: np.ascontiguousarray(as_numpy_array(v), dtype=np.float16) for k, v in sd.items()}
     return bytes(brotli.compress(pack_state_dict_numpy(np_sd, dtype="fp16"), quality=BROTLI_QUALITY))
 
 
-def _deserialize_numpy_state_dict(blob: bytes) -> dict[str, "np.ndarray"]:
+def _deserialize_numpy_state_dict(blob: bytes) -> dict[str, np.ndarray]:
     """Torch-free deserialize of the BSV1-v2 numpy-native decoder blob.
 
     Returns ``{key: fp32 ndarray}``. The shipped numpy-portable inflate runtime
@@ -109,38 +107,42 @@ def _deserialize_numpy_state_dict(blob: bytes) -> dict[str, "np.ndarray"]:
     return {k: v.astype(np.float32) for k, v in np_sd.items()}
 
 
-def _deserialize_state_dict(blob: bytes) -> dict[str, torch.Tensor]:
+def _deserialize_state_dict(blob: bytes) -> dict[str, Any]:
     """Torch-side deserialize (training/eval parity): wraps numpy arrays."""
+    import importlib
+
+    torch = importlib.import_module("torch")
     np_sd = _deserialize_numpy_state_dict(blob)
     return {k: torch.from_numpy(v.astype("float32")) for k, v in np_sd.items()}
 
 
 def _quantize_latents_to_int16(
-    latents: torch.Tensor,
-) -> tuple[torch.Tensor, float, float]:
-    if latents.dtype not in (torch.float32, torch.float16):
-        raise ValueError(f"latents must be float; got {latents.dtype}")
-    f = latents.detach().to(dtype=torch.float32, device="cpu")
+    latents: Any,
+) -> tuple[np.ndarray, float, float]:
+    arr = as_numpy_array(latents)
+    if not np.issubdtype(arr.dtype, np.floating):
+        raise ValueError(f"latents must be float; got {arr.dtype}")
+    f = np.ascontiguousarray(arr, dtype=np.float32)
     lo, hi = float(f.min()), float(f.max())
     if hi <= lo:
         # FFFF Catalog #158 fix: -32767 fill so dequant = 0*scale + lo = lo
-        return (torch.full_like(f, -32767, dtype=torch.int16), 1.0, lo)
+        return (np.full(f.shape, -32767, dtype=np.int16), 1.0, lo)
     scale = (hi - lo) / 65534.0
-    q_unsigned = ((f - lo) / scale).round().clamp(0.0, 65534.0)
-    q = (q_unsigned - 32767.0).to(torch.int16)
+    q_unsigned = np.clip(np.round((f - lo) / scale), 0.0, 65534.0)
+    q = (q_unsigned - 32767.0).astype(np.int16)
     return (q, scale, lo)
 
 
 def _dequantize_latents(
-    q: torch.Tensor, scale: float, zero_point: float
-) -> torch.Tensor:
-    q_unsigned = q.to(torch.float32) + 32767.0
+    q: np.ndarray, scale: float, zero_point: float
+) -> np.ndarray:
+    q_unsigned = q.astype(np.float32) + 32767.0
     return q_unsigned * float(scale) + float(zero_point)
 
 
 def pack_archive(
-    decoder_state_dict: dict[str, torch.Tensor],
-    latents: torch.Tensor,
+    decoder_state_dict: dict[str, Any],
+    latents: Any,
     meta: dict[str, object],
     *,
     num_boosting_rounds: int,
@@ -148,23 +150,24 @@ def pack_archive(
 ) -> bytes:
     if schema_version != BSV1_SCHEMA_VERSION:
         raise ValueError(f"unsupported schema version: {schema_version}")
-    if latents.dim() != 2:
+    latents_arr = as_numpy_array(latents)
+    if latents_arr.ndim != 2:
         raise ValueError(
-            f"latents must be 2-D (num_pairs, latent_dim); got {tuple(latents.shape)}"
+            f"latents must be 2-D (num_pairs, latent_dim); got {tuple(latents_arr.shape)}"
         )
     if num_boosting_rounds < 0 or num_boosting_rounds > 255:
         raise ValueError(
             f"num_boosting_rounds {num_boosting_rounds} out of u8 range [0, 255]"
         )
 
-    num_pairs, latent_dim = int(latents.shape[0]), int(latents.shape[1])
+    num_pairs, latent_dim = int(latents_arr.shape[0]), int(latents_arr.shape[1])
     if num_pairs <= 0 or num_pairs > 0xFFFF:
         raise ValueError(f"num_pairs {num_pairs} out of u16 range")
     if latent_dim <= 0 or latent_dim > 0xFFFF:
         raise ValueError(f"latent_dim {latent_dim} out of u16 range")
 
-    q_latents, scale, zero_point = _quantize_latents_to_int16(latents)
-    latent_bytes = q_latents.contiguous().numpy().tobytes()
+    q_latents, scale, zero_point = _quantize_latents_to_int16(latents_arr)
+    latent_bytes = np.ascontiguousarray(q_latents).tobytes()
     decoder_blob = _serialize_state_dict(decoder_state_dict)
 
     meta_with_quant = dict(meta)
@@ -230,13 +233,15 @@ def parse_archive(blob: bytes) -> BoostnervArchive:
     sd = _deserialize_state_dict(decoder_blob)
     meta = json.loads(meta_blob.decode("utf-8"))
 
-    import numpy as np
-    q_latents = torch.from_numpy(
-        np.frombuffer(latent_blob, dtype=np.int16).copy()
-    ).view(num_pairs, latent_dim)
+    import importlib
+
+    torch = importlib.import_module("torch")
+    q_latents = np.frombuffer(latent_blob, dtype=np.int16).copy().reshape(
+        num_pairs, latent_dim
+    )
     scale = float(meta.pop("_quant_scale"))
     zp = float(meta.pop("_quant_zero_point"))
-    latents = _dequantize_latents(q_latents, scale, zp)
+    latents = torch.from_numpy(_dequantize_latents(q_latents, scale, zp))
 
     return BoostnervArchive(
         decoder_state_dict=sd,
@@ -256,8 +261,8 @@ class BoostnervArchiveNumpy:
     8th MLX-first standing directive.
     """
 
-    decoder_state_dict: dict[str, "np.ndarray"]
-    latents: "np.ndarray"
+    decoder_state_dict: dict[str, np.ndarray]
+    latents: np.ndarray
     meta: dict[str, object]
     schema_version: int
     num_boosting_rounds: int
