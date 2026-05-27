@@ -1872,6 +1872,172 @@ def test_observer_rejects_succeeded_generic_custody_artifact_without_proof(
     )
 
 
+def test_observer_rejects_running_generic_custody_artifact_without_proof(
+    tmp_path: Path,
+) -> None:
+    candidate_archive = _write_artifact_bytes(
+        tmp_path / "generic_candidate.zip",
+        b"generic custody candidate bytes",
+    )
+    artifact_path = tmp_path / "generic_custody.json"
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "schema": "generic_candidate_custody.v1",
+                "candidate_archive": candidate_archive,
+                "receiver_contract_satisfied": True,
+                "receiver_verification": {
+                    "schema": "family_agnostic_runtime_consumption_proof_verification.v1",
+                    "receiver_contract_satisfied": True,
+                    "proof_present": True,
+                    "blockers": [],
+                },
+                "score_claim": False,
+                "score_claim_valid": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "promotable": False,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+                "gpu_launched": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    state = tmp_path / "queue.sqlite"
+    queue = _queue(artifact_path)
+    queue["experiments"][0]["steps"][0]["postconditions"][0]["equals"] = (
+        "generic_candidate_custody.v1"
+    )
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'running',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-05-27T16:02:00Z'
+            WHERE queue_id = 'observer_test'
+              AND experiment_id = 'exp0'
+              AND step_id = 'smoke'
+            """,
+            (json.dumps({"command": ["python", "generic_custody.py"]}),),
+        )
+        conn.commit()
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=0,
+    )
+
+    assert observation["healthy"] is False
+    artifact = observation["running_steps"][0]["expected_artifacts"][0]
+    assert artifact["postcondition_passed"] is False
+    assert (
+        "json_equals_custody_runtime_or_receiver_proof_path_missing"
+        in artifact["artifact_revalidation_blockers"]
+    )
+    assert "experiment_queue_observation_artifact_postcondition_failures:1" in (
+        observation["blockers"]
+    )
+
+
+def test_observer_rejects_receiver_contract_only_proof_as_custody(
+    tmp_path: Path,
+) -> None:
+    candidate_archive = _write_artifact_bytes(
+        tmp_path / "generic_candidate.zip",
+        b"generic custody candidate bytes",
+    )
+    proof_path = tmp_path / "receiver_contract_only_proof.json"
+    proof_path.write_text(
+        json.dumps(
+            {
+                "schema": "family_agnostic_runtime_consumption_proof_v1",
+                "candidate_archive": dict(candidate_archive),
+                "candidate_archive_sha256": candidate_archive["sha256"],
+                "receiver_contract_satisfied": True,
+                "score_claim": False,
+                "score_claim_valid": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "promotable": False,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+                "gpu_launched": False,
+                "blockers": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    artifact_path = tmp_path / "generic_custody.json"
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "schema": "generic_candidate_custody.v1",
+                "candidate_archive": candidate_archive,
+                "receiver_contract_satisfied": True,
+                "runtime_consumption_proof_path": proof_path.as_posix(),
+                "receiver_verification": {
+                    "schema": "family_agnostic_runtime_consumption_proof_verification.v1",
+                    "receiver_contract_satisfied": True,
+                    "proof_present": True,
+                    "proof_path": proof_path.as_posix(),
+                    "blockers": [],
+                },
+                "score_claim": False,
+                "score_claim_valid": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "promotable": False,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+                "gpu_launched": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    state = tmp_path / "queue.sqlite"
+    queue = _queue(artifact_path)
+    queue["experiments"][0]["steps"][0]["postconditions"][0]["equals"] = (
+        "generic_candidate_custody.v1"
+    )
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'succeeded',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-05-27T16:10:00Z'
+            WHERE queue_id = 'observer_test'
+              AND experiment_id = 'exp0'
+              AND step_id = 'smoke'
+            """,
+            (json.dumps({"command": ["python", "generic_custody.py"]}),),
+        )
+        conn.commit()
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=0,
+    )
+
+    assert observation["healthy"] is False
+    artifact = observation["succeeded_artifact_failure_steps"][0]["expected_artifacts"][0]
+    assert artifact["postcondition_passed"] is False
+    assert (
+        "json_equals_custody_proof_json_success_flag_missing"
+        in artifact["artifact_revalidation_blockers"]
+    )
+
+
 def test_observer_accepts_succeeded_generic_custody_artifact_with_live_proof(
     tmp_path: Path,
 ) -> None:

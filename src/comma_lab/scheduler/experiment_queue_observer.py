@@ -74,7 +74,6 @@ RUNTIME_PROOF_MAPPING_FIELDS = (
 PROOF_SUCCESS_FIELDS = (
     "passed",
     "runtime_consumption_proof_passed",
-    "receiver_contract_satisfied",
     "full_frame_inflate_parity_satisfied",
     "source_runtime_unpacker_parse_satisfied",
 )
@@ -1226,7 +1225,6 @@ def _expected_artifacts(
     step: Mapping[str, Any],
     *,
     repo_root: Path,
-    enforce_custody_proof: bool = False,
 ) -> list[dict[str, Any]]:
     artifacts: list[dict[str, Any]] = []
     for condition in step.get("postconditions", []):
@@ -1260,7 +1258,6 @@ def _expected_artifacts(
             condition,
             path=path,
             repo_root=repo_root,
-            enforce_custody_proof=enforce_custody_proof,
         )
         if revalidation:
             record["artifact_revalidation"] = revalidation
@@ -1282,7 +1279,6 @@ def _artifact_postcondition_revalidation(
     *,
     path: Path,
     repo_root: Path,
-    enforce_custody_proof: bool = False,
 ) -> dict[str, Any]:
     postcondition_type = str(condition.get("type") or "")
     blockers: list[str] = []
@@ -1329,11 +1325,7 @@ def _artifact_postcondition_revalidation(
             for item in materializer.get("blockers", [])
             if str(item)
         )
-    elif (
-        enforce_custody_proof
-        and payload is not None
-        and _payload_has_custody_claim(payload)
-    ):
+    elif payload is not None and _payload_has_custody_claim(payload):
         custody = _generic_custody_payload_revalidation(
             payload,
             repo_root=repo_root,
@@ -1453,7 +1445,6 @@ def _step_observation(
         observation["expected_artifacts"] = _expected_artifacts(
             step_definition,
             repo_root=repo_root,
-            enforce_custody_proof=step_state.get("status") == "succeeded",
         )
         _extend_unique(
             observation["expected_artifact_paths"],
