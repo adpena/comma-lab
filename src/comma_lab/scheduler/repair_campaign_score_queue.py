@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import json
+from collections import Counter
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
@@ -56,7 +58,7 @@ DEFAULT_WATERFILL_SOURCE_WORKER_MAX_STEPS = 8
 DEFAULT_WATERFILL_SOURCE_WORKER_MAX_EXPERIMENTS = 2
 DEFAULT_WATERFILL_SOURCE_WORKER_MAX_PARALLEL = 1
 DEFAULT_WATERFILL_SOURCE_WORKER_TIMEOUT_SECONDS = 300
-DEFAULT_BYTE_CLOSED_MATERIALIZATION_WORKER_MAX_STEPS = 6
+DEFAULT_BYTE_CLOSED_MATERIALIZATION_WORKER_MAX_STEPS = 9
 DEFAULT_BYTE_CLOSED_MATERIALIZATION_WORKER_MAX_EXPERIMENTS = 1
 DEFAULT_BYTE_CLOSED_MATERIALIZATION_WORKER_MAX_PARALLEL = 1
 DEFAULT_BYTE_CLOSED_MATERIALIZATION_WORKER_TIMEOUT_SECONDS = 600
@@ -126,6 +128,119 @@ def _positive_int(value: Any) -> int | None:
     except (TypeError, ValueError):
         return None
     return parsed if parsed > 0 else 0
+
+
+def _load_json_if_present(
+    path: str | Path | None,
+    repo_root: str | Path,
+) -> Mapping[str, Any]:
+    if path is None:
+        return {}
+    path_text = str(path or "").strip()
+    if not path_text:
+        return {}
+    resolved = _resolve(path_text, repo_root)
+    if not resolved.is_file():
+        return {}
+    try:
+        payload = json.loads(resolved.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, Mapping) else {}
+
+
+def _repair_materialization_child_rollup(
+    *,
+    experiments: Sequence[Mapping[str, Any]],
+    repo_root: str | Path,
+) -> dict[str, Any]:
+    queue_paths: list[str] = []
+    worker_result_paths: list[str] = []
+    blocker_counts: Counter[str] = Counter()
+    queue_count = 0
+    child_experiment_count = 0
+    ready_child_count = 0
+    blocked_child_count = 0
+    posterior_signal_count = 0
+    posterior_appended_count = 0
+    posterior_duplicate_count = 0
+    worker_failure_count = 0
+    for experiment in experiments:
+        metadata = _mapping(experiment.get("metadata"))
+        queue_path = str(
+            metadata.get("repair_campaign_byte_closed_materialization_queue_path")
+            or ""
+        ).strip()
+        worker_path = str(
+            metadata.get(
+                "repair_campaign_byte_closed_materialization_worker_result_path"
+            )
+            or ""
+        ).strip()
+        if queue_path:
+            queue_paths.append(queue_path)
+        if worker_path:
+            worker_result_paths.append(worker_path)
+        queue = _load_json_if_present(queue_path, repo_root)
+        if queue:
+            queue_count += 1
+            queue_metadata = _mapping(queue.get("metadata"))
+            child_experiment_count += (
+                _positive_int(queue_metadata.get("experiment_count")) or 0
+            )
+            ready_child_count += (
+                _positive_int(queue_metadata.get("ready_experiment_count")) or 0
+            )
+            blocked_child_count += (
+                _positive_int(queue_metadata.get("blocked_experiment_count")) or 0
+            )
+            blocker_counts.update(
+                _string_list(queue_metadata.get("queue_actuation_blockers"))
+            )
+            for child in queue.get("experiments") or []:
+                if not isinstance(child, Mapping):
+                    continue
+                child_metadata = _mapping(child.get("metadata"))
+                blocker_counts.update(
+                    _string_list(child_metadata.get("queue_actuation_blockers"))
+                )
+                append_report = _load_json_if_present(
+                    child_metadata.get("posterior_append_report_path"),
+                    repo_root,
+                )
+                if append_report:
+                    posterior_signal_count += (
+                        _positive_int(append_report.get("signal_count")) or 0
+                    )
+                    posterior_appended_count += (
+                        _positive_int(append_report.get("appended_count")) or 0
+                    )
+                    posterior_duplicate_count += (
+                        _positive_int(append_report.get("skipped_duplicate_count"))
+                        or 0
+                    )
+        worker_result = _load_json_if_present(worker_path, repo_root)
+        if worker_result:
+            worker_failure_count += _positive_int(
+                worker_result.get("failure_count")
+            ) or 0
+    return {
+        "schema": "repair_campaign_byte_closed_materialization_rollup.v1",
+        "queue_paths": ordered_unique(queue_paths),
+        "worker_result_paths": ordered_unique(worker_result_paths),
+        "materialization_queue_artifact_count": queue_count,
+        "materialization_child_experiment_count": child_experiment_count,
+        "materialization_ready_child_count": ready_child_count,
+        "materialization_blocked_child_count": blocked_child_count,
+        "materialization_blocker_histogram": dict(sorted(blocker_counts.items())),
+        "materialization_worker_failure_count": worker_failure_count,
+        "materialization_posterior_signal_count": posterior_signal_count,
+        "materialization_posterior_appended_count": posterior_appended_count,
+        "materialization_posterior_duplicate_count": posterior_duplicate_count,
+        "budget_spend_allowed": False,
+        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
+    }
 
 
 def _posterior_route_executable_queue_keys(
@@ -683,6 +798,16 @@ def _score_experiment(
                     str(results_root),
                     "--queue-id",
                     f"{_slug(chain_id)}_repair_byte_closed_materialization",
+                    *(
+                        ["--posterior-path", posterior_ref]
+                        if posterior_ref is not None
+                        else []
+                    ),
+                    *(
+                        ["--posterior-lock-path", posterior_lock_ref]
+                        if posterior_lock_ref is not None
+                        else []
+                    ),
                     "--overwrite",
                 ],
                 "resources": {"kind": "local_cpu"},
@@ -1089,12 +1214,19 @@ def summarize_repair_campaign_score_queue(
     posterior_prior_summary = build_repair_campaign_posterior_prior_summary(
         posterior_path=posterior_path,
     )
+    score_experiments = [
+        experiment
+        for experiment in repair_campaign_score_queue.get("experiments") or []
+        if isinstance(experiment, Mapping)
+    ]
+    materialization_rollup = _repair_materialization_child_rollup(
+        experiments=score_experiments,
+        repo_root=Path.cwd(),
+    )
     summary = {
         "schema": REPAIR_CAMPAIGN_SCORE_QUEUE_SUMMARY_SCHEMA,
         "queue_id": repair_campaign_score_queue.get("queue_id"),
-        "experiment_count": len(
-            repair_campaign_score_queue.get("experiments") or []
-        ),
+        "experiment_count": len(score_experiments),
         "ready_experiment_count": metadata.get("ready_experiment_count"),
         "blocked_experiment_count": metadata.get("blocked_experiment_count"),
         "campaign_scorer_uses_posterior_priors": metadata.get(
@@ -1109,6 +1241,22 @@ def summarize_repair_campaign_score_queue(
         ),
         "byte_closed_materialization_followup_default": metadata.get(
             "byte_closed_materialization_followup_default"
+        ),
+        "byte_closed_materialization_rollup": materialization_rollup,
+        "byte_closed_materialization_queue_paths": materialization_rollup.get(
+            "queue_paths"
+        ),
+        "byte_closed_materialization_ready_child_count": materialization_rollup.get(
+            "materialization_ready_child_count"
+        ),
+        "byte_closed_materialization_blocked_child_count": materialization_rollup.get(
+            "materialization_blocked_child_count"
+        ),
+        "byte_closed_materialization_blocker_histogram": materialization_rollup.get(
+            "materialization_blocker_histogram"
+        ),
+        "byte_closed_materialization_posterior_appended_count": (
+            materialization_rollup.get("materialization_posterior_appended_count")
         ),
         "queue_path": str(queue_path),
         "allowed_use": "default_repair_campaign_scorer_queue_planning_only",

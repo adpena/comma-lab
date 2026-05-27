@@ -242,7 +242,7 @@ def test_build_repair_campaign_score_queue_from_waterfill_work_order(
     assert experiment["metadata"]["byte_closed_materialization_followup_default"] is True
     assert experiment["metadata"]["byte_closed_materialization_worker_limits"] == {
         "schema": "repair_campaign_byte_closed_materialization_worker_limits.v1",
-        "max_steps": 6,
+        "max_steps": 9,
         "max_experiments": 1,
         "max_parallel": 1,
         "timeout_seconds": 600,
@@ -398,6 +398,96 @@ def test_repair_campaign_score_queue_can_bind_posterior_prior_input(
         DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_PATH.name
         == "repair_campaign_stackability_posterior.jsonl"
     )
+    materialization_step = next(
+        step
+        for step in experiment["steps"]
+        if step["id"] == "build_repair_campaign_byte_closed_materialization_queue"
+    )
+    assert "--posterior-path" in materialization_step["command"]
+    assert str(posterior_path) in materialization_step["command"]
+    assert "--posterior-lock-path" in materialization_step["command"]
+    assert str(posterior_path.with_name(f".{posterior_path.name}.lock")) in (
+        materialization_step["command"]
+    )
+    materialization_queue_path = Path(
+        experiment["metadata"]["repair_campaign_byte_closed_materialization_queue_path"]
+    )
+    materialization_queue_path.parent.mkdir(parents=True, exist_ok=True)
+    materialization_append_report_path = (
+        tmp_path / "materialization_child_posterior_append_report.json"
+    )
+    materialization_append_report_path.write_text(
+        json.dumps(
+            {
+                "schema": REPAIR_CAMPAIGN_BLOCKED_POSTERIOR_APPEND_REPORT_SCHEMA,
+                "signal_count": 2,
+                "appended_count": 1,
+                "skipped_duplicate_count": 1,
+                **_false_authority(),
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    materialization_queue_path.write_text(
+        json.dumps(
+            {
+                "schema": QUEUE_SCHEMA,
+                "queue_id": "unit_child_materialization",
+                "controls": {"mode": "running"},
+                "metadata": {
+                    "experiment_count": 2,
+                    "ready_experiment_count": 1,
+                    "blocked_experiment_count": 1,
+                    "queue_actuation_blockers": ["family_transform_missing"],
+                    **_false_authority(),
+                },
+                "experiments": [
+                    {
+                        "id": "materialize_segnet_region",
+                        "status": "queued",
+                        "metadata": {
+                            "queue_actuation_blockers": [],
+                            "posterior_append_report_path": str(
+                                materialization_append_report_path
+                            ),
+                            **_false_authority(),
+                        },
+                        "steps": [],
+                    },
+                    {
+                        "id": "materialize_selector_codec",
+                        "status": "frozen",
+                        "metadata": {
+                            "queue_actuation_blockers": ["runtime_proof_missing"],
+                            **_false_authority(),
+                        },
+                        "steps": [],
+                    },
+                ],
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    worker_result_path = Path(
+        experiment["metadata"][
+            "repair_campaign_byte_closed_materialization_worker_result_path"
+        ]
+    )
+    worker_result_path.write_text(
+        json.dumps(
+            {"schema": "experiment_queue_worker_result.v1", "failure_count": 0},
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     summary = summarize_repair_campaign_score_queue(
         repair_campaign_score_queue=queue,
         queue_path=tmp_path / "repair_campaign_score_queue.json",
@@ -408,6 +498,17 @@ def test_repair_campaign_score_queue_can_bind_posterior_prior_input(
     assert summary["posterior_prior_summary"][
         "schema"
     ] == REPAIR_CAMPAIGN_POSTERIOR_PRIOR_SUMMARY_SCHEMA
+    assert summary["byte_closed_materialization_queue_paths"]
+    assert summary["byte_closed_materialization_ready_child_count"] == 1
+    assert summary["byte_closed_materialization_blocked_child_count"] == 1
+    assert summary["byte_closed_materialization_blocker_histogram"] == {
+        "family_transform_missing": 1,
+        "runtime_proof_missing": 1,
+    }
+    assert summary["byte_closed_materialization_posterior_appended_count"] == 1
+    assert summary["byte_closed_materialization_rollup"][
+        "materialization_posterior_signal_count"
+    ] == 2
 
 
 def test_repair_posterior_acquisition_followup_queue_routes_to_child_queue(
