@@ -283,10 +283,24 @@ def test_manifest_rejects_list_section_specs_must_be_tuple() -> None:
         _valid_manifest(section_specs=[_valid_section_spec()])
 
 
-def test_manifest_monolithic_requires_canonical_member_name() -> None:
-    bad_spec = _valid_section_spec(member_name="weights.bin")
-    with pytest.raises(ValueError, match="monolithic_single_file=True"):
-        _valid_manifest(monolithic_single_file=True, section_specs=(bad_spec,))
+def test_manifest_monolithic_accepts_any_single_member_name() -> None:
+    """Layer 1 x-member grammar fix: monolithic is the structural single-member
+    property, recognized member-name-agnostically. A single ``weights.bin``
+    member (or the PR101/DQS1 ``x`` convention) IS a valid monolithic archive.
+    """
+    x_spec = _valid_section_spec(member_name="weights.bin")
+    m = _valid_manifest(monolithic_single_file=True, section_specs=(x_spec,))
+    assert m.monolithic_single_file is True
+    assert m.section_specs[0].member_name == "weights.bin"
+
+
+def test_manifest_monolithic_rejects_multiple_distinct_members() -> None:
+    """monolithic_single_file=True with 2+ DISTINCT members is forbidden — that
+    is multi-file and must carry multi_file_justification."""
+    s1 = _valid_section_spec(section_name="a", member_name="weights.bin")
+    s2 = _valid_section_spec(section_name="b", member_name="latents.bin")
+    with pytest.raises(ValueError, match="single ZIP member"):
+        _valid_manifest(monolithic_single_file=True, section_specs=(s1, s2))
 
 
 def test_manifest_multi_file_requires_justification() -> None:
@@ -482,6 +496,18 @@ def _build_monolithic_archive(tmp_path: Path, contents: bytes = b"hello world" *
     return archive
 
 
+def _build_single_member_archive(
+    tmp_path: Path, member_name: str, contents: bytes = b"frontier bytes" * 100
+) -> Path:
+    """Build a single-member archive with an arbitrary member name (e.g. the
+    PR101/DQS1 frontier-grammar ``x`` convention)."""
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    archive = tmp_path / "archive.zip"
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr(member_name, contents)
+    return archive
+
+
 def _build_multi_file_archive(tmp_path: Path) -> Path:
     tmp_path.mkdir(parents=True, exist_ok=True)
     archive = tmp_path / "archive.zip"
@@ -508,6 +534,49 @@ def test_discover_multi_file(tmp_path: Path) -> None:
     assert len(specs) == 2
     names = {s.section_name for s in specs}
     assert names == {"weights.bin", "latents.bin"}
+
+
+def test_discover_single_x_member_is_monolithic(tmp_path: Path) -> None:
+    """Layer 1 x-member grammar fix (Phase 10 op-routable #1): the PR101/DQS1
+    frontier-grammar single-``x``-member archive IS monolithic, recognized
+    structurally rather than by the literal ``0.bin`` name. This is the exact
+    case that drove the Phase 10 dry-run to exit 5 NAMED-BLOCKER pre-fix.
+    """
+    archive = _build_single_member_archive(tmp_path, "x", b"dqs1 frontier" * 200)
+    specs, is_monolithic = discover_section_specs_from_archive(archive)
+    assert is_monolithic is True
+    assert len(specs) == 1
+    assert specs[0].section_name == "x"
+    assert specs[0].member_name == "x"
+    assert specs[0].length_in_archive == len(b"dqs1 frontier" * 200)
+
+
+def test_discover_single_0bin_member_is_monolithic_regression(tmp_path: Path) -> None:
+    """Backward-compat regression: the canonical ``0.bin`` single-member archive
+    is still classified monolithic after the x-member fix."""
+    archive = _build_monolithic_archive(tmp_path)
+    specs, is_monolithic = discover_section_specs_from_archive(archive)
+    assert is_monolithic is True
+    assert len(specs) == 1
+    assert specs[0].member_name == "0.bin"
+
+
+def test_discover_single_arbitrary_member_is_monolithic(tmp_path: Path) -> None:
+    """Any single-member name (not just 0.bin / x) classifies monolithic."""
+    archive = _build_single_member_archive(tmp_path, "weights.bin")
+    specs, is_monolithic = discover_section_specs_from_archive(archive)
+    assert is_monolithic is True
+    assert len(specs) == 1
+    assert specs[0].member_name == "weights.bin"
+
+
+def test_discover_genuine_multi_file_still_not_monolithic(tmp_path: Path) -> None:
+    """Regression guard: a genuine 2+-member archive is still NOT monolithic
+    after the x-member fix (the fix must not over-classify)."""
+    archive = _build_multi_file_archive(tmp_path)
+    specs, is_monolithic = discover_section_specs_from_archive(archive)
+    assert is_monolithic is False
+    assert len(specs) == 2
 
 
 def test_discover_empty_archive_raises(tmp_path: Path) -> None:
@@ -610,6 +679,32 @@ def test_build_canonical_entry_monolithic_synthetic(tmp_path: Path) -> None:
     assert manifest.section_specs[0].member_name == "0.bin"
     assert manifest.byte_mutation_smoke_verdict == ByteMutationSmokeVerdict.NOT_RUN.value
     assert manifest.no_op_detector_passed is False
+    assert manifest.parser_section_manifest_path is not None
+    assert Path(manifest.parser_section_manifest_path).is_file()
+
+
+def test_build_canonical_entry_single_x_member_passes(tmp_path: Path) -> None:
+    """Layer 1 x-member grammar fix end-to-end: the canonical entry point
+    classifies a single-``x``-member archive as monolithic with the DEFAULT
+    monolithic_single_file=True (no multi_file_justification needed). This is
+    the exact path the Phase 10 CLI took to exit 5 NAMED-BLOCKER pre-fix; it
+    now reaches a valid ArchiveGrammarManifest.
+    """
+    archive = _build_single_member_archive(tmp_path / "results", "x", b"x" * 5000)
+    pipeline = _build_synthetic_pipeline_result(
+        lane_id="lane_v14_v2_dqs1_plus_fec10_20260526",
+        substrate_id="pr101_lc_v2_clone_enhanced_curriculum",
+    )
+    manifest = build_archive_grammar_from_compression_pipeline_result(
+        compression_pipeline_result=pipeline,
+        archive_path=archive,
+        output_dir=tmp_path,
+    )
+    assert manifest.monolithic_single_file is True
+    assert manifest.multi_file_justification is None
+    assert len(manifest.section_specs) == 1
+    assert manifest.section_specs[0].member_name == "x"
+    assert manifest.archive_bytes == archive.stat().st_size
     assert manifest.parser_section_manifest_path is not None
     assert Path(manifest.parser_section_manifest_path).is_file()
 
@@ -1000,6 +1095,32 @@ def test_live_repo_cli_importable_via_subprocess() -> None:
         timeout=20,
     )
     assert proc.returncode == 0
+
+
+def test_live_repo_v14_v2_dqs1_x_member_archive_is_monolithic() -> None:
+    """Layer 1 x-member grammar fix regression against the ACTUAL V14-V2 PR111
+    candidate frontier archive (single ``x`` member, PR101/DQS1 grammar). This
+    is the exact archive whose member-name convention drove the Phase 10
+    end-to-end dry-run to exit 5 NAMED-BLOCKER. Guarded by existence so the
+    suite stays green on clones without the candidate work dir.
+    """
+    candidate = (
+        REPO_ROOT
+        / "experiments"
+        / "results"
+        / "v14_v2_dqs1_plus_fec10_substituted_20260526T023000Z"
+        / "submission_dir"
+        / "archive.zip"
+    )
+    if not candidate.is_file():
+        pytest.skip("V14-V2 candidate archive not present in this checkout")
+    specs, is_monolithic = discover_section_specs_from_archive(candidate)
+    assert is_monolithic is True, (
+        "V14-V2 single-x-member archive must classify monolithic per the "
+        "Layer 1 x-member grammar fix"
+    )
+    assert len(specs) == 1
+    assert specs[0].member_name == "x"
 
 
 def test_live_repo_canonical_verifier_helper_exists() -> None:

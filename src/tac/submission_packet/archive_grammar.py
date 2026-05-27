@@ -317,11 +317,15 @@ class ArchiveGrammarManifest:
 
     section_specs: tuple[ArchiveSectionSpec, ...]
     """Per-section descriptors; canonical-monolithic-single-file requires all
-    sections share the same ``member_name`` (default ``"0.bin"``)."""
+    sections share ONE ``member_name`` (the structural single-file property,
+    recognized member-name-agnostically — ``"0.bin"``, the PR101/DQS1 ``"x"``
+    convention, or any single member)."""
 
     monolithic_single_file: bool
-    """True for canonical HNeRV parity L3 single-file ``0.bin`` archives.
-    False requires non-empty ``multi_file_justification`` rationale."""
+    """True for canonical HNeRV parity L3 single-file archives, recognized
+    structurally (exactly one ZIP member, regardless of its name — ``0.bin``,
+    the PR101/DQS1 ``x`` convention, etc.). False requires non-empty
+    ``multi_file_justification`` rationale."""
 
     multi_file_justification: str | None
     """Substantive rationale (≥4 chars, non-placeholder per Catalog #287)
@@ -406,14 +410,21 @@ class ArchiveGrammarManifest:
             raise ValueError("monolithic_single_file must be bool")
         if self.monolithic_single_file:
             # Per HNeRV parity L3: monolithic single-file requires all sections
-            # to share the canonical ``0.bin`` member name.
-            for spec in self.section_specs:
-                if spec.member_name != CANONICAL_MONOLITHIC_MEMBER_NAME:
-                    raise ValueError(
-                        f"monolithic_single_file=True requires all sections to use "
-                        f"member_name={CANONICAL_MONOLITHIC_MEMBER_NAME!r}; section "
-                        f"{spec.section_name!r} uses {spec.member_name!r} per HNeRV parity L3"
-                    )
+            # to share ONE member name (the structural single-file property),
+            # recognized member-name-agnostically. The canonical ``0.bin`` and
+            # the PR101/DQS1 frontier-grammar single-``x``-member convention are
+            # BOTH valid monolithic archives. What is forbidden is declaring
+            # ``monolithic_single_file=True`` while sections span 2+ DISTINCT
+            # members (that is multi-file and must carry
+            # ``multi_file_justification`` with ``monolithic_single_file=False``).
+            distinct_members = {spec.member_name for spec in self.section_specs}
+            if len(distinct_members) > 1:
+                raise ValueError(
+                    f"monolithic_single_file=True requires all sections to share a "
+                    f"single ZIP member; sections span {sorted(distinct_members)!r} "
+                    "per HNeRV parity L3 (set monolithic_single_file=False + "
+                    "multi_file_justification for genuine multi-file archives)"
+                )
         else:
             # Per Catalog #287: multi-file requires substantive justification.
             if self.multi_file_justification is None:
@@ -612,14 +623,23 @@ def discover_section_specs_from_archive(
     """Auto-discover section specs from an ``archive.zip`` for canonical HNeRV
     parity L3 monolithic-single-file archives.
 
-    Per HNeRV parity L3 canonical: monolithic single-file ``0.bin`` is the
-    default. When the archive has only that single member, the helper emits
-    one :class:`ArchiveSectionSpec` covering the full member with section_kind
-    ``OTHER`` (caller routes substrate-specific grammar refinement). When the
-    archive has multiple members, the helper falls back to per-member specs
-    with offset 0 in each member; the manifest then carries
-    ``monolithic_single_file=False`` and the caller MUST provide
-    ``multi_file_justification``.
+    Per HNeRV parity L3 canonical: a monolithic single-file archive is ANY
+    archive with exactly ONE ZIP member, recognized structurally rather than
+    by member name. The canonical ``0.bin`` convention and the PR101/DQS1
+    frontier-grammar single-``x``-member convention are BOTH monolithic — the
+    structural property (exactly one member) is what HNeRV parity L3 means by
+    "monolithic single-file", not the literal member name. When the archive
+    has exactly one member (whatever its name), the helper emits one
+    :class:`ArchiveSectionSpec` covering the full member with section_kind
+    ``OTHER`` (caller routes substrate-specific grammar refinement) and uses
+    the member's ACTUAL name. When the archive has multiple members, the
+    helper falls back to per-member specs with offset 0 in each member; the
+    manifest then carries ``monolithic_single_file=False`` and the caller MUST
+    provide ``multi_file_justification``.
+
+    The ``monolithic_member_name`` parameter is retained for backward
+    compatibility but no longer gates classification — a single-member archive
+    is monolithic regardless of whether its member matches that name.
 
     Returns:
         ``(section_specs_tuple, is_monolithic_single_file)``.
@@ -630,18 +650,21 @@ def discover_section_specs_from_archive(
             f"archive {archive_path} has zero ZIP members; "
             "HNeRV parity L3 requires at least the canonical monolithic 0.bin"
         )
-    if len(members) == 1 and members[0] == monolithic_member_name:
-        # Canonical HNeRV parity L3 monolithic single-file path.
-        member_bytes = _read_archive_zip_member_bytes(archive_path, monolithic_member_name)
+    if len(members) == 1:
+        # Canonical HNeRV parity L3 monolithic single-file path. The single
+        # member is the monolithic blob regardless of its name (``0.bin``,
+        # the PR101/DQS1 ``x`` convention, or any other single-member name).
+        sole_member_name = members[0]
+        member_bytes = _read_archive_zip_member_bytes(archive_path, sole_member_name)
         spec = ArchiveSectionSpec(
-            section_name=monolithic_member_name,
+            section_name=sole_member_name,
             offset_in_archive=0,
             length_in_archive=len(member_bytes),
             sha256_of_section=_sha256_bytes(member_bytes),
             section_kind=SectionKind.OTHER.value,
             operational_mechanism_status=OperationalMechanismStatus.OPERATIONAL.value,
             distinguishing_feature_name=None,
-            member_name=monolithic_member_name,
+            member_name=sole_member_name,
         )
         return ((spec,), True)
     # Multi-file fallback: emit one spec per member.
