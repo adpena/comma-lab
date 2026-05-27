@@ -67,29 +67,14 @@ Cross-references
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from tac.substrates.atw_v2_cooperative_receiver_v2.numpy_reference import (
-    CooperativeReceiverConfig,
-    DEFAULT_COND_EMBED_DIM,
-    DEFAULT_DECODER_CHANNELS,
-    DEFAULT_DECODER_EMBED_DIM,
-    DEFAULT_DECODER_INITIAL_GRID_H,
-    DEFAULT_DECODER_INITIAL_GRID_W,
-    DEFAULT_DECODER_NUM_UPSAMPLE_BLOCKS,
-    DEFAULT_EGO_MOTION_DIM,
-    DEFAULT_LATENT_DIM,
-    DEFAULT_NUM_PAIRS,
-    DEFAULT_OUTPUT_H,
-    DEFAULT_OUTPUT_W,
-    NumpyWeights,
-    init_numpy_weights_random,
-    numpy_decode_pair_with_ego_motion_conditioning,
-    numpy_ego_motion_foe_projection,
-)
+if TYPE_CHECKING:
+    from tac.substrates.atw_v2_cooperative_receiver_v2.numpy_reference import (
+        CooperativeReceiverConfig,
+    )
 
 try:  # pragma: no cover — exercised on Apple Silicon with MLX installed
     import mlx.core as mx
@@ -126,7 +111,7 @@ def require_mlx_available() -> None:
 # ----------------------------------------------------------------------------
 
 
-def mlx_ego_motion_foe_projection(pose_delta: "mx.array") -> "mx.array":
+def mlx_ego_motion_foe_projection(pose_delta: mx.array) -> mx.array:
     """Per-pair ego-motion FOE projection in MLX. Sister to numpy_ego_motion_foe_projection.
 
     Per Phase 3 design memo §7 + Ballard 2007 + Catalog #311.
@@ -162,7 +147,7 @@ def mlx_ego_motion_foe_projection(pose_delta: "mx.array") -> "mx.array":
 # ----------------------------------------------------------------------------
 
 
-class _CondEmbeddingHead:
+class _CondEmbeddingHead(nn.Module if nn is not None else object):  # type: ignore[misc]
     """Conditioning embedding head: ego_motion -> cond_embed_dim hidden -> latent_dim projection.
 
     Per Phase 3 design memo §1 + §7. Sister to numpy_reference's two-layer MLP.
@@ -170,19 +155,20 @@ class _CondEmbeddingHead:
 
     def __init__(self, cfg: CooperativeReceiverConfig) -> None:
         require_mlx_available()
+        super().__init__()
         self.cfg = cfg
         # Layer 1: (ego_motion_dim) -> (cond_embed_dim)
         self.fc1 = nn.Linear(cfg.ego_motion_dim, cfg.cond_embed_dim)
         # Layer 2: (cond_embed_dim) -> (latent_dim) — projects directly onto latent_dim
         self.fc2 = nn.Linear(cfg.cond_embed_dim, cfg.latent_dim)
 
-    def __call__(self, ego_motion_proj: "mx.array") -> "mx.array":
+    def __call__(self, ego_motion_proj: mx.array) -> mx.array:
         h = self.fc1(ego_motion_proj)
         h = nn.relu(h)
         return self.fc2(h)
 
 
-class _HNeRVStyleDecoder:
+class _HNeRVStyleDecoder(nn.Module if nn is not None else object):  # type: ignore[misc]
     """HNeRV-style decoder per Phase 3 §1 + §7 + canonical Z6 pattern.
 
     Forward: latent -> Linear initial_proj -> reshape grid -> N x [Conv2d(4*out) +
@@ -191,6 +177,7 @@ class _HNeRVStyleDecoder:
 
     def __init__(self, cfg: CooperativeReceiverConfig) -> None:
         require_mlx_available()
+        super().__init__()
         self.cfg = cfg
         embed_total = cfg.decoder_embed_dim * cfg.decoder_initial_grid_h * cfg.decoder_initial_grid_w
         self.initial_proj = nn.Linear(cfg.latent_dim, embed_total)
@@ -203,7 +190,7 @@ class _HNeRVStyleDecoder:
             in_ch = out_ch
         self.final_conv = nn.Conv2d(in_ch, 6, kernel_size=3, padding=1)
 
-    def __call__(self, z: "mx.array") -> tuple["mx.array", "mx.array"]:
+    def __call__(self, z: mx.array) -> tuple[mx.array, mx.array]:
         B = z.shape[0]
         # Initial projection
         flat = self.initial_proj(z)
@@ -297,9 +284,9 @@ class ATWv2CooperativeReceiverV2MLX:
 
     def reconstruct_pair(
         self,
-        pair_indices: "mx.array",
-        pose_delta: "mx.array",
-    ) -> tuple["mx.array", "mx.array"]:
+        pair_indices: mx.array,
+        pose_delta: mx.array,
+    ) -> tuple[mx.array, mx.array]:
         """Inflate-time reconstruction: per-pair latent + ego-motion -> RGB pair.
 
         Args:
@@ -335,9 +322,89 @@ class ATWv2CooperativeReceiverV2MLX:
         self.per_pair_latent_residual = mx.array(latents.astype(np.float32))
 
 
+class ATWv2CooperativeReceiverV2TrainableMLX(
+    nn.Module if nn is not None else object  # type: ignore[misc]
+):
+    """Trainable ``nn.Module`` wrapper for the canonical MLX score-aware harness.
+
+    MLX-SCORE-AWARE-HARNESS-WAVE 2026-05-27: the prior blocker was that
+    :class:`ATWv2CooperativeReceiverV2MLX` is NOT an ``mlx.nn.Module`` (no
+    ``.parameters()`` for ``value_and_grad``) AND its ``reconstruct_pair`` takes
+    a separate ``pose_delta`` the harness does not supply at call time. This
+    wrapper extinguishes both: it is an ``nn.Module`` exposing the harness's
+    ``reconstruct_pair(idx) -> (rgb_0, rgb_1)`` NCHW ``[0, 1]`` convention with
+    the per-pair ego-motion ``pose_delta`` carried INTERNALLY as a learnable
+    per-pair table (auto-decoder pattern; the substrate's distinguishing
+    primitive is the ego-motion FOE conditioning, learned per-pair from the
+    reconstruction signal rather than supplied by an external PoseNet at
+    training time).
+
+    Trainable parameters (discovered by MLX ``value_and_grad`` via
+    ``.parameters()``):
+
+    - ``cond_embed_head`` (ego_motion -> latent projection; ``nn.Linear`` x2)
+    - ``decoder`` (HNeRV-style; ``nn.Linear`` + ``nn.Conv2d`` blocks)
+    - ``per_pair_latent_residual`` ``(num_pairs, latent_dim)`` learnable table
+    - ``per_pair_pose_delta`` ``(num_pairs, ego_motion_dim)`` learnable table
+
+    Per Phase 3 design memo §1 + §7 (Atick-Redlich cooperative-receiver +
+    ego-motion FOE conditioning per Catalog #311). Non-promotable
+    ``[macOS-MLX research-signal]`` per CLAUDE.md "MLX portable-local-substrate
+    authority".
+    """
+
+    def __init__(self, cfg: CooperativeReceiverConfig) -> None:
+        require_mlx_available()
+        super().__init__()
+        self.cfg = cfg
+        self.cond_embed_head = _CondEmbeddingHead(cfg)
+        self.decoder = _HNeRVStyleDecoder(cfg)
+        # Learnable per-pair latent residual (auto-decoder) + per-pair pose
+        # delta carried internally (NOT a call-time argument). Small init so
+        # the conditioning starts near the cond-embed prior.
+        key_latent = mx.random.key(0)
+        key_pose = mx.random.key(1)
+        self.per_pair_latent_residual = (
+            mx.random.normal(shape=(cfg.num_pairs, cfg.latent_dim), key=key_latent)
+            * 0.01
+        )
+        self.per_pair_pose_delta = (
+            mx.random.normal(
+                shape=(cfg.num_pairs, cfg.ego_motion_dim), key=key_pose
+            )
+            * 0.01
+        )
+
+    def reconstruct_pair(
+        self, pair_indices: mx.array
+    ) -> tuple[mx.array, mx.array]:
+        """Harness forward: per-pair latent + ego-motion -> (rgb_0, rgb_1).
+
+        Args:
+            pair_indices: ``(B,)`` int tensor in ``[0, num_pairs)``.
+
+        Returns:
+            ``(rgb_0, rgb_1)`` each ``(B, 3, output_H, output_W)`` in ``[0, 1]``
+            (the harness ``reconstruct_pair_nchw01`` convention).
+        """
+        require_mlx_available()
+        pose_delta = self.per_pair_pose_delta[pair_indices]
+        Y_ego_motion = mlx_ego_motion_foe_projection(pose_delta)
+        cond_embed = self.cond_embed_head(Y_ego_motion)
+        z = self.per_pair_latent_residual[pair_indices] + cond_embed
+        return self.decoder(z)
+
+    def __call__(
+        self, pair_indices: mx.array
+    ) -> tuple[mx.array, mx.array]:
+        """Alias for :meth:`reconstruct_pair` (default forward)."""
+        return self.reconstruct_pair(pair_indices)
+
+
 __all__ = [
-    "ATWv2CooperativeReceiverV2MLX",
     "SCHEMA_VERSION",
+    "ATWv2CooperativeReceiverV2MLX",
+    "ATWv2CooperativeReceiverV2TrainableMLX",
     "is_mlx_available",
     "mlx_ego_motion_foe_projection",
     "require_mlx_available",

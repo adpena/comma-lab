@@ -33,6 +33,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+try:  # pragma: no cover — exercised on Apple Silicon with MLX installed
+    import mlx.core as mx
+    import mlx.nn as nn
+except Exception:  # pragma: no cover — import guard for non-Apple CI
+    mx = None  # type: ignore[assignment]
+    nn = None  # type: ignore[assignment]
+
 # Module-level config. MLX is imported lazily inside the factory to keep
 # top-level import cheap (sister substrates' canonical pattern).
 EVAL_HW: tuple[int, int] = (384, 512)
@@ -103,7 +110,7 @@ class CoinPPImplicitNeuralRepresentationConfig:
 def _ensure_mlx_available() -> Any:
     """Lazy import MLX. Raises with actionable message if not installed."""
     try:
-        import mlx.core as mx  # noqa: F401
+        import mlx.core as mx
 
         return mx
     except ImportError as exc:
@@ -164,28 +171,181 @@ def estimate_archive_bytes(cfg: CoinPPImplicitNeuralRepresentationConfig) -> int
     return base_compressed + modulation_compressed + header_meta
 
 
+def _mlx_sinusoidal_positional_encoding(coords: Any, num_frequencies: int) -> Any:
+    """MLX sinusoidal positional encoding (NeRF/COIN++ canonical).
+
+    Byte-stable sister of ``numpy_reference.sinusoidal_positional_encoding``:
+    for coord ``c`` in ``[-1, 1]`` and ``L = num_frequencies`` produces
+    ``[sin(2^k pi c), cos(2^k pi c)]`` for ``k`` in ``[0, L-1]`` per coordinate
+    axis. Explicit fp32 per the axis-2 MLX drift discipline.
+
+    Args:
+        coords: ``(..., D)`` MLX array of coordinates in ``[-1, 1]``.
+        num_frequencies: ``L``; output dim = ``D * L * 2``.
+
+    Returns:
+        ``(..., D * L * 2)`` MLX float32 array.
+    """
+    import math
+
+    coords32 = coords.astype(mx.float32)
+    d = int(coords32.shape[-1])
+    bands = (2.0 ** mx.arange(num_frequencies, dtype=mx.float32)) * mx.array(
+        math.pi, dtype=mx.float32
+    )
+    scaled = coords32[..., None] * bands  # (..., D, L)
+    stacked = mx.stack([mx.sin(scaled), mx.cos(scaled)], axis=-1)  # (..., D, L, 2)
+    out_shape = (*coords32.shape[:-1], d * int(num_frequencies) * 2)
+    return mx.reshape(stacked, out_shape)
+
+
+def _mlx_make_coord_grid_nhwc(height: int, width: int, t: float) -> Any:
+    """MLX (H, W, 3) coord grid of (x, y, t) in ``[-1, 1]`` for x/y; t as-is.
+
+    Byte-stable sister of ``numpy_reference.make_coord_grid_nhwc``.
+    """
+    x = (
+        mx.linspace(-1.0, 1.0, width).astype(mx.float32)
+        if width > 1
+        else mx.zeros((1,), dtype=mx.float32)
+    )
+    y = (
+        mx.linspace(-1.0, 1.0, height).astype(mx.float32)
+        if height > 1
+        else mx.zeros((1,), dtype=mx.float32)
+    )
+    yy = y[:, None] * mx.ones((1, width), dtype=mx.float32)
+    xx = mx.ones((height, 1), dtype=mx.float32) * x[None, :]
+    tt = mx.full((height, width), float(t), dtype=mx.float32)
+    return mx.stack([xx, yy, tt], axis=-1)  # (H, W, 3)
+
+
+class CoinPPRendererMLX(nn.Module if nn is not None else object):  # type: ignore[misc]
+    """Trainable COIN++ meta-modulated SIREN coord-MLP — MLX ``nn.Module``.
+
+    MLX-SCORE-AWARE-HARNESS-WAVE 2026-05-27: the prior blocker was that this
+    substrate shipped only config + cost estimators — there was NO MLX
+    SIREN/COIN++ renderer forward. This class lands the COIN++ base coord-MLP
+    (Dupont et al. 2022) + per-pair modulation network as a single trainable
+    ``mlx.nn.Module``, mirroring the canonical numpy
+    ``coord_mlp_forward`` topology exactly:
+
+    1. sinusoidal positional encoding of (x, y, t) coords (NeRF; pos_dim freqs)
+    2. input projection -> hidden_dim
+    3. ``num_hidden_layers`` x [Linear hidden->hidden + FiLM(scale+1, shift) +
+       sin] where (scale, shift) come from a per-layer FiLM projection of the
+       per-pair modulation vector
+    4. output projection -> sigmoid -> RGB in [0, 1]
+
+    The per-pair modulation table ``per_pair_modulation`` ``(num_pairs,
+    mod_dim)`` is the learnable per-instance code (the COIN++ "modulations");
+    the base coord-MLP + FiLM proj weights are shared across all pairs.
+
+    Exposes the harness's ``reconstruct_pair(idx) -> (rgb_0, rgb_1)`` NCHW
+    ``[0, 1]`` convention: frame_0 uses ``t=-1``, frame_1 uses ``t=+1``.
+
+    Non-promotable ``[macOS-MLX research-signal]`` per CLAUDE.md "MLX
+    portable-local-substrate authority".
+    """
+
+    def __init__(self, cfg: CoinPPImplicitNeuralRepresentationConfig) -> None:
+        if nn is None:
+            raise RuntimeError(
+                "MLX is not installed; CoinPPRendererMLX requires MLX "
+                "(macOS Apple Silicon). Route through numpy_reference for "
+                "non-Apple-Silicon iteration per axis-3 portability."
+            )
+        super().__init__()
+        self.cfg = cfg
+        pos_enc_dim = cfg.pos_dim * 2 * 3  # (x, y, t) x L x (sin, cos)
+        self.input_proj = nn.Linear(pos_enc_dim, cfg.hidden_dim)
+        self.hidden = [
+            nn.Linear(cfg.hidden_dim, cfg.hidden_dim)
+            for _ in range(cfg.num_hidden_layers)
+        ]
+        self.film = [
+            nn.Linear(cfg.mod_dim, 2 * cfg.hidden_dim)
+            for _ in range(cfg.num_hidden_layers)
+        ]
+        self.output_proj = nn.Linear(cfg.hidden_dim, 3)
+        # Learnable per-pair modulation code (the COIN++ "modulations").
+        key = mx.random.key(0)
+        self.per_pair_modulation = (
+            mx.random.normal(shape=(cfg.num_pairs, cfg.mod_dim), key=key) * 0.01
+        )
+
+    def _render_frame(self, modulation: Any, t: float) -> Any:
+        """Render one frame for a batch of per-pair modulations at coord-time t.
+
+        Args:
+            modulation: ``(B, mod_dim)`` per-pair modulation vectors.
+            t: coordinate-time (frame_0 -> -1.0, frame_1 -> +1.0).
+
+        Returns:
+            ``(B, 3, H, W)`` RGB in ``[0, 1]`` (NCHW; harness convention).
+        """
+        cfg = self.cfg
+        b = int(modulation.shape[0])
+        grid = _mlx_make_coord_grid_nhwc(cfg.eval_h, cfg.eval_w, t)  # (H, W, 3)
+        coords = mx.broadcast_to(
+            grid[None], (b, cfg.eval_h, cfg.eval_w, 3)
+        )  # (B, H, W, 3)
+        pos_enc = _mlx_sinusoidal_positional_encoding(coords, cfg.pos_dim)
+        h = self.input_proj(pos_enc)
+        mod_b = modulation[:, None, None, :]  # (B, 1, 1, mod_dim)
+        for i in range(cfg.num_hidden_layers):
+            h = self.hidden[i](h)
+            film_out = self.film[i](mod_b)  # (B, 1, 1, 2*hidden)
+            scale = film_out[..., : cfg.hidden_dim] + 1.0
+            shift = film_out[..., cfg.hidden_dim :]
+            h = mx.sin(h * scale + shift)
+        rgb = mx.sigmoid(self.output_proj(h))  # (B, H, W, 3) in [0, 1]
+        return mx.transpose(rgb, (0, 3, 1, 2))  # (B, 3, H, W)
+
+    def reconstruct_pair(self, pair_indices: Any) -> tuple[Any, Any]:
+        """Harness forward: per-pair modulation -> (rgb_0, rgb_1).
+
+        Args:
+            pair_indices: ``(B,)`` int tensor in ``[0, num_pairs)``.
+
+        Returns:
+            ``(rgb_0, rgb_1)`` each ``(B, 3, eval_h, eval_w)`` in ``[0, 1]``.
+        """
+        modulation = self.per_pair_modulation[pair_indices]
+        rgb_0 = self._render_frame(modulation, t=-1.0)
+        rgb_1 = self._render_frame(modulation, t=1.0)
+        return rgb_0, rgb_1
+
+    def __call__(self, pair_indices: Any) -> tuple[Any, Any]:
+        """Alias for :meth:`reconstruct_pair` (default forward)."""
+        return self.reconstruct_pair(pair_indices)
+
+
 def _full_main(argv: list[str] | None = None) -> int:
     """L0 SCAFFOLD posture per Catalog #240: full main raises NotImplementedError.
 
-    The L0 scaffold ships design + MLX renderer + numpy reference + PyTorch
-    inflate + archive grammar + tests + smoke trainer stub. The full MLX
-    training path is gated by Phase 2 council symposium per Catalog #325 +
-    operator-authorized paid-CUDA dispatch eligibility per Catalog #1265
-    MLX-first contest-equivalence gate.
+    NOTE: the canonical MLX-first score-aware training entry point is the
+    sister trainer
+    ``experiments/train_substrate_coin_pp_implicit_neural_representation_mlx.py``
+    (``--full``), which routes :class:`CoinPPRendererMLX` through the canonical
+    ``tac.substrates._shared.mlx_score_aware`` harness. This module-level
+    ``_full_main`` (config + estimators surface) retains the L0 posture; the
+    trainable renderer + training path live in the trainer + the harness.
     """
     raise NotImplementedError(
-        "coin_pp_implicit_neural_representation full main NOT YET IMPLEMENTED "
-        "— L0 SCAFFOLD posture per Catalog #240. Phase 2 council symposium "
-        "per Catalog #325 + Catalog #1265 MLX↔PyTorch parity gate REQUIRED "
-        "before any paid-CUDA dispatch authorization. See "
-        ".omx/research/path_3_k_coin_pp_substrate_design_20260526.md "
-        "for the Phase 2+ roadmap."
+        "coin_pp_implicit_neural_representation.mlx_renderer._full_main is the "
+        "config/estimators surface (L0 SCAFFOLD posture per Catalog #240). "
+        "The MLX-first score-aware training entry point is "
+        "experiments/train_substrate_coin_pp_implicit_neural_representation_mlx.py "
+        "--full, which trains CoinPPRendererMLX via the canonical "
+        "tac.substrates._shared.mlx_score_aware harness."
     )
 
 
 __all__ = [
-    "CoinPPImplicitNeuralRepresentationConfig",
     "EVAL_HW",
+    "CoinPPImplicitNeuralRepresentationConfig",
+    "CoinPPRendererMLX",
     "_ensure_mlx_available",
     "_full_main",
     "base_mlp_param_count",

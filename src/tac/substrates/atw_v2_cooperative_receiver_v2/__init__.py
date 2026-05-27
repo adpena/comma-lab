@@ -88,10 +88,9 @@ Catalog #124 archive-grammar 8 fields (declared inline so AST walker observes th
 
 target_modes: ``research_substrate``
 lane_class: ``substrate_engineering``
-research_only: true (Phase 4 council approval required to lift _full_main
-NotImplementedError per CLAUDE.md "Substrate scaffolds MUST be COMPLETE
-or RESEARCH-ONLY" + Catalog #240(c). Pending Phase 4 D4-equivalent probe
-for ego-motion conditioning surface.)
+research_only: true (MLX-local score-aware full trainer is unblocked through
+the canonical non-promotable harness; Phase 4 D4-equivalent probe, PyTorch
+bridge, and paired contest-axis anchors remain required before promotion.)
 canary_status: ``post_canary_dependent``
 canary_dependency: ``lane_path_3_h_atw_v2_cooperative_receiver_cargo_cult_first_20260526``
 
@@ -175,7 +174,7 @@ PHASE_2_DECISION_PATH = (
 )
 RESEARCH_ONLY = True
 DISPATCH_ENABLED = False
-IMPLEMENTATION_STATUS = "l0_scaffold_mlx_renderer_archive_inflate_tests_research_only_full_main_not_implemented_per_catalog_240c"
+IMPLEMENTATION_STATUS = "l0_scaffold_mlx_renderer_archive_inflate_tests_research_only_mlx_score_aware_full_main_unblocked_non_promotable"
 
 # Phase 1 audit empirical evidence references (immutable provenance per
 # Catalog #110/#113 HISTORICAL_PROVENANCE).
@@ -242,8 +241,10 @@ _SCAFFOLD_MODULES = (
 
 
 __all__ = [
+    "ARCHITECTURE_CLASS",
     "ARCHIVE_GRAMMAR",
     "BOLT_ON_LOC_BUDGET",
+    "CANONICAL_EQUATION_IDS",
     "CONDITIONING_VARIABLE_CITATION",
     "DEPRECATED_CONDITIONING_VARIABLE",
     "DESIGN_MEMO_PATH",
@@ -275,9 +276,6 @@ __all__ = [
     "V1_FALSIFICATION_MUTATED_BYTE_COUNT",
     "V1_FALSIFICATION_RAW_EQUAL",
     "V1_FALSIFICATION_TEST_NAME",
-    # WAVE-1 canonical posterior emission wire-in (2026-05-26)
-    "ARCHITECTURE_CLASS",
-    "CANONICAL_EQUATION_IDS",
     "emit_landing_posterior_anchor",
 ]
 

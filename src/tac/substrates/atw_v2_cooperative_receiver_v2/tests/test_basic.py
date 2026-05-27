@@ -27,8 +27,6 @@ Test categories
 
 from __future__ import annotations
 
-import struct
-
 import numpy as np
 import pytest
 
@@ -56,13 +54,11 @@ from tac.substrates.atw_v2_cooperative_receiver_v2 import (
     V1_FALSIFICATION_MAX_ABS_RAW_BYTE_DELTA,
 )
 from tac.substrates.atw_v2_cooperative_receiver_v2.archive import (
-    ATWV2CR2_HEADER_FIXED_SIZE,
-    ATWV2CR2_HEADER_FMT,
     ATWV2CR2_MAGIC,
     ATWV2CR2_SCHEMA_VERSION,
-    ATWv2CR2Archive,
     NUM_SECTIONS,
     PARSER_SECTION_ROLES,
+    ATWv2CR2Archive,
     build_smoke_archive,
     pack_archive,
     parse_archive,
@@ -77,7 +73,6 @@ from tac.substrates.atw_v2_cooperative_receiver_v2.numpy_reference import (
     numpy_sigmoid,
     numpy_softmax,
 )
-
 
 # -----------------------------------------------------------------------------
 # Category 1: Substrate identity (Catalog #241 contract)
@@ -107,7 +102,7 @@ def test_dispatch_disabled_at_l0_scaffold():
 
 def test_implementation_status_declares_l0_scaffold():
     assert "l0_scaffold" in IMPLEMENTATION_STATUS
-    assert "full_main_not_implemented" in IMPLEMENTATION_STATUS
+    assert "mlx_score_aware_full_main_unblocked" in IMPLEMENTATION_STATUS
 
 
 def test_horizon_class_is_frontier_pursuit():
@@ -458,6 +453,39 @@ def test_mlx_ego_motion_foe_projection_matches_numpy():
     np.testing.assert_allclose(out_numpy, out_mlx, atol=1e-5, rtol=1e-5)
 
 
+def test_trainable_mlx_renderer_exposes_harness_contract():
+    """ATW trainable wrapper returns harness-compatible NCHW [0, 1] pairs."""
+    pytest.importorskip("mlx", reason="MLX not available; skipping MLX harness test")
+    import mlx.core as mx
+
+    from tac.substrates.atw_v2_cooperative_receiver_v2.mlx_renderer import (
+        ATWv2CooperativeReceiverV2TrainableMLX,
+    )
+
+    cfg = CooperativeReceiverConfig(
+        num_pairs=3,
+        latent_dim=8,
+        ego_motion_dim=6,
+        cond_embed_dim=4,
+        decoder_embed_dim=8,
+        decoder_initial_grid_h=3,
+        decoder_initial_grid_w=4,
+        decoder_channels=(8, 6),
+        decoder_num_upsample_blocks=2,
+        output_height=12,
+        output_width=16,
+    )
+    model = ATWv2CooperativeReceiverV2TrainableMLX(cfg)
+    rgb_0, rgb_1 = model.reconstruct_pair(mx.array([0, 2], dtype=mx.int32))
+    mx.eval(rgb_0, rgb_1)
+
+    assert rgb_0.shape == (2, 3, 12, 16)
+    assert rgb_1.shape == (2, 3, 12, 16)
+    assert float(mx.min(rgb_0).item()) >= 0.0
+    assert float(mx.max(rgb_0).item()) <= 1.0
+    assert callable(model.parameters)
+
+
 # -----------------------------------------------------------------------------
 # Category 6: MLX↔PyTorch drift verification (when both available)
 # -----------------------------------------------------------------------------
@@ -470,11 +498,11 @@ def test_mlx_pytorch_ego_motion_foe_projection_drift_below_catalog_1265_threshol
     import mlx.core as mx
     import torch as _torch
 
-    from tac.substrates.atw_v2_cooperative_receiver_v2.mlx_renderer import (
-        mlx_ego_motion_foe_projection,
-    )
     from tac.substrates.atw_v2_cooperative_receiver_v2._torch_compat_reference import (
         torch_ego_motion_foe_projection,
+    )
+    from tac.substrates.atw_v2_cooperative_receiver_v2.mlx_renderer import (
+        mlx_ego_motion_foe_projection,
     )
 
     pose_delta_np = np.array(
@@ -537,7 +565,7 @@ def test_inflate_main_cli_signature_matches_catalog_146():
     """Catalog #146: inflate.py CLI signature = <archive_dir> <output_dir> <file_list>."""
     from tac.substrates.atw_v2_cooperative_receiver_v2.inflate import main
 
-    with pytest.raises(SystemExit, match="usage: inflate.py"):
+    with pytest.raises(SystemExit, match=r"usage: inflate\.py"):
         main([])
 
 
@@ -660,19 +688,18 @@ def test_mlx_pytorch_full_decoder_drift_below_catalog_1265_threshold():
     import torch as _torch
     import torch.nn.functional as F
 
-    from tac.substrates.atw_v2_cooperative_receiver_v2.numpy_reference import (
-        DEFAULT_DECODER_INITIAL_GRID_H,
-        DEFAULT_DECODER_INITIAL_GRID_W,
-        DEFAULT_OUTPUT_H,
-        DEFAULT_OUTPUT_W,
-    )
-
     # Use the canonical helper directly to isolate the bilinear upsample drift.
     # (Full-decoder drift includes ``nn.Linear`` + ``nn.Conv2d`` matmul drift
     # which is hardware-class O(1e-2) per Phase 3 §8 — the dominant term.
     # The canonical PR95 helper's contribution is ≤1e-5 per CONSOLIDATE-OP-1
     # empirical anchor.)
     from tac.local_acceleration.pr95_hnerv_mlx import bilinear_resize_nhwc
+    from tac.substrates.atw_v2_cooperative_receiver_v2.numpy_reference import (
+        DEFAULT_DECODER_INITIAL_GRID_H,
+        DEFAULT_DECODER_INITIAL_GRID_W,
+        DEFAULT_OUTPUT_H,
+        DEFAULT_OUTPUT_W,
+    )
 
     np.random.seed(42)
     # Mimic decoder output shape after PixelShuffle blocks:

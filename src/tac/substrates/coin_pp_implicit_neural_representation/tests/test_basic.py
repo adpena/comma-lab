@@ -577,6 +577,34 @@ def test_mlx_availability_gate() -> None:
             _ensure_mlx_available()
 
 
+def test_coin_pp_mlx_renderer_exposes_harness_contract() -> None:
+    """COIN++ trainable renderer returns harness-compatible NCHW [0, 1] pairs."""
+    pytest.importorskip("mlx", reason="MLX not available; skipping MLX harness test")
+    import mlx.core as mx
+
+    from tac.substrates.coin_pp_implicit_neural_representation.mlx_renderer import (
+        CoinPPImplicitNeuralRepresentationConfig,
+        CoinPPRendererMLX,
+    )
+
+    cfg = CoinPPImplicitNeuralRepresentationConfig(
+        mod_dim=2,
+        pos_dim=1,
+        hidden_dim=2,
+        num_hidden_layers=1,
+        num_pairs=2,
+    )
+    model = CoinPPRendererMLX(cfg)
+    rgb_0, rgb_1 = model.reconstruct_pair(mx.array([0], dtype=mx.int32))
+    mx.eval(rgb_0, rgb_1)
+
+    assert rgb_0.shape == (1, 3, cfg.eval_h, cfg.eval_w)
+    assert rgb_1.shape == (1, 3, cfg.eval_h, cfg.eval_w)
+    assert float(mx.min(rgb_0).item()) >= 0.0
+    assert float(mx.max(rgb_0).item()) <= 1.0
+    assert callable(model.parameters)
+
+
 # ---------------------------------------------------------------------------
 # Test 10: deterministic byte-level archive pack invariant
 # ---------------------------------------------------------------------------

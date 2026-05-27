@@ -1,27 +1,42 @@
 # SPDX-License-Identifier: MIT
-"""ATW V2 cooperative-receiver V2 — MLX smoke trainer (Path 3 candidate H).
-# NO_GRAD_WAIVED:MLX_substrate_trainer_uses_mx_no_grad_or_substrate_uses_lazy_eval_no_autograd_per_mlx_first_canonical_doctrine_4107bbf8d_or_substrate_eval_uses_alternate_memory_management_per_comprehensive_bug_audit_cascade_20260526
-# AUTOCAST_FP16_WAIVED:MLX_or_PyTorch_substrate_trainer_does_not_use_PyTorch_CUDA_autocast_fp16_primitive_per_mlx_first_canonical_doctrine_4107bbf8d_or_substrate_uses_different_precision_strategy_per_comprehensive_bug_audit_cascade_20260526
+"""ATW V2 cooperative-receiver V2 — MLX score-aware trainer (Path 3 candidate H).
+# NO_GRAD_WAIVED:MLX_substrate_trainer_uses_mlx_value_and_grad_lazy_eval_no_pytorch_autograd_per_mlx_first_canonical_doctrine_8th_standing_directive
+# AUTOCAST_FP16_WAIVED:MLX_substrate_trainer_does_not_use_PyTorch_CUDA_autocast_fp16_primitive_per_mlx_first_canonical_doctrine_8th_standing_directive
+# TORCH_COMPILE_WAIVED:MLX_substrate_trainer_has_no_pytorch_training_path_per_mlx_first_canonical_doctrine_8th_standing_directive
+# SYNTHETIC_NON_SMOKE_OK:synthetic_targets_only_in_smoke_full_path_decodes_real_contest_video_via_decode_mlx_targets_catalog_114
+# DISPATCH_OPTIMIZATION_PROTOCOL_OK:mlx_local_no_paid_dispatch_research_only_true_per_claude_md_substrate_scaffolds_must_be_complete_or_research_only
 
-Per Phase 3 design memo §10 (L0 SCAFFOLD package structure) + Catalog
-#240(c) (_full_main raises NotImplementedError pre-Phase 4 council).
+MLX-SCORE-AWARE-HARNESS-WAVE 2026-05-27: this trainer's ``_full_main`` is
+UNBLOCKED. The prior ``NotImplementedError`` (Catalog #240(c)) is replaced by a
+route through the canonical substrate-AGNOSTIC harness
+``tac.substrates._shared.mlx_score_aware.run_mlx_score_aware_full_main``. The
+unblock required wrapping the substrate's cond-embed head + HNeRV decoder + a
+learnable per-pair ego-motion ``pose_delta`` table as a single trainable
+``mlx.nn.Module`` (``ATWv2CooperativeReceiverV2TrainableMLX``) — the prior
+blocker was that the renderer was NOT an ``nn.Module`` and ``reconstruct_pair``
+took a separate ``pose_delta`` argument the harness does not supply.
 
-L0 SCAFFOLD scope
-=================
+## Canonical-vs-unique decision per layer (Catalog #290)
 
-- _smoke_main: end-to-end MLX forward smoke (encoder + cond_embed + decoder
-  via numpy reference as parity check); ~1-3 min wall-clock on macOS.
-- _full_main: raises NotImplementedError per Catalog #240(c). Phase 4
-  council approval required to lift.
+- ADOPT_CANONICAL_BECAUSE_SERVES: training loop / EMA / score-aware loss /
+  Provenance / posterior anchor (the harness + ``run_long_training``).
+- FORK_BECAUSE_PRINCIPLED_MISMATCH (this substrate's UNIQUE primitive): the
+  Atick-Redlich cooperative-receiver + ego-motion FOE conditioning
+  (``mlx_renderer.ATWv2CooperativeReceiverV2TrainableMLX``; per Catalog #311).
+
+## Dispatch gating (Catalog #325)
+
+MLX-LOCAL ONLY ($0 M5 Max); the harness fails closed on a non-MLX host (NO
+CPU/CUDA paid-dispatch leak per Catalog #1 + #317). Any recipe stays
+``dispatch_enabled: false`` + ``research_only: true``; output is non-promotable
+``[macOS-MLX research-signal]`` per Catalog #192/#341. Per-axis SegNet/PoseNet
+decomposition + MLX->PyTorch export bridge (#1251) + Catalog #319
+deliverability_proof + paired [contest-CUDA]+[contest-CPU] anchor remain
+DEFERRED to the PyTorch sister L2 / paid-dispatch path.
 
 Non-promotable canonical contract per CLAUDE.md "MLX portable-local-substrate
-authority":
-
-- Tagged [macOS-MLX research-signal] at landing
-- score_claim=False, promotion_eligible=False
-- Phase 4 promotion path: MLX state_dict → PyTorch (via #1251 bridge) →
-  archive → contest-equivalence gate per Catalog #1265 → operator routes
-  paid CUDA dispatch
+authority": tagged [macOS-MLX research-signal]; score_claim=False,
+promotion_eligible=False.
 """
 
 from __future__ import annotations
@@ -31,6 +46,106 @@ import json
 import sys
 from pathlib import Path
 from typing import Any
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT / "src"))
+
+
+# ---------------------------------------------------------------------------
+# Catalog #151 manifest — EVERY flag below must be threaded by any operator
+# wrapper that subprocess-invokes this trainer (ast.AnnAssign per Catalog #168).
+# The L0 scaffold has NO required input files in smoke; --full requires the
+# real contest video at --video-path (required_input_file=True).
+# ---------------------------------------------------------------------------
+TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
+    "--output-dir": {
+        "env": "ATW_V2_CR2_OUTPUT_DIR",
+        "rationale": (
+            "Output directory for the substrate's MLX-local training "
+            "artifacts: training_artifact JSON + EMA checkpoint + "
+            "observability surface."
+        ),
+        "default": "",
+        "required_input_file": False,
+    },
+    "--epochs": {
+        "env": "ATW_V2_CR2_EPOCHS",
+        "rationale": (
+            "Number of MLX-local training epochs. Full training pending "
+            "per-substrate symposium per Catalog #325 before any paid dispatch."
+        ),
+        "default": "2",
+        "required_input_file": False,
+    },
+    "--video-path": {
+        "env": "ATW_V2_CR2_VIDEO_PATH",
+        "rationale": (
+            "Real contest video for --full MLX-first score-aware training "
+            "(Catalog #114; real video, never synthetic in non-smoke)."
+        ),
+        "default": "upstream/videos/0.mkv",
+        "required_input_file": True,
+    },
+}
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--smoke", action="store_true", help="Run smoke-mode forward pass"
+    )
+    parser.add_argument(
+        "--full",
+        action="store_true",
+        help="Run full MLX score-aware training via the canonical harness.",
+    )
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--batch-size", type=int, default=4)
+    parser.add_argument("--num-pairs", type=int, default=10)
+    parser.add_argument(
+        "--latent-dim",
+        type=int,
+        default=32,
+        help="Per-pair latent dim (full default 32 per design memo).",
+    )
+    parser.add_argument(
+        "--epochs",
+        type=int,
+        default=2,
+        help="MLX score-aware training epochs (--full).",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=None,
+        help="Output dir for --full training artifacts.",
+    )
+    parser.add_argument(
+        "--video-path",
+        type=Path,
+        default=Path("upstream/videos/0.mkv"),
+        help="Real contest video for --full score-aware training (Catalog #114).",
+    )
+    parser.add_argument(
+        "--full-lr",
+        type=float,
+        default=1e-3,
+        help="Learning rate for --full MLX score-aware training.",
+    )
+    parser.add_argument(
+        "--distillation-weight",
+        type=float,
+        default=0.5,
+        help="Weight on the gradient-reachable Hinton-KL T=2.0 scorer "
+        "surrogate term in the --full score-aware loss (0.0 disables).",
+    )
+    parser.add_argument(
+        "--output-json",
+        type=str,
+        default=None,
+        help="Optional smoke result JSON path.",
+    )
+    return parser
 
 
 def _smoke_main(args: argparse.Namespace) -> int:
@@ -69,16 +184,13 @@ def _smoke_main(args: argparse.Namespace) -> int:
     )
     weights = init_numpy_weights_random(cfg, seed=args.seed)
 
-    # Build deterministic input
     B = args.batch_size
     per_pair_latent_residual = np.zeros((B, cfg.latent_dim), dtype=np.float32)
 
-    # Generate per-pair pose_delta + ego-motion FOE projection
     rng = np.random.default_rng(args.seed)
     pose_delta = rng.normal(0, 0.1, size=(B, 6)).astype(np.float32)
     ego_motion_proj = numpy_ego_motion_foe_projection(pose_delta)
 
-    # Forward pass
     rgb_0, rgb_1 = numpy_decode_pair_with_ego_motion_conditioning(
         per_pair_latent_residual,
         ego_motion_proj,
@@ -124,35 +236,83 @@ def _smoke_main(args: argparse.Namespace) -> int:
 
 
 def _full_main(args: argparse.Namespace) -> int:
-    """Full training entry point — raises NotImplementedError per Catalog #240(c).
+    """MLX-first score-aware full training via the canonical MLX harness.
 
-    Phase 4 council approval required to lift. Pending:
-    1. D4-equivalent probe for ego-motion conditioning surface
-       (`tools/probe_atw_v2_cooperative_receiver_ego_motion_conditioning_disambiguator.py`)
-    2. PyTorch training loss via canonical `tac.codec.cooperative_receiver.
-       atick_redlich.cooperative_receiver_loss` per Catalog #164
-    3. MLX→PyTorch state_dict export bridge per #1251 pattern
-    4. Catalog #1265 contest-equivalence gate verification
-    5. Per-substrate symposium evidence per Catalog #325
+    Routes through the substrate-AGNOSTIC harness binding real contest-video
+    targets (Catalog #114) + gradient-reachable score-aware loss (reconstruction
+    MSE + Hinton-KL T=2.0 scorer surrogate; Catalog #164) + canonical EMA /
+    OOM-safe / telemetry / Provenance / posterior anchor via
+    ``run_long_training``.
+
+    The UNIQUE primitive is ``ATWv2CooperativeReceiverV2TrainableMLX`` (the
+    cooperative-receiver + ego-motion FOE conditioning ``nn.Module``).
     """
-    raise NotImplementedError(
-        "atw_v2_cooperative_receiver_v2._full_main requires Phase 4 council approval "
-        "per CLAUDE.md 'Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY' + "
-        "Catalog #240(c). L0 SCAFFOLD provides MLX-native forward + numpy reference + "
-        "PyTorch parity reference + archive grammar + inflate runtime + smoke trainer; "
-        "PyTorch training loss + D4-equivalent probe + Catalog #1265 gate verification "
-        "are the Phase 4 deliverables."
+    from tac.substrates._shared.mlx_score_aware import (
+        RendererBundle,
+        decode_mlx_targets,
+        run_mlx_score_aware_full_main,
     )
+    from tac.substrates.atw_v2_cooperative_receiver_v2.mlx_renderer import (
+        ATWv2CooperativeReceiverV2TrainableMLX,
+    )
+    from tac.substrates.atw_v2_cooperative_receiver_v2.numpy_reference import (
+        CooperativeReceiverConfig,
+    )
+
+    if args.output_dir is None:
+        raise SystemExit(
+            "--output-dir is required for --full training "
+            "(Catalog #151 TIER_1_OPERATOR_REQUIRED_FLAGS)."
+        )
+
+    cfg = CooperativeReceiverConfig(
+        num_pairs=int(args.num_pairs),
+        latent_dim=int(args.latent_dim),
+    )
+    model = ATWv2CooperativeReceiverV2TrainableMLX(cfg)
+    target_rgb_0, target_rgb_1 = decode_mlx_targets(
+        args.video_path,
+        num_pairs=int(args.num_pairs),
+        output_height=cfg.output_height,
+        output_width=cfg.output_width,
+    )
+    bundle = RendererBundle(
+        model=model,
+        target_rgb_0=target_rgb_0,
+        target_rgb_1=target_rgb_1,
+        num_pairs=int(args.num_pairs),
+        forward_convention="reconstruct_pair_nchw01",
+        distillation_weight=float(args.distillation_weight),
+    )
+    artifact = run_mlx_score_aware_full_main(
+        bundle=bundle,
+        substrate_id="atw_v2_cooperative_receiver_v2",
+        lane_id="lane_path_3_h_atw_v2_cooperative_receiver_cargo_cult_first_20260526",
+        output_dir=args.output_dir,
+        epochs=int(args.epochs),
+        batch_pair_indices_per_step=min(int(args.num_pairs), 8),
+        learning_rate=float(args.full_lr),
+        seed=int(args.seed),
+        notes=(
+            "ATW V2 cooperative-receiver V2 MLX-first score-aware full training "
+            "via canonical mlx_score_aware harness; real contest video + "
+            "reconstruction + Hinton-KL T=2.0 scorer surrogate + ego-motion FOE "
+            "conditioning (Catalog #311); non-promotable [macOS-MLX "
+            "research-signal] per Catalog #192/#317/#341; per-axis + MLX->PyTorch "
+            "bridge + paired CUDA/CPU anchor DEFERRED to sister L2."
+        ),
+    )
+    print(
+        f"[atw_v2_cooperative_receiver_v2:_full_main] DONE "
+        f"epochs={artifact.total_epochs_completed} promotable={artifact.promotable} "
+        f"wall={artifact.total_wall_clock_seconds:.1f}s "
+        f"artifact={args.output_dir / 'training_artifact.json'}"
+    )
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--smoke", action="store_true", help="Run smoke-mode forward pass")
-    parser.add_argument("--full", action="store_true", help="Run full training (NotImplementedError per Catalog #240(c))")
-    parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--batch-size", type=int, default=4)
-    parser.add_argument("--num-pairs", type=int, default=10)
-    parser.add_argument("--output-json", type=str, default=None, help="Optional smoke result JSON path")
+    parser = _build_parser()
     args = parser.parse_args(argv)
 
     if args.full:
