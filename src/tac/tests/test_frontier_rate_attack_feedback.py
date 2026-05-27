@@ -1717,6 +1717,18 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
         for experiment in targeted_queue["experiments"]
         for request in experiment["metadata"]["correction_requests"]
     )
+    work_order_step = next(
+        step
+        for step in targeted_queue["experiments"][0]["steps"]
+        if step["id"].startswith("emit_targeted_component_correction_work_order_")
+    )
+    assert "--target-optimization-profile-metadata-json" in work_order_step["command"]
+    target_metadata_flag = work_order_step["command"].index(
+        "--target-optimization-profile-metadata-json"
+    )
+    assert json.loads(work_order_step["command"][target_metadata_flag + 1]) == (
+        target_metadata
+    )
     local_cpu_step = next(
         step
         for step in targeted_queue["experiments"][0]["steps"]
@@ -2855,6 +2867,9 @@ def test_targeted_component_response_harvest_cli_accepts_reference_advisory(
         queue_id="frontier_feedback_paired_response_cli_unit",
         candidate_limit=1,
     )
+    target_metadata = report["target_optimization_profile_metadata"]
+    assert target_metadata["schema"] == TARGET_OPTIMIZATION_PROFILE_QUEUE_METADATA_SCHEMA
+    _assert_false_authority(target_metadata)
     work_order = build_frontier_targeted_component_correction_work_order(
         targeted_component_correction_acquisition=report[
             "targeted_component_correction_acquisition"
@@ -2862,6 +2877,7 @@ def test_targeted_component_response_harvest_cli_accepts_reference_advisory(
         acquisition_id=report["targeted_component_correction_acquisition"][
             "top_acquisition_ids"
         ][0],
+        target_optimization_profile_metadata=target_metadata,
     )
     work_order_path = _write_json(tmp_path / "work_order.json", work_order)
     candidate_path = _write_json(
@@ -3009,6 +3025,16 @@ def test_targeted_component_response_harvest_cli_accepts_reference_advisory(
         == TARGETED_COMPONENT_CORRECTION_CHAIN_MATERIALIZER_HANDOFF_SCHEMA
     )
     _assert_false_authority(handoff)
+    assert handoff["frontier_target_optimization_profile"] == target_metadata
+    assert (
+        handoff["materializer_backlog"]["frontier_target_optimization_profile"]
+        == target_metadata
+    )
+    assert all(
+        row["operation_params"]["frontier_target_optimization_profile"]
+        == target_metadata
+        for row in handoff["materializer_backlog"]["rows"]
+    )
     assert "packet_member_merge_v1" in handoff["registered_chain_targets"]
     handoff_budget = handoff["materializer_backlog"]["rows"][0][
         "frontier_operation_portfolio_row"
@@ -3287,14 +3313,22 @@ def test_targeted_component_correction_materialization_requests_group_responses(
         queue_id="frontier_feedback_materialization_request_unit",
         candidate_limit=3,
     )
+    target_metadata = report["target_optimization_profile_metadata"]
+    assert target_metadata["schema"] == TARGET_OPTIMIZATION_PROFILE_QUEUE_METADATA_SCHEMA
+    _assert_false_authority(target_metadata)
     targeted_component = report["targeted_component_correction_acquisition"]
     work_orders = [
         build_frontier_targeted_component_correction_work_order(
             targeted_component_correction_acquisition=targeted_component,
             acquisition_id=acquisition_id,
+            target_optimization_profile_metadata=target_metadata,
         )
         for acquisition_id in targeted_component["top_acquisition_ids"][:2]
     ]
+    assert all(
+        work_order["frontier_target_optimization_profile"] == target_metadata
+        for work_order in work_orders
+    )
     local_cpu_advisory = {
         "schema_version": "contest_auth_eval_result.v1",
         **_false_authority(),
@@ -3316,15 +3350,21 @@ def test_targeted_component_correction_materialization_requests_group_responses(
         )
         for index, work_order in enumerate(work_orders, start=1)
     ]
+    assert all(
+        row["frontier_target_optimization_profile"] == target_metadata
+        for row in response_rows
+    )
     harvest = build_frontier_targeted_component_correction_response_harvest(
         repo_root=tmp_path,
         response_rows=response_rows,
     )
+    assert harvest["frontier_target_optimization_profile"] == target_metadata
 
     requests = build_frontier_targeted_component_correction_materialization_requests(
         targeted_component_correction_response_harvest=harvest,
         candidate_limit=1,
     )
+    assert requests["frontier_target_optimization_profile"] == target_metadata
 
     assert (
         requests["schema"]
@@ -3340,6 +3380,7 @@ def test_targeted_component_correction_materialization_requests_group_responses(
         == TARGETED_COMPONENT_CORRECTION_MATERIALIZATION_REQUEST_ROW_SCHEMA
     )
     _assert_false_authority(request)
+    assert request["frontier_target_optimization_profile"] == target_metadata
     assert request["accepted_response_count"] == 2
     assert set(request["accepted_correction_families"]) == {
         row["correction_family"] for row in response_rows
@@ -3364,6 +3405,7 @@ def test_targeted_component_correction_materialization_requests_group_responses(
     )
     assert selected["materialization_request_id"] == request["materialization_request_id"]
     _assert_false_authority(selected)
+    assert selected["frontier_target_optimization_profile"] == target_metadata
 
     harvest_path = tmp_path / "targeted_component_correction_response_harvest.json"
     harvest_path.write_text(json.dumps(harvest), encoding="utf-8")
@@ -3376,7 +3418,20 @@ def test_targeted_component_correction_materialization_requests_group_responses(
         candidate_limit=1,
     )
     assert queue is not None
+    _assert_false_authority(queue["metadata"])
+    _assert_false_authority(queue["materialization_request_summary"])
+    assert queue["metadata"]["frontier_target_optimization_profile"] == target_metadata
+    assert (
+        queue["materialization_request_summary"][
+            "frontier_target_optimization_profile"
+        ]
+        == target_metadata
+    )
     assert len(queue["experiments"]) == 1
+    assert (
+        queue["experiments"][0]["metadata"]["frontier_target_optimization_profile"]
+        == target_metadata
+    )
     step = queue["experiments"][0]["steps"][0]
     assert (
         step["command"][1]
@@ -3401,6 +3456,10 @@ def test_targeted_component_correction_materialization_requests_group_responses(
         == TARGETED_COMPONENT_CORRECTION_MATERIALIZATION_REQUEST_ROW_SCHEMA
     )
     _assert_false_authority(materialized_request)
+    assert (
+        materialized_request["frontier_target_optimization_profile"]
+        == target_metadata
+    )
 
     chain_work_orders = (
         build_frontier_targeted_component_correction_chain_work_orders(
@@ -3410,15 +3469,23 @@ def test_targeted_component_correction_materialization_requests_group_responses(
     )
     assert chain_work_orders["schema"] == OPERATION_CHAIN_COMPILER_WORK_ORDERS_SCHEMA
     _assert_false_authority(chain_work_orders)
+    assert chain_work_orders["frontier_target_optimization_profile"] == target_metadata
     assert chain_work_orders["work_order_count"] == 1
     chain_work_order = chain_work_orders["work_orders"][0]
     _assert_false_authority(chain_work_order)
+    assert chain_work_order["frontier_target_optimization_profile"] == target_metadata
     assert chain_work_order["source_materialization_request_id"] == request[
         "materialization_request_id"
     ]
     runtime_binding = chain_work_order["targeted_correction_budget"][
         "receiver_runtime_binding_context"
     ]
+    assert (
+        chain_work_order["targeted_correction_budget"][
+            "frontier_target_optimization_profile"
+        ]
+        == target_metadata
+    )
     assert runtime_binding["binding_complete_for_component_eval"] is True
     assert runtime_binding["candidate_archive_path"]
     assert chain_work_order["targeted_correction_budget"]["candidate_archive_path"]
@@ -3454,7 +3521,17 @@ def test_targeted_component_correction_materialization_requests_group_responses(
         dqs1_observation_source_paths=(dqs1_observations,),
     )
     assert chain_queue is not None
+    _assert_false_authority(chain_queue["metadata"])
+    assert chain_queue["metadata"]["frontier_target_optimization_profile"] == (
+        target_metadata
+    )
     _assert_false_authority(chain_queue["experiments"][0]["metadata"])
+    assert (
+        chain_queue["experiments"][0]["metadata"][
+            "frontier_target_optimization_profile"
+        ]
+        == target_metadata
+    )
     assert len(chain_queue["experiments"]) == 1
     assert chain_queue["experiments"][0]["steps"][0]["command"][1] == (
         "tools/build_frontier_operation_chain_stage_plan.py"
@@ -3473,10 +3550,32 @@ def test_targeted_component_correction_materialization_requests_group_responses(
         operation_chain_compiler_work_orders=chain_work_orders,
         source_operation_id=chain_work_order["source_operation_id"],
     )
+    assert (
+        chain_stage_plan["frontier_target_optimization_profile"]
+        == target_metadata
+    )
+    assert all(
+        row["frontier_target_optimization_profile"] == target_metadata
+        for row in chain_stage_plan["stage_rows"]
+    )
+    assert all(
+        handoff["frontier_target_optimization_profile"] == target_metadata
+        for handoff in chain_stage_plan["queue_handoffs"]
+    )
     byte_range_inputs = build_frontier_byte_range_stage_inputs(
         repo_root=REPO_ROOT,
         operation_chain_stage_plan=chain_stage_plan,
         chain_output_dir=tmp_path / "targeted_byte_range_chain",
+    )
+    assert byte_range_inputs["frontier_target_optimization_profile"] == target_metadata
+    targeted_drop_many_inputs = build_frontier_targeted_drop_many_stage_inputs(
+        repo_root=REPO_ROOT,
+        operation_chain_stage_plan=chain_stage_plan,
+        output_dir=tmp_path / "targeted_drop_many_chain",
+    )
+    assert (
+        targeted_drop_many_inputs["frontier_target_optimization_profile"]
+        == target_metadata
     )
     assert byte_range_inputs["local_chain_queueable"] is False
     assert byte_range_inputs["materializer_context"][
