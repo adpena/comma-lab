@@ -23,6 +23,9 @@ from tac.optimization.repair_campaign_scorer import (
     REPAIR_CAMPAIGN_OPTIMIZER_DECISION_SCHEMA,
     REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA,
 )
+from tac.optimization.repair_family_materializers import (
+    REPAIR_CAMPAIGN_FAMILY_MATERIALIZER_MANIFEST_SCHEMA,
+)
 
 REPAIR_CAMPAIGN_BYTE_CLOSED_MATERIALIZATION_QUEUE_METADATA_SCHEMA = (
     "repair_campaign_byte_closed_materialization_queue_metadata.v1"
@@ -189,11 +192,13 @@ def _materialization_experiment(
     child_replay_manifest = (
         row_root / "repair_budget_child_component_replay_manifests.json"
     )
+    family_materializer_manifest = row_root / "repair_family_materializer_manifest.json"
     binding_report = row_root / "repair_budget_materializer_binding_report.json"
     execution_report = row_root / "repair_budget_materialization_execution_report.json"
     gate = row_root / "repair_campaign_byte_closed_materialization_gate.json"
     materialization_plan_ref = _repo_rel(materialization_plan, repo_root)
     child_replay_ref = _repo_rel(child_replay_manifest, repo_root)
+    family_materializer_ref = _repo_rel(family_materializer_manifest, repo_root)
     binding_report_ref = _repo_rel(binding_report, repo_root)
     execution_report_ref = _repo_rel(execution_report, repo_root)
     gate_ref = _repo_rel(gate, repo_root)
@@ -229,6 +234,10 @@ def _materialization_experiment(
         "interaction_dynamics": dict(dynamics),
         "materialization_plan_path": materialization_plan_ref,
         "child_component_replay_manifests_path": child_replay_ref,
+        "repair_family_materializer_manifest_path": family_materializer_ref,
+        "repair_family_materializer_manifest_schema": (
+            REPAIR_CAMPAIGN_FAMILY_MATERIALIZER_MANIFEST_SCHEMA
+        ),
         "materializer_binding_report_path": binding_report_ref,
         "materialization_execution_report_path": execution_report_ref,
         "byte_closed_materialization_gate_path": gate_ref,
@@ -316,6 +325,42 @@ def _materialization_experiment(
                 },
             },
             {
+                "id": "emit_repair_family_materializer_manifest",
+                "kind": "command",
+                "requires": ["emit_repair_budget_materialization_plan"],
+                "command": [
+                    ".venv/bin/python",
+                    "tools/build_repair_campaign_family_materializer_manifest.py",
+                    "--materialization-plan",
+                    materialization_plan_ref,
+                    "--score-report",
+                    str(score_report_path),
+                    "--typed-response-id",
+                    typed_response_id,
+                    "--candidate-id",
+                    candidate_id,
+                    "--materializer-manifest-out",
+                    family_materializer_ref,
+                    "--overwrite",
+                ],
+                "resources": {"kind": "local_io_heavy"},
+                "timeout_seconds": 120,
+                "postconditions": [
+                    {
+                        "type": "json_equals",
+                        "path": family_materializer_ref,
+                        "key": "schema",
+                        "equals": REPAIR_CAMPAIGN_FAMILY_MATERIALIZER_MANIFEST_SCHEMA,
+                    },
+                    {"type": "json_false_authority", "path": family_materializer_ref},
+                ],
+                "telemetry": {
+                    "artifact_paths": [family_materializer_ref],
+                    "input_artifact_paths": [materialization_plan_ref, str(score_report_path)],
+                    "include_postcondition_paths": True,
+                },
+            },
+            {
                 "id": "emit_repair_budget_child_component_replay_manifests",
                 "kind": "command",
                 "requires": ["emit_repair_budget_materialization_plan"],
@@ -348,7 +393,10 @@ def _materialization_experiment(
             {
                 "id": "bind_repair_budget_materializer_execution",
                 "kind": "command",
-                "requires": ["emit_repair_budget_child_component_replay_manifests"],
+                "requires": [
+                    "emit_repair_family_materializer_manifest",
+                    "emit_repair_budget_child_component_replay_manifests",
+                ],
                 "command": [
                     ".venv/bin/python",
                     "tools/build_frontier_repair_budget_materializer_binding_report.py",
@@ -358,6 +406,8 @@ def _materialization_experiment(
                     binding_report_ref,
                     "--materializer-manifest",
                     child_replay_ref,
+                    "--materializer-manifest",
+                    family_materializer_ref,
                     *(
                         ["--materializer-work-queue", materializer_work_queue_ref]
                         if materializer_work_queue_ref
@@ -395,6 +445,7 @@ def _materialization_experiment(
                         [
                             materialization_plan_ref,
                             child_replay_ref,
+                            family_materializer_ref,
                             materializer_work_queue_ref,
                             materializer_execution_queue_ref,
                         ]
@@ -676,6 +727,7 @@ __all__ = [
     "REPAIR_CAMPAIGN_BYTE_CLOSED_MATERIALIZATION_EXPERIMENT_METADATA_SCHEMA",
     "REPAIR_CAMPAIGN_BYTE_CLOSED_MATERIALIZATION_GATE_SCHEMA",
     "REPAIR_CAMPAIGN_BYTE_CLOSED_MATERIALIZATION_QUEUE_METADATA_SCHEMA",
+    "REPAIR_CAMPAIGN_FAMILY_MATERIALIZER_MANIFEST_SCHEMA",
     "RepairCampaignMaterializationQueueError",
     "build_repair_campaign_byte_closed_materialization_queue",
 ]

@@ -11,6 +11,7 @@ from comma_lab.scheduler.repair_campaign_materialization_queue import (
     REPAIR_CAMPAIGN_BYTE_CLOSED_MATERIALIZATION_EXPERIMENT_METADATA_SCHEMA,
     REPAIR_CAMPAIGN_BYTE_CLOSED_MATERIALIZATION_GATE_SCHEMA,
     REPAIR_CAMPAIGN_BYTE_CLOSED_MATERIALIZATION_QUEUE_METADATA_SCHEMA,
+    REPAIR_CAMPAIGN_FAMILY_MATERIALIZER_MANIFEST_SCHEMA,
     build_repair_campaign_byte_closed_materialization_queue,
 )
 from tac.optimization.repair_campaign_scorer import score_repair_campaign
@@ -131,6 +132,7 @@ def test_byte_closed_materialization_queue_emits_archive_bound_steps(
     assert experiment["metadata"]["interaction_dynamics"]["active_scales"]
     assert [step["id"] for step in experiment["steps"]] == [
         "emit_repair_budget_materialization_plan",
+        "emit_repair_family_materializer_manifest",
         "emit_repair_budget_child_component_replay_manifests",
         "bind_repair_budget_materializer_execution",
         "audit_repair_budget_materialization_execution",
@@ -140,6 +142,10 @@ def test_byte_closed_materialization_queue_emits_archive_bound_steps(
         "tools/build_frontier_repair_budget_materialization_plan.py"
     )
     assert str(work_order_path) in experiment["steps"][0]["command"]
+    assert experiment["metadata"]["repair_family_materializer_manifest_schema"] == (
+        REPAIR_CAMPAIGN_FAMILY_MATERIALIZER_MANIFEST_SCHEMA
+    )
+    assert "--materializer-manifest" in experiment["steps"][3]["command"]
     assert experiment["steps"][-1]["postconditions"][0]["equals"] == (
         REPAIR_CAMPAIGN_BYTE_CLOSED_MATERIALIZATION_GATE_SCHEMA
     )
@@ -205,7 +211,7 @@ def test_byte_closed_materialization_queue_cli_writes_queue(tmp_path: Path) -> N
             "run-worker",
             "--execute",
             "--max-steps",
-            "6",
+            "7",
             "--max-experiments",
             "1",
             "--max-parallel",

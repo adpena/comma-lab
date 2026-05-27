@@ -1024,12 +1024,17 @@ def test_repair_budget_waterfill_queue_emits_execution_audit_step(
     assert queue is not None
     experiment = queue["experiments"][0]
     step_ids = [step["id"] for step in experiment["steps"]]
-    assert step_ids == [
+    assert step_ids[:5] == [
         "emit_repair_budget_waterfill_work_order",
         "emit_repair_budget_materialization_plan",
         "emit_repair_budget_child_component_replay_manifests",
         "bind_repair_budget_materializer_execution",
         "audit_repair_budget_materialization_execution",
+    ]
+    assert step_ids[5:] == [
+        "emit_repair_cascade_mlx_probe_queue",
+        "validate_repair_cascade_mlx_probe_queue",
+        "run_repair_cascade_mlx_probe_queue_bounded_local",
     ]
     replay_step = experiment["steps"][2]
     assert replay_step["requires"] == ["emit_repair_budget_materialization_plan"]
