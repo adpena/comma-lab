@@ -253,12 +253,23 @@ def _run_auxiliary_queue_execution(
         if not queue_path:
             continue
         validate = _validate_queue(queue_path)
+        queue_state_path = resolve_repo_path(queue_path, repo_root=REPO_ROOT).with_suffix(
+            ".sqlite"
+        )
         command = [
             sys.executable,
             "tools/experiment_queue.py",
             "--queue",
             _display_path(queue_path),
+            "--state",
+            _display_path(queue_state_path),
             "run-worker",
+            "--noncanonical-state-rationale",
+            (
+                "bounded feedback-cycle auxiliary queue execution uses artifact-"
+                f"local sqlite state for {stage_label}:{artifact_key} so it does "
+                "not collide with canonical long-lived workers"
+            ),
             "--execute",
             "--max-steps",
             str(args.auxiliary_queue_max_steps),
@@ -274,6 +285,7 @@ def _run_auxiliary_queue_execution(
                 "stage_label": stage_label,
                 "artifact_key": artifact_key,
                 "queue_path": queue_path,
+                "state_path": _display_path(queue_state_path),
                 "validate": validate,
                 "command": command,
                 "result": {

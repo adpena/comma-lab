@@ -39,6 +39,8 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     REPAIR_BUDGET_MATERIALIZATION_PLAN_ROW_SCHEMA,
     REPAIR_BUDGET_MATERIALIZATION_PLAN_SCHEMA,
     REPAIR_BUDGET_MATERIALIZER_BINDING_REPORT_SCHEMA,
+    REPAIR_BUDGET_TYPED_RESPONSE_LEDGER_SCHEMA,
+    REPAIR_BUDGET_TYPED_RESPONSE_ROW_SCHEMA,
     REPAIR_BUDGET_WATERFILL_ALLOCATION_ACTION_TERM_SCHEMA,
     REPAIR_BUDGET_WATERFILL_WORK_ORDER_SCHEMA,
     TARGETED_COMPONENT_CORRECTION_ACQUISITION_SCHEMA,
@@ -3563,6 +3565,7 @@ def test_targeted_component_correction_materialization_requests_group_responses(
     assert "exact_axis_component_response_required_before_budget_spend" in (
         repair_waterfill_work_order["blockers"]
     )
+
     materialization_plan = build_frontier_repair_budget_materialization_plan(
         repair_budget_waterfill_work_order=repair_waterfill_work_order,
         repair_budget_waterfill_work_order_path=tmp_path
@@ -3691,6 +3694,9 @@ def test_targeted_component_correction_materialization_requests_group_responses(
     assert repair_waterfill_experiment["metadata"][
         "repair_allocation_action_term_schema"
     ] == REPAIR_BUDGET_WATERFILL_ALLOCATION_ACTION_TERM_SCHEMA
+    assert repair_waterfill_experiment["metadata"]["typed_response_ledger_schema"] == (
+        REPAIR_BUDGET_TYPED_RESPONSE_LEDGER_SCHEMA
+    )
     assert repair_waterfill_experiment["metadata"]["repair_dynamics_prior_active"] is True
     assert repair_waterfill_experiment["metadata"]["repair_dynamics_palette_prior"][
         "palette_modes"
@@ -3717,6 +3723,9 @@ def test_targeted_component_correction_materialization_requests_group_responses(
         (REPO_ROOT / repair_work_order_path).read_text(encoding="utf-8")
     )
     assert repair_materialized["schema"] == REPAIR_BUDGET_WATERFILL_WORK_ORDER_SCHEMA
+    assert repair_materialized["typed_response_ledger_schema"] == (
+        REPAIR_BUDGET_TYPED_RESPONSE_LEDGER_SCHEMA
+    )
     _assert_false_authority(repair_materialized)
     materialization_step = repair_waterfill_experiment["steps"][1]
     assert materialization_step["command"][1] == (
@@ -4042,6 +4051,163 @@ def test_targeted_component_correction_materialization_requests_group_responses(
         "many_op_plan_to_component_replay_and_exact_readiness_bridge"
         in first_chain["next_queue_edges"]
     )
+
+
+def test_repair_waterfill_work_order_builds_typed_response_ledger(
+    tmp_path: Path,
+) -> None:
+    autonomous = {
+        "schema": AUTONOMOUS_CHAIN_OPTIMIZATION_SCHEMA,
+        "generated_at_utc": "2026-05-27T00:00:00Z",
+        "rows": [
+            {
+                "schema": AUTONOMOUS_CHAIN_OPTIMIZATION_ROW_SCHEMA,
+                "chain_id": "typed_repair_chain",
+                "chain_family": "rate_distortion_receiver_closed_many_op_campaign",
+                "optimization_objective": (
+                    "minimize_delta_segnet_plus_delta_posenet_plus_lambda_delta_bytes"
+                ),
+                "repair_budget_waterfill_plan": {
+                    "schema": "frontier_rate_attack_repair_budget_waterfill_plan.v1",
+                    **_false_authority(),
+                },
+                "rate_budget_preservation_plan": {
+                    "schema": RATE_BUDGET_PRESERVATION_PLAN_SCHEMA,
+                    "operator_action_ledger": {
+                        "schema": OPERATOR_ACTION_LEDGER_SCHEMA,
+                        "term_count": 0,
+                        **_false_authority(),
+                    },
+                    **_false_authority(),
+                },
+                **_false_authority(),
+            }
+        ],
+        **_false_authority(),
+    }
+    harvest = {
+        "schema": TARGETED_COMPONENT_CORRECTION_RESPONSE_HARVEST_SCHEMA,
+        "rows": [
+            {
+                "schema": (
+                    "frontier_rate_attack_targeted_component_correction_response_"
+                    "row.v1"
+                ),
+                "acquisition_id": "seg_region_response",
+                "candidate_id": "segnet_class_region_waterfill",
+                "correction_family": "segnet_class_region_waterfill",
+                "local_acquisition_recommended": True,
+                "negative_measured_lagrangian_delta": True,
+                "measured_component_delta_score_units": -0.0011,
+                "measured_lagrangian_delta_score_units": -0.0010,
+                "targeted_dimensions": ["segnet", "region"],
+                "operation_levels": ["frame", "region"],
+                "selected_pair_indices": [7, 9],
+                "selected_region_ids": ["road_boundary"],
+                "local_cpu_component_terms": {
+                    "segnet_delta_score_units": -0.0012,
+                    "posenet_delta_score_units": 0.0001,
+                    "correction_added_archive_bytes": 32,
+                },
+                **_false_authority(),
+            },
+            {
+                "schema": (
+                    "frontier_rate_attack_targeted_component_correction_response_"
+                    "row.v1"
+                ),
+                "acquisition_id": "selector_entropy_response",
+                "candidate_id": "selector_entropy_boundary",
+                "correction_family": "selector_huffman_boundary_recode",
+                "local_acquisition_recommended": True,
+                "negative_measured_lagrangian_delta": True,
+                "measured_component_delta_score_units": -0.00025,
+                "measured_lagrangian_delta_score_units": -0.0002,
+                "entropy_position": "at_entropy_coder",
+                "targeted_dimensions": ["selector_stream"],
+                "operation_levels": ["entropy_coder"],
+                "local_cpu_component_terms": {
+                    "segnet_delta_score_units": -0.0002,
+                    "posenet_delta_score_units": -0.00005,
+                    "correction_added_archive_bytes": 8,
+                },
+                **_false_authority(),
+            },
+        ],
+        **_false_authority(),
+    }
+    receiver_budget = {
+        "schema": RECEIVER_CLOSED_CORRECTION_BUDGET_SCHEMA,
+        "receiver_closed_saved_bytes_total": 40,
+        "receiver_closed_candidate_count": 1,
+        "rows": [
+            {
+                "candidate_id": "rate_parent",
+                "target_kind": "packet_member_merge_v1",
+                "receiver_closed": True,
+                "saved_bytes": 40,
+                **_false_authority(),
+            }
+        ],
+        **_false_authority(),
+    }
+
+    work_order = build_frontier_repair_budget_waterfill_work_order(
+        autonomous_chain_optimization=autonomous,
+        chain_id="typed_repair_chain",
+        targeted_component_correction_response_harvest=harvest,
+        receiver_closed_correction_budget=receiver_budget,
+        autonomous_chain_optimization_path=tmp_path / "autonomous.json",
+        targeted_component_correction_response_harvest_path=tmp_path / "harvest.json",
+        receiver_closed_correction_budget_path=tmp_path / "budget.json",
+    )
+
+    ledger = work_order["typed_response_ledger"]
+    assert ledger["schema"] == REPAIR_BUDGET_TYPED_RESPONSE_LEDGER_SCHEMA
+    assert ledger["row_schema"] == REPAIR_BUDGET_TYPED_RESPONSE_ROW_SCHEMA
+    assert ledger["row_count"] == 2
+    assert ledger["entropy_position_histogram"] == {
+        "at_entropy_coder": 1,
+        "before_entropy_coder_distribution_shaping": 1,
+    }
+    first_typed = ledger["rows"][0]
+    assert first_typed["schema"] == REPAIR_BUDGET_TYPED_RESPONSE_ROW_SCHEMA
+    assert first_typed["entropy_position_label"] == (
+        "before_entropy_coder_distribution_shaping"
+    )
+    assert first_typed["marginal_response_curves"]["objective"][
+        "improvement_per_byte"
+    ] > 0.0
+    assert first_typed["interaction_scope"]["pair_indices"] == [7, 9]
+    assert first_typed["stacking_interaction_terms"][
+        "must_remeasure_with_parent_and_sibling_repairs"
+    ] is True
+    first_allocation = work_order["allocation_rows"][0]
+    assert first_allocation["typed_response_id"] == first_typed["typed_response_id"]
+    assert first_allocation["proposed_encoder_repair_bytes"] == 32
+    assert first_allocation["allocation_action_term"]["T_i"][
+        "typed_response_id"
+    ] == first_typed["typed_response_id"]
+    assert first_allocation["allocation_action_term"]["T_i"][
+        "entropy_position_label"
+    ] == "before_entropy_coder_distribution_shaping"
+    assert work_order["allocation_rows"][1]["proposed_encoder_repair_bytes"] == 8
+
+    plan = build_frontier_repair_budget_materialization_plan(
+        repair_budget_waterfill_work_order=work_order,
+        repair_budget_waterfill_work_order_path=tmp_path / "work_order.json",
+    )
+    child_rows = [
+        row
+        for row in plan["candidate_chain_rows"]
+        if row["candidate_kind"] == "spent_budget_repair_child"
+    ]
+    assert child_rows[0]["typed_response_id"] == first_typed["typed_response_id"]
+    assert child_rows[0]["entropy_position_label"] == (
+        "before_entropy_coder_distribution_shaping"
+    )
+    _assert_false_authority(work_order)
+    _assert_false_authority(plan)
 
 
 def test_repair_budget_materializer_manifest_discovery_filters_exact_readiness_reports() -> None:

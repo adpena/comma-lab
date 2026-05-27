@@ -203,6 +203,12 @@ REPAIR_BUDGET_WATERFILL_QUEUE_METADATA_SCHEMA = (
 REPAIR_BUDGET_WATERFILL_ALLOCATION_ACTION_TERM_SCHEMA = (
     "frontier_rate_attack_repair_budget_waterfill_allocation_action_term.v1"
 )
+REPAIR_BUDGET_TYPED_RESPONSE_LEDGER_SCHEMA = (
+    "frontier_rate_attack_repair_budget_typed_response_ledger.v1"
+)
+REPAIR_BUDGET_TYPED_RESPONSE_ROW_SCHEMA = (
+    "frontier_rate_attack_repair_budget_typed_response_row.v1"
+)
 REPAIR_CASCADE_OPPORTUNITY_ROW_SCHEMA = (
     "frontier_rate_attack_repair_cascade_opportunity_row.v1"
 )
@@ -6654,6 +6660,159 @@ def build_frontier_autonomous_chain_work_order(
     return payload
 
 
+def _repair_response_entropy_position(row: Mapping[str, Any]) -> tuple[str, str]:
+    explicit = str(row.get("entropy_position") or "").strip()
+    if explicit:
+        return explicit, "explicit_response_entropy_position"
+
+    target_kind_candidates = _unique_strings(
+        [
+            row.get("target_kind"),
+            row.get("rate_target_kind"),
+            row.get("rate_packet_target_kind"),
+            row.get("materializer_target_kind"),
+        ]
+    )
+    for target_kind in target_kind_candidates:
+        position = _entropy_pipeline_position(target_kind)
+        if position != "unknown_entropy_pipeline_position":
+            return position, f"target_kind:{target_kind}"
+
+    corpus = " ".join(
+        _unique_strings(
+            [
+                row.get("correction_family"),
+                *_targeted_component_response_operation_levels(row),
+                *_targeted_component_response_targeted_dimensions(row),
+            ]
+        )
+    ).lower()
+    if any(token in corpus for token in ("huffman", "arithmetic", "range", "ans")):
+        return "at_entropy_coder", "correction_family_or_level_entropy_codec_hint"
+    if any(token in corpus for token in ("zip", "header", "container", "member")):
+        return (
+            "after_entropy_coder_container_or_zip_grammar",
+            "correction_family_or_level_container_hint",
+        )
+    if any(
+        token in corpus
+        for token in (
+            "segnet",
+            "posenet",
+            "frame",
+            "pair",
+            "region",
+            "palette",
+            "chroma",
+            "luma",
+            "rgb",
+            "roll",
+            "repair",
+        )
+    ):
+        return (
+            "before_entropy_coder_distribution_shaping",
+            "scorer_or_frame_space_repair_hint",
+        )
+    return "unknown_entropy_pipeline_position", "insufficient_response_stage_signal"
+
+
+def _repair_response_scope_values(row: Mapping[str, Any], key: str) -> list[Any]:
+    value = row.get(key)
+    if value is None:
+        metadata = row.get("source_metadata")
+        if isinstance(metadata, Mapping):
+            value = metadata.get(key)
+    if value is None:
+        return []
+    if isinstance(value, (str, bytes, bytearray)):
+        return [str(value)]
+    if isinstance(value, Sequence):
+        return list(value)
+    return [value]
+
+
+def _repair_response_interaction_scope(row: Mapping[str, Any]) -> dict[str, Any]:
+    pair_indices = _repair_response_scope_values(row, "selected_pair_indices")
+    frame_indices = _repair_response_scope_values(row, "selected_frame_indices")
+    region_ids = _repair_response_scope_values(row, "selected_region_ids")
+    mode_ids = _repair_response_scope_values(row, "selected_mode_ids")
+    if not mode_ids:
+        mode_ids = _repair_response_scope_values(row, "compact_palette_mode_ids")
+    return {
+        "schema": "frontier_rate_attack_repair_response_interaction_scope.v1",
+        "pair_indices": pair_indices,
+        "pair_count": len(pair_indices) if pair_indices else row.get("selected_pair_count"),
+        "frame_indices": frame_indices,
+        "frame_count": len(frame_indices) if frame_indices else row.get("selected_frame_count"),
+        "region_ids": region_ids,
+        "region_count": len(region_ids) if region_ids else row.get("selected_region_count"),
+        "mode_ids": mode_ids,
+        "mode_count": len(mode_ids) if mode_ids else row.get("palette_size"),
+        "operation_levels": _targeted_component_response_operation_levels(row),
+        "targeted_dimensions": _targeted_component_response_targeted_dimensions(row),
+        "interaction_status": "must_remeasure_stack_synergy_before_promotion",
+        "allowed_use": "repair_stackability_feature_for_local_waterfill_only",
+        "forbidden_use": "score_claim_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
+def _repair_response_marginal_curve(
+    *,
+    requested_bytes: int,
+    segnet_delta: float | None,
+    posenet_delta: float | None,
+    component_delta: float | None,
+    rate_delta: float | None,
+    objective_delta: float | None,
+) -> dict[str, Any]:
+    denominator = requested_bytes if requested_bytes > 0 else None
+
+    def per_byte(value: float | None) -> float | None:
+        return value / denominator if value is not None and denominator else None
+
+    return {
+        "schema": "frontier_rate_attack_repair_response_marginal_curves.v1",
+        "requested_repair_bytes": requested_bytes,
+        "segnet": {
+            "delta_score_units": segnet_delta,
+            "marginal_delta_per_byte": per_byte(segnet_delta),
+        },
+        "posenet": {
+            "delta_score_units": posenet_delta,
+            "marginal_delta_per_byte": per_byte(posenet_delta),
+        },
+        "component": {
+            "delta_score_units": component_delta,
+            "marginal_delta_per_byte": per_byte(component_delta),
+        },
+        "lambda_rate": {
+            "delta_score_units": rate_delta,
+            "marginal_delta_per_byte": per_byte(rate_delta),
+        },
+        "objective": {
+            "delta_score_units": objective_delta,
+            "marginal_delta_per_byte": per_byte(objective_delta),
+            "improvement_score_units": (
+                -objective_delta
+                if objective_delta is not None and objective_delta < 0.0
+                else 0.0
+            ),
+            "improvement_per_byte": (
+                (-objective_delta / denominator)
+                if objective_delta is not None
+                and objective_delta < 0.0
+                and denominator
+                else 0.0
+            ),
+        },
+        "allowed_use": "typed_marginal_curve_for_local_repair_waterfill",
+        "forbidden_use": "score_claim_or_budget_spend_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
 def _repair_waterfill_added_bytes(row: Mapping[str, Any]) -> int | None:
     terms = row.get("local_cpu_component_terms")
     if isinstance(terms, Mapping):
@@ -6666,6 +6825,201 @@ def _repair_waterfill_added_bytes(row: Mapping[str, Any]) -> int | None:
         if value is not None:
             return max(0, value)
     return None
+
+
+def _repair_budget_typed_response_ledger(
+    *,
+    accepted_rows: Sequence[Mapping[str, Any]],
+    available_rate_credit_bytes: int,
+) -> dict[str, Any]:
+    """Normalize measured repair responses into the waterfill action basis."""
+
+    typed_rows: list[dict[str, Any]] = []
+    entropy_histogram: dict[str, int] = {}
+    lambda_rate_score_per_byte = rate_delta_for_archive_byte_delta(1)
+    for rank, row in enumerate(
+        sorted(accepted_rows, key=_targeted_component_response_sort_key),
+        start=1,
+    ):
+        normalized = dict(row)
+        added_bytes = _repair_waterfill_added_bytes(row)
+        requested_bytes = added_bytes if added_bytes is not None else 0
+        local_terms = (
+            row.get("local_cpu_component_terms")
+            if isinstance(row.get("local_cpu_component_terms"), Mapping)
+            else {}
+        )
+        segnet_delta = _finite_float_or_none(
+            local_terms.get("segnet_delta_score_units")
+        )
+        posenet_delta = _finite_float_or_none(
+            local_terms.get("posenet_delta_score_units")
+        )
+        component_delta = _finite_float_or_none(
+            row.get("measured_component_delta_score_units")
+        )
+        if component_delta is None and segnet_delta is not None and posenet_delta is not None:
+            component_delta = segnet_delta + posenet_delta
+        rate_delta = _finite_float_or_none(
+            local_terms.get("correction_rate_delta_score_units")
+        )
+        if rate_delta is None:
+            rate_delta = rate_delta_for_archive_byte_delta(requested_bytes)
+        objective_delta = _finite_float_or_none(
+            row.get("measured_lagrangian_delta_score_units")
+        )
+        if objective_delta is None and component_delta is not None:
+            objective_delta = component_delta + rate_delta
+        entropy_position, entropy_evidence = _repair_response_entropy_position(row)
+        entropy_histogram[entropy_position] = (
+            entropy_histogram.get(entropy_position, 0) + 1
+        )
+        typed_response_id = _bounded_content_key(
+            "repair_budget_typed_response",
+            (
+                row.get("acquisition_id"),
+                row.get("candidate_id"),
+                row.get("correction_family"),
+                rank,
+                requested_bytes,
+                objective_delta,
+                entropy_position,
+            ),
+        )
+        marginal_curves = _repair_response_marginal_curve(
+            requested_bytes=requested_bytes,
+            segnet_delta=segnet_delta,
+            posenet_delta=posenet_delta,
+            component_delta=component_delta,
+            rate_delta=rate_delta,
+            objective_delta=objective_delta,
+        )
+        interaction_scope = _repair_response_interaction_scope(row)
+        normalized.update(
+            {
+                "schema": REPAIR_BUDGET_TYPED_RESPONSE_ROW_SCHEMA,
+                "rank": rank,
+                "typed_response_id": typed_response_id,
+                "source_response_schema": row.get("schema"),
+                "source_response_artifact_path": row.get("response_artifact_path")
+                or row.get("source_harvest_path"),
+                "operation_levels": _targeted_component_response_operation_levels(row),
+                "targeted_dimensions": _targeted_component_response_targeted_dimensions(
+                    row
+                ),
+                "entropy_position_label": entropy_position,
+                "entropy_position_evidence": entropy_evidence,
+                "entropy_position_model": {
+                    "schema": "frontier_rate_attack_entropy_position_model.v1",
+                    "class": entropy_position,
+                    "principle": (
+                        "before_coder_shapes_symbol_distribution; at_coder_attacks_"
+                        "integer_codeword_or_model_gap; after_coder_can_only_remove_"
+                        "container_or_runtime_grammar_overhead"
+                    ),
+                    "receiver_role": "deterministic_decode_only_no_eval_time_adaptation",
+                    "allowed_use": "local_action_functional_feature_only",
+                    "forbidden_use": "score_claim_or_dispatch_authority",
+                    **FALSE_AUTHORITY,
+                },
+                "requested_repair_bytes": requested_bytes,
+                "segnet_delta_score_units": segnet_delta,
+                "posenet_delta_score_units": posenet_delta,
+                "component_delta_score_units": component_delta,
+                "lambda_delta_bytes_score_units": rate_delta,
+                "objective_delta_score_units": objective_delta,
+                "marginal_response_curves": marginal_curves,
+                "interaction_scope": interaction_scope,
+                "stacking_interaction_terms": {
+                    "schema": (
+                        "frontier_rate_attack_repair_response_stacking_"
+                        "interaction_terms.v1"
+                    ),
+                    "status": "measured_stack_interactions_required_before_promotion",
+                    "same_pair_region_mode_collision_possible": bool(
+                        interaction_scope.get("pair_indices")
+                        or interaction_scope.get("region_ids")
+                        or interaction_scope.get("mode_ids")
+                    ),
+                    "synergy_or_antagonism_score_units": None,
+                    "must_remeasure_with_parent_and_sibling_repairs": True,
+                    "allowed_use": "queue_owned_stackability_prior_only",
+                    "forbidden_use": "score_claim_or_dispatch_authority",
+                    **FALSE_AUTHORITY,
+                },
+                "hard_constraints": [
+                    "allocated_bytes_must_not_exceed_receiver_closed_rate_credit",
+                    "parent_rate_only_archive_must_materialize_first",
+                    "receiver_consumes_materialized_runtime_output",
+                    "component_response_replayed_before_budget_spend",
+                    "exact_auth_eval_required_before_score_or_promotion_claim",
+                ],
+                "budget_spend_allowed": False,
+                "ready_for_budget_spend": False,
+                "ready_for_exact_eval_dispatch": False,
+                "allowed_use": "typed_response_row_for_repair_waterfill_only",
+                "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+                **FALSE_AUTHORITY,
+            }
+        )
+        require_no_truthy_authority_fields(
+            normalized,
+            context=f"repair_budget_typed_response_row:{typed_response_id}",
+        )
+        typed_rows.append(normalized)
+
+    objective_improvement_total = sum(
+        float(
+            (
+                row.get("marginal_response_curves", {})
+                if isinstance(row.get("marginal_response_curves"), Mapping)
+                else {}
+            )
+            .get("objective", {})
+            .get("improvement_score_units")
+            or 0.0
+        )
+        for row in typed_rows
+        if isinstance(row.get("marginal_response_curves"), Mapping)
+        and isinstance(row["marginal_response_curves"].get("objective"), Mapping)
+    )
+    payload = {
+        "schema": REPAIR_BUDGET_TYPED_RESPONSE_LEDGER_SCHEMA,
+        "row_schema": REPAIR_BUDGET_TYPED_RESPONSE_ROW_SCHEMA,
+        "row_count": len(typed_rows),
+        "accepted_response_count": len(typed_rows),
+        "available_receiver_closed_rate_credit_bytes": max(
+            0,
+            int(available_rate_credit_bytes),
+        ),
+        "lambda_rate_score_per_byte": lambda_rate_score_per_byte,
+        "optimization_objective": (
+            "minimize_delta_segnet_plus_delta_posenet_plus_lambda_delta_bytes"
+        ),
+        "sort_key": (
+            "measured_lagrangian_delta_score_units_ascending_then_acquisition_id"
+        ),
+        "entropy_position_histogram": dict(sorted(entropy_histogram.items())),
+        "objective_improvement_score_units_total": objective_improvement_total,
+        "hard_constraints": [
+            "rate_only_floor_preserved_as_parent_candidate",
+            "receiver_closed_rate_credit_is_a_hard_byte_budget",
+            "local_mlx_or_cpu_response_is_planning_signal_only",
+            "exact_cpu_or_cuda_auth_axis_required_before_dispatch_or_promotion",
+        ],
+        "rows": typed_rows,
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        "allowed_use": "typed_cumulative_repair_response_ledger_for_queue_waterfill",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        payload,
+        context="repair_budget_typed_response_ledger",
+    )
+    return payload
 
 
 def _repair_waterfill_allocation_action_term(
@@ -6704,6 +7058,7 @@ def _repair_waterfill_allocation_action_term(
     action_id = _bounded_content_key(
         "repair_waterfill_allocation_action",
         (
+            row.get("typed_response_id"),
             row.get("acquisition_id"),
             row.get("candidate_id"),
             row.get("correction_family"),
@@ -6732,6 +7087,28 @@ def _repair_waterfill_allocation_action_term(
             "component_delta_score_units": component_delta,
             "lambda_delta_bytes_score_units": correction_rate_delta,
             "objective_delta_score_units": objective_delta,
+            "typed_response_id": row.get("typed_response_id"),
+            "entropy_position_label": row.get("entropy_position_label"),
+            "entropy_position_model": dict(
+                row.get("entropy_position_model")
+                if isinstance(row.get("entropy_position_model"), Mapping)
+                else {}
+            ),
+            "marginal_response_curves": dict(
+                row.get("marginal_response_curves")
+                if isinstance(row.get("marginal_response_curves"), Mapping)
+                else {}
+            ),
+            "interaction_scope": dict(
+                row.get("interaction_scope")
+                if isinstance(row.get("interaction_scope"), Mapping)
+                else {}
+            ),
+            "stacking_interaction_terms": dict(
+                row.get("stacking_interaction_terms")
+                if isinstance(row.get("stacking_interaction_terms"), Mapping)
+                else {}
+            ),
             **_targeted_rate_packet_context_fields(row),
             "receiver_closed_rate_packet_context": dict(rate_packet_context),
             **FALSE_AUTHORITY,
@@ -6743,6 +7120,10 @@ def _repair_waterfill_allocation_action_term(
             "component_response_replay_required": True,
             "parser_only_proof_rejected": True,
             "deterministic_adapter_only": True,
+            "entropy_position_constraint": (
+                "repair_and_rate_attack_are_encoder_side_only; receiver_must_not_"
+                "optimize_or_inspect_scorer_state"
+            ),
             **FALSE_AUTHORITY,
         },
         "interaction_terms": {
@@ -6751,6 +7132,12 @@ def _repair_waterfill_allocation_action_term(
             "remaining_receiver_closed_rate_credit_bytes_after": remaining_after,
             "must_remeasure_parent_child_interaction_before_promotion": True,
             "synergy_or_antagonism_score_units": None,
+            "typed_response_id": row.get("typed_response_id"),
+            "source_interaction_scope": dict(
+                row.get("interaction_scope")
+                if isinstance(row.get("interaction_scope"), Mapping)
+                else {}
+            ),
             **FALSE_AUTHORITY,
         },
         "legal_runtime_constraints": [
@@ -6810,8 +7197,15 @@ def _repair_waterfill_allocation_rows(
                 "acquisition_id": row.get("acquisition_id"),
                 "candidate_id": row.get("candidate_id"),
                 "correction_family": row.get("correction_family"),
+                "typed_response_id": row.get("typed_response_id"),
                 "targeted_dimensions": list(row.get("targeted_dimensions") or []),
                 "operation_levels": list(row.get("operation_levels") or []),
+                "entropy_position_label": row.get("entropy_position_label"),
+                "entropy_position_model": dict(
+                    row.get("entropy_position_model")
+                    if isinstance(row.get("entropy_position_model"), Mapping)
+                    else {}
+                ),
                 "allocation_action_term": allocation_action_term,
                 "measured_component_delta_score_units": component_delta,
                 "measured_lagrangian_delta_score_units": lagrangian_delta,
@@ -6834,6 +7228,21 @@ def _repair_waterfill_allocation_rows(
                     -lagrangian_delta
                     if lagrangian_delta is not None and lagrangian_delta < 0.0
                     else 0.0
+                ),
+                "marginal_response_curves": dict(
+                    row.get("marginal_response_curves")
+                    if isinstance(row.get("marginal_response_curves"), Mapping)
+                    else {}
+                ),
+                "interaction_scope": dict(
+                    row.get("interaction_scope")
+                    if isinstance(row.get("interaction_scope"), Mapping)
+                    else {}
+                ),
+                "stacking_interaction_terms": dict(
+                    row.get("stacking_interaction_terms")
+                    if isinstance(row.get("stacking_interaction_terms"), Mapping)
+                    else {}
                 ),
                 "estimated_receiver_closed_rate_credit_score_units": row.get(
                     "estimated_receiver_closed_rate_credit_score_units"
@@ -7042,8 +7451,16 @@ def build_frontier_repair_budget_waterfill_work_order(
         if isinstance(rate_budget_preservation_plan.get("operator_action_ledger"), Mapping)
         else {}
     )
-    allocation_rows = _repair_waterfill_allocation_rows(
+    typed_response_ledger = _repair_budget_typed_response_ledger(
         accepted_rows=accepted_rows,
+        available_rate_credit_bytes=available_bytes,
+    )
+    allocation_rows = _repair_waterfill_allocation_rows(
+        accepted_rows=[
+            item
+            for item in typed_response_ledger.get("rows") or []
+            if isinstance(item, Mapping)
+        ],
         available_rate_credit_bytes=available_bytes,
     )
     proposed_bytes_total = sum(
@@ -7109,6 +7526,8 @@ def build_frontier_repair_budget_waterfill_work_order(
             "repair_allocation_action_term_schema": (
                 REPAIR_BUDGET_WATERFILL_ALLOCATION_ACTION_TERM_SCHEMA
             ),
+            "typed_response_ledger_schema": REPAIR_BUDGET_TYPED_RESPONSE_LEDGER_SCHEMA,
+            "typed_response_row_schema": REPAIR_BUDGET_TYPED_RESPONSE_ROW_SCHEMA,
             "upstream_waterfill_solver_schema": (
                 rate_budget_preservation_plan.get("waterfill_solver", {}).get("schema")
                 if isinstance(
@@ -7171,6 +7590,10 @@ def build_frontier_repair_budget_waterfill_work_order(
             **FALSE_AUTHORITY,
         },
         "accepted_response_count": len(accepted_rows),
+        "typed_response_ledger_schema": REPAIR_BUDGET_TYPED_RESPONSE_LEDGER_SCHEMA,
+        "typed_response_row_schema": REPAIR_BUDGET_TYPED_RESPONSE_ROW_SCHEMA,
+        "typed_response_row_count": typed_response_ledger.get("row_count"),
+        "typed_response_ledger": typed_response_ledger,
         "allocation_row_count": len(allocation_rows),
         "repair_cascade_opportunity_count": len(cascade_opportunity_rows),
         "repair_cascade_opportunity_rows": cascade_opportunity_rows,
@@ -7525,10 +7948,17 @@ def _repair_budget_spent_child_rows(
                 "child_must_not_replace_parent_archive": True,
                 "allocation_rank": allocation.get("rank"),
                 "allocation_candidate_id": allocation.get("candidate_id"),
+                "typed_response_id": allocation.get("typed_response_id"),
                 "acquisition_id": allocation.get("acquisition_id"),
                 "correction_family": allocation.get("correction_family"),
                 "targeted_dimensions": list(allocation.get("targeted_dimensions") or []),
                 "operation_levels": list(allocation.get("operation_levels") or []),
+                "entropy_position_label": allocation.get("entropy_position_label"),
+                "entropy_position_model": dict(
+                    allocation.get("entropy_position_model")
+                    if isinstance(allocation.get("entropy_position_model"), Mapping)
+                    else {}
+                ),
                 **_targeted_rate_packet_context_fields(allocation),
                 "receiver_closed_rate_packet_context": dict(
                     allocation.get("receiver_closed_rate_packet_context")
@@ -7554,6 +7984,24 @@ def _repair_budget_spent_child_rows(
                 ),
                 "measured_lagrangian_delta_score_units": (
                     allocation.get("measured_lagrangian_delta_score_units")
+                ),
+                "marginal_response_curves": dict(
+                    allocation.get("marginal_response_curves")
+                    if isinstance(allocation.get("marginal_response_curves"), Mapping)
+                    else {}
+                ),
+                "interaction_scope": dict(
+                    allocation.get("interaction_scope")
+                    if isinstance(allocation.get("interaction_scope"), Mapping)
+                    else {}
+                ),
+                "stacking_interaction_terms": dict(
+                    allocation.get("stacking_interaction_terms")
+                    if isinstance(
+                        allocation.get("stacking_interaction_terms"),
+                        Mapping,
+                    )
+                    else {}
                 ),
                 "source_response_artifact_path": allocation.get(
                     "source_response_artifact_path"
@@ -7740,6 +8188,15 @@ def build_frontier_repair_budget_materialization_plan(
         "operator_action_term_count": operator_action_ledger.get("term_count"),
         "repair_allocation_action_term_schema": (
             REPAIR_BUDGET_WATERFILL_ALLOCATION_ACTION_TERM_SCHEMA
+        ),
+        "typed_response_ledger_schema": repair_budget_waterfill_work_order.get(
+            "typed_response_ledger_schema"
+        ),
+        "typed_response_row_schema": repair_budget_waterfill_work_order.get(
+            "typed_response_row_schema"
+        ),
+        "typed_response_row_count": repair_budget_waterfill_work_order.get(
+            "typed_response_row_count"
         ),
         "rate_only_floor_preserved_before_repair_spend": True,
         "spent_budget_candidates_are_children_of_rate_only_floor": True,
@@ -9390,6 +9847,11 @@ def build_frontier_repair_budget_waterfill_queue(
                 "repair_allocation_action_term_schema": (
                     REPAIR_BUDGET_WATERFILL_ALLOCATION_ACTION_TERM_SCHEMA
                 ),
+                "typed_response_ledger_schema": (
+                    REPAIR_BUDGET_TYPED_RESPONSE_LEDGER_SCHEMA
+                ),
+                "typed_response_row_schema": REPAIR_BUDGET_TYPED_RESPONSE_ROW_SCHEMA,
+                "typed_response_row_count": 0,
                 "missing_prerequisite_artifact_keys": _unique_strings(
                     missing_prerequisite_keys
                 ),
@@ -9579,6 +10041,9 @@ def build_frontier_repair_budget_waterfill_queue(
             "repair_allocation_action_term_schema": (
                 REPAIR_BUDGET_WATERFILL_ALLOCATION_ACTION_TERM_SCHEMA
             ),
+            "typed_response_ledger_schema": REPAIR_BUDGET_TYPED_RESPONSE_LEDGER_SCHEMA,
+            "typed_response_row_schema": REPAIR_BUDGET_TYPED_RESPONSE_ROW_SCHEMA,
+            "typed_response_row_count": accepted_count,
             "preserve_rate_only_archive_before_budget_spend": True,
             "candidate_chain_materialization_plan_path": materialization_plan_ref,
             "candidate_chain_component_replay_manifests_path": (
@@ -9661,6 +10126,12 @@ def build_frontier_repair_budget_waterfill_queue(
                             {
                                 "type": "json_false_authority",
                                 "path": work_order_ref,
+                            },
+                            {
+                                "type": "json_equals",
+                                "path": work_order_ref,
+                                "key": "typed_response_ledger_schema",
+                                "equals": REPAIR_BUDGET_TYPED_RESPONSE_LEDGER_SCHEMA,
                             },
                             {
                                 "type": "json_equals",
@@ -19043,6 +19514,8 @@ __all__ = [
     "REPAIR_BUDGET_MATERIALIZATION_PLAN_SCHEMA",
     "REPAIR_BUDGET_MATERIALIZER_BINDING_REPORT_SCHEMA",
     "REPAIR_BUDGET_MATERIALIZER_BINDING_ROW_SCHEMA",
+    "REPAIR_BUDGET_TYPED_RESPONSE_LEDGER_SCHEMA",
+    "REPAIR_BUDGET_TYPED_RESPONSE_ROW_SCHEMA",
     "REPAIR_BUDGET_WATERFILL_ALLOCATION_ACTION_TERM_SCHEMA",
     "REPAIR_BUDGET_WATERFILL_QUEUE_METADATA_SCHEMA",
     "REPAIR_BUDGET_WATERFILL_WORK_ORDER_SCHEMA",
