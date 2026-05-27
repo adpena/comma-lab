@@ -59048,6 +59048,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_v14_v2_cascade_a_fec10_substitution_onto_dqs1_frontier_20260526",
+      "name": "V14-V2 Cascade A FEC10 substitution onto DQS1 frontier (rank021)",
+      "phase": 7.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "experiments/results/v14_v2_dqs1_plus_fec10_substituted_20260526T023000Z/submission_dir/archive.zip; archive_sha=0a3abfe6...; bytes=178546"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "frame-byte-identical inflate verified locally vs DQS1 baseline; output 0.raw sha=00b479229c97ede3..."
+        },
+        "contest_cuda": {
+          "status": true,
+          "evidence": "0.22618311337661345 [contest-CUDA T4] modal_auth_eval call_id fc-01KSKNC9BQ4ABNNC8AW77SB56E; -8.66e-6 vs DQS1 baseline"
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/v14_v2_cascade_a_fec10_substitution_onto_dqs1_frontier_landed_20260526.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -59057,5 +59098,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-27T00:20:58Z"
+  "updated_at": "2026-05-27T03:02:40Z"
 }
