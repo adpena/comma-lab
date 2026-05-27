@@ -154,25 +154,22 @@ def test_byte_mutation_changes_inflate_output_no_op_proof() -> None:
     assert not torch.allclose(arc_a.latents[0, 0], arc_b.latents[0, 0], atol=1e-6)
 
 
-def test_trainer_full_main_raises_not_implemented_at_l0_scaffold() -> None:
-    """L0 SCAFFOLD posture: trainer _full_main MUST raise NotImplementedError."""
-    import argparse
+def test_trainer_full_main_implemented_and_cuda_gated(tmp_path) -> None:
+    """PACT-NERV-FULL-MAIN-CLUSTER-2 2026-05-27: _full_main IMPLEMENTED + CUDA-gated."""
     import importlib
+    import inspect
 
-    trainer = importlib.import_module(
-        "experiments.train_substrate_pact_nerv_moe"
+    import pytest
+
+    trainer = importlib.import_module("experiments.train_substrate_pact_nerv_moe")
+    src = inspect.getsource(trainer._full_main)
+    assert "raise NotImplementedError" not in src
+    assert "run_pact_nerv_score_aware_training" in src
+    args = trainer._build_parser().parse_args(
+        ["--output-dir", str(tmp_path / "out"), "--device", "cpu"]
     )
-    ns = argparse.Namespace(output_dir=None, epochs=1, smoke=False, device="cpu")
-    try:
-        trainer._full_main(ns)
-    except NotImplementedError as exc:
-        assert (
-            "OPERATOR-GATED" in str(exc)
-            or "L0 SCAFFOLD" in str(exc)
-            or "Stage 1" in str(exc)
-        )
-    else:  # pragma: no cover
-        raise AssertionError("expected NotImplementedError per L0 SCAFFOLD posture")
+    with pytest.raises(SystemExit):
+        trainer._full_main(args)
 
 
 def test_trainer_routes_through_canonical_scorer_loss_helper() -> None:
