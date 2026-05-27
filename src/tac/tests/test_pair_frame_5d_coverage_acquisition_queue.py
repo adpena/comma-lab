@@ -11,6 +11,8 @@ import sys
 from comma_lab.scheduler.pair_frame_5d_coverage_acquisition_queue import (
     PAIR_FRAME_5D_COVERAGE_ACQUISITION_PLAN_SCHEMA,
     PAIR_FRAME_5D_COVERAGE_ACQUISITION_QUEUE_SCHEMA,
+    PAIR_FRAME_5D_EXACT_AXIS_ANCHOR_REQUEST_SCHEMA,
+    PAIR_FRAME_5D_MLX_NEGATIVE_DELTA_REQUEST_SCHEMA,
     build_coverage_acquisition_plan,
     build_pair_frame_5d_coverage_acquisition_queue,
 )
@@ -93,6 +95,41 @@ def test_build_coverage_acquisition_plan_for_fail_closed_anchor_order() -> None:
     assert "requires_byte_closed_submission_bundle_for_paired_auth_eval" in (
         plan["blocking_conditions"]
     )
+    request = plan["followup_lane_requests"][0]
+    assert request["schema"] == PAIR_FRAME_5D_EXACT_AXIS_ANCHOR_REQUEST_SCHEMA
+    assert request["canonical_paired_dispatch_tool"] == (
+        "tools/dispatch_modal_paired_auth_eval.py"
+    )
+    assert request["paired_dispatch_command_contract_blockers"] == []
+    assert "--submission-bundle" not in " ".join(
+        request["paired_dispatch_command_template"]
+    )
+    assert request["required_input_schema_version"] == "submission_bundle_v1_20260526"
+
+
+def test_build_coverage_acquisition_plan_for_mlx_negative_delta_request() -> None:
+    audit = _audit(_work_order("acquire_negative_delta_cells_before_operator_fanout"))
+
+    plan = build_coverage_acquisition_plan(
+        coverage_audit=audit,
+        work_order_id="acquire_negative_delta_cells_before_operator_fanout",
+        coverage_audit_path="audit.json",
+        repo_root=_REPO_ROOT,
+        canvas_path="canvas.json",
+        output_root="experiments/results/unit_coverage_acquisition",
+    )
+
+    assert plan["executable_now"] is False
+    assert plan["preferred_resource_kind"] == "local_mlx"
+    request = plan["followup_lane_requests"][0]
+    assert request["schema"] == PAIR_FRAME_5D_MLX_NEGATIVE_DELTA_REQUEST_SCHEMA
+    assert request["canonical_execution_tool"] == "tools/run_mlx_scorer_response_cache.py"
+    assert request["preferred_execution_queue_schema"] == (
+        "mlx_scorer_response_execution_queue_plan.v1"
+    )
+    assert "--allow-gpu-research-signal" in request["command_template"]
+    assert "--archive-size-bytes" in request["command_template"]
+    assert request["score_claim"] is False
 
 
 def test_emit_coverage_acquisition_plan_cli(tmp_path: pathlib.Path) -> None:

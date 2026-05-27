@@ -5,15 +5,25 @@ from __future__ import annotations
 
 import json
 import re
+import shlex
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from tac.deploy.modal.paired_dispatch import (
+    PAIRED_AUTH_EVAL_DEFAULT_CLAIM_AGENT,
+    PAIRED_AUTH_EVAL_DISPATCH_TOOL,
+    paired_auth_eval_dispatch_command_template,
+)
+from tac.deploy.modal.paired_dispatch_contract import (
+    paired_auth_eval_dispatch_command_blockers,
+)
 from tac.optimization.pair_frame_scorer_geometry_lattice_5d_canvas_coverage import (
     COVERAGE_AUDIT_SCHEMA,
     WORK_ORDER_SCHEMA,
 )
 from tac.optimization.proxy_candidate_contract import require_no_truthy_authority_fields
+from tac.submission_packet.builder import SUBMISSION_BUNDLE_SCHEMA_VERSION
 
 from .experiment_queue import QUEUE_SCHEMA, ExperimentQueueError, normalize_queue_definition
 
@@ -22,6 +32,12 @@ PAIR_FRAME_5D_COVERAGE_ACQUISITION_PLAN_SCHEMA = (
 )
 PAIR_FRAME_5D_COVERAGE_ACQUISITION_QUEUE_SCHEMA = (
     "pair_frame_5d_canvas_coverage_acquisition_queue.v1"
+)
+PAIR_FRAME_5D_EXACT_AXIS_ANCHOR_REQUEST_SCHEMA = (
+    "pair_frame_5d_canvas_exact_axis_anchor_request.v1"
+)
+PAIR_FRAME_5D_MLX_NEGATIVE_DELTA_REQUEST_SCHEMA = (
+    "pair_frame_5d_canvas_mlx_negative_delta_request.v1"
 )
 POPULATED_CANVAS_SCHEMA = "pair_frame_scorer_geometry_lattice_5d_canvas_populated_v1"
 EXTENDED_OPERATOR_QUEUE_SCHEMA = "experiment_queue.v1"
@@ -148,6 +164,184 @@ def _plan_class(work_order_id: str) -> tuple[str, bool, str, list[str]]:
     return ("manual_consumer_binding_required", False, "local_cpu", ["unknown_work_order"])
 
 
+def _paired_axis_anchor_request(
+    *,
+    archive_sha256: str,
+    output_base: Path,
+    repo_root: Path,
+) -> dict[str, Any]:
+    lane_id_base = "lane_pair_frame_5d_coverage_axis_fill"
+    dispatch_command = paired_auth_eval_dispatch_command_template(
+        archive_path="<submission_dir>/archive.zip",
+        submission_dir="<submission_dir>",
+        lane_id_base=lane_id_base,
+        archive_sha256=archive_sha256 or "<archive_sha256>",
+        execute=False,
+        label="pair_frame_5d_coverage_axis_fill",
+        run_id="pair_frame_5d_coverage_axis_fill",
+        output_root=_repo_rel(output_base / "paired_auth_eval", repo_root),
+        claim_agent=PAIRED_AUTH_EVAL_DEFAULT_CLAIM_AGENT,
+        claim_notes=(
+            "5D coverage acquisition requires paired contest CPU/CUDA axis anchors"
+        ),
+    )
+    dispatch_command_text = shlex.join(str(part) for part in dispatch_command)
+    blockers = paired_auth_eval_dispatch_command_blockers(
+        paired_dispatch_tool=PAIRED_AUTH_EVAL_DISPATCH_TOOL,
+        command_template=dispatch_command_text,
+        require_command=True,
+    )
+    request = {
+        "schema": PAIR_FRAME_5D_EXACT_AXIS_ANCHOR_REQUEST_SCHEMA,
+        "work_order_id": "populate_missing_paired_cpu_cuda_axis_anchors",
+        "archive_sha256": archive_sha256,
+        "required_input_schema_version": SUBMISSION_BUNDLE_SCHEMA_VERSION,
+        "required_inputs": [
+            {
+                "id": "submission_bundle_result",
+                "schema_version": SUBMISSION_BUNDLE_SCHEMA_VERSION,
+                "path_placeholder": "<submission_bundle_result.json>",
+                "purpose": (
+                    "bind archive.zip, submission_dir, inflate.sh, archive bytes, "
+                    "and runtime closure before paired exact-axis dispatch"
+                ),
+            }
+        ],
+        "canonical_plan_entrypoint": [
+            ".venv/bin/python",
+            "tools/paired_auth_eval_cli.py",
+            "--from-submission-bundle",
+            "<submission_bundle_result.json>",
+            "--cost-band",
+            "smoke",
+            "--cuda-gpu",
+            "T4",
+            "--cuda-platform",
+            "modal",
+            "--cpu-target",
+            "linux_x86_64_modal",
+            "--budget-usd",
+            "1.00",
+            "--dry-run",
+            "--json",
+        ],
+        "canonical_paired_dispatch_tool": PAIRED_AUTH_EVAL_DISPATCH_TOOL,
+        "paired_dispatch_command_template": dispatch_command,
+        "paired_dispatch_command_template_text": dispatch_command_text,
+        "paired_dispatch_command_contract_blockers": blockers,
+        "exact_axes_required": ["contest_cpu", "contest_cuda"],
+        "dispatch_claim_required": True,
+        "execute_default": False,
+        "allowed_use": "paired_exact_axis_anchor_acquisition_planning_only",
+        "forbidden_use": "single_axis_dispatch_or_score_claim_without_auth_eval",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        request,
+        context="pair_frame_5d_exact_axis_anchor_request",
+    )
+    return request
+
+
+def _mlx_negative_delta_request(
+    *,
+    archive_sha256: str,
+    output_base: Path,
+    repo_root: Path,
+) -> dict[str, Any]:
+    response_path = output_base / "mlx_negative_delta" / "mlx_scorer_response.json"
+    components_dir = output_base / "mlx_negative_delta" / "components"
+    request = {
+        "schema": PAIR_FRAME_5D_MLX_NEGATIVE_DELTA_REQUEST_SCHEMA,
+        "work_order_id": "acquire_negative_delta_cells_before_operator_fanout",
+        "archive_sha256": archive_sha256,
+        "required_inputs": [
+            {
+                "id": "reference_mlx_cache_dir",
+                "path_placeholder": "<reference_mlx_cache_dir>",
+                "requires_manifest": True,
+            },
+            {
+                "id": "candidate_mlx_cache_dir",
+                "path_placeholder": "<candidate_mlx_cache_dir>",
+                "requires_manifest": True,
+            },
+            {
+                "id": "archive_size_bytes",
+                "value_placeholder": "<archive_size_bytes>",
+            },
+        ],
+        "canonical_execution_tool": "tools/run_mlx_scorer_response_cache.py",
+        "preferred_execution_queue_schema": "mlx_scorer_response_execution_queue_plan.v1",
+        "command_template": [
+            ".venv/bin/python",
+            "tools/run_mlx_scorer_response_cache.py",
+            "--reference-cache-dir",
+            "<reference_mlx_cache_dir>",
+            "--candidate-cache-dir",
+            "<candidate_mlx_cache_dir>",
+            "--archive-size-bytes",
+            "<archive_size_bytes>",
+            "--output",
+            _repo_rel(response_path, repo_root),
+            "--repo-root",
+            ".",
+            "--batch-pairs",
+            "1",
+            "--start-pair",
+            "0",
+            "--device",
+            "gpu",
+            "--allow-gpu-research-signal",
+            "--allow-local-cpu-advisory-cache-identity",
+            "--components-dir",
+            _repo_rel(components_dir, repo_root),
+            "--response-family",
+            "pair_frame_5d_coverage_negative_delta",
+        ],
+        "response_output": _repo_rel(response_path, repo_root),
+        "components_dir": _repo_rel(components_dir, repo_root),
+        "batch_pairs": 1,
+        "device": "gpu",
+        "cache_identity_mode": "local_research_signal_only",
+        "requires_exact_eval_before_spend_or_promotion": True,
+        "allowed_use": "local_mlx_negative_delta_acquisition_planning_only",
+        "forbidden_use": "score_claim_or_auth_axis_transfer_without_calibration",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        request,
+        context="pair_frame_5d_mlx_negative_delta_request",
+    )
+    return request
+
+
+def _followup_lane_requests(
+    *,
+    work_order_id: str,
+    archive_sha256: str,
+    output_base: Path,
+    repo_root: Path,
+) -> list[dict[str, Any]]:
+    if work_order_id == "populate_missing_paired_cpu_cuda_axis_anchors":
+        return [
+            _paired_axis_anchor_request(
+                archive_sha256=archive_sha256,
+                output_base=output_base,
+                repo_root=repo_root,
+            )
+        ]
+    if work_order_id == "acquire_negative_delta_cells_before_operator_fanout":
+        return [
+            _mlx_negative_delta_request(
+                archive_sha256=archive_sha256,
+                output_base=output_base,
+                repo_root=repo_root,
+            )
+        ]
+    return []
+
+
 def build_coverage_acquisition_plan(
     *,
     coverage_audit: Mapping[str, Any],
@@ -185,30 +379,16 @@ def build_coverage_acquisition_plan(
                 "--json",
             ]
         )
-    command_templates: list[list[str]] = []
-    if work_order_id == "populate_missing_paired_cpu_cuda_axis_anchors":
-        command_templates.append(
-            [
-                ".venv/bin/python",
-                "tools/dispatch_modal_paired_auth_eval.py",
-                "--submission-bundle",
-                "<byte_closed_submission_bundle.json>",
-                "--lane-id",
-                "lane_pair_frame_5d_coverage_axis_fill",
-            ]
-        )
-    elif work_order_id == "acquire_negative_delta_cells_before_operator_fanout":
-        command_templates.append(
-            [
-                ".venv/bin/python",
-                "tools/run_mlx_scorer_response_from_local_advisory.py",
-                "--reference-cache-dir",
-                "<reference_mlx_cache>",
-                "--candidate-cache-dir",
-                "<candidate_mlx_cache>",
-                "--allow-gpu-research-signal",
-            ]
-        )
+    followup_requests = _followup_lane_requests(
+        work_order_id=work_order_id,
+        archive_sha256=archive_sha256,
+        output_base=output_base,
+        repo_root=repo,
+    )
+    command_templates = [
+        list(request.get("command_template") or request.get("canonical_plan_entrypoint") or [])
+        for request in followup_requests
+    ]
     target = work_order.get("target") if isinstance(work_order.get("target"), Mapping) else {}
     payload: dict[str, Any] = {
         "schema": PAIR_FRAME_5D_COVERAGE_ACQUISITION_PLAN_SCHEMA,
@@ -229,6 +409,7 @@ def build_coverage_acquisition_plan(
         "blocking_conditions": blockers,
         "generated_commands": generated_commands,
         "command_templates_requiring_inputs": command_templates,
+        "followup_lane_requests": followup_requests,
         "suggested_next_tools": list(work_order.get("suggested_next_tools") or []),
         "target": dict(target),
         "queue_followup": {
@@ -611,6 +792,8 @@ __all__ = [
     "FALSE_AUTHORITY",
     "PAIR_FRAME_5D_COVERAGE_ACQUISITION_PLAN_SCHEMA",
     "PAIR_FRAME_5D_COVERAGE_ACQUISITION_QUEUE_SCHEMA",
+    "PAIR_FRAME_5D_EXACT_AXIS_ANCHOR_REQUEST_SCHEMA",
+    "PAIR_FRAME_5D_MLX_NEGATIVE_DELTA_REQUEST_SCHEMA",
     "build_coverage_acquisition_plan",
     "build_pair_frame_5d_coverage_acquisition_queue",
 ]
