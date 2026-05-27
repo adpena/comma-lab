@@ -51,12 +51,46 @@ from tac.substrates.z5_predictive_coding_world_model.archive import (
 # ===========================================================================
 
 
-def test_z5_module_declares_research_only_until_full_main_lands() -> None:
-    """The substrate-level status must match the operator recipe gate."""
+def test_z5_module_declares_research_only_until_paid_dispatch_clears() -> None:
+    """The substrate-level status must match the operator recipe gate.
+
+    CLASS-SHIFT-FULL-MAIN-CLUSTER 2026-05-27: the trainer ``_full_main`` is now
+    IMPLEMENTED (code complete) but PAID DISPATCH stays gated by ``research_only:
+    true`` on the recipe per Catalog #325 until the per-substrate symposium + Z4
+    canary anchor clear it. The package docstring records that recipe gate.
+    """
     doc = z5_module.__doc__ or ""
     assert "research_only: true" in doc
     assert "research_only: false" not in doc
-    assert "NotImplementedError" in doc
+
+
+def test_z5_trainer_full_main_implemented_and_cuda_gated(tmp_path) -> None:
+    """CLASS-SHIFT-FULL-MAIN-CLUSTER 2026-05-27: _full_main IMPLEMENTED + CUDA-gated.
+
+    NotImplementedError extinguished; ``_full_main`` routes the canonical
+    score-aware loop through ``run_pact_nerv_score_aware_training``. Full
+    (non-smoke) path is CUDA-required (Catalog #1/#325): ``--device cpu``
+    without ``--full-cpu`` refuses via SystemExit. PAID DISPATCH stays gated
+    by the recipe per Catalog #325.
+    """
+    import importlib
+    import inspect
+
+    import pytest
+
+    trainer = importlib.import_module(
+        "experiments.train_substrate_z5_predictive_coding_world_model"
+    )
+    src = inspect.getsource(trainer._full_main)
+    assert "raise NotImplementedError" not in src, (
+        "_full_main NotImplementedError must be extinguished"
+    )
+    assert "run_pact_nerv_score_aware_training" in src
+    args = trainer._build_parser().parse_args(
+        ["--output-dir", str(tmp_path / "out"), "--device", "cpu", "--epochs", "1"]
+    )
+    with pytest.raises(SystemExit):
+        trainer._full_main(args)
 
 def test_predictor_output_shape_2_layer() -> None:
     p = HierarchicalPredictor(
