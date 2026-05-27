@@ -59,6 +59,7 @@ import argparse
 import hashlib
 import json
 import shutil
+import sys
 import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
@@ -84,6 +85,10 @@ FALSE_AUTHORITY: dict[str, Any] = {
     "gpu_launched": False,
     "dispatch_packet_ready": False,
 }
+
+
+class Pr95MlxPackageError(RuntimeError):
+    """Raised when a PR95 MLX package cannot satisfy the source archive contract."""
 
 
 def _sha256_bytes(data: bytes) -> str:
@@ -132,6 +137,46 @@ def _resolve_latents_and_meta(
         latents = pt_state_dict.pop("latents")
         return latents, dict(packet.meta), source_custody
     return packet.latents, dict(packet.meta), source_custody
+
+
+def _latent_shape(latents: Any) -> tuple[int, ...]:
+    shape = getattr(latents, "shape", None)
+    if shape is None:
+        return ()
+    try:
+        return tuple(int(dim) for dim in shape)
+    except TypeError:
+        return ()
+
+
+def _validate_latents_match_pr95_meta(
+    *,
+    latents: Any,
+    meta: dict[str, Any],
+    latents_from_pt: bool,
+) -> None:
+    shape = _latent_shape(latents)
+    expected_n_pairs = int(meta["n_pairs"]) if "n_pairs" in meta else None
+    expected_latent_dim = int(meta["latent_dim"])
+    if len(shape) != 2:
+        source = "checkpoint" if latents_from_pt else "source archive"
+        raise Pr95MlxPackageError(
+            f"{source}_latents_rank_mismatch: expected rank-2 latents "
+            f"(n_pairs, latent_dim), got shape={shape}"
+        )
+    blockers: list[str] = []
+    if expected_n_pairs is not None and shape[0] != expected_n_pairs:
+        blockers.append("checkpoint_latent_count_mismatch")
+    if shape[1] != expected_latent_dim:
+        blockers.append("checkpoint_latent_dim_mismatch")
+    if blockers:
+        source = "checkpoint" if latents_from_pt else "source archive"
+        raise Pr95MlxPackageError(
+            f"{','.join(blockers)}: {source} latent shape={shape} does not "
+            f"match PR95 meta n_pairs={expected_n_pairs} "
+            f"latent_dim={expected_latent_dim}; build a checkpoint with the "
+            "full source PR95 latent table before using --latents-from-pt"
+        )
 
 
 def _strip_pt_keys_not_in_decoder(
@@ -444,15 +489,6 @@ def package_pytorch_state_dict_to_contest_archive(
     output_submission_dir = Path(output_submission_dir)
     source_submission_root = Path(source_submission_root)
 
-    if output_submission_dir.exists():
-        if not overwrite:
-            raise FileExistsError(
-                f"output submission dir exists and --no-overwrite was passed: "
-                f"{output_submission_dir}"
-            )
-        shutil.rmtree(output_submission_dir)
-    output_submission_dir.mkdir(parents=True, exist_ok=True)
-
     pt_state_dict = _load_pytorch_state_dict(input_pt)
     pt_sha256 = _sha256_file(input_pt)
     pt_bytes = input_pt.stat().st_size
@@ -462,11 +498,25 @@ def package_pytorch_state_dict_to_contest_archive(
         latents_from_pt=latents_from_pt,
         pt_state_dict=pt_state_dict,
     )
+    _validate_latents_match_pr95_meta(
+        latents=latents,
+        meta=meta,
+        latents_from_pt=latents_from_pt,
+    )
     decoder_sd = _strip_pt_keys_not_in_decoder(
         pt_state_dict,
         latent_dim=int(meta["latent_dim"]),
         base_channels=int(meta["base_channels"]),
     )
+
+    if output_submission_dir.exists():
+        if not overwrite:
+            raise FileExistsError(
+                f"output submission dir exists and --no-overwrite was passed: "
+                f"{output_submission_dir}"
+            )
+        shutil.rmtree(output_submission_dir)
+    output_submission_dir.mkdir(parents=True, exist_ok=True)
 
     archive_zip_path = output_submission_dir / "archive.zip"
     write_report = write_pr95_public_archive_zip(
@@ -630,15 +680,19 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
-    report = package_pytorch_state_dict_to_contest_archive(
-        input_pt=args.input_pt,
-        source_archive_zip=args.source_archive_zip,
-        output_submission_dir=args.output_submission_dir,
-        source_submission_root=args.source_submission_root,
-        latents_from_pt=args.latents_from_pt,
-        overwrite=not args.no_overwrite,
-        report_out=args.report_out,
-    )
+    try:
+        report = package_pytorch_state_dict_to_contest_archive(
+            input_pt=args.input_pt,
+            source_archive_zip=args.source_archive_zip,
+            output_submission_dir=args.output_submission_dir,
+            source_submission_root=args.source_submission_root,
+            latents_from_pt=args.latents_from_pt,
+            overwrite=not args.no_overwrite,
+            report_out=args.report_out,
+        )
+    except Pr95MlxPackageError as exc:
+        print(f"[pr95-mlx-package] FATAL: {exc}", file=sys.stderr)
+        return 2
     print(
         f"[pr95-mlx-package] archive_zip={report['archive_zip_path']} "
         f"bytes={report['archive_zip_bytes']} "

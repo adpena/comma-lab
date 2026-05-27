@@ -9,6 +9,8 @@ import subprocess
 import zipfile
 from pathlib import Path
 
+import pytest
+
 from tac.local_acceleration.pr95_hnerv_mlx import (
     HNeRVSyntheticTrainingBundleMLX,
     pytorch_state_dict_from_mlx,
@@ -16,6 +18,7 @@ from tac.local_acceleration.pr95_hnerv_mlx import (
 )
 from tools.package_pr95_mlx_pytorch_state_dict_to_contest_archive import (
     PR95_MLX_PACKAGE_SCHEMA,
+    Pr95MlxPackageError,
     package_pytorch_state_dict_to_contest_archive,
 )
 
@@ -97,3 +100,39 @@ def test_package_pr95_mlx_pytorch_state_dict_byte_closed_runtime_smoke(
     raw = output_dir / "0.raw"
     assert raw.is_file()
     assert raw.stat().st_size == 2 * 874 * 1164 * 3
+
+
+def test_package_pr95_latents_from_pt_fails_before_output_on_count_mismatch(
+    tmp_path: Path,
+) -> None:
+    import torch
+
+    bundle = HNeRVSyntheticTrainingBundleMLX(
+        latent_count=3,
+        latent_dim=28,
+        base_channels=8,
+        seed=23,
+    )
+    source_archive_zip = tmp_path / "source_archive.zip"
+    write_pr95_public_archive_zip(
+        pytorch_state_dict_from_mlx(bundle.decoder),
+        bundle.latents,
+        meta={"latent_dim": 28, "base_channels": 8, "eval_size": [384, 512]},
+        output_zip_path=source_archive_zip,
+    )
+
+    input_pt = tmp_path / "state_dict_with_short_latents.pt"
+    state_dict = pytorch_state_dict_from_mlx(bundle.decoder, as_torch=True)
+    state_dict["latents"] = torch.zeros((1, 28), dtype=torch.float32)
+    torch.save(state_dict, input_pt)
+
+    submission_dir = tmp_path / "submission"
+    with pytest.raises(Pr95MlxPackageError, match="checkpoint_latent_count_mismatch"):
+        package_pytorch_state_dict_to_contest_archive(
+            input_pt=input_pt,
+            source_archive_zip=source_archive_zip,
+            output_submission_dir=submission_dir,
+            latents_from_pt=True,
+        )
+
+    assert not submission_dir.exists()
