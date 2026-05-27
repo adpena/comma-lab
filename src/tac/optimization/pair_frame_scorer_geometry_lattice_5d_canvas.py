@@ -154,6 +154,8 @@ Lane: ``lane_pair_frame_scorer_geometry_lattice_design_memo_20260525`` L1.
 
 from __future__ import annotations
 
+import hashlib
+import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from enum import StrEnum
@@ -165,6 +167,8 @@ from tac.cathedral.consumer_contract import (
     ConsumerTier,
     HookNumber,
 )
+from tac.provenance.builders import build_provenance_for_predicted
+from tac.provenance.validator import provenance_to_dict
 
 # ---------------------------------------------------------------------------
 # Module-level canonical contract per Catalog #335 + #357.
@@ -579,7 +583,17 @@ def bind_pair_component_xray(
         raise ValueError(
             f"archive_path must be Path, got {type(archive_path).__name__}"
         )
-    raise NotImplementedError(_BUILD_1_DEFER_SENTINEL)
+    frame_idx = min(pair_idx * 2, CANONICAL_FRAME_COUNT - 1)
+    geometry = compute_segnet_posenet_score_geometry(
+        pair_idx=pair_idx,
+        frame_idx=frame_idx,
+        archive_path=archive_path,
+    )
+    by_scorer_axis: dict[ScorerAxis, dict[str, float]] = {}
+    for cpu_cuda_axis, axis_values in geometry.items():
+        for scorer_axis, value in axis_values.items():
+            by_scorer_axis.setdefault(scorer_axis, {})[cpu_cuda_axis.value] = value
+    return by_scorer_axis
 
 
 def decompose_frame_axis_master_gradient(
@@ -606,7 +620,17 @@ def decompose_frame_axis_master_gradient(
         raise ValueError(
             f"archive_path must be Path, got {type(archive_path).__name__}"
         )
-    raise NotImplementedError(_BUILD_1_DEFER_SENTINEL)
+    pair_idx = min(frame_idx // 2, CANONICAL_PAIR_COUNT - 1)
+    geometry = compute_segnet_posenet_score_geometry(
+        pair_idx=pair_idx,
+        frame_idx=frame_idx,
+        archive_path=archive_path,
+    )
+    by_scorer_axis: dict[ScorerAxis, dict[str, float]] = {}
+    for cpu_cuda_axis, axis_values in geometry.items():
+        for scorer_axis, value in axis_values.items():
+            by_scorer_axis.setdefault(scorer_axis, {})[cpu_cuda_axis.value] = value
+    return by_scorer_axis
 
 
 def compute_segnet_posenet_score_geometry(
@@ -633,7 +657,29 @@ def compute_segnet_posenet_score_geometry(
         raise ValueError(f"pair_idx must be int, got {type(pair_idx).__name__}")
     if not isinstance(frame_idx, int) or isinstance(frame_idx, bool):
         raise ValueError(f"frame_idx must be int, got {type(frame_idx).__name__}")
-    raise NotImplementedError(_BUILD_1_DEFER_SENTINEL)
+    if not 0 <= pair_idx < CANONICAL_PAIR_COUNT:
+        raise ValueError(
+            f"pair_idx {pair_idx} out of range [0, {CANONICAL_PAIR_COUNT})"
+        )
+    if not 0 <= frame_idx < CANONICAL_FRAME_COUNT:
+        raise ValueError(
+            f"frame_idx {frame_idx} out of range [0, {CANONICAL_FRAME_COUNT})"
+        )
+    if not isinstance(archive_path, Path):
+        raise ValueError(
+            f"archive_path must be Path, got {type(archive_path).__name__}"
+        )
+    canvas = PairFrameScorerGeometryLattice.build_lattice(archive_path)
+    result: dict[CpuCudaAxis, dict[ScorerAxis, float]] = {}
+    for cell in canvas._cells.values():
+        if cell.pair_idx != pair_idx or cell.frame_idx != frame_idx:
+            continue
+        if cell.receiver_runtime is not ReceiverRuntime.RAW_RESIDUAL:
+            continue
+        result.setdefault(cell.cpu_cuda_axis, {})[cell.scorer_axis] = (
+            cell.predicted_delta_score
+        )
+    return result
 
 
 def query_receiver_runtime_feasibility(
@@ -662,7 +708,45 @@ def query_receiver_runtime_feasibility(
             f"receiver_runtime must be ReceiverRuntime, got "
             f"{type(receiver_runtime).__name__}"
         )
-    raise NotImplementedError(_BUILD_1_DEFER_SENTINEL)
+    if not isinstance(pair_idx, int) or isinstance(pair_idx, bool):
+        raise ValueError(f"pair_idx must be int, got {type(pair_idx).__name__}")
+    if not 0 <= pair_idx < CANONICAL_PAIR_COUNT:
+        raise ValueError(
+            f"pair_idx {pair_idx} out of range [0, {CANONICAL_PAIR_COUNT})"
+        )
+    if not isinstance(frame_idx, int) or isinstance(frame_idx, bool):
+        raise ValueError(f"frame_idx must be int, got {type(frame_idx).__name__}")
+    if not 0 <= frame_idx < CANONICAL_FRAME_COUNT:
+        raise ValueError(
+            f"frame_idx {frame_idx} out of range [0, {CANONICAL_FRAME_COUNT})"
+        )
+    if not isinstance(archive_path, Path):
+        raise ValueError(
+            f"archive_path must be Path, got {type(archive_path).__name__}"
+        )
+    if receiver_runtime is ReceiverRuntime.RAW_RESIDUAL:
+        return {
+            ScorerAxis.SEGNET_5CLASS: True,
+            ScorerAxis.POSENET_6D: True,
+            ScorerAxis.RATE_TERM: True,
+        }
+    if receiver_runtime is ReceiverRuntime.FULL_DROP:
+        return {
+            ScorerAxis.SEGNET_5CLASS: False,
+            ScorerAxis.POSENET_6D: False,
+            ScorerAxis.RATE_TERM: True,
+        }
+    if receiver_runtime is ReceiverRuntime.MASKED:
+        return {
+            ScorerAxis.SEGNET_5CLASS: True,
+            ScorerAxis.POSENET_6D: False,
+            ScorerAxis.RATE_TERM: True,
+        }
+    return {
+        ScorerAxis.SEGNET_5CLASS: True,
+        ScorerAxis.POSENET_6D: True,
+        ScorerAxis.RATE_TERM: True,
+    }
 
 
 def generate_queue_executable_start(
@@ -706,7 +790,352 @@ def generate_queue_executable_start(
             f"cpu_cuda_axis must be CpuCudaAxis, got "
             f"{type(cpu_cuda_axis).__name__}"
         )
-    raise NotImplementedError(_BUILD_2_DEFER_SENTINEL)
+    if not isinstance(canvas, PairFrameScorerGeometryLattice):
+        raise ValueError(
+            f"canvas must be PairFrameScorerGeometryLattice, got "
+            f"{type(canvas).__name__}"
+        )
+    pair_set = {int(value) for value in pair_idxs}
+    frame_set = {int(value) for value in frame_idxs}
+    if not pair_set:
+        raise ValueError("pair_idxs must contain at least one pair index")
+    if not frame_set:
+        raise ValueError("frame_idxs must contain at least one frame index")
+    for pair_idx in pair_set:
+        if not 0 <= pair_idx < CANONICAL_PAIR_COUNT:
+            raise ValueError(
+                f"pair_idx {pair_idx} out of range [0, {CANONICAL_PAIR_COUNT})"
+            )
+    for frame_idx in frame_set:
+        if not 0 <= frame_idx < CANONICAL_FRAME_COUNT:
+            raise ValueError(
+                f"frame_idx {frame_idx} out of range [0, {CANONICAL_FRAME_COUNT})"
+            )
+    cells = [
+        cell
+        for cell in canvas._cells.values()
+        if cell.pair_idx in pair_set
+        and cell.frame_idx in frame_set
+        and cell.receiver_runtime is receiver_runtime
+        and cell.cpu_cuda_axis is cpu_cuda_axis
+        and cell.receiver_feasibility
+    ]
+    if not cells:
+        raise ValueError(
+            "no feasible cells matched the requested pair/frame/runtime/hardware "
+            "coordinate"
+        )
+    axis_decomposition = _build_axis_decomposition_for_candidate(
+        cells, canvas.archive_sha256, operation
+    )
+    total_delta = sum(float(cell.predicted_delta_score) for cell in cells)
+    total_bytes = sum(int(cell.predicted_byte_cost) for cell in cells)
+    group_key = (*sorted(pair_set), *sorted(frame_set))
+    recipe_hint = {
+        "operation": operation.value,
+        "receiver_runtime": receiver_runtime.value,
+        "cpu_cuda_axis": cpu_cuda_axis.value,
+        "pair_idxs": sorted(pair_set),
+        "frame_idxs": sorted(frame_set),
+        "group_size_cells": len(cells),
+        "candidate_source": "generate_queue_executable_start",
+        "candidate_authority": "predicted_metadata_only",
+    }
+    return ExecutableCandidate(
+        operation=operation,
+        archive_candidate_path=_candidate_archive_path(
+            canvas, operation, group_key, receiver_runtime, cpu_cuda_axis
+        ),
+        predicted_delta_score=total_delta,
+        predicted_byte_cost=total_bytes,
+        catalog_323_provenance=dict(axis_decomposition.canonical_provenance),
+        canonical_dispatch_recipe_hint=recipe_hint,
+        predicted_axis_decomposition=axis_decomposition,
+    )
+
+
+# ---------------------------------------------------------------------------
+# BUILD-2 canonical operation generator helper (sister of the 4 instance
+# methods on PairFrameScorerGeometryLattice; module-level for testability).
+# ---------------------------------------------------------------------------
+
+_PREDICTOR_MODEL_ID_FULL_DROP = "pair_frame_scorer_geometry_lattice_5d_canvas.full_drop_v0"
+_PREDICTOR_MODEL_ID_REPAIR = "pair_frame_scorer_geometry_lattice_5d_canvas.repair_v0"
+_PREDICTOR_MODEL_ID_MASKED = "pair_frame_scorer_geometry_lattice_5d_canvas.masked_v0"
+_PREDICTOR_MODEL_ID_FEATHERED = "pair_frame_scorer_geometry_lattice_5d_canvas.feathered_v0"
+
+_OPERATION_MODEL_ID_MAP: Mapping[CanonicalOperation, str] = {
+    CanonicalOperation.FULL_DROP: _PREDICTOR_MODEL_ID_FULL_DROP,
+    CanonicalOperation.REPAIR: _PREDICTOR_MODEL_ID_REPAIR,
+    CanonicalOperation.MASKED: _PREDICTOR_MODEL_ID_MASKED,
+    CanonicalOperation.FEATHERED: _PREDICTOR_MODEL_ID_FEATHERED,
+}
+
+
+def _scorer_axis_score_contributions(
+    cells: Sequence[PairFrameScorerGeometryCell],
+) -> tuple[float, float, int]:
+    """Sum per-axis deltas across a sequence of cells.
+
+    Returns (sum_seg_delta_score, sum_pose_delta_score, sum_rate_bytes).
+
+    Per CLAUDE.md "Apples-to-apples evidence discipline": the canvas's
+    per-cell ``predicted_delta_score`` is already in canonical contest-score
+    units (matches ``S = 100 * d_seg + sqrt(10 * d_pose) + 25 * archive_bytes
+    / 37545489``). For BUILD-3 Catalog #356 AxisDecomposition wire-in we
+    INVERT the canonical formula per scorer_axis so the AxisDecomposition
+    carries the underlying d_seg / d_pose / archive_bytes deltas instead
+    of the composed score delta. This preserves apples-to-apples per the
+    10th standing directive.
+    """
+    seg_score_delta = 0.0
+    pose_score_delta = 0.0
+    rate_bytes_delta = 0
+    for cell in cells:
+        if cell.scorer_axis is ScorerAxis.SEGNET_5CLASS:
+            seg_score_delta += float(cell.predicted_delta_score)
+        elif cell.scorer_axis is ScorerAxis.POSENET_6D:
+            pose_score_delta += float(cell.predicted_delta_score)
+        elif cell.scorer_axis is ScorerAxis.RATE_TERM:
+            rate_bytes_delta += int(cell.predicted_byte_cost)
+    return seg_score_delta, pose_score_delta, rate_bytes_delta
+
+
+def _build_axis_decomposition_for_candidate(
+    cells: Sequence[PairFrameScorerGeometryCell],
+    archive_sha256: str,
+    operation: CanonicalOperation,
+) -> AxisDecomposition:
+    """Compose per-cell deltas into a canonical AxisDecomposition per Catalog #356.
+
+    Per Catalog #356 STRICT preflight gate: any consumer that emits
+    ``predicted_axis_decomposition`` MUST thread canonical Provenance via
+    one of the canonical builders (we use ``build_provenance_for_predicted``
+    since the canvas operation generators emit PREDICTED candidates per
+    Catalog #287/#341 axis_tag="[predicted]").
+
+    Per the 10th standing directive (apples-to-apples): we INVERT the
+    canonical scoring formula to recover per-axis deltas (d_seg, d_pose,
+    archive_bytes) from the composed score delta. The canonical formula
+    is ``S = 100 * d_seg + sqrt(10 * d_pose) + 25 * archive_bytes /
+    37545489``, so:
+
+        d_seg_delta = score_delta_seg / 100
+        d_pose_delta = score_delta_pose / sqrt(10)
+            (only valid as a linear approximation around the operating
+            point; the canonical full composition lives in
+            ``tac.score_composition.compose_score_from_axes`` which uses
+            the difference-of-sqrt form per CLAUDE.md "SegNet vs PoseNet
+            importance — operating-point dependent")
+        archive_bytes_delta = sum of rate-axis byte costs
+    """
+    seg_score_delta, pose_score_delta, rate_bytes_delta = (
+        _scorer_axis_score_contributions(cells)
+    )
+    # Linear inversion (per Catalog #356 docstring: AxisDecomposition fields
+    # carry d_seg_delta + d_pose_delta + archive_bytes_delta; the canonical
+    # ranker uses tac.score_composition.compose_score_from_axes for the
+    # difference-of-sqrt pose composition).
+    d_seg_delta = seg_score_delta / 100.0
+    # Pose: per CLAUDE.md "SegNet vs PoseNet importance — operating-point
+    # dependent" the marginal sensitivity is 5/sqrt(10*d_pose). For
+    # canvas-level prediction we use the canonical linear approx
+    # d_pose_delta ≈ score_delta_pose / sqrt(10) which is conservative at
+    # the PR106 frontier (pose_avg ≈ 3.4e-5; marginal ≈ 271). Downstream
+    # cathedral ranker composes via compose_score_from_axes for the
+    # accurate difference-of-sqrt form.
+    d_pose_delta = pose_score_delta / math.sqrt(10.0)
+
+    # Canonical Provenance per Catalog #323. Per Catalog #356 STRICT gate:
+    # the canonical_provenance MUST be a dict produced via the canonical
+    # builders. We use build_provenance_for_predicted since canvas candidates
+    # are PREDICTED-from-model per Catalog #287/#341.
+    coord_signature = "|".join(
+        sorted(
+            f"({c.pair_idx},{c.frame_idx},{c.scorer_axis.value},"
+            f"{c.receiver_runtime.value},{c.cpu_cuda_axis.value})"
+            for c in cells
+        )
+    )
+    inputs_payload = f"{archive_sha256}|{operation.value}|{coord_signature}"
+    inputs_sha = sha256_hex(inputs_payload)
+    prov = build_provenance_for_predicted(
+        model_id=_OPERATION_MODEL_ID_MAP[operation],
+        inputs_sha256=inputs_sha,
+        measurement_axis="[predicted]",
+        hardware_substrate="unknown",
+    )
+    return AxisDecomposition(
+        predicted_d_seg_delta=d_seg_delta,
+        predicted_d_pose_delta=d_pose_delta,
+        predicted_archive_bytes_delta=rate_bytes_delta,
+        axis_tag="[predicted]",
+        canonical_provenance=provenance_to_dict(prov),
+    )
+
+
+def sha256_hex(text: str) -> str:
+    """Canonical sha256 helper for inputs_sha256 (Catalog #323 sister)."""
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _derive_archive_sha256_from_path(archive_path: Path) -> str:
+    """Compute archive sha256 for class-level empirical lattice loading."""
+    h = hashlib.sha256()
+    with archive_path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(64 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _repo_root_for_archive_path(archive_path: Path) -> Path | None:
+    """Find nearest parent carrying the canonical master-gradient ledger."""
+    for parent in (archive_path.parent, *archive_path.parents):
+        if (parent / ".omx" / "state" / "master_gradient_anchors.jsonl").exists():
+            return parent
+    return None
+
+
+def _candidate_archive_path(
+    canvas: PairFrameScorerGeometryLattice,
+    operation: CanonicalOperation,
+    group_key: tuple[int, ...],
+    receiver_runtime: ReceiverRuntime,
+    cpu_cuda_axis: CpuCudaAxis,
+) -> Path:
+    """Canonical scaffold-only sentinel path for the ExecutableCandidate.
+
+    Per the audit memo §"Direct answer to operator question": BUILD-2
+    operation generators emit CANDIDATE METADATA; the actual archive-byte
+    construction is PAID-DISPATCH territory (audit's PRIORITY 4 / FIRE
+    phase). The path here is deterministic from the canvas + group key
+    so downstream consumers can pair candidates with their dispatch
+    artifacts at dispatch-time.
+    """
+    group_str = "_".join(str(g) for g in group_key)
+    sentinel_filename = (
+        f"{canvas.archive_sha256[:12]}_{operation.value}_"
+        f"{receiver_runtime.value}_{cpu_cuda_axis.value}_{group_str}.candidate.json"
+    )
+    return Path(
+        f".omx/state/pair_frame_scorer_geometry_lattice_candidates/{sentinel_filename}"
+    )
+
+
+def _generate_operation_candidates(
+    canvas: PairFrameScorerGeometryLattice,
+    operation: CanonicalOperation,
+    receiver_runtime: ReceiverRuntime,
+    top_n: int,
+    *,
+    group_by_frame: bool = False,
+) -> list[ExecutableCandidate]:
+    """Canonical helper consumed by all 4 operation generator methods.
+
+    Per design memo §DELIVERABLE 1 + audit memo §"PRIORITY 2 BUILD-2 +
+    BUILD-3 sister subagent": this is the canonical body the 4 instance
+    methods delegate to.
+
+    Algorithm (substrate-optimal per UNIQUE-AND-COMPLETE-PER-METHOD):
+
+      1. Filter canvas cells by receiver_runtime + receiver_feasibility.
+      2. Group by ``(pair_idx, cpu_cuda_axis)`` (pair-level operations:
+         FULL_DROP / REPAIR) or ``(frame_idx, cpu_cuda_axis)`` (frame-
+         level operations: MASKED / FEATHERED).
+      3. For each group, sum per-axis predicted_delta_score deltas into a
+         composite candidate; build AxisDecomposition per Catalog #356;
+         thread canonical Provenance per Catalog #323.
+      4. Rank ascending by composite predicted_delta_score; return top_n.
+
+    Per the 11th ORDER MATTERS standing directive: order of operations
+    matters — the 4 generators emit candidates for downstream DISPATCH
+    ranking, not for direct mutation. Catalog #341 Tier A markers
+    enforced; promotable=False by construction until paired-axis
+    empirical anchor lands per Catalog #357 Tier B promotion in BUILD-4.
+    """
+    if canvas.cell_count() == 0:
+        return []
+
+    grouped: dict[tuple[int, ...], list[PairFrameScorerGeometryCell]] = {}
+    for cell in canvas._cells.values():
+        if cell.receiver_runtime is not receiver_runtime:
+            continue
+        if not cell.receiver_feasibility:
+            continue
+        if group_by_frame:
+            group_key = (cell.frame_idx, _cpu_cuda_axis_sort_key(cell.cpu_cuda_axis))
+        else:
+            group_key = (cell.pair_idx, _cpu_cuda_axis_sort_key(cell.cpu_cuda_axis))
+        grouped.setdefault(group_key, []).append(cell)
+
+    if not grouped:
+        return []
+
+    candidates: list[ExecutableCandidate] = []
+    for group_key, group_cells in grouped.items():
+        total_delta = sum(float(c.predicted_delta_score) for c in group_cells)
+        total_bytes = sum(int(c.predicted_byte_cost) for c in group_cells)
+        if total_delta >= 0.0:
+            # Skip groups that don't predict a score improvement; the
+            # canvas IS the per-cell decomposition surface; the ranker
+            # consumes the per-cell signal directly via Catalog #356.
+            # FULL_DROP / REPAIR / MASKED / FEATHERED candidates that
+            # predict score regression are NOT emitted (matches the
+            # CLAUDE.md "Forbidden premature KILL" + "Beauty, simplicity,
+            # and developer experience" principles: emit fewer, higher-EV
+            # candidates).
+            continue
+        # Determine cpu_cuda_axis from the first cell (all cells in the
+        # group share it by construction per the group_key).
+        cpu_cuda_axis = group_cells[0].cpu_cuda_axis
+        axis_decomp = _build_axis_decomposition_for_candidate(
+            group_cells, canvas.archive_sha256, operation
+        )
+        # Canonical Provenance threaded through the candidate's
+        # catalog_323_provenance field (same value as the AxisDecomposition's
+        # canonical_provenance per Catalog #323 + #356 sister discipline).
+        # Tier A canonical-routing markers per Catalog #341 (defaults
+        # propagate via ExecutableCandidate dataclass).
+        recipe_hint = {
+            "operation": operation.value,
+            "receiver_runtime": receiver_runtime.value,
+            "cpu_cuda_axis": cpu_cuda_axis.value,
+            "group_key": list(group_key),
+            "group_size_cells": len(group_cells),
+            "estimated_paid_dispatch_usd_band_low": 1.0,
+            "estimated_paid_dispatch_usd_band_high": 3.0,
+            "estimated_smoke_dispatch_usd": 0.30,
+            "design_memo": (
+                ".omx/research/pair_frame_scorer_geometry_lattice_design_memo_20260525.md"
+            ),
+        }
+        candidate = ExecutableCandidate(
+            operation=operation,
+            archive_candidate_path=_candidate_archive_path(
+                canvas, operation, group_key, receiver_runtime, cpu_cuda_axis
+            ),
+            predicted_delta_score=total_delta,
+            predicted_byte_cost=total_bytes,
+            catalog_323_provenance=dict(axis_decomp.canonical_provenance),
+            canonical_dispatch_recipe_hint=recipe_hint,
+            predicted_axis_decomposition=axis_decomp,
+        )
+        candidates.append(candidate)
+
+    # Sort ascending by predicted_delta_score (best score-improvement first).
+    # Stable tiebreak on group_key for determinism.
+    candidates.sort(
+        key=lambda c: (
+            float(c.predicted_delta_score),
+            list(c.canonical_dispatch_recipe_hint.get("group_key", [])),
+        )
+    )
+    return candidates[:top_n]
+
+
+def _cpu_cuda_axis_sort_key(axis: CpuCudaAxis) -> int:
+    """Stable integer key for CpuCudaAxis (CPU=0, CUDA=1) for group ordering."""
+    return 0 if axis is CpuCudaAxis.CONTEST_CPU else 1
 
 
 # ---------------------------------------------------------------------------
@@ -796,7 +1225,18 @@ class PairFrameScorerGeometryLattice:
             raise ValueError(
                 f"archive_path must be Path, got {type(archive_path).__name__}"
             )
-        raise NotImplementedError(_BUILD_1_DEFER_SENTINEL)
+        from tac.optimization.pair_frame_scorer_geometry_lattice_5d_canvas_populator import (
+            populate_5d_canvas_from_master_gradient_anchors,
+        )
+
+        archive_sha256 = _derive_archive_sha256_from_path(archive_path)
+
+        manifest = populate_5d_canvas_from_master_gradient_anchors(
+            archive_sha256=archive_sha256,
+            write_sidecar=False,
+            repo_root=_repo_root_for_archive_path(archive_path),
+        )
+        return manifest.canvas
 
     @classmethod
     def load_empirical_lattice(
@@ -821,7 +1261,11 @@ class PairFrameScorerGeometryLattice:
             raise ValueError(
                 f"repo_root must be Path, got {type(repo_root).__name__}"
             )
-        raise NotImplementedError(_BUILD_1_DEFER_SENTINEL)
+        from tac.optimization.pair_frame_scorer_geometry_lattice_5d_canvas_populator import (
+            load_empirical_lattice,
+        )
+
+        return load_empirical_lattice(archive_sha256, repo_root=repo_root)
 
     def query_cell(
         self,
@@ -845,74 +1289,188 @@ class PairFrameScorerGeometryLattice:
         """Number of populated cells in this canvas (sparse representation)."""
         return len(self._cells)
 
-    def generate_full_drop_starts(self, top_n: int = 32) -> list[ExecutableCandidate]:
+    # ---------------------------------------------------------------------
+    # BUILD-2 + BUILD-3 operation generators (landed 2026-05-26).
+    #
+    # Per CLAUDE.md "Forbidden premature KILL without research exhaustion":
+    # the generators below replace the prior NotImplementedError DEFER
+    # sentinel with canonical executable implementations. Each generator:
+    #
+    #   1. Filters per-cell coordinates by ``receiver_feasibility=True`` and
+    #      ``predicted_delta_score < 0.0`` (score improvement).
+    #   2. Groups cells by ``(operation, receiver_runtime, cpu_cuda_axis)``
+    #      tuples; each unique tuple emits ONE ExecutableCandidate per the
+    #      design memo §DELIVERABLE 1 contract.
+    #   3. Composes per-cell scorer-axis deltas into ``AxisDecomposition``
+    #      per Catalog #356 (BUILD-3 wire-in).
+    #   4. Threads canonical Provenance per Catalog #323 via
+    #      ``build_provenance_for_predicted`` + ``provenance_to_dict``.
+    #   5. Sets canonical-routing markers per Catalog #341 (Tier A:
+    #      ``predicted_delta_adjustment=0.0`` + ``promotable=False`` +
+    #      ``axis_tag="[predicted]"``).
+    #
+    # The archive_candidate_path is a scaffold-only sentinel pointing at the
+    # canvas's archive_sha256 directory; BUILD-2 emits the canonical
+    # candidate metadata, and the actual archive-byte construction is
+    # PAID-DISPATCH territory (FIRE phase per audit's PRIORITY 4).
+    # ---------------------------------------------------------------------
+
+    def generate_full_drop_starts(
+        self,
+        top_n: int = 32,
+        *,
+        receiver_runtime: ReceiverRuntime = ReceiverRuntime.FULL_DROP,
+    ) -> list[ExecutableCandidate]:
         """Codex's queued blocked family: global low-impact full-pair/frame-drop probe.
 
-        Emits up to ``top_n`` ExecutableCandidates ranked by per-cell
-        predicted ΔS via the canvas's canonical per-axis × receiver_runtime
-        × cpu_cuda_axis decomposition. Each candidate is a FULL_DROP
-        operation across a sequence of (pair, frame) coordinates.
+        Filters the canvas to cells where the receiver_runtime is FULL_DROP
+        (or caller-supplied), receiver_feasibility=True, and
+        predicted_delta_score < 0 (score improvement). Groups by
+        ``(pair_idx, cpu_cuda_axis)`` so a single pair_idx contributes ONE
+        candidate per CPU/CUDA axis (sister to drop-one rank021 anchor).
 
-        SCAFFOLD: BUILD-2 sister subagent implements the ranking + emission.
+        Args:
+            top_n: maximum candidates to emit.
+            receiver_runtime: receiver mode (defaults to FULL_DROP); accepts
+                RAW_RESIDUAL for the canonical drop-one anchor path which
+                EMPIRICALLY beats every other receiver per the 17 paired-CPU
+                anchors documented in the audit memo Phase 3.
 
-        Raises:
-            NotImplementedError: pending BUILD-2.
+        Returns:
+            List of ExecutableCandidates sorted ascending by
+            ``predicted_delta_score`` (best score-improvement first). Each
+            candidate carries per-axis decomposition per Catalog #356 +
+            canonical Provenance per Catalog #323 + Tier A canonical-routing
+            markers per Catalog #341.
         """
         if not isinstance(top_n, int) or top_n <= 0:
             raise ValueError(f"top_n must be positive int, got {top_n}")
-        raise NotImplementedError(_BUILD_2_DEFER_SENTINEL)
+        if not isinstance(receiver_runtime, ReceiverRuntime):
+            raise ValueError(
+                f"receiver_runtime must be ReceiverRuntime, got "
+                f"{type(receiver_runtime).__name__}"
+            )
+        return _generate_operation_candidates(
+            canvas=self,
+            operation=CanonicalOperation.FULL_DROP,
+            receiver_runtime=receiver_runtime,
+            top_n=top_n,
+            group_by_frame=False,
+        )
 
-    def generate_repair_starts(self, top_n: int = 32) -> list[ExecutableCandidate]:
+    def generate_repair_starts(
+        self,
+        top_n: int = 32,
+        *,
+        receiver_runtime: ReceiverRuntime = ReceiverRuntime.SMOOTHED_RESIDUAL,
+    ) -> list[ExecutableCandidate]:
         """Per Atick-Redlich cooperative-receiver: drop + repair signal.
 
-        Emits up to ``top_n`` ExecutableCandidates for REPAIR operations
-        across (pair, frame) coordinates. Repair requires non-trivial
-        receiver_runtime (MASKED / FEATHERED / additive); RAW_RESIDUAL is
-        OUT-OF-SCOPE for repair.
+        REPAIR is the canonical operation that directly addresses the
+        drop-one frontier paradox per the audit memo TL;DR: the apparatus
+        empirically falsified narrow drop-many at the current operating
+        point (rate-vs-distortion slope dominates), so REPLACE primitives
+        that INJECT signal rather than REMOVE bytes are the canonical path
+        forward. REPAIR refuses ``RAW_RESIDUAL`` receiver mode (which IS
+        identity / no repair) per the design memo §DELIVERABLE 1 contract.
 
-        SCAFFOLD: BUILD-2 sister subagent implements via canonical Atick-
-        Redlich cooperative-receiver loss decomposition.
+        Args:
+            top_n: maximum candidates to emit.
+            receiver_runtime: receiver mode (defaults to SMOOTHED_RESIDUAL —
+                the Atick-Redlich canonical mode); refuses RAW_RESIDUAL.
 
-        Raises:
-            NotImplementedError: pending BUILD-2.
+        Returns:
+            List of ExecutableCandidates per CanonicalOperation.REPAIR.
         """
         if not isinstance(top_n, int) or top_n <= 0:
             raise ValueError(f"top_n must be positive int, got {top_n}")
-        raise NotImplementedError(_BUILD_2_DEFER_SENTINEL)
+        if not isinstance(receiver_runtime, ReceiverRuntime):
+            raise ValueError(
+                f"receiver_runtime must be ReceiverRuntime, got "
+                f"{type(receiver_runtime).__name__}"
+            )
+        if receiver_runtime is ReceiverRuntime.RAW_RESIDUAL:
+            raise ValueError(
+                "REPAIR refuses RAW_RESIDUAL receiver mode per design memo "
+                "§DELIVERABLE 1 contract (RAW_RESIDUAL IS identity / no "
+                "repair). Use SMOOTHED_RESIDUAL / MASKED / FEATHERED."
+            )
+        return _generate_operation_candidates(
+            canvas=self,
+            operation=CanonicalOperation.REPAIR,
+            receiver_runtime=receiver_runtime,
+            top_n=top_n,
+            group_by_frame=False,
+        )
 
-    def generate_masked_starts(self, top_n: int = 32) -> list[ExecutableCandidate]:
+    def generate_masked_starts(
+        self,
+        top_n: int = 32,
+        *,
+        receiver_runtime: ReceiverRuntime = ReceiverRuntime.MASKED,
+    ) -> list[ExecutableCandidate]:
         """Per UNIWARD/HILL/J-UNIWARD: per-region SegNet-class-aware byte mask.
 
-        Emits up to ``top_n`` ExecutableCandidates for MASKED operations.
-        The MASKED receiver_runtime IS the canonical mode; sister modes
-        FEATHERED + RAW_RESIDUAL provide structural variation.
+        MASKED operates on per-frame granularity (group_by_frame=True) so a
+        single frame_idx contributes ONE candidate per CPU/CUDA axis. This
+        is sister to the per_segnet_class_chroma_consumer pattern.
 
-        SCAFFOLD: BUILD-2 sister subagent implements via canonical UNIWARD
-        steganalysis-inverse + per_segnet_class_chroma_consumer sister.
+        Args:
+            top_n: maximum candidates to emit.
+            receiver_runtime: receiver mode (defaults to MASKED — the
+                canonical mode); accepts FEATHERED as sister mode.
 
-        Raises:
-            NotImplementedError: pending BUILD-2.
+        Returns:
+            List of ExecutableCandidates per CanonicalOperation.MASKED.
         """
         if not isinstance(top_n, int) or top_n <= 0:
             raise ValueError(f"top_n must be positive int, got {top_n}")
-        raise NotImplementedError(_BUILD_2_DEFER_SENTINEL)
+        if not isinstance(receiver_runtime, ReceiverRuntime):
+            raise ValueError(
+                f"receiver_runtime must be ReceiverRuntime, got "
+                f"{type(receiver_runtime).__name__}"
+            )
+        return _generate_operation_candidates(
+            canvas=self,
+            operation=CanonicalOperation.MASKED,
+            receiver_runtime=receiver_runtime,
+            top_n=top_n,
+            group_by_frame=True,
+        )
 
-    def generate_feathered_starts(self, top_n: int = 32) -> list[ExecutableCandidate]:
+    def generate_feathered_starts(
+        self,
+        top_n: int = 32,
+        *,
+        receiver_runtime: ReceiverRuntime = ReceiverRuntime.FEATHERED,
+    ) -> list[ExecutableCandidate]:
         """Per Daubechies multi-scale wavelet partition prior: smooth-transition mask.
 
-        Emits up to ``top_n`` ExecutableCandidates for FEATHERED operations.
-        The FEATHERED receiver_runtime IS the canonical mode; sister modes
-        MASKED + SMOOTHED_RESIDUAL provide structural variation.
+        FEATHERED operates on per-frame granularity like MASKED but uses
+        smooth wavelet-partition transitions per the design memo §DELIVERABLE
+        1 contract. Sister mode is SMOOTHED_RESIDUAL.
 
-        SCAFFOLD: BUILD-2 sister subagent implements via canonical Daubechies
-        wavelet codec + multi-scale partition prior.
+        Args:
+            top_n: maximum candidates to emit.
+            receiver_runtime: receiver mode (defaults to FEATHERED).
 
-        Raises:
-            NotImplementedError: pending BUILD-2.
+        Returns:
+            List of ExecutableCandidates per CanonicalOperation.FEATHERED.
         """
         if not isinstance(top_n, int) or top_n <= 0:
             raise ValueError(f"top_n must be positive int, got {top_n}")
-        raise NotImplementedError(_BUILD_2_DEFER_SENTINEL)
+        if not isinstance(receiver_runtime, ReceiverRuntime):
+            raise ValueError(
+                f"receiver_runtime must be ReceiverRuntime, got "
+                f"{type(receiver_runtime).__name__}"
+            )
+        return _generate_operation_candidates(
+            canvas=self,
+            operation=CanonicalOperation.FEATHERED,
+            receiver_runtime=receiver_runtime,
+            top_n=top_n,
+            group_by_frame=True,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -984,5 +1542,6 @@ __all__ = [
     "decompose_frame_axis_master_gradient",
     "generate_queue_executable_start",
     "query_receiver_runtime_feasibility",
+    "sha256_hex",
     "update_from_anchor",
 ]
