@@ -1,0 +1,101 @@
+{
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "deployment_target": "desktop_research",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "optimizer_candidate_queue_is_planning_only",
+    "requires_exact_eval_readiness_gate",
+    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+    "requires_non_proxy_score_evidence_before_promotion",
+    "frontier_rate_attack_contexts_are_local_only"
+  ],
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "generated_at_utc": "2026-05-27T14:46:49Z",
+  "gpu_launched": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "queue_id": "frontier_final_rate_attack_runtime_identity_fix_20260527T1500Z",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "rows": [
+    {
+      "backlog_key": "frontier_rate_attack:packet_member_zip_header_elide_v1",
+      "context": {
+        "allow_overwrite": false,
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "member_name": "x",
+        "min_free_bytes": 0,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "sweep_archive_specs": [
+          "current_contest_cpu_frontier=experiments/results/v14_v2_dqs1_plus_fec10_substituted_20260526T023000Z/submission_dir/archive.zip"
+        ],
+        "sweep_observation_jsonl": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_runtime_identity_fix_20260527T1500Z/packet_member_zip_header_elide_v1/observations.jsonl",
+        "sweep_output_dir": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_runtime_identity_fix_20260527T1500Z/packet_member_zip_header_elide_v1",
+        "sweep_output_json": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_runtime_identity_fix_20260527T1500Z/packet_member_zip_header_elide_v1/sweep.json"
+      },
+      "materializer_id": "packet_member_zip_header_elide_adapter",
+      "target_kind": "packet_member_zip_header_elide_v1"
+    },
+    {
+      "backlog_key": "frontier_rate_attack:packet_member_recompress_v1",
+      "context": {
+        "allow_overwrite": false,
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "member_name": "x",
+        "min_free_bytes": 0,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "sweep_archive_specs": [
+          "current_contest_cpu_frontier=experiments/results/v14_v2_dqs1_plus_fec10_substituted_20260526T023000Z/submission_dir/archive.zip"
+        ],
+        "sweep_observation_jsonl": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_runtime_identity_fix_20260527T1500Z/packet_member_recompress_v1/observations.jsonl",
+        "sweep_output_dir": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_runtime_identity_fix_20260527T1500Z/packet_member_recompress_v1",
+        "sweep_output_json": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_runtime_identity_fix_20260527T1500Z/packet_member_recompress_v1/sweep.json",
+        "zip_compression_methods": [
+          "stored",
+          "deflated"
+        ],
+        "zip_compresslevels": [
+          "1",
+          "6",
+          "9"
+        ]
+      },
+      "materializer_id": "packet_member_recompress_adapter",
+      "target_kind": "packet_member_recompress_v1"
+    }
+  ],
+  "schema": "byte_shaving_materializer_contexts.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "target_modes": [
+    "contest_exact_eval_planning"
+  ]
+}

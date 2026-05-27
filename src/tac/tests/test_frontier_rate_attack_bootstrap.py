@@ -795,6 +795,47 @@ def test_resolve_current_frontier_archive_from_auth_request(tmp_path: Path) -> N
     )
 
 
+def test_resolve_current_frontier_archive_from_default_submission_dir(
+    tmp_path: Path,
+) -> None:
+    archive = _write_archive(
+        tmp_path
+        / "experiments"
+        / "results"
+        / "frontier_candidate"
+        / "submission_dir"
+        / "archive.zip"
+    )
+    digest = sha256_file(archive)
+    pointer_path = tmp_path / ".omx" / "state" / "canonical_frontier_pointer.json"
+    _write_json(
+        pointer_path,
+        {
+            "our_local_frontier_contest_cpu": {
+                "archive_sha256": digest,
+                "score": 0.123,
+                "evidence_grade": "[contest-CPU]",
+                "hardware_substrate": "linux_x86_64_cpu",
+                "measured_at_utc": "2026-05-25T00:00:00Z",
+                "extra": {"archive_bytes": archive.stat().st_size},
+            }
+        },
+    )
+
+    resolution = resolve_current_frontier_archive(
+        repo_root=tmp_path,
+        pointer_path=pointer_path,
+        frontier_axis="contest_cpu",
+    )
+
+    assert resolution["archive_sha256"] == digest
+    assert resolution["archive_record"]["path"] == (
+        "experiments/results/frontier_candidate/submission_dir/archive.zip"
+    )
+    assert resolution["match"]["source"] == "default_submission_archive_search"
+    assert resolution["match"]["request_path"] is None
+
+
 def test_resolve_current_frontier_archive_fails_closed_on_duplicate_matches(
     tmp_path: Path,
 ) -> None:

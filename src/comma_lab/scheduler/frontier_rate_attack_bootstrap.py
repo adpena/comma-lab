@@ -679,6 +679,32 @@ def _request_roots(repo_root: Path, roots: Sequence[str | Path]) -> list[Path]:
     ]
 
 
+def _default_frontier_archive_candidates(repo_root: Path) -> list[Path]:
+    """Return bounded canonical local archive locations for frontier replay.
+
+    The repository can contain thousands of generated ``archive.zip`` files.
+    The default resolver intentionally checks only source submission packets
+    instead of broad recursive archive scans, keeping automatic current-frontier
+    resolution deterministic and cheap while still covering promoted lanes.
+    """
+
+    patterns = (
+        "experiments/results/*/submission_dir/archive.zip",
+        "experiments/results/*/submission/archive.zip",
+        "submissions/*/archive.zip",
+    )
+    candidates: list[Path] = []
+    seen: set[str] = set()
+    for pattern in patterns:
+        for candidate in sorted(repo_root.glob(pattern)):
+            marker = candidate.resolve(strict=False).as_posix()
+            if marker in seen:
+                continue
+            seen.add(marker)
+            candidates.append(candidate)
+    return candidates
+
+
 def resolve_current_frontier_archive(
     *,
     repo_root: str | Path,
@@ -732,6 +758,23 @@ def resolve_current_frontier_archive(
                     "absolute_path": archive_path.as_posix(),
                     "source": "auth_eval_request",
                     "request_path": _repo_rel(request_file, repo),
+                }
+            )
+
+    if not matches:
+        for archive_path in _default_frontier_archive_candidates(repo):
+            if not archive_path.is_file():
+                continue
+            if expected_bytes is not None and archive_path.stat().st_size != expected_bytes:
+                continue
+            if sha256_file(archive_path) != expected_sha256:
+                continue
+            matches.append(
+                {
+                    "path": _repo_rel(archive_path, repo),
+                    "absolute_path": archive_path.as_posix(),
+                    "source": "default_submission_archive_search",
+                    "request_path": None,
                 }
             )
 

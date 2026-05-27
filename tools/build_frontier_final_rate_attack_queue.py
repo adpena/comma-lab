@@ -11,6 +11,7 @@ only; exact auth eval is still required before any score or promotion claim.
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 import time
@@ -57,9 +58,20 @@ def _default_results_root() -> Path:
         Path("/Volumes/VertigoDataTier/experiments/results"),
         Path("/Volumes/APDataStore/experiments/results"),
     ):
-        if root.exists():
+        if _can_create_child(root):
             return root
     return REPO_ROOT / "experiments" / "results"
+
+
+def _can_create_child(root: Path) -> bool:
+    probe = root / f".pact_write_probe_{os.getpid()}"
+    try:
+        root.mkdir(parents=True, exist_ok=True)
+        probe.mkdir()
+        probe.rmdir()
+    except OSError:
+        return False
+    return True
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:

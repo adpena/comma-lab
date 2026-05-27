@@ -422,6 +422,78 @@ def _receiver_runtime_proof_blockers(
     return blockers
 
 
+def _payload_has_custody_claim(payload: Mapping[str, Any]) -> bool:
+    if _candidate_archive_record(payload):
+        return True
+    if _runtime_proof_records(payload):
+        return True
+    receiver = payload.get("receiver_verification")
+    if isinstance(receiver, Mapping):
+        return True
+    for key in (
+        "receiver_contract_satisfied",
+        "runtime_adapter_ready",
+        "runtime_tree_sha256",
+        "candidate_runtime_tree_sha256",
+        "candidate_runtime_dir",
+        "runtime_dir",
+        "candidate_submission_dir",
+        "candidate_inflate_sh_path",
+    ):
+        if key in payload:
+            return True
+    return False
+
+
+def _generic_custody_payload_revalidation(
+    payload: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    context: str,
+) -> dict[str, Any]:
+    blockers = [
+        f"{context}_truthy_authority:{violation}"
+        for violation in truthy_authority_field_violations(payload)
+    ]
+    candidate_archive = _candidate_archive_record(payload)
+    candidate_validation: dict[str, Any] | None = None
+    if candidate_archive:
+        candidate_validation = _file_custody_revalidation(
+            candidate_archive,
+            repo_root=repo_root,
+            label=f"{context}_candidate_archive",
+            require_bytes=True,
+            require_sha256=True,
+        )
+        blockers.extend(
+            str(item)
+            for item in candidate_validation.get("blockers") or []
+            if str(item)
+        )
+    if (
+        payload.get("receiver_contract_satisfied") is True
+        or payload.get("runtime_adapter_ready") is True
+        or isinstance(payload.get("receiver_verification"), Mapping)
+        or _runtime_proof_records(payload)
+    ):
+        blockers.extend(
+            _receiver_runtime_proof_blockers(
+                payload,
+                repo_root=repo_root,
+                context=context,
+            )
+        )
+    blockers.extend(_runtime_identity_blockers(payload, repo_root=repo_root, context=context))
+    out = {
+        "schema": "observer_generic_custody_payload_revalidation.v1",
+        "valid": not blockers,
+        "blockers": _dedupe_strings(blockers),
+    }
+    if candidate_validation is not None:
+        out["candidate_archive"] = candidate_validation
+    return out
+
+
 def _payload_has_materializer_contract(payload: Mapping[str, Any]) -> bool:
     return (
         str(payload.get("schema") or "") in FAMILY_AGNOSTIC_MATERIALIZER_CANDIDATE_SCHEMAS
@@ -1154,6 +1226,7 @@ def _expected_artifacts(
     step: Mapping[str, Any],
     *,
     repo_root: Path,
+    enforce_custody_proof: bool = False,
 ) -> list[dict[str, Any]]:
     artifacts: list[dict[str, Any]] = []
     for condition in step.get("postconditions", []):
@@ -1187,6 +1260,7 @@ def _expected_artifacts(
             condition,
             path=path,
             repo_root=repo_root,
+            enforce_custody_proof=enforce_custody_proof,
         )
         if revalidation:
             record["artifact_revalidation"] = revalidation
@@ -1208,6 +1282,7 @@ def _artifact_postcondition_revalidation(
     *,
     path: Path,
     repo_root: Path,
+    enforce_custody_proof: bool = False,
 ) -> dict[str, Any]:
     postcondition_type = str(condition.get("type") or "")
     blockers: list[str] = []
@@ -1252,6 +1327,22 @@ def _artifact_postcondition_revalidation(
         blockers.extend(
             str(item)
             for item in materializer.get("blockers", [])
+            if str(item)
+        )
+    elif (
+        enforce_custody_proof
+        and payload is not None
+        and _payload_has_custody_claim(payload)
+    ):
+        custody = _generic_custody_payload_revalidation(
+            payload,
+            repo_root=repo_root,
+            context=f"{postcondition_type}_custody",
+        )
+        details["custody"] = custody
+        blockers.extend(
+            str(item)
+            for item in custody.get("blockers", [])
             if str(item)
         )
     if payload is not None and payload.get("schema") == HINTON_MLX_LONG_TRAINING_SMOKE_SCHEMA:
@@ -1362,6 +1453,7 @@ def _step_observation(
         observation["expected_artifacts"] = _expected_artifacts(
             step_definition,
             repo_root=repo_root,
+            enforce_custody_proof=step_state.get("status") == "succeeded",
         )
         _extend_unique(
             observation["expected_artifact_paths"],

@@ -1,0 +1,78 @@
+{
+  "archive_count": 1,
+  "blockers": [
+    "packet_member_merge_contract_has_no_ready_archives"
+  ],
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "deployment_target": "desktop_research",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "optimizer_candidate_queue_is_planning_only",
+    "requires_exact_eval_readiness_gate",
+    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+    "requires_non_proxy_score_evidence_before_promotion",
+    "packet_member_merge_contract_has_no_ready_archives"
+  ],
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "generated_at_utc": "2026-05-27T14:36:25Z",
+  "gpu_launched": false,
+  "merge_contract_path": ".omx/research/frontier_final_rate_attack_20260527T143625Z/derived_packet_member_merge_contracts/merge_contract.json",
+  "merge_contract_sha256": "79550e08f6c126492b081315b5e3c021eaa532c17d145e700d15993c391334b0",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_archive_count": 0,
+  "ready_archive_labels": [],
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_materializer_target": false,
+  "rows": [
+    {
+      "archive_label": "current_cpu",
+      "archive_sha256": "0a3abfe645c4fac0df9ea89237f25dd9bfc6b2471b897c36d7437795d27d1403",
+      "blockers": [
+        "packet_member_merge_requires_at_least_two_members"
+      ],
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "packet_member_merge_requires_at_least_two_members"
+      ],
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_materializer_target": false,
+      "schema": "frontier_rate_attack_packet_member_merge_contract_archive_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_member_names": [
+        "x"
+      ],
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ],
+      "zip_member_count": 1
+    }
+  ],
+  "schema": "frontier_rate_attack_derived_packet_member_merge_contract.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "target_modes": [
+    "contest_exact_eval_planning"
+  ]
+}

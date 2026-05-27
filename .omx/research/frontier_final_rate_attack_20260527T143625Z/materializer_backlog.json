@@ -1,0 +1,207 @@
+{
+  "backlog_row_count": 2,
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "deployment_target": "desktop_research",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "optimizer_candidate_queue_is_planning_only",
+    "requires_exact_eval_readiness_gate",
+    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+    "requires_non_proxy_score_evidence_before_promotion",
+    "frontier_rate_attack_backlog_is_planning_only"
+  ],
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "generated_at_utc": "2026-05-27T14:36:25Z",
+  "gpu_launched": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "rows": [
+    {
+      "affected_unit_count": 1,
+      "backlog_key": "frontier_rate_attack:packet_member_zip_header_elide_v1",
+      "backlog_rank": 1,
+      "blocked_resolution_count": 1,
+      "blocked_row_count": 1,
+      "candidate_saved_bytes_sum": 0,
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "cooperative_receiver_required": true,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "frontier_rate_attack_local_materializer_sweep_only"
+      ],
+      "exact_cuda_auth_eval": false,
+      "expected_score_gain_sum": 0.0,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gap_class": "frontier_final_rate_attack_materializer_sweep",
+      "gpu_launched": false,
+      "materialization_resource_kind": "local_cpu",
+      "materializer_id": "packet_member_zip_header_elide_adapter",
+      "operation_family": "zip_header_elide",
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_contract_id": "packet_member_zip_header_elide_v1.receiver.v1",
+      "receiver_contract_kind": "family_agnostic_packet_member_zip_header_elide",
+      "receiver_contract_status": "local_receiver_proof_required",
+      "schema": "byte_shaving_materializer_backlog_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operation_count": 1,
+      "source_selection_ids": [
+        "current_cpu"
+      ],
+      "source_selection_samples": [
+        {
+          "archive_bytes": 178546,
+          "archive_sha256": "0a3abfe645c4fac0df9ea89237f25dd9bfc6b2471b897c36d7437795d27d1403",
+          "selection_id": "current_cpu",
+          "selection_kind": "frontier_archive"
+        }
+      ],
+      "source_unit_ids": [
+        "current_cpu"
+      ],
+      "suggested_materializer_count": 1,
+      "suggested_materializers": [
+        {
+          "cooperative_receiver_required": true,
+          "description": "Family-agnostic ZIP/member header elision materializer for deterministic metadata that the runtime can reconstruct or ignore. Member payload bytes stay identical; exact-readiness still requires runtime-consumption proof and auth eval.",
+          "emits_candidate_archive": true,
+          "executable": true,
+          "implementation_module": "tac.optimization.family_agnostic_materializers",
+          "materialization_resource_kind": "local_cpu",
+          "materialize_function": "materialize_packet_member_zip_header_elide_candidate",
+          "materializer_id": "packet_member_zip_header_elide_adapter",
+          "operation_family": "zip_header_elide",
+          "plan_function": "",
+          "planning_only": false,
+          "receiver_contract_id": "packet_member_zip_header_elide_v1.receiver.v1",
+          "receiver_contract_kind": "family_agnostic_packet_member_zip_header_elide",
+          "receiver_proof_function": "",
+          "receiver_verify_function": "",
+          "required_context_fields": [
+            "archive_path",
+            "output_archive",
+            "output_manifest"
+          ],
+          "target_kind": "packet_member_zip_header_elide_v1",
+          "unit_kind": "packet_member"
+        }
+      ],
+      "target_kind": "packet_member_zip_header_elide_v1",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ],
+      "unit_kind": "packet_member"
+    },
+    {
+      "affected_unit_count": 1,
+      "backlog_key": "frontier_rate_attack:packet_member_recompress_v1",
+      "backlog_rank": 2,
+      "blocked_resolution_count": 1,
+      "blocked_row_count": 1,
+      "candidate_saved_bytes_sum": 0,
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "cooperative_receiver_required": true,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "frontier_rate_attack_local_materializer_sweep_only"
+      ],
+      "exact_cuda_auth_eval": false,
+      "expected_score_gain_sum": 0.0,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gap_class": "frontier_final_rate_attack_materializer_sweep",
+      "gpu_launched": false,
+      "materialization_resource_kind": "local_cpu",
+      "materializer_id": "packet_member_recompress_adapter",
+      "operation_family": "member_recompress",
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_contract_id": "packet_member_recompress_v1.receiver.v1",
+      "receiver_contract_kind": "family_agnostic_packet_member_recompress",
+      "receiver_contract_status": "local_receiver_proof_required",
+      "schema": "byte_shaving_materializer_backlog_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operation_count": 1,
+      "source_selection_ids": [
+        "current_cpu"
+      ],
+      "source_selection_samples": [
+        {
+          "archive_bytes": 178546,
+          "archive_sha256": "0a3abfe645c4fac0df9ea89237f25dd9bfc6b2471b897c36d7437795d27d1403",
+          "selection_id": "current_cpu",
+          "selection_kind": "frontier_archive"
+        }
+      ],
+      "source_unit_ids": [
+        "current_cpu"
+      ],
+      "suggested_materializer_count": 1,
+      "suggested_materializers": [
+        {
+          "cooperative_receiver_required": true,
+          "description": "Family-agnostic packet-member recompression materializer for monolithic HNeRV packets, bolted-on side members, and non-NeRV archives. It preserves member payload bytes and still requires runtime-consumption proof before exact-readiness.",
+          "emits_candidate_archive": true,
+          "executable": true,
+          "implementation_module": "tac.optimization.family_agnostic_materializers",
+          "materialization_resource_kind": "local_cpu",
+          "materialize_function": "materialize_packet_member_recompress_candidate",
+          "materializer_id": "packet_member_recompress_adapter",
+          "operation_family": "member_recompress",
+          "plan_function": "",
+          "planning_only": false,
+          "receiver_contract_id": "packet_member_recompress_v1.receiver.v1",
+          "receiver_contract_kind": "family_agnostic_packet_member_recompress",
+          "receiver_proof_function": "",
+          "receiver_verify_function": "",
+          "required_context_fields": [
+            "archive_path",
+            "output_archive",
+            "output_manifest"
+          ],
+          "target_kind": "packet_member_recompress_v1",
+          "unit_kind": "packet_member"
+        }
+      ],
+      "target_kind": "packet_member_recompress_v1",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ],
+      "unit_kind": "packet_member"
+    }
+  ],
+  "schema": "byte_shaving_materializer_backlog.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "target_modes": [
+    "contest_exact_eval_planning"
+  ],
+  "tool": "comma_lab.scheduler.frontier_rate_attack_bootstrap"
+}
