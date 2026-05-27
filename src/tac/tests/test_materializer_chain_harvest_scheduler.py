@@ -600,6 +600,7 @@ def test_harvest_work_queue_binds_runtime_context_into_source_row(
     repo.mkdir()
     external = tmp_path / "VertigoDataTier"
     chain = _chain_manifest(external)
+    runtime_tree_sha = tree_sha256(external / "candidate_runtime")
     proof = repo / "submissions" / "candidate" / "runtime_consumption_proof.json"
     work_queue = _write_json(
         repo / "materializer_work_queue.json",
@@ -636,6 +637,10 @@ def test_harvest_work_queue_binds_runtime_context_into_source_row(
                             "candidate_inflate_sh_path": (
                                 "submissions/candidate/inflate.sh"
                             ),
+                            "candidate_runtime": {
+                                "runtime_tree_sha256": runtime_tree_sha
+                            },
+                            "expected_runtime_tree_sha256": runtime_tree_sha,
                         },
                     },
                     "postconditions": [
@@ -675,6 +680,8 @@ def test_harvest_work_queue_binds_runtime_context_into_source_row(
     assert row["runtime_consumption_proof_path"] == (
         proof.relative_to(repo).as_posix()
     )
+    assert row["runtime_tree_sha256"] == runtime_tree_sha
+    assert row["expected_runtime_tree_sha256"] == runtime_tree_sha
     assert row["materializer_harvest_runtime_context_sources"] == [
         {
             "source": "materializer_work_queue_row",
@@ -687,9 +694,77 @@ def test_harvest_work_queue_binds_runtime_context_into_source_row(
         "candidate_submission_dir",
         "candidate_inflate_sh_path",
         "runtime_consumption_proof_path",
+        "runtime_tree_sha256",
+        "expected_runtime_tree_sha256",
     }.issubset(set(row["materializer_harvest_runtime_context_applied_fields"]))
     assert row["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_harvest_work_queue_runtime_tree_identity_conflict_blocks_source_row(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    chain = _exact_ready_chain_manifest(repo)
+    stale_runtime_tree_sha = "d" * 64
+    work_queue = _write_json(
+        repo / "materializer_work_queue.json",
+        {
+            "schema": MATERIALIZER_WORK_QUEUE_SCHEMA,
+            "tool": "fixture",
+            "row_count": 1,
+            "executable_row_count": 1,
+            "blocked_row_count": 0,
+            "rows": [
+                {
+                    "schema": "byte_shaving_materializer_work_row.v1",
+                    "work_id": "Materializer Work Fixture",
+                    "work_rank": 1,
+                    "backlog_key": "fixture",
+                    "unit_kind": "byte_range",
+                    "operation_family": "entropy_recode",
+                    "target_kind": "byte_range_entropy_recode_v1",
+                    "resource_kind": "local_cpu",
+                    "executable": True,
+                    "receiver_runtime_binding_context": {
+                        "candidate_runtime_tree_sha256": stale_runtime_tree_sha,
+                    },
+                    "postconditions": [
+                        {
+                            "type": "materializer_chain_complete",
+                            "path": str(chain),
+                            "schema": CHAIN_SCHEMA,
+                        }
+                    ],
+                    **_false_authority(),
+                }
+            ],
+            **_false_authority(),
+        },
+    )
+
+    result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        work_queue_path=work_queue,
+        require_succeeded_state=False,
+    )
+
+    row = result["source_queue"]["top_k"][0]
+    blocker = (
+        "materializer_harvest_runtime_context_tree_sha256_conflict:"
+        "candidate_runtime_tree_sha256"
+    )
+    assert result["report"]["accepted_manifest_count"] == 1
+    assert row["candidate_runtime_tree_sha256"] != stale_runtime_tree_sha
+    assert blocker in row["materializer_harvest_runtime_context_identity_blockers"]
+    assert blocker in row["readiness_blockers"]
+    assert blocker in row["dispatch_blockers"]
+    assert row["runtime_adapter_ready"] is False
+    assert row["candidate_runtime_adapter_blocker_cleared"] is False
+    assert row["receiver_contract_satisfied"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+    assert row["score_claim"] is False
 
 
 def test_harvest_work_queue_explicit_chain_manifest_filters_sibling_rows(
