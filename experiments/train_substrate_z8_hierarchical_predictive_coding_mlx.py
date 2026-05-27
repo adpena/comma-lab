@@ -41,7 +41,6 @@ import sys
 import time
 from pathlib import Path
 
-
 # CATEGORY-CHECK: this script is OUT-OF-SCOPE for Catalog #226
 # (`check_trainer_auth_eval_uses_canonical_helper`) because it is an MLX-local
 # SMOKE trainer that does NOT invoke `experiments/contest_auth_eval.py`.
@@ -87,6 +86,31 @@ def _build_parser() -> argparse.ArgumentParser:
             "Optional path for smoke convergence JSON manifest (non-promotable; "
             "carries [macOS-MLX research-signal] tag)."
         ),
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=None,
+        help="Output dir for --full MLX score-aware training (required for --full).",
+    )
+    parser.add_argument(
+        "--video-path",
+        type=Path,
+        default=Path("upstream/videos/0.mkv"),
+        help="Real contest video for --full MLX-first training (Catalog #114).",
+    )
+    parser.add_argument(
+        "--full-lr",
+        type=float,
+        default=1e-3,
+        help="Learning rate for --full MLX score-aware training.",
+    )
+    parser.add_argument(
+        "--distillation-weight",
+        type=float,
+        default=0.5,
+        help="Weight on the gradient-reachable Hinton-KL T=2.0 scorer "
+        "surrogate term in the --full score-aware loss (0.0 disables).",
     )
     return parser
 
@@ -248,32 +272,116 @@ def _smoke_main(args: argparse.Namespace) -> int:
 
 
 def _full_main(args: argparse.Namespace) -> int:
-    """Full training is council-gated per Catalog #240 acceptance cascade (c).
+    """MLX-first score-aware full training via the canonical MLX harness.
 
-    Phase 2 council deliberation required to lift per CLAUDE.md "Substrate
-    scaffolds MUST be COMPLETE or RESEARCH-ONLY" non-negotiable. Full path
-    will:
+    MLX-SCORE-AWARE-HARNESS-WAVE 2026-05-27: this ``_full_main`` now routes
+    through the canonical substrate-AGNOSTIC harness
+    ``tac.substrates._shared.mlx_score_aware_full_main.run_mlx_score_aware_full_main``
+    (sister of ``pact_nerv_full_main.py`` for MLX-first substrates). The harness
+    extinguishes the prior ``NotImplementedError`` by binding:
 
-    1. Run the canonical 6-stage curriculum (Phase 0-5 per design memo Section 9).
-    2. Route through canonical `tac.substrates._shared.score_aware_common.score_pair_components`
-       per Catalog #164.
-    3. Apply `tac.differentiable_eval_roundtrip.apply_eval_roundtrip_during_training`
-       per CLAUDE.md "eval_roundtrip — NON-NEGOTIABLE".
-    4. Apply `patch_upstream_yuv6_globally()` before `load_differentiable_scorers()`
-       per Catalog #187.
-    5. Use `detect_hardware_substrate(substrate_tag="z8_hpc_v1", axis="cuda")`
-       per Catalog #190.
-    6. Apply EMA 0.997 weights / 0.99 codebook per CLAUDE.md "EMA — NON-NEGOTIABLE".
-    7. Build Z8HPC1 archive + paired CPU/CUDA auth_eval via canonical
-       `gate_auth_eval_call` per Catalog #226.
+    1. Real contest-video targets via ``decode_mlx_targets`` (Catalog #114).
+    2. Gradient-reachable score-aware loss (reconstruction MSE + Hinton-KL
+       T=2.0 scorer surrogate; Catalog #164 sister discipline, MLX-native).
+    3. Canonical EMA shadow (0.997) / OOM-safe step / telemetry / Provenance /
+       posterior anchor via ``run_long_training``.
+
+    ## Canonical-vs-unique decision per layer (Catalog #290)
+
+    - ADOPT_CANONICAL: training loop / EMA / score-aware-loss / Provenance /
+      posterior anchor (the harness + ``run_long_training``).
+    - FORK (this substrate's UNIQUE primitive): the Z8 multi-level RSSM
+      hierarchy + per-level Gumbel-Softmax STE + Mallat wavelet proxy +
+      DreamerV3 deterministic state (``mlx_renderer.py`` —
+      ``Z8HierarchicalPredictiveCoderMLX``).
+
+    ## Dispatch gating (Catalog #325)
+
+    MLX-LOCAL ONLY ($0 M5 Max); fails closed on a non-MLX host (NO CPU/CUDA
+    paid-dispatch leak per Catalog #1 + #317). Recipe stays
+    ``dispatch_enabled: false`` + ``research_only: true``; output is
+    non-promotable ``[macOS-MLX research-signal]`` per Catalog #192/#341.
+
+    Still DEFERRED to the PyTorch sister L2 / paid-dispatch path (Catalog #325
+    Phase 2 symposium): per-axis SegNet/PoseNet decomposition via
+    ``score_pair_components`` (#164), ``patch_upstream_yuv6_globally`` (#187),
+    MLX->PyTorch export bridge, Z8HPC1 archive + paired CPU/CUDA auth_eval
+    (#226), Catalog #319 deliverability_proof + Catalog #270 declarations.
     """
-    raise NotImplementedError(
-        "Z8 _full_main is council-gated per Catalog #240 acceptance cascade (c) "
-        "pre-build substrate-engineering. Phase 2 lifts via per-substrate symposium "
-        "per Catalog #325. See design memo "
-        ".omx/research/path_3_f_z8_hierarchical_predictive_coding_substrate_design_20260526.md "
-        "Section 13 operator-routable #4."
+    if args.output_dir is None:
+        print(
+            "[Z8 MLX full] --output-dir is required for --full training",
+            file=sys.stderr,
+        )
+        return 2
+
+    from tac.substrates._shared.mlx_score_aware_full_main import (
+        MlxScoreAwareHarnessError,
+        RendererBundle,
+        decode_mlx_targets,
+        run_mlx_score_aware_full_main,
     )
+    from tac.substrates.z8_hierarchical_predictive_coding.mlx_renderer import (
+        Z8HierarchicalConfig,
+        Z8HierarchicalPredictiveCoderMLX,
+    )
+
+    cfg = Z8HierarchicalConfig(
+        num_levels=3,
+        num_groups_per_level=(4, 3, 2),
+        num_categories_per_level=(16, 8, 4),
+        base_channels=8,
+        decoder_latent_dim=12,
+        num_pairs=int(args.num_pairs),
+        deterministic_state_dim=8,
+        gumbel_temperature=1.0,
+        use_straight_through=True,
+    )
+    model = Z8HierarchicalPredictiveCoderMLX(cfg)
+    out_h, out_w = cfg.eval_size  # HNeRV decoder hardcodes 384x512 output.
+    try:
+        target_rgb_0, target_rgb_1 = decode_mlx_targets(
+            args.video_path,
+            num_pairs=int(args.num_pairs),
+            output_height=out_h,
+            output_width=out_w,
+        )
+    except MlxScoreAwareHarnessError as exc:
+        print(f"[Z8 MLX full] FATAL: {exc}", file=sys.stderr)
+        return 65
+    bundle = RendererBundle(
+        model=model,
+        target_rgb_0=target_rgb_0,
+        target_rgb_1=target_rgb_1,
+        num_pairs=int(args.num_pairs),
+        forward_convention="call_b2chw_255",
+        distillation_weight=float(args.distillation_weight),
+    )
+    artifact = run_mlx_score_aware_full_main(
+        bundle=bundle,
+        substrate_id="z8_hierarchical_predictive_coding",
+        lane_id="lane_path_3_f_z8_hierarchical_predictive_coding_cargo_cult_first_20260526",
+        output_dir=args.output_dir,
+        epochs=int(args.epochs),
+        batch_pair_indices_per_step=min(int(args.num_pairs), 8),
+        learning_rate=float(args.full_lr),
+        seed=int(args.seed),
+        notes=(
+            "Z8 hierarchical predictive coding MLX-first score-aware full "
+            "training via canonical mlx_score_aware_full_main harness; real "
+            "contest video + reconstruction + Hinton-KL T=2.0 scorer surrogate; "
+            "non-promotable [macOS-MLX research-signal] per Catalog "
+            "#192/#317/#341; per-axis + MLX->PyTorch bridge + paired CUDA/CPU "
+            "anchor DEFERRED to sister L2 Phase 2 symposium."
+        ),
+    )
+    print(
+        f"[Z8 MLX full] DONE epochs={artifact.total_epochs_completed} "
+        f"promotable={artifact.promotable} "
+        f"wall={artifact.total_wall_clock_seconds:.1f}s "
+        f"artifact={args.output_dir / 'training_artifact.json'}"
+    )
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
