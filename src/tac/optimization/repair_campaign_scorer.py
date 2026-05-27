@@ -8,6 +8,7 @@ missing before any budget spend, promotion, or exact dispatch.
 
 from __future__ import annotations
 
+import json
 from collections.abc import Mapping, Sequence
 from math import isfinite
 from pathlib import Path
@@ -15,10 +16,14 @@ from typing import Any
 
 from tac.fec6_selector_operator_space import FEC6_FIXED_K16_MODE_IDS
 from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY
+from tac.optimization.family_agnostic_materializers import (
+    verify_runtime_consumption_proof,
+)
 from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
     require_no_truthy_authority_fields,
 )
+from tac.repo_io import sha256_file
 
 REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA = "repair_campaign_score_report.v1"
 REPAIR_CAMPAIGN_SCORE_ROW_SCHEMA = "repair_campaign_score_row.v1"
@@ -133,6 +138,32 @@ def _repo_path_exists(path_text: str, repo_root: str | Path | None) -> bool:
     if not path.is_absolute() and repo_root is not None:
         path = Path(repo_root) / path
     return path.exists()
+
+
+def _resolve_repo_path(path_text: str, repo_root: str | Path | None) -> Path:
+    path = Path(path_text)
+    if not path.is_absolute() and repo_root is not None:
+        path = Path(repo_root) / path
+    return path
+
+
+def _sha256_text(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    text = value.strip().lower()
+    if len(text) != 64:
+        return None
+    if any(ch not in "0123456789abcdef" for ch in text):
+        return None
+    return text
+
+
+def _first_sha256_text(*values: Any) -> str | None:
+    for value in values:
+        text = _sha256_text(value)
+        if text is not None:
+            return text
+    return None
 
 
 def _palette_mode_frame_index(mode: str) -> int | None:
@@ -1098,7 +1129,16 @@ def _receiver_proof_status(
         if row.get("receiver_consumed_candidate_archive_path")
         else "candidate_archive_path"
     )
-    archive = _path_status(row, archive_key, repo_root=repo_root)
+    archive = _path_status(
+        row,
+        archive_key,
+        repo_root=repo_root,
+        expected_sha256_keys=(
+            "receiver_consumed_candidate_archive_sha256",
+            "candidate_archive_sha256",
+            "archive_sha256",
+        ),
+    )
     replay = _path_status(
         row,
         "component_response_replay_manifest_path",
@@ -1109,16 +1149,34 @@ def _receiver_proof_status(
         "exact_axis_component_response_path",
         repo_root=repo_root,
     )
+    proof_validation = _runtime_consumption_proof_validation(
+        row,
+        proof_status=proof,
+        archive_status=archive,
+        repo_root=repo_root,
+    )
     statuses = [proof, archive, replay, exact]
     missing = [
         f"{item['key']}:missing_or_unverified"
         for item in statuses
         if item["exists"] is not True
     ]
+    if archive.get("exists") is True and archive.get("is_file") is not True:
+        missing.append(f"{archive['key']}:path_not_file")
+    if archive.get("is_symlink") is True:
+        missing.append(f"{archive['key']}:path_is_symlink")
+    if proof_validation.get("receiver_contract_satisfied") is not True:
+        missing.append("runtime_consumption_proof_path:missing_or_unverified")
+    if archive.get("sha256_match") is False:
+        missing.append(f"{archive['key']}:sha256_mismatch")
     return {
         "schema": "repair_campaign_receiver_proof_status.v1",
-        "receiver_runtime_custody_ready": not missing,
+        "receiver_runtime_custody_ready": (
+            not missing
+            and proof_validation.get("receiver_contract_satisfied") is True
+        ),
         "runtime_consumption_proof": proof,
+        "runtime_consumption_proof_validation": proof_validation,
         "receiver_consumed_candidate_archive": archive,
         "component_response_replay_manifest": replay,
         "exact_axis_component_response": exact,
@@ -1152,14 +1210,133 @@ def _path_status(
     key: str,
     *,
     repo_root: str | Path | None,
+    expected_sha256_keys: Sequence[str] = (),
 ) -> dict[str, Any]:
     text = str(row.get(key) or "").strip()
+    path = _resolve_repo_path(text, repo_root) if text else None
+    exists = path.exists() if path is not None else False
+    is_file = path.is_file() if path is not None else False
+    is_symlink = path.is_symlink() if path is not None else False
+    observed_sha = (
+        sha256_file(path)
+        if path is not None and is_file and not is_symlink
+        else None
+    )
+    expected_sha = _first_sha256_text(*(row.get(item) for item in expected_sha256_keys))
     return {
         "key": key,
         "path": text or None,
         "present": bool(text),
-        "exists": _repo_path_exists(text, repo_root) if text else False,
+        "exists": exists,
+        "is_file": is_file,
+        "is_symlink": is_symlink,
+        "sha256": observed_sha,
+        "expected_sha256": expected_sha,
+        "sha256_match": (
+            observed_sha == expected_sha
+            if observed_sha is not None and expected_sha is not None
+            else None
+        ),
     }
+
+
+def _runtime_consumption_proof_validation(
+    row: Mapping[str, Any],
+    *,
+    proof_status: Mapping[str, Any],
+    archive_status: Mapping[str, Any],
+    repo_root: str | Path | None,
+) -> dict[str, Any]:
+    blockers: list[str] = []
+    proof_path = str(proof_status.get("path") or "").strip()
+    proof_present = bool(proof_path)
+    proof_exists = proof_status.get("exists") is True
+    if not proof_present:
+        blockers.append("runtime_consumption_proof_path_missing")
+    elif not proof_exists:
+        blockers.append("runtime_consumption_proof_file_missing")
+    if proof_status.get("is_symlink") is True:
+        blockers.append("runtime_consumption_proof_file_is_symlink")
+    if proof_status.get("is_file") is False and proof_exists:
+        blockers.append("runtime_consumption_proof_path_not_file")
+
+    payload: Mapping[str, Any] = {}
+    if proof_present and proof_exists and proof_status.get("is_file") is True:
+        path = _resolve_repo_path(proof_path, repo_root)
+        try:
+            loaded = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            blockers.append("runtime_consumption_proof_json_invalid")
+        else:
+            if isinstance(loaded, Mapping):
+                payload = loaded
+            else:
+                blockers.append("runtime_consumption_proof_not_object")
+
+    if payload:
+        try:
+            require_no_truthy_authority_fields(
+                payload,
+                context="repair_campaign_runtime_consumption_proof",
+            )
+        except ValueError as exc:
+            blockers.append(f"runtime_consumption_proof_false_authority:{exc}")
+        required_archive_sha = (
+            _sha256_text(str(archive_status.get("sha256") or ""))
+            or _first_sha256_text(
+                row.get("receiver_consumed_candidate_archive_sha256"),
+                row.get("candidate_archive_sha256"),
+                row.get("archive_sha256"),
+            )
+        )
+        if required_archive_sha is None:
+            blockers.append("runtime_consumption_proof_candidate_archive_sha_missing")
+        else:
+            verification = verify_runtime_consumption_proof(
+                runtime_consumption_proof=payload,
+                required_candidate_archive_sha256=required_archive_sha,
+                required_target_kind=str(row.get("target_kind") or "")
+                if row.get("target_kind")
+                else None,
+                required_materializer_id=str(row.get("materializer_id") or "")
+                if row.get("materializer_id")
+                else None,
+                required_receiver_contract_kind=str(
+                    row.get("receiver_contract_kind") or ""
+                )
+                if row.get("receiver_contract_kind")
+                else None,
+                repo_root=repo_root,
+            )
+            blockers.extend(_string_list(verification.get("blockers")))
+    validation = {
+        "schema": "repair_campaign_runtime_consumption_proof_validation.v1",
+        "proof_present": proof_present,
+        "proof_exists": proof_exists,
+        "proof_path": proof_path or None,
+        "proof_sha256": proof_status.get("sha256"),
+        "proof_schema": payload.get("schema") if payload else None,
+        "candidate_archive_sha256": (
+            _sha256_text(str(archive_status.get("sha256") or ""))
+            or _first_sha256_text(
+                row.get("receiver_consumed_candidate_archive_sha256"),
+                row.get("candidate_archive_sha256"),
+                row.get("archive_sha256"),
+            )
+        ),
+        "receiver_contract_satisfied": not blockers,
+        "blockers": ordered_unique(blockers),
+        "budget_spend_allowed": False,
+        "ready_for_exact_eval_dispatch": False,
+        "allowed_use": "repair_campaign_runtime_proof_validation_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        validation,
+        context="repair_campaign_runtime_consumption_proof_validation",
+    )
+    return validation
 
 
 def _execution_gate(

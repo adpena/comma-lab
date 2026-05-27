@@ -1,12 +1,16 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import sys
 from pathlib import Path
 
 from tac.fec6_selector_operator_space import FEC6_FIXED_K16_MODE_IDS
+from tac.optimization.family_agnostic_materializers import (
+    RUNTIME_CONSUMPTION_PROOF_SCHEMA,
+)
 from tac.optimization.repair_campaign_learning_signal import (
     build_repair_campaign_blocked_learning_signal_report,
 )
@@ -434,6 +438,152 @@ def test_score_repair_campaign_ranks_ready_mlx_and_names_missing_artifacts(
         blocked["execution_gate"]["missing_artifacts"]
     )
     assert "per_region_selector_codec_replay_missing" in report["missing_artifacts"]
+
+
+def test_score_repair_campaign_revalidates_existing_runtime_proof_artifact(
+    tmp_path: Path,
+) -> None:
+    work_order = _work_order(tmp_path)
+    first = work_order["typed_response_ledger"]["rows"][0]  # type: ignore[index]
+    archive_path = tmp_path / "candidate_archive.zip"
+    archive_path.write_bytes(b"candidate archive bytes")
+    archive_sha = hashlib.sha256(archive_path.read_bytes()).hexdigest()
+    proof_path = tmp_path / "runtime_consumption_proof.json"
+    proof_path.write_text(
+        json.dumps(
+            {
+                "schema": RUNTIME_CONSUMPTION_PROOF_SCHEMA,
+                "proof_kind": "unit_repair_campaign_runtime_proof",
+                "candidate_archive_sha256": archive_sha,
+                "runtime_consumption_proof_passed": True,
+                "passed": True,
+                "runtime_consumption_probe": {
+                    "schema": "unit_repair_campaign_runtime_probe.v1",
+                    "passed": True,
+                },
+                **_false_authority(),
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    first["candidate_archive_path"] = str(archive_path)
+    first["candidate_archive_sha256"] = archive_sha
+    first["runtime_consumption_proof_path"] = str(proof_path)
+
+    report = score_repair_campaign(payload=work_order, repo_root=tmp_path)
+
+    row = report["rows"][0]
+    proof_status = row["receiver_proof_status"]
+    assert proof_status["runtime_consumption_proof"]["exists"] is True
+    assert proof_status["runtime_consumption_proof_validation"][
+        "receiver_contract_satisfied"
+    ] is True
+    assert (
+        "runtime_consumption_proof_path:missing_or_unverified"
+        not in proof_status["missing_artifacts"]
+    )
+    allocation = report["optimizer_decision"]["selected_allocation_rows"][0]
+    assert (
+        "runtime_consumption_proof_path:missing_or_unverified"
+        not in allocation["receiver_proof_status"]["missing_artifacts"]
+    )
+
+
+def test_score_repair_campaign_rejects_path_only_runtime_proof_artifact(
+    tmp_path: Path,
+) -> None:
+    work_order = _work_order(tmp_path)
+    first = work_order["typed_response_ledger"]["rows"][0]  # type: ignore[index]
+    archive_path = tmp_path / "candidate_archive.zip"
+    archive_path.write_bytes(b"candidate archive bytes")
+    archive_sha = hashlib.sha256(archive_path.read_bytes()).hexdigest()
+    proof_path = tmp_path / "runtime_consumption_proof.json"
+    proof_path.write_text(
+        json.dumps(
+            {
+                "schema": RUNTIME_CONSUMPTION_PROOF_SCHEMA,
+                "candidate_archive_sha256": archive_sha,
+                "runtime_consumption_proof_passed": True,
+                "passed": True,
+                "score_claim": True,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    first["candidate_archive_path"] = str(archive_path)
+    first["candidate_archive_sha256"] = archive_sha
+    first["runtime_consumption_proof_path"] = str(proof_path)
+
+    report = score_repair_campaign(payload=work_order, repo_root=tmp_path)
+
+    row = report["rows"][0]
+    validation = row["receiver_proof_status"]["runtime_consumption_proof_validation"]
+    assert validation["proof_exists"] is True
+    assert validation["receiver_contract_satisfied"] is False
+    assert any(
+        str(blocker).startswith("runtime_consumption_proof_false_authority:")
+        for blocker in validation["blockers"]
+    )
+    assert "runtime_consumption_proof_path:missing_or_unverified" in (
+        row["receiver_proof_status"]["missing_artifacts"]
+    )
+
+
+def test_score_repair_campaign_rejects_symlink_candidate_archive_custody(
+    tmp_path: Path,
+) -> None:
+    work_order = _work_order(tmp_path)
+    first = work_order["typed_response_ledger"]["rows"][0]  # type: ignore[index]
+    archive_path = tmp_path / "candidate_archive.zip"
+    archive_path.write_bytes(b"candidate archive bytes")
+    archive_sha = hashlib.sha256(archive_path.read_bytes()).hexdigest()
+    linked_archive_path = tmp_path / "candidate_archive_link.zip"
+    linked_archive_path.symlink_to(archive_path)
+    proof_path = tmp_path / "runtime_consumption_proof.json"
+    proof_path.write_text(
+        json.dumps(
+            {
+                "schema": RUNTIME_CONSUMPTION_PROOF_SCHEMA,
+                "proof_kind": "unit_repair_campaign_runtime_proof",
+                "candidate_archive_sha256": archive_sha,
+                "runtime_consumption_proof_passed": True,
+                "passed": True,
+                "runtime_consumption_probe": {
+                    "schema": "unit_repair_campaign_runtime_probe.v1",
+                    "passed": True,
+                },
+                **_false_authority(),
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    first["candidate_archive_path"] = str(linked_archive_path)
+    first["candidate_archive_sha256"] = archive_sha
+    first["runtime_consumption_proof_path"] = str(proof_path)
+
+    report = score_repair_campaign(payload=work_order, repo_root=tmp_path)
+
+    row = report["rows"][0]
+    archive_status = row["receiver_proof_status"]["receiver_consumed_candidate_archive"]
+    assert archive_status["exists"] is True
+    assert archive_status["is_symlink"] is True
+    assert (
+        "candidate_archive_path:path_is_symlink"
+        in row["receiver_proof_status"]["missing_artifacts"]
+    )
+    assert (
+        row["receiver_proof_status"]["runtime_consumption_proof_validation"][
+            "receiver_contract_satisfied"
+        ]
+        is True
+    )
 
 
 def test_score_repair_campaign_uses_palette_frame_asymmetry_context(
