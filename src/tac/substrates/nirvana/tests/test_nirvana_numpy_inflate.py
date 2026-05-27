@@ -121,7 +121,6 @@ def test_numpy_parse_matches_torch_parse_exactly() -> None:
 def test_numpy_decode_matches_torch_model() -> None:
     """Numpy patch-decode + stitch parity vs torch NirvanaSubstrate.forward."""
     model, blob = _build_model_and_blob()
-    cfg = _cfg()
 
     with torch.no_grad():
         idx = torch.tensor([0], dtype=torch.long)

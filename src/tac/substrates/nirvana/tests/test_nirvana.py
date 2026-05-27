@@ -9,6 +9,10 @@ NotImplementedError per the L0 SCAFFOLD posture (Catalog #240).
 
 from __future__ import annotations
 
+import ast
+from pathlib import Path
+
+import numpy as np
 import torch
 
 from tac.substrates.nirvana.architecture import (
@@ -21,7 +25,10 @@ from tac.substrates.nirvana.archive import (
     NRV1_SCHEMA_VERSION,
     pack_archive,
     parse_archive,
+    parse_archive_numpy,
 )
+
+_INFLATE_PATH = Path(__file__).resolve().parents[1] / "inflate.py"
 
 
 def _smoke_cfg() -> NirvanaConfig:
@@ -84,6 +91,44 @@ def test_archive_pack_then_parse_roundtrip_recovers_tensors():
         assert torch.allclose(rec.to(torch.float32), v.to(torch.float32), atol=1e-2)
 
     assert arc.latents.shape == latents.shape
+
+
+def test_numpy_parse_matches_torch_parse_roundtrip():
+    cfg = _smoke_cfg()
+    torch.manual_seed(3)
+    model = NirvanaSubstrate(cfg)
+    sd = model.state_dict()
+    decoder_sd = {k: v for k, v in sd.items() if k != "latents"}
+    blob = pack_archive(
+        decoder_sd,
+        sd["latents"].clone(),
+        _smoke_meta(cfg),
+        patch_grid_h=cfg.patch_grid_h,
+        patch_grid_w=cfg.patch_grid_w,
+        patch_embed_dim=cfg.patch_embed_dim,
+    )
+
+    torch_arc = parse_archive(blob)
+    numpy_arc = parse_archive_numpy(blob)
+
+    assert numpy_arc.schema_version == torch_arc.schema_version
+    assert numpy_arc.patch_grid_h == torch_arc.patch_grid_h
+    assert numpy_arc.patch_grid_w == torch_arc.patch_grid_w
+    assert numpy_arc.patch_embed_dim == torch_arc.patch_embed_dim
+    assert np.abs(torch_arc.latents.numpy() - numpy_arc.latents).max() < 1e-5
+    assert set(numpy_arc.decoder_state_dict) == set(torch_arc.decoder_state_dict)
+    for key, value in numpy_arc.decoder_state_dict.items():
+        assert np.abs(torch_arc.decoder_state_dict[key].numpy() - value).max() < 1e-5
+
+
+def test_nirvana_inflate_has_no_torch_or_mlx_import() -> None:
+    tree = ast.parse(_INFLATE_PATH.read_text(encoding="utf-8"))
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                assert not alias.name.startswith(("torch", "mlx")), alias.name
+        if isinstance(node, ast.ImportFrom) and node.module:
+            assert not node.module.startswith(("torch", "mlx")), node.module
 
 
 def test_header_size_invariant_is_25_bytes():
