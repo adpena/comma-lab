@@ -287,3 +287,91 @@ def test_mlx_replay_diff_reports_hash_and_env_mismatch(tmp_path: Path) -> None:
     assert diff["matched"] is False
     assert "output.npy_sha256" in diff["mismatches"]
     assert diff["changed_environment_keys"] == ["PYTHONHASHSEED"]
+
+
+def test_mlx_replay_rerun_command_rewrites_outputs_and_strips_side_effects(
+    tmp_path: Path,
+) -> None:
+    tool_path = REPO_ROOT / "tools" / "rerun_mlx_master_gradient_replay.py"
+    spec = importlib.util.spec_from_file_location("rerun_mlx_master_gradient_replay_under_test", tool_path)
+    assert spec is not None and spec.loader is not None
+    tool = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(tool)
+
+    bundle_path = tmp_path / "source.replay_bundle.json"
+    bundle = {
+        "schema": "mlx_master_gradient_replay_bundle.v1",
+        "tool": "tools/extract_master_gradient_mlx.py",
+        "argv": [
+            "--archive",
+            "archive.zip",
+            "--out",
+            "original.npy",
+            "--manifest-jsonl",
+            ".omx/state/mlx_research_signal_manifest.jsonl",
+            "--replay-bundle-path=original.replay_bundle.json",
+            "--write-anchor",
+            "--no-replay-bundle",
+            "--n-pairs",
+            "2",
+        ],
+        "archive": {"sha256": "a" * 64},
+        "calibration_gate": {
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    }
+
+    record = tool.build_rerun_command(
+        bundle,
+        bundle_path=bundle_path,
+        output_dir=tmp_path / "reruns",
+        python_executable="/usr/bin/python3",
+    )
+    command = record["command"]
+
+    assert command[:2] == [
+        "/usr/bin/python3",
+        str(REPO_ROOT / "tools" / "extract_master_gradient_mlx.py"),
+    ]
+    assert "--archive" in command
+    assert "--n-pairs" in command
+    assert "--write-anchor" not in command
+    assert "--no-replay-bundle" not in command
+    assert "--manifest-jsonl" not in command
+    assert not any(str(part).startswith("--replay-bundle-path=") for part in command)
+    assert command.count("--out") == 1
+    assert command.count("--replay-bundle-path") == 1
+    assert command[-1] == "--no-manifest"
+    assert record["score_claim"] is False
+    assert record["ready_for_exact_eval_dispatch"] is False
+
+
+def test_mlx_replay_rerun_rejects_truthy_calibration_authority(tmp_path: Path) -> None:
+    tool_path = REPO_ROOT / "tools" / "rerun_mlx_master_gradient_replay.py"
+    spec = importlib.util.spec_from_file_location("rerun_mlx_master_gradient_replay_bad_gate", tool_path)
+    assert spec is not None and spec.loader is not None
+    tool = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(tool)
+
+    bundle = {
+        "schema": "mlx_master_gradient_replay_bundle.v1",
+        "tool": "tools/extract_master_gradient_mlx.py",
+        "argv": ["--archive", "archive.zip", "--out", "original.npy"],
+        "calibration_gate": {
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": True,
+        },
+    }
+
+    with pytest.raises(tool.MLXReplayRerunError, match="ready_for_exact_eval_dispatch"):
+        tool.build_rerun_command(
+            bundle,
+            bundle_path=tmp_path / "bad.replay_bundle.json",
+            output_dir=tmp_path / "reruns",
+            python_executable="/usr/bin/python3",
+        )
