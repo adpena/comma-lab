@@ -13,6 +13,12 @@ from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
     require_no_truthy_authority_fields,
 )
+from tac.optimization.repair_campaign_learning_signal import (
+    REPAIR_CAMPAIGN_BLOCKED_LEARNING_SIGNAL_REPORT_SCHEMA,
+)
+from tac.optimization.repair_campaign_posterior import (
+    REPAIR_CAMPAIGN_BLOCKED_POSTERIOR_APPEND_REPORT_SCHEMA,
+)
 from tac.optimization.repair_campaign_scorer import REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA
 
 REPAIR_CAMPAIGN_SCORE_QUEUE_METADATA_SCHEMA = (
@@ -152,6 +158,20 @@ def _score_experiment(
         stackability_worker_result_path,
         repo_root,
     )
+    blocked_learning_signal_report_path = (
+        queue_root / _slug(chain_id) / "repair_campaign_blocked_learning_signal_report.json"
+    )
+    blocked_learning_signal_report_ref = _repo_rel(
+        blocked_learning_signal_report_path,
+        repo_root,
+    )
+    blocked_posterior_append_report_path = (
+        queue_root / _slug(chain_id) / "repair_campaign_blocked_posterior_append_report.json"
+    )
+    blocked_posterior_append_report_ref = _repo_rel(
+        blocked_posterior_append_report_path,
+        repo_root,
+    )
     blockers = []
     if not work_order_ref:
         blockers.append("repair_budget_waterfill_work_order_path_missing")
@@ -185,9 +205,16 @@ def _score_experiment(
         "repair_campaign_stackability_worker_result_path": (
             stackability_worker_result_ref
         ),
+        "repair_campaign_blocked_learning_signal_report_path": (
+            blocked_learning_signal_report_ref
+        ),
+        "repair_campaign_blocked_posterior_append_report_path": (
+            blocked_posterior_append_report_ref
+        ),
         "campaign_scorer_default": True,
         "stackability_followup_default": True,
         "continual_learning_followup_default": True,
+        "blocked_learning_followup_default": True,
         "stackability_worker_limits": {
             "schema": "repair_campaign_stackability_worker_limits.v1",
             "max_steps": DEFAULT_STACKABILITY_WORKER_MAX_STEPS,
@@ -309,6 +336,84 @@ def _score_experiment(
                 "telemetry": {
                     "artifact_paths": [score_report_ref],
                     "input_artifact_paths": [work_order_ref],
+                    "include_postcondition_paths": True,
+                },
+            },
+            {
+                "id": "build_repair_campaign_blocked_learning_signals",
+                "kind": "command",
+                "requires": ["score_repair_campaign_from_typed_ledger"],
+                "command": [
+                    ".venv/bin/python",
+                    "tools/build_repair_campaign_blocked_learning_signals.py",
+                    "--score-report",
+                    score_report_ref,
+                    "--blocked-signal-report-out",
+                    blocked_learning_signal_report_ref,
+                    "--overwrite",
+                ],
+                "resources": {"kind": "local_cpu"},
+                "timeout_seconds": 120,
+                "postconditions": [
+                    {
+                        "type": "json_equals",
+                        "path": blocked_learning_signal_report_ref,
+                        "key": "schema",
+                        "equals": REPAIR_CAMPAIGN_BLOCKED_LEARNING_SIGNAL_REPORT_SCHEMA,
+                    },
+                    {
+                        "type": "json_false_authority",
+                        "path": blocked_learning_signal_report_ref,
+                    },
+                    {
+                        "type": "json_equals",
+                        "path": blocked_learning_signal_report_ref,
+                        "key": "ready_for_exact_eval_dispatch",
+                        "equals": False,
+                    },
+                ],
+                "telemetry": {
+                    "artifact_paths": [blocked_learning_signal_report_ref],
+                    "input_artifact_paths": [score_report_ref],
+                    "include_postcondition_paths": True,
+                },
+            },
+            {
+                "id": "append_blocked_repair_campaign_learning_posterior",
+                "kind": "command",
+                "requires": ["build_repair_campaign_blocked_learning_signals"],
+                "command": [
+                    ".venv/bin/python",
+                    "tools/append_repair_campaign_blocked_posterior.py",
+                    "--blocked-learning-signal-report",
+                    blocked_learning_signal_report_ref,
+                    "--report-out",
+                    blocked_posterior_append_report_ref,
+                    "--overwrite",
+                ],
+                "resources": {"kind": "local_cpu"},
+                "timeout_seconds": 120,
+                "postconditions": [
+                    {
+                        "type": "json_equals",
+                        "path": blocked_posterior_append_report_ref,
+                        "key": "schema",
+                        "equals": REPAIR_CAMPAIGN_BLOCKED_POSTERIOR_APPEND_REPORT_SCHEMA,
+                    },
+                    {
+                        "type": "json_false_authority",
+                        "path": blocked_posterior_append_report_ref,
+                    },
+                    {
+                        "type": "json_equals",
+                        "path": blocked_posterior_append_report_ref,
+                        "key": "ready_for_exact_eval_dispatch",
+                        "equals": False,
+                    },
+                ],
+                "telemetry": {
+                    "artifact_paths": [blocked_posterior_append_report_ref],
+                    "input_artifact_paths": [blocked_learning_signal_report_ref],
                     "include_postcondition_paths": True,
                 },
             },

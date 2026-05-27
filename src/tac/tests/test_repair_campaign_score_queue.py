@@ -12,6 +12,12 @@ from comma_lab.scheduler.repair_campaign_score_queue import (
     REPAIR_CAMPAIGN_SCORE_QUEUE_METADATA_SCHEMA,
     build_repair_campaign_score_queue,
 )
+from tac.optimization.repair_campaign_learning_signal import (
+    REPAIR_CAMPAIGN_BLOCKED_LEARNING_SIGNAL_REPORT_SCHEMA,
+)
+from tac.optimization.repair_campaign_posterior import (
+    REPAIR_CAMPAIGN_BLOCKED_POSTERIOR_APPEND_REPORT_SCHEMA,
+)
 from tac.optimization.repair_campaign_scorer import REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -69,6 +75,21 @@ def _work_order(tmp_path: Path) -> dict[str, object]:
                     "objective_delta_score_units": -0.0010,
                     "local_mlx_response_path": str(mlx),
                     "reference_local_mlx_response_path": str(ref),
+                    **_false_authority(),
+                },
+                {
+                    "schema": (
+                        "frontier_rate_attack_repair_budget_typed_response_row.v1"
+                    ),
+                    "typed_response_id": "selector_missing",
+                    "candidate_id": "per_region_selector_codec_missing",
+                    "acquisition_id": "selector_codec_acq",
+                    "correction_family": "per_region_selector_codec",
+                    "targeted_dimensions": ["selector_stream", "region"],
+                    "operation_levels": ["region"],
+                    "entropy_position_label": "selector_codec_entropy",
+                    "requested_repair_bytes": 16,
+                    "objective_delta_score_units": -0.0002,
                     **_false_authority(),
                 },
             ],
@@ -157,12 +178,40 @@ def test_build_repair_campaign_score_queue_from_waterfill_work_order(
     command = experiment["steps"][1]["command"]
     assert command[:2] == [".venv/bin/python", "tools/score_repair_campaign.py"]
     assert str(work_order_path) in command
-    stackability_command = experiment["steps"][2]["command"]
+    blocked_signal_step = next(
+        step
+        for step in experiment["steps"]
+        if step["id"] == "build_repair_campaign_blocked_learning_signals"
+    )
+    assert blocked_signal_step["requires"] == [
+        "score_repair_campaign_from_typed_ledger"
+    ]
+    assert experiment["metadata"][
+        "repair_campaign_blocked_learning_signal_report_path"
+    ].endswith("repair_campaign_blocked_learning_signal_report.json")
+    blocked_append_step = next(
+        step
+        for step in experiment["steps"]
+        if step["id"] == "append_blocked_repair_campaign_learning_posterior"
+    )
+    assert blocked_append_step["requires"] == [
+        "build_repair_campaign_blocked_learning_signals"
+    ]
+    assert experiment["metadata"][
+        "repair_campaign_blocked_posterior_append_report_path"
+    ].endswith("repair_campaign_blocked_posterior_append_report.json")
+    assert experiment["metadata"]["blocked_learning_followup_default"] is True
+    stackability_step = next(
+        step
+        for step in experiment["steps"]
+        if step["id"] == "build_repair_campaign_stackability_queue"
+    )
+    stackability_command = stackability_step["command"]
     assert stackability_command[:2] == [
         ".venv/bin/python",
         "tools/build_repair_campaign_stackability_queue.py",
     ]
-    assert experiment["steps"][2]["requires"] == [
+    assert stackability_step["requires"] == [
         "score_repair_campaign_from_typed_ledger"
     ]
     assert experiment["metadata"]["repair_campaign_stackability_queue_path"] in (
@@ -179,20 +228,24 @@ def test_build_repair_campaign_score_queue_from_waterfill_work_order(
         "max_parallel": 1,
         "timeout_seconds": 900,
     }
-    assert experiment["steps"][3]["id"] == (
-        "validate_repair_campaign_stackability_queue"
+    validate_step = next(
+        step
+        for step in experiment["steps"]
+        if step["id"] == "validate_repair_campaign_stackability_queue"
     )
-    assert experiment["steps"][3]["requires"] == [
+    assert validate_step["requires"] == [
         "build_repair_campaign_stackability_queue"
     ]
-    assert experiment["steps"][4]["id"] == (
-        "run_repair_campaign_stackability_queue_bounded_local"
+    worker_step = next(
+        step
+        for step in experiment["steps"]
+        if step["id"] == "run_repair_campaign_stackability_queue_bounded_local"
     )
-    assert experiment["steps"][4]["requires"] == [
+    assert worker_step["requires"] == [
         "validate_repair_campaign_stackability_queue"
     ]
     assert experiment["metadata"]["repair_campaign_stackability_queue_path"] in (
-        experiment["steps"][4]["command"]
+        worker_step["command"]
     )
     assert experiment["steps"][1]["requires"] == [
         "assert_repair_budget_waterfill_work_order_materialized"
@@ -274,7 +327,70 @@ def test_repair_campaign_score_queue_cli_writes_and_score_step_runs(
     assert report["schema"] == REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA
     assert report["rows"][0]["typed_response_id"] == "segnet_region_ready"
     assert report["ready_for_local_mlx_advisory_execution_count"] == 1
-    stackability_command = queue["experiments"][0]["steps"][2]["command"]
+    assert report["optimizer_decision"]["blocked_allocation_count"] == 1
+    blocked_signal_command = next(
+        step["command"]
+        for step in queue["experiments"][0]["steps"]
+        if step["id"] == "build_repair_campaign_blocked_learning_signals"
+    )
+    blocked_signal_result = subprocess.run(
+        [sys.executable, *blocked_signal_command[1:]],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert blocked_signal_result.returncode == 0, blocked_signal_result.stderr
+    blocked_signal_report_path = Path(
+        queue["experiments"][0]["metadata"][
+            "repair_campaign_blocked_learning_signal_report_path"
+        ]
+    )
+    blocked_signal_report = json.loads(
+        blocked_signal_report_path.read_text(encoding="utf-8")
+    )
+    assert blocked_signal_report["schema"] == (
+        REPAIR_CAMPAIGN_BLOCKED_LEARNING_SIGNAL_REPORT_SCHEMA
+    )
+    assert blocked_signal_report["blocked_signal_count"] == 1
+    blocked_signal = blocked_signal_report["learning_signal_rows"][0]
+    assert blocked_signal["typed_response_id"] == "selector_missing"
+    assert blocked_signal["learning_signal_kind"] == (
+        "blocked_repair_campaign_allocation"
+    )
+    assert blocked_signal["local_planning_update"][
+        "local_planning_update_ready"
+    ] is True
+    blocked_append_command = next(
+        step["command"]
+        for step in queue["experiments"][0]["steps"]
+        if step["id"] == "append_blocked_repair_campaign_learning_posterior"
+    )
+    blocked_append_result = subprocess.run(
+        [sys.executable, *blocked_append_command[1:]],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert blocked_append_result.returncode == 0, blocked_append_result.stderr
+    blocked_append_report_path = Path(
+        queue["experiments"][0]["metadata"][
+            "repair_campaign_blocked_posterior_append_report_path"
+        ]
+    )
+    blocked_append_report = json.loads(
+        blocked_append_report_path.read_text(encoding="utf-8")
+    )
+    assert blocked_append_report["schema"] == (
+        REPAIR_CAMPAIGN_BLOCKED_POSTERIOR_APPEND_REPORT_SCHEMA
+    )
+    assert blocked_append_report["signal_count"] == 1
+    stackability_command = next(
+        step["command"]
+        for step in queue["experiments"][0]["steps"]
+        if step["id"] == "build_repair_campaign_stackability_queue"
+    )
     stackability_result = subprocess.run(
         [sys.executable, *stackability_command[1:]],
         cwd=REPO_ROOT,
@@ -290,7 +406,11 @@ def test_repair_campaign_score_queue_cli_writes_and_score_step_runs(
     stackability_queue = json.loads(stackability_queue_path.read_text(encoding="utf-8"))
     assert stackability_queue["schema"] == QUEUE_SCHEMA
     assert stackability_queue["metadata"]["ready_experiment_count"] == 1
-    validate_command = queue["experiments"][0]["steps"][3]["command"]
+    validate_command = next(
+        step["command"]
+        for step in queue["experiments"][0]["steps"]
+        if step["id"] == "validate_repair_campaign_stackability_queue"
+    )
     validate_result = subprocess.run(
         [sys.executable, *validate_command[1:]],
         cwd=REPO_ROOT,
@@ -299,7 +419,11 @@ def test_repair_campaign_score_queue_cli_writes_and_score_step_runs(
         check=False,
     )
     assert validate_result.returncode == 0, validate_result.stderr
-    worker_command = queue["experiments"][0]["steps"][4]["command"]
+    worker_command = next(
+        step["command"]
+        for step in queue["experiments"][0]["steps"]
+        if step["id"] == "run_repair_campaign_stackability_queue_bounded_local"
+    )
     worker_result = subprocess.run(
         [sys.executable, *worker_command[1:]],
         cwd=REPO_ROOT,

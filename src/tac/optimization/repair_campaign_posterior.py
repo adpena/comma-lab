@@ -15,6 +15,7 @@ from typing import Any
 from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY
 from tac.optimization.proxy_candidate_contract import require_no_truthy_authority_fields
 from tac.optimization.repair_campaign_learning_signal import (
+    REPAIR_CAMPAIGN_BLOCKED_LEARNING_SIGNAL_REPORT_SCHEMA,
     REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA,
 )
 from tac.repo_io import json_line, json_text, sha256_file
@@ -26,6 +27,9 @@ REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_ROW_SCHEMA = (
 )
 REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_APPEND_REPORT_SCHEMA = (
     "repair_campaign_stackability_posterior_append_report.v1"
+)
+REPAIR_CAMPAIGN_BLOCKED_POSTERIOR_APPEND_REPORT_SCHEMA = (
+    "repair_campaign_blocked_posterior_append_report.v1"
 )
 DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_PATH = (
     _REPO_ROOT / ".omx" / "state" / "repair_campaign_stackability_posterior.jsonl"
@@ -284,12 +288,103 @@ def append_repair_campaign_stackability_posterior_signal(
     return report
 
 
+def append_repair_campaign_blocked_learning_signal_report(
+    *,
+    blocked_learning_signal_report_path: str | Path,
+    blocked_learning_signal_report: Mapping[str, Any],
+    posterior_path: str | Path | None = None,
+    lock_path: str | Path | None = None,
+    repo_root: str | Path = _REPO_ROOT,
+) -> dict[str, Any]:
+    """Append every blocked repair learning signal with duplicate suppression."""
+
+    if (
+        blocked_learning_signal_report.get("schema")
+        != REPAIR_CAMPAIGN_BLOCKED_LEARNING_SIGNAL_REPORT_SCHEMA
+    ):
+        raise RepairCampaignPosteriorError(
+            "blocked signal report must be repair_campaign_blocked_learning_signal_report.v1"
+        )
+    require_no_truthy_authority_fields(
+        blocked_learning_signal_report,
+        context="repair_campaign_blocked_posterior_signal_report",
+    )
+    signal_rows = [
+        row
+        for row in blocked_learning_signal_report.get("learning_signal_rows") or []
+        if isinstance(row, Mapping)
+    ]
+    path = Path(posterior_path or DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_PATH)
+    lock = Path(lock_path or DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_LOCK_PATH)
+    appended_rows: list[dict[str, Any]] = []
+    duplicate_row_ids: list[str] = []
+    with _posterior_lock(lock):
+        rows = load_repair_campaign_stackability_posterior_rows(path)
+        existing_ids = {
+            str(item.get("row_id"))
+            for item in rows
+            if isinstance(item, Mapping) and item.get("row_id")
+        }
+        for signal in signal_rows:
+            if signal.get("schema") != REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA:
+                raise RepairCampaignPosteriorError(
+                    "blocked signal row must be repair_campaign_learning_signal.v1"
+                )
+            row = build_repair_campaign_stackability_posterior_row(
+                learning_signal_path=blocked_learning_signal_report_path,
+                learning_signal=signal,
+                repo_root=repo_root,
+            )
+            if row["row_id"] in existing_ids:
+                duplicate_row_ids.append(row["row_id"])
+                continue
+            appended_rows.append(row)
+            existing_ids.add(row["row_id"])
+        if appended_rows:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with path.open("a", encoding="utf-8") as handle:
+                for row in appended_rows:
+                    handle.write(json_line(row))
+    report = {
+        "schema": REPAIR_CAMPAIGN_BLOCKED_POSTERIOR_APPEND_REPORT_SCHEMA,
+        "blocked_learning_signal_report_path": _repo_rel(
+            blocked_learning_signal_report_path,
+            repo_root=repo_root,
+        ),
+        "posterior_path": _repo_rel(path, repo_root=repo_root),
+        "lock_path": _repo_rel(lock, repo_root=repo_root),
+        "signal_count": len(signal_rows),
+        "appended_count": len(appended_rows),
+        "skipped_duplicate_count": len(duplicate_row_ids),
+        "appended_row_ids": [row["row_id"] for row in appended_rows],
+        "duplicate_row_ids": duplicate_row_ids,
+        "existing_row_count": len(rows),
+        "final_row_count": len(rows) + len(appended_rows),
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "allowed_use": "blocked_repair_campaign_posterior_append_audit",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        report,
+        context="repair_campaign_blocked_posterior_append_report",
+    )
+    return report
+
+
 __all__ = [
     "DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_LOCK_PATH",
     "DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_PATH",
+    "REPAIR_CAMPAIGN_BLOCKED_POSTERIOR_APPEND_REPORT_SCHEMA",
     "REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_APPEND_REPORT_SCHEMA",
     "REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_ROW_SCHEMA",
     "RepairCampaignPosteriorError",
+    "append_repair_campaign_blocked_learning_signal_report",
     "append_repair_campaign_stackability_posterior_signal",
     "build_repair_campaign_stackability_posterior_row",
     "load_repair_campaign_stackability_posterior_rows",
