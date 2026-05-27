@@ -27,15 +27,19 @@ from tac.substrates._shared.numpy_portable_inflate import (
     FORBIDDEN_INFLATE_FRAMEWORKS,
     InflateNotNumpyPortableError,
     NumpyPortableStateDictError,
+    as_numpy_array,
     assert_inflate_is_numpy_portable,
     bilinear_resize_nhwc,
+    conv2d_nhwc_oihw,
     conv2d_numpy,
+    depthwise_conv2d_nhwc_oihw,
     film_modulate_numpy,
     find_forbidden_framework_imports,
     gru_cell_numpy,
     linear,
     pack_state_dict_numpy,
     pixel_shuffle_2x_nhwc,
+    pointwise_conv1x1_nhwc_oihw,
     sigmoid,
     tanh,
     unpack_state_dict_numpy,
@@ -140,6 +144,13 @@ def test_pack_accepts_mlx_like_array_interface():
     np.testing.assert_array_equal(out["w"], np.array([[1.0, 2.0]], dtype=np.float32))
 
 
+def test_as_numpy_array_accepts_torch_without_bridge_importing_torch():
+    x = torch.randn(2, 3)
+    out = as_numpy_array(x)
+    assert isinstance(out, np.ndarray)
+    np.testing.assert_array_equal(out, x.numpy())
+
+
 # --------------------------------------------------------------------------- #
 # fail-closed on malformed blobs
 # --------------------------------------------------------------------------- #
@@ -222,6 +233,40 @@ def test_conv2d_numpy_vs_torch():
     ref = F.conv2d(x_nchw, w_nchw, torch.from_numpy(b), padding=1)
     ref_nhwc = np.transpose(ref.numpy(), (0, 2, 3, 1))
     np.testing.assert_allclose(got, ref_nhwc, rtol=0, atol=1e-4)
+
+
+def test_conv2d_nhwc_oihw_vs_torch_grouped():
+    # PyTorch OIHW weights, NHWC activations, grouped conv adapter.
+    x = np.random.randn(1, 5, 6, 4).astype(np.float32)
+    w = np.random.randn(6, 2, 3, 3).astype(np.float32)  # out=6, in/group=2, groups=2
+    b = np.random.randn(6).astype(np.float32)
+    got = conv2d_nhwc_oihw(x, w, b, padding=1, groups=2)
+    x_nchw = torch.from_numpy(np.transpose(x, (0, 3, 1, 2)).copy())
+    ref = F.conv2d(x_nchw, torch.from_numpy(w), torch.from_numpy(b), padding=1, groups=2)
+    ref_nhwc = np.transpose(ref.numpy(), (0, 2, 3, 1))
+    np.testing.assert_allclose(got, ref_nhwc, rtol=0, atol=1e-4)
+
+
+def test_depthwise_conv2d_nhwc_oihw_vs_torch():
+    x = np.random.randn(2, 5, 6, 4).astype(np.float32)
+    w = np.random.randn(4, 1, 3, 3).astype(np.float32)
+    b = np.random.randn(4).astype(np.float32)
+    got = depthwise_conv2d_nhwc_oihw(x, w, b, padding=1)
+    x_nchw = torch.from_numpy(np.transpose(x, (0, 3, 1, 2)).copy())
+    ref = F.conv2d(x_nchw, torch.from_numpy(w), torch.from_numpy(b), padding=1, groups=4)
+    ref_nhwc = np.transpose(ref.numpy(), (0, 2, 3, 1))
+    np.testing.assert_allclose(got, ref_nhwc, rtol=0, atol=1e-5)
+
+
+def test_pointwise_conv1x1_nhwc_oihw_vs_torch():
+    x = np.random.randn(2, 4, 5, 3).astype(np.float32)
+    w = np.random.randn(7, 3, 1, 1).astype(np.float32)
+    b = np.random.randn(7).astype(np.float32)
+    got = pointwise_conv1x1_nhwc_oihw(x, w, b)
+    x_nchw = torch.from_numpy(np.transpose(x, (0, 3, 1, 2)).copy())
+    ref = F.conv2d(x_nchw, torch.from_numpy(w), torch.from_numpy(b))
+    ref_nhwc = np.transpose(ref.numpy(), (0, 2, 3, 1))
+    np.testing.assert_allclose(got, ref_nhwc, rtol=0, atol=1e-5)
 
 
 def test_bilinear_resize_nhwc_vs_torch_align_false():
@@ -588,7 +633,9 @@ def test_end_to_end_film_coord_mlp_parity_vs_torch():
 
 def test_decode_primitives_registry_complete():
     expected = {
-        "to_float32", "linear", "conv2d_nhwc", "conv2d_numpy",
+        "as_numpy_array", "to_float32", "linear", "conv2d_nhwc", "conv2d_numpy",
+        "conv2d_nhwc_oihw", "depthwise_conv2d_nhwc_oihw",
+        "pointwise_conv1x1_nhwc_oihw",
         "bilinear_upsample_2x_nhwc", "bilinear_resize_nhwc",
         "pixel_shuffle_2x_nhwc", "film_modulate_numpy", "gru_cell_numpy",
         "sigmoid", "sin", "tanh", "relu", "gelu", "mean", "kahan_mean",

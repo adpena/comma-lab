@@ -202,6 +202,18 @@ def _as_numpy(value: Any) -> np.ndarray:
         ) from exc
 
 
+def as_numpy_array(value: Any) -> np.ndarray:
+    """Public duck-typed tensor/array -> numpy bridge used by archive grammars.
+
+    This is the canonical way for substrate archive packers to accept torch,
+    MLX, or numpy arrays without importing a training framework in the archive
+    module itself. It intentionally returns a view when the source permits one;
+    callers that need a stable byte payload should still cast/copy to their
+    required dtype and contiguity.
+    """
+    return _as_numpy(value)
+
+
 def pack_state_dict_numpy(
     state_dict: Mapping[str, Any],
     *,
@@ -390,6 +402,113 @@ def conv2d_numpy(
 ) -> np.ndarray:
     """Stable decode-side alias for :func:`conv2d_nhwc` (NHWC 2D conv, fp32 accum)."""
     return conv2d_nhwc(x, weight, bias, padding=padding)
+
+
+def conv2d_nhwc_oihw(
+    x: np.ndarray,
+    weight_oihw: np.ndarray,
+    bias: np.ndarray | None = None,
+    *,
+    padding: int = 0,
+    groups: int = 1,
+) -> np.ndarray:
+    """NHWC convolution for PyTorch-style ``(out, in/groups, kH, kW)`` weights.
+
+    Most substrate archives store weights in PyTorch OIHW layout because that
+    is what training emits. This shared adapter prevents every numpy-portable
+    inflate from rewriting the same transpose/group logic locally.
+    """
+    x32 = to_float32(x)
+    w32 = to_float32(weight_oihw)
+    if x32.ndim != 4 or w32.ndim != 4:
+        raise ValueError(
+            f"conv2d_nhwc_oihw expects x NHWC 4-D and weight OIHW 4-D; "
+            f"got {x32.shape} and {w32.shape}"
+        )
+    if groups <= 0:
+        raise ValueError(f"groups must be positive; got {groups}")
+    c_in = int(x32.shape[-1])
+    c_out = int(w32.shape[0])
+    c_per_group = int(w32.shape[1])
+    if c_in % groups != 0 or c_out % groups != 0:
+        raise ValueError(
+            f"groups={groups} must divide input/output channels ({c_in}, {c_out})"
+        )
+    if c_per_group != c_in // groups:
+        raise ValueError(
+            f"weight input channels per group {c_per_group} != input/group {c_in // groups}"
+        )
+
+    if groups == 1:
+        weight_ohwi = np.transpose(w32, (0, 2, 3, 1))
+        return conv2d_nhwc(x32, weight_ohwi, bias, padding=padding)
+
+    out_parts: list[np.ndarray] = []
+    out_per_group = c_out // groups
+    in_per_group = c_in // groups
+    bias32 = None if bias is None else to_float32(bias)
+    for g in range(groups):
+        xs = x32[..., g * in_per_group : (g + 1) * in_per_group]
+        ws = w32[g * out_per_group : (g + 1) * out_per_group]
+        bs = None if bias32 is None else bias32[g * out_per_group : (g + 1) * out_per_group]
+        out_parts.append(conv2d_nhwc(xs, np.transpose(ws, (0, 2, 3, 1)), bs, padding=padding))
+    return np.concatenate(out_parts, axis=-1)
+
+
+def depthwise_conv2d_nhwc_oihw(
+    x: np.ndarray,
+    weight_oihw: np.ndarray,
+    bias: np.ndarray | None = None,
+    *,
+    padding: int = 0,
+) -> np.ndarray:
+    """Depthwise NHWC convolution for PyTorch ``(C, 1, kH, kW)`` weights.
+
+    Optimized for the common NeRV-family depthwise-separable block. It avoids
+    the generic grouped-conv inner channel loop while preserving PyTorch
+    ``groups=C`` semantics.
+    """
+    x32 = to_float32(x)
+    w32 = to_float32(weight_oihw)
+    if x32.ndim != 4 or w32.ndim != 4:
+        raise ValueError(
+            f"depthwise_conv2d_nhwc_oihw expects x NHWC 4-D and weight OIHW 4-D; "
+            f"got {x32.shape} and {w32.shape}"
+        )
+    n, h, w, c = x32.shape
+    if int(w32.shape[0]) != c or int(w32.shape[1]) != 1:
+        raise ValueError(
+            f"depthwise weight must have shape (C, 1, kH, kW) for C={c}; got {w32.shape}"
+        )
+    kh, kw = int(w32.shape[2]), int(w32.shape[3])
+    pad_h = pad_w = int(padding)
+    xp = np.pad(x32, ((0, 0), (pad_h, pad_h), (pad_w, pad_w), (0, 0)))
+    h_out = h + 2 * pad_h - kh + 1
+    w_out = w + 2 * pad_w - kw + 1
+    if h_out <= 0 or w_out <= 0:
+        raise ValueError(
+            f"kernel {(kh, kw)} with padding={padding} is larger than input {(h, w)}"
+        )
+    out = np.zeros((n, h_out, w_out, c), dtype=np.float32)
+    for di in range(kh):
+        for dj in range(kw):
+            tap = w32[:, 0, di, dj]
+            out += xp[:, di : di + h_out, dj : dj + w_out, :] * tap[None, None, None, :]
+    if bias is not None:
+        out = out + to_float32(bias)[None, None, None, :]
+    return out
+
+
+def pointwise_conv1x1_nhwc_oihw(
+    x: np.ndarray,
+    weight_oihw: np.ndarray,
+    bias: np.ndarray | None = None,
+) -> np.ndarray:
+    """Fast 1x1 NHWC convolution for PyTorch ``(out, in, 1, 1)`` weights."""
+    w32 = to_float32(weight_oihw)
+    if w32.ndim != 4 or int(w32.shape[2]) != 1 or int(w32.shape[3]) != 1:
+        raise ValueError(f"pointwise_conv1x1_nhwc_oihw expects (out,in,1,1); got {w32.shape}")
+    return linear(x, w32[:, :, 0, 0], bias)
 
 
 def bilinear_resize_nhwc(
@@ -931,10 +1050,14 @@ def write_numpy_portable_contest_runtime(
 # documentation / the AST verifier's allowlist). Maps stable decode-side name
 # to the callable.
 DECODE_PRIMITIVES: dict[str, Callable[..., Any]] = {
+    "as_numpy_array": as_numpy_array,
     "to_float32": to_float32,
     "linear": linear,
     "conv2d_nhwc": conv2d_nhwc,
     "conv2d_numpy": conv2d_numpy,
+    "conv2d_nhwc_oihw": conv2d_nhwc_oihw,
+    "depthwise_conv2d_nhwc_oihw": depthwise_conv2d_nhwc_oihw,
+    "pointwise_conv1x1_nhwc_oihw": pointwise_conv1x1_nhwc_oihw,
     "bilinear_upsample_2x_nhwc": bilinear_upsample_2x_nhwc,
     "bilinear_resize_nhwc": bilinear_resize_nhwc,
     "pixel_shuffle_2x_nhwc": pixel_shuffle_2x_nhwc,
@@ -963,11 +1086,14 @@ __all__ = [
     "NPSD_SCHEMA_VERSION",
     "InflateNotNumpyPortableError",
     "NumpyPortableStateDictError",
+    "as_numpy_array",
     "assert_inflate_is_numpy_portable",
     "bilinear_resize_nhwc",
     "bilinear_upsample_2x_nhwc",
     "conv2d_nhwc",
+    "conv2d_nhwc_oihw",
     "conv2d_numpy",
+    "depthwise_conv2d_nhwc_oihw",
     "film_modulate_numpy",
     "find_forbidden_framework_imports",
     "gelu",
@@ -977,6 +1103,7 @@ __all__ = [
     "mean",
     "pack_state_dict_numpy",
     "pixel_shuffle_2x_nhwc",
+    "pointwise_conv1x1_nhwc_oihw",
     "relu",
     "sigmoid",
     "sin",
