@@ -12,6 +12,7 @@ not a synthetic frame base).
 from __future__ import annotations
 
 import ast
+import tempfile
 from pathlib import Path
 
 import numpy as np
@@ -28,6 +29,8 @@ from tac.substrates.z5_predictive_coding_world_model.archive import (
 )
 from tac.substrates.z5_predictive_coding_world_model.inflate import (
     _decode_pair,
+    _raw_output_path_numpy,
+    _read_single_member_archive_bytes,
     _rollout_latents,
 )
 
@@ -116,6 +119,16 @@ def test_parse_archive_numpy_is_torch_free_in_code() -> None:
                     assert inner.value.id != "torch", node.name
 
 
+def test_archive_module_has_no_top_level_torch_or_mlx_import() -> None:
+    tree = ast.parse(_ARCHIVE_PATH.read_text(encoding="utf-8"))
+    for node in tree.body:
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                assert not alias.name.startswith(("torch", "mlx")), alias.name
+        if isinstance(node, ast.ImportFrom) and node.module:
+            assert not node.module.startswith(("torch", "mlx")), node.module
+
+
 def test_numpy_parse_matches_torch_parse_exactly() -> None:
     _model, blob = _build_model_and_blob()
     at = parse_archive(blob)
@@ -174,3 +187,48 @@ def test_predictor_is_operationally_consumed() -> None:
     # The full predictor produces different latents than the identity ablation
     # at every t >= 1 (the predictor is non-trivially consumed).
     assert np.abs(z_full[1:] - z_identity[1:]).max() > 1e-5
+
+
+def test_read_single_member_archive_bytes_accepts_0_bin_or_x() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        (root / "0.bin").write_bytes(b"zero")
+        assert _read_single_member_archive_bytes(root) == b"zero"
+        (root / "0.bin").unlink()
+        (root / "x").write_bytes(b"x")
+        assert _read_single_member_archive_bytes(root) == b"x"
+
+
+def test_read_single_member_archive_bytes_rejects_missing_or_ambiguous() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        try:
+            _read_single_member_archive_bytes(root)
+        except FileNotFoundError as exc:
+            assert "expected exactly one archive member" in str(exc)
+        else:  # pragma: no cover
+            raise AssertionError("expected missing archive member to fail")
+
+        (root / "0.bin").write_bytes(b"zero")
+        (root / "x").write_bytes(b"x")
+        try:
+            _read_single_member_archive_bytes(root)
+        except ValueError as exc:
+            assert "ambiguous archive members" in str(exc)
+        else:  # pragma: no cover
+            raise AssertionError("expected ambiguous archive members to fail")
+
+
+def test_raw_output_path_preserves_safe_relative_subdir_and_rejects_escape() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        assert _raw_output_path_numpy(root, "sub/video.mkv") == (
+            root / "sub" / "video.raw"
+        ).resolve(strict=False)
+        for bad in ("", "../video.mkv", "/tmp/video.mkv", "a//b.mkv"):
+            try:
+                _raw_output_path_numpy(root, bad)
+            except ValueError:
+                pass
+            else:  # pragma: no cover
+                raise AssertionError(f"expected unsafe name to fail: {bad!r}")

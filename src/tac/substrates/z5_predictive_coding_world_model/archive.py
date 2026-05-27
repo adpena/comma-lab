@@ -50,10 +50,12 @@ from __future__ import annotations
 import json
 import struct
 from dataclasses import dataclass
+from typing import Any
 
 import brotli  # type: ignore[import-not-found]
 import numpy as np
-import torch
+
+from tac.substrates._shared.numpy_portable_inflate import as_numpy_array
 
 Z5PCWM1_MAGIC: bytes = b"Z5WM"
 """Z5 predictive-coding world-model variant 1 archive magic."""
@@ -75,21 +77,21 @@ _BROTLI_QUALITY: int = 9
 class PredictiveCodingArchive:
     """Parsed Z5PCWM1 archive — the inflate-time data contract."""
 
-    encoder_state_dict: dict[str, torch.Tensor]
-    decoder_state_dict: dict[str, torch.Tensor]
-    predictor_state_dict: dict[str, torch.Tensor]
-    latent_init: torch.Tensor  # (latent_dim,) float32 dequantized
-    residuals: torch.Tensor    # (num_pairs, latent_dim) float32 dequantized
-    ego_motion: torch.Tensor   # (num_pairs, ego_motion_dim) float32 dequantized
+    encoder_state_dict: dict[str, Any]
+    decoder_state_dict: dict[str, Any]
+    predictor_state_dict: dict[str, Any]
+    latent_init: Any  # (latent_dim,) float32 dequantized
+    residuals: Any    # (num_pairs, latent_dim) float32 dequantized
+    ego_motion: Any   # (num_pairs, ego_motion_dim) float32 dequantized
     meta: dict[str, object]
     schema_version: int
 
 
-def _serialize_state_dict(sd: dict[str, torch.Tensor]) -> bytes:
+def _serialize_state_dict(sd: dict[str, Any]) -> bytes:
     """Serialize state_dict deterministically (matches Z4 pattern)."""
     parts: list[bytes] = []
     for key in sorted(sd.keys()):
-        tensor = sd[key].detach().to("cpu", dtype=torch.float16).contiguous()
+        tensor = np.ascontiguousarray(as_numpy_array(sd[key]), dtype=np.float16)
         key_bytes = key.encode("utf-8")
         if len(key_bytes) > 0xFFFF:
             raise ValueError(f"key {key!r} too long for u16")
@@ -102,12 +104,12 @@ def _serialize_state_dict(sd: dict[str, torch.Tensor]) -> bytes:
         header_fmt = f"<H{len(key_bytes)}sB" + "I" * len(shape)
         header = struct.pack(header_fmt, len(key_bytes), key_bytes, len(shape), *shape)
         parts.append(header)
-        parts.append(tensor.numpy().tobytes(order="C"))
+        parts.append(tensor.tobytes(order="C"))
     raw = b"".join(parts)
     return bytes(brotli.compress(raw, quality=_BROTLI_QUALITY))
 
 
-def _deserialize_numpy_state_dict(blob: bytes) -> dict[str, "np.ndarray"]:
+def _deserialize_numpy_state_dict(blob: bytes) -> dict[str, np.ndarray]:
     """Torch-free deserialize of the Z5PCWM1 length-prefixed fp16 state_dict blob.
 
     Reads the EXACT same byte format ``_serialize_state_dict`` produces, but
@@ -116,7 +118,7 @@ def _deserialize_numpy_state_dict(blob: bytes) -> dict[str, "np.ndarray"]:
     standing directive: ``torch`` is FORBIDDEN at decode time).
     """
     raw = brotli.decompress(blob)
-    sd: dict[str, "np.ndarray"] = {}
+    sd: dict[str, np.ndarray] = {}
     pos = 0
     while pos < len(raw):
         if pos + 2 > len(raw):
@@ -147,9 +149,12 @@ def _deserialize_numpy_state_dict(blob: bytes) -> dict[str, "np.ndarray"]:
     return sd
 
 
-def _deserialize_state_dict(blob: bytes) -> dict[str, torch.Tensor]:
+def _deserialize_state_dict(blob: bytes) -> dict[str, Any]:
+    import importlib
+
+    torch = importlib.import_module("torch")
     raw = brotli.decompress(blob)
-    sd: dict[str, torch.Tensor] = {}
+    sd: dict[str, Any] = {}
     pos = 0
 
     while pos < len(raw):
@@ -183,28 +188,29 @@ def _deserialize_state_dict(blob: bytes) -> dict[str, torch.Tensor]:
     return sd
 
 
-def _quantize_to_int8(t: torch.Tensor) -> tuple[torch.Tensor, float, float]:
+def _quantize_to_int8(t: Any) -> tuple[np.ndarray, float, float]:
     """Quantize a float tensor to int8 via min/max range.
 
     Per Catalog #161 the degenerate-range case (hi <= lo) clamps to -127
     so the decoded value is exactly ``lo``.
     """
-    if t.dtype not in (torch.float32, torch.float16):
-        raise ValueError(f"tensor must be float; got {t.dtype}")
-    f = t.detach().to(dtype=torch.float32, device="cpu")
+    arr = as_numpy_array(t)
+    if not np.issubdtype(arr.dtype, np.floating):
+        raise ValueError(f"tensor must be float; got {arr.dtype}")
+    f = np.ascontiguousarray(arr, dtype=np.float32)
     lo, hi = float(f.min()), float(f.max())
     if hi <= lo:
-        return torch.full_like(f, -127, dtype=torch.int8), 1.0, lo
+        return np.full(f.shape, -127, dtype=np.int8), 1.0, lo
     scale = (hi - lo) / 254.0
-    q_unsigned = ((f - lo) / scale).round().clamp(0.0, 254.0)
-    q = (q_unsigned - 127.0).to(torch.int8)
+    q_unsigned = np.clip(np.round((f - lo) / scale), 0.0, 254.0)
+    q = (q_unsigned - 127.0).astype(np.int8)
     return q, scale, lo
 
 
 def _dequantize_from_int8(
-    q: torch.Tensor, scale: float, zero_point: float
-) -> torch.Tensor:
-    q_unsigned = q.to(torch.float32) + 127.0
+    q: np.ndarray, scale: float, zero_point: float
+) -> np.ndarray:
+    q_unsigned = q.astype(np.float32) + 127.0
     return q_unsigned * float(scale) + float(zero_point)
 
 
@@ -242,12 +248,12 @@ def _make_predictive_coding_world_model_meta_block(
 
 
 def pack_archive(
-    encoder_state_dict: dict[str, torch.Tensor],
-    decoder_state_dict: dict[str, torch.Tensor],
-    predictor_state_dict: dict[str, torch.Tensor],
-    latent_init: torch.Tensor,
-    residuals: torch.Tensor,
-    ego_motion: torch.Tensor,
+    encoder_state_dict: dict[str, Any],
+    decoder_state_dict: dict[str, Any],
+    predictor_state_dict: dict[str, Any],
+    latent_init: Any,
+    residuals: Any,
+    ego_motion: Any,
     meta: dict[str, object],
     *,
     schema_version: int = Z5PCWM1_SCHEMA_VERSION,
@@ -258,23 +264,28 @@ def pack_archive(
     """Serialize trained substrate into Z5PCWM1 0.bin bytes."""
     if schema_version != Z5PCWM1_SCHEMA_VERSION:
         raise ValueError(f"unsupported schema version: {schema_version}")
-    if latent_init.dim() != 1:
-        raise ValueError(f"latent_init must be 1-D (latent_dim,); got {tuple(latent_init.shape)}")
-    if residuals.dim() != 2:
-        raise ValueError(f"residuals must be 2-D; got {tuple(residuals.shape)}")
-    if ego_motion.dim() != 2:
-        raise ValueError(f"ego_motion must be 2-D; got {tuple(ego_motion.shape)}")
-
-    latent_dim = int(latent_init.shape[0])
-    num_pairs = int(residuals.shape[0])
-    ego_motion_dim = int(ego_motion.shape[1])
-    if int(residuals.shape[1]) != latent_dim:
+    latent_init_arr = as_numpy_array(latent_init)
+    residuals_arr = as_numpy_array(residuals)
+    ego_motion_arr = as_numpy_array(ego_motion)
+    if latent_init_arr.ndim != 1:
         raise ValueError(
-            f"residuals second dim {residuals.shape[1]} != latent_dim {latent_dim}"
+            f"latent_init must be 1-D (latent_dim,); got {tuple(latent_init_arr.shape)}"
         )
-    if int(ego_motion.shape[0]) != num_pairs:
+    if residuals_arr.ndim != 2:
+        raise ValueError(f"residuals must be 2-D; got {tuple(residuals_arr.shape)}")
+    if ego_motion_arr.ndim != 2:
+        raise ValueError(f"ego_motion must be 2-D; got {tuple(ego_motion_arr.shape)}")
+
+    latent_dim = int(latent_init_arr.shape[0])
+    num_pairs = int(residuals_arr.shape[0])
+    ego_motion_dim = int(ego_motion_arr.shape[1])
+    if int(residuals_arr.shape[1]) != latent_dim:
         raise ValueError(
-            f"ego_motion first dim {ego_motion.shape[0]} != num_pairs {num_pairs}"
+            f"residuals second dim {residuals_arr.shape[1]} != latent_dim {latent_dim}"
+        )
+    if int(ego_motion_arr.shape[0]) != num_pairs:
+        raise ValueError(
+            f"ego_motion first dim {ego_motion_arr.shape[0]} != num_pairs {num_pairs}"
         )
     if num_pairs <= 0 or num_pairs > 0xFFFF:
         raise ValueError(f"num_pairs {num_pairs} out of u16 range")
@@ -283,12 +294,12 @@ def pack_archive(
     if ego_motion_dim <= 0 or ego_motion_dim > 0xFFFF:
         raise ValueError(f"ego_motion_dim {ego_motion_dim} out of u16 range")
 
-    q_latent_init, scale_li, zp_li = _quantize_to_int8(latent_init)
-    q_residuals, scale_r, zp_r = _quantize_to_int8(residuals)
-    q_ego, scale_e, zp_e = _quantize_to_int8(ego_motion)
-    latent_init_bytes = q_latent_init.contiguous().numpy().tobytes()
-    residuals_bytes = q_residuals.contiguous().numpy().tobytes()
-    ego_motion_bytes = q_ego.contiguous().numpy().tobytes()
+    q_latent_init, scale_li, zp_li = _quantize_to_int8(latent_init_arr)
+    q_residuals, scale_r, zp_r = _quantize_to_int8(residuals_arr)
+    q_ego, scale_e, zp_e = _quantize_to_int8(ego_motion_arr)
+    latent_init_bytes = np.ascontiguousarray(q_latent_init).tobytes()
+    residuals_bytes = np.ascontiguousarray(q_residuals).tobytes()
+    ego_motion_bytes = np.ascontiguousarray(q_ego).tobytes()
 
     encoder_blob = _serialize_state_dict(encoder_state_dict)
     decoder_blob = _serialize_state_dict(decoder_state_dict)
@@ -339,6 +350,9 @@ def pack_archive(
 
 def parse_archive(blob: bytes) -> PredictiveCodingArchive:
     """Parse Z5PCWM1 0.bin bytes back into all sections."""
+    import importlib
+
+    torch = importlib.import_module("torch")
     if len(blob) < Z5PCWM1_HEADER_SIZE:
         raise ValueError(
             f"archive too short ({len(blob)} bytes; need >= {Z5PCWM1_HEADER_SIZE})"
@@ -403,17 +417,13 @@ def parse_archive(blob: bytes) -> PredictiveCodingArchive:
     predictor_sd = _deserialize_state_dict(predictor_blob)
     meta = json.loads(meta_blob.decode("utf-8"))
 
-    import numpy as np
-
-    q_li = torch.from_numpy(
-        np.frombuffer(latent_init_blob, dtype=np.int8).copy()
-    ).view(latent_dim)
-    q_r = torch.from_numpy(
-        np.frombuffer(residuals_blob, dtype=np.int8).copy()
-    ).view(num_pairs, latent_dim)
-    q_e = torch.from_numpy(
-        np.frombuffer(ego_motion_blob, dtype=np.int8).copy()
-    ).view(num_pairs, ego_motion_dim)
+    q_li = np.frombuffer(latent_init_blob, dtype=np.int8).copy().reshape(latent_dim)
+    q_r = np.frombuffer(residuals_blob, dtype=np.int8).copy().reshape(
+        num_pairs, latent_dim
+    )
+    q_e = np.frombuffer(ego_motion_blob, dtype=np.int8).copy().reshape(
+        num_pairs, ego_motion_dim
+    )
 
     scale_li = float(meta.pop("_latent_init_scale"))
     zp_li = float(meta.pop("_latent_init_zp"))
@@ -422,9 +432,9 @@ def parse_archive(blob: bytes) -> PredictiveCodingArchive:
     scale_e = float(meta.pop("_ego_motion_scale"))
     zp_e = float(meta.pop("_ego_motion_zp"))
 
-    latent_init = _dequantize_from_int8(q_li, scale_li, zp_li)
-    residuals = _dequantize_from_int8(q_r, scale_r, zp_r)
-    ego_motion = _dequantize_from_int8(q_e, scale_e, zp_e)
+    latent_init = torch.from_numpy(_dequantize_from_int8(q_li, scale_li, zp_li))
+    residuals = torch.from_numpy(_dequantize_from_int8(q_r, scale_r, zp_r))
+    ego_motion = torch.from_numpy(_dequantize_from_int8(q_e, scale_e, zp_e))
 
     return PredictiveCodingArchive(
         encoder_state_dict=encoder_sd,
@@ -449,12 +459,12 @@ class PredictiveCodingArchiveNumpy:
     provenance-only.
     """
 
-    encoder_state_dict: dict[str, "np.ndarray"]
-    decoder_state_dict: dict[str, "np.ndarray"]
-    predictor_state_dict: dict[str, "np.ndarray"]
-    latent_init: "np.ndarray"  # (latent_dim,) fp32
-    residuals: "np.ndarray"    # (num_pairs, latent_dim) fp32
-    ego_motion: "np.ndarray"   # (num_pairs, ego_motion_dim) fp32
+    encoder_state_dict: dict[str, np.ndarray]
+    decoder_state_dict: dict[str, np.ndarray]
+    predictor_state_dict: dict[str, np.ndarray]
+    latent_init: np.ndarray  # (latent_dim,) fp32
+    residuals: np.ndarray    # (num_pairs, latent_dim) fp32
+    ego_motion: np.ndarray   # (num_pairs, ego_motion_dim) fp32
     meta: dict[str, object]
     schema_version: int
 
@@ -700,13 +710,13 @@ Z5PCWM1_SECTION_ROLES: dict[str, str] = {
 
 
 __all__ = [
-    "PredictiveCodingArchive",
-    "PredictiveCodingArchiveNumpy",
     "Z5PCWM1_HEADER_FMT",
     "Z5PCWM1_HEADER_SIZE",
     "Z5PCWM1_MAGIC",
     "Z5PCWM1_SCHEMA_VERSION",
     "Z5PCWM1_SECTION_ROLES",
+    "PredictiveCodingArchive",
+    "PredictiveCodingArchiveNumpy",
     "pack_archive",
     "parse_archive",
     "parse_archive_numpy",
