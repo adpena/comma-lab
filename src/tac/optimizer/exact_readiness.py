@@ -1389,13 +1389,132 @@ def _runtime_consumption_pr101_binding_blockers(
     return blockers, facts
 
 
-def _family_agnostic_runtime_proof_passed(proof: Mapping[str, Any]) -> bool:
-    if proof.get("runtime_consumption_proof_passed") is True:
-        return True
-    if proof.get("passed") is True:
-        return True
+def _list_blockers(value: object, *, missing_blocker: str) -> list[str]:
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        return [missing_blocker]
+    return [str(item) for item in value if str(item)]
+
+
+def _family_agnostic_runtime_probe_has_evidence(probe: Mapping[str, Any]) -> bool:
+    for key, value in probe.items():
+        if key in {"schema", "passed", "blockers"}:
+            continue
+        if key.endswith("_sha256") and is_sha256(value):
+            return True
+        if key.endswith("_sha256s") and isinstance(value, Mapping) and value:
+            return True
+        if key.endswith("_passed") and value is True:
+            return True
+        if key.endswith("_proofs") and isinstance(value, list) and value:
+            return True
+    return False
+
+
+def _family_agnostic_archive_path_blockers(
+    proof: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    queue_dir: Path | None,
+) -> list[str]:
+    candidate_archive = proof.get("candidate_archive")
+    if not isinstance(candidate_archive, Mapping):
+        return []
+    archive_ref = candidate_archive.get("path")
+    archive_path = resolve_path(archive_ref, repo_root=repo_root, queue_dir=queue_dir)
+    if archive_path is None:
+        return ["runtime_consumption_proof_candidate_archive_path_missing"]
+    blockers: list[str] = []
+    if not archive_path.is_file():
+        return ["runtime_consumption_proof_candidate_archive_file_missing"]
+    expected_sha = candidate_archive.get("sha256")
+    if is_sha256(expected_sha) and sha256_file(archive_path) != str(expected_sha).lower():
+        blockers.append("runtime_consumption_proof_candidate_archive_file_sha_mismatch")
+    expected_bytes = candidate_archive.get("bytes")
+    if (
+        isinstance(expected_bytes, int)
+        and not isinstance(expected_bytes, bool)
+        and archive_path.stat().st_size != expected_bytes
+    ):
+        blockers.append("runtime_consumption_proof_candidate_archive_file_bytes_mismatch")
+    return blockers
+
+
+def _family_agnostic_runtime_proof_semantic_blockers(
+    proof: Mapping[str, Any],
+    *,
+    proof_path: Path,
+    repo_root: Path,
+    queue_dir: Path | None,
+) -> list[str]:
+    schema = proof.get("schema")
+    blockers = _list_blockers(
+        proof.get("blockers"),
+        missing_blocker="runtime_consumption_proof_blockers_not_list",
+    )
+    if schema == "family_agnostic_runtime_consumption_proof_verification.v1":
+        if proof.get("receiver_contract_satisfied") is not True:
+            blockers.append("runtime_consumption_proof_receiver_contract_not_satisfied")
+        if proof.get("proof_present") is not True:
+            blockers.append("runtime_consumption_proof_source_proof_not_present")
+        nested_ref = proof.get("proof_path")
+        nested_path = resolve_path(nested_ref, repo_root=repo_root, queue_dir=queue_dir)
+        if nested_path is None:
+            blockers.append("runtime_consumption_proof_source_path_missing")
+        elif not nested_path.is_file():
+            blockers.append("runtime_consumption_proof_source_file_missing")
+        elif nested_path.resolve(strict=False) == proof_path.resolve(strict=False):
+            blockers.append("runtime_consumption_proof_source_path_self_reference")
+        else:
+            try:
+                nested_raw = read_json(nested_path)
+            except (OSError, json.JSONDecodeError) as exc:
+                blockers.append(f"runtime_consumption_proof_source_json_invalid:{exc}")
+            else:
+                if not isinstance(nested_raw, dict):
+                    blockers.append("runtime_consumption_proof_source_not_object")
+                elif nested_raw.get("schema") != "family_agnostic_runtime_consumption_proof_v1":
+                    blockers.append("runtime_consumption_proof_source_schema_mismatch")
+                else:
+                    nested_blockers = _family_agnostic_runtime_proof_semantic_blockers(
+                        nested_raw,
+                        proof_path=nested_path,
+                        repo_root=repo_root,
+                        queue_dir=queue_dir,
+                    )
+                    blockers.extend(
+                        f"source:{blocker}" for blocker in nested_blockers
+                    )
+        return blockers
+
+    if proof.get("receiver_contract_satisfied") is not True:
+        blockers.append("runtime_consumption_proof_receiver_contract_not_satisfied")
+    if proof.get("runtime_consumption_proof_passed") is not True:
+        blockers.append("runtime_consumption_proof_passed_flag_missing")
+    if proof.get("passed") is not True:
+        blockers.append("runtime_consumption_proof_top_level_passed_missing")
     probe = proof.get("runtime_consumption_probe")
-    return isinstance(probe, Mapping) and probe.get("passed") is True
+    if not isinstance(probe, Mapping):
+        blockers.append("runtime_consumption_proof_runtime_probe_missing")
+    else:
+        probe_blockers = _list_blockers(
+            probe.get("blockers"),
+            missing_blocker="runtime_consumption_probe_blockers_not_list",
+        )
+        blockers.extend(f"runtime_probe:{blocker}" for blocker in probe_blockers)
+        if probe.get("passed") is not True:
+            blockers.append("runtime_consumption_probe_not_passed")
+        if not _family_agnostic_runtime_probe_has_evidence(probe):
+            blockers.append("runtime_consumption_probe_evidence_missing")
+    blockers.extend(
+        _family_agnostic_archive_path_blockers(
+            proof,
+            repo_root=repo_root,
+            queue_dir=queue_dir,
+        )
+    )
+    return blockers
 
 
 def _family_agnostic_runtime_proof_archive_sha(proof: Mapping[str, Any]) -> str | None:
@@ -1582,11 +1701,18 @@ def validate_runtime_consumption_proof(
         blockers.extend(binding_blockers)
         facts.update(binding_facts)
     elif proof_schema in FAMILY_AGNOSTIC_RUNTIME_CONSUMPTION_PROOF_SCHEMAS:
-        if not _family_agnostic_runtime_proof_passed(proof_raw) and not (
+        semantic_blockers = _family_agnostic_runtime_proof_semantic_blockers(
+            proof_raw,
+            proof_path=proof_path,
+            repo_root=repo_root,
+            queue_dir=queue_dir,
+        )
+        if semantic_blockers and not (
             _is_renderer_payload_dfl1_candidate(row)
             and proof_backed_by_full_frame_parity
         ):
             blockers.append("runtime_consumption_proof_not_proven")
+            blockers.extend(semantic_blockers)
         for field in ("target_kind", "materializer_id", "receiver_contract_kind"):
             expected = row.get(field)
             if not isinstance(expected, str) or not expected.strip():

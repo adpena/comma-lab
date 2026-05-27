@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import sys
@@ -40,6 +41,14 @@ def _write_json(path: Path, payload: object) -> Path:
 def _assert_false_authority(payload: dict[str, object]) -> None:
     for key, value in FALSE_AUTHORITY.items():
         assert payload.get(key) is value, key
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _materialization_plan() -> dict[str, object]:
@@ -120,6 +129,7 @@ def _receiver_consumed_manifest(
     proof_path = tmp_path / f"{candidate_chain_id}.proof.json"
     archive_path.write_bytes(b"PK\x05\x06" + b"\0" * 18)
     proof_path.write_text('{"receiver_consumed": true}\n', encoding="utf-8")
+    archive_sha = _sha256_file(archive_path)
     manifest: dict[str, object] = {
         "schema": "frontier_rate_attack_materializer_manifest_fixture.v1",
         "materializer_id": "fixture_receiver_consumed_materializer",
@@ -128,7 +138,7 @@ def _receiver_consumed_manifest(
         "byte_closed_candidate_emitted": True,
         "candidate_archive": {
             "path": str(archive_path),
-            "sha256": "a" * 64,
+            "sha256": archive_sha,
             "bytes": archive_path.stat().st_size,
         },
         "source_archive": {
@@ -382,6 +392,34 @@ def test_repair_budget_materializer_binding_report_preserves_parent_fail_closed(
     assert materialized["candidate_archive_materialized_count"] == 1
     assert materialized["repair_dynamics_prior_count"] == 2
     assert materialized["repair_dynamics_palette_prior"]["frame1_mode_count"] == 0
+
+
+def test_repair_budget_materializer_binding_refuses_schema_only_manifest_booleans(
+    tmp_path: Path,
+) -> None:
+    plan = _materialization_plan()
+    parent_id = str(plan["parent_candidate_chain_id"])
+    manifest = _receiver_consumed_manifest(
+        tmp_path,
+        candidate_chain_id=parent_id,
+    )
+    Path(str(manifest["candidate_archive"]["path"])).unlink()  # type: ignore[index]
+    Path(str(manifest["runtime_consumption_proof_path"])).unlink()
+
+    binding_report = build_frontier_repair_budget_materializer_binding_report(
+        repo_root=REPO_ROOT,
+        repair_budget_materialization_plan=plan,
+        materializer_manifests=[manifest],
+    )
+
+    parent_row = binding_report["binding_rows"][0]
+    assert parent_row["candidate_archive_materialized"] is False
+    assert parent_row["receiver_consumed"] is False
+    assert "direct_materializer_manifest_not_receiver_consumed" in parent_row["blockers"]
+    assert "candidate_archive_file_missing" in parent_row["blockers"]
+    assert "runtime_consumption_proof_file_missing" in parent_row["blockers"]
+    assert binding_report["candidate_archive_materialized_count"] == 0
+    assert binding_report["receiver_consumed_count"] == 0
 
 
 def test_repair_budget_child_manifest_requires_component_replay_for_execution(

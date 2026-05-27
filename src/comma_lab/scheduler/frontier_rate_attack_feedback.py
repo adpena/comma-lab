@@ -740,6 +740,14 @@ def _resolve_path(path: str | Path, *, repo_root: Path) -> Path:
     return candidate.resolve(strict=False)
 
 
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def _load_json(path: Path) -> dict[str, Any]:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
@@ -8279,6 +8287,7 @@ def _materializer_manifest_record(
     *,
     manifest: Mapping[str, Any],
     manifest_path: str | Path | None,
+    repo_root: Path,
 ) -> dict[str, Any]:
     require_no_truthy_authority_fields(
         manifest,
@@ -8301,16 +8310,12 @@ def _materializer_manifest_record(
     )
     candidate_archive_path = str(candidate_archive.get("path") or "").strip()
     candidate_archive_sha = str(candidate_archive.get("sha256") or "").strip()
+    candidate_archive_bytes = candidate_archive.get("bytes")
     runtime_proof_path = str(
         manifest.get("runtime_consumption_proof_path")
         or receiver_verification.get("proof_path")
         or ""
     ).strip()
-    runtime_proof_present = (
-        bool(runtime_proof_path)
-        or receiver_verification.get("proof_present") is True
-        or receiver_verification.get("runtime_consumption_proof_passed") is True
-    )
     receiver_contract_satisfied = (
         manifest.get("receiver_contract_satisfied") is True
         or receiver_verification.get("receiver_contract_satisfied") is True
@@ -8328,6 +8333,64 @@ def _materializer_manifest_record(
             *_string_list(component_replay.get("component_response_replay_blockers")),
         ]
     )
+    candidate_archive_verified = False
+    proof_blockers: list[str] = []
+    if byte_closed:
+        if not candidate_archive_path:
+            readiness_blockers.append("candidate_archive_path_missing")
+        elif not candidate_archive_sha:
+            readiness_blockers.append("candidate_archive_sha256_missing")
+        else:
+            archive_path = _resolve_path(candidate_archive_path, repo_root=repo_root)
+            if not archive_path.is_file():
+                readiness_blockers.append("candidate_archive_file_missing")
+            else:
+                actual_sha = _sha256_file(archive_path)
+                if actual_sha != candidate_archive_sha:
+                    readiness_blockers.append("candidate_archive_file_sha256_mismatch")
+                elif (
+                    isinstance(candidate_archive_bytes, int)
+                    and not isinstance(candidate_archive_bytes, bool)
+                    and archive_path.stat().st_size != candidate_archive_bytes
+                ):
+                    readiness_blockers.append("candidate_archive_file_bytes_mismatch")
+                else:
+                    candidate_archive_verified = True
+    runtime_proof_verified = False
+    if runtime_proof_path:
+        proof_path = _resolve_path(runtime_proof_path, repo_root=repo_root)
+        if not proof_path.is_file():
+            proof_blockers.append("runtime_consumption_proof_file_missing")
+        else:
+            runtime_proof_verified = True
+            try:
+                proof_payload = _load_json(proof_path)
+            except FrontierRateAttackFeedbackError:
+                proof_blockers.append("runtime_consumption_proof_json_invalid")
+            else:
+                proof_blockers.extend(
+                    f"runtime_consumption_proof:{blocker}"
+                    for blocker in _string_list(proof_payload.get("blockers"))
+                )
+    elif (
+        receiver_verification.get("proof_present") is True
+        or receiver_verification.get("runtime_consumption_proof_passed") is True
+    ):
+        proof_blockers.append("runtime_consumption_proof_path_missing")
+    receiver_blockers = [
+        f"receiver_verification:{blocker}"
+        for blocker in _string_list(receiver_verification.get("blockers"))
+    ]
+    readiness_blockers.extend(proof_blockers)
+    readiness_blockers.extend(receiver_blockers)
+    readiness_blockers = _unique_strings(readiness_blockers)
+    runtime_proof_present = runtime_proof_verified
+    receiver_consumed = bool(
+        runtime_proof_verified
+        and receiver_contract_satisfied
+        and not proof_blockers
+        and not receiver_blockers
+    )
     return {
         "schema": "frontier_rate_attack_materializer_manifest_binding_input.v1",
         "manifest_path": str(manifest_path or ""),
@@ -8338,7 +8401,7 @@ def _materializer_manifest_record(
         "byte_closed_candidate_emitted": byte_closed,
         "candidate_archive_path": candidate_archive_path or None,
         "candidate_archive_sha256": candidate_archive_sha or None,
-        "candidate_archive_bytes": candidate_archive.get("bytes"),
+        "candidate_archive_bytes": candidate_archive_bytes,
         "source_archive_path": source_archive.get("path"),
         "source_archive_sha256": source_archive.get("sha256"),
         "runtime_consumption_proof_path": runtime_proof_path or None,
@@ -8361,10 +8424,8 @@ def _materializer_manifest_record(
         "readiness_blockers": readiness_blockers,
         "selector_palette_modes": selector_palette_modes,
         "repair_dynamics_prior": repair_dynamics_prior,
-        "candidate_archive_materialized": bool(
-            byte_closed and candidate_archive_path and candidate_archive_sha
-        ),
-        "receiver_consumed": bool(runtime_proof_present and receiver_contract_satisfied),
+        "candidate_archive_materialized": bool(byte_closed and candidate_archive_verified),
+        "receiver_consumed": receiver_consumed,
         **FALSE_AUTHORITY,
     }
 
@@ -8407,6 +8468,7 @@ def _load_materializer_manifest_records(
                     _materializer_manifest_record(
                         manifest=child_manifest,
                         manifest_path=child_path,
+                        repo_root=repo,
                     )
                 )
             return
@@ -8414,6 +8476,7 @@ def _load_materializer_manifest_records(
             _materializer_manifest_record(
                 manifest=manifest,
                 manifest_path=manifest_path,
+                repo_root=repo,
             )
         )
 
