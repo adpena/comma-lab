@@ -230,21 +230,34 @@ def test_boosting_residual_bounded_by_gain_clamp():
     assert float(clamped.abs().max()) <= cfg.boosting_gain_clamp + 1e-6
 
 
-def test_full_main_raises_not_implemented_at_l0_scaffold():
-    """L0 SCAFFOLD posture: trainer _full_main MUST raise NotImplementedError.
+def test_full_main_implemented_and_cuda_gated(tmp_path):
+    """CLASS-SHIFT-FULL-MAIN-CLUSTER 2026-05-27: _full_main IMPLEMENTED + CUDA-gated.
 
-    Per Catalog #240 (recipe-vs-trainer-state consistency) + Catalog #315
-    (OPTIMAL FORM before paid dispatch) + Catalog #325 (per-substrate
-    symposium): the boost_nerv trainer's full path is council-gated.
+    The L0 SCAFFOLD NotImplementedError is extinguished: ``_full_main`` now
+    routes the canonical score-aware training loop through
+    ``run_pact_nerv_score_aware_training``. Per CLAUDE.md "MPS auth eval is
+    NOISE" + Catalog #1, the full (non-smoke) path is CUDA-required; invoking
+    it with ``--device cpu`` refuses via ``device_or_die`` (SystemExit),
+    proving the path wires correctly without firing paid GPU. PAID DISPATCH
+    stays gated by ``dispatch_enabled: false`` + ``research_only: true`` on the
+    recipe per Catalog #325 (code complete, trigger gated).
     """
-    import argparse
     import importlib
+    import inspect
+
+    import pytest
 
     trainer = importlib.import_module("experiments.train_substrate_boost_nerv")
-    ns = argparse.Namespace(output_dir=None, epochs=1, smoke=False, device="cpu")
-    try:
-        trainer._full_main(ns)
-    except NotImplementedError as exc:
-        assert "OPERATOR-GATED" in str(exc) or "L0 SCAFFOLD" in str(exc)
-    else:  # pragma: no cover
-        raise AssertionError("expected NotImplementedError per L0 SCAFFOLD posture")
+    src = inspect.getsource(trainer._full_main)
+    assert "raise NotImplementedError" not in src, (
+        "_full_main NotImplementedError must be extinguished per "
+        "CLASS-SHIFT-FULL-MAIN-CLUSTER"
+    )
+    assert "run_pact_nerv_score_aware_training" in src, (
+        "_full_main must route through the canonical shared training loop"
+    )
+    args = trainer._build_parser().parse_args(
+        ["--output-dir", str(tmp_path / "out"), "--device", "cpu", "--epochs", "1"]
+    )
+    with pytest.raises(SystemExit):
+        trainer._full_main(args)
