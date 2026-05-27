@@ -1106,8 +1106,15 @@ def build_pair_frame_5d_coverage_acquisition_queue(
 
     followup_readiness_report = out_root / "followup_readiness_report.json"
     followup_execution_queue = out_root / "followup_execution_queue.json"
+    followup_execution_worker_result = (
+        out_root / "followup_execution_worker_result.json"
+    )
     followup_readiness_report_ref = _repo_rel(followup_readiness_report, repo)
     followup_execution_queue_ref = _repo_rel(followup_execution_queue, repo)
+    followup_execution_worker_result_ref = _repo_rel(
+        followup_execution_worker_result,
+        repo,
+    )
     experiments.append(
         {
             "id": "audit_blocked_followup_requests",
@@ -1117,6 +1124,7 @@ def build_pair_frame_5d_coverage_acquisition_queue(
             "tags": [
                 "pair-frame-5d-canvas",
                 "coverage-followup-readiness",
+                "coverage-followup-execution",
                 "blocked-input-refusal",
                 "no-score-authority",
             ],
@@ -1126,8 +1134,14 @@ def build_pair_frame_5d_coverage_acquisition_queue(
                 "canvas_path": canvas_ref,
                 "followup_readiness_report_path": followup_readiness_report_ref,
                 "followup_execution_queue_path": followup_execution_queue_ref,
+                "followup_execution_worker_result_path": (
+                    followup_execution_worker_result_ref
+                ),
                 "blocked_work_order_ids": blocked_work_order_ids,
-                "allowed_use": "local_encoder_side_coverage_followup_readiness_only",
+                "allowed_use": (
+                    "local_encoder_side_coverage_followup_readiness_and_"
+                    "bounded_mlx_execution_only"
+                ),
                 **FALSE_AUTHORITY,
             },
             "steps": [
@@ -1188,6 +1202,68 @@ def build_pair_frame_5d_coverage_acquisition_queue(
                     "telemetry": {
                         "artifact_paths": [followup_execution_queue_ref],
                         "input_artifact_paths": [followup_readiness_report_ref],
+                        "recursive": False,
+                        "include_postcondition_paths": True,
+                    },
+                },
+                {
+                    "id": "validate_followup_execution_queue",
+                    "kind": "command",
+                    "requires": ["emit_followup_execution_queue"],
+                    "command": [
+                        ".venv/bin/python",
+                        "tools/experiment_queue.py",
+                        "--queue",
+                        followup_execution_queue_ref,
+                        "validate",
+                    ],
+                    "resources": {"kind": "local_cpu"},
+                    "timeout_seconds": 120,
+                    "postconditions": [],
+                    "telemetry": {
+                        "input_artifact_paths": [followup_execution_queue_ref],
+                        "recursive": False,
+                    },
+                },
+                {
+                    "id": "run_followup_execution_queue_bounded_local",
+                    "kind": "command",
+                    "requires": ["validate_followup_execution_queue"],
+                    "command": [
+                        ".venv/bin/python",
+                        "tools/experiment_queue.py",
+                        "--queue",
+                        followup_execution_queue_ref,
+                        "run-worker",
+                        "--execute",
+                        "--max-steps",
+                        "4",
+                        "--max-experiments",
+                        "2",
+                        "--max-parallel",
+                        "1",
+                        "--output",
+                        followup_execution_worker_result_ref,
+                    ],
+                    "resources": {"kind": "local_cpu"},
+                    "timeout_seconds": 900,
+                    "postconditions": [
+                        {
+                            "type": "json_equals",
+                            "path": followup_execution_worker_result_ref,
+                            "key": "schema",
+                            "equals": WORKER_RESULT_SCHEMA,
+                        },
+                        {
+                            "type": "json_equals",
+                            "path": followup_execution_worker_result_ref,
+                            "key": "failure_count",
+                            "equals": 0,
+                        },
+                    ],
+                    "telemetry": {
+                        "artifact_paths": [followup_execution_worker_result_ref],
+                        "input_artifact_paths": [followup_execution_queue_ref],
                         "recursive": False,
                         "include_postcondition_paths": True,
                     },

@@ -721,6 +721,9 @@ def test_build_pair_frame_5d_coverage_acquisition_queue_shape(
     assert readiness["metadata"]["followup_execution_queue_path"].endswith(
         "followup_execution_queue.json"
     )
+    assert readiness["metadata"]["followup_execution_worker_result_path"].endswith(
+        "followup_execution_worker_result.json"
+    )
     assert readiness["steps"][0]["command"][1] == (
         "tools/audit_5d_coverage_followup_requests.py"
     )
@@ -728,6 +731,26 @@ def test_build_pair_frame_5d_coverage_acquisition_queue_shape(
     assert readiness["steps"][1]["command"][1] == (
         "tools/build_5d_coverage_followup_execution_queue.py"
     )
+    assert readiness["steps"][2]["id"] == "validate_followup_execution_queue"
+    assert readiness["steps"][2]["command"] == [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        readiness["metadata"]["followup_execution_queue_path"],
+        "validate",
+    ]
+    assert readiness["steps"][3]["id"] == "run_followup_execution_queue_bounded_local"
+    assert readiness["steps"][3]["command"][:5] == [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        readiness["metadata"]["followup_execution_queue_path"],
+        "run-worker",
+    ]
+    assert readiness["steps"][3]["command"][-2:] == [
+        "--output",
+        readiness["metadata"]["followup_execution_worker_result_path"],
+    ]
     refresh = queue["experiments"][-1]
     assert refresh["id"] == "refresh_reaudit_and_refire_extended_operators"
     assert refresh["metadata"]["external_blocking_work_order_ids"] == [

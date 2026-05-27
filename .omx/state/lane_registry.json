@@ -59171,6 +59171,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_pair_frame_5d_coverage_followup_execution_20260527",
+      "name": "5D coverage follow-up execution queue",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "self-executing 5D follow-up child queue wired in acquisition DAG; ruff + 20 focused tests + 50 frontier feedback tests pass"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_5d_followup_self_execution_20260527T062903Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -59180,5 +59221,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-27T05:35:15Z"
+  "updated_at": "2026-05-27T06:30:13Z"
 }

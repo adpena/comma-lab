@@ -224,6 +224,9 @@ def test_refresh_artifacts_emit_pair_frame_5d_extended_operator_queue(
     assert audit["score_claim"] is False
     assert len(acquisition_queue["experiments"]) == audit["work_order_count"] + 2
     assert acquisition_queue["experiments"][-2]["id"] == "audit_blocked_followup_requests"
+    assert acquisition_queue["experiments"][-2]["steps"][-1]["id"] == (
+        "run_followup_execution_queue_bounded_local"
+    )
     report = json.loads(
         (output_dir / "feedback_refresh_report.json").read_text(encoding="utf-8")
     )
@@ -240,6 +243,15 @@ def test_refresh_artifacts_emit_pair_frame_5d_extended_operator_queue(
         ]
         == acquisition_queue_ref
     )
+    followup_queue_ref = report["pair_frame_5d_coverage_acquisition_queue_summary"][
+        "followup_execution_queue_path"
+    ]
+    assert followup_queue_ref.endswith(
+        "pair_frame_5d_coverage_acquisition/followup_execution_queue.json"
+    )
+    assert report["pair_frame_5d_coverage_acquisition_queue_summary"][
+        "followup_execution_bounded_local_run_by_queue"
+    ] is True
     assert (
         report["pair_frame_5d_coverage_acquisition_queue_summary"][
             "coverage_verdict"
@@ -256,6 +268,24 @@ def test_refresh_artifacts_emit_pair_frame_5d_extended_operator_queue(
             "validate",
         ]
     )
+    assert report["operator_commands"][
+        "validate_pair_frame_5d_followup_execution_queue_after_acquisition"
+    ] == [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        followup_queue_ref,
+        "validate",
+    ]
+    assert report["operator_commands"][
+        "run_pair_frame_5d_followup_execution_queue_bounded_local_after_acquisition"
+    ][:5] == [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        followup_queue_ref,
+        "run-worker",
+    ]
 
 
 def test_autonomous_parent_queue_binds_pair_frame_5d_child_when_present(

@@ -626,6 +626,24 @@ def write_frontier_refresh_artifacts(
                 coverage_acquisition_queue_path = (
                     out / "pair_frame_5d_coverage_acquisition_queue.json"
                 )
+                followup_execution_queue_path = (
+                    out
+                    / "pair_frame_5d_coverage_acquisition"
+                    / "followup_execution_queue.json"
+                )
+                followup_execution_worker_result_path = (
+                    out
+                    / "pair_frame_5d_coverage_acquisition"
+                    / "followup_execution_worker_result.json"
+                )
+                followup_execution_queue_ref = repo_rel(
+                    followup_execution_queue_path,
+                    repo_root,
+                )
+                followup_execution_worker_result_ref = repo_rel(
+                    followup_execution_worker_result_path,
+                    repo_root,
+                )
                 write_json_artifact(
                     coverage_acquisition_queue_path,
                     dict(coverage_acquisition_queue),
@@ -644,10 +662,17 @@ def write_frontier_refresh_artifacts(
                     "experiment_count": len(
                         coverage_acquisition_queue.get("experiments") or []
                     ),
+                    "followup_execution_queue_path": followup_execution_queue_ref,
+                    "followup_execution_worker_result_path": (
+                        followup_execution_worker_result_ref
+                    ),
+                    "followup_execution_emitted_by_queue": True,
+                    "followup_execution_bounded_local_run_by_queue": True,
                     "work_order_count": coverage_audit.get("work_order_count"),
                     "coverage_verdict": coverage_audit.get("verdict"),
                     "allowed_use": (
-                        "local_encoder_side_coverage_acquisition_planning_only"
+                        "local_encoder_side_coverage_acquisition_and_bounded_"
+                        "mlx_followup_execution_only"
                     ),
                     **FALSE_AUTHORITY,
                 }
@@ -1516,6 +1541,40 @@ def write_frontier_refresh_artifacts(
             "--max-parallel",
             "1",
         ]
+        coverage_summary = report_to_write.get(
+            "pair_frame_5d_coverage_acquisition_queue_summary"
+        )
+        followup_execution_queue = (
+            coverage_summary.get("followup_execution_queue_path")
+            if isinstance(coverage_summary, Mapping)
+            else None
+        )
+        if isinstance(followup_execution_queue, str) and followup_execution_queue:
+            operator_commands[
+                "validate_pair_frame_5d_followup_execution_queue_after_acquisition"
+            ] = [
+                ".venv/bin/python",
+                "tools/experiment_queue.py",
+                "--queue",
+                followup_execution_queue,
+                "validate",
+            ]
+            operator_commands[
+                "run_pair_frame_5d_followup_execution_queue_bounded_local_after_acquisition"
+            ] = [
+                ".venv/bin/python",
+                "tools/experiment_queue.py",
+                "--queue",
+                followup_execution_queue,
+                "run-worker",
+                "--execute",
+                "--max-steps",
+                "4",
+                "--max-experiments",
+                "2",
+                "--max-parallel",
+                "1",
+            ]
     if "autonomous_chain_optimization_queue" in artifacts:
         operator_commands["validate_autonomous_chain_optimization_queue"] = [
             ".venv/bin/python",
