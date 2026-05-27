@@ -34,6 +34,7 @@ from tac.optimization.proxy_candidate_contract import (
 )
 from tac.optimization.runtime_adapter_identity import (
     RUNTIME_DIR_FIELDS,
+    RUNTIME_EXPECTED_TREE_SHA_FIELDS,
     RUNTIME_TREE_SHA_FIELDS,
     runtime_adapter_identity_blockers,
     runtime_adapter_identity_claimed,
@@ -951,10 +952,13 @@ def _chain_runtime_context_fields(
         chain,
         repo_root=repo_root,
     ) or _chain_runtime_tree_sha256(chain)
+    expected_runtime_tree_sha = _chain_expected_runtime_tree_sha256(chain)
     if runtime_tree_sha is not None:
         out["candidate_runtime_tree_sha256"] = runtime_tree_sha
         if chain.get("schema") == "byte_range_entropy_recode_chain_v1":
             out["byte_range_entropy_recode_runtime_tree_sha256"] = runtime_tree_sha
+    if expected_runtime_tree_sha is not None:
+        out["expected_runtime_tree_sha256"] = expected_runtime_tree_sha
     return out
 
 
@@ -969,12 +973,19 @@ def _chain_runtime_adapter_identity_blockers(
     ):
         return []
     runtime_dirs = _chain_runtime_dir_paths(chain, repo_root=repo_root)
-    expected_runtime_tree_sha = _chain_runtime_tree_sha256(chain)
+    observed_runtime_tree_sha = _chain_runtime_tree_sha256(chain)
+    expected_runtime_tree_sha = _chain_expected_runtime_tree_sha256(chain)
     blockers: list[str] = []
     if not runtime_dirs:
         blockers.append("runtime_adapter_dir_missing")
     if expected_runtime_tree_sha is None:
-        blockers.append("runtime_tree_sha256_missing")
+        blockers.append("expected_runtime_tree_sha256_missing")
+    if (
+        observed_runtime_tree_sha is not None
+        and expected_runtime_tree_sha is not None
+        and observed_runtime_tree_sha != expected_runtime_tree_sha
+    ):
+        blockers.append("expected_runtime_tree_sha256_mismatch")
     live_runtime_checked = False
     for runtime_dir in runtime_dirs:
         if runtime_dir.is_symlink():
@@ -991,6 +1002,11 @@ def _chain_runtime_adapter_identity_blockers(
             continue
         actual_runtime_tree_sha = tree_sha256(runtime_dir).lower()
         if actual_runtime_tree_sha != expected_runtime_tree_sha:
+            blockers.append("expected_runtime_tree_sha256_mismatch")
+        if (
+            observed_runtime_tree_sha is not None
+            and actual_runtime_tree_sha != observed_runtime_tree_sha
+        ):
             blockers.append("runtime_tree_sha256_mismatch")
     if not live_runtime_checked:
         blockers.append("runtime_tree_sha256_live_runtime_dir_unverifiable")
@@ -1045,6 +1061,24 @@ def _chain_runtime_tree_sha256(chain: Mapping[str, Any]) -> str | None:
         value = _string_or_none(step.get("runtime_tree_sha256"))
         if value is not None:
             return value
+    return None
+
+
+def _chain_expected_runtime_tree_sha256(chain: Mapping[str, Any]) -> str | None:
+    for key in RUNTIME_EXPECTED_TREE_SHA_FIELDS:
+        value = _string_or_none(chain.get(key))
+        if value is not None:
+            return value
+    steps = chain.get("chain_steps")
+    if not isinstance(steps, list):
+        return None
+    for step in steps:
+        if not isinstance(step, Mapping):
+            continue
+        for key in RUNTIME_EXPECTED_TREE_SHA_FIELDS:
+            value = _string_or_none(step.get(key))
+            if value is not None:
+                return value
     return None
 
 

@@ -101,8 +101,9 @@ def runtime_adapter_identity_blockers(
     if runtime_dirs:
         observed_tree_sha = runtime_adapter_tree_sha256_from_mapping(payload)
         expected_tree_sha = _runtime_adapter_expected_tree_sha256_from_mapping(payload)
-        declared_tree_sha = observed_tree_sha or expected_tree_sha
-        if declared_tree_sha is None:
+        if expected_tree_sha is None:
+            blockers.append(f"{context}_expected_runtime_tree_sha256_missing")
+        if observed_tree_sha is None and expected_tree_sha is None:
             blockers.append(f"{context}_runtime_tree_sha256_missing")
         blockers.extend(
             _expected_runtime_tree_identity_blockers(
@@ -124,10 +125,10 @@ def runtime_adapter_identity_blockers(
                 continue
             live_tree_checked = True
             actual_tree_sha = tree_sha256(runtime_dir).lower()
-            if declared_tree_sha is not None and actual_tree_sha != declared_tree_sha:
-                blockers.append(f"{context}_runtime_tree_sha256_mismatch")
             if expected_tree_sha is not None and actual_tree_sha != expected_tree_sha:
                 blockers.append(f"{context}_expected_runtime_tree_sha256_mismatch")
+            if observed_tree_sha is not None and actual_tree_sha != observed_tree_sha:
+                blockers.append(f"{context}_runtime_tree_sha256_mismatch")
         if not live_tree_checked:
             blockers.append(f"{context}_runtime_tree_live_identity_unverified")
         return _ordered_unique(blockers)

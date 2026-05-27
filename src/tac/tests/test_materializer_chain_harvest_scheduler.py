@@ -253,6 +253,7 @@ def _chain_manifest(
                 "step_id": "build_runtime_adapter",
                 "status": "succeeded",
                 "runtime_tree_sha256": runtime_tree_sha,
+                "expected_runtime_tree_sha256": runtime_tree_sha,
             }
         ],
         "next_required_gates": ["contest_auth_eval"],
@@ -450,6 +451,7 @@ def _exact_ready_chain_manifest(
         "runtime_consumption_proof_path": runtime_proof.relative_to(repo).as_posix(),
         "candidate_runtime_dir": str(submission),
         "candidate_runtime_tree_sha256": runtime_tree_sha,
+        "expected_runtime_tree_sha256": runtime_tree_sha,
         **_false_authority(),
     }
     return _write_json(repo / "chain" / CHAIN_MANIFEST_NAME, payload)
@@ -898,7 +900,34 @@ def test_harvest_rejects_chain_manifest_stale_runtime_tree_identity(
     assert result["report"]["accepted_manifest_count"] == 0
     assert result["source_queue"]["n_candidates"] == 0
     assert any(
-        "runtime_adapter_identity_blocked:runtime_tree_sha256_mismatch"
+        "runtime_adapter_identity_blocked:expected_runtime_tree_sha256_mismatch"
+        in blocker
+        for blocker in result["report"]["rows"][0]["blockers"]
+    )
+
+
+def test_harvest_rejects_chain_manifest_without_expected_runtime_tree_identity(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    external = tmp_path / "VertigoDataTier"
+    chain = _chain_manifest(external)
+    payload = json.loads(chain.read_text(encoding="utf-8"))
+    for step in payload["chain_steps"]:
+        if isinstance(step, dict):
+            step.pop("expected_runtime_tree_sha256", None)
+    chain.write_text(json.dumps(payload), encoding="utf-8")
+
+    result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[chain],
+    )
+
+    assert result["report"]["accepted_manifest_count"] == 0
+    assert result["source_queue"]["n_candidates"] == 0
+    assert any(
+        "runtime_adapter_identity_blocked:expected_runtime_tree_sha256_missing"
         in blocker
         for blocker in result["report"]["rows"][0]["blockers"]
     )

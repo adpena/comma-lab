@@ -62,6 +62,25 @@ def test_runtime_adapter_identity_blocks_expected_runtime_tree_mismatch(
     assert "unit_runtime_tree_sha256_mismatch" not in blockers
 
 
+def test_runtime_adapter_identity_ready_tree_requires_expected_runtime_identity(
+    tmp_path: Path,
+) -> None:
+    runtime = _runtime_dir(tmp_path / "runtime")
+    actual_tree_sha = tree_sha256(runtime)
+
+    blockers = runtime_adapter_identity_blockers(
+        {
+            "runtime_adapter_ready": True,
+            "runtime_dir": runtime.as_posix(),
+            "runtime_tree_sha256": actual_tree_sha,
+        },
+        repo_root=tmp_path,
+        context="unit",
+    )
+
+    assert blockers == ["unit_expected_runtime_tree_sha256_missing"]
+
+
 def test_runtime_adapter_identity_accepts_expected_runtime_tree_as_live_identity(
     tmp_path: Path,
 ) -> None:
