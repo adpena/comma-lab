@@ -9,8 +9,10 @@ from pathlib import Path
 from comma_lab.scheduler.experiment_queue import QUEUE_SCHEMA
 from comma_lab.scheduler.repair_cascade_mlx_probe_queue import (
     REPAIR_CASCADE_MLX_PROBE_QUEUE_METADATA_SCHEMA,
+    REPAIR_CASCADE_MLX_PROBE_RESULT_SCHEMA,
     REPAIR_CASCADE_MLX_PROBE_SPEC_SCHEMA,
     build_repair_cascade_mlx_probe_queue,
+    build_repair_cascade_mlx_probe_result,
     build_repair_cascade_mlx_probe_spec,
 )
 from tac.optimization.repair_campaign_scorer import score_repair_campaign
@@ -106,6 +108,36 @@ def test_repair_cascade_mlx_probe_spec_names_exact_missing_artifacts(
     assert all(row["score_claim"] is False for row in spec["probe_measurement_plan"])
 
 
+def test_repair_cascade_mlx_probe_result_records_missing_mlx_inputs(
+    tmp_path: Path,
+) -> None:
+    work_order = _work_order()
+    spec = build_repair_cascade_mlx_probe_spec(
+        source_payload=work_order,
+        source_payload_path=tmp_path / "repair_budget_waterfill_work_order.json",
+        cascade_id="cascade_c_posenet_null_segnet_region_selector_codec",
+        repo_root=tmp_path,
+    )
+
+    result = build_repair_cascade_mlx_probe_result(
+        probe_spec=spec,
+        probe_spec_path=tmp_path / "repair_cascade_mlx_probe_spec.json",
+        repo_root=tmp_path,
+    )
+
+    assert result["schema"] == REPAIR_CASCADE_MLX_PROBE_RESULT_SCHEMA
+    assert result["component_response_axis"] == "[macOS-MLX research-signal]"
+    assert result["local_mlx_probe_execution_ready"] is False
+    assert result["component_response_row_emitted"] is False
+    assert result["learning_signal_kind"] == "blocked_repair_cascade_mlx_probe"
+    assert "local_mlx_probe_artifacts_missing" in result["blockers"]
+    assert "local_mlx_response_path:missing_or_unverified" in (
+        result["missing_local_mlx_artifacts"]
+    )
+    assert result["score_claim"] is False
+    assert result["ready_for_exact_eval_dispatch"] is False
+
+
 def test_repair_cascade_mlx_probe_queue_from_score_report_runs_spec_step(
     tmp_path: Path,
 ) -> None:
@@ -129,9 +161,18 @@ def test_repair_cascade_mlx_probe_queue_from_score_report_runs_spec_step(
     assert experiment["metadata"]["component_response_axis"] == (
         "[macOS-MLX research-signal]"
     )
+    assert experiment["metadata"]["probe_result_schema"] == (
+        REPAIR_CASCADE_MLX_PROBE_RESULT_SCHEMA
+    )
     assert experiment["steps"][0]["command"][1] == (
         "tools/build_repair_cascade_mlx_probe_spec.py"
     )
+    result_step = next(
+        step
+        for step in experiment["steps"]
+        if step["id"] == "record_repair_cascade_mlx_probe_result"
+    )
+    assert result_step["command"][1] == "tools/run_repair_cascade_mlx_probe.py"
 
     queue_path = _write_json(tmp_path / "repair_cascade_mlx_probe_queue.json", queue)
     validate = subprocess.run(
@@ -159,7 +200,7 @@ def test_repair_cascade_mlx_probe_queue_from_score_report_runs_spec_step(
             "run-worker",
             "--execute",
             "--max-steps",
-            "2",
+            "3",
             "--max-experiments",
             "1",
             "--output",
@@ -180,6 +221,11 @@ def test_repair_cascade_mlx_probe_queue_from_score_report_runs_spec_step(
     assert "local_mlx_response_path:missing_or_unverified" in (
         spec["missing_local_mlx_artifacts"]
     )
+    result_path = REPO_ROOT / experiment["metadata"]["probe_result_path"]
+    assert result_path.is_file()
+    probe_result = json.loads(result_path.read_text(encoding="utf-8"))
+    assert probe_result["schema"] == REPAIR_CASCADE_MLX_PROBE_RESULT_SCHEMA
+    assert probe_result["learning_signal_kind"] == "blocked_repair_cascade_mlx_probe"
 
 
 def test_repair_cascade_mlx_probe_queue_cli_writes_queue(tmp_path: Path) -> None:
@@ -214,3 +260,38 @@ def test_repair_cascade_mlx_probe_queue_cli_writes_queue(tmp_path: Path) -> None
     assert cli_result["ready_for_exact_eval_dispatch"] is False
     queue = json.loads(queue_path.read_text(encoding="utf-8"))
     assert queue["metadata"]["structural_repair_cascade_count"] == 1
+
+
+def test_repair_cascade_mlx_probe_result_cli_writes_result(tmp_path: Path) -> None:
+    work_order = _work_order()
+    spec = build_repair_cascade_mlx_probe_spec(
+        source_payload=work_order,
+        source_payload_path=tmp_path / "repair_budget_waterfill_work_order.json",
+        cascade_id="cascade_c_posenet_null_segnet_region_selector_codec",
+        repo_root=tmp_path,
+    )
+    spec_path = _write_json(tmp_path / "repair_cascade_mlx_probe_spec.json", spec)
+    result_path = tmp_path / "repair_cascade_mlx_probe_result.json"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "tools/run_repair_cascade_mlx_probe.py",
+            "--probe-spec",
+            str(spec_path),
+            "--output",
+            str(result_path),
+            "--overwrite",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    cli_result = json.loads(result.stdout)
+    assert cli_result["ready_for_exact_eval_dispatch"] is False
+    payload = json.loads(result_path.read_text(encoding="utf-8"))
+    assert payload["schema"] == REPAIR_CASCADE_MLX_PROBE_RESULT_SCHEMA
+    assert payload["local_mlx_probe_execution_ready"] is False

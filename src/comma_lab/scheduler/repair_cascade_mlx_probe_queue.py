@@ -22,6 +22,7 @@ REPAIR_CASCADE_MLX_PROBE_EXPERIMENT_METADATA_SCHEMA = (
     "repair_cascade_mlx_probe_experiment_metadata.v1"
 )
 REPAIR_CASCADE_MLX_PROBE_SPEC_SCHEMA = "repair_cascade_mlx_probe_spec.v1"
+REPAIR_CASCADE_MLX_PROBE_RESULT_SCHEMA = "repair_cascade_mlx_probe_result.v1"
 REPAIR_CASCADE_OPPORTUNITY_ROW_SCHEMA = (
     "frontier_rate_attack_repair_cascade_opportunity_row.v1"
 )
@@ -258,6 +259,106 @@ def build_repair_cascade_mlx_probe_spec(
     return spec
 
 
+def _artifact_status_from_record(
+    record: Mapping[str, Any],
+    *,
+    repo_root: str | Path,
+) -> dict[str, Any]:
+    key = str(record.get("key") or "unknown").strip() or "unknown"
+    path_text = str(record.get("path") or "").strip()
+    path = _resolve(path_text, repo_root) if path_text else None
+    return {
+        "key": key,
+        "path": path_text or None,
+        "exists": bool(path is not None and path.is_file()),
+    }
+
+
+def build_repair_cascade_mlx_probe_result(
+    *,
+    probe_spec: Mapping[str, Any],
+    probe_spec_path: str | Path,
+    repo_root: str | Path,
+) -> dict[str, Any]:
+    """Record deterministic readiness for one MLX-local cascade probe spec."""
+
+    if probe_spec.get("schema") != REPAIR_CASCADE_MLX_PROBE_SPEC_SCHEMA:
+        raise RepairCascadeMlxProbeQueueError(
+            "repair cascade MLX probe result requires a probe spec"
+        )
+    require_no_truthy_authority_fields(
+        probe_spec,
+        context="repair_cascade_mlx_probe_result_spec",
+    )
+    artifact_status = [
+        _artifact_status_from_record(record, repo_root=repo_root)
+        for record in probe_spec.get("local_mlx_artifact_status") or []
+        if isinstance(record, Mapping)
+    ]
+    missing = ordered_unique(
+        [
+            f"{item['key']}:missing_or_unverified"
+            for item in artifact_status
+            if item.get("exists") is not True
+        ]
+    )
+    spec_blockers = _string_list(probe_spec.get("blockers"))
+    blockers = ordered_unique(
+        [
+            *missing,
+            *spec_blockers,
+            *(
+                ["local_mlx_probe_artifacts_missing"]
+                if missing
+                else ["concrete_mlx_component_response_runner_required"]
+            ),
+            "exact_axis_component_response_required_before_budget_spend",
+            "receiver_runtime_materialization_required_before_exact_dispatch",
+        ]
+    )
+    result = {
+        "schema": REPAIR_CASCADE_MLX_PROBE_RESULT_SCHEMA,
+        "probe_spec_path": str(probe_spec_path),
+        "probe_spec_schema": probe_spec.get("schema"),
+        "cascade_id": probe_spec.get("cascade_id"),
+        "cascade_label": probe_spec.get("cascade_label"),
+        "source_payload_path": probe_spec.get("source_payload_path"),
+        "source_payload_schema": probe_spec.get("source_payload_schema"),
+        "component_response_axis": "[macOS-MLX research-signal]",
+        "local_mlx_artifact_status": artifact_status,
+        "missing_local_mlx_artifacts": missing,
+        "required_probe_measurements": _string_list(
+            probe_spec.get("required_probe_measurements")
+        ),
+        "probe_measurement_plan": list(probe_spec.get("probe_measurement_plan") or []),
+        "local_mlx_probe_execution_ready": not missing,
+        "local_mlx_probe_executed": False,
+        "component_response_row_emitted": False,
+        "learning_signal_kind": (
+            "blocked_repair_cascade_mlx_probe"
+            if missing
+            else "repair_cascade_mlx_probe_ready_for_component_response_runner"
+        ),
+        "recommended_next_action": (
+            "materialize_missing_cascade_mlx_probe_artifacts"
+            if missing
+            else "run_concrete_mlx_component_response_probe_and_harvest_response_row"
+        ),
+        "blockers": blockers,
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        "allowed_use": "cascade_mlx_local_probe_readiness_result_for_learning_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        result,
+        context=f"repair_cascade_mlx_probe_result:{probe_spec.get('cascade_id')}",
+    )
+    return result
+
+
 def _cascade_experiment(
     *,
     source_payload: Mapping[str, Any],
@@ -270,7 +371,9 @@ def _cascade_experiment(
     cascade_id = str(cascade.get("cascade_id") or f"cascade_{priority}").strip()
     slug = _slug(cascade_id)
     spec_path = queue_root / slug / "repair_cascade_mlx_probe_spec.json"
+    result_path = queue_root / slug / "repair_cascade_mlx_probe_result.json"
     spec_ref = _repo_rel(spec_path, repo_root)
+    result_ref = _repo_rel(result_path, repo_root)
     missing = _required_probe_measurements(cascade)
     metadata = {
         "schema": REPAIR_CASCADE_MLX_PROBE_EXPERIMENT_METADATA_SCHEMA,
@@ -282,6 +385,8 @@ def _cascade_experiment(
         "pipeline_position": cascade.get("pipeline_position"),
         "probe_spec_path": spec_ref,
         "probe_spec_schema": REPAIR_CASCADE_MLX_PROBE_SPEC_SCHEMA,
+        "probe_result_path": result_ref,
+        "probe_result_schema": REPAIR_CASCADE_MLX_PROBE_RESULT_SCHEMA,
         "required_probe_measurements": missing,
         "local_mlx_advisory_custody_required": True,
         "component_response_axis": "[macOS-MLX research-signal]",
@@ -354,6 +459,42 @@ def _cascade_experiment(
                 "resources": {"kind": "local_cpu"},
                 "timeout_seconds": 60,
                 "telemetry": {
+                    "input_artifact_paths": [spec_ref],
+                    "include_postcondition_paths": True,
+                },
+            },
+            {
+                "id": "record_repair_cascade_mlx_probe_result",
+                "kind": "command",
+                "requires": ["emit_repair_cascade_mlx_probe_spec"],
+                "command": [
+                    ".venv/bin/python",
+                    "tools/run_repair_cascade_mlx_probe.py",
+                    "--probe-spec",
+                    spec_ref,
+                    "--output",
+                    result_ref,
+                    "--overwrite",
+                ],
+                "resources": {"kind": "local_cpu"},
+                "timeout_seconds": 120,
+                "postconditions": [
+                    {
+                        "type": "json_equals",
+                        "path": result_ref,
+                        "key": "schema",
+                        "equals": REPAIR_CASCADE_MLX_PROBE_RESULT_SCHEMA,
+                    },
+                    {"type": "json_false_authority", "path": result_ref},
+                    {
+                        "type": "json_equals",
+                        "path": result_ref,
+                        "key": "ready_for_exact_eval_dispatch",
+                        "equals": False,
+                    },
+                ],
+                "telemetry": {
+                    "artifact_paths": [result_ref],
                     "input_artifact_paths": [spec_ref],
                     "include_postcondition_paths": True,
                 },
@@ -505,9 +646,11 @@ def build_repair_cascade_mlx_probe_queue(
 __all__ = [
     "REPAIR_CASCADE_MLX_PROBE_EXPERIMENT_METADATA_SCHEMA",
     "REPAIR_CASCADE_MLX_PROBE_QUEUE_METADATA_SCHEMA",
+    "REPAIR_CASCADE_MLX_PROBE_RESULT_SCHEMA",
     "REPAIR_CASCADE_MLX_PROBE_SPEC_SCHEMA",
     "RepairCascadeMlxProbeQueueError",
     "build_repair_cascade_mlx_probe_queue",
+    "build_repair_cascade_mlx_probe_result",
     "build_repair_cascade_mlx_probe_spec",
     "repair_cascade_rows_from_payload",
 ]
