@@ -25,6 +25,12 @@ RUNTIME_TREE_SHA_FIELDS = (
     "inflate_runtime_tree_sha256",
     "runtime_adapter_tree_sha256",
 )
+RUNTIME_EXPECTED_TREE_SHA_FIELDS = (
+    "expected_runtime_tree_sha256",
+    "expected_inflate_runtime_tree_sha256",
+    "expected_candidate_runtime_tree_sha256",
+    "modal_expected_runtime_tree_sha256",
+)
 RUNTIME_ADAPTER_FILE_PATH_FIELDS = (
     "path",
     "runtime_adapter_path",
@@ -87,9 +93,18 @@ def runtime_adapter_identity_blockers(
     blockers: list[str] = []
     runtime_dirs = _runtime_dir_paths(payload, repo_root=repo)
     if runtime_dirs:
-        expected_tree_sha = runtime_adapter_tree_sha256_from_mapping(payload)
-        if expected_tree_sha is None:
+        observed_tree_sha = runtime_adapter_tree_sha256_from_mapping(payload)
+        expected_tree_sha = _runtime_adapter_expected_tree_sha256_from_mapping(payload)
+        declared_tree_sha = observed_tree_sha or expected_tree_sha
+        if declared_tree_sha is None:
             blockers.append(f"{context}_runtime_tree_sha256_missing")
+        blockers.extend(
+            _expected_runtime_tree_identity_blockers(
+                observed_tree_sha=observed_tree_sha,
+                expected_tree_sha=expected_tree_sha,
+                context=context,
+            )
+        )
         live_tree_checked = False
         for runtime_dir in runtime_dirs:
             if runtime_dir.is_symlink():
@@ -103,8 +118,10 @@ def runtime_adapter_identity_blockers(
                 continue
             live_tree_checked = True
             actual_tree_sha = tree_sha256(runtime_dir).lower()
-            if expected_tree_sha is not None and actual_tree_sha != expected_tree_sha:
+            if declared_tree_sha is not None and actual_tree_sha != declared_tree_sha:
                 blockers.append(f"{context}_runtime_tree_sha256_mismatch")
+            if expected_tree_sha is not None and actual_tree_sha != expected_tree_sha:
+                blockers.append(f"{context}_expected_runtime_tree_sha256_mismatch")
         if not live_tree_checked:
             blockers.append(f"{context}_runtime_tree_live_identity_unverified")
         return _ordered_unique(blockers)
@@ -119,6 +136,32 @@ def runtime_adapter_identity_blockers(
 
     blockers.append(f"{context}_runtime_dir_missing_for_tree_identity")
     return blockers
+
+
+def _runtime_adapter_expected_tree_sha256_from_mapping(
+    mapping: Mapping[str, Any],
+) -> str | None:
+    """Return the first explicit expected runtime-tree SHA-256 in ``mapping``."""
+
+    for candidate in _iter_runtime_identity_mappings(mapping):
+        for key in RUNTIME_EXPECTED_TREE_SHA_FIELDS:
+            value = _sha256_or_none(candidate.get(key))
+            if value is not None:
+                return value
+    return None
+
+
+def _expected_runtime_tree_identity_blockers(
+    *,
+    observed_tree_sha: str | None,
+    expected_tree_sha: str | None,
+    context: str,
+) -> list[str]:
+    if observed_tree_sha is None or expected_tree_sha is None:
+        return []
+    if observed_tree_sha == expected_tree_sha:
+        return []
+    return [f"{context}_expected_runtime_tree_sha256_mismatch"]
 
 
 def _runtime_dir_paths(payload: Mapping[str, Any], *, repo_root: Path) -> list[Path]:
@@ -229,6 +272,7 @@ def _ordered_unique(items: Iterable[str]) -> list[str]:
 
 __all__ = [
     "RUNTIME_DIR_FIELDS",
+    "RUNTIME_EXPECTED_TREE_SHA_FIELDS",
     "RUNTIME_READY_FIELDS",
     "RUNTIME_TREE_SHA_FIELDS",
     "runtime_adapter_identity_blockers",

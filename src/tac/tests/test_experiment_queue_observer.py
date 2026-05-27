@@ -16,6 +16,7 @@ from comma_lab.scheduler.experiment_queue_observer import (
 from comma_lab.scheduler.queue_feedback_replan_policy import (
     build_queue_observation_recovery_plan,
 )
+from tac.repo_io import tree_sha256
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -2160,6 +2161,149 @@ def test_observer_rejects_materializer_stale_runtime_tree_identity(
     assert observation["healthy"] is False
     artifact = observation["succeeded_artifact_failure_steps"][0]["expected_artifacts"][0]
     assert any("runtime_tree_sha256_mismatch" in blocker for blocker in artifact["artifact_revalidation_blockers"])
+
+
+def test_observer_rejects_materializer_expected_runtime_tree_mismatch(
+    tmp_path: Path,
+) -> None:
+    manifest = tmp_path / "expected_runtime_mismatch_materializer.json"
+    candidate_archive = _write_artifact_bytes(
+        tmp_path / "expected_runtime_mismatch_candidate.zip",
+        b"expected runtime mismatch candidate bytes",
+    )
+    runtime_dir = tmp_path / "candidate_runtime"
+    runtime_dir.mkdir()
+    (runtime_dir / "inflate.sh").write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+    runtime_tree_sha = tree_sha256(runtime_dir)
+    stale_expected_tree_sha = "c" * 64
+    proof = tmp_path / "runtime_consumption_proof.json"
+    proof.write_text(
+        json.dumps(
+            {
+                "schema": "family_agnostic_runtime_consumption_proof_v1",
+                "candidate_archive": dict(candidate_archive),
+                "candidate_archive_sha256": candidate_archive["sha256"],
+                "receiver_contract_satisfied": True,
+                "runtime_consumption_proof_passed": True,
+                "passed": True,
+                "runtime_adapter_ready": True,
+                "runtime_adapter_manifest": {
+                    "runtime_adapter_ready": True,
+                    "runtime_dir": runtime_dir.as_posix(),
+                    "runtime_tree_sha256": runtime_tree_sha,
+                    "expected_runtime_tree_sha256": stale_expected_tree_sha,
+                },
+                "score_claim": False,
+                "score_claim_valid": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "promotable": False,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+                "gpu_launched": False,
+                "blockers": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    manifest.write_text(
+        json.dumps(
+            {
+                "schema": "packet_member_merge_candidate.v1",
+                "target_kind": "packet_member_merge_v1",
+                "materializer_id": "packet_member_merge_adapter",
+                "receiver_contract_kind": "family_agnostic_packet_member_merge",
+                "receiver_contract_satisfied": True,
+                "runtime_adapter_ready": True,
+                "candidate_archive": candidate_archive,
+                "runtime_consumption_proof_path": proof.as_posix(),
+                "receiver_verification": {
+                    "schema": "family_agnostic_runtime_consumption_proof_verification.v1",
+                    "receiver_contract_satisfied": True,
+                    "runtime_adapter_ready": True,
+                    "proof_present": True,
+                    "proof_path": proof.as_posix(),
+                    "runtime_adapter_tree_sha256": runtime_tree_sha,
+                    "expected_runtime_tree_sha256": stale_expected_tree_sha,
+                    "blockers": [],
+                },
+                "packet_member_merge_receiver_runtime": {
+                    "runtime_adapter_ready": True,
+                    "runtime_dir": runtime_dir.as_posix(),
+                    "runtime_tree_sha256": runtime_tree_sha,
+                    "expected_runtime_tree_sha256": stale_expected_tree_sha,
+                },
+                "serialized_archive_delta": {
+                    "schema": "serialized_archive_delta_contract.v1",
+                    "source_archive_bytes": 128,
+                    "candidate_archive_bytes": candidate_archive["bytes"],
+                    "realized_saved_bytes": 8,
+                    "savings_realized": True,
+                    "status": "realized_saving",
+                },
+                "score_claim": False,
+                "score_claim_valid": False,
+                "score_claim_eligible": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "promotable": False,
+                "ready_for_exact_eval_dispatch": False,
+                "field_selection_ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+                "gpu_launched": False,
+                "exact_cuda_auth_eval": False,
+                "contest_cuda_auth_eval": False,
+                "score_affecting_payload_changed": True,
+                "charged_bits_changed": True,
+            }
+        ),
+        encoding="utf-8",
+    )
+    state = tmp_path / "queue.sqlite"
+    queue = _queue(manifest)
+    queue["experiments"][0]["steps"][0]["postconditions"] = [
+        {
+            "type": "json_false_authority",
+            "path": manifest.as_posix(),
+            "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+            ],
+        }
+    ]
+
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'succeeded',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-05-27T17:30:00Z'
+            WHERE queue_id = 'observer_test'
+              AND experiment_id = 'exp0'
+              AND step_id = 'smoke'
+            """,
+            (json.dumps({"command": ["python", "tools/run_family_agnostic_materializer.py"]}),),
+        )
+        conn.commit()
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=0,
+    )
+
+    assert observation["healthy"] is False
+    artifact = observation["succeeded_artifact_failure_steps"][0]["expected_artifacts"][0]
+    assert any(
+        "expected_runtime_tree_sha256_mismatch" in blocker
+        for blocker in artifact["artifact_revalidation_blockers"]
+    )
 
 
 def test_observer_rejects_succeeded_generic_custody_artifact_without_proof(
