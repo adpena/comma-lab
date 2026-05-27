@@ -12,6 +12,7 @@ import numpy as np
 
 from tac.optimization.family_agnostic_materializers import (
     ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
+    ARCHIVE_ZIP_REPACK_SCHEMA,
     PACKET_MEMBER_MERGE_MATERIALIZER_ID,
     PACKET_MEMBER_MERGE_RECEIVER_CONTRACT_KIND,
     PACKET_MEMBER_MERGE_RUNTIME_ADAPTER_PROOF_KIND,
@@ -28,6 +29,7 @@ from tac.optimization.family_agnostic_materializers import (
     TENSOR_FACTORIZE_SCHEMA,
     TENSOR_FACTORIZE_TARGET_KIND,
     materialize_archive_section_entropy_recode_candidate,
+    materialize_archive_zip_repack_candidate,
     materialize_packet_member_merge_candidate,
     materialize_packet_member_recompress_candidate,
     materialize_packet_member_zip_header_elide_candidate,
@@ -148,6 +150,50 @@ def test_packet_member_recompress_materializer_emits_payload_identity_proof(
     assert "packet_member_recompress_receiver_contract_not_satisfied" not in (
         result["readiness_blockers"]
     )
+    assert result["score_claim"] is False
+    assert result["ready_for_exact_eval_dispatch"] is False
+
+
+def test_archive_zip_repack_materializer_preserves_all_member_payloads(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    output = tmp_path / "candidate.zip"
+    proof = tmp_path / "runtime_consumption_proof.json"
+    payloads = {
+        "renderer.bin": b"A" * 8192,
+        "sidecar.bin": b"BC" * 4096,
+    }
+    _write_zip(archive, payloads, compression=zipfile.ZIP_STORED)
+
+    result = materialize_archive_zip_repack_candidate(
+        archive_path=archive,
+        output_archive=output,
+        compression_methods=("deflated",),
+        compresslevels=(9,),
+        runtime_consumption_proof_out=proof,
+        repo_root=tmp_path,
+    )
+
+    proof_payload = json.loads(proof.read_text(encoding="utf-8"))
+    assert result["schema"] == ARCHIVE_ZIP_REPACK_SCHEMA
+    assert result["target_kind"] == "archive_zip_repack_v1"
+    assert result["byte_closed_candidate_emitted"] is True
+    assert result["candidate_archive"]["bytes"] < result["source_archive"]["bytes"]
+    assert result["selected_repack"]["saved_bytes"] > 0
+    assert result["selected_repack"]["member_count"] == 2
+    assert proof_payload["proof_kind"] == "archive_zip_repack_payload_identity_receiver_proof.v1"
+    assert proof_payload["candidate_archive"]["sha256"] == result["candidate_archive"]["sha256"]
+    assert proof_payload["runtime_consumption_probe"]["all_member_payloads_identical"] is True
+    assert proof_payload["receiver_contract_satisfied"] is True
+    assert result["receiver_contract_satisfied"] is True
+    assert result["receiver_verification"]["candidate_member_sha256s"] == {
+        name: sha256_bytes(payload) for name, payload in payloads.items()
+    }
+    assert "runtime_consumption_proof_missing" not in result["readiness_blockers"]
+    with zipfile.ZipFile(output, "r") as zf:
+        assert zf.read("renderer.bin") == payloads["renderer.bin"]
+        assert zf.read("sidecar.bin") == payloads["sidecar.bin"]
     assert result["score_claim"] is False
     assert result["ready_for_exact_eval_dispatch"] is False
 
@@ -1938,6 +1984,53 @@ def test_family_agnostic_materializer_cli_writes_false_authority_manifest(
     assert payload["receiver_verification"]["proof_present"] is True
     assert payload["runtime_consumption_proof_path"] == str(proof)
     assert payload["tool_run_manifest"]["tool"] == "tools/run_family_agnostic_materializer.py"
+    assert payload["score_claim"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+
+
+def test_archive_zip_repack_materializer_cli_auto_writes_runtime_proof(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    output = tmp_path / "candidate.zip"
+    manifest = tmp_path / "candidate.json"
+    proof = tmp_path / "candidate.runtime_consumption_proof.json"
+    _write_zip(
+        archive,
+        {
+            "a.bin": b"A" * 4096,
+            "b.bin": b"B" * 4096,
+        },
+        compression=zipfile.ZIP_STORED,
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "run_family_agnostic_materializer.py"),
+            "--target-kind",
+            "archive_zip_repack_v1",
+            "--archive-path",
+            str(archive),
+            "--output-archive",
+            str(output),
+            "--output-manifest",
+            str(manifest),
+        ],
+        check=True,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+    )
+
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    stdout_payload = json.loads(completed.stdout)
+    assert payload["schema"] == ARCHIVE_ZIP_REPACK_SCHEMA
+    assert stdout_payload["schema"] == ARCHIVE_ZIP_REPACK_SCHEMA
+    assert proof.is_file()
+    assert payload["receiver_contract_satisfied"] is True
+    assert payload["selected_repack"]["saved_bytes"] > 0
+    assert payload["receiver_verification"]["proof_present"] is True
     assert payload["score_claim"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False
 

@@ -44,6 +44,7 @@ HINTON_MLX_LONG_TRAINING_SMOKE_SCHEMA = "hinton_mlx_long_training_smoke_verdict.
 FAMILY_AGNOSTIC_MATERIALIZER_CANDIDATE_SCHEMAS = frozenset(
     {
         "archive_section_entropy_recode_candidate.v1",
+        "archive_zip_repack_candidate.v1",
         "packet_member_merge_candidate.v1",
         "packet_member_recompress_candidate.v1",
         "packet_member_zip_header_elide_candidate.v1",

@@ -44,6 +44,7 @@ from .byte_shaving_campaign_queue import (
 )
 from .byte_shaving_materializer_registry import (
     ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+    ARCHIVE_ZIP_REPACK_TARGET_KIND,
     PACKET_MEMBER_MERGE_TARGET_KIND,
     PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
@@ -67,6 +68,7 @@ FRONTIER_ARCHIVE_RESOLUTION_SCHEMA = "frontier_archive_resolution.v1"
 FRONTIER_ARCHIVE_RECORD_SCHEMA = "frontier_rate_attack_archive_record.v1"
 DEFAULT_FRONTIER_POINTER = ".omx/state/canonical_frontier_pointer.json"
 DEFAULT_EXECUTABLE_TARGET_KINDS = (
+    ARCHIVE_ZIP_REPACK_TARGET_KIND,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
     PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
     PACKET_MEMBER_MERGE_TARGET_KIND,
@@ -917,6 +919,9 @@ def _target_context(
             blockers.append("packet_member_recompress_requires_single_shared_member_or_member_name")
         else:
             context["member_name"] = member_name
+        context["zip_compression_methods"] = list(zip_compression_methods)
+        context["zip_compresslevels"] = [str(level) for level in zip_compresslevels]
+    elif target_kind == ARCHIVE_ZIP_REPACK_TARGET_KIND:
         context["zip_compression_methods"] = list(zip_compression_methods)
         context["zip_compresslevels"] = [str(level) for level in zip_compresslevels]
     elif target_kind == PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND:

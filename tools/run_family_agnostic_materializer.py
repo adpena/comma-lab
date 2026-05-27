@@ -18,6 +18,7 @@ ensure_repo_imports(REPO_ROOT)
 
 from tac.optimization.family_agnostic_materializers import (  # noqa: E402
     ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+    ARCHIVE_ZIP_REPACK_TARGET_KIND,
     PACKET_MEMBER_MERGE_MATERIALIZER_ID,
     PACKET_MEMBER_MERGE_RECEIVER_CONTRACT_KIND,
     PACKET_MEMBER_MERGE_RUNTIME_ADAPTER_PROOF_KIND,
@@ -31,6 +32,7 @@ from tac.optimization.family_agnostic_materializers import (  # noqa: E402
     TENSOR_FACTORIZE_TARGET_KIND,
     FamilyAgnosticMaterializerError,
     materialize_archive_section_entropy_recode_candidate,
+    materialize_archive_zip_repack_candidate,
     materialize_packet_member_merge_candidate,
     materialize_packet_member_recompress_candidate,
     materialize_packet_member_zip_header_elide_candidate,
@@ -64,6 +66,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         required=True,
         choices=(
             ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+            ARCHIVE_ZIP_REPACK_TARGET_KIND,
             PACKET_MEMBER_MERGE_TARGET_KIND,
             PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
             PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
@@ -182,6 +185,7 @@ def _run_materializer(
 ) -> dict:
     proof_out_target_kinds = {
         ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+        ARCHIVE_ZIP_REPACK_TARGET_KIND,
         PACKET_MEMBER_MERGE_TARGET_KIND,
         PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
         PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
@@ -195,6 +199,7 @@ def _run_materializer(
         raise FamilyAgnosticMaterializerError(
             "--runtime-consumption-proof-out is currently supported only for "
             "archive_section_entropy_recode_v1, packet_member_merge_v1, "
+            "archive_zip_repack_v1, "
             "packet_member_recompress_v1, "
             "packet_member_zip_header_elide_v1, renderer_payload_dfl1_v1, "
             "and tensor_factorize_v1"
@@ -228,6 +233,25 @@ def _run_materializer(
             section_manifest=args.section_manifest,
             section_names=args.section_name,
             brotli_qualities=tuple(args.brotli_quality or [9, 10, 11]),
+            runtime_consumption_proof_out=runtime_proof_out,
+            expected_existing_runtime_consumption_proof_sha256=(
+                _expected_existing_sha256_for_overwrite(
+                    args.expected_existing_runtime_consumption_proof_sha256,
+                    runtime_proof_out,
+                    allow_overwrite=args.allow_overwrite,
+                )
+            ),
+        )
+    if args.target_kind == ARCHIVE_ZIP_REPACK_TARGET_KIND:
+        runtime_proof_out = args.runtime_consumption_proof_out
+        if args.runtime_consumption_proof is None and runtime_proof_out is None:
+            runtime_proof_out = args.output_manifest.with_name(
+                f"{args.output_manifest.stem}.runtime_consumption_proof.json"
+            )
+        return materialize_archive_zip_repack_candidate(
+            **common,
+            compression_methods=tuple(args.zip_compression_method or ["stored", "deflated"]),
+            compresslevels=tuple(args.zip_compresslevel or [1, 6, 9]),
             runtime_consumption_proof_out=runtime_proof_out,
             expected_existing_runtime_consumption_proof_sha256=(
                 _expected_existing_sha256_for_overwrite(

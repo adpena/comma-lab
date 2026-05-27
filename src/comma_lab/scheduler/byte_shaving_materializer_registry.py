@@ -54,6 +54,8 @@ INVERSE_ACTION_HIGH_LEVEL_RECEIVER_CONTRACT_KIND = (
 )
 ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER = "archive_section_entropy_recode_adapter"
 ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND = "archive_section_entropy_recode_v1"
+ARCHIVE_ZIP_REPACK_MATERIALIZER = "archive_zip_repack_adapter"
+ARCHIVE_ZIP_REPACK_TARGET_KIND = "archive_zip_repack_v1"
 ARCHIVE_SECTION_HEADER_ELIDE_MATERIALIZER = "archive_section_header_elide_adapter"
 ARCHIVE_SECTION_HEADER_ELIDE_TARGET_KIND = "archive_section_header_elide_v1"
 ARCHIVE_SECTION_REORDER_MATERIALIZER = "archive_section_reorder_adapter"
@@ -297,6 +299,29 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
         ),
         implementation_module="tac.optimization.family_agnostic_materializers",
         materialize_function="materialize_archive_section_entropy_recode_candidate",
+    ),
+    MaterializerAdapter(
+        materializer_id=ARCHIVE_ZIP_REPACK_MATERIALIZER,
+        unit_kind="archive",
+        operation_family="archive_zip_repack",
+        target_kind=ARCHIVE_ZIP_REPACK_TARGET_KIND,
+        executable=True,
+        description=(
+            "Family-agnostic archive-wide ZIP repack materializer. It explores "
+            "uniform and greedy per-member compression plans, preserves decoded "
+            "member payloads, and emits a receiver proof before exact-readiness."
+        ),
+        receiver_contract_id=f"{ARCHIVE_ZIP_REPACK_TARGET_KIND}.receiver.v1",
+        receiver_contract_kind="family_agnostic_archive_zip_repack",
+        cooperative_receiver_required=True,
+        materialization_resource_kind="local_cpu",
+        required_context_fields=(
+            "archive_path",
+            "output_archive",
+            "output_manifest",
+        ),
+        implementation_module="tac.optimization.family_agnostic_materializers",
+        materialize_function="materialize_archive_zip_repack_candidate",
     ),
     _non_executable_family_adapter(
         materializer_id=ARCHIVE_SECTION_HEADER_ELIDE_MATERIALIZER,
@@ -775,6 +800,8 @@ __all__ = [
     "ARCHIVE_SECTION_PROCEDURALIZE_TARGET_KIND",
     "ARCHIVE_SECTION_REORDER_MATERIALIZER",
     "ARCHIVE_SECTION_REORDER_TARGET_KIND",
+    "ARCHIVE_ZIP_REPACK_MATERIALIZER",
+    "ARCHIVE_ZIP_REPACK_TARGET_KIND",
     "BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER",
     "BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_ID",
     "BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_KIND",

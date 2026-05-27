@@ -117,6 +117,12 @@ INVERSE_ACTION_COMPILER_TARGET_DEFAULTS: dict[str, dict[str, Any]] = {
         "materializer": "archive_section_proceduralize_adapter",
         "receiver_contract_kind": "family_agnostic_archive_section_proceduralize",
     },
+    "archive_zip_repack_v1": {
+        "unit_kind": "archive",
+        "operation_family": "archive_zip_repack",
+        "materializer": "archive_zip_repack_adapter",
+        "receiver_contract_kind": "family_agnostic_archive_zip_repack",
+    },
     "packet_member_recompress_v1": {
         "unit_kind": "packet_member",
         "operation_family": "member_recompress",
@@ -175,6 +181,7 @@ INVERSE_ACTION_COMPILER_TARGET_DEFAULTS: dict[str, dict[str, Any]] = {
 INVERSE_ACTION_EXECUTABLE_COMPILER_TARGETS: frozenset[str] = frozenset(
     {
         "archive_section_entropy_recode_v1",
+        "archive_zip_repack_v1",
         "packet_member_merge_v1",
         "packet_member_recompress_v1",
         "packet_member_zip_header_elide_v1",
@@ -211,6 +218,11 @@ INVERSE_ACTION_COMPILER_TARGET_REQUIRED_CONTEXT_FIELDS: dict[str, tuple[str, ...
         "section_manifest",
         "procedural_receiver_spec",
         "runtime_consumption_proof",
+    ),
+    "archive_zip_repack_v1": (
+        "archive_path",
+        "output_archive",
+        "output_manifest",
     ),
     "packet_member_zip_header_elide_v1": (
         "archive_path",
@@ -364,6 +376,7 @@ UNIT_KINDS: frozenset[str] = frozenset(
     {
         "pair",
         "frame",
+        "archive",
         "byte_range",
         "archive_section",
         "tensor",
@@ -375,6 +388,9 @@ UNIT_KINDS: frozenset[str] = frozenset(
 )
 
 DEFAULT_OPERATION_FAMILIES: dict[str, tuple[str, ...]] = {
+    "archive": (
+        "archive_zip_repack",
+    ),
     "pair": (
         "drop_pair",
         "substitute_pair",
@@ -451,6 +467,7 @@ DEFAULT_OPERATION_ORDER_PRIORS: dict[str, int] = {
     "delta_encode": 40,
     "entropy_recode": 40,
     "section_entropy_recode": 40,
+    "archive_zip_repack": 40,
     "member_recompress": 40,
     "literal_elide": 50,
     "null_remove_or_seed": 50,
@@ -465,6 +482,7 @@ DEFAULT_OPERATION_ORDER_PRIORS: dict[str, int] = {
 PACKET_IR_BYTE_CLOSED_UNIT_KINDS = frozenset(
     {
         "archive_section",
+        "archive",
         "byte_range",
         "packet_member",
         "tensor",

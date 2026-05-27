@@ -10,7 +10,9 @@ from tac.optimization.repair_campaign_scorer import (
     REPAIR_CAMPAIGN_OPTIMIZER_DECISION_SCHEMA,
     REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA,
     REPAIR_CAMPAIGN_SCORE_ROW_SCHEMA,
+    REPAIR_CAMPAIGN_STACKABILITY_PROBE_SCHEMA,
     REPAIR_OPERATOR_FAMILY_PRIORS_SCHEMA,
+    build_repair_campaign_stackability_probe,
     repair_operator_family_priors,
     score_repair_campaign,
 )
@@ -159,6 +161,38 @@ def test_score_repair_campaign_ranks_ready_mlx_and_names_missing_artifacts(
     assert "per_region_selector_codec_replay_missing" in report["missing_artifacts"]
 
 
+def test_repair_campaign_stackability_probe_requires_mlx_custody(
+    tmp_path: Path,
+) -> None:
+    report = score_repair_campaign(payload=_work_order(tmp_path), repo_root=tmp_path)
+
+    ready = build_repair_campaign_stackability_probe(
+        score_report=report,
+        typed_response_id="segnet_region_ready",
+        repo_root=tmp_path,
+    )
+
+    assert ready["schema"] == REPAIR_CAMPAIGN_STACKABILITY_PROBE_SCHEMA
+    assert ready["status"] == "ready_for_local_mlx_stackability_probe"
+    assert ready["stackability_ready"] is True
+    assert ready["allocated_repair_bytes"] == 32
+    assert ready["budget_spend_allowed"] is False
+    assert ready["ready_for_exact_eval_dispatch"] is False
+
+    blocked = build_repair_campaign_stackability_probe(
+        score_report=report,
+        typed_response_id="selector_missing",
+        repo_root=tmp_path,
+    )
+
+    assert blocked["schema"] == REPAIR_CAMPAIGN_STACKABILITY_PROBE_SCHEMA
+    assert blocked["status"] == "blocked_missing_artifact"
+    assert blocked["stackability_ready"] is False
+    assert "optimizer_selected_allocation_missing" in blocked["blockers"]
+    assert "local_mlx_advisory_custody_missing" in blocked["blockers"]
+    assert "per_region_selector_codec_replay_missing" in blocked["missing_artifacts"]
+
+
 def test_score_repair_campaign_cli_writes_report(tmp_path: Path) -> None:
     work_order_path = tmp_path / "work_order.json"
     report_path = tmp_path / "repair_campaign_score_report.json"
@@ -189,3 +223,39 @@ def test_score_repair_campaign_cli_writes_report(tmp_path: Path) -> None:
     report = json.loads(report_path.read_text(encoding="utf-8"))
     assert report["schema"] == REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA
     assert report["rows"][0]["typed_response_id"] == "segnet_region_ready"
+
+
+def test_repair_campaign_stackability_probe_cli_writes_probe(tmp_path: Path) -> None:
+    report_path = tmp_path / "repair_campaign_score_report.json"
+    probe_path = tmp_path / "repair_campaign_stackability_probe.json"
+    report = score_repair_campaign(payload=_work_order(tmp_path), repo_root=tmp_path)
+    report_path.write_text(
+        json.dumps(report, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "tools/run_repair_campaign_stackability_probe.py",
+            "--score-report",
+            str(report_path),
+            "--typed-response-id",
+            "segnet_region_ready",
+            "--output",
+            str(probe_path),
+            "--overwrite",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    cli_result = json.loads(result.stdout)
+    assert cli_result["ready_for_exact_eval_dispatch"] is False
+    assert cli_result["stackability_ready"] is True
+    probe = json.loads(probe_path.read_text(encoding="utf-8"))
+    assert probe["schema"] == REPAIR_CAMPAIGN_STACKABILITY_PROBE_SCHEMA
+    assert probe["typed_response_id"] == "segnet_region_ready"

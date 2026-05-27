@@ -33,6 +33,7 @@ from tac.optimization.serialized_archive_economics import (
 from tac.repo_io import read_json, sha256_bytes, sha256_file, write_bytes_artifact, write_json_artifact
 
 ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA = "archive_section_entropy_recode_candidate.v1"
+ARCHIVE_ZIP_REPACK_SCHEMA = "archive_zip_repack_candidate.v1"
 PACKET_MEMBER_RECOMPRESS_SCHEMA = "packet_member_recompress_candidate.v1"
 PACKET_MEMBER_MERGE_SCHEMA = "packet_member_merge_candidate.v1"
 RENDERER_PAYLOAD_DFL1_SCHEMA = "renderer_payload_dfl1_candidate.v1"
@@ -40,6 +41,7 @@ PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA = "packet_member_zip_header_elide_candidat
 TENSOR_FACTORIZE_SCHEMA = "tensor_factorize_candidate.v1"
 RUNTIME_CONSUMPTION_PROOF_SCHEMA = "family_agnostic_runtime_consumption_proof_v1"
 ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND = "archive_section_entropy_recode_v1"
+ARCHIVE_ZIP_REPACK_TARGET_KIND = "archive_zip_repack_v1"
 PACKET_MEMBER_RECOMPRESS_TARGET_KIND = "packet_member_recompress_v1"
 PACKET_MEMBER_MERGE_TARGET_KIND = "packet_member_merge_v1"
 RENDERER_PAYLOAD_DFL1_TARGET_KIND = "renderer_payload_dfl1_v1"
@@ -49,6 +51,7 @@ SHELL_INFLATE_PARITY_SCOPE_CONTEST_FULL_SAMPLE = "contest_full_sample"
 PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND = "packet_member_zip_header_elide_v1"
 TENSOR_FACTORIZE_TARGET_KIND = "tensor_factorize_v1"
 ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER_ID = "archive_section_entropy_recode_adapter"
+ARCHIVE_ZIP_REPACK_MATERIALIZER_ID = "archive_zip_repack_adapter"
 PACKET_MEMBER_RECOMPRESS_MATERIALIZER_ID = "packet_member_recompress_adapter"
 PACKET_MEMBER_MERGE_MATERIALIZER_ID = "packet_member_merge_adapter"
 RENDERER_PAYLOAD_DFL1_MATERIALIZER_ID = "renderer_payload_dfl1_adapter"
@@ -56,6 +59,8 @@ PACKET_MEMBER_ZIP_HEADER_ELIDE_MATERIALIZER_ID = "packet_member_zip_header_elide
 TENSOR_FACTORIZE_MATERIALIZER_ID = "tensor_factorize_adapter"
 ARCHIVE_SECTION_ENTROPY_RECODE_PROOF_KIND = "archive_section_entropy_recode_raw_payload_identity_receiver_proof.v1"
 ARCHIVE_SECTION_ENTROPY_RECODE_RECEIVER_CONTRACT_KIND = "family_agnostic_archive_section_entropy_recode"
+ARCHIVE_ZIP_REPACK_PROOF_KIND = "archive_zip_repack_payload_identity_receiver_proof.v1"
+ARCHIVE_ZIP_REPACK_RECEIVER_CONTRACT_KIND = "family_agnostic_archive_zip_repack"
 PACKET_MEMBER_RECOMPRESS_PROOF_KIND = "packet_member_recompress_payload_identity_receiver_proof.v1"
 PACKET_MEMBER_RECOMPRESS_RECEIVER_CONTRACT_KIND = "family_agnostic_packet_member_recompress"
 PACKET_MEMBER_ZIP_HEADER_ELIDE_PROOF_KIND = "packet_member_zip_header_elide_payload_identity_receiver_proof.v1"
@@ -128,6 +133,249 @@ def _serialized_archive_delta_contract(
         modeled_saved_bytes=saved_bytes,
         require_realized_saving=False,
     )
+
+
+def materialize_archive_zip_repack_candidate(
+    *,
+    archive_path: str | Path,
+    output_archive: str | Path,
+    compression_methods: Sequence[str] = ("stored", "deflated"),
+    compresslevels: Sequence[int] = (1, 6, 9),
+    runtime_consumption_proof: str | Path | Mapping[str, Any] | None = None,
+    runtime_consumption_proof_out: str | Path | None = None,
+    repo_root: str | Path | None = None,
+    allow_size_regression: bool = False,
+    allow_overwrite: bool = False,
+    expected_existing_output_sha256: str | None = None,
+    expected_existing_runtime_consumption_proof_sha256: str | None = None,
+    min_free_bytes: int = 0,
+) -> dict[str, Any]:
+    """Repack every ZIP member while preserving decoded member payload bytes."""
+
+    repo = _repo(repo_root)
+    if runtime_consumption_proof is not None and runtime_consumption_proof_out is not None:
+        raise FamilyAgnosticMaterializerError(
+            "runtime_consumption_proof and runtime_consumption_proof_out are mutually exclusive"
+        )
+    archive = _resolve_path(archive_path, repo=repo)
+    output = _resolve_path(output_archive, repo=repo)
+    proof_out = (
+        _resolve_path(runtime_consumption_proof_out, repo=repo) if runtime_consumption_proof_out is not None else None
+    )
+    member_names = _zip_member_names(archive)
+    if not member_names:
+        raise FamilyAgnosticMaterializerError("archive_zip_repack_v1 requires at least one ZIP member")
+    source_record = _archive_record(archive)
+    source_members = [_member_record(archive, member_name) for member_name in member_names]
+    compression_trials = _zip_repack_compression_trials(
+        compression_methods=compression_methods,
+        compresslevels=compresslevels,
+    )
+    if not compression_trials:
+        raise FamilyAgnosticMaterializerError("no archive_zip_repack compression candidates were produced")
+
+    candidates = _archive_zip_repack_candidate_trials(
+        archive,
+        member_names=member_names,
+        compression_trials=compression_trials,
+    )
+    best = min(
+        candidates,
+        key=lambda item: (
+            int(item["archive_bytes"]),
+            str(item["strategy"]),
+            str(item["plan_key"]),
+        ),
+    )
+    saved_bytes = int(source_record["bytes"]) - int(best["archive_bytes"])
+    blockers: list[str] = []
+    if saved_bytes <= 0 and not allow_size_regression:
+        blockers.append("candidate_not_rate_positive")
+    write_result = write_bytes_artifact(
+        output,
+        bytes(best["payload"]),
+        allow_overwrite=allow_overwrite,
+        expected_existing_sha256=expected_existing_output_sha256,
+        min_free_bytes=min_free_bytes,
+    )
+    candidate_record = _archive_record(output)
+    candidate_members = [_member_record(output, member_name) for member_name in member_names]
+    candidate_member_sha256s = {str(row["name"]): str(row["sha256"]) for row in candidate_members}
+    proof_write_result = None
+    runtime_proof_ref: str | Path | Mapping[str, Any] | None = runtime_consumption_proof
+    if proof_out is not None:
+        runtime_proof_payload = _archive_zip_repack_runtime_consumption_proof(
+            source_archive=source_record,
+            candidate_archive=candidate_record,
+            source_members=source_members,
+            candidate_members=candidate_members,
+            selected_repack={
+                "strategy": best["strategy"],
+                "plan_key": best["plan_key"],
+                "member_count": len(member_names),
+                "source_archive_bytes": source_record["bytes"],
+                "candidate_archive_bytes": candidate_record["bytes"],
+                "saved_bytes": saved_bytes,
+                "compression_plan": best["compression_plan"],
+            },
+        )
+        proof_write_result = write_json_artifact(
+            proof_out,
+            runtime_proof_payload,
+            allow_overwrite=allow_overwrite,
+            expected_existing_sha256=expected_existing_runtime_consumption_proof_sha256,
+            min_free_bytes=min_free_bytes,
+        )
+        runtime_proof_ref = proof_out
+    receiver_verification = verify_runtime_consumption_proof(
+        runtime_consumption_proof=runtime_proof_ref,
+        required_candidate_archive_sha256=candidate_record["sha256"],
+        required_candidate_member_sha256s=candidate_member_sha256s,
+        required_proof_kind=ARCHIVE_ZIP_REPACK_PROOF_KIND,
+        required_receiver_contract_kind=ARCHIVE_ZIP_REPACK_RECEIVER_CONTRACT_KIND,
+        required_target_kind=ARCHIVE_ZIP_REPACK_TARGET_KIND,
+        required_materializer_id=ARCHIVE_ZIP_REPACK_MATERIALIZER_ID,
+        repo_root=repo,
+    )
+    readiness_blockers = _readiness_blockers(
+        blockers,
+        receiver_verification,
+        receiver_blocker="archive_zip_repack_receiver_contract_not_satisfied",
+    )
+    return {
+        "schema": ARCHIVE_ZIP_REPACK_SCHEMA,
+        "materializer_id": ARCHIVE_ZIP_REPACK_MATERIALIZER_ID,
+        "target_kind": ARCHIVE_ZIP_REPACK_TARGET_KIND,
+        "portability_contract": _materializer_portability_contract(
+            materializer_id=ARCHIVE_ZIP_REPACK_MATERIALIZER_ID,
+            target_kind=ARCHIVE_ZIP_REPACK_TARGET_KIND,
+            required_python_modules=("zipfile",),
+            deterministic_surface="python_stdlib_zipfile_archive_repack",
+            notes=(
+                "Archive-wide ZIP repack explores uniform and greedy per-member "
+                "compression plans while preserving every decoded member payload."
+            ),
+        ),
+        "receiver_contract_id": f"{ARCHIVE_ZIP_REPACK_TARGET_KIND}.receiver.v1",
+        "receiver_contract_kind": ARCHIVE_ZIP_REPACK_RECEIVER_CONTRACT_KIND,
+        "byte_closed_candidate_emitted": True,
+        "source_archive": source_record,
+        "source_members": source_members,
+        "candidate_archive": candidate_record,
+        "candidate_members": candidate_members,
+        "selected_member_names": member_names,
+        "selection_scope": "all_zip_members",
+        "selected_repack": {
+            "strategy": best["strategy"],
+            "plan_key": best["plan_key"],
+            "member_count": len(member_names),
+            "source_archive_bytes": source_record["bytes"],
+            "candidate_archive_bytes": candidate_record["bytes"],
+            "saved_bytes": saved_bytes,
+            "compression_plan": best["compression_plan"],
+        },
+        "serialized_archive_delta": _serialized_archive_delta_contract(
+            source_archive=source_record,
+            candidate_archive=candidate_record,
+            saved_bytes=saved_bytes,
+        ),
+        "candidate_trials": [
+            {key: value for key, value in trial.items() if key != "payload"} for trial in candidates
+        ],
+        "receiver_verification": receiver_verification,
+        "runtime_consumption_proof_path": (
+            proof_out.as_posix() if proof_out is not None else receiver_verification.get("proof_path")
+        ),
+        "runtime_consumption_proof_write": (proof_write_result.__dict__ if proof_write_result is not None else None),
+        "receiver_contract_satisfied": (receiver_verification["receiver_contract_satisfied"] is True),
+        "readiness_blockers": readiness_blockers,
+        "artifact_write": write_result.__dict__,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _archive_zip_repack_runtime_consumption_proof(
+    *,
+    source_archive: Mapping[str, Any],
+    candidate_archive: Mapping[str, Any],
+    source_members: Sequence[Mapping[str, Any]],
+    candidate_members: Sequence[Mapping[str, Any]],
+    selected_repack: Mapping[str, Any],
+) -> dict[str, Any]:
+    source_by_name = {str(row.get("name")): row for row in source_members}
+    candidate_by_name = {str(row.get("name")): row for row in candidate_members}
+    member_proofs = []
+    passed = True
+    for name in sorted(source_by_name):
+        source_row = source_by_name[name]
+        candidate_row = candidate_by_name.get(name, {})
+        source_sha = _clean_str(source_row.get("sha256"))
+        candidate_sha = _clean_str(candidate_row.get("sha256"))
+        member_passed = source_sha is not None and candidate_sha == source_sha
+        passed = passed and member_passed
+        member_proofs.append(
+            {
+                "member_name": name,
+                "source_member_sha256": source_sha,
+                "candidate_member_sha256": candidate_sha,
+                "member_payload_identical_to_source": member_passed,
+                "source_member_bytes": source_row.get("bytes"),
+                "candidate_member_bytes": candidate_row.get("bytes"),
+                "source_zip_compression_method": source_row.get("zip_compression_method"),
+                "candidate_zip_compression_method": candidate_row.get("zip_compression_method"),
+                "source_zip_compressed_bytes": source_row.get("zip_compressed_bytes"),
+                "candidate_zip_compressed_bytes": candidate_row.get("zip_compressed_bytes"),
+                "passed": member_passed,
+            }
+        )
+    if set(candidate_by_name) != set(source_by_name):
+        passed = False
+    candidate_member_sha256s = {
+        str(row.get("name")): str(row.get("sha256"))
+        for row in candidate_members
+        if _clean_str(row.get("name")) is not None and _clean_str(row.get("sha256")) is not None
+    }
+    return {
+        "schema": RUNTIME_CONSUMPTION_PROOF_SCHEMA,
+        "proof_kind": ARCHIVE_ZIP_REPACK_PROOF_KIND,
+        "proof_scope": "archive_zip_member_payload_identity_after_repack",
+        "target_kind": ARCHIVE_ZIP_REPACK_TARGET_KIND,
+        "materializer_id": ARCHIVE_ZIP_REPACK_MATERIALIZER_ID,
+        "receiver_contract_kind": ARCHIVE_ZIP_REPACK_RECEIVER_CONTRACT_KIND,
+        "receiver_contract_id": f"{ARCHIVE_ZIP_REPACK_TARGET_KIND}.receiver.v1",
+        "source_archive": dict(source_archive),
+        "source_members": [dict(row) for row in source_members],
+        "candidate_archive": dict(candidate_archive),
+        "candidate_members": [dict(row) for row in candidate_members],
+        "candidate_archive_sha256": candidate_archive.get("sha256"),
+        "candidate_member_sha256s": candidate_member_sha256s,
+        "selected_repack": dict(selected_repack),
+        "runtime_consumption_probe": {
+            "schema": "archive_zip_repack_payload_identity_probe.v1",
+            "passed": passed,
+            "member_count": len(member_proofs),
+            "all_member_payloads_identical": all(
+                proof["member_payload_identical_to_source"] is True for proof in member_proofs
+            ),
+            "same_member_name_set": set(candidate_by_name) == set(source_by_name),
+            "member_proofs": member_proofs,
+        },
+        "receiver_contract_satisfied": passed,
+        "runtime_consumption_proof_passed": passed,
+        "passed": passed,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "gpu_launched": False,
+        "exact_cuda_auth_eval": False,
+        "contest_cuda_auth_eval": False,
+        "score_affecting_payload_changed": False,
+        "charged_bits_changed": True,
+    }
 
 
 def materialize_packet_member_recompress_candidate(
@@ -2546,6 +2794,149 @@ def _zip_archive_bytes_with_replacement(
                 kwargs["compresslevel"] = compresslevel
             target.writestr(out_info, payload, **kwargs)
     return output.getvalue()
+
+
+def _zip_repack_compression_trials(
+    *,
+    compression_methods: Sequence[str],
+    compresslevels: Sequence[int],
+) -> tuple[tuple[int, int | None], ...]:
+    trials: list[tuple[int, int | None]] = []
+    for method in _normalized_compression_methods(compression_methods):
+        levels = (
+            (None,) if method == zipfile.ZIP_STORED else _ordered_unique_ints(int(level) for level in compresslevels)
+        )
+        for level in levels:
+            trial = (method, level)
+            if trial not in trials:
+                trials.append(trial)
+    return tuple(trials)
+
+
+def _zip_repack_plan_key(plan: Mapping[str, tuple[int, int | None]]) -> str:
+    return "|".join(
+        f"{name}:{_compression_method_name(method)}:{'default' if level is None else level}"
+        for name, (method, level) in sorted(plan.items())
+    )
+
+
+def _zip_repack_plan_manifest(plan: Mapping[str, tuple[int, int | None]]) -> list[dict[str, Any]]:
+    return [
+        {
+            "member_name": name,
+            "zip_compression_method": _compression_method_name(method),
+            "zip_compresslevel": level,
+        }
+        for name, (method, level) in sorted(plan.items())
+    ]
+
+
+def _archive_zip_repack_candidate_trials(
+    archive: Path,
+    *,
+    member_names: Sequence[str],
+    compression_trials: Sequence[tuple[int, int | None]],
+) -> list[dict[str, Any]]:
+    candidates: list[dict[str, Any]] = []
+    seen_payloads: set[str] = set()
+
+    def append_candidate(*, strategy: str, plan: Mapping[str, tuple[int, int | None]]) -> dict[str, Any]:
+        payload = _zip_archive_bytes_with_repack_plan(archive, compression_plan=plan)
+        archive_sha = sha256_bytes(payload)
+        if archive_sha not in seen_payloads:
+            seen_payloads.add(archive_sha)
+            candidates.append(
+                {
+                    "strategy": strategy,
+                    "plan_key": _zip_repack_plan_key(plan),
+                    "compression_plan": _zip_repack_plan_manifest(plan),
+                    "archive_bytes": len(payload),
+                    "archive_sha256": archive_sha,
+                    "payload": payload,
+                }
+            )
+        return {
+            "strategy": strategy,
+            "plan_key": _zip_repack_plan_key(plan),
+            "compression_plan": _zip_repack_plan_manifest(plan),
+            "archive_bytes": len(payload),
+            "archive_sha256": archive_sha,
+            "payload": payload,
+        }
+
+    for method, level in compression_trials:
+        uniform_plan = dict.fromkeys(member_names, (method, level))
+        append_candidate(strategy="uniform", plan=uniform_plan)
+    if not candidates:
+        return []
+    current = min(
+        candidates,
+        key=lambda item: (
+            int(item["archive_bytes"]),
+            str(item["strategy"]),
+            str(item["plan_key"]),
+        ),
+    )
+    current_plan = {
+        str(row["member_name"]): (
+            _compression_method_id(str(row["zip_compression_method"])),
+            row.get("zip_compresslevel"),
+        )
+        for row in current["compression_plan"]
+    }
+    for member_name in member_names:
+        best_for_member = current
+        best_plan = dict(current_plan)
+        for method, level in compression_trials:
+            trial_plan = dict(current_plan)
+            trial_plan[member_name] = (method, level)
+            trial = append_candidate(strategy="greedy_per_member", plan=trial_plan)
+            if (
+                int(trial["archive_bytes"]),
+                str(trial["plan_key"]),
+            ) < (
+                int(best_for_member["archive_bytes"]),
+                str(best_for_member["plan_key"]),
+            ):
+                best_for_member = trial
+                best_plan = trial_plan
+        current = best_for_member
+        current_plan = best_plan
+    return candidates
+
+
+def _zip_archive_bytes_with_repack_plan(
+    archive: Path,
+    *,
+    compression_plan: Mapping[str, tuple[int, int | None]],
+) -> bytes:
+    output = io.BytesIO()
+    with zipfile.ZipFile(archive, "r") as source, zipfile.ZipFile(output, "w") as target:
+        for info in source.infolist():
+            out_info = _copy_zip_info(info)
+            if info.is_dir():
+                target.mkdir(out_info)
+                continue
+            payload = source.read(info.filename)
+            compression, compresslevel = compression_plan.get(
+                info.filename,
+                (out_info.compress_type, None),
+            )
+            out_info.compress_type = compression
+            kwargs = {}
+            if out_info.compress_type == zipfile.ZIP_DEFLATED and compresslevel is not None:
+                kwargs["compresslevel"] = compresslevel
+            target.writestr(out_info, payload, **kwargs)
+    return output.getvalue()
+
+
+def _compression_method_id(name: str) -> int:
+    cleaned = name.strip().lower()
+    if cleaned == "stored":
+        return zipfile.ZIP_STORED
+    if cleaned == "deflated":
+        return zipfile.ZIP_DEFLATED
+    raise FamilyAgnosticMaterializerError(f"unsupported ZIP compression method: {name!r}")
 
 
 def _zip_archive_bytes_single_member(

@@ -22,6 +22,8 @@ ensure_repo_imports(REPO_ROOT)
 from tac.optimization.family_agnostic_materializers import (  # noqa: E402
     ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER_ID,
     ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+    ARCHIVE_ZIP_REPACK_MATERIALIZER_ID,
+    ARCHIVE_ZIP_REPACK_TARGET_KIND,
     PACKET_MEMBER_MERGE_MATERIALIZER_ID,
     PACKET_MEMBER_MERGE_RECEIVER_CONTRACT_KIND,
     PACKET_MEMBER_MERGE_RUNTIME_ADAPTER_PROOF_KIND,
@@ -36,6 +38,7 @@ from tac.optimization.family_agnostic_materializers import (  # noqa: E402
     TENSOR_FACTORIZE_TARGET_KIND,
     FamilyAgnosticMaterializerError,
     materialize_archive_section_entropy_recode_candidate,
+    materialize_archive_zip_repack_candidate,
     materialize_packet_member_merge_candidate,
     materialize_packet_member_recompress_candidate,
     materialize_packet_member_zip_header_elide_candidate,
@@ -87,6 +90,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
         choices=(
             ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+            ARCHIVE_ZIP_REPACK_TARGET_KIND,
             PACKET_MEMBER_MERGE_TARGET_KIND,
             PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
             PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
@@ -224,6 +228,7 @@ def build_materializer_empirical_sweep(
 ) -> dict[str, Any]:
     if target_kind not in {
         ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+        ARCHIVE_ZIP_REPACK_TARGET_KIND,
         PACKET_MEMBER_MERGE_TARGET_KIND,
         PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
         PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
@@ -365,6 +370,17 @@ def _materialize_target(
             section_manifest=section_manifest,
             section_names=section_names,
             brotli_qualities=tuple(brotli_qualities or (9, 10, 11)),
+            runtime_consumption_proof_out=proof_path,
+            repo_root=REPO_ROOT,
+            allow_overwrite=allow_overwrite,
+            min_free_bytes=min_free_bytes,
+        )
+    if target_kind == ARCHIVE_ZIP_REPACK_TARGET_KIND:
+        return materialize_archive_zip_repack_candidate(
+            archive_path=archive,
+            output_archive=candidate_path,
+            compression_methods=tuple(zip_compression_methods or ("stored", "deflated")),
+            compresslevels=tuple(zip_compresslevels or (1, 6, 9)),
             runtime_consumption_proof_out=proof_path,
             repo_root=REPO_ROOT,
             allow_overwrite=allow_overwrite,
@@ -522,6 +538,8 @@ def _materialize_target(
 def _target_materializer_id(target_kind: str) -> str:
     if target_kind == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND:
         return ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER_ID
+    if target_kind == ARCHIVE_ZIP_REPACK_TARGET_KIND:
+        return ARCHIVE_ZIP_REPACK_MATERIALIZER_ID
     if target_kind == PACKET_MEMBER_MERGE_TARGET_KIND:
         return PACKET_MEMBER_MERGE_MATERIALIZER_ID
     if target_kind == PACKET_MEMBER_RECOMPRESS_TARGET_KIND:

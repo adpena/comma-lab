@@ -35,6 +35,7 @@ from tac.optimization.byte_shaving_campaign import (
 from tac.optimization.decoder_q_constants import FEC6_PAIR_COUNT
 from tac.optimization.family_agnostic_materializers import (
     ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
+    ARCHIVE_ZIP_REPACK_SCHEMA,
     PACKET_MEMBER_MERGE_SCHEMA,
     PACKET_MEMBER_RECOMPRESS_SCHEMA,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
@@ -67,6 +68,7 @@ from .byte_shaving_materializer_registry import (
     ARCHIVE_SECTION_HEADER_ELIDE_TARGET_KIND,
     ARCHIVE_SECTION_PROCEDURALIZE_TARGET_KIND,
     ARCHIVE_SECTION_REORDER_TARGET_KIND,
+    ARCHIVE_ZIP_REPACK_TARGET_KIND,
     DQS1_PAIRSET_TARGET_KIND,
     INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER,
     INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY,
@@ -145,6 +147,7 @@ HARVESTABLE_MATERIALIZER_MANIFEST_SCHEMAS = frozenset(
         CHAIN_SCHEMA,
         INVERSE_SCORER_CELL_CHAIN_SCHEMA,
         ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
+        ARCHIVE_ZIP_REPACK_SCHEMA,
         PACKET_MEMBER_MERGE_SCHEMA,
         PACKET_MEMBER_RECOMPRESS_SCHEMA,
         PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
@@ -155,6 +158,7 @@ HARVESTABLE_MATERIALIZER_MANIFEST_SCHEMAS = frozenset(
 GROUPED_ARCHIVE_STATE_SUPPORTED_TARGET_KINDS = frozenset(
     {
         ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+        ARCHIVE_ZIP_REPACK_TARGET_KIND,
         PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
         PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
     }
@@ -2172,6 +2176,8 @@ def _family_agnostic_materializer_command(
             blockers.append("materializer_context_missing:section_manifest")
         else:
             input_paths.append(section_manifest)
+    elif target_kind == ARCHIVE_ZIP_REPACK_TARGET_KIND:
+        pass
     elif target_kind == PACKET_MEMBER_RECOMPRESS_TARGET_KIND:
         packet_member_manifest = _path_context_value(context, "packet_member_manifest")
         if packet_member_manifest is not None:
@@ -2267,6 +2273,7 @@ def _family_agnostic_materializer_command(
     runtime_proof_out: str | None = None
     if runtime_proof is None and target_kind in {
         ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+        ARCHIVE_ZIP_REPACK_TARGET_KIND,
         PACKET_MEMBER_MERGE_TARGET_KIND,
         PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
         PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
@@ -2334,6 +2341,17 @@ def _family_agnostic_materializer_command(
         qualities.extend(_string_list_context_value(context, "qualities"))
         for quality in ordered_unique(qualities):
             command.extend(["--brotli-quality", quality])
+    elif target_kind == ARCHIVE_ZIP_REPACK_TARGET_KIND:
+        methods = _string_list_context_value(context, "zip_compression_method")
+        methods.extend(_string_list_context_value(context, "zip_compression_methods"))
+        methods.extend(_string_list_context_value(context, "compression_method"))
+        for method in ordered_unique(methods):
+            command.extend(["--zip-compression-method", method])
+        levels = _string_list_context_value(context, "zip_compresslevel")
+        levels.extend(_string_list_context_value(context, "zip_compresslevels"))
+        levels.extend(_string_list_context_value(context, "compresslevel"))
+        for level in ordered_unique(levels):
+            command.extend(["--zip-compresslevel", level])
     elif target_kind == PACKET_MEMBER_RECOMPRESS_TARGET_KIND:
         packet_member_manifest = _path_context_value(context, "packet_member_manifest")
         if packet_member_manifest is not None:
@@ -2675,6 +2693,7 @@ def _family_agnostic_materializer_sweep_command(
 
     supported_targets = {
         ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+        ARCHIVE_ZIP_REPACK_TARGET_KIND,
         PACKET_MEMBER_MERGE_TARGET_KIND,
         PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
         PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
@@ -2725,6 +2744,19 @@ def _family_agnostic_materializer_sweep_command(
         for quality in ordered_unique(qualities):
             if command:
                 command.extend(["--brotli-quality", quality])
+    elif target_kind == ARCHIVE_ZIP_REPACK_TARGET_KIND:
+        methods = _string_list_context_value(context, "zip_compression_method")
+        methods.extend(_string_list_context_value(context, "zip_compression_methods"))
+        methods.extend(_string_list_context_value(context, "compression_method"))
+        for method in ordered_unique(methods):
+            if command:
+                command.extend(["--zip-compression-method", method])
+        levels = _string_list_context_value(context, "zip_compresslevel")
+        levels.extend(_string_list_context_value(context, "zip_compresslevels"))
+        levels.extend(_string_list_context_value(context, "compresslevel"))
+        for level in ordered_unique(levels):
+            if command:
+                command.extend(["--zip-compresslevel", level])
     elif target_kind == PACKET_MEMBER_RECOMPRESS_TARGET_KIND:
         packet_member_manifest = _path_context_value(context, "packet_member_manifest")
         if packet_member_manifest is not None:
@@ -3191,6 +3223,13 @@ def _materializer_work_dispatch_blockers(target_kind: str) -> tuple[str, ...]:
             [
                 "archive_section_entropy_recode_requires_archive_preflight",
                 "archive_section_entropy_recode_requires_same_runtime_inflate_parity",
+            ]
+        )
+    if target_kind == ARCHIVE_ZIP_REPACK_TARGET_KIND:
+        blockers.extend(
+            [
+                "archive_zip_repack_requires_archive_preflight",
+                "archive_zip_repack_requires_runtime_consumption_proof",
             ]
         )
     if target_kind == ARCHIVE_SECTION_HEADER_ELIDE_TARGET_KIND:
@@ -3714,6 +3753,20 @@ def build_materializer_work_queue(
                 target_kind=ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
                 schema=ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
                 repo_root=repo,
+                )
+            )
+            blockers.extend(command_blockers)
+        elif (
+            unit_kind == "archive"
+            and operation_family == "archive_zip_repack"
+            and target_kind == ARCHIVE_ZIP_REPACK_TARGET_KIND
+        ):
+            command, command_blockers, telemetry, postconditions = (
+                _family_agnostic_materializer_queue_adapter(
+                    context,
+                    target_kind=ARCHIVE_ZIP_REPACK_TARGET_KIND,
+                    schema=ARCHIVE_ZIP_REPACK_SCHEMA,
+                    repo_root=repo,
                 )
             )
             blockers.extend(command_blockers)

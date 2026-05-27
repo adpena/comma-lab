@@ -58,6 +58,12 @@ def _write_recompress_zip(path: Path) -> None:
         )
 
 
+def _write_archive_repack_zip(path: Path) -> None:
+    with zipfile.ZipFile(path, "w") as zf:
+        zf.writestr("renderer.bin", b"A" * 4096, compress_type=zipfile.ZIP_STORED)
+        zf.writestr("sidecar.bin", b"B" * 2048, compress_type=zipfile.ZIP_STORED)
+
+
 def _write_merge_zip(path: Path) -> None:
     with zipfile.ZipFile(path, "w") as zf:
         for name, payload in {
@@ -204,6 +210,32 @@ def test_materializer_empirical_sweep_supports_packet_member_recompress(
     assert row["saved_bytes"] > 0
     assert row["observed_rate_gain"] > 0
     assert row["observed_score_gain"] > 0
+    assert row["receiver_contract_satisfied"] is True
+    assert row["score_claim"] is False
+    assert Path(row["candidate_archive_path"]).is_file()
+
+
+def test_materializer_empirical_sweep_supports_archive_zip_repack(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "archive_repack.zip"
+    _write_archive_repack_zip(archive)
+
+    payload = build_materializer_empirical_sweep(
+        target_kind="archive_zip_repack_v1",
+        archives=[f"archive_repack={archive}"],
+        output_dir=tmp_path / "sweep",
+        zip_compression_methods=("deflated",),
+        zip_compresslevels=(9,),
+    )
+
+    row = payload["observations"][0]
+    assert payload["materializer_id"] == "archive_zip_repack_adapter"
+    assert payload["planner_feedback"]["target_kind"] == "archive_zip_repack_v1"
+    assert row["selected_materialization_key"] == "selected_repack"
+    assert row["selected_repack"]["member_count"] == 2
+    assert row["saved_bytes"] > 0
+    assert row["observed_rate_gain"] > 0
     assert row["receiver_contract_satisfied"] is True
     assert row["score_claim"] is False
     assert Path(row["candidate_archive_path"]).is_file()

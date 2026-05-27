@@ -31,6 +31,7 @@ MATERIALIZER_FALSE_AUTHORITY: dict[str, bool] = {
 }
 MATERIALIZER_DELTA_KEYS: tuple[str, ...] = (
     "section_recode",
+    "selected_repack",
     "selected_compression",
     "selected_merge",
     "selected_payload",
@@ -99,6 +100,7 @@ def _recommended_planner_action(
         return "repair_receiver_contract_before_exact_readiness"
     suffix_by_target = {
         "archive_section_entropy_recode_v1": "archive_section_entropy_recode",
+        "archive_zip_repack_v1": "archive_zip_repack",
         "packet_member_recompress_v1": "member_recompress",
         "packet_member_zip_header_elide_v1": "header_elide",
         "tensor_factorize_v1": "tensor_factorize",
@@ -334,6 +336,7 @@ def materializer_observation_from_manifest(
         "serialized_archive_delta": dict(selected)
         if selected_key == SERIALIZED_ARCHIVE_DELTA_KEY
         else {},
+        "selected_repack": dict(selected) if selected_key == "selected_repack" else {},
         "selected_elision": dict(selected) if selected_key == "selected_elision" else {},
         "section_recode": dict(selected) if selected_key == "section_recode" else {},
         "selected_compression": dict(selected)

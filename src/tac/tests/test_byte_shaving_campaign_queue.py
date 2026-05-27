@@ -47,6 +47,8 @@ from comma_lab.scheduler.byte_shaving_materializer_registry import (
     ARCHIVE_SECTION_PROCEDURALIZE_TARGET_KIND,
     ARCHIVE_SECTION_REORDER_MATERIALIZER,
     ARCHIVE_SECTION_REORDER_TARGET_KIND,
+    ARCHIVE_ZIP_REPACK_MATERIALIZER,
+    ARCHIVE_ZIP_REPACK_TARGET_KIND,
     BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER,
     BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_ID,
     BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_KIND,
@@ -117,6 +119,7 @@ from tac.optimization.dynamic_sparse_gate_oracle import (
 )
 from tac.optimization.family_agnostic_materializers import (
     ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
+    ARCHIVE_ZIP_REPACK_SCHEMA,
     PACKET_MEMBER_MERGE_SCHEMA,
     PACKET_MEMBER_RECOMPRESS_SCHEMA,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
@@ -1207,6 +1210,20 @@ def test_materializer_registry_has_family_agnostic_fail_closed_targets() -> None
                 "unit_kind": "tensor",
             },
             TENSOR_FACTORIZE_MATERIALIZER,
+            "local_cpu",
+        ),
+        (
+            {
+                "unit_id": "frontier_archive_zip",
+                "operation_id": "repack_frontier_archive_zip",
+                "operation_family": "archive_zip_repack",
+                "target_kind": ARCHIVE_ZIP_REPACK_TARGET_KIND,
+            },
+            {
+                "unit_id": "frontier_archive_zip",
+                "unit_kind": "archive",
+            },
+            ARCHIVE_ZIP_REPACK_MATERIALIZER,
             "local_cpu",
         ),
         (
@@ -2506,6 +2523,59 @@ def test_archive_section_entropy_recode_fails_closed_without_section_manifest(
     assert row["executable"] is False
     assert row["tool"] is None
     assert "materializer_context_missing:section_manifest" in row["materialization_blockers"]
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_materializer_work_queue_wraps_archive_zip_repack(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    output = tmp_path / "archive_repack.zip"
+    out_manifest = tmp_path / "archive_repack.json"
+    backlog = {
+        "schema": MATERIALIZER_BACKLOG_SCHEMA,
+        "rows": [
+            {
+                "backlog_key": "archive_zip_repack_fixture",
+                "unit_kind": "archive",
+                "operation_family": "archive_zip_repack",
+                "target_kind": ARCHIVE_ZIP_REPACK_TARGET_KIND,
+                "materializer_id": ARCHIVE_ZIP_REPACK_MATERIALIZER,
+            },
+        ],
+    }
+
+    queue = build_materializer_work_queue(
+        backlog,
+        repo_root=tmp_path,
+        contexts={
+            "archive_zip_repack_fixture": {
+                "archive_path": str(archive),
+                "output_archive": str(output),
+                "output_manifest": str(out_manifest),
+                "zip_compresslevel": [1, 9],
+            },
+        },
+        source_plan_path="plan.json",
+    )
+
+    row = queue["rows"][0]
+    runtime_proof = out_manifest.with_name(f"{out_manifest.stem}.runtime_consumption_proof.json")
+    assert queue["executable_row_count"] == 1
+    assert row["tool"] == "tools/run_family_agnostic_materializer.py"
+    assert ["--target-kind", ARCHIVE_ZIP_REPACK_TARGET_KIND] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    assert ["--runtime-consumption-proof-out", str(runtime_proof)] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    _assert_typed_postconditions(
+        row["postconditions"],
+        path=out_manifest,
+        schema=ARCHIVE_ZIP_REPACK_SCHEMA,
+    )
+    assert row["telemetry"]["input_artifact_paths"] == [str(archive)]
     assert row["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
 

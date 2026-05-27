@@ -212,6 +212,7 @@ _TARGET_KIND_POSITION_OVERRIDES: dict[str, str] = {
     "archive_section_header_elide_v1": "P16",
     "archive_section_proceduralize_v1": "P5",
     "archive_section_reorder_v1": "P16",
+    "archive_zip_repack_v1": "P15",
     "byte_range_entropy_recode_v1": "P13",
     "dqs1_pairset_drop_pair": "P17",
     "frame_pair_geometry_transform_v1": "P17",

@@ -18,6 +18,7 @@ from typing import Any
 
 from tac.optimization.family_agnostic_materializers import (
     ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
+    ARCHIVE_ZIP_REPACK_SCHEMA,
     PACKET_MEMBER_MERGE_SCHEMA,
     PACKET_MEMBER_RECOMPRESS_SCHEMA,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
@@ -52,6 +53,7 @@ SUPPORTED_CHAIN_SCHEMAS = frozenset(
 SUPPORTED_FAMILY_AGNOSTIC_MATERIALIZER_SCHEMAS = frozenset(
     {
         ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
+        ARCHIVE_ZIP_REPACK_SCHEMA,
         PACKET_MEMBER_MERGE_SCHEMA,
         PACKET_MEMBER_RECOMPRESS_SCHEMA,
         PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
@@ -1047,6 +1049,8 @@ def _candidate_family(schema: str) -> str:
         return "inverse_scorer_cell"
     if schema == ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA:
         return "archive_section_entropy_recode"
+    if schema == ARCHIVE_ZIP_REPACK_SCHEMA:
+        return "archive_zip_repack"
     if schema == PACKET_MEMBER_MERGE_SCHEMA:
         return "packet_member_merge"
     if schema == PACKET_MEMBER_RECOMPRESS_SCHEMA:
