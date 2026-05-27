@@ -264,16 +264,28 @@ def build_feca_selector_reparameterized_candidate(
     best_alpha = int(source_module.ALPHA_DEFAULT)
     for scale in scales:
         for alpha in alphas:
-            payload = _encode_with_params(
-                source_module,
-                source_codes,
-                scale=int(scale),
-                alpha=int(alpha),
-            )
+            try:
+                payload = _encode_with_params(
+                    source_module,
+                    source_codes,
+                    scale=int(scale),
+                    alpha=int(alpha),
+                )
+            except FecaSelectorReparameterizationError as exc:
+                rows.append(
+                    {
+                        "scale": int(scale),
+                        "alpha": int(alpha),
+                        "status": "roundtrip_failed",
+                        "error": str(exc),
+                    }
+                )
+                continue
             rows.append(
                 {
                     "scale": int(scale),
                     "alpha": int(alpha),
+                    "status": "roundtrip_equal",
                     "selector_payload_bytes": len(payload),
                     "selector_payload_sha256": sha256_bytes(payload),
                     "selector_saved_bytes": len(parts["selector_payload"]) - len(payload),
@@ -482,7 +494,7 @@ def build_feca_selector_reparameterized_candidate(
             "sweep_rows": sorted(
                 rows,
                 key=lambda row: (
-                    int(row["selector_payload_bytes"]),
+                    int(row.get("selector_payload_bytes") or 1 << 60),
                     int(row["scale"]),
                     int(row["alpha"]),
                 ),
