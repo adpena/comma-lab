@@ -34,6 +34,12 @@ REPAIR_CAMPAIGN_POSTERIOR_PRIOR_SUMMARY_SCHEMA = (
 REPAIR_CAMPAIGN_POSTERIOR_FAMILY_PRIOR_SCHEMA = (
     "repair_campaign_posterior_family_prior.v1"
 )
+REPAIR_CAMPAIGN_MULTISCALE_ACTION_LEDGER_SCHEMA = (
+    "repair_campaign_multiscale_action_ledger.v1"
+)
+REPAIR_CAMPAIGN_MULTISCALE_ACTION_ROW_SCHEMA = (
+    "repair_campaign_multiscale_action_row.v1"
+)
 
 _TYPED_LEDGER_SCHEMA = "frontier_rate_attack_repair_budget_typed_response_ledger.v1"
 _TYPED_ROW_SCHEMA = "frontier_rate_attack_repair_budget_typed_response_row.v1"
@@ -51,6 +57,18 @@ _ENTROPY_POSITION_WEIGHTS: dict[str, float] = {
     "after_entropy_coder_container_or_zip_grammar": 0.45,
     "unknown_entropy_pipeline_position": 0.20,
 }
+
+_SCALE_ORDER: tuple[str, ...] = (
+    "bit",
+    "byte",
+    "pixel",
+    "boundary",
+    "region",
+    "frame",
+    "pair",
+    "batch",
+    "full_video",
+)
 
 
 class RepairCampaignScorerError(ValueError):
@@ -338,6 +356,239 @@ def _component_response_terms(row: Mapping[str, Any]) -> dict[str, Any]:
         "forbidden_use": "score_claim_or_budget_spend_authority",
         **FALSE_AUTHORITY,
     }
+
+
+def _entropy_position_class(entropy_position: str) -> str:
+    if entropy_position.startswith("before_entropy_coder"):
+        return "pre_entropy_distribution_shaping"
+    if entropy_position == "scorer_entropy_repair_before_selector_codec":
+        return "scorer_entropy_before_selector_codec"
+    if entropy_position.startswith("at_entropy_coder"):
+        return "entropy_coder_boundary"
+    if entropy_position.startswith("after_entropy_coder"):
+        return "post_entropy_container"
+    if entropy_position == "selector_codec_entropy":
+        return "selector_codec_entropy"
+    return "unknown_entropy_pipeline_position"
+
+
+def _ordered_scales(values: Sequence[str]) -> list[str]:
+    seen = ordered_unique(values)
+    known = [scale for scale in _SCALE_ORDER if scale in set(seen)]
+    extra = [scale for scale in seen if scale not in set(_SCALE_ORDER)]
+    return [*known, *extra]
+
+
+def _has_any_key(mapping: Mapping[str, Any], fragments: Sequence[str]) -> bool:
+    lowered = [str(key).lower() for key in mapping]
+    return any(any(fragment in key for fragment in fragments) for key in lowered)
+
+
+def _multiscale_action_row(
+    *,
+    source_row: Mapping[str, Any],
+    prior: Mapping[str, Any],
+    entropy_position: str,
+    requested_bytes: int,
+    objective_delta: float | None,
+    per_op_bytes_delta: int | None,
+    component_response_terms: Mapping[str, Any],
+    interaction_penalty: float,
+    hard_constraints: Sequence[str],
+) -> dict[str, Any]:
+    scope = _mapping(source_row.get("interaction_scope"))
+    stack_terms = _mapping(source_row.get("stacking_interaction_terms"))
+    term = _allocation_action_term(source_row)
+    transform = _mapping(term.get("T_i"))
+    operation_levels = _string_list(source_row.get("operation_levels"))
+    targeted_dimensions = _string_list(source_row.get("targeted_dimensions"))
+    corpus = " ".join(
+        [
+            *operation_levels,
+            *targeted_dimensions,
+            str(source_row.get("correction_family") or ""),
+            str(source_row.get("candidate_id") or ""),
+            str(prior.get("family_id") or ""),
+        ]
+    ).lower()
+
+    scale_reasons: dict[str, list[str]] = {scale: [] for scale in _SCALE_ORDER}
+
+    def add(scale: str, reason: str) -> None:
+        scale_reasons.setdefault(scale, []).append(reason)
+
+    bit_delta = _first_float(
+        source_row.get("compressed_bit_delta_vs_baseline"),
+        source_row.get("selector_payload_bit_delta_vs_baseline"),
+        source_row.get("bit_delta_vs_baseline"),
+        transform.get("compressed_bit_delta_vs_baseline"),
+        transform.get("selector_payload_bit_delta_vs_baseline"),
+        transform.get("bit_delta_vs_baseline"),
+        transform.get("bits_delta"),
+    )
+    if bit_delta is not None or "bit" in corpus or _has_any_key(
+        scope, ("bit", "bits")
+    ):
+        add("bit", "bit_delta_or_bit_level_scope")
+    if requested_bytes > 0 or per_op_bytes_delta is not None or "byte" in corpus:
+        add("byte", "repair_byte_budget_or_archive_byte_delta")
+    if "pixel" in corpus or _has_any_key(scope, ("pixel", "mask")):
+        add("pixel", "pixel_or_mask_scope")
+    if (
+        "boundary" in corpus
+        or "segnet" in corpus
+        or _has_any_key(scope, ("boundary", "edge"))
+    ):
+        add("boundary", "segnet_boundary_or_explicit_boundary_scope")
+    if "region" in corpus or _has_any_key(scope, ("region", "class_region")):
+        add("region", "region_scope")
+    if "frame" in corpus or _has_any_key(scope, ("frame",)):
+        add("frame", "frame_scope")
+    if "pair" in corpus or _has_any_key(scope, ("pair",)):
+        add("pair", "pair_scope")
+    if "batch" in corpus or _has_any_key(scope, ("batch",)):
+        add("batch", "batch_scope")
+    if (
+        "full_video" in corpus
+        or "video" in corpus
+        or _has_any_key(scope, ("full_video", "video"))
+    ):
+        add("full_video", "full_video_scope")
+
+    active_scales = _ordered_scales(
+        [scale for scale, reasons in scale_reasons.items() if reasons]
+    )
+    scale_rows = [
+        {
+            "scale": scale,
+            "source_reasons": ordered_unique(scale_reasons.get(scale) or []),
+        }
+        for scale in active_scales
+    ]
+    segnet_delta = _safe_float(component_response_terms.get("segnet_delta_score_units"))
+    posenet_delta = _safe_float(
+        component_response_terms.get("posenet_delta_score_units")
+    )
+    component_axis_values: list[str] = []
+    if segnet_delta is not None:
+        component_axis_values.append("segnet")
+    if posenet_delta is not None:
+        component_axis_values.append("posenet")
+    if per_op_bytes_delta is not None or requested_bytes:
+        component_axis_values.append("rate_bytes")
+    if bit_delta is not None:
+        component_axis_values.append("selector_bits")
+    component_axes = ordered_unique(component_axis_values)
+    interaction_order = len(active_scales)
+    remeasure_required = (
+        stack_terms.get("must_remeasure_with_parent_and_sibling_repairs") is True
+        or interaction_order >= 4
+    )
+    row = {
+        "schema": REPAIR_CAMPAIGN_MULTISCALE_ACTION_ROW_SCHEMA,
+        "typed_response_id": source_row.get("typed_response_id"),
+        "candidate_id": source_row.get("candidate_id"),
+        "family_id": prior.get("family_id") or "unclassified_repair_family",
+        "correction_family": source_row.get("correction_family"),
+        "active_scales": active_scales,
+        "scale_rows": scale_rows,
+        "interaction_order": interaction_order,
+        "component_axes": component_axes,
+        "entropy_position_label": entropy_position,
+        "entropy_position_class": _entropy_position_class(entropy_position),
+        "action_functional": {
+            "schema": "repair_campaign_multiscale_action_functional_terms.v1",
+            "objective": "minimize_delta_segnet_plus_delta_posenet_plus_lambda_delta_bytes",
+            "delta_segnet_score_units": segnet_delta,
+            "delta_posenet_score_units": posenet_delta,
+            "objective_delta_score_units": objective_delta,
+            "per_op_bytes_delta": per_op_bytes_delta,
+            "requested_repair_bytes": requested_bytes,
+            "bit_delta_vs_baseline": bit_delta,
+            "interaction_penalty": interaction_penalty,
+            "entropy_position_weight": _ENTROPY_POSITION_WEIGHTS.get(
+                entropy_position,
+                _ENTROPY_POSITION_WEIGHTS["unknown_entropy_pipeline_position"],
+            ),
+        },
+        "interaction_scope": dict(scope),
+        "stacking_interaction_terms": dict(stack_terms),
+        "remeasure_required_before_budget_spend": remeasure_required,
+        "hard_legal_runtime_constraints": list(hard_constraints),
+        "mathematical_grounding": {
+            "schema": "repair_campaign_multiscale_mathematical_grounding.v1",
+            "scale_order": list(_SCALE_ORDER),
+            "principle": (
+                "repair value depends on where a transformation acts relative "
+                "to entropy concentration and which spatial/temporal support it touches"
+            ),
+            "objective": (
+                "DeltaS = DeltaSegNet + DeltaPoseNet + lambda*DeltaBytes + "
+                "cross_scale_interaction_terms"
+            ),
+            "hard_constraint": (
+                "allocated repair bytes are bounded by receiver-closed rate credit"
+            ),
+        },
+        "allowed_use": "multiscale_repair_action_ranking_feature_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        row,
+        context=(
+            "repair_campaign_multiscale_action_row:"
+            f"{source_row.get('typed_response_id') or source_row.get('candidate_id')}"
+        ),
+    )
+    return row
+
+
+def _multiscale_action_ledger(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    scale_histogram: dict[str, int] = {}
+    entropy_class_histogram: dict[str, int] = {}
+    interaction_order_histogram: dict[str, int] = {}
+    action_rows: list[dict[str, Any]] = []
+    for row in rows:
+        action = _mapping(row.get("multiscale_action_row"))
+        if not action:
+            continue
+        action_rows.append(dict(action))
+        for scale in _string_list(action.get("active_scales")):
+            scale_histogram[scale] = scale_histogram.get(scale, 0) + 1
+        entropy_class = str(
+            action.get("entropy_position_class")
+            or "unknown_entropy_pipeline_position"
+        )
+        entropy_class_histogram[entropy_class] = (
+            entropy_class_histogram.get(entropy_class, 0) + 1
+        )
+        order = str(_safe_int(action.get("interaction_order")))
+        interaction_order_histogram[order] = interaction_order_histogram.get(order, 0) + 1
+    ledger = {
+        "schema": REPAIR_CAMPAIGN_MULTISCALE_ACTION_LEDGER_SCHEMA,
+        "row_schema": REPAIR_CAMPAIGN_MULTISCALE_ACTION_ROW_SCHEMA,
+        "row_count": len(action_rows),
+        "scale_order": list(_SCALE_ORDER),
+        "scale_histogram": dict(sorted(scale_histogram.items())),
+        "entropy_position_class_histogram": dict(
+            sorted(entropy_class_histogram.items())
+        ),
+        "interaction_order_histogram": dict(
+            sorted(interaction_order_histogram.items())
+        ),
+        "rows": action_rows,
+        "budget_spend_allowed": False,
+        "ready_for_exact_eval_dispatch": False,
+        "allowed_use": "repair_campaign_multiscale_action_ledger_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        ledger,
+        context="repair_campaign_multiscale_action_ledger",
+    )
+    return ledger
 
 
 def _load_posterior_rows(
@@ -795,6 +1046,9 @@ def _build_optimizer_decision(
                     "component_response_terms": dict(
                         _mapping(row.get("component_response_terms"))
                     ),
+                    "multiscale_action_row": dict(
+                        _mapping(row.get("multiscale_action_row"))
+                    ),
                     "receiver_proof_status": dict(receiver_proof_status),
                     "hard_legal_runtime_constraints": _string_list(
                         row.get("hard_legal_runtime_constraints")
@@ -856,6 +1110,9 @@ def _build_optimizer_decision(
                 "per_op_bytes_delta": row.get("per_op_bytes_delta"),
                 "component_response_terms": dict(
                     _mapping(row.get("component_response_terms"))
+                ),
+                "multiscale_action_row": dict(
+                    _mapping(row.get("multiscale_action_row"))
                 ),
                 "receiver_proof_status": dict(
                     _mapping(row.get("receiver_proof_status"))
@@ -1067,6 +1324,13 @@ def build_repair_campaign_stackability_probe(
             allocation.get("scaled_expected_local_improvement_score_units")
         )
         or 0.0,
+        "multiscale_action_row": dict(
+            _mapping(
+                allocation.get("multiscale_action_row")
+                if allocation
+                else score_row.get("multiscale_action_row")
+            )
+        ),
         "entropy_position_label": entropy_position,
         "entropy_position_class": (
             "pre_entropy_distribution_shaping"
@@ -1182,6 +1446,17 @@ def score_repair_campaign(
         component_response_terms = _component_response_terms(row)
         receiver_proof = _receiver_proof_status(row, repo_root=repo_root)
         hard_constraints = _hard_legal_runtime_constraints(row)
+        multiscale_action = _multiscale_action_row(
+            source_row=row,
+            prior=prior,
+            entropy_position=entropy_position,
+            requested_bytes=requested_bytes,
+            objective_delta=objective_delta,
+            per_op_bytes_delta=per_op_bytes_delta,
+            component_response_terms=component_response_terms,
+            interaction_penalty=interaction_penalty,
+            hard_constraints=hard_constraints,
+        )
         bytes_denominator = requested_bytes if requested_bytes > 0 else 1
         improvement_per_byte = improvement / bytes_denominator
         posterior_family_prior = _posterior_family_prior(
@@ -1229,6 +1504,7 @@ def score_repair_campaign(
             "improvement_per_byte": improvement_per_byte,
             "per_op_bytes_delta": per_op_bytes_delta,
             "component_response_terms": component_response_terms,
+            "multiscale_action_row": multiscale_action,
             "receiver_proof_status": receiver_proof,
             "hard_legal_runtime_constraints": hard_constraints,
             "family_prior_multiplier": family_multiplier,
@@ -1270,6 +1546,9 @@ def score_repair_campaign(
     )
     for rank, row in enumerate(rows, start=1):
         row["campaign_rank"] = rank
+        action = row.get("multiscale_action_row")
+        if isinstance(action, dict):
+            action["campaign_rank"] = rank
     ready_rows = [
         row
         for row in rows
@@ -1286,6 +1565,7 @@ def score_repair_campaign(
         rows=rows,
         posterior_summary=posterior_summary,
     )
+    multiscale_ledger = _multiscale_action_ledger(rows)
     report = {
         "schema": REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA,
         "row_schema": REPAIR_CAMPAIGN_SCORE_ROW_SCHEMA,
@@ -1299,6 +1579,7 @@ def score_repair_campaign(
         "blocked_missing_artifact_count": len(rows) - len(ready_rows),
         "operator_family_priors": repair_operator_family_priors(),
         "structural_repair_opportunity_count": structural_opportunity_count,
+        "multiscale_action_ledger": multiscale_ledger,
         "missing_artifacts": missing_artifacts,
         "optimizer_decision": optimizer_decision,
         "rows": rows,
@@ -1313,6 +1594,8 @@ def score_repair_campaign(
 
 
 __all__ = [
+    "REPAIR_CAMPAIGN_MULTISCALE_ACTION_LEDGER_SCHEMA",
+    "REPAIR_CAMPAIGN_MULTISCALE_ACTION_ROW_SCHEMA",
     "REPAIR_CAMPAIGN_OPTIMIZER_ALLOCATION_ROW_SCHEMA",
     "REPAIR_CAMPAIGN_OPTIMIZER_DECISION_SCHEMA",
     "REPAIR_CAMPAIGN_POSTERIOR_FAMILY_PRIOR_SCHEMA",

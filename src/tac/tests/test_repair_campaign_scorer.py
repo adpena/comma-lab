@@ -10,6 +10,8 @@ from tac.optimization.repair_campaign_learning_signal import (
     build_repair_campaign_blocked_learning_signal_report,
 )
 from tac.optimization.repair_campaign_scorer import (
+    REPAIR_CAMPAIGN_MULTISCALE_ACTION_LEDGER_SCHEMA,
+    REPAIR_CAMPAIGN_MULTISCALE_ACTION_ROW_SCHEMA,
     REPAIR_CAMPAIGN_OPTIMIZER_DECISION_SCHEMA,
     REPAIR_CAMPAIGN_POSTERIOR_PRIOR_SUMMARY_SCHEMA,
     REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA,
@@ -81,6 +83,7 @@ def _work_order(tmp_path: Path) -> dict[str, object]:
                         ),
                         "T_i": {
                             "archive_byte_delta_vs_baseline": -4,
+                            "compressed_bit_delta_vs_baseline": -32,
                         },
                         "legal_runtime_constraints": [
                             "receiver_consumes_materialized_runtime_output",
@@ -98,6 +101,9 @@ def _work_order(tmp_path: Path) -> dict[str, object]:
                     "interaction_scope": {
                         "pair_indices": [7, 9],
                         "region_ids": ["road_boundary"],
+                        "pixel_count": 2048,
+                        "batch_count": 1,
+                        "full_video_id": "unit_video",
                         **_false_authority(),
                     },
                     "stacking_interaction_terms": {
@@ -262,6 +268,34 @@ def test_score_repair_campaign_ranks_ready_mlx_and_names_missing_artifacts(
     assert first["per_op_bytes_delta"] == -4
     assert first["component_response_terms"]["segnet_delta_score_units"] == -0.0007
     assert first["component_response_terms"]["posenet_delta_score_units"] == -0.0003
+    action = first["multiscale_action_row"]
+    assert action["schema"] == REPAIR_CAMPAIGN_MULTISCALE_ACTION_ROW_SCHEMA
+    assert action["active_scales"] == [
+        "bit",
+        "byte",
+        "pixel",
+        "boundary",
+        "region",
+        "frame",
+        "pair",
+        "batch",
+        "full_video",
+    ]
+    assert action["component_axes"] == [
+        "segnet",
+        "posenet",
+        "rate_bytes",
+        "selector_bits",
+    ]
+    assert action["action_functional"]["bit_delta_vs_baseline"] == -32.0
+    assert action["entropy_position_class"] == "pre_entropy_distribution_shaping"
+    assert action["remeasure_required_before_budget_spend"] is True
+    assert report["multiscale_action_ledger"]["schema"] == (
+        REPAIR_CAMPAIGN_MULTISCALE_ACTION_LEDGER_SCHEMA
+    )
+    assert report["multiscale_action_ledger"]["row_count"] == 2
+    assert report["multiscale_action_ledger"]["scale_histogram"]["region"] == 2
+    assert report["multiscale_action_ledger"]["scale_histogram"]["bit"] == 1
     assert (
         "runtime_consumption_proof_path:missing_or_unverified"
         in first["receiver_proof_status"]["missing_artifacts"]
@@ -274,6 +308,9 @@ def test_score_repair_campaign_ranks_ready_mlx_and_names_missing_artifacts(
     assert allocation["per_op_bytes_delta"] == -4
     assert allocation["component_response_terms"]["segnet_delta_score_units"] == (
         -0.0007
+    )
+    assert allocation["multiscale_action_row"]["active_scales"] == (
+        action["active_scales"]
     )
     assert (
         "runtime_consumption_proof_path:missing_or_unverified"
@@ -407,6 +444,11 @@ def test_repair_campaign_stackability_probe_requires_mlx_custody(
     assert ready["status"] == "ready_for_local_mlx_stackability_probe"
     assert ready["stackability_ready"] is True
     assert ready["allocated_repair_bytes"] == 32
+    assert ready["multiscale_action_row"]["active_scales"][:3] == [
+        "bit",
+        "byte",
+        "pixel",
+    ]
     assert ready["budget_spend_allowed"] is False
     assert ready["ready_for_exact_eval_dispatch"] is False
 
