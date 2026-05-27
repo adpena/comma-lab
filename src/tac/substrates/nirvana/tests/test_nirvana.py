@@ -9,12 +9,19 @@ NotImplementedError per the L0 SCAFFOLD posture (Catalog #240).
 
 from __future__ import annotations
 
-import ast
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 import numpy as np
 import torch
+from PIL import Image
 
+from tac.substrates._shared.numpy_portable_inflate import (
+    assert_inflate_is_numpy_portable,
+    write_numpy_portable_contest_runtime,
+)
 from tac.substrates.nirvana.architecture import (
     NirvanaConfig,
     NirvanaSubstrate,
@@ -25,10 +32,13 @@ from tac.substrates.nirvana.archive import (
     NRV1_SCHEMA_VERSION,
     pack_archive,
     parse_archive,
-    parse_archive_numpy,
 )
+from tac.substrates.nirvana.archive_numpy import parse_archive_numpy
+from tac.substrates.nirvana.inflate import inflate_one_video
 
+REPO_ROOT = Path(__file__).resolve().parents[5]
 _INFLATE_PATH = Path(__file__).resolve().parents[1] / "inflate.py"
+_ARCHIVE_NUMPY_PATH = Path(__file__).resolve().parents[1] / "archive_numpy.py"
 
 
 def _smoke_cfg() -> NirvanaConfig:
@@ -122,13 +132,54 @@ def test_numpy_parse_matches_torch_parse_roundtrip():
 
 
 def test_nirvana_inflate_has_no_torch_or_mlx_import() -> None:
-    tree = ast.parse(_INFLATE_PATH.read_text(encoding="utf-8"))
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            for alias in node.names:
-                assert not alias.name.startswith(("torch", "mlx")), alias.name
-        if isinstance(node, ast.ImportFrom) and node.module:
-            assert not node.module.startswith(("torch", "mlx")), node.module
+    assert_inflate_is_numpy_portable(_INFLATE_PATH)
+    assert_inflate_is_numpy_portable(_ARCHIVE_NUMPY_PATH)
+
+
+def test_numpy_portable_runtime_emitter_vendors_runtime_safe_archive(tmp_path: Path):
+    cfg = _smoke_cfg()
+    torch.manual_seed(5)
+    model = NirvanaSubstrate(cfg)
+    sd = model.state_dict()
+    archive_bytes = pack_archive(
+        {k: v for k, v in sd.items() if k != "latents"},
+        sd["latents"].clone(),
+        _smoke_meta(cfg),
+        patch_grid_h=cfg.patch_grid_h,
+        patch_grid_w=cfg.patch_grid_w,
+        patch_embed_dim=cfg.patch_embed_dim,
+    )
+
+    out = tmp_path / "submission"
+    write_numpy_portable_contest_runtime(
+        out,
+        substrate_pkg_name="nirvana",
+        repo_root=REPO_ROOT,
+        runtime_module_files=("archive_numpy.py", "inflate.py"),
+    )
+    assert (out / "inflate.sh").is_file()
+    assert (out / "src" / "tac" / "substrates" / "nirvana" / "archive_numpy.py").is_file()
+    assert not (out / "src" / "tac" / "substrates" / "nirvana" / "archive.py").exists()
+    for py in out.rglob("*.py"):
+        assert_inflate_is_numpy_portable(py)
+
+    archive_dir = tmp_path / "archive"
+    archive_dir.mkdir()
+    (archive_dir / "0.bin").write_bytes(archive_bytes)
+    file_list = tmp_path / "file_list.txt"
+    file_list.write_text("0.mkv\n", encoding="utf-8")
+    output_dir = tmp_path / "inflated"
+    env = {
+        "PATH": os.environ.get("PATH", ""),
+        "PYTHONNOUSERSITE": "1",
+    }
+    subprocess.run(
+        [sys.executable, str(out / "inflate.py"), str(archive_dir), str(output_dir), str(file_list)],
+        check=True,
+        env=env,
+    )
+    assert (output_dir / "0" / "0.png").is_file()
+    assert (output_dir / "0" / f"{cfg.num_pairs * 2 - 1}.png").is_file()
 
 
 def test_header_size_invariant_is_25_bytes():
@@ -185,6 +236,26 @@ def test_pack_archive_rejects_oversize_patch_grid():
         raise AssertionError("expected ValueError on out-of-u8 patch_grid_h")
 
 
+def test_pack_archive_rejects_duplicate_latents_in_decoder_state_dict():
+    cfg = _smoke_cfg()
+    torch.manual_seed(0)
+    model = NirvanaSubstrate(cfg)
+    sd = model.state_dict()
+    try:
+        pack_archive(
+            sd,
+            sd["latents"].clone(),
+            _smoke_meta(cfg),
+            patch_grid_h=cfg.patch_grid_h,
+            patch_grid_w=cfg.patch_grid_w,
+            patch_embed_dim=cfg.patch_embed_dim,
+        )
+    except ValueError as exc:
+        assert "exclude" in str(exc) and "latents" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("expected ValueError on duplicated latents tensor")
+
+
 def test_forward_pass_after_roundtrip_matches_original_within_tolerance():
     cfg = _smoke_cfg()
     torch.manual_seed(7)
@@ -213,6 +284,39 @@ def test_forward_pass_after_roundtrip_matches_original_within_tolerance():
 
     assert torch.allclose(rgb_0_a, rgb_0_b, atol=5e-2)
     assert torch.allclose(rgb_1_a, rgb_1_b, atol=5e-2)
+
+
+def test_numpy_inflate_one_video_matches_torch_model_png(tmp_path: Path):
+    cfg = _smoke_cfg()
+    torch.manual_seed(23)
+    model = NirvanaSubstrate(cfg).eval()
+    with torch.no_grad():
+        model.latents.normal_(std=0.5)
+        model.patch_embeddings.normal_(std=0.5)
+        torch_rgb0, torch_rgb1 = model(torch.tensor([0], dtype=torch.long))
+    sd = model.state_dict()
+    blob = pack_archive(
+        {k: v for k, v in sd.items() if k != "latents"},
+        sd["latents"].clone(),
+        _smoke_meta(cfg),
+        patch_grid_h=cfg.patch_grid_h,
+        patch_grid_w=cfg.patch_grid_w,
+        patch_embed_dim=cfg.patch_embed_dim,
+    )
+
+    out = tmp_path / "0"
+    inflate_one_video(blob, out)
+
+    got0 = np.asarray(Image.open(out / "0.png"))
+    got1 = np.asarray(Image.open(out / "1.png"))
+    ref0 = (
+        torch_rgb0[0].permute(1, 2, 0).numpy().clip(0.0, 1.0) * 255.0
+    ).round().clip(0, 255).astype(np.uint8)
+    ref1 = (
+        torch_rgb1[0].permute(1, 2, 0).numpy().clip(0.0, 1.0) * 255.0
+    ).round().clip(0, 255).astype(np.uint8)
+    assert np.abs(got0.astype(int) - ref0.astype(int)).max() <= 1
+    assert np.abs(got1.astype(int) - ref1.astype(int)).max() <= 1
 
 
 # ENCODE_INFLATE_ROUNDTRIP — Catalog #139 byte-mutation smoke

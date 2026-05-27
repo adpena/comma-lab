@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""nirvana archive grammar — monolithic single-file ``0.bin`` (NRV1).
+"""nirvana training archive grammar — monolithic single-file ``0.bin`` (NRV1).
 
 Catalog #124 STRICT archive-grammar 8 fields declared in package
 ``__init__``. Export-first grammar (L2):
@@ -7,7 +7,7 @@ Catalog #124 STRICT archive-grammar 8 fields declared in package
 ::
 
     MAGIC(4)               b"NRV1"  NIRVANA Variant 1
-    VERSION(1)             u8       schema version (currently 1)
+    VERSION(1)             u8       schema version (currently 2)
     LATENT_DIM(2)          u16      cfg.latent_dim
     NUM_PAIRS(2)           u16      cfg.num_pairs
     PATCH_GRID_H(1)        u8       cfg.patch_grid_h
@@ -16,7 +16,7 @@ Catalog #124 STRICT archive-grammar 8 fields declared in package
     DECODER_BLOB_LEN(4)    u32      brotli shared per-patch decoder blob len
     LATENT_BLOB_LEN(4)     u32      raw int16 latents bytes len
     META_BLOB_LEN(4)       u32      utf-8 json meta bytes len
-    DECODER_BLOB           ...      brotli(quality=9) of pickled state_dict
+    DECODER_BLOB           ...      brotli(quality=9) of numpy-native state_dict
                                     (shared per-patch decoder + patch embeddings)
     LATENT_BLOB            ...      int16 latents row-major
     META_BLOB              ...      json: {"sin_freq": ..., "decoder_channels": [...],
@@ -52,24 +52,18 @@ import torch
 
 from tac.substrates._shared.numpy_portable_inflate import (
     pack_state_dict_numpy,
-    unpack_state_dict_numpy,
 )
-
-NRV1_MAGIC: bytes = b"NRV1"
-# Schema v2 (numpy-portable bridge, 2026-05-27): the DECODER_BLOB internal
-# encoding is now a torch-free numpy-native ``{key: fp16 ndarray}`` blob (was
-# ``brotli(pickle(torch_tensors))`` in v1). Per the 8th MLX-first standing
-# directive ``torch`` is FORBIDDEN at inflate time, and a torch-tensor pickle
-# requires ``torch`` to unpickle. The numpy-native blob (canonical
-# ``pack_state_dict_numpy`` bridge) lets ``parse_archive_numpy`` read weights
-# with NO torch dependency so the shipped inflate runtime is numpy/PIL-portable.
-NRV1_SCHEMA_VERSION: int = 2
-
-NRV1_HEADER_FMT: str = "<4sBHHBBHIII"
-NRV1_HEADER_SIZE: int = struct.calcsize(NRV1_HEADER_FMT)
-assert NRV1_HEADER_SIZE == 25, "NRV1 header size invariant (patch grid + embed dim)"
-
-BROTLI_QUALITY: int = 9
+from tac.substrates.nirvana.archive_numpy import (
+    BROTLI_QUALITY,
+    NRV1_HEADER_FMT,
+    NRV1_HEADER_SIZE,
+    NRV1_MAGIC,
+    NRV1_SCHEMA_VERSION,
+    NirvanaArchiveNumpy,
+    deserialize_numpy_state_dict,
+    parse_archive_numpy,
+    split_archive_sections,
+)
 
 
 @dataclass(frozen=True)
@@ -94,23 +88,16 @@ def _serialize_state_dict(sd: dict[str, torch.Tensor]) -> bytes:
     Uses the canonical ``pack_state_dict_numpy`` bridge (fp16 ``{key: ndarray}``,
     no pickle) wrapped in brotli. The result contains ZERO
     ``torch._utils._rebuild_tensor`` GLOBAL refs so ``parse_archive_numpy`` can
-    read it with NO torch import (8th MLX-first standing directive).
+    read it with no training-framework import.
     """
-    np_sd = {
-        k: v.detach().to("cpu", dtype=torch.float16).contiguous().numpy()
-        for k, v in sd.items()
-    }
-    return bytes(brotli.compress(pack_state_dict_numpy(np_sd, dtype="fp16"), quality=BROTLI_QUALITY))
+    return bytes(
+        brotli.compress(pack_state_dict_numpy(sd, dtype="fp16"), quality=BROTLI_QUALITY)
+    )
 
 
 def _deserialize_numpy_state_dict(blob: bytes) -> dict[str, np.ndarray]:
-    """Torch-free deserialize of the NRV1-v2 numpy-native decoder blob.
-
-    Returns ``{key: fp32 ndarray}``. The shipped numpy-portable inflate runtime
-    calls this (no torch import).
-    """
-    np_sd = unpack_state_dict_numpy(brotli.decompress(blob))
-    return {k: v.astype(np.float32) for k, v in np_sd.items()}
+    """Compatibility wrapper around the runtime-safe numpy decoder."""
+    return deserialize_numpy_state_dict(blob)
 
 
 def _deserialize_state_dict(blob: bytes) -> dict[str, torch.Tensor]:
@@ -153,6 +140,8 @@ def pack_archive(
 ) -> bytes:
     if schema_version != NRV1_SCHEMA_VERSION:
         raise ValueError(f"unsupported schema version: {schema_version}")
+    if "latents" in decoder_state_dict:
+        raise ValueError("decoder_state_dict must exclude the separate latents tensor")
     if latents.dim() != 2:
         raise ValueError(
             f"latents must be 2-D (num_pairs, latent_dim); got {tuple(latents.shape)}"
@@ -198,53 +187,13 @@ def pack_archive(
 
 
 def parse_archive(blob: bytes) -> NirvanaArchive:
-    if len(blob) < NRV1_HEADER_SIZE:
-        raise ValueError(
-            f"archive too short ({len(blob)} bytes; need >= {NRV1_HEADER_SIZE})"
-        )
-    (
-        magic,
-        version,
-        latent_dim,
-        num_pairs,
-        patch_grid_h,
-        patch_grid_w,
-        patch_embed_dim,
-        decoder_len,
-        latent_len,
-        meta_len,
-    ) = struct.unpack(NRV1_HEADER_FMT, blob[:NRV1_HEADER_SIZE])
-    if magic != NRV1_MAGIC:
-        raise ValueError(f"bad magic: {magic!r} (expected {NRV1_MAGIC!r})")
-    if version != NRV1_SCHEMA_VERSION:
-        raise ValueError(f"unsupported schema version: {version}")
+    sections = split_archive_sections(blob)
+    sd = _deserialize_state_dict(sections.decoder_blob)
+    meta = json.loads(sections.meta_blob.decode("utf-8"))
 
-    expected_latent_bytes = num_pairs * latent_dim * 2
-    if latent_len != expected_latent_bytes:
-        raise ValueError(
-            f"latent_len {latent_len} != num_pairs*latent_dim*2 = {expected_latent_bytes}"
-        )
-
-    end_header = NRV1_HEADER_SIZE
-    end_decoder = end_header + decoder_len
-    end_latents = end_decoder + latent_len
-    end_meta = end_latents + meta_len
-    if end_meta != len(blob):
-        raise ValueError(
-            f"archive size {len(blob)} != expected {end_meta} from header"
-        )
-
-    decoder_blob = blob[end_header:end_decoder]
-    latent_blob = blob[end_decoder:end_latents]
-    meta_blob = blob[end_latents:end_meta]
-
-    sd = _deserialize_state_dict(decoder_blob)
-    meta = json.loads(meta_blob.decode("utf-8"))
-
-    import numpy as np
     q_latents = torch.from_numpy(
-        np.frombuffer(latent_blob, dtype=np.int16).copy()
-    ).view(num_pairs, latent_dim)
+        np.frombuffer(sections.latent_blob, dtype=np.int16).copy()
+    ).view(sections.num_pairs, sections.latent_dim)
     scale = float(meta.pop("_quant_scale"))
     zp = float(meta.pop("_quant_zero_point"))
     latents = _dequantize_latents(q_latents, scale, zp)
@@ -253,92 +202,22 @@ def parse_archive(blob: bytes) -> NirvanaArchive:
         decoder_state_dict=sd,
         latents=latents,
         meta=meta,
-        schema_version=int(version),
-        patch_grid_h=int(patch_grid_h),
-        patch_grid_w=int(patch_grid_w),
-        patch_embed_dim=int(patch_embed_dim),
+        schema_version=sections.schema_version,
+        patch_grid_h=sections.patch_grid_h,
+        patch_grid_w=sections.patch_grid_w,
+        patch_embed_dim=sections.patch_embed_dim,
     )
 
 
-@dataclass(frozen=True)
-class NirvanaArchiveNumpy:
-    """Torch-free parsed NRV1 archive — the numpy-portable inflate-time contract.
-
-    Sister of :class:`NirvanaArchive` but with ``np.ndarray`` weights / latents
-    so the shipped inflate runtime needs ONLY numpy + brotli (no torch) per the
-    8th MLX-first standing directive.
-    """
-
-    decoder_state_dict: dict[str, np.ndarray]
-    latents: np.ndarray
-    meta: dict[str, object]
-    schema_version: int
-    patch_grid_h: int
-    patch_grid_w: int
-    patch_embed_dim: int
-
-
-def parse_archive_numpy(blob: bytes) -> NirvanaArchiveNumpy:
-    """Torch-free parse of an NRV1-v2 archive for the numpy-portable inflate.
-
-    Identical section walk to :func:`parse_archive` but reconstructs weights +
-    latents as numpy arrays with NO torch import. Per the 8th MLX-first
-    directive's bridge contract the shipped inflate runtime reads weights via
-    this path so the runtime tree carries only numpy + brotli.
-    """
-    if len(blob) < NRV1_HEADER_SIZE:
-        raise ValueError(
-            f"archive too short ({len(blob)} bytes; need >= {NRV1_HEADER_SIZE})"
-        )
-    (
-        magic,
-        version,
-        latent_dim,
-        num_pairs,
-        patch_grid_h,
-        patch_grid_w,
-        patch_embed_dim,
-        decoder_len,
-        latent_len,
-        meta_len,
-    ) = struct.unpack(NRV1_HEADER_FMT, blob[:NRV1_HEADER_SIZE])
-    if magic != NRV1_MAGIC:
-        raise ValueError(f"bad magic: {magic!r} (expected {NRV1_MAGIC!r})")
-    if version != NRV1_SCHEMA_VERSION:
-        raise ValueError(f"unsupported schema version: {version}")
-
-    expected_latent_bytes = num_pairs * latent_dim * 2
-    if latent_len != expected_latent_bytes:
-        raise ValueError(
-            f"latent_len {latent_len} != num_pairs*latent_dim*2 = {expected_latent_bytes}"
-        )
-
-    end_header = NRV1_HEADER_SIZE
-    end_decoder = end_header + decoder_len
-    end_latents = end_decoder + latent_len
-    end_meta = end_latents + meta_len
-    if end_meta != len(blob):
-        raise ValueError(
-            f"archive size {len(blob)} != expected {end_meta} from header"
-        )
-
-    sd = _deserialize_numpy_state_dict(blob[end_header:end_decoder])
-    meta = json.loads(blob[end_latents:end_meta].decode("utf-8"))
-
-    q = np.frombuffer(blob[end_decoder:end_latents], dtype=np.int16).reshape(
-        num_pairs, latent_dim
-    )
-    scale = float(meta.pop("_quant_scale"))
-    zp = float(meta.pop("_quant_zero_point"))
-    # dequant mirrors _dequantize_latents: (q + 32767) * scale + zero_point
-    latents = (q.astype(np.float32) + 32767.0) * scale + zp
-
-    return NirvanaArchiveNumpy(
-        decoder_state_dict=sd,
-        latents=latents,
-        meta=meta,
-        schema_version=int(version),
-        patch_grid_h=int(patch_grid_h),
-        patch_grid_w=int(patch_grid_w),
-        patch_embed_dim=int(patch_embed_dim),
-    )
+__all__ = [
+    "BROTLI_QUALITY",
+    "NRV1_HEADER_FMT",
+    "NRV1_HEADER_SIZE",
+    "NRV1_MAGIC",
+    "NRV1_SCHEMA_VERSION",
+    "NirvanaArchive",
+    "NirvanaArchiveNumpy",
+    "pack_archive",
+    "parse_archive",
+    "parse_archive_numpy",
+]

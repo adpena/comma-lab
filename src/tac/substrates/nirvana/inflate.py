@@ -35,46 +35,21 @@ import numpy as np
 
 from tac.substrates._shared.numpy_portable_inflate import (
     bilinear_resize_nhwc,
+    depthwise_conv2d_nhwc_oihw,
     linear,
     pixel_shuffle_2x_nhwc,
+    pointwise_conv1x1_nhwc_oihw,
     sigmoid,
-    to_float32,
+    sin,
 )
-from tac.substrates.nirvana.archive import parse_archive_numpy
-
-
-def _depthwise_conv3x3_nhwc(
-    x: np.ndarray, w_nchw: np.ndarray, bias: np.ndarray
-) -> np.ndarray:
-    """Depthwise 3×3 conv (groups=C) pad=1 in NHWC. ``w_nchw`` is (C, 1, 3, 3)."""
-    x32 = to_float32(x)
-    w32 = to_float32(w_nchw)  # (C, 1, kH, kW)
-    n, h, w, c = x32.shape
-    kh, kw = int(w32.shape[2]), int(w32.shape[3])
-    pad_h, pad_w = kh // 2, kw // 2
-    xp = np.pad(x32, ((0, 0), (pad_h, pad_h), (pad_w, pad_w), (0, 0)))
-    out = np.zeros((n, h, w, c), dtype=np.float32)
-    for di in range(kh):
-        for dj in range(kw):
-            # per-channel kernel weight at tap (di, dj): shape (C,)
-            tap = w32[:, 0, di, dj]
-            out += xp[:, di : di + h, dj : dj + w, :] * tap[None, None, None, :]
-    return out + to_float32(bias)[None, None, None, :]
-
-
-def _pointwise_conv1x1_nhwc(
-    x: np.ndarray, w_nchw: np.ndarray, bias: np.ndarray
-) -> np.ndarray:
-    """Pointwise 1×1 conv in NHWC: y = x @ W[:, :, 0, 0].T + b. ``w_nchw`` (C_out, C_in, 1, 1)."""
-    w_lin = to_float32(w_nchw)[:, :, 0, 0]  # (C_out, C_in)
-    return linear(x, w_lin, bias)
+from tac.substrates.nirvana.archive_numpy import parse_archive_numpy
 
 
 def _decode_patch_frame(
     h: np.ndarray, head_w: np.ndarray, head_b: np.ndarray
 ) -> np.ndarray:
     """1×1 RGB head + sigmoid -> NHWC (BP, h, w, 3)."""
-    return sigmoid(_pointwise_conv1x1_nhwc(h, head_w, head_b))
+    return sigmoid(pointwise_conv1x1_nhwc_oihw(h, head_w, head_b))
 
 
 def inflate_one_video(archive_bytes: bytes, output_dir: Path) -> None:
@@ -99,6 +74,14 @@ def inflate_one_video(archive_bytes: bytes, output_dir: Path) -> None:
     patch_w = out_w // gw
 
     patch_emb = sd["patch_embeddings"]  # (num_patches, patch_embed_dim)
+    if patch_emb.shape[0] != num_patches:
+        raise ValueError(
+            f"patch_embeddings rows {patch_emb.shape[0]} != patch grid {num_patches}"
+        )
+    if out_h % gh != 0 or out_w % gw != 0:
+        raise ValueError(
+            f"output dims {(out_h, out_w)} not divisible by patch grid {(gh, gw)}"
+        )
 
     output_dir.mkdir(parents=True, exist_ok=True)
     from PIL import Image  # type: ignore[import-not-found]
@@ -113,9 +96,18 @@ def inflate_one_video(archive_bytes: bytes, output_dir: Path) -> None:
         h = np.transpose(grid_nchw, (0, 2, 3, 1))  # (P, gh0, gw0, embed)
         for b in range(num_blocks):
             p = f"blocks.{b}.dsc."
-            h = _depthwise_conv3x3_nhwc(h, sd[p + "depthwise.weight"], sd[p + "depthwise.bias"])
-            h = _pointwise_conv1x1_nhwc(h, sd[p + "pointwise.weight"], sd[p + "pointwise.bias"])
-            h = np.sin(sin_freq * h)
+            h = depthwise_conv2d_nhwc_oihw(
+                h,
+                sd[p + "depthwise.weight"],
+                sd[p + "depthwise.bias"],
+                padding=1,
+            )
+            h = pointwise_conv1x1_nhwc_oihw(
+                h,
+                sd[p + "pointwise.weight"],
+                sd[p + "pointwise.bias"],
+            )
+            h = sin(sin_freq * h)
             h = pixel_shuffle_2x_nhwc(h)  # (P, 2h, 2w, out_ch)
 
         rgb0_p = _decode_patch_frame(h, sd["head_rgb_0.weight"], sd["head_rgb_0.bias"])
@@ -148,16 +140,18 @@ def _stitch_patches(
 
 def main_cli() -> int:
     """CLI: inflate.py <archive_dir> <output_dir> <file_list> per Catalog #146."""
-    if len(sys.argv) < 4:
+    if len(sys.argv) != 4:
         print("usage: inflate.py <archive_dir> <output_dir> <file_list>", file=sys.stderr)
         return 2
     archive_dir = Path(sys.argv[1])
     output_dir = Path(sys.argv[2])
     file_list_path = Path(sys.argv[3])
 
-    file_list = file_list_path.read_text(encoding="utf-8").strip().splitlines()
     archive_bytes = (archive_dir / "0.bin").read_bytes()
-    for fname in file_list:
+    for fname in file_list_path.read_text(encoding="utf-8").splitlines():
+        fname = fname.strip()
+        if not fname:
+            continue
         base = Path(fname).stem
         inflate_one_video(archive_bytes, output_dir / base)
     return 0

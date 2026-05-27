@@ -4,9 +4,8 @@
 
 Operator-callable training scaffold per the WAVE-3-NERV-LITERATURE-L0-RESCOPED
 queue 2026-05-20. SCAFFOLD-LEVEL: ``_smoke_main`` exercises the substrate
-package; ``_full_main`` raises ``NotImplementedError`` per CLAUDE.md
-"Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY" non-negotiable +
-Catalog #220 + #240 + #315 + #325.
+package; ``_full_main`` now routes through the canonical score-aware training
+loop and remains CUDA/recipe gated for paid dispatch per Catalog #325.
 
 This trainer's ``SubstrateContract`` declares ``research_only=True``;
 ``dispatch_enabled: false`` on the matching recipe.
@@ -34,9 +33,11 @@ Usage (smoke; CPU, tiny config)::
         --output-dir experiments/results/nirvana_smoke_<utc> \\
         --epochs 2 --device cpu --smoke
 
-Usage (full; refused at L0 SCAFFOLD)::
+Usage (full; CUDA-gated and recipe-gated)::
 
-    # raises NotImplementedError per Catalog #240 + #315 + #325
+    .venv/bin/python experiments/train_substrate_nirvana.py \\
+        --output-dir experiments/results/nirvana_full_<utc> \\
+        --device cuda --epochs 1
 
 Cross-ref:
     src/tac/substrates/nirvana/ (substrate package)
@@ -409,12 +410,14 @@ def _full_main(args: argparse.Namespace) -> int:
         unpatch_upstream_yuv6,
     )
     from tac.scorer import load_differentiable_scorers
+    from tac.substrates._shared.numpy_portable_inflate import (
+        write_numpy_portable_contest_runtime,
+    )
     from tac.substrates._shared.pact_nerv_full_main import (
         build_archive_zip,
         closed_form_weight_byte_proxy,
         decode_pairs_for_training,
         run_pact_nerv_score_aware_training,
-        write_contest_runtime,
     )
     from tac.substrates.nirvana import (
         NirvanaConfig,
@@ -525,9 +528,11 @@ def _full_main(args: argparse.Namespace) -> int:
             archive_sha = _sha256_bytes(bin_bytes)
             archive_bytes = len(bin_bytes)
             submission_dir = args.output_dir / "submission"
-            write_contest_runtime(
-                submission_dir, substrate_pkg_name="nirvana",
+            write_numpy_portable_contest_runtime(
+                submission_dir,
+                substrate_pkg_name="nirvana",
                 repo_root=REPO_ROOT,
+                runtime_module_files=("archive_numpy.py", "inflate.py"),
             )
             (submission_dir / "0.bin").write_bytes(bin_bytes)
             build_archive_zip(

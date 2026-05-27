@@ -66,7 +66,7 @@ Council design memo:
 | L6 score-domain Lagrangian | PASS (B(theta)/N + d_seg + sqrt(d_pose)) |
 | L7 bolt-on <= 350 LOC | substrate_engineering exception (~750 total) |
 | L8 eval-roundtrip + diff yuv6 | PLANNED (wired at L1 SCAFFOLD) |
-| L9 runtime closure | PASS (torch + brotli; declared) |
+| L9 runtime closure | PASS (numpy + brotli + PIL; declared) |
 | L10 mask/pose coupling | N/A (renderer replaces full slot) |
 | L11 no-op detector | PASS (executable byte-mutation smoke in tests) |
 | L12 single-LOC review discipline | PASS (each file reviewable in 30s) |
@@ -78,7 +78,7 @@ Catalog #124 archive-grammar 8 fields:
                                + patch_index_embedding_blob + latents_blob + meta_blob + implicit
                                "per_patch_decoder_weights" subset)
     inflate_runtime_loc_budget: <= 200 LOC
-    runtime_dep_closure:       torch, brotli
+    runtime_dep_closure:       numpy, brotli, PIL
     export_format:             brotli-compressed shared per-patch decoder state_dict
                                + int16 latents + utf8-json meta
     score_aware_loss:          L = alpha*B/N + beta*d_seg + gamma*sqrt(d_pose)
@@ -102,18 +102,7 @@ Operator 5-tier fit ranking citation:
      adaptive scheduling. Stacks orthogonally with global NeRV substrates."
 """
 
-from .architecture import (
-    NirvanaConfig,
-    NirvanaSubstrate,
-)
-from .archive import (
-    NirvanaArchive,
-    NirvanaArchiveNumpy,
-    pack_archive,
-    parse_archive,
-    parse_archive_numpy,
-)
-from .score_aware_loss import NirvanaScoreAwareLoss, ScoreAwareLossWeights
+from .archive_numpy import NirvanaArchiveNumpy, parse_archive_numpy
 
 __all__ = [
     "NirvanaArchive",
@@ -126,3 +115,33 @@ __all__ = [
     "parse_archive",
     "parse_archive_numpy",
 ]
+
+
+def __getattr__(name: str):
+    """Lazy-load training-only torch surfaces.
+
+    Importing ``tac.substrates.nirvana.archive_numpy`` or the package itself
+    must not pull torch into a numpy-portable inflate process. Training modules
+    remain available through the public package API, but only when requested.
+    """
+    if name in {"NirvanaConfig", "NirvanaSubstrate"}:
+        from .architecture import NirvanaConfig, NirvanaSubstrate
+
+        return {"NirvanaConfig": NirvanaConfig, "NirvanaSubstrate": NirvanaSubstrate}[name]
+    if name in {"NirvanaArchive", "pack_archive", "parse_archive"}:
+        from .archive import NirvanaArchive, pack_archive, parse_archive
+
+        return {
+            "NirvanaArchive": NirvanaArchive,
+            "pack_archive": pack_archive,
+            "parse_archive": parse_archive,
+        }[name]
+    if name in {"NirvanaScoreAwareLoss", "ScoreAwareLossWeights"}:
+        from .score_aware_loss import NirvanaScoreAwareLoss, ScoreAwareLossWeights
+
+        return {
+            "NirvanaScoreAwareLoss": NirvanaScoreAwareLoss,
+            "ScoreAwareLossWeights": ScoreAwareLossWeights,
+        }[name]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
