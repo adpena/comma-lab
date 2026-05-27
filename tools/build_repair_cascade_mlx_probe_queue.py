@@ -21,6 +21,10 @@ from comma_lab.scheduler.repair_cascade_mlx_probe_queue import (  # noqa: E402
     RepairCascadeMlxProbeQueueError,
     build_repair_cascade_mlx_probe_queue,
 )
+from tac.optimization.repair_campaign_posterior import (  # noqa: E402
+    DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_LOCK_PATH,
+    DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_PATH,
+)
 from tac.repo_io import (  # noqa: E402
     ArtifactWriteError,
     json_text,
@@ -50,6 +54,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=None,
         help="Optional maximum number of cascade rows to convert.",
     )
+    parser.add_argument(
+        "--posterior-path",
+        type=Path,
+        default=DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_PATH,
+        help="Append-only repair campaign posterior JSONL path.",
+    )
+    parser.add_argument(
+        "--posterior-lock-path",
+        type=Path,
+        default=DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_LOCK_PATH,
+        help="Lock path for the repair campaign posterior JSONL.",
+    )
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args(argv)
 
@@ -72,6 +88,8 @@ def main(argv: list[str] | None = None) -> int:
             results_root=args.results_root,
             queue_id=args.queue_id,
             experiment_limit=args.experiment_limit,
+            posterior_path=args.posterior_path,
+            posterior_lock_path=args.posterior_lock_path,
         )
         queue_out = _resolve(args.probe_queue_out)
         expected_existing_sha256 = None

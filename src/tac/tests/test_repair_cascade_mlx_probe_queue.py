@@ -11,9 +11,16 @@ from comma_lab.scheduler.repair_cascade_mlx_probe_queue import (
     REPAIR_CASCADE_MLX_PROBE_QUEUE_METADATA_SCHEMA,
     REPAIR_CASCADE_MLX_PROBE_RESULT_SCHEMA,
     REPAIR_CASCADE_MLX_PROBE_SPEC_SCHEMA,
+    build_repair_cascade_mlx_learning_signal,
     build_repair_cascade_mlx_probe_queue,
     build_repair_cascade_mlx_probe_result,
     build_repair_cascade_mlx_probe_spec,
+)
+from tac.optimization.repair_campaign_learning_signal import (
+    REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA,
+)
+from tac.optimization.repair_campaign_posterior import (
+    REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_APPEND_REPORT_SCHEMA,
 )
 from tac.optimization.repair_campaign_scorer import score_repair_campaign
 
@@ -138,6 +145,43 @@ def test_repair_cascade_mlx_probe_result_records_missing_mlx_inputs(
     assert result["ready_for_exact_eval_dispatch"] is False
 
 
+def test_repair_cascade_mlx_learning_signal_records_multiscale_blockers(
+    tmp_path: Path,
+) -> None:
+    work_order = _work_order()
+    spec = build_repair_cascade_mlx_probe_spec(
+        source_payload=work_order,
+        source_payload_path=tmp_path / "repair_budget_waterfill_work_order.json",
+        cascade_id="cascade_c_posenet_null_segnet_region_selector_codec",
+        repo_root=tmp_path,
+    )
+    result = build_repair_cascade_mlx_probe_result(
+        probe_spec=spec,
+        probe_spec_path=tmp_path / "repair_cascade_mlx_probe_spec.json",
+        repo_root=tmp_path,
+    )
+    result_path = _write_json(tmp_path / "repair_cascade_mlx_probe_result.json", result)
+
+    signal = build_repair_cascade_mlx_learning_signal(
+        probe_result=result,
+        probe_result_path=result_path,
+        repo_root=tmp_path,
+    )
+
+    assert signal["schema"] == REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA
+    assert signal["family_id"] == "entropy_position_cascade"
+    assert signal["component_response_axis"] == "[macOS-MLX research-signal]"
+    assert signal["ready_for_exact_eval_dispatch"] is False
+    assert signal["local_planning_update"]["recommended_acquisition_policy"] == (
+        "materialize_missing_local_mlx_custody_before_stackability"
+    )
+    features = signal["local_planning_update"]["planner_feature_vector"]
+    assert features["targeted_position_count"] == 3
+    assert "scorer_entropy" in features["entropy_surfaces"]
+    assert "selector_codec" in features["operation_levels"]
+    assert "local_mlx_probe_artifacts_missing" in signal["blockers"]
+
+
 def test_repair_cascade_mlx_probe_queue_from_score_report_runs_spec_step(
     tmp_path: Path,
 ) -> None:
@@ -151,6 +195,8 @@ def test_repair_cascade_mlx_probe_queue_from_score_report_runs_spec_step(
         source_payload_path=score_report_path,
         results_root=tmp_path / "results",
         queue_id="cascade_c_probe_unit",
+        posterior_path=tmp_path / "repair_campaign_stackability_posterior.jsonl",
+        posterior_lock_path=tmp_path / ".repair_campaign_stackability_posterior.lock",
     )
 
     assert queue["schema"] == QUEUE_SCHEMA
@@ -164,6 +210,12 @@ def test_repair_cascade_mlx_probe_queue_from_score_report_runs_spec_step(
     assert experiment["metadata"]["probe_result_schema"] == (
         REPAIR_CASCADE_MLX_PROBE_RESULT_SCHEMA
     )
+    assert experiment["metadata"]["learning_signal_schema"] == (
+        REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA
+    )
+    assert experiment["metadata"]["posterior_append_report_schema"] == (
+        REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_APPEND_REPORT_SCHEMA
+    )
     assert experiment["steps"][0]["command"][1] == (
         "tools/build_repair_cascade_mlx_probe_spec.py"
     )
@@ -173,6 +225,14 @@ def test_repair_cascade_mlx_probe_queue_from_score_report_runs_spec_step(
         if step["id"] == "record_repair_cascade_mlx_probe_result"
     )
     assert result_step["command"][1] == "tools/run_repair_cascade_mlx_probe.py"
+    learning_step = next(
+        step
+        for step in experiment["steps"]
+        if step["id"] == "build_repair_cascade_mlx_learning_signal"
+    )
+    assert learning_step["command"][1] == (
+        "tools/build_repair_cascade_mlx_learning_signal.py"
+    )
 
     queue_path = _write_json(tmp_path / "repair_cascade_mlx_probe_queue.json", queue)
     validate = subprocess.run(
@@ -200,7 +260,7 @@ def test_repair_cascade_mlx_probe_queue_from_score_report_runs_spec_step(
             "run-worker",
             "--execute",
             "--max-steps",
-            "3",
+            "5",
             "--max-experiments",
             "1",
             "--output",
@@ -226,6 +286,16 @@ def test_repair_cascade_mlx_probe_queue_from_score_report_runs_spec_step(
     probe_result = json.loads(result_path.read_text(encoding="utf-8"))
     assert probe_result["schema"] == REPAIR_CASCADE_MLX_PROBE_RESULT_SCHEMA
     assert probe_result["learning_signal_kind"] == "blocked_repair_cascade_mlx_probe"
+    signal_path = REPO_ROOT / experiment["metadata"]["learning_signal_path"]
+    assert signal_path.is_file()
+    signal = json.loads(signal_path.read_text(encoding="utf-8"))
+    assert signal["schema"] == REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA
+    posterior_path = Path(experiment["metadata"]["posterior_path"])
+    assert posterior_path.is_file()
+    posterior_lines = posterior_path.read_text(encoding="utf-8").splitlines()
+    assert len(posterior_lines) == 1
+    posterior_row = json.loads(posterior_lines[0])
+    assert posterior_row["typed_response_id"] == signal["typed_response_id"]
 
 
 def test_repair_cascade_mlx_probe_queue_cli_writes_queue(tmp_path: Path) -> None:
@@ -247,6 +317,10 @@ def test_repair_cascade_mlx_probe_queue_cli_writes_queue(tmp_path: Path) -> None
             str(tmp_path / "results"),
             "--queue-id",
             "cascade_c_probe_cli_unit",
+            "--posterior-path",
+            str(tmp_path / "repair_campaign_stackability_posterior.jsonl"),
+            "--posterior-lock-path",
+            str(tmp_path / ".repair_campaign_stackability_posterior.lock"),
             "--overwrite",
         ],
         cwd=REPO_ROOT,
@@ -295,3 +369,46 @@ def test_repair_cascade_mlx_probe_result_cli_writes_result(tmp_path: Path) -> No
     payload = json.loads(result_path.read_text(encoding="utf-8"))
     assert payload["schema"] == REPAIR_CASCADE_MLX_PROBE_RESULT_SCHEMA
     assert payload["local_mlx_probe_execution_ready"] is False
+
+
+def test_repair_cascade_mlx_learning_signal_cli_writes_signal(tmp_path: Path) -> None:
+    work_order = _work_order()
+    spec = build_repair_cascade_mlx_probe_spec(
+        source_payload=work_order,
+        source_payload_path=tmp_path / "repair_budget_waterfill_work_order.json",
+        cascade_id="cascade_c_posenet_null_segnet_region_selector_codec",
+        repo_root=tmp_path,
+    )
+    result_payload = build_repair_cascade_mlx_probe_result(
+        probe_spec=spec,
+        probe_spec_path=tmp_path / "repair_cascade_mlx_probe_spec.json",
+        repo_root=tmp_path,
+    )
+    result_path = _write_json(
+        tmp_path / "repair_cascade_mlx_probe_result.json",
+        result_payload,
+    )
+    signal_path = tmp_path / "repair_cascade_mlx_learning_signal.json"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "tools/build_repair_cascade_mlx_learning_signal.py",
+            "--probe-result",
+            str(result_path),
+            "--learning-signal-out",
+            str(signal_path),
+            "--overwrite",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    cli_result = json.loads(result.stdout)
+    assert cli_result["ready_for_exact_eval_dispatch"] is False
+    signal = json.loads(signal_path.read_text(encoding="utf-8"))
+    assert signal["schema"] == REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA
+    assert signal["family_id"] == "entropy_position_cascade"

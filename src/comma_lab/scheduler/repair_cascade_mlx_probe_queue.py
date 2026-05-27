@@ -13,7 +13,17 @@ from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
     require_no_truthy_authority_fields,
 )
+from tac.optimization.repair_campaign_learning_signal import (
+    REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA,
+    REPAIR_CAMPAIGN_LOCAL_PLANNING_UPDATE_SCHEMA,
+)
+from tac.optimization.repair_campaign_posterior import (
+    DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_LOCK_PATH,
+    DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_PATH,
+    REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_APPEND_REPORT_SCHEMA,
+)
 from tac.optimization.repair_campaign_scorer import REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA
+from tac.repo_io import json_text, sha256_bytes, sha256_file
 
 REPAIR_CASCADE_MLX_PROBE_QUEUE_METADATA_SCHEMA = (
     "repair_cascade_mlx_probe_queue_metadata.v1"
@@ -274,6 +284,36 @@ def _artifact_status_from_record(
     }
 
 
+def _safe_int(value: Any) -> int:
+    if value is None or isinstance(value, bool):
+        return 0
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _stable_sha256(payload: Mapping[str, Any]) -> str:
+    return sha256_bytes(json_text(payload).encode("utf-8"))
+
+
+def _file_record(
+    label: str,
+    path: str | Path,
+    *,
+    repo_root: str | Path,
+) -> dict[str, Any]:
+    resolved = _resolve(path, repo_root)
+    if not resolved.is_file():
+        raise RepairCascadeMlxProbeQueueError(f"required artifact missing: {label}={path}")
+    return {
+        "label": label,
+        "path": _repo_rel(resolved, repo_root),
+        "sha256": sha256_file(resolved),
+        "bytes": resolved.stat().st_size,
+    }
+
+
 def build_repair_cascade_mlx_probe_result(
     *,
     probe_spec: Mapping[str, Any],
@@ -324,6 +364,8 @@ def build_repair_cascade_mlx_probe_result(
         "cascade_label": probe_spec.get("cascade_label"),
         "source_payload_path": probe_spec.get("source_payload_path"),
         "source_payload_schema": probe_spec.get("source_payload_schema"),
+        "pipeline_position": probe_spec.get("pipeline_position"),
+        "targeted_positions": list(probe_spec.get("targeted_positions") or []),
         "component_response_axis": "[macOS-MLX research-signal]",
         "local_mlx_artifact_status": artifact_status,
         "missing_local_mlx_artifacts": missing,
@@ -359,6 +401,183 @@ def build_repair_cascade_mlx_probe_result(
     return result
 
 
+def build_repair_cascade_mlx_learning_signal(
+    *,
+    probe_result: Mapping[str, Any],
+    probe_result_path: str | Path,
+    repo_root: str | Path,
+) -> dict[str, Any]:
+    """Build a posterior-consumable learning signal from one cascade probe result."""
+
+    if probe_result.get("schema") != REPAIR_CASCADE_MLX_PROBE_RESULT_SCHEMA:
+        raise RepairCascadeMlxProbeQueueError(
+            "repair cascade learning signal requires a probe result"
+        )
+    require_no_truthy_authority_fields(
+        probe_result,
+        context="repair_cascade_mlx_learning_signal_result",
+    )
+    source_artifact = _file_record(
+        "repair_cascade_mlx_probe_result",
+        probe_result_path,
+        repo_root=repo_root,
+    )
+    cascade_id = str(probe_result.get("cascade_id") or "unknown_cascade").strip()
+    missing_artifacts = _string_list(probe_result.get("missing_local_mlx_artifacts"))
+    blockers = ordered_unique(
+        [
+            *_string_list(probe_result.get("blockers")),
+            "cascade_mlx_learning_signal_is_not_score_authority",
+            "exact_axis_component_response_required_before_budget_spend",
+            "receiver_runtime_materialization_required_before_exact_dispatch",
+        ]
+    )
+    targeted_positions = [
+        dict(row)
+        for row in probe_result.get("targeted_positions") or []
+        if isinstance(row, Mapping)
+    ]
+    entropy_surfaces = ordered_unique(
+        str(row.get("entropy_surface") or "").strip()
+        for row in targeted_positions
+        if str(row.get("entropy_surface") or "").strip()
+    )
+    position_ids = ordered_unique(
+        str(row.get("position_id") or "").strip()
+        for row in targeted_positions
+        if str(row.get("position_id") or "").strip()
+    )
+    measurement_plan = [
+        dict(row)
+        for row in probe_result.get("probe_measurement_plan") or []
+        if isinstance(row, Mapping)
+    ]
+    measurements = _string_list(probe_result.get("required_probe_measurements"))
+    ready = probe_result.get("local_mlx_probe_execution_ready") is True
+    recommended_policy = (
+        "increase_priority_for_exact_axis_component_response_replay"
+        if ready
+        else "materialize_missing_local_mlx_custody_before_stackability"
+    )
+    identity = {
+        "schema": "repair_cascade_mlx_learning_identity.v1",
+        "cascade_id": cascade_id,
+        "probe_result_schema": probe_result.get("schema"),
+        "source_probe_result_sha256": source_artifact.get("sha256"),
+        "pipeline_position": probe_result.get("pipeline_position"),
+        "missing_artifacts": missing_artifacts,
+        "blockers": blockers,
+        "required_probe_measurements": measurements,
+        "targeted_positions": targeted_positions,
+    }
+    signal = {
+        "schema": REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA,
+        "learning_signal_kind": probe_result.get("learning_signal_kind"),
+        "typed_response_id": f"repair_cascade_mlx_probe:{cascade_id}",
+        "candidate_id": cascade_id,
+        "family_id": "entropy_position_cascade",
+        "component_response_axis": probe_result.get("component_response_axis"),
+        "evidence_grade": (
+            "local_mlx_cascade_probe_result_ready_for_component_response"
+            if ready
+            else "blocked_local_mlx_cascade_probe_result"
+        ),
+        "source_artifacts": [source_artifact],
+        "replay_identity": {
+            "schema": "repair_cascade_mlx_learning_replay_identity.v1",
+            "replay_identity_kind": "cascade_mlx_probe_result_no_component_response",
+            "hash_manifest_sha256": _stable_sha256(identity),
+            "source_records_sha256": _stable_sha256(
+                {
+                    "schema": "repair_cascade_mlx_learning_source.v1",
+                    "source_artifact": source_artifact,
+                }
+            ),
+            "replay_argv_sha256": None,
+            "execution_context_sha256": None,
+            "environment_sha256": None,
+        },
+        "local_planning_update": {
+            "schema": REPAIR_CAMPAIGN_LOCAL_PLANNING_UPDATE_SCHEMA,
+            "posterior_surface": "repair_campaign_stackability_local_mlx_posterior",
+            "local_planning_update_ready": True,
+            "recommended_acquisition_policy": recommended_policy,
+            "recommended_stackability_followup": probe_result.get(
+                "recommended_next_action"
+            ),
+            "planner_feature_vector": {
+                "cascade_probe_execution_ready": ready,
+                "component_response_row_emitted": (
+                    probe_result.get("component_response_row_emitted") is True
+                ),
+                "missing_artifact_count": len(missing_artifacts),
+                "blocker_count": len(blockers),
+                "required_probe_measurement_count": len(measurements),
+                "probe_measurement_plan_count": len(measurement_plan),
+                "targeted_position_count": len(targeted_positions),
+                "position_ids": position_ids,
+                "entropy_surfaces": entropy_surfaces,
+                "entropy_position_label": probe_result.get("pipeline_position"),
+                "operation_levels": ordered_unique(
+                    [
+                        "pixel",
+                        "region",
+                        "boundary",
+                        "frame",
+                        "pair",
+                        "batch",
+                        "full_video",
+                        "selector_codec",
+                    ]
+                ),
+                "local_mlx_artifact_count": len(
+                    list(probe_result.get("local_mlx_artifact_status") or [])
+                ),
+                "existing_local_mlx_artifact_count": sum(
+                    1
+                    for row in probe_result.get("local_mlx_artifact_status") or []
+                    if isinstance(row, Mapping) and row.get("exists") is True
+                ),
+                "source_payload_schema_present": bool(
+                    probe_result.get("source_payload_schema")
+                ),
+                "source_payload_path_present": bool(probe_result.get("source_payload_path")),
+                "allocated_repair_bytes": 0,
+                "expected_local_improvement_score_units": 0.0,
+                "improvement_per_allocated_byte": 0.0,
+                "requested_repair_bytes": _safe_int(
+                    probe_result.get("requested_repair_bytes")
+                ),
+            },
+            "posterior_update_blockers": [
+                "cascade_mlx_learning_signal_is_not_score_authority",
+                "exact_axis_component_response_required_before_budget_spend",
+                "receiver_runtime_materialization_required_before_exact_dispatch",
+            ],
+            "budget_spend_allowed": False,
+            "ready_for_budget_spend": False,
+            "ready_for_exact_eval_dispatch": False,
+            **FALSE_AUTHORITY,
+        },
+        "blockers": blockers,
+        "missing_artifacts": missing_artifacts,
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "allowed_use": "repair_cascade_mlx_acquisition_update_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        signal,
+        context=f"repair_cascade_mlx_learning_signal:{cascade_id}",
+    )
+    return signal
+
+
 def _cascade_experiment(
     *,
     source_payload: Mapping[str, Any],
@@ -366,14 +585,24 @@ def _cascade_experiment(
     cascade: Mapping[str, Any],
     repo_root: str | Path,
     queue_root: Path,
+    posterior_path: Path,
+    posterior_lock_path: Path,
     priority: int,
 ) -> dict[str, Any]:
     cascade_id = str(cascade.get("cascade_id") or f"cascade_{priority}").strip()
     slug = _slug(cascade_id)
     spec_path = queue_root / slug / "repair_cascade_mlx_probe_spec.json"
     result_path = queue_root / slug / "repair_cascade_mlx_probe_result.json"
+    learning_signal_path = queue_root / slug / "repair_cascade_mlx_learning_signal.json"
+    posterior_append_report_path = (
+        queue_root / slug / "repair_cascade_mlx_posterior_append_report.json"
+    )
     spec_ref = _repo_rel(spec_path, repo_root)
     result_ref = _repo_rel(result_path, repo_root)
+    learning_signal_ref = _repo_rel(learning_signal_path, repo_root)
+    posterior_append_report_ref = _repo_rel(posterior_append_report_path, repo_root)
+    posterior_ref = _repo_rel(posterior_path, repo_root)
+    posterior_lock_ref = _repo_rel(posterior_lock_path, repo_root)
     missing = _required_probe_measurements(cascade)
     metadata = {
         "schema": REPAIR_CASCADE_MLX_PROBE_EXPERIMENT_METADATA_SCHEMA,
@@ -387,6 +616,14 @@ def _cascade_experiment(
         "probe_spec_schema": REPAIR_CASCADE_MLX_PROBE_SPEC_SCHEMA,
         "probe_result_path": result_ref,
         "probe_result_schema": REPAIR_CASCADE_MLX_PROBE_RESULT_SCHEMA,
+        "learning_signal_path": learning_signal_ref,
+        "learning_signal_schema": REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA,
+        "posterior_path": posterior_ref,
+        "posterior_lock_path": posterior_lock_ref,
+        "posterior_append_report_path": posterior_append_report_ref,
+        "posterior_append_report_schema": (
+            REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_APPEND_REPORT_SCHEMA
+        ),
         "required_probe_measurements": missing,
         "local_mlx_advisory_custody_required": True,
         "component_response_axis": "[macOS-MLX research-signal]",
@@ -499,6 +736,85 @@ def _cascade_experiment(
                     "include_postcondition_paths": True,
                 },
             },
+            {
+                "id": "build_repair_cascade_mlx_learning_signal",
+                "kind": "command",
+                "requires": ["record_repair_cascade_mlx_probe_result"],
+                "command": [
+                    ".venv/bin/python",
+                    "tools/build_repair_cascade_mlx_learning_signal.py",
+                    "--probe-result",
+                    result_ref,
+                    "--learning-signal-out",
+                    learning_signal_ref,
+                    "--overwrite",
+                ],
+                "resources": {"kind": "local_cpu"},
+                "timeout_seconds": 120,
+                "postconditions": [
+                    {
+                        "type": "json_equals",
+                        "path": learning_signal_ref,
+                        "key": "schema",
+                        "equals": REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA,
+                    },
+                    {"type": "json_false_authority", "path": learning_signal_ref},
+                    {
+                        "type": "json_equals",
+                        "path": learning_signal_ref,
+                        "key": "ready_for_exact_eval_dispatch",
+                        "equals": False,
+                    },
+                ],
+                "telemetry": {
+                    "artifact_paths": [learning_signal_ref],
+                    "input_artifact_paths": [result_ref],
+                    "include_postcondition_paths": True,
+                },
+            },
+            {
+                "id": "append_repair_cascade_mlx_learning_posterior",
+                "kind": "command",
+                "requires": ["build_repair_cascade_mlx_learning_signal"],
+                "command": [
+                    ".venv/bin/python",
+                    "tools/append_repair_campaign_stackability_posterior.py",
+                    "--learning-signal",
+                    learning_signal_ref,
+                    "--posterior-path",
+                    posterior_ref,
+                    "--lock-path",
+                    posterior_lock_ref,
+                    "--report-out",
+                    posterior_append_report_ref,
+                    "--overwrite",
+                ],
+                "resources": {"kind": "local_cpu"},
+                "timeout_seconds": 120,
+                "postconditions": [
+                    {
+                        "type": "json_equals",
+                        "path": posterior_append_report_ref,
+                        "key": "schema",
+                        "equals": (
+                            REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_APPEND_REPORT_SCHEMA
+                        ),
+                    },
+                    {"type": "json_false_authority", "path": posterior_append_report_ref},
+                    {"type": "jsonl_false_authority", "path": posterior_ref},
+                    {
+                        "type": "json_equals",
+                        "path": posterior_append_report_ref,
+                        "key": "ready_for_exact_eval_dispatch",
+                        "equals": False,
+                    },
+                ],
+                "telemetry": {
+                    "artifact_paths": [posterior_append_report_ref, posterior_ref],
+                    "input_artifact_paths": [learning_signal_ref],
+                    "include_postcondition_paths": True,
+                },
+            },
         ],
     }
 
@@ -562,6 +878,10 @@ def build_repair_cascade_mlx_probe_queue(
     results_root: str | Path,
     queue_id: str = "repair_cascade_mlx_probe_queue",
     experiment_limit: int | None = None,
+    posterior_path: str | Path = DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_PATH,
+    posterior_lock_path: str | Path = (
+        DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_LOCK_PATH
+    ),
 ) -> dict[str, Any]:
     """Build local probe-spec rows for structural repair cascades."""
 
@@ -575,6 +895,8 @@ def build_repair_cascade_mlx_probe_queue(
     queue_root = (
         _resolve(results_root, repo_root) / "repair_cascade_mlx_probe_queue" / _slug(queue_id)
     )
+    resolved_posterior_path = _resolve(posterior_path, repo_root)
+    resolved_posterior_lock_path = _resolve(posterior_lock_path, repo_root)
     experiments = (
         [
             _cascade_experiment(
@@ -583,6 +905,8 @@ def build_repair_cascade_mlx_probe_queue(
                 cascade=cascade,
                 repo_root=repo_root,
                 queue_root=queue_root,
+                posterior_path=resolved_posterior_path,
+                posterior_lock_path=resolved_posterior_lock_path,
                 priority=priority,
             )
             for priority, cascade in enumerate(cascade_rows, start=1)
@@ -614,6 +938,11 @@ def build_repair_cascade_mlx_probe_queue(
         "ready_experiment_count": ready_count,
         "blocked_experiment_count": len(experiments) - ready_count,
         "results_root": _repo_rel(queue_root, repo_root),
+        "posterior_path": _repo_rel(resolved_posterior_path, repo_root),
+        "posterior_lock_path": _repo_rel(resolved_posterior_lock_path, repo_root),
+        "posterior_append_report_schema": (
+            REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_APPEND_REPORT_SCHEMA
+        ),
         "queue_actuation_blockers": blockers,
         "local_mlx_advisory_custody_required": True,
         "component_response_axis": "[macOS-MLX research-signal]",
@@ -649,6 +978,7 @@ __all__ = [
     "REPAIR_CASCADE_MLX_PROBE_RESULT_SCHEMA",
     "REPAIR_CASCADE_MLX_PROBE_SPEC_SCHEMA",
     "RepairCascadeMlxProbeQueueError",
+    "build_repair_cascade_mlx_learning_signal",
     "build_repair_cascade_mlx_probe_queue",
     "build_repair_cascade_mlx_probe_result",
     "build_repair_cascade_mlx_probe_spec",
