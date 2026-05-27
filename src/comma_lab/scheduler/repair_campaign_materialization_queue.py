@@ -86,6 +86,57 @@ def _string_list(value: Any) -> list[str]:
     return [text] if text else []
 
 
+def _safe_int(value: Any, default: int = 0) -> int:
+    if value is None or isinstance(value, bool):
+        return default
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _allocation_entropy_pipeline(allocation: Mapping[str, Any]) -> Mapping[str, Any]:
+    direct = _mapping(allocation.get("entropy_pipeline_position"))
+    if direct:
+        return direct
+    return _mapping(_mapping(allocation.get("multiscale_action_row")).get("entropy_pipeline_position"))
+
+
+def _allocation_entropy_stage_index(allocation: Mapping[str, Any]) -> int:
+    pipeline = _allocation_entropy_pipeline(allocation)
+    return _safe_int(pipeline.get("stage_index"), default=999)
+
+
+def _allocation_materialization_sort_key(allocation: Mapping[str, Any]) -> tuple[int, int, str]:
+    return (
+        _allocation_entropy_stage_index(allocation),
+        _safe_int(allocation.get("campaign_rank"), default=999),
+        str(allocation.get("typed_response_id") or allocation.get("candidate_id") or ""),
+    )
+
+
+def _entropy_materialization_order_rows(
+    allocations: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for order, allocation in enumerate(allocations, start=1):
+        pipeline = _allocation_entropy_pipeline(allocation)
+        rows.append(
+            {
+                "materialization_order": order,
+                "typed_response_id": allocation.get("typed_response_id"),
+                "candidate_id": allocation.get("candidate_id"),
+                "entropy_position_label": allocation.get("entropy_position_label"),
+                "entropy_position_class": pipeline.get("entropy_position_class"),
+                "entropy_pipeline_stage_index": _allocation_entropy_stage_index(
+                    allocation
+                ),
+                "composition_order_rule": pipeline.get("composition_order_rule"),
+            }
+        )
+    return rows
+
+
 def _find_score_row(
     score_report: Mapping[str, Any],
     *,
@@ -255,6 +306,7 @@ def _materialization_experiment(
         "family_id": allocation.get("family_id"),
         "entropy_position_label": allocation.get("entropy_position_label"),
         "entropy_pipeline_position": dict(entropy_pipeline),
+        "entropy_pipeline_materialization_order": priority,
         "allocated_repair_bytes": allocation.get("allocated_repair_bytes"),
         "repair_materialization_lineage": dict(lineage),
         "interaction_dynamics": dict(dynamics),
@@ -754,6 +806,7 @@ def build_repair_campaign_byte_closed_materialization_queue(
         for row in decision.get("selected_allocation_rows") or []
         if isinstance(row, Mapping)
     ]
+    allocations = sorted(allocations, key=_allocation_materialization_sort_key)
     if experiment_limit is not None:
         allocations = allocations[: max(0, int(experiment_limit))]
     queue_root = (
@@ -815,6 +868,9 @@ def build_repair_campaign_byte_closed_materialization_queue(
         "ready_experiment_count": ready_count,
         "blocked_experiment_count": len(experiments) - ready_count,
         "selected_allocation_count": len(allocations),
+        "entropy_pipeline_materialization_order": (
+            _entropy_materialization_order_rows(allocations)
+        ),
         "results_root": _repo_rel(queue_root, repo_root),
         "posterior_path": _repo_rel(resolved_posterior_path, repo_root),
         "posterior_lock_path": _repo_rel(resolved_posterior_lock_path, repo_root),

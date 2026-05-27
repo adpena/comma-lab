@@ -140,6 +140,7 @@ def test_byte_closed_materialization_queue_emits_archive_bound_steps(
     assert experiment["metadata"]["entropy_pipeline_position"][
         "can_shape_coder_input_distribution"
     ] is True
+    assert experiment["metadata"]["entropy_pipeline_materialization_order"] == 1
     assert [step["id"] for step in experiment["steps"]] == [
         "emit_repair_budget_materialization_plan",
         "emit_repair_family_materializer_manifest",
@@ -167,6 +168,56 @@ def test_byte_closed_materialization_queue_emits_archive_bound_steps(
     assert experiment["steps"][7]["postconditions"][0]["equals"] == (
         REPAIR_CAMPAIGN_BLOCKED_POSTERIOR_APPEND_REPORT_SCHEMA
     )
+
+
+def test_byte_closed_materialization_queue_orders_allocations_by_entropy_stage(
+    tmp_path: Path,
+) -> None:
+    work_order = _work_order(tmp_path)
+    ledger = work_order["typed_response_ledger"]  # type: ignore[index]
+    first = ledger["rows"][0]  # type: ignore[index]
+    selector_row = {
+        **first,
+        "typed_response_id": "selector_codec_ready",
+        "candidate_id": "per_region_selector_codec_ready",
+        "correction_family": "per_region_selector_codec",
+        "targeted_dimensions": ["selector_stream", "region"],
+        "operation_levels": ["region", "entropy_coder"],
+        "entropy_position_label": "selector_codec_entropy",
+        "requested_repair_bytes": 4,
+        "objective_delta_score_units": -0.01,
+        "selector_payload_bits_per_region": {"road_boundary": 16},
+        "receiver_consumed_runtime_replay_proof": {"passed": True},
+        **_false_authority(),
+    }
+    ledger["rows"].append(selector_row)  # type: ignore[index]
+    work_order_path = _write_json(tmp_path / "work_order.json", work_order)
+    report = score_repair_campaign(payload=work_order, repo_root=tmp_path)
+    report_path = _write_json(tmp_path / "score_report.json", report)
+
+    assert report["optimizer_decision"]["selected_allocation_rows"][0][
+        "typed_response_id"
+    ] == "selector_codec_ready"
+
+    queue = build_repair_campaign_byte_closed_materialization_queue(
+        repo_root=REPO_ROOT,
+        score_report=report,
+        score_report_path=report_path,
+        work_order_path=work_order_path,
+        results_root=tmp_path / "results",
+        queue_id="unit_repair_materialization",
+    )
+
+    assert [
+        experiment["metadata"]["typed_response_id"]
+        for experiment in queue["experiments"]
+    ] == ["segnet_region_ready", "selector_codec_ready"]
+    assert queue["metadata"]["entropy_pipeline_materialization_order"][0][
+        "entropy_pipeline_stage_index"
+    ] == 0
+    assert queue["metadata"]["entropy_pipeline_materialization_order"][1][
+        "entropy_pipeline_stage_index"
+    ] == 2
 
 
 def test_byte_closed_materialization_queue_cli_writes_queue(tmp_path: Path) -> None:
