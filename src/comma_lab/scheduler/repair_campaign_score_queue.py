@@ -1,0 +1,312 @@
+# SPDX-License-Identifier: MIT
+"""Build queue-owned repair campaign scoring rows from waterfill queues."""
+
+from __future__ import annotations
+
+from collections.abc import Mapping, Sequence
+from pathlib import Path
+from typing import Any
+
+from comma_lab.scheduler.experiment_queue import QUEUE_SCHEMA, normalize_queue_definition
+from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY
+from tac.optimization.proxy_candidate_contract import (
+    ordered_unique,
+    require_no_truthy_authority_fields,
+)
+from tac.optimization.repair_campaign_scorer import REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA
+
+REPAIR_CAMPAIGN_SCORE_QUEUE_METADATA_SCHEMA = (
+    "repair_campaign_score_queue_metadata.v1"
+)
+REPAIR_CAMPAIGN_SCORE_EXPERIMENT_METADATA_SCHEMA = (
+    "repair_campaign_score_experiment_metadata.v1"
+)
+
+
+class RepairCampaignScoreQueueError(ValueError):
+    """Raised when a repair campaign score queue cannot be built."""
+
+
+def _slug(value: Any) -> str:
+    text = str(value or "unknown").strip().lower()
+    chars = [ch if ch.isalnum() else "_" for ch in text]
+    return "_".join("".join(chars).split("_")) or "unknown"
+
+
+def _repo_rel(path: str | Path, repo_root: str | Path) -> str:
+    resolved = Path(path)
+    repo = Path(repo_root)
+    try:
+        return str(resolved.resolve(strict=False).relative_to(repo.resolve(strict=False)))
+    except ValueError:
+        return str(resolved)
+
+
+def _resolve(path: str | Path, repo_root: str | Path) -> Path:
+    value = Path(path)
+    return value if value.is_absolute() else Path(repo_root) / value
+
+
+def _command_arg(command: Sequence[Any], flag: str) -> str:
+    values = [str(item) for item in command]
+    try:
+        index = values.index(flag)
+    except ValueError:
+        return ""
+    if index + 1 >= len(values):
+        return ""
+    return values[index + 1]
+
+
+def _work_order_path_from_experiment(experiment: Mapping[str, Any]) -> str:
+    metadata = experiment.get("metadata")
+    if isinstance(metadata, Mapping):
+        for key in (
+            "repair_budget_waterfill_work_order_path",
+            "waterfill_work_order_path",
+            "work_order_path",
+        ):
+            value = str(metadata.get(key) or "").strip()
+            if value:
+                return value
+    for step in experiment.get("steps") or []:
+        if not isinstance(step, Mapping):
+            continue
+        command = step.get("command")
+        if isinstance(command, Sequence) and not isinstance(
+            command,
+            (str, bytes, bytearray),
+        ):
+            command_text = " ".join(str(item) for item in command)
+            if (
+                step.get("id") != "emit_repair_budget_waterfill_work_order"
+                and "build_frontier_repair_budget_waterfill_work_order.py"
+                not in command_text
+                and "--work-order-out" not in command_text
+            ):
+                continue
+            value = _command_arg(command, "--work-order-out")
+            if value:
+                return value
+    return ""
+
+
+def _score_experiment(
+    *,
+    source_experiment: Mapping[str, Any],
+    source_queue_path: str | Path,
+    repo_root: str | Path,
+    queue_root: Path,
+    priority: int,
+) -> dict[str, Any]:
+    metadata = (
+        source_experiment.get("metadata")
+        if isinstance(source_experiment.get("metadata"), Mapping)
+        else {}
+    )
+    chain_id = str(
+        metadata.get("chain_id")
+        or source_experiment.get("id")
+        or f"repair_campaign_{priority}"
+    )
+    work_order_ref = _work_order_path_from_experiment(source_experiment)
+    score_report_path = (
+        queue_root / _slug(chain_id) / "repair_campaign_score_report.json"
+    )
+    score_report_ref = _repo_rel(score_report_path, repo_root)
+    blockers = []
+    if not work_order_ref:
+        blockers.append("repair_budget_waterfill_work_order_path_missing")
+    elif not _resolve(work_order_ref, repo_root).exists():
+        blockers.append(f"repair_budget_waterfill_work_order_not_materialized:{work_order_ref}")
+    status = "queued" if not blockers else "frozen"
+    experiment_metadata = {
+        "schema": REPAIR_CAMPAIGN_SCORE_EXPERIMENT_METADATA_SCHEMA,
+        "source_queue_path": str(source_queue_path),
+        "source_experiment_id": source_experiment.get("id"),
+        "chain_id": chain_id,
+        "repair_budget_waterfill_work_order_path": work_order_ref or None,
+        "repair_campaign_score_report_path": score_report_ref,
+        "campaign_scorer_default": True,
+        "queue_actuation_ready": not blockers,
+        "queue_actuation_blockers": ordered_unique(blockers),
+        "score_report_schema": REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA,
+        "budget_spend_allowed": False,
+        "ready_for_exact_eval_dispatch": False,
+        "allowed_use": "queue_owned_repair_campaign_scoring_metadata",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        experiment_metadata,
+        context=f"repair_campaign_score_experiment_metadata:{chain_id}",
+    )
+    steps: list[dict[str, Any]]
+    if blockers:
+        steps = [
+            {
+                "id": "inspect_missing_repair_campaign_score_prerequisites",
+                "kind": "command",
+                "command": [
+                    ".venv/bin/python",
+                    "-c",
+                    (
+                        "import json; print(json.dumps({"
+                        "'ready_for_exact_eval_dispatch': False,"
+                        "'budget_spend_allowed': False,"
+                        f"'blockers': {ordered_unique(blockers)!r}"
+                        "}, sort_keys=True))"
+                    ),
+                ],
+                "resources": {"kind": "local_cpu"},
+                "timeout_seconds": 30,
+                "telemetry": {"include_postcondition_paths": True},
+            }
+        ]
+    else:
+        steps = [
+            {
+                "id": "score_repair_campaign_from_typed_ledger",
+                "kind": "command",
+                "command": [
+                    ".venv/bin/python",
+                    "tools/score_repair_campaign.py",
+                    "--work-order",
+                    work_order_ref,
+                    "--score-report-out",
+                    score_report_ref,
+                    "--overwrite",
+                ],
+                "resources": {"kind": "local_io_heavy"},
+                "timeout_seconds": 120,
+                "postconditions": [
+                    {
+                        "type": "json_equals",
+                        "path": score_report_ref,
+                        "key": "schema",
+                        "equals": REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA,
+                    },
+                    {
+                        "type": "json_false_authority",
+                        "path": score_report_ref,
+                    },
+                    {
+                        "type": "json_equals",
+                        "path": score_report_ref,
+                        "key": "ready_for_exact_eval_dispatch",
+                        "equals": False,
+                    },
+                    {
+                        "type": "json_equals",
+                        "path": score_report_ref,
+                        "key": "budget_spend_allowed",
+                        "equals": False,
+                    },
+                ],
+                "telemetry": {
+                    "artifact_paths": [score_report_ref],
+                    "input_artifact_paths": [work_order_ref],
+                    "include_postcondition_paths": True,
+                },
+            }
+        ]
+    return {
+        "id": f"score_repair_campaign_{_slug(chain_id)}",
+        "priority": priority,
+        "status": status,
+        "tags": [
+            "frontier-rate-attack",
+            "repair-campaign-scorer",
+            "default-campaign-scorer",
+            "no-score-authority",
+        ],
+        "metadata": experiment_metadata,
+        "steps": steps,
+    }
+
+
+def build_repair_campaign_score_queue(
+    *,
+    repo_root: str | Path,
+    repair_budget_waterfill_queue: Mapping[str, Any],
+    repair_budget_waterfill_queue_path: str | Path,
+    results_root: str | Path,
+    queue_id: str = "repair_campaign_score_queue",
+    experiment_limit: int | None = None,
+) -> dict[str, Any]:
+    """Build a queue that scores repair-waterfill work orders."""
+
+    if repair_budget_waterfill_queue.get("schema") != QUEUE_SCHEMA:
+        raise RepairCampaignScoreQueueError("repair waterfill input must be experiment_queue.v1")
+    require_no_truthy_authority_fields(
+        repair_budget_waterfill_queue,
+        context="repair_campaign_score_queue_input",
+    )
+    source_experiments = [
+        experiment
+        for experiment in repair_budget_waterfill_queue.get("experiments") or []
+        if isinstance(experiment, Mapping)
+    ]
+    if experiment_limit is not None:
+        source_experiments = source_experiments[: max(0, int(experiment_limit))]
+    queue_root = (
+        _resolve(results_root, repo_root)
+        / "repair_campaign_score_queue"
+        / _slug(queue_id)
+    )
+    experiments = [
+        _score_experiment(
+            source_experiment=experiment,
+            source_queue_path=repair_budget_waterfill_queue_path,
+            repo_root=repo_root,
+            queue_root=queue_root,
+            priority=priority,
+        )
+        for priority, experiment in enumerate(source_experiments, start=1)
+    ]
+    ready_count = sum(
+        1
+        for experiment in experiments
+        if experiment["metadata"].get("queue_actuation_ready") is True
+    )
+    metadata = {
+        "schema": REPAIR_CAMPAIGN_SCORE_QUEUE_METADATA_SCHEMA,
+        "source_queue_path": str(repair_budget_waterfill_queue_path),
+        "source_queue_id": repair_budget_waterfill_queue.get("queue_id"),
+        "campaign_scorer_default": True,
+        "score_report_schema": REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA,
+        "experiment_count": len(experiments),
+        "ready_experiment_count": ready_count,
+        "blocked_experiment_count": len(experiments) - ready_count,
+        "results_root": _repo_rel(queue_root, repo_root),
+        "budget_spend_allowed": False,
+        "ready_for_exact_eval_dispatch": False,
+        "allowed_use": "repair_campaign_score_queue_for_local_planning",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        metadata,
+        context="repair_campaign_score_queue_metadata",
+    )
+    return normalize_queue_definition(
+        {
+            "schema": QUEUE_SCHEMA,
+            "queue_id": queue_id,
+            "controls": {
+                "mode": "running",
+                "local_first": True,
+                "max_concurrency": {"local_io_heavy": 1, "local_cpu": 1},
+            },
+            "metadata": metadata,
+            "experiments": experiments,
+        }
+    )
+
+
+__all__ = [
+    "REPAIR_CAMPAIGN_SCORE_EXPERIMENT_METADATA_SCHEMA",
+    "REPAIR_CAMPAIGN_SCORE_QUEUE_METADATA_SCHEMA",
+    "RepairCampaignScoreQueueError",
+    "build_repair_campaign_score_queue",
+]
