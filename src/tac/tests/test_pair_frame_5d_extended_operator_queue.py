@@ -222,7 +222,8 @@ def test_refresh_artifacts_emit_pair_frame_5d_extended_operator_queue(
     assert len(queue["experiments"]) == 8
     assert audit["verdict"] == "densification_required"
     assert audit["score_claim"] is False
-    assert len(acquisition_queue["experiments"]) == audit["work_order_count"] + 1
+    assert len(acquisition_queue["experiments"]) == audit["work_order_count"] + 2
+    assert acquisition_queue["experiments"][-2]["id"] == "audit_blocked_followup_requests"
     report = json.loads(
         (output_dir / "feedback_refresh_report.json").read_text(encoding="utf-8")
     )

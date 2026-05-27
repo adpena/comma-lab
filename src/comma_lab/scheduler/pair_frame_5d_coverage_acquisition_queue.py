@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 import re
 import shlex
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -38,6 +38,9 @@ PAIR_FRAME_5D_EXACT_AXIS_ANCHOR_REQUEST_SCHEMA = (
 )
 PAIR_FRAME_5D_MLX_NEGATIVE_DELTA_REQUEST_SCHEMA = (
     "pair_frame_5d_canvas_mlx_negative_delta_request.v1"
+)
+PAIR_FRAME_5D_FOLLOWUP_READINESS_REPORT_SCHEMA = (
+    "pair_frame_5d_canvas_coverage_followup_readiness_report.v1"
 )
 POPULATED_CANVAS_SCHEMA = "pair_frame_scorer_geometry_lattice_5d_canvas_populated_v1"
 EXTENDED_OPERATOR_QUEUE_SCHEMA = "experiment_queue.v1"
@@ -342,6 +345,226 @@ def _followup_lane_requests(
     return []
 
 
+def _optional_existing_json(path: Path | None) -> dict[str, Any] | None:
+    if path is None:
+        return None
+    if not path.is_file():
+        return None
+    try:
+        return _load_json_object(path)
+    except ExperimentQueueError:
+        return None
+
+
+def _replace_command_placeholders(
+    command: Sequence[object],
+    replacements: Mapping[str, object],
+) -> list[str]:
+    rendered: list[str] = []
+    for item in command:
+        text = str(item)
+        for placeholder, value in replacements.items():
+            text = text.replace(placeholder, str(value))
+        rendered.append(text)
+    return rendered
+
+
+def _exact_axis_request_readiness(
+    request: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    submission_bundle_path: Path | None,
+) -> tuple[list[str], list[str] | None]:
+    blockers = list(request.get("paired_dispatch_command_contract_blockers") or [])
+    if submission_bundle_path is None:
+        blockers.append("submission_bundle_result_path_missing")
+        return blockers, None
+    if not submission_bundle_path.is_file():
+        blockers.append("submission_bundle_result_path_not_found")
+        return blockers, None
+    bundle = _optional_existing_json(submission_bundle_path)
+    if bundle is None:
+        blockers.append("submission_bundle_result_not_json_object")
+        return blockers, None
+    expected_schema = str(request.get("required_input_schema_version") or "")
+    if bundle.get("schema_version") != expected_schema:
+        blockers.append(
+            "submission_bundle_result_schema_mismatch:"
+            f"{bundle.get('schema_version')!r}"
+        )
+    request_sha = str(request.get("archive_sha256") or "")
+    bundle_sha = str(bundle.get("archive_sha256") or "")
+    if request_sha and bundle_sha and request_sha != bundle_sha:
+        blockers.append("submission_bundle_archive_sha256_mismatch")
+    command = [
+        ".venv/bin/python",
+        "tools/paired_auth_eval_cli.py",
+        "--from-submission-bundle",
+        _repo_rel(submission_bundle_path, repo_root),
+        "--cost-band",
+        "smoke",
+        "--cuda-gpu",
+        "T4",
+        "--cuda-platform",
+        "modal",
+        "--cpu-target",
+        "linux_x86_64_modal",
+        "--budget-usd",
+        "1.00",
+        "--dry-run",
+        "--json",
+    ]
+    return blockers, None if blockers else command
+
+
+def _mlx_request_readiness(
+    request: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    reference_mlx_cache_dir: Path | None,
+    candidate_mlx_cache_dir: Path | None,
+    archive_size_bytes: int | None,
+) -> tuple[list[str], list[str] | None]:
+    blockers: list[str] = []
+    if reference_mlx_cache_dir is None:
+        blockers.append("reference_mlx_cache_dir_missing")
+    elif not (reference_mlx_cache_dir / "manifest.json").is_file():
+        blockers.append("reference_mlx_cache_manifest_missing")
+    if candidate_mlx_cache_dir is None:
+        blockers.append("candidate_mlx_cache_dir_missing")
+    elif not (candidate_mlx_cache_dir / "manifest.json").is_file():
+        blockers.append("candidate_mlx_cache_manifest_missing")
+    if (
+        archive_size_bytes is None
+        or isinstance(archive_size_bytes, bool)
+        or archive_size_bytes <= 0
+    ):
+        blockers.append("archive_size_bytes_missing_or_invalid")
+    replacements: dict[str, object] = {
+        "<reference_mlx_cache_dir>": (
+            ""
+            if reference_mlx_cache_dir is None
+            else _repo_rel(reference_mlx_cache_dir, repo_root)
+        ),
+        "<candidate_mlx_cache_dir>": (
+            ""
+            if candidate_mlx_cache_dir is None
+            else _repo_rel(candidate_mlx_cache_dir, repo_root)
+        ),
+        "<archive_size_bytes>": archive_size_bytes or "",
+    }
+    command = _replace_command_placeholders(
+        request.get("command_template") or [],
+        replacements,
+    )
+    return blockers, None if blockers else command
+
+
+def build_coverage_followup_readiness_report(
+    *,
+    repo_root: str | Path,
+    plan_paths: Sequence[str | Path],
+    submission_bundle_path: str | Path | None = None,
+    reference_mlx_cache_dir: str | Path | None = None,
+    candidate_mlx_cache_dir: str | Path | None = None,
+    archive_size_bytes: int | None = None,
+) -> dict[str, Any]:
+    """Classify typed follow-up requests as ready or fail-closed blocked."""
+
+    repo = Path(repo_root)
+    bundle = (
+        None
+        if submission_bundle_path is None
+        else _resolve_path(submission_bundle_path, repo_root=repo)
+    )
+    reference_cache = (
+        None
+        if reference_mlx_cache_dir is None
+        else _resolve_path(reference_mlx_cache_dir, repo_root=repo)
+    )
+    candidate_cache = (
+        None
+        if candidate_mlx_cache_dir is None
+        else _resolve_path(candidate_mlx_cache_dir, repo_root=repo)
+    )
+    rows: list[dict[str, Any]] = []
+    for raw_path in plan_paths:
+        plan_path = _resolve_path(raw_path, repo_root=repo)
+        plan = _load_json_object(plan_path)
+        if plan.get("schema") != PAIR_FRAME_5D_COVERAGE_ACQUISITION_PLAN_SCHEMA:
+            raise ExperimentQueueError(
+                f"{plan_path}: expected {PAIR_FRAME_5D_COVERAGE_ACQUISITION_PLAN_SCHEMA}"
+            )
+        try:
+            require_no_truthy_authority_fields(
+                plan,
+                context=f"pair_frame_5d_followup_readiness_plan:{plan_path}",
+            )
+        except ValueError as exc:
+            raise ExperimentQueueError(str(exc)) from exc
+        for request in plan.get("followup_lane_requests") or []:
+            if not isinstance(request, Mapping):
+                continue
+            try:
+                require_no_truthy_authority_fields(
+                    request,
+                    context=(
+                        "pair_frame_5d_followup_readiness_request:"
+                        f"{plan_path}:{request.get('schema')}"
+                    ),
+                )
+            except ValueError as exc:
+                raise ExperimentQueueError(str(exc)) from exc
+            schema = str(request.get("schema") or "")
+            if schema == PAIR_FRAME_5D_EXACT_AXIS_ANCHOR_REQUEST_SCHEMA:
+                blockers, command = _exact_axis_request_readiness(
+                    request,
+                    repo_root=repo,
+                    submission_bundle_path=bundle,
+                )
+            elif schema == PAIR_FRAME_5D_MLX_NEGATIVE_DELTA_REQUEST_SCHEMA:
+                blockers, command = _mlx_request_readiness(
+                    request,
+                    repo_root=repo,
+                    reference_mlx_cache_dir=reference_cache,
+                    candidate_mlx_cache_dir=candidate_cache,
+                    archive_size_bytes=archive_size_bytes,
+                )
+            else:
+                blockers = [f"unknown_followup_request_schema:{schema}"]
+                command = None
+            rows.append(
+                {
+                    "schema": "pair_frame_5d_canvas_followup_readiness_row.v1",
+                    "plan_path": _repo_rel(plan_path, repo),
+                    "work_order_id": request.get("work_order_id"),
+                    "request_schema": schema,
+                    "ready": not blockers,
+                    "blockers": blockers,
+                    "materialized_command": command,
+                    "allowed_use": "queue_followup_readiness_routing_only",
+                    **FALSE_AUTHORITY,
+                }
+            )
+    ready_count = sum(1 for row in rows if row["ready"])
+    report = {
+        "schema": PAIR_FRAME_5D_FOLLOWUP_READINESS_REPORT_SCHEMA,
+        "plan_count": len(plan_paths),
+        "request_count": len(rows),
+        "ready_request_count": ready_count,
+        "blocked_request_count": len(rows) - ready_count,
+        "requests": rows,
+        "allowed_use": "queue_followup_readiness_routing_only",
+        "forbidden_use": "score_claim_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        report,
+        context="pair_frame_5d_followup_readiness_report",
+    )
+    return report
+
+
 def build_coverage_acquisition_plan(
     *,
     coverage_audit: Mapping[str, Any],
@@ -571,6 +794,64 @@ def build_pair_frame_5d_coverage_acquisition_queue(
             }
         )
 
+    followup_readiness_report = out_root / "followup_readiness_report.json"
+    followup_readiness_report_ref = _repo_rel(followup_readiness_report, repo)
+    experiments.append(
+        {
+            "id": "audit_blocked_followup_requests",
+            "lane_id": "lane_pair_frame_5d_coverage_acquisition_queue_20260527",
+            "priority": 900,
+            "status": status,
+            "tags": [
+                "pair-frame-5d-canvas",
+                "coverage-followup-readiness",
+                "blocked-input-refusal",
+                "no-score-authority",
+            ],
+            "metadata": {
+                "schema": PAIR_FRAME_5D_COVERAGE_ACQUISITION_QUEUE_SCHEMA,
+                "coverage_audit_path": audit_ref,
+                "canvas_path": canvas_ref,
+                "followup_readiness_report_path": followup_readiness_report_ref,
+                "blocked_work_order_ids": blocked_work_order_ids,
+                "allowed_use": "local_encoder_side_coverage_followup_readiness_only",
+                **FALSE_AUTHORITY,
+            },
+            "steps": [
+                {
+                    "id": "emit_followup_readiness_report",
+                    "kind": "command",
+                    "requires": plan_step_refs,
+                    "command": [
+                        ".venv/bin/python",
+                        "tools/audit_5d_coverage_followup_requests.py",
+                        "--plans-dir",
+                        f"{out_ref}/plans",
+                        "--output",
+                        followup_readiness_report_ref,
+                    ],
+                    "resources": {"kind": "local_cpu"},
+                    "timeout_seconds": 120,
+                    "postconditions": [
+                        {
+                            "type": "json_equals",
+                            "path": followup_readiness_report_ref,
+                            "key": "schema",
+                            "equals": PAIR_FRAME_5D_FOLLOWUP_READINESS_REPORT_SCHEMA,
+                        },
+                        _false_authority_postcondition(followup_readiness_report_ref),
+                    ],
+                    "telemetry": {
+                        "artifact_paths": [followup_readiness_report_ref],
+                        "input_artifact_paths": [f"{out_ref}/plans"],
+                        "recursive": False,
+                        "include_postcondition_paths": True,
+                    },
+                }
+            ],
+        }
+    )
+
     archive_sha256 = str(audit.get("archive_sha256") or "")
     refreshed_canvas = out_root / "refreshed_5d_canvas.json"
     refreshed_audit = out_root / "refreshed_5d_canvas_coverage_audit.json"
@@ -775,6 +1056,7 @@ def build_pair_frame_5d_coverage_acquisition_queue(
                 "executable_work_order_ids": executable_work_order_ids,
                 "blocked_work_order_ids": blocked_work_order_ids,
                 "plan_classes_by_work_order": plan_classes_by_work_order,
+                "followup_readiness_report_path": followup_readiness_report_ref,
                 "allowed_use": "local_encoder_side_coverage_acquisition_planning_only",
                 **FALSE_AUTHORITY,
             },
@@ -793,7 +1075,9 @@ __all__ = [
     "PAIR_FRAME_5D_COVERAGE_ACQUISITION_PLAN_SCHEMA",
     "PAIR_FRAME_5D_COVERAGE_ACQUISITION_QUEUE_SCHEMA",
     "PAIR_FRAME_5D_EXACT_AXIS_ANCHOR_REQUEST_SCHEMA",
+    "PAIR_FRAME_5D_FOLLOWUP_READINESS_REPORT_SCHEMA",
     "PAIR_FRAME_5D_MLX_NEGATIVE_DELTA_REQUEST_SCHEMA",
     "build_coverage_acquisition_plan",
+    "build_coverage_followup_readiness_report",
     "build_pair_frame_5d_coverage_acquisition_queue",
 ]

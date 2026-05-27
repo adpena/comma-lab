@@ -12,8 +12,10 @@ from comma_lab.scheduler.pair_frame_5d_coverage_acquisition_queue import (
     PAIR_FRAME_5D_COVERAGE_ACQUISITION_PLAN_SCHEMA,
     PAIR_FRAME_5D_COVERAGE_ACQUISITION_QUEUE_SCHEMA,
     PAIR_FRAME_5D_EXACT_AXIS_ANCHOR_REQUEST_SCHEMA,
+    PAIR_FRAME_5D_FOLLOWUP_READINESS_REPORT_SCHEMA,
     PAIR_FRAME_5D_MLX_NEGATIVE_DELTA_REQUEST_SCHEMA,
     build_coverage_acquisition_plan,
+    build_coverage_followup_readiness_report,
     build_pair_frame_5d_coverage_acquisition_queue,
 )
 from tac.optimization.pair_frame_scorer_geometry_lattice_5d_canvas_coverage import (
@@ -24,6 +26,7 @@ from tac.optimization.pair_frame_scorer_geometry_lattice_5d_canvas_coverage impo
 _REPO_ROOT = pathlib.Path(__file__).resolve().parents[3]
 _BUILD_TOOL = _REPO_ROOT / "tools" / "build_5d_canvas_coverage_acquisition_queue.py"
 _EMIT_TOOL = _REPO_ROOT / "tools" / "emit_5d_canvas_coverage_acquisition_plan.py"
+_AUDIT_TOOL = _REPO_ROOT / "tools" / "audit_5d_coverage_followup_requests.py"
 
 
 def _work_order(order_id: str, *, priority: int = 1) -> dict[str, object]:
@@ -132,6 +135,117 @@ def test_build_coverage_acquisition_plan_for_mlx_negative_delta_request() -> Non
     assert request["score_claim"] is False
 
 
+def test_build_followup_readiness_report_blocks_missing_inputs(
+    tmp_path: pathlib.Path,
+) -> None:
+    audit = _audit(
+        _work_order("populate_missing_paired_cpu_cuda_axis_anchors", priority=1),
+        _work_order("acquire_negative_delta_cells_before_operator_fanout", priority=2),
+    )
+    exact_plan = build_coverage_acquisition_plan(
+        coverage_audit=audit,
+        work_order_id="populate_missing_paired_cpu_cuda_axis_anchors",
+        coverage_audit_path="audit.json",
+        repo_root=_REPO_ROOT,
+        canvas_path="canvas.json",
+    )
+    mlx_plan = build_coverage_acquisition_plan(
+        coverage_audit=audit,
+        work_order_id="acquire_negative_delta_cells_before_operator_fanout",
+        coverage_audit_path="audit.json",
+        repo_root=_REPO_ROOT,
+        canvas_path="canvas.json",
+    )
+    exact_path = _write_json(tmp_path / "exact_plan.json", exact_plan)
+    mlx_path = _write_json(tmp_path / "mlx_plan.json", mlx_plan)
+
+    report = build_coverage_followup_readiness_report(
+        repo_root=_REPO_ROOT,
+        plan_paths=[exact_path, mlx_path],
+    )
+
+    assert report["schema"] == PAIR_FRAME_5D_FOLLOWUP_READINESS_REPORT_SCHEMA
+    assert report["request_count"] == 2
+    assert report["ready_request_count"] == 0
+    assert report["blocked_request_count"] == 2
+    blockers = {
+        row["work_order_id"]: row["blockers"]
+        for row in report["requests"]
+    }
+    assert blockers[
+        "populate_missing_paired_cpu_cuda_axis_anchors"
+    ] == ["submission_bundle_result_path_missing"]
+    assert blockers[
+        "acquire_negative_delta_cells_before_operator_fanout"
+    ] == [
+        "reference_mlx_cache_dir_missing",
+        "candidate_mlx_cache_dir_missing",
+        "archive_size_bytes_missing_or_invalid",
+    ]
+    assert report["score_claim"] is False
+
+
+def test_build_followup_readiness_report_materializes_ready_commands(
+    tmp_path: pathlib.Path,
+) -> None:
+    audit = _audit(
+        _work_order("populate_missing_paired_cpu_cuda_axis_anchors", priority=1),
+        _work_order("acquire_negative_delta_cells_before_operator_fanout", priority=2),
+    )
+    exact_plan = build_coverage_acquisition_plan(
+        coverage_audit=audit,
+        work_order_id="populate_missing_paired_cpu_cuda_axis_anchors",
+        coverage_audit_path="audit.json",
+        repo_root=_REPO_ROOT,
+        canvas_path="canvas.json",
+    )
+    mlx_plan = build_coverage_acquisition_plan(
+        coverage_audit=audit,
+        work_order_id="acquire_negative_delta_cells_before_operator_fanout",
+        coverage_audit_path="audit.json",
+        repo_root=_REPO_ROOT,
+        canvas_path="canvas.json",
+    )
+    exact_path = _write_json(tmp_path / "exact_plan.json", exact_plan)
+    mlx_path = _write_json(tmp_path / "mlx_plan.json", mlx_plan)
+    submission_bundle = _write_json(
+        tmp_path / "submission_bundle_result.json",
+        {
+            "schema_version": "submission_bundle_v1_20260526",
+            "archive_sha256": "e" * 64,
+        },
+    )
+    reference_cache = tmp_path / "reference_mlx_cache"
+    candidate_cache = tmp_path / "candidate_mlx_cache"
+    reference_cache.mkdir()
+    candidate_cache.mkdir()
+    _write_json(reference_cache / "manifest.json", {"schema": "unit"})
+    _write_json(candidate_cache / "manifest.json", {"schema": "unit"})
+
+    report = build_coverage_followup_readiness_report(
+        repo_root=_REPO_ROOT,
+        plan_paths=[exact_path, mlx_path],
+        submission_bundle_path=submission_bundle,
+        reference_mlx_cache_dir=reference_cache,
+        candidate_mlx_cache_dir=candidate_cache,
+        archive_size_bytes=123,
+    )
+
+    assert report["ready_request_count"] == 2
+    assert report["blocked_request_count"] == 0
+    commands = {
+        row["work_order_id"]: row["materialized_command"]
+        for row in report["requests"]
+    }
+    assert "tools/paired_auth_eval_cli.py" in commands[
+        "populate_missing_paired_cpu_cuda_axis_anchors"
+    ]
+    assert "tools/run_mlx_scorer_response_cache.py" in commands[
+        "acquire_negative_delta_cells_before_operator_fanout"
+    ]
+    assert "123" in commands["acquire_negative_delta_cells_before_operator_fanout"]
+
+
 def test_emit_coverage_acquisition_plan_cli(tmp_path: pathlib.Path) -> None:
     audit_path = _write_json(
         tmp_path / "audit.json",
@@ -171,6 +285,43 @@ def test_emit_coverage_acquisition_plan_cli(tmp_path: pathlib.Path) -> None:
     assert payload["promotable"] is False
 
 
+def test_audit_followup_requests_cli(tmp_path: pathlib.Path) -> None:
+    plan = build_coverage_acquisition_plan(
+        coverage_audit=_audit(_work_order("populate_missing_paired_cpu_cuda_axis_anchors")),
+        work_order_id="populate_missing_paired_cpu_cuda_axis_anchors",
+        coverage_audit_path="audit.json",
+        repo_root=_REPO_ROOT,
+        canvas_path="canvas.json",
+    )
+    plans_dir = tmp_path / "plans"
+    plans_dir.mkdir()
+    _write_json(plans_dir / "exact_acquisition_plan.json", plan)
+    report_path = tmp_path / "followup_readiness_report.json"
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(_AUDIT_TOOL),
+            "--plans-dir",
+            str(plans_dir),
+            "--output",
+            str(report_path),
+        ],
+        cwd=_REPO_ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["schema"] == PAIR_FRAME_5D_FOLLOWUP_READINESS_REPORT_SCHEMA
+    assert report["request_count"] == 1
+    assert report["requests"][0]["ready"] is False
+    assert report["requests"][0]["blockers"] == [
+        "submission_bundle_result_path_missing"
+    ]
+
+
 def test_build_pair_frame_5d_coverage_acquisition_queue_shape(
     tmp_path: pathlib.Path,
 ) -> None:
@@ -199,7 +350,7 @@ def test_build_pair_frame_5d_coverage_acquisition_queue_shape(
     assert queue["metadata"]["executable_work_order_ids"] == [
         "densify_frame_coverage_for_masked_and_feathered_search"
     ]
-    assert len(queue["experiments"]) == 3
+    assert len(queue["experiments"]) == 4
     first = queue["experiments"][0]
     assert first["metadata"]["schema"] == PAIR_FRAME_5D_COVERAGE_ACQUISITION_QUEUE_SCHEMA
     assert first["metadata"]["score_claim"] is False
@@ -208,7 +359,17 @@ def test_build_pair_frame_5d_coverage_acquisition_queue_shape(
         "requires_byte_closed_submission_bundle_for_paired_auth_eval",
         "requires_dispatch_claim_before_paid_or_remote_exact_axis_work",
     ]
-    assert first["steps"][0]["command"][1] == "tools/emit_5d_canvas_coverage_acquisition_plan.py"
+    assert first["steps"][0]["command"][1] == (
+        "tools/emit_5d_canvas_coverage_acquisition_plan.py"
+    )
+    readiness = queue["experiments"][-2]
+    assert readiness["id"] == "audit_blocked_followup_requests"
+    assert readiness["metadata"]["followup_readiness_report_path"].endswith(
+        "followup_readiness_report.json"
+    )
+    assert readiness["steps"][0]["command"][1] == (
+        "tools/audit_5d_coverage_followup_requests.py"
+    )
     refresh = queue["experiments"][-1]
     assert refresh["id"] == "refresh_reaudit_and_refire_extended_operators"
     assert refresh["metadata"]["external_blocking_work_order_ids"] == [
@@ -249,4 +410,41 @@ def test_build_coverage_acquisition_queue_cli(tmp_path: pathlib.Path) -> None:
     payload = json.loads(queue_path.read_text(encoding="utf-8"))
     assert payload["queue_id"] == "unit_coverage_acquisition_cli"
     assert payload["controls"]["max_concurrency"]["local_cpu"] == 3
-    assert len(payload["experiments"]) == 2
+    assert len(payload["experiments"]) == 3
+    assert payload["experiments"][-2]["id"] == "audit_blocked_followup_requests"
+
+
+def test_audit_coverage_followup_requests_cli(tmp_path: pathlib.Path) -> None:
+    audit = _audit(_work_order("populate_missing_paired_cpu_cuda_axis_anchors"))
+    plan = build_coverage_acquisition_plan(
+        coverage_audit=audit,
+        work_order_id="populate_missing_paired_cpu_cuda_axis_anchors",
+        coverage_audit_path="audit.json",
+        repo_root=_REPO_ROOT,
+        canvas_path="canvas.json",
+    )
+    plans_dir = tmp_path / "plans"
+    plans_dir.mkdir()
+    _write_json(plans_dir / "exact_plan.json", plan)
+    out_path = tmp_path / "followup_readiness_report.json"
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(_AUDIT_TOOL),
+            "--plans-dir",
+            str(plans_dir),
+            "--output",
+            str(out_path),
+        ],
+        cwd=_REPO_ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    payload = json.loads(out_path.read_text(encoding="utf-8"))
+    assert payload["schema"] == PAIR_FRAME_5D_FOLLOWUP_READINESS_REPORT_SCHEMA
+    assert payload["ready_request_count"] == 0
+    assert payload["blocked_request_count"] == 1
+    assert payload["requests"][0]["materialized_command"] is None
