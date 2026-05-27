@@ -106,6 +106,26 @@ from tac.submission_packet.archive_grammar import (
 from tac.submission_packet.archive_grammar import (
     CANONICAL_EQUATION_ID as ARCHIVE_GRAMMAR_CANONICAL_EQUATION_ID,
 )
+from tac.submission_packet.builder import (
+    DEFAULT_INFLATE_DEPS_BUDGET,
+    DEFAULT_INFLATE_PY_LOC_BUDGET,
+    HNERV_CLASS_INFLATE_DEPS,
+    NUMPY_PORTABLE_INFLATE_DEPS,
+    PHASE_4_LAYER_VERSION,
+    SUBMISSION_BUNDLE_SCHEMA_VERSION,
+    BundleComponentKind,
+    DependencyClosureManifest,
+    PythonpathSelfContainmentStatus,
+    SelectInflateDeviceRouting,
+    SubmissionBundleError,
+    SubmissionBundleResult,
+    build_dependency_closure_manifest,
+    build_submission_bundle,
+    derive_submission_bundle_provenance,
+)
+from tac.submission_packet.builder import (
+    CANONICAL_EQUATION_ID as SUBMISSION_BUNDLE_CANONICAL_EQUATION_ID,
+)
 from tac.submission_packet.compression_pipeline import (
     CANONICAL_EQUATION_ID,
     COMPRESSION_PIPELINE_SCHEMA_VERSION,
@@ -153,4 +173,21 @@ __all__ = [
     "discover_section_specs_from_archive",
     "emit_parser_section_manifest_sidecar",
     "verify_byte_mutation_smoke_via_canonical_helper",
+    # Phase 4 (Layer 2)
+    "SUBMISSION_BUNDLE_CANONICAL_EQUATION_ID",
+    "SUBMISSION_BUNDLE_SCHEMA_VERSION",
+    "PHASE_4_LAYER_VERSION",
+    "DEFAULT_INFLATE_DEPS_BUDGET",
+    "DEFAULT_INFLATE_PY_LOC_BUDGET",
+    "HNERV_CLASS_INFLATE_DEPS",
+    "NUMPY_PORTABLE_INFLATE_DEPS",
+    "BundleComponentKind",
+    "DependencyClosureManifest",
+    "PythonpathSelfContainmentStatus",
+    "SelectInflateDeviceRouting",
+    "SubmissionBundleError",
+    "SubmissionBundleResult",
+    "build_dependency_closure_manifest",
+    "build_submission_bundle",
+    "derive_submission_bundle_provenance",
 ]
