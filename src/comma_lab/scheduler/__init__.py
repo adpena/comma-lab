@@ -195,6 +195,13 @@ from .queue_feedback_replan_policy import (
     validate_feedback_followup_queue,
     validate_queue_observation_recovery_queue,
 )
+from .repair_campaign_materialization_queue import (
+    REPAIR_CAMPAIGN_BYTE_CLOSED_MATERIALIZATION_EXPERIMENT_METADATA_SCHEMA,
+    REPAIR_CAMPAIGN_BYTE_CLOSED_MATERIALIZATION_GATE_SCHEMA,
+    REPAIR_CAMPAIGN_BYTE_CLOSED_MATERIALIZATION_QUEUE_METADATA_SCHEMA,
+    RepairCampaignMaterializationQueueError,
+    build_repair_campaign_byte_closed_materialization_queue,
+)
 from .repair_campaign_score_queue import (
     REPAIR_CAMPAIGN_SCORE_EXPERIMENT_METADATA_SCHEMA,
     REPAIR_CAMPAIGN_SCORE_QUEUE_METADATA_SCHEMA,
@@ -295,6 +302,9 @@ __all__ = [
     "QUEUE_OBSERVATION_RECOVERY_QUEUE_METADATA_SCHEMA",
     "QUEUE_OBSERVATION_RECOVERY_QUEUE_VALIDATION_SCHEMA",
     "REGISTRY_SCHEMA",
+    "REPAIR_CAMPAIGN_BYTE_CLOSED_MATERIALIZATION_EXPERIMENT_METADATA_SCHEMA",
+    "REPAIR_CAMPAIGN_BYTE_CLOSED_MATERIALIZATION_GATE_SCHEMA",
+    "REPAIR_CAMPAIGN_BYTE_CLOSED_MATERIALIZATION_QUEUE_METADATA_SCHEMA",
     "REPAIR_CAMPAIGN_SCORE_EXPERIMENT_METADATA_SCHEMA",
     "REPAIR_CAMPAIGN_SCORE_QUEUE_METADATA_SCHEMA",
     "REPAIR_CAMPAIGN_STACKABILITY_EXPERIMENT_METADATA_SCHEMA",
@@ -325,6 +335,7 @@ __all__ = [
     "PlatformRegistry",
     "PlatformSpec",
     "ReadyStep",
+    "RepairCampaignMaterializationQueueError",
     "RepairCampaignScoreQueueError",
     "RepairCampaignStackabilityQueueError",
     "RepairCascadeMlxProbeQueueError",
@@ -361,6 +372,7 @@ __all__ = [
     "build_queue_observation_recovery_queue",
     "build_remote_git_preflight_command",
     "build_remote_shell_command",
+    "build_repair_campaign_byte_closed_materialization_queue",
     "build_repair_campaign_score_queue",
     "build_repair_campaign_stackability_queue",
     "build_repair_cascade_mlx_learning_signal",

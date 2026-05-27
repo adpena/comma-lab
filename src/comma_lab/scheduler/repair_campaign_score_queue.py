@@ -56,6 +56,10 @@ DEFAULT_WATERFILL_SOURCE_WORKER_MAX_STEPS = 8
 DEFAULT_WATERFILL_SOURCE_WORKER_MAX_EXPERIMENTS = 2
 DEFAULT_WATERFILL_SOURCE_WORKER_MAX_PARALLEL = 1
 DEFAULT_WATERFILL_SOURCE_WORKER_TIMEOUT_SECONDS = 300
+DEFAULT_BYTE_CLOSED_MATERIALIZATION_WORKER_MAX_STEPS = 6
+DEFAULT_BYTE_CLOSED_MATERIALIZATION_WORKER_MAX_EXPERIMENTS = 1
+DEFAULT_BYTE_CLOSED_MATERIALIZATION_WORKER_MAX_PARALLEL = 1
+DEFAULT_BYTE_CLOSED_MATERIALIZATION_WORKER_TIMEOUT_SECONDS = 600
 
 
 class RepairCampaignScoreQueueError(ValueError):
@@ -231,6 +235,21 @@ def _score_experiment(
         stackability_worker_result_path,
         repo_root,
     )
+    materialization_queue_path = (
+        queue_root
+        / _slug(chain_id)
+        / "repair_campaign_byte_closed_materialization_queue.json"
+    )
+    materialization_queue_ref = _repo_rel(materialization_queue_path, repo_root)
+    materialization_worker_result_path = (
+        queue_root
+        / _slug(chain_id)
+        / "repair_campaign_byte_closed_materialization_worker_result.json"
+    )
+    materialization_worker_result_ref = _repo_rel(
+        materialization_worker_result_path,
+        repo_root,
+    )
     cascade_mlx_probe_queue_path = (
         queue_root / _slug(chain_id) / "repair_cascade_mlx_probe_queue.json"
     )
@@ -319,6 +338,12 @@ def _score_experiment(
         "repair_campaign_stackability_worker_result_path": (
             stackability_worker_result_ref
         ),
+        "repair_campaign_byte_closed_materialization_queue_path": (
+            materialization_queue_ref
+        ),
+        "repair_campaign_byte_closed_materialization_worker_result_path": (
+            materialization_worker_result_ref
+        ),
         "repair_cascade_mlx_probe_queue_path": cascade_mlx_probe_queue_ref,
         "repair_cascade_mlx_probe_worker_result_path": (
             cascade_mlx_probe_worker_result_ref
@@ -334,8 +359,20 @@ def _score_experiment(
         "campaign_scorer_default": True,
         "campaign_scorer_uses_posterior_priors": posterior_ref is not None,
         "stackability_followup_default": True,
+        "byte_closed_materialization_followup_default": True,
         "continual_learning_followup_default": True,
         "blocked_learning_followup_default": True,
+        "byte_closed_materialization_worker_limits": {
+            "schema": "repair_campaign_byte_closed_materialization_worker_limits.v1",
+            "max_steps": DEFAULT_BYTE_CLOSED_MATERIALIZATION_WORKER_MAX_STEPS,
+            "max_experiments": (
+                DEFAULT_BYTE_CLOSED_MATERIALIZATION_WORKER_MAX_EXPERIMENTS
+            ),
+            "max_parallel": DEFAULT_BYTE_CLOSED_MATERIALIZATION_WORKER_MAX_PARALLEL,
+            "timeout_seconds": (
+                DEFAULT_BYTE_CLOSED_MATERIALIZATION_WORKER_TIMEOUT_SECONDS
+            ),
+        },
         "stackability_worker_limits": {
             "schema": "repair_campaign_stackability_worker_limits.v1",
             "max_steps": DEFAULT_STACKABILITY_WORKER_MAX_STEPS,
@@ -630,6 +667,113 @@ def _score_experiment(
                 },
             },
             {
+                "id": "build_repair_campaign_byte_closed_materialization_queue",
+                "kind": "command",
+                "requires": ["score_repair_campaign_from_typed_ledger"],
+                "command": [
+                    ".venv/bin/python",
+                    "tools/build_repair_campaign_byte_closed_materialization_queue.py",
+                    "--score-report",
+                    score_report_ref,
+                    "--work-order",
+                    work_order_ref,
+                    "--materialization-queue-out",
+                    materialization_queue_ref,
+                    "--results-root",
+                    str(results_root),
+                    "--queue-id",
+                    f"{_slug(chain_id)}_repair_byte_closed_materialization",
+                    "--overwrite",
+                ],
+                "resources": {"kind": "local_cpu"},
+                "timeout_seconds": 120,
+                "postconditions": [
+                    {
+                        "type": "json_equals",
+                        "path": materialization_queue_ref,
+                        "key": "schema",
+                        "equals": QUEUE_SCHEMA,
+                    },
+                    {
+                        "type": "json_false_authority",
+                        "path": materialization_queue_ref,
+                        "required_false": [],
+                    },
+                ],
+                "telemetry": {
+                    "artifact_paths": [materialization_queue_ref],
+                    "input_artifact_paths": [score_report_ref, work_order_ref],
+                    "include_postcondition_paths": True,
+                },
+            },
+            {
+                "id": "validate_repair_campaign_byte_closed_materialization_queue",
+                "kind": "command",
+                "requires": ["build_repair_campaign_byte_closed_materialization_queue"],
+                "command": [
+                    ".venv/bin/python",
+                    "tools/experiment_queue.py",
+                    "--queue",
+                    materialization_queue_ref,
+                    "validate",
+                ],
+                "resources": {"kind": "local_cpu"},
+                "timeout_seconds": 120,
+                "telemetry": {
+                    "input_artifact_paths": [materialization_queue_ref],
+                },
+            },
+            {
+                "id": "run_repair_campaign_byte_closed_materialization_queue_bounded_local",
+                "kind": "command",
+                "requires": [
+                    "validate_repair_campaign_byte_closed_materialization_queue"
+                ],
+                "command": [
+                    ".venv/bin/python",
+                    "tools/experiment_queue.py",
+                    "--queue",
+                    materialization_queue_ref,
+                    "run-worker",
+                    "--execute",
+                    "--max-steps",
+                    str(DEFAULT_BYTE_CLOSED_MATERIALIZATION_WORKER_MAX_STEPS),
+                    "--max-experiments",
+                    str(DEFAULT_BYTE_CLOSED_MATERIALIZATION_WORKER_MAX_EXPERIMENTS),
+                    "--max-parallel",
+                    str(DEFAULT_BYTE_CLOSED_MATERIALIZATION_WORKER_MAX_PARALLEL),
+                    "--output",
+                    materialization_worker_result_ref,
+                ],
+                "resources": {"kind": "local_io_heavy"},
+                "timeout_seconds": (
+                    DEFAULT_BYTE_CLOSED_MATERIALIZATION_WORKER_TIMEOUT_SECONDS
+                ),
+                "postconditions": [
+                    {
+                        "type": "json_equals",
+                        "path": materialization_worker_result_ref,
+                        "key": "schema",
+                        "equals": "experiment_queue_worker_result.v1",
+                    },
+                    {
+                        "type": "json_equals",
+                        "path": materialization_worker_result_ref,
+                        "key": "failure_count",
+                        "equals": 0,
+                    },
+                ],
+                "telemetry": {
+                    "artifact_paths": [materialization_worker_result_ref],
+                    "input_artifact_paths": [
+                        materialization_queue_ref,
+                        score_report_ref,
+                        work_order_ref,
+                    ],
+                    "include_postcondition_paths": True,
+                },
+            },
+            {
                 "id": "build_repair_campaign_stackability_queue",
                 "kind": "command",
                 "requires": ["score_repair_campaign_from_typed_ledger"],
@@ -892,6 +1036,7 @@ def build_repair_campaign_score_queue(
         "source_queue_id": repair_budget_waterfill_queue.get("queue_id"),
         "campaign_scorer_default": True,
         "campaign_scorer_uses_posterior_priors": posterior_path is not None,
+        "byte_closed_materialization_followup_default": True,
         "repair_campaign_stackability_posterior_path": (
             _repo_rel(_resolve(posterior_path, repo_root), repo_root)
             if posterior_path is not None
@@ -961,6 +1106,9 @@ def summarize_repair_campaign_score_queue(
         ),
         "posterior_acquisition_followup_routes": (
             posterior_prior_summary.get("acquisition_followup_routes") or []
+        ),
+        "byte_closed_materialization_followup_default": metadata.get(
+            "byte_closed_materialization_followup_default"
         ),
         "queue_path": str(queue_path),
         "allowed_use": "default_repair_campaign_scorer_queue_planning_only",

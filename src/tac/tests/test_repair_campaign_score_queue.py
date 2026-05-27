@@ -234,6 +234,52 @@ def test_build_repair_campaign_score_queue_from_waterfill_work_order(
         "repair_campaign_stackability_worker_result_path"
     ].endswith("repair_campaign_stackability_worker_result.json")
     assert experiment["metadata"][
+        "repair_campaign_byte_closed_materialization_queue_path"
+    ].endswith("repair_campaign_byte_closed_materialization_queue.json")
+    assert experiment["metadata"][
+        "repair_campaign_byte_closed_materialization_worker_result_path"
+    ].endswith("repair_campaign_byte_closed_materialization_worker_result.json")
+    assert experiment["metadata"]["byte_closed_materialization_followup_default"] is True
+    assert experiment["metadata"]["byte_closed_materialization_worker_limits"] == {
+        "schema": "repair_campaign_byte_closed_materialization_worker_limits.v1",
+        "max_steps": 6,
+        "max_experiments": 1,
+        "max_parallel": 1,
+        "timeout_seconds": 600,
+    }
+    materialization_step = next(
+        step
+        for step in experiment["steps"]
+        if step["id"] == "build_repair_campaign_byte_closed_materialization_queue"
+    )
+    assert materialization_step["requires"] == [
+        "score_repair_campaign_from_typed_ledger"
+    ]
+    assert materialization_step["command"][:2] == [
+        ".venv/bin/python",
+        "tools/build_repair_campaign_byte_closed_materialization_queue.py",
+    ]
+    assert experiment["metadata"][
+        "repair_campaign_byte_closed_materialization_queue_path"
+    ] in materialization_step["command"]
+    materialization_validate_step = next(
+        step
+        for step in experiment["steps"]
+        if step["id"] == "validate_repair_campaign_byte_closed_materialization_queue"
+    )
+    assert materialization_validate_step["requires"] == [
+        "build_repair_campaign_byte_closed_materialization_queue"
+    ]
+    materialization_worker_step = next(
+        step
+        for step in experiment["steps"]
+        if step["id"]
+        == "run_repair_campaign_byte_closed_materialization_queue_bounded_local"
+    )
+    assert materialization_worker_step["requires"] == [
+        "validate_repair_campaign_byte_closed_materialization_queue"
+    ]
+    assert experiment["metadata"][
         "repair_cascade_mlx_probe_queue_path"
     ].endswith("repair_cascade_mlx_probe_queue.json")
     assert experiment["metadata"][
