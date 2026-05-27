@@ -181,6 +181,7 @@ def _stackability_experiment(
     blockers = ordered_unique([*allocation_blockers, *_custody_blockers(score_row)])
     queue_actuation_ready = not blockers
     status = "queued" if queue_actuation_ready else "frozen"
+    multiscale_action_row = _mapping(allocation.get("multiscale_action_row"))
     metadata = {
         "schema": REPAIR_CAMPAIGN_STACKABILITY_EXPERIMENT_METADATA_SCHEMA,
         "source_score_report_path": str(score_report_path),
@@ -189,6 +190,16 @@ def _stackability_experiment(
         "family_id": allocation.get("family_id"),
         "entropy_position_label": allocation.get("entropy_position_label"),
         "allocated_repair_bytes": _safe_int(allocation.get("allocated_repair_bytes")),
+        "repair_materialization_lineage": dict(
+            _mapping(allocation.get("repair_materialization_lineage"))
+        ),
+        "materialization_missing_artifacts": _string_list(
+            allocation.get("materialization_missing_artifacts")
+        ),
+        "multiscale_action_row": dict(multiscale_action_row),
+        "interaction_dynamics": dict(
+            _mapping(multiscale_action_row.get("interaction_dynamics"))
+        ),
         "probe_output_path": probe_ref,
         "stackability_probe_schema": REPAIR_CAMPAIGN_STACKABILITY_PROBE_SCHEMA,
         "replay_bundle_path": replay_bundle_ref,

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping, Sequence
+from itertools import pairwise
 from math import isfinite
 from pathlib import Path
 from typing import Any
@@ -49,6 +50,12 @@ REPAIR_CAMPAIGN_MULTISCALE_ACTION_LEDGER_SCHEMA = (
 REPAIR_CAMPAIGN_MULTISCALE_ACTION_ROW_SCHEMA = (
     "repair_campaign_multiscale_action_row.v1"
 )
+REPAIR_CAMPAIGN_INTERACTION_DYNAMICS_SCHEMA = (
+    "repair_campaign_cross_scale_interaction_dynamics.v1"
+)
+REPAIR_CAMPAIGN_MATERIALIZATION_LINEAGE_SCHEMA = (
+    "repair_campaign_materialization_lineage.v1"
+)
 
 _TYPED_LEDGER_SCHEMA = "frontier_rate_attack_repair_budget_typed_response_ledger.v1"
 _TYPED_ROW_SCHEMA = "frontier_rate_attack_repair_budget_typed_response_row.v1"
@@ -81,6 +88,16 @@ _SCALE_ORDER: tuple[str, ...] = (
     "batch",
     "full_video",
 )
+_SCALE_INTERACTION_DYNAMICS: dict[tuple[str, str], str] = {
+    ("bit", "byte"): "codeword_integer_boundary_and_payload_accounting",
+    ("byte", "pixel"): "rate_budget_to_reconstruction_support",
+    ("pixel", "boundary"): "low_level_spatial_error_to_segnet_edge_response",
+    ("boundary", "region"): "class_boundary_to_region_waterfill_response",
+    ("region", "frame"): "spatial_support_to_frame0_palette_or_frame_operator",
+    ("frame", "pair"): "frame_operator_to_temporal_pair_response",
+    ("pair", "batch"): "pair_response_to_batch_aggregation",
+    ("batch", "full_video"): "batch_response_to_full_video_score_functional",
+}
 _NON_SIGNAL_SCOPE_KEYS = frozenset(FALSE_AUTHORITY)
 
 
@@ -614,6 +631,88 @@ def _has_any_key(mapping: Mapping[str, Any], fragments: Sequence[str]) -> bool:
     return any(any(fragment in key for fragment in fragments) for key in lowered)
 
 
+def _scale_interaction_dynamics(
+    *,
+    active_scales: Sequence[str],
+    scale_rows: Sequence[Mapping[str, Any]],
+    entropy_position: str,
+    component_axes: Sequence[str],
+    stack_terms: Mapping[str, Any],
+) -> dict[str, Any]:
+    active = _ordered_scales(_string_list(active_scales))
+    reasons_by_scale = {
+        str(row.get("scale") or ""): _string_list(row.get("source_reasons"))
+        for row in scale_rows
+        if row.get("scale")
+    }
+    entropy_class = _entropy_position_class(entropy_position)
+    edges: list[dict[str, Any]] = []
+    for source, target in pairwise(active):
+        dynamics_class = _SCALE_INTERACTION_DYNAMICS.get(
+            (source, target),
+            "non_adjacent_or_family_specific_cross_scale_interaction",
+        )
+        edges.append(
+            {
+                "edge": f"{source}->{target}",
+                "source_scale": source,
+                "target_scale": target,
+                "dynamics_class": dynamics_class,
+                "source_reasons": reasons_by_scale.get(source, []),
+                "target_reasons": reasons_by_scale.get(target, []),
+                "entropy_position_class": entropy_class,
+                "component_axes": list(component_axes),
+            }
+        )
+    low_level = [scale for scale in active if scale in {"bit", "byte", "pixel"}]
+    spatial = [
+        scale for scale in active if scale in {"pixel", "boundary", "region", "frame"}
+    ]
+    temporal = [scale for scale in active if scale in {"pair", "batch", "full_video"}]
+    remeasurement_reasons = []
+    if stack_terms.get("must_remeasure_with_parent_and_sibling_repairs") is True:
+        remeasurement_reasons.append("explicit_parent_or_sibling_stackability_term")
+    if len(active) >= 4:
+        remeasurement_reasons.append("high_order_cross_scale_support")
+    if entropy_class in {
+        "pre_entropy_distribution_shaping",
+        "scorer_entropy_before_selector_codec",
+    }:
+        remeasurement_reasons.append("pre_or_scorer_entropy_position_changes_response")
+    dynamics = {
+        "schema": REPAIR_CAMPAIGN_INTERACTION_DYNAMICS_SCHEMA,
+        "scale_order": list(_SCALE_ORDER),
+        "active_scales": active,
+        "component_axes": list(component_axes),
+        "entropy_position_label": entropy_position,
+        "entropy_position_class": entropy_class,
+        "low_level_signal_scales": low_level,
+        "spatial_support_scales": spatial,
+        "temporal_aggregation_scales": temporal,
+        "canonical_interaction_edges": edges,
+        "cross_scale_edge_count": len(edges),
+        "interaction_order": len(active),
+        "interaction_state_variables": [
+            "delta_segnet",
+            "delta_posenet",
+            "lambda_delta_bytes",
+            "entropy_position_weight",
+            "cross_scale_interaction_terms",
+            "receiver_runtime_constraints",
+        ],
+        "remeasurement_reasons": ordered_unique(remeasurement_reasons),
+        "must_remeasure_after_materialization": bool(remeasurement_reasons),
+        "allowed_use": "repair_campaign_cross_scale_dynamics_ranking_feature_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        dynamics,
+        context="repair_campaign_cross_scale_interaction_dynamics",
+    )
+    return dynamics
+
+
 def _multiscale_action_row(
     *,
     source_row: Mapping[str, Any],
@@ -715,6 +814,13 @@ def _multiscale_action_row(
         stack_terms.get("must_remeasure_with_parent_and_sibling_repairs") is True
         or interaction_order >= 4
     )
+    interaction_dynamics = _scale_interaction_dynamics(
+        active_scales=active_scales,
+        scale_rows=scale_rows,
+        entropy_position=entropy_position,
+        component_axes=component_axes,
+        stack_terms=stack_terms,
+    )
     row = {
         "schema": REPAIR_CAMPAIGN_MULTISCALE_ACTION_ROW_SCHEMA,
         "typed_response_id": source_row.get("typed_response_id"),
@@ -748,11 +854,13 @@ def _multiscale_action_row(
         "palette_dynamics_context": dict(palette_dynamics_context),
         "interaction_scope": dict(scope),
         "stacking_interaction_terms": dict(stack_terms),
+        "interaction_dynamics": interaction_dynamics,
         "remeasure_required_before_budget_spend": remeasure_required,
         "hard_legal_runtime_constraints": list(hard_constraints),
         "mathematical_grounding": {
             "schema": "repair_campaign_multiscale_mathematical_grounding.v1",
             "scale_order": list(_SCALE_ORDER),
+            "interaction_dynamics_schema": REPAIR_CAMPAIGN_INTERACTION_DYNAMICS_SCHEMA,
             "principle": (
                 "repair value depends on where a transformation acts relative "
                 "to entropy concentration and which spatial/temporal support it touches"
@@ -763,6 +871,9 @@ def _multiscale_action_row(
             ),
             "hard_constraint": (
                 "allocated repair bytes are bounded by receiver-closed rate credit"
+            ),
+            "state_variables": list(
+                interaction_dynamics["interaction_state_variables"]
             ),
         },
         "allowed_use": "multiscale_repair_action_ranking_feature_only",
@@ -783,6 +894,8 @@ def _multiscale_action_ledger(rows: Sequence[Mapping[str, Any]]) -> dict[str, An
     scale_histogram: dict[str, int] = {}
     entropy_class_histogram: dict[str, int] = {}
     interaction_order_histogram: dict[str, int] = {}
+    interaction_edge_histogram: dict[str, int] = {}
+    dynamics_class_histogram: dict[str, int] = {}
     action_rows: list[dict[str, Any]] = []
     for row in rows:
         action = _mapping(row.get("multiscale_action_row"))
@@ -800,6 +913,20 @@ def _multiscale_action_ledger(rows: Sequence[Mapping[str, Any]]) -> dict[str, An
         )
         order = str(_safe_int(action.get("interaction_order")))
         interaction_order_histogram[order] = interaction_order_histogram.get(order, 0) + 1
+        dynamics = _mapping(action.get("interaction_dynamics"))
+        for edge in dynamics.get("canonical_interaction_edges") or []:
+            if not isinstance(edge, Mapping):
+                continue
+            edge_key = str(edge.get("edge") or "").strip()
+            dynamics_class = str(edge.get("dynamics_class") or "").strip()
+            if edge_key:
+                interaction_edge_histogram[edge_key] = (
+                    interaction_edge_histogram.get(edge_key, 0) + 1
+                )
+            if dynamics_class:
+                dynamics_class_histogram[dynamics_class] = (
+                    dynamics_class_histogram.get(dynamics_class, 0) + 1
+                )
     ledger = {
         "schema": REPAIR_CAMPAIGN_MULTISCALE_ACTION_LEDGER_SCHEMA,
         "row_schema": REPAIR_CAMPAIGN_MULTISCALE_ACTION_ROW_SCHEMA,
@@ -812,6 +939,8 @@ def _multiscale_action_ledger(rows: Sequence[Mapping[str, Any]]) -> dict[str, An
         "interaction_order_histogram": dict(
             sorted(interaction_order_histogram.items())
         ),
+        "interaction_edge_histogram": dict(sorted(interaction_edge_histogram.items())),
+        "dynamics_class_histogram": dict(sorted(dynamics_class_histogram.items())),
         "rows": action_rows,
         "budget_spend_allowed": False,
         "ready_for_exact_eval_dispatch": False,
@@ -1187,6 +1316,105 @@ def _receiver_proof_status(
         "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
         **FALSE_AUTHORITY,
     }
+
+
+def _status_ready(status: Mapping[str, Any]) -> bool:
+    return (
+        status.get("exists") is True
+        and status.get("is_file") is True
+        and status.get("is_symlink") is not True
+    )
+
+
+def _repair_materialization_lineage(
+    *,
+    row: Mapping[str, Any],
+    receiver_proof_status: Mapping[str, Any],
+    execution_gate: Mapping[str, Any],
+) -> dict[str, Any]:
+    archive = _mapping(receiver_proof_status.get("receiver_consumed_candidate_archive"))
+    proof = _mapping(receiver_proof_status.get("runtime_consumption_proof"))
+    proof_validation = _mapping(
+        receiver_proof_status.get("runtime_consumption_proof_validation")
+    )
+    replay = _mapping(receiver_proof_status.get("component_response_replay_manifest"))
+    exact_axis = _mapping(receiver_proof_status.get("exact_axis_component_response"))
+    local_ready = execution_gate.get("local_mlx_advisory_custody_ready") is True
+    archive_ready = _status_ready(archive)
+    proof_ready = _status_ready(proof) and proof_validation.get("receiver_contract_satisfied") is True
+    replay_ready = _status_ready(replay)
+    exact_axis_ready = _status_ready(exact_axis)
+    blockers: list[str] = []
+    if not local_ready:
+        blockers.append("local_mlx_advisory_custody_missing")
+    if not archive_ready:
+        blockers.append("byte_closed_candidate_archive_missing_or_unverified")
+    if not proof_ready:
+        blockers.append("archive_bound_runtime_consumption_proof_missing_or_unverified")
+    if not replay_ready:
+        blockers.append("component_response_replay_manifest_missing_or_unverified")
+    if not exact_axis_ready:
+        blockers.append("exact_axis_component_response_artifact_missing_or_unverified")
+    lineage = {
+        "schema": REPAIR_CAMPAIGN_MATERIALIZATION_LINEAGE_SCHEMA,
+        "typed_response_id": row.get("typed_response_id"),
+        "candidate_id": row.get("candidate_id"),
+        "family_id_hint": row.get("family_id_hint"),
+        "correction_family": row.get("correction_family"),
+        "lineage_stage": (
+            "local_mlx_stackability_ready"
+            if local_ready
+            else "blocked_before_local_mlx_stackability"
+        ),
+        "local_mlx_advisory_custody_ready": local_ready,
+        "byte_closed_candidate_archive_ready": archive_ready,
+        "archive_bound_runtime_consumption_proof_ready": proof_ready,
+        "component_response_replay_manifest_ready": replay_ready,
+        "exact_axis_component_response_ready": exact_axis_ready,
+        "materialization_ready_for_exact_axis_handoff": (
+            archive_ready and proof_ready and replay_ready and exact_axis_ready
+        ),
+        "required_artifact_keys": [
+            "local_mlx_response_path",
+            "reference_local_mlx_response_path",
+            "receiver_consumed_candidate_archive_path",
+            "runtime_consumption_proof_path",
+            "component_response_replay_manifest_path",
+            "exact_axis_component_response_path",
+        ],
+        "candidate_archive": dict(archive),
+        "runtime_consumption_proof": dict(proof),
+        "runtime_consumption_proof_validation": dict(proof_validation),
+        "component_response_replay_manifest": dict(replay),
+        "exact_axis_component_response": dict(exact_axis),
+        "execution_gate_missing_artifacts": _string_list(
+            execution_gate.get("missing_artifacts")
+        ),
+        "receiver_proof_missing_artifacts": _string_list(
+            receiver_proof_status.get("missing_artifacts")
+        ),
+        "materialization_blockers": ordered_unique(blockers),
+        "recommended_next_queue_action": (
+            "materialize_byte_closed_repair_candidate_and_archive_bound_runtime_proof"
+            if local_ready
+            else "materialize_missing_local_mlx_custody_before_repair_materialization"
+        ),
+        "target_queue_artifact_key": "repair_campaign_byte_closed_materialization_queue",
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        "allowed_use": "repair_campaign_materialization_lineage_planning_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        lineage,
+        context=(
+            "repair_campaign_materialization_lineage:"
+            f"{row.get('typed_response_id') or row.get('candidate_id')}"
+        ),
+    )
+    return lineage
 
 
 def _hard_legal_runtime_constraints(row: Mapping[str, Any]) -> list[str]:
@@ -1624,6 +1852,7 @@ def _build_optimizer_decision(
             blockers.append("receiver_closed_rate_credit_exhausted")
         if blockers:
             receiver_proof_status = _mapping(row.get("receiver_proof_status"))
+            materialization_lineage = _mapping(row.get("repair_materialization_lineage"))
             blocked_rows.append(
                 {
                     "typed_response_id": typed_response_id,
@@ -1659,6 +1888,7 @@ def _build_optimizer_decision(
                         _mapping(row.get("multiscale_action_row"))
                     ),
                     "receiver_proof_status": dict(receiver_proof_status),
+                    "repair_materialization_lineage": dict(materialization_lineage),
                     "hard_legal_runtime_constraints": _string_list(
                         row.get("hard_legal_runtime_constraints")
                     ),
@@ -1669,6 +1899,9 @@ def _build_optimizer_decision(
                             *_string_list(gate.get("missing_artifacts")),
                             *_string_list(
                                 receiver_proof_status.get("missing_artifacts")
+                            ),
+                            *_string_list(
+                                materialization_lineage.get("materialization_blockers")
                             ),
                         ]
                     ),
@@ -1731,6 +1964,14 @@ def _build_optimizer_decision(
                 ),
                 "receiver_proof_status": dict(
                     _mapping(row.get("receiver_proof_status"))
+                ),
+                "repair_materialization_lineage": dict(
+                    _mapping(row.get("repair_materialization_lineage"))
+                ),
+                "materialization_missing_artifacts": _string_list(
+                    _mapping(row.get("repair_materialization_lineage")).get(
+                        "materialization_blockers"
+                    )
                 ),
                 "hard_legal_runtime_constraints": _string_list(
                     row.get("hard_legal_runtime_constraints")
@@ -2123,6 +2364,11 @@ def score_repair_campaign(
             * (1.0 - interaction_penalty)
         )
         gate = _execution_gate(row, prior, repo_root=repo_root)
+        materialization_lineage = _repair_materialization_lineage(
+            row=row,
+            receiver_proof_status=receiver_proof,
+            execution_gate=gate,
+        )
         scored_row = {
             "schema": REPAIR_CAMPAIGN_SCORE_ROW_SCHEMA,
             "source_row_schema": row.get("schema"),
@@ -2153,6 +2399,7 @@ def score_repair_campaign(
             "component_response_terms": component_response_terms,
             "multiscale_action_row": multiscale_action,
             "receiver_proof_status": receiver_proof,
+            "repair_materialization_lineage": materialization_lineage,
             "hard_legal_runtime_constraints": hard_constraints,
             "family_prior_multiplier": family_multiplier,
             "posterior_prior_multiplier": posterior_prior_multiplier,
@@ -2243,6 +2490,8 @@ def score_repair_campaign(
 
 
 __all__ = [
+    "REPAIR_CAMPAIGN_INTERACTION_DYNAMICS_SCHEMA",
+    "REPAIR_CAMPAIGN_MATERIALIZATION_LINEAGE_SCHEMA",
     "REPAIR_CAMPAIGN_MULTISCALE_ACTION_LEDGER_SCHEMA",
     "REPAIR_CAMPAIGN_MULTISCALE_ACTION_ROW_SCHEMA",
     "REPAIR_CAMPAIGN_OPTIMIZER_ALLOCATION_ROW_SCHEMA",

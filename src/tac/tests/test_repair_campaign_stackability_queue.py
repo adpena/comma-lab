@@ -30,6 +30,7 @@ from tac.optimization.repair_campaign_replay_bundle import (
     diff_repair_campaign_stackability_replay_bundles,
 )
 from tac.optimization.repair_campaign_scorer import (
+    REPAIR_CAMPAIGN_INTERACTION_DYNAMICS_SCHEMA,
     REPAIR_CAMPAIGN_STACKABILITY_PROBE_SCHEMA,
     build_repair_campaign_stackability_probe,
     score_repair_campaign,
@@ -197,6 +198,20 @@ def test_stackability_queue_emits_executable_local_probe(tmp_path: Path) -> None
     assert experiment["metadata"]["learning_signal_path"].endswith(
         "repair_campaign_learning_signal.json"
     )
+    assert experiment["metadata"]["repair_materialization_lineage"][
+        "target_queue_artifact_key"
+    ] == "repair_campaign_byte_closed_materialization_queue"
+    assert "byte_closed_candidate_archive_missing_or_unverified" in (
+        experiment["metadata"]["materialization_missing_artifacts"]
+    )
+    dynamics = experiment["metadata"]["interaction_dynamics"]
+    assert dynamics["schema"] == REPAIR_CAMPAIGN_INTERACTION_DYNAMICS_SCHEMA
+    assert "boundary->region" in {
+        edge["edge"] for edge in dynamics["canonical_interaction_edges"]
+    }
+    assert experiment["metadata"]["multiscale_action_row"]["interaction_dynamics"][
+        "cross_scale_edge_count"
+    ] == dynamics["cross_scale_edge_count"]
     command = [
         sys.executable if item == ".venv/bin/python" else str(item)
         for item in experiment["steps"][0]["command"]

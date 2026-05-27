@@ -15,6 +15,8 @@ from tac.optimization.repair_campaign_learning_signal import (
     build_repair_campaign_blocked_learning_signal_report,
 )
 from tac.optimization.repair_campaign_scorer import (
+    REPAIR_CAMPAIGN_INTERACTION_DYNAMICS_SCHEMA,
+    REPAIR_CAMPAIGN_MATERIALIZATION_LINEAGE_SCHEMA,
     REPAIR_CAMPAIGN_MULTISCALE_ACTION_LEDGER_SCHEMA,
     REPAIR_CAMPAIGN_MULTISCALE_ACTION_ROW_SCHEMA,
     REPAIR_CAMPAIGN_OPTIMIZER_DECISION_SCHEMA,
@@ -387,15 +389,39 @@ def test_score_repair_campaign_ranks_ready_mlx_and_names_missing_artifacts(
         "rate_bytes",
         "selector_bits",
     ]
+    dynamics = action["interaction_dynamics"]
+    assert dynamics["schema"] == REPAIR_CAMPAIGN_INTERACTION_DYNAMICS_SCHEMA
+    assert dynamics["low_level_signal_scales"] == ["bit", "byte", "pixel"]
+    assert dynamics["temporal_aggregation_scales"] == [
+        "pair",
+        "batch",
+        "full_video",
+    ]
+    assert dynamics["canonical_interaction_edges"][0]["edge"] == "bit->byte"
+    assert dynamics["canonical_interaction_edges"][-1]["edge"] == "batch->full_video"
+    assert dynamics["canonical_interaction_edges"][2]["dynamics_class"] == (
+        "low_level_spatial_error_to_segnet_edge_response"
+    )
+    assert "cross_scale_interaction_terms" in dynamics["interaction_state_variables"]
+    assert dynamics["must_remeasure_after_materialization"] is True
     assert action["action_functional"]["bit_delta_vs_baseline"] == -32.0
     assert action["entropy_position_class"] == "pre_entropy_distribution_shaping"
     assert action["remeasure_required_before_budget_spend"] is True
+    assert action["mathematical_grounding"]["interaction_dynamics_schema"] == (
+        REPAIR_CAMPAIGN_INTERACTION_DYNAMICS_SCHEMA
+    )
     assert report["multiscale_action_ledger"]["schema"] == (
         REPAIR_CAMPAIGN_MULTISCALE_ACTION_LEDGER_SCHEMA
     )
     assert report["multiscale_action_ledger"]["row_count"] == 2
     assert report["multiscale_action_ledger"]["scale_histogram"]["region"] == 2
     assert report["multiscale_action_ledger"]["scale_histogram"]["bit"] == 1
+    assert report["multiscale_action_ledger"]["interaction_edge_histogram"][
+        "bit->byte"
+    ] == 1
+    assert report["multiscale_action_ledger"]["dynamics_class_histogram"][
+        "class_boundary_to_region_waterfill_response"
+    ] == 1
     assert (
         "runtime_consumption_proof_path:missing_or_unverified"
         in first["receiver_proof_status"]["missing_artifacts"]
@@ -403,6 +429,23 @@ def test_score_repair_campaign_ranks_ready_mlx_and_names_missing_artifacts(
     assert "receiver_consumes_materialized_runtime_output" in (
         first["hard_legal_runtime_constraints"]
     )
+    lineage = first["repair_materialization_lineage"]
+    assert lineage["schema"] == REPAIR_CAMPAIGN_MATERIALIZATION_LINEAGE_SCHEMA
+    assert lineage["lineage_stage"] == "local_mlx_stackability_ready"
+    assert lineage["local_mlx_advisory_custody_ready"] is True
+    assert lineage["byte_closed_candidate_archive_ready"] is False
+    assert lineage["archive_bound_runtime_consumption_proof_ready"] is False
+    assert lineage["component_response_replay_manifest_ready"] is False
+    assert lineage["exact_axis_component_response_ready"] is False
+    assert lineage["target_queue_artifact_key"] == (
+        "repair_campaign_byte_closed_materialization_queue"
+    )
+    assert {
+        "byte_closed_candidate_archive_missing_or_unverified",
+        "archive_bound_runtime_consumption_proof_missing_or_unverified",
+        "component_response_replay_manifest_missing_or_unverified",
+        "exact_axis_component_response_artifact_missing_or_unverified",
+    }.issubset(set(lineage["materialization_blockers"]))
     assert first["campaign_score"] > 0.0
     allocation = decision["selected_allocation_rows"][0]
     assert allocation["per_op_bytes_delta"] == -4
@@ -415,6 +458,12 @@ def test_score_repair_campaign_ranks_ready_mlx_and_names_missing_artifacts(
     assert (
         "runtime_consumption_proof_path:missing_or_unverified"
         in allocation["receiver_proof_status"]["missing_artifacts"]
+    )
+    assert allocation["repair_materialization_lineage"]["schema"] == (
+        REPAIR_CAMPAIGN_MATERIALIZATION_LINEAGE_SCHEMA
+    )
+    assert "byte_closed_candidate_archive_missing_or_unverified" in (
+        allocation["materialization_missing_artifacts"]
     )
     blocked_allocation = decision["blocked_allocation_rows"][0]
     assert blocked_allocation["typed_response_id"] == "selector_missing"
@@ -456,6 +505,12 @@ def test_score_repair_campaign_blocks_missing_family_required_value_artifacts(
 
     row = next(item for item in report["rows"] if item["typed_response_id"] == "segnet_region_ready")
     assert row["execution_gate"]["recommended_queue_status"] == "blocked_missing_artifact"
+    assert row["repair_materialization_lineage"]["lineage_stage"] == (
+        "blocked_before_local_mlx_stackability"
+    )
+    assert "local_mlx_advisory_custody_missing" in (
+        row["repair_materialization_lineage"]["materialization_blockers"]
+    )
     assert "segnet_class_region_mask_ids:missing_or_empty" in (
         row["execution_gate"]["missing_artifacts"]
     )
@@ -565,6 +620,14 @@ def test_score_repair_campaign_revalidates_existing_runtime_proof_artifact(
     assert (
         "runtime_consumption_proof_path:missing_or_unverified"
         not in allocation["receiver_proof_status"]["missing_artifacts"]
+    )
+    lineage = allocation["repair_materialization_lineage"]
+    assert lineage["byte_closed_candidate_archive_ready"] is True
+    assert lineage["archive_bound_runtime_consumption_proof_ready"] is True
+    assert lineage["component_response_replay_manifest_ready"] is False
+    assert lineage["exact_axis_component_response_ready"] is False
+    assert "component_response_replay_manifest_missing_or_unverified" in (
+        allocation["materialization_missing_artifacts"]
     )
 
 
