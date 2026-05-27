@@ -23,6 +23,7 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
+from tac.optimization.entropy_position import classify_entropy_position
 from tac.optimization.proxy_candidate_contract import (
     apply_proxy_evidence_boundary,
     require_no_truthy_authority_fields,
@@ -353,12 +354,20 @@ def build_feca_selector_reparameterized_candidate(
         ),
         "candidate_requires_exact_auth_eval_before_promotion",
     ]
+    entropy_position = classify_entropy_position(
+        FECA_SELECTOR_TARGET_KIND,
+        operation_family="selector_context_recode",
+        payload_context={"entropy_position_id": "P11"},
+    )
     proof = apply_proxy_evidence_boundary(
         {
             "schema": FECA_REPARAMETERIZATION_PROOF_SCHEMA,
             "generated_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "target_kind": FECA_SELECTOR_TARGET_KIND,
             "materializer_id": FECA_SELECTOR_MATERIALIZER_ID,
+            "operation_family": "selector_context_recode",
+            "entropy_position_id": "P11",
+            "entropy_position_classification": entropy_position,
             "receiver_contract_id": FECA_SELECTOR_RECEIVER_CONTRACT_ID,
             "receiver_contract_kind": FECA_SELECTOR_RECEIVER_CONTRACT_KIND,
             "source_archive": source_archive_record,
@@ -398,6 +407,7 @@ def build_feca_selector_reparameterized_candidate(
             "materializer_id": FECA_SELECTOR_MATERIALIZER_ID,
             "operation_family": "selector_context_recode",
             "entropy_position_id": "P11",
+            "entropy_position_classification": entropy_position,
             "selection_scope": "fp11_feca_selector_stream",
             "receiver_contract_id": FECA_SELECTOR_RECEIVER_CONTRACT_ID,
             "receiver_contract_kind": FECA_SELECTOR_RECEIVER_CONTRACT_KIND,
