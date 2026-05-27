@@ -5321,6 +5321,18 @@ def preflight_all(
             strict=False, verbose=verbose
         )
 
+        # Catalog #371: no orphan auto-trigger stub whose condition is reachable.
+        # STUB-AUDIT-AND-FIX wave 2026-05-27 self-protection. Refuses
+        # re-introduction of the no-op auto_recalibrate orphan-stub (the
+        # canonical recalibrator must actually refit / emit EVENT_RECALIBRATED
+        # or carry # DEFERRED_STUB_OK:<reactivation-criteria>). STRICT-from-byte-
+        # one per CLAUDE.md "Strict-flip atomicity rule"; the working recalibrator
+        # lands in the same commit batch driving live count to 0.
+        # Memory: feedback_stub_audit_and_fix_wave_landed_20260527.
+        check_no_orphan_auto_trigger_stub_with_satisfied_condition(
+            strict=True, verbose=verbose
+        )
+
         # Catalog #356: per-axis decomposition carries canonical Provenance.
         # Per CATHEDRAL-SMARTER-DESIGN-MEMO Dim 3 Steps 3.1-3.3 (operator
         # blanket approval 2026-05-20). Sister of Catalog #335 at the
@@ -28579,6 +28591,214 @@ def check_cathedral_consumer_directory_package_exposes_canonical_contract(
             "canonical CathedralConsumerContract on src/tac/cathedral_consumers/* "
             "per CLAUDE.md 'Bugs must be permanently fixed AND self-protected "
             "against' non-negotiable (sister of Catalog #265):\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Catalog #371 — no orphan auto-trigger stub with satisfied condition
+# ────────────────────────────────────────────────────────────────────────────
+#
+# Per STUB-AUDIT-AND-FIX wave 2026-05-27 (operator directive "fix all stubs and
+# continue iterating and optimizing and auditing") + CLAUDE.md "Results must
+# become system intelligence" (a no-op consumer of landed evidence is the
+# orphan-work failure mode) + "Bugs must be permanently fixed AND self-protected
+# against" non-negotiable.
+#
+# Bug class anchor: tac.canonical_equations.registry.auto_recalibrate_from_
+# continual_learning_posterior shipped as a no-op stub
+# (``equations_recalibrated=0,  # stub; auto-refit comes in a follow-on landing``)
+# that returned WITHOUT refitting even when its OWN documented trigger condition
+# (``when_3+_new_empirical_anchors_in_domain``) was ALREADY satisfied. Empirical
+# receipt: 11 of 64 canonical equations carried stale ``predicted_vs_empirical_
+# residual`` summaries that no longer matched their own landed EmpiricalAnchor
+# rows (including stale NaN sentinels + synthetic count/max-abs-residual keys),
+# and the stub no-op'd on all of them. canonical equation #2
+# (hinton_kl_distill_enables_qat_catalyst_composition_savings_v1) had 3 anchors
+# falsifying the closed-form alpha=0.15 lift toward an empirical ~0, yet its
+# summary + last_calibration_utc never moved.
+#
+# This gate refuses re-introduction of the orphan-auto-trigger-stub pattern in
+# the canonical recalibrator: an ``auto_recalibrate_*`` function that hardcodes
+# ``equations_recalibrated=0`` (no-op-by-construction) OR carries the explicit
+# follow-on-stub marker WITHOUT also wiring the canonical EVENT_RECALIBRATED
+# emission path. The function MUST either actually refit (emit EVENT_RECALIBRATED
+# / call _append_event_locked) OR carry a same-line
+# ``# DEFERRED_STUB_OK:<reactivation-criteria>`` waiver with a substantive
+# non-placeholder reactivation criterion (Catalog #287 sister discipline).
+#
+# Acceptance:
+#   (a) the recalibrator references EVENT_RECALIBRATED (the canonical refit
+#       emission path is wired); OR
+#   (b) the no-op marker line carries # DEFERRED_STUB_OK:<reactivation-criteria>
+#       with a real reactivation criterion (>= 4 chars; placeholder rejected).
+#
+# STRICT-from-byte-one per CLAUDE.md "Strict-flip atomicity rule" — the
+# STUB-AUDIT-AND-FIX wave lands the working recalibrator in the same commit
+# batch, driving live count to 0.
+#
+# Sister of Catalog #335 / #336 / #337 / #355 (orphan-signal / facade-wire-in
+# extinction at the cathedral consumer + master-gradient + meta-Lagrangian
+# surfaces; #371 is the auto-trigger-stub sub-surface) + Catalog #287
+# (placeholder-rationale rejection) + Catalog #176 (META-meta: STRICT callsites
+# have CLAUDE.md row) + Catalog #185 (META-meta-meta: Live count: 0 verified
+# empirically) + Catalog #344 (canonical equations registry — the surface this
+# recalibrator keeps coherent).
+
+_CHECK_371_RECALIBRATOR_RELPATH = "src/tac/canonical_equations/registry.py"
+_CHECK_371_RECALIBRATOR_FN = "auto_recalibrate_from_continual_learning_posterior"
+# No-op-by-construction marker: a hardcoded equations_recalibrated=0 return is
+# the orphan-stub signature (the function CANNOT refit anything).
+_CHECK_371_NOOP_MARKERS = (
+    "equations_recalibrated=0,  # stub",
+    "auto-refit comes in a follow-on",
+    "0,  # stub; auto-refit",
+)
+# The canonical refit emission token — presence proves the function is wired
+# to actually append a recalibration event.
+_CHECK_371_REFIT_EMISSION_TOKEN = "EVENT_RECALIBRATED"
+_CHECK_371_WAIVER_MARKER = "# DEFERRED_STUB_OK:"
+_CHECK_371_PLACEHOLDER_RATIONALES = frozenset(
+    {"<rationale>", "<reason>", "<reactivation-criteria>", "<reactivation>"}
+)
+
+
+def _check_371_extract_recalibrator_body(text: str) -> str | None:
+    """Return the source text of the auto_recalibrate function body, or None.
+
+    Indentation-based scan: capture from the ``def auto_recalibrate_...`` line
+    to the next top-level ``def``/``class`` at column 0.
+    """
+    lines = text.splitlines()
+    start = None
+    for i, line in enumerate(lines):
+        if line.lstrip().startswith(f"def {_CHECK_371_RECALIBRATOR_FN}"):
+            start = i
+            break
+    if start is None:
+        return None
+    body = [lines[start]]
+    for line in lines[start + 1 :]:
+        # Stop at the next module-level def/class (column 0).
+        if line and not line[0].isspace() and (
+            line.startswith("def ") or line.startswith("class ") or line.startswith("@")
+        ):
+            break
+        body.append(line)
+    return "\n".join(body)
+
+
+def check_no_orphan_auto_trigger_stub_with_satisfied_condition(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #371 — refuse orphan auto-trigger stub whose condition is reachable.
+
+    Per STUB-AUDIT-AND-FIX wave 2026-05-27. Refuses re-introduction of the
+    no-op-auto-recalibrator orphan-stub: a ``auto_recalibrate_*`` function whose
+    documented trigger condition (``when_3+_new_empirical_anchors_in_domain``)
+    is reachable but which hardcodes ``equations_recalibrated=0`` /
+    carries the follow-on-stub marker WITHOUT wiring the canonical
+    ``EVENT_RECALIBRATED`` emission path.
+
+    Acceptance: (a) the recalibrator references ``EVENT_RECALIBRATED`` (refit
+    emission wired); OR (b) the no-op marker line carries a same-line
+    ``# DEFERRED_STUB_OK:<reactivation-criteria>`` waiver with a substantive
+    non-placeholder criterion.
+
+    STRICT-from-byte-one — live count at landing: 0.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    target = root / _CHECK_371_RECALIBRATOR_RELPATH
+    if not target.exists():
+        if verbose:
+            print(
+                f"  [orphan-auto-trigger-stub] {_CHECK_371_RECALIBRATOR_RELPATH} "
+                "not present, skipping"
+            )
+        return []
+
+    try:
+        text = target.read_text(encoding="utf-8")
+    except OSError as exc:
+        return [f"{_CHECK_371_RECALIBRATOR_RELPATH}: could not read ({exc})"]
+
+    body = _check_371_extract_recalibrator_body(text)
+    if body is None:
+        # The canonical recalibrator function is GONE entirely — that itself is
+        # a regression (the orphan-stub fix removed without replacement).
+        violations = [
+            f"{_CHECK_371_RECALIBRATOR_RELPATH}: function "
+            f"{_CHECK_371_RECALIBRATOR_FN!r} not found; Catalog #371 requires the "
+            "canonical auto-recalibrator to exist + wire EVENT_RECALIBRATED"
+        ]
+        if verbose:
+            print(f"  [orphan-auto-trigger-stub] {len(violations)} violation(s)")
+        if strict:
+            raise PreflightError(
+                "check_no_orphan_auto_trigger_stub_with_satisfied_condition: "
+                + violations[0]
+            )
+        return violations
+
+    violations: list[str] = []
+
+    # Refit emission wired? If yes, the function is NOT a no-op orphan stub.
+    refit_wired = _CHECK_371_REFIT_EMISSION_TOKEN in body
+
+    # Scan the body line-by-line for no-op markers; each one is a violation
+    # UNLESS the refit emission is wired OR the marker line carries the waiver.
+    for raw_line in body.splitlines():
+        for marker in _CHECK_371_NOOP_MARKERS:
+            if marker in raw_line:
+                if refit_wired:
+                    # Refit path is present; a residual stub comment is
+                    # historical-only and the function is not a no-op.
+                    continue
+                waiver_rationale = None
+                if _CHECK_371_WAIVER_MARKER in raw_line:
+                    waiver_rationale = raw_line.split(
+                        _CHECK_371_WAIVER_MARKER, 1
+                    )[1].strip()
+                if waiver_rationale is not None:
+                    cleaned = waiver_rationale.strip()
+                    if (
+                        len(cleaned) >= 4
+                        and cleaned not in _CHECK_371_PLACEHOLDER_RATIONALES
+                    ):
+                        continue
+                    violations.append(
+                        f"{_CHECK_371_RECALIBRATOR_RELPATH}: no-op stub marker "
+                        f"{marker!r} carries placeholder/short "
+                        f"# DEFERRED_STUB_OK rationale {cleaned!r}; provide a "
+                        "substantive reactivation criterion (>= 4 chars)"
+                    )
+                    continue
+                violations.append(
+                    f"{_CHECK_371_RECALIBRATOR_RELPATH}: {_CHECK_371_RECALIBRATOR_FN} "
+                    f"contains no-op stub marker {marker!r} WITHOUT wiring "
+                    f"{_CHECK_371_REFIT_EMISSION_TOKEN} emission AND WITHOUT a "
+                    "# DEFERRED_STUB_OK:<reactivation-criteria> waiver. Catalog "
+                    "#371: an auto-trigger function whose condition is reachable "
+                    "must actually refit (emit EVENT_RECALIBRATED) or carry an "
+                    "explicit reactivation-criteria waiver."
+                )
+
+    if verbose:
+        print(f"  [orphan-auto-trigger-stub] {len(violations)} violation(s)")
+    if violations and strict:
+        raise PreflightError(
+            "check_no_orphan_auto_trigger_stub_with_satisfied_condition found "
+            f"{len(violations)} violation(s). Catalog #371 refuses the "
+            "orphan-auto-trigger-stub class (a no-op recalibrator whose trigger "
+            "condition is already satisfied) per CLAUDE.md 'Results must become "
+            "system intelligence' + 'Bugs must be permanently fixed AND "
+            "self-protected against':\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
         )
     return violations

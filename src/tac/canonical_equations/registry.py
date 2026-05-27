@@ -50,6 +50,7 @@ from typing import Any, Mapping
 
 from tac.canonical_equations.equation import (
     CANONICAL_EQUATION_SCHEMA_VERSION,
+    RECALIBRATE_ON_NEW_ANCHORS,
     CanonicalEquation,
     EmpiricalAnchor,
     InvalidEquationError,
@@ -672,40 +673,144 @@ class RecalibrationReport:
     per_equation_summary: dict[str, dict[str, Any]] = field(default_factory=dict)
 
 
+# Canonical trigger token (mirrors equation.RECALIBRATE_ON_NEW_ANCHORS) at which
+# the 3+-anchor auto-refit fires. Imported lazily inside the function to avoid a
+# top-level cycle, but pinned here so the threshold is auditable in one place.
+_AUTO_REFIT_MIN_ANCHORS = 3
+
+
+def _refit_residual_map_from_anchors(
+    equation: CanonicalEquation,
+) -> dict[str, float]:
+    """Recompute the per-axis residual map directly from the equation's anchors.
+
+    Evidence-faithful refit: each landed :class:`EmpiricalAnchor` carries a
+    ``measurement_method`` axis token + a normalized ``residual`` magnitude
+    (NaN already refused at construction per ``EmpiricalAnchor.__post_init__``).
+    The latest anchor per axis wins (mirrors ``with_new_anchor`` semantics,
+    which overwrite ``predicted_vs_empirical_residual[method]`` on append).
+
+    This does NOT synthesize new anchors and does NOT fabricate a measurement
+    (Catalog #287 / #323): it only re-derives the residual *summary* from
+    anchors that already landed via signed ``update_equation_with_empirical_anchor``
+    calls. The stale-prior bug class (an equation whose stored residual map no
+    longer matches its own anchors because a sister appended anchors but never
+    re-summarized) is what this extincts.
+    """
+    refit: dict[str, float] = {}
+    for anchor in equation.empirical_anchors:
+        # Latest-wins per axis (anchors are stored in append order).
+        refit[anchor.measurement_method] = float(anchor.residual)
+    return refit
+
+
 def auto_recalibrate_from_continual_learning_posterior(
     equation_id: str | None = None,
     *,
     path: Path | None = None,
+    lock_path: Path | None = None,
+    agent: str | None = None,
+    subagent_id: str | None = None,
 ) -> RecalibrationReport:
-    """Stub for periodic auto-recalibration.
+    """Periodic auto-recalibration of canonical-equation residual summaries.
 
-    The full continual-learning posterior consumption is implemented as a
-    follow-on cathedral consumer (see ``canonical_equation_lookup_consumer``).
-    This helper exists so the operator-facing CLI
-    ``tools/recalibrate_equation.py`` has a callable entry point; it
-    iterates current equations + emits a no-op report when no new anchors
-    are present (the canonical "the system already knows" path).
+    For every equation whose ``next_recalibration_trigger`` is
+    ``when_3+_new_empirical_anchors_in_domain`` AND whose anchor count is
+    >= ``_AUTO_REFIT_MIN_ANCHORS`` (3), this helper re-derives
+    ``predicted_vs_empirical_residual`` directly from the equation's own
+    landed :class:`EmpiricalAnchor` rows and, if that recomputed map differs
+    from the stored map, appends a canonical ``recalibrated`` event (bumping
+    ``last_calibration_utc``). The original payload is preserved verbatim per
+    Catalog #110/#113 APPEND-ONLY; only a NEW event row is written.
 
-    Per CLAUDE.md "Forbidden empirical-claim-without-evidence-tag": no
-    automatic anchor synthesis here — actual recalibration requires an
-    explicit ``update_equation_with_empirical_anchor`` call backed by a
-    measured artifact path.
+    Why this is NOT a Catalog #287 violation: no anchor is synthesized and no
+    empirical_output is fabricated. The refit only re-SUMMARIZES residuals
+    from anchors that already landed via signed
+    ``update_equation_with_empirical_anchor`` calls. The bug class this
+    extincts is the stale-prior orphan: an equation accumulates 3+ disagreeing
+    anchors (e.g. ``hinton_kl_distill_enables_qat_catalyst_composition_savings_v1``
+    whose anchors falsify the closed-form alpha=0.15 lift toward an empirical
+    ~0) yet its stored residual summary + ``last_calibration_utc`` never move
+    because the previous recalibrator no-op'd even when its own trigger
+    condition was already satisfied.
+
+    Equations on other triggers (``when_residual_drift_exceeds_2x`` /
+    ``when_operator_invokes_recalibrate_equation`` / ``never_auto_operator_only``)
+    are reported but NOT auto-refit here — those require an operator invocation
+    or a drift-detection path, by design.
+
+    Returns a :class:`RecalibrationReport`. ``new_anchors_absorbed`` counts
+    the (axis, residual) summary rows that were updated/added by the refit
+    (the system "absorbing" already-landed evidence into the summary), NOT
+    new measurements.
     """
+    from dataclasses import replace
+
     equations = query_equations(path=path)
     if equation_id is not None:
         equations = [e for e in equations if e.equation_id == equation_id]
+
     summary: dict[str, dict[str, Any]] = {}
+    recalibrated_count = 0
+    absorbed_count = 0
+
     for eq in equations:
+        trigger = eq.next_recalibration_trigger
+        anchor_count = len(eq.empirical_anchors)
+        refit_eligible = (
+            trigger == RECALIBRATE_ON_NEW_ANCHORS
+            and anchor_count >= _AUTO_REFIT_MIN_ANCHORS
+        )
+        refit_map = _refit_residual_map_from_anchors(eq) if refit_eligible else {}
+        stored_map = dict(eq.predicted_vs_empirical_residual)
+        # Drift detection: did the recomputed summary diverge from the stored
+        # summary? (New axis keys, changed residual magnitudes, or stale keys
+        # whose anchors were superseded.)
+        changed = refit_eligible and refit_map != stored_map
+        did_recalibrate = False
+
+        if changed:
+            updated = replace(
+                eq,
+                predicted_vs_empirical_residual=refit_map,
+                last_calibration_utc=_utc_now_iso(),
+            )
+            n_axes_changed = sum(
+                1
+                for k, v in refit_map.items()
+                if stored_map.get(k) != v
+            ) + sum(1 for k in stored_map if k not in refit_map)
+            _append_event_locked(
+                EVENT_RECALIBRATED,
+                updated,
+                path=path,
+                lock_path=lock_path,
+                agent=agent or "claude",
+                subagent_id=subagent_id,
+                notes=(
+                    f"auto_recalibrate: refit residual summary from "
+                    f"{anchor_count} landed anchors; {n_axes_changed} axis row(s) "
+                    f"changed (stale-prior orphan extinction)"
+                ),
+            )
+            recalibrated_count += 1
+            absorbed_count += n_axes_changed
+            did_recalibrate = True
+            eq = updated  # report the post-refit state
+
         summary[eq.equation_id] = {
-            "anchor_count": len(eq.empirical_anchors),
+            "anchor_count": anchor_count,
             "current_residuals": dict(eq.predicted_vs_empirical_residual),
             "well_calibrated": eq.is_well_calibrated,
-            "trigger": eq.next_recalibration_trigger,
+            "trigger": trigger,
+            "refit_eligible": refit_eligible,
+            "recalibrated": did_recalibrate,
         }
+
     return RecalibrationReport(
         equations_checked=len(equations),
-        equations_recalibrated=0,  # stub; auto-refit comes in a follow-on landing
-        new_anchors_absorbed=0,
+        equations_recalibrated=recalibrated_count,
+        new_anchors_absorbed=absorbed_count,
         per_equation_summary=summary,
     )
 

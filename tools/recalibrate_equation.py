@@ -59,14 +59,21 @@ def main() -> int:
     for eq_id, summary in sorted(report.per_equation_summary.items()):
         ok = summary.get("well_calibrated", False)
         marker = "OK" if ok else "DRIFT"
-        print(f"  [{marker}] {eq_id}")
+        recal = " [RECALIBRATED]" if summary.get("recalibrated") else ""
+        print(f"  [{marker}]{recal} {eq_id}")
         for axis, residual in sorted(summary.get("current_residuals", {}).items()):
-            print(f"      {axis}: residual={residual:.4f}")
+            try:
+                print(f"      {axis}: residual={float(residual):.4f}")
+            except (TypeError, ValueError):
+                print(f"      {axis}: residual={residual}")
     print()
     print(
-        "Note: actual refit requires explicit "
-        "tac.canonical_equations.update_equation_with_empirical_anchor() "
-        "call backed by a measured artifact (Catalog #287/#323)."
+        "Note: auto-refit re-derives the residual SUMMARY from anchors already "
+        "landed via signed update_equation_with_empirical_anchor() calls when an "
+        "equation's when_3+_new_empirical_anchors_in_domain trigger is satisfied. "
+        "It never synthesizes anchors (Catalog #287/#323); a NEW measurement still "
+        "requires an explicit update_equation_with_empirical_anchor() call backed "
+        "by a measured artifact."
     )
     return 0
 
