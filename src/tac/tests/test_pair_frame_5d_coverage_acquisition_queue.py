@@ -12,9 +12,11 @@ from comma_lab.scheduler.pair_frame_5d_coverage_acquisition_queue import (
     PAIR_FRAME_5D_COVERAGE_ACQUISITION_PLAN_SCHEMA,
     PAIR_FRAME_5D_COVERAGE_ACQUISITION_QUEUE_SCHEMA,
     PAIR_FRAME_5D_EXACT_AXIS_ANCHOR_REQUEST_SCHEMA,
+    PAIR_FRAME_5D_FOLLOWUP_EXECUTION_QUEUE_SCHEMA,
     PAIR_FRAME_5D_FOLLOWUP_READINESS_REPORT_SCHEMA,
     PAIR_FRAME_5D_MLX_NEGATIVE_DELTA_REQUEST_SCHEMA,
     build_coverage_acquisition_plan,
+    build_coverage_followup_execution_queue,
     build_coverage_followup_readiness_report,
     build_pair_frame_5d_coverage_acquisition_queue,
 )
@@ -27,6 +29,9 @@ _REPO_ROOT = pathlib.Path(__file__).resolve().parents[3]
 _BUILD_TOOL = _REPO_ROOT / "tools" / "build_5d_canvas_coverage_acquisition_queue.py"
 _EMIT_TOOL = _REPO_ROOT / "tools" / "emit_5d_canvas_coverage_acquisition_plan.py"
 _AUDIT_TOOL = _REPO_ROOT / "tools" / "audit_5d_coverage_followup_requests.py"
+_FOLLOWUP_QUEUE_TOOL = (
+    _REPO_ROOT / "tools" / "build_5d_coverage_followup_execution_queue.py"
+)
 
 
 def _work_order(order_id: str, *, priority: int = 1) -> dict[str, object]:
@@ -79,6 +84,51 @@ def _audit(*work_orders: dict[str, object]) -> dict[str, object]:
 def _write_json(path: pathlib.Path, payload: object) -> pathlib.Path:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return path
+
+
+def _submission_bundle_payload(*, archive_sha256: str = "e" * 64) -> dict[str, object]:
+    return {
+        "schema_version": "submission_bundle_v1_20260526",
+        "lane_id": "lane_unit",
+        "substrate_id": "substrate_unit",
+        "archive_sha256": archive_sha256,
+        "archive_bytes": 123,
+        "submission_dir": "experiments/results/unit_submission",
+        "inflate_sh_path": "experiments/results/unit_submission/inflate.sh",
+        "inflate_py_path": "experiments/results/unit_submission/inflate.py",
+        "inflate_py_loc": 10,
+        "inflate_py_loc_budget": 200,
+        "inflate_py_loc_waiver_rationale": None,
+        "readme_md_path": "experiments/results/unit_submission/README.md",
+        "report_txt_path": "experiments/results/unit_submission/report.txt",
+        "archive_manifest_path": (
+            "experiments/results/unit_submission/archive_manifest.json"
+        ),
+        "dependency_closure_manifest": {
+            "declared_dependencies": ["numpy"],
+            "dependency_budget": 2,
+            "within_budget": True,
+            "numpy_portable": True,
+            "waiver_rationale": None,
+        },
+        "select_inflate_device_routing": "inline_with_waiver",
+        "pythonpath_self_containment_status": "clean",
+        "vendor_pythonpath_self_containment": False,
+        "runtime_dep_closure": ["numpy"],
+        "measurement_utc": "2026-05-27T00:00:00+00:00",
+        "axis_tag": "[predicted]",
+        "score_claim": False,
+        "promotable": False,
+        "evidence_grade": "[predicted; submission-bundle-canonical]",
+        "canonical_helper_invocation": "tac.submission_packet.build_submission_bundle",
+        "canonical_equation_id": "submission_bundle_canonical_helper_consolidation_savings_v1",
+        "canonical_equation_status": "FORMALIZATION_PENDING",
+        "elapsed_seconds": 0.1,
+        "canonical_provenance": {},
+        "written_at_utc": "2026-05-27T00:00:00+00:00",
+        "written_pid": 1,
+        "written_host": "unit",
+    }
 
 
 def test_build_coverage_acquisition_plan_for_fail_closed_anchor_order() -> None:
@@ -210,10 +260,7 @@ def test_build_followup_readiness_report_materializes_ready_commands(
     mlx_path = _write_json(tmp_path / "mlx_plan.json", mlx_plan)
     submission_bundle = _write_json(
         tmp_path / "submission_bundle_result.json",
-        {
-            "schema_version": "submission_bundle_v1_20260526",
-            "archive_sha256": "e" * 64,
-        },
+        _submission_bundle_payload(),
     )
     reference_cache = tmp_path / "reference_mlx_cache"
     candidate_cache = tmp_path / "candidate_mlx_cache"
@@ -244,6 +291,310 @@ def test_build_followup_readiness_report_materializes_ready_commands(
         "acquire_negative_delta_cells_before_operator_fanout"
     ]
     assert "123" in commands["acquire_negative_delta_cells_before_operator_fanout"]
+
+
+def test_build_followup_execution_queue_freezes_exact_and_queues_mlx(
+    tmp_path: pathlib.Path,
+) -> None:
+    audit = _audit(
+        _work_order("populate_missing_paired_cpu_cuda_axis_anchors", priority=1),
+        _work_order("acquire_negative_delta_cells_before_operator_fanout", priority=2),
+    )
+    exact_plan = build_coverage_acquisition_plan(
+        coverage_audit=audit,
+        work_order_id="populate_missing_paired_cpu_cuda_axis_anchors",
+        coverage_audit_path="audit.json",
+        repo_root=_REPO_ROOT,
+        canvas_path="canvas.json",
+    )
+    mlx_plan = build_coverage_acquisition_plan(
+        coverage_audit=audit,
+        work_order_id="acquire_negative_delta_cells_before_operator_fanout",
+        coverage_audit_path="audit.json",
+        repo_root=_REPO_ROOT,
+        canvas_path="canvas.json",
+    )
+    exact_path = _write_json(tmp_path / "exact_plan.json", exact_plan)
+    mlx_path = _write_json(tmp_path / "mlx_plan.json", mlx_plan)
+    submission_bundle = _write_json(
+        tmp_path / "submission_bundle_result.json",
+        _submission_bundle_payload(),
+    )
+    reference_cache = tmp_path / "reference_mlx_cache"
+    candidate_cache = tmp_path / "candidate_mlx_cache"
+    reference_cache.mkdir()
+    candidate_cache.mkdir()
+    _write_json(reference_cache / "manifest.json", {"schema": "unit"})
+    _write_json(candidate_cache / "manifest.json", {"schema": "unit"})
+    readiness_path = _write_json(
+        tmp_path / "followup_readiness_report.json",
+        build_coverage_followup_readiness_report(
+            repo_root=_REPO_ROOT,
+            plan_paths=[exact_path, mlx_path],
+            submission_bundle_path=submission_bundle,
+            reference_mlx_cache_dir=reference_cache,
+            candidate_mlx_cache_dir=candidate_cache,
+            archive_size_bytes=123,
+        ),
+    )
+
+    queue = build_coverage_followup_execution_queue(
+        repo_root=_REPO_ROOT,
+        readiness_report_path=readiness_path,
+        queue_id="unit_followup_execution",
+    )
+
+    assert queue["metadata"]["schema"] == PAIR_FRAME_5D_FOLLOWUP_EXECUTION_QUEUE_SCHEMA
+    assert queue["metadata"]["ready_request_count"] == 2
+    exact, mlx = queue["experiments"]
+    assert exact["status"] == "frozen"
+    assert exact["metadata"]["operator_gated"] is True
+    assert exact["steps"][0]["resources"]["kind"] == "local_cpu"
+    assert mlx["status"] == "queued"
+    assert mlx["steps"][0]["resources"]["kind"] == "local_mlx"
+    assert any(
+        condition.get("key") == "schema_version"
+        and condition.get("equals") == "mlx_scorer_response.v1"
+        for condition in mlx["steps"][0]["postconditions"]
+    )
+
+
+def test_build_followup_execution_queue_handles_no_ready_rows(
+    tmp_path: pathlib.Path,
+) -> None:
+    readiness_path = _write_json(
+        tmp_path / "blocked_readiness_report.json",
+        {
+            "schema": PAIR_FRAME_5D_FOLLOWUP_READINESS_REPORT_SCHEMA,
+            "plan_count": 1,
+            "request_count": 1,
+            "ready_request_count": 0,
+            "blocked_request_count": 1,
+            "requests": [
+                {
+                    "schema": "pair_frame_5d_canvas_followup_readiness_row.v1",
+                    "plan_path": "unit_plan.json",
+                    "work_order_id": "populate_missing_paired_cpu_cuda_axis_anchors",
+                    "request_schema": PAIR_FRAME_5D_EXACT_AXIS_ANCHOR_REQUEST_SCHEMA,
+                    "ready": False,
+                    "blockers": ["submission_bundle_result_path_missing"],
+                    "materialized_command": None,
+                    "allowed_use": "queue_followup_readiness_routing_only",
+                    "score_claim": False,
+                    "score_claim_valid": False,
+                    "score_claim_eligible": False,
+                    "promotion_eligible": False,
+                    "promotable": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                    "dispatch_packet_ready": False,
+                    "reproduction_claim": False,
+                    "reproduction_equivalence": False,
+                }
+            ],
+            "allowed_use": "queue_followup_readiness_routing_only",
+            "forbidden_use": "score_claim_or_dispatch_authority",
+            "score_claim": False,
+            "score_claim_valid": False,
+            "score_claim_eligible": False,
+            "promotion_eligible": False,
+            "promotable": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_packet_ready": False,
+            "reproduction_claim": False,
+            "reproduction_equivalence": False,
+        },
+    )
+
+    queue = build_coverage_followup_execution_queue(
+        repo_root=_REPO_ROOT,
+        readiness_report_path=readiness_path,
+        queue_id="unit_no_ready_followup_execution",
+    )
+
+    assert queue["metadata"]["selected_request_count"] == 0
+    assert queue["experiments"][0]["id"] == "no_ready_followup_requests"
+    assert queue["experiments"][0]["status"] == "disabled"
+
+
+def test_followup_readiness_refuses_schema_only_submission_bundle(
+    tmp_path: pathlib.Path,
+) -> None:
+    audit = _audit(_work_order("populate_missing_paired_cpu_cuda_axis_anchors"))
+    plan = build_coverage_acquisition_plan(
+        coverage_audit=audit,
+        work_order_id="populate_missing_paired_cpu_cuda_axis_anchors",
+        coverage_audit_path="audit.json",
+        repo_root=_REPO_ROOT,
+        canvas_path="canvas.json",
+    )
+    plan_path = _write_json(tmp_path / "exact_plan.json", plan)
+    schema_only_bundle = _write_json(
+        tmp_path / "schema_only_bundle.json",
+        {
+            "schema_version": "submission_bundle_v1_20260526",
+            "archive_sha256": "e" * 64,
+        },
+    )
+
+    report = build_coverage_followup_readiness_report(
+        repo_root=_REPO_ROOT,
+        plan_paths=[plan_path],
+        submission_bundle_path=schema_only_bundle,
+    )
+
+    assert report["ready_request_count"] == 0
+    assert report["blocked_request_count"] == 1
+    assert report["requests"][0]["blockers"] == [
+        "submission_bundle_result_contract_invalid:ValueError"
+    ]
+    assert report["requests"][0]["materialized_command"] is None
+
+
+def test_build_followup_execution_queue_from_ready_report(
+    tmp_path: pathlib.Path,
+) -> None:
+    audit = _audit(
+        _work_order("populate_missing_paired_cpu_cuda_axis_anchors", priority=1),
+        _work_order("acquire_negative_delta_cells_before_operator_fanout", priority=2),
+    )
+    exact_plan = build_coverage_acquisition_plan(
+        coverage_audit=audit,
+        work_order_id="populate_missing_paired_cpu_cuda_axis_anchors",
+        coverage_audit_path="audit.json",
+        repo_root=_REPO_ROOT,
+        canvas_path="canvas.json",
+        output_root=tmp_path / "acquisition",
+    )
+    mlx_plan = build_coverage_acquisition_plan(
+        coverage_audit=audit,
+        work_order_id="acquire_negative_delta_cells_before_operator_fanout",
+        coverage_audit_path="audit.json",
+        repo_root=_REPO_ROOT,
+        canvas_path="canvas.json",
+        output_root=tmp_path / "acquisition",
+    )
+    exact_path = _write_json(tmp_path / "exact_plan.json", exact_plan)
+    mlx_path = _write_json(tmp_path / "mlx_plan.json", mlx_plan)
+    submission_bundle = _write_json(
+        tmp_path / "submission_bundle_result.json",
+        _submission_bundle_payload(),
+    )
+    reference_cache = tmp_path / "reference_mlx_cache"
+    candidate_cache = tmp_path / "candidate_mlx_cache"
+    reference_cache.mkdir()
+    candidate_cache.mkdir()
+    _write_json(reference_cache / "manifest.json", {"schema": "unit"})
+    _write_json(candidate_cache / "manifest.json", {"schema": "unit"})
+    readiness = build_coverage_followup_readiness_report(
+        repo_root=_REPO_ROOT,
+        plan_paths=[exact_path, mlx_path],
+        submission_bundle_path=submission_bundle,
+        reference_mlx_cache_dir=reference_cache,
+        candidate_mlx_cache_dir=candidate_cache,
+        archive_size_bytes=123,
+    )
+    readiness_path = _write_json(tmp_path / "readiness.json", readiness)
+
+    queue = build_coverage_followup_execution_queue(
+        repo_root=_REPO_ROOT,
+        readiness_report_path=readiness_path,
+        queue_id="unit_followup_execution",
+    )
+
+    assert queue["schema"] == "experiment_queue.v1"
+    assert queue["metadata"]["schema"] == PAIR_FRAME_5D_FOLLOWUP_EXECUTION_QUEUE_SCHEMA
+    assert queue["metadata"]["ready_request_count"] == 2
+    assert queue["metadata"]["blocked_request_count"] == 0
+    assert len(queue["experiments"]) == 2
+    exact_exp, mlx_exp = queue["experiments"]
+    assert exact_exp["steps"][0]["resources"]["kind"] == "local_cpu"
+    assert exact_exp["status"] == "frozen"
+    assert "--dry-run" in exact_exp["steps"][0]["command"]
+    assert exact_exp["metadata"]["score_claim"] is False
+    assert mlx_exp["steps"][0]["resources"]["kind"] == "local_mlx"
+    assert [row["type"] for row in mlx_exp["steps"][0]["postconditions"]] == [
+        "path_exists",
+        "json_equals",
+        "json_false_authority",
+    ]
+
+
+def test_build_followup_execution_queue_refuses_all_blocked_report(
+    tmp_path: pathlib.Path,
+) -> None:
+    audit = _audit(_work_order("populate_missing_paired_cpu_cuda_axis_anchors"))
+    plan = build_coverage_acquisition_plan(
+        coverage_audit=audit,
+        work_order_id="populate_missing_paired_cpu_cuda_axis_anchors",
+        coverage_audit_path="audit.json",
+        repo_root=_REPO_ROOT,
+        canvas_path="canvas.json",
+    )
+    plan_path = _write_json(tmp_path / "exact_plan.json", plan)
+    readiness = build_coverage_followup_readiness_report(
+        repo_root=_REPO_ROOT,
+        plan_paths=[plan_path],
+    )
+    readiness_path = _write_json(tmp_path / "readiness.json", readiness)
+
+    queue = build_coverage_followup_execution_queue(
+        repo_root=_REPO_ROOT,
+        readiness_report_path=readiness_path,
+    )
+
+    assert queue["metadata"]["ready_request_count"] == 0
+    assert queue["metadata"]["blocked_request_count"] == 1
+    assert len(queue["experiments"]) == 1
+    assert queue["experiments"][0]["id"] == "no_ready_followup_requests"
+    assert queue["experiments"][0]["status"] == "disabled"
+    assert queue["experiments"][0]["metadata"]["score_claim"] is False
+
+
+def test_build_followup_execution_queue_cli(tmp_path: pathlib.Path) -> None:
+    audit = _audit(_work_order("populate_missing_paired_cpu_cuda_axis_anchors"))
+    plan = build_coverage_acquisition_plan(
+        coverage_audit=audit,
+        work_order_id="populate_missing_paired_cpu_cuda_axis_anchors",
+        coverage_audit_path="audit.json",
+        repo_root=_REPO_ROOT,
+        canvas_path="canvas.json",
+    )
+    plan_path = _write_json(tmp_path / "exact_plan.json", plan)
+    submission_bundle = _write_json(
+        tmp_path / "submission_bundle_result.json",
+        _submission_bundle_payload(),
+    )
+    readiness = build_coverage_followup_readiness_report(
+        repo_root=_REPO_ROOT,
+        plan_paths=[plan_path],
+        submission_bundle_path=submission_bundle,
+    )
+    readiness_path = _write_json(tmp_path / "readiness.json", readiness)
+    queue_path = tmp_path / "followup_queue.json"
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(_FOLLOWUP_QUEUE_TOOL),
+            "--readiness-report",
+            str(readiness_path),
+            "--queue-out",
+            str(queue_path),
+            "--queue-id",
+            "unit_followup_execution_cli",
+        ],
+        cwd=_REPO_ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    queue = json.loads(queue_path.read_text(encoding="utf-8"))
+    assert queue["queue_id"] == "unit_followup_execution_cli"
+    assert queue["metadata"]["schema"] == PAIR_FRAME_5D_FOLLOWUP_EXECUTION_QUEUE_SCHEMA
+    assert len(queue["experiments"]) == 1
 
 
 def test_emit_coverage_acquisition_plan_cli(tmp_path: pathlib.Path) -> None:
@@ -367,8 +718,15 @@ def test_build_pair_frame_5d_coverage_acquisition_queue_shape(
     assert readiness["metadata"]["followup_readiness_report_path"].endswith(
         "followup_readiness_report.json"
     )
+    assert readiness["metadata"]["followup_execution_queue_path"].endswith(
+        "followup_execution_queue.json"
+    )
     assert readiness["steps"][0]["command"][1] == (
         "tools/audit_5d_coverage_followup_requests.py"
+    )
+    assert readiness["steps"][1]["id"] == "emit_followup_execution_queue"
+    assert readiness["steps"][1]["command"][1] == (
+        "tools/build_5d_coverage_followup_execution_queue.py"
     )
     refresh = queue["experiments"][-1]
     assert refresh["id"] == "refresh_reaudit_and_refire_extended_operators"
@@ -448,3 +806,49 @@ def test_audit_coverage_followup_requests_cli(tmp_path: pathlib.Path) -> None:
     assert payload["ready_request_count"] == 0
     assert payload["blocked_request_count"] == 1
     assert payload["requests"][0]["materialized_command"] is None
+
+
+def test_build_followup_execution_queue_cli_no_ready(tmp_path: pathlib.Path) -> None:
+    readiness_path = _write_json(
+        tmp_path / "blocked_readiness_report.json",
+        {
+            "schema": PAIR_FRAME_5D_FOLLOWUP_READINESS_REPORT_SCHEMA,
+            "plan_count": 0,
+            "request_count": 0,
+            "ready_request_count": 0,
+            "blocked_request_count": 0,
+            "requests": [],
+            "allowed_use": "queue_followup_readiness_routing_only",
+            "forbidden_use": "score_claim_or_dispatch_authority",
+            "score_claim": False,
+            "score_claim_valid": False,
+            "score_claim_eligible": False,
+            "promotion_eligible": False,
+            "promotable": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_packet_ready": False,
+            "reproduction_claim": False,
+            "reproduction_equivalence": False,
+        },
+    )
+    queue_path = tmp_path / "followup_execution_queue.json"
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(_FOLLOWUP_QUEUE_TOOL),
+            "--readiness-report",
+            str(readiness_path),
+            "--queue-out",
+            str(queue_path),
+        ],
+        cwd=_REPO_ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    payload = json.loads(queue_path.read_text(encoding="utf-8"))
+    assert payload["metadata"]["schema"] == PAIR_FRAME_5D_FOLLOWUP_EXECUTION_QUEUE_SCHEMA
+    assert payload["experiments"][0]["status"] == "disabled"

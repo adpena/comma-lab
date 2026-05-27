@@ -41,10 +41,7 @@ Usage::
 from __future__ import annotations
 
 import argparse
-import datetime
 import json
-import os
-import socket
 import sys
 from pathlib import Path
 
@@ -56,11 +53,8 @@ from tac.submission_packet import (  # noqa: E402  (sys.path insert above)
     SubmissionBundleResult,
     SubmissionComplianceError,
     enforce_contest_compliance,
+    submission_bundle_result_from_dict,
 )
-from tac.submission_packet.builder import (  # noqa: E402
-    DependencyClosureManifest,
-)
-
 
 _EXIT_CLEAN = 0
 _EXIT_COMPLIANCE_ERROR = 1
@@ -87,72 +81,7 @@ def _load_submission_bundle(path: str) -> SubmissionBundleResult:
         raise ValueError(
             f"submission bundle JSON must be a dict; got {type(payload).__name__}"
         )
-    return _submission_bundle_from_dict(payload)
-
-
-def _submission_bundle_from_dict(payload: dict) -> SubmissionBundleResult:
-    """Reconstruct a SubmissionBundleResult from a dict (round-trip from as_dict)."""
-    dep_man_payload = payload.get("dependency_closure_manifest", {})
-    if not isinstance(dep_man_payload, dict):
-        raise ValueError("dependency_closure_manifest must be a dict")
-    dep_man = DependencyClosureManifest(
-        declared_dependencies=tuple(
-            dep_man_payload.get("declared_dependencies", [])
-        ),
-        dependency_budget=int(dep_man_payload.get("dependency_budget", 2)),
-        within_budget=bool(dep_man_payload.get("within_budget", True)),
-        numpy_portable=bool(dep_man_payload.get("numpy_portable", False)),
-        waiver_rationale=dep_man_payload.get("waiver_rationale"),
-    )
-    return SubmissionBundleResult(
-        schema_version=payload["schema_version"],
-        lane_id=payload["lane_id"],
-        substrate_id=payload["substrate_id"],
-        archive_sha256=payload["archive_sha256"],
-        archive_bytes=int(payload["archive_bytes"]),
-        submission_dir=payload["submission_dir"],
-        inflate_sh_path=payload["inflate_sh_path"],
-        inflate_py_path=payload["inflate_py_path"],
-        inflate_py_loc=int(payload["inflate_py_loc"]),
-        inflate_py_loc_budget=int(payload["inflate_py_loc_budget"]),
-        inflate_py_loc_waiver_rationale=payload.get(
-            "inflate_py_loc_waiver_rationale"
-        ),
-        readme_md_path=payload["readme_md_path"],
-        report_txt_path=payload["report_txt_path"],
-        archive_manifest_path=payload["archive_manifest_path"],
-        dependency_closure_manifest=dep_man,
-        select_inflate_device_routing=payload["select_inflate_device_routing"],
-        pythonpath_self_containment_status=payload[
-            "pythonpath_self_containment_status"
-        ],
-        vendor_pythonpath_self_containment=bool(
-            payload.get("vendor_pythonpath_self_containment", False)
-        ),
-        runtime_dep_closure=tuple(payload.get("runtime_dep_closure", [])),
-        measurement_utc=payload["measurement_utc"],
-        axis_tag=payload.get("axis_tag", "[predicted]"),
-        score_claim=bool(payload.get("score_claim", False)),
-        promotable=bool(payload.get("promotable", False)),
-        evidence_grade=payload.get(
-            "evidence_grade", "[predicted; submission-bundle-canonical]"
-        ),
-        canonical_helper_invocation=payload.get(
-            "canonical_helper_invocation",
-            "tac.submission_packet.build_submission_bundle",
-        ),
-        canonical_equation_id=payload[
-            "canonical_equation_id"
-        ],
-        canonical_equation_status=payload[
-            "canonical_equation_status"
-        ],
-        elapsed_seconds=float(payload.get("elapsed_seconds", 0.0)),
-        canonical_provenance=payload.get("canonical_provenance", {}),
-        written_at_utc=payload.get("written_at_utc", ""),
-        written_pid=int(payload.get("written_pid", 0)),
-        written_host=payload.get("written_host", ""),
-    )
+    return submission_bundle_result_from_dict(payload)
 
 
 def _build_arg_parser() -> argparse.ArgumentParser:
@@ -242,7 +171,7 @@ def _classify_exit_code(verdict) -> int:
 def _print_human_readable(verdict, args) -> None:
     print("=" * 72, file=sys.stderr)
     print(
-        f"Phase 6 Layer 4 Contest Compliance Verdict (canonical helper)",
+        "Phase 6 Layer 4 Contest Compliance Verdict (canonical helper)",
         file=sys.stderr,
     )
     print("=" * 72, file=sys.stderr)

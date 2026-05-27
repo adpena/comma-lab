@@ -53,10 +53,7 @@ Usage (post-dispatch reconstruction)::
 from __future__ import annotations
 
 import argparse
-import datetime
 import json
-import os
-import socket
 import sys
 from pathlib import Path
 from typing import Any
@@ -71,15 +68,14 @@ if str(_REPO_ROOT) not in sys.path:
 
 
 from tac.submission_packet import (  # noqa: E402
-    DependencyClosureManifest,
     PairedAuthEvalError,
     PairedAuthEvalVerdict,
     PairedAuthEvalVerdictKind,
     SubmissionBundleResult,
     plan_paired_auth_eval,
     reconstruct_verdict_from_disk,
+    submission_bundle_result_from_dict,
 )
-
 
 # Canonical CLI exit code constants.
 EXIT_PAIRED_PASS = 0
@@ -113,51 +109,7 @@ def _reconstruct_submission_bundle_from_dict(data: dict[str, Any]) -> Submission
     Handles the nested ``dependency_closure_manifest`` reconstruction +
     tuple-vs-list normalization for frozen-dataclass round-trip.
     """
-    dep_data = data.get("dependency_closure_manifest", {})
-    if isinstance(dep_data, dict):
-        dep_manifest = DependencyClosureManifest(
-            declared_dependencies=tuple(dep_data.get("declared_dependencies", ())),
-            dependency_budget=int(dep_data.get("dependency_budget", 2)),
-            within_budget=bool(dep_data.get("within_budget", True)),
-            numpy_portable=bool(dep_data.get("numpy_portable", False)),
-            waiver_rationale=dep_data.get("waiver_rationale"),
-        )
-    else:
-        raise ValueError("dependency_closure_manifest must be a dict")
-    return SubmissionBundleResult(
-        schema_version=data["schema_version"],
-        lane_id=data["lane_id"],
-        substrate_id=data["substrate_id"],
-        archive_sha256=data["archive_sha256"],
-        archive_bytes=int(data["archive_bytes"]),
-        submission_dir=data["submission_dir"],
-        inflate_sh_path=data["inflate_sh_path"],
-        inflate_py_path=data["inflate_py_path"],
-        inflate_py_loc=int(data["inflate_py_loc"]),
-        inflate_py_loc_budget=int(data["inflate_py_loc_budget"]),
-        inflate_py_loc_waiver_rationale=data.get("inflate_py_loc_waiver_rationale"),
-        readme_md_path=data["readme_md_path"],
-        report_txt_path=data["report_txt_path"],
-        archive_manifest_path=data["archive_manifest_path"],
-        dependency_closure_manifest=dep_manifest,
-        select_inflate_device_routing=data["select_inflate_device_routing"],
-        pythonpath_self_containment_status=data["pythonpath_self_containment_status"],
-        vendor_pythonpath_self_containment=bool(data["vendor_pythonpath_self_containment"]),
-        runtime_dep_closure=tuple(data["runtime_dep_closure"]),
-        measurement_utc=data["measurement_utc"],
-        axis_tag=data["axis_tag"],
-        score_claim=bool(data["score_claim"]),
-        promotable=bool(data["promotable"]),
-        evidence_grade=data["evidence_grade"],
-        canonical_helper_invocation=data["canonical_helper_invocation"],
-        canonical_equation_id=data["canonical_equation_id"],
-        canonical_equation_status=data["canonical_equation_status"],
-        elapsed_seconds=float(data["elapsed_seconds"]),
-        canonical_provenance=data.get("canonical_provenance", {}),
-        written_at_utc=data.get("written_at_utc", ""),
-        written_pid=int(data.get("written_pid", 0)),
-        written_host=data.get("written_host", ""),
-    )
+    return submission_bundle_result_from_dict(data)
 
 
 def _load_submission_bundle(path_or_stdin: str) -> SubmissionBundleResult:

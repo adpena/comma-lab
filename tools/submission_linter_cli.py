@@ -49,6 +49,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT / "src") not in sys.path:
     sys.path.insert(0, str(REPO_ROOT / "src"))
 
+from tac.submission_packet.builder import (  # noqa: E402
+    SubmissionBundleResult,
+    submission_bundle_result_from_dict,
+)
 from tac.submission_packet.linter import (  # noqa: E402
     LINTER_SCHEMA_VERSION,
     LintSeverity,
@@ -57,12 +61,6 @@ from tac.submission_packet.linter import (  # noqa: E402
     lint_pr_body,
     lint_submission_bundle,
 )
-from tac.submission_packet.builder import (  # noqa: E402
-    DependencyClosureManifest,
-    SUBMISSION_BUNDLE_SCHEMA_VERSION,
-    SubmissionBundleResult,
-)
-
 
 # Canonical exit codes per CLI docstring above.
 EXIT_LINT_CLEAN = 0
@@ -163,66 +161,17 @@ def _load_submission_bundle_from_json(path: Path) -> SubmissionBundleResult:
         raise SubmissionLinterError(
             f"submission bundle JSON at {path} must be a JSON object; got {type(payload).__name__}"
         )
-    dep_payload = payload.get("dependency_closure_manifest")
-    if not isinstance(dep_payload, dict):
-        raise SubmissionLinterError(
-            "submission bundle JSON missing 'dependency_closure_manifest' object"
+    try:
+        payload_for_parse = dict(payload)
+        payload_for_parse.setdefault("vendor_pythonpath_self_containment", True)
+        return submission_bundle_result_from_dict(
+            payload_for_parse,
+            require_schema_version=False,
         )
-    dep_manifest = DependencyClosureManifest(
-        declared_dependencies=tuple(dep_payload.get("declared_dependencies", ())),
-        dependency_budget=int(dep_payload.get("dependency_budget", 2)),
-        within_budget=bool(dep_payload.get("within_budget", True)),
-        numpy_portable=bool(dep_payload.get("numpy_portable", False)),
-        waiver_rationale=dep_payload.get("waiver_rationale"),
-    )
-    schema_version = payload.get("schema_version") or SUBMISSION_BUNDLE_SCHEMA_VERSION
-    return SubmissionBundleResult(
-        schema_version=schema_version,
-        lane_id=str(payload["lane_id"]),
-        substrate_id=str(payload["substrate_id"]),
-        archive_sha256=str(payload["archive_sha256"]),
-        archive_bytes=int(payload["archive_bytes"]),
-        submission_dir=str(payload["submission_dir"]),
-        inflate_sh_path=str(payload["inflate_sh_path"]),
-        inflate_py_path=str(payload["inflate_py_path"]),
-        inflate_py_loc=int(payload["inflate_py_loc"]),
-        inflate_py_loc_budget=int(payload["inflate_py_loc_budget"]),
-        inflate_py_loc_waiver_rationale=payload.get("inflate_py_loc_waiver_rationale"),
-        readme_md_path=str(payload["readme_md_path"]),
-        report_txt_path=str(payload["report_txt_path"]),
-        archive_manifest_path=str(payload["archive_manifest_path"]),
-        dependency_closure_manifest=dep_manifest,
-        select_inflate_device_routing=str(payload["select_inflate_device_routing"]),
-        pythonpath_self_containment_status=str(
-            payload["pythonpath_self_containment_status"]
-        ),
-        vendor_pythonpath_self_containment=bool(
-            payload.get("vendor_pythonpath_self_containment", True)
-        ),
-        runtime_dep_closure=tuple(payload.get("runtime_dep_closure", ())),
-        measurement_utc=str(payload["measurement_utc"]),
-        axis_tag=str(payload.get("axis_tag", "[predicted]")),
-        score_claim=bool(payload.get("score_claim", False)),
-        promotable=bool(payload.get("promotable", False)),
-        evidence_grade=str(
-            payload.get("evidence_grade", "[predicted; submission-bundle-canonical]")
-        ),
-        canonical_helper_invocation=str(
-            payload.get(
-                "canonical_helper_invocation",
-                "tac.submission_packet.build_submission_bundle",
-            )
-        ),
-        canonical_equation_id=str(payload["canonical_equation_id"]),
-        canonical_equation_status=str(
-            payload.get("canonical_equation_status", "FORMALIZATION_PENDING")
-        ),
-        elapsed_seconds=float(payload.get("elapsed_seconds", 0.0)),
-        canonical_provenance=payload.get("canonical_provenance", {}),
-        written_at_utc=str(payload.get("written_at_utc", "")),
-        written_pid=int(payload.get("written_pid", 0)),
-        written_host=str(payload.get("written_host", "")),
-    )
+    except (KeyError, TypeError, ValueError) as exc:
+        raise SubmissionLinterError(
+            f"submission bundle JSON at {path} failed canonical bundle parsing: {exc}"
+        ) from exc
 
 
 def _render_human_readable(verdict: LintVerdict) -> str:

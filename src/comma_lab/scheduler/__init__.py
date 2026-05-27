@@ -163,7 +163,11 @@ from .models import (
 from .pair_frame_5d_coverage_acquisition_queue import (
     PAIR_FRAME_5D_COVERAGE_ACQUISITION_PLAN_SCHEMA,
     PAIR_FRAME_5D_COVERAGE_ACQUISITION_QUEUE_SCHEMA,
+    PAIR_FRAME_5D_FOLLOWUP_EXECUTION_QUEUE_SCHEMA,
+    PAIR_FRAME_5D_FOLLOWUP_READINESS_REPORT_SCHEMA,
     build_coverage_acquisition_plan,
+    build_coverage_followup_execution_queue,
+    build_coverage_followup_readiness_report,
     build_pair_frame_5d_coverage_acquisition_queue,
 )
 from .queue_feedback_replan_policy import (
@@ -245,6 +249,8 @@ __all__ = [
     "PACKET_MEMBER_RECOMPRESS_TARGET_KIND",
     "PAIR_FRAME_5D_COVERAGE_ACQUISITION_PLAN_SCHEMA",
     "PAIR_FRAME_5D_COVERAGE_ACQUISITION_QUEUE_SCHEMA",
+    "PAIR_FRAME_5D_FOLLOWUP_EXECUTION_QUEUE_SCHEMA",
+    "PAIR_FRAME_5D_FOLLOWUP_READINESS_REPORT_SCHEMA",
     "QUEUE_FEEDBACK_REPLAN_CHILD_QUEUE_VALIDATION_SCHEMA",
     "QUEUE_FEEDBACK_REPLAN_CONTINUATION_METADATA_SCHEMA",
     "QUEUE_FEEDBACK_REPLAN_POLICY_SCHEMA",
@@ -282,6 +288,8 @@ __all__ = [
     "assert_canonical_state_for_execution",
     "assert_no_orphaned_steps_for_execution",
     "build_coverage_acquisition_plan",
+    "build_coverage_followup_execution_queue",
+    "build_coverage_followup_readiness_report",
     "build_frontier_byte_range_stage_inputs",
     "build_frontier_operation_chain_compiler_queue",
     "build_frontier_operation_chain_compiler_stage_plan",

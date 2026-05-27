@@ -107,6 +107,9 @@ from tac.submission_packet.archive_grammar import (
     CANONICAL_EQUATION_ID as ARCHIVE_GRAMMAR_CANONICAL_EQUATION_ID,
 )
 from tac.submission_packet.builder import (
+    CANONICAL_EQUATION_ID as SUBMISSION_BUNDLE_CANONICAL_EQUATION_ID,
+)
+from tac.submission_packet.builder import (
     DEFAULT_INFLATE_DEPS_BUDGET,
     DEFAULT_INFLATE_PY_LOC_BUDGET,
     HNERV_CLASS_INFLATE_DEPS,
@@ -122,14 +125,12 @@ from tac.submission_packet.builder import (
     build_dependency_closure_manifest,
     build_submission_bundle,
     derive_submission_bundle_provenance,
-)
-from tac.submission_packet.builder import (
-    CANONICAL_EQUATION_ID as SUBMISSION_BUNDLE_CANONICAL_EQUATION_ID,
+    submission_bundle_result_from_dict,
 )
 from tac.submission_packet.compliance import (
+    CANONICAL_COMPLIANCE_SCRIPT_PATH,
     COMPLIANCE_SCHEMA_VERSION,
     PHASE_6_LAYER_VERSION,
-    CANONICAL_COMPLIANCE_SCRIPT_PATH,
     CheckSeverity,
     ComplianceCheck,
     ComplianceVerdict,
@@ -143,10 +144,10 @@ from tac.submission_packet.compliance import (
 from tac.submission_packet.compression_pipeline import (
     CANONICAL_EQUATION_ID,
     COMPRESSION_PIPELINE_SCHEMA_VERSION,
-    HardwareSubstrateClass,
     PHASE_2_LAYER_VERSION,
     CompressionPipelineError,
     CompressionPipelineResult,
+    HardwareSubstrateClass,
     PerAxisPredictedBand,
     build_compression_pipeline,
     classify_hardware_substrate_for_dispatch,
@@ -155,14 +156,13 @@ from tac.submission_packet.compression_pipeline import (
     verify_compression_pipeline_protocol_complete,
 )
 from tac.submission_packet.linter import (
-    EVIDENCE_GRADE as LINTER_EVIDENCE_GRADE,
-    FORBIDDEN_PUBLIC_PR_TOKENS,
-    FIRST_PERSON_PLURAL_PATTERNS,
-    EMDASH_CHARACTER,
-    TONE_VIOLATION_PATTERNS,
     CANONICAL_AXIS_TAGS,
+    EMDASH_CHARACTER,
+    FIRST_PERSON_PLURAL_PATTERNS,
+    FORBIDDEN_PUBLIC_PR_TOKENS,
     LINTER_SCHEMA_VERSION,
     PHASE_5_LAYER_VERSION,
+    TONE_VIOLATION_PATTERNS,
     LintFinding,
     LintSeverity,
     LintSurface,
@@ -180,6 +180,12 @@ from tac.submission_packet.linter import (
 from tac.submission_packet.linter import (
     CANONICAL_EQUATION_ID as LINTER_CANONICAL_EQUATION_ID,
 )
+from tac.submission_packet.linter import (
+    EVIDENCE_GRADE as LINTER_EVIDENCE_GRADE,
+)
+from tac.submission_packet.paired_auth_eval import (
+    CANONICAL_EQUATION_ID as PAIRED_AUTH_EVAL_CANONICAL_EQUATION_ID,
+)
 from tac.submission_packet.paired_auth_eval import (
     PAIRED_AUTH_EVAL_SCHEMA_VERSION,
     PHASE_7_LAYER_VERSION,
@@ -190,11 +196,8 @@ from tac.submission_packet.paired_auth_eval import (
     plan_paired_auth_eval,
     reconstruct_verdict_from_disk,
 )
-from tac.submission_packet.paired_auth_eval import (
-    CANONICAL_EQUATION_ID as PAIRED_AUTH_EVAL_CANONICAL_EQUATION_ID,
-)
 
-__all__ = [
+__all__ = [  # noqa: RUF022 - grouped by pipeline phase, not alphabetically.
     # Phase 2 (Layer 0)
     "CANONICAL_EQUATION_ID",
     "COMPRESSION_PIPELINE_SCHEMA_VERSION",
@@ -243,6 +246,7 @@ __all__ = [
     "build_dependency_closure_manifest",
     "build_submission_bundle",
     "derive_submission_bundle_provenance",
+    "submission_bundle_result_from_dict",
     # Phase 6 (Layer 4) - compliance enforcer (this lane)
     "COMPLIANCE_CANONICAL_EQUATION_ID",
     "COMPLIANCE_SCHEMA_VERSION",
