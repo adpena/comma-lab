@@ -147,6 +147,12 @@ AUTONOMOUS_CHAIN_WORK_ORDER_SCHEMA = (
 AUTONOMOUS_CHAIN_QUEUE_METADATA_SCHEMA = (
     "frontier_rate_attack_autonomous_chain_optimization_queue_metadata.v1"
 )
+AUTONOMOUS_CHILD_QUEUE_DEFAULT_MAX_STEPS = 8
+AUTONOMOUS_CHILD_QUEUE_DEFAULT_MAX_EXPERIMENTS = 2
+AUTONOMOUS_CHILD_QUEUE_DEFAULT_MAX_PARALLEL = 1
+REPAIR_CAMPAIGN_SCORE_QUEUE_MAX_STEPS = 12
+REPAIR_CAMPAIGN_SCORE_QUEUE_MAX_EXPERIMENTS = 2
+REPAIR_CAMPAIGN_SCORE_QUEUE_MAX_PARALLEL = 1
 RATE_BUDGET_PRESERVATION_PLAN_SCHEMA = (
     "frontier_rate_attack_rate_budget_preservation_plan.v1"
 )
@@ -11147,9 +11153,9 @@ def build_frontier_autonomous_chain_optimization_queue(
                     "bounded_local_execution": True,
                     "advisory_only": False,
                     "requires_exact_auth_before_score_claim": True,
-                    "max_steps": 12,
-                    "max_experiments": 2,
-                    "max_parallel": 1,
+                    "max_steps": REPAIR_CAMPAIGN_SCORE_QUEUE_MAX_STEPS,
+                    "max_experiments": REPAIR_CAMPAIGN_SCORE_QUEUE_MAX_EXPERIMENTS,
+                    "max_parallel": REPAIR_CAMPAIGN_SCORE_QUEUE_MAX_PARALLEL,
                     **FALSE_AUTHORITY,
                 }
             )
@@ -11204,9 +11210,18 @@ def build_frontier_autonomous_chain_optimization_queue(
         child_queue_paths: list[str] = []
         child_queue_run_step_ids: list[str] = []
         receiver_repair_run_step_ids: list[str] = []
-        child_queue_run_step_id_by_key: dict[str, str] = {}
+        planned_child_queue_run_step_id_by_key: dict[str, str] = {}
         child_queue_health_by_key: dict[str, dict[str, Any]] = {}
         blocked_child_queue_artifact_keys: list[str] = []
+        for action_index, action in enumerate(local_actions, start=1):
+            queue_key = str(action.get("queue_artifact_key") or "")
+            if not queue_key or queue_key not in artifact_paths_by_key:
+                continue
+            slug = _slug_token(f"{action.get('id') or action_index}_{queue_key}")
+            planned_child_queue_run_step_id_by_key.setdefault(
+                queue_key,
+                f"run_{slug}_bounded_local",
+            )
         for action_index, action in enumerate(local_actions, start=1):
             queue_key = str(action.get("queue_artifact_key") or "")
             if not queue_key:
@@ -11255,17 +11270,33 @@ def build_frontier_autonomous_chain_optimization_queue(
             run_step_id = f"run_{slug}_bounded_local"
             child_worker_result_path = work_dir / f"{slug}_worker_result.json"
             child_worker_result_ref = _repo_rel(child_worker_result_path, repo)
-            child_max_steps = _finite_int_or_none(action.get("max_steps")) or 8
-            child_max_experiments = (
-                _finite_int_or_none(action.get("max_experiments")) or 2
+            child_max_steps = (
+                _finite_int_or_none(action.get("max_steps"))
+                or AUTONOMOUS_CHILD_QUEUE_DEFAULT_MAX_STEPS
             )
-            child_max_parallel = _finite_int_or_none(action.get("max_parallel")) or 1
+            child_max_experiments = (
+                _finite_int_or_none(action.get("max_experiments"))
+                or AUTONOMOUS_CHILD_QUEUE_DEFAULT_MAX_EXPERIMENTS
+            )
+            child_max_parallel = (
+                _finite_int_or_none(action.get("max_parallel"))
+                or AUTONOMOUS_CHILD_QUEUE_DEFAULT_MAX_PARALLEL
+            )
             if child_max_steps < 1:
-                child_max_steps = 8
+                child_max_steps = AUTONOMOUS_CHILD_QUEUE_DEFAULT_MAX_STEPS
             if child_max_experiments < 1:
-                child_max_experiments = 2
+                child_max_experiments = AUTONOMOUS_CHILD_QUEUE_DEFAULT_MAX_EXPERIMENTS
             if child_max_parallel < 1:
-                child_max_parallel = 1
+                child_max_parallel = AUTONOMOUS_CHILD_QUEUE_DEFAULT_MAX_PARALLEL
+            required_run_steps = [validate_step_id]
+            if queue_key == "repair_campaign_score_queue":
+                repair_budget_run_step_id = (
+                    planned_child_queue_run_step_id_by_key.get(
+                        "repair_budget_waterfill_queue"
+                    )
+                )
+                if repair_budget_run_step_id and repair_budget_run_step_id != run_step_id:
+                    required_run_steps.append(repair_budget_run_step_id)
             steps.append(
                 {
                     "id": run_step_id,
@@ -11286,22 +11317,7 @@ def build_frontier_autonomous_chain_optimization_queue(
                         "--output",
                         child_worker_result_ref,
                     ],
-                    "requires": _unique_strings(
-                        [
-                            validate_step_id,
-                            *(
-                                [
-                                    child_queue_run_step_id_by_key[
-                                        "repair_budget_waterfill_queue"
-                                    ]
-                                ]
-                                if queue_key == "repair_campaign_score_queue"
-                                and "repair_budget_waterfill_queue"
-                                in child_queue_run_step_id_by_key
-                                else []
-                            ),
-                        ]
-                    ),
+                    "requires": _unique_strings(required_run_steps),
                     "resources": {"kind": "local_io_heavy"},
                     "timeout_seconds": 900,
                     "postconditions": [
@@ -11329,7 +11345,6 @@ def build_frontier_autonomous_chain_optimization_queue(
                 }
             )
             child_queue_run_step_ids.append(run_step_id)
-            child_queue_run_step_id_by_key[queue_key] = run_step_id
             if queue_key == "receiver_repair_queue":
                 receiver_repair_run_step_ids.append(run_step_id)
         post_repair_refresh_planned = False

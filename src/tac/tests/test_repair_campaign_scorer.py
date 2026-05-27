@@ -188,6 +188,24 @@ def test_score_repair_campaign_ranks_ready_mlx_and_names_missing_artifacts(
         "runtime_consumption_proof_path:missing_or_unverified"
         in allocation["receiver_proof_status"]["missing_artifacts"]
     )
+    blocked_allocation = decision["blocked_allocation_rows"][0]
+    assert blocked_allocation["typed_response_id"] == "selector_missing"
+    assert blocked_allocation["family_id"] == "per_region_selector_codec"
+    assert blocked_allocation["execution_gate"]["recommended_queue_status"] == (
+        "blocked_missing_artifact"
+    )
+    assert "per_region_selector_codec_replay_missing" in (
+        blocked_allocation["missing_artifacts"]
+    )
+    assert "runtime_consumption_proof_path:missing_or_unverified" in (
+        blocked_allocation["receiver_proof_status"]["missing_artifacts"]
+    )
+    assert blocked_allocation["component_response_terms"]["response_axis"] == (
+        "unknown_or_unmeasured_component_response_axis"
+    )
+    assert "component_response_replayed_before_budget_spend" in (
+        blocked_allocation["hard_legal_runtime_constraints"]
+    )
     blocked = report["rows"][1]
     assert blocked["typed_response_id"] == "selector_missing"
     assert blocked["execution_gate"]["recommended_queue_status"] == (

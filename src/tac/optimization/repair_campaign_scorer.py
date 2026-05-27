@@ -526,15 +526,49 @@ def _build_optimizer_decision(
         if remaining <= 0:
             blockers.append("receiver_closed_rate_credit_exhausted")
         if blockers:
+            receiver_proof_status = _mapping(row.get("receiver_proof_status"))
             blocked_rows.append(
                 {
                     "typed_response_id": typed_response_id,
                     "candidate_id": row.get("candidate_id"),
+                    "acquisition_id": row.get("acquisition_id"),
                     "family_id": row.get("family_id"),
+                    "correction_family": row.get("correction_family"),
+                    "targeted_dimensions": _string_list(row.get("targeted_dimensions")),
+                    "operation_levels": _string_list(row.get("operation_levels")),
                     "campaign_rank": row.get("campaign_rank"),
+                    "entropy_position_label": row.get("entropy_position_label"),
+                    "requested_repair_bytes": requested_bytes,
+                    "objective_delta_score_units": row.get("objective_delta_score_units"),
+                    "expected_local_improvement_score_units": improvement,
+                    "campaign_score": row.get("campaign_score"),
+                    "per_op_bytes_delta": row.get("per_op_bytes_delta"),
+                    "component_response_terms": dict(
+                        _mapping(row.get("component_response_terms"))
+                    ),
+                    "receiver_proof_status": dict(receiver_proof_status),
+                    "hard_legal_runtime_constraints": _string_list(
+                        row.get("hard_legal_runtime_constraints")
+                    ),
+                    "execution_gate": dict(gate),
+                    "missing_artifacts": ordered_unique(
+                        [
+                            *_string_list(gate.get("missing_artifacts")),
+                            *_string_list(
+                                receiver_proof_status.get("missing_artifacts")
+                            ),
+                        ]
+                    ),
+                    "interaction_penalty": row.get("interaction_penalty"),
+                    "interaction_scope": dict(_mapping(row.get("interaction_scope"))),
+                    "stacking_interaction_terms": dict(
+                        _mapping(row.get("stacking_interaction_terms"))
+                    ),
                     "blockers": ordered_unique(blockers),
                     "budget_spend_allowed": False,
                     "ready_for_exact_eval_dispatch": False,
+                    "allowed_use": "blocked_repair_optimizer_signal_only",
+                    "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
                     **FALSE_AUTHORITY,
                 }
             )
