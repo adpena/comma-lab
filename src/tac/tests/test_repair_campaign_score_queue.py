@@ -145,11 +145,17 @@ def test_build_repair_campaign_score_queue_from_waterfill_work_order(
         REPAIR_CAMPAIGN_SCORE_EXPERIMENT_METADATA_SCHEMA
     )
     assert experiment["metadata"]["queue_actuation_ready"] is True
-    command = experiment["steps"][0]["command"]
+    assert experiment["steps"][0]["id"] == (
+        "assert_repair_budget_waterfill_work_order_materialized"
+    )
+    command = experiment["steps"][1]["command"]
     assert command[:2] == [".venv/bin/python", "tools/score_repair_campaign.py"]
     assert str(work_order_path) in command
+    assert experiment["steps"][1]["requires"] == [
+        "assert_repair_budget_waterfill_work_order_materialized"
+    ]
     assert "--score-report-out" in command
-    postconditions = experiment["steps"][0]["postconditions"]
+    postconditions = experiment["steps"][1]["postconditions"]
     assert {
         "type": "json_equals",
         "path": experiment["metadata"]["repair_campaign_score_report_path"],
@@ -198,7 +204,16 @@ def test_repair_campaign_score_queue_cli_writes_and_score_step_runs(
     assert cli_result["ready_for_exact_eval_dispatch"] is False
     assert cli_result["ready_experiment_count"] == 1
     queue = json.loads(score_queue_path.read_text(encoding="utf-8"))
-    command = queue["experiments"][0]["steps"][0]["command"]
+    prerequisite_command = queue["experiments"][0]["steps"][0]["command"]
+    prerequisite = subprocess.run(
+        [sys.executable, *prerequisite_command[1:]],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert prerequisite.returncode == 0, prerequisite.stderr
+    command = queue["experiments"][0]["steps"][1]["command"]
     step_result = subprocess.run(
         [sys.executable, *command[1:]],
         cwd=REPO_ROOT,
@@ -218,7 +233,9 @@ def test_repair_campaign_score_queue_cli_writes_and_score_step_runs(
     assert report["ready_for_local_mlx_advisory_execution_count"] == 1
 
 
-def test_repair_campaign_score_queue_freezes_missing_work_order(tmp_path: Path) -> None:
+def test_repair_campaign_score_queue_defers_missing_work_order_to_prerequisite_step(
+    tmp_path: Path,
+) -> None:
     waterfill_queue = _waterfill_queue(tmp_path / "missing.json")
 
     queue = build_repair_campaign_score_queue(
@@ -230,11 +247,13 @@ def test_repair_campaign_score_queue_freezes_missing_work_order(tmp_path: Path) 
     )
 
     experiment = queue["experiments"][0]
-    assert experiment["status"] == "frozen"
-    assert experiment["metadata"]["queue_actuation_ready"] is False
-    assert experiment["metadata"]["queue_actuation_blockers"] == [
-        f"repair_budget_waterfill_work_order_not_materialized:{tmp_path / 'missing.json'}"
-    ]
+    assert experiment["status"] == "queued"
+    assert experiment["metadata"]["queue_actuation_ready"] is True
+    assert experiment["metadata"]["queue_actuation_blockers"] == []
+    assert (
+        experiment["metadata"]["repair_budget_waterfill_work_order_exists_at_build"]
+        is False
+    )
     assert experiment["steps"][0]["id"] == (
-        "inspect_missing_repair_campaign_score_prerequisites"
+        "assert_repair_budget_waterfill_work_order_materialized"
     )

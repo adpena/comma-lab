@@ -58,6 +58,28 @@ def _command_arg(command: Sequence[Any], flag: str) -> str:
     return values[index + 1]
 
 
+def _string_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, (str, bytes, bytearray)):
+        text = str(value).strip()
+        return [text] if text else []
+    if isinstance(value, Sequence):
+        return [str(item).strip() for item in value if str(item).strip()]
+    text = str(value).strip()
+    return [text] if text else []
+
+
+def _positive_int(value: Any) -> int | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else 0
+
+
 def _work_order_path_from_experiment(experiment: Mapping[str, Any]) -> str:
     metadata = experiment.get("metadata")
     if isinstance(metadata, Mapping):
@@ -117,8 +139,21 @@ def _score_experiment(
     blockers = []
     if not work_order_ref:
         blockers.append("repair_budget_waterfill_work_order_path_missing")
-    elif not _resolve(work_order_ref, repo_root).exists():
-        blockers.append(f"repair_budget_waterfill_work_order_not_materialized:{work_order_ref}")
+        if _positive_int(metadata.get("typed_response_row_count")) == 0:
+            blockers.append("repair_budget_waterfill_typed_response_ledger_empty")
+        if metadata.get("queue_actuation_ready") is False:
+            blockers.append("source_repair_budget_waterfill_queue_not_actuation_ready")
+        blockers.extend(
+            f"source_queue_actuation_blocker:{blocker}"
+            for blocker in _string_list(metadata.get("queue_actuation_blockers"))
+        )
+        blockers.extend(
+            f"source_missing_prerequisite_artifact:{key}"
+            for key in _string_list(metadata.get("missing_prerequisite_artifact_keys"))
+        )
+    work_order_exists_at_build = (
+        bool(work_order_ref) and _resolve(work_order_ref, repo_root).is_file()
+    )
     status = "queued" if not blockers else "frozen"
     experiment_metadata = {
         "schema": REPAIR_CAMPAIGN_SCORE_EXPERIMENT_METADATA_SCHEMA,
@@ -126,10 +161,19 @@ def _score_experiment(
         "source_experiment_id": source_experiment.get("id"),
         "chain_id": chain_id,
         "repair_budget_waterfill_work_order_path": work_order_ref or None,
+        "repair_budget_waterfill_work_order_exists_at_build": (
+            work_order_exists_at_build
+        ),
         "repair_campaign_score_report_path": score_report_ref,
         "campaign_scorer_default": True,
         "queue_actuation_ready": not blockers,
         "queue_actuation_blockers": ordered_unique(blockers),
+        "source_queue_actuation_blockers": _string_list(
+            metadata.get("queue_actuation_blockers")
+        ),
+        "source_missing_prerequisite_artifact_keys": _string_list(
+            metadata.get("missing_prerequisite_artifact_keys")
+        ),
         "score_report_schema": REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA,
         "budget_spend_allowed": False,
         "ready_for_exact_eval_dispatch": False,
@@ -166,8 +210,38 @@ def _score_experiment(
     else:
         steps = [
             {
+                "id": "assert_repair_budget_waterfill_work_order_materialized",
+                "kind": "command",
+                "command": [
+                    ".venv/bin/python",
+                    "-c",
+                    (
+                        "import json, sys; from pathlib import Path; "
+                        "p = Path(sys.argv[1]); ok = p.is_file(); "
+                        "print(json.dumps({"
+                        "'schema': 'repair_campaign_score_prerequisite_check.v1', "
+                        "'work_order': str(p), "
+                        "'work_order_exists': ok, "
+                        "'budget_spend_allowed': False, "
+                        "'ready_for_exact_eval_dispatch': False, "
+                        "'score_claim': False, "
+                        "'promotion_eligible': False, "
+                        "'rank_or_kill_eligible': False"
+                        "}, sort_keys=True)); "
+                        "raise SystemExit(0 if ok else 2)"
+                    ),
+                    work_order_ref,
+                ],
+                "resources": {"kind": "local_cpu"},
+                "timeout_seconds": 30,
+                "telemetry": {"input_artifact_paths": [work_order_ref]},
+            },
+            {
                 "id": "score_repair_campaign_from_typed_ledger",
                 "kind": "command",
+                "requires": [
+                    "assert_repair_budget_waterfill_work_order_materialized"
+                ],
                 "command": [
                     ".venv/bin/python",
                     "tools/score_repair_campaign.py",

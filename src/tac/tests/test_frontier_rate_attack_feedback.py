@@ -93,6 +93,9 @@ from comma_lab.scheduler.frontier_rate_attack_feedback_cycle import (
     write_pairset_component_marginal_feedback_bundle,
     write_targeted_component_correction_post_auxiliary_artifacts,
 )
+from comma_lab.scheduler.repair_campaign_score_queue import (
+    REPAIR_CAMPAIGN_SCORE_QUEUE_METADATA_SCHEMA,
+)
 from tac.fec6_selector_operator_space import FEC6_FIXED_K16_MODE_IDS
 from tac.optimization.repair_dynamics_palette_probe import (
     REPAIR_DYNAMICS_PALETTE_PROBE_MATRIX_SCHEMA,
@@ -6284,6 +6287,7 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     )
     autonomous_chain_optimization_path = output_dir / "autonomous_chain_optimization.json"
     repair_budget_waterfill_queue_path = output_dir / "repair_budget_waterfill_queue.json"
+    repair_campaign_score_queue_path = output_dir / "repair_campaign_score_queue.json"
     autonomous_chain_optimization_queue_path = (
         output_dir / "autonomous_chain_optimization_queue.json"
     )
@@ -6303,6 +6307,7 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     assert targeted_component_chain_materializer_work_queue_path.exists()
     assert autonomous_chain_optimization_path.exists()
     assert repair_budget_waterfill_queue_path.exists()
+    assert repair_campaign_score_queue_path.exists()
     assert autonomous_chain_optimization_queue_path.exists()
     assert report_path.exists()
     report = json.loads(report_path.read_text(encoding="utf-8"))
@@ -6362,6 +6367,13 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     assert report["artifacts"]["repair_budget_waterfill_queue"].endswith(
         "repair_budget_waterfill_queue.json"
     )
+    assert report["artifacts"]["repair_campaign_score_queue"].endswith(
+        "repair_campaign_score_queue.json"
+    )
+    assert report["repair_campaign_score_queue_summary"]["queue_path"].endswith(
+        "repair_campaign_score_queue.json"
+    )
+    _assert_false_authority(report["repair_campaign_score_queue_summary"])
     assert report["artifacts"]["autonomous_chain_optimization_queue"].endswith(
         "autonomous_chain_optimization_queue.json"
     )
@@ -6466,6 +6478,22 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
         "--queue",
         report["artifacts"]["repair_budget_waterfill_queue"],
     ]
+    assert report["operator_commands"]["validate_repair_campaign_score_queue"] == [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        report["artifacts"]["repair_campaign_score_queue"],
+        "validate",
+    ]
+    repair_score_run = report["operator_commands"][
+        "run_repair_campaign_score_queue_bounded_local"
+    ]
+    assert repair_score_run[:4] == [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        report["artifacts"]["repair_campaign_score_queue"],
+    ]
     assert report["operator_commands"]["validate_autonomous_chain_optimization_queue"] == [
         ".venv/bin/python",
         "tools/experiment_queue.py",
@@ -6492,6 +6520,9 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     )
     repair_waterfill_queue_artifact = json.loads(
         repair_budget_waterfill_queue_path.read_text(encoding="utf-8")
+    )
+    repair_score_queue_artifact = json.loads(
+        repair_campaign_score_queue_path.read_text(encoding="utf-8")
     )
     assert repair_waterfill_queue_artifact["schema"] == "experiment_queue.v1"
     assert repair_waterfill_queue_artifact["experiments"][0]["metadata"][
@@ -6534,6 +6565,42 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
         )
     _assert_false_authority(
         repair_waterfill_queue_artifact["experiments"][0]["metadata"]
+    )
+    assert repair_score_queue_artifact["schema"] == "experiment_queue.v1"
+    assert repair_score_queue_artifact["metadata"]["schema"] == (
+        REPAIR_CAMPAIGN_SCORE_QUEUE_METADATA_SCHEMA
+    )
+    _assert_false_authority(repair_score_queue_artifact["metadata"])
+    assert repair_score_queue_artifact["metadata"]["source_queue_path"].endswith(
+        "repair_budget_waterfill_queue.json"
+    )
+    repair_score_experiment = repair_score_queue_artifact["experiments"][0]
+    if repair_score_experiment["status"] == "queued":
+        repair_score_steps = repair_score_experiment["steps"]
+        assert repair_score_steps[0]["id"] == (
+            "assert_repair_budget_waterfill_work_order_materialized"
+        )
+        repair_score_step = next(
+            step
+            for step in repair_score_steps
+            if step["id"] == "score_repair_campaign_from_typed_ledger"
+        )
+        repair_score_command = repair_score_step["command"]
+        assert repair_score_command[1] == "tools/score_repair_campaign.py"
+        work_order_arg = repair_score_command[
+            repair_score_command.index("--work-order") + 1
+        ]
+        assert work_order_arg.endswith("repair_budget_waterfill_work_order.json")
+        assert repair_score_step["requires"] == [
+            "assert_repair_budget_waterfill_work_order_materialized"
+        ]
+    else:
+        assert repair_score_experiment["status"] == "frozen"
+        repair_score_command = repair_score_experiment["steps"][0]["command"]
+        assert repair_score_command[1] == "-c"
+        assert repair_score_experiment["metadata"]["queue_actuation_blockers"]
+    _assert_false_authority(
+        repair_score_experiment["metadata"]
     )
     assert autonomous_queue_artifact["schema"] == "experiment_queue.v1"
     autonomous_queue_metadata = autonomous_queue_artifact["experiments"][0]["metadata"]
@@ -6680,6 +6747,20 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
         check=False,
     )
     assert autonomous_queue_validate.returncode == 0, autonomous_queue_validate.stderr
+    repair_score_queue_validate = subprocess.run(
+        [
+            sys.executable,
+            "tools/experiment_queue.py",
+            "--queue",
+            str(repair_campaign_score_queue_path),
+            "validate",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert repair_score_queue_validate.returncode == 0, repair_score_queue_validate.stderr
     targeted_component_queue = json.loads(
         targeted_component_queue_path.read_text(encoding="utf-8")
     )
