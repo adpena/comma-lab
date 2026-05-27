@@ -119,6 +119,278 @@ def _blocked_policy(blockers: Sequence[Any], missing_artifacts: Sequence[Any]) -
     return "materialize_missing_repair_campaign_artifacts"
 
 
+def _materialization_policy(
+    *,
+    blockers: Sequence[Any],
+    archive_materialized: bool,
+    runtime_proof_present: bool,
+    receiver_consumed: bool,
+    component_response_replayed: bool,
+) -> str:
+    joined = " ".join(_string_list(blockers))
+    if component_response_replayed and not archive_materialized:
+        return "prioritize_byte_closed_family_materializer_implementation"
+    if archive_materialized and not runtime_proof_present:
+        return "prioritize_archive_bound_runtime_consumption_proof"
+    if runtime_proof_present and not receiver_consumed:
+        return "prioritize_receiver_decode_only_proof"
+    if not component_response_replayed and "component_response" in joined:
+        return "increase_priority_for_targeted_component_response_harvest"
+    if (
+        archive_materialized
+        and runtime_proof_present
+        and receiver_consumed
+        and component_response_replayed
+    ):
+        return "hold_until_byte_closed_exact_auth_handoff_available"
+    return _blocked_policy(blockers, blockers)
+
+
+def build_repair_campaign_materialization_learning_signal_report(
+    *,
+    materialization_execution_report_path: str | Path,
+    materialization_execution_report: Mapping[str, Any],
+    materialization_gate_path: str | Path,
+    materialization_gate: Mapping[str, Any],
+    repo_root: str | Path,
+    family_materializer_manifest_path: str | Path | None = None,
+    family_materializer_manifest: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build posterior-consumable signals from repair materialization gates."""
+
+    if (
+        materialization_execution_report.get("schema")
+        != "frontier_rate_attack_repair_budget_materialization_execution_report.v1"
+    ):
+        raise RepairCampaignLearningSignalError(
+            "materialization execution report has unexpected schema"
+        )
+    if (
+        materialization_gate.get("schema")
+        != "repair_campaign_byte_closed_materialization_gate.v1"
+    ):
+        raise RepairCampaignLearningSignalError(
+            "materialization gate has unexpected schema"
+        )
+    for label, payload in (
+        ("materialization_execution_report", materialization_execution_report),
+        ("materialization_gate", materialization_gate),
+    ):
+        require_no_truthy_authority_fields(
+            payload,
+            context=f"repair_materialization_learning_signal_input:{label}",
+        )
+    manifest = dict(family_materializer_manifest or {})
+    if manifest:
+        require_no_truthy_authority_fields(
+            manifest,
+            context="repair_materialization_learning_signal_family_manifest",
+        )
+    source_artifacts = [
+        _file_record(
+            "repair_budget_materialization_execution_report",
+            materialization_execution_report_path,
+            repo_root=repo_root,
+        ),
+        _file_record(
+            "repair_campaign_byte_closed_materialization_gate",
+            materialization_gate_path,
+            repo_root=repo_root,
+        ),
+    ]
+    if family_materializer_manifest_path is not None:
+        source_artifacts.append(
+            _file_record(
+                "repair_campaign_family_materializer_manifest",
+                family_materializer_manifest_path,
+                repo_root=repo_root,
+            )
+        )
+    typed_response_id = str(materialization_gate.get("typed_response_id") or "").strip()
+    candidate_id = str(materialization_gate.get("candidate_id") or "").strip()
+    family_id = str(
+        manifest.get("family_id")
+        or manifest.get("target_kind")
+        or materialization_gate.get("family_id")
+        or "unclassified_repair_family"
+    )
+    execution_rows = [
+        row
+        for row in materialization_execution_report.get("execution_rows") or []
+        if isinstance(row, Mapping)
+    ]
+    child_rows = [
+        row
+        for row in execution_rows
+        if row.get("candidate_kind") == "spent_budget_repair_child"
+    ]
+    target_row = child_rows[0] if child_rows else (execution_rows[0] if execution_rows else {})
+    blockers = ordered_unique(
+        [
+            *_string_list(materialization_gate.get("blockers")),
+            *_string_list(materialization_execution_report.get("blockers")),
+            *_string_list(target_row.get("blockers")),
+            "materialization_learning_signal_is_not_score_authority",
+            "exact_axis_component_response_required_before_budget_spend",
+        ]
+    )
+    archive_materialized = (
+        materialization_gate.get("candidate_archive_materialized") is True
+        or target_row.get("candidate_archive_materialized") is True
+    )
+    runtime_proof_present = (
+        materialization_gate.get("archive_bound_runtime_consumption_proof_ready")
+        is True
+        or target_row.get("runtime_consumption_proof_present") is True
+    )
+    receiver_consumed = target_row.get("receiver_consumed") is True
+    component_response_replayed = (
+        materialization_gate.get("component_response_replayed") is True
+        or target_row.get("component_response_replayed") is True
+        or manifest.get("component_response_replayed") is True
+    )
+    policy = _materialization_policy(
+        blockers=blockers,
+        archive_materialized=archive_materialized,
+        runtime_proof_present=runtime_proof_present,
+        receiver_consumed=receiver_consumed,
+        component_response_replayed=component_response_replayed,
+    )
+    entropy_stage = _mapping(manifest.get("active_entropy_stage"))
+    fractal_scope = _mapping(manifest.get("fractal_optimization_scope"))
+    identity = {
+        "schema": "repair_materialization_learning_identity.v1",
+        "typed_response_id": typed_response_id,
+        "candidate_id": candidate_id,
+        "family_id": family_id,
+        "candidate_chain_id": target_row.get("candidate_chain_id"),
+        "entropy_position_label": manifest.get("entropy_position_label"),
+        "archive_materialized": archive_materialized,
+        "runtime_proof_present": runtime_proof_present,
+        "receiver_consumed": receiver_consumed,
+        "component_response_replayed": component_response_replayed,
+        "blockers": blockers,
+        "source_artifact_sha256s": [row["sha256"] for row in source_artifacts],
+    }
+    feature_vector = {
+        "materialization_signal_kind": "repair_campaign_byte_closed_materialization_gate",
+        "candidate_archive_materialized": archive_materialized,
+        "runtime_consumption_proof_present": runtime_proof_present,
+        "receiver_consumed": receiver_consumed,
+        "component_response_replayed": component_response_replayed,
+        "missing_archive_after_component_replay": (
+            component_response_replayed and not archive_materialized
+        ),
+        "blocker_count": len(blockers),
+        "missing_artifact_count": sum(
+            1
+            for blocker in blockers
+            if "missing" in blocker or "not_materialized" in blocker
+        ),
+        "entropy_position_label": manifest.get("entropy_position_label"),
+        "entropy_stage_order": entropy_stage.get("order"),
+        "entropy_stage_class": entropy_stage.get("class"),
+        "fractal_active_levels": _string_list(fractal_scope.get("active_levels")),
+        "fractal_ordered_levels": _string_list(fractal_scope.get("ordered_levels")),
+    }
+    component_axis = target_row.get("component_response_replay_axis_tag")
+    if component_response_replayed and not component_axis:
+        component_axis = "[macOS-MLX research-signal]"
+    signal = {
+        "schema": REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA,
+        "learning_signal_kind": "repair_campaign_materialization_gate",
+        "typed_response_id": (
+            typed_response_id
+            or "materialization:"
+            f"{materialization_execution_report.get('chain_id')}:"
+            f"{target_row.get('candidate_chain_id')}"
+        ),
+        "candidate_id": candidate_id or target_row.get("candidate_chain_id"),
+        "family_id": family_id,
+        "component_response_axis": (
+            component_axis or "blocked_or_unmeasured_component_response_axis"
+        ),
+        "evidence_grade": "materialization_gate_local_custody_signal_only",
+        "source_artifacts": source_artifacts,
+        "replay_identity": {
+            "schema": "repair_materialization_learning_replay_identity.v1",
+            "replay_identity_kind": "repair_materialization_gate",
+            "hash_manifest_sha256": _stable_sha256(identity),
+            "source_records_sha256": _stable_sha256(
+                {
+                    "schema": "repair_materialization_learning_source.v1",
+                    "source_artifacts": source_artifacts,
+                }
+            ),
+            "replay_argv_sha256": None,
+            "execution_context_sha256": None,
+            "environment_sha256": None,
+        },
+        "local_planning_update": {
+            "schema": REPAIR_CAMPAIGN_LOCAL_PLANNING_UPDATE_SCHEMA,
+            "posterior_surface": "repair_campaign_stackability_local_mlx_posterior",
+            "local_planning_update_ready": True,
+            "recommended_acquisition_policy": policy,
+            "recommended_stackability_followup": (
+                "materialize_archive_and_runtime_proof_then_rerun_component_stackability"
+            ),
+            "planner_feature_vector": feature_vector,
+            "posterior_update_blockers": [
+                "materialization_learning_signal_is_not_score_authority",
+                "exact_axis_component_response_required_before_budget_spend",
+            ],
+            "budget_spend_allowed": False,
+            "ready_for_budget_spend": False,
+            "ready_for_exact_eval_dispatch": False,
+            **FALSE_AUTHORITY,
+        },
+        "blockers": blockers,
+        "missing_artifacts": [
+            blocker
+            for blocker in blockers
+            if "missing" in blocker or "not_materialized" in blocker
+        ],
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "allowed_use": "repair_materialization_gate_acquisition_update_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        signal,
+        context="repair_campaign_materialization_learning_signal",
+    )
+    report = {
+        "schema": REPAIR_CAMPAIGN_BLOCKED_LEARNING_SIGNAL_REPORT_SCHEMA,
+        "source_materialization_execution_report": source_artifacts[0],
+        "source_materialization_gate": source_artifacts[1],
+        "source_family_materializer_manifest": (
+            source_artifacts[2] if len(source_artifacts) > 2 else None
+        ),
+        "blocked_signal_count": 1,
+        "learning_signal_rows": [signal],
+        "learning_signal_schema": REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA,
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "allowed_use": "repair_materialization_learning_signal_bundle_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        report,
+        context="repair_campaign_materialization_learning_signal_report",
+    )
+    return report
+
+
 def build_repair_campaign_activation_plan_learning_signal_report(
     *,
     activation_plan_path: str | Path,
@@ -677,4 +949,5 @@ __all__ = [
     "build_repair_campaign_activation_plan_learning_signal_report",
     "build_repair_campaign_blocked_learning_signal_report",
     "build_repair_campaign_learning_signal",
+    "build_repair_campaign_materialization_learning_signal_report",
 ]

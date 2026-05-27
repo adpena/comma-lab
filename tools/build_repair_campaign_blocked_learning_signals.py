@@ -21,6 +21,7 @@ from tac.optimization.repair_campaign_learning_signal import (  # noqa: E402
     RepairCampaignLearningSignalError,
     build_repair_campaign_activation_plan_learning_signal_report,
     build_repair_campaign_blocked_learning_signal_report,
+    build_repair_campaign_materialization_learning_signal_report,
 )
 from tac.repo_io import (  # noqa: E402
     ArtifactWriteError,
@@ -35,6 +36,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--score-report", type=Path)
     source.add_argument("--activation-plan", type=Path)
+    source.add_argument("--materialization-execution-report", type=Path)
+    parser.add_argument("--materialization-gate", type=Path)
+    parser.add_argument("--family-materializer-manifest", type=Path)
     parser.add_argument(
         "--blocked-signal-report-out",
         "--blocked-learning-signal-report-out",
@@ -68,7 +72,7 @@ def main(argv: list[str] | None = None) -> int:
                 score_report=score_report,
                 repo_root=REPO_ROOT,
             )
-        else:
+        elif args.activation_plan is not None:
             source_label = "activation_plan"
             source_path = _resolve(args.activation_plan)
             activation_plan = json.loads(source_path.read_text(encoding="utf-8"))
@@ -79,6 +83,46 @@ def main(argv: list[str] | None = None) -> int:
             report = build_repair_campaign_activation_plan_learning_signal_report(
                 activation_plan_path=args.activation_plan,
                 activation_plan=activation_plan,
+                repo_root=REPO_ROOT,
+            )
+        else:
+            source_label = "materialization_execution_report"
+            if args.materialization_gate is None:
+                raise RepairCampaignLearningSignalError(
+                    "--materialization-gate is required with "
+                    "--materialization-execution-report"
+                )
+            source_path = _resolve(args.materialization_execution_report)
+            gate_path = _resolve(args.materialization_gate)
+            execution_report = json.loads(source_path.read_text(encoding="utf-8"))
+            materialization_gate = json.loads(gate_path.read_text(encoding="utf-8"))
+            if not isinstance(execution_report, dict):
+                raise RepairCampaignLearningSignalError(
+                    "materialization execution report must be a JSON object"
+                )
+            if not isinstance(materialization_gate, dict):
+                raise RepairCampaignLearningSignalError(
+                    "materialization gate must be a JSON object"
+                )
+            family_manifest = None
+            if args.family_materializer_manifest is not None:
+                family_manifest_path = _resolve(args.family_materializer_manifest)
+                family_manifest = json.loads(
+                    family_manifest_path.read_text(encoding="utf-8")
+                )
+                if not isinstance(family_manifest, dict):
+                    raise RepairCampaignLearningSignalError(
+                        "family materializer manifest must be a JSON object"
+                    )
+            report = build_repair_campaign_materialization_learning_signal_report(
+                materialization_execution_report_path=(
+                    args.materialization_execution_report
+                ),
+                materialization_execution_report=execution_report,
+                materialization_gate_path=args.materialization_gate,
+                materialization_gate=materialization_gate,
+                family_materializer_manifest_path=args.family_materializer_manifest,
+                family_materializer_manifest=family_manifest,
                 repo_root=REPO_ROOT,
             )
         report_out = _resolve(args.blocked_signal_report_out)
@@ -116,11 +160,7 @@ def main(argv: list[str] | None = None) -> int:
             {
                 "schema": "repair_campaign_blocked_learning_signal_cli_result.v1",
                 "source_kind": source_label,
-                "source_path": str(
-                    args.score_report
-                    if args.score_report is not None
-                    else args.activation_plan
-                ),
+                "source_path": str(source_path),
                 "blocked_signal_report_out": str(args.blocked_signal_report_out),
                 "blocked_signal_count": report["blocked_signal_count"],
                 "bytes_written": (

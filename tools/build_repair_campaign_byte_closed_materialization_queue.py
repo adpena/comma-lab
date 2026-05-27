@@ -26,6 +26,10 @@ from comma_lab.scheduler.repair_campaign_materialization_queue import (  # noqa:
     RepairCampaignMaterializationQueueError,
     build_repair_campaign_byte_closed_materialization_queue,
 )
+from tac.optimization.repair_campaign_posterior import (  # noqa: E402
+    DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_LOCK_PATH,
+    DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_PATH,
+)
 from tac.repo_io import (  # noqa: E402
     ArtifactWriteError,
     json_text,
@@ -54,6 +58,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--materializer-work-queue", type=Path)
     parser.add_argument("--materializer-execution-queue", type=Path)
     parser.add_argument("--repair-palette-mode", action="append", default=[])
+    parser.add_argument(
+        "--posterior-path",
+        type=Path,
+        default=DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_PATH,
+    )
+    parser.add_argument(
+        "--posterior-lock-path",
+        type=Path,
+        default=DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_LOCK_PATH,
+    )
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args(argv)
 
@@ -82,6 +96,8 @@ def main(argv: list[str] | None = None) -> int:
             materializer_work_queue=args.materializer_work_queue,
             materializer_execution_queue=args.materializer_execution_queue,
             repair_palette_modes=tuple(args.repair_palette_mode),
+            posterior_path=args.posterior_path,
+            posterior_lock_path=args.posterior_lock_path,
         )
         queue_out = _resolve(args.materialization_queue_out)
         expected_existing_sha256 = None
@@ -120,6 +136,7 @@ def main(argv: list[str] | None = None) -> int:
                 "work_order": str(args.work_order),
                 "materialization_queue_out": str(args.materialization_queue_out),
                 "queue_id": queue["queue_id"],
+                "posterior_path": str(args.posterior_path),
                 "experiment_count": len(queue["experiments"]),
                 "ready_experiment_count": queue["metadata"][
                     "ready_experiment_count"

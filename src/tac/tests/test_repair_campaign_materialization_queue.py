@@ -14,6 +14,12 @@ from comma_lab.scheduler.repair_campaign_materialization_queue import (
     REPAIR_CAMPAIGN_FAMILY_MATERIALIZER_MANIFEST_SCHEMA,
     build_repair_campaign_byte_closed_materialization_queue,
 )
+from tac.optimization.repair_campaign_learning_signal import (
+    REPAIR_CAMPAIGN_BLOCKED_LEARNING_SIGNAL_REPORT_SCHEMA,
+)
+from tac.optimization.repair_campaign_posterior import (
+    REPAIR_CAMPAIGN_BLOCKED_POSTERIOR_APPEND_REPORT_SCHEMA,
+)
 from tac.optimization.repair_campaign_scorer import score_repair_campaign
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -137,6 +143,8 @@ def test_byte_closed_materialization_queue_emits_archive_bound_steps(
         "bind_repair_budget_materializer_execution",
         "audit_repair_budget_materialization_execution",
         "emit_selected_repair_materialization_gate",
+        "build_repair_materialization_learning_signal",
+        "append_repair_materialization_posterior_signal",
     ]
     assert experiment["steps"][0]["command"][1] == (
         "tools/build_frontier_repair_budget_materialization_plan.py"
@@ -146,8 +154,14 @@ def test_byte_closed_materialization_queue_emits_archive_bound_steps(
         REPAIR_CAMPAIGN_FAMILY_MATERIALIZER_MANIFEST_SCHEMA
     )
     assert "--materializer-manifest" in experiment["steps"][3]["command"]
-    assert experiment["steps"][-1]["postconditions"][0]["equals"] == (
+    assert experiment["steps"][5]["postconditions"][0]["equals"] == (
         REPAIR_CAMPAIGN_BYTE_CLOSED_MATERIALIZATION_GATE_SCHEMA
+    )
+    assert experiment["steps"][6]["postconditions"][0]["equals"] == (
+        REPAIR_CAMPAIGN_BLOCKED_LEARNING_SIGNAL_REPORT_SCHEMA
+    )
+    assert experiment["steps"][7]["postconditions"][0]["equals"] == (
+        REPAIR_CAMPAIGN_BLOCKED_POSTERIOR_APPEND_REPORT_SCHEMA
     )
 
 
@@ -157,6 +171,8 @@ def test_byte_closed_materialization_queue_cli_writes_queue(tmp_path: Path) -> N
     report = score_repair_campaign(payload=work_order, repo_root=tmp_path)
     report_path = _write_json(tmp_path / "score_report.json", report)
     queue_path = tmp_path / "repair_materialization_queue.json"
+    posterior_path = tmp_path / "repair_campaign_stackability_posterior.jsonl"
+    posterior_lock_path = tmp_path / ".repair_campaign_stackability_posterior.lock"
 
     result = subprocess.run(
         [
@@ -176,6 +192,10 @@ def test_byte_closed_materialization_queue_cli_writes_queue(tmp_path: Path) -> N
             str(tmp_path / "results"),
             "--queue-id",
             "unit_repair_materialization",
+            "--posterior-path",
+            str(posterior_path),
+            "--posterior-lock-path",
+            str(posterior_lock_path),
         ],
         cwd=REPO_ROOT,
         text=True,
@@ -211,7 +231,7 @@ def test_byte_closed_materialization_queue_cli_writes_queue(tmp_path: Path) -> N
             "run-worker",
             "--execute",
             "--max-steps",
-            "7",
+            "9",
             "--max-experiments",
             "1",
             "--max-parallel",
@@ -227,3 +247,4 @@ def test_byte_closed_materialization_queue_cli_writes_queue(tmp_path: Path) -> N
     assert worker_result.returncode == 0, worker_result.stderr
     worker_payload = json.loads(worker_result_path.read_text(encoding="utf-8"))
     assert worker_payload["failure_count"] == 0
+    assert posterior_path.is_file()

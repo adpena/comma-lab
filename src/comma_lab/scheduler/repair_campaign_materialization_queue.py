@@ -19,6 +19,14 @@ from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
     require_no_truthy_authority_fields,
 )
+from tac.optimization.repair_campaign_learning_signal import (
+    REPAIR_CAMPAIGN_BLOCKED_LEARNING_SIGNAL_REPORT_SCHEMA,
+)
+from tac.optimization.repair_campaign_posterior import (
+    DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_LOCK_PATH,
+    DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_PATH,
+    REPAIR_CAMPAIGN_BLOCKED_POSTERIOR_APPEND_REPORT_SCHEMA,
+)
 from tac.optimization.repair_campaign_scorer import (
     REPAIR_CAMPAIGN_OPTIMIZER_DECISION_SCHEMA,
     REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA,
@@ -181,6 +189,8 @@ def _materialization_experiment(
     materializer_work_queue: str | Path | None,
     materializer_execution_queue: str | Path | None,
     repair_palette_modes: Sequence[str],
+    posterior_path: str | Path,
+    posterior_lock_path: str | Path,
 ) -> dict[str, Any]:
     typed_response_id = str(allocation.get("typed_response_id") or "").strip()
     candidate_id = str(allocation.get("candidate_id") or "").strip()
@@ -196,12 +206,25 @@ def _materialization_experiment(
     binding_report = row_root / "repair_budget_materializer_binding_report.json"
     execution_report = row_root / "repair_budget_materialization_execution_report.json"
     gate = row_root / "repair_campaign_byte_closed_materialization_gate.json"
+    materialization_learning_signal = (
+        row_root / "repair_materialization_learning_signal_report.json"
+    )
+    posterior_append_report = (
+        row_root / "repair_materialization_posterior_append_report.json"
+    )
     materialization_plan_ref = _repo_rel(materialization_plan, repo_root)
     child_replay_ref = _repo_rel(child_replay_manifest, repo_root)
     family_materializer_ref = _repo_rel(family_materializer_manifest, repo_root)
     binding_report_ref = _repo_rel(binding_report, repo_root)
     execution_report_ref = _repo_rel(execution_report, repo_root)
     gate_ref = _repo_rel(gate, repo_root)
+    materialization_learning_signal_ref = _repo_rel(
+        materialization_learning_signal,
+        repo_root,
+    )
+    posterior_append_report_ref = _repo_rel(posterior_append_report, repo_root)
+    posterior_ref = _repo_rel(posterior_path, repo_root)
+    posterior_lock_ref = _repo_rel(posterior_lock_path, repo_root)
     work_order_ref = _repo_rel(work_order, repo_root)
     materializer_work_queue_ref = (
         _repo_rel(_resolve(materializer_work_queue, repo_root), repo_root)
@@ -243,6 +266,18 @@ def _materialization_experiment(
         "byte_closed_materialization_gate_path": gate_ref,
         "byte_closed_materialization_gate_schema": (
             REPAIR_CAMPAIGN_BYTE_CLOSED_MATERIALIZATION_GATE_SCHEMA
+        ),
+        "materialization_learning_signal_report_path": (
+            materialization_learning_signal_ref
+        ),
+        "materialization_learning_signal_report_schema": (
+            REPAIR_CAMPAIGN_BLOCKED_LEARNING_SIGNAL_REPORT_SCHEMA
+        ),
+        "posterior_path": posterior_ref,
+        "posterior_lock_path": posterior_lock_ref,
+        "posterior_append_report_path": posterior_append_report_ref,
+        "posterior_append_report_schema": (
+            REPAIR_CAMPAIGN_BLOCKED_POSTERIOR_APPEND_REPORT_SCHEMA
         ),
         "materializer_work_queue_path": materializer_work_queue_ref,
         "materializer_execution_queue_path": materializer_execution_queue_ref,
@@ -524,6 +559,82 @@ def _materialization_experiment(
                     "include_postcondition_paths": True,
                 },
             },
+            {
+                "id": "build_repair_materialization_learning_signal",
+                "kind": "command",
+                "requires": ["emit_selected_repair_materialization_gate"],
+                "command": [
+                    ".venv/bin/python",
+                    "tools/build_repair_campaign_blocked_learning_signals.py",
+                    "--materialization-execution-report",
+                    execution_report_ref,
+                    "--materialization-gate",
+                    gate_ref,
+                    "--family-materializer-manifest",
+                    family_materializer_ref,
+                    "--blocked-signal-report-out",
+                    materialization_learning_signal_ref,
+                    "--overwrite",
+                ],
+                "resources": {"kind": "local_cpu"},
+                "timeout_seconds": 120,
+                "postconditions": [
+                    {
+                        "type": "json_equals",
+                        "path": materialization_learning_signal_ref,
+                        "key": "schema",
+                        "equals": REPAIR_CAMPAIGN_BLOCKED_LEARNING_SIGNAL_REPORT_SCHEMA,
+                    },
+                    {
+                        "type": "json_false_authority",
+                        "path": materialization_learning_signal_ref,
+                    },
+                ],
+                "telemetry": {
+                    "artifact_paths": [materialization_learning_signal_ref],
+                    "input_artifact_paths": [
+                        execution_report_ref,
+                        gate_ref,
+                        family_materializer_ref,
+                    ],
+                    "include_postcondition_paths": True,
+                },
+            },
+            {
+                "id": "append_repair_materialization_posterior_signal",
+                "kind": "command",
+                "requires": ["build_repair_materialization_learning_signal"],
+                "command": [
+                    ".venv/bin/python",
+                    "tools/append_repair_campaign_blocked_posterior.py",
+                    "--blocked-learning-signal-report",
+                    materialization_learning_signal_ref,
+                    "--posterior-path",
+                    posterior_ref,
+                    "--lock-path",
+                    posterior_lock_ref,
+                    "--report-out",
+                    posterior_append_report_ref,
+                    "--overwrite",
+                ],
+                "resources": {"kind": "local_cpu"},
+                "timeout_seconds": 120,
+                "postconditions": [
+                    {
+                        "type": "json_equals",
+                        "path": posterior_append_report_ref,
+                        "key": "schema",
+                        "equals": REPAIR_CAMPAIGN_BLOCKED_POSTERIOR_APPEND_REPORT_SCHEMA,
+                    },
+                    {"type": "json_false_authority", "path": posterior_append_report_ref},
+                    {"type": "jsonl_false_authority", "path": posterior_ref},
+                ],
+                "telemetry": {
+                    "artifact_paths": [posterior_append_report_ref, posterior_ref],
+                    "input_artifact_paths": [materialization_learning_signal_ref],
+                    "include_postcondition_paths": True,
+                },
+            },
         ]
     return {
         "id": f"repair_materialize_{stem}",
@@ -615,6 +726,10 @@ def build_repair_campaign_byte_closed_materialization_queue(
     materializer_work_queue: str | Path | None = None,
     materializer_execution_queue: str | Path | None = None,
     repair_palette_modes: Sequence[str] = (),
+    posterior_path: str | Path = DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_PATH,
+    posterior_lock_path: str | Path = (
+        DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_LOCK_PATH
+    ),
 ) -> dict[str, Any]:
     """Build queue rows that attempt byte-closed repair candidate materialization."""
 
@@ -643,6 +758,8 @@ def build_repair_campaign_byte_closed_materialization_queue(
         / "repair_campaign_byte_closed_materialization_queue"
         / _slug(queue_id)
     )
+    resolved_posterior_path = _resolve(posterior_path, repo_root)
+    resolved_posterior_lock_path = _resolve(posterior_lock_path, repo_root)
     experiments = (
         [
             _materialization_experiment(
@@ -656,6 +773,8 @@ def build_repair_campaign_byte_closed_materialization_queue(
                 materializer_work_queue=materializer_work_queue,
                 materializer_execution_queue=materializer_execution_queue,
                 repair_palette_modes=repair_palette_modes,
+                posterior_path=resolved_posterior_path,
+                posterior_lock_path=resolved_posterior_lock_path,
             )
             for priority, allocation in enumerate(allocations, start=1)
         ]
@@ -694,6 +813,14 @@ def build_repair_campaign_byte_closed_materialization_queue(
         "blocked_experiment_count": len(experiments) - ready_count,
         "selected_allocation_count": len(allocations),
         "results_root": _repo_rel(queue_root, repo_root),
+        "posterior_path": _repo_rel(resolved_posterior_path, repo_root),
+        "posterior_lock_path": _repo_rel(resolved_posterior_lock_path, repo_root),
+        "materialization_learning_signal_report_schema": (
+            REPAIR_CAMPAIGN_BLOCKED_LEARNING_SIGNAL_REPORT_SCHEMA
+        ),
+        "posterior_append_report_schema": (
+            REPAIR_CAMPAIGN_BLOCKED_POSTERIOR_APPEND_REPORT_SCHEMA
+        ),
         "queue_actuation_blockers": ordered_unique(blockers),
         "local_mlx_rows_are_advisory_only": True,
         "exact_eval_handoff_requires_complete_archive_runtime_component_custody": True,

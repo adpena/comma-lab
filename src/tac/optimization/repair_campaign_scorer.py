@@ -1155,6 +1155,27 @@ def _posterior_acquisition_route(policy: str) -> dict[str, Any]:
             "queue_artifact_key": "exact_auth_eval_handoff",
             "required_evidence_surface": "contest_cpu_or_cuda_auth_axis_payload",
         }
+    if policy == "prioritize_byte_closed_family_materializer_implementation":
+        return {
+            "priority_score": 78,
+            "activation_action": "implement_or_run_repair_family_byte_transform",
+            "queue_artifact_key": "repair_campaign_byte_closed_materialization_queue",
+            "required_evidence_surface": "repair_family_materializer_manifest",
+        }
+    if policy == "prioritize_archive_bound_runtime_consumption_proof":
+        return {
+            "priority_score": 76,
+            "activation_action": "bind_archive_to_receiver_runtime_consumption_proof",
+            "queue_artifact_key": "repair_campaign_byte_closed_materialization_queue",
+            "required_evidence_surface": "archive_bound_runtime_consumption_proof",
+        }
+    if policy == "prioritize_receiver_decode_only_proof":
+        return {
+            "priority_score": 74,
+            "activation_action": "prove_receiver_decode_only_consumes_repair_archive",
+            "queue_artifact_key": "repair_campaign_byte_closed_materialization_queue",
+            "required_evidence_surface": "receiver_decode_only_runtime_proof",
+        }
     if policy == "materialize_missing_local_mlx_custody_before_stackability":
         return {
             "priority_score": 70,

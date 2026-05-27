@@ -6,7 +6,18 @@ import subprocess
 import sys
 from pathlib import Path
 
-from tac.optimization.repair_campaign_scorer import score_repair_campaign
+from tac.optimization.repair_campaign_learning_signal import (
+    REPAIR_CAMPAIGN_BLOCKED_LEARNING_SIGNAL_REPORT_SCHEMA,
+    build_repair_campaign_materialization_learning_signal_report,
+)
+from tac.optimization.repair_campaign_posterior import (
+    append_repair_campaign_blocked_learning_signal_report,
+    load_repair_campaign_stackability_posterior_rows,
+)
+from tac.optimization.repair_campaign_scorer import (
+    build_repair_campaign_posterior_prior_summary,
+    score_repair_campaign,
+)
 from tac.optimization.repair_family_materializers import (
     REPAIR_CAMPAIGN_FAMILY_MATERIALIZER_MANIFEST_SCHEMA,
     build_repair_campaign_family_materializer_manifest,
@@ -195,3 +206,92 @@ def test_family_materializer_cli_writes_manifest(tmp_path: Path) -> None:
     assert manifest["schema"] == REPAIR_CAMPAIGN_FAMILY_MATERIALIZER_MANIFEST_SCHEMA
     assert manifest["component_response_replayed"] is True
     assert manifest["score_claim"] is False
+
+
+def test_materialization_gate_learning_signal_updates_posterior(
+    tmp_path: Path,
+) -> None:
+    score_report = score_repair_campaign(payload=_repair_payload(tmp_path), repo_root=tmp_path)
+    plan = _plan_from_score_report(score_report)
+    family_manifest = build_repair_campaign_family_materializer_manifest(
+        repo_root=tmp_path,
+        materialization_plan=plan,
+        score_report=score_report,
+        materialization_plan_path=tmp_path / "plan.json",
+        score_report_path=tmp_path / "score_report.json",
+        typed_response_id="segnet_region_ready",
+        candidate_id="segnet_class_region_waterfill",
+    )
+    family_manifest_path = _write_json(tmp_path / "family_manifest.json", family_manifest)
+    execution_report = {
+        "schema": "frontier_rate_attack_repair_budget_materialization_execution_report.v1",
+        "chain_id": "unit_repair_chain",
+        "candidate_archive_materialized": False,
+        "runtime_consumption_proof_present": False,
+        "receiver_consumed": False,
+        "component_response_replayed": True,
+        "execution_rows": [
+            {
+                "schema": "frontier_rate_attack_repair_budget_materialization_execution_row.v1",
+                "candidate_kind": "spent_budget_repair_child",
+                "candidate_chain_id": "repair_budget_spent_child_unit_segnet",
+                "candidate_archive_materialized": False,
+                "runtime_consumption_proof_present": False,
+                "receiver_consumed": False,
+                "component_response_replayed": True,
+                "component_response_replay_axis_tag": "[macOS-MLX research-signal]",
+                "blockers": ["candidate_archive_materialized_false"],
+                **_false_authority(),
+            }
+        ],
+        "blockers": ["candidate_archives_not_materialized"],
+        **_false_authority(),
+    }
+    gate = {
+        "schema": "repair_campaign_byte_closed_materialization_gate.v1",
+        "typed_response_id": "segnet_region_ready",
+        "candidate_id": "segnet_class_region_waterfill",
+        "candidate_archive_materialized": False,
+        "archive_bound_runtime_consumption_proof_ready": False,
+        "component_response_replayed": True,
+        "blockers": ["candidate_archive_materialized_false"],
+        **_false_authority(),
+    }
+    execution_report_path = _write_json(tmp_path / "execution_report.json", execution_report)
+    gate_path = _write_json(tmp_path / "gate.json", gate)
+
+    signal_report = build_repair_campaign_materialization_learning_signal_report(
+        materialization_execution_report_path=execution_report_path,
+        materialization_execution_report=execution_report,
+        materialization_gate_path=gate_path,
+        materialization_gate=gate,
+        family_materializer_manifest_path=family_manifest_path,
+        family_materializer_manifest=family_manifest,
+        repo_root=tmp_path,
+    )
+
+    assert signal_report["schema"] == REPAIR_CAMPAIGN_BLOCKED_LEARNING_SIGNAL_REPORT_SCHEMA
+    signal = signal_report["learning_signal_rows"][0]
+    update = signal["local_planning_update"]
+    assert update["recommended_acquisition_policy"] == (
+        "prioritize_byte_closed_family_materializer_implementation"
+    )
+    assert update["planner_feature_vector"]["entropy_stage_order"] == 10
+    signal_report_path = _write_json(tmp_path / "signal_report.json", signal_report)
+    posterior_path = tmp_path / "posterior.jsonl"
+    append_report = append_repair_campaign_blocked_learning_signal_report(
+        blocked_learning_signal_report_path=signal_report_path,
+        blocked_learning_signal_report=signal_report,
+        posterior_path=posterior_path,
+        lock_path=tmp_path / ".posterior.lock",
+        repo_root=tmp_path,
+    )
+    posterior_rows = load_repair_campaign_stackability_posterior_rows(posterior_path)
+    summary = build_repair_campaign_posterior_prior_summary(
+        posterior_path=posterior_path,
+    )
+
+    assert append_report["appended_count"] == 1
+    assert posterior_rows[0]["typed_response_id"] == "segnet_region_ready"
+    route = summary["acquisition_followup_routes"][0]
+    assert route["activation_action"] == "implement_or_run_repair_family_byte_transform"
