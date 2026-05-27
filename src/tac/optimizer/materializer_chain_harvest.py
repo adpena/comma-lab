@@ -23,6 +23,7 @@ from tac.optimization.family_agnostic_materializers import (
     PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
     RENDERER_PAYLOAD_DFL1_SCHEMA,
     TENSOR_FACTORIZE_SCHEMA,
+    verify_runtime_consumption_proof,
 )
 from tac.optimization.proxy_candidate_contract import (
     apply_proxy_evidence_boundary,
@@ -97,6 +98,15 @@ def adapt_materializer_chain_manifest_to_candidate(
             candidate_archive=candidate_archive,
         )
     )
+    runtime_identity_blockers = _chain_runtime_adapter_identity_blockers(
+        chain,
+        repo_root=repo_root,
+    )
+    if runtime_identity_blockers:
+        raise MaterializerChainHarvestError(
+            "runtime_adapter_identity_blocked:"
+            + ",".join(runtime_identity_blockers)
+        )
     if delta_blockers:
         raise MaterializerChainHarvestError(
             "serialized_archive_delta_blocked:" + ",".join(delta_blockers)
@@ -266,17 +276,35 @@ def adapt_family_agnostic_materializer_manifest_to_candidate(
     receiver_map = (
         receiver_verification if isinstance(receiver_verification, Mapping) else {}
     )
-    proof_present = receiver_map.get("proof_present") is True
-    receiver_satisfied = manifest.get("receiver_contract_satisfied") is True
-    # At this queue boundary the flag means "no runtime-adapter blocker remains",
-    # not necessarily "a separate adapter file exists".  Identity-style
-    # materializers can have no generated adapter while still being ready once
-    # the runtime-consumption proof is verified.
-    runtime_adapter_ready = receiver_satisfied
     raw_proof_path = (
         receiver_map.get("proof_path") or manifest.get("runtime_consumption_proof_path")
     )
     proof_path = raw_proof_path.strip() if isinstance(raw_proof_path, str) else None
+    runtime_proof, proof_blockers = _load_runtime_proof_with_blockers(
+        proof_path,
+        repo_root=repo_root,
+        candidate_archive_sha256=candidate_archive["sha256"],
+        required_target_kind=manifest.get("target_kind"),
+        required_materializer_id=manifest.get("materializer_id"),
+        required_receiver_contract_kind=manifest.get("receiver_contract_kind"),
+    )
+    receiver_blockers = _string_list(receiver_map.get("blockers"))
+    proof_file_present = bool(runtime_proof)
+    proof_clean = proof_file_present and not proof_blockers
+    receiver_satisfied = (
+        manifest.get("receiver_contract_satisfied") is True
+        and (
+            receiver_map.get("receiver_contract_satisfied") is True
+            or "receiver_contract_satisfied" not in receiver_map
+        )
+        and proof_clean
+        and not receiver_blockers
+    )
+    # At this queue boundary the flag means "no runtime-adapter blocker remains",
+    # not necessarily "a separate adapter file exists".  Identity-style
+    # materializers can have no generated adapter while still being ready once
+    # the runtime-consumption proof is file-backed and verifier-clean.
+    runtime_adapter_ready = receiver_satisfied
     candidate_member = _zip_member_record_from_manifest(
         manifest,
         "candidate_member",
@@ -300,7 +328,16 @@ def adapt_family_agnostic_materializer_manifest_to_candidate(
         schema=schema,
         archive_sha=candidate_archive["sha256"],
     )
-    runtime_proof = _load_optional_runtime_proof(proof_path, repo_root=repo_root)
+    readiness_blockers = ordered_unique(
+        [
+            *_string_list(manifest.get("readiness_blockers")),
+            *[
+                f"receiver_verification:{blocker}"
+                for blocker in receiver_blockers
+            ],
+            *proof_blockers,
+        ]
+    )
     row = {
         "candidate_id": candidate_id,
         "lane_id": str(manifest.get("lane_id") or f"materializer_harvest::{schema}"),
@@ -347,9 +384,9 @@ def adapt_family_agnostic_materializer_manifest_to_candidate(
         "runtime_adapter_ready": runtime_adapter_ready,
         "receiver_contract_satisfied": receiver_satisfied,
         "candidate_runtime_adapter_blocker_cleared": runtime_adapter_ready,
-        "readiness_blockers": _string_list(manifest.get("readiness_blockers")),
+        "readiness_blockers": readiness_blockers,
         "runtime_consumption_proof_required": True,
-        "runtime_consumption_proof_status": "present" if proof_present else "missing",
+        "runtime_consumption_proof_status": "present" if proof_file_present else "missing",
         "runtime_consumption_proof_path": proof_path,
         **_submission_runtime_harvest_fields(manifest),
         **_packet_member_merge_harvest_fields(manifest),
@@ -381,7 +418,7 @@ def adapt_family_agnostic_materializer_manifest_to_candidate(
                 if receiver_satisfied
                 else ["family_agnostic_receiver_contract_not_satisfied"]
             ),
-            *_string_list(manifest.get("readiness_blockers")),
+            *readiness_blockers,
             *_string_list(manifest.get("dispatch_blockers")),
         ],
     )
@@ -553,22 +590,82 @@ def _renderer_payload_dfl1_harvest_fields(
     return fields
 
 
-def _load_optional_runtime_proof(
+def _load_runtime_proof_with_blockers(
     proof_path: str | None,
     *,
     repo_root: Path,
-) -> Mapping[str, Any]:
+    candidate_archive_sha256: str,
+    required_target_kind: Any = None,
+    required_materializer_id: Any = None,
+    required_receiver_contract_kind: Any = None,
+) -> tuple[Mapping[str, Any], list[str]]:
     if proof_path is None:
-        return {}
+        return {}, ["runtime_consumption_proof_path_missing"]
     path = Path(proof_path)
     resolved = path if path.is_absolute() else repo_root / path
-    if not resolved.is_file() or resolved.is_symlink():
-        return {}
+    if resolved.is_symlink():
+        return {}, ["runtime_consumption_proof_file_is_symlink"]
+    if not resolved.is_file():
+        return {}, ["runtime_consumption_proof_file_missing"]
     try:
         payload = json.loads(resolved.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
-        return {}
-    return payload if isinstance(payload, Mapping) else {}
+        return {}, ["runtime_consumption_proof_json_invalid"]
+    if not isinstance(payload, Mapping):
+        return {}, ["runtime_consumption_proof_not_object"]
+    blockers: list[str] = []
+    try:
+        require_no_truthy_authority_fields(
+            payload,
+            context="family_agnostic_runtime_consumption_proof",
+        )
+    except ValueError as exc:
+        blockers.append(f"runtime_consumption_proof_false_authority:{exc}")
+    blockers.extend(
+        f"runtime_consumption_proof:{blocker}"
+        for blocker in _string_list(payload.get("blockers"))
+    )
+    verification = verify_runtime_consumption_proof(
+        runtime_consumption_proof=payload,
+        required_candidate_archive_sha256=candidate_archive_sha256,
+        required_target_kind=(
+            required_target_kind if isinstance(required_target_kind, str) else None
+        ),
+        required_materializer_id=(
+            required_materializer_id if isinstance(required_materializer_id, str) else None
+        ),
+        required_receiver_contract_kind=(
+            required_receiver_contract_kind
+            if isinstance(required_receiver_contract_kind, str)
+            else None
+        ),
+        repo_root=repo_root,
+    )
+    blockers.extend(
+        f"runtime_consumption_proof:{blocker}"
+        for blocker in _string_list(verification.get("blockers"))
+    )
+    proof_archive_sha = _runtime_proof_archive_sha(payload)
+    if proof_archive_sha is None:
+        blockers.append("runtime_consumption_proof_candidate_archive_sha_missing")
+    elif proof_archive_sha != candidate_archive_sha256:
+        blockers.append("runtime_consumption_proof_candidate_archive_sha_mismatch")
+    return payload, ordered_unique(blockers)
+
+
+def _runtime_proof_archive_sha(proof: Mapping[str, Any]) -> str | None:
+    candidate_archive = proof.get("candidate_archive")
+    if isinstance(candidate_archive, Mapping):
+        value = candidate_archive.get("sha256") or candidate_archive.get(
+            "archive_sha256"
+        )
+        if isinstance(value, str) and len(value.strip()) == 64:
+            return value.strip().lower()
+    for key in ("candidate_archive_sha256", "archive_sha256"):
+        value = proof.get(key)
+        if isinstance(value, str) and len(value.strip()) == 64:
+            return value.strip().lower()
+    return None
 
 
 def _zip_member_record_from_manifest(
@@ -677,18 +774,58 @@ def _chain_runtime_context_fields(
     return out
 
 
+def _chain_runtime_adapter_identity_blockers(
+    chain: Mapping[str, Any],
+    *,
+    repo_root: Path,
+) -> list[str]:
+    if (
+        chain.get("runtime_adapter_ready") is not True
+        and chain.get("candidate_runtime_adapter_blocker_cleared") is not True
+    ):
+        return []
+    runtime_dirs = _chain_runtime_dir_paths(chain, repo_root=repo_root)
+    actual_runtime_tree_sha = _chain_runtime_dir_tree_sha256(
+        chain,
+        repo_root=repo_root,
+    )
+    expected_runtime_tree_sha = _chain_runtime_tree_sha256(chain)
+    blockers: list[str] = []
+    if not runtime_dirs or not any(path.is_dir() for path in runtime_dirs):
+        blockers.append("runtime_adapter_dir_missing")
+    if actual_runtime_tree_sha is None:
+        blockers.append("runtime_tree_sha256_live_runtime_dir_unverifiable")
+    if expected_runtime_tree_sha is None:
+        blockers.append("runtime_tree_sha256_missing")
+    elif (
+        actual_runtime_tree_sha is not None
+        and actual_runtime_tree_sha != expected_runtime_tree_sha
+    ):
+        blockers.append("runtime_tree_sha256_mismatch")
+    return blockers
+
+
+def _chain_runtime_dir_paths(
+    chain: Mapping[str, Any],
+    *,
+    repo_root: Path,
+) -> list[Path]:
+    out: list[Path] = []
+    for key in ("candidate_runtime_dir", "runtime_dir", "inflate_runtime_dir"):
+        value = _nonempty_string(chain.get(key))
+        if value is None:
+            continue
+        path = Path(value)
+        out.append(path if path.is_absolute() else repo_root / path)
+    return out
+
+
 def _chain_runtime_dir_tree_sha256(
     chain: Mapping[str, Any],
     *,
     repo_root: Path,
 ) -> str | None:
-    for key in ("candidate_runtime_dir", "runtime_dir", "inflate_runtime_dir"):
-        value = _nonempty_string(chain.get(key))
-        if value is None:
-            continue
-        candidate = Path(value)
-        if not candidate.is_absolute():
-            candidate = repo_root / candidate
+    for candidate in _chain_runtime_dir_paths(chain, repo_root=repo_root):
         if candidate.is_dir() and (candidate / "inflate.sh").is_file():
             return tree_sha256(candidate).lower()
     return None
