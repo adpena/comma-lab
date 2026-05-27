@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 from dataclasses import asdict
@@ -171,6 +172,10 @@ def test_cli_preserves_heuristic_without_master_gradient_anchor(monkeypatch, tmp
     assert np.load(out).shape == (5, 2, 3)
     sidecar = json.loads(out.with_suffix(".npy.meta.json").read_text(encoding="utf-8"))
     assert sidecar["master_gradient_anchor_written"] is False
+    assert sidecar["npy_sha256"] == hashlib.sha256(out.read_bytes()).hexdigest()
+    assert sidecar["determinism"]["seed"] == 20260527
+    assert sidecar["determinism"]["numpy_seeded"] is True
+    assert "--call-id" in sidecar["argv"]
     assert "source_runtime_full_frame_parity_missing" in sidecar["master_gradient_anchor_blockers"]
     assert sidecar["score_claim"] is False
     assert sidecar["ready_for_exact_eval_dispatch"] is False
@@ -241,3 +246,5 @@ def test_cli_writes_mlx_manifest_as_false_authority(monkeypatch, tmp_path: Path)
     assert row["promotion_eligible"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
     assert row["master_gradient_anchor_written"] is False
+    assert row["npy_sha256"] == hashlib.sha256((tmp_path / "gradient.npy").read_bytes()).hexdigest()
+    assert row["determinism"]["seed"] == 20260527

@@ -32,7 +32,10 @@ from __future__ import annotations
 import argparse
 import datetime as _dt
 import fcntl
+import hashlib
 import json
+import os
+import subprocess
 import sys
 from collections.abc import Sequence
 from pathlib import Path
@@ -70,6 +73,65 @@ def _parse_axes(axes_arg: str) -> tuple[str, ...]:
         if a not in AXIS_ORDER:
             raise SystemExit(f"unknown axis {a!r}; valid axes: {AXIS_ORDER}")
     return requested
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _git_output(args: Sequence[str]) -> str | None:
+    try:
+        proc = subprocess.run(
+            ["git", *args],
+            cwd=REPO_ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+    except OSError:
+        return None
+    if proc.returncode != 0:
+        return None
+    return proc.stdout.strip()
+
+
+def _set_best_effort_determinism(seed: int) -> dict[str, object]:
+    np.random.seed(seed)
+    torch_seeded = False
+    mlx_seeded = False
+    try:
+        import torch
+
+        torch.manual_seed(seed)
+        torch.use_deterministic_algorithms(True, warn_only=True)
+        torch_seeded = True
+    except Exception:
+        torch_seeded = False
+    try:
+        import mlx.core as mx
+
+        mx.random.seed(seed)
+        mlx_seeded = True
+    except Exception:
+        mlx_seeded = False
+    return {
+        "seed": seed,
+        "numpy_seeded": True,
+        "torch_seeded": torch_seeded,
+        "mlx_seeded": mlx_seeded,
+        "pythonhashseed": os.environ.get("PYTHONHASHSEED"),
+        "torch_deterministic_algorithms_warn_only": torch_seeded,
+        "best_effort_note": (
+            "The extractor uses deterministic central finite differences and no random "
+            "sampling. MLX/GPU kernels may still have backend-level numeric variation; "
+            "output hashes are recorded for rerun comparison."
+        ),
+    }
 
 
 def _locked_save_npy(out_path: Path, arr: np.ndarray) -> None:
@@ -151,6 +213,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         help="Number of frame pairs to decode/score per MLX batch (default 16).",
     )
     parser.add_argument(
+        "--seed",
+        type=int,
+        default=20260527,
+        help="Best-effort deterministic seed recorded in all custody metadata.",
+    )
+    parser.add_argument(
         "--upstream-dir",
         type=Path,
         default=REPO_ROOT / "upstream",
@@ -193,6 +261,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         help="Optional extraction call id / run label for the master-gradient anchor.",
     )
     parser.add_argument("--verbose", action="store_true", help="Per-tensor FD progress logging.")
+    argv_for_manifest = list(argv) if argv is not None else sys.argv[1:]
     args = parser.parse_args(argv)
 
     axes = _parse_axes(args.axes)
@@ -201,6 +270,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         raise SystemExit("--n-pairs must be positive")
     if args.pair_batch_size <= 0:
         raise SystemExit("--pair-batch-size must be positive")
+
+    determinism = _set_best_effort_determinism(args.seed)
 
     try:
         result = extract_mlx_per_pair_master_gradient(
@@ -218,6 +289,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 1
 
     _locked_save_npy(args.out, result.per_pair_per_byte)
+    npy_sha256 = _sha256_file(args.out)
 
     captured_at_utc = _utc_now()
     anchor_written = False
@@ -243,6 +315,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     sidecar = {
         "schema_version": SCHEMA_VERSION,
         "npy_path": str(args.out),
+        "npy_sha256": npy_sha256,
         "npy_shape": list(result.per_pair_per_byte.shape),
         "axis_order": list(AXIS_ORDER),
         "axes_requested": list(axes),
@@ -277,6 +350,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         ),
         "codec_grammar": result.metadata["codec_grammar"],
         "captured_at_utc": captured_at_utc,
+        "determinism": determinism,
+        "argv": argv_for_manifest,
+        "git_head": _git_output(["rev-parse", "HEAD"]),
+        "git_status_short": _git_output(["status", "--short"]),
         "master_gradient_anchor_path": str(args.anchor_jsonl),
         "master_gradient_anchor_written": anchor_written,
         "master_gradient_anchor_blockers": anchor_blockers,
@@ -306,6 +383,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             "archive_sha256": result.archive_sha256,
             "archive_path": str(args.archive),
             "npy_path": str(args.out),
+            "npy_sha256": npy_sha256,
             "npy_shape": list(result.per_pair_per_byte.shape),
             "n_pairs_used": result.n_pairs_used,
             "n_pairs_total": result.n_pairs_total,
@@ -329,6 +407,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             "master_gradient_anchor_written": anchor_written,
             "master_gradient_anchor_blockers": anchor_blockers,
             "captured_at_utc": sidecar["captured_at_utc"],
+            "determinism": determinism,
+            "git_head": sidecar["git_head"],
         }
         _append_jsonl_locked(manifest_row, output_path=args.manifest_jsonl)
 
@@ -337,6 +417,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             {
                 "out": str(args.out),
                 "sidecar": str(sidecar_path),
+                "npy_sha256": npy_sha256,
                 "shape": list(result.per_pair_per_byte.shape),
                 "archive_sha256": result.archive_sha256[:24],
                 "n_pairs_used": result.n_pairs_used,
