@@ -1337,6 +1337,252 @@ def test_observer_rejects_jsonl_custody_row_with_only_proof_present_flag(
     )
 
 
+def test_observer_accepts_jsonl_custody_row_with_live_proof(
+    tmp_path: Path,
+) -> None:
+    candidate_archive = _write_artifact_bytes(
+        tmp_path / "jsonl_custody_candidate.zip",
+        b"jsonl custody candidate bytes",
+    )
+    receiver_verification = _write_receiver_proof(
+        tmp_path / "jsonl_custody_receiver_proof.json",
+        candidate_archive=candidate_archive,
+    )
+    observation_jsonl = tmp_path / "custody_observations.jsonl"
+    observation_jsonl.write_text(
+        json.dumps(
+            {
+                "schema": "generic_candidate_custody_observation.v1",
+                "candidate_id": "jsonl_custody_candidate",
+                "candidate_archive": candidate_archive,
+                "receiver_contract_satisfied": True,
+                "runtime_consumption_proof_path": receiver_verification["proof_path"],
+                "receiver_verification": receiver_verification,
+                "score_claim": False,
+                "score_claim_valid": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "promotable": False,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+                "gpu_launched": False,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    state = tmp_path / "queue.sqlite"
+    queue = {
+        "schema": "experiment_queue.v1",
+        "queue_id": "observer_test",
+        "controls": {"mode": "running", "max_concurrency": {"local_cpu": 1}},
+        "experiments": [
+            {
+                "id": "jsonl_custody_experiment",
+                "status": "queued",
+                "priority": 1,
+                "steps": [
+                    {
+                        "id": "observe_custody_jsonl",
+                        "kind": "command",
+                        "command": ["python", "emit_custody_jsonl.py"],
+                        "resources": {"kind": "local_cpu"},
+                        "postconditions": [
+                            {
+                                "type": "jsonl_false_authority",
+                                "path": observation_jsonl.as_posix(),
+                                "schema_equals": (
+                                    "generic_candidate_custody_observation.v1"
+                                ),
+                                "require_nonempty": True,
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'succeeded',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-05-27T18:05:00Z'
+            WHERE queue_id = 'observer_test'
+              AND experiment_id = 'jsonl_custody_experiment'
+              AND step_id = 'observe_custody_jsonl'
+            """,
+            (json.dumps({"command": ["python", "emit_custody_jsonl.py"]}),),
+        )
+        conn.commit()
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=0,
+    )
+
+    assert observation["healthy"] is True
+    assert observation["succeeded_artifact_failure_steps"] == []
+    assert observation["blockers"] == []
+    assert observation["status_counts"]["succeeded"] == 1
+
+
+def test_observer_rejects_jsonl_custody_row_with_stale_runtime_tree_identity(
+    tmp_path: Path,
+) -> None:
+    candidate_archive = _write_artifact_bytes(
+        tmp_path / "jsonl_stale_runtime_candidate.zip",
+        b"jsonl stale runtime candidate bytes",
+    )
+    runtime_dir = tmp_path / "candidate_runtime"
+    runtime_dir.mkdir()
+    (runtime_dir / "inflate.sh").write_text(
+        "#!/usr/bin/env bash\nexit 0\n",
+        encoding="utf-8",
+    )
+    stale_tree_sha = "b" * 64
+    proof_path = tmp_path / "jsonl_stale_runtime_proof.json"
+    proof_path.write_text(
+        json.dumps(
+            {
+                "schema": "family_agnostic_runtime_consumption_proof_v1",
+                "candidate_archive": dict(candidate_archive),
+                "candidate_archive_sha256": candidate_archive["sha256"],
+                "receiver_contract_satisfied": True,
+                "runtime_consumption_proof_passed": True,
+                "passed": True,
+                "runtime_adapter_ready": True,
+                "runtime_adapter_manifest": {
+                    "runtime_adapter_ready": True,
+                    "runtime_dir": runtime_dir.as_posix(),
+                    "runtime_tree_sha256": stale_tree_sha,
+                },
+                "score_claim": False,
+                "score_claim_valid": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "promotable": False,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+                "gpu_launched": False,
+                "blockers": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    observation_jsonl = tmp_path / "custody_observations.jsonl"
+    observation_jsonl.write_text(
+        json.dumps(
+            {
+                "schema": "generic_candidate_custody_observation.v1",
+                "candidate_id": "jsonl_stale_runtime_candidate",
+                "candidate_archive": candidate_archive,
+                "receiver_contract_satisfied": True,
+                "runtime_adapter_ready": True,
+                "runtime_consumption_proof_path": proof_path.as_posix(),
+                "receiver_verification": {
+                    "schema": (
+                        "family_agnostic_runtime_consumption_proof_verification.v1"
+                    ),
+                    "receiver_contract_satisfied": True,
+                    "runtime_adapter_ready": True,
+                    "proof_present": True,
+                    "proof_path": proof_path.as_posix(),
+                    "runtime_adapter_tree_sha256": stale_tree_sha,
+                    "blockers": [],
+                },
+                "runtime_manifest": {
+                    "runtime_adapter_ready": True,
+                    "runtime_dir": runtime_dir.as_posix(),
+                    "runtime_tree_sha256": stale_tree_sha,
+                },
+                "score_claim": False,
+                "score_claim_valid": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "promotable": False,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+                "gpu_launched": False,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    state = tmp_path / "queue.sqlite"
+    queue = {
+        "schema": "experiment_queue.v1",
+        "queue_id": "observer_test",
+        "controls": {"mode": "running", "max_concurrency": {"local_cpu": 1}},
+        "experiments": [
+            {
+                "id": "jsonl_custody_experiment",
+                "status": "queued",
+                "priority": 1,
+                "steps": [
+                    {
+                        "id": "observe_custody_jsonl",
+                        "kind": "command",
+                        "command": ["python", "emit_custody_jsonl.py"],
+                        "resources": {"kind": "local_cpu"},
+                        "postconditions": [
+                            {
+                                "type": "jsonl_false_authority",
+                                "path": observation_jsonl.as_posix(),
+                                "schema_equals": (
+                                    "generic_candidate_custody_observation.v1"
+                                ),
+                                "require_nonempty": True,
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'succeeded',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-05-27T18:10:00Z'
+            WHERE queue_id = 'observer_test'
+              AND experiment_id = 'jsonl_custody_experiment'
+              AND step_id = 'observe_custody_jsonl'
+            """,
+            (json.dumps({"command": ["python", "emit_custody_jsonl.py"]}),),
+        )
+        conn.commit()
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=0,
+    )
+
+    assert observation["healthy"] is False
+    artifact = observation["succeeded_artifact_failure_steps"][0][
+        "expected_artifacts"
+    ][0]
+    assert artifact["postcondition_type"] == "jsonl_false_authority"
+    assert artifact["postcondition_passed"] is False
+    assert any(
+        "runtime_tree_sha256_mismatch" in blocker
+        for blocker in artifact["artifact_revalidation_blockers"]
+    )
+
+
 def test_observer_surfaces_succeeded_single_family_materializer_manifests(
     tmp_path: Path,
 ) -> None:
