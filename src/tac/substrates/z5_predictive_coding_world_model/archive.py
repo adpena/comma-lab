@@ -52,6 +52,7 @@ import struct
 from dataclasses import dataclass
 
 import brotli  # type: ignore[import-not-found]
+import numpy as np
 import torch
 
 Z5PCWM1_MAGIC: bytes = b"Z5WM"
@@ -106,11 +107,50 @@ def _serialize_state_dict(sd: dict[str, torch.Tensor]) -> bytes:
     return bytes(brotli.compress(raw, quality=_BROTLI_QUALITY))
 
 
+def _deserialize_numpy_state_dict(blob: bytes) -> dict[str, "np.ndarray"]:
+    """Torch-free deserialize of the Z5PCWM1 length-prefixed fp16 state_dict blob.
+
+    Reads the EXACT same byte format ``_serialize_state_dict`` produces, but
+    reconstructs each tensor as an ``np.float32`` ndarray with NO torch import.
+    The shipped numpy-portable inflate runtime calls this (8th MLX-first
+    standing directive: ``torch`` is FORBIDDEN at decode time).
+    """
+    raw = brotli.decompress(blob)
+    sd: dict[str, "np.ndarray"] = {}
+    pos = 0
+    while pos < len(raw):
+        if pos + 2 > len(raw):
+            raise ValueError("state_dict blob truncated reading key length")
+        (key_len,) = struct.unpack("<H", raw[pos : pos + 2])
+        pos += 2
+        if pos + key_len + 1 > len(raw):
+            raise ValueError("state_dict blob truncated reading key bytes")
+        key = raw[pos : pos + key_len].decode("utf-8")
+        pos += key_len
+        (ndim,) = struct.unpack("<B", raw[pos : pos + 1])
+        pos += 1
+        if pos + ndim * 4 > len(raw):
+            raise ValueError("state_dict blob truncated reading shape")
+        shape = struct.unpack("<" + "I" * ndim, raw[pos : pos + ndim * 4])
+        pos += ndim * 4
+        numel = 1
+        for dim in shape:
+            numel *= int(dim)
+        tensor_bytes = numel * 2  # fp16
+        if pos + tensor_bytes > len(raw):
+            raise ValueError(f"state_dict blob truncated reading tensor {key!r}")
+        arr = np.frombuffer(raw[pos : pos + tensor_bytes], dtype=np.float16).copy()
+        sd[key] = arr.reshape(shape).astype(np.float32)
+        pos += tensor_bytes
+    if pos != len(raw):
+        raise ValueError(f"state_dict blob has trailing bytes (pos={pos} len={len(raw)})")
+    return sd
+
+
 def _deserialize_state_dict(blob: bytes) -> dict[str, torch.Tensor]:
     raw = brotli.decompress(blob)
     sd: dict[str, torch.Tensor] = {}
     pos = 0
-    import numpy as np
 
     while pos < len(raw):
         if pos + 2 > len(raw):
@@ -398,6 +438,124 @@ def parse_archive(blob: bytes) -> PredictiveCodingArchive:
     )
 
 
+@dataclass(frozen=True)
+class PredictiveCodingArchiveNumpy:
+    """Torch-free parsed Z5PCWM1 archive — the numpy-portable inflate-time contract.
+
+    Sister of :class:`PredictiveCodingArchive` but with ``np.ndarray`` weights /
+    latents so the shipped inflate runtime needs ONLY numpy + brotli (no torch)
+    per the 8th MLX-first standing directive. The ``decoder_state_dict`` +
+    ``predictor_state_dict`` are the inflate-time consumers; the encoder is
+    provenance-only.
+    """
+
+    encoder_state_dict: dict[str, "np.ndarray"]
+    decoder_state_dict: dict[str, "np.ndarray"]
+    predictor_state_dict: dict[str, "np.ndarray"]
+    latent_init: "np.ndarray"  # (latent_dim,) fp32
+    residuals: "np.ndarray"    # (num_pairs, latent_dim) fp32
+    ego_motion: "np.ndarray"   # (num_pairs, ego_motion_dim) fp32
+    meta: dict[str, object]
+    schema_version: int
+
+
+def parse_archive_numpy(blob: bytes) -> PredictiveCodingArchiveNumpy:
+    """Torch-free parse of a Z5PCWM1 archive for the numpy-portable inflate.
+
+    Identical section walk to :func:`parse_archive` but reconstructs every
+    weight / latent / residual / ego-motion as a numpy array with NO torch
+    import. Per the 8th MLX-first directive's bridge contract the shipped
+    inflate runtime reads weights via this path so the runtime tree carries
+    only numpy + brotli.
+    """
+    if len(blob) < Z5PCWM1_HEADER_SIZE:
+        raise ValueError(
+            f"archive too short ({len(blob)} bytes; need >= {Z5PCWM1_HEADER_SIZE})"
+        )
+    (
+        magic,
+        version,
+        latent_dim,
+        ego_motion_dim,
+        num_pairs,
+        encoder_len,
+        decoder_len,
+        predictor_len,
+        latent_init_len,
+        residuals_len,
+        ego_motion_len,
+        meta_len,
+    ) = struct.unpack(Z5PCWM1_HEADER_FMT, blob[:Z5PCWM1_HEADER_SIZE])
+    if magic != Z5PCWM1_MAGIC:
+        raise ValueError(f"bad magic: {magic!r} (expected {Z5PCWM1_MAGIC!r})")
+    if version != Z5PCWM1_SCHEMA_VERSION:
+        raise ValueError(f"unsupported schema version: {version}")
+
+    if latent_init_len != latent_dim:
+        raise ValueError(
+            f"latent_init_len {latent_init_len} != latent_dim {latent_dim}"
+        )
+    expected_residuals = num_pairs * latent_dim
+    if residuals_len != expected_residuals:
+        raise ValueError(
+            f"residuals_len {residuals_len} != num_pairs*latent_dim = {expected_residuals}"
+        )
+    expected_ego = num_pairs * ego_motion_dim
+    if ego_motion_len != expected_ego:
+        raise ValueError(
+            f"ego_motion_len {ego_motion_len} != num_pairs*ego_motion_dim = {expected_ego}"
+        )
+
+    pos = Z5PCWM1_HEADER_SIZE
+    end_encoder = pos + encoder_len
+    end_decoder = end_encoder + decoder_len
+    end_predictor = end_decoder + predictor_len
+    end_latent_init = end_predictor + latent_init_len
+    end_residuals = end_latent_init + residuals_len
+    end_ego = end_residuals + ego_motion_len
+    end_meta = end_ego + meta_len
+    if end_meta != len(blob):
+        raise ValueError(
+            f"archive size {len(blob)} != expected {end_meta} from header"
+        )
+
+    encoder_sd = _deserialize_numpy_state_dict(blob[pos:end_encoder])
+    decoder_sd = _deserialize_numpy_state_dict(blob[end_encoder:end_decoder])
+    predictor_sd = _deserialize_numpy_state_dict(blob[end_decoder:end_predictor])
+    meta = json.loads(blob[end_ego:end_meta].decode("utf-8"))
+
+    q_li = np.frombuffer(blob[end_predictor:end_latent_init], dtype=np.int8).reshape(latent_dim)
+    q_r = np.frombuffer(blob[end_latent_init:end_residuals], dtype=np.int8).reshape(
+        num_pairs, latent_dim
+    )
+    q_e = np.frombuffer(blob[end_residuals:end_ego], dtype=np.int8).reshape(
+        num_pairs, ego_motion_dim
+    )
+
+    scale_li = float(meta.pop("_latent_init_scale"))
+    zp_li = float(meta.pop("_latent_init_zp"))
+    scale_r = float(meta.pop("_residuals_scale"))
+    zp_r = float(meta.pop("_residuals_zp"))
+    scale_e = float(meta.pop("_ego_motion_scale"))
+    zp_e = float(meta.pop("_ego_motion_zp"))
+
+    # dequant mirrors _dequantize_from_int8: (q + 127) * scale + zero_point
+    latent_init = (q_li.astype(np.float32) + 127.0) * scale_li + zp_li
+    residuals = (q_r.astype(np.float32) + 127.0) * scale_r + zp_r
+    ego_motion = (q_e.astype(np.float32) + 127.0) * scale_e + zp_e
+
+    return PredictiveCodingArchiveNumpy(
+        encoder_state_dict=encoder_sd,
+        decoder_state_dict=decoder_sd,
+        predictor_state_dict=predictor_sd,
+        latent_init=latent_init,
+        residuals=residuals,
+        ego_motion=ego_motion,
+        meta=meta,
+        schema_version=int(version),
+    )
+
+
 def parse_z5pcwm1_archive_bytes(archive_bytes: bytes) -> dict[str, tuple[int, int]]:
     """Return section name -> (start, length) for Z5PCWM1 (predictive-coding world-model) grammar.
 
@@ -543,6 +701,7 @@ Z5PCWM1_SECTION_ROLES: dict[str, str] = {
 
 __all__ = [
     "PredictiveCodingArchive",
+    "PredictiveCodingArchiveNumpy",
     "Z5PCWM1_HEADER_FMT",
     "Z5PCWM1_HEADER_SIZE",
     "Z5PCWM1_MAGIC",
@@ -550,5 +709,6 @@ __all__ = [
     "Z5PCWM1_SECTION_ROLES",
     "pack_archive",
     "parse_archive",
+    "parse_archive_numpy",
     "parse_z5pcwm1_archive_bytes",
 ]

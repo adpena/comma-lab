@@ -169,8 +169,10 @@ from tac.substrates.z5_predictive_coding_world_model.archive import (
     Z5PCWM1_SCHEMA_VERSION,
     Z5PCWM1_SECTION_ROLES,
     PredictiveCodingArchive,
+    PredictiveCodingArchiveNumpy,
     pack_archive,
     parse_archive,
+    parse_archive_numpy,
     parse_z5pcwm1_archive_bytes,
 )
 from tac.substrates.z5_predictive_coding_world_model.score_aware_loss import (
@@ -190,11 +192,13 @@ __all__ = [
     "Z5PCWM1_SECTION_ROLES",
     "HierarchicalPredictor",
     "PredictiveCodingArchive",
+    "PredictiveCodingArchiveNumpy",
     "PredictiveCodingConfig",
     "PredictiveCodingLossWeights",
     "PredictiveCodingScoreAwareLoss",
     "PredictiveCodingSubstrate",
     "pack_archive",
     "parse_archive",
+    "parse_archive_numpy",
     "parse_z5pcwm1_archive_bytes",
 ]
