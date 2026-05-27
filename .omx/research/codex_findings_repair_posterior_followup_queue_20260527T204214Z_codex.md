@@ -53,9 +53,14 @@ acquisition routes; routes now select the next local evidence-producing queue.
 - `.venv/bin/python -m pytest src/tac/tests/test_frontier_rate_attack_feedback.py -q`
 - `.venv/bin/python tools/lane_maturity.py validate`
 - Review policy checks on touched source/test/tool files: 0 violations, excluding the large frontier feedback test file which was run for evidence but left unstaged because of pre-existing unrelated review debt.
+- Local refresh smoke:
+  `.venv/bin/python tools/build_frontier_rate_attack_feedback_refresh.py --output-dir .omx/research/frontier_rate_attack_feedback_posterior_followup_smoke_20260527T204506Z --results-root /Volumes/VertigoDataTier/pact/frontier_rate_attack_feedback_posterior_followup_smoke_20260527T204506Z --frontier-artifact-root .omx/research/frontier_final_rate_attack_activation_posterior_smoke_20260527T2021Z --candidate-limit 2 --max-files-per-root 64 --local-cpu-concurrency 1 --local-io-concurrency 1 --action-summary latest`
+- Follow-up queue validation:
+  `.venv/bin/python tools/experiment_queue.py --queue .omx/research/frontier_rate_attack_feedback_posterior_followup_smoke_20260527T204506Z/repair_posterior_acquisition_followup_queue.json validate`
+  returned valid with 2 experiments and 5 steps.
 
 ## Remaining Work
 
-The next concrete actuator is to run a bounded local feedback refresh smoke and
-confirm the new follow-up queue appears in the emitted artifact map, validates,
-and either executes or freezes with precise missing-evidence blockers.
+The next concrete actuator is to run the new posterior follow-up queue bounded
+locally and verify it advances targeted response harvest and MLX custody repair
+without granting score or dispatch authority.
