@@ -1231,6 +1231,112 @@ def test_observer_surfaces_succeeded_materializer_feedback_artifact(
     assert artifact["postcondition_passed"] is True
 
 
+def test_observer_rejects_jsonl_custody_row_with_only_proof_present_flag(
+    tmp_path: Path,
+) -> None:
+    candidate_archive = _write_artifact_bytes(
+        tmp_path / "jsonl_custody_candidate.zip",
+        b"jsonl custody candidate bytes",
+    )
+    observation_jsonl = tmp_path / "custody_observations.jsonl"
+    observation_jsonl.write_text(
+        json.dumps(
+            {
+                "schema": "generic_candidate_custody_observation.v1",
+                "candidate_id": "jsonl_custody_candidate",
+                "candidate_archive": candidate_archive,
+                "receiver_contract_satisfied": True,
+                "receiver_verification": {
+                    "schema": (
+                        "family_agnostic_runtime_consumption_proof_verification.v1"
+                    ),
+                    "receiver_contract_satisfied": True,
+                    "proof_present": True,
+                    "blockers": [],
+                },
+                "score_claim": False,
+                "score_claim_valid": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "promotable": False,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+                "gpu_launched": False,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    state = tmp_path / "queue.sqlite"
+    queue = {
+        "schema": "experiment_queue.v1",
+        "queue_id": "observer_test",
+        "controls": {"mode": "running", "max_concurrency": {"local_cpu": 1}},
+        "experiments": [
+            {
+                "id": "jsonl_custody_experiment",
+                "status": "queued",
+                "priority": 1,
+                "steps": [
+                    {
+                        "id": "observe_custody_jsonl",
+                        "kind": "command",
+                        "command": ["python", "emit_custody_jsonl.py"],
+                        "resources": {"kind": "local_cpu"},
+                        "postconditions": [
+                            {
+                                "type": "jsonl_false_authority",
+                                "path": observation_jsonl.as_posix(),
+                                "schema_equals": (
+                                    "generic_candidate_custody_observation.v1"
+                                ),
+                                "require_nonempty": True,
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'succeeded',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-05-27T18:00:00Z'
+            WHERE queue_id = 'observer_test'
+              AND experiment_id = 'jsonl_custody_experiment'
+              AND step_id = 'observe_custody_jsonl'
+            """,
+            (json.dumps({"command": ["python", "emit_custody_jsonl.py"]}),),
+        )
+        conn.commit()
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=0,
+    )
+
+    assert observation["healthy"] is False
+    failed_step = observation["succeeded_artifact_failure_steps"][0]
+    artifact = failed_step["expected_artifacts"][0]
+    assert artifact["postcondition_type"] == "jsonl_false_authority"
+    assert artifact["postcondition_passed"] is False
+    assert (
+        "row_1:jsonl_custody_runtime_or_receiver_proof_path_missing"
+        in artifact["artifact_revalidation_blockers"]
+    )
+    assert "experiment_queue_observation_artifact_postcondition_failures:1" in (
+        observation["blockers"]
+    )
+
+
 def test_observer_surfaces_succeeded_single_family_materializer_manifests(
     tmp_path: Path,
 ) -> None:

@@ -593,6 +593,16 @@ def _jsonl_false_authority_revalidation(
                         f"row_{index}:{blocker}"
                         for blocker in materializer_validation.get("blockers", [])
                     )
+                elif _payload_has_custody_claim(row):
+                    custody_validation = _generic_custody_payload_revalidation(
+                        row,
+                        repo_root=repo_root,
+                        context="jsonl_custody",
+                    )
+                    blockers.extend(
+                        f"row_{index}:{blocker}"
+                        for blocker in custody_validation.get("blockers", [])
+                    )
     except OSError as exc:
         blockers.append(f"jsonl_false_authority_read_failed:{type(exc).__name__}")
     if bool(condition.get("require_nonempty", True)) and row_count == 0:
