@@ -49,6 +49,7 @@ from tac.optimization.family_agnostic_materializers import (
     PACKET_MEMBER_RECOMPRESS_SCHEMA,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
     RENDERER_PAYLOAD_DFL1_SCHEMA,
+    RUNTIME_CONSUMPTION_PROOF_SCHEMA,
     TENSOR_FACTORIZE_SCHEMA,
     materialize_archive_section_entropy_recode_candidate,
     materialize_packet_member_recompress_candidate,
@@ -969,6 +970,75 @@ def test_harvest_family_agnostic_declaration_only_proof_is_not_receiver_ready(
     assert "runtime_consumption_proof_file_missing" in row["readiness_blockers"]
     assert "family_agnostic_receiver_contract_not_satisfied" in row[
         "dispatch_blockers"
+    ]
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_harvest_family_agnostic_runtime_ready_requires_proof_identity(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    external = tmp_path / "VertigoDataTier"
+    manifest = _family_agnostic_manifest(external)
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    runtime_dir = _write_simple_shell_runtime(external / "candidate_runtime")
+    runtime_tree_sha = tree_sha256(runtime_dir)
+    proof = _write_json(
+        external / "runtime_consumption_proof.json",
+        {
+            "schema": RUNTIME_CONSUMPTION_PROOF_SCHEMA,
+            "proof_kind": "fixture_receiver_without_runtime_identity",
+            "target_kind": payload["target_kind"],
+            "materializer_id": payload["materializer_id"],
+            "receiver_contract_kind": "family_agnostic_packet_member_recompress",
+            "candidate_archive": payload["candidate_archive"],
+            "candidate_archive_sha256": payload["candidate_archive"]["sha256"],
+            "runtime_consumption_proof_passed": True,
+            "receiver_contract_satisfied": True,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_attempted": False,
+            "gpu_launched": False,
+            "blockers": [],
+        },
+    )
+    payload.update(
+        {
+            "receiver_contract_satisfied": True,
+            "receiver_contract_kind": "family_agnostic_packet_member_recompress",
+            "runtime_adapter_ready": True,
+            "candidate_runtime_adapter_blocker_cleared": True,
+            "candidate_runtime_dir": str(runtime_dir),
+            "candidate_runtime_tree_sha256": runtime_tree_sha,
+            "runtime_consumption_proof_path": str(proof),
+            "receiver_verification": {
+                "schema": "family_agnostic_runtime_consumption_proof_verification.v1",
+                "receiver_contract_satisfied": True,
+                "runtime_adapter_ready": True,
+                "proof_present": True,
+                "proof_path": str(proof),
+                "blockers": [],
+            },
+            "readiness_blockers": [],
+        }
+    )
+    _write_json(manifest, payload)
+
+    result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[manifest],
+    )
+
+    row = result["source_queue"]["top_k"][0]
+    assert result["report"]["accepted_manifest_count"] == 1
+    assert row["receiver_contract_satisfied"] is True
+    assert row["runtime_adapter_ready"] is False
+    assert row["candidate_runtime_adapter_blocker_cleared"] is False
+    assert "runtime_consumption_proof:runtime_adapter_identity_claim_missing" in row[
+        "readiness_blockers"
     ]
     assert row["ready_for_exact_eval_dispatch"] is False
 

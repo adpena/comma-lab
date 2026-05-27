@@ -330,6 +330,7 @@ def _proof_record_blockers(
     repo_root: Path,
     context: str,
     expected_candidate_archive_sha256: str | None = None,
+    require_runtime_identity: bool = False,
 ) -> list[str]:
     validation = _file_custody_revalidation(
         record,
@@ -362,10 +363,20 @@ def _proof_record_blockers(
         elif proof_archive_sha != expected_candidate_archive_sha256:
             blockers.append(f"{context}_proof_candidate_archive_sha256_mismatch")
     runtime_manifest = proof.get("runtime_adapter_manifest")
-    if proof.get("runtime_adapter_ready") is True or (
+    proof_claims_runtime_identity = proof.get("runtime_adapter_ready") is True or (
         isinstance(runtime_manifest, Mapping)
         and runtime_manifest.get("runtime_adapter_ready") is True
-    ):
+    )
+    if require_runtime_identity:
+        blockers.extend(
+            runtime_adapter_identity_blockers(
+                proof,
+                repo_root=repo_root,
+                context=f"{context}_proof",
+                require_claimed=True,
+            )
+        )
+    elif proof_claims_runtime_identity:
         blockers.extend(
             runtime_adapter_identity_blockers(
                 proof,
@@ -404,6 +415,10 @@ def _receiver_runtime_proof_blockers(
     if not proof_records:
         blockers.append(f"{context}_runtime_or_receiver_proof_path_missing")
     expected_archive_sha = _candidate_archive_sha256(payload)
+    require_proof_runtime_identity = (
+        payload.get("runtime_adapter_ready") is True
+        or receiver.get("runtime_adapter_ready") is True
+    )
     for proof_record in proof_records:
         blockers.extend(
             _proof_record_blockers(
@@ -411,6 +426,7 @@ def _receiver_runtime_proof_blockers(
                 repo_root=repo_root,
                 context=context,
                 expected_candidate_archive_sha256=expected_archive_sha,
+                require_runtime_identity=require_proof_runtime_identity,
             )
         )
     return blockers

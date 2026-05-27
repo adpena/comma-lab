@@ -37,6 +37,7 @@ from tac.optimization.runtime_adapter_identity import (
     RUNTIME_TREE_SHA_FIELDS,
     runtime_adapter_identity_blockers,
     runtime_adapter_identity_claimed,
+    runtime_adapter_tree_sha256_from_mapping,
 )
 from tac.optimization.serialized_archive_economics import (
     build_serialized_archive_delta_contract,
@@ -460,24 +461,36 @@ def _family_agnostic_runtime_identity_blockers(
     repo_root: Path,
 ) -> list[str]:
     blockers: list[str] = []
+    manifest_claims_ready = runtime_adapter_identity_claimed(manifest)
+    proof_claims_ready = runtime_adapter_identity_claimed(runtime_proof)
+    manifest_claims_identity = _concrete_runtime_adapter_identity_claimed(manifest)
     proof_claims_identity = _concrete_runtime_adapter_identity_claimed(runtime_proof)
-    if _concrete_runtime_adapter_identity_claimed(manifest) and not proof_claims_identity:
+    if manifest_claims_identity:
         blockers.extend(
             runtime_adapter_identity_blockers(
                 manifest,
                 repo_root=repo_root,
                 context="family_agnostic_materializer_manifest",
+                require_claimed=True,
             )
         )
-    if proof_claims_identity:
+    if manifest_claims_ready and not proof_claims_identity:
+        blockers.append("runtime_consumption_proof:runtime_adapter_identity_claim_missing")
+    if proof_claims_ready:
         blockers.extend(
             f"runtime_consumption_proof:{blocker}"
             for blocker in runtime_adapter_identity_blockers(
                 runtime_proof,
                 repo_root=repo_root,
                 context="runtime_consumption_proof",
+                require_claimed=True,
             )
         )
+    if manifest_claims_identity and proof_claims_identity:
+        manifest_tree_sha = runtime_adapter_tree_sha256_from_mapping(manifest)
+        proof_tree_sha = runtime_adapter_tree_sha256_from_mapping(runtime_proof)
+        if manifest_tree_sha is not None and proof_tree_sha is not None and manifest_tree_sha != proof_tree_sha:
+            blockers.append("runtime_consumption_proof:runtime_adapter_tree_sha256_mismatch")
     return ordered_unique(blockers)
 
 
@@ -519,7 +532,7 @@ def _concrete_runtime_adapter_identity_claimed(payload: Mapping[str, Any]) -> bo
             _string_or_none(mapping.get(key)) is not None
             for key in _RUNTIME_ADAPTER_FILE_SHA_FIELDS
         )
-        if has_file_path or has_file_sha:
+        if has_file_path and has_file_sha:
             return True
     return False
 
