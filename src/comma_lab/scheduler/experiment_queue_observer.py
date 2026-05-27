@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import Any
 
 from comma_lab.scheduler.experiment_queue import (
+    DEFAULT_FALSE_OR_MISSING_AUTHORITY_FIELDS,
+    DEFAULT_REQUIRED_FALSE_AUTHORITY_FIELDS,
     ExperimentQueueError,
     _condition_passes,
     connect_state_readonly,
@@ -25,7 +27,9 @@ from tac.optimization.materializer_feedback import (
     MATERIALIZER_FALSE_AUTHORITY,
     materializer_archive_delta,
 )
+from tac.optimization.proxy_candidate_contract import truthy_authority_field_violations
 from tac.optimization.serialized_archive_economics import SERIALIZED_ARCHIVE_DELTA_SCHEMA
+from tac.repo_io import tree_sha256
 
 OBSERVATION_SCHEMA = "experiment_queue_observation.v1"
 LOCAL_TRAINING_SIGNAL_OBSERVATION_SCHEMA = "local_training_signal_observation.v1"
@@ -50,6 +54,40 @@ REQUIRED_MATERIALIZER_FEEDBACK_FALSE_AUTHORITY_FIELDS = (
     "promotion_eligible",
     "rank_or_kill_eligible",
     "ready_for_exact_eval_dispatch",
+)
+MATERIALIZER_EFFECT_FLAG_FIELDS = frozenset(
+    {"score_affecting_payload_changed", "charged_bits_changed"}
+)
+RUNTIME_PROOF_PATH_FIELDS = (
+    "runtime_consumption_proof_path",
+    "full_frame_inflate_parity_proof_path",
+    "renderer_payload_dfl1_full_frame_inflate_parity_proof_path",
+    "proof_path",
+)
+RUNTIME_PROOF_MAPPING_FIELDS = (
+    "runtime_consumption_proof",
+    "full_frame_inflate_parity_proof",
+    "proof",
+)
+RUNTIME_DIR_FIELDS = (
+    "candidate_runtime_dir",
+    "runtime_dir",
+    "inflate_runtime_dir",
+    "source_runtime_dir",
+)
+RUNTIME_TREE_SHA_FIELDS = (
+    "candidate_runtime_tree_sha256",
+    "runtime_tree_sha256",
+    "inflate_runtime_tree_sha256",
+    "runtime_adapter_sha256",
+    "runtime_adapter_tree_sha256",
+)
+PROOF_SUCCESS_FIELDS = (
+    "passed",
+    "runtime_consumption_proof_passed",
+    "receiver_contract_satisfied",
+    "full_frame_inflate_parity_satisfied",
+    "source_runtime_unpacker_parse_satisfied",
 )
 
 
@@ -81,6 +119,511 @@ def _json_load_lenient(path: Path) -> Mapping[str, Any] | None:
     except (OSError, json.JSONDecodeError, UnicodeDecodeError):
         return None
     return payload if isinstance(payload, Mapping) else None
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _is_sha256(value: Any) -> bool:
+    text = str(value or "").strip().lower()
+    return len(text) == 64 and all(ch in "0123456789abcdef" for ch in text)
+
+
+def _resolve_payload_path(raw_path: Any, *, repo_root: Path) -> Path | None:
+    if not isinstance(raw_path, str) or not raw_path.strip():
+        return None
+    path = Path(raw_path)
+    return path if path.is_absolute() else repo_root / path
+
+
+def _file_custody_revalidation(
+    record: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    label: str,
+    require_bytes: bool,
+    require_sha256: bool,
+) -> dict[str, Any]:
+    blockers: list[str] = []
+    path = _resolve_payload_path(record.get("path"), repo_root=repo_root)
+    out: dict[str, Any] = {
+        "schema": "observer_file_custody_revalidation.v1",
+        "label": label,
+        "valid": False,
+        "blockers": blockers,
+    }
+    if path is None:
+        blockers.append(f"{label}_path_missing")
+        return out
+    out["path"] = _repo_rel(path, repo_root)
+    if path.is_symlink():
+        blockers.append(f"{label}_path_is_symlink")
+        return out
+    if not path.is_file():
+        blockers.append(f"{label}_file_missing")
+        return out
+    try:
+        actual_bytes = path.stat().st_size
+    except OSError as exc:
+        blockers.append(f"{label}_stat_failed:{type(exc).__name__}")
+        return out
+    out["actual_bytes"] = actual_bytes
+    expected_bytes = _positive_int(record.get("bytes"))
+    if expected_bytes is None:
+        if require_bytes:
+            blockers.append(f"{label}_bytes_missing")
+    else:
+        out["expected_bytes"] = expected_bytes
+        if actual_bytes != expected_bytes:
+            blockers.append(f"{label}_bytes_mismatch")
+    expected_sha256 = str(record.get("sha256") or "").strip().lower()
+    if not _is_sha256(expected_sha256):
+        if require_sha256:
+            blockers.append(f"{label}_sha256_missing_or_invalid")
+    else:
+        out["expected_sha256"] = expected_sha256
+        try:
+            actual_sha256 = _sha256_file(path)
+        except OSError as exc:
+            blockers.append(f"{label}_sha256_failed:{type(exc).__name__}")
+        else:
+            out["actual_sha256"] = actual_sha256
+            if actual_sha256 != expected_sha256:
+                blockers.append(f"{label}_sha256_mismatch")
+    out["valid"] = not blockers
+    return out
+
+
+def _candidate_archive_record(payload: Mapping[str, Any]) -> dict[str, Any]:
+    candidate = payload.get("candidate_archive")
+    out: dict[str, Any] = dict(candidate) if isinstance(candidate, Mapping) else {}
+    for source_key, target_key in (
+        ("candidate_archive_path", "path"),
+        ("archive_path", "path"),
+        ("candidate_archive_bytes", "bytes"),
+        ("archive_bytes", "bytes"),
+        ("candidate_archive_sha256", "sha256"),
+        ("archive_sha256", "sha256"),
+    ):
+        if target_key not in out and source_key in payload:
+            out[target_key] = payload[source_key]
+    return {key: value for key, value in out.items() if value not in (None, "")}
+
+
+def _readiness_blockers_from_payload(payload: Mapping[str, Any]) -> list[str]:
+    blockers = [str(item) for item in payload.get("readiness_blockers") or [] if str(item)]
+    refusal = payload.get("exact_readiness_refusal")
+    if isinstance(refusal, Mapping):
+        _extend_unique(
+            blockers,
+            [str(item) for item in refusal.get("blockers") or [] if str(item)],
+        )
+    return blockers
+
+
+def _false_authority_payload_blockers(
+    payload: Mapping[str, Any],
+    *,
+    context: str,
+    allow_materializer_effect_flags: bool = False,
+) -> list[str]:
+    blockers: list[str] = []
+    required_false = tuple(
+        dict.fromkeys(
+            (
+                *DEFAULT_REQUIRED_FALSE_AUTHORITY_FIELDS,
+                *REQUIRED_MATERIALIZER_FEEDBACK_FALSE_AUTHORITY_FIELDS,
+            )
+        )
+    )
+    false_or_missing = tuple(
+        dict.fromkeys(
+            (
+                *DEFAULT_FALSE_OR_MISSING_AUTHORITY_FIELDS,
+                *MATERIALIZER_FALSE_AUTHORITY.keys(),
+            )
+        )
+    )
+    for key in required_false:
+        if payload.get(key) is not False:
+            blockers.append(f"{context}_{key}_must_be_false")
+    for key in false_or_missing:
+        if allow_materializer_effect_flags and key in MATERIALIZER_EFFECT_FLAG_FIELDS:
+            continue
+        if key in payload and payload.get(key) is not False:
+            blockers.append(f"{context}_{key}_must_be_false_or_missing")
+    for violation in truthy_authority_field_violations(payload):
+        blockers.append(f"{context}_truthy_authority:{violation}")
+    return blockers
+
+
+def _false_authority_revalidation(
+    payload: Mapping[str, Any],
+    *,
+    context: str,
+) -> dict[str, Any]:
+    blockers = _false_authority_payload_blockers(payload, context=context)
+    return {
+        "schema": "observer_false_authority_revalidation.v1",
+        "valid": not blockers,
+        "blockers": blockers,
+    }
+
+
+def _runtime_proof_records(payload: Mapping[str, Any]) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+
+    def add_from_mapping(mapping: Mapping[str, Any], *, prefix: str = "") -> None:
+        for path_key in RUNTIME_PROOF_PATH_FIELDS:
+            path_value = mapping.get(path_key)
+            if not isinstance(path_value, str) or not path_value.strip():
+                continue
+            base = path_key[: -len("_path")] if path_key.endswith("_path") else path_key
+            record = {"path": path_value}
+            for source_key, target_key in (
+                (f"{base}_bytes", "bytes"),
+                (f"{base}_sha256", "sha256"),
+                ("proof_bytes", "bytes"),
+                ("proof_sha256", "sha256"),
+            ):
+                if target_key not in record and source_key in mapping:
+                    record[target_key] = mapping[source_key]
+            records.append(record)
+        for mapping_key in RUNTIME_PROOF_MAPPING_FIELDS:
+            value = mapping.get(mapping_key)
+            if isinstance(value, Mapping):
+                candidate = _candidate_archive_record(value)
+                if "path" in value:
+                    candidate["path"] = value["path"]
+                if candidate:
+                    records.append(candidate)
+        receiver = mapping.get("receiver_verification")
+        if isinstance(receiver, Mapping) and not prefix:
+            add_from_mapping(receiver, prefix="receiver_verification")
+
+    add_from_mapping(payload)
+    return records
+
+
+def _candidate_archive_sha256(payload: Mapping[str, Any]) -> str | None:
+    candidate = _candidate_archive_record(payload)
+    value = candidate.get("sha256")
+    if _is_sha256(value):
+        return str(value).strip().lower()
+    return None
+
+
+def _proof_candidate_archive_sha256(proof: Mapping[str, Any]) -> str | None:
+    candidate_archive = proof.get("candidate_archive")
+    if isinstance(candidate_archive, Mapping) and _is_sha256(candidate_archive.get("sha256")):
+        return str(candidate_archive["sha256"]).strip().lower()
+    for key in ("candidate_archive_sha256", "archive_sha256"):
+        if _is_sha256(proof.get(key)):
+            return str(proof[key]).strip().lower()
+    return None
+
+
+def _runtime_tree_sha256_from_mapping(mapping: Mapping[str, Any]) -> str | None:
+    for key in RUNTIME_TREE_SHA_FIELDS:
+        if _is_sha256(mapping.get(key)):
+            return str(mapping[key]).strip().lower()
+    for nested_key in (
+        "runtime_adapter_manifest",
+        "receiver_verification",
+        "runtime_manifest",
+        "candidate_runtime",
+    ):
+        nested = mapping.get(nested_key)
+        if isinstance(nested, Mapping):
+            value = _runtime_tree_sha256_from_mapping(nested)
+            if value is not None:
+                return value
+    return None
+
+
+def _runtime_identity_blockers(
+    payload: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    context: str,
+) -> list[str]:
+    runtime_claimed = payload.get("runtime_adapter_ready") is True or payload.get(
+        "candidate_runtime_adapter_blocker_cleared"
+    ) is True
+    receiver = payload.get("receiver_verification")
+    if isinstance(receiver, Mapping):
+        runtime_claimed = runtime_claimed or receiver.get("runtime_adapter_ready") is True
+    if not runtime_claimed:
+        return []
+
+    blockers: list[str] = []
+    expected_sha = _runtime_tree_sha256_from_mapping(payload)
+    if expected_sha is None:
+        blockers.append(f"{context}_runtime_tree_sha256_missing")
+    runtime_dirs = [
+        _resolve_payload_path(payload.get(key), repo_root=repo_root)
+        for key in RUNTIME_DIR_FIELDS
+        if isinstance(payload.get(key), str) and str(payload.get(key)).strip()
+    ]
+    runtime_dirs = [path for path in runtime_dirs if path is not None]
+    if not runtime_dirs:
+        blockers.append(f"{context}_runtime_dir_missing_for_tree_identity")
+        return blockers
+    live_tree_checked = False
+    for runtime_dir in runtime_dirs:
+        if runtime_dir.is_symlink():
+            blockers.append(f"{context}_runtime_dir_is_symlink")
+            continue
+        if not runtime_dir.is_dir():
+            blockers.append(f"{context}_runtime_dir_missing")
+            continue
+        if not (runtime_dir / "inflate.sh").is_file():
+            blockers.append(f"{context}_runtime_dir_missing_inflate_sh")
+            continue
+        live_tree_checked = True
+        actual_sha = tree_sha256(runtime_dir).lower()
+        if expected_sha is not None and actual_sha != expected_sha:
+            blockers.append(f"{context}_runtime_tree_sha256_mismatch")
+    if not live_tree_checked:
+        blockers.append(f"{context}_runtime_tree_live_identity_unverified")
+    return blockers
+
+
+def _proof_record_blockers(
+    record: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    context: str,
+    expected_candidate_archive_sha256: str | None = None,
+) -> list[str]:
+    validation = _file_custody_revalidation(
+        record,
+        repo_root=repo_root,
+        label=f"{context}_proof",
+        require_bytes=False,
+        require_sha256=False,
+    )
+    blockers = [str(item) for item in validation.get("blockers") or [] if str(item)]
+    path = _resolve_payload_path(record.get("path"), repo_root=repo_root)
+    if path is not None and path.suffix != ".json":
+        blockers.append(f"{context}_proof_json_file_required")
+    if blockers or path is None:
+        return blockers
+    proof = _json_load_lenient(path)
+    if proof is None:
+        blockers.append(f"{context}_proof_json_invalid")
+        return blockers
+    proof_blockers = proof.get("blockers")
+    if isinstance(proof_blockers, list) and proof_blockers:
+        blockers.append(f"{context}_proof_json_blockers_present")
+    if truthy_authority_field_violations(proof):
+        blockers.append(f"{context}_proof_json_truthy_authority_present")
+    if not any(proof.get(key) is True for key in PROOF_SUCCESS_FIELDS):
+        blockers.append(f"{context}_proof_json_success_flag_missing")
+    proof_archive_sha = _proof_candidate_archive_sha256(proof)
+    if expected_candidate_archive_sha256 is not None:
+        if proof_archive_sha is None:
+            blockers.append(f"{context}_proof_candidate_archive_sha256_missing")
+        elif proof_archive_sha != expected_candidate_archive_sha256:
+            blockers.append(f"{context}_proof_candidate_archive_sha256_mismatch")
+    runtime_manifest = proof.get("runtime_adapter_manifest")
+    if (
+        proof.get("runtime_adapter_ready") is True
+        or (isinstance(runtime_manifest, Mapping) and runtime_manifest.get("runtime_adapter_ready") is True)
+    ) and _runtime_tree_sha256_from_mapping(proof) is None:
+        blockers.append(f"{context}_proof_runtime_tree_sha256_missing")
+    for key in (
+        "passed",
+        "runtime_consumption_proof_passed",
+        "receiver_contract_satisfied",
+    ):
+        if key in proof and proof.get(key) is not True:
+            blockers.append(f"{context}_proof_json_{key}_not_true")
+    return blockers
+
+
+def _receiver_runtime_proof_blockers(
+    payload: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    context: str,
+) -> list[str]:
+    blockers: list[str] = []
+    receiver = payload.get("receiver_verification")
+    receiver = receiver if isinstance(receiver, Mapping) else {}
+    receiver_blockers = receiver.get("blockers")
+    if isinstance(receiver_blockers, list) and receiver_blockers:
+        blockers.append(f"{context}_receiver_verification_blockers_present")
+    if (
+        payload.get("receiver_contract_satisfied") is not True
+        and receiver.get("receiver_contract_satisfied") is not True
+    ):
+        blockers.append(f"{context}_receiver_contract_not_independently_satisfied")
+    proof_records = _runtime_proof_records(payload)
+    if not proof_records:
+        blockers.append(f"{context}_runtime_or_receiver_proof_path_missing")
+    expected_archive_sha = _candidate_archive_sha256(payload)
+    for proof_record in proof_records:
+        blockers.extend(
+            _proof_record_blockers(
+                proof_record,
+                repo_root=repo_root,
+                context=context,
+                expected_candidate_archive_sha256=expected_archive_sha,
+            )
+        )
+    return blockers
+
+
+def _payload_has_materializer_contract(payload: Mapping[str, Any]) -> bool:
+    return (
+        str(payload.get("schema") or "") in FAMILY_AGNOSTIC_MATERIALIZER_CANDIDATE_SCHEMAS
+        or _artifact_has_materializer_identity(payload)
+    )
+
+
+def _materializer_payload_revalidation(
+    payload: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    context: str,
+) -> dict[str, Any]:
+    blockers = _false_authority_payload_blockers(
+        payload,
+        context=context,
+        allow_materializer_effect_flags=True,
+    )
+    candidate_archive = _candidate_archive_record(payload)
+    candidate_validation = _file_custody_revalidation(
+        candidate_archive,
+        repo_root=repo_root,
+        label=f"{context}_candidate_archive",
+        require_bytes=True,
+        require_sha256=True,
+    )
+    blockers.extend(
+        str(item) for item in candidate_validation.get("blockers") or [] if str(item)
+    )
+    blockers.extend(
+        _receiver_runtime_proof_blockers(
+            payload,
+            repo_root=repo_root,
+            context=context,
+        )
+    )
+    blockers.extend(_runtime_identity_blockers(payload, repo_root=repo_root, context=context))
+    return {
+        "schema": "observer_materializer_payload_revalidation.v1",
+        "valid": not blockers,
+        "blockers": blockers,
+        "candidate_archive": candidate_validation,
+    }
+
+
+def _jsonl_false_authority_revalidation(
+    condition: Mapping[str, Any],
+    *,
+    repo_root: Path,
+) -> dict[str, Any]:
+    path = _resolve_payload_path(condition.get("path"), repo_root=repo_root)
+    blockers: list[str] = []
+    row_count = 0
+    if path is None:
+        blockers.append("jsonl_false_authority_path_missing")
+        return {
+            "schema": "observer_jsonl_false_authority_revalidation.v1",
+            "valid": False,
+            "row_count": row_count,
+            "blockers": blockers,
+        }
+    if path.is_symlink():
+        blockers.append("jsonl_false_authority_path_is_symlink")
+    elif not path.is_file():
+        blockers.append("jsonl_false_authority_file_missing")
+    if blockers:
+        return {
+            "schema": "observer_jsonl_false_authority_revalidation.v1",
+            "valid": False,
+            "row_count": row_count,
+            "blockers": blockers,
+        }
+    schema_equals = condition.get("schema_equals")
+    try:
+        with path.open(encoding="utf-8") as handle:
+            for index, line in enumerate(handle, start=1):
+                text = line.strip()
+                if not text:
+                    continue
+                row_count += 1
+                try:
+                    row = json.loads(text)
+                except json.JSONDecodeError:
+                    blockers.append(f"row_{index}_json_invalid")
+                    continue
+                if not isinstance(row, Mapping):
+                    blockers.append(f"row_{index}_not_object")
+                    continue
+                if schema_equals is not None and row.get("schema") != schema_equals:
+                    blockers.append(f"row_{index}_schema_mismatch")
+                blockers.extend(
+                    f"row_{index}:{blocker}"
+                    for blocker in _false_authority_payload_blockers(
+                        row,
+                        context="jsonl_false_authority",
+                    )
+                )
+                if _payload_has_materializer_contract(row):
+                    materializer_validation = _materializer_payload_revalidation(
+                        row,
+                        repo_root=repo_root,
+                        context="jsonl_materializer",
+                    )
+                    blockers.extend(
+                        f"row_{index}:{blocker}"
+                        for blocker in materializer_validation.get("blockers", [])
+                    )
+    except OSError as exc:
+        blockers.append(f"jsonl_false_authority_read_failed:{type(exc).__name__}")
+    if bool(condition.get("require_nonempty", True)) and row_count == 0:
+        blockers.append("jsonl_false_authority_empty")
+    return {
+        "schema": "observer_jsonl_false_authority_revalidation.v1",
+        "valid": not blockers,
+        "row_count": row_count,
+        "blockers": blockers,
+    }
+
+
+def _local_training_signal_revalidation(
+    payload: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    context: str,
+) -> dict[str, Any]:
+    blockers = _false_authority_payload_blockers(payload, context=context)
+    proof_records = _runtime_proof_records(payload)
+    proof_blockers: list[str] = []
+    for proof_record in proof_records:
+        proof_blockers.extend(
+            _proof_record_blockers(proof_record, repo_root=repo_root, context=context)
+        )
+    has_independent_proof = bool(proof_records) and not proof_blockers
+    blockers.extend(proof_blockers)
+    if not has_independent_proof and not _readiness_blockers_from_payload(payload):
+        blockers.append(
+            f"{context}_requires_readiness_blockers_or_exact_readiness_refusal_without_independent_proof"
+        )
+    return {
+        "schema": "observer_local_training_signal_revalidation.v1",
+        "valid": not blockers,
+        "blockers": blockers,
+        "independent_proof_present": has_independent_proof,
+    }
 
 
 def _tail_text(path: Path, *, max_lines: int, max_bytes: int = 64_000) -> list[str]:
@@ -369,7 +912,16 @@ def _path_artifact_record(path: Path, *, repo_root: Path) -> dict[str, Any]:
                     if key in score
                 }
             if record.get("json_schema") == OPTIMIZER_CANDIDATE_QUEUE_SCHEMA:
-                materializer_rows = _optimizer_candidate_queue_materializer_rows(payload)
+                materializer_rows, row_blockers = (
+                    _optimizer_candidate_queue_materializer_rows(
+                        payload,
+                        repo_root=repo_root,
+                    )
+                )
+                if row_blockers:
+                    record[
+                        "optimizer_candidate_queue_materializer_row_revalidation_blockers"
+                    ] = row_blockers
                 if materializer_rows:
                     record["optimizer_candidate_queue_materializer_row_count"] = len(
                         materializer_rows
@@ -382,24 +934,40 @@ def _path_artifact_record(path: Path, *, repo_root: Path) -> dict[str, Any]:
 
 def _optimizer_candidate_queue_materializer_rows(
     payload: Mapping[str, Any],
-) -> list[dict[str, Any]]:
+    *,
+    repo_root: Path,
+) -> tuple[list[dict[str, Any]], list[str]]:
     rows: list[dict[str, Any]] = []
+    blockers: list[str] = []
     top_k = payload.get("top_k")
     if not isinstance(top_k, Sequence) or isinstance(
         top_k,
         (str, bytes, bytearray),
     ):
-        return rows
+        return rows, blockers
     for row_index, raw_row in enumerate(top_k):
         if not isinstance(raw_row, Mapping):
+            continue
+        revalidation = _materializer_payload_revalidation(
+            raw_row,
+            repo_root=repo_root,
+            context=f"optimizer_candidate_queue_top_k_{row_index}",
+        )
+        if not revalidation.get("valid"):
+            blockers.extend(
+                f"top_k[{row_index}]:{blocker}"
+                for blocker in revalidation.get("blockers", [])
+                if str(blocker)
+            )
             continue
         materializer_row = _optimizer_candidate_queue_materializer_row(
             raw_row,
             row_index=row_index,
         )
         if materializer_row is not None:
+            materializer_row["artifact_revalidation"] = revalidation
             rows.append(materializer_row)
-    return rows
+    return rows, blockers
 
 
 def _optimizer_candidate_queue_materializer_row(
@@ -571,6 +1139,12 @@ def _extend_unique(out: list[str], values: Sequence[Any]) -> None:
             out.append(text)
 
 
+def _dedupe_strings(values: Sequence[Any]) -> list[str]:
+    out: list[str] = []
+    _extend_unique(out, values)
+    return out
+
+
 def _artifact_paths_from_telemetry(
     step: Mapping[str, Any],
     *,
@@ -666,8 +1240,101 @@ def _expected_artifacts(
         ) as exc:
             record["postcondition_passed"] = False
             record["postcondition_error"] = f"{type(exc).__name__}: {exc}"
+        revalidation = _artifact_postcondition_revalidation(
+            record,
+            condition,
+            path=path,
+            repo_root=repo_root,
+        )
+        if revalidation:
+            record["artifact_revalidation"] = revalidation
+            blockers = [
+                str(item)
+                for item in revalidation.get("blockers", [])
+                if str(item)
+            ]
+            if blockers:
+                record["artifact_revalidation_blockers"] = blockers
+                record["postcondition_passed"] = False
         artifacts.append(record)
     return artifacts
+
+
+def _artifact_postcondition_revalidation(
+    record: Mapping[str, Any],
+    condition: Mapping[str, Any],
+    *,
+    path: Path,
+    repo_root: Path,
+) -> dict[str, Any]:
+    postcondition_type = str(condition.get("type") or "")
+    blockers: list[str] = []
+    details: dict[str, Any] = {
+        "schema": "experiment_queue_observer_artifact_revalidation.v1",
+        "postcondition_type": postcondition_type,
+        "valid": True,
+        "blockers": blockers,
+    }
+    if record.get("exists") is not True:
+        return details
+    if postcondition_type == "jsonl_false_authority":
+        jsonl = _jsonl_false_authority_revalidation(condition, repo_root=repo_root)
+        details["jsonl_false_authority"] = jsonl
+        blockers.extend(str(item) for item in jsonl.get("blockers", []) if str(item))
+        details["blockers"] = _dedupe_strings(blockers)
+        details["valid"] = not details["blockers"]
+        return details
+
+    payload = _json_load_lenient(path) if path.suffix == ".json" else None
+    if postcondition_type == "json_false_authority":
+        if payload is None:
+            blockers.append("json_false_authority_payload_not_object")
+        else:
+            false_authority = _false_authority_revalidation(
+                payload,
+                context="json_false_authority",
+            )
+            details["false_authority"] = false_authority
+            blockers.extend(
+                str(item)
+                for item in false_authority.get("blockers", [])
+                if str(item)
+            )
+    if payload is not None and _payload_has_materializer_contract(payload):
+        materializer = _materializer_payload_revalidation(
+            payload,
+            repo_root=repo_root,
+            context=f"{postcondition_type}_materializer",
+        )
+        details["materializer"] = materializer
+        blockers.extend(
+            str(item)
+            for item in materializer.get("blockers", [])
+            if str(item)
+        )
+    if payload is not None and payload.get("schema") == HINTON_MLX_LONG_TRAINING_SMOKE_SCHEMA:
+        local_training = _local_training_signal_revalidation(
+            payload,
+            repo_root=repo_root,
+            context=f"{postcondition_type}_local_training",
+        )
+        details["local_training_signal"] = local_training
+        blockers.extend(
+            str(item)
+            for item in local_training.get("blockers", [])
+            if str(item)
+        )
+    if record.get("optimizer_candidate_queue_materializer_row_revalidation_blockers"):
+        blockers.extend(
+            str(item)
+            for item in record[
+                "optimizer_candidate_queue_materializer_row_revalidation_blockers"
+            ]
+            if str(item)
+        )
+    details["blockers"] = _dedupe_strings(blockers)
+    details["valid"] = not details["blockers"]
+    return details
 
 
 def _positive_int(value: object) -> int | None:
@@ -805,6 +1472,8 @@ def _step_has_materializer_feedback_artifact(
             continue
         if not _artifact_false_authority_satisfied(artifact):
             continue
+        if not _artifact_revalidation_satisfied(artifact):
+            continue
         if artifact.get("optimizer_candidate_queue_materializer_row_count"):
             return True
         if (
@@ -842,6 +1511,8 @@ def _step_has_local_training_signal_artifact(
             continue
         if not _artifact_false_authority_satisfied(artifact):
             continue
+        if not _artifact_revalidation_satisfied(artifact):
+            continue
         if artifact.get("json_schema") == HINTON_MLX_LONG_TRAINING_SMOKE_SCHEMA:
             return True
     return False
@@ -859,6 +1530,8 @@ def _local_training_signal_observations_from_step(
         if artifact.get("postcondition_passed") is not True:
             continue
         if not _artifact_false_authority_satisfied(artifact):
+            continue
+        if not _artifact_revalidation_satisfied(artifact):
             continue
         if artifact.get("json_schema") != HINTON_MLX_LONG_TRAINING_SMOKE_SCHEMA:
             continue
@@ -914,6 +1587,11 @@ def _artifact_false_authority_satisfied(artifact: Mapping[str, Any]) -> bool:
         not (key in artifact and artifact.get(key) is not False)
         for key in MATERIALIZER_FALSE_AUTHORITY
     )
+
+
+def _artifact_revalidation_satisfied(artifact: Mapping[str, Any]) -> bool:
+    blockers = artifact.get("artifact_revalidation_blockers")
+    return not (isinstance(blockers, list) and blockers)
 
 
 def _artifact_has_materializer_identity(artifact: Mapping[str, Any]) -> bool:
@@ -1065,7 +1743,14 @@ def observe_experiment_queue(
                     _local_training_signal_observations_from_step(step_observation)
                 )
             artifacts = step_observation.get("expected_artifacts") or []
-            if any(isinstance(item, Mapping) and item.get("postcondition_passed") is False for item in artifacts):
+            if any(
+                isinstance(item, Mapping)
+                and (
+                    item.get("postcondition_passed") is False
+                    or bool(item.get("artifact_revalidation_blockers"))
+                )
+                for item in artifacts
+            ):
                 succeeded_artifact_failure_steps.append(step_observation)
                 health_steps.append(step_observation)
             continue

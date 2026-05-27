@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -17,6 +18,48 @@ from comma_lab.scheduler.queue_feedback_replan_policy import (
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+
+
+def _write_artifact_bytes(path: Path, data: bytes) -> dict[str, object]:
+    path.write_bytes(data)
+    return {
+        "path": path.as_posix(),
+        "bytes": len(data),
+        "sha256": hashlib.sha256(data).hexdigest(),
+    }
+
+
+def _write_receiver_proof(
+    path: Path,
+    *,
+    candidate_archive: dict[str, object],
+) -> dict[str, object]:
+    payload = {
+        "schema": "family_agnostic_runtime_consumption_proof_v1",
+        "candidate_archive": dict(candidate_archive),
+        "candidate_archive_sha256": candidate_archive["sha256"],
+        "receiver_contract_satisfied": True,
+        "runtime_consumption_proof_passed": True,
+        "passed": True,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "gpu_launched": False,
+        "blockers": [],
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    return {
+        "schema": "family_agnostic_runtime_consumption_proof_verification.v1",
+        "receiver_contract_satisfied": True,
+        "runtime_adapter_ready": False,
+        "proof_present": True,
+        "proof_path": path.as_posix(),
+        "blockers": [],
+    }
 
 
 def _queue(artifact_path: Path) -> dict[str, object]:
@@ -878,6 +921,87 @@ def test_observer_surfaces_hinton_mlx_long_training_smoke(
     assert signal["ready_for_exact_eval_dispatch"] is False
 
 
+def test_observer_refuses_local_training_signal_without_readiness_blockers(
+    tmp_path: Path,
+) -> None:
+    artifact = tmp_path / "hinton_smoke_no_blockers.json"
+    artifact.write_text(
+        json.dumps(
+            {
+                "schema": "hinton_mlx_long_training_smoke_verdict.v1",
+                "mode": "executed_smoke",
+                "lane_id": "lane_hinton_mlx_smoke_test",
+                "operator_run_label": "hinton_kl_t2_smoke",
+                "local_training_queue_signal": "LOCAL_MLX_QUEUE_READY",
+                "paid_dispatch_authorization_signal": (
+                    "PAID_DISPATCH_BLOCKED_REQUIRES_CONTEST_TEACHER_AND_CPU_CUDA_AUTH_EVAL"
+                ),
+                "convergence_verdict": {
+                    "verdict": "CONVERGES_CONSISTENTLY",
+                    "initial_loss": 0.2,
+                    "final_loss": 0.01,
+                    "loss_reduction_percent": 95.0,
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "promotable": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    state = tmp_path / "queue.sqlite"
+    queue = _queue(artifact)
+    queue["experiments"][0]["steps"][0]["postconditions"] = [
+        {
+            "type": "json_false_authority",
+            "path": artifact.as_posix(),
+            "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+            ],
+        }
+    ]
+
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'succeeded',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-05-27T14:30:00Z'
+            WHERE queue_id = 'observer_test'
+              AND experiment_id = 'exp0'
+              AND step_id = 'smoke'
+            """,
+            (json.dumps({"command": ["python", "-c", "print('hello queue')"]}),),
+        )
+        conn.commit()
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=0,
+    )
+
+    assert observation["healthy"] is False
+    assert observation["succeeded_signal_steps"] == []
+    assert observation["local_training_signal_observation_count"] == 0
+    artifact_record = observation["succeeded_artifact_failure_steps"][0][
+        "expected_artifacts"
+    ][0]
+    assert any(
+        "requires_readiness_blockers_or_exact_readiness_refusal" in blocker
+        for blocker in artifact_record["artifact_revalidation_blockers"]
+    )
+
+
 def test_observer_real_pr95_queue_owns_drift_trace_and_package_artifacts(
     tmp_path: Path,
 ) -> None:
@@ -1194,6 +1318,14 @@ def test_observer_surfaces_succeeded_single_family_materializer_manifests(
         delta_key,
     ) in enumerate(manifests, start=1):
         manifest = tmp_path / f"{slug}.json"
+        candidate_archive = _write_artifact_bytes(
+            tmp_path / f"{slug}_candidate.zip",
+            (f"{slug}:candidate".encode() * 64)[: 900 + index],
+        )
+        receiver_verification = _write_receiver_proof(
+            tmp_path / f"{slug}_receiver_proof.json",
+            candidate_archive=candidate_archive,
+        )
         manifest.write_text(
             json.dumps(
                 {
@@ -1203,10 +1335,14 @@ def test_observer_surfaces_succeeded_single_family_materializer_manifests(
                     "receiver_contract_kind": receiver_contract_kind,
                     "receiver_contract_satisfied": True,
                     "source_archive": {"bytes": 1000 + index, "sha256": f"{index}" * 64},
-                    "candidate_archive": {"bytes": 900 + index, "sha256": f"{index + 3}" * 64},
+                    "candidate_archive": candidate_archive,
+                    "runtime_consumption_proof_path": receiver_verification[
+                        "proof_path"
+                    ],
+                    "receiver_verification": receiver_verification,
                     delta_key: {
                         "source_archive_bytes": 1000 + index,
-                        "candidate_archive_bytes": 900 + index,
+                        "candidate_archive_bytes": candidate_archive["bytes"],
                         "saved_bytes": 100,
                     },
                     "score_claim": False,
@@ -1318,6 +1454,14 @@ def test_observer_surfaces_future_materializer_with_serialized_archive_delta(
     tmp_path: Path,
 ) -> None:
     manifest = tmp_path / "future_materializer.json"
+    candidate_archive = _write_artifact_bytes(
+        tmp_path / "future_candidate.zip",
+        b"f" * 1000,
+    )
+    receiver_verification = _write_receiver_proof(
+        tmp_path / "future_receiver_proof.json",
+        candidate_archive=candidate_archive,
+    )
     manifest.write_text(
         json.dumps(
             {
@@ -1327,11 +1471,13 @@ def test_observer_surfaces_future_materializer_with_serialized_archive_delta(
                 "receiver_contract_kind": "family_agnostic_future_byte_packer",
                 "receiver_contract_satisfied": True,
                 "source_archive": {"bytes": 1024, "sha256": "a" * 64},
-                "candidate_archive": {"bytes": 1000, "sha256": "b" * 64},
+                "candidate_archive": candidate_archive,
+                "runtime_consumption_proof_path": receiver_verification["proof_path"],
+                "receiver_verification": receiver_verification,
                 "serialized_archive_delta": {
                     "schema": "serialized_archive_delta_contract.v1",
                     "source_archive_bytes": 1024,
-                    "candidate_archive_bytes": 1000,
+                    "candidate_archive_bytes": candidate_archive["bytes"],
                     "archive_delta_bytes": -24,
                     "realized_saved_bytes": 24,
                     "savings_realized": True,
@@ -1427,10 +1573,139 @@ def test_observer_surfaces_future_materializer_with_serialized_archive_delta(
     assert artifact["score_claim"] is False
 
 
+def test_observer_rejects_materializer_with_only_proof_present_flag(
+    tmp_path: Path,
+) -> None:
+    manifest = tmp_path / "flag_only_materializer.json"
+    candidate_archive = _write_artifact_bytes(
+        tmp_path / "flag_only_candidate.zip",
+        b"flag-only candidate bytes",
+    )
+    manifest.write_text(
+        json.dumps(
+            {
+                "schema": "future_materializer_candidate.v1",
+                "target_kind": "future_byte_packer_v1",
+                "materializer_id": "future_byte_packer_adapter",
+                "receiver_contract_kind": "family_agnostic_future_byte_packer",
+                "receiver_contract_satisfied": True,
+                "candidate_archive": candidate_archive,
+                "receiver_verification": {
+                    "schema": "family_agnostic_runtime_consumption_proof_verification.v1",
+                    "receiver_contract_satisfied": True,
+                    "proof_present": True,
+                    "blockers": [],
+                },
+                "serialized_archive_delta": {
+                    "schema": "serialized_archive_delta_contract.v1",
+                    "source_archive_bytes": 128,
+                    "candidate_archive_bytes": candidate_archive["bytes"],
+                    "realized_saved_bytes": 8,
+                    "savings_realized": True,
+                    "status": "realized_saving",
+                },
+                "score_claim": False,
+                "score_claim_valid": False,
+                "score_claim_eligible": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "promotable": False,
+                "ready_for_exact_eval_dispatch": False,
+                "field_selection_ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+                "gpu_launched": False,
+                "exact_cuda_auth_eval": False,
+                "contest_cuda_auth_eval": False,
+                "score_affecting_payload_changed": False,
+                "charged_bits_changed": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    state = tmp_path / "queue.sqlite"
+    queue = {
+        "schema": "experiment_queue.v1",
+        "queue_id": "observer_test",
+        "controls": {"mode": "running", "max_concurrency": {"local_cpu": 1}},
+        "experiments": [
+            {
+                "id": "flag_only_materializer_experiment",
+                "status": "queued",
+                "priority": 1,
+                "steps": [
+                    {
+                        "id": "materialize",
+                        "kind": "command",
+                        "command": ["python", "tools/run_family_agnostic_materializer.py"],
+                        "resources": {"kind": "local_cpu"},
+                        "postconditions": [
+                            {
+                                "type": "json_false_authority",
+                                "path": manifest.as_posix(),
+                                "required_false": [
+                                    "score_claim",
+                                    "promotion_eligible",
+                                    "rank_or_kill_eligible",
+                                    "ready_for_exact_eval_dispatch",
+                                ],
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'succeeded',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-05-27T15:00:00Z'
+            WHERE queue_id = 'observer_test'
+              AND experiment_id = 'flag_only_materializer_experiment'
+              AND step_id = 'materialize'
+            """,
+            (json.dumps({"command": ["python", "tools/run_family_agnostic_materializer.py"]}),),
+        )
+        conn.commit()
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=1,
+    )
+
+    assert observation["healthy"] is False
+    assert observation["succeeded_artifact_steps"] == []
+    failed_step = observation["succeeded_artifact_failure_steps"][0]
+    artifact = failed_step["expected_artifacts"][0]
+    assert artifact["postcondition_passed"] is False
+    assert "experiment_queue_observation_artifact_postcondition_failures:1" in (
+        observation["blockers"]
+    )
+    assert (
+        "json_false_authority_materializer_runtime_or_receiver_proof_path_missing"
+        in artifact["artifact_revalidation_blockers"]
+    )
+
+
 def test_observer_surfaces_optimizer_candidate_queue_materializer_top_k(
     tmp_path: Path,
 ) -> None:
     source_queue = tmp_path / "source_queue.json"
+    candidate_archive = _write_artifact_bytes(
+        tmp_path / "candidate.zip",
+        b"r" * 345_422,
+    )
+    receiver_verification = _write_receiver_proof(
+        tmp_path / "optimizer_receiver_proof.json",
+        candidate_archive=candidate_archive,
+    )
     source_queue.write_text(
         json.dumps(
             {
@@ -1458,11 +1733,11 @@ def test_observer_surfaces_optimizer_candidate_queue_materializer_top_k(
                         "renderer_payload_dfl1_full_frame_inflate_parity_satisfied": (
                             True
                         ),
-                        "candidate_archive": {
-                            "path": "candidate.zip",
-                            "bytes": 345_422,
-                            "sha256": "e" * 64,
-                        },
+                        "candidate_archive": candidate_archive,
+                        "runtime_consumption_proof_path": receiver_verification[
+                            "proof_path"
+                        ],
+                        "receiver_verification": receiver_verification,
                         "serialized_archive_delta": {
                             "schema": "serialized_archive_delta_contract.v1",
                             "status": "realized_saving",
@@ -1571,6 +1846,117 @@ def test_observer_surfaces_optimizer_candidate_queue_materializer_top_k(
     assert "charged_bits_changed" not in rows[0]
     assert rows[0]["serialized_archive_delta_realized_saved_bytes"] == 380
     assert rows[0]["readiness_blockers"] == []
+
+
+def test_observer_refuses_optimizer_top_k_row_without_nested_revalidation(
+    tmp_path: Path,
+) -> None:
+    source_queue = tmp_path / "source_queue.json"
+    source_queue.write_text(
+        json.dumps(
+            {
+                "schema": "optimizer_candidate_queue_v1",
+                "score_claim": False,
+                "score_claim_valid": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "rank_or_kill_eligible": False,
+                "promotable": False,
+                "dispatch_attempted": False,
+                "gpu_launched": False,
+                "top_k": [
+                    {
+                        "candidate_id": "missing_receiver_runtime",
+                        "target_kind": "renderer_payload_dfl1_v1",
+                        "materializer_id": "renderer_payload_dfl1_adapter",
+                        "receiver_contract_kind": (
+                            "source_runtime_native_renderer_payload_dfl1"
+                        ),
+                        "receiver_contract_satisfied": True,
+                        "candidate_archive": {
+                            "path": (tmp_path / "missing_candidate.zip").as_posix(),
+                            "bytes": 345_422,
+                            "sha256": "e" * 64,
+                        },
+                        "serialized_archive_delta": {
+                            "schema": "serialized_archive_delta_contract.v1",
+                            "status": "realized_saving",
+                            "realized_saved_bytes": 380,
+                            "source_archive_bytes": 345_802,
+                            "candidate_archive_bytes": 345_422,
+                            "savings_realized": True,
+                            "score_claim": False,
+                            "score_claim_valid": False,
+                            "promotion_eligible": False,
+                            "ready_for_exact_eval_dispatch": False,
+                            "rank_or_kill_eligible": False,
+                            "promotable": False,
+                            "dispatch_attempted": False,
+                            "gpu_launched": False,
+                        },
+                        "readiness_blockers": [],
+                        "score_claim": False,
+                        "score_claim_valid": False,
+                        "promotion_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                        "rank_or_kill_eligible": False,
+                        "promotable": False,
+                        "dispatch_attempted": False,
+                        "gpu_launched": False,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    state = tmp_path / "queue.sqlite"
+    queue = _queue(source_queue)
+    queue["experiments"][0]["steps"][0]["postconditions"] = [
+        {
+            "type": "json_false_authority",
+            "path": source_queue.as_posix(),
+            "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+            ],
+        }
+    ]
+
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'succeeded',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-05-27T14:25:00Z'
+            WHERE queue_id = 'observer_test'
+              AND experiment_id = 'exp0'
+              AND step_id = 'smoke'
+            """,
+            (json.dumps({"command": ["python", "tools/harvest_materializer_chain.py"]}),),
+        )
+        conn.commit()
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=0,
+    )
+
+    assert observation["healthy"] is False
+    assert observation["succeeded_artifact_steps"] == []
+    artifact = observation["succeeded_artifact_failure_steps"][0][
+        "expected_artifacts"
+    ][0]
+    assert artifact.get("optimizer_candidate_queue_materializer_row_count") is None
+    blockers = artifact["artifact_revalidation_blockers"]
+    assert any("candidate_archive_file_missing" in blocker for blocker in blockers)
+    assert any("runtime_or_receiver_proof_path_missing" in blocker for blocker in blockers)
 
 
 def test_observer_health_marks_missing_state_fail_closed(tmp_path: Path) -> None:
