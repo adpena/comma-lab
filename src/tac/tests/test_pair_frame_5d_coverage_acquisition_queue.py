@@ -288,7 +288,10 @@ def _write_submission_bundle_result(
     (submission_dir / "report.txt").write_text("unit report\n", encoding="utf-8")
     _write_json(
         submission_dir / "archive_manifest.json",
-        {"archive_sha256": _sha256_bytes(archive_bytes)},
+        {
+            "archive_sha256": _sha256_bytes(archive_bytes),
+            "archive_size_bytes": len(archive_bytes),
+        },
     )
     return _write_json(
         path,
@@ -740,6 +743,7 @@ def test_followup_readiness_refuses_contract_only_missing_bundle_files(
 
     blockers = report["requests"][0]["blockers"]
     assert report["ready_request_count"] == 0
+    assert report["requests"][0]["ready"] is False
     assert "submission_bundle_submission_dir_not_found" in blockers
     assert "submission_bundle_archive_zip_missing" in blockers
     assert "submission_bundle_inflate_sh_path_not_found" in blockers
@@ -771,9 +775,93 @@ def test_followup_input_binding_refuses_contract_only_missing_bundle_files(
 
     blockers = report["requests"][0]["blockers"]
     assert report["bound_request_count"] == 0
+    assert report["requests"][0]["ready_for_readiness_refresh"] is False
     assert "submission_bundle_submission_dir_not_found" in blockers
     assert "submission_bundle_archive_zip_missing" in blockers
     assert "submission_bundle_inflate_sh_path_not_found" in blockers
+    assert "submission_bundle_path" not in report["selected_inputs"]
+
+
+def test_followup_readiness_refuses_symlinked_submission_bundle_result(
+    tmp_path: pathlib.Path,
+) -> None:
+    archive_payload = b"unit submission archive\n"
+    archive_sha = _sha256_bytes(archive_payload)
+    audit = _audit(
+        _work_order(
+            "populate_missing_paired_cpu_cuda_axis_anchors",
+            archive_sha256=archive_sha,
+        ),
+        archive_sha256=archive_sha,
+    )
+    plan = build_coverage_acquisition_plan(
+        coverage_audit=audit,
+        work_order_id="populate_missing_paired_cpu_cuda_axis_anchors",
+        coverage_audit_path="audit.json",
+        repo_root=_REPO_ROOT,
+        canvas_path="canvas.json",
+    )
+    plan_path = _write_json(tmp_path / "exact_plan.json", plan)
+    real_bundle = _write_submission_bundle_result(
+        tmp_path / "real_submission_bundle_result.json",
+        archive_bytes=archive_payload,
+    )
+    symlink_bundle = tmp_path / "submission_bundle_result.json"
+    symlink_bundle.symlink_to(real_bundle)
+
+    report = build_coverage_followup_readiness_report(
+        repo_root=_REPO_ROOT,
+        plan_paths=[plan_path],
+        submission_bundle_path=symlink_bundle,
+    )
+
+    assert report["ready_request_count"] == 0
+    assert report["blocked_request_count"] == 1
+    assert report["requests"][0]["ready"] is False
+    assert "submission_bundle_result_path_symlink" in report["requests"][0]["blockers"]
+    assert report["requests"][0]["materialized_command"] is None
+
+
+def test_followup_input_binding_refuses_autodiscovered_symlinked_bundle_result(
+    tmp_path: pathlib.Path,
+) -> None:
+    archive_payload = b"unit submission archive\n"
+    archive_sha = _sha256_bytes(archive_payload)
+    audit = _audit(
+        _work_order(
+            "populate_missing_paired_cpu_cuda_axis_anchors",
+            archive_sha256=archive_sha,
+        ),
+        archive_sha256=archive_sha,
+    )
+    plan = build_coverage_acquisition_plan(
+        coverage_audit=audit,
+        work_order_id="populate_missing_paired_cpu_cuda_axis_anchors",
+        coverage_audit_path="audit.json",
+        repo_root=_REPO_ROOT,
+        canvas_path="canvas.json",
+    )
+    plan_path = _write_json(tmp_path / "exact_plan.json", plan)
+    real_root = tmp_path / "real_bundle"
+    real_root.mkdir()
+    real_bundle = _write_submission_bundle_result(
+        real_root / "submission_bundle_result.json",
+        archive_bytes=archive_payload,
+    )
+    search_root = tmp_path / "search_root"
+    search_root.mkdir()
+    (search_root / "submission_bundle_result.json").symlink_to(real_bundle)
+
+    report = build_coverage_followup_input_binding_report(
+        repo_root=_REPO_ROOT,
+        plan_paths=[plan_path],
+        search_roots=[search_root],
+    )
+
+    blockers = report["requests"][0]["blockers"]
+    assert report["bound_request_count"] == 0
+    assert report["requests"][0]["ready_for_readiness_refresh"] is False
+    assert "submission_bundle_result_path_symlink" in blockers
     assert "submission_bundle_path" not in report["selected_inputs"]
 
 

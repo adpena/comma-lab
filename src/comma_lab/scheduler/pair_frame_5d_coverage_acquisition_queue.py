@@ -465,6 +465,8 @@ def _iter_named_json_files(roots: Sequence[Path], name: str) -> list[Path]:
 def _load_submission_bundle_contract(
     path: Path,
 ) -> tuple[Any | None, list[str]]:
+    if path.is_symlink():
+        return None, ["submission_bundle_result_path_symlink"]
     try:
         payload = _load_json_object(path)
     except ExperimentQueueError as exc:
@@ -491,6 +493,42 @@ def _resolve_bundle_path(
     return bundle_candidate
 
 
+def _same_resolved_path(left: Path, right: Path) -> bool:
+    return left.resolve(strict=False) == right.resolve(strict=False)
+
+
+def _inside_resolved_dir(path: Path, directory: Path) -> bool:
+    try:
+        path.resolve(strict=False).relative_to(directory.resolve(strict=False))
+    except ValueError:
+        return False
+    return True
+
+
+def _archive_manifest_identity_blockers(
+    path: Path,
+    *,
+    archive_sha256: str,
+    archive_bytes: int,
+) -> list[str]:
+    try:
+        payload = _load_json_object(path)
+    except ExperimentQueueError as exc:
+        return [f"submission_bundle_archive_manifest_path_invalid:{type(exc).__name__}"]
+
+    blockers: list[str] = []
+    if payload.get("archive_sha256") != archive_sha256:
+        blockers.append("submission_bundle_archive_manifest_archive_sha256_mismatch")
+    manifest_bytes = payload.get("archive_size_bytes")
+    if isinstance(manifest_bytes, bool) or not isinstance(manifest_bytes, int):
+        blockers.append(
+            "submission_bundle_archive_manifest_archive_size_bytes_missing_or_invalid"
+        )
+    elif manifest_bytes != archive_bytes:
+        blockers.append("submission_bundle_archive_manifest_archive_size_bytes_mismatch")
+    return blockers
+
+
 def _submission_bundle_file_blockers(
     bundle: Any,
     *,
@@ -498,16 +536,25 @@ def _submission_bundle_file_blockers(
     repo_root: Path,
 ) -> list[str]:
     blockers: list[str] = []
+    if bundle_result_path.is_symlink():
+        blockers.append("submission_bundle_result_path_symlink")
     submission_dir = _resolve_bundle_path(
         bundle.submission_dir,
         repo_root=repo_root,
         bundle_result_path=bundle_result_path,
     )
-    if not submission_dir.is_dir():
+    submission_dir_ready = False
+    if submission_dir.is_symlink():
+        blockers.append("submission_bundle_submission_dir_symlink")
+    elif not submission_dir.is_dir():
         blockers.append("submission_bundle_submission_dir_not_found")
+    else:
+        submission_dir_ready = True
 
     archive_zip = submission_dir / "archive.zip"
-    if not archive_zip.is_file():
+    if archive_zip.is_symlink():
+        blockers.append("submission_bundle_archive_zip_symlink")
+    elif not archive_zip.is_file():
         blockers.append("submission_bundle_archive_zip_missing")
     else:
         actual_bytes = archive_zip.stat().st_size
@@ -517,20 +564,40 @@ def _submission_bundle_file_blockers(
             blockers.append("submission_bundle_archive_sha256_mismatch")
 
     required_paths = {
-        "inflate_sh_path": bundle.inflate_sh_path,
-        "inflate_py_path": bundle.inflate_py_path,
-        "readme_md_path": bundle.readme_md_path,
-        "report_txt_path": bundle.report_txt_path,
-        "archive_manifest_path": bundle.archive_manifest_path,
+        "inflate_sh_path": ("inflate.sh", bundle.inflate_sh_path),
+        "inflate_py_path": ("inflate.py", bundle.inflate_py_path),
+        "readme_md_path": ("README.md", bundle.readme_md_path),
+        "report_txt_path": ("report.txt", bundle.report_txt_path),
+        "archive_manifest_path": ("archive_manifest.json", bundle.archive_manifest_path),
     }
-    for label, raw_path in required_paths.items():
+    archive_manifest_path: Path | None = None
+    for label, (canonical_name, raw_path) in required_paths.items():
         resolved = _resolve_bundle_path(
             raw_path,
             repo_root=repo_root,
             bundle_result_path=bundle_result_path,
         )
+        if resolved.is_symlink():
+            blockers.append(f"submission_bundle_{label}_symlink")
+            continue
         if not resolved.is_file():
             blockers.append(f"submission_bundle_{label}_not_found")
+            continue
+        if submission_dir_ready and not _inside_resolved_dir(resolved, submission_dir):
+            blockers.append(f"submission_bundle_{label}_outside_submission_dir")
+        expected = submission_dir / canonical_name
+        if submission_dir_ready and not _same_resolved_path(resolved, expected):
+            blockers.append(f"submission_bundle_{label}_not_canonical_submission_file")
+        if label == "archive_manifest_path":
+            archive_manifest_path = resolved
+    if archive_manifest_path is not None:
+        blockers.extend(
+            _archive_manifest_identity_blockers(
+                archive_manifest_path,
+                archive_sha256=str(bundle.archive_sha256),
+                archive_bytes=int(bundle.archive_bytes),
+            )
+        )
     return blockers
 
 
@@ -553,6 +620,9 @@ def _select_submission_bundle_for_archive(
     blockers: list[str] = []
     for path in paths:
         resolved = _resolve_path(path, repo_root=repo_root)
+        if resolved.is_symlink():
+            blockers.append("submission_bundle_result_path_symlink")
+            continue
         if not resolved.is_file():
             blockers.append("submission_bundle_result_path_not_found")
             continue
@@ -906,6 +976,9 @@ def _exact_axis_request_readiness(
     blockers = list(request.get("paired_dispatch_command_contract_blockers") or [])
     if submission_bundle_path is None:
         blockers.append("submission_bundle_result_path_missing")
+        return blockers, None
+    if submission_bundle_path.is_symlink():
+        blockers.append("submission_bundle_result_path_symlink")
         return blockers, None
     if not submission_bundle_path.is_file():
         blockers.append("submission_bundle_result_path_not_found")
