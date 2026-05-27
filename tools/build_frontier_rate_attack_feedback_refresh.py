@@ -689,6 +689,21 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
                 coverage_acquisition_queue_path = (
                     output_dir / "pair_frame_5d_coverage_acquisition_queue.json"
                 )
+                followup_input_binding_report_path = (
+                    output_dir
+                    / "pair_frame_5d_coverage_acquisition"
+                    / "followup_input_binding_report.json"
+                )
+                followup_execution_queue_path = (
+                    output_dir
+                    / "pair_frame_5d_coverage_acquisition"
+                    / "followup_execution_queue.json"
+                )
+                followup_execution_worker_result_path = (
+                    output_dir
+                    / "pair_frame_5d_coverage_acquisition"
+                    / "followup_execution_worker_result.json"
+                )
                 write_json_artifact(
                     coverage_acquisition_queue_path,
                     coverage_acquisition_queue,
@@ -735,9 +750,24 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
                 "experiment_count": len(
                     coverage_acquisition_queue.get("experiments") or []
                 ),
+                "followup_input_binding_report_path": _display_path(
+                    followup_input_binding_report_path
+                ),
+                "followup_execution_queue_path": _display_path(
+                    followup_execution_queue_path
+                ),
+                "followup_execution_worker_result_path": _display_path(
+                    followup_execution_worker_result_path
+                ),
+                "followup_input_binding_planned_by_queue": True,
+                "followup_execution_queue_planned_by_queue": True,
+                "followup_execution_bounded_local_run_completed": False,
                 "work_order_count": coverage_audit.get("work_order_count"),
                 "coverage_verdict": coverage_audit.get("verdict"),
-                "allowed_use": "local_encoder_side_5d_coverage_acquisition_only",
+                "allowed_use": (
+                    "local_encoder_side_coverage_acquisition_and_followup_"
+                    "execution_planning_only"
+                ),
                 **FALSE_AUTHORITY,
             }
     eureka_planning = report.get("local_cpu_eureka_planning")

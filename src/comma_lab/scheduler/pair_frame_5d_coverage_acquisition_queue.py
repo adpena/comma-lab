@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import shlex
@@ -18,6 +19,7 @@ from tac.deploy.modal.paired_dispatch import (
 from tac.deploy.modal.paired_dispatch_contract import (
     paired_auth_eval_dispatch_command_blockers,
 )
+from tac.local_acceleration.mlx_cache_audit import cache_audit_stamp_blockers
 from tac.optimization.pair_frame_scorer_geometry_lattice_5d_canvas_coverage import (
     COVERAGE_AUDIT_SCHEMA,
     WORK_ORDER_SCHEMA,
@@ -48,10 +50,21 @@ PAIR_FRAME_5D_FOLLOWUP_READINESS_REPORT_SCHEMA = (
 PAIR_FRAME_5D_FOLLOWUP_EXECUTION_QUEUE_SCHEMA = (
     "pair_frame_5d_canvas_coverage_followup_execution_queue.v1"
 )
+PAIR_FRAME_5D_FOLLOWUP_INPUT_BINDING_REPORT_SCHEMA = (
+    "pair_frame_5d_canvas_coverage_followup_input_binding_report.v1"
+)
 POPULATED_CANVAS_SCHEMA = "pair_frame_scorer_geometry_lattice_5d_canvas_populated_v1"
 EXTENDED_OPERATOR_QUEUE_SCHEMA = "experiment_queue.v1"
 WORKER_RESULT_SCHEMA = "experiment_queue_worker_result.v1"
 MLX_SCORER_RESPONSE_SCHEMA = "mlx_scorer_response.v1"
+REQUIRED_MLX_CACHE_ARRAY_KEYS = frozenset(
+    {"pair_indices", "posenet_yuv6_pair", "segnet_last_rgb"}
+)
+REQUIRED_MLX_CACHE_ARRAY_FILES = {
+    "pair_indices": "pair_indices.npy",
+    "posenet_yuv6_pair": "posenet_yuv6_pair.npy",
+    "segnet_last_rgb": "segnet_last_rgb.npy",
+}
 
 FALSE_AUTHORITY: dict[str, bool] = {
     "score_claim": False,
@@ -65,6 +78,14 @@ FALSE_AUTHORITY: dict[str, bool] = {
     "reproduction_claim": False,
     "reproduction_equivalence": False,
 }
+MLX_CACHE_FALSE_AUTHORITY_FIELDS = (
+    "score_claim",
+    "score_claim_valid",
+    "promotion_eligible",
+    "promotable",
+    "rank_or_kill_eligible",
+    "ready_for_exact_eval_dispatch",
+)
 
 
 def _slug(value: object) -> str:
@@ -91,6 +112,14 @@ def _load_json_object(path: Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ExperimentQueueError(f"{path}: expected JSON object")
     return payload
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _load_coverage_audit(path: Path) -> dict[str, Any]:
@@ -376,6 +405,333 @@ def _replace_command_placeholders(
     return rendered
 
 
+def _candidate_search_roots(
+    search_roots: Sequence[str | Path] | None,
+    *,
+    repo_root: Path,
+) -> list[Path]:
+    roots: list[Path] = []
+    for raw in search_roots or []:
+        root = _resolve_path(raw, repo_root=repo_root)
+        if root.exists():
+            roots.append(root)
+    return roots
+
+
+def _iter_named_json_files(roots: Sequence[Path], name: str) -> list[Path]:
+    paths: list[Path] = []
+    seen: set[Path] = set()
+    for root in roots:
+        candidates = [root] if root.name == name and root.is_file() else []
+        if root.is_dir():
+            candidates.extend(root.rglob(name))
+        for path in candidates:
+            try:
+                resolved = path.resolve()
+            except OSError:
+                continue
+            if resolved in seen or not path.is_file():
+                continue
+            seen.add(resolved)
+            paths.append(path)
+    return sorted(paths, key=lambda item: item.as_posix())
+
+
+def _load_submission_bundle_contract(
+    path: Path,
+) -> tuple[Any | None, list[str]]:
+    try:
+        payload = _load_json_object(path)
+    except ExperimentQueueError as exc:
+        return None, [f"submission_bundle_result_not_json_object:{type(exc).__name__}"]
+    try:
+        return submission_bundle_result_from_dict(payload), []
+    except (KeyError, TypeError, ValueError) as exc:
+        return None, [f"submission_bundle_result_contract_invalid:{type(exc).__name__}"]
+
+
+def _select_submission_bundle_for_archive(
+    *,
+    archive_sha256: str,
+    repo_root: Path,
+    explicit_path: Path | None,
+    search_roots: Sequence[Path],
+) -> tuple[Path | None, int | None, list[str], int]:
+    paths = [explicit_path] if explicit_path is not None else _iter_named_json_files(
+        search_roots,
+        "submission_bundle_result.json",
+    )
+    paths = [path for path in paths if path is not None]
+    if not paths:
+        return None, None, ["submission_bundle_result_not_found_for_archive_sha256"], 0
+
+    matches: list[tuple[Path, int]] = []
+    blockers: list[str] = []
+    for path in paths:
+        resolved = _resolve_path(path, repo_root=repo_root)
+        if not resolved.is_file():
+            blockers.append("submission_bundle_result_path_not_found")
+            continue
+        bundle, bundle_blockers = _load_submission_bundle_contract(resolved)
+        if bundle_blockers:
+            blockers.extend(bundle_blockers)
+            continue
+        bundle_sha = str(bundle.archive_sha256)
+        if archive_sha256 and bundle_sha != archive_sha256:
+            continue
+        matches.append((resolved, int(bundle.archive_bytes)))
+
+    if len(matches) == 1:
+        selected, archive_bytes = matches[0]
+        return selected, archive_bytes, [], len(paths)
+    if len(matches) > 1:
+        return (
+            None,
+            None,
+            ["submission_bundle_result_ambiguous_for_archive_sha256"],
+            len(paths),
+        )
+    return (
+        None,
+        None,
+        blockers or ["submission_bundle_result_not_found_for_archive_sha256"],
+        len(paths),
+    )
+
+
+def _manifest_artifact_file_blockers(
+    *,
+    cache_dir: Path,
+    manifest: Mapping[str, Any],
+    key: str,
+) -> list[str]:
+    blockers: list[str] = []
+    filename = REQUIRED_MLX_CACHE_ARRAY_FILES[key]
+    path = cache_dir / filename
+    if not path.is_file():
+        return [f"mlx_cache_{key}_array_file_missing"]
+    artifacts = manifest.get("artifacts")
+    artifact = artifacts.get(key) if isinstance(artifacts, Mapping) else None
+    if not isinstance(artifact, Mapping):
+        return [f"mlx_cache_artifact_{key}_missing"]
+    expected_bytes = artifact.get("bytes")
+    if not isinstance(expected_bytes, int) or isinstance(expected_bytes, bool):
+        blockers.append(f"mlx_cache_artifact_{key}_bytes_missing")
+    elif path.stat().st_size != expected_bytes:
+        blockers.append(f"mlx_cache_artifact_{key}_bytes_mismatch")
+    expected_sha = artifact.get("sha256")
+    if not isinstance(expected_sha, str) or not expected_sha:
+        blockers.append(f"mlx_cache_artifact_{key}_sha256_missing")
+    elif _sha256_file(path) != expected_sha:
+        blockers.append(f"mlx_cache_artifact_{key}_sha256_mismatch")
+    return blockers
+
+
+def _mlx_cache_manifest_blockers(
+    cache_dir: Path,
+    *,
+    candidate: bool,
+    allow_local_cpu_advisory_identity: bool = True,
+) -> tuple[dict[str, Any] | None, list[str]]:
+    manifest_path = cache_dir / "manifest.json"
+    if not manifest_path.is_file():
+        return None, ["mlx_cache_manifest_missing"]
+    try:
+        manifest = _load_json_object(manifest_path)
+    except ExperimentQueueError as exc:
+        return None, [f"mlx_cache_manifest_invalid:{type(exc).__name__}"]
+
+    blockers: list[str] = []
+    if manifest.get("hash_only") is True:
+        blockers.append("mlx_cache_hash_only_no_tensors")
+    arrays = manifest.get("array_sha256")
+    if not isinstance(arrays, Mapping):
+        blockers.append("mlx_cache_array_sha256_missing")
+        arrays = {}
+    else:
+        for key in sorted(REQUIRED_MLX_CACHE_ARRAY_KEYS):
+            if not isinstance(arrays.get(key), str) or not arrays.get(key):
+                blockers.append(f"mlx_cache_array_sha256_{key}_missing")
+    artifacts = manifest.get("artifacts")
+    if not isinstance(artifacts, Mapping):
+        blockers.append("mlx_cache_artifacts_missing")
+    for key in sorted(REQUIRED_MLX_CACHE_ARRAY_KEYS):
+        blockers.extend(
+            _manifest_artifact_file_blockers(
+                cache_dir=cache_dir,
+                manifest=manifest,
+                key=key,
+            )
+        )
+    for key in (
+        "archive_sha256",
+        "raw_sha256",
+        "inflated_outputs_aggregate_sha256",
+        "hash_domain",
+    ):
+        if not isinstance(manifest.get(key), str) or not manifest.get(key):
+            blockers.append(f"mlx_cache_{key}_missing")
+    pair_count = manifest.get("pair_count")
+    if isinstance(pair_count, bool) or not isinstance(pair_count, int) or pair_count < 1:
+        blockers.append("mlx_cache_pair_count_missing_or_invalid")
+    for field in MLX_CACHE_FALSE_AUTHORITY_FIELDS:
+        if manifest.get(field) is not False:
+            blockers.append(f"mlx_cache_manifest_{field}_not_false")
+
+    if candidate:
+        auth_blockers = cache_audit_stamp_blockers(
+            manifest,
+            cache_root=cache_dir,
+            stamp_key="auth_eval_identity_audit",
+            expected_verdict="PASS_CACHE_AUTH_EVAL_IDENTITY",
+            require_identity_residual_zero=True,
+            require_cache_shapes=True,
+        )
+        auth_audit = manifest.get("auth_eval_identity_audit")
+        auth_ok = (
+            manifest.get("eligible_for_local_mlx_transfer_calibration") is True
+            and isinstance(auth_audit, Mapping)
+            and auth_audit.get("verdict") == "PASS_CACHE_AUTH_EVAL_IDENTITY"
+            and auth_audit.get("passed") is True
+            and auth_audit.get("identity_residual") == 0
+            and not auth_blockers
+        )
+        local_blockers = cache_audit_stamp_blockers(
+            manifest,
+            cache_root=cache_dir,
+            stamp_key="local_cpu_advisory_cache_identity_audit",
+            expected_verdict="PASS_CACHE_LOCAL_CPU_ADVISORY_IDENTITY",
+            require_identity_residual_zero=False,
+            require_cache_shapes=False,
+        )
+        local_audit = manifest.get("local_cpu_advisory_cache_identity_audit")
+        local_ok = (
+            allow_local_cpu_advisory_identity
+            and manifest.get("eligible_for_local_mlx_local_advisory_debug") is True
+            and isinstance(local_audit, Mapping)
+            and local_audit.get("verdict")
+            == "PASS_CACHE_LOCAL_CPU_ADVISORY_IDENTITY"
+            and local_audit.get("passed") is True
+            and not local_blockers
+        )
+        if not auth_ok and not local_ok:
+            blockers.append("candidate_mlx_cache_identity_audit_missing_or_invalid")
+            if auth_blockers:
+                blockers.extend(f"auth_identity:{blocker}" for blocker in auth_blockers)
+            if local_blockers:
+                blockers.extend(f"local_advisory_identity:{blocker}" for blocker in local_blockers)
+
+    return manifest, blockers
+
+
+def _mlx_cache_pair_blockers(
+    reference_manifest: Mapping[str, Any] | None,
+    candidate_manifest: Mapping[str, Any] | None,
+) -> list[str]:
+    if reference_manifest is None or candidate_manifest is None:
+        return []
+    blockers: list[str] = []
+    for key in (
+        "pair_count",
+        "pair_indices_shape",
+    ):
+        if reference_manifest.get(key) != candidate_manifest.get(key):
+            blockers.append(f"mlx_cache_pair_{key}_mismatch")
+    reference_arrays = reference_manifest.get("array_sha256")
+    candidate_arrays = candidate_manifest.get("array_sha256")
+    if (
+        isinstance(reference_arrays, Mapping)
+        and isinstance(candidate_arrays, Mapping)
+        and reference_arrays.get("pair_indices") != candidate_arrays.get("pair_indices")
+    ):
+        blockers.append("mlx_cache_pair_indices_sha256_mismatch")
+    return blockers
+
+
+def _iter_mlx_cache_dirs(roots: Sequence[Path]) -> list[Path]:
+    dirs: list[Path] = []
+    seen: set[Path] = set()
+    for root in roots:
+        if root.is_file():
+            continue
+        manifests: list[Path] = []
+        if (root / "manifest.json").is_file():
+            manifests.append(root / "manifest.json")
+        if root.is_dir():
+            manifests.extend(root.rglob("manifest.json"))
+        for manifest in manifests:
+            cache_dir = manifest.parent
+            if not any((cache_dir / filename).is_file() for filename in REQUIRED_MLX_CACHE_ARRAY_FILES.values()):
+                continue
+            try:
+                resolved = cache_dir.resolve()
+            except OSError:
+                continue
+            if resolved in seen:
+                continue
+            seen.add(resolved)
+            dirs.append(cache_dir)
+    return sorted(dirs, key=lambda item: item.as_posix())
+
+
+def _select_mlx_cache_for_request(
+    *,
+    request: Mapping[str, Any],
+    repo_root: Path,
+    explicit_path: Path | None,
+    search_roots: Sequence[Path],
+    candidate: bool,
+) -> tuple[Path | None, dict[str, Any] | None, list[str], int]:
+    archive_sha256 = str(request.get("archive_sha256") or "")
+    paths = [explicit_path] if explicit_path is not None else _iter_mlx_cache_dirs(
+        search_roots,
+    )
+    paths = [path for path in paths if path is not None]
+    if explicit_path is None and paths:
+        needle = "candidate" if candidate else "reference"
+        preferred = [path for path in paths if needle in path.as_posix()]
+        if preferred:
+            paths = preferred
+    if not paths:
+        blocker = (
+            "candidate_mlx_cache_dir_not_found_for_archive_sha256"
+            if candidate
+            else "reference_mlx_cache_dir_not_found"
+        )
+        return None, None, [blocker], 0
+
+    matches: list[tuple[Path, dict[str, Any]]] = []
+    blockers: list[str] = []
+    for path in paths:
+        resolved = _resolve_path(path, repo_root=repo_root)
+        manifest, cache_blockers = _mlx_cache_manifest_blockers(
+            resolved,
+            candidate=candidate,
+        )
+        if cache_blockers:
+            blockers.extend(cache_blockers)
+            continue
+        if candidate and archive_sha256 and manifest.get("archive_sha256") != archive_sha256:
+            continue
+        matches.append((resolved, manifest))
+
+    if len(matches) == 1:
+        return matches[0][0], matches[0][1], [], len(paths)
+    if len(matches) > 1:
+        blocker = (
+            "candidate_mlx_cache_dir_ambiguous_for_archive_sha256"
+            if candidate
+            else "reference_mlx_cache_dir_ambiguous"
+        )
+        return None, None, [blocker], len(paths)
+    blocker = (
+        "candidate_mlx_cache_dir_not_found_for_archive_sha256"
+        if candidate
+        else "reference_mlx_cache_dir_not_found"
+    )
+    return None, None, blockers or [blocker], len(paths)
+
+
 def _exact_axis_request_readiness(
     request: Mapping[str, Any],
     *,
@@ -438,14 +794,33 @@ def _mlx_request_readiness(
     archive_size_bytes: int | None,
 ) -> tuple[list[str], list[str] | None]:
     blockers: list[str] = []
+    reference_manifest: dict[str, Any] | None = None
+    candidate_manifest: dict[str, Any] | None = None
     if reference_mlx_cache_dir is None:
         blockers.append("reference_mlx_cache_dir_missing")
-    elif not (reference_mlx_cache_dir / "manifest.json").is_file():
-        blockers.append("reference_mlx_cache_manifest_missing")
+    else:
+        reference_manifest, reference_blockers = _mlx_cache_manifest_blockers(
+            reference_mlx_cache_dir,
+            candidate=False,
+        )
+        blockers.extend(f"reference:{blocker}" for blocker in reference_blockers)
     if candidate_mlx_cache_dir is None:
         blockers.append("candidate_mlx_cache_dir_missing")
-    elif not (candidate_mlx_cache_dir / "manifest.json").is_file():
-        blockers.append("candidate_mlx_cache_manifest_missing")
+    else:
+        candidate_manifest, candidate_blockers = _mlx_cache_manifest_blockers(
+            candidate_mlx_cache_dir,
+            candidate=True,
+        )
+        blockers.extend(f"candidate:{blocker}" for blocker in candidate_blockers)
+        request_sha = str(request.get("archive_sha256") or "")
+        candidate_sha = (
+            str(candidate_manifest.get("archive_sha256") or "")
+            if candidate_manifest is not None
+            else ""
+        )
+        if request_sha and candidate_sha and request_sha != candidate_sha:
+            blockers.append("candidate:mlx_cache_archive_sha256_mismatch")
+    blockers.extend(_mlx_cache_pair_blockers(reference_manifest, candidate_manifest))
     if (
         archive_size_bytes is None
         or isinstance(archive_size_bytes, bool)
@@ -573,6 +948,213 @@ def build_coverage_followup_readiness_report(
     require_no_truthy_authority_fields(
         report,
         context="pair_frame_5d_followup_readiness_report",
+    )
+    return report
+
+
+def build_coverage_followup_input_binding_report(
+    *,
+    repo_root: str | Path,
+    plan_paths: Sequence[str | Path],
+    search_roots: Sequence[str | Path] | None = None,
+    submission_bundle_path: str | Path | None = None,
+    reference_mlx_cache_dir: str | Path | None = None,
+    candidate_mlx_cache_dir: str | Path | None = None,
+    archive_size_bytes: int | None = None,
+) -> dict[str, Any]:
+    """Bind follow-up requests to concrete, custody-checked local inputs.
+
+    The report is deliberately advisory: it discovers the strongest available
+    local paths for the existing readiness gate, but does not itself claim
+    score, promotion, dispatch readiness, or runtime parity.
+    """
+
+    repo = Path(repo_root)
+    roots = _candidate_search_roots(search_roots, repo_root=repo)
+    explicit_bundle = (
+        None
+        if submission_bundle_path is None
+        else _resolve_path(submission_bundle_path, repo_root=repo)
+    )
+    explicit_reference_cache = (
+        None
+        if reference_mlx_cache_dir is None
+        else _resolve_path(reference_mlx_cache_dir, repo_root=repo)
+    )
+    explicit_candidate_cache = (
+        None
+        if candidate_mlx_cache_dir is None
+        else _resolve_path(candidate_mlx_cache_dir, repo_root=repo)
+    )
+
+    rows: list[dict[str, Any]] = []
+    selected_bundle_paths: set[str] = set()
+    selected_reference_cache_paths: set[str] = set()
+    selected_candidate_cache_paths: set[str] = set()
+    selected_archive_size_bytes: set[int] = set()
+    for raw_path in plan_paths:
+        plan_path = _resolve_path(raw_path, repo_root=repo)
+        plan = _load_json_object(plan_path)
+        if plan.get("schema") != PAIR_FRAME_5D_COVERAGE_ACQUISITION_PLAN_SCHEMA:
+            raise ExperimentQueueError(
+                f"{plan_path}: expected {PAIR_FRAME_5D_COVERAGE_ACQUISITION_PLAN_SCHEMA}"
+            )
+        try:
+            require_no_truthy_authority_fields(
+                plan,
+                context=f"pair_frame_5d_followup_input_binding_plan:{plan_path}",
+            )
+        except ValueError as exc:
+            raise ExperimentQueueError(str(exc)) from exc
+        for request in plan.get("followup_lane_requests") or []:
+            if not isinstance(request, Mapping):
+                continue
+            try:
+                require_no_truthy_authority_fields(
+                    request,
+                    context=(
+                        "pair_frame_5d_followup_input_binding_request:"
+                        f"{plan_path}:{request.get('schema')}"
+                    ),
+                )
+            except ValueError as exc:
+                raise ExperimentQueueError(str(exc)) from exc
+            schema = str(request.get("schema") or "")
+            blockers: list[str] = []
+            row: dict[str, Any] = {
+                "schema": "pair_frame_5d_canvas_followup_input_binding_row.v1",
+                "plan_path": _repo_rel(plan_path, repo),
+                "work_order_id": request.get("work_order_id"),
+                "request_schema": schema,
+                "archive_sha256": request.get("archive_sha256"),
+                "allowed_use": "queue_followup_input_binding_only",
+                **FALSE_AUTHORITY,
+            }
+            if schema == PAIR_FRAME_5D_EXACT_AXIS_ANCHOR_REQUEST_SCHEMA:
+                bundle, bundle_bytes, bundle_blockers, considered = (
+                    _select_submission_bundle_for_archive(
+                        archive_sha256=str(request.get("archive_sha256") or ""),
+                        repo_root=repo,
+                        explicit_path=explicit_bundle,
+                        search_roots=roots,
+                    )
+                )
+                blockers.extend(bundle_blockers)
+                row["candidate_submission_bundle_count"] = considered
+                if bundle is not None:
+                    bundle_ref = _repo_rel(bundle, repo)
+                    row["selected_submission_bundle_path"] = bundle_ref
+                    selected_bundle_paths.add(bundle_ref)
+                if bundle_bytes is not None:
+                    row["selected_archive_size_bytes"] = bundle_bytes
+                    selected_archive_size_bytes.add(bundle_bytes)
+            elif schema == PAIR_FRAME_5D_MLX_NEGATIVE_DELTA_REQUEST_SCHEMA:
+                reference_cache, reference_manifest, reference_blockers, ref_count = (
+                    _select_mlx_cache_for_request(
+                        request=request,
+                        repo_root=repo,
+                        explicit_path=explicit_reference_cache,
+                        search_roots=roots,
+                        candidate=False,
+                    )
+                )
+                candidate_cache, candidate_manifest, candidate_blockers, cand_count = (
+                    _select_mlx_cache_for_request(
+                        request=request,
+                        repo_root=repo,
+                        explicit_path=explicit_candidate_cache,
+                        search_roots=roots,
+                        candidate=True,
+                    )
+                )
+                blockers.extend(f"reference:{blocker}" for blocker in reference_blockers)
+                blockers.extend(f"candidate:{blocker}" for blocker in candidate_blockers)
+                blockers.extend(_mlx_cache_pair_blockers(reference_manifest, candidate_manifest))
+                row["candidate_reference_mlx_cache_count"] = ref_count
+                row["candidate_candidate_mlx_cache_count"] = cand_count
+                if reference_cache is not None:
+                    reference_ref = _repo_rel(reference_cache, repo)
+                    row["selected_reference_mlx_cache_dir"] = reference_ref
+                    selected_reference_cache_paths.add(reference_ref)
+                if candidate_cache is not None:
+                    candidate_ref = _repo_rel(candidate_cache, repo)
+                    row["selected_candidate_mlx_cache_dir"] = candidate_ref
+                    selected_candidate_cache_paths.add(candidate_ref)
+                if (
+                    archive_size_bytes is not None
+                    and not isinstance(archive_size_bytes, bool)
+                    and archive_size_bytes > 0
+                ):
+                    row["selected_archive_size_bytes"] = int(archive_size_bytes)
+                    selected_archive_size_bytes.add(int(archive_size_bytes))
+                else:
+                    bundle, bundle_bytes, bundle_blockers, considered = (
+                        _select_submission_bundle_for_archive(
+                            archive_sha256=str(request.get("archive_sha256") or ""),
+                            repo_root=repo,
+                            explicit_path=explicit_bundle,
+                            search_roots=roots,
+                        )
+                    )
+                    row["candidate_submission_bundle_count"] = considered
+                    if bundle is not None:
+                        bundle_ref = _repo_rel(bundle, repo)
+                        row["selected_submission_bundle_path"] = bundle_ref
+                        selected_bundle_paths.add(bundle_ref)
+                    if bundle_bytes is not None:
+                        row["selected_archive_size_bytes"] = bundle_bytes
+                        selected_archive_size_bytes.add(bundle_bytes)
+                    else:
+                        blockers.extend(
+                            f"archive_size:{blocker}" for blocker in bundle_blockers
+                        )
+            else:
+                blockers.append(f"unknown_followup_request_schema:{schema}")
+            row["ready_for_readiness_refresh"] = not blockers
+            row["blockers"] = blockers
+            rows.append(row)
+
+    selected_inputs: dict[str, Any] = {}
+    global_blockers: list[str] = []
+    if len(selected_bundle_paths) == 1:
+        selected_inputs["submission_bundle_path"] = next(iter(selected_bundle_paths))
+    elif len(selected_bundle_paths) > 1:
+        global_blockers.append("multiple_submission_bundles_selected")
+    if len(selected_reference_cache_paths) == 1:
+        selected_inputs["reference_mlx_cache_dir"] = next(
+            iter(selected_reference_cache_paths)
+        )
+    elif len(selected_reference_cache_paths) > 1:
+        global_blockers.append("multiple_reference_mlx_cache_dirs_selected")
+    if len(selected_candidate_cache_paths) == 1:
+        selected_inputs["candidate_mlx_cache_dir"] = next(
+            iter(selected_candidate_cache_paths)
+        )
+    elif len(selected_candidate_cache_paths) > 1:
+        global_blockers.append("multiple_candidate_mlx_cache_dirs_selected")
+    if len(selected_archive_size_bytes) == 1:
+        selected_inputs["archive_size_bytes"] = next(iter(selected_archive_size_bytes))
+    elif len(selected_archive_size_bytes) > 1:
+        global_blockers.append("multiple_archive_size_byte_values_selected")
+
+    ready_count = sum(1 for row in rows if row["ready_for_readiness_refresh"])
+    report = {
+        "schema": PAIR_FRAME_5D_FOLLOWUP_INPUT_BINDING_REPORT_SCHEMA,
+        "plan_count": len(plan_paths),
+        "request_count": len(rows),
+        "bound_request_count": ready_count,
+        "blocked_request_count": len(rows) - ready_count,
+        "search_roots": [_repo_rel(root, repo) for root in roots],
+        "selected_inputs": selected_inputs,
+        "global_blockers": global_blockers,
+        "requests": rows,
+        "allowed_use": "queue_followup_input_binding_only",
+        "forbidden_use": "score_claim_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        report,
+        context="pair_frame_5d_followup_input_binding_report",
     )
     return report
 
@@ -1105,11 +1687,13 @@ def build_pair_frame_5d_coverage_acquisition_queue(
         )
 
     followup_readiness_report = out_root / "followup_readiness_report.json"
+    followup_input_binding_report = out_root / "followup_input_binding_report.json"
     followup_execution_queue = out_root / "followup_execution_queue.json"
     followup_execution_worker_result = (
         out_root / "followup_execution_worker_result.json"
     )
     followup_readiness_report_ref = _repo_rel(followup_readiness_report, repo)
+    followup_input_binding_report_ref = _repo_rel(followup_input_binding_report, repo)
     followup_execution_queue_ref = _repo_rel(followup_execution_queue, repo)
     followup_execution_worker_result_ref = _repo_rel(
         followup_execution_worker_result,
@@ -1132,6 +1716,7 @@ def build_pair_frame_5d_coverage_acquisition_queue(
                 "schema": PAIR_FRAME_5D_COVERAGE_ACQUISITION_QUEUE_SCHEMA,
                 "coverage_audit_path": audit_ref,
                 "canvas_path": canvas_ref,
+                "followup_input_binding_report_path": followup_input_binding_report_ref,
                 "followup_readiness_report_path": followup_readiness_report_ref,
                 "followup_execution_queue_path": followup_execution_queue_ref,
                 "followup_execution_worker_result_path": (
@@ -1146,30 +1731,49 @@ def build_pair_frame_5d_coverage_acquisition_queue(
             },
             "steps": [
                 {
-                    "id": "emit_followup_readiness_report",
+                    "id": "bind_followup_inputs_and_emit_readiness_report",
                     "kind": "command",
                     "requires": plan_step_refs,
                     "command": [
                         ".venv/bin/python",
-                        "tools/audit_5d_coverage_followup_requests.py",
+                        "tools/bind_5d_coverage_followup_inputs.py",
                         "--plans-dir",
                         f"{out_ref}/plans",
+                        "--search-root",
+                        out_ref,
                         "--output",
+                        followup_input_binding_report_ref,
+                        "--refreshed-readiness-output",
                         followup_readiness_report_ref,
+                        "--overwrite",
                     ],
                     "resources": {"kind": "local_cpu"},
                     "timeout_seconds": 120,
                     "postconditions": [
                         {
                             "type": "json_equals",
+                            "path": followup_input_binding_report_ref,
+                            "key": "schema",
+                            "equals": (
+                                PAIR_FRAME_5D_FOLLOWUP_INPUT_BINDING_REPORT_SCHEMA
+                            ),
+                        },
+                        {
+                            "type": "json_equals",
                             "path": followup_readiness_report_ref,
                             "key": "schema",
                             "equals": PAIR_FRAME_5D_FOLLOWUP_READINESS_REPORT_SCHEMA,
                         },
+                        _false_authority_postcondition(
+                            followup_input_binding_report_ref
+                        ),
                         _false_authority_postcondition(followup_readiness_report_ref),
                     ],
                     "telemetry": {
-                        "artifact_paths": [followup_readiness_report_ref],
+                        "artifact_paths": [
+                            followup_input_binding_report_ref,
+                            followup_readiness_report_ref,
+                        ],
                         "input_artifact_paths": [f"{out_ref}/plans"],
                         "recursive": False,
                         "include_postcondition_paths": True,
@@ -1178,7 +1782,7 @@ def build_pair_frame_5d_coverage_acquisition_queue(
                 {
                     "id": "emit_followup_execution_queue",
                     "kind": "command",
-                    "requires": ["emit_followup_readiness_report"],
+                    "requires": ["bind_followup_inputs_and_emit_readiness_report"],
                     "command": [
                         ".venv/bin/python",
                         "tools/build_5d_coverage_followup_execution_queue.py",
@@ -1188,6 +1792,7 @@ def build_pair_frame_5d_coverage_acquisition_queue(
                         followup_execution_queue_ref,
                         "--queue-id",
                         f"{queue_id}_followup_execution",
+                        "--overwrite",
                     ],
                     "resources": {"kind": "local_cpu"},
                     "timeout_seconds": 120,
@@ -1497,10 +2102,12 @@ __all__ = [
     "PAIR_FRAME_5D_COVERAGE_ACQUISITION_QUEUE_SCHEMA",
     "PAIR_FRAME_5D_EXACT_AXIS_ANCHOR_REQUEST_SCHEMA",
     "PAIR_FRAME_5D_FOLLOWUP_EXECUTION_QUEUE_SCHEMA",
+    "PAIR_FRAME_5D_FOLLOWUP_INPUT_BINDING_REPORT_SCHEMA",
     "PAIR_FRAME_5D_FOLLOWUP_READINESS_REPORT_SCHEMA",
     "PAIR_FRAME_5D_MLX_NEGATIVE_DELTA_REQUEST_SCHEMA",
     "build_coverage_acquisition_plan",
     "build_coverage_followup_execution_queue",
+    "build_coverage_followup_input_binding_report",
     "build_coverage_followup_readiness_report",
     "build_pair_frame_5d_coverage_acquisition_queue",
 ]

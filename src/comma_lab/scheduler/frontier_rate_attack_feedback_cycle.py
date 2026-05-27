@@ -631,10 +631,19 @@ def write_frontier_refresh_artifacts(
                     / "pair_frame_5d_coverage_acquisition"
                     / "followup_execution_queue.json"
                 )
+                followup_input_binding_report_path = (
+                    out
+                    / "pair_frame_5d_coverage_acquisition"
+                    / "followup_input_binding_report.json"
+                )
                 followup_execution_worker_result_path = (
                     out
                     / "pair_frame_5d_coverage_acquisition"
                     / "followup_execution_worker_result.json"
+                )
+                followup_input_binding_report_ref = repo_rel(
+                    followup_input_binding_report_path,
+                    repo_root,
                 )
                 followup_execution_queue_ref = repo_rel(
                     followup_execution_queue_path,
@@ -662,17 +671,21 @@ def write_frontier_refresh_artifacts(
                     "experiment_count": len(
                         coverage_acquisition_queue.get("experiments") or []
                     ),
+                    "followup_input_binding_report_path": (
+                        followup_input_binding_report_ref
+                    ),
                     "followup_execution_queue_path": followup_execution_queue_ref,
                     "followup_execution_worker_result_path": (
                         followup_execution_worker_result_ref
                     ),
-                    "followup_execution_emitted_by_queue": True,
-                    "followup_execution_bounded_local_run_by_queue": True,
+                    "followup_input_binding_planned_by_queue": True,
+                    "followup_execution_queue_planned_by_queue": True,
+                    "followup_execution_bounded_local_run_completed": False,
                     "work_order_count": coverage_audit.get("work_order_count"),
                     "coverage_verdict": coverage_audit.get("verdict"),
                     "allowed_use": (
-                        "local_encoder_side_coverage_acquisition_and_bounded_"
-                        "mlx_followup_execution_only"
+                        "local_encoder_side_coverage_acquisition_and_followup_"
+                        "execution_planning_only"
                     ),
                     **FALSE_AUTHORITY,
                 }

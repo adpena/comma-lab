@@ -3,20 +3,25 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import pathlib
 import subprocess
 import sys
+
+import numpy as np
 
 from comma_lab.scheduler.pair_frame_5d_coverage_acquisition_queue import (
     PAIR_FRAME_5D_COVERAGE_ACQUISITION_PLAN_SCHEMA,
     PAIR_FRAME_5D_COVERAGE_ACQUISITION_QUEUE_SCHEMA,
     PAIR_FRAME_5D_EXACT_AXIS_ANCHOR_REQUEST_SCHEMA,
     PAIR_FRAME_5D_FOLLOWUP_EXECUTION_QUEUE_SCHEMA,
+    PAIR_FRAME_5D_FOLLOWUP_INPUT_BINDING_REPORT_SCHEMA,
     PAIR_FRAME_5D_FOLLOWUP_READINESS_REPORT_SCHEMA,
     PAIR_FRAME_5D_MLX_NEGATIVE_DELTA_REQUEST_SCHEMA,
     build_coverage_acquisition_plan,
     build_coverage_followup_execution_queue,
+    build_coverage_followup_input_binding_report,
     build_coverage_followup_readiness_report,
     build_pair_frame_5d_coverage_acquisition_queue,
 )
@@ -29,6 +34,7 @@ _REPO_ROOT = pathlib.Path(__file__).resolve().parents[3]
 _BUILD_TOOL = _REPO_ROOT / "tools" / "build_5d_canvas_coverage_acquisition_queue.py"
 _EMIT_TOOL = _REPO_ROOT / "tools" / "emit_5d_canvas_coverage_acquisition_plan.py"
 _AUDIT_TOOL = _REPO_ROOT / "tools" / "audit_5d_coverage_followup_requests.py"
+_BIND_TOOL = _REPO_ROOT / "tools" / "bind_5d_coverage_followup_inputs.py"
 _FOLLOWUP_QUEUE_TOOL = (
     _REPO_ROOT / "tools" / "build_5d_coverage_followup_execution_queue.py"
 )
@@ -84,6 +90,98 @@ def _audit(*work_orders: dict[str, object]) -> dict[str, object]:
 def _write_json(path: pathlib.Path, payload: object) -> pathlib.Path:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return path
+
+
+def _sha256_file(path: pathlib.Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _false_authority() -> dict[str, bool]:
+    return {
+        "score_claim": False,
+        "score_claim_valid": False,
+        "score_claim_eligible": False,
+        "promotion_eligible": False,
+        "promotable": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_packet_ready": False,
+        "reproduction_claim": False,
+        "reproduction_equivalence": False,
+    }
+
+
+def _write_mlx_cache(
+    cache_dir: pathlib.Path,
+    *,
+    archive_sha256: str = "e" * 64,
+    local_advisory_identity: bool = False,
+) -> pathlib.Path:
+    cache_dir.mkdir()
+    arrays = {
+        "pair_indices": np.asarray([[0, 1], [1, 2]], dtype=np.int32),
+        "posenet_yuv6_pair": np.zeros((2, 12, 4, 4), dtype=np.float32),
+        "segnet_last_rgb": np.zeros((2, 3, 4, 4), dtype=np.float32),
+    }
+    artifact_payload: dict[str, dict[str, object]] = {}
+    array_sha256: dict[str, str] = {}
+    filenames = {
+        "pair_indices": "pair_indices.npy",
+        "posenet_yuv6_pair": "posenet_yuv6_pair.npy",
+        "segnet_last_rgb": "segnet_last_rgb.npy",
+    }
+    for key, array in arrays.items():
+        path = cache_dir / filenames[key]
+        np.save(path, array)
+        digest = _sha256_file(path)
+        array_sha256[key] = digest
+        artifact_payload[key] = {
+            "path": filenames[key],
+            "bytes": path.stat().st_size,
+            "sha256": digest,
+        }
+    manifest = {
+        "archive_sha256": archive_sha256,
+        "raw_sha256": "a" * 64,
+        "inflated_outputs_aggregate_sha256": "b" * 64,
+        "hash_domain": "unit-test-npy-file",
+        "pair_count": 2,
+        "pair_indices_shape": [2, 2],
+        "posenet_yuv6_pair_shape": [2, 12, 4, 4],
+        "segnet_last_rgb_shape": [2, 3, 4, 4],
+        "array_sha256": array_sha256,
+        "artifacts": artifact_payload,
+        **_false_authority(),
+    }
+    if local_advisory_identity:
+        audit = {
+            "verdict": "PASS_CACHE_LOCAL_CPU_ADVISORY_IDENTITY",
+            "passed": True,
+            "identity_residual": 0,
+            "cache": {
+                "archive_sha256": manifest["archive_sha256"],
+                "raw_sha256": manifest["raw_sha256"],
+                "inflated_outputs_aggregate_sha256": (
+                    manifest["inflated_outputs_aggregate_sha256"]
+                ),
+                "hash_domain": manifest["hash_domain"],
+                "pair_count": manifest["pair_count"],
+                "array_sha256": manifest["array_sha256"],
+            },
+            **_false_authority(),
+        }
+        audit_path = _write_json(cache_dir / "local_cpu_advisory_cache_audit.json", audit)
+        manifest["eligible_for_local_mlx_local_advisory_debug"] = True
+        manifest["local_cpu_advisory_cache_identity_audit"] = {
+            "path": audit_path.name,
+            "sha256": _sha256_file(audit_path),
+            "verdict": "PASS_CACHE_LOCAL_CPU_ADVISORY_IDENTITY",
+            "passed": True,
+            "identity_residual": 0,
+            **_false_authority(),
+        }
+    _write_json(cache_dir / "manifest.json", manifest)
+    return cache_dir
 
 
 def _submission_bundle_payload(*, archive_sha256: str = "e" * 64) -> dict[str, object]:
@@ -264,10 +362,8 @@ def test_build_followup_readiness_report_materializes_ready_commands(
     )
     reference_cache = tmp_path / "reference_mlx_cache"
     candidate_cache = tmp_path / "candidate_mlx_cache"
-    reference_cache.mkdir()
-    candidate_cache.mkdir()
-    _write_json(reference_cache / "manifest.json", {"schema": "unit"})
-    _write_json(candidate_cache / "manifest.json", {"schema": "unit"})
+    _write_mlx_cache(reference_cache)
+    _write_mlx_cache(candidate_cache, local_advisory_identity=True)
 
     report = build_coverage_followup_readiness_report(
         repo_root=_REPO_ROOT,
@@ -291,6 +387,65 @@ def test_build_followup_readiness_report_materializes_ready_commands(
         "acquire_negative_delta_cells_before_operator_fanout"
     ]
     assert "123" in commands["acquire_negative_delta_cells_before_operator_fanout"]
+
+
+def test_build_followup_input_binding_report_discovers_custody_checked_inputs(
+    tmp_path: pathlib.Path,
+) -> None:
+    audit = _audit(
+        _work_order("populate_missing_paired_cpu_cuda_axis_anchors", priority=1),
+        _work_order("acquire_negative_delta_cells_before_operator_fanout", priority=2),
+    )
+    exact_plan = build_coverage_acquisition_plan(
+        coverage_audit=audit,
+        work_order_id="populate_missing_paired_cpu_cuda_axis_anchors",
+        coverage_audit_path="audit.json",
+        repo_root=_REPO_ROOT,
+        canvas_path="canvas.json",
+    )
+    mlx_plan = build_coverage_acquisition_plan(
+        coverage_audit=audit,
+        work_order_id="acquire_negative_delta_cells_before_operator_fanout",
+        coverage_audit_path="audit.json",
+        repo_root=_REPO_ROOT,
+        canvas_path="canvas.json",
+    )
+    exact_path = _write_json(tmp_path / "exact_plan.json", exact_plan)
+    mlx_path = _write_json(tmp_path / "mlx_plan.json", mlx_plan)
+    submission_bundle = _write_json(
+        tmp_path / "submission_bundle_result.json",
+        _submission_bundle_payload(),
+    )
+    reference_cache = _write_mlx_cache(tmp_path / "reference_mlx_cache")
+    candidate_cache = _write_mlx_cache(
+        tmp_path / "candidate_mlx_cache",
+        local_advisory_identity=True,
+    )
+
+    report = build_coverage_followup_input_binding_report(
+        repo_root=_REPO_ROOT,
+        plan_paths=[exact_path, mlx_path],
+        search_roots=[tmp_path],
+        reference_mlx_cache_dir=reference_cache,
+        candidate_mlx_cache_dir=candidate_cache,
+    )
+
+    assert report["schema"] == PAIR_FRAME_5D_FOLLOWUP_INPUT_BINDING_REPORT_SCHEMA
+    assert report["bound_request_count"] == 2
+    assert report["blocked_request_count"] == 0
+    assert report["selected_inputs"]["submission_bundle_path"] == str(
+        submission_bundle.relative_to(_REPO_ROOT)
+        if submission_bundle.is_relative_to(_REPO_ROOT)
+        else submission_bundle
+    )
+    assert report["selected_inputs"]["reference_mlx_cache_dir"].endswith(
+        "reference_mlx_cache"
+    )
+    assert report["selected_inputs"]["candidate_mlx_cache_dir"].endswith(
+        "candidate_mlx_cache"
+    )
+    assert report["selected_inputs"]["archive_size_bytes"] == 123
+    assert all(row["ready_for_readiness_refresh"] for row in report["requests"])
 
 
 def test_build_followup_execution_queue_freezes_exact_and_queues_mlx(
@@ -322,10 +477,8 @@ def test_build_followup_execution_queue_freezes_exact_and_queues_mlx(
     )
     reference_cache = tmp_path / "reference_mlx_cache"
     candidate_cache = tmp_path / "candidate_mlx_cache"
-    reference_cache.mkdir()
-    candidate_cache.mkdir()
-    _write_json(reference_cache / "manifest.json", {"schema": "unit"})
-    _write_json(candidate_cache / "manifest.json", {"schema": "unit"})
+    _write_mlx_cache(reference_cache)
+    _write_mlx_cache(candidate_cache, local_advisory_identity=True)
     readiness_path = _write_json(
         tmp_path / "followup_readiness_report.json",
         build_coverage_followup_readiness_report(
@@ -452,6 +605,140 @@ def test_followup_readiness_refuses_schema_only_submission_bundle(
     assert report["requests"][0]["materialized_command"] is None
 
 
+def test_followup_readiness_refuses_manifest_only_mlx_cache(
+    tmp_path: pathlib.Path,
+) -> None:
+    audit = _audit(_work_order("acquire_negative_delta_cells_before_operator_fanout"))
+    plan = build_coverage_acquisition_plan(
+        coverage_audit=audit,
+        work_order_id="acquire_negative_delta_cells_before_operator_fanout",
+        coverage_audit_path="audit.json",
+        repo_root=_REPO_ROOT,
+        canvas_path="canvas.json",
+    )
+    plan_path = _write_json(tmp_path / "mlx_plan.json", plan)
+    reference_cache = tmp_path / "reference_mlx_cache"
+    candidate_cache = tmp_path / "candidate_mlx_cache"
+    reference_cache.mkdir()
+    candidate_cache.mkdir()
+    _write_json(reference_cache / "manifest.json", {"schema": "unit"})
+    _write_json(candidate_cache / "manifest.json", {"schema": "unit"})
+
+    report = build_coverage_followup_readiness_report(
+        repo_root=_REPO_ROOT,
+        plan_paths=[plan_path],
+        reference_mlx_cache_dir=reference_cache,
+        candidate_mlx_cache_dir=candidate_cache,
+        archive_size_bytes=123,
+    )
+
+    blockers = report["requests"][0]["blockers"]
+    assert report["ready_request_count"] == 0
+    assert "reference:mlx_cache_array_sha256_missing" in blockers
+    assert "candidate:candidate_mlx_cache_identity_audit_missing_or_invalid" in blockers
+    assert report["requests"][0]["materialized_command"] is None
+
+
+def test_build_followup_input_binding_report_selects_bundle_and_mlx_caches(
+    tmp_path: pathlib.Path,
+) -> None:
+    audit = _audit(
+        _work_order("populate_missing_paired_cpu_cuda_axis_anchors", priority=1),
+        _work_order("acquire_negative_delta_cells_before_operator_fanout", priority=2),
+    )
+    plans_dir = tmp_path / "plans"
+    plans_dir.mkdir()
+    exact_plan = build_coverage_acquisition_plan(
+        coverage_audit=audit,
+        work_order_id="populate_missing_paired_cpu_cuda_axis_anchors",
+        coverage_audit_path="audit.json",
+        repo_root=_REPO_ROOT,
+        canvas_path="canvas.json",
+    )
+    mlx_plan = build_coverage_acquisition_plan(
+        coverage_audit=audit,
+        work_order_id="acquire_negative_delta_cells_before_operator_fanout",
+        coverage_audit_path="audit.json",
+        repo_root=_REPO_ROOT,
+        canvas_path="canvas.json",
+    )
+    exact_path = _write_json(plans_dir / "exact_acquisition_plan.json", exact_plan)
+    mlx_path = _write_json(plans_dir / "mlx_acquisition_plan.json", mlx_plan)
+    _write_json(
+        tmp_path / "submission_bundle_result.json",
+        _submission_bundle_payload(),
+    )
+    _write_mlx_cache(tmp_path / "reference_mlx_cache")
+    _write_mlx_cache(
+        tmp_path / "candidate_mlx_cache",
+        local_advisory_identity=True,
+    )
+
+    report = build_coverage_followup_input_binding_report(
+        repo_root=_REPO_ROOT,
+        plan_paths=[exact_path, mlx_path],
+        search_roots=[tmp_path],
+    )
+
+    assert report["schema"] == PAIR_FRAME_5D_FOLLOWUP_INPUT_BINDING_REPORT_SCHEMA
+    assert report["bound_request_count"] == 2
+    assert report["blocked_request_count"] == 0
+    selected = report["selected_inputs"]
+    assert selected["archive_size_bytes"] == 123
+    assert selected["submission_bundle_path"].endswith("submission_bundle_result.json")
+    assert selected["reference_mlx_cache_dir"].endswith("reference_mlx_cache")
+    assert selected["candidate_mlx_cache_dir"].endswith("candidate_mlx_cache")
+    assert report["score_claim"] is False
+
+
+def test_bind_followup_inputs_cli_emits_refreshed_readiness(
+    tmp_path: pathlib.Path,
+) -> None:
+    audit = _audit(_work_order("populate_missing_paired_cpu_cuda_axis_anchors"))
+    plans_dir = tmp_path / "plans"
+    plans_dir.mkdir()
+    plan = build_coverage_acquisition_plan(
+        coverage_audit=audit,
+        work_order_id="populate_missing_paired_cpu_cuda_axis_anchors",
+        coverage_audit_path="audit.json",
+        repo_root=_REPO_ROOT,
+        canvas_path="canvas.json",
+    )
+    _write_json(plans_dir / "exact_acquisition_plan.json", plan)
+    _write_json(
+        tmp_path / "submission_bundle_result.json",
+        _submission_bundle_payload(),
+    )
+    binding_path = tmp_path / "binding.json"
+    readiness_path = tmp_path / "readiness.json"
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(_BIND_TOOL),
+            "--plans-dir",
+            str(plans_dir),
+            "--search-root",
+            str(tmp_path),
+            "--output",
+            str(binding_path),
+            "--refreshed-readiness-output",
+            str(readiness_path),
+        ],
+        cwd=_REPO_ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    binding = json.loads(binding_path.read_text(encoding="utf-8"))
+    readiness = json.loads(readiness_path.read_text(encoding="utf-8"))
+    assert binding["schema"] == PAIR_FRAME_5D_FOLLOWUP_INPUT_BINDING_REPORT_SCHEMA
+    assert binding["bound_request_count"] == 1
+    assert readiness["schema"] == PAIR_FRAME_5D_FOLLOWUP_READINESS_REPORT_SCHEMA
+    assert readiness["ready_request_count"] == 1
+
+
 def test_build_followup_execution_queue_from_ready_report(
     tmp_path: pathlib.Path,
 ) -> None:
@@ -483,10 +770,8 @@ def test_build_followup_execution_queue_from_ready_report(
     )
     reference_cache = tmp_path / "reference_mlx_cache"
     candidate_cache = tmp_path / "candidate_mlx_cache"
-    reference_cache.mkdir()
-    candidate_cache.mkdir()
-    _write_json(reference_cache / "manifest.json", {"schema": "unit"})
-    _write_json(candidate_cache / "manifest.json", {"schema": "unit"})
+    _write_mlx_cache(reference_cache)
+    _write_mlx_cache(candidate_cache, local_advisory_identity=True)
     readiness = build_coverage_followup_readiness_report(
         repo_root=_REPO_ROOT,
         plan_paths=[exact_path, mlx_path],
@@ -673,6 +958,69 @@ def test_audit_followup_requests_cli(tmp_path: pathlib.Path) -> None:
     ]
 
 
+def test_bind_followup_inputs_cli_refreshes_readiness(tmp_path: pathlib.Path) -> None:
+    audit = _audit(
+        _work_order("populate_missing_paired_cpu_cuda_axis_anchors", priority=1),
+        _work_order("acquire_negative_delta_cells_before_operator_fanout", priority=2),
+    )
+    exact_plan = build_coverage_acquisition_plan(
+        coverage_audit=audit,
+        work_order_id="populate_missing_paired_cpu_cuda_axis_anchors",
+        coverage_audit_path="audit.json",
+        repo_root=_REPO_ROOT,
+        canvas_path="canvas.json",
+    )
+    mlx_plan = build_coverage_acquisition_plan(
+        coverage_audit=audit,
+        work_order_id="acquire_negative_delta_cells_before_operator_fanout",
+        coverage_audit_path="audit.json",
+        repo_root=_REPO_ROOT,
+        canvas_path="canvas.json",
+    )
+    plans_dir = tmp_path / "plans"
+    plans_dir.mkdir()
+    _write_json(plans_dir / "exact_acquisition_plan.json", exact_plan)
+    _write_json(plans_dir / "mlx_acquisition_plan.json", mlx_plan)
+    _write_json(tmp_path / "submission_bundle_result.json", _submission_bundle_payload())
+    reference_cache = _write_mlx_cache(tmp_path / "reference_mlx_cache")
+    candidate_cache = _write_mlx_cache(
+        tmp_path / "candidate_mlx_cache",
+        local_advisory_identity=True,
+    )
+    binding_report = tmp_path / "followup_input_binding_report.json"
+    readiness_report = tmp_path / "followup_readiness_report.json"
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(_BIND_TOOL),
+            "--plans-dir",
+            str(plans_dir),
+            "--search-root",
+            str(tmp_path),
+            "--reference-mlx-cache-dir",
+            str(reference_cache),
+            "--candidate-mlx-cache-dir",
+            str(candidate_cache),
+            "--output",
+            str(binding_report),
+            "--refreshed-readiness-output",
+            str(readiness_report),
+        ],
+        cwd=_REPO_ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    binding = json.loads(binding_report.read_text(encoding="utf-8"))
+    readiness = json.loads(readiness_report.read_text(encoding="utf-8"))
+    assert binding["schema"] == PAIR_FRAME_5D_FOLLOWUP_INPUT_BINDING_REPORT_SCHEMA
+    assert binding["bound_request_count"] == 2
+    assert readiness["schema"] == PAIR_FRAME_5D_FOLLOWUP_READINESS_REPORT_SCHEMA
+    assert readiness["ready_request_count"] == 2
+
+
 def test_build_pair_frame_5d_coverage_acquisition_queue_shape(
     tmp_path: pathlib.Path,
 ) -> None:
@@ -724,9 +1072,18 @@ def test_build_pair_frame_5d_coverage_acquisition_queue_shape(
     assert readiness["metadata"]["followup_execution_worker_result_path"].endswith(
         "followup_execution_worker_result.json"
     )
-    assert readiness["steps"][0]["command"][1] == (
-        "tools/audit_5d_coverage_followup_requests.py"
+    assert readiness["metadata"]["followup_input_binding_report_path"].endswith(
+        "followup_input_binding_report.json"
     )
+    assert readiness["steps"][0]["command"][1] == (
+        "tools/bind_5d_coverage_followup_inputs.py"
+    )
+    assert readiness["steps"][0]["command"][
+        readiness["steps"][0]["command"].index("--output") + 1
+    ] == readiness["metadata"]["followup_input_binding_report_path"]
+    assert readiness["steps"][0]["command"][
+        readiness["steps"][0]["command"].index("--refreshed-readiness-output") + 1
+    ] == readiness["metadata"]["followup_readiness_report_path"]
     assert readiness["steps"][1]["id"] == "emit_followup_execution_queue"
     assert readiness["steps"][1]["command"][1] == (
         "tools/build_5d_coverage_followup_execution_queue.py"

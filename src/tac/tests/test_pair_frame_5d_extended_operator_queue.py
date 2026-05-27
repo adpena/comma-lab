@@ -250,8 +250,11 @@ def test_refresh_artifacts_emit_pair_frame_5d_extended_operator_queue(
         "pair_frame_5d_coverage_acquisition/followup_execution_queue.json"
     )
     assert report["pair_frame_5d_coverage_acquisition_queue_summary"][
-        "followup_execution_bounded_local_run_by_queue"
+        "followup_execution_queue_planned_by_queue"
     ] is True
+    assert report["pair_frame_5d_coverage_acquisition_queue_summary"][
+        "followup_execution_bounded_local_run_completed"
+    ] is False
     assert (
         report["pair_frame_5d_coverage_acquisition_queue_summary"][
             "coverage_verdict"
