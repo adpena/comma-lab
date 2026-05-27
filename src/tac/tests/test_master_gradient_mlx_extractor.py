@@ -329,6 +329,7 @@ def test_mlx_replay_rerun_command_rewrites_outputs_and_strips_side_effects(
         bundle_path=bundle_path,
         output_dir=tmp_path / "reruns",
         python_executable="/usr/bin/python3",
+        run_id="stable_replay",
     )
     command = record["command"]
 
@@ -345,6 +346,7 @@ def test_mlx_replay_rerun_command_rewrites_outputs_and_strips_side_effects(
     assert command.count("--out") == 1
     assert command.count("--replay-bundle-path") == 1
     assert command[-1] == "--no-manifest"
+    assert record["run_dir"] == str(tmp_path / "reruns" / "stable_replay")
     assert record["score_claim"] is False
     assert record["ready_for_exact_eval_dispatch"] is False
 

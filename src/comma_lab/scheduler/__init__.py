@@ -148,6 +148,10 @@ from .mlx_learned_sweep_autopilot_queue import (
     build_mlx_learned_sweep_autopilot_batch_queue,
     build_mlx_learned_sweep_autopilot_queue,
 )
+from .mlx_master_gradient_replay_queue import (
+    MLX_MASTER_GRADIENT_REPLAY_QUEUE_SCHEMA,
+    build_mlx_master_gradient_replay_queue,
+)
 from .models import (
     BudgetReport,
     BudgetSpec,
@@ -246,6 +250,7 @@ __all__ = [
     "MLX_EXECUTION_QUEUE_SCHEMA",
     "MLX_LEARNED_SWEEP_AUTOPILOT_BATCH_QUEUE_SCHEMA",
     "MLX_LEARNED_SWEEP_AUTOPILOT_QUEUE_SCHEMA",
+    "MLX_MASTER_GRADIENT_REPLAY_QUEUE_SCHEMA",
     "MLX_RUNTIME_TELEMETRY_STATE_DISCOVERY_POLICY_SCHEMA",
     "PACKET_MEMBER_RECOMPRESS_MATERIALIZER",
     "PACKET_MEMBER_RECOMPRESS_TARGET_KIND",
@@ -308,6 +313,7 @@ __all__ = [
     "build_materializer_execution_queue",
     "build_mlx_learned_sweep_autopilot_batch_queue",
     "build_mlx_learned_sweep_autopilot_queue",
+    "build_mlx_master_gradient_replay_queue",
     "build_mlx_scorer_response_execution_queue",
     "build_pair_frame_5d_coverage_acquisition_queue",
     "build_queue_feedback_replan_continuation_queue",

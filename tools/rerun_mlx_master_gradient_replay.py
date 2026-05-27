@@ -106,6 +106,7 @@ def build_rerun_command(
     output_dir: Path,
     python_executable: str,
     append_manifest: bool = False,
+    run_id: str | None = None,
 ) -> dict[str, Any]:
     """Build a side-effect-contained rerun command from a replay bundle."""
 
@@ -118,8 +119,8 @@ def build_rerun_command(
     archive_sha = ""
     if isinstance(archive, Mapping):
         archive_sha = str(archive.get("sha256") or "")[:12]
-    run_id = _safe_id(f"{bundle_path.stem}_{archive_sha}_{_utc_compact()}")
-    run_dir = output_dir / run_id
+    resolved_run_id = run_id or f"{bundle_path.stem}_{archive_sha}_{_utc_compact()}"
+    run_dir = output_dir / _safe_id(resolved_run_id)
     out_path = run_dir / "gradient.npy"
     rerun_bundle_path = out_path.with_suffix(out_path.suffix + ".replay_bundle.json")
     diff_path = run_dir / "replay_diff.json"
@@ -167,6 +168,7 @@ def rerun_and_diff(
     output_dir: Path,
     python_executable: str,
     append_manifest: bool = False,
+    run_id: str | None = None,
 ) -> tuple[dict[str, Any], int]:
     bundle = _load_json(bundle_path)
     command_record = build_rerun_command(
@@ -175,6 +177,7 @@ def rerun_and_diff(
         output_dir=output_dir,
         python_executable=python_executable,
         append_manifest=append_manifest,
+        run_id=run_id,
     )
     run_dir = Path(command_record["run_dir"])
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -230,6 +233,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
+        "--run-id",
+        default=None,
+        help=(
+            "Stable rerun directory name under --output-dir. Defaults to a "
+            "timestamped id when omitted."
+        ),
+    )
+    parser.add_argument(
         "--strict",
         action="store_true",
         help="Exit non-zero if the rerun bundle differs from the source bundle.",
@@ -242,6 +253,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             output_dir=args.output_dir,
             python_executable=args.python_executable,
             append_manifest=args.append_manifest,
+            run_id=args.run_id,
         )
     except (
         OSError,
