@@ -10654,6 +10654,7 @@ def build_frontier_repair_budget_waterfill_queue(
                                 {
                                     "type": "json_false_authority",
                                     "path": repair_cascade_mlx_probe_queue_ref,
+                                    "required_false": [],
                                 },
                             ],
                             "telemetry": {

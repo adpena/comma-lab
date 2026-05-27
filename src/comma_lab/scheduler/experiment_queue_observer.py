@@ -208,24 +208,30 @@ def _false_authority_payload_blockers(
     *,
     context: str,
     allow_materializer_effect_flags: bool = False,
+    required_false: Sequence[str] | None = None,
+    false_or_missing: Sequence[str] | None = None,
 ) -> list[str]:
     blockers: list[str] = []
-    required_false = tuple(
-        dict.fromkeys(
-            (
-                *DEFAULT_REQUIRED_FALSE_AUTHORITY_FIELDS,
-                *REQUIRED_MATERIALIZER_FEEDBACK_FALSE_AUTHORITY_FIELDS,
+    if required_false is None:
+        required_false = tuple(
+            dict.fromkeys(
+                (
+                    *DEFAULT_REQUIRED_FALSE_AUTHORITY_FIELDS,
+                    *REQUIRED_MATERIALIZER_FEEDBACK_FALSE_AUTHORITY_FIELDS,
+                )
             )
         )
-    )
-    false_or_missing = tuple(
-        dict.fromkeys(
-            (
-                *DEFAULT_FALSE_OR_MISSING_AUTHORITY_FIELDS,
-                *MATERIALIZER_FALSE_AUTHORITY.keys(),
+    if false_or_missing is None:
+        false_or_missing = tuple(
+            dict.fromkeys(
+                (
+                    *DEFAULT_FALSE_OR_MISSING_AUTHORITY_FIELDS,
+                    *MATERIALIZER_FALSE_AUTHORITY.keys(),
+                )
             )
         )
-    )
+    required_false = tuple(dict.fromkeys(required_false))
+    false_or_missing = tuple(dict.fromkeys(false_or_missing))
     for key in required_false:
         if payload.get(key) is not False:
             blockers.append(f"{context}_{key}_must_be_false")
@@ -243,8 +249,15 @@ def _false_authority_revalidation(
     payload: Mapping[str, Any],
     *,
     context: str,
+    required_false: Sequence[str] | None = None,
+    false_or_missing: Sequence[str] | None = None,
 ) -> dict[str, Any]:
-    blockers = _false_authority_payload_blockers(payload, context=context)
+    blockers = _false_authority_payload_blockers(
+        payload,
+        context=context,
+        required_false=required_false,
+        false_or_missing=false_or_missing,
+    )
     return {
         "schema": "observer_false_authority_revalidation.v1",
         "valid": not blockers,
@@ -1381,9 +1394,21 @@ def _artifact_postcondition_revalidation(
         if payload is None:
             blockers.append("json_false_authority_payload_not_object")
         else:
+            required_false = (
+                _string_list(condition.get("required_false"))
+                if "required_false" in condition
+                else None
+            )
+            false_or_missing = (
+                _string_list(condition.get("false_or_missing"))
+                if "false_or_missing" in condition
+                else None
+            )
             false_authority = _false_authority_revalidation(
                 payload,
                 context="json_false_authority",
+                required_false=required_false,
+                false_or_missing=false_or_missing,
             )
             details["false_authority"] = false_authority
             blockers.extend(

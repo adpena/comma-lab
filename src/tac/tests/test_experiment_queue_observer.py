@@ -380,6 +380,71 @@ def test_observer_rejects_completion_contract_without_custody_proof(
     assert required_custody["valid"] is False
 
 
+def test_observer_honors_queue_false_authority_override_but_rejects_nested_truth(
+    tmp_path: Path,
+) -> None:
+    child_queue = tmp_path / "child_queue.json"
+    child_queue.write_text(
+        json.dumps(
+            {
+                "schema": "experiment_queue.v1",
+                "queue_id": "child",
+                "controls": {"mode": "running"},
+                "metadata": {
+                    "score_claim": True,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                },
+                "experiments": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    state = tmp_path / "queue.sqlite"
+    queue = _queue(child_queue)
+    queue["experiments"][0]["steps"][0]["postconditions"] = [
+        {
+            "type": "json_false_authority",
+            "path": child_queue.as_posix(),
+            "required_false": [],
+        }
+    ]
+
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'succeeded',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-05-27T21:18:00Z'
+            WHERE queue_id = 'observer_test'
+              AND experiment_id = 'exp0'
+              AND step_id = 'smoke'
+            """,
+            (json.dumps({"command": ["python", "-c", "print('hello queue')"]}),),
+        )
+        conn.commit()
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=0,
+    )
+
+    assert observation["healthy"] is False
+    artifact_record = observation["succeeded_artifact_failure_steps"][0][
+        "expected_artifacts"
+    ][0]
+    assert artifact_record["postcondition_passed"] is False
+    assert (
+        "json_false_authority_truthy_authority:metadata.score_claim=truthy"
+        in artifact_record["artifact_revalidation_blockers"]
+    )
+
+
 def test_observer_reports_definition_drift_without_mutating_state(
     tmp_path: Path,
 ) -> None:

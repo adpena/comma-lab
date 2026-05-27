@@ -658,6 +658,7 @@ def _score_experiment(
                     {
                         "type": "json_false_authority",
                         "path": stackability_queue_ref,
+                        "required_false": [],
                     },
                 ],
                 "telemetry": {
@@ -695,6 +696,7 @@ def _score_experiment(
                     {
                         "type": "json_false_authority",
                         "path": cascade_mlx_probe_queue_ref,
+                        "required_false": [],
                     },
                 ],
                 "telemetry": {
