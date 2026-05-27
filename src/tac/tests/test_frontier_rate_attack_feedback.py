@@ -1668,6 +1668,7 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
         and row["rate_only_archive_preservation_required"] is True
         for row in rate_plan["rows"]
     )
+    target_metadata = report["target_optimization_profile_metadata"]
     targeted_queue = build_frontier_targeted_component_correction_queue(
         repo_root=tmp_path,
         targeted_component_correction_acquisition=report[
@@ -1680,8 +1681,13 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
         queue_id="targeted_family_round_robin_unit",
         candidate_limit=4,
         include_mlx_response=False,
+        target_optimization_profile_metadata=target_metadata,
     )
     assert targeted_queue is not None
+    assert (
+        targeted_queue["metadata"]["frontier_target_optimization_profile"]
+        == target_metadata
+    )
     assert targeted_queue["selection_policy"]["policy"] == (
         "bounded_candidate_family_round_robin"
     )
@@ -1697,6 +1703,17 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
     assert (
         targeted_queue["experiments"][0]["metadata"]["shared_component_response_reuse"]
         is True
+    )
+    assert (
+        targeted_queue["experiments"][0]["metadata"][
+            "frontier_target_optimization_profile"
+        ]
+        == target_metadata
+    )
+    assert all(
+        request["frontier_target_optimization_profile"] == target_metadata
+        for experiment in targeted_queue["experiments"]
+        for request in experiment["metadata"]["correction_requests"]
     )
     local_cpu_step = next(
         step
@@ -3090,6 +3107,15 @@ def test_empty_targeted_component_correction_queue_emits_blocked_harvest(
         tmp_path / "targeted_component_correction_acquisition.json",
         acquisition,
     )
+    target_metadata = {
+        "schema": "frontier_rate_attack_target_optimization_profile_queue_metadata.v1",
+        "target_profile_id": "unit_empty_selection_target",
+        "target_mode": "contest_video_overfit",
+        "declared_overfit_allowed": True,
+        "profile_ready": False,
+        "blockers": ["unit_empty_selection"],
+        **_false_authority(),
+    }
 
     queue = build_frontier_targeted_component_correction_queue(
         repo_root=tmp_path,
@@ -3098,17 +3124,23 @@ def test_empty_targeted_component_correction_queue_emits_blocked_harvest(
         results_root=tmp_path / "results",
         queue_id="targeted_component_empty_selection_unit",
         candidate_limit=2,
+        target_optimization_profile_metadata=target_metadata,
     )
 
     assert queue is not None
     assert queue["schema"] == "experiment_queue.v1"
     assert queue["metadata"]["queue_actuation_ready"] is False
+    assert queue["metadata"]["frontier_target_optimization_profile"] == target_metadata
     _assert_false_authority(queue["metadata"])
     assert "targeted_component_correction_selected_rows_empty" in queue["metadata"][
         "queue_actuation_blockers"
     ]
     assert queue["experiments"][0]["status"] == "frozen"
     assert queue["experiments"][0]["metadata"]["selected_row_count"] == 0
+    assert (
+        queue["experiments"][0]["metadata"]["frontier_target_optimization_profile"]
+        == target_metadata
+    )
     _assert_false_authority(queue["experiments"][0]["metadata"])
 
     harvest = build_frontier_targeted_component_correction_response_harvest(
@@ -4692,6 +4724,7 @@ def test_post_auxiliary_targeted_component_refresh_reharvests_into_chain(
         ],
     }
     queue_path = _write_json(tmp_path / "targeted_component_queue.json", queue)
+    target_metadata = report["target_optimization_profile_metadata"]
 
     summary = write_targeted_component_correction_post_auxiliary_artifacts(
         output_dir=tmp_path / "post_auxiliary_refresh",
@@ -4701,9 +4734,11 @@ def test_post_auxiliary_targeted_component_refresh_reharvests_into_chain(
         results_root=results_root,
         queue_id="post_auxiliary_refresh_unit",
         candidate_limit=1,
+        target_optimization_profile_metadata=target_metadata,
     )
 
     _assert_false_authority(summary)
+    assert summary["frontier_target_optimization_profile"] == target_metadata
     assert summary["response_harvest_row_count"] == 1
     assert summary["response_harvest_local_acquisition_recommended_count"] == 1
     assert summary["materialization_request_row_count"] == 1
@@ -6472,6 +6507,19 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     )
     targeted_queue = json.loads(
         targeted_component_queue_path.read_text(encoding="utf-8")
+    )
+    assert (
+        targeted_queue["metadata"]["frontier_target_optimization_profile"]
+        == target_metadata
+    )
+    targeted_queue_metadata = targeted_queue["experiments"][0]["metadata"]
+    assert (
+        targeted_queue_metadata["frontier_target_optimization_profile"]
+        == target_metadata
+    )
+    assert all(
+        request["frontier_target_optimization_profile"] == target_metadata
+        for request in targeted_queue_metadata["correction_requests"]
     )
     repair_probe_steps = [
         step

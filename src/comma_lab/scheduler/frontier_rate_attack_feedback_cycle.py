@@ -600,6 +600,16 @@ def write_frontier_refresh_artifacts(
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
     artifacts: dict[str, str] = {}
+    target_profile_metadata = (
+        dict(report.get("target_optimization_profile_metadata"))
+        if isinstance(report.get("target_optimization_profile_metadata"), Mapping)
+        else {}
+    )
+    if target_profile_metadata:
+        require_no_truthy_authority_fields(
+            target_profile_metadata,
+            context="frontier_refresh_artifacts_target_optimization_profile",
+        )
     discovery = report.get("discovery")
     if isinstance(discovery, Mapping):
         path = out / "materializer_feedback_discovery.json"
@@ -934,6 +944,7 @@ def write_frontier_refresh_artifacts(
                 f"{report.get('queue_id') or 'frontier_feedback'}_"
                 "component_correction"
             ),
+            target_optimization_profile_metadata=target_profile_metadata,
         )
         if isinstance(correction_queue, Mapping):
             queue_path = out / "targeted_component_correction_queue.json"
@@ -1184,6 +1195,7 @@ def write_frontier_refresh_artifacts(
                 "repair_budget_waterfill"
             ),
             chain_limit=int(report.get("candidate_limit") or 4),
+            target_optimization_profile_metadata=target_profile_metadata,
         )
         if isinstance(repair_waterfill_queue, Mapping):
             repair_waterfill_queue_path = out / "repair_budget_waterfill_queue.json"
@@ -1799,6 +1811,7 @@ def write_targeted_component_correction_post_auxiliary_artifacts(
     candidate_limit: int,
     dqs1_observation_source_paths: Sequence[str | Path] = (),
     artifact_prefix: str = "post_auxiliary",
+    target_optimization_profile_metadata: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Re-harvest targeted correction responses after bounded local queue work."""
 
@@ -1810,6 +1823,26 @@ def write_targeted_component_correction_post_auxiliary_artifacts(
         targeted_component_correction_queue,
         context="post_auxiliary_targeted_component_correction_queue",
     )
+    target_profile_metadata = (
+        dict(target_optimization_profile_metadata)
+        if isinstance(target_optimization_profile_metadata, Mapping)
+        and target_optimization_profile_metadata
+        else {}
+    )
+    if not target_profile_metadata:
+        queue_metadata = targeted_component_correction_queue.get("metadata")
+        if isinstance(queue_metadata, Mapping):
+            nested = queue_metadata.get("frontier_target_optimization_profile")
+            if isinstance(nested, Mapping) and nested:
+                target_profile_metadata = dict(nested)
+    if target_profile_metadata:
+        require_no_truthy_authority_fields(
+            target_profile_metadata,
+            context=(
+                "post_auxiliary_targeted_component_refresh_"
+                "target_optimization_profile"
+            ),
+        )
     repo = Path(repo_root)
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -1939,6 +1972,7 @@ def write_targeted_component_correction_post_auxiliary_artifacts(
             targeted_component_correction_queue_path,
             repo,
         ),
+        "frontier_target_optimization_profile": dict(target_profile_metadata),
         "response_harvest_row_count": response_harvest.get("row_count"),
         "response_harvest_local_acquisition_recommended_count": (
             response_harvest.get("local_acquisition_recommended_count")

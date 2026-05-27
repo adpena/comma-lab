@@ -12198,6 +12198,7 @@ def _blocked_targeted_component_correction_queue(
     results_root: str | Path,
     queue_id: str,
     candidate_limit: int,
+    target_optimization_profile_metadata: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     acquisition_path = _resolve_path(
         targeted_component_correction_acquisition_path,
@@ -12207,6 +12208,20 @@ def _blocked_targeted_component_correction_queue(
     acquisition_metadata = _targeted_component_correction_queue_metadata(
         targeted_component_correction_acquisition
     )
+    target_profile_metadata = (
+        dict(target_optimization_profile_metadata)
+        if isinstance(target_optimization_profile_metadata, Mapping)
+        and target_optimization_profile_metadata
+        else {}
+    )
+    if target_profile_metadata:
+        require_no_truthy_authority_fields(
+            target_profile_metadata,
+            context=(
+                "blocked_targeted_component_correction_queue_"
+                "target_optimization_profile"
+            ),
+        )
     blockers = _unique_strings(
         [
             "targeted_component_correction_selected_rows_empty",
@@ -12220,6 +12235,7 @@ def _blocked_targeted_component_correction_queue(
             "metadata.v1"
         ),
         "targeted_component_correction_acquisition": acquisition_metadata,
+        "frontier_target_optimization_profile": dict(target_profile_metadata),
         "queue_actuation_ready": False,
         "queue_actuation_blockers": blockers,
         "selected_row_count": 0,
@@ -17331,6 +17347,7 @@ def build_frontier_targeted_component_correction_queue(
     mlx_device: str = "gpu",
     include_mlx_response: bool = True,
     component_response_cache_roots: Sequence[str | Path] = (),
+    target_optimization_profile_metadata: Mapping[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     """Compile receiver-closed budget rows into local CPU/MLX component probes."""
 
@@ -17347,6 +17364,17 @@ def build_frontier_targeted_component_correction_queue(
         targeted_component_correction_acquisition,
         context="targeted_component_correction_queue_input",
     )
+    target_profile_metadata = (
+        dict(target_optimization_profile_metadata)
+        if isinstance(target_optimization_profile_metadata, Mapping)
+        and target_optimization_profile_metadata
+        else {}
+    )
+    if target_profile_metadata:
+        require_no_truthy_authority_fields(
+            target_profile_metadata,
+            context="targeted_component_correction_queue_target_optimization_profile",
+        )
     selected_rows = _selected_targeted_component_correction_rows(
         targeted_component_correction_acquisition,
         candidate_limit=candidate_limit,
@@ -17363,6 +17391,7 @@ def build_frontier_targeted_component_correction_queue(
             results_root=results_root,
             queue_id=queue_id,
             candidate_limit=candidate_limit,
+            target_optimization_profile_metadata=target_profile_metadata,
         )
     selection_policy = _targeted_component_correction_queue_selection_policy(
         selected_rows=selected_rows,
@@ -17565,6 +17594,9 @@ def build_frontier_targeted_component_correction_queue(
                     "component_correction_response_harvest_path": _repo_rel(
                         response_harvest_path,
                         repo,
+                    ),
+                    "frontier_target_optimization_profile": dict(
+                        target_profile_metadata
                     ),
                     "local_cpu_advisory_path": _repo_rel(local_cpu_advisory, repo),
                     "local_cpu_advisory_reuse_mode": (
@@ -18502,6 +18534,9 @@ def build_frontier_targeted_component_correction_queue(
                 "metadata": {
                     "schema": TARGETED_COMPONENT_CORRECTION_QUEUE_METADATA_SCHEMA,
                     "candidate_id": candidate_id,
+                    "frontier_target_optimization_profile": dict(
+                        target_profile_metadata
+                    ),
                     "selected_acquisition_count": len(candidate_rows),
                     "selected_correction_families": _unique_strings(
                         row.get("correction_family") for row in candidate_rows
@@ -18601,6 +18636,31 @@ def build_frontier_targeted_component_correction_queue(
                 "steps": steps,
             }
         )
+    queue_metadata = {
+        "schema": (
+            "frontier_rate_attack_targeted_component_correction_queue_root_"
+            "metadata.v1"
+        ),
+        "targeted_component_correction_acquisition": (
+            _targeted_component_correction_queue_metadata(
+                targeted_component_correction_acquisition
+            )
+        ),
+        "frontier_target_optimization_profile": dict(target_profile_metadata),
+        "selection_policy": dict(selection_policy),
+        "selected_candidate_count": len(candidate_order),
+        "selected_row_count": len(selected_rows),
+        "candidate_limit": candidate_limit,
+        "results_root": _repo_rel(results_base, repo),
+        "source_artifact_paths": [_repo_rel(acquisition_path, repo)],
+        "allowed_use": "targeted_component_correction_queue_metadata_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        queue_metadata,
+        context="targeted_component_correction_queue_root_metadata",
+    )
     queue = normalize_queue_definition(
         {
             "schema": QUEUE_SCHEMA,
@@ -18616,6 +18676,7 @@ def build_frontier_targeted_component_correction_queue(
                     "modal_gpu": 0,
                 },
             },
+            "metadata": queue_metadata,
             "experiments": experiments,
         }
     )

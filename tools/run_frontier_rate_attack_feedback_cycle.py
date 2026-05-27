@@ -439,6 +439,11 @@ def _write_post_auxiliary_targeted_component_refresh(
             report.get("dqs1_observation_source_paths") or ()
         ),
         artifact_prefix=f"{stage_label}_post_auxiliary",
+        target_optimization_profile_metadata=(
+            report.get("target_optimization_profile_metadata")
+            if isinstance(report.get("target_optimization_profile_metadata"), dict)
+            else None
+        ),
     )
 
 

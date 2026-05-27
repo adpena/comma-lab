@@ -993,6 +993,11 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
             component_response_cache_roots=tuple(
                 report.get("component_response_cache_roots") or ()
             ),
+            target_optimization_profile_metadata=(
+                report.get("target_optimization_profile_metadata")
+                if isinstance(report.get("target_optimization_profile_metadata"), dict)
+                else None
+            ),
         )
         if isinstance(correction_queue, dict):
             queue_path = output_dir / "targeted_component_correction_queue.json"
