@@ -10,6 +10,9 @@ from comma_lab.scheduler.repair_campaign_stackability_queue import (
     REPAIR_CAMPAIGN_STACKABILITY_QUEUE_METADATA_SCHEMA,
     build_repair_campaign_stackability_queue,
 )
+from tac.optimization.repair_campaign_learning_signal import (
+    REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA,
+)
 from tac.optimization.repair_campaign_replay_bundle import (
     REPAIR_CAMPAIGN_STACKABILITY_REPLAY_BUNDLE_DIFF_SCHEMA,
     REPAIR_CAMPAIGN_STACKABILITY_REPLAY_BUNDLE_SCHEMA,
@@ -162,6 +165,9 @@ def test_stackability_queue_emits_executable_local_probe(tmp_path: Path) -> None
     assert experiment["metadata"]["replay_bundle_path"].endswith(
         "repair_campaign_stackability_replay_bundle.json"
     )
+    assert experiment["metadata"]["learning_signal_path"].endswith(
+        "repair_campaign_learning_signal.json"
+    )
     command = [
         sys.executable if item == ".venv/bin/python" else str(item)
         for item in experiment["steps"][0]["command"]
@@ -206,6 +212,36 @@ def test_stackability_queue_emits_executable_local_probe(tmp_path: Path) -> None
     assert bundle["environment"]["schema"] == "safe_replay_environment_capture.v1"
     assert bundle["budget_spend_allowed"] is False
     assert bundle["ready_for_exact_eval_dispatch"] is False
+    learning_command = [
+        sys.executable if item == ".venv/bin/python" else str(item)
+        for item in experiment["steps"][2]["command"]
+    ]
+    learning_result = subprocess.run(
+        learning_command,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert learning_result.returncode == 0, learning_result.stderr
+    learning_signal = json.loads(
+        Path(experiment["metadata"]["learning_signal_path"]).read_text(
+            encoding="utf-8"
+        )
+    )
+    assert learning_signal["schema"] == REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA
+    assert learning_signal["typed_response_id"] == "segnet_region_ready"
+    assert learning_signal["replay_identity"]["hash_manifest_sha256"] == (
+        bundle["hash_manifest_sha256"]
+    )
+    assert learning_signal["local_planning_update"][
+        "local_planning_update_ready"
+    ] is True
+    assert learning_signal["local_planning_update"]["planner_feature_vector"][
+        "improvement_per_allocated_byte"
+    ] > 0.0
+    assert learning_signal["budget_spend_allowed"] is False
+    assert learning_signal["ready_for_exact_eval_dispatch"] is False
 
 
 def test_stackability_replay_bundle_diff_detects_environment_drift(

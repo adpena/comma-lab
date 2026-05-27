@@ -14,6 +14,9 @@ from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
     require_no_truthy_authority_fields,
 )
+from tac.optimization.repair_campaign_learning_signal import (
+    REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA,
+)
 from tac.optimization.repair_campaign_replay_bundle import (
     REPAIR_CAMPAIGN_STACKABILITY_REPLAY_BUNDLE_SCHEMA,
 )
@@ -138,6 +141,12 @@ def _stackability_experiment(
         / "repair_campaign_stackability_replay_bundle.json"
     )
     replay_bundle_ref = _repo_rel(replay_bundle_path, repo_root)
+    learning_signal_path = (
+        queue_root
+        / _slug(typed_response_id)
+        / "repair_campaign_learning_signal.json"
+    )
+    learning_signal_ref = _repo_rel(learning_signal_path, repo_root)
     allocation_blockers: list[str] = []
     if not typed_response_id:
         allocation_blockers.append("typed_response_id_missing")
@@ -160,6 +169,8 @@ def _stackability_experiment(
         "stackability_probe_schema": REPAIR_CAMPAIGN_STACKABILITY_PROBE_SCHEMA,
         "replay_bundle_path": replay_bundle_ref,
         "replay_bundle_schema": REPAIR_CAMPAIGN_STACKABILITY_REPLAY_BUNDLE_SCHEMA,
+        "learning_signal_path": learning_signal_ref,
+        "learning_signal_schema": REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA,
         "queue_actuation_ready": queue_actuation_ready,
         "queue_actuation_blockers": blockers,
         "local_mlx_advisory_custody_required": True,
@@ -295,6 +306,53 @@ def _stackability_experiment(
                 "telemetry": {
                     "artifact_paths": [replay_bundle_ref],
                     "input_artifact_paths": [str(score_report_path), probe_ref],
+                    "include_postcondition_paths": True,
+                },
+            },
+            {
+                "id": "build_repair_campaign_learning_signal",
+                "kind": "command",
+                "requires": ["build_repair_campaign_stackability_replay_bundle"],
+                "command": [
+                    ".venv/bin/python",
+                    "tools/build_repair_campaign_learning_signal.py",
+                    "--score-report",
+                    str(score_report_path),
+                    "--probe",
+                    probe_ref,
+                    "--replay-bundle",
+                    replay_bundle_ref,
+                    "--signal-out",
+                    learning_signal_ref,
+                    "--overwrite",
+                ],
+                "resources": {"kind": "local_cpu"},
+                "timeout_seconds": 120,
+                "postconditions": [
+                    {
+                        "type": "json_equals",
+                        "path": learning_signal_ref,
+                        "key": "schema",
+                        "equals": REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA,
+                    },
+                    {
+                        "type": "json_false_authority",
+                        "path": learning_signal_ref,
+                    },
+                    {
+                        "type": "json_equals",
+                        "path": learning_signal_ref,
+                        "key": "ready_for_exact_eval_dispatch",
+                        "equals": False,
+                    },
+                ],
+                "telemetry": {
+                    "artifact_paths": [learning_signal_ref],
+                    "input_artifact_paths": [
+                        str(score_report_path),
+                        probe_ref,
+                        replay_bundle_ref,
+                    ],
                     "include_postcondition_paths": True,
                 },
             }
