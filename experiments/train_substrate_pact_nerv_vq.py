@@ -21,6 +21,9 @@ from pathlib import Path
 from typing import Any
 
 from tac.substrate_registry import SubstrateContract, register_substrate
+from tac.substrates._shared.smoke_auth_eval_gate import (
+    gate_auth_eval_call as _canon_gate_auth_eval_call,
+)
 from tac.substrates._shared.trainer_skeleton import (
     detect_hardware_substrate as _canon_detect_hardware_substrate,
 )
@@ -34,17 +37,23 @@ from tac.substrates._shared.trainer_skeleton import (
     pin_seeds as _canonical_pin_seeds,
 )
 from tac.substrates._shared.trainer_skeleton import (
+    sha256_bytes as _canonical_sha256_bytes,
+)
+from tac.substrates._shared.trainer_skeleton import (
     torch_version_string as _canonical_torch_version_string,
 )
 from tac.substrates._shared.trainer_skeleton import (
     utc_now_iso as _canonical_utc_now_iso,
 )
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_VIDEO_PATH = REPO_ROOT / "upstream" / "videos" / "0.mkv"
 DEFAULT_UPSTREAM_DIR = REPO_ROOT / "upstream"
 SUBSTRATE_TAG = "pact_nerv_vq"
+EVAL_HW = (384, 512)
+N_PAIRS_FULL = 600
+CONTEST_NORMALIZER = 37_545_489.0
+CONTEST_AUTH_EVAL_SCRIPT = REPO_ROOT / "experiments" / "contest_auth_eval.py"
 
 
 TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
@@ -111,6 +120,21 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--codebook-size", type=int, default=16)
     p.add_argument("--codebook-decay", type=float, default=0.99)
     p.add_argument("--commitment-weight", type=float, default=0.25)
+    # Full-path score-aware training flags (Catalog #325-gated).
+    p.add_argument("--lr", type=float, default=5e-4)
+    p.add_argument("--weight-decay", type=float, default=0.0)
+    p.add_argument("--grad-clip", type=float, default=1.0)
+    p.add_argument("--ema-decay", type=float, default=0.997)
+    p.add_argument("--alpha-rate", type=float, default=25.0)
+    p.add_argument("--beta-seg", type=float, default=100.0)
+    p.add_argument("--gamma-pose", type=float, default=1.0)
+    p.add_argument("--pose-weight-scale", type=float, default=1.0)
+    p.add_argument("--noise-std", type=float, default=0.5)
+    p.add_argument("--max-pairs", type=int, default=None)
+    p.add_argument("--val-pair-count", type=int, default=64)
+    p.add_argument("--val-every-epochs", type=int, default=10)
+    p.add_argument("--skip-archive-build", action="store_true", default=False)
+    p.add_argument("--skip-auth-eval", action="store_true", default=False)
     p.add_argument("--device", choices=["cuda", "cpu"], default="cpu")
     p.add_argument("--smoke", action="store_true")
     p.add_argument("--enable-autocast-fp16", action="store_true", default=False)
@@ -121,6 +145,10 @@ def _build_parser() -> argparse.ArgumentParser:
 
 def _utc_now_iso() -> str:
     return _canonical_utc_now_iso()
+
+
+def _sha256_bytes(data: bytes) -> str:
+    return _canonical_sha256_bytes(data)
 
 
 def _git_head_sha() -> str:
@@ -247,11 +275,233 @@ def _full_main(args: argparse.Namespace) -> int:
     5. Operator-frontier-override per Catalog #300 OR Stage 1 approval flips
        research_only=false.
     """
-    raise NotImplementedError(
-        "[pact_nerv_vq] full training path is OPERATOR-GATED per Catalog #240 + "
-        "#315 + #325. This is an L0 SCAFFOLD trainer; substrate is research_only "
-        "until PACT-NERV symposium Stage 1 dispatch lands."
+    import torch
+
+    from tac.differentiable_eval_roundtrip import (
+        patch_upstream_yuv6_globally,
+        unpatch_upstream_yuv6,
     )
+    from tac.scorer import load_differentiable_scorers
+    from tac.substrates._shared.pact_nerv_full_main import (
+        build_archive_zip,
+        closed_form_weight_byte_proxy,
+        decode_pairs_for_training,
+        run_pact_nerv_score_aware_training,
+        write_contest_runtime,
+    )
+    from tac.substrates._shared.trainer_skeleton import (
+        build_optimized_training_context as _canon_build_optimized_training_context,
+    )
+    from tac.substrates.pact_nerv_vq import (
+        PactNervVqConfig,
+        PactNervVqScoreAwareLoss,
+        PactNervVqSubstrate,
+        ScoreAwareLossWeights,
+        pack_archive,
+    )
+
+    _pin_seeds(args.seed)
+    device = _device_or_die(args.device, smoke=False)
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    stage_log: list[dict[str, Any]] = []
+    yuv6_token = patch_upstream_yuv6_globally()
+    try:
+        posenet, segnet = load_differentiable_scorers(args.upstream_dir, device=device)
+        for p in list(posenet.parameters()) + list(segnet.parameters()):
+            p.requires_grad_(False)
+        posenet.eval()
+        segnet.eval()
+
+        print(f"[full:{SUBSTRATE_TAG}] decoding pairs from {args.video_path} ...")
+        pair_tensor = decode_pairs_for_training(
+            args.video_path, substrate_tag=SUBSTRATE_TAG, n_pairs=N_PAIRS_FULL,
+            max_pairs=args.max_pairs, repo_root=REPO_ROOT,
+        ).to(device)
+        n_pairs = int(pair_tensor.shape[0])
+        print(f"[full:{SUBSTRATE_TAG}] decoded {n_pairs} pairs at {EVAL_HW}")
+
+        cfg = PactNervVqConfig(
+            latent_dim=args.latent_dim,
+            sin_frequency=30.0,
+            codebook_size=args.codebook_size,
+            codebook_decay=args.codebook_decay,
+            commitment_weight=args.commitment_weight,
+            num_pairs=n_pairs,
+            output_height=EVAL_HW[0],
+            output_width=EVAL_HW[1],
+        )
+        model = PactNervVqSubstrate(cfg).to(device)
+        print(f"[full:{SUBSTRATE_TAG}] params: {model.num_parameters():,}")
+
+        weights = ScoreAwareLossWeights(
+            alpha_rate=args.alpha_rate, beta_seg=args.beta_seg,
+            gamma_pose=args.gamma_pose, pose_weight_scale=args.pose_weight_scale,
+            contest_normalizer=CONTEST_NORMALIZER, commitment_weight=args.commitment_weight,
+        )
+        loss_fn = PactNervVqScoreAwareLoss(
+            seg_scorer=segnet, pose_scorer=posenet, weights=weights
+        )
+
+        opt_ctx = _canon_build_optimized_training_context(
+            args, scorers=(posenet, segnet), gt_pairs=pair_tensor,
+            substrate_model=model, device=device,
+        )
+        gt_cache = opt_ctx.gt_cache
+        archive_bytes_proxy = closed_form_weight_byte_proxy(model)
+
+        def _compute_loss(
+            m, idx, gt_0, gt_1, abp, *, gt_pose_batch, gt_seg_batch, gt_seg_already_probs
+        ):
+            rgb_0, rgb_1 = m(idx)
+            return loss_fn(
+                rgb_0 * 255.0, rgb_1 * 255.0, gt_0, gt_1, abp,
+                commitment_loss=m.last_commitment_loss,
+                apply_eval_roundtrip=True, noise_std=args.noise_std,
+                gt_pose_batch=gt_pose_batch, gt_seg_batch=gt_seg_batch,
+                gt_seg_already_probs=gt_seg_already_probs,
+            )
+
+        result = run_pact_nerv_score_aware_training(
+            model=model, pair_tensor=pair_tensor, compute_loss=_compute_loss,
+            archive_bytes_proxy=archive_bytes_proxy, device=device,
+            output_dir=args.output_dir, substrate_tag=SUBSTRATE_TAG,
+            epochs=args.epochs, batch_size=args.batch_size, lr=args.lr,
+            weight_decay=args.weight_decay, grad_clip=args.grad_clip,
+            ema_decay=args.ema_decay, val_pair_count=args.val_pair_count,
+            val_every_epochs=args.val_every_epochs, gt_cache=gt_cache,
+            stage_log=stage_log, config_asdict=asdict(cfg),
+        )
+        print(
+            f"[full:{SUBSTRATE_TAG}] train done: best_val_lag="
+            f"{result.best_val_lagrangian:.6f} elapsed={result.train_elapsed_sec:.1f}s"
+        )
+
+        archive_sha = ""
+        archive_bytes = 0
+        archive_zip_path = args.output_dir / "archive.zip"
+        if not args.skip_archive_build:
+            sd = result.best_ema_state_dict
+            # Load the best EMA shadow into a fresh model so we can collect the
+            # per-pair codebook indices via a forward over all pairs.
+            best_model = PactNervVqSubstrate(cfg).to(device).eval()
+            best_model.load_state_dict(sd, strict=True)
+            codebook = best_model.quantizer.codebook.detach().cpu().clone()
+            indices_list = []
+            with torch.no_grad():
+                for start in range(0, n_pairs, max(1, args.batch_size)):
+                    b_idx = torch.arange(
+                        start, min(start + max(1, args.batch_size), n_pairs),
+                        device=device, dtype=torch.long,
+                    )
+                    best_model(b_idx)
+                    indices_list.append(best_model.last_indices.detach().cpu().reshape(-1))
+            indices = torch.cat(indices_list).to(dtype=torch.long)
+            decoder_sd = {k: v for k, v in sd.items() if k != "latents"}
+            meta = {
+                "embed_dim": cfg.embed_dim,
+                "initial_grid_h": cfg.initial_grid_h,
+                "initial_grid_w": cfg.initial_grid_w,
+                "decoder_channels": list(cfg.decoder_channels),
+                "sin_frequency": cfg.sin_frequency,
+                "output_height": cfg.output_height,
+                "output_width": cfg.output_width,
+                "num_upsample_blocks": cfg.num_upsample_blocks,
+                "codebook_decay": cfg.codebook_decay,
+                "commitment_weight": cfg.commitment_weight,
+            }
+            bin_bytes = pack_archive(decoder_sd, codebook, indices, meta)
+            (args.output_dir / "0.bin").write_bytes(bin_bytes)
+            archive_sha = _sha256_bytes(bin_bytes)
+            archive_bytes = len(bin_bytes)
+            submission_dir = args.output_dir / "submission"
+            write_contest_runtime(
+                submission_dir, substrate_pkg_name="pact_nerv_vq",
+                repo_root=REPO_ROOT,
+            )
+            (submission_dir / "0.bin").write_bytes(bin_bytes)
+            build_archive_zip(
+                archive_zip_path, bin_bytes=bin_bytes, submission_dir=submission_dir
+            )
+            print(f"[full:{SUBSTRATE_TAG}] wrote 0.bin ({archive_bytes} B) + archive.zip")
+
+        auth_eval_result_path: Path | None = None
+        contest_cuda_score: float | None = None
+        if not args.skip_auth_eval and archive_zip_path.is_file():
+            auth_eval_result_path = args.output_dir / "contest_auth_eval_cuda.json"
+            auth_result = _canon_gate_auth_eval_call(
+                args=args, archive_zip=archive_zip_path,
+                inflate_sh=args.output_dir / "submission" / "inflate.sh",
+                upstream_dir=args.upstream_dir, output_json=auth_eval_result_path,
+                contest_auth_eval_script=CONTEST_AUTH_EVAL_SCRIPT,
+                substrate_tag=SUBSTRATE_TAG, device=device,
+            )
+            if auth_result is not None:
+                contest_cuda_score = auth_result["auth_eval_cuda_score"]
+                print(f"[full:{SUBSTRATE_TAG}] [contest-CUDA] score = {contest_cuda_score}")
+
+        if contest_cuda_score is not None and archive_sha:
+            try:
+                from tac.continual_learning import (
+                    ContestResult,
+                    posterior_update_locked,
+                )
+
+                _detected = _canon_detect_hardware_substrate(
+                    axis="cuda", substrate_tag=SUBSTRATE_TAG,
+                    provenance_path=args.output_dir / "provenance.json",
+                    env_var_candidates=("PACT_NERV_VQ_GPU", "MODAL_GPU"),
+                )
+                update = posterior_update_locked(
+                    ContestResult(
+                        axis="cuda", hardware_substrate=_detected,
+                        architecture_class="lane_pact_nerv_vq_l0_scaffold_20260520",
+                        score_value=contest_cuda_score, evidence_tag="[contest-CUDA]",
+                        archive_sha256=archive_sha, archive_bytes=archive_bytes,
+                        notes=f"pact_nerv_vq first-anchor; epochs={args.epochs}",
+                        observed_at_utc=_utc_now_iso(),
+                    )
+                )
+                print(f"[full:{SUBSTRATE_TAG}] posterior_update accepted={update.accepted}")
+            except Exception as exc:
+                print(f"[full:{SUBSTRATE_TAG}] posterior_update failed: {exc}", file=sys.stderr)
+
+        provenance = {
+            "schema": "pact_nerv_vq_full_provenance_v1",
+            "generated_at": _utc_now_iso(),
+            "git_head": _git_head_sha(),
+            "trainer": "experiments/train_substrate_pact_nerv_vq.py",
+            "lane_id": "lane_pact_nerv_vq_l0_scaffold_20260520",
+            "substrate_tag": SUBSTRATE_TAG,
+            "args": {k: (str(v) if isinstance(v, Path) else v) for k, v in vars(args).items()},
+            "pytorch_version": _canonical_torch_version_string(),
+            "device": str(device),
+            "num_pairs_decoded": result.n_pairs,
+            "best_val_lagrangian": (
+                result.best_val_lagrangian
+                if result.best_val_lagrangian == result.best_val_lagrangian else None
+            ),
+            "best_epoch": result.best_epoch,
+            "train_elapsed_sec": result.train_elapsed_sec,
+            "archive_sha256": archive_sha,
+            "archive_bytes": archive_bytes,
+            "auth_eval_cuda_score": contest_cuda_score,
+            "auth_eval_json_path": (
+                str(auth_eval_result_path) if auth_eval_result_path else None
+            ),
+            "stage_log": stage_log,
+            "custody_status": "ci-rebuildable",
+            "score_claim": contest_cuda_score is not None,
+            "score_axis_tag": "[contest-CUDA]" if contest_cuda_score is not None else None,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+        (args.output_dir / "provenance.json").write_text(
+            json.dumps(provenance, indent=2, sort_keys=True), encoding="utf-8"
+        )
+        print(f"[full:{SUBSTRATE_TAG}] wrote {args.output_dir / 'provenance.json'}")
+        return 0
+    finally:
+        unpatch_upstream_yuv6(yuv6_token)
 
 
 PACT_NERV_VQ_SUBSTRATE_CONTRACT = SubstrateContract(
