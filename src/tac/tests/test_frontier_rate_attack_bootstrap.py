@@ -28,6 +28,7 @@ from comma_lab.scheduler.byte_shaving_materializer_registry import (
     TENSOR_FACTORIZE_TARGET_KIND,
 )
 from comma_lab.scheduler.frontier_final_rate_attack_autoloop import (
+    POST_FEEDBACK_CHILD_QUEUE_ACTIVATION_PLAN_SCHEMA,
     POST_FEEDBACK_CHILD_QUEUE_RUNS_SCHEMA,
     execute_post_feedback_child_queues,
     select_post_feedback_child_queue_artifacts,
@@ -1008,10 +1009,31 @@ def test_post_feedback_child_queue_execution_classifies_frozen_child_queue(
                 "id": "blocked_until_receiver_ready",
                 "status": "frozen",
                 "priority": 10,
+                "tags": ["encoder-repair-allocator", "segnet-posenet-waterfill"],
+                "metadata": {
+                    "queue_actuation_blockers": [
+                        "no_targeted_component_correction_response_rows",
+                        "no_receiver_closed_saved_bytes_available",
+                        "exact_auth_eval_required_before_score_or_promotion_claim",
+                    ],
+                },
                 "steps": [
                     {
                         "id": "materialize",
                         "command": ["python", "-c", "print('frozen')"],
+                        "telemetry": {
+                            "input_artifact_paths": [
+                                "targeted_component_correction_response_harvest.json",
+                                "receiver_closed_correction_budget.json",
+                            ],
+                            "artifact_paths": ["repair_budget_waterfill.json"],
+                        },
+                        "postconditions": [
+                            {
+                                "type": "json_false_authority",
+                                "path": "repair_budget_waterfill.json",
+                            }
+                        ],
                     }
                 ],
             }
@@ -1069,6 +1091,31 @@ def test_post_feedback_child_queue_execution_classifies_frozen_child_queue(
         "child_queue_remaining_work_frozen_by_definition"
     ]
     assert run["queue_status_counts"] == {"frozen": 1}
+    assert report["activation_plan_count"] == 1
+    assert run["activation_plan_path"].endswith(
+        "post_execute_feedback_child_queue_observations/"
+        "autonomous_chain_optimization_queue/activation_plan.json"
+    )
+    activation_plan_path = tmp_path / run["activation_plan_path"]
+    activation_plan = json.loads(activation_plan_path.read_text(encoding="utf-8"))
+    assert activation_plan["schema"] == POST_FEEDBACK_CHILD_QUEUE_ACTIVATION_PLAN_SCHEMA
+    assert activation_plan["score_claim"] is False
+    assert activation_plan["promotion_eligible"] is False
+    assert activation_plan["blocked_experiment_count"] == 1
+    assert {
+        action["activation_action"] for action in activation_plan["activation_actions"]
+    } == {
+        "harvest_targeted_component_response_rows",
+        "materialize_receiver_closed_rate_budget_credit",
+        "route_byte_closed_candidate_to_exact_auth_eval_handoff",
+        "thaw_queue_definition_after_prerequisite_evidence_lands",
+    }
+    step_refs = activation_plan["blocked_experiments"][0]["step_evidence_refs"][0]
+    assert step_refs["telemetry_input_artifact_paths"] == [
+        "targeted_component_correction_response_harvest.json",
+        "receiver_closed_correction_budget.json",
+    ]
+    assert step_refs["postcondition_paths"] == ["repair_budget_waterfill.json"]
 
 
 def test_post_feedback_child_queue_execution_revalidates_observer_identity(

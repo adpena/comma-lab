@@ -29,6 +29,9 @@ POST_FEEDBACK_CHILD_QUEUE_RUNS_SCHEMA = (
 POST_FEEDBACK_CHILD_QUEUE_RUN_SCHEMA = (
     "frontier_final_rate_attack_post_feedback_child_queue_run.v1"
 )
+POST_FEEDBACK_CHILD_QUEUE_ACTIVATION_PLAN_SCHEMA = (
+    "frontier_final_rate_attack_child_queue_activation_plan.v1"
+)
 
 POST_FEEDBACK_CHILD_QUEUE_PRIORITY = (
     "operation_materializer_execution_queue",
@@ -109,6 +112,164 @@ def _observation_status_count(
     if not isinstance(raw_count, int) or isinstance(raw_count, bool):
         return 0
     return raw_count
+
+
+def _strings_from(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item) for item in value if str(item)]
+
+
+def _step_artifact_refs(step: Mapping[str, Any]) -> dict[str, Any]:
+    telemetry = step.get("telemetry")
+    if not isinstance(telemetry, Mapping):
+        telemetry = {}
+    postcondition_paths: list[str] = []
+    postcondition_types: list[str] = []
+    for condition in step.get("postconditions") or []:
+        if not isinstance(condition, Mapping):
+            continue
+        condition_type = condition.get("type")
+        if isinstance(condition_type, str) and condition_type:
+            postcondition_types.append(condition_type)
+        path = condition.get("path")
+        if isinstance(path, str) and path:
+            postcondition_paths.append(path)
+    return {
+        "step_id": str(step.get("id") or ""),
+        "requires": _strings_from(step.get("requires")),
+        "resource_kind": str((step.get("resources") or {}).get("kind") or "local_cpu")
+        if isinstance(step.get("resources"), Mapping)
+        else "local_cpu",
+        "telemetry_input_artifact_paths": _strings_from(
+            telemetry.get("input_artifact_paths")
+        ),
+        "telemetry_output_artifact_paths": _strings_from(telemetry.get("artifact_paths")),
+        "postcondition_types": sorted(set(postcondition_types)),
+        "postcondition_paths": sorted(set(postcondition_paths)),
+    }
+
+
+def _activation_action_for_blocker(blocker: str) -> dict[str, str]:
+    if "targeted_component_correction" in blocker or "component_eval" in blocker:
+        return {
+            "blocker": blocker,
+            "activation_action": "harvest_targeted_component_response_rows",
+            "evidence_surface": "targeted_component_correction_response_harvest",
+        }
+    if "receiver_closed" in blocker or "saved_bytes" in blocker:
+        return {
+            "blocker": blocker,
+            "activation_action": "materialize_receiver_closed_rate_budget_credit",
+            "evidence_surface": "receiver_closed_correction_budget",
+        }
+    if "exact_auth_eval" in blocker:
+        return {
+            "blocker": blocker,
+            "activation_action": "route_byte_closed_candidate_to_exact_auth_eval_handoff",
+            "evidence_surface": "contest_cpu_or_cuda_auth_axis_payload",
+        }
+    if blocker.startswith("experiment_status:"):
+        return {
+            "blocker": blocker,
+            "activation_action": "thaw_queue_definition_after_prerequisite_evidence_lands",
+            "evidence_surface": "queue_definition_status",
+        }
+    return {
+        "blocker": blocker,
+        "activation_action": "inspect_queue_owned_prerequisite",
+        "evidence_surface": "experiment_metadata_or_step_postconditions",
+    }
+
+
+def _activation_blockers_for_experiment(experiment: Mapping[str, Any]) -> list[str]:
+    metadata = experiment.get("metadata")
+    if not isinstance(metadata, Mapping):
+        metadata = {}
+    blockers: list[str] = []
+    status = str(experiment.get("status") or "queued")
+    if status != "queued":
+        blockers.append(f"experiment_status:{status}")
+    for key in (
+        "queue_actuation_blockers",
+        "activation_blockers",
+        "readiness_blockers",
+        "blockers",
+    ):
+        blockers.extend(_strings_from(metadata.get(key)))
+    return list(dict.fromkeys(blockers))
+
+
+def _child_queue_activation_plan(
+    *,
+    queue_path: Path,
+    queue_payload: Mapping[str, Any],
+    queue_id: str,
+    queue_sha256: str,
+    repo_root: Path,
+) -> dict[str, Any]:
+    blocked_experiments: list[dict[str, Any]] = []
+    for experiment in queue_payload.get("experiments") or []:
+        if not isinstance(experiment, Mapping):
+            continue
+        status = str(experiment.get("status") or "queued")
+        if status not in {"frozen", "paused", "disabled"}:
+            continue
+        blockers = _activation_blockers_for_experiment(experiment)
+        blocked_experiments.append(
+            {
+                "experiment_id": str(experiment.get("id") or ""),
+                "lane_id": experiment.get("lane_id"),
+                "status": status,
+                "tags": _strings_from(experiment.get("tags")),
+                "activation_blockers": blockers,
+                "activation_actions": [
+                    _activation_action_for_blocker(blocker) for blocker in blockers
+                ],
+                "step_count": len(experiment.get("steps") or []),
+                "step_evidence_refs": [
+                    _step_artifact_refs(step)
+                    for step in experiment.get("steps") or []
+                    if isinstance(step, Mapping)
+                ],
+            }
+        )
+    activation_actions = list(
+        {
+            row["activation_action"]: row
+            for experiment in blocked_experiments
+            for row in experiment["activation_actions"]
+        }.values()
+    )
+    return {
+        "schema": POST_FEEDBACK_CHILD_QUEUE_ACTIVATION_PLAN_SCHEMA,
+        "generated_at_utc": _utc_now(),
+        "queue_id": queue_id,
+        "queue_sha256": queue_sha256,
+        "queue_path": _repo_rel(queue_path, repo_root),
+        "blocked_experiment_count": len(blocked_experiments),
+        "blocked_experiments": blocked_experiments,
+        "activation_actions": activation_actions,
+        "mathematical_contract": {
+            "objective": "minimize_delta_score_under_rate_and_runtime_constraints",
+            "state_variables": [
+                "bytes_delta",
+                "segnet_response",
+                "posenet_response",
+                "interaction_terms",
+                "entropy_position",
+                "receiver_runtime_identity",
+            ],
+            "hard_constraints": [
+                "score_claim_false_until_contest_auth_axis_eval",
+                "promotion_false_until_byte_closed_runtime_receiver_proof",
+                "budget_spend_false_until_receiver_closed_saved_bytes_exist",
+            ],
+        },
+        "allowed_use": "local_child_queue_activation_planning_only",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
 
 
 def _queue_identity_from_path(path: Path) -> dict[str, str]:
@@ -359,6 +520,28 @@ def run_experiment_queue_once(
     frozen_after = _observation_status_count(observation, "frozen")
     paused_after = _observation_status_count(observation, "paused")
     disabled_after = _observation_status_count(observation, "disabled")
+    activation_plan: dict[str, Any] | None = None
+    activation_plan_write_result: ArtifactWriteResult | None = None
+    if frozen_after or paused_after or disabled_after:
+        queue_payload = _load_json_object(queue)
+        activation_plan = _child_queue_activation_plan(
+            queue_path=queue,
+            queue_payload=queue_payload,
+            queue_id=queue_id,
+            queue_sha256=queue_sha256,
+            repo_root=repo,
+        )
+        if activation_plan["blocked_experiment_count"]:
+            activation_plan_path = observer_path.parent / "activation_plan.json"
+            activation_plan_write_result = write_json_artifact(
+                activation_plan_path,
+                activation_plan,
+            )
+            activation_plan["artifact_path"] = _repo_rel(activation_plan_path, repo)
+            activation_plan["artifact_sha256"] = activation_plan_write_result.sha256
+            activation_plan["artifact_bytes"] = (
+                activation_plan_write_result.bytes_written
+            )
     progress_made = None if steps_started is None else steps_started > 0
     progress_blockers = []
     observer_revalidation = _observer_revalidation(
@@ -409,6 +592,13 @@ def run_experiment_queue_once(
         "queue_healthy": observation.get("healthy") is True if observation else False,
         "queue_status_counts": dict(observation.get("status_counts") or {}) if observation else {},
         "queue_blockers": list(observation.get("blockers") or []) if observation else [],
+        "activation_plan": activation_plan,
+        "activation_plan_path": activation_plan.get("artifact_path")
+        if activation_plan is not None
+        else None,
+        "activation_plan_sha256": activation_plan.get("artifact_sha256")
+        if activation_plan is not None
+        else None,
         "allowed_use": "bounded_local_post_feedback_queue_execution_only",
         "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
         **FALSE_AUTHORITY,
@@ -475,6 +665,7 @@ def execute_post_feedback_child_queues(
             and not run.get("queue_status_counts", {}).get("queued", 0)
             and run.get("queue_status_counts", {}).get("frozen", 0)
         ),
+        "activation_plan_count": sum(1 for run in runs if run.get("activation_plan_path")),
         "max_steps": max_steps,
         "max_parallel": max_parallel,
         "limit": limit,
@@ -492,6 +683,7 @@ def execute_post_feedback_child_queues(
 
 
 __all__ = [
+    "POST_FEEDBACK_CHILD_QUEUE_ACTIVATION_PLAN_SCHEMA",
     "POST_FEEDBACK_CHILD_QUEUE_PRIORITY",
     "POST_FEEDBACK_CHILD_QUEUE_RUNS_SCHEMA",
     "execute_post_feedback_child_queues",
