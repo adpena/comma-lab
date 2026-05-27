@@ -22,6 +22,9 @@ from tac.optimization.repair_campaign_scorer import (
 
 REPAIR_CAMPAIGN_ENTROPY_STAGE_CHAIN_CONTRACT_SCHEMA = "repair_campaign_entropy_stage_chain_contract.v1"
 REPAIR_CAMPAIGN_ENTROPY_STAGE_CHAIN_NODE_SCHEMA = "repair_campaign_entropy_stage_chain_node.v1"
+REPAIR_CAMPAIGN_REQUIRED_OPTIMIZER_SOLVER = (
+    "interaction_aware_entropy_stage_waterfill_v1"
+)
 
 
 class RepairCampaignChainContractError(ValueError):
@@ -77,9 +80,10 @@ def _stage_index(allocation: Mapping[str, Any]) -> int:
     return _safe_int(_entropy_pipeline(allocation).get("stage_index"), default=999)
 
 
-def _allocation_sort_key(allocation: Mapping[str, Any]) -> tuple[int, int, str]:
+def _allocation_sort_key(allocation: Mapping[str, Any]) -> tuple[int, int, int, str]:
     return (
         _stage_index(allocation),
+        _safe_int(allocation.get("optimizer_candidate_evaluation_index"), default=999),
         _safe_int(allocation.get("campaign_rank"), default=999),
         str(allocation.get("typed_response_id") or allocation.get("candidate_id") or ""),
     )
@@ -186,6 +190,14 @@ def _node_for_allocation(
         "typed_response_id": typed_response_id or None,
         "candidate_id": allocation.get("candidate_id"),
         "family_id": allocation.get("family_id"),
+        "optimizer_candidate_evaluation_index": allocation.get(
+            "optimizer_candidate_evaluation_index"
+        ),
+        "interaction_order": allocation.get("interaction_order"),
+        "interaction_aware_selection_score": allocation.get(
+            "interaction_aware_selection_score"
+        ),
+        "selection_rationale": allocation.get("selection_rationale"),
         "entropy_pipeline_position": dict(pipeline),
         "entropy_pipeline_stage_index": _stage_index(allocation),
         "entropy_position_label": allocation.get("entropy_position_label"),
@@ -227,6 +239,11 @@ def build_repair_campaign_entropy_stage_chain_contract(
     decision = _mapping(score_report.get("optimizer_decision"))
     if decision.get("schema") != REPAIR_CAMPAIGN_OPTIMIZER_DECISION_SCHEMA:
         raise RepairCampaignChainContractError("score report missing repair_campaign_optimizer_decision.v1")
+    if decision.get("solver") != REPAIR_CAMPAIGN_REQUIRED_OPTIMIZER_SOLVER:
+        raise RepairCampaignChainContractError(
+            "chain contract requires interaction-aware entropy-stage optimizer "
+            f"solver {REPAIR_CAMPAIGN_REQUIRED_OPTIMIZER_SOLVER}"
+        )
     allocations = sorted(
         [row for row in decision.get("selected_allocation_rows") or [] if isinstance(row, Mapping)],
         key=_allocation_sort_key,
@@ -242,21 +259,39 @@ def build_repair_campaign_entropy_stage_chain_contract(
         ]
     )
     stage_histogram: dict[str, int] = {}
+    interaction_order_histogram: dict[str, int] = {}
     for node in nodes:
         stage = str(
             _mapping(node.get("entropy_pipeline_position")).get("entropy_position_class")
             or "unknown_entropy_pipeline_position"
         )
         stage_histogram[stage] = stage_histogram.get(stage, 0) + 1
+        interaction_order = str(_safe_int(node.get("interaction_order")))
+        interaction_order_histogram[interaction_order] = (
+            interaction_order_histogram.get(interaction_order, 0) + 1
+        )
     contract = {
         "schema": REPAIR_CAMPAIGN_ENTROPY_STAGE_CHAIN_CONTRACT_SCHEMA,
         "node_schema": REPAIR_CAMPAIGN_ENTROPY_STAGE_CHAIN_NODE_SCHEMA,
         "source_score_report_path": _repo_rel(score_report_path, repo_root=repo_root),
         "source_score_report_schema": score_report.get("schema"),
         "optimizer_decision_schema": decision.get("schema"),
+        "optimizer_solver": decision.get("solver"),
+        "required_optimizer_solver": REPAIR_CAMPAIGN_REQUIRED_OPTIMIZER_SOLVER,
+        "optimizer_selection_sort_order": list(
+            _string_list(decision.get("selection_sort_order"))
+        ),
+        "optimizer_candidate_evaluation_order": [
+            dict(row)
+            for row in decision.get("optimizer_candidate_evaluation_order") or []
+            if isinstance(row, Mapping)
+        ],
         "selected_allocation_count": len(allocations),
         "chain_node_count": len(nodes),
         "ordered_entropy_pipeline_stage_histogram": dict(sorted(stage_histogram.items())),
+        "interaction_order_chain_histogram": dict(
+            sorted(interaction_order_histogram.items())
+        ),
         "ordered_chain_nodes": nodes,
         "required_downstream_queue_artifacts": [
             "repair_campaign_stackability_queue",
@@ -288,6 +323,7 @@ def build_repair_campaign_entropy_stage_chain_contract(
 __all__ = [
     "REPAIR_CAMPAIGN_ENTROPY_STAGE_CHAIN_CONTRACT_SCHEMA",
     "REPAIR_CAMPAIGN_ENTROPY_STAGE_CHAIN_NODE_SCHEMA",
+    "REPAIR_CAMPAIGN_REQUIRED_OPTIMIZER_SOLVER",
     "RepairCampaignChainContractError",
     "build_repair_campaign_entropy_stage_chain_contract",
 ]

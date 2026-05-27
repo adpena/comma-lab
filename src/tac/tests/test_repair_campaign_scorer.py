@@ -7,6 +7,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 from tac.fec6_selector_operator_space import FEC6_FIXED_K16_MODE_IDS
 from tac.optimization.family_agnostic_materializers import (
     RUNTIME_CONSUMPTION_PROOF_SCHEMA,
@@ -14,6 +16,8 @@ from tac.optimization.family_agnostic_materializers import (
 from tac.optimization.repair_campaign_chain_contract import (
     REPAIR_CAMPAIGN_ENTROPY_STAGE_CHAIN_CONTRACT_SCHEMA,
     REPAIR_CAMPAIGN_ENTROPY_STAGE_CHAIN_NODE_SCHEMA,
+    REPAIR_CAMPAIGN_REQUIRED_OPTIMIZER_SOLVER,
+    RepairCampaignChainContractError,
     build_repair_campaign_entropy_stage_chain_contract,
 )
 from tac.optimization.repair_campaign_learning_signal import (
@@ -607,6 +611,18 @@ def test_entropy_stage_chain_contract_requires_replay_receiver_and_exact_handoff
 
     assert contract["schema"] == REPAIR_CAMPAIGN_ENTROPY_STAGE_CHAIN_CONTRACT_SCHEMA
     assert contract["node_schema"] == REPAIR_CAMPAIGN_ENTROPY_STAGE_CHAIN_NODE_SCHEMA
+    assert contract["optimizer_solver"] == REPAIR_CAMPAIGN_REQUIRED_OPTIMIZER_SOLVER
+    assert (
+        contract["required_optimizer_solver"]
+        == REPAIR_CAMPAIGN_REQUIRED_OPTIMIZER_SOLVER
+    )
+    assert contract["optimizer_selection_sort_order"][:2] == [
+        "queue_readiness",
+        "entropy_pipeline_stage_index",
+    ]
+    assert contract["optimizer_candidate_evaluation_order"][0][
+        "typed_response_id"
+    ] == "segnet_region_ready"
     assert contract["selected_allocation_count"] == 1
     assert contract["chain_node_count"] == 1
     assert contract["ready_for_exact_eval_dispatch"] is False
@@ -615,6 +631,9 @@ def test_entropy_stage_chain_contract_requires_replay_receiver_and_exact_handoff
     assert "deterministic_local_mlx_replay_bundle_required" in contract["blockers"]
     node = contract["ordered_chain_nodes"][0]
     assert node["typed_response_id"] == "segnet_region_ready"
+    assert node["optimizer_candidate_evaluation_index"] == 1
+    assert node["interaction_order"] >= 1
+    assert node["interaction_aware_selection_score"] > 0.0
     assert node["entropy_pipeline_stage_index"] == 0
     assert node["deterministic_replay_bundle_required"] is True
     assert node["deterministic_replay_bundle_satisfied"] is False
@@ -633,6 +652,20 @@ def test_entropy_stage_chain_contract_requires_replay_receiver_and_exact_handoff
     assert "archive_bound_runtime_consumption_proof_missing_or_unverified" in (
         node["blockers"]
     )
+
+
+def test_entropy_stage_chain_contract_rejects_stale_scalar_greedy_solver(
+    tmp_path: Path,
+) -> None:
+    report = score_repair_campaign(payload=_work_order(tmp_path), repo_root=tmp_path)
+    stale = json.loads(json.dumps(report))
+    stale["optimizer_decision"]["solver"] = "greedy_campaign_score_waterfill_v1"
+
+    with pytest.raises(RepairCampaignChainContractError, match="interaction-aware"):
+        build_repair_campaign_entropy_stage_chain_contract(
+            score_report=stale,
+            repo_root=tmp_path,
+        )
 
 
 def test_score_repair_campaign_blocks_missing_family_required_value_artifacts(
