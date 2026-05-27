@@ -15,6 +15,7 @@ from tac.optimization.repair_campaign_learning_signal import (
     build_repair_campaign_blocked_learning_signal_report,
 )
 from tac.optimization.repair_campaign_scorer import (
+    REPAIR_CAMPAIGN_ENTROPY_PIPELINE_POSITION_SCHEMA,
     REPAIR_CAMPAIGN_INTERACTION_DYNAMICS_SCHEMA,
     REPAIR_CAMPAIGN_MATERIALIZATION_LINEAGE_SCHEMA,
     REPAIR_CAMPAIGN_MULTISCALE_ACTION_LEDGER_SCHEMA,
@@ -406,10 +407,23 @@ def test_score_repair_campaign_ranks_ready_mlx_and_names_missing_artifacts(
     assert dynamics["must_remeasure_after_materialization"] is True
     assert action["action_functional"]["bit_delta_vs_baseline"] == -32.0
     assert action["entropy_position_class"] == "pre_entropy_distribution_shaping"
+    assert action["entropy_pipeline_position"]["schema"] == (
+        REPAIR_CAMPAIGN_ENTROPY_PIPELINE_POSITION_SCHEMA
+    )
+    assert action["entropy_pipeline_position"]["stage_index"] == 0
+    assert action["entropy_pipeline_position"][
+        "can_shape_coder_input_distribution"
+    ] is True
+    assert action["entropy_pipeline_position"]["information_effect_class"] == (
+        "changes_symbol_distribution_seen_by_entropy_coder"
+    )
     assert action["remeasure_required_before_budget_spend"] is True
     assert action["mathematical_grounding"]["interaction_dynamics_schema"] == (
         REPAIR_CAMPAIGN_INTERACTION_DYNAMICS_SCHEMA
     )
+    assert action["mathematical_grounding"][
+        "entropy_pipeline_position_schema"
+    ] == REPAIR_CAMPAIGN_ENTROPY_PIPELINE_POSITION_SCHEMA
     assert report["multiscale_action_ledger"]["schema"] == (
         REPAIR_CAMPAIGN_MULTISCALE_ACTION_LEDGER_SCHEMA
     )
@@ -422,6 +436,12 @@ def test_score_repair_campaign_ranks_ready_mlx_and_names_missing_artifacts(
     assert report["multiscale_action_ledger"]["dynamics_class_histogram"][
         "class_boundary_to_region_waterfill_response"
     ] == 1
+    assert report["multiscale_action_ledger"][
+        "ordered_entropy_pipeline_classes_present"
+    ] == ["pre_entropy_distribution_shaping", "selector_codec_entropy"]
+    assert report["multiscale_action_ledger"][
+        "entropy_pipeline_stage_index_histogram"
+    ] == {"0": 1, "2": 1}
     assert (
         "runtime_consumption_proof_path:missing_or_unverified"
         in first["receiver_proof_status"]["missing_artifacts"]
@@ -449,6 +469,10 @@ def test_score_repair_campaign_ranks_ready_mlx_and_names_missing_artifacts(
     assert first["campaign_score"] > 0.0
     allocation = decision["selected_allocation_rows"][0]
     assert allocation["per_op_bytes_delta"] == -4
+    assert allocation["entropy_pipeline_position"]["stage_index"] == 0
+    assert decision["entropy_pipeline_stage_allocation_histogram"] == {
+        "pre_entropy_distribution_shaping": 1
+    }
     assert allocation["component_response_terms"]["segnet_delta_score_units"] == (
         -0.0007
     )

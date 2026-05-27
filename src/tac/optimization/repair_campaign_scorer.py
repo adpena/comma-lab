@@ -56,6 +56,9 @@ REPAIR_CAMPAIGN_INTERACTION_DYNAMICS_SCHEMA = (
 REPAIR_CAMPAIGN_MATERIALIZATION_LINEAGE_SCHEMA = (
     "repair_campaign_materialization_lineage.v1"
 )
+REPAIR_CAMPAIGN_ENTROPY_PIPELINE_POSITION_SCHEMA = (
+    "repair_campaign_entropy_pipeline_position.v1"
+)
 
 _TYPED_LEDGER_SCHEMA = "frontier_rate_attack_repair_budget_typed_response_ledger.v1"
 _TYPED_ROW_SCHEMA = "frontier_rate_attack_repair_budget_typed_response_row.v1"
@@ -76,6 +79,15 @@ _ENTROPY_POSITION_WEIGHTS: dict[str, float] = {
     "after_entropy_coder_container_or_zip_grammar": 0.45,
     "unknown_entropy_pipeline_position": 0.20,
 }
+
+_ENTROPY_PIPELINE_STAGE_ORDER: tuple[str, ...] = (
+    "pre_entropy_distribution_shaping",
+    "scorer_entropy_before_selector_codec",
+    "selector_codec_entropy",
+    "entropy_coder_boundary",
+    "post_entropy_container",
+    "unknown_entropy_pipeline_position",
+)
 
 _SCALE_ORDER: tuple[str, ...] = (
     "bit",
@@ -615,6 +627,77 @@ def _entropy_position_class(entropy_position: str) -> str:
     return "unknown_entropy_pipeline_position"
 
 
+def _entropy_pipeline_position_descriptor(entropy_position: str) -> dict[str, Any]:
+    entropy_class = _entropy_position_class(entropy_position)
+    try:
+        stage_index = _ENTROPY_PIPELINE_STAGE_ORDER.index(entropy_class)
+    except ValueError:
+        stage_index = _ENTROPY_PIPELINE_STAGE_ORDER.index(
+            "unknown_entropy_pipeline_position"
+        )
+        entropy_class = "unknown_entropy_pipeline_position"
+    before_coder = entropy_class in {
+        "pre_entropy_distribution_shaping",
+        "scorer_entropy_before_selector_codec",
+        "selector_codec_entropy",
+    }
+    at_coder = entropy_class == "entropy_coder_boundary"
+    after_coder = entropy_class == "post_entropy_container"
+    information_effect = {
+        "pre_entropy_distribution_shaping": "changes_symbol_distribution_seen_by_entropy_coder",
+        "scorer_entropy_before_selector_codec": (
+            "changes_scorer_response_distribution_before_selector_codec"
+        ),
+        "selector_codec_entropy": "changes_selector_stream_symbols_or_region_decisions",
+        "entropy_coder_boundary": "optimizes_integer_codeword_or_model_boundary",
+        "post_entropy_container": "container_permutation_or_overhead_only",
+        "unknown_entropy_pipeline_position": "requires_empirical_stage_classification",
+    }[entropy_class]
+    constraints = [
+        "chain_order_must_preserve_receiver_decode_only_contract",
+        "exact_axis_replay_required_before_score_or_promotion_claim",
+    ]
+    if before_coder:
+        constraints.append("downstream_entropy_recode_must_be_remeasured")
+    if at_coder:
+        constraints.append("codeword_integer_boundary_accounting_required")
+    if after_coder:
+        constraints.append("no_information_savings_after_coder_without_overhead_removal")
+    descriptor = {
+        "schema": REPAIR_CAMPAIGN_ENTROPY_PIPELINE_POSITION_SCHEMA,
+        "entropy_position_label": entropy_position,
+        "entropy_position_class": entropy_class,
+        "stage_index": stage_index,
+        "stage_order": list(_ENTROPY_PIPELINE_STAGE_ORDER),
+        "upstream_stage_classes": list(_ENTROPY_PIPELINE_STAGE_ORDER[:stage_index]),
+        "downstream_stage_classes": list(
+            _ENTROPY_PIPELINE_STAGE_ORDER[stage_index + 1 :]
+        ),
+        "information_effect_class": information_effect,
+        "can_shape_coder_input_distribution": before_coder,
+        "can_attack_codeword_integer_boundary": at_coder,
+        "post_coder_information_change_allowed": False,
+        "container_overhead_only_after_coder": after_coder,
+        "entropy_position_weight": _ENTROPY_POSITION_WEIGHTS.get(
+            entropy_position,
+            _ENTROPY_POSITION_WEIGHTS["unknown_entropy_pipeline_position"],
+        ),
+        "composition_order_rule": (
+            "optimize_pre_coder_distribution_shaping_then_selector_or_entropy_"
+            "coder_boundary_then_container_overhead_cleanup"
+        ),
+        "stackability_constraints": ordered_unique(constraints),
+        "allowed_use": "repair_campaign_entropy_pipeline_chain_order_feature_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        descriptor,
+        context=f"repair_campaign_entropy_pipeline_position:{entropy_position}",
+    )
+    return descriptor
+
+
 def _ordered_scales(values: Sequence[str]) -> list[str]:
     seen = ordered_unique(values)
     known = [scale for scale in _SCALE_ORDER if scale in set(seen)]
@@ -646,6 +729,7 @@ def _scale_interaction_dynamics(
         if row.get("scale")
     }
     entropy_class = _entropy_position_class(entropy_position)
+    entropy_pipeline_position = _entropy_pipeline_position_descriptor(entropy_position)
     edges: list[dict[str, Any]] = []
     for source, target in pairwise(active):
         dynamics_class = _SCALE_INTERACTION_DYNAMICS.get(
@@ -686,6 +770,16 @@ def _scale_interaction_dynamics(
         "component_axes": list(component_axes),
         "entropy_position_label": entropy_position,
         "entropy_position_class": entropy_class,
+        "entropy_pipeline_stage_index": entropy_pipeline_position["stage_index"],
+        "entropy_pipeline_information_effect_class": (
+            entropy_pipeline_position["information_effect_class"]
+        ),
+        "can_shape_coder_input_distribution": (
+            entropy_pipeline_position["can_shape_coder_input_distribution"]
+        ),
+        "can_attack_codeword_integer_boundary": (
+            entropy_pipeline_position["can_attack_codeword_integer_boundary"]
+        ),
         "low_level_signal_scales": low_level,
         "spatial_support_scales": spatial,
         "temporal_aggregation_scales": temporal,
@@ -810,6 +904,7 @@ def _multiscale_action_row(
         component_axis_values.append("selector_bits")
     component_axes = ordered_unique(component_axis_values)
     interaction_order = len(active_scales)
+    entropy_pipeline_position = _entropy_pipeline_position_descriptor(entropy_position)
     remeasure_required = (
         stack_terms.get("must_remeasure_with_parent_and_sibling_repairs") is True
         or interaction_order >= 4
@@ -833,6 +928,7 @@ def _multiscale_action_row(
         "component_axes": component_axes,
         "entropy_position_label": entropy_position,
         "entropy_position_class": _entropy_position_class(entropy_position),
+        "entropy_pipeline_position": entropy_pipeline_position,
         "action_functional": {
             "schema": "repair_campaign_multiscale_action_functional_terms.v1",
             "objective": "minimize_delta_segnet_plus_delta_posenet_plus_lambda_delta_bytes",
@@ -847,6 +943,7 @@ def _multiscale_action_row(
                 entropy_position,
                 _ENTROPY_POSITION_WEIGHTS["unknown_entropy_pipeline_position"],
             ),
+            "entropy_pipeline_stage_index": entropy_pipeline_position["stage_index"],
             "palette_frame_asymmetry_multiplier": _palette_frame_asymmetry_multiplier(
                 palette_dynamics_context
             ),
@@ -860,6 +957,10 @@ def _multiscale_action_row(
         "mathematical_grounding": {
             "schema": "repair_campaign_multiscale_mathematical_grounding.v1",
             "scale_order": list(_SCALE_ORDER),
+            "entropy_pipeline_stage_order": list(_ENTROPY_PIPELINE_STAGE_ORDER),
+            "entropy_pipeline_position_schema": (
+                REPAIR_CAMPAIGN_ENTROPY_PIPELINE_POSITION_SCHEMA
+            ),
             "interaction_dynamics_schema": REPAIR_CAMPAIGN_INTERACTION_DYNAMICS_SCHEMA,
             "principle": (
                 "repair value depends on where a transformation acts relative "
@@ -893,6 +994,7 @@ def _multiscale_action_row(
 def _multiscale_action_ledger(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     scale_histogram: dict[str, int] = {}
     entropy_class_histogram: dict[str, int] = {}
+    entropy_stage_index_histogram: dict[str, int] = {}
     interaction_order_histogram: dict[str, int] = {}
     interaction_edge_histogram: dict[str, int] = {}
     dynamics_class_histogram: dict[str, int] = {}
@@ -910,6 +1012,11 @@ def _multiscale_action_ledger(rows: Sequence[Mapping[str, Any]]) -> dict[str, An
         )
         entropy_class_histogram[entropy_class] = (
             entropy_class_histogram.get(entropy_class, 0) + 1
+        )
+        entropy_pipeline = _mapping(action.get("entropy_pipeline_position"))
+        stage_index = str(_safe_int(entropy_pipeline.get("stage_index")))
+        entropy_stage_index_histogram[stage_index] = (
+            entropy_stage_index_histogram.get(stage_index, 0) + 1
         )
         order = str(_safe_int(action.get("interaction_order")))
         interaction_order_histogram[order] = interaction_order_histogram.get(order, 0) + 1
@@ -932,10 +1039,22 @@ def _multiscale_action_ledger(rows: Sequence[Mapping[str, Any]]) -> dict[str, An
         "row_schema": REPAIR_CAMPAIGN_MULTISCALE_ACTION_ROW_SCHEMA,
         "row_count": len(action_rows),
         "scale_order": list(_SCALE_ORDER),
+        "entropy_pipeline_position_schema": (
+            REPAIR_CAMPAIGN_ENTROPY_PIPELINE_POSITION_SCHEMA
+        ),
+        "entropy_pipeline_stage_order": list(_ENTROPY_PIPELINE_STAGE_ORDER),
         "scale_histogram": dict(sorted(scale_histogram.items())),
         "entropy_position_class_histogram": dict(
             sorted(entropy_class_histogram.items())
         ),
+        "entropy_pipeline_stage_index_histogram": dict(
+            sorted(entropy_stage_index_histogram.items())
+        ),
+        "ordered_entropy_pipeline_classes_present": [
+            stage
+            for stage in _ENTROPY_PIPELINE_STAGE_ORDER
+            if entropy_class_histogram.get(stage)
+        ],
         "interaction_order_histogram": dict(
             sorted(interaction_order_histogram.items())
         ),
@@ -1885,6 +2004,9 @@ def _build_optimizer_decision(
                     "operation_levels": _string_list(row.get("operation_levels")),
                     "campaign_rank": row.get("campaign_rank"),
                     "entropy_position_label": row.get("entropy_position_label"),
+                    "entropy_pipeline_position": dict(
+                        _mapping(row.get("entropy_pipeline_position"))
+                    ),
                     "requested_repair_bytes": requested_bytes,
                     "objective_delta_score_units": row.get("objective_delta_score_units"),
                     "expected_local_improvement_score_units": improvement,
@@ -1956,6 +2078,9 @@ def _build_optimizer_decision(
                 "operation_levels": _string_list(row.get("operation_levels")),
                 "campaign_rank": row.get("campaign_rank"),
                 "entropy_position_label": row.get("entropy_position_label"),
+                "entropy_pipeline_position": dict(
+                    _mapping(row.get("entropy_pipeline_position"))
+                ),
                 "requested_repair_bytes": requested_bytes,
                 "allocated_repair_bytes": allocated,
                 "allocation_fraction": allocation_fraction,
@@ -2020,11 +2145,20 @@ def _build_optimizer_decision(
         for row in selected_rows
     )
     entropy_histogram: dict[str, int] = {}
+    entropy_stage_histogram: dict[str, int] = {}
     family_histogram: dict[str, int] = {}
     for row in selected_rows:
         entropy = str(row.get("entropy_position_label") or "unknown_entropy_pipeline_position")
+        entropy_pipeline = _mapping(row.get("entropy_pipeline_position"))
+        entropy_stage = str(
+            entropy_pipeline.get("entropy_position_class")
+            or _entropy_position_class(entropy)
+        )
         family = str(row.get("family_id") or "unclassified_repair_family")
         entropy_histogram[entropy] = entropy_histogram.get(entropy, 0) + 1
+        entropy_stage_histogram[entropy_stage] = (
+            entropy_stage_histogram.get(entropy_stage, 0) + 1
+        )
         family_histogram[family] = family_histogram.get(family, 0) + 1
     blockers = [
         "local_mlx_repair_optimizer_is_not_budget_spend_authority",
@@ -2049,6 +2183,9 @@ def _build_optimizer_decision(
         "unallocated_receiver_closed_rate_credit_bytes": remaining,
         "expected_local_improvement_score_units_total": expected_improvement_total,
         "entropy_position_allocation_histogram": dict(sorted(entropy_histogram.items())),
+        "entropy_pipeline_stage_allocation_histogram": dict(
+            sorted(entropy_stage_histogram.items())
+        ),
         "family_allocation_histogram": dict(sorted(family_histogram.items())),
         "selected_allocation_rows": selected_rows,
         "blocked_allocation_rows": blocked_rows,
@@ -2171,6 +2308,11 @@ def build_repair_campaign_stackability_probe(
         or score_row.get("entropy_position_label")
         or "unknown_entropy_pipeline_position"
     )
+    entropy_pipeline_position = (
+        _mapping(allocation.get("entropy_pipeline_position"))
+        or _mapping(score_row.get("entropy_pipeline_position"))
+        or _entropy_pipeline_position_descriptor(entropy_position)
+    )
     stackability_ready = not blockers
     status = (
         "ready_for_local_mlx_stackability_probe"
@@ -2224,23 +2366,11 @@ def build_repair_campaign_stackability_probe(
             or 1.0
         ),
         "entropy_position_label": entropy_position,
-        "entropy_position_class": (
-            "pre_entropy_distribution_shaping"
-            if entropy_position.startswith("before_entropy_coder")
-            else (
-                "scorer_entropy_before_selector_codec"
-                if entropy_position == "scorer_entropy_repair_before_selector_codec"
-                else (
-                    "entropy_coder_boundary"
-                    if entropy_position.startswith("at_entropy_coder")
-                    else (
-                        "post_entropy_container"
-                        if entropy_position.startswith("after_entropy_coder")
-                        else "selector_or_unknown_entropy_position"
-                    )
-                )
-            )
+        "entropy_position_class": str(
+            entropy_pipeline_position.get("entropy_position_class")
+            or _entropy_position_class(entropy_position)
         ),
+        "entropy_pipeline_position": dict(entropy_pipeline_position),
         "interaction_penalty": _safe_float(
             allocation.get("interaction_penalty")
             if allocation
@@ -2326,6 +2456,9 @@ def score_repair_campaign(
             else 0.0
         )
         entropy_position = _entropy_position(row, prior)
+        entropy_pipeline_position = _entropy_pipeline_position_descriptor(
+            entropy_position
+        )
         entropy_weight = _ENTROPY_POSITION_WEIGHTS.get(
             entropy_position,
             _ENTROPY_POSITION_WEIGHTS["unknown_entropy_pipeline_position"],
@@ -2411,6 +2544,7 @@ def score_repair_campaign(
             "targeted_dimensions": _string_list(row.get("targeted_dimensions")),
             "operation_levels": _string_list(row.get("operation_levels")),
             "entropy_position_label": entropy_position,
+            "entropy_pipeline_position": entropy_pipeline_position,
             "entropy_position_weight": entropy_weight,
             "requested_repair_bytes": requested_bytes,
             "objective_delta_score_units": objective_delta,
@@ -2511,6 +2645,7 @@ def score_repair_campaign(
 
 
 __all__ = [
+    "REPAIR_CAMPAIGN_ENTROPY_PIPELINE_POSITION_SCHEMA",
     "REPAIR_CAMPAIGN_INTERACTION_DYNAMICS_SCHEMA",
     "REPAIR_CAMPAIGN_MATERIALIZATION_LINEAGE_SCHEMA",
     "REPAIR_CAMPAIGN_MULTISCALE_ACTION_LEDGER_SCHEMA",

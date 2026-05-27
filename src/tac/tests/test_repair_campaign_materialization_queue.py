@@ -136,6 +136,10 @@ def test_byte_closed_materialization_queue_emits_archive_bound_steps(
         "target_queue_artifact_key"
     ] == "repair_campaign_byte_closed_materialization_queue"
     assert experiment["metadata"]["interaction_dynamics"]["active_scales"]
+    assert experiment["metadata"]["entropy_pipeline_position"]["stage_index"] == 0
+    assert experiment["metadata"]["entropy_pipeline_position"][
+        "can_shape_coder_input_distribution"
+    ] is True
     assert [step["id"] for step in experiment["steps"]] == [
         "emit_repair_budget_materialization_plan",
         "emit_repair_family_materializer_manifest",

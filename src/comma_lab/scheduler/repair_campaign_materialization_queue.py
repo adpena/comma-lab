@@ -242,7 +242,9 @@ def _materialization_experiment(
         work_order_path=work_order,
     )
     lineage = _mapping(allocation.get("repair_materialization_lineage"))
-    dynamics = _mapping(_mapping(allocation.get("multiscale_action_row")).get("interaction_dynamics"))
+    action_row = _mapping(allocation.get("multiscale_action_row"))
+    dynamics = _mapping(action_row.get("interaction_dynamics"))
+    entropy_pipeline = _mapping(action_row.get("entropy_pipeline_position"))
     status = "queued" if not blockers else "frozen"
     metadata = {
         "schema": REPAIR_CAMPAIGN_BYTE_CLOSED_MATERIALIZATION_EXPERIMENT_METADATA_SCHEMA,
@@ -252,6 +254,7 @@ def _materialization_experiment(
         "candidate_id": candidate_id or None,
         "family_id": allocation.get("family_id"),
         "entropy_position_label": allocation.get("entropy_position_label"),
+        "entropy_pipeline_position": dict(entropy_pipeline),
         "allocated_repair_bytes": allocation.get("allocated_repair_bytes"),
         "repair_materialization_lineage": dict(lineage),
         "interaction_dynamics": dict(dynamics),
