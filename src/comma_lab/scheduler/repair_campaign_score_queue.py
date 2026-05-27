@@ -900,7 +900,7 @@ def _posterior_followup_experiment(
     blockers: list[str] = []
     steps: list[dict[str, Any]] = []
     required_artifact = artifact_paths_by_key.get(required_key)
-    if required_key and required_artifact is None:
+    if required_key and required_artifact is None and not executable_queue_keys:
         missing_artifact_keys.append(required_key)
     if required_key == "exact_auth_eval_handoff":
         blockers.append("exact_auth_eval_handoff_requires_contest_axis_claim")

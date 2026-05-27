@@ -362,12 +362,28 @@ def test_repair_posterior_acquisition_followup_queue_routes_to_child_queue(
 ) -> None:
     response_harvest_path = tmp_path / "targeted_response_harvest.json"
     targeted_queue_path = tmp_path / "targeted_queue.json"
+    repair_score_queue_path = tmp_path / "repair_score_queue.json"
     response_harvest_path.write_text('{"schema":"response_harvest.v1"}\n')
     targeted_queue_path.write_text(
         json.dumps(
             {
                 "schema": QUEUE_SCHEMA,
                 "queue_id": "targeted_component_correction_queue",
+                "controls": {"mode": "running"},
+                "metadata": _false_authority(),
+                "experiments": [],
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    repair_score_queue_path.write_text(
+        json.dumps(
+            {
+                "schema": QUEUE_SCHEMA,
+                "queue_id": "repair_campaign_score_queue",
                 "controls": {"mode": "running"},
                 "metadata": _false_authority(),
                 "experiments": [],
@@ -394,14 +410,24 @@ def test_repair_posterior_acquisition_followup_queue_routes_to_child_queue(
         "blocker_total": 0,
         **_false_authority(),
     }
+    mlx_custody_route = {
+        **route,
+        "recommended_acquisition_policy": (
+            "materialize_missing_local_mlx_custody_before_stackability"
+        ),
+        "activation_action": "materialize_missing_local_mlx_custody",
+        "queue_artifact_key": "repair_cascade_mlx_probe_queue",
+        "required_evidence_surface": "local_mlx_research_signal",
+        "priority_score": 70,
+    }
     posterior_summary = {
         "schema": REPAIR_CAMPAIGN_POSTERIOR_PRIOR_SUMMARY_SCHEMA,
         "posterior_path": str(tmp_path / "posterior.jsonl"),
         "posterior_row_count": 2,
         "family_prior_count": 0,
         "family_priors": [],
-        "acquisition_followup_route_count": 1,
-        "acquisition_followup_routes": [route],
+        "acquisition_followup_route_count": 2,
+        "acquisition_followup_routes": [route, mlx_custody_route],
         "allowed_use": "unit_test",
         "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
         **_false_authority(),
@@ -413,6 +439,7 @@ def test_repair_posterior_acquisition_followup_queue_routes_to_child_queue(
         artifact_paths_by_key={
             "targeted_component_correction_response_harvest": response_harvest_path,
             "targeted_component_correction_queue": targeted_queue_path,
+            "repair_campaign_score_queue": repair_score_queue_path,
         },
         results_root=tmp_path / "results",
         queue_id="unit_repair_posterior_followup",
@@ -423,7 +450,7 @@ def test_repair_posterior_acquisition_followup_queue_routes_to_child_queue(
         queue["metadata"]["schema"]
         == REPAIR_POSTERIOR_ACQUISITION_FOLLOWUP_QUEUE_METADATA_SCHEMA
     )
-    assert queue["metadata"]["ready_experiment_count"] == 1
+    assert queue["metadata"]["ready_experiment_count"] == 2
     experiment = queue["experiments"][0]
     assert experiment["status"] == "queued"
     assert (
@@ -442,12 +469,18 @@ def test_repair_posterior_acquisition_followup_queue_routes_to_child_queue(
         and str(targeted_queue_path) in command
         for command in step_commands
     )
+    mlx_experiment = queue["experiments"][1]
+    assert mlx_experiment["status"] == "queued"
+    assert mlx_experiment["metadata"]["executable_queue_artifact_keys"] == [
+        "repair_campaign_score_queue"
+    ]
+    assert mlx_experiment["metadata"]["queue_actuation_blockers"] == []
     summary = summarize_repair_posterior_acquisition_followup_queue(
         repair_posterior_followup_queue=queue,
         queue_path=tmp_path / "repair_posterior_acquisition_followup_queue.json",
     )
-    assert summary["posterior_acquisition_followup_route_count"] == 1
-    assert summary["ready_experiment_count"] == 1
+    assert summary["posterior_acquisition_followup_route_count"] == 2
+    assert summary["ready_experiment_count"] == 2
 
 
 def test_repair_campaign_score_queue_cli_writes_and_score_step_runs(
