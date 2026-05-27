@@ -72,8 +72,13 @@ def _load_feca_module(encoder_dir: Path, *, module_suffix: str) -> ModuleType:
     if spec is None or spec.loader is None:
         raise FecaSelectorReparameterizationError(f"could not load FECa module: {module_path}")
     module = importlib.util.module_from_spec(spec)
-    with _prepended_sys_path(encoder_dir):
-        spec.loader.exec_module(module)
+    original_dont_write_bytecode = sys.dont_write_bytecode
+    try:
+        sys.dont_write_bytecode = True
+        with _prepended_sys_path(encoder_dir):
+            spec.loader.exec_module(module)
+    finally:
+        sys.dont_write_bytecode = original_dont_write_bytecode
     return module
 
 
@@ -250,7 +255,11 @@ def build_feca_selector_reparameterized_candidate(
             raise FecaSelectorReparameterizationError(f"output exists: {output}")
         shutil.rmtree(output)
     candidate_dir = output / "submission_dir"
-    shutil.copytree(source_dir, candidate_dir)
+    shutil.copytree(
+        source_dir,
+        candidate_dir,
+        ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+    )
 
     source_archive = source_dir / "archive.zip"
     candidate_archive = candidate_dir / "archive.zip"
