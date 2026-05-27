@@ -126,6 +126,20 @@ from tac.submission_packet.builder import (
 from tac.submission_packet.builder import (
     CANONICAL_EQUATION_ID as SUBMISSION_BUNDLE_CANONICAL_EQUATION_ID,
 )
+from tac.submission_packet.compliance import (
+    COMPLIANCE_SCHEMA_VERSION,
+    PHASE_6_LAYER_VERSION,
+    CANONICAL_COMPLIANCE_SCRIPT_PATH,
+    CheckSeverity,
+    ComplianceCheck,
+    ComplianceVerdict,
+    SubmissionComplianceError,
+    derive_compliance_provenance,
+    enforce_contest_compliance,
+)
+from tac.submission_packet.compliance import (
+    CANONICAL_EQUATION_ID as COMPLIANCE_CANONICAL_EQUATION_ID,
+)
 from tac.submission_packet.compression_pipeline import (
     CANONICAL_EQUATION_ID,
     COMPRESSION_PIPELINE_SCHEMA_VERSION,
@@ -139,6 +153,32 @@ from tac.submission_packet.compression_pipeline import (
     derive_compression_pipeline_provenance,
     validate_recipe_trainer_pair,
     verify_compression_pipeline_protocol_complete,
+)
+from tac.submission_packet.linter import (
+    EVIDENCE_GRADE as LINTER_EVIDENCE_GRADE,
+    FORBIDDEN_PUBLIC_PR_TOKENS,
+    FIRST_PERSON_PLURAL_PATTERNS,
+    EMDASH_CHARACTER,
+    TONE_VIOLATION_PATTERNS,
+    CANONICAL_AXIS_TAGS,
+    LINTER_SCHEMA_VERSION,
+    PHASE_5_LAYER_VERSION,
+    LintFinding,
+    LintSeverity,
+    LintSurface,
+    LintVerdict,
+    SubmissionLinterError,
+    derive_linter_provenance,
+    lint_archive_zip,
+    lint_compliance_placeholder,
+    lint_inflate_py,
+    lint_pr_body,
+    lint_readme,
+    lint_submission_bundle,
+    lint_tone,
+)
+from tac.submission_packet.linter import (
+    CANONICAL_EQUATION_ID as LINTER_CANONICAL_EQUATION_ID,
 )
 
 __all__ = [
@@ -190,4 +230,38 @@ __all__ = [
     "build_dependency_closure_manifest",
     "build_submission_bundle",
     "derive_submission_bundle_provenance",
+    # Phase 6 (Layer 4) - compliance enforcer (this lane)
+    "COMPLIANCE_CANONICAL_EQUATION_ID",
+    "COMPLIANCE_SCHEMA_VERSION",
+    "PHASE_6_LAYER_VERSION",
+    "CANONICAL_COMPLIANCE_SCRIPT_PATH",
+    "CheckSeverity",
+    "ComplianceCheck",
+    "ComplianceVerdict",
+    "SubmissionComplianceError",
+    "derive_compliance_provenance",
+    "enforce_contest_compliance",
+    # Phase 5 (Layer 3)
+    "LINTER_CANONICAL_EQUATION_ID",
+    "LINTER_EVIDENCE_GRADE",
+    "LINTER_SCHEMA_VERSION",
+    "PHASE_5_LAYER_VERSION",
+    "FORBIDDEN_PUBLIC_PR_TOKENS",
+    "FIRST_PERSON_PLURAL_PATTERNS",
+    "EMDASH_CHARACTER",
+    "TONE_VIOLATION_PATTERNS",
+    "CANONICAL_AXIS_TAGS",
+    "LintFinding",
+    "LintSeverity",
+    "LintSurface",
+    "LintVerdict",
+    "SubmissionLinterError",
+    "derive_linter_provenance",
+    "lint_archive_zip",
+    "lint_compliance_placeholder",
+    "lint_inflate_py",
+    "lint_pr_body",
+    "lint_readme",
+    "lint_submission_bundle",
+    "lint_tone",
 ]
