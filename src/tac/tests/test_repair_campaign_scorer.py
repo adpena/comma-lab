@@ -20,6 +20,7 @@ from tac.optimization.repair_campaign_scorer import (
     REPAIR_CAMPAIGN_SCORE_ROW_SCHEMA,
     REPAIR_CAMPAIGN_STACKABILITY_PROBE_SCHEMA,
     REPAIR_OPERATOR_FAMILY_PRIORS_SCHEMA,
+    build_repair_campaign_posterior_prior_summary,
     build_repair_campaign_stackability_probe,
     repair_operator_family_priors,
     score_repair_campaign,
@@ -617,6 +618,13 @@ def test_score_repair_campaign_folds_stackability_posterior_into_priors(
     assert with_posterior["optimizer_decision"]["posterior_prior_summary"][
         "posterior_row_count"
     ] == 3
+    public_summary = build_repair_campaign_posterior_prior_summary(
+        posterior_path=posterior_path,
+    )
+    assert public_summary["posterior_row_count"] == 3
+    assert public_summary["acquisition_followup_routes"][0][
+        "recommended_acquisition_policy"
+    ] == "increase_priority_for_targeted_component_response_harvest"
 
 
 def test_repair_campaign_stackability_probe_requires_mlx_custody(

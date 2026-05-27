@@ -960,6 +960,19 @@ def _posterior_prior_summary(
     return summary
 
 
+def build_repair_campaign_posterior_prior_summary(
+    *,
+    posterior_path: str | Path | None,
+) -> dict[str, Any]:
+    """Load repair stackability posterior rows and project local planner priors."""
+
+    posterior_rows = _load_posterior_rows(posterior_path)
+    return _posterior_prior_summary(
+        posterior_path=posterior_path,
+        posterior_rows=posterior_rows,
+    )
+
+
 def _posterior_acquisition_route(policy: str) -> dict[str, Any]:
     if policy == "increase_priority_for_targeted_component_response_harvest":
         return {
@@ -1763,10 +1776,8 @@ def score_repair_campaign(
     """Score repair typed rows for the next queue-owned local campaign slice."""
 
     require_no_truthy_authority_fields(payload, context="repair_campaign_scorer_input")
-    posterior_rows = _load_posterior_rows(posterior_path)
-    posterior_summary = _posterior_prior_summary(
+    posterior_summary = build_repair_campaign_posterior_prior_summary(
         posterior_path=posterior_path,
-        posterior_rows=posterior_rows,
     )
     campaign_input_rows = [*_typed_rows(payload), *_cascade_opportunity_rows(payload)]
     structural_opportunity_count = sum(
@@ -1981,6 +1992,7 @@ __all__ = [
     "REPAIR_OPERATOR_FAMILY_PRIORS_SCHEMA",
     "REPAIR_OPERATOR_FAMILY_PRIOR_ROW_SCHEMA",
     "RepairCampaignScorerError",
+    "build_repair_campaign_posterior_prior_summary",
     "build_repair_campaign_stackability_probe",
     "repair_operator_family_priors",
     "score_repair_campaign",

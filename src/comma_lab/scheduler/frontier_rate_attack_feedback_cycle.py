@@ -38,6 +38,9 @@ from tac.optimization.pairset_component_marginal import (
     PAIRSET_COMPONENT_MARGINAL_MODEL_SCHEMA,
 )
 from tac.optimization.proxy_candidate_contract import require_no_truthy_authority_fields
+from tac.optimization.repair_campaign_scorer import (
+    build_repair_campaign_posterior_prior_summary,
+)
 from tac.repo_io import (
     ArtifactWriteError,
     json_text,
@@ -69,7 +72,10 @@ from .pair_frame_5d_coverage_acquisition_queue import (
 from .pair_frame_5d_extended_operator_queue import (
     build_pair_frame_5d_extended_operator_queue,
 )
-from .repair_campaign_score_queue import build_repair_campaign_score_queue
+from .repair_campaign_score_queue import (
+    DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_PATH,
+    build_repair_campaign_score_queue,
+)
 
 FRONTIER_RATE_ATTACK_FEEDBACK_CYCLE_SCHEMA = "frontier_rate_attack_feedback_cycle.v1"
 FRONTIER_RATE_ATTACK_DQS1_OBSERVATION_BUNDLE_SCHEMA = (
@@ -1217,6 +1223,7 @@ def write_frontier_refresh_artifacts(
                     "repair_campaign_score"
                 ),
                 experiment_limit=int(report.get("candidate_limit") or 4),
+                posterior_path=DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_PATH,
             )
             repair_campaign_score_queue_path = out / "repair_campaign_score_queue.json"
             write_json_artifact(
@@ -1226,6 +1233,9 @@ def write_frontier_refresh_artifacts(
             artifacts["repair_campaign_score_queue"] = repo_rel(
                 repair_campaign_score_queue_path,
                 repo_root,
+            )
+            posterior_prior_summary = build_repair_campaign_posterior_prior_summary(
+                posterior_path=DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_PATH,
             )
             report["repair_campaign_score_queue_summary"] = {
                 "schema": "frontier_rate_attack_repair_campaign_score_queue_summary.v1",
@@ -1241,6 +1251,17 @@ def write_frontier_refresh_artifacts(
                     "metadata",
                     {},
                 ).get("blocked_experiment_count"),
+                "campaign_scorer_uses_posterior_priors": repair_campaign_score_queue.get(
+                    "metadata",
+                    {},
+                ).get("campaign_scorer_uses_posterior_priors"),
+                "posterior_prior_summary": posterior_prior_summary,
+                "posterior_acquisition_followup_route_count": (
+                    posterior_prior_summary.get("acquisition_followup_route_count")
+                ),
+                "posterior_acquisition_followup_routes": (
+                    posterior_prior_summary.get("acquisition_followup_routes") or []
+                ),
                 "queue_path": artifacts["repair_campaign_score_queue"],
                 "allowed_use": (
                     "default_repair_campaign_scorer_queue_planning_only"

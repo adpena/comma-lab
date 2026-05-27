@@ -81,6 +81,9 @@ from tac.optimization.pair_frame_scorer_geometry_lattice import (  # noqa: E402
 from tac.optimization.proxy_candidate_contract import (  # noqa: E402
     require_no_truthy_authority_fields,
 )
+from tac.optimization.repair_campaign_scorer import (  # noqa: E402
+    build_repair_campaign_posterior_prior_summary,
+)
 from tac.repo_io import ArtifactWriteError, json_text, write_json_artifact  # noqa: E402
 
 PAIR_FRAME_5D_CANVAS_POPULATED_SCHEMA = (
@@ -1291,6 +1294,9 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
             artifacts["repair_campaign_score_queue"] = _display_path(
                 repair_campaign_score_queue_path
             )
+            posterior_prior_summary = build_repair_campaign_posterior_prior_summary(
+                posterior_path=DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_PATH,
+            )
             report["repair_campaign_score_queue_summary"] = {
                 "schema": "frontier_rate_attack_repair_campaign_score_queue_summary.v1",
                 "queue_id": repair_campaign_score_queue.get("queue_id"),
@@ -1305,6 +1311,17 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
                     "metadata",
                     {},
                 ).get("blocked_experiment_count"),
+                "campaign_scorer_uses_posterior_priors": repair_campaign_score_queue.get(
+                    "metadata",
+                    {},
+                ).get("campaign_scorer_uses_posterior_priors"),
+                "posterior_prior_summary": posterior_prior_summary,
+                "posterior_acquisition_followup_route_count": (
+                    posterior_prior_summary.get("acquisition_followup_route_count")
+                ),
+                "posterior_acquisition_followup_routes": (
+                    posterior_prior_summary.get("acquisition_followup_routes") or []
+                ),
                 "queue_path": artifacts["repair_campaign_score_queue"],
                 "allowed_use": (
                     "default_repair_campaign_scorer_queue_planning_only"
