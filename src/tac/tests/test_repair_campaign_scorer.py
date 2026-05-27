@@ -70,6 +70,25 @@ def _work_order(tmp_path: Path) -> dict[str, object]:
                     ),
                     "requested_repair_bytes": 32,
                     "objective_delta_score_units": -0.0010,
+                    "allocation_action_term": {
+                        "schema": (
+                            "frontier_rate_attack_repair_budget_waterfill_"
+                            "allocation_action_term.v1"
+                        ),
+                        "T_i": {
+                            "archive_byte_delta_vs_baseline": -4,
+                        },
+                        "legal_runtime_constraints": [
+                            "receiver_consumes_materialized_runtime_output",
+                            "component_response_replayed_before_budget_spend",
+                        ],
+                        **_false_authority(),
+                    },
+                    "local_mlx_component_terms": {
+                        "segnet_delta_score_units": -0.0007,
+                        "posenet_delta_score_units": -0.0003,
+                        **_false_authority(),
+                    },
                     "local_mlx_response_path": str(mlx),
                     "reference_local_mlx_response_path": str(ref),
                     "interaction_scope": {
@@ -149,7 +168,26 @@ def test_score_repair_campaign_ranks_ready_mlx_and_names_missing_artifacts(
     assert first["execution_gate"]["recommended_queue_status"] == (
         "ready_for_local_mlx_advisory_execution"
     )
+    assert first["per_op_bytes_delta"] == -4
+    assert first["component_response_terms"]["segnet_delta_score_units"] == -0.0007
+    assert first["component_response_terms"]["posenet_delta_score_units"] == -0.0003
+    assert (
+        "runtime_consumption_proof_path:missing_or_unverified"
+        in first["receiver_proof_status"]["missing_artifacts"]
+    )
+    assert "receiver_consumes_materialized_runtime_output" in (
+        first["hard_legal_runtime_constraints"]
+    )
     assert first["campaign_score"] > 0.0
+    allocation = decision["selected_allocation_rows"][0]
+    assert allocation["per_op_bytes_delta"] == -4
+    assert allocation["component_response_terms"]["segnet_delta_score_units"] == (
+        -0.0007
+    )
+    assert (
+        "runtime_consumption_proof_path:missing_or_unverified"
+        in allocation["receiver_proof_status"]["missing_artifacts"]
+    )
     blocked = report["rows"][1]
     assert blocked["typed_response_id"] == "selector_missing"
     assert blocked["execution_gate"]["recommended_queue_status"] == (

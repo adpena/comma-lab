@@ -83,6 +83,14 @@ def _mapping(value: Any) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
 
 
+def _first_float(*values: Any) -> float | None:
+    for value in values:
+        parsed = _safe_float(value)
+        if parsed is not None:
+            return parsed
+    return None
+
+
 def _repo_path_exists(path_text: str, repo_root: str | Path | None) -> bool:
     if not path_text:
         return False
@@ -259,6 +267,130 @@ def _interaction_penalty(row: Mapping[str, Any]) -> float:
     return min(penalty, 0.35)
 
 
+def _allocation_action_term(row: Mapping[str, Any]) -> Mapping[str, Any]:
+    for key in ("allocation_action_term", "operator_action_term", "action_term"):
+        value = row.get(key)
+        if isinstance(value, Mapping):
+            return value
+    return {}
+
+
+def _per_op_bytes_delta(row: Mapping[str, Any]) -> int | None:
+    term = _allocation_action_term(row)
+    transform = _mapping(term.get("T_i"))
+    delta = _first_float(
+        row.get("archive_byte_delta_vs_baseline"),
+        row.get("receiver_closed_archive_byte_delta_vs_reference"),
+        row.get("selector_payload_wire_delta_bytes"),
+        transform.get("archive_byte_delta_vs_baseline"),
+        transform.get("receiver_closed_archive_byte_delta_vs_reference"),
+        transform.get("bytes_delta"),
+    )
+    if delta is None:
+        return None
+    return int(delta)
+
+
+def _component_delta(row: Mapping[str, Any], component: str) -> float | None:
+    component_terms = (
+        _mapping(row.get("local_mlx_component_terms"))
+        or _mapping(row.get("local_cpu_component_terms"))
+        or _mapping(row.get("component_terms"))
+    )
+    curves = _mapping(row.get("marginal_response_curves"))
+    component_curve = _mapping(curves.get(component))
+    return _first_float(
+        row.get(f"{component}_delta_score_units"),
+        row.get(f"measured_{component}_delta_score_units"),
+        component_terms.get(f"{component}_delta_score_units"),
+        component_terms.get("delta_score_units"),
+        component_curve.get("delta_score_units"),
+    )
+
+
+def _component_response_terms(row: Mapping[str, Any]) -> dict[str, Any]:
+    segnet_delta = _component_delta(row, "segnet")
+    posenet_delta = _component_delta(row, "posenet")
+    measured_component = _first_float(
+        row.get("measured_component_delta_score_units"),
+        row.get("component_delta_score_units"),
+    )
+    return {
+        "schema": "repair_campaign_component_response_terms.v1",
+        "segnet_delta_score_units": segnet_delta,
+        "posenet_delta_score_units": posenet_delta,
+        "measured_component_delta_score_units": measured_component,
+        "response_axis": (
+            "[macOS-MLX research-signal]"
+            if row.get("local_mlx_response_path")
+            else "unknown_or_unmeasured_component_response_axis"
+        ),
+        "allowed_use": "repair_campaign_component_response_ranking_feature",
+        "forbidden_use": "score_claim_or_budget_spend_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
+def _receiver_proof_status(
+    row: Mapping[str, Any],
+    *,
+    repo_root: str | Path | None,
+) -> dict[str, Any]:
+    proof = _path_status(row, "runtime_consumption_proof_path", repo_root=repo_root)
+    archive_key = (
+        "receiver_consumed_candidate_archive_path"
+        if row.get("receiver_consumed_candidate_archive_path")
+        else "candidate_archive_path"
+    )
+    archive = _path_status(row, archive_key, repo_root=repo_root)
+    replay = _path_status(
+        row,
+        "component_response_replay_manifest_path",
+        repo_root=repo_root,
+    )
+    exact = _path_status(
+        row,
+        "exact_axis_component_response_path",
+        repo_root=repo_root,
+    )
+    statuses = [proof, archive, replay, exact]
+    missing = [
+        f"{item['key']}:missing_or_unverified"
+        for item in statuses
+        if item["exists"] is not True
+    ]
+    return {
+        "schema": "repair_campaign_receiver_proof_status.v1",
+        "receiver_runtime_custody_ready": not missing,
+        "runtime_consumption_proof": proof,
+        "receiver_consumed_candidate_archive": archive,
+        "component_response_replay_manifest": replay,
+        "exact_axis_component_response": exact,
+        "missing_artifacts": ordered_unique(missing),
+        "budget_spend_allowed": False,
+        "ready_for_exact_eval_dispatch": False,
+        "allowed_use": "repair_campaign_receiver_proof_custody_status_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
+def _hard_legal_runtime_constraints(row: Mapping[str, Any]) -> list[str]:
+    term = _allocation_action_term(row)
+    return ordered_unique(
+        [
+            "allocated_bytes_must_not_exceed_receiver_closed_rate_credit",
+            "local_mlx_response_is_planning_signal_only",
+            "parent_rate_only_archive_must_materialize_first",
+            "receiver_consumes_materialized_runtime_output",
+            "component_response_replayed_before_budget_spend",
+            "exact_auth_eval_required_before_score_or_promotion_claim",
+            *_string_list(row.get("legal_runtime_constraints")),
+            *_string_list(term.get("legal_runtime_constraints")),
+        ]
+    )
+
+
 def _path_status(
     row: Mapping[str, Any],
     key: str,
@@ -431,6 +563,16 @@ def _build_optimizer_decision(
                 "expected_local_improvement_score_units": improvement,
                 "scaled_expected_local_improvement_score_units": scaled_improvement,
                 "campaign_score": row.get("campaign_score"),
+                "per_op_bytes_delta": row.get("per_op_bytes_delta"),
+                "component_response_terms": dict(
+                    _mapping(row.get("component_response_terms"))
+                ),
+                "receiver_proof_status": dict(
+                    _mapping(row.get("receiver_proof_status"))
+                ),
+                "hard_legal_runtime_constraints": _string_list(
+                    row.get("hard_legal_runtime_constraints")
+                ),
                 "interaction_penalty": row.get("interaction_penalty"),
                 "interaction_scope": dict(_mapping(row.get("interaction_scope"))),
                 "stacking_interaction_terms": dict(
@@ -733,6 +875,10 @@ def score_repair_campaign(
         )
         family_multiplier = _safe_float(prior.get("campaign_prior_multiplier")) or 1.0
         interaction_penalty = _interaction_penalty(row)
+        per_op_bytes_delta = _per_op_bytes_delta(row)
+        component_response_terms = _component_response_terms(row)
+        receiver_proof = _receiver_proof_status(row, repo_root=repo_root)
+        hard_constraints = _hard_legal_runtime_constraints(row)
         bytes_denominator = requested_bytes if requested_bytes > 0 else 1
         improvement_per_byte = improvement / bytes_denominator
         campaign_score = (
@@ -760,6 +906,10 @@ def score_repair_campaign(
             "objective_delta_score_units": objective_delta,
             "improvement_score_units": improvement,
             "improvement_per_byte": improvement_per_byte,
+            "per_op_bytes_delta": per_op_bytes_delta,
+            "component_response_terms": component_response_terms,
+            "receiver_proof_status": receiver_proof,
+            "hard_legal_runtime_constraints": hard_constraints,
             "family_prior_multiplier": family_multiplier,
             "interaction_penalty": interaction_penalty,
             "campaign_score": campaign_score,
