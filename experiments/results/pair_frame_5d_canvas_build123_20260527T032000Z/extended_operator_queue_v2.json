@@ -1,0 +1,783 @@
+{
+  "controls": {
+    "local_first": true,
+    "max_concurrency": {
+      "local_cpu": 1
+    },
+    "mode": "running"
+  },
+  "experiments": [
+    {
+      "id": "pair_frame_5d_extended_operator_replace_one",
+      "lane_id": null,
+      "metadata": {
+        "allowed_use": "local_encoder_side_5d_extended_operator_planning_only",
+        "canonical_equation_id_pending": "replace_one_via_linear_substitution_distortion_v1",
+        "canvas_path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json",
+        "dispatch_packet_ready": false,
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
+        "operation": "replace_one",
+        "output_path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/replace_one_extended_candidates.json",
+        "output_root": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2",
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "reproduction_claim": false,
+        "reproduction_equivalence": false,
+        "schema": "pair_frame_5d_extended_operator_queue.v1",
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false
+      },
+      "priority": 1,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/apply_8_extended_operators_to_5d_canvas_cli.py",
+            "--canvas-path",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json",
+            "--operator",
+            "replace_one",
+            "--top-n",
+            "8",
+            "--output",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/replace_one_extended_candidates.json",
+            "--target-pair-idx",
+            "0",
+            "--alternative-selector-id",
+            "1"
+          ],
+          "id": "emit_replace_one_candidates",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "extended_operator_candidates.v0",
+              "key": "schema",
+              "path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/replace_one_extended_candidates.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [
+                "dispatch_packet_ready",
+                "promotable",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+                "reproduction_claim",
+                "reproduction_equivalence",
+                "score_claim",
+                "score_claim_eligible",
+                "score_claim_valid"
+              ],
+              "path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/replace_one_extended_candidates.json",
+              "required_false": [],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/replace_one_extended_candidates.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "pair-frame-5d-canvas",
+        "extended-operator",
+        "encoder-side-planning",
+        "no-score-authority",
+        "replace_one"
+      ]
+    },
+    {
+      "id": "pair_frame_5d_extended_operator_replace_many",
+      "lane_id": null,
+      "metadata": {
+        "allowed_use": "local_encoder_side_5d_extended_operator_planning_only",
+        "canonical_equation_id_pending": "replace_many_via_beam_search_per_axis_decomposition_v1",
+        "canvas_path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json",
+        "dispatch_packet_ready": false,
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
+        "operation": "replace_many",
+        "output_path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/replace_many_extended_candidates.json",
+        "output_root": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2",
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "reproduction_claim": false,
+        "reproduction_equivalence": false,
+        "schema": "pair_frame_5d_extended_operator_queue.v1",
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false
+      },
+      "priority": 2,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/apply_8_extended_operators_to_5d_canvas_cli.py",
+            "--canvas-path",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json",
+            "--operator",
+            "replace_many",
+            "--top-n",
+            "8",
+            "--output",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/replace_many_extended_candidates.json",
+            "--beam-width",
+            "8",
+            "--beam-depth",
+            "4"
+          ],
+          "id": "emit_replace_many_candidates",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "extended_operator_candidates.v0",
+              "key": "schema",
+              "path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/replace_many_extended_candidates.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [
+                "dispatch_packet_ready",
+                "promotable",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+                "reproduction_claim",
+                "reproduction_equivalence",
+                "score_claim",
+                "score_claim_eligible",
+                "score_claim_valid"
+              ],
+              "path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/replace_many_extended_candidates.json",
+              "required_false": [],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/replace_many_extended_candidates.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "pair-frame-5d-canvas",
+        "extended-operator",
+        "encoder-side-planning",
+        "no-score-authority",
+        "replace_many"
+      ]
+    },
+    {
+      "id": "pair_frame_5d_extended_operator_merge_pair",
+      "lane_id": null,
+      "metadata": {
+        "allowed_use": "local_encoder_side_5d_extended_operator_planning_only",
+        "canonical_equation_id_pending": "merge_pair_via_rate_distortion_joint_optimization_v1",
+        "canvas_path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json",
+        "dispatch_packet_ready": false,
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
+        "operation": "merge_pair",
+        "output_path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/merge_pair_extended_candidates.json",
+        "output_root": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2",
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "reproduction_claim": false,
+        "reproduction_equivalence": false,
+        "schema": "pair_frame_5d_extended_operator_queue.v1",
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false
+      },
+      "priority": 3,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/apply_8_extended_operators_to_5d_canvas_cli.py",
+            "--canvas-path",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json",
+            "--operator",
+            "merge_pair",
+            "--top-n",
+            "8",
+            "--output",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/merge_pair_extended_candidates.json",
+            "--max-merge-candidates",
+            "256"
+          ],
+          "id": "emit_merge_pair_candidates",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "extended_operator_candidates.v0",
+              "key": "schema",
+              "path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/merge_pair_extended_candidates.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [
+                "dispatch_packet_ready",
+                "promotable",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+                "reproduction_claim",
+                "reproduction_equivalence",
+                "score_claim",
+                "score_claim_eligible",
+                "score_claim_valid"
+              ],
+              "path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/merge_pair_extended_candidates.json",
+              "required_false": [],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/merge_pair_extended_candidates.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "pair-frame-5d-canvas",
+        "extended-operator",
+        "encoder-side-planning",
+        "no-score-authority",
+        "merge_pair"
+      ]
+    },
+    {
+      "id": "pair_frame_5d_extended_operator_reorder_pair",
+      "lane_id": null,
+      "metadata": {
+        "allowed_use": "local_encoder_side_5d_extended_operator_planning_only",
+        "canonical_equation_id_pending": "reorder_pair_via_entropy_coder_context_markov_v1",
+        "canvas_path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json",
+        "dispatch_packet_ready": false,
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
+        "operation": "reorder_pair",
+        "output_path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/reorder_pair_extended_candidates.json",
+        "output_root": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2",
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "reproduction_claim": false,
+        "reproduction_equivalence": false,
+        "schema": "pair_frame_5d_extended_operator_queue.v1",
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false
+      },
+      "priority": 4,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/apply_8_extended_operators_to_5d_canvas_cli.py",
+            "--canvas-path",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json",
+            "--operator",
+            "reorder_pair",
+            "--top-n",
+            "8",
+            "--output",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/reorder_pair_extended_candidates.json",
+            "--reorder-block-size",
+            "8"
+          ],
+          "id": "emit_reorder_pair_candidates",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "extended_operator_candidates.v0",
+              "key": "schema",
+              "path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/reorder_pair_extended_candidates.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [
+                "dispatch_packet_ready",
+                "promotable",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+                "reproduction_claim",
+                "reproduction_equivalence",
+                "score_claim",
+                "score_claim_eligible",
+                "score_claim_valid"
+              ],
+              "path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/reorder_pair_extended_candidates.json",
+              "required_false": [],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/reorder_pair_extended_candidates.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "pair-frame-5d-canvas",
+        "extended-operator",
+        "encoder-side-planning",
+        "no-score-authority",
+        "reorder_pair"
+      ]
+    },
+    {
+      "id": "pair_frame_5d_extended_operator_drop_frame",
+      "lane_id": null,
+      "metadata": {
+        "allowed_use": "local_encoder_side_5d_extended_operator_planning_only",
+        "canonical_equation_id_pending": "drop_frame_via_per_frame_master_gradient_v1",
+        "canvas_path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json",
+        "dispatch_packet_ready": false,
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
+        "operation": "drop_frame",
+        "output_path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/drop_frame_extended_candidates.json",
+        "output_root": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2",
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "reproduction_claim": false,
+        "reproduction_equivalence": false,
+        "schema": "pair_frame_5d_extended_operator_queue.v1",
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false
+      },
+      "priority": 5,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/apply_8_extended_operators_to_5d_canvas_cli.py",
+            "--canvas-path",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json",
+            "--operator",
+            "drop_frame",
+            "--top-n",
+            "8",
+            "--output",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/drop_frame_extended_candidates.json",
+            "--which-frame",
+            "both"
+          ],
+          "id": "emit_drop_frame_candidates",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "extended_operator_candidates.v0",
+              "key": "schema",
+              "path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/drop_frame_extended_candidates.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [
+                "dispatch_packet_ready",
+                "promotable",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+                "reproduction_claim",
+                "reproduction_equivalence",
+                "score_claim",
+                "score_claim_eligible",
+                "score_claim_valid"
+              ],
+              "path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/drop_frame_extended_candidates.json",
+              "required_false": [],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/drop_frame_extended_candidates.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "pair-frame-5d-canvas",
+        "extended-operator",
+        "encoder-side-planning",
+        "no-score-authority",
+        "drop_frame"
+      ]
+    },
+    {
+      "id": "pair_frame_5d_extended_operator_synthesize_frame",
+      "lane_id": null,
+      "metadata": {
+        "allowed_use": "local_encoder_side_5d_extended_operator_planning_only",
+        "canonical_equation_id_pending": "synthesize_frame_via_atick_redlich_cooperative_receiver_v1",
+        "canvas_path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json",
+        "dispatch_packet_ready": false,
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
+        "operation": "synthesize_frame",
+        "output_path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/synthesize_frame_extended_candidates.json",
+        "output_root": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2",
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "reproduction_claim": false,
+        "reproduction_equivalence": false,
+        "schema": "pair_frame_5d_extended_operator_queue.v1",
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false
+      },
+      "priority": 6,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/apply_8_extended_operators_to_5d_canvas_cli.py",
+            "--canvas-path",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json",
+            "--operator",
+            "synthesize_frame",
+            "--top-n",
+            "8",
+            "--output",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/synthesize_frame_extended_candidates.json",
+            "--receiver-runtime",
+            "smoothed_residual",
+            "--which-frame",
+            "last",
+            "--synthesis-seed",
+            "0"
+          ],
+          "id": "emit_synthesize_frame_candidates",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "extended_operator_candidates.v0",
+              "key": "schema",
+              "path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/synthesize_frame_extended_candidates.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [
+                "dispatch_packet_ready",
+                "promotable",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+                "reproduction_claim",
+                "reproduction_equivalence",
+                "score_claim",
+                "score_claim_eligible",
+                "score_claim_valid"
+              ],
+              "path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/synthesize_frame_extended_candidates.json",
+              "required_false": [],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/synthesize_frame_extended_candidates.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "pair-frame-5d-canvas",
+        "extended-operator",
+        "encoder-side-planning",
+        "no-score-authority",
+        "synthesize_frame"
+      ]
+    },
+    {
+      "id": "pair_frame_5d_extended_operator_motion_conditional",
+      "lane_id": null,
+      "metadata": {
+        "allowed_use": "local_encoder_side_5d_extended_operator_planning_only",
+        "canonical_equation_id_pending": "motion_conditional_via_rao_ballard_predictive_coding_v1",
+        "canvas_path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json",
+        "dispatch_packet_ready": false,
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
+        "operation": "motion_conditional",
+        "output_path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/motion_conditional_extended_candidates.json",
+        "output_root": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2",
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "reproduction_claim": false,
+        "reproduction_equivalence": false,
+        "schema": "pair_frame_5d_extended_operator_queue.v1",
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false
+      },
+      "priority": 7,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/apply_8_extended_operators_to_5d_canvas_cli.py",
+            "--canvas-path",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json",
+            "--operator",
+            "motion_conditional",
+            "--top-n",
+            "8",
+            "--output",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/motion_conditional_extended_candidates.json",
+            "--motion-threshold-percentile",
+            "0.75"
+          ],
+          "id": "emit_motion_conditional_candidates",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "extended_operator_candidates.v0",
+              "key": "schema",
+              "path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/motion_conditional_extended_candidates.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [
+                "dispatch_packet_ready",
+                "promotable",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+                "reproduction_claim",
+                "reproduction_equivalence",
+                "score_claim",
+                "score_claim_eligible",
+                "score_claim_valid"
+              ],
+              "path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/motion_conditional_extended_candidates.json",
+              "required_false": [],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/motion_conditional_extended_candidates.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "pair-frame-5d-canvas",
+        "extended-operator",
+        "encoder-side-planning",
+        "no-score-authority",
+        "motion_conditional"
+      ]
+    },
+    {
+      "id": "pair_frame_5d_extended_operator_temporal_coherence",
+      "lane_id": null,
+      "metadata": {
+        "allowed_use": "local_encoder_side_5d_extended_operator_planning_only",
+        "canonical_equation_id_pending": "temporal_coherence_via_wyner_ziv_side_information_v1",
+        "canvas_path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json",
+        "dispatch_packet_ready": false,
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
+        "operation": "temporal_coherence",
+        "output_path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/temporal_coherence_extended_candidates.json",
+        "output_root": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2",
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "reproduction_claim": false,
+        "reproduction_equivalence": false,
+        "schema": "pair_frame_5d_extended_operator_queue.v1",
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false
+      },
+      "priority": 8,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/apply_8_extended_operators_to_5d_canvas_cli.py",
+            "--canvas-path",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json",
+            "--operator",
+            "temporal_coherence",
+            "--top-n",
+            "8",
+            "--output",
+            "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/temporal_coherence_extended_candidates.json",
+            "--temporal-window",
+            "4",
+            "--similarity-threshold",
+            "0.7"
+          ],
+          "id": "emit_temporal_coherence_candidates",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "extended_operator_candidates.v0",
+              "key": "schema",
+              "path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/temporal_coherence_extended_candidates.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [
+                "dispatch_packet_ready",
+                "promotable",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+                "reproduction_claim",
+                "reproduction_equivalence",
+                "score_claim",
+                "score_claim_eligible",
+                "score_claim_valid"
+              ],
+              "path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/temporal_coherence_extended_candidates.json",
+              "required_false": [],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/temporal_coherence_extended_candidates.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "pair-frame-5d-canvas",
+        "extended-operator",
+        "encoder-side-planning",
+        "no-score-authority",
+        "temporal_coherence"
+      ]
+    }
+  ],
+  "queue_id": "pair_frame_5d_extended_operator_live_6bae0201_v2",
+  "schema": "experiment_queue.v1"
+}

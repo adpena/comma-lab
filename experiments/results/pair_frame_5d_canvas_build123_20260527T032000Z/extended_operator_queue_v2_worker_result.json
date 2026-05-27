@@ -1,0 +1,633 @@
+{
+  "allow_cloud": false,
+  "claim_refused_count": 0,
+  "execute": true,
+  "failure_count": 0,
+  "idle_cycles": 0,
+  "max_experiments": 8,
+  "max_parallel": 1,
+  "noncanonical_state_rationale": null,
+  "orphaned_state_rationale": null,
+  "planned_steps": [],
+  "queue_id": "pair_frame_5d_extended_operator_live_6bae0201_v2",
+  "requested_max_parallel": 1,
+  "resource_limits": {
+    "local_cpu": 1
+  },
+  "schema": "experiment_queue_worker_result.v1",
+  "stale_running_reconciliations": [],
+  "started_at_utc": "2026-05-27T03:38:10Z",
+  "started_experiment_ids": [
+    "pair_frame_5d_extended_operator_drop_frame",
+    "pair_frame_5d_extended_operator_merge_pair",
+    "pair_frame_5d_extended_operator_motion_conditional",
+    "pair_frame_5d_extended_operator_reorder_pair",
+    "pair_frame_5d_extended_operator_replace_many",
+    "pair_frame_5d_extended_operator_replace_one",
+    "pair_frame_5d_extended_operator_synthesize_frame",
+    "pair_frame_5d_extended_operator_temporal_coherence"
+  ],
+  "state": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_pair_frame_5d_extended_operator_live_6bae0201_v2.sqlite",
+  "step_results": [
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/apply_8_extended_operators_to_5d_canvas_cli.py",
+        "--canvas-path",
+        "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json",
+        "--operator",
+        "replace_one",
+        "--top-n",
+        "8",
+        "--output",
+        "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/replace_one_extended_candidates.json",
+        "--target-pair-idx",
+        "0",
+        "--alternative-selector-id",
+        "1"
+      ],
+      "elapsed_seconds": 0.2647561249323189,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/pair_frame_5d_extended_operator_live_6bae0201_v2/pair_frame_5d_extended_operator_replace_one/emit_replace_one_candidates/20260527T033810Z_e9bda50d930a021a.log",
+      "pid": 50971,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/apply_8_extended_operators_to_5d_canvas_cli.py",
+          "--canvas-path",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json",
+          "--operator",
+          "replace_one",
+          "--top-n",
+          "8",
+          "--output",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/replace_one_extended_candidates.json",
+          "--target-pair-idx",
+          "0",
+          "--alternative-selector-id",
+          "1"
+        ],
+        "experiment_id": "pair_frame_5d_extended_operator_replace_one",
+        "priority": 1,
+        "queue_id": "pair_frame_5d_extended_operator_live_6bae0201_v2",
+        "resource_kind": "local_cpu",
+        "step_hashes": {
+          "command_hash": "eaf2111b0ee765dc4546764dd2b6c2bb4fb23a7c8f9b4a0d7bcb117f811f3e10",
+          "definition_hash": "15d5c597c972e53878399d4ad5c2d444ef43d1e2469241c4e97c2425f8927e42",
+          "postcondition_hash": "a82df11e43101358a0e6359b45163a229aafbc46ebb7145c58fbb3cf4041b063"
+        },
+        "step_id": "emit_replace_one_candidates"
+      },
+      "resource_kind": "local_cpu",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 714,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-27T03:38:10Z",
+            "path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/replace_one_extended_candidates.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 211,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "e9bda50d930a021a"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/apply_8_extended_operators_to_5d_canvas_cli.py",
+        "--canvas-path",
+        "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json",
+        "--operator",
+        "replace_many",
+        "--top-n",
+        "8",
+        "--output",
+        "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/replace_many_extended_candidates.json",
+        "--beam-width",
+        "8",
+        "--beam-depth",
+        "4"
+      ],
+      "elapsed_seconds": 0.2614042910281569,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/pair_frame_5d_extended_operator_live_6bae0201_v2/pair_frame_5d_extended_operator_replace_many/emit_replace_many_candidates/20260527T033810Z_a7f7d05a46510285.log",
+      "pid": 50972,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/apply_8_extended_operators_to_5d_canvas_cli.py",
+          "--canvas-path",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json",
+          "--operator",
+          "replace_many",
+          "--top-n",
+          "8",
+          "--output",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/replace_many_extended_candidates.json",
+          "--beam-width",
+          "8",
+          "--beam-depth",
+          "4"
+        ],
+        "experiment_id": "pair_frame_5d_extended_operator_replace_many",
+        "priority": 2,
+        "queue_id": "pair_frame_5d_extended_operator_live_6bae0201_v2",
+        "resource_kind": "local_cpu",
+        "step_hashes": {
+          "command_hash": "d53f1c7745e4ae42e53a75821e0c1ccbed171ebfc681078e7350d009e551b841",
+          "definition_hash": "25f5ae488a21e67d54027b35d0990ac6c8094f080aeabbdefba5b0800bff90e0",
+          "postcondition_hash": "cfbbeb24240472dc64ef64b2eb63f8ebf63ff783e57c757772c7a3f2643304e8"
+        },
+        "step_id": "emit_replace_many_candidates"
+      },
+      "resource_kind": "local_cpu",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 720,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-27T03:38:10Z",
+            "path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/replace_many_extended_candidates.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 212,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "a7f7d05a46510285"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/apply_8_extended_operators_to_5d_canvas_cli.py",
+        "--canvas-path",
+        "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json",
+        "--operator",
+        "merge_pair",
+        "--top-n",
+        "8",
+        "--output",
+        "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/merge_pair_extended_candidates.json",
+        "--max-merge-candidates",
+        "256"
+      ],
+      "elapsed_seconds": 0.26227212499361485,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/pair_frame_5d_extended_operator_live_6bae0201_v2/pair_frame_5d_extended_operator_merge_pair/emit_merge_pair_candidates/20260527T033810Z_d9631ed005bcbb23.log",
+      "pid": 50973,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/apply_8_extended_operators_to_5d_canvas_cli.py",
+          "--canvas-path",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json",
+          "--operator",
+          "merge_pair",
+          "--top-n",
+          "8",
+          "--output",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/merge_pair_extended_candidates.json",
+          "--max-merge-candidates",
+          "256"
+        ],
+        "experiment_id": "pair_frame_5d_extended_operator_merge_pair",
+        "priority": 3,
+        "queue_id": "pair_frame_5d_extended_operator_live_6bae0201_v2",
+        "resource_kind": "local_cpu",
+        "step_hashes": {
+          "command_hash": "2c1cac431b60cd3b0574b03d3ad9d4a3eb9c9d346b8030088842592389235185",
+          "definition_hash": "d23cfe53b7f005409aefc7b24b651c97102f6e827815cbf2a02c02882d545bc8",
+          "postcondition_hash": "c6efd565ef4d87138e629a4d7b16fb96db8dd1b296e21820156f8a38828b9426"
+        },
+        "step_id": "emit_merge_pair_candidates"
+      },
+      "resource_kind": "local_cpu",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 716,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-27T03:38:10Z",
+            "path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/merge_pair_extended_candidates.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 210,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "d9631ed005bcbb23"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/apply_8_extended_operators_to_5d_canvas_cli.py",
+        "--canvas-path",
+        "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json",
+        "--operator",
+        "reorder_pair",
+        "--top-n",
+        "8",
+        "--output",
+        "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/reorder_pair_extended_candidates.json",
+        "--reorder-block-size",
+        "8"
+      ],
+      "elapsed_seconds": 0.25868470896966755,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/pair_frame_5d_extended_operator_live_6bae0201_v2/pair_frame_5d_extended_operator_reorder_pair/emit_reorder_pair_candidates/20260527T033811Z_a85fe5a48678c07b.log",
+      "pid": 50974,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/apply_8_extended_operators_to_5d_canvas_cli.py",
+          "--canvas-path",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json",
+          "--operator",
+          "reorder_pair",
+          "--top-n",
+          "8",
+          "--output",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/reorder_pair_extended_candidates.json",
+          "--reorder-block-size",
+          "8"
+        ],
+        "experiment_id": "pair_frame_5d_extended_operator_reorder_pair",
+        "priority": 4,
+        "queue_id": "pair_frame_5d_extended_operator_live_6bae0201_v2",
+        "resource_kind": "local_cpu",
+        "step_hashes": {
+          "command_hash": "8564c4f44e27aa363ab24289d58337d1fcf63ecfd4317f238c993012bd71398d",
+          "definition_hash": "7c098e0539f72e26b6f97c1bde35503a79f8eee5503423e9573e3e0456987aef",
+          "postcondition_hash": "b84fe3faa7cea916150401ebf3dbbe1d96863bd757e7c673bb1d59a0da19be60"
+        },
+        "step_id": "emit_reorder_pair_candidates"
+      },
+      "resource_kind": "local_cpu",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 714,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-27T03:38:11Z",
+            "path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/reorder_pair_extended_candidates.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 212,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "a85fe5a48678c07b"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/apply_8_extended_operators_to_5d_canvas_cli.py",
+        "--canvas-path",
+        "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json",
+        "--operator",
+        "drop_frame",
+        "--top-n",
+        "8",
+        "--output",
+        "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/drop_frame_extended_candidates.json",
+        "--which-frame",
+        "both"
+      ],
+      "elapsed_seconds": 0.26340291707310826,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/pair_frame_5d_extended_operator_live_6bae0201_v2/pair_frame_5d_extended_operator_drop_frame/emit_drop_frame_candidates/20260527T033811Z_0acb0d0dd507c51d.log",
+      "pid": 50975,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/apply_8_extended_operators_to_5d_canvas_cli.py",
+          "--canvas-path",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json",
+          "--operator",
+          "drop_frame",
+          "--top-n",
+          "8",
+          "--output",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/drop_frame_extended_candidates.json",
+          "--which-frame",
+          "both"
+        ],
+        "experiment_id": "pair_frame_5d_extended_operator_drop_frame",
+        "priority": 5,
+        "queue_id": "pair_frame_5d_extended_operator_live_6bae0201_v2",
+        "resource_kind": "local_cpu",
+        "step_hashes": {
+          "command_hash": "adb53dcb732224739bcb02ddb8efb2131e55b104da6545910bf2c4d66a62441c",
+          "definition_hash": "2d5700f70a29e23ba4b0f6dd3b3e244afc3d310541b8e896c358ea410e1f37bd",
+          "postcondition_hash": "4ad7865750ac21c70b038986b06ebaae57ceb10225515b1d830ec248e73e4367"
+        },
+        "step_id": "emit_drop_frame_candidates"
+      },
+      "resource_kind": "local_cpu",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 707,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-27T03:38:11Z",
+            "path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/drop_frame_extended_candidates.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 210,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "0acb0d0dd507c51d"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/apply_8_extended_operators_to_5d_canvas_cli.py",
+        "--canvas-path",
+        "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json",
+        "--operator",
+        "synthesize_frame",
+        "--top-n",
+        "8",
+        "--output",
+        "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/synthesize_frame_extended_candidates.json",
+        "--receiver-runtime",
+        "smoothed_residual",
+        "--which-frame",
+        "last",
+        "--synthesis-seed",
+        "0"
+      ],
+      "elapsed_seconds": 0.26364895794540644,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/pair_frame_5d_extended_operator_live_6bae0201_v2/pair_frame_5d_extended_operator_synthesize_frame/emit_synthesize_frame_candidates/20260527T033811Z_b8c48720a9483a79.log",
+      "pid": 50976,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/apply_8_extended_operators_to_5d_canvas_cli.py",
+          "--canvas-path",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json",
+          "--operator",
+          "synthesize_frame",
+          "--top-n",
+          "8",
+          "--output",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/synthesize_frame_extended_candidates.json",
+          "--receiver-runtime",
+          "smoothed_residual",
+          "--which-frame",
+          "last",
+          "--synthesis-seed",
+          "0"
+        ],
+        "experiment_id": "pair_frame_5d_extended_operator_synthesize_frame",
+        "priority": 6,
+        "queue_id": "pair_frame_5d_extended_operator_live_6bae0201_v2",
+        "resource_kind": "local_cpu",
+        "step_hashes": {
+          "command_hash": "88403c84efca5aa11692bb5dd89effff82f0a97017ca0f428b461349b3aa56aa",
+          "definition_hash": "2658a38f48216b602e5cb06b310236aa248b28bf32b2b23d974a434f507ca45e",
+          "postcondition_hash": "f237fff208b72ed44e56058854ac84243f0c59d66aedde7d1b265bd313ea67a0"
+        },
+        "step_id": "emit_synthesize_frame_candidates"
+      },
+      "resource_kind": "local_cpu",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 747,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-27T03:38:11Z",
+            "path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/synthesize_frame_extended_candidates.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 216,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "b8c48720a9483a79"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/apply_8_extended_operators_to_5d_canvas_cli.py",
+        "--canvas-path",
+        "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json",
+        "--operator",
+        "motion_conditional",
+        "--top-n",
+        "8",
+        "--output",
+        "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/motion_conditional_extended_candidates.json",
+        "--motion-threshold-percentile",
+        "0.75"
+      ],
+      "elapsed_seconds": 0.2636179170804098,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/pair_frame_5d_extended_operator_live_6bae0201_v2/pair_frame_5d_extended_operator_motion_conditional/emit_motion_conditional_candidates/20260527T033811Z_f395a9d8fd22f9ca.log",
+      "pid": 50977,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/apply_8_extended_operators_to_5d_canvas_cli.py",
+          "--canvas-path",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json",
+          "--operator",
+          "motion_conditional",
+          "--top-n",
+          "8",
+          "--output",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/motion_conditional_extended_candidates.json",
+          "--motion-threshold-percentile",
+          "0.75"
+        ],
+        "experiment_id": "pair_frame_5d_extended_operator_motion_conditional",
+        "priority": 7,
+        "queue_id": "pair_frame_5d_extended_operator_live_6bae0201_v2",
+        "resource_kind": "local_cpu",
+        "step_hashes": {
+          "command_hash": "33ab0682149b288ca10dcc652921c75f75234fc9f1a5174eed09e1be99601870",
+          "definition_hash": "c1e956a311b6c2841e5acbf3682d799ef0afce27ebb38fa2baa9d7ded040c1cb",
+          "postcondition_hash": "ce3e3e90119549af42e80445eddba4b0982ed43895011636b1da95a8352a80f1"
+        },
+        "step_id": "emit_motion_conditional_candidates"
+      },
+      "resource_kind": "local_cpu",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 727,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-27T03:38:11Z",
+            "path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/motion_conditional_extended_candidates.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 218,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "f395a9d8fd22f9ca"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/apply_8_extended_operators_to_5d_canvas_cli.py",
+        "--canvas-path",
+        "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json",
+        "--operator",
+        "temporal_coherence",
+        "--top-n",
+        "8",
+        "--output",
+        "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/temporal_coherence_extended_candidates.json",
+        "--temporal-window",
+        "4",
+        "--similarity-threshold",
+        "0.7"
+      ],
+      "elapsed_seconds": 0.26378716598264873,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/pair_frame_5d_extended_operator_live_6bae0201_v2/pair_frame_5d_extended_operator_temporal_coherence/emit_temporal_coherence_candidates/20260527T033812Z_826ec68bb5ee9bdc.log",
+      "pid": 50979,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/apply_8_extended_operators_to_5d_canvas_cli.py",
+          "--canvas-path",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/populated_5d_canvas.json",
+          "--operator",
+          "temporal_coherence",
+          "--top-n",
+          "8",
+          "--output",
+          "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/temporal_coherence_extended_candidates.json",
+          "--temporal-window",
+          "4",
+          "--similarity-threshold",
+          "0.7"
+        ],
+        "experiment_id": "pair_frame_5d_extended_operator_temporal_coherence",
+        "priority": 8,
+        "queue_id": "pair_frame_5d_extended_operator_live_6bae0201_v2",
+        "resource_kind": "local_cpu",
+        "step_hashes": {
+          "command_hash": "ab30dbdca05adc8fbd41f378e4a17225651ebbb52ff665630f08e03ef0cd7673",
+          "definition_hash": "50b6282fd9ef020aec1b35af996f817b4f4738587409419f98cc72a5eecfda56",
+          "postcondition_hash": "6aed3e572dd785d30d4c9f8336224c8cd2da6e55826c4b4ca0b526fdf11da137"
+        },
+        "step_id": "emit_temporal_coherence_candidates"
+      },
+      "resource_kind": "local_cpu",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 724,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-27T03:38:12Z",
+            "path": "experiments/results/pair_frame_5d_canvas_build123_20260527T032000Z/extended_operator_queue_outputs_v2/temporal_coherence_extended_candidates.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 218,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "826ec68bb5ee9bdc"
+    }
+  ],
+  "steps_started": 8,
+  "stop_reason": "max_steps_reached",
+  "stop_signals": [],
+  "success_count": 8
+}
