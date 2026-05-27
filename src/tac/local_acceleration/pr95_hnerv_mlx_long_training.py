@@ -547,16 +547,18 @@ class MLXPairIterator:
     """MLX-native iterator producing (frame_index, target_frame) pairs.
 
     Per the canonical PR 95 training reference, each training step samples a
-    pair-index from the available video frames; the HNeRVDecoder consumes
+    pair-index from adjacent video-frame pairs; the HNeRVDecoder consumes
     the per-pair latent (the pipeline owns + trains the ``latents_full``
-    state) and produces an RGB frame that is compared against the source
-    target frame at the canonical 384x512 resolution. The iterator preserves
+    state) and produces two RGB frames that are compared against the source
+    target pair at the canonical 384x512 resolution. The iterator preserves
     source provenance by keying every yielded pair against a (video_sha256,
     frame_index) tuple, which the telemetry layer records per Catalog #305.
 
     Frames are pre-loaded into memory (canonical 1200-frame contest video at
     384x512x3 = ~700 MB float32; well within M5 Max memory budget). Each
-    ``sample_batch(B)`` yields a single ``(mx_idx, mx_target_rgb)`` pair.
+    ``sample_batch(B)`` yields ``(mx_pair_idx, mx_target_rgb_pair)`` with
+    targets shaped ``(B, 2, H, W, 3)``. Therefore the full contest video yields
+    600 trainable latents, matching the public PR95 archive contract.
     """
 
     def __init__(
@@ -596,11 +598,23 @@ class MLXPairIterator:
         stacked = np.stack(frames_uint8, axis=0)  # (T, H, W, 3) uint8
         self._frames_np = stacked
         self._frame_count = stacked.shape[0]
+        if self.pair_strategy == "next_frame_pair":
+            self._pair_count = self._frame_count // 2
+            if self._pair_count < 1:
+                raise RuntimeError(
+                    "next_frame_pair strategy requires at least two decoded frames"
+                )
+        else:
+            self._pair_count = self._frame_count
         self._mx_frames_cache: Any = None
 
     @property
     def frame_count(self) -> int:
         return self._frame_count
+
+    @property
+    def pair_count(self) -> int:
+        return self._pair_count
 
     def _mx_frames(self) -> Any:
         """Lazy-build MLX float32 normalized frames in (T, H, W, 3)."""
@@ -616,19 +630,25 @@ class MLXPairIterator:
 
         Returns:
             indices: MLX int32 array of shape ``(batch_size,)``.
-            targets: MLX float32 array of shape ``(batch_size, H, W, 3)``
-                containing RGB target frames normalized to ``[0, 1]``.
+            targets: MLX float32 array of shape ``(batch_size, 2, H, W, 3)``
+                containing RGB target frame pairs normalized to ``[0, 1]``.
         """
 
         assert mx is not None
         if batch_size < 1:
             raise ValueError(f"batch_size must be >= 1; got {batch_size}")
-        sampled = self._rng_state.integers(
-            low=0, high=self._frame_count, size=batch_size
-        )
+        sampled = self._rng_state.integers(low=0, high=self._pair_count, size=batch_size)
         indices_mx = mx.array(sampled.astype("int32"))
         frames_mx = self._mx_frames()
-        targets_mx = frames_mx[indices_mx]
+        if self.pair_strategy == "next_frame_pair":
+            frame_indices_mx = mx.array(
+                [[int(index) * 2, int(index) * 2 + 1] for index in sampled],
+                dtype=mx.int32,
+            )
+            targets_mx = frames_mx[frame_indices_mx]
+        else:
+            target = frames_mx[indices_mx]
+            targets_mx = mx.stack([target, target], axis=1)
         return indices_mx, targets_mx
 
 
@@ -1118,7 +1138,7 @@ class MLXLongTrainingPipeline:
         self._source_video_frame_count = self._pair_iterator.frame_count
         # MLX bundle; canonical HNeRV hparams plus trainable per-pair latents.
         self._bundle = _LongTrainingBundleMLX(
-            latent_count=self._source_video_frame_count,
+            latent_count=self._pair_iterator.pair_count,
             latent_dim=self.config.latent_dim,
             base_channels=self.config.base_channels,
             eval_size=self.config.eval_size,
@@ -1161,18 +1181,16 @@ class MLXLongTrainingPipeline:
         Args:
             bundle: ``_LongTrainingBundleMLX`` with decoder + trainable latents.
             indices: MLX int32 ``(B,)`` selecting trainable latents.
-            targets_batch: MLX float32 ``(B, H, W, 3)`` normalized [0, 1].
+            targets_batch: MLX float32 ``(B, 2, H, W, 3)`` normalized [0, 1].
         """
 
         assert mx is not None
         # Decoder output shape per canonical PR 95 reference:
         # ``(B, 2, 3, H, W)`` in [0, 255].
         decoded = bundle(indices)
-        # We compare ONLY frame_0 of the pair (since our target is a
-        # single frame per index). Reshape: (B, 3, H, W) -> (B, H, W, 3).
-        decoded_f0 = decoded[:, 0] / 255.0  # (B, 3, H, W) normalized
-        decoded_bhwc = mx.transpose(decoded_f0, (0, 2, 3, 1))  # (B, H, W, 3)
-        diff = decoded_bhwc - targets_batch
+        decoded_pair = decoded / 255.0  # (B, 2, 3, H, W) normalized
+        decoded_b2hwc = mx.transpose(decoded_pair, (0, 1, 3, 4, 2))
+        diff = decoded_b2hwc - targets_batch
         loss = mx.mean(diff * diff)
         return loss
 
@@ -1334,15 +1352,11 @@ class MLXLongTrainingPipeline:
             from tac.local_acceleration.mlx_to_pytorch_export import (
                 export_mlx_state_dict_to_torch_pt,
             )
+            from tac.local_acceleration.pr95_hnerv_mlx import (
+                pytorch_state_dict_from_mlx,
+            )
 
-            np_state: dict[str, Any] = {}
-            for k, v in flat_params.items():
-                arr = _mlx_to_numpy(v)
-                # MLX Conv2d uses (out, kH, kW, in) layout per the
-                # canonical bundle; PyTorch expects (out, in, kH, kW).
-                if arr.ndim == 4:
-                    arr = np.transpose(arr, (0, 3, 1, 2))
-                np_state[k] = arr
+            np_state: dict[str, Any] = pytorch_state_dict_from_mlx(self._decoder)
             latents_np = _mlx_to_numpy(self._bundle.latents).astype(  # type: ignore[union-attr]
                 np.float32,
                 copy=True,

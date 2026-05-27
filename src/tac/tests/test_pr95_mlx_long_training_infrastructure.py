@@ -22,6 +22,7 @@ from tac.local_acceleration.pr95_hnerv_mlx_long_training import (
     PR95_MLX_LONG_TRAINING_TELEMETRY_SCHEMA,
     LongTrainingConfig,
     MLXLongTrainingPipeline,
+    MLXPairIterator,
     StageHyperparameters,
     StageTelemetryRow,
     TrainingTelemetry,
@@ -264,6 +265,31 @@ def test_initial_substrate_registry_has_operator_routable_ids() -> None:
     assert all(adapter.as_dict()["operator_routable_summary"] for adapter in registry)
 
 
+def test_mlx_pair_iterator_uses_adjacent_frame_pairs_for_pr95_latents() -> None:
+    pytest.importorskip("mlx.core")
+
+    class _FrameSource:
+        video_path = Path("synthetic_4_frame_source.mkv")
+
+        def iter_frames(self):
+            for value in range(4):
+                yield np.full((2, 3, 3), value, dtype=np.uint8)
+
+    iterator = MLXPairIterator(_FrameSource(), random_seed=0)
+    indices, targets = iterator.sample_batch(2)
+
+    indices_np = np.asarray(indices)
+    targets_np = np.asarray(targets)
+    assert iterator.frame_count == 4
+    assert iterator.pair_count == 2
+    assert targets_np.shape == (2, 2, 2, 3, 3)
+    for batch_index, pair_index in enumerate(indices_np):
+        expected_f0 = int(pair_index) * 2 / 255.0
+        expected_f1 = (int(pair_index) * 2 + 1) / 255.0
+        assert targets_np[batch_index, 0, 0, 0, 0] == pytest.approx(expected_f0)
+        assert targets_np[batch_index, 1, 0, 0, 0] == pytest.approx(expected_f1)
+
+
 def test_long_training_step_updates_trainable_latents() -> None:
     mx = pytest.importorskip("mlx.core")
     optim = pytest.importorskip("mlx.optimizers")
@@ -289,7 +315,7 @@ def test_long_training_step_updates_trainable_latents() -> None:
 
     loss = pipeline.training_step(
         mx.array([0], dtype=mx.int32),
-        mx.zeros((1, 384, 512, 3), dtype=mx.float32),
+        mx.zeros((1, 2, 384, 512, 3), dtype=mx.float32),
     )
     mx.eval(pipeline._bundle.latents)
     after = np.asarray(pipeline._bundle.latents)
@@ -344,6 +370,10 @@ def test_long_training_checkpoint_exports_trained_latents_in_pt(
     assert artifact.latents_path.is_file()
     assert "latents" in loaded
     assert list(loaded["latents"].shape) == [2, 28]
+    assert "blocks.0.weight" in loaded
+    assert "blocks.0.conv.weight" not in loaded
+    assert "refine.0.weight" in loaded
+    assert "refine0.weight" not in loaded
     artifact_dict = artifact.as_dict()
     assert artifact_dict["exact_readiness_refusal"]["ready"] is False
     assert artifact_dict["reproduction_equivalence"] is False
