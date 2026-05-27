@@ -2208,6 +2208,41 @@ def preflight_all(
         check_substrate_inflate_emits_expected_frame_count_or_fail_closed(
             strict=False, verbose=verbose,
         )
+        # 2026-05-26 Catalog #368 — SUBSTITUTION-STACKING BASELINE
+        # CANONICAL FRONTIER POINTER gate per V14 verdict empirical anchor
+        # (commit abdeefb00) + 11th ORDER standing directive Dim 8
+        # (apples-to-apples baseline FIRST). Sister of Catalog #343
+        # (frontier scores are pointer-only NON-NEGOTIABLE) at the
+        # recipe + trainer surface. Refuses stacking/substitution recipes
+        # citing a baseline sha that does NOT match the canonical frontier
+        # pointer at `.omx/state/canonical_frontier_pointer.json`. STRICT-
+        # from-byte-one per CLAUDE.md "Bugs must be permanently fixed AND
+        # self-protected against" + "Strict-flip atomicity rule"; live
+        # count at landing: 0 (no NEW stacking attempts on non-frontier
+        # baselines after V14). Sister of Catalog #343 + #246 + #226.
+        check_substrate_substitution_stacking_baseline_matches_canonical_frontier_pointer(
+            strict=False, verbose=verbose,
+        )
+        # 2026-05-26 Catalog #369 — INFLATE CONSUMES REAL TRAINED WEIGHTS
+        # NOT SYNTHETIC FRAME BASE gate per Cascade C' WAVE-6 verdict
+        # empirical anchor (commit e215ee555) + 11th ORDER standing
+        # directive Dim 2 (operation ordering within pipeline; trainer-
+        # FIRST real-video then inflate-SECOND consumes real weights).
+        # Sister of Catalog #213 (Comma2k19 canonical) + #146 (contest-
+        # compliant inflate runtime) + #205 (canonical select_inflate_device)
+        # + #220 (operational mechanism) + #272 (distinguishing-feature
+        # integration). Refuses `submissions/*/inflate.py` +
+        # `src/tac/substrates/*/inflate.py` that generate synthetic frame
+        # bases (sinusoidal R/G + radial B; mean-fill / hardcoded RGB)
+        # without (a) real-frame-vendor token OR (b) waiver OR (c)
+        # research_only / smoke_only opt-out. Initial wire-in WARN-ONLY
+        # per CLAUDE.md "Strict-flip atomicity rule" because Cascade C'
+        # currently carries the canonical bug pattern + research_only=true
+        # opt-out (per Catalog #240). Sister of Catalog #213 + #146 + #205
+        # + #220 + #272.
+        check_substrate_inflate_consumes_real_trained_weights_not_synthetic_frame_base(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-15 Catalog #249 - phantom-score directory class permanent fix.
         # Per the Z3 v2 FULL Modal A100 dispatch 2026-05-15T11:41:15Z empirical
         # anchor: trainer hardcoded `result_json_path = out_dir /
@@ -79288,6 +79323,712 @@ def check_no_canonical_equation_misapplication_to_residual_hybrid_contexts(
     if verbose and violations:
         for v in violations:
             print(v)
+    return violations
+
+
+# ============================================================================
+# Catalog #368 — check_substrate_substitution_stacking_baseline_matches_canonical_frontier_pointer
+#
+# SUBSTITUTION-STACKING BASELINE CANONICAL FRONTIER POINTER ORDER-DISCIPLINE
+# self-protection 2026-05-26 per V14 verdict empirical anchor (commit
+# `abdeefb00`) + 11th ORDER standing directive Dim 8 (apples-to-apples
+# baseline FIRST). Sister of Catalog #343 (frontier scores are pointer-
+# only NON-NEGOTIABLE) at the substitution-stacking recipe + trainer
+# surface.
+#
+# Bug class anchor: V14 paired CPU+CUDA dispatch
+# `fc-01KSKK6DQKB9YEBHR550Y4KB0W` (CUDA T4) + `fc-01KSKK713B02QD5NEP5V6FHQTQ`
+# (CPU) stacked Cascade A FEC10 hybrid selector packet (236B) onto PR101+FEC6
+# baseline (sha `6bae0201fb082457`, 178517 bytes) when the CANONICAL FRONTIER
+# pointer at `.omx/state/canonical_frontier_pointer.json` says CPU frontier
+# = DQS1 rank021 sha `7a0da5d0fc327cba...` at 0.1920282830 [contest-CPU] and
+# CUDA frontier = PR106 format0d sha `9cb989cef519...` at 0.20533002902
+# [contest-CUDA]. V14 landed score 0.192042660714715 [contest-CPU] (WORSE
+# than canonical frontier by +1.4e-5) + 0.22620136552710735 [contest-CUDA T4]
+# (WORSE by +0.0209). Per CLAUDE.md "Submission auth eval — BOTH CPU AND
+# CUDA" non-negotiable: NOT PR111 candidate because the substitution-stacking
+# baseline did NOT match canonical frontier; the FEC10 hybrid -8.7e-6 rate-
+# axis savings cannot close the structural gap between FEC6 (sha 6bae0201)
+# vs DQS1 frontier (sha 7a0da5d0).
+#
+# Per 11th ORDER standing directive Dim 8 (apples-to-apples baseline FIRST):
+# substitution-stacking recipes MUST identify the CANONICAL FRONTIER as
+# baseline BEFORE proposing a substitution, NOT after the paired dispatch
+# discovers the gap. This is the recurring 11th ORDER violation that's now
+# extincted structurally: the gate fires BEFORE paid dispatch can fire.
+#
+# Detection scope: scans `.omx/operator_authorize_recipes/*.yaml` +
+# `experiments/train_substrate_*.py` for stacking/substitution patterns
+# (e.g. baseline_archive_sha / substitution_baseline / stacked_archive_sha
+# fields OR token patterns). For each detected baseline sha, refuses if
+# NOT matching canonical frontier pointer for the relevant axis.
+#
+# Stacking indicators that trigger gate inspection:
+#   - YAML fields: `baseline_archive_sha:` / `substitution_baseline:` /
+#     `stacked_archive_sha:` / `baseline_sha:` / `stacked_on_archive:`
+#   - Text patterns in `description:` / `summary:` / `notes:` blocks
+#     mentioning substitution-stacking on a baseline sha
+#
+# Acceptance cascades:
+#   (a) baseline sha matches canonical frontier pointer (contest_cpu OR
+#       contest_cuda) exactly (full sha or sha prefix ≥8 chars);
+#   (b) recipe carries same-line `# BASELINE_NON_FRONTIER_INTENTIONAL_OK:
+#       <rationale>` waiver with non-placeholder rationale (≥4 chars;
+#       placeholder `<rationale>` / `<reason>` literals rejected per
+#       Catalog #287 sister discipline so the gate's docstring example
+#       cannot self-waive);
+#   (c) recipe declares `lane_class: substrate_engineering` (per HNeRV
+#       parity L7 substrate-engineering exception);
+#   (d) recipe declares `research_only: true` (transparent non-promotable
+#       per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-
+#       ONLY") OR `dispatch_enabled: false`.
+#
+# Sister of Catalog #343 (frontier scores are pointer-only NON-NEGOTIABLE)
+# + Catalog #246 (paired CUDA + CPU) + Catalog #226 (gate_auth_eval_call
+# canonical helper routing) + Catalog #316 (reports/latest.md not stale
+# vs canonical frontier).
+#
+# Memory: feedback_new_catalog_numbers_order_discipline_structural_extinction_368_369_landed_20260526.md.
+# Lane: lane_new_catalog_numbers_order_discipline_structural_extinction_368_369_baseline_canonical_frontier_pointer_inflate_real_weights_20260526.
+# Retroactive sweep memo: .omx/research/retroactive_sweep_for_catalog_368_*.md.
+# ============================================================================
+
+_CHECK_368_EXEMPT_PATH_MARKERS: tuple[str, ...] = (
+    "_intake_",
+    ".omx/oss_export/",
+    "vendored",
+    "/tests/",
+    "/test_",
+    "build/lib/",
+    "reports/raw/",
+)
+
+# YAML field names that explicitly declare a baseline sha for substitution-
+# stacking. If any of these field names appear with a sha value, the gate
+# triggers inspection.
+_CHECK_368_BASELINE_SHA_FIELD_NAMES: tuple[str, ...] = (
+    "baseline_archive_sha",
+    "substitution_baseline",
+    "stacked_archive_sha",
+    "baseline_sha",
+    "stacked_on_archive",
+    "baseline_archive_sha256",
+    "stacking_baseline_sha",
+    "stacking_baseline",
+)
+
+# Text patterns that indicate a substitution-stacking pattern in description /
+# notes / summary fields. Used as secondary trigger when explicit fields are
+# not present.
+_CHECK_368_STACKING_TEXT_TRIGGERS: tuple[str, ...] = (
+    "stacked archive built on",
+    "stacking on baseline sha",
+    "substitution on baseline",
+    "swapped selector packet on",
+    "stacked on baseline archive",
+)
+
+_CHECK_368_WAIVER_RE = re.compile(
+    r"#\s*BASELINE_NON_FRONTIER_INTENTIONAL_OK\s*:\s*(?P<rationale>[^\n]+)"
+)
+_CHECK_368_WAIVER_PLACEHOLDERS: frozenset[str] = frozenset({
+    "<rationale>", "<reason>", ""
+})
+
+# Tokens that indicate the recipe is explicitly non-promotable / out-of-scope.
+_CHECK_368_OPT_OUT_TOKENS: tuple[str, ...] = (
+    "research_only: true",
+    "research_only:true",
+    "dispatch_enabled: false",
+    "dispatch_enabled:false",
+    "lane_class: substrate_engineering",
+    "lane_class:substrate_engineering",
+    "lane_class: research_substrate",
+    "lane_class:research_substrate",
+    "smoke_only: true",
+    "smoke_only:true",
+)
+
+
+def _check_368_iter_recipe_files(repo_root: Path) -> list[Path]:
+    """Return ``.omx/operator_authorize_recipes/*.yaml`` files."""
+    files: list[Path] = []
+    recipes_dir = repo_root / ".omx" / "operator_authorize_recipes"
+    if recipes_dir.exists():
+        for fp in recipes_dir.glob("*.yaml"):
+            if fp.is_file():
+                files.append(fp)
+    return sorted(set(files))
+
+
+def _check_368_path_in_scope(path: Path, repo_root: Path) -> bool:
+    """Return True if ``path`` is in scope (not exempt)."""
+    try:
+        rel = str(path.relative_to(repo_root)).replace("\\", "/")
+    except ValueError:
+        return False
+    for marker in _CHECK_368_EXEMPT_PATH_MARKERS:
+        if marker in rel:
+            return False
+    return True
+
+
+def _check_368_load_canonical_frontier_shas(
+    repo_root: Path,
+) -> dict[str, str]:
+    """Return {axis: full_sha} for canonical frontier per pointer JSON."""
+    pointer_path = repo_root / ".omx" / "state" / "canonical_frontier_pointer.json"
+    if not pointer_path.exists():
+        return {}
+    try:
+        payload = json.loads(pointer_path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    result: dict[str, str] = {}
+    for key, axis in (
+        ("our_local_frontier_contest_cpu", "contest_cpu"),
+        ("our_local_frontier_contest_cuda", "contest_cuda"),
+    ):
+        entry = payload.get(key)
+        if isinstance(entry, dict):
+            sha = entry.get("archive_sha256")
+            if isinstance(sha, str) and len(sha) >= 8:
+                result[axis] = sha.lower()
+    return result
+
+
+def _check_368_extract_sha_candidates_from_text(text: str) -> list[str]:
+    """Extract sha-like tokens (hex, ≥8 chars) from text."""
+    # Match a 8+ char hex sequence preceded by sha-ish context tokens OR
+    # explicit field names. Conservative: only extract if clearly a sha.
+    sha_pattern = re.compile(
+        r"(?:sha\s*[=:]?\s*|sha256\s*[=:]?\s*|archive_sha[a-z0-9_]*\s*[=:]?\s*"
+        r"|baseline.*?\bsha\b\s*[=:]?\s*|"
+        r"`)([0-9a-fA-F]{8,64})\b",
+        re.IGNORECASE,
+    )
+    found: list[str] = []
+    for m in sha_pattern.finditer(text):
+        sha = m.group(1).lower()
+        if len(sha) >= 8:
+            found.append(sha)
+    # Also extract any standalone field assignment like "baseline_archive_sha: 6bae..."
+    for field in _CHECK_368_BASELINE_SHA_FIELD_NAMES:
+        field_re = re.compile(rf"{re.escape(field)}\s*:\s*['\"]?([0-9a-fA-F]{{8,64}})", re.IGNORECASE)
+        for m in field_re.finditer(text):
+            sha = m.group(1).lower()
+            if len(sha) >= 8:
+                found.append(sha)
+    return found
+
+
+def _check_368_recipe_has_stacking_trigger(text: str) -> bool:
+    """Return True if text contains stacking/substitution triggers."""
+    text_lc = text.lower()
+    for field in _CHECK_368_BASELINE_SHA_FIELD_NAMES:
+        if field.lower() in text_lc:
+            return True
+    for trigger in _CHECK_368_STACKING_TEXT_TRIGGERS:
+        if trigger.lower() in text_lc:
+            return True
+    return False
+
+
+def _check_368_recipe_has_opt_out(text: str) -> bool:
+    """Return True if recipe declares research_only / dispatch_enabled:false / substrate_engineering."""
+    for token in _CHECK_368_OPT_OUT_TOKENS:
+        if token in text:
+            return True
+    return False
+
+
+def _check_368_recipe_has_waiver(text: str) -> bool:
+    """Return True if text carries a valid Catalog #368 waiver."""
+    for line in text.splitlines():
+        match = _CHECK_368_WAIVER_RE.search(line)
+        if not match:
+            continue
+        rationale = match.group("rationale").strip().rstrip("#)/ \t").strip()
+        if rationale in _CHECK_368_WAIVER_PLACEHOLDERS:
+            continue
+        if len(rationale) < 4:
+            continue
+        return True
+    return False
+
+
+def _check_368_sha_matches_canonical_frontier(
+    candidate_sha: str, frontier_shas: dict[str, str]
+) -> bool:
+    """Return True if candidate sha matches any canonical frontier sha."""
+    candidate_lc = candidate_sha.lower()
+    for axis, full_sha in frontier_shas.items():
+        if candidate_lc == full_sha:
+            return True
+        # Prefix match (≥8 chars on both sides) — frontier shas may be cited
+        # by prefix in recipes for brevity.
+        prefix_len = min(len(candidate_lc), len(full_sha))
+        if prefix_len >= 8 and candidate_lc[:prefix_len] == full_sha[:prefix_len]:
+            return True
+    return False
+
+
+def check_substrate_substitution_stacking_baseline_matches_canonical_frontier_pointer(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #368 — refuse stacking recipes with non-frontier baseline.
+
+    Sister of Catalog #343 (frontier scores are pointer-only NON-NEGOTIABLE)
+    at the substitution-stacking recipe surface.
+
+    Empirical anchor: V14 paired CPU+CUDA dispatch
+    ``fc-01KSKK6DQKB9YEBHR550Y4KB0W`` (CUDA T4) +
+    ``fc-01KSKK713B02QD5NEP5V6FHQTQ`` (CPU) stacked FEC10 hybrid selector
+    packet onto PR101+FEC6 baseline (sha ``6bae0201fb082457``) when canonical
+    frontier is DQS1 rank021 sha ``7a0da5d0fc327cba...`` (CPU) at 0.192028
+    + PR106 format0d sha ``9cb989cef519...`` (CUDA) at 0.20533. V14 landed
+    NOT PR111 candidate (worse than frontier on both axes). Per 11th ORDER
+    standing directive Dim 8 (apples-to-apples baseline FIRST): substitution-
+    stacking recipes MUST identify canonical frontier BEFORE paired dispatch.
+
+    Acceptance cascades:
+      (a) baseline sha matches canonical frontier pointer for at least one
+          axis (contest_cpu OR contest_cuda);
+      (b) recipe carries same-line ``# BASELINE_NON_FRONTIER_INTENTIONAL_OK:
+          <rationale>`` waiver with non-placeholder rationale (>=4 chars);
+      (c) recipe declares ``lane_class: substrate_engineering`` /
+          ``research_only: true`` / ``dispatch_enabled: false`` /
+          ``smoke_only: true`` (transparent non-promotable).
+
+    Returns:
+        List of violation messages. Empty list = clean.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    files = _check_368_iter_recipe_files(root)
+    frontier_shas = _check_368_load_canonical_frontier_shas(root)
+    violations: list[str] = []
+    for path in files:
+        if not _check_368_path_in_scope(path, root):
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except Exception:
+            continue
+        rel = str(path.relative_to(root)).replace("\\", "/")
+        # Trigger inspection only if stacking/substitution pattern present.
+        if not _check_368_recipe_has_stacking_trigger(text):
+            continue
+        # Opt-out cascades.
+        if _check_368_recipe_has_opt_out(text):
+            continue
+        if _check_368_recipe_has_waiver(text):
+            continue
+        # Extract baseline sha candidates from text. If we cannot extract any
+        # sha (e.g. the recipe describes stacking conceptually but doesn't
+        # cite a sha), skip — gate cannot adjudicate without a concrete sha.
+        candidates = _check_368_extract_sha_candidates_from_text(text)
+        if not candidates:
+            continue
+        # If frontier pointer is unavailable, skip with verbose warning.
+        if not frontier_shas:
+            if verbose:
+                print(
+                    f"  [catalog-368] WARN: canonical frontier pointer "
+                    f"unavailable at {root}/.omx/state/canonical_frontier_pointer.json; "
+                    f"cannot evaluate {rel}"
+                )
+            continue
+        # Refuse if NONE of the cited baseline shas matches canonical frontier.
+        any_match = any(
+            _check_368_sha_matches_canonical_frontier(sha, frontier_shas)
+            for sha in candidates
+        )
+        if any_match:
+            continue
+        baseline_summary = ", ".join(sorted(set(s[:12] for s in candidates))[:3])
+        frontier_summary = ", ".join(
+            f"{axis}={sha[:12]}" for axis, sha in sorted(frontier_shas.items())
+        )
+        violations.append(
+            f"[Catalog #368] {rel}: substitution-stacking recipe cites "
+            f"baseline sha(s) [{baseline_summary}] which do NOT match "
+            f"canonical frontier pointer [{frontier_summary}]. Per 11th "
+            f"ORDER standing directive Dim 8 (apples-to-apples baseline "
+            f"FIRST) + CLAUDE.md \"Submission auth eval — BOTH CPU AND CUDA\" "
+            f"non-negotiable: V14 verdict (commit abdeefb00) empirically "
+            f"proved stacking on non-frontier baseline cannot beat canonical "
+            f"frontier even with -13B rate-axis savings. Either (a) re-base "
+            f"on canonical frontier sha; (b) add same-line "
+            f"`# BASELINE_NON_FRONTIER_INTENTIONAL_OK:<rationale>` waiver "
+            f"(placeholder rejected per Catalog #287); (c) declare "
+            f"`research_only: true` / `dispatch_enabled: false` / "
+            f"`lane_class: substrate_engineering` opt-out."
+        )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [catalog-368] WARN: {len(violations)} substitution-stacking "
+                f"recipe(s) of {len(files)} scanned cite non-frontier baseline "
+                f"(strict={strict})"
+            )
+        else:
+            print(
+                f"  [catalog-368] OK ({len(files)} recipe file(s) scanned; "
+                f"{len(frontier_shas)} frontier axes loaded)"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            f"check_substrate_substitution_stacking_baseline_matches_canonical_frontier_pointer: "
+            f"{len(violations)} substitution-stacking recipe(s) cite non-"
+            f"frontier baseline (Catalog #368 — SUBSTITUTION-STACKING "
+            f"BASELINE CANONICAL FRONTIER POINTER per V14 abdeefb00 anchor + "
+            f"11th ORDER Dim 8); first 3:\n  "
+            + "\n  ".join(violations[:3])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #369 — check_substrate_inflate_consumes_real_trained_weights_not_synthetic_frame_base
+#
+# INFLATE CONSUMES REAL TRAINED WEIGHTS NOT SYNTHETIC FRAME BASE ORDER-
+# DISCIPLINE self-protection 2026-05-26 per Cascade C' WAVE-6 verdict
+# empirical anchor (commit `e215ee555`) + 11th ORDER standing directive
+# Dim 2 (operation ordering within pipeline; trainer-FIRST real-video then
+# inflate-SECOND consumes real weights then real frame reconstruction).
+# Sister of Catalog #213 (Comma2k19 canonical) + Catalog #146 (contest-
+# compliant inflate runtime) + Catalog #205 (canonical select_inflate_device)
+# + Catalog #220 (operational mechanism) + Catalog #272 (distinguishing-
+# feature integration).
+#
+# Bug class anchor: Cascade C' WAVE-5/6 inflate.py at
+# `src/tac/substrates/cascade_c_prime_frame_1_segnet_waterfill/inflate.py`
+# uses synthetic `_render_frame_0_base()` (sinusoidal R/G + radial B; mean
+# 142.25 std 30.02) instead of real frame_0 from archive bytes. WAVE-6
+# fresh archive smoke landed score 85.43 [diagnostic_cpu] vs canonical
+# frontier 0.192028 — 445x WORSE. The synthetic frame base WITHOUT real
+# trained weight consumption is the structural cause: PoseNet response to
+# synthetic frames cannot correlate with real ego-motion semantics even
+# if the per-pair pose_delta is operationally applied.
+#
+# Per 11th ORDER standing directive Dim 2 (operation ordering within
+# pipeline): the canonical operational order is trainer-FIRST consumes
+# real Comma2k19 dashcam frames (per Catalog #213) → trainer emits real
+# learned weights → inflate-SECOND consumes those weights to reconstruct
+# real frames. Inflate-side synthetic frame generation breaks this order
+# because inflate is operating WITHOUT trainer-emitted weights as input.
+#
+# Detection scope: scans `submissions/*/inflate.py` (excluding
+# `submissions/exact_current/` per CLAUDE.md mutation frontier) +
+# `src/tac/substrates/*/inflate.py` for synthetic frame generation
+# patterns:
+#   - Function names: `_render_frame_0_base`, `_synthesize_frame_base`,
+#     `_render_frame_placeholder`, `_render_frame_synthetic`,
+#     `synthetic_frame_for_per_pair_warp`
+#   - Operation patterns: `np.sin(...) * ... + ...` directly into uint8 RGB
+#     channels; `(96 + 96 * gx).astype(np.uint8)` style hardcoded mean+amplitude
+#   - Variable names: `r_channel = (...).astype(np.uint8)` with hardcoded
+#     numerical constants (not derived from archive bytes)
+#
+# Acceptance cascades:
+#   (a) inflate.py imports + uses canonical real-frame-vendor token:
+#       `Comma2k19LocalCache.fetch_chunk` (per Catalog #213); `pyav` or
+#       `av.open` for real-video decode; `frame_0_from_archive_bytes`
+#       sister pattern;
+#   (b) file carries same-line `# SYNTHETIC_FRAME_BASE_INTENTIONAL_OK:
+#       <rationale>` waiver with non-placeholder rationale (>=4 chars;
+#       placeholder rejected per Catalog #287);
+#   (c) inflate.py is in a substrate whose recipe carries explicit
+#       `research_only: true` / `dispatch_enabled: false` / `smoke_only:
+#       true` opt-out (verified by adjacency to a sister opt-out marker
+#       file in the substrate directory).
+#
+# Sister of Catalog #213 + Catalog #146 + Catalog #205 + Catalog #220 +
+# Catalog #272.
+#
+# Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule"
+# because Cascade C' carries the canonical bug pattern + research_only=true
+# opt-out (per Catalog #240). Strict-flip planned when no NEW synthetic-
+# frame-base inflate.py file is added without proper opt-out or vendor
+# token.
+#
+# Memory: feedback_new_catalog_numbers_order_discipline_structural_extinction_368_369_landed_20260526.md.
+# Lane: lane_new_catalog_numbers_order_discipline_structural_extinction_368_369_baseline_canonical_frontier_pointer_inflate_real_weights_20260526.
+# Retroactive sweep memo: .omx/research/retroactive_sweep_for_catalog_369_*.md.
+# ============================================================================
+
+_CHECK_369_EXEMPT_PATH_MARKERS: tuple[str, ...] = (
+    "submissions/exact_current/",  # pinned upstream snapshot
+    "_intake_",
+    ".omx/oss_export/",
+    "vendored",
+    "/tests/",
+    "/test_",
+    "build/lib/",
+    "reports/raw/",
+)
+
+# Function names / patterns that indicate synthetic frame base generation
+# without real trained weight consumption.
+_CHECK_369_SYNTHETIC_FRAME_PATTERNS: tuple[str, ...] = (
+    "_render_frame_0_base",
+    "_synthesize_frame_base",
+    "_render_frame_placeholder",
+    "_render_frame_synthetic",
+    "synthetic_frame_for_per_pair_warp",
+    "_render_synthetic_rgb",
+    "_synthetic_base_frame",
+    "render_deterministic_textured_RGB",
+    "deterministic_textured_rgb",
+    "synthesize_textured_frame_base",
+)
+
+# Operational indicators of synthetic frame generation (paired with the
+# function-name match — when these appear inside a synthetic-named function,
+# they are the canonical bug-class fingerprint).
+_CHECK_369_SYNTHETIC_INDICATORS: tuple[str, ...] = (
+    "sinusoidal grid",
+    "sinusoidal_R_G",
+    "sinusoidal R/G",
+    "radial gradient",
+    "radial_B",
+    "radial B",
+    "deterministic per-substrate frame_0",
+    "synthesizes a deterministic textured",
+)
+
+# Tokens that indicate real-frame-vendor / Comma2k19 canonical helper usage.
+_CHECK_369_REAL_FRAME_VENDOR_TOKENS: tuple[str, ...] = (
+    "Comma2k19LocalCache.fetch_chunk",
+    "Comma2k19LocalCache",
+    "frame_0_from_archive_bytes",
+    "real_frame_from_pyav",
+    "av.open",  # pyav for real-video decode
+    "decode_real_frame_from",
+    "extract_real_frame_0",
+    "real_dashcam_frame",
+    "canonical_real_frame_loader",
+)
+
+_CHECK_369_WAIVER_RE = re.compile(
+    r"#\s*SYNTHETIC_FRAME_BASE_INTENTIONAL_OK\s*:\s*(?P<rationale>[^\n]+)"
+)
+_CHECK_369_WAIVER_PLACEHOLDERS: frozenset[str] = frozenset({
+    "<rationale>", "<reason>", ""
+})
+
+
+def _check_369_iter_inflate_files(repo_root: Path) -> list[Path]:
+    """Return inflate.py files in scope (submissions + substrates)."""
+    files: list[Path] = []
+    sub_dir = repo_root / "submissions"
+    if sub_dir.exists():
+        for fp in sub_dir.glob("*/inflate.py"):
+            if fp.is_file():
+                files.append(fp)
+    sb_dir = repo_root / "src" / "tac" / "substrates"
+    if sb_dir.exists():
+        for fp in sb_dir.glob("*/inflate.py"):
+            if fp.is_file():
+                files.append(fp)
+    return sorted(files)
+
+
+def _check_369_path_in_scope(path: Path, repo_root: Path) -> bool:
+    """Return True if ``path`` is in scope (not exempt)."""
+    try:
+        rel = str(path.relative_to(repo_root)).replace("\\", "/")
+    except ValueError:
+        return False
+    for marker in _CHECK_369_EXEMPT_PATH_MARKERS:
+        if marker in rel:
+            return False
+    return True
+
+
+def _check_369_file_has_synthetic_pattern(text: str) -> bool:
+    """Return True if text contains synthetic frame base generation patterns."""
+    for pattern in _CHECK_369_SYNTHETIC_FRAME_PATTERNS:
+        if pattern in text:
+            return True
+    return False
+
+
+def _check_369_file_has_real_frame_vendor(text: str) -> bool:
+    """Return True if text imports/uses a canonical real-frame-vendor token."""
+    for token in _CHECK_369_REAL_FRAME_VENDOR_TOKENS:
+        if token in text:
+            return True
+    return False
+
+
+def _check_369_file_has_waiver(text: str) -> bool:
+    """Return True if text carries a valid Catalog #369 waiver anywhere."""
+    for line in text.splitlines():
+        match = _CHECK_369_WAIVER_RE.search(line)
+        if not match:
+            continue
+        rationale = match.group("rationale").strip().rstrip("#)/ \t").strip()
+        if rationale in _CHECK_369_WAIVER_PLACEHOLDERS:
+            continue
+        if len(rationale) < 4:
+            continue
+        return True
+    return False
+
+
+def _check_369_substrate_has_opt_out(inflate_path: Path, repo_root: Path) -> bool:
+    """Return True if substrate's adjacent recipe declares non-promotable."""
+    # Look for a recipe with matching substrate id in
+    # .omx/operator_authorize_recipes/substrate_*<substrate_id>*.yaml
+    try:
+        rel = str(inflate_path.relative_to(repo_root)).replace("\\", "/")
+    except ValueError:
+        return False
+    # Extract substrate id from path: src/tac/substrates/<sid>/inflate.py
+    # OR submissions/<sid>/inflate.py
+    parts = rel.split("/")
+    if len(parts) < 3:
+        return False
+    if parts[0] == "src" and parts[1] == "tac" and parts[2] == "substrates":
+        if len(parts) < 5:
+            return False
+        substrate_id = parts[3]
+    elif parts[0] == "submissions":
+        substrate_id = parts[1]
+    else:
+        return False
+    # Search recipes for matching id
+    recipes_dir = repo_root / ".omx" / "operator_authorize_recipes"
+    if not recipes_dir.exists():
+        return False
+    for fp in recipes_dir.glob(f"substrate_{substrate_id}_*.yaml"):
+        try:
+            text = fp.read_text(encoding="utf-8")
+        except Exception:
+            continue
+        for token in (
+            "research_only: true",
+            "research_only:true",
+            "dispatch_enabled: false",
+            "dispatch_enabled:false",
+            "smoke_only: true",
+            "smoke_only:true",
+            "lane_class: substrate_engineering",
+            "lane_class:substrate_engineering",
+            "lane_class: research_substrate",
+            "lane_class:research_substrate",
+        ):
+            if token in text:
+                return True
+    return False
+
+
+def check_substrate_inflate_consumes_real_trained_weights_not_synthetic_frame_base(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #369 — refuse inflate.py files that generate synthetic frame bases.
+
+    Sister of Catalog #213 (Comma2k19 canonical) + Catalog #146 (contest-
+    compliant inflate runtime) + Catalog #205 (canonical select_inflate_device)
+    + Catalog #220 (operational mechanism) + Catalog #272 (distinguishing-
+    feature integration).
+
+    Empirical anchor: Cascade C' WAVE-6 fresh archive smoke (commit
+    ``e215ee555``) landed score 85.43 [diagnostic_cpu] vs canonical frontier
+    0.192028 = 445x WORSE because inflate.py uses synthetic
+    ``_render_frame_0_base`` (sinusoidal R/G + radial B; mean 142.25
+    std 30.02) instead of real frame_0 derived from trainer-emitted weights
+    consuming real Comma2k19 dashcam frames per Catalog #213.
+
+    Per 11th ORDER standing directive Dim 2 (operation ordering within
+    pipeline): trainer-FIRST consumes real-video → trainer emits real
+    learned weights → inflate-SECOND consumes those weights to reconstruct
+    real frames. Inflate-side synthetic frame generation breaks this order.
+
+    Scans ``submissions/*/inflate.py`` (excluding ``submissions/exact_current/``
+    per CLAUDE.md mutation frontier) + ``src/tac/substrates/*/inflate.py``.
+    For files with synthetic frame base patterns, requires (a) real-frame-
+    vendor token (Comma2k19LocalCache.fetch_chunk etc.) OR (b) same-line
+    waiver OR (c) adjacent substrate recipe with research_only/smoke_only
+    opt-out.
+
+    Returns:
+        List of violation messages. Empty list = clean.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    files = _check_369_iter_inflate_files(root)
+    violations: list[str] = []
+    for path in files:
+        if not _check_369_path_in_scope(path, root):
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except Exception:
+            continue
+        rel = str(path.relative_to(root)).replace("\\", "/")
+        # Only fires if file has synthetic frame base patterns.
+        if not _check_369_file_has_synthetic_pattern(text):
+            continue
+        # Acceptance cascade (a): real-frame-vendor token present.
+        if _check_369_file_has_real_frame_vendor(text):
+            continue
+        # Acceptance cascade (b): same-line waiver.
+        if _check_369_file_has_waiver(text):
+            continue
+        # Acceptance cascade (c): substrate recipe opt-out.
+        if _check_369_substrate_has_opt_out(path, root):
+            continue
+        violations.append(
+            f"[Catalog #369] {rel}: inflate.py generates synthetic frame "
+            f"base (e.g. `_render_frame_0_base` sinusoidal R/G + radial B) "
+            f"without real-frame-vendor token. Per 11th ORDER standing "
+            f"directive Dim 2 (operation ordering within pipeline): "
+            f"trainer-FIRST consumes real Comma2k19 dashcam frames → emits "
+            f"real weights → inflate-SECOND consumes weights for real "
+            f"frame reconstruction. Cascade C' WAVE-6 (commit e215ee555) "
+            f"empirically proved synthetic frame_0 base → score 85.43 "
+            f"[diagnostic_cpu] = 445x WORSE than canonical frontier. "
+            f"Either (a) use canonical real-frame-vendor "
+            f"`Comma2k19LocalCache.fetch_chunk` (per Catalog #213) or "
+            f"sister `av.open` pyav real-video decode; (b) add same-line "
+            f"`# SYNTHETIC_FRAME_BASE_INTENTIONAL_OK:<rationale>` waiver "
+            f"(placeholder rejected per Catalog #287); (c) declare "
+            f"`research_only: true` / `dispatch_enabled: false` / "
+            f"`smoke_only: true` in adjacent substrate recipe."
+        )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [catalog-369] WARN: {len(violations)} synthetic frame "
+                f"base inflate file(s) of {len(files)} scanned "
+                f"(strict={strict})"
+            )
+        else:
+            print(f"  [catalog-369] OK ({len(files)} inflate file(s) scanned)")
+
+    if violations and strict:
+        raise PreflightError(
+            f"check_substrate_inflate_consumes_real_trained_weights_not_synthetic_frame_base: "
+            f"{len(violations)} inflate file(s) generate synthetic frame "
+            f"bases (Catalog #369 — INFLATE CONSUMES REAL TRAINED WEIGHTS "
+            f"NOT SYNTHETIC FRAME BASE per Cascade C' WAVE-6 e215ee555 "
+            f"anchor + 11th ORDER Dim 2); first 3:\n  "
+            + "\n  ".join(violations[:3])
+        )
     return violations
 
 
