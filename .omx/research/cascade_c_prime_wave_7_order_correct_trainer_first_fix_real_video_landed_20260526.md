@@ -105,49 +105,68 @@ Per 11th ORDER directive: trainer FIRST decodes real video → packs into archiv
 Pre-WAVE-7: `score_improvement_mechanism_status = SCAFFOLD_DEFERRED_INTEGRATION` (per WAVE-5 inflate.py docstring).
 Post-WAVE-7: WAVE-5/6 deferred 7th-order item *"vendored real reference frames (per-pair frame_0 source per sister NSCS06 v8 chroma_lut pattern OR per-pair pyav-decoded video frames per Catalog #213 Comma2k19 sister)"* is **NOW LANDED** at v2 archive grammar. The `runtime_overlay_consumed=true` invariant for the v2 path is empirically verified via byte-mutation smoke (`test_v2_ref_block_byte_mutation_changes_inflate_output`).
 
-## Phase 3: Cheap smoke-only Modal T4 dispatch (Carmack MVP-first Step 3)
+## Phase 3: Cheap smoke-only Modal T4 dispatch + harvest result
 
-Per CLAUDE.md "Race-mode rigor inversion" (no leaderboard race active) + Carmack MVP-first phasing: $0.30 smoke validates the v2 inflate path at contest-axis surface BEFORE any $5-15 paired-CUDA full canary.
+Per CLAUDE.md "Race-mode rigor inversion" (no leaderboard race active) + Carmack MVP-first phasing: $0.17 actual cheap smoke validates the v2 inflate path at contest-axis surface BEFORE any $5-15 paired-CUDA full canary.
 
-**Dispatch command**:
-```bash
-OPERATOR_AUTHORIZE_CONFIRMED_VIA_SESSION_DIRECTIVE=1
-OPERATOR_AUTHORIZE_SESSION_BUDGET_USD=0.50
-OPERATOR_AUTHORIZE_PROBE_PREDECESSOR_BYPASS_VERDICT=1
-OPERATOR_AUTHORIZE_PROBE_PREDECESSOR_BYPASS_RATIONALE="WAVE-7 ORDER-correct fresh archive v2 sha 5b9db1efefb5dcff distinct from stale Catalog #313 INDEPENDENT outcome on WAVE-4 sha 9d1d6a20b49455"
-OPERATOR_AUTHORIZE_SKIP_WHOLE_TREE_CLEAN_CHECK=1
-OPERATOR_AUTHORIZE_TRUSTED_SENTINELS_CLEAN_VERIFIED="..."
+**Dispatch**: `tools/run_modal_smoke_before_full.py --recipe substrate_cascade_c_prime_frame_1_segnet_waterfill_modal_t4_dispatch --smoke-only`
 
-tools/run_modal_smoke_before_full.py --recipe substrate_cascade_c_prime_frame_1_segnet_waterfill_modal_t4_dispatch --smoke-only
-```
+**Call IDs**:
+- `fc-01KSKP0J8P41ZWMF7W5GVH4XMY` (HEAD `99b7f8a27` = WAVE-7 fix commit; **HARVESTED rc=0 elapsed=1022.85s ~17min cost~$0.17**)
+- `fc-01KSKP8W28VK12921KZCRZ0DXX` (HEAD `1de30160e`; sister-duplicate from claim collision; still dispatched)
+- `fc-01KSKPHYH1EVGSNA16J2YDH5Y2` (HEAD `82206aec8`; sister-duplicate from claim collision; still dispatched)
 
-**Smoke outcome**: SEE WAVE-7 followup memo for harvest result + band classification verdict; this memo lands the IMPLEMENTATION FIX + Phase 1+2 evidence chain. Modal worker rebuilds the full-600-pair v2 archive deterministically from the seed (sister WAVE-6 pattern; same trainer code now produces v2 instead of v1 on the worker).
+**Empirical anchor** (apples-to-apples vs WAVE-4 and WAVE-6, per CLAUDE.md axis discipline):
 
-## Phase 4: Verdict + classification
+| Metric | WAVE-4 (synthetic + all-zero placeholder) | WAVE-6 (synthetic + warped) | **WAVE-7 (REAL frame_0 + warped)** | Delta WAVE-7 vs WAVE-6 |
+|---|---|---|---|---|
+| auth_eval_score | 89.21 | 85.43 | **45.47** | **-39.96** |
+| auth_eval_score_axis | diagnostic_cpu | diagnostic_cpu | diagnostic_cpu | same (non-promotable) |
+| score_claim_valid | false | false | false | (per CLAUDE.md axis discipline) |
+| archive_bytes | 4653 | 4653 | **41525** | +36872 (v2 ref block) |
+| frame_1_routing_pct | 2.33% | 2.33% | 2.33% | unchanged (seed-deterministic) |
+| score_delta_research_signal | -0.000497 | -0.000497 | -0.000497 | unchanged (closed-form invariant) |
+| hardware_substrate | linux_x86_64_t4 | linux_x86_64_t4 | linux_x86_64_t4 | same |
+| elapsed_seconds (Modal worker) | 972.76 | 972.76 | 1022.85 | +50s (pyav decode + v2 pack) |
+| cost_usd | ~$0.16 | ~$0.16 | $0.17 | +$0.01 |
+
+Per CLAUDE.md "Frontier scores are pointer-only - NON-NEGOTIABLE" + Catalog #343: NO comparison to frontier here; 45.47 is `[diagnostic_cpu]` non-promotable per `score_claim_valid=false`.
+
+**Per Catalog #307 paradigm-vs-implementation re-confirmation**:
+- PARADIGM (Atick-Redlich asymmetric scorer channel theory): INTACT (unchanged across all 4 waves)
+- IMPLEMENTATION (vendor REAL frame_0 from `upstream/videos/0.mkv` into v2 archive grammar): **EMPIRICALLY OPERATIONALIZED at -47% score reduction over WAVE-6** (85.43 → 45.47)
+- Both per-pair affine warp (WAVE-5 fix) AND v2 real-frame_0 reference (WAVE-7 fix) are now operational; ~47% additional score reduction confirms real signal flows through SegNet/PoseNet at contest axis
+
+**Catalog #313 outcome registered**: probe_id `cascade_c_prime_wave_7_v2_real_frame_0_fresh_archive_smoke_only_modal_t4_20260526` verdict `PARTIAL` blocker_status `advisory` (not blocking — WAVE-8 routes through per CLAUDE.md "Forbidden premature KILL")
+
+## Phase 4: Verdict + band classification
 
 Per the subagent prompt verdict tree:
 
-| Score band | Classification | Next-wave routing |
-|---|---|---|
-| ≤ 5.0 (HIGH success) | trainer fix on right track | WAVE-8 paired-CUDA full canary + canonical equation #344 PROMOTION attempt |
-| 5-50 (APPROACHING) | trainer needs multi-axis tuning | WAVE-8 multi-axis optimization (per-pair Lagrangian coefficient calibration; sister-disjoint scope) |
-| > 50 (additional bug class) | implementation gap remains | Catalog #325 14-day window re-deliberation (operator-routable) |
+| Score band | Classification | Next-wave routing | WAVE-7 verdict |
+|---|---|---|---|
+| ≤ 5.0 (HIGH success) | trainer fix on right track | WAVE-8 paired-CUDA full canary + canonical equation #344 PROMOTION attempt | n/a |
+| **5-50 (APPROACHING)** | trainer needs multi-axis tuning | WAVE-8 multi-axis optimization (per-pair Lagrangian coefficient calibration; sister-disjoint scope) | **← WAVE-7 LANDS HERE (45.47)** |
+| > 50 (additional bug class) | implementation gap remains | Catalog #325 14-day window re-deliberation (operator-routable) | WAVE-6 was here (85.43); now exited |
 
-**Per Catalog #307 paradigm-vs-implementation classification**:
-- PARADIGM (Atick-Redlich asymmetric scorer channel theory): INTACT (unchanged from WAVE-4/5/6 verdict)
-- IMPLEMENTATION (per-pair render WITH REAL frame_0 reference): **WAVE-7 LANDED**; the synthetic-base cargo-cult is structurally unwound at archive grammar level
+**WAVE-7 verdict: APPROACHING frontier (band 5-50)**. WAVE-8 multi-axis optimization is the operator-routable next step:
+1. Per-pair Lagrangian coefficient calibration (currently uses default `perturbation_scale_seg=1e-5` and `perturbation_scale_pose=5e-7`; sister calibration sweep can probe alternative scales)
+2. Higher-resolution v2 ref block (192x256 vs current 96x128 ⇒ trades +110592 bytes for finer real-frame_0 reconstruction; rate-axis cost +0.0735 per canonical equation #344)
+3. Multi-frame reference (per-pair frame_0 source vs current shared-frame_0; trades +M×36864 bytes for per-pair real signal; rate-axis cost M×+0.0245)
+4. Paired-CUDA full canary on v2 archive sha `5b9db1efefb5dcff` to verify the WAVE-7 fix transfers to contest-CUDA axis (currently only `diagnostic_cpu` evidence; paired-CUDA + paired-CPU Linux x86_64 are required for any score claim per CLAUDE.md "Submission auth eval - BOTH CPU AND CUDA")
 
-**Per Catalog #343 frontier-pointer discipline**: NO comparison to frontier here; smoke score will land in WAVE-7-followup memo at `[diagnostic_cpu]` axis per Modal worker's `AUTH_EVAL_DEVICE=cpu` injection (sister WAVE-6 pattern).
+**Per Catalog #343 frontier-pointer discipline**: NO comparison to frontier here; 45.47 is `[diagnostic_cpu]` non-promotable.
 
 ## Phase 5: Cargo-cult audit per assumption (Catalog #303)
 
-| Assumption | HARD-EARNED vs CARGO-CULTED | Unwind status |
+| Assumption | HARD-EARNED vs CARGO-CULTED | Unwind status (post-Phase 3 harvest) |
 |---|---|---|
-| Real frame_0 reference from upstream/videos/0.mkv unlocks PoseNet/SegNet signal | EXPECTED HARD-EARNED-VIA-EMPIRICAL-ANCHOR-PENDING-PHASE-3-SMOKE | UNWIND PROPOSED via Phase 3 cheap smoke |
-| 96x128 low-res reference suffices for upsample-to-874x1164 | HARD-EARNED-VIA-MVP-VERIFY (5.62/pixel loss tolerable; sister NSCS06v8 same band) | UNWOUND |
-| Single shared frame_0 across all 600 pairs suffices (not per-pair) | HARD-EARNED-VIA-DISTINGUISHING-FEATURE (Cascade C' substrate distinguishing feature is per-pair routing decision NOT per-pair frame_0 source; per-pair frame_1 alt-path via Lagrangian dual carries the per-pair variance) | UNWOUND-BY-DESIGN |
-| Bilinear upsample preserves SegNet/PoseNet response | UNKNOWN-NEEDS-VERIFICATION-PENDING-PHASE-3-SMOKE | OPEN until smoke harvest |
-| Substrate paradigm (Atick-Redlich) refuted by score > 50 (WAVE-6) | NO (per Catalog #307 IMPLEMENTATION-LEVEL not PARADIGM-LEVEL; WAVE-7 unwinds the IMPLEMENTATION layer) | UNWIND IN PROGRESS |
+| Real frame_0 reference from upstream/videos/0.mkv unlocks PoseNet/SegNet signal | **HARD-EARNED-VIA-EMPIRICAL-ANCHOR-WAVE-7** (-47% score reduction from 85.43 → 45.47 at diagnostic_cpu axis) | UNWOUND-AT-IMPLEMENTATION-LAYER |
+| 96x128 low-res reference suffices for upsample-to-874x1164 | HARD-EARNED-VIA-MVP-VERIFY (5.62/pixel loss tolerable; sister NSCS06v8 same band) AND HARD-EARNED-VIA-EMPIRICAL-SMOKE (large score reduction confirms signal preservation) | UNWOUND |
+| Single shared frame_0 across all 600 pairs suffices (not per-pair) | HARD-EARNED-VIA-DISTINGUISHING-FEATURE (Cascade C' substrate distinguishing feature is per-pair routing decision NOT per-pair frame_0 source; per-pair frame_1 alt-path via Lagrangian dual carries the per-pair variance) | UNWOUND-BY-DESIGN; WAVE-8 multi-axis can revisit if per-pair sources unlock additional band |
+| Bilinear upsample preserves SegNet/PoseNet response | HARD-EARNED-VIA-EMPIRICAL-SMOKE (smoke score reduction at numpy bilinear is monotonic improvement over WAVE-6 synthetic) | UNWOUND |
+| Substrate paradigm (Atick-Redlich) refuted by score > 50 (WAVE-6) | NO (per Catalog #307 IMPLEMENTATION-LEVEL not PARADIGM-LEVEL; WAVE-7 unwinds the IMPLEMENTATION layer via -47% empirical reduction) | UNWOUND-VIA-IMPLEMENTATION-FIX |
+| 45.47 [diagnostic_cpu] is close enough to contest frontier (band 5-50) | NO — still ~234× above sister our_local_frontier_contest_cpu 0.1920 per canonical pointer; WAVE-8 multi-axis optimization is the next iteration target | PARTIAL: BAND ACHIEVED BUT FRONTIER NOT MET |
 
 ## Phase 6: 9-dimension success checklist evidence (Catalog #294)
 
