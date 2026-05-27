@@ -69,6 +69,7 @@ from .pair_frame_5d_coverage_acquisition_queue import (
 from .pair_frame_5d_extended_operator_queue import (
     build_pair_frame_5d_extended_operator_queue,
 )
+from .repair_campaign_score_queue import build_repair_campaign_score_queue
 
 FRONTIER_RATE_ATTACK_FEEDBACK_CYCLE_SCHEMA = "frontier_rate_attack_feedback_cycle.v1"
 FRONTIER_RATE_ATTACK_DQS1_OBSERVATION_BUNDLE_SCHEMA = (
@@ -1194,6 +1195,46 @@ def write_frontier_refresh_artifacts(
                 repair_waterfill_queue_path,
                 repo_root,
             )
+            repair_campaign_score_queue = build_repair_campaign_score_queue(
+                repo_root=repo_root,
+                repair_budget_waterfill_queue=repair_waterfill_queue,
+                repair_budget_waterfill_queue_path=repair_waterfill_queue_path,
+                results_root=str(report.get("results_root") or "experiments/results"),
+                queue_id=(
+                    f"{report.get('queue_id') or 'frontier_feedback'}_"
+                    "repair_campaign_score"
+                ),
+                experiment_limit=int(report.get("candidate_limit") or 4),
+            )
+            repair_campaign_score_queue_path = out / "repair_campaign_score_queue.json"
+            write_json_artifact(
+                repair_campaign_score_queue_path,
+                dict(repair_campaign_score_queue),
+            )
+            artifacts["repair_campaign_score_queue"] = repo_rel(
+                repair_campaign_score_queue_path,
+                repo_root,
+            )
+            report["repair_campaign_score_queue_summary"] = {
+                "schema": "frontier_rate_attack_repair_campaign_score_queue_summary.v1",
+                "queue_id": repair_campaign_score_queue.get("queue_id"),
+                "experiment_count": len(
+                    repair_campaign_score_queue.get("experiments") or []
+                ),
+                "ready_experiment_count": repair_campaign_score_queue.get(
+                    "metadata",
+                    {},
+                ).get("ready_experiment_count"),
+                "blocked_experiment_count": repair_campaign_score_queue.get(
+                    "metadata",
+                    {},
+                ).get("blocked_experiment_count"),
+                "queue_path": artifacts["repair_campaign_score_queue"],
+                "allowed_use": (
+                    "default_repair_campaign_scorer_queue_planning_only"
+                ),
+                **FALSE_AUTHORITY,
+            }
         autonomous_queue = build_frontier_autonomous_chain_optimization_queue(
             repo_root=repo_root,
             autonomous_chain_optimization=autonomous_chain_optimization,
@@ -1537,6 +1578,35 @@ def write_frontier_refresh_artifacts(
             "tools/experiment_queue.py",
             "--queue",
             artifacts["repair_budget_waterfill_queue"],
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            "8",
+            "--max-experiments",
+            "2",
+            "--max-parallel",
+            "1",
+        ]
+    if "repair_campaign_score_queue" in artifacts:
+        operator_commands["validate_repair_campaign_score_queue"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["repair_campaign_score_queue"],
+            "validate",
+        ]
+        operator_commands["init_repair_campaign_score_queue"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["repair_campaign_score_queue"],
+            "init",
+        ]
+        operator_commands["run_repair_campaign_score_queue_bounded_local"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["repair_campaign_score_queue"],
             "run-worker",
             "--execute",
             "--max-steps",

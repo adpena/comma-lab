@@ -193,6 +193,12 @@ from .queue_feedback_replan_policy import (
     validate_feedback_followup_queue,
     validate_queue_observation_recovery_queue,
 )
+from .repair_campaign_score_queue import (
+    REPAIR_CAMPAIGN_SCORE_EXPERIMENT_METADATA_SCHEMA,
+    REPAIR_CAMPAIGN_SCORE_QUEUE_METADATA_SCHEMA,
+    RepairCampaignScoreQueueError,
+    build_repair_campaign_score_queue,
+)
 from .ssh_experiment_queue_executor import (
     SSH_ARTIFACT_MOBILITY_SCHEMA,
     SSH_EXECUTION_RESULT_SCHEMA,
@@ -267,6 +273,8 @@ __all__ = [
     "QUEUE_OBSERVATION_RECOVERY_QUEUE_METADATA_SCHEMA",
     "QUEUE_OBSERVATION_RECOVERY_QUEUE_VALIDATION_SCHEMA",
     "REGISTRY_SCHEMA",
+    "REPAIR_CAMPAIGN_SCORE_EXPERIMENT_METADATA_SCHEMA",
+    "REPAIR_CAMPAIGN_SCORE_QUEUE_METADATA_SCHEMA",
     "SCHEDULER_RUNTIME_POLICY_SCHEMA",
     "SSH_ARTIFACT_MOBILITY_SCHEMA",
     "SSH_EXECUTION_RESULT_SCHEMA",
@@ -289,6 +297,7 @@ __all__ = [
     "PlatformRegistry",
     "PlatformSpec",
     "ReadyStep",
+    "RepairCampaignScoreQueueError",
     "RunRecord",
     "SchedulerStatusReport",
     "TrackStatus",
@@ -322,6 +331,7 @@ __all__ = [
     "build_queue_observation_recovery_queue",
     "build_remote_git_preflight_command",
     "build_remote_shell_command",
+    "build_repair_campaign_score_queue",
     "build_rsync_pull_command",
     "build_rsync_push_command",
     "collect_exact_ready_queue_paths",
