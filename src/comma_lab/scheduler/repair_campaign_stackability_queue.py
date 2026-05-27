@@ -24,6 +24,7 @@ from tac.optimization.repair_campaign_posterior import (
 )
 from tac.optimization.repair_campaign_replay_bundle import (
     REPAIR_CAMPAIGN_STACKABILITY_REPLAY_BUNDLE_SCHEMA,
+    REPAIR_CAMPAIGN_STACKABILITY_REPLAY_RERUN_SCHEMA,
 )
 from tac.optimization.repair_campaign_scorer import (
     REPAIR_CAMPAIGN_OPTIMIZER_DECISION_SCHEMA,
@@ -148,6 +149,14 @@ def _stackability_experiment(
         / "repair_campaign_stackability_replay_bundle.json"
     )
     replay_bundle_ref = _repo_rel(replay_bundle_path, repo_root)
+    replay_rerun_dir = queue_root / _slug(typed_response_id) / "replay_rerun"
+    replay_rerun_dir_ref = _repo_rel(replay_rerun_dir, repo_root)
+    replay_rerun_summary_path = (
+        queue_root
+        / _slug(typed_response_id)
+        / "repair_campaign_stackability_replay_rerun_summary.json"
+    )
+    replay_rerun_summary_ref = _repo_rel(replay_rerun_summary_path, repo_root)
     learning_signal_path = (
         queue_root
         / _slug(typed_response_id)
@@ -184,6 +193,9 @@ def _stackability_experiment(
         "stackability_probe_schema": REPAIR_CAMPAIGN_STACKABILITY_PROBE_SCHEMA,
         "replay_bundle_path": replay_bundle_ref,
         "replay_bundle_schema": REPAIR_CAMPAIGN_STACKABILITY_REPLAY_BUNDLE_SCHEMA,
+        "replay_rerun_dir": replay_rerun_dir_ref,
+        "replay_rerun_summary_path": replay_rerun_summary_ref,
+        "replay_rerun_summary_schema": REPAIR_CAMPAIGN_STACKABILITY_REPLAY_RERUN_SCHEMA,
         "learning_signal_path": learning_signal_ref,
         "learning_signal_schema": REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA,
         "posterior_path": posterior_ref,
@@ -331,9 +343,58 @@ def _stackability_experiment(
                 },
             },
             {
-                "id": "build_repair_campaign_learning_signal",
+                "id": "rerun_repair_campaign_stackability_replay_bundle",
                 "kind": "command",
                 "requires": ["build_repair_campaign_stackability_replay_bundle"],
+                "command": [
+                    ".venv/bin/python",
+                    "tools/rerun_repair_campaign_stackability_replay_bundle.py",
+                    "--bundle",
+                    replay_bundle_ref,
+                    "--output-dir",
+                    replay_rerun_dir_ref,
+                    "--summary-out",
+                    replay_rerun_summary_ref,
+                    "--run-id",
+                    _slug(typed_response_id),
+                    "--overwrite",
+                ],
+                "resources": {"kind": "local_cpu"},
+                "timeout_seconds": 120,
+                "postconditions": [
+                    {
+                        "type": "json_equals",
+                        "path": replay_rerun_summary_ref,
+                        "key": "schema",
+                        "equals": REPAIR_CAMPAIGN_STACKABILITY_REPLAY_RERUN_SCHEMA,
+                    },
+                    {
+                        "type": "json_false_authority",
+                        "path": replay_rerun_summary_ref,
+                    },
+                    {
+                        "type": "json_equals",
+                        "path": replay_rerun_summary_ref,
+                        "key": "matched",
+                        "equals": True,
+                    },
+                    {
+                        "type": "json_equals",
+                        "path": replay_rerun_summary_ref,
+                        "key": "ready_for_exact_eval_dispatch",
+                        "equals": False,
+                    },
+                ],
+                "telemetry": {
+                    "artifact_paths": [replay_rerun_summary_ref],
+                    "input_artifact_paths": [replay_bundle_ref],
+                    "include_postcondition_paths": True,
+                },
+            },
+            {
+                "id": "build_repair_campaign_learning_signal",
+                "kind": "command",
+                "requires": ["rerun_repair_campaign_stackability_replay_bundle"],
                 "command": [
                     ".venv/bin/python",
                     "tools/build_repair_campaign_learning_signal.py",

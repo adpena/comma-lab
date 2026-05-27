@@ -26,6 +26,12 @@ REPAIR_CAMPAIGN_STACKABILITY_REPLAY_BUNDLE_SCHEMA = (
 REPAIR_CAMPAIGN_STACKABILITY_REPLAY_BUNDLE_DIFF_SCHEMA = (
     "repair_campaign_stackability_replay_bundle_diff.v1"
 )
+REPAIR_CAMPAIGN_STACKABILITY_REPLAY_RERUN_COMMAND_SCHEMA = (
+    "repair_campaign_stackability_replay_rerun_command.v1"
+)
+REPAIR_CAMPAIGN_STACKABILITY_REPLAY_RERUN_SCHEMA = (
+    "repair_campaign_stackability_replay_rerun.v1"
+)
 SAFE_REPLAY_ENVIRONMENT_CAPTURE_SCHEMA = "safe_replay_environment_capture.v1"
 
 _REDACT_TOKENS = (
@@ -89,6 +95,12 @@ def _file_record(
 
 def _stable_json_sha256(payload: Mapping[str, Any]) -> str:
     return sha256_bytes(json_text(payload).encode("utf-8"))
+
+
+def stable_json_sha256(payload: Mapping[str, Any]) -> str:
+    """Return the canonical JSON SHA-256 used by replay-bundle records."""
+
+    return _stable_json_sha256(payload)
 
 
 def _git_text(args: Sequence[str], *, repo_root: Path) -> str:
@@ -357,8 +369,11 @@ def diff_repair_campaign_stackability_replay_bundles(
 __all__ = [
     "REPAIR_CAMPAIGN_STACKABILITY_REPLAY_BUNDLE_DIFF_SCHEMA",
     "REPAIR_CAMPAIGN_STACKABILITY_REPLAY_BUNDLE_SCHEMA",
+    "REPAIR_CAMPAIGN_STACKABILITY_REPLAY_RERUN_COMMAND_SCHEMA",
+    "REPAIR_CAMPAIGN_STACKABILITY_REPLAY_RERUN_SCHEMA",
     "RepairCampaignReplayBundleError",
     "build_repair_campaign_stackability_replay_bundle",
     "capture_safe_replay_environment",
     "diff_repair_campaign_stackability_replay_bundles",
+    "stable_json_sha256",
 ]

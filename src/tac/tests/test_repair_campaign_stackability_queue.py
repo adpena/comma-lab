@@ -1,10 +1,13 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import importlib.util
 import json
 import subprocess
 import sys
 from pathlib import Path
+
+import pytest
 
 from comma_lab.scheduler.repair_campaign_stackability_queue import (
     REPAIR_CAMPAIGN_STACKABILITY_QUEUE_METADATA_SCHEMA,
@@ -22,6 +25,7 @@ from tac.optimization.repair_campaign_posterior import (
 from tac.optimization.repair_campaign_replay_bundle import (
     REPAIR_CAMPAIGN_STACKABILITY_REPLAY_BUNDLE_DIFF_SCHEMA,
     REPAIR_CAMPAIGN_STACKABILITY_REPLAY_BUNDLE_SCHEMA,
+    REPAIR_CAMPAIGN_STACKABILITY_REPLAY_RERUN_SCHEMA,
     build_repair_campaign_stackability_replay_bundle,
     diff_repair_campaign_stackability_replay_bundles,
 )
@@ -236,9 +240,32 @@ def test_stackability_queue_emits_executable_local_probe(tmp_path: Path) -> None
     assert bundle["environment"]["schema"] == "safe_replay_environment_capture.v1"
     assert bundle["budget_spend_allowed"] is False
     assert bundle["ready_for_exact_eval_dispatch"] is False
-    learning_command = [
+    rerun_command = [
         sys.executable if item == ".venv/bin/python" else str(item)
         for item in experiment["steps"][2]["command"]
+    ]
+    rerun_result = subprocess.run(
+        rerun_command,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert rerun_result.returncode == 0, rerun_result.stderr
+    rerun_summary = json.loads(
+        Path(experiment["metadata"]["replay_rerun_summary_path"]).read_text(
+            encoding="utf-8"
+        )
+    )
+    assert rerun_summary["schema"] == REPAIR_CAMPAIGN_STACKABILITY_REPLAY_RERUN_SCHEMA
+    assert rerun_summary["matched"] is True
+    assert rerun_summary["probe_payload_matched"] is True
+    assert rerun_summary["local_mlx_custody_hashes_matched"] is True
+    assert rerun_summary["budget_spend_allowed"] is False
+    assert rerun_summary["ready_for_exact_eval_dispatch"] is False
+    learning_command = [
+        sys.executable if item == ".venv/bin/python" else str(item)
+        for item in experiment["steps"][3]["command"]
     ]
     learning_result = subprocess.run(
         learning_command,
@@ -268,7 +295,7 @@ def test_stackability_queue_emits_executable_local_probe(tmp_path: Path) -> None
     assert learning_signal["ready_for_exact_eval_dispatch"] is False
     posterior_command = [
         sys.executable if item == ".venv/bin/python" else str(item)
-        for item in experiment["steps"][3]["command"]
+        for item in experiment["steps"][4]["command"]
     ]
     posterior_result = subprocess.run(
         posterior_command,
@@ -409,6 +436,110 @@ def test_stackability_replay_bundle_diff_detects_environment_drift(
     assert cli_result["matched"] is False
     assert cli_diff["schema"] == REPAIR_CAMPAIGN_STACKABILITY_REPLAY_BUNDLE_DIFF_SCHEMA
     assert cli_diff["changed_environment_keys"] == ["MLX_VISIBLE_DEVICES"]
+
+
+def test_repair_stackability_rerun_command_rewrites_probe_output(
+    tmp_path: Path,
+) -> None:
+    tool_path = REPO_ROOT / "tools" / "rerun_repair_campaign_stackability_replay_bundle.py"
+    spec = importlib.util.spec_from_file_location(
+        "repair_stackability_rerun_tool_under_test",
+        tool_path,
+    )
+    assert spec is not None and spec.loader is not None
+    tool = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(tool)
+
+    bundle = {
+        "schema": REPAIR_CAMPAIGN_STACKABILITY_REPLAY_BUNDLE_SCHEMA,
+        "replay_target_tool": "tools/run_repair_campaign_stackability_probe.py",
+        "typed_response_id": "segnet_region_ready",
+        "replay_argv": [
+            ".venv/bin/python",
+            "tools/run_repair_campaign_stackability_probe.py",
+            "--score-report",
+            "score.json",
+            "--typed-response-id",
+            "segnet_region_ready",
+            "--output=original_probe.json",
+            "--overwrite",
+        ],
+        "calibration_gate": {
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        **_false_authority(),
+    }
+
+    record = tool.build_rerun_command(
+        bundle,
+        bundle_path=tmp_path / "source_replay_bundle.json",
+        output_dir=tmp_path / "reruns",
+        python_executable="/usr/bin/python3",
+        run_id="stable_repair_replay",
+    )
+    command = record["command"]
+
+    assert command[:2] == [
+        "/usr/bin/python3",
+        str(REPO_ROOT / "tools" / "run_repair_campaign_stackability_probe.py"),
+    ]
+    assert "--score-report" in command
+    assert "--typed-response-id" in command
+    assert not any(str(part).endswith("original_probe.json") for part in command)
+    assert sum(str(part).startswith("--output") for part in command) == 1
+    assert record["run_dir"] == str(tmp_path / "reruns" / "stable_repair_replay")
+    assert record["side_effect_policy"]["original_probe_output_rewritten"] is True
+    assert record["budget_spend_allowed"] is False
+    assert record["ready_for_exact_eval_dispatch"] is False
+
+
+def test_repair_stackability_rerun_rejects_truthy_authority(
+    tmp_path: Path,
+) -> None:
+    tool_path = REPO_ROOT / "tools" / "rerun_repair_campaign_stackability_replay_bundle.py"
+    spec = importlib.util.spec_from_file_location(
+        "repair_stackability_rerun_tool_bad_authority",
+        tool_path,
+    )
+    assert spec is not None and spec.loader is not None
+    tool = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(tool)
+
+    bundle = {
+        "schema": REPAIR_CAMPAIGN_STACKABILITY_REPLAY_BUNDLE_SCHEMA,
+        "replay_target_tool": "tools/run_repair_campaign_stackability_probe.py",
+        "replay_argv": [
+            ".venv/bin/python",
+            "tools/run_repair_campaign_stackability_probe.py",
+            "--score-report",
+            "score.json",
+            "--typed-response-id",
+            "segnet_region_ready",
+            "--output",
+            "probe.json",
+        ],
+        "calibration_gate": {
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": True,
+        },
+        **_false_authority(),
+    }
+
+    with pytest.raises(
+        tool.RepairCampaignReplayBundleError,
+        match="ready_for_exact_eval_dispatch",
+    ):
+        tool.build_rerun_command(
+            bundle,
+            bundle_path=tmp_path / "bad_replay_bundle.json",
+            output_dir=tmp_path / "reruns",
+            python_executable="/usr/bin/python3",
+        )
 
 
 def test_stackability_queue_freezes_bad_selected_allocation_with_exact_missing_names(
