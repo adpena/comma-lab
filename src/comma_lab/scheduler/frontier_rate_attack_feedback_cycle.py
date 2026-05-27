@@ -46,6 +46,10 @@ from tac.repo_io import (
     write_text_artifact,
 )
 
+from .byte_shaving_materializer_registry import (
+    DQS1_PAIRSET_TARGET_KIND,
+    INVERSE_SCORER_CELL_TARGET_KIND,
+)
 from .experiment_queue import ExperimentQueueError
 from .frontier_rate_attack_feedback import (
     OPERATION_CHAIN_COMPILER_WORK_ORDER_SCHEMA,
@@ -78,6 +82,9 @@ from .repair_campaign_score_queue import (
 )
 
 FRONTIER_RATE_ATTACK_FEEDBACK_CYCLE_SCHEMA = "frontier_rate_attack_feedback_cycle.v1"
+FRONTIER_RATE_ATTACK_PORTFOLIO_COVERAGE_SCHEMA = (
+    "frontier_rate_attack_portfolio_coverage.v1"
+)
 FRONTIER_RATE_ATTACK_DQS1_OBSERVATION_BUNDLE_SCHEMA = (
     "frontier_rate_attack_dqs1_observation_bundle.v1"
 )
@@ -129,6 +136,156 @@ def resolve_repo_path(path: str | Path, *, repo_root: str | Path) -> Path:
     if not value.is_absolute():
         value = Path(repo_root) / value
     return value.resolve(strict=False)
+
+
+def _artifact_values(
+    artifacts: Mapping[str, Any],
+    keys: Sequence[str],
+) -> list[str]:
+    values: list[str] = []
+    for key in keys:
+        value = artifacts.get(key)
+        if isinstance(value, str) and value:
+            values.append(value)
+        elif isinstance(value, Sequence) and not isinstance(value, str | bytes):
+            values.extend(str(item) for item in value if str(item))
+    return list(dict.fromkeys(values))
+
+
+def build_frontier_rate_attack_portfolio_coverage(
+    *,
+    report: Mapping[str, Any],
+    artifacts: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Summarize queue-owned coverage across archive, DQS1, and scorer loops."""
+
+    targeted_child_paths = [
+        str(path)
+        for path in report.get("targeted_drop_many_dqs1_child_queue_paths") or []
+        if str(path)
+    ]
+    pathway_specs = (
+        {
+            "pathway_id": "archive_rate_materializer_sweep",
+            "surface": "archive_rate",
+            "target_kinds": [
+                "archive_zip_repack_v1",
+                "packet_member_zip_header_elide_v1",
+                "packet_member_recompress_v1",
+                "packet_member_merge_v1",
+                "renderer_payload_dfl1_v1",
+                "archive_section_entropy_recode_v1",
+                "tensor_factorize_v1",
+            ],
+            "artifact_keys": (
+                "operation_materializer_backlog",
+                "operation_materializer_contexts",
+                "operation_materializer_work_queue",
+                "operation_materializer_execution_queue",
+            ),
+        },
+        {
+            "pathway_id": "operation_chain_compiler",
+            "surface": "cross_position_chain",
+            "target_kinds": ["byte_range_entropy_recode_v1", "targeted_drop_many"],
+            "artifact_keys": (
+                "operation_chain_compiler_work_orders",
+                "operation_chain_compiler_queue",
+                "autonomous_chain_optimization",
+                "autonomous_chain_optimization_queue",
+            ),
+        },
+        {
+            "pathway_id": "dqs1_local_first_feedback",
+            "surface": "dqs1_pairset",
+            "target_kinds": [DQS1_PAIRSET_TARGET_KIND],
+            "artifact_keys": (
+                "dqs1_selected_pairset_acquisition",
+                "dqs1_followup_queue",
+                "materializer_feedback_bridge",
+            ),
+            "extra_artifact_paths": targeted_child_paths,
+        },
+        {
+            "pathway_id": "inverse_steganalysis_acquisition",
+            "surface": "scorer_inverse",
+            "target_kinds": [INVERSE_SCORER_CELL_TARGET_KIND],
+            "artifact_keys": (
+                "local_cpu_eureka_planning",
+                "pair_frame_5d_canvas",
+                "pair_frame_5d_extended_operator_queue",
+                "pair_frame_5d_coverage_acquisition_queue",
+                "targeted_component_correction_acquisition",
+                "targeted_component_correction_queue",
+                "targeted_component_correction_operation_chain_queue",
+                "operation_chain_compiler_work_orders",
+                "operation_chain_compiler_queue",
+            ),
+        },
+        {
+            "pathway_id": "rate_savings_to_distortion_budget",
+            "surface": "repair_budget",
+            "target_kinds": ["receiver_closed_correction_budget", "repair_budget_waterfill"],
+            "artifact_keys": (
+                "receiver_closed_correction_budget",
+                "repair_budget_waterfill_queue",
+                "repair_campaign_score_queue",
+                "repair_posterior_acquisition_followup_queue",
+            ),
+        },
+    )
+    rows: list[dict[str, Any]] = []
+    for spec in pathway_specs:
+        artifact_paths = [
+            *_artifact_values(artifacts, spec["artifact_keys"]),
+            *list(spec.get("extra_artifact_paths", ())),
+        ]
+        artifact_paths = list(dict.fromkeys(artifact_paths))
+        rows.append(
+            {
+                "schema": "frontier_rate_attack_portfolio_coverage_row.v1",
+                "pathway_id": spec["pathway_id"],
+                "surface": spec["surface"],
+                "target_kinds": list(spec["target_kinds"]),
+                "artifact_keys": [
+                    key for key in spec["artifact_keys"] if key in artifacts
+                ],
+                "artifact_paths": artifact_paths,
+                "bound": bool(artifact_paths),
+                "status": "bound" if artifact_paths else "not_bound_in_this_refresh",
+                **FALSE_AUTHORITY,
+            }
+        )
+    deferred_bindings = []
+    for target_kind, pathway_id in (
+        (DQS1_PAIRSET_TARGET_KIND, "dqs1_local_first_feedback"),
+        (INVERSE_SCORER_CELL_TARGET_KIND, "inverse_steganalysis_acquisition"),
+    ):
+        row = next(item for item in rows if item["pathway_id"] == pathway_id)
+        deferred_bindings.append(
+            {
+                "target_kind": target_kind,
+                "pathway_id": pathway_id,
+                "binding_status": row["status"],
+                "artifact_paths": list(row["artifact_paths"]),
+                **FALSE_AUTHORITY,
+            }
+        )
+    payload = {
+        "schema": FRONTIER_RATE_ATTACK_PORTFOLIO_COVERAGE_SCHEMA,
+        "queue_id": report.get("queue_id"),
+        "generated_at_utc": report.get("generated_at_utc"),
+        "pathway_count": len(rows),
+        "bound_pathway_count": sum(1 for row in rows if row["bound"]),
+        "rows": rows,
+        "deferred_registry_target_bindings": deferred_bindings,
+        "coverage_ready_for_bounded_local_followup": any(row["bound"] for row in rows),
+        "allowed_use": "queue_owned_frontier_rate_attack_portfolio_planning_only",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(payload, context="frontier_portfolio_coverage")
+    return payload
 
 
 def _extend_followup_roots(
@@ -1305,10 +1462,28 @@ def write_frontier_refresh_artifacts(
         write_json_artifact(path, dict(queue))
         artifacts["dqs1_followup_queue"] = repo_rel(path, repo_root)
 
+    portfolio_coverage = build_frontier_rate_attack_portfolio_coverage(
+        report=report,
+        artifacts=artifacts,
+    )
+    portfolio_coverage_path = out / "frontier_rate_attack_portfolio_coverage.json"
+    write_json_artifact(portfolio_coverage_path, dict(portfolio_coverage))
+    artifacts["frontier_rate_attack_portfolio_coverage"] = repo_rel(
+        portfolio_coverage_path,
+        repo_root,
+    )
+
     report_path = out / report_filename
     report_to_write = dict(report)
+    report_to_write["frontier_rate_attack_portfolio_coverage"] = portfolio_coverage
     report_to_write["artifacts"] = dict(artifacts)
     operator_commands: dict[str, Any] = {}
+    operator_commands["inspect_frontier_rate_attack_portfolio_coverage"] = [
+        ".venv/bin/python",
+        "-m",
+        "json.tool",
+        artifacts["frontier_rate_attack_portfolio_coverage"],
+    ]
     if "dqs1_followup_queue" in artifacts:
         operator_commands.update(
             {
@@ -2374,8 +2549,10 @@ __all__ = [
     "FRONTIER_RATE_ATTACK_DQS1_OBSERVATION_BUNDLE_SCHEMA",
     "FRONTIER_RATE_ATTACK_FEEDBACK_CYCLE_SCHEMA",
     "FRONTIER_RATE_ATTACK_PAIRSET_COMPONENT_MARGINAL_BUNDLE_SCHEMA",
+    "FRONTIER_RATE_ATTACK_PORTFOLIO_COVERAGE_SCHEMA",
     "FrontierRateAttackFeedbackCycleError",
     "artifact_token",
+    "build_frontier_rate_attack_portfolio_coverage",
     "discover_dqs1_drop_many_greedy_verdict_paths",
     "harvest_paths_from_autopilot_payload",
     "harvest_paths_from_autopilot_result_files",

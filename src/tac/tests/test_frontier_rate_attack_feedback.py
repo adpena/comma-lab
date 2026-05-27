@@ -87,6 +87,7 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
 )
 from comma_lab.scheduler.frontier_rate_attack_feedback_cycle import (
     AUTOPILOT_RESULT_SCHEMA,
+    FRONTIER_RATE_ATTACK_PORTFOLIO_COVERAGE_SCHEMA,
     FrontierRateAttackFeedbackCycleError,
     discover_dqs1_drop_many_greedy_verdict_paths,
     harvest_paths_from_autopilot_payload,
@@ -6175,6 +6176,29 @@ def test_frontier_feedback_compiler_turns_eureka_near_misses_into_beyond_drop_tw
     assert artifacts["operation_chain_compiler_queue"].endswith(
         "operation_chain_compiler_queue.json"
     )
+    assert artifacts["frontier_rate_attack_portfolio_coverage"].endswith(
+        "frontier_rate_attack_portfolio_coverage.json"
+    )
+    portfolio_coverage = json.loads(
+        (tmp_path / artifacts["frontier_rate_attack_portfolio_coverage"]).read_text(
+            encoding="utf-8"
+        )
+    )
+    assert portfolio_coverage["schema"] == FRONTIER_RATE_ATTACK_PORTFOLIO_COVERAGE_SCHEMA
+    assert portfolio_coverage["coverage_ready_for_bounded_local_followup"] is True
+    bindings = {
+        row["target_kind"]: row
+        for row in portfolio_coverage["deferred_registry_target_bindings"]
+    }
+    assert bindings["dqs1_pairset_drop_pair"]["binding_status"] == "bound"
+    assert bindings["inverse_scorer_cell_candidate_v1"]["binding_status"] == "bound"
+    assert "dqs1_followup_queue.json" in " ".join(
+        bindings["dqs1_pairset_drop_pair"]["artifact_paths"]
+    )
+    assert "operation_chain_compiler_queue.json" in " ".join(
+        bindings["inverse_scorer_cell_candidate_v1"]["artifact_paths"]
+    )
+    _assert_false_authority(portfolio_coverage)
     assert artifacts["receiver_repair_backlog"].endswith(
         "receiver_repair_backlog.json"
     )
