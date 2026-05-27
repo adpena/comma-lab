@@ -2168,6 +2168,46 @@ def preflight_all(
         check_trainer_auth_eval_uses_canonical_helper(
             strict=True, verbose=verbose,
         )
+        # 2026-05-26 Catalog #365 - CANONICAL HELPER SIGNATURE DRIFT extension
+        # to Catalog #226 per Cascade C' subagent C empirical anchor (commit
+        # a885ea2e5). Sister of #226 at the KWARG-SIGNATURE sub-surface;
+        # enforces that gate_auth_eval_call(...) callers use canonical
+        # archive_zip=/output_json=/substrate_tag=/args=/contest_auth_eval_script=
+        # kwarg names per the canonical helper signature at
+        # smoke_auth_eval_gate.py:261. STRICT-from-byte-one per
+        # CLAUDE.md "Strict-flip atomicity rule"; live count at landing: 0
+        # (Cascade C' a885ea2e5 fix cleaned the only known violation in same
+        # commit batch). Sister of Catalog #226 + #164 + #205 + #218.
+        check_substrate_trainer_routes_through_canonical_gate_auth_eval_call_with_correct_kwargs(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-26 Catalog #366 - INFLATE SHIM IMPORT DRIFT extension to
+        # Catalog #361 per Cascade C' Wave 2 empirical anchor (commit
+        # 3c2ce7fc2). Sister of #361 at the IMPORT-NAME sub-surface;
+        # enforces that trainer-emitted inflate.py shims import names that
+        # actually exist as exports in the target inflate module. Empirical
+        # anchor: Cascade C' Wave 2 ImportError 'cannot import name main
+        # from cascade_c_prime_frame_1_segnet_waterfill.inflate' (canonical
+        # module exports main_cli). STRICT-from-byte-one; live count at
+        # landing: 0 (3c2ce7fc2 fix cleaned the only known violation).
+        # Sister of Catalog #361 + #146 + #295 + #205.
+        check_substrate_trainer_emitted_inflate_shim_imports_match_canonical_module_exports(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-26 Catalog #367 - INFLATE RAW BYTES FAIL-OPEN extension to
+        # Catalog #146 per Cascade C' WAVE-3 empirical anchor (commit
+        # 39e1db080 + fix commits 5bcb53070 + d0c4517ea). Sister of #146 at
+        # the FRAME-EMISSION-COUNT sub-surface; refuses inflate.py files
+        # that emit raw bytes AND reference contest output contract but
+        # lack a fail-closed check on raw_bytes/frame_count. Empirical
+        # anchor: Cascade C' WAVE-3 fc-01KSKB4B30DCYTCP883XYV5BNV emitted
+        # 708MB instead of 3.66GB; contest_auth_eval crashed WRONG-SIZE.
+        # Initial wire-in WARN-ONLY per CLAUDE.md "Strict-flip atomicity
+        # rule" because 5 pre-existing inflate.py files need backfill or
+        # waiver. Sister of Catalog #146 + #205 + #220 + #272 + #295.
+        check_substrate_inflate_emits_expected_frame_count_or_fail_closed(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-15 Catalog #249 - phantom-score directory class permanent fix.
         # Per the Z3 v2 FULL Modal A100 dispatch 2026-05-15T11:41:15Z empirical
         # anchor: trainer hardcoded `result_json_path = out_dir /
@@ -59114,6 +59154,753 @@ def check_trainer_auth_eval_uses_canonical_helper(
             + "\n  ".join(violations[:3])
         )
         raise PreflightError(msg)
+    return violations
+
+
+# ============================================================================
+# Catalog #365 — check_substrate_trainer_routes_through_canonical_gate_auth_eval_call_with_correct_kwargs
+#
+# CANONICAL HELPER SIGNATURE DRIFT extension to Catalog #226 self-protection
+# 2026-05-26 per Cascade C' subagent C combined verdict empirical anchor
+# (commit `a885ea2e5`). Sister of Catalog #226 at the KWARG-SIGNATURE sub-
+# surface.
+#
+# Where #226 enforces that trainers route THROUGH the canonical helper
+# `tac.substrates._shared.smoke_auth_eval_gate.gate_auth_eval_call`, #365
+# enforces that callers use the canonical KWARG names per the helper's
+# signature. Pre-fix, the Cascade C' trainer wrapper passed:
+#   - `archive=` (canonical = `archive_zip=`)
+#   - `json_out=` (canonical = `output_json=`)
+#   - `lane_id=` (NOT in canonical signature)
+#   - `substrate_id=` (canonical = `substrate_tag=`)
+# AND was missing required canonical kwargs (`args=` argparse.Namespace +
+# `contest_auth_eval_script=` Path).
+#
+# Empirical anchor: Modal T4 dispatch `fc-01KSK7GTPEF27FX0AAH2319GVR`
+# 2026-05-26 rc=0 in 5.2s with stage 1-6 SUCCESS but stage 7 auth_eval
+# failed with `TypeError`. Fix landed `a885ea2e5` replaced the deprecated
+# kwarg names with canonical ones per the canonical helper signature
+# inspected at `smoke_auth_eval_gate.py:261`.
+#
+# The canonical signature is fully keyword-only (per `*,` separator):
+#   - args: argparse.Namespace (required)
+#   - archive_zip: Path (required)
+#   - inflate_sh: Path (required)
+#   - upstream_dir: Path (required)
+#   - output_json: Path (required)
+#   - contest_auth_eval_script: Path (required)
+#   - substrate_tag: str (required)
+#   - device: Any (optional)
+#   - full_cpu_active: bool (optional)
+#   - required_score_axis: str (optional)
+#   - require_component_recompute: bool (optional)
+#   - auth_eval_device: str | None (optional)
+#   - return_non_cuda_result: bool (optional)
+#   - extra_argv: tuple | None (optional)
+#
+# AST-aware scan: walks every Call node in `experiments/train_substrate_*.py`
+# + `experiments/train_renderer*.py` whose target name contains
+# `gate_auth_eval_call`; for each, checks (a) deprecated KNOWN_NONCANONICAL
+# kwarg names absent + (b) all REQUIRED canonical kwargs present.
+#
+# Same-line waiver: `# CANONICAL_GATE_KWARG_DRIFT_OK:<rationale>` on the
+# Call line (rationale >= 4 chars; placeholder `<rationale>` / `<reason>`
+# literals rejected per Catalog #287 sister discipline so the docstring
+# example cannot self-waive).
+#
+# Sister of Catalog #226 (canonical helper routing — same META class at
+# the call-EXISTS surface; #365 is the KWARG-CORRECTNESS sub-surface) +
+# Catalog #164 (canonical scorer-loss helper routing) + Catalog #205
+# (canonical inflate device-fork) + Catalog #218 (canonical mini-batch
+# reconstruct). Together they extinct the substrate-trainer canonical-
+# path-bypass bug class across all known surfaces.
+#
+# STRICT-from-byte-one per CLAUDE.md "Bugs must be permanently fixed AND
+# self-protected against" + "Strict-flip atomicity rule" non-negotiables —
+# live count at landing: 0 (the trainer wrapper fix `a885ea2e5` cleaned
+# the only known violation in the same commit batch).
+#
+# Memory: feedback_fix_wave_cascade_c_prime_all_bugs_permanent_fix_and_self_protect_against_landed_20260526.md.
+# Lane: lane_fix_wave_cascade_c_prime_all_bugs_permanent_fix_and_self_protect_against_20260526.
+# Retroactive sweep memo: .omx/research/retroactive_sweep_for_catalog_365_*.md.
+# ============================================================================
+
+_CHECK_365_NONCANONICAL_KWARGS: frozenset[str] = frozenset({
+    "archive",       # canonical = archive_zip
+    "json_out",      # canonical = output_json
+    "lane_id",       # not in canonical signature
+    "substrate_id",  # canonical = substrate_tag
+})
+_CHECK_365_REQUIRED_CANONICAL_KWARGS: frozenset[str] = frozenset({
+    "args",
+    "archive_zip",
+    "output_json",
+    "contest_auth_eval_script",
+    "substrate_tag",
+})
+_CHECK_365_WAIVER_RE = re.compile(
+    r"#\s*CANONICAL_GATE_KWARG_DRIFT_OK\s*:\s*(?P<rationale>[^\n]+)"
+)
+_CHECK_365_WAIVER_PLACEHOLDERS: frozenset[str] = frozenset({
+    "<rationale>", "<reason>", ""
+})
+
+
+def _check_365_iter_trainer_files(repo_root: Path) -> list[Path]:
+    """Return ``experiments/train_substrate_*.py`` + train_renderer*.py files."""
+    files: list[Path] = []
+    exp_dir = repo_root / "experiments"
+    if exp_dir.exists():
+        for pat in ("train_substrate_*.py", "train_renderer*.py"):
+            for f in exp_dir.glob(pat):
+                if f.is_file():
+                    files.append(f)
+    return sorted(set(files))
+
+
+def _check_365_call_targets_gate_helper(call_node: ast.Call) -> bool:
+    """Return True if ``call_node`` targets ``gate_auth_eval_call`` (any alias)."""
+    target = ""
+    f = call_node.func
+    if isinstance(f, ast.Name):
+        target = f.id
+    elif isinstance(f, ast.Attribute):
+        target = f.attr
+    return "gate_auth_eval_call" in target
+
+
+def _check_365_line_has_waiver(line_text: str) -> bool:
+    """Return True if ``line_text`` carries a valid Catalog #365 waiver."""
+    match = _CHECK_365_WAIVER_RE.search(line_text)
+    if not match:
+        return False
+    rationale = match.group("rationale").strip().rstrip("#)/ \t").strip()
+    if rationale in _CHECK_365_WAIVER_PLACEHOLDERS:
+        return False
+    if len(rationale) < 4:
+        return False
+    return True
+
+
+def _check_365_collect_violations_in_file(
+    path: Path, repo_root: Path
+) -> list[str]:
+    """Walk ``path``, collect gate_auth_eval_call kwarg-drift violations."""
+    try:
+        src = path.read_text(encoding="utf-8")
+    except Exception:
+        return []
+    try:
+        tree = ast.parse(src, filename=str(path))
+    except SyntaxError:
+        return []
+    src_lines = src.splitlines()
+    rel = str(path.relative_to(repo_root)).replace("\\", "/")
+    violations: list[str] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if not _check_365_call_targets_gate_helper(node):
+            continue
+        # Check same-line waiver on the Call's first line.
+        if node.lineno - 1 < len(src_lines):
+            line_text = src_lines[node.lineno - 1]
+            if _check_365_line_has_waiver(line_text):
+                continue
+            # Also check the multi-line span (e.g. waiver on the closing `)` line).
+            end_line = getattr(node, "end_lineno", node.lineno)
+            for ln_idx in range(node.lineno - 1, min(end_line, len(src_lines))):
+                if _check_365_line_has_waiver(src_lines[ln_idx]):
+                    break
+            else:
+                pass  # no waiver found; continue to validation
+        kw_names = {kw.arg for kw in node.keywords if kw.arg}
+        # Check (a) deprecated kwargs absent
+        deprecated = kw_names & _CHECK_365_NONCANONICAL_KWARGS
+        # Check (b) all required canonical kwargs present
+        missing = _CHECK_365_REQUIRED_CANONICAL_KWARGS - kw_names
+        if not deprecated and not missing:
+            continue
+        # Check same-line waiver again (for clarity in violation message)
+        waived = False
+        end_line = getattr(node, "end_lineno", node.lineno)
+        for ln_idx in range(node.lineno - 1, min(end_line, len(src_lines))):
+            if _check_365_line_has_waiver(src_lines[ln_idx]):
+                waived = True
+                break
+        if waived:
+            continue
+        parts: list[str] = []
+        if deprecated:
+            parts.append(f"deprecated kwarg(s) {sorted(deprecated)!r}")
+        if missing:
+            parts.append(f"missing canonical kwarg(s) {sorted(missing)!r}")
+        violations.append(
+            f"[Catalog #365] {rel}:{node.lineno}: gate_auth_eval_call(...) "
+            f"signature drift: {'; '.join(parts)}. Canonical signature at "
+            f"tac.substrates._shared.smoke_auth_eval_gate.gate_auth_eval_call "
+            f"requires: args=, archive_zip=, inflate_sh=, upstream_dir=, "
+            f"output_json=, contest_auth_eval_script=, substrate_tag=. "
+            f"Empirical anchor: Cascade C' subagent C commit a885ea2e5 "
+            f"replaced archive=/json_out=/lane_id=/substrate_id= with "
+            f"canonical kwargs after Modal T4 fc-01KSK7GTPEF27FX0AAH2319GVR "
+            f"stage 7 auth_eval TypeError. Add same-line "
+            f"`# CANONICAL_GATE_KWARG_DRIFT_OK:<rationale>` waiver only with "
+            f"operator review (placeholder rationale rejected per Catalog #287)."
+        )
+    return violations
+
+
+def check_substrate_trainer_routes_through_canonical_gate_auth_eval_call_with_correct_kwargs(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #365 — refuse gate_auth_eval_call kwarg drift in substrate trainers.
+
+    Sister of Catalog #226 at the KWARG-SIGNATURE sub-surface. AST-scans
+    ``experiments/train_substrate_*.py`` + ``experiments/train_renderer*.py``
+    for every Call to ``gate_auth_eval_call`` (or its alias) and refuses any
+    that use deprecated kwarg names (``archive=`` / ``json_out=`` /
+    ``lane_id=`` / ``substrate_id=``) OR are missing canonical required
+    kwargs (``args=`` / ``archive_zip=`` / ``output_json=`` /
+    ``contest_auth_eval_script=`` / ``substrate_tag=``).
+
+    Same-line waiver: ``# CANONICAL_GATE_KWARG_DRIFT_OK:<rationale>`` on
+    the Call line (rationale >= 4 chars; placeholder rejected).
+
+    Empirical anchor: Cascade C' subagent C commit ``a885ea2e5`` fixed the
+    only known violation after Modal T4 ``fc-01KSK7GTPEF27FX0AAH2319GVR``
+    stage 7 auth_eval TypeError per the deprecated kwarg names.
+
+    Returns:
+        List of violation messages. Empty list = clean.
+    """
+
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    files = _check_365_iter_trainer_files(root)
+    violations: list[str] = []
+    for path in files:
+        violations.extend(_check_365_collect_violations_in_file(path, root))
+
+    if verbose:
+        if violations:
+            print(
+                f"  [catalog-365] WARN: {len(violations)} kwarg-drift "
+                f"violation(s) across {len(files)} trainer file(s) "
+                f"(strict={strict})"
+            )
+        else:
+            print(f"  [catalog-365] OK ({len(files)} trainer file(s) scanned)")
+
+    if violations and strict:
+        raise PreflightError(
+            f"check_substrate_trainer_routes_through_canonical_gate_auth_eval_call_with_correct_kwargs: "
+            f"{len(violations)} kwarg-drift violation(s) (Catalog #365 — "
+            f"CANONICAL HELPER SIGNATURE DRIFT extension; Cascade C' subagent C "
+            f"a885ea2e5 anchor); first 3:\n  "
+            + "\n  ".join(violations[:3])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #366 — check_substrate_trainer_emitted_inflate_shim_imports_match_canonical_module_exports
+#
+# INFLATE SHIM IMPORT DRIFT extension to Catalog #361 self-protection
+# 2026-05-26 per Cascade C' Wave 2 verdict empirical anchor (commit
+# `3c2ce7fc2` inline fix). Sister of Catalog #361 (Modal artifact filter)
+# + Catalog #146 (contest-compliant runtime template) + Catalog #295
+# (PYTHONPATH self-containment) at the IMPORT-NAME sub-surface.
+#
+# Empirical anchor: Cascade C' Wave 2 inflate shim raised
+# ``ImportError: cannot import name 'main' from
+# 'tac.substrates.cascade_c_prime_frame_1_segnet_waterfill.inflate'``
+# because the trainer wrapper's emitted inflate.py contained ``from
+# tac.substrates.<X>.inflate import main`` but the canonical module
+# exports ``main_cli`` (not ``main``). Fix landed `3c2ce7fc2` used
+# ``from ... import main_cli as main``.
+#
+# This META-class extends to ANY future trainer wrapper that emits an
+# inflate.py shim with a ``from tac.substrates.<X>.inflate import <name>``
+# statement. The shim's import-NAME must exist as an export in the target
+# inflate module — otherwise the shim crashes at the first import attempt.
+#
+# AST-aware scan: walks every string-literal Constant in
+# ``experiments/train_substrate_*.py`` + ``experiments/train_renderer*.py``;
+# extracts ``from tac.substrates.<modpath>.inflate import <name>`` patterns;
+# parses the target inflate module's AST + extracts exports (FunctionDef +
+# Assign + ClassDef names); refuses any shim whose imported name is not
+# in the target module's export set.
+#
+# Same-line waiver: ``# INFLATE_SHIM_IMPORT_DRIFT_OK:<rationale>`` on the
+# string-literal line (rationale >= 4 chars; placeholder rejected).
+#
+# STRICT-from-byte-one per CLAUDE.md "Bugs must be permanently fixed AND
+# self-protected against" + "Strict-flip atomicity rule" non-negotiables —
+# live count at landing: 0 (the Wave 2 fix `3c2ce7fc2` cleaned the only
+# known violation in the same commit batch + the trainer wrapper now uses
+# ``main_cli as main``).
+#
+# Sister of Catalog #361 (Modal artifact harvester preserves output/submission)
+# + Catalog #146 (contest-compliant runtime template) + Catalog #295
+# (PYTHONPATH self-containment) + Catalog #205 (canonical select_inflate_device).
+# Together they extinct the substrate-trainer inflate-emission bug class at
+# FOUR surfaces: filter (#361) + template (#146) + path (#295) + device
+# (#205) + import-name (#366 — this gate).
+#
+# Memory: feedback_fix_wave_cascade_c_prime_all_bugs_permanent_fix_and_self_protect_against_landed_20260526.md.
+# Lane: lane_fix_wave_cascade_c_prime_all_bugs_permanent_fix_and_self_protect_against_20260526.
+# Retroactive sweep memo: .omx/research/retroactive_sweep_for_catalog_366_*.md.
+# ============================================================================
+
+_CHECK_366_SHIM_PATTERN = re.compile(
+    r"from\s+(?P<modpath>tac\.substrates\.[a-z0-9_.]+\.inflate)"
+    r"\s+import\s+(?P<name>[a-z_][a-z0-9_]*)",
+    re.IGNORECASE,
+)
+_CHECK_366_WAIVER_RE = re.compile(
+    r"#\s*INFLATE_SHIM_IMPORT_DRIFT_OK\s*:\s*(?P<rationale>[^\n]+)"
+)
+_CHECK_366_WAIVER_PLACEHOLDERS: frozenset[str] = frozenset({
+    "<rationale>", "<reason>", ""
+})
+
+
+def _check_366_iter_trainer_files(repo_root: Path) -> list[Path]:
+    """Return ``experiments/train_substrate_*.py`` + train_renderer*.py files."""
+    files: list[Path] = []
+    exp_dir = repo_root / "experiments"
+    if exp_dir.exists():
+        for pat in ("train_substrate_*.py", "train_renderer*.py"):
+            for f in exp_dir.glob(pat):
+                if f.is_file():
+                    files.append(f)
+    return sorted(set(files))
+
+
+def _check_366_module_exports(target_fp: Path) -> set[str]:
+    """Parse target inflate module + return set of top-level exports."""
+    try:
+        src = target_fp.read_text(encoding="utf-8")
+    except Exception:
+        return set()
+    try:
+        mod_tree = ast.parse(src, filename=str(target_fp))
+    except SyntaxError:
+        return set()
+    exports: set[str] = set()
+    for n in mod_tree.body:
+        if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            exports.add(n.name)
+        elif isinstance(n, ast.ClassDef):
+            exports.add(n.name)
+        elif isinstance(n, ast.Assign):
+            for t in n.targets:
+                if isinstance(t, ast.Name):
+                    exports.add(t.id)
+        elif isinstance(n, ast.AnnAssign):  # ASSIGN_ONLY_OK_dual_handled_per_catalog_168
+            if isinstance(n.target, ast.Name):
+                exports.add(n.target.id)
+        elif isinstance(n, (ast.Import, ast.ImportFrom)):
+            for alias in n.names:
+                # Imported names are also exported via the module namespace.
+                exports.add(alias.asname or alias.name.split(".")[-1])
+    return exports
+
+
+def _check_366_line_has_waiver(line_text: str) -> bool:
+    """Return True if ``line_text`` carries a valid Catalog #366 waiver."""
+    match = _CHECK_366_WAIVER_RE.search(line_text)
+    if not match:
+        return False
+    rationale = match.group("rationale").strip().rstrip("#)/ \t").strip()
+    if rationale in _CHECK_366_WAIVER_PLACEHOLDERS:
+        return False
+    if len(rationale) < 4:
+        return False
+    return True
+
+
+def _check_366_collect_violations_in_file(
+    path: Path, repo_root: Path
+) -> list[str]:
+    """Walk ``path``, collect inflate shim import drift violations."""
+    try:
+        src = path.read_text(encoding="utf-8")
+    except Exception:
+        return []
+    try:
+        tree = ast.parse(src, filename=str(path))
+    except SyntaxError:
+        return []
+    src_lines = src.splitlines()
+    rel = str(path.relative_to(repo_root)).replace("\\", "/")
+    violations: list[str] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Constant):
+            continue
+        if not isinstance(node.value, str):
+            continue
+        for match in _CHECK_366_SHIM_PATTERN.finditer(node.value):
+            modpath = match.group("modpath")
+            name = match.group("name")
+            # Resolve target module
+            local_rel = modpath.replace("tac.", "src/tac/").replace(".", "/") + ".py"
+            target_fp = repo_root / local_rel
+            if not target_fp.exists():
+                # Same-line waiver?
+                if node.lineno - 1 < len(src_lines) and _check_366_line_has_waiver(
+                    src_lines[node.lineno - 1]
+                ):
+                    continue
+                violations.append(
+                    f"[Catalog #366] {rel}:{node.lineno}: trainer-emitted inflate "
+                    f"shim imports '{name}' from {modpath} but target module "
+                    f"does not exist at {local_rel}. Add canonical inflate "
+                    f"module OR fix shim emission OR add same-line "
+                    f"`# INFLATE_SHIM_IMPORT_DRIFT_OK:<rationale>` waiver."
+                )
+                continue
+            exports = _check_366_module_exports(target_fp)
+            if name in exports:
+                continue
+            # Same-line waiver?
+            if node.lineno - 1 < len(src_lines) and _check_366_line_has_waiver(
+                src_lines[node.lineno - 1]
+            ):
+                continue
+            violations.append(
+                f"[Catalog #366] {rel}:{node.lineno}: trainer-emitted inflate "
+                f"shim imports '{name}' from {modpath} but target module "
+                f"only exports {sorted(exports)[:10]!r}. Empirical anchor: "
+                f"Cascade C' Wave 2 ImportError per commit 3c2ce7fc2 fix "
+                f"(shim imported 'main' but canonical module exports "
+                f"'main_cli'; fix uses 'from ... import main_cli as main'). "
+                f"Fix emission to import an existing export OR add same-line "
+                f"`# INFLATE_SHIM_IMPORT_DRIFT_OK:<rationale>` waiver "
+                f"(placeholder rejected per Catalog #287)."
+            )
+    return violations
+
+
+def check_substrate_trainer_emitted_inflate_shim_imports_match_canonical_module_exports(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #366 — refuse inflate shim import drift in substrate trainers.
+
+    Sister of Catalog #361 (Modal artifact harvester preserves
+    output/submission) + Catalog #146 (contest-compliant runtime template)
+    + Catalog #295 (PYTHONPATH self-containment) + Catalog #205 (canonical
+    select_inflate_device). Together they extinct the substrate-trainer
+    inflate-emission bug class at FIVE surfaces: filter (#361) + template
+    (#146) + path (#295) + device (#205) + import-name (#366).
+
+    Empirical anchor: Cascade C' Wave 2 inflate shim raised
+    ``ImportError: cannot import name 'main' from
+    'tac.substrates.cascade_c_prime_frame_1_segnet_waterfill.inflate'``
+    because the trainer wrapper's emitted inflate.py imported 'main'
+    but canonical module exports 'main_cli'. Fix landed ``3c2ce7fc2``
+    uses ``from ... import main_cli as main``.
+
+    AST-aware scan walks string-literal Constants in
+    ``experiments/train_substrate_*.py`` + ``experiments/train_renderer*.py``;
+    extracts ``from tac.substrates.<X>.inflate import <name>`` patterns;
+    parses the target module + extracts exports; refuses any shim whose
+    imported name is not in the target module's export set.
+
+    Same-line waiver: ``# INFLATE_SHIM_IMPORT_DRIFT_OK:<rationale>`` on
+    the string-literal line (rationale >= 4 chars; placeholder rejected).
+
+    Returns:
+        List of violation messages. Empty list = clean.
+    """
+
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    files = _check_366_iter_trainer_files(root)
+    violations: list[str] = []
+    for path in files:
+        violations.extend(_check_366_collect_violations_in_file(path, root))
+
+    if verbose:
+        if violations:
+            print(
+                f"  [catalog-366] WARN: {len(violations)} shim import drift "
+                f"violation(s) across {len(files)} trainer file(s) "
+                f"(strict={strict})"
+            )
+        else:
+            print(f"  [catalog-366] OK ({len(files)} trainer file(s) scanned)")
+
+    if violations and strict:
+        raise PreflightError(
+            f"check_substrate_trainer_emitted_inflate_shim_imports_match_canonical_module_exports: "
+            f"{len(violations)} shim import drift violation(s) (Catalog #366 — "
+            f"INFLATE SHIM IMPORT DRIFT extension; Cascade C' Wave 2 3c2ce7fc2 "
+            f"anchor); first 3:\n  "
+            + "\n  ".join(violations[:3])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #367 — check_substrate_inflate_emits_expected_frame_count_or_fail_closed
+#
+# INFLATE RAW BYTES FAIL-OPEN extension to Catalog #146 self-protection
+# 2026-05-26 per Cascade C' WAVE-3 verdict empirical anchor (commit
+# `39e1db080`). Sister of Catalog #146 (contest-compliant inflate
+# template) + Catalog #205 (canonical select_inflate_device) + Catalog
+# #295 (PYTHONPATH self-containment) at the FRAME-EMISSION-COUNT sub-
+# surface.
+#
+# Empirical anchor: Cascade C' WAVE-3 Modal T4 dispatch
+# ``fc-01KSKB4B30DCYTCP883XYV5BNV`` returned rc=0 elapsed=11.62s with
+# stage 1-6 SUCCESS but stage 7 contest_auth_eval FAILED with:
+#   ``RuntimeError: [inflate] WRONG-SIZE .raw file(s):
+#     0.raw=707788800B (expected 3662409600B). Each must be 3,662,409,600
+#     bytes (1164x874x1200x3). Likely truncated mid-decode.``
+#
+# Root cause: WAVE-3 inflate.py emitted 1200 frames at 384x512x3 resolution
+# instead of 1200 frames at 1164x874x3 (contest output resolution). Fix
+# landed via Cascade C' commits `5bcb53070` (full-frame inflate scaffold)
+# + `d0c4517ea` (waterfill queue integration); current inflate.py at HEAD
+# has `_write_sparse_zero_raw` + `raw_bytes != CONTEST_RAW_BYTES` raise.
+#
+# This META-class self-protect catches ANY future regression where a
+# substrate inflate.py emits raw bytes that don't match the contest
+# 1164x874x1200x3 = 3,662,409,600 byte contract. The contest's
+# upstream/contest_auth_eval.py checks raw-byte size strictly per
+# `_run_inflate` and refuses with WRONG-SIZE if mismatch.
+#
+# Detection: scans `submissions/*/inflate.py` (excluding submissions/
+# exact_current/ per CLAUDE.md mutation frontier) + `src/tac/substrates/*/
+# inflate.py` for files that contain a `.raw` output-write pattern. For
+# each file, requires (a) reference to CONTEST_RAW_BYTES / CONTEST_NUM_FRAMES
+# / CONTEST_OUT_H / CONTEST_OUT_W or equivalent canonical constants AND
+# (b) a fail-closed check (raise/assert) on raw_bytes / frame_count /
+# byte_count or equivalent.
+#
+# Same-line waiver: ``# INFLATE_FRAME_COUNT_FAIL_OPEN_OK:<rationale>`` on
+# any line in the file (rationale >= 4 chars; placeholder rejected per
+# Catalog #287). Reserved for legitimate streaming-emission patterns or
+# scaffolds that explicitly delegate to a sister module that does the
+# fail-closed check.
+#
+# Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule"
+# because many in-flight scaffold inflate.py files don't yet write raw
+# bytes (they're SCAFFOLD_DEFERRED_INTEGRATION per Catalog #220). The
+# gate fires structurally on any inflate.py that DOES emit raw bytes
+# without a fail-closed check.
+#
+# Sister of Catalog #146 (contest-compliant template) + Catalog #205
+# (canonical select_inflate_device) + Catalog #220 (L1 scaffold
+# operational mechanism) + Catalog #272 (distinguishing-feature
+# integration contract) + Catalog #295 (PYTHONPATH self-containment).
+#
+# Memory: feedback_fix_wave_cascade_c_prime_all_bugs_permanent_fix_and_self_protect_against_landed_20260526.md.
+# Lane: lane_fix_wave_cascade_c_prime_all_bugs_permanent_fix_and_self_protect_against_20260526.
+# Retroactive sweep memo: .omx/research/retroactive_sweep_for_catalog_367_*.md.
+# ============================================================================
+
+_CHECK_367_EXEMPT_PATH_MARKERS: tuple[str, ...] = (
+    "submissions/exact_current/",  # pinned upstream snapshot
+    "_intake_",
+    ".omx/oss_export/",
+    "vendored",
+    "/tests/",
+    "/test_",
+    "build/lib/",
+)
+
+# Indicators that the inflate.py emits raw bytes to a .raw file.
+_CHECK_367_RAW_WRITE_INDICATORS: tuple[str, ...] = (
+    ".raw",
+    "raw_bytes",
+    "with_suffix",
+)
+
+# Patterns that suggest the file references the contest output contract.
+# Files lacking ALL of these AND emitting raw bytes are out of scope (likely
+# scaffolds that don't yet write).
+_CHECK_367_CONTEST_CONTRACT_TOKENS: tuple[str, ...] = (
+    "CONTEST_RAW_BYTES",
+    "CONTEST_NUM_FRAMES",
+    "CONTEST_OUT_H",
+    "CONTEST_OUT_W",
+    "CONTEST_FRAME_BYTES",
+    "1164",  # canonical contest width
+    "3662409600",  # canonical contest raw byte count
+    "3_662_409_600",
+)
+
+# Tokens that indicate a fail-closed raw-byte / frame-count check exists.
+_CHECK_367_FAIL_CLOSED_TOKENS: tuple[str, ...] = (
+    "raise AssertionError",
+    "raise ValueError",
+    "raise RuntimeError",
+    "assert raw_bytes",
+    "assert frame_count",
+    "!= CONTEST_RAW_BYTES",
+    "!= CONTEST_NUM_FRAMES",
+    "contest raw byte contract",
+    "raw byte contract drifted",
+    "wrong-size",
+    "WRONG-SIZE",
+    "expected_frames",
+    "expected_raw",
+    "frame_count_check",
+    "byte_count_check",
+)
+
+_CHECK_367_WAIVER_RE = re.compile(
+    r"#\s*INFLATE_FRAME_COUNT_FAIL_OPEN_OK\s*:\s*(?P<rationale>[^\n]+)"
+)
+_CHECK_367_WAIVER_PLACEHOLDERS: frozenset[str] = frozenset({
+    "<rationale>", "<reason>", ""
+})
+
+
+def _check_367_iter_inflate_files(repo_root: Path) -> list[Path]:
+    """Return inflate.py files in scope (submissions + substrates)."""
+    files: list[Path] = []
+    sub_dir = repo_root / "submissions"
+    if sub_dir.exists():
+        for fp in sub_dir.glob("*/inflate.py"):
+            if fp.is_file():
+                files.append(fp)
+    sb_dir = repo_root / "src" / "tac" / "substrates"
+    if sb_dir.exists():
+        for fp in sb_dir.glob("*/inflate.py"):
+            if fp.is_file():
+                files.append(fp)
+    return sorted(files)
+
+
+def _check_367_path_in_scope(path: Path, repo_root: Path) -> bool:
+    """Return True if ``path`` is in scope (not exempt)."""
+    try:
+        rel = str(path.relative_to(repo_root)).replace("\\", "/")
+    except ValueError:
+        return False
+    for marker in _CHECK_367_EXEMPT_PATH_MARKERS:
+        if marker in rel:
+            return False
+    return True
+
+
+def _check_367_file_has_waiver(text: str) -> bool:
+    """Return True if ``text`` carries a valid Catalog #367 waiver anywhere."""
+    for line in text.splitlines():
+        match = _CHECK_367_WAIVER_RE.search(line)
+        if not match:
+            continue
+        rationale = match.group("rationale").strip().rstrip("#)/ \t").strip()
+        if rationale in _CHECK_367_WAIVER_PLACEHOLDERS:
+            continue
+        if len(rationale) < 4:
+            continue
+        return True
+    return False
+
+
+def check_substrate_inflate_emits_expected_frame_count_or_fail_closed(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #367 — refuse inflate.py files that emit raw bytes without fail-closed frame-count check.
+
+    Sister of Catalog #146 (contest-compliant template) + Catalog #205
+    (canonical select_inflate_device) + Catalog #220 (L1 scaffold
+    operational mechanism) + Catalog #272 (distinguishing-feature
+    integration contract) + Catalog #295 (PYTHONPATH self-containment).
+
+    Empirical anchor: Cascade C' WAVE-3 dispatch
+    ``fc-01KSKB4B30DCYTCP883XYV5BNV`` returned rc=0 but contest_auth_eval
+    crashed with ``RuntimeError: [inflate] WRONG-SIZE .raw file(s):
+    0.raw=707788800B (expected 3662409600B)`` because WAVE-3 inflate.py
+    emitted 1200 frames at 384x512x3 instead of 1200 frames at 1164x874x3.
+    Fix landed Cascade C' commits ``5bcb53070`` + ``d0c4517ea``.
+
+    Scans ``submissions/*/inflate.py`` (excluding ``submissions/exact_current/``
+    per CLAUDE.md mutation frontier) + ``src/tac/substrates/*/inflate.py``.
+    For files that emit raw bytes AND reference the contest output contract,
+    requires a fail-closed check (raise/assert) on raw_bytes / frame_count /
+    byte_count.
+
+    Same-line / file-level waiver: ``# INFLATE_FRAME_COUNT_FAIL_OPEN_OK:<rationale>``
+    (rationale >= 4 chars; placeholder rejected).
+
+    Returns:
+        List of violation messages. Empty list = clean.
+    """
+
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    files = _check_367_iter_inflate_files(root)
+    violations: list[str] = []
+    for path in files:
+        if not _check_367_path_in_scope(path, root):
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except Exception:
+            continue
+        rel = str(path.relative_to(root)).replace("\\", "/")
+        # File-level waiver?
+        if _check_367_file_has_waiver(text):
+            continue
+        # Only fires if file emits raw bytes AND references contest contract.
+        emits_raw = any(tok in text for tok in _CHECK_367_RAW_WRITE_INDICATORS)
+        references_contest = any(
+            tok in text for tok in _CHECK_367_CONTEST_CONTRACT_TOKENS
+        )
+        if not (emits_raw and references_contest):
+            continue
+        has_fail_closed = any(
+            tok in text for tok in _CHECK_367_FAIL_CLOSED_TOKENS
+        )
+        if has_fail_closed:
+            continue
+        violations.append(
+            f"[Catalog #367] {rel}: emits raw bytes AND references contest "
+            f"output contract but lacks fail-closed check on raw_bytes/"
+            f"frame_count/byte_count. Empirical anchor: Cascade C' WAVE-3 "
+            f"dispatch fc-01KSKB4B30DCYTCP883XYV5BNV emitted 708MB instead "
+            f"of 3.66GB (1200 frames at 384x512x3 instead of 1164x874x3); "
+            f"contest_auth_eval crashed WRONG-SIZE. Add fail-closed check: "
+            f"`if raw_bytes != CONTEST_RAW_BYTES: raise AssertionError(...)` "
+            f"OR add file-level `# INFLATE_FRAME_COUNT_FAIL_OPEN_OK:<rationale>` "
+            f"waiver (placeholder rejected per Catalog #287)."
+        )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [catalog-367] WARN: {len(violations)} fail-open inflate "
+                f"file(s) of {len(files)} scanned (strict={strict})"
+            )
+        else:
+            print(f"  [catalog-367] OK ({len(files)} inflate file(s) scanned)")
+
+    if violations and strict:
+        raise PreflightError(
+            f"check_substrate_inflate_emits_expected_frame_count_or_fail_closed: "
+            f"{len(violations)} inflate file(s) emit raw bytes without "
+            f"fail-closed check (Catalog #367 — INFLATE RAW BYTES FAIL-OPEN "
+            f"extension; Cascade C' WAVE-3 39e1db080 anchor); first 3:\n  "
+            + "\n  ".join(violations[:3])
+        )
     return violations
 
 
