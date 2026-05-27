@@ -59294,6 +59294,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_cascade_b_catalyst_sister_wave_2_production_scale_post_train_qat_real_segnet_20260526",
+      "name": "Cascade B CATALYST sister wave 2 production 600fx1000ep + post-train QAT",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/cascade_b_catalyst_sister_wave_2_production_scale_post_train_qat_real_segnet_20260526.py (723 LOC; production 600fx1000ep+QAT100ep PARTIAL_CONFIRMATION; experiments/results/.../sweep_results.json)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/cascade_b_catalyst_sister_wave_2_production_scale_landed_20260527.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -59303,5 +59344,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-27T13:21:30Z"
+  "updated_at": "2026-05-27T13:34:50Z"
 }
