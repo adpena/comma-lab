@@ -12,6 +12,7 @@ import pytest
 from tac.analysis.hnerv_packet_sections import (
     A2K1_MAGIC,
     CPLX1_MAGIC,
+    FECA_MAGIC_PREFIX,
     FEC6_MAGIC_PREFIX,
     FP11_MAGIC_PREFIX,
     MANIFEST_SCHEMA,
@@ -153,6 +154,48 @@ def test_pr101_fec6_manifest_records_dqs1_selective_runtime_tail(tmp_path: Path)
     assert tail_section["offset"] == len(payload) - len(dqs1_tail)
     assert tail_section["length"] == len(dqs1_tail)
     assert tail_section["optimization_role"] == "sidecar_or_correction_stream"
+    assert manifest["coverage"]["covers_payload"] is True
+    assert validate_packet_section_manifest(manifest) == []
+
+
+def test_pr101_fec10_manifest_records_feca_selector_sections(tmp_path: Path) -> None:
+    source_sidecar = b"s" * 607
+    source_payload = (
+        b"d" * PR101_DECODER_BLOB_LEN
+        + b"l" * PR101_LATENT_BLOB_LEN
+        + source_sidecar
+    )
+    selector_bits = b"\x80" * 228
+    selector_payload = (
+        FECA_MAGIC_PREFIX
+        + b"\x00\x01"
+        + (600).to_bytes(2, "little")
+        + selector_bits
+    )
+    payload = (
+        FP11_MAGIC_PREFIX
+        + len(source_payload).to_bytes(4, "little")
+        + source_payload
+        + len(selector_payload).to_bytes(2, "little")
+        + selector_payload
+    )
+    archive = tmp_path / "pr101_fec10.zip"
+    _stored_zip(archive, "x", payload)
+
+    manifest = build_packet_section_manifest(
+        archive,
+        label="PR101 FEC10",
+        parser=PARSER_AUTO,
+    )
+
+    assert manifest["parser_section_gate"]["ready"] is True
+    assert manifest["parser"]["name"] == PARSER_PR101_FEC6
+    assert [section["name"] for section in manifest["sections"]][-2:] == [
+        "selector_fec10_hybrid_adaptive_blend_header",
+        "selector_fec10_hybrid_adaptive_blend_bitstream",
+    ]
+    assert manifest["sections"][-2]["length"] == 8
+    assert manifest["sections"][-1]["length"] == len(selector_bits)
     assert manifest["coverage"]["covers_payload"] is True
     assert validate_packet_section_manifest(manifest) == []
 

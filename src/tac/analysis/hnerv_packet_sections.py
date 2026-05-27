@@ -159,6 +159,10 @@ PR101_FEC6_SECTION_ROLES = {
     "selector_len_u16le": "control_or_metadata",
     "selector_fec6_fixed_huffman_k16_header": "entropy_model_or_range_stream",
     "selector_fec6_fixed_huffman_k16_bitstream": "sidecar_or_correction_stream",
+    "selector_fec8_markov_header": "entropy_model_or_range_stream",
+    "selector_fec8_markov_bitstream": "sidecar_or_correction_stream",
+    "selector_fec10_hybrid_adaptive_blend_header": "entropy_model_or_range_stream",
+    "selector_fec10_hybrid_adaptive_blend_bitstream": "sidecar_or_correction_stream",
     "selector_dqs1_selective_runtime_tail": "sidecar_or_correction_stream",
 }
 PR103_SECTION_ROLES = {
@@ -215,6 +219,8 @@ Z5PCWM1_MAGIC_PREFIX = b"Z5WM"
 TT5L_MAGIC_PREFIX = b"TT5L"
 FP11_MAGIC_PREFIX = b"FP11"
 FEC6_MAGIC_PREFIX = b"FEC6"
+FEC8_MAGIC_PREFIX = b"FEC8"
+FECA_MAGIC_PREFIX = b"FECa"
 
 
 class HnervPacketSectionManifestError(ValueError):
@@ -698,14 +704,48 @@ def _parse_pr101_fec6_sections(payload: bytes) -> list[dict[str, Any]]:
             f"PR101 FEC6 selector payload too short: {selector_len}"
         )
     selector_magic = payload[selector_start : selector_start + 4]
-    if selector_magic != FEC6_MAGIC_PREFIX:
-        raise HnervPacketSectionManifestError(
-            f"PR101 FEC6 selector magic mismatch: {selector_magic!r}"
+    selector_header_len: int
+    selector_header_name: str
+    selector_bitstream_name: str
+    if selector_magic == FEC6_MAGIC_PREFIX:
+        selector_header_len = 6
+        selector_header_name = "selector_fec6_fixed_huffman_k16_header"
+        selector_bitstream_name = "selector_fec6_fixed_huffman_k16_bitstream"
+        n_pairs = int.from_bytes(
+            payload[selector_start + 4 : selector_start + 6],
+            "little",
         )
-    n_pairs = int.from_bytes(payload[selector_start + 4 : selector_start + 6], "little")
+    elif selector_magic == FEC8_MAGIC_PREFIX:
+        selector_header_len = 8
+        selector_header_name = "selector_fec8_markov_header"
+        selector_bitstream_name = "selector_fec8_markov_bitstream"
+        if selector_len < selector_header_len:
+            raise HnervPacketSectionManifestError(
+                f"PR101 FEC8 selector payload too short: {selector_len}"
+            )
+        n_pairs = int.from_bytes(
+            payload[selector_start + 6 : selector_start + 8],
+            "little",
+        )
+    elif selector_magic == FECA_MAGIC_PREFIX:
+        selector_header_len = 8
+        selector_header_name = "selector_fec10_hybrid_adaptive_blend_header"
+        selector_bitstream_name = "selector_fec10_hybrid_adaptive_blend_bitstream"
+        if selector_len < selector_header_len:
+            raise HnervPacketSectionManifestError(
+                f"PR101 FEC10 selector payload too short: {selector_len}"
+            )
+        n_pairs = int.from_bytes(
+            payload[selector_start + 6 : selector_start + 8],
+            "little",
+        )
+    else:
+        raise HnervPacketSectionManifestError(
+            f"PR101 frame selector magic mismatch: {selector_magic!r}"
+        )
     if n_pairs != 600:
         raise HnervPacketSectionManifestError(
-            f"PR101 FEC6 selector n_pairs mismatch: expected 600, got {n_pairs}"
+            f"PR101 frame selector n_pairs mismatch: expected 600, got {n_pairs}"
         )
     decoder_start = source_start
     latent_start = decoder_start + PR101_DECODER_BLOB_LEN
@@ -734,14 +774,14 @@ def _parse_pr101_fec6_sections(payload: bytes) -> list[dict[str, Any]]:
             payload[selector_len_start:selector_start],
         ),
         (
-            "selector_fec6_fixed_huffman_k16_header",
+            selector_header_name,
             selector_start,
-            payload[selector_start : selector_start + 6],
+            payload[selector_start : selector_start + selector_header_len],
         ),
         (
-            "selector_fec6_fixed_huffman_k16_bitstream",
-            selector_start + 6,
-            payload[selector_start + 6 : selector_end],
+            selector_bitstream_name,
+            selector_start + selector_header_len,
+            payload[selector_start + selector_header_len : selector_end],
         ),
     ]
     if dqs1_tail:
@@ -1498,7 +1538,7 @@ def _parser_confidence(parser_name: str) -> str:
     if parser_name == PARSER_PR101:
         return "fixed public PR101 offsets"
     if parser_name == PARSER_PR101_FEC6:
-        return "FP11 wrapper plus FEC6 fixed-Huffman K16 selector payload"
+        return "FP11 wrapper plus PR101-family frame selector payload"
     if parser_name == PARSER_PR103:
         return "existing PR103 lc_ac parser"
     if parser_name == PARSER_PR106:
@@ -1560,6 +1600,8 @@ __all__ = [
     "D1POLY1_MAGIC_PREFIX",
     "DP1_MAGIC_PREFIX",
     "FEC6_MAGIC_PREFIX",
+    "FEC8_MAGIC_PREFIX",
+    "FECA_MAGIC_PREFIX",
     "FP11_MAGIC_PREFIX",
     "IBPS1_MAGIC_PREFIX",
     "MANIFEST_SCHEMA",
