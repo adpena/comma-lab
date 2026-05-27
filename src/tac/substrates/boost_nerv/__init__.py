@@ -111,19 +111,23 @@ from .architecture import (
 )
 from .archive import (
     BoostnervArchive,
+    BoostnervArchiveNumpy,
     pack_archive,
     parse_archive,
+    parse_archive_numpy,
 )
 from .score_aware_loss import BoostnervScoreAwareLoss, ScoreAwareLossWeights
 
 __all__ = [
     "BoostnervArchive",
+    "BoostnervArchiveNumpy",
     "BoostnervConfig",
     "BoostnervScoreAwareLoss",
     "BoostnervSubstrate",
     "ScoreAwareLossWeights",
     "pack_archive",
     "parse_archive",
+    "parse_archive_numpy",
     # WAVE-1 canonical posterior emission wire-in (2026-05-26)
     "SUBSTRATE_ID",
     "ARCHITECTURE_CLASS",
