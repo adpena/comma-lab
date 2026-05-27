@@ -200,6 +200,22 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         "tac.optimization.repair_campaign_learning_signal",
         "build_repair_campaign_learning_signal",
     ),
+    "REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_APPEND_REPORT_SCHEMA": (
+        "tac.optimization.repair_campaign_posterior",
+        "REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_APPEND_REPORT_SCHEMA",
+    ),
+    "REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_ROW_SCHEMA": (
+        "tac.optimization.repair_campaign_posterior",
+        "REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_ROW_SCHEMA",
+    ),
+    "RepairCampaignPosteriorError": (
+        "tac.optimization.repair_campaign_posterior",
+        "RepairCampaignPosteriorError",
+    ),
+    "append_repair_campaign_stackability_posterior_signal": (
+        "tac.optimization.repair_campaign_posterior",
+        "append_repair_campaign_stackability_posterior_signal",
+    ),
     "observations_from_queue_observation": (
         "tac.optimization.inverse_steganalysis_acquisition",
         "observations_from_queue_observation",

@@ -13,6 +13,12 @@ from comma_lab.scheduler.repair_campaign_stackability_queue import (
 from tac.optimization.repair_campaign_learning_signal import (
     REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA,
 )
+from tac.optimization.repair_campaign_posterior import (
+    REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_APPEND_REPORT_SCHEMA,
+    REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_ROW_SCHEMA,
+    append_repair_campaign_stackability_posterior_signal,
+    load_repair_campaign_stackability_posterior_rows,
+)
 from tac.optimization.repair_campaign_replay_bundle import (
     REPAIR_CAMPAIGN_STACKABILITY_REPLAY_BUNDLE_DIFF_SCHEMA,
     REPAIR_CAMPAIGN_STACKABILITY_REPLAY_BUNDLE_SCHEMA,
@@ -144,11 +150,15 @@ def test_repair_campaign_learning_signal_is_public_optimization_export() -> None
         REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA as exported_schema,
     )
     from tac.optimization import (
+        append_repair_campaign_stackability_posterior_signal as exported_append,
+    )
+    from tac.optimization import (
         build_repair_campaign_learning_signal as exported_builder,
     )
 
     assert exported_schema == REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA
     assert callable(exported_builder)
+    assert exported_append is append_repair_campaign_stackability_posterior_signal
 
 
 def test_stackability_queue_emits_executable_local_probe(tmp_path: Path) -> None:
@@ -165,6 +175,8 @@ def test_stackability_queue_emits_executable_local_probe(tmp_path: Path) -> None
         score_report_path=report_path,
         results_root=tmp_path / "results",
         queue_id="stackability_test",
+        posterior_path=tmp_path / "repair_campaign_stackability_posterior.jsonl",
+        posterior_lock_path=tmp_path / ".repair_campaign_stackability_posterior.lock",
     )
 
     assert queue["metadata"]["schema"] == (
@@ -254,6 +266,56 @@ def test_stackability_queue_emits_executable_local_probe(tmp_path: Path) -> None
     ] > 0.0
     assert learning_signal["budget_spend_allowed"] is False
     assert learning_signal["ready_for_exact_eval_dispatch"] is False
+    posterior_command = [
+        sys.executable if item == ".venv/bin/python" else str(item)
+        for item in experiment["steps"][3]["command"]
+    ]
+    posterior_result = subprocess.run(
+        posterior_command,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert posterior_result.returncode == 0, posterior_result.stderr
+    posterior_report = json.loads(
+        Path(experiment["metadata"]["posterior_append_report_path"]).read_text(
+            encoding="utf-8"
+        )
+    )
+    posterior_rows = load_repair_campaign_stackability_posterior_rows(
+        tmp_path / "repair_campaign_stackability_posterior.jsonl"
+    )
+    assert posterior_report["schema"] == (
+        REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_APPEND_REPORT_SCHEMA
+    )
+    assert posterior_report["appended"] is True
+    assert posterior_report["ready_for_exact_eval_dispatch"] is False
+    assert len(posterior_rows) == 1
+    assert posterior_rows[0]["schema"] == REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_ROW_SCHEMA
+    assert posterior_rows[0]["row_id"] == posterior_report["row_id"]
+    assert posterior_rows[0]["replay_identity"]["hash_manifest_sha256"] == (
+        bundle["hash_manifest_sha256"]
+    )
+    duplicate_result = subprocess.run(
+        posterior_command,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert duplicate_result.returncode == 0, duplicate_result.stderr
+    duplicate_report = json.loads(
+        Path(experiment["metadata"]["posterior_append_report_path"]).read_text(
+            encoding="utf-8"
+        )
+    )
+    duplicate_rows = load_repair_campaign_stackability_posterior_rows(
+        tmp_path / "repair_campaign_stackability_posterior.jsonl"
+    )
+    assert duplicate_report["appended"] is False
+    assert duplicate_report["skipped_duplicate"] is True
+    assert len(duplicate_rows) == 1
 
 
 def test_stackability_replay_bundle_diff_detects_environment_drift(

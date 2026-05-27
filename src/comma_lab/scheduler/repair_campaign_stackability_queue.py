@@ -17,6 +17,11 @@ from tac.optimization.proxy_candidate_contract import (
 from tac.optimization.repair_campaign_learning_signal import (
     REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA,
 )
+from tac.optimization.repair_campaign_posterior import (
+    DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_LOCK_PATH,
+    DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_PATH,
+    REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_APPEND_REPORT_SCHEMA,
+)
 from tac.optimization.repair_campaign_replay_bundle import (
     REPAIR_CAMPAIGN_STACKABILITY_REPLAY_BUNDLE_SCHEMA,
 )
@@ -126,6 +131,8 @@ def _stackability_experiment(
     repo_root: str | Path,
     queue_root: Path,
     priority: int,
+    posterior_path: str | Path,
+    posterior_lock_path: str | Path,
 ) -> dict[str, Any]:
     typed_response_id = str(allocation.get("typed_response_id") or "").strip()
     score_row = _find_score_row(score_report, typed_response_id=typed_response_id)
@@ -147,6 +154,14 @@ def _stackability_experiment(
         / "repair_campaign_learning_signal.json"
     )
     learning_signal_ref = _repo_rel(learning_signal_path, repo_root)
+    posterior_append_report_path = (
+        queue_root
+        / _slug(typed_response_id)
+        / "repair_campaign_posterior_append_report.json"
+    )
+    posterior_append_report_ref = _repo_rel(posterior_append_report_path, repo_root)
+    posterior_ref = _repo_rel(posterior_path, repo_root)
+    posterior_lock_ref = _repo_rel(posterior_lock_path, repo_root)
     allocation_blockers: list[str] = []
     if not typed_response_id:
         allocation_blockers.append("typed_response_id_missing")
@@ -171,6 +186,12 @@ def _stackability_experiment(
         "replay_bundle_schema": REPAIR_CAMPAIGN_STACKABILITY_REPLAY_BUNDLE_SCHEMA,
         "learning_signal_path": learning_signal_ref,
         "learning_signal_schema": REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA,
+        "posterior_path": posterior_ref,
+        "posterior_lock_path": posterior_lock_ref,
+        "posterior_append_report_path": posterior_append_report_ref,
+        "posterior_append_report_schema": (
+            REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_APPEND_REPORT_SCHEMA
+        ),
         "queue_actuation_ready": queue_actuation_ready,
         "queue_actuation_blockers": blockers,
         "local_mlx_advisory_custody_required": True,
@@ -355,6 +376,55 @@ def _stackability_experiment(
                     ],
                     "include_postcondition_paths": True,
                 },
+            },
+            {
+                "id": "append_repair_campaign_stackability_posterior",
+                "kind": "command",
+                "requires": ["build_repair_campaign_learning_signal"],
+                "command": [
+                    ".venv/bin/python",
+                    "tools/append_repair_campaign_stackability_posterior.py",
+                    "--learning-signal",
+                    learning_signal_ref,
+                    "--posterior-path",
+                    posterior_ref,
+                    "--lock-path",
+                    posterior_lock_ref,
+                    "--report-out",
+                    posterior_append_report_ref,
+                    "--overwrite",
+                ],
+                "resources": {"kind": "local_cpu"},
+                "timeout_seconds": 120,
+                "postconditions": [
+                    {
+                        "type": "json_equals",
+                        "path": posterior_append_report_ref,
+                        "key": "schema",
+                        "equals": (
+                            REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_APPEND_REPORT_SCHEMA
+                        ),
+                    },
+                    {
+                        "type": "json_false_authority",
+                        "path": posterior_append_report_ref,
+                    },
+                    {
+                        "type": "jsonl_false_authority",
+                        "path": posterior_ref,
+                    },
+                    {
+                        "type": "json_equals",
+                        "path": posterior_append_report_ref,
+                        "key": "ready_for_exact_eval_dispatch",
+                        "equals": False,
+                    },
+                ],
+                "telemetry": {
+                    "artifact_paths": [posterior_append_report_ref, posterior_ref],
+                    "input_artifact_paths": [learning_signal_ref],
+                    "include_postcondition_paths": True,
+                },
             }
         ]
     return {
@@ -451,6 +521,10 @@ def build_repair_campaign_stackability_queue(
     results_root: str | Path,
     queue_id: str = "repair_campaign_stackability_queue",
     experiment_limit: int | None = None,
+    posterior_path: str | Path = DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_PATH,
+    posterior_lock_path: str | Path = (
+        DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_LOCK_PATH
+    ),
 ) -> dict[str, Any]:
     """Build local probe rows for optimizer-selected repair allocations."""
 
@@ -479,6 +553,8 @@ def build_repair_campaign_stackability_queue(
         / "repair_campaign_stackability_queue"
         / _slug(queue_id)
     )
+    resolved_posterior_path = _resolve(posterior_path, repo_root)
+    resolved_posterior_lock_path = _resolve(posterior_lock_path, repo_root)
     experiments = (
         [
             _stackability_experiment(
@@ -488,6 +564,8 @@ def build_repair_campaign_stackability_queue(
                 repo_root=repo_root,
                 queue_root=queue_root,
                 priority=priority,
+                posterior_path=resolved_posterior_path,
+                posterior_lock_path=resolved_posterior_lock_path,
             )
             for priority, allocation in enumerate(allocations, start=1)
         ]
@@ -525,6 +603,11 @@ def build_repair_campaign_stackability_queue(
         "blocked_experiment_count": len(experiments) - ready_count,
         "selected_allocation_count": len(allocations),
         "results_root": _repo_rel(queue_root, repo_root),
+        "posterior_path": _repo_rel(resolved_posterior_path, repo_root),
+        "posterior_lock_path": _repo_rel(resolved_posterior_lock_path, repo_root),
+        "posterior_append_report_schema": (
+            REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_APPEND_REPORT_SCHEMA
+        ),
         "queue_actuation_blockers": ordered_unique(blockers),
         "local_mlx_advisory_custody_required": True,
         "component_response_axis": "[macOS-MLX research-signal]",
