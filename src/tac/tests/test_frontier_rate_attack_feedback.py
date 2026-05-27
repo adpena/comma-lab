@@ -33,6 +33,7 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     RECEIVER_REPAIR_BACKLOG_SCHEMA,
     RECEIVER_REPAIR_ROW_SCHEMA,
     RECEIVER_REPAIR_WORK_ORDER_SCHEMA,
+    REPAIR_BUDGET_CHILD_COMPONENT_REPLAY_MANIFESTS_SCHEMA,
     REPAIR_BUDGET_MATERIALIZATION_EXECUTION_REPORT_SCHEMA,
     REPAIR_BUDGET_MATERIALIZATION_EXECUTION_ROW_SCHEMA,
     REPAIR_BUDGET_MATERIALIZATION_PLAN_ROW_SCHEMA,
@@ -3748,10 +3749,43 @@ def test_targeted_component_correction_materialization_requests_group_responses(
     )
     assert materialization_materialized["candidate_archive_materialized"] is False
     _assert_false_authority(materialization_materialized)
-    binding_step = repair_waterfill_experiment["steps"][2]
+    replay_step = repair_waterfill_experiment["steps"][2]
+    assert replay_step["command"][1] == (
+        "tools/build_frontier_repair_budget_child_component_replay_manifests.py"
+    )
+    result = subprocess.run(
+        [sys.executable, *replay_step["command"][1:]],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    replay_payload = json.loads(result.stdout)
+    assert replay_payload["ready_for_exact_eval_dispatch"] is False
+    replay_manifest_path = Path(
+        replay_step["command"][replay_step["command"].index("--output-manifest") + 1]
+    )
+    replay_materialized = json.loads(
+        (REPO_ROOT / replay_manifest_path).read_text(encoding="utf-8")
+    )
+    assert replay_materialized["schema"] == (
+        REPAIR_BUDGET_CHILD_COMPONENT_REPLAY_MANIFESTS_SCHEMA
+    )
+    assert replay_materialized["manifest_count"] == 0
+    assert replay_materialized["component_response_replayed_count"] == 0
+    assert any(
+        blocker.startswith("source_response_artifact_missing:")
+        for blocker in replay_materialized["blockers"]
+    )
+    _assert_false_authority(replay_materialized)
+    binding_step = repair_waterfill_experiment["steps"][3]
     assert binding_step["command"][1] == (
         "tools/build_frontier_repair_budget_materializer_binding_report.py"
     )
+    assert binding_step["command"][
+        binding_step["command"].index("--materializer-manifest") + 1
+    ].endswith("repair_budget_child_component_replay_manifests.json")
     assert binding_step["command"].count("--repair-palette-mode") == len(
         FEC6_FIXED_K16_MODE_IDS
     )
@@ -3784,7 +3818,7 @@ def test_targeted_component_correction_materialization_requests_group_responses(
         in binding_materialized["repair_dynamics_palette_prior"]["repair_waterfill_hints"]
     )
     _assert_false_authority(binding_materialized)
-    execution_step = repair_waterfill_experiment["steps"][3]
+    execution_step = repair_waterfill_experiment["steps"][4]
     assert execution_step["command"][1] == (
         "tools/build_frontier_repair_budget_materialization_execution_report.py"
     )
@@ -6192,9 +6226,21 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     assert repair_waterfill_metadata["materializer_work_queue_path"].endswith(
         "targeted_component_correction_chain_materializer_work_queue.json"
     )
-    binding_command = repair_waterfill_queue_artifact["experiments"][0]["steps"][2][
+    replay_command = repair_waterfill_queue_artifact["experiments"][0]["steps"][2][
         "command"
     ]
+    assert replay_command[1] == (
+        "tools/build_frontier_repair_budget_child_component_replay_manifests.py"
+    )
+    assert replay_command[
+        replay_command.index("--output-manifest") + 1
+    ].endswith("repair_budget_child_component_replay_manifests.json")
+    binding_command = repair_waterfill_queue_artifact["experiments"][0]["steps"][3][
+        "command"
+    ]
+    assert binding_command[
+        binding_command.index("--materializer-manifest") + 1
+    ].endswith("repair_budget_child_component_replay_manifests.json")
     assert binding_command[
         binding_command.index("--materializer-work-queue") + 1
     ].endswith("targeted_component_correction_chain_materializer_work_queue.json")

@@ -8,6 +8,7 @@ from pathlib import Path
 
 from comma_lab.scheduler.frontier_rate_attack_feedback import (
     AUTONOMOUS_CHAIN_OPTIMIZATION_ROW_SCHEMA,
+    REPAIR_BUDGET_CHILD_COMPONENT_REPLAY_MANIFESTS_SCHEMA,
     REPAIR_BUDGET_MATERIALIZATION_EXECUTION_REPORT_SCHEMA,
     REPAIR_BUDGET_MATERIALIZATION_EXECUTION_ROW_SCHEMA,
     REPAIR_BUDGET_MATERIALIZATION_PLAN_ROW_SCHEMA,
@@ -18,6 +19,7 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     REPAIR_CASCADE_OPPORTUNITY_ROW_SCHEMA,
     REPAIR_DYNAMICS_PALETTE_PRIOR_SCHEMA,
     TARGETED_COMPONENT_CORRECTION_RESPONSE_HARVEST_SCHEMA,
+    build_frontier_repair_budget_child_component_replay_manifests,
     build_frontier_repair_budget_materialization_execution_report,
     build_frontier_repair_budget_materialization_plan,
     build_frontier_repair_budget_materializer_binding_report,
@@ -177,6 +179,41 @@ def _receiver_consumed_manifest(
             ],
         }
     return manifest
+
+
+def _component_response_harvest(
+    *,
+    candidate_id: str = "pairset_drop_many_fixture",
+    correction_family: str = "repair_dynamics_frame0_palette_interaction_waterfill",
+    local_mlx_response_path: str = "artifacts/mlx_scorer_response.json",
+) -> dict[str, object]:
+    return {
+        "schema": TARGETED_COMPONENT_CORRECTION_RESPONSE_HARVEST_SCHEMA,
+        "row_count": 1,
+        "local_acquisition_recommended_count": 1,
+        "ready_for_budget_spend_count": 0,
+        "rows": [
+            {
+                "schema": "frontier_rate_attack_targeted_component_correction_response_row.v1",
+                "candidate_id": candidate_id,
+                "correction_family": correction_family,
+                "local_mlx_response_path": local_mlx_response_path,
+                "reference_local_mlx_response_path": (
+                    "artifacts/reference_mlx_scorer_response.json"
+                ),
+                "local_mlx_score_axis": "[macOS-MLX research-signal]",
+                "measured_component_delta_score_units": -0.0004,
+                "measured_lagrangian_delta_score_units": -0.0006,
+                "negative_measured_lagrangian_delta": True,
+                "budget_spend_blockers": [
+                    "exact_axis_component_response_required_before_budget_spend",
+                    "receiver_runtime_materialization_required_before_budget_spend",
+                ],
+                **FALSE_AUTHORITY,
+            }
+        ],
+        **FALSE_AUTHORITY,
+    }
 
 
 def test_repair_budget_materialization_execution_report_refuses_until_runtime_proof(
@@ -467,6 +504,90 @@ def test_repair_budget_child_component_replay_manifest_unblocks_local_execution(
     _assert_false_authority(execution_report)
 
 
+def test_repair_budget_child_replay_collection_preserves_signal_before_archive(
+    tmp_path: Path,
+) -> None:
+    plan = _materialization_plan()
+    parent_id = str(plan["parent_candidate_chain_id"])
+    child_id = str(plan["candidate_chain_rows"][1]["candidate_chain_id"])  # type: ignore[index]
+    response_path = tmp_path / "component_correction_response_harvest.json"
+    response_harvest = _component_response_harvest()
+    _write_json(response_path, response_harvest)
+    plan["candidate_chain_rows"][1]["source_response_artifact_path"] = str(response_path)  # type: ignore[index]
+    parent_manifest = _receiver_consumed_manifest(
+        tmp_path,
+        candidate_chain_id=parent_id,
+    )
+
+    replay_collection = build_frontier_repair_budget_child_component_replay_manifests(
+        repair_budget_materialization_plan=plan,
+        repair_budget_materialization_plan_path=tmp_path
+        / "repair_budget_materialization_plan.json",
+        response_harvests_by_path={str(response_path): response_harvest},
+    )
+
+    assert replay_collection["schema"] == (
+        REPAIR_BUDGET_CHILD_COMPONENT_REPLAY_MANIFESTS_SCHEMA
+    )
+    assert replay_collection["manifest_count"] == 1
+    assert replay_collection["component_response_replayed_count"] == 1
+    assert replay_collection["byte_closed_candidate_emitted_count"] == 0
+    replay_manifest = replay_collection["manifests"][0]
+    assert replay_manifest["candidate_chain_id"] == child_id
+    assert replay_manifest["byte_closed_candidate_emitted"] is False
+    assert replay_manifest["component_response_replayed"] is True
+    assert replay_manifest["component_response_replay"]["axis_tag"] == (
+        "[macOS-MLX research-signal]"
+    )
+    assert (
+        "repair_candidate_archive_materialization_missing"
+        in replay_manifest["readiness_blockers"]
+    )
+    _assert_false_authority(replay_collection)
+
+    replay_manifest_path = _write_json(tmp_path / "replay_collection.json", replay_collection)
+    binding_report = build_frontier_repair_budget_materializer_binding_report(
+        repo_root=REPO_ROOT,
+        repair_budget_materialization_plan=plan,
+        repair_budget_materialization_plan_path=tmp_path
+        / "repair_budget_materialization_plan.json",
+        materializer_manifests=[parent_manifest],
+        materializer_manifest_paths=[replay_manifest_path],
+    )
+
+    child_row = binding_report["binding_rows"][1]
+    assert child_row["candidate_archive_materialized"] is False
+    assert child_row["component_response_replayed"] is True
+    assert child_row["component_response_replay_path"] == str(response_path)
+    assert child_row["component_response_replay_axis_tag"] == (
+        "[macOS-MLX research-signal]"
+    )
+    assert "direct_materializer_manifest_not_receiver_consumed" in child_row["blockers"]
+    assert (
+        "repair_candidate_archive_materialization_missing" in child_row["blockers"]
+    )
+
+    execution_report = build_frontier_repair_budget_materialization_execution_report(
+        repair_budget_materialization_plan=plan,
+        repair_budget_materialization_plan_path=tmp_path
+        / "repair_budget_materialization_plan.json",
+        materializer_binding_report=binding_report,
+        materializer_binding_report_path=tmp_path
+        / "repair_budget_materializer_binding_report.json",
+    )
+    child_execution = execution_report["execution_rows"][1]
+    assert child_execution["component_response_replayed"] is True
+    assert child_execution["ready_for_local_materialization"] is False
+    assert "component_response_replayed_false" not in child_execution["blockers"]
+    assert (
+        "component_response_replay_required_before_budget_spend"
+        not in child_execution["blockers"]
+    )
+    assert "candidate_archive_materialized_false" in child_execution["blockers"]
+    assert execution_report["ready_for_exact_eval_dispatch"] is False
+    _assert_false_authority(execution_report)
+
+
 def test_receiver_closed_rate_credit_materializes_rate_only_parent_locally(
     tmp_path: Path,
 ) -> None:
@@ -699,19 +820,32 @@ def test_repair_budget_waterfill_queue_emits_execution_audit_step(
     assert step_ids == [
         "emit_repair_budget_waterfill_work_order",
         "emit_repair_budget_materialization_plan",
+        "emit_repair_budget_child_component_replay_manifests",
         "bind_repair_budget_materializer_execution",
         "audit_repair_budget_materialization_execution",
     ]
-    binding_step = experiment["steps"][2]
-    assert binding_step["requires"] == ["emit_repair_budget_materialization_plan"]
+    replay_step = experiment["steps"][2]
+    assert replay_step["requires"] == ["emit_repair_budget_materialization_plan"]
+    assert replay_step["command"][1] == (
+        "tools/build_frontier_repair_budget_child_component_replay_manifests.py"
+    )
+    assert any(
+        condition.get("equals") == REPAIR_BUDGET_CHILD_COMPONENT_REPLAY_MANIFESTS_SCHEMA
+        for condition in replay_step["postconditions"]
+    )
+    binding_step = experiment["steps"][3]
+    assert binding_step["requires"] == [
+        "emit_repair_budget_child_component_replay_manifests"
+    ]
     assert binding_step["command"][1] == (
         "tools/build_frontier_repair_budget_materializer_binding_report.py"
     )
+    assert "--materializer-manifest" in binding_step["command"]
     assert any(
         condition.get("equals") == REPAIR_BUDGET_MATERIALIZER_BINDING_REPORT_SCHEMA
         for condition in binding_step["postconditions"]
     )
-    audit_step = experiment["steps"][3]
+    audit_step = experiment["steps"][4]
     assert audit_step["requires"] == ["bind_repair_budget_materializer_execution"]
     assert audit_step["command"][1] == (
         "tools/build_frontier_repair_budget_materialization_execution_report.py"
@@ -725,6 +859,11 @@ def test_repair_budget_waterfill_queue_emits_execution_audit_step(
         experiment["metadata"]["candidate_chain_materializer_binding_report_path"].endswith(
             "repair_budget_materializer_binding_report.json"
         )
+    )
+    assert (
+        experiment["metadata"][
+            "candidate_chain_component_replay_manifests_path"
+        ].endswith("repair_budget_child_component_replay_manifests.json")
     )
     assert (
         experiment["metadata"]["candidate_chain_execution_report_path"].endswith(
