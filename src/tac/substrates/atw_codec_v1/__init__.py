@@ -163,8 +163,10 @@ from tac.substrates.atw_codec_v1.archive import (
     ATW1_SCHEMA_VERSION,
     ATW1_SECTION_ROLES,
     ATWCodecArchive,
+    ATWCodecArchiveNumpy,
     pack_archive,
     parse_archive,
+    parse_archive_numpy,
     parse_atw1_archive_bytes,
 )
 from tac.substrates.atw_codec_v1.score_aware_loss import (
@@ -184,10 +186,12 @@ __all__ = [
     "TOTAL_ARCHIVE_TARGET_BYTES_MIN",
     "ATWCodec",
     "ATWCodecArchive",
+    "ATWCodecArchiveNumpy",
     "ATWCodecConfig",
     "ATWLossWeights",
     "ATWScoreAwareLoss",
     "pack_archive",
     "parse_archive",
+    "parse_archive_numpy",
     "parse_atw1_archive_bytes",
 ]

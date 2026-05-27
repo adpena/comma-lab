@@ -61,6 +61,7 @@ import struct
 from dataclasses import dataclass
 
 import brotli  # type: ignore[import-not-found]
+import numpy as np
 import torch
 
 ATW1_MAGIC: bytes = b"ATW1"
@@ -133,13 +134,53 @@ def _serialize_state_dict(sd: dict[str, torch.Tensor]) -> bytes:
     return bytes(brotli.compress(raw, quality=_BROTLI_QUALITY))
 
 
+def _deserialize_numpy_state_dict(blob: bytes) -> dict[str, "np.ndarray"]:
+    """Torch-free deserialize of the ATW1 length-prefixed fp16 state_dict blob.
+
+    Reads the EXACT same byte format ``_serialize_state_dict`` produces, but
+    reconstructs each tensor as an ``np.float32`` ndarray with NO torch import.
+    The shipped numpy-portable inflate runtime calls this (8th MLX-first
+    standing directive: ``torch`` is FORBIDDEN at decode time). Returns ``{}``
+    for an empty blob (matching the torch-side helper).
+    """
+    if not blob:
+        return {}
+    raw = brotli.decompress(blob)
+    sd: dict[str, "np.ndarray"] = {}
+    pos = 0
+    while pos < len(raw):
+        if pos + 2 > len(raw):
+            raise ValueError("state_dict blob truncated reading key length")
+        (key_len,) = struct.unpack("<H", raw[pos : pos + 2])
+        pos += 2
+        if pos + key_len + 1 > len(raw):
+            raise ValueError("state_dict blob truncated reading key bytes")
+        key = raw[pos : pos + key_len].decode("utf-8")
+        pos += key_len
+        (ndim,) = struct.unpack("<B", raw[pos : pos + 1])
+        pos += 1
+        if pos + ndim * 4 > len(raw):
+            raise ValueError("state_dict blob truncated reading shape")
+        shape = struct.unpack("<" + "I" * ndim, raw[pos : pos + ndim * 4])
+        pos += ndim * 4
+        numel = 1
+        for dim in shape:
+            numel *= int(dim)
+        tensor_bytes = numel * 2  # fp16
+        if pos + tensor_bytes > len(raw):
+            raise ValueError(f"state_dict blob truncated reading tensor {key!r}")
+        arr = np.frombuffer(raw[pos : pos + tensor_bytes], dtype=np.float16).copy()
+        sd[key] = arr.reshape(shape).astype(np.float32)
+        pos += tensor_bytes
+    return sd
+
+
 def _deserialize_state_dict(blob: bytes) -> dict[str, torch.Tensor]:
     if not blob:
         return {}
     raw = brotli.decompress(blob)
     sd: dict[str, torch.Tensor] = {}
     pos = 0
-    import numpy as np
 
     while pos < len(raw):
         if pos + 2 > len(raw):
@@ -418,6 +459,116 @@ def parse_archive(blob: bytes) -> ATWCodecArchive:
     )
 
 
+@dataclass(frozen=True)
+class ATWCodecArchiveNumpy:
+    """Torch-free parsed ATW1 archive — the numpy-portable inflate-time contract.
+
+    Sister of :class:`ATWCodecArchive` but with ``np.ndarray`` weights / latents
+    so the shipped inflate runtime needs ONLY numpy + brotli (no torch) per the
+    8th MLX-first standing directive. The ``decoder_state_dict`` +
+    ``wz_side_info_head_state_dict`` are the inflate-time consumers; the encoder
+    is provenance-only (kept for parity with the torch-side parse).
+    """
+
+    encoder_state_dict: dict[str, "np.ndarray"]
+    decoder_state_dict: dict[str, "np.ndarray"]
+    wz_side_info_head_state_dict: dict[str, "np.ndarray"]
+    latent_residual: "np.ndarray"
+    """``(num_pairs, latent_dim)`` fp32 dequantized z_residual."""
+    scorer_class_prior_table: "np.ndarray"
+    """``(num_pairs, scorer_class_prior_dim)`` fp32 scorer class prior table."""
+    meta: dict[str, object]
+    schema_version: int
+
+
+def parse_archive_numpy(blob: bytes) -> ATWCodecArchiveNumpy:
+    """Torch-free parse of an ATW1 archive for the numpy-portable inflate.
+
+    Identical section walk to :func:`parse_archive` but reconstructs every
+    weight / latent / class-prior as a numpy array with NO torch import. Per the
+    8th MLX-first directive's bridge contract the shipped inflate runtime reads
+    weights via this path so the runtime tree carries only numpy + brotli.
+    """
+    if len(blob) < ATW1_HEADER_SIZE:
+        raise ValueError(
+            f"archive too short ({len(blob)} bytes; need >= {ATW1_HEADER_SIZE})"
+        )
+    (
+        magic,
+        version,
+        latent_dim,
+        num_pairs,
+        prior_dim,
+        encoder_len,
+        decoder_len,
+        wz_head_len,
+        latent_len,
+        class_prior_table_len,
+        meta_len,
+    ) = struct.unpack(ATW1_HEADER_FMT, blob[:ATW1_HEADER_SIZE])
+    if magic != ATW1_MAGIC:
+        raise ValueError(f"bad magic: {magic!r} (expected {ATW1_MAGIC!r})")
+    if version != ATW1_SCHEMA_VERSION:
+        raise ValueError(f"unsupported schema version: {version}")
+
+    expected_latent_bytes = num_pairs * latent_dim  # int8 = 1 byte
+    if latent_len != expected_latent_bytes:
+        raise ValueError(
+            f"latent_residual blob: latent_len {latent_len} != "
+            f"num_pairs*latent_dim = {expected_latent_bytes}"
+        )
+    expected_class_prior_table_bytes = num_pairs * prior_dim * 2  # fp16 = 2 bytes
+    if class_prior_table_len != expected_class_prior_table_bytes:
+        raise ValueError(
+            f"class_prior_table blob: class_prior_table_len "
+            f"{class_prior_table_len} != num_pairs*prior_dim*2 = "
+            f"{expected_class_prior_table_bytes}"
+        )
+
+    end_header = ATW1_HEADER_SIZE
+    end_encoder = end_header + int(encoder_len)
+    end_decoder = end_encoder + int(decoder_len)
+    end_wz_head = end_decoder + int(wz_head_len)
+    end_latents = end_wz_head + int(latent_len)
+    end_class_prior_table = end_latents + int(class_prior_table_len)
+    end_meta = end_class_prior_table + int(meta_len)
+    if end_meta != len(blob):
+        raise ValueError(
+            f"archive size {len(blob)} != expected {end_meta} from header"
+        )
+
+    encoder_sd = _deserialize_numpy_state_dict(blob[end_header:end_encoder])
+    decoder_sd = _deserialize_numpy_state_dict(blob[end_encoder:end_decoder])
+    wz_head_sd = _deserialize_numpy_state_dict(blob[end_decoder:end_wz_head])
+    meta = json.loads(blob[end_class_prior_table:end_meta].decode("utf-8"))
+
+    q = np.frombuffer(blob[end_wz_head:end_latents], dtype=np.int8).reshape(
+        num_pairs, latent_dim
+    )
+    scale = float(meta.pop("_lat_scale"))
+    zp = float(meta.pop("_lat_zero_point"))
+    # dequant mirrors _dequantize_latents: (q + 127) * scale + zero_point
+    latents = (q.astype(np.float32) + 127.0) * scale + zp
+
+    class_prior_table = (
+        np.frombuffer(
+            blob[end_latents:end_class_prior_table], dtype=np.float16
+        )
+        .reshape(num_pairs, prior_dim)
+        .astype(np.float32)
+    )
+
+    return ATWCodecArchiveNumpy(
+        encoder_state_dict=encoder_sd,
+        decoder_state_dict=decoder_sd,
+        wz_side_info_head_state_dict=wz_head_sd,
+        latent_residual=latents,
+        scorer_class_prior_table=class_prior_table,
+        meta=meta,
+        schema_version=int(version),
+    )
+
+
 def parse_atw1_archive_bytes(archive_bytes: bytes) -> dict[str, tuple[int, int]]:
     """Return section name -> (start, length) for ATW1 grammar.
 
@@ -537,7 +688,9 @@ __all__ = [
     "ATW1_SCHEMA_VERSION",
     "ATW1_SECTION_ROLES",
     "ATWCodecArchive",
+    "ATWCodecArchiveNumpy",
     "pack_archive",
     "parse_archive",
+    "parse_archive_numpy",
     "parse_atw1_archive_bytes",
 ]

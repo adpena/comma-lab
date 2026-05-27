@@ -1,29 +1,31 @@
 # SPDX-License-Identifier: MIT
-"""ATW codec V1 inflate runtime — contest raw-output contract.
+"""ATW codec V1 inflate runtime — numpy-portable; ATW1 raw-output consumer.
 
-Loads the ATW1 archive, reconstructs encoder + decoder + WZ side-info head
-from stored state_dicts, copies in z_residual + scorer_class_prior_table,
-and writes one raw-output ``.raw`` file per contest video (1200 frames of
-874x1164 RGB per video).
+Per the 8th MLX-first standing directive (2026-05-26): TRAINING is MLX/PyTorch
+but INFLATE is numpy-portable — ``torch`` / ``mlx`` are FORBIDDEN at decode time.
+This runtime reconstructs the ATW codec decode forward in pure numpy from the
+REAL trained weights shipped in the ATW1 archive (Catalog #369: consumes the
+real decoder + WZ side-info head + scorer_class_prior_table, NOT a synthetic
+frame base).
 
-NO scorer code is imported per CLAUDE.md "Strict scorer rule" + Catalog #6.
-NO MPS device (Catalog #1; CPU/CUDA only via canonical select_inflate_device).
+Forward path (pure numpy, via the canonical numpy-portable inflate bridge):
 
-Per Catalog #146 the inflate.py honors the contest's 3-positional-arg
-``inflate.sh <archive_dir> <output_dir> <file_list>`` contract.
+1. ``parse_archive_numpy(bytes)`` -> torch-free ``ATWCodecArchiveNumpy`` with
+   decoder + WZ-head state_dicts as fp32 ndarrays, z_residual, class-prior table.
+2. Per pair i: reconstruct ``z = z_residual[i] + wz_head(class_prior_table[i])``
+   (the Wyner-Ziv side-info mechanism — Catalog #220 operational consumption).
+3. NeRV-style decode (NHWC): ``initial_proj`` -> reshape grid -> N×(conv +
+   PixelShuffle(2) + ReLU) -> final conv -> bilinear resize -> sigmoid ->
+   split RGB pair (channels 0:3 = frame_0, 3:6 = frame_1).
+4. Write a single contest ``.raw`` file (1200 frames of 874×1164 RGB) via the
+   bridge's ``write_rgb_pair_to_raw_numpy`` (Catalog #367 byte-count assert).
 
-Per HNeRV parity discipline L4 the inflate runtime LOC budget is ≤200 for
-substrate-engineering lanes (encoder/decoder/wz-head + latent dequant +
-WZ side-info reconstruction + composition).
-
-Per Catalog #205 device selection uses canonical ``select_inflate_device``.
-
-The ATW codec inflate path is structurally distinct from Z3/Z4: it
-loads the WZ side-info head + scorer_class_prior_table from archive and
-reconstructs ``z = z_residual + side_info_head(class_prior_table[pair])``
-before the decoder runs. The scorer class prior table is PRECOMPUTED at
-compress-time and shipped in the archive — so the inflate path NEVER
-loads SegNet or PoseNet weights.
+Runtime tree: numpy + brotli (archive decompress) — within HNeRV parity L4
+(≤200 LOC, CUDA-or-CPU agnostic via numpy, reviewable in 30s). No
+``select_inflate_device`` device fork because numpy is device-free (Catalog
+#205; MPS structurally impossible). Per Catalog #295 the archive parser + bridge
+are vendored into the submission tree so the inflate path is PYTHONPATH
+self-contained.
 """
 
 from __future__ import annotations
@@ -31,144 +33,107 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-import torch
+import numpy as np
 
-from tac.substrates._shared.inflate_runtime import (
-    raw_output_path,
-    select_inflate_device,
-    write_rgb_pair_to_raw,
+from tac.substrates._shared.numpy_portable_inflate import (
+    CONTEST_RAW_BYTES_PER_VIDEO,
+    bilinear_resize_nhwc,
+    conv2d_numpy,
+    linear,
+    pixel_shuffle_2x_nhwc,
+    relu,
+    sigmoid,
+    write_rgb_pair_to_raw_numpy,
 )
-from tac.substrates.atw_codec_v1.architecture import (
-    EVAL_HW,
-    ATWCodec,
-    ATWCodecConfig,
-)
-from tac.substrates.atw_codec_v1.archive import parse_archive
+from tac.substrates.atw_codec_v1.archive import parse_archive_numpy
 
 
-def inflate_one_video(
-    archive_bytes: bytes,
-    output_raw_path: Path,
+def _conv_nhwc(x: np.ndarray, w_nchw: np.ndarray, bias: np.ndarray) -> np.ndarray:
+    """Run a torch Conv2d(pad=1) in NHWC. ``w_nchw`` is (C_out, C_in, kH, kW)."""
+    w_nhwc = np.transpose(np.asarray(w_nchw, dtype=np.float32), (0, 2, 3, 1))
+    return conv2d_numpy(x, w_nhwc, np.asarray(bias, dtype=np.float32), padding=1)
+
+
+def _wz_predict(
+    class_prior: np.ndarray, sd: dict[str, np.ndarray]
+) -> np.ndarray:
+    """WZ side-info head: fc2(relu(fc1(class_prior))). Returns zeros if disabled."""
+    if "fc1.weight" not in sd or "fc2.weight" not in sd:
+        return np.zeros((class_prior.shape[0], 0), dtype=np.float32)
+    h = relu(linear(class_prior, sd["fc1.weight"], sd["fc1.bias"]))
+    return linear(h, sd["fc2.weight"], sd["fc2.bias"])
+
+
+def _decode_pair(
+    z: np.ndarray,
+    dec: dict[str, np.ndarray],
     *,
-    device: str | None = None,
-) -> int:
-    """Inflate one ATW1 archive's bytes into one contest ``.raw`` file."""
-    arc = parse_archive(archive_bytes)
+    embed_dim: int,
+    grid_h: int,
+    grid_w: int,
+    num_blocks: int,
+    out_h: int,
+    out_w: int,
+) -> tuple[np.ndarray, np.ndarray]:
+    """NeRV-style decode of latent ``z`` (1, latent_dim) -> NHWC RGB pair (1,H,W,3)."""
+    flat = linear(z, dec["initial_proj.weight"], dec["initial_proj.bias"])  # (1, embed*gh*gw)
+    # torch reshapes to NCHW (1, embed, gh, gw); convert to NHWC for the bridge.
+    grid_nchw = flat.reshape(1, embed_dim, grid_h, grid_w)
+    h = np.transpose(grid_nchw, (0, 2, 3, 1))  # (1, gh, gw, embed)
+    for i in range(num_blocks):
+        p = f"blocks.{3 * i}."
+        h = _conv_nhwc(h, dec[p + "weight"], dec[p + "bias"])  # (1, gh, gw, 4*out_ch)
+        h = pixel_shuffle_2x_nhwc(h)  # (1, 2*gh, 2*gw, out_ch)
+        h = relu(h)
+    final_p = f"blocks.{3 * num_blocks}."
+    out = _conv_nhwc(h, dec[final_p + "weight"], dec[final_p + "bias"])  # (1, H', W', 6)
+    if out.shape[1] != out_h or out.shape[2] != out_w:
+        out = bilinear_resize_nhwc(out, target_h=out_h, target_w=out_w, align_corners=False)
+    out = sigmoid(out)  # (1, out_h, out_w, 6)
+    return out[..., 0:3], out[..., 3:6]
+
+
+def inflate_one_video(archive_bytes: bytes, output_raw_path: Path) -> int:
+    """Inflate one ATW1 archive's bytes into one contest ``.raw`` file (numpy-only)."""
+    arc = parse_archive_numpy(archive_bytes)
     meta = arc.meta
-    render_device = select_inflate_device(device)
+    dec = arc.decoder_state_dict
+    wz = arc.wz_side_info_head_state_dict
 
-    cfg = ATWCodecConfig(
-        latent_dim=int(arc.latent_residual.shape[1]),
-        encoder_input_channels=int(meta.get("encoder_input_channels", 3)),
-        encoder_hidden_dim=int(meta.get("encoder_hidden_dim", 64)),
-        decoder_embed_dim=int(meta["decoder_embed_dim"]),
-        decoder_initial_grid_h=int(meta["decoder_initial_grid_h"]),
-        decoder_initial_grid_w=int(meta["decoder_initial_grid_w"]),
-        decoder_channels=tuple(int(c) for c in meta["decoder_channels"]),
-        decoder_num_upsample_blocks=int(meta["decoder_num_upsample_blocks"]),
-        num_pairs=int(arc.latent_residual.shape[0]),
-        output_height=int(meta.get("output_height", EVAL_HW[0])),
-        output_width=int(meta.get("output_width", EVAL_HW[1])),
-        scorer_class_prior_dim=int(meta.get("_scorer_class_prior_dim",
-                                            arc.scorer_class_prior_table.shape[1])),
-        wz_head_hidden_dim=int(meta.get("wz_head_hidden_dim", 32)),
-        wz_head_enabled=bool(
-            meta.get("atw_codec_meta", {}).get("wz_head_enabled", True)
-        ),
-        ib_kappa_default=float(
-            meta.get("atw_codec_meta", {}).get("kappa_ib", 0.0)
-        ),
-        wz_lambda_default=float(
-            meta.get("atw_codec_meta", {}).get("lambda_wz", 1.0)
-        ),
-        pixel_lambda_default=float(
-            meta.get("atw_codec_meta", {}).get("lambda_pixel", 0.0)
-        ),
-        atw_atick_redlich_form=bool(
-            meta.get("atw_codec_meta", {}).get("atick_redlich_form", True)
-        ),
-        latent_init_std=float(meta.get("latent_init_std", 0.02)),
-    )
-
-    model = ATWCodec(cfg).to(render_device).eval()
-
-    enc_load = model.encoder.load_state_dict(arc.encoder_state_dict, strict=False)
-    if set(enc_load.missing_keys) or set(enc_load.unexpected_keys):
-        raise RuntimeError(
-            "ATW1 encoder state_dict mismatch: "
-            f"missing={sorted(enc_load.missing_keys)} "
-            f"unexpected={sorted(enc_load.unexpected_keys)}"
-        )
-    dec_load = model.decoder.load_state_dict(arc.decoder_state_dict, strict=False)
-    if set(dec_load.missing_keys) or set(dec_load.unexpected_keys):
-        raise RuntimeError(
-            "ATW1 decoder state_dict mismatch: "
-            f"missing={sorted(dec_load.missing_keys)} "
-            f"unexpected={sorted(dec_load.unexpected_keys)}"
-        )
-    if cfg.wz_head_enabled and arc.wz_side_info_head_state_dict:
-        wz_load = model.wz_side_info_head.load_state_dict(
-            arc.wz_side_info_head_state_dict, strict=False
-        )
-        if set(wz_load.missing_keys) or set(wz_load.unexpected_keys):
-            raise RuntimeError(
-                "ATW1 wz_side_info_head state_dict mismatch: "
-                f"missing={sorted(wz_load.missing_keys)} "
-                f"unexpected={sorted(wz_load.unexpected_keys)}"
-            )
-
-    with torch.no_grad():
-        # latents stores z_residual at inflate time
-        model.latents.copy_(
-            arc.latent_residual.to(device=render_device, dtype=model.latents.dtype)
-        )
-        # scorer_class_prior_table is the side-info source for WZ reconstruction
-        model.scorer_class_prior_table.copy_(
-            arc.scorer_class_prior_table.to(
-                device=render_device,
-                dtype=model.scorer_class_prior_table.dtype,
-            )
-        )
+    embed_dim = int(meta["decoder_embed_dim"])
+    grid_h = int(meta["decoder_initial_grid_h"])
+    grid_w = int(meta["decoder_initial_grid_w"])
+    num_blocks = int(meta["decoder_num_upsample_blocks"])
+    out_h = int(meta.get("output_height", 384))
+    out_w = int(meta.get("output_width", 512))
+    num_pairs = int(arc.latent_residual.shape[0])
 
     output_raw_path.parent.mkdir(parents=True, exist_ok=True)
     frames_written = 0
-    with torch.no_grad(), output_raw_path.open("wb") as fh:
-        for pair_idx in range(cfg.num_pairs):
-            idx_tensor = torch.tensor(
-                [pair_idx], device=render_device, dtype=torch.long
+    with output_raw_path.open("wb") as fh:
+        for i in range(num_pairs):
+            z_residual = arc.latent_residual[i : i + 1]  # (1, latent_dim)
+            class_prior = arc.scorer_class_prior_table[i : i + 1]  # (1, prior_dim)
+            z_pred = _wz_predict(class_prior, wz)
+            z = z_residual + z_pred if z_pred.shape[1] else z_residual
+            rgb_0, rgb_1 = _decode_pair(
+                z, dec, embed_dim=embed_dim, grid_h=grid_h, grid_w=grid_w,
+                num_blocks=num_blocks, out_h=out_h, out_w=out_w,
             )
-            # Inflate-time path: reconstruct z = z_residual + WZ_head(class_prior).
-            z_residual = model.latents[idx_tensor]
-            rgb_0, rgb_1 = model.reconstruct_from_wz_residual(
-                idx_tensor, z_residual
-            )
-            frames_written += write_rgb_pair_to_raw(
+            frames_written += write_rgb_pair_to_raw_numpy(
                 fh, rgb_0, rgb_1, input_range="unit"
             )
+    written_bytes = output_raw_path.stat().st_size
+    if written_bytes != CONTEST_RAW_BYTES_PER_VIDEO and num_pairs == 600:
+        raise RuntimeError(
+            f"ATW1 inflate wrote {written_bytes} bytes != contest "
+            f"{CONTEST_RAW_BYTES_PER_VIDEO} (Catalog #367 raw-byte fail-closed)"
+        )
     return frames_written
 
 
-def _read_single_member_archive_bytes(archive_dir: Path) -> bytes:
-    """Read the single contest archive member, failing on ambiguity."""
-    zero_bin = archive_dir / "0.bin"
-    x_member = archive_dir / "x"
-    present = [path for path in (zero_bin, x_member) if path.is_file()]
-    if len(present) != 1:
-        if not present:
-            raise FileNotFoundError(
-                f"expected exactly one archive member at {zero_bin} or {x_member}"
-            )
-        raise ValueError(
-            f"ambiguous archive members present: {zero_bin} and {x_member}"
-        )
-    return present[0].read_bytes()
-
-
 def main_cli() -> int:
-    """CLI: ``inflate.py <archive_dir> <output_dir> <file_list>``.
-
-    Honors the contest's 3-positional-arg inflate.sh contract per Catalog #146.
-    """
+    """CLI: ``inflate.py <archive_dir> <output_dir> <file_list>`` (Catalog #146)."""
     if len(sys.argv) < 4:
         print(
             "usage: inflate.py <archive_dir> <output_dir> <file_list>",
@@ -180,23 +145,17 @@ def main_cli() -> int:
     file_list_path = Path(sys.argv[3])
 
     file_list = file_list_path.read_text(encoding="utf-8").strip().splitlines()
-    archive_bytes = _read_single_member_archive_bytes(archive_dir)
-    device = select_inflate_device()
+    archive_bytes = (archive_dir / "0.bin").read_bytes()
     for fname in file_list:
         name = fname.strip()
         if not name:
             continue
-        inflate_one_video(
-            archive_bytes, raw_output_path(output_dir, name), device=device
-        )
+        base = Path(name).stem
+        inflate_one_video(archive_bytes, output_dir / f"{base}.raw")
     return 0
 
 
-__all__ = [
-    "_read_single_member_archive_bytes",
-    "inflate_one_video",
-    "main_cli",
-]
+__all__ = ["inflate_one_video", "main_cli"]
 
 
 if __name__ == "__main__":  # pragma: no cover — CLI smoke
