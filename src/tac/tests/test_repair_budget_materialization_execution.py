@@ -484,6 +484,49 @@ def test_repair_budget_materializer_binding_revalidates_runtime_proof_payload(
     assert binding_report["receiver_consumed_count"] == 0
 
 
+def test_repair_budget_materializer_binding_refuses_plan_row_proof_bool_without_revalidation(
+    tmp_path: Path,
+) -> None:
+    plan = _materialization_plan()
+    parent = plan["candidate_chain_rows"][0]  # type: ignore[index]
+    archive_path = tmp_path / "legacy_parent.zip"
+    archive_path.write_bytes(b"PK\x05\x06" + b"\0" * 18)
+    archive_sha = _sha256_file(archive_path)
+    parent.update(
+        {
+            "candidate_archive_materialized": True,
+            "candidate_archive_path": str(archive_path),
+            "candidate_archive_sha256": archive_sha,
+            "candidate_archive_bytes": archive_path.stat().st_size,
+            "runtime_consumption_proof_present": True,
+            "receiver_consumed": True,
+            "blockers": [],
+        }
+    )
+
+    binding_report = build_frontier_repair_budget_materializer_binding_report(
+        repo_root=REPO_ROOT,
+        repair_budget_materialization_plan=plan,
+        repair_budget_materialization_plan_path=tmp_path
+        / "repair_budget_materialization_plan.json",
+    )
+
+    parent_row, child_row = binding_report["binding_rows"]
+    assert parent_row["plan_row_receiver_closed_binding"] is True
+    assert parent_row["candidate_archive_materialized"] is True
+    assert parent_row["runtime_consumption_proof_present"] is False
+    assert parent_row["receiver_consumed"] is False
+    assert (
+        "runtime_consumption_proof_revalidation_missing_or_invalid"
+        in parent_row["blockers"]
+    )
+    assert child_row["receiver_consumed"] is False
+    assert "parent_rate_only_archive_materialization_required" in child_row["blockers"]
+    assert binding_report["candidate_archive_materialized_count"] == 1
+    assert binding_report["receiver_consumed_count"] == 0
+    _assert_false_authority(binding_report)
+
+
 def test_repair_budget_child_manifest_requires_component_replay_for_execution(
     tmp_path: Path,
 ) -> None:
@@ -531,6 +574,69 @@ def test_repair_budget_child_manifest_requires_component_replay_for_execution(
     assert "component_response_replayed_false" in child_execution["blockers"]
     assert execution_report["ready_for_local_materialization_count"] == 1
     assert execution_report["ready_for_exact_eval_dispatch"] is False
+    _assert_false_authority(execution_report)
+
+
+def test_repair_budget_component_replay_ignores_legacy_proof_present_flag(
+    tmp_path: Path,
+) -> None:
+    plan = _materialization_plan()
+    parent_id = str(plan["parent_candidate_chain_id"])
+    child_id = str(plan["candidate_chain_rows"][1]["candidate_chain_id"])  # type: ignore[index]
+    parent_manifest = _receiver_consumed_manifest(
+        tmp_path,
+        candidate_chain_id=parent_id,
+    )
+    child_manifest = _receiver_consumed_manifest(
+        tmp_path,
+        candidate_chain_id=child_id,
+        target_kind="segnet_posenet_repair_child_v1",
+    )
+    replay_path = _write_json(
+        tmp_path / f"{child_id}.legacy_component_proof.json",
+        {
+            "schema": "legacy_component_response_replay_fixture.v1",
+            "candidate_chain_id": child_id,
+            "axis_tag": "[macOS-MLX research-signal]",
+            **FALSE_AUTHORITY,
+        },
+    )
+    child_manifest["component_response_replay"] = {
+        "schema": "legacy_component_response_replay_fixture.v1",
+        "proof_present": True,
+        "artifact_path": str(replay_path),
+        "axis_tag": "[macOS-MLX research-signal]",
+        **FALSE_AUTHORITY,
+    }
+
+    binding_report = build_frontier_repair_budget_materializer_binding_report(
+        repo_root=REPO_ROOT,
+        repair_budget_materialization_plan=plan,
+        repair_budget_materialization_plan_path=tmp_path
+        / "repair_budget_materialization_plan.json",
+        materializer_manifests=[parent_manifest, child_manifest],
+    )
+
+    child_row = binding_report["binding_rows"][1]
+    assert child_row["candidate_archive_materialized"] is True
+    assert child_row["receiver_consumed"] is True
+    assert child_row["component_response_replayed"] is False
+    assert child_row["component_response_replay_path"] == str(replay_path)
+
+    execution_report = build_frontier_repair_budget_materialization_execution_report(
+        repair_budget_materialization_plan=plan,
+        repair_budget_materialization_plan_path=tmp_path
+        / "repair_budget_materialization_plan.json",
+        materializer_binding_report=binding_report,
+        materializer_binding_report_path=tmp_path
+        / "repair_budget_materializer_binding_report.json",
+    )
+
+    child_execution = execution_report["execution_rows"][1]
+    assert child_execution["component_response_replayed"] is False
+    assert child_execution["ready_for_local_materialization"] is False
+    assert "component_response_replayed_false" in child_execution["blockers"]
+    assert execution_report["component_response_replayed_count"] == 1
     _assert_false_authority(execution_report)
 
 

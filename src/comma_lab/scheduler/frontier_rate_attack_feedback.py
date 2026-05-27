@@ -9079,7 +9079,6 @@ def _component_response_replay_manifest_record(
         or replay.get("component_response_replayed") is True
         or replay.get("response_replayed") is True
         or replay.get("replayed") is True
-        or replay.get("proof_present") is True
     )
     replay_path = _first_nonempty_text(
         manifest.get("component_response_replay_path"),
@@ -9469,6 +9468,9 @@ def _repair_budget_materializer_binding_row(
                 "runtime_consumption_proof_present"
             )
             is True,
+            "runtime_consumption_proof_revalidation": plan_row.get(
+                "runtime_consumption_proof_revalidation"
+            ),
             "receiver_consumed": True,
             "repair_dynamics_prior": {},
             **FALSE_AUTHORITY,
@@ -9481,25 +9483,45 @@ def _repair_budget_materializer_binding_row(
             blockers.append("child_parent_candidate_chain_id_mismatch")
         if parent_candidate_chain_id not in bound_parent_ids:
             blockers.append("parent_rate_only_archive_materialization_required")
-    if direct_ready or plan_row_ready:
-        if candidate_kind == "rate_only_floor_parent":
-            bound_parent_ids.add(candidate_chain_id)
-    elif direct_matches:
+    if not direct_ready and not plan_row_ready and direct_matches:
         blockers.append("direct_materializer_manifest_not_receiver_consumed")
-    elif coverage_matches:
+    elif not direct_ready and not plan_row_ready and coverage_matches:
         blockers.append("individual_materializer_manifests_not_composed_single_candidate_archive")
-    else:
+    elif not direct_ready and not plan_row_ready:
         blockers.append("candidate_chain_materializer_manifest_missing")
     for record in direct_matches:
         blockers.extend(_string_list(record.get("readiness_blockers")))
     candidate_archive_materialized = bool(selected)
-    receiver_consumed = bool(selected)
     component_response_replayed = (
         plan_row.get("component_response_replayed") is True
         or candidate_kind == "rate_only_floor_parent"
         or selected.get("component_response_replayed") is True
         or replay_selected.get("component_response_replayed") is True
     )
+    runtime_proof_revalidation = (
+        selected.get("runtime_consumption_proof_revalidation")
+        or plan_row.get("runtime_consumption_proof_revalidation")
+    )
+    runtime_proof_present = bool(
+        isinstance(runtime_proof_revalidation, Mapping)
+        and runtime_proof_revalidation.get("proof_valid") is True
+    )
+    receiver_consumed = bool(
+        selected.get("receiver_consumed") is True
+        and runtime_proof_present
+        and (
+            not isinstance(runtime_proof_revalidation, Mapping)
+            or runtime_proof_revalidation.get("receiver_contract_satisfied") is True
+        )
+    )
+    if selected and not runtime_proof_present:
+        blockers.append("runtime_consumption_proof_revalidation_missing_or_invalid")
+    if (
+        candidate_kind == "rate_only_floor_parent"
+        and candidate_archive_materialized
+        and receiver_consumed
+    ):
+        bound_parent_ids.add(candidate_chain_id)
     return {
         "schema": REPAIR_BUDGET_MATERIALIZER_BINDING_ROW_SCHEMA,
         "candidate_chain_id": candidate_chain_id,
@@ -9548,18 +9570,13 @@ def _repair_budget_materializer_binding_row(
         "runtime_consumption_proof_path": selected.get(
             "runtime_consumption_proof_path"
         ),
-        "runtime_consumption_proof_revalidation": (
-            selected.get("runtime_consumption_proof_revalidation")
-            or plan_row.get("runtime_consumption_proof_revalidation")
-        ),
+        "runtime_consumption_proof_revalidation": runtime_proof_revalidation,
         "repair_dynamics_prior": dict(
             selected.get("repair_dynamics_prior")
             if isinstance(selected.get("repair_dynamics_prior"), Mapping)
             else {}
         ),
-        "runtime_consumption_proof_present": bool(
-            selected.get("runtime_consumption_proof_present", bool(selected))
-        ),
+        "runtime_consumption_proof_present": runtime_proof_present,
         "receiver_consumed": receiver_consumed,
         "component_response_replayed": component_response_replayed,
         "component_response_replay_path": (
