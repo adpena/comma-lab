@@ -49,6 +49,7 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     TARGETED_DROP_MANY_STAGE_INPUTS_SCHEMA,
     FrontierRateAttackFeedbackError,
     _exact_readiness_bridge_summary,
+    _expected_materializer_manifest_paths_from_queue,
     build_frontier_autonomous_chain_optimization,
     build_frontier_autonomous_chain_optimization_queue,
     build_frontier_autonomous_chain_work_order,
@@ -130,7 +131,11 @@ def test_feedback_cycle_auxiliary_execution_includes_materializer_queues() -> No
     assert spec is not None
     assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    sys.path.insert(0, str(REPO_ROOT))
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.path.remove(str(REPO_ROOT))
 
     assert "operation_materializer_execution_queue" in (
         module.AUXILIARY_QUEUE_ARTIFACT_KEYS
@@ -4005,6 +4010,62 @@ def test_targeted_component_correction_materialization_requests_group_responses(
     )
 
 
+def test_repair_budget_materializer_manifest_discovery_filters_exact_readiness_reports() -> None:
+    queue = {
+        "schema": "experiment_queue.v1",
+        "rows": [
+            {
+                "command": [
+                    ".venv/bin/python",
+                    "tools/run_family_agnostic_materializer.py",
+                    "--output-manifest",
+                    "results/candidate_materializer_output.json",
+                ],
+                "postconditions": [
+                    {"path": "results/manifest.json"},
+                    {"path": "results/exact_eval_handoff/harvest_report.json"},
+                    {"path": "results/exact_eval_handoff/dispatch_plan.json"},
+                ],
+            }
+        ],
+        "experiments": [
+            {
+                "steps": [
+                    {
+                        "command": [
+                            ".venv/bin/python",
+                            "tools/run_family_agnostic_materializer.py",
+                            "--output-manifest",
+                            "results/step_manifest_output.json",
+                        ],
+                        "postconditions": [
+                            {
+                                "path": (
+                                    "results/exact_eval_handoff/submission/"
+                                    "archive_manifest.json"
+                                )
+                            },
+                            {
+                                "path": (
+                                    "results/exact_eval_handoff/"
+                                    "exact_readiness_bridge_report.json"
+                                )
+                            },
+                        ],
+                    }
+                ]
+            }
+        ],
+    }
+
+    assert _expected_materializer_manifest_paths_from_queue(queue) == [
+        "results/candidate_materializer_output.json",
+        "results/manifest.json",
+        "results/step_manifest_output.json",
+        "results/exact_eval_handoff/submission/archive_manifest.json",
+    ]
+
+
 def test_targeted_dfl1_binds_member_compatible_source_archive(
     tmp_path: Path,
 ) -> None:
@@ -6125,6 +6186,29 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     assert repair_waterfill_queue_artifact["experiments"][0]["metadata"][
         "pipeline_side"
     ] == "encoder_repair_allocator"
+    repair_waterfill_metadata = repair_waterfill_queue_artifact["experiments"][0][
+        "metadata"
+    ]
+    assert repair_waterfill_metadata["materializer_work_queue_path"].endswith(
+        "targeted_component_correction_chain_materializer_work_queue.json"
+    )
+    binding_command = repair_waterfill_queue_artifact["experiments"][0]["steps"][2][
+        "command"
+    ]
+    assert binding_command[
+        binding_command.index("--materializer-work-queue") + 1
+    ].endswith("targeted_component_correction_chain_materializer_work_queue.json")
+    if "targeted_component_correction_chain_materializer_execution_queue" in report[
+        "artifacts"
+    ]:
+        assert repair_waterfill_metadata[
+            "materializer_execution_queue_path"
+        ].endswith("targeted_component_correction_chain_materializer_execution_queue.json")
+        assert binding_command[
+            binding_command.index("--materializer-execution-queue") + 1
+        ].endswith(
+            "targeted_component_correction_chain_materializer_execution_queue.json"
+        )
     _assert_false_authority(
         repair_waterfill_queue_artifact["experiments"][0]["metadata"]
     )

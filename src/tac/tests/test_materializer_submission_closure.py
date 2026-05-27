@@ -307,6 +307,120 @@ def test_materializer_submission_closure_discovers_source_packet_submission_dir(
     assert (repo / "closure" / "submission" / "inflate.py").is_file()
 
 
+def test_materializer_submission_closure_writes_refusal_when_runtime_missing(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path
+    source_archive = repo / "artifacts" / "source.zip"
+    candidate_archive = repo / "artifacts" / "candidate.zip"
+    candidate_archive.parent.mkdir(parents=True)
+    _write_zip(source_archive, b"A" * 40)
+    _write_zip(candidate_archive, b"B" * 24)
+    candidate_sha = _sha256(candidate_archive)
+    source_sha = _sha256(source_archive)
+    proof_path = repo / "artifacts" / "runtime_consumption_proof.json"
+    proof_path.write_text(
+        json.dumps(
+            {
+                "schema": "family_agnostic_runtime_consumption_proof_v1",
+                "target_kind": "archive_section_entropy_recode_v1",
+                "materializer_id": "archive_section_entropy_recode_adapter",
+                "receiver_contract_kind": (
+                    "family_agnostic_archive_section_entropy_recode"
+                ),
+                "receiver_contract_satisfied": True,
+                "runtime_consumption_proof_passed": True,
+                "passed": True,
+                "candidate_archive_sha256": candidate_sha,
+                **FALSE_AUTHORITY,
+            }
+        ),
+        encoding="utf-8",
+    )
+    source_queue_path = repo / "artifacts" / "source_queue.json"
+    source_queue_path.write_text(
+        json.dumps(
+            {
+                "schema": "optimizer_candidate_queue_v1",
+                **FALSE_AUTHORITY,
+                "n_candidates": 1,
+                "top_k_count": 1,
+                "dispatch_ready_count": 0,
+                "dispatch_ready": [],
+                "top_k": [
+                    {
+                        "schema": "archive_section_entropy_recode_candidate.v1",
+                        **FALSE_AUTHORITY,
+                        "candidate_id": "archive_section_fixture",
+                        "target_kind": "archive_section_entropy_recode_v1",
+                        "materializer_id": "archive_section_entropy_recode_adapter",
+                        "receiver_contract_kind": (
+                            "family_agnostic_archive_section_entropy_recode"
+                        ),
+                        "receiver_contract_satisfied": True,
+                        "runtime_adapter_ready": True,
+                        "runtime_consumption_proof_required": True,
+                        "runtime_consumption_proof_status": "present",
+                        "runtime_consumption_proof_path": (
+                            proof_path.relative_to(repo).as_posix()
+                        ),
+                        "candidate_archive_path": (
+                            candidate_archive.relative_to(repo).as_posix()
+                        ),
+                        "candidate_archive_sha256": candidate_sha,
+                        "candidate_archive_bytes": candidate_archive.stat().st_size,
+                        "source_archive_path": (
+                            source_archive.relative_to(repo).as_posix()
+                        ),
+                        "source_archive_sha256": source_sha,
+                        "source_archive_bytes": source_archive.stat().st_size,
+                        "score_affecting_payload_changed": True,
+                        "charged_bits_changed": True,
+                        "dispatch_blockers": [
+                            "optimizer_candidate_queue_is_planning_only",
+                        ],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = build_materializer_submission_runtime_closure(
+        repo_root=repo,
+        source_queue_path=source_queue_path,
+        candidate_id="archive_section_fixture",
+        submission_dir_out=repo / "closure" / "submission",
+        closed_source_queue_out=repo / "closure" / "closed_source_queue.json",
+        closure_report_out=repo / "closure" / "submission_closure_report.json",
+    )
+
+    assert report["schema"] == SUBMISSION_CLOSURE_REPORT_SCHEMA
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["runtime_manifest"] is None
+    assert "source_runtime_dir_missing_or_inflate_sh_missing" in (
+        report["closure_blockers"]
+    )
+    assert (repo / "closure" / "submission" / "archive.zip").is_file()
+    assert (repo / "closure" / "submission" / "archive_manifest.json").is_file()
+    assert (repo / "closure" / "submission" / "runtime_consumption_proof.json").is_file()
+    assert not (repo / "closure" / "submission" / "inflate.sh").exists()
+
+    closed_queue = json.loads(
+        (repo / "closure" / "closed_source_queue.json").read_text(encoding="utf-8")
+    )
+    closed_row = closed_queue["top_k"][0]
+    assert closed_row["candidate_archive_path"] == "closure/submission/archive.zip"
+    assert "source_runtime_dir_missing_or_inflate_sh_missing" in (
+        closed_row["materializer_submission_closure_blockers"]
+    )
+    assert "submission_runtime_closure_refused_missing_runtime" in (
+        closed_row["readiness_blockers"]
+    )
+    assert closed_row["score_claim"] is False
+    assert closed_row["ready_for_exact_eval_dispatch"] is False
+
+
 def test_materializer_submission_closure_uses_proof_backed_runtime_adapter(
     tmp_path: Path,
 ) -> None:

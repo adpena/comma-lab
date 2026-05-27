@@ -709,6 +709,146 @@ def _closed_queue_payload_many(
     return payload
 
 
+def _write_runtime_refused_submission_closure(
+    *,
+    repo: Path,
+    source_queue: Path,
+    queue_payload: Mapping[str, Any],
+    row: Mapping[str, Any],
+    candidate_archive: Path,
+    proof_source: Path,
+    submission_dir: Path,
+    closed_queue_path: Path,
+    closure_report_path: Path,
+    archive_sha: str,
+    archive_bytes: int,
+    blocker: str,
+    closure_kind: str,
+) -> dict[str, Any]:
+    archive_out = submission_dir / "archive.zip"
+    shutil.copy2(candidate_archive, archive_out)
+    proof_out = submission_dir / "runtime_consumption_proof.json"
+    shutil.copy2(proof_source, proof_out)
+    _write_report_txt(
+        submission_dir=submission_dir,
+        candidate_id=str(row.get("candidate_id") or ""),
+        archive_sha256=archive_sha,
+        archive_bytes=archive_bytes,
+    )
+    archive_manifest = _build_archive_manifest(
+        archive_path=archive_out,
+        source_queue_path=source_queue,
+        source_row=row,
+        repo_root=repo,
+    )
+    archive_manifest_path = submission_dir / "archive_manifest.json"
+    _write_json(archive_manifest_path, archive_manifest)
+    blockers = [blocker, "submission_runtime_closure_refused_missing_runtime"]
+
+    closed_row = dict(row)
+    closed_dispatch_blockers = list(row.get("dispatch_blockers") or [])
+    closed_readiness_blockers = list(row.get("readiness_blockers") or [])
+    closed_row.update(
+        {
+            "archive_path": _repo_rel(archive_out, repo),
+            "candidate_archive_path": _repo_rel(archive_out, repo),
+            "archive_sha256": archive_sha,
+            "candidate_archive_sha256": archive_sha,
+            "archive_bytes": archive_bytes,
+            "archive_size_bytes": archive_bytes,
+            "candidate_archive_bytes": archive_bytes,
+            "submission_dir": _repo_rel(submission_dir, repo),
+            "archive_manifest_path": _repo_rel(archive_manifest_path, repo),
+            "runtime_consumption_proof_path": _repo_rel(proof_out, repo),
+            "runtime_consumption_proof_status": "present",
+            "materializer_submission_closure_report_path": _repo_rel(
+                closure_report_path,
+                repo,
+            ),
+            "materializer_submission_closure_kind": (
+                f"{closure_kind}_runtime_refused"
+            ),
+            "materializer_submission_closure_blockers": blockers,
+            "readiness_blockers": list(
+                dict.fromkeys([*closed_readiness_blockers, *blockers])
+            ),
+            "dispatch_blockers": list(
+                dict.fromkeys([*closed_dispatch_blockers, *blockers])
+            ),
+            "candidate_archive_path_unverified": False,
+            "evidence_semantics": (
+                "byte_closed_submission_archive_static_custody_runtime_refused"
+            ),
+            "allowed_use": "materializer_submission_closure_source_row_only",
+            "forbidden_use": (
+                "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+            ),
+            **FALSE_AUTHORITY,
+        }
+    )
+    closed_queue = _closed_queue_payload(
+        source_queue=queue_payload,
+        source_row=row,
+        closed_row=closed_row,
+    )
+    require_no_truthy_authority_fields(
+        closed_queue,
+        context="materializer_submission_closure_closed_queue_runtime_refused",
+    )
+    _write_json(closed_queue_path, closed_queue)
+
+    report = apply_proxy_evidence_boundary(
+        {
+            "schema": SUBMISSION_CLOSURE_REPORT_SCHEMA,
+            "tool": "tac.optimizer.materializer_submission_closure",
+            "generated_at_utc": _utc_now(),
+            "source_queue_path": _repo_rel(source_queue, repo),
+            "closed_source_queue_path": _repo_rel(closed_queue_path, repo),
+            "candidate_id": row.get("candidate_id"),
+            "target_kind": row.get("target_kind"),
+            "submission_dir": _repo_rel(submission_dir, repo),
+            "materializer_submission_closure_kind": (
+                f"{closure_kind}_runtime_refused"
+            ),
+            "archive_path": _repo_rel(archive_out, repo),
+            "archive_sha256": archive_sha,
+            "archive_bytes": archive_bytes,
+            "archive_manifest_path": _repo_rel(archive_manifest_path, repo),
+            "runtime_consumption_proof_path": _repo_rel(proof_out, repo),
+            "copied_runtime_file_count": 0,
+            "copied_runtime_files": [],
+            "runtime_manifest": None,
+            "closure_queue_schema": closed_queue.get("schema"),
+            "saved_bytes_at_risk": row.get("realized_saved_bytes"),
+            "source_runtime_adapter_ready": False,
+            "closure_blockers": blockers,
+            "targeted_correction_budget_signal": {
+                "freed_bytes_require_receiver_and_exact_readiness_before_spend": True,
+                "saved_bytes_at_risk": row.get("realized_saved_bytes"),
+                **FALSE_AUTHORITY,
+            },
+            "allowed_use": "exact_readiness_static_submission_closure_only",
+            "forbidden_use": (
+                "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+            ),
+            **FALSE_AUTHORITY,
+        },
+        dispatch_blockers=[
+            "submission_closure_report_is_not_dispatch_authority",
+            "run_exact_readiness_bridge_on_closed_source_queue",
+            "lane_claim_required_before_gpu_or_remote_eval",
+            "contest_exact_auth_eval_required_before_score_claim",
+            *blockers,
+        ],
+    )
+    require_no_truthy_authority_fields(
+        report,
+        context="materializer_submission_closure_report_runtime_refused",
+    )
+    _write_json(closure_report_path, report)
+    return report
+
+
 def build_materializer_submission_runtime_closure(
     *,
     repo_root: str | Path,
@@ -792,22 +932,49 @@ def build_materializer_submission_runtime_closure(
         adapter_values
     )
 
+    runtime_resolution_blocker: str | None = None
     if runtime_adapter_ready:
-        runtime_source = _resolve_runtime_adapter_dir(
-            row,
-            proof_payload=proof_payload,
-            repo_root=repo,
-            queue_dir=queue_dir,
-        )
+        try:
+            runtime_source = _resolve_runtime_adapter_dir(
+                row,
+                proof_payload=proof_payload,
+                repo_root=repo,
+                queue_dir=queue_dir,
+            )
+        except MaterializerSubmissionClosureError as exc:
+            runtime_source = None
+            runtime_resolution_blocker = str(exc)
         closure_kind = "runtime_adapter_closure_with_candidate_archive"
     else:
-        runtime_source = _derive_source_runtime_dir(
-            row,
-            repo_root=repo,
-            queue_dir=queue_dir,
-            source_runtime_dir=source_runtime_dir,
-        )
+        try:
+            runtime_source = _derive_source_runtime_dir(
+                row,
+                repo_root=repo,
+                queue_dir=queue_dir,
+                source_runtime_dir=source_runtime_dir,
+            )
+        except MaterializerSubmissionClosureError as exc:
+            runtime_source = None
+            runtime_resolution_blocker = str(exc)
         closure_kind = "source_runtime_static_closure_with_candidate_archive"
+
+    if runtime_source is None:
+        return _write_runtime_refused_submission_closure(
+            repo=repo,
+            source_queue=source_queue,
+            queue_payload=queue_payload,
+            row=row,
+            candidate_archive=candidate_archive,
+            proof_source=proof_source,
+            submission_dir=submission_dir,
+            closed_queue_path=closed_queue_path,
+            closure_report_path=closure_report_path,
+            archive_sha=archive_sha,
+            archive_bytes=archive_bytes,
+            blocker=runtime_resolution_blocker
+            or "source_runtime_dir_missing_or_inflate_sh_missing",
+            closure_kind=closure_kind,
+        )
 
     copied_runtime_files = _copy_runtime_tree(runtime_source, submission_dir)
     if not (submission_dir / "inflate.sh").is_file():

@@ -568,6 +568,8 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
     operation_materializer_bridge = report.get("operation_materializer_bridge")
     operation_work_queue: dict[str, object] | None = None
     operation_execution_queue: dict[str, object] | None = None
+    targeted_chain_work_queue: dict[str, object] | None = None
+    targeted_execution_queue: dict[str, object] | None = None
     if isinstance(operation_materializer_bridge, dict):
         path = output_dir / "operation_materializer_bridge.json"
         write_json_artifact(path, operation_materializer_bridge)
@@ -908,6 +910,30 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
         artifacts["autonomous_chain_optimization"] = _display_path(path)
         response_harvest = report.get("targeted_component_correction_response_harvest")
         receiver_closed_budget = report.get("receiver_closed_correction_budget")
+        repair_materializer_work_queue = (
+            targeted_chain_work_queue
+            if isinstance(targeted_chain_work_queue, dict)
+            else operation_work_queue
+            if isinstance(operation_work_queue, dict)
+            else None
+        )
+        repair_materializer_execution_queue = (
+            targeted_execution_queue
+            if isinstance(targeted_execution_queue, dict)
+            else operation_execution_queue
+            if isinstance(operation_execution_queue, dict)
+            else None
+        )
+        repair_materializer_work_queue_path = (
+            artifacts.get("targeted_component_correction_chain_materializer_work_queue")
+            or artifacts.get("operation_materializer_work_queue")
+        )
+        repair_materializer_execution_queue_path = (
+            artifacts.get(
+                "targeted_component_correction_chain_materializer_execution_queue"
+            )
+            or artifacts.get("operation_materializer_execution_queue")
+        )
         repair_waterfill_queue = build_frontier_repair_budget_waterfill_queue(
             repo_root=REPO_ROOT,
             autonomous_chain_optimization=autonomous_chain_optimization,
@@ -926,20 +952,10 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
             receiver_closed_correction_budget_path=artifacts.get(
                 "receiver_closed_correction_budget"
             ),
-            materializer_work_queue=(
-                operation_work_queue if isinstance(operation_work_queue, dict) else None
-            ),
-            materializer_work_queue_path=artifacts.get(
-                "operation_materializer_work_queue"
-            ),
-            materializer_execution_queue=(
-                operation_execution_queue
-                if isinstance(operation_execution_queue, dict)
-                else None
-            ),
-            materializer_execution_queue_path=artifacts.get(
-                "operation_materializer_execution_queue"
-            ),
+            materializer_work_queue=repair_materializer_work_queue,
+            materializer_work_queue_path=repair_materializer_work_queue_path,
+            materializer_execution_queue=repair_materializer_execution_queue,
+            materializer_execution_queue_path=repair_materializer_execution_queue_path,
             repair_dynamics_palette_prior=(
                 report.get("repair_dynamics_palette_prior")
                 if isinstance(report.get("repair_dynamics_palette_prior"), dict)

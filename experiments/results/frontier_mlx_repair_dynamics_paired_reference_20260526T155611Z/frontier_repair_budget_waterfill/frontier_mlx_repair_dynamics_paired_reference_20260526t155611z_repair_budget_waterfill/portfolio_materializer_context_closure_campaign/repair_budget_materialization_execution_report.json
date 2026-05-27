@@ -536,7 +536,7 @@
   ],
   "field_selection_ready_for_exact_eval_dispatch": false,
   "forbidden_use": "score_claim_or_budget_spend_or_promotion_or_dispatch_authority",
-  "generated_at_utc": "2026-05-26T19:23:54Z",
+  "generated_at_utc": "2026-05-27T00:20:05Z",
   "gpu_launched": false,
   "materializer_binding_row_count": 6,
   "parent_candidate_chain_id": "repair_rate_floor_parent_portfolio_materializer_context_closure_campaign_21e2bcb8000259b8",

@@ -8040,38 +8040,52 @@ def _load_materializer_manifest_records(
     return records, _unique_strings(blockers)
 
 
+def _is_expected_materializer_manifest_path(path: str) -> bool:
+    name = Path(path).name
+    return name in {"manifest.json", "archive_manifest.json"} or name.endswith(
+        "_manifest.json"
+    )
+
+
 def _expected_materializer_manifest_paths_from_queue(
     queue: Mapping[str, Any] | None,
 ) -> list[str]:
     if not isinstance(queue, Mapping):
         return []
     paths: list[str] = []
+    def append_command_manifest_paths(command: object) -> None:
+        if not isinstance(command, Sequence) or isinstance(command, (str, bytes)):
+            return
+        for index, item in enumerate(command[:-1]):
+            if item == "--output-manifest":
+                paths.append(str(command[index + 1]))
+
+    def append_postcondition_manifest_path(condition: object) -> None:
+        if not isinstance(condition, Mapping):
+            return
+        path = condition.get("path")
+        if (
+            isinstance(path, str)
+            and path.strip()
+            and _is_expected_materializer_manifest_path(path.strip())
+        ):
+            paths.append(path.strip())
+
     for row in queue.get("rows") or []:
         if not isinstance(row, Mapping):
             continue
-        command = row.get("command")
-        if isinstance(command, Sequence) and not isinstance(command, (str, bytes)):
-            for index, item in enumerate(command[:-1]):
-                if item == "--output-manifest":
-                    paths.append(str(command[index + 1]))
+        append_command_manifest_paths(row.get("command"))
         for condition in row.get("postconditions") or []:
-            if not isinstance(condition, Mapping):
-                continue
-            path = condition.get("path")
-            if isinstance(path, str) and path.strip():
-                paths.append(path.strip())
+            append_postcondition_manifest_path(condition)
     for experiment in queue.get("experiments") or []:
         if not isinstance(experiment, Mapping):
             continue
         for step in experiment.get("steps") or []:
             if not isinstance(step, Mapping):
                 continue
+            append_command_manifest_paths(step.get("command"))
             for condition in step.get("postconditions") or []:
-                if not isinstance(condition, Mapping):
-                    continue
-                path = condition.get("path")
-                if isinstance(path, str) and path.strip():
-                    paths.append(path.strip())
+                append_postcondition_manifest_path(condition)
     return _unique_strings(paths)
 
 
@@ -8295,10 +8309,14 @@ def build_frontier_repair_budget_materializer_binding_report(
         context="repair_budget_materializer_binding_plan",
     )
     repo = Path(repo_root)
-    expected_paths = [
-        *_expected_materializer_manifest_paths_from_queue(materializer_work_queue),
-        *_expected_materializer_manifest_paths_from_queue(materializer_execution_queue),
-    ]
+    expected_paths = _unique_strings(
+        [
+            *_expected_materializer_manifest_paths_from_queue(materializer_work_queue),
+            *_expected_materializer_manifest_paths_from_queue(
+                materializer_execution_queue
+            ),
+        ]
+    )
     manifest_records, manifest_blockers = _load_materializer_manifest_records(
         repo_root=repo,
         materializer_manifests=materializer_manifests,

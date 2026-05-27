@@ -514,6 +514,10 @@ def write_frontier_refresh_artifacts(
         write_json_artifact(path, dict(rate_budget_preservation_plan))
         artifacts["rate_budget_preservation_plan"] = repo_rel(path, repo_root)
     operation_materializer_bridge = report.get("operation_materializer_bridge")
+    operation_work_queue: Mapping[str, Any] | None = None
+    operation_execution_queue: Mapping[str, Any] | None = None
+    targeted_chain_work_queue: Mapping[str, Any] | None = None
+    targeted_execution_queue: Mapping[str, Any] | None = None
     if isinstance(operation_materializer_bridge, Mapping):
         path = out / "operation_materializer_bridge.json"
         write_json_artifact(path, dict(operation_materializer_bridge))
@@ -853,6 +857,30 @@ def write_frontier_refresh_artifacts(
         artifacts["autonomous_chain_optimization"] = repo_rel(path, repo_root)
         response_harvest = report.get("targeted_component_correction_response_harvest")
         receiver_closed_budget = report.get("receiver_closed_correction_budget")
+        repair_materializer_work_queue = (
+            targeted_chain_work_queue
+            if isinstance(targeted_chain_work_queue, Mapping)
+            else operation_work_queue
+            if isinstance(operation_work_queue, Mapping)
+            else None
+        )
+        repair_materializer_execution_queue = (
+            targeted_execution_queue
+            if isinstance(targeted_execution_queue, Mapping)
+            else operation_execution_queue
+            if isinstance(operation_execution_queue, Mapping)
+            else None
+        )
+        repair_materializer_work_queue_path = (
+            artifacts.get("targeted_component_correction_chain_materializer_work_queue")
+            or artifacts.get("operation_materializer_work_queue")
+        )
+        repair_materializer_execution_queue_path = (
+            artifacts.get(
+                "targeted_component_correction_chain_materializer_execution_queue"
+            )
+            or artifacts.get("operation_materializer_execution_queue")
+        )
         repair_waterfill_queue = build_frontier_repair_budget_waterfill_queue(
             repo_root=repo_root,
             autonomous_chain_optimization=autonomous_chain_optimization,
@@ -871,6 +899,10 @@ def write_frontier_refresh_artifacts(
             receiver_closed_correction_budget_path=artifacts.get(
                 "receiver_closed_correction_budget"
             ),
+            materializer_work_queue=repair_materializer_work_queue,
+            materializer_work_queue_path=repair_materializer_work_queue_path,
+            materializer_execution_queue=repair_materializer_execution_queue,
+            materializer_execution_queue_path=repair_materializer_execution_queue_path,
             results_root=str(report.get("results_root") or "experiments/results"),
             queue_id=(
                 f"{report.get('queue_id') or 'frontier_feedback'}_"

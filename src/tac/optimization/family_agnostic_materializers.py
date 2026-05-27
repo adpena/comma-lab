@@ -1670,11 +1670,18 @@ def _archive_section_entropy_recode_runtime_consumption_proof(
         expected_candidate_sha = _clean_str(section.get("candidate_sha256"))
         expected_raw_sha = _clean_str(section.get("raw_payload_sha256"))
         length_preserved = candidate_length == source_length
+        full_member_payload_identity = (
+            source_offset == 0
+            and candidate_offset == 0
+            and source_length == len(source_member_payload)
+            and candidate_length == len(candidate_member_payload)
+        )
+        receiver_route_preserved = length_preserved or full_member_payload_identity
         section_passed = (
             source_raw_sha is not None
             and candidate_raw_sha is not None
             and source_raw_sha == candidate_raw_sha
-            and length_preserved
+            and receiver_route_preserved
             and (expected_source_sha is None or source_sha == expected_source_sha)
             and (expected_candidate_sha is None or candidate_sha == expected_candidate_sha)
             and (expected_raw_sha is None or candidate_raw_sha == expected_raw_sha)
@@ -1694,6 +1701,8 @@ def _archive_section_entropy_recode_runtime_consumption_proof(
                 "candidate_raw_payload_sha256": candidate_raw_sha,
                 "raw_payload_identical": source_raw_sha == candidate_raw_sha,
                 "section_length_preserved": length_preserved,
+                "full_member_brotli_payload_identity": full_member_payload_identity,
+                "receiver_route_preserved": receiver_route_preserved,
                 "passed": section_passed,
             }
         )
@@ -1724,6 +1733,9 @@ def _archive_section_entropy_recode_runtime_consumption_proof(
         ),
         "all_selected_section_lengths_preserved": all(
             proof["section_length_preserved"] is True for proof in section_proofs
+        ),
+        "all_selected_section_receiver_routes_preserved": all(
+            proof["receiver_route_preserved"] is True for proof in section_proofs
         ),
         "receiver_contract_satisfied": passed,
         "runtime_consumption_proof_passed": passed,

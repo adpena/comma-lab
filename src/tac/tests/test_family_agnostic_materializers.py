@@ -1344,6 +1344,58 @@ def test_archive_section_entropy_recode_materializer_emits_raw_identity_proof(
     assert result["ready_for_exact_eval_dispatch"] is False
 
 
+def test_archive_section_entropy_recode_accepts_full_member_length_changed_proof(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    output = tmp_path / "candidate.zip"
+    proof = tmp_path / "runtime_consumption_proof.json"
+    raw = (b"abcdef0123456789" * 4096) + (b"A" * 8192)
+    section = brotli.compress(raw, quality=1)
+    _write_zip(archive, {"0.raw": section})
+    manifest = {
+        "schema": "fixture_section_manifest.v1",
+        "member": {"name": "0.raw"},
+        "sections": [
+            {
+                "name": "whole_member_brotli",
+                "index": 0,
+                "offset": 0,
+                "length": len(section),
+                "sha256": sha256_bytes(section),
+            }
+        ],
+    }
+
+    result = materialize_archive_section_entropy_recode_candidate(
+        archive_path=archive,
+        section_manifest=manifest,
+        output_archive=output,
+        section_names=("whole_member_brotli",),
+        brotli_qualities=(11,),
+        runtime_consumption_proof_out=proof,
+        repo_root=tmp_path,
+    )
+
+    proof_payload = json.loads(proof.read_text(encoding="utf-8"))
+    section_proof = proof_payload["section_proofs"][0]
+    assert proof_payload["all_selected_sections_raw_payload_identical"] is True
+    assert proof_payload["all_selected_section_lengths_preserved"] is False
+    assert proof_payload["all_selected_section_receiver_routes_preserved"] is True
+    assert section_proof["full_member_brotli_payload_identity"] is True
+    assert section_proof["receiver_route_preserved"] is True
+    assert section_proof["passed"] is True
+    assert result["receiver_contract_satisfied"] is True
+    assert "section_length_changed_requires_runtime_consumption_proof" not in (
+        result["readiness_blockers"]
+    )
+    assert "archive_section_entropy_recode_receiver_contract_not_satisfied" not in (
+        result["readiness_blockers"]
+    )
+    assert result["score_claim"] is False
+    assert result["ready_for_exact_eval_dispatch"] is False
+
+
 def test_archive_section_entropy_recode_materializer_accepts_length_preserved_proof(
     tmp_path: Path,
 ) -> None:
@@ -2165,25 +2217,33 @@ def test_archive_section_materializer_cli_auto_writes_runtime_proof(
         encoding="utf-8",
     )
 
+    command = [
+        sys.executable,
+        str(REPO_ROOT / "tools" / "run_family_agnostic_materializer.py"),
+        "--target-kind",
+        "archive_section_entropy_recode_v1",
+        "--archive-path",
+        str(archive),
+        "--output-archive",
+        str(output),
+        "--output-manifest",
+        str(manifest_path),
+        "--section-manifest",
+        str(section_manifest_path),
+        "--section-name",
+        "section_a",
+        "--brotli-quality",
+        "11",
+    ]
     completed = subprocess.run(
-        [
-            sys.executable,
-            str(REPO_ROOT / "tools" / "run_family_agnostic_materializer.py"),
-            "--target-kind",
-            "archive_section_entropy_recode_v1",
-            "--archive-path",
-            str(archive),
-            "--output-archive",
-            str(output),
-            "--output-manifest",
-            str(manifest_path),
-            "--section-manifest",
-            str(section_manifest_path),
-            "--section-name",
-            "section_a",
-            "--brotli-quality",
-            "11",
-        ],
+        command,
+        check=True,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+    )
+    rerun = subprocess.run(
+        [*command, "--allow-overwrite"],
         check=True,
         cwd=REPO_ROOT,
         text=True,
@@ -2192,15 +2252,21 @@ def test_archive_section_materializer_cli_auto_writes_runtime_proof(
 
     payload = json.loads(manifest_path.read_text(encoding="utf-8"))
     stdout_payload = json.loads(completed.stdout)
+    rerun_payload = json.loads(rerun.stdout)
     assert payload["schema"] == ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA
     assert stdout_payload["schema"] == ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA
+    assert rerun_payload["schema"] == ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA
     assert proof.is_file()
-    assert payload["receiver_contract_satisfied"] is False
+    assert payload["receiver_contract_satisfied"] is True
     assert payload["receiver_verification"]["proof_present"] is True
+    assert payload["receiver_verification"]["receiver_contract_satisfied"] is True
     assert payload["runtime_consumption_proof_path"] == str(proof)
-    assert "section_length_changed_requires_runtime_consumption_proof" in (
+    assert "section_length_changed_requires_runtime_consumption_proof" not in (
         payload["readiness_blockers"]
     )
+    proof_payload = json.loads(proof.read_text(encoding="utf-8"))
+    assert proof_payload["all_selected_section_lengths_preserved"] is False
+    assert proof_payload["all_selected_section_receiver_routes_preserved"] is True
     assert payload["score_claim"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False
 
