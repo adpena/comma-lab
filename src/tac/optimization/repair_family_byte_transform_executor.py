@@ -41,21 +41,11 @@ from tac.repo_io import (
     write_bytes_artifact,
 )
 
-REPAIR_FAMILY_BYTE_TRANSFORM_EXECUTION_REPORT_SCHEMA = (
-    "repair_family_byte_transform_execution_report.v1"
-)
-REPAIR_FAMILY_BYTE_TRANSFORM_PAYLOAD_SCHEMA = (
-    "repair_family_byte_transform_payload.v1"
-)
-REPAIR_FAMILY_BYTE_TRANSFORM_DELTA_SCHEMA = (
-    "repair_family_byte_transform_delta.v1"
-)
-REPAIR_FAMILY_BYTE_TRANSFORM_REPLAY_BUNDLE_SCHEMA = (
-    "repair_family_byte_transform_replay_bundle.v1"
-)
-REPAIR_FAMILY_EXACT_EVAL_HANDOFF_GATE_SCHEMA = (
-    "repair_family_exact_eval_handoff_gate.v1"
-)
+REPAIR_FAMILY_BYTE_TRANSFORM_EXECUTION_REPORT_SCHEMA = "repair_family_byte_transform_execution_report.v1"
+REPAIR_FAMILY_BYTE_TRANSFORM_PAYLOAD_SCHEMA = "repair_family_byte_transform_payload.v1"
+REPAIR_FAMILY_BYTE_TRANSFORM_DELTA_SCHEMA = "repair_family_byte_transform_delta.v1"
+REPAIR_FAMILY_BYTE_TRANSFORM_REPLAY_BUNDLE_SCHEMA = "repair_family_byte_transform_replay_bundle.v1"
+REPAIR_FAMILY_EXACT_EVAL_HANDOFF_GATE_SCHEMA = "repair_family_exact_eval_handoff_gate.v1"
 
 SUPPORTED_REPAIR_BYTE_TRANSFORM_FAMILIES: frozenset[str] = frozenset(
     {
@@ -180,9 +170,7 @@ def _file_record(
     resolved = _resolve(path, repo_root)
     present = resolved.is_file()
     if required and not present:
-        raise RepairFamilyByteTransformExecutorError(
-            f"required artifact missing: {label}={path}"
-        )
+        raise RepairFamilyByteTransformExecutorError(f"required artifact missing: {label}={path}")
     record = {
         "label": label,
         "path": _repo_rel(resolved, repo_root),
@@ -199,9 +187,7 @@ def _artifact_path_from_statuses(manifest: Mapping[str, Any], key: str) -> str:
     for item in replay.get("local_mlx_custody_paths") or []:
         if isinstance(item, Mapping) and str(item.get("key") or "") == key:
             return str(item.get("path") or "").strip()
-    for item in _mapping(manifest.get("receiver_verification")).get(
-        "local_mlx_custody_paths"
-    ) or []:
+    for item in _mapping(manifest.get("receiver_verification")).get("local_mlx_custody_paths") or []:
         if isinstance(item, Mapping) and str(item.get("key") or "") == key:
             return str(item.get("path") or "").strip()
     return ""
@@ -218,7 +204,11 @@ def _component_probe_delta(manifest: Mapping[str, Any]) -> dict[str, Any]:
     posenet_delta = _safe_float(terms.get("posenet_delta_score_units"))
     combined = _safe_float(terms.get("combined_delta_score_units"))
     if combined == 0.0:
-        combined = segnet_delta + posenet_delta
+        measured_delta = _safe_float(terms.get("measured_component_delta_score_units"))
+        objective_delta = _safe_float(
+            terms.get("objective_delta_score_units") or manifest.get("objective_delta_score_units")
+        )
+        combined = measured_delta or objective_delta or (segnet_delta + posenet_delta)
     replay = _mapping(manifest.get("component_response_replay"))
     axis = str(replay.get("axis_tag") or replay.get("response_axis") or "").strip()
     return {
@@ -228,8 +218,7 @@ def _component_probe_delta(manifest: Mapping[str, Any]) -> dict[str, Any]:
         "segnet_delta_score_units": segnet_delta,
         "posenet_delta_score_units": posenet_delta,
         "combined_delta_score_units": combined,
-        "evidence_grade": replay.get("evidence_grade")
-        or "local_mlx_component_response_replay_only",
+        "evidence_grade": replay.get("evidence_grade") or "local_mlx_component_response_replay_only",
         "local_mlx_rows_are_advisory_only": True,
         "budget_spend_allowed": False,
         "ready_for_budget_spend": False,
@@ -300,8 +289,7 @@ def _build_transform_payload(
         "active_entropy_stage": dict(_mapping(manifest.get("active_entropy_stage"))),
         "fractal_levels": _active_levels(manifest),
         "allocated_repair_bytes": _safe_int(
-            manifest.get("allocated_repair_bytes")
-            or _component_terms(manifest).get("allocated_repair_bytes")
+            manifest.get("allocated_repair_bytes") or _component_terms(manifest).get("allocated_repair_bytes")
         ),
         "family_signal_payload": _family_signal_payload(manifest, family_id),
         "mlx_local_probe_delta": _component_probe_delta(manifest),
@@ -512,9 +500,7 @@ def _archive_native_zip_repack_candidate(
         "path": candidate.get("path") or _repo_rel(output, repo_root),
         "sha256": candidate.get("sha256") or sha256_file(output),
         "bytes": candidate.get("bytes") or output.stat().st_size,
-        "runtime_consumption_proof_path": _repo_rel(proof, repo_root)
-        if proof.is_file()
-        else None,
+        "runtime_consumption_proof_path": _repo_rel(proof, repo_root) if proof.is_file() else None,
         "runtime_consumption_proof_ready": proof_ready,
         "receiver_contract_kind": native_manifest.get("receiver_contract_kind"),
         "receiver_contract_satisfied": proof_ready,
@@ -537,11 +523,7 @@ def _exact_eval_handoff_gate(
     exact_blockers = ordered_unique(
         [
             *list(blockers),
-            *(
-                []
-                if candidate_archive.get("materialized") is True
-                else ["byte_closed_candidate_archive_missing"]
-            ),
+            *([] if candidate_archive.get("materialized") is True else ["byte_closed_candidate_archive_missing"]),
             *(
                 []
                 if candidate_archive.get("runtime_consumption_proof_ready") is True
@@ -605,9 +587,7 @@ def _source_records(
             key,
         )
         if path:
-            records.append(
-                _file_record(label=label, path=path, repo_root=repo_root, required=False)
-            )
+            records.append(_file_record(label=label, path=path, repo_root=repo_root, required=False))
     return records
 
 
@@ -715,10 +695,7 @@ def build_repair_family_byte_transform_execution_report(
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Run a concrete repair-family byte-transform executor."""
 
-    if (
-        family_materializer_manifest.get("schema")
-        != REPAIR_CAMPAIGN_FAMILY_MATERIALIZER_MANIFEST_SCHEMA
-    ):
+    if family_materializer_manifest.get("schema") != REPAIR_CAMPAIGN_FAMILY_MATERIALIZER_MANIFEST_SCHEMA:
         raise RepairFamilyByteTransformExecutorError(
             "repair family byte transform requires repair family materializer manifest"
         )
@@ -727,9 +704,7 @@ def build_repair_family_byte_transform_execution_report(
         context="repair_family_byte_transform_manifest",
     )
     raw_family_id = str(
-        family_materializer_manifest.get("family_id")
-        or family_materializer_manifest.get("target_kind")
-        or ""
+        family_materializer_manifest.get("family_id") or family_materializer_manifest.get("target_kind") or ""
     ).strip()
     family_id = raw_family_id or "unclassified_repair_family"
     supported = family_id in SUPPORTED_REPAIR_BYTE_TRANSFORM_FAMILIES
@@ -777,83 +752,52 @@ def build_repair_family_byte_transform_execution_report(
     report = {
         "schema": REPAIR_FAMILY_BYTE_TRANSFORM_EXECUTION_REPORT_SCHEMA,
         "generated_at_utc": _utc_now(),
-        "materializer_id": (
-            "repair_family_byte_transform_executor:"
-            f"{family_id}"
-        ),
+        "materializer_id": (f"repair_family_byte_transform_executor:{family_id}"),
         "manifest_kind": "repair_family_byte_transform_execution_report",
-        "source_family_materializer_manifest_path": str(
-            family_materializer_manifest_path
-        ),
-        "source_family_materializer_manifest_schema": (
-            family_materializer_manifest.get("schema")
-        ),
+        "source_family_materializer_manifest_path": str(family_materializer_manifest_path),
+        "source_family_materializer_manifest_schema": (family_materializer_manifest.get("schema")),
         "target_kind": family_materializer_manifest.get("target_kind"),
         "family_id": family_id,
         "typed_response_id": family_materializer_manifest.get("typed_response_id"),
         "candidate_chain_id": family_materializer_manifest.get("candidate_chain_id"),
-        "candidate_chain_ids": _string_list(
-            family_materializer_manifest.get("candidate_chain_ids")
-        ),
-        "repair_budget_candidate_chain_id": family_materializer_manifest.get(
-            "repair_budget_candidate_chain_id"
-        ),
+        "candidate_chain_ids": _string_list(family_materializer_manifest.get("candidate_chain_ids")),
+        "repair_budget_candidate_chain_id": family_materializer_manifest.get("repair_budget_candidate_chain_id"),
         "repair_budget_candidate_chain_ids": _string_list(
             family_materializer_manifest.get("repair_budget_candidate_chain_ids")
         ),
-        "entropy_position_label": family_materializer_manifest.get(
-            "entropy_position_label"
-        ),
-        "active_entropy_stage": dict(
-            _mapping(family_materializer_manifest.get("active_entropy_stage"))
-        ),
-        "fractal_optimization_scope": dict(
-            _mapping(family_materializer_manifest.get("fractal_optimization_scope"))
-        ),
+        "entropy_position_label": family_materializer_manifest.get("entropy_position_label"),
+        "active_entropy_stage": dict(_mapping(family_materializer_manifest.get("active_entropy_stage"))),
+        "fractal_optimization_scope": dict(_mapping(family_materializer_manifest.get("fractal_optimization_scope"))),
         "allocated_repair_bytes": transform_payload.get("allocated_repair_bytes"),
         "byte_transform_supported": supported,
         "byte_transform_delta_emitted": True,
         "byte_transform_delta": delta,
         "candidate_delta": delta,
         "candidate_archive": candidate_archive,
-        "archive_native_transform_attempted": (
-            candidate_archive.get("archive_native_transform_attempted") is True
-        ),
-        "archive_native_transform_kind": candidate_archive.get(
-            "archive_native_transform_kind"
-        ),
+        "archive_native_transform_attempted": (candidate_archive.get("archive_native_transform_attempted") is True),
+        "archive_native_transform_kind": candidate_archive.get("archive_native_transform_kind"),
         "archive_native_saved_bytes": candidate_archive.get("saved_bytes"),
         "byte_closed_candidate_emitted": candidate_archive.get("materialized") is True,
         "candidate_archive_materialized": candidate_archive.get("materialized") is True,
-        "runtime_consumption_proof_path": family_materializer_manifest.get(
-            "runtime_consumption_proof_path"
-        )
+        "runtime_consumption_proof_path": family_materializer_manifest.get("runtime_consumption_proof_path")
         or candidate_archive.get("runtime_consumption_proof_path"),
-        "receiver_contract_kind": family_materializer_manifest.get(
-            "receiver_contract_kind"
-        )
+        "receiver_contract_kind": family_materializer_manifest.get("receiver_contract_kind")
         or candidate_archive.get("receiver_contract_kind"),
         "receiver_contract_satisfied": (
             family_materializer_manifest.get("receiver_contract_satisfied") is True
             or candidate_archive.get("receiver_contract_satisfied") is True
         ),
-        "component_response_replayed": (
-            family_materializer_manifest.get("component_response_replayed") is True
-        ),
-        "component_response_replay": dict(
-            _mapping(family_materializer_manifest.get("component_response_replay"))
-        ),
+        "component_response_replayed": (family_materializer_manifest.get("component_response_replayed") is True),
+        "component_response_replay": dict(_mapping(family_materializer_manifest.get("component_response_replay"))),
         "mlx_local_probe_delta": component_delta,
         "component_response_replay_axis_tag": component_delta["component_response_axis"],
-        "component_response_replay_path": _mapping(
-            family_materializer_manifest.get("component_response_replay")
-        ).get("artifact_path"),
+        "component_response_replay_path": _mapping(family_materializer_manifest.get("component_response_replay")).get(
+            "artifact_path"
+        ),
         "exact_eval_handoff_gate": exact_gate,
         "exact_eval_handoff_eligible": False,
         "replay_bundle_schema": REPAIR_FAMILY_BYTE_TRANSFORM_REPLAY_BUNDLE_SCHEMA,
-        "replay_bundle_hash_manifest_sha256": replay_bundle.get(
-            "hash_manifest_sha256"
-        ),
+        "replay_bundle_hash_manifest_sha256": replay_bundle.get("hash_manifest_sha256"),
         "readiness_blockers": ordered_unique(blockers),
         "blockers": ordered_unique(blockers),
         "local_mlx_rows_are_advisory_only": True,

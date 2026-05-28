@@ -23,17 +23,11 @@ from tac.repo_io import json_text, sha256_bytes, sha256_file
 
 REPAIR_FAMILY_STACK_SEARCH_PLAN_SCHEMA = "repair_family_stack_search_plan.v1"
 REPAIR_FAMILY_STACK_SEARCH_ROW_SCHEMA = "repair_family_stack_search_row.v1"
-REPAIR_FAMILY_EXACT_HANDOFF_CANDIDATE_ROW_SCHEMA = (
-    "repair_family_exact_handoff_candidate_row.v1"
-)
+REPAIR_FAMILY_EXACT_HANDOFF_CANDIDATE_ROW_SCHEMA = "repair_family_exact_handoff_candidate_row.v1"
 REPAIR_FAMILY_EXACT_HANDOFF_PLAN_SCHEMA = "repair_family_exact_handoff_plan.v1"
-REPAIR_FAMILY_STACK_LEARNING_SIGNAL_REPORT_SCHEMA = (
-    "repair_campaign_blocked_learning_signal_report.v1"
-)
+REPAIR_FAMILY_STACK_LEARNING_SIGNAL_REPORT_SCHEMA = "repair_campaign_blocked_learning_signal_report.v1"
 REPAIR_FAMILY_STACK_LEARNING_SIGNAL_SCHEMA = "repair_campaign_learning_signal.v1"
-REPAIR_FAMILY_STACK_LOCAL_PLANNING_UPDATE_SCHEMA = (
-    "repair_campaign_local_planning_update.v1"
-)
+REPAIR_FAMILY_STACK_LOCAL_PLANNING_UPDATE_SCHEMA = "repair_campaign_local_planning_update.v1"
 
 _LEVEL_ORDER: tuple[str, ...] = (
     "bit",
@@ -46,6 +40,7 @@ _LEVEL_ORDER: tuple[str, ...] = (
     "batch",
     "full_video",
 )
+_LEVEL_RANK = {level: index for index, level in enumerate(_LEVEL_ORDER)}
 
 
 class RepairFamilyStackSearchError(ValueError):
@@ -108,6 +103,10 @@ def _safe_int(value: Any, default: int = 0) -> int:
         return default
 
 
+def _clamp(value: float, lower: float = 0.0, upper: float = 1.0) -> float:
+    return max(lower, min(upper, value))
+
+
 def _report_file_record(
     path: str | Path,
     *,
@@ -161,19 +160,14 @@ def _posterior_demotions(
         state["policies"].append(policy)
         feature_vector = _mapping(row.get("planner_feature_vector"))
         if not feature_vector:
-            feature_vector = _mapping(
-                _mapping(row.get("local_planning_update")).get(
-                    "planner_feature_vector"
-                )
-            )
+            feature_vector = _mapping(_mapping(row.get("local_planning_update")).get("planner_feature_vector"))
         policy_delta = _mapping(row.get("acquisition_policy_delta"))
         expected = _safe_float(
             policy_delta.get("expected_local_improvement_score_units")
             or feature_vector.get("expected_local_improvement_score_units")
         )
         improvement_per_byte = _safe_float(
-            policy_delta.get("improvement_per_allocated_byte")
-            or feature_vector.get("improvement_per_allocated_byte")
+            policy_delta.get("improvement_per_allocated_byte") or feature_vector.get("improvement_per_allocated_byte")
         )
         state["expected_improvement_sum"] += max(0.0, expected)
         state["improvement_per_byte_sum"] += max(0.0, improvement_per_byte)
@@ -202,24 +196,17 @@ def _posterior_demotions(
         state["demotion_multiplier"] = max(0.20, 1.0 - min(0.80, negatives / observations))
         state["demoted"] = negatives > 0
         state["positive_fraction"] = int(state["positive_result_count"]) / observations
-        state["mean_expected_improvement"] = (
-            float(state["expected_improvement_sum"]) / observations
-        )
-        state["mean_improvement_per_byte"] = (
-            float(state["improvement_per_byte_sum"]) / observations
-        )
+        state["mean_expected_improvement"] = float(state["expected_improvement_sum"]) / observations
+        state["mean_improvement_per_byte"] = float(state["improvement_per_byte_sum"]) / observations
         posterior_boost = min(
             0.25,
-            0.10 * float(state["positive_fraction"])
-            + min(0.15, float(state["mean_improvement_per_byte"]) * 4000.0),
+            0.10 * float(state["positive_fraction"]) + min(0.15, float(state["mean_improvement_per_byte"]) * 4000.0),
         )
         posterior_penalty = min(
             0.55,
             0.20 * (int(state["receiver_credit_exhausted_count"]) / observations)
-            + 0.16
-            * (int(state["entropy_stage_contract_miss_count"]) / observations)
-            + 0.10
-            * (int(state["stackability_remeasure_required_count"]) / observations),
+            + 0.16 * (int(state["entropy_stage_contract_miss_count"]) / observations)
+            + 0.10 * (int(state["stackability_remeasure_required_count"]) / observations),
         )
         state["acquisition_multiplier"] = max(
             0.15,
@@ -240,9 +227,7 @@ def _level_penalty(levels: Sequence[str]) -> float:
 
 def _scope_levels(report: Mapping[str, Any]) -> list[str]:
     scope = _mapping(report.get("fractal_optimization_scope"))
-    return _string_list(scope.get("active_levels")) or _string_list(
-        scope.get("declared_levels")
-    )
+    return _string_list(scope.get("active_levels")) or _string_list(scope.get("declared_levels"))
 
 
 def _stage_order(report: Mapping[str, Any]) -> int:
@@ -256,6 +241,21 @@ def _byte_credit_feasible(report: Mapping[str, Any], remaining_budget: int | Non
     if remaining_budget is None:
         return True
     return requested <= max(0, remaining_budget)
+
+
+def _stack_row_key(row: Mapping[str, Any]) -> str:
+    return "|".join(
+        [
+            str(row.get("family_id") or "unclassified_repair_family"),
+            str(row.get("typed_response_id") or "typed_response_unknown"),
+            str(row.get("candidate_chain_id") or "candidate_chain_unknown"),
+            str(row.get("order_hint") or "0"),
+        ]
+    )
+
+
+def _level_sort_key(level: str) -> tuple[int, str]:
+    return (_LEVEL_RANK.get(level, len(_LEVEL_ORDER)), level)
 
 
 def _stack_row(
@@ -272,9 +272,7 @@ def _stack_row(
         context=f"repair_family_stack_search_report:{report_path}",
     )
     if report.get("schema") != REPAIR_FAMILY_BYTE_TRANSFORM_EXECUTION_REPORT_SCHEMA:
-        raise RepairFamilyStackSearchError(
-            "stack search requires repair_family_byte_transform_execution_report.v1"
-        )
+        raise RepairFamilyStackSearchError("stack search requires repair_family_byte_transform_execution_report.v1")
     family = str(report.get("family_id") or "unclassified_repair_family")
     delta = _mapping(report.get("mlx_local_probe_delta"))
     combined_delta = _safe_float(delta.get("combined_delta_score_units"))
@@ -288,17 +286,13 @@ def _stack_row(
     exact_gate = _mapping(report.get("exact_eval_handoff_gate"))
     demotion = dict(posterior_demotions.get(family) or {})
     demotion_multiplier = _safe_float(demotion.get("demotion_multiplier")) or 1.0
-    acquisition_multiplier = (
-        _safe_float(demotion.get("acquisition_multiplier")) or demotion_multiplier
-    )
+    acquisition_multiplier = _safe_float(demotion.get("acquisition_multiplier")) or demotion_multiplier
     scope_penalty = _level_penalty(levels)
     stack_penalty = _safe_float(report.get("interaction_penalty")) + scope_penalty
     feasible = _byte_credit_feasible(report, remaining_budget)
     negative_demoted = demotion.get("demoted") is True
     score = (
-        (local_improvement / max(1, delta_bytes))
-        * acquisition_multiplier
-        * (1.0 - min(0.95, stack_penalty))
+        (local_improvement / max(1, delta_bytes)) * acquisition_multiplier * (1.0 - min(0.95, stack_penalty))
         if feasible
         else 0.0
     )
@@ -306,11 +300,7 @@ def _stack_row(
         [
             *_string_list(report.get("blockers")),
             *([] if feasible else ["byte_credit_exhausted_for_stack_row"]),
-            *(
-                ["automatic_negative_result_demotion_active"]
-                if negative_demoted
-                else []
-            ),
+            *(["automatic_negative_result_demotion_active"] if negative_demoted else []),
             *(
                 ["posterior_receiver_credit_rebudget_required"]
                 if int(demotion.get("receiver_credit_exhausted_count") or 0) > 0
@@ -323,8 +313,7 @@ def _stack_row(
             ),
             *(
                 ["posterior_stackability_remeasure_required"]
-                if int(demotion.get("stackability_remeasure_required_count") or 0)
-                > 0
+                if int(demotion.get("stackability_remeasure_required_count") or 0) > 0
                 else []
             ),
             "exact_axis_required_before_score_or_budget",
@@ -332,6 +321,7 @@ def _stack_row(
     )
     row = {
         "schema": REPAIR_FAMILY_STACK_SEARCH_ROW_SCHEMA,
+        "stack_row_key": None,
         "source_execution_report": _report_file_record(
             report_path,
             repo_root=repo_root,
@@ -342,17 +332,12 @@ def _stack_row(
         "entropy_position_label": report.get("entropy_position_label"),
         "entropy_stage_order": entropy_order,
         "fractal_scope_levels": levels,
-        "scope_order_indexes": [
-            _LEVEL_ORDER.index(level) for level in levels if level in _LEVEL_ORDER
-        ],
+        "scope_order_indexes": [_LEVEL_ORDER.index(level) for level in levels if level in _LEVEL_ORDER],
         "delta_payload_bytes": delta_bytes,
         "allocated_repair_bytes": allocated_repair_bytes,
         "archive_native_saved_bytes": archive_native_saved_bytes,
-        "byte_closed_candidate_emitted": report.get("byte_closed_candidate_emitted")
-        is True,
-        "candidate_archive_materialized": (
-            report.get("candidate_archive_materialized") is True
-        ),
+        "byte_closed_candidate_emitted": report.get("byte_closed_candidate_emitted") is True,
+        "candidate_archive_materialized": (report.get("candidate_archive_materialized") is True),
         "archive_bound_runtime_consumption_proof_ready": (
             exact_gate.get("archive_bound_runtime_consumption_proof_ready") is True
         ),
@@ -384,6 +369,7 @@ def _stack_row(
         row,
         context=f"repair_family_stack_search_row:{family}",
     )
+    row["stack_row_key"] = _stack_row_key(row)
     return row
 
 
@@ -404,26 +390,19 @@ def _interaction_feature_vector(row: Mapping[str, Any]) -> dict[str, Any]:
         "has_pair_scope": "pair" in levels,
         "has_batch_scope": "batch" in levels,
         "has_full_video_scope": "full_video" in levels,
-        "frame0_palette_asymmetry_prior": family
-        in {"frame0_k16_palette_asymmetry", "palette_frame_asymmetry_prior"},
+        "frame0_palette_asymmetry_prior": family in {"frame0_k16_palette_asymmetry", "palette_frame_asymmetry_prior"},
         "selector_codec_family": family == "per_region_selector_codec",
         "segnet_region_family": family == "segnet_class_region_waterfill",
         "posenet_bottom_decile_family": family == "posenet_null_bottom_decile",
         "entropy_boundary_family": family == "entropy_boundary_probe",
         "byte_credit_feasible": row.get("byte_credit_feasible") is True,
-        "archive_bound_exact_handoff_candidate": (
-            row.get("archive_bound_exact_handoff_candidate") is True
-        ),
-        "negative_posterior_demoted": (
-            row.get("automatic_negative_result_demoted") is True
-        ),
+        "archive_bound_exact_handoff_candidate": (row.get("archive_bound_exact_handoff_candidate") is True),
+        "negative_posterior_demoted": (row.get("automatic_negative_result_demoted") is True),
         "local_mlx_expected_improvement_score_units": _safe_float(
             row.get("local_mlx_expected_improvement_score_units")
         ),
         "stackability_penalty": _safe_float(row.get("stackability_penalty")),
-        "interaction_aware_stack_score": _safe_float(
-            row.get("interaction_aware_stack_score")
-        ),
+        "interaction_aware_stack_score": _safe_float(row.get("interaction_aware_stack_score")),
         "budget_spend_allowed": False,
         "ready_for_exact_eval_dispatch": False,
         **FALSE_AUTHORITY,
@@ -455,15 +434,9 @@ def _interaction_cell_key(vector: Mapping[str, Any]) -> str:
         str(vector.get("family_id") or "family_unknown"),
         f"stage_{vector.get('entropy_stage_order')}",
         "+".join(scope_parts) or "scope_unknown",
-        "archive_bound"
-        if vector.get("archive_bound_exact_handoff_candidate") is True
-        else "archive_unbound",
-        "negative_demoted"
-        if vector.get("negative_posterior_demoted") is True
-        else "posterior_active",
-        "byte_feasible"
-        if vector.get("byte_credit_feasible") is True
-        else "byte_exhausted",
+        "archive_bound" if vector.get("archive_bound_exact_handoff_candidate") is True else "archive_unbound",
+        "negative_demoted" if vector.get("negative_posterior_demoted") is True else "posterior_active",
+        "byte_feasible" if vector.get("byte_credit_feasible") is True else "byte_exhausted",
     ]
     return "|".join(tags)
 
@@ -502,9 +475,7 @@ def _build_interaction_tensor(rows: Sequence[Mapping[str, Any]]) -> dict[str, An
             cell["negative_demoted_count"] += 1
         if vector.get("byte_credit_feasible") is True:
             cell["byte_credit_feasible_count"] += 1
-        improvement = _safe_float(
-            vector.get("local_mlx_expected_improvement_score_units")
-        )
+        improvement = _safe_float(vector.get("local_mlx_expected_improvement_score_units"))
         stack_score = _safe_float(vector.get("interaction_aware_stack_score"))
         cell["expected_improvement_sum"] += improvement
         cell["stack_score_sum"] += stack_score
@@ -517,18 +488,10 @@ def _build_interaction_tensor(rows: Sequence[Mapping[str, Any]]) -> dict[str, An
     for cell in cell_map.values():
         cell["family_ids"] = ordered_unique(cell["family_ids"])
         cell["entropy_stage_orders"] = sorted(
-            {
-                int(order)
-                for order in cell["entropy_stage_orders"]
-                if not isinstance(order, bool) and order is not None
-            }
+            {int(order) for order in cell["entropy_stage_orders"] if not isinstance(order, bool) and order is not None}
         )
-        cell["mean_stack_score"] = (
-            float(cell["stack_score_sum"]) / max(1, int(cell["row_count"]))
-        )
-        cell["mean_expected_improvement"] = (
-            float(cell["expected_improvement_sum"]) / max(1, int(cell["row_count"]))
-        )
+        cell["mean_stack_score"] = float(cell["stack_score_sum"]) / max(1, int(cell["row_count"]))
+        cell["mean_expected_improvement"] = float(cell["expected_improvement_sum"]) / max(1, int(cell["row_count"]))
         require_no_truthy_authority_fields(
             cell,
             context=f"repair_family_stack_interaction_tensor_cell:{cell['cell_key']}",
@@ -568,6 +531,324 @@ def _build_interaction_tensor(rows: Sequence[Mapping[str, Any]]) -> dict[str, An
     return tensor
 
 
+def _pairwise_interaction_cell(
+    *,
+    left: Mapping[str, Any],
+    right: Mapping[str, Any],
+    byte_credit_budget: int | None,
+) -> dict[str, Any]:
+    left_levels = set(_string_list(left.get("fractal_scope_levels")))
+    right_levels = set(_string_list(right.get("fractal_scope_levels")))
+    overlap = sorted(left_levels & right_levels, key=_level_sort_key)
+    union = sorted(left_levels | right_levels, key=_level_sort_key)
+    left_family = str(left.get("family_id") or "unclassified_repair_family")
+    right_family = str(right.get("family_id") or "unclassified_repair_family")
+    left_stage = _safe_int(left.get("entropy_stage_order"), default=999)
+    right_stage = _safe_int(right.get("entropy_stage_order"), default=999)
+    stage_gap = right_stage - left_stage
+    stage_inversion = right_stage < left_stage
+    same_stage_pressure = right_stage == left_stage
+    left_bytes = max(0, _safe_int(left.get("delta_payload_bytes")))
+    right_bytes = max(0, _safe_int(right.get("delta_payload_bytes")))
+    combined_bytes = left_bytes + right_bytes
+    combined_improvement = _safe_float(left.get("local_mlx_expected_improvement_score_units")) + _safe_float(
+        right.get("local_mlx_expected_improvement_score_units")
+    )
+    combined_stack_score = _safe_float(left.get("interaction_aware_stack_score")) + _safe_float(
+        right.get("interaction_aware_stack_score")
+    )
+    byte_credit_exhausted = (
+        left.get("byte_credit_feasible") is False
+        or right.get("byte_credit_feasible") is False
+        or (byte_credit_budget is not None and combined_bytes > max(0, byte_credit_budget))
+    )
+    region_selector_coupling = {
+        left_family,
+        right_family,
+    } == {"segnet_class_region_waterfill", "per_region_selector_codec"}
+    region_boundary_coupling = ("region" in left_levels and "boundary" in right_levels) or (
+        "boundary" in left_levels and "region" in right_levels
+    )
+    entropy_boundary_coupling = "entropy_boundary_probe" in {
+        left_family,
+        right_family,
+    } and bool({"bit", "byte"} & (left_levels | right_levels))
+    palette_frame0_prior_coupling = "frame0_k16_palette_asymmetry" in {
+        left_family,
+        right_family,
+    } or "palette_frame_asymmetry_prior" in {left_family, right_family}
+    pair_batch_spillover = bool({"pair", "batch", "full_video"} & (left_levels | right_levels))
+    stage_penalty = 0.24 if stage_inversion else (0.04 if same_stage_pressure else 0.0)
+    scope_overlap_penalty = min(0.30, 0.04 * len(overlap))
+    spillover_penalty = 0.12 if pair_batch_spillover and overlap else 0.0
+    byte_credit_penalty = 0.20 if byte_credit_exhausted else 0.0
+    negative_posterior_penalty = 0.0
+    if left.get("automatic_negative_result_demoted") is True:
+        negative_posterior_penalty += 0.12
+    if right.get("automatic_negative_result_demoted") is True:
+        negative_posterior_penalty += 0.12
+    coupling_synergy = 0.0
+    if region_selector_coupling:
+        coupling_synergy += 0.08
+    if entropy_boundary_coupling:
+        coupling_synergy += 0.05
+    if palette_frame0_prior_coupling and {"pixel", "frame"} & (left_levels | right_levels):
+        coupling_synergy += 0.04
+    if (
+        left.get("archive_bound_exact_handoff_candidate") is True
+        and right.get("archive_bound_exact_handoff_candidate") is True
+    ):
+        coupling_synergy += 0.03
+    total_penalty = _clamp(
+        stage_penalty
+        + scope_overlap_penalty
+        + spillover_penalty
+        + byte_credit_penalty
+        + negative_posterior_penalty
+        - coupling_synergy,
+        0.0,
+        0.95,
+    )
+    pair_score = combined_stack_score * (1.0 - total_penalty)
+    blockers = ordered_unique(
+        [
+            *(["entropy_stage_order_inversion_for_candidate_transition"] if stage_inversion else []),
+            *(["byte_credit_exhausted_for_pairwise_transition"] if byte_credit_exhausted else []),
+            *(["pair_batch_or_full_video_spillover_remeasure_required"] if spillover_penalty else []),
+            *(["negative_posterior_transition_penalty_active"] if negative_posterior_penalty else []),
+        ]
+    )
+    cell = {
+        "schema": "repair_family_stack_pairwise_interaction_cell.v1",
+        "left_stack_row_key": left.get("stack_row_key") or _stack_row_key(left),
+        "right_stack_row_key": right.get("stack_row_key") or _stack_row_key(right),
+        "left_family_id": left_family,
+        "right_family_id": right_family,
+        "left_entropy_stage_order": left_stage,
+        "right_entropy_stage_order": right_stage,
+        "entropy_stage_gap": stage_gap,
+        "entropy_stage_inversion": stage_inversion,
+        "scope_overlap_levels": overlap,
+        "scope_union_levels": union,
+        "scope_jaccard": len(overlap) / max(1, len(union)),
+        "combined_delta_payload_bytes": combined_bytes,
+        "byte_credit_budget": byte_credit_budget,
+        "byte_credit_exhausted": byte_credit_exhausted,
+        "combined_local_mlx_expected_improvement_score_units": combined_improvement,
+        "region_selector_coupling": region_selector_coupling,
+        "region_boundary_coupling": region_boundary_coupling,
+        "entropy_boundary_coupling": entropy_boundary_coupling,
+        "palette_frame0_prior_coupling": palette_frame0_prior_coupling,
+        "pair_batch_or_full_video_spillover": pair_batch_spillover,
+        "stage_penalty": stage_penalty,
+        "scope_overlap_penalty": scope_overlap_penalty,
+        "spillover_penalty": spillover_penalty,
+        "byte_credit_penalty": byte_credit_penalty,
+        "negative_posterior_penalty": negative_posterior_penalty,
+        "coupling_synergy": coupling_synergy,
+        "total_interaction_penalty": total_penalty,
+        "pairwise_acquisition_score": pair_score,
+        "transition_allowed_by_tensor": not stage_inversion and not byte_credit_exhausted,
+        "interaction_formula": (
+            "pair_score=(s_i+s_j)*(1-clamp(p_stage+p_scope+p_spill+p_byte+p_negative-s_synergy,0,0.95))"
+        ),
+        "blockers": blockers,
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        cell,
+        context=(
+            f"repair_family_stack_pairwise_interaction_cell:{cell['left_stack_row_key']}->{cell['right_stack_row_key']}"
+        ),
+    )
+    return cell
+
+
+def _build_pairwise_interaction_tensor(
+    *,
+    rows: Sequence[Mapping[str, Any]],
+    byte_credit_budget: int | None,
+) -> dict[str, Any]:
+    cells = [
+        _pairwise_interaction_cell(
+            left=left,
+            right=right,
+            byte_credit_budget=byte_credit_budget,
+        )
+        for left in rows
+        for right in rows
+        if (left.get("stack_row_key") or _stack_row_key(left)) != (right.get("stack_row_key") or _stack_row_key(right))
+    ]
+    cells.sort(
+        key=lambda cell: (
+            -float(cell.get("pairwise_acquisition_score") or 0.0),
+            float(cell.get("total_interaction_penalty") or 0.0),
+            str(cell.get("left_stack_row_key") or ""),
+            str(cell.get("right_stack_row_key") or ""),
+        )
+    )
+    tensor = {
+        "schema": "repair_family_stack_pairwise_interaction_tensor.v1",
+        "axis_names": [
+            "left_family_id",
+            "right_family_id",
+            "entropy_stage_gap",
+            "scope_overlap",
+            "region_boundary_coupling",
+            "pair_batch_spillover",
+            "byte_credit_pressure",
+            "negative_posterior_pressure",
+        ],
+        "cell_count": len(cells),
+        "cells": cells,
+        "acquisition_rule": (
+            "ordered_chain_score_uses_pairwise_stage_scope_byte_credit_negative_"
+            "posterior_and_family_coupling_terms_before exact_axis_handoff"
+        ),
+        "budget_spend_allowed": False,
+        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        tensor,
+        context="repair_family_stack_pairwise_interaction_tensor",
+    )
+    return tensor
+
+
+def _build_stack_acquisition_paths(
+    *,
+    rows: Sequence[Mapping[str, Any]],
+    pairwise_tensor: Mapping[str, Any],
+    byte_credit_budget: int | None,
+) -> list[dict[str, Any]]:
+    row_by_key = {str(row.get("stack_row_key") or _stack_row_key(row)): row for row in rows}
+    pair_by_key: dict[tuple[str, str], Mapping[str, Any]] = {}
+    for cell in pairwise_tensor.get("cells") or []:
+        if not isinstance(cell, Mapping):
+            continue
+        pair_by_key[
+            (
+                str(cell.get("left_stack_row_key") or ""),
+                str(cell.get("right_stack_row_key") or ""),
+            )
+        ] = cell
+    remaining = list(row_by_key)
+    selected: list[str] = []
+    selected_cells: list[Mapping[str, Any]] = []
+    used_bytes = 0
+    while remaining:
+        best_key = None
+        best_score = float("-inf")
+        best_cells: list[Mapping[str, Any]] = []
+        min_remaining_stage = min(
+            _safe_int(row_by_key[key].get("entropy_stage_order"), default=999) for key in remaining
+        )
+        max_selected_stage = max(
+            [_safe_int(row_by_key[key].get("entropy_stage_order"), default=999) for key in selected] or [-1]
+        )
+        for key in remaining:
+            row = row_by_key[key]
+            row_stage = _safe_int(row.get("entropy_stage_order"), default=999)
+            if not selected and row_stage != min_remaining_stage:
+                continue
+            if selected and row_stage < max_selected_stage:
+                continue
+            row_bytes = max(0, _safe_int(row.get("delta_payload_bytes")))
+            if byte_credit_budget is not None and used_bytes + row_bytes > byte_credit_budget:
+                continue
+            candidate_cells = [
+                pair_by_key[(selected_key, key)] for selected_key in selected if (selected_key, key) in pair_by_key
+            ]
+            transition_penalty = max(
+                [_safe_float(cell.get("total_interaction_penalty")) for cell in candidate_cells] or [0.0]
+            )
+            transition_score = _safe_float(row.get("interaction_aware_stack_score")) * (
+                1.0 - min(0.95, transition_penalty)
+            )
+            if not selected:
+                transition_score = _safe_float(row.get("interaction_aware_stack_score"))
+            if transition_score > best_score:
+                best_key = key
+                best_score = transition_score
+                best_cells = candidate_cells
+        if best_key is None:
+            break
+        if selected and best_score <= 0.0:
+            break
+        selected.append(best_key)
+        selected_cells.extend(best_cells)
+        used_bytes += max(0, _safe_int(row_by_key[best_key].get("delta_payload_bytes")))
+        remaining.remove(best_key)
+    selected_rows = [row_by_key[key] for key in selected]
+    strict_archive_bound_improvement = any(
+        row.get("archive_bound_exact_handoff_candidate") is True
+        and _safe_float(row.get("local_mlx_expected_improvement_score_units")) > 0.0
+        for row in selected_rows
+    )
+    all_selected_demoted = bool(selected_rows) and all(
+        row.get("automatic_negative_result_demoted") is True for row in selected_rows
+    )
+    terminal_outcome_class = "precise_exact_axis_blocker"
+    if strict_archive_bound_improvement:
+        terminal_outcome_class = "strictly_better_archive_bound_candidate_exact_axis_blocked"
+    elif all_selected_demoted:
+        terminal_outcome_class = "family_demoted_by_posterior_evidence"
+    blockers = ordered_unique(
+        [
+            *[blocker for row in selected_rows for blocker in _string_list(row.get("blockers"))],
+            *[blocker for cell in selected_cells for blocker in _string_list(cell.get("blockers"))],
+            "contest_cpu_or_cuda_exact_axis_payload_required",
+            "lane_dispatch_claim_required_before_exact_eval",
+        ]
+    )
+    path = {
+        "schema": "repair_family_stack_acquisition_path.v1",
+        "path_id": "primary_pairwise_tensor_path",
+        "path_kind": "greedy_pairwise_interaction_tensor_acquisition",
+        "row_keys": selected,
+        "family_order": [str(row.get("family_id") or "") for row in selected_rows],
+        "typed_response_order": [str(row.get("typed_response_id") or "") for row in selected_rows],
+        "entropy_stage_order": [_safe_int(row.get("entropy_stage_order"), default=999) for row in selected_rows],
+        "total_delta_payload_bytes": used_bytes,
+        "byte_credit_budget": byte_credit_budget,
+        "byte_credit_remaining": None if byte_credit_budget is None else max(0, byte_credit_budget - used_bytes),
+        "total_local_mlx_expected_improvement_score_units": sum(
+            _safe_float(row.get("local_mlx_expected_improvement_score_units")) for row in selected_rows
+        ),
+        "total_interaction_aware_stack_score": sum(
+            _safe_float(row.get("interaction_aware_stack_score")) for row in selected_rows
+        ),
+        "max_pairwise_interaction_penalty": max(
+            [_safe_float(cell.get("total_interaction_penalty")) for cell in selected_cells] or [0.0]
+        ),
+        "mean_pairwise_acquisition_score": (
+            sum(_safe_float(cell.get("pairwise_acquisition_score")) for cell in selected_cells)
+            / max(1, len(selected_cells))
+        ),
+        "archive_bound_candidate_count": sum(
+            1 for row in selected_rows if row.get("archive_bound_exact_handoff_candidate") is True
+        ),
+        "strict_archive_bound_local_improvement_candidate": strict_archive_bound_improvement,
+        "terminal_outcome_class": terminal_outcome_class,
+        "blockers": blockers,
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        "allowed_use": "repair_family_pairwise_stack_acquisition_planning_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        path,
+        context="repair_family_stack_acquisition_path",
+    )
+    return [path]
+
+
 def _build_posterior_acquisition_surface(
     posterior_demotions: Mapping[str, Mapping[str, Any]],
 ) -> dict[str, Any]:
@@ -578,37 +859,17 @@ def _build_posterior_acquisition_surface(
                 "schema": "repair_family_stack_posterior_acquisition_prior.v1",
                 "family_id": family_id,
                 "observation_count": _safe_int(prior.get("observation_count")),
-                "negative_result_count": _safe_int(
-                    prior.get("negative_result_count")
-                ),
-                "positive_result_count": _safe_int(
-                    prior.get("positive_result_count")
-                ),
-                "receiver_credit_exhausted_count": _safe_int(
-                    prior.get("receiver_credit_exhausted_count")
-                ),
-                "stackability_remeasure_required_count": _safe_int(
-                    prior.get("stackability_remeasure_required_count")
-                ),
-                "entropy_stage_contract_miss_count": _safe_int(
-                    prior.get("entropy_stage_contract_miss_count")
-                ),
-                "mean_expected_improvement": _safe_float(
-                    prior.get("mean_expected_improvement")
-                ),
-                "mean_improvement_per_byte": _safe_float(
-                    prior.get("mean_improvement_per_byte")
-                ),
-                "demotion_multiplier": _safe_float(
-                    prior.get("demotion_multiplier")
-                ),
-                "acquisition_multiplier": _safe_float(
-                    prior.get("acquisition_multiplier")
-                ),
+                "negative_result_count": _safe_int(prior.get("negative_result_count")),
+                "positive_result_count": _safe_int(prior.get("positive_result_count")),
+                "receiver_credit_exhausted_count": _safe_int(prior.get("receiver_credit_exhausted_count")),
+                "stackability_remeasure_required_count": _safe_int(prior.get("stackability_remeasure_required_count")),
+                "entropy_stage_contract_miss_count": _safe_int(prior.get("entropy_stage_contract_miss_count")),
+                "mean_expected_improvement": _safe_float(prior.get("mean_expected_improvement")),
+                "mean_improvement_per_byte": _safe_float(prior.get("mean_improvement_per_byte")),
+                "demotion_multiplier": _safe_float(prior.get("demotion_multiplier")),
+                "acquisition_multiplier": _safe_float(prior.get("acquisition_multiplier")),
                 "policies": _string_list(prior.get("policies")),
-                "budget_routing_hints": _string_list(
-                    prior.get("budget_routing_hints")
-                ),
+                "budget_routing_hints": _string_list(prior.get("budget_routing_hints")),
                 "budget_spend_allowed": False,
                 "ready_for_exact_eval_dispatch": False,
                 **FALSE_AUTHORITY,
@@ -639,11 +900,20 @@ def _budget_routing_decision(
     rows: Sequence[Mapping[str, Any]],
     posterior_surface: Mapping[str, Any],
     archive_bound_handoff_count: int,
+    primary_acquisition_path: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     if not rows:
         route = "materialize_repair_family_byte_transform_reports"
         blocker = "repair_family_byte_transform_execution_reports_missing"
         priority = 100
+    elif (
+        primary_acquisition_path is not None
+        and primary_acquisition_path.get("terminal_outcome_class")
+        == "strictly_better_archive_bound_candidate_exact_axis_blocked"
+    ):
+        route = "bridge_strictly_better_archive_bound_candidate_to_exact_ready_input"
+        blocker = "contest_cpu_or_cuda_exact_axis_payload_required"
+        priority = 98
     elif archive_bound_handoff_count > 0:
         route = "bridge_archive_bound_candidate_to_exact_ready_input"
         blocker = "contest_cpu_or_cuda_exact_axis_payload_required"
@@ -674,6 +944,12 @@ def _budget_routing_decision(
         "priority_score": priority,
         "selected_blocker_class": blocker,
         "archive_bound_handoff_count": archive_bound_handoff_count,
+        "primary_acquisition_path_id": None
+        if primary_acquisition_path is None
+        else primary_acquisition_path.get("path_id"),
+        "primary_terminal_outcome_class": None
+        if primary_acquisition_path is None
+        else primary_acquisition_path.get("terminal_outcome_class"),
         "budget_spend_allowed": False,
         "ready_for_budget_spend": False,
         "ready_for_exact_eval_dispatch": False,
@@ -752,9 +1028,7 @@ def _runtime_proof_record(
 ) -> tuple[dict[str, Any], list[str]]:
     candidate = _mapping(report.get("candidate_archive"))
     path_text = str(
-        candidate.get("runtime_consumption_proof_path")
-        or report.get("runtime_consumption_proof_path")
-        or ""
+        candidate.get("runtime_consumption_proof_path") or report.get("runtime_consumption_proof_path") or ""
     ).strip()
     blockers: list[str] = []
     present = False
@@ -772,10 +1046,7 @@ def _runtime_proof_record(
             byte_count = path.stat().st_size
     proof_ready = (
         candidate.get("runtime_consumption_proof_ready") is True
-        or _mapping(report.get("exact_eval_handoff_gate")).get(
-            "archive_bound_runtime_consumption_proof_ready"
-        )
-        is True
+        or _mapping(report.get("exact_eval_handoff_gate")).get("archive_bound_runtime_consumption_proof_ready") is True
     )
     if not proof_ready:
         blockers.append("archive_bound_runtime_consumption_proof_missing")
@@ -822,16 +1093,8 @@ def _exact_handoff_candidate_row(
             *_string_list(exact_gate.get("blockers")),
             *archive_blockers,
             *proof_blockers,
-            *(
-                []
-                if report.get("byte_closed_candidate_emitted") is True
-                else ["byte_closed_candidate_archive_missing"]
-            ),
-            *(
-                []
-                if archive_bound_complete
-                else ["archive_runtime_custody_incomplete"]
-            ),
+            *([] if report.get("byte_closed_candidate_emitted") is True else ["byte_closed_candidate_archive_missing"]),
+            *([] if archive_bound_complete else ["archive_runtime_custody_incomplete"]),
             "contest_cpu_or_cuda_exact_axis_payload_required",
             "lane_dispatch_claim_required_before_exact_eval",
         ]
@@ -884,13 +1147,9 @@ def plan_repair_family_stack_search(
     """Plan a fail-closed cross-family stack over concrete byte-transform rows."""
 
     if len(execution_reports) != len(execution_report_paths):
-        raise RepairFamilyStackSearchError(
-            "execution_reports and execution_report_paths length mismatch"
-        )
+        raise RepairFamilyStackSearchError("execution_reports and execution_report_paths length mismatch")
     posterior_rows = (
-        load_repair_campaign_stackability_posterior_rows(posterior_path)
-        if posterior_path is not None
-        else []
+        load_repair_campaign_stackability_posterior_rows(posterior_path) if posterior_path is not None else []
     )
     demotions = _posterior_demotions(posterior_rows)
     remaining_budget = byte_credit_budget
@@ -924,6 +1183,23 @@ def plan_repair_family_stack_search(
         row["interaction_feature_vector"] = _interaction_feature_vector(row)
     rows = [row for row, _report, _path in row_packages]
     interaction_tensor = _build_interaction_tensor(rows)
+    pairwise_interaction_tensor = _build_pairwise_interaction_tensor(
+        rows=rows,
+        byte_credit_budget=byte_credit_budget,
+    )
+    acquisition_paths = _build_stack_acquisition_paths(
+        rows=rows,
+        pairwise_tensor=pairwise_interaction_tensor,
+        byte_credit_budget=byte_credit_budget,
+    )
+    primary_acquisition_path = acquisition_paths[0] if acquisition_paths else None
+    selected_row_keys = set(
+        _string_list(None if primary_acquisition_path is None else primary_acquisition_path.get("row_keys"))
+    )
+    for row in rows:
+        row["selected_for_materialization_handoff"] = (
+            str(row.get("stack_row_key") or _stack_row_key(row)) in selected_row_keys
+        )
     exact_handoff_candidates = [
         _exact_handoff_candidate_row(
             report=report,
@@ -934,17 +1210,11 @@ def plan_repair_family_stack_search(
         for row, report, path in row_packages
     ]
     archive_bound_handoff_count = sum(
-        1
-        for row in exact_handoff_candidates
-        if row.get("archive_bound_custody_complete") is True
+        1 for row in exact_handoff_candidates if row.get("archive_bound_custody_complete") is True
     )
     exact_handoff_gate_blockers = ordered_unique(
         [
-            *(
-                []
-                if archive_bound_handoff_count
-                else ["byte_closed_archive_runtime_receiver_proof_required_per_stack"]
-            ),
+            *([] if archive_bound_handoff_count else ["byte_closed_archive_runtime_receiver_proof_required_per_stack"]),
             "contest_cpu_or_cuda_exact_axis_payload_required",
             "lane_dispatch_claim_required_before_exact_eval",
         ]
@@ -954,6 +1224,7 @@ def plan_repair_family_stack_search(
         rows=rows,
         posterior_surface=posterior_acquisition_surface,
         archive_bound_handoff_count=archive_bound_handoff_count,
+        primary_acquisition_path=primary_acquisition_path,
     )
     plan = {
         "schema": REPAIR_FAMILY_STACK_SEARCH_PLAN_SCHEMA,
@@ -971,22 +1242,39 @@ def plan_repair_family_stack_search(
         "stack_rows": rows,
         "interaction_tensor": interaction_tensor,
         "interaction_tensor_cell_count": interaction_tensor["cell_count"],
+        "pairwise_interaction_tensor": pairwise_interaction_tensor,
+        "pairwise_interaction_tensor_cell_count": pairwise_interaction_tensor["cell_count"],
+        "stack_acquisition_path_count": len(acquisition_paths),
+        "stack_acquisition_paths": acquisition_paths,
+        "primary_stack_acquisition_path": primary_acquisition_path,
+        "bounded_autonomous_terminal_policy": {
+            "schema": "repair_family_stack_bounded_autonomous_terminal_policy.v1",
+            "terminal_outcome_class": None
+            if primary_acquisition_path is None
+            else primary_acquisition_path.get("terminal_outcome_class"),
+            "stop_conditions": [
+                "strictly_better_archive_bound_candidate_exact_axis_blocked",
+                "precise_exact_axis_blocker",
+                "family_demoted_by_posterior_evidence",
+            ],
+            "local_mlx_rows_are_advisory_only": True,
+            "budget_spend_allowed": False,
+            "ready_for_exact_eval_dispatch": False,
+            **FALSE_AUTHORITY,
+        },
         "exact_eval_handoff_candidate_count": len(exact_handoff_candidates),
         "archive_bound_exact_handoff_candidate_count": archive_bound_handoff_count,
         "exact_eval_handoff_candidates": exact_handoff_candidates,
         "planned_family_order": ordered_unique(row["family_id"] for row in rows),
         "budget_routing_decision": budget_routing_decision,
         "candidate_improvement_observed": any(
-            float(row.get("local_mlx_expected_improvement_score_units") or 0.0) > 0.0
-            for row in rows
+            float(row.get("local_mlx_expected_improvement_score_units") or 0.0) > 0.0 for row in rows
         ),
         "exact_eval_handoff_gate": {
             "schema": "repair_family_stack_search_exact_handoff_gate.v1",
             "eligible_for_exact_eval_handoff": False,
             "exact_eval_handoff_candidate_count": len(exact_handoff_candidates),
-            "archive_bound_exact_handoff_candidate_count": (
-                archive_bound_handoff_count
-            ),
+            "archive_bound_exact_handoff_candidate_count": (archive_bound_handoff_count),
             "archive_bound_custody_complete": archive_bound_handoff_count > 0,
             "target_modes": ["contest_exact_eval"],
             "exact_axis_required": ["contest-CPU", "contest-CUDA"],
@@ -1022,30 +1310,18 @@ def build_repair_family_exact_handoff_plan(
     """
 
     if stack_plan.get("schema") != REPAIR_FAMILY_STACK_SEARCH_PLAN_SCHEMA:
-        raise RepairFamilyStackSearchError(
-            "repair family exact handoff plan requires repair family stack plan"
-        )
+        raise RepairFamilyStackSearchError("repair family exact handoff plan requires repair family stack plan")
     require_no_truthy_authority_fields(
         stack_plan,
         context="repair_family_exact_handoff_source_stack_plan",
     )
-    rows = [
-        dict(row)
-        for row in stack_plan.get("exact_eval_handoff_candidates") or []
-        if isinstance(row, Mapping)
-    ]
-    archive_bound_rows = [
-        row for row in rows if row.get("archive_bound_custody_complete") is True
-    ]
+    rows = [dict(row) for row in stack_plan.get("exact_eval_handoff_candidates") or [] if isinstance(row, Mapping)]
+    archive_bound_rows = [row for row in rows if row.get("archive_bound_custody_complete") is True]
     gate = _mapping(stack_plan.get("exact_eval_handoff_gate"))
     blockers = ordered_unique(
         [
             *_string_list(gate.get("blockers")),
-            *(
-                []
-                if archive_bound_rows
-                else ["archive_bound_exact_handoff_candidate_missing"]
-            ),
+            *([] if archive_bound_rows else ["archive_bound_exact_handoff_candidate_missing"]),
             "materializer_exact_eval_dispatch_plan_or_exact_ready_queue_required",
             "contest_cpu_or_cuda_exact_axis_payload_required",
             "lane_dispatch_claim_required_before_exact_eval",
@@ -1065,9 +1341,7 @@ def build_repair_family_exact_handoff_plan(
             "schema": "repair_family_exact_handoff_contract.v1",
             "source": "repair_family_stack_search",
             "adapter_artifact_only": True,
-            "next_authoritative_gate": (
-                "materializer_exact_eval_dispatch_plan_or_exact_ready_queue"
-            ),
+            "next_authoritative_gate": ("materializer_exact_eval_dispatch_plan_or_exact_ready_queue"),
             "mlx_local_rows_are_advisory_only": True,
             "receiver_must_remain_decode_only": True,
             "budget_spend_allowed": False,
@@ -1158,44 +1432,25 @@ def _learning_signal_for_stack_row(row: Mapping[str, Any]) -> dict[str, Any]:
     }
     feature_vector = {
         "materialization_signal_kind": "repair_family_stack_search_row",
-        "candidate_archive_materialized": (
-            row.get("candidate_archive_materialized") is True
-        ),
-        "runtime_consumption_proof_present": (
-            row.get("archive_bound_runtime_consumption_proof_ready") is True
-        ),
+        "candidate_archive_materialized": (row.get("candidate_archive_materialized") is True),
+        "runtime_consumption_proof_present": (row.get("archive_bound_runtime_consumption_proof_ready") is True),
         "component_response_replayed": True,
         "expected_local_improvement_score_units": improvement,
         "improvement_per_allocated_byte": improvement / delta_bytes,
-        "interaction_aware_stack_score": _safe_float(
-            row.get("interaction_aware_stack_score")
-        ),
-        "posterior_acquisition_multiplier": _safe_float(
-            row.get("posterior_acquisition_multiplier")
-        ),
+        "interaction_aware_stack_score": _safe_float(row.get("interaction_aware_stack_score")),
+        "posterior_acquisition_multiplier": _safe_float(row.get("posterior_acquisition_multiplier")),
         "blocker_count": len(blockers),
-        "missing_artifact_count": sum(
-            1
-            for blocker in blockers
-            if "missing" in blocker or "incomplete" in blocker
-        ),
+        "missing_artifact_count": sum(1 for blocker in blockers if "missing" in blocker or "incomplete" in blocker),
         "entropy_position_label": row.get("entropy_position_label"),
         "entropy_stage_order": row.get("entropy_stage_order"),
-        "entropy_pipeline_stage_index": _safe_int(
-            row.get("entropy_stage_order"), default=999
-        ),
+        "entropy_pipeline_stage_index": _safe_int(row.get("entropy_stage_order"), default=999),
         "fractal_active_levels": levels,
-        "fractal_ordered_levels": [
-            level for level in _LEVEL_ORDER if level in set(levels)
-        ],
+        "fractal_ordered_levels": [level for level in _LEVEL_ORDER if level in set(levels)],
         "interaction_order": len(levels),
         "selection_blocker_class": blocker_class,
         "receiver_credit_exhausted": blocker_class == "receiver_credit_exhausted",
-        "stackability_remeasure_required": (
-            blocker_class == "stackability_interaction_remeasure"
-        ),
-        "entropy_stage_contract_miss": blocker_class
-        == "entropy_stage_contract_miss",
+        "stackability_remeasure_required": (blocker_class == "stackability_interaction_remeasure"),
+        "entropy_stage_contract_miss": blocker_class == "entropy_stage_contract_miss",
     }
     signal = {
         "schema": REPAIR_FAMILY_STACK_LEARNING_SIGNAL_SCHEMA,
@@ -1227,9 +1482,7 @@ def _learning_signal_for_stack_row(row: Mapping[str, Any]) -> dict[str, Any]:
             "posterior_surface": "repair_family_stack_search_posterior_feedback",
             "local_planning_update_ready": True,
             "recommended_acquisition_policy": policy,
-            "recommended_stackability_followup": (
-                "continue_bounded_autonomous_repair_floor_loop"
-            ),
+            "recommended_stackability_followup": ("continue_bounded_autonomous_repair_floor_loop"),
             "planner_feature_vector": feature_vector,
             "posterior_update_blockers": [
                 "repair_family_stack_learning_signal_is_not_score_authority",
@@ -1241,11 +1494,7 @@ def _learning_signal_for_stack_row(row: Mapping[str, Any]) -> dict[str, Any]:
             **FALSE_AUTHORITY,
         },
         "blockers": blockers,
-        "missing_artifacts": [
-            blocker
-            for blocker in blockers
-            if "missing" in blocker or "incomplete" in blocker
-        ],
+        "missing_artifacts": [blocker for blocker in blockers if "missing" in blocker or "incomplete" in blocker],
         "budget_spend_allowed": False,
         "ready_for_budget_spend": False,
         "ready_for_exact_eval_dispatch": False,
@@ -1292,9 +1541,7 @@ def build_repair_family_stack_learning_signal_report(
     """Build posterior-consumable local learning signals from stack outcomes."""
 
     if stack_plan.get("schema") != REPAIR_FAMILY_STACK_SEARCH_PLAN_SCHEMA:
-        raise RepairFamilyStackSearchError(
-            "stack learning signal report requires repair family stack plan"
-        )
+        raise RepairFamilyStackSearchError("stack learning signal report requires repair family stack plan")
     require_no_truthy_authority_fields(
         stack_plan,
         context="repair_family_stack_learning_signal_source_plan",
@@ -1304,19 +1551,11 @@ def build_repair_family_stack_learning_signal_report(
             bridge_report,
             context="repair_family_stack_learning_signal_bridge_report",
         )
-    rows = [
-        row for row in stack_plan.get("stack_rows") or [] if isinstance(row, Mapping)
-    ]
+    rows = [row for row in stack_plan.get("stack_rows") or [] if isinstance(row, Mapping)]
     signals = (
-        [_learning_signal_for_stack_row(row) for row in rows]
-        if rows
-        else [_missing_execution_report_learning_signal()]
+        [_learning_signal_for_stack_row(row) for row in rows] if rows else [_missing_execution_report_learning_signal()]
     )
-    bridge_blockers = (
-        list(_string_list(_mapping(bridge_report).get("blockers")))
-        if bridge_report is not None
-        else []
-    )
+    bridge_blockers = list(_string_list(_mapping(bridge_report).get("blockers"))) if bridge_report is not None else []
     report = {
         "schema": REPAIR_FAMILY_STACK_LEARNING_SIGNAL_REPORT_SCHEMA,
         "generated_at_utc": _utc_now(),

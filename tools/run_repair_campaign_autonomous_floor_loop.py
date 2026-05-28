@@ -59,12 +59,8 @@ from tac.repo_io import (  # noqa: E402
     write_json_artifact,
 )
 
-REPAIR_CAMPAIGN_AUTONOMOUS_FLOOR_LOOP_SCHEMA = (
-    "repair_campaign_autonomous_floor_loop.v1"
-)
-REPAIR_CAMPAIGN_AUTONOMOUS_FLOOR_LOOP_BLOCKER_REPORT_SCHEMA = (
-    "repair_campaign_autonomous_floor_loop_blocker_report.v1"
-)
+REPAIR_CAMPAIGN_AUTONOMOUS_FLOOR_LOOP_SCHEMA = "repair_campaign_autonomous_floor_loop.v1"
+REPAIR_CAMPAIGN_AUTONOMOUS_FLOOR_LOOP_BLOCKER_REPORT_SCHEMA = "repair_campaign_autonomous_floor_loop_blocker_report.v1"
 
 
 class RepairCampaignAutonomousFloorLoopError(ValueError):
@@ -106,9 +102,7 @@ def _repo_rel(path: str | Path) -> str:
 def _load_json(path: Path) -> dict[str, Any]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
-        raise RepairCampaignAutonomousFloorLoopError(
-            f"{path} must contain a JSON object"
-        )
+        raise RepairCampaignAutonomousFloorLoopError(f"{path} must contain a JSON object")
     return payload
 
 
@@ -169,9 +163,7 @@ def _run_worker(
 
 def _discover_execution_reports(output_dir: Path) -> list[Path]:
     return sorted(
-        path
-        for path in output_dir.rglob("repair_family_byte_transform_execution_report.json")
-        if path.is_file()
+        path for path in output_dir.rglob("repair_family_byte_transform_execution_report.json") if path.is_file()
     )
 
 
@@ -192,6 +184,14 @@ def _load_execution_reports(paths: list[Path]) -> list[dict[str, Any]]:
 def _iteration_stop_reason(stack_plan: dict[str, Any], worker_result: dict[str, Any] | None) -> str:
     if worker_result is not None and worker_result.get("returncode") not in (0, None):
         return "exact_axis_blocker_or_local_worker_failure"
+    primary_path = stack_plan.get("primary_stack_acquisition_path")
+    terminal_outcome = str(primary_path.get("terminal_outcome_class") or "") if isinstance(primary_path, dict) else ""
+    if terminal_outcome in {
+        "strictly_better_archive_bound_candidate_exact_axis_blocked",
+        "precise_exact_axis_blocker",
+        "family_demoted_by_posterior_evidence",
+    }:
+        return terminal_outcome
     if stack_plan.get("candidate_improvement_observed") is True:
         return "candidate_improvement_observed"
     return "exact_axis_blocker"
@@ -207,6 +207,13 @@ def _precise_blocker_stop_reason(summary: dict[str, Any]) -> str:
         if isinstance(_iteration, dict)
     ):
         return "local_worker_failure_or_exact_axis_blocker"
+    primary_path = stack_plan.get("primary_stack_acquisition_path")
+    terminal_outcome = str(primary_path.get("terminal_outcome_class") or "") if isinstance(primary_path, dict) else ""
+    if terminal_outcome in {
+        "strictly_better_archive_bound_candidate_exact_axis_blocked",
+        "family_demoted_by_posterior_evidence",
+    }:
+        return terminal_outcome
     if int(summary.get("archive_bound_exact_handoff_candidate_count") or 0) > 0:
         return "archive_bound_candidate_exact_axis_blocked"
     if route == "demote_repair_family_until_new_component_signal":
@@ -248,21 +255,13 @@ def _build_blocker_report(summary: dict[str, Any]) -> dict[str, Any]:
         "activation_action": activation_action,
         "priority_score": priority_score,
         "execution_report_count": stack_plan.get("execution_report_count"),
-        "exact_eval_handoff_candidate_count": summary[
-            "exact_eval_handoff_candidate_count"
-        ],
-        "archive_bound_exact_handoff_candidate_count": summary[
-            "archive_bound_exact_handoff_candidate_count"
-        ],
-        "exact_ready_bridge_candidate_count": summary[
-            "exact_ready_bridge_candidate_count"
-        ],
+        "exact_eval_handoff_candidate_count": summary["exact_eval_handoff_candidate_count"],
+        "archive_bound_exact_handoff_candidate_count": summary["archive_bound_exact_handoff_candidate_count"],
+        "exact_ready_bridge_candidate_count": summary["exact_ready_bridge_candidate_count"],
         "exact_ready_bridge_runtime_content_tree_custody_proven_count": summary[
             "exact_ready_bridge_runtime_content_tree_custody_proven_count"
         ],
-        "posterior_learning_signal_count": summary[
-            "posterior_learning_signal_count"
-        ],
+        "posterior_learning_signal_count": summary["posterior_learning_signal_count"],
         "posterior_appended_count": summary["posterior_appended_count"],
         "blockers": [blocker for blocker in blockers if blocker],
         "required_next_authority": "contest_cpu_or_cuda_auth_axis_payload",
@@ -334,10 +333,7 @@ def _build_summary(
                 "execution_report_count": len(reports),
                 "execution_report_paths": [_repo_rel(path) for path in report_paths],
                 "stack_plan_schema": final_stack_plan.get("schema"),
-                "candidate_improvement_observed": final_stack_plan.get(
-                    "candidate_improvement_observed"
-                )
-                is True,
+                "candidate_improvement_observed": final_stack_plan.get("candidate_improvement_observed") is True,
                 "stop_reason": stop_reason,
                 "budget_spend_allowed": False,
                 "ready_for_exact_eval_dispatch": False,
@@ -347,6 +343,9 @@ def _build_summary(
         if stop_reason in {
             "candidate_improvement_observed",
             "exact_axis_blocker_or_local_worker_failure",
+            "strictly_better_archive_bound_candidate_exact_axis_blocked",
+            "precise_exact_axis_blocker",
+            "family_demoted_by_posterior_evidence",
         }:
             break
     stack_plan_path = output_dir / "repair_family_stack_search_plan.json"
@@ -363,18 +362,16 @@ def _build_summary(
     )
     exact_ready_bridge_report = exact_ready_bridge["bridge_report"]
     exact_ready_source_queue_path = output_dir / "repair_family_exact_ready_source_queue.json"
-    blocked_exact_ready_queue_path = (
-        output_dir / "repair_family_blocked_exact_ready_queue.json"
-    )
-    exact_ready_bridge_report_path = (
-        output_dir / "repair_family_exact_ready_bridge_report.json"
-    )
+    blocked_exact_ready_queue_path = output_dir / "repair_family_blocked_exact_ready_queue.json"
+    exact_ready_bridge_report_path = output_dir / "repair_family_exact_ready_bridge_report.json"
     learning_signal_report = build_repair_family_stack_learning_signal_report(
         stack_plan=final_stack_plan,
         bridge_report=exact_ready_bridge_report,
     )
-    learning_signal_report_path = (
-        output_dir / "repair_family_stack_learning_signal_report.json"
+    learning_signal_report_path = output_dir / "repair_family_stack_learning_signal_report.json"
+    primary_path = final_stack_plan.get("primary_stack_acquisition_path")
+    primary_terminal_outcome = (
+        str(primary_path.get("terminal_outcome_class") or "") if isinstance(primary_path, dict) else None
     )
     summary = {
         "schema": REPAIR_CAMPAIGN_AUTONOMOUS_FLOOR_LOOP_SCHEMA,
@@ -390,35 +387,27 @@ def _build_summary(
         "iterations": iterations,
         "stack_search_plan_path": _repo_rel(stack_plan_path),
         "stack_search_plan": final_stack_plan,
+        "primary_stack_acquisition_terminal_outcome": primary_terminal_outcome,
+        "primary_stack_acquisition_path": primary_path,
         "exact_handoff_plan_path": _repo_rel(exact_handoff_plan_path),
         "exact_handoff_plan_schema": REPAIR_FAMILY_EXACT_HANDOFF_PLAN_SCHEMA,
         "exact_handoff_plan": exact_handoff_plan,
         "exact_eval_handoff_candidate_count": exact_handoff_plan["candidate_count"],
-        "archive_bound_exact_handoff_candidate_count": exact_handoff_plan[
-            "archive_bound_candidate_count"
-        ],
+        "archive_bound_exact_handoff_candidate_count": exact_handoff_plan["archive_bound_candidate_count"],
         "exact_ready_bridge_source_queue_path": _repo_rel(exact_ready_source_queue_path),
         "blocked_exact_ready_queue_path": _repo_rel(blocked_exact_ready_queue_path),
         "exact_ready_bridge_report_path": _repo_rel(exact_ready_bridge_report_path),
         "exact_ready_bridge_report_schema": REPAIR_FAMILY_EXACT_READY_BRIDGE_REPORT_SCHEMA,
         "exact_ready_bridge_report": exact_ready_bridge_report,
-        "exact_ready_bridge_candidate_count": exact_ready_bridge_report[
-            "candidate_count"
-        ],
-        "exact_ready_bridge_archive_custody_proven_count": exact_ready_bridge_report[
-            "archive_custody_proven_count"
-        ],
+        "exact_ready_bridge_candidate_count": exact_ready_bridge_report["candidate_count"],
+        "exact_ready_bridge_archive_custody_proven_count": exact_ready_bridge_report["archive_custody_proven_count"],
         "exact_ready_bridge_runtime_content_tree_custody_proven_count": (
             exact_ready_bridge_report["runtime_content_tree_custody_proven_count"]
         ),
         "exact_ready_bridge": exact_ready_bridge,
         "posterior_learning_signal_report_path": _repo_rel(learning_signal_report_path),
-        "posterior_learning_signal_report_schema": (
-            REPAIR_FAMILY_STACK_LEARNING_SIGNAL_REPORT_SCHEMA
-        ),
-        "posterior_learning_signal_count": learning_signal_report[
-            "learning_signal_count"
-        ],
+        "posterior_learning_signal_report_schema": (REPAIR_FAMILY_STACK_LEARNING_SIGNAL_REPORT_SCHEMA),
+        "posterior_learning_signal_count": learning_signal_report["learning_signal_count"],
         "posterior_learning_signal_report": learning_signal_report,
         "posterior_append_report": None,
         "posterior_appended_count": 0,
@@ -478,11 +467,7 @@ def main(argv: list[str] | None = None) -> int:
             submission_dirs=tuple(args.submission_dir),
         )
         stack_plan_path = output_dir / "repair_family_stack_search_plan.json"
-        expected_stack_sha = (
-            sha256_file(stack_plan_path)
-            if stack_plan_path.exists() and args.overwrite
-            else None
-        )
+        expected_stack_sha = sha256_file(stack_plan_path) if stack_plan_path.exists() and args.overwrite else None
         write_json_artifact(
             stack_plan_path,
             summary["stack_search_plan"],
@@ -491,9 +476,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         exact_handoff_plan_path = output_dir / "repair_family_exact_handoff_plan.json"
         expected_exact_handoff_sha = (
-            sha256_file(exact_handoff_plan_path)
-            if exact_handoff_plan_path.exists() and args.overwrite
-            else None
+            sha256_file(exact_handoff_plan_path) if exact_handoff_plan_path.exists() and args.overwrite else None
         )
         write_json_artifact(
             exact_handoff_plan_path,
@@ -501,15 +484,9 @@ def main(argv: list[str] | None = None) -> int:
             allow_overwrite=bool(args.overwrite),
             expected_existing_sha256=expected_exact_handoff_sha,
         )
-        exact_ready_source_queue_path = (
-            output_dir / "repair_family_exact_ready_source_queue.json"
-        )
-        blocked_exact_ready_queue_path = (
-            output_dir / "repair_family_blocked_exact_ready_queue.json"
-        )
-        exact_ready_bridge_report_path = (
-            output_dir / "repair_family_exact_ready_bridge_report.json"
-        )
+        exact_ready_source_queue_path = output_dir / "repair_family_exact_ready_source_queue.json"
+        blocked_exact_ready_queue_path = output_dir / "repair_family_blocked_exact_ready_queue.json"
+        exact_ready_bridge_report_path = output_dir / "repair_family_exact_ready_bridge_report.json"
         for path, payload in (
             (
                 exact_ready_source_queue_path,
@@ -524,18 +501,14 @@ def main(argv: list[str] | None = None) -> int:
                 summary["exact_ready_bridge_report"],
             ),
         ):
-            expected_bridge_sha = (
-                sha256_file(path) if path.exists() and args.overwrite else None
-            )
+            expected_bridge_sha = sha256_file(path) if path.exists() and args.overwrite else None
             write_json_artifact(
                 path,
                 payload,
                 allow_overwrite=bool(args.overwrite),
                 expected_existing_sha256=expected_bridge_sha,
             )
-        learning_signal_report_path = (
-            output_dir / "repair_family_stack_learning_signal_report.json"
-        )
+        learning_signal_report_path = output_dir / "repair_family_stack_learning_signal_report.json"
         expected_learning_signal_sha = (
             sha256_file(learning_signal_report_path)
             if learning_signal_report_path.exists() and args.overwrite
@@ -548,26 +521,16 @@ def main(argv: list[str] | None = None) -> int:
             expected_existing_sha256=expected_learning_signal_sha,
         )
         if args.posterior_path is not None:
-            posterior_append_report = (
-                append_repair_campaign_blocked_learning_signal_report(
-                    blocked_learning_signal_report_path=_repo_rel(
-                        learning_signal_report_path
-                    ),
-                    blocked_learning_signal_report=summary[
-                        "posterior_learning_signal_report"
-                    ],
-                    posterior_path=args.posterior_path,
-                    lock_path=args.posterior_lock_path,
-                    repo_root=REPO_ROOT,
-                )
+            posterior_append_report = append_repair_campaign_blocked_learning_signal_report(
+                blocked_learning_signal_report_path=_repo_rel(learning_signal_report_path),
+                blocked_learning_signal_report=summary["posterior_learning_signal_report"],
+                posterior_path=args.posterior_path,
+                lock_path=args.posterior_lock_path,
+                repo_root=REPO_ROOT,
             )
             summary["posterior_append_report"] = posterior_append_report
-            summary["posterior_appended_count"] = posterior_append_report[
-                "appended_count"
-            ]
-            summary["posterior_skipped_duplicate_count"] = posterior_append_report[
-                "skipped_duplicate_count"
-            ]
+            summary["posterior_appended_count"] = posterior_append_report["appended_count"]
+            summary["posterior_skipped_duplicate_count"] = posterior_append_report["skipped_duplicate_count"]
             require_no_truthy_authority_fields(
                 summary,
                 context="repair_campaign_autonomous_floor_loop_summary_after_posterior",
@@ -575,9 +538,7 @@ def main(argv: list[str] | None = None) -> int:
         blocker_report = _build_blocker_report(summary)
         blocker_report_path = output_dir / "repair_family_floor_loop_blocker_report.json"
         expected_blocker_sha = (
-            sha256_file(blocker_report_path)
-            if blocker_report_path.exists() and args.overwrite
-            else None
+            sha256_file(blocker_report_path) if blocker_report_path.exists() and args.overwrite else None
         )
         write_json_artifact(
             blocker_report_path,
@@ -595,9 +556,7 @@ def main(argv: list[str] | None = None) -> int:
             context="repair_campaign_autonomous_floor_loop_summary_after_blocker",
         )
         summary_out = _resolve(args.summary_out)
-        expected_summary_sha = (
-            sha256_file(summary_out) if summary_out.exists() and args.overwrite else None
-        )
+        expected_summary_sha = sha256_file(summary_out) if summary_out.exists() and args.overwrite else None
         write_result = write_json_artifact(
             summary_out,
             summary,
@@ -620,10 +579,9 @@ def main(argv: list[str] | None = None) -> int:
                 "schema": "repair_campaign_autonomous_floor_loop_cli_result.v1",
                 "summary_out": str(args.summary_out),
                 "stop_reason": summary["stop_reason"],
+                "primary_stack_acquisition_terminal_outcome": summary["primary_stack_acquisition_terminal_outcome"],
                 "iteration_count": summary["iteration_count"],
-                "execution_report_count": summary["stack_search_plan"][
-                    "execution_report_count"
-                ],
+                "execution_report_count": summary["stack_search_plan"]["execution_report_count"],
                 "exact_eval_handoff_candidate_count": summary["stack_search_plan"].get(
                     "exact_eval_handoff_candidate_count",
                     0,
@@ -634,24 +592,14 @@ def main(argv: list[str] | None = None) -> int:
                         0,
                     )
                 ),
-                "exact_ready_bridge_candidate_count": summary[
-                    "exact_ready_bridge_candidate_count"
-                ],
+                "exact_ready_bridge_candidate_count": summary["exact_ready_bridge_candidate_count"],
                 "exact_ready_bridge_runtime_content_tree_custody_proven_count": (
-                    summary[
-                        "exact_ready_bridge_runtime_content_tree_custody_proven_count"
-                    ]
+                    summary["exact_ready_bridge_runtime_content_tree_custody_proven_count"]
                 ),
-                "posterior_learning_signal_count": summary[
-                    "posterior_learning_signal_count"
-                ],
+                "posterior_learning_signal_count": summary["posterior_learning_signal_count"],
                 "posterior_appended_count": summary["posterior_appended_count"],
-                "exact_axis_blocker_report_path": summary[
-                    "exact_axis_blocker_report_path"
-                ],
-                "candidate_improvement_observed": summary["stack_search_plan"][
-                    "candidate_improvement_observed"
-                ],
+                "exact_axis_blocker_report_path": summary["exact_axis_blocker_report_path"],
+                "candidate_improvement_observed": summary["stack_search_plan"]["candidate_improvement_observed"],
                 "bytes_written": write_result.bytes_written,
                 "score_claim": False,
                 "promotion_eligible": False,

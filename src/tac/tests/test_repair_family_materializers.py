@@ -89,17 +89,13 @@ def _repair_payload(tmp_path: Path) -> dict[str, object]:
             "available_receiver_closed_rate_credit_bytes": 40,
             "rows": [
                 {
-                    "schema": (
-                        "frontier_rate_attack_repair_budget_typed_response_row.v1"
-                    ),
+                    "schema": ("frontier_rate_attack_repair_budget_typed_response_row.v1"),
                     "typed_response_id": "segnet_region_ready",
                     "candidate_id": "segnet_class_region_waterfill",
                     "correction_family": "segnet_class_region_waterfill",
                     "targeted_dimensions": ["segnet", "region"],
                     "operation_levels": ["pixel", "boundary", "region", "frame"],
-                    "entropy_position_label": (
-                        "before_entropy_coder_distribution_shaping"
-                    ),
+                    "entropy_position_label": ("before_entropy_coder_distribution_shaping"),
                     "requested_repair_bytes": 32,
                     "objective_delta_score_units": -0.0010,
                     "local_mlx_response_path": str(mlx),
@@ -183,6 +179,8 @@ def test_segnet_family_materializer_emits_ordered_fail_closed_manifest(
 
     assert manifest["schema"] == REPAIR_CAMPAIGN_FAMILY_MATERIALIZER_MANIFEST_SCHEMA
     assert manifest["target_kind"] == "segnet_class_region_waterfill"
+    assert manifest["allocated_repair_bytes"] == 32
+    assert manifest["objective_delta_score_units"] == -0.001
     assert manifest["candidate_chain_ids"] == ["repair_budget_spent_child_unit_segnet"]
     assert manifest["active_entropy_stage"]["order"] == 10
     assert manifest["fractal_optimization_scope"]["ordered_levels"] == [
@@ -199,11 +197,52 @@ def test_segnet_family_materializer_emits_ordered_fail_closed_manifest(
     assert manifest["component_response_replayed"] is True
     assert manifest["byte_closed_candidate_emitted"] is False
     assert (
-        "segnet_class_region_waterfill_byte_closed_candidate_archive_not_materialized"
-        in manifest["readiness_blockers"]
+        "segnet_class_region_waterfill_byte_closed_candidate_archive_not_materialized" in manifest["readiness_blockers"]
     )
     assert "segnet_class_region_mask_ids_missing" not in manifest["readiness_blockers"]
     assert manifest["ready_for_exact_eval_dispatch"] is False
+
+
+def test_family_materializer_preserves_candidate_family_and_budget_for_novel_families(
+    tmp_path: Path,
+) -> None:
+    payload = _repair_payload(tmp_path)
+    ledger = payload["typed_response_ledger"]  # type: ignore[index]
+    row = ledger["rows"][0]  # type: ignore[index]
+    row.update(
+        {
+            "typed_response_id": "frame0_k16_palette_ready",
+            "candidate_id": "frame0_k16_palette_asymmetry",
+            "correction_family": "frame0_k16_palette_asymmetry",
+            "targeted_dimensions": ["palette", "frame0"],
+            "operation_levels": ["pixel", "byte", "frame"],
+            "requested_repair_bytes": 10,
+            "objective_delta_score_units": -0.0012,
+            "palette_dynamics_context": {
+                "canonical_k": 16,
+                "frame0_mode_count": 15,
+                "frame1_mode_count": 0,
+            },
+        }
+    )
+    score_report = score_repair_campaign(payload=payload, repo_root=tmp_path)
+    plan = _plan_from_score_report(score_report)
+
+    manifest = build_repair_campaign_family_materializer_manifest(
+        repo_root=tmp_path,
+        materialization_plan=plan,
+        score_report=score_report,
+        materialization_plan_path=tmp_path / "plan.json",
+        score_report_path=tmp_path / "score_report.json",
+        typed_response_id="frame0_k16_palette_ready",
+        candidate_id="frame0_k16_palette_asymmetry",
+    )
+
+    assert manifest["family_id"] == "frame0_k16_palette_asymmetry"
+    assert manifest["target_kind"] == "frame0_k16_palette_asymmetry"
+    assert manifest["allocated_repair_bytes"] == 10
+    assert manifest["objective_delta_score_units"] == -0.0012
+    assert "unsupported_repair_family_byte_transform" not in " ".join(manifest["readiness_blockers"])
 
 
 def test_family_materializer_cli_writes_manifest(tmp_path: Path) -> None:
@@ -321,9 +360,7 @@ def test_byte_transform_executor_repacks_archive_native_candidate_when_custody_e
     assert candidate["receiver_contract_satisfied"] is True
     assert (tmp_path / candidate["path"]).is_file()
     assert (tmp_path / candidate["runtime_consumption_proof_path"]).is_file()
-    assert report["exact_eval_handoff_gate"][
-        "archive_bound_runtime_consumption_proof_ready"
-    ] is True
+    assert report["exact_eval_handoff_gate"]["archive_bound_runtime_consumption_proof_ready"] is True
     assert report["exact_eval_handoff_gate"]["eligible_for_exact_eval_handoff"] is False
     report_path = _write_json(tmp_path / "byte_transform_report.json", report)
     stack_plan = plan_repair_family_stack_search(
@@ -334,9 +371,7 @@ def test_byte_transform_executor_repacks_archive_native_candidate_when_custody_e
     )
     assert stack_plan["exact_eval_handoff_candidate_count"] == 1
     assert stack_plan["archive_bound_exact_handoff_candidate_count"] == 1
-    assert stack_plan["exact_eval_handoff_gate"][
-        "archive_bound_custody_complete"
-    ] is True
+    assert stack_plan["exact_eval_handoff_gate"]["archive_bound_custody_complete"] is True
     assert (
         "byte_closed_archive_runtime_receiver_proof_required_per_stack"
         not in stack_plan["exact_eval_handoff_gate"]["blockers"]
@@ -479,9 +514,7 @@ def test_byte_transform_executor_supports_all_queue_owned_repair_families(
     assert report["byte_transform_delta"]["transform_kind"]
     assert report["byte_closed_candidate_emitted"] is True
     assert report["candidate_archive"]["runtime_consumption_proof_ready"] is True
-    assert report["exact_eval_handoff_gate"][
-        "archive_bound_runtime_consumption_proof_ready"
-    ] is True
+    assert report["exact_eval_handoff_gate"]["archive_bound_runtime_consumption_proof_ready"] is True
     assert report["ready_for_exact_eval_dispatch"] is False
     assert bundle["schema"] == REPAIR_FAMILY_BYTE_TRANSFORM_REPLAY_BUNDLE_SCHEMA
 
@@ -520,9 +553,7 @@ def test_repair_family_stack_search_demotes_negative_posterior(
                 "candidate_id": "segnet_class_region_waterfill",
                 "family_id": "segnet_class_region_waterfill",
                 "acquisition_policy_delta": {
-                    "recommended_acquisition_policy": (
-                        "decrease_family_priority_until_new_component_response_signal"
-                    ),
+                    "recommended_acquisition_policy": ("decrease_family_priority_until_new_component_response_signal"),
                     "family_priority_direction": "decrease",
                     **_false_authority(),
                 },
@@ -555,6 +586,103 @@ def test_repair_family_stack_search_demotes_negative_posterior(
         "demote_repair_family_until_new_component_signal",
         "run_next_byte_closed_materializer_or_mlx_probe",
     }
+    assert stack_plan["ready_for_exact_eval_dispatch"] is False
+
+
+def test_repair_family_stack_search_builds_pairwise_tensor_acquisition_path(
+    tmp_path: Path,
+) -> None:
+    reports = []
+    report_paths = []
+    for family_id, stage, levels, delta, byte_count in (
+        (
+            "segnet_class_region_waterfill",
+            10,
+            ["pixel", "boundary", "region", "frame"],
+            -0.0020,
+            32,
+        ),
+        (
+            "per_region_selector_codec",
+            20,
+            ["bit", "byte", "boundary", "region", "pair", "batch"],
+            -0.0010,
+            12,
+        ),
+    ):
+        report = {
+            "schema": REPAIR_FAMILY_BYTE_TRANSFORM_EXECUTION_REPORT_SCHEMA,
+            "family_id": family_id,
+            "typed_response_id": f"{family_id}_typed",
+            "candidate_chain_id": f"{family_id}_chain",
+            "candidate_chain_ids": [f"{family_id}_chain"],
+            "entropy_position_label": "before_entropy_coder_distribution_shaping",
+            "active_entropy_stage": {
+                "order": stage,
+                "stage": "before_entropy_coder_distribution_shaping",
+            },
+            "fractal_optimization_scope": {
+                "active_levels": levels,
+                "declared_levels": levels,
+            },
+            "allocated_repair_bytes": byte_count,
+            "byte_transform_delta": {
+                "schema": "repair_family_byte_transform_delta.v1",
+                "path": f"{family_id}.json",
+                "bytes": byte_count,
+                **_false_authority(),
+            },
+            "mlx_local_probe_delta": {
+                "schema": "repair_family_byte_transform_mlx_probe_delta.v1",
+                "combined_delta_score_units": delta,
+                "segnet_delta_score_units": delta,
+                "posenet_delta_score_units": 0.0,
+                **_false_authority(),
+            },
+            "byte_closed_candidate_emitted": False,
+            "candidate_archive_materialized": False,
+            "exact_eval_handoff_gate": {
+                "schema": "repair_family_exact_eval_handoff_gate.v1",
+                "archive_bound_runtime_consumption_proof_ready": False,
+                "blockers": ["byte_closed_candidate_archive_missing"],
+                **_false_authority(),
+            },
+            "blockers": [],
+            **_false_authority(),
+        }
+        report_path = _write_json(tmp_path / f"{family_id}_report.json", report)
+        reports.append(report)
+        report_paths.append(report_path)
+
+    stack_plan = plan_repair_family_stack_search(
+        execution_reports=reports,
+        execution_report_paths=report_paths,
+        repo_root=tmp_path,
+        byte_credit_budget=64,
+    )
+
+    assert stack_plan["pairwise_interaction_tensor_cell_count"] == 2
+    pair_cells = stack_plan["pairwise_interaction_tensor"]["cells"]
+    forward_cell = next(
+        cell
+        for cell in pair_cells
+        if cell["left_family_id"] == "segnet_class_region_waterfill"
+        and cell["right_family_id"] == "per_region_selector_codec"
+    )
+    assert forward_cell["entropy_stage_gap"] == 10
+    assert forward_cell["region_selector_coupling"] is True
+    assert forward_cell["region_boundary_coupling"] is True
+    assert forward_cell["coupling_synergy"] > 0.0
+    assert forward_cell["transition_allowed_by_tensor"] is True
+    primary_path = stack_plan["primary_stack_acquisition_path"]
+    assert primary_path["family_order"] == [
+        "segnet_class_region_waterfill",
+        "per_region_selector_codec",
+    ]
+    assert primary_path["terminal_outcome_class"] == "precise_exact_axis_blocker"
+    assert primary_path["total_delta_payload_bytes"] == 44
+    assert all(row["selected_for_materialization_handoff"] for row in stack_plan["stack_rows"])
+    assert stack_plan["bounded_autonomous_terminal_policy"]["terminal_outcome_class"] == "precise_exact_axis_blocker"
     assert stack_plan["ready_for_exact_eval_dispatch"] is False
 
 
@@ -670,9 +798,7 @@ def test_repair_exact_ready_bridge_emits_blocked_source_queue(
     source_row = source_queue["top_k"][0]
     assert source_row["target_modes"] == ["contest_exact_eval"]
     assert source_row["ready_for_exact_eval_dispatch"] is False
-    assert "submission_dir_missing_for_runtime_content_tree_custody" in source_row[
-        "dispatch_blockers"
-    ]
+    assert "submission_dir_missing_for_runtime_content_tree_custody" in source_row["dispatch_blockers"]
 
 
 def test_materialization_gate_learning_signal_updates_posterior(
@@ -740,9 +866,7 @@ def test_materialization_gate_learning_signal_updates_posterior(
     assert signal_report["schema"] == REPAIR_CAMPAIGN_BLOCKED_LEARNING_SIGNAL_REPORT_SCHEMA
     signal = signal_report["learning_signal_rows"][0]
     update = signal["local_planning_update"]
-    assert update["recommended_acquisition_policy"] == (
-        "prioritize_byte_closed_family_materializer_implementation"
-    )
+    assert update["recommended_acquisition_policy"] == ("prioritize_byte_closed_family_materializer_implementation")
     assert update["planner_feature_vector"]["entropy_stage_order"] == 10
     signal_report_path = _write_json(tmp_path / "signal_report.json", signal_report)
     posterior_path = tmp_path / "posterior.jsonl"
@@ -760,12 +884,11 @@ def test_materialization_gate_learning_signal_updates_posterior(
 
     assert append_report["appended_count"] == 1
     assert posterior_rows[0]["typed_response_id"] == "segnet_region_ready"
-    assert posterior_rows[0]["acquisition_policy_delta"][
-        "family_priority_direction"
-    ] == "increase"
-    assert posterior_rows[0]["acquisition_policy_delta"][
-        "posterior_budget_routing_hint"
-    ] == "route_budget_to_byte_closed_materializer_after_custody"
+    assert posterior_rows[0]["acquisition_policy_delta"]["family_priority_direction"] == "increase"
+    assert (
+        posterior_rows[0]["acquisition_policy_delta"]["posterior_budget_routing_hint"]
+        == "route_budget_to_byte_closed_materializer_after_custody"
+    )
     route = summary["acquisition_followup_routes"][0]
     assert route["activation_action"] == "implement_or_run_repair_family_byte_transform"
 
@@ -790,9 +913,7 @@ def test_blocked_credit_exhaustion_updates_posterior_budget_routing(
     assert update["recommended_acquisition_policy"] == (
         "increase_receiver_closed_rate_credit_or_rebudget_earlier_entropy_stage"
     )
-    assert update["planner_feature_vector"]["selection_blocker_class"] == (
-        "receiver_credit_exhausted"
-    )
+    assert update["planner_feature_vector"]["selection_blocker_class"] == ("receiver_credit_exhausted")
     assert update["planner_feature_vector"]["receiver_credit_exhausted"] is True
 
     signal_report_path = _write_json(tmp_path / "blocked_signals.json", signal_report)
@@ -810,12 +931,11 @@ def test_blocked_credit_exhaustion_updates_posterior_budget_routing(
     )
     route = summary["acquisition_followup_routes"][0]
 
-    assert posterior_rows[0]["acquisition_policy_delta"][
-        "posterior_budget_routing_hint"
-    ] == "rebudget_receiver_closed_credit_before_exact_axis_spend"
-    assert route["activation_action"] == (
-        "rebudget_receiver_credit_to_earliest_entropy_stage"
+    assert (
+        posterior_rows[0]["acquisition_policy_delta"]["posterior_budget_routing_hint"]
+        == "rebudget_receiver_closed_credit_before_exact_axis_spend"
     )
+    assert route["activation_action"] == ("rebudget_receiver_credit_to_earliest_entropy_stage")
     assert route["queue_artifact_key"] == "repair_budget_waterfill_queue"
 
 

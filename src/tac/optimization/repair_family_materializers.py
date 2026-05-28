@@ -27,9 +27,7 @@ from tac.optimization.repair_campaign_chain_contract import (
 from tac.optimization.repair_campaign_scorer import REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA
 from tac.repo_io import sha256_file
 
-REPAIR_CAMPAIGN_FAMILY_MATERIALIZER_MANIFEST_SCHEMA = (
-    "repair_campaign_family_materializer_manifest.v1"
-)
+REPAIR_CAMPAIGN_FAMILY_MATERIALIZER_MANIFEST_SCHEMA = "repair_campaign_family_materializer_manifest.v1"
 
 _MATERIALIZATION_PLAN_SCHEMA = "frontier_rate_attack_repair_budget_materialization_plan.v1"
 
@@ -82,7 +80,9 @@ _FAMILY_REQUIRED_VALUE_KEYS: Mapping[str, tuple[str, ...]] = {
     "segnet_class_region_waterfill": ("segnet_class_region_mask_ids",),
     "posenet_null_bottom_decile": ("posenet_null_bottom_decile_pair_ids",),
     "palette_frame_asymmetry_prior": (),
+    "frame0_k16_palette_asymmetry": (),
     "per_region_selector_codec": ("selector_payload_bits_per_region",),
+    "entropy_boundary_probe": ("entropy_boundary_probe_manifest",),
 }
 
 _FAMILY_REQUIRED_PATH_KEYS: Mapping[str, tuple[str, ...]] = {
@@ -163,7 +163,9 @@ def _find_child_plan_row(
             continue
         if typed_response_id and str(row.get("typed_response_id") or "") == typed_response_id:
             return row
-        if (candidate_id and str(row.get("allocation_candidate_id") or "") == candidate_id) or (family_id and str(row.get("correction_family") or "") == family_id):
+        if (candidate_id and str(row.get("allocation_candidate_id") or "") == candidate_id) or (
+            family_id and str(row.get("correction_family") or "") == family_id
+        ):
             fallback = row
     return fallback
 
@@ -192,10 +194,7 @@ def _multiscale_scope(
     allocation: Mapping[str, Any],
     score_row: Mapping[str, Any],
 ) -> dict[str, Any]:
-    action = (
-        _mapping(allocation.get("multiscale_action_row"))
-        or _mapping(score_row.get("multiscale_action_row"))
-    )
+    action = _mapping(allocation.get("multiscale_action_row")) or _mapping(score_row.get("multiscale_action_row"))
     dynamics = _mapping(action.get("interaction_dynamics"))
     active = ordered_unique(
         [
@@ -212,8 +211,7 @@ def _multiscale_scope(
         "declared_levels": active,
         "interaction_edges": list(dynamics.get("interaction_edges") or []),
         "stackability_policy": (
-            "measure_local_atoms_then_remeasure_composed_parent_child_and_sibling_"
-            "interactions_before_budget_spend"
+            "measure_local_atoms_then_remeasure_composed_parent_child_and_sibling_interactions_before_budget_spend"
         ),
         "optimizer_must_preserve_entropy_pipeline_order": True,
         "budget_spend_allowed": False,
@@ -227,6 +225,24 @@ def _first_text(*values: Any) -> str:
         if text:
             return text
     return ""
+
+
+def _safe_float(value: Any) -> float:
+    if value is None or isinstance(value, bool):
+        return 0.0
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _safe_int(value: Any) -> int:
+    if value is None or isinstance(value, bool):
+        return 0
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
 
 
 def _candidate_archive(
@@ -271,9 +287,7 @@ def _candidate_archive(
     return {
         "path": archive_path or None,
         "sha256": archive_sha or None,
-        "bytes": archive_bytes
-        if archive_bytes is not None
-        else child_row.get("candidate_archive_bytes"),
+        "bytes": archive_bytes if archive_bytes is not None else child_row.get("candidate_archive_bytes"),
     }, ordered_unique(blockers)
 
 
@@ -310,11 +324,7 @@ def _gate_value_nonempty(
 ) -> bool:
     gate = _mapping(score_row.get("execution_gate"))
     for item in gate.get("local_mlx_custody_values") or []:
-        if (
-            isinstance(item, Mapping)
-            and str(item.get("key") or "") == key
-            and item.get("nonempty") is True
-        ):
+        if isinstance(item, Mapping) and str(item.get("key") or "") == key and item.get("nonempty") is True:
             return True
     return False
 
@@ -327,9 +337,20 @@ def _component_replay(
     score_row: Mapping[str, Any],
     repo_root: str | Path,
 ) -> tuple[dict[str, Any], list[str]]:
-    terms = _mapping(score_row.get("component_response_terms")) or _mapping(
-        allocation.get("component_response_terms")
+    terms = _mapping(score_row.get("component_response_terms")) or _mapping(allocation.get("component_response_terms"))
+    objective_delta = _safe_float(
+        score_row.get("objective_delta_score_units")
+        or allocation.get("objective_delta_score_units")
+        or child_row.get("objective_delta_score_units")
     )
+    if objective_delta:
+        terms = {
+            **dict(terms),
+            "objective_delta_score_units": objective_delta,
+            "measured_component_delta_score_units": terms.get("measured_component_delta_score_units")
+            if terms.get("measured_component_delta_score_units") is not None
+            else objective_delta,
+        }
     local_mlx = _first_text(
         score_row.get("local_mlx_response_path"),
         child_row.get("local_mlx_response_path"),
@@ -340,9 +361,7 @@ def _component_replay(
         score_row.get("reference_local_mlx_response_path"),
         child_row.get("reference_local_mlx_response_path"),
         _gate_path(score_row, "reference_local_mlx_response_path"),
-        _mapping(child_row.get("local_advisory_custody")).get(
-            "reference_local_mlx_response_path"
-        ),
+        _mapping(child_row.get("local_advisory_custody")).get("reference_local_mlx_response_path"),
     )
     axis = _first_text(
         allocation.get("component_response_axis"),
@@ -407,9 +426,8 @@ def _family_required_blockers(
         elif not _is_file(path_text, repo_root):
             blockers.append(f"{key}_file_missing")
     if family_id == "palette_frame_asymmetry_prior":
-        palette_context = (
-            _mapping(score_row.get("palette_dynamics_context"))
-            or _mapping(allocation.get("palette_dynamics_context"))
+        palette_context = _mapping(score_row.get("palette_dynamics_context")) or _mapping(
+            allocation.get("palette_dynamics_context")
         )
         if not palette_context:
             blockers.append("palette_dynamics_context_missing")
@@ -429,13 +447,9 @@ def build_repair_campaign_family_materializer_manifest(
     """Build a family materializer manifest for one repair allocation."""
 
     if materialization_plan.get("schema") != _MATERIALIZATION_PLAN_SCHEMA:
-        raise RepairFamilyMaterializerError(
-            "repair family materializer requires repair budget materialization plan"
-        )
+        raise RepairFamilyMaterializerError("repair family materializer requires repair budget materialization plan")
     if score_report.get("schema") != REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA:
-        raise RepairFamilyMaterializerError(
-            "repair family materializer requires repair_campaign_score_report.v1"
-        )
+        raise RepairFamilyMaterializerError("repair family materializer requires repair_campaign_score_report.v1")
     require_no_truthy_authority_fields(
         materialization_plan,
         context="repair_family_materializer_materialization_plan",
@@ -464,8 +478,16 @@ def build_repair_campaign_family_materializer_manifest(
         score_row.get("family_id"),
         allocation.get("correction_family"),
         score_row.get("correction_family"),
+        candidate_id,
         "unclassified_repair_family",
     )
+    if family_id == "unclassified_repair_family":
+        family_id = _first_text(
+            allocation.get("correction_family"),
+            score_row.get("correction_family"),
+            candidate_id,
+            family_id,
+        )
     child_row = _find_child_plan_row(
         materialization_plan,
         typed_response_id=typed_response_id,
@@ -521,14 +543,9 @@ def build_repair_campaign_family_materializer_manifest(
         *family_blockers,
     ]
     byte_closed = (
-        bool(candidate_chain_id)
-        and bool(archive.get("path"))
-        and bool(archive.get("sha256"))
-        and not archive_blockers
+        bool(candidate_chain_id) and bool(archive.get("path")) and bool(archive.get("sha256")) and not archive_blockers
     )
-    receiver_satisfied = (
-        byte_closed and proof_validation.get("receiver_contract_satisfied") is True
-    )
+    receiver_satisfied = byte_closed and proof_validation.get("receiver_contract_satisfied") is True
     if not byte_closed:
         blockers.append(f"{family_id}_byte_closed_candidate_archive_not_materialized")
     if not receiver_satisfied:
@@ -551,6 +568,18 @@ def build_repair_campaign_family_materializer_manifest(
         "correction_family": child_row.get("correction_family")
         or allocation.get("correction_family")
         or score_row.get("correction_family"),
+        "allocated_repair_bytes": _safe_int(
+            allocation.get("allocated_repair_bytes")
+            or score_row.get("allocated_repair_bytes")
+            or child_row.get("allocated_repair_bytes")
+            or allocation.get("requested_repair_bytes")
+            or score_row.get("requested_repair_bytes")
+        ),
+        "objective_delta_score_units": _safe_float(
+            allocation.get("objective_delta_score_units")
+            or score_row.get("objective_delta_score_units")
+            or child_row.get("objective_delta_score_units")
+        ),
         "entropy_position_label": entropy_stage["stage"],
         "entropy_pipeline_order": list(_ENTROPY_PIPELINE_ORDER),
         "active_entropy_stage": entropy_stage,
@@ -597,10 +626,7 @@ def build_repair_campaign_family_materializer_manifest(
     }
     require_no_truthy_authority_fields(
         manifest,
-        context=(
-            "repair_campaign_family_materializer_manifest:"
-            f"{typed_response_id or candidate_id or family_id}"
-        ),
+        context=(f"repair_campaign_family_materializer_manifest:{typed_response_id or candidate_id or family_id}"),
     )
     return manifest
 
