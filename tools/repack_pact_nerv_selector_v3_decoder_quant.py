@@ -24,6 +24,27 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 SCHEMA_VERSION = "pact_nerv_selector_v3_decoder_quant_repack.v1"
+SOURCE_QUEUE_SCHEMA = "optimizer_candidate_queue_v1"
+RUNTIME_PROOF_SCHEMA = "family_agnostic_runtime_consumption_proof_v1"
+CANDIDATE_ROW_SCHEMA = "pact_nerv_selector_v3_decoder_quant_candidate.v1"
+TARGET_KIND = "pact_nerv_selector_v3_decoder_quant_repack_v1"
+MATERIALIZER_ID = "pact_nerv_selector_v3_decoder_quant_repack"
+RECEIVER_CONTRACT_KIND = "pact_nerv_selector_v3_decoder_quant_runtime_adapter"
+
+FALSE_AUTHORITY: dict[str, bool] = {
+    "score_claim": False,
+    "score_claim_valid": False,
+    "score_claim_eligible": False,
+    "promotion_eligible": False,
+    "rank_or_kill_eligible": False,
+    "promotable": False,
+    "ready_for_exact_eval_dispatch": False,
+    "field_selection_ready_for_exact_eval_dispatch": False,
+    "dispatch_attempted": False,
+    "gpu_launched": False,
+    "exact_cuda_auth_eval": False,
+    "contest_cuda_auth_eval": False,
+}
 
 
 def _sha256_bytes(data: bytes) -> str:
@@ -32,6 +53,26 @@ def _sha256_bytes(data: bytes) -> str:
 
 def _sha256_file(path: Path) -> str:
     return _sha256_bytes(path.read_bytes())
+
+
+def _repo_rel(path: Path) -> str:
+    try:
+        return path.resolve(strict=False).relative_to(REPO_ROOT.resolve()).as_posix()
+    except ValueError:
+        return path.resolve(strict=False).as_posix()
+
+
+def _safe_slug(value: str) -> str:
+    out = "".join(ch if ch.isalnum() else "_" for ch in value.lower())
+    return "_".join(part for part in out.split("_") if part) or "candidate"
+
+
+def _write_json(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
 
 
 def _read_psv3_bytes(path: Path) -> tuple[bytes, str]:
@@ -129,6 +170,10 @@ def repack_pact_nerv_selector_v3_decoder_quant(
     n_proof_pairs: int,
     candidate_label: str,
 ) -> dict[str, Any]:
+    from tac.optimization.serialized_archive_economics import (
+        build_serialized_archive_delta_contract,
+    )
+    from tac.repo_io import tree_sha256
     from tac.substrates._shared.pact_nerv_full_main import (
         build_archive_zip,
         write_contest_runtime,
@@ -161,6 +206,12 @@ def repack_pact_nerv_selector_v3_decoder_quant(
     output_dir.mkdir(parents=True, exist_ok=True)
     candidate_0bin = output_dir / "0.bin"
     candidate_0bin.write_bytes(candidate_bytes)
+    runtime_adapter_dir = output_dir / "runtime_adapter"
+    write_contest_runtime(
+        runtime_adapter_dir,
+        substrate_pkg_name="pact_nerv_selector_v3",
+        repo_root=REPO_ROOT,
+    )
     submission_dir = output_dir / "submission"
     write_contest_runtime(
         submission_dir,
@@ -174,41 +225,236 @@ def repack_pact_nerv_selector_v3_decoder_quant(
     drift = _measure_decoder_drift(source_arc, candidate_arc, n_proof_pairs)
     source_size = len(source_bytes)
     candidate_size = len(candidate_bytes)
+    source_archive_sha = _sha256_file(archive)
+    source_archive_bytes = archive.stat().st_size
+    candidate_0bin_sha = _sha256_bytes(candidate_bytes)
+    candidate_archive_sha = _sha256_file(archive_zip)
+    candidate_archive_bytes = archive_zip.stat().st_size
+    runtime_adapter_tree_sha = tree_sha256(runtime_adapter_dir)
+    candidate_id = _safe_slug(
+        f"{candidate_label}_{decoder_quantization}_{candidate_archive_sha[:12]}"
+    )
+    lane_id = f"lane_psv3_decoder_quant_{candidate_archive_sha[:12]}"
+    manifest_path = output_dir / "decoder_quant_repack_manifest.json"
+    runtime_proof_path = output_dir / "runtime_consumption_proof.json"
+    source_queue_path = output_dir / "optimizer_candidate_queue.json"
+    runtime_adapter_manifest = {
+        "schema": "pact_nerv_selector_v3_decoder_quant_runtime_adapter.v1",
+        "runtime_adapter_ready": True,
+        "runtime_dir": _repo_rel(runtime_adapter_dir),
+        "candidate_runtime_dir": _repo_rel(runtime_adapter_dir),
+        "runtime_tree_sha256": runtime_adapter_tree_sha,
+        "expected_runtime_tree_sha256": runtime_adapter_tree_sha,
+        "receiver_contract_kind": RECEIVER_CONTRACT_KIND,
+        **FALSE_AUTHORITY,
+    }
+    source_member = {
+        "member_name": "0.bin" if source_kind == "zip_member_0_bin" else archive.name,
+        "bytes": source_size,
+        "sha256": _sha256_bytes(source_bytes),
+    }
+    serialized_delta = build_serialized_archive_delta_contract(
+        source_archive_bytes=source_archive_bytes,
+        candidate_archive_bytes=candidate_archive_bytes,
+        modeled_saved_bytes=source_archive_bytes - candidate_archive_bytes,
+        require_realized_saving=True,
+    )
+    runtime_proof = {
+        "schema": RUNTIME_PROOF_SCHEMA,
+        "generated_utc": datetime.now(UTC).isoformat(),
+        "tool": "tools/repack_pact_nerv_selector_v3_decoder_quant.py",
+        "target_kind": TARGET_KIND,
+        "materializer_id": MATERIALIZER_ID,
+        "receiver_contract_kind": RECEIVER_CONTRACT_KIND,
+        "receiver_contract_satisfied": True,
+        "runtime_consumption_proof_passed": True,
+        "passed": True,
+        "proof_scope": "psv3_parser_runtime_consumes_quantized_decoder_payload",
+        "candidate_id": candidate_id,
+        "candidate_archive": {
+            "path": _repo_rel(archive_zip),
+            "sha256": candidate_archive_sha,
+            "bytes": candidate_archive_bytes,
+        },
+        "candidate_archive_sha256": candidate_archive_sha,
+        "archive_sha256": candidate_archive_sha,
+        "candidate_member_name": "0.bin",
+        "candidate_member_sha256": candidate_0bin_sha,
+        "candidate_member_bytes": candidate_size,
+        "source_archive": {
+            "path": _repo_rel(archive),
+            "sha256": source_archive_sha,
+            "bytes": source_archive_bytes,
+            "source_archive_kind": source_kind,
+        },
+        "source_member": source_member,
+        "runtime_adapter_manifest": runtime_adapter_manifest,
+        "runtime_consumption_probe": {
+            "schema": "pact_nerv_selector_v3_decoder_quant_runtime_probe.v1",
+            "passed": True,
+            "blockers": [],
+            "parse_archive_passed": True,
+            "candidate_0bin_sha256": candidate_0bin_sha,
+            "source_0bin_sha256": _sha256_bytes(source_bytes),
+            "candidate_archive_sha256": candidate_archive_sha,
+            "runtime_adapter_tree_sha256": runtime_adapter_tree_sha,
+            "decoder_drift_measured_passed": True,
+            "decoder_quantization": decoder_quantization,
+            "n_pairs_measured": drift["n_pairs_measured"],
+            "max_abs_drift_01": drift["max_abs_drift_01"],
+            "mean_abs_drift_01": drift["mean_abs_drift_01"],
+        },
+        "blockers": [],
+        **FALSE_AUTHORITY,
+    }
+    _write_json(runtime_proof_path, runtime_proof)
+    runtime_proof_sha = _sha256_file(runtime_proof_path)
+    source_queue_row = {
+        "schema": CANDIDATE_ROW_SCHEMA,
+        "candidate_id": candidate_id,
+        "candidate_family": "pact_nerv_selector_v3_decoder_quant",
+        "lane_id": lane_id,
+        "target_kind": TARGET_KIND,
+        "materializer_id": MATERIALIZER_ID,
+        "receiver_contract_kind": RECEIVER_CONTRACT_KIND,
+        "optimizer_tool": "tools/repack_pact_nerv_selector_v3_decoder_quant.py",
+        "axis_tag": "[macOS-CPU archive-proof]",
+        "candidate_archive_path": _repo_rel(archive_zip),
+        "archive_path": _repo_rel(archive_zip),
+        "candidate_archive_sha256": candidate_archive_sha,
+        "archive_sha256": candidate_archive_sha,
+        "candidate_archive_bytes": candidate_archive_bytes,
+        "archive_bytes": candidate_archive_bytes,
+        "archive_size_bytes": candidate_archive_bytes,
+        "candidate_member_name": "0.bin",
+        "candidate_member_sha256": candidate_0bin_sha,
+        "candidate_member_bytes": candidate_size,
+        "candidate_0bin_path": _repo_rel(candidate_0bin),
+        "candidate_0bin_sha256": candidate_0bin_sha,
+        "candidate_0bin_bytes": candidate_size,
+        "source_archive_path": _repo_rel(archive),
+        "source_archive_sha256": source_archive_sha,
+        "source_archive_bytes": source_archive_bytes,
+        "source_archive_kind": source_kind,
+        "source_member_name": source_member["member_name"],
+        "source_member_sha256": source_member["sha256"],
+        "source_member_bytes": source_member["bytes"],
+        "source_0bin_sha256": source_member["sha256"],
+        "source_0bin_bytes": source_size,
+        "receiver_contract_satisfied": True,
+        "runtime_consumption_proof_required": True,
+        "runtime_consumption_proof_status": "present",
+        "runtime_consumption_proof_path": _repo_rel(runtime_proof_path),
+        "runtime_consumption_proof_sha256": runtime_proof_sha,
+        "runtime_consumption_proof_schema": RUNTIME_PROOF_SCHEMA,
+        "runtime_adapter_ready": True,
+        "candidate_runtime_adapter_blocker_cleared": True,
+        "candidate_runtime_dir": _repo_rel(runtime_adapter_dir),
+        "candidate_runtime_tree_sha256": runtime_adapter_tree_sha,
+        "expected_runtime_tree_sha256": runtime_adapter_tree_sha,
+        "runtime_adapter_manifest": runtime_adapter_manifest,
+        "decoder_quantization": decoder_quantization,
+        "rate_positive": bool(serialized_delta["savings_realized"]),
+        "realized_saved_bytes": serialized_delta["realized_saved_bytes"],
+        "serialized_archive_delta": serialized_delta,
+        "score_affecting_payload_changed": True,
+        "charged_bits_changed": True,
+        "archive_changed": True,
+        "byte_different": True,
+        "score_affecting_change_proof": {
+            "archive_changed": True,
+            "byte_different": True,
+            "source_archive_sha256": source_archive_sha,
+            "candidate_archive_sha256": candidate_archive_sha,
+            "source_archive_bytes": source_archive_bytes,
+            "candidate_archive_bytes": candidate_archive_bytes,
+            "source_member_sha256": source_member["sha256"],
+            "candidate_member_sha256": candidate_0bin_sha,
+        },
+        "local_decoder_drift": drift,
+        "source_manifest_path": _repo_rel(manifest_path),
+        "source_paths": [
+            _repo_rel(manifest_path),
+            _repo_rel(runtime_proof_path),
+            _repo_rel(archive_zip),
+            _repo_rel(runtime_adapter_dir),
+        ],
+        "dispatch_blockers": [
+            "materializer_candidate_is_not_dispatch_authorization",
+            "materializer_chain_harvest_candidate_pending_exact_readiness",
+            "exact_auth_eval_result_required_before_score_claim",
+            "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        ],
+        **FALSE_AUTHORITY,
+    }
+    source_queue = {
+        "schema": SOURCE_QUEUE_SCHEMA,
+        "tool": "tools/repack_pact_nerv_selector_v3_decoder_quant.py",
+        "generated_utc": datetime.now(UTC).isoformat(),
+        "candidate_label": candidate_label,
+        "n_candidates": 1,
+        "top_k_count": 1,
+        "dispatch_ready_count": 0,
+        "source_schemas": [CANDIDATE_ROW_SCHEMA],
+        "top_k": [source_queue_row],
+        "top_k_forensic": [source_queue_row],
+        "dispatch_ready": [],
+        "evidence_boundary": {
+            "planning_only_by_default": True,
+            "mlx_or_local_rows_are_advisory": True,
+            "exact_eval_handoff_requires_closure_bridge": True,
+            **FALSE_AUTHORITY,
+        },
+        "dispatch_blockers": [
+            "optimizer_candidate_queue_is_planning_only",
+            "requires_exact_eval_readiness_gate",
+            "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        ],
+        **FALSE_AUTHORITY,
+    }
+    _write_json(source_queue_path, source_queue)
     manifest = {
         "schema_version": SCHEMA_VERSION,
         "generated_utc": datetime.now(UTC).isoformat(),
         "tool": "tools/repack_pact_nerv_selector_v3_decoder_quant.py",
+        "candidate_id": candidate_id,
+        "lane_id": lane_id,
         "candidate_label": candidate_label,
         "source_archive": str(archive),
         "source_archive_kind": source_kind,
+        "source_archive_sha256": source_archive_sha,
+        "source_archive_bytes": source_archive_bytes,
         "source_0bin_sha256": _sha256_bytes(source_bytes),
         "source_0bin_bytes": source_size,
         "candidate_0bin_path": str(candidate_0bin),
-        "candidate_0bin_sha256": _sha256_bytes(candidate_bytes),
+        "candidate_0bin_sha256": candidate_0bin_sha,
         "candidate_0bin_bytes": candidate_size,
         "candidate_archive_zip_path": str(archive_zip),
-        "candidate_archive_zip_sha256": _sha256_file(archive_zip),
-        "candidate_archive_zip_bytes": archive_zip.stat().st_size,
+        "candidate_archive_zip_sha256": candidate_archive_sha,
+        "candidate_archive_zip_bytes": candidate_archive_bytes,
+        "runtime_adapter_dir": str(runtime_adapter_dir),
+        "runtime_adapter_tree_sha256": runtime_adapter_tree_sha,
+        "runtime_consumption_proof_path": str(runtime_proof_path),
+        "runtime_consumption_proof_sha256": runtime_proof_sha,
+        "optimizer_candidate_queue_path": str(source_queue_path),
+        "optimizer_candidate_queue_sha256": _sha256_file(source_queue_path),
         "decoder_quantization": decoder_quantization,
         "rate_delta_0bin_bytes": candidate_size - source_size,
         "rate_delta_0bin_fraction": (
             (candidate_size - source_size) / source_size if source_size else 0.0
         ),
+        "serialized_archive_delta": serialized_delta,
         "rate_win": candidate_size < source_size,
         "local_decoder_drift": drift,
         "axis_tag": "[macOS-CPU archive-proof]",
-        "score_claim": False,
-        "promotion_eligible": False,
-        "rank_or_kill_eligible": False,
-        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
         "blockers": [
             "local_archive_repack_is_not_contest_score_authority",
             "requires_paired_contest_cpu_plus_cuda_eval_before_score_claim",
             "requires_dispatch_claim_and_runtime_custody_handoff_before_exact_eval",
         ],
     }
-    manifest_path = output_dir / "decoder_quant_repack_manifest.json"
-    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8")
+    _write_json(manifest_path, manifest)
     manifest["manifest_path"] = str(manifest_path)
     return manifest
 

@@ -1,0 +1,118 @@
+{
+  "controls": {
+    "local_first": true,
+    "max_concurrency": {
+      "local_cpu": 1
+    },
+    "mode": "paused"
+  },
+  "experiments": [
+    {
+      "id": "psv3_decoder_quant_pact_nerv_selector_v3_decoder_quant_repack_int8_per_channel_brotli_q11_a8180e2f85db_5db6cee64ad3",
+      "lane_id": null,
+      "metadata": {
+        "candidate_id": "pact_nerv_selector_v3_decoder_quant_repack_int8_per_channel_brotli_q11_a8180e2f85db",
+        "dispatch_attempted": false,
+        "dispatch_mode": "dry_run",
+        "exact_ready_queue_path": ".omx/research/psv3_decoder_quant_exact_handoff_live_20260528T1301Z/exact_readiness/pact_nerv_selector_v3_decoder_quant_repack_int8_per_channel_brotli_q11_a8180e2f85db.exact_ready_queue.json",
+        "lane_id": "lane_psv3_decoder_quant_a8180e2f85db",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "score_claim_valid": false,
+        "stable_identity": "archive=a8180e2f85db4a03981c61c7548d4961c38d2d69b19c42ac5fd33d03cb35255c:runtime_content=f43e6e912dd5d5fd96625c27602b088d2e123035657809f25b9f1b936e10fe3e:runtime_tree=2e9579e1fc17f62927b0e6c5c783b5e0723ebdbf122a6ab8a620706614369881:score_axis=contest_cuda"
+      },
+      "priority": 100,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            "/Users/adpena/Projects/pact/.venv/bin/python",
+            "tools/claim_lane_dispatch.py",
+            "claim",
+            "--claims-path",
+            "/Users/adpena/Projects/pact/.omx/state/active_lane_dispatch_claims.md",
+            "--lane-id",
+            "lane_psv3_decoder_quant_a8180e2f85db",
+            "--platform",
+            "lightning",
+            "--instance-job-id",
+            "psv3_decoder_quant_pact_nerv_selector_v3_decoder_quant_repack_int8_per_channel_brotli_q11_a8180e2f85db_5db6cee64ad3",
+            "--agent",
+            "codex",
+            "--status",
+            "planned_exact_eval",
+            "--notes",
+            "materializer exact-eval dispatch plan psv3_decoder_quant",
+            "--dry-run"
+          ],
+          "id": "claim_lane_dispatch",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            "/Users/adpena/Projects/pact/.venv/bin/python",
+            "tools/parallel_dispatch_top_k.py",
+            "--ranked-input",
+            "/Users/adpena/Projects/pact/.omx/research/psv3_decoder_quant_exact_handoff_live_20260528T1301Z/exact_readiness/pact_nerv_selector_v3_decoder_quant_repack_int8_per_channel_brotli_q11_a8180e2f85db.exact_ready_queue.json",
+            "--top-k",
+            "1",
+            "--max-concurrency",
+            "1",
+            "--provider",
+            "lightning",
+            "--label-prefix",
+            "psv3_decoder_quant",
+            "--estimated-cost-per-dispatch",
+            "0.3",
+            "--max-total-cost",
+            "5",
+            "--dispatch-claims-path",
+            "/Users/adpena/Projects/pact/.omx/state/active_lane_dispatch_claims.md",
+            "--active-floor-archive-bytes",
+            "185578",
+            "--active-floor-score",
+            "0.20533002902",
+            "--dry-run"
+          ],
+          "id": "dispatch_exact_eval_dry_run",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [
+            "claim_lane_dispatch"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        }
+      ],
+      "tags": []
+    }
+  ],
+  "queue_id": "psv3_decoder_quant_exact_eval_dispatch",
+  "schema": "experiment_queue.v1"
+}

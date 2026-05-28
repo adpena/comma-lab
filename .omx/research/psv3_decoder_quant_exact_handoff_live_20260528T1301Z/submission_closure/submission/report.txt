@@ -1,0 +1,12 @@
+Materializer submission runtime closure
+
+candidate_id: pact_nerv_selector_v3_decoder_quant_repack_int8_per_channel_brotli_q11_a8180e2f85db
+archive_sha256: a8180e2f85db4a03981c61c7548d4961c38d2d69b19c42ac5fd33d03cb35255c
+archive_bytes: 96030
+score_claim: false
+promotion_eligible: false
+rank_or_kill_eligible: false
+ready_for_exact_eval_dispatch: false
+
+This packet is a local exact-readiness closure artifact. It is not a score,
+rank, promotion, or dispatch authority until the canonical exact-eval gates pass.

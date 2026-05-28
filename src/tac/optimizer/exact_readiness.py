@@ -2206,6 +2206,9 @@ def promoted_row(
             "optimizer_tool",
             "op_params",
             "coords",
+            "target_kind",
+            "materializer_id",
+            "receiver_contract_kind",
             "source_paths",
             "source_manifest_path",
         )
@@ -2236,6 +2239,18 @@ def promoted_row(
         "cpu_or_proxy_score_not_cuda_evidence": True,
         "cuda_gap_review_required_before_promotion": True,
         "contest_dispatch_verdict": "ready_for_contest_exact_eval_dispatch_after_lane_claim",
+        "target_kind": source_row.get("target_kind"),
+        "materializer_id": source_row.get("materializer_id"),
+        "receiver_contract_kind": source_row.get("receiver_contract_kind"),
+        "runtime_adapter_ready": bool(as_bool(source_row.get("runtime_adapter_ready"))),
+        "candidate_runtime_adapter_blocker_cleared": bool(
+            as_bool(source_row.get("candidate_runtime_adapter_blocker_cleared"))
+        ),
+        "candidate_runtime_tree_sha256": source_row.get(
+            "candidate_runtime_tree_sha256"
+        ),
+        "expected_runtime_tree_sha256": source_row.get("expected_runtime_tree_sha256"),
+        "runtime_adapter_manifest": source_row.get("runtime_adapter_manifest"),
         "archive_path": repo_rel(archive_path, repo_root),
         "candidate_archive_path": repo_rel(archive_path, repo_root),
         "archive_sha256": archive_sha,

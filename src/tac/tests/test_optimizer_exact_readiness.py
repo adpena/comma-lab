@@ -1797,6 +1797,35 @@ def test_family_agnostic_runtime_proof_requires_candidate_row_metadata(
     )
 
 
+def test_promoted_family_agnostic_row_preserves_dispatch_contract_metadata(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    _write_family_agnostic_runtime_proof(submission, archive_sha)
+    _add_required_runtime_proof_fields(queue, submission, tmp_path, status="present")
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["report"]["ready_for_exact_eval_dispatch"] is True
+    promoted_row = result["promoted_queue"]["dispatch_ready"][0]
+    assert promoted_row["target_kind"] == "packet_member_recompress_v1"
+    assert promoted_row["materializer_id"] == "packet_member_recompress_adapter"
+    assert (
+        promoted_row["receiver_contract_kind"]
+        == "family_agnostic_packet_member_recompress"
+    )
+    assert promoted_row["runtime_consumption_proof_schema"] == (
+        "family_agnostic_runtime_consumption_proof_v1"
+    )
+    assert promoted_row["runtime_consumption_proof_archive_sha256"] == archive_sha
+
+
 @pytest.mark.parametrize(
     ("proof_kwargs", "expected_blocker"),
     [

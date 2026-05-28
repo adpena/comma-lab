@@ -217,11 +217,56 @@ def test_decoder_quant_repack_cli_writes_byte_closed_fail_closed_manifest(
     assert stdout_payload["schema_version"] == manifest["schema_version"]
     assert (out_dir / "archive.zip").is_file()
     assert (out_dir / "submission" / "inflate.py").is_file()
+    assert (out_dir / "runtime_adapter" / "inflate.sh").is_file()
     assert manifest["score_claim"] is False
     assert manifest["promotion_eligible"] is False
     assert manifest["ready_for_exact_eval_dispatch"] is False
     assert manifest["decoder_quantization"] == DECODER_QUANT_INT8_PER_CHANNEL_BROTLI_Q11
     assert manifest["local_decoder_drift"]["n_pairs_measured"] == 1
+    assert manifest["runtime_adapter_tree_sha256"]
+    assert manifest["runtime_consumption_proof_path"]
+    assert manifest["optimizer_candidate_queue_path"]
+
+    proof = json.loads(
+        (out_dir / "runtime_consumption_proof.json").read_text(encoding="utf-8")
+    )
+    queue = json.loads(
+        (out_dir / "optimizer_candidate_queue.json").read_text(encoding="utf-8")
+    )
+    row = queue["top_k"][0]
+    assert proof["schema"] == "family_agnostic_runtime_consumption_proof_v1"
+    assert proof["receiver_contract_satisfied"] is True
+    assert proof["runtime_adapter_manifest"]["runtime_adapter_ready"] is True
+    assert queue["schema"] == "optimizer_candidate_queue_v1"
+    assert queue["dispatch_ready"] == []
+    assert row["receiver_contract_satisfied"] is True
+    assert row["runtime_adapter_ready"] is True
+    assert row["runtime_consumption_proof_status"] == "present"
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+    from tac.optimizer.materializer_submission_closure import (
+        build_materializer_submission_runtime_closure,
+    )
+
+    closure_report = build_materializer_submission_runtime_closure(
+        repo_root=Path(__file__).resolve().parents[5],
+        source_queue_path=out_dir / "optimizer_candidate_queue.json",
+        candidate_id=row["candidate_id"],
+        submission_dir_out=tmp_path / "closed_submission",
+        closed_source_queue_out=tmp_path / "closed_queue.json",
+        closure_report_out=tmp_path / "closure_report.json",
+        overwrite=True,
+    )
+    assert closure_report["archive_sha256"] == manifest["candidate_archive_zip_sha256"]
+    closed_queue = json.loads(
+        (tmp_path / "closed_queue.json").read_text(encoding="utf-8")
+    )
+    closed_row = closed_queue["top_k"][0]
+    assert closed_row["runtime_adapter_ready"] is True
+    assert closed_row["candidate_archive_path_unverified"] is False
+    assert closed_row["score_claim"] is False
+    assert closed_row["ready_for_exact_eval_dispatch"] is False
 
 
 def test_archive_header_size_invariant_is_26_bytes() -> None:
