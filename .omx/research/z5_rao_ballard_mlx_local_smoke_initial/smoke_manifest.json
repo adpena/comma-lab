@@ -1,0 +1,86 @@
+{
+  "axis_tag": "[macOS-MLX research-signal]",
+  "canonical_provenance": {
+    "axis_tag": "[macOS-MLX research-signal]",
+    "evidence_grade": "predicted",
+    "kind": "predicted_from_model",
+    "promotable": false,
+    "rationale": "MLX-local smoke produces no score; this manifest documents renderer construction + single forward pass only. Non-promotable by construction per Catalog #192/#317/#341.",
+    "score_claim_valid": false
+  },
+  "config": {
+    "cooperative_receiver_beta": 0.1,
+    "decoder_channels": [
+      24,
+      20,
+      16,
+      12,
+      8,
+      6,
+      4
+    ],
+    "ego_dim": 6,
+    "embed_dim": 32,
+    "film_generator_depth": 3,
+    "film_hidden_width": 24,
+    "high_latent_dim": 16,
+    "initial_grid_h": 3,
+    "initial_grid_w": 4,
+    "lambda_residual": 1.0,
+    "low_latent_dim": 24,
+    "num_pairs": 8,
+    "num_upsample_blocks": 7,
+    "output_height": 384,
+    "output_width": 512,
+    "predictor_hidden_dim": 48,
+    "predictor_num_layers": 2,
+    "sin_frequency": 30.0
+  },
+  "evidence_grade": "[macOS-MLX research-signal]",
+  "forward_convention": "reconstruct_pair_nchw01",
+  "forward_smoke": {
+    "input_indices": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "residual_l2": 0.9185771346092224,
+    "residual_shape": [
+      4,
+      24
+    ],
+    "rgb_0_max": 0.5000122785568237,
+    "rgb_0_mean": 0.5,
+    "rgb_0_min": 0.499986469745636,
+    "rgb_0_shape": [
+      4,
+      3,
+      384,
+      512
+    ],
+    "rgb_1_max": 0.5000154972076416,
+    "rgb_1_mean": 0.5,
+    "rgb_1_min": 0.49998533725738525,
+    "rgb_1_shape": [
+      4,
+      3,
+      384,
+      512
+    ]
+  },
+  "lane_id": "lane_time_traveler_l5_z5_rao_ballard_mlx_local_scaffold_20260528",
+  "operator_routable_landing_memo": ".omx/research/z5_rao_ballard_mlx_local_scaffold_landed_20260528.md",
+  "predicted_delta_adjustment": 0.0,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "renderer_module": "tac.substrates.time_traveler_l5_z5.mlx_renderer",
+  "renderer_num_parameters": 84638,
+  "renderer_schema_version": "z5_rao_ballard_mlx_renderer_v1_20260528",
+  "scaffold_state": "L1_full_main_wired_via_canonical_mlx_score_aware_harness_z5_first_t4_symposium_landed_20260528",
+  "schema_version": "z5_rao_ballard_mlx_local_smoke_manifest_v1_20260528",
+  "score_claim": false,
+  "substrate_id": "time_traveler_l5_z5_mlx_local"
+}

@@ -1,0 +1,221 @@
+schema_version: 1
+name: substrate_time_traveler_l5_z5_modal_t4_dispatch
+lane_id: lane_time_traveler_l5_z5_rao_ballard_mlx_local_scaffold_20260528
+
+# Z5 Rao-Ballard 2-level hierarchical predictive coding substrate recipe.
+#
+# Per T4 SYMPOSIUM Wave N+13 verdict `f5d3c6835` op-routable #1 (Z5-first
+# among Z4/Z5/Z6/Z7/Z8 class-shift queue) + operator NON-NEGOTIABLE 2026-05-28
+# + CLAUDE.md "PER-SUBSTRATE OPTIMAL FORM via adversarial grand council
+# symposium" + Catalog #311 ego-motion-conditioned predictive coding canonical
+# + Catalog #312 hierarchical predictive coding canonical quadruple.
+#
+# This recipe exists so the canonical readiness/queue tooling (e.g.
+# tools/asymptotic_pursuit_candidate_readiness_assessment.py) can surface Z5
+# as an explicit DEFER candidate with exact blockers. It is NOT operator-spend
+# authority — per-substrate symposium per Catalog #325 + paired CUDA/CPU
+# anchor harvest required before any paid Modal dispatch.
+
+# Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY"
+# non-negotiable + Catalog #220 substrate-engineering opt-out + Catalog
+# #240 recipe-vs-trainer-state consistency.
+research_only: true
+dispatch_enabled: false
+
+dispatch_blockers:
+  - z5_dispatch_requires_per_substrate_symposium_per_catalog_325_within_14_days
+  - z5_dispatch_requires_hinton_distilled_scorer_bound_600pair_mlx_local_empirical_anchor
+  - z5_dispatch_requires_paired_cuda_cpu_anchor_harvest_per_catalog_226_and_246
+  - z5_dispatch_requires_post_training_tier_c_density_validation_per_catalog_324
+  - z5_dispatch_requires_identity_predictor_disambiguator_probe_per_catalog_308
+
+dispatch_blockers_cleared:
+  - blocker: z5_canonical_mlx_local_scaffold_construction_round_trip_verification
+    cleared_at_utc: "2026-05-28T22:08:18Z"
+    evidence:
+      - .omx/research/z5_rao_ballard_mlx_local_50ep_600pair_20260528T220807Z/training_artifact.json
+    scope: |
+      MLX-LOCAL canonical scaffold construction + 50ep/600pair pure-reconstruction
+      training round-trip ONLY (loss 0.362 -> 0.148; archive_sha=ceb614f6c0d2784fb756ab9c127bab8d5f009ac882726cc27043a6a6055f74ca; 214630 bytes); research_only AND dispatch_enabled=false remain binding.
+      Scorer-bound + paired-anchor + symposium requirements UNCLEARED.
+
+summary: |
+  Z5 Rao-Ballard 2-level hierarchical predictive coding substrate — FIRST
+  among Z4/Z5/Z6/Z7/Z8 class-shift queue per T4 SYMPOSIUM Wave N+13 verdict
+  per Carmack engineering-shortcut (simplest paradigm with clearest empirical
+  anchor candidate). 2-level Rao-Ballard hierarchy (z_low + z_high +
+  predictor) with EXPLICIT high-to-low forecasting per (z_high_t,
+  ego_motion_t) -> z_low_t_pred mapping; canonical bidirectional Bayesian
+  inference architecture per Rao-Ballard 1999. Direct sister of Z6-v2
+  single-level FiLM (commit c26647891) + Z7-Mamba-2 state-space (commit
+  2224eff58) within the cooperative-receiver paradigm class per Catalog #311
+  + #312 hierarchical predictive coding canonical quadruple.
+
+platform: modal
+gpu: T4
+min_smoke_gpu: T4
+min_vram_gb: 16
+target_modes:
+  - research_substrate
+
+horizon_class: asymptotic_pursuit
+active_dispatch_contract: z5_rao_ballard_built_research_gate
+dispatch_contracts:
+  - id: z5_rao_ballard_built_research_gate
+    archive_role: planned_z5rb1_monolithic_payload
+    builder_surface: experiments/train_substrate_time_traveler_l5_z5_mlx_local.py
+    status: post_build_research_only
+    exact_eval_path: blocked_pending_per_substrate_symposium_plus_scorer_bound_anchor_plus_paired_cpu_cuda
+    blocker_basis: .omx/research/time_traveler_l5_z6_z7_z8_predictive_coding_world_models_asymptotic_pursuit_scoping_design_20260516.md
+
+cost_band:
+  epochs: 100
+  predicted_cost_usd: 5.0
+  hand_calibrated_fallback_p50_usd: 5.0
+  platform_key: modal
+  gpu_key: T4
+
+predicted_score_target: null
+predicted_band: [0.155, 0.180]
+predicted_band_kind: predicted_score_band
+predicted_band_axis: contest-CPU
+predicted_band_validation_status: pending_post_training
+predicted_band_reactivation_criteria: |
+  Z5's [0.155, 0.180] score band is a research prior from the Z5 design memo
+  + Time-Traveler L5 staircase Step 3 + sister Z6/Z7 cross-family pose-axis
+  empirical anchors (Z6-v2 Wave N+5 3.74x reduction + Z7-Mamba-2 lr=1e-4
+  stabilized 19.2% baseline), not empirical evidence. It may rank Wave-N+1
+  planning only while research_only=true and dispatch_enabled=false. Spend
+  /promotion requires: (1) Hinton-distilled scorer-bound 600-pair MLX-LOCAL
+  empirical anchor lands per Catalog #164 (this scaffold's pure-reconstruction
+  anchor at archive_sha ceb614f6 PROVES the canonical apparatus end-to-end
+  but does NOT bind score-axis predictions); (2) identity-predictor ablation
+  disambiguator probe lands per Catalog #308 alternative-probe-methodology
+  discipline; (3) per-substrate symposium per Catalog #325 6-step contract;
+  (4) post-training Tier-C density validation per Catalog #324; (5) paired
+  CPU/CUDA exact eval is harvested under lane claim custody per Catalog #226
+  + #245 modal_call_id_ledger.
+
+predicted_delta_s_band: [-0.030, -0.010]
+predicted_delta_s_axis: contest-CPU
+predicted_delta_s_basis: |
+  Per .omx/research/time_traveler_l5_z6_z7_z8_predictive_coding_world_models_asymptotic_pursuit_scoping_design_20260516.md
+  Z5 estimate range [0.155, 0.180] reverse-derived from PR101 GOLD 0.193
+  baseline. Research-wave prediction only; score_claim=false. Dykstra-
+  feasibility intersection of (a) Rao-Ballard 2-level hierarchical predictor
+  bit-savings ~10-20% vs single-level Z6 (~308K params) baseline, (b)
+  Atick-Redlich cooperative-receiver MI reduction ~5-10%, (c) cross-substrate
+  sister Z6-v1 + Z6-v2 + Z7-GRU predicted bands. See Z6/Z7/Z8 design memo §8
+  for full Dykstra-feasibility derivation per Catalog #296.
+
+smoke_score_band: [0.16, 0.19]
+predicted_delta: |
+  Z5 predicted score band [0.155, 0.180] and predicted delta-S band
+  [-0.030, -0.010] [contest-CPU prediction], not a score claim.
+predicted_delta_basis: |
+  Derived from
+  .omx/research/time_traveler_l5_z6_z7_z8_predictive_coding_world_models_asymptotic_pursuit_scoping_design_20260516.md
+  Z5 estimate. The band is a research prior only. It is not contest-CUDA
+  evidence and must not be used for ranking, promotion, or kill decisions
+  without paired exact-eval harvest per Catalog #226 + Catalog #324
+  post-training Tier-C validation discipline.
+
+literature_anchor: |
+  Rao & Ballard (1999) "Predictive coding in the visual cortex" Nature
+  Neuroscience 2(1):79-87 — canonical bidirectional Bayesian inference
+  hierarchical architecture; Atick & Redlich (1990) "Towards a Theory of
+  Early Visual Processing" — cooperative-receiver paradigm; Friston (2010)
+  "The free-energy principle: a unified brain theory?" Nature Reviews
+  Neuroscience 11:127-138 — world-model free-energy; Hafner et al.
+  DreamerV3 (2023) "Mastering Diverse Domains through World Models" —
+  modern world-model latent-dynamics revival; Tishby & Zaslavsky (2015)
+  "Deep learning and the information bottleneck principle" — IB framework.
+
+source_supports: |
+  The Z6/Z7/Z8 design memo §11 + §13 binds Z5 as the canonical 2-level
+  EXPLICIT hierarchical predictive coding alternative within the
+  cooperative-receiver paradigm class. Rao-Ballard 1999's bidirectional
+  inference IS the canonical generalization of single-level FiLM (Z6) +
+  state-space recurrence (Z7) — the level-1 predictor's output IS the
+  prior that the level-0 encoder's output is compared against. The
+  identity-predictor probe is the canonical refutation per Catalog #308.
+
+pact_must_prove: |
+  Before paid full dispatch, Z5 must prove at least: (1) Z5RB1 archive
+  grammar emits byte-closed archive bytes (DONE: archive_sha
+  ceb614f6c0d2784fb756ab9c127bab8d5f009ac882726cc27043a6a6055f74ca at 214630
+  bytes from 50ep/600pair MLX-LOCAL scaffold construction); (2) inflate
+  runtime consumes predictor + high_latents + ego_vecs bytes and changes
+  output (Catalog #220 + #272 byte-mutation smoke); (3) identity-predictor
+  disambiguator at same archive bytes shows full-predictor-WIN at score
+  delta >= 0.005 on contest-CUDA (Catalog #308 N>=3 alternative-probe-
+  methodology canonical refutation); (4) Hinton-distilled scorer-bound
+  600-pair MLX-LOCAL empirical anchor lands per Catalog #164 + Z6-v2 sister
+  Wave N+5 3.74x pose-axis reduction pattern; (5) paired CPU/CUDA exact
+  eval is harvested under lane claim custody per Catalog #226 + #245;
+  (6) per-substrate symposium per Catalog #325 6-step contract lands within
+  14 days of any dispatch attempt; (7) post-training Tier-C density
+  validation per Catalog #324 (predicted_band_validation_status MUST be
+  validated_post_training before any predicted_band-based ranking).
+
+decode_complexity_evidence: |
+  Built inflate runtime is scorer-free and vendors the Z5RB1 parser +
+  PyTorch Z5RaoBallardSubstrate decoder + 2-level Rao-Ballard predictor +
+  raw writer into submission_runtime/src. Runtime deps: torch + brotli +
+  numpy (HNeRV L4 <=2 deps; numpy is stdlib-adjacent). The MLX-LOCAL
+  scaffold construction at archive_sha ceb614f6 validates the canonical
+  apparatus end-to-end (loss 0.362 -> 0.148 in 50ep/600pair on M5 Max in
+  1.02s wall-clock; 214630 bytes archive) but the measured packet remains
+  non-frontier and research-only [macOS-MLX research-signal].
+
+envelope_status: |
+  Non-dispatchable. If all gates are later ratified, the symposium cost
+  path is $7-15 total: trainer build $0 GPU (DONE — 1s wall-clock M5 Max),
+  Hinton scorer-bound 600pair MLX-LOCAL anchor $0 GPU (sister run),
+  identity-predictor disambiguator probe $1-2 (Modal T4 paired smoke +
+  smoke), full dispatch $5 Modal T4 + paired CPU/CUDA $1-2.
+
+remote_driver: scripts/remote_lane_substrate_time_traveler_l5_z5.sh
+
+modal:
+  lane_script: scripts/remote_lane_substrate_time_traveler_l5_z5.sh
+
+env_overrides:
+  Z5_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  Z5_LANE_ID: lane_time_traveler_l5_z5_rao_ballard_mlx_local_scaffold_20260528
+  Z5_RECIPE_PATH: .omx/operator_authorize_recipes/substrate_time_traveler_l5_z5_modal_t4_dispatch.yaml
+
+required_input_files: []
+
+required_input_files_trainer:
+  - experiments/train_substrate_time_traveler_l5_z5_mlx_local.py
+
+sentinel_files:
+  - .omx/research/time_traveler_l5_z6_z7_z8_predictive_coding_world_models_asymptotic_pursuit_scoping_design_20260516.md
+  - .omx/research/z5_rao_ballard_mlx_local_scaffold_landed_20260528.md
+
+dependencies:
+  - .omx/research/time_traveler_l5_z6_z7_z8_predictive_coding_world_models_asymptotic_pursuit_scoping_design_20260516.md
+  - .omx/research/campaign_z5_predictive_coding_world_model_20260514.md
+
+# Per Catalog #181 + #182 + #171 + #173 canonical recipe-field discipline.
+pyav_decode_strategy: cpu_thread_async_upload
+video_input_strategy: per_dispatch_local_copy
+canary_status: post_canary_dependent
+canary_dependency: time_traveler_l5_z6_v2_cargo_cult_unwind_mlx_local
+
+notes: |
+  This recipe exists so tools/asymptotic_pursuit_candidate_readiness_assessment.py
+  + tools/asymptotic_pursuit_dispatch_queue.py can surface Z5 as an explicit
+  DEFER candidate with exact blockers. It is NOT operator-spend authority.
+  Per CLAUDE.md "PER-SUBSTRATE OPTIMAL FORM via adversarial grand council
+  symposium" + Catalog #325: this recipe satisfies the per-substrate-symposium-
+  evidence requirement for the next 14 days via the Time-Traveler L5
+  staircase Step 3 design memo (Z6/Z7/Z8 parent memo) only; a Z5-specific
+  per-substrate symposium memo at
+  .omx/research/council_per_substrate_symposium_time_traveler_l5_z5_rao_ballard_<utc>.md
+  is required within 14 days of any dispatch attempt.
+
+  # FORMALIZATION_PENDING:Z5 per-substrate symposium memo follow-up; canonical equation z5_rao_ballard_hierarchical_predictive_coding_pose_axis_savings_v1 landed in same commit batch as this recipe per Catalog #344
+  # PREDICTED_BAND_RANDOM_INIT_OK:scaffold-only_recipe_band_is_research_prior_from_design_memo_pending_post_training_tier_c_validation_per_catalog_324_after_hinton_scorer_bound_600pair_mlx_local_anchor_lands

@@ -60442,6 +60442,61 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_time_traveler_l5_z5_rao_ballard_mlx_local_scaffold_20260528",
+      "name": "Time-Traveler L5 Z5 Rao-Ballard Hierarchical Predictive Coding MLX-LOCAL Scaffold",
+      "phase": 3.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "Z5 substrate package complete (architecture.py + archive.py + inflate.py + mlx_renderer.py + archive_candidate.py + experiments/train_substrate_time_traveler_l5_z5_mlx_local.py); MLX 1:1 PyTorch bridge 29 keys 0 mismatches; scaffold commit be4e4b237; research_only=true per Catalog #220/#240/#325"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "[empirical:.omx/research/z5_rao_ballard_mlx_local_50ep_600pair_20260528T220807Z/training_artifact.json] Z5 first MLX-LOCAL anchor: 50ep/600pair pure-reconstruction; loss 0.362->0.148 (59% reduction); archive_sha256=ceb614f6c0d2784fb756ab9c127bab8d5f009ac882726cc27043a6a6055f74ca; archive_bytes=214630; [macOS-MLX research-signal]; canonical equation z5_rao_ballard_hierarchical_predictive_coding_pose_axis_savings_v1 anchor 1/3 registered per Catalog #344"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "",
+      "research_only": true,
+      "lane_class": "substrate_engineering",
+      "design_evidence": {
+        "archive_grammar": "Z5RB1 monolithic single-file 0.bin: MAGIC(4)=Z5RB + VERSION(1) + LOW_LATENT_DIM(2) + HIGH_LATENT_DIM(2) + EGO_DIM(2) + NUM_PAIRS(2) + 6x u32 section_len fields = 37 bytes; 6 sections (decoder + predictor + low_latents + high_latents + ego_vecs + meta_json); brotli q=9; sorted-keys JSON meta",
+        "parser_section_manifest": "Z5RB1_SECTION_ROLES = (decoder_state_dict, predictor_state_dict, low_latents, high_latents, ego_vecs, meta_json); each blob has explicit length-prefixed serialization with shape preservation",
+        "runtime_dep_closure": [
+          "torch + brotli + numpy"
+        ],
+        "export_format": "Z5RB1 monolithic single-zip-member 0.bin",
+        "score_aware_loss": "routes through canonical mlx_score_aware.score_aware_loss per Catalog #164; reconstruction MSE + optional Hinton-KL T=2.0 SegNet surrogate + pose-MSE PoseNet surrogate; Atick-Redlich cooperative-receiver gradient binding per Catalog #311 + Catalog #312 hierarchical predictive coding canonical quadruple",
+        "inflate_runtime_loc_budget": 200,
+        "bolt_on_loc_budget": 0,
+        "no_op_detector_planned": true
+      }
     }
   ],
   "level_rules": {
@@ -60451,5 +60506,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-28T19:25:03Z"
+  "updated_at": "2026-05-28T22:16:26Z"
 }
