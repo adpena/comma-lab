@@ -136,6 +136,45 @@ def test_queue_fleet_treats_native_work_queue_as_non_executable_artifact(
     assert samples[0]["recommended_action"] == "route_to_native_consumer_not_experiment_queue_supervisor"
 
 
+def test_queue_fleet_treats_queue_validation_report_as_non_executable_artifact(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    tool = _load_queue_fleet_tool()
+    validation_report = tmp_path / "queue_validate.json"
+    validation_report.write_text(
+        json.dumps(
+            {
+                "valid": True,
+                "queue_id": "validated_but_not_executable",
+                "experiment_count": 1,
+                "step_count": 3,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rc = tool.main(
+        [
+            "--root",
+            str(tmp_path),
+            "--row-limit",
+            "0",
+            "status",
+            "--format",
+            "json",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert rc == 0
+    assert payload["invalid_queue_count"] == 0
+    assert payload["non_executable_artifact_count"] == 1
+    samples = payload["status_samples"]["NON_EXECUTABLE_QUEUE_ARTIFACT"]
+    assert samples[0]["artifact_schema"] == "experiment_queue_validation_report.v1"
+    assert samples[0]["recommended_action"] == "use_as_validation_report_not_experiment_queue_supervisor"
+
+
 def test_queue_fleet_still_flags_malformed_experiment_queue(tmp_path: Path, capsys) -> None:
     tool = _load_queue_fleet_tool()
     bad_queue = tmp_path / "broken_queue.json"
@@ -184,6 +223,39 @@ def test_queue_fleet_exposes_init_commands_for_missing_state(tmp_path: Path, cap
     init_command = payload["next_init_commands"][0]
     assert "tools/experiment_queue.py" in init_command
     assert init_command[-1] == "init"
+
+
+def test_queue_fleet_init_missing_initializes_missing_state(tmp_path: Path, capsys) -> None:
+    tool = _load_queue_fleet_tool()
+    queue_path, _artifact = _queue_file(tmp_path)
+    state_root = tmp_path / "state"
+
+    rc = tool.main(
+        [
+            "--root",
+            str(queue_path),
+            "--state-root",
+            str(state_root),
+            "init-missing",
+            "--output-dir",
+            str(tmp_path / "fleet_init"),
+            "--execute",
+            "--max-queues",
+            "1",
+            "--strict",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert rc == 0
+    assert payload["schema"] == "experiment_queue_fleet_init_missing_run.v1"
+    assert payload["execute"] is True
+    assert payload["selected_count"] == 1
+    assert payload["failed_child_count"] == 0
+    assert payload["child_runs"][0]["init_result"]["returncode"] == 0
+    assert payload["initial_status"]["status_counts"] == {"NEEDS_INIT": 1}
+    assert payload["final_status"]["status_counts"] == {"READY_TO_SUPERVISE": 1}
+    assert payload["score_claim"] is False
 
 
 def test_queue_fleet_supervise_plan_only_preserves_queue(tmp_path: Path, capsys) -> None:

@@ -32,6 +32,7 @@ from tac.repo_io import ArtifactWriteError, sha256_file, write_json_artifact  # 
 
 FLEET_SUPERVISOR_SCHEMA = "experiment_queue_fleet_supervisor_run.v1"
 FLEET_LOCK_SCHEMA = "experiment_queue_fleet_supervisor_lock.v1"
+FLEET_INIT_MISSING_SCHEMA = "experiment_queue_fleet_init_missing_run.v1"
 
 
 def _utc_now() -> str:
@@ -321,6 +322,106 @@ def cmd_supervise(args: argparse.Namespace) -> int:
     return 4 if args.strict and payload["failed_child_count"] else 0
 
 
+def _init_command_from_row(row: Mapping[str, Any]) -> list[str]:
+    return [
+        sys.executable,
+        "tools/experiment_queue.py",
+        "--queue",
+        str(row["queue_path"]),
+        "--state",
+        str(row["state"]),
+        "init",
+    ]
+
+
+def cmd_init_missing(args: argparse.Namespace) -> int:
+    output_root = Path(args.output_dir)
+    output_root.mkdir(parents=True, exist_ok=True)
+    lock_path = Path(args.lock_path) if args.lock_path else output_root / "fleet.lock"
+    started_at = _utc_now()
+    with FleetLock(
+        lock_path,
+        {
+            "pid": str(__import__("os").getpid()),
+            "output_dir": repo_rel(output_root, REPO_ROOT),
+            "execute": args.execute,
+            "operation": "init_missing",
+        },
+    ):
+        initial = _fleet_status_from_args(args)
+        rows = initial.get("rows", [])
+        if not isinstance(rows, Sequence) or isinstance(rows, (str, bytes, bytearray)):
+            rows = []
+        selected = [row for row in rows if isinstance(row, Mapping) and row.get("status") == "NEEDS_INIT"]
+        selected = selected[: args.max_queues]
+        events_path = output_root / "fleet_init_events.jsonl"
+        runs: list[dict[str, Any]] = []
+        for index, row in enumerate(selected):
+            command = _init_command_from_row(row)
+            result: dict[str, Any] = {
+                "schema": "experiment_queue_fleet_init_missing_child.v1",
+                "index": index,
+                "queue_id": row.get("queue_id"),
+                "queue_path": row.get("queue_path"),
+                "state": row.get("state"),
+                "status_before": row.get("status"),
+                "command": command,
+                "execute": args.execute,
+                **FALSE_AUTHORITY,
+            }
+            if args.execute:
+                result["started_at_utc"] = _utc_now()
+                result["init_result"] = _run(command)
+                result["finished_at_utc"] = _utc_now()
+            runs.append(result)
+            _append_jsonl(events_path, result)
+            init_result = result.get("init_result")
+            if isinstance(init_result, Mapping) and init_result.get("failed") and args.stop_on_child_failure:
+                break
+        final = _fleet_status_from_args(args)
+        failed_count = sum(
+            1
+            for row in runs
+            if isinstance(row.get("init_result"), Mapping) and row["init_result"].get("failed")
+        )
+        payload = {
+            "schema": FLEET_INIT_MISSING_SCHEMA,
+            "started_at_utc": started_at,
+            "finished_at_utc": _utc_now(),
+            "execute": args.execute,
+            "output_dir": repo_rel(output_root, REPO_ROOT),
+            "lock_path": repo_rel(lock_path, REPO_ROOT),
+            "events_jsonl": repo_rel(events_path, REPO_ROOT),
+            "selected_count": len(selected),
+            "completed_child_count": len(runs),
+            "failed_child_count": failed_count,
+            "initial_status": initial,
+            "final_status": final,
+            "child_runs": runs,
+            "allowed_use": "queue_fleet_missing_state_initialization_only",
+            "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_exact_eval_authority",
+            **FALSE_AUTHORITY,
+        }
+        result_path = output_root / "fleet_init_missing_result.json"
+        try:
+            expected = sha256_file(result_path) if result_path.exists() else None
+            artifact = write_json_artifact(
+                result_path,
+                payload,
+                allow_overwrite=expected is not None,
+                expected_existing_sha256=expected,
+            )
+        except ArtifactWriteError as exc:
+            raise ExperimentQueueError(str(exc)) from exc
+        payload["artifact"] = {
+            "path": artifact.path,
+            "bytes": artifact.bytes_written,
+            "sha256": artifact.sha256,
+        }
+    _json_print(payload)
+    return 4 if args.strict and payload["failed_child_count"] else 0
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", action="append", help="scan root; repeatable")
@@ -360,6 +461,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     supervise.add_argument("--lock-path", default=None)
     supervise.add_argument("--strict", action="store_true")
     supervise.set_defaults(func=cmd_supervise)
+
+    init_missing = sub.add_parser("init-missing")
+    init_missing.add_argument("--output-dir", required=True)
+    init_missing.add_argument("--execute", action="store_true")
+    init_missing.add_argument("--max-queues", type=int, default=8)
+    init_missing.add_argument("--stop-on-child-failure", action=argparse.BooleanOptionalAction, default=True)
+    init_missing.add_argument("--lock-path", default=None)
+    init_missing.add_argument("--strict", action="store_true")
+    init_missing.set_defaults(func=cmd_init_missing)
     return parser.parse_args(argv)
 
 

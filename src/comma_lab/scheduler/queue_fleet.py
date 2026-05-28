@@ -75,7 +75,7 @@ def _candidate_name(path: Path) -> bool:
     return any(token in name for token in QUEUE_FILENAME_TOKENS)
 
 
-def _raw_json_schema(path: Path) -> str | None:
+def _raw_json_metadata(path: Path) -> dict[str, Any] | None:
     if path.suffix.lower() != ".json":
         return None
     try:
@@ -84,8 +84,22 @@ def _raw_json_schema(path: Path) -> str | None:
         return None
     if not isinstance(payload, Mapping):
         return None
+    out: dict[str, Any] = {}
     schema = payload.get("schema")
-    return schema if isinstance(schema, str) and schema.strip() else None
+    if isinstance(schema, str) and schema.strip():
+        out["artifact_schema"] = schema
+    if (
+        "experiments" not in payload
+        and isinstance(payload.get("queue_id"), str)
+        and isinstance(payload.get("valid"), bool)
+        and "experiment_count" in payload
+        and "step_count" in payload
+    ):
+        out["artifact_schema"] = out.get("artifact_schema") or "experiment_queue_validation_report.v1"
+        out["recommended_action"] = "use_as_validation_report_not_experiment_queue_supervisor"
+    if not out:
+        return None
+    return out
 
 
 def _stable_path_order_key(path: Path) -> tuple[int, str]:
@@ -284,7 +298,8 @@ def queue_fleet_row(
     try:
         queue = load_queue_definition(path)
     except Exception as exc:
-        artifact_schema = _raw_json_schema(path)
+        artifact_metadata = _raw_json_metadata(path) or {}
+        artifact_schema = artifact_metadata.get("artifact_schema")
         if artifact_schema and artifact_schema != QUEUE_SCHEMA:
             status = NON_EXECUTABLE_QUEUE_ARTIFACT_STATUS
             return {
@@ -293,7 +308,10 @@ def queue_fleet_row(
                 "priority": _priority(status),
                 "artifact_schema": artifact_schema,
                 "ignored_for_supervision": True,
-                "recommended_action": "route_to_native_consumer_not_experiment_queue_supervisor",
+                "recommended_action": artifact_metadata.get(
+                    "recommended_action",
+                    "route_to_native_consumer_not_experiment_queue_supervisor",
+                ),
                 "blockers": [],
             }
         return {
