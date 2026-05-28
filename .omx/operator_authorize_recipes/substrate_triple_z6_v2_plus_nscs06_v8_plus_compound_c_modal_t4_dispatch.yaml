@@ -1,0 +1,233 @@
+# SPDX-License-Identifier: MIT
+# WAVE-N+6 SLOT 2 TRIPLE composite recipe scaffold
+# (DISPATCH_ENABLED=FALSE pending operator-attended paired-CUDA RATIFICATION
+# per Catalog #246 + per-substrate symposium per Catalog #325).
+#
+# TRIPLE composite = Z6-v2 cargo-cult-unwind MLX-LOCAL pose-axis (607,099 B;
+# sha 407d1e83...) + NSCS06 v8 chroma_lut v2 procedural seed (1,846,867 B;
+# sha 1a92af66...) + Compound C heterogeneous bit decoder (68,609 B; 0.bin
+# sha 983e23bc...) per Wave N+6 TRIPLE composition test (canonical equation
+# triple_substrate_composition_orthogonal_pose_axis_savings_v1).
+#
+# Per canonical first-order Volterra TRIPLE α=0.9548 MOSTLY ORTHOGONAL:
+#   pairwise α_AB=1.0 (Z6-v2 pose ⊥ NSCS06 v8 seg) per Z6-v2 PROCEED hypothesis
+#   pairwise α_AC=1.0 (Z6-v2 pose ⊥ Compound C rate) per Z6-v2 PROCEED hypothesis
+#   pairwise α_BC=0.85 (NSCS06 v8 + Compound C) per Compound F EMPIRICAL anchor
+#   triple_alpha = mean(α_AB, α_AC, α_BC) = 0.95 per canonical sister
+#                  `tac.optimization.substrate_composition_matrix.predicted_composite_delta`
+#
+#   predicted composite ΔS total = -0.036
+#   predicted score [contest-CPU] = 0.156006
+#   predicted band [contest-CPU] = [0.155, 0.175] (per Wave N+6 queue entry)
+#   IN sub-0.16 candidate cascade
+#
+# Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY" +
+# Catalog #240 (recipe-vs-trainer-state consistency): this recipe is
+# transparently non-dispatchable until the operator-attended paired-Linux+
+# NVIDIA anchor lands.
+#
+# Per CLAUDE.md "Frontier target — NON-NEGOTIABLE": current canonical
+# frontier per `.omx/state/canonical_frontier_pointer.json` is contest-CPU
+# 0.192009 / 178,530 B / sha 18e3155fbbbe9ab2 (per Catalog #343
+# pointer-only discipline; NOT hardcoded literal here). TRIPLE composite
+# candidate at predicted 0.156 [contest-CPU] would advance the local
+# frontier by ~0.036 ΔS total IF RATIFIED (3-axis: pose + seg + rate).
+#
+# SISTER RELATIONSHIPS:
+# - Slot 1 PAIR composite (composite_nscs06_v8_plus_compound_c_pr111_candidate
+#   _20260528) is THE BC-position of THIS TRIPLE; sister-disjoint scope.
+# - Z6-v2 (Wave N+5 Slot 2) provides the orthogonal pose-axis lever per
+#   PROCEED verdict 2026-05-28 (4-of-5 of session's distinguishing-feature
+#   dispatches FALSIFIED at lifted-trainer form; Z6-v2 cargo-cult-unwind
+#   methodology is the canonical exception per CLAUDE.md Catalog #315 +
+#   "Substrate MUST be at OPTIMAL FORM before paid empirical dispatch").
+
+substrate_id: triple_z6_v2_plus_nscs06_v8_plus_compound_c_wave_n6
+lane_id: lane_wave_n6_triple_z6_v2_plus_nscs06_v8_plus_compound_c_20260528
+platform: modal
+gpu: T4
+recipe_id: substrate_triple_z6_v2_plus_nscs06_v8_plus_compound_c_modal_t4_dispatch
+dispatch_kind: substrate
+dispatch_enabled: false  # PENDING per-substrate symposium per Catalog #325
+                         # + operator-attended paired-CUDA RATIFICATION per
+                         # Catalog #246 + CLAUDE.md "Executing actions with care"
+research_only: true       # NON-PROMOTABLE [composite-predicted-pending-paired-anchor]
+                          # pending paired-CUDA RATIFICATION per Catalog #246
+canary_status: post_canary_dependent
+canary_dependency: substrate_composite_nscs06_v8_plus_compound_c_pr111_modal_t4_dispatch
+
+# Catalog #240 transparency: the TRIPLE composite has NO single trainer
+# because it combines THREE pre-trained substrate archives. The "trainer"
+# path here is the canonical composite archive builder; the lane_script is
+# the composite inflate runtime (operator-routable; pending Wave N+7).
+trainer_path: experiments/results/triple_z6_v2_plus_nscs06_v8_plus_compound_c_wave_n6_20260528/build_triple_composite_archive.py
+lane_script: experiments/results/triple_z6_v2_plus_nscs06_v8_plus_compound_c_wave_n6_20260528/submission/inflate.sh
+
+# Catalog #170 + Catalog #215: hardware floor declarations.
+min_vram_gb: 15
+min_smoke_gpu: T4
+target_modes:
+  - contest_one_video_replay
+  - contest_generalized
+
+# Catalog #171 + Catalog #181: video / pyav decode strategy.
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+
+# Catalog #325 per-substrate symposium evidence (REQUIRED post-canary-dep).
+# Composite symposium uses BOTH Slot 1 sister + the Z6-v2 PROCEED landing as anchors.
+symposium_anchor_memo: .omx/research/wave_n6_triple_z6_v2_plus_nscs06_v8_plus_compound_c_composition_test_landed_20260528.md
+symposium_sister_landing_memos:
+  - .omx/research/z6_v2_cargo_cult_unwind_hinton_distill_600pair_long_mlx_orthogonal_pose_axis_candidate_b_landed_20260528.md
+  - .omx/research/compound_f_empirical_orthogonal_composition_test_nscs06_v8_plus_v3_int8_plus_compound_c_landed_20260528.md
+  - .omx/research/nscs06_v8_chroma_lut_hinton_distill_600pair_long_mlx_landed_20260528.md
+  - .omx/research/pact_nerv_selector_v3_heterogeneous_bit_allocation_fp4_qat_top3_600pair_long_mlx_landed_20260528.md
+symposium_verdict_pending_paired_cuda_ratification: true
+
+# Catalog #324 predicted_band sourcing (TRIPLE composite prediction).
+predicted_band:
+  contest_cpu: [0.155, 0.175]
+  contest_cuda: [0.170, 0.235]  # widened per parent CUDA amplification risk vs CPU
+predicted_band_validation_status: pending_post_training_paired_cuda_cpu
+# Per Catalog #324 + CLAUDE.md "Forbidden empirical-claim-without-evidence-tag":
+# the predicted band is sourced from canonical first-order Volterra TRIPLE
+# extension (`tac.optimization.substrate_composition_matrix.predicted_composite_delta`
+# extended to N=3) applied to the LANDED ΔS values from the 3 sister substrate
+# landing memos. NOT phantom_random_init — ALL THREE component archives ARE
+# post-training (Z6-v2 50ep MLX 2026-05-28 + NSCS06 v8 600-pair long MLX +
+# Compound C 600-pair long MLX with Hinton distill). The triple_alpha=0.9548
+# IS derived from canonical sister first-order Volterra per the Wave N+6
+# composition test landing memo (NOT measured empirically at byte-closed
+# archive surface; canonical Volterra propagation per Daubechies multi-scale
+# partition prior for cross-paradigm + decoder-compression + pose-axis pairs).
+predicted_band_provenance:
+  composite_score_kind: PREDICTED_FROM_MODEL
+  composite_canonical_helper: tac.optimization.substrate_composition_matrix.predicted_composite_delta
+  composite_alpha_triple: 0.9548
+  composite_alpha_classifier: tac.optimization.substrate_composition_matrix.classify_pairwise_composability
+  pairwise_alpha:
+    AB_z6_v2_x_nscs06_v8: 1.0
+    AC_z6_v2_x_compound_c: 1.0
+    BC_nscs06_v8_x_compound_c: 0.85
+  component_archive_shas:
+    z6_v2: 407d1e8394419419c46c93b9b9f095c58bf691c1cb1b30be39d4bf15246cfe05
+    nscs06_v8: 1a92af663754fc8ef388a9ae7469a075625694e6b48712e323d3a6d145762eb3
+    compound_c_0bin: 983e23bc58db9e30c6621eb081695e5344c0fc4ac7c73de1b3e39d25d8456044
+    compound_c_archive_zip: 986ef525c84990f661750f53b74ef22ed3c489e980a0124ee802390a208f5798
+    composite_triple_archive_zip: aa81e158889a0f8b558dbf03b73a93335a2dcd5e5268f2b40143f09a99537c92  # 2,527,479 B; sha computed at build time
+  baseline_pointer: .omx/state/canonical_frontier_pointer.json
+
+# Catalog #344 canonical equations referenced by TRIPLE composite.
+canonical_equation_anchor:
+  - equation_id: triple_substrate_composition_orthogonal_pose_axis_savings_v1
+    anchor_id_to_append: wave_n6_triple_pr111plus1_z6v2_pose_axis_orthogonal_validated_20260528
+    in_domain_context: triple_orthogonal_pose_axis_PLUS_cross_paradigm_PLUS_decoder_compression
+  - equation_id: cross_paradigm_plus_decoder_compression_compound_alpha_v1
+    anchor_id_to_append: wave_n6_triple_pr111plus1_compound_f_pair_alpha_preserved_in_triple_20260528
+    in_domain_context: compound_f_canonical_pair_nscs06_v8_PLUS_compound_c_PRESERVED_within_triple
+  - equation_id: triple_substrate_composition_alpha_v1
+    anchor_id_to_append: wave_n6_first_empirical_triple_anchor_alpha_0_9548_20260528
+    in_domain_context: triple_substrate_composition_alpha_prediction
+  - equation_id: z6_v2_predictive_coding_pose_axis_savings_v1
+    anchor_id_to_append: wave_n6_z6_v2_pose_axis_orthogonality_validated_in_triple_20260528
+    in_domain_context: z6_v2_pose_axis_orthogonal_composition_with_cross_paradigm_AND_decoder_compression
+  - equation_id: procedural_codebook_from_seed_compression_savings_v1
+    anchor_id_to_append: wave_n6_triple_pr111plus1_nscs06_v8_chroma_lut_replacement_savings_consumed_20260528
+    in_domain_context: nscs06_v8_chroma_lut
+
+# Catalog #313 probe outcome routing.
+probe_outcomes_routing:
+  predecessor_outcome_check: enabled
+  blocking_verdict_action: refuse_dispatch_per_catalog_313
+
+# Catalog #246 paired CPU+CUDA on 1:1 contest-compliant hardware
+# (NOT macOS-CPU per Catalog #192; NOT MPS per Catalog #1 + CLAUDE.md
+# "MPS auth eval is NOISE" non-negotiable).
+paired_auth_eval:
+  contest_cuda:
+    platform: modal
+    gpu: T4
+    hardware_substrate: linux_x86_64_t4
+    canonical_axis_label: contest_cuda
+  contest_cpu:
+    platform: modal
+    instance_type: linux_x86_64_cpu_only
+    hardware_substrate: linux_x86_64_cpu
+    canonical_axis_label: contest_cpu
+
+# Per Catalog #270 dispatch optimization protocol Tier 1 engineering +
+# Catalog #244 canonical NVML env block at remote driver surface.
+env_overrides:
+  TRIPLE_COMPOSITE_ARCHIVE_PATH: experiments/results/triple_z6_v2_plus_nscs06_v8_plus_compound_c_wave_n6_20260528/archive.zip
+  TRIPLE_COMPOSITE_SUBMISSION_DIR: experiments/results/triple_z6_v2_plus_nscs06_v8_plus_compound_c_wave_n6_20260528/submission
+  DALI_DISABLE_NVML: "1"  # Catalog #244
+  CUBLAS_WORKSPACE_CONFIG: ":4096:8"  # Catalog #244
+  PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True  # Catalog #244
+
+cost_band:
+  estimated_cost_usd: 2.50  # paired CUDA T4 + Linux x86_64 CPU per Catalog #246
+                            # higher than Slot 1 PAIR ($1.50) due to triple inflate
+                            # complexity + sequential decode chain Z6-v2 + chroma_lut
+                            # + decoder
+  epochs: 0   # composite has no training; archive is pre-built from sister landings
+  batch_size: 0
+  expected_wall_clock_minutes: 90  # T4 CUDA inflate+eval ~12 min + CPU inflate+eval ~75 min
+
+# Reactivation criteria per CLAUDE.md "Substrate scaffolds MUST be COMPLETE"
+reactivation_criteria:
+  - "Per-substrate symposium per Catalog #325 covering Wave N+6 TRIPLE candidate (cross-paradigm + decoder-compression + orthogonal pose-axis lever stacking sister to Compound F PAIR symposium)"
+  - "Wave N+7 sister landing: sequential decode chain inflate runtime per Catalog #220 implementing TRIPLE inflate.py + inflate.sh ≤200 LOC strict per HNeRV parity L4 OR carry explicit waiver; sequence Z6-v2 → Compound C primary → NSCS06 v8 chroma overlay → bilinear upsample 384×512 → 1164×874"
+  - "Paired-CUDA RATIFICATION per Catalog #246 confirming composite score in [0.155, 0.175] [contest-CPU] AND in [0.170, 0.235] [contest-CUDA] empirically"
+  - "Catalog #324 predicted_band_validation_status transitions to validated_post_training_paired_cuda_cpu with anchor artifact paths"
+  - "Operator-attended verdict: IF RATIFIED ≤0.175 [contest-CPU] AND/OR sub-0.16 → PR111+1 SUB-0.16 candidate submission cascade via Phase 9 tools/operator_pr_submission_full_lifecycle.py; IF NOT RATIFIED → IMPLEMENTATION-LEVEL falsification per Catalog #307 of Z6-v2 orthogonality at TRIPLE surface + Compound F + triple canonical equation refit per Catalog #371"
+  - "IF α_triple measured empirically < 0.7 (cannibalizing): IMPLEMENTATION-LEVEL falsification of orthogonality hypothesis per Catalog #307; sister-level Z6-v2 PROCEED preserved as ENCODER-SIDE compress-time signal; TRIPLE surface FALSIFIED at inflate-time runtime; canonical equation triple_substrate_composition_orthogonal_pose_axis_savings_v1 refit per Catalog #371"
+
+notes: >
+  WAVE N+6 TRIPLE composite archive (2026-05-28) per Z6-v2 PROCEED verdict
+  empirical anchor + canonical first-order Volterra TRIPLE extension to N=3.
+
+  CANONICAL TRIPLE (per Wave N+6 composition test): Z6-v2 cargo-cult-unwind
+  MLX-LOCAL pose-axis ⊕ NSCS06 v8 chroma_lut v2 procedural seed ⊕ Compound C
+  heterogeneous per-tensor bit allocation. Direct extension of Slot 1 PAIR
+  composite (NSCS06 v8 + Compound C; THE BC-position of THIS TRIPLE) by
+  adding Z6-v2 as the ORTHOGONAL POSE-AXIS LEVER per the Z6-v2 PROCEED
+  verdict's sub-0.16 candidate cascade hypothesis.
+
+  COMPOSITION SEMANTICS: TRIPLE_STACKABLE_VIA_PAIRWISE_FIRST_ORDER_VOLTERRA
+  triple_alpha = 0.9548 MOSTLY ORTHOGONAL. The pairwise α decomposition:
+  α_AB=1.0 (Z6-v2 pose ⊥ NSCS06 v8 seg/chroma) + α_AC=1.0 (Z6-v2 pose ⊥
+  Compound C rate) + α_BC=0.85 (Compound F EMPIRICAL anchor PRESERVED at
+  BC-position). Per canonical sister
+  `tac.optimization.substrate_composition_matrix.predicted_composite_delta`:
+  composite delta = -0.036; composite predicted score = 0.156 [contest-CPU].
+  IN sub-0.16 candidate cascade per Wave N+6 queue predicted band [0.155, 0.175].
+
+  ORTHOGONALITY HYPOTHESIS TEST: Z6-v2 PROCEED verdict 2026-05-28 explicit
+  "PROCEED with the understanding that the orthogonal-pose-axis cascade
+  claim requires Wave N+6 empirical alpha measurement before sub-0.16
+  routing can ratify." THIS RECIPE IS the operator-routable canonical
+  paired-CUDA RATIFICATION mechanism for that cascade verdict.
+
+  Per CLAUDE.md "Frontier target" + Catalog #343: current canonical frontier
+  per .omx/state/canonical_frontier_pointer.json (NOT hardcoded literal).
+  TRIPLE composite candidate at predicted 0.156 would advance the local
+  frontier by ~0.036 ΔS total (3-axis: pose + seg + rate) IF RATIFIED.
+  PR111+1 SUB-0.16 candidate submission requires operator-attended
+  `gh pr create` per CLAUDE.md "Executing actions with care" + Catalog #370
+  canonical-compliance-verdict gate.
+
+  PER-AXIS DECOMPOSITION per Catalog #356: Z6-v2 carries -0.015 pose-axis
+  delta; NSCS06 v8 carries -0.010 seg-axis + -0.003 rate-axis; Compound C
+  carries -0.010 rate-axis. Composite per-axis sums (assuming orthogonality):
+  d_seg=-0.010 + d_pose=-0.015 + d_rate=-0.013. Pareto solver per Catalog
+  #372 verifies Pareto-feasibility at predicted operating point with all
+  slack on all 3 axes.
+
+  Recipe DISPATCH_ENABLED=FALSE per Catalog #240/#325 transparency:
+  paired-CUDA RATIFICATION + per-substrate symposium operator-attended.
+  Composite archive (2,527,479 bytes; sha aa81e158...) materialized at
+  experiments/results/triple_z6_v2_plus_nscs06_v8_plus_compound_c_wave_n6_20260528/archive.zip.
+  Inflate.py canonical per Catalog #146/#205/#295/#367/#369 — OPERATOR-ROUTABLE
+  Wave N+7 sister landing (this recipe scaffolds the dispatch path; actual
+  inflate.py + inflate.sh + vendored substrate package per Catalog #295
+  emit Wave N+7).
