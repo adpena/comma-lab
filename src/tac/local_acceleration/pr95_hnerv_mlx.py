@@ -109,6 +109,14 @@ PR95_MLX_CONV2D_ACCUMULATION_OVERRIDE_PRESETS: dict[str, dict[str, str]] = {
         ),
         "kahan_fp32",
     ),
+    "blocks02_kahan_fp32": dict.fromkeys(
+        tuple(
+            name
+            for i in range(3)
+            for name in (f"blocks.{i}.conv", f"blocks.{i}.skip_conv")
+        ),
+        "kahan_fp32",
+    ),
     "blocks_refine_kahan_fp32": dict.fromkeys(
         (*_PR95_MLX_BLOCK_CONV_NAMES, *_PR95_MLX_REFINE_CONV_NAMES),
         "kahan_fp32",
@@ -812,6 +820,83 @@ def pr95_mlx_conv2d_accumulation_overrides_from_items(
             mode.strip()
         )
     return overrides
+
+
+def pr95_mlx_conv2d_scope_search_candidates(
+    *,
+    block_count: int = 6,
+    include_presets: bool = True,
+    include_single_blocks: bool = True,
+    include_prefix_blocks: bool = True,
+) -> list[dict[str, Any]]:
+    if block_count < 1:
+        raise ValueError(f"block_count must be >= 1, got {block_count}")
+
+    candidates: list[dict[str, Any]] = []
+
+    def append_candidate(
+        candidate_id: str,
+        *,
+        kind: str,
+        overrides: Mapping[str, str],
+    ) -> None:
+        validated = validate_pr95_mlx_conv2d_accumulation_overrides(overrides)
+        candidates.append(
+            {
+                "candidate_id": candidate_id,
+                "kind": kind,
+                "conv2d_accumulation_overrides": validated,
+                "override_count": len(validated),
+            }
+        )
+
+    append_candidate("baseline_optimized", kind="baseline", overrides={})
+
+    if include_presets:
+        for preset in PR95_MLX_CONV2D_ACCUMULATION_OVERRIDE_PRESETS:
+            if preset == "none":
+                continue
+            append_candidate(
+                f"preset_{preset}",
+                kind="preset",
+                overrides=pr95_mlx_conv2d_accumulation_overrides_from_preset(preset),
+            )
+
+    if include_single_blocks:
+        for index in range(block_count):
+            append_candidate(
+                f"block{index}_kahan_fp32",
+                kind="single_block",
+                overrides={
+                    f"blocks.{index}.conv": "kahan_fp32",
+                    f"blocks.{index}.skip_conv": "kahan_fp32",
+                },
+            )
+
+    if include_prefix_blocks:
+        for end_index in range(block_count):
+            append_candidate(
+                f"blocks0_{end_index}_kahan_fp32",
+                kind="prefix_blocks",
+                overrides={
+                    name: "kahan_fp32"
+                    for index in range(end_index + 1)
+                    for name in (
+                        f"blocks.{index}.conv",
+                        f"blocks.{index}.skip_conv",
+                    )
+                },
+            )
+
+    deduped: list[dict[str, Any]] = []
+    seen: set[tuple[tuple[str, str], ...]] = set()
+    for candidate in candidates:
+        key = tuple(sorted(candidate["conv2d_accumulation_overrides"].items()))
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(candidate)
+    return deduped
 
 
 def pixel_shuffle_2x_nhwc(x: Any, *, upscale_factor: int = 2) -> Any:
@@ -2873,6 +2958,7 @@ __all__ = [
     "pr95_default_optimizer_descriptor_id",
     "pr95_mlx_conv2d_accumulation_overrides_from_items",
     "pr95_mlx_conv2d_accumulation_overrides_from_preset",
+    "pr95_mlx_conv2d_scope_search_candidates",
     "pr95_mlx_optimizer_config_from_descriptor",
     "pr95_mlx_optimizer_descriptor_row",
     "pr95_mlx_parameter_shape_records",

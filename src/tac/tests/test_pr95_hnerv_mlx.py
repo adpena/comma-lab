@@ -44,6 +44,7 @@ from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
     pixel_shuffle_2x_nhwc,
     pr95_mlx_conv2d_accumulation_overrides_from_items,
     pr95_mlx_conv2d_accumulation_overrides_from_preset,
+    pr95_mlx_conv2d_scope_search_candidates,
     pr95_mlx_parameter_shape_records,
     pytorch_state_dict_from_mlx,
     run_pr95_mlx_synthetic_timing_smoke,
@@ -224,6 +225,9 @@ def test_conv2d_accumulation_override_items_extend_presets() -> None:
         "blocks.1.conv": "kahan_fp32",
         "blocks.1.skip_conv": "kahan_fp32",
     }
+    assert len(
+        pr95_mlx_conv2d_accumulation_overrides_from_preset("blocks02_kahan_fp32")
+    ) == 6
 
     overrides = pr95_mlx_conv2d_accumulation_overrides_from_items(
         ["blocks.0.conv=fixed_fp32", "rgb_1=optimized"],
@@ -237,6 +241,25 @@ def test_conv2d_accumulation_override_items_extend_presets() -> None:
         "rgb_0": "kahan_fp32",
         "rgb_1": "optimized",
     }
+
+
+def test_conv2d_scope_search_candidates_are_rankable_and_deduped() -> None:
+    candidates = pr95_mlx_conv2d_scope_search_candidates(block_count=3)
+    ids = [candidate["candidate_id"] for candidate in candidates]
+
+    assert ids[0] == "baseline_optimized"
+    assert "preset_blocks01_kahan_fp32" in ids
+    assert "preset_blocks02_kahan_fp32" in ids
+    assert "block0_kahan_fp32" in ids
+    assert "blocks0_1_kahan_fp32" not in ids
+    assert "blocks0_2_kahan_fp32" not in ids
+    assert len(ids) == len(set(ids))
+    assert len(
+        {
+            tuple(sorted(candidate["conv2d_accumulation_overrides"].items()))
+            for candidate in candidates
+        }
+    ) == len(candidates)
 
 
 def test_public_pr95_pytorch_state_load_matches_mlx_forward() -> None:
