@@ -190,16 +190,67 @@ def _runtime_root_file_manifest(root: Path, repo_root: Path) -> list[dict]:
     return files
 
 
+def _path_exists_case_sensitive(path: Path) -> bool:
+    """Return True iff ``path`` exists AND every component matches exact case.
+
+    On macOS HFS+/APFS (case-insensitive by default) and on Windows NTFS,
+    ``Path.exists()`` returns True even when the real on-disk basename uses
+    a different case than ``path``. The contest runtime hash, however, is
+    computed identically on Linux Modal workers where the filesystem IS
+    case-sensitive. A LOCAL projector that succeeds on a case-fold match
+    will add a phantom entry to ``repo_local_tac_import_manifest`` that the
+    Linux worker cannot reproduce, producing a runtime_tree_sha256 mismatch
+    that fails dispatch pre-validation (Catalog #229 / Catalog #146 contract).
+
+    The canonical fix: walk parent ``iterdir()`` and require exact basename
+    match. Symlinks and broken paths are handled conservatively (return
+    False rather than raising).
+
+    Anchor: PR111 paired-CUDA RATIFICATION 2026-05-28 failed 4× with
+    ``inflate runtime tree hash mismatch`` because
+    ``tac.dykstra_pareto_solver.Polytope`` (capital-P) resolved to LOCAL
+    ``polytope.py`` via case-fold; Linux worker correctly returned False.
+    """
+
+    try:
+        path = Path(path)
+    except TypeError:
+        return False
+    # Walk from the filesystem root down: every component must match its
+    # parent's iterdir() listing exactly. We use parent.iterdir() rather
+    # than os.listdir() so test fixtures that monkeypatch Path behavior
+    # still route through the canonical pathlib surface.
+    components = path.parts
+    if not components:
+        return False
+    current = Path(components[0])
+    if not current.exists():
+        return False
+    for part in components[1:]:
+        try:
+            children = {child.name for child in current.iterdir()}
+        except (FileNotFoundError, NotADirectoryError, PermissionError):
+            return False
+        if part not in children:
+            return False
+        current = current / part
+    return current.exists()
+
+
 def _module_exists(module_name: str, repo_root: Path) -> bool:
     if not _is_tac_module(module_name):
         return False
     rel_parts = module_name.split(".")[1:]
     tac_root = repo_root / "src" / "tac"
     if not rel_parts:
-        return (tac_root / "__init__.py").exists()
+        return _path_exists_case_sensitive(tac_root / "__init__.py")
     return (
-        (tac_root.joinpath(*rel_parts).with_suffix(".py")).exists()
-        or (tac_root.joinpath(*rel_parts) / "__init__.py").exists()
+        _path_exists_case_sensitive(
+            tac_root.joinpath(*rel_parts).with_suffix(".py")
+        )
+        or _path_exists_case_sensitive(
+            tac_root.joinpath(*rel_parts) / "__init__.py"
+        )
     )
 
 
@@ -265,11 +316,14 @@ def _module_paths(module_name: str, repo_root: Path) -> list[Path]:
     paths: list[Path] = []
     for i in range(len(rel_parts) + 1):
         init_path = tac_root.joinpath(*rel_parts[:i]) / "__init__.py"
-        if init_path.exists():
+        # Case-sensitive check per _path_exists_case_sensitive contract above:
+        # avoids macOS HFS+/APFS case-fold producing manifests that diverge
+        # from Linux Modal workers (Catalog #229 / Catalog #146).
+        if _path_exists_case_sensitive(init_path):
             paths.append(init_path)
     if rel_parts:
         module_path = tac_root.joinpath(*rel_parts).with_suffix(".py")
-        if module_path.exists():
+        if _path_exists_case_sensitive(module_path):
             paths.append(module_path)
     return paths
 
