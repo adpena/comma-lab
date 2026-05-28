@@ -8,6 +8,10 @@ from pathlib import Path
 
 import pytest
 
+from tac.optimization.archive_bound_candidate_contract import (
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA,
+)
 from tac.pr85_bundle import SEGMENT_ORDER, pack_pr85_bundle
 from tac.public_frontier_intake import (
     PublicFrontierIntakeError,
@@ -95,6 +99,19 @@ def test_profile_detects_charged_side_info_and_baseline_segment_delta(tmp_path: 
     assert report["primary_member"]["name"] == "x"
     assert report["side_info"]["charged_bytes"] == len(b"tiny-side-info")
     assert report["side_info"]["requires_runtime_contract_review"] is True
+    assert report["archive_bound_candidate_contract_schema"] == (
+        ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+    )
+    assert report["archive_bound_candidate_contract_surface_schema"] == (
+        ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA
+    )
+    contract = report["archive_bound_candidate_contract"]
+    assert contract["schema"] == ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+    assert contract["byte_closed_candidate_materialized"] is True
+    assert contract["receiver_contract_satisfied"] is False
+    assert {"public_frontier", "zip_container", "zip_ordering"}.issubset(
+        set(contract["archive_substrate_tags"])
+    )
     diff = report["baseline_diffs"][0]
     changed_names = {row["segment"] for row in diff["changed_segments"]}
     assert changed_names == {"randmulti"}

@@ -454,6 +454,10 @@ def normalize_observation_row(row: Mapping[str, Any]) -> dict[str, Any]:
         "feedback_semantics",
         "non_authoritative_repair_budget_score",
         "non_authoritative_repair_budget_bytes_equivalent",
+        "archive_bound_candidate_contract_schema",
+        "archive_bound_candidate_contract",
+        "archive_bound_candidate_contract_surface_schema",
+        "archive_bound_candidate_contract_surface",
     )
     for key in passthrough_keys:
         if key in row and row.get(key) is not None:

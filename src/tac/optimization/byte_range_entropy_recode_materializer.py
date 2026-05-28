@@ -23,6 +23,11 @@ from tac.hnerv_pr103_lc_ac_schema import (
     PUBLIC_PR103_LAYOUT,
     Pr103LcAcLayout,
 )
+from tac.optimization.archive_bound_candidate_contract import (
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA,
+    build_archive_bound_candidate_contract_surface,
+)
 from tac.pr103_arithmetic_transform_plan import (
     CANDIDATE_SCHEMA as PR103_CANDIDATE_SCHEMA,
 )
@@ -174,6 +179,21 @@ def materialize_byte_range_entropy_recode_candidate(
             ),
         ]
     )
+    archive_bound_surface = _archive_bound_candidate_contract_surface(
+        candidate_archive=candidate_archive,
+        source_archive=source_archive_record,
+        receiver_contract_satisfied=(
+            receiver_verification["receiver_contract_satisfied"] is True
+        ),
+        runtime_consumption_proof=runtime_consumption_proof,
+        readiness_blockers=readiness_blockers,
+        repo=repo,
+        candidate_chain_id=candidate_sha or None,
+        semantic_payload_changed=(
+            isinstance(diff_manifest, Mapping)
+            and diff_manifest.get("candidate_non_noop") is True
+        ),
+    )
     return {
         "schema": CANDIDATE_SCHEMA,
         "source_materializer_schema": PR103_CANDIDATE_SCHEMA,
@@ -194,6 +214,16 @@ def materialize_byte_range_entropy_recode_candidate(
             receiver_verification["receiver_contract_satisfied"] is True
         ),
         "readiness_blockers": readiness_blockers,
+        "archive_bound_candidate_contract_schema": (
+            ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+        ),
+        "archive_bound_candidate_contract": archive_bound_surface[
+            "selected_candidate_contract"
+        ],
+        "archive_bound_candidate_contract_surface_schema": (
+            ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA
+        ),
+        "archive_bound_candidate_contract_surface": archive_bound_surface,
         "ready_for_archive_preflight": False,
         **FALSE_AUTHORITY,
     }
@@ -355,6 +385,20 @@ def verify_byte_range_entropy_recode_candidate_manifest(
             ),
         ]
     )
+    receiver_contract_satisfied = (
+        receiver_verification["receiver_contract_satisfied"] is True
+        and not custody["blockers"]
+    )
+    archive_bound_surface = _archive_bound_candidate_contract_surface(
+        candidate_archive=candidate_archive,
+        source_archive=_mapping(candidate.get("source_archive")),
+        receiver_contract_satisfied=receiver_contract_satisfied,
+        runtime_consumption_proof=runtime_consumption_proof,
+        readiness_blockers=readiness_blockers,
+        repo=repo,
+        candidate_chain_id=_clean_str(candidate_archive.get("sha256")) or None,
+        semantic_payload_changed=True,
+    )
     return {
         "schema": VERIFIED_CANDIDATE_SCHEMA,
         "source_candidate_schema": candidate.get("schema"),
@@ -368,11 +412,18 @@ def verify_byte_range_entropy_recode_candidate_manifest(
         "candidate_archive": candidate_archive,
         "candidate_archive_custody": custody,
         "receiver_verification": receiver_verification,
-        "receiver_contract_satisfied": (
-            receiver_verification["receiver_contract_satisfied"] is True
-            and not custody["blockers"]
-        ),
+        "receiver_contract_satisfied": receiver_contract_satisfied,
         "readiness_blockers": readiness_blockers,
+        "archive_bound_candidate_contract_schema": (
+            ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+        ),
+        "archive_bound_candidate_contract": archive_bound_surface[
+            "selected_candidate_contract"
+        ],
+        "archive_bound_candidate_contract_surface_schema": (
+            ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA
+        ),
+        "archive_bound_candidate_contract_surface": archive_bound_surface,
         "ready_for_archive_preflight": False,
         **FALSE_AUTHORITY,
     }
@@ -478,6 +529,54 @@ def _candidate_archive_custody(
         "member_sha256": sha256_bytes(member.payload) if member is not None else "",
         "blockers": _ordered_unique(blockers),
     }
+
+
+def _runtime_proof_path(value: str | Path | Mapping[str, Any] | None) -> str:
+    if value is None or isinstance(value, Mapping):
+        return ""
+    return str(value)
+
+
+def _archive_bound_candidate_contract_surface(
+    *,
+    candidate_archive: Mapping[str, Any],
+    source_archive: Mapping[str, Any],
+    receiver_contract_satisfied: bool,
+    runtime_consumption_proof: str | Path | Mapping[str, Any] | None,
+    readiness_blockers: Sequence[str],
+    repo: Path,
+    candidate_chain_id: str | None,
+    semantic_payload_changed: bool,
+) -> dict[str, Any]:
+    contract_candidate = {
+        "archive_native_transform_kind": TARGET_KIND,
+        "materialized": bool(_clean_str(candidate_archive.get("sha256"))),
+        "path": candidate_archive.get("path"),
+        "sha256": candidate_archive.get("sha256"),
+        "bytes": candidate_archive.get("bytes"),
+        "source_archive_path": source_archive.get("path"),
+        "source_archive_sha256": source_archive.get("sha256"),
+        "source_archive_bytes": source_archive.get("bytes"),
+        "runtime_consumption_proof_ready": receiver_contract_satisfied,
+        "runtime_consumption_proof_path": _runtime_proof_path(runtime_consumption_proof),
+        "receiver_contract_kind": RECEIVER_CONTRACT_KIND,
+        "receiver_contract_satisfied": receiver_contract_satisfied,
+        "semantic_payload_changed": semantic_payload_changed,
+        "score_affecting_payload_changed": semantic_payload_changed,
+        "exact_axis_score_affecting_adjudication_required": semantic_payload_changed,
+        "charged_bits_changed": semantic_payload_changed,
+        "blockers": list(readiness_blockers),
+    }
+    return build_archive_bound_candidate_contract_surface(
+        candidates=[contract_candidate],
+        selected_transform_kind=TARGET_KIND,
+        repo_root=repo,
+        source_context=source_archive,
+        family_id="byte_range_entropy_recode",
+        typed_response_id=_clean_str(candidate_archive.get("member_name")) or None,
+        candidate_chain_id=candidate_chain_id,
+        entropy_position_label="at_entropy_coder",
+    )
 
 
 def _changed_archive_byte_ranges(

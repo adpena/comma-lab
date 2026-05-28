@@ -83,6 +83,12 @@ def archive_substrate_tags_for_transform_kind(transform_kind: str) -> list[str]:
 
     kind = str(transform_kind or "").lower()
     tags: list[str] = []
+    if "public_frontier" in kind:
+        tags.append("public_frontier")
+    if "byte_range" in kind:
+        tags.append("byte_range")
+    if "dqs1" in kind or "pairset" in kind:
+        tags.extend(["dqs1", "selector"])
     if "fec" in kind:
         tags.extend(["fec", "selector_stream"])
     if "selector" in kind:
@@ -91,7 +97,12 @@ def archive_substrate_tags_for_transform_kind(transform_kind: str) -> list[str]:
         tags.append("huffman")
     if "header" in kind:
         tags.append("header")
-    if "range_coder" in kind:
+    if (
+        "range_coder" in kind
+        or "arithmetic" in kind
+        or "lc_ac" in kind
+        or "entropy_recode" in kind
+    ):
         tags.extend(["range_coder", "entropy_coder"])
     if "ans_coder" in kind:
         tags.extend(["ans_coder", "entropy_coder"])

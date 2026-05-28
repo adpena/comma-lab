@@ -14,6 +14,10 @@ from tac.hnerv_pr103_lc_ac_schema import (
     Pr103LcAcLayout,
     encode_pr103_merged_ac_stream,
 )
+from tac.optimization.archive_bound_candidate_contract import (
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA,
+)
 from tac.optimization.byte_range_entropy_recode_chain import (
     BYTE_RANGE_CANDIDATE_MANIFEST_NAME,
     CHAIN_SCHEMA,
@@ -145,6 +149,20 @@ def test_pr103_backed_byte_range_entropy_materializer_emits_byte_closed_candidat
     )
     assert report["score_claim"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["archive_bound_candidate_contract_schema"] == (
+        ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+    )
+    assert report["archive_bound_candidate_contract_surface_schema"] == (
+        ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA
+    )
+    contract = report["archive_bound_candidate_contract"]
+    assert contract["schema"] == ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+    assert contract["archive_native_transform_kind"] == TARGET_KIND
+    assert contract["byte_closed_candidate_materialized"] is True
+    assert contract["runtime_consumption_proof_ready"] is False
+    assert {"byte_range", "range_coder", "entropy_coder"}.issubset(
+        set(contract["archive_substrate_tags"])
+    )
 
     receiver_proof = {
         "schema": RECEIVER_PROOF_SCHEMA,
@@ -169,6 +187,12 @@ def test_pr103_backed_byte_range_entropy_materializer_emits_byte_closed_candidat
     )
 
     assert proven_report["receiver_contract_satisfied"] is True
+    assert proven_report["archive_bound_candidate_contract"][
+        "receiver_contract_satisfied"
+    ] is True
+    assert proven_report["archive_bound_candidate_contract"][
+        "runtime_consumption_proof_ready"
+    ] is True
     assert "candidate_runtime_adapter_missing" not in proven_report[
         "readiness_blockers"
     ]
@@ -285,6 +309,18 @@ def test_byte_range_entropy_chain_runs_materialize_adapter_proof_verify(
     assert chain["runtime_consumption_proof_path"].endswith(
         "chain/byte_range_receiver_proof.json"
     )
+    assert chain["archive_bound_candidate_contract_schema"] == (
+        ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+    )
+    assert chain["archive_bound_candidate_contract_surface_schema"] == (
+        ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA
+    )
+    assert chain["archive_bound_candidate_contract"][
+        "archive_bound_candidate_ready"
+    ] is True
+    assert chain["archive_bound_candidate_contract"][
+        "contest_runtime_decoder_adapter_ready"
+    ] is True
     assert "candidate_runtime_adapter_missing" not in chain["readiness_blockers"]
     assert "candidate_inflate_output_parity_missing" in chain["readiness_blockers"]
     assert "inflate_or_full_frame_parity" in chain["next_required_gates"]

@@ -17,6 +17,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from tac.optimization.archive_bound_candidate_contract import (
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA,
+    build_archive_bound_candidate_contract_surface,
+)
 from tac.optimization.macos_cpu_advisory_signal import EVIDENCE_GRADE, EVIDENCE_TAG
 from tac.optimization.mlx_dynamic_sweep_observations import (
     FALSE_AUTHORITY,
@@ -362,6 +367,14 @@ def build_observation_row_from_harvest(
     }
     observed_score = _score_from_advisory(advisory, label=str(advisory_path))
     score_delta_vs_baseline = observed_score - baseline_components["score"]
+    archive_bound_surface = _dqs1_archive_bound_candidate_contract_surface(
+        harvest=harvest,
+        candidate_components=candidate_components,
+        baseline_components=baseline_components,
+        archive_sha=archive_sha,
+        repo_root=repo_root,
+        candidate_id=candidate_id,
+    )
     selected = _selected_pair_indices(acquisition)
     operation = acquisition.get("acquisition_operation")
     operation_payload = dict(operation) if isinstance(operation, Mapping) else {}
@@ -385,6 +398,16 @@ def build_observation_row_from_harvest(
         "archive_byte_delta_vs_baseline": int(candidate_components["archive_size_bytes"])
         - int(baseline_components["archive_size_bytes"]),
         "component_delta_baseline_policy": BASELINE_POLICY,
+        "archive_bound_candidate_contract_schema": (
+            ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+        ),
+        "archive_bound_candidate_contract": archive_bound_surface[
+            "selected_candidate_contract"
+        ],
+        "archive_bound_candidate_contract_surface_schema": (
+            ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA
+        ),
+        "archive_bound_candidate_contract_surface": archive_bound_surface,
         "run_id": f"{candidate_id}_{harvest.get('harvested_at_utc')}",
         "notes": (
             "macOS-CPU advisory local-first harvest; planning signal only, "
@@ -423,6 +446,55 @@ def build_observation_row_from_harvest(
         source_artifact_sha256=file_sha256(advisory_path),
         observed_at_utc=observed_at or None,
         extra=extra,
+    )
+
+
+def _dqs1_archive_bound_candidate_contract_surface(
+    *,
+    harvest: Mapping[str, Any],
+    candidate_components: Mapping[str, Any],
+    baseline_components: Mapping[str, Any],
+    archive_sha: str,
+    repo_root: Path,
+    candidate_id: str,
+) -> dict[str, Any]:
+    archive_path = str(harvest.get("candidate_archive_path") or "").strip()
+    candidate_bytes = int(candidate_components["archive_size_bytes"])
+    source_bytes = int(baseline_components["archive_size_bytes"])
+    blockers = [
+        "dqs1_local_first_observation_is_macos_cpu_advisory",
+        "dqs1_candidate_requires_receiver_runtime_proof",
+        "dqs1_candidate_requires_exact_cpu_or_cuda_replay",
+    ]
+    if not archive_path:
+        blockers.append("dqs1_candidate_archive_path_missing")
+    return build_archive_bound_candidate_contract_surface(
+        candidates=[
+            {
+                "archive_native_transform_kind": (
+                    "dqs1_pairset_drop_pair_local_advisory"
+                ),
+                "materialized": bool(archive_path and archive_sha),
+                "path": archive_path,
+                "sha256": archive_sha,
+                "bytes": candidate_bytes,
+                "source_archive_bytes": source_bytes,
+                "runtime_consumption_proof_ready": False,
+                "receiver_contract_kind": "archive_charged_pairset_runtime_selector",
+                "receiver_contract_satisfied": False,
+                "semantic_payload_changed": True,
+                "score_affecting_payload_changed": True,
+                "exact_axis_score_affecting_adjudication_required": True,
+                "charged_bits_changed": candidate_bytes != source_bytes,
+                "blockers": blockers,
+            }
+        ],
+        selected_transform_kind="dqs1_pairset_drop_pair_local_advisory",
+        repo_root=repo_root,
+        family_id="dqs1_local_first",
+        typed_response_id=candidate_id,
+        candidate_chain_id=archive_sha,
+        entropy_position_label="before_entropy_coder_selector",
     )
 
 

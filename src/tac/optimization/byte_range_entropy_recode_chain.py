@@ -19,6 +19,11 @@ from tac.hnerv_pr103_lc_ac_schema import (
     PUBLIC_PR103_LAYOUT,
     Pr103LcAcLayout,
 )
+from tac.optimization.archive_bound_candidate_contract import (
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA,
+    build_archive_bound_candidate_contract_surface,
+)
 from tac.optimization.byte_range_entropy_recode_materializer import (
     FALSE_AUTHORITY,
     MATERIALIZER_ID,
@@ -213,6 +218,47 @@ def _chain_manifest(
         and receiver_contract_satisfied
         and receiver_proof_ready
     )
+    archive_bound_surface = build_archive_bound_candidate_contract_surface(
+        candidates=[
+            {
+                "archive_native_transform_kind": TARGET_KIND,
+                "materialized": candidate.get("byte_closed_candidate_emitted") is True,
+                "path": candidate_archive.get("path"),
+                "sha256": candidate_archive.get("sha256"),
+                "bytes": candidate_archive.get("bytes"),
+                "source_archive_path": source_archive.get("path"),
+                "source_archive_sha256": source_archive.get("sha256")
+                or source_archive.get("archive_sha256"),
+                "source_archive_bytes": source_archive.get("bytes")
+                or source_archive.get("archive_bytes"),
+                "runtime_consumption_proof_ready": receiver_proof_ready,
+                "runtime_consumption_proof_path": repo_relative(
+                    receiver_proof_path,
+                    repo,
+                ),
+                "receiver_contract_kind": RECEIVER_CONTRACT_KIND,
+                "receiver_contract_satisfied": receiver_contract_satisfied,
+                "runtime_adapter_manifest": _file_record(
+                    runtime_adapter_manifest_path,
+                    repo=repo,
+                ),
+                "runtime_adapter_ready": runtime_adapter_ready,
+                "contest_runtime_decoder_adapter_ready": runtime_adapter_ready,
+                "semantic_payload_changed": True,
+                "score_affecting_payload_changed": True,
+                "exact_axis_score_affecting_adjudication_required": True,
+                "charged_bits_changed": True,
+                "blockers": readiness_blockers,
+            }
+        ],
+        selected_transform_kind=TARGET_KIND,
+        repo_root=repo,
+        source_context=source_archive,
+        family_id="byte_range_entropy_recode",
+        typed_response_id=candidate_archive.get("member_name") or None,
+        candidate_chain_id=candidate_archive.get("sha256") or None,
+        entropy_position_label="at_entropy_coder",
+    )
     return {
         "schema": CHAIN_SCHEMA,
         "output_dir": repo_relative(output_dir, repo),
@@ -245,6 +291,16 @@ def _chain_manifest(
         "receiver_proof_ready": receiver_proof_ready,
         "receiver_contract_satisfied": receiver_contract_satisfied,
         "candidate_runtime_adapter_blocker_cleared": candidate_runtime_blocker_cleared,
+        "archive_bound_candidate_contract_schema": (
+            ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+        ),
+        "archive_bound_candidate_contract": archive_bound_surface[
+            "selected_candidate_contract"
+        ],
+        "archive_bound_candidate_contract_surface_schema": (
+            ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA
+        ),
+        "archive_bound_candidate_contract_surface": archive_bound_surface,
         "full_frame_or_shell_parity_required": any(
             blocker
             in {

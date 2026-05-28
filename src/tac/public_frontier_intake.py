@@ -25,11 +25,18 @@ from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
 from typing import Any
 
+from tac.optimization.archive_bound_candidate_contract import (
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA,
+    build_archive_bound_candidate_contract_surface,
+)
 from tac.pr85_bundle import Pr85BundleError, parse_pr85_bundle
 
 SCHEMA = "public_frontier_archive_intake_v1"
 TOOL = "experiments/profile_public_frontier_intake.py"
 EVIDENCE_GRADE = "byte_intake_only"
+ARCHIVE_CONTRACT_TRANSFORM_KIND = "public_frontier_archive_intake_zip_ordering"
+PUBLIC_FRONTIER_RECEIVER_CONTRACT_KIND = "public_frontier_runtime_receiver_review"
 
 _QUARANTINE_SPEC = (
     ".recovery_quarantine_20260505T004735Z/src/tac/public_frontier_intake.recovery_spec.json"
@@ -465,17 +472,24 @@ def profile_public_frontier_archive(
         for member in members
     ]
     primary_public = {key: value for key, value in primary.items() if key != "payload"}
+    archive_record = {
+        "path": archive_path.as_posix(),
+        "bytes": len(raw),
+        "sha256": _sha256_bytes(raw),
+    }
+    archive_bound_surface = _archive_bound_candidate_contract_surface(
+        archive=archive_record,
+        strict_zip=strict_zip,
+        side_info_member_count=len(side_members),
+        baseline_diffs=baseline_diffs,
+    )
     return {
         "schema": SCHEMA,
         "tool": TOOL,
         "evidence_grade": EVIDENCE_GRADE,
         "score_claim": False,
         "label": label or archive_path.stem,
-        "archive": {
-            "path": archive_path.as_posix(),
-            "bytes": len(raw),
-            "sha256": _sha256_bytes(raw),
-        },
+        "archive": archive_record,
         "strict_zip": strict_zip,
         "member_count": len(members),
         "members": payload_members,
@@ -491,6 +505,16 @@ def profile_public_frontier_archive(
         },
         "segment_profile": segment_profile,
         "baseline_diffs": baseline_diffs,
+        "archive_bound_candidate_contract_schema": (
+            ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+        ),
+        "archive_bound_candidate_contract": archive_bound_surface[
+            "selected_candidate_contract"
+        ],
+        "archive_bound_candidate_contract_surface_schema": (
+            ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA
+        ),
+        "archive_bound_candidate_contract_surface": archive_bound_surface,
         "promotion_eligible": False,
         "dispatchable": False,
         "blockers": [
@@ -498,6 +522,52 @@ def profile_public_frontier_archive(
             "requires_exact_cuda_auth_eval_for_score_claim",
         ],
     }
+
+
+def _archive_bound_candidate_contract_surface(
+    *,
+    archive: Mapping[str, Any],
+    strict_zip: Mapping[str, Any],
+    side_info_member_count: int,
+    baseline_diffs: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    changed_segments = sum(
+        len(diff.get("changed_segments") or [])
+        for diff in baseline_diffs
+        if isinstance(diff, Mapping)
+    )
+    blockers = [
+        "public_frontier_byte_intake_requires_receiver_adapter_proof",
+        "public_frontier_byte_intake_requires_exact_axis_replay",
+    ]
+    if strict_zip.get("valid") is not True:
+        blockers.append("public_frontier_strict_zip_blockers_present")
+    if side_info_member_count:
+        blockers.append("public_frontier_side_info_requires_runtime_contract_review")
+    return build_archive_bound_candidate_contract_surface(
+        candidates=[
+            {
+                "archive_native_transform_kind": ARCHIVE_CONTRACT_TRANSFORM_KIND,
+                "materialized": True,
+                "path": archive.get("path"),
+                "sha256": archive.get("sha256"),
+                "bytes": archive.get("bytes"),
+                "runtime_consumption_proof_ready": False,
+                "receiver_contract_kind": PUBLIC_FRONTIER_RECEIVER_CONTRACT_KIND,
+                "receiver_contract_satisfied": False,
+                "semantic_payload_changed": changed_segments > 0,
+                "score_affecting_payload_changed": changed_segments > 0,
+                "exact_axis_score_affecting_adjudication_required": True,
+                "charged_bits_changed": changed_segments > 0,
+                "blockers": blockers,
+            }
+        ],
+        selected_transform_kind=ARCHIVE_CONTRACT_TRANSFORM_KIND,
+        family_id="public_frontier_archive_intake",
+        typed_response_id=str(archive.get("sha256") or "")[:16] or None,
+        candidate_chain_id=str(archive.get("sha256") or "") or None,
+        entropy_position_label="archive_container_intake",
+    )
 
 
 def render_markdown(profile: dict[str, Any]) -> str:

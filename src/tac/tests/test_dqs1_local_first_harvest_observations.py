@@ -6,6 +6,10 @@ from pathlib import Path
 
 import pytest
 
+from tac.optimization.archive_bound_candidate_contract import (
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA,
+)
 from tac.optimization.dqs1_local_first_harvest_observations import (
     DQS1LocalHarvestObservationError,
     build_harvest_observation_summary,
@@ -171,6 +175,17 @@ def test_build_rows_from_harvests_preserves_false_authority_and_component_deltas
     )
     assert row["baseline_archive_size_bytes"] == baseline_size
     assert row["archive_byte_delta_vs_baseline"] == -1
+    assert row["archive_bound_candidate_contract_schema"] == (
+        ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+    )
+    assert row["archive_bound_candidate_contract_surface_schema"] == (
+        ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA
+    )
+    contract = row["archive_bound_candidate_contract"]
+    assert contract["schema"] == ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+    assert {"dqs1", "selector"}.issubset(set(contract["archive_substrate_tags"]))
+    assert contract["archive_bound_candidate_ready"] is False
+    assert contract["candidate_archive"]["sha256"] == _sha("d")
 
 
 def test_write_rows_and_summary_validate_with_dynamic_observation_loader(

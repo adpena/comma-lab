@@ -1038,6 +1038,12 @@ def _dqs1_outcome_surface(
                 "source_index": row_index,
                 "score_axis": row.get("observed_axis"),
                 "evidence_grade": row.get("evidence_grade"),
+                "archive_bound_candidate_contract": row.get(
+                    "archive_bound_candidate_contract"
+                ),
+                "archive_bound_candidate_contract_surface": row.get(
+                    "archive_bound_candidate_contract_surface"
+                ),
                 "evidence_semantics": (
                     "dqs1_pair_frame_geometry_empirical_rate_distortion_anchor"
                 ),
