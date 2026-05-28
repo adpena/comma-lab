@@ -39,7 +39,7 @@ PROVIDER_PRECLAIM_STEP_ID = "provider_preclaim_check"
 DISPATCH_STEP_ID = "dispatch_exact_eval"
 DRY_RUN_DISPATCH_STEP_ID = "dispatch_exact_eval_dry_run"
 SUPPORTED_DISPATCH_MODES = frozenset({"dry_run", "execute"})
-SUPPORTED_PROVIDERS = frozenset({"lightning", "vastai"})
+SUPPORTED_PROVIDERS = frozenset({"lightning", "modal", "vastai"})
 SUPPORTED_EXACT_EVAL_SCORE_AXES = frozenset({"contest_cuda"})
 FALSE_AUTHORITY: dict[str, bool] = {
     "score_claim": False,
@@ -71,6 +71,9 @@ def build_materializer_exact_eval_dispatch_plan(
     allow_above_active_floor_dispatch: bool = False,
     operator_override_reason: str | None = None,
     execute_queue_operator_review_reason: str | None = None,
+    modal_single_axis_waiver_reason: str | None = (
+        "queue_owned_materializer_exact_eval_cuda_axis_anchor"
+    ),
 ) -> dict[str, Any]:
     """Return a dispatch plan and an ``experiment_queue.v1`` definition.
 
@@ -246,6 +249,8 @@ def build_materializer_exact_eval_dispatch_plan(
         )
         dispatch_command = _dispatch_command(
             queue_path=queue_path,
+            row=queue_row,
+            repo_root=repo,
             provider=provider,
             label_prefix=label_prefix,
             estimated_cost_per_dispatch=estimated_cost_per_dispatch,
@@ -256,6 +261,8 @@ def build_materializer_exact_eval_dispatch_plan(
             operator_override_reason=operator_override_reason,
             dispatch_claims_path=claims_path,
             required_claim_job_id=job_id,
+            agent=agent,
+            modal_single_axis_waiver_reason=modal_single_axis_waiver_reason,
             dry_run=mode == "dry_run",
         )
         experiments.append(
@@ -777,6 +784,8 @@ def _claim_command(
 def _dispatch_command(
     *,
     queue_path: Path,
+    row: Mapping[str, Any],
+    repo_root: Path,
     provider: str,
     label_prefix: str,
     estimated_cost_per_dispatch: float,
@@ -787,8 +796,19 @@ def _dispatch_command(
     operator_override_reason: str | None,
     dispatch_claims_path: Path,
     required_claim_job_id: str,
+    agent: str,
+    modal_single_axis_waiver_reason: str | None,
     dry_run: bool,
 ) -> list[str]:
+    if provider == "modal":
+        return _modal_dispatch_command(
+            row=row,
+            repo_root=repo_root,
+            job_id=required_claim_job_id,
+            agent=agent,
+            modal_single_axis_waiver_reason=modal_single_axis_waiver_reason,
+            dry_run=dry_run,
+        )
     command = [
         sys.executable,
         "tools/parallel_dispatch_top_k.py",
@@ -832,6 +852,90 @@ def _dispatch_command(
             ]
         )
     return command
+
+
+def _modal_dispatch_command(
+    *,
+    row: Mapping[str, Any],
+    repo_root: Path,
+    job_id: str,
+    agent: str,
+    modal_single_axis_waiver_reason: str | None,
+    dry_run: bool,
+) -> list[str]:
+    archive_path = _row_path_value(row, "archive_path", "candidate_archive_path")
+    submission_dir = _row_path_value(row, "submission_dir")
+    inflate_sh = _row_path_value(row, "inflate_sh_path") or "inflate.sh"
+    archive_sha = _row_archive_sha(row)
+    lane_id = _row_lane_id(row)
+    if dry_run:
+        return [
+            sys.executable,
+            "-c",
+            (
+                "print('modal exact-eval dry-run: "
+                f"{_safe_slug(job_id)} archive={archive_sha or ''}')"
+            ),
+        ]
+    if not archive_path:
+        raise ExperimentQueueError("modal_dispatch_archive_path_missing")
+    if not submission_dir:
+        raise ExperimentQueueError("modal_dispatch_submission_dir_missing")
+    if archive_sha is None:
+        raise ExperimentQueueError("modal_dispatch_archive_sha256_missing")
+    modal_cli = Path(sys.executable).with_name("modal")
+    command = [
+        "/usr/bin/env",
+        f"PYTHONPATH=src:upstream:{repo_root.as_posix()}",
+        modal_cli.as_posix(),
+        "run",
+        "--detach",
+        "experiments/modal_auth_eval.py",
+        "--archive",
+        str(archive_path),
+        "--submission-dir",
+        str(submission_dir),
+        "--inflate-sh",
+        str(inflate_sh),
+        "--output-dir",
+        (repo_root / "experiments" / "results" / "modal_auth_eval" / _safe_slug(job_id)).as_posix(),
+        "--expected-archive-sha256",
+        archive_sha,
+        "--expected-runtime-tree-sha256",
+        "auto",
+        "--gpu",
+        "T4",
+        "--scorer-device",
+        "cuda",
+        "--inflate-device",
+        "auto",
+        "--lane-id",
+        lane_id,
+        "--instance-job-id",
+        job_id,
+        "--claim-agent",
+        agent,
+        "--claim-policy",
+        "require_active",
+        "--claim-notes",
+        (
+            "Queue-owned Modal T4 exact-CUDA auth eval; no score claim until "
+            f"recovered/adjudicated; archive_sha256={archive_sha}"
+        ),
+    ]
+    waiver = _nonempty_text_or_none(modal_single_axis_waiver_reason)
+    if waiver is not None:
+        command.extend(["--single-axis-waiver-reason", waiver])
+    command.extend(["--detach", "--provider-detach-ack"])
+    return command
+
+
+def _row_path_value(row: Mapping[str, Any], *keys: str) -> str | None:
+    for key in keys:
+        value = row.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return None
 
 
 def _row_lane_id(row: Mapping[str, Any]) -> str:

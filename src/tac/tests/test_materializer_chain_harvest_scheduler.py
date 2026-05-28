@@ -3656,6 +3656,62 @@ def test_materializer_dispatch_plan_execute_requires_active_claim_for_dispatch(
     assert job_id in dispatch_command
 
 
+def test_materializer_dispatch_plan_execute_can_emit_modal_detached_command(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    chain = _exact_ready_chain_manifest(repo)
+    source_queue_out = repo / "source_queue.json"
+    harvest_result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[chain],
+    )
+    _write_json(source_queue_out, harvest_result["source_queue"])
+    bridge = run_exact_readiness_bridge_for_harvested_queue(
+        repo_root=repo,
+        source_queue_path=source_queue_out,
+        exact_readiness_out_dir=repo / "exact_readiness",
+        active_floor_archive_bytes=None,
+    )
+    bridge_path = _write_json(repo / "bridge_report.json", bridge)
+
+    result = build_materializer_exact_eval_dispatch_plan(
+        repo_root=repo,
+        bridge_report_path=bridge_path,
+        dispatch_mode="execute",
+        allow_paid_dispatch_queue=True,
+        provider="modal",
+        label_prefix="fixture_modal_materializer_exact_eval",
+        active_floor_archive_bytes=None,
+        execute_queue_operator_review_reason="operator approved modal exact eval",
+        modal_single_axis_waiver_reason="fixture_single_axis_cuda_anchor",
+    )
+
+    plan = result["plan"]
+    steps = result["experiment_queue"]["experiments"][0]["steps"]
+    preclaim_command = steps[0]["command"]
+    dispatch_command = steps[2]["command"]
+    assert plan["authorized_candidate_count"] == 1
+    assert plan["plan_blockers"] == []
+    assert steps[0]["id"] == "provider_preclaim_check"
+    assert "modal" in preclaim_command
+    assert dispatch_command[:4] == [
+        "/usr/bin/env",
+        f"PYTHONPATH=src:upstream:{repo.as_posix()}",
+        Path(sys.executable).with_name("modal").as_posix(),
+        "run",
+    ]
+    assert "--detach" in dispatch_command
+    assert "experiments/modal_auth_eval.py" in dispatch_command
+    assert "--claim-policy" in dispatch_command
+    assert "require_active" in dispatch_command
+    assert "--expected-runtime-tree-sha256" in dispatch_command
+    assert "auto" in dispatch_command
+    assert "--single-axis-waiver-reason" in dispatch_command
+    assert "fixture_single_axis_cuda_anchor" in dispatch_command
+
+
 def test_materializer_dispatch_plan_execute_records_operator_review_clearance(
     tmp_path: Path,
 ) -> None:

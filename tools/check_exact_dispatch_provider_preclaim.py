@@ -7,6 +7,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import time
 from collections.abc import Mapping
 from pathlib import Path
@@ -18,7 +19,7 @@ except ModuleNotFoundError:  # pragma: no cover
 
 REPO_ROOT = repo_root_from_tool(__file__)
 SCHEMA = "exact_dispatch_provider_preclaim_check.v1"
-SUPPORTED_PROVIDERS = frozenset({"lightning"})
+SUPPORTED_PROVIDERS = frozenset({"lightning", "modal"})
 FALSE_AUTHORITY: dict[str, bool] = {
     "score_claim": False,
     "score_claim_valid": False,
@@ -64,6 +65,14 @@ def build_preclaim_check(
             blockers=blockers,
             env_status=env_status,
         )
+    if provider == "modal":
+        env_status, blockers = _modal_preclaim(source_env)
+        return _payload(
+            provider=provider,
+            job_id=job_id,
+            blockers=blockers,
+            env_status=env_status,
+        )
     return _payload(
         provider=provider,
         job_id=job_id,
@@ -90,6 +99,42 @@ def _lightning_preclaim(env: Mapping[str, str]) -> tuple[dict[str, str], list[st
         blockers.append("lightning_owner_missing")
     if env_status["LIGHTNING_SSH_TARGET"] != "present":
         blockers.append("lightning_ssh_target_missing")
+    return env_status, blockers
+
+
+def _modal_preclaim(env: Mapping[str, str]) -> tuple[dict[str, str], list[str]]:
+    home = Path(env.get("HOME") or "").expanduser()
+    modal_cli = REPO_ROOT / ".venv" / "bin" / "modal"
+    config_path = Path(env.get("MODAL_CONFIG_PATH") or "") if env.get("MODAL_CONFIG_PATH") else None
+    config_candidates = [
+        path
+        for path in (
+            config_path,
+            home / ".modal.toml" if str(home) else None,
+            home / ".modal" / "config.toml" if str(home) else None,
+        )
+        if path is not None
+    ]
+    token_pair_present = (
+        _presence(env.get("MODAL_TOKEN_ID", "")) == "present"
+        and _presence(env.get("MODAL_TOKEN_SECRET", "")) == "present"
+    )
+    config_present = any(path.is_file() for path in config_candidates)
+    env_status = {
+        "MODAL_TOKEN_ID": _presence(env.get("MODAL_TOKEN_ID", "")),
+        "MODAL_TOKEN_SECRET": _presence(env.get("MODAL_TOKEN_SECRET", "")),
+        "MODAL_PROFILE": _presence(env.get("MODAL_PROFILE", "")),
+        "MODAL_CONFIG_PATH": _presence(env.get("MODAL_CONFIG_PATH", "")),
+        "modal_cli": "present"
+        if modal_cli.is_file() or shutil.which("modal")
+        else "missing",
+        "modal_config": "present" if config_present else "missing",
+    }
+    blockers: list[str] = []
+    if env_status["modal_cli"] != "present":
+        blockers.append("modal_cli_missing")
+    if not token_pair_present and not config_present:
+        blockers.append("modal_auth_config_missing")
     return env_status, blockers
 
 

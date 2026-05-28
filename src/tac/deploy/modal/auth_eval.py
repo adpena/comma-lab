@@ -21,6 +21,7 @@ from typing import Any
 from tac.auth_eval_result import parse_auth_eval_score_claim
 from tac.deploy.claims import (
     DispatchClaimSpec,
+    active_claim_row,
     predicted_eta,
     record_dispatch_claim,
     terminal_dispatch_claim,
@@ -478,6 +479,38 @@ def claim_modal_auth_eval_dispatch(
     )
 
 
+def require_active_modal_auth_eval_claim(
+    *,
+    repo_root: Path,
+    spec: ClaimSpec,
+) -> dict[str, str]:
+    """Validate that a queue-owned claim already exists before Modal spend."""
+
+    if not spec.lane_id or not spec.instance_job_id:
+        raise SystemExit(
+            "FATAL: Modal auth eval dispatch requires --lane-id and "
+            "--instance-job-id before provider work starts"
+        )
+    claims_path = repo_root / ".omx" / "state" / "active_lane_dispatch_claims.md"
+    try:
+        row = active_claim_row(
+            claims_path,
+            lane_id=spec.lane_id,
+            instance_job_id=spec.instance_job_id,
+        )
+    except ValueError as exc:
+        raise SystemExit(
+            "FATAL: Modal auth eval --claim-policy require_active could not "
+            f"find an active lane claim: {exc}"
+        ) from exc
+    if row.get("platform") != spec.platform:
+        raise SystemExit(
+            "FATAL: Modal auth eval active claim platform mismatch: "
+            f"expected={spec.platform} actual={row.get('platform')}"
+        )
+    return row
+
+
 def terminal_modal_auth_eval_claim(
     *,
     repo_root: Path,
@@ -847,6 +880,7 @@ __all__ = [
     "prepare_modal_auth_eval_request",
     "read_spawn_metadata",
     "recover_modal_auth_eval",
+    "require_active_modal_auth_eval_claim",
     "runtime_upload_skip_reason",
     "safe_modal_artifact_path",
     "submission_dir_zip_bytes",

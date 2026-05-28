@@ -66,6 +66,7 @@ from tac.deploy.modal.auth_eval import (
     materialize_modal_artifacts,
     modal_uploaded_submission_dir_runtime_manifest,
     prepare_modal_auth_eval_request,
+    require_active_modal_auth_eval_claim,
     terminal_modal_auth_eval_claim,
     validate_modal_auth_eval_pairing,
     write_spawn_metadata,
@@ -971,6 +972,7 @@ def main(
     claim_agent: str = "codex:modal_auth_eval_cpu",
     claim_notes: str = "",
     force_claim: bool = False,
+    claim_policy: str = "open",
     pair_group_id: str = "",
     single_axis_waiver_reason: str = "",
 ) -> None:
@@ -991,6 +993,11 @@ def main(
             "--detach --provider-detach-ack ...`. Without CLI --detach the ephemeral "
             "Modal app may stop before the spawned function returns, producing a "
             "blank RemoteError and no score artifact."
+        )
+    claim_policy_normalized = str(claim_policy or "open").strip().lower()
+    if claim_policy_normalized not in {"open", "require_active"}:
+        raise SystemExit(
+            "FATAL: --claim-policy must be one of open, require_active"
         )
 
     prepared = prepare_modal_auth_eval_request(
@@ -1122,11 +1129,14 @@ def main(
         bool(allow_large_scorer_input_cache_tensor_export),
         tensor_volume_run_id,
     )
-    claim_modal_auth_eval_dispatch(
-        repo_root=Path.cwd(),
-        spec=claim_spec,
-        status="active_modal_cpu_auth_eval_spawning" if detach else "active_modal_cpu_auth_eval_running",
-    )
+    if claim_policy_normalized == "require_active":
+        require_active_modal_auth_eval_claim(repo_root=Path.cwd(), spec=claim_spec)
+    else:
+        claim_modal_auth_eval_dispatch(
+            repo_root=Path.cwd(),
+            spec=claim_spec,
+            status="active_modal_cpu_auth_eval_spawning" if detach else "active_modal_cpu_auth_eval_running",
+        )
     if detach:
         try:
             call = run_auth_eval_cpu.spawn(*call_args)

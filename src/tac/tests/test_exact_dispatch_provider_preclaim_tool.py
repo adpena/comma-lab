@@ -84,3 +84,37 @@ def test_lightning_preclaim_writes_redacted_ready_artifact(
     assert "user@example.test" not in text
     assert "private-ssh-target" not in text
     assert truthy_authority_field_violations(payload) == []
+
+
+def test_modal_preclaim_blocks_missing_auth_config(tmp_path: Path) -> None:
+    payload = preclaim.build_preclaim_check(
+        provider="modal",
+        job_id="fixture_modal_exact_job",
+        env={"HOME": str(tmp_path)},
+    )
+
+    assert payload["preclaim_ready"] is False
+    assert "modal_auth_config_missing" in payload["blockers"]
+    assert payload["env_status"]["MODAL_TOKEN_ID"] == "missing"
+    assert truthy_authority_field_violations(payload) == []
+
+
+def test_modal_preclaim_accepts_redacted_token_pair(tmp_path: Path) -> None:
+    payload = preclaim.build_preclaim_check(
+        provider="modal",
+        job_id="fixture_modal_exact_job",
+        env={
+            "HOME": str(tmp_path),
+            "MODAL_TOKEN_ID": "private-token-id",
+            "MODAL_TOKEN_SECRET": "private-token-secret",
+        },
+    )
+
+    assert payload["preclaim_ready"] is True
+    assert payload["blockers"] == []
+    assert payload["env_status"]["MODAL_TOKEN_ID"] == "present"
+    assert payload["env_status"]["MODAL_TOKEN_SECRET"] == "present"
+    text = json.dumps(payload)
+    assert "private-token-id" not in text
+    assert "private-token-secret" not in text
+    assert truthy_authority_field_violations(payload) == []

@@ -37,7 +37,11 @@ def main(argv: list[str] | None = None) -> int:
         "--experiment-queue-id",
         default="materializer_exact_eval_dispatch_queue",
     )
-    parser.add_argument("--provider", choices=["lightning", "vastai"], default="lightning")
+    parser.add_argument(
+        "--provider",
+        choices=["lightning", "modal", "vastai"],
+        default="lightning",
+    )
     parser.add_argument(
         "--dispatch-mode",
         choices=["dry_run", "execute"],
@@ -77,6 +81,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--disable-active-floor-score", action="store_true")
     parser.add_argument("--allow-above-active-floor-dispatch", action="store_true")
     parser.add_argument("--operator-override-reason", default=None)
+    parser.add_argument(
+        "--modal-single-axis-waiver-reason",
+        default="queue_owned_materializer_exact_eval_cuda_axis_anchor",
+    )
     parser.add_argument(
         "--require-authorized",
         action="store_true",
@@ -125,6 +133,7 @@ def main(argv: list[str] | None = None) -> int:
         allow_above_active_floor_dispatch=args.allow_above_active_floor_dispatch,
         operator_override_reason=args.operator_override_reason,
         execute_queue_operator_review_reason=args.execute_queue_operator_review_reason,
+        modal_single_axis_waiver_reason=args.modal_single_axis_waiver_reason,
     )
     write_json(args.dispatch_plan_out, result["plan"], overwrite=args.overwrite)
     write_json(
