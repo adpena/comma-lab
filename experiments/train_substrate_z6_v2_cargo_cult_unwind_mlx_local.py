@@ -129,8 +129,16 @@ def _full_main(args: argparse.Namespace) -> int:
     """
     from tac.substrates._shared.mlx_score_aware import (
         RendererBundle,
+        build_mlx_posenet_pair_teacher,
+        build_mlx_segnet_pair_teacher,
         decode_mlx_targets,
         run_mlx_score_aware_full_main,
+    )
+    from tac.substrates.hinton_distilled_scorer_surrogate import (
+        DEFAULT_POSE_DIMS,
+        DEFAULT_SEGNET_CLASSES,
+        build_learnable_pose_student_head,
+        build_learnable_student_head,
     )
     from tac.substrates.z6_v2_cargo_cult_unwind.architecture import Z6V2Config
     from tac.substrates.z6_v2_cargo_cult_unwind.archive_candidate import (
@@ -149,6 +157,72 @@ def _full_main(args: argparse.Namespace) -> int:
         output_height=out_h,
         output_width=out_w,
     )
+
+    # Canonical Hinton-distilled scorer surrogate wiring per IA3 sister commit
+    # b551bfd34 + SELECTOR-V3 sister commit ab650cc78 + V2/V4/VQ sister cascade
+    # commit 1860ea2ac + V2+V4+VQ 600-pair Hinton landed commit 84a4893e4. Per
+    # 11th INDIVIDUALLY-FRACTAL standing directive 2026-05-27: this is Z6-v2's
+    # OWN engineering pass — the cooperative-receiver paradigm (Rao-Ballard
+    # hierarchical predictive coding + ego-motion FoE conditioning per Catalog
+    # #311) under Hinton-distilled scorer-bound gradient binds the canonical
+    # Hinton-Vinyals-Dean 2014 KL T=2.0 + pose-MSE composition to Z6-v2's
+    # specific substrate-distinguishing primitives per Catalog #272.
+    #
+    # Cross-family hypothesis (operator-routable from V2+V4+VQ 600-pair parity
+    # landing memo 2026-05-28): does the COOPERATIVE-RECEIVER paradigm under
+    # Hinton-distilled scorer-bound gradient produce empirically DIFFERENT
+    # convergence signature than the PACT-NeRV per-method-saturated parity
+    # floor 3.40? Canonical equation #1 anchor 15 -> 16 (cross-family scope
+    # expansion fires Catalog #371 auto-recalibration trigger).
+    #
+    # When --distillation-weight > 0 AND NOT --allow-mock-scorer-teacher we
+    # bind the REAL SegNet + REAL PoseNet teacher caches + learnable student
+    # heads per canonical Hinton-Vinyals-Dean 2014 KL T=2.0 + pose-MSE
+    # composition. Per CLAUDE.md "SegNet vs PoseNet importance" + Catalog #164
+    # the harness bundle.__post_init__ fail-closes on missing pose teacher
+    # when distillation_weight > 0 (C6 IBPS / DreamerV3 scorer-blindness
+    # lesson). Z6-v2 output (384, 512) matches canonical SegNet/PoseNet eval
+    # resolution exactly (zero adapter).
+    scorer_teacher = None
+    pose_scorer_teacher = None
+    learnable_student_head = None
+    learnable_pose_student_head = None
+    pose_distillation_weight = 0.0
+    if (
+        float(args.distillation_weight) > 0.0
+        and not bool(args.allow_mock_scorer_teacher)
+    ):
+        bundle_no_teacher = RendererBundle(
+            model=model,
+            target_rgb_0=target_rgb_0,
+            target_rgb_1=target_rgb_1,
+            num_pairs=int(args.num_pairs),
+            forward_convention="call_b2chw_255",
+            distillation_weight=0.0,
+            pose_distillation_weight=0.0,
+            pose_dims=DEFAULT_POSE_DIMS,
+        )
+        scorer_teacher = build_mlx_segnet_pair_teacher(
+            bundle_no_teacher,
+            upstream_dir=str(args.upstream_dir),
+            device="cpu",  # CLAUDE.md "MPS auth eval is NOISE" - CPU teacher only.
+        )
+        pose_scorer_teacher = build_mlx_posenet_pair_teacher(
+            bundle_no_teacher,
+            upstream_dir=str(args.upstream_dir),
+            device="cpu",
+        )
+        learnable_student_head = build_learnable_student_head(
+            num_classes=DEFAULT_SEGNET_CLASSES,
+            in_channels=3,
+            seed=int(args.seed),
+        )
+        learnable_pose_student_head = build_learnable_pose_student_head(
+            pose_dims=DEFAULT_POSE_DIMS,
+            seed=int(args.seed),
+        )
+        pose_distillation_weight = float(args.pose_distillation_weight)
+
     bundle = RendererBundle(
         model=model,
         target_rgb_0=target_rgb_0,
@@ -156,6 +230,12 @@ def _full_main(args: argparse.Namespace) -> int:
         num_pairs=int(args.num_pairs),
         forward_convention="call_b2chw_255",
         distillation_weight=float(args.distillation_weight),
+        scorer_teacher=scorer_teacher,
+        learnable_student_head=learnable_student_head,
+        pose_distillation_weight=pose_distillation_weight,
+        pose_scorer_teacher=pose_scorer_teacher,
+        learnable_pose_student_head=learnable_pose_student_head,
+        pose_dims=DEFAULT_POSE_DIMS,
         allow_mock_scorer_teacher=bool(args.allow_mock_scorer_teacher),
         export_archive_fn=export_z6_v2_mlx_archive,
     )
@@ -345,9 +425,36 @@ def _build_parser() -> argparse.ArgumentParser:
         "--distillation-weight", type=float, default=0.0,
         help=(
             "Weight on the gradient-reachable Hinton-KL T=2.0 scorer surrogate "
-            "term in the --full score-aware loss (0.0 disables). >0 REQUIRES a "
-            "real scorer_teacher OR --allow-mock-scorer-teacher per Catalog "
-            "#164 + the C6 IBPS scorer-blindness lesson."
+            "term in the --full score-aware loss (0.0 disables). >0 + NOT "
+            "--allow-mock-scorer-teacher binds the REAL SegNet + REAL PoseNet "
+            "teacher cache via canonical "
+            "build_mlx_segnet_pair_teacher/build_mlx_posenet_pair_teacher per "
+            "the IA3 sister commit b551bfd34 + V3 sister commit ab650cc78 + "
+            "V2/V4/VQ sister cascade commit 1860ea2ac + V2+V4+VQ 600-pair "
+            "Hinton landed commit 84a4893e4 + Catalog #164."
+        ),
+    )
+    p.add_argument(
+        "--pose-distillation-weight",
+        type=float,
+        default=1.0,
+        help=(
+            "Weight on the POSE-MSE distillation term per CLAUDE.md 'SegNet "
+            "vs PoseNet importance' operating-point-dependent discipline "
+            "(pose is DOMINANT at frontier). Default 1.0 wires both scorers "
+            "(PoseNet REQUIRED at frontier unless allow_segnet_only_research "
+            "is opted into). Used only when --distillation-weight > 0 AND "
+            "NOT --allow-mock-scorer-teacher."
+        ),
+    )
+    p.add_argument(
+        "--upstream-dir",
+        type=Path,
+        default=Path("upstream"),
+        help=(
+            "Upstream repo path containing SegNet + PoseNet safetensors for "
+            "the real teacher cache build (canonical for the Hinton-distilled "
+            "scorer surrogate wire-in)."
         ),
     )
     p.add_argument(
@@ -355,7 +462,9 @@ def _build_parser() -> argparse.ArgumentParser:
         help=(
             "EXPLICIT opt-in to the scorer-BLIND deterministic-cosine mock "
             "teacher when --distillation-weight > 0 AND no real scorer_teacher "
-            "is wired. Default OFF — the harness fails closed otherwise."
+            "is wired. Default OFF — the harness fails closed otherwise. Set "
+            "ONLY for a $0 no-real-SegNet smoke that explicitly accepts the "
+            "result is reconstruction-proxy (NOT scorer-bound)."
         ),
     )
     return p
