@@ -1,0 +1,64 @@
+{
+  "archive_bytes": 230349,
+  "archive_path": ".omx/research/pr95_mlx_runtime_consumption_queue_20260528T131513Z/pr95_public_archive.zip",
+  "archive_sha256": "bf5922b27c8f1c350df728b7131f9b99dd83d83819152638a6ce156a493fb046",
+  "archive_zip_bytes": 230349,
+  "archive_zip_path": ".omx/research/pr95_mlx_runtime_consumption_queue_20260528T131513Z/pr95_public_archive.zip",
+  "archive_zip_sha256": "bf5922b27c8f1c350df728b7131f9b99dd83d83819152638a6ce156a493fb046",
+  "bytes": 230349,
+  "candidate_archive": {
+    "bytes": 230349,
+    "path": ".omx/research/pr95_mlx_runtime_consumption_queue_20260528T131513Z/pr95_public_archive.zip",
+    "sha256": "bf5922b27c8f1c350df728b7131f9b99dd83d83819152638a6ce156a493fb046"
+  },
+  "dispatch_attempted": false,
+  "dispatch_packet_ready": false,
+  "exact_readiness_refusal": {
+    "blockers": [
+      "requires_full_frame_inflate_parity_before_runtime_consumption_claim",
+      "requires_exact_cpu_cuda_auth_eval_before_score_claim"
+    ],
+    "ready": false,
+    "schema": "exact_readiness_refusal.v1"
+  },
+  "gpu_launched": false,
+  "member": "0.bin",
+  "member_bytes": 230241,
+  "member_compress_type": 0,
+  "member_name": "0.bin",
+  "member_sha256": "36e693f3d3ecd91ef03aa3497c3938f3819b71a6ab29240c7e3e8e7900359ec1",
+  "parsed_latent_shape": [
+    1,
+    28
+  ],
+  "parsed_meta": {
+    "base_channels": 36,
+    "eval_size": [
+      384,
+      512
+    ],
+    "latent_dim": 28,
+    "n_pairs": 1
+  },
+  "parsed_state_dict_tensor_count": 28,
+  "path": ".omx/research/pr95_mlx_runtime_consumption_queue_20260528T131513Z/pr95_public_archive.zip",
+  "pr95_1to1_reproduction_claim": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_satisfied": true,
+  "receiver_proof_present": true,
+  "reproduction_claim": false,
+  "reproduction_equivalence": false,
+  "runtime_consumption_proof_bytes": 5044,
+  "runtime_consumption_proof_path": ".omx/research/pr95_mlx_runtime_consumption_queue_20260528T131513Z/runtime_consumption_proof.json",
+  "runtime_consumption_proof_present": true,
+  "runtime_consumption_proof_sha256": "f1ea67ad05bd9d1a3581825554117170375b5e901b4ddb979204ba47cf17ea24",
+  "runtime_consumption_proven": true,
+  "schema": "pr95_hnerv_archive_export.v1",
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "sha256": "bf5922b27c8f1c350df728b7131f9b99dd83d83819152638a6ce156a493fb046"
+}

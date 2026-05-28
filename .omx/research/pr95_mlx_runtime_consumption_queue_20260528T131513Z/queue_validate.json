@@ -1,0 +1,20 @@
+{
+  "auto_parallelism": {
+    "local_only": {
+      "max_parallel": 1,
+      "resource_limits": {
+        "local_mlx": 1
+      }
+    },
+    "with_cloud": {
+      "max_parallel": 1,
+      "resource_limits": {
+        "local_mlx": 1
+      }
+    }
+  },
+  "experiment_count": 1,
+  "queue_id": "pr95_mlx_control_arm_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed23_steps1_c36",
+  "step_count": 1,
+  "valid": true
+}
