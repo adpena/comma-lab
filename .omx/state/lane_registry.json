@@ -59991,6 +59991,47 @@
         }
       },
       "notes": "research_only=true; lane_class=substrate_engineering; MLX-LOCAL only ([macOS-MLX research-signal] per Catalog #192/#317/#341); 2000ep convergence 0.338 -> 0.0024 (140x reduction; log-log slope -1.10) in 126s on M5 Max; 56198 params; archive_grammar=PIA3 (sister PyTorch); parser_section_manifest=PIA3; inflate_runtime_loc_budget<=200; runtime_dep_closure=numpy+PIL (no MLX dep); export_format=PIA3; score_aware_loss=mlx_score_aware harness reconstruction+optional Hinton-KL T=2.0; bolt_on_loc_budget=~150 LOC IA3 modulation; no_op_detector_planned=Catalog #105/#139/#220 sister via PIA3 byte mutation"
+    },
+    {
+      "id": "lane_pact_nerv_selector_v2_l1_long_run_mlx_local_20260528",
+      "name": "PACT-NeRV-SELECTOR-V2 L1 LONG-RUN MLX-LOCAL closure (2nd PACT-NeRV variant after IA3)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "MLX renderer + dedicated MLX-LOCAL trainer + MLX->PyTorch bridge tool + 7 dedicated tests; 14 existing PyTorch sister tests pass; 196.5x loss reduction in 2000ep / 117.3s wall-clock on M5 Max (vs IA3 sister 140x / 126.3s); final loss 0.001718 ~28% LOWER than IA3 sister's 0.0024; parameter parity 54710==54710 with PyTorch sister; sister of PACT-NeRV-IA3 commit 9ecc75a2d + IA3 bridge commit bbf11079d; landing memo .omx/research/pact_nerv_selector_v2_l1_long_run_mlx_landed_20260528.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/pact_nerv_selector_v2_l1_long_run_mlx_landed_20260528.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -60000,5 +60041,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-28T03:24:21Z"
+  "updated_at": "2026-05-28T04:43:45Z"
 }
