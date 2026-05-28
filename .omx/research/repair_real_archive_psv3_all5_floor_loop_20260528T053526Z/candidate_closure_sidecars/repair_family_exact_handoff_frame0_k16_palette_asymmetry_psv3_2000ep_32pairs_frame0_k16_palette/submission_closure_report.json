@@ -1,0 +1,242 @@
+{
+  "allowed_use": "exact_readiness_static_submission_closure_only",
+  "archive_bytes": 112133,
+  "archive_manifest_path": ".omx/research/repair_real_archive_psv3_all5_floor_loop_20260528T053526Z/submission_runtime_closure/repair_family_exact_handoff_frame0_k16_palette_asymmetry_psv3_2000ep_32pairs_frame0_k16_palette/archive_manifest.json",
+  "archive_path": ".omx/research/repair_real_archive_psv3_all5_floor_loop_20260528T053526Z/submission_runtime_closure/repair_family_exact_handoff_frame0_k16_palette_asymmetry_psv3_2000ep_32pairs_frame0_k16_palette/archive.zip",
+  "archive_sha256": "f3e49d0dec8402ef5d3233bf726c7f73372e93a955c8a002b67faf7bfb2484d6",
+  "candidate_id": "repair_family_exact_handoff__frame0_k16_palette_asymmetry__psv3_2000ep_32pairs_frame0_k16_palette",
+  "charged_bits_changed": false,
+  "closed_source_queue_path": ".omx/research/repair_real_archive_psv3_all5_floor_loop_20260528T053526Z/candidate_closure_sidecars/repair_family_exact_handoff_frame0_k16_palette_asymmetry_psv3_2000ep_32pairs_frame0_k16_palette/closed_source_queue.json",
+  "closure_queue_schema": "optimizer_candidate_queue_v1",
+  "contest_cuda_auth_eval": false,
+  "copied_runtime_file_count": 8,
+  "copied_runtime_files": [
+    {
+      "bytes": 1125,
+      "relative_path": "inflate.py",
+      "sha256": "4a8246393403be40f77c539565be0820fcbc774bb40838ad8a82f7038c5a5fc3"
+    },
+    {
+      "bytes": 448,
+      "relative_path": "inflate.sh",
+      "sha256": "086d037f5bd5fe76a7eb3f79d07e49c614ddee858ecbb84a17e5178cbb0337a9"
+    },
+    {
+      "bytes": 0,
+      "relative_path": "src/tac/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "relative_path": "src/tac/substrates/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "relative_path": "src/tac/substrates/pact_nerv_selector_v3/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 7326,
+      "relative_path": "src/tac/substrates/pact_nerv_selector_v3/architecture.py",
+      "sha256": "99db73b2367e6a8e34639d07c9f31bc2ecdd53bcaa4c621f842a8a439fc29786"
+    },
+    {
+      "bytes": 5681,
+      "relative_path": "src/tac/substrates/pact_nerv_selector_v3/archive.py",
+      "sha256": "99780d6fd3538e1bf597738f19564799a5c8ce2957e458748b52015015a3966f"
+    },
+    {
+      "bytes": 2671,
+      "relative_path": "src/tac/substrates/pact_nerv_selector_v3/inflate.py",
+      "sha256": "f150c6adb39c1a41805fadc651812c343616802f3c57c967b83b249d5e2ad355"
+    }
+  ],
+  "deployment_target": "desktop_research",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "optimizer_candidate_queue_is_planning_only",
+    "requires_exact_eval_readiness_gate",
+    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+    "requires_non_proxy_score_evidence_before_promotion",
+    "submission_closure_report_is_not_dispatch_authority",
+    "run_exact_readiness_bridge_on_closed_source_queue",
+    "lane_claim_required_before_gpu_or_remote_eval",
+    "contest_exact_auth_eval_required_before_score_claim"
+  ],
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+  "generated_at_utc": "2026-05-28T05:41:13Z",
+  "gpu_launched": false,
+  "materializer_submission_closure_kind": "source_runtime_static_closure_with_candidate_archive",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "runtime_consumption_proof_path": ".omx/research/repair_real_archive_psv3_all5_floor_loop_20260528T053526Z/submission_runtime_closure/repair_family_exact_handoff_frame0_k16_palette_asymmetry_psv3_2000ep_32pairs_frame0_k16_palette/runtime_consumption_proof.json",
+  "runtime_manifest": {
+    "external_dependency_roots": [],
+    "files": [
+      {
+        "bytes": 6583,
+        "relative_path": "archive_manifest.json",
+        "repo_relative_path": ".omx/research/repair_real_archive_psv3_all5_floor_loop_20260528T053526Z/submission_runtime_closure/repair_family_exact_handoff_frame0_k16_palette_asymmetry_psv3_2000ep_32pairs_frame0_k16_palette/archive_manifest.json",
+        "sha256": "9743d15363dd33e04c32bcb0633fa011b5560eb09c523e4996cbc93ae851a94a"
+      },
+      {
+        "bytes": 1125,
+        "relative_path": "inflate.py",
+        "repo_relative_path": ".omx/research/repair_real_archive_psv3_all5_floor_loop_20260528T053526Z/submission_runtime_closure/repair_family_exact_handoff_frame0_k16_palette_asymmetry_psv3_2000ep_32pairs_frame0_k16_palette/inflate.py",
+        "sha256": "4a8246393403be40f77c539565be0820fcbc774bb40838ad8a82f7038c5a5fc3"
+      },
+      {
+        "bytes": 448,
+        "relative_path": "inflate.sh",
+        "repo_relative_path": ".omx/research/repair_real_archive_psv3_all5_floor_loop_20260528T053526Z/submission_runtime_closure/repair_family_exact_handoff_frame0_k16_palette_asymmetry_psv3_2000ep_32pairs_frame0_k16_palette/inflate.sh",
+        "sha256": "086d037f5bd5fe76a7eb3f79d07e49c614ddee858ecbb84a17e5178cbb0337a9"
+      },
+      {
+        "bytes": 526,
+        "relative_path": "report.txt",
+        "repo_relative_path": ".omx/research/repair_real_archive_psv3_all5_floor_loop_20260528T053526Z/submission_runtime_closure/repair_family_exact_handoff_frame0_k16_palette_asymmetry_psv3_2000ep_32pairs_frame0_k16_palette/report.txt",
+        "sha256": "29f7071437fe123b37313465278f00c46bbdf1bfd79c7244a1ce643f04355e2a"
+      },
+      {
+        "bytes": 18863,
+        "relative_path": "runtime_consumption_proof.json",
+        "repo_relative_path": ".omx/research/repair_real_archive_psv3_all5_floor_loop_20260528T053526Z/submission_runtime_closure/repair_family_exact_handoff_frame0_k16_palette_asymmetry_psv3_2000ep_32pairs_frame0_k16_palette/runtime_consumption_proof.json",
+        "sha256": "f3d80a2cec369534191c0c1f83adf271905efaa9ba57f70d841060a835b37db6"
+      },
+      {
+        "bytes": 0,
+        "relative_path": "src/tac/__init__.py",
+        "repo_relative_path": ".omx/research/repair_real_archive_psv3_all5_floor_loop_20260528T053526Z/submission_runtime_closure/repair_family_exact_handoff_frame0_k16_palette_asymmetry_psv3_2000ep_32pairs_frame0_k16_palette/src/tac/__init__.py",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "bytes": 0,
+        "relative_path": "src/tac/substrates/__init__.py",
+        "repo_relative_path": ".omx/research/repair_real_archive_psv3_all5_floor_loop_20260528T053526Z/submission_runtime_closure/repair_family_exact_handoff_frame0_k16_palette_asymmetry_psv3_2000ep_32pairs_frame0_k16_palette/src/tac/substrates/__init__.py",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "bytes": 0,
+        "relative_path": "src/tac/substrates/pact_nerv_selector_v3/__init__.py",
+        "repo_relative_path": ".omx/research/repair_real_archive_psv3_all5_floor_loop_20260528T053526Z/submission_runtime_closure/repair_family_exact_handoff_frame0_k16_palette_asymmetry_psv3_2000ep_32pairs_frame0_k16_palette/src/tac/substrates/pact_nerv_selector_v3/__init__.py",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "bytes": 7326,
+        "relative_path": "src/tac/substrates/pact_nerv_selector_v3/architecture.py",
+        "repo_relative_path": ".omx/research/repair_real_archive_psv3_all5_floor_loop_20260528T053526Z/submission_runtime_closure/repair_family_exact_handoff_frame0_k16_palette_asymmetry_psv3_2000ep_32pairs_frame0_k16_palette/src/tac/substrates/pact_nerv_selector_v3/architecture.py",
+        "sha256": "99db73b2367e6a8e34639d07c9f31bc2ecdd53bcaa4c621f842a8a439fc29786"
+      },
+      {
+        "bytes": 5681,
+        "relative_path": "src/tac/substrates/pact_nerv_selector_v3/archive.py",
+        "repo_relative_path": ".omx/research/repair_real_archive_psv3_all5_floor_loop_20260528T053526Z/submission_runtime_closure/repair_family_exact_handoff_frame0_k16_palette_asymmetry_psv3_2000ep_32pairs_frame0_k16_palette/src/tac/substrates/pact_nerv_selector_v3/archive.py",
+        "sha256": "99780d6fd3538e1bf597738f19564799a5c8ce2957e458748b52015015a3966f"
+      },
+      {
+        "bytes": 2671,
+        "relative_path": "src/tac/substrates/pact_nerv_selector_v3/inflate.py",
+        "repo_relative_path": ".omx/research/repair_real_archive_psv3_all5_floor_loop_20260528T053526Z/submission_runtime_closure/repair_family_exact_handoff_frame0_k16_palette_asymmetry_psv3_2000ep_32pairs_frame0_k16_palette/src/tac/substrates/pact_nerv_selector_v3/inflate.py",
+        "sha256": "f150c6adb39c1a41805fadc651812c343616802f3c57c967b83b249d5e2ad355"
+      }
+    ],
+    "repo_local_tac_import_manifest": {
+      "discovery": "static_ast_recursive_import_closure",
+      "file_count": 6,
+      "files": [
+        {
+          "bytes": 3192,
+          "module": "tac",
+          "relative_path": "src/tac/__init__.py",
+          "sha256": "ead03ad440517bfc6fd083a59cc153ef4d99676d66ce162c6fe12109d6a3762a"
+        },
+        {
+          "bytes": 9141,
+          "module": "tac.substrates",
+          "relative_path": "src/tac/substrates/__init__.py",
+          "sha256": "97f4f13db5902f5c50b6277240254b51b4aac4d0b3ab8436d3fed4d506f105e2"
+        },
+        {
+          "bytes": 3243,
+          "module": "tac.substrates.pact_nerv_selector_v3",
+          "relative_path": "src/tac/substrates/pact_nerv_selector_v3/__init__.py",
+          "sha256": "5676fc36c142985d9b2f27abfcf9710b485b638aa9723b004e1f48ca21e58bb1"
+        },
+        {
+          "bytes": 7326,
+          "module": "tac.substrates.pact_nerv_selector_v3.architecture",
+          "relative_path": "src/tac/substrates/pact_nerv_selector_v3/architecture.py",
+          "sha256": "99db73b2367e6a8e34639d07c9f31bc2ecdd53bcaa4c621f842a8a439fc29786"
+        },
+        {
+          "bytes": 5681,
+          "module": "tac.substrates.pact_nerv_selector_v3.archive",
+          "relative_path": "src/tac/substrates/pact_nerv_selector_v3/archive.py",
+          "sha256": "99780d6fd3538e1bf597738f19564799a5c8ce2957e458748b52015015a3966f"
+        },
+        {
+          "bytes": 2671,
+          "module": "tac.substrates.pact_nerv_selector_v3.inflate",
+          "relative_path": "src/tac/substrates/pact_nerv_selector_v3/inflate.py",
+          "sha256": "f150c6adb39c1a41805fadc651812c343616802f3c57c967b83b249d5e2ad355"
+        }
+      ],
+      "module_count": 6,
+      "parse_errors": [],
+      "root_import_modules": [
+        "tac.substrates.pact_nerv_selector_v3.inflate"
+      ],
+      "runtime_root_name": "repair_family_exact_handoff_frame0_k16_palette_asymmetry_psv3_2000ep_32pairs_frame0_k16_palette",
+      "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+      "tac_root_relative_path": "src/tac",
+      "unresolved_modules": []
+    },
+    "runtime_content_tree_sha256": "32a061ee73b2cfaadea8bf0456acfdaf0a6305a6c91ac0a0f105c7c5c9462634",
+    "runtime_file_count": 11,
+    "runtime_root": "/Users/adpena/Projects/pact/.omx/research/repair_real_archive_psv3_all5_floor_loop_20260528T053526Z/submission_runtime_closure/repair_family_exact_handoff_frame0_k16_palette_asymmetry_psv3_2000ep_32pairs_frame0_k16_palette",
+    "runtime_tree_sha256": "d8f67d75782d65035737a0f509260ca8f8e609eb5b55cfd9a4e0e6885b731fca",
+    "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+    "upstream_evaluate_py": {
+      "bytes": 6005,
+      "relative_path": "evaluate.py",
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    }
+  },
+  "runtime_source_dir": "experiments/results/pact_nerv_selector_v3_mlx_local_long_2000ep_32pairs_20260528T045801Z/submission",
+  "saved_bytes_at_risk": null,
+  "schema": "materializer_submission_runtime_closure_report.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "source_queue_path": ".omx/research/repair_real_archive_psv3_all5_floor_loop_20260528T053526Z/floor_loop_receiver_contract_bridge/repair_family_exact_ready_source_queue.json",
+  "source_runtime_adapter_ready": false,
+  "source_runtime_dir": "experiments/results/pact_nerv_selector_v3_mlx_local_long_2000ep_32pairs_20260528T045801Z/submission",
+  "submission_dir": ".omx/research/repair_real_archive_psv3_all5_floor_loop_20260528T053526Z/submission_runtime_closure/repair_family_exact_handoff_frame0_k16_palette_asymmetry_psv3_2000ep_32pairs_frame0_k16_palette",
+  "target_kind": null,
+  "target_modes": [
+    "contest_exact_eval_planning"
+  ],
+  "targeted_correction_budget_signal": {
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "freed_bytes_require_receiver_and_exact_readiness_before_spend": true,
+    "gpu_launched": false,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "saved_bytes_at_risk": null,
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false
+  },
+  "tool": "tac.optimizer.materializer_submission_closure"
+}

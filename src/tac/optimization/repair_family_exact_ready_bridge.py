@@ -197,6 +197,7 @@ def _runtime_proof_from_row(row: Mapping[str, Any]) -> Mapping[str, Any]:
 
 def _submission_runtime_custody(
     *,
+    candidate_id: str | None = None,
     candidate_sha256: str | None,
     candidate_bytes: int | None,
     submission_dirs: Sequence[str | Path],
@@ -241,6 +242,20 @@ def _submission_runtime_custody(
                 local_blockers.append("submission_archive_bytes_mismatch")
         if not archive_manifest_path.is_file():
             local_blockers.append("submission_archive_manifest_missing")
+        else:
+            try:
+                archive_manifest = read_json(archive_manifest_path)
+            except (OSError, ValueError) as exc:
+                archive_manifest = {}
+                local_blockers.append(
+                    f"submission_archive_manifest_read_failed:{exc}"
+                )
+            if candidate_id and isinstance(archive_manifest, Mapping):
+                manifest_candidate_id = str(archive_manifest.get("candidate_id") or "")
+                if manifest_candidate_id and manifest_candidate_id != candidate_id:
+                    local_blockers.append(
+                        "submission_archive_manifest_candidate_id_mismatch"
+                    )
         if not report_txt.is_file():
             local_blockers.append("submission_report_txt_missing")
         if not inflate_sh.is_file():
@@ -346,6 +361,10 @@ def _bridge_row(
         expected_bytes = candidate_archive_row.get("bytes")
     if not isinstance(expected_bytes, int) or isinstance(expected_bytes, bool):
         expected_bytes = None
+    candidate_id = (
+        "repair_family_exact_handoff__"
+        f"{_slug(family_id)}__{_slug(typed_response_id)}"
+    )
     archive_custody, archive_blockers = _file_custody(
         path_text=str(candidate_archive_row.get("path") or ""),
         repo_root=repo_root,
@@ -367,6 +386,11 @@ def _bridge_row(
         proof_path_text=str(runtime_proof_row.get("path") or ""),
         repo_root=repo_root,
     )
+    receiver_contract_satisfied = (
+        proof_custody.get("custody_complete") is True
+        and not proof_payload_blockers
+        and proof_payload.get("receiver_contract_satisfied") is True
+    )
     source_archive = dict(_candidate_source_archive(proof_payload))
     candidate_archive = {
         "path": archive_custody.get("path"),
@@ -378,6 +402,7 @@ def _bridge_row(
         candidate_archive=candidate_archive,
     )
     submission_custody, submission_blockers = _submission_runtime_custody(
+        candidate_id=candidate_id,
         candidate_sha256=archive_custody.get("sha256")
         if isinstance(archive_custody.get("sha256"), str)
         else expected_sha,
@@ -391,10 +416,6 @@ def _bridge_row(
         submission_custody.get("archive_path")
         if submission_custody.get("custody_complete") is True
         else archive_custody.get("path")
-    )
-    candidate_id = (
-        "repair_family_exact_handoff__"
-        f"{_slug(family_id)}__{_slug(typed_response_id)}"
     )
     row_blockers = ordered_unique(
         [
@@ -440,11 +461,19 @@ def _bridge_row(
         "runtime_consumption_proof_path": proof_custody.get("path"),
         "runtime_consumption_proof_sha256": proof_custody.get("sha256"),
         "runtime_consumption_proof_required": True,
+        "runtime_consumption_proof_schema": proof_payload.get("schema"),
+        "runtime_consumption_proof_passed": (
+            proof_payload.get("runtime_consumption_proof_passed") is True
+            or proof_payload.get("passed") is True
+        ),
         "runtime_consumption_proof_status": (
             "archive_bound_proof_custody_present"
             if proof_custody.get("custody_complete") is True
             else "runtime_proof_custody_incomplete"
         ),
+        "receiver_contract_id": proof_payload.get("receiver_contract_id"),
+        "receiver_contract_kind": proof_payload.get("receiver_contract_kind"),
+        "receiver_contract_satisfied": receiver_contract_satisfied,
         "runtime_tree_sha256": submission_custody.get("runtime_tree_sha256"),
         "runtime_content_tree_sha256": submission_custody.get(
             "runtime_content_tree_sha256"

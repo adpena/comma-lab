@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -16,6 +17,10 @@ from comma_lab.scheduler.repair_campaign_materialization_queue import (
     REPAIR_CAMPAIGN_FAMILY_MATERIALIZER_MANIFEST_SCHEMA,
     build_repair_campaign_byte_closed_materialization_queue,
 )
+from tac.optimization.repair_archive_candidate_intake import (
+    REPAIR_ARCHIVE_CANDIDATE_INTAKE_SCHEMA,
+    build_repair_campaign_work_order_from_archives,
+)
 from tac.optimization.repair_campaign_chain_contract import (
     RepairCampaignChainContractError,
 )
@@ -26,6 +31,9 @@ from tac.optimization.repair_campaign_posterior import (
     REPAIR_CAMPAIGN_BLOCKED_POSTERIOR_APPEND_REPORT_SCHEMA,
 )
 from tac.optimization.repair_campaign_scorer import score_repair_campaign
+from tac.optimizer.materializer_submission_closure import (
+    build_materializer_submission_runtime_closures,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -215,6 +223,22 @@ def _write_json(path: Path, payload: dict[str, object]) -> Path:
     return path
 
 
+def _write_archive(path: Path) -> Path:
+    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("0.bin", b"PSV3" + bytes(range(32)))
+        zf.writestr("inflate.py", b"print('decode-only')\n")
+    return path
+
+
+def _write_runtime_dir(path: Path) -> Path:
+    path.mkdir(parents=True)
+    inflate_sh = path / "inflate.sh"
+    inflate_sh.write_text("#!/usr/bin/env bash\npython inflate.py \"$@\"\n", encoding="utf-8")
+    inflate_sh.chmod(0o755)
+    (path / "inflate.py").write_text("print('decode-only')\n", encoding="utf-8")
+    return path
+
+
 def test_byte_closed_materialization_queue_emits_archive_bound_steps(
     tmp_path: Path,
 ) -> None:
@@ -350,6 +374,170 @@ def test_byte_closed_materialization_queue_orders_allocations_by_entropy_stage(
     assert queue["metadata"]["entropy_pipeline_materialization_order"][1][
         "entropy_pipeline_stage_index"
     ] == 2
+
+
+def test_archive_candidate_intake_builds_real_archive_five_family_work_order(
+    tmp_path: Path,
+) -> None:
+    archive = _write_archive(tmp_path / "source_archive.zip")
+    training_artifact = _write_json(
+        tmp_path / "training_artifact.json",
+        {
+            "schema_version": "unit_mlx_training_artifact.v1",
+            "per_epoch_metrics": [{"loss": 1.0}, {"loss": 0.02}],
+            "total_epochs_completed": 2,
+            "total_wall_clock_seconds": 1.0,
+            "archive_path": str(archive),
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+    equivalence_gate = _write_json(
+        tmp_path / "equivalence_gate.json",
+        {
+            "schema_version": "unit_equivalence_gate.v1",
+            "axis_tag": "[macOS-MLX research-signal]",
+            "margin_below_threshold": 0.1,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+
+    work_order = build_repair_campaign_work_order_from_archives(
+        archive_paths=[archive],
+        output_dir=tmp_path / "intake",
+        repo_root=REPO_ROOT,
+        source_labels=["unit_psv3"],
+        training_artifact_paths=[training_artifact],
+        equivalence_gate_paths=[equivalence_gate],
+        chain_id="unit_real_archive_repair",
+        overwrite=True,
+    )
+
+    assert work_order["schema"] == (
+        "frontier_rate_attack_repair_budget_waterfill_work_order.v1"
+    )
+    intake = work_order["archive_candidate_intake"]
+    assert intake["schema"] == REPAIR_ARCHIVE_CANDIDATE_INTAKE_SCHEMA
+    assert intake["archive_count"] == 1
+    assert intake["typed_response_count"] == 5
+    families = {
+        row["correction_family"]
+        for row in work_order["typed_response_ledger"]["rows"]
+    }
+    assert families == {
+        "entropy_boundary_probe",
+        "frame0_k16_palette_asymmetry",
+        "per_region_selector_codec",
+        "posenet_null_bottom_decile",
+        "segnet_class_region_waterfill",
+    }
+    for row in work_order["typed_response_ledger"]["rows"]:
+        assert row["candidate_archive_path"]
+        assert row["runtime_consumption_proof_path"]
+        assert row["receiver_consumed"] is True
+        assert row["ready_for_exact_eval_dispatch"] is False
+    palette_row = next(
+        row
+        for row in work_order["typed_response_ledger"]["rows"]
+        if row["correction_family"] == "frame0_k16_palette_asymmetry"
+    )
+    assert palette_row["palette_dynamics_context"]["frame0_mode_count"] == 15
+    assert palette_row["palette_dynamics_context"]["frame1_mode_count"] == 0
+
+
+def test_real_archive_intake_runs_all_families_through_floor_loop(
+    tmp_path: Path,
+) -> None:
+    archive = _write_archive(tmp_path / "source_archive.zip")
+    work_order = build_repair_campaign_work_order_from_archives(
+        archive_paths=[archive],
+        output_dir=tmp_path / "intake",
+        repo_root=REPO_ROOT,
+        source_labels=["unit_psv3"],
+        chain_id="unit_real_archive_repair",
+        overwrite=True,
+    )
+    work_order_path = _write_json(tmp_path / "real_archive_work_order.json", work_order)
+    report = score_repair_campaign(payload=work_order, repo_root=REPO_ROOT)
+    assert report["optimizer_decision"]["selected_allocation_count"] == 5
+    report_path = _write_json(tmp_path / "real_archive_score_report.json", report)
+    queue = build_repair_campaign_byte_closed_materialization_queue(
+        repo_root=REPO_ROOT,
+        score_report=report,
+        score_report_path=report_path,
+        work_order_path=work_order_path,
+        results_root=tmp_path / "real_archive_results",
+        queue_id="unit_real_archive_repair_materialization",
+    )
+    queue_path = _write_json(tmp_path / "real_archive_queue.json", queue)
+    summary_path = tmp_path / "real_archive_floor_loop_summary.json"
+    posterior_path = tmp_path / "real_archive_floor_loop_posterior.jsonl"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "run_repair_campaign_autonomous_floor_loop.py"),
+            "--materialization-queue",
+            str(queue_path),
+            "--output-dir",
+            str(tmp_path / "real_archive_loop"),
+            "--summary-out",
+            str(summary_path),
+            "--posterior-path",
+            str(posterior_path),
+            "--posterior-lock-path",
+            str(tmp_path / ".real_archive_floor_loop_posterior.lock"),
+            "--execute-local",
+            "--require-all-queue-families",
+            "--worker-max-experiments-per-iteration",
+            "5",
+            "--max-steps-per-iteration",
+            "80",
+            "--max-iterations",
+            "1",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=120,
+    )
+
+    assert result.returncode == 0, result.stderr
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    assert summary["repair_family_coverage"]["coverage_satisfied"] is True
+    assert summary["archive_bound_exact_handoff_candidate_count"] == 5
+    assert summary["posterior_learning_signal_count"] == 5
+    assert summary["ready_for_exact_eval_dispatch"] is False
+    source_queue_path = tmp_path / "real_archive_loop" / "repair_family_exact_ready_source_queue.json"
+    source_queue = json.loads(source_queue_path.read_text(encoding="utf-8"))
+    assert {
+        row["receiver_contract_satisfied"] for row in source_queue["top_k"]
+    } == {True}
+    assert {
+        row["receiver_contract_kind"] for row in source_queue["top_k"]
+    } == {"family_agnostic_archive_zip_repack"}
+
+    runtime_dir = _write_runtime_dir(tmp_path / "runtime")
+    closure_report = build_materializer_submission_runtime_closures(
+        repo_root=REPO_ROOT,
+        source_queue_path=source_queue_path,
+        source_runtime_dir=runtime_dir,
+        submission_dir_out=tmp_path / "submission_runtime_closure",
+        closed_source_queue_out=tmp_path / "closed_repair_family_exact_ready_source_queue.json",
+        closure_report_out=tmp_path / "submission_runtime_closure_report.json",
+        overwrite=True,
+    )
+    assert closure_report["candidate_count"] == 5
+    assert {
+        row["materializer_submission_closure_kind"]
+        for row in closure_report["rows"]
+    } == {"source_runtime_static_closure_with_candidate_archive"}
 
 
 def test_byte_closed_materialization_queue_rejects_stale_optimizer_solver_contract(
