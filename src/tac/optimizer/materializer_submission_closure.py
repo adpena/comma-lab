@@ -1088,8 +1088,19 @@ def build_materializer_submission_runtime_closure(
             "archive_path": _repo_rel(archive_out, repo),
             "archive_sha256": archive_sha,
             "archive_bytes": archive_bytes,
+            "candidate_archive": {
+                "path": _repo_rel(archive_out, repo),
+                "sha256": archive_sha,
+                "bytes": archive_bytes,
+            },
+            "candidate_archive_path": _repo_rel(archive_out, repo),
+            "candidate_archive_sha256": archive_sha,
+            "candidate_archive_bytes": archive_bytes,
             "archive_manifest_path": _repo_rel(archive_manifest_path, repo),
             "runtime_consumption_proof_path": _repo_rel(proof_out, repo),
+            "runtime_consumption_proof_status": "present",
+            "receiver_contract_satisfied": True,
+            "runtime_adapter_ready": runtime_adapter_ready,
             "copied_runtime_file_count": len(copied_runtime_files),
             "copied_runtime_files": copied_runtime_files,
             "runtime_manifest": runtime_manifest,
@@ -1114,6 +1125,15 @@ def build_materializer_submission_runtime_closure(
             "contest_exact_auth_eval_required_before_score_claim",
         ],
     )
+    if runtime_adapter_ready:
+        report.update(
+            {
+                "candidate_runtime_dir": _repo_rel(runtime_source, repo),
+                "candidate_runtime_tree_sha256": adapter_runtime_tree_sha,
+                "expected_runtime_tree_sha256": adapter_runtime_tree_sha,
+                "runtime_adapter_manifest": dict(adapter_manifest),
+            }
+        )
     require_no_truthy_authority_fields(
         report,
         context="materializer_submission_closure_report",

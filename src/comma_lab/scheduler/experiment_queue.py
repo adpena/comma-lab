@@ -1230,6 +1230,20 @@ def _proof_candidate_archive_sha256(proof: Mapping[str, Any]) -> str | None:
     return None
 
 
+def _proof_is_full_frame_parity(proof: Mapping[str, Any]) -> bool:
+    return (
+        proof.get("full_frame_inflate_output_parity_claim") is True
+        and proof.get("cmp_equal") is True
+        and proof.get("output_sha256_match") is True
+    )
+
+
+def _proof_success_satisfied(proof: Mapping[str, Any]) -> bool:
+    return _proof_is_full_frame_parity(proof) or any(
+        proof.get(key) is True for key in PROOF_SUCCESS_FIELDS
+    )
+
+
 def _json_mapping_file(path: Path) -> Mapping[str, Any] | None:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
@@ -1268,7 +1282,7 @@ def _proof_record_valid(
         return False
     if truthy_authority_field_violations(proof):
         return False
-    if not any(proof.get(key) is True for key in PROOF_SUCCESS_FIELDS):
+    if not _proof_success_satisfied(proof):
         return False
     if expected_candidate_archive_sha256 is not None:
         proof_archive_sha = _proof_candidate_archive_sha256(proof)
@@ -1279,12 +1293,7 @@ def _proof_record_valid(
         isinstance(runtime_manifest, Mapping)
         and runtime_manifest.get("runtime_adapter_ready") is True
     )
-    proof_is_full_frame_parity = (
-        proof.get("full_frame_inflate_output_parity_claim") is True
-        and proof.get("cmp_equal") is True
-        and proof.get("output_sha256_match") is True
-    )
-    if require_runtime_identity and not proof_is_full_frame_parity:
+    if require_runtime_identity and not _proof_is_full_frame_parity(proof):
         if runtime_adapter_identity_blockers(
             proof,
             repo_root=repo_root,

@@ -312,10 +312,27 @@ def _proof_candidate_archive_sha256(proof: Mapping[str, Any]) -> str | None:
     candidate_archive = proof.get("candidate_archive")
     if isinstance(candidate_archive, Mapping) and _is_sha256(candidate_archive.get("sha256")):
         return str(candidate_archive["sha256"]).strip().lower()
+    right = proof.get("right")
+    if isinstance(right, Mapping) and _is_sha256(right.get("archive_sha256")):
+        return str(right["archive_sha256"]).strip().lower()
     for key in ("candidate_archive_sha256", "archive_sha256"):
         if _is_sha256(proof.get(key)):
             return str(proof[key]).strip().lower()
     return None
+
+
+def _proof_is_full_frame_parity(proof: Mapping[str, Any]) -> bool:
+    return (
+        proof.get("full_frame_inflate_output_parity_claim") is True
+        and proof.get("cmp_equal") is True
+        and proof.get("output_sha256_match") is True
+    )
+
+
+def _proof_success_satisfied(proof: Mapping[str, Any]) -> bool:
+    return _proof_is_full_frame_parity(proof) or any(
+        proof.get(key) is True for key in PROOF_SUCCESS_FIELDS
+    )
 
 
 def _runtime_identity_blockers(
@@ -363,7 +380,7 @@ def _proof_record_blockers(
         blockers.append(f"{context}_proof_json_blockers_present")
     if truthy_authority_field_violations(proof):
         blockers.append(f"{context}_proof_json_truthy_authority_present")
-    if not any(proof.get(key) is True for key in PROOF_SUCCESS_FIELDS):
+    if not _proof_success_satisfied(proof):
         blockers.append(f"{context}_proof_json_success_flag_missing")
     proof_archive_sha = _proof_candidate_archive_sha256(proof)
     if expected_candidate_archive_sha256 is not None:
@@ -376,7 +393,7 @@ def _proof_record_blockers(
         isinstance(runtime_manifest, Mapping)
         and runtime_manifest.get("runtime_adapter_ready") is True
     )
-    if require_runtime_identity:
+    if require_runtime_identity and not _proof_is_full_frame_parity(proof):
         blockers.extend(
             runtime_adapter_identity_blockers(
                 proof,

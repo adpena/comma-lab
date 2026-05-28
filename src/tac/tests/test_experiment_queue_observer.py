@@ -2951,6 +2951,93 @@ def test_observer_rejects_receiver_contract_only_proof_as_custody(
     )
 
 
+def test_observer_accepts_full_frame_parity_proof_as_runtime_custody(
+    tmp_path: Path,
+) -> None:
+    candidate_archive = _write_artifact_bytes(
+        tmp_path / "generic_candidate.zip",
+        b"generic custody candidate bytes",
+    )
+    proof_path = tmp_path / "full_frame_parity_proof.json"
+    proof_path.write_text(
+        json.dumps(
+            {
+                "schema": "full_frame_inflate_output_parity_proof.v1",
+                "full_frame_inflate_output_parity_claim": True,
+                "cmp_equal": True,
+                "output_sha256_match": True,
+                "right": {
+                    "archive_sha256": candidate_archive["sha256"],
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "blockers": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    artifact_path = tmp_path / "generic_custody.json"
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "schema": "generic_candidate_custody.v1",
+                "candidate_archive": candidate_archive,
+                "receiver_contract_satisfied": True,
+                "full_frame_inflate_parity_proof_path": proof_path.as_posix(),
+                "receiver_verification": {
+                    "schema": "full_frame_parity_verification.v1",
+                    "receiver_contract_satisfied": True,
+                    "proof_present": True,
+                    "proof_path": proof_path.as_posix(),
+                    "blockers": [],
+                },
+                "score_claim": False,
+                "score_claim_valid": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "promotable": False,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+                "gpu_launched": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    state = tmp_path / "queue.sqlite"
+    queue = _queue(artifact_path)
+    queue["experiments"][0]["steps"][0]["postconditions"][0]["equals"] = (
+        "generic_candidate_custody.v1"
+    )
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'succeeded',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-05-28T20:10:00Z'
+            WHERE queue_id = 'observer_test'
+              AND experiment_id = 'exp0'
+              AND step_id = 'smoke'
+            """,
+            (json.dumps({"command": ["python", "generic_custody.py"]}),),
+        )
+        conn.commit()
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=0,
+    )
+
+    assert observation["healthy"] is True
+    assert observation["succeeded_artifact_failure_steps"] == []
+
+
 def test_observer_accepts_succeeded_generic_custody_artifact_with_live_proof(
     tmp_path: Path,
 ) -> None:

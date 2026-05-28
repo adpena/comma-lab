@@ -572,6 +572,11 @@ def test_materializer_submission_closure_uses_proof_backed_runtime_adapter(
 
     submission = repo / "closure" / "submission"
     assert report["source_runtime_adapter_ready"] is True
+    assert report["receiver_contract_satisfied"] is True
+    assert report["runtime_adapter_ready"] is True
+    assert report["candidate_archive"]["sha256"] == candidate_sha
+    assert report["candidate_runtime_tree_sha256"] == adapter_runtime_sha
+    assert report["expected_runtime_tree_sha256"] == adapter_runtime_sha
     assert (
         report["materializer_submission_closure_kind"]
         == "runtime_adapter_closure_with_candidate_archive"
