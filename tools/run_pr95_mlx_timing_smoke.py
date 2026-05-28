@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
 import json
 import subprocess
@@ -98,6 +99,36 @@ def _write_json(path: Path, payload: dict[str, Any]) -> None:
     )
 
 
+def _sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        while chunk := fh.read(1 << 20):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _embedded_runtime_consumption_proof(payload: dict[str, Any]) -> dict[str, Any]:
+    """Keep embedded proof summaries from being parsed as extra proof records."""
+
+    return {
+        key: value
+        for key, value in payload.items()
+        if key
+        not in {
+            "archive_path",
+            "archive_bytes",
+            "archive_sha256",
+            "candidate_archive",
+            "path",
+            "bytes",
+            "sha256",
+            "proof_path",
+            "proof_bytes",
+            "proof_sha256",
+        }
+    }
+
+
 def _load_public_pr95_decoder_cls(model_path: Path) -> Any:
     model_path = Path(model_path)
     if not model_path.is_file():
@@ -127,8 +158,16 @@ def _mark_public_archive_export_runtime_consumed(
     public_archive_export["runtime_consumption_proof_present"] = True
     public_archive_export["runtime_consumption_proven"] = proven
     public_archive_export["runtime_consumption_proof_path"] = _rel(proof_path)
+    public_archive_export["runtime_consumption_proof_bytes"] = (
+        proof_path.stat().st_size
+    )
+    public_archive_export["runtime_consumption_proof_sha256"] = _sha256_file(
+        proof_path
+    )
     if not proven:
         return
+    public_archive_export["receiver_contract_satisfied"] = True
+    public_archive_export["receiver_proof_present"] = True
     refusal = public_archive_export.get("exact_readiness_refusal")
     if not isinstance(refusal, dict):
         return
@@ -1538,7 +1577,7 @@ def _representation_manifest(
             "pytorch_export_forward_parity": pytorch_export_forward_parity or {},
             "byte_closed_smoke_archive": archive_summary,
             "pr95_public_archive_export": public_archive_export,
-            "runtime_consumption_proof": runtime_consumption_proof or {},
+            "runtime_consumption_proof": manifest.get("runtime_consumption_proof", {}),
             "source_video_training_target": manifest.get(
                 "source_video_training_target",
                 {},
@@ -1858,6 +1897,10 @@ def main(argv: list[str] | None = None) -> int:
         else None
     )
     if public_archive_export is not None:
+        manifest["candidate_archive"] = public_archive_export["candidate_archive"]
+        manifest["archive_path"] = public_archive_export["archive_path"]
+        manifest["archive_bytes"] = public_archive_export["archive_bytes"]
+        manifest["archive_sha256"] = public_archive_export["archive_sha256"]
         _write_json(output_dir / "pr95_public_archive_export.json", public_archive_export)
 
     pytorch_export_forward_parity: dict[str, Any] | None = None
@@ -1926,19 +1969,28 @@ def main(argv: list[str] | None = None) -> int:
         if public_archive_export is None:
             raise SystemExit("--prove-pr95-runtime-consumption requires PR95 archive export")
         proof_path = output_dir / "runtime_consumption_proof.json"
+        proof_command = [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "prove_pr95_public_archive_runtime_consumption.py"),
+            "--archive-zip",
+            str(output_dir / "pr95_public_archive.zip"),
+            "--output-json",
+            str(proof_path),
+            "--timeout-seconds",
+            str(args.runtime_proof_timeout_seconds),
+            "--max-output-bytes",
+            str(args.runtime_proof_max_output_bytes),
+        ]
+        if args.allow_existing_output_dir and proof_path.exists():
+            proof_command.extend(
+                [
+                    "--allow-overwrite",
+                    "--expected-existing-sha256",
+                    _sha256_file(proof_path),
+                ]
+            )
         proof_result = subprocess.run(
-            [
-                sys.executable,
-                str(REPO_ROOT / "tools" / "prove_pr95_public_archive_runtime_consumption.py"),
-                "--archive-zip",
-                str(output_dir / "pr95_public_archive.zip"),
-                "--output-json",
-                str(proof_path),
-                "--timeout-seconds",
-                str(args.runtime_proof_timeout_seconds),
-                "--max-output-bytes",
-                str(args.runtime_proof_max_output_bytes),
-            ],
+            proof_command,
             cwd=REPO_ROOT,
             text=True,
             capture_output=True,
@@ -1951,8 +2003,15 @@ def main(argv: list[str] | None = None) -> int:
                 f"{proof_result.stderr or proof_result.stdout}"
             )
         runtime_consumption_proof = json.loads(proof_path.read_text(encoding="utf-8"))
-        manifest["runtime_consumption_proof"] = runtime_consumption_proof
+        manifest["runtime_consumption_proof"] = _embedded_runtime_consumption_proof(
+            runtime_consumption_proof
+        )
         manifest["runtime_consumption_proof_path"] = _rel(proof_path)
+        manifest["runtime_consumption_proof_bytes"] = proof_path.stat().st_size
+        manifest["runtime_consumption_proof_sha256"] = _sha256_file(proof_path)
+        if runtime_consumption_proof.get("runtime_consumption_proven") is True:
+            manifest["receiver_contract_satisfied"] = True
+            manifest["receiver_proof_present"] = True
         _mark_public_archive_export_runtime_consumed(
             public_archive_export,
             proof_path=proof_path,

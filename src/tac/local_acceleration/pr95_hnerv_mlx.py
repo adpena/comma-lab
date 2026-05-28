@@ -135,6 +135,7 @@ PR95_MLX_SOURCE_VIDEO_RGB_YUV6_BLOCKERS: tuple[str, ...] = (
 FALSE_AUTHORITY: dict[str, bool] = {
     "score_claim": False,
     "score_claim_valid": False,
+    "score_claim_eligible": False,
     "promotion_eligible": False,
     "rank_or_kill_eligible": False,
     "ready_for_exact_eval_dispatch": False,
@@ -142,6 +143,9 @@ FALSE_AUTHORITY: dict[str, bool] = {
     "dispatch_attempted": False,
     "gpu_launched": False,
     "dispatch_packet_ready": False,
+    "reproduction_claim": False,
+    "pr95_1to1_reproduction_claim": False,
+    "reproduction_equivalence": False,
 }
 
 EXACT_READINESS_REFUSAL_BLOCKERS: tuple[str, ...] = (
@@ -641,6 +645,14 @@ def write_pr95_public_archive_zip(
         "archive_zip_path": output_zip_path.as_posix(),
         "archive_zip_bytes": archive_zip_bytes,
         "archive_zip_sha256": archive_zip_sha256,
+        "archive_path": output_zip_path.as_posix(),
+        "archive_bytes": archive_zip_bytes,
+        "archive_sha256": archive_zip_sha256,
+        "candidate_archive": {
+            "path": output_zip_path.as_posix(),
+            "bytes": archive_zip_bytes,
+            "sha256": archive_zip_sha256,
+        },
         "path": output_zip_path.as_posix(),
         "bytes": archive_zip_bytes,
         "sha256": archive_zip_sha256,

@@ -91,6 +91,18 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Refuse predicted raw output above this size unless --allow-large-output.",
     )
     parser.add_argument("--allow-large-output", action="store_true")
+    parser.add_argument(
+        "--allow-overwrite",
+        action="store_true",
+        help=(
+            "Allow replacing --output-json only when "
+            "--expected-existing-sha256 matches the current file."
+        ),
+    )
+    parser.add_argument(
+        "--expected-existing-sha256",
+        help="Expected current SHA-256 for --output-json when --allow-overwrite is set.",
+    )
     return parser
 
 
@@ -146,6 +158,8 @@ def main(argv: list[str] | None = None) -> int:
     runtime_consumption_proven = (
         proc.returncode == 0 and raw_exists and raw_bytes == expected_bytes
     )
+    archive_zip_bytes = archive_zip.stat().st_size
+    archive_zip_sha256 = _sha256_file(archive_zip)
     output_json.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "schema": "pr95_hnerv_public_runtime_consumption_proof.v1",
@@ -154,6 +168,14 @@ def main(argv: list[str] | None = None) -> int:
         "lane_id": "lane_pr95_hnerv_mlx_reproduction",
         "source_pr": 95,
         "submission": "hnerv_muon",
+        "archive_path": archive_zip.as_posix(),
+        "archive_bytes": archive_zip_bytes,
+        "archive_sha256": archive_zip_sha256,
+        "candidate_archive": {
+            "path": archive_zip.as_posix(),
+            "bytes": archive_zip_bytes,
+            "sha256": archive_zip_sha256,
+        },
         "archive_packet": packet.custody_manifest(),
         "inflate_sh": inflate_sh.as_posix(),
         "runtime_files": _runtime_files(inflate_sh),
@@ -168,6 +190,7 @@ def main(argv: list[str] | None = None) -> int:
         "stderr_tail": proc.stderr[-4000:],
         "returncode": proc.returncode,
         "runtime_consumption_proven": runtime_consumption_proven,
+        "runtime_consumption_proof_passed": runtime_consumption_proven,
         "full_frame_inflate_parity": False,
         "exact_readiness_refusal": {
             "schema": "exact_readiness_refusal.v1",
@@ -180,7 +203,12 @@ def main(argv: list[str] | None = None) -> int:
         },
         **FALSE_AUTHORITY,
     }
-    write_json_artifact(output_json, payload)
+    write_json_artifact(
+        output_json,
+        payload,
+        allow_overwrite=args.allow_overwrite,
+        expected_existing_sha256=args.expected_existing_sha256,
+    )
     if not runtime_consumption_proven:
         return 1
     return 0

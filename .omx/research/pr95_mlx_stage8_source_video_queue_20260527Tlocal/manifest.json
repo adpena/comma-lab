@@ -1,0 +1,148 @@
+{
+  "authority_contract": {
+    "local_signal_axis": "[macOS-MLX research-signal]",
+    "promotion_authority": false,
+    "quality_authority": false,
+    "queue_authority": "experiment_queue.v1",
+    "rank_or_kill_authority": false,
+    "ready_for_exact_eval_dispatch": false,
+    "score_authority_requires": [
+      "pr95_hnerv_mlx_timing_smoke_is_local_training_signal_not_score",
+      "pr95_hnerv_mlx_training_is_synthetic_timing_only_not_source_faithful",
+      "pr95_source_video_loader_not_ported_to_mlx",
+      "pr95_eval_roundtrip_yuv6_preprocess_ported_but_scorer_loss_not_wired_to_mlx",
+      "pr95_stage_hparams_and_cosine_schedules_not_all_source_matched",
+      "pr95_qat_c1a_and_resume_semantics_not_ported_to_mlx",
+      "pr95_export_forward_parity_not_established",
+      "synthetic_targets_do_not_establish_contest_quality",
+      "byte_closed_smoke_archive_not_consumed_by_pr95_runtime",
+      "runtime_consumption_proof_missing",
+      "receiver_proof_missing",
+      "requires_pytorch_export_forward_parity_on_source_checkpoint",
+      "requires_byte_closed_contest_archive_export",
+      "requires_exact_cpu_cuda_auth_eval_before_score_claim"
+    ],
+    "score_claim": false
+  },
+  "base_channels": 36,
+  "batch_size": 1,
+  "control_profile": null,
+  "dispatch_attempted": false,
+  "dispatch_packet_ready": false,
+  "execution_commands": {
+    "init": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      "<queue-output>",
+      "init"
+    ],
+    "run_worker_execute": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      "<queue-output>",
+      "run-worker",
+      "--execute",
+      "--max-parallel",
+      "0"
+    ],
+    "validate": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      "<queue-output>",
+      "validate"
+    ]
+  },
+  "generated_at_utc": "2026-05-28T01:20:05Z",
+  "gpu_launched": false,
+  "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+  "latent_dim": 28,
+  "output_root": "/Volumes/VertigoDataTier/experiments/results/pr95_mlx_stage8_source_video_queue_20260527Tlocal",
+  "plan_count": 1,
+  "plans": [
+    {
+      "candidate_id": "pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed913_steps1_c36_source_video_rgb_yuv6",
+      "dispatch_attempted": false,
+      "dispatch_packet_ready": false,
+      "gpu_launched": false,
+      "matrix_cell_id": "bb2529af481108fba713cf7e11ae5179303b213cf049cb79b72237d287b35b9b",
+      "optimizer_config_sha256": "c5d401d14216813875097611f6cb5a5582239d1b2bb1804d3bc9edd005acc3af",
+      "optimizer_descriptor_id": "pr95_stage8_muon_adamw_mlx",
+      "plan": "/Volumes/VertigoDataTier/experiments/results/pr95_mlx_stage8_source_video_queue_20260527Tlocal/stage8/pr95_stage8_muon_adamw_mlx/seed913_c36_bb2529af4811/plan.json",
+      "promotable": false,
+      "promotion_eligible": false,
+      "queued": true,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "representation_training_plan": "/Volumes/VertigoDataTier/experiments/results/pr95_mlx_stage8_source_video_queue_20260527Tlocal/stage8/pr95_stage8_muon_adamw_mlx/seed913_c36_bb2529af4811/representation_training_plan.json",
+      "run_manifest": "/Volumes/VertigoDataTier/experiments/results/pr95_mlx_stage8_source_video_queue_20260527Tlocal/stage8/pr95_stage8_muon_adamw_mlx/seed913_c36_bb2529af4811/manifest.json",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "seed": 913,
+      "stage_index": 8,
+      "stage_module": "stage8_muon_finetune",
+      "steps": 1
+    }
+  ],
+  "promotable": false,
+  "promotion_eligible": false,
+  "prove_pr95_runtime_consumption": true,
+  "pytorch_export_mlx_device": "cpu",
+  "pytorch_export_sample_indices": [
+    0
+  ],
+  "queue_controls": {
+    "local_first": true,
+    "max_concurrency": {
+      "local_cpu": 1,
+      "local_cuda": 1,
+      "local_mlx": 1,
+      "local_mps": 1
+    },
+    "mode": "running"
+  },
+  "queue_id": "pr95_mlx_stage8_source_video_queue_20260527Tlocal",
+  "queue_output": ".omx/research/pr95_mlx_stage8_source_video_queue_20260527Tlocal/queue.json",
+  "queue_output_sha256": "43fee7f1348cda5aceeeed20791e5a7cae4acc5392dd9c57067b365a933fd084",
+  "queue_schema": "experiment_queue.v1",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "refusal_count": 0,
+  "refusals": [],
+  "runtime_proof_max_output_bytes": 67108864,
+  "runtime_proof_timeout_seconds": 180.0,
+  "schema": "pr95_hnerv_mlx_optimizer_matrix_queue.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "seeds": [
+    913
+  ],
+  "source_preprocess_camera_hw": "874,1164",
+  "source_preprocess_gradient_shape": "1,2,16,20,3",
+  "source_preprocess_shape": "1,2,384,512,3",
+  "source_video_gradient_shape": "1,2,16,20,3",
+  "source_video_loss_surface": "rgb_yuv6_mse",
+  "source_video_output_hw": "384,512",
+  "source_video_pair_indices": [
+    0
+  ],
+  "source_video_path": "upstream/videos/0.mkv",
+  "source_video_upstream_dir": "upstream",
+  "stage_indices": [
+    8
+  ],
+  "step_counts": [
+    1
+  ],
+  "steps": 1,
+  "synthetic_pairs": 1,
+  "timeout_seconds": 900,
+  "train_on_source_video_pairs": true,
+  "write_byte_closed_smoke": true,
+  "write_pr95_public_archive_export": true,
+  "write_pytorch_export_parity": true,
+  "write_source_faithful_preprocess_smoke": false,
+  "write_source_video_preprocess_smoke": true
+}
