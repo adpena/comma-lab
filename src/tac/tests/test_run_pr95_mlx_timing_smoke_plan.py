@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import sys
@@ -441,6 +442,8 @@ def test_pr95_mlx_plan_only_can_write_execution_queue(tmp_path: Path) -> None:
 
     assert summary["execution_queue"].endswith("queue.json")
     assert summary["execution_queue_id"] == queue["queue_id"]
+    expected_suffix = hashlib.sha256(str(output_dir.resolve()).encode("utf-8")).hexdigest()[:10]
+    assert queue["queue_id"].endswith(f"_{expected_suffix}")
     assert summary["execution_queue_experiment_count"] == 1
     assert queue["schema"] == "experiment_queue.v1"
     assert queue["controls"]["max_concurrency"]["local_mlx"] == 2

@@ -108,6 +108,11 @@ def _safe_queue_id(value: str) -> str:
     return re.sub(r"[^a-z0-9_]+", "_", value.lower()).strip("_") or "pr95_mlx"
 
 
+def _default_execution_queue_id(plan: dict[str, Any], output_dir: Path) -> str:
+    output_digest = hashlib.sha256(_rel(output_dir).encode("utf-8")).hexdigest()[:10]
+    return _safe_queue_id(f"pr95_mlx_control_arm_{plan['candidate_id']}_{output_digest}")
+
+
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
@@ -2737,9 +2742,7 @@ def main(argv: list[str] | None = None) -> int:
         execution_queue_path = args.execution_queue_output or output_dir / "queue.json"
         execution_queue: dict[str, Any] | None = None
         if write_execution_queue:
-            queue_id = args.execution_queue_id or _safe_queue_id(
-                f"pr95_mlx_control_arm_{plan['candidate_id']}"
-            )
+            queue_id = args.execution_queue_id or _default_execution_queue_id(plan, output_dir)
             execution_queue = build_local_training_execution_queue(
                 [plan],
                 queue_id=queue_id,

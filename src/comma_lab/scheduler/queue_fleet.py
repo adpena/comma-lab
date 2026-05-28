@@ -261,6 +261,8 @@ def _compact_row_sample(row: Mapping[str, Any]) -> dict[str, Any]:
         "blockers",
         "status_counts",
         "recommended_action",
+        "conflict_status_before",
+        "identity_conflict",
     ):
         value = row.get(key)
         if value not in (None, {}, [], ""):
@@ -380,6 +382,51 @@ def queue_fleet_row(
     }
 
 
+def _prepend_unique(existing: Iterable[Any], additions: Sequence[str]) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for value in [*additions, *[str(item) for item in existing if str(item)]]:
+        if value in seen:
+            continue
+        seen.add(value)
+        out.append(value)
+    return out
+
+
+def annotate_identity_conflicts(rows: Sequence[dict[str, Any]]) -> None:
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        queue_id = row.get("queue_id")
+        if not isinstance(queue_id, str) or not queue_id.strip():
+            continue
+        if row.get("status") in {"INVALID_QUEUE", NON_EXECUTABLE_QUEUE_ARTIFACT_STATUS}:
+            continue
+        groups.setdefault(queue_id, []).append(row)
+    for queue_id, group in groups.items():
+        queue_paths = sorted({str(row.get("queue_path") or "") for row in group if row.get("queue_path")})
+        if len(queue_paths) <= 1:
+            continue
+        states = sorted({str(row.get("state") or "") for row in group if row.get("state")})
+        blockers = [f"experiment_queue_fleet_duplicate_queue_id:{queue_id}:paths={len(queue_paths)}"]
+        if len(states) == 1 and states[0]:
+            blockers.append(f"experiment_queue_fleet_shared_state:{states[0]}:paths={len(queue_paths)}")
+        conflict = {
+            "queue_id": queue_id,
+            "queue_path_count": len(queue_paths),
+            "queue_paths": queue_paths,
+            "state_count": len(states),
+            "states": states,
+        }
+        for row in group:
+            row["conflict_status_before"] = row.get("status")
+            row["identity_conflict"] = conflict
+            row["status"] = "NEEDS_RECOVERY"
+            row["priority"] = _priority("NEEDS_RECOVERY")
+            row["recommended_action"] = "split_or_migrate_duplicate_queue_id_before_supervision"
+            row["blockers"] = _prepend_unique(row.get("blockers") or [], blockers)
+            row["blocker_count"] = len(row["blockers"])
+
+
 def queue_fleet_status(
     repo_root: str | Path,
     roots: Sequence[str | Path] | None = None,
@@ -405,6 +452,7 @@ def queue_fleet_status(
         )
         for path in paths
     ]
+    annotate_identity_conflicts(rows)
     rows.sort(key=lambda row: (int(row.get("priority") or 999), str(row.get("queue_path") or "")))
     counts = Counter(str(row.get("status") or "UNKNOWN") for row in rows)
     actionable = [

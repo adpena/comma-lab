@@ -258,6 +258,48 @@ def test_queue_fleet_init_missing_initializes_missing_state(tmp_path: Path, caps
     assert payload["score_claim"] is False
 
 
+def test_queue_fleet_flags_duplicate_queue_id_shared_state(tmp_path: Path, capsys) -> None:
+    tool = _load_queue_fleet_tool()
+    first_root = tmp_path / "first"
+    second_root = tmp_path / "second"
+    first_root.mkdir()
+    second_root.mkdir()
+    first_queue, _first_artifact = _queue_file(first_root)
+    second_queue, _second_artifact = _queue_file(second_root)
+    state_root = tmp_path / "state"
+    state = _init_state(first_queue, state_root)
+
+    rc = tool.main(
+        [
+            "--root",
+            str(tmp_path),
+            "--state-root",
+            str(state_root),
+            "status",
+            "--format",
+            "json",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert rc == 0
+    assert payload["status_counts"] == {"NEEDS_RECOVERY": 2}
+    assert payload["needs_recovery_count"] == 2
+    rows = sorted(payload["rows"], key=lambda row: row["queue_path"])
+    assert {row["queue_path"] for row in rows} == {
+        str(first_queue),
+        str(second_queue),
+    }
+    for row in rows:
+        assert row["status"] == "NEEDS_RECOVERY"
+        assert row["recommended_action"] == "split_or_migrate_duplicate_queue_id_before_supervision"
+        assert row["identity_conflict"]["queue_id"] == "unit_fleet_queue"
+        assert row["identity_conflict"]["queue_path_count"] == 2
+        assert row["identity_conflict"]["states"] == [str(state)]
+        assert row["blockers"][0] == "experiment_queue_fleet_duplicate_queue_id:unit_fleet_queue:paths=2"
+        assert row["blockers"][1].startswith("experiment_queue_fleet_shared_state:")
+
+
 def test_queue_fleet_supervise_plan_only_preserves_queue(tmp_path: Path, capsys) -> None:
     tool = _load_queue_fleet_tool()
     queue_path, artifact = _queue_file(tmp_path)
