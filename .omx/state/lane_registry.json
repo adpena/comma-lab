@@ -17053,7 +17053,8 @@
       "level": 1,
       "name": "Score-Aware NeRV Extended substrate (sane_hnerv) \u2014 council-approved primary substrate",
       "notes": "archive_grammar=monolithic_single_file_0.bin_fixed_offsets parser_section_manifest=parse_archive(bytes)->(decoder_sd,latents,meta) inflate_runtime_loc_budget=<=100_LOC runtime_dep_closure=torch,brotli export_format=brotli_state_dict+int16_latents+utf8_json_meta score_aware_loss=alpha*B/N+beta*d_seg+gamma*sqrt(d_pose) bolt_on_loc_budget=~530_substrate_engineering no_op_detector_planned=Catalog_139_byte_mutation_smoke score_aware_substrate=true research_only=false lane_class=substrate_engineering",
-      "phase": 2.0
+      "phase": 2.0,
+      "lane_class": "substrate_engineering"
     },
     {
       "gates": {
@@ -60547,5 +60548,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-28T22:56:23Z"
+  "updated_at": "2026-05-28T23:41:30Z"
 }
