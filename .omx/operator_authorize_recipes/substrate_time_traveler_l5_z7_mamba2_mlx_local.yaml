@@ -1,0 +1,206 @@
+schema_version: 1
+name: substrate_time_traveler_l5_z7_mamba2_mlx_local
+lane_id: lane_slot_1_z7_mamba2_hinton_distill_600pair_long_mlx_20260528
+
+# Z7-Mamba-2 MLX-FIRST L1 SCAFFOLD per Catalog #240. Sister of Z6-v2 canonical
+# pose-axis pattern (Wave N+5 3.74x reduction at 50ep/600pair/MLX-LOCAL).
+# Slot 1 of cap=2 atomic-pairing 2026-05-28.
+#
+# Per the canonical landing memo at:
+#   .omx/research/z7_mamba2_state_space_hinton_distill_600pair_long_mlx_landed_20260528.md
+# The MLX-FIRST `_full_main` is BLOCKED per landing memo §10 until the
+# Z7Mamba2MLXNativeRenderer -> mlx.nn.Module migration completes.
+#
+# The existing canonical Modal A100 PyTorch recipe at:
+#   .omx/operator_authorize_recipes/substrate_time_traveler_l5_z7_mamba2_modal_a100_dispatch.yaml
+# remains the canonical PyTorch-side dispatch surface. THIS MLX-LOCAL recipe
+# is the $0 GPU sister per CLAUDE.md MLX-FIRST 8th standing directive 2026-05-26.
+
+research_only: true
+# Per Catalog #240: trainer's `_full_main` raises NotImplementedError until
+# migration completes; recipe MUST opt out of dispatch per the canonical
+# recipe-vs-trainer-state consistency contract. The smoke path WORKS today
+# (renderer + 1 forward pass; non-promotable per Catalog #192/#317/#341).
+dispatch_enabled: false
+smoke_only: false
+dispatch_blockers:
+  - z7_mamba2_mlx_first_full_main_requires_mlx_module_migration_per_landing_memo_section_10
+  - z7_mamba2_mlx_module_migration_requires_byte_parity_tests_vs_existing_Z7Mamba2MLXNativeRenderer_export_state_dict
+  - z7_mamba2_mlx_first_archive_candidate_bridge_to_Z7MCM2_pending_post_migration
+  - z7_mamba2_first_empirical_anchor_to_canonical_equation_z7_mamba2_state_space_predictive_coding_pose_axis_savings_v1_pending_post_migration
+
+summary: |
+  Z7-Mamba-2 MLX-FIRST L1 SCAFFOLD sister of Z6-v2 cooperative-receiver pose-
+  axis canonical pattern. Slot 1 of cap=2 atomic-pairing 2026-05-28 per the
+  operator mandate: "Z7-Mamba-2 (Mamba state-space replacement of HNeRV
+  blocks) + Hinton-distilled scorer surrogate + 600-pair MLX-LOCAL canonical
+  pattern. Sister pose-axis substrate per Catalog #312 hierarchical
+  predictive coding canonical quadruple. Alternative to Z6-v2 (3.74x pose-
+  axis reduction CONFIRMED today Wave N+5)."
+
+  This recipe is the $0 GPU MLX-FIRST sister of the existing canonical Modal
+  A100 PyTorch recipe `substrate_time_traveler_l5_z7_mamba2_modal_a100_dispatch.yaml`.
+  Per CLAUDE.md "MLX-FIRST" standing directive 2026-05-26 + 11th INDIVIDUALLY-
+  FRACTAL standing directive 2026-05-27: each substrate gets its own MLX-LOCAL
+  trainer wired through the canonical mlx_score_aware harness + Hinton-
+  distilled scorer surrogate teacher.
+
+  CURRENT STATE: L1 SCAFFOLD. The `_smoke_main` path WORKS today (renderer
+  constructs end-to-end + 1 forward pass; non-promotable per Catalog
+  #192/#317/#341). The `_full_main` path raises NotImplementedError per
+  Catalog #240 until the Z7Mamba2MLXNativeRenderer -> mlx.nn.Module migration
+  completes per landing memo §10 "Operator-routable next".
+
+platform: local-mps  # M5 Max Apple Silicon; $0 GPU per CLAUDE.md MLX-FIRST
+gpu: "macos_arm64_mlx"
+min_smoke_gpu: "macos_arm64_mlx"
+min_vram_gb: 0  # MLX-LOCAL uses unified memory; no discrete VRAM requirement
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - research_substrate
+
+horizon_class: asymptotic_pursuit
+canary_status: independent_substrate
+
+active_dispatch_contract: z7_mamba2_mlx_first_research_gate
+dispatch_contracts:
+  - id: z7_mamba2_mlx_first_research_gate
+    archive_role: planned_z7mcm2_monolithic_payload_post_mlx_first_migration
+    builder_surface: experiments/train_substrate_time_traveler_l5_z7_mamba2_mlx_local.py
+    status: l1_scaffold_smoke_works_full_main_blocked_pending_mlx_module_migration
+    exact_eval_path: blocked_pending_mlx_module_migration_then_paired_cpu_cuda_per_catalog_246
+    blocker_basis: .omx/research/z7_mamba2_state_space_hinton_distill_600pair_long_mlx_landed_20260528.md
+
+cost_band:
+  epochs: 100
+  predicted_cost_usd: 0.0  # $0 GPU per CLAUDE.md MLX-FIRST
+  hand_calibrated_fallback_p50_usd: 0.0
+  platform_key: local-mps
+  gpu_key: macos_arm64_mlx
+  smoke_score_band: [0.13, 0.25]
+  predicted_cuda_band: [0.167, 0.184]
+  all_flags_on: true
+
+predicted_score_target: null
+predicted_band: [0.167, 0.184]
+predicted_band_kind: predicted_score_band
+predicted_band_axis: contest-CPU
+predicted_band_validation_status: pending_post_training
+predicted_band_reactivation_criteria: |
+  Z7-Mamba-2's [0.167, 0.184] score band is a research prior from the
+  Z7-Mamba-2 design memo + deep-research wave TOP-5 #2 (Dao-Gu 2024 sister-
+  architecture prior; sister of the existing canonical Modal A100 recipe
+  predicted-band declaration). It may rank Wave-N+8/N+9 planning only while
+  research_only=true and dispatch_enabled=false. Spend/promotion requires:
+  (1) Z7Mamba2MLXNativeRenderer -> mlx.nn.Module migration lands per landing
+  memo §10; (2) byte-parity tests vs existing Z7Mamba2MLXNativeRenderer
+  export_state_dict; (3) MLX-FIRST `_full_main` body replaces
+  NotImplementedError with the canonical Z6-v2 pattern at
+  experiments/train_substrate_z6_v2_cargo_cult_unwind_mlx_local.py
+  lines 116-272; (4) archive_candidate.py MLX state_dict -> Z7MCM2 bridge
+  lands; (5) 600-pair MLX-LOCAL ~2000 epoch training produces first empirical
+  anchor APPENDED to canonical equation
+  z7_mamba2_state_space_predictive_coding_pose_axis_savings_v1; (6) per-axis
+  decomposition vs Z6-v2 paired-anchor comparison surfaced; (7) post-training
+  Tier-C density paired exact-eval evidence harvested under lane claim
+  custody per Catalog #226 + #245 modal_call_id_ledger for paradigm-level
+  ratification.
+
+predicted_delta_s_band: [-0.025, -0.008]
+predicted_delta_s_axis: contest-CPU
+predicted_delta_s_basis: |
+  Per the canonical landing memo §5 "Predicted ΔS band (Catalog #296
+  Dykstra-feasibility check)": Dykstra intersection across (a) Mamba-2
+  selective state-space bit-savings ~10-20% rate axis [-0.0015, -0.003];
+  (b) cooperative-receiver pose-axis temporal prediction (sister of Z6-v2
+  Wave N+5 anchor 3.74x reduction) [-0.010, -0.020]; (c) Mamba-2 selectivity
+  gating advantage at longer sequences (~600 pairs). HIGH VARIANCE pending
+  paired CPU/CUDA empirical anchor per Catalog #246 + #324.
+
+provenance_kind: predicted_from_model
+literature_anchor: |
+  Mamba-2 (Dao-Gu 2024, arxiv 2405.21060) selective state-space sequence model;
+  Atick-Redlich cooperative-receiver theorem; Rao-Ballard predictive coding;
+  Hafner DreamerV3 latent dynamics; sister of Z6-v2 cooperative-receiver
+  pose-axis canonical equation z6_v2_predictive_coding_pose_axis_savings_v1
+  (Wave N+5 empirical anchor 3.74x reduction); Z7-Mamba-2 substrate design
+  memo .omx/research/z7_mamba2_substrate_design_memo_20260518.md.
+
+source_supports: |
+  Dao-Gu 2024 Section 4.2: ~10-20% bit savings vs GRU/LSTM at equal
+  reconstruction quality. Z6-v2 Wave N+5 empirical anchor 3.74x pose-axis
+  reduction within cooperative-receiver paradigm class (THIS substrate is
+  the sister-architecture probe per Catalog #308 N>=3 alternative-probe-
+  methodology). Wave N+6 TRIPLE composition alpha=0.9548 validates the
+  pose-axis orthogonality hypothesis at first-order Volterra.
+
+paper_claim_scope: |
+  This recipe is NOT a score claim. It is a launchable empirical probe SCAFFOLD
+  for the Z7-Mamba-2 sister-architecture hypothesis. The MLX-LOCAL `_smoke`
+  validates renderer construction + 1 forward pass only (research-signal per
+  Catalog #192/#317/#341 [macOS-MLX research-signal]; score_claim=false). The
+  `_full_main` body is BLOCKED per Catalog #240 pending the Z7Mamba2MLXNative
+  Renderer -> mlx.nn.Module migration per landing memo §10. Promotion requires:
+  (1) post-migration first empirical anchor APPENDED to canonical equation
+  z7_mamba2_state_space_predictive_coding_pose_axis_savings_v1; (2) paired
+  CPU/CUDA exact-eval via the canonical exact-eval dispatcher per Catalog
+  #246 + #324; (3) lane claim custody per Catalog #226 + #245
+  modal_call_id_ledger.
+
+pact_must_prove: |
+  Wave N+9 quad composition (Z6-v2 + Z7-Mamba-2 + NSCS06 v8 + Compound C)
+  predicted sub-0.15 candidate cascade per landing memo §11 + Wave N+6 TRIPLE
+  alpha=0.9548 extension. The Z7-Mamba-2 sister-architecture probe must
+  empirically prove that the Mamba-2 selective state-space encoder-side
+  temporal prediction produces an orthogonal pose-axis ΔS distinct from
+  Z6-v2's 2-level Rao-Ballard FiLM-ego-motion predictor at the SAME
+  50ep/600pair/MLX-LOCAL operating point (Catalog #308 alternative-probe-
+  methodology enumeration).
+
+decode_complexity_evidence: |
+  Z7MCM2 archive grammar canonical at src/tac/substrates/time_traveler_l5_z7_mamba2/archive.py;
+  inflate runtime <= 200 LOC at src/tac/substrates/time_traveler_l5_z7_mamba2/inflate.py
+  per HNeRV parity discipline L4 + Catalog #328; canonical select_inflate_device
+  per Catalog #205; PYTHONPATH self-contained per Catalog #295; emits expected
+  frame count per Catalog #367 (1164x874x1200x3 = 3,662,409,600 bytes).
+
+smoke_before_full: false  # smoke is the only runnable path until migration
+
+operator_required_flags:
+  TIER_1_OPERATOR_REQUIRED_FLAGS:
+    - --num-pairs
+    - --epochs
+    - --video-path
+
+notes: |
+  This recipe is the MLX-LOCAL $0 GPU sister of the existing canonical Modal
+  A100 PyTorch recipe (substrate_time_traveler_l5_z7_mamba2_modal_a100_dispatch.yaml).
+  Both recipes are research_only=true + dispatch_enabled=false until their
+  respective trainer paths are BUILT (Modal A100 needs Wave N+1 council; MLX-
+  LOCAL needs the mlx.nn.Module migration). The MLX-LOCAL path is the $0 GPU
+  fast-feedback loop per CLAUDE.md MLX-FIRST 8th standing directive; the
+  Modal A100 path is the canonical paid-dispatch surface per Catalog #246
+  paired CPU/CUDA.
+
+  Recommended runs (RUNNABLE smoke; BLOCKED full):
+    # Smoke (works today; renderer + 1 forward pass):
+    .venv/bin/python experiments/train_substrate_time_traveler_l5_z7_mamba2_mlx_local.py \
+        --smoke --num-pairs 4 --output-dir .omx/research/z7_mamba2_mlx_smoke_<utc>
+
+    # Full (BLOCKED per Catalog #240 + landing memo §10; raises NotImplementedError):
+    .venv/bin/python experiments/train_substrate_time_traveler_l5_z7_mamba2_mlx_local.py \
+        --full --num-pairs 600 --epochs 2000 \
+        --output-dir .omx/research/z7_mamba2_mlx_long_<utc>
+
+  Post-migration unlock path per landing memo §10:
+    1. Author src/tac/substrates/time_traveler_l5_z7_mamba2/mlx_module.py
+       (Z7Mamba2MLXModule wrapping the existing parameter set as
+        mlx.nn.Module submodules)
+    2. Byte-parity tests vs existing Z7Mamba2MLXNativeRenderer.export_state_dict
+    3. Replace _full_main NotImplementedError with canonical Z6-v2 pattern
+    4. archive_candidate.py MLX state_dict -> Z7MCM2 bridge
+    5. Run 600-pair MLX-LOCAL ~2000 epoch on M5 Max
+    6. APPEND empirical anchor to canonical equation
+       z7_mamba2_state_space_predictive_coding_pose_axis_savings_v1
+    7. Wave N+9 quad composition test per landing memo §11
