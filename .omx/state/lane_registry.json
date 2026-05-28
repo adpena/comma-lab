@@ -59950,6 +59950,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_pact_nerv_long_run_mlx_local_closure_20260528",
+      "name": "PACT-NeRV-IA3 MLX-LOCAL LONG-RUN closure (Stage 1 canonical; ULTIMATE STAIRCASE Variant #1)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/pact_nerv_ia3/mlx_renderer.py (MLX renderer 56198 params; PyTorch state_dict export via export_state_dict()) + experiments/train_substrate_pact_nerv_ia3_mlx_local.py (MLX-LOCAL trainer routing through canonical mlx_score_aware harness); MLX-LOCAL 2000ep wall=126s on M5 Max convergence 0.338->0.0024 = 140x reduction at [macOS-MLX research-signal]; research_only=true per Catalog #192/#317/#341; promotion path = MLX state_dict -> PyTorch bridge -> PIA3 archive -> contest-equivalence gate Catalog #1265 -> operator paid CUDA dispatch"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/pact_nerv_long_run_mlx_local_closure_landed_20260528.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; lane_class=substrate_engineering; MLX-LOCAL only ([macOS-MLX research-signal] per Catalog #192/#317/#341); 2000ep convergence 0.338 -> 0.0024 (140x reduction; log-log slope -1.10) in 126s on M5 Max; 56198 params; archive_grammar=PIA3 (sister PyTorch); parser_section_manifest=PIA3; inflate_runtime_loc_budget<=200; runtime_dep_closure=numpy+PIL (no MLX dep); export_format=PIA3; score_aware_loss=mlx_score_aware harness reconstruction+optional Hinton-KL T=2.0; bolt_on_loc_budget=~150 LOC IA3 modulation; no_op_detector_planned=Catalog #105/#139/#220 sister via PIA3 byte mutation"
     }
   ],
   "level_rules": {
@@ -59959,5 +60000,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-28T03:00:28Z"
+  "updated_at": "2026-05-28T03:24:21Z"
 }
