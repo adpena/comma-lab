@@ -18,8 +18,10 @@ from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
     EXACT_READINESS_REFUSAL_BLOCKERS,
     FALSE_AUTHORITY,
     PR95_MLX_BACKEND_STATUS_LOCAL_TIMING_PROXY,
+    PR95_MLX_CONV2D_ACCUMULATION_MODES,
     PR95_MLX_LOSS_SURFACE_RGB_MSE,
     PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE,
+    PR95_MLX_OPTIMIZED_CONV2D_ACCUMULATION_MODE,
     PR95_MLX_PYTORCH_EXPORT_FORWARD_PARITY_SCHEMA,
     PR95_MLX_SOURCE_FAITHFUL_BLOCKERS,
     PR95_MLX_SOURCE_VIDEO_RGB_BLOCKERS,
@@ -166,6 +168,22 @@ def test_decoder_output_shape_and_pytorch_state_names() -> None:
     assert "skips.2.weight" in exported
 
 
+def test_decoder_supports_shared_fixed_order_conv2d_accumulation_mode() -> None:
+    assert PR95_MLX_OPTIMIZED_CONV2D_ACCUMULATION_MODE in PR95_MLX_CONV2D_ACCUMULATION_MODES
+    model = HNeRVDecoderMLX(base_channels=4, conv2d_accumulation_mode="kahan_fp32")
+    z = mx.zeros((1, 28))
+
+    y = model(z)
+    mx.eval(y)
+    exported = pytorch_state_dict_from_mlx(model)
+    manifest = model.architecture_manifest()
+
+    assert y.shape == (1, 2, 3, 384, 512)
+    assert manifest["conv2d_accumulation_mode"] == "kahan_fp32"
+    assert exported["blocks.0.weight"].shape == (16, 4, 3, 3)
+    assert exported["rgb_1.weight"].shape == (3, 2, 3, 3)
+
+
 def test_public_pr95_pytorch_state_load_matches_mlx_forward() -> None:
     torch = pytest.importorskip("torch")
     module = _load_public_pr95_model_module()
@@ -237,11 +255,13 @@ def test_public_pr95_archive_packet_mlx_cpu_forward_parity_probe() -> None:
         module.HNeRVDecoder,
         sample_indices=[0],
         mlx_device="cpu",
+        conv2d_accumulation_mode="kahan_fp32",
     )
 
     assert result["schema"] == "pr95_hnerv_public_archive_mlx_forward_parity.v1"
     assert result["sample_indices"] == [0]
     assert result["mlx_device"] == "cpu"
+    assert result["conv2d_accumulation_mode"] == "kahan_fp32"
     assert result["parity"]["passed"] is True
     assert result["parity"]["max_abs"] <= 2e-3
     assert result["parity"]["mean_abs"] <= 1e-4

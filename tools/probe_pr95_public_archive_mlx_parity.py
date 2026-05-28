@@ -63,6 +63,12 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--atol-max", type=float, default=2e-3)
     parser.add_argument("--atol-mean", type=float, default=1e-4)
+    parser.add_argument(
+        "--conv2d-accumulation-mode",
+        choices=("optimized", "fixed_fp32", "kahan_fp32", "fixed_fp64"),
+        default="optimized",
+        help="PR95 MLX Conv2d accumulation path to probe.",
+    )
     parser.add_argument("--output-json", type=Path, required=True)
     parser.add_argument(
         "--require-pass",
@@ -92,6 +98,7 @@ def main(argv: list[str] | None = None) -> int:
             mlx_device=device,
             atol_max=args.atol_max,
             atol_mean=args.atol_mean,
+            conv2d_accumulation_mode=args.conv2d_accumulation_mode,
         )
         for device in devices
     ]
@@ -100,6 +107,7 @@ def main(argv: list[str] | None = None) -> int:
         "generated_utc": datetime.now(UTC).isoformat(),
         "archive_packet": packet.custody_manifest(),
         "source_model_path": args.source_model.as_posix(),
+        "conv2d_accumulation_mode": args.conv2d_accumulation_mode,
         "results": results,
         "all_passed": all(result["parity"]["passed"] for result in results),
         "require_pass": bool(args.require_pass),

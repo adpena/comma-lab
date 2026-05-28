@@ -128,6 +128,7 @@ def measure_per_op_drift(
     mlx_device: str = "cpu",
     seed: int = 42,
     source_model: Path = DEFAULT_PR95_PUBLIC_MODEL,
+    conv2d_accumulation_mode: str = "optimized",
 ) -> dict[str, Any]:
     """Run the full per-operation drift measurement and return the canonical report."""
 
@@ -137,12 +138,20 @@ def measure_per_op_drift(
     import torch.nn as nn
     import torch.nn.functional as F
 
+    from tac.local_acceleration.mlx_scorer_adapters import (
+        mlx_reference_conv2d_nhwc,
+    )
     from tac.local_acceleration.pr95_hnerv_mlx import (
+        PR95_MLX_CONV2D_ACCUMULATION_MODES,
+        PR95_MLX_OPTIMIZED_CONV2D_ACCUMULATION_MODE,
         HNeRVDecoderMLX,
         bilinear_resize2x_align_corners_false_nhwc,
         load_pytorch_state_dict_into_mlx,
         pixel_shuffle_2x_nhwc,
+        validate_pr95_mlx_conv2d_accumulation_mode,
     )
+
+    conv_mode = validate_pr95_mlx_conv2d_accumulation_mode(conv2d_accumulation_mode)
 
     if mlx_device == "cpu":
         mx.set_default_device(mx.cpu)
@@ -223,17 +232,27 @@ def measure_per_op_drift(
 
     # 6) conv2d_3x3_pad1
     torch_conv = nn.Conv2d(36, 144, 3, padding=1)
-    mlx_conv = mlx_nn.Conv2d(36, 144, 3, padding=1)
     W = torch_conv.weight.detach().numpy().astype(np.float32)
     b = torch_conv.bias.detach().numpy().astype(np.float32)
-    mlx_conv.weight = mx.array(np.transpose(W, (0, 2, 3, 1)).copy())
-    mlx_conv.bias = mx.array(b.copy())
+    W_ohwi = np.transpose(W, (0, 2, 3, 1)).copy()
     x_np6 = np.random.randn(1, 36, 6, 8).astype(np.float32)
     x_torch6 = torch.from_numpy(x_np6)
     x_mlx6 = _torch_nchw_to_mlx_nhwc(x_np6, mx)
     with torch.no_grad():
         y_torch6 = torch_conv(x_torch6).numpy()
-    y_mlx6 = mlx_conv(x_mlx6)
+    if conv_mode == PR95_MLX_OPTIMIZED_CONV2D_ACCUMULATION_MODE:
+        mlx_conv = mlx_nn.Conv2d(36, 144, 3, padding=1)
+        mlx_conv.weight = mx.array(W_ohwi)
+        mlx_conv.bias = mx.array(b.copy())
+        y_mlx6 = mlx_conv(x_mlx6)
+    else:
+        y_mlx6 = mlx_reference_conv2d_nhwc(
+            x_mlx6,
+            mx.array(W_ohwi),
+            mx.array(b.copy()),
+            padding=1,
+            accumulation_mode=conv_mode,
+        )
     mx.eval(y_mlx6)
     y_mlx6_np = _mlx_nhwc_to_numpy_nchw(y_mlx6)
     per_op_results["conv2d_3x3_pad1"] = _measure_op(
@@ -245,7 +264,11 @@ def measure_per_op_drift(
     torch_decoder = public_pr95.HNeRVDecoder(latent_dim=28, base_channels=36).eval()
     torch_state = {k: v.detach() for k, v in torch_decoder.state_dict().items()}
 
-    mlx_decoder = HNeRVDecoderMLX(latent_dim=28, base_channels=36)
+    mlx_decoder = HNeRVDecoderMLX(
+        latent_dim=28,
+        base_channels=36,
+        conv2d_accumulation_mode=conv_mode,
+    )
     load_pytorch_state_dict_into_mlx(
         mlx_decoder, {k: v.numpy() for k, v in torch_state.items()}
     )
@@ -277,6 +300,8 @@ def measure_per_op_drift(
         "generated_utc": datetime.now(UTC).isoformat(),
         "tool": "tools/measure_pr95_mlx_pytorch_per_op_drift.py",
         "mlx_device": mlx_device,
+        "conv2d_accumulation_mode": conv_mode,
+        "conv2d_accumulation_modes_available": list(PR95_MLX_CONV2D_ACCUMULATION_MODES),
         "seed": seed,
         "source_model_path": str(source_model),
         "per_op": per_op_results,
@@ -331,6 +356,16 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Path to the public PR95 HNeRVDecoder model.py (canonical PyTorch reference).",
     )
     parser.add_argument(
+        "--conv2d-accumulation-mode",
+        choices=("optimized", "fixed_fp32", "kahan_fp32", "fixed_fp64"),
+        default="optimized",
+        help=(
+            "MLX Conv2d accumulation path for the PR95 decoder probe. "
+            "optimized uses native mx.conv2d; fixed modes use the shared "
+            "fixed-order reference path."
+        ),
+    )
+    parser.add_argument(
         "--require-all-within-bands",
         action="store_true",
         help="Exit nonzero if any operation drift exceeds its canonical attested band.",
@@ -344,12 +379,14 @@ def main(argv: list[str] | None = None) -> int:
         mlx_device=args.mlx_device,
         seed=args.seed,
         source_model=args.source_model,
+        conv2d_accumulation_mode=args.conv2d_accumulation_mode,
     )
     args.report_out.parent.mkdir(parents=True, exist_ok=True)
     args.report_out.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
 
     print(
-        f"[pr95-drift-measure] mlx_device={args.mlx_device} seed={args.seed}"
+        f"[pr95-drift-measure] mlx_device={args.mlx_device} "
+        f"conv2d_accumulation_mode={args.conv2d_accumulation_mode} seed={args.seed}"
     )
     for name, row in report["per_op"].items():
         in_band = "PASS" if row["attested_within_band"] else "FAIL"

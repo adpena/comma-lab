@@ -28,6 +28,9 @@ from typing import Any
 
 import numpy as np
 
+from tac.local_acceleration.mlx_scorer_adapters import (
+    mlx_reference_conv2d_nhwc,
+)
 from tac.local_acceleration.pr95_hnerv_mlx_contract import (
     PR95_EXPORT_FORWARD_PARITY_BLOCKER,
     PR95_FULL_FRAME_INFLATE_PARITY_BLOCKER,
@@ -75,6 +78,13 @@ PR95_MLX_PYTORCH_EXPORT_FORWARD_PARITY_SCHEMA = (
 )
 PR95_ARCHIVE_EXPORT_SCHEMA = "pr95_hnerv_archive_export.v1"
 PR95_ARCHIVE_N_QUANT = 127
+PR95_MLX_OPTIMIZED_CONV2D_ACCUMULATION_MODE = "optimized"
+PR95_MLX_CONV2D_ACCUMULATION_MODES: tuple[str, ...] = (
+    PR95_MLX_OPTIMIZED_CONV2D_ACCUMULATION_MODE,
+    "fixed_fp32",
+    "kahan_fp32",
+    "fixed_fp64",
+)
 
 PR95_STAGE_MODULES: dict[int, str] = {
     1: "stage1_v328_ce",
@@ -713,6 +723,24 @@ def _mlx_conv_to_numpy(value: Any) -> np.ndarray:
     return np.transpose(arr, (0, 3, 1, 2))
 
 
+def _pair_int(value: int | tuple[int, int], *, label: str) -> tuple[int, int]:
+    if isinstance(value, tuple):
+        if len(value) != 2:
+            raise ValueError(f"{label} must be an int or pair, got {value!r}")
+        return (int(value[0]), int(value[1]))
+    return (int(value), int(value))
+
+
+def validate_pr95_mlx_conv2d_accumulation_mode(mode: str) -> str:
+    normalized = str(mode)
+    if normalized not in PR95_MLX_CONV2D_ACCUMULATION_MODES:
+        raise ValueError(
+            "conv2d_accumulation_mode must be one of "
+            f"{PR95_MLX_CONV2D_ACCUMULATION_MODES}, got {mode!r}"
+        )
+    return normalized
+
+
 def pixel_shuffle_2x_nhwc(x: Any, *, upscale_factor: int = 2) -> Any:
     """CANONICAL PixelShuffle for NHWC tensors using native MLX reshape/transpose.
 
@@ -970,15 +998,107 @@ def bilinear_resize_nhwc(
     return top * (1.0 - h_frac_b) + bot * h_frac_b
 
 
-class _HNeRVUpsampleBlockMLX(nn.Module if nn is not None else object):  # type: ignore[misc]
-    def __init__(self, in_channels: int, out_channels: int) -> None:
+class _PR95Conv2dMLX(nn.Module if nn is not None else object):  # type: ignore[misc]
+    """PR95 Conv2d with explicit accumulation-mode selection.
+
+    ``optimized`` uses native ``mx.conv2d`` for training throughput. The fixed
+    modes delegate to the shared reference Conv2d used by scorer drift probes,
+    so PR95 parity/debug paths do not grow a second implementation.
+    """
+
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: int | tuple[int, int],
+        *,
+        stride: int | tuple[int, int] = 1,
+        padding: int | tuple[int, int] = 0,
+        dilation: int | tuple[int, int] = 1,
+        groups: int = 1,
+        bias: bool = True,
+        conv2d_accumulation_mode: str = PR95_MLX_OPTIMIZED_CONV2D_ACCUMULATION_MODE,
+    ) -> None:
         require_mlx()
         super().__init__()
         self.in_channels = int(in_channels)
         self.out_channels = int(out_channels)
-        self.conv = nn.Conv2d(in_channels, out_channels * 4, 3, padding=1)  # type: ignore[union-attr]
+        self.kernel_size = _pair_int(kernel_size, label="kernel_size")
+        self.stride = _pair_int(stride, label="stride")
+        self.padding = _pair_int(padding, label="padding")
+        self.dilation = _pair_int(dilation, label="dilation")
+        self.groups = int(groups)
+        self.conv2d_accumulation_mode = validate_pr95_mlx_conv2d_accumulation_mode(
+            conv2d_accumulation_mode
+        )
+        if self.groups < 1:
+            raise ValueError(f"groups must be >= 1, got {groups}")
+        if self.in_channels % self.groups != 0:
+            raise ValueError(
+                f"in_channels {self.in_channels} not divisible by groups {self.groups}"
+            )
+        native = nn.Conv2d(  # type: ignore[union-attr]
+            self.in_channels,
+            self.out_channels,
+            self.kernel_size,
+            stride=self.stride,
+            padding=self.padding,
+            dilation=self.dilation,
+            groups=self.groups,
+            bias=bool(bias),
+        )
+        self.weight = native.weight
+        self.bias = native.bias if bool(bias) else None
+
+    def __call__(self, x: Any) -> Any:
+        if self.conv2d_accumulation_mode == PR95_MLX_OPTIMIZED_CONV2D_ACCUMULATION_MODE:
+            out = mx.conv2d(  # type: ignore[union-attr]
+                x,
+                self.weight,
+                stride=self.stride,
+                padding=self.padding,
+                dilation=self.dilation,
+                groups=self.groups,
+            )
+            return out if self.bias is None else out + self.bias
+        return mlx_reference_conv2d_nhwc(
+            x,
+            self.weight,
+            self.bias,
+            stride=self.stride,
+            padding=self.padding,
+            dilation=self.dilation,
+            groups=self.groups,
+            accumulation_mode=self.conv2d_accumulation_mode,
+        )
+
+
+class _HNeRVUpsampleBlockMLX(nn.Module if nn is not None else object):  # type: ignore[misc]
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        *,
+        conv2d_accumulation_mode: str = PR95_MLX_OPTIMIZED_CONV2D_ACCUMULATION_MODE,
+    ) -> None:
+        require_mlx()
+        super().__init__()
+        self.in_channels = int(in_channels)
+        self.out_channels = int(out_channels)
+        self.conv = _PR95Conv2dMLX(
+            in_channels,
+            out_channels * 4,
+            3,
+            padding=1,
+            conv2d_accumulation_mode=conv2d_accumulation_mode,
+        )
         self.skip_conv = (
-            nn.Conv2d(in_channels, out_channels, 1)  # type: ignore[union-attr]
+            _PR95Conv2dMLX(
+                in_channels,
+                out_channels,
+                1,
+                conv2d_accumulation_mode=conv2d_accumulation_mode,
+            )
             if in_channels != out_channels
             else None
         )
@@ -1006,6 +1126,7 @@ class HNeRVDecoderMLX(nn.Module if nn is not None else object):  # type: ignore[
         base_channels: int = 36,
         eval_size: tuple[int, int] = (384, 512),
         output_layout: str = "n2chw",
+        conv2d_accumulation_mode: str = PR95_MLX_OPTIMIZED_CONV2D_ACCUMULATION_MODE,
     ) -> None:
         require_mlx()
         super().__init__()
@@ -1015,6 +1136,9 @@ class HNeRVDecoderMLX(nn.Module if nn is not None else object):  # type: ignore[
         self.base_h = 6
         self.base_w = 8
         self.output_layout = output_layout
+        self.conv2d_accumulation_mode = validate_pr95_mlx_conv2d_accumulation_mode(
+            conv2d_accumulation_mode
+        )
         if self.eval_size != (self.base_h * 64, self.base_w * 64):
             raise ValueError(
                 "PR95 decoder topology fixes eval_size to "
@@ -1040,13 +1164,43 @@ class HNeRVDecoderMLX(nn.Module if nn is not None else object):  # type: ignore[
             channels[0] * self.base_h * self.base_w,
         )
         self.blocks = [
-            _HNeRVUpsampleBlockMLX(channels[i], channels[i + 1]) for i in range(6)
+            _HNeRVUpsampleBlockMLX(
+                channels[i],
+                channels[i + 1],
+                conv2d_accumulation_mode=self.conv2d_accumulation_mode,
+            )
+            for i in range(6)
         ]
         final_ch = channels[-1]
-        self.refine0 = nn.Conv2d(final_ch, final_ch // 2, 3, padding=2, dilation=2)  # type: ignore[union-attr]
-        self.refine1 = nn.Conv2d(final_ch // 2, final_ch, 3, padding=1)  # type: ignore[union-attr]
-        self.rgb_0 = nn.Conv2d(final_ch, 3, 3, padding=1)  # type: ignore[union-attr]
-        self.rgb_1 = nn.Conv2d(final_ch, 3, 3, padding=1)  # type: ignore[union-attr]
+        self.refine0 = _PR95Conv2dMLX(
+            final_ch,
+            final_ch // 2,
+            3,
+            padding=2,
+            dilation=2,
+            conv2d_accumulation_mode=self.conv2d_accumulation_mode,
+        )
+        self.refine1 = _PR95Conv2dMLX(
+            final_ch // 2,
+            final_ch,
+            3,
+            padding=1,
+            conv2d_accumulation_mode=self.conv2d_accumulation_mode,
+        )
+        self.rgb_0 = _PR95Conv2dMLX(
+            final_ch,
+            3,
+            3,
+            padding=1,
+            conv2d_accumulation_mode=self.conv2d_accumulation_mode,
+        )
+        self.rgb_1 = _PR95Conv2dMLX(
+            final_ch,
+            3,
+            3,
+            padding=1,
+            conv2d_accumulation_mode=self.conv2d_accumulation_mode,
+        )
 
     def features_nhwc(self, z: Any) -> Any:
         batch = int(z.shape[0])
@@ -1085,6 +1239,7 @@ class HNeRVDecoderMLX(nn.Module if nn is not None else object):  # type: ignore[
             "upsample_blocks": 6,
             "internal_layout": "NHWC",
             "default_output_layout": self.output_layout,
+            "conv2d_accumulation_mode": self.conv2d_accumulation_mode,
             "decoder_param_count": _param_count_from_tree(self.parameters()),
             "source_pr": 95,
             "source_architecture": "submissions/hnerv_muon/src/model.py::HNeRVDecoder",
@@ -1102,6 +1257,7 @@ class HNeRVSyntheticTrainingBundleMLX(nn.Module if nn is not None else object): 
         base_channels: int = 36,
         seed: int = 0,
         output_layout: str = "n2chw",
+        conv2d_accumulation_mode: str = PR95_MLX_OPTIMIZED_CONV2D_ACCUMULATION_MODE,
     ) -> None:
         require_mlx()
         super().__init__()
@@ -1111,6 +1267,7 @@ class HNeRVSyntheticTrainingBundleMLX(nn.Module if nn is not None else object): 
             latent_dim=latent_dim,
             base_channels=base_channels,
             output_layout=output_layout,
+            conv2d_accumulation_mode=conv2d_accumulation_mode,
         )
 
     def __call__(self, indices: Any) -> Any:
@@ -1240,6 +1397,7 @@ def compare_pr95_public_archive_forward_with_pytorch(
     mlx_device: str = "cpu",
     atol_max: float = 2e-3,
     atol_mean: float = 1e-4,
+    conv2d_accumulation_mode: str = PR95_MLX_OPTIMIZED_CONV2D_ACCUMULATION_MODE,
 ) -> dict[str, Any]:
     """Compare MLX against PyTorch on decoded public PR95 packet state.
 
@@ -1254,6 +1412,7 @@ def compare_pr95_public_archive_forward_with_pytorch(
         raise Pr95HNeRVMlxError("torch is required for PR95 parity probes") from exc
 
     meta = packet.meta
+    conv_mode = validate_pr95_mlx_conv2d_accumulation_mode(conv2d_accumulation_mode)
     indices = _sample_indices_for_pr95_packet(int(packet.latents.shape[0]), sample_indices)
     z_np = packet.latents[indices].astype(np.float32, copy=False)
     torch_state_dict = {
@@ -1274,6 +1433,7 @@ def compare_pr95_public_archive_forward_with_pytorch(
             latent_dim=int(meta["latent_dim"]),
             base_channels=int(meta["base_channels"]),
             eval_size=tuple(int(dim) for dim in meta["eval_size"]),
+            conv2d_accumulation_mode=conv_mode,
         )
         load_pytorch_state_dict_into_mlx(mlx_model, packet.state_dict)
         started = time.perf_counter()
@@ -1307,6 +1467,7 @@ def compare_pr95_public_archive_forward_with_pytorch(
         "submission": "hnerv_muon",
         "evidence_grade": "[macOS-MLX research-signal]",
         "mlx_device": mlx_device,
+        "conv2d_accumulation_mode": conv_mode,
         "sample_indices": indices,
         "sample_count": len(indices),
         "elapsed_seconds": elapsed,
@@ -1338,6 +1499,7 @@ def trace_pr95_public_archive_decoder_with_pytorch(
     sample_indices: Sequence[int] | None = None,
     mlx_device: str = "cpu",
     cliff_threshold: float = 1.0e-5,
+    conv2d_accumulation_mode: str = PR95_MLX_OPTIMIZED_CONV2D_ACCUMULATION_MODE,
 ) -> dict[str, Any]:
     """Trace PR95 decoder boundary drift between PyTorch and MLX.
 
@@ -1359,6 +1521,7 @@ def trace_pr95_public_archive_decoder_with_pytorch(
         )
 
     meta = packet.meta
+    conv_mode = validate_pr95_mlx_conv2d_accumulation_mode(conv2d_accumulation_mode)
     indices = _sample_indices_for_pr95_packet(int(packet.latents.shape[0]), sample_indices)
     z_np = packet.latents[indices].astype(np.float32, copy=False)
     torch_state_dict = {
@@ -1379,6 +1542,7 @@ def trace_pr95_public_archive_decoder_with_pytorch(
             latent_dim=int(meta["latent_dim"]),
             base_channels=int(meta["base_channels"]),
             eval_size=tuple(int(dim) for dim in meta["eval_size"]),
+            conv2d_accumulation_mode=conv_mode,
         )
         load_pytorch_state_dict_into_mlx(mlx_model, packet.state_dict)
         started = time.perf_counter()
@@ -1404,6 +1568,7 @@ def trace_pr95_public_archive_decoder_with_pytorch(
         "submission": "hnerv_muon",
         "evidence_grade": "[macOS-MLX research-signal]",
         "mlx_device": mlx_device,
+        "conv2d_accumulation_mode": conv_mode,
         "sample_indices": indices,
         "sample_count": len(indices),
         "elapsed_seconds": elapsed,
@@ -1620,6 +1785,7 @@ def write_pr95_public_archive_pytorch_export_forward_parity(
     mlx_device: str = "cpu",
     atol_max: float = 2e-3,
     atol_mean: float = 1e-4,
+    conv2d_accumulation_mode: str = PR95_MLX_OPTIMIZED_CONV2D_ACCUMULATION_MODE,
     overwrite: bool = False,
 ) -> dict[str, Any]:
     """Export a decoded PR95 MLX archive checkpoint to ``.pt`` and prove parity.
@@ -1653,6 +1819,7 @@ def write_pr95_public_archive_pytorch_export_forward_parity(
         mlx_device=mlx_device,
         atol_max=atol_max,
         atol_mean=atol_mean,
+        conv2d_accumulation_mode=conv2d_accumulation_mode,
     )
     parity = forward_parity.get("parity", {})
     passed = isinstance(parity, Mapping) and parity.get("passed") is True
@@ -1684,6 +1851,7 @@ def write_pr95_public_archive_pytorch_export_forward_parity(
         "sample_indices": list(forward_parity["sample_indices"]),
         "sample_count": int(forward_parity["sample_count"]),
         "mlx_device": mlx_device,
+        "conv2d_accumulation_mode": forward_parity["conv2d_accumulation_mode"],
         "pytorch_export_forward_parity_established": bool(passed),
         "forward_parity": forward_parity,
         "exact_readiness_refusal": {

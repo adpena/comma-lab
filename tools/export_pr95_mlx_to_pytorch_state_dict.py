@@ -55,6 +55,7 @@ def export_pr95_public_archive_to_pytorch_state_dict(
     mlx_device: str = "cpu",
     atol_max: float = 1e-4,
     atol_mean: float = 1e-5,
+    conv2d_accumulation_mode: str = "optimized",
     overwrite: bool = True,
 ) -> dict[str, Any]:
     """Parse the PR95 archive packet, write a .pt state_dict, and prove parity.
@@ -90,6 +91,7 @@ def export_pr95_public_archive_to_pytorch_state_dict(
         mlx_device=mlx_device,
         atol_max=atol_max,
         atol_mean=atol_mean,
+        conv2d_accumulation_mode=conv2d_accumulation_mode,
         overwrite=overwrite,
     )
     decoder_trace = (
@@ -100,6 +102,7 @@ def export_pr95_public_archive_to_pytorch_state_dict(
             model_module.HNeRVDecoder,
             sample_indices=sample_indices,
             mlx_device=mlx_device,
+            conv2d_accumulation_mode=conv2d_accumulation_mode,
         )
     )
     decoder_trace_summary = None
@@ -163,6 +166,7 @@ def export_pr95_public_archive_to_pytorch_state_dict(
         "pt_bytes": parity.get("pt_bytes"),
         "sample_indices": parity.get("sample_indices"),
         "mlx_device": mlx_device,
+        "conv2d_accumulation_mode": conv2d_accumulation_mode,
         "exact_readiness_refusal": {
             "schema": "exact_readiness_refusal.v1",
             "ready": False,
@@ -189,6 +193,12 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--decoder-trace-out", type=Path)
     parser.add_argument("--sample-indices")
     parser.add_argument("--mlx-device", choices=("cpu", "gpu"), default="cpu")
+    parser.add_argument(
+        "--conv2d-accumulation-mode",
+        choices=("optimized", "fixed_fp32", "kahan_fp32", "fixed_fp64"),
+        default="optimized",
+        help="PR95 MLX Conv2d accumulation path for parity and trace probes.",
+    )
     parser.add_argument("--atol-max", type=float, default=1e-4)
     parser.add_argument("--atol-mean", type=float, default=1e-5)
     parser.add_argument(
@@ -216,6 +226,7 @@ def main(argv: list[str] | None = None) -> int:
         mlx_device=args.mlx_device,
         atol_max=args.atol_max,
         atol_mean=args.atol_mean,
+        conv2d_accumulation_mode=args.conv2d_accumulation_mode,
         overwrite=not args.no_overwrite,
     )
     drift_attested = bool(
@@ -231,7 +242,8 @@ def main(argv: list[str] | None = None) -> int:
     print(
         "[pr95-mlx-pytorch-export] "
         f"max_abs={parity['max_abs']:.6e} mean_abs={parity['mean_abs']:.6e} "
-        f"drift_attested={drift_attested}"
+        f"drift_attested={drift_attested} "
+        f"conv2d_accumulation_mode={args.conv2d_accumulation_mode}"
     )
     return 1 if args.require_pass and not passed else 0
 

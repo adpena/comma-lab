@@ -1,0 +1,195 @@
+{
+  "aggregate": {
+    "all_within_attested_bands": true,
+    "framework_different_op_count": 0,
+    "op_count": 7
+  },
+  "axis_tag": "[predicted]",
+  "blockers": [
+    "local_mlx_pytorch_per_op_drift_probe_is_not_contest_auth_eval",
+    "requires_paired_cuda_t4_or_linux_x86_64_eval_for_promotion"
+  ],
+  "conv2d_accumulation_mode": "kahan_fp32",
+  "conv2d_accumulation_modes_available": [
+    "optimized",
+    "fixed_fp32",
+    "kahan_fp32",
+    "fixed_fp64"
+  ],
+  "evidence_grade": "macOS-MLX-research-signal",
+  "evidence_tag": "[macOS-MLX research-signal]",
+  "generated_utc": "2026-05-28T06:44:14.690620+00:00",
+  "mlx_device": "cpu",
+  "operator_routable_summary": "Per-op drift measurement complete. Operator routes through Slot 1 export bridge VERDICT upgrade if all ops within attested bands.",
+  "per_op": {
+    "bilinear_resize_2x_align_corners_false_nhwc": {
+      "actual_class": "byte_stable_by_default",
+      "attested_max_abs_band": 1e-06,
+      "attested_mean_abs_band": 1e-07,
+      "attested_within_band": true,
+      "axis_tag": "[predicted]",
+      "blockers": [
+        "local_mlx_pytorch_drift_attestation_is_not_contest_auth_eval",
+        "requires_paired_cuda_t4_or_linux_x86_64_eval_for_promotion"
+      ],
+      "evidence_grade": "macOS-MLX-research-signal",
+      "evidence_tag": "[macOS-MLX research-signal]",
+      "expected_class": "byte_stable_by_default",
+      "measured_max_abs": 2.384185791015625e-07,
+      "measured_mean_abs": 1.879598876541877e-08,
+      "notes": "canonical anchor max_abs=2.3842e-07 mean_abs=1.8309e-08; measured max_abs=2.3842e-07 mean_abs=1.8796e-08",
+      "operation_name": "bilinear_resize_2x_align_corners_false_nhwc",
+      "promotable": false,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "mlx_pytorch_drift_attestation.v1",
+      "score_claim": false
+    },
+    "conv2d_3x3_pad1": {
+      "actual_class": "numeric_tolerance_inherent",
+      "attested_max_abs_band": 0.0001,
+      "attested_mean_abs_band": 1e-05,
+      "attested_within_band": true,
+      "axis_tag": "[predicted]",
+      "blockers": [
+        "local_mlx_pytorch_drift_attestation_is_not_contest_auth_eval",
+        "requires_paired_cuda_t4_or_linux_x86_64_eval_for_promotion"
+      ],
+      "evidence_grade": "macOS-MLX-research-signal",
+      "evidence_tag": "[macOS-MLX research-signal]",
+      "expected_class": "numeric_tolerance_inherent",
+      "measured_max_abs": 1.0728836059570312e-06,
+      "measured_mean_abs": 1.0548523476927585e-07,
+      "notes": "canonical anchor max_abs=1.4305e-06 mean_abs=1.3792e-07; measured max_abs=1.0729e-06 mean_abs=1.0549e-07",
+      "operation_name": "conv2d_3x3_pad1",
+      "promotable": false,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "mlx_pytorch_drift_attestation.v1",
+      "score_claim": false
+    },
+    "hnerv_decoder_full": {
+      "actual_class": "numeric_tolerance_inherent",
+      "attested_max_abs_band": 0.0001,
+      "attested_mean_abs_band": 1e-05,
+      "attested_within_band": true,
+      "axis_tag": "[predicted]",
+      "blockers": [
+        "local_mlx_pytorch_drift_attestation_is_not_contest_auth_eval",
+        "requires_paired_cuda_t4_or_linux_x86_64_eval_for_promotion"
+      ],
+      "evidence_grade": "macOS-MLX-research-signal",
+      "evidence_tag": "[macOS-MLX research-signal]",
+      "expected_class": "numeric_tolerance_inherent",
+      "measured_max_abs": 3.0517578125e-05,
+      "measured_mean_abs": 4.415562216308899e-06,
+      "notes": "canonical anchor max_abs=3.0518e-05 mean_abs=4.7964e-06; measured max_abs=3.0518e-05 mean_abs=4.4156e-06",
+      "operation_name": "hnerv_decoder_full",
+      "promotable": false,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "mlx_pytorch_drift_attestation.v1",
+      "score_claim": false
+    },
+    "linear_stem": {
+      "actual_class": "byte_stable_by_default",
+      "attested_max_abs_band": 1e-06,
+      "attested_mean_abs_band": 1e-07,
+      "attested_within_band": true,
+      "axis_tag": "[predicted]",
+      "blockers": [
+        "local_mlx_pytorch_drift_attestation_is_not_contest_auth_eval",
+        "requires_paired_cuda_t4_or_linux_x86_64_eval_for_promotion"
+      ],
+      "evidence_grade": "macOS-MLX-research-signal",
+      "evidence_tag": "[macOS-MLX research-signal]",
+      "expected_class": "byte_stable_by_default",
+      "measured_max_abs": 0.0,
+      "measured_mean_abs": 0.0,
+      "notes": "canonical anchor max_abs=0.0000e+00 mean_abs=0.0000e+00; measured max_abs=0.0000e+00 mean_abs=0.0000e+00",
+      "operation_name": "linear_stem",
+      "promotable": false,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "mlx_pytorch_drift_attestation.v1",
+      "score_claim": false
+    },
+    "pixel_shuffle_2x_nhwc": {
+      "actual_class": "byte_stable_by_default",
+      "attested_max_abs_band": 1e-06,
+      "attested_mean_abs_band": 1e-07,
+      "attested_within_band": true,
+      "axis_tag": "[predicted]",
+      "blockers": [
+        "local_mlx_pytorch_drift_attestation_is_not_contest_auth_eval",
+        "requires_paired_cuda_t4_or_linux_x86_64_eval_for_promotion"
+      ],
+      "evidence_grade": "macOS-MLX-research-signal",
+      "evidence_tag": "[macOS-MLX research-signal]",
+      "expected_class": "byte_stable_by_default",
+      "measured_max_abs": 0.0,
+      "measured_mean_abs": 0.0,
+      "notes": "canonical anchor max_abs=0.0000e+00 mean_abs=0.0000e+00; measured max_abs=0.0000e+00 mean_abs=0.0000e+00",
+      "operation_name": "pixel_shuffle_2x_nhwc",
+      "promotable": false,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "mlx_pytorch_drift_attestation.v1",
+      "score_claim": false
+    },
+    "sigmoid": {
+      "actual_class": "byte_stable_by_default",
+      "attested_max_abs_band": 1e-06,
+      "attested_mean_abs_band": 1e-07,
+      "attested_within_band": true,
+      "axis_tag": "[predicted]",
+      "blockers": [
+        "local_mlx_pytorch_drift_attestation_is_not_contest_auth_eval",
+        "requires_paired_cuda_t4_or_linux_x86_64_eval_for_promotion"
+      ],
+      "evidence_grade": "macOS-MLX-research-signal",
+      "evidence_tag": "[macOS-MLX research-signal]",
+      "expected_class": "byte_stable_by_default",
+      "measured_max_abs": 1.1920928955078125e-07,
+      "measured_mean_abs": 1.310399966314435e-08,
+      "notes": "canonical anchor max_abs=1.1921e-07 mean_abs=1.2397e-08; measured max_abs=1.1921e-07 mean_abs=1.3104e-08",
+      "operation_name": "sigmoid",
+      "promotable": false,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "mlx_pytorch_drift_attestation.v1",
+      "score_claim": false
+    },
+    "sin": {
+      "actual_class": "byte_stable_by_default",
+      "attested_max_abs_band": 1e-06,
+      "attested_mean_abs_band": 1e-07,
+      "attested_within_band": true,
+      "axis_tag": "[predicted]",
+      "blockers": [
+        "local_mlx_pytorch_drift_attestation_is_not_contest_auth_eval",
+        "requires_paired_cuda_t4_or_linux_x86_64_eval_for_promotion"
+      ],
+      "evidence_grade": "macOS-MLX-research-signal",
+      "evidence_tag": "[macOS-MLX research-signal]",
+      "expected_class": "byte_stable_by_default",
+      "measured_max_abs": 5.960464477539063e-08,
+      "measured_mean_abs": 5.291507676474794e-09,
+      "notes": "canonical anchor max_abs=5.9605e-08 mean_abs=5.1331e-09; measured max_abs=5.9605e-08 mean_abs=5.2915e-09",
+      "operation_name": "sin",
+      "promotable": false,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "mlx_pytorch_drift_attestation.v1",
+      "score_claim": false
+    }
+  },
+  "promotable": false,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "pr95_mlx_pytorch_per_op_drift_report.v1",
+  "score_claim": false,
+  "seed": 1708,
+  "source_model_path": "/Users/adpena/Projects/pact/experiments/results/public_pr_intake_full/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py",
+  "tool": "tools/measure_pr95_mlx_pytorch_per_op_drift.py"
+}
