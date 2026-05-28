@@ -69,6 +69,7 @@ def build_materializer_exact_eval_dispatch_plan(
     active_floor_score: float | None = ACTIVE_FLOOR_SCORE,
     allow_above_active_floor_dispatch: bool = False,
     operator_override_reason: str | None = None,
+    execute_queue_operator_review_reason: str | None = None,
 ) -> dict[str, Any]:
     """Return a dispatch plan and an ``experiment_queue.v1`` definition.
 
@@ -301,7 +302,8 @@ def build_materializer_exact_eval_dispatch_plan(
             f"{estimated_total_cost:.2f}>{max_total_cost:.2f}"
         )
     plan_blockers.extend(hard_plan_blockers)
-    if mode == "execute":
+    review_reason = _nonempty_text_or_none(execute_queue_operator_review_reason)
+    if mode == "execute" and review_reason is None:
         plan_blockers.append("execute_dispatch_queue_created_requires_operator_review")
     queue_experiments = [] if hard_plan_blockers else experiments
     queue_mode = "paused"
@@ -371,6 +373,7 @@ def build_materializer_exact_eval_dispatch_plan(
                 "dedupe_by_archive_runtime_content_runtime_tree_score_axis;"
                 "deterministic_queue_order;no_score_authority"
             ),
+            "execute_queue_operator_review_reason": review_reason,
             "dispatch_claims_path": _repo_rel(claims_path, repo),
             "experiment_queue_schema": dispatch_queue["schema"],
             "experiment_queue_id": dispatch_queue["queue_id"],
@@ -392,6 +395,13 @@ def build_materializer_exact_eval_dispatch_plan(
         context="materializer_exact_eval_dispatch_plan",
     )
     return {"plan": plan, "experiment_queue": dispatch_queue}
+
+
+def _nonempty_text_or_none(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    return text or None
 
 
 def _resolve_active_floor_score(
@@ -746,6 +756,8 @@ def _dispatch_command(
         f"{max_total_cost:.8g}",
         "--dispatch-claims-path",
         dispatch_claims_path.as_posix(),
+        "--harvest-output",
+        (queue_path.parent / f"{_safe_slug(required_claim_job_id)}.parallel_dispatch_harvest.jsonl").as_posix(),
     ]
     if active_floor_archive_bytes is not None:
         command.extend(["--active-floor-archive-bytes", str(active_floor_archive_bytes)])

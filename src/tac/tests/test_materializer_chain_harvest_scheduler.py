@@ -3478,7 +3478,53 @@ def test_materializer_dispatch_plan_execute_requires_active_claim_for_dispatch(
     assert "--required-claim-platform" in dispatch_command
     assert "lightning" in dispatch_command
     assert "--required-claim-instance-job-id" in dispatch_command
+    assert "--harvest-output" in dispatch_command
     assert job_id in dispatch_command
+
+
+def test_materializer_dispatch_plan_execute_records_operator_review_clearance(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    chain = _exact_ready_chain_manifest(repo)
+    source_queue_out = repo / "source_queue.json"
+    harvest_result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[chain],
+    )
+    _write_json(source_queue_out, harvest_result["source_queue"])
+    bridge = run_exact_readiness_bridge_for_harvested_queue(
+        repo_root=repo,
+        source_queue_path=source_queue_out,
+        exact_readiness_out_dir=repo / "exact_readiness",
+        active_floor_archive_bytes=None,
+    )
+    bridge_path = _write_json(repo / "bridge_report.json", bridge)
+
+    result = build_materializer_exact_eval_dispatch_plan(
+        repo_root=repo,
+        bridge_report_path=bridge_path,
+        dispatch_mode="execute",
+        allow_paid_dispatch_queue=True,
+        provider="lightning",
+        label_prefix="fixture_materializer_exact_eval",
+        active_floor_archive_bytes=None,
+        execute_queue_operator_review_reason=(
+            "operator approved PSV3 exact eval execution in active Codex turn"
+        ),
+    )
+
+    plan = result["plan"]
+    assert plan["authorized_candidate_count"] == 1
+    assert plan["plan_blockers"] == []
+    assert (
+        plan["execute_queue_operator_review_reason"]
+        == "operator approved PSV3 exact eval execution in active Codex turn"
+    )
+    assert result["experiment_queue"]["experiments"][0]["steps"][1]["id"] == (
+        "dispatch_exact_eval"
+    )
 
 
 def test_materializer_dispatch_plan_freezes_queue_when_cost_cap_exceeded(
@@ -3917,6 +3963,61 @@ def test_dispatch_plan_cli_preserves_default_active_floor_guards(
         == module.ACTIVE_FLOOR_ARCHIVE_BYTES
     )
     assert captured["active_floor_score"] == module.ACTIVE_FLOOR_SCORE
+
+
+def test_dispatch_plan_cli_forwards_execute_operator_review_reason(
+    tmp_path: Path,
+) -> None:
+    spec = importlib.util.spec_from_file_location(
+        "build_materializer_exact_eval_dispatch_plan_fixture",
+        DISPATCH_PLAN_TOOL,
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    captured: dict[str, object] = {}
+
+    def fake_build_materializer_exact_eval_dispatch_plan(**kwargs: object) -> dict[str, object]:
+        captured.update(kwargs)
+        return {
+            "plan": {
+                "authorized_candidate_count": 1,
+                "blocked_candidate_count": 0,
+                "dispatch_mode": "execute",
+                "plan_blockers": [],
+            },
+            "experiment_queue": {"schema": QUEUE_SCHEMA, "experiments": []},
+        }
+
+    module.build_materializer_exact_eval_dispatch_plan = (
+        fake_build_materializer_exact_eval_dispatch_plan
+    )
+    module.write_json = lambda path, payload, **kwargs: None
+
+    rc = module.main(
+        [
+            "--repo-root",
+            str(tmp_path),
+            "--exact-ready-queue",
+            str(tmp_path / "exact_ready_queue.json"),
+            "--dispatch-plan-out",
+            str(tmp_path / "dispatch_plan.json"),
+            "--experiment-queue-out",
+            str(tmp_path / "dispatch_queue.json"),
+            "--dispatch-mode",
+            "execute",
+            "--allow-paid-dispatch-queue",
+            "--execute-queue-operator-review-reason",
+            "operator approved exact dispatch for active work order",
+            "--require-authorized",
+        ]
+    )
+
+    assert rc == 0
+    assert (
+        captured["execute_queue_operator_review_reason"]
+        == "operator approved exact dispatch for active work order"
+    )
 
 
 def test_dispatch_plan_cli_writes_paused_dry_run_queue_from_bridge(

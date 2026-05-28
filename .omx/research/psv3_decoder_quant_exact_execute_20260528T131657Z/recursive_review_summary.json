@@ -1,0 +1,19 @@
+{
+  "bundle_id": "6624185f23bbfe22",
+  "clean_pass_count": 3,
+  "generated_at_utc": "2026-05-28T13:23:44Z",
+  "ledger_path": ".omx/state/recursive_review_rounds.jsonl",
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "review_ids": [
+    "8a6a354da8e0",
+    "da10f03e591b",
+    "8994923729e2"
+  ],
+  "schema": "recursive_adversarial_review_summary.v1",
+  "scope_content_sha256": "7aafcbb785ede3224b35257d5cc5a6c4f779215622d39d1500fa06390b8b6551",
+  "score_claim": false,
+  "sealed": true,
+  "unresolved_critical_count": 0
+}

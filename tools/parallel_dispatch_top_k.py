@@ -301,6 +301,14 @@ def _candidate_archive_path_value(candidate: dict) -> object:
     return None
 
 
+def _candidate_inflate_sh_path_value(candidate: dict) -> object:
+    for key in ("inflate_sh_path", "candidate_inflate_sh_path"):
+        value = candidate.get(key)
+        if value:
+            return value
+    return None
+
+
 def _resolve_archive_path(path_value: object, *, ranked_input_dir: Path | None) -> Path | None:
     if isinstance(path_value, Path):
         path = path_value
@@ -863,6 +871,9 @@ def _build_dispatch_cmd(
             cmd += ["--dispatch-claims-path", str(dispatch_claims_path)]
         if claim_policy == "require_active_claim":
             cmd.append("--use-existing-dispatch-claim")
+        inflate_sh_path = _candidate_inflate_sh_path_value(candidate)
+        if inflate_sh_path:
+            cmd += ["--inflate-sh", str(inflate_sh_path)]
         gate_json = candidate.get("apogee_distortion_gate_json")
         if gate_json:
             cmd += ["--apogee-distortion-gate-json", str(gate_json)]

@@ -379,6 +379,17 @@ def test_claim_lane_does_not_force_without_explicit_force_claim(monkeypatch) -> 
     )
     assert "--force" not in calls[-1]
 
+
+def test_claim_lane_uses_force_only_with_explicit_force_claim(monkeypatch) -> None:
+    dispatcher = _load_dispatcher()
+    calls = []
+
+    def _fake_run(cmd, cwd, check):
+        calls.append(cmd)
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(dispatcher.subprocess, "run", _fake_run)
+
     dispatcher.claim_lane(
         lane="demo",
         job_name="job2",
@@ -389,6 +400,20 @@ def test_claim_lane_does_not_force_without_explicit_force_claim(monkeypatch) -> 
         force_claim_reason="terminal stale claim",
     )
     assert "--force" in calls[-1]
+
+
+def test_dispatcher_defaults_honor_lightning_environment(monkeypatch) -> None:
+    monkeypatch.setenv("LIGHTNING_SSH_TARGET", "ssh-env-target")
+    monkeypatch.setenv("LIGHTNING_STUDIO", "studio-env")
+    monkeypatch.setenv("LIGHTNING_TEAMSPACE", "teamspace-env")
+    monkeypatch.setenv("LIGHTNING_USER", "user-env")
+
+    dispatcher = _load_dispatcher()
+
+    assert dispatcher.DEFAULT_SSH_TARGET == "ssh-env-target"
+    assert dispatcher.LIGHTNING_STUDIO == "studio-env"
+    assert dispatcher.LIGHTNING_TEAMSPACE == "teamspace-env"
+    assert dispatcher.LIGHTNING_USER == "user-env"
 
 
 def test_main_existing_claim_uses_exact_dispatch_lane_and_job(monkeypatch) -> None:

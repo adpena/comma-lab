@@ -48,6 +48,15 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Required with --dispatch-mode execute.",
     )
+    parser.add_argument(
+        "--execute-queue-operator-review-reason",
+        default=None,
+        help=(
+            "Specific operator/reviewer authorization for execute-mode queues. "
+            "When omitted, execute queues are still emitted but retain the "
+            "execute_dispatch_queue_created_requires_operator_review blocker."
+        ),
+    )
     parser.add_argument("--max-concurrency", type=int, default=1)
     parser.add_argument("--estimated-cost-per-dispatch", type=float, default=0.30)
     parser.add_argument("--max-total-cost", type=float, default=5.00)
@@ -115,6 +124,7 @@ def main(argv: list[str] | None = None) -> int:
         active_floor_score=active_floor_score,
         allow_above_active_floor_dispatch=args.allow_above_active_floor_dispatch,
         operator_override_reason=args.operator_override_reason,
+        execute_queue_operator_review_reason=args.execute_queue_operator_review_reason,
     )
     write_json(args.dispatch_plan_out, result["plan"], overwrite=args.overwrite)
     write_json(

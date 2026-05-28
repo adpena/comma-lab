@@ -273,6 +273,29 @@ def test_parallel_dispatch_lightning_existing_claim_command_uses_required_job(
     assert "--use-existing-dispatch-claim" in cmd
 
 
+def test_parallel_dispatch_lightning_command_passes_archive_bound_inflate_sh(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool("parallel_dispatch_top_k")
+    candidate = _ready_custody_candidate(
+        tmp_path,
+        inflate_sh_path=(tmp_path / "submission" / "inflate.sh").as_posix(),
+    )
+
+    cmd = tool._build_dispatch_cmd(
+        candidate,
+        provider="lightning",
+        lane_script="scripts/legacy_should_be_ignored_for_lightning.sh",
+        label_prefix="batch",
+        estimated_cost=0.11,
+        max_dph=0.50,
+    )
+
+    joined = " ".join(cmd)
+    assert f"--inflate-sh {tmp_path / 'submission' / 'inflate.sh'}" in joined
+    assert "--archive" in cmd
+
+
 def test_parallel_dispatch_rejects_above_active_floor_archive_by_default(
     tmp_path: Path,
 ) -> None:

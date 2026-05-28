@@ -1,0 +1,64 @@
+{
+  "artifacts": {
+    "claim_log": {
+      "path": ".omx/research/psv3_decoder_quant_exact_execute_20260528T131657Z/queue_logs/psv3_decoder_quant_exact_eval_dispatch_execute/psv3_decoder_quant_pact_nerv_selector_v3_decoder_quant_repack_int8_per_channel_954231f90f2beb3c/claim_lane_dispatch/20260528T131720Z_5ba847ce58930a79.log",
+      "sha256": "c0db7e344f52338e4892b0dc3ef001aa4bc3c4b6f66d4b2c0bb26e0612a42261"
+    },
+    "dispatch_log": {
+      "path": ".omx/research/psv3_decoder_quant_exact_execute_20260528T131657Z/queue_logs/psv3_decoder_quant_exact_eval_dispatch_execute/psv3_decoder_quant_pact_nerv_selector_v3_decoder_quant_repack_int8_per_channel_954231f90f2beb3c/dispatch_exact_eval/20260528T131720Z_a3746dabdd8f905c.log",
+      "sha256": "21d11b07902cca0bdde25915e76a07e7d0948c999d2efb2de547e10b35312095"
+    },
+    "exact_ready_queue": {
+      "path": ".omx/research/psv3_decoder_quant_exact_handoff_live_20260528T1301Z/exact_readiness/pact_nerv_selector_v3_decoder_quant_repack_int8_per_channel_brotli_q11_a8180e2f85db.exact_ready_queue.json",
+      "sha256": "d9da009abde864f0f8d4720762c849f96f136a82839967cebf9bbac5c4e4637d"
+    },
+    "execute_plan": {
+      "path": ".omx/research/psv3_decoder_quant_exact_execute_20260528T131657Z/exact_eval_dispatch_plan_execute.json",
+      "sha256": "bacf3e8464041b7b7e2baa5e2bb964576c93a6de486d799cf493489e0a685a7a"
+    },
+    "execute_queue": {
+      "path": ".omx/research/psv3_decoder_quant_exact_execute_20260528T131657Z/exact_eval_experiment_queue_execute.json",
+      "sha256": "4bc9c0743f3e63f0a644e05f784a9f63f55b5a682b49c1a2d0f627fa1b0c6eea"
+    },
+    "harvest_jsonl": {
+      "path": ".omx/research/psv3_decoder_quant_exact_handoff_live_20260528T1301Z/exact_readiness/psv3_decoder_quant_pact_nerv_selector_v3_decoder_quant_repack_int8_per_channel_brotli_q11_a8180e2f85db_5db6cee64ad3.parallel_dispatch_harvest.jsonl",
+      "row_count": 1,
+      "sha256": "481f71c81edc70f09685ed04599b4e68543c22e03d7a947d7761a40e0c4a1969"
+    }
+  },
+  "blocker": "LIGHTNING_SSH_TARGET_or_explicit_--ssh-target_required_before_lightning_staging",
+  "candidate_id": "pact_nerv_selector_v3_decoder_quant_repack_int8_per_channel_brotli_q11_a8180e2f85db",
+  "claim_terminal_status": "failed_lightning_dispatch_missing_ssh_target",
+  "dispatch_job_id": "psv3_decoder_quant_pact_nerv_selector_v3_decoder_quant_repack_int8_per_channel_brotli_q11_a8180e2f85db_5db6cee64ad3",
+  "exact_axis_score_available": false,
+  "failure_class": "infrastructure_missing_lightning_ssh_target",
+  "generated_at_utc": "2026-05-28T13:18:43Z",
+  "harvest_rows": [
+    {
+      "archive_sha256": "a8180e2f85db4a03981c61c7548d4961c38d2d69b19c42ac5fd33d03cb35255c",
+      "archive_size_bytes": 96030,
+      "candidate_id": "pact_nerv_selector_v3_decoder_quant_repack_int8_per_channel_brotli_q11_a8180e2f85db",
+      "contest_cuda_score": null,
+      "elapsed_seconds": 0.036159875002340414,
+      "label": "psv3_decoder_quant_pact_nerv_selector_v3_decoder_quant_repack_int8_per_channel_brotli_q11_a8180e2f85db_5db6cee64ad3",
+      "returncode": 1,
+      "score_axis": null,
+      "score_claim_source_key": null,
+      "score_json_path": null,
+      "started_utc": "2026-05-28T13:17:22Z",
+      "stderr_tail": "FATAL: set --ssh-target or LIGHTNING_SSH_TARGET before staging to Lightning\n",
+      "stdout_tail": "",
+      "tag": "[dispatch-failed]"
+    }
+  ],
+  "lane_id": "lane_psv3_decoder_quant_a8180e2f85db",
+  "method_negative": false,
+  "promotion_eligible": false,
+  "queue_control_mode": "frozen",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "remote_job_launched": false,
+  "retry_policy": "set LIGHTNING_SSH_TARGET or pass an explicit ssh target through the dispatch wrapper, then rewind dispatch_exact_eval after verifying the active claim is closed",
+  "schema": "exact_eval_dispatch_blocker.v1",
+  "score_claim": false
+}

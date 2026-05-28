@@ -57,22 +57,22 @@ ensure_repo_imports(REPO_ROOT)
 
 from tac.deploy.lightning.defaults import (  # noqa: E402
     DEFAULT_LIGHTNING_REMOTE_PACT,
-    DEFAULT_LIGHTNING_SSH_TARGET,
-    DEFAULT_LIGHTNING_STUDIO,
-    DEFAULT_LIGHTNING_TEAMSPACE,
-    DEFAULT_LIGHTNING_USER,
+    default_ssh_target,
+    default_studio,
+    default_teamspace,
+    default_user,
 )
 from tac.repo_io import read_json, sha256_file  # noqa: E402
 
 _sha256_file = sha256_file  # Backward-compatible test/tool API alias.
 
-DEFAULT_SSH_TARGET = DEFAULT_LIGHTNING_SSH_TARGET
+DEFAULT_SSH_TARGET = default_ssh_target()
 DEFAULT_REMOTE_PACT = DEFAULT_LIGHTNING_REMOTE_PACT
 PR106_BASELINE_SCORE = 0.20945673
 PR106_BASELINE_BYTES = 186239
-LIGHTNING_STUDIO = DEFAULT_LIGHTNING_STUDIO
-LIGHTNING_TEAMSPACE = DEFAULT_LIGHTNING_TEAMSPACE
-LIGHTNING_USER = DEFAULT_LIGHTNING_USER
+LIGHTNING_STUDIO = default_studio()
+LIGHTNING_TEAMSPACE = default_teamspace()
+LIGHTNING_USER = default_user()
 INFLATE_TORCH_SPEC = "torch==2.5.1+cu124"
 UV_EXTRA_INDEX_URL = "https://download.pytorch.org/whl/cu124"
 UV_INDEX_STRATEGY = "unsafe-best-match"
