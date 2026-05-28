@@ -31,11 +31,21 @@ platform: modal
 gpu: T4
 recipe_id: substrate_composite_nscs06_v8_plus_compound_c_pr111_modal_t4_dispatch
 dispatch_kind: substrate
-dispatch_enabled: false  # PENDING per-substrate symposium per Catalog #325
-                         # + operator-attended paired-CUDA RATIFICATION per
-                         # Catalog #246 + CLAUDE.md "Executing actions with care"
+dispatch_enabled: false  # RE-DISABLED 2026-05-28T17:57Z per Catalog #240 + #325
+                         # transparency. 2026-05-28T17:52Z paired-CUDA RATIFICATION
+                         # attempt DEFERRED per probe outcome
+                         # `pr111_composite_paired_cuda_ratification_infrastructure_deferred_20260528`
+                         # (BLOCKING verdict per Catalog #313). 4 dispatches failed
+                         # rc=1 BOTH axes via inflate runtime tree hash mismatch
+                         # between LOCAL projector and Modal worker. INFRASTRUCTURE-LEVEL
+                         # not paradigm-level per Catalog #307. Re-enable AFTER
+                         # `tools/dispatch_modal_paired_auth_eval.py` runtime tree
+                         # divergence is fixed.
 research_only: true       # NON-PROMOTABLE [composite-predicted-pending-paired-anchor]
-                          # pending paired-CUDA RATIFICATION per Catalog #246
+                          # pending paired-CUDA RATIFICATION per Catalog #246;
+                          # PR-creation HARD GATE per just-saved standing directive
+                          # 2026-05-28 forbids `gh pr create` without explicit
+                          # per-PR operator authorization regardless.
 canary_status: post_canary_dependent
 canary_dependency: substrate_pact_nerv_selector_v3_heterogeneous_bit_modal_t4_dispatch
 
