@@ -1,0 +1,1247 @@
+{
+  "auto_parallelism": {
+    "idle_declared_resources": {},
+    "local_only": {
+      "max_parallel": 2,
+      "resource_limits": {
+        "local_cpu": 2
+      }
+    },
+    "used_resource_kinds": [
+      "local_cpu"
+    ],
+    "with_cloud": {
+      "max_parallel": 2,
+      "resource_limits": {
+        "local_cpu": 2
+      }
+    }
+  },
+  "blocked_steps": [],
+  "blocker_count": 0,
+  "blockers": [],
+  "definition_drift": {
+    "changed_step_count": 0,
+    "changed_steps": [],
+    "missing_hash_step_count": 0,
+    "missing_hash_steps": [],
+    "missing_step_count": 0,
+    "missing_steps": [],
+    "read_only": true,
+    "schema": "experiment_queue_definition_drift.v1"
+  },
+  "disabled_steps": [],
+  "failed_steps": [],
+  "frozen_steps": [],
+  "generated_at_utc": "2026-05-28T15:09:21Z",
+  "healthy": true,
+  "local_training_signal_observation_count": 0,
+  "local_training_signal_observations": [],
+  "mode": "running",
+  "observe_read_only": true,
+  "orphaned_step_count": 0,
+  "orphaned_steps": [],
+  "paused_steps": [],
+  "performance": {
+    "backlog_key_by_experiment": {
+      "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier": "frontier_rate_attack:fp11_source_brotli_recode_v1:current_contest_cpu_frontier"
+    },
+    "by_backlog_key": {
+      "frontier_rate_attack:fp11_source_brotli_recode_v1:current_contest_cpu_frontier": {
+        "artifact_record_bytes_mean": 79975.4,
+        "artifact_record_bytes_sum": 399877,
+        "artifact_record_count": 11,
+        "artifact_record_raw_bytes_mean": 79975.4,
+        "artifact_record_raw_bytes_sum": 399877,
+        "backlog_keys": [
+          "frontier_rate_attack:fp11_source_brotli_recode_v1:current_contest_cpu_frontier"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 3.3289821250073146,
+        "elapsed_seconds_mean": 1.1370156084012706,
+        "elapsed_seconds_min": 0.17198774999997113,
+        "elapsed_seconds_sum": 5.685078042006353,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 3023.6,
+        "log_bytes_sum": 15118,
+        "resource_kind_counts": {
+          "local_cpu": 5
+        },
+        "run_count": 5,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan",
+          "build_materializer_submission_closure",
+          "harvest_materializer_chains",
+          "materialize_local_proof_chain",
+          "run_materializer_exact_readiness_bridge"
+        ],
+        "success_count": 5,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier"
+        ]
+      }
+    },
+    "by_experiment": {
+      "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier": {
+        "artifact_record_bytes_mean": 79975.4,
+        "artifact_record_bytes_sum": 399877,
+        "artifact_record_count": 11,
+        "artifact_record_raw_bytes_mean": 79975.4,
+        "artifact_record_raw_bytes_sum": 399877,
+        "backlog_keys": [
+          "frontier_rate_attack:fp11_source_brotli_recode_v1:current_contest_cpu_frontier"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 3.3289821250073146,
+        "elapsed_seconds_mean": 1.1370156084012706,
+        "elapsed_seconds_min": 0.17198774999997113,
+        "elapsed_seconds_sum": 5.685078042006353,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 3023.6,
+        "log_bytes_sum": 15118,
+        "resource_kind_counts": {
+          "local_cpu": 5
+        },
+        "run_count": 5,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan",
+          "build_materializer_submission_closure",
+          "harvest_materializer_chains",
+          "materialize_local_proof_chain",
+          "run_materializer_exact_readiness_bridge"
+        ],
+        "success_count": 5,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier"
+        ]
+      }
+    },
+    "by_resource_kind": {
+      "local_cpu": {
+        "artifact_record_bytes_mean": 79975.4,
+        "artifact_record_bytes_sum": 399877,
+        "artifact_record_count": 11,
+        "artifact_record_raw_bytes_mean": 79975.4,
+        "artifact_record_raw_bytes_sum": 399877,
+        "backlog_keys": [
+          "frontier_rate_attack:fp11_source_brotli_recode_v1:current_contest_cpu_frontier"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 3.3289821250073146,
+        "elapsed_seconds_mean": 1.1370156084012706,
+        "elapsed_seconds_min": 0.17198774999997113,
+        "elapsed_seconds_sum": 5.685078042006353,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 3023.6,
+        "log_bytes_sum": 15118,
+        "resource_kind_counts": {
+          "local_cpu": 5
+        },
+        "run_count": 5,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan",
+          "build_materializer_submission_closure",
+          "harvest_materializer_chains",
+          "materialize_local_proof_chain",
+          "run_materializer_exact_readiness_bridge"
+        ],
+        "success_count": 5,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier"
+        ]
+      }
+    },
+    "by_source_selection_id": {
+      "current_contest_cpu_frontier": {
+        "artifact_record_bytes_mean": 79975.4,
+        "artifact_record_bytes_sum": 399877,
+        "artifact_record_count": 11,
+        "artifact_record_raw_bytes_mean": 79975.4,
+        "artifact_record_raw_bytes_sum": 399877,
+        "backlog_keys": [
+          "frontier_rate_attack:fp11_source_brotli_recode_v1:current_contest_cpu_frontier"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 3.3289821250073146,
+        "elapsed_seconds_mean": 1.1370156084012706,
+        "elapsed_seconds_min": 0.17198774999997113,
+        "elapsed_seconds_sum": 5.685078042006353,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 3023.6,
+        "log_bytes_sum": 15118,
+        "resource_kind_counts": {
+          "local_cpu": 5
+        },
+        "run_count": 5,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan",
+          "build_materializer_submission_closure",
+          "harvest_materializer_chains",
+          "materialize_local_proof_chain",
+          "run_materializer_exact_readiness_bridge"
+        ],
+        "success_count": 5,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier"
+        ]
+      }
+    },
+    "by_source_unit_id": {
+      "current_contest_cpu_frontier": {
+        "artifact_record_bytes_mean": 79975.4,
+        "artifact_record_bytes_sum": 399877,
+        "artifact_record_count": 11,
+        "artifact_record_raw_bytes_mean": 79975.4,
+        "artifact_record_raw_bytes_sum": 399877,
+        "backlog_keys": [
+          "frontier_rate_attack:fp11_source_brotli_recode_v1:current_contest_cpu_frontier"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 3.3289821250073146,
+        "elapsed_seconds_mean": 1.1370156084012706,
+        "elapsed_seconds_min": 0.17198774999997113,
+        "elapsed_seconds_sum": 5.685078042006353,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 3023.6,
+        "log_bytes_sum": 15118,
+        "resource_kind_counts": {
+          "local_cpu": 5
+        },
+        "run_count": 5,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan",
+          "build_materializer_submission_closure",
+          "harvest_materializer_chains",
+          "materialize_local_proof_chain",
+          "run_materializer_exact_readiness_bridge"
+        ],
+        "success_count": 5,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier"
+        ]
+      }
+    },
+    "by_step": {
+      "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier.build_exact_eval_dispatch_plan": {
+        "artifact_record_bytes_mean": 4441.0,
+        "artifact_record_bytes_sum": 4441,
+        "artifact_record_count": 2,
+        "artifact_record_raw_bytes_mean": 4441.0,
+        "artifact_record_raw_bytes_sum": 4441,
+        "backlog_keys": [
+          "frontier_rate_attack:fp11_source_brotli_recode_v1:current_contest_cpu_frontier"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.781265458004782,
+        "elapsed_seconds_mean": 0.781265458004782,
+        "elapsed_seconds_min": 0.781265458004782,
+        "elapsed_seconds_sum": 0.781265458004782,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 366.0,
+        "log_bytes_sum": 366,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan"
+        ],
+        "success_count": 1,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier"
+        ]
+      },
+      "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier.build_materializer_submission_closure": {
+        "artifact_record_bytes_mean": 349113.0,
+        "artifact_record_bytes_sum": 349113,
+        "artifact_record_count": 3,
+        "artifact_record_raw_bytes_mean": 349113.0,
+        "artifact_record_raw_bytes_sum": 349113,
+        "backlog_keys": [
+          "frontier_rate_attack:fp11_source_brotli_recode_v1:current_contest_cpu_frontier"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.17198774999997113,
+        "elapsed_seconds_mean": 0.17198774999997113,
+        "elapsed_seconds_min": 0.17198774999997113,
+        "elapsed_seconds_sum": 0.17198774999997113,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 1249.0,
+        "log_bytes_sum": 1249,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_materializer_submission_closure"
+        ],
+        "success_count": 1,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier"
+        ]
+      },
+      "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier.harvest_materializer_chains": {
+        "artifact_record_bytes_mean": 25034.0,
+        "artifact_record_bytes_sum": 25034,
+        "artifact_record_count": 2,
+        "artifact_record_raw_bytes_mean": 25034.0,
+        "artifact_record_raw_bytes_sum": 25034,
+        "backlog_keys": [
+          "frontier_rate_attack:fp11_source_brotli_recode_v1:current_contest_cpu_frontier"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.6754657090059482,
+        "elapsed_seconds_mean": 0.6754657090059482,
+        "elapsed_seconds_min": 0.6754657090059482,
+        "elapsed_seconds_sum": 0.6754657090059482,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 637.0,
+        "log_bytes_sum": 637,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "harvest_materializer_chains"
+        ],
+        "success_count": 1,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier"
+        ]
+      },
+      "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier.materialize_local_proof_chain": {
+        "artifact_record_bytes_mean": 12380.0,
+        "artifact_record_bytes_sum": 12380,
+        "artifact_record_count": 2,
+        "artifact_record_raw_bytes_mean": 12380.0,
+        "artifact_record_raw_bytes_sum": 12380,
+        "backlog_keys": [
+          "frontier_rate_attack:fp11_source_brotli_recode_v1:current_contest_cpu_frontier"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 3.3289821250073146,
+        "elapsed_seconds_mean": 3.3289821250073146,
+        "elapsed_seconds_min": 3.3289821250073146,
+        "elapsed_seconds_sum": 3.3289821250073146,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 12220.0,
+        "log_bytes_sum": 12220,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "materialize_local_proof_chain"
+        ],
+        "success_count": 1,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier"
+        ]
+      },
+      "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier.run_materializer_exact_readiness_bridge": {
+        "artifact_record_bytes_mean": 8909.0,
+        "artifact_record_bytes_sum": 8909,
+        "artifact_record_count": 2,
+        "artifact_record_raw_bytes_mean": 8909.0,
+        "artifact_record_raw_bytes_sum": 8909,
+        "backlog_keys": [
+          "frontier_rate_attack:fp11_source_brotli_recode_v1:current_contest_cpu_frontier"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.727376999988337,
+        "elapsed_seconds_mean": 0.727376999988337,
+        "elapsed_seconds_min": 0.727376999988337,
+        "elapsed_seconds_sum": 0.727376999988337,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 646.0,
+        "log_bytes_sum": 646,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "run_materializer_exact_readiness_bridge"
+        ],
+        "success_count": 1,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier"
+        ]
+      }
+    },
+    "by_work_id": {
+      "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier": {
+        "artifact_record_bytes_mean": 79975.4,
+        "artifact_record_bytes_sum": 399877,
+        "artifact_record_count": 11,
+        "artifact_record_raw_bytes_mean": 79975.4,
+        "artifact_record_raw_bytes_sum": 399877,
+        "backlog_keys": [
+          "frontier_rate_attack:fp11_source_brotli_recode_v1:current_contest_cpu_frontier"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 3.3289821250073146,
+        "elapsed_seconds_mean": 1.1370156084012706,
+        "elapsed_seconds_min": 0.17198774999997113,
+        "elapsed_seconds_sum": 5.685078042006353,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 3023.6,
+        "log_bytes_sum": 15118,
+        "resource_kind_counts": {
+          "local_cpu": 5
+        },
+        "run_count": 5,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan",
+          "build_materializer_submission_closure",
+          "harvest_materializer_chains",
+          "materialize_local_proof_chain",
+          "run_materializer_exact_readiness_bridge"
+        ],
+        "success_count": 5,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier"
+        ]
+      }
+    },
+    "candidate_id_by_experiment": {
+      "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier": [
+        "current_contest_cpu_frontier"
+      ]
+    },
+    "event_count": 5,
+    "promotion_eligible": false,
+    "queue_id": "frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "experiment_queue_performance_summary.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "source_selection_ids_by_experiment": {
+      "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier": [
+        "current_contest_cpu_frontier"
+      ]
+    },
+    "source_unit_ids_by_experiment": {
+      "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier": [
+        "current_contest_cpu_frontier"
+      ]
+    },
+    "telemetry_only": true,
+    "work_id_by_experiment": {
+      "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier": "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier"
+    }
+  },
+  "queue_id": "frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal",
+  "queue_sha256": "7e3b9d681f1bf497280c066dfcf908ee5546960909b1f68c85480d29e915eb7b",
+  "queued_steps": [],
+  "ready_steps": [],
+  "running_steps": [],
+  "runtime_policy": {
+    "advisory_only": true,
+    "apply_requires_explicit_call": true,
+    "backpressure": {
+      "local_io_heavy": {
+        "reason": "limit_file_tree_hashing_and_artifact_pullback_pressure",
+        "recommended_concurrency": 4
+      }
+    },
+    "current_max_concurrency": {
+      "local_cpu": 2
+    },
+    "dispatch_attempted": false,
+    "dispatch_packet_ready": false,
+    "generated_from_schema": "experiment_queue_performance_summary.v1",
+    "gpu_launched": false,
+    "input_event_count": 5,
+    "machine_capacity": {
+      "local_cpu": 18,
+      "local_io_heavy": 4,
+      "local_mlx": 1,
+      "local_mps": 1
+    },
+    "promotable": false,
+    "promotion_eligible": false,
+    "queue_id": "frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "recommended_max_concurrency": {
+      "local_cpu": 18
+    },
+    "recommended_timeout_seconds_by_resource": {
+      "local_cpu": 30
+    },
+    "resource_policies": {
+      "local_cpu": {
+        "advisory_only": true,
+        "concurrency_reason": "use_detected_local_cpu_capacity",
+        "current_concurrency": 2,
+        "current_timeout_seconds_max": null,
+        "dispatch_packet_ready": false,
+        "elapsed_seconds_p50": 0.727376999988337,
+        "elapsed_seconds_p95": 3.3289821250073146,
+        "observed_failure_count": 0,
+        "observed_run_count": 5,
+        "observed_timeout_count": 0,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "recommended_concurrency": 18,
+        "recommended_timeout_seconds": 30,
+        "resource_kind": "local_cpu",
+        "score_claim": false,
+        "timeout_multiplier": 3.0
+      }
+    },
+    "schema": "scheduler_runtime_policy.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "telemetry_only": true
+  },
+  "schema": "experiment_queue_observation.v1",
+  "state": ".omx/state/experiment_queue_frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal.sqlite",
+  "state_watermark": {
+    "control_mode": "running",
+    "control_updated_at_utc": "2026-05-28T15:09:14Z",
+    "event_count": 19,
+    "max_event_id": 19,
+    "max_step_updated_at_utc": "2026-05-28T15:09:20Z",
+    "queue_id": "frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal",
+    "schema": "experiment_queue_state_watermark.v1",
+    "state_path": ".omx/state/experiment_queue_frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal.sqlite",
+    "step_state_count": 5
+  },
+  "status_counts": {
+    "succeeded": 5
+  },
+  "step_count": 5,
+  "succeeded_artifact_failure_steps": [],
+  "succeeded_artifact_steps": [
+    {
+      "attempts": 1,
+      "backlog_keys": [
+        "frontier_rate_attack:fp11_source_brotli_recode_v1:current_contest_cpu_frontier"
+      ],
+      "candidate_saved_bytes_sum": 0,
+      "expected_artifact_paths": [
+        ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/closed_source_queue.json",
+        ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission_closure_report.json",
+        ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission"
+      ],
+      "expected_artifacts": [
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 30499,
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "exists": true,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "json_schema": "optimizer_candidate_queue_v1",
+          "mtime_utc": "2026-05-28T15:09:19Z",
+          "optimizer_candidate_queue_materializer_row_count": 1,
+          "optimizer_candidate_queue_materializer_rows": [
+            {
+              "artifact_revalidation": {
+                "blockers": [],
+                "candidate_archive": {
+                  "actual_bytes": 178493,
+                  "actual_sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c",
+                  "blockers": [],
+                  "expected_bytes": 178493,
+                  "expected_sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c",
+                  "label": "optimizer_candidate_queue_top_k_0_candidate_archive",
+                  "path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/archive.zip",
+                  "schema": "observer_file_custody_revalidation.v1",
+                  "valid": true
+                },
+                "schema": "observer_materializer_payload_revalidation.v1",
+                "valid": true
+              },
+              "candidate_archive": {
+                "bytes": 178493,
+                "path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/archive.zip",
+                "sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c"
+              },
+              "candidate_id": "fp11_source_brotli_recode_b7106c9bdbb8",
+              "contest_cuda_auth_eval": false,
+              "dispatch_attempted": false,
+              "exact_cuda_auth_eval": false,
+              "field_selection_ready_for_exact_eval_dispatch": false,
+              "gpu_launched": false,
+              "materializer_charged_bits_changed": true,
+              "materializer_delta_source": "serialized_archive_delta",
+              "materializer_id": "fp11_source_brotli_recode_adapter",
+              "materializer_score_affecting_payload_changed": true,
+              "optimizer_candidate_queue_row_index": 0,
+              "promotable": false,
+              "promotion_eligible": false,
+              "rank_or_kill_eligible": false,
+              "readiness_blockers": [
+                "candidate_requires_full_frame_inflate_output_parity_before_score_claim",
+                "candidate_requires_exact_auth_eval_before_promotion"
+              ],
+              "ready_for_exact_eval_dispatch": false,
+              "receiver_contract_kind": "source_runtime_native_fp11_source_brotli_recode",
+              "receiver_contract_satisfied": true,
+              "score_claim": false,
+              "score_claim_eligible": false,
+              "score_claim_valid": false,
+              "serialized_archive_delta": {
+                "archive_delta_bytes": -37,
+                "blockers": [],
+                "candidate_archive_bytes": 178493,
+                "dispatch_attempted": false,
+                "gpu_launched": false,
+                "modeled_cost_bytes": null,
+                "modeled_saved_bytes": null,
+                "promotable": false,
+                "promotion_eligible": false,
+                "rank_or_kill_eligible": false,
+                "rate_only_control": false,
+                "ready_for_exact_eval_dispatch": false,
+                "realized_saved_bytes": 37,
+                "require_realized_saving": false,
+                "savings_realized": true,
+                "schema": "serialized_archive_delta_contract.v1",
+                "score_claim": false,
+                "score_claim_valid": false,
+                "source_archive_bytes": 178530,
+                "status": "realized_saving"
+              },
+              "serialized_archive_delta_candidate_archive_bytes": 178493,
+              "serialized_archive_delta_realized_saved_bytes": 37,
+              "serialized_archive_delta_saved_bytes": 37,
+              "serialized_archive_delta_savings_realized": true,
+              "serialized_archive_delta_source_archive_bytes": 178530,
+              "serialized_archive_delta_status": "realized_saving",
+              "source_archive": {
+                "bytes": 178530,
+                "path": "/Volumes/VertigoDataTier/experiments/results/feca_selector_reparameterized_runtime_stable_20260527Tlocal/submission_dir/archive.zip",
+                "sha256": "18e3155fbbbe9ab23e1c21bc0d99ba8d18657a71c3129fc5ff9e0405b67d1669"
+              },
+              "target_kind": "fp11_source_brotli_recode_v1"
+            }
+          ],
+          "path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/closed_source_queue.json",
+          "postcondition_passed": true,
+          "postcondition_type": "json_equals",
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 17953,
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "exists": true,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "json_schema": "materializer_submission_runtime_closure_report.v1",
+          "mtime_utc": "2026-05-28T15:09:19Z",
+          "path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission_closure_report.json",
+          "postcondition_passed": true,
+          "postcondition_type": "json_equals",
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false
+        }
+      ],
+      "expected_score_gain_sum": 0.0,
+      "experiment_id": "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier",
+      "experiment_status": "queued",
+      "log_exists": true,
+      "log_path": ".omx/state/experiment_queue_logs/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier/build_materializer_submission_closure/20260528T150919Z_747e0f371fbc2472.log",
+      "log_tail": [],
+      "materializer_id": "fp11_source_brotli_recode_adapter",
+      "operation_family": "source_brotli_recode",
+      "pid": 9456,
+      "processes": [],
+      "receiver_contract_id": "fp11_source_brotli_recode_v1.receiver.v1",
+      "receiver_contract_kind": "source_runtime_native_fp11_source_brotli_recode",
+      "resource_kind": "local_cpu",
+      "source_selection_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "source_unit_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "status": "succeeded",
+      "step_id": "build_materializer_submission_closure",
+      "stored_status": "succeeded",
+      "target_kind": "fp11_source_brotli_recode_v1",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "unit_kind": "selector_stream",
+      "updated_at_utc": "2026-05-28T15:09:19Z",
+      "work_ids": [
+        "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier"
+      ],
+      "worker_run_id": "747e0f371fbc2472"
+    },
+    {
+      "attempts": 1,
+      "backlog_keys": [
+        "frontier_rate_attack:fp11_source_brotli_recode_v1:current_contest_cpu_frontier"
+      ],
+      "candidate_saved_bytes_sum": 0,
+      "expected_artifact_paths": [
+        ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/source_queue.json",
+        ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/harvest_report.json"
+      ],
+      "expected_artifacts": [
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 17589,
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "exists": true,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "json_schema": "optimizer_candidate_queue_v1",
+          "mtime_utc": "2026-05-28T15:09:18Z",
+          "optimizer_candidate_queue_materializer_row_count": 1,
+          "optimizer_candidate_queue_materializer_rows": [
+            {
+              "artifact_revalidation": {
+                "blockers": [],
+                "candidate_archive": {
+                  "actual_bytes": 178493,
+                  "actual_sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c",
+                  "blockers": [],
+                  "expected_bytes": 178493,
+                  "expected_sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c",
+                  "label": "optimizer_candidate_queue_top_k_0_candidate_archive",
+                  "path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/submission_dir/archive.zip",
+                  "schema": "observer_file_custody_revalidation.v1",
+                  "valid": true
+                },
+                "schema": "observer_materializer_payload_revalidation.v1",
+                "valid": true
+              },
+              "candidate_archive": {
+                "bytes": 178493,
+                "path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/submission_dir/archive.zip",
+                "sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c"
+              },
+              "candidate_id": "fp11_source_brotli_recode_b7106c9bdbb8",
+              "contest_cuda_auth_eval": false,
+              "dispatch_attempted": false,
+              "exact_cuda_auth_eval": false,
+              "field_selection_ready_for_exact_eval_dispatch": false,
+              "gpu_launched": false,
+              "materializer_charged_bits_changed": true,
+              "materializer_delta_source": "serialized_archive_delta",
+              "materializer_id": "fp11_source_brotli_recode_adapter",
+              "materializer_score_affecting_payload_changed": true,
+              "optimizer_candidate_queue_row_index": 0,
+              "promotable": false,
+              "promotion_eligible": false,
+              "rank_or_kill_eligible": false,
+              "readiness_blockers": [
+                "candidate_requires_full_frame_inflate_output_parity_before_score_claim",
+                "candidate_requires_exact_auth_eval_before_promotion"
+              ],
+              "ready_for_exact_eval_dispatch": false,
+              "receiver_contract_kind": "source_runtime_native_fp11_source_brotli_recode",
+              "receiver_contract_satisfied": true,
+              "score_claim": false,
+              "score_claim_eligible": false,
+              "score_claim_valid": false,
+              "serialized_archive_delta": {
+                "archive_delta_bytes": -37,
+                "blockers": [],
+                "candidate_archive_bytes": 178493,
+                "dispatch_attempted": false,
+                "gpu_launched": false,
+                "modeled_cost_bytes": null,
+                "modeled_saved_bytes": null,
+                "promotable": false,
+                "promotion_eligible": false,
+                "rank_or_kill_eligible": false,
+                "rate_only_control": false,
+                "ready_for_exact_eval_dispatch": false,
+                "realized_saved_bytes": 37,
+                "require_realized_saving": false,
+                "savings_realized": true,
+                "schema": "serialized_archive_delta_contract.v1",
+                "score_claim": false,
+                "score_claim_valid": false,
+                "source_archive_bytes": 178530,
+                "status": "realized_saving"
+              },
+              "serialized_archive_delta_candidate_archive_bytes": 178493,
+              "serialized_archive_delta_realized_saved_bytes": 37,
+              "serialized_archive_delta_saved_bytes": 37,
+              "serialized_archive_delta_savings_realized": true,
+              "serialized_archive_delta_source_archive_bytes": 178530,
+              "serialized_archive_delta_status": "realized_saving",
+              "source_archive": {
+                "bytes": 178530,
+                "path": "/Volumes/VertigoDataTier/experiments/results/feca_selector_reparameterized_runtime_stable_20260527Tlocal/submission_dir/archive.zip",
+                "sha256": "18e3155fbbbe9ab23e1c21bc0d99ba8d18657a71c3129fc5ff9e0405b67d1669"
+              },
+              "target_kind": "fp11_source_brotli_recode_v1"
+            }
+          ],
+          "path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/source_queue.json",
+          "postcondition_passed": true,
+          "postcondition_type": "json_equals",
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 7445,
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "exists": true,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "json_schema": "materializer_chain_harvest_report.v1",
+          "mtime_utc": "2026-05-28T15:09:18Z",
+          "path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/harvest_report.json",
+          "postcondition_passed": true,
+          "postcondition_type": "json_equals",
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false
+        }
+      ],
+      "expected_score_gain_sum": 0.0,
+      "experiment_id": "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier",
+      "experiment_status": "queued",
+      "log_exists": true,
+      "log_path": ".omx/state/experiment_queue_logs/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier/harvest_materializer_chains/20260528T150918Z_96d309b60e7b29d9.log",
+      "log_tail": [],
+      "materializer_id": "fp11_source_brotli_recode_adapter",
+      "operation_family": "source_brotli_recode",
+      "pid": 9455,
+      "processes": [],
+      "receiver_contract_id": "fp11_source_brotli_recode_v1.receiver.v1",
+      "receiver_contract_kind": "source_runtime_native_fp11_source_brotli_recode",
+      "resource_kind": "local_cpu",
+      "source_selection_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "source_unit_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "status": "succeeded",
+      "step_id": "harvest_materializer_chains",
+      "stored_status": "succeeded",
+      "target_kind": "fp11_source_brotli_recode_v1",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "unit_kind": "selector_stream",
+      "updated_at_utc": "2026-05-28T15:09:19Z",
+      "work_ids": [
+        "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier"
+      ],
+      "worker_run_id": "96d309b60e7b29d9"
+    },
+    {
+      "attempts": 1,
+      "backlog_keys": [
+        "frontier_rate_attack:fp11_source_brotli_recode_v1:current_contest_cpu_frontier"
+      ],
+      "candidate_saved_bytes_sum": 0,
+      "expected_artifact_paths": [
+        ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/fp11_source_brotli_recode_manifest.json",
+        ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode",
+        "/Volumes/VertigoDataTier/experiments/results/feca_selector_reparameterized_runtime_stable_20260527Tlocal/submission_dir"
+      ],
+      "expected_artifacts": [
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "materializer": {
+              "blockers": [],
+              "candidate_archive": {
+                "actual_bytes": 178493,
+                "actual_sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c",
+                "blockers": [],
+                "expected_bytes": 178493,
+                "expected_sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c",
+                "label": "json_equals_materializer_candidate_archive",
+                "path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/submission_dir/archive.zip",
+                "schema": "observer_file_custody_revalidation.v1",
+                "valid": true
+              },
+              "schema": "observer_materializer_payload_revalidation.v1",
+              "valid": true
+            },
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 12220,
+          "candidate_archive": {
+            "bytes": 178493,
+            "path": "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/submission_dir/archive.zip",
+            "sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c"
+          },
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "exists": true,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "json_schema": "fp11_source_brotli_recode_manifest.v1",
+          "materializer_delta_source": "selected_payload",
+          "materializer_id": "fp11_source_brotli_recode_adapter",
+          "mtime_utc": "2026-05-28T15:09:18Z",
+          "path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/fp11_source_brotli_recode_manifest.json",
+          "postcondition_passed": true,
+          "postcondition_type": "json_equals",
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "readiness_blockers": [
+            "candidate_requires_full_frame_inflate_output_parity_before_score_claim",
+            "candidate_requires_exact_auth_eval_before_promotion"
+          ],
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_contract_kind": "source_runtime_native_fp11_source_brotli_recode",
+          "receiver_contract_satisfied": true,
+          "receiver_verification": {
+            "blockers": [],
+            "receiver_contract_satisfied": true,
+            "runtime_adapter_ready": true
+          },
+          "runtime_consumption_proof_path": "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/fp11_source_brotli_recode_runtime_consumption_proof.json",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "selected_payload_candidate_archive_bytes": 178493,
+          "selected_payload_saved_bytes": 37,
+          "selected_payload_source_archive_bytes": 178530,
+          "serialized_archive_delta_candidate_archive_bytes": 178493,
+          "serialized_archive_delta_realized_saved_bytes": 37,
+          "serialized_archive_delta_savings_realized": true,
+          "serialized_archive_delta_schema": "serialized_archive_delta_contract.v1",
+          "serialized_archive_delta_source_archive_bytes": 178530,
+          "serialized_archive_delta_status": "realized_saving",
+          "target_kind": "fp11_source_brotli_recode_v1"
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "materializer": {
+              "blockers": [],
+              "candidate_archive": {
+                "actual_bytes": 178493,
+                "actual_sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c",
+                "blockers": [],
+                "expected_bytes": 178493,
+                "expected_sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c",
+                "label": "json_completion_contract_materializer_candidate_archive",
+                "path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/submission_dir/archive.zip",
+                "schema": "observer_file_custody_revalidation.v1",
+                "valid": true
+              },
+              "schema": "observer_materializer_payload_revalidation.v1",
+              "valid": true
+            },
+            "postcondition_type": "json_completion_contract",
+            "required_archive_runtime_receiver_custody": {
+              "blockers": [],
+              "candidate_archive": {
+                "actual_bytes": 178493,
+                "actual_sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c",
+                "blockers": [],
+                "expected_bytes": 178493,
+                "expected_sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c",
+                "label": "json_completion_contract_candidate_archive",
+                "path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/submission_dir/archive.zip",
+                "schema": "observer_file_custody_revalidation.v1",
+                "valid": true
+              },
+              "schema": "observer_required_archive_runtime_receiver_custody_revalidation.v1",
+              "valid": true
+            },
+            "runtime_identity": {
+              "blockers": [],
+              "required": true,
+              "schema": "runtime_adapter_identity_revalidation.v1",
+              "valid": true
+            },
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 12220,
+          "candidate_archive": {
+            "bytes": 178493,
+            "path": "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/submission_dir/archive.zip",
+            "sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c"
+          },
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "exists": true,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "json_schema": "fp11_source_brotli_recode_manifest.v1",
+          "materializer_delta_source": "selected_payload",
+          "materializer_id": "fp11_source_brotli_recode_adapter",
+          "mtime_utc": "2026-05-28T15:09:18Z",
+          "path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/fp11_source_brotli_recode_manifest.json",
+          "postcondition_passed": true,
+          "postcondition_type": "json_completion_contract",
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "readiness_blockers": [
+            "candidate_requires_full_frame_inflate_output_parity_before_score_claim",
+            "candidate_requires_exact_auth_eval_before_promotion"
+          ],
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_contract_kind": "source_runtime_native_fp11_source_brotli_recode",
+          "receiver_contract_satisfied": true,
+          "receiver_verification": {
+            "blockers": [],
+            "receiver_contract_satisfied": true,
+            "runtime_adapter_ready": true
+          },
+          "runtime_consumption_proof_path": "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/fp11_source_brotli_recode_runtime_consumption_proof.json",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "selected_payload_candidate_archive_bytes": 178493,
+          "selected_payload_saved_bytes": 37,
+          "selected_payload_source_archive_bytes": 178530,
+          "serialized_archive_delta_candidate_archive_bytes": 178493,
+          "serialized_archive_delta_realized_saved_bytes": 37,
+          "serialized_archive_delta_savings_realized": true,
+          "serialized_archive_delta_schema": "serialized_archive_delta_contract.v1",
+          "serialized_archive_delta_source_archive_bytes": 178530,
+          "serialized_archive_delta_status": "realized_saving",
+          "target_kind": "fp11_source_brotli_recode_v1"
+        }
+      ],
+      "expected_score_gain_sum": 0.0,
+      "experiment_id": "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier",
+      "experiment_status": "queued",
+      "log_exists": true,
+      "log_path": ".omx/state/experiment_queue_logs/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier/materialize_local_proof_chain/20260528T150915Z_865dce45cafea0c8.log",
+      "log_tail": [],
+      "materializer_id": "fp11_source_brotli_recode_adapter",
+      "operation_family": "source_brotli_recode",
+      "pid": 9333,
+      "processes": [],
+      "receiver_contract_id": "fp11_source_brotli_recode_v1.receiver.v1",
+      "receiver_contract_kind": "source_runtime_native_fp11_source_brotli_recode",
+      "resource_kind": "local_cpu",
+      "source_selection_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "source_unit_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "status": "succeeded",
+      "step_id": "materialize_local_proof_chain",
+      "stored_status": "succeeded",
+      "target_kind": "fp11_source_brotli_recode_v1",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "unit_kind": "selector_stream",
+      "updated_at_utc": "2026-05-28T15:09:18Z",
+      "work_ids": [
+        "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier"
+      ],
+      "worker_run_id": "865dce45cafea0c8"
+    }
+  ],
+  "succeeded_signal_steps": [],
+  "suggested_commands": {
+    "pause": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control paused --reason '<reason>'",
+    "refresh": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> observe --tail-lines 20",
+    "resume": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control running --reason '<reason>'",
+    "run_worker": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> run-worker --execute"
+  }
+}

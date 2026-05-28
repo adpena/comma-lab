@@ -373,6 +373,9 @@ def normalize_inverse_steganalysis_observation(row: Mapping[str, Any]) -> dict[s
         "saved_bytes": saved_bytes,
         "observed_rate_gain": observed_rate_gain,
         "rate_positive": rate_positive,
+        "charged_bits_changed_proxy_signal": row.get("charged_bits_changed_proxy_signal") is True
+        or rate_positive,
+        "score_affecting_payload_changed": row.get("score_affecting_payload_changed") is True,
         "receiver_contract_satisfied": row.get("receiver_contract_satisfied") is True,
         "artifact_record_count": _optional_int(
             row.get("artifact_record_count"),
@@ -4437,6 +4440,15 @@ def _queue_materializer_delta_observations_for_artifact_record(
         return out
     if saved_bytes is None:
         saved_bytes = 0
+    archive_delta_bytes = _optional_int(
+        _first(
+            artifact.get("serialized_archive_delta_archive_delta_bytes"),
+            artifact.get("archive_delta_bytes"),
+        ),
+        "serialized_archive_delta_archive_delta_bytes",
+    )
+    if archive_delta_bytes is None and saved_bytes is not None:
+        archive_delta_bytes = -int(saved_bytes)
     if delta_status is None:
         if saved_bytes > 0:
             delta_status = "realized_saving"
@@ -4556,6 +4568,9 @@ def _queue_materializer_delta_observations_for_artifact_record(
                         else "receiver_or_rate_blocked_materializer_feedback"
                     ),
                     "archive_delta_status": delta_status,
+                    "archive_delta_bytes": archive_delta_bytes,
+                    "charged_bits_changed_proxy_signal": rate_positive,
+                    "score_affecting_payload_changed": False,
                     "source_archive_bytes": _optional_int(
                         _first(
                             artifact.get("serialized_archive_delta_source_archive_bytes"),

@@ -1,0 +1,73 @@
+{
+  "archive_rate_supported_target_kinds": [
+    "archive_zip_repack_v1",
+    "packet_member_zip_header_elide_v1",
+    "packet_member_recompress_v1",
+    "packet_member_merge_v1",
+    "renderer_payload_dfl1_v1",
+    "selector_stream_context_recode_v1",
+    "fp11_source_brotli_recode_v1",
+    "archive_section_entropy_recode_v1",
+    "tensor_factorize_v1"
+  ],
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "context_omitted_target_kinds": [],
+  "coverage_complete": true,
+  "deferred_registry_target_rows": [
+    {
+      "deferred_to": "dqs1_local_first_feedback_cycle",
+      "rationale": "DQS1 pairset drops require pair-index acquisition and scorer feedback; they are queued through the DQS1 local-first feedback cycle rather than the archive-only final-rate bootstrap.",
+      "target_kind": "dqs1_pairset_drop_pair"
+    },
+    {
+      "deferred_to": "inverse_steganalysis_acquisition_chain",
+      "rationale": "Inverse-scorer cell candidates require raw-video, action-functional, candidate-template, and inflate-parity context; they are queued through the inverse-steganalysis acquisition chain rather than the archive-only final-rate bootstrap.",
+      "target_kind": "inverse_scorer_cell_candidate_v1"
+    }
+  ],
+  "deployment_target": "desktop_research",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "optimizer_candidate_queue_is_planning_only",
+    "requires_exact_eval_readiness_gate",
+    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+    "requires_non_proxy_score_evidence_before_promotion",
+    "frontier_rate_attack_target_coverage_is_local_planning_signal"
+  ],
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "gpu_launched": false,
+  "included_target_kinds": [
+    "fp11_source_brotli_recode_v1"
+  ],
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "registry_candidate_executable_target_kinds": [
+    "archive_section_entropy_recode_v1",
+    "archive_zip_repack_v1",
+    "dqs1_pairset_drop_pair",
+    "fp11_source_brotli_recode_v1",
+    "inverse_scorer_cell_candidate_v1",
+    "packet_member_merge_v1",
+    "packet_member_recompress_v1",
+    "packet_member_zip_header_elide_v1",
+    "renderer_payload_dfl1_v1",
+    "selector_stream_context_recode_v1",
+    "tensor_factorize_v1"
+  ],
+  "requested_target_kinds": [
+    "fp11_source_brotli_recode_v1"
+  ],
+  "schema": "frontier_final_rate_attack_target_coverage.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "target_modes": [
+    "contest_exact_eval_planning"
+  ],
+  "unclassified_executable_candidate_target_kinds": []
+}

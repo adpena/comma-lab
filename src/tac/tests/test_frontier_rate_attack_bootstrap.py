@@ -24,6 +24,7 @@ from comma_lab.scheduler.byte_shaving_materializer_registry import (
     ARCHIVE_ZIP_REPACK_TARGET_KIND,
     DQS1_PAIRSET_TARGET_KIND,
     FECA_SELECTOR_REPARAMETERIZE_TARGET_KIND,
+    FP11_SOURCE_BROTLI_RECODE_TARGET_KIND,
     INVERSE_SCORER_CELL_TARGET_KIND,
     PACKET_MEMBER_MERGE_TARGET_KIND,
     PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
@@ -116,6 +117,24 @@ def _write_fp11_feca_submission(path: Path, *, marker_prefix_padding: int = 0) -
         + b"src"
         + (8).to_bytes(2, "little")
         + (b"x" * marker_prefix_padding)
+        + b"FECaDATA"
+        + b"dqs1"
+    )
+    return _write_stored_archive(path / "archive.zip", member_name="p", payload=payload)
+
+
+def _write_fp11_source_brotli_recode_submission(path: Path) -> Path:
+    path.mkdir(parents=True, exist_ok=True)
+    (path / "inflate.py").write_text("# runtime placeholder\n", encoding="utf-8")
+    (path / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    src = path / "src"
+    src.mkdir(parents=True, exist_ok=True)
+    (src / "codec.py").write_text("DECODER_BLOB_LEN = 2\n", encoding="utf-8")
+    payload = (
+        b"FP11"
+        + (3).to_bytes(4, "little")
+        + b"abc"
+        + (8).to_bytes(2, "little")
         + b"FECaDATA"
         + b"dqs1"
     )
@@ -372,6 +391,37 @@ def test_frontier_bootstrap_binds_selector_context_recode_when_feca_marker_is_la
     assert payloads["bootstrap"]["executable_target_kinds"] == [
         FECA_SELECTOR_REPARAMETERIZE_TARGET_KIND
     ]
+    assert payloads["bootstrap"]["target_omissions"] == []
+
+
+def test_frontier_bootstrap_binds_fp11_source_brotli_recode_context(
+    tmp_path: Path,
+) -> None:
+    archive_path = _write_fp11_source_brotli_recode_submission(tmp_path / "submission_dir")
+    record = archive_record(
+        label="frontier",
+        archive_path=archive_path,
+        repo_root=tmp_path,
+        source_kind="unit_test",
+    )
+
+    payloads = build_frontier_rate_attack_payloads(
+        repo_root=tmp_path,
+        queue_id="frontier_final_rate_attack_fp11_source_brotli",
+        archive_records=[record],
+        results_root=tmp_path / "results",
+        target_kinds=(FP11_SOURCE_BROTLI_RECODE_TARGET_KIND,),
+        include_optional_target_blockers=False,
+        allow_overwrite=True,
+    )
+
+    row = payloads["contexts"]["rows"][0]
+    context = row["context"]
+    assert row["target_kind"] == FP11_SOURCE_BROTLI_RECODE_TARGET_KIND
+    assert context["source_submission_dir"].endswith("submission_dir")
+    assert context["output_dir"].endswith("fp11_source_brotli_recode")
+    assert context["brotli_qualities"] == list(range(1, 12))
+    assert context["brotli_lgwins"] == ["none", *list(range(16, 25))]
     assert payloads["bootstrap"]["target_omissions"] == []
 
 

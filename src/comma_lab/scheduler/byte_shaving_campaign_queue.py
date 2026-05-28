@@ -64,6 +64,9 @@ from tac.packet_compiler.deterministic_compiler import (
 from tac.packet_compiler.feca_selector_reparameterize import (
     FECA_REPARAMETERIZATION_MANIFEST_SCHEMA,
 )
+from tac.packet_compiler.fp11_source_brotli_recode import (
+    FP11_SOURCE_BROTLI_RECODE_MANIFEST_SCHEMA,
+)
 from tac.repo_io import sha256_file
 
 from .byte_shaving_materializer_registry import (
@@ -74,6 +77,7 @@ from .byte_shaving_materializer_registry import (
     ARCHIVE_ZIP_REPACK_TARGET_KIND,
     DQS1_PAIRSET_TARGET_KIND,
     FECA_SELECTOR_REPARAMETERIZE_TARGET_KIND,
+    FP11_SOURCE_BROTLI_RECODE_TARGET_KIND,
     INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER,
     INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY,
     INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND,
@@ -123,6 +127,7 @@ FAMILY_AGNOSTIC_MATERIALIZER_TOOL = "tools/run_family_agnostic_materializer.py"
 FAMILY_AGNOSTIC_MATERIALIZER_SWEEP_TOOL = "tools/run_family_agnostic_materializer_sweep.py"
 GROUPED_ARCHIVE_STATE_MATERIALIZER_TOOL = "tools/run_grouped_family_agnostic_materializer.py"
 FECA_SELECTOR_REPARAMETERIZATION_TOOL = "tools/build_feca_selector_reparameterized_candidate.py"
+FP11_SOURCE_BROTLI_RECODE_TOOL = "tools/build_fp11_source_brotli_recode_candidate.py"
 SHELL_INFLATE_PARITY_TOOL = "tools/prove_shell_inflate_parity.py"
 INVERSE_ACTION_FUNCTIONAL_TOOL = "tools/build_inverse_steganalysis_action_functional.py"
 INVERSE_SCORER_CELL_TOOL = "tools/materialize_inverse_scorer_cell_candidate.py"
@@ -157,6 +162,7 @@ HARVESTABLE_MATERIALIZER_MANIFEST_SCHEMAS = frozenset(
         PACKET_MEMBER_RECOMPRESS_SCHEMA,
         PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
         FECA_REPARAMETERIZATION_MANIFEST_SCHEMA,
+        FP11_SOURCE_BROTLI_RECODE_MANIFEST_SCHEMA,
         RENDERER_PAYLOAD_DFL1_SCHEMA,
         TENSOR_FACTORIZE_SCHEMA,
     }
@@ -1905,6 +1911,69 @@ def _feca_selector_reparameterization_command(
     return command, [], telemetry
 
 
+def _fp11_source_brotli_recode_command(
+    context: Mapping[str, Any],
+) -> tuple[list[str], list[str], dict[str, Any]]:
+    blockers: list[str] = []
+    source_submission_dir = _path_context_value(context, "source_submission_dir")
+    if source_submission_dir is None:
+        source_submission_dir = _path_context_value(context, "candidate_submission_dir")
+    if source_submission_dir is None:
+        blockers.append("materializer_context_missing:source_submission_dir")
+    output_dir = _path_context_value(context, "output_dir")
+    if output_dir is None:
+        blockers.append("materializer_context_missing:output_dir")
+    if blockers:
+        return [], blockers, {}
+
+    assert source_submission_dir is not None
+    assert output_dir is not None
+    command = [
+        ".venv/bin/python",
+        FP11_SOURCE_BROTLI_RECODE_TOOL,
+        "--source-submission-dir",
+        source_submission_dir,
+        "--output-dir",
+        output_dir,
+        "--allow-nonpositive-candidate",
+    ]
+    for key, flag in (
+        ("quality", "--quality"),
+        ("qualities", "--quality"),
+        ("brotli_quality", "--quality"),
+        ("brotli_qualities", "--quality"),
+        ("lgwin", "--lgwin"),
+        ("lgwins", "--lgwin"),
+        ("brotli_lgwin", "--lgwin"),
+        ("brotli_lgwins", "--lgwin"),
+    ):
+        values = context.get(key)
+        if values is None:
+            continue
+        if isinstance(values, list | tuple):
+            for value in values:
+                command.extend([flag, str(value)])
+        else:
+            command.extend([flag, str(values)])
+    parity_proof = (
+        context.get("full_frame_inflate_parity_proof")
+        or context.get("full_frame_inflate_parity_proof_path")
+    )
+    if isinstance(parity_proof, str) and parity_proof.strip():
+        command.extend(["--full-frame-inflate-parity-proof", parity_proof])
+    if context.get("overwrite") is True or context.get("allow_overwrite") is True:
+        command.append("--overwrite")
+    manifest_path = str(Path(output_dir) / "fp11_source_brotli_recode_manifest.json")
+    telemetry = {
+        "artifact_paths": [output_dir],
+        "input_artifact_paths": [source_submission_dir],
+        "pullback_artifact_paths": [output_dir],
+        "include_postcondition_paths": True,
+        "fp11_source_brotli_recode_manifest": manifest_path,
+    }
+    return command, [], telemetry
+
+
 def _inverse_scorer_action_functional_command(
     context: Mapping[str, Any],
 ) -> tuple[list[str], list[str], dict[str, Any]]:
@@ -3375,6 +3444,14 @@ def _materializer_work_dispatch_blockers(target_kind: str) -> tuple[str, ...]:
                 "packet_member_zip_header_elide_requires_runtime_consumption_proof",
             ]
         )
+    if target_kind == FP11_SOURCE_BROTLI_RECODE_TARGET_KIND:
+        blockers.extend(
+            [
+                "fp11_source_brotli_recode_requires_source_runtime_adapter",
+                "fp11_source_brotli_recode_requires_decoder_raw_roundtrip_proof",
+                "fp11_source_brotli_recode_requires_same_runtime_full_frame_parity",
+            ]
+        )
     if target_kind == TENSOR_FACTORIZE_TARGET_KIND:
         blockers.extend(
             [
@@ -3584,6 +3661,24 @@ def _materializer_candidate_postconditions(
             "source_runtime_native_renderer_payload_dfl1"
         )
         required_positive_int.append("selected_payload.payload_bytes")
+    if target_kind == FP11_SOURCE_BROTLI_RECODE_TARGET_KIND:
+        required_equals["receiver_contract_kind"] = (
+            "source_runtime_native_fp11_source_brotli_recode"
+        )
+        required_equals["serialized_archive_delta.schema"] = (
+            "serialized_archive_delta_contract.v1"
+        )
+        required_sha256.append("candidate_member.sha256")
+        required_positive_int.extend(
+            [
+                "source_decoder_bytes",
+                "candidate_decoder_bytes",
+                "candidate_member.bytes",
+                "serialized_archive_delta.source_archive_bytes",
+                "serialized_archive_delta.candidate_archive_bytes",
+            ]
+        )
+        required_nonempty.append("runtime_consumption_proof_path")
     if target_kind == PACKET_MEMBER_MERGE_TARGET_KIND:
         required_nonempty.extend(
             [
@@ -3639,6 +3734,20 @@ def _materializer_candidate_postconditions(
                     ]
                     if target_kind == RENDERER_PAYLOAD_DFL1_TARGET_KIND
                     and require_dfl1_full_frame_parity
+                    else []
+                ),
+                *(
+                    [
+                        "receiver_contract_satisfied",
+                        "receiver_verification.receiver_contract_satisfied",
+                        "runtime_adapter_ready",
+                        "receiver_verification.runtime_adapter_ready",
+                        "decoder_raw_roundtrip_equal",
+                        "source_tail_unchanged",
+                        "selector_payload_unchanged",
+                        "dqs1_tail_unchanged",
+                    ]
+                    if target_kind == FP11_SOURCE_BROTLI_RECODE_TARGET_KIND
                     else []
                 ),
                 *(
@@ -3968,6 +4077,24 @@ def build_materializer_work_queue(
                     ),
                     schema=FECA_REPARAMETERIZATION_MANIFEST_SCHEMA,
                     target_kind=FECA_SELECTOR_REPARAMETERIZE_TARGET_KIND,
+                )
+        elif (
+            unit_kind == "selector_stream"
+            and operation_family == "source_brotli_recode"
+            and target_kind == FP11_SOURCE_BROTLI_RECODE_TARGET_KIND
+        ):
+            command, command_blockers, telemetry = _fp11_source_brotli_recode_command(
+                context
+            )
+            blockers.extend(command_blockers)
+            output_dir = _path_context_value(context, "output_dir")
+            if command and output_dir is not None:
+                postconditions = _materializer_candidate_postconditions(
+                    manifest_path=str(
+                        Path(output_dir) / "fp11_source_brotli_recode_manifest.json"
+                    ),
+                    schema=FP11_SOURCE_BROTLI_RECODE_MANIFEST_SCHEMA,
+                    target_kind=FP11_SOURCE_BROTLI_RECODE_TARGET_KIND,
                 )
         elif (
             unit_kind == "tensor"

@@ -1,0 +1,34 @@
+{
+  "allowed_use": "local_final_rate_attack_planning_feedback_only",
+  "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
+  "materializer_archive_delta_status_counts": {
+    "realized_saving": 2
+  },
+  "materializer_blocking_feedback_count": 0,
+  "materializer_observation_count": 2,
+  "materializer_rate_nonpositive_count": 0,
+  "materializer_rate_positive_count": 2,
+  "materializer_saved_bytes_max": 37,
+  "materializer_saved_bytes_sum": 74,
+  "materializer_target_kind_counts": {
+    "fp11_source_brotli_recode_v1": 2
+  },
+  "observation_count": 7,
+  "observation_kind_counts": {
+    "materializer_chain_archive_delta": 2,
+    "queue_performance_step": 5
+  },
+  "observer_revalidation_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/observer_revalidation.json",
+  "promotion_eligible": false,
+  "queue_blockers": [],
+  "queue_healthy": true,
+  "queue_id": "frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal",
+  "queue_status_counts": {
+    "succeeded": 5
+  },
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "frontier_final_rate_attack_signal_harvest.v1",
+  "score_claim": false,
+  "signal_observations_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/materializer_signal_observations.jsonl"
+}

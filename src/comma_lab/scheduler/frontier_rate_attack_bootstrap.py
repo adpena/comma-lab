@@ -33,6 +33,14 @@ from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
     require_no_truthy_authority_fields,
 )
+from tac.packet_compiler.feca_selector_reparameterize import (
+    FEC8_MAGIC,
+    FECA_MAGIC,
+    split_fp11_member,
+)
+from tac.packet_compiler.fp11_source_brotli_recode import (
+    parse_decoder_blob_len,
+)
 from tac.repo_io import sha256_bytes, sha256_file, tree_sha256, write_json_artifact
 
 from .byte_shaving_campaign_queue import (
@@ -47,6 +55,7 @@ from .byte_shaving_materializer_registry import (
     ARCHIVE_ZIP_REPACK_TARGET_KIND,
     DQS1_PAIRSET_TARGET_KIND,
     FECA_SELECTOR_REPARAMETERIZE_TARGET_KIND,
+    FP11_SOURCE_BROTLI_RECODE_TARGET_KIND,
     INVERSE_SCORER_CELL_TARGET_KIND,
     PACKET_MEMBER_MERGE_TARGET_KIND,
     PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
@@ -78,6 +87,7 @@ DEFAULT_EXECUTABLE_TARGET_KINDS = (
     PACKET_MEMBER_MERGE_TARGET_KIND,
     RENDERER_PAYLOAD_DFL1_TARGET_KIND,
     FECA_SELECTOR_REPARAMETERIZE_TARGET_KIND,
+    FP11_SOURCE_BROTLI_RECODE_TARGET_KIND,
 )
 DEFAULT_OPTIONAL_TARGET_KINDS = (
     ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
@@ -539,6 +549,78 @@ def _feca_selector_record_context(
             "upstream_entropy_positions": ["P19", "P18"],
             "downstream_materializer_targets": [ARCHIVE_ZIP_REPACK_TARGET_KIND],
             "chain_label": "frontier_final_rate_attack_p19_p18_to_p11_selector_then_p15_repack",
+        },
+        [],
+    )
+
+
+def _fp11_source_brotli_record_context(
+    record: Mapping[str, Any],
+) -> tuple[dict[str, Any] | None, list[str]]:
+    archive_path = _record_absolute_archive_path(record)
+    blockers: list[str] = []
+    if archive_path is None:
+        return None, ["fp11_source_brotli_recode_requires_absolute_archive_path"]
+    if archive_path.name != "archive.zip":
+        blockers.append("fp11_source_brotli_recode_requires_submission_archive_zip")
+    source_submission_dir = archive_path.parent
+    if not _safe_exists(source_submission_dir):
+        blockers.append("fp11_source_brotli_recode_source_submission_dir_missing")
+    required_paths = (
+        source_submission_dir / "inflate.py",
+        source_submission_dir / "inflate.sh",
+        source_submission_dir / "src" / "codec.py",
+    )
+    missing = [
+        path.relative_to(source_submission_dir).as_posix()
+        for path in required_paths
+        if not _safe_is_file(path)
+    ]
+    if missing:
+        blockers.append("fp11_source_brotli_recode_missing_runtime_files:" + ",".join(missing))
+    if len(_record_zip_member_names(record)) != 1:
+        blockers.append("fp11_source_brotli_recode_requires_single_fp11_member")
+    else:
+        try:
+            member_name = _record_zip_member_names(record)[0]
+            payload = _single_member_payload(archive_path, member_name=member_name)
+        except (OSError, FrontierRateAttackBootstrapError):
+            blockers.append("fp11_source_brotli_recode_member_payload_unreadable")
+        else:
+            if not payload.startswith(b"FP11"):
+                blockers.append("fp11_source_brotli_recode_requires_fp11_archive_member")
+            else:
+                try:
+                    parts = split_fp11_member(
+                        payload,
+                        allowed_selector_magics=(FECA_MAGIC, FEC8_MAGIC),
+                    )
+                except ValueError as exc:
+                    blockers.append(f"fp11_source_brotli_recode_fp11_parse_failed:{exc}")
+                else:
+                    if _safe_is_file(source_submission_dir / "src" / "codec.py"):
+                        try:
+                            decoder_len = parse_decoder_blob_len(
+                                (source_submission_dir / "src" / "codec.py").read_text(
+                                    encoding="utf-8"
+                                )
+                            )
+                        except (OSError, ValueError) as exc:
+                            blockers.append(
+                                f"fp11_source_brotli_recode_decoder_len_parse_failed:{exc}"
+                            )
+                        else:
+                            if decoder_len >= len(parts["source_payload"]):
+                                blockers.append(
+                                    "fp11_source_brotli_recode_decoder_len_exhausts_source_payload"
+                                )
+    if blockers:
+        return None, ordered_unique(blockers)
+    return (
+        {
+            "source_submission_dir": source_submission_dir.as_posix(),
+            "brotli_qualities": list(range(1, 12)),
+            "brotli_lgwins": ["none", *list(range(16, 25))],
         },
         [],
     )
@@ -1325,6 +1407,23 @@ def _target_context(
                     context["full_frame_inflate_parity_proof"] = (
                         full_frame_inflate_parity_proof
                     )
+    elif target_kind == FP11_SOURCE_BROTLI_RECODE_TARGET_KIND:
+        if len(archive_records) != 1:
+            blockers.append("fp11_source_brotli_recode_requires_per_archive_context")
+        else:
+            brotli_context, brotli_blockers = _fp11_source_brotli_record_context(
+                archive_records[0]
+            )
+            blockers.extend(brotli_blockers)
+            if brotli_context is not None:
+                context.update(brotli_context)
+                context["output_dir"] = (
+                    output_root / target_kind / "fp11_source_brotli_recode"
+                ).as_posix()
+                if full_frame_inflate_parity_proof is not None:
+                    context["full_frame_inflate_parity_proof"] = (
+                        full_frame_inflate_parity_proof
+                    )
     elif target_kind == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND:
         if section_manifest is None:
             blockers.append("archive_section_entropy_recode_requires_section_manifest")
@@ -1758,6 +1857,52 @@ def build_frontier_rate_attack_payloads(
                 )
             continue
         if target_kind == FECA_SELECTOR_REPARAMETERIZE_TARGET_KIND:
+            for record in checked_records:
+                label = str(record["label"])
+                context, per_archive_blockers = _target_context(
+                    target_kind=target_kind,
+                    archive_records=[record],
+                    output_root=output_root / "per_archive" / _clean_id(label),
+                    member_name=shared_member,
+                    section_manifest=section_manifest,
+                    section_names=section_names,
+                    merge_contract=merge_contract,
+                    merged_member_name=merged_member_name,
+                    payload_member_name=payload_member_name,
+                    full_frame_inflate_parity_proof=full_frame_inflate_parity_proof,
+                    tensor_manifest=tensor_manifest,
+                    factorization_contract=factorization_contract,
+                    tensor_factorize_rank=tensor_factorize_rank,
+                    zip_compression_methods=zip_compression_methods,
+                    zip_compresslevels=zip_compresslevels,
+                    min_free_bytes=min_free_bytes,
+                    allow_overwrite=allow_overwrite,
+                )
+                if per_archive_blockers:
+                    target_omissions.append(
+                        apply_proxy_evidence_boundary(
+                            {
+                                "schema": "frontier_rate_attack_target_omission.v1",
+                                "target_kind": target_kind,
+                                "archive_label": label,
+                                "materializer_id": adapter.get("materializer_id"),
+                                "blockers": ordered_unique(per_archive_blockers),
+                                **FALSE_AUTHORITY,
+                            },
+                            dispatch_blockers=per_archive_blockers,
+                        )
+                    )
+                    continue
+                assert context is not None
+                append_target_row(
+                    target_kind=target_kind,
+                    adapter=adapter,
+                    backlog_key=f"frontier_rate_attack:{target_kind}:{label}",
+                    context=context,
+                    source_records=[record],
+                )
+            continue
+        if target_kind == FP11_SOURCE_BROTLI_RECODE_TARGET_KIND:
             for record in checked_records:
                 label = str(record["label"])
                 context, per_archive_blockers = _target_context(

@@ -105,6 +105,12 @@ INVERSE_ACTION_COMPILER_TARGET_DEFAULTS: dict[str, dict[str, Any]] = {
         "materializer": "feca_selector_reparameterize_adapter",
         "receiver_contract_kind": "source_runtime_native_selector_context_recode",
     },
+    "fp11_source_brotli_recode_v1": {
+        "unit_kind": "selector_stream",
+        "operation_family": "source_brotli_recode",
+        "materializer": "fp11_source_brotli_recode_adapter",
+        "receiver_contract_kind": "source_runtime_native_fp11_source_brotli_recode",
+    },
     "archive_section_header_elide_v1": {
         "unit_kind": "archive_section",
         "operation_family": "section_header_elide",
@@ -436,6 +442,7 @@ DEFAULT_OPERATION_FAMILIES: dict[str, tuple[str, ...]] = {
     ),
     "selector_stream": (
         "selector_context_recode",
+        "source_brotli_recode",
     ),
     "scorer_response_row": (
         "materialize_scorer_response_candidate",

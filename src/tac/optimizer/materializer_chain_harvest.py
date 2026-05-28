@@ -48,6 +48,10 @@ from tac.packet_compiler.feca_selector_reparameterize import (
     FECA_REPARAMETERIZATION_MANIFEST_SCHEMA,
     FECA_REPARAMETERIZATION_PROOF_SCHEMA,
 )
+from tac.packet_compiler.fp11_source_brotli_recode import (
+    FP11_SOURCE_BROTLI_RECODE_MANIFEST_SCHEMA,
+    FP11_SOURCE_BROTLI_RECODE_PROOF_SCHEMA,
+)
 from tac.repo_io import tree_sha256
 
 SUPPORTED_CHAIN_SCHEMAS = frozenset(
@@ -66,6 +70,7 @@ SUPPORTED_FAMILY_AGNOSTIC_MATERIALIZER_SCHEMAS = frozenset(
         RENDERER_PAYLOAD_DFL1_SCHEMA,
         TENSOR_FACTORIZE_SCHEMA,
         FECA_REPARAMETERIZATION_MANIFEST_SCHEMA,
+        FP11_SOURCE_BROTLI_RECODE_MANIFEST_SCHEMA,
     }
 )
 SUPPORTED_MATERIALIZER_MANIFEST_SCHEMAS = SUPPORTED_CHAIN_SCHEMAS | SUPPORTED_FAMILY_AGNOSTIC_MATERIALIZER_SCHEMAS
@@ -831,6 +836,15 @@ def _load_runtime_proof_with_blockers(
                 required_receiver_contract_kind=required_receiver_contract_kind,
             )
         )
+    elif schema == FP11_SOURCE_BROTLI_RECODE_PROOF_SCHEMA:
+        blockers.extend(
+            _fp11_source_brotli_runtime_consumption_proof_blockers(
+                payload,
+                required_target_kind=required_target_kind,
+                required_materializer_id=required_materializer_id,
+                required_receiver_contract_kind=required_receiver_contract_kind,
+            )
+        )
     else:
         blockers.append(f"runtime_consumption_proof_schema_unsupported:{schema}")
     blockers.extend(
@@ -878,6 +892,40 @@ def _feca_selector_runtime_consumption_proof_blockers(
         blockers.append("runtime_consumption_proof:feca_source_payload_changed")
     if proof.get("dqs1_tail_unchanged") is not True:
         blockers.append("runtime_consumption_proof:feca_dqs1_tail_changed")
+    return blockers
+
+
+def _fp11_source_brotli_runtime_consumption_proof_blockers(
+    proof: Mapping[str, Any],
+    *,
+    required_target_kind: Any = None,
+    required_materializer_id: Any = None,
+    required_receiver_contract_kind: Any = None,
+) -> list[str]:
+    blockers: list[str] = []
+    if required_target_kind is not None and proof.get("target_kind") != required_target_kind:
+        blockers.append("runtime_consumption_proof:fp11_source_brotli_target_kind_mismatch")
+    if required_materializer_id is not None and proof.get("materializer_id") != required_materializer_id:
+        blockers.append("runtime_consumption_proof:fp11_source_brotli_materializer_id_mismatch")
+    if (
+        required_receiver_contract_kind is not None
+        and proof.get("receiver_contract_kind") != required_receiver_contract_kind
+    ):
+        blockers.append("runtime_consumption_proof:fp11_source_brotli_receiver_contract_kind_mismatch")
+    if proof.get("runtime_consumption_proof_passed") is not True:
+        blockers.append("runtime_consumption_proof:fp11_source_brotli_runtime_consumption_proof_not_passed")
+    if proof.get("passed") is not True:
+        blockers.append("runtime_consumption_proof:fp11_source_brotli_proof_not_passed")
+    if proof.get("receiver_contract_satisfied") is not True:
+        blockers.append("runtime_consumption_proof:fp11_source_brotli_receiver_contract_not_satisfied")
+    for key in (
+        "decoder_raw_roundtrip_equal",
+        "source_tail_unchanged",
+        "selector_payload_unchanged",
+        "dqs1_tail_unchanged",
+    ):
+        if proof.get(key) is not True:
+            blockers.append(f"runtime_consumption_proof:fp11_source_brotli_{key}_not_true")
     return blockers
 
 
@@ -1249,6 +1297,8 @@ def _candidate_family(schema: str) -> str:
         return "tensor_factorize"
     if schema == FECA_REPARAMETERIZATION_MANIFEST_SCHEMA:
         return "selector_stream_context_recode"
+    if schema == FP11_SOURCE_BROTLI_RECODE_MANIFEST_SCHEMA:
+        return "fp11_source_brotli_recode"
     return "materializer_chain"
 
 

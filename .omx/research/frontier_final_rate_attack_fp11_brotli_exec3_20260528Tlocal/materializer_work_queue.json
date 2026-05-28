@@ -1,0 +1,231 @@
+{
+  "blocked_row_count": 0,
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "deployment_target": "desktop_research",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "optimizer_candidate_queue_is_planning_only",
+    "requires_exact_eval_readiness_gate",
+    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+    "requires_non_proxy_score_evidence_before_promotion"
+  ],
+  "exact_cuda_auth_eval": false,
+  "executable_row_count": 1,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "generated_at_utc": "2026-05-28T15:09:13Z",
+  "gpu_launched": false,
+  "grouped_archive_state_executable_request_count": 0,
+  "grouped_archive_state_materializer_requests": [],
+  "grouped_archive_state_request_count": 0,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "row_count": 1,
+  "rows": [
+    {
+      "backlog_key": "frontier_rate_attack:fp11_source_brotli_recode_v1:current_contest_cpu_frontier",
+      "backlog_rank": 1,
+      "candidate_saved_bytes_sum": 0,
+      "charged_bits_changed": false,
+      "command": [
+        ".venv/bin/python",
+        "tools/build_fp11_source_brotli_recode_candidate.py",
+        "--source-submission-dir",
+        "/Volumes/VertigoDataTier/experiments/results/feca_selector_reparameterized_runtime_stable_20260527Tlocal/submission_dir",
+        "--output-dir",
+        "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode",
+        "--allow-nonpositive-candidate",
+        "--quality",
+        "1",
+        "--quality",
+        "2",
+        "--quality",
+        "3",
+        "--quality",
+        "4",
+        "--quality",
+        "5",
+        "--quality",
+        "6",
+        "--quality",
+        "7",
+        "--quality",
+        "8",
+        "--quality",
+        "9",
+        "--quality",
+        "10",
+        "--quality",
+        "11",
+        "--lgwin",
+        "none",
+        "--lgwin",
+        "16",
+        "--lgwin",
+        "17",
+        "--lgwin",
+        "18",
+        "--lgwin",
+        "19",
+        "--lgwin",
+        "20",
+        "--lgwin",
+        "21",
+        "--lgwin",
+        "22",
+        "--lgwin",
+        "23",
+        "--lgwin",
+        "24",
+        "--overwrite"
+      ],
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "materializer_work_queue_local_proof_chain_only",
+        "fp11_source_brotli_recode_requires_source_runtime_adapter",
+        "fp11_source_brotli_recode_requires_decoder_raw_roundtrip_proof",
+        "fp11_source_brotli_recode_requires_same_runtime_full_frame_parity",
+        "exact_auth_eval_required_before_score_claim"
+      ],
+      "exact_cuda_auth_eval": false,
+      "executable": true,
+      "expected_score_gain_sum": 0.0,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "materialization_blockers": [],
+      "materializer_context_closure_plan": null,
+      "materializer_id": "fp11_source_brotli_recode_adapter",
+      "operation_family": "source_brotli_recode",
+      "packet_ir_blocker_counts": {},
+      "packet_ir_lowered_row_count": null,
+      "postconditions": [
+        {
+          "equals": "fp11_source_brotli_recode_manifest.v1",
+          "key": "schema",
+          "path": "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/fp11_source_brotli_recode_manifest.json",
+          "type": "json_equals"
+        },
+        {
+          "false_or_missing": [
+            "ready_for_exact_eval_dispatch",
+            "dispatch_attempted",
+            "gpu_launched"
+          ],
+          "forbidden_statuses": [
+            "failed"
+          ],
+          "path": "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/fp11_source_brotli_recode_manifest.json",
+          "required_artifact_records": [
+            "candidate_archive"
+          ],
+          "required_equals": {
+            "receiver_contract_kind": "source_runtime_native_fp11_source_brotli_recode",
+            "schema": "fp11_source_brotli_recode_manifest.v1",
+            "serialized_archive_delta.schema": "serialized_archive_delta_contract.v1"
+          },
+          "required_false": [
+            "score_claim",
+            "promotion_eligible",
+            "rank_or_kill_eligible"
+          ],
+          "required_nonempty": [
+            "runtime_consumption_proof_path"
+          ],
+          "required_nonempty_unless_true": [],
+          "required_positive_int": [
+            "candidate_archive.bytes",
+            "source_decoder_bytes",
+            "candidate_decoder_bytes",
+            "candidate_member.bytes",
+            "serialized_archive_delta.source_archive_bytes",
+            "serialized_archive_delta.candidate_archive_bytes"
+          ],
+          "required_runtime_adapter_identity": true,
+          "required_sha256": [
+            "candidate_archive.sha256",
+            "candidate_member.sha256"
+          ],
+          "required_true": [
+            "byte_closed_candidate_emitted",
+            "receiver_contract_satisfied",
+            "receiver_verification.receiver_contract_satisfied",
+            "runtime_adapter_ready",
+            "receiver_verification.runtime_adapter_ready",
+            "decoder_raw_roundtrip_equal",
+            "source_tail_unchanged",
+            "selector_payload_unchanged",
+            "dqs1_tail_unchanged"
+          ],
+          "type": "json_completion_contract"
+        }
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_contract_id": "fp11_source_brotli_recode_v1.receiver.v1",
+      "receiver_contract_kind": "source_runtime_native_fp11_source_brotli_recode",
+      "receiver_runtime_binding_context": null,
+      "renderer_payload_dfl1_parity_context": null,
+      "repo_root": ".",
+      "resource_kind": "local_cpu",
+      "schema": "byte_shaving_materializer_work_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "source_backlog_key": null,
+      "source_packet_ir_operation_indices": [],
+      "source_packet_ir_operation_indices_by_unit": {},
+      "source_packet_ir_operation_set_ids": [],
+      "source_packet_ir_source_operation_set_ids": [],
+      "source_plan_path": null,
+      "source_selection_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "source_unit_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "target_kind": "fp11_source_brotli_recode_v1",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ],
+      "telemetry": {
+        "artifact_paths": [
+          "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode"
+        ],
+        "fp11_source_brotli_recode_manifest": "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/fp11_source_brotli_recode_manifest.json",
+        "include_postcondition_paths": true,
+        "input_artifact_paths": [
+          "/Volumes/VertigoDataTier/experiments/results/feca_selector_reparameterized_runtime_stable_20260527Tlocal/submission_dir"
+        ],
+        "pullback_artifact_paths": [
+          "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode"
+        ]
+      },
+      "tool": "tools/build_fp11_source_brotli_recode_candidate.py",
+      "unit_kind": "selector_stream",
+      "work_id": "materializer_work_frontier_rate_attack_fp11_source_brotli_recode_v1_current_contest_cpu_frontier",
+      "work_rank": 1
+    }
+  ],
+  "schema": "byte_shaving_materializer_work_queue.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "source_backlog_schema": "byte_shaving_materializer_backlog.v1",
+  "source_plan_path": null,
+  "target_modes": [
+    "contest_exact_eval_planning"
+  ],
+  "tool": "comma_lab.scheduler.byte_shaving_campaign_queue"
+}

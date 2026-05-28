@@ -82,6 +82,8 @@ RENDERER_PAYLOAD_DFL1_MATERIALIZER = "renderer_payload_dfl1_adapter"
 RENDERER_PAYLOAD_DFL1_TARGET_KIND = "renderer_payload_dfl1_v1"
 FECA_SELECTOR_REPARAMETERIZE_MATERIALIZER = "feca_selector_reparameterize_adapter"
 FECA_SELECTOR_REPARAMETERIZE_TARGET_KIND = "selector_stream_context_recode_v1"
+FP11_SOURCE_BROTLI_RECODE_MATERIALIZER = "fp11_source_brotli_recode_adapter"
+FP11_SOURCE_BROTLI_RECODE_TARGET_KIND = "fp11_source_brotli_recode_v1"
 
 
 @dataclass(frozen=True)
@@ -592,6 +594,29 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
         implementation_module="tac.packet_compiler.feca_selector_reparameterize",
         materialize_function="build_feca_selector_reparameterized_candidate",
     ),
+    MaterializerAdapter(
+        materializer_id=FP11_SOURCE_BROTLI_RECODE_MATERIALIZER,
+        unit_kind="selector_stream",
+        operation_family="source_brotli_recode",
+        target_kind=FP11_SOURCE_BROTLI_RECODE_TARGET_KIND,
+        executable=True,
+        description=(
+            "Source-runtime-native FP11 source split-Brotli recode. This operates "
+            "inside the FP11 source payload, preserves decompressed decoder state "
+            "exactly, patches the runtime decoder length, and stays blocked on "
+            "full-frame inflate parity plus exact auth eval before promotion."
+        ),
+        receiver_contract_id=f"{FP11_SOURCE_BROTLI_RECODE_TARGET_KIND}.receiver.v1",
+        receiver_contract_kind="source_runtime_native_fp11_source_brotli_recode",
+        cooperative_receiver_required=True,
+        materialization_resource_kind="local_cpu",
+        required_context_fields=(
+            "source_submission_dir",
+            "output_dir",
+        ),
+        implementation_module="tac.packet_compiler.fp11_source_brotli_recode",
+        materialize_function="build_fp11_source_brotli_recode_candidate",
+    ),
 )
 
 _ADAPTERS_BY_TARGET_KEY: dict[tuple[str, str, str], MaterializerAdapter] = {
@@ -839,6 +864,8 @@ __all__ = [
     "DQS1_RECEIVER_CONTRACT_KIND",
     "FECA_SELECTOR_REPARAMETERIZE_MATERIALIZER",
     "FECA_SELECTOR_REPARAMETERIZE_TARGET_KIND",
+    "FP11_SOURCE_BROTLI_RECODE_MATERIALIZER",
+    "FP11_SOURCE_BROTLI_RECODE_TARGET_KIND",
     "INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER",
     "INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY",
     "INVERSE_ACTION_HIGH_LEVEL_RECEIVER_CONTRACT_ID",

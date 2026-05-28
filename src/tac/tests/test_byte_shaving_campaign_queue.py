@@ -57,6 +57,8 @@ from comma_lab.scheduler.byte_shaving_materializer_registry import (
     DQS1_PAIRSET_TARGET_KIND,
     DQS1_RECEIVER_CONTRACT_ID,
     DQS1_RECEIVER_CONTRACT_KIND,
+    FP11_SOURCE_BROTLI_RECODE_MATERIALIZER,
+    FP11_SOURCE_BROTLI_RECODE_TARGET_KIND,
     INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER,
     INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY,
     INVERSE_ACTION_HIGH_LEVEL_RECEIVER_CONTRACT_ID,
@@ -1212,6 +1214,7 @@ def test_materializer_registry_has_family_agnostic_fail_closed_targets() -> None
             },
             TENSOR_FACTORIZE_MATERIALIZER,
             "local_cpu",
+            "tac.optimization.family_agnostic_materializers",
         ),
         (
             {
@@ -1226,6 +1229,7 @@ def test_materializer_registry_has_family_agnostic_fail_closed_targets() -> None
             },
             ARCHIVE_ZIP_REPACK_MATERIALIZER,
             "local_cpu",
+            "tac.optimization.family_agnostic_materializers",
         ),
         (
             {
@@ -1240,6 +1244,7 @@ def test_materializer_registry_has_family_agnostic_fail_closed_targets() -> None
             },
             PACKET_MEMBER_RECOMPRESS_MATERIALIZER,
             "local_cpu",
+            "tac.optimization.family_agnostic_materializers",
         ),
         (
             {
@@ -1254,6 +1259,7 @@ def test_materializer_registry_has_family_agnostic_fail_closed_targets() -> None
             },
             PACKET_MEMBER_ZIP_HEADER_ELIDE_MATERIALIZER,
             "local_cpu",
+            "tac.optimization.family_agnostic_materializers",
         ),
         (
             {
@@ -1268,6 +1274,7 @@ def test_materializer_registry_has_family_agnostic_fail_closed_targets() -> None
             },
             PACKET_MEMBER_MERGE_MATERIALIZER,
             "local_cpu",
+            "tac.optimization.family_agnostic_materializers",
         ),
         (
             {
@@ -1282,10 +1289,26 @@ def test_materializer_registry_has_family_agnostic_fail_closed_targets() -> None
             },
             RENDERER_PAYLOAD_DFL1_MATERIALIZER,
             "local_cpu",
+            "tac.optimization.family_agnostic_materializers",
+        ),
+        (
+            {
+                "unit_id": "fp11_source_decoder_streams",
+                "operation_id": "recode_fp11_source_split_brotli",
+                "operation_family": "source_brotli_recode",
+                "target_kind": FP11_SOURCE_BROTLI_RECODE_TARGET_KIND,
+            },
+            {
+                "unit_id": "fp11_source_decoder_streams",
+                "unit_kind": "selector_stream",
+            },
+            FP11_SOURCE_BROTLI_RECODE_MATERIALIZER,
+            "local_cpu",
+            "tac.packet_compiler.fp11_source_brotli_recode",
         ),
     ]
 
-    for operation, unit, materializer_id, resource_kind in executable_cases:
+    for operation, unit, materializer_id, resource_kind, module in executable_cases:
         resolved = resolve_materializer(operation=operation, unit=unit)
         assert resolved.executable is True
         assert resolved.materializer_id == materializer_id
@@ -1293,7 +1316,7 @@ def test_materializer_registry_has_family_agnostic_fail_closed_targets() -> None
         assert resolved.materialization_resource_kind == resource_kind
         assert resolved.blockers == ()
         assert resolved.adapter is not None
-        assert resolved.adapter.implementation_module == "tac.optimization.family_agnostic_materializers"
+        assert resolved.adapter.implementation_module == module
         assert resolved.adapter.materialize_function
     packet_merge = resolve_materializer(
         operation={
