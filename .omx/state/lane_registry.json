@@ -59868,6 +59868,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_z6_v2_cargo_cult_unwind_l0_scaffold_20260527",
+      "name": "Z6-v2 cargo-cult-unwind L0 SCAFFOLD",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "L0 scaffold registers canonical SubstrateContract per Catalog #241/#242; Rao-Ballard capacity-critique-driven cargo-cult-unwind of Z6 ego-motion-conditioned predictive coding paradigm per Catalog #311 + N1 path-5 STRUCTURAL CEILING REINFORCED 2026-05-28 routing; MLX-first numpy-portable inflate per 8th standing directive 2026-05-26; INDIVIDUALLY-FRACTAL 11th standing directive 2026-05-27; lane_class=substrate_engineering; research_only=true; dispatch_enabled=false; design memo .omx/research/z6_v2_cargo_cult_unwind_design_20260527T053000Z.md; canonical posterior anchor pending sister landing"
     }
   ],
   "level_rules": {
@@ -59877,5 +59918,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-27T19:54:41Z"
+  "updated_at": "2026-05-28T02:15:01Z"
 }
