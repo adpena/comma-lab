@@ -42,8 +42,10 @@ from tac.optimization.repair_family_materializers import (
 from tac.optimization.repair_family_stack_search import (
     REPAIR_FAMILY_EXACT_HANDOFF_CANDIDATE_ROW_SCHEMA,
     REPAIR_FAMILY_EXACT_HANDOFF_PLAN_SCHEMA,
+    REPAIR_FAMILY_STACK_LEARNING_SIGNAL_REPORT_SCHEMA,
     REPAIR_FAMILY_STACK_SEARCH_PLAN_SCHEMA,
     build_repair_family_exact_handoff_plan,
+    build_repair_family_stack_learning_signal_report,
     plan_repair_family_stack_search,
 )
 
@@ -547,7 +549,58 @@ def test_repair_family_stack_search_demotes_negative_posterior(
     assert row["interaction_feature_vector"]["segnet_region_family"] is True
     assert stack_plan["interaction_tensor"]["cell_count"] == 1
     assert stack_plan["interaction_tensor"]["cells"][0]["negative_demoted_count"] == 1
+    assert stack_plan["posterior_acquisition_surface"]["family_prior_count"] == 1
+    assert row["posterior_acquisition_multiplier"] < 1.0
+    assert stack_plan["budget_routing_decision"]["activation_action"] in {
+        "demote_repair_family_until_new_component_signal",
+        "run_next_byte_closed_materializer_or_mlx_probe",
+    }
     assert stack_plan["ready_for_exact_eval_dispatch"] is False
+
+
+def test_repair_stack_learning_signal_report_closes_posterior_loop(
+    tmp_path: Path,
+) -> None:
+    score_report = score_repair_campaign(payload=_repair_payload(tmp_path), repo_root=tmp_path)
+    plan = _plan_from_score_report(score_report)
+    manifest = build_repair_campaign_family_materializer_manifest(
+        repo_root=tmp_path,
+        materialization_plan=plan,
+        score_report=score_report,
+        materialization_plan_path=tmp_path / "plan.json",
+        score_report_path=tmp_path / "score_report.json",
+        typed_response_id="segnet_region_ready",
+        candidate_id="segnet_class_region_waterfill",
+    )
+    manifest_path = _write_json(tmp_path / "family_manifest.json", manifest)
+    report, _bundle = build_repair_family_byte_transform_execution_report(
+        family_materializer_manifest=manifest,
+        family_materializer_manifest_path=manifest_path,
+        output_dir=tmp_path / "byte_transform",
+        replay_argv=["python", "tools/run_repair_family_byte_transform_executor.py"],
+        invocation_argv=["pytest"],
+        repo_root=tmp_path,
+        allow_overwrite=False,
+    )
+    report_path = _write_json(tmp_path / "byte_transform_report.json", report)
+    stack_plan = plan_repair_family_stack_search(
+        execution_reports=[report],
+        execution_report_paths=[report_path],
+        repo_root=tmp_path,
+        byte_credit_budget=1,
+    )
+    learning_report = build_repair_family_stack_learning_signal_report(
+        stack_plan=stack_plan,
+    )
+
+    assert learning_report["schema"] == REPAIR_FAMILY_STACK_LEARNING_SIGNAL_REPORT_SCHEMA
+    assert learning_report["learning_signal_count"] == 1
+    signal = learning_report["learning_signal_rows"][0]
+    update = signal["local_planning_update"]
+    assert update["recommended_acquisition_policy"] == (
+        "increase_receiver_closed_rate_credit_or_rebudget_earlier_entropy_stage"
+    )
+    assert update["planner_feature_vector"]["receiver_credit_exhausted"] is True
 
 
 def test_repair_exact_ready_bridge_emits_blocked_source_queue(

@@ -364,6 +364,7 @@ def test_repair_campaign_autonomous_floor_loop_cli_fails_closed(
     )
     queue_path = _write_json(tmp_path / "repair_materialization_queue.json", queue)
     summary_path = tmp_path / "floor_loop_summary.json"
+    posterior_path = tmp_path / "floor_loop_posterior.jsonl"
 
     result = subprocess.run(
         [
@@ -375,6 +376,10 @@ def test_repair_campaign_autonomous_floor_loop_cli_fails_closed(
             str(tmp_path / "loop"),
             "--summary-out",
             str(summary_path),
+            "--posterior-path",
+            str(posterior_path),
+            "--posterior-lock-path",
+            str(tmp_path / ".floor_loop_posterior.lock"),
             "--max-iterations",
             "1",
         ],
@@ -396,6 +401,11 @@ def test_repair_campaign_autonomous_floor_loop_cli_fails_closed(
         "repair_family_exact_ready_bridge_report.v1"
     )
     assert summary["exact_ready_bridge_candidate_count"] == 0
+    assert summary["posterior_learning_signal_report_schema"] == (
+        "repair_campaign_blocked_learning_signal_report.v1"
+    )
+    assert summary["posterior_learning_signal_count"] == 1
+    assert summary["posterior_appended_count"] == 1
     exact_handoff_plan = json.loads(
         (tmp_path / "loop" / "repair_family_exact_handoff_plan.json").read_text(
             encoding="utf-8"
@@ -413,6 +423,13 @@ def test_repair_campaign_autonomous_floor_loop_cli_fails_closed(
             encoding="utf-8"
         )
     )
+    learning_signal_report = json.loads(
+        (tmp_path / "loop" / "repair_family_stack_learning_signal_report.json").read_text(
+            encoding="utf-8"
+        )
+    )
     assert bridge_report["candidate_count"] == 0
     assert blocked_queue["dispatch_ready_count"] == 0
+    assert learning_signal_report["learning_signal_count"] == 1
+    assert posterior_path.is_file()
     assert summary["ready_for_exact_eval_dispatch"] is False

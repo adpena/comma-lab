@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import time
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
@@ -18,7 +19,7 @@ from tac.optimization.repair_campaign_posterior import (
 from tac.optimization.repair_family_byte_transform_executor import (
     REPAIR_FAMILY_BYTE_TRANSFORM_EXECUTION_REPORT_SCHEMA,
 )
-from tac.repo_io import sha256_file
+from tac.repo_io import json_text, sha256_bytes, sha256_file
 
 REPAIR_FAMILY_STACK_SEARCH_PLAN_SCHEMA = "repair_family_stack_search_plan.v1"
 REPAIR_FAMILY_STACK_SEARCH_ROW_SCHEMA = "repair_family_stack_search_row.v1"
@@ -26,6 +27,13 @@ REPAIR_FAMILY_EXACT_HANDOFF_CANDIDATE_ROW_SCHEMA = (
     "repair_family_exact_handoff_candidate_row.v1"
 )
 REPAIR_FAMILY_EXACT_HANDOFF_PLAN_SCHEMA = "repair_family_exact_handoff_plan.v1"
+REPAIR_FAMILY_STACK_LEARNING_SIGNAL_REPORT_SCHEMA = (
+    "repair_campaign_blocked_learning_signal_report.v1"
+)
+REPAIR_FAMILY_STACK_LEARNING_SIGNAL_SCHEMA = "repair_campaign_learning_signal.v1"
+REPAIR_FAMILY_STACK_LOCAL_PLANNING_UPDATE_SCHEMA = (
+    "repair_campaign_local_planning_update.v1"
+)
 
 _LEVEL_ORDER: tuple[str, ...] = (
     "bit",
@@ -42,6 +50,14 @@ _LEVEL_ORDER: tuple[str, ...] = (
 
 class RepairFamilyStackSearchError(ValueError):
     """Raised when repair-family stack search cannot be planned."""
+
+
+def _utc_now() -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+def _stable_sha256(payload: Mapping[str, Any]) -> str:
+    return sha256_bytes(json_text(payload).encode("utf-8"))
 
 
 def _resolve(path: str | Path, repo_root: str | Path) -> Path:
@@ -131,11 +147,53 @@ def _posterior_demotions(
                 "family_id": family,
                 "observation_count": 0,
                 "negative_result_count": 0,
+                "positive_result_count": 0,
+                "receiver_credit_exhausted_count": 0,
+                "stackability_remeasure_required_count": 0,
+                "entropy_stage_contract_miss_count": 0,
+                "expected_improvement_sum": 0.0,
+                "improvement_per_byte_sum": 0.0,
                 "policies": [],
+                "budget_routing_hints": [],
             },
         )
         state["observation_count"] += 1
         state["policies"].append(policy)
+        feature_vector = _mapping(row.get("planner_feature_vector"))
+        if not feature_vector:
+            feature_vector = _mapping(
+                _mapping(row.get("local_planning_update")).get(
+                    "planner_feature_vector"
+                )
+            )
+        policy_delta = _mapping(row.get("acquisition_policy_delta"))
+        expected = _safe_float(
+            policy_delta.get("expected_local_improvement_score_units")
+            or feature_vector.get("expected_local_improvement_score_units")
+        )
+        improvement_per_byte = _safe_float(
+            policy_delta.get("improvement_per_allocated_byte")
+            or feature_vector.get("improvement_per_allocated_byte")
+        )
+        state["expected_improvement_sum"] += max(0.0, expected)
+        state["improvement_per_byte_sum"] += max(0.0, improvement_per_byte)
+        if expected > 0.0 or improvement_per_byte > 0.0:
+            state["positive_result_count"] += 1
+        if policy_delta.get("receiver_credit_exhausted") is True or (
+            feature_vector.get("receiver_credit_exhausted") is True
+        ):
+            state["receiver_credit_exhausted_count"] += 1
+        if policy_delta.get("stackability_remeasure_required") is True or (
+            feature_vector.get("stackability_remeasure_required") is True
+        ):
+            state["stackability_remeasure_required_count"] += 1
+        if policy_delta.get("entropy_stage_contract_miss") is True or (
+            feature_vector.get("entropy_stage_contract_miss") is True
+        ):
+            state["entropy_stage_contract_miss_count"] += 1
+        hint = str(policy_delta.get("posterior_budget_routing_hint") or "").strip()
+        if hint:
+            state["budget_routing_hints"].append(hint)
         if negative:
             state["negative_result_count"] += 1
     for state in by_family.values():
@@ -143,7 +201,32 @@ def _posterior_demotions(
         negatives = int(state["negative_result_count"])
         state["demotion_multiplier"] = max(0.20, 1.0 - min(0.80, negatives / observations))
         state["demoted"] = negatives > 0
+        state["positive_fraction"] = int(state["positive_result_count"]) / observations
+        state["mean_expected_improvement"] = (
+            float(state["expected_improvement_sum"]) / observations
+        )
+        state["mean_improvement_per_byte"] = (
+            float(state["improvement_per_byte_sum"]) / observations
+        )
+        posterior_boost = min(
+            0.25,
+            0.10 * float(state["positive_fraction"])
+            + min(0.15, float(state["mean_improvement_per_byte"]) * 4000.0),
+        )
+        posterior_penalty = min(
+            0.55,
+            0.20 * (int(state["receiver_credit_exhausted_count"]) / observations)
+            + 0.16
+            * (int(state["entropy_stage_contract_miss_count"]) / observations)
+            + 0.10
+            * (int(state["stackability_remeasure_required_count"]) / observations),
+        )
+        state["acquisition_multiplier"] = max(
+            0.15,
+            min(1.35, float(state["demotion_multiplier"]) * (1.0 + posterior_boost - posterior_penalty)),
+        )
         state["policies"] = ordered_unique(state["policies"])
+        state["budget_routing_hints"] = ordered_unique(state["budget_routing_hints"])
         state.update(FALSE_AUTHORITY)
     return by_family
 
@@ -205,13 +288,16 @@ def _stack_row(
     exact_gate = _mapping(report.get("exact_eval_handoff_gate"))
     demotion = dict(posterior_demotions.get(family) or {})
     demotion_multiplier = _safe_float(demotion.get("demotion_multiplier")) or 1.0
+    acquisition_multiplier = (
+        _safe_float(demotion.get("acquisition_multiplier")) or demotion_multiplier
+    )
     scope_penalty = _level_penalty(levels)
     stack_penalty = _safe_float(report.get("interaction_penalty")) + scope_penalty
     feasible = _byte_credit_feasible(report, remaining_budget)
     negative_demoted = demotion.get("demoted") is True
     score = (
         (local_improvement / max(1, delta_bytes))
-        * demotion_multiplier
+        * acquisition_multiplier
         * (1.0 - min(0.95, stack_penalty))
         if feasible
         else 0.0
@@ -223,6 +309,22 @@ def _stack_row(
             *(
                 ["automatic_negative_result_demotion_active"]
                 if negative_demoted
+                else []
+            ),
+            *(
+                ["posterior_receiver_credit_rebudget_required"]
+                if int(demotion.get("receiver_credit_exhausted_count") or 0) > 0
+                else []
+            ),
+            *(
+                ["posterior_entropy_stage_contract_miss_active"]
+                if int(demotion.get("entropy_stage_contract_miss_count") or 0) > 0
+                else []
+            ),
+            *(
+                ["posterior_stackability_remeasure_required"]
+                if int(demotion.get("stackability_remeasure_required_count") or 0)
+                > 0
                 else []
             ),
             "exact_axis_required_before_score_or_budget",
@@ -263,6 +365,8 @@ def _stack_row(
         "local_mlx_expected_improvement_score_units": local_improvement,
         "stackability_penalty": stack_penalty,
         "posterior_demotion": demotion,
+        "posterior_acquisition_prior": demotion,
+        "posterior_acquisition_multiplier": acquisition_multiplier,
         "automatic_negative_result_demoted": negative_demoted,
         "byte_credit_feasible": feasible,
         "interaction_aware_stack_score": score,
@@ -462,6 +566,126 @@ def _build_interaction_tensor(rows: Sequence[Mapping[str, Any]]) -> dict[str, An
         context="repair_family_stack_interaction_tensor",
     )
     return tensor
+
+
+def _build_posterior_acquisition_surface(
+    posterior_demotions: Mapping[str, Mapping[str, Any]],
+) -> dict[str, Any]:
+    family_priors = []
+    for family_id, prior in sorted(posterior_demotions.items()):
+        family_priors.append(
+            {
+                "schema": "repair_family_stack_posterior_acquisition_prior.v1",
+                "family_id": family_id,
+                "observation_count": _safe_int(prior.get("observation_count")),
+                "negative_result_count": _safe_int(
+                    prior.get("negative_result_count")
+                ),
+                "positive_result_count": _safe_int(
+                    prior.get("positive_result_count")
+                ),
+                "receiver_credit_exhausted_count": _safe_int(
+                    prior.get("receiver_credit_exhausted_count")
+                ),
+                "stackability_remeasure_required_count": _safe_int(
+                    prior.get("stackability_remeasure_required_count")
+                ),
+                "entropy_stage_contract_miss_count": _safe_int(
+                    prior.get("entropy_stage_contract_miss_count")
+                ),
+                "mean_expected_improvement": _safe_float(
+                    prior.get("mean_expected_improvement")
+                ),
+                "mean_improvement_per_byte": _safe_float(
+                    prior.get("mean_improvement_per_byte")
+                ),
+                "demotion_multiplier": _safe_float(
+                    prior.get("demotion_multiplier")
+                ),
+                "acquisition_multiplier": _safe_float(
+                    prior.get("acquisition_multiplier")
+                ),
+                "policies": _string_list(prior.get("policies")),
+                "budget_routing_hints": _string_list(
+                    prior.get("budget_routing_hints")
+                ),
+                "budget_spend_allowed": False,
+                "ready_for_exact_eval_dispatch": False,
+                **FALSE_AUTHORITY,
+            }
+        )
+    surface = {
+        "schema": "repair_family_stack_posterior_acquisition_surface.v1",
+        "family_prior_count": len(family_priors),
+        "family_priors": family_priors,
+        "acquisition_rule": (
+            "positive_local_mlx_priors_can_raise_order_but_negative_results_"
+            "byte_credit_exhaustion_entropy_stage_misses_and_stackability_"
+            "remeasure_flags_reduce_or_reroute_budget"
+        ),
+        "budget_spend_allowed": False,
+        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        surface,
+        context="repair_family_stack_posterior_acquisition_surface",
+    )
+    return surface
+
+
+def _budget_routing_decision(
+    *,
+    rows: Sequence[Mapping[str, Any]],
+    posterior_surface: Mapping[str, Any],
+    archive_bound_handoff_count: int,
+) -> dict[str, Any]:
+    if not rows:
+        route = "materialize_repair_family_byte_transform_reports"
+        blocker = "repair_family_byte_transform_execution_reports_missing"
+        priority = 100
+    elif archive_bound_handoff_count > 0:
+        route = "bridge_archive_bound_candidate_to_exact_ready_input"
+        blocker = "contest_cpu_or_cuda_exact_axis_payload_required"
+        priority = 96
+    elif any(row.get("byte_credit_feasible") is False for row in rows):
+        route = "rebudget_receiver_closed_credit_before_more_repair"
+        blocker = "byte_credit_exhausted_for_stack_row"
+        priority = 92
+    elif all(row.get("automatic_negative_result_demoted") is True for row in rows):
+        route = "demote_repair_family_until_new_component_signal"
+        blocker = "automatic_negative_result_demotion_active"
+        priority = 88
+    elif any(
+        _safe_int(prior.get("entropy_stage_contract_miss_count")) > 0
+        for prior in posterior_surface.get("family_priors") or []
+        if isinstance(prior, Mapping)
+    ):
+        route = "rebuild_entropy_stage_chain_contract"
+        blocker = "posterior_entropy_stage_contract_miss_active"
+        priority = 86
+    else:
+        route = "run_next_byte_closed_materializer_or_mlx_probe"
+        blocker = "exact_axis_required_before_score_or_budget"
+        priority = 80
+    decision = {
+        "schema": "repair_family_stack_budget_routing_decision.v1",
+        "activation_action": route,
+        "priority_score": priority,
+        "selected_blocker_class": blocker,
+        "archive_bound_handoff_count": archive_bound_handoff_count,
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        "allowed_use": "repair_family_local_acquisition_routing_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        decision,
+        context="repair_family_stack_budget_routing_decision",
+    )
+    return decision
 
 
 def _candidate_archive_record(
@@ -725,11 +949,18 @@ def plan_repair_family_stack_search(
             "lane_dispatch_claim_required_before_exact_eval",
         ]
     )
+    posterior_acquisition_surface = _build_posterior_acquisition_surface(demotions)
+    budget_routing_decision = _budget_routing_decision(
+        rows=rows,
+        posterior_surface=posterior_acquisition_surface,
+        archive_bound_handoff_count=archive_bound_handoff_count,
+    )
     plan = {
         "schema": REPAIR_FAMILY_STACK_SEARCH_PLAN_SCHEMA,
         "execution_report_count": len(rows),
         "posterior_path": None if posterior_path is None else str(posterior_path),
         "posterior_row_count": len(posterior_rows),
+        "posterior_acquisition_surface": posterior_acquisition_surface,
         "byte_credit_budget": byte_credit_budget,
         "automatic_negative_result_demotion_enabled": True,
         "entropy_ordering_rule": (
@@ -744,6 +975,7 @@ def plan_repair_family_stack_search(
         "archive_bound_exact_handoff_candidate_count": archive_bound_handoff_count,
         "exact_eval_handoff_candidates": exact_handoff_candidates,
         "planned_family_order": ordered_unique(row["family_id"] for row in rows),
+        "budget_routing_decision": budget_routing_decision,
         "candidate_improvement_observed": any(
             float(row.get("local_mlx_expected_improvement_score_units") or 0.0) > 0.0
             for row in rows
@@ -858,12 +1090,274 @@ def build_repair_family_exact_handoff_plan(
     return plan
 
 
+def _learning_selection_blocker(row: Mapping[str, Any]) -> str:
+    blockers = " ".join(_string_list(row.get("blockers")))
+    if row.get("byte_credit_feasible") is False or "byte_credit" in blockers:
+        return "receiver_credit_exhausted"
+    if _safe_int(row.get("entropy_stage_order"), default=999) >= 999:
+        return "entropy_stage_contract_miss"
+    if row.get("automatic_negative_result_demoted") is True:
+        return "negative_result_demoted"
+    if row.get("archive_bound_exact_handoff_candidate") is True:
+        return "exact_axis_handoff_missing"
+    if row.get("byte_closed_candidate_emitted") is not True:
+        return "byte_closed_candidate_missing"
+    if row.get("archive_bound_runtime_consumption_proof_ready") is not True:
+        return "runtime_consumption_proof_missing"
+    if "stackability" in blockers or "interaction" in blockers:
+        return "stackability_interaction_remeasure"
+    return "exact_axis_handoff_missing"
+
+
+def _learning_policy(row: Mapping[str, Any]) -> str:
+    blocker = _learning_selection_blocker(row)
+    if blocker == "receiver_credit_exhausted":
+        return "increase_receiver_closed_rate_credit_or_rebudget_earlier_entropy_stage"
+    if blocker == "entropy_stage_contract_miss":
+        return "rebuild_entropy_stage_chain_contract_before_budget_spend"
+    if blocker == "negative_result_demoted":
+        return "decrease_family_priority_until_new_component_response_signal"
+    if blocker == "byte_closed_candidate_missing":
+        return "prioritize_byte_closed_family_materializer_implementation"
+    if blocker == "runtime_consumption_proof_missing":
+        return "prioritize_archive_bound_runtime_consumption_proof"
+    if blocker == "stackability_interaction_remeasure":
+        return "prioritize_stackability_remeasurement_before_additional_budget"
+    return "hold_until_byte_closed_exact_auth_handoff_available"
+
+
+def _learning_signal_for_stack_row(row: Mapping[str, Any]) -> dict[str, Any]:
+    family = str(row.get("family_id") or "unclassified_repair_family")
+    typed_response_id = str(
+        row.get("typed_response_id")
+        or row.get("candidate_chain_id")
+        or f"{family}:stack_order_{row.get('planned_stack_order') or 0}"
+    )
+    blocker_class = _learning_selection_blocker(row)
+    policy = _learning_policy(row)
+    improvement = _safe_float(row.get("local_mlx_expected_improvement_score_units"))
+    delta_bytes = max(1, _safe_int(row.get("delta_payload_bytes"), default=1))
+    levels = _string_list(row.get("fractal_scope_levels"))
+    blockers = ordered_unique(
+        [
+            *_string_list(row.get("blockers")),
+            "repair_family_stack_learning_signal_is_not_score_authority",
+            "exact_axis_component_response_required_before_budget_spend",
+        ]
+    )
+    identity = {
+        "schema": "repair_family_stack_learning_identity.v1",
+        "family_id": family,
+        "typed_response_id": typed_response_id,
+        "candidate_chain_id": row.get("candidate_chain_id"),
+        "planned_stack_order": row.get("planned_stack_order"),
+        "entropy_stage_order": row.get("entropy_stage_order"),
+        "fractal_scope_levels": levels,
+        "selection_blocker_class": blocker_class,
+        "blockers": blockers,
+    }
+    feature_vector = {
+        "materialization_signal_kind": "repair_family_stack_search_row",
+        "candidate_archive_materialized": (
+            row.get("candidate_archive_materialized") is True
+        ),
+        "runtime_consumption_proof_present": (
+            row.get("archive_bound_runtime_consumption_proof_ready") is True
+        ),
+        "component_response_replayed": True,
+        "expected_local_improvement_score_units": improvement,
+        "improvement_per_allocated_byte": improvement / delta_bytes,
+        "interaction_aware_stack_score": _safe_float(
+            row.get("interaction_aware_stack_score")
+        ),
+        "posterior_acquisition_multiplier": _safe_float(
+            row.get("posterior_acquisition_multiplier")
+        ),
+        "blocker_count": len(blockers),
+        "missing_artifact_count": sum(
+            1
+            for blocker in blockers
+            if "missing" in blocker or "incomplete" in blocker
+        ),
+        "entropy_position_label": row.get("entropy_position_label"),
+        "entropy_stage_order": row.get("entropy_stage_order"),
+        "entropy_pipeline_stage_index": _safe_int(
+            row.get("entropy_stage_order"), default=999
+        ),
+        "fractal_active_levels": levels,
+        "fractal_ordered_levels": [
+            level for level in _LEVEL_ORDER if level in set(levels)
+        ],
+        "interaction_order": len(levels),
+        "selection_blocker_class": blocker_class,
+        "receiver_credit_exhausted": blocker_class == "receiver_credit_exhausted",
+        "stackability_remeasure_required": (
+            blocker_class == "stackability_interaction_remeasure"
+        ),
+        "entropy_stage_contract_miss": blocker_class
+        == "entropy_stage_contract_miss",
+    }
+    signal = {
+        "schema": REPAIR_FAMILY_STACK_LEARNING_SIGNAL_SCHEMA,
+        "learning_signal_kind": "repair_family_stack_search_feedback",
+        "typed_response_id": typed_response_id,
+        "candidate_id": row.get("candidate_chain_id") or typed_response_id,
+        "family_id": family,
+        "component_response_axis": "[macOS-MLX research-signal]",
+        "evidence_grade": "repair_family_stack_search_local_planning_signal_only",
+        "source_artifacts": [dict(_mapping(row.get("source_execution_report")))]
+        if row.get("source_execution_report")
+        else [],
+        "replay_identity": {
+            "schema": "repair_family_stack_learning_replay_identity.v1",
+            "replay_identity_kind": "repair_family_stack_search_feedback",
+            "hash_manifest_sha256": _stable_sha256(identity),
+            "source_records_sha256": _stable_sha256(
+                {
+                    "schema": "repair_family_stack_learning_sources.v1",
+                    "source_execution_report": row.get("source_execution_report"),
+                }
+            ),
+            "replay_argv_sha256": None,
+            "execution_context_sha256": None,
+            "environment_sha256": None,
+        },
+        "local_planning_update": {
+            "schema": REPAIR_FAMILY_STACK_LOCAL_PLANNING_UPDATE_SCHEMA,
+            "posterior_surface": "repair_family_stack_search_posterior_feedback",
+            "local_planning_update_ready": True,
+            "recommended_acquisition_policy": policy,
+            "recommended_stackability_followup": (
+                "continue_bounded_autonomous_repair_floor_loop"
+            ),
+            "planner_feature_vector": feature_vector,
+            "posterior_update_blockers": [
+                "repair_family_stack_learning_signal_is_not_score_authority",
+                "exact_axis_component_response_required_before_budget_spend",
+            ],
+            "budget_spend_allowed": False,
+            "ready_for_budget_spend": False,
+            "ready_for_exact_eval_dispatch": False,
+            **FALSE_AUTHORITY,
+        },
+        "blockers": blockers,
+        "missing_artifacts": [
+            blocker
+            for blocker in blockers
+            if "missing" in blocker or "incomplete" in blocker
+        ],
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "allowed_use": "repair_family_stack_acquisition_update_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        signal,
+        context=f"repair_family_stack_learning_signal:{typed_response_id}",
+    )
+    return signal
+
+
+def _missing_execution_report_learning_signal() -> dict[str, Any]:
+    row = {
+        "family_id": "unclassified_repair_family",
+        "typed_response_id": "repair_family_floor_loop_execution_reports_missing",
+        "candidate_chain_id": "repair_family_floor_loop_execution_reports_missing",
+        "planned_stack_order": 0,
+        "entropy_stage_order": 999,
+        "fractal_scope_levels": [],
+        "delta_payload_bytes": 1,
+        "local_mlx_expected_improvement_score_units": 0.0,
+        "interaction_aware_stack_score": 0.0,
+        "byte_credit_feasible": True,
+        "byte_closed_candidate_emitted": False,
+        "candidate_archive_materialized": False,
+        "archive_bound_runtime_consumption_proof_ready": False,
+        "blockers": ["repair_family_byte_transform_execution_reports_missing"],
+        **FALSE_AUTHORITY,
+    }
+    return _learning_signal_for_stack_row(row)
+
+
+def build_repair_family_stack_learning_signal_report(
+    *,
+    stack_plan: Mapping[str, Any],
+    bridge_report: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build posterior-consumable local learning signals from stack outcomes."""
+
+    if stack_plan.get("schema") != REPAIR_FAMILY_STACK_SEARCH_PLAN_SCHEMA:
+        raise RepairFamilyStackSearchError(
+            "stack learning signal report requires repair family stack plan"
+        )
+    require_no_truthy_authority_fields(
+        stack_plan,
+        context="repair_family_stack_learning_signal_source_plan",
+    )
+    if bridge_report is not None:
+        require_no_truthy_authority_fields(
+            bridge_report,
+            context="repair_family_stack_learning_signal_bridge_report",
+        )
+    rows = [
+        row for row in stack_plan.get("stack_rows") or [] if isinstance(row, Mapping)
+    ]
+    signals = (
+        [_learning_signal_for_stack_row(row) for row in rows]
+        if rows
+        else [_missing_execution_report_learning_signal()]
+    )
+    bridge_blockers = (
+        list(_string_list(_mapping(bridge_report).get("blockers")))
+        if bridge_report is not None
+        else []
+    )
+    report = {
+        "schema": REPAIR_FAMILY_STACK_LEARNING_SIGNAL_REPORT_SCHEMA,
+        "generated_at_utc": _utc_now(),
+        "learning_signal_kind": "repair_family_stack_search_feedback",
+        "source_stack_plan_schema": stack_plan.get("schema"),
+        "source_bridge_report_schema": _mapping(bridge_report).get("schema"),
+        "stack_row_count": len(rows),
+        "learning_signal_count": len(signals),
+        "learning_signal_rows": signals,
+        "blockers": ordered_unique(
+            [
+                *bridge_blockers,
+                "repair_family_stack_learning_signal_is_not_score_authority",
+                "exact_axis_component_response_required_before_budget_spend",
+            ]
+        ),
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "allowed_use": "repair_family_stack_feedback_posterior_append_input",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        report,
+        context="repair_family_stack_learning_signal_report",
+    )
+    return report
+
+
 __all__ = [
     "REPAIR_FAMILY_EXACT_HANDOFF_CANDIDATE_ROW_SCHEMA",
     "REPAIR_FAMILY_EXACT_HANDOFF_PLAN_SCHEMA",
+    "REPAIR_FAMILY_STACK_LEARNING_SIGNAL_REPORT_SCHEMA",
     "REPAIR_FAMILY_STACK_SEARCH_PLAN_SCHEMA",
     "REPAIR_FAMILY_STACK_SEARCH_ROW_SCHEMA",
     "RepairFamilyStackSearchError",
     "build_repair_family_exact_handoff_plan",
+    "build_repair_family_stack_learning_signal_report",
     "plan_repair_family_stack_search",
 ]

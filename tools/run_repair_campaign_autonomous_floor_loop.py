@@ -32,6 +32,10 @@ from tac.optimization.proxy_candidate_contract import (  # noqa: E402
     ordered_unique,
     require_no_truthy_authority_fields,
 )
+from tac.optimization.repair_campaign_posterior import (  # noqa: E402
+    DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_LOCK_PATH,
+    append_repair_campaign_blocked_learning_signal_report,
+)
 from tac.optimization.repair_family_byte_transform_executor import (  # noqa: E402
     REPAIR_FAMILY_BYTE_TRANSFORM_EXECUTION_REPORT_SCHEMA,
 )
@@ -41,9 +45,11 @@ from tac.optimization.repair_family_exact_ready_bridge import (  # noqa: E402
 )
 from tac.optimization.repair_family_stack_search import (  # noqa: E402
     REPAIR_FAMILY_EXACT_HANDOFF_PLAN_SCHEMA,
+    REPAIR_FAMILY_STACK_LEARNING_SIGNAL_REPORT_SCHEMA,
     REPAIR_FAMILY_STACK_SEARCH_PLAN_SCHEMA,
     RepairFamilyStackSearchError,
     build_repair_family_exact_handoff_plan,
+    build_repair_family_stack_learning_signal_report,
     plan_repair_family_stack_search,
 )
 from tac.repo_io import (  # noqa: E402
@@ -68,6 +74,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--summary-out", required=True, type=Path)
     parser.add_argument("--posterior-path", type=Path)
+    parser.add_argument(
+        "--posterior-lock-path",
+        type=Path,
+        default=DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_LOCK_PATH,
+    )
     parser.add_argument("--byte-credit-budget", type=int)
     parser.add_argument("--max-iterations", type=int, default=1)
     parser.add_argument("--max-steps-per-iteration", type=int, default=32)
@@ -257,6 +268,13 @@ def _build_summary(
     exact_ready_bridge_report_path = (
         output_dir / "repair_family_exact_ready_bridge_report.json"
     )
+    learning_signal_report = build_repair_family_stack_learning_signal_report(
+        stack_plan=final_stack_plan,
+        bridge_report=exact_ready_bridge_report,
+    )
+    learning_signal_report_path = (
+        output_dir / "repair_family_stack_learning_signal_report.json"
+    )
     summary = {
         "schema": REPAIR_CAMPAIGN_AUTONOMOUS_FLOOR_LOOP_SCHEMA,
         "materialization_queue_path": _repo_rel(queue_path),
@@ -293,6 +311,17 @@ def _build_summary(
             exact_ready_bridge_report["runtime_content_tree_custody_proven_count"]
         ),
         "exact_ready_bridge": exact_ready_bridge,
+        "posterior_learning_signal_report_path": _repo_rel(learning_signal_report_path),
+        "posterior_learning_signal_report_schema": (
+            REPAIR_FAMILY_STACK_LEARNING_SIGNAL_REPORT_SCHEMA
+        ),
+        "posterior_learning_signal_count": learning_signal_report[
+            "learning_signal_count"
+        ],
+        "posterior_learning_signal_report": learning_signal_report,
+        "posterior_append_report": None,
+        "posterior_appended_count": 0,
+        "posterior_skipped_duplicate_count": 0,
         "stop_reason": iterations[-1]["stop_reason"] if iterations else "exact_axis_blocker",
         "autonomous_loop_closed": True,
         "loop_contract": [
@@ -301,6 +330,7 @@ def _build_summary(
             "stack_search_routes_negative_results_and_byte_credit",
             "exact_eval_handoff_fails_closed_without_contest_cpu_or_cuda_axis",
             "exact_ready_bridge_emits_source_queue_and_blocked_exact_ready_queue",
+            "stack_and_bridge_outcomes_emit_posterior_learning_signals",
         ],
         "blockers": ordered_unique(
             [
@@ -401,6 +431,45 @@ def main(argv: list[str] | None = None) -> int:
                 allow_overwrite=bool(args.overwrite),
                 expected_existing_sha256=expected_bridge_sha,
             )
+        learning_signal_report_path = (
+            output_dir / "repair_family_stack_learning_signal_report.json"
+        )
+        expected_learning_signal_sha = (
+            sha256_file(learning_signal_report_path)
+            if learning_signal_report_path.exists() and args.overwrite
+            else None
+        )
+        write_json_artifact(
+            learning_signal_report_path,
+            summary["posterior_learning_signal_report"],
+            allow_overwrite=bool(args.overwrite),
+            expected_existing_sha256=expected_learning_signal_sha,
+        )
+        if args.posterior_path is not None:
+            posterior_append_report = (
+                append_repair_campaign_blocked_learning_signal_report(
+                    blocked_learning_signal_report_path=_repo_rel(
+                        learning_signal_report_path
+                    ),
+                    blocked_learning_signal_report=summary[
+                        "posterior_learning_signal_report"
+                    ],
+                    posterior_path=args.posterior_path,
+                    lock_path=args.posterior_lock_path,
+                    repo_root=REPO_ROOT,
+                )
+            )
+            summary["posterior_append_report"] = posterior_append_report
+            summary["posterior_appended_count"] = posterior_append_report[
+                "appended_count"
+            ]
+            summary["posterior_skipped_duplicate_count"] = posterior_append_report[
+                "skipped_duplicate_count"
+            ]
+            require_no_truthy_authority_fields(
+                summary,
+                context="repair_campaign_autonomous_floor_loop_summary_after_posterior",
+            )
         summary_out = _resolve(args.summary_out)
         expected_summary_sha = (
             sha256_file(summary_out) if summary_out.exists() and args.overwrite else None
@@ -449,6 +518,10 @@ def main(argv: list[str] | None = None) -> int:
                         "exact_ready_bridge_runtime_content_tree_custody_proven_count"
                     ]
                 ),
+                "posterior_learning_signal_count": summary[
+                    "posterior_learning_signal_count"
+                ],
+                "posterior_appended_count": summary["posterior_appended_count"],
                 "candidate_improvement_observed": summary["stack_search_plan"][
                     "candidate_improvement_observed"
                 ],
