@@ -561,10 +561,10 @@ def test_real_archive_intake_runs_all_families_through_floor_loop(
     assert summary["archive_entropy_substrate_coverage_count"] == 5
     assert summary["archive_entropy_substrate_coverages"]
     assert summary["archive_entropy_substrate_gap_count"] > 0
-    assert "range_coder_contest_runtime_adapter_missing" in summary[
+    assert "range_coder_exact_axis_adjudication_missing" in summary[
         "archive_entropy_substrate_blockers"
     ]
-    assert "ans_coder_contest_runtime_adapter_missing" in summary[
+    assert "ans_coder_exact_axis_adjudication_missing" in summary[
         "archive_entropy_substrate_blockers"
     ]
     assert summary["archive_entropy_substrate_probe_count"] == 0
@@ -593,6 +593,22 @@ def test_real_archive_intake_runs_all_families_through_floor_loop(
     assert "ans_coder_entropy_probe" in summary["archive_variant_signal_kinds"]
     assert "range_coder_lzma_prototype" in summary["archive_variant_signal_kinds"]
     assert "ans_coder_rans_prototype" in summary["archive_variant_signal_kinds"]
+    assert summary["archive_variant_materializer_backlog_task_count"] == 10
+    assert summary["archive_variant_materializer_byte_closed_task_count"] == 10
+    assert (
+        summary["archive_variant_materializer_runtime_adapter_ready_task_count"]
+        == 10
+    )
+    assert (
+        summary["entropy_stage_materializer_work_orders"][
+            "archive_variant_materializer_backlog_task_count"
+        ]
+        == 10
+    )
+    assert {
+        task["target_archive_transform_kind"]
+        for task in summary["archive_variant_materializer_backlog_tasks"]
+    } == {"range_coder_lzma_prototype", "ans_coder_rans_prototype"}
     assert summary["posterior_stack_learning_signal_count"] == 5
     assert summary["entropy_stage_chain_posterior_learning_signal_count"] == 5
     assert summary["exact_failure_rebudgeting_posterior_learning_signal_count"] == 6

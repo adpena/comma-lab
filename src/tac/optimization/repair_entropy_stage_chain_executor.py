@@ -313,6 +313,23 @@ def _build_one_chain(
             "archive_entropy_substrate_coverage": dict(
                 _mapping(report.get("archive_entropy_substrate_coverage"))
             ),
+            "archive_variant_materializer_backlog": dict(
+                _mapping(report.get("archive_variant_materializer_backlog"))
+            ),
+            "archive_variant_materializer_backlog_task_count": _safe_int(
+                report.get("archive_variant_materializer_backlog_task_count"),
+                default=0,
+            ),
+            "archive_variant_materializer_byte_closed_task_count": _safe_int(
+                report.get("archive_variant_materializer_byte_closed_task_count"),
+                default=0,
+            ),
+            "archive_variant_materializer_runtime_adapter_ready_task_count": _safe_int(
+                report.get(
+                    "archive_variant_materializer_runtime_adapter_ready_task_count"
+                ),
+                default=0,
+            ),
             "stage_input_archive": dict(current_archive),
             "stage_output_archive": None,
             "stage_execution_report_path": None,
@@ -426,6 +443,27 @@ def _build_one_chain(
                     "stage_archive_entropy_substrate_coverage": dict(
                         _mapping(stage_report.get("archive_entropy_substrate_coverage"))
                     ),
+                    "stage_archive_variant_materializer_backlog": dict(
+                        _mapping(stage_report.get("archive_variant_materializer_backlog"))
+                    ),
+                    "stage_archive_variant_materializer_backlog_task_count": _safe_int(
+                        stage_report.get("archive_variant_materializer_backlog_task_count"),
+                        default=0,
+                    ),
+                    "stage_archive_variant_materializer_byte_closed_task_count": _safe_int(
+                        stage_report.get(
+                            "archive_variant_materializer_byte_closed_task_count"
+                        ),
+                        default=0,
+                    ),
+                    "stage_archive_variant_materializer_runtime_adapter_ready_task_count": (
+                        _safe_int(
+                            stage_report.get(
+                                "archive_variant_materializer_runtime_adapter_ready_task_count"
+                            ),
+                            default=0,
+                        )
+                    ),
                     "stage_blockers": ordered_unique(output_blockers),
                 }
             )
@@ -477,6 +515,43 @@ def _build_one_chain(
                 or stage.get("archive_entropy_substrate_coverage"),
                 Mapping,
             )
+        ],
+        "archive_variant_materializer_backlog_task_count": sum(
+            _safe_int(
+                stage.get("stage_archive_variant_materializer_backlog_task_count")
+                or stage.get("archive_variant_materializer_backlog_task_count"),
+                default=0,
+            )
+            for stage in stages
+        ),
+        "archive_variant_materializer_byte_closed_task_count": sum(
+            _safe_int(
+                stage.get("stage_archive_variant_materializer_byte_closed_task_count")
+                or stage.get("archive_variant_materializer_byte_closed_task_count"),
+                default=0,
+            )
+            for stage in stages
+        ),
+        "archive_variant_materializer_runtime_adapter_ready_task_count": sum(
+            _safe_int(
+                stage.get(
+                    "stage_archive_variant_materializer_runtime_adapter_ready_task_count"
+                )
+                or stage.get(
+                    "archive_variant_materializer_runtime_adapter_ready_task_count"
+                ),
+                default=0,
+            )
+            for stage in stages
+        ),
+        "archive_variant_materializer_backlogs": [
+            backlog
+            for stage in stages
+            for backlog in (
+                stage.get("stage_archive_variant_materializer_backlog"),
+                stage.get("archive_variant_materializer_backlog"),
+            )
+            if isinstance(backlog, Mapping) and backlog
         ],
         "exact_axis_required": ["contest-CPU", "contest-CUDA"],
         "blockers": ordered_unique(
@@ -587,6 +662,35 @@ def build_repair_entropy_stage_chain_execution_bundle(
             item
             for report in chain_reports
             for item in report.get("archive_entropy_substrate_coverages") or []
+            if isinstance(item, Mapping)
+        ],
+        "archive_variant_materializer_backlog_task_count": sum(
+            _safe_int(
+                report.get("archive_variant_materializer_backlog_task_count"),
+                default=0,
+            )
+            for report in chain_reports
+        ),
+        "archive_variant_materializer_byte_closed_task_count": sum(
+            _safe_int(
+                report.get("archive_variant_materializer_byte_closed_task_count"),
+                default=0,
+            )
+            for report in chain_reports
+        ),
+        "archive_variant_materializer_runtime_adapter_ready_task_count": sum(
+            _safe_int(
+                report.get(
+                    "archive_variant_materializer_runtime_adapter_ready_task_count"
+                ),
+                default=0,
+            )
+            for report in chain_reports
+        ),
+        "archive_variant_materializer_backlogs": [
+            item
+            for report in chain_reports
+            for item in report.get("archive_variant_materializer_backlogs") or []
             if isinstance(item, Mapping)
         ],
         "composed_archive_candidate_default": True,

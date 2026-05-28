@@ -369,7 +369,7 @@ def build_repair_archive_entropy_substrate_coverage(
         _row(
             substrate="range_coding",
             status=(
-                "prototype_materialized_runtime_proven"
+                "prototype_materialized_runtime_adapter_proven"
                 if range_prototype_materialized
                 else "probe_only_materializer_missing"
                 if range_probe_available
@@ -390,7 +390,6 @@ def build_repair_archive_entropy_substrate_coverage(
                     if range_prototype_materialized
                     else ["range_coder_materializer_missing"]
                 ),
-                "range_coder_contest_runtime_adapter_missing",
                 "range_coder_exact_axis_adjudication_missing",
             ],
             estimated_zero_order_savings_bytes=_safe_int(
@@ -401,7 +400,7 @@ def build_repair_archive_entropy_substrate_coverage(
         _row(
             substrate="ans_coding",
             status=(
-                "prototype_materialized_runtime_proven"
+                "prototype_materialized_runtime_adapter_proven"
                 if ans_prototype_materialized
                 else "probe_only_materializer_missing"
                 if ans_probe_available
@@ -422,7 +421,6 @@ def build_repair_archive_entropy_substrate_coverage(
                     if ans_prototype_materialized
                     else ["ans_coder_materializer_missing"]
                 ),
-                "ans_coder_contest_runtime_adapter_missing",
                 "ans_coder_exact_axis_adjudication_missing",
             ],
             estimated_zero_order_savings_bytes=_safe_int(

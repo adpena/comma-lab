@@ -658,6 +658,17 @@ def _compile_entropy_stage_materializer_work_orders(
         stage_rows = [row for row in selected_rows if _entropy_compiler_stage(row) == stage]
         if not stage_rows:
             continue
+        stage_backlog_sources = [
+            row.get("archive_variant_materializer_backlog")
+            for row in stage_rows
+            if isinstance(row.get("archive_variant_materializer_backlog"), dict)
+        ]
+        stage_backlog_tasks = [
+            dict(task)
+            for backlog in stage_backlog_sources
+            for task in (backlog.get("task_rows") or [])
+            if isinstance(task, dict)
+        ]
         stage_rows.sort(
             key=lambda row: (
                 int(row.get("entropy_stage_order") or 999),
@@ -695,12 +706,24 @@ def _compile_entropy_stage_materializer_work_orders(
                 float(row.get("local_mlx_expected_improvement_score_units") or 0.0)
                 for row in stage_rows
             ),
+            "archive_variant_materializer_backlog_task_count": len(stage_backlog_tasks),
+            "archive_variant_materializer_byte_closed_task_count": sum(
+                1
+                for task in stage_backlog_tasks
+                if task.get("byte_closed_candidate_materialized") is True
+            ),
+            "archive_variant_materializer_runtime_adapter_ready_task_count": sum(
+                1
+                for task in stage_backlog_tasks
+                if task.get("runtime_adapter_ready") is True
+            ),
+            "archive_variant_materializer_backlog_tasks": stage_backlog_tasks,
             "candidate_archive_required": True,
             "receiver_decode_only_runtime_proof_required": True,
             "archive_bound_exact_ready_bridge_input_required": True,
             "preclaim_gate_required_before_exact_dispatch": True,
             "materializer_action": (
-                "emit_byte_closed_archive_bound_candidates_for_entropy_stage"
+                "emit_byte_closed_archive_bound_candidates_for_entropy_stage_and_variant_backlog"
             ),
             "blockers": ordered_unique(
                 blocker
@@ -726,6 +749,29 @@ def _compile_entropy_stage_materializer_work_orders(
         "work_order_count": len(work_orders),
         "stage_order": list(stage_order),
         "work_orders": work_orders,
+        "archive_variant_materializer_backlog_task_count": sum(
+            int(order.get("archive_variant_materializer_backlog_task_count") or 0)
+            for order in work_orders
+        ),
+        "archive_variant_materializer_byte_closed_task_count": sum(
+            int(order.get("archive_variant_materializer_byte_closed_task_count") or 0)
+            for order in work_orders
+        ),
+        "archive_variant_materializer_runtime_adapter_ready_task_count": sum(
+            int(
+                order.get(
+                    "archive_variant_materializer_runtime_adapter_ready_task_count"
+                )
+                or 0
+            )
+            for order in work_orders
+        ),
+        "archive_variant_materializer_backlog_tasks": [
+            dict(task)
+            for order in work_orders
+            for task in order.get("archive_variant_materializer_backlog_tasks") or []
+            if isinstance(task, dict)
+        ],
         "archive_bound_candidate_default": True,
         "budget_spend_allowed": False,
         "ready_for_budget_spend": False,
@@ -1421,6 +1467,24 @@ def _build_summary(
             "archive_variant_signal_acquisition_penalty_sum",
             0,
         ),
+        "archive_variant_materializer_backlog_task_count": final_stack_plan.get(
+            "archive_variant_materializer_backlog_task_count",
+            0,
+        ),
+        "archive_variant_materializer_byte_closed_task_count": final_stack_plan.get(
+            "archive_variant_materializer_byte_closed_task_count",
+            0,
+        ),
+        "archive_variant_materializer_runtime_adapter_ready_task_count": (
+            final_stack_plan.get(
+                "archive_variant_materializer_runtime_adapter_ready_task_count",
+                0,
+            )
+        ),
+        "archive_variant_materializer_backlog_tasks": final_stack_plan.get(
+            "archive_variant_materializer_backlog_tasks",
+            [],
+        ),
         "top_fractal_marginal_surface_cells": fractal_cells[:8],
         "stack_acquisition_frontier_count": final_stack_plan.get(
             "stack_acquisition_frontier_count",
@@ -1462,6 +1526,24 @@ def _build_summary(
             entropy_stage_chain_execution_bundle[
                 "materialized_chain_candidate_count"
             ]
+        ),
+        "entropy_stage_chain_archive_variant_materializer_backlog_task_count": (
+            entropy_stage_chain_execution_bundle.get(
+                "archive_variant_materializer_backlog_task_count",
+                0,
+            )
+        ),
+        "entropy_stage_chain_archive_variant_materializer_byte_closed_task_count": (
+            entropy_stage_chain_execution_bundle.get(
+                "archive_variant_materializer_byte_closed_task_count",
+                0,
+            )
+        ),
+        "entropy_stage_chain_archive_variant_materializer_runtime_adapter_ready_task_count": (
+            entropy_stage_chain_execution_bundle.get(
+                "archive_variant_materializer_runtime_adapter_ready_task_count",
+                0,
+            )
         ),
         "entropy_stage_chain_runtime_consumption_proof_ready_count": (
             entropy_stage_chain_execution_bundle[
@@ -1557,6 +1639,8 @@ def _build_summary(
             "frontier_selected_queues_default_to_archive_bound_candidate_emission",
             "entropy_stage_chain_compiler_emits_materializer_work_orders",
             "entropy_stage_chain_compiler_executes_composed_archive_candidates",
+            "probe_only_entropy_variant_signals_open_queue_owned_materializer_backlog_tasks",
+            "range_ans_runtime_adapters_decode_candidate_members_inside_receiver_proofs",
             "precise_blocker_report_names_next_unblocked_action",
         ],
         "blockers": ordered_unique(
@@ -1774,11 +1858,23 @@ def main(argv: list[str] | None = None) -> int:
                 "entropy_stage_materializer_work_order_count": summary[
                     "entropy_stage_materializer_work_order_count"
                 ],
+                "archive_variant_materializer_backlog_task_count": summary[
+                    "archive_variant_materializer_backlog_task_count"
+                ],
+                "archive_variant_materializer_byte_closed_task_count": summary[
+                    "archive_variant_materializer_byte_closed_task_count"
+                ],
+                "archive_variant_materializer_runtime_adapter_ready_task_count": summary[
+                    "archive_variant_materializer_runtime_adapter_ready_task_count"
+                ],
                 "entropy_stage_chain_count": summary[
                     "entropy_stage_chain_count"
                 ],
                 "entropy_stage_chain_materialized_candidate_count": summary[
                     "entropy_stage_chain_materialized_candidate_count"
+                ],
+                "entropy_stage_chain_archive_variant_materializer_backlog_task_count": summary[
+                    "entropy_stage_chain_archive_variant_materializer_backlog_task_count"
                 ],
                 "exact_dispatch_preclaim_gate_count": summary[
                     "exact_dispatch_preclaim_gate_count"

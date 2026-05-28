@@ -337,6 +337,9 @@ def _stack_row(
         report.get("archive_entropy_substrate_coverage")
     )
     archive_variant_signal_surface = _mapping(report.get("archive_variant_signal_surface"))
+    archive_variant_materializer_backlog = _mapping(
+        report.get("archive_variant_materializer_backlog")
+    )
     archive_entropy_blockers = _string_list(archive_entropy_coverage.get("blockers"))
     archive_entropy_anti_pattern_penalty = _archive_entropy_anti_pattern_penalty(
         archive_entropy_coverage
@@ -458,6 +461,16 @@ def _stack_row(
         ),
         "archive_variant_signal_blockers": archive_variant_signal_blockers,
         "archive_variant_signal_acquisition_penalty": archive_variant_signal_penalty,
+        "archive_variant_materializer_backlog": dict(archive_variant_materializer_backlog),
+        "archive_variant_materializer_backlog_task_count": _safe_int(
+            archive_variant_materializer_backlog.get("row_count")
+        ),
+        "archive_variant_materializer_byte_closed_task_count": _safe_int(
+            archive_variant_materializer_backlog.get("byte_closed_materialized_task_count")
+        ),
+        "archive_variant_materializer_runtime_adapter_ready_task_count": _safe_int(
+            archive_variant_materializer_backlog.get("runtime_adapter_ready_task_count")
+        ),
         "byte_closed_candidate_emitted": report.get("byte_closed_candidate_emitted") is True,
         "candidate_archive_materialized": (report.get("candidate_archive_materialized") is True),
         "archive_bound_runtime_consumption_proof_ready": (
@@ -528,6 +541,15 @@ def _interaction_feature_vector(row: Mapping[str, Any]) -> dict[str, Any]:
         "archive_variant_non_selected_signal_count": _safe_int(
             row.get("archive_variant_non_selected_signal_count")
         ),
+        "archive_variant_materializer_backlog_task_count": _safe_int(
+            row.get("archive_variant_materializer_backlog_task_count")
+        ),
+        "archive_variant_materializer_byte_closed_task_count": _safe_int(
+            row.get("archive_variant_materializer_byte_closed_task_count")
+        ),
+        "archive_variant_materializer_runtime_adapter_ready_task_count": _safe_int(
+            row.get("archive_variant_materializer_runtime_adapter_ready_task_count")
+        ),
         "negative_posterior_demoted": (row.get("automatic_negative_result_demoted") is True),
         "local_mlx_expected_improvement_score_units": _safe_float(
             row.get("local_mlx_expected_improvement_score_units")
@@ -592,6 +614,9 @@ def _build_interaction_tensor(rows: Sequence[Mapping[str, Any]]) -> dict[str, An
                 "archive_variant_signal_count": 0,
                 "archive_variant_probe_count": 0,
                 "archive_variant_prototype_count": 0,
+                "archive_variant_materializer_backlog_task_count": 0,
+                "archive_variant_materializer_byte_closed_task_count": 0,
+                "archive_variant_materializer_runtime_adapter_ready_task_count": 0,
                 "expected_improvement_sum": 0.0,
                 "stack_score_sum": 0.0,
                 "max_stack_score": 0.0,
@@ -617,6 +642,15 @@ def _build_interaction_tensor(rows: Sequence[Mapping[str, Any]]) -> dict[str, An
         )
         cell["archive_variant_prototype_count"] += _safe_int(
             vector.get("archive_variant_prototype_count")
+        )
+        cell["archive_variant_materializer_backlog_task_count"] += _safe_int(
+            vector.get("archive_variant_materializer_backlog_task_count")
+        )
+        cell["archive_variant_materializer_byte_closed_task_count"] += _safe_int(
+            vector.get("archive_variant_materializer_byte_closed_task_count")
+        )
+        cell["archive_variant_materializer_runtime_adapter_ready_task_count"] += _safe_int(
+            vector.get("archive_variant_materializer_runtime_adapter_ready_task_count")
         )
         improvement = _safe_float(vector.get("local_mlx_expected_improvement_score_units"))
         stack_score = _safe_float(vector.get("interaction_aware_stack_score"))
@@ -2103,6 +2137,24 @@ def plan_repair_family_stack_search(
             _safe_float(row.get("archive_variant_signal_acquisition_penalty"))
             for row in rows
         ),
+        "archive_variant_materializer_backlog_task_count": sum(
+            _safe_int(row.get("archive_variant_materializer_backlog_task_count"))
+            for row in rows
+        ),
+        "archive_variant_materializer_byte_closed_task_count": sum(
+            _safe_int(row.get("archive_variant_materializer_byte_closed_task_count"))
+            for row in rows
+        ),
+        "archive_variant_materializer_runtime_adapter_ready_task_count": sum(
+            _safe_int(row.get("archive_variant_materializer_runtime_adapter_ready_task_count"))
+            for row in rows
+        ),
+        "archive_variant_materializer_backlog_tasks": [
+            task
+            for row in rows
+            for task in _mapping(row.get("archive_variant_materializer_backlog")).get("task_rows") or []
+            if isinstance(task, Mapping)
+        ],
         "measured_mlx_posterior_budget_routing_updates": (
             measured_mlx_budget_updates
         ),
@@ -2536,6 +2588,15 @@ def _learning_signal_for_stack_row(row: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "archive_variant_signal_acquisition_penalty": _safe_float(
             row.get("archive_variant_signal_acquisition_penalty")
+        ),
+        "archive_variant_materializer_backlog_task_count": _safe_int(
+            row.get("archive_variant_materializer_backlog_task_count")
+        ),
+        "archive_variant_materializer_byte_closed_task_count": _safe_int(
+            row.get("archive_variant_materializer_byte_closed_task_count")
+        ),
+        "archive_variant_materializer_runtime_adapter_ready_task_count": _safe_int(
+            row.get("archive_variant_materializer_runtime_adapter_ready_task_count")
         ),
         "selection_blocker_class": blocker_class,
         "receiver_credit_exhausted": blocker_class == "receiver_credit_exhausted",

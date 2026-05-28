@@ -31,6 +31,12 @@ from tac.optimization.repair_campaign_scorer import (
     build_repair_campaign_posterior_prior_summary,
     score_repair_campaign,
 )
+from tac.optimization.repair_entropy_coder_runtime_adapters import (
+    REPAIR_ENTROPY_CODER_RUNTIME_ADAPTER_MANIFEST_SCHEMA,
+    ans_rans_prototype_encode,
+    decode_entropy_coder_prototype_member,
+    range_lzma_prototype_encode,
+)
 from tac.optimization.repair_entropy_stage_chain_executor import (
     REPAIR_ENTROPY_STAGE_CHAIN_EXECUTION_BUNDLE_SCHEMA,
     build_repair_entropy_stage_chain_execution_bundle,
@@ -38,6 +44,8 @@ from tac.optimization.repair_entropy_stage_chain_executor import (
 from tac.optimization.repair_family_byte_transform_executor import (
     FEC5_FIXED_K8_CODE_BITS,
     FEC6_FIXED_K16_CODE_BITS,
+    REPAIR_ARCHIVE_VARIANT_MATERIALIZER_BACKLOG_ROW_SCHEMA,
+    REPAIR_ARCHIVE_VARIANT_MATERIALIZER_BACKLOG_SCHEMA,
     REPAIR_ARCHIVE_VARIANT_SIGNAL_SURFACE_SCHEMA,
     REPAIR_FAMILY_BYTE_TRANSFORM_EXECUTION_REPORT_SCHEMA,
     REPAIR_FAMILY_BYTE_TRANSFORM_REPLAY_BUNDLE_SCHEMA,
@@ -81,6 +89,31 @@ def _false_authority() -> dict[str, bool]:
         "score_affecting_payload_changed": False,
         "charged_bits_changed": False,
     }
+
+
+def test_entropy_coder_runtime_adapters_roundtrip_receiver_decode() -> None:
+    payloads = [
+        b"",
+        b"abc",
+        bytes(range(256)) * 2,
+        b"\x00" * 128,
+        b"selector-payload" * 17,
+    ]
+    for payload in payloads:
+        assert (
+            decode_entropy_coder_prototype_member(
+                coder_family="range",
+                packet=range_lzma_prototype_encode(payload),
+            )
+            == payload
+        )
+        assert (
+            decode_entropy_coder_prototype_member(
+                coder_family="ans",
+                packet=ans_rans_prototype_encode(payload),
+            )
+            == payload
+        )
 
 
 def _repair_payload(tmp_path: Path) -> dict[str, object]:
@@ -630,10 +663,10 @@ def test_byte_transform_executor_mutates_fec6_selector_payload_when_detected(
         row["substrate"]: row for row in coverage["rows"]
     }
     assert rows_by_substrate["range_coding"]["coverage_status"] == (
-        "prototype_materialized_runtime_proven"
+        "prototype_materialized_runtime_adapter_proven"
     )
     assert rows_by_substrate["ans_coding"]["coverage_status"] == (
-        "prototype_materialized_runtime_proven"
+        "prototype_materialized_runtime_adapter_proven"
     )
     archive_variants = {
         variant["archive_native_transform_kind"]: variant
@@ -674,6 +707,40 @@ def test_byte_transform_executor_mutates_fec6_selector_payload_when_detected(
     assert variant_rows["ans_coder_rans_prototype"]["signal_class"] == (
         "prototype_runtime_proven"
     )
+    assert (
+        report["archive_variant_materializer_backlog_schema"]
+        == REPAIR_ARCHIVE_VARIANT_MATERIALIZER_BACKLOG_SCHEMA
+    )
+    backlog = report["archive_variant_materializer_backlog"]
+    assert backlog["schema"] == REPAIR_ARCHIVE_VARIANT_MATERIALIZER_BACKLOG_SCHEMA
+    assert backlog["row_count"] == 2
+    assert backlog["probe_only_signal_count"] == 2
+    assert backlog["executable_task_count"] == 2
+    assert backlog["byte_closed_materialized_task_count"] == 2
+    assert backlog["runtime_adapter_ready_task_count"] == 2
+    assert backlog["opened_by_pipeline"] is True
+    assert backlog["pipeline_consumer"] == (
+        "repair_campaign_entropy_stage_materializer_work_order_bundle"
+    )
+    backlog_rows = {
+        row["target_archive_transform_kind"]: row for row in backlog["task_rows"]
+    }
+    assert set(backlog_rows) == {
+        "range_coder_lzma_prototype",
+        "ans_coder_rans_prototype",
+    }
+    for row in backlog_rows.values():
+        assert row["schema"] == REPAIR_ARCHIVE_VARIANT_MATERIALIZER_BACKLOG_ROW_SCHEMA
+        assert row["queue_owned"] is True
+        assert row["opened_by_pipeline"] is True
+        assert row["smallest_byte_closed_materializer_task"] is True
+        assert row["byte_closed_candidate_materialized"] is True
+        assert row["runtime_consumption_proof_ready"] is True
+        assert row["runtime_adapter_ready"] is True
+        assert row["receiver_contract_satisfied"] is True
+        assert row["score_claim"] is False
+        assert row["promotion_eligible"] is False
+        assert row["ready_for_exact_eval_dispatch"] is False
     for transform_kind in ("range_coder_entropy_probe", "ans_coder_entropy_probe"):
         probe = archive_variants[transform_kind]
         assert probe["materialized"] is False
@@ -692,6 +759,24 @@ def test_byte_transform_executor_mutates_fec6_selector_payload_when_detected(
         assert prototype["score_affecting_payload_changed"] is False
         assert (tmp_path / prototype["path"]).is_file()
         assert (tmp_path / prototype["runtime_consumption_proof_path"]).is_file()
+        assert prototype["contest_runtime_decoder_adapter_ready"] is True
+        assert prototype["contest_runtime_adapter_integrated"] is True
+        assert prototype["runtime_adapter_manifest"]["schema"] == (
+            REPAIR_ENTROPY_CODER_RUNTIME_ADAPTER_MANIFEST_SCHEMA
+        )
+        proof = json.loads(
+            (tmp_path / prototype["runtime_consumption_proof_path"]).read_text(
+                encoding="utf-8"
+            )
+        )
+        assert proof["runtime_adapter_manifest"]["schema"] == (
+            REPAIR_ENTROPY_CODER_RUNTIME_ADAPTER_MANIFEST_SCHEMA
+        )
+        assert proof["runtime_consumption_probe"]["decoder_adapter_invoked"] is True
+        assert proof["contest_runtime_decoder_adapter_integrated"] is True
+        assert "contest_runtime_adapter_missing" not in " ".join(
+            prototype.get("blockers", [])
+        )
     assert report["semantic_payload_changed"] is True
     assert report["score_affecting_payload_changed"] is False
     assert candidate["semantic_payload_changed"] is True
