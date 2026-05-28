@@ -60319,6 +60319,88 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_wyner_ziv_pipeline_stage_codec_cross_substrate_composition_y_fec6_for_pr101_20260528",
+      "name": "Wyner-Ziv cross-substrate composition Y (FEC6 as Y for PR101) Wave N+9 Slot 3",
+      "phase": 3.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "Cross-substrate composition Y helpers + CLI flags + verdict integration landed in src/tac/substrates/wyner_ziv_pipeline_stage_codec/trainer.py; 26/26 substrate tests pass; canonical equation #344 + anti-pattern #16 + probe outcome #313 + recipe scaffold all landed atomically"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "[macOS-MLX research-signal:experiments/results/wyner_ziv_cross_substrate_composition_y_fec6_for_pr101_l1_mlx_20260528/training_artifact.json] density 0.000437% Y-derivable-prefix on PR101 fp16 X=457916B vs FECA frontier Y=178430B; THIRD-SURFACE FALSIFIED per Catalog #307 IMPLEMENTATION-LEVEL; PARADIGM INTACT per Catalog #311"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/wyner_ziv_cross_substrate_composition_y_fec6_for_pr101_landed_20260528.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_strict_gate_check_subagent_spawn_includes_head_state_pv_evidence_plus_canonical_helper_20260528",
+      "name": "Catalog #376 STRICT gate + canonical helper SPAWN-time PV",
+      "phase": 8.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/preflight.py + src/tac/discipline_anti_pattern_guards/ (canonical helper) + 75 dedicated tests pass; WARN-ONLY initial wire-in per CLAUDE.md Strict-flip atomicity rule"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #376 check_subagent_spawn_includes_head_state_pv_evidence wired into preflight_all WARN-ONLY; live count = 0 at landing (943 legacy rows exempt via 2030-01-01 cutoff)"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/feedback_strict_gate_check_subagent_spawn_includes_head_state_pv_evidence_plus_canonical_helper_landed_20260528.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -60328,5 +60410,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-28T16:44:06Z"
+  "updated_at": "2026-05-28T18:11:49Z"
 }

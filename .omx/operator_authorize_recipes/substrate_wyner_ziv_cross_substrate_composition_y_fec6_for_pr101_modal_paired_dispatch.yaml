@@ -1,0 +1,148 @@
+schema_version: 1
+name: substrate_wyner_ziv_cross_substrate_composition_y_fec6_for_pr101_modal_paired_dispatch
+lane_id: lane_wyner_ziv_pipeline_stage_codec_cross_substrate_composition_y_fec6_for_pr101_20260528
+summary: |
+  Wyner-Ziv pipeline-stage codec with cross-substrate composition Y derivation
+  (Wave N+9 Slot 3 op-routable; sister of per-pair-posenet-output-y recipe).
+  This recipe scaffolds the OPERATOR-ATTENDED paired-CUDA reactivation path
+  for the Wyner-Ziv substrate after the THIRD-SURFACE empirical falsification
+  at the cross-substrate composition Y surface.
+
+  Per Wave N+9 Slot 3 empirical anchor (2026-05-28; MLX-LOCAL $0.0 wall_clock
+  0.52s on M5 Max): Y = canonical FEC6/FECA frontier ZIP-member 'x' payload
+  (sha 18e3155f / 178430 B at experiments/results/feca_selector_reparameterized
+  _scale64_alpha1_rebuilt_20260528Tlocal/submission_dir/archive.zip) vs
+  X = PR101 fp16 decoder state_dict (sha 79b804d9 / 457916 B) yields
+  Y-derivable-prefix density 0.000437% (x2290 below 1% threshold per
+  op-routable #4). THIRD-SURFACE IMPLEMENTATION-LEVEL FALSIFICATION per
+  Catalog #307 (sister of #15 prefix-Y falsification + #15.5 per-pair-pose-
+  stand-in falsification). PARADIGM Wyner 1976 R(D|Y) + Atick-Tishby-Wyner
+  triple per Catalog #311 STILL INTACT.
+
+  Per Catalog #325 PER-SUBSTRATE OPTIMAL FORM via adversarial grand council
+  symposium: this recipe is `dispatch_enabled: false` until the 6-step
+  contract is satisfied via a fresh sextet pact deliberation that authorizes
+  the appropriate reactivation path (the empirical MLX-LOCAL measurement
+  ALREADY ran and is canonically logged; this recipe carries the operator-
+  attended L2 paired-CUDA scaffold for the NEXT step in case of paradigm-
+  RATIFY pivot — currently expected NEXT step is Wave N+10 path #1 real
+  PoseNet pre-compute via the sister per-pair-posenet recipe).
+
+  Per CLAUDE.md "Forbidden premature KILL without research exhaustion":
+  the substrate is DEFERRED-PENDING-research with 3 priority-ordered
+  reactivation paths (in order of expected EV after THIRD-surface failure):
+
+  1. **Real PoseNet pre-compute Y (Wave N+10 path #1; FOURTH Y surface)**:
+     CANONICAL NEXT STEP per anti-pattern #16 canonical_unwind_path. Pre-
+     compute per-pair PoseNet output on contest video 0.mkv via CUDA
+     dispatch (~$1-5 cost Modal-approved per blanket); ship per-pair pose
+     tensor (~14400 bytes for 600 pairs * 6 dims * float32) as decoder-
+     side side-info Y. Decoder reproduces Y at inflate WITHOUT loading
+     PoseNet per Catalog #6 strict-scorer-rule + Catalog #320 (the per-
+     pair pose IS in the archive; no scorer load required). This is the
+     DETERMINISTIC-from-uncorrelated-sources-FAMILY-EXHAUSTED follow-up;
+     uses ACTUAL PoseNet output (no stand-in) so Y bytes carry true
+     contest-video-derived signal that may overlap PR101 weights at
+     byte-prefix surface. Sister recipe at
+     .omx/operator_authorize_recipes/substrate_wyner_ziv_pipeline_stage_codec_per_pair_posenet_output_y_modal_paired_dispatch.yaml
+     is the canonical operator-attended scaffold.
+
+  2. **Non-prefix Y-overlap detector (Hamming-distance / KL-divergence)**:
+     extend the canonical primitive `_detect_y_derivable_prefix` beyond
+     contiguous-prefix to Hamming/KL distance. The lzma ratio 0.4215 on
+     PR101 fp16 bytes (vs sister prober anchor 0.217-0.228) suggests
+     cross-byte STRUCTURE exists; the prefix-detector misses it because
+     it only matches contiguous prefixes. ~$0 MLX-LOCAL + primitive
+     extension cost. Lower EV than path #1 (Hamming-distance fp16 weights
+     against compressed FECA bytes is still likely entropy-flat) but
+     orthogonal evidence value if path #1 also fails.
+
+  3. **CSC-style sparse-coding Y derivation**: derive Y as the
+     reconstruction residual of PR101 weights against a sparse codebook
+     trained on the contest video latents. Sister direction per Catalog
+     #311 Atick-Tishby-Wyner (cooperative-receiver) at the latent-coding
+     surface rather than the byte-prefix surface. Higher EV than path #2
+     but requires substantial new infrastructure (sparse codebook trainer
+     + CUDA dispatch); deferred until paths #1 + #2 evidence resolves.
+
+platform: modal
+gpu: "${MODAL_GPU:-A100}"
+min_vram_gb: 24
+# Catalog #215: paired CUDA+CPU per Catalog #246 requires A100 for full-mode
+# determinism on Wyner-Ziv cross-substrate composition Y if pivoted to a
+# composition path that re-runs FECA encoder + PR101 decoder forward pass.
+min_smoke_gpu: "A100"
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - contest_one_video_replay
+  - research_substrate
+canary_status: independent_substrate
+
+# Per Catalog #240 recipe-vs-trainer-state consistency + CLAUDE.md
+# "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY": dispatch_enabled
+# is FALSE because the cross-substrate composition Y surface has been
+# empirically FALSIFIED at MLX-LOCAL (paid CUDA dispatch on the same
+# already-falsified surface would burn $5+ with no expected ΔS gain).
+# Recipe scaffold preserved per Catalog #325 6-step contract + Catalog #313
+# probe-outcomes ledger reactivation criteria for future operator-attended
+# pivot decisions.
+dispatch_enabled: false
+research_only: true
+smoke_only: false
+
+# Per Catalog #324 post-training Tier-C validation discipline: predicted_band
+# is empirical-density-dependent. The MLX-LOCAL THIRD-surface measurement
+# falsified the density predicate; the predicted band is tagged
+# phantom_random_init pending NEW Y-derivation surface that passes density
+# threshold via paths #1, #2, or #3 above.
+predicted_band:
+  predicted_score_delta_band_lo: 0.0
+  predicted_score_delta_band_hi: 0.0
+  predicted_band_validation_status: phantom_random_init
+  reactivation_criteria: |
+    Post-real-PoseNet-pre-compute density measurement on archive sha pending
+    generation via operator-attended L2 CUDA dispatch (Wave N+10 path #1) +
+    paired Catalog #246 CUDA+CPU auth-eval. The current MLX-LOCAL cross-
+    substrate composition Y density 0.000437% is NON-PROMOTABLE per Catalog
+    #192/#317/#341 + structurally below threshold per anti-pattern #16.
+    Reactivation REQUIRES one of: (a) Wave N+10 path #1 real PoseNet pre-
+    compute Y density passes 1% threshold; (b) sister non-prefix Y-overlap
+    detector primitive lands with empirical density measurement >= 1%; (c)
+    CSC-style sparse-coding Y derivation lands with empirical density >= 1%.
+    NONE of (a)/(b)/(c) currently apply; do NOT dispatch paid CUDA on the
+    same cross-substrate composition Y surface without a NEW reactivation
+    path's empirical density anchor.
+
+# Per Catalog #270 + Catalog #244: NVML env block + Tier 1 engineering
+# primitives are required at the trainer side per Catalog #172/#178/#179/#180
+# (the empirical measurement harness has no gradient descent so most Tier 1
+# primitives are N/A; the harness is "training" only in the empirical-
+# measurement sense).
+
+env_overrides:
+  # Wyner-Ziv-specific env vars per Catalog #151 trainer-flag manifest
+  WZPSC_BASE_SUBSTRATE_BYTES_PATH: experiments/results/pr101_codecop_sweep_20260507_codex/pr101_decoder_state_dict.pt
+  WZPSC_MLX_OUTPUT_DIR: experiments/results/wyner_ziv_pipeline_stage_codec_l2_paired_cuda_cross_substrate_composition_y_${DISPATCH_INSTANCE_JOB_ID}
+  # Cross-substrate composition Y mode active
+  WYNER_ZIV_CROSS_SUBSTRATE_COMPOSITION_Y: "1"
+  WYNER_ZIV_CROSS_SUBSTRATE_COMPOSITION_Y_FRONTIER_AXIS: "contest_cpu"
+  WYNER_ZIV_CROSS_SUBSTRATE_COMPOSITION_Y_ZIP_MEMBER_NAME: "x"
+  # Catalog #244 canonical NVML/CUDA env block (auto-emitted by driver_generator
+  # at scaffold-time per Catalog #335 cathedral consumer auto-discovery)
+  DALI_DISABLE_NVML: "1"
+  CUBLAS_WORKSPACE_CONFIG: ":4096:8"
+  PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+
+cost_band:
+  epochs: 1  # empirical measurement harness has no training loop
+  estimated_cost_usd: 5.0  # paired CUDA+CPU auth-eval IF dispatched (currently disabled)
+  estimated_wall_clock_minutes: 30.0
+  cost_band_token: l2_paired_cuda_cpu_cross_substrate_composition_y
+
+operator_required_attestations:
+  - catalog_246_paired_cuda_cpu_auth_eval_anchor_required_before_score_claim
+  - catalog_325_per_substrate_symposium_within_14_days_before_dispatch
+  - anti_pattern_16_third_surface_falsification_acknowledged_and_unwound_via_reactivation_path
+  - canonical_equation_344_wyner_ziv_cross_substrate_composition_y_pose_axis_savings_v1_empirical_anchor_predicted_band_validated
+  - canonical_frontier_pointer_per_catalog_343_NOT_hardcoded_literals_for_y_archive_location

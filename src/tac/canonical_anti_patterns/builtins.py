@@ -1066,18 +1066,147 @@ def build_wyner_ziv_prefix_y_density_decoder_state_dict_surface_v1() -> AntiPatt
     )
 
 
+def build_wyner_ziv_cross_substrate_composition_y_density_decoder_state_dict_surface_v1() -> AntiPattern:
+    """Anti-pattern #16: Wyner-Ziv cross-substrate composition Y density on decoder-state-dict.
+
+    Sister anti-pattern of #15 at the THIRD Y-derivation surface. Empirical
+    anchor: Wave N+9 Slot 3 landing 2026-05-28 — L1 LONG MLX measurement with
+    Y = canonical FEC6/FECA frontier ZIP-member 'x' payload (sha
+    ``18e3155fbbbe9ab2`` / 178430 B at ``experiments/results/feca_selector_
+    reparameterized_scale64_alpha1_rebuilt_20260528Tlocal/submission_dir/
+    archive.zip``) vs X = PR101 fp16 decoder state_dict (sha
+    ``79b804d9a5839eb3`` / 457916 B) yielded prefix density **0.000437%** —
+    **~2290× below 1% threshold** per op-routable #4. Per Catalog #307:
+    IMPLEMENTATION-LEVEL falsification (PARADIGM Wyner 1976 R(D|Y) +
+    Catalog #311 Atick-Tishby-Wyner triple STILL INTACT).
+
+    THIRD-SURFACE empirical receipt completes the falsification class scope
+    across three orthogonal Y-derivation paths (4 canonical sources +
+    per-pair PoseNet-output Y stand-in + cross-substrate composition Y) ALL
+    yielding ~0% prefix density on PR101 fp16 state_dict bytes. The
+    operationally-distinct hypothesis under test — Y derived from a sister
+    substrate's compressed bytes (uncorrelated derivation path from X) —
+    was the strongest remaining candidate for the byte-prefix detector at
+    the state_dict surface.
+
+    The FALSIFICATION shows that PR101 fp16 raw weight bytes are
+    sufficiently entropy-flat that NO contiguous-prefix detector against
+    ANY Y derivation in the deterministic-from-uncorrelated-sources family
+    can recover meaningful overlap. The canonical Wyner-Ziv paradigm
+    REMAINS INTACT — what is falsified is the prefix-detector
+    implementation, not the cooperative-receiver framing. Sister
+    reactivation path per Catalog #246 + #311: real PoseNet pre-compute Y
+    via Modal blanket authorization OR Hamming-distance / KL-divergence
+    based Y derivation that does not require contiguous-prefix overlap.
+    """
+    return AntiPattern(
+        anti_pattern_id="wyner_ziv_cross_substrate_composition_y_density_decoder_state_dict_surface_v1",
+        description=(
+            "Wyner-Ziv prefix-detector applied to decoder-state-dict bytes "
+            "against a sister substrate's compressed Y bytes (canonical "
+            "FEC6/FECA frontier ZIP-member payload) yields ~0% Y-derivable-"
+            "prefix density. fp16 weights are entropy-flat enough that EVEN "
+            "compressed bytes of a sister substrate trained on the SAME "
+            "contest video share NO contiguous-prefix overlap. "
+            "IMPLEMENTATION (prefix-detector at cross-substrate-Y surface) "
+            "falsified; PARADIGM (Wyner 1976 R(D|Y) per Catalog #311) intact. "
+            "Canonical unwind: real PoseNet pre-compute Y or non-prefix "
+            "overlap-detector Y (Hamming/KL)."
+        ),
+        forbidden_pattern_predicate=(
+            "wyner_ziv_layer.intercept_location == STATE_DICT_SERIALIZATION "
+            "AND wyner_ziv_layer.side_info_source IN {cross_substrate_canonical_frontier_ZIP_member_payload} "
+            "AND base_substrate_bytes_form IN {raw_fp16, raw_fp32, torch_save} "
+            "AND Y_derivation = canonical_frontier_pointer.our_local_frontier_X.archive_bytes "
+            "AND prefix_density_percent < 1.0"
+        ),
+        falsification_band={
+            # Empirical: 0.000437% density on PR101 fp16 vs FECA frontier
+            # (~2290× below 1% threshold). Sister surfaces #15 (canonical
+            # sources + per-pair stand-in) reported 0.000218%. Falsification
+            # band is a structural property of the entropy-flat fp16 byte
+            # distribution at the prefix-detector surface.
+            "max_density_percent_lo": 0.0,
+            "max_density_percent_hi": 0.01,
+            "threshold_percent_per_op_routable_4": 1.0,
+            "third_surface_empirical_density_percent": 0.000437,
+            "third_surface_residual_factor_below_threshold": 2290.0,
+        },
+        recurrence_conditions=(
+            "wyner_ziv_pipeline_stage_codec measuring density on raw_fp16 state_dict via cross-substrate Y",
+            "wyner_ziv_pipeline_stage_codec measuring density on raw_fp32 state_dict via cross-substrate Y",
+            "any prefix-detector applied to entropy-flat tensor-weight byte stream against any compressed Y",
+            "cross-substrate composition Y from canonical frontier ZIP member yields << 1% density",
+            "Hypothesis that sister substrate's compressed encoding overlaps decoder state_dict at byte-prefix surface",
+        ),
+        canonical_source_anchor=(
+            "Wave N+9 Slot 3 landing 2026-05-28: cross-substrate composition Y "
+            "empirical falsification at 0.000437% density (Y=FECA frontier sha "
+            "18e3155f / 178430 B ZIP member 'x' payload vs X=PR101 fp16 sha "
+            "79b804d9 / 457916 B); sister .omx/research/wyner_ziv_cross_substrate_"
+            "composition_y_fec6_for_pr101_landed_20260528.md; canonical equation "
+            "#344 wyner_ziv_cross_substrate_composition_y_pose_axis_savings_v1 "
+            "anchor wave_n_plus_9_slot_3_cross_substrate_composition_y_fec6_for_"
+            "pr101_fp16; Catalog #311 Atick-Tishby-Wyner triple; Catalog #307 "
+            "paradigm-vs-implementation classification; Catalog #343 canonical "
+            "frontier pointer for Y bytes location"
+        ),
+        canonical_unwind_path=(
+            "Per Catalog #311 Atick-Tishby-Wyner triple + Wave N+9 reactivation "
+            "path #1: real PoseNet pre-compute Y via operator-attended L2 CUDA "
+            "dispatch per Catalog #246 + Modal blanket authorization. The "
+            "deterministic-from-uncorrelated-sources family of Y derivations "
+            "(spanning canonical sources + per-pair PoseNet-output Y stand-in "
+            "+ cross-substrate composition Y) is now empirically exhausted at "
+            "the prefix-detector surface. The remaining unwind is either (a) "
+            "REAL PoseNet pre-compute Y (operator-attended L2; Modal-approved "
+            "per blanket) — runs CONTEST PoseNet on contest frames at compress "
+            "time, ships per-pair Y as side-info; the decoder reproduces Y "
+            "deterministically at inflate WITHOUT loading scorer per Catalog "
+            "#6 strict-scorer-rule; OR (b) NON-PREFIX Y-overlap detector "
+            "(Hamming-distance / KL-divergence) that does not require "
+            "contiguous-prefix overlap. Per CLAUDE.md 'Forbidden premature "
+            "KILL': DEFERRED-PENDING-research, NOT killed."
+        ),
+        canonical_producers=(
+            "experiments/train_substrate_wyner_ziv_pipeline_stage_codec.py",
+            "src/tac/substrates/wyner_ziv_pipeline_stage_codec/trainer.py:_derive_cross_substrate_composition_y_fec6_for_pr101",
+            "src/tac/substrates/wyner_ziv_pipeline_stage_codec/trainer.py:_measure_cross_substrate_composition_y_density_fec6_for_pr101",
+            "src/tac/codec/wyner_ziv_layer.py",
+        ),
+        canonical_consumers=(
+            "tools/cathedral_autopilot_autonomous_loop.py",
+            "src/tac/cathedral_consumers/anti_pattern_lookup_consumer/",
+            "src/tac/cathedral_consumers/wyner_ziv_pipeline_stage_codec/",
+            "src/tac/canonical_equations/registry.py (canonical equation #344 anchor wyner_ziv_cross_substrate_composition_y_pose_axis_savings_v1)",
+        ),
+        paradigm_class=PARADIGM_DIAGNOSIS,
+        severity=SEVERITY_MEDIUM,
+        provenance=_design_provenance(
+            "wyner_ziv_cross_substrate_composition_y_density_decoder_state_dict_surface_v1"
+        ),
+        empirical_falsifications=(),
+        last_recalibration_utc=_DESIGN_LANDING_UTC,
+        next_recalibration_trigger=RECALIBRATE_ON_NEW_FALSIFICATIONS,
+    )
+
+
 # -----------------------------------------------------------------------------
 # Population helpers
 # -----------------------------------------------------------------------------
 
 
 def build_all_initial_anti_patterns() -> list[AntiPattern]:
-    """Return the 15 initial canonical anti-patterns as a list (no registry write).
+    """Return the 16 initial canonical anti-patterns as a list (no registry write).
 
     Wave N+7 Slot 2 2026-05-28 expansion: added #13/#14 discipline anti-patterns
     and #15 Wyner-Ziv prefix-Y diagnosis anti-pattern per operator directive
     'ensure all negative findings audited' + Wyner-Ziv FALSIFICATION
     reactivation criteria.
+
+    Wave N+9 Slot 3 2026-05-28 expansion: added #16 Wyner-Ziv cross-substrate
+    composition Y diagnosis anti-pattern per THIRD-SURFACE empirical
+    falsification (sister of #15 at the cross-substrate-Y derivation surface).
     """
     return [
         build_lzma_on_already_brotli_saturated_compounding_v1(),
@@ -1095,6 +1224,7 @@ def build_all_initial_anti_patterns() -> list[AntiPattern]:
         build_subagent_spawn_without_head_state_premise_verification_v1(),
         build_predecessor_working_tree_uncommitted_handoff_v1(),
         build_wyner_ziv_prefix_y_density_decoder_state_dict_surface_v1(),
+        build_wyner_ziv_cross_substrate_composition_y_density_decoder_state_dict_surface_v1(),
     ]
 
 

@@ -88,6 +88,8 @@ __all__ = (
     "_measure_per_pair_posenet_output_y_density",
     "_derive_per_pair_posenet_output_y_stand_in",
     "_load_base_substrate_pre_entropy_bytes",
+    "_derive_cross_substrate_composition_y_fec6_for_pr101",
+    "_measure_cross_substrate_composition_y_density_fec6_for_pr101",
     "L0_SCAFFOLD_NOT_IMPLEMENTED_MESSAGE",
     "MLX_EVIDENCE_GRADE",
     "PER_PAIR_POSENET_OUTPUT_Y_NUM_PAIRS_DEFAULT",
@@ -103,6 +105,25 @@ __all__ = (
 # "1199 OVERLAPPING PAIRS vs 600 NON-OVERLAPPING" anchor.
 PER_PAIR_POSENET_OUTPUT_Y_POSE_DIM = 6
 PER_PAIR_POSENET_OUTPUT_Y_NUM_PAIRS_DEFAULT = 600
+
+
+# Cross-substrate composition Y constants per Wave N+9 Slot 3 op-routable
+# (THIRD Y surface after Wave N+5 prefix-Y FALSIFIED at 0.000218% AND Wave
+# N+7 Slot 2 per-pair PoseNet-output Y stand-in FALSIFIED at 0.000218%
+# both 4585× below 1% threshold). The hypothesis tests Catalog #311 Atick-
+# Tishby-Wyner cooperative-receiver triple at the CROSS-SUBSTRATE COMPOSITION
+# surface: Y = sister substrate's compressed encoding of the SAME contest
+# video (canonical FEC6/FECA family per Catalog #343 frontier pointer) used
+# as decoder-side side-info for compressing PR101 fp16 state_dict bytes. The
+# key Wyner 1976 R(D|Y) invariant is byte-level mutual information I(X; Y);
+# IF FECA (rate-axis-attack frontier substrate) + PR101 (decoder state)
+# encode shared video-structure at the byte level → I(X;Y) > 0 → H(X|Y) <
+# H(X). Distinction from FALSIFIED surfaces: cross-substrate Y is derived
+# from a DIFFERENT substrate's bytes (uncorrelated derivation path from X),
+# whereas prefix-Y and per-pair PoseNet Y stand-in were both derived FROM
+# the same X analytically (redundant with X by construction).
+CROSS_SUBSTRATE_COMPOSITION_Y_DEFAULT_FRONTIER_AXIS = "contest_cpu"
+CROSS_SUBSTRATE_COMPOSITION_Y_ZIP_MEMBER_NAME_DEFAULT = "x"
 
 
 # Per CLAUDE.md "MPS auth eval is NOISE" + Catalog #192/#341 non-promotable
@@ -323,6 +344,59 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help=(
             "Per-pair pose Y dtype (default: float32 matches contest scorer "
             "default; float64 emulates extended-precision pose-axis side-info)."
+        ),
+    )
+    # --- Wave N+9 Slot 3: cross-substrate composition Y per Catalog #311
+    parser.add_argument(
+        "--cross-substrate-composition-y",
+        action="store_true",
+        help=(
+            "L1 THIRD Y SURFACE per Wave N+9 Slot 3 op-routable + Catalog #311 "
+            "Atick-Tishby-Wyner triple. Switches Y derivation from canonical "
+            "sources (FALSIFIED) and per-pair pose stand-in (FALSIFIED) to a "
+            "cross-substrate composition Y: the canonical FEC6/FECA frontier "
+            "archive's entropy-coded ZIP-member payload bytes used as decoder-"
+            "side side-info for PR101 fp16 state_dict X compression. Per "
+            "Catalog #343 'Frontier scores are pointer-only', the canonical "
+            "frontier archive location is loaded via "
+            "tac.canonical_frontier_pointer.load_canonical_frontier_pointer_lenient "
+            "(NOT hardcoded literals). Hypothesis: I(X;Y) > 0 IFF the two "
+            "substrates share underlying video-structure encoding at the byte "
+            "level. THIRD-SURFACE test; IF density >= 1%% paradigm-RATIFY + "
+            "queue Wave N+10 full training; IF density < 1%% sister anti-"
+            "pattern register + queue path #1 real PoseNet pre-compute Y per "
+            "Catalog #246 + Modal blanket authorization."
+        ),
+    )
+    parser.add_argument(
+        "--cross-substrate-composition-y-frontier-axis",
+        type=str,
+        default=CROSS_SUBSTRATE_COMPOSITION_Y_DEFAULT_FRONTIER_AXIS,
+        choices=("contest_cpu", "contest_cuda"),
+        help=(
+            "Which canonical frontier axis to load Y from (default: "
+            "contest_cpu matches Wave N+9 brief + canonical FECA archive)."
+        ),
+    )
+    parser.add_argument(
+        "--cross-substrate-composition-y-zip-member-name",
+        type=str,
+        default=CROSS_SUBSTRATE_COMPOSITION_Y_ZIP_MEMBER_NAME_DEFAULT,
+        help=(
+            "Canonical ZIP member name within the frontier archive containing "
+            "the entropy-coded payload Y bytes (default: 'x' matches canonical "
+            "FECA + sister frontier archive grammar)."
+        ),
+    )
+    parser.add_argument(
+        "--cross-substrate-composition-y-frontier-archive-path-override",
+        type=Path,
+        default=None,
+        help=(
+            "Optional explicit path override for the canonical frontier "
+            "archive (bypasses canonical pointer lookup). RESERVED for test "
+            "fixtures + sister disambiguator probes; default None routes "
+            "through canonical pointer per Catalog #343."
         ),
     )
     return parser
@@ -747,6 +821,325 @@ def _measure_per_pair_posenet_output_y_density(
         }
 
 
+def _derive_cross_substrate_composition_y_fec6_for_pr101(
+    frontier_axis: str = CROSS_SUBSTRATE_COMPOSITION_Y_DEFAULT_FRONTIER_AXIS,
+    zip_member_name: str = CROSS_SUBSTRATE_COMPOSITION_Y_ZIP_MEMBER_NAME_DEFAULT,
+    frontier_archive_path_override: Path | None = None,
+) -> tuple[bytes, dict[str, Any]]:
+    """Derive cross-substrate composition Y from canonical FEC6/FECA frontier.
+
+    Per Wave N+9 Slot 3 op-routable (THIRD Y surface after TWO empirically
+    falsified surfaces — Wave N+5 prefix-Y `6f5eabf30` at 0.000218% density
+    + Wave N+7 Slot 2 per-pair PoseNet-output Y stand-in `49bdcd78f` at
+    0.000218% density both 4585× below 1% threshold). The hypothesis tests
+    Catalog #311 Atick-Tishby-Wyner cooperative-receiver triple at the
+    CROSS-SUBSTRATE COMPOSITION surface: Y derived from sister substrate's
+    compressed encoding of the SAME contest video.
+
+    Per Catalog #343 "Frontier scores are pointer-only" non-negotiable, this
+    helper loads the canonical FEC6/FECA frontier archive bytes location
+    from ``tac.canonical_frontier_pointer.load_canonical_frontier_pointer_lenient``
+    (NOT hardcoded literals). Frontier axis defaults to ``contest_cpu`` per
+    the canonical pointer schema's ``our_local_frontier_contest_cpu`` field.
+
+    Per CLAUDE.md "Apples-to-apples evidence discipline" + Catalog #229
+    premise verification: the canonical frontier MUST resolve to an existing
+    archive ZIP whose canonical ZIP member contains the entropy-coded
+    payload bytes. Per the canonical FECA archive grammar (Wave N+5
+    empirical anchor: 178530 B archive containing single ZIP member 'x' of
+    178430 B = entropy-coded selector packet), the canonical Y bytes are
+    the ZIP member 'x' raw payload (NOT the outer archive wrapper bytes,
+    which include ZIP magic + headers + CRC + filename + extra fields and
+    are NOT the substrate's encoded representation).
+
+    Per CLAUDE.md "Forbidden /tmp paths in any persisted artifact" + Catalog
+    #208: the canonical FECA archive resolves under ``experiments/results/``
+    via the canonical pointer's ``extra.architecture_class`` field, which
+    routes through ``tac.frontier_scan.collect_all_anchors`` per Catalog
+    #316 frontier-pointer-consumer discipline.
+
+    Distinction from FALSIFIED surfaces: cross-substrate Y is derived from
+    a DIFFERENT substrate's bytes (FECA's entropy-coded selector packet),
+    uncorrelated with X (PR101 fp16 raw state_dict weights) at the byte
+    derivation path. Whereas prefix-Y was derived from canonical priors
+    (Comma2k19 / ImageNet / torch_defaults / math_constants — all UPSTREAM
+    of X's training process) and per-pair PoseNet Y stand-in was
+    deterministic-from-pair-index (UNRELATED to X but also unrelated to
+    any contest video structure), cross-substrate Y carries the bit-level
+    encoding of the SAME contest video that PR101 was trained on, but
+    through a DIFFERENT substrate's compression path. The Wyner-Ziv R(D|Y)
+    invariant predicts I(X; Y) > 0 IF the two substrates share underlying
+    video-structure encoding at the byte level.
+
+    Args:
+        frontier_axis: which canonical frontier to load (``contest_cpu`` or
+            ``contest_cuda``). Default ``contest_cpu`` matches Wave N+9
+            brief.
+        zip_member_name: name of the canonical ZIP member to extract for Y
+            bytes (default ``"x"`` matches FECA archive grammar).
+        frontier_archive_path_override: if provided, bypass the canonical
+            pointer lookup and use this explicit archive path. Reserved for
+            test fixtures + sister disambiguator probes.
+
+    Returns:
+        Tuple of (y_bytes, provenance_dict). y_bytes is the canonical ZIP
+        member raw payload. provenance_dict carries the canonical
+        frontier sha + path + architecture class + axis for downstream
+        canonical Provenance per Catalog #323.
+
+    Raises:
+        FileNotFoundError: canonical frontier archive missing on disk.
+        ValueError: frontier axis not in {contest_cpu, contest_cuda} OR
+            ZIP member missing in archive.
+        RuntimeError: canonical pointer cannot resolve frontier archive
+            location.
+    """
+    import zipfile
+
+    from tac.canonical_frontier_pointer import (
+        load_canonical_frontier_pointer_lenient,
+    )
+
+    if frontier_axis not in ("contest_cpu", "contest_cuda"):
+        raise ValueError(
+            f"frontier_axis must be 'contest_cpu' or 'contest_cuda'; "
+            f"got {frontier_axis!r}"
+        )
+
+    if frontier_archive_path_override is not None:
+        archive_path = frontier_archive_path_override
+        # When using an override, fabricate minimal provenance from the path
+        frontier_sha256 = ""
+        frontier_arch_class = "override_path"
+        frontier_lane_id = None
+        frontier_score = None
+    else:
+        pointer = load_canonical_frontier_pointer_lenient()
+        if frontier_axis == "contest_cpu":
+            anchor = pointer.our_local_frontier_contest_cpu
+        else:
+            anchor = pointer.our_local_frontier_contest_cuda
+        if anchor is None:
+            raise RuntimeError(
+                f"canonical frontier pointer has no anchor for axis "
+                f"{frontier_axis!r}; cannot derive cross-substrate "
+                "composition Y per Catalog #343."
+            )
+        frontier_sha256 = anchor.archive_sha256
+        frontier_arch_class = anchor.extra.get("architecture_class", "unknown")
+        frontier_lane_id = anchor.lane_id
+        frontier_score = anchor.score
+
+        # Resolve canonical archive location: the canonical frontier pointer
+        # records the sha256, but the on-disk location must be discovered.
+        # Per the canonical convention (Wave N+5 anchor: FECA at
+        # experiments/results/feca_selector_reparameterized_scale64_alpha1_rebuilt
+        # _20260528Tlocal/submission_dir/archive.zip), the architecture_class
+        # token IS the experiments/results/<dir>/ subdir prefix, and the
+        # canonical archive file inside is submission_dir/archive.zip.
+        canonical_subdir_candidates = [
+            Path("experiments/results") / frontier_arch_class
+            / "submission_dir" / "archive.zip",
+            # Fallback patterns for sister architecture_class naming conventions
+            Path("experiments/results") / f"{frontier_arch_class}_rebuilt_20260528Tlocal"
+            / "submission_dir" / "archive.zip",
+            Path("experiments/results") / f"{frontier_arch_class}_20260528Tlocal"
+            / "submission_dir" / "archive.zip",
+        ]
+        archive_path = None
+        for candidate in canonical_subdir_candidates:
+            if candidate.exists():
+                archive_path = candidate
+                break
+        if archive_path is None:
+            # Fall back to sha256 scan across canonical experiments/results/
+            # (slow path; only fires if architecture_class naming convention
+            # diverges from on-disk layout).
+            for candidate_zip in Path("experiments/results").rglob(
+                "submission_dir/archive.zip"
+            ):
+                try:
+                    cb = candidate_zip.read_bytes()
+                    if hashlib.sha256(cb).hexdigest() == frontier_sha256:
+                        archive_path = candidate_zip
+                        break
+                except Exception:  # pragma: no cover
+                    continue
+        if archive_path is None:
+            raise FileNotFoundError(
+                f"canonical frontier archive sha256={frontier_sha256[:16]} "
+                f"(arch_class={frontier_arch_class!r}) not found on disk "
+                f"under experiments/results/; tried {len(canonical_subdir_candidates)} "
+                "candidate paths + sha-prefix scan. Per Catalog #229 fail-closed: "
+                "cannot derive cross-substrate composition Y without canonical "
+                "frontier archive bytes. Re-run "
+                ".venv/bin/python tools/refresh_canonical_frontier.py to update "
+                "the canonical pointer per Catalog #343."
+            )
+
+    if not archive_path.exists():
+        raise FileNotFoundError(
+            f"canonical frontier archive missing on disk at {archive_path}"
+        )
+
+    # Verify the archive's sha256 matches the canonical pointer (if not override)
+    archive_bytes = archive_path.read_bytes()
+    archive_sha_actual = hashlib.sha256(archive_bytes).hexdigest()
+    if frontier_archive_path_override is None and archive_sha_actual != frontier_sha256:
+        raise RuntimeError(
+            f"canonical frontier archive sha256 mismatch: pointer says "
+            f"{frontier_sha256[:16]} but on-disk {archive_path} has "
+            f"{archive_sha_actual[:16]}. Per Catalog #343: refresh the pointer "
+            f"or rebuild the canonical frontier archive."
+        )
+
+    # Extract the canonical ZIP member's raw bytes (NOT the outer archive
+    # wrapper). Per Wave N+5 FECA empirical anchor: single member 'x' is
+    # 178430 B = entropy-coded selector packet, the canonical decoder input
+    # AFTER ZIP unwrapping.
+    try:
+        with zipfile.ZipFile(archive_path, "r") as zf:
+            member_names = zf.namelist()
+            if zip_member_name not in member_names:
+                raise ValueError(
+                    f"canonical ZIP member {zip_member_name!r} not in archive "
+                    f"{archive_path}; available members: {member_names}. Per "
+                    "FECA archive grammar canonical convention, the entropy-"
+                    "coded payload member is 'x'."
+                )
+            y_bytes = zf.read(zip_member_name)
+    except zipfile.BadZipFile as exc:
+        raise RuntimeError(
+            f"canonical frontier archive {archive_path} is not a valid ZIP: "
+            f"{exc!r}"
+        ) from exc
+
+    provenance = {
+        "frontier_axis": frontier_axis,
+        "frontier_archive_path": str(archive_path),
+        "frontier_archive_sha256": archive_sha_actual,
+        "frontier_archive_bytes_len": len(archive_bytes),
+        "frontier_architecture_class": frontier_arch_class,
+        "frontier_lane_id": frontier_lane_id,
+        "frontier_score": frontier_score,
+        "zip_member_name": zip_member_name,
+        "y_bytes_len": len(y_bytes),
+        "y_bytes_sha256_prefix12": hashlib.sha256(y_bytes).hexdigest()[:12],
+        "is_override_path": frontier_archive_path_override is not None,
+    }
+    return y_bytes, provenance
+
+
+def _measure_cross_substrate_composition_y_density_fec6_for_pr101(
+    pre_entropy_bytes: bytes,
+    frontier_axis: str = CROSS_SUBSTRATE_COMPOSITION_Y_DEFAULT_FRONTIER_AXIS,
+    zip_member_name: str = CROSS_SUBSTRATE_COMPOSITION_Y_ZIP_MEMBER_NAME_DEFAULT,
+    frontier_archive_path_override: Path | None = None,
+) -> dict[str, Any]:
+    """Measure Y-derivable-prefix density vs cross-substrate composition Y.
+
+    Wave N+9 Slot 3 op-routable canonical sister measurement to the 4-canonical-
+    source measurement in :func:`_measure_y_derivable_prefix_density_per_source`
+    + per-pair PoseNet-output Y measurement in
+    :func:`_measure_per_pair_posenet_output_y_density`. Returns a single
+    measurement record matching the canonical schema so downstream consumers
+    can compare like-for-like across the FOUR surfaces tested to date:
+
+      1. Wave N+5 prefix-Y per 4 canonical sources (Comma2k19/ImageNet/
+         torch_defaults/math_constants) — empirically FALSIFIED at 0.000218%.
+      2. Wave N+7 Slot 2 per-pair PoseNet-output Y deterministic stand-in
+         (Atick-Redlich 1990 per Catalog #311) — empirically FALSIFIED at
+         0.000218%.
+      3. Wave N+9 Slot 3 cross-substrate composition Y (FEC6/FECA frontier
+         as Y for PR101 fp16 state_dict X) — THIS MEASUREMENT.
+      4. (Future) Wave N+10+ real PoseNet pre-compute Y via operator-
+         attended L2 CUDA dispatch per Catalog #246 reactivation path.
+
+    Per CLAUDE.md "Apples-to-apples evidence discipline": the verdict
+    reported is HONEST about the test object (canonical FEC6/FECA frontier
+    archive bytes loaded via canonical pointer per Catalog #343). The
+    density measurement IS diagnostic of whether the cross-substrate
+    composition surface admits any prefix overlap with real PR101 fp16
+    state_dict bytes.
+
+    Per CLAUDE.md "Forbidden premature KILL without research exhaustion":
+    IF density < 1%, the substrate is DEFERRED-PENDING-research at this
+    THIRD Y surface; per Catalog #307 paradigm-vs-implementation
+    classification, the PARADIGM (Wyner 1976 R(D|Y); decoder-side
+    cooperative-receiver per Atick-Tishby-Wyner triple per Catalog #311)
+    is STILL INTACT. The IMPLEMENTATION-LEVEL falsification scope expands
+    to include the cross-substrate composition surface, queuing the FOURTH
+    Y surface (real PoseNet pre-compute Y via operator-attended L2 per
+    Catalog #246; Modal-approved per blanket).
+
+    Args:
+        pre_entropy_bytes: real base-substrate pre-entropy byte stream
+            (canonical: PR101 fp16 decoder state_dict via
+            :func:`_load_base_substrate_pre_entropy_bytes`).
+        frontier_axis: which canonical frontier to load (default
+            ``contest_cpu`` per Wave N+9 brief).
+        zip_member_name: canonical ZIP member name (default ``"x"``).
+        frontier_archive_path_override: optional override path for tests.
+
+    Returns:
+        Measurement record with the same schema as the canonical 4-source
+        measurement (y_bytes, y_sha256_prefix12, prefix_len_bytes,
+        density_percent, derivation_succeeded, derivation_error_repr) plus
+        cross-substrate-specific fields (frontier_axis,
+        frontier_architecture_class, frontier_archive_path,
+        frontier_archive_sha256, test_object).
+    """
+    try:
+        y_bytes, y_provenance = _derive_cross_substrate_composition_y_fec6_for_pr101(
+            frontier_axis=frontier_axis,
+            zip_member_name=zip_member_name,
+            frontier_archive_path_override=frontier_archive_path_override,
+        )
+        prefix_len = _detect_y_derivable_prefix(pre_entropy_bytes, y_bytes)
+        density_pct = (
+            100.0 * prefix_len / len(pre_entropy_bytes)
+            if pre_entropy_bytes
+            else 0.0
+        )
+        return {
+            "y_bytes": len(y_bytes),
+            "y_sha256_prefix12": y_provenance["y_bytes_sha256_prefix12"],
+            "prefix_len_bytes": prefix_len,
+            "density_percent": density_pct,
+            "derivation_succeeded": True,
+            "derivation_error_repr": None,
+            "frontier_axis": frontier_axis,
+            "frontier_architecture_class": y_provenance["frontier_architecture_class"],
+            "frontier_archive_path": y_provenance["frontier_archive_path"],
+            "frontier_archive_sha256": y_provenance["frontier_archive_sha256"],
+            "frontier_archive_bytes_len": y_provenance["frontier_archive_bytes_len"],
+            "zip_member_name": zip_member_name,
+            "test_object": (
+                "cross_substrate_composition_y_canonical_fec6_feca_frontier_"
+                "zip_member_payload_atick_tishby_wyner_triple_per_catalog_311"
+            ),
+        }
+    except (FileNotFoundError, ValueError, RuntimeError, Exception) as exc:  # pragma: no cover — fail-closed
+        return {
+            "y_bytes": 0,
+            "y_sha256_prefix12": "",
+            "prefix_len_bytes": 0,
+            "density_percent": 0.0,
+            "derivation_succeeded": False,
+            "derivation_error_repr": repr(exc)[:200],
+            "frontier_axis": frontier_axis,
+            "frontier_architecture_class": "",
+            "frontier_archive_path": "",
+            "frontier_archive_sha256": "",
+            "frontier_archive_bytes_len": 0,
+            "zip_member_name": zip_member_name,
+            "test_object": (
+                "cross_substrate_composition_y_canonical_fec6_feca_frontier_"
+                "zip_member_payload_atick_tishby_wyner_triple_per_catalog_311"
+            ),
+        }
+
+
 def _full_main(args: argparse.Namespace) -> int:
     """L1 LONG MLX empirical-measurement harness per Catalog #325 6-step contract.
 
@@ -900,6 +1293,77 @@ def _full_main(args: argparse.Namespace) -> int:
                 f"{per_pair_y_measurement['derivation_error_repr']}"
             )
 
+    # Step 2c (Wave N+9 Slot 3): cross-substrate composition Y density
+    # measurement per Catalog #311 Atick-Tishby-Wyner triple. Optional via
+    # --cross-substrate-composition-y; when active, this is the canonical
+    # THIRD Y surface after Wave N+5 prefix-Y FALSIFIED 0.000218% (6f5eabf30)
+    # + Wave N+7 Slot 2 per-pair PoseNet-output Y stand-in FALSIFIED 0.000218%
+    # (49bdcd78f). Per CLAUDE.md "Apples-to-apples evidence discipline": the
+    # measurement is HONEST about loading canonical FEC6/FECA frontier ZIP
+    # member payload bytes via the canonical pointer per Catalog #343 (NOT
+    # hardcoded literals). Key distinction from FALSIFIED surfaces: cross-
+    # substrate Y is derived from a DIFFERENT substrate's bytes (uncorrelated
+    # derivation path from X) whereas prefix-Y and per-pair-pose-stand-in
+    # were both derived FROM X analytically. The verdict feeds: (a) Wave
+    # N+10 paradigm-RATIFY + full training queue if density >= 1%,
+    # (b) sister anti-pattern register + path #1 real PoseNet pre-compute Y
+    # via Modal blanket if density < 1%.
+    cross_substrate_y_measurement: dict[str, Any] | None = None
+    if getattr(args, "cross_substrate_composition_y", False):
+        x_frontier_axis = getattr(
+            args, "cross_substrate_composition_y_frontier_axis",
+            CROSS_SUBSTRATE_COMPOSITION_Y_DEFAULT_FRONTIER_AXIS,
+        )
+        x_zip_member = getattr(
+            args, "cross_substrate_composition_y_zip_member_name",
+            CROSS_SUBSTRATE_COMPOSITION_Y_ZIP_MEMBER_NAME_DEFAULT,
+        )
+        x_path_override = getattr(
+            args, "cross_substrate_composition_y_frontier_archive_path_override",
+            None,
+        )
+        print(
+            f"[wzpsc-l1] Wave N+9 Slot 3: measuring cross-substrate composition "
+            f"Y density (canonical FEC6/FECA frontier ZIP-member payload per "
+            f"Catalog #311 + #343) frontier_axis={x_frontier_axis} "
+            f"zip_member={x_zip_member!r} "
+            f"override={'<provided>' if x_path_override is not None else None} ..."
+        )
+        cross_substrate_y_measurement = (
+            _measure_cross_substrate_composition_y_density_fec6_for_pr101(
+                pre_entropy_bytes,
+                frontier_axis=x_frontier_axis,
+                zip_member_name=x_zip_member,
+                frontier_archive_path_override=x_path_override,
+            )
+        )
+        if cross_substrate_y_measurement["derivation_succeeded"]:
+            print(
+                f"  cross_substrate_composition_y: Y={cross_substrate_y_measurement['y_bytes']} B "
+                f"(sha={cross_substrate_y_measurement['y_sha256_prefix12']}); "
+                f"frontier_arch_class={cross_substrate_y_measurement['frontier_architecture_class']}; "
+                f"prefix_len={cross_substrate_y_measurement['prefix_len_bytes']} B; "
+                f"density={cross_substrate_y_measurement['density_percent']:.6f}%"
+            )
+            print(
+                f"  [wzpsc-l1] cross-substrate Y verdict: density "
+                f"{cross_substrate_y_measurement['density_percent']:.6f}% "
+                f"{'>= 1% PASS (Wave N+10 paradigm-RATIFY + full training queued)' if cross_substrate_y_measurement['density_percent'] >= 1.0 else '< 1% THIRD-SURFACE FALSIFIED (sister anti-pattern register; queue path #1 real PoseNet pre-compute via Modal blanket)'}"
+            )
+            # Update max_density_pct + best_source if cross-substrate Y wins
+            if cross_substrate_y_measurement["density_percent"] > max_density_pct:
+                max_density_pct = cross_substrate_y_measurement["density_percent"]
+                best_source = "cross_substrate_composition_y_fec6_for_pr101"
+                print(
+                    f"  [wzpsc-l1] cross-substrate Y SURPASSES prior surfaces; "
+                    f"new max_density_pct={max_density_pct:.6f}% (best_source={best_source})"
+                )
+        else:
+            print(
+                f"  cross_substrate_composition_y: FAIL "
+                f"{cross_substrate_y_measurement['derivation_error_repr']}"
+            )
+
     # Step 3: lzma ratio sanity vs sister prober anchor (0.217-0.228).
     # Per CLAUDE.md "Bit-level deconstruction and entropy discipline".
     import lzma
@@ -922,13 +1386,16 @@ def _full_main(args: argparse.Namespace) -> int:
     # Step 4: WZPSC01 archive grammar roundtrip on real bytes.
     # Per Catalog #105 / #139 / #220 / #272 no-op detector at the archive surface.
     per_pair_y_won = best_source == "per_pair_posenet_output_y_stand_in"
+    cross_substrate_y_won = best_source == "cross_substrate_composition_y_fec6_for_pr101"
     # The WynerZivPipelineStageCodecArchitecture only accepts canonical
-    # LEGAL_SIDE_INFO_SOURCES; when per-pair Y wins, archive emission still
-    # uses the best canonical source label for arch construction, but the
-    # actual Y bytes routed to the encoder are the per-pair Y bytes.
+    # LEGAL_SIDE_INFO_SOURCES; when per-pair Y OR cross-substrate Y wins,
+    # archive emission still uses a canonical source label for arch
+    # construction, but the actual Y bytes routed to the encoder are the
+    # alternative-surface Y bytes (per the same generator/loader so decoder
+    # can reproduce — key Wyner 1976 byte-identity invariant).
     arch_side_info_source = (
         best_source
-        if (best_source != "none" and not per_pair_y_won)
+        if (best_source != "none" and not (per_pair_y_won or cross_substrate_y_won))
         else "math_constants"
     )
     arch = WynerZivPipelineStageCodecArchitecture(
@@ -951,6 +1418,20 @@ def _full_main(args: argparse.Namespace) -> int:
                 num_pairs=per_pair_y_measurement["num_pairs"],
                 pose_dim=per_pair_y_measurement["pose_dim"],
                 dtype=per_pair_y_measurement["dtype"],
+            )
+        elif cross_substrate_y_won and cross_substrate_y_measurement is not None:
+            # Cross-substrate composition Y bytes (canonical FEC6/FECA frontier
+            # ZIP-member payload per Catalog #343 frontier-pointer-canonical).
+            # The same loader is used so the encoder and decoder agree on Y
+            # byte-identically (key Wyner 1976 invariant).
+            y_bytes_best, _ = _derive_cross_substrate_composition_y_fec6_for_pr101(
+                frontier_axis=cross_substrate_y_measurement["frontier_axis"],
+                zip_member_name=cross_substrate_y_measurement["zip_member_name"],
+                frontier_archive_path_override=getattr(
+                    args,
+                    "cross_substrate_composition_y_frontier_archive_path_override",
+                    None,
+                ),
             )
         else:
             y_bytes_best = (
@@ -1056,8 +1537,46 @@ def _full_main(args: argparse.Namespace) -> int:
         per_pair_y_measurement is not None
         and per_pair_y_measurement.get("derivation_succeeded", False)
     )
+    cross_substrate_y_tested = (
+        cross_substrate_y_measurement is not None
+        and cross_substrate_y_measurement.get("derivation_succeeded", False)
+    )
     if max_density_pct < density_threshold_pct:
-        if per_pair_y_tested:
+        if cross_substrate_y_tested:
+            # Wave N+9 Slot 3 op-routable (cross-substrate composition Y) was
+            # tested and also fell below 1% — THIRD-SURFACE falsification per
+            # sister anti-pattern (registered post-landing per Catalog #344
+            # canonical equation registry + Catalog #313 probe-outcomes
+            # ledger). Sister Wave N+10 path #1 reactivation requires REAL
+            # PoseNet pre-compute via operator-attended L2 CUDA dispatch per
+            # Catalog #246 + Modal blanket authorization.
+            verdict_kind = (
+                "IMPLEMENTATION_LEVEL_FALSIFICATION_PER_CATALOG_307_"
+                "CROSS_SUBSTRATE_COMPOSITION_Y_THIRD_SURFACE_FALSIFIED"
+            )
+            verdict_message = (
+                f"Cross-substrate composition Y density "
+                f"{cross_substrate_y_measurement['density_percent']:.6f}% "
+                f"(best across 4 canonical + per-pair-stand-in + cross-substrate "
+                f"= {max_density_pct:.6f}%) is BELOW {density_threshold_pct}% "
+                f"threshold per op-routable #4. THREE Y SURFACES "
+                "now empirically falsified at the prefix-detector surface for "
+                "PR101 fp16 state_dict bytes: (1) 4 canonical sources "
+                "(Comma2k19/ImageNet/torch_defaults/math_constants), (2) per-pair "
+                "PoseNet-output Y deterministic stand-in (Atick-Redlich 1990 per "
+                "Catalog #311), (3) cross-substrate composition Y "
+                f"(canonical {cross_substrate_y_measurement.get('frontier_architecture_class', 'unknown')} "
+                "frontier ZIP-member payload per Catalog #343). The PARADIGM "
+                "(Wyner 1976 R(D|Y); decoder-side cooperative-receiver per "
+                "Atick-Tishby-Wyner triple per Catalog #311) is STILL INTACT — "
+                "what is falsified is the prefix-detector implementation against "
+                "the deterministic-from-X-uncorrelated Y family. Per CLAUDE.md "
+                "'Forbidden premature KILL': DEFERRED-PENDING-research. "
+                "Reactivation path #1: real PoseNet pre-compute via operator-"
+                "attended L2 CUDA dispatch per Catalog #246 + Modal blanket "
+                "authorization. THIRD-SURFACE anti-pattern receipt LOGGED."
+            )
+        elif per_pair_y_tested:
             # Op-routable #5 (per-pair PoseNet-output Y stand-in) was tested
             # and also fell below 1% — SECOND-SURFACE falsification per anti-
             # pattern #15. Sister Wave N+8 composition reactivation path
@@ -1166,6 +1685,11 @@ def _full_main(args: argparse.Namespace) -> int:
             getattr(args, "per_pair_posenet_output_y", False)
         ),
         "per_pair_posenet_output_y_won_best_source": per_pair_y_won,
+        "cross_substrate_composition_y_measurement": cross_substrate_y_measurement,
+        "cross_substrate_composition_y_active": bool(
+            getattr(args, "cross_substrate_composition_y", False)
+        ),
+        "cross_substrate_composition_y_won_best_source": cross_substrate_y_won,
         "max_density_percent": max_density_pct,
         "best_source": best_source,
         "lzma_ratio_sanity": {
