@@ -174,9 +174,34 @@ def _sha256_values_from_identity_mappings(
             value = _sha256_or_none(candidate.get(key))
             if value is None or value in seen:
                 continue
+            if key == "runtime_tree_sha256" and _runtime_tree_sha_is_submission_alias(
+                candidate,
+                value,
+            ):
+                continue
             seen.add(value)
             values.append(value)
     return values
+
+
+def _runtime_tree_sha_is_submission_alias(
+    mapping: Mapping[str, Any],
+    value: str,
+) -> bool:
+    submission_tree = _sha256_or_none(mapping.get("submission_runtime_tree_sha256"))
+    if submission_tree != value:
+        return False
+    for key in (
+        "candidate_runtime_tree_sha256",
+        "adapter_runtime_tree_sha256",
+        "packet_member_merge_receiver_runtime_tree_sha256",
+        "tensor_factorize_receiver_runtime_tree_sha256",
+        "renderer_payload_dfl1_runtime_tree_sha256",
+    ):
+        adapter_tree = _sha256_or_none(mapping.get(key))
+        if adapter_tree is not None and adapter_tree != value:
+            return True
+    return False
 
 
 def _expected_runtime_tree_identity_blockers(

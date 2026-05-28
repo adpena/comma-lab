@@ -63,6 +63,11 @@ from .archive import (
     pack_archive,
     parse_archive,
 )
+from .archive_candidate import (
+    export_pact_nerv_selector_v4_mlx_archive,
+    pack_archive_from_exported_state_dict,
+    selector_v4_meta_from_config,
+)
 from .score_aware_loss import (
     PactNervSelectorV4ScoreAwareLoss,
     ScoreAwareLossWeights,
@@ -78,6 +83,9 @@ __all__ = [
     "PactNervSelectorV4Substrate",
     "RunLengthSelectorCoder",
     "ScoreAwareLossWeights",
+    "export_pact_nerv_selector_v4_mlx_archive",
     "pack_archive",
+    "pack_archive_from_exported_state_dict",
     "parse_archive",
+    "selector_v4_meta_from_config",
 ]

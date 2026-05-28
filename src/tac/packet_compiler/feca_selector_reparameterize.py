@@ -28,6 +28,9 @@ from tac.optimization.proxy_candidate_contract import (
     apply_proxy_evidence_boundary,
     require_no_truthy_authority_fields,
 )
+from tac.optimization.serialized_archive_economics import (
+    build_serialized_archive_delta_contract,
+)
 from tac.repo_io import sha256_bytes, sha256_file, tree_sha256, write_json_artifact
 
 FECA_REPARAMETERIZATION_MANIFEST_SCHEMA = "feca_selector_reparameterization_manifest.v1"
@@ -480,6 +483,7 @@ def build_feca_selector_reparameterized_candidate(
     chain_parent_artifact: str | Path | None = None,
     chain_label: str = "cascade_c_p19_p18_to_p11_selector_context_recode",
     full_frame_inflate_parity_proof: str | Path | None = None,
+    allow_nonpositive_candidate: bool = False,
     allow_overwrite: bool = False,
 ) -> dict[str, Any]:
     source_dir = Path(source_submission_dir)
@@ -597,12 +601,28 @@ def build_feca_selector_reparameterized_candidate(
             best_scale = int(scale) if scale is not None else best_scale
             best_alpha = int(alpha) if alpha is not None else best_alpha
 
-    if len(best_payload) >= len(parts["selector_payload"]):
+    savings_positive = len(best_payload) < len(parts["selector_payload"])
+    if not savings_positive and not allow_nonpositive_candidate:
         raise FecaSelectorReparameterizationError(
             "no rate-positive selector context recode found"
         )
 
-    if best_codec_family == SELECTOR_CODEC_FEC10_ADAPTIVE_BLEND:
+    candidate_runtime_patch: dict[str, Any]
+    if not savings_positive:
+        best_payload = parts["selector_payload"]
+        best_scale = int(source_module._BlendContextModel.SCALE)
+        best_alpha = int(source_module.ALPHA_DEFAULT)
+        best_codec_family = SELECTOR_CODEC_FEC10_ADAPTIVE_BLEND
+        candidate_runtime_patch = {
+            "codec_family": best_codec_family,
+            "alpha_default": best_alpha,
+            "blend_context_model_scale": best_scale,
+            "fec8_dispatch_added": False,
+            "selector_context_recode_applied": False,
+            "reason": "no_rate_positive_selector_context_recode_found",
+        }
+        candidate_member = member_payload
+    elif best_codec_family == SELECTOR_CODEC_FEC10_ADAPTIVE_BLEND:
         _patch_runtime_module(
             candidate_dir / "encoder" / "build_pr101_frame_exploit_selector_packet_fec10_hybrid.py",
             scale=best_scale,
@@ -613,6 +633,7 @@ def build_feca_selector_reparameterized_candidate(
             "alpha_default": best_alpha,
             "blend_context_model_scale": best_scale,
             "fec8_dispatch_added": False,
+            "selector_context_recode_applied": True,
         }
     else:
         _write_fec8_decoder_shim(candidate_dir / "src" / "fec8_markov_decoder.py")
@@ -622,13 +643,15 @@ def build_feca_selector_reparameterized_candidate(
             "alpha_default": None,
             "blend_context_model_scale": None,
             "fec8_dispatch_added": True,
+            "selector_context_recode_applied": True,
         }
-    candidate_member = join_fp11_member(
-        source_payload=parts["source_payload"],
-        selector_payload=best_payload,
-        dqs1_tail=parts["dqs1_tail"],
-    )
-    _write_stored_archive(candidate_archive, member_name=info.filename, payload=candidate_member)
+    if savings_positive:
+        candidate_member = join_fp11_member(
+            source_payload=parts["source_payload"],
+            selector_payload=best_payload,
+            dqs1_tail=parts["dqs1_tail"],
+        )
+        _write_stored_archive(candidate_archive, member_name=info.filename, payload=candidate_member)
 
     candidate_module = _load_feca_module(candidate_dir / "encoder", module_suffix="candidate")
     candidate_markov_module = (
@@ -655,6 +678,12 @@ def build_feca_selector_reparameterized_candidate(
     archive_saved_bytes = source_archive.stat().st_size - candidate_archive.stat().st_size
     source_archive_record = _archive_record(source_archive)
     candidate_archive_record = _archive_record(candidate_archive)
+    serialized_archive_delta = build_serialized_archive_delta_contract(
+        source_archive=source_archive_record,
+        candidate_archive=candidate_archive_record,
+        modeled_saved_bytes=archive_saved_bytes,
+        require_realized_saving=False,
+    )
     if parity_payload is not None:
         right = parity_payload.get("right") if isinstance(parity_payload.get("right"), dict) else {}
         left = parity_payload.get("left") if isinstance(parity_payload.get("left"), dict) else {}
@@ -742,9 +771,10 @@ def build_feca_selector_reparameterized_candidate(
                 "source_payload_bytes": len(parts["selector_payload"]),
                 "candidate_payload_bytes": len(best_payload),
                 "payload_saved_bytes": len(parts["selector_payload"]) - len(best_payload),
-                "status": "realized_saving",
+                "status": "realized_saving" if archive_saved_bytes > 0 else "zero_delta",
                 "savings_realized": archive_saved_bytes > 0,
             },
+            "serialized_archive_delta": serialized_archive_delta,
         },
         dispatch_blockers=tuple(readiness_blockers),
     )
@@ -808,7 +838,7 @@ def build_feca_selector_reparameterized_candidate(
             "selector_code_roundtrip_equal": True,
             "source_payload_unchanged": True,
             "dqs1_tail_unchanged": True,
-            "candidate_runtime_patched": True,
+            "candidate_runtime_patched": savings_positive,
             "byte_closed_candidate_emitted": True,
             "receiver_proof_ready": True,
             "receiver_contract_satisfied": True,
@@ -846,15 +876,10 @@ def build_feca_selector_reparameterized_candidate(
                 "source_payload_bytes": len(parts["selector_payload"]),
                 "candidate_payload_bytes": len(best_payload),
                 "payload_saved_bytes": len(parts["selector_payload"]) - len(best_payload),
-                "status": "realized_saving",
+                "status": "realized_saving" if archive_saved_bytes > 0 else "zero_delta",
                 "savings_realized": archive_saved_bytes > 0,
             },
-            "serialized_archive_delta": {
-                "schema": "serialized_archive_delta_contract.v1",
-                "source_archive_bytes": source_archive_record["bytes"],
-                "candidate_archive_bytes": candidate_archive_record["bytes"],
-                "saved_bytes": archive_saved_bytes,
-            },
+            "serialized_archive_delta": serialized_archive_delta,
             "readiness_blockers": readiness_blockers,
             "sweep_rows": sorted(
                 rows,

@@ -64,6 +64,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default="cascade_c_p19_p18_to_p11_selector_context_recode",
     )
     parser.add_argument("--full-frame-inflate-parity-proof", type=Path)
+    parser.add_argument(
+        "--allow-nonpositive-candidate",
+        action="store_true",
+        help=(
+            "Emit a non-authoritative zero-delta manifest when the sweep finds no "
+            "rate-positive recode. Safety and roundtrip failures remain fatal."
+        ),
+    )
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args(argv)
 
@@ -84,6 +92,7 @@ def main(argv: list[str] | None = None) -> int:
             chain_parent_artifact=args.chain_parent_artifact,
             chain_label=args.chain_label,
             full_frame_inflate_parity_proof=args.full_frame_inflate_parity_proof,
+            allow_nonpositive_candidate=args.allow_nonpositive_candidate,
             allow_overwrite=args.overwrite,
         )
     except (FecaSelectorReparameterizationError, OSError, ValueError) as exc:

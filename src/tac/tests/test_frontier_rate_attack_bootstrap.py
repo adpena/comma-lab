@@ -11,6 +11,7 @@ from pathlib import Path
 import brotli
 import pytest
 
+import comma_lab.scheduler.frontier_rate_attack_bootstrap as frontier_bootstrap
 from comma_lab.scheduler.byte_shaving_campaign_queue import (
     MATERIALIZER_DISPATCH_PLAN_STEP_ID,
     MATERIALIZER_EXACT_READINESS_BRIDGE_STEP_ID,
@@ -22,6 +23,7 @@ from comma_lab.scheduler.byte_shaving_materializer_registry import (
     ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
     ARCHIVE_ZIP_REPACK_TARGET_KIND,
     DQS1_PAIRSET_TARGET_KIND,
+    FECA_SELECTOR_REPARAMETERIZE_TARGET_KIND,
     INVERSE_SCORER_CELL_TARGET_KIND,
     PACKET_MEMBER_MERGE_TARGET_KIND,
     PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
@@ -96,6 +98,28 @@ def _write_stored_archive(path: Path, *, member_name: str, payload: bytes) -> Pa
     with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as archive:
         archive.writestr(member_name, payload)
     return path
+
+
+def _write_fp11_feca_submission(path: Path, *, marker_prefix_padding: int = 0) -> Path:
+    path.mkdir(parents=True, exist_ok=True)
+    (path / "inflate.py").write_text("# runtime placeholder\n", encoding="utf-8")
+    (path / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    encoder = path / "encoder"
+    encoder.mkdir(parents=True, exist_ok=True)
+    (encoder / "build_pr101_frame_exploit_selector_packet_fec10_hybrid.py").write_text(
+        "# encoder placeholder\n",
+        encoding="utf-8",
+    )
+    payload = (
+        b"FP11"
+        + (3).to_bytes(4, "little")
+        + b"src"
+        + (8).to_bytes(2, "little")
+        + (b"x" * marker_prefix_padding)
+        + b"FECaDATA"
+        + b"dqs1"
+    )
+    return _write_stored_archive(path / "archive.zip", member_name="p", payload=payload)
 
 
 def _load_frontier_queue_builder_tool_module():
@@ -273,6 +297,9 @@ def test_frontier_bootstrap_target_coverage_accounts_for_registry_executables(
         "context_omitted_target_kinds"
     ]
     assert TENSOR_FACTORIZE_TARGET_KIND in coverage["context_omitted_target_kinds"]
+    assert FECA_SELECTOR_REPARAMETERIZE_TARGET_KIND in coverage[
+        "context_omitted_target_kinds"
+    ]
     deferred = {
         row["target_kind"]: row
         for row in coverage["deferred_registry_target_rows"]
@@ -286,6 +313,66 @@ def test_frontier_bootstrap_target_coverage_accounts_for_registry_executables(
         "inverse_steganalysis_acquisition_chain"
     )
     _assert_false_authority(coverage)
+
+
+def test_frontier_bootstrap_binds_selector_context_recode_when_source_runtime_present(
+    tmp_path: Path,
+) -> None:
+    archive_path = _write_fp11_feca_submission(tmp_path / "submission_dir")
+    record = archive_record(
+        label="frontier",
+        archive_path=archive_path,
+        repo_root=tmp_path,
+        source_kind="unit_test",
+    )
+
+    payloads = build_frontier_rate_attack_payloads(
+        repo_root=tmp_path,
+        queue_id="frontier_final_rate_attack_selector_context",
+        archive_records=[record],
+        results_root=tmp_path / "results",
+        target_kinds=(FECA_SELECTOR_REPARAMETERIZE_TARGET_KIND,),
+        include_optional_target_blockers=False,
+        allow_overwrite=True,
+    )
+
+    row = payloads["contexts"]["rows"][0]
+    context = row["context"]
+    assert row["target_kind"] == FECA_SELECTOR_REPARAMETERIZE_TARGET_KIND
+    assert context["source_submission_dir"].endswith("submission_dir")
+    assert context["output_dir"].endswith("feca_selector_context_recode")
+    assert context["selector_codec_families"] == ["fec10_adaptive_blend"]
+    assert context["downstream_materializer_targets"] == [ARCHIVE_ZIP_REPACK_TARGET_KIND]
+
+
+def test_frontier_bootstrap_binds_selector_context_recode_when_feca_marker_is_late(
+    tmp_path: Path,
+) -> None:
+    archive_path = _write_fp11_feca_submission(
+        tmp_path / "submission_dir",
+        marker_prefix_padding=5000,
+    )
+    record = archive_record(
+        label="frontier",
+        archive_path=archive_path,
+        repo_root=tmp_path,
+        source_kind="unit_test",
+    )
+
+    payloads = build_frontier_rate_attack_payloads(
+        repo_root=tmp_path,
+        queue_id="frontier_final_rate_attack_selector_context_late_marker",
+        archive_records=[record],
+        results_root=tmp_path / "results",
+        target_kinds=(FECA_SELECTOR_REPARAMETERIZE_TARGET_KIND,),
+        include_optional_target_blockers=False,
+        allow_overwrite=True,
+    )
+
+    assert payloads["bootstrap"]["executable_target_kinds"] == [
+        FECA_SELECTOR_REPARAMETERIZE_TARGET_KIND
+    ]
+    assert payloads["bootstrap"]["target_omissions"] == []
 
 
 def test_frontier_bootstrap_propagates_declared_video_scope_to_queue(
@@ -2095,6 +2182,132 @@ def test_resolve_current_frontier_archive_from_auth_request(tmp_path: Path) -> N
     )
 
 
+def test_resolve_current_frontier_archive_skips_unreadable_request_archive(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    valid_archive = _write_archive(
+        tmp_path / "experiments" / "results" / "candidate" / "submission_dir" / "archive.zip"
+    )
+    unreadable_archive = _write_archive(
+        tmp_path / "external" / "stale" / "submission_dir" / "archive.zip"
+    )
+    digest = sha256_file(valid_archive)
+    pointer_path = tmp_path / ".omx" / "state" / "canonical_frontier_pointer.json"
+    _write_json(
+        pointer_path,
+        {
+            "our_local_frontier_contest_cpu": {
+                "archive_sha256": digest,
+                "score": 0.123,
+                "evidence_grade": "[contest-CPU]",
+                "hardware_substrate": "linux_x86_64_cpu",
+                "measured_at_utc": "2026-05-25T00:00:00Z",
+                "extra": {"archive_bytes": valid_archive.stat().st_size},
+            }
+        },
+    )
+    _write_json(
+        tmp_path
+        / "experiments"
+        / "results"
+        / "modal_auth_eval_cpu"
+        / "stale"
+        / "modal_cpu_auth_eval_local_request.json",
+        {
+            "archive_path": unreadable_archive.as_posix(),
+            "archive_sha256": digest,
+            "archive_size_bytes": valid_archive.stat().st_size,
+        },
+    )
+    real_sha256_file = frontier_bootstrap.sha256_file
+
+    def guarded_sha256(path: str | Path) -> str:
+        if Path(path) == unreadable_archive:
+            raise PermissionError("simulated external storage permission failure")
+        return real_sha256_file(path)
+
+    monkeypatch.setattr(frontier_bootstrap, "sha256_file", guarded_sha256)
+
+    resolution = resolve_current_frontier_archive(
+        repo_root=tmp_path,
+        pointer_path=pointer_path,
+        frontier_axis="contest_cpu",
+    )
+
+    assert resolution["archive_sha256"] == digest
+    assert resolution["archive_record"]["path"] == (
+        "experiments/results/candidate/submission_dir/archive.zip"
+    )
+    assert resolution["match"]["source"] == "default_submission_archive_search"
+
+
+def test_resolve_current_frontier_archive_disambiguates_duplicate_sha_by_auth_score(
+    tmp_path: Path,
+) -> None:
+    first_archive = _write_archive(
+        tmp_path / "runs" / "first" / "submission_dir" / "archive.zip"
+    )
+    second_archive = _write_archive(
+        tmp_path / "runs" / "second" / "submission_dir" / "archive.zip"
+    )
+    digest = sha256_file(first_archive)
+    assert sha256_file(second_archive) == digest
+    pointer_path = tmp_path / ".omx" / "state" / "canonical_frontier_pointer.json"
+    _write_json(
+        pointer_path,
+        {
+            "our_local_frontier_contest_cpu": {
+                "archive_sha256": digest,
+                "score": 0.123456789,
+                "evidence_grade": "[contest-CPU]",
+                "hardware_substrate": "linux_x86_64_cpu",
+                "measured_at_utc": "2026-05-25T00:00:00Z",
+                "extra": {"archive_bytes": first_archive.stat().st_size},
+            }
+        },
+    )
+    request_root = tmp_path / "experiments" / "results" / "modal_auth_eval_cpu"
+    for label, archive, score in (
+        ("first", first_archive, 0.123456789),
+        ("second", second_archive, 0.123455789),
+    ):
+        run_dir = request_root / label
+        _write_json(
+            run_dir / "modal_cpu_auth_eval_local_request.json",
+            {
+                "archive_path": archive.as_posix(),
+                "archive_sha256": digest,
+                "archive_size_bytes": archive.stat().st_size,
+                "expected_runtime_tree_sha256": f"{1 if label == 'first' else 2}" * 64,
+            },
+        )
+        _write_json(
+            run_dir / "contest_auth_eval.json",
+            {
+                "canonical_score": score,
+                "provenance": {
+                    "archive_sha256": digest,
+                    "archive_size_bytes": archive.stat().st_size,
+                },
+            },
+        )
+
+    resolution = resolve_current_frontier_archive(
+        repo_root=tmp_path,
+        pointer_path=pointer_path,
+        frontier_axis="contest_cpu",
+        request_search_roots=(request_root,),
+    )
+
+    assert resolution["archive_record"]["path"] == (
+        "runs/first/submission_dir/archive.zip"
+    )
+    assert resolution["match"]["disambiguation"]["strategy"] == (
+        "auth_eval_canonical_score_matches_frontier_pointer"
+    )
+
+
 def test_resolve_current_frontier_archive_from_default_submission_dir(
     tmp_path: Path,
 ) -> None:
@@ -2147,6 +2360,8 @@ def test_resolve_current_frontier_archive_fails_closed_on_duplicate_matches(
     )
     digest = sha256_file(first)
     assert sha256_file(second) == digest
+    (first.parent / "inflate.sh").write_text("first runtime\n", encoding="utf-8")
+    (second.parent / "inflate.sh").write_text("second runtime\n", encoding="utf-8")
     pointer_path = tmp_path / ".omx" / "state" / "canonical_frontier_pointer.json"
     _write_json(
         pointer_path,

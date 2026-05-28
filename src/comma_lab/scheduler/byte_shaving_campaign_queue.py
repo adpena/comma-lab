@@ -1851,6 +1851,7 @@ def _feca_selector_reparameterization_command(
         source_submission_dir,
         "--output-dir",
         output_dir,
+        "--allow-nonpositive-candidate",
     ]
     for key, flag in (("scale", "--scale"), ("scales", "--scale"), ("alpha", "--alpha"), ("alphas", "--alpha")):
         values = context.get(key)
@@ -3049,6 +3050,7 @@ def _materializer_sweep_postconditions(
         {
             "type": "json_completion_contract",
             "path": output_json,
+            "required_archive_runtime_receiver_custody": False,
             "required_equals": {
                 "schema": FAMILY_AGNOSTIC_MATERIALIZER_SWEEP_SCHEMA,
                 "target_kind": target_kind,

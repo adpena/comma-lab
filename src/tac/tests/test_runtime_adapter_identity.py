@@ -172,3 +172,27 @@ def test_runtime_adapter_identity_blocks_nested_expected_runtime_tree_conflict(
     )
 
     assert "unit_expected_runtime_tree_sha256_conflict" in blockers
+
+
+def test_runtime_adapter_identity_treats_submission_tree_as_separate_from_adapter_tree(
+    tmp_path: Path,
+) -> None:
+    adapter_runtime = _runtime_dir(tmp_path / "adapter_runtime")
+    adapter_tree_sha = tree_sha256(adapter_runtime)
+    submission_tree_sha = "f" * 64
+
+    blockers = runtime_adapter_identity_blockers(
+        {
+            "runtime_adapter_ready": True,
+            "candidate_runtime_dir": adapter_runtime.as_posix(),
+            "candidate_runtime_tree_sha256": adapter_tree_sha,
+            "expected_runtime_tree_sha256": adapter_tree_sha,
+            "adapter_runtime_tree_sha256": adapter_tree_sha,
+            "runtime_tree_sha256": submission_tree_sha,
+            "submission_runtime_tree_sha256": submission_tree_sha,
+        },
+        repo_root=tmp_path,
+        context="unit",
+    )
+
+    assert blockers == []

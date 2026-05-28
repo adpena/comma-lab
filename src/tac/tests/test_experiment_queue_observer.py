@@ -380,6 +380,69 @@ def test_observer_rejects_completion_contract_without_custody_proof(
     assert required_custody["valid"] is False
 
 
+def test_observer_allows_explicit_planning_completion_contract_custody_opt_out(
+    tmp_path: Path,
+) -> None:
+    artifact = tmp_path / "completion.json"
+    artifact.write_text(
+        json.dumps(
+            {
+                "schema": "planning_sweep_report.v1",
+                "status": "succeeded",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    state = tmp_path / "queue.sqlite"
+    queue = _queue(artifact)
+    queue["experiments"][0]["steps"][0]["postconditions"] = [
+        {
+            "type": "json_completion_contract",
+            "path": artifact.as_posix(),
+            "required_archive_runtime_receiver_custody": False,
+            "required_equals": {"schema": "planning_sweep_report.v1"},
+            "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+            ],
+            "false_or_missing": ["ready_for_exact_eval_dispatch"],
+        }
+    ]
+
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'succeeded',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-05-28T06:00:00Z'
+            WHERE queue_id = 'observer_test'
+              AND experiment_id = 'exp0'
+              AND step_id = 'smoke'
+            """,
+            (json.dumps({"command": ["python", "-c", "print('hello queue')"]}),),
+        )
+        conn.commit()
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=0,
+    )
+
+    assert observation["healthy"] is True
+    assert observation["blockers"] == []
+    assert observation["succeeded_artifact_failure_steps"] == []
+
+
 def test_observer_honors_queue_false_authority_override_but_rejects_nested_truth(
     tmp_path: Path,
 ) -> None:

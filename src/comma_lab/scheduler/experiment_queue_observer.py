@@ -516,6 +516,12 @@ def _generic_custody_payload_revalidation(
 def _postcondition_requires_archive_runtime_receiver_custody(
     condition: Mapping[str, Any],
 ) -> bool:
+    if condition.get("required_archive_runtime_receiver_custody") is False:
+        return False
+    if condition.get("required_archive_runtime_custody") is False:
+        return False
+    if condition.get("required_receiver_custody") is False:
+        return False
     postcondition_type = str(condition.get("type") or "")
     return (
         postcondition_type in ARCHIVE_RUNTIME_RECEIVER_CUSTODY_POSTCONDITION_TYPES

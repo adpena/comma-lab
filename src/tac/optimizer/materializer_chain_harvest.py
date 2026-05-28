@@ -44,6 +44,10 @@ from tac.optimization.serialized_archive_economics import (
     build_serialized_archive_delta_contract,
 )
 from tac.optimizer.exact_readiness import validate_serialized_archive_delta_contract
+from tac.packet_compiler.feca_selector_reparameterize import (
+    FECA_REPARAMETERIZATION_MANIFEST_SCHEMA,
+    FECA_REPARAMETERIZATION_PROOF_SCHEMA,
+)
 from tac.repo_io import tree_sha256
 
 SUPPORTED_CHAIN_SCHEMAS = frozenset(
@@ -61,6 +65,7 @@ SUPPORTED_FAMILY_AGNOSTIC_MATERIALIZER_SCHEMAS = frozenset(
         PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
         RENDERER_PAYLOAD_DFL1_SCHEMA,
         TENSOR_FACTORIZE_SCHEMA,
+        FECA_REPARAMETERIZATION_MANIFEST_SCHEMA,
     }
 )
 SUPPORTED_MATERIALIZER_MANIFEST_SCHEMAS = SUPPORTED_CHAIN_SCHEMAS | SUPPORTED_FAMILY_AGNOSTIC_MATERIALIZER_SCHEMAS
@@ -511,6 +516,15 @@ def _submission_runtime_harvest_fields(manifest: Mapping[str, Any]) -> dict[str,
         value = _nonempty_string(manifest.get(key))
         if value is not None:
             fields[key] = value
+    for key in (
+        "candidate_runtime_tree_sha256",
+        "runtime_tree_sha256",
+        "expected_runtime_tree_sha256",
+        "expected_candidate_runtime_tree_sha256",
+    ):
+        value = _string_or_none(manifest.get(key))
+        if value is not None:
+            fields[key] = value
     inflate_runtime_dir = _nonempty_string(manifest.get("inflate_runtime_dir"))
     if inflate_runtime_dir is not None and "source_runtime_dir" not in fields:
         fields["source_runtime_dir"] = inflate_runtime_dir
@@ -808,6 +822,15 @@ def _load_runtime_proof_with_blockers(
                 candidate_archive_sha256=candidate_archive_sha256,
             )
         )
+    elif schema == FECA_REPARAMETERIZATION_PROOF_SCHEMA:
+        blockers.extend(
+            _feca_selector_runtime_consumption_proof_blockers(
+                payload,
+                required_target_kind=required_target_kind,
+                required_materializer_id=required_materializer_id,
+                required_receiver_contract_kind=required_receiver_contract_kind,
+            )
+        )
     else:
         blockers.append(f"runtime_consumption_proof_schema_unsupported:{schema}")
     blockers.extend(
@@ -824,6 +847,38 @@ def _load_runtime_proof_with_blockers(
     elif proof_archive_sha != candidate_archive_sha256:
         blockers.append("runtime_consumption_proof_candidate_archive_sha_mismatch")
     return payload, ordered_unique(blockers)
+
+
+def _feca_selector_runtime_consumption_proof_blockers(
+    proof: Mapping[str, Any],
+    *,
+    required_target_kind: Any = None,
+    required_materializer_id: Any = None,
+    required_receiver_contract_kind: Any = None,
+) -> list[str]:
+    blockers: list[str] = []
+    if required_target_kind is not None and proof.get("target_kind") != required_target_kind:
+        blockers.append("runtime_consumption_proof:feca_target_kind_mismatch")
+    if required_materializer_id is not None and proof.get("materializer_id") != required_materializer_id:
+        blockers.append("runtime_consumption_proof:feca_materializer_id_mismatch")
+    if (
+        required_receiver_contract_kind is not None
+        and proof.get("receiver_contract_kind") != required_receiver_contract_kind
+    ):
+        blockers.append("runtime_consumption_proof:feca_receiver_contract_kind_mismatch")
+    if proof.get("runtime_consumption_proof_passed") is not True:
+        blockers.append("runtime_consumption_proof:feca_runtime_consumption_proof_not_passed")
+    if proof.get("passed") is not True:
+        blockers.append("runtime_consumption_proof:feca_proof_not_passed")
+    if proof.get("receiver_contract_satisfied") is not True:
+        blockers.append("runtime_consumption_proof:feca_receiver_contract_not_satisfied")
+    if proof.get("selector_code_roundtrip_equal") is not True:
+        blockers.append("runtime_consumption_proof:feca_selector_code_roundtrip_not_equal")
+    if proof.get("source_payload_unchanged") is not True:
+        blockers.append("runtime_consumption_proof:feca_source_payload_changed")
+    if proof.get("dqs1_tail_unchanged") is not True:
+        blockers.append("runtime_consumption_proof:feca_dqs1_tail_changed")
+    return blockers
 
 
 def _pr101_runtime_consumption_proof_blockers(
@@ -1192,6 +1247,8 @@ def _candidate_family(schema: str) -> str:
         return "renderer_payload_dfl1"
     if schema == TENSOR_FACTORIZE_SCHEMA:
         return "tensor_factorize"
+    if schema == FECA_REPARAMETERIZATION_MANIFEST_SCHEMA:
+        return "selector_stream_context_recode"
     return "materializer_chain"
 
 
