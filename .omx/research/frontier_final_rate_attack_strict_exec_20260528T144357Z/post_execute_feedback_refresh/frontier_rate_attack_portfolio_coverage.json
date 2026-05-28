@@ -1,0 +1,258 @@
+{
+  "allowed_use": "queue_owned_frontier_rate_attack_portfolio_planning_only",
+  "bound_pathway_count": 5,
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "coverage_ready_for_bounded_local_followup": true,
+  "deferred_registry_target_bindings": [
+    {
+      "artifact_paths": [
+        ".omx/research/frontier_final_rate_attack_strict_exec_20260528T144357Z/post_execute_feedback_refresh/materializer_feedback_bridge.json"
+      ],
+      "binding_status": "bound",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "pathway_id": "dqs1_local_first_feedback",
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "target_kind": "dqs1_pairset_drop_pair"
+    },
+    {
+      "artifact_paths": [
+        ".omx/research/frontier_final_rate_attack_strict_exec_20260528T144357Z/post_execute_feedback_refresh/local_cpu_eureka_planning.json",
+        ".omx/research/frontier_final_rate_attack_strict_exec_20260528T144357Z/post_execute_feedback_refresh/targeted_component_correction_acquisition.json",
+        ".omx/research/frontier_final_rate_attack_strict_exec_20260528T144357Z/post_execute_feedback_refresh/targeted_component_correction_queue.json",
+        ".omx/research/frontier_final_rate_attack_strict_exec_20260528T144357Z/post_execute_feedback_refresh/operation_chain_compiler_work_orders.json",
+        ".omx/research/frontier_final_rate_attack_strict_exec_20260528T144357Z/post_execute_feedback_refresh/operation_chain_compiler_queue.json"
+      ],
+      "binding_status": "bound",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "pathway_id": "inverse_steganalysis_acquisition",
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "target_kind": "inverse_scorer_cell_candidate_v1"
+    }
+  ],
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+  "generated_at_utc": "2026-05-28T14:44:15Z",
+  "gpu_launched": false,
+  "pathway_count": 5,
+  "promotable": false,
+  "promotion_eligible": false,
+  "queue_id": "frontier_final_rate_attack_strict_exec_20260528T144357Z_post_execute_feedback",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "rows": [
+    {
+      "artifact_keys": [
+        "operation_materializer_backlog",
+        "operation_materializer_contexts",
+        "operation_materializer_work_queue"
+      ],
+      "artifact_paths": [
+        ".omx/research/frontier_final_rate_attack_strict_exec_20260528T144357Z/post_execute_feedback_refresh/operation_materializer_backlog.json",
+        ".omx/research/frontier_final_rate_attack_strict_exec_20260528T144357Z/post_execute_feedback_refresh/operation_materializer_contexts.json",
+        ".omx/research/frontier_final_rate_attack_strict_exec_20260528T144357Z/post_execute_feedback_refresh/operation_materializer_work_queue.json"
+      ],
+      "bound": true,
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "pathway_id": "archive_rate_materializer_sweep",
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "frontier_rate_attack_portfolio_coverage_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "status": "bound",
+      "surface": "archive_rate",
+      "target_kinds": [
+        "archive_zip_repack_v1",
+        "packet_member_zip_header_elide_v1",
+        "packet_member_recompress_v1",
+        "packet_member_merge_v1",
+        "renderer_payload_dfl1_v1",
+        "archive_section_entropy_recode_v1",
+        "tensor_factorize_v1"
+      ]
+    },
+    {
+      "artifact_keys": [
+        "operation_chain_compiler_work_orders",
+        "operation_chain_compiler_queue",
+        "autonomous_chain_optimization",
+        "autonomous_chain_optimization_queue"
+      ],
+      "artifact_paths": [
+        ".omx/research/frontier_final_rate_attack_strict_exec_20260528T144357Z/post_execute_feedback_refresh/operation_chain_compiler_work_orders.json",
+        ".omx/research/frontier_final_rate_attack_strict_exec_20260528T144357Z/post_execute_feedback_refresh/operation_chain_compiler_queue.json",
+        ".omx/research/frontier_final_rate_attack_strict_exec_20260528T144357Z/post_execute_feedback_refresh/autonomous_chain_optimization.json",
+        ".omx/research/frontier_final_rate_attack_strict_exec_20260528T144357Z/post_execute_feedback_refresh/autonomous_chain_optimization_queue.json"
+      ],
+      "bound": true,
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "pathway_id": "operation_chain_compiler",
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "frontier_rate_attack_portfolio_coverage_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "status": "bound",
+      "surface": "cross_position_chain",
+      "target_kinds": [
+        "byte_range_entropy_recode_v1",
+        "targeted_drop_many"
+      ]
+    },
+    {
+      "artifact_keys": [
+        "materializer_feedback_bridge"
+      ],
+      "artifact_paths": [
+        ".omx/research/frontier_final_rate_attack_strict_exec_20260528T144357Z/post_execute_feedback_refresh/materializer_feedback_bridge.json"
+      ],
+      "bound": true,
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "pathway_id": "dqs1_local_first_feedback",
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "frontier_rate_attack_portfolio_coverage_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "status": "bound",
+      "surface": "dqs1_pairset",
+      "target_kinds": [
+        "dqs1_pairset_drop_pair"
+      ]
+    },
+    {
+      "artifact_keys": [
+        "local_cpu_eureka_planning",
+        "targeted_component_correction_acquisition",
+        "targeted_component_correction_queue",
+        "operation_chain_compiler_work_orders",
+        "operation_chain_compiler_queue"
+      ],
+      "artifact_paths": [
+        ".omx/research/frontier_final_rate_attack_strict_exec_20260528T144357Z/post_execute_feedback_refresh/local_cpu_eureka_planning.json",
+        ".omx/research/frontier_final_rate_attack_strict_exec_20260528T144357Z/post_execute_feedback_refresh/targeted_component_correction_acquisition.json",
+        ".omx/research/frontier_final_rate_attack_strict_exec_20260528T144357Z/post_execute_feedback_refresh/targeted_component_correction_queue.json",
+        ".omx/research/frontier_final_rate_attack_strict_exec_20260528T144357Z/post_execute_feedback_refresh/operation_chain_compiler_work_orders.json",
+        ".omx/research/frontier_final_rate_attack_strict_exec_20260528T144357Z/post_execute_feedback_refresh/operation_chain_compiler_queue.json"
+      ],
+      "bound": true,
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "pathway_id": "inverse_steganalysis_acquisition",
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "frontier_rate_attack_portfolio_coverage_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "status": "bound",
+      "surface": "scorer_inverse",
+      "target_kinds": [
+        "inverse_scorer_cell_candidate_v1"
+      ]
+    },
+    {
+      "artifact_keys": [
+        "receiver_closed_correction_budget",
+        "repair_budget_waterfill_queue",
+        "repair_campaign_score_queue",
+        "repair_posterior_acquisition_followup_queue"
+      ],
+      "artifact_paths": [
+        ".omx/research/frontier_final_rate_attack_strict_exec_20260528T144357Z/post_execute_feedback_refresh/receiver_closed_correction_budget.json",
+        ".omx/research/frontier_final_rate_attack_strict_exec_20260528T144357Z/post_execute_feedback_refresh/repair_budget_waterfill_queue.json",
+        ".omx/research/frontier_final_rate_attack_strict_exec_20260528T144357Z/post_execute_feedback_refresh/repair_campaign_score_queue.json",
+        ".omx/research/frontier_final_rate_attack_strict_exec_20260528T144357Z/post_execute_feedback_refresh/repair_posterior_acquisition_followup_queue.json"
+      ],
+      "bound": true,
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "pathway_id": "rate_savings_to_distortion_budget",
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "frontier_rate_attack_portfolio_coverage_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "status": "bound",
+      "surface": "repair_budget",
+      "target_kinds": [
+        "receiver_closed_correction_budget",
+        "repair_budget_waterfill"
+      ]
+    }
+  ],
+  "schema": "frontier_rate_attack_portfolio_coverage.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false
+}

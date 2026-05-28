@@ -1,0 +1,256 @@
+{
+  "mode": "running",
+  "orphaned_step_count": 0,
+  "orphaned_steps": [],
+  "queue_id": "frontier_final_rate_attack_strict_exec_20260528T144357Z_post_execute_feedback_autonomous_chain_optimization",
+  "ready_steps": [
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/build_frontier_autonomous_chain_work_order.py",
+        "--autonomous-chain-optimization",
+        ".omx/research/frontier_final_rate_attack_strict_exec_20260528T144357Z/post_execute_feedback_refresh/autonomous_chain_optimization.json",
+        "--chain-id",
+        "global_many_op_rate_distortion_receiver_campaign",
+        "--work-order-out",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_strict_exec_20260528t144357z_post_execute_feedback_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/autonomous_chain_work_order.json",
+        "--overwrite",
+        "--child-queue-artifact-path",
+        ".omx/research/frontier_final_rate_attack_strict_exec_20260528T144357Z/post_execute_feedback_refresh/repair_budget_waterfill_queue.json",
+        "--child-queue-artifact-path",
+        ".omx/research/frontier_final_rate_attack_strict_exec_20260528T144357Z/post_execute_feedback_refresh/repair_campaign_score_queue.json",
+        "--child-queue-artifact-path",
+        ".omx/research/frontier_final_rate_attack_strict_exec_20260528T144357Z/post_execute_feedback_refresh/repair_posterior_acquisition_followup_queue.json",
+        "--queue-actuation-ready"
+      ],
+      "experiment_id": "autonomous_chain_global_many_op_rate_distortion_receiver_campaign",
+      "priority": 1,
+      "queue_id": "frontier_final_rate_attack_strict_exec_20260528T144357Z_post_execute_feedback_autonomous_chain_optimization",
+      "resource_kind": "local_io_heavy",
+      "step_hashes": {
+        "command_hash": "9604dc2b09bab578652be25ef64b4fbffc9c0d6dfe1d138d958bff0e681dd7ee",
+        "definition_hash": "aee08cef94fb87601c4574453687f2efe81e9d0db6a714f23eced9e7190d762f",
+        "postcondition_hash": "533acfb66ec489bfe38bd1f10a65ed15433c204c36077da1113076ae3398202c"
+      },
+      "step_id": "emit_autonomous_chain_work_order"
+    }
+  ],
+  "schema": "experiment_queue_summary.v1",
+  "state": ".omx/state/experiment_queue_frontier_final_rate_attack_strict_exec_20260528T144357Z_post_execute_feedback_autonomous_chain_optimization.sqlite",
+  "status_counts": {
+    "queued": 21
+  },
+  "step_count": 21,
+  "steps": [
+    {
+      "attempts": 0,
+      "experiment_id": "autonomous_chain_global_many_op_rate_distortion_receiver_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_autonomous_chain_work_order",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T14:44:20Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "autonomous_chain_global_many_op_rate_distortion_receiver_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "run_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_bounded_local",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T14:44:20Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "autonomous_chain_global_many_op_rate_distortion_receiver_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "run_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue_bounded_local",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T14:44:20Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "autonomous_chain_global_many_op_rate_distortion_receiver_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "run_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_bounded_local",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T14:44:20Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "autonomous_chain_global_many_op_rate_distortion_receiver_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "validate_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T14:44:20Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "autonomous_chain_global_many_op_rate_distortion_receiver_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "validate_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T14:44:20Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "autonomous_chain_global_many_op_rate_distortion_receiver_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "validate_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T14:44:20Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "autonomous_chain_portfolio_materializer_context_closure_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_autonomous_chain_work_order",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T14:44:20Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "autonomous_chain_portfolio_materializer_context_closure_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "run_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_bounded_local",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T14:44:20Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "autonomous_chain_portfolio_materializer_context_closure_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "run_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue_bounded_local",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T14:44:20Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "autonomous_chain_portfolio_materializer_context_closure_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "run_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_bounded_local",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T14:44:20Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "autonomous_chain_portfolio_materializer_context_closure_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "validate_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T14:44:20Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "autonomous_chain_portfolio_materializer_context_closure_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "validate_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T14:44:20Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "autonomous_chain_portfolio_materializer_context_closure_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "validate_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T14:44:20Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "autonomous_chain_segnet_posenet_geometry_drop_many_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_autonomous_chain_work_order",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T14:44:20Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "autonomous_chain_segnet_posenet_geometry_drop_many_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "run_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_bounded_local",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T14:44:20Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "autonomous_chain_segnet_posenet_geometry_drop_many_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "run_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue_bounded_local",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T14:44:20Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "autonomous_chain_segnet_posenet_geometry_drop_many_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "run_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_bounded_local",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T14:44:20Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "autonomous_chain_segnet_posenet_geometry_drop_many_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "validate_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T14:44:20Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "autonomous_chain_segnet_posenet_geometry_drop_many_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "validate_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T14:44:20Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "autonomous_chain_segnet_posenet_geometry_drop_many_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "validate_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T14:44:20Z"
+    }
+  ]
+}

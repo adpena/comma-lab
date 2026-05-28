@@ -1,0 +1,33 @@
+{
+  "allowed_use": "blocked_repair_campaign_posterior_append_audit",
+  "appended_count": 1,
+  "appended_row_ids": [
+    "afc052509bd2395420bb35b9d726763c9fe452a13f0c625491c29088c4e8029b"
+  ],
+  "blocked_learning_signal_report_path": ".omx/research/frontier_final_rate_attack_strict_exec_20260528T144357Z/post_execute_feedback_child_queue_observations/targeted_component_correction_queue/activation_learning_signal_report.json",
+  "budget_spend_allowed": false,
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "duplicate_row_ids": [],
+  "exact_cuda_auth_eval": false,
+  "existing_row_count": 499,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "final_row_count": 500,
+  "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+  "gpu_launched": false,
+  "lock_path": ".omx/state/.repair_campaign_stackability_posterior.lock",
+  "posterior_path": ".omx/state/repair_campaign_stackability_posterior.jsonl",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_budget_spend": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "repair_campaign_blocked_posterior_append_report.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "signal_count": 1,
+  "skipped_duplicate_count": 0
+}

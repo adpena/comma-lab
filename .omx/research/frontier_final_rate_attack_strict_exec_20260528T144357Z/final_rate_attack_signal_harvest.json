@@ -1,0 +1,39 @@
+{
+  "allowed_use": "local_final_rate_attack_planning_feedback_only",
+  "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
+  "materializer_archive_delta_status_counts": {
+    "no_realized_delta": 3,
+    "zero_delta": 8
+  },
+  "materializer_blocking_feedback_count": 11,
+  "materializer_observation_count": 11,
+  "materializer_rate_nonpositive_count": 11,
+  "materializer_rate_positive_count": 0,
+  "materializer_saved_bytes_max": 0,
+  "materializer_saved_bytes_sum": 0,
+  "materializer_target_kind_counts": {
+    "archive_zip_repack_v1": 3,
+    "packet_member_recompress_v1": 3,
+    "packet_member_zip_header_elide_v1": 3,
+    "selector_stream_context_recode_v1": 2
+  },
+  "observation_count": 31,
+  "observation_kind_counts": {
+    "family_agnostic_materializer_empirical_observation": 3,
+    "materializer_chain_archive_delta": 8,
+    "queue_performance_step": 20
+  },
+  "observer_revalidation_path": ".omx/research/frontier_final_rate_attack_strict_exec_20260528T144357Z/observer_revalidation.json",
+  "promotion_eligible": false,
+  "queue_blockers": [],
+  "queue_healthy": true,
+  "queue_id": "frontier_final_rate_attack_strict_exec_20260528T144357Z",
+  "queue_status_counts": {
+    "succeeded": 20
+  },
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "frontier_final_rate_attack_signal_harvest.v1",
+  "score_claim": false,
+  "signal_observations_path": ".omx/research/frontier_final_rate_attack_strict_exec_20260528T144357Z/materializer_signal_observations.jsonl"
+}
