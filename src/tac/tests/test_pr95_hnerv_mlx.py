@@ -19,6 +19,7 @@ from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
     FALSE_AUTHORITY,
     PR95_MLX_BACKEND_STATUS_LOCAL_TIMING_PROXY,
     PR95_MLX_CONV2D_ACCUMULATION_MODES,
+    PR95_MLX_CONV2D_ACCUMULATION_OVERRIDE_PRESETS,
     PR95_MLX_LOSS_SURFACE_RGB_MSE,
     PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE,
     PR95_MLX_OPTIMIZED_CONV2D_ACCUMULATION_MODE,
@@ -41,6 +42,7 @@ from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
     parse_pr95_public_archive_zip,
     partition_pr95_mlx_parameter_names,
     pixel_shuffle_2x_nhwc,
+    pr95_mlx_conv2d_accumulation_overrides_from_preset,
     pr95_mlx_parameter_shape_records,
     pytorch_state_dict_from_mlx,
     run_pr95_mlx_synthetic_timing_smoke,
@@ -184,6 +186,34 @@ def test_decoder_supports_shared_fixed_order_conv2d_accumulation_mode() -> None:
     assert exported["rgb_1.weight"].shape == (3, 2, 3, 3)
 
 
+def test_decoder_supports_per_layer_conv2d_accumulation_overrides() -> None:
+    assert "rgb_heads_kahan_fp32" in PR95_MLX_CONV2D_ACCUMULATION_OVERRIDE_PRESETS
+    overrides = pr95_mlx_conv2d_accumulation_overrides_from_preset(
+        "rgb_heads_kahan_fp32"
+    )
+
+    model = HNeRVDecoderMLX(
+        base_channels=4,
+        conv2d_accumulation_mode="optimized",
+        conv2d_accumulation_overrides=overrides,
+    )
+    z = mx.zeros((1, 28))
+
+    y = model(z)
+    mx.eval(y)
+    manifest = model.architecture_manifest()
+
+    assert y.shape == (1, 2, 3, 384, 512)
+    assert manifest["conv2d_accumulation_mode"] == "optimized"
+    assert manifest["conv2d_accumulation_overrides"] == {
+        "rgb_0": "kahan_fp32",
+        "rgb_1": "kahan_fp32",
+    }
+    assert model.blocks[0].conv.conv2d_accumulation_mode == "optimized"
+    assert model.rgb_0.conv2d_accumulation_mode == "kahan_fp32"
+    assert model.rgb_1.conv2d_accumulation_mode == "kahan_fp32"
+
+
 def test_public_pr95_pytorch_state_load_matches_mlx_forward() -> None:
     torch = pytest.importorskip("torch")
     module = _load_public_pr95_model_module()
@@ -262,6 +292,7 @@ def test_public_pr95_archive_packet_mlx_cpu_forward_parity_probe() -> None:
     assert result["sample_indices"] == [0]
     assert result["mlx_device"] == "cpu"
     assert result["conv2d_accumulation_mode"] == "kahan_fp32"
+    assert result["conv2d_accumulation_overrides"] == {}
     assert result["parity"]["passed"] is True
     assert result["parity"]["max_abs"] <= 2e-3
     assert result["parity"]["mean_abs"] <= 1e-4
@@ -305,6 +336,11 @@ def test_public_pr95_archive_pytorch_export_forward_parity_probe(
         run_id="unit_pr95_export_parity",
         sample_indices=[0],
         mlx_device="cpu",
+        conv2d_accumulation_overrides=(
+            pr95_mlx_conv2d_accumulation_overrides_from_preset(
+                "rgb_heads_kahan_fp32"
+            )
+        ),
         overwrite=True,
     )
 
@@ -314,6 +350,10 @@ def test_public_pr95_archive_pytorch_export_forward_parity_probe(
     assert result["pt_path"].endswith("state.pt")
     assert (tmp_path / "state.pt").is_file()
     assert result["sample_indices"] == [0]
+    assert result["conv2d_accumulation_overrides"] == {
+        "rgb_0": "kahan_fp32",
+        "rgb_1": "kahan_fp32",
+    }
     assert result["forward_parity"]["parity"]["passed"] is True
     blockers = result["exact_readiness_refusal"]["blockers"]
     assert PR95_EXPORT_FORWARD_PARITY_BLOCKER not in blockers
@@ -355,11 +395,20 @@ def test_public_pr95_archive_decoder_trace_localizes_mlx_drift(
         sample_indices=[0],
         mlx_device="cpu",
         cliff_threshold=0.0,
+        conv2d_accumulation_overrides=(
+            pr95_mlx_conv2d_accumulation_overrides_from_preset(
+                "rgb_heads_kahan_fp32"
+            )
+        ),
     )
 
     assert result["schema"] == PUBLIC_ARCHIVE_DECODER_TRACE_SCHEMA
     assert result["sample_indices"] == [0]
     assert result["mlx_device"] == "cpu"
+    assert result["conv2d_accumulation_overrides"] == {
+        "rgb_0": "kahan_fp32",
+        "rgb_1": "kahan_fp32",
+    }
     assert result["trace_count"] >= 25
     assert result["output_delta"]["name"] == "output"
     assert result["output_delta"]["shape_match"] is True

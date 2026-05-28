@@ -31,6 +31,7 @@ from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
     FALSE_AUTHORITY,
     LANE_ID,
     PR95_MLX_CONV2D_ACCUMULATION_MODES,
+    PR95_MLX_CONV2D_ACCUMULATION_OVERRIDE_PRESETS,
     PR95_MLX_LOSS_SURFACE_RGB_MSE,
     PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE,
     PR95_MLX_LOSS_SURFACES,
@@ -42,6 +43,7 @@ from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
     compare_pr95_public_archive_forward_with_pytorch,
     parse_pr95_public_archive_zip,
     pr95_default_optimizer_descriptor_id,
+    pr95_mlx_conv2d_accumulation_overrides_from_preset,
     pr95_mlx_optimizer_descriptor_row,
     run_pr95_mlx_synthetic_timing_smoke,
     trace_pr95_public_archive_decoder_with_pytorch,
@@ -522,9 +524,11 @@ def _recommended_execution_command(
     pytorch_export_sample_indices: list[int],
     pytorch_export_mlx_device: str,
     pytorch_export_conv2d_accumulation_mode: str,
+    pytorch_export_conv2d_override_preset: str,
     pytorch_export_atol_max: float,
     pytorch_export_atol_mean: float,
     mlx_gpu_drift_conv2d_accumulation_mode: str,
+    mlx_gpu_drift_conv2d_override_preset: str,
     write_source_faithful_preprocess_smoke: bool,
     write_source_video_preprocess_smoke: bool,
     train_on_source_video_pairs: bool,
@@ -599,6 +603,8 @@ def _recommended_execution_command(
                 pytorch_export_mlx_device,
                 "--pytorch-export-conv2d-accumulation-mode",
                 pytorch_export_conv2d_accumulation_mode,
+                "--pytorch-export-conv2d-override-preset",
+                pytorch_export_conv2d_override_preset,
             ]
         )
     if write_mlx_gpu_drift_attestation:
@@ -607,6 +613,8 @@ def _recommended_execution_command(
             [
                 "--mlx-gpu-drift-conv2d-accumulation-mode",
                 mlx_gpu_drift_conv2d_accumulation_mode,
+                "--mlx-gpu-drift-conv2d-override-preset",
+                mlx_gpu_drift_conv2d_override_preset,
             ]
         )
     if write_source_faithful_preprocess_smoke:
@@ -886,9 +894,13 @@ def _build_representation_training_plan(
     pytorch_export_sample_indices: list[int],
     pytorch_export_mlx_device: str,
     pytorch_export_conv2d_accumulation_mode: str,
+    pytorch_export_conv2d_override_preset: str,
+    pytorch_export_conv2d_accumulation_overrides: dict[str, str],
     pytorch_export_atol_max: float,
     pytorch_export_atol_mean: float,
     mlx_gpu_drift_conv2d_accumulation_mode: str,
+    mlx_gpu_drift_conv2d_override_preset: str,
+    mlx_gpu_drift_conv2d_accumulation_overrides: dict[str, str],
     write_source_faithful_preprocess_smoke: bool,
     write_source_video_preprocess_smoke: bool,
     train_on_source_video_pairs: bool,
@@ -1032,10 +1044,22 @@ def _build_representation_training_plan(
             "pytorch_export_conv2d_accumulation_mode": (
                 pytorch_export_conv2d_accumulation_mode
             ),
+            "pytorch_export_conv2d_override_preset": (
+                pytorch_export_conv2d_override_preset
+            ),
+            "pytorch_export_conv2d_accumulation_overrides": (
+                pytorch_export_conv2d_accumulation_overrides
+            ),
             "pytorch_export_atol_max": pytorch_export_atol_max,
             "pytorch_export_atol_mean": pytorch_export_atol_mean,
             "mlx_gpu_drift_conv2d_accumulation_mode": (
                 mlx_gpu_drift_conv2d_accumulation_mode
+            ),
+            "mlx_gpu_drift_conv2d_override_preset": (
+                mlx_gpu_drift_conv2d_override_preset
+            ),
+            "mlx_gpu_drift_conv2d_accumulation_overrides": (
+                mlx_gpu_drift_conv2d_accumulation_overrides
             ),
             "source_faithful_preprocess_smoke_requested": (
                 write_source_faithful_preprocess_smoke
@@ -1133,6 +1157,16 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
         args.optimizer_descriptor_id or pr95_default_optimizer_descriptor_id(stage)
     )
     optimizer_descriptor = pr95_mlx_optimizer_descriptor_row(optimizer_descriptor_id)
+    pytorch_export_conv2d_accumulation_overrides = (
+        pr95_mlx_conv2d_accumulation_overrides_from_preset(
+            args.pytorch_export_conv2d_override_preset
+        )
+    )
+    mlx_gpu_drift_conv2d_accumulation_overrides = (
+        pr95_mlx_conv2d_accumulation_overrides_from_preset(
+            args.mlx_gpu_drift_conv2d_override_preset
+        )
+    )
     optimizer_training_config = optimizer_descriptor.get("training_config", {})
     optimizer_backend_status = str(
         optimizer_training_config.get("backend_status")
@@ -1191,6 +1225,16 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
             if args.write_pytorch_export_parity
             else None
         ),
+        "pytorch_export_conv2d_override_preset": (
+            args.pytorch_export_conv2d_override_preset
+            if args.write_pytorch_export_parity
+            else None
+        ),
+        "pytorch_export_conv2d_accumulation_overrides": (
+            pytorch_export_conv2d_accumulation_overrides
+            if args.write_pytorch_export_parity
+            else None
+        ),
         "mlx_gpu_forward_drift_attestation": _rel(
             output_dir / "mlx_gpu_forward_drift_attestation.json"
         )
@@ -1201,6 +1245,16 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
         else None,
         "mlx_gpu_drift_conv2d_accumulation_mode": (
             args.mlx_gpu_drift_conv2d_accumulation_mode
+            if args.write_mlx_gpu_drift_attestation
+            else None
+        ),
+        "mlx_gpu_drift_conv2d_override_preset": (
+            args.mlx_gpu_drift_conv2d_override_preset
+            if args.write_mlx_gpu_drift_attestation
+            else None
+        ),
+        "mlx_gpu_drift_conv2d_accumulation_overrides": (
+            mlx_gpu_drift_conv2d_accumulation_overrides
             if args.write_mlx_gpu_drift_attestation
             else None
         ),
@@ -1315,10 +1369,16 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
             pytorch_export_conv2d_accumulation_mode=(
                 args.pytorch_export_conv2d_accumulation_mode
             ),
+            pytorch_export_conv2d_override_preset=(
+                args.pytorch_export_conv2d_override_preset
+            ),
             pytorch_export_atol_max=args.pytorch_export_atol_max,
             pytorch_export_atol_mean=args.pytorch_export_atol_mean,
             mlx_gpu_drift_conv2d_accumulation_mode=(
                 args.mlx_gpu_drift_conv2d_accumulation_mode
+            ),
+            mlx_gpu_drift_conv2d_override_preset=(
+                args.mlx_gpu_drift_conv2d_override_preset
             ),
             optimizer_descriptor_id=optimizer_descriptor_id,
         ),
@@ -1350,10 +1410,22 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
         pytorch_export_conv2d_accumulation_mode=(
             args.pytorch_export_conv2d_accumulation_mode
         ),
+        pytorch_export_conv2d_override_preset=(
+            args.pytorch_export_conv2d_override_preset
+        ),
+        pytorch_export_conv2d_accumulation_overrides=(
+            pytorch_export_conv2d_accumulation_overrides
+        ),
         pytorch_export_atol_max=args.pytorch_export_atol_max,
         pytorch_export_atol_mean=args.pytorch_export_atol_mean,
         mlx_gpu_drift_conv2d_accumulation_mode=(
             args.mlx_gpu_drift_conv2d_accumulation_mode
+        ),
+        mlx_gpu_drift_conv2d_override_preset=(
+            args.mlx_gpu_drift_conv2d_override_preset
+        ),
+        mlx_gpu_drift_conv2d_accumulation_overrides=(
+            mlx_gpu_drift_conv2d_accumulation_overrides
         ),
         write_source_faithful_preprocess_smoke=(
             args.write_source_faithful_preprocess_smoke
@@ -1426,8 +1498,20 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
         "pytorch_export_conv2d_accumulation_mode": (
             args.pytorch_export_conv2d_accumulation_mode
         ),
+        "pytorch_export_conv2d_override_preset": (
+            args.pytorch_export_conv2d_override_preset
+        ),
+        "pytorch_export_conv2d_accumulation_overrides": (
+            pytorch_export_conv2d_accumulation_overrides
+        ),
         "mlx_gpu_drift_conv2d_accumulation_mode": (
             args.mlx_gpu_drift_conv2d_accumulation_mode
+        ),
+        "mlx_gpu_drift_conv2d_override_preset": (
+            args.mlx_gpu_drift_conv2d_override_preset
+        ),
+        "mlx_gpu_drift_conv2d_accumulation_overrides": (
+            mlx_gpu_drift_conv2d_accumulation_overrides
         ),
         "pytorch_export_atol_max": args.pytorch_export_atol_max,
         "pytorch_export_atol_mean": args.pytorch_export_atol_mean,
@@ -1630,8 +1714,20 @@ def _representation_manifest(
             "pytorch_export_conv2d_accumulation_mode": manifest.get(
                 "pytorch_export_conv2d_accumulation_mode"
             ),
+            "pytorch_export_conv2d_override_preset": manifest.get(
+                "pytorch_export_conv2d_override_preset"
+            ),
+            "pytorch_export_conv2d_accumulation_overrides": manifest.get(
+                "pytorch_export_conv2d_accumulation_overrides"
+            ),
             "mlx_gpu_drift_conv2d_accumulation_mode": manifest.get(
                 "mlx_gpu_drift_conv2d_accumulation_mode"
+            ),
+            "mlx_gpu_drift_conv2d_override_preset": manifest.get(
+                "mlx_gpu_drift_conv2d_override_preset"
+            ),
+            "mlx_gpu_drift_conv2d_accumulation_overrides": manifest.get(
+                "mlx_gpu_drift_conv2d_accumulation_overrides"
             ),
             "pytorch_export_atol_max": manifest.get("pytorch_export_atol_max"),
             "pytorch_export_atol_mean": manifest.get("pytorch_export_atol_mean"),
@@ -1813,12 +1909,31 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="PR95 MLX Conv2d accumulation path for export parity.",
     )
     parser.add_argument(
+        "--pytorch-export-conv2d-override-preset",
+        choices=tuple(PR95_MLX_CONV2D_ACCUMULATION_OVERRIDE_PRESETS),
+        default="none",
+        help=(
+            "Named per-layer Conv2d accumulation overrides for export parity. "
+            "Use this to pin suspected drift boundaries without slowing every "
+            "Conv2d layer."
+        ),
+    )
+    parser.add_argument(
         "--mlx-gpu-drift-conv2d-accumulation-mode",
         choices=PR95_MLX_CONV2D_ACCUMULATION_MODES,
         default="optimized",
         help=(
             "PR95 MLX Conv2d accumulation path for the GPU forward-drift "
             "attestation and decoder trace."
+        ),
+    )
+    parser.add_argument(
+        "--mlx-gpu-drift-conv2d-override-preset",
+        choices=tuple(PR95_MLX_CONV2D_ACCUMULATION_OVERRIDE_PRESETS),
+        default="none",
+        help=(
+            "Named per-layer Conv2d accumulation overrides for the GPU "
+            "forward-drift attestation and decoder trace."
         ),
     )
     parser.add_argument("--pytorch-export-atol-max", type=float, default=2e-3)
@@ -1932,6 +2047,16 @@ def main(argv: list[str] | None = None) -> int:
         or args.write_pytorch_export_parity
         or args.write_mlx_gpu_drift_attestation
     )
+    pytorch_export_conv2d_accumulation_overrides = (
+        pr95_mlx_conv2d_accumulation_overrides_from_preset(
+            args.pytorch_export_conv2d_override_preset
+        )
+    )
+    mlx_gpu_drift_conv2d_accumulation_overrides = (
+        pr95_mlx_conv2d_accumulation_overrides_from_preset(
+            args.mlx_gpu_drift_conv2d_override_preset
+        )
+    )
     if (
         args.write_mlx_gpu_drift_attestation
         and args.mlx_gpu_drift_conv2d_accumulation_mode == "fixed_fp64"
@@ -1940,6 +2065,14 @@ def main(argv: list[str] | None = None) -> int:
             "--mlx-gpu-drift-conv2d-accumulation-mode fixed_fp64 is unsupported "
             "on MLX GPU; use optimized/fixed_fp32/kahan_fp32 for Metal or run "
             "fixed_fp64 on the CPU parity path."
+        )
+    if args.write_mlx_gpu_drift_attestation and any(
+        mode == "fixed_fp64"
+        for mode in mlx_gpu_drift_conv2d_accumulation_overrides.values()
+    ):
+        raise SystemExit(
+            "--mlx-gpu-drift-conv2d-override-preset resolved to fixed_fp64 for "
+            "at least one layer, which is unsupported on MLX GPU"
         )
     if output_dir.exists() and not args.allow_existing_output_dir:
         raise SystemExit(
@@ -2043,8 +2176,20 @@ def main(argv: list[str] | None = None) -> int:
     manifest["pytorch_export_conv2d_accumulation_mode"] = (
         args.pytorch_export_conv2d_accumulation_mode
     )
+    manifest["pytorch_export_conv2d_override_preset"] = (
+        args.pytorch_export_conv2d_override_preset
+    )
+    manifest["pytorch_export_conv2d_accumulation_overrides"] = (
+        pytorch_export_conv2d_accumulation_overrides
+    )
     manifest["mlx_gpu_drift_conv2d_accumulation_mode"] = (
         args.mlx_gpu_drift_conv2d_accumulation_mode
+    )
+    manifest["mlx_gpu_drift_conv2d_override_preset"] = (
+        args.mlx_gpu_drift_conv2d_override_preset
+    )
+    manifest["mlx_gpu_drift_conv2d_accumulation_overrides"] = (
+        mlx_gpu_drift_conv2d_accumulation_overrides
     )
     manifest["pytorch_export_atol_max"] = args.pytorch_export_atol_max
     manifest["pytorch_export_atol_mean"] = args.pytorch_export_atol_mean
@@ -2099,6 +2244,9 @@ def main(argv: list[str] | None = None) -> int:
                 atol_mean=args.pytorch_export_atol_mean,
                 conv2d_accumulation_mode=(
                     args.pytorch_export_conv2d_accumulation_mode
+                ),
+                conv2d_accumulation_overrides=(
+                    pytorch_export_conv2d_accumulation_overrides
                 ),
                 overwrite=True,
             )
@@ -2161,6 +2309,9 @@ def main(argv: list[str] | None = None) -> int:
                 conv2d_accumulation_mode=(
                     args.mlx_gpu_drift_conv2d_accumulation_mode
                 ),
+                conv2d_accumulation_overrides=(
+                    mlx_gpu_drift_conv2d_accumulation_overrides
+                ),
             )
         )
         mlx_gpu_decoder_trace = trace_pr95_public_archive_decoder_with_pytorch(
@@ -2170,6 +2321,9 @@ def main(argv: list[str] | None = None) -> int:
             mlx_device="gpu",
             cliff_threshold=args.pytorch_export_atol_mean,
             conv2d_accumulation_mode=args.mlx_gpu_drift_conv2d_accumulation_mode,
+            conv2d_accumulation_overrides=(
+                mlx_gpu_drift_conv2d_accumulation_overrides
+            ),
         )
         manifest["mlx_gpu_forward_drift_attestation"] = (
             mlx_gpu_forward_drift_attestation

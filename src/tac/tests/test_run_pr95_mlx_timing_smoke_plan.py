@@ -52,6 +52,8 @@ def test_pr95_mlx_plan_only_cli_builds_queueable_local_mlx_plan(
             "--write-mlx-gpu-drift-attestation",
             "--mlx-gpu-drift-conv2d-accumulation-mode",
             "kahan_fp32",
+            "--mlx-gpu-drift-conv2d-override-preset",
+            "rgb_heads_kahan_fp32",
             "--write-source-video-preprocess-smoke",
             "--source-video-path",
             "upstream/videos/0.mkv",
@@ -120,11 +122,22 @@ def test_pr95_mlx_plan_only_cli_builds_queueable_local_mlx_plan(
         "python_command_args"
     ]
     assert "kahan_fp32" in execution["python_command_args"]
+    assert "--mlx-gpu-drift-conv2d-override-preset" in execution[
+        "python_command_args"
+    ]
+    assert "rgb_heads_kahan_fp32" in execution["python_command_args"]
     assert execution["mlx_gpu_forward_drift_attestation"].endswith(
         "mlx_gpu_forward_drift_attestation.json"
     )
     assert execution["mlx_gpu_decoder_trace"].endswith("mlx_gpu_decoder_trace.json")
     assert execution["mlx_gpu_drift_conv2d_accumulation_mode"] == "kahan_fp32"
+    assert execution["mlx_gpu_drift_conv2d_override_preset"] == (
+        "rgb_heads_kahan_fp32"
+    )
+    assert execution["mlx_gpu_drift_conv2d_accumulation_overrides"] == {
+        "rgb_0": "kahan_fp32",
+        "rgb_1": "kahan_fp32",
+    }
     assert execution["archive_export_manifest"].endswith(
         "pr95_public_archive_export.json"
     )
@@ -194,6 +207,15 @@ def test_pr95_mlx_plan_only_cli_builds_queueable_local_mlx_plan(
     assert representation_plan["candidate_params"][
         "mlx_gpu_drift_conv2d_accumulation_mode"
     ] == "kahan_fp32"
+    assert representation_plan["candidate_params"][
+        "mlx_gpu_drift_conv2d_override_preset"
+    ] == "rgb_heads_kahan_fp32"
+    assert representation_plan["candidate_params"][
+        "mlx_gpu_drift_conv2d_accumulation_overrides"
+    ] == {
+        "rgb_0": "kahan_fp32",
+        "rgb_1": "kahan_fp32",
+    }
     assert PR95_SOURCE_VIDEO_LOADER_UNPORTED_BLOCKER not in representation_plan[
         "dispatch_blockers"
     ]

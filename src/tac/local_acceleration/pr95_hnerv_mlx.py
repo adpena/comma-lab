@@ -85,6 +85,27 @@ PR95_MLX_CONV2D_ACCUMULATION_MODES: tuple[str, ...] = (
     "kahan_fp32",
     "fixed_fp64",
 )
+_PR95_MLX_RGB_HEAD_CONV_NAMES: tuple[str, ...] = ("rgb_0", "rgb_1")
+_PR95_MLX_REFINE_CONV_NAMES: tuple[str, ...] = ("refine0", "refine1")
+_PR95_MLX_BLOCK_CONV_NAMES: tuple[str, ...] = tuple(
+    name for i in range(6) for name in (f"blocks.{i}.conv", f"blocks.{i}.skip_conv")
+)
+PR95_MLX_CONV2D_ACCUMULATION_OVERRIDE_PRESETS: dict[str, dict[str, str]] = {
+    "none": {},
+    "rgb_heads_kahan_fp32": dict.fromkeys(
+        _PR95_MLX_RGB_HEAD_CONV_NAMES,
+        "kahan_fp32",
+    ),
+    "refine_rgb_heads_kahan_fp32": dict.fromkeys(
+        (*_PR95_MLX_REFINE_CONV_NAMES, *_PR95_MLX_RGB_HEAD_CONV_NAMES),
+        "kahan_fp32",
+    ),
+    "blocks_kahan_fp32": dict.fromkeys(_PR95_MLX_BLOCK_CONV_NAMES, "kahan_fp32"),
+    "blocks_refine_kahan_fp32": dict.fromkeys(
+        (*_PR95_MLX_BLOCK_CONV_NAMES, *_PR95_MLX_REFINE_CONV_NAMES),
+        "kahan_fp32",
+    ),
+}
 
 PR95_STAGE_MODULES: dict[int, str] = {
     1: "stage1_v328_ce",
@@ -741,6 +762,30 @@ def validate_pr95_mlx_conv2d_accumulation_mode(mode: str) -> str:
     return normalized
 
 
+def validate_pr95_mlx_conv2d_accumulation_overrides(
+    overrides: Mapping[str, str] | None,
+) -> dict[str, str]:
+    if overrides is None:
+        return {}
+    validated: dict[str, str] = {}
+    for raw_name, raw_mode in overrides.items():
+        name = str(raw_name)
+        if not name:
+            raise ValueError("conv2d accumulation override names must be non-empty")
+        validated[name] = validate_pr95_mlx_conv2d_accumulation_mode(str(raw_mode))
+    return validated
+
+
+def pr95_mlx_conv2d_accumulation_overrides_from_preset(preset: str) -> dict[str, str]:
+    normalized = str(preset)
+    if normalized not in PR95_MLX_CONV2D_ACCUMULATION_OVERRIDE_PRESETS:
+        raise ValueError(
+            "conv2d accumulation override preset must be one of "
+            f"{tuple(PR95_MLX_CONV2D_ACCUMULATION_OVERRIDE_PRESETS)}, got {preset!r}"
+        )
+    return dict(PR95_MLX_CONV2D_ACCUMULATION_OVERRIDE_PRESETS[normalized])
+
+
 def pixel_shuffle_2x_nhwc(x: Any, *, upscale_factor: int = 2) -> Any:
     """CANONICAL PixelShuffle for NHWC tensors using native MLX reshape/transpose.
 
@@ -1080,24 +1125,31 @@ class _HNeRVUpsampleBlockMLX(nn.Module if nn is not None else object):  # type: 
         out_channels: int,
         *,
         conv2d_accumulation_mode: str = PR95_MLX_OPTIMIZED_CONV2D_ACCUMULATION_MODE,
+        skip_conv2d_accumulation_mode: str | None = None,
     ) -> None:
         require_mlx()
         super().__init__()
         self.in_channels = int(in_channels)
         self.out_channels = int(out_channels)
+        self.conv2d_accumulation_mode = validate_pr95_mlx_conv2d_accumulation_mode(
+            conv2d_accumulation_mode
+        )
+        self.skip_conv2d_accumulation_mode = validate_pr95_mlx_conv2d_accumulation_mode(
+            skip_conv2d_accumulation_mode or self.conv2d_accumulation_mode
+        )
         self.conv = _PR95Conv2dMLX(
             in_channels,
             out_channels * 4,
             3,
             padding=1,
-            conv2d_accumulation_mode=conv2d_accumulation_mode,
+            conv2d_accumulation_mode=self.conv2d_accumulation_mode,
         )
         self.skip_conv = (
             _PR95Conv2dMLX(
                 in_channels,
                 out_channels,
                 1,
-                conv2d_accumulation_mode=conv2d_accumulation_mode,
+                conv2d_accumulation_mode=self.skip_conv2d_accumulation_mode,
             )
             if in_channels != out_channels
             else None
@@ -1127,6 +1179,7 @@ class HNeRVDecoderMLX(nn.Module if nn is not None else object):  # type: ignore[
         eval_size: tuple[int, int] = (384, 512),
         output_layout: str = "n2chw",
         conv2d_accumulation_mode: str = PR95_MLX_OPTIMIZED_CONV2D_ACCUMULATION_MODE,
+        conv2d_accumulation_overrides: Mapping[str, str] | None = None,
     ) -> None:
         require_mlx()
         super().__init__()
@@ -1138,6 +1191,11 @@ class HNeRVDecoderMLX(nn.Module if nn is not None else object):  # type: ignore[
         self.output_layout = output_layout
         self.conv2d_accumulation_mode = validate_pr95_mlx_conv2d_accumulation_mode(
             conv2d_accumulation_mode
+        )
+        self.conv2d_accumulation_overrides = (
+            validate_pr95_mlx_conv2d_accumulation_overrides(
+                conv2d_accumulation_overrides
+            )
         )
         if self.eval_size != (self.base_h * 64, self.base_w * 64):
             raise ValueError(
@@ -1159,6 +1217,12 @@ class HNeRVDecoderMLX(nn.Module if nn is not None else object):  # type: ignore[
             raise ValueError("base_channels too small for PR95 channel taper")
         self.channels = channels
 
+        def conv_mode_for(name: str) -> str:
+            return self.conv2d_accumulation_overrides.get(
+                name,
+                self.conv2d_accumulation_mode,
+            )
+
         self.stem = nn.Linear(  # type: ignore[union-attr]
             self.latent_dim,
             channels[0] * self.base_h * self.base_w,
@@ -1167,7 +1231,10 @@ class HNeRVDecoderMLX(nn.Module if nn is not None else object):  # type: ignore[
             _HNeRVUpsampleBlockMLX(
                 channels[i],
                 channels[i + 1],
-                conv2d_accumulation_mode=self.conv2d_accumulation_mode,
+                conv2d_accumulation_mode=conv_mode_for(f"blocks.{i}.conv"),
+                skip_conv2d_accumulation_mode=conv_mode_for(
+                    f"blocks.{i}.skip_conv"
+                ),
             )
             for i in range(6)
         ]
@@ -1178,28 +1245,28 @@ class HNeRVDecoderMLX(nn.Module if nn is not None else object):  # type: ignore[
             3,
             padding=2,
             dilation=2,
-            conv2d_accumulation_mode=self.conv2d_accumulation_mode,
+            conv2d_accumulation_mode=conv_mode_for("refine0"),
         )
         self.refine1 = _PR95Conv2dMLX(
             final_ch // 2,
             final_ch,
             3,
             padding=1,
-            conv2d_accumulation_mode=self.conv2d_accumulation_mode,
+            conv2d_accumulation_mode=conv_mode_for("refine1"),
         )
         self.rgb_0 = _PR95Conv2dMLX(
             final_ch,
             3,
             3,
             padding=1,
-            conv2d_accumulation_mode=self.conv2d_accumulation_mode,
+            conv2d_accumulation_mode=conv_mode_for("rgb_0"),
         )
         self.rgb_1 = _PR95Conv2dMLX(
             final_ch,
             3,
             3,
             padding=1,
-            conv2d_accumulation_mode=self.conv2d_accumulation_mode,
+            conv2d_accumulation_mode=conv_mode_for("rgb_1"),
         )
 
     def features_nhwc(self, z: Any) -> Any:
@@ -1240,6 +1307,9 @@ class HNeRVDecoderMLX(nn.Module if nn is not None else object):  # type: ignore[
             "internal_layout": "NHWC",
             "default_output_layout": self.output_layout,
             "conv2d_accumulation_mode": self.conv2d_accumulation_mode,
+            "conv2d_accumulation_overrides": dict(
+                self.conv2d_accumulation_overrides
+            ),
             "decoder_param_count": _param_count_from_tree(self.parameters()),
             "source_pr": 95,
             "source_architecture": "submissions/hnerv_muon/src/model.py::HNeRVDecoder",
@@ -1258,6 +1328,7 @@ class HNeRVSyntheticTrainingBundleMLX(nn.Module if nn is not None else object): 
         seed: int = 0,
         output_layout: str = "n2chw",
         conv2d_accumulation_mode: str = PR95_MLX_OPTIMIZED_CONV2D_ACCUMULATION_MODE,
+        conv2d_accumulation_overrides: Mapping[str, str] | None = None,
     ) -> None:
         require_mlx()
         super().__init__()
@@ -1268,6 +1339,7 @@ class HNeRVSyntheticTrainingBundleMLX(nn.Module if nn is not None else object): 
             base_channels=base_channels,
             output_layout=output_layout,
             conv2d_accumulation_mode=conv2d_accumulation_mode,
+            conv2d_accumulation_overrides=conv2d_accumulation_overrides,
         )
 
     def __call__(self, indices: Any) -> Any:
@@ -1398,6 +1470,7 @@ def compare_pr95_public_archive_forward_with_pytorch(
     atol_max: float = 2e-3,
     atol_mean: float = 1e-4,
     conv2d_accumulation_mode: str = PR95_MLX_OPTIMIZED_CONV2D_ACCUMULATION_MODE,
+    conv2d_accumulation_overrides: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
     """Compare MLX against PyTorch on decoded public PR95 packet state.
 
@@ -1413,6 +1486,9 @@ def compare_pr95_public_archive_forward_with_pytorch(
 
     meta = packet.meta
     conv_mode = validate_pr95_mlx_conv2d_accumulation_mode(conv2d_accumulation_mode)
+    conv_overrides = validate_pr95_mlx_conv2d_accumulation_overrides(
+        conv2d_accumulation_overrides
+    )
     indices = _sample_indices_for_pr95_packet(int(packet.latents.shape[0]), sample_indices)
     z_np = packet.latents[indices].astype(np.float32, copy=False)
     torch_state_dict = {
@@ -1434,6 +1510,7 @@ def compare_pr95_public_archive_forward_with_pytorch(
             base_channels=int(meta["base_channels"]),
             eval_size=tuple(int(dim) for dim in meta["eval_size"]),
             conv2d_accumulation_mode=conv_mode,
+            conv2d_accumulation_overrides=conv_overrides,
         )
         load_pytorch_state_dict_into_mlx(mlx_model, packet.state_dict)
         started = time.perf_counter()
@@ -1468,6 +1545,7 @@ def compare_pr95_public_archive_forward_with_pytorch(
         "evidence_grade": "[macOS-MLX research-signal]",
         "mlx_device": mlx_device,
         "conv2d_accumulation_mode": conv_mode,
+        "conv2d_accumulation_overrides": conv_overrides,
         "sample_indices": indices,
         "sample_count": len(indices),
         "elapsed_seconds": elapsed,
@@ -1500,6 +1578,7 @@ def trace_pr95_public_archive_decoder_with_pytorch(
     mlx_device: str = "cpu",
     cliff_threshold: float = 1.0e-5,
     conv2d_accumulation_mode: str = PR95_MLX_OPTIMIZED_CONV2D_ACCUMULATION_MODE,
+    conv2d_accumulation_overrides: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
     """Trace PR95 decoder boundary drift between PyTorch and MLX.
 
@@ -1522,6 +1601,9 @@ def trace_pr95_public_archive_decoder_with_pytorch(
 
     meta = packet.meta
     conv_mode = validate_pr95_mlx_conv2d_accumulation_mode(conv2d_accumulation_mode)
+    conv_overrides = validate_pr95_mlx_conv2d_accumulation_overrides(
+        conv2d_accumulation_overrides
+    )
     indices = _sample_indices_for_pr95_packet(int(packet.latents.shape[0]), sample_indices)
     z_np = packet.latents[indices].astype(np.float32, copy=False)
     torch_state_dict = {
@@ -1543,6 +1625,7 @@ def trace_pr95_public_archive_decoder_with_pytorch(
             base_channels=int(meta["base_channels"]),
             eval_size=tuple(int(dim) for dim in meta["eval_size"]),
             conv2d_accumulation_mode=conv_mode,
+            conv2d_accumulation_overrides=conv_overrides,
         )
         load_pytorch_state_dict_into_mlx(mlx_model, packet.state_dict)
         started = time.perf_counter()
@@ -1569,6 +1652,7 @@ def trace_pr95_public_archive_decoder_with_pytorch(
         "evidence_grade": "[macOS-MLX research-signal]",
         "mlx_device": mlx_device,
         "conv2d_accumulation_mode": conv_mode,
+        "conv2d_accumulation_overrides": conv_overrides,
         "sample_indices": indices,
         "sample_count": len(indices),
         "elapsed_seconds": elapsed,
@@ -1786,6 +1870,7 @@ def write_pr95_public_archive_pytorch_export_forward_parity(
     atol_max: float = 2e-3,
     atol_mean: float = 1e-4,
     conv2d_accumulation_mode: str = PR95_MLX_OPTIMIZED_CONV2D_ACCUMULATION_MODE,
+    conv2d_accumulation_overrides: Mapping[str, str] | None = None,
     overwrite: bool = False,
 ) -> dict[str, Any]:
     """Export a decoded PR95 MLX archive checkpoint to ``.pt`` and prove parity.
@@ -1820,6 +1905,7 @@ def write_pr95_public_archive_pytorch_export_forward_parity(
         atol_max=atol_max,
         atol_mean=atol_mean,
         conv2d_accumulation_mode=conv2d_accumulation_mode,
+        conv2d_accumulation_overrides=conv2d_accumulation_overrides,
     )
     parity = forward_parity.get("parity", {})
     passed = isinstance(parity, Mapping) and parity.get("passed") is True
@@ -1852,6 +1938,9 @@ def write_pr95_public_archive_pytorch_export_forward_parity(
         "sample_count": int(forward_parity["sample_count"]),
         "mlx_device": mlx_device,
         "conv2d_accumulation_mode": forward_parity["conv2d_accumulation_mode"],
+        "conv2d_accumulation_overrides": forward_parity[
+            "conv2d_accumulation_overrides"
+        ],
         "pytorch_export_forward_parity_established": bool(passed),
         "forward_parity": forward_parity,
         "exact_readiness_refusal": {
@@ -2718,6 +2807,8 @@ __all__ = [
     "PR95_ARCHIVE_EXPORT_SCHEMA",
     "PR95_ARCHIVE_N_QUANT",
     "PR95_MLX_BACKEND_STATUS_LOCAL_TIMING_PROXY",
+    "PR95_MLX_CONV2D_ACCUMULATION_MODES",
+    "PR95_MLX_CONV2D_ACCUMULATION_OVERRIDE_PRESETS",
     "PR95_MLX_LOSS_SURFACES",
     "PR95_MLX_LOSS_SURFACE_RGB_MSE",
     "PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE",
@@ -2752,6 +2843,7 @@ __all__ = [
     "partition_pr95_mlx_parameter_names",
     "pixel_shuffle_2x_nhwc",
     "pr95_default_optimizer_descriptor_id",
+    "pr95_mlx_conv2d_accumulation_overrides_from_preset",
     "pr95_mlx_optimizer_config_from_descriptor",
     "pr95_mlx_optimizer_descriptor_row",
     "pr95_mlx_parameter_shape_records",
@@ -2760,6 +2852,8 @@ __all__ = [
     "run_pr95_mlx_synthetic_timing_smoke",
     "stage_smoke_config",
     "trace_pr95_public_archive_decoder_with_pytorch",
+    "validate_pr95_mlx_conv2d_accumulation_mode",
+    "validate_pr95_mlx_conv2d_accumulation_overrides",
     "write_pr95_mlx_byte_closed_smoke_archive",
     "write_pr95_public_archive_pytorch_export_forward_parity",
     "write_pr95_public_archive_zip",

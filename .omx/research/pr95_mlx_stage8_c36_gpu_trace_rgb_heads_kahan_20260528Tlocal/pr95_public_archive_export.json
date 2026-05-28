@@ -1,0 +1,60 @@
+{
+  "archive_bytes": 230345,
+  "archive_path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_stage8_c36_gpu_trace_rgb_heads_kahan_20260528Tlocal/pr95_public_archive.zip",
+  "archive_sha256": "5cce3f399244f45f5fd1315dc868f1b72229a5080a2c806496bce5651ece8cdc",
+  "archive_zip_bytes": 230345,
+  "archive_zip_path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_stage8_c36_gpu_trace_rgb_heads_kahan_20260528Tlocal/pr95_public_archive.zip",
+  "archive_zip_sha256": "5cce3f399244f45f5fd1315dc868f1b72229a5080a2c806496bce5651ece8cdc",
+  "bytes": 230345,
+  "candidate_archive": {
+    "bytes": 230345,
+    "path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_stage8_c36_gpu_trace_rgb_heads_kahan_20260528Tlocal/pr95_public_archive.zip",
+    "sha256": "5cce3f399244f45f5fd1315dc868f1b72229a5080a2c806496bce5651ece8cdc"
+  },
+  "dispatch_attempted": false,
+  "dispatch_packet_ready": false,
+  "exact_readiness_refusal": {
+    "blockers": [
+      "pr95_archive_export_is_byte_closed_but_not_runtime_consumed",
+      "requires_full_frame_inflate_parity_before_runtime_consumption_claim",
+      "requires_exact_cpu_cuda_auth_eval_before_score_claim"
+    ],
+    "ready": false,
+    "schema": "exact_readiness_refusal.v1"
+  },
+  "gpu_launched": false,
+  "member": "0.bin",
+  "member_bytes": 230237,
+  "member_compress_type": 0,
+  "member_name": "0.bin",
+  "member_sha256": "660d413cc4ce1a53b227e7b4fc5253d8b047397e6b87ad86330188cfd0eacc83",
+  "parsed_latent_shape": [
+    1,
+    28
+  ],
+  "parsed_meta": {
+    "base_channels": 36,
+    "eval_size": [
+      384,
+      512
+    ],
+    "latent_dim": 28,
+    "n_pairs": 1
+  },
+  "parsed_state_dict_tensor_count": 28,
+  "path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_stage8_c36_gpu_trace_rgb_heads_kahan_20260528Tlocal/pr95_public_archive.zip",
+  "pr95_1to1_reproduction_claim": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_proof_present": false,
+  "reproduction_claim": false,
+  "reproduction_equivalence": false,
+  "runtime_consumption_proof_present": false,
+  "schema": "pr95_hnerv_archive_export.v1",
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "sha256": "5cce3f399244f45f5fd1315dc868f1b72229a5080a2c806496bce5651ece8cdc"
+}
