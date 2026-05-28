@@ -1,0 +1,176 @@
+# SPDX-License-Identifier: MIT
+# WAVE-N+5 SLOT 1 PR111-CANDIDATE composite recipe scaffold
+# (DISPATCH_ENABLED=FALSE pending operator-attended paired-CUDA RATIFICATION
+# per Catalog #246 + per-substrate symposium per Catalog #325).
+#
+# Composite = NSCS06 v8 chroma_lut v2 procedural seed (1,846,867 B; sha
+# 1a92af663754fc8e) + Compound C heterogeneous bit decoder (68,609 B;
+# 0.bin sister) per Compound F empirical orthogonal composition test
+# (canonical equation cross_paradigm_plus_decoder_compression_compound_alpha_v1).
+#
+# Per Compound F canonical first-order Volterra α=0.85 STACKABLE_SERIAL_PENDING_GRAMMAR:
+#   predicted composite ΔS rate-axis = -0.026950
+#   predicted score [contest-CPU] = 0.165059
+#   predicted band [contest-CPU] = [0.163, 0.167]
+#
+# Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY" +
+# Catalog #240 (recipe-vs-trainer-state consistency): this recipe is
+# transparently non-dispatchable until the operator-attended paired-Linux+
+# NVIDIA anchor lands.
+#
+# Per CLAUDE.md "Frontier target — NON-NEGOTIABLE": current canonical
+# frontier per `.omx/state/canonical_frontier_pointer.json` is contest-CPU
+# 0.192009 / 178,530 B / sha 18e3155fbbbe9ab2 (per Catalog #343
+# pointer-only discipline; NOT hardcoded literal here). Composite candidate
+# at predicted 0.165 [contest-CPU] would advance the local frontier by
+# ~0.027 ΔS rate-axis IF RATIFIED.
+
+substrate_id: composite_nscs06_v8_plus_compound_c_pr111_candidate
+lane_id: lane_composite_nscs06_v8_plus_compound_c_pr111_candidate_paired_cuda_ratification_20260528
+platform: modal
+gpu: T4
+recipe_id: substrate_composite_nscs06_v8_plus_compound_c_pr111_modal_t4_dispatch
+dispatch_kind: substrate
+dispatch_enabled: false  # PENDING per-substrate symposium per Catalog #325
+                         # + operator-attended paired-CUDA RATIFICATION per
+                         # Catalog #246 + CLAUDE.md "Executing actions with care"
+research_only: true       # NON-PROMOTABLE [composite-predicted-pending-paired-anchor]
+                          # pending paired-CUDA RATIFICATION per Catalog #246
+canary_status: post_canary_dependent
+canary_dependency: substrate_pact_nerv_selector_v3_heterogeneous_bit_modal_t4_dispatch
+
+# Catalog #240 transparency: the composite has NO single trainer because it
+# combines TWO pre-trained substrate archives (NSCS06 v8 chroma_lut +
+# Compound C heterogeneous bit). The "trainer" path here is the canonical
+# composite archive builder; the lane_script is the composite inflate runtime.
+trainer_path: experiments/results/composite_nscs06_v8_plus_compound_c_pr111_candidate_20260528/build_composite_archive.py
+lane_script: experiments/results/composite_nscs06_v8_plus_compound_c_pr111_candidate_20260528/submission/inflate.sh
+
+# Catalog #170 + Catalog #215: hardware floor declarations.
+min_vram_gb: 15
+min_smoke_gpu: T4
+target_modes:
+  - contest_one_video_replay
+  - contest_generalized
+
+# Catalog #171 + Catalog #181: video / pyav decode strategy.
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+
+# Catalog #325 per-substrate symposium evidence (REQUIRED post-canary-dep).
+# Composite symposium uses BOTH sister landing memos as evidence anchors.
+symposium_anchor_memo: .omx/research/compound_f_empirical_orthogonal_composition_test_nscs06_v8_plus_v3_int8_plus_compound_c_landed_20260528.md
+symposium_sister_landing_memos:
+  - .omx/research/nscs06_v8_chroma_lut_hinton_distill_600pair_long_mlx_landed_20260528.md
+  - .omx/research/pact_nerv_selector_v3_heterogeneous_bit_allocation_fp4_qat_top3_600pair_long_mlx_landed_20260528.md
+symposium_verdict_pending_paired_cuda_ratification: true
+
+# Catalog #324 predicted_band sourcing (PR111 candidate prediction).
+predicted_band:
+  contest_cpu: [0.163, 0.167]
+  contest_cuda: [0.180, 0.230]  # widened per parent CUDA amplification risk vs CPU
+predicted_band_validation_status: pending_post_training_paired_cuda_cpu
+# Per Catalog #324 + CLAUDE.md "Forbidden empirical-claim-without-evidence-tag":
+# the predicted band is sourced from Compound F empirical first-order Volterra
+# (`tac.optimization.substrate_composition_matrix.predicted_composite_delta`)
+# applied to the LANDED ΔS values from the 2 sister substrate landing memos.
+# IS NOT phantom_random_init — both component archives ARE post-training
+# (600-pair long MLX-LOCAL anchors). The composition_alpha=0.85 IS derived from
+# the canonical Daubechies multi-scale partition prior, NOT measured empirically.
+predicted_band_provenance:
+  composite_score_kind: PREDICTED_FROM_MODEL
+  composite_canonical_helper: tac.optimization.substrate_composition_matrix.predicted_composite_delta
+  composite_alpha: 0.85
+  composite_alpha_classifier: tac.optimization.substrate_composition_matrix.classify_pairwise_composability
+  component_archive_shas:
+    nscs06_v8: 1a92af663754fc8ef388a9ae7469a075625694e6b48712e323d3a6d145762eb3
+    compound_c_0bin: 983e23bc58db9e30c6621eb081695e5344c0fc4ac7c73de1b3e39d25d8456044  # Compound C 0.bin (decoder archive) sha (carried inside composite ZIP)
+    compound_c_archive_zip: 986ef525c84990f6f29c9c8aacfa44ab5e8a4ab8d4f60c4d8fa84ad44a0fdf78  # Compound C archive.zip (parent dir) sha
+    composite_archive_zip: dfff1358638ef7f7bad4596958cddb62215ed06c5b850a8501e3ad42a2c13402  # composite multi-section ZIP at experiments/results/composite_nscs06_v8_plus_compound_c_pr111_candidate_20260528/archive.zip
+  baseline_pointer: .omx/state/canonical_frontier_pointer.json
+
+# Catalog #344 canonical equations referenced by composite.
+canonical_equation_anchor:
+  - equation_id: procedural_codebook_from_seed_compression_savings_v1
+    anchor_id_to_append: composite_pr111_nscs06_v8_chroma_lut_replacement_savings_consumed_20260528
+    in_domain_context: nscs06_v8_chroma_lut
+  - equation_id: cross_paradigm_plus_decoder_compression_compound_alpha_v1
+    anchor_id_to_append: composite_pr111_first_order_volterra_alpha_0_85_pending_paired_cuda_ratification_20260528
+    in_domain_context: compound_f_canonical_pair_nscs06_v8_PLUS_compound_c
+
+# Catalog #313 probe outcome routing.
+probe_outcomes_routing:
+  predecessor_outcome_check: enabled
+  blocking_verdict_action: refuse_dispatch_per_catalog_313
+
+# Catalog #246 paired CPU+CUDA on 1:1 contest-compliant hardware
+# (NOT macOS-CPU per Catalog #192; NOT MPS per Catalog #1 + CLAUDE.md
+# "MPS auth eval is NOISE" non-negotiable).
+paired_auth_eval:
+  contest_cuda:
+    platform: modal
+    gpu: T4
+    hardware_substrate: linux_x86_64_t4
+    canonical_axis_label: contest_cuda
+  contest_cpu:
+    platform: modal
+    instance_type: linux_x86_64_cpu_only
+    hardware_substrate: linux_x86_64_cpu
+    canonical_axis_label: contest_cpu
+
+# Per Catalog #270 dispatch optimization protocol Tier 1 engineering +
+# Catalog #244 canonical NVML env block at remote driver surface.
+env_overrides:
+  COMPOSITE_ARCHIVE_PATH: experiments/results/composite_nscs06_v8_plus_compound_c_pr111_candidate_20260528/archive.zip
+  COMPOSITE_SUBMISSION_DIR: experiments/results/composite_nscs06_v8_plus_compound_c_pr111_candidate_20260528/submission
+  DALI_DISABLE_NVML: "1"  # Catalog #244
+  CUBLAS_WORKSPACE_CONFIG: ":4096:8"  # Catalog #244
+  PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True  # Catalog #244
+
+cost_band:
+  estimated_cost_usd: 1.50  # paired CUDA T4 + Linux x86_64 CPU per Catalog #246
+  epochs: 0   # composite has no training; archive is pre-built from sister landings
+  batch_size: 0
+  expected_wall_clock_minutes: 75  # T4 CUDA inflate+eval ~10 min + CPU inflate+eval ~60 min
+
+# Reactivation criteria per CLAUDE.md "Substrate scaffolds MUST be COMPLETE"
+reactivation_criteria:
+  - "Per-substrate symposium per Catalog #325 covering composite PR111 candidate (cross-paradigm + decoder-compression stacking sister to Compound F symposium)"
+  - "Paired-CUDA RATIFICATION per Catalog #246 confirming sub-0.18 score [contest-CPU] AND sub-0.23 score [contest-CUDA] empirically"
+  - "Catalog #324 predicted_band_validation_status transitions to validated_post_training_paired_cuda_cpu with anchor artifact paths"
+  - "Operator-attended verdict: IF RATIFIED ≤0.18 [contest-CPU] AND/OR [contest-CUDA] → PR111 submission cascade via Phase 9 tools/operator_pr_submission_full_lifecycle.py; IF NOT RATIFIED → IMPLEMENTATION-LEVEL falsification per Catalog #307 + Compound F canonical equation refit per Catalog #371"
+
+notes: >
+  PR111-CANDIDATE composite archive per WAVE-N+5 SLOT 1 (2026-05-28) per
+  Compound F empirical orthogonal composition test landing memo.
+
+  CANONICAL PAIR (per Compound F): NSCS06 v8 chroma_lut v2 procedural seed
+  ⊕ Compound C heterogeneous per-tensor bit allocation.
+
+  COMPOSITION SEMANTICS: STACKABLE_SERIAL_PENDING_GRAMMAR α=0.85 per first-
+  order Volterra canonical helper
+  `tac.optimization.substrate_composition_matrix.predicted_composite_delta`.
+  The composite ARCHIVE GRAMMAR is multi-section ZIP per HNeRV parity L3
+  multi-file justification; the composite INFLATE RUNTIME at
+  `submission/inflate.py` reads `archive_dir/0.bin` (composite ZIP), extracts
+  the 2 sections, and emits contest 1164×874×1200×3 raw frames per Catalog
+  #146/#367 contract via sequential decode chain (Compound C MlxRenderer
+  primary + bilinear upsample 384×512 → 1164×874).
+
+  PREDICTED COMPOSITE SCORE [contest-CPU] = 0.165 per Compound F first-order
+  Volterra. PREDICTED BAND [contest-CPU] = [0.163, 0.167]. This is the
+  PR111 candidate score floor PENDING paired-CUDA RATIFICATION.
+
+  Per CLAUDE.md "Frontier target" + Catalog #343: current canonical frontier
+  per .omx/state/canonical_frontier_pointer.json (NOT hardcoded literal).
+  Composite candidate at predicted 0.165 would advance the local frontier
+  by ~0.027 ΔS rate-axis if RATIFIED. PR111 submission requires
+  operator-attended `gh pr create` per CLAUDE.md "Executing actions with care"
+  + Catalog #370 canonical-compliance-verdict gate.
+
+  Recipe DISPATCH_ENABLED=FALSE per Catalog #240/#325 transparency:
+  paired-CUDA RATIFICATION + per-substrate symposium operator-attended.
+  Composite archive (1,917,982 bytes; sha computed at build time) +
+  inflate.py (~210 LOC + Catalog #367 fail-closed check + Catalog #205
+  device fork canonical) + vendored substrate package per Catalog #295
+  + local CPU smoke verified emit 3,662,409,600 byte raw file.
