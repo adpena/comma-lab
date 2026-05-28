@@ -631,6 +631,11 @@ def test_repair_campaign_autonomous_floor_loop_executes_all_required_queue_famil
     assert coverage["missing_required_family_ids"] == []
     assert summary["stack_search_plan"]["execution_report_count"] == 5
     assert summary["stack_search_plan"]["pairwise_interaction_tensor_cell_count"] == 20
+    assert summary["stack_search_plan"]["n_way_hypergraph_acquisition_enabled"] is True
+    assert summary["stack_search_plan"]["hypergraph_interaction_tensor_cell_count"] == 26
+    primary_path = summary["stack_search_plan"]["primary_stack_acquisition_path"]
+    assert primary_path["path_kind"] == "n_way_hypergraph_interaction_tensor_acquisition"
+    assert primary_path["source_hyperedge_order"] >= 2
     assert summary["posterior_learning_signal_count"] == 5
     assert summary["ready_for_exact_eval_dispatch"] is False
 

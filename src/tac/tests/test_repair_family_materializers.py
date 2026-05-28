@@ -662,6 +662,12 @@ def test_repair_family_stack_search_builds_pairwise_tensor_acquisition_path(
     )
 
     assert stack_plan["pairwise_interaction_tensor_cell_count"] == 2
+    assert stack_plan["n_way_hypergraph_acquisition_enabled"] is True
+    assert stack_plan["hypergraph_interaction_tensor_cell_count"] == 1
+    hyper_cell = stack_plan["hypergraph_interaction_tensor"]["cells"][0]
+    assert hyper_cell["hyperedge_order"] == 2
+    assert hyper_cell["transition_allowed_by_tensor"] is True
+    assert hyper_cell["coupling_synergy"] > 0.0
     pair_cells = stack_plan["pairwise_interaction_tensor"]["cells"]
     forward_cell = next(
         cell
@@ -675,6 +681,7 @@ def test_repair_family_stack_search_builds_pairwise_tensor_acquisition_path(
     assert forward_cell["coupling_synergy"] > 0.0
     assert forward_cell["transition_allowed_by_tensor"] is True
     primary_path = stack_plan["primary_stack_acquisition_path"]
+    assert primary_path["path_kind"] == "n_way_hypergraph_interaction_tensor_acquisition"
     assert primary_path["family_order"] == [
         "segnet_class_region_waterfill",
         "per_region_selector_codec",

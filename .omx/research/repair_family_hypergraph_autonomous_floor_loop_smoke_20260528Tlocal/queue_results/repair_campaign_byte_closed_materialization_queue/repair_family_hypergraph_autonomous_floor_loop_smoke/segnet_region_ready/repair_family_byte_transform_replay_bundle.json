@@ -1,0 +1,227 @@
+{
+  "budget_spend_allowed": false,
+  "candidate_chain_id": "repair_budget_spent_child_all5_repair_family_smoke_chain_f87180ee4f119684",
+  "charged_bits_changed": false,
+  "component_response_axis": "[macOS-MLX research-signal]",
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "environment_sha256": "b9845f8d12fb17fac19d848e212952a8fbd7f7b81edc1590b98efd49dfc819a3",
+  "exact_cuda_auth_eval": false,
+  "execution_context_manifest": {
+    "environment": {
+      "env": {
+        "BUN_INSTALL": "/Users/adpena/.bun",
+        "CLOUDFLARE_API_TOKEN": "[REDACTED]",
+        "CLOUDFLARE_API_TOKEN_ADMIN": "[REDACTED]",
+        "CODEX_CI": "1",
+        "CODEX_THREAD_ID": "019e64ab-4dcc-7c22-9b46-36b4c39a0beb",
+        "COLORTERM": "",
+        "FLEET_AUTHORITY_TOKEN": "[REDACTED]",
+        "FLEET_HUB_API_TOKEN": "[REDACTED]",
+        "FPATH": "/opt/homebrew/share/zsh/site-functions:/usr/local/share/zsh/site-functions:/usr/share/zsh/site-functions:/usr/share/zsh/5.9/functions",
+        "GH_PAGER": "cat",
+        "GIT_PAGER": "cat",
+        "HOME": "/Users/adpena",
+        "HOMEBREW_CELLAR": "/opt/homebrew/Cellar",
+        "HOMEBREW_PREFIX": "/opt/homebrew",
+        "HOMEBREW_REPOSITORY": "/opt/homebrew",
+        "INFOPATH": "/opt/homebrew/share/info:/opt/homebrew/share/info:",
+        "LANG": "C.UTF-8",
+        "LC_ALL": "C.UTF-8",
+        "LC_CTYPE": "C.UTF-8",
+        "LMSTUDIO_API_KEY": "[REDACTED]",
+        "LOGNAME": "adpena",
+        "NO_COLOR": "1",
+        "OLDPWD": "/Users/adpena/Projects/pact",
+        "OMX_HOOK_PLUGINS": "0",
+        "PAGER": "cat",
+        "PATH": "/Users/adpena/.codex/tmp/arg0/codex-arg0FWNbGV:/Users/adpena/.cargo/bin:/Users/adpena/.local/bin:/Users/adpena/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Users/adpena/.bun/bin:/Users/adpena/.antigravity/antigravity/bin:/Users/adpena/.local/bin:/Users/adpena/.local/bin:/Users/adpena/.elan/bin:/Users/adpena/.local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/opt/pkg/env/active/bin:/opt/pmk/env/global/bin:/Library/Apple/usr/bin:/Users/adpena/.cargo/bin:/Users/adpena/.local/bin:/Users/adpena/.lmstudio/bin",
+        "PWD": "/Users/adpena/Projects/pact",
+        "ROBLOX_OPEN_CLOUD_API_KEY": "[REDACTED]",
+        "SHELL": "/bin/zsh",
+        "SHLVL": "1",
+        "SSH_CLIENT": "100.124.23.93 55416 22",
+        "SSH_CONNECTION": "100.124.23.93 55416 100.81.85.28 22",
+        "TERM": "dumb",
+        "TMPDIR": "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/",
+        "USER": "adpena",
+        "_": "/Users/adpena/Projects/pact/.venv/bin/python",
+        "__CF_USER_TEXT_ENCODING": "0x1F5:0x0:0x0",
+        "codex_path": "/opt/homebrew/bin/codex",
+        "mount_authenticator_shm": "[REDACTED]"
+      },
+      "policy": "all environment keys captured for replay diagnostics; credential-like values are redacted",
+      "redacted_keys": [
+        "CLOUDFLARE_API_TOKEN",
+        "CLOUDFLARE_API_TOKEN_ADMIN",
+        "FLEET_AUTHORITY_TOKEN",
+        "FLEET_HUB_API_TOKEN",
+        "LMSTUDIO_API_KEY",
+        "ROBLOX_OPEN_CLOUD_API_KEY",
+        "mount_authenticator_shm"
+      ],
+      "schema": "safe_replay_environment_capture.v1"
+    },
+    "git": {
+      "head": "464cdc4e67ec70dab2d28211350dc00c72f4d032",
+      "status_short": "M .omx/state/active_lane_dispatch_claims.md\n M .omx/state/canonical_task_status.jsonl\n M .omx/state/current_focus.md\n M .omx/state/modal_call_id_ledger.jsonl\n M .omx/state/next_experiments.md\n M experiments/results/_modal_harvest_summary.json\n M reports/cathedral_autopilot_evidence.jsonl\n M reports/latest.md\n M src/tac/frontier_scan.py\n M src/tac/optimization/repair_family_stack_search.py\n M src/tac/tests/test_frontier_scan.py\n M src/tac/tests/test_repair_campaign_materialization_queue.py\n M src/tac/tests/test_repair_family_materializers.py\n M tools/scan_best_anchor_per_axis.py\n?? .omx/research/faiss_ivf_pq_codebook_fit_smoke_20260527Tlocal/\n?? .omx/research/frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z/\n?? .omx/research/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/\n?? .omx/research/frontier_final_rate_attack_activation_posterior_smoke_20260527T2021Z/\n?? .omx/research/frontier_final_rate_attack_all_exec_autoloop_20260527Tlocal.stdout.json\n?? .omx/research/frontier_final_rate_attack_all_exec_autoloop_20260527Tlocal/\n?? .omx/research/frontier_final_rate_attack_archive_repack_20260527T161914Z/\n?? .omx/research/frontier_final_rate_attack_auto_loop_smoke2_20260527Tlocal/\n?? .omx/research/frontier_final_rate_attack_auto_loop_smoke3_20260527Tlocal/\n?? .omx/research/frontier_final_rate_attack_auto_loop_smoke_20260527Tlocal/\n?? .omx/research/frontier_final_rate_attack_autoloop_child_smoke2_20260527Tlocal.stdout.json\n?? .omx/research/frontier_final_rate_attack_autoloop_child_smoke2_20260527Tlocal/\n?? .omx/research/frontier_final_rate_attack_autoloop_child_smoke_20260527Tlocal/\n?? .omx/research/frontier_final_rate_attack_autoloop_progress_smoke_20260527Tlocal.stdout.json\n?? .omx/research/frontier_final_rate_attack_autoloop_progress_smoke_20260527Tlocal/\n?? .omx/research/frontier_final_rate_attack_autowired_smoke2_20260527Tlocal/\n?? .omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/\n?? .omx/research/frontier_final_rate_attack_false_authority_smoke_20260527Tlocal/\n?? .omx/research/frontier_final_rate_attack_frozen_status_smoke_20260527Tlocal/\n?? .omx/research/frontier_final_rate_attack_goal_resume_20260527Tlocal/\n?? .omx/research/frontier_final_rate_attack_observer_health_smoke_20260527Tlocal/\n?? .omx/research/frontier_final_rate_attack_observer_reval_smoke_20260527Tlocal/\n?? .omx/research/frontier_final_rate_attack_queue_owned_20260527Tnow.stdout.json\n?? .omx/research/frontier_final_rate_attack_queue_owned_20260527Tnow/\n?? .omx/research/frontier_final_rate_attack_readable_reval_20260527Tlocal/\n?? .omx/research/frontier_final_rate_attack_signal_harvest_20260527Tlocal.stdout.json\n?? .omx/research/frontier_final_rate_attack_signal_harvest_20260527Tlocal/\n?? .omx/research/frontier_rate_attack_auto_final_signal_ingest_20260527Tlocal.stdout.json\n?? .omx/research/frontier_rate_attack_auto_final_signal_ingest_20260527Tlocal/\n?? .omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1605Z/\n?? .omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z/frontier_rate_attack_feedback_cycle.json\n?? .omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z/initial_component_marginal_refresh/\n?? .omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z/initial_refresh/autonomous_chain_optimization.json\n?? .omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z/initial_refresh/autonomous_chain_optimization_queue.json\n?? .omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z/initial_refresh/dqs1_followup_queue.json\n?? .omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z/initial_refresh/dqs1_observation_discovery.json\n?? .omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z/initial_refresh/dqs1_selected_pairset_acquisition.json\n?? .omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z/initial_refresh/feedback_refresh_report.json\n?? .omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z/initial_refresh/local_cpu_eureka_planning.json\n?? .omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z/initial_refresh/materializer_feedback_bridge.json\n?? .omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z/initial_refresh/materializer_feedback_discovery.json\n?? .omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z/initial_refresh/operation_chain_compiler_queue.json\n?? .omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z/initial_refresh/operation_chain_compiler_work_orders.json\n?? .omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z/initial_refresh/operation_materializer_backlog.json\n?? .omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z/initial_refresh/operation_materializer_bridge.json\n?? .omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z/initial_refresh/operation_materializer_contexts.json\n?? .omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z/initial_refresh/operation_materializer_execution_queue.json\n?? .omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z/initial_refresh/operation_materializer_work_queue.json\n?? .omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z/initial_refresh/operation_portfolio.json\n?? .omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z/initial_refresh/pair_frame_geometry_discovery.json\n?? .omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z/initial_refresh/rate_budget_preservation_plan.json\n?? .omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z/initial_refresh/receiver_closed_correction_budget.json\n?? .omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z/initial_refresh/receiver_repair_backlog.json\n?? .omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z/initial_refresh/receiver_repair_queue.json\n?? .omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z/initial_refresh/targeted_component_correction_acquisition.json\n?? .omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z/initial_refresh/targeted_component_correction_chain_materializer_handoff.json\n?? .omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z/initial_refresh/targeted_component_correction_chain_materializer_work_queue.json\n?? .omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z/initial_refresh/targeted_component_correction_materialization_requests.json\n?? .omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z/initial_refresh/targeted_component_correction_operation_chain_work_orders.json\n?? .omx/research/frontier_rate_attack_feedback_cycle_empty_targeted_harvest_20260527T1615Z/post_followup_local_cpu_eureka_planning.json\n?? .omx/research/frontier_rate_attack_feedback_cycle_final_rate_regen_20260527T1625Z/\n?? .omx/research/frontier_rate_attack_feedback_cycle_readable_reval_20260527Tlocal/\n?? .omx/research/frontier_rate_attack_feedback_cycle_repair_score_queue_20260527T1830Z/\n?? .omx/research/frontier_rate_attack_feedback_from_all_exec_20260527Tlocal1/\n?? .omx/research/frontier_rate_attack_feedback_from_all_exec_isolated_20260527Tlocal1/\n?? .omx/research/frontier_rate_attack_feedback_palette_k16_refresh_20260527Tlocal/\n?? .omx/research/frontier_rate_attack_feedback_posterior_followup_smoke_20260527T204225Z/\n?? .omx/research/frontier_rate_attack_feedback_posterior_followup_smoke_20260527T204506Z/\n?? .omx/research/frontier_section_recode_feca_probe_20260527Tlocal.stdout.json\n?? .omx/research/frontier_section_recode_feca_probe_20260527Tlocal/\n?? .omx/research/frontier_section_recode_feca_probe_20260527Tlocal2.stdout.json\n?? .omx/research/frontier_section_recode_feca_probe_20260527Tlocal2/\n?? .omx/research/mlx_score_aware_cli_smoke_atw_20260527Tlocal/\n?? .omx/research/mlx_score_aware_cli_smoke_coin_20260527Tlocal/\n?? .omx/research/mlx_score_aware_cli_smoke_mdl_20260527Tlocal/\n?? .omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal/\n?? .omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v2/\n?? .omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/\n?? .omx/research/pact_nerv_diffusion_blocks_byte_closed_smoke_20260528Tlocal/\n?? .omx/research/pact_nerv_diffusion_blocks_mlx_smoke_20260528Tlocal/worker_result.json\n?? .omx/research/pact_nerv_diffusion_blocks_runtime_custody_smoke2_20260528Tlocal/\n?? .omx/research/pact_nerv_diffusion_blocks_runtime_custody_smoke_20260528Tlocal/\n?? .omx/research/pact_nerv_ia3_byte_closed_candidate_smoke_20260528Tlocal/\n?? .omx/research/pact_nerv_ia3_byte_closed_direct_smoke_20260528Tlocal/\n?? .omx/research/pact_nerv_ia3_gate_smoke_20260528Tlocal/\n?? .omx/research/repair_family_hypergraph_autonomous_floor_loop_smoke_20260528Tlocal/\n?? .omx/research/repair_family_pairwise_autonomous_floor_loop_smoke2_20260528Tlocal/\n?? .omx/research/repair_family_pairwise_autonomous_floor_loop_smoke_20260528Tlocal/\n?? .omx/research/scorer_region_selector_chain_receiver_patch3_20260528Tlocal/\n?? .omx/research/scorer_region_selector_chain_receiver_patch_20260528Tlocal/\n?? experiments/train_substrate_pact_nerv_selector_v3_mlx_local.py\n?? src/tac/substrates/pact_nerv_selector_v3/archive_candidate.py\n?? src/tac/substrates/pact_nerv_selector_v3/mlx_renderer.py\n?? src/tac/substrates/pact_nerv_selector_v3/tests/test_pact_nerv_selector_v3_mlx_renderer_and_bridge.py\n?? tools/export_pact_nerv_selector_v3_mlx_to_pytorch_state_dict.py\n?? tools/gate_mlx_candidate_contest_equivalence_pact_nerv_selector_v3.py"
+    },
+    "invocation_argv": [
+      "tools/run_repair_family_byte_transform_executor.py",
+      "--family-materializer-manifest",
+      ".omx/research/repair_family_hypergraph_autonomous_floor_loop_smoke_20260528Tlocal/queue_results/repair_campaign_byte_closed_materialization_queue/repair_family_hypergraph_autonomous_floor_loop_smoke/segnet_region_ready/repair_family_materializer_manifest.json",
+      "--output-dir",
+      ".omx/research/repair_family_hypergraph_autonomous_floor_loop_smoke_20260528Tlocal/queue_results/repair_campaign_byte_closed_materialization_queue/repair_family_hypergraph_autonomous_floor_loop_smoke/segnet_region_ready/repair_family_byte_transform",
+      "--execution-report-out",
+      ".omx/research/repair_family_hypergraph_autonomous_floor_loop_smoke_20260528Tlocal/queue_results/repair_campaign_byte_closed_materialization_queue/repair_family_hypergraph_autonomous_floor_loop_smoke/segnet_region_ready/repair_family_byte_transform_execution_report.json",
+      "--replay-bundle-out",
+      ".omx/research/repair_family_hypergraph_autonomous_floor_loop_smoke_20260528Tlocal/queue_results/repair_campaign_byte_closed_materialization_queue/repair_family_hypergraph_autonomous_floor_loop_smoke/segnet_region_ready/repair_family_byte_transform_replay_bundle.json",
+      "--overwrite"
+    ],
+    "python": {
+      "executable": "/Users/adpena/Projects/pact/.venv/bin/python",
+      "platform": "macOS-26.4-arm64-arm-64bit",
+      "version": "3.12.13 (main, Mar 10 2026, 18:18:07) [Clang 21.1.4 ]"
+    },
+    "schema": "repair_family_byte_transform_replay_execution_context.v1"
+  },
+  "execution_context_sha256": "760e93be524615a54255a65674a538a63d470bdeaa8eb6ac3994aff0d00be74c",
+  "family_id": "segnet_class_region_waterfill",
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "generated_at_utc": "2026-05-28T05:05:25Z",
+  "gpu_launched": false,
+  "hash_manifest": {
+    "candidate_chain_id": "repair_budget_spent_child_all5_repair_family_smoke_chain_f87180ee4f119684",
+    "delta_bytes": 3321,
+    "delta_sha256": "97d0deb732c2382083f1c170e77e9c6155c492a2ebcfc0f3a46b4422ec4c4954",
+    "family_id": "segnet_class_region_waterfill",
+    "replay_argv": [
+      ".venv/bin/python",
+      "tools/run_repair_family_byte_transform_executor.py",
+      "--family-materializer-manifest",
+      ".omx/research/repair_family_hypergraph_autonomous_floor_loop_smoke_20260528Tlocal/queue_results/repair_campaign_byte_closed_materialization_queue/repair_family_hypergraph_autonomous_floor_loop_smoke/segnet_region_ready/repair_family_materializer_manifest.json",
+      "--output-dir",
+      ".omx/research/repair_family_hypergraph_autonomous_floor_loop_smoke_20260528Tlocal/queue_results/repair_campaign_byte_closed_materialization_queue/repair_family_hypergraph_autonomous_floor_loop_smoke/segnet_region_ready/repair_family_byte_transform",
+      "--execution-report-out",
+      ".omx/research/repair_family_hypergraph_autonomous_floor_loop_smoke_20260528Tlocal/queue_results/repair_campaign_byte_closed_materialization_queue/repair_family_hypergraph_autonomous_floor_loop_smoke/segnet_region_ready/repair_family_byte_transform_execution_report.json",
+      "--replay-bundle-out",
+      ".omx/research/repair_family_hypergraph_autonomous_floor_loop_smoke_20260528Tlocal/queue_results/repair_campaign_byte_closed_materialization_queue/repair_family_hypergraph_autonomous_floor_loop_smoke/segnet_region_ready/repair_family_byte_transform_replay_bundle.json",
+      "--overwrite"
+    ],
+    "schema": "repair_family_byte_transform_replay_hash_manifest.v1",
+    "source_records": [
+      {
+        "bytes": 9528,
+        "label": "repair_family_materializer_manifest",
+        "path": ".omx/research/repair_family_hypergraph_autonomous_floor_loop_smoke_20260528Tlocal/queue_results/repair_campaign_byte_closed_materialization_queue/repair_family_hypergraph_autonomous_floor_loop_smoke/segnet_region_ready/repair_family_materializer_manifest.json",
+        "present": true,
+        "required": true,
+        "sha256": "73a76ff421bcf3854949dee6046077afe9b2bb4de705b9f7f3262466adfe17da"
+      },
+      {
+        "bytes": 3321,
+        "label": "repair_family_byte_transform_payload",
+        "path": ".omx/research/repair_family_hypergraph_autonomous_floor_loop_smoke_20260528Tlocal/queue_results/repair_campaign_byte_closed_materialization_queue/repair_family_hypergraph_autonomous_floor_loop_smoke/segnet_region_ready/repair_family_byte_transform/segnet_class_region_waterfill_segnet_region_ready_byte_transform_payload.json",
+        "present": true,
+        "required": true,
+        "sha256": "97d0deb732c2382083f1c170e77e9c6155c492a2ebcfc0f3a46b4422ec4c4954"
+      },
+      {
+        "bytes": 517,
+        "label": "local_mlx_response",
+        "path": ".omx/research/repair_family_all5_autonomous_floor_loop_smoke_20260528T043751Z/mlx_response.json",
+        "present": true,
+        "required": false,
+        "sha256": "ad197d9345919726ca455d895e516f89a228b7c2d82a45cce166f79625e188cd"
+      },
+      {
+        "bytes": 517,
+        "label": "reference_local_mlx_response",
+        "path": ".omx/research/repair_family_all5_autonomous_floor_loop_smoke_20260528T043751Z/reference_mlx_response.json",
+        "present": true,
+        "required": false,
+        "sha256": "ad197d9345919726ca455d895e516f89a228b7c2d82a45cce166f79625e188cd"
+      }
+    ],
+    "typed_response_id": "segnet_region_ready"
+  },
+  "hash_manifest_sha256": "82877adcceeb97f18839f6353ca08799e475d15a373ff22571fcd5196596d5c1",
+  "invocation_argv": [
+    "tools/run_repair_family_byte_transform_executor.py",
+    "--family-materializer-manifest",
+    ".omx/research/repair_family_hypergraph_autonomous_floor_loop_smoke_20260528Tlocal/queue_results/repair_campaign_byte_closed_materialization_queue/repair_family_hypergraph_autonomous_floor_loop_smoke/segnet_region_ready/repair_family_materializer_manifest.json",
+    "--output-dir",
+    ".omx/research/repair_family_hypergraph_autonomous_floor_loop_smoke_20260528Tlocal/queue_results/repair_campaign_byte_closed_materialization_queue/repair_family_hypergraph_autonomous_floor_loop_smoke/segnet_region_ready/repair_family_byte_transform",
+    "--execution-report-out",
+    ".omx/research/repair_family_hypergraph_autonomous_floor_loop_smoke_20260528Tlocal/queue_results/repair_campaign_byte_closed_materialization_queue/repair_family_hypergraph_autonomous_floor_loop_smoke/segnet_region_ready/repair_family_byte_transform_execution_report.json",
+    "--replay-bundle-out",
+    ".omx/research/repair_family_hypergraph_autonomous_floor_loop_smoke_20260528Tlocal/queue_results/repair_campaign_byte_closed_materialization_queue/repair_family_hypergraph_autonomous_floor_loop_smoke/segnet_region_ready/repair_family_byte_transform_replay_bundle.json",
+    "--overwrite"
+  ],
+  "invocation_argv_sha256": "60c0a5468b32ae09f2c13948472b0f567f5408d861dae8cb7d9a0667d49a54b8",
+  "local_mlx_rows_are_advisory_only": true,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_budget_spend": false,
+  "ready_for_exact_eval_dispatch": false,
+  "replay_argv": [
+    ".venv/bin/python",
+    "tools/run_repair_family_byte_transform_executor.py",
+    "--family-materializer-manifest",
+    ".omx/research/repair_family_hypergraph_autonomous_floor_loop_smoke_20260528Tlocal/queue_results/repair_campaign_byte_closed_materialization_queue/repair_family_hypergraph_autonomous_floor_loop_smoke/segnet_region_ready/repair_family_materializer_manifest.json",
+    "--output-dir",
+    ".omx/research/repair_family_hypergraph_autonomous_floor_loop_smoke_20260528Tlocal/queue_results/repair_campaign_byte_closed_materialization_queue/repair_family_hypergraph_autonomous_floor_loop_smoke/segnet_region_ready/repair_family_byte_transform",
+    "--execution-report-out",
+    ".omx/research/repair_family_hypergraph_autonomous_floor_loop_smoke_20260528Tlocal/queue_results/repair_campaign_byte_closed_materialization_queue/repair_family_hypergraph_autonomous_floor_loop_smoke/segnet_region_ready/repair_family_byte_transform_execution_report.json",
+    "--replay-bundle-out",
+    ".omx/research/repair_family_hypergraph_autonomous_floor_loop_smoke_20260528Tlocal/queue_results/repair_campaign_byte_closed_materialization_queue/repair_family_hypergraph_autonomous_floor_loop_smoke/segnet_region_ready/repair_family_byte_transform_replay_bundle.json",
+    "--overwrite"
+  ],
+  "replay_argv_sha256": "98caf1613963d26c748892d567781f115e8465f5dcecb69f1f4bf02eacd92b3e",
+  "replay_target_tool": "tools/run_repair_family_byte_transform_executor.py",
+  "schema": "repair_family_byte_transform_replay_bundle.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "source_manifest_path": ".omx/research/repair_family_hypergraph_autonomous_floor_loop_smoke_20260528Tlocal/queue_results/repair_campaign_byte_closed_materialization_queue/repair_family_hypergraph_autonomous_floor_loop_smoke/segnet_region_ready/repair_family_materializer_manifest.json",
+  "source_manifest_schema": "repair_campaign_family_materializer_manifest.v1",
+  "source_records": [
+    {
+      "bytes": 9528,
+      "label": "repair_family_materializer_manifest",
+      "path": ".omx/research/repair_family_hypergraph_autonomous_floor_loop_smoke_20260528Tlocal/queue_results/repair_campaign_byte_closed_materialization_queue/repair_family_hypergraph_autonomous_floor_loop_smoke/segnet_region_ready/repair_family_materializer_manifest.json",
+      "present": true,
+      "required": true,
+      "sha256": "73a76ff421bcf3854949dee6046077afe9b2bb4de705b9f7f3262466adfe17da"
+    },
+    {
+      "bytes": 3321,
+      "label": "repair_family_byte_transform_payload",
+      "path": ".omx/research/repair_family_hypergraph_autonomous_floor_loop_smoke_20260528Tlocal/queue_results/repair_campaign_byte_closed_materialization_queue/repair_family_hypergraph_autonomous_floor_loop_smoke/segnet_region_ready/repair_family_byte_transform/segnet_class_region_waterfill_segnet_region_ready_byte_transform_payload.json",
+      "present": true,
+      "required": true,
+      "sha256": "97d0deb732c2382083f1c170e77e9c6155c492a2ebcfc0f3a46b4422ec4c4954"
+    },
+    {
+      "bytes": 517,
+      "label": "local_mlx_response",
+      "path": ".omx/research/repair_family_all5_autonomous_floor_loop_smoke_20260528T043751Z/mlx_response.json",
+      "present": true,
+      "required": false,
+      "sha256": "ad197d9345919726ca455d895e516f89a228b7c2d82a45cce166f79625e188cd"
+    },
+    {
+      "bytes": 517,
+      "label": "reference_local_mlx_response",
+      "path": ".omx/research/repair_family_all5_autonomous_floor_loop_smoke_20260528T043751Z/reference_mlx_response.json",
+      "present": true,
+      "required": false,
+      "sha256": "ad197d9345919726ca455d895e516f89a228b7c2d82a45cce166f79625e188cd"
+    }
+  ],
+  "source_records_sha256": "c79e18b73659e081c9f3d65ac72eb4d911d70f42ed13320f7ce1040f5a64576f",
+  "tool": "tools/run_repair_family_byte_transform_executor.py",
+  "typed_response_id": "segnet_region_ready"
+}

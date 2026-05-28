@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import time
 from collections.abc import Mapping, Sequence
+from itertools import combinations, pairwise
 from pathlib import Path
 from typing import Any
 
@@ -719,6 +720,297 @@ def _build_pairwise_interaction_tensor(
     return tensor
 
 
+def _family_coupling_synergy(
+    *,
+    family_ids: set[str],
+    scope_union: set[str],
+    archive_bound_count: int,
+    subset_size: int,
+) -> float:
+    synergy = 0.0
+    if {"segnet_class_region_waterfill", "per_region_selector_codec"} <= family_ids:
+        synergy += 0.10
+    if "entropy_boundary_probe" in family_ids and {"bit", "byte"} & scope_union:
+        synergy += 0.06
+    if "frame0_k16_palette_asymmetry" in family_ids and {"pixel", "frame"} & scope_union:
+        synergy += 0.05
+    if {"posenet_null_bottom_decile", "segnet_class_region_waterfill"} <= family_ids:
+        synergy += 0.04
+    if archive_bound_count == subset_size:
+        synergy += 0.04
+    synergy += min(0.08, 0.02 * max(0, len(family_ids) - 1))
+    return synergy
+
+
+def _hypergraph_interaction_cell(
+    *,
+    rows_by_key: Mapping[str, Mapping[str, Any]],
+    subset_keys: Sequence[str],
+    pair_by_key: Mapping[tuple[str, str], Mapping[str, Any]],
+    byte_credit_budget: int | None,
+) -> dict[str, Any]:
+    selected_rows = [rows_by_key[key] for key in subset_keys]
+    family_ids = [str(row.get("family_id") or "unclassified_repair_family") for row in selected_rows]
+    family_set = set(family_ids)
+    stages = [_safe_int(row.get("entropy_stage_order"), default=999) for row in selected_rows]
+    entropy_stage_inversion = any(right < left for left, right in pairwise(stages))
+    entropy_stage_span = max(stages or [999]) - min(stages or [999])
+    scope_sets = [set(_string_list(row.get("fractal_scope_levels"))) for row in selected_rows]
+    scope_union = set().union(*scope_sets) if scope_sets else set()
+    scope_common = set.intersection(*scope_sets) if scope_sets else set()
+    total_bytes = sum(max(0, _safe_int(row.get("delta_payload_bytes"))) for row in selected_rows)
+    byte_credit_exhausted = byte_credit_budget is not None and total_bytes > max(0, byte_credit_budget)
+    archive_bound_count = sum(
+        1 for row in selected_rows if row.get("archive_bound_exact_handoff_candidate") is True
+    )
+    negative_count = sum(1 for row in selected_rows if row.get("automatic_negative_result_demoted") is True)
+    row_score_sum = sum(_safe_float(row.get("interaction_aware_stack_score")) for row in selected_rows)
+    expected_improvement_sum = sum(
+        _safe_float(row.get("local_mlx_expected_improvement_score_units")) for row in selected_rows
+    )
+    pair_cells = [
+        pair_by_key[(left, right)]
+        for left, right in combinations(subset_keys, 2)
+        if (left, right) in pair_by_key
+    ]
+    pair_penalties = [_safe_float(cell.get("total_interaction_penalty")) for cell in pair_cells]
+    max_pair_penalty = max(pair_penalties or [0.0])
+    mean_pair_penalty = sum(pair_penalties) / max(1, len(pair_penalties))
+    same_stage_pressure = len(set(stages)) < len(stages)
+    high_scope_spillover = bool({"pair", "batch", "full_video"} & scope_union) and len(scope_common) > 0
+    stage_penalty = 0.30 if entropy_stage_inversion else (0.05 if same_stage_pressure else 0.0)
+    stage_span_penalty = min(0.12, 0.01 * max(0, entropy_stage_span - 1))
+    scope_common_penalty = min(0.22, 0.035 * len(scope_common))
+    byte_credit_penalty = 0.22 if byte_credit_exhausted else 0.0
+    negative_posterior_penalty = min(0.30, 0.11 * negative_count)
+    spillover_penalty = 0.12 if high_scope_spillover else 0.0
+    coupling_synergy = _family_coupling_synergy(
+        family_ids=family_set,
+        scope_union=scope_union,
+        archive_bound_count=archive_bound_count,
+        subset_size=len(selected_rows),
+    )
+    total_penalty = _clamp(
+        max_pair_penalty * 0.55
+        + mean_pair_penalty * 0.25
+        + stage_penalty
+        + stage_span_penalty
+        + scope_common_penalty
+        + byte_credit_penalty
+        + negative_posterior_penalty
+        + spillover_penalty
+        - coupling_synergy,
+        0.0,
+        0.95,
+    )
+    score = row_score_sum * (1.0 - total_penalty)
+    blockers = ordered_unique(
+        [
+            *(["entropy_stage_order_inversion_for_hyperedge"] if entropy_stage_inversion else []),
+            *(["byte_credit_exhausted_for_hyperedge"] if byte_credit_exhausted else []),
+            *(["negative_posterior_hyperedge_penalty_active"] if negative_count else []),
+            *(["pair_batch_or_full_video_hyperedge_remeasure_required"] if high_scope_spillover else []),
+        ]
+    )
+    cell = {
+        "schema": "repair_family_stack_hypergraph_interaction_cell.v1",
+        "hyperedge_key": "||".join(subset_keys),
+        "hyperedge_order": len(selected_rows),
+        "row_keys": list(subset_keys),
+        "family_ids": ordered_unique(family_ids),
+        "typed_response_ids": [
+            str(row.get("typed_response_id") or "typed_response_unknown") for row in selected_rows
+        ],
+        "entropy_stage_order": stages,
+        "entropy_stage_inversion": entropy_stage_inversion,
+        "entropy_stage_span": entropy_stage_span,
+        "scope_union_levels": sorted(scope_union, key=_level_sort_key),
+        "scope_common_levels": sorted(scope_common, key=_level_sort_key),
+        "combined_delta_payload_bytes": total_bytes,
+        "byte_credit_budget": byte_credit_budget,
+        "byte_credit_exhausted": byte_credit_exhausted,
+        "archive_bound_count": archive_bound_count,
+        "negative_demoted_count": negative_count,
+        "combined_local_mlx_expected_improvement_score_units": expected_improvement_sum,
+        "row_stack_score_sum": row_score_sum,
+        "pairwise_cell_count": len(pair_cells),
+        "max_pairwise_interaction_penalty": max_pair_penalty,
+        "mean_pairwise_interaction_penalty": mean_pair_penalty,
+        "stage_penalty": stage_penalty,
+        "stage_span_penalty": stage_span_penalty,
+        "scope_common_penalty": scope_common_penalty,
+        "byte_credit_penalty": byte_credit_penalty,
+        "negative_posterior_penalty": negative_posterior_penalty,
+        "spillover_penalty": spillover_penalty,
+        "coupling_synergy": coupling_synergy,
+        "total_hypergraph_interaction_penalty": total_penalty,
+        "hypergraph_acquisition_score": score,
+        "transition_allowed_by_tensor": not entropy_stage_inversion and not byte_credit_exhausted,
+        "interaction_formula": (
+            "hyper_score=sum(s_i)*(1-clamp(0.55*max_pair+0.25*mean_pair+"
+            "p_stage+p_span+p_scope+p_byte+p_negative+p_spill-s_synergy,0,0.95))"
+        ),
+        "blockers": blockers,
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        cell,
+        context=f"repair_family_stack_hypergraph_interaction_cell:{cell['hyperedge_key']}",
+    )
+    return cell
+
+
+def _build_hypergraph_interaction_tensor(
+    *,
+    rows: Sequence[Mapping[str, Any]],
+    pairwise_tensor: Mapping[str, Any],
+    byte_credit_budget: int | None,
+) -> dict[str, Any]:
+    row_by_key = {str(row.get("stack_row_key") or _stack_row_key(row)): row for row in rows}
+    row_keys = list(row_by_key)
+    pair_by_key: dict[tuple[str, str], Mapping[str, Any]] = {}
+    for cell in pairwise_tensor.get("cells") or []:
+        if isinstance(cell, Mapping):
+            pair_by_key[
+                (
+                    str(cell.get("left_stack_row_key") or ""),
+                    str(cell.get("right_stack_row_key") or ""),
+                )
+            ] = cell
+    max_order = min(5, len(row_keys))
+    cells = [
+        _hypergraph_interaction_cell(
+            rows_by_key=row_by_key,
+            subset_keys=subset,
+            pair_by_key=pair_by_key,
+            byte_credit_budget=byte_credit_budget,
+        )
+        for order in range(2, max_order + 1)
+        for subset in combinations(row_keys, order)
+    ]
+    cells.sort(
+        key=lambda cell: (
+            -float(cell.get("hypergraph_acquisition_score") or 0.0),
+            -int(cell.get("hyperedge_order") or 0),
+            float(cell.get("total_hypergraph_interaction_penalty") or 0.0),
+            str(cell.get("hyperedge_key") or ""),
+        )
+    )
+    tensor = {
+        "schema": "repair_family_stack_hypergraph_interaction_tensor.v1",
+        "axis_names": [
+            "family_subset",
+            "entropy_stage_sequence",
+            "scope_union",
+            "scope_common",
+            "archive_bound_count",
+            "byte_credit_pressure",
+            "negative_posterior_pressure",
+        ],
+        "max_hyperedge_order": max_order,
+        "cell_count": len(cells),
+        "cells": cells,
+        "acquisition_rule": (
+            "select_n_way_hyperedge_with_monotone_entropy_order_positive_score_"
+            "byte_credit_feasibility_archive_custody_and_negative_posterior_penalties"
+        ),
+        "budget_spend_allowed": False,
+        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        tensor,
+        context="repair_family_stack_hypergraph_interaction_tensor",
+    )
+    return tensor
+
+
+def _build_hypergraph_stack_acquisition_paths(
+    *,
+    rows: Sequence[Mapping[str, Any]],
+    hypergraph_tensor: Mapping[str, Any],
+    byte_credit_budget: int | None,
+) -> list[dict[str, Any]]:
+    row_by_key = {str(row.get("stack_row_key") or _stack_row_key(row)): row for row in rows}
+    best_cell = None
+    for cell in hypergraph_tensor.get("cells") or []:
+        if not isinstance(cell, Mapping):
+            continue
+        if cell.get("transition_allowed_by_tensor") is not True:
+            continue
+        if _safe_float(cell.get("hypergraph_acquisition_score")) <= 0.0:
+            continue
+        best_cell = cell
+        break
+    if best_cell is None:
+        return []
+    selected = _string_list(best_cell.get("row_keys"))
+    selected_rows = [row_by_key[key] for key in selected if key in row_by_key]
+    strict_archive_bound_improvement = any(
+        row.get("archive_bound_exact_handoff_candidate") is True
+        and _safe_float(row.get("local_mlx_expected_improvement_score_units")) > 0.0
+        for row in selected_rows
+    )
+    all_selected_demoted = bool(selected_rows) and all(
+        row.get("automatic_negative_result_demoted") is True for row in selected_rows
+    )
+    terminal_outcome_class = "precise_exact_axis_blocker"
+    if strict_archive_bound_improvement:
+        terminal_outcome_class = "strictly_better_archive_bound_candidate_exact_axis_blocked"
+    elif all_selected_demoted:
+        terminal_outcome_class = "family_demoted_by_posterior_evidence"
+    blockers = ordered_unique(
+        [
+            *[blocker for row in selected_rows for blocker in _string_list(row.get("blockers"))],
+            *_string_list(best_cell.get("blockers")),
+            "contest_cpu_or_cuda_exact_axis_payload_required",
+            "lane_dispatch_claim_required_before_exact_eval",
+        ]
+    )
+    path = {
+        "schema": "repair_family_stack_acquisition_path.v1",
+        "path_id": "primary_hypergraph_tensor_path",
+        "path_kind": "n_way_hypergraph_interaction_tensor_acquisition",
+        "source_hyperedge_key": best_cell.get("hyperedge_key"),
+        "source_hyperedge_order": best_cell.get("hyperedge_order"),
+        "row_keys": selected,
+        "family_order": [str(row.get("family_id") or "") for row in selected_rows],
+        "typed_response_order": [str(row.get("typed_response_id") or "") for row in selected_rows],
+        "entropy_stage_order": [_safe_int(row.get("entropy_stage_order"), default=999) for row in selected_rows],
+        "total_delta_payload_bytes": best_cell.get("combined_delta_payload_bytes"),
+        "byte_credit_budget": byte_credit_budget,
+        "byte_credit_remaining": None
+        if byte_credit_budget is None
+        else max(0, byte_credit_budget - _safe_int(best_cell.get("combined_delta_payload_bytes"))),
+        "total_local_mlx_expected_improvement_score_units": (
+            best_cell.get("combined_local_mlx_expected_improvement_score_units")
+        ),
+        "total_interaction_aware_stack_score": best_cell.get("row_stack_score_sum"),
+        "max_pairwise_interaction_penalty": best_cell.get("max_pairwise_interaction_penalty"),
+        "max_hypergraph_interaction_penalty": best_cell.get("total_hypergraph_interaction_penalty"),
+        "mean_pairwise_acquisition_score": None,
+        "hypergraph_acquisition_score": best_cell.get("hypergraph_acquisition_score"),
+        "archive_bound_candidate_count": best_cell.get("archive_bound_count"),
+        "strict_archive_bound_local_improvement_candidate": strict_archive_bound_improvement,
+        "terminal_outcome_class": terminal_outcome_class,
+        "blockers": blockers,
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        "allowed_use": "repair_family_n_way_stack_acquisition_planning_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        path,
+        context="repair_family_hypergraph_stack_acquisition_path",
+    )
+    return [path]
+
+
 def _build_stack_acquisition_paths(
     *,
     rows: Sequence[Mapping[str, Any]],
@@ -1187,11 +1479,25 @@ def plan_repair_family_stack_search(
         rows=rows,
         byte_credit_budget=byte_credit_budget,
     )
-    acquisition_paths = _build_stack_acquisition_paths(
+    hypergraph_interaction_tensor = _build_hypergraph_interaction_tensor(
         rows=rows,
         pairwise_tensor=pairwise_interaction_tensor,
         byte_credit_budget=byte_credit_budget,
     )
+    hypergraph_acquisition_paths = _build_hypergraph_stack_acquisition_paths(
+        rows=rows,
+        hypergraph_tensor=hypergraph_interaction_tensor,
+        byte_credit_budget=byte_credit_budget,
+    )
+    pairwise_acquisition_paths = _build_stack_acquisition_paths(
+        rows=rows,
+        pairwise_tensor=pairwise_interaction_tensor,
+        byte_credit_budget=byte_credit_budget,
+    )
+    acquisition_paths = [
+        *hypergraph_acquisition_paths,
+        *pairwise_acquisition_paths,
+    ]
     primary_acquisition_path = acquisition_paths[0] if acquisition_paths else None
     selected_row_keys = set(
         _string_list(None if primary_acquisition_path is None else primary_acquisition_path.get("row_keys"))
@@ -1244,6 +1550,11 @@ def plan_repair_family_stack_search(
         "interaction_tensor_cell_count": interaction_tensor["cell_count"],
         "pairwise_interaction_tensor": pairwise_interaction_tensor,
         "pairwise_interaction_tensor_cell_count": pairwise_interaction_tensor["cell_count"],
+        "n_way_hypergraph_acquisition_enabled": True,
+        "hypergraph_interaction_tensor": hypergraph_interaction_tensor,
+        "hypergraph_interaction_tensor_cell_count": hypergraph_interaction_tensor["cell_count"],
+        "hypergraph_stack_acquisition_path_count": len(hypergraph_acquisition_paths),
+        "pairwise_stack_acquisition_path_count": len(pairwise_acquisition_paths),
         "stack_acquisition_path_count": len(acquisition_paths),
         "stack_acquisition_paths": acquisition_paths,
         "primary_stack_acquisition_path": primary_acquisition_path,
