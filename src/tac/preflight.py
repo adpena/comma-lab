@@ -5382,6 +5382,23 @@ def preflight_all(
             strict=True, verbose=verbose
         )
 
+        # Catalog #372: cathedral_autopilot main() invokes Dykstra Pareto solver.
+        # DYKSTRA-PARETO-SOLVER-WIRE-IN 2026-05-28 self-protection per
+        # CATHEDRAL-SMARTER-DESIGN-MEMO Dim 1 Phase 4 + CLAUDE.md
+        # "Meta-Lagrangian/Pareto solver — NON-NEGOTIABLE, HIGHEST EMPHASIS"
+        # + Catalog #355 sister invoker-callsite pattern. Refuses any state of
+        # the canonical autopilot entry point where main() does NOT contain a
+        # call to invoke_dykstra_pareto_solver_on_candidates OR solve_pareto_polytope_intersection
+        # per Catalog #372 acceptance contract. Per Catalog #287/#323/#341:
+        # contribution is OBSERVABILITY-ONLY at landing (bounded [0.95, 1.05]
+        # adjustment factor preserves the Phase 1 safety envelope per Catalog #355).
+        # STRICT-from-byte-one per CLAUDE.md "Strict-flip atomicity rule" —
+        # canonical Phase 4 wire-in lands in same commit batch driving live count to 0.
+        # Memory: feedback_dykstra_pareto_polytope_solver_wire_in_dim1_phase4_landed_20260528.
+        check_cathedral_autopilot_main_invokes_dykstra_pareto_solver(
+            strict=True, verbose=verbose
+        )
+
         # Catalog #354: master-gradient exploit consumers bundle completeness.
         # RESPAWN-MG-7-BUNDLE 2026-05-20 self-protection per operator
         # NON-NEGOTIABLE 2026-05-19 verbatim "Implement all exploits and wire
@@ -29626,6 +29643,245 @@ def check_cathedral_autopilot_main_invokes_meta_lagrangian(
             "self-protected against' non-negotiable + 'Meta-Lagrangian/Pareto "
             "solver — NON-NEGOTIABLE, HIGHEST EMPHASIS'. Sister of Catalog "
             "#336 + #337 at the meta-Lagrangian surface:\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Catalog #372 — cathedral_autopilot main() invokes Dykstra Pareto solver
+# ────────────────────────────────────────────────────────────────────────────
+#
+# DYKSTRA-PARETO-SOLVER-WIRE-IN per CATHEDRAL-SMARTER-DESIGN-MEMO Dimension
+# 1 Phase 4 (2026-05-28) + CLAUDE.md "Meta-Lagrangian/Pareto solver — NON-
+# NEGOTIABLE, HIGHEST EMPHASIS" + operator standing directive verbatim *"the
+# desired loop is: formulate objective and constraints -> emit typed atoms
+# -> Pareto/KKT/interaction prune -> select by score delta plus expected
+# information gain -> build deterministic archive -> exact CUDA eval and
+# exact contest-CPU eval when the archive is a frontier/submission
+# candidate -> reseed the solver"*.
+#
+# Sister of Catalog #355 META-LAGRANGIAN-WIRE-1 invoker-callsite gate at
+# the Dykstra Pareto polytope solver sub-surface. The canonical Dykstra
+# helper sits at :mod:`tac.dykstra_pareto_solver` (facade over the
+# canonical sister :mod:`tac.findings_lagrangian.dual_solver_phase_2`
+# landed 2026-05-26 per Phase 2 advancement). Phase 4 lands the canonical
+# CANDIDATE-LIST invoker that fires the polytope solver on every
+# cathedral autopilot iteration's ranked top-N candidates per-axis,
+# emits per-axis tight-constraint identification (binding axis = next-
+# cycle attack direction per Boyd-Dattorro 2006 § 6.2), and surfaces
+# the typed Pareto verdict.
+#
+# Per CLAUDE.md "Apples-to-apples evidence discipline" + Catalog
+# #287/#323/#341: contribution is OBSERVABILITY-ONLY at landing. The
+# bounded scalar adjustment factor in [0.95, 1.05] preserves the
+# META-LAGRANGIAN-WIRE-1 Phase 1 safety envelope per Catalog #355
+# sister discipline.
+
+_CHECK_372_TARGET_RELPATH = "tools/cathedral_autopilot_autonomous_loop.py"
+_CHECK_372_ACCEPTANCE_TOKENS: frozenset[str] = frozenset({
+    "invoke_dykstra_pareto_solver_on_candidates",
+    "solve_pareto_polytope_intersection",
+})
+_CHECK_372_WAIVER_TOKEN = "DYKSTRA_PARETO_SOLVER_INVOKER_WAIVED"
+_CHECK_372_PLACEHOLDER_RATIONALES: frozenset[str] = frozenset({
+    "<rationale>", "<reason>", "rationale", "reason",
+})
+
+
+def check_cathedral_autopilot_main_invokes_dykstra_pareto_solver(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #372 — cathedral_autopilot main() invokes Dykstra Pareto solver.
+
+    DYKSTRA-PARETO-SOLVER WIRE-IN self-protection per CATHEDRAL-SMARTER-
+    DESIGN-MEMO Dim 1 Phase 4 + CLAUDE.md "Meta-Lagrangian/Pareto solver
+    — NON-NEGOTIABLE, HIGHEST EMPHASIS" non-negotiable. Refuses any state
+    of the canonical autopilot entry point where main() does NOT contain
+    a call to one of the canonical invocation tokens:
+
+    - ``invoke_dykstra_pareto_solver_on_candidates`` (the canonical
+      Dim 1 Phase 4 helper that wraps
+      :func:`tac.dykstra_pareto_solver.solve_pareto_polytope_intersection`
+      + per-candidate per-axis Pareto polytope projection).
+    - ``solve_pareto_polytope_intersection`` (direct invocation; rare;
+      acceptable if main() wires the verdict into the output payload).
+
+    Acceptance: (a) any of the 2 tokens appears as a Call node in the
+    main() function body via AST scan; OR (b) same-line waiver
+    ``# DYKSTRA_PARETO_SOLVER_INVOKER_WAIVED:<rationale>`` on the
+    ``def main`` line with non-placeholder rationale (≥4 chars;
+    placeholder literals ``<rationale>`` / ``<reason>`` rejected per
+    Catalog #287 sister discipline so the gate's docstring example
+    cannot self-waive).
+
+    STRICT-from-byte-one per CLAUDE.md "Strict-flip atomicity rule" —
+    the canonical Phase 4 wire-in lands in same commit batch driving
+    live count to 0.
+
+    Sister of:
+    - Catalog #336 (cathedral consumer discovery invoker; same META-
+      class at consumer surface)
+    - Catalog #337 (master-gradient rerank invoker; same META-class
+      at master-gradient surface)
+    - Catalog #355 (META-LAGRANGIAN-WIRE-1 Phase 1 invoker; same
+      META-class at meta-Lagrangian surface; #372 is the Dykstra
+      Pareto polytope sub-surface)
+    - Catalog #287 (placeholder-rationale rejection)
+    - Catalog #125 (6-hook wire-in non-negotiable; THIS gate IS the
+      structural protection for hook #2 Pareto constraint on the
+      Dykstra Pareto polytope solver sub-surface)
+    - Catalog #176 (META-meta: STRICT callsites have CLAUDE.md row)
+    - Catalog #185 (META-meta: Live count: 0 verified empirically)
+    - Catalog #335 (canonical cathedral consumer contract; auto-
+      discovered :mod:`tac.cathedral_consumers.dykstra_pareto_solver_consumer`)
+    - Catalog #341 (Tier A canonical-routing markers; consumer +
+      invoker both emit Tier A observability-only contributions)
+    - Catalog #357 (Tier B dual-tier consumer; Phase 2 promotion path)
+    - Catalog #344 (canonical equations registry; equation
+      ``dykstra_pareto_polytope_intersection_compounding_v1`` registered
+      in same commit batch)
+
+    Per CLAUDE.md "Bugs must be permanently fixed AND self-protected
+    against": the canonical solver helper existing at
+    :mod:`tac.findings_lagrangian.dual_solver_phase_2` is necessary
+    but not sufficient; the candidate-list invoker callsite in main()
+    is the missing structural protection that THIS gate enforces.
+
+    Per CLAUDE.md "Meta-Lagrangian/Pareto solver — NON-NEGOTIABLE,
+    HIGHEST EMPHASIS": *"The desired loop is: formulate objective and
+    constraints -> emit typed atoms -> Pareto/KKT/interaction prune ->
+    select by score delta plus expected information gain..."* The
+    invoker callsite is the structural primitive that keeps the Pareto
+    solver living + iterating per session.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    target = root / _CHECK_372_TARGET_RELPATH
+    if not target.is_file():
+        if verbose:
+            print(
+                f"  [dykstra-pareto-invoker] {_CHECK_372_TARGET_RELPATH} "
+                "not present, skipping"
+            )
+        return []
+
+    try:
+        source = target.read_text(encoding="utf-8")
+    except OSError as exc:
+        if strict:
+            raise PreflightError(
+                f"check_cathedral_autopilot_main_invokes_dykstra_pareto_solver: "
+                f"cannot read {target}: {exc}"
+            )
+        return [f"cannot read {target}: {exc}"]
+
+    # Check waiver on the def main line.
+    lines = source.splitlines()
+    main_lineno: int | None = None
+    for i, line in enumerate(lines, start=1):
+        stripped = line.strip()
+        if stripped.startswith("def main(") or stripped.startswith("def main "):
+            main_lineno = i
+            if _CHECK_372_WAIVER_TOKEN + ":" in line:
+                idx = line.find(_CHECK_372_WAIVER_TOKEN + ":")
+                rationale = line[idx + len(_CHECK_372_WAIVER_TOKEN) + 1:].strip()
+                rationale = rationale.rstrip("'\"`*")
+                if rationale and len(rationale) >= 4 and rationale.lower() not in _CHECK_372_PLACEHOLDER_RATIONALES:
+                    if verbose:
+                        print(
+                            f"  [dykstra-pareto-invoker] waiver active: {rationale[:80]}"
+                        )
+                    return []
+            break
+
+    if main_lineno is None:
+        violations = [
+            f"{_CHECK_372_TARGET_RELPATH}: missing def main(); "
+            "Catalog #372 requires main() function present per DYKSTRA-PARETO-SOLVER-WIRE-IN Phase 4 contract"
+        ]
+        if strict:
+            raise PreflightError(
+                "check_cathedral_autopilot_main_invokes_dykstra_pareto_solver "
+                f"found {len(violations)} violation(s):\n  " + "\n  ".join(violations)
+            )
+        return violations
+
+    import ast as _ast
+    try:
+        tree = _ast.parse(source, filename=str(target))
+    except SyntaxError as exc:
+        if strict:
+            raise PreflightError(
+                f"check_cathedral_autopilot_main_invokes_dykstra_pareto_solver: "
+                f"SyntaxError parsing {target}: {exc}"
+            )
+        return [f"SyntaxError parsing {target}: {exc}"]
+
+    main_node: _ast.FunctionDef | None = None
+    for node in tree.body:
+        if isinstance(node, _ast.FunctionDef) and node.name == "main":
+            main_node = node
+            break
+
+    if main_node is None:
+        violations = [
+            f"{_CHECK_372_TARGET_RELPATH}: no top-level def main found; "
+            "Catalog #372 requires main() function present per DYKSTRA-PARETO-SOLVER-WIRE-IN Phase 4 contract"
+        ]
+        if strict:
+            raise PreflightError(
+                "check_cathedral_autopilot_main_invokes_dykstra_pareto_solver "
+                f"found {len(violations)} violation(s):\n  " + "\n  ".join(violations)
+            )
+        return violations
+
+    # Walk main() body looking for any Call to one of the acceptance tokens.
+    found_invoker = False
+    for sub in _ast.walk(main_node):
+        if isinstance(sub, _ast.Call):
+            func = sub.func
+            if isinstance(func, _ast.Name):
+                if func.id in _CHECK_372_ACCEPTANCE_TOKENS:
+                    found_invoker = True
+                    break
+            elif isinstance(func, _ast.Attribute):
+                if func.attr in _CHECK_372_ACCEPTANCE_TOKENS:
+                    found_invoker = True
+                    break
+
+    violations: list[str] = []
+    if not found_invoker:
+        violations.append(
+            f"{_CHECK_372_TARGET_RELPATH}: main() does NOT invoke any of "
+            f"{sorted(_CHECK_372_ACCEPTANCE_TOKENS)}; Catalog #372 enforces the "
+            "DYKSTRA-PARETO-SOLVER-WIRE-IN Phase 4 invoker callsite (the canonical "
+            "tac.dykstra_pareto_solver surface existing is necessary but NOT "
+            "sufficient; the invoker callsite in main() is the missing "
+            "structural protection per CLAUDE.md 'Meta-Lagrangian/Pareto "
+            "solver — NON-NEGOTIABLE, HIGHEST EMPHASIS'). Add a call to "
+            "invoke_dykstra_pareto_solver_on_candidates OR add same-line "
+            f"`# {_CHECK_372_WAIVER_TOKEN}:<rationale>` waiver on the "
+            "def main line"
+        )
+
+    if verbose:
+        print(f"  [dykstra-pareto-invoker] {len(violations)} violation(s)")
+
+    if violations and strict:
+        raise PreflightError(
+            "check_cathedral_autopilot_main_invokes_dykstra_pareto_solver "
+            f"found {len(violations)} violation(s). Catalog #372 enforces "
+            "the DYKSTRA-PARETO-SOLVER-WIRE-IN Phase 4 invoker-callsite "
+            "structural protection per CLAUDE.md 'Bugs must be permanently "
+            "fixed AND self-protected against' non-negotiable + 'Meta-"
+            "Lagrangian/Pareto solver — NON-NEGOTIABLE, HIGHEST EMPHASIS'. "
+            "Sister of Catalog #336 + #337 + #355 at the Pareto polytope "
+            "solver surface:\n  "
             + "\n  ".join(v[:400] for v in violations[:5])
         )
     return violations

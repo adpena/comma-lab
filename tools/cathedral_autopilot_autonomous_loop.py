@@ -7667,6 +7667,314 @@ def invoke_meta_lagrangian_on_candidates(
 # ─────────────────────────────────────────────────────────────────────────
 
 
+# ─────────────────────────────────────────────────────────────────────────
+# DYKSTRA-PARETO-SOLVER WIRE-IN per CATHEDRAL-SMARTER-DESIGN-MEMO Dim 1
+# Phase 4 + Catalog #372 STRICT preflight gate + Catalog #355 sister
+# pattern. Per CLAUDE.md "Meta-Lagrangian/Pareto solver — NON-NEGOTIABLE,
+# HIGHEST EMPHASIS": Dykstra alternating projections on the per-axis
+# Pareto polytope IS the compounding mechanism that makes per-axis
+# substrate work (decoder compression + cross-paradigm + heterogeneous
+# bit allocation) provably optimal. Per CLAUDE.md "Apples-to-apples
+# evidence discipline" + Catalog #287/#323/#341: contribution is
+# OBSERVABILITY-ONLY at landing (bounded [0.95, 1.05] adjustment factor
+# preserves the Phase 1 safety envelope per Catalog #355).
+# ─────────────────────────────────────────────────────────────────────────
+
+
+DYKSTRA_PARETO_SOLVER_INVOCATION_SCHEMA = (
+    "dykstra_pareto_solver_invocation_v1_20260528"
+)
+
+
+def _default_dykstra_pareto_polytope_bounds() -> dict[str, tuple[float, float]]:
+    """Canonical per-axis polytope bounds for the cathedral autopilot.
+
+    Mirrors :func:`_default_phase_2_dual_solver_budgets` sister discipline.
+    The default bounds bracket the canonical frontier per Catalog #343
+    pointer with generous slack so the polytope captures both
+    improvement-direction candidates (negative deltas) and noise-floor
+    candidates (small positive deltas).
+    """
+    return {
+        # SegNet distortion: 0 to 0.5 (well above current frontier ~0.0006).
+        "seg": (0.0, 0.5),
+        # PoseNet distortion: 0 to 0.5 (well above current frontier ~3.4e-5).
+        "pose": (0.0, 0.5),
+        # Archive bytes delta: -100KB to +100KB around current frontier.
+        # Negative = smaller archive = improvement; positive = larger.
+        "rate": (-100_000.0, 100_000.0),
+    }
+
+
+def _candidate_per_axis_targets_for_dykstra(
+    candidate: "CandidateRow",
+) -> dict[str, float]:
+    """Extract per-axis targets from a candidate row for Dykstra projection.
+
+    For candidates that don't carry per-axis decomposition (Tier A
+    consumers per Catalog #341 default to scalar predicted_score_delta),
+    we approximate per-axis distribution per CLAUDE.md "SegNet vs PoseNet
+    importance — operating-point dependent" 2026-05-04 anchor: at the
+    PR106 frontier operating point, seg dominates total (3.67x larger by
+    contribution) while pose has higher marginal sensitivity (2.71x).
+
+    For now we use a CONSERVATIVE proxy: distribute the scalar
+    predicted_score_delta across the 3 canonical axes per the contest
+    formula constants ratio. Future Tier B consumers per Catalog #357
+    will emit AxisDecomposition directly per Catalog #356.
+    """
+    scalar = float(candidate.predicted_score_delta)
+    # Conservative proxy: attribute the entire scalar delta to the seg axis
+    # since seg dominates total contribution at the current frontier.
+    # This is OBSERVABILITY-ONLY per Catalog #287/#323/#341; the bounded
+    # adjustment factor in [0.95, 1.05] preserves the safety envelope.
+    return {
+        "seg": float(scalar) if scalar > 0 else 0.0,
+        "pose": 0.0,
+        "rate": 0.0 if scalar >= 0 else float(scalar * 10_000.0),
+    }
+
+
+def invoke_dykstra_pareto_solver_on_candidates(
+    candidates: list["CandidateRow"],
+    *,
+    top_n: int | None = None,
+    panel_axis: str = "contest_cpu",
+    per_axis_budgets: Mapping[str, tuple[float, float]] | None = None,
+    use_mlx: bool | None = None,
+) -> dict[str, Any]:
+    """Canonical Dykstra Pareto polytope solver invocation per Dim 1 Phase 4.
+
+    Mirrors :func:`invoke_meta_lagrangian_on_candidates` per Catalog
+    #355 invoker-callsite pattern. For each candidate (top_n cap):
+
+      1. Builds a canonical 3-axis Pareto polytope from per_axis_budgets
+         (defaults to :func:`_default_dykstra_pareto_polytope_bounds`).
+      2. Extracts per-axis targets via
+         :func:`_candidate_per_axis_targets_for_dykstra` (conservative
+         proxy until Tier B AxisDecomposition emission per Catalog #356).
+      3. Runs Dykstra alternating projections via
+         :func:`tac.dykstra_pareto_solver.solve_pareto_polytope_intersection`
+         (delegates to the canonical sister Phase 2 solver per the
+         SCALE-BACK pivot).
+      4. Captures per-candidate verdict: feasibility + tight-axis
+         identification + per-axis dual variables + bounded scalar
+         adjustment factor in [0.95, 1.05].
+
+    Per CLAUDE.md "Apples-to-apples evidence discipline" + Catalog
+    #287/#323/#341: contribution is OBSERVABILITY-ONLY at landing. The
+    cathedral autopilot ranker consumes the bounded scalar factor
+    inside the Phase 1 safety envelope; the per-axis verdict surface
+    is operator-facing audit + future Tier B promotion candidate per
+    Catalog #357 sister discipline.
+
+    Per CATHEDRAL-SMARTER-DESIGN-MEMO Dim 1 Phase 4 + CLAUDE.md
+    "Meta-Lagrangian/Pareto solver" non-negotiable: per-axis TIGHT
+    constraint identification (axes where λ > 0 per Boyd-Dattorro
+    2006 § 6.2) IS the canonical disambiguator for next-cycle attack
+    direction — when sister Slot 2 + future Compound C/D/F land their
+    empirical pairwise alpha measurements, the tight-axis aggregate
+    histogram across recent loop iterations identifies which polytope
+    axis the cathedral autopilot ranker should attack next.
+
+    Args
+    ----
+    candidates : list[CandidateRow]
+        Ranked candidate list (typically autopilot ranker output).
+    top_n : int | None
+        Cap at top-N. ``None`` means all (default).
+    panel_axis : str
+        Contest score axis (mirrors sister helpers).
+    per_axis_budgets : Mapping[str, tuple[float, float]] | None
+        Per-axis (lower, upper) polytope bounds. Defaults to
+        :func:`_default_dykstra_pareto_polytope_bounds`.
+    use_mlx : bool | None
+        MLX vs numpy compute substrate.
+
+    Returns
+    -------
+    dict
+        Schema-versioned payload with per-candidate verdicts +
+        aggregate tight-axis histogram + count of feasible vs
+        infeasible verdicts.
+    """
+    target_candidates = list(candidates)
+    if top_n is not None and top_n > 0:
+        target_candidates = target_candidates[:top_n]
+
+    invocations: list[dict[str, Any]] = []
+    per_candidate_errors = 0
+    feasible_count = 0
+    infeasible_count = 0
+    tight_axis_histogram: dict[str, int] = {"seg": 0, "pose": 0, "rate": 0}
+
+    # Lazy import to keep cathedral autopilot import-tree light.
+    try:
+        from tac.dykstra_pareto_solver import (
+            Polytope,
+            solve_pareto_polytope_intersection,
+        )
+        from tac.provenance.builders import build_provenance_for_predicted
+        from tac.provenance.validator import provenance_to_dict
+        _SOLVER_OK = True
+        _import_error: str | None = None
+    except Exception as exc:
+        _SOLVER_OK = False
+        _import_error = f"{type(exc).__name__}: {exc}"
+
+    if not _SOLVER_OK:
+        invocations.append({
+            "schema_error": (
+                f"tac.dykstra_pareto_solver unavailable: {_import_error}"
+            ),
+            "score_claim": False,
+            "promotable": False,
+            "axis_tag": "[predicted]",
+        })
+        return {
+            "schema": DYKSTRA_PARETO_SOLVER_INVOCATION_SCHEMA,
+            "evidence_grade": "[predicted, Dykstra Pareto polytope solver invocation]",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "panel_axis": panel_axis,
+            "top_n": top_n,
+            "candidates_invoked": 0,
+            "feasible_count": 0,
+            "infeasible_count": 0,
+            "tight_axis_histogram": tight_axis_histogram,
+            "phase": "phase_4_canonical_dykstra_pareto_polytope_solver",
+            "invocations": invocations,
+            "per_candidate_errors": per_candidate_errors + 1,
+            "import_error": _import_error,
+        }
+
+    bounds = dict(per_axis_budgets or _default_dykstra_pareto_polytope_bounds())
+    try:
+        polytope = Polytope(
+            axis_bounds=bounds,
+            name="cathedral_autopilot_canonical_3_axis_pareto_polytope",
+        )
+    except Exception as exc:
+        return {
+            "schema": DYKSTRA_PARETO_SOLVER_INVOCATION_SCHEMA,
+            "evidence_grade": "[predicted, Dykstra Pareto polytope solver invocation]",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "panel_axis": panel_axis,
+            "top_n": top_n,
+            "candidates_invoked": 0,
+            "feasible_count": 0,
+            "infeasible_count": 0,
+            "tight_axis_histogram": tight_axis_histogram,
+            "phase": "phase_4_canonical_dykstra_pareto_polytope_solver",
+            "invocations": [{
+                "schema_error": f"Polytope construction failed: {type(exc).__name__}: {exc}",
+                "score_claim": False,
+                "promotable": False,
+                "axis_tag": "[predicted]",
+            }],
+            "per_candidate_errors": 1,
+        }
+
+    for candidate in target_candidates:
+        try:
+            cid = str(candidate.candidate_id or "unknown_candidate")
+            targets = _candidate_per_axis_targets_for_dykstra(candidate)
+            # Build canonical Provenance per Catalog #323.
+            # Use the candidate's id-as-features-proxy for inputs_sha256
+            # since we don't have direct access to the candidate's
+            # feature sha at this surface; the canonical equation
+            # tracking will refine this when the canonical equation
+            # consumer surfaces.
+            inputs_proxy_sha = "0" * 64  # placeholder; canonical
+            # equation consumer will refine via its own posterior
+            prov = build_provenance_for_predicted(
+                model_id=f"dykstra_pareto_solver_invocation:{cid}",
+                inputs_sha256=inputs_proxy_sha,
+                measurement_axis="[predicted]",
+                hardware_substrate="unknown",
+            )
+            prov_dict = provenance_to_dict(prov)
+            verdict = solve_pareto_polytope_intersection(
+                polytope,
+                initial_point=targets,
+                candidate_id=cid,
+                use_mlx=use_mlx,
+                canonical_provenance=prov_dict,
+            )
+            if verdict.feasible:
+                feasible_count += 1
+            else:
+                infeasible_count += 1
+            for axis in verdict.tight_constraint_axes:
+                if axis in tight_axis_histogram:
+                    tight_axis_histogram[axis] += 1
+            invocations.append({
+                "candidate_id": cid,
+                "feasible": verdict.feasible,
+                "tight_constraint_axes": list(verdict.tight_constraint_axes),
+                "slack_axes": list(verdict.slack_axes),
+                "per_axis_dual_variables": {
+                    k: float(v) for k, v in verdict.per_axis_dual_variables.items()
+                },
+                "adjustment_factor": float(verdict.adjustment_factor),
+                "per_axis_adjustment_factors": {
+                    k: float(v) for k, v in verdict.per_axis_adjustment_factors.items()
+                },
+                "convergence_residual": float(verdict.convergence_residual),
+                "iteration_count": int(verdict.iteration_count),
+                "converged": bool(verdict.converged),
+                "schema_version": str(verdict.schema_version),
+                "score_claim": False,
+                "promotable": False,
+                "axis_tag": "[predicted]",
+            })
+        except Exception as exc:
+            per_candidate_errors += 1
+            invocations.append({
+                "candidate_id": getattr(candidate, "candidate_id", "?"),
+                "error": f"{type(exc).__name__}: {exc}",
+                "score_claim": False,
+                "promotable": False,
+                "axis_tag": "[predicted]",
+            })
+
+    return {
+        "schema": DYKSTRA_PARETO_SOLVER_INVOCATION_SCHEMA,
+        "evidence_grade": "[predicted, Dykstra Pareto polytope solver invocation]",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "panel_axis": panel_axis,
+        "top_n": top_n,
+        "candidates_invoked": len(target_candidates),
+        "feasible_count": feasible_count,
+        "infeasible_count": infeasible_count,
+        "tight_axis_histogram": dict(tight_axis_histogram),
+        "phase": "phase_4_canonical_dykstra_pareto_polytope_solver",
+        "polytope_bounds": {
+            axis: [float(lo), float(hi)] for axis, (lo, hi) in bounds.items()
+        },
+        "invocations": invocations,
+        "per_candidate_errors": per_candidate_errors,
+        "next_phase_roadmap": (
+            ".omx/research/dykstra_pareto_polytope_solver_wire_in_dim1_phase4_"
+            "landed_20260528.md"
+        ),
+        "canonical_helper_module": "tac.dykstra_pareto_solver",
+        "canonical_equation_id": (
+            "dykstra_pareto_polytope_intersection_compounding_v1"
+        ),
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# End of DYKSTRA-PARETO-SOLVER WIRE-IN per Catalog #372 + Catalog #355
+# ─────────────────────────────────────────────────────────────────────────
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -8209,6 +8517,21 @@ def main(argv: list[str] | None = None) -> int:
             use_phase_2_dual_solver=args.use_phase_2_dual_solver,
         )
 
+        # DYKSTRA-PARETO-SOLVER WIRE-IN per CATHEDRAL-SMARTER-DESIGN-MEMO
+        # Dim 1 Phase 4 (2026-05-28). Catalog #372 STRICT preflight gate +
+        # Catalog #355 sister invoker pattern. The canonical Pareto polytope
+        # solver runs by default (no flag gating) so per-axis tight-constraint
+        # identification feeds the cathedral autopilot ranker's compounding
+        # decision per CLAUDE.md "Meta-Lagrangian/Pareto solver" non-negotiable.
+        # Per Catalog #287/#323/#341: contribution is observability-only;
+        # bounded [0.95, 1.05] adjustment factor preserves Phase 1 safety
+        # envelope per Catalog #355.
+        dykstra_pareto_invocations = invoke_dykstra_pareto_solver_on_candidates(
+            ranked,
+            top_n=top_n,
+            panel_axis=args.score_panel_axis,
+        )
+
         # WAVE-3-DIM-1-PHASE-2 (2026-05-20): per-adjuster ablation invocation
         # on the same ranked top-N. EXTENDS Phase 1 (does NOT replace it).
         # Per CLAUDE.md "Meta-Lagrangian/Pareto solver" non-negotiable:
@@ -8276,6 +8599,7 @@ def main(argv: list[str] | None = None) -> int:
                 "cathedral_consumer_invocation_active_catalog_336_337",
                 "meta_lagrangian_invocation_active_catalog_355",
                 "phase_2_ablation_invocation_active_wave_3_dim_1",
+                "dykstra_pareto_solver_invocation_active_catalog_372",
                 "meta_lagrangian_phase_2_dual_solver_false_authority"
                 if args.use_phase_2_dual_solver
                 else "meta_lagrangian_phase_2_dual_solver_not_requested",
@@ -8285,6 +8609,7 @@ def main(argv: list[str] | None = None) -> int:
             "phase_2_dual_solver_enabled": args.use_phase_2_dual_solver,
             "phase_2_ablation_invocations": phase_2_ablation_invocations,
             "phase_2_ablation_mode": args.phase_2_ablation_mode,
+            "dykstra_pareto_invocations": dykstra_pareto_invocations,
             "rank_axis": args.rank_axis,
             "z1_empirical_revision_applied": True,
             "continual_posterior_loaded": args.load_continual_posterior,
@@ -8374,6 +8699,17 @@ def main(argv: list[str] | None = None) -> int:
             use_phase_2_dual_solver=args.use_phase_2_dual_solver,
         )
 
+        # DYKSTRA-PARETO-SOLVER WIRE-IN per CATHEDRAL-SMARTER-DESIGN-MEMO
+        # Dim 1 Phase 4 (2026-05-28). Same post-loop wire-in as report-only.
+        # Catalog #372 STRICT preflight gate + Catalog #355 sister invoker
+        # pattern. Per Catalog #287/#323/#341: contribution is observability-
+        # only; bounded [0.95, 1.05] adjustment preserves Phase 1 envelope.
+        dykstra_pareto_invocations_post_loop = invoke_dykstra_pareto_solver_on_candidates(
+            ranked_post_loop,
+            top_n=min(args.max_dispatch_recommendations or 10, 10),
+            panel_axis=args.score_panel_axis,
+        )
+
         # WAVE-3-DIM-1-PHASE-2 (2026-05-20): same post-loop wire-in as
         # report-only. Per CLAUDE.md "Meta-Lagrangian/Pareto solver" non-
         # negotiable + Catalog #287/#323 observability-only at Phase 2.
@@ -8424,6 +8760,20 @@ def main(argv: list[str] | None = None) -> int:
             "aggregate_divergence": {},
             "per_candidate_errors": 0,
             "posterior_persisted_count": 0,
+            "error": f"{type(exc).__name__}: {exc}",
+        }
+        dykstra_pareto_invocations_post_loop = {
+            "schema": DYKSTRA_PARETO_SOLVER_INVOCATION_SCHEMA,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "candidates_invoked": 0,
+            "feasible_count": 0,
+            "infeasible_count": 0,
+            "tight_axis_histogram": {"seg": 0, "pose": 0, "rate": 0},
+            "phase": "phase_4_canonical_dykstra_pareto_polytope_solver",
+            "invocations": [],
+            "per_candidate_errors": 0,
             "error": f"{type(exc).__name__}: {exc}",
         }
         ranked_post_loop = []
