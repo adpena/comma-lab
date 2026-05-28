@@ -13,6 +13,7 @@ from tac.frontier_scan import (
     build_cpu_axis_optimal_payload,
     build_frontier_scan_payload,
     cpu_axis_family_for_anchor,
+    refresh_frontier_citation_surfaces,
     render_frontier_scan_text,
     scan_frontier_citation_surface,
     select_cpu_optimal_per_family,
@@ -272,6 +273,89 @@ def test_scan_best_anchor_cli_delegates_to_canonical_module(tmp_path: Path) -> N
     assert payload["schema"] == "pact_frontier_scan_v1"
     assert payload["best_per_axis"]["contest_cpu"]["archive_sha256"] == "6" * 64
     assert payload["g1_cpu_axis_optimization"]["schema"] == "g1_cpu_axis_optimal_archive_v1"
+
+
+def test_refresh_frontier_citation_surfaces_updates_all_mirrors(
+    tmp_path: Path,
+) -> None:
+    _write_frontier_fixture(tmp_path)
+    state = tmp_path / ".omx/state"
+    state.mkdir(parents=True, exist_ok=True)
+    for name in ("current_focus.md", "next_experiments.md"):
+        (state / name).write_text(
+            "\n".join(
+                [
+                    "# Mirror",
+                    "",
+                    "## Frontier",
+                    "",
+                    "- Canonical scanner-derived best CPU anchor:",
+                    "  `0.199`",
+                    "  `[contest-CPU; Linux x86_64 1:1]`, archive",
+                    "  `" + "1" * 64 + "`,",
+                    "  lane `stale_cpu_lane`.",
+                    "  Refresh from `reports/latest.md` and",
+                    "  `.omx/state/canonical_frontier_pointer.json`; this file is a mirror, not a",
+                    "  frontier source of truth.",
+                    "- Canonical scanner-derived best CUDA anchor:",
+                    "  `0.300`",
+                    "  `[contest-CUDA T4]`, archive",
+                    "  `" + "2" * 64 + "`,",
+                    "  lane `stale_cuda_lane`.",
+                    "- A1 remains the control arm.",
+                ]
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+    refresh = refresh_frontier_citation_surfaces(
+        tmp_path,
+        checked_at_utc="2026-05-28T00:00:00Z",
+    )
+
+    assert refresh["changed"]["reports/latest.md"]["changed"] is True
+    assert refresh["changed"][".omx/state/current_focus.md"]["changed"] is True
+    assert refresh["changed"][".omx/state/next_experiments.md"]["changed"] is True
+    payload = build_frontier_scan_payload(tmp_path)
+    assert payload["drift"] == []
+    assert all(not rows for rows in payload["frontier_citation_surface_drift"].values())
+    latest = (tmp_path / "reports/latest.md").read_text(encoding="utf-8")
+    assert "2026-05-28T00:00:00Z" in latest
+    assert "0.1920513169" in latest
+    focus = (state / "current_focus.md").read_text(encoding="utf-8")
+    assert "0.192051316881" in focus
+    assert "lane_cpu_frontier" in focus
+    assert "this file is a mirror, not a\n  frontier source of truth" in focus
+
+
+def test_scan_best_anchor_cli_refreshes_citation_surfaces(tmp_path: Path) -> None:
+    _write_frontier_fixture(tmp_path)
+    repo_root = Path(__file__).resolve().parents[3]
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(repo_root / "tools/scan_best_anchor_per_axis.py"),
+            "--repo-root",
+            str(tmp_path),
+            "--format",
+            "json",
+            "--refresh-citation-surfaces",
+            "--checked-at-utc",
+            "2026-05-28T00:00:00Z",
+            "--check-drift",
+        ],
+        check=False,
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+    )
+
+    assert completed.returncode == 0
+    payload = json.loads(completed.stdout)
+    assert payload["drift"] == []
+    assert payload["citation_surface_refresh"]["schema"] == "frontier_citation_surface_refresh_v1"
 
 
 def test_cpu_axis_optimal_archive_selector_cli(tmp_path: Path) -> None:
