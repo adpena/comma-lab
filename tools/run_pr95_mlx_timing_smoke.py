@@ -8,6 +8,7 @@ import argparse
 import hashlib
 import importlib.util
 import json
+import re
 import subprocess
 import sys
 from datetime import UTC, datetime
@@ -26,6 +27,9 @@ SRC_DIR = REPO_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
+from comma_lab.scheduler.local_training_queue import (  # noqa: E402
+    build_local_training_execution_queue,
+)
 from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
     EXACT_READINESS_REFUSAL_BLOCKERS,
     FALSE_AUTHORITY,
@@ -97,6 +101,10 @@ def _rel(path: Path) -> str:
         return path.resolve().relative_to(REPO_ROOT.resolve()).as_posix()
     except ValueError:
         return path.resolve().as_posix()
+
+
+def _safe_queue_id(value: str) -> str:
+    return re.sub(r"[^a-z0-9_]+", "_", value.lower()).strip("_") or "pr95_mlx"
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
@@ -2108,12 +2116,54 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "experiment_queue execution without requiring MLX at planning time."
         ),
     )
+    parser.add_argument(
+        "--write-execution-queue",
+        action="store_true",
+        help=(
+            "With --plan-only, also compile representation_training_plan.json "
+            "into an experiment_queue.v1 queue.json."
+        ),
+    )
+    parser.add_argument(
+        "--execution-queue-output",
+        type=Path,
+        help=(
+            "Queue output path for --write-execution-queue. Defaults to "
+            "<output-dir>/queue.json. Supplying this implies --write-execution-queue."
+        ),
+    )
+    parser.add_argument(
+        "--execution-queue-id",
+        help="Queue id for --write-execution-queue. Defaults to a candidate-derived id.",
+    )
+    parser.add_argument(
+        "--execution-queue-lane-id",
+        default=LANE_ID,
+        help="Lane id to stamp on the generated local MLX execution queue.",
+    )
+    parser.add_argument(
+        "--execution-queue-local-mlx-concurrency",
+        type=int,
+        default=1,
+        help="local_mlx concurrency for the generated execution queue.",
+    )
+    parser.add_argument(
+        "--execution-queue-timeout-seconds",
+        type=int,
+        default=0,
+        help="Step timeout for the generated execution queue.",
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     output_dir = args.output_dir.resolve()
+    write_execution_queue = bool(
+        args.write_execution_queue or args.execution_queue_output is not None
+    )
+    if write_execution_queue and not args.plan_only:
+        raise SystemExit("--write-execution-queue requires --plan-only")
     needs_pr95_archive_export = (
         args.write_pr95_public_archive_export
         or args.prove_pr95_runtime_consumption
@@ -2163,6 +2213,21 @@ def main(argv: list[str] | None = None) -> int:
     if args.plan_only:
         plan = _build_plan(args, output_dir=output_dir)
         _write_json(output_dir / "plan.json", plan)
+        execution_queue_path = args.execution_queue_output or output_dir / "queue.json"
+        execution_queue: dict[str, Any] | None = None
+        if write_execution_queue:
+            queue_id = args.execution_queue_id or _safe_queue_id(
+                f"pr95_mlx_control_arm_{plan['candidate_id']}"
+            )
+            execution_queue = build_local_training_execution_queue(
+                [plan],
+                queue_id=queue_id,
+                repo_root=REPO_ROOT,
+                lane_id=args.execution_queue_lane_id,
+                local_mlx_concurrency=args.execution_queue_local_mlx_concurrency,
+                timeout_seconds=args.execution_queue_timeout_seconds,
+            )
+            _write_json(execution_queue_path, execution_queue)
         summary = {
             "schema": "pr95_hnerv_mlx_timing_smoke_plan_summary_v1",
             "ok": True,
@@ -2170,12 +2235,22 @@ def main(argv: list[str] | None = None) -> int:
             "representation_training_plan": _rel(
                 output_dir / "representation_training_plan.json"
             ),
+            "execution_queue": _rel(execution_queue_path)
+            if execution_queue is not None
+            else None,
+            "execution_queue_id": execution_queue["queue_id"]
+            if execution_queue is not None
+            else None,
+            "execution_queue_experiment_count": len(execution_queue["experiments"])
+            if execution_queue is not None
+            else None,
             "candidate_id": plan["candidate_id"],
             "stage_index": plan["stage_index"],
             "stage_module": plan["stage_module"],
             "queue_schema": "experiment_queue.v1",
             **FALSE_AUTHORITY,
         }
+        summary = {key: value for key, value in summary.items() if value is not None}
         _write_json(output_dir / "plan_summary.json", summary)
         print(json.dumps(summary, indent=2, sort_keys=True))
         return 0

@@ -1,0 +1,285 @@
+{
+  "controls": {
+    "local_first": true,
+    "max_concurrency": {
+      "local_cpu": 1,
+      "local_cuda": 1,
+      "local_mlx": 2,
+      "local_mps": 1
+    },
+    "mode": "running"
+  },
+  "experiments": [
+    {
+      "id": "local_training_0000_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed23_steps1_c36",
+      "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+      "metadata": {
+        "candidate_generation_only": true,
+        "candidate_id": "pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed23_steps1_c36",
+        "device": "mlx",
+        "dispatch_packet_ready": false,
+        "generated_at_utc": "2026-05-28T13:09:39Z",
+        "optimizer_backend_status": "implemented_mlx_local_timing_proxy",
+        "optimizer_config_sha256": "c5d401d14216813875097611f6cb5a5582239d1b2bb1804d3bc9edd005acc3af",
+        "optimizer_descriptor_id": "pr95_stage8_muon_adamw_mlx",
+        "parameter_group_lr_policy_id": "embedding_theta1_hidden_muon_adamw",
+        "parameter_group_lr_policy_sha256": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+        "pr95_1to1_reproduction_claim": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "representation_family": "hnerv",
+        "reproduction_claim": false,
+        "reproduction_equivalence": false,
+        "requires_exact_eval_before_promotion": true,
+        "schema": "local_training_execution_queue_plan.v1",
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "seed": 23,
+        "source_plan_schema": "representation_training_probe_plan_v1",
+        "stage_index": 8,
+        "substrate_family": "nerv_family",
+        "tool": "comma_lab.scheduler.local_training_queue",
+        "training_backend": "mlx"
+      },
+      "priority": 10,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_pr95_mlx_timing_smoke.py",
+            "--stage",
+            "8",
+            "--steps",
+            "1",
+            "--batch-size",
+            "1",
+            "--synthetic-pairs",
+            "1",
+            "--seed",
+            "23",
+            "--base-channels",
+            "36",
+            "--latent-dim",
+            "28",
+            "--optimizer-descriptor-id",
+            "pr95_stage8_muon_adamw_mlx",
+            "--output-dir",
+            ".omx/research/pr95_mlx_control_arm_queue_builder_smoke_20260528T130916Z",
+            "--allow-existing-output-dir",
+            "--write-pr95-public-archive-export",
+            "--public-pr95-source-model",
+            "experiments/results/public_pr_intake_full/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py",
+            "--pytorch-export-atol-max",
+            "0.002",
+            "--pytorch-export-atol-mean",
+            "0.0001",
+            "--pytorch-export-sample-index",
+            "0",
+            "--write-mlx-gpu-drift-attestation",
+            "--mlx-gpu-drift-conv2d-accumulation-mode",
+            "optimized",
+            "--mlx-gpu-drift-conv2d-override-preset",
+            "blocks02_kahan_fp32"
+          ],
+          "id": "run_local_training",
+          "kind": "command",
+          "postconditions": [
+            {
+              "path": ".omx/research/pr95_mlx_control_arm_queue_builder_smoke_20260528T130916Z/manifest.json",
+              "type": "path_exists"
+            },
+            {
+              "false_or_missing": [
+                "dispatch_packet_ready",
+                "pr95_1to1_reproduction_claim",
+                "promotable",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+                "reproduction_claim",
+                "reproduction_equivalence",
+                "score_claim",
+                "score_claim_eligible",
+                "score_claim_valid"
+              ],
+              "path": ".omx/research/pr95_mlx_control_arm_queue_builder_smoke_20260528T130916Z/manifest.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/pr95_mlx_control_arm_queue_builder_smoke_20260528T130916Z/representation_training_manifest.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "representation_training_probe_manifest_v1",
+              "key": "schema",
+              "path": ".omx/research/pr95_mlx_control_arm_queue_builder_smoke_20260528T130916Z/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [
+                "dispatch_packet_ready",
+                "pr95_1to1_reproduction_claim",
+                "promotable",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+                "reproduction_claim",
+                "reproduction_equivalence",
+                "score_claim",
+                "score_claim_eligible",
+                "score_claim_valid"
+              ],
+              "path": ".omx/research/pr95_mlx_control_arm_queue_builder_smoke_20260528T130916Z/representation_training_manifest.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed23_steps1_c36",
+              "key": "candidate_id",
+              "path": ".omx/research/pr95_mlx_control_arm_queue_builder_smoke_20260528T130916Z/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 8,
+              "key": "candidate_params.stage_index",
+              "path": ".omx/research/pr95_mlx_control_arm_queue_builder_smoke_20260528T130916Z/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 23,
+              "key": "seed",
+              "path": ".omx/research/pr95_mlx_control_arm_queue_builder_smoke_20260528T130916Z/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "pr95_stage8_muon_adamw_mlx",
+              "key": "candidate_params.optimizer_descriptor_id",
+              "path": ".omx/research/pr95_mlx_control_arm_queue_builder_smoke_20260528T130916Z/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "c5d401d14216813875097611f6cb5a5582239d1b2bb1804d3bc9edd005acc3af",
+              "key": "candidate_params.optimizer_config_sha256",
+              "path": ".omx/research/pr95_mlx_control_arm_queue_builder_smoke_20260528T130916Z/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "embedding_theta1_hidden_muon_adamw",
+              "key": "candidate_params.parameter_group_lr_policy_id",
+              "path": ".omx/research/pr95_mlx_control_arm_queue_builder_smoke_20260528T130916Z/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+              "key": "candidate_params.parameter_group_lr_policy_sha256",
+              "path": ".omx/research/pr95_mlx_control_arm_queue_builder_smoke_20260528T130916Z/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/pr95_mlx_control_arm_queue_builder_smoke_20260528T130916Z/pr95_public_archive.zip",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/pr95_mlx_control_arm_queue_builder_smoke_20260528T130916Z/pr95_public_archive_export.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_archive_export.v1",
+              "key": "schema",
+              "path": ".omx/research/pr95_mlx_control_arm_queue_builder_smoke_20260528T130916Z/pr95_public_archive_export.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "runtime_consumption_proof_present",
+              "path": ".omx/research/pr95_mlx_control_arm_queue_builder_smoke_20260528T130916Z/pr95_public_archive_export.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/pr95_mlx_control_arm_queue_builder_smoke_20260528T130916Z/pr95_public_archive_export.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/pr95_mlx_control_arm_queue_builder_smoke_20260528T130916Z/mlx_gpu_forward_drift_attestation.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_public_archive_mlx_forward_parity.v1",
+              "key": "schema",
+              "path": ".omx/research/pr95_mlx_control_arm_queue_builder_smoke_20260528T130916Z/mlx_gpu_forward_drift_attestation.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "gpu",
+              "key": "mlx_device",
+              "path": ".omx/research/pr95_mlx_control_arm_queue_builder_smoke_20260528T130916Z/mlx_gpu_forward_drift_attestation.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "exact_readiness_refusal.ready",
+              "path": ".omx/research/pr95_mlx_control_arm_queue_builder_smoke_20260528T130916Z/mlx_gpu_forward_drift_attestation.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/pr95_mlx_control_arm_queue_builder_smoke_20260528T130916Z/mlx_gpu_forward_drift_attestation.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/pr95_mlx_control_arm_queue_builder_smoke_20260528T130916Z/mlx_gpu_decoder_trace.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_public_archive_mlx_decoder_trace.v1",
+              "key": "schema",
+              "path": ".omx/research/pr95_mlx_control_arm_queue_builder_smoke_20260528T130916Z/mlx_gpu_decoder_trace.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "gpu",
+              "key": "mlx_device",
+              "path": ".omx/research/pr95_mlx_control_arm_queue_builder_smoke_20260528T130916Z/mlx_gpu_decoder_trace.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "exact_readiness_refusal.ready",
+              "path": ".omx/research/pr95_mlx_control_arm_queue_builder_smoke_20260528T130916Z/mlx_gpu_decoder_trace.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/pr95_mlx_control_arm_queue_builder_smoke_20260528T130916Z/mlx_gpu_decoder_trace.json",
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_mlx"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/pr95_mlx_control_arm_queue_builder_smoke_20260528T130916Z/manifest.json",
+              ".omx/research/pr95_mlx_control_arm_queue_builder_smoke_20260528T130916Z/representation_training_manifest.json",
+              ".omx/research/pr95_mlx_control_arm_queue_builder_smoke_20260528T130916Z/pr95_public_archive.zip",
+              ".omx/research/pr95_mlx_control_arm_queue_builder_smoke_20260528T130916Z/pr95_public_archive_export.json",
+              ".omx/research/pr95_mlx_control_arm_queue_builder_smoke_20260528T130916Z/mlx_gpu_forward_drift_attestation.json",
+              ".omx/research/pr95_mlx_control_arm_queue_builder_smoke_20260528T130916Z/mlx_gpu_decoder_trace.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 512,
+            "recursive": true
+          },
+          "timeout_seconds": 900
+        }
+      ],
+      "tags": []
+    }
+  ],
+  "queue_id": "pr95_mlx_control_arm_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed23_steps1_c36",
+  "schema": "experiment_queue.v1"
+}

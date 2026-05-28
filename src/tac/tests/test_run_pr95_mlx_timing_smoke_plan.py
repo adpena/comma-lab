@@ -354,3 +354,64 @@ def test_pr95_mlx_plan_defaults_gpu_drift_to_public_release_no_cliff_preset(
     assert representation_plan["candidate_params"][
         "mlx_gpu_drift_conv2d_override_preset"
     ] == "blocks02_kahan_fp32"
+
+
+def test_pr95_mlx_plan_only_can_write_execution_queue(tmp_path: Path) -> None:
+    output_dir = tmp_path / "pr95_mlx_stage8_queue_plan"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "run_pr95_mlx_timing_smoke.py"),
+            "--stage",
+            "8",
+            "--steps",
+            "1",
+            "--batch-size",
+            "1",
+            "--synthetic-pairs",
+            "1",
+            "--seed",
+            "23",
+            "--base-channels",
+            "36",
+            "--output-dir",
+            str(output_dir),
+            "--write-mlx-gpu-drift-attestation",
+            "--plan-only",
+            "--write-execution-queue",
+            "--execution-queue-local-mlx-concurrency",
+            "2",
+            "--execution-queue-timeout-seconds",
+            "123",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=120,
+    )
+
+    assert result.returncode == 0, result.stderr
+    summary = json.loads(result.stdout)
+    queue = json.loads((output_dir / "queue.json").read_text(encoding="utf-8"))
+
+    assert summary["execution_queue"].endswith("queue.json")
+    assert summary["execution_queue_id"] == queue["queue_id"]
+    assert summary["execution_queue_experiment_count"] == 1
+    assert queue["schema"] == "experiment_queue.v1"
+    assert queue["controls"]["max_concurrency"]["local_mlx"] == 2
+    step = queue["experiments"][0]["steps"][0]
+    assert step["timeout_seconds"] == 123
+    assert step["resources"]["kind"] == "local_mlx"
+    assert "--mlx-gpu-drift-conv2d-override-preset" in step["command"]
+    assert step["command"][
+        step["command"].index("--mlx-gpu-drift-conv2d-override-preset") + 1
+    ] == "blocks02_kahan_fp32"
+    assert any(
+        condition["type"] == "json_equals"
+        and condition["path"].endswith("mlx_gpu_forward_drift_attestation.json")
+        and condition["key"] == "mlx_device"
+        and condition["equals"] == "gpu"
+        for condition in step["postconditions"]
+    )
+    assert queue["experiments"][0]["metadata"]["ready_for_exact_eval_dispatch"] is False
