@@ -17,7 +17,7 @@ except ModuleNotFoundError:  # pragma: no cover
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
-from tac.optimization.repair_autonomous_multi_archive_runner import (  # noqa: E402
+from comma_lab.scheduler.repair_autonomous_multi_archive_runner import (  # noqa: E402
     RepairAutonomousMultiArchiveRunnerError,
     run_repair_autonomous_multi_archive_runner,
 )

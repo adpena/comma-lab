@@ -82,6 +82,7 @@ or dated `.omx/research/` ledgers.
 | `tac.optimizer` | Exact-readiness, dispatch authority, proxy-candidate contracts, and planning gates |
 | `tac.procedural_codebook_generator` | Archive-seeded and weight-derived deterministic codebook generation, including procedural-seed authority packets |
 | `tac.preflight` | Reusable contest/runtime/package validity checks |
+| `tac.reverse_engineering_curation` | Pure reverse-engineering tree curation rules consumed by `tac.preflight` and wrapped by `comma_lab.reverse_engineering` |
 
 ## Active Workflows
 

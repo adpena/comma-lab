@@ -40,7 +40,7 @@ score-authority-safe.
 | `comma_lab.cli` | Operator-facing command surface |
 | `comma_lab.preflight` | Adapters around canonical `tac.preflight` checks |
 | `comma_lab.research_state` | Track, summarize, externalize, or ignore research artifacts |
-| `comma_lab.reverse_engineering` | Public-submission tree hygiene and disposition helpers |
+| `comma_lab.reverse_engineering` | Lab-facing public-submission hygiene import surface backed by `tac.reverse_engineering_curation` |
 | `comma_lab.scheduler` | Lightweight scheduler data models and reporting |
 | `comma_lab.scheduler.queue_fleet` | Live queue discovery, health classification, and bounded supervision across `.omx` / `experiments` queues |
 | `comma_lab.state_models` | Promoted-result and custody state models |
@@ -71,6 +71,9 @@ When adding code, ask which layer owns the durable abstraction:
 - **Contest/runtime validity check** reusable outside one tool: put it in
   `tac.preflight` or another `tac` module, then expose it through
   `comma_lab.preflight` if operators need it.
+- **Reusable repository/package hygiene check**: put the pure checker in `tac`
+  when `tac.preflight` enforces it; expose a `comma_lab` adapter only for lab
+  dashboards and operator workflows.
 - **Lab state, provider state, public intake, or report projection**: put it in
   `comma_lab`.
 - **One-off CLI glue**: keep it thin and delegate to `tac` or `comma_lab`.

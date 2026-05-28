@@ -9296,9 +9296,9 @@ def check_reverse_engineering_tree_curation(
     missing = [path.relative_to(root).as_posix() for path in required if not path.is_file()]
     violations = [f"missing required reverse-engineering surface: {rel}" for rel in missing]
     try:
-        from comma_lab.reverse_engineering import audit_reverse_engineering_tree, blocking_records
+        from tac.reverse_engineering_curation import audit_reverse_engineering_tree, blocking_records
     except Exception as exc:  # pragma: no cover - import failure is environment-specific
-        violations.append(f"cannot import comma_lab.reverse_engineering: {exc}")
+        violations.append(f"cannot import tac.reverse_engineering_curation: {exc}")
         records = []
         blockers = []
     else:

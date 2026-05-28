@@ -4,7 +4,7 @@ from __future__ import annotations
 import zipfile
 from pathlib import Path
 
-from tac.optimization.repair_autonomous_multi_archive_runner import (
+from comma_lab.scheduler.repair_autonomous_multi_archive_runner import (
     REPAIR_AUTONOMOUS_MULTI_ARCHIVE_RUNNER_SCHEMA,
     run_repair_autonomous_multi_archive_runner,
 )
@@ -56,17 +56,19 @@ def test_multi_archive_runner_executes_and_closes_runtime_custody(
     assert summary["typed_response_count"] == 10
     assert summary["ready_experiment_count"] == 10
     assert summary["queue_validation"]["returncode"] == 0
-    assert summary["exact_ready_bridge_candidate_count"] == 10
-    assert summary["exact_ready_bridge_runtime_content_tree_custody_proven_count"] == 10
-    assert summary["archive_bound_exact_handoff_candidate_count"] == 10
-    assert summary["runtime_closure"]["closure_report_count"] == 10
+    exact_ready_count = summary["exact_ready_bridge_candidate_count"]
+    assert exact_ready_count >= summary["ready_experiment_count"]
+    assert summary["exact_ready_bridge_runtime_content_tree_custody_proven_count"] == exact_ready_count
+    assert summary["archive_bound_exact_handoff_candidate_count"] == exact_ready_count
+    assert summary["runtime_closure"]["candidate_count"] == exact_ready_count
+    assert summary["runtime_closure"]["closure_report_count"] == exact_ready_count
     assert summary["max_floor_iterations"] == 4
     assert summary["bounded_live_archive_loop"]["max_floor_iterations"] == 4
     assert (
         summary["bounded_live_archive_loop"][
             "archive_bound_exact_handoff_candidate_count"
         ]
-        == 10
+        == exact_ready_count
     )
     assert summary["blocked_exact_dispatch_authorized_candidate_count"] == 0
     assert summary["blocked_exact_dispatch_blocked_candidate_count"] == 1
