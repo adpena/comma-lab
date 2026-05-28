@@ -1345,6 +1345,14 @@ def _build_summary(
             "fractal_marginal_surface_cell_count",
             0,
         ),
+        "archive_entropy_substrate_gap_count": final_stack_plan.get(
+            "archive_entropy_substrate_gap_count",
+            0,
+        ),
+        "archive_entropy_substrate_blockers": final_stack_plan.get(
+            "archive_entropy_substrate_blockers",
+            [],
+        ),
         "top_fractal_marginal_surface_cells": fractal_cells[:8],
         "stack_acquisition_frontier_count": final_stack_plan.get(
             "stack_acquisition_frontier_count",

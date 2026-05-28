@@ -281,6 +281,10 @@ def _stack_row(
     levels = _scope_levels(report)
     entropy_order = _stage_order(report)
     byte_delta = _mapping(report.get("byte_transform_delta"))
+    archive_entropy_coverage = _mapping(
+        report.get("archive_entropy_substrate_coverage")
+    )
+    archive_entropy_blockers = _string_list(archive_entropy_coverage.get("blockers"))
     allocated_repair_bytes = _safe_int(report.get("allocated_repair_bytes"))
     delta_bytes = allocated_repair_bytes or _safe_int(byte_delta.get("bytes"))
     archive_native_saved_bytes = _safe_int(report.get("archive_native_saved_bytes"))
@@ -300,6 +304,7 @@ def _stack_row(
     blockers = ordered_unique(
         [
             *_string_list(report.get("blockers")),
+            *archive_entropy_blockers,
             *([] if feasible else ["byte_credit_exhausted_for_stack_row"]),
             *(["automatic_negative_result_demotion_active"] if negative_demoted else []),
             *(
@@ -337,6 +342,11 @@ def _stack_row(
         "delta_payload_bytes": delta_bytes,
         "allocated_repair_bytes": allocated_repair_bytes,
         "archive_native_saved_bytes": archive_native_saved_bytes,
+        "archive_entropy_substrate_coverage": dict(archive_entropy_coverage),
+        "archive_entropy_substrate_materialized_substrates": _string_list(
+            archive_entropy_coverage.get("materialized_substrates")
+        ),
+        "archive_entropy_substrate_blockers": archive_entropy_blockers,
         "byte_closed_candidate_emitted": report.get("byte_closed_candidate_emitted") is True,
         "candidate_archive_materialized": (report.get("candidate_archive_materialized") is True),
         "archive_bound_runtime_consumption_proof_ready": (
@@ -1519,6 +1529,10 @@ def _budget_routing_decision(
         route = "demote_repair_family_until_new_component_signal"
         blocker = "automatic_negative_result_demotion_active"
         priority = 88
+    elif any(_string_list(row.get("archive_entropy_substrate_blockers")) for row in rows):
+        route = "materialize_missing_archive_entropy_substrate_variant"
+        blocker = "archive_entropy_substrate_materializer_gap"
+        priority = 90
     elif positive_measured_update_count > 0:
         route = "materialize_archive_bound_candidate_for_measured_mlx_marginal"
         blocker = "archive_bound_candidate_required_for_measured_mlx_marginal"
@@ -1878,6 +1892,15 @@ def plan_repair_family_stack_search(
         "hypergraph_interaction_tensor_cell_count": hypergraph_interaction_tensor["cell_count"],
         "fractal_marginal_surface": fractal_marginal_surface,
         "fractal_marginal_surface_cell_count": fractal_marginal_surface["cell_count"],
+        "archive_entropy_substrate_blockers": ordered_unique(
+            blocker
+            for row in rows
+            for blocker in _string_list(row.get("archive_entropy_substrate_blockers"))
+        ),
+        "archive_entropy_substrate_gap_count": sum(
+            len(_string_list(row.get("archive_entropy_substrate_blockers")))
+            for row in rows
+        ),
         "measured_mlx_posterior_budget_routing_updates": (
             measured_mlx_budget_updates
         ),
@@ -2191,6 +2214,8 @@ def _learning_selection_blocker(row: Mapping[str, Any]) -> str:
         return "negative_result_demoted"
     if row.get("archive_bound_exact_handoff_candidate") is True:
         return "exact_axis_handoff_missing"
+    if _string_list(row.get("archive_entropy_substrate_blockers")):
+        return "archive_entropy_substrate_materializer_gap"
     if row.get("byte_closed_candidate_emitted") is not True:
         return "byte_closed_candidate_missing"
     if row.get("archive_bound_runtime_consumption_proof_ready") is not True:
@@ -2208,6 +2233,8 @@ def _learning_policy(row: Mapping[str, Any]) -> str:
         return "rebuild_entropy_stage_chain_contract_before_budget_spend"
     if blocker == "negative_result_demoted":
         return "decrease_family_priority_until_new_component_response_signal"
+    if blocker == "archive_entropy_substrate_materializer_gap":
+        return "materialize_missing_archive_entropy_substrate_variant"
     if blocker == "byte_closed_candidate_missing":
         return "prioritize_byte_closed_family_materializer_implementation"
     if blocker == "runtime_consumption_proof_missing":
@@ -2264,6 +2291,12 @@ def _learning_signal_for_stack_row(row: Mapping[str, Any]) -> dict[str, Any]:
         "fractal_active_levels": levels,
         "fractal_ordered_levels": [level for level in _LEVEL_ORDER if level in set(levels)],
         "interaction_order": len(levels),
+        "archive_entropy_substrate_materialized_substrates": _string_list(
+            row.get("archive_entropy_substrate_materialized_substrates")
+        ),
+        "archive_entropy_substrate_blockers": _string_list(
+            row.get("archive_entropy_substrate_blockers")
+        ),
         "selection_blocker_class": blocker_class,
         "receiver_credit_exhausted": blocker_class == "receiver_credit_exhausted",
         "stackability_remeasure_required": (blocker_class == "stackability_interaction_remeasure"),
