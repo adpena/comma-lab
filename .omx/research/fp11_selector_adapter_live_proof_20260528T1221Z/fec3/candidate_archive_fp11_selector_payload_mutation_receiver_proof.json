@@ -1,0 +1,113 @@
+{
+  "candidate_archive": {
+    "bytes": 178517,
+    "path": ".omx/research/fp11_selector_adapter_live_proof_20260528T1221Z/fec3/candidate_archive_fp11_selector_payload_mutation.zip",
+    "sha256": "f2c1093e3f0f9789f641d7d2901cc3ea1ba5d953d53cc81fef3bf36c560e44d8"
+  },
+  "candidate_member": {
+    "bytes": 178417,
+    "name": "x",
+    "sha256": "8ade97afc0674846b8075da82a2e7dccc3678efb22ca4a26410b0e60e99318bc",
+    "zip_compressed_bytes": 178417,
+    "zip_compression_method": 0
+  },
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "gpu_launched": false,
+  "materializer_id": "repair_family_byte_transform_executor:segnet_class_region_waterfill",
+  "mutation_details": {
+    "bits_per_symbol": 3,
+    "candidate_code_histogram": {
+      "0": 160,
+      "1": 136,
+      "2": 57,
+      "3": 12,
+      "4": 72,
+      "5": 34,
+      "6": 36,
+      "7": 93
+    },
+    "candidate_selector_bytes": 249,
+    "changed_pair_count": 17,
+    "changed_pair_indexes_preview": [
+      0,
+      37,
+      74,
+      111,
+      148,
+      185,
+      222,
+      259,
+      296,
+      333,
+      370,
+      407,
+      444,
+      481,
+      518,
+      555,
+      592
+    ],
+    "n_pairs": 600,
+    "palette_size": 8,
+    "schema": "repair_family_fp11_selector_mutation_details.v1",
+    "selector_magic": "FEC3",
+    "selector_prefix_hex": "46454333580203080000001100030001000a000700080009",
+    "semantic_stage": "pre_entropy_payload_distribution_shaping",
+    "source_code_histogram": {
+      "0": 163,
+      "1": 140,
+      "2": 42,
+      "3": 11,
+      "4": 75,
+      "5": 35,
+      "6": 36,
+      "7": 98
+    },
+    "source_format": "FP11+FEC3",
+    "source_selector_bytes": 249,
+    "target_code": 2
+  },
+  "passed": true,
+  "promotable": false,
+  "promotion_eligible": false,
+  "proof_kind": "fp11_selector_reencoded_runtime_adapter_parse_proof.v1",
+  "proof_scope": "score_affecting_fp11_selector_payload_changed_and_reparsed",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_id": "repair_family_fp11_selector_payload_mutation_v1.receiver.v1",
+  "receiver_contract_kind": "repair_family_fp11_selector_payload_mutation_runtime_parse",
+  "receiver_contract_satisfied": true,
+  "runtime_consumption_probe": {
+    "archive_zip_readable": true,
+    "candidate_member_sha256": "8ade97afc0674846b8075da82a2e7dccc3678efb22ca4a26410b0e60e99318bc",
+    "member_payload_changed": true,
+    "passed": true,
+    "schema": "fp11_selector_payload_parse_probe.v1",
+    "selected_member_name": "x",
+    "source_member_sha256": "e74c0d766528672c3b3440bbec6da07561b4ac1ced6e0d08cb7557f814c96b58"
+  },
+  "runtime_consumption_proof_passed": true,
+  "schema": "repair_family_archive_payload_mutation_runtime_consumption_proof.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "selected_member_name": "x",
+  "source_archive": {
+    "bytes": 178517,
+    "path": "experiments/results/pr101_frame_exploit_selector_fec3_compact_exact_k8_cpu_overlay_20260514_codex/archive.zip",
+    "sha256": "8866ebb655e96ccf0ffcd84feae08c131734cba8c402bfb8c661a29f289ce409"
+  },
+  "source_member": {
+    "bytes": 178417,
+    "name": "x",
+    "sha256": "e74c0d766528672c3b3440bbec6da07561b4ac1ced6e0d08cb7557f814c96b58",
+    "zip_compressed_bytes": 178417,
+    "zip_compression_method": 0
+  },
+  "target_kind": "repair_family_fp11_selector_payload_mutation_v1"
+}

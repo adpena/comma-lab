@@ -1,0 +1,97 @@
+{
+  "candidate_archive": {
+    "bytes": 178477,
+    "path": "/Users/adpena/Projects/pact/.omx/research/fp11_selector_adapter_live_proof_20260528T1221Z/fec5/candidate_archive_native_zip_repack.zip",
+    "sha256": "13e6dd3bf26866bdb633e6ab9910f59c73d2ab6e7d21ccf6b22b2c0a9d49c523"
+  },
+  "candidate_archive_sha256": "13e6dd3bf26866bdb633e6ab9910f59c73d2ab6e7d21ccf6b22b2c0a9d49c523",
+  "candidate_member_sha256s": {
+    "x": "424070ed48b1b8748deeb317d0893f2b3f35d2bae5d2558da4515dd13f8f60c3"
+  },
+  "candidate_members": [
+    {
+      "bytes": 178377,
+      "name": "x",
+      "sha256": "424070ed48b1b8748deeb317d0893f2b3f35d2bae5d2558da4515dd13f8f60c3",
+      "zip_compressed_bytes": 178377,
+      "zip_compressed_payload_sha256": "424070ed48b1b8748deeb317d0893f2b3f35d2bae5d2558da4515dd13f8f60c3",
+      "zip_compressed_sha256": "424070ed48b1b8748deeb317d0893f2b3f35d2bae5d2558da4515dd13f8f60c3",
+      "zip_compression_method": "stored"
+    }
+  ],
+  "charged_bits_changed": true,
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "gpu_launched": false,
+  "materializer_id": "archive_zip_repack_adapter",
+  "passed": true,
+  "promotable": false,
+  "promotion_eligible": false,
+  "proof_kind": "archive_zip_repack_payload_identity_receiver_proof.v1",
+  "proof_scope": "archive_zip_member_payload_identity_after_repack",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_id": "archive_zip_repack_v1.receiver.v1",
+  "receiver_contract_kind": "family_agnostic_archive_zip_repack",
+  "receiver_contract_satisfied": true,
+  "runtime_consumption_probe": {
+    "all_member_payloads_identical": true,
+    "member_count": 1,
+    "member_proofs": [
+      {
+        "candidate_member_bytes": 178377,
+        "candidate_member_sha256": "424070ed48b1b8748deeb317d0893f2b3f35d2bae5d2558da4515dd13f8f60c3",
+        "candidate_zip_compressed_bytes": 178377,
+        "candidate_zip_compression_method": "stored",
+        "member_name": "x",
+        "member_payload_identical_to_source": true,
+        "passed": true,
+        "source_member_bytes": 178377,
+        "source_member_sha256": "424070ed48b1b8748deeb317d0893f2b3f35d2bae5d2558da4515dd13f8f60c3",
+        "source_zip_compressed_bytes": 178377,
+        "source_zip_compression_method": "stored"
+      }
+    ],
+    "passed": true,
+    "same_member_name_set": true,
+    "schema": "archive_zip_repack_payload_identity_probe.v1"
+  },
+  "runtime_consumption_proof_passed": true,
+  "schema": "family_agnostic_runtime_consumption_proof_v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_valid": false,
+  "selected_repack": {
+    "candidate_archive_bytes": 178477,
+    "compression_plan": [
+      {
+        "member_name": "x",
+        "zip_compression_method": "stored",
+        "zip_compresslevel": null
+      }
+    ],
+    "member_count": 1,
+    "plan_key": "x:stored:default",
+    "saved_bytes": 0,
+    "source_archive_bytes": 178477,
+    "strategy": "uniform"
+  },
+  "source_archive": {
+    "bytes": 178477,
+    "path": "/Users/adpena/Projects/pact/experiments/results/pr101_frame_exploit_selector_fec5_fixed_huffman_k8_cpu_overlay_20260515_codex/archive.zip",
+    "sha256": "13e6dd3bf26866bdb633e6ab9910f59c73d2ab6e7d21ccf6b22b2c0a9d49c523"
+  },
+  "source_members": [
+    {
+      "bytes": 178377,
+      "name": "x",
+      "sha256": "424070ed48b1b8748deeb317d0893f2b3f35d2bae5d2558da4515dd13f8f60c3",
+      "zip_compressed_bytes": 178377,
+      "zip_compressed_payload_sha256": "424070ed48b1b8748deeb317d0893f2b3f35d2bae5d2558da4515dd13f8f60c3",
+      "zip_compressed_sha256": "424070ed48b1b8748deeb317d0893f2b3f35d2bae5d2558da4515dd13f8f60c3",
+      "zip_compression_method": "stored"
+    }
+  ],
+  "target_kind": "archive_zip_repack_v1"
+}

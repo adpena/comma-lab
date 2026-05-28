@@ -1,0 +1,72 @@
+{
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "rows": [
+    {
+      "candidate_bytes": 178517,
+      "candidate_path": ".omx/research/fp11_selector_adapter_live_proof_20260528T1221Z/fec3/candidate_archive_fp11_selector_payload_mutation.zip",
+      "detected_archive_families": [
+        "single_file_payload_archive",
+        "fp11_frame_selector_wrapper",
+        "fec3_compact_selector"
+      ],
+      "label": "fec3",
+      "mutation_selector_magic": "FEC3",
+      "proof_ready": true,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "selected_archive_transform_kind": "fp11_selector_payload_mutation",
+      "semantic_payload_changed": true
+    },
+    {
+      "candidate_bytes": 178478,
+      "candidate_path": ".omx/research/fp11_selector_adapter_live_proof_20260528T1221Z/fec5/candidate_archive_fp11_selector_payload_mutation.zip",
+      "detected_archive_families": [
+        "single_file_payload_archive",
+        "fp11_frame_selector_wrapper",
+        "fec5_fixed_huffman_k8_selector"
+      ],
+      "label": "fec5",
+      "mutation_selector_magic": "FEC5",
+      "proof_ready": true,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "selected_archive_transform_kind": "fp11_selector_payload_mutation",
+      "semantic_payload_changed": true
+    },
+    {
+      "candidate_bytes": 178511,
+      "candidate_path": ".omx/research/fp11_selector_adapter_live_proof_20260528T1221Z/fec8/candidate_archive_fp11_selector_payload_mutation.zip",
+      "detected_archive_families": [
+        "single_file_payload_archive",
+        "fp11_frame_selector_wrapper",
+        "fec8_static_second_order_k16_selector"
+      ],
+      "label": "fec8",
+      "mutation_selector_magic": "FEC8",
+      "proof_ready": true,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "selected_archive_transform_kind": "fp11_selector_payload_mutation",
+      "semantic_payload_changed": true
+    },
+    {
+      "candidate_bytes": 178653,
+      "candidate_path": ".omx/research/fp11_selector_adapter_live_proof_20260528T1221Z/fes1/candidate_archive_fp11_selector_payload_mutation.zip",
+      "detected_archive_families": [
+        "single_file_payload_archive",
+        "fp11_frame_selector_wrapper",
+        "fes1_all_none_selector"
+      ],
+      "label": "fes1",
+      "mutation_selector_magic": "FES1",
+      "proof_ready": true,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "selected_archive_transform_kind": "fp11_selector_payload_mutation",
+      "semantic_payload_changed": true
+    }
+  ],
+  "schema": "fp11_selector_adapter_live_proof_summary.v3",
+  "score_claim": false
+}

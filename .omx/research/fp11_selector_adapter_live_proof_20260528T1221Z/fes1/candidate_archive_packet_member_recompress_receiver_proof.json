@@ -1,0 +1,73 @@
+{
+  "candidate_archive": {
+    "bytes": 178373,
+    "path": "/Users/adpena/Projects/pact/.omx/research/fp11_selector_adapter_live_proof_20260528T1221Z/fes1/candidate_archive_packet_member_recompress.zip",
+    "sha256": "26985bce0fde25c1caffa3d43f6aaec1f16d64874ed1a9e5b66ee2f59eeac5cb"
+  },
+  "candidate_archive_sha256": "26985bce0fde25c1caffa3d43f6aaec1f16d64874ed1a9e5b66ee2f59eeac5cb",
+  "candidate_member": {
+    "bytes": 178553,
+    "name": "x",
+    "sha256": "282dd2060d129b6b1404c617fa578cc9a39dee3ab639518748943fac232814c6",
+    "zip_compressed_bytes": 178273,
+    "zip_compressed_payload_sha256": "c3401451530030931639ad56470f41d1866764a66f6c77f3a2efa73807bf98a8",
+    "zip_compressed_sha256": "c3401451530030931639ad56470f41d1866764a66f6c77f3a2efa73807bf98a8",
+    "zip_compression_method": "deflated"
+  },
+  "candidate_member_payload_identical_to_source": true,
+  "candidate_member_sha256": "282dd2060d129b6b1404c617fa578cc9a39dee3ab639518748943fac232814c6",
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "gpu_launched": false,
+  "materializer_id": "packet_member_recompress_adapter",
+  "member_sha256": "282dd2060d129b6b1404c617fa578cc9a39dee3ab639518748943fac232814c6",
+  "passed": true,
+  "promotable": false,
+  "promotion_eligible": false,
+  "proof_kind": "packet_member_recompress_payload_identity_receiver_proof.v1",
+  "proof_scope": "zip_member_payload_identity_after_archive_recompression",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_id": "packet_member_recompress_v1.receiver.v1",
+  "receiver_contract_kind": "family_agnostic_packet_member_recompress",
+  "receiver_contract_satisfied": true,
+  "runtime_consumption_probe": {
+    "candidate_member_bytes": 178553,
+    "candidate_member_sha256": "282dd2060d129b6b1404c617fa578cc9a39dee3ab639518748943fac232814c6",
+    "passed": true,
+    "schema": "packet_member_payload_identity_probe.v1",
+    "source_member_bytes": 178553,
+    "source_member_sha256": "282dd2060d129b6b1404c617fa578cc9a39dee3ab639518748943fac232814c6"
+  },
+  "runtime_consumption_proof_passed": true,
+  "schema": "family_agnostic_runtime_consumption_proof_v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_valid": false,
+  "selected_compression": {
+    "candidate_archive_bytes": 178373,
+    "compression_method": "deflated",
+    "compresslevel": 9,
+    "saved_bytes": 280,
+    "source_archive_bytes": 178653
+  },
+  "selected_member_name": "x",
+  "source_archive": {
+    "bytes": 178653,
+    "path": "/Users/adpena/Projects/pact/experiments/results/pr101_frame_exploit_selector_all_none_control_20260514T1855Z_codex/archive.zip",
+    "sha256": "ebacec483e04402b1f1810cc5f3672bb291a613ab232790ee9137714889f28ba"
+  },
+  "source_member": {
+    "bytes": 178553,
+    "name": "x",
+    "sha256": "282dd2060d129b6b1404c617fa578cc9a39dee3ab639518748943fac232814c6",
+    "zip_compressed_bytes": 178553,
+    "zip_compressed_payload_sha256": "282dd2060d129b6b1404c617fa578cc9a39dee3ab639518748943fac232814c6",
+    "zip_compressed_sha256": "282dd2060d129b6b1404c617fa578cc9a39dee3ab639518748943fac232814c6",
+    "zip_compression_method": "stored"
+  },
+  "source_member_sha256": "282dd2060d129b6b1404c617fa578cc9a39dee3ab639518748943fac232814c6",
+  "target_kind": "packet_member_recompress_v1"
+}

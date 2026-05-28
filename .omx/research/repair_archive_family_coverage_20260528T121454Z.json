@@ -1,0 +1,1158 @@
+{
+  "adapter_registry": {
+    "coder_boundary_adapters": [
+      "zip_packet_member_recompress"
+    ],
+    "next_adapter_classes": [
+      "pact_nerv_selector_v3_packet",
+      "pact_nerv_selector_v4_packet",
+      "hnerv_latent_sidecar_hdm",
+      "renderer_dfl1_payload",
+      "renderer_rpk1_payload",
+      "renderer_asym_payload",
+      "raw_hnerv_payload",
+      "stc_raw_payload",
+      "tensor_factorize_payload"
+    ],
+    "next_score_affecting_adapter_classes": [
+      "pact_nerv_selector_v3_packet",
+      "pact_nerv_selector_v4_packet",
+      "hnerv_latent_sidecar_hdm",
+      "renderer_dfl1_payload",
+      "renderer_rpk1_payload",
+      "renderer_asym_payload",
+      "raw_hnerv_payload",
+      "stc_raw_payload",
+      "tensor_factorize_payload"
+    ],
+    "post_container_adapters": [
+      "zip_archive_repack"
+    ],
+    "schema": "repair_family_byte_transform_archive_adapter_registry.v2",
+    "score_affecting_adapters": [
+      "fec3_compact_selector",
+      "fec5_fixed_huffman_k8_selector",
+      "fec6_fixed_huffman_k16_selector",
+      "fec8_static_second_order_k16_selector",
+      "fes1_all_none_selector"
+    ],
+    "unsupported_detected_families_fail_closed": true
+  },
+  "archive_count": 10,
+  "family_counts": {
+    "fec3_compact_selector": 1,
+    "fec5_fixed_huffman_k8_selector": 1,
+    "fec6_fixed_huffman_k16_selector": 1,
+    "fec8_static_second_order_k16_selector": 1,
+    "fes1_all_none_selector": 1,
+    "fp11_frame_selector_wrapper": 5,
+    "hnerv_latent_sidecar_hdm": 1,
+    "multi_member_runtime_archive": 2,
+    "pact_nerv_selector_v4_packet": 1,
+    "renderer_asym_payload": 1,
+    "renderer_dfl1_payload": 1,
+    "renderer_rpk1_payload": 1,
+    "single_file_payload_archive": 8
+  },
+  "implemented_score_affecting_adapter_rows": [
+    {
+      "adapter_id": "fp11_selector_payload_mutation",
+      "archive_count": 1,
+      "entropy_position": "before_entropy_coder_distribution_shaping",
+      "family": "fec3_compact_selector",
+      "implemented": true,
+      "next_action": "route_to_existing_score_affecting_adapter",
+      "optimization_scopes": [
+        "bit",
+        "byte",
+        "pair",
+        "frame",
+        "entropy_coder"
+      ],
+      "priority": 1,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_executor_surface": "fp11_selector_payload_mutation",
+      "schema": "archive_family_adapter_automation_row.v1",
+      "score_claim": false
+    },
+    {
+      "adapter_id": "fp11_selector_payload_mutation",
+      "archive_count": 1,
+      "entropy_position": "before_entropy_coder_distribution_shaping",
+      "family": "fec5_fixed_huffman_k8_selector",
+      "implemented": true,
+      "next_action": "route_to_existing_score_affecting_adapter",
+      "optimization_scopes": [
+        "bit",
+        "byte",
+        "pair",
+        "frame",
+        "entropy_coder"
+      ],
+      "priority": 2,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_executor_surface": "fp11_selector_payload_mutation",
+      "schema": "archive_family_adapter_automation_row.v1",
+      "score_claim": false
+    },
+    {
+      "adapter_id": "fec6_selector_payload_mutation",
+      "archive_count": 1,
+      "entropy_position": "before_entropy_coder_distribution_shaping",
+      "family": "fec6_fixed_huffman_k16_selector",
+      "implemented": true,
+      "next_action": "route_to_existing_score_affecting_adapter",
+      "optimization_scopes": [
+        "bit",
+        "byte",
+        "pair",
+        "frame",
+        "entropy_coder"
+      ],
+      "priority": 3,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_executor_surface": "fec6_selector_payload_mutation",
+      "schema": "archive_family_adapter_automation_row.v1",
+      "score_claim": false
+    },
+    {
+      "adapter_id": "fp11_selector_payload_mutation",
+      "archive_count": 1,
+      "entropy_position": "before_entropy_coder_distribution_shaping",
+      "family": "fec8_static_second_order_k16_selector",
+      "implemented": true,
+      "next_action": "route_to_existing_score_affecting_adapter",
+      "optimization_scopes": [
+        "bit",
+        "byte",
+        "pair",
+        "pair_transition",
+        "frame",
+        "entropy_coder"
+      ],
+      "priority": 4,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_executor_surface": "fp11_selector_payload_mutation",
+      "schema": "archive_family_adapter_automation_row.v1",
+      "score_claim": false
+    },
+    {
+      "adapter_id": "fp11_selector_payload_mutation",
+      "archive_count": 1,
+      "entropy_position": "before_entropy_coder_distribution_shaping",
+      "family": "fes1_all_none_selector",
+      "implemented": true,
+      "next_action": "route_to_existing_score_affecting_adapter",
+      "optimization_scopes": [
+        "bit",
+        "byte",
+        "pair",
+        "frame",
+        "palette"
+      ],
+      "priority": 5,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_executor_surface": "fp11_selector_payload_mutation",
+      "schema": "archive_family_adapter_automation_row.v1",
+      "score_claim": false
+    }
+  ],
+  "implemented_score_affecting_family_counts": {
+    "fec3_compact_selector": 1,
+    "fec5_fixed_huffman_k8_selector": 1,
+    "fec6_fixed_huffman_k16_selector": 1,
+    "fec8_static_second_order_k16_selector": 1,
+    "fes1_all_none_selector": 1
+  },
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "rows": [
+    {
+      "adapter_registry": {
+        "coder_boundary_adapters": [
+          "zip_packet_member_recompress"
+        ],
+        "next_adapter_classes": [
+          "pact_nerv_selector_v3_packet",
+          "pact_nerv_selector_v4_packet",
+          "hnerv_latent_sidecar_hdm",
+          "renderer_dfl1_payload",
+          "renderer_rpk1_payload",
+          "renderer_asym_payload",
+          "raw_hnerv_payload",
+          "stc_raw_payload",
+          "tensor_factorize_payload"
+        ],
+        "next_score_affecting_adapter_classes": [
+          "pact_nerv_selector_v3_packet",
+          "pact_nerv_selector_v4_packet",
+          "hnerv_latent_sidecar_hdm",
+          "renderer_dfl1_payload",
+          "renderer_rpk1_payload",
+          "renderer_asym_payload",
+          "raw_hnerv_payload",
+          "stc_raw_payload",
+          "tensor_factorize_payload"
+        ],
+        "post_container_adapters": [
+          "zip_archive_repack"
+        ],
+        "schema": "repair_family_byte_transform_archive_adapter_registry.v2",
+        "score_affecting_adapters": [
+          "fec3_compact_selector",
+          "fec5_fixed_huffman_k8_selector",
+          "fec6_fixed_huffman_k16_selector",
+          "fec8_static_second_order_k16_selector",
+          "fes1_all_none_selector"
+        ],
+        "unsupported_detected_families_fail_closed": true
+      },
+      "archive_bytes": 274257,
+      "archive_path": "experiments/results/baseline_verify/archive_a1_renderer_poses.zip",
+      "archive_sha256": "ac2f6c89ed721e256a90c45b1cbfb9a8c062908164e033064300750297a635d2",
+      "blockers": [],
+      "coder_boundary_adapter_available": true,
+      "detected_archive_families": [
+        "multi_member_runtime_archive",
+        "renderer_asym_payload"
+      ],
+      "fingerprint_details": {},
+      "implemented_score_affecting_families": [],
+      "post_container_adapter_available": true,
+      "primary_payload_bytes": 296776,
+      "primary_payload_head_hex": "4153594dfa1500007b2276657273696f",
+      "primary_payload_member": "renderer.bin",
+      "primary_payload_zip_compressed_bytes": 267399,
+      "primary_payload_zip_compression_method": 8,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "archive_family_fingerprint.v1",
+      "score_affecting_adapter_implemented": false,
+      "score_affecting_unsupported_families_fail_closed": true,
+      "score_claim": false,
+      "unsupported_score_affecting_families": [
+        "renderer_asym_payload"
+      ],
+      "zip_member_count": 2,
+      "zip_members": [
+        {
+          "bytes": 296776,
+          "name": "renderer.bin",
+          "zip_compressed_bytes": 267399,
+          "zip_compression_method": 8
+        },
+        {
+          "bytes": 7200,
+          "name": "optimized_poses.bin",
+          "zip_compressed_bytes": 6622,
+          "zip_compression_method": 8
+        }
+      ]
+    },
+    {
+      "adapter_registry": {
+        "coder_boundary_adapters": [
+          "zip_packet_member_recompress"
+        ],
+        "next_adapter_classes": [
+          "pact_nerv_selector_v3_packet",
+          "pact_nerv_selector_v4_packet",
+          "hnerv_latent_sidecar_hdm",
+          "renderer_dfl1_payload",
+          "renderer_rpk1_payload",
+          "renderer_asym_payload",
+          "raw_hnerv_payload",
+          "stc_raw_payload",
+          "tensor_factorize_payload"
+        ],
+        "next_score_affecting_adapter_classes": [
+          "pact_nerv_selector_v3_packet",
+          "pact_nerv_selector_v4_packet",
+          "hnerv_latent_sidecar_hdm",
+          "renderer_dfl1_payload",
+          "renderer_rpk1_payload",
+          "renderer_asym_payload",
+          "raw_hnerv_payload",
+          "stc_raw_payload",
+          "tensor_factorize_payload"
+        ],
+        "post_container_adapters": [
+          "zip_archive_repack"
+        ],
+        "schema": "repair_family_byte_transform_archive_adapter_registry.v2",
+        "score_affecting_adapters": [
+          "fec3_compact_selector",
+          "fec5_fixed_huffman_k8_selector",
+          "fec6_fixed_huffman_k16_selector",
+          "fec8_static_second_order_k16_selector",
+          "fes1_all_none_selector"
+        ],
+        "unsupported_detected_families_fail_closed": true
+      },
+      "archive_bytes": 97944,
+      "archive_path": "experiments/results/c067_cmg3_rowspan_stride8_candidate_20260502T105104Z/archive.zip",
+      "archive_sha256": "a707a37679f83fbda8bdb791ff688b885781e0ee2fc94c316d341e5fe9662bb7",
+      "blockers": [],
+      "coder_boundary_adapter_available": true,
+      "detected_archive_families": [
+        "single_file_payload_archive",
+        "renderer_rpk1_payload"
+      ],
+      "fingerprint_details": {},
+      "implemented_score_affecting_families": [],
+      "post_container_adapter_available": true,
+      "primary_payload_bytes": 97844,
+      "primary_payload_head_hex": "2f17bf0852504b31640300007b226d65",
+      "primary_payload_member": "p",
+      "primary_payload_zip_compressed_bytes": 97844,
+      "primary_payload_zip_compression_method": 0,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "archive_family_fingerprint.v1",
+      "score_affecting_adapter_implemented": false,
+      "score_affecting_unsupported_families_fail_closed": true,
+      "score_claim": false,
+      "unsupported_score_affecting_families": [
+        "renderer_rpk1_payload"
+      ],
+      "zip_member_count": 1,
+      "zip_members": [
+        {
+          "bytes": 97844,
+          "name": "p",
+          "zip_compressed_bytes": 97844,
+          "zip_compression_method": 0
+        }
+      ]
+    },
+    {
+      "adapter_registry": {
+        "coder_boundary_adapters": [
+          "zip_packet_member_recompress"
+        ],
+        "next_adapter_classes": [
+          "pact_nerv_selector_v3_packet",
+          "pact_nerv_selector_v4_packet",
+          "hnerv_latent_sidecar_hdm",
+          "renderer_dfl1_payload",
+          "renderer_rpk1_payload",
+          "renderer_asym_payload",
+          "raw_hnerv_payload",
+          "stc_raw_payload",
+          "tensor_factorize_payload"
+        ],
+        "next_score_affecting_adapter_classes": [
+          "pact_nerv_selector_v3_packet",
+          "pact_nerv_selector_v4_packet",
+          "hnerv_latent_sidecar_hdm",
+          "renderer_dfl1_payload",
+          "renderer_rpk1_payload",
+          "renderer_asym_payload",
+          "raw_hnerv_payload",
+          "stc_raw_payload",
+          "tensor_factorize_payload"
+        ],
+        "post_container_adapters": [
+          "zip_archive_repack"
+        ],
+        "schema": "repair_family_byte_transform_archive_adapter_registry.v2",
+        "score_affecting_adapters": [
+          "fec3_compact_selector",
+          "fec5_fixed_huffman_k8_selector",
+          "fec6_fixed_huffman_k16_selector",
+          "fec8_static_second_order_k16_selector",
+          "fes1_all_none_selector"
+        ],
+        "unsupported_detected_families_fail_closed": true
+      },
+      "archive_bytes": 111527,
+      "archive_path": "experiments/results/pact_nerv_selector_v4_mlx_full_layoutfix_20260528Tlocal/archive.zip",
+      "archive_sha256": "a8ebb822e50a41b1d00ef512ebf8a0ea006bac2323f57e3e94088d3594bd8171",
+      "blockers": [],
+      "coder_boundary_adapter_available": true,
+      "detected_archive_families": [
+        "multi_member_runtime_archive",
+        "pact_nerv_selector_v4_packet"
+      ],
+      "fingerprint_details": {},
+      "implemented_score_affecting_families": [],
+      "post_container_adapter_available": true,
+      "primary_payload_bytes": 103676,
+      "primary_payload_head_hex": "50535634011800200010bb8d01000006",
+      "primary_payload_member": "0.bin",
+      "primary_payload_zip_compressed_bytes": 103711,
+      "primary_payload_zip_compression_method": 8,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "archive_family_fingerprint.v1",
+      "score_affecting_adapter_implemented": false,
+      "score_affecting_unsupported_families_fail_closed": true,
+      "score_claim": false,
+      "unsupported_score_affecting_families": [
+        "pact_nerv_selector_v4_packet"
+      ],
+      "zip_member_count": 9,
+      "zip_members": [
+        {
+          "bytes": 103676,
+          "name": "0.bin",
+          "zip_compressed_bytes": 103711,
+          "zip_compression_method": 8
+        },
+        {
+          "bytes": 448,
+          "name": "inflate.sh",
+          "zip_compressed_bytes": 322,
+          "zip_compression_method": 8
+        },
+        {
+          "bytes": 1125,
+          "name": "inflate.py",
+          "zip_compressed_bytes": 574,
+          "zip_compression_method": 8
+        },
+        {
+          "bytes": 0,
+          "name": "src/tac/__init__.py",
+          "zip_compressed_bytes": 2,
+          "zip_compression_method": 8
+        },
+        {
+          "bytes": 0,
+          "name": "src/tac/substrates/__init__.py",
+          "zip_compressed_bytes": 2,
+          "zip_compression_method": 8
+        },
+        {
+          "bytes": 0,
+          "name": "src/tac/substrates/pact_nerv_selector_v4/__init__.py",
+          "zip_compressed_bytes": 2,
+          "zip_compression_method": 8
+        },
+        {
+          "bytes": 8394,
+          "name": "src/tac/substrates/pact_nerv_selector_v4/architecture.py",
+          "zip_compressed_bytes": 2687,
+          "zip_compression_method": 8
+        },
+        {
+          "bytes": 5303,
+          "name": "src/tac/substrates/pact_nerv_selector_v4/archive.py",
+          "zip_compressed_bytes": 1853,
+          "zip_compression_method": 8
+        },
+        {
+          "bytes": 2614,
+          "name": "src/tac/substrates/pact_nerv_selector_v4/inflate.py",
+          "zip_compressed_bytes": 1100,
+          "zip_compression_method": 8
+        }
+      ]
+    },
+    {
+      "adapter_registry": {
+        "coder_boundary_adapters": [
+          "zip_packet_member_recompress"
+        ],
+        "next_adapter_classes": [
+          "pact_nerv_selector_v3_packet",
+          "pact_nerv_selector_v4_packet",
+          "hnerv_latent_sidecar_hdm",
+          "renderer_dfl1_payload",
+          "renderer_rpk1_payload",
+          "renderer_asym_payload",
+          "raw_hnerv_payload",
+          "stc_raw_payload",
+          "tensor_factorize_payload"
+        ],
+        "next_score_affecting_adapter_classes": [
+          "pact_nerv_selector_v3_packet",
+          "pact_nerv_selector_v4_packet",
+          "hnerv_latent_sidecar_hdm",
+          "renderer_dfl1_payload",
+          "renderer_rpk1_payload",
+          "renderer_asym_payload",
+          "raw_hnerv_payload",
+          "stc_raw_payload",
+          "tensor_factorize_payload"
+        ],
+        "post_container_adapters": [
+          "zip_archive_repack"
+        ],
+        "schema": "repair_family_byte_transform_archive_adapter_registry.v2",
+        "score_affecting_adapters": [
+          "fec3_compact_selector",
+          "fec5_fixed_huffman_k8_selector",
+          "fec6_fixed_huffman_k16_selector",
+          "fec8_static_second_order_k16_selector",
+          "fes1_all_none_selector"
+        ],
+        "unsupported_detected_families_fail_closed": true
+      },
+      "archive_bytes": 178653,
+      "archive_path": "experiments/results/pr101_frame_exploit_selector_all_none_control_20260514T1855Z_codex/archive.zip",
+      "archive_sha256": "ebacec483e04402b1f1810cc5f3672bb291a613ab232790ee9137714889f28ba",
+      "blockers": [],
+      "coder_boundary_adapter_available": true,
+      "detected_archive_families": [
+        "single_file_payload_archive",
+        "fp11_frame_selector_wrapper",
+        "fes1_all_none_selector"
+      ],
+      "fingerprint_details": {
+        "fp11_selector_bytes": 385,
+        "fp11_selector_magic": "FES1",
+        "fp11_source_bytes": 178158
+      },
+      "implemented_score_affecting_families": [
+        "fes1_all_none_selector"
+      ],
+      "post_container_adapter_available": true,
+      "primary_payload_bytes": 178553,
+      "primary_payload_head_hex": "46503131eeb702001bcd03f865a666a5",
+      "primary_payload_member": "x",
+      "primary_payload_zip_compressed_bytes": 178553,
+      "primary_payload_zip_compression_method": 0,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "archive_family_fingerprint.v1",
+      "score_affecting_adapter_implemented": true,
+      "score_affecting_unsupported_families_fail_closed": false,
+      "score_claim": false,
+      "unsupported_score_affecting_families": [],
+      "zip_member_count": 1,
+      "zip_members": [
+        {
+          "bytes": 178553,
+          "name": "x",
+          "zip_compressed_bytes": 178553,
+          "zip_compression_method": 0
+        }
+      ]
+    },
+    {
+      "adapter_registry": {
+        "coder_boundary_adapters": [
+          "zip_packet_member_recompress"
+        ],
+        "next_adapter_classes": [
+          "pact_nerv_selector_v3_packet",
+          "pact_nerv_selector_v4_packet",
+          "hnerv_latent_sidecar_hdm",
+          "renderer_dfl1_payload",
+          "renderer_rpk1_payload",
+          "renderer_asym_payload",
+          "raw_hnerv_payload",
+          "stc_raw_payload",
+          "tensor_factorize_payload"
+        ],
+        "next_score_affecting_adapter_classes": [
+          "pact_nerv_selector_v3_packet",
+          "pact_nerv_selector_v4_packet",
+          "hnerv_latent_sidecar_hdm",
+          "renderer_dfl1_payload",
+          "renderer_rpk1_payload",
+          "renderer_asym_payload",
+          "raw_hnerv_payload",
+          "stc_raw_payload",
+          "tensor_factorize_payload"
+        ],
+        "post_container_adapters": [
+          "zip_archive_repack"
+        ],
+        "schema": "repair_family_byte_transform_archive_adapter_registry.v2",
+        "score_affecting_adapters": [
+          "fec3_compact_selector",
+          "fec5_fixed_huffman_k8_selector",
+          "fec6_fixed_huffman_k16_selector",
+          "fec8_static_second_order_k16_selector",
+          "fes1_all_none_selector"
+        ],
+        "unsupported_detected_families_fail_closed": true
+      },
+      "archive_bytes": 178517,
+      "archive_path": "experiments/results/pr101_frame_exploit_selector_fec3_compact_exact_k8_cpu_overlay_20260514_codex/archive.zip",
+      "archive_sha256": "8866ebb655e96ccf0ffcd84feae08c131734cba8c402bfb8c661a29f289ce409",
+      "blockers": [],
+      "coder_boundary_adapter_available": true,
+      "detected_archive_families": [
+        "single_file_payload_archive",
+        "fp11_frame_selector_wrapper",
+        "fec3_compact_selector"
+      ],
+      "fingerprint_details": {
+        "fp11_selector_bytes": 249,
+        "fp11_selector_magic": "FEC3",
+        "fp11_source_bytes": 178158
+      },
+      "implemented_score_affecting_families": [
+        "fec3_compact_selector"
+      ],
+      "post_container_adapter_available": true,
+      "primary_payload_bytes": 178417,
+      "primary_payload_head_hex": "46503131eeb702001bcd03f865a666a5",
+      "primary_payload_member": "x",
+      "primary_payload_zip_compressed_bytes": 178417,
+      "primary_payload_zip_compression_method": 0,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "archive_family_fingerprint.v1",
+      "score_affecting_adapter_implemented": true,
+      "score_affecting_unsupported_families_fail_closed": false,
+      "score_claim": false,
+      "unsupported_score_affecting_families": [],
+      "zip_member_count": 1,
+      "zip_members": [
+        {
+          "bytes": 178417,
+          "name": "x",
+          "zip_compressed_bytes": 178417,
+          "zip_compression_method": 0
+        }
+      ]
+    },
+    {
+      "adapter_registry": {
+        "coder_boundary_adapters": [
+          "zip_packet_member_recompress"
+        ],
+        "next_adapter_classes": [
+          "pact_nerv_selector_v3_packet",
+          "pact_nerv_selector_v4_packet",
+          "hnerv_latent_sidecar_hdm",
+          "renderer_dfl1_payload",
+          "renderer_rpk1_payload",
+          "renderer_asym_payload",
+          "raw_hnerv_payload",
+          "stc_raw_payload",
+          "tensor_factorize_payload"
+        ],
+        "next_score_affecting_adapter_classes": [
+          "pact_nerv_selector_v3_packet",
+          "pact_nerv_selector_v4_packet",
+          "hnerv_latent_sidecar_hdm",
+          "renderer_dfl1_payload",
+          "renderer_rpk1_payload",
+          "renderer_asym_payload",
+          "raw_hnerv_payload",
+          "stc_raw_payload",
+          "tensor_factorize_payload"
+        ],
+        "post_container_adapters": [
+          "zip_archive_repack"
+        ],
+        "schema": "repair_family_byte_transform_archive_adapter_registry.v2",
+        "score_affecting_adapters": [
+          "fec3_compact_selector",
+          "fec5_fixed_huffman_k8_selector",
+          "fec6_fixed_huffman_k16_selector",
+          "fec8_static_second_order_k16_selector",
+          "fes1_all_none_selector"
+        ],
+        "unsupported_detected_families_fail_closed": true
+      },
+      "archive_bytes": 178477,
+      "archive_path": "experiments/results/pr101_frame_exploit_selector_fec5_fixed_huffman_k8_cpu_overlay_20260515_codex/archive.zip",
+      "archive_sha256": "13e6dd3bf26866bdb633e6ab9910f59c73d2ab6e7d21ccf6b22b2c0a9d49c523",
+      "blockers": [],
+      "coder_boundary_adapter_available": true,
+      "detected_archive_families": [
+        "single_file_payload_archive",
+        "fp11_frame_selector_wrapper",
+        "fec5_fixed_huffman_k8_selector"
+      ],
+      "fingerprint_details": {
+        "fp11_selector_bytes": 209,
+        "fp11_selector_magic": "FEC5",
+        "fp11_source_bytes": 178158
+      },
+      "implemented_score_affecting_families": [
+        "fec5_fixed_huffman_k8_selector"
+      ],
+      "post_container_adapter_available": true,
+      "primary_payload_bytes": 178377,
+      "primary_payload_head_hex": "46503131eeb702001bcd03f865a666a5",
+      "primary_payload_member": "x",
+      "primary_payload_zip_compressed_bytes": 178377,
+      "primary_payload_zip_compression_method": 0,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "archive_family_fingerprint.v1",
+      "score_affecting_adapter_implemented": true,
+      "score_affecting_unsupported_families_fail_closed": false,
+      "score_claim": false,
+      "unsupported_score_affecting_families": [],
+      "zip_member_count": 1,
+      "zip_members": [
+        {
+          "bytes": 178377,
+          "name": "x",
+          "zip_compressed_bytes": 178377,
+          "zip_compression_method": 0
+        }
+      ]
+    },
+    {
+      "adapter_registry": {
+        "coder_boundary_adapters": [
+          "zip_packet_member_recompress"
+        ],
+        "next_adapter_classes": [
+          "pact_nerv_selector_v3_packet",
+          "pact_nerv_selector_v4_packet",
+          "hnerv_latent_sidecar_hdm",
+          "renderer_dfl1_payload",
+          "renderer_rpk1_payload",
+          "renderer_asym_payload",
+          "raw_hnerv_payload",
+          "stc_raw_payload",
+          "tensor_factorize_payload"
+        ],
+        "next_score_affecting_adapter_classes": [
+          "pact_nerv_selector_v3_packet",
+          "pact_nerv_selector_v4_packet",
+          "hnerv_latent_sidecar_hdm",
+          "renderer_dfl1_payload",
+          "renderer_rpk1_payload",
+          "renderer_asym_payload",
+          "raw_hnerv_payload",
+          "stc_raw_payload",
+          "tensor_factorize_payload"
+        ],
+        "post_container_adapters": [
+          "zip_archive_repack"
+        ],
+        "schema": "repair_family_byte_transform_archive_adapter_registry.v2",
+        "score_affecting_adapters": [
+          "fec3_compact_selector",
+          "fec5_fixed_huffman_k8_selector",
+          "fec6_fixed_huffman_k16_selector",
+          "fec8_static_second_order_k16_selector",
+          "fes1_all_none_selector"
+        ],
+        "unsupported_detected_families_fail_closed": true
+      },
+      "archive_bytes": 178517,
+      "archive_path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
+      "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "blockers": [],
+      "coder_boundary_adapter_available": true,
+      "detected_archive_families": [
+        "single_file_payload_archive",
+        "fp11_frame_selector_wrapper",
+        "fec6_fixed_huffman_k16_selector"
+      ],
+      "fingerprint_details": {
+        "fp11_selector_bytes": 249,
+        "fp11_selector_magic": "FEC6",
+        "fp11_source_bytes": 178158
+      },
+      "implemented_score_affecting_families": [
+        "fec6_fixed_huffman_k16_selector"
+      ],
+      "post_container_adapter_available": true,
+      "primary_payload_bytes": 178417,
+      "primary_payload_head_hex": "46503131eeb702001bcd03f865a666a5",
+      "primary_payload_member": "x",
+      "primary_payload_zip_compressed_bytes": 178417,
+      "primary_payload_zip_compression_method": 0,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "archive_family_fingerprint.v1",
+      "score_affecting_adapter_implemented": true,
+      "score_affecting_unsupported_families_fail_closed": false,
+      "score_claim": false,
+      "unsupported_score_affecting_families": [],
+      "zip_member_count": 1,
+      "zip_members": [
+        {
+          "bytes": 178417,
+          "name": "x",
+          "zip_compressed_bytes": 178417,
+          "zip_compression_method": 0
+        }
+      ]
+    },
+    {
+      "adapter_registry": {
+        "coder_boundary_adapters": [
+          "zip_packet_member_recompress"
+        ],
+        "next_adapter_classes": [
+          "pact_nerv_selector_v3_packet",
+          "pact_nerv_selector_v4_packet",
+          "hnerv_latent_sidecar_hdm",
+          "renderer_dfl1_payload",
+          "renderer_rpk1_payload",
+          "renderer_asym_payload",
+          "raw_hnerv_payload",
+          "stc_raw_payload",
+          "tensor_factorize_payload"
+        ],
+        "next_score_affecting_adapter_classes": [
+          "pact_nerv_selector_v3_packet",
+          "pact_nerv_selector_v4_packet",
+          "hnerv_latent_sidecar_hdm",
+          "renderer_dfl1_payload",
+          "renderer_rpk1_payload",
+          "renderer_asym_payload",
+          "raw_hnerv_payload",
+          "stc_raw_payload",
+          "tensor_factorize_payload"
+        ],
+        "post_container_adapters": [
+          "zip_archive_repack"
+        ],
+        "schema": "repair_family_byte_transform_archive_adapter_registry.v2",
+        "score_affecting_adapters": [
+          "fec3_compact_selector",
+          "fec5_fixed_huffman_k8_selector",
+          "fec6_fixed_huffman_k16_selector",
+          "fec8_static_second_order_k16_selector",
+          "fes1_all_none_selector"
+        ],
+        "unsupported_detected_families_fail_closed": true
+      },
+      "archive_bytes": 178507,
+      "archive_path": "experiments/results/pr101_frame_exploit_selector_fec8_static_second_order_k16_clean_20260526_codex/archive.zip",
+      "archive_sha256": "b44da5d54d34ce094c8fca7a37172b9ea6546d8a56eb960afa86252f56d11844",
+      "blockers": [],
+      "coder_boundary_adapter_available": true,
+      "detected_archive_families": [
+        "single_file_payload_archive",
+        "fp11_frame_selector_wrapper",
+        "fec8_static_second_order_k16_selector"
+      ],
+      "fingerprint_details": {
+        "fp11_selector_bytes": 239,
+        "fp11_selector_magic": "FEC8",
+        "fp11_source_bytes": 178158
+      },
+      "implemented_score_affecting_families": [
+        "fec8_static_second_order_k16_selector"
+      ],
+      "post_container_adapter_available": true,
+      "primary_payload_bytes": 178407,
+      "primary_payload_head_hex": "46503131eeb702001bcd03f865a666a5",
+      "primary_payload_member": "x",
+      "primary_payload_zip_compressed_bytes": 178407,
+      "primary_payload_zip_compression_method": 0,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "archive_family_fingerprint.v1",
+      "score_affecting_adapter_implemented": true,
+      "score_affecting_unsupported_families_fail_closed": false,
+      "score_claim": false,
+      "unsupported_score_affecting_families": [],
+      "zip_member_count": 1,
+      "zip_members": [
+        {
+          "bytes": 178407,
+          "name": "x",
+          "zip_compressed_bytes": 178407,
+          "zip_compression_method": 0
+        }
+      ]
+    },
+    {
+      "adapter_registry": {
+        "coder_boundary_adapters": [
+          "zip_packet_member_recompress"
+        ],
+        "next_adapter_classes": [
+          "pact_nerv_selector_v3_packet",
+          "pact_nerv_selector_v4_packet",
+          "hnerv_latent_sidecar_hdm",
+          "renderer_dfl1_payload",
+          "renderer_rpk1_payload",
+          "renderer_asym_payload",
+          "raw_hnerv_payload",
+          "stc_raw_payload",
+          "tensor_factorize_payload"
+        ],
+        "next_score_affecting_adapter_classes": [
+          "pact_nerv_selector_v3_packet",
+          "pact_nerv_selector_v4_packet",
+          "hnerv_latent_sidecar_hdm",
+          "renderer_dfl1_payload",
+          "renderer_rpk1_payload",
+          "renderer_asym_payload",
+          "raw_hnerv_payload",
+          "stc_raw_payload",
+          "tensor_factorize_payload"
+        ],
+        "post_container_adapters": [
+          "zip_archive_repack"
+        ],
+        "schema": "repair_family_byte_transform_archive_adapter_registry.v2",
+        "score_affecting_adapters": [
+          "fec3_compact_selector",
+          "fec5_fixed_huffman_k8_selector",
+          "fec6_fixed_huffman_k16_selector",
+          "fec8_static_second_order_k16_selector",
+          "fes1_all_none_selector"
+        ],
+        "unsupported_detected_families_fail_closed": true
+      },
+      "archive_bytes": 186876,
+      "archive_path": "experiments/results/pr106_format0d_latent_score_table_materialized_20260515_codex/sidecar_archive.zip",
+      "archive_sha256": "9cb989cef519ed1771f6c9dc18c988ee93d01a2925da1913d63f9015d6247cf4",
+      "blockers": [],
+      "coder_boundary_adapter_available": true,
+      "detected_archive_families": [
+        "single_file_payload_archive",
+        "hnerv_latent_sidecar_hdm"
+      ],
+      "fingerprint_details": {},
+      "implemented_score_affecting_families": [],
+      "post_container_adapter_available": true,
+      "primary_payload_bytes": 186776,
+      "primary_payload_head_hex": "fe0d80d50200ffde970248444d39534f",
+      "primary_payload_member": "x",
+      "primary_payload_zip_compressed_bytes": 186776,
+      "primary_payload_zip_compression_method": 0,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "archive_family_fingerprint.v1",
+      "score_affecting_adapter_implemented": false,
+      "score_affecting_unsupported_families_fail_closed": true,
+      "score_claim": false,
+      "unsupported_score_affecting_families": [
+        "hnerv_latent_sidecar_hdm"
+      ],
+      "zip_member_count": 1,
+      "zip_members": [
+        {
+          "bytes": 186776,
+          "name": "x",
+          "zip_compressed_bytes": 186776,
+          "zip_compression_method": 0
+        }
+      ]
+    },
+    {
+      "adapter_registry": {
+        "coder_boundary_adapters": [
+          "zip_packet_member_recompress"
+        ],
+        "next_adapter_classes": [
+          "pact_nerv_selector_v3_packet",
+          "pact_nerv_selector_v4_packet",
+          "hnerv_latent_sidecar_hdm",
+          "renderer_dfl1_payload",
+          "renderer_rpk1_payload",
+          "renderer_asym_payload",
+          "raw_hnerv_payload",
+          "stc_raw_payload",
+          "tensor_factorize_payload"
+        ],
+        "next_score_affecting_adapter_classes": [
+          "pact_nerv_selector_v3_packet",
+          "pact_nerv_selector_v4_packet",
+          "hnerv_latent_sidecar_hdm",
+          "renderer_dfl1_payload",
+          "renderer_rpk1_payload",
+          "renderer_asym_payload",
+          "raw_hnerv_payload",
+          "stc_raw_payload",
+          "tensor_factorize_payload"
+        ],
+        "post_container_adapters": [
+          "zip_archive_repack"
+        ],
+        "schema": "repair_family_byte_transform_archive_adapter_registry.v2",
+        "score_affecting_adapters": [
+          "fec3_compact_selector",
+          "fec5_fixed_huffman_k8_selector",
+          "fec6_fixed_huffman_k16_selector",
+          "fec8_static_second_order_k16_selector",
+          "fes1_all_none_selector"
+        ],
+        "unsupported_detected_families_fail_closed": true
+      },
+      "archive_bytes": 345422,
+      "archive_path": "experiments/results/renderer_payload_dfl1_native_smoke_20260525T005335Z/candidate.zip",
+      "archive_sha256": "e20295f0a662101567f36afe8ce17142635f976cb2f2b8937b4cbc76455ee3c4",
+      "blockers": [],
+      "coder_boundary_adapter_available": true,
+      "detected_archive_families": [
+        "single_file_payload_archive",
+        "renderer_dfl1_payload"
+      ],
+      "fingerprint_details": {},
+      "implemented_score_affecting_families": [],
+      "post_container_adapter_available": true,
+      "primary_payload_bytes": 345322,
+      "primary_payload_head_hex": "44464c31cc58697013679a869aadadec",
+      "primary_payload_member": "p",
+      "primary_payload_zip_compressed_bytes": 345322,
+      "primary_payload_zip_compression_method": 0,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "archive_family_fingerprint.v1",
+      "score_affecting_adapter_implemented": false,
+      "score_affecting_unsupported_families_fail_closed": true,
+      "score_claim": false,
+      "unsupported_score_affecting_families": [
+        "renderer_dfl1_payload"
+      ],
+      "zip_member_count": 1,
+      "zip_members": [
+        {
+          "bytes": 345322,
+          "name": "p",
+          "zip_compressed_bytes": 345322,
+          "zip_compression_method": 0
+        }
+      ]
+    }
+  ],
+  "schema": "archive_family_coverage_report.v1",
+  "score_affecting_adapter_implemented_archive_count": 5,
+  "score_affecting_unsupported_archive_count": 5,
+  "score_claim": false,
+  "unsupported_score_affecting_adapter_gap_queue": [
+    {
+      "adapter_id": "hnerv_sidecar_latent_mutator",
+      "archive_count": 1,
+      "entropy_position": "before_entropy_coder_distribution_shaping",
+      "family": "hnerv_latent_sidecar_hdm",
+      "implemented": false,
+      "next_action": "build_parser_mutator_receiver_proof_and_exact_handoff_gate",
+      "optimization_scopes": [
+        "byte",
+        "latent",
+        "channel",
+        "pair",
+        "frame"
+      ],
+      "priority": 1,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_executor_surface": "hnerv_sidecar_latent_mutator",
+      "schema": "archive_family_adapter_automation_row.v1",
+      "score_claim": false
+    },
+    {
+      "adapter_id": "pact_nerv_packet_parser_mutator",
+      "archive_count": 1,
+      "entropy_position": "before_entropy_coder_distribution_shaping",
+      "family": "pact_nerv_selector_v4_packet",
+      "implemented": false,
+      "next_action": "build_parser_mutator_receiver_proof_and_exact_handoff_gate",
+      "optimization_scopes": [
+        "byte",
+        "tensor",
+        "frame",
+        "pair",
+        "batch",
+        "full_video"
+      ],
+      "priority": 2,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_executor_surface": "pact_nerv_packet_parser_mutator",
+      "schema": "archive_family_adapter_automation_row.v1",
+      "score_claim": false
+    },
+    {
+      "adapter_id": "renderer_payload_parser_mutator",
+      "archive_count": 1,
+      "entropy_position": "before_entropy_coder_distribution_shaping",
+      "family": "renderer_asym_payload",
+      "implemented": false,
+      "next_action": "build_parser_mutator_receiver_proof_and_exact_handoff_gate",
+      "optimization_scopes": [
+        "byte",
+        "payload",
+        "region",
+        "boundary",
+        "frame",
+        "batch"
+      ],
+      "priority": 3,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_executor_surface": "renderer_payload_parser_mutator",
+      "schema": "archive_family_adapter_automation_row.v1",
+      "score_claim": false
+    },
+    {
+      "adapter_id": "renderer_payload_parser_mutator",
+      "archive_count": 1,
+      "entropy_position": "before_entropy_coder_distribution_shaping",
+      "family": "renderer_dfl1_payload",
+      "implemented": false,
+      "next_action": "build_parser_mutator_receiver_proof_and_exact_handoff_gate",
+      "optimization_scopes": [
+        "byte",
+        "payload",
+        "region",
+        "boundary",
+        "frame",
+        "batch"
+      ],
+      "priority": 4,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_executor_surface": "renderer_payload_parser_mutator",
+      "schema": "archive_family_adapter_automation_row.v1",
+      "score_claim": false
+    },
+    {
+      "adapter_id": "renderer_payload_parser_mutator",
+      "archive_count": 1,
+      "entropy_position": "before_entropy_coder_distribution_shaping",
+      "family": "renderer_rpk1_payload",
+      "implemented": false,
+      "next_action": "build_parser_mutator_receiver_proof_and_exact_handoff_gate",
+      "optimization_scopes": [
+        "byte",
+        "payload",
+        "region",
+        "boundary",
+        "frame",
+        "batch"
+      ],
+      "priority": 5,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_executor_surface": "renderer_payload_parser_mutator",
+      "schema": "archive_family_adapter_automation_row.v1",
+      "score_claim": false
+    }
+  ],
+  "unsupported_score_affecting_family_counts": {
+    "hnerv_latent_sidecar_hdm": 1,
+    "pact_nerv_selector_v4_packet": 1,
+    "renderer_asym_payload": 1,
+    "renderer_dfl1_payload": 1,
+    "renderer_rpk1_payload": 1
+  }
+}

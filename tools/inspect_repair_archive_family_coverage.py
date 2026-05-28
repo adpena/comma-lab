@@ -86,6 +86,9 @@ def main(argv: list[str] | None = None) -> int:
                 "unsupported_score_affecting_family_counts": report[
                     "unsupported_score_affecting_family_counts"
                 ],
+                "unsupported_score_affecting_adapter_gap_queue": report[
+                    "unsupported_score_affecting_adapter_gap_queue"
+                ],
                 "score_claim": False,
                 "promotion_eligible": False,
                 "rank_or_kill_eligible": False,

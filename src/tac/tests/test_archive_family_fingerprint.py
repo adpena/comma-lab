@@ -35,8 +35,8 @@ def test_archive_family_fingerprint_distinguishes_selector_generations(tmp_path:
 
     assert fec3_probe["schema"] == ARCHIVE_FAMILY_FINGERPRINT_SCHEMA
     assert "fec3_compact_selector" in fec3_probe["detected_archive_families"]
-    assert fec3_probe["score_affecting_adapter_implemented"] is False
-    assert "fec3_compact_selector" in fec3_probe["unsupported_score_affecting_families"]
+    assert fec3_probe["score_affecting_adapter_implemented"] is True
+    assert "fec3_compact_selector" in fec3_probe["implemented_score_affecting_families"]
     assert "fec6_fixed_huffman_k16_selector" in fec6_probe["detected_archive_families"]
     assert fec6_probe["score_affecting_adapter_implemented"] is True
     assert fec6_probe["implemented_score_affecting_families"] == [
@@ -76,9 +76,17 @@ def test_archive_family_coverage_report_rolls_up_adapter_gaps(tmp_path: Path) ->
     assert report["schema"] == ARCHIVE_FAMILY_COVERAGE_REPORT_SCHEMA
     assert report["archive_count"] == 3
     assert report["implemented_score_affecting_family_counts"] == {
+        "fec5_fixed_huffman_k8_selector": 1,
         "fec6_fixed_huffman_k16_selector": 1
     }
-    assert report["unsupported_score_affecting_family_counts"]["fec5_fixed_huffman_k8_selector"] == 1
     assert report["unsupported_score_affecting_family_counts"]["pact_nerv_selector_v4_packet"] == 1
+    gap_rows = {
+        str(row["family"]): row
+        for row in report["unsupported_score_affecting_adapter_gap_queue"]
+    }
+    assert gap_rows["pact_nerv_selector_v4_packet"]["required_executor_surface"] == (
+        "pact_nerv_packet_parser_mutator"
+    )
+    assert "full_video" in gap_rows["pact_nerv_selector_v4_packet"]["optimization_scopes"]
     assert report["score_claim"] is False
     assert report["ready_for_exact_eval_dispatch"] is False

@@ -9,6 +9,7 @@ authority.
 
 from __future__ import annotations
 
+import importlib.util
 import io
 import platform
 import struct
@@ -119,6 +120,20 @@ _FEC6_FAMILY_TARGET_CODES: Mapping[str, int] = {
     "per_region_selector_codec": 0,
     "palette_frame_asymmetry_prior": 2,
     "frame0_k16_palette_asymmetry": 2,
+}
+
+FEC5_FIXED_K8_CODE_BITS: tuple[str, ...] = (
+    "00",
+    "01",
+    "100",
+    "101",
+    "1100",
+    "1101",
+    "1110",
+    "1111",
+)
+FEC5_FIXED_K8_DECODE: Mapping[str, int] = {
+    bits: index for index, bits in enumerate(FEC5_FIXED_K8_CODE_BITS)
 }
 
 
@@ -354,6 +369,246 @@ def _encode_fec6_codes(codes: Sequence[int]) -> bytes:
     return bytes(int(bits[index : index + 8], 2) for index in range(0, len(bits), 8))
 
 
+def _decode_fec5_codes(payload: bytes, *, n_pairs: int) -> list[int]:
+    codes: list[int] = []
+    prefix = ""
+    consumed_bits = 0
+    for byte in payload:
+        for shift in range(7, -1, -1):
+            bit = "1" if (byte >> shift) & 1 else "0"
+            prefix += bit
+            consumed_bits += 1
+            code = FEC5_FIXED_K8_DECODE.get(prefix)
+            if code is not None:
+                codes.append(code)
+                prefix = ""
+                if len(codes) == n_pairs:
+                    padding_bits = len(payload) * 8 - consumed_bits
+                    if padding_bits and payload[-1] & ((1 << padding_bits) - 1):
+                        raise RepairFamilyByteTransformExecutorError(
+                            "FEC5 selector padding bits are non-zero"
+                        )
+                    return codes
+            elif len(prefix) > 4:
+                raise RepairFamilyByteTransformExecutorError(
+                    "FEC5 selector contains invalid prefix code"
+                )
+    raise RepairFamilyByteTransformExecutorError("FEC5 selector bitstream truncated")
+
+
+def _encode_fec5_codes(codes: Sequence[int]) -> bytes:
+    bits = "".join(FEC5_FIXED_K8_CODE_BITS[int(code)] for code in codes)
+    padding = (-len(bits)) % 8
+    bits += "0" * padding
+    return bytes(int(bits[index : index + 8], 2) for index in range(0, len(bits), 8))
+
+
+def _pack_codes_lsb(codes: Sequence[int], *, bits_per_symbol: int) -> bytes:
+    out = bytearray((len(codes) * bits_per_symbol + 7) // 8)
+    bit_pos = 0
+    max_code = 1 << bits_per_symbol
+    for code in codes:
+        value = int(code)
+        if not 0 <= value < max_code:
+            raise RepairFamilyByteTransformExecutorError(
+                f"selector code {value} cannot fit in {bits_per_symbol} bits"
+            )
+        for shift in range(bits_per_symbol):
+            if (value >> shift) & 1:
+                absolute = bit_pos + shift
+                out[absolute // 8] |= 1 << (absolute % 8)
+        bit_pos += bits_per_symbol
+    return bytes(out)
+
+
+def _unpack_codes_lsb(
+    payload: bytes,
+    *,
+    n_pairs: int,
+    bits_per_symbol: int,
+    max_code_exclusive: int,
+) -> list[int]:
+    codes: list[int] = []
+    bit_pos = 0
+    for _ in range(n_pairs):
+        code = 0
+        for shift in range(bits_per_symbol):
+            absolute = bit_pos + shift
+            byte_index = absolute // 8
+            if byte_index >= len(payload):
+                raise RepairFamilyByteTransformExecutorError("selector bitstream truncated")
+            code |= ((payload[byte_index] >> (absolute % 8)) & 1) << shift
+        if code >= max_code_exclusive:
+            raise RepairFamilyByteTransformExecutorError(
+                f"selector code {code} outside palette {max_code_exclusive}"
+            )
+        codes.append(code)
+        bit_pos += bits_per_symbol
+    if (bit_pos + 7) // 8 != len(payload):
+        raise RepairFamilyByteTransformExecutorError("selector has trailing payload bytes")
+    return codes
+
+
+def _decode_fes1_selector(selector: bytes) -> tuple[list[int], dict[str, Any]]:
+    if len(selector) < 10 or selector[:4] != b"FES1":
+        raise RepairFamilyByteTransformExecutorError("FES1 selector payload missing")
+    n_pairs, palette_size, bits_per_symbol, packed_len = struct.unpack_from(
+        "<HBBH",
+        selector,
+        4,
+    )
+    if not 1 <= palette_size <= 255:
+        raise RepairFamilyByteTransformExecutorError(f"FES1 invalid palette size {palette_size}")
+    packed = selector[10 : 10 + packed_len]
+    if len(selector) != 10 + packed_len:
+        raise RepairFamilyByteTransformExecutorError("FES1 selector length mismatch")
+    codes = _unpack_codes_lsb(
+        packed,
+        n_pairs=n_pairs,
+        bits_per_symbol=bits_per_symbol,
+        max_code_exclusive=palette_size,
+    )
+    return codes, {
+        "selector_magic": "FES1",
+        "n_pairs": n_pairs,
+        "palette_size": palette_size,
+        "bits_per_symbol": bits_per_symbol,
+        "selector_prefix_hex": selector[:10].hex(),
+    }
+
+
+def _encode_fes1_selector(codes: Sequence[int], details: Mapping[str, Any]) -> bytes:
+    palette_size = int(details["palette_size"])
+    bits_per_symbol = int(details["bits_per_symbol"])
+    packed = _pack_codes_lsb(codes, bits_per_symbol=bits_per_symbol)
+    return (
+        b"FES1"
+        + struct.pack("<HBBH", len(codes), palette_size, bits_per_symbol, len(packed))
+        + packed
+    )
+
+
+def _decode_fec3_selector(selector: bytes) -> tuple[list[int], dict[str, Any]]:
+    if len(selector) < 8 or selector[:4] != b"FEC3":
+        raise RepairFamilyByteTransformExecutorError("FEC3 selector payload missing")
+    n_pairs, bits_per_symbol, n_specs = struct.unpack_from("<HBB", selector, 4)
+    pos = 8
+    for _ in range(n_specs):
+        if pos + 2 > len(selector):
+            raise RepairFamilyByteTransformExecutorError("FEC3 palette table truncated")
+        tag = selector[pos]
+        pos += 2
+        if tag == 1:
+            if pos + 5 > len(selector):
+                raise RepairFamilyByteTransformExecutorError("FEC3 dynamic spec truncated")
+            pos += 5
+        elif tag != 0:
+            raise RepairFamilyByteTransformExecutorError(f"FEC3 unsupported table tag {tag}")
+    codes = _unpack_codes_lsb(
+        selector[pos:],
+        n_pairs=n_pairs,
+        bits_per_symbol=bits_per_symbol,
+        max_code_exclusive=n_specs,
+    )
+    return codes, {
+        "selector_magic": "FEC3",
+        "n_pairs": n_pairs,
+        "bits_per_symbol": bits_per_symbol,
+        "palette_size": n_specs,
+        "selector_prefix_hex": selector[:pos].hex(),
+    }
+
+
+def _encode_fec3_selector(codes: Sequence[int], details: Mapping[str, Any]) -> bytes:
+    return bytes.fromhex(str(details["selector_prefix_hex"])) + _pack_codes_lsb(
+        codes,
+        bits_per_symbol=int(details["bits_per_symbol"]),
+    )
+
+
+def _load_fec8_codec_module(repo_root: str | Path) -> Any:
+    path = (
+        _resolve(repo_root, repo_root)
+        / "submissions/hnerv_fec6_fixed_huffman_k16/encoder/"
+        "build_pr101_frame_exploit_selector_packet_markov.py"
+    )
+    if not path.is_file():
+        raise RepairFamilyByteTransformExecutorError("FEC8 codec module missing")
+    spec = importlib.util.spec_from_file_location("_pact_fec8_markov_codec", path)
+    if spec is None or spec.loader is None:
+        raise RepairFamilyByteTransformExecutorError("FEC8 codec module cannot load")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _decode_fec8_selector(
+    selector: bytes,
+    *,
+    repo_root: str | Path,
+) -> tuple[list[int], dict[str, Any]]:
+    if len(selector) < 8 or selector[:4] != b"FEC8":
+        raise RepairFamilyByteTransformExecutorError("FEC8 selector payload missing")
+    module = _load_fec8_codec_module(repo_root)
+    codes = list(module.decode_fec8_markov_selector(selector))
+    return codes, {
+        "selector_magic": "FEC8",
+        "variant_hex": selector[4:6].hex(),
+        "n_pairs": len(codes),
+        "palette_size": len(FEC6_FIXED_K16_CODE_BITS),
+    }
+
+
+def _encode_fec8_selector(
+    codes: Sequence[int],
+    details: Mapping[str, Any],
+    *,
+    repo_root: str | Path,
+) -> bytes:
+    module = _load_fec8_codec_module(repo_root)
+    variant = bytes.fromhex(str(details["variant_hex"]))
+    if variant == getattr(module, "FEC8_VARIANT_STATIC", b"\x00\x01"):
+        return module.encode_fec8_markov_selector_static(codes, n_pairs=len(codes))
+    if variant == getattr(module, "FEC8_VARIANT_ADAPTIVE", b"\x00\x02"):
+        return module.encode_fec8_markov_selector_adaptive(codes, n_pairs=len(codes))
+    if variant == getattr(module, "FEC8_VARIANT_STATIC_SECOND_ORDER", b"\x00\x03"):
+        return module.encode_fec8_markov_selector_static_second_order(
+            codes,
+            n_pairs=len(codes),
+        )
+    raise RepairFamilyByteTransformExecutorError(f"unsupported FEC8 variant {variant.hex()}")
+
+
+def _mutated_selector_codes(
+    codes: Sequence[int],
+    *,
+    family_id: str,
+    palette_size: int,
+) -> tuple[list[int], list[int], int]:
+    mutated = [int(code) for code in codes]
+    target_code = min(_FEC6_FAMILY_TARGET_CODES.get(family_id, 0), palette_size - 1)
+    n_pairs = len(mutated)
+    span = max(1, n_pairs // 10)
+    if family_id == "posenet_null_bottom_decile":
+        indexes = range(max(0, n_pairs - span), n_pairs)
+    elif family_id == "segnet_class_region_waterfill":
+        indexes = range(0, n_pairs, max(1, n_pairs // 16))
+    elif family_id == "per_region_selector_codec":
+        indexes = range(0, n_pairs, 8)
+    else:
+        indexes = range(0, min(n_pairs, span))
+    changed_indexes: list[int] = []
+    for index in indexes:
+        if index >= n_pairs:
+            continue
+        old = mutated[index]
+        new = target_code if old != target_code else (old + 1) % palette_size
+        if old != new:
+            mutated[index] = new
+            changed_indexes.append(index)
+    return mutated, changed_indexes, target_code
+
+
 def _mutated_fec6_selector_member(
     member_payload: bytes,
     *,
@@ -415,6 +670,105 @@ def _mutated_fec6_selector_member(
         "target_code": target_code,
         "source_code_histogram": {str(code): codes.count(code) for code in sorted(set(codes))},
         "candidate_code_histogram": {str(code): mutated.count(code) for code in sorted(set(mutated))},
+        "semantic_stage": "pre_entropy_payload_distribution_shaping",
+    }
+    return new_member, details
+
+
+def _selector_payload_from_fp11(member_payload: bytes) -> tuple[int, bytes] | None:
+    if len(member_payload) < 12 or member_payload[:4] != b"FP11":
+        return None
+    source_len = struct.unpack_from("<I", member_payload, 4)[0]
+    selector_len_offset = 8 + source_len
+    if selector_len_offset + 2 > len(member_payload):
+        return None
+    selector_len = struct.unpack_from("<H", member_payload, selector_len_offset)[0]
+    selector_start = selector_len_offset + 2
+    selector_end = selector_start + selector_len
+    if selector_end != len(member_payload) or selector_len < 4:
+        return None
+    return selector_len_offset, member_payload[selector_start:selector_end]
+
+
+def _mutated_non_fec6_fp11_selector_member(
+    member_payload: bytes,
+    *,
+    family_id: str,
+    repo_root: str | Path,
+) -> tuple[bytes, dict[str, Any]] | None:
+    if family_id not in _FEC6_FAMILY_TARGET_CODES:
+        return None
+    parsed = _selector_payload_from_fp11(member_payload)
+    if parsed is None:
+        return None
+    selector_len_offset, selector = parsed
+    magic = selector[:4]
+    if magic == b"FEC6":
+        return None
+    if magic == b"FES1":
+        codes, details = _decode_fes1_selector(selector)
+        candidate_codes, changed_indexes, target_code = _mutated_selector_codes(
+            codes,
+            family_id=family_id,
+            palette_size=int(details["palette_size"]),
+        )
+        new_selector = _encode_fes1_selector(candidate_codes, details)
+    elif magic == b"FEC3":
+        codes, details = _decode_fec3_selector(selector)
+        candidate_codes, changed_indexes, target_code = _mutated_selector_codes(
+            codes,
+            family_id=family_id,
+            palette_size=int(details["palette_size"]),
+        )
+        new_selector = _encode_fec3_selector(candidate_codes, details)
+    elif magic == b"FEC5":
+        if len(selector) < 6:
+            raise RepairFamilyByteTransformExecutorError("FEC5 selector truncated")
+        n_pairs = struct.unpack_from("<H", selector, 4)[0]
+        codes = _decode_fec5_codes(selector[6:], n_pairs=n_pairs)
+        candidate_codes, changed_indexes, target_code = _mutated_selector_codes(
+            codes,
+            family_id=family_id,
+            palette_size=len(FEC5_FIXED_K8_CODE_BITS),
+        )
+        details = {
+            "selector_magic": "FEC5",
+            "n_pairs": n_pairs,
+            "palette_size": len(FEC5_FIXED_K8_CODE_BITS),
+        }
+        new_selector = b"FEC5" + struct.pack("<H", n_pairs) + _encode_fec5_codes(candidate_codes)
+    elif magic == b"FEC8":
+        codes, details = _decode_fec8_selector(selector, repo_root=repo_root)
+        candidate_codes, changed_indexes, target_code = _mutated_selector_codes(
+            codes,
+            family_id=family_id,
+            palette_size=int(details["palette_size"]),
+        )
+        new_selector = _encode_fec8_selector(candidate_codes, details, repo_root=repo_root)
+    else:
+        return None
+    if not changed_indexes:
+        return None
+    selector_start = selector_len_offset + 2
+    new_member = (
+        member_payload[:selector_len_offset]
+        + struct.pack("<H", len(new_selector))
+        + new_selector
+        + member_payload[selector_start + len(selector) :]
+    )
+    details = {
+        "schema": "repair_family_fp11_selector_mutation_details.v1",
+        "source_format": f"FP11+{magic.decode('ascii', errors='replace')}",
+        **dict(details),
+        "source_selector_bytes": len(selector),
+        "candidate_selector_bytes": len(new_selector),
+        "changed_pair_count": len(changed_indexes),
+        "changed_pair_indexes_preview": changed_indexes[:32],
+        "target_code": target_code,
+        "source_code_histogram": {str(code): list(codes).count(code) for code in sorted(set(codes))},
+        "candidate_code_histogram": {
+            str(code): candidate_codes.count(code) for code in sorted(set(candidate_codes))
+        },
         "semantic_stage": "pre_entropy_payload_distribution_shaping",
     }
     return new_member, details
@@ -824,6 +1178,139 @@ def _fec6_payload_mutation_candidate(
     return candidate, blockers
 
 
+def _fp11_selector_payload_mutation_candidate(
+    *,
+    manifest: Mapping[str, Any],
+    output_dir: str | Path,
+    repo_root: str | Path,
+    family_id: str,
+    allow_overwrite: bool,
+) -> tuple[dict[str, Any], list[str]]:
+    blockers: list[str] = []
+    if family_id not in _FEC6_FAMILY_TARGET_CODES:
+        blockers.append(f"fp11_selector_payload_mutation_not_enabled_for_family:{family_id}")
+        return _empty_candidate_archive(
+            blockers=blockers,
+            archive_native_transform_kind="fp11_selector_payload_mutation",
+        ), blockers
+    source, actual_sha, source_blockers = _source_archive_path_and_sha(manifest, repo_root=repo_root)
+    blockers.extend(source_blockers)
+    if source is None or blockers:
+        return _empty_candidate_archive(
+            blockers=blockers,
+            archive_native_transform_kind="fp11_selector_payload_mutation",
+        ), blockers
+    try:
+        member_name = _primary_payload_member(source)
+        source_member_payload = _zip_member_bytes(source, member_name)
+        mutation = _mutated_non_fec6_fp11_selector_member(
+            source_member_payload,
+            family_id=family_id,
+            repo_root=repo_root,
+        )
+    except (OSError, zipfile.BadZipFile, KeyError, RepairFamilyByteTransformExecutorError) as exc:
+        blockers.append(f"fp11_selector_payload_mutation_probe_failed:{exc}")
+        return _empty_candidate_archive(
+            blockers=blockers,
+            archive_native_transform_kind="fp11_selector_payload_mutation",
+        ), blockers
+    if mutation is None:
+        blockers.append("non_fec6_fp11_selector_payload_not_detected")
+        return _empty_candidate_archive(
+            blockers=blockers,
+            archive_native_transform_kind="fp11_selector_payload_mutation",
+        ), blockers
+    candidate_member_payload, mutation_details = mutation
+    output = _resolve(output_dir, repo_root) / "candidate_archive_fp11_selector_payload_mutation.zip"
+    proof = _resolve(output_dir, repo_root) / "candidate_archive_fp11_selector_payload_mutation_receiver_proof.json"
+    candidate_payload = _zip_archive_bytes_with_replacement(
+        source,
+        member_name=member_name,
+        replacement=candidate_member_payload,
+        compression=zipfile.ZIP_STORED,
+    )
+    try:
+        _write_bytes_with_expected(output, candidate_payload, allow_overwrite=allow_overwrite)
+        source_record = _archive_record(source, repo_root=repo_root)
+        candidate_record = _archive_record(output, repo_root=repo_root)
+        source_member = _member_record(source, member_name, payload=source_member_payload)
+        candidate_member = _member_record(output, member_name)
+        proof_payload = {
+            "schema": "repair_family_archive_payload_mutation_runtime_consumption_proof.v1",
+            "proof_kind": "fp11_selector_reencoded_runtime_adapter_parse_proof.v1",
+            "proof_scope": "score_affecting_fp11_selector_payload_changed_and_reparsed",
+            "target_kind": "repair_family_fp11_selector_payload_mutation_v1",
+            "materializer_id": f"repair_family_byte_transform_executor:{family_id}",
+            "receiver_contract_kind": "repair_family_fp11_selector_payload_mutation_runtime_parse",
+            "receiver_contract_id": "repair_family_fp11_selector_payload_mutation_v1.receiver.v1",
+            "source_archive": source_record,
+            "candidate_archive": candidate_record,
+            "selected_member_name": member_name,
+            "source_member": source_member,
+            "candidate_member": candidate_member,
+            "mutation_details": mutation_details,
+            "runtime_consumption_probe": {
+                "schema": "fp11_selector_payload_parse_probe.v1",
+                "passed": True,
+                "selected_member_name": member_name,
+                "source_member_sha256": source_member["sha256"],
+                "candidate_member_sha256": candidate_member["sha256"],
+                "member_payload_changed": source_member["sha256"] != candidate_member["sha256"],
+                "archive_zip_readable": True,
+            },
+            "receiver_contract_satisfied": True,
+            "runtime_consumption_proof_passed": True,
+            "passed": True,
+            "score_affecting_payload_changed": True,
+            "charged_bits_changed": True,
+            **FALSE_AUTHORITY,
+        }
+        _write_json_with_expected(proof, proof_payload, allow_overwrite=allow_overwrite)
+    except (ArtifactWriteError, OSError, zipfile.BadZipFile, ValueError) as exc:
+        blockers.append(f"fp11_selector_payload_mutation_write_failed:{exc}")
+        return _empty_candidate_archive(
+            blockers=blockers,
+            archive_native_transform_kind="fp11_selector_payload_mutation",
+        ), blockers
+    saved_bytes = int(source_record["bytes"]) - int(candidate_record["bytes"])
+    candidate = {
+        "schema": "repair_family_archive_native_candidate.v1",
+        "materialized": True,
+        "archive_native_transform_attempted": True,
+        "archive_native_transform_kind": "fp11_selector_payload_mutation",
+        "semantic_entropy_stage": "pre_entropy_payload_distribution_shaping",
+        "archive_native_materializer_schema": proof_payload["schema"],
+        "archive_native_materializer_id": proof_payload["materializer_id"],
+        "archive_native_target_kind": proof_payload["target_kind"],
+        "source_archive_path": _repo_rel(source, repo_root),
+        "source_archive_sha256": actual_sha,
+        "source_archive_bytes": source.stat().st_size,
+        "path": _repo_rel(output, repo_root),
+        "sha256": candidate_record["sha256"],
+        "bytes": candidate_record["bytes"],
+        "runtime_consumption_proof_path": _repo_rel(proof, repo_root),
+        "runtime_consumption_proof_ready": True,
+        "receiver_contract_kind": proof_payload["receiver_contract_kind"],
+        "receiver_contract_satisfied": True,
+        "selected_member_name": member_name,
+        "mutation_details": mutation_details,
+        "semantic_payload_changed": True,
+        "exact_axis_score_affecting_adjudication_required": True,
+        "score_affecting_payload_changed": True,
+        "charged_bits_changed": True,
+        "saved_bytes": saved_bytes,
+        "blockers": ordered_unique(blockers),
+        "budget_spend_allowed": False,
+        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        candidate,
+        context="repair_family_fp11_selector_payload_mutation_candidate",
+    )
+    return candidate, blockers
+
+
 def _packet_member_recompress_candidate(
     *,
     manifest: Mapping[str, Any],
@@ -905,7 +1392,10 @@ def _packet_member_recompress_candidate(
 
 def _candidate_rank(candidate: Mapping[str, Any]) -> tuple[int, int, int, str]:
     proof_ready = candidate.get("runtime_consumption_proof_ready") is True
-    score_affecting = candidate.get("score_affecting_payload_changed") is True
+    score_affecting = (
+        candidate.get("semantic_payload_changed") is True
+        or candidate.get("exact_axis_score_affecting_adjudication_required") is True
+    )
     materialized = candidate.get("materialized") is True
     return (
         0 if materialized and proof_ready and score_affecting else 1,
@@ -926,6 +1416,13 @@ def _archive_transform_candidates(
     variants: list[dict[str, Any]] = []
     blockers: list[str] = []
     for builder in (
+        lambda: _fp11_selector_payload_mutation_candidate(
+            manifest=manifest,
+            output_dir=output_dir,
+            repo_root=repo_root,
+            family_id=family_id,
+            allow_overwrite=allow_overwrite,
+        ),
         lambda: _fec6_payload_mutation_candidate(
             manifest=manifest,
             output_dir=output_dir,
@@ -1423,6 +1920,7 @@ def build_repair_family_byte_transform_execution_report(
 
 
 __all__ = [
+    "FEC5_FIXED_K8_CODE_BITS",
     "FEC6_FIXED_K16_CODE_BITS",
     "REPAIR_FAMILY_BYTE_TRANSFORM_DELTA_SCHEMA",
     "REPAIR_FAMILY_BYTE_TRANSFORM_EXECUTION_REPORT_SCHEMA",

@@ -6,7 +6,7 @@ from __future__ import annotations
 import struct
 import zipfile
 from collections import Counter
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -19,7 +19,11 @@ REPAIR_BYTE_TRANSFORM_ARCHIVE_ADAPTER_REGISTRY_SCHEMA = (
 )
 
 SCORE_AFFECTING_ARCHIVE_ADAPTERS: tuple[str, ...] = (
+    "fec3_compact_selector",
+    "fec5_fixed_huffman_k8_selector",
     "fec6_fixed_huffman_k16_selector",
+    "fec8_static_second_order_k16_selector",
+    "fes1_all_none_selector",
 )
 CODER_BOUNDARY_ARCHIVE_ADAPTERS: tuple[str, ...] = (
     "zip_packet_member_recompress",
@@ -28,10 +32,6 @@ POST_CONTAINER_ARCHIVE_ADAPTERS: tuple[str, ...] = (
     "zip_archive_repack",
 )
 NEXT_SCORE_AFFECTING_ADAPTER_CLASSES: tuple[str, ...] = (
-    "fec3_compact_selector",
-    "fec5_fixed_huffman_k8_selector",
-    "fec8_static_second_order_k16_selector",
-    "fes1_all_none_selector",
     "pact_nerv_selector_v3_packet",
     "pact_nerv_selector_v4_packet",
     "hnerv_latent_sidecar_hdm",
@@ -42,6 +42,69 @@ NEXT_SCORE_AFFECTING_ADAPTER_CLASSES: tuple[str, ...] = (
     "stc_raw_payload",
     "tensor_factorize_payload",
 )
+
+_FAMILY_AUTOMATION_SURFACES: Mapping[str, tuple[str, tuple[str, ...], str]] = {
+    "fec3_compact_selector": (
+        "fp11_selector_payload_mutation",
+        ("bit", "byte", "pair", "frame", "entropy_coder"),
+        "before_entropy_coder_distribution_shaping",
+    ),
+    "fec5_fixed_huffman_k8_selector": (
+        "fp11_selector_payload_mutation",
+        ("bit", "byte", "pair", "frame", "entropy_coder"),
+        "before_entropy_coder_distribution_shaping",
+    ),
+    "fec6_fixed_huffman_k16_selector": (
+        "fec6_selector_payload_mutation",
+        ("bit", "byte", "pair", "frame", "entropy_coder"),
+        "before_entropy_coder_distribution_shaping",
+    ),
+    "fec8_static_second_order_k16_selector": (
+        "fp11_selector_payload_mutation",
+        ("bit", "byte", "pair", "pair_transition", "frame", "entropy_coder"),
+        "before_entropy_coder_distribution_shaping",
+    ),
+    "fes1_all_none_selector": (
+        "fp11_selector_payload_mutation",
+        ("bit", "byte", "pair", "frame", "palette"),
+        "before_entropy_coder_distribution_shaping",
+    ),
+    "pact_nerv_selector_v3_packet": (
+        "pact_nerv_packet_parser_mutator",
+        ("byte", "tensor", "frame", "pair", "batch", "full_video"),
+        "before_entropy_coder_distribution_shaping",
+    ),
+    "pact_nerv_selector_v4_packet": (
+        "pact_nerv_packet_parser_mutator",
+        ("byte", "tensor", "frame", "pair", "batch", "full_video"),
+        "before_entropy_coder_distribution_shaping",
+    ),
+    "hnerv_latent_sidecar_hdm": (
+        "hnerv_sidecar_latent_mutator",
+        ("byte", "latent", "channel", "pair", "frame"),
+        "before_entropy_coder_distribution_shaping",
+    ),
+    "renderer_dfl1_payload": (
+        "renderer_payload_parser_mutator",
+        ("byte", "payload", "region", "boundary", "frame", "batch"),
+        "before_entropy_coder_distribution_shaping",
+    ),
+    "renderer_rpk1_payload": (
+        "renderer_payload_parser_mutator",
+        ("byte", "payload", "region", "boundary", "frame", "batch"),
+        "before_entropy_coder_distribution_shaping",
+    ),
+    "renderer_asym_payload": (
+        "renderer_payload_parser_mutator",
+        ("byte", "payload", "region", "boundary", "frame", "batch"),
+        "before_entropy_coder_distribution_shaping",
+    ),
+    "raw_hnerv_payload": (
+        "raw_hnerv_payload_parser_mutator",
+        ("byte", "tensor", "latent", "frame", "pair"),
+        "before_entropy_coder_distribution_shaping",
+    ),
+}
 
 
 def _repo_rel(path: str | Path, repo_root: str | Path | None) -> str:
@@ -269,6 +332,43 @@ def fingerprint_archive_family(
     }
 
 
+def _adapter_automation_row(
+    family: str,
+    *,
+    count: int,
+    implemented: bool,
+    priority: int,
+) -> dict[str, Any]:
+    adapter_id, scopes, entropy_stage = _FAMILY_AUTOMATION_SURFACES.get(
+        family,
+        (
+            "archive_family_parser_mutator",
+            ("byte", "payload"),
+            "before_entropy_coder_distribution_shaping",
+        ),
+    )
+    return {
+        "schema": "archive_family_adapter_automation_row.v1",
+        "family": family,
+        "archive_count": int(count),
+        "priority": int(priority),
+        "adapter_id": adapter_id,
+        "implemented": bool(implemented),
+        "required_executor_surface": adapter_id,
+        "entropy_position": entropy_stage,
+        "optimization_scopes": list(scopes),
+        "next_action": (
+            "route_to_existing_score_affecting_adapter"
+            if implemented
+            else "build_parser_mutator_receiver_proof_and_exact_handoff_gate"
+        ),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
 def build_archive_family_coverage_report(
     archive_paths: Iterable[str | Path],
     *,
@@ -289,12 +389,35 @@ def build_archive_family_coverage_report(
         implemented_counts.update(
             str(item) for item in row.get("implemented_score_affecting_families") or []
         )
+    implemented_rows = [
+        _adapter_automation_row(
+            family,
+            count=count,
+            implemented=True,
+            priority=index,
+        )
+        for index, (family, count) in enumerate(sorted(implemented_counts.items()), start=1)
+    ]
+    gap_rows = [
+        _adapter_automation_row(
+            family,
+            count=count,
+            implemented=False,
+            priority=index,
+        )
+        for index, (family, count) in enumerate(
+            sorted(unsupported_counts.items(), key=lambda item: (-item[1], item[0])),
+            start=1,
+        )
+    ]
     return {
         "schema": ARCHIVE_FAMILY_COVERAGE_REPORT_SCHEMA,
         "archive_count": len(rows),
         "family_counts": dict(sorted(counts.items())),
         "implemented_score_affecting_family_counts": dict(sorted(implemented_counts.items())),
         "unsupported_score_affecting_family_counts": dict(sorted(unsupported_counts.items())),
+        "implemented_score_affecting_adapter_rows": implemented_rows,
+        "unsupported_score_affecting_adapter_gap_queue": gap_rows,
         "score_affecting_adapter_implemented_archive_count": sum(
             1 for row in rows if row.get("score_affecting_adapter_implemented") is True
         ),

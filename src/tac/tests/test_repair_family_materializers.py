@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import struct
 import subprocess
@@ -28,6 +29,7 @@ from tac.optimization.repair_campaign_scorer import (
     score_repair_campaign,
 )
 from tac.optimization.repair_family_byte_transform_executor import (
+    FEC5_FIXED_K8_CODE_BITS,
     FEC6_FIXED_K16_CODE_BITS,
     REPAIR_FAMILY_BYTE_TRANSFORM_EXECUTION_REPORT_SCHEMA,
     REPAIR_FAMILY_BYTE_TRANSFORM_REPLAY_BUNDLE_SCHEMA,
@@ -170,6 +172,72 @@ def _fec6_selector_payload(codes: list[int]) -> bytes:
     selector = b"FEC6" + struct.pack("<H", len(codes)) + encoded
     source_payload = b"hnerv-source-payload"
     return b"FP11" + struct.pack("<I", len(source_payload)) + source_payload + struct.pack("<H", len(selector)) + selector
+
+
+def _pack_lsb_codes(codes: list[int], bits_per_symbol: int) -> bytes:
+    out = bytearray((len(codes) * bits_per_symbol + 7) // 8)
+    bit_pos = 0
+    for code in codes:
+        for shift in range(bits_per_symbol):
+            if (int(code) >> shift) & 1:
+                absolute = bit_pos + shift
+                out[absolute // 8] |= 1 << (absolute % 8)
+        bit_pos += bits_per_symbol
+    return bytes(out)
+
+
+def _fp11_selector_payload(selector: bytes) -> bytes:
+    source_payload = b"hnerv-source-payload"
+    return (
+        b"FP11"
+        + struct.pack("<I", len(source_payload))
+        + source_payload
+        + struct.pack("<H", len(selector))
+        + selector
+    )
+
+
+def _fec3_selector_payload(codes: list[int]) -> bytes:
+    bits_per_symbol = 2
+    palette_table = b"".join(struct.pack("<BB", 0, index) for index in range(4))
+    selector = (
+        b"FEC3"
+        + struct.pack("<HBB", len(codes), bits_per_symbol, 4)
+        + palette_table
+        + _pack_lsb_codes(codes, bits_per_symbol)
+    )
+    return _fp11_selector_payload(selector)
+
+
+def _fec5_selector_payload(codes: list[int]) -> bytes:
+    bits = "".join(FEC5_FIXED_K8_CODE_BITS[code] for code in codes)
+    bits += "0" * ((-len(bits)) % 8)
+    encoded = bytes(int(bits[index : index + 8], 2) for index in range(0, len(bits), 8))
+    return _fp11_selector_payload(b"FEC5" + struct.pack("<H", len(codes)) + encoded)
+
+
+def _fes1_selector_payload(codes: list[int]) -> bytes:
+    packed = _pack_lsb_codes(codes, 5)
+    selector = b"FES1" + struct.pack("<HBBH", len(codes), 31, 5, len(packed)) + packed
+    return _fp11_selector_payload(selector)
+
+
+def _fec8_selector_payload(codes: list[int]) -> bytes:
+    module_path = (
+        REPO_ROOT
+        / "submissions/hnerv_fec6_fixed_huffman_k16/encoder/"
+        "build_pr101_frame_exploit_selector_packet_markov.py"
+    )
+    spec = importlib.util.spec_from_file_location("_test_fec8_markov_codec", module_path)
+    if spec is None or spec.loader is None:
+        pytest.skip("FEC8 Markov codec module unavailable")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    selector = module.encode_fec8_markov_selector_static_second_order(
+        codes,
+        n_pairs=len(codes),
+    )
+    return _fp11_selector_payload(selector)
 
 
 def test_segnet_family_materializer_emits_ordered_fail_closed_manifest(
@@ -481,6 +549,141 @@ def test_byte_transform_executor_mutates_fec6_selector_payload_when_detected(
     assert candidate["mutation_details"]["changed_pair_count"] > 0
     assert (tmp_path / candidate["path"]).is_file()
     assert (tmp_path / candidate["runtime_consumption_proof_path"]).is_file()
+
+
+@pytest.mark.parametrize(
+    ("archive_family", "payload"),
+    [
+        (
+            "fec3_compact_selector",
+            _fec3_selector_payload([0, 1, 2, 3, 0, 1, 2, 3, 0, 1]),
+        ),
+        (
+            "fec5_fixed_huffman_k8_selector",
+            _fec5_selector_payload([0, 1, 2, 3, 4, 5, 6, 7, 0, 1]),
+        ),
+        (
+            "fes1_all_none_selector",
+            _fes1_selector_payload([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
+        ),
+    ],
+)
+def test_byte_transform_executor_mutates_non_fec6_fp11_selector_payloads(
+    tmp_path: Path,
+    archive_family: str,
+    payload: bytes,
+) -> None:
+    archive_path = _write_zip(tmp_path / f"{archive_family}.zip", {"x": payload})
+    archive_sha = hashlib.sha256(archive_path.read_bytes()).hexdigest()
+    manifest = {
+        "schema": REPAIR_CAMPAIGN_FAMILY_MATERIALIZER_MANIFEST_SCHEMA,
+        "family_id": "segnet_class_region_waterfill",
+        "typed_response_id": f"{archive_family}_ready",
+        "candidate_chain_id": f"{archive_family}_chain",
+        "candidate_chain_ids": [f"{archive_family}_chain"],
+        "component_response_replay": {
+            "component_response_terms": {
+                "segnet_delta_score_units": -0.001,
+                "combined_delta_score_units": -0.001,
+            },
+            "local_mlx_custody_paths": [],
+            **_false_authority(),
+        },
+        "receiver_verification": {
+            "local_mlx_custody_paths": [],
+            **_false_authority(),
+        },
+        "candidate_archive": {
+            "path": str(archive_path),
+            "sha256": archive_sha,
+            "bytes": archive_path.stat().st_size,
+        },
+        "receiver_contract_satisfied": False,
+        "byte_closed_candidate_emitted": True,
+        "readiness_blockers": [],
+        **_false_authority(),
+    }
+    manifest_path = _write_json(tmp_path / f"{archive_family}_manifest.json", manifest)
+
+    report, _bundle = build_repair_family_byte_transform_execution_report(
+        family_materializer_manifest=manifest,
+        family_materializer_manifest_path=manifest_path,
+        output_dir=tmp_path / f"{archive_family}_transform",
+        replay_argv=["python", "tools/run_repair_family_byte_transform_executor.py"],
+        invocation_argv=["pytest"],
+        repo_root=tmp_path,
+        allow_overwrite=False,
+    )
+
+    candidate = report["candidate_archive"]
+    detected_families = report["archive_family_probe"]["detected_archive_families"]
+    assert archive_family in detected_families
+    assert report["selected_archive_transform_kind"] == "fp11_selector_payload_mutation"
+    assert report["semantic_payload_changed"] is True
+    assert report["score_affecting_payload_changed"] is False
+    assert candidate["semantic_payload_changed"] is True
+    assert candidate["score_affecting_payload_changed"] is False
+    assert candidate["runtime_consumption_proof_ready"] is True
+    assert candidate["mutation_details"]["changed_pair_count"] > 0
+    assert (tmp_path / candidate["path"]).is_file()
+    assert (tmp_path / candidate["runtime_consumption_proof_path"]).is_file()
+
+
+def test_byte_transform_executor_mutates_fec8_fp11_selector_payload(
+    tmp_path: Path,
+) -> None:
+    archive_family = "fec8_static_second_order_k16_selector"
+    archive_path = _write_zip(
+        tmp_path / "fec8.zip",
+        {"x": _fec8_selector_payload([0, 1, 2, 3, 0, 1, 2, 3, 0, 1])},
+    )
+    archive_sha = hashlib.sha256(archive_path.read_bytes()).hexdigest()
+    manifest = {
+        "schema": REPAIR_CAMPAIGN_FAMILY_MATERIALIZER_MANIFEST_SCHEMA,
+        "family_id": "segnet_class_region_waterfill",
+        "typed_response_id": "fec8_ready",
+        "candidate_chain_id": "fec8_chain",
+        "candidate_chain_ids": ["fec8_chain"],
+        "component_response_replay": {
+            "component_response_terms": {
+                "segnet_delta_score_units": -0.001,
+                "combined_delta_score_units": -0.001,
+            },
+            "local_mlx_custody_paths": [],
+            **_false_authority(),
+        },
+        "receiver_verification": {
+            "local_mlx_custody_paths": [],
+            **_false_authority(),
+        },
+        "candidate_archive": {
+            "path": str(archive_path),
+            "sha256": archive_sha,
+            "bytes": archive_path.stat().st_size,
+        },
+        "receiver_contract_satisfied": False,
+        "byte_closed_candidate_emitted": True,
+        "readiness_blockers": [],
+        **_false_authority(),
+    }
+    manifest_path = _write_json(tmp_path / "fec8_manifest.json", manifest)
+
+    report, _bundle = build_repair_family_byte_transform_execution_report(
+        family_materializer_manifest=manifest,
+        family_materializer_manifest_path=manifest_path,
+        output_dir=tmp_path / "fec8_transform",
+        replay_argv=["python", "tools/run_repair_family_byte_transform_executor.py"],
+        invocation_argv=["pytest"],
+        repo_root=REPO_ROOT,
+        allow_overwrite=False,
+    )
+
+    candidate = report["candidate_archive"]
+    assert archive_family in report["archive_family_probe"]["detected_archive_families"]
+    assert report["selected_archive_transform_kind"] == "fp11_selector_payload_mutation"
+    assert candidate["runtime_consumption_proof_ready"] is True
+    assert candidate["semantic_payload_changed"] is True
+    assert candidate["mutation_details"]["selector_magic"] == "FEC8"
 
 
 def test_repair_family_byte_transform_cli_writes_report_and_bundle(

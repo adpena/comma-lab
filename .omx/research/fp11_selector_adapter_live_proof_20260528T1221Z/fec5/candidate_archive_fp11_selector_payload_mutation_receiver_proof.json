@@ -1,0 +1,111 @@
+{
+  "candidate_archive": {
+    "bytes": 178478,
+    "path": ".omx/research/fp11_selector_adapter_live_proof_20260528T1221Z/fec5/candidate_archive_fp11_selector_payload_mutation.zip",
+    "sha256": "d0c9c1d9f2a49193d4c0648e7dc2aba03809cacc989a126a4fc65ecf9d84a562"
+  },
+  "candidate_member": {
+    "bytes": 178378,
+    "name": "x",
+    "sha256": "852104e7bbaecc5772ab481202d9619db45523e6038a091f7a2c27d182bb994b",
+    "zip_compressed_bytes": 178378,
+    "zip_compression_method": 0
+  },
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "gpu_launched": false,
+  "materializer_id": "repair_family_byte_transform_executor:segnet_class_region_waterfill",
+  "mutation_details": {
+    "candidate_code_histogram": {
+      "0": 160,
+      "1": 136,
+      "2": 105,
+      "3": 77,
+      "4": 41,
+      "5": 36,
+      "6": 34,
+      "7": 11
+    },
+    "candidate_selector_bytes": 210,
+    "changed_pair_count": 17,
+    "changed_pair_indexes_preview": [
+      0,
+      37,
+      74,
+      111,
+      148,
+      185,
+      222,
+      259,
+      296,
+      333,
+      370,
+      407,
+      444,
+      481,
+      518,
+      555,
+      592
+    ],
+    "n_pairs": 600,
+    "palette_size": 8,
+    "schema": "repair_family_fp11_selector_mutation_details.v1",
+    "selector_magic": "FEC5",
+    "semantic_stage": "pre_entropy_payload_distribution_shaping",
+    "source_code_histogram": {
+      "0": 163,
+      "1": 140,
+      "2": 98,
+      "3": 75,
+      "4": 42,
+      "5": 36,
+      "6": 35,
+      "7": 11
+    },
+    "source_format": "FP11+FEC5",
+    "source_selector_bytes": 209,
+    "target_code": 2
+  },
+  "passed": true,
+  "promotable": false,
+  "promotion_eligible": false,
+  "proof_kind": "fp11_selector_reencoded_runtime_adapter_parse_proof.v1",
+  "proof_scope": "score_affecting_fp11_selector_payload_changed_and_reparsed",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_id": "repair_family_fp11_selector_payload_mutation_v1.receiver.v1",
+  "receiver_contract_kind": "repair_family_fp11_selector_payload_mutation_runtime_parse",
+  "receiver_contract_satisfied": true,
+  "runtime_consumption_probe": {
+    "archive_zip_readable": true,
+    "candidate_member_sha256": "852104e7bbaecc5772ab481202d9619db45523e6038a091f7a2c27d182bb994b",
+    "member_payload_changed": true,
+    "passed": true,
+    "schema": "fp11_selector_payload_parse_probe.v1",
+    "selected_member_name": "x",
+    "source_member_sha256": "424070ed48b1b8748deeb317d0893f2b3f35d2bae5d2558da4515dd13f8f60c3"
+  },
+  "runtime_consumption_proof_passed": true,
+  "schema": "repair_family_archive_payload_mutation_runtime_consumption_proof.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "selected_member_name": "x",
+  "source_archive": {
+    "bytes": 178477,
+    "path": "experiments/results/pr101_frame_exploit_selector_fec5_fixed_huffman_k8_cpu_overlay_20260515_codex/archive.zip",
+    "sha256": "13e6dd3bf26866bdb633e6ab9910f59c73d2ab6e7d21ccf6b22b2c0a9d49c523"
+  },
+  "source_member": {
+    "bytes": 178377,
+    "name": "x",
+    "sha256": "424070ed48b1b8748deeb317d0893f2b3f35d2bae5d2558da4515dd13f8f60c3",
+    "zip_compressed_bytes": 178377,
+    "zip_compression_method": 0
+  },
+  "target_kind": "repair_family_fp11_selector_payload_mutation_v1"
+}

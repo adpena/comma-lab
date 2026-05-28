@@ -1,0 +1,100 @@
+{
+  "candidate_archive": {
+    "bytes": 178653,
+    "path": ".omx/research/fp11_selector_adapter_live_proof_20260528T1221Z/fes1/candidate_archive_fp11_selector_payload_mutation.zip",
+    "sha256": "43c1f2bc41fb425723a01992dfc3f37c54ad17be4f6a63e1b1a4e1c478eac60b"
+  },
+  "candidate_member": {
+    "bytes": 178553,
+    "name": "x",
+    "sha256": "43168d7c5f67e15e1c20928dc8e991f97832ab50d19e83c8009be72d4b77f087",
+    "zip_compressed_bytes": 178553,
+    "zip_compression_method": 0
+  },
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "gpu_launched": false,
+  "materializer_id": "repair_family_byte_transform_executor:segnet_class_region_waterfill",
+  "mutation_details": {
+    "bits_per_symbol": 5,
+    "candidate_code_histogram": {
+      "0": 583,
+      "2": 17
+    },
+    "candidate_selector_bytes": 385,
+    "changed_pair_count": 17,
+    "changed_pair_indexes_preview": [
+      0,
+      37,
+      74,
+      111,
+      148,
+      185,
+      222,
+      259,
+      296,
+      333,
+      370,
+      407,
+      444,
+      481,
+      518,
+      555,
+      592
+    ],
+    "n_pairs": 600,
+    "palette_size": 22,
+    "schema": "repair_family_fp11_selector_mutation_details.v1",
+    "selector_magic": "FES1",
+    "selector_prefix_hex": "46455331580216057701",
+    "semantic_stage": "pre_entropy_payload_distribution_shaping",
+    "source_code_histogram": {
+      "0": 600
+    },
+    "source_format": "FP11+FES1",
+    "source_selector_bytes": 385,
+    "target_code": 2
+  },
+  "passed": true,
+  "promotable": false,
+  "promotion_eligible": false,
+  "proof_kind": "fp11_selector_reencoded_runtime_adapter_parse_proof.v1",
+  "proof_scope": "score_affecting_fp11_selector_payload_changed_and_reparsed",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_id": "repair_family_fp11_selector_payload_mutation_v1.receiver.v1",
+  "receiver_contract_kind": "repair_family_fp11_selector_payload_mutation_runtime_parse",
+  "receiver_contract_satisfied": true,
+  "runtime_consumption_probe": {
+    "archive_zip_readable": true,
+    "candidate_member_sha256": "43168d7c5f67e15e1c20928dc8e991f97832ab50d19e83c8009be72d4b77f087",
+    "member_payload_changed": true,
+    "passed": true,
+    "schema": "fp11_selector_payload_parse_probe.v1",
+    "selected_member_name": "x",
+    "source_member_sha256": "282dd2060d129b6b1404c617fa578cc9a39dee3ab639518748943fac232814c6"
+  },
+  "runtime_consumption_proof_passed": true,
+  "schema": "repair_family_archive_payload_mutation_runtime_consumption_proof.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "selected_member_name": "x",
+  "source_archive": {
+    "bytes": 178653,
+    "path": "experiments/results/pr101_frame_exploit_selector_all_none_control_20260514T1855Z_codex/archive.zip",
+    "sha256": "ebacec483e04402b1f1810cc5f3672bb291a613ab232790ee9137714889f28ba"
+  },
+  "source_member": {
+    "bytes": 178553,
+    "name": "x",
+    "sha256": "282dd2060d129b6b1404c617fa578cc9a39dee3ab639518748943fac232814c6",
+    "zip_compressed_bytes": 178553,
+    "zip_compression_method": 0
+  },
+  "target_kind": "repair_family_fp11_selector_payload_mutation_v1"
+}

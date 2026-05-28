@@ -1,0 +1,69 @@
+{
+  "byte_closed_candidate_emitted": true,
+  "candidate_archive": {
+    "bytes": 178507,
+    "path": "experiments/results/pr101_frame_exploit_selector_fec8_static_second_order_k16_clean_20260526_codex/archive.zip",
+    "sha256": "b44da5d54d34ce094c8fca7a37172b9ea6546d8a56eb960afa86252f56d11844"
+  },
+  "candidate_chain_id": "live_fec8_chain",
+  "candidate_chain_ids": [
+    "live_fec8_chain"
+  ],
+  "charged_bits_changed": false,
+  "component_response_replay": {
+    "charged_bits_changed": false,
+    "component_response_terms": {
+      "combined_delta_score_units": -0.001,
+      "segnet_delta_score_units": -0.001
+    },
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "gpu_launched": false,
+    "local_mlx_custody_paths": [],
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "score_affecting_payload_changed": false,
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false
+  },
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "family_id": "segnet_class_region_waterfill",
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "gpu_launched": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "readiness_blockers": [],
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_satisfied": false,
+  "receiver_verification": {
+    "charged_bits_changed": false,
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "gpu_launched": false,
+    "local_mlx_custody_paths": [],
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "score_affecting_payload_changed": false,
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false
+  },
+  "schema": "repair_campaign_family_materializer_manifest.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "typed_response_id": "live_fec8_segnet_region"
+}
