@@ -42,6 +42,7 @@ from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
     parse_pr95_public_archive_zip,
     partition_pr95_mlx_parameter_names,
     pixel_shuffle_2x_nhwc,
+    pr95_mlx_conv2d_accumulation_overrides_from_items,
     pr95_mlx_conv2d_accumulation_overrides_from_preset,
     pr95_mlx_parameter_shape_records,
     pytorch_state_dict_from_mlx,
@@ -212,6 +213,30 @@ def test_decoder_supports_per_layer_conv2d_accumulation_overrides() -> None:
     assert model.blocks[0].conv.conv2d_accumulation_mode == "optimized"
     assert model.rgb_0.conv2d_accumulation_mode == "kahan_fp32"
     assert model.rgb_1.conv2d_accumulation_mode == "kahan_fp32"
+
+
+def test_conv2d_accumulation_override_items_extend_presets() -> None:
+    assert pr95_mlx_conv2d_accumulation_overrides_from_preset(
+        "blocks01_kahan_fp32"
+    ) == {
+        "blocks.0.conv": "kahan_fp32",
+        "blocks.0.skip_conv": "kahan_fp32",
+        "blocks.1.conv": "kahan_fp32",
+        "blocks.1.skip_conv": "kahan_fp32",
+    }
+
+    overrides = pr95_mlx_conv2d_accumulation_overrides_from_items(
+        ["blocks.0.conv=fixed_fp32", "rgb_1=optimized"],
+        base=pr95_mlx_conv2d_accumulation_overrides_from_preset(
+            "rgb_heads_kahan_fp32"
+        ),
+    )
+
+    assert overrides == {
+        "blocks.0.conv": "fixed_fp32",
+        "rgb_0": "kahan_fp32",
+        "rgb_1": "optimized",
+    }
 
 
 def test_public_pr95_pytorch_state_load_matches_mlx_forward() -> None:

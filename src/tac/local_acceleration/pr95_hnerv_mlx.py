@@ -101,6 +101,14 @@ PR95_MLX_CONV2D_ACCUMULATION_OVERRIDE_PRESETS: dict[str, dict[str, str]] = {
         "kahan_fp32",
     ),
     "blocks_kahan_fp32": dict.fromkeys(_PR95_MLX_BLOCK_CONV_NAMES, "kahan_fp32"),
+    "blocks01_kahan_fp32": dict.fromkeys(
+        tuple(
+            name
+            for i in range(2)
+            for name in (f"blocks.{i}.conv", f"blocks.{i}.skip_conv")
+        ),
+        "kahan_fp32",
+    ),
     "blocks_refine_kahan_fp32": dict.fromkeys(
         (*_PR95_MLX_BLOCK_CONV_NAMES, *_PR95_MLX_REFINE_CONV_NAMES),
         "kahan_fp32",
@@ -784,6 +792,26 @@ def pr95_mlx_conv2d_accumulation_overrides_from_preset(preset: str) -> dict[str,
             f"{tuple(PR95_MLX_CONV2D_ACCUMULATION_OVERRIDE_PRESETS)}, got {preset!r}"
         )
     return dict(PR95_MLX_CONV2D_ACCUMULATION_OVERRIDE_PRESETS[normalized])
+
+
+def pr95_mlx_conv2d_accumulation_overrides_from_items(
+    items: Sequence[str] | None,
+    *,
+    base: Mapping[str, str] | None = None,
+) -> dict[str, str]:
+    overrides = validate_pr95_mlx_conv2d_accumulation_overrides(base)
+    for raw_item in items or ():
+        item = str(raw_item).strip()
+        name, sep, mode = item.partition("=")
+        if not item or sep != "=" or not name.strip() or not mode.strip():
+            raise ValueError(
+                "conv2d accumulation override items must use '<module>=<mode>', "
+                f"got {raw_item!r}"
+            )
+        overrides[name.strip()] = validate_pr95_mlx_conv2d_accumulation_mode(
+            mode.strip()
+        )
+    return overrides
 
 
 def pixel_shuffle_2x_nhwc(x: Any, *, upscale_factor: int = 2) -> Any:
@@ -2843,6 +2871,7 @@ __all__ = [
     "partition_pr95_mlx_parameter_names",
     "pixel_shuffle_2x_nhwc",
     "pr95_default_optimizer_descriptor_id",
+    "pr95_mlx_conv2d_accumulation_overrides_from_items",
     "pr95_mlx_conv2d_accumulation_overrides_from_preset",
     "pr95_mlx_optimizer_config_from_descriptor",
     "pr95_mlx_optimizer_descriptor_row",
