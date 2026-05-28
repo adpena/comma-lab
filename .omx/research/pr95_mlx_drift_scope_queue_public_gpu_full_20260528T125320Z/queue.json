@@ -1,0 +1,126 @@
+{
+  "controls": {
+    "local_first": true,
+    "max_concurrency": {
+      "local_cpu": 1,
+      "local_mlx": 1
+    },
+    "mode": "running"
+  },
+  "experiments": [
+    {
+      "id": "mlx_drift_scope_0000_pr95_hnerv_mlx_conv2d_scope_contest_video_overfit_gpu",
+      "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+      "metadata": {
+        "archive_family": "hnerv_pr95",
+        "candidate_family": "hnerv_pr95_public_archive",
+        "candidate_generation_only": true,
+        "candidate_id": "pr95_hnerv_mlx_conv2d_scope_contest_video_overfit_gpu",
+        "dispatch_packet_ready": false,
+        "expected_output_schema": "pr95_hnerv_mlx_conv2d_drift_scope_search.v1",
+        "generalizable_against_videos": false,
+        "generated_at_utc": "2026-05-28T12:53:20Z",
+        "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+        "optimization_profile": "contest_video_overfit",
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "requires_exact_eval_before_promotion": true,
+        "schema": "mlx_drift_scope_search_execution_queue_plan.v1",
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_plan_schema": "local_mlx_drift_scope_search_plan.v1",
+        "target_video": "upstream/videos/0.mkv",
+        "tool": "comma_lab.scheduler.mlx_drift_scope_queue",
+        "video_scope": "contest_single_video"
+      },
+      "priority": 10,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_pr95_mlx_conv2d_drift_scope_search.py",
+            "--archive-zip",
+            "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/archive.zip",
+            "--public-pr95-source-model",
+            "experiments/results/public_pr_intake_full/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py",
+            "--output-dir",
+            ".omx/research/pr95_mlx_drift_scope_queue_public_gpu_full_20260528T125320Z",
+            "--mlx-device",
+            "gpu",
+            "--conv2d-accumulation-mode",
+            "optimized",
+            "--atol-max",
+            "0.01",
+            "--atol-mean",
+            "0.001",
+            "--cliff-threshold",
+            "0.001",
+            "--block-count",
+            "6",
+            "--optimization-profile",
+            "contest_video_overfit",
+            "--target-video",
+            "upstream/videos/0.mkv",
+            "--archive-family",
+            "hnerv_pr95",
+            "--candidate-family",
+            "hnerv_pr95_public_archive",
+            "--allow-existing-output-dir"
+          ],
+          "id": "run_mlx_drift_scope_search",
+          "kind": "command",
+          "postconditions": [
+            {
+              "path": ".omx/research/pr95_mlx_drift_scope_queue_public_gpu_full_20260528T125320Z/scope_search_summary.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_conv2d_drift_scope_search.v1",
+              "key": "schema",
+              "path": ".omx/research/pr95_mlx_drift_scope_queue_public_gpu_full_20260528T125320Z/scope_search_summary.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "exact_readiness_refusal.ready",
+              "path": ".omx/research/pr95_mlx_drift_scope_queue_public_gpu_full_20260528T125320Z/scope_search_summary.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/pr95_mlx_drift_scope_queue_public_gpu_full_20260528T125320Z/scope_search_summary.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": "contest_video_overfit",
+              "key": "optimization_target.profile",
+              "path": ".omx/research/pr95_mlx_drift_scope_queue_public_gpu_full_20260528T125320Z/scope_search_summary.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_mlx"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/pr95_mlx_drift_scope_queue_public_gpu_full_20260528T125320Z/scope_search_summary.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 512,
+            "recursive": true
+          },
+          "timeout_seconds": 1800
+        }
+      ],
+      "tags": []
+    }
+  ],
+  "queue_id": "pr95_mlx_drift_scope_public_gpu_full_20260528T125320Z",
+  "schema": "experiment_queue.v1"
+}

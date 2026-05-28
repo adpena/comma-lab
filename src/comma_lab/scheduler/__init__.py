@@ -138,6 +138,12 @@ from .materializer_exact_eval_dispatch_plan import (
     DISPATCH_PLAN_SCHEMA,
     build_materializer_exact_eval_dispatch_plan,
 )
+from .mlx_drift_scope_harvest import (
+    MLX_DRIFT_SCOPE_RECOMMENDATION_BATCH_SCHEMA,
+    MLX_DRIFT_SCOPE_RECOMMENDATION_SCHEMA,
+    build_mlx_drift_scope_recommendation,
+    build_mlx_drift_scope_recommendation_batch,
+)
 from .mlx_drift_scope_queue import (
     MLX_DRIFT_SCOPE_PLAN_SCHEMA,
     MLX_DRIFT_SCOPE_QUEUE_SCHEMA,
@@ -298,6 +304,8 @@ __all__ = [
     "MLX_ACQUISITION_FOLLOWUP_SCHEMA",
     "MLX_DRIFT_SCOPE_PLAN_SCHEMA",
     "MLX_DRIFT_SCOPE_QUEUE_SCHEMA",
+    "MLX_DRIFT_SCOPE_RECOMMENDATION_BATCH_SCHEMA",
+    "MLX_DRIFT_SCOPE_RECOMMENDATION_SCHEMA",
     "MLX_EXECUTION_QUEUE_SCHEMA",
     "MLX_LEARNED_SWEEP_AUTOPILOT_BATCH_QUEUE_SCHEMA",
     "MLX_LEARNED_SWEEP_AUTOPILOT_QUEUE_SCHEMA",
@@ -382,6 +390,8 @@ __all__ = [
     "build_materializer_exact_eval_consumer_queue",
     "build_materializer_exact_eval_dispatch_plan",
     "build_materializer_execution_queue",
+    "build_mlx_drift_scope_recommendation",
+    "build_mlx_drift_scope_recommendation_batch",
     "build_mlx_drift_scope_search_queue",
     "build_mlx_learned_sweep_autopilot_batch_queue",
     "build_mlx_learned_sweep_autopilot_queue",
