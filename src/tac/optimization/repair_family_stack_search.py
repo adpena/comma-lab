@@ -349,6 +349,18 @@ def _stack_row(
         "archive_entropy_substrate_probed_substrates": _string_list(
             archive_entropy_coverage.get("probed_substrates")
         ),
+        "archive_entropy_probed_zero_order_savings_bytes": _safe_int(
+            archive_entropy_coverage.get("probed_entropy_estimated_zero_order_savings_bytes")
+        ),
+        "archive_entropy_anti_pattern_protection_count": _safe_int(
+            archive_entropy_coverage.get("anti_pattern_protection_count")
+        ),
+        "archive_entropy_anti_pattern_ids": ordered_unique(
+            str(protection.get("anti_pattern_id") or "").strip()
+            for protection in archive_entropy_coverage.get("anti_pattern_protections") or []
+            if isinstance(protection, Mapping)
+            and str(protection.get("anti_pattern_id") or "").strip()
+        ),
         "archive_entropy_substrate_blockers": archive_entropy_blockers,
         "byte_closed_candidate_emitted": report.get("byte_closed_candidate_emitted") is True,
         "candidate_archive_materialized": (report.get("candidate_archive_materialized") is True),
@@ -1913,6 +1925,19 @@ def plan_repair_family_stack_search(
             len(_string_list(row.get("archive_entropy_substrate_probed_substrates")))
             for row in rows
         ),
+        "archive_entropy_probed_zero_order_savings_bytes": sum(
+            _safe_int(row.get("archive_entropy_probed_zero_order_savings_bytes"))
+            for row in rows
+        ),
+        "archive_entropy_anti_pattern_ids": ordered_unique(
+            anti_pattern_id
+            for row in rows
+            for anti_pattern_id in _string_list(row.get("archive_entropy_anti_pattern_ids"))
+        ),
+        "archive_entropy_anti_pattern_protection_count": sum(
+            _safe_int(row.get("archive_entropy_anti_pattern_protection_count"))
+            for row in rows
+        ),
         "measured_mlx_posterior_budget_routing_updates": (
             measured_mlx_budget_updates
         ),
@@ -2308,6 +2333,12 @@ def _learning_signal_for_stack_row(row: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "archive_entropy_substrate_probed_substrates": _string_list(
             row.get("archive_entropy_substrate_probed_substrates")
+        ),
+        "archive_entropy_probed_zero_order_savings_bytes": _safe_int(
+            row.get("archive_entropy_probed_zero_order_savings_bytes")
+        ),
+        "archive_entropy_anti_pattern_ids": _string_list(
+            row.get("archive_entropy_anti_pattern_ids")
         ),
         "archive_entropy_substrate_blockers": _string_list(
             row.get("archive_entropy_substrate_blockers")

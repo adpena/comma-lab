@@ -1361,6 +1361,18 @@ def _build_summary(
             "archive_entropy_substrate_probed_substrates",
             [],
         ),
+        "archive_entropy_probed_zero_order_savings_bytes": final_stack_plan.get(
+            "archive_entropy_probed_zero_order_savings_bytes",
+            0,
+        ),
+        "archive_entropy_anti_pattern_protection_count": final_stack_plan.get(
+            "archive_entropy_anti_pattern_protection_count",
+            0,
+        ),
+        "archive_entropy_anti_pattern_ids": final_stack_plan.get(
+            "archive_entropy_anti_pattern_ids",
+            [],
+        ),
         "top_fractal_marginal_surface_cells": fractal_cells[:8],
         "stack_acquisition_frontier_count": final_stack_plan.get(
             "stack_acquisition_frontier_count",

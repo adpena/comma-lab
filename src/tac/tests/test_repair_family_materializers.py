@@ -608,6 +608,22 @@ def test_byte_transform_executor_mutates_fec6_selector_payload_when_detected(
     assert "selector_streams" in coverage["materialized_substrates"]
     assert "huffman_coding" in coverage["materialized_substrates"]
     assert coverage["probed_substrates"] == ["range_coding", "ans_coding"]
+    assert coverage["probed_entropy_estimated_zero_order_savings_bytes"] >= 0
+    anti_pattern_ids = {
+        protection["anti_pattern_id"]
+        for protection in coverage["anti_pattern_protections"]
+    }
+    assert "proxy_or_advisory_probe_masquerades_as_score_authority_v1" in anti_pattern_ids
+    assert "probe_only_side_report_orphaned_from_optimizer_v1" in anti_pattern_ids
+    assert "zero_order_entropy_estimate_promoted_as_materialized_savings_v1" in anti_pattern_ids
+    assert coverage["denied_uses"] == [
+        "score_claim",
+        "promotion",
+        "rank_or_kill",
+        "budget_spend",
+        "exact_eval_dispatch",
+        "archive_submission",
+    ]
     rows_by_substrate = {
         row["substrate"]: row for row in coverage["rows"]
     }
