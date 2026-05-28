@@ -29,6 +29,7 @@ from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
     trace_pr95_public_archive_decoder_with_pytorch,
 )
 
+DEFAULT_CONTEST_VIDEO = REPO_ROOT / "upstream/videos/0.mkv"
 DEFAULT_PUBLIC_PR95_SOURCE_MODEL = (
     REPO_ROOT
     / "experiments/results/public_pr_intake_full/public_pr95_intake_20260505_auto"
@@ -40,6 +41,13 @@ DEFAULT_PUBLIC_PR95_ARCHIVE = (
     / "archive.zip"
 )
 SCOPE_SEARCH_SCHEMA = "pr95_hnerv_mlx_conv2d_drift_scope_search.v1"
+SCOPE_SEARCH_PLAN_SCHEMA = "local_mlx_drift_scope_search_plan.v1"
+OPTIMIZATION_PROFILES = (
+    "contest_video_overfit",
+    "single_video",
+    "video_corpus",
+    "archive_generalization",
+)
 
 
 def _rel(path: Path) -> str:
@@ -143,6 +151,118 @@ def _candidate_row(
     }
 
 
+def _command_for_plan(args: argparse.Namespace, *, output_dir: Path) -> list[str]:
+    command = [
+        ".venv/bin/python",
+        "tools/run_pr95_mlx_conv2d_drift_scope_search.py",
+        "--archive-zip",
+        _rel(args.archive_zip),
+        "--public-pr95-source-model",
+        _rel(args.public_pr95_source_model),
+        "--output-dir",
+        _rel(output_dir),
+        "--mlx-device",
+        args.mlx_device,
+        "--conv2d-accumulation-mode",
+        args.conv2d_accumulation_mode,
+        "--atol-max",
+        str(args.atol_max),
+        "--atol-mean",
+        str(args.atol_mean),
+        "--cliff-threshold",
+        str(args.cliff_threshold),
+        "--block-count",
+        str(args.block_count),
+        "--optimization-profile",
+        args.optimization_profile,
+        "--target-video",
+        _rel(args.target_video),
+        "--archive-family",
+        args.archive_family,
+        "--candidate-family",
+        args.candidate_family,
+        "--allow-existing-output-dir",
+    ]
+    for sample_index in args.sample_index or []:
+        command.extend(["--sample-index", str(sample_index)])
+    if args.no_presets:
+        command.append("--no-presets")
+    if args.no_single_blocks:
+        command.append("--no-single-blocks")
+    if args.no_prefix_blocks:
+        command.append("--no-prefix-blocks")
+    if args.write_candidate_artifacts:
+        command.append("--write-candidate-artifacts")
+    return command
+
+
+def _optimization_target(args: argparse.Namespace) -> dict[str, Any]:
+    target_video = args.target_video.resolve()
+    return {
+        "schema": "local_video_archive_optimization_target.v1",
+        "profile": args.optimization_profile,
+        "target_video": _rel(target_video),
+        "target_video_exists": target_video.exists(),
+        "video_scope": (
+            "contest_single_video"
+            if args.optimization_profile == "contest_video_overfit"
+            else args.optimization_profile
+        ),
+        "contest_overfit_allowed": args.optimization_profile == "contest_video_overfit",
+        "generalizable_against_videos": args.optimization_profile
+        in {"single_video", "video_corpus", "archive_generalization"},
+        "archive_family": args.archive_family,
+        "candidate_family": args.candidate_family,
+        "portable_to": [
+            "other_contest_video_runs",
+            "comma2k19_or_video_corpus_lanes",
+            "hnerv_variants",
+            "boostnerv_bolt_ons",
+            "nerv_family",
+            "non_nerv_archives_with_plan_adapters",
+        ],
+    }
+
+
+def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]:
+    output_manifest = output_dir / "scope_search_summary.json"
+    execution = {
+        "schema": "local_mlx_drift_scope_search_recommended_execution.v1",
+        "tool": "tools/run_pr95_mlx_conv2d_drift_scope_search.py",
+        "mlx_device": args.mlx_device,
+        "device": args.mlx_device,
+        "resource_kind": "local_mlx" if args.mlx_device == "gpu" else "local_cpu",
+        "output_manifest": _rel(output_manifest),
+        "output_dir": _rel(output_dir),
+        "expected_output_schema": SCOPE_SEARCH_SCHEMA,
+        "python_command_args": _command_for_plan(args, output_dir=output_dir),
+        **FALSE_AUTHORITY,
+    }
+    return {
+        "schema": SCOPE_SEARCH_PLAN_SCHEMA,
+        "candidate_id": (
+            f"pr95_hnerv_mlx_conv2d_scope_{args.optimization_profile}_{args.mlx_device}"
+        ),
+        "lane_id": LANE_ID,
+        "archive_family": args.archive_family,
+        "candidate_family": args.candidate_family,
+        "optimization_target": _optimization_target(args),
+        "expected_output_schema": SCOPE_SEARCH_SCHEMA,
+        "recommended_execution": execution,
+        "authority_contract": {
+            "score_claim": False,
+            "quality_authority": False,
+            "promotion_authority": False,
+            "dispatch_authority": False,
+            "score_authority_requires": [
+                "full_frame_inflate_parity",
+                "contest_cpu_or_cuda_auth_eval",
+            ],
+        },
+        **FALSE_AUTHORITY,
+    }
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--archive-zip", type=Path, default=DEFAULT_PUBLIC_PR95_ARCHIVE)
@@ -168,6 +288,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--no-prefix-blocks", action="store_true")
     parser.add_argument("--write-candidate-artifacts", action="store_true")
     parser.add_argument("--allow-existing-output-dir", action="store_true")
+    parser.add_argument(
+        "--optimization-profile",
+        choices=OPTIMIZATION_PROFILES,
+        default="contest_video_overfit",
+        help="Declare whether this run is overfitting the contest video or generalizing.",
+    )
+    parser.add_argument("--target-video", type=Path, default=DEFAULT_CONTEST_VIDEO)
+    parser.add_argument("--archive-family", default="hnerv_pr95")
+    parser.add_argument("--candidate-family", default="hnerv_pr95_public_archive")
+    parser.add_argument("--plan-only", action="store_true")
+    parser.add_argument("--plan-output", type=Path)
     return parser.parse_args(argv)
 
 
@@ -180,6 +311,24 @@ def main(argv: list[str] | None = None) -> int:
             "(pass --allow-existing-output-dir to append/overwrite manifests)"
         )
     output_dir.mkdir(parents=True, exist_ok=True)
+    if args.plan_only:
+        plan_path = (args.plan_output or output_dir / "plan.json").resolve()
+        plan = _build_plan(args, output_dir=output_dir)
+        _write_json(plan_path, plan)
+        print(
+            json.dumps(
+                {
+                    "ok": True,
+                    "schema": "local_mlx_drift_scope_search_plan_summary.v1",
+                    "plan": _rel(plan_path),
+                    "output_manifest": plan["recommended_execution"]["output_manifest"],
+                    **FALSE_AUTHORITY,
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return 0
 
     archive_zip = args.archive_zip.resolve()
     source_model = args.public_pr95_source_model.resolve()
@@ -241,6 +390,9 @@ def main(argv: list[str] | None = None) -> int:
         "source_pr": 95,
         "submission": "hnerv_muon",
         "evidence_grade": "[macOS-MLX research-signal]",
+        "optimization_target": _optimization_target(args),
+        "archive_family": args.archive_family,
+        "candidate_family": args.candidate_family,
         "archive_zip": _rel(archive_zip),
         "archive_sha256": _sha256_file(archive_zip),
         "public_pr95_source_model": _rel(source_model),

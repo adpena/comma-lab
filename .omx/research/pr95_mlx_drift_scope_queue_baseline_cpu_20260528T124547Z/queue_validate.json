@@ -1,0 +1,20 @@
+{
+  "auto_parallelism": {
+    "local_only": {
+      "max_parallel": 1,
+      "resource_limits": {
+        "local_cpu": 1
+      }
+    },
+    "with_cloud": {
+      "max_parallel": 1,
+      "resource_limits": {
+        "local_cpu": 1
+      }
+    }
+  },
+  "experiment_count": 1,
+  "queue_id": "pr95_mlx_drift_scope_baseline_cpu_20260528T124547Z",
+  "step_count": 1,
+  "valid": true
+}
