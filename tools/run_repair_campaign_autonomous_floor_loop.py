@@ -36,6 +36,10 @@ from tac.optimization.repair_campaign_posterior import (  # noqa: E402
     DEFAULT_REPAIR_CAMPAIGN_STACKABILITY_POSTERIOR_LOCK_PATH,
     append_repair_campaign_blocked_learning_signal_report,
 )
+from tac.optimization.repair_entropy_stage_chain_executor import (  # noqa: E402
+    REPAIR_ENTROPY_STAGE_CHAIN_EXECUTION_BUNDLE_SCHEMA,
+    build_repair_entropy_stage_chain_execution_bundle,
+)
 from tac.optimization.repair_family_byte_transform_executor import (  # noqa: E402
     REPAIR_FAMILY_BYTE_TRANSFORM_EXECUTION_REPORT_SCHEMA,
     SUPPORTED_REPAIR_BYTE_TRANSFORM_FAMILIES,
@@ -1223,6 +1227,19 @@ def _build_summary(
     entropy_stage_materializer_work_orders_path = (
         output_dir / "repair_family_entropy_stage_materializer_work_orders.json"
     )
+    entropy_stage_chain_execution_bundle = (
+        build_repair_entropy_stage_chain_execution_bundle(
+            execution_reports=reports,
+            execution_report_paths=tuple(_repo_rel(path) for path in report_paths),
+            work_order_bundle=entropy_stage_materializer_work_orders,
+            output_dir=output_dir / "repair_family_entropy_stage_chain_execution",
+            repo_root=REPO_ROOT,
+            allow_overwrite=overwrite_artifacts,
+        )
+    )
+    entropy_stage_chain_execution_bundle_path = (
+        output_dir / "repair_family_entropy_stage_chain_execution_bundle.json"
+    )
     summary = {
         "schema": REPAIR_CAMPAIGN_AUTONOMOUS_FLOOR_LOOP_SCHEMA,
         "materialization_queue_path": _repo_rel(queue_path),
@@ -1273,6 +1290,28 @@ def _build_summary(
         ),
         "entropy_stage_materializer_work_orders": (
             entropy_stage_materializer_work_orders
+        ),
+        "entropy_stage_chain_execution_bundle_path": _repo_rel(
+            entropy_stage_chain_execution_bundle_path
+        ),
+        "entropy_stage_chain_execution_bundle_schema": (
+            REPAIR_ENTROPY_STAGE_CHAIN_EXECUTION_BUNDLE_SCHEMA
+        ),
+        "entropy_stage_chain_execution_bundle": (
+            entropy_stage_chain_execution_bundle
+        ),
+        "entropy_stage_chain_count": (
+            entropy_stage_chain_execution_bundle["chain_count"]
+        ),
+        "entropy_stage_chain_materialized_candidate_count": (
+            entropy_stage_chain_execution_bundle[
+                "materialized_chain_candidate_count"
+            ]
+        ),
+        "entropy_stage_chain_runtime_consumption_proof_ready_count": (
+            entropy_stage_chain_execution_bundle[
+                "runtime_consumption_proof_ready_count"
+            ]
         ),
         "frontier_executable_selection_consumed": any(
             isinstance(item, dict)
@@ -1329,12 +1368,14 @@ def _build_summary(
             "frontier_paths_filter_executable_iteration_queues_when_available",
             "frontier_selected_queues_default_to_archive_bound_candidate_emission",
             "entropy_stage_chain_compiler_emits_materializer_work_orders",
+            "entropy_stage_chain_compiler_executes_composed_archive_candidates",
             "precise_blocker_report_names_next_unblocked_action",
         ],
         "blockers": ordered_unique(
             [
                 "contest_cpu_or_cuda_exact_axis_payload_required_before_score",
                 "lane_dispatch_claim_required_before_exact_eval",
+                *_string_list(entropy_stage_chain_execution_bundle.get("blockers")),
                 *(
                     []
                     if final_stack_plan.get("execution_report_count")
@@ -1403,10 +1444,17 @@ def main(argv: list[str] | None = None) -> int:
         entropy_stage_materializer_work_orders_path = (
             output_dir / "repair_family_entropy_stage_materializer_work_orders.json"
         )
+        entropy_stage_chain_execution_bundle_path = (
+            output_dir / "repair_family_entropy_stage_chain_execution_bundle.json"
+        )
         for path, payload in (
             (
                 entropy_stage_materializer_work_orders_path,
                 summary["entropy_stage_materializer_work_orders"],
+            ),
+            (
+                entropy_stage_chain_execution_bundle_path,
+                summary["entropy_stage_chain_execution_bundle"],
             ),
             (
                 exact_ready_source_queue_path,
@@ -1537,6 +1585,12 @@ def main(argv: list[str] | None = None) -> int:
                 ],
                 "entropy_stage_materializer_work_order_count": summary[
                     "entropy_stage_materializer_work_order_count"
+                ],
+                "entropy_stage_chain_count": summary[
+                    "entropy_stage_chain_count"
+                ],
+                "entropy_stage_chain_materialized_candidate_count": summary[
+                    "entropy_stage_chain_materialized_candidate_count"
                 ],
                 "exact_dispatch_preclaim_gate_count": summary[
                     "exact_dispatch_preclaim_gate_count"

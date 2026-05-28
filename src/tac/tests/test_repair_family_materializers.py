@@ -28,6 +28,10 @@ from tac.optimization.repair_campaign_scorer import (
     build_repair_campaign_posterior_prior_summary,
     score_repair_campaign,
 )
+from tac.optimization.repair_entropy_stage_chain_executor import (
+    REPAIR_ENTROPY_STAGE_CHAIN_EXECUTION_BUNDLE_SCHEMA,
+    build_repair_entropy_stage_chain_execution_bundle,
+)
 from tac.optimization.repair_family_byte_transform_executor import (
     FEC5_FIXED_K8_CODE_BITS,
     FEC6_FIXED_K16_CODE_BITS,
@@ -846,6 +850,139 @@ def test_repair_family_byte_transform_cli_writes_report_and_bundle(
     assert report["schema"] == REPAIR_FAMILY_BYTE_TRANSFORM_EXECUTION_REPORT_SCHEMA
     assert bundle["schema"] == REPAIR_FAMILY_BYTE_TRANSFORM_REPLAY_BUNDLE_SCHEMA
     assert report["score_claim"] is False
+
+
+def test_entropy_stage_chain_executor_composes_selected_archive_stages(
+    tmp_path: Path,
+) -> None:
+    source_archive = _write_zip(
+        tmp_path / "chain_source.zip",
+        {"x": _fec6_selector_payload([0, 2, 7, 13, 0, 2, 7, 13, 0, 2, 7, 13])},
+    )
+    source_sha = hashlib.sha256(source_archive.read_bytes()).hexdigest()
+
+    reports: list[dict[str, object]] = []
+    report_paths: list[Path] = []
+    for index, (family_id, typed_response_id, stage_order) in enumerate(
+        (
+            ("segnet_class_region_waterfill", "segnet_region_chain_ready", 10),
+            ("per_region_selector_codec", "selector_codec_chain_ready", 30),
+        ),
+        start=1,
+    ):
+        manifest = {
+            "schema": REPAIR_CAMPAIGN_FAMILY_MATERIALIZER_MANIFEST_SCHEMA,
+            "materializer_id": f"repair_family_materializer:{family_id}",
+            "target_kind": family_id,
+            "family_id": family_id,
+            "typed_response_id": typed_response_id,
+            "candidate_chain_id": f"{family_id}_chain",
+            "candidate_chain_ids": [f"{family_id}_chain"],
+            "repair_budget_candidate_chain_id": f"{family_id}_chain",
+            "repair_budget_candidate_chain_ids": [f"{family_id}_chain"],
+            "entropy_position_label": (
+                "selector_codec_entropy"
+                if family_id == "per_region_selector_codec"
+                else "before_entropy_coder_distribution_shaping"
+            ),
+            "active_entropy_stage": {
+                "order": stage_order,
+                "stage": (
+                    "selector_codec_entropy"
+                    if family_id == "per_region_selector_codec"
+                    else "before_entropy_coder_distribution_shaping"
+                ),
+            },
+            "fractal_optimization_scope": {
+                "active_levels": ["bit", "byte", "region", "frame", "pair"],
+                "declared_levels": ["bit", "byte", "region", "frame", "pair"],
+            },
+            "component_response_replayed": True,
+            "component_response_replay": {
+                "replayed": True,
+                "axis_tag": "[macOS-MLX research-signal]",
+                "component_response_terms": {
+                    "combined_delta_score_units": -0.001 * index,
+                    "segnet_delta_score_units": -0.001 * index,
+                    "posenet_delta_score_units": 0.0,
+                    **_false_authority(),
+                },
+                **_false_authority(),
+            },
+            "receiver_contract_satisfied": False,
+            "candidate_archive": {
+                "path": str(source_archive),
+                "sha256": source_sha,
+                "bytes": source_archive.stat().st_size,
+            },
+            "byte_closed_candidate_emitted": True,
+            "readiness_blockers": [],
+            **_false_authority(),
+        }
+        manifest_path = _write_json(tmp_path / f"{family_id}_manifest.json", manifest)
+        report, _bundle = build_repair_family_byte_transform_execution_report(
+            family_materializer_manifest=manifest,
+            family_materializer_manifest_path=manifest_path,
+            output_dir=tmp_path / f"{family_id}_leaf_transform",
+            replay_argv=["python", "tools/run_repair_family_byte_transform_executor.py"],
+            invocation_argv=["pytest"],
+            repo_root=tmp_path,
+            allow_overwrite=False,
+        )
+        report_path = _write_json(tmp_path / f"{family_id}_report.json", report)
+        reports.append(report)
+        report_paths.append(report_path)
+
+    work_order_bundle = {
+        "schema": "repair_campaign_entropy_stage_materializer_work_order_bundle.v1",
+        "stage_order": ["before_coder", "coder_boundary", "after_coder"],
+        "work_order_count": 2,
+        "work_orders": [
+            {
+                "schema": "repair_campaign_entropy_stage_materializer_work_order.v1",
+                "compiler_stage": "before_coder",
+                "stage_materialization_order": 1,
+                "family_order": ["segnet_class_region_waterfill"],
+                "typed_response_order": ["segnet_region_chain_ready"],
+                **_false_authority(),
+            },
+            {
+                "schema": "repair_campaign_entropy_stage_materializer_work_order.v1",
+                "compiler_stage": "coder_boundary",
+                "stage_materialization_order": 2,
+                "family_order": ["per_region_selector_codec"],
+                "typed_response_order": ["selector_codec_chain_ready"],
+                **_false_authority(),
+            },
+        ],
+        **_false_authority(),
+    }
+
+    chain_bundle = build_repair_entropy_stage_chain_execution_bundle(
+        execution_reports=reports,
+        execution_report_paths=report_paths,
+        work_order_bundle=work_order_bundle,
+        output_dir=tmp_path / "entropy_stage_chain",
+        repo_root=tmp_path,
+        allow_overwrite=False,
+    )
+
+    assert chain_bundle["schema"] == REPAIR_ENTROPY_STAGE_CHAIN_EXECUTION_BUNDLE_SCHEMA
+    assert chain_bundle["chain_count"] == 1
+    assert chain_bundle["materialized_chain_candidate_count"] == 1
+    chain_report = chain_bundle["chain_reports"][0]
+    assert chain_report["stage_count"] == 2
+    assert chain_report["planned_stage_count"] == 2
+    assert [stage["family_id"] for stage in chain_report["stages"]] == [
+        "segnet_class_region_waterfill",
+        "per_region_selector_codec",
+    ]
+    assert chain_report["archive_bound_candidate_emitted"] is True
+    assert chain_report["runtime_consumption_proof_ready"] is True
+    final_archive = chain_report["candidate_archive"]
+    assert final_archive["sha256"] != source_sha
+    assert (tmp_path / final_archive["path"]).is_file()
+    assert chain_bundle["ready_for_exact_eval_dispatch"] is False
 
 
 @pytest.mark.parametrize(
