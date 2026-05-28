@@ -140,6 +140,14 @@ Cross-references
 """
 from __future__ import annotations
 
+from tac.dykstra_pareto_solver.anti_pattern_constraint import (
+    ANTI_PATTERN_CONSTRAINT_DUAL_KEY_PREFIX,
+    AntiPatternConstraint,
+    AntiPatternConstraintError,
+    VALID_SEVERITY_WEIGHTS as ANTI_PATTERN_VALID_SEVERITY_WEIGHTS,
+    aggregate_anti_pattern_duals,
+    severity_weight_for as anti_pattern_severity_weight_for,
+)
 from tac.dykstra_pareto_solver.polytope import (
     Polytope,
     PolytopeError,
@@ -181,6 +189,13 @@ __all__ = [
     "ParetoSolverError",
     "solve_pareto_polytope_intersection",
     "TIGHT_CONSTRAINT_LAMBDA_THRESHOLD",
+    # Layer 5 Wave N+2 anti-pattern constraint integration.
+    "AntiPatternConstraint",
+    "AntiPatternConstraintError",
+    "ANTI_PATTERN_CONSTRAINT_DUAL_KEY_PREFIX",
+    "ANTI_PATTERN_VALID_SEVERITY_WEIGHTS",
+    "aggregate_anti_pattern_duals",
+    "anti_pattern_severity_weight_for",
     # Canonical sister-module re-exports (for downstream direct use).
     "CANONICAL_3_AXIS_NAMES",
     "DYKSTRA_DEFAULT_EPSILON",

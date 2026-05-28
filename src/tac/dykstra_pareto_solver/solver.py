@@ -29,6 +29,12 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from tac.cathedral.consumer_contract import AxisDecomposition
+from tac.dykstra_pareto_solver.anti_pattern_constraint import (
+    ANTI_PATTERN_CONSTRAINT_DUAL_KEY_PREFIX,
+    AntiPatternConstraint,
+    AntiPatternConstraintError,
+    aggregate_anti_pattern_duals,
+)
 from tac.dykstra_pareto_solver.polytope import (
     CANONICAL_3_AXIS_ORDERING,
     Polytope,
@@ -80,6 +86,7 @@ class DykstraParetoSolver:
     tolerance: float = DYKSTRA_DEFAULT_EPSILON
     max_iterations: int = DYKSTRA_DEFAULT_MAX_ITERATIONS
     use_mlx: bool | None = None
+    anti_pattern_constraints: tuple[AntiPatternConstraint, ...] = ()
 
     def __post_init__(self) -> None:
         if not isinstance(self.polytope, Polytope):
@@ -94,6 +101,117 @@ class DykstraParetoSolver:
             raise ParetoSolverError(
                 f"max_iterations must be a positive int, got {self.max_iterations}"
             )
+        # Layer 5 Wave N+2: anti-pattern constraints contract per
+        # canonical anti-patterns design memo + AntiPatternConstraint.
+        if not isinstance(self.anti_pattern_constraints, tuple):
+            raise ParetoSolverError(
+                "anti_pattern_constraints must be a tuple (frozen), got "
+                f"{type(self.anti_pattern_constraints).__name__}"
+            )
+        seen_ids: set[str] = set()
+        for i, constraint in enumerate(self.anti_pattern_constraints):
+            if not isinstance(constraint, AntiPatternConstraint):
+                raise ParetoSolverError(
+                    f"anti_pattern_constraints[{i}] must be "
+                    f"AntiPatternConstraint, got {type(constraint).__name__}"
+                )
+            if constraint.anti_pattern_id in seen_ids:
+                raise ParetoSolverError(
+                    f"anti_pattern_constraints contains duplicate "
+                    f"anti_pattern_id={constraint.anti_pattern_id!r}; the "
+                    "dual_variable_key collision would corrupt the verdict's "
+                    "per_axis_dual_variables mapping"
+                )
+            seen_ids.add(constraint.anti_pattern_id)
+
+    def _apply_anti_pattern_constraints(
+        self,
+        projection_point: Mapping[str, float],
+        *,
+        feasible: bool,
+        tight_axes: list[str],
+        slack_axes: list[str],
+        per_axis_dual_variables: dict[str, float],
+        per_axis_kkt_residuals: dict[str, float],
+        per_axis_adjustment_factors: dict[str, float],
+    ) -> tuple[bool, list[str], list[str], dict[str, float], dict[str, float], dict[str, float]]:
+        """Layer 5 Wave N+2: integrate anti-pattern constraints into the verdict.
+
+        Per the canonical anti-patterns design memo §"Mathematical
+        compounding identity" + Boyd & Vandenberghe (2004) Chapter 5:
+        anti-pattern matches become ACTIVE polytope-exclusion
+        constraints. For each constraint that the projection lands
+        INSIDE the forbidden region of:
+
+          * The per-anti-pattern dual variable is added to
+            ``per_axis_dual_variables`` with key ``anti_pattern_<id>``.
+          * The constraint key joins ``tight_axes`` (the constraint is
+            binding; cathedral autopilot routes the canonical unwind
+            path per Catalog #125 hook #6).
+          * ``per_axis_kkt_residuals[anti_pattern_<id>] = dual_value``
+            so downstream consumers can audit per-constraint KKT
+            satisfaction.
+          * ``per_axis_adjustment_factors[anti_pattern_<id>] = 1.0``
+            (anti-pattern constraints do NOT add a score-axis
+            adjustment per Catalog #341 observability-only contract;
+            the bounded 1.0 satisfies the Verdict's ``[0.95, 1.05]``
+            invariant).
+
+        Per the design memo's MAX-aggregation identity: if ANY anti-
+        pattern constraint is binding (``dual > 0``), the verdict's
+        ``feasible`` flag is set to False (the polytope projection
+        landed inside a forbidden region; the candidate must apply
+        the canonical unwind path to land in a true feasible region).
+
+        Returns the updated ``(feasible, tight_axes, slack_axes,
+        per_axis_dual_variables, per_axis_kkt_residuals,
+        per_axis_adjustment_factors)`` tuple per the canonical Verdict
+        contract.
+        """
+        if not self.anti_pattern_constraints:
+            return (
+                bool(feasible),
+                list(tight_axes),
+                list(slack_axes),
+                dict(per_axis_dual_variables),
+                dict(per_axis_kkt_residuals),
+                dict(per_axis_adjustment_factors),
+            )
+
+        per_constraint_duals, _max_dual, _binding_paths = aggregate_anti_pattern_duals(
+            projection_point, self.anti_pattern_constraints
+        )
+
+        updated_feasible = bool(feasible)
+        updated_tight = list(tight_axes)
+        updated_slack = list(slack_axes)
+        updated_duals = dict(per_axis_dual_variables)
+        updated_kkt = dict(per_axis_kkt_residuals)
+        updated_factors = dict(per_axis_adjustment_factors)
+
+        for constraint in self.anti_pattern_constraints:
+            key = constraint.dual_variable_key
+            dual_value = float(per_constraint_duals.get(key, 0.0))
+            updated_duals[key] = dual_value
+            updated_kkt[key] = dual_value
+            updated_factors[key] = 1.0  # observability-only per Catalog #341
+            if dual_value > TIGHT_CONSTRAINT_LAMBDA_THRESHOLD:
+                updated_tight.append(key)
+                # Constraint is binding; feasibility revoked per the
+                # MAX-aggregation identity (one binding anti-pattern is
+                # enough to corrupt the entire stack).
+                updated_feasible = False
+            else:
+                updated_slack.append(key)
+
+        return (
+            updated_feasible,
+            updated_tight,
+            updated_slack,
+            updated_duals,
+            updated_kkt,
+            updated_factors,
+        )
 
     def solve(
         self,
@@ -230,15 +348,36 @@ class DykstraParetoSolver:
             else:
                 slack_axes.append(axis)
 
+        # Layer 5 Wave N+2: integrate anti-pattern constraints per the
+        # canonical anti-patterns design memo. Anti-pattern duals append
+        # to per_axis_dual_variables with key prefix anti_pattern_<id>;
+        # binding constraints revoke feasibility per MAX-aggregation.
+        (
+            feasible,
+            tight_axes,
+            slack_axes,
+            updated_duals,
+            updated_kkt,
+            updated_factors,
+        ) = self._apply_anti_pattern_constraints(
+            projection_point,
+            feasible=feasible,
+            tight_axes=tight_axes,
+            slack_axes=slack_axes,
+            per_axis_dual_variables=dict(sister_result.dual_variables_per_axis),
+            per_axis_kkt_residuals=dict(sister_result.kkt_residual_per_axis),
+            per_axis_adjustment_factors=dict(sister_result.adjustment_factor_per_axis),
+        )
+
         return ParetoSolverVerdict(
             candidate_id=candidate_id,
             feasible=feasible,
             projection_point=projection_point,
-            per_axis_dual_variables=dict(sister_result.dual_variables_per_axis),
+            per_axis_dual_variables=updated_duals,
             tight_constraint_axes=tuple(tight_axes),
             slack_axes=tuple(slack_axes),
-            per_axis_kkt_residuals=dict(sister_result.kkt_residual_per_axis),
-            per_axis_adjustment_factors=dict(sister_result.adjustment_factor_per_axis),
+            per_axis_kkt_residuals=updated_kkt,
+            per_axis_adjustment_factors=updated_factors,
             adjustment_factor=float(sister_result.adjustment_factor),
             convergence_residual=float(convergence_residual),
             iteration_count=int(sister_result.dykstra_iterations_to_convergence),
@@ -346,6 +485,27 @@ class DykstraParetoSolver:
         feasible = self.polytope.contains(projection_point, tolerance=self.tolerance * 10)
         converged = convergence_residual < self.tolerance or feasible
 
+        # Layer 5 Wave N+2: integrate anti-pattern constraints per the
+        # canonical anti-patterns design memo. Anti-pattern duals append
+        # to per_axis_dual_variables with key prefix anti_pattern_<id>;
+        # binding constraints revoke feasibility per MAX-aggregation.
+        (
+            feasible,
+            tight_axes,
+            slack_axes,
+            per_axis_dual_variables,
+            per_axis_kkt_residuals,
+            per_axis_factors,
+        ) = self._apply_anti_pattern_constraints(
+            projection_point,
+            feasible=bool(feasible),
+            tight_axes=tight_axes,
+            slack_axes=slack_axes,
+            per_axis_dual_variables=per_axis_dual_variables,
+            per_axis_kkt_residuals=per_axis_kkt_residuals,
+            per_axis_adjustment_factors=per_axis_factors,
+        )
+
         return ParetoSolverVerdict(
             candidate_id=candidate_id,
             feasible=bool(feasible),
@@ -377,12 +537,19 @@ def solve_pareto_polytope_intersection(
     use_mlx: bool | None = None,
     per_axis_posterior_sigma: Mapping[str, float] | None = None,
     canonical_provenance: Mapping[str, Any] | None = None,
+    anti_pattern_constraints: tuple[AntiPatternConstraint, ...] = (),
 ) -> ParetoSolverVerdict:
     """Convenience wrapper: build solver + solve in one call.
 
     Per the canonical Boyd-Vandenberghe (2004) Chapter 5 + Dykstra 1983
     alternating projections theorem: this is the canonical
     "compute Pareto polytope intersection" primitive.
+
+    Per Wave N+2 Layer 5 mandate + canonical anti-patterns design memo:
+    anti-pattern constraints become ACTIVE polytope-exclusion
+    constraints; per-anti-pattern dual variables surface in the
+    verdict's ``per_axis_dual_variables`` with key prefix
+    ``anti_pattern_<id>``; binding constraints revoke feasibility.
 
     Args
     ----
@@ -402,17 +569,23 @@ def solve_pareto_polytope_intersection(
         Per-axis posterior uncertainty.
     canonical_provenance : Mapping[str, Any] | None
         Catalog #323 Provenance dict.
+    anti_pattern_constraints : tuple[AntiPatternConstraint, ...]
+        Layer 5 Wave N+2 polytope-exclusion constraints derived from
+        registered anti-pattern matches. Empty tuple (default)
+        preserves Wave N+1 baseline behavior.
 
     Returns
     -------
     ParetoSolverVerdict
-        Canonical verdict.
+        Canonical verdict (anti-pattern duals surface in
+        ``per_axis_dual_variables`` when constraints supplied).
     """
     solver = DykstraParetoSolver(
         polytope=polytope,
         tolerance=tolerance,
         max_iterations=max_iterations,
         use_mlx=use_mlx,
+        anti_pattern_constraints=anti_pattern_constraints,
     )
     return solver.solve(
         initial_point,

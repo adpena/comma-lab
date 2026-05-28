@@ -7735,6 +7735,123 @@ def _candidate_per_axis_targets_for_dykstra(
     }
 
 
+def _candidate_to_stack_spec(candidate: "CandidateRow") -> dict[str, Any]:
+    """Extract a stack_spec mapping from a CandidateRow for anti-pattern matching.
+
+    Per Wave N+2 Layer 5 mandate + canonical anti-patterns design memo:
+    the cathedral autopilot ranker derives an anti-pattern-matchable
+    stack_spec per candidate so the registered anti-patterns can
+    surface matches via :func:`tac.canonical_anti_patterns.match_stack_against_anti_patterns`.
+
+    Mirrors the sister consumer ``anti_pattern_lookup_consumer``
+    resolution order: read ``candidate.stack_spec`` (canonical attr) or
+    sister synonym ``proposed_stack_spec`` if available; else build a
+    fallback dict from the candidate's known surface (candidate_id +
+    family_tag + predicted_score_delta).
+
+    Returns
+    -------
+    dict[str, Any]
+        Open mapping suitable for
+        :func:`match_stack_against_anti_patterns`.
+    """
+    spec_attr = getattr(candidate, "stack_spec", None)
+    if isinstance(spec_attr, Mapping):
+        return dict(spec_attr)
+    spec_attr_sister = getattr(candidate, "proposed_stack_spec", None)
+    if isinstance(spec_attr_sister, Mapping):
+        return dict(spec_attr_sister)
+    fallback: dict[str, Any] = {
+        "candidate_id": str(getattr(candidate, "candidate_id", "?")),
+    }
+    # CandidateRow's canonical attr is `family`; sister `family_tag` is
+    # an alternate name some surfaces emit.
+    family = getattr(candidate, "family", None) or getattr(candidate, "family_tag", None)
+    if isinstance(family, str) and family.strip():
+        fallback["family"] = family
+    delta = getattr(candidate, "predicted_score_delta", None)
+    if isinstance(delta, (int, float)):
+        fallback["predicted_score_delta"] = float(delta)
+    return fallback
+
+
+def _derive_anti_pattern_constraints_for_candidate(
+    candidate: "CandidateRow",
+) -> tuple[Any, ...]:
+    """Layer 5 Wave N+2: derive AntiPatternConstraint tuple for a candidate.
+
+    Calls :func:`tac.canonical_anti_patterns.match_stack_against_anti_patterns`
+    on the candidate's resolved stack_spec; for each
+    :class:`AntiPatternMatch` returned, constructs a
+    :class:`AntiPatternConstraint` whose forbidden region is the per-
+    candidate stack itself (the projection inherits the binding via the
+    fixed-True predicate; the dual variable encodes the severity
+    weight). Constraint dual is non-zero IFF the anti-pattern matched
+    the candidate's stack — which is the canonical "anti-pattern is
+    binding for THIS candidate" semantics per the design memo
+    §"Mathematical compounding identity".
+
+    Per CLAUDE.md "Forbidden premature KILL": the constraints do NOT
+    KILL the candidate's research lane. They reshape the polytope's
+    feasibility set so the autopilot ranker can STEER next-cycle attack
+    direction via the matched anti-pattern's canonical_unwind_path.
+
+    Returns
+    -------
+    tuple[AntiPatternConstraint, ...]
+        Empty tuple if no anti-patterns match OR the matcher is
+        unavailable (defensive fail-open per CLAUDE.md "Subagent
+        coherence-by-default" — the cathedral autopilot ranker never
+        crashes on a defensive surface).
+    """
+    try:
+        from tac.canonical_anti_patterns import match_stack_against_anti_patterns
+        from tac.dykstra_pareto_solver import AntiPatternConstraint
+    except Exception:
+        return ()
+    stack_spec = _candidate_to_stack_spec(candidate)
+    try:
+        matches = match_stack_against_anti_patterns(stack_spec)
+    except Exception:
+        return ()
+    constraints: list[Any] = []
+    seen_ids: set[str] = set()
+    for m in matches:
+        ap_id = m.anti_pattern.anti_pattern_id
+        if ap_id in seen_ids:
+            # Catalog #287/#323: duplicate anti-pattern matches would
+            # corrupt the solver's per_constraint dual_variable_key
+            # uniqueness invariant; defensively skip duplicates.
+            continue
+        seen_ids.add(ap_id)
+        try:
+            constraints.append(
+                AntiPatternConstraint(
+                    anti_pattern_id=ap_id,
+                    # The match is per-candidate; the forbidden region
+                    # IS the candidate's stack itself. The predicate
+                    # returns True unconditionally because the matcher
+                    # has already established structural overlap with
+                    # the registered anti-pattern's recurrence_conditions
+                    # / forbidden_pattern_predicate at the consumer
+                    # surface. The constraint's dual variable encodes
+                    # the severity weight; the Pareto solver's KKT
+                    # surface routes the canonical unwind path when the
+                    # constraint is binding.
+                    forbidden_region_predicate=lambda _point: True,
+                    severity=m.anti_pattern.severity,
+                    canonical_unwind_path=m.canonical_unwind_path_recommended,
+                )
+            )
+        except Exception:
+            # Defensive: any constraint construction error is swallowed
+            # (Catalog #341 observability-only contract); the matcher's
+            # observability annotation still fires via the sister
+            # cathedral consumer.
+            continue
+    return tuple(constraints)
+
+
 def invoke_dykstra_pareto_solver_on_candidates(
     candidates: list["CandidateRow"],
     *,
@@ -7807,10 +7924,20 @@ def invoke_dykstra_pareto_solver_on_candidates(
     feasible_count = 0
     infeasible_count = 0
     tight_axis_histogram: dict[str, int] = {"seg": 0, "pose": 0, "rate": 0}
+    # Layer 5 Wave N+2: per-anti-pattern binding histogram across the
+    # invoked candidate cohort. Surfaces which anti-pattern recurrences
+    # are most actively constraining the cathedral autopilot ranker's
+    # candidate pool — operator-facing audit for next-cycle attack
+    # direction routing per Catalog #125 hook #6.
+    anti_pattern_binding_histogram: dict[str, int] = {}
+    candidates_with_matched_anti_patterns = 0
+    total_matched_anti_pattern_occurrences = 0
+    canonical_unwind_paths_recommended_set: list[str] = []
 
     # Lazy import to keep cathedral autopilot import-tree light.
     try:
         from tac.dykstra_pareto_solver import (
+            ANTI_PATTERN_CONSTRAINT_DUAL_KEY_PREFIX,
             Polytope,
             solve_pareto_polytope_intersection,
         )
@@ -7882,6 +8009,15 @@ def invoke_dykstra_pareto_solver_on_candidates(
         try:
             cid = str(candidate.candidate_id or "unknown_candidate")
             targets = _candidate_per_axis_targets_for_dykstra(candidate)
+            # Layer 5 Wave N+2: derive anti-pattern constraints per
+            # candidate per the canonical anti-patterns design memo §
+            # "Mathematical compounding identity". Empty tuple if no
+            # registered anti-pattern matches the candidate's
+            # stack_spec OR the registry/helper is unavailable
+            # (defensive fail-open per Catalog #341 observability-only).
+            ap_constraints = _derive_anti_pattern_constraints_for_candidate(
+                candidate
+            )
             # Build canonical Provenance per Catalog #323.
             # Use the candidate's id-as-features-proxy for inputs_sha256
             # since we don't have direct access to the candidate's
@@ -7903,14 +8039,46 @@ def invoke_dykstra_pareto_solver_on_candidates(
                 candidate_id=cid,
                 use_mlx=use_mlx,
                 canonical_provenance=prov_dict,
+                anti_pattern_constraints=ap_constraints,
             )
             if verdict.feasible:
                 feasible_count += 1
             else:
                 infeasible_count += 1
-            for axis in verdict.tight_constraint_axes:
-                if axis in tight_axis_histogram:
-                    tight_axis_histogram[axis] += 1
+            # Layer 5 Wave N+2: aggregate per-axis histogram (existing
+            # canonical 3 axes) + per-anti-pattern binding histogram.
+            # Distinguish axis-dual keys from anti-pattern-dual keys via
+            # the canonical prefix per Catalog #125 hook #6.
+            matched_anti_pattern_ids: list[str] = []
+            binding_anti_pattern_ids: list[str] = []
+            canonical_unwind_paths_for_candidate: list[str] = []
+            for axis_or_ap in verdict.tight_constraint_axes:
+                if axis_or_ap in tight_axis_histogram:
+                    tight_axis_histogram[axis_or_ap] += 1
+                elif axis_or_ap.startswith(
+                    ANTI_PATTERN_CONSTRAINT_DUAL_KEY_PREFIX
+                ):
+                    ap_id_local = axis_or_ap[
+                        len(ANTI_PATTERN_CONSTRAINT_DUAL_KEY_PREFIX):
+                    ]
+                    binding_anti_pattern_ids.append(ap_id_local)
+                    anti_pattern_binding_histogram[ap_id_local] = (
+                        anti_pattern_binding_histogram.get(ap_id_local, 0) + 1
+                    )
+            for constraint in ap_constraints:
+                matched_anti_pattern_ids.append(constraint.anti_pattern_id)
+                if constraint.canonical_unwind_path not in canonical_unwind_paths_recommended_set:
+                    canonical_unwind_paths_recommended_set.append(
+                        constraint.canonical_unwind_path
+                    )
+                canonical_unwind_paths_for_candidate.append(
+                    constraint.canonical_unwind_path
+                )
+            if matched_anti_pattern_ids:
+                candidates_with_matched_anti_patterns += 1
+                total_matched_anti_pattern_occurrences += len(
+                    matched_anti_pattern_ids
+                )
             invocations.append({
                 "candidate_id": cid,
                 "feasible": verdict.feasible,
@@ -7930,6 +8098,15 @@ def invoke_dykstra_pareto_solver_on_candidates(
                 "score_claim": False,
                 "promotable": False,
                 "axis_tag": "[predicted]",
+                # Layer 5 Wave N+2: per-candidate anti-pattern surface
+                # for cathedral autopilot ranker routing per Catalog
+                # #125 hook #6 disambiguator.
+                "matched_anti_patterns": list(matched_anti_pattern_ids),
+                "binding_anti_pattern_ids": list(binding_anti_pattern_ids),
+                "canonical_unwind_paths_recommended": list(
+                    canonical_unwind_paths_for_candidate
+                ),
+                "anti_pattern_constraint_count": len(ap_constraints),
             })
         except Exception as exc:
             per_candidate_errors += 1
@@ -7960,12 +8137,26 @@ def invoke_dykstra_pareto_solver_on_candidates(
         "invocations": invocations,
         "per_candidate_errors": per_candidate_errors,
         "next_phase_roadmap": (
-            ".omx/research/dykstra_pareto_polytope_solver_wire_in_dim1_phase4_"
-            "landed_20260528.md"
+            ".omx/research/canonical_anti_patterns_layer_3_plus_5_landed_20260528.md"
         ),
         "canonical_helper_module": "tac.dykstra_pareto_solver",
         "canonical_equation_id": (
             "dykstra_pareto_polytope_intersection_compounding_v1"
+        ),
+        # Layer 5 Wave N+2 anti-pattern integration surface per Catalog
+        # #125 hook #2 (Pareto constraint) + hook #6 (probe disambig).
+        "anti_pattern_binding_histogram": dict(anti_pattern_binding_histogram),
+        "candidates_with_matched_anti_patterns": int(
+            candidates_with_matched_anti_patterns
+        ),
+        "total_matched_anti_pattern_occurrences": int(
+            total_matched_anti_pattern_occurrences
+        ),
+        "canonical_unwind_paths_recommended": list(
+            canonical_unwind_paths_recommended_set
+        ),
+        "anti_pattern_constraint_canonical_equation_id": (
+            "anti_pattern_polytope_exclusion_dykstra_compounding_v1"
         ),
     }
 

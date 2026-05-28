@@ -5399,6 +5399,28 @@ def preflight_all(
             strict=True, verbose=verbose
         )
 
+        # Catalog #373: compound-stack proposals acknowledge registered anti-patterns.
+        # CANONICAL-ANTI-PATTERNS REGISTRY 2026-05-28 Layer 3 self-protection per
+        # operator NON-NEGOTIABLE verbatim ("learning anti-patterns is upser
+        # important too for compounding continual learning, like the canonical
+        # equations bu netgative and a higher layer of abstraction") + canonical
+        # anti-patterns design memo §"Layer 3" + Layer 1+2 landing memo. Refuses
+        # post-cutoff (>= 2026-05-29) landing memos proposing a compound stack
+        # that matches a registered anti-pattern WITHOUT (a) citing the matched
+        # anti_pattern_id + canonical_unwind_path acknowledgment, (b) same-line
+        # `# ANTI_PATTERN_MATCH_INTENTIONAL_OK:<rationale>` waiver, or (c)
+        # empirical falsification ratification per the canonical registry.
+        # Sister of Catalog #372 (Slot 1 Dykstra Pareto solver invoker;
+        # Layer 5 sister integration) at the memo-acknowledgment surface.
+        # STRICT-from-byte-one per CLAUDE.md "Strict-flip atomicity rule" —
+        # the cutoff exempts pre-2026-05-29 memos so live count at landing
+        # is 0 (no in-scope memo carries a trigger AND matches a registered
+        # anti-pattern WITHOUT acknowledgment in the Wave N+2 commit batch).
+        # Memory: feedback_canonical_anti_patterns_layer_3_plus_5_landed_20260528.
+        check_compound_stack_proposal_acknowledges_known_anti_patterns(
+            strict=True, verbose=verbose
+        )
+
         # Catalog #354: master-gradient exploit consumers bundle completeness.
         # RESPAWN-MG-7-BUNDLE 2026-05-20 self-protection per operator
         # NON-NEGOTIABLE 2026-05-19 verbatim "Implement all exploits and wire
@@ -29882,6 +29904,351 @@ def check_cathedral_autopilot_main_invokes_dykstra_pareto_solver(
             "Lagrangian/Pareto solver — NON-NEGOTIABLE, HIGHEST EMPHASIS'. "
             "Sister of Catalog #336 + #337 + #355 at the Pareto polytope "
             "solver surface:\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Catalog #373 — Compound stack proposal acknowledges known anti-patterns
+# ────────────────────────────────────────────────────────────────────────────
+#
+# CANONICAL-ANTI-PATTERNS REGISTRY 2026-05-28 Layer 3 self-protection per
+# operator NON-NEGOTIABLE verbatim *"learning anti-patterns is upser important
+# too for compounding continual learning, like the canonical equations bu
+# netgative and a higher layer of abstraction"* + canonical anti-patterns
+# design memo (.omx/research/canonical_anti_patterns_registry_design_20260528.md
+# §"Layer 3") + Layer 1+2 landing memo
+# (.omx/research/canonical_anti_patterns_registry_layer_1_plus_2_landed_20260528.md).
+#
+# Refuses repo-local `.omx/research/*_landed_<YYYYMMDD>.md` landing memos
+# dated >= 2026-05-29 (cutoff per "Strict-flip atomicity rule"; Wave N+1 +
+# earlier exempt) that propose a COMPOUND STACK (regex trigger tokens:
+# `compound stack` / `compounding order` / `stacking` / `stack-of-stacks` /
+# `combined codec` / sister patterns) whose body MATCHES a registered
+# canonical anti-pattern via
+# :func:`tac.canonical_anti_patterns.match_stack_against_anti_patterns`
+# WITHOUT one of:
+#
+#   (a) Citing the matched anti-pattern_id verbatim AND applying its
+#       canonical_unwind_path explicitly.
+#   (b) Same-line waiver
+#       `# ANTI_PATTERN_MATCH_INTENTIONAL_OK:<rationale>` on the trigger
+#       line with non-placeholder rationale (≥4 chars; placeholder
+#       `<rationale>` / `<reason>` literals rejected per Catalog #287
+#       sister discipline so the gate's docstring example cannot self-
+#       waive).
+#   (c) Empirical falsification appended to the canonical anti-patterns
+#       registry that explicitly RATIFIES the anti-pattern in this
+#       context (sister `EVENT_FALSIFICATION_APPENDED` row).
+#
+# Sister of:
+# - Catalog #344 (canonical equations memo-reference enforcement; #344 is
+#   the POSITIVE registry surface, #373 is the NEGATIVE registry surface)
+# - Catalog #287 (placeholder-rationale rejection)
+# - Catalog #185 (META-meta drift detection — this entry verified empirically)
+# - Catalog #176 (META-meta STRICT-callsite-has-CLAUDE.md-row that THIS
+#   entry satisfies)
+# - Catalog #372 (sister Slot 1 Dykstra Pareto solver invoker; Layer 5
+#   sister-integration gate)
+# - Catalog #335 (canonical cathedral consumer contract for
+#   anti_pattern_lookup_consumer)
+# - Catalog #341 (Tier A canonical-routing markers; Layer 2 consumer
+#   carries them)
+# - Catalog #324 (post-training Tier-C validation; sister negative-
+#   constraint surface at the recipe-emit surface)
+#
+# Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against":
+# the canonical anti-patterns registry existing at
+# :mod:`tac.canonical_anti_patterns` is necessary but not sufficient; the
+# memo-level acknowledgment gate at the compound-stack-proposal surface
+# is the missing structural protection that THIS gate enforces. Sister of
+# Catalog #372 (the Slot 1 Dykstra Pareto solver invoker-callsite surface);
+# Layer 5 (Wave N+2 same commit batch) makes anti-patterns ACTIVE polytope
+# constraints; THIS Layer 3 gate makes them REVIEWABLE memo-level
+# obligations BEFORE compound stack work is proposed.
+
+_CHECK_373_RESEARCH_REL = ".omx/research"
+_CHECK_373_CUTOFF_YYYYMMDD = "20260529"
+_CHECK_373_LANDED_RE = re.compile(r"_landed_(\d{8})\.md$")
+_CHECK_373_TRIGGER_TOKENS: frozenset[str] = frozenset({
+    "compound stack",
+    "compounding order",
+    "stacking",
+    "stack-of-stacks",
+    "stack of stacks",
+    "combined codec",
+})
+_CHECK_373_WAIVER_TOKEN = "ANTI_PATTERN_MATCH_INTENTIONAL_OK"
+_CHECK_373_PLACEHOLDER_RATIONALES: frozenset[str] = frozenset({
+    "<rationale>",
+    "<reason>",
+    "rationale",
+    "reason",
+    "",
+})
+# Sister cite tokens — when a memo cites a matched anti-pattern_id verbatim
+# AND its canonical_unwind_path the gate accepts the proposal as
+# acknowledged. Layer 1+2 builtins use snake_case_vN id pattern per the
+# canonical anti_pattern_id regex in tac.canonical_anti_patterns.anti_pattern.
+_CHECK_373_CITE_TOKEN_PREFIXES: frozenset[str] = frozenset({
+    "anti_pattern_id=",
+    "anti-pattern: ",
+    "canonical_unwind_path",
+    "matched anti-pattern",
+    "ANTI_PATTERN_MATCH_RATIFIED",
+})
+
+
+def _check_373_extract_yyyymmdd(path: Path) -> str | None:
+    m = _CHECK_373_LANDED_RE.search(path.name)
+    return m.group(1) if m else None
+
+
+def _check_373_post_cutoff(yyyymmdd: str) -> bool:
+    """True iff date suffix is ON OR AFTER the cutoff."""
+    return yyyymmdd >= _CHECK_373_CUTOFF_YYYYMMDD
+
+
+def _check_373_has_trigger(body_lower: str) -> bool:
+    """True iff body contains any compound-stack trigger token."""
+    for tok in _CHECK_373_TRIGGER_TOKENS:
+        if tok in body_lower:
+            return True
+    return False
+
+
+def _check_373_has_valid_waiver(body: str) -> bool:
+    """True iff body contains canonical waiver with substantive rationale.
+
+    Acceptance: same-line waiver on the trigger line OR anywhere in body.
+    Rejects placeholder rationales per Catalog #287 sister discipline.
+    """
+    needle = _CHECK_373_WAIVER_TOKEN + ":"
+    for line in body.splitlines():
+        if needle not in line:
+            continue
+        rationale = line.split(needle, 1)[1].strip()
+        rationale = rationale.rstrip("'\"`*-")
+        if (
+            rationale
+            and len(rationale) >= 4
+            and rationale.lower() not in _CHECK_373_PLACEHOLDER_RATIONALES
+        ):
+            return True
+    return False
+
+
+def _check_373_has_acknowledgment(body: str, matched_ids: list[str]) -> bool:
+    """True iff body cites a matched anti_pattern_id + sister acknowledgment token.
+
+    Acceptance per design memo §"Layer 3" (a): the memo must cite the
+    matched anti_pattern_id verbatim AND reference the canonical
+    unwind path. We check (i) any matched_id appears in body AND (ii)
+    any acknowledgment-prefix token appears within ±10 lines of the
+    cite (relaxed: anywhere in body; the operator's prose form may
+    interleave).
+    """
+    if not matched_ids:
+        return True
+    body_lower = body.lower()
+    any_id_cited = any(mid.lower() in body_lower for mid in matched_ids)
+    if not any_id_cited:
+        return False
+    for prefix in _CHECK_373_CITE_TOKEN_PREFIXES:
+        if prefix.lower() in body_lower:
+            return True
+    return False
+
+
+def _check_373_landing_memos_in_scope(root: Path) -> list[Path]:
+    """Enumerate in-scope landing memos in `.omx/research/` post-cutoff."""
+    research_dir = root / _CHECK_373_RESEARCH_REL
+    if not research_dir.is_dir():
+        return []
+    out: list[Path] = []
+    for path in sorted(research_dir.glob("*_landed_*.md")):
+        ymd = _check_373_extract_yyyymmdd(path)
+        if ymd is None or not _check_373_post_cutoff(ymd):
+            continue
+        out.append(path)
+    return out
+
+
+def _check_373_safely_match_stack_for_memo(
+    body: str,
+) -> tuple[bool, list[str], str | None]:
+    """Defensively call match_stack_against_anti_patterns from a memo body.
+
+    Returns (matcher_ran_ok, matched_ids, import_error_or_None). On any
+    exception (registry corrupt, helper not importable, JSONL parse
+    failure) returns (False, [], error_msg) so the gate fails-OPEN on
+    infrastructure problems rather than blocking compound-stack
+    proposals when the registry itself is the issue.
+
+    The stack_spec is derived from the memo body as a single-field
+    mapping {"memo_body": body[:8000]} so the matcher's substring +
+    structural matcher walks the body for anti-pattern recurrence
+    conditions / forbidden_pattern_predicate signatures.
+    """
+    try:
+        from tac.canonical_anti_patterns import match_stack_against_anti_patterns
+    except Exception as exc:  # noqa: BLE001 — defensive fail-OPEN
+        return False, [], f"{type(exc).__name__}: {exc}"
+    try:
+        spec = {"memo_body": body[:8000]}
+        matches = match_stack_against_anti_patterns(spec, min_confidence=0.5)
+    except Exception as exc:  # noqa: BLE001 — defensive fail-OPEN
+        return False, [], f"{type(exc).__name__}: {exc}"
+    matched_ids = [m.anti_pattern.anti_pattern_id for m in matches]
+    return True, matched_ids, None
+
+
+def check_compound_stack_proposal_acknowledges_known_anti_patterns(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #373 — compound-stack proposals acknowledge registered anti-patterns.
+
+    CANONICAL-ANTI-PATTERNS REGISTRY 2026-05-28 Layer 3 self-protection.
+    Refuses post-cutoff (date suffix >= 2026-05-29) landing memos under
+    `.omx/research/*_landed_<YYYYMMDD>.md` that propose a compound stack
+    (regex triggers per :data:`_CHECK_373_TRIGGER_TOKENS`) AND match
+    one or more registered anti-patterns via
+    :func:`tac.canonical_anti_patterns.match_stack_against_anti_patterns`
+    WITHOUT one of:
+
+      (a) Citing the matched anti_pattern_id + canonical_unwind_path
+          acknowledgment token in the memo body.
+      (b) Same-line waiver
+          `# ANTI_PATTERN_MATCH_INTENTIONAL_OK:<rationale>` with
+          substantive non-placeholder rationale (≥4 chars).
+      (c) Empirical falsification ratified to the canonical registry
+          (sister `EVENT_FALSIFICATION_APPENDED` row; covered
+          structurally via citation of `ANTI_PATTERN_MATCH_RATIFIED`
+          token).
+
+    STRICT-from-byte-one per CLAUDE.md "Strict-flip atomicity rule";
+    live count at landing: 0 (cutoff exempts pre-2026-05-29 memos).
+
+    Per CLAUDE.md "Forbidden premature KILL": a matched anti-pattern
+    is NOT a KILL verdict on the proposed compound stack. The gate
+    surfaces the matched anti-pattern_id + canonical_unwind_path so
+    the operator can:
+      (a) Apply the canonical correct alternative
+      (b) Add the same-line waiver with substantive rationale
+      (c) Append empirical falsification ratifying the anti-pattern
+          in this context (the empirical row updates the canonical
+          registry's recurrence-conditions)
+
+    Per the canonical anti-patterns design memo §"Mathematical
+    compounding identity": this gate enforces the LEFT side of::
+
+        NextCycleAttackDirection = argmax_axis (
+            PredictedΔS_axis_i × λ_axis_i_tight_from_Dykstra
+        ) subject to (
+            NOT any (proposed_stack matches AntiPattern_j AND not waived)
+        )
+
+    Layer 5 (sister Slot 1 Dykstra Pareto polytope solver integration;
+    landed Wave N+2 same commit batch) implements the RIGHT side via
+    ACTIVE polytope-exclusion constraints. Together they extinct the
+    "compound stacking work re-discovers a known anti-pattern via paid
+    GPU dispatch" failure mode at TWO surfaces: memo-level
+    acknowledgment (THIS gate) + runtime polytope feasibility (Layer 5
+    via Catalog #372 invoker).
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    memos = _check_373_landing_memos_in_scope(root)
+    if verbose:
+        print(
+            f"  [compound-stack-acknowledges-anti-patterns] "
+            f"in-scope memos: {len(memos)}"
+        )
+
+    violations: list[str] = []
+    for path in memos:
+        try:
+            body = path.read_text(encoding="utf-8")
+        except OSError as exc:
+            if verbose:
+                print(f"  [compound-stack] cannot read {path}: {exc}")
+            continue
+        body_lower = body.lower()
+        if not _check_373_has_trigger(body_lower):
+            continue
+        # Defensive matcher: fail-OPEN on registry / helper unavailability
+        # so this gate does not block memo landings when the registry
+        # itself is the issue.
+        ok, matched_ids, import_err = _check_373_safely_match_stack_for_memo(
+            body
+        )
+        if not ok:
+            if verbose:
+                print(
+                    f"  [compound-stack] {path.name}: matcher unavailable; "
+                    f"skipping ({import_err})"
+                )
+            continue
+        if not matched_ids:
+            continue
+        if _check_373_has_valid_waiver(body):
+            if verbose:
+                print(
+                    f"  [compound-stack] {path.name}: "
+                    "ANTI_PATTERN_MATCH_INTENTIONAL_OK waiver active"
+                )
+            continue
+        if _check_373_has_acknowledgment(body, matched_ids):
+            if verbose:
+                print(
+                    f"  [compound-stack] {path.name}: matched anti-pattern "
+                    "acknowledged via cite + canonical_unwind_path token"
+                )
+            continue
+        ids_cited_str = ", ".join(matched_ids[:5])
+        if len(matched_ids) > 5:
+            ids_cited_str += f" + {len(matched_ids) - 5} more"
+        violations.append(
+            f"{path.relative_to(root)}: compound-stack proposal matches "
+            f"registered anti-pattern(s) [{ids_cited_str}] WITHOUT one of: "
+            "(a) cite anti_pattern_id + canonical_unwind_path acknowledgment "
+            "token; (b) same-line "
+            f"`# {_CHECK_373_WAIVER_TOKEN}:<rationale>` waiver with "
+            "substantive rationale; (c) empirical falsification ratified to "
+            "the canonical registry via "
+            "`tac.canonical_anti_patterns.append_empirical_falsification`. "
+            "Per CLAUDE.md 'Forbidden premature KILL' the matched anti-pattern "
+            "is NOT a kill verdict on the technique; consult "
+            "`tools/list_canonical_anti_patterns.py` for the canonical "
+            "unwind path."
+        )
+
+    if verbose:
+        print(
+            f"  [compound-stack-acknowledges-anti-patterns] "
+            f"{len(violations)} violation(s)"
+        )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_compound_stack_proposal_acknowledges_known_anti_patterns "
+            f"found {len(violations)} violation(s). Catalog #373 enforces the "
+            "CANONICAL-ANTI-PATTERNS REGISTRY Layer 3 memo-acknowledgment "
+            "structural protection per CLAUDE.md 'Bugs must be permanently "
+            "fixed AND self-protected against' non-negotiable + 'Results "
+            "must become system intelligence' non-negotiable. Sister of "
+            "Catalog #372 (Slot 1 Dykstra Pareto polytope solver invoker; "
+            "Layer 5 sister integration). Per the canonical anti-patterns "
+            "design memo §'Mathematical compounding identity': this gate "
+            "is the LEFT side of the constraint; Catalog #372 + Layer 5 "
+            "are the RIGHT side (active polytope exclusion). Together they "
+            "extinct the 'compound stacking work re-discovers a known anti-"
+            "pattern via paid GPU dispatch' failure mode bidirectionally:\n  "
             + "\n  ".join(v[:400] for v in violations[:5])
         )
     return violations
