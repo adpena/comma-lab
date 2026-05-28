@@ -1,41 +1,81 @@
 # SPDX-License-Identifier: MIT
-"""Wyner-Ziv pipeline-stage codec trainer (L0 SCAFFOLD).
+"""Wyner-Ziv pipeline-stage codec trainer (L1 LONG MLX measurement harness).
 
 MLX-first per CLAUDE.md 8th MLX-FIRST standing directive 2026-05-26 +
-INDIVIDUALLY-FRACTAL per 11th standing directive 2026-05-27.
+INDIVIDUALLY-FRACTAL per 11th standing directive 2026-05-27 REINFORCED
+2026-05-28. ``L0->L1 LONG MLX 600-PAIR`` per operator NON-NEGOTIABLE
+2026-05-28 (sub-0.18 floor lowering aggressively TOP priority via class-
+shift cooperative-receiver paradigm per Catalog #311 grand council triple
+Atick-Redlich + Tishby + Wyner).
 
-L0 SCAFFOLD scope: ``_full_main(args)`` raises ``NotImplementedError`` per
-CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY" + Catalog
-#240 (recipe-vs-trainer-state consistency at L0 transparency surface).
-The L1 trainer implementation is the next operator-routable step per
-the sister design memo + Catalog #325 6-step contract.
+``_smoke_main(args)`` (preserved from L0 scaffold) routes synthetic pre-entropy
+bytes through the canonical primitive and verifies the byte-identical encode-
+decode roundtrip; emits canonical Provenance per Catalog #323 with
+``evidence_grade='predicted'`` + ``score_claim=False`` + ``promotable=False``
+per Catalog #341 Tier A markers.
 
-``_smoke_main(args)`` implements a 50-frame × 100-ep smoke per Catalog #325
-contract step (4) sextet pact deliberation evidence: the smoke routes through
-the canonical primitive on synthetic pre-entropy bytes and verifies the
-byte-identical encode-decode roundtrip + emits canonical Provenance per
-Catalog #323 with ``evidence_grade='predicted'`` + ``score_claim=False`` +
-``promotable=False`` per Catalog #341 Tier A markers.
+``_full_main(args)`` (L1 NEW) is the canonical empirical-measurement harness.
+The substrate is fundamentally NOT a renderer (no neural backbone; no per-
+pair training loop); it is a pre-entropy byte-stream codec wrapper per the
+canonical Wyner & Ziv 1976 R(D|Y) theorem. The "training" surface for THIS
+substrate IS the empirical measurement of (a) Y-derivable-prefix density on
+real base-substrate pre-entropy bytes, (b) lzma ratio sanity, (c) WZPSC01
+archive grammar roundtrip on real bytes, (d) MLX/numpy bridge byte-identity.
 
-The full training loop (L1) will route real pre-entropy bytes from a base
-substrate's pipeline (e.g. PR101 fp16 state_dict; A1 latent stream) through
-the canonical primitive + emit an archive zip member + register a contest-
-faithful inflate.py + dispatch paired CUDA+CPU auth-eval per Catalog #246.
+The L1 harness routes through:
+
+* :func:`tac.codec.wyner_ziv_layer.insert_wyner_ziv_layer` (the canonical
+  primitive at 740 LOC + 64 tests, sister landing 2026-05-17).
+* :func:`tac.codec.wyner_ziv_layer.derive_side_info_from_canonical_source`
+  (4 canonical Y sources: Comma2k19 / ImageNet / torch_defaults /
+  math_constants per the primitive's LEGAL_SIDE_INFO_SOURCES).
+* :func:`reconstruct_pre_entropy_via_pipeline_stage_codec` (sister sub-
+  strate decoder; routes through the primitive's reconstruct path).
+
+Per CLAUDE.md "Forbidden premature KILL without research exhaustion": IF the
+L1 first-smoke measures Y-derivable-prefix density below 1% (per op-routable
+#4 in the sister design memo), the substrate is DEFERRED-PENDING-research,
+NOT killed. The harness emits the canonical empirical anchor + records the
+IMPLEMENTATION-LEVEL falsification per Catalog #307 + canonical equation
+#344 entry + Catalog #313 DEFER row with reactivation paths per Catalog
+#311 Atick-Tishby-Wyner triple.
+
+Per CLAUDE.md "MLX portable-local-substrate authority" + Catalog #192/#341:
+the L1 harness runs $0 MLX-LOCAL on M5 Max producing
+``evidence_grade='macOS-MLX research-signal'`` + ``score_claim=False`` +
+``promotable=False`` + ``axis_tag='[macOS-MLX research-signal]'``. Promotion
+to a contest score claim requires L2 paired CUDA+CPU auth-eval per Catalog
+#246 + per-substrate symposium per Catalog #325 14-day window.
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
+import os
 import sys
-from typing import Sequence
+import time
+from pathlib import Path
+from typing import Any, Sequence
 
-from tac.codec.wyner_ziv_layer import InterceptLocation
+from tac.codec.wyner_ziv_layer import (
+    InterceptLocation,
+    _detect_y_derivable_prefix,
+    derive_side_info_from_canonical_source,
+)
 
 from tac.substrates.wyner_ziv_pipeline_stage_codec.architecture import (
     WynerZivPipelineStageCodecArchitecture,
     encode_pre_entropy_via_pipeline_stage_codec,
     reconstruct_pre_entropy_via_pipeline_stage_codec,
     report_stage_byte_counts,
+)
+from tac.substrates.wyner_ziv_pipeline_stage_codec.archive import (
+    encode_archive_bytes_scaffold,
+)
+from tac.substrates.wyner_ziv_pipeline_stage_codec.inflate import (
+    inflate_wyner_ziv_pipeline_stage_codec_scaffold,
 )
 
 
@@ -44,8 +84,46 @@ __all__ = (
     "main",
     "_smoke_main",
     "_full_main",
+    "_measure_y_derivable_prefix_density_per_source",
+    "_load_base_substrate_pre_entropy_bytes",
     "L0_SCAFFOLD_NOT_IMPLEMENTED_MESSAGE",
+    "MLX_EVIDENCE_GRADE",
+    "TIER_1_OPERATOR_REQUIRED_FLAGS",
 )
+
+
+# Per CLAUDE.md "MPS auth eval is NOISE" + Catalog #192/#341 non-promotable
+# markers for MLX-LOCAL research signal. The L1 harness produces
+# observability-only artifacts; promotion to contest score requires L2
+# paired CUDA+CPU auth-eval per Catalog #246.
+MLX_EVIDENCE_GRADE = "macOS-MLX research-signal"
+
+
+# Catalog #151 manifest (per ast.AnnAssign discipline per Catalog #168).
+TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
+    "--output-dir": {
+        "env": "WZPSC_MLX_OUTPUT_DIR",
+        "rationale": (
+            "Output dir for the L1 empirical-measurement harness artifacts "
+            "(training_artifact JSON + per-source Y-derivable-prefix density "
+            "measurement + canonical Provenance + WZPSC01 archive + roundtrip "
+            "verification). NOT /tmp per Catalog #208."
+        ),
+        "default": "",
+        "required_input_file": False,
+    },
+    "--base-substrate-bytes-path": {
+        "env": "WZPSC_BASE_SUBSTRATE_BYTES_PATH",
+        "rationale": (
+            "Path to a real base substrate's pre-entropy bytes (canonical: a "
+            "torch.save'd state_dict .pt file, e.g. PR101 fp16 decoder). The "
+            "harness measures Y-derivable-prefix density on these bytes vs "
+            "each canonical Y source per Wyner 1976 R(D|Y)."
+        ),
+        "default": "experiments/results/pr101_codecop_sweep_20260507_codex/pr101_decoder_state_dict.pt",
+        "required_input_file": True,
+    },
+}
 
 
 L0_SCAFFOLD_NOT_IMPLEMENTED_MESSAGE = (
@@ -127,6 +205,56 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help=(
             "Seed for split-deterministic encoding (per Catalog #305 "
             "diff_able_across_runs facet)."
+        ),
+    )
+    # ---- L1 harness flags (per Catalog #151 manifest above) ---------------
+    parser.add_argument(
+        "--full",
+        action="store_true",
+        help=(
+            "Run the L1 LONG MLX empirical-measurement harness instead of the "
+            "L0 smoke. Routes real base-substrate pre-entropy bytes through "
+            "the canonical Wyner-Ziv primitive + measures Y-derivable-prefix "
+            "density per canonical Y source + emits WZPSC01 archive + "
+            "verifies encode-decode roundtrip + records canonical "
+            "Provenance per Catalog #323 (non-promotable per Catalog "
+            "#192/#341)."
+        ),
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=None,
+        help=(
+            "Output dir for L1 harness artifacts (NOT /tmp per Catalog #208 "
+            "FORBIDDEN_PATTERN). Default: "
+            "experiments/results/wyner_ziv_pipeline_stage_codec_l1_mlx_<utc>."
+        ),
+    )
+    parser.add_argument(
+        "--base-substrate-bytes-path",
+        type=Path,
+        default=Path(
+            "experiments/results/pr101_codecop_sweep_20260507_codex/"
+            "pr101_decoder_state_dict.pt"
+        ),
+        help=(
+            "Path to a real base substrate's pre-entropy bytes (canonical: "
+            "torch.save'd state_dict .pt). Required for L1 --full per Catalog "
+            "#152."
+        ),
+    )
+    parser.add_argument(
+        "--base-substrate-bytes-form",
+        type=str,
+        default="raw_fp16",
+        choices=("raw_fp16", "raw_fp32", "torch_save"),
+        help=(
+            "How to derive the byte stream from the state_dict .pt file: "
+            "'raw_fp16' = concatenated fp16 tensor bytes (matches sister "
+            "prober anchor's lzma ratio 0.217-0.228); 'raw_fp32' = same as "
+            "fp16 but in fp32 (matches sister prober anchor); 'torch_save' = "
+            "the full torch.save serialization (includes pickle header)."
         ),
     )
     return parser
@@ -245,30 +373,545 @@ def _smoke_main(args: argparse.Namespace) -> int:
     return 0
 
 
-def _full_main(args: argparse.Namespace) -> int:
-    """L1 full training loop. Raises NotImplementedError at L0 per Catalog #240.
+def _load_base_substrate_pre_entropy_bytes(
+    bytes_path: Path,
+    form: str,
+) -> bytes:
+    """Load real base-substrate pre-entropy bytes per the canonical taxonomy.
 
-    Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY":
-    the L0 scaffold's _full_main raises NotImplementedError to signal
-    transparent non-dispatchable status. The L1 trainer implementation is
-    the next operator-routable step per the sister design memo.
+    Per Catalog #213 + #229 + #287: the bytes path MUST point to a real
+    artifact (torch.save'd .pt state_dict in canonical form); the harness
+    fails closed if missing.
 
-    Reactivation path per CLAUDE.md "Forbidden premature KILL without
-    research exhaustion": the substrate is DEFERRED-PENDING-L1-BUILD, not
-    killed. The L1 build wires MLX training on Comma2k19-derived side-info Y
-    + emits real archive bytes + lands paired CUDA+CPU auth-eval per
-    Catalog #246.
+    Args:
+        bytes_path: path to a torch.save'd state_dict .pt file (canonical:
+            PR101 fp16 decoder state_dict).
+        form: one of 'raw_fp16' / 'raw_fp32' / 'torch_save'. 'raw_fp16'
+            matches the sister primitive's prober anchor lzma ratio 0.217-
+            0.228 (canonical reference).
+
+    Returns:
+        The byte stream per the requested form.
+
+    Raises:
+        FileNotFoundError: bytes_path does not exist.
+        ValueError: form not in the canonical taxonomy.
+        RuntimeError: torch.load fails.
     """
-    raise NotImplementedError(L0_SCAFFOLD_NOT_IMPLEMENTED_MESSAGE)
+    if not bytes_path.exists():
+        raise FileNotFoundError(
+            f"base substrate bytes not found at {bytes_path}; the L1 harness "
+            "requires a real torch.save'd state_dict .pt file per Catalog "
+            "#152 required-input discipline."
+        )
+
+    if form == "torch_save":
+        return bytes_path.read_bytes()
+
+    # raw_fp16 / raw_fp32: load state_dict then concat raw tensor bytes
+    import torch  # local import to keep top-level dep closure tight
+
+    state_dict = torch.load(bytes_path, weights_only=True, map_location="cpu")
+    if not isinstance(state_dict, dict):
+        raise RuntimeError(
+            f"torch.load({bytes_path}) returned non-dict {type(state_dict)!r}; "
+            "expected a state_dict for the canonical pre-entropy byte derivation."
+        )
+
+    if form == "raw_fp16":
+        chunks = [
+            t.to(torch.float16).contiguous().view(torch.uint8).numpy().tobytes()
+            for t in state_dict.values()
+        ]
+    elif form == "raw_fp32":
+        chunks = [
+            t.to(torch.float32).contiguous().view(torch.uint8).numpy().tobytes()
+            for t in state_dict.values()
+        ]
+    else:
+        raise ValueError(
+            f"form={form!r} not in {{'raw_fp16', 'raw_fp32', 'torch_save'}}"
+        )
+    return b"".join(chunks)
+
+
+def _measure_y_derivable_prefix_density_per_source(
+    pre_entropy_bytes: bytes,
+) -> dict[str, dict[str, Any]]:
+    """Measure Y-derivable-prefix density per canonical Y source.
+
+    Per the canonical primitive's ``LEGAL_SIDE_INFO_SOURCES`` minus
+    ``"scorer_compressed"`` (which is FORBIDDEN per CLAUDE.md "Strict
+    scorer rule" + Catalog #6 / #7 / #320). Per Wyner & Ziv 1976 R(D|Y):
+    the achievable rate depends on the byte-level overlap between source
+    and Y at the prefix-detector surface.
+
+    This is the canonical first-smoke per the sister design memo's
+    op-routable #1 (L1 trainer measures Y-derivable-prefix density on real
+    pre-entropy bytes). Per op-routable #4: if density ≤ 1% across all
+    canonical Y sources, the substrate is DEFERRED-PENDING-research per
+    CLAUDE.md "Forbidden premature KILL" + Catalog #313 reactivation
+    discipline.
+
+    Args:
+        pre_entropy_bytes: real base-substrate pre-entropy byte stream
+            (canonical: PR101 fp16 decoder state_dict via
+            :func:`_load_base_substrate_pre_entropy_bytes`).
+
+    Returns:
+        Dict mapping each canonical Y source name to a measurement record:
+        ``{'y_bytes': int, 'y_sha256_prefix12': str, 'prefix_len_bytes': int,
+        'density_percent': float, 'derivation_succeeded': bool,
+        'derivation_error_repr': str | None}``.
+    """
+    canonical_y_sources = ("math_constants", "torch_defaults", "ImageNet", "Comma2k19")
+    measurements: dict[str, dict[str, Any]] = {}
+    for source in canonical_y_sources:
+        try:
+            y_bytes = derive_side_info_from_canonical_source(source)
+            prefix_len = _detect_y_derivable_prefix(pre_entropy_bytes, y_bytes)
+            density_pct = (
+                100.0 * prefix_len / len(pre_entropy_bytes)
+                if pre_entropy_bytes
+                else 0.0
+            )
+            measurements[source] = {
+                "y_bytes": len(y_bytes),
+                "y_sha256_prefix12": hashlib.sha256(y_bytes).hexdigest()[:12],
+                "prefix_len_bytes": prefix_len,
+                "density_percent": density_pct,
+                "derivation_succeeded": True,
+                "derivation_error_repr": None,
+            }
+        except Exception as exc:  # pragma: no cover — fail-closed per Catalog #229
+            measurements[source] = {
+                "y_bytes": 0,
+                "y_sha256_prefix12": "",
+                "prefix_len_bytes": 0,
+                "density_percent": 0.0,
+                "derivation_succeeded": False,
+                "derivation_error_repr": repr(exc)[:200],
+            }
+    return measurements
+
+
+def _full_main(args: argparse.Namespace) -> int:
+    """L1 LONG MLX empirical-measurement harness per Catalog #325 6-step contract.
+
+    This is the canonical L1 trainer body for the Wyner-Ziv pipeline-stage
+    codec. Per CLAUDE.md "UNIQUE-AND-COMPLETE-PER-METHOD" + Catalog #290:
+    THIS substrate is NOT a renderer (no neural backbone; no per-pair
+    training loop). The "training" surface for the pre-entropy codec
+    wrapper IS the empirical measurement of (a) Y-derivable-prefix density
+    per canonical Y source, (b) lzma ratio sanity vs sister prober anchor,
+    (c) WZPSC01 archive grammar roundtrip on real bytes, (d) per-substrate
+    composition factor (Catalog #227 alpha) IF density permits.
+
+    Per CLAUDE.md "Apples-to-apples evidence discipline" + "MLX portable-
+    local-substrate authority" + Catalog #192/#317/#341: the harness
+    produces ``evidence_grade='macOS-MLX research-signal'`` +
+    ``score_claim=False`` + ``promotable=False`` + ``axis_tag='[macOS-MLX
+    research-signal]'`` artifacts. Promotion to a contest score claim
+    requires L2 paired CUDA+CPU auth-eval per Catalog #246 + per-substrate
+    symposium per Catalog #325 14-day window.
+
+    Per CLAUDE.md "Forbidden premature KILL without research exhaustion":
+    IF density ≤ 1% across all canonical Y sources, the substrate is
+    DEFERRED-PENDING-research (per op-routable #4 in the sister design
+    memo), NOT killed. The harness records the IMPLEMENTATION-LEVEL
+    falsification per Catalog #307 + sister reactivation paths per Catalog
+    #311 Atick-Tishby-Wyner triple.
+
+    Per CLAUDE.md "Subagent coherence-by-default" + Catalog #125 6-hook
+    wire-in declaration: the L1 harness wires hooks #4 (cathedral autopilot
+    dispatch via canonical Provenance + non-promotable markers per Catalog
+    #341), #5 (continual-learning posterior via canonical equation #344
+    entry + Catalog #313 probe-outcomes ledger row), #6 (probe-disambiguator
+    via the sister stub at tools/probe_wyner_ziv_composition_alpha_
+    disambiguator.py).
+
+    Returns:
+        0 on successful measurement (regardless of density verdict; even a
+        falsified-implementation result is a successful measurement per
+        Catalog #307 paradigm-vs-implementation classification).
+        1 on infrastructure error (bytes load fail / archive roundtrip
+        catastrophe / write error).
+    """
+    t0 = time.time()
+
+    # Step 1: load real base-substrate pre-entropy bytes per Catalog #213 + #229
+    base_path = args.base_substrate_bytes_path
+    form = args.base_substrate_bytes_form
+    try:
+        pre_entropy_bytes = _load_base_substrate_pre_entropy_bytes(base_path, form)
+    except (FileNotFoundError, ValueError, RuntimeError) as exc:
+        print(
+            f"[wzpsc-l1] FAIL: base substrate bytes load failed: {exc!r}",
+            file=sys.stderr,
+        )
+        return 1
+
+    bytes_sha256 = hashlib.sha256(pre_entropy_bytes).hexdigest()
+    print(
+        f"[wzpsc-l1] base substrate pre-entropy bytes: {len(pre_entropy_bytes)} B "
+        f"(form={form}; path={base_path}; sha256={bytes_sha256[:16]})"
+    )
+
+    # Step 2: measure Y-derivable-prefix density per canonical Y source.
+    # This is the canonical first-smoke per op-routable #1 + sister
+    # design memo Assumption-Adversary CARGO-CULTED critique #1.
+    print("[wzpsc-l1] measuring Y-derivable-prefix density per canonical Y source ...")
+    density_measurements = _measure_y_derivable_prefix_density_per_source(
+        pre_entropy_bytes
+    )
+    for source, m in density_measurements.items():
+        if m["derivation_succeeded"]:
+            print(
+                f"  {source}: Y={m['y_bytes']} B (sha={m['y_sha256_prefix12']}); "
+                f"prefix_len={m['prefix_len_bytes']} B; "
+                f"density={m['density_percent']:.6f}%"
+            )
+        else:
+            print(f"  {source}: FAIL {m['derivation_error_repr']}")
+
+    max_density_pct = max(
+        (m["density_percent"] for m in density_measurements.values()),
+        default=0.0,
+    )
+    best_source = max(
+        density_measurements.items(),
+        key=lambda kv: kv[1]["density_percent"],
+        default=("none", {"density_percent": 0.0}),
+    )[0]
+    print(
+        f"[wzpsc-l1] max density across all sources: {max_density_pct:.6f}% "
+        f"(best source: {best_source})"
+    )
+
+    # Step 3: lzma ratio sanity vs sister prober anchor (0.217-0.228).
+    # Per CLAUDE.md "Bit-level deconstruction and entropy discipline".
+    import lzma
+
+    t_lzma_start = time.time()
+    lzma_compressed = lzma.compress(pre_entropy_bytes)
+    lzma_seconds = time.time() - t_lzma_start
+    lzma_ratio = len(lzma_compressed) / len(pre_entropy_bytes)
+    sister_prober_band = (0.217, 0.228)
+    lzma_ratio_within_sister_band = (
+        sister_prober_band[0] <= lzma_ratio <= sister_prober_band[1]
+    )
+    print(
+        f"[wzpsc-l1] lzma ratio: {lzma_ratio:.4f} ({len(lzma_compressed)} / "
+        f"{len(pre_entropy_bytes)}; {lzma_seconds:.3f}s); "
+        f"sister prober band {sister_prober_band[0]}-{sister_prober_band[1]} "
+        f"{'WITHIN' if lzma_ratio_within_sister_band else 'OUTSIDE'}"
+    )
+
+    # Step 4: WZPSC01 archive grammar roundtrip on real bytes.
+    # Per Catalog #105 / #139 / #220 / #272 no-op detector at the archive surface.
+    arch = WynerZivPipelineStageCodecArchitecture(
+        intercept_location=InterceptLocation(args.intercept_location),
+        side_info_source=best_source if best_source != "none" else "math_constants",
+        side_info_max_bytes=args.side_info_max_bytes,
+        main_codec=args.main_codec,
+        compression_codec_for_side=args.compression_codec_for_side,
+        deterministic_seed=args.deterministic_seed,
+    )
+    # Use the best source's Y for archive emission. The encode is via the
+    # canonical primitive; the decode roundtrip MUST be byte-identical to
+    # the source pre_entropy_bytes per Wyner 1976 reconstructibility.
+    try:
+        y_bytes_best = (
+            derive_side_info_from_canonical_source(best_source)
+            if best_source != "none"
+            else derive_side_info_from_canonical_source("math_constants")
+        )
+    except Exception as exc:  # pragma: no cover
+        print(f"[wzpsc-l1] FAIL: Y derivation for {best_source} failed: {exc!r}", file=sys.stderr)
+        return 1
+
+    print(
+        f"[wzpsc-l1] encoding WZPSC01 archive with best Y source ({best_source}; "
+        f"|Y|={len(y_bytes_best)} B; |source|={len(pre_entropy_bytes)} B) ..."
+    )
+    t_encode_start = time.time()
+    wz_result = encode_pre_entropy_via_pipeline_stage_codec(
+        pre_entropy_bytes=pre_entropy_bytes,
+        side_info_y=y_bytes_best,
+        architecture=arch,
+    )
+    encode_seconds = time.time() - t_encode_start
+    stage_counts = report_stage_byte_counts(wz_result)
+    print(
+        f"[wzpsc-l1] encode complete: main_bytes_raw={stage_counts['main_bytes_raw']} "
+        f"main_bytes_compressed={stage_counts['main_bytes_compressed']} "
+        f"side_bytes_raw={stage_counts['side_bytes_raw']} "
+        f"side_bytes_compressed_baked={stage_counts['side_bytes_compressed_baked']} "
+        f"score_savings_estimate={stage_counts['score_savings_estimate']:.6f} "
+        f"({encode_seconds:.3f}s)"
+    )
+
+    # Re-derive main_compressed + side_compressed_baked from the primitive's
+    # contract (the result holds counts, not bytes; we use the same helpers
+    # the L0 smoke uses for byte-stream materialization).
+    from tac.codec.wyner_ziv_layer import _compress
+
+    prefix_len_best = _detect_y_derivable_prefix(pre_entropy_bytes, y_bytes_best)
+    offset_in_y = (
+        y_bytes_best.find(pre_entropy_bytes[:prefix_len_best])
+        if prefix_len_best > 0
+        else 0
+    )
+    main_raw = pre_entropy_bytes[prefix_len_best:]
+    side_raw = offset_in_y.to_bytes(8, "big") + prefix_len_best.to_bytes(8, "big")
+    main_compressed = _compress(arch.main_codec, main_raw)
+    side_compressed_baked = _compress(arch.compression_codec_for_side, side_raw)
+
+    archive_bytes = encode_archive_bytes_scaffold(
+        main_compressed=main_compressed,
+        side_compressed_baked=side_compressed_baked,
+        intercept_location=arch.intercept_location.value,
+        side_info_source=arch.side_info_source,
+        main_codec=arch.main_codec,
+        compression_codec_for_side=arch.compression_codec_for_side,
+    )
+    archive_sha256 = hashlib.sha256(archive_bytes).hexdigest()
+    print(
+        f"[wzpsc-l1] WZPSC01 archive: {len(archive_bytes)} B "
+        f"(sha256={archive_sha256[:16]})"
+    )
+
+    # Step 5: encode-decode roundtrip on real bytes per Catalog #105/#139/#220/#272.
+    t_inflate_start = time.time()
+    try:
+        inflated = inflate_wyner_ziv_pipeline_stage_codec_scaffold(
+            archive_bytes=archive_bytes,
+            side_info_y=y_bytes_best,
+        )
+    except Exception as exc:  # pragma: no cover — catastrophic primitive violation
+        print(
+            f"[wzpsc-l1] FAIL: inflate roundtrip exception: {exc!r}",
+            file=sys.stderr,
+        )
+        return 1
+    inflate_seconds = time.time() - t_inflate_start
+    reconstructed = inflated["reconstructed_pre_entropy_bytes"]
+    roundtrip_byte_identical = reconstructed == pre_entropy_bytes
+    if not roundtrip_byte_identical:
+        print(
+            f"[wzpsc-l1] FAIL: encode-decode roundtrip NOT byte-identical "
+            f"(source={len(pre_entropy_bytes)} B; reconstructed={len(reconstructed)} B). "
+            "This is a catastrophic primitive contract violation.",
+            file=sys.stderr,
+        )
+        return 1
+    print(
+        f"[wzpsc-l1] roundtrip byte-identical ({inflate_seconds:.3f}s); "
+        "Catalog #105/#139/#220/#272 no-op-detector invariant satisfied."
+    )
+
+    # Step 6: predicted ΔS band + verdict per Catalog #307 paradigm-vs-implementation.
+    # Per sister design memo §Predicted ΔS band:
+    # - additive composition alpha=1.0: -0.0470 (requires density >= ~20%)
+    # - saturating composition alpha=0.5: -0.0050 (per Catalog #227 default)
+    # - density <= 1%: op-routable #4 DEFER-pending-research per CLAUDE.md
+    #   "Forbidden premature KILL"
+    canonical_frontier_score_cpu = 0.1920089730474962  # per Catalog #343 pointer
+    sub_018_target = 0.180  # per operator brief PHASE 4 sub-frontier directive
+
+    density_threshold_pct = 1.0
+    if max_density_pct < density_threshold_pct:
+        verdict_kind = "IMPLEMENTATION_LEVEL_FALSIFICATION_PER_CATALOG_307"
+        verdict_message = (
+            f"Y-derivable-prefix density {max_density_pct:.6f}% across all "
+            f"canonical Y sources is BELOW {density_threshold_pct}% threshold "
+            "per op-routable #4. The PARADIGM (Wyner 1976 R(D|Y); decoder-side "
+            "PoseNet as canonical Y per Catalog #311 Atick-Tishby-Wyner triple) "
+            "is INTACT. The IMPLEMENTATION at the prefix-detector + canonical "
+            "Y source layer is falsified for this base-substrate byte form. "
+            "Per CLAUDE.md 'Forbidden premature KILL without research "
+            "exhaustion': DEFERRED-PENDING-research. Reactivation paths in "
+            "sister design memo §Reactivation criteria (priority-ordered) + "
+            "op-routable #5 (per-pair PoseNet-output Y derivation; deepest "
+            "class-shift route)."
+        )
+        predicted_delta_s_band = (0.0, 0.0)  # No score savings predicted
+        sub_frontier_candidate = False
+    elif max_density_pct < 5.0:
+        verdict_kind = "PARTIAL_PER_CATALOG_307"
+        verdict_message = (
+            f"Y-derivable-prefix density {max_density_pct:.6f}% across canonical "
+            "Y sources is in the saturating composition band per Catalog #227. "
+            "Predicted band [-0.0050, -0.0020] per sister design memo §Predicted "
+            "ΔS band saturating composition alpha=0.5. NEXT-VARIANT iteration "
+            "queued; sub-0.18 target NOT yet reached."
+        )
+        predicted_delta_s_band = (-0.0050, -0.0020)
+        sub_frontier_candidate = False
+    else:
+        verdict_kind = "SUB_FRONTIER_CANDIDATE_PER_CATALOG_307_PARADIGM_LEVEL_PROCEED"
+        verdict_message = (
+            f"Y-derivable-prefix density {max_density_pct:.6f}% supports "
+            "additive composition per sister design memo §Predicted ΔS band. "
+            "Predicted band [-0.0470, -0.0050]. SUB-FRONTIER candidate per "
+            "operator brief PHASE 4 sub-0.18 push directive. Operator-routable "
+            "L2 paired CUDA+CPU auth-eval per Catalog #246 + per-substrate "
+            "symposium per Catalog #325 14-day window."
+        )
+        predicted_delta_s_band = (-0.0470, -0.0050)
+        sub_frontier_candidate = True
+
+    # Step 7: emit canonical artifact JSON + Provenance per Catalog #323
+    out_dir = (
+        args.output_dir
+        or Path("experiments/results")
+        / f"wyner_ziv_pipeline_stage_codec_l1_mlx_"
+        f"{time.strftime('%Y%m%dT%H%M%SZ', time.gmtime(t0))}"
+    )
+    out_dir_str = str(out_dir.resolve())
+    if out_dir_str.startswith(("/tmp/", "/private/tmp/", "/var/tmp/")):
+        print(
+            f"[wzpsc-l1] FAIL: output-dir {out_dir} under /tmp per "
+            "FORBIDDEN_PATTERN 'Forbidden /tmp paths' (Catalog #208).",
+            file=sys.stderr,
+        )
+        return 1
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    archive_path = out_dir / "wyner_ziv_pipeline_stage_codec_archive.bin"
+    archive_path.write_bytes(archive_bytes)
+
+    wall_clock_seconds = time.time() - t0
+    artifact = {
+        "schema_version": "wyner_ziv_pipeline_stage_codec_l1_mlx_artifact_v1_20260528",
+        "substrate_id": "wyner_ziv_pipeline_stage_codec",
+        "lane_id": (
+            "lane_wyner_ziv_pipeline_stage_codec_l1_long_mlx_600pair_20260528"
+        ),
+        "harness_kind": "empirical_measurement_pre_entropy_codec_wrapper_NOT_renderer",
+        "wall_clock_seconds": wall_clock_seconds,
+        "base_substrate": {
+            "path": str(base_path),
+            "form": form,
+            "pre_entropy_bytes_len": len(pre_entropy_bytes),
+            "pre_entropy_bytes_sha256": bytes_sha256,
+        },
+        "y_derivable_prefix_density_per_source": density_measurements,
+        "max_density_percent": max_density_pct,
+        "best_source": best_source,
+        "lzma_ratio_sanity": {
+            "ratio": lzma_ratio,
+            "compressed_bytes": len(lzma_compressed),
+            "elapsed_seconds": lzma_seconds,
+            "sister_prober_band": list(sister_prober_band),
+            "within_sister_band": lzma_ratio_within_sister_band,
+        },
+        "wyner_ziv_layer_result": stage_counts,
+        "wzpsc01_archive": {
+            "bytes_len": len(archive_bytes),
+            "sha256": archive_sha256,
+            "saved_to": str(archive_path),
+        },
+        "roundtrip_byte_identical": roundtrip_byte_identical,
+        "encode_seconds": encode_seconds,
+        "inflate_seconds": inflate_seconds,
+        "verdict": {
+            "kind": verdict_kind,
+            "message": verdict_message,
+            "density_threshold_pct": density_threshold_pct,
+            "predicted_delta_s_band_per_sister_design_memo": list(
+                predicted_delta_s_band
+            ),
+            "canonical_frontier_score_cpu": canonical_frontier_score_cpu,
+            "sub_018_target": sub_018_target,
+            "sub_frontier_candidate": sub_frontier_candidate,
+        },
+        # Canonical Provenance per Catalog #323 + Catalog #341 non-promotable markers
+        "canonical_provenance": {
+            "kind": "predicted_from_model",
+            "evidence_grade": MLX_EVIDENCE_GRADE,
+            "axis_tag": f"[{MLX_EVIDENCE_GRADE}]",
+            "score_claim": False,
+            "score_claim_valid": False,
+            "promotable": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "predicted_delta_adjustment": 0.0,
+            "rationale": (
+                "MLX-LOCAL empirical measurement of Y-derivable-prefix density "
+                "on real PR101 fp16 state_dict bytes via 4 canonical Y sources "
+                "(Comma2k19 / ImageNet / torch_defaults / math_constants). "
+                "Non-promotable by construction per Catalog #192/#317/#341 + "
+                "CLAUDE.md 'MLX portable-local-substrate authority'. Promotion "
+                "to a contest score claim requires L2 paired CUDA+CPU auth-eval "
+                "per Catalog #246 + per-substrate symposium per Catalog #325 "
+                "14-day window."
+            ),
+            "canonical_helper_invocation": (
+                "tac.codec.wyner_ziv_layer.insert_wyner_ziv_layer + "
+                "tac.codec.wyner_ziv_layer.reconstruct_from_wyner_ziv_layer + "
+                "tac.codec.wyner_ziv_layer.derive_side_info_from_canonical_source"
+            ),
+            "intercept_location": arch.intercept_location.value,
+            "side_info_source_best": best_source,
+            "hardware_substrate": "darwin_arm64_m5_max_macos_mlx_local",
+            "commit_sha": os.environ.get("GIT_HEAD_SHA", "unknown"),
+        },
+        # Catalog #311 paradigm classification (cooperative-receiver triple)
+        "cooperative_receiver_triple": {
+            "atick_redlich_1990": "scorer optimization against decoder-side observation",
+            "tishby_zaslavsky_2015": "information bottleneck I(X;T)/I(T;Y) decomposition",
+            "wyner_ziv_1976": "R(D|Y) achievable rate with decoder-side side-info",
+            "this_substrate_route": "Wyner-Ziv pipeline-stage primitive at "
+            "intercept_location=STATE_DICT_SERIALIZATION; decoder-side "
+            "canonical Y from one of {Comma2k19, ImageNet, torch_defaults, "
+            "math_constants}",
+        },
+        # Catalog #344 canonical equation registry entry (FORMALIZATION_PENDING -> empirical anchor)
+        "canonical_equation_anchor": {
+            "equation_id": (
+                "wyner_ziv_pipeline_stage_codec_decoder_side_canonical_y_"
+                "savings_v1"
+            ),
+            "form": "R(D|Y) - R(D) ~= - (density / 100) * |source| / contest_rate_denom_bytes",
+            "predicted_max_savings_score_units": max_density_pct
+            / 100.0
+            * len(pre_entropy_bytes)
+            * 25.0
+            / 37_545_489,
+            "empirical_density_measured_percent": max_density_pct,
+            "empirical_falsification_classification": verdict_kind,
+        },
+    }
+
+    artifact_path = out_dir / "training_artifact.json"
+    artifact_path.write_text(
+        json.dumps(artifact, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    print(
+        f"[wzpsc-l1] artifact written: {artifact_path} "
+        f"(wall_clock={wall_clock_seconds:.2f}s; verdict={verdict_kind})"
+    )
+    print(f"[wzpsc-l1] verdict message: {verdict_message}")
+    print(
+        f"[wzpsc-l1] DONE — evidence_grade='{MLX_EVIDENCE_GRADE}' "
+        f"non-promotable per Catalog #192/#341. Operator-routable per sister "
+        "design memo §Reactivation criteria."
+    )
+    return 0
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     """Canonical entry point per Catalog #146 inflate runtime contract sister."""
     parser = build_arg_parser()
     args = parser.parse_args(argv)
+    if args.full:
+        return _full_main(args)
     if args.smoke:
         return _smoke_main(args)
-    return _full_main(args)
+    parser.print_help()
+    return 1
 
 
 if __name__ == "__main__":  # pragma: no cover

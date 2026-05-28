@@ -316,22 +316,95 @@ def test_e2e_encode_archive_inflate_roundtrip_byte_identical():
 
 
 # -----------------------------------------------------------------------------
-# Catalog #240 transparent non-dispatchable: _full_main raises NotImplementedError
+# L0->L1 LONG MLX promotion 2026-05-28: _full_main is now the canonical empirical-
+# measurement harness per the sister L1 landing memo
+# (.omx/research/wyner_ziv_pipeline_stage_codec_l1_long_mlx_600pair_landed_20260528.md).
+# Per CLAUDE.md HISTORICAL_PROVENANCE Catalog #110/#113: the L0 sentinel constant
+# L0_SCAFFOLD_NOT_IMPLEMENTED_MESSAGE is preserved (for forensic citation of the
+# L0 scaffold contract) but the runtime tests now exercise the L1 harness.
 # -----------------------------------------------------------------------------
 
 
-def test_full_main_raises_not_implemented_at_l0():
-    """Catalog #240: L0 scaffold's _full_main raises NotImplementedError."""
-    parser = build_arg_parser()
-    args = parser.parse_args([])
-    with pytest.raises(NotImplementedError, match="L0 SCAFFOLD"):
-        _full_main(args)
-
-
-def test_l0_scaffold_message_cites_canonical_design_memo():
-    """The NotImplementedError message MUST cite the sister design memo path."""
+def test_l0_scaffold_message_constant_preserved_for_historical_provenance():
+    """Per Catalog #110/#113: the L0 sentinel constant remains importable for
+    forensic citation; the L1 harness does not raise NotImplementedError but
+    the constant's existence documents the pre-L1 scaffold contract.
+    """
     assert ".omx/research/wyner_ziv_pipeline_stage_codec_design_20260528.md" in L0_SCAFFOLD_NOT_IMPLEMENTED_MESSAGE
     assert "L0 SCAFFOLD" in L0_SCAFFOLD_NOT_IMPLEMENTED_MESSAGE
+
+
+def test_l1_full_main_runs_to_zero_on_real_pr101_state_dict():
+    """L1 LONG MLX harness: _full_main MUST exit 0 on real PR101 fp16 bytes
+    and produce the canonical empirical anchor + WZPSC01 archive + byte-
+    identical roundtrip per Catalog #105/#139/#220/#272.
+    """
+    import os as _os
+    import tempfile
+    from pathlib import Path as _Path
+
+    parser = build_arg_parser()
+    pr101_path = _Path(
+        "experiments/results/pr101_codecop_sweep_20260507_codex/"
+        "pr101_decoder_state_dict.pt"
+    )
+    if not pr101_path.exists():
+        pytest.skip(f"PR101 reference state_dict not present at {pr101_path}")
+
+    with tempfile.TemporaryDirectory(dir=".omx/tmp" if _os.path.isdir(".omx/tmp") else None) as td:
+        out_dir = _Path(td) / "wzpsc_l1_test"
+        args = parser.parse_args([
+            "--full",
+            "--output-dir", str(out_dir),
+            "--base-substrate-bytes-path", str(pr101_path),
+            "--base-substrate-bytes-form", "raw_fp16",
+        ])
+        rc = _full_main(args)
+        assert rc == 0, f"L1 harness exited non-zero: {rc}"
+
+        artifact_path = out_dir / "training_artifact.json"
+        assert artifact_path.exists(), "training_artifact.json was not emitted"
+        import json as _json
+        artifact = _json.loads(artifact_path.read_text())
+
+        # Canonical Provenance + Catalog #341 non-promotable markers
+        prov = artifact["canonical_provenance"]
+        assert prov["promotable"] is False
+        assert prov["score_claim"] is False
+        assert prov["evidence_grade"] == "macOS-MLX research-signal"
+        assert prov["axis_tag"] == "[macOS-MLX research-signal]"
+
+        # Empirical measurement structure
+        assert "y_derivable_prefix_density_per_source" in artifact
+        sources = set(artifact["y_derivable_prefix_density_per_source"].keys())
+        assert sources == {"math_constants", "torch_defaults", "ImageNet", "Comma2k19"}
+
+        # WZPSC01 archive emitted
+        assert artifact["wzpsc01_archive"]["bytes_len"] > 0
+        assert artifact["roundtrip_byte_identical"] is True
+
+        # Verdict structure
+        assert artifact["verdict"]["kind"].endswith(
+            "FALSIFICATION_PER_CATALOG_307"
+        ) or "PARTIAL" in artifact["verdict"]["kind"] or "SUB_FRONTIER" in artifact["verdict"]["kind"]
+
+
+def test_l1_full_main_fails_closed_on_missing_base_substrate_bytes():
+    """The L1 harness MUST fail closed (return 1) when base bytes don't exist.
+
+    Per CLAUDE.md "Forbidden CLI flag inventions" + Catalog #152 required-
+    input validation: missing files surface as rc=1 + stderr message.
+    """
+    from pathlib import Path as _Path
+    parser = build_arg_parser()
+    args = parser.parse_args([
+        "--full",
+        "--output-dir", "/nonexistent_out_dir_for_test",
+        "--base-substrate-bytes-path",
+        "/nonexistent/path/that/does/not/exist.pt",
+    ])
+    rc = _full_main(args)
+    assert rc == 1
 
 
 def test_smoke_main_returns_zero_on_byte_identical_roundtrip():
@@ -348,7 +421,7 @@ def test_main_cli_smoke_flag():
     assert rc == 0
 
 
-def test_main_cli_no_smoke_flag_raises_not_implemented():
-    """main() without --smoke routes to _full_main + raises NotImplementedError."""
-    with pytest.raises(NotImplementedError):
-        main([])
+def test_main_cli_no_flag_prints_help_and_returns_one():
+    """main() without --smoke or --full prints help + returns rc=1."""
+    rc = main([])
+    assert rc == 1
