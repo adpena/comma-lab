@@ -33,6 +33,22 @@ matcher does NOT promote / dispatch / mutate state. Slot 1's Pareto
 solver consumes the match results as constraints; the operator decides
 whether to apply the canonical unwind path OR override with a waiver.
 
+ARCHITECTURAL FIX 2026-05-28 (Wave N+3 Slot 2): false-positive matches
+fired empirically 3× this session when stack_spec carried explicit
+override flags or contradicting compression_ops (Compound C STAND_DOWN
+`e61ea93b0`, Wave N+3 Slot 1 PyTorch sister `4c1daf186`, Compound F
+preflight `e5467cf05`). Pre-fix matcher relied on token-overlap
+heuristics that fired regardless of explicit-guarantee fields like
+``quantization_aware_training=True`` or absence of ``lzma`` in
+``compression_ops``. The fix introduces a per-anti-pattern OVERRIDE
+TABLE that names structural guarantees ("if stack_spec[K]==V then
+predicate IS NOT MET — refuse match") + structural contradictions
+("if stack_spec[K] is a list and 'lzma' not in it, then 'brotli+lzma
+chained' predicate IS NOT MET"). The table is decoupled from the
+``AntiPattern`` dataclass so JSONL persisted state stays
+back-compatible and downstream consumers see only the cleaner
+``match_stack_against_anti_patterns`` return value.
+
 Sister of:
   * ``tac.canonical_anti_patterns.registry`` (the registered anti-patterns)
   * ``tac.canonical_anti_patterns.builtins`` (initial 12 anti-patterns)
@@ -43,7 +59,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping, Sequence
 
 from tac.canonical_anti_patterns.anti_pattern import (
     SEVERITY_CRITICAL,
@@ -138,6 +154,296 @@ class ValidationResult:
             raise ValueError("suggested_canonical_order must be a string")
 
 
+# ---------------------------------------------------------------------------
+# ARCHITECTURAL FIX: per-anti-pattern explicit-override predicate table.
+# ---------------------------------------------------------------------------
+#
+# Each entry maps a canonical ``anti_pattern_id`` to a callable
+# ``(stack_spec) -> (is_structurally_inapplicable, human_readable_reason)``.
+# When ``is_structurally_inapplicable`` is True, the matcher REFUSES to match
+# the anti-pattern regardless of any token-overlap heuristic — the stack_spec
+# explicitly proves the forbidden predicate IS NOT MET.
+#
+# The table is intentionally decoupled from the ``AntiPattern`` dataclass:
+#   1. JSONL persisted state stays back-compatible (no schema bump).
+#   2. The override knowledge is matcher-engineering (how to interpret
+#      stack_spec fields), not anti-pattern-engineering (what the forbidden
+#      pattern IS).
+#   3. New anti-patterns landing in ``builtins.py`` can co-land a sister entry
+#      here as their canonical override predicate; the matcher inherits the
+#      protection structurally.
+#
+# Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against":
+# this fix STRUCTURALLY extincts the false-positive bug class at the matcher
+# surface; the symptom-only filter at
+# ``tac.substrates.pact_nerv_selector_v3.heterogeneous_bit_allocation.
+# assert_no_critical_anti_pattern_matches`` is now redundant for the
+# fp4_packed_without_qat case (kept as defense-in-depth).
+#
+# CASES (each backed by an empirical false-positive anchor):
+#
+# (a) fp4_packed_without_qat_cos_collapse_v1 — anchor: Compound C STAND_DOWN
+#     `e61ea93b0`. Predicate: NOT training_pipeline.includes_qat_finetune_pass.
+#     Explicit guarantee: stack_spec["quantization_aware_training"] is True
+#     OR stack_spec["qat_finetune_passes"] >= 1 OR
+#     stack_spec["training_pipeline"]["qat_finetune"] truthy.
+#
+# (b) brotli_plus_lzma_chained_anti_pattern_v1 — anchor: Wave N+3 Slot 1
+#     `4c1daf186`. Predicate: compression_pipeline contains BOTH brotli AND
+#     lzma. Explicit contradiction: stack_spec["compression_ops"] is a list
+#     AND no token contains "lzma".
+#
+# (c) lzma_on_already_brotli_saturated_compounding_v1 — sister of (b);
+#     same explicit-contradiction predicate (absence of lzma).
+#
+# (d) cross_paradigm_test_without_per_axis_decomposition_v1 — anchor: Compound
+#     F preflight `e5467cf05`. Predicate: cross_paradigm=True AND
+#     per_axis_decomposition_active=False. Explicit guarantee:
+#     stack_spec["per_axis_decomposition_active"] is True.
+#
+_OverridePredicate = Callable[[Mapping[str, Any]], tuple[bool, str]]
+
+
+def _iter_list_like(value: Any) -> tuple[Any, ...]:
+    """Return a tuple view of list/tuple values; empty tuple otherwise."""
+    if isinstance(value, (list, tuple)):
+        return tuple(value)
+    return ()
+
+
+def _stack_spec_contains_token_in_field(
+    stack_spec: Mapping[str, Any],
+    field: str,
+    token: str,
+) -> bool:
+    """Return True iff stack_spec[field] is a list-like containing `token`.
+
+    Per-element matching is case-insensitive substring on the str()
+    representation of each element. Used by explicit-contradiction
+    predicates to determine whether a forbidden token is genuinely
+    present in a structured field (NOT just appearing in haystack via
+    some sister substring).
+    """
+    value = stack_spec.get(field)
+    if not isinstance(value, (list, tuple)):
+        return False
+    token_lower = token.lower()
+    for element in value:
+        if isinstance(element, str) and token_lower in element.lower():
+            return True
+    return False
+
+
+def _explicit_override_fp4_packed_without_qat(
+    stack_spec: Mapping[str, Any],
+) -> tuple[bool, str]:
+    """Refuse fp4_packed_without_qat_cos_collapse_v1 match when QAT proven.
+
+    The forbidden predicate is ``NOT training_pipeline.includes_qat_finetune_pass``.
+    The match is STRUCTURALLY INAPPLICABLE when the stack_spec explicitly
+    declares QAT is active via any of:
+
+      * ``stack_spec["quantization_aware_training"]`` is True
+      * ``stack_spec["qat_finetune_passes"]`` is int >= 1
+      * ``stack_spec["training_pipeline"]["qat_finetune"]`` is truthy
+      * ``stack_spec["training_pipeline"]["includes_qat_finetune_pass"]`` is True
+      * ``stack_spec["qat_enabled"]`` is True
+    """
+    if stack_spec.get("quantization_aware_training") is True:
+        return True, (
+            "explicit override: stack_spec['quantization_aware_training']=True "
+            "structurally satisfies the predicate "
+            "'training_pipeline.includes_qat_finetune_pass'"
+        )
+    if stack_spec.get("qat_enabled") is True:
+        return True, (
+            "explicit override: stack_spec['qat_enabled']=True structurally "
+            "satisfies the QAT-pipeline predicate"
+        )
+    passes = stack_spec.get("qat_finetune_passes")
+    if isinstance(passes, int) and not isinstance(passes, bool) and passes >= 1:
+        return True, (
+            f"explicit override: stack_spec['qat_finetune_passes']={passes} >= 1 "
+            "structurally satisfies the QAT-pipeline predicate"
+        )
+    training_pipeline = stack_spec.get("training_pipeline")
+    if isinstance(training_pipeline, Mapping):
+        if training_pipeline.get("qat_finetune") in (True, 1):
+            return True, (
+                "explicit override: stack_spec['training_pipeline']"
+                "['qat_finetune'] is truthy structurally satisfies the "
+                "QAT-pipeline predicate"
+            )
+        if training_pipeline.get("includes_qat_finetune_pass") is True:
+            return True, (
+                "explicit override: stack_spec['training_pipeline']"
+                "['includes_qat_finetune_pass']=True structurally satisfies "
+                "the QAT-pipeline predicate"
+            )
+    return False, ""
+
+
+def _explicit_override_brotli_plus_lzma_chained(
+    stack_spec: Mapping[str, Any],
+) -> tuple[bool, str]:
+    """Refuse brotli_plus_lzma_chained match when compression_ops lacks lzma.
+
+    The forbidden predicate is ``compression_pipeline contains brotli AND
+    compression_pipeline contains lzma``. The match is STRUCTURALLY
+    INAPPLICABLE when the stack_spec declares a structured
+    ``compression_ops`` (or sister synonym ``compression_pipeline``)
+    list AND no element contains the lzma token. This catches the
+    Wave N+3 Slot 1 false positive where the proposed stack was
+    ``["brotli_q11"]`` (no lzma anywhere) yet the matcher's
+    token-fallback heuristic fired due to sister-pattern haystack
+    overlap.
+    """
+    for field in ("compression_ops", "compression_pipeline", "entropy_coders"):
+        value = stack_spec.get(field)
+        if isinstance(value, (list, tuple)):
+            has_lzma = any(
+                isinstance(e, str) and "lzma" in e.lower() for e in value
+            )
+            if not has_lzma:
+                return True, (
+                    f"explicit override: stack_spec[{field!r}]={list(value)!r} "
+                    "is a structured compression-pipeline list with NO lzma "
+                    "token; the forbidden 'brotli+lzma chained' predicate is "
+                    "structurally not met"
+                )
+    return False, ""
+
+
+def _explicit_override_lzma_on_already_brotli(
+    stack_spec: Mapping[str, Any],
+) -> tuple[bool, str]:
+    """Refuse lzma_on_already_brotli_saturated match when compression_ops lacks lzma.
+
+    Sister of (b): the forbidden predicate is ``LZMA AFTER brotli``.
+    If structured compression_ops lacks lzma entirely, the predicate is
+    structurally not met.
+    """
+    # Reuse the brotli+lzma override — both predicates require lzma's
+    # presence; absence structurally refutes both.
+    return _explicit_override_brotli_plus_lzma_chained(stack_spec)
+
+
+def _explicit_override_cross_paradigm_test_per_axis_decomposition(
+    stack_spec: Mapping[str, Any],
+) -> tuple[bool, str]:
+    """Refuse cross_paradigm_test_without_per_axis_decomposition when active.
+
+    The forbidden predicate is ``cross_paradigm=True AND
+    per_axis_decomposition_active=False``. The match is STRUCTURALLY
+    INAPPLICABLE when the stack_spec explicitly declares per-axis
+    decomposition active via any of:
+
+      * ``stack_spec["per_axis_decomposition_active"]`` is True
+      * ``stack_spec["per_axis_decomposition"]`` is True
+      * ``stack_spec["catalog_356_active"]`` is True
+    """
+    if stack_spec.get("per_axis_decomposition_active") is True:
+        return True, (
+            "explicit override: stack_spec['per_axis_decomposition_active']="
+            "True structurally satisfies Catalog #356 per-axis decomposition"
+        )
+    if stack_spec.get("per_axis_decomposition") is True:
+        return True, (
+            "explicit override: stack_spec['per_axis_decomposition']=True "
+            "structurally satisfies Catalog #356 per-axis decomposition"
+        )
+    if stack_spec.get("catalog_356_active") is True:
+        return True, (
+            "explicit override: stack_spec['catalog_356_active']=True "
+            "structurally satisfies the Catalog #356 GAP FIX predicate"
+        )
+    return False, ""
+
+
+def _explicit_override_quantize_then_svd_corrupted(
+    stack_spec: Mapping[str, Any],
+) -> tuple[bool, str]:
+    """Refuse quantize_then_svd_corrupted_low_rank when structured ops absent.
+
+    The forbidden predicate is ``compound_stack contains svd AND quantize
+    AND svd.order > quantize.order``. The match is STRUCTURALLY
+    INAPPLICABLE when ``compression_ops`` / ``quantization_ops`` are
+    structured lists AND no SVD/low-rank token follows quantization.
+    Sister-pattern protection for stacks that mention SVD in haystack
+    but not in execution-order list.
+    """
+    quantization_ops = stack_spec.get("quantization_ops")
+    if isinstance(quantization_ops, (list, tuple)):
+        has_quant = any(
+            isinstance(e, str)
+            and any(
+                t in e.lower() for t in ("int8", "int4", "fp4", "quantize", "qat")
+            )
+            for e in quantization_ops
+        )
+        has_svd = any(
+            isinstance(e, str)
+            and any(t in e.lower() for t in ("svd", "low_rank", "low-rank"))
+            for e in quantization_ops
+        )
+        if has_quant and not has_svd:
+            return True, (
+                "explicit override: stack_spec['quantization_ops'] contains "
+                "quantization but NO svd/low_rank token; the forbidden "
+                "'quantize THEN svd' predicate is structurally not met"
+            )
+    return False, ""
+
+
+_EXPLICIT_OVERRIDE_PREDICATES: dict[str, _OverridePredicate] = {
+    "fp4_packed_without_qat_cos_collapse_v1": (
+        _explicit_override_fp4_packed_without_qat
+    ),
+    "brotli_plus_lzma_chained_anti_pattern_v1": (
+        _explicit_override_brotli_plus_lzma_chained
+    ),
+    "lzma_on_already_brotli_saturated_compounding_v1": (
+        _explicit_override_lzma_on_already_brotli
+    ),
+    "cross_paradigm_test_without_per_axis_decomposition_v1": (
+        _explicit_override_cross_paradigm_test_per_axis_decomposition
+    ),
+    "quantize_then_svd_corrupted_low_rank_v1": (
+        _explicit_override_quantize_then_svd_corrupted
+    ),
+}
+
+
+def evaluate_explicit_override_for_anti_pattern(
+    anti_pattern_id: str,
+    stack_spec: Mapping[str, Any],
+) -> tuple[bool, str]:
+    """Public API: evaluate a single anti-pattern's explicit-override predicate.
+
+    Returns ``(is_structurally_inapplicable, human_readable_reason)``.
+    When ``is_structurally_inapplicable=True``, the matcher MUST refuse
+    to match the anti-pattern regardless of token-overlap confidence.
+
+    Anti-patterns without a registered explicit-override predicate
+    return ``(False, "")`` (the matcher falls back to token-heuristic
+    matching).
+
+    Per CLAUDE.md "Beauty, simplicity, and developer experience": exposed
+    as a public function so downstream consumers (e.g. cathedral autopilot
+    diagnostics, operator-facing CLI list_canonical_anti_patterns.py) can
+    introspect the override decision without re-implementing the table.
+    """
+    if not isinstance(stack_spec, Mapping):
+        return False, ""
+    predicate = _EXPLICIT_OVERRIDE_PREDICATES.get(anti_pattern_id)
+    if predicate is None:
+        return False, ""
+    try:
+        return predicate(stack_spec)
+    except Exception:  # noqa: BLE001 - defensive; never crash matcher
+        return False, ""
+
+
 # Canonical compounding-order violations the matcher recognizes structurally.
 # These mirror anti-patterns #1 / #2 / #4 / #5 in the initial canonical
 # population. Each entry: (after_op_tokens, before_op_tokens) where the
@@ -221,20 +527,35 @@ def match_stack_against_anti_patterns(
 
     Args:
         stack_spec: open Mapping describing the proposed compound stack.
-            Canonical shape (all optional):
+            Canonical shape (all optional; the matcher honors explicit
+            guarantee fields per the override table when present):
 
               {
                   "substrate_id": str,
-                  "compression_ops": list[str],
-                  "quantization_ops": list[str],
+                  "compression_ops": list[str],   # structured execution order
+                  "quantization_ops": list[str],  # structured execution order
                   "decoder_arch": str,
-                  "per_axis_decomposition_active": bool,
+                  "per_axis_decomposition_active": bool,   # Catalog #356
                   "predicted_band_source": str,
                   "archive_artifact_path": str | None,
                   "data_source_inheritance": dict[str, str] | None,
                   "modal_dispatch_pre_spawn_path": bool,
+                  "quantization_aware_training": bool,    # Catalog #146 QAT
+                  "qat_enabled": bool,                    # sister synonym
+                  "qat_finetune_passes": int,             # sister synonym
+                  "training_pipeline": {"qat_finetune": bool, ...},
                   ...
               }
+
+            ARCHITECTURAL FIX 2026-05-28: when stack_spec carries explicit
+            override fields (e.g. ``quantization_aware_training=True``,
+            structured ``compression_ops`` list with no ``lzma`` token,
+            ``per_axis_decomposition_active=True``), the matcher consults the
+            per-anti-pattern override table BEFORE the token-overlap heuristic
+            and REFUSES to match anti-patterns whose forbidden predicate is
+            structurally proven inapplicable. See
+            :func:`evaluate_explicit_override_for_anti_pattern` for the
+            canonical override decision API.
 
         path: optional override for the registry JSONL path (for tests).
         min_confidence: matches below this threshold are dropped (default 0.5).
@@ -256,6 +577,15 @@ def match_stack_against_anti_patterns(
     registered = query_anti_patterns(path=path)
     matches: list[AntiPatternMatch] = []
     for ap in registered:
+        # ARCHITECTURAL FIX: consult the explicit-override predicate FIRST.
+        # When the stack_spec structurally proves the forbidden predicate is
+        # not met, the match is refused regardless of token-heuristic.
+        is_inapplicable, _override_reason = evaluate_explicit_override_for_anti_pattern(
+            ap.anti_pattern_id, stack_spec
+        )
+        if is_inapplicable:
+            continue
+
         best_condition: str | None = None
         best_confidence: float = 0.0
         for condition in ap.recurrence_conditions:
@@ -385,6 +715,7 @@ def validate_compound_stack_order(
 __all__ = [
     "AntiPatternMatch",
     "ValidationResult",
+    "evaluate_explicit_override_for_anti_pattern",
     "match_stack_against_anti_patterns",
     "validate_compound_stack_order",
 ]

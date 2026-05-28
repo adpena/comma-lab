@@ -92,6 +92,7 @@ from tac.canonical_anti_patterns.builtins import (
 from tac.canonical_anti_patterns.pattern_matcher import (
     AntiPatternMatch,
     ValidationResult,
+    evaluate_explicit_override_for_anti_pattern,
     match_stack_against_anti_patterns,
     validate_compound_stack_order,
 )
@@ -169,6 +170,7 @@ __all__ = [
     "append_empirical_falsification",
     "auto_recalibrate_from_continual_learning_posterior",
     "build_all_initial_anti_patterns",
+    "evaluate_explicit_override_for_anti_pattern",
     "get_anti_pattern_by_id",
     "load_anti_patterns_events_lenient",
     "load_anti_patterns_strict",
