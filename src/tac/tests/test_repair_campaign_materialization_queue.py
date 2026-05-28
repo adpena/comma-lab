@@ -156,6 +156,7 @@ def test_byte_closed_materialization_queue_emits_archive_bound_steps(
         "emit_repair_budget_materialization_plan",
         "emit_repair_family_materializer_manifest",
         "emit_repair_budget_child_component_replay_manifests",
+        "execute_repair_family_byte_transform",
         "bind_repair_budget_materializer_execution",
         "audit_repair_budget_materialization_execution",
         "emit_selected_repair_materialization_gate",
@@ -169,14 +170,21 @@ def test_byte_closed_materialization_queue_emits_archive_bound_steps(
     assert experiment["metadata"]["repair_family_materializer_manifest_schema"] == (
         REPAIR_CAMPAIGN_FAMILY_MATERIALIZER_MANIFEST_SCHEMA
     )
-    assert "--materializer-manifest" in experiment["steps"][3]["command"]
-    assert experiment["steps"][5]["postconditions"][0]["equals"] == (
-        REPAIR_CAMPAIGN_BYTE_CLOSED_MATERIALIZATION_GATE_SCHEMA
+    assert experiment["metadata"][
+        "repair_family_byte_transform_execution_report_schema"
+    ] == "repair_family_byte_transform_execution_report.v1"
+    assert "--materializer-manifest" in experiment["steps"][4]["command"]
+    assert any(
+        str(item).endswith("repair_family_byte_transform_execution_report.json")
+        for item in experiment["steps"][4]["command"]
     )
     assert experiment["steps"][6]["postconditions"][0]["equals"] == (
-        REPAIR_CAMPAIGN_BLOCKED_LEARNING_SIGNAL_REPORT_SCHEMA
+        REPAIR_CAMPAIGN_BYTE_CLOSED_MATERIALIZATION_GATE_SCHEMA
     )
     assert experiment["steps"][7]["postconditions"][0]["equals"] == (
+        REPAIR_CAMPAIGN_BLOCKED_LEARNING_SIGNAL_REPORT_SCHEMA
+    )
+    assert experiment["steps"][8]["postconditions"][0]["equals"] == (
         REPAIR_CAMPAIGN_BLOCKED_POSTERIOR_APPEND_REPORT_SCHEMA
     )
 
@@ -337,3 +345,48 @@ def test_byte_closed_materialization_queue_cli_writes_queue(tmp_path: Path) -> N
     worker_payload = json.loads(worker_result_path.read_text(encoding="utf-8"))
     assert worker_payload["failure_count"] == 0
     assert posterior_path.is_file()
+
+
+def test_repair_campaign_autonomous_floor_loop_cli_fails_closed(
+    tmp_path: Path,
+) -> None:
+    work_order = _work_order(tmp_path)
+    work_order_path = _write_json(tmp_path / "work_order.json", work_order)
+    report = score_repair_campaign(payload=work_order, repo_root=tmp_path)
+    report_path = _write_json(tmp_path / "score_report.json", report)
+    queue = build_repair_campaign_byte_closed_materialization_queue(
+        repo_root=REPO_ROOT,
+        score_report=report,
+        score_report_path=report_path,
+        work_order_path=work_order_path,
+        results_root=tmp_path / "results",
+        queue_id="unit_repair_materialization",
+    )
+    queue_path = _write_json(tmp_path / "repair_materialization_queue.json", queue)
+    summary_path = tmp_path / "floor_loop_summary.json"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "run_repair_campaign_autonomous_floor_loop.py"),
+            "--materialization-queue",
+            str(queue_path),
+            "--output-dir",
+            str(tmp_path / "loop"),
+            "--summary-out",
+            str(summary_path),
+            "--max-iterations",
+            "1",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    assert summary["schema"] == "repair_campaign_autonomous_floor_loop.v1"
+    assert summary["stop_reason"] == "exact_axis_blocker"
+    assert summary["stack_search_plan"]["execution_report_count"] == 0
+    assert summary["ready_for_exact_eval_dispatch"] is False

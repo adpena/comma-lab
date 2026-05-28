@@ -24,9 +24,18 @@ from tac.optimization.repair_campaign_scorer import (
     build_repair_campaign_posterior_prior_summary,
     score_repair_campaign,
 )
+from tac.optimization.repair_family_byte_transform_executor import (
+    REPAIR_FAMILY_BYTE_TRANSFORM_EXECUTION_REPORT_SCHEMA,
+    REPAIR_FAMILY_BYTE_TRANSFORM_REPLAY_BUNDLE_SCHEMA,
+    build_repair_family_byte_transform_execution_report,
+)
 from tac.optimization.repair_family_materializers import (
     REPAIR_CAMPAIGN_FAMILY_MATERIALIZER_MANIFEST_SCHEMA,
     build_repair_campaign_family_materializer_manifest,
+)
+from tac.optimization.repair_family_stack_search import (
+    REPAIR_FAMILY_STACK_SEARCH_PLAN_SCHEMA,
+    plan_repair_family_stack_search,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -212,6 +221,221 @@ def test_family_materializer_cli_writes_manifest(tmp_path: Path) -> None:
     assert manifest["schema"] == REPAIR_CAMPAIGN_FAMILY_MATERIALIZER_MANIFEST_SCHEMA
     assert manifest["component_response_replayed"] is True
     assert manifest["score_claim"] is False
+
+
+def test_repair_family_byte_transform_executor_emits_replayable_delta(
+    tmp_path: Path,
+) -> None:
+    score_report = score_repair_campaign(payload=_repair_payload(tmp_path), repo_root=tmp_path)
+    plan = _plan_from_score_report(score_report)
+    manifest = build_repair_campaign_family_materializer_manifest(
+        repo_root=tmp_path,
+        materialization_plan=plan,
+        score_report=score_report,
+        materialization_plan_path=tmp_path / "plan.json",
+        score_report_path=tmp_path / "score_report.json",
+        typed_response_id="segnet_region_ready",
+        candidate_id="segnet_class_region_waterfill",
+    )
+    manifest_path = _write_json(tmp_path / "family_manifest.json", manifest)
+
+    report, bundle = build_repair_family_byte_transform_execution_report(
+        family_materializer_manifest=manifest,
+        family_materializer_manifest_path=manifest_path,
+        output_dir=tmp_path / "byte_transform",
+        replay_argv=["python", "tools/run_repair_family_byte_transform_executor.py"],
+        invocation_argv=["pytest"],
+        repo_root=tmp_path,
+        allow_overwrite=False,
+    )
+
+    assert report["schema"] == REPAIR_FAMILY_BYTE_TRANSFORM_EXECUTION_REPORT_SCHEMA
+    assert report["family_id"] == "segnet_class_region_waterfill"
+    assert report["byte_transform_delta_emitted"] is True
+    assert report["byte_transform_delta"]["bytes"] > 0
+    assert (tmp_path / report["byte_transform_delta"]["path"]).is_file()
+    assert report["component_response_replayed"] is True
+    assert report["exact_eval_handoff_gate"]["eligible_for_exact_eval_handoff"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert bundle["schema"] == REPAIR_FAMILY_BYTE_TRANSFORM_REPLAY_BUNDLE_SCHEMA
+    assert bundle["source_records_sha256"]
+
+
+def test_repair_family_byte_transform_cli_writes_report_and_bundle(
+    tmp_path: Path,
+) -> None:
+    score_report = score_repair_campaign(payload=_repair_payload(tmp_path), repo_root=tmp_path)
+    plan = _plan_from_score_report(score_report)
+    manifest = build_repair_campaign_family_materializer_manifest(
+        repo_root=tmp_path,
+        materialization_plan=plan,
+        score_report=score_report,
+        materialization_plan_path=tmp_path / "plan.json",
+        score_report_path=tmp_path / "score_report.json",
+        typed_response_id="segnet_region_ready",
+        candidate_id="segnet_class_region_waterfill",
+    )
+    manifest_path = _write_json(tmp_path / "family_manifest.json", manifest)
+    report_path = tmp_path / "byte_transform_report.json"
+    bundle_path = tmp_path / "byte_transform_bundle.json"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "run_repair_family_byte_transform_executor.py"),
+            "--family-materializer-manifest",
+            str(manifest_path),
+            "--output-dir",
+            str(tmp_path / "byte_transform"),
+            "--execution-report-out",
+            str(report_path),
+            "--replay-bundle-out",
+            str(bundle_path),
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    bundle = json.loads(bundle_path.read_text(encoding="utf-8"))
+    assert report["schema"] == REPAIR_FAMILY_BYTE_TRANSFORM_EXECUTION_REPORT_SCHEMA
+    assert bundle["schema"] == REPAIR_FAMILY_BYTE_TRANSFORM_REPLAY_BUNDLE_SCHEMA
+    assert report["score_claim"] is False
+
+
+@pytest.mark.parametrize(
+    "family_id",
+    [
+        "posenet_null_bottom_decile",
+        "segnet_class_region_waterfill",
+        "per_region_selector_codec",
+        "frame0_k16_palette_asymmetry",
+        "entropy_boundary_probe",
+    ],
+)
+def test_byte_transform_executor_supports_all_queue_owned_repair_families(
+    tmp_path: Path,
+    family_id: str,
+) -> None:
+    manifest = {
+        "schema": REPAIR_CAMPAIGN_FAMILY_MATERIALIZER_MANIFEST_SCHEMA,
+        "materializer_id": f"repair_family_materializer:{family_id}",
+        "target_kind": family_id,
+        "family_id": family_id,
+        "typed_response_id": f"{family_id}_typed",
+        "candidate_chain_id": f"{family_id}_chain",
+        "candidate_chain_ids": [f"{family_id}_chain"],
+        "repair_budget_candidate_chain_id": f"{family_id}_chain",
+        "repair_budget_candidate_chain_ids": [f"{family_id}_chain"],
+        "entropy_position_label": "before_entropy_coder_distribution_shaping",
+        "active_entropy_stage": {
+            "order": 10,
+            "stage": "before_entropy_coder_distribution_shaping",
+            "class": "pre_entropy_distribution_shaping",
+        },
+        "fractal_optimization_scope": {
+            "active_levels": ["bit", "byte", "pixel", "region", "frame"],
+            "declared_levels": ["bit", "byte", "pixel", "region", "frame"],
+        },
+        "component_response_replayed": True,
+        "component_response_replay": {
+            "replayed": True,
+            "axis_tag": "[macOS-MLX research-signal]",
+            "component_response_terms": {
+                "segnet_delta_score_units": -0.0001,
+                "posenet_delta_score_units": -0.0002,
+                **_false_authority(),
+            },
+            **_false_authority(),
+        },
+        "receiver_contract_satisfied": False,
+        "byte_closed_candidate_emitted": False,
+        "readiness_blockers": ["candidate_archive_missing"],
+        **_false_authority(),
+    }
+    manifest_path = _write_json(tmp_path / f"{family_id}.json", manifest)
+
+    report, bundle = build_repair_family_byte_transform_execution_report(
+        family_materializer_manifest=manifest,
+        family_materializer_manifest_path=manifest_path,
+        output_dir=tmp_path / family_id,
+        replay_argv=["python", "tools/run_repair_family_byte_transform_executor.py"],
+        invocation_argv=["pytest"],
+        repo_root=tmp_path,
+        allow_overwrite=False,
+    )
+
+    assert report["family_id"] == family_id
+    assert report["byte_transform_supported"] is True
+    assert report["byte_transform_delta"]["transform_kind"]
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert bundle["schema"] == REPAIR_FAMILY_BYTE_TRANSFORM_REPLAY_BUNDLE_SCHEMA
+
+
+def test_repair_family_stack_search_demotes_negative_posterior(
+    tmp_path: Path,
+) -> None:
+    score_report = score_repair_campaign(payload=_repair_payload(tmp_path), repo_root=tmp_path)
+    plan = _plan_from_score_report(score_report)
+    manifest = build_repair_campaign_family_materializer_manifest(
+        repo_root=tmp_path,
+        materialization_plan=plan,
+        score_report=score_report,
+        materialization_plan_path=tmp_path / "plan.json",
+        score_report_path=tmp_path / "score_report.json",
+        typed_response_id="segnet_region_ready",
+        candidate_id="segnet_class_region_waterfill",
+    )
+    manifest_path = _write_json(tmp_path / "family_manifest.json", manifest)
+    report, _bundle = build_repair_family_byte_transform_execution_report(
+        family_materializer_manifest=manifest,
+        family_materializer_manifest_path=manifest_path,
+        output_dir=tmp_path / "byte_transform",
+        replay_argv=["python", "tools/run_repair_family_byte_transform_executor.py"],
+        invocation_argv=["pytest"],
+        repo_root=tmp_path,
+        allow_overwrite=False,
+    )
+    report_path = _write_json(tmp_path / "byte_transform_report.json", report)
+    posterior_path = tmp_path / "posterior.jsonl"
+    posterior_path.write_text(
+        json.dumps(
+            {
+                "schema": "repair_campaign_stackability_posterior_row.v1",
+                "typed_response_id": "segnet_negative",
+                "candidate_id": "segnet_class_region_waterfill",
+                "family_id": "segnet_class_region_waterfill",
+                "acquisition_policy_delta": {
+                    "recommended_acquisition_policy": (
+                        "decrease_family_priority_until_new_component_response_signal"
+                    ),
+                    "family_priority_direction": "decrease",
+                    **_false_authority(),
+                },
+                "blockers": ["non_improving_local_objective_delta"],
+                **_false_authority(),
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    stack_plan = plan_repair_family_stack_search(
+        execution_reports=[report],
+        execution_report_paths=[report_path],
+        repo_root=tmp_path,
+        posterior_path=posterior_path,
+        byte_credit_budget=10_000,
+    )
+
+    assert stack_plan["schema"] == REPAIR_FAMILY_STACK_SEARCH_PLAN_SCHEMA
+    row = stack_plan["stack_rows"][0]
+    assert row["automatic_negative_result_demoted"] is True
+    assert "automatic_negative_result_demotion_active" in row["blockers"]
+    assert stack_plan["ready_for_exact_eval_dispatch"] is False
 
 
 def test_materialization_gate_learning_signal_updates_posterior(

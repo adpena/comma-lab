@@ -34,6 +34,10 @@ from tac.optimization.repair_campaign_posterior import (
 from tac.optimization.repair_campaign_scorer import (
     REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA,
 )
+from tac.optimization.repair_family_byte_transform_executor import (
+    REPAIR_FAMILY_BYTE_TRANSFORM_EXECUTION_REPORT_SCHEMA,
+    REPAIR_FAMILY_BYTE_TRANSFORM_REPLAY_BUNDLE_SCHEMA,
+)
 from tac.optimization.repair_family_materializers import (
     REPAIR_CAMPAIGN_FAMILY_MATERIALIZER_MANIFEST_SCHEMA,
 )
@@ -257,6 +261,13 @@ def _materialization_experiment(
         row_root / "repair_budget_child_component_replay_manifests.json"
     )
     family_materializer_manifest = row_root / "repair_family_materializer_manifest.json"
+    byte_transform_dir = row_root / "repair_family_byte_transform"
+    byte_transform_execution_report = (
+        row_root / "repair_family_byte_transform_execution_report.json"
+    )
+    byte_transform_replay_bundle = (
+        row_root / "repair_family_byte_transform_replay_bundle.json"
+    )
     binding_report = row_root / "repair_budget_materializer_binding_report.json"
     execution_report = row_root / "repair_budget_materialization_execution_report.json"
     gate = row_root / "repair_campaign_byte_closed_materialization_gate.json"
@@ -269,6 +280,15 @@ def _materialization_experiment(
     materialization_plan_ref = _repo_rel(materialization_plan, repo_root)
     child_replay_ref = _repo_rel(child_replay_manifest, repo_root)
     family_materializer_ref = _repo_rel(family_materializer_manifest, repo_root)
+    byte_transform_dir_ref = _repo_rel(byte_transform_dir, repo_root)
+    byte_transform_execution_report_ref = _repo_rel(
+        byte_transform_execution_report,
+        repo_root,
+    )
+    byte_transform_replay_bundle_ref = _repo_rel(
+        byte_transform_replay_bundle,
+        repo_root,
+    )
     binding_report_ref = _repo_rel(binding_report, repo_root)
     execution_report_ref = _repo_rel(execution_report, repo_root)
     gate_ref = _repo_rel(gate, repo_root)
@@ -318,6 +338,19 @@ def _materialization_experiment(
         "repair_family_materializer_manifest_path": family_materializer_ref,
         "repair_family_materializer_manifest_schema": (
             REPAIR_CAMPAIGN_FAMILY_MATERIALIZER_MANIFEST_SCHEMA
+        ),
+        "repair_family_byte_transform_output_dir": byte_transform_dir_ref,
+        "repair_family_byte_transform_execution_report_path": (
+            byte_transform_execution_report_ref
+        ),
+        "repair_family_byte_transform_execution_report_schema": (
+            REPAIR_FAMILY_BYTE_TRANSFORM_EXECUTION_REPORT_SCHEMA
+        ),
+        "repair_family_byte_transform_replay_bundle_path": (
+            byte_transform_replay_bundle_ref
+        ),
+        "repair_family_byte_transform_replay_bundle_schema": (
+            REPAIR_FAMILY_BYTE_TRANSFORM_REPLAY_BUNDLE_SCHEMA
         ),
         "materializer_binding_report_path": binding_report_ref,
         "materialization_execution_report_path": execution_report_ref,
@@ -484,10 +517,69 @@ def _materialization_experiment(
                 },
             },
             {
+                "id": "execute_repair_family_byte_transform",
+                "kind": "command",
+                "requires": ["emit_repair_family_materializer_manifest"],
+                "command": [
+                    ".venv/bin/python",
+                    "tools/run_repair_family_byte_transform_executor.py",
+                    "--family-materializer-manifest",
+                    family_materializer_ref,
+                    "--output-dir",
+                    byte_transform_dir_ref,
+                    "--execution-report-out",
+                    byte_transform_execution_report_ref,
+                    "--replay-bundle-out",
+                    byte_transform_replay_bundle_ref,
+                    "--overwrite",
+                ],
+                "resources": {"kind": "local_io_heavy"},
+                "timeout_seconds": 120,
+                "postconditions": [
+                    {
+                        "type": "json_equals",
+                        "path": byte_transform_execution_report_ref,
+                        "key": "schema",
+                        "equals": (
+                            REPAIR_FAMILY_BYTE_TRANSFORM_EXECUTION_REPORT_SCHEMA
+                        ),
+                    },
+                    {
+                        "type": "json_false_authority",
+                        "path": byte_transform_execution_report_ref,
+                    },
+                    {
+                        "type": "json_equals",
+                        "path": byte_transform_execution_report_ref,
+                        "key": "ready_for_exact_eval_dispatch",
+                        "equals": False,
+                    },
+                    {
+                        "type": "json_equals",
+                        "path": byte_transform_replay_bundle_ref,
+                        "key": "schema",
+                        "equals": REPAIR_FAMILY_BYTE_TRANSFORM_REPLAY_BUNDLE_SCHEMA,
+                    },
+                    {
+                        "type": "json_false_authority",
+                        "path": byte_transform_replay_bundle_ref,
+                    },
+                ],
+                "telemetry": {
+                    "artifact_paths": [
+                        byte_transform_execution_report_ref,
+                        byte_transform_replay_bundle_ref,
+                    ],
+                    "input_artifact_paths": [family_materializer_ref],
+                    "include_postcondition_paths": True,
+                },
+            },
+            {
                 "id": "bind_repair_budget_materializer_execution",
                 "kind": "command",
                 "requires": [
                     "emit_repair_family_materializer_manifest",
+                    "execute_repair_family_byte_transform",
                     "emit_repair_budget_child_component_replay_manifests",
                 ],
                 "command": [
@@ -501,6 +593,8 @@ def _materialization_experiment(
                     child_replay_ref,
                     "--materializer-manifest",
                     family_materializer_ref,
+                    "--materializer-manifest",
+                    byte_transform_execution_report_ref,
                     *(
                         ["--materializer-work-queue", materializer_work_queue_ref]
                         if materializer_work_queue_ref
@@ -539,6 +633,7 @@ def _materialization_experiment(
                             materialization_plan_ref,
                             child_replay_ref,
                             family_materializer_ref,
+                            byte_transform_execution_report_ref,
                             materializer_work_queue_ref,
                             materializer_execution_queue_ref,
                         ]

@@ -121,7 +121,8 @@ def require_interaction_aware_optimizer_decision(
         )
     if decision.get("solver") != REPAIR_CAMPAIGN_REQUIRED_OPTIMIZER_SOLVER:
         raise RepairCampaignChainContractError(
-            f"{context}: requires solver {REPAIR_CAMPAIGN_REQUIRED_OPTIMIZER_SOLVER}"
+            f"{context}: requires solver {REPAIR_CAMPAIGN_REQUIRED_OPTIMIZER_SOLVER} "
+            "(interaction-aware entropy-stage contract)"
         )
 
 
