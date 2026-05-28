@@ -88,10 +88,12 @@ def _json_schema_fields(path: Path) -> dict[str, Any]:
         "promotion_eligible": payload.get("promotion_eligible"),
         "ready_for_exact_eval_dispatch": payload.get("ready_for_exact_eval_dispatch"),
         "byte_closed_candidate_emitted": payload.get("byte_closed_candidate_emitted"),
+        "runtime_adapter_ready": payload.get("runtime_adapter_ready"),
+        "candidate_runtime_adapter_blocker_cleared": payload.get("candidate_runtime_adapter_blocker_cleared"),
+        "candidate_runtime_tree_sha256": payload.get("candidate_runtime_tree_sha256"),
         "receiver_contract_satisfied": payload.get("receiver_contract_satisfied"),
-        "full_frame_inflate_parity_satisfied": payload.get(
-            "full_frame_inflate_parity_satisfied"
-        ),
+        "full_frame_inflate_parity_satisfied": payload.get("full_frame_inflate_parity_satisfied"),
+        "runtime_consumption_proof_sha256": payload.get("runtime_consumption_proof_sha256"),
         "receiver_proof_sha256": receiver_verification.get("proof_sha256")
         if isinstance(receiver_verification, Mapping)
         else None,
@@ -194,17 +196,9 @@ def build_mlx_local_replay_bundle(
     if not commands:
         raise MlxReplayBundleError("at least one replay command is required")
     root = Path(repo_root)
-    output_artifacts = [
-        artifact_manifest_entry(path, repo_root=root) for path in artifact_paths
-    ]
-    input_artifacts = [
-        artifact_manifest_entry(path, repo_root=root) for path in input_artifact_paths
-    ]
-    missing = [
-        row["path"]
-        for row in [*input_artifacts, *output_artifacts]
-        if row.get("missing") is True
-    ]
+    output_artifacts = [artifact_manifest_entry(path, repo_root=root) for path in artifact_paths]
+    input_artifacts = [artifact_manifest_entry(path, repo_root=root) for path in input_artifact_paths]
+    missing = [row["path"] for row in [*input_artifacts, *output_artifacts] if row.get("missing") is True]
     env = _capture_environment()
     byte_closed_receiver_proof_present = any(
         row.get("byte_closed_candidate_emitted") is True
@@ -213,12 +207,22 @@ def build_mlx_local_replay_bundle(
         and bool(row.get("receiver_proof_sha256"))
         for row in output_artifacts
     )
+    runtime_custody_present = any(
+        row.get("byte_closed_candidate_emitted") is True
+        and row.get("runtime_adapter_ready") is True
+        and row.get("candidate_runtime_adapter_blocker_cleared") is True
+        and bool(row.get("candidate_runtime_tree_sha256"))
+        and bool(row.get("runtime_consumption_proof_sha256") or row.get("receiver_proof_sha256"))
+        for row in output_artifacts
+    )
     blockers = [
         "macos_mlx_research_signal_has_no_score_authority",
         "contest_cpu_or_cuda_exact_eval_required_before_promotion",
     ]
     if not byte_closed_receiver_proof_present:
         blockers.append("byte_closed_archive_and_receiver_runtime_proof_required_before_dispatch")
+    if not runtime_custody_present:
+        blockers.append("runtime_adapter_custody_required_before_dispatch")
     if missing:
         blockers.append("missing_replay_artifacts")
     if env["redacted_key_count"]:
@@ -249,6 +253,7 @@ def build_mlx_local_replay_bundle(
             "local_replay_ready": not missing,
             "contest_exact_eval_ready": False,
             "byte_closed_receiver_proof_present": byte_closed_receiver_proof_present,
+            "runtime_custody_present": runtime_custody_present,
             "exact_eval_blockers": blockers,
         },
         "score_claim": False,

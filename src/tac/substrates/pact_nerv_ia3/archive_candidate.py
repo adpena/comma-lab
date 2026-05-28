@@ -103,6 +103,12 @@ def _frame_sha_manifest(root: Path) -> list[dict[str, Any]]:
     ]
 
 
+def _prune_python_bytecode(root: Path) -> None:
+    for path in sorted(root.rglob("__pycache__"), reverse=True):
+        if path.is_dir() and not path.is_symlink():
+            shutil.rmtree(path)
+
+
 def _run_packaged_inflate(
     *,
     submission_dir: Path,
@@ -111,6 +117,7 @@ def _run_packaged_inflate(
 ) -> dict[str, Any]:
     env = dict(os.environ)
     env["PYTHON"] = sys.executable
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
     result = subprocess.run(
         [
             "bash",
@@ -193,6 +200,7 @@ def materialize_pact_nerv_ia3_byte_closed_candidate(
     bin_path = out_dir / "0.bin"
     bin_path.write_bytes(bin_bytes)
     (submission_dir / "0.bin").write_bytes(bin_bytes)
+    runtime_dir_ref = repo_relative(submission_dir, root)
     archive_zip_path = out_dir / "archive.zip"
     build_archive_zip(archive_zip_path, bin_bytes=bin_bytes, submission_dir=submission_dir)
 
@@ -209,6 +217,8 @@ def materialize_pact_nerv_ia3_byte_closed_candidate(
         raise PactNervIa3ArchiveCandidateError(
             f"packaged receiver failed rc={receiver_run['returncode']}: {receiver_run['stderr_tail']}"
         )
+    _prune_python_bytecode(submission_dir)
+    runtime_tree_sha = tree_sha256(submission_dir)
     inflate_one_video(bin_bytes, reference_output / "0", device="cpu")
 
     receiver_tree_sha = tree_sha256(receiver_output)
@@ -242,6 +252,12 @@ def materialize_pact_nerv_ia3_byte_closed_candidate(
         "receiver_run": receiver_run,
         "receiver_frame_manifest": receiver_frames,
         "reference_frame_manifest": reference_frames,
+        "proof_path": repo_relative(proof_path, root),
+        "runtime_adapter_ready": True,
+        "candidate_runtime_adapter_blocker_cleared": True,
+        "candidate_runtime_dir": runtime_dir_ref,
+        "candidate_runtime_tree_sha256": runtime_tree_sha,
+        "expected_candidate_runtime_tree_sha256": runtime_tree_sha,
         "score_claim": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
@@ -265,6 +281,13 @@ def materialize_pact_nerv_ia3_byte_closed_candidate(
         "byte_closed_candidate_emitted": True,
         "receiver_contract_satisfied": proof_payload["receiver_contract_satisfied"],
         "full_frame_inflate_parity_satisfied": proof_payload["full_frame_inflate_output_parity_claim"],
+        "runtime_adapter_ready": True,
+        "candidate_runtime_adapter_blocker_cleared": True,
+        "candidate_runtime_dir": runtime_dir_ref,
+        "candidate_runtime_tree_sha256": runtime_tree_sha,
+        "expected_candidate_runtime_tree_sha256": runtime_tree_sha,
+        "runtime_consumption_proof_path": repo_relative(proof_path, root),
+        "runtime_consumption_proof_sha256": sha256_file(proof_path),
         "candidate_archive": _artifact(archive_zip_path, repo_root=root),
         "candidate_archive_path": repo_relative(archive_zip_path, root),
         "candidate_archive_bytes": archive_zip_path.stat().st_size,
@@ -276,6 +299,11 @@ def materialize_pact_nerv_ia3_byte_closed_candidate(
             "receiver_contract_satisfied": proof_payload["receiver_contract_satisfied"],
             "proof_present": True,
             "runtime_consumption_proof_passed": proof_payload["runtime_consumption_proof_passed"],
+            "runtime_adapter_ready": True,
+            "candidate_runtime_adapter_blocker_cleared": True,
+            "candidate_runtime_dir": runtime_dir_ref,
+            "candidate_runtime_tree_sha256": runtime_tree_sha,
+            "expected_candidate_runtime_tree_sha256": runtime_tree_sha,
             "proof_path": repo_relative(proof_path, root),
             "proof_bytes": proof_path.stat().st_size,
             "proof_sha256": sha256_file(proof_path),

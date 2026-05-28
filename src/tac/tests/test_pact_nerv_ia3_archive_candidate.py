@@ -5,6 +5,7 @@ from pathlib import Path
 
 import torch
 
+from tac.optimization.runtime_adapter_identity import runtime_adapter_identity_blockers
 from tac.repo_io import write_json
 from tac.substrates.pact_nerv_ia3.architecture import (
     PactNervIa3Config,
@@ -78,14 +79,33 @@ def test_pact_nerv_ia3_byte_closed_candidate_emits_receiver_proof(tmp_path: Path
     proof = __import__("json").loads(proof_path.read_text(encoding="utf-8"))
     archive_ref = Path(manifest["candidate_archive_path"])
     archive_path = archive_ref if archive_ref.is_absolute() else REPO_ROOT / archive_ref
+    runtime_ref = Path(manifest["candidate_runtime_dir"])
+    runtime_path = runtime_ref if runtime_ref.is_absolute() else REPO_ROOT / runtime_ref
 
     assert manifest["schema"] == PACT_NERV_IA3_BYTE_CLOSED_CANDIDATE_SCHEMA
     assert manifest["byte_closed_candidate_emitted"] is True
     assert manifest["receiver_contract_satisfied"] is True
+    assert manifest["runtime_adapter_ready"] is True
+    assert manifest["candidate_runtime_adapter_blocker_cleared"] is True
+    assert manifest["candidate_runtime_tree_sha256"] == manifest["expected_candidate_runtime_tree_sha256"]
+    assert manifest["runtime_consumption_proof_sha256"]
     assert manifest["score_claim"] is False
     assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["receiver_verification"]["runtime_adapter_ready"] is True
+    assert not list(runtime_path.rglob("__pycache__"))
+    assert (
+        runtime_adapter_identity_blockers(
+            manifest,
+            repo_root=REPO_ROOT,
+            context="unit",
+            require_claimed=True,
+        )
+        == []
+    )
     assert archive_path.is_file()
     assert proof["schema"] == PACT_NERV_IA3_RECEIVER_INFLATE_PROOF_SCHEMA
     assert proof["passed"] is True
     assert proof["runtime_consumption_proof_passed"] is True
+    assert proof["runtime_adapter_ready"] is True
+    assert proof["candidate_runtime_tree_sha256"] == manifest["candidate_runtime_tree_sha256"]
     assert proof["receiver_frame_count"] == cfg.num_pairs * 2

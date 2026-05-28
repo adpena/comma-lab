@@ -1,0 +1,77 @@
+{
+  "axis": "[macOS-MLX research-signal]",
+  "byte_closed_candidate_emitted": true,
+  "byte_tax": {
+    "archive_zip_bytes": 26259,
+    "pia3_0_bin_bytes": 14627,
+    "raw_state_dict_bytes": 40949
+  },
+  "candidate_0_bin": {
+    "bytes": 14627,
+    "path": ".omx/research/pact_nerv_diffusion_blocks_runtime_custody_smoke3_20260528Tlocal/outputs/pact_nerv_ia3_byte_closed_candidate/0.bin",
+    "sha256": "670cabee6bed4471ac4532c6329cf452d8ac0b5f25510a2289f70db1c08a1ed6"
+  },
+  "candidate_archive": {
+    "bytes": 26259,
+    "path": ".omx/research/pact_nerv_diffusion_blocks_runtime_custody_smoke3_20260528Tlocal/outputs/pact_nerv_ia3_byte_closed_candidate/archive.zip",
+    "sha256": "ea08242904cadfcec8682a29a037c06cc6f2bf806ca9b68dab4b79d39f114b49"
+  },
+  "candidate_archive_bytes": 26259,
+  "candidate_archive_path": ".omx/research/pact_nerv_diffusion_blocks_runtime_custody_smoke3_20260528Tlocal/outputs/pact_nerv_ia3_byte_closed_candidate/archive.zip",
+  "candidate_archive_sha256": "ea08242904cadfcec8682a29a037c06cc6f2bf806ca9b68dab4b79d39f114b49",
+  "candidate_runtime_adapter_blocker_cleared": true,
+  "candidate_runtime_dir": ".omx/research/pact_nerv_diffusion_blocks_runtime_custody_smoke3_20260528Tlocal/outputs/pact_nerv_ia3_byte_closed_candidate/submission",
+  "candidate_runtime_tree_sha256": "475432eb7b6afa3da91e86961c569353ead6a24a8ed8f9169ea69678ee82ff78",
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "macos_mlx_research_signal_has_no_score_authority",
+    "smoke_candidate_not_full_contest_video",
+    "contest_cpu_or_cuda_auth_eval_required_before_score_claim"
+  ],
+  "exact_cuda_auth_eval": false,
+  "expected_candidate_runtime_tree_sha256": "475432eb7b6afa3da91e86961c569353ead6a24a8ed8f9169ea69678ee82ff78",
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "full_frame_inflate_parity_satisfied": true,
+  "gpu_launched": false,
+  "label": "pact_nerv_diffusion_blocks_runtime_custody_smoke3_20260528Tlocal:pact_nerv_ia3_byte_closed",
+  "parity_report": {
+    "bytes": 12077,
+    "path": ".omx/research/pact_nerv_diffusion_blocks_runtime_custody_smoke3_20260528Tlocal/outputs/pact_nerv_ia3_mlx_pytorch_forward_parity.json",
+    "sha256": "e49506c3cc3f15317b4a30b33e816e9255f3fe1ae0710cf3eea9efe04dc04b36"
+  },
+  "promotable": false,
+  "promotion_eligible": false,
+  "pytorch_state_dict": {
+    "bytes": 40949,
+    "path": ".omx/research/pact_nerv_diffusion_blocks_runtime_custody_smoke3_20260528Tlocal/outputs/pact_nerv_ia3_mlx_pytorch_forward_parity.pt",
+    "sha256": "6d7b72c843faf5193d5c7b0f641d94738a86382f4eff27618d632b0fa00545df"
+  },
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_satisfied": true,
+  "receiver_inflate_proof_path": ".omx/research/pact_nerv_diffusion_blocks_runtime_custody_smoke3_20260528Tlocal/outputs/pact_nerv_ia3_byte_closed_candidate/receiver_inflate_proof.json",
+  "receiver_inflate_proof_sha256": "dbeb61e0891f7f5fb25933fd3a1b391817cb38ce3d006d6bbdaa965d522ae447",
+  "receiver_verification": {
+    "candidate_runtime_adapter_blocker_cleared": true,
+    "candidate_runtime_dir": ".omx/research/pact_nerv_diffusion_blocks_runtime_custody_smoke3_20260528Tlocal/outputs/pact_nerv_ia3_byte_closed_candidate/submission",
+    "candidate_runtime_tree_sha256": "475432eb7b6afa3da91e86961c569353ead6a24a8ed8f9169ea69678ee82ff78",
+    "expected_candidate_runtime_tree_sha256": "475432eb7b6afa3da91e86961c569353ead6a24a8ed8f9169ea69678ee82ff78",
+    "proof_bytes": 4990,
+    "proof_path": ".omx/research/pact_nerv_diffusion_blocks_runtime_custody_smoke3_20260528Tlocal/outputs/pact_nerv_ia3_byte_closed_candidate/receiver_inflate_proof.json",
+    "proof_present": true,
+    "proof_sha256": "dbeb61e0891f7f5fb25933fd3a1b391817cb38ce3d006d6bbdaa965d522ae447",
+    "receiver_contract_satisfied": true,
+    "runtime_adapter_ready": true,
+    "runtime_consumption_proof_passed": true
+  },
+  "runtime_adapter_ready": true,
+  "runtime_consumption_proof_path": ".omx/research/pact_nerv_diffusion_blocks_runtime_custody_smoke3_20260528Tlocal/outputs/pact_nerv_ia3_byte_closed_candidate/receiver_inflate_proof.json",
+  "runtime_consumption_proof_sha256": "dbeb61e0891f7f5fb25933fd3a1b391817cb38ce3d006d6bbdaa965d522ae447",
+  "schema": "pact_nerv_ia3_byte_closed_candidate.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false
+}

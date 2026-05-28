@@ -72,6 +72,10 @@ def test_mlx_replay_bundle_does_not_drop_byte_closed_receiver_proof_signal(
         {
             "schema": "pact_nerv_ia3_byte_closed_candidate.v1",
             "byte_closed_candidate_emitted": True,
+            "runtime_adapter_ready": True,
+            "candidate_runtime_adapter_blocker_cleared": True,
+            "candidate_runtime_tree_sha256": "runtime123",
+            "runtime_consumption_proof_sha256": "proof123",
             "receiver_contract_satisfied": True,
             "full_frame_inflate_parity_satisfied": True,
             "receiver_verification": {"proof_sha256": "abc123"},
@@ -91,10 +95,46 @@ def test_mlx_replay_bundle_does_not_drop_byte_closed_receiver_proof_signal(
 
     readiness = bundle["replay_readiness"]
     assert readiness["byte_closed_receiver_proof_present"] is True
+    assert readiness["runtime_custody_present"] is True
     assert (
         "byte_closed_archive_and_receiver_runtime_proof_required_before_dispatch"
         not in readiness["exact_eval_blockers"]
     )
-    assert "contest_cpu_or_cuda_exact_eval_required_before_promotion" in readiness[
-        "exact_eval_blockers"
-    ]
+    assert "runtime_adapter_custody_required_before_dispatch" not in readiness["exact_eval_blockers"]
+    assert "contest_cpu_or_cuda_exact_eval_required_before_promotion" in readiness["exact_eval_blockers"]
+
+
+def test_mlx_replay_bundle_keeps_runtime_custody_blocker_until_tree_hash_present(
+    tmp_path: Path,
+) -> None:
+    candidate = tmp_path / "byte_closed_candidate.json"
+    write_json(
+        candidate,
+        {
+            "schema": "pact_nerv_ia3_byte_closed_candidate.v1",
+            "byte_closed_candidate_emitted": True,
+            "receiver_contract_satisfied": True,
+            "full_frame_inflate_parity_satisfied": True,
+            "receiver_verification": {"proof_sha256": "abc123"},
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+
+    bundle = build_mlx_local_replay_bundle(
+        repo_root=tmp_path,
+        bundle_id="unit_runtime_custody_missing",
+        axis="[macOS-MLX research-signal]",
+        commands=[["python", "materialize.py"]],
+        artifact_paths=[candidate],
+    )
+
+    readiness = bundle["replay_readiness"]
+    assert readiness["byte_closed_receiver_proof_present"] is True
+    assert readiness["runtime_custody_present"] is False
+    assert (
+        "byte_closed_archive_and_receiver_runtime_proof_required_before_dispatch"
+        not in readiness["exact_eval_blockers"]
+    )
+    assert "runtime_adapter_custody_required_before_dispatch" in readiness["exact_eval_blockers"]

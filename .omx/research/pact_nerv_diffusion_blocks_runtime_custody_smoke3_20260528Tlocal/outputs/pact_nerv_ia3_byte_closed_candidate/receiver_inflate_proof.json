@@ -1,0 +1,121 @@
+{
+  "candidate_archive": {
+    "bytes": 26259,
+    "path": ".omx/research/pact_nerv_diffusion_blocks_runtime_custody_smoke3_20260528Tlocal/outputs/pact_nerv_ia3_byte_closed_candidate/archive.zip",
+    "sha256": "ea08242904cadfcec8682a29a037c06cc6f2bf806ca9b68dab4b79d39f114b49"
+  },
+  "candidate_archive_sha256": "ea08242904cadfcec8682a29a037c06cc6f2bf806ca9b68dab4b79d39f114b49",
+  "candidate_runtime_adapter_blocker_cleared": true,
+  "candidate_runtime_dir": ".omx/research/pact_nerv_diffusion_blocks_runtime_custody_smoke3_20260528Tlocal/outputs/pact_nerv_ia3_byte_closed_candidate/submission",
+  "candidate_runtime_tree_sha256": "475432eb7b6afa3da91e86961c569353ead6a24a8ed8f9169ea69678ee82ff78",
+  "charged_bits_changed": false,
+  "cmp_equal": true,
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "expected_candidate_runtime_tree_sha256": "475432eb7b6afa3da91e86961c569353ead6a24a8ed8f9169ea69678ee82ff78",
+  "expected_frame_count": 6,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "frame_count_ok": true,
+  "full_frame_inflate_output_parity_claim": true,
+  "gpu_launched": false,
+  "label": "pact_nerv_diffusion_blocks_runtime_custody_smoke3_20260528Tlocal:pact_nerv_ia3_byte_closed",
+  "output_sha256_match": true,
+  "parity_scope": "full_candidate_smoke_video",
+  "passed": true,
+  "promotable": false,
+  "promotion_eligible": false,
+  "proof_path": ".omx/research/pact_nerv_diffusion_blocks_runtime_custody_smoke3_20260528Tlocal/outputs/pact_nerv_ia3_byte_closed_candidate/receiver_inflate_proof.json",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_satisfied": true,
+  "receiver_frame_count": 6,
+  "receiver_frame_manifest": [
+    {
+      "bytes": 108,
+      "path": "0/0.png",
+      "sha256": "46fee9ae778585ff88e58ff7f0f9295ddcbd7159f383b3ca3676431bb74a5b93"
+    },
+    {
+      "bytes": 108,
+      "path": "0/1.png",
+      "sha256": "46fee9ae778585ff88e58ff7f0f9295ddcbd7159f383b3ca3676431bb74a5b93"
+    },
+    {
+      "bytes": 108,
+      "path": "0/2.png",
+      "sha256": "46fee9ae778585ff88e58ff7f0f9295ddcbd7159f383b3ca3676431bb74a5b93"
+    },
+    {
+      "bytes": 108,
+      "path": "0/3.png",
+      "sha256": "46fee9ae778585ff88e58ff7f0f9295ddcbd7159f383b3ca3676431bb74a5b93"
+    },
+    {
+      "bytes": 108,
+      "path": "0/4.png",
+      "sha256": "46fee9ae778585ff88e58ff7f0f9295ddcbd7159f383b3ca3676431bb74a5b93"
+    },
+    {
+      "bytes": 108,
+      "path": "0/5.png",
+      "sha256": "46fee9ae778585ff88e58ff7f0f9295ddcbd7159f383b3ca3676431bb74a5b93"
+    }
+  ],
+  "receiver_output_tree_sha256": "55a9998c1676b78fcd4f241b4eeeabe5872ada0c2a1e94c6cefbd24fd22cf755",
+  "receiver_run": {
+    "argv": [
+      "bash",
+      "/Users/adpena/Projects/pact/.omx/research/pact_nerv_diffusion_blocks_runtime_custody_smoke3_20260528Tlocal/outputs/pact_nerv_ia3_byte_closed_candidate/submission/inflate.sh",
+      "/Users/adpena/Projects/pact/.omx/research/pact_nerv_diffusion_blocks_runtime_custody_smoke3_20260528Tlocal/outputs/pact_nerv_ia3_byte_closed_candidate/submission",
+      "/Users/adpena/Projects/pact/.omx/research/pact_nerv_diffusion_blocks_runtime_custody_smoke3_20260528Tlocal/outputs/pact_nerv_ia3_byte_closed_candidate/receiver_output",
+      "/Users/adpena/Projects/pact/.omx/research/pact_nerv_diffusion_blocks_runtime_custody_smoke3_20260528Tlocal/outputs/pact_nerv_ia3_byte_closed_candidate/file_list.txt"
+    ],
+    "returncode": 0,
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr_tail": "",
+    "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stdout_tail": ""
+  },
+  "reference_frame_count": 6,
+  "reference_frame_manifest": [
+    {
+      "bytes": 108,
+      "path": "0/0.png",
+      "sha256": "46fee9ae778585ff88e58ff7f0f9295ddcbd7159f383b3ca3676431bb74a5b93"
+    },
+    {
+      "bytes": 108,
+      "path": "0/1.png",
+      "sha256": "46fee9ae778585ff88e58ff7f0f9295ddcbd7159f383b3ca3676431bb74a5b93"
+    },
+    {
+      "bytes": 108,
+      "path": "0/2.png",
+      "sha256": "46fee9ae778585ff88e58ff7f0f9295ddcbd7159f383b3ca3676431bb74a5b93"
+    },
+    {
+      "bytes": 108,
+      "path": "0/3.png",
+      "sha256": "46fee9ae778585ff88e58ff7f0f9295ddcbd7159f383b3ca3676431bb74a5b93"
+    },
+    {
+      "bytes": 108,
+      "path": "0/4.png",
+      "sha256": "46fee9ae778585ff88e58ff7f0f9295ddcbd7159f383b3ca3676431bb74a5b93"
+    },
+    {
+      "bytes": 108,
+      "path": "0/5.png",
+      "sha256": "46fee9ae778585ff88e58ff7f0f9295ddcbd7159f383b3ca3676431bb74a5b93"
+    }
+  ],
+  "reference_output_tree_sha256": "55a9998c1676b78fcd4f241b4eeeabe5872ada0c2a1e94c6cefbd24fd22cf755",
+  "runtime_adapter_ready": true,
+  "runtime_consumption_proof_passed": true,
+  "schema": "pact_nerv_ia3_receiver_inflate_proof.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false
+}

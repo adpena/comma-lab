@@ -516,6 +516,8 @@ def build_pact_nerv_diffusion_blocks_mlx_queue(
                                     "byte_closed_candidate_emitted",
                                     "receiver_contract_satisfied",
                                     "full_frame_inflate_parity_satisfied",
+                                    "runtime_adapter_ready",
+                                    "candidate_runtime_adapter_blocker_cleared",
                                 ],
                                 "required_false": [
                                     "score_claim",
@@ -526,6 +528,9 @@ def build_pact_nerv_diffusion_blocks_mlx_queue(
                                 "required_nonempty": [
                                     "candidate_archive.sha256",
                                     "receiver_verification.proof_sha256",
+                                    "candidate_runtime_tree_sha256",
+                                    "runtime_consumption_proof_path",
+                                    "runtime_consumption_proof_sha256",
                                 ],
                             },
                             {"type": "json_false_authority", "path": ia3_byte_closed_manifest_ref},
@@ -562,6 +567,8 @@ def build_pact_nerv_diffusion_blocks_mlx_queue(
                                 "required_equals": {
                                     "schema": MLX_LOCAL_REPLAY_BUNDLE_SCHEMA,
                                     "replay_readiness.local_replay_ready": True,
+                                    "replay_readiness.byte_closed_receiver_proof_present": True,
+                                    "replay_readiness.runtime_custody_present": True,
                                 },
                                 "required_false": [
                                     "score_claim",

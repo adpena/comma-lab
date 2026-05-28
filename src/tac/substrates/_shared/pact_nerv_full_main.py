@@ -76,6 +76,7 @@ custody discipline.
 [verified-against: src/tac/substrates/_shared/trainer_skeleton.py decode_real_pairs/device_or_die/EMA]
 [verified-against: src/tac/substrates/score_aware_common.score_pair_components_dispatch Catalog #164]
 """
+
 from __future__ import annotations
 
 import math
@@ -227,12 +228,8 @@ def run_pact_nerv_score_aware_training(
     ema = EMA(model, decay=ema_decay)
     _stage(f"ema_wired_decay_{ema_decay}")
 
-    optimizer = torch.optim.AdamW(
-        model.parameters(), lr=lr, weight_decay=weight_decay
-    )
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer, T_max=max(1, epochs)
-    )
+    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=max(1, epochs))
 
     output_dir.mkdir(parents=True, exist_ok=True)
     ckpt_best_path = output_dir / "best.pt"
@@ -281,8 +278,7 @@ def run_pact_nerv_score_aware_training(
                 )
                 if nan_strike >= max_nan_strikes:
                     raise RuntimeError(
-                        f"NaN watchdog: {nan_strike} consecutive non-finite "
-                        "losses; aborting to preserve EMA shadow."
+                        f"NaN watchdog: {nan_strike} consecutive non-finite losses; aborting to preserve EMA shadow."
                     )
                 optimizer.zero_grad(set_to_none=True)
                 continue
@@ -290,9 +286,7 @@ def run_pact_nerv_score_aware_training(
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
             if grad_clip > 0:
-                torch.nn.utils.clip_grad_norm_(
-                    model.parameters(), max_norm=grad_clip
-                )
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=grad_clip)
             optimizer.step()
             ema.update(model)
             epoch_loss_sum += float(loss.detach().item())
@@ -303,9 +297,7 @@ def run_pact_nerv_score_aware_training(
 
         is_val_epoch = (epoch + 1) % val_every_epochs == 0 or epoch == epochs - 1
         if is_val_epoch:
-            orig_state = {
-                k: v.detach().clone() for k, v in model.state_dict().items()
-            }
+            orig_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
             ema.apply(model)
             model.eval()
             with torch.no_grad():
@@ -334,18 +326,14 @@ def run_pact_nerv_score_aware_training(
                 best_epoch = epoch
                 ema_state = ema.state_dict()
                 ckpt = {
-                    "state_dict": {
-                        k: v.detach().cpu() for k, v in ema_state.items()
-                    },
+                    "state_dict": {k: v.detach().cpu() for k, v in ema_state.items()},
                     "config": config_asdict,
                     "ema_decay": ema_decay,
                     "best_val_lagrangian": val_lag,
                     "best_epoch": int(epoch),
                     "saved_at_utc": utc_now_iso(),
                     "substrate_tag": substrate_tag,
-                    "training_axis_note": (
-                        "[contest-CUDA] for promotion; auth eval still required"
-                    ),
+                    "training_axis_note": ("[contest-CUDA] for promotion; auth eval still required"),
                 }
                 if extra_checkpoint_fields:
                     ckpt.update(extra_checkpoint_fields)
@@ -357,10 +345,7 @@ def run_pact_nerv_score_aware_training(
     used_fallback = False
     if not ckpt_best_path.is_file():
         used_fallback = True
-        print(
-            f"[full:{substrate_tag}] WARN no improving val checkpoint; "
-            "saving EMA shadow at end-of-training."
-        )
+        print(f"[full:{substrate_tag}] WARN no improving val checkpoint; saving EMA shadow at end-of-training.")
         ema_state = ema.state_dict()
         ckpt = {
             "state_dict": {k: v.detach().cpu() for k, v in ema_state.items()},
@@ -379,9 +364,7 @@ def run_pact_nerv_score_aware_training(
     best_blob = torch.load(ckpt_best_path, map_location="cpu", weights_only=False)
     return PactNervTrainingResult(
         best_ema_state_dict=best_blob["state_dict"],
-        best_val_lagrangian=(
-            best_val_lag if math.isfinite(best_val_lag) else float("nan")
-        ),
+        best_val_lagrangian=(best_val_lag if math.isfinite(best_val_lag) else float("nan")),
         best_epoch=int(best_epoch),
         train_elapsed_sec=float(train_elapsed_sec),
         n_pairs=n_pairs,
@@ -442,9 +425,7 @@ def write_contest_runtime(
             shutil.copy2(src_file, runtime_pkg / name)
 
     if inflate_import_line is None:
-        inflate_import_line = (
-            f"from tac.substrates.{substrate_pkg_name}.inflate import inflate_one_video"
-        )
+        inflate_import_line = f"from tac.substrates.{substrate_pkg_name}.inflate import inflate_one_video"
 
     inflate_sh = (
         "#!/usr/bin/env bash\n"
@@ -452,25 +433,26 @@ def write_contest_runtime(
         "(PACT-NERV-FULL-MAIN-WAVE 2026-05-27)\n"
         "# Contract: $1=archive_dir $2=output_dir $3=file_list\n"
         "set -euo pipefail\n"
-        "HERE=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"\n"
-        "DATA_DIR=\"$1\"\n"
-        "OUTPUT_DIR=\"$2\"\n"
-        "FILE_LIST=\"$3\"\n"
-        "mkdir -p \"$OUTPUT_DIR\"\n"
-        "exec \"${PYTHON:-python3}\" \"$HERE/inflate.py\" "
-        "\"$DATA_DIR\" \"$OUTPUT_DIR\" \"$FILE_LIST\"\n"
+        'HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"\n'
+        'DATA_DIR="$1"\n'
+        'OUTPUT_DIR="$2"\n'
+        'FILE_LIST="$3"\n'
+        'mkdir -p "$OUTPUT_DIR"\n'
+        'export PYTHONDONTWRITEBYTECODE="${PYTHONDONTWRITEBYTECODE:-1}"\n'
+        'exec "${PYTHON:-python3}" "$HERE/inflate.py" '
+        '"$DATA_DIR" "$OUTPUT_DIR" "$FILE_LIST"\n'
     )
     (submission_dir / "inflate.sh").write_text(inflate_sh, encoding="utf-8")
     (submission_dir / "inflate.sh").chmod(0o755)
 
     inflate_py = (
         "#!/usr/bin/env python\n"
-        f"\"\"\"{substrate_pkg_name} contest-compliant inflate runtime.\n"
+        f'"""{substrate_pkg_name} contest-compliant inflate runtime.\n'
         "\n"
         "Reads archive_dir/0.bin via the packaged substrate parser, then for\n"
         "each base in file_list writes per-frame .png under output_dir/<base>/.\n"
         "No scorer-network imports (strict-scorer-rule contract).\n"
-        "\"\"\"\n"
+        '"""\n'
         "import sys\n"
         "from pathlib import Path\n"
         "\n"
