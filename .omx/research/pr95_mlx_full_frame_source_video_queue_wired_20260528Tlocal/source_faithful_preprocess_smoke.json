@@ -1,0 +1,90 @@
+{
+  "camera_hw": [
+    11,
+    13
+  ],
+  "dispatch_attempted": false,
+  "dispatch_packet_ready": false,
+  "elapsed_seconds": 0.0030670000123791397,
+  "exact_readiness_refusal": {
+    "blockers": [
+      "pr95_source_video_loader_not_wired_to_mlx_preprocess_smoke",
+      "pr95_scorer_loss_not_wired_to_mlx_preprocess_smoke",
+      "pr95_preprocess_smoke_is_not_source_video_training_loop",
+      "pr95_stage_hparams_and_cosine_schedules_not_all_source_matched",
+      "pr95_qat_c1a_and_resume_semantics_not_ported_to_mlx",
+      "requires_byte_closed_contest_archive_export",
+      "requires_exact_cpu_cuda_auth_eval_before_score_claim",
+      "pytorch_export_forward_parity_is_local_probe_not_score_authority",
+      "full_frame_inflate_parity_against_source_runtime_failed"
+    ],
+    "ready": false
+  },
+  "gpu_launched": false,
+  "gradient_probe": {
+    "camera_hw": [
+      11,
+      13
+    ],
+    "dispatch_attempted": false,
+    "dispatch_packet_ready": false,
+    "elapsed_seconds": 0.0020054170017829165,
+    "gpu_launched": false,
+    "gradient_reachable": true,
+    "input_shape": [
+      1,
+      2,
+      8,
+      10,
+      3
+    ],
+    "max_abs_gradient": 0.0023128478787839413,
+    "min_abs_gradient": 1e-08,
+    "nonzero_gradient_count": 480,
+    "pr95_1to1_reproduction_claim": false,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "reproduction_claim": false,
+    "reproduction_equivalence": false,
+    "schema": "pr95_hnerv_mlx_preprocess_gradient_probe_v1",
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false
+  },
+  "input_shape": [
+    1,
+    2,
+    8,
+    10,
+    3
+  ],
+  "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+  "pr95_1to1_reproduction_claim": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "reproduction_claim": false,
+  "reproduction_equivalence": false,
+  "roundtrip_output_shape": [
+    1,
+    2,
+    8,
+    10,
+    3
+  ],
+  "schema": "pr95_hnerv_mlx_source_faithful_preprocess_smoke_v1",
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "source_faithful_preprocess_ready": true,
+  "yuv6_output_shape": [
+    1,
+    2,
+    4,
+    5,
+    6
+  ]
+}

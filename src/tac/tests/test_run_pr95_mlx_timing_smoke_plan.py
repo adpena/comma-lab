@@ -49,6 +49,17 @@ def test_pr95_mlx_plan_only_cli_builds_queueable_local_mlx_plan(
             "--prove-pr95-runtime-consumption",
             "--runtime-proof-max-output-bytes",
             "7000000",
+            "--write-pr95-full-frame-inflate-parity",
+            "--full-frame-parity-max-output-bytes",
+            "7000000",
+            "--full-frame-parity-mlx-device",
+            "cpu",
+            "--full-frame-parity-conv2d-accumulation-mode",
+            "fixed_fp32",
+            "--full-frame-parity-conv2d-override-preset",
+            "none",
+            "--full-frame-parity-chunk-pairs",
+            "4",
             "--write-mlx-gpu-drift-attestation",
             "--mlx-gpu-drift-conv2d-accumulation-mode",
             "kahan_fp32",
@@ -119,6 +130,16 @@ def test_pr95_mlx_plan_only_cli_builds_queueable_local_mlx_plan(
     assert "--write-byte-closed-smoke" in execution["python_command_args"]
     assert "--write-pr95-public-archive-export" in execution["python_command_args"]
     assert "--prove-pr95-runtime-consumption" in execution["python_command_args"]
+    assert "--write-pr95-full-frame-inflate-parity" in execution[
+        "python_command_args"
+    ]
+    assert execution["full_frame_inflate_parity_proof"].endswith(
+        "full_frame_inflate_parity_proof.json"
+    )
+    assert execution["full_frame_parity_mlx_device"] == "cpu"
+    assert execution["full_frame_parity_conv2d_accumulation_mode"] == "fixed_fp32"
+    assert execution["full_frame_parity_conv2d_override_preset"] == "none"
+    assert execution["full_frame_parity_chunk_pairs"] == 4
     assert "--write-mlx-gpu-drift-attestation" in execution["python_command_args"]
     assert "--mlx-gpu-drift-conv2d-accumulation-mode" in execution[
         "python_command_args"
@@ -165,6 +186,13 @@ def test_pr95_mlx_plan_only_cli_builds_queueable_local_mlx_plan(
         condition["type"] == "json_equals"
         and condition["path"].endswith("runtime_consumption_proof.json")
         and condition["key"] == "runtime_consumption_proven"
+        and condition["equals"] is True
+        for condition in execution["extra_artifact_postconditions"]
+    )
+    assert any(
+        condition["type"] == "json_equals"
+        and condition["path"].endswith("full_frame_inflate_parity_proof.json")
+        and condition["key"] == "runtime_consumption_proof_passed"
         and condition["equals"] is True
         for condition in execution["extra_artifact_postconditions"]
     )
@@ -228,6 +256,15 @@ def test_pr95_mlx_plan_only_cli_builds_queueable_local_mlx_plan(
         "rgb_0": "kahan_fp32",
         "rgb_1": "kahan_fp32",
     }
+    assert representation_plan["candidate_params"][
+        "pr95_full_frame_inflate_parity_requested"
+    ] is True
+    assert representation_plan["candidate_params"][
+        "full_frame_parity_mlx_device"
+    ] == "cpu"
+    assert representation_plan["candidate_params"][
+        "full_frame_parity_conv2d_accumulation_mode"
+    ] == "fixed_fp32"
     assert PR95_SOURCE_VIDEO_LOADER_UNPORTED_BLOCKER not in representation_plan[
         "dispatch_blockers"
     ]

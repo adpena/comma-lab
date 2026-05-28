@@ -1,0 +1,126 @@
+{
+  "archive_bytes": 8500,
+  "archive_packet": {
+    "archive_zip_path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_source_video_queue_wired_20260528Tlocal/pr95_public_archive.zip",
+    "archive_zip_sha256": "cace13c614f45f7eb7c29c44832ab50b4f07542c7a9b7cc570c4a8d50dfe3492",
+    "dispatch_attempted": false,
+    "dispatch_packet_ready": false,
+    "gpu_launched": false,
+    "latent_shape": [
+      1,
+      28
+    ],
+    "member_bytes": 8392,
+    "member_compress_type": 0,
+    "member_name": "0.bin",
+    "member_sha256": "f8206e3709734564b3fc74bf2183c9bc1897c091b21a97b8d5d16fa778a6d68b",
+    "meta": {
+      "base_channels": 4,
+      "eval_size": [
+        384,
+        512
+      ],
+      "latent_dim": 28,
+      "n_pairs": 1
+    },
+    "pr95_1to1_reproduction_claim": false,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "reproduction_claim": false,
+    "reproduction_equivalence": false,
+    "schema": "pr95_hnerv_public_archive_packet.v1",
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "source_pr": 95,
+    "state_dict_tensor_count": 26,
+    "submission": "hnerv_muon"
+  },
+  "archive_path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_source_video_queue_wired_20260528Tlocal/pr95_public_archive.zip",
+  "archive_sha256": "cace13c614f45f7eb7c29c44832ab50b4f07542c7a9b7cc570c4a8d50dfe3492",
+  "conv2d_accumulation_mode": "fixed_fp32",
+  "conv2d_accumulation_overrides": {},
+  "diff": {
+    "byte_exact": false,
+    "changed_byte_count": 21,
+    "changed_byte_fraction": 3.4403579545007746e-06,
+    "max_abs_uint8": 1,
+    "mean_abs_uint8": 3.4403579545007746e-06,
+    "mlx_count": 6104016,
+    "p999_abs_uint8": 0.0,
+    "p99_abs_uint8": 0.0,
+    "public_count": 6104016,
+    "same_shape": true
+  },
+  "dispatch_attempted": false,
+  "dispatch_packet_ready": false,
+  "exact_readiness_refusal": {
+    "blockers": [
+      "full_frame_inflate_parity_against_source_runtime_failed",
+      "full_frame_inflate_parity_is_not_score_authority",
+      "requires_exact_cpu_cuda_auth_eval_before_score_claim"
+    ],
+    "ready": false,
+    "schema": "exact_readiness_refusal.v1"
+  },
+  "expected_raw_bytes": 6104016,
+  "full_frame_inflate_output_parity_claim": false,
+  "full_frame_inflate_parity_failed": true,
+  "full_frame_inflate_parity_satisfied": false,
+  "generated_utc": "2026-05-28T13:40:22.753718+00:00",
+  "gpu_launched": false,
+  "inflate_sh": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+  "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+  "mlx_device": "cpu",
+  "mlx_raw_bytes": 6104016,
+  "mlx_raw_sha256": "d8acd63eaba36848b39af7a0a377d92d862a0780ccd071f0ec00582c5a15aacd",
+  "pr95_1to1_reproduction_claim": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "public_raw_bytes": 6104016,
+  "public_raw_path": null,
+  "public_raw_sha256": "826f545c608b91f0dfd43dcea6edea8d4a23008feae2c02f71a70808c74a5e6d",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_satisfied": false,
+  "receiver_proof_present": false,
+  "reproduction_claim": false,
+  "reproduction_equivalence": false,
+  "returncode": 0,
+  "runtime_consumption_proof_passed": true,
+  "runtime_consumption_proven": true,
+  "runtime_files": [
+    {
+      "bytes": 811,
+      "path": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+      "sha256": "0cb9c3df78ad870cadd2ac6d46007b6c1aeb6a61c76b7800ae74a00addafb885"
+    },
+    {
+      "bytes": 2158,
+      "path": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.py",
+      "sha256": "fdc1e9af70a8f6b47f84c3978a29cb872dbc3dbdc6c123bda72ea494221a0e26"
+    },
+    {
+      "bytes": 2197,
+      "path": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py",
+      "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+    },
+    {
+      "bytes": 7455,
+      "path": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/codec.py",
+      "sha256": "63d3ffd03c514fa5841fbf75a3eac87cc76ed40f68e0d68db50cd7cda517266f"
+    }
+  ],
+  "schema": "pr95_hnerv_public_full_frame_inflate_parity_proof.v1",
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "source_pr": 95,
+  "started_utc": "2026-05-28T13:40:21.900531+00:00",
+  "stderr_tail": "",
+  "stdout_tail": "Inflating 0.mkv ... saved 2 frames\n",
+  "submission": "hnerv_muon",
+  "work_dir": null
+}

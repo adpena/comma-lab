@@ -59,6 +59,7 @@ from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
 from tac.local_acceleration.pr95_hnerv_mlx_contract import (  # noqa: E402
     PR95_EXPORT_FORWARD_PARITY_BLOCKER,
     PR95_FULL_FRAME_INFLATE_PARITY_BLOCKER,
+    PR95_FULL_FRAME_INFLATE_PARITY_FAILED_BLOCKER,
     PR95_LEGACY_TRAINING_LOOP_NOT_SOURCE_FAITHFUL_BLOCKER,
     PR95_PREPROCESS_SMOKE_NOT_SOURCE_VIDEO_TRAINING_BLOCKER,
     PR95_SEGNET_POSENET_LOSS_UNWIRED_BLOCKER,
@@ -145,6 +146,31 @@ def _embedded_runtime_consumption_proof(payload: dict[str, Any]) -> dict[str, An
     }
 
 
+def _embedded_full_frame_inflate_parity_proof(
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    """Embed full-frame parity evidence without duplicating custody path claims."""
+
+    return {
+        key: value
+        for key, value in payload.items()
+        if key
+        not in {
+            "archive_path",
+            "archive_bytes",
+            "archive_sha256",
+            "path",
+            "bytes",
+            "sha256",
+            "proof_path",
+            "proof_bytes",
+            "proof_sha256",
+            "work_dir",
+            "public_raw_path",
+        }
+    }
+
+
 def _load_public_pr95_decoder_cls(model_path: Path) -> Any:
     model_path = Path(model_path)
     if not model_path.is_file():
@@ -195,6 +221,53 @@ def _mark_public_archive_export_runtime_consumed(
         for blocker in blockers
         if blocker != PR95_ARCHIVE_EXPORT_NOT_RUNTIME_CONSUMED_BLOCKER
     ]
+
+
+def _mark_public_archive_export_full_frame_parity(
+    public_archive_export: dict[str, Any],
+    *,
+    proof_path: Path,
+    full_frame_inflate_parity_proof: dict[str, Any],
+) -> None:
+    satisfied = (
+        full_frame_inflate_parity_proof.get("full_frame_inflate_parity_satisfied")
+        is True
+    )
+    attempted = True
+    public_archive_export["full_frame_inflate_parity_proof_present"] = attempted
+    public_archive_export["full_frame_inflate_parity_satisfied"] = satisfied
+    public_archive_export["full_frame_inflate_parity_proof_path"] = _rel(proof_path)
+    public_archive_export["full_frame_inflate_parity_proof_bytes"] = (
+        proof_path.stat().st_size
+    )
+    public_archive_export["full_frame_inflate_parity_proof_sha256"] = _sha256_file(
+        proof_path
+    )
+    public_archive_export["full_frame_inflate_parity_diff"] = (
+        full_frame_inflate_parity_proof.get("diff")
+    )
+    refusal = public_archive_export.get("exact_readiness_refusal")
+    if not isinstance(refusal, dict):
+        return
+    blockers = refusal.get("blockers")
+    if not isinstance(blockers, list):
+        return
+    blockers = [
+        blocker
+        for blocker in blockers
+        if blocker
+        not in {
+            "requires_full_frame_inflate_parity_before_runtime_consumption_claim",
+            PR95_FULL_FRAME_INFLATE_PARITY_BLOCKER,
+            PR95_FULL_FRAME_INFLATE_PARITY_FAILED_BLOCKER,
+        }
+    ]
+    blockers.append(
+        "full_frame_inflate_parity_is_local_probe_not_score_authority"
+        if satisfied
+        else PR95_FULL_FRAME_INFLATE_PARITY_FAILED_BLOCKER
+    )
+    refusal["blockers"] = list(dict.fromkeys(blockers))
 
 
 def _slug(value: str) -> str:
@@ -295,6 +368,8 @@ def _source_video_preprocess_ready(
 def _exact_readiness_blockers(
     *,
     runtime_consumption_proven: bool = False,
+    full_frame_inflate_parity_attempted: bool = False,
+    full_frame_inflate_parity_proven: bool = False,
     pytorch_export_forward_parity_proven: bool = False,
     source_faithful_preprocess_smoke: dict[str, Any] | None = None,
     source_video_preprocess_smoke: dict[str, Any] | None = None,
@@ -372,9 +447,23 @@ def _exact_readiness_blockers(
         blockers.extend(
             [
                 "runtime_consumption_smoke_is_not_score_authority",
-                PR95_FULL_FRAME_INFLATE_PARITY_BLOCKER,
             ]
         )
+        if full_frame_inflate_parity_proven:
+            blockers = [
+                blocker
+                for blocker in blockers
+                if blocker != PR95_FULL_FRAME_INFLATE_PARITY_BLOCKER
+            ]
+            blockers.append(
+                "full_frame_inflate_parity_is_local_probe_not_score_authority"
+            )
+        else:
+            blockers.append(
+                PR95_FULL_FRAME_INFLATE_PARITY_FAILED_BLOCKER
+                if full_frame_inflate_parity_attempted
+                else PR95_FULL_FRAME_INFLATE_PARITY_BLOCKER
+            )
     if pytorch_export_forward_parity_proven:
         blockers = [
             blocker
@@ -419,6 +508,42 @@ def _apply_pytorch_export_parity_to_exact_readiness(
         exact["blockers"].append(
             "pytorch_export_forward_parity_is_local_probe_not_score_authority"
         )
+
+
+def _apply_full_frame_parity_to_exact_readiness(
+    payload: dict[str, Any],
+    *,
+    full_frame_inflate_parity_proof: dict[str, Any] | None,
+) -> None:
+    """Reconcile nested exact-readiness blockers with full-frame parity evidence."""
+
+    if full_frame_inflate_parity_proof is None:
+        return
+    exact = payload.get("exact_readiness_refusal")
+    if not isinstance(exact, dict):
+        return
+    blockers = exact.get("blockers")
+    if not isinstance(blockers, list):
+        return
+    satisfied = (
+        full_frame_inflate_parity_proof.get("full_frame_inflate_parity_satisfied")
+        is True
+    )
+    exact["blockers"] = [
+        blocker
+        for blocker in blockers
+        if blocker
+        not in {
+            PR95_FULL_FRAME_INFLATE_PARITY_BLOCKER,
+            PR95_FULL_FRAME_INFLATE_PARITY_FAILED_BLOCKER,
+        }
+    ]
+    exact["blockers"].append(
+        "full_frame_inflate_parity_is_local_probe_not_score_authority"
+        if satisfied
+        else PR95_FULL_FRAME_INFLATE_PARITY_FAILED_BLOCKER
+    )
+    exact["blockers"] = list(dict.fromkeys(exact["blockers"]))
 
 
 def _without_pytorch_export_parity_blockers(blockers: Any) -> list[str]:
@@ -528,6 +653,8 @@ def _recommended_execution_command(
     write_byte_closed_smoke: bool,
     write_pr95_public_archive_export: bool,
     prove_pr95_runtime_consumption: bool,
+    write_pr95_full_frame_inflate_parity: bool,
+    require_pr95_full_frame_inflate_parity: bool,
     write_pytorch_export_parity: bool,
     write_mlx_gpu_drift_attestation: bool,
     public_pr95_source_model: Path,
@@ -541,6 +668,13 @@ def _recommended_execution_command(
     mlx_gpu_drift_conv2d_accumulation_mode: str,
     mlx_gpu_drift_conv2d_override_preset: str,
     mlx_gpu_drift_conv2d_override_items: list[str],
+    full_frame_parity_mlx_device: str,
+    full_frame_parity_conv2d_accumulation_mode: str,
+    full_frame_parity_conv2d_override_preset: str,
+    full_frame_parity_conv2d_override_items: list[str],
+    full_frame_parity_chunk_pairs: int,
+    full_frame_parity_timeout_seconds: float,
+    full_frame_parity_max_output_bytes: int,
     write_source_faithful_preprocess_smoke: bool,
     write_source_video_preprocess_smoke: bool,
     train_on_source_video_pairs: bool,
@@ -594,6 +728,28 @@ def _recommended_execution_command(
                 str(runtime_proof_max_output_bytes),
             ]
         )
+    if write_pr95_full_frame_inflate_parity:
+        command.append("--write-pr95-full-frame-inflate-parity")
+        if require_pr95_full_frame_inflate_parity:
+            command.append("--require-pr95-full-frame-inflate-parity")
+        command.extend(
+            [
+                "--full-frame-parity-mlx-device",
+                full_frame_parity_mlx_device,
+                "--full-frame-parity-conv2d-accumulation-mode",
+                full_frame_parity_conv2d_accumulation_mode,
+                "--full-frame-parity-conv2d-override-preset",
+                full_frame_parity_conv2d_override_preset,
+                "--full-frame-parity-chunk-pairs",
+                str(full_frame_parity_chunk_pairs),
+                "--full-frame-parity-timeout-seconds",
+                str(full_frame_parity_timeout_seconds),
+                "--full-frame-parity-max-output-bytes",
+                str(full_frame_parity_max_output_bytes),
+            ]
+        )
+        for override_item in full_frame_parity_conv2d_override_items:
+            command.extend(["--full-frame-parity-conv2d-override", override_item])
     if write_pytorch_export_parity or write_mlx_gpu_drift_attestation:
         command.extend(
             [
@@ -685,6 +841,8 @@ def _extra_artifact_postconditions(
     output_dir: Path,
     write_pr95_public_archive_export: bool,
     prove_pr95_runtime_consumption: bool,
+    write_pr95_full_frame_inflate_parity: bool,
+    require_pr95_full_frame_inflate_parity: bool,
     write_pytorch_export_parity: bool,
     write_mlx_gpu_drift_attestation: bool,
     write_source_faithful_preprocess_smoke: bool,
@@ -888,6 +1046,37 @@ def _extra_artifact_postconditions(
                 _json_false_authority_postcondition(proof_path),
             ]
         )
+    if write_pr95_full_frame_inflate_parity:
+        proof_path = _rel(output_dir / "full_frame_inflate_parity_proof.json")
+        postconditions.extend(
+            [
+                {"type": "path_exists", "path": proof_path},
+                _json_equals_postcondition(
+                    proof_path,
+                    "schema",
+                    "pr95_hnerv_public_full_frame_inflate_parity_proof.v1",
+                ),
+                _json_equals_postcondition(
+                    proof_path,
+                    "runtime_consumption_proof_passed",
+                    True,
+                ),
+                _json_equals_postcondition(
+                    proof_path,
+                    "exact_readiness_refusal.ready",
+                    False,
+                ),
+                _json_false_authority_postcondition(proof_path),
+            ]
+        )
+        if require_pr95_full_frame_inflate_parity:
+            postconditions.append(
+                _json_equals_postcondition(
+                    proof_path,
+                    "full_frame_inflate_parity_satisfied",
+                    True,
+                )
+            )
     return postconditions
 
 
@@ -904,6 +1093,8 @@ def _build_representation_training_plan(
     write_byte_closed_smoke: bool,
     write_pr95_public_archive_export: bool,
     prove_pr95_runtime_consumption: bool,
+    write_pr95_full_frame_inflate_parity: bool,
+    require_pr95_full_frame_inflate_parity: bool,
     write_pytorch_export_parity: bool,
     write_mlx_gpu_drift_attestation: bool,
     public_pr95_source_model: Path,
@@ -919,6 +1110,12 @@ def _build_representation_training_plan(
     mlx_gpu_drift_conv2d_override_preset: str,
     mlx_gpu_drift_conv2d_override_items: list[str],
     mlx_gpu_drift_conv2d_accumulation_overrides: dict[str, str],
+    full_frame_parity_mlx_device: str,
+    full_frame_parity_conv2d_accumulation_mode: str,
+    full_frame_parity_conv2d_override_preset: str,
+    full_frame_parity_conv2d_override_items: list[str],
+    full_frame_parity_conv2d_accumulation_overrides: dict[str, str],
+    full_frame_parity_chunk_pairs: int,
     write_source_faithful_preprocess_smoke: bool,
     write_source_video_preprocess_smoke: bool,
     train_on_source_video_pairs: bool,
@@ -1051,6 +1248,12 @@ def _build_representation_training_plan(
             "byte_closed_smoke_archive_requested": write_byte_closed_smoke,
             "pr95_public_archive_export_requested": write_pr95_public_archive_export,
             "pr95_runtime_consumption_proof_requested": prove_pr95_runtime_consumption,
+            "pr95_full_frame_inflate_parity_requested": (
+                write_pr95_full_frame_inflate_parity
+            ),
+            "pr95_full_frame_inflate_parity_required": (
+                require_pr95_full_frame_inflate_parity
+            ),
             "pytorch_export_forward_parity_requested": write_pytorch_export_parity,
             "mlx_gpu_forward_drift_attestation_requested": (
                 write_mlx_gpu_drift_attestation
@@ -1084,6 +1287,26 @@ def _build_representation_training_plan(
             ),
             "mlx_gpu_drift_conv2d_accumulation_overrides": (
                 mlx_gpu_drift_conv2d_accumulation_overrides
+            ),
+            "full_frame_parity_mlx_device": full_frame_parity_mlx_device,
+            "full_frame_parity_conv2d_accumulation_mode": (
+                full_frame_parity_conv2d_accumulation_mode
+            ),
+            "full_frame_parity_conv2d_override_preset": (
+                full_frame_parity_conv2d_override_preset
+            ),
+            "full_frame_parity_conv2d_override_items": (
+                full_frame_parity_conv2d_override_items
+            ),
+            "full_frame_parity_conv2d_accumulation_overrides": (
+                full_frame_parity_conv2d_accumulation_overrides
+            ),
+            "full_frame_parity_chunk_pairs": full_frame_parity_chunk_pairs,
+            "full_frame_parity_timeout_seconds": (
+                recommended_execution.get("full_frame_parity_timeout_seconds")
+            ),
+            "full_frame_parity_max_output_bytes": (
+                recommended_execution.get("full_frame_parity_max_output_bytes")
             ),
             "source_faithful_preprocess_smoke_requested": (
                 write_source_faithful_preprocess_smoke
@@ -1162,6 +1385,7 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
     needs_pr95_archive_export = (
         args.write_pr95_public_archive_export
         or args.prove_pr95_runtime_consumption
+        or args.write_pr95_full_frame_inflate_parity
         or args.write_pytorch_export_parity
         or args.write_mlx_gpu_drift_attestation
     )
@@ -1194,6 +1418,14 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
             args.mlx_gpu_drift_conv2d_override,
             base=pr95_mlx_conv2d_accumulation_overrides_from_preset(
                 args.mlx_gpu_drift_conv2d_override_preset
+            ),
+        )
+    )
+    full_frame_parity_conv2d_accumulation_overrides = (
+        pr95_mlx_conv2d_accumulation_overrides_from_items(
+            args.full_frame_parity_conv2d_override,
+            base=pr95_mlx_conv2d_accumulation_overrides_from_preset(
+                args.full_frame_parity_conv2d_override_preset
             ),
         )
     )
@@ -1233,6 +1465,48 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
         "runtime_consumption_proof": _rel(output_dir / "runtime_consumption_proof.json")
         if args.prove_pr95_runtime_consumption
         else None,
+        "full_frame_inflate_parity_proof": _rel(
+            output_dir / "full_frame_inflate_parity_proof.json"
+        )
+        if args.write_pr95_full_frame_inflate_parity
+        else None,
+        "full_frame_parity_mlx_device": args.full_frame_parity_mlx_device
+        if args.write_pr95_full_frame_inflate_parity
+        else None,
+        "full_frame_parity_conv2d_accumulation_mode": (
+            args.full_frame_parity_conv2d_accumulation_mode
+            if args.write_pr95_full_frame_inflate_parity
+            else None
+        ),
+        "full_frame_parity_conv2d_override_preset": (
+            args.full_frame_parity_conv2d_override_preset
+            if args.write_pr95_full_frame_inflate_parity
+            else None
+        ),
+        "full_frame_parity_conv2d_override_items": (
+            args.full_frame_parity_conv2d_override
+            if args.write_pr95_full_frame_inflate_parity
+            else None
+        ),
+        "full_frame_parity_conv2d_accumulation_overrides": (
+            full_frame_parity_conv2d_accumulation_overrides
+            if args.write_pr95_full_frame_inflate_parity
+            else None
+        ),
+        "full_frame_parity_chunk_pairs": args.full_frame_parity_chunk_pairs
+        if args.write_pr95_full_frame_inflate_parity
+        else None,
+        "full_frame_parity_timeout_seconds": args.full_frame_parity_timeout_seconds
+        if args.write_pr95_full_frame_inflate_parity
+        else None,
+        "full_frame_parity_max_output_bytes": args.full_frame_parity_max_output_bytes
+        if args.write_pr95_full_frame_inflate_parity
+        else None,
+        "require_pr95_full_frame_inflate_parity": (
+            args.require_pr95_full_frame_inflate_parity
+            if args.write_pr95_full_frame_inflate_parity
+            else None
+        ),
         "pytorch_export_state_dict": _rel(output_dir / "pr95_pytorch_state_dict.pt")
         if args.write_pytorch_export_parity
         else None,
@@ -1349,6 +1623,12 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
                 needs_pr95_archive_export
             ),
             prove_pr95_runtime_consumption=args.prove_pr95_runtime_consumption,
+            write_pr95_full_frame_inflate_parity=(
+                args.write_pr95_full_frame_inflate_parity
+            ),
+            require_pr95_full_frame_inflate_parity=(
+                args.require_pr95_full_frame_inflate_parity
+            ),
             write_pytorch_export_parity=args.write_pytorch_export_parity,
             write_mlx_gpu_drift_attestation=args.write_mlx_gpu_drift_attestation,
             write_source_faithful_preprocess_smoke=(
@@ -1383,6 +1663,12 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
                 needs_pr95_archive_export
             ),
             prove_pr95_runtime_consumption=args.prove_pr95_runtime_consumption,
+            write_pr95_full_frame_inflate_parity=(
+                args.write_pr95_full_frame_inflate_parity
+            ),
+            require_pr95_full_frame_inflate_parity=(
+                args.require_pr95_full_frame_inflate_parity
+            ),
             write_pytorch_export_parity=args.write_pytorch_export_parity,
             write_mlx_gpu_drift_attestation=args.write_mlx_gpu_drift_attestation,
             write_source_faithful_preprocess_smoke=(
@@ -1426,6 +1712,23 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
             mlx_gpu_drift_conv2d_override_items=(
                 args.mlx_gpu_drift_conv2d_override or []
             ),
+            full_frame_parity_mlx_device=args.full_frame_parity_mlx_device,
+            full_frame_parity_conv2d_accumulation_mode=(
+                args.full_frame_parity_conv2d_accumulation_mode
+            ),
+            full_frame_parity_conv2d_override_preset=(
+                args.full_frame_parity_conv2d_override_preset
+            ),
+            full_frame_parity_conv2d_override_items=(
+                args.full_frame_parity_conv2d_override or []
+            ),
+            full_frame_parity_chunk_pairs=args.full_frame_parity_chunk_pairs,
+            full_frame_parity_timeout_seconds=(
+                args.full_frame_parity_timeout_seconds
+            ),
+            full_frame_parity_max_output_bytes=(
+                args.full_frame_parity_max_output_bytes
+            ),
             optimizer_descriptor_id=optimizer_descriptor_id,
         ),
         "candidate_generation_only": True,
@@ -1448,6 +1751,12 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
             needs_pr95_archive_export
         ),
         prove_pr95_runtime_consumption=args.prove_pr95_runtime_consumption,
+        write_pr95_full_frame_inflate_parity=(
+            args.write_pr95_full_frame_inflate_parity
+        ),
+        require_pr95_full_frame_inflate_parity=(
+            args.require_pr95_full_frame_inflate_parity
+        ),
         write_pytorch_export_parity=args.write_pytorch_export_parity,
         write_mlx_gpu_drift_attestation=args.write_mlx_gpu_drift_attestation,
         public_pr95_source_model=args.public_pr95_source_model,
@@ -1479,6 +1788,20 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
         mlx_gpu_drift_conv2d_accumulation_overrides=(
             mlx_gpu_drift_conv2d_accumulation_overrides
         ),
+        full_frame_parity_mlx_device=args.full_frame_parity_mlx_device,
+        full_frame_parity_conv2d_accumulation_mode=(
+            args.full_frame_parity_conv2d_accumulation_mode
+        ),
+        full_frame_parity_conv2d_override_preset=(
+            args.full_frame_parity_conv2d_override_preset
+        ),
+        full_frame_parity_conv2d_override_items=(
+            args.full_frame_parity_conv2d_override or []
+        ),
+        full_frame_parity_conv2d_accumulation_overrides=(
+            full_frame_parity_conv2d_accumulation_overrides
+        ),
+        full_frame_parity_chunk_pairs=args.full_frame_parity_chunk_pairs,
         write_source_faithful_preprocess_smoke=(
             args.write_source_faithful_preprocess_smoke
         ),
@@ -1540,6 +1863,12 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
             needs_pr95_archive_export
         ),
         "prove_pr95_runtime_consumption": bool(args.prove_pr95_runtime_consumption),
+        "write_pr95_full_frame_inflate_parity": bool(
+            args.write_pr95_full_frame_inflate_parity
+        ),
+        "require_pr95_full_frame_inflate_parity": bool(
+            args.require_pr95_full_frame_inflate_parity
+        ),
         "write_pytorch_export_parity": bool(args.write_pytorch_export_parity),
         "write_mlx_gpu_drift_attestation": bool(
             args.write_mlx_gpu_drift_attestation
@@ -1571,6 +1900,22 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
         "mlx_gpu_drift_conv2d_accumulation_overrides": (
             mlx_gpu_drift_conv2d_accumulation_overrides
         ),
+        "full_frame_parity_mlx_device": args.full_frame_parity_mlx_device,
+        "full_frame_parity_conv2d_accumulation_mode": (
+            args.full_frame_parity_conv2d_accumulation_mode
+        ),
+        "full_frame_parity_conv2d_override_preset": (
+            args.full_frame_parity_conv2d_override_preset
+        ),
+        "full_frame_parity_conv2d_override_items": (
+            args.full_frame_parity_conv2d_override or []
+        ),
+        "full_frame_parity_conv2d_accumulation_overrides": (
+            full_frame_parity_conv2d_accumulation_overrides
+        ),
+        "full_frame_parity_chunk_pairs": args.full_frame_parity_chunk_pairs,
+        "full_frame_parity_timeout_seconds": args.full_frame_parity_timeout_seconds,
+        "full_frame_parity_max_output_bytes": args.full_frame_parity_max_output_bytes,
         "pytorch_export_atol_max": args.pytorch_export_atol_max,
         "pytorch_export_atol_mean": args.pytorch_export_atol_mean,
         "write_source_faithful_preprocess_smoke": bool(
@@ -1610,6 +1955,7 @@ def _representation_manifest(
     output_dir: Path,
     archive_summary: dict[str, Any] | None,
     runtime_consumption_proof: dict[str, Any] | None,
+    full_frame_inflate_parity_proof: dict[str, Any] | None,
     pytorch_export_forward_parity: dict[str, Any] | None,
     mlx_gpu_forward_drift_attestation: dict[str, Any] | None,
     mlx_gpu_decoder_trace: dict[str, Any] | None,
@@ -1632,8 +1978,20 @@ def _representation_manifest(
     )
     archive_zip = public_archive_export or archive_summary
     runtime_consumption_proven = bool(
-        runtime_consumption_proof
-        and runtime_consumption_proof.get("runtime_consumption_proven") is True
+        (
+            runtime_consumption_proof
+            and runtime_consumption_proof.get("runtime_consumption_proven") is True
+        )
+        or (
+            full_frame_inflate_parity_proof
+            and full_frame_inflate_parity_proof.get("runtime_consumption_proof_passed")
+            is True
+        )
+    )
+    full_frame_inflate_parity_proven = bool(
+        full_frame_inflate_parity_proof
+        and full_frame_inflate_parity_proof.get("full_frame_inflate_parity_satisfied")
+        is True
     )
     pytorch_export_forward_parity_proven = bool(
         pytorch_export_forward_parity
@@ -1658,6 +2016,10 @@ def _representation_manifest(
     )
     exact_blockers = _exact_readiness_blockers(
         runtime_consumption_proven=runtime_consumption_proven,
+        full_frame_inflate_parity_attempted=(
+            full_frame_inflate_parity_proof is not None
+        ),
+        full_frame_inflate_parity_proven=full_frame_inflate_parity_proven,
         pytorch_export_forward_parity_proven=(
             pytorch_export_forward_parity_proven
         ),
@@ -1745,6 +2107,36 @@ def _representation_manifest(
             "byte_closed_smoke_archive_emitted": archive_summary is not None,
             "pr95_public_archive_export_emitted": public_archive_export is not None,
             "pr95_runtime_consumption_proof_present": runtime_consumption_proven,
+            "pr95_full_frame_inflate_parity_present": (
+                full_frame_inflate_parity_proof is not None
+            ),
+            "pr95_full_frame_inflate_parity_satisfied": (
+                full_frame_inflate_parity_proven
+            ),
+            "full_frame_parity_mlx_device": manifest.get(
+                "full_frame_parity_mlx_device"
+            ),
+            "full_frame_parity_conv2d_accumulation_mode": manifest.get(
+                "full_frame_parity_conv2d_accumulation_mode"
+            ),
+            "full_frame_parity_conv2d_override_preset": manifest.get(
+                "full_frame_parity_conv2d_override_preset"
+            ),
+            "full_frame_parity_conv2d_override_items": manifest.get(
+                "full_frame_parity_conv2d_override_items"
+            ),
+            "full_frame_parity_conv2d_accumulation_overrides": manifest.get(
+                "full_frame_parity_conv2d_accumulation_overrides"
+            ),
+            "full_frame_parity_chunk_pairs": manifest.get(
+                "full_frame_parity_chunk_pairs"
+            ),
+            "full_frame_parity_timeout_seconds": manifest.get(
+                "full_frame_parity_timeout_seconds"
+            ),
+            "full_frame_parity_max_output_bytes": manifest.get(
+                "full_frame_parity_max_output_bytes"
+            ),
             "pytorch_export_forward_parity_requested": (
                 manifest.get("write_pytorch_export_parity") is True
             ),
@@ -1861,6 +2253,10 @@ def _representation_manifest(
             "byte_closed_smoke_archive": archive_summary,
             "pr95_public_archive_export": public_archive_export,
             "runtime_consumption_proof": manifest.get("runtime_consumption_proof", {}),
+            "full_frame_inflate_parity_proof": manifest.get(
+                "full_frame_inflate_parity_proof",
+                {},
+            ),
             "source_video_training_target": manifest.get(
                 "source_video_training_target",
                 {},
@@ -2026,6 +2422,53 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=64 * 1024 * 1024,
     )
     parser.add_argument(
+        "--write-pr95-full-frame-inflate-parity",
+        action="store_true",
+        help=(
+            "Run public inflate and compare its camera-resolution raw bytes "
+            "against direct MLX rendering of the emitted archive. The proof is "
+            "fail-closed; exact readiness only improves if bytes match exactly."
+        ),
+    )
+    parser.add_argument(
+        "--require-pr95-full-frame-inflate-parity",
+        action="store_true",
+        help=(
+            "Fail this tool when --write-pr95-full-frame-inflate-parity produces "
+            "a proof JSON but not byte-exact full-frame parity."
+        ),
+    )
+    parser.add_argument(
+        "--full-frame-parity-mlx-device",
+        choices=("cpu", "gpu"),
+        default="gpu",
+    )
+    parser.add_argument(
+        "--full-frame-parity-conv2d-accumulation-mode",
+        choices=PR95_MLX_CONV2D_ACCUMULATION_MODES,
+        default="optimized",
+    )
+    parser.add_argument(
+        "--full-frame-parity-conv2d-override-preset",
+        choices=tuple(PR95_MLX_CONV2D_ACCUMULATION_OVERRIDE_PRESETS),
+        default=PR95_MLX_PUBLIC_RELEASE_NO_CLIFF_CONV2D_OVERRIDE_PRESET,
+    )
+    parser.add_argument(
+        "--full-frame-parity-conv2d-override",
+        action="append",
+        help=(
+            "Per-layer Conv2d accumulation override as '<module>=<mode>' for "
+            "the full-frame parity proof."
+        ),
+    )
+    parser.add_argument("--full-frame-parity-chunk-pairs", type=int, default=16)
+    parser.add_argument("--full-frame-parity-timeout-seconds", type=float, default=900.0)
+    parser.add_argument(
+        "--full-frame-parity-max-output-bytes",
+        type=int,
+        default=64 * 1024 * 1024,
+    )
+    parser.add_argument(
         "--write-source-faithful-preprocess-smoke",
         action="store_true",
         help=(
@@ -2164,9 +2607,18 @@ def main(argv: list[str] | None = None) -> int:
     )
     if write_execution_queue and not args.plan_only:
         raise SystemExit("--write-execution-queue requires --plan-only")
+    if (
+        args.require_pr95_full_frame_inflate_parity
+        and not args.write_pr95_full_frame_inflate_parity
+    ):
+        raise SystemExit(
+            "--require-pr95-full-frame-inflate-parity requires "
+            "--write-pr95-full-frame-inflate-parity"
+        )
     needs_pr95_archive_export = (
         args.write_pr95_public_archive_export
         or args.prove_pr95_runtime_consumption
+        or args.write_pr95_full_frame_inflate_parity
         or args.write_pytorch_export_parity
         or args.write_mlx_gpu_drift_attestation
     )
@@ -2186,6 +2638,14 @@ def main(argv: list[str] | None = None) -> int:
             ),
         )
     )
+    full_frame_parity_conv2d_accumulation_overrides = (
+        pr95_mlx_conv2d_accumulation_overrides_from_items(
+            args.full_frame_parity_conv2d_override,
+            base=pr95_mlx_conv2d_accumulation_overrides_from_preset(
+                args.full_frame_parity_conv2d_override_preset
+            ),
+        )
+    )
     if (
         args.write_mlx_gpu_drift_attestation
         and args.mlx_gpu_drift_conv2d_accumulation_mode == "fixed_fp64"
@@ -2202,6 +2662,21 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit(
             "--mlx-gpu-drift-conv2d-override-preset resolved to fixed_fp64 for "
             "at least one layer, which is unsupported on MLX GPU"
+        )
+    if (
+        args.write_pr95_full_frame_inflate_parity
+        and args.full_frame_parity_mlx_device == "gpu"
+        and (
+            args.full_frame_parity_conv2d_accumulation_mode == "fixed_fp64"
+            or any(
+                mode == "fixed_fp64"
+                for mode in full_frame_parity_conv2d_accumulation_overrides.values()
+            )
+        )
+    ):
+        raise SystemExit(
+            "fixed_fp64 full-frame parity accumulation is unsupported on MLX GPU; "
+            "use --full-frame-parity-mlx-device cpu or choose fp32/kahan modes"
         )
     if output_dir.exists() and not args.allow_existing_output_dir:
         raise SystemExit(
@@ -2350,6 +2825,32 @@ def main(argv: list[str] | None = None) -> int:
     )
     manifest["mlx_gpu_drift_conv2d_accumulation_overrides"] = (
         mlx_gpu_drift_conv2d_accumulation_overrides
+    )
+    manifest["write_pr95_full_frame_inflate_parity"] = bool(
+        args.write_pr95_full_frame_inflate_parity
+    )
+    manifest["require_pr95_full_frame_inflate_parity"] = bool(
+        args.require_pr95_full_frame_inflate_parity
+    )
+    manifest["full_frame_parity_mlx_device"] = args.full_frame_parity_mlx_device
+    manifest["full_frame_parity_conv2d_accumulation_mode"] = (
+        args.full_frame_parity_conv2d_accumulation_mode
+    )
+    manifest["full_frame_parity_conv2d_override_preset"] = (
+        args.full_frame_parity_conv2d_override_preset
+    )
+    manifest["full_frame_parity_conv2d_override_items"] = (
+        args.full_frame_parity_conv2d_override or []
+    )
+    manifest["full_frame_parity_conv2d_accumulation_overrides"] = (
+        full_frame_parity_conv2d_accumulation_overrides
+    )
+    manifest["full_frame_parity_chunk_pairs"] = args.full_frame_parity_chunk_pairs
+    manifest["full_frame_parity_timeout_seconds"] = (
+        args.full_frame_parity_timeout_seconds
+    )
+    manifest["full_frame_parity_max_output_bytes"] = (
+        args.full_frame_parity_max_output_bytes
     )
     manifest["pytorch_export_atol_max"] = args.pytorch_export_atol_max
     manifest["pytorch_export_atol_mean"] = args.pytorch_export_atol_mean
@@ -2575,6 +3076,84 @@ def main(argv: list[str] | None = None) -> int:
             if blocker != "runtime_consumption_proof_missing"
         ]
 
+    full_frame_inflate_parity_proof: dict[str, Any] | None = None
+    if args.write_pr95_full_frame_inflate_parity:
+        if public_archive_export is None:
+            raise SystemExit(
+                "--write-pr95-full-frame-inflate-parity requires PR95 archive export"
+            )
+        proof_path = output_dir / "full_frame_inflate_parity_proof.json"
+        proof_command = [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "prove_pr95_public_archive_full_frame_parity.py"),
+            "--archive-zip",
+            str(output_dir / "pr95_public_archive.zip"),
+            "--output-json",
+            str(proof_path),
+            "--timeout-seconds",
+            str(args.full_frame_parity_timeout_seconds),
+            "--max-output-bytes",
+            str(args.full_frame_parity_max_output_bytes),
+            "--mlx-device",
+            args.full_frame_parity_mlx_device,
+            "--conv2d-accumulation-mode",
+            args.full_frame_parity_conv2d_accumulation_mode,
+            "--conv2d-override-preset",
+            args.full_frame_parity_conv2d_override_preset,
+            "--chunk-pairs",
+            str(args.full_frame_parity_chunk_pairs),
+        ]
+        for override_item in args.full_frame_parity_conv2d_override or []:
+            proof_command.extend(["--conv2d-override", override_item])
+        if args.allow_existing_output_dir and proof_path.exists():
+            proof_command.extend(
+                [
+                    "--allow-overwrite",
+                    "--expected-existing-sha256",
+                    _sha256_file(proof_path),
+                ]
+            )
+        proof_result = subprocess.run(
+            proof_command,
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=args.full_frame_parity_timeout_seconds + 30,
+        )
+        if proof_result.returncode != 0 and (
+            args.require_pr95_full_frame_inflate_parity or not proof_path.exists()
+        ):
+            raise SystemExit(
+                "PR95 public full-frame inflate parity proof failed: "
+                f"{proof_result.stderr or proof_result.stdout}"
+            )
+        full_frame_inflate_parity_proof = json.loads(
+            proof_path.read_text(encoding="utf-8")
+        )
+        full_frame_inflate_parity_satisfied = (
+            full_frame_inflate_parity_proof.get("full_frame_inflate_parity_satisfied")
+            is True
+        )
+        manifest["full_frame_inflate_parity_proof"] = (
+            _embedded_full_frame_inflate_parity_proof(
+                full_frame_inflate_parity_proof
+            )
+        )
+        manifest["full_frame_inflate_parity_proof_present"] = True
+        manifest["full_frame_inflate_parity_satisfied"] = (
+            full_frame_inflate_parity_satisfied
+        )
+        manifest["full_frame_inflate_parity_proof_path"] = _rel(proof_path)
+        manifest["full_frame_inflate_parity_proof_bytes"] = proof_path.stat().st_size
+        manifest["full_frame_inflate_parity_proof_sha256"] = _sha256_file(proof_path)
+        _mark_public_archive_export_full_frame_parity(
+            public_archive_export,
+            proof_path=proof_path,
+            full_frame_inflate_parity_proof=full_frame_inflate_parity_proof,
+        )
+        _write_json(output_dir / "pr95_public_archive_export.json", public_archive_export)
+
     source_faithful_preprocess_smoke: dict[str, Any] | None = None
     if args.write_source_faithful_preprocess_smoke:
         camera_hw = _parse_int_tuple(
@@ -2603,6 +3182,10 @@ def main(argv: list[str] | None = None) -> int:
                 )
                 is True
             ),
+        )
+        _apply_full_frame_parity_to_exact_readiness(
+            source_faithful_preprocess_smoke,
+            full_frame_inflate_parity_proof=full_frame_inflate_parity_proof,
         )
         _write_json(
             output_dir / "source_faithful_preprocess_smoke.json",
@@ -2645,6 +3228,10 @@ def main(argv: list[str] | None = None) -> int:
                 is True
             ),
         )
+        _apply_full_frame_parity_to_exact_readiness(
+            source_video_preprocess_smoke,
+            full_frame_inflate_parity_proof=full_frame_inflate_parity_proof,
+        )
         _write_json(
             output_dir / "source_video_preprocess_smoke.json",
             source_video_preprocess_smoke,
@@ -2661,8 +3248,25 @@ def main(argv: list[str] | None = None) -> int:
 
     manifest["exact_readiness_refusal"]["blockers"] = _exact_readiness_blockers(
         runtime_consumption_proven=(
-            runtime_consumption_proof is not None
-            and runtime_consumption_proof.get("runtime_consumption_proven") is True
+            (
+                runtime_consumption_proof is not None
+                and runtime_consumption_proof.get("runtime_consumption_proven") is True
+            )
+            or (
+                full_frame_inflate_parity_proof is not None
+                and full_frame_inflate_parity_proof.get(
+                    "runtime_consumption_proof_passed"
+                )
+                is True
+            )
+        ),
+        full_frame_inflate_parity_attempted=full_frame_inflate_parity_proof is not None,
+        full_frame_inflate_parity_proven=(
+            full_frame_inflate_parity_proof is not None
+            and full_frame_inflate_parity_proof.get(
+                "full_frame_inflate_parity_satisfied"
+            )
+            is True
         ),
         pytorch_export_forward_parity_proven=(
             pytorch_export_forward_parity is not None
@@ -2686,6 +3290,7 @@ def main(argv: list[str] | None = None) -> int:
         output_dir=output_dir,
         archive_summary=archive_summary,
         runtime_consumption_proof=runtime_consumption_proof,
+        full_frame_inflate_parity_proof=full_frame_inflate_parity_proof,
         pytorch_export_forward_parity=pytorch_export_forward_parity,
         mlx_gpu_forward_drift_attestation=mlx_gpu_forward_drift_attestation,
         mlx_gpu_decoder_trace=mlx_gpu_decoder_trace,
@@ -2703,6 +3308,7 @@ def main(argv: list[str] | None = None) -> int:
         "byte_closed_smoke_archive": archive_summary,
         "pr95_public_archive_export": public_archive_export,
         "runtime_consumption_proof": runtime_consumption_proof,
+        "full_frame_inflate_parity_proof": full_frame_inflate_parity_proof,
         "pytorch_export_forward_parity": pytorch_export_forward_parity,
         "mlx_gpu_forward_drift_attestation": mlx_gpu_forward_drift_attestation,
         "mlx_gpu_decoder_trace": mlx_gpu_decoder_trace,

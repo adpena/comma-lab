@@ -1,0 +1,81 @@
+{
+  "archive_bytes": 8500,
+  "archive_path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_source_video_queue_wired_20260528Tlocal/pr95_public_archive.zip",
+  "archive_sha256": "cace13c614f45f7eb7c29c44832ab50b4f07542c7a9b7cc570c4a8d50dfe3492",
+  "archive_zip_bytes": 8500,
+  "archive_zip_path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_source_video_queue_wired_20260528Tlocal/pr95_public_archive.zip",
+  "archive_zip_sha256": "cace13c614f45f7eb7c29c44832ab50b4f07542c7a9b7cc570c4a8d50dfe3492",
+  "bytes": 8500,
+  "candidate_archive": {
+    "bytes": 8500,
+    "path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_source_video_queue_wired_20260528Tlocal/pr95_public_archive.zip",
+    "sha256": "cace13c614f45f7eb7c29c44832ab50b4f07542c7a9b7cc570c4a8d50dfe3492"
+  },
+  "dispatch_attempted": false,
+  "dispatch_packet_ready": false,
+  "exact_readiness_refusal": {
+    "blockers": [
+      "requires_exact_cpu_cuda_auth_eval_before_score_claim",
+      "full_frame_inflate_parity_against_source_runtime_failed"
+    ],
+    "ready": false,
+    "schema": "exact_readiness_refusal.v1"
+  },
+  "full_frame_inflate_parity_diff": {
+    "byte_exact": false,
+    "changed_byte_count": 21,
+    "changed_byte_fraction": 3.4403579545007746e-06,
+    "max_abs_uint8": 1,
+    "mean_abs_uint8": 3.4403579545007746e-06,
+    "mlx_count": 6104016,
+    "p999_abs_uint8": 0.0,
+    "p99_abs_uint8": 0.0,
+    "public_count": 6104016,
+    "same_shape": true
+  },
+  "full_frame_inflate_parity_proof_bytes": 4978,
+  "full_frame_inflate_parity_proof_path": ".omx/research/pr95_mlx_full_frame_source_video_queue_wired_20260528Tlocal/full_frame_inflate_parity_proof.json",
+  "full_frame_inflate_parity_proof_present": true,
+  "full_frame_inflate_parity_proof_sha256": "2f969cc5761547a10951b0264372ec61e1bc4dbebf71bc459d8e9cfaa7687b5c",
+  "full_frame_inflate_parity_satisfied": false,
+  "gpu_launched": false,
+  "member": "0.bin",
+  "member_bytes": 8392,
+  "member_compress_type": 0,
+  "member_name": "0.bin",
+  "member_sha256": "f8206e3709734564b3fc74bf2183c9bc1897c091b21a97b8d5d16fa778a6d68b",
+  "parsed_latent_shape": [
+    1,
+    28
+  ],
+  "parsed_meta": {
+    "base_channels": 4,
+    "eval_size": [
+      384,
+      512
+    ],
+    "latent_dim": 28,
+    "n_pairs": 1
+  },
+  "parsed_state_dict_tensor_count": 26,
+  "path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_source_video_queue_wired_20260528Tlocal/pr95_public_archive.zip",
+  "pr95_1to1_reproduction_claim": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_satisfied": true,
+  "receiver_proof_present": true,
+  "reproduction_claim": false,
+  "reproduction_equivalence": false,
+  "runtime_consumption_proof_bytes": 5093,
+  "runtime_consumption_proof_path": ".omx/research/pr95_mlx_full_frame_source_video_queue_wired_20260528Tlocal/runtime_consumption_proof.json",
+  "runtime_consumption_proof_present": true,
+  "runtime_consumption_proof_sha256": "dc4daf928610319f47166bb74882789ab226b2c9a955d11148c4ba10d45744a3",
+  "runtime_consumption_proven": true,
+  "schema": "pr95_hnerv_archive_export.v1",
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "sha256": "cace13c614f45f7eb7c29c44832ab50b4f07542c7a9b7cc570c4a8d50dfe3492"
+}
