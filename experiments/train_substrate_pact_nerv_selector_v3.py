@@ -98,6 +98,34 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
         "satisfied_by_profile": (),
         "requires": (),
     },
+    # WAVE-N+3 SLOT 1 op-routable #1 (2026-05-28): decoder_quantization
+    # threading through PyTorch sister archive emit path. The recipe at
+    # .omx/operator_authorize_recipes/substrate_pact_nerv_selector_v3_int8_decoder_modal_t4_dispatch.yaml
+    # declares DECODER_QUANT in env_overrides; Catalog #151 requires the
+    # operator-wrapper threading to be auditable via the trainer manifest.
+    "--decoder-quant": {
+        "env": "DECODER_QUANT",
+        "rationale": (
+            "Slot 2 + Compound C archive-emit quantization mode "
+            "(int8_per_channel_brotli_q11 / heterogeneous_per_tensor); "
+            "default fp16_brotli_q9 preserves V3 baseline; mirrors MLX-LOCAL "
+            "canonical interface"
+        ),
+        "default": "fp16_brotli_q9",
+        "satisfied_by_profile": (),
+        "requires": (),
+    },
+    "--fp4-qat-epochs": {
+        "env": "FP4_QAT_EPOCHS",
+        "rationale": (
+            "FP4-QAT post-training fine-tune epochs on top-K tensors per "
+            "CLAUDE.md 'QAT pipeline' non-negotiable; default 0 disables; "
+            "applies only when --decoder-quant=heterogeneous_per_tensor"
+        ),
+        "default": "0",
+        "satisfied_by_profile": (),
+        "requires": (),
+    },
 }
 
 
@@ -133,6 +161,91 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--enable-autocast-fp16", action="store_true", default=False)
     p.add_argument("--enable-torch-compile", action="store_true", default=False)
     p.add_argument("--enable-gt-scorer-cache", action="store_true", default=False)
+    # WAVE-N+3 SLOT 1 op-routable #1 PyTorch sister landing 2026-05-28:
+    # decoder_quantization parameter threading per the MLX-LOCAL canonical
+    # interface at experiments/train_substrate_pact_nerv_selector_v3_mlx_local.py.
+    # Mirrors the sister exactly so MLX-LOCAL --decoder-quant values are valid
+    # at the PyTorch contest-resolution sister and the env-override at
+    # .omx/operator_authorize_recipes/substrate_pact_nerv_selector_v3_int8_decoder_modal_t4_dispatch.yaml
+    # threads through as DECODER_QUANT -> --decoder-quant.
+    # Default preserves V3 baseline (fp16_brotli_q9) behavior so an operator
+    # who does NOT pass --decoder-quant gets the canonical baseline archive
+    # emission per Catalog #240 recipe-vs-trainer-state transparency.
+    p.add_argument(
+        "--decoder-quant",
+        type=str,
+        default="fp16_brotli_q9",
+        choices=[
+            "fp16_brotli_q9",
+            "fp16_brotli_q11",
+            "int8_per_channel_brotli_q11",
+            "heterogeneous_per_tensor",
+        ],
+        help=(
+            "Decoder state-dict archive-emit quantization strategy "
+            "(WAVE-N+3 SLOT 1 PyTorch sister 2026-05-28 mirrors MLX-LOCAL "
+            "--decoder-quant interface). Default 'fp16_brotli_q9' preserves "
+            "V3 baseline (sha256 ef5a087ff6301dbf). 'int8_per_channel_brotli_q11' "
+            "emits the Slot 2 empirical -28.5% archive baseline. "
+            "'heterogeneous_per_tensor' emits the Compound C variant: top-K "
+            "tensors FP4-QAT + mid int8-per-channel + tail int4-groupwise NF4 "
+            "via canonical tac.substrates.pact_nerv_selector_v3."
+            "heterogeneous_bit_allocation helper. Per Catalog #192/#317/#341 "
+            "non-promotable [macOS-MLX research-signal] pending paired-CUDA "
+            "RATIFICATION per Catalog #246."
+        ),
+    )
+    p.add_argument(
+        "--fp4-qat-epochs",
+        type=int,
+        default=0,
+        help=(
+            "FP4-QAT post-training fine-tune epochs on top-K tensors "
+            "(Quantizr 0.33 canonical = 200; smoke = 50; default 0 disables "
+            "QAT). Applies only when --decoder-quant=heterogeneous_per_tensor. "
+            "Per CLAUDE.md 'QAT pipeline' non-negotiable: scalar-weight-only "
+            "fine-tune at scaled LR (default 0.1x) for fp4_qat_epochs."
+        ),
+    )
+    p.add_argument(
+        "--top-k-fp4",
+        type=int,
+        default=3,
+        help=(
+            "Number of top-K tensors routed to FP4-QAT (parent memo: top-3 "
+            "cover 70.31% of decoder byte cost). Informational at this "
+            "wave; the canonical heterogeneous_bit_allocation helper uses "
+            "its own DEFAULT_TOP_K_FP4=3 constant."
+        ),
+    )
+    p.add_argument(
+        "--sensitivity-ranking-method",
+        type=str,
+        default="magnitude_x_byte_cost",
+        choices=[
+            "magnitude_x_byte_cost",
+            "taylor_gradient",
+            "dykstra_lagrangian_dual",
+        ],
+        help=(
+            "Per-tensor sensitivity ranking method (informational; the "
+            "canonical helper uses BYTE_COST x sensitivity ranking regardless; "
+            "future extension hook). Mirrors MLX-LOCAL canonical interface."
+        ),
+    )
+    p.add_argument(
+        "--brotli-quality",
+        type=int,
+        default=None,
+        help=(
+            "Override brotli quality. Default None defers to per-mode "
+            "canonical: fp16_brotli_q9 = 9; fp16_brotli_q11 / "
+            "int8_per_channel_brotli_q11 / heterogeneous_per_tensor = 11. "
+            "Mirrors MLX-LOCAL canonical posture (the archive helper at "
+            "tac.substrates.pact_nerv_selector_v3.archive selects quality "
+            "per decoder_quantization kind)."
+        ),
+    )
     return p
 
 
@@ -269,6 +382,8 @@ def _full_main(args: argparse.Namespace) -> int:
     3. 9-dim checklist (#294) + observability (#305) + Dykstra band (#296).
     4. Recipe ``research_only`` flips to false + ``dispatch_enabled`` to true.
     """
+    import torch
+
     from tac.differentiable_eval_roundtrip import (
         patch_upstream_yuv6_globally,
         unpatch_upstream_yuv6,
@@ -363,10 +478,100 @@ def _full_main(args: argparse.Namespace) -> int:
         archive_sha = ""
         archive_bytes = 0
         archive_zip_path = args.output_dir / "archive.zip"
+        qat_metrics: dict[str, Any] = {}
         if not args.skip_archive_build:
             sd = result.best_ema_state_dict
             latents = sd["latents"].detach().cpu()
             decoder_sd = {k: v for k, v in sd.items() if k != "latents"}
+
+            # WAVE-N+3 SLOT 1 op-routable #1 (2026-05-28): validate
+            # --decoder-quant against canonical set BEFORE archive emit so
+            # the failure surfaces pre-emit (not post-emit at parse time).
+            # Mirrors MLX-LOCAL canonical sister validation. Per Catalog
+            # #146 + #324 fail-closed discipline.
+            from tac.substrates.pact_nerv_selector_v3.archive import (
+                DECODER_QUANTIZATION_KINDS,
+            )
+
+            decoder_quant = str(args.decoder_quant)
+            if decoder_quant not in DECODER_QUANTIZATION_KINDS:
+                raise ValueError(
+                    f"unsupported --decoder-quant {decoder_quant!r}; "
+                    f"expected one of {sorted(DECODER_QUANTIZATION_KINDS)}. "
+                    "Per WAVE-N+3 SLOT 1 PyTorch sister landing 2026-05-28: "
+                    "use 'int8_per_channel_brotli_q11' for the Slot 2 "
+                    "sub-0.18 candidate; use 'heterogeneous_per_tensor' for "
+                    "the Compound C sub-0.16 candidate; default "
+                    "'fp16_brotli_q9' preserves V3 baseline."
+                )
+
+            # WAVE-N+3 SLOT 1 Compound C: optional FP4-QAT fine-tune on
+            # top-K tensors BEFORE archive emit. Only fires when
+            # heterogeneous quant + QAT epochs > 0. The canonical helper at
+            # tac.substrates.pact_nerv_selector_v3.heterogeneous_bit_allocation
+            # is framework-agnostic at the PyTorch state_dict boundary (the
+            # MLX export_state_dict already returns PyTorch-shaped tensors;
+            # the PyTorch trainer's decoder_sd is native PyTorch). Per
+            # CLAUDE.md "QAT pipeline" non-negotiable + Quantizr 0.33
+            # canonical pattern: scalar-weight-only fine-tune at scaled LR
+            # (default 0.1x) for fp4_qat_epochs.
+            if (
+                decoder_quant == "heterogeneous_per_tensor"
+                and int(args.fp4_qat_epochs) > 0
+            ):
+                from tac.substrates.pact_nerv_selector_v3.heterogeneous_bit_allocation import (
+                    apply_fp4_qat_finetune_on_top_k_tensors,
+                    compute_per_tensor_sensitivity_via_taylor_expansion,
+                    derive_heterogeneous_bit_allocation,
+                )
+
+                sd_torch_cpu = {
+                    k: v.detach().to("cpu", dtype=torch.float32)
+                    for k, v in decoder_sd.items()
+                }
+                sensitivity = compute_per_tensor_sensitivity_via_taylor_expansion(
+                    sd_torch_cpu
+                )
+                allocation = derive_heterogeneous_bit_allocation(
+                    sd_torch_cpu, sensitivity
+                )
+                qat_result = apply_fp4_qat_finetune_on_top_k_tensors(
+                    sd_torch_cpu,
+                    allocation,
+                    qat_epochs=int(args.fp4_qat_epochs),
+                    qat_learning_rate_scale=0.1,
+                    base_learning_rate=float(args.lr),
+                    seed=int(args.seed),
+                )
+                # Substitute QAT-fine-tuned tensors back so the archive
+                # emit's heterogeneous_per_tensor quantization runs over
+                # grid-snapped floats (near-zero quantization error per
+                # Quantizr).
+                for name in qat_result.fp4_tensors_finetuned:
+                    decoder_sd[name] = (
+                        qat_result.fine_tuned_state_dict[name].detach()
+                    )
+                qat_metrics = {
+                    "fp4_tensors_finetuned": list(qat_result.fp4_tensors_finetuned),
+                    "qat_epochs": qat_result.qat_epochs,
+                    "qat_learning_rate": qat_result.qat_learning_rate,
+                    "final_qat_loss": qat_result.final_qat_loss,
+                    "per_tensor_cos_pre_qat": dict(qat_result.per_tensor_cos_pre_qat),
+                    "per_tensor_cos_post_qat": dict(qat_result.per_tensor_cos_post_qat),
+                    "allocation_rationale": allocation.rationale,
+                    "rationale": qat_result.rationale,
+                }
+                (args.output_dir / "qat_metrics.json").write_text(
+                    json.dumps(qat_metrics, indent=2, sort_keys=True) + "\n",
+                    encoding="utf-8",
+                )
+                print(
+                    f"[full:{SUBSTRATE_TAG}] FP4-QAT finished: "
+                    f"{len(qat_result.fp4_tensors_finetuned)} tensors, "
+                    f"{qat_result.qat_epochs} epochs, "
+                    f"final_loss={qat_result.final_qat_loss:.6f}"
+                )
+
             # L0 selector posture: per-pair palette mode 0 (the inflate omits
             # selector application at scaffold; Stage 1 wires deterministic FEC6).
             coder = RiceGolombSelectorCoder(
@@ -385,6 +590,7 @@ def _full_main(args: argparse.Namespace) -> int:
             bin_bytes = pack_archive(
                 decoder_sd, latents, selector_bytes, meta,
                 palette_size=cfg.selector_palette_size,
+                decoder_quantization=decoder_quant,
             )
             (args.output_dir / "0.bin").write_bytes(bin_bytes)
             archive_sha = _sha256_bytes(bin_bytes)
@@ -442,7 +648,7 @@ def _full_main(args: argparse.Namespace) -> int:
                 print(f"[full:{SUBSTRATE_TAG}] posterior_update failed: {exc}", file=sys.stderr)
 
         provenance = {
-            "schema": "pact_nerv_selector_v3_full_provenance_v1",
+            "schema": "pact_nerv_selector_v3_full_provenance_v2_decoder_quant_extended",
             "generated_at": _utc_now_iso(),
             "git_head": _git_head_sha(),
             "trainer": "experiments/train_substrate_pact_nerv_selector_v3.py",
@@ -460,6 +666,19 @@ def _full_main(args: argparse.Namespace) -> int:
             "train_elapsed_sec": result.train_elapsed_sec,
             "archive_sha256": archive_sha,
             "archive_bytes": archive_bytes,
+            # WAVE-N+3 SLOT 1 op-routable #1 (2026-05-28): record the
+            # decoder_quantization kind + QAT metrics so paired-CUDA
+            # RATIFICATION cycle has the full provenance for the apples-to-
+            # apples comparison (per CLAUDE.md "Apples-to-apples evidence
+            # discipline" non-negotiable).
+            "decoder_quantization": str(args.decoder_quant),
+            "fp4_qat_epochs": int(args.fp4_qat_epochs),
+            "top_k_fp4": int(args.top_k_fp4),
+            "sensitivity_ranking_method": str(args.sensitivity_ranking_method),
+            "brotli_quality_override": (
+                int(args.brotli_quality) if args.brotli_quality is not None else None
+            ),
+            "qat_metrics": qat_metrics if qat_metrics else None,
             "auth_eval_cuda_score": contest_cuda_score,
             "auth_eval_json_path": (
                 str(auth_eval_result_path) if auth_eval_result_path else None

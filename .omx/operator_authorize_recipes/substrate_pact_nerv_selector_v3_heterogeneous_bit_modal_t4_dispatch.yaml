@@ -85,6 +85,16 @@ env_overrides:
   PACT_NERV_SELECTOR_V3_MLX_FP4_QAT_EPOCHS: "200"
   PACT_NERV_SELECTOR_V3_MLX_TOP_K_FP4: "3"
   PACT_NERV_SELECTOR_V3_MLX_SENSITIVITY_RANKING_METHOD: magnitude_x_byte_cost
+  # WAVE-N+3 SLOT 1 op-routable #1 PyTorch sister landing (2026-05-28):
+  # the PyTorch trainer experiments/train_substrate_pact_nerv_selector_v3.py
+  # now wires --decoder-quant heterogeneous_per_tensor + --fp4-qat-epochs
+  # through the canonical pack_archive() emit path. The env-vars below
+  # threading via the canonical Catalog #151 manifest entry into the
+  # operator-authorize CLI dispatch + Catalog #243 _run_local_pre_deploy_check
+  # pipeline. Recipe still DISPATCH_ENABLED=FALSE per Catalog #240/#325
+  # operator-attended discipline.
+  DECODER_QUANT: heterogeneous_per_tensor
+  FP4_QAT_EPOCHS: "200"
   DALI_DISABLE_NVML: "1"  # Catalog #244
   CUBLAS_WORKSPACE_CONFIG: ":4096:8"  # Catalog #244
   PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True  # Catalog #244
@@ -97,7 +107,7 @@ cost_band:
 
 # Reactivation criteria per CLAUDE.md "Substrate scaffolds MUST be COMPLETE"
 reactivation_criteria:
-  - "Wave N+3 sister PyTorch trainer landing wiring --decoder-quant heterogeneous_per_tensor + --fp4-qat-epochs through experiments/train_substrate_pact_nerv_selector_v3.py"
+  - "RESOLVED 2026-05-28 per WAVE-N+3 SLOT 1 op-routable #1: PyTorch sister trainer experiments/train_substrate_pact_nerv_selector_v3.py now wires --decoder-quant heterogeneous_per_tensor + --fp4-qat-epochs through the canonical pack_archive() emit path; Catalog #151 manifest entry threads DECODER_QUANT + FP4_QAT_EPOCHS env vars from this recipe through the operator-authorize CLI dispatch. Landing memo: .omx/research/pact_nerv_selector_v3_pytorch_decoder_quant_sister_landing_op_routable_1_landed_20260528.md"
   - "Per-substrate symposium per Catalog #325 covering Compound C heterogeneous bit allocation variant"
   - "Paired-CUDA RATIFICATION per Catalog #246 confirming sub-0.18 score floor empirically"
   - "Catalog #324 post-training Tier-C density re-measurement on the landed Compound C archive sha256"
@@ -112,10 +122,13 @@ notes: >
   Catalog #192/#317/#341 NON-PROMOTABLE [macOS-MLX research-signal]
   pending paired-CUDA RATIFICATION per Catalog #246.
 
-  Recipe DISPATCH_ENABLED=FALSE per Catalog #240 transparency: the
-  PyTorch sister trainer at experiments/train_substrate_pact_nerv_selector_v3.py
-  requires wiring decoder_quantization=heterogeneous_per_tensor +
-  fp4_qat_epochs argparse parameters (operator-routable Wave N+3 sister
-  landing). The MLX-LOCAL trainer at
-  experiments/train_substrate_pact_nerv_selector_v3_mlx_local.py IS
-  fully wired per this Wave N+2 Slot 1 landing.
+  Recipe DISPATCH_ENABLED=FALSE per Catalog #240/#325 transparency:
+  paired-CUDA RATIFICATION + per-substrate symposium operator-attended.
+  WAVE-N+3 SLOT 1 op-routable #1 PyTorch sister landing 2026-05-28 has
+  CLOSED the bridge — the PyTorch trainer at
+  experiments/train_substrate_pact_nerv_selector_v3.py now wires
+  decoder_quantization=heterogeneous_per_tensor + fp4_qat_epochs via
+  argparse + Catalog #151 manifest entries. Sister of MLX-LOCAL trainer
+  at experiments/train_substrate_pact_nerv_selector_v3_mlx_local.py
+  per Wave N+2 Slot 1 landing. Operator-routable: flip
+  dispatch_enabled=true after per-substrate symposium per Catalog #325.

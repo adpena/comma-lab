@@ -35,7 +35,16 @@ dispatch_blockers:
   - paired_cuda_ratification_operator_attended_per_catalog_246
   - per_substrate_symposium_for_int8_decoder_variant_pending_per_catalog_325
   - predicted_band_validation_status_pending_post_training_per_catalog_324
-  - mlx_to_pytorch_state_dict_bridge_required_for_contest_1164x874_resolution
+  # WAVE-N+3 SLOT 1 op-routable #1 (2026-05-28): PyTorch sister landing
+  # WIRED via experiments/train_substrate_pact_nerv_selector_v3.py
+  # --decoder-quant flag + canonical pack_archive(decoder_quantization=...)
+  # threading. The MLX->PyTorch contest-resolution bridge unblocker IS
+  # this landing. Sister of MLX-LOCAL canonical interface; the env-override
+  # DECODER_QUANT below now threads through to the PyTorch trainer's
+  # --decoder-quant argparse flag per Catalog #151 manifest. Bridge bullet
+  # marked RESOLVED-PENDING-DISPATCH; remaining blockers are paired-CUDA
+  # operator-attended + per-substrate symposium per Catalog #325.
+  - mlx_to_pytorch_state_dict_bridge_RESOLVED_pending_paired_cuda_dispatch_per_wave_n_plus_3_slot_1_landing_20260528
   - cls_stream_wire_in_blocker_per_yousfi_pr110_council_inheritance
 
 platform: modal
@@ -131,12 +140,14 @@ env_overrides:
   PACT_NERV_SELECTOR_V3_SMOKE: "0"
   SMOKE_ONLY: "0"
   LOCAL_CUDA_WORKER: "0"
-  # DECODER-COMPRESSION-INT8-PER-CHANNEL Slot 2 work 2026-05-28: the
-  # PyTorch sister trainer requires a sister landing wiring the
-  # decoder_quantization parameter through the archive emit path
-  # (currently the PyTorch sister hardcodes the fp16_brotli_q9 default
-  # at line 385); env override DECODER_QUANT documents the operator's
-  # intent for the paired-CUDA RATIFICATION cycle.
+  # DECODER-COMPRESSION-INT8-PER-CHANNEL Slot 2 work 2026-05-28: per
+  # WAVE-N+3 SLOT 1 op-routable #1 PyTorch sister landing (2026-05-28),
+  # DECODER_QUANT env var now threads via Catalog #151 manifest entry
+  # `--decoder-quant` directly into the PyTorch trainer
+  # experiments/train_substrate_pact_nerv_selector_v3.py archive emit
+  # path at the formerly-hardcoded fp16_brotli_q9 callsite. Operator-
+  # attended dispatch via tools/operator_authorize.py threads the env
+  # var through to the trainer's argparse --decoder-quant.
   DECODER_QUANT: "int8_per_channel_brotli_q11"
   BROTLI_QUALITY: "11"
 
@@ -163,12 +174,19 @@ reactivation_criteria: |
      quant variant of PACT-NeRV-V3 (the V3 RE-RUN symposium 38d77eebd
      covers fp16 baseline only; the int8 variant needs its OWN
      PROCEED-unconditional sextet pact + 6-step contract).
-  2. MLX->PyTorch state_dict bridge sister landing wiring the
-     decoder_quantization parameter through
-     experiments/train_substrate_pact_nerv_selector_v3.py:385 archive
-     emit path (currently hardcodes fp16_brotli_q9).
+  2. RESOLVED 2026-05-28 per WAVE-N+3 SLOT 1 op-routable #1 PyTorch
+     sister landing: the decoder_quantization parameter is now wired
+     through experiments/train_substrate_pact_nerv_selector_v3.py
+     archive emit path via canonical pack_archive(decoder_quantization=...)
+     plus --decoder-quant argparse flag. Landing memo:
+     .omx/research/pact_nerv_selector_v3_pytorch_decoder_quant_sister_landing_op_routable_1_landed_20260528.md
   3. PyTorch sister contest-resolution rendering (1164x874 per Catalog
-     #367) verified empirically before dispatch.
+     #367) verified empirically before dispatch — the canonical
+     write_contest_runtime + inflate.py already emit at 1164x874 per
+     CONTEST_RAW_BYTES = 3_662_409_600 contract; the PyTorch trainer's
+     EVAL_HW = (384, 512) is INFLATE-time output resolution from which
+     the contest runtime renders the 1164x874 PNGs. Empirical
+     verification via paired-CUDA dispatch.
   4. Operator-attended ratification per Catalog #246 (paired CUDA + CPU
      on 1:1 contest-compliant hardware per CLAUDE.md "Submission auth
      eval - BOTH CPU AND CUDA").
