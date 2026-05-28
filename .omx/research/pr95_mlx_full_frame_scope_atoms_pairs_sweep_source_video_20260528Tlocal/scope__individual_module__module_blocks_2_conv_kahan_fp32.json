@@ -1,0 +1,322 @@
+{
+  "archive_bytes": 8500,
+  "archive_packet": {
+    "archive_zip_path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+    "archive_zip_sha256": "cace13c614f45f7eb7c29c44832ab50b4f07542c7a9b7cc570c4a8d50dfe3492",
+    "dispatch_attempted": false,
+    "dispatch_packet_ready": false,
+    "gpu_launched": false,
+    "latent_shape": [
+      1,
+      28
+    ],
+    "member_bytes": 8392,
+    "member_compress_type": 0,
+    "member_name": "0.bin",
+    "member_sha256": "f8206e3709734564b3fc74bf2183c9bc1897c091b21a97b8d5d16fa778a6d68b",
+    "meta": {
+      "base_channels": 4,
+      "eval_size": [
+        384,
+        512
+      ],
+      "latent_dim": 28,
+      "n_pairs": 1
+    },
+    "pr95_1to1_reproduction_claim": false,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "reproduction_claim": false,
+    "reproduction_equivalence": false,
+    "schema": "pr95_hnerv_public_archive_packet.v1",
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "source_pr": 95,
+    "state_dict_tensor_count": 26,
+    "submission": "hnerv_muon"
+  },
+  "archive_path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+  "archive_sha256": "cace13c614f45f7eb7c29c44832ab50b4f07542c7a9b7cc570c4a8d50dfe3492",
+  "conv2d_accumulation_mode": "optimized",
+  "conv2d_accumulation_overrides": {
+    "blocks.2.conv": "kahan_fp32"
+  },
+  "diff": {
+    "boundary_distance_changed_byte_count": {
+      "edge_0": 0,
+      "interior_ge9": 20,
+      "near_edge_1_2": 0,
+      "near_edge_3_8": 1
+    },
+    "byte_exact": false,
+    "changed_byte_count": 21,
+    "changed_byte_fraction": 3.4403579545007746e-06,
+    "first_mismatch": {
+      "abs_delta_uint8": 1,
+      "boundary_distance_pixels": 81,
+      "channel": 1,
+      "channel_name": "g",
+      "flat_index": 283894,
+      "frame_index": 0,
+      "mlx_uint8": 126,
+      "public_uint8": 127,
+      "signed_delta_mlx_minus_public": -1,
+      "x": 347,
+      "y": 81
+    },
+    "frame_shape_nhwc": [
+      2,
+      874,
+      1164,
+      3
+    ],
+    "max_abs_uint8": 1,
+    "mean_abs_uint8": 3.4403579545007746e-06,
+    "mismatch_sample_cap": 8,
+    "mismatch_sample_count": 8,
+    "mismatch_samples": [
+      {
+        "abs_delta_uint8": 1,
+        "boundary_distance_pixels": 81,
+        "channel": 1,
+        "channel_name": "g",
+        "flat_index": 283894,
+        "frame_index": 0,
+        "mlx_uint8": 126,
+        "public_uint8": 127,
+        "signed_delta_mlx_minus_public": -1,
+        "x": 347,
+        "y": 81
+      },
+      {
+        "abs_delta_uint8": 1,
+        "boundary_distance_pixels": 132,
+        "channel": 2,
+        "channel_name": "b",
+        "flat_index": 461585,
+        "frame_index": 0,
+        "mlx_uint8": 127,
+        "public_uint8": 128,
+        "signed_delta_mlx_minus_public": -1,
+        "x": 213,
+        "y": 132
+      },
+      {
+        "abs_delta_uint8": 1,
+        "boundary_distance_pixels": 219,
+        "channel": 2,
+        "channel_name": "b",
+        "flat_index": 767021,
+        "frame_index": 0,
+        "mlx_uint8": 127,
+        "public_uint8": 128,
+        "signed_delta_mlx_minus_public": -1,
+        "x": 757,
+        "y": 219
+      },
+      {
+        "abs_delta_uint8": 1,
+        "boundary_distance_pixels": 311,
+        "channel": 2,
+        "channel_name": "b",
+        "flat_index": 1615862,
+        "frame_index": 0,
+        "mlx_uint8": 126,
+        "public_uint8": 125,
+        "signed_delta_mlx_minus_public": 1,
+        "x": 852,
+        "y": 462
+      },
+      {
+        "abs_delta_uint8": 1,
+        "boundary_distance_pixels": 334,
+        "channel": 2,
+        "channel_name": "b",
+        "flat_index": 1884359,
+        "frame_index": 0,
+        "mlx_uint8": 128,
+        "public_uint8": 127,
+        "signed_delta_mlx_minus_public": 1,
+        "x": 723,
+        "y": 539
+      },
+      {
+        "abs_delta_uint8": 1,
+        "boundary_distance_pixels": 307,
+        "channel": 0,
+        "channel_name": "r",
+        "flat_index": 1978416,
+        "frame_index": 0,
+        "mlx_uint8": 127,
+        "public_uint8": 126,
+        "signed_delta_mlx_minus_public": 1,
+        "x": 648,
+        "y": 566
+      },
+      {
+        "abs_delta_uint8": 1,
+        "boundary_distance_pixels": 145,
+        "channel": 2,
+        "channel_name": "b",
+        "flat_index": 2543783,
+        "frame_index": 0,
+        "mlx_uint8": 128,
+        "public_uint8": 129,
+        "signed_delta_mlx_minus_public": -1,
+        "x": 535,
+        "y": 728
+      },
+      {
+        "abs_delta_uint8": 1,
+        "boundary_distance_pixels": 133,
+        "channel": 0,
+        "channel_name": "r",
+        "flat_index": 2584629,
+        "frame_index": 0,
+        "mlx_uint8": 129,
+        "public_uint8": 128,
+        "signed_delta_mlx_minus_public": 1,
+        "x": 183,
+        "y": 740
+      }
+    ],
+    "mlx_count": 6104016,
+    "p999_abs_uint8": 0.0,
+    "p99_abs_uint8": 0.0,
+    "per_channel_changed_byte_count": {
+      "b": 10,
+      "g": 7,
+      "r": 4
+    },
+    "per_frame_changed_byte_count": [
+      10,
+      11
+    ],
+    "public_count": 6104016,
+    "raw_layout": "frames_nhwc_uint8",
+    "same_shape": true,
+    "signed_delta_histogram_mlx_minus_public": {
+      "-1": 11,
+      "1": 10
+    }
+  },
+  "dispatch_attempted": false,
+  "dispatch_packet_ready": false,
+  "drift_localization_verdict": "mlx_decoder_or_mlx_bridge_arithmetic_drift",
+  "exact_readiness_refusal": {
+    "blockers": [
+      "full_frame_inflate_parity_against_source_runtime_failed",
+      "full_frame_inflate_parity_is_not_score_authority",
+      "requires_exact_cpu_cuda_auth_eval_before_score_claim"
+    ],
+    "ready": false,
+    "schema": "exact_readiness_refusal.v1"
+  },
+  "expected_raw_bytes": 6104016,
+  "full_frame_inflate_output_parity_claim": false,
+  "full_frame_inflate_parity_failed": true,
+  "full_frame_inflate_parity_satisfied": false,
+  "generated_utc": "2026-05-28T14:40:17.071358+00:00",
+  "gpu_launched": false,
+  "inflate_sh": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+  "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+  "mlx_device": "cpu",
+  "mlx_raw_bytes": 6104016,
+  "mlx_raw_sha256": "d8acd63eaba36848b39af7a0a377d92d862a0780ccd071f0ec00582c5a15aacd",
+  "pr95_1to1_reproduction_claim": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "public_raw_bytes": 6104016,
+  "public_raw_path": null,
+  "public_raw_sha256": "826f545c608b91f0dfd43dcea6edea8d4a23008feae2c02f71a70808c74a5e6d",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_satisfied": false,
+  "receiver_proof_present": false,
+  "reproduction_claim": false,
+  "reproduction_equivalence": false,
+  "returncode": 0,
+  "runtime_consumption_proof_passed": true,
+  "runtime_consumption_proven": true,
+  "runtime_files": [
+    {
+      "bytes": 811,
+      "path": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+      "sha256": "0cb9c3df78ad870cadd2ac6d46007b6c1aeb6a61c76b7800ae74a00addafb885"
+    },
+    {
+      "bytes": 2158,
+      "path": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.py",
+      "sha256": "fdc1e9af70a8f6b47f84c3978a29cb872dbc3dbdc6c123bda72ea494221a0e26"
+    },
+    {
+      "bytes": 2197,
+      "path": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py",
+      "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+    },
+    {
+      "bytes": 7455,
+      "path": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/codec.py",
+      "sha256": "63d3ffd03c514fa5841fbf75a3eac87cc76ed40f68e0d68db50cd7cda517266f"
+    }
+  ],
+  "schema": "pr95_hnerv_public_full_frame_inflate_parity_proof.v1",
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "source_pr": 95,
+  "started_utc": "2026-05-28T14:40:15.789728+00:00",
+  "stderr_tail": "",
+  "stdout_tail": "Inflating 0.mkv ... saved 2 frames\n",
+  "submission": "hnerv_muon",
+  "torch_direct_reference": {
+    "byte_exact_with_public_inflate": true,
+    "diff": {
+      "boundary_distance_changed_byte_count": {
+        "edge_0": 0,
+        "interior_ge9": 0,
+        "near_edge_1_2": 0,
+        "near_edge_3_8": 0
+      },
+      "byte_exact": true,
+      "changed_byte_count": 0,
+      "changed_byte_fraction": 0.0,
+      "first_mismatch": null,
+      "frame_shape_nhwc": [
+        2,
+        874,
+        1164,
+        3
+      ],
+      "max_abs_uint8": 0,
+      "mean_abs_uint8": 0.0,
+      "mismatch_sample_cap": 8,
+      "mismatch_sample_count": 0,
+      "mismatch_samples": [],
+      "mlx_count": 6104016,
+      "p999_abs_uint8": 0.0,
+      "p99_abs_uint8": 0.0,
+      "per_channel_changed_byte_count": {
+        "b": 0,
+        "g": 0,
+        "r": 0
+      },
+      "per_frame_changed_byte_count": [
+        0,
+        0
+      ],
+      "public_count": 6104016,
+      "raw_layout": "frames_nhwc_uint8",
+      "same_shape": true,
+      "signed_delta_histogram_mlx_minus_public": {}
+    },
+    "enabled": true,
+    "model_py": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py",
+    "raw_bytes": 6104016,
+    "raw_sha256": "826f545c608b91f0dfd43dcea6edea8d4a23008feae2c02f71a70808c74a5e6d"
+  },
+  "work_dir": null
+}

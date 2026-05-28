@@ -1,0 +1,3003 @@
+{
+  "archive_zip": ".omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+  "candidate_commands": [
+    {
+      "candidate_id": "optimized__none",
+      "candidate_source": "explicit",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {},
+      "conv2d_override_items": [],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/optimized__none.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/optimized__none.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/optimized__none_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8"
+      ],
+      "scope_search_kind": null,
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/optimized__none_work"
+    },
+    {
+      "candidate_id": "optimized__blocks02_kahan_fp32",
+      "candidate_source": "explicit",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.0.conv": "kahan_fp32",
+        "blocks.0.skip_conv": "kahan_fp32",
+        "blocks.1.conv": "kahan_fp32",
+        "blocks.1.skip_conv": "kahan_fp32",
+        "blocks.2.conv": "kahan_fp32",
+        "blocks.2.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.0.conv=kahan_fp32",
+        "blocks.0.skip_conv=kahan_fp32",
+        "blocks.1.conv=kahan_fp32",
+        "blocks.1.skip_conv=kahan_fp32",
+        "blocks.2.conv=kahan_fp32",
+        "blocks.2.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "blocks02_kahan_fp32",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/optimized__blocks02_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/optimized__blocks02_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/optimized__blocks02_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "blocks02_kahan_fp32",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.0.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.0.skip_conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.1.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.1.skip_conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.2.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.2.skip_conv=kahan_fp32"
+      ],
+      "scope_search_kind": null,
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/optimized__blocks02_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "optimized__blocks_refine_kahan_fp32",
+      "candidate_source": "explicit",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.0.conv": "kahan_fp32",
+        "blocks.0.skip_conv": "kahan_fp32",
+        "blocks.1.conv": "kahan_fp32",
+        "blocks.1.skip_conv": "kahan_fp32",
+        "blocks.2.conv": "kahan_fp32",
+        "blocks.2.skip_conv": "kahan_fp32",
+        "blocks.3.conv": "kahan_fp32",
+        "blocks.3.skip_conv": "kahan_fp32",
+        "blocks.4.conv": "kahan_fp32",
+        "blocks.4.skip_conv": "kahan_fp32",
+        "blocks.5.conv": "kahan_fp32",
+        "blocks.5.skip_conv": "kahan_fp32",
+        "refine0": "kahan_fp32",
+        "refine1": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.0.conv=kahan_fp32",
+        "blocks.0.skip_conv=kahan_fp32",
+        "blocks.1.conv=kahan_fp32",
+        "blocks.1.skip_conv=kahan_fp32",
+        "blocks.2.conv=kahan_fp32",
+        "blocks.2.skip_conv=kahan_fp32",
+        "blocks.3.conv=kahan_fp32",
+        "blocks.3.skip_conv=kahan_fp32",
+        "blocks.4.conv=kahan_fp32",
+        "blocks.4.skip_conv=kahan_fp32",
+        "blocks.5.conv=kahan_fp32",
+        "blocks.5.skip_conv=kahan_fp32",
+        "refine0=kahan_fp32",
+        "refine1=kahan_fp32"
+      ],
+      "conv2d_override_preset": "blocks_refine_kahan_fp32",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/optimized__blocks_refine_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/optimized__blocks_refine_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/optimized__blocks_refine_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "blocks_refine_kahan_fp32",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.0.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.0.skip_conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.1.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.1.skip_conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.2.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.2.skip_conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.3.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.3.skip_conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.4.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.4.skip_conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.5.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.5.skip_conv=kahan_fp32",
+        "--conv2d-override",
+        "refine0=kahan_fp32",
+        "--conv2d-override",
+        "refine1=kahan_fp32"
+      ],
+      "scope_search_kind": null,
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/optimized__blocks_refine_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "kahan_fp32__none",
+      "candidate_source": "explicit",
+      "conv2d_accumulation_mode": "kahan_fp32",
+      "conv2d_accumulation_overrides": {},
+      "conv2d_override_items": [],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/kahan_fp32__none.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/kahan_fp32__none.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/kahan_fp32__none_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "kahan_fp32",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8"
+      ],
+      "scope_search_kind": null,
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/kahan_fp32__none_work"
+    },
+    {
+      "candidate_id": "scope__single_block__block0_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.0.conv": "kahan_fp32",
+        "blocks.0.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.0.conv=kahan_fp32",
+        "blocks.0.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__single_block__block0_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__single_block__block0_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__single_block__block0_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.0.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.0.skip_conv=kahan_fp32"
+      ],
+      "scope_search_kind": "single_block",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__single_block__block0_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__single_block__block1_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.1.conv": "kahan_fp32",
+        "blocks.1.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.1.conv=kahan_fp32",
+        "blocks.1.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__single_block__block1_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__single_block__block1_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__single_block__block1_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.1.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.1.skip_conv=kahan_fp32"
+      ],
+      "scope_search_kind": "single_block",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__single_block__block1_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__single_block__block2_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.2.conv": "kahan_fp32",
+        "blocks.2.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.2.conv=kahan_fp32",
+        "blocks.2.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__single_block__block2_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__single_block__block2_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__single_block__block2_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.2.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.2.skip_conv=kahan_fp32"
+      ],
+      "scope_search_kind": "single_block",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__single_block__block2_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__single_block__block3_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.3.conv": "kahan_fp32",
+        "blocks.3.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.3.conv=kahan_fp32",
+        "blocks.3.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__single_block__block3_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__single_block__block3_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__single_block__block3_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.3.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.3.skip_conv=kahan_fp32"
+      ],
+      "scope_search_kind": "single_block",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__single_block__block3_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__single_block__block4_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.4.conv": "kahan_fp32",
+        "blocks.4.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.4.conv=kahan_fp32",
+        "blocks.4.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__single_block__block4_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__single_block__block4_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__single_block__block4_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.4.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.4.skip_conv=kahan_fp32"
+      ],
+      "scope_search_kind": "single_block",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__single_block__block4_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__single_block__block5_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.5.conv": "kahan_fp32",
+        "blocks.5.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.5.conv=kahan_fp32",
+        "blocks.5.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__single_block__block5_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__single_block__block5_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__single_block__block5_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.5.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.5.skip_conv=kahan_fp32"
+      ],
+      "scope_search_kind": "single_block",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__single_block__block5_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__prefix_blocks__blocks0_1_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.0.conv": "kahan_fp32",
+        "blocks.0.skip_conv": "kahan_fp32",
+        "blocks.1.conv": "kahan_fp32",
+        "blocks.1.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.0.conv=kahan_fp32",
+        "blocks.0.skip_conv=kahan_fp32",
+        "blocks.1.conv=kahan_fp32",
+        "blocks.1.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__prefix_blocks__blocks0_1_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__prefix_blocks__blocks0_1_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__prefix_blocks__blocks0_1_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.0.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.0.skip_conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.1.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.1.skip_conv=kahan_fp32"
+      ],
+      "scope_search_kind": "prefix_blocks",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__prefix_blocks__blocks0_1_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__prefix_blocks__blocks0_3_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.0.conv": "kahan_fp32",
+        "blocks.0.skip_conv": "kahan_fp32",
+        "blocks.1.conv": "kahan_fp32",
+        "blocks.1.skip_conv": "kahan_fp32",
+        "blocks.2.conv": "kahan_fp32",
+        "blocks.2.skip_conv": "kahan_fp32",
+        "blocks.3.conv": "kahan_fp32",
+        "blocks.3.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.0.conv=kahan_fp32",
+        "blocks.0.skip_conv=kahan_fp32",
+        "blocks.1.conv=kahan_fp32",
+        "blocks.1.skip_conv=kahan_fp32",
+        "blocks.2.conv=kahan_fp32",
+        "blocks.2.skip_conv=kahan_fp32",
+        "blocks.3.conv=kahan_fp32",
+        "blocks.3.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__prefix_blocks__blocks0_3_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__prefix_blocks__blocks0_3_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__prefix_blocks__blocks0_3_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.0.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.0.skip_conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.1.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.1.skip_conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.2.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.2.skip_conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.3.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.3.skip_conv=kahan_fp32"
+      ],
+      "scope_search_kind": "prefix_blocks",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__prefix_blocks__blocks0_3_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__prefix_blocks__blocks0_4_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.0.conv": "kahan_fp32",
+        "blocks.0.skip_conv": "kahan_fp32",
+        "blocks.1.conv": "kahan_fp32",
+        "blocks.1.skip_conv": "kahan_fp32",
+        "blocks.2.conv": "kahan_fp32",
+        "blocks.2.skip_conv": "kahan_fp32",
+        "blocks.3.conv": "kahan_fp32",
+        "blocks.3.skip_conv": "kahan_fp32",
+        "blocks.4.conv": "kahan_fp32",
+        "blocks.4.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.0.conv=kahan_fp32",
+        "blocks.0.skip_conv=kahan_fp32",
+        "blocks.1.conv=kahan_fp32",
+        "blocks.1.skip_conv=kahan_fp32",
+        "blocks.2.conv=kahan_fp32",
+        "blocks.2.skip_conv=kahan_fp32",
+        "blocks.3.conv=kahan_fp32",
+        "blocks.3.skip_conv=kahan_fp32",
+        "blocks.4.conv=kahan_fp32",
+        "blocks.4.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__prefix_blocks__blocks0_4_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__prefix_blocks__blocks0_4_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__prefix_blocks__blocks0_4_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.0.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.0.skip_conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.1.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.1.skip_conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.2.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.2.skip_conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.3.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.3.skip_conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.4.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.4.skip_conv=kahan_fp32"
+      ],
+      "scope_search_kind": "prefix_blocks",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__prefix_blocks__blocks0_4_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__prefix_blocks__blocks0_5_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.0.conv": "kahan_fp32",
+        "blocks.0.skip_conv": "kahan_fp32",
+        "blocks.1.conv": "kahan_fp32",
+        "blocks.1.skip_conv": "kahan_fp32",
+        "blocks.2.conv": "kahan_fp32",
+        "blocks.2.skip_conv": "kahan_fp32",
+        "blocks.3.conv": "kahan_fp32",
+        "blocks.3.skip_conv": "kahan_fp32",
+        "blocks.4.conv": "kahan_fp32",
+        "blocks.4.skip_conv": "kahan_fp32",
+        "blocks.5.conv": "kahan_fp32",
+        "blocks.5.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.0.conv=kahan_fp32",
+        "blocks.0.skip_conv=kahan_fp32",
+        "blocks.1.conv=kahan_fp32",
+        "blocks.1.skip_conv=kahan_fp32",
+        "blocks.2.conv=kahan_fp32",
+        "blocks.2.skip_conv=kahan_fp32",
+        "blocks.3.conv=kahan_fp32",
+        "blocks.3.skip_conv=kahan_fp32",
+        "blocks.4.conv=kahan_fp32",
+        "blocks.4.skip_conv=kahan_fp32",
+        "blocks.5.conv=kahan_fp32",
+        "blocks.5.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__prefix_blocks__blocks0_5_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__prefix_blocks__blocks0_5_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__prefix_blocks__blocks0_5_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.0.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.0.skip_conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.1.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.1.skip_conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.2.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.2.skip_conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.3.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.3.skip_conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.4.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.4.skip_conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.5.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.5.skip_conv=kahan_fp32"
+      ],
+      "scope_search_kind": "prefix_blocks",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__prefix_blocks__blocks0_5_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__individual_module__module_blocks_0_conv_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.0.conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.0.conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_0_conv_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_0_conv_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_0_conv_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.0.conv=kahan_fp32"
+      ],
+      "scope_search_kind": "individual_module",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_0_conv_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__individual_module__module_blocks_0_skip_conv_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.0.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.0.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_0_skip_conv_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_0_skip_conv_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_0_skip_conv_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.0.skip_conv=kahan_fp32"
+      ],
+      "scope_search_kind": "individual_module",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_0_skip_conv_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__individual_module__module_blocks_1_conv_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.1.conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.1.conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_1_conv_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_1_conv_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_1_conv_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.1.conv=kahan_fp32"
+      ],
+      "scope_search_kind": "individual_module",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_1_conv_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__individual_module__module_blocks_1_skip_conv_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.1.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.1.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_1_skip_conv_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_1_skip_conv_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_1_skip_conv_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.1.skip_conv=kahan_fp32"
+      ],
+      "scope_search_kind": "individual_module",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_1_skip_conv_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__individual_module__module_blocks_2_conv_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.2.conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.2.conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_2_conv_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_2_conv_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_2_conv_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.2.conv=kahan_fp32"
+      ],
+      "scope_search_kind": "individual_module",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_2_conv_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__individual_module__module_blocks_2_skip_conv_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.2.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.2.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_2_skip_conv_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_2_skip_conv_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_2_skip_conv_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.2.skip_conv=kahan_fp32"
+      ],
+      "scope_search_kind": "individual_module",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_2_skip_conv_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__individual_module__module_blocks_3_conv_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.3.conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.3.conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_3_conv_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_3_conv_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_3_conv_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.3.conv=kahan_fp32"
+      ],
+      "scope_search_kind": "individual_module",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_3_conv_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__individual_module__module_blocks_3_skip_conv_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.3.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.3.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_3_skip_conv_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_3_skip_conv_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_3_skip_conv_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.3.skip_conv=kahan_fp32"
+      ],
+      "scope_search_kind": "individual_module",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_3_skip_conv_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__individual_module__module_blocks_4_conv_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.4.conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.4.conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_4_conv_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_4_conv_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_4_conv_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.4.conv=kahan_fp32"
+      ],
+      "scope_search_kind": "individual_module",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_4_conv_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__individual_module__module_blocks_4_skip_conv_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.4.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.4.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_4_skip_conv_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_4_skip_conv_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_4_skip_conv_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.4.skip_conv=kahan_fp32"
+      ],
+      "scope_search_kind": "individual_module",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_4_skip_conv_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__individual_module__module_blocks_5_conv_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.5.conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.5.conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_5_conv_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_5_conv_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_5_conv_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.5.conv=kahan_fp32"
+      ],
+      "scope_search_kind": "individual_module",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_5_conv_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__individual_module__module_blocks_5_skip_conv_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.5.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.5.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_5_skip_conv_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_5_skip_conv_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_5_skip_conv_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.5.skip_conv=kahan_fp32"
+      ],
+      "scope_search_kind": "individual_module",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_blocks_5_skip_conv_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__individual_module__module_refine0_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "refine0": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "refine0=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_refine0_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_refine0_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_refine0_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "refine0=kahan_fp32"
+      ],
+      "scope_search_kind": "individual_module",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_refine0_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__individual_module__module_refine1_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "refine1": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "refine1=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_refine1_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_refine1_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_refine1_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "refine1=kahan_fp32"
+      ],
+      "scope_search_kind": "individual_module",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_refine1_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__individual_module__module_rgb_0_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "rgb_0": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "rgb_0=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_rgb_0_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_rgb_0_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_rgb_0_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "rgb_0=kahan_fp32"
+      ],
+      "scope_search_kind": "individual_module",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_rgb_0_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__individual_module__module_rgb_1_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "rgb_1": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "rgb_1=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_rgb_1_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_rgb_1_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_rgb_1_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "rgb_1=kahan_fp32"
+      ],
+      "scope_search_kind": "individual_module",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__individual_module__module_rgb_1_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__pair_blocks__blockpair0_2_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.0.conv": "kahan_fp32",
+        "blocks.0.skip_conv": "kahan_fp32",
+        "blocks.2.conv": "kahan_fp32",
+        "blocks.2.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.0.conv=kahan_fp32",
+        "blocks.0.skip_conv=kahan_fp32",
+        "blocks.2.conv=kahan_fp32",
+        "blocks.2.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair0_2_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair0_2_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair0_2_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.0.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.0.skip_conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.2.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.2.skip_conv=kahan_fp32"
+      ],
+      "scope_search_kind": "pair_blocks",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair0_2_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__pair_blocks__blockpair0_3_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.0.conv": "kahan_fp32",
+        "blocks.0.skip_conv": "kahan_fp32",
+        "blocks.3.conv": "kahan_fp32",
+        "blocks.3.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.0.conv=kahan_fp32",
+        "blocks.0.skip_conv=kahan_fp32",
+        "blocks.3.conv=kahan_fp32",
+        "blocks.3.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair0_3_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair0_3_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair0_3_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.0.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.0.skip_conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.3.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.3.skip_conv=kahan_fp32"
+      ],
+      "scope_search_kind": "pair_blocks",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair0_3_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__pair_blocks__blockpair0_4_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.0.conv": "kahan_fp32",
+        "blocks.0.skip_conv": "kahan_fp32",
+        "blocks.4.conv": "kahan_fp32",
+        "blocks.4.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.0.conv=kahan_fp32",
+        "blocks.0.skip_conv=kahan_fp32",
+        "blocks.4.conv=kahan_fp32",
+        "blocks.4.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair0_4_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair0_4_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair0_4_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.0.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.0.skip_conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.4.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.4.skip_conv=kahan_fp32"
+      ],
+      "scope_search_kind": "pair_blocks",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair0_4_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__pair_blocks__blockpair0_5_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.0.conv": "kahan_fp32",
+        "blocks.0.skip_conv": "kahan_fp32",
+        "blocks.5.conv": "kahan_fp32",
+        "blocks.5.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.0.conv=kahan_fp32",
+        "blocks.0.skip_conv=kahan_fp32",
+        "blocks.5.conv=kahan_fp32",
+        "blocks.5.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair0_5_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair0_5_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair0_5_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.0.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.0.skip_conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.5.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.5.skip_conv=kahan_fp32"
+      ],
+      "scope_search_kind": "pair_blocks",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair0_5_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__pair_blocks__blockpair1_2_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.1.conv": "kahan_fp32",
+        "blocks.1.skip_conv": "kahan_fp32",
+        "blocks.2.conv": "kahan_fp32",
+        "blocks.2.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.1.conv=kahan_fp32",
+        "blocks.1.skip_conv=kahan_fp32",
+        "blocks.2.conv=kahan_fp32",
+        "blocks.2.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair1_2_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair1_2_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair1_2_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.1.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.1.skip_conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.2.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.2.skip_conv=kahan_fp32"
+      ],
+      "scope_search_kind": "pair_blocks",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair1_2_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__pair_blocks__blockpair1_3_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.1.conv": "kahan_fp32",
+        "blocks.1.skip_conv": "kahan_fp32",
+        "blocks.3.conv": "kahan_fp32",
+        "blocks.3.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.1.conv=kahan_fp32",
+        "blocks.1.skip_conv=kahan_fp32",
+        "blocks.3.conv=kahan_fp32",
+        "blocks.3.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair1_3_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair1_3_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair1_3_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.1.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.1.skip_conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.3.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.3.skip_conv=kahan_fp32"
+      ],
+      "scope_search_kind": "pair_blocks",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair1_3_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__pair_blocks__blockpair1_4_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.1.conv": "kahan_fp32",
+        "blocks.1.skip_conv": "kahan_fp32",
+        "blocks.4.conv": "kahan_fp32",
+        "blocks.4.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.1.conv=kahan_fp32",
+        "blocks.1.skip_conv=kahan_fp32",
+        "blocks.4.conv=kahan_fp32",
+        "blocks.4.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair1_4_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair1_4_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair1_4_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.1.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.1.skip_conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.4.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.4.skip_conv=kahan_fp32"
+      ],
+      "scope_search_kind": "pair_blocks",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair1_4_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__pair_blocks__blockpair1_5_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.1.conv": "kahan_fp32",
+        "blocks.1.skip_conv": "kahan_fp32",
+        "blocks.5.conv": "kahan_fp32",
+        "blocks.5.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.1.conv=kahan_fp32",
+        "blocks.1.skip_conv=kahan_fp32",
+        "blocks.5.conv=kahan_fp32",
+        "blocks.5.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair1_5_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair1_5_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair1_5_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.1.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.1.skip_conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.5.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.5.skip_conv=kahan_fp32"
+      ],
+      "scope_search_kind": "pair_blocks",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair1_5_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__pair_blocks__blockpair2_3_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.2.conv": "kahan_fp32",
+        "blocks.2.skip_conv": "kahan_fp32",
+        "blocks.3.conv": "kahan_fp32",
+        "blocks.3.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.2.conv=kahan_fp32",
+        "blocks.2.skip_conv=kahan_fp32",
+        "blocks.3.conv=kahan_fp32",
+        "blocks.3.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair2_3_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair2_3_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair2_3_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.2.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.2.skip_conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.3.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.3.skip_conv=kahan_fp32"
+      ],
+      "scope_search_kind": "pair_blocks",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair2_3_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__pair_blocks__blockpair2_4_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.2.conv": "kahan_fp32",
+        "blocks.2.skip_conv": "kahan_fp32",
+        "blocks.4.conv": "kahan_fp32",
+        "blocks.4.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.2.conv=kahan_fp32",
+        "blocks.2.skip_conv=kahan_fp32",
+        "blocks.4.conv=kahan_fp32",
+        "blocks.4.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair2_4_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair2_4_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair2_4_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.2.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.2.skip_conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.4.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.4.skip_conv=kahan_fp32"
+      ],
+      "scope_search_kind": "pair_blocks",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair2_4_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__pair_blocks__blockpair2_5_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.2.conv": "kahan_fp32",
+        "blocks.2.skip_conv": "kahan_fp32",
+        "blocks.5.conv": "kahan_fp32",
+        "blocks.5.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.2.conv=kahan_fp32",
+        "blocks.2.skip_conv=kahan_fp32",
+        "blocks.5.conv=kahan_fp32",
+        "blocks.5.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair2_5_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair2_5_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair2_5_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.2.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.2.skip_conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.5.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.5.skip_conv=kahan_fp32"
+      ],
+      "scope_search_kind": "pair_blocks",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair2_5_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__pair_blocks__blockpair3_4_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.3.conv": "kahan_fp32",
+        "blocks.3.skip_conv": "kahan_fp32",
+        "blocks.4.conv": "kahan_fp32",
+        "blocks.4.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.3.conv=kahan_fp32",
+        "blocks.3.skip_conv=kahan_fp32",
+        "blocks.4.conv=kahan_fp32",
+        "blocks.4.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair3_4_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair3_4_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair3_4_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.3.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.3.skip_conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.4.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.4.skip_conv=kahan_fp32"
+      ],
+      "scope_search_kind": "pair_blocks",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair3_4_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__pair_blocks__blockpair3_5_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.3.conv": "kahan_fp32",
+        "blocks.3.skip_conv": "kahan_fp32",
+        "blocks.5.conv": "kahan_fp32",
+        "blocks.5.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.3.conv=kahan_fp32",
+        "blocks.3.skip_conv=kahan_fp32",
+        "blocks.5.conv=kahan_fp32",
+        "blocks.5.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair3_5_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair3_5_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair3_5_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.3.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.3.skip_conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.5.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.5.skip_conv=kahan_fp32"
+      ],
+      "scope_search_kind": "pair_blocks",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair3_5_kahan_fp32_work"
+    },
+    {
+      "candidate_id": "scope__pair_blocks__blockpair4_5_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.4.conv": "kahan_fp32",
+        "blocks.4.skip_conv": "kahan_fp32",
+        "blocks.5.conv": "kahan_fp32",
+        "blocks.5.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.4.conv=kahan_fp32",
+        "blocks.4.skip_conv=kahan_fp32",
+        "blocks.5.conv=kahan_fp32",
+        "blocks.5.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "proof_path": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair4_5_kahan_fp32.json",
+      "python_command_args": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "/Users/adpena/Projects/pact/tools/prove_pr95_public_archive_full_frame_parity.py",
+        "--archive-zip",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+        "--inflate-sh",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "--output-json",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair4_5_kahan_fp32.json",
+        "--work-dir",
+        "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair4_5_kahan_fp32_work",
+        "--mlx-device",
+        "cpu",
+        "--conv2d-accumulation-mode",
+        "optimized",
+        "--conv2d-override-preset",
+        "none",
+        "--timeout-seconds",
+        "180.0",
+        "--max-output-bytes",
+        "7000000",
+        "--max-mismatch-samples",
+        "8",
+        "--conv2d-override",
+        "blocks.4.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.4.skip_conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.5.conv=kahan_fp32",
+        "--conv2d-override",
+        "blocks.5.skip_conv=kahan_fp32"
+      ],
+      "scope_search_kind": "pair_blocks",
+      "work_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/scope__pair_blocks__blockpair4_5_kahan_fp32_work"
+    }
+  ],
+  "candidate_count": 44,
+  "candidates": [
+    {
+      "candidate_id": "optimized__none",
+      "candidate_source": "explicit",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {},
+      "conv2d_override_items": [],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": null
+    },
+    {
+      "candidate_id": "optimized__blocks02_kahan_fp32",
+      "candidate_source": "explicit",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.0.conv": "kahan_fp32",
+        "blocks.0.skip_conv": "kahan_fp32",
+        "blocks.1.conv": "kahan_fp32",
+        "blocks.1.skip_conv": "kahan_fp32",
+        "blocks.2.conv": "kahan_fp32",
+        "blocks.2.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.0.conv=kahan_fp32",
+        "blocks.0.skip_conv=kahan_fp32",
+        "blocks.1.conv=kahan_fp32",
+        "blocks.1.skip_conv=kahan_fp32",
+        "blocks.2.conv=kahan_fp32",
+        "blocks.2.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "blocks02_kahan_fp32",
+      "scope_search_kind": null
+    },
+    {
+      "candidate_id": "optimized__blocks_refine_kahan_fp32",
+      "candidate_source": "explicit",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.0.conv": "kahan_fp32",
+        "blocks.0.skip_conv": "kahan_fp32",
+        "blocks.1.conv": "kahan_fp32",
+        "blocks.1.skip_conv": "kahan_fp32",
+        "blocks.2.conv": "kahan_fp32",
+        "blocks.2.skip_conv": "kahan_fp32",
+        "blocks.3.conv": "kahan_fp32",
+        "blocks.3.skip_conv": "kahan_fp32",
+        "blocks.4.conv": "kahan_fp32",
+        "blocks.4.skip_conv": "kahan_fp32",
+        "blocks.5.conv": "kahan_fp32",
+        "blocks.5.skip_conv": "kahan_fp32",
+        "refine0": "kahan_fp32",
+        "refine1": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.0.conv=kahan_fp32",
+        "blocks.0.skip_conv=kahan_fp32",
+        "blocks.1.conv=kahan_fp32",
+        "blocks.1.skip_conv=kahan_fp32",
+        "blocks.2.conv=kahan_fp32",
+        "blocks.2.skip_conv=kahan_fp32",
+        "blocks.3.conv=kahan_fp32",
+        "blocks.3.skip_conv=kahan_fp32",
+        "blocks.4.conv=kahan_fp32",
+        "blocks.4.skip_conv=kahan_fp32",
+        "blocks.5.conv=kahan_fp32",
+        "blocks.5.skip_conv=kahan_fp32",
+        "refine0=kahan_fp32",
+        "refine1=kahan_fp32"
+      ],
+      "conv2d_override_preset": "blocks_refine_kahan_fp32",
+      "scope_search_kind": null
+    },
+    {
+      "candidate_id": "kahan_fp32__none",
+      "candidate_source": "explicit",
+      "conv2d_accumulation_mode": "kahan_fp32",
+      "conv2d_accumulation_overrides": {},
+      "conv2d_override_items": [],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": null
+    },
+    {
+      "candidate_id": "scope__single_block__block0_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.0.conv": "kahan_fp32",
+        "blocks.0.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.0.conv=kahan_fp32",
+        "blocks.0.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "single_block"
+    },
+    {
+      "candidate_id": "scope__single_block__block1_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.1.conv": "kahan_fp32",
+        "blocks.1.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.1.conv=kahan_fp32",
+        "blocks.1.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "single_block"
+    },
+    {
+      "candidate_id": "scope__single_block__block2_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.2.conv": "kahan_fp32",
+        "blocks.2.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.2.conv=kahan_fp32",
+        "blocks.2.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "single_block"
+    },
+    {
+      "candidate_id": "scope__single_block__block3_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.3.conv": "kahan_fp32",
+        "blocks.3.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.3.conv=kahan_fp32",
+        "blocks.3.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "single_block"
+    },
+    {
+      "candidate_id": "scope__single_block__block4_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.4.conv": "kahan_fp32",
+        "blocks.4.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.4.conv=kahan_fp32",
+        "blocks.4.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "single_block"
+    },
+    {
+      "candidate_id": "scope__single_block__block5_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.5.conv": "kahan_fp32",
+        "blocks.5.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.5.conv=kahan_fp32",
+        "blocks.5.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "single_block"
+    },
+    {
+      "candidate_id": "scope__prefix_blocks__blocks0_1_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.0.conv": "kahan_fp32",
+        "blocks.0.skip_conv": "kahan_fp32",
+        "blocks.1.conv": "kahan_fp32",
+        "blocks.1.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.0.conv=kahan_fp32",
+        "blocks.0.skip_conv=kahan_fp32",
+        "blocks.1.conv=kahan_fp32",
+        "blocks.1.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "prefix_blocks"
+    },
+    {
+      "candidate_id": "scope__prefix_blocks__blocks0_3_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.0.conv": "kahan_fp32",
+        "blocks.0.skip_conv": "kahan_fp32",
+        "blocks.1.conv": "kahan_fp32",
+        "blocks.1.skip_conv": "kahan_fp32",
+        "blocks.2.conv": "kahan_fp32",
+        "blocks.2.skip_conv": "kahan_fp32",
+        "blocks.3.conv": "kahan_fp32",
+        "blocks.3.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.0.conv=kahan_fp32",
+        "blocks.0.skip_conv=kahan_fp32",
+        "blocks.1.conv=kahan_fp32",
+        "blocks.1.skip_conv=kahan_fp32",
+        "blocks.2.conv=kahan_fp32",
+        "blocks.2.skip_conv=kahan_fp32",
+        "blocks.3.conv=kahan_fp32",
+        "blocks.3.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "prefix_blocks"
+    },
+    {
+      "candidate_id": "scope__prefix_blocks__blocks0_4_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.0.conv": "kahan_fp32",
+        "blocks.0.skip_conv": "kahan_fp32",
+        "blocks.1.conv": "kahan_fp32",
+        "blocks.1.skip_conv": "kahan_fp32",
+        "blocks.2.conv": "kahan_fp32",
+        "blocks.2.skip_conv": "kahan_fp32",
+        "blocks.3.conv": "kahan_fp32",
+        "blocks.3.skip_conv": "kahan_fp32",
+        "blocks.4.conv": "kahan_fp32",
+        "blocks.4.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.0.conv=kahan_fp32",
+        "blocks.0.skip_conv=kahan_fp32",
+        "blocks.1.conv=kahan_fp32",
+        "blocks.1.skip_conv=kahan_fp32",
+        "blocks.2.conv=kahan_fp32",
+        "blocks.2.skip_conv=kahan_fp32",
+        "blocks.3.conv=kahan_fp32",
+        "blocks.3.skip_conv=kahan_fp32",
+        "blocks.4.conv=kahan_fp32",
+        "blocks.4.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "prefix_blocks"
+    },
+    {
+      "candidate_id": "scope__prefix_blocks__blocks0_5_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.0.conv": "kahan_fp32",
+        "blocks.0.skip_conv": "kahan_fp32",
+        "blocks.1.conv": "kahan_fp32",
+        "blocks.1.skip_conv": "kahan_fp32",
+        "blocks.2.conv": "kahan_fp32",
+        "blocks.2.skip_conv": "kahan_fp32",
+        "blocks.3.conv": "kahan_fp32",
+        "blocks.3.skip_conv": "kahan_fp32",
+        "blocks.4.conv": "kahan_fp32",
+        "blocks.4.skip_conv": "kahan_fp32",
+        "blocks.5.conv": "kahan_fp32",
+        "blocks.5.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.0.conv=kahan_fp32",
+        "blocks.0.skip_conv=kahan_fp32",
+        "blocks.1.conv=kahan_fp32",
+        "blocks.1.skip_conv=kahan_fp32",
+        "blocks.2.conv=kahan_fp32",
+        "blocks.2.skip_conv=kahan_fp32",
+        "blocks.3.conv=kahan_fp32",
+        "blocks.3.skip_conv=kahan_fp32",
+        "blocks.4.conv=kahan_fp32",
+        "blocks.4.skip_conv=kahan_fp32",
+        "blocks.5.conv=kahan_fp32",
+        "blocks.5.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "prefix_blocks"
+    },
+    {
+      "candidate_id": "scope__individual_module__module_blocks_0_conv_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.0.conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.0.conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "individual_module"
+    },
+    {
+      "candidate_id": "scope__individual_module__module_blocks_0_skip_conv_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.0.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.0.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "individual_module"
+    },
+    {
+      "candidate_id": "scope__individual_module__module_blocks_1_conv_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.1.conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.1.conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "individual_module"
+    },
+    {
+      "candidate_id": "scope__individual_module__module_blocks_1_skip_conv_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.1.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.1.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "individual_module"
+    },
+    {
+      "candidate_id": "scope__individual_module__module_blocks_2_conv_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.2.conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.2.conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "individual_module"
+    },
+    {
+      "candidate_id": "scope__individual_module__module_blocks_2_skip_conv_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.2.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.2.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "individual_module"
+    },
+    {
+      "candidate_id": "scope__individual_module__module_blocks_3_conv_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.3.conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.3.conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "individual_module"
+    },
+    {
+      "candidate_id": "scope__individual_module__module_blocks_3_skip_conv_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.3.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.3.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "individual_module"
+    },
+    {
+      "candidate_id": "scope__individual_module__module_blocks_4_conv_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.4.conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.4.conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "individual_module"
+    },
+    {
+      "candidate_id": "scope__individual_module__module_blocks_4_skip_conv_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.4.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.4.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "individual_module"
+    },
+    {
+      "candidate_id": "scope__individual_module__module_blocks_5_conv_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.5.conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.5.conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "individual_module"
+    },
+    {
+      "candidate_id": "scope__individual_module__module_blocks_5_skip_conv_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.5.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.5.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "individual_module"
+    },
+    {
+      "candidate_id": "scope__individual_module__module_refine0_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "refine0": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "refine0=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "individual_module"
+    },
+    {
+      "candidate_id": "scope__individual_module__module_refine1_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "refine1": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "refine1=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "individual_module"
+    },
+    {
+      "candidate_id": "scope__individual_module__module_rgb_0_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "rgb_0": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "rgb_0=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "individual_module"
+    },
+    {
+      "candidate_id": "scope__individual_module__module_rgb_1_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "rgb_1": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "rgb_1=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "individual_module"
+    },
+    {
+      "candidate_id": "scope__pair_blocks__blockpair0_2_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.0.conv": "kahan_fp32",
+        "blocks.0.skip_conv": "kahan_fp32",
+        "blocks.2.conv": "kahan_fp32",
+        "blocks.2.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.0.conv=kahan_fp32",
+        "blocks.0.skip_conv=kahan_fp32",
+        "blocks.2.conv=kahan_fp32",
+        "blocks.2.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "pair_blocks"
+    },
+    {
+      "candidate_id": "scope__pair_blocks__blockpair0_3_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.0.conv": "kahan_fp32",
+        "blocks.0.skip_conv": "kahan_fp32",
+        "blocks.3.conv": "kahan_fp32",
+        "blocks.3.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.0.conv=kahan_fp32",
+        "blocks.0.skip_conv=kahan_fp32",
+        "blocks.3.conv=kahan_fp32",
+        "blocks.3.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "pair_blocks"
+    },
+    {
+      "candidate_id": "scope__pair_blocks__blockpair0_4_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.0.conv": "kahan_fp32",
+        "blocks.0.skip_conv": "kahan_fp32",
+        "blocks.4.conv": "kahan_fp32",
+        "blocks.4.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.0.conv=kahan_fp32",
+        "blocks.0.skip_conv=kahan_fp32",
+        "blocks.4.conv=kahan_fp32",
+        "blocks.4.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "pair_blocks"
+    },
+    {
+      "candidate_id": "scope__pair_blocks__blockpair0_5_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.0.conv": "kahan_fp32",
+        "blocks.0.skip_conv": "kahan_fp32",
+        "blocks.5.conv": "kahan_fp32",
+        "blocks.5.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.0.conv=kahan_fp32",
+        "blocks.0.skip_conv=kahan_fp32",
+        "blocks.5.conv=kahan_fp32",
+        "blocks.5.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "pair_blocks"
+    },
+    {
+      "candidate_id": "scope__pair_blocks__blockpair1_2_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.1.conv": "kahan_fp32",
+        "blocks.1.skip_conv": "kahan_fp32",
+        "blocks.2.conv": "kahan_fp32",
+        "blocks.2.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.1.conv=kahan_fp32",
+        "blocks.1.skip_conv=kahan_fp32",
+        "blocks.2.conv=kahan_fp32",
+        "blocks.2.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "pair_blocks"
+    },
+    {
+      "candidate_id": "scope__pair_blocks__blockpair1_3_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.1.conv": "kahan_fp32",
+        "blocks.1.skip_conv": "kahan_fp32",
+        "blocks.3.conv": "kahan_fp32",
+        "blocks.3.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.1.conv=kahan_fp32",
+        "blocks.1.skip_conv=kahan_fp32",
+        "blocks.3.conv=kahan_fp32",
+        "blocks.3.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "pair_blocks"
+    },
+    {
+      "candidate_id": "scope__pair_blocks__blockpair1_4_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.1.conv": "kahan_fp32",
+        "blocks.1.skip_conv": "kahan_fp32",
+        "blocks.4.conv": "kahan_fp32",
+        "blocks.4.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.1.conv=kahan_fp32",
+        "blocks.1.skip_conv=kahan_fp32",
+        "blocks.4.conv=kahan_fp32",
+        "blocks.4.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "pair_blocks"
+    },
+    {
+      "candidate_id": "scope__pair_blocks__blockpair1_5_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.1.conv": "kahan_fp32",
+        "blocks.1.skip_conv": "kahan_fp32",
+        "blocks.5.conv": "kahan_fp32",
+        "blocks.5.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.1.conv=kahan_fp32",
+        "blocks.1.skip_conv=kahan_fp32",
+        "blocks.5.conv=kahan_fp32",
+        "blocks.5.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "pair_blocks"
+    },
+    {
+      "candidate_id": "scope__pair_blocks__blockpair2_3_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.2.conv": "kahan_fp32",
+        "blocks.2.skip_conv": "kahan_fp32",
+        "blocks.3.conv": "kahan_fp32",
+        "blocks.3.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.2.conv=kahan_fp32",
+        "blocks.2.skip_conv=kahan_fp32",
+        "blocks.3.conv=kahan_fp32",
+        "blocks.3.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "pair_blocks"
+    },
+    {
+      "candidate_id": "scope__pair_blocks__blockpair2_4_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.2.conv": "kahan_fp32",
+        "blocks.2.skip_conv": "kahan_fp32",
+        "blocks.4.conv": "kahan_fp32",
+        "blocks.4.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.2.conv=kahan_fp32",
+        "blocks.2.skip_conv=kahan_fp32",
+        "blocks.4.conv=kahan_fp32",
+        "blocks.4.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "pair_blocks"
+    },
+    {
+      "candidate_id": "scope__pair_blocks__blockpair2_5_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.2.conv": "kahan_fp32",
+        "blocks.2.skip_conv": "kahan_fp32",
+        "blocks.5.conv": "kahan_fp32",
+        "blocks.5.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.2.conv=kahan_fp32",
+        "blocks.2.skip_conv=kahan_fp32",
+        "blocks.5.conv=kahan_fp32",
+        "blocks.5.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "pair_blocks"
+    },
+    {
+      "candidate_id": "scope__pair_blocks__blockpair3_4_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.3.conv": "kahan_fp32",
+        "blocks.3.skip_conv": "kahan_fp32",
+        "blocks.4.conv": "kahan_fp32",
+        "blocks.4.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.3.conv=kahan_fp32",
+        "blocks.3.skip_conv=kahan_fp32",
+        "blocks.4.conv=kahan_fp32",
+        "blocks.4.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "pair_blocks"
+    },
+    {
+      "candidate_id": "scope__pair_blocks__blockpair3_5_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.3.conv": "kahan_fp32",
+        "blocks.3.skip_conv": "kahan_fp32",
+        "blocks.5.conv": "kahan_fp32",
+        "blocks.5.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.3.conv=kahan_fp32",
+        "blocks.3.skip_conv=kahan_fp32",
+        "blocks.5.conv=kahan_fp32",
+        "blocks.5.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "pair_blocks"
+    },
+    {
+      "candidate_id": "scope__pair_blocks__blockpair4_5_kahan_fp32",
+      "candidate_source": "canonical_scope_search",
+      "conv2d_accumulation_mode": "optimized",
+      "conv2d_accumulation_overrides": {
+        "blocks.4.conv": "kahan_fp32",
+        "blocks.4.skip_conv": "kahan_fp32",
+        "blocks.5.conv": "kahan_fp32",
+        "blocks.5.skip_conv": "kahan_fp32"
+      },
+      "conv2d_override_items": [
+        "blocks.4.conv=kahan_fp32",
+        "blocks.4.skip_conv=kahan_fp32",
+        "blocks.5.conv=kahan_fp32",
+        "blocks.5.skip_conv=kahan_fp32"
+      ],
+      "conv2d_override_preset": "none",
+      "scope_search_kind": "pair_blocks"
+    }
+  ],
+  "dispatch_attempted": false,
+  "dispatch_packet_ready": false,
+  "exact_readiness_refusal": {
+    "blockers": [
+      "local_pr95_mlx_full_frame_parity_mode_sweep_is_not_score_authority",
+      "requires_exact_cpu_cuda_auth_eval_before_score_claim"
+    ],
+    "ready": false,
+    "schema": "exact_readiness_refusal.v1"
+  },
+  "expected_output": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal/full_frame_parity_mode_sweep.json",
+  "generated_utc": "2026-05-28T14:40:11.104989+00:00",
+  "gpu_launched": false,
+  "include_scope_search_candidates": true,
+  "inflate_sh": "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+  "jobs": 6,
+  "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+  "mlx_device": "cpu",
+  "output_dir": ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal",
+  "pr95_1to1_reproduction_claim": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "recommended_execution": {
+    "dispatch_attempted": false,
+    "dispatch_packet_ready": false,
+    "gpu_launched": false,
+    "pr95_1to1_reproduction_claim": false,
+    "promotable": false,
+    "promotion_eligible": false,
+    "python_command_args": [
+      ".venv/bin/python",
+      "tools/run_pr95_mlx_full_frame_parity_mode_sweep.py",
+      "--archive-zip",
+      ".omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+      "--output-dir",
+      ".omx/research/pr95_mlx_full_frame_scope_atoms_pairs_sweep_source_video_20260528Tlocal",
+      "--mlx-device",
+      "cpu",
+      "--jobs",
+      "6",
+      "--allow-existing-output-dir"
+    ],
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "reproduction_claim": false,
+    "reproduction_equivalence": false,
+    "resource_kind": "local_cpu",
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "tool": "tools/run_pr95_mlx_full_frame_parity_mode_sweep.py"
+  },
+  "reproduction_claim": false,
+  "reproduction_equivalence": false,
+  "schema": "pr95_hnerv_mlx_full_frame_parity_mode_sweep_plan.v1",
+  "scope_block_count": 6,
+  "scope_include_individual_modules": true,
+  "scope_include_pair_blocks": true,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false
+}

@@ -132,6 +132,8 @@ def test_pr95_mlx_full_frame_parity_mode_sweep_can_append_scope_candidates(
             "--scope-block-count",
             "2",
             "--scope-no-presets",
+            "--scope-include-individual-modules",
+            "--scope-include-pair-blocks",
             "--jobs",
             "2",
             "--plan-only",
@@ -149,14 +151,22 @@ def test_pr95_mlx_full_frame_parity_mode_sweep_can_append_scope_candidates(
 
     assert plan["include_scope_search_candidates"] is True
     assert plan["scope_block_count"] == 2
-    assert {row["candidate_id"] for row in commands} == {
+    assert plan["scope_include_individual_modules"] is True
+    assert plan["scope_include_pair_blocks"] is True
+    candidate_ids = {row["candidate_id"] for row in commands}
+    assert {
         "optimized__none",
-        "scope__block0_kahan_fp32",
-        "scope__block1_kahan_fp32",
-        "scope__blocks0_1_kahan_fp32",
-    }
+        "scope__single_block__block0_kahan_fp32",
+        "scope__single_block__block1_kahan_fp32",
+        "scope__prefix_blocks__blocks0_1_kahan_fp32",
+        "scope__individual_module__module_blocks_1_conv_kahan_fp32",
+        "scope__individual_module__module_refine0_kahan_fp32",
+    }.issubset(candidate_ids)
+    assert len(candidate_ids) == len(commands)
     block0 = next(
-        row for row in commands if row["candidate_id"] == "scope__block0_kahan_fp32"
+        row
+        for row in commands
+        if row["candidate_id"] == "scope__single_block__block0_kahan_fp32"
     )
     assert block0["candidate_source"] == "canonical_scope_search"
     assert block0["scope_search_kind"] == "single_block"

@@ -8,6 +8,7 @@ import argparse
 import hashlib
 import importlib.util
 import os
+import shutil
 import subprocess
 import sys
 import zipfile
@@ -652,13 +653,7 @@ def main(argv: list[str] | None = None) -> int:
         expected_existing_sha256=args.expected_existing_sha256,
     )
     if not args.keep_work_dir:
-        for path in sorted(work_dir.rglob("*"), reverse=True):
-            if path.is_file():
-                path.unlink()
-            elif path.is_dir():
-                path.rmdir()
-        if work_dir.exists():
-            work_dir.rmdir()
+        shutil.rmtree(work_dir, ignore_errors=True)
     return 0 if byte_exact else 1
 
 

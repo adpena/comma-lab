@@ -262,6 +262,41 @@ def test_conv2d_scope_search_candidates_are_rankable_and_deduped() -> None:
     ) == len(candidates)
 
 
+def test_conv2d_scope_search_candidates_can_include_module_and_pair_atoms() -> None:
+    candidates = pr95_mlx_conv2d_scope_search_candidates(
+        block_count=3,
+        include_presets=False,
+        include_single_blocks=False,
+        include_prefix_blocks=False,
+        include_individual_modules=True,
+        include_pair_blocks=True,
+    )
+    by_id = {candidate["candidate_id"]: candidate for candidate in candidates}
+
+    assert by_id["baseline_optimized"]["kind"] == "baseline"
+    assert by_id["module_blocks_2_conv_kahan_fp32"]["kind"] == "individual_module"
+    assert by_id["module_blocks_2_conv_kahan_fp32"][
+        "conv2d_accumulation_overrides"
+    ] == {"blocks.2.conv": "kahan_fp32"}
+    assert by_id["module_refine0_kahan_fp32"]["conv2d_accumulation_overrides"] == {
+        "refine0": "kahan_fp32"
+    }
+    assert by_id["blockpair1_2_kahan_fp32"]["kind"] == "pair_blocks"
+    assert by_id["blockpair1_2_kahan_fp32"]["conv2d_accumulation_overrides"] == {
+        "blocks.1.conv": "kahan_fp32",
+        "blocks.1.skip_conv": "kahan_fp32",
+        "blocks.2.conv": "kahan_fp32",
+        "blocks.2.skip_conv": "kahan_fp32",
+    }
+    assert len(by_id) == len(candidates)
+    assert len(
+        {
+            tuple(sorted(candidate["conv2d_accumulation_overrides"].items()))
+            for candidate in candidates
+        }
+    ) == len(candidates)
+
+
 def test_public_pr95_pytorch_state_load_matches_mlx_forward() -> None:
     torch = pytest.importorskip("torch")
     module = _load_public_pr95_model_module()

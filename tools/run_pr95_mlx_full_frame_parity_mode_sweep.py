@@ -109,6 +109,8 @@ def _candidate_specs(
     scope_include_presets: bool,
     scope_include_single_blocks: bool,
     scope_include_prefix_blocks: bool,
+    scope_include_individual_modules: bool,
+    scope_include_pair_blocks: bool,
     scope_search_candidate_limit: int,
 ) -> list[dict[str, Any]]:
     specs = list(raw_specs or DEFAULT_CANDIDATES)
@@ -145,6 +147,8 @@ def _candidate_specs(
             include_presets=scope_include_presets,
             include_single_blocks=scope_include_single_blocks,
             include_prefix_blocks=scope_include_prefix_blocks,
+            include_individual_modules=scope_include_individual_modules,
+            include_pair_blocks=scope_include_pair_blocks,
         )
         if scope_search_candidate_limit > 0:
             scope_candidates = scope_candidates[:scope_search_candidate_limit]
@@ -152,7 +156,10 @@ def _candidate_specs(
             _append_candidate(
                 rows,
                 seen,
-                candidate_id=f"scope__{_safe_id(str(candidate['candidate_id']))}",
+                candidate_id=(
+                    f"scope__{_safe_id(str(candidate['kind']))}__"
+                    f"{_safe_id(str(candidate['candidate_id']))}"
+                ),
                 mode="optimized",
                 preset="none",
                 overrides=dict(candidate["conv2d_accumulation_overrides"]),
@@ -342,6 +349,8 @@ def _build_plan(args: argparse.Namespace, *, candidates: list[dict[str, Any]]) -
         "candidate_count": len(candidates),
         "include_scope_search_candidates": args.include_scope_search_candidates,
         "scope_block_count": args.scope_block_count,
+        "scope_include_individual_modules": args.scope_include_individual_modules,
+        "scope_include_pair_blocks": args.scope_include_pair_blocks,
         "candidates": candidates,
         "candidate_commands": candidate_commands,
         "recommended_execution": {
@@ -397,6 +406,8 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--scope-no-presets", action="store_true")
     parser.add_argument("--scope-no-single-blocks", action="store_true")
     parser.add_argument("--scope-no-prefix-blocks", action="store_true")
+    parser.add_argument("--scope-include-individual-modules", action="store_true")
+    parser.add_argument("--scope-include-pair-blocks", action="store_true")
     parser.add_argument(
         "--scope-search-candidate-limit",
         type=int,
@@ -489,6 +500,8 @@ def main(argv: list[str] | None = None) -> int:
         scope_include_presets=not args.scope_no_presets,
         scope_include_single_blocks=not args.scope_no_single_blocks,
         scope_include_prefix_blocks=not args.scope_no_prefix_blocks,
+        scope_include_individual_modules=args.scope_include_individual_modules,
+        scope_include_pair_blocks=args.scope_include_pair_blocks,
         scope_search_candidate_limit=args.scope_search_candidate_limit,
     )
     output_dir = args.output_dir.resolve()

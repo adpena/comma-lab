@@ -829,6 +829,8 @@ def pr95_mlx_conv2d_scope_search_candidates(
     include_presets: bool = True,
     include_single_blocks: bool = True,
     include_prefix_blocks: bool = True,
+    include_individual_modules: bool = False,
+    include_pair_blocks: bool = False,
 ) -> list[dict[str, Any]]:
     if block_count < 1:
         raise ValueError(f"block_count must be >= 1, got {block_count}")
@@ -888,6 +890,38 @@ def pr95_mlx_conv2d_scope_search_candidates(
                     )
                 },
             )
+
+    if include_individual_modules:
+        for index in range(block_count):
+            for suffix in ("conv", "skip_conv"):
+                name = f"blocks.{index}.{suffix}"
+                append_candidate(
+                    f"module_{name.replace('.', '_')}_kahan_fp32",
+                    kind="individual_module",
+                    overrides={name: "kahan_fp32"},
+                )
+        for name in ("refine0", "refine1", "rgb_0", "rgb_1"):
+            append_candidate(
+                f"module_{name}_kahan_fp32",
+                kind="individual_module",
+                overrides={name: "kahan_fp32"},
+            )
+
+    if include_pair_blocks:
+        for left in range(block_count):
+            for right in range(left + 1, block_count):
+                append_candidate(
+                    f"blockpair{left}_{right}_kahan_fp32",
+                    kind="pair_blocks",
+                    overrides={
+                        name: "kahan_fp32"
+                        for index in (left, right)
+                        for name in (
+                            f"blocks.{index}.conv",
+                            f"blocks.{index}.skip_conv",
+                        )
+                    },
+                )
 
     deduped: list[dict[str, Any]] = []
     seen: set[tuple[tuple[str, str], ...]] = set()
