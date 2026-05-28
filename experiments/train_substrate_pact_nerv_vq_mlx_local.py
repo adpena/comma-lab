@@ -1,57 +1,42 @@
 # SPDX-License-Identifier: MIT
-"""PACT-NeRV-SELECTOR-V2 MLX-first score-aware trainer — L1 LONG-RUN MLX-LOCAL.
+"""PACT-NeRV-VQ MLX-first score-aware trainer — L1 LONG-RUN MLX-LOCAL.
 # NO_GRAD_WAIVED:MLX_substrate_trainer_uses_mlx_value_and_grad_lazy_eval_no_pytorch_autograd_per_mlx_first_canonical_doctrine_8th_standing_directive
 # AUTOCAST_FP16_WAIVED:MLX_substrate_trainer_does_not_use_PyTorch_CUDA_autocast_fp16_primitive_per_mlx_first_canonical_doctrine_8th_standing_directive
 # TORCH_COMPILE_WAIVED:MLX_substrate_trainer_has_no_pytorch_training_path_per_mlx_first_canonical_doctrine_8th_standing_directive
 # SYNTHETIC_NON_SMOKE_OK:synthetic_targets_only_in_smoke_full_path_decodes_real_contest_video_via_decode_mlx_targets_catalog_114
 # DISPATCH_OPTIMIZATION_PROTOCOL_OK:mlx_local_no_paid_dispatch_research_only_true_per_claude_md_substrate_scaffolds_must_be_complete_or_research_only
 
-PACT-NERV-NEXT-VARIANT 2026-05-28: dedicated MLX-LOCAL trainer sister of
-``experiments/train_substrate_pact_nerv_selector_v2.py`` (the PyTorch sister).
-This trainer is the SECOND PACT-NeRV variant promoted from L0 SCAFFOLD to L1
-LONG-RUN MLX-LOCAL via the canonical pattern landed by sister PACT-NeRV-IA3
-at commit ``9ecc75a2d`` (closing the operator's question 2026-05-28 "have we
-done any long runs yet or continued optimizing and iterating, or did we
-accidentally forget and stop working on driving our existing work to MLX
-runs in parallel?").
+PACT-NERV-VQ-LONG-RUN-MLX-LOCAL 2026-05-28: dedicated MLX-LOCAL trainer sister
+of ``experiments/train_substrate_pact_nerv_vq.py`` (the PyTorch sister). Per
+the operator NON-NEGOTIABLE TOP-1 operator-routable post-SELECTOR-V4 verdict
+(commit ``f013736de``): the SELECTOR-PARADIGM cascade has empirically
+saturated at the 32-pair base-decoder floor; PACT-NeRV-VQ provides the
+ORTHOGONAL paradigm (DISCRETE TOKENS via van den Oord VQ-VAE codebook +
+per-pair index) per ULTIMATE STAIRCASE Step 15 PRIORITY 1.
 
-Variant selection rationale (per parent prompt's individually-fractal criteria)
-------------------------------------------------------------------------------
+CONTEXT — SELECTOR-PARADIGM saturation (PACT-NeRV cascade)
+==========================================================
 
-After PACT-NeRV-IA3 (Stage 1) landed L1 LONG-RUN MLX-LOCAL via commit
-``9ecc75a2d``, the next-highest-EV variant per the ULTIMATE design memo
-(``.omx/research/pact_nerv_ultimate_research_and_design_20260520T193443Z.md``)
-is PACT-NeRV-SELECTOR-V2 (Variant #11 / STAIRCASE Step 11), PRIORITY 1 per
-CROSS-CANDIDATE finding #1 empirical headroom:
+- IA3 L1 commit ``9ecc75a2d``:       140.0x / 0.00240 final
+- SELECTOR-V2 L1 commit ``fee801ac7``: 196.5x / 0.00172 final
+- SELECTOR-V3 L1 commit ``2f69d0ea6``: 231.1x / 0.00146 final
+- SELECTOR-V4 L1 commit ``f013736de``: 201.3x / 0.001677 final
 
-- (i) **Most-canonical "next"** per ULTIMATE STAIRCASE: Step 11 (SELECTOR
-  -PARADIGM-EXTENSIONS class) is PRIORITY 1 per CROSS-CANDIDATE finding #1.
-- (ii) **Highest predicted-ΔS-per-MLX-hour EV**: SELECTOR-V2 inherits fec6
-  empirical headroom (+259 bytes → +0.00333 [contest-CPU] empirical anchor);
-  the L1 MLX research-signal will probe whether the arithmetic-coded
-  selector (Witten 1987 §3.2; fractional-bit precision over k=16 palette)
-  captures even more headroom than fec6's integer-bit Huffman code-lengths.
-- (iii) **MLX-implementable at L1 ~3-6h**: SELECTOR-V2's base HNeRV decoder
-  mirrors PACT-NeRV-IA3 (per the architecture.py comment "The base HNeRV
-  decoder mirrors pact_nerv_ia3 / boost_nerv"); the SELECTOR primitive
-  operates at ARCHIVE-ENCODE TIME so the MLX renderer is the BASE HNeRV
-  decoder without IA3 modulation (~400 LOC; sister mlx_renderer.py landed
-  at commit ``$(this commit)``).
-- (iv) **DISJOINT from IA3**: SELECTOR-PARADIGM-EXTENSIONS architectural
-  family (arithmetic coder over k=16 palette) vs IA3 γ-modulation
-  architectural family — maximum portfolio coverage per the parent prompt's
-  "different architectural family preferred" criterion.
+The 0.0014-0.0017 band is the stochastic-seed + AdamW-noise floor at 32-pair
+scale. PACT-NeRV-VQ is the orthogonal-architectural pivot per portfolio
+diversification discipline (Aaron van den Oord inner council seat aligned).
 
 INDIVIDUALLY-FRACTAL per UNIQUE-AND-COMPLETE-PER-METHOD
--------------------------------------------------------
+=======================================================
 
-This is PACT-NeRV-SELECTOR-V2's OWN canonical MLX engineering pass per the
+This trainer is PACT-NeRV-VQ's OWN canonical MLX engineering pass per the
 11th INDIVIDUALLY-FRACTAL standing directive 2026-05-27. The trainer is
 SEPARATE from the PyTorch sister (no shared-helper shortcut; per-method
-optimization). The PyTorch ``experiments/train_substrate_pact_nerv_selector_v2.py``
-continues to exist with its CUDA-required ``_full_main``; this trainer is
-the dedicated MLX-LOCAL engineering pass per the 8th MLX-first standing
-directive REINFORCED 2026-05-27 ("always prefer MLX first always").
+optimization). The PyTorch ``experiments/train_substrate_pact_nerv_vq.py``
+(if/when it lands as the sister L1 PyTorch trainer) continues to exist with
+its CUDA-required ``_full_main``; this trainer is the dedicated MLX-LOCAL
+engineering pass per the 8th MLX-first standing directive REINFORCED 2026-05-28
+("you can fire everything and anything on MLX").
 
 Canonical-vs-unique decision per layer (Catalog #290)
 -----------------------------------------------------
@@ -60,13 +45,9 @@ Canonical-vs-unique decision per layer (Catalog #290)
   Provenance / posterior anchor (the canonical
   ``tac.substrates._shared.mlx_score_aware.run_mlx_score_aware_full_main``
   harness + ``run_long_training``).
-- ADOPT_CANONICAL_BECAUSE_SERVES: HNeRV-class base decoder backbone
-  (DepthSep + SIREN + PixelShuffle x7) — same as PACT-NeRV-IA3 per the
-  empirically validated PR95/PR101/PR110 medal-class topology.
 - FORK_BECAUSE_PRINCIPLED_MISMATCH (this substrate's UNIQUE primitive): the
-  arithmetic-coded per-pair selector over k=16 palette (Witten 1987 §3.2;
-  the substrate-distinguishing primitive operating at ARCHIVE-ENCODE TIME
-  — NOT in the MLX forward path).
+  VQ-VAE codebook + per-pair index quantizer per van den Oord 1711.00937
+  (``mlx_renderer.PactNervVqSubstrateMLX``).
 
 Dispatch gating (Catalog #325)
 ------------------------------
@@ -83,33 +64,34 @@ trainer is the FREE pre-paid-dispatch research signal generator.
 Cross-references
 ----------------
 
-- Canonical MLX renderer:
-  :mod:`tac.substrates.pact_nerv_selector_v2.mlx_renderer`
+- Canonical MLX renderer: :mod:`tac.substrates.pact_nerv_vq.mlx_renderer`
 - Canonical PyTorch sister architecture:
-  :mod:`tac.substrates.pact_nerv_selector_v2.architecture`
+  :mod:`tac.substrates.pact_nerv_vq.architecture`
 - Canonical MLX score-aware harness:
   :mod:`tac.substrates._shared.mlx_score_aware`
-- ULTIMATE design memo (Step 11 / Variant #11):
+- Sister IA3 MLX trainer reference:
+  ``experiments/train_substrate_pact_nerv_ia3_mlx_local.py``
+- ULTIMATE design memo:
   ``.omx/research/pact_nerv_ultimate_research_and_design_20260520T193443Z.md``
+- L0 SCAFFOLD design memo:
+  ``.omx/research/pact_nerv_vq_l0_scaffold_design_20260520T211500Z.md``
 - This landing memo:
-  ``.omx/research/pact_nerv_selector_v2_l1_long_run_mlx_landed_20260528.md``
-- IA3 reference landing (canonical L1 promotion pattern):
-  ``.omx/research/pact_nerv_long_run_mlx_local_closure_landed_20260528.md``
+  ``.omx/research/pact_nerv_vq_l1_long_run_mlx_landed_20260528.md``
 
 Usage
 -----
 
 Smoke (CPU/MLX, 2 epochs, synthetic-free real video, manifest only)::
 
-    .venv/bin/python experiments/train_substrate_pact_nerv_selector_v2_mlx_local.py \\
-        --output-dir experiments/results/pact_nerv_selector_v2_mlx_smoke_<utc> \\
+    .venv/bin/python experiments/train_substrate_pact_nerv_vq_mlx_local.py \\
+        --output-dir experiments/results/pact_nerv_vq_mlx_smoke_<utc> \\
         --smoke
 
 Full LONG run (MLX-LOCAL M5 Max, real video, score-aware via canonical harness)::
 
-    .venv/bin/python experiments/train_substrate_pact_nerv_selector_v2_mlx_local.py \\
-        --full --output-dir experiments/results/pact_nerv_selector_v2_mlx_long_<utc> \\
-        --epochs 500 --num-pairs 32
+    .venv/bin/python experiments/train_substrate_pact_nerv_vq_mlx_local.py \\
+        --full --output-dir experiments/results/pact_nerv_vq_mlx_long_<utc> \\
+        --epochs 2000 --num-pairs 32
 """
 
 from __future__ import annotations
@@ -129,7 +111,7 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 # ---------------------------------------------------------------------------
 TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
     "--output-dir": {
-        "env": "PACT_NERV_SELECTOR_V2_MLX_OUTPUT_DIR",
+        "env": "PACT_NERV_VQ_MLX_OUTPUT_DIR",
         "rationale": (
             "Output dir for MLX-local training artifacts: training_artifact "
             "JSON + EMA checkpoint + observability surface (NOT /tmp per "
@@ -139,17 +121,17 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
         "required_input_file": False,
     },
     "--epochs": {
-        "env": "PACT_NERV_SELECTOR_V2_MLX_EPOCHS",
+        "env": "PACT_NERV_VQ_MLX_EPOCHS",
         "rationale": (
-            "Number of MLX-local training epochs. LONG run smoke -> short "
-            "follow-up runs; 100-500ep is the canonical pre-paid-dispatch "
-            "research-signal window per Catalog #325."
+            "Number of MLX-local training epochs. The canonical LONG run is "
+            "2000ep / 32 pairs matching the PACT-NeRV cascade reference "
+            "(IA3/V2/V3/V4 all 2000ep) per Catalog #325."
         ),
-        "default": "100",
+        "default": "2000",
         "required_input_file": False,
     },
     "--video-path": {
-        "env": "PACT_NERV_SELECTOR_V2_MLX_VIDEO_PATH",
+        "env": "PACT_NERV_VQ_MLX_VIDEO_PATH",
         "rationale": (
             "Real contest video for --full score-aware training (Catalog "
             "#114; real video, never synthetic in non-smoke)."
@@ -165,8 +147,7 @@ def _full_main(args: argparse.Namespace) -> int:
 
     This routes through the canonical substrate-AGNOSTIC harness
     ``tac.substrates._shared.mlx_score_aware.run_mlx_score_aware_full_main``
-    (sister of ``pact_nerv_ia3_mlx_local`` for the IA3 sister + sister of
-    ``dreamer_v3_rssm`` / ``coin_pp`` for MLX-first substrates).
+    (sister of the IA3 / V2 / V3 / V4 MLX-LOCAL trainers).
 
     Per CLAUDE.md "MLX portable-local-substrate authority": the harness
     auto-stamps the canonical non-promotable markers
@@ -194,18 +175,13 @@ def _full_main(args: argparse.Namespace) -> int:
         build_learnable_pose_student_head,
         build_learnable_student_head,
     )
-    from tac.substrates.pact_nerv_selector_v2.architecture import (
-        PactNervSelectorV2Config,
-    )
-    from tac.substrates.pact_nerv_selector_v2.archive_candidate import (
-        export_pact_nerv_selector_v2_mlx_archive,
-    )
-    from tac.substrates.pact_nerv_selector_v2.mlx_renderer import (
-        PactNervSelectorV2SubstrateMLX,
+    from tac.substrates.pact_nerv_vq.architecture import PactNervVqConfig
+    from tac.substrates.pact_nerv_vq.mlx_renderer import (
+        PactNervVqSubstrateMLX,
     )
 
-    cfg = PactNervSelectorV2Config(num_pairs=int(args.num_pairs))
-    model = PactNervSelectorV2SubstrateMLX(cfg)
+    cfg = PactNervVqConfig(num_pairs=int(args.num_pairs))
+    model = PactNervVqSubstrateMLX(cfg)
     out_h, out_w = int(cfg.output_height), int(cfg.output_width)
     target_rgb_0, target_rgb_1 = decode_mlx_targets(
         args.video_path,
@@ -214,10 +190,88 @@ def _full_main(args: argparse.Namespace) -> int:
         output_width=out_w,
     )
 
+    # ----------------------------------------------------------------
+    # PACT-NeRV-VQ INDIVIDUALLY-FRACTAL export_state_dict_fn (CRITICAL).
+    # ----------------------------------------------------------------
+    # The canonical MLX harness fallback uses ``model.parameters()`` which
+    # EXCLUDES the VQ codebook + EMA buffers (registered as bare mx.array
+    # attributes per van den Oord §3.2 — NOT MLX nn.Parameter). The
+    # MLX→PyTorch bridge tool requires these buffers to reconstruct the
+    # PyTorch quantizer state at archive-pack time. Wire a substrate-specific
+    # export that emits the FULL state in MLX-native HWIO Conv2d layout
+    # (matches what the bridge tool's ``unpack_state_dict_numpy`` expects).
+    # Per CLAUDE.md "UNIQUE-AND-COMPLETE-PER-METHOD" + Catalog #290: this is
+    # the substrate-specific FORK_BECAUSE_PRINCIPLED_MISMATCH per layer.
+    def _export_vq_state_dict_with_buffers(m: Any, path: Path) -> None:
+        import numpy as np
+
+        from tac.substrates._shared.numpy_portable_inflate import (
+            pack_state_dict_numpy,
+        )
+
+        # Build canonical MLX-HWIO state including VQ buffers; the canonical
+        # ``model.export_state_dict()`` returns PyTorch-OIHW (transposed) so
+        # we read the raw MLX-side attributes directly for the bridge's
+        # HWIO→OIHW transpose to work.
+        flat: dict[str, np.ndarray] = {}
+
+        # Per-pair learnable latent (no Conv layout; 2-D).
+        flat["latents"] = np.asarray(m.latents, dtype=np.float32).copy()
+
+        # VQ buffers (registered as private mx.array attrs; NOT params).
+        flat["quantizer.codebook"] = np.asarray(
+            m.quantizer.codebook, dtype=np.float32
+        ).copy()
+        flat["quantizer.ema_cluster_size"] = np.asarray(
+            m.quantizer.ema_cluster_size, dtype=np.float32
+        ).copy()
+        flat["quantizer.ema_w"] = np.asarray(
+            m.quantizer.ema_w, dtype=np.float32
+        ).copy()
+
+        # Linear weights (no Conv layout).
+        flat["latent_embed.weight"] = np.asarray(
+            m.latent_embed.weight, dtype=np.float32
+        ).copy()
+        flat["latent_embed.bias"] = np.asarray(
+            m.latent_embed.bias, dtype=np.float32
+        ).copy()
+
+        # Conv2d weights in MLX HWIO layout (out, kH, kW, in).
+        for i, block in enumerate(m.blocks):
+            d = block.dsc.depthwise
+            p = block.dsc.pointwise
+            flat[f"blocks.{i}.dsc.depthwise.weight"] = np.asarray(
+                d.weight, dtype=np.float32
+            ).copy()
+            flat[f"blocks.{i}.dsc.depthwise.bias"] = np.asarray(
+                d.bias, dtype=np.float32
+            ).copy()
+            flat[f"blocks.{i}.dsc.pointwise.weight"] = np.asarray(
+                p.weight, dtype=np.float32
+            ).copy()
+            flat[f"blocks.{i}.dsc.pointwise.bias"] = np.asarray(
+                p.bias, dtype=np.float32
+            ).copy()
+
+        for head_name in ("head_rgb_0", "head_rgb_1"):
+            head = getattr(m, head_name)
+            flat[f"{head_name}.weight"] = np.asarray(
+                head.weight, dtype=np.float32
+            ).copy()
+            flat[f"{head_name}.bias"] = np.asarray(
+                head.bias, dtype=np.float32
+            ).copy()
+
+        path.parent.mkdir(parents=True, exist_ok=True)
+        blob_path = path.with_suffix(path.suffix + ".npsd")
+        blob = pack_state_dict_numpy(flat, dtype="fp32")
+        blob_path.write_bytes(blob)
+
     # Canonical Hinton-distilled scorer surrogate wiring per IA3 sister commit
     # b551bfd34 + SELECTOR-V3 sister commit ab650cc78 + canonical equation #1
-    # hinton_distilled_scorer_surrogate_savings_via_kl_t2_v1 anchor 9 -> 10
-    # (this batch cascade fires Catalog #371 auto-recalibration trigger). When
+    # hinton_distilled_scorer_surrogate_savings_via_kl_t2_v1 sister cascade
+    # batch fires Catalog #371 auto-recalibration trigger. When
     # --distillation-weight > 0 AND NOT --allow-mock-scorer-teacher we bind the
     # REAL SegNet + REAL PoseNet teacher caches + learnable student heads per
     # the canonical Hinton-Vinyals-Dean 2014 KL T=2.0 + pose-MSE composition.
@@ -280,32 +334,31 @@ def _full_main(args: argparse.Namespace) -> int:
         learnable_pose_student_head=learnable_pose_student_head,
         pose_dims=DEFAULT_POSE_DIMS,
         allow_mock_scorer_teacher=bool(args.allow_mock_scorer_teacher),
-        export_archive_fn=export_pact_nerv_selector_v2_mlx_archive,
+        export_state_dict_fn=_export_vq_state_dict_with_buffers,
     )
     artifact = run_mlx_score_aware_full_main(
         bundle=bundle,
-        substrate_id="pact_nerv_selector_v2_mlx_local",
-        lane_id="lane_pact_nerv_selector_v2_l1_long_run_mlx_local_20260528",
+        substrate_id="pact_nerv_vq_mlx_local",
+        lane_id="lane_pact_nerv_vq_l1_long_run_mlx_local_20260528",
         output_dir=args.output_dir,
         epochs=int(args.epochs),
         batch_pair_indices_per_step=min(int(args.num_pairs), 8),
         learning_rate=float(args.full_lr),
         seed=int(args.seed),
         notes=(
-            "PACT-NeRV-SELECTOR-V2 MLX-first score-aware LONG-RUN training "
-            "via canonical mlx_score_aware harness; real contest video + "
-            "reconstruction + optional Hinton-KL T=2.0 scorer surrogate; "
-            "arithmetic-coded selector over k=16 palette (Witten 1987 §3.2) "
-            "is the substrate-distinguishing primitive operating at "
-            "ARCHIVE-ENCODE TIME (NOT the MLX forward path; sister of "
-            "PACT-NeRV-IA3 base HNeRV decoder backbone); non-promotable "
-            "[macOS-MLX research-signal] per Catalog #192/#317/#341; "
-            "per-axis + MLX->PyTorch bridge + paired CUDA/CPU anchor "
-            "DEFERRED to sister L2 + per-substrate symposium Catalog #325."
+            "PACT-NeRV-VQ MLX-first score-aware LONG-RUN training via canonical "
+            "mlx_score_aware harness; real contest video + reconstruction + "
+            "optional Hinton-KL T=2.0 scorer surrogate; VQ-VAE codebook + "
+            "per-pair discrete index (van den Oord 1711.00937 §3.1-3.2) is the "
+            "substrate-distinguishing ORTHOGONAL primitive vs the SELECTOR-"
+            "PARADIGM cascade (IA3/V2/V3/V4) saturated at 32-pair base-decoder "
+            "floor; non-promotable [macOS-MLX research-signal] per Catalog "
+            "#192/#317/#341; per-axis + MLX->PyTorch bridge + paired CUDA/CPU "
+            "anchor DEFERRED to sister L2 + per-substrate symposium Catalog #325."
         ),
     )
     print(
-        f"[pact_nerv_selector_v2_mlx_local:_full_main] DONE "
+        f"[pact_nerv_vq_mlx_local:_full_main] DONE "
         f"epochs={artifact.total_epochs_completed} "
         f"promotable={artifact.promotable} "
         f"wall={artifact.total_wall_clock_seconds:.1f}s "
@@ -333,19 +386,16 @@ def _smoke_main(args: argparse.Namespace) -> int:
         )
         return 2
 
-    from tac.substrates.pact_nerv_selector_v2.architecture import (
-        PactNervSelectorV2Config,
-    )
-    from tac.substrates.pact_nerv_selector_v2.mlx_renderer import (
+    from tac.substrates.pact_nerv_vq.architecture import PactNervVqConfig
+    from tac.substrates.pact_nerv_vq.mlx_renderer import (
         MLX_EVIDENCE_GRADE,
         SCHEMA_VERSION,
-        PactNervSelectorV2SubstrateMLX,
+        PactNervVqSubstrateMLX,
     )
 
-    cfg = PactNervSelectorV2Config(num_pairs=min(int(args.num_pairs), 8))
-    model = PactNervSelectorV2SubstrateMLX(cfg)
+    cfg = PactNervVqConfig(num_pairs=min(int(args.num_pairs), 8))
+    model = PactNervVqSubstrateMLX(cfg)
     num_params = int(model.num_parameters())
-    # Single forward to validate the architecture binds end-to-end.
     idx = mx.array(list(range(min(4, cfg.num_pairs))), dtype=mx.int32)
     output = model(idx)
     mx.eval(output)
@@ -367,7 +417,7 @@ def _smoke_main(args: argparse.Namespace) -> int:
 
     output_dir = Path(
         args.output_dir
-        or ".omx/research/pact_nerv_selector_v2_mlx_local_smoke"
+        or ".omx/research/pact_nerv_vq_mlx_local_smoke"
     )
     output_dir_str = str(output_dir.resolve())
     if output_dir_str.startswith(("/tmp/", "/private/tmp/")):
@@ -380,10 +430,10 @@ def _smoke_main(args: argparse.Namespace) -> int:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     smoke_manifest = {
-        "schema_version": "pact_nerv_selector_v2_mlx_smoke_manifest_v1_20260528",
-        "substrate_id": "pact_nerv_selector_v2_mlx_local",
-        "lane_id": "lane_pact_nerv_selector_v2_l1_long_run_mlx_local_20260528",
-        "renderer_module": "tac.substrates.pact_nerv_selector_v2.mlx_renderer",
+        "schema_version": "pact_nerv_vq_mlx_smoke_manifest_v1_20260528",
+        "substrate_id": "pact_nerv_vq_mlx_local",
+        "lane_id": "lane_pact_nerv_vq_l1_long_run_mlx_local_20260528",
+        "renderer_module": "tac.substrates.pact_nerv_vq.mlx_renderer",
         "renderer_schema_version": SCHEMA_VERSION,
         "renderer_num_parameters": num_params,
         "config": {
@@ -394,7 +444,9 @@ def _smoke_main(args: argparse.Namespace) -> int:
             "decoder_channels": list(cfg.decoder_channels),
             "sin_frequency": float(cfg.sin_frequency),
             "num_upsample_blocks": int(cfg.num_upsample_blocks),
-            "selector_palette_size": int(cfg.selector_palette_size),
+            "codebook_size": int(cfg.codebook_size),
+            "codebook_decay": float(cfg.codebook_decay),
+            "commitment_weight": float(cfg.commitment_weight),
             "num_pairs": int(cfg.num_pairs),
             "output_height": int(cfg.output_height),
             "output_width": int(cfg.output_width),
@@ -405,6 +457,10 @@ def _smoke_main(args: argparse.Namespace) -> int:
             "output_min": float(mx.min(output)),
             "output_max": float(mx.max(output)),
             "output_mean": float(mx.mean(output)),
+        },
+        "vq_observability": {
+            "last_commitment_loss": float(model.last_commitment_loss),
+            "last_indices": [int(v) for v in model.last_indices.tolist()],
         },
         "forward_convention": "call_b2chw_255",
         "evidence_grade": MLX_EVIDENCE_GRADE,
@@ -423,8 +479,8 @@ def _smoke_main(args: argparse.Namespace) -> int:
             "promotable": False,
             "rationale": (
                 "MLX-local smoke produces no score; this manifest documents "
-                "renderer construction + single forward pass only. Non-promotable "
-                "by construction per Catalog #192/#317/#341."
+                "renderer construction + single forward pass + VQ observability "
+                "only. Non-promotable by construction per Catalog #192/#317/#341."
             ),
         },
     }
@@ -434,8 +490,9 @@ def _smoke_main(args: argparse.Namespace) -> int:
         encoding="utf-8",
     )
     print(
-        f"[pact_nerv_selector_v2_mlx_local smoke] manifest written to: {manifest_path} "
-        f"(num_params={num_params}; output_shape={output_shape}) "
+        f"[pact_nerv_vq_mlx_local smoke] manifest written to: {manifest_path} "
+        f"(num_params={num_params}; output_shape={output_shape}; "
+        f"codebook_size={cfg.codebook_size}) "
         f"{MLX_EVIDENCE_GRADE} non-promotable per Catalog #341",
         file=sys.stderr,
     )
@@ -445,7 +502,7 @@ def _smoke_main(args: argparse.Namespace) -> int:
 def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         description=(
-            "PACT-NeRV-SELECTOR-V2 MLX-first score-aware trainer "
+            "PACT-NeRV-VQ MLX-first score-aware trainer "
             "(L1 LONG-RUN MLX-LOCAL 2026-05-28)."
         )
     )
@@ -460,13 +517,13 @@ def _build_parser() -> argparse.ArgumentParser:
         "--num-pairs",
         type=int,
         default=32,
-        help="Trainable pair count (32 for LONG; smoke caps at 8).",
+        help="Trainable pair count (32 for LONG matching PACT-NeRV cascade; smoke caps at 8).",
     )
     p.add_argument(
         "--epochs",
         type=int,
-        default=100,
-        help="MLX score-aware epochs (--full).",
+        default=2000,
+        help="MLX score-aware epochs (--full); canonical PACT-NeRV cascade LONG=2000.",
     )
     p.add_argument(
         "--output-dir", type=Path, default=None, help="Output dir (NOT /tmp)."
@@ -521,9 +578,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help=(
             "EXPLICIT opt-in to the scorer-BLIND deterministic-cosine mock "
             "teacher when --distillation-weight > 0 AND no real scorer_teacher "
-            "is wired. Default OFF — the harness fails closed otherwise. Set "
-            "ONLY for a $0 no-real-SegNet smoke that explicitly accepts the "
-            "result is reconstruction-proxy (NOT scorer-bound)."
+            "is wired. Default OFF — the harness fails closed otherwise."
         ),
     )
     return p

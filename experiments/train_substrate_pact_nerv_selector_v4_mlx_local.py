@@ -192,8 +192,16 @@ def _full_main(args: argparse.Namespace) -> int:
     """
     from tac.substrates._shared.mlx_score_aware import (
         RendererBundle,
+        build_mlx_posenet_pair_teacher,
+        build_mlx_segnet_pair_teacher,
         decode_mlx_targets,
         run_mlx_score_aware_full_main,
+    )
+    from tac.substrates.hinton_distilled_scorer_surrogate import (
+        DEFAULT_POSE_DIMS,
+        DEFAULT_SEGNET_CLASSES,
+        build_learnable_pose_student_head,
+        build_learnable_student_head,
     )
     from tac.substrates.pact_nerv_selector_v4.architecture import (
         PactNervSelectorV4Config,
@@ -214,6 +222,59 @@ def _full_main(args: argparse.Namespace) -> int:
         output_height=out_h,
         output_width=out_w,
     )
+
+    # Canonical Hinton-distilled scorer surrogate wiring per IA3 sister commit
+    # b551bfd34 + SELECTOR-V3 sister commit ab650cc78 + canonical equation #1
+    # hinton_distilled_scorer_surrogate_savings_via_kl_t2_v1 sister cascade
+    # batch fires Catalog #371 auto-recalibration trigger. When
+    # --distillation-weight > 0 AND NOT --allow-mock-scorer-teacher we bind the
+    # REAL SegNet + REAL PoseNet teacher caches + learnable student heads per
+    # the canonical Hinton-Vinyals-Dean 2014 KL T=2.0 + pose-MSE composition.
+    # Per CLAUDE.md "SegNet vs PoseNet importance" + Catalog #164 the harness
+    # bundle.__post_init__ fail-closes on missing pose teacher when
+    # distillation_weight > 0 (C6 IBPS / DreamerV3 scorer-blindness lesson).
+    # Output (384, 512) matches the canonical SegNet/PoseNet eval resolution
+    # exactly (zero adapter).
+    scorer_teacher = None
+    pose_scorer_teacher = None
+    learnable_student_head = None
+    learnable_pose_student_head = None
+    pose_distillation_weight = 0.0
+    if (
+        float(args.distillation_weight) > 0.0
+        and not bool(args.allow_mock_scorer_teacher)
+    ):
+        bundle_no_teacher = RendererBundle(
+            model=model,
+            target_rgb_0=target_rgb_0,
+            target_rgb_1=target_rgb_1,
+            num_pairs=int(args.num_pairs),
+            forward_convention="call_b2chw_255",
+            distillation_weight=0.0,
+            pose_distillation_weight=0.0,
+            pose_dims=DEFAULT_POSE_DIMS,
+        )
+        scorer_teacher = build_mlx_segnet_pair_teacher(
+            bundle_no_teacher,
+            upstream_dir=str(args.upstream_dir),
+            device="cpu",  # CLAUDE.md "MPS auth eval is NOISE" - CPU teacher only.
+        )
+        pose_scorer_teacher = build_mlx_posenet_pair_teacher(
+            bundle_no_teacher,
+            upstream_dir=str(args.upstream_dir),
+            device="cpu",
+        )
+        learnable_student_head = build_learnable_student_head(
+            num_classes=DEFAULT_SEGNET_CLASSES,
+            in_channels=3,
+            seed=int(args.seed),
+        )
+        learnable_pose_student_head = build_learnable_pose_student_head(
+            pose_dims=DEFAULT_POSE_DIMS,
+            seed=int(args.seed),
+        )
+        pose_distillation_weight = float(args.pose_distillation_weight)
+
     bundle = RendererBundle(
         model=model,
         target_rgb_0=target_rgb_0,
@@ -221,6 +282,12 @@ def _full_main(args: argparse.Namespace) -> int:
         num_pairs=int(args.num_pairs),
         forward_convention="call_b2chw_255",
         distillation_weight=float(args.distillation_weight),
+        scorer_teacher=scorer_teacher,
+        learnable_student_head=learnable_student_head,
+        pose_distillation_weight=pose_distillation_weight,
+        pose_scorer_teacher=pose_scorer_teacher,
+        learnable_pose_student_head=learnable_pose_student_head,
+        pose_dims=DEFAULT_POSE_DIMS,
         allow_mock_scorer_teacher=bool(args.allow_mock_scorer_teacher),
         export_archive_fn=export_pact_nerv_selector_v4_mlx_archive,
     )
@@ -428,9 +495,35 @@ def _build_parser() -> argparse.ArgumentParser:
         default=0.0,
         help=(
             "Weight on the gradient-reachable Hinton-KL T=2.0 scorer surrogate "
-            "term in the --full score-aware loss (0.0 disables). >0 REQUIRES a "
-            "real scorer_teacher OR --allow-mock-scorer-teacher per Catalog "
-            "#164 + the C6 IBPS scorer-blindness lesson."
+            "term in the --full score-aware loss (0.0 disables). >0 + NOT "
+            "--allow-mock-scorer-teacher binds the REAL SegNet + REAL PoseNet "
+            "teacher cache via canonical "
+            "build_mlx_segnet_pair_teacher/build_mlx_posenet_pair_teacher per "
+            "the IA3 sister commit b551bfd34 + V3 sister commit ab650cc78 + "
+            "Catalog #164."
+        ),
+    )
+    p.add_argument(
+        "--pose-distillation-weight",
+        type=float,
+        default=1.0,
+        help=(
+            "Weight on the POSE-MSE distillation term per CLAUDE.md 'SegNet "
+            "vs PoseNet importance' operating-point-dependent discipline "
+            "(pose is DOMINANT at frontier). Default 1.0 wires both scorers "
+            "(PoseNet REQUIRED at frontier unless allow_segnet_only_research "
+            "is opted into). Used only when --distillation-weight > 0 AND "
+            "NOT --allow-mock-scorer-teacher."
+        ),
+    )
+    p.add_argument(
+        "--upstream-dir",
+        type=Path,
+        default=Path("upstream"),
+        help=(
+            "Upstream repo path containing SegNet + PoseNet safetensors for "
+            "the real teacher cache build (canonical for the Hinton-distilled "
+            "scorer surrogate wire-in)."
         ),
     )
     p.add_argument(
