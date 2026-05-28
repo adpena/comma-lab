@@ -22,6 +22,9 @@ from tac.repo_io import sha256_file
 
 REPAIR_FAMILY_STACK_SEARCH_PLAN_SCHEMA = "repair_family_stack_search_plan.v1"
 REPAIR_FAMILY_STACK_SEARCH_ROW_SCHEMA = "repair_family_stack_search_row.v1"
+REPAIR_FAMILY_EXACT_HANDOFF_CANDIDATE_ROW_SCHEMA = (
+    "repair_family_exact_handoff_candidate_row.v1"
+)
 
 _LEVEL_ORDER: tuple[str, ...] = (
     "bit",
@@ -195,7 +198,10 @@ def _stack_row(
     levels = _scope_levels(report)
     entropy_order = _stage_order(report)
     byte_delta = _mapping(report.get("byte_transform_delta"))
-    delta_bytes = _safe_int(byte_delta.get("bytes"))
+    allocated_repair_bytes = _safe_int(report.get("allocated_repair_bytes"))
+    delta_bytes = allocated_repair_bytes or _safe_int(byte_delta.get("bytes"))
+    archive_native_saved_bytes = _safe_int(report.get("archive_native_saved_bytes"))
+    exact_gate = _mapping(report.get("exact_eval_handoff_gate"))
     demotion = dict(posterior_demotions.get(family) or {})
     demotion_multiplier = _safe_float(demotion.get("demotion_multiplier")) or 1.0
     scope_penalty = _level_penalty(levels)
@@ -237,6 +243,21 @@ def _stack_row(
             _LEVEL_ORDER.index(level) for level in levels if level in _LEVEL_ORDER
         ],
         "delta_payload_bytes": delta_bytes,
+        "allocated_repair_bytes": allocated_repair_bytes,
+        "archive_native_saved_bytes": archive_native_saved_bytes,
+        "byte_closed_candidate_emitted": report.get("byte_closed_candidate_emitted")
+        is True,
+        "candidate_archive_materialized": (
+            report.get("candidate_archive_materialized") is True
+        ),
+        "archive_bound_runtime_consumption_proof_ready": (
+            exact_gate.get("archive_bound_runtime_consumption_proof_ready") is True
+        ),
+        "archive_bound_exact_handoff_candidate": (
+            report.get("byte_closed_candidate_emitted") is True
+            and report.get("candidate_archive_materialized") is True
+            and exact_gate.get("archive_bound_runtime_consumption_proof_ready") is True
+        ),
         "local_mlx_combined_delta_score_units": combined_delta,
         "local_mlx_expected_improvement_score_units": local_improvement,
         "stackability_penalty": stack_penalty,
@@ -257,6 +278,191 @@ def _stack_row(
     require_no_truthy_authority_fields(
         row,
         context=f"repair_family_stack_search_row:{family}",
+    )
+    return row
+
+
+def _candidate_archive_record(
+    *,
+    report: Mapping[str, Any],
+    repo_root: str | Path,
+) -> tuple[dict[str, Any], list[str]]:
+    candidate = _mapping(report.get("candidate_archive"))
+    path_text = str(candidate.get("path") or "").strip()
+    expected_sha = str(candidate.get("sha256") or "").strip()
+    expected_bytes = candidate.get("bytes")
+    blockers: list[str] = []
+    present = False
+    sha256 = None
+    byte_count = None
+    sha256_matches = False
+    bytes_match = False
+    if not path_text:
+        blockers.append("candidate_archive_path_missing")
+    else:
+        path = _resolve(path_text, repo_root)
+        present = path.is_file()
+        if not present:
+            blockers.append("candidate_archive_file_missing")
+        else:
+            sha256 = sha256_file(path)
+            byte_count = path.stat().st_size
+            sha256_matches = bool(expected_sha and sha256 == expected_sha)
+            if not expected_sha:
+                blockers.append("candidate_archive_sha256_missing")
+            elif not sha256_matches:
+                blockers.append("candidate_archive_sha256_mismatch")
+            bytes_match = (
+                isinstance(expected_bytes, int)
+                and not isinstance(expected_bytes, bool)
+                and byte_count == expected_bytes
+            )
+            if expected_bytes is None:
+                blockers.append("candidate_archive_bytes_missing")
+            elif not bytes_match:
+                blockers.append("candidate_archive_bytes_mismatch")
+    return {
+        "schema": "repair_family_exact_handoff_candidate_archive_custody.v1",
+        "path": path_text or None,
+        "expected_sha256": expected_sha or None,
+        "expected_bytes": expected_bytes,
+        "present": present,
+        "sha256": sha256,
+        "bytes": byte_count,
+        "sha256_matches": sha256_matches,
+        "bytes_match": bytes_match,
+        "custody_complete": bool(present and sha256_matches and bytes_match),
+        "blockers": ordered_unique(blockers),
+        "budget_spend_allowed": False,
+        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
+    }, blockers
+
+
+def _runtime_proof_record(
+    *,
+    report: Mapping[str, Any],
+    repo_root: str | Path,
+) -> tuple[dict[str, Any], list[str]]:
+    candidate = _mapping(report.get("candidate_archive"))
+    path_text = str(
+        candidate.get("runtime_consumption_proof_path")
+        or report.get("runtime_consumption_proof_path")
+        or ""
+    ).strip()
+    blockers: list[str] = []
+    present = False
+    sha256 = None
+    byte_count = None
+    if not path_text:
+        blockers.append("runtime_consumption_proof_path_missing")
+    else:
+        path = _resolve(path_text, repo_root)
+        present = path.is_file()
+        if not present:
+            blockers.append("runtime_consumption_proof_file_missing")
+        else:
+            sha256 = sha256_file(path)
+            byte_count = path.stat().st_size
+    proof_ready = (
+        candidate.get("runtime_consumption_proof_ready") is True
+        or _mapping(report.get("exact_eval_handoff_gate")).get(
+            "archive_bound_runtime_consumption_proof_ready"
+        )
+        is True
+    )
+    if not proof_ready:
+        blockers.append("archive_bound_runtime_consumption_proof_missing")
+    return {
+        "schema": "repair_family_exact_handoff_runtime_proof_custody.v1",
+        "path": path_text or None,
+        "present": present,
+        "sha256": sha256,
+        "bytes": byte_count,
+        "archive_bound_runtime_consumption_proof_ready": proof_ready,
+        "custody_complete": bool(present and proof_ready),
+        "blockers": ordered_unique(blockers),
+        "budget_spend_allowed": False,
+        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
+    }, blockers
+
+
+def _exact_handoff_candidate_row(
+    *,
+    report: Mapping[str, Any],
+    report_path: str | Path,
+    stack_row: Mapping[str, Any],
+    repo_root: str | Path,
+) -> dict[str, Any]:
+    candidate_archive, archive_blockers = _candidate_archive_record(
+        report=report,
+        repo_root=repo_root,
+    )
+    runtime_proof, proof_blockers = _runtime_proof_record(
+        report=report,
+        repo_root=repo_root,
+    )
+    exact_gate = _mapping(report.get("exact_eval_handoff_gate"))
+    archive_bound_complete = bool(
+        report.get("byte_closed_candidate_emitted") is True
+        and report.get("candidate_archive_materialized") is True
+        and candidate_archive.get("custody_complete") is True
+        and runtime_proof.get("custody_complete") is True
+    )
+    blockers = ordered_unique(
+        [
+            *_string_list(report.get("blockers")),
+            *_string_list(exact_gate.get("blockers")),
+            *archive_blockers,
+            *proof_blockers,
+            *(
+                []
+                if report.get("byte_closed_candidate_emitted") is True
+                else ["byte_closed_candidate_archive_missing"]
+            ),
+            *(
+                []
+                if archive_bound_complete
+                else ["archive_runtime_custody_incomplete"]
+            ),
+            "contest_cpu_or_cuda_exact_axis_payload_required",
+            "lane_dispatch_claim_required_before_exact_eval",
+        ]
+    )
+    row = {
+        "schema": REPAIR_FAMILY_EXACT_HANDOFF_CANDIDATE_ROW_SCHEMA,
+        "source_execution_report": _report_file_record(
+            report_path,
+            repo_root=repo_root,
+        ),
+        "source_stack_order": stack_row.get("planned_stack_order"),
+        "family_id": report.get("family_id"),
+        "typed_response_id": report.get("typed_response_id"),
+        "candidate_chain_id": report.get("candidate_chain_id"),
+        "candidate_chain_ids": _string_list(report.get("candidate_chain_ids")),
+        "entropy_position_label": report.get("entropy_position_label"),
+        "entropy_stage_order": stack_row.get("entropy_stage_order"),
+        "candidate_archive": candidate_archive,
+        "runtime_consumption_proof": runtime_proof,
+        "archive_bound_custody_complete": archive_bound_complete,
+        "archive_bound_exact_handoff_candidate": archive_bound_complete,
+        "target_modes": ["contest_exact_eval"],
+        "exact_axis_required": ["contest-CPU", "contest-CUDA"],
+        "component_response_axis": "[macOS-MLX research-signal]",
+        "local_mlx_rows_are_advisory_only": True,
+        "eligible_for_exact_eval_handoff": False,
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        "allowed_use": "archive_bound_exact_handoff_planning_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        row,
+        context=f"repair_family_exact_handoff_candidate_row:{report.get('family_id')}",
     )
     return row
 
@@ -282,7 +488,7 @@ def plan_repair_family_stack_search(
     )
     demotions = _posterior_demotions(posterior_rows)
     remaining_budget = byte_credit_budget
-    rows: list[dict[str, Any]] = []
+    row_packages: list[tuple[dict[str, Any], Mapping[str, Any], str | Path]] = []
     for order_hint, (report, path) in enumerate(
         zip(execution_reports, execution_report_paths, strict=True),
         start=1,
@@ -297,18 +503,44 @@ def plan_repair_family_stack_search(
         )
         if remaining_budget is not None and row["byte_credit_feasible"]:
             remaining_budget = max(0, remaining_budget - int(row["delta_payload_bytes"]))
-        rows.append(row)
-    rows.sort(
-        key=lambda row: (
-            row["entropy_stage_order"],
-            row["automatic_negative_result_demoted"],
-            -float(row["interaction_aware_stack_score"]),
-            row["order_hint"],
-            str(row.get("typed_response_id") or ""),
+        row_packages.append((row, report, path))
+    row_packages.sort(
+        key=lambda package: (
+            package[0]["entropy_stage_order"],
+            package[0]["automatic_negative_result_demoted"],
+            -float(package[0]["interaction_aware_stack_score"]),
+            package[0]["order_hint"],
+            str(package[0].get("typed_response_id") or ""),
         )
     )
-    for index, row in enumerate(rows, start=1):
+    for index, (row, _report, _path) in enumerate(row_packages, start=1):
         row["planned_stack_order"] = index
+    rows = [row for row, _report, _path in row_packages]
+    exact_handoff_candidates = [
+        _exact_handoff_candidate_row(
+            report=report,
+            report_path=path,
+            stack_row=row,
+            repo_root=repo_root,
+        )
+        for row, report, path in row_packages
+    ]
+    archive_bound_handoff_count = sum(
+        1
+        for row in exact_handoff_candidates
+        if row.get("archive_bound_custody_complete") is True
+    )
+    exact_handoff_gate_blockers = ordered_unique(
+        [
+            *(
+                []
+                if archive_bound_handoff_count
+                else ["byte_closed_archive_runtime_receiver_proof_required_per_stack"]
+            ),
+            "contest_cpu_or_cuda_exact_axis_payload_required",
+            "lane_dispatch_claim_required_before_exact_eval",
+        ]
+    )
     plan = {
         "schema": REPAIR_FAMILY_STACK_SEARCH_PLAN_SCHEMA,
         "execution_report_count": len(rows),
@@ -322,6 +554,9 @@ def plan_repair_family_stack_search(
         ),
         "fractal_scope_order": list(_LEVEL_ORDER),
         "stack_rows": rows,
+        "exact_eval_handoff_candidate_count": len(exact_handoff_candidates),
+        "archive_bound_exact_handoff_candidate_count": archive_bound_handoff_count,
+        "exact_eval_handoff_candidates": exact_handoff_candidates,
         "planned_family_order": ordered_unique(row["family_id"] for row in rows),
         "candidate_improvement_observed": any(
             float(row.get("local_mlx_expected_improvement_score_units") or 0.0) > 0.0
@@ -330,11 +565,14 @@ def plan_repair_family_stack_search(
         "exact_eval_handoff_gate": {
             "schema": "repair_family_stack_search_exact_handoff_gate.v1",
             "eligible_for_exact_eval_handoff": False,
-            "blockers": [
-                "byte_closed_archive_runtime_receiver_proof_required_per_stack",
-                "contest_cpu_or_cuda_exact_axis_payload_required",
-                "lane_dispatch_claim_required_before_exact_eval",
-            ],
+            "exact_eval_handoff_candidate_count": len(exact_handoff_candidates),
+            "archive_bound_exact_handoff_candidate_count": (
+                archive_bound_handoff_count
+            ),
+            "archive_bound_custody_complete": archive_bound_handoff_count > 0,
+            "target_modes": ["contest_exact_eval"],
+            "exact_axis_required": ["contest-CPU", "contest-CUDA"],
+            "blockers": exact_handoff_gate_blockers,
             "budget_spend_allowed": False,
             "ready_for_exact_eval_dispatch": False,
             **FALSE_AUTHORITY,
@@ -354,6 +592,7 @@ def plan_repair_family_stack_search(
 
 
 __all__ = [
+    "REPAIR_FAMILY_EXACT_HANDOFF_CANDIDATE_ROW_SCHEMA",
     "REPAIR_FAMILY_STACK_SEARCH_PLAN_SCHEMA",
     "REPAIR_FAMILY_STACK_SEARCH_ROW_SCHEMA",
     "RepairFamilyStackSearchError",

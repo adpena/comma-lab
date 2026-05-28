@@ -10,7 +10,6 @@ authority.
 from __future__ import annotations
 
 import platform
-import shutil
 import subprocess
 import sys
 import time
@@ -19,6 +18,10 @@ from pathlib import Path
 from typing import Any
 
 from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY
+from tac.optimization.family_agnostic_materializers import (
+    FamilyAgnosticMaterializerError,
+    materialize_archive_zip_repack_candidate,
+)
 from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
     require_no_truthy_authority_fields,
@@ -374,37 +377,153 @@ def _optional_archive_copy(
     repo_root: str | Path,
     allow_overwrite: bool,
 ) -> tuple[dict[str, Any], list[str]]:
+    return _archive_native_zip_repack_candidate(
+        manifest=manifest,
+        output_dir=output_dir,
+        repo_root=repo_root,
+        allow_overwrite=allow_overwrite,
+    )
+
+
+def _archive_native_zip_repack_candidate(
+    *,
+    manifest: Mapping[str, Any],
+    output_dir: str | Path,
+    repo_root: str | Path,
+    allow_overwrite: bool,
+) -> tuple[dict[str, Any], list[str]]:
     archive = _mapping(manifest.get("candidate_archive"))
     path_text = str(archive.get("path") or "").strip()
     blockers: list[str] = []
     if not path_text:
         blockers.append("candidate_archive_path_missing")
-        return {"materialized": False, "path": None, "sha256": None, "bytes": None}, blockers
+        return {
+            "schema": "repair_family_archive_native_candidate.v1",
+            "materialized": False,
+            "archive_native_transform_attempted": False,
+            "archive_native_transform_kind": "zip_repack_payload_identity",
+            "path": None,
+            "sha256": None,
+            "bytes": None,
+            "runtime_consumption_proof_path": None,
+            "runtime_consumption_proof_ready": False,
+            "receiver_contract_satisfied": False,
+            "saved_bytes": None,
+            "blockers": blockers,
+            "budget_spend_allowed": False,
+            "ready_for_exact_eval_dispatch": False,
+            **FALSE_AUTHORITY,
+        }, blockers
     source = _resolve(path_text, repo_root)
     if not source.is_file():
         blockers.append("candidate_archive_file_missing")
-        return {"materialized": False, "path": path_text, "sha256": None, "bytes": None}, blockers
+        return {
+            "schema": "repair_family_archive_native_candidate.v1",
+            "materialized": False,
+            "archive_native_transform_attempted": False,
+            "archive_native_transform_kind": "zip_repack_payload_identity",
+            "path": path_text,
+            "sha256": None,
+            "bytes": None,
+            "runtime_consumption_proof_path": None,
+            "runtime_consumption_proof_ready": False,
+            "receiver_contract_satisfied": False,
+            "saved_bytes": None,
+            "blockers": blockers,
+            "budget_spend_allowed": False,
+            "ready_for_exact_eval_dispatch": False,
+            **FALSE_AUTHORITY,
+        }, blockers
     expected_sha = str(archive.get("sha256") or "").strip()
     actual_sha = sha256_file(source)
     if expected_sha and expected_sha != actual_sha:
         blockers.append("candidate_archive_sha256_mismatch")
-        return {"materialized": False, "path": path_text, "sha256": actual_sha, "bytes": source.stat().st_size}, blockers
-    output = _resolve(output_dir, repo_root) / "candidate_archive_passthrough.zip"
-    if output.exists() and not allow_overwrite:
-        raise ArtifactWriteError(f"refusing to overwrite existing artifact: {output}")
-    if output.exists() and allow_overwrite and sha256_file(output) == actual_sha:
-        skipped = True
-    else:
-        output.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(source, output)
-        skipped = False
+        return {
+            "schema": "repair_family_archive_native_candidate.v1",
+            "materialized": False,
+            "archive_native_transform_attempted": False,
+            "archive_native_transform_kind": "zip_repack_payload_identity",
+            "path": path_text,
+            "sha256": actual_sha,
+            "bytes": source.stat().st_size,
+            "runtime_consumption_proof_path": None,
+            "runtime_consumption_proof_ready": False,
+            "receiver_contract_satisfied": False,
+            "saved_bytes": None,
+            "blockers": blockers,
+            "budget_spend_allowed": False,
+            "ready_for_exact_eval_dispatch": False,
+            **FALSE_AUTHORITY,
+        }, blockers
+    output = _resolve(output_dir, repo_root) / "candidate_archive_native_zip_repack.zip"
+    proof = _resolve(output_dir, repo_root) / "candidate_archive_native_zip_repack_receiver_proof.json"
+    expected_output_sha = sha256_file(output) if output.exists() and allow_overwrite else None
+    expected_proof_sha = sha256_file(proof) if proof.exists() and allow_overwrite else None
+    try:
+        native_manifest = materialize_archive_zip_repack_candidate(
+            archive_path=source,
+            output_archive=output,
+            runtime_consumption_proof_out=proof,
+            repo_root=repo_root,
+            allow_size_regression=True,
+            allow_overwrite=allow_overwrite,
+            expected_existing_output_sha256=expected_output_sha,
+            expected_existing_runtime_consumption_proof_sha256=expected_proof_sha,
+        )
+    except (FamilyAgnosticMaterializerError, ArtifactWriteError, OSError, ValueError) as exc:
+        blockers.append(f"archive_native_zip_repack_failed:{exc}")
+        return {
+            "schema": "repair_family_archive_native_candidate.v1",
+            "materialized": False,
+            "archive_native_transform_attempted": True,
+            "archive_native_transform_kind": "zip_repack_payload_identity",
+            "source_archive_path": _repo_rel(source, repo_root),
+            "path": None,
+            "sha256": None,
+            "bytes": None,
+            "runtime_consumption_proof_path": None,
+            "runtime_consumption_proof_ready": False,
+            "receiver_contract_satisfied": False,
+            "saved_bytes": None,
+            "blockers": blockers,
+            "budget_spend_allowed": False,
+            "ready_for_exact_eval_dispatch": False,
+            **FALSE_AUTHORITY,
+        }, blockers
+    native_blockers = _string_list(native_manifest.get("readiness_blockers"))
+    blockers.extend(native_blockers)
+    selected = _mapping(native_manifest.get("selected_repack"))
+    candidate = _mapping(native_manifest.get("candidate_archive"))
+    source_record = _mapping(native_manifest.get("source_archive"))
+    proof_ready = native_manifest.get("receiver_contract_satisfied") is True
+    if not proof_ready:
+        blockers.append("archive_native_receiver_contract_not_satisfied")
     return {
-        "materialized": True,
-        "path": _repo_rel(output, repo_root),
-        "sha256": sha256_file(output),
-        "bytes": output.stat().st_size,
-        "passthrough_copy_of_manifest_candidate_archive": True,
-        "skipped_identical_existing_artifact": skipped,
+        "schema": "repair_family_archive_native_candidate.v1",
+        "materialized": output.is_file(),
+        "archive_native_transform_attempted": True,
+        "archive_native_transform_kind": "zip_repack_payload_identity",
+        "archive_native_materializer_schema": native_manifest.get("schema"),
+        "archive_native_materializer_id": native_manifest.get("materializer_id"),
+        "archive_native_target_kind": native_manifest.get("target_kind"),
+        "source_archive_path": source_record.get("path") or _repo_rel(source, repo_root),
+        "source_archive_sha256": source_record.get("sha256") or actual_sha,
+        "source_archive_bytes": source_record.get("bytes") or source.stat().st_size,
+        "path": candidate.get("path") or _repo_rel(output, repo_root),
+        "sha256": candidate.get("sha256") or sha256_file(output),
+        "bytes": candidate.get("bytes") or output.stat().st_size,
+        "runtime_consumption_proof_path": _repo_rel(proof, repo_root)
+        if proof.is_file()
+        else None,
+        "runtime_consumption_proof_ready": proof_ready,
+        "receiver_contract_kind": native_manifest.get("receiver_contract_kind"),
+        "receiver_contract_satisfied": proof_ready,
+        "saved_bytes": selected.get("saved_bytes"),
+        "selected_repack": dict(selected),
+        "blockers": ordered_unique(blockers),
+        "budget_spend_allowed": False,
+        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
     }, blockers
 
 
@@ -425,8 +544,11 @@ def _exact_eval_handoff_gate(
             ),
             *(
                 []
-                if manifest.get("receiver_contract_satisfied") is True
-                and receiver.get("runtime_consumption_proof_passed") is True
+                if candidate_archive.get("runtime_consumption_proof_ready") is True
+                or (
+                    manifest.get("receiver_contract_satisfied") is True
+                    and receiver.get("runtime_consumption_proof_passed") is True
+                )
                 else ["archive_bound_receiver_runtime_proof_missing"]
             ),
             "contest_cpu_or_cuda_exact_axis_payload_required",
@@ -438,8 +560,11 @@ def _exact_eval_handoff_gate(
         "eligible_for_exact_eval_handoff": False,
         "candidate_archive_materialized": candidate_archive.get("materialized") is True,
         "archive_bound_runtime_consumption_proof_ready": (
-            manifest.get("receiver_contract_satisfied") is True
-            and receiver.get("runtime_consumption_proof_passed") is True
+            candidate_archive.get("runtime_consumption_proof_ready") is True
+            or (
+                manifest.get("receiver_contract_satisfied") is True
+                and receiver.get("runtime_consumption_proof_passed") is True
+            )
         ),
         "component_response_axis": "[macOS-MLX research-signal]",
         "exact_axis_required": ["contest-CPU", "contest-CUDA"],
@@ -685,21 +810,32 @@ def build_repair_family_byte_transform_execution_report(
         "fractal_optimization_scope": dict(
             _mapping(family_materializer_manifest.get("fractal_optimization_scope"))
         ),
+        "allocated_repair_bytes": transform_payload.get("allocated_repair_bytes"),
         "byte_transform_supported": supported,
         "byte_transform_delta_emitted": True,
         "byte_transform_delta": delta,
         "candidate_delta": delta,
         "candidate_archive": candidate_archive,
+        "archive_native_transform_attempted": (
+            candidate_archive.get("archive_native_transform_attempted") is True
+        ),
+        "archive_native_transform_kind": candidate_archive.get(
+            "archive_native_transform_kind"
+        ),
+        "archive_native_saved_bytes": candidate_archive.get("saved_bytes"),
         "byte_closed_candidate_emitted": candidate_archive.get("materialized") is True,
         "candidate_archive_materialized": candidate_archive.get("materialized") is True,
         "runtime_consumption_proof_path": family_materializer_manifest.get(
             "runtime_consumption_proof_path"
-        ),
+        )
+        or candidate_archive.get("runtime_consumption_proof_path"),
         "receiver_contract_kind": family_materializer_manifest.get(
             "receiver_contract_kind"
-        ),
+        )
+        or candidate_archive.get("receiver_contract_kind"),
         "receiver_contract_satisfied": (
             family_materializer_manifest.get("receiver_contract_satisfied") is True
+            or candidate_archive.get("receiver_contract_satisfied") is True
         ),
         "component_response_replayed": (
             family_materializer_manifest.get("component_response_replayed") is True

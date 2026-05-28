@@ -1,9 +1,11 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import sys
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -34,6 +36,7 @@ from tac.optimization.repair_family_materializers import (
     build_repair_campaign_family_materializer_manifest,
 )
 from tac.optimization.repair_family_stack_search import (
+    REPAIR_FAMILY_EXACT_HANDOFF_CANDIDATE_ROW_SCHEMA,
     REPAIR_FAMILY_STACK_SEARCH_PLAN_SCHEMA,
     plan_repair_family_stack_search,
 )
@@ -144,6 +147,13 @@ def _plan_from_score_report(score_report: dict[str, object]) -> dict[str, object
 
 def _write_json(path: Path, payload: dict[str, object]) -> Path:
     path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    return path
+
+
+def _write_zip(path: Path, members: dict[str, bytes]) -> Path:
+    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as archive:
+        for name, payload in members.items():
+            archive.writestr(name, payload)
     return path
 
 
@@ -259,6 +269,76 @@ def test_repair_family_byte_transform_executor_emits_replayable_delta(
     assert report["ready_for_exact_eval_dispatch"] is False
     assert bundle["schema"] == REPAIR_FAMILY_BYTE_TRANSFORM_REPLAY_BUNDLE_SCHEMA
     assert bundle["source_records_sha256"]
+
+
+def test_byte_transform_executor_repacks_archive_native_candidate_when_custody_exists(
+    tmp_path: Path,
+) -> None:
+    score_report = score_repair_campaign(payload=_repair_payload(tmp_path), repo_root=tmp_path)
+    plan = _plan_from_score_report(score_report)
+    archive_path = _write_zip(
+        tmp_path / "source_archive.zip",
+        {"0.bin": (b"segnet-region-waterfill" * 64)},
+    )
+    archive_sha = hashlib.sha256(archive_path.read_bytes()).hexdigest()
+    plan["candidate_chain_rows"][1]["candidate_archive_path"] = str(archive_path)
+    plan["candidate_chain_rows"][1]["candidate_archive_sha256"] = archive_sha
+    plan["candidate_chain_rows"][1]["candidate_archive_bytes"] = archive_path.stat().st_size
+    manifest = build_repair_campaign_family_materializer_manifest(
+        repo_root=tmp_path,
+        materialization_plan=plan,
+        score_report=score_report,
+        materialization_plan_path=tmp_path / "plan.json",
+        score_report_path=tmp_path / "score_report.json",
+        typed_response_id="segnet_region_ready",
+        candidate_id="segnet_class_region_waterfill",
+    )
+    manifest_path = _write_json(tmp_path / "family_manifest.json", manifest)
+
+    report, _bundle = build_repair_family_byte_transform_execution_report(
+        family_materializer_manifest=manifest,
+        family_materializer_manifest_path=manifest_path,
+        output_dir=tmp_path / "byte_transform",
+        replay_argv=["python", "tools/run_repair_family_byte_transform_executor.py"],
+        invocation_argv=["pytest"],
+        repo_root=tmp_path,
+        allow_overwrite=False,
+    )
+
+    candidate = report["candidate_archive"]
+    assert report["byte_closed_candidate_emitted"] is True
+    assert report["archive_native_transform_attempted"] is True
+    assert report["archive_native_transform_kind"] == "zip_repack_payload_identity"
+    assert candidate["runtime_consumption_proof_ready"] is True
+    assert candidate["receiver_contract_satisfied"] is True
+    assert (tmp_path / candidate["path"]).is_file()
+    assert (tmp_path / candidate["runtime_consumption_proof_path"]).is_file()
+    assert report["exact_eval_handoff_gate"][
+        "archive_bound_runtime_consumption_proof_ready"
+    ] is True
+    assert report["exact_eval_handoff_gate"]["eligible_for_exact_eval_handoff"] is False
+    report_path = _write_json(tmp_path / "byte_transform_report.json", report)
+    stack_plan = plan_repair_family_stack_search(
+        execution_reports=[report],
+        execution_report_paths=[report_path],
+        repo_root=tmp_path,
+        byte_credit_budget=10_000,
+    )
+    assert stack_plan["exact_eval_handoff_candidate_count"] == 1
+    assert stack_plan["archive_bound_exact_handoff_candidate_count"] == 1
+    assert stack_plan["exact_eval_handoff_gate"][
+        "archive_bound_custody_complete"
+    ] is True
+    assert (
+        "byte_closed_archive_runtime_receiver_proof_required_per_stack"
+        not in stack_plan["exact_eval_handoff_gate"]["blockers"]
+    )
+    handoff_row = stack_plan["exact_eval_handoff_candidates"][0]
+    assert handoff_row["schema"] == REPAIR_FAMILY_EXACT_HANDOFF_CANDIDATE_ROW_SCHEMA
+    assert handoff_row["archive_bound_custody_complete"] is True
+    assert handoff_row["candidate_archive"]["custody_complete"] is True
+    assert handoff_row["runtime_consumption_proof"]["custody_complete"] is True
+    assert handoff_row["ready_for_exact_eval_dispatch"] is False
 
 
 def test_repair_family_byte_transform_cli_writes_report_and_bundle(

@@ -335,6 +335,16 @@ def main(argv: list[str] | None = None) -> int:
                 "execution_report_count": summary["stack_search_plan"][
                     "execution_report_count"
                 ],
+                "exact_eval_handoff_candidate_count": summary["stack_search_plan"].get(
+                    "exact_eval_handoff_candidate_count",
+                    0,
+                ),
+                "archive_bound_exact_handoff_candidate_count": (
+                    summary["stack_search_plan"].get(
+                        "archive_bound_exact_handoff_candidate_count",
+                        0,
+                    )
+                ),
                 "candidate_improvement_observed": summary["stack_search_plan"][
                     "candidate_improvement_observed"
                 ],
