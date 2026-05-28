@@ -543,12 +543,17 @@ def test_real_archive_intake_runs_all_families_through_floor_loop(
     assert result.returncode == 0, result.stderr
     summary = json.loads(summary_path.read_text(encoding="utf-8"))
     assert summary["repair_family_coverage"]["coverage_satisfied"] is True
-    assert summary["archive_bound_exact_handoff_candidate_count"] == 5
+    assert summary["archive_bound_exact_handoff_candidate_count"] == 6
     assert summary["entropy_stage_chain_execution_bundle_schema"] == (
         "repair_entropy_stage_chain_execution_bundle.v1"
     )
     assert summary["entropy_stage_chain_count"] == 1
     assert summary["entropy_stage_chain_materialized_candidate_count"] == 1
+    assert summary["entropy_stage_chain_exact_handoff_candidate_count"] == 1
+    assert (
+        summary["entropy_stage_chain_archive_bound_exact_handoff_candidate_count"]
+        == 1
+    )
     assert (
         summary["entropy_stage_chain_runtime_consumption_proof_ready_count"]
         == 1
@@ -559,6 +564,10 @@ def test_real_archive_intake_runs_all_families_through_floor_loop(
     assert summary["ready_for_exact_eval_dispatch"] is False
     source_queue_path = tmp_path / "real_archive_loop" / "repair_family_exact_ready_source_queue.json"
     source_queue = json.loads(source_queue_path.read_text(encoding="utf-8"))
+    assert source_queue["n_candidates"] == 6
+    assert "entropy_stage_chain" in {
+        row["family_id"] for row in source_queue["top_k"]
+    }
     assert {
         row["receiver_contract_satisfied"] for row in source_queue["top_k"]
     } == {True}
@@ -581,7 +590,7 @@ def test_real_archive_intake_runs_all_families_through_floor_loop(
         closure_report_out=tmp_path / "submission_runtime_closure_report.json",
         overwrite=True,
     )
-    assert closure_report["candidate_count"] == 5
+    assert closure_report["candidate_count"] == 6
     assert {
         row["materializer_submission_closure_kind"]
         for row in closure_report["rows"]

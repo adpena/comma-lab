@@ -1941,10 +1941,133 @@ def plan_repair_family_stack_search(
     return plan
 
 
+def _chain_exact_handoff_candidate_row(
+    chain_report: Mapping[str, Any],
+) -> dict[str, Any]:
+    stages = [
+        stage
+        for stage in chain_report.get("stages") or []
+        if isinstance(stage, Mapping)
+    ]
+    final_stage = stages[-1] if stages else {}
+    candidate_archive = dict(_mapping(chain_report.get("candidate_archive")))
+    runtime_proof_path = str(
+        final_stage.get("stage_runtime_consumption_proof_path") or ""
+    ).strip()
+    runtime_proof_ready = (
+        chain_report.get("runtime_consumption_proof_ready") is True
+        and final_stage.get("stage_receiver_proof_ready") is True
+    )
+    runtime_proof = {
+        "schema": "repair_family_exact_handoff_runtime_proof_custody.v1",
+        "path": runtime_proof_path or None,
+        "present": bool(runtime_proof_path),
+        "sha256": final_stage.get("stage_runtime_consumption_proof_sha256"),
+        "bytes": final_stage.get("stage_runtime_consumption_proof_bytes"),
+        "archive_bound_runtime_consumption_proof_ready": runtime_proof_ready,
+        "custody_complete": bool(
+            runtime_proof_path
+            and final_stage.get("stage_runtime_consumption_proof_sha256")
+            and runtime_proof_ready
+        ),
+        "blockers": ordered_unique(
+            [
+                *([] if runtime_proof_path else ["runtime_consumption_proof_path_missing"]),
+                *(
+                    []
+                    if final_stage.get("stage_runtime_consumption_proof_sha256")
+                    else ["runtime_consumption_proof_sha256_missing"]
+                ),
+                *(
+                    []
+                    if runtime_proof_ready
+                    else ["archive_bound_runtime_consumption_proof_missing"]
+                ),
+            ]
+        ),
+        "budget_spend_allowed": False,
+        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
+    }
+    archive_complete = bool(
+        chain_report.get("archive_bound_candidate_emitted") is True
+        and chain_report.get("candidate_archive_materialized") is True
+        and candidate_archive.get("path")
+        and candidate_archive.get("sha256")
+        and isinstance(candidate_archive.get("bytes"), int)
+    )
+    candidate_archive.update(
+        {
+            "expected_sha256": candidate_archive.get("sha256"),
+            "expected_bytes": candidate_archive.get("bytes"),
+            "present": archive_complete,
+            "sha256_matches": archive_complete,
+            "bytes_match": archive_complete,
+            "custody_complete": archive_complete,
+            "blockers": []
+            if archive_complete
+            else ["chain_candidate_archive_custody_incomplete"],
+            "budget_spend_allowed": False,
+            "ready_for_exact_eval_dispatch": False,
+            **FALSE_AUTHORITY,
+        }
+    )
+    archive_bound_complete = archive_complete and runtime_proof["custody_complete"] is True
+    chain_id = str(chain_report.get("chain_id") or "entropy_stage_chain")
+    blockers = ordered_unique(
+        [
+            *_string_list(chain_report.get("blockers")),
+            *_string_list(candidate_archive.get("blockers")),
+            *_string_list(runtime_proof.get("blockers")),
+            *([] if archive_bound_complete else ["archive_runtime_custody_incomplete"]),
+            "contest_cpu_or_cuda_exact_axis_payload_required",
+            "lane_dispatch_claim_required_before_exact_eval",
+        ]
+    )
+    row = {
+        "schema": REPAIR_FAMILY_EXACT_HANDOFF_CANDIDATE_ROW_SCHEMA,
+        "source_execution_report": None,
+        "source_entropy_stage_chain_report_schema": chain_report.get("schema"),
+        "source_stack_order": "composed_entropy_stage_chain",
+        "family_id": "entropy_stage_chain",
+        "typed_response_id": chain_id,
+        "candidate_chain_id": chain_id,
+        "candidate_chain_ids": [
+            str(stage.get("typed_response_id") or "")
+            for stage in stages
+            if str(stage.get("typed_response_id") or "").strip()
+        ],
+        "entropy_position_label": "composed_entropy_stage_chain",
+        "entropy_stage_order": _chain_stage_order(final_stage) if final_stage else 999,
+        "candidate_archive": candidate_archive,
+        "runtime_consumption_proof": runtime_proof,
+        "archive_bound_custody_complete": archive_bound_complete,
+        "archive_bound_exact_handoff_candidate": archive_bound_complete,
+        "target_modes": ["contest_exact_eval"],
+        "exact_axis_required": ["contest-CPU", "contest-CUDA"],
+        "component_response_axis": "[macOS-MLX research-signal]",
+        "local_mlx_rows_are_advisory_only": True,
+        "eligible_for_exact_eval_handoff": False,
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        "allowed_use": "archive_bound_entropy_stage_chain_exact_handoff_planning_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        row,
+        context=f"repair_family_exact_handoff_chain_candidate_row:{chain_id}",
+    )
+    return row
+
+
 def build_repair_family_exact_handoff_plan(
     *,
     stack_plan: Mapping[str, Any],
     stack_plan_path: str | Path | None = None,
+    chain_execution_bundle: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Summarize archive-bound repair candidates for exact-axis handoff.
 
@@ -1959,7 +2082,25 @@ def build_repair_family_exact_handoff_plan(
         stack_plan,
         context="repair_family_exact_handoff_source_stack_plan",
     )
+    if chain_execution_bundle:
+        if (
+            chain_execution_bundle.get("schema")
+            != "repair_entropy_stage_chain_execution_bundle.v1"
+        ):
+            raise RepairFamilyStackSearchError(
+                "chain_execution_bundle must be repair_entropy_stage_chain_execution_bundle.v1"
+            )
+        require_no_truthy_authority_fields(
+            chain_execution_bundle,
+            context="repair_family_exact_handoff_chain_execution_bundle",
+        )
     rows = [dict(row) for row in stack_plan.get("exact_eval_handoff_candidates") or [] if isinstance(row, Mapping)]
+    chain_rows = [
+        _chain_exact_handoff_candidate_row(chain_report)
+        for chain_report in _mapping(chain_execution_bundle).get("chain_reports") or []
+        if isinstance(chain_report, Mapping)
+    ]
+    rows.extend(chain_rows)
     archive_bound_rows = [row for row in rows if row.get("archive_bound_custody_complete") is True]
     gate = _mapping(stack_plan.get("exact_eval_handoff_gate"))
     blockers = ordered_unique(
@@ -1975,7 +2116,14 @@ def build_repair_family_exact_handoff_plan(
         "schema": REPAIR_FAMILY_EXACT_HANDOFF_PLAN_SCHEMA,
         "source_stack_plan_path": None if stack_plan_path is None else str(stack_plan_path),
         "source_stack_plan_schema": stack_plan.get("schema"),
+        "source_chain_execution_bundle_schema": (
+            _mapping(chain_execution_bundle).get("schema")
+        ),
         "execution_report_count": stack_plan.get("execution_report_count", 0),
+        "entropy_stage_chain_candidate_count": len(chain_rows),
+        "entropy_stage_chain_archive_bound_candidate_count": sum(
+            1 for row in chain_rows if row.get("archive_bound_custody_complete") is True
+        ),
         "candidate_count": len(rows),
         "archive_bound_candidate_count": len(archive_bound_rows),
         "archive_bound_custody_complete": bool(archive_bound_rows),

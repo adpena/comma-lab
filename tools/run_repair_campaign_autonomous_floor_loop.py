@@ -1177,9 +1177,29 @@ def _build_summary(
             break
     stack_plan_path = output_dir / "repair_family_stack_search_plan.json"
     exact_handoff_plan_path = output_dir / "repair_family_exact_handoff_plan.json"
+    entropy_stage_materializer_work_orders = (
+        _compile_entropy_stage_materializer_work_orders(final_stack_plan)
+    )
+    entropy_stage_materializer_work_orders_path = (
+        output_dir / "repair_family_entropy_stage_materializer_work_orders.json"
+    )
+    entropy_stage_chain_execution_bundle = (
+        build_repair_entropy_stage_chain_execution_bundle(
+            execution_reports=reports,
+            execution_report_paths=tuple(_repo_rel(path) for path in report_paths),
+            work_order_bundle=entropy_stage_materializer_work_orders,
+            output_dir=output_dir / "repair_family_entropy_stage_chain_execution",
+            repo_root=REPO_ROOT,
+            allow_overwrite=overwrite_artifacts,
+        )
+    )
+    entropy_stage_chain_execution_bundle_path = (
+        output_dir / "repair_family_entropy_stage_chain_execution_bundle.json"
+    )
     exact_handoff_plan = build_repair_family_exact_handoff_plan(
         stack_plan=final_stack_plan,
         stack_plan_path=_repo_rel(stack_plan_path),
+        chain_execution_bundle=entropy_stage_chain_execution_bundle,
     )
     exact_ready_bridge = build_repair_family_exact_ready_bridge(
         exact_handoff_plan=exact_handoff_plan,
@@ -1217,25 +1237,6 @@ def _build_summary(
         if isinstance(path, dict)
     ]
     primary_frontier_path = acquisition_frontier[0] if acquisition_frontier else None
-    entropy_stage_materializer_work_orders = (
-        _compile_entropy_stage_materializer_work_orders(final_stack_plan)
-    )
-    entropy_stage_materializer_work_orders_path = (
-        output_dir / "repair_family_entropy_stage_materializer_work_orders.json"
-    )
-    entropy_stage_chain_execution_bundle = (
-        build_repair_entropy_stage_chain_execution_bundle(
-            execution_reports=reports,
-            execution_report_paths=tuple(_repo_rel(path) for path in report_paths),
-            work_order_bundle=entropy_stage_materializer_work_orders,
-            output_dir=output_dir / "repair_family_entropy_stage_chain_execution",
-            repo_root=REPO_ROOT,
-            allow_overwrite=overwrite_artifacts,
-        )
-    )
-    entropy_stage_chain_execution_bundle_path = (
-        output_dir / "repair_family_entropy_stage_chain_execution_bundle.json"
-    )
     learning_signal_report = build_repair_family_stack_learning_signal_report(
         stack_plan=final_stack_plan,
         bridge_report=exact_ready_bridge_report,
@@ -1327,6 +1328,15 @@ def _build_summary(
         "exact_handoff_plan": exact_handoff_plan,
         "exact_eval_handoff_candidate_count": exact_handoff_plan["candidate_count"],
         "archive_bound_exact_handoff_candidate_count": exact_handoff_plan["archive_bound_candidate_count"],
+        "entropy_stage_chain_exact_handoff_candidate_count": (
+            exact_handoff_plan.get("entropy_stage_chain_candidate_count", 0)
+        ),
+        "entropy_stage_chain_archive_bound_exact_handoff_candidate_count": (
+            exact_handoff_plan.get(
+                "entropy_stage_chain_archive_bound_candidate_count",
+                0,
+            )
+        ),
         "exact_ready_bridge_source_queue_path": _repo_rel(exact_ready_source_queue_path),
         "blocked_exact_ready_queue_path": _repo_rel(blocked_exact_ready_queue_path),
         "exact_ready_bridge_report_path": _repo_rel(exact_ready_bridge_report_path),

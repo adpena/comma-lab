@@ -983,6 +983,27 @@ def test_entropy_stage_chain_executor_composes_selected_archive_stages(
     assert final_archive["sha256"] != source_sha
     assert (tmp_path / final_archive["path"]).is_file()
     assert chain_bundle["ready_for_exact_eval_dispatch"] is False
+    exact_handoff = build_repair_family_exact_handoff_plan(
+        stack_plan={
+            "schema": REPAIR_FAMILY_STACK_SEARCH_PLAN_SCHEMA,
+            "execution_report_count": 0,
+            "exact_eval_handoff_candidates": [],
+            "exact_eval_handoff_gate": {
+                "blockers": [],
+                **_false_authority(),
+            },
+            **_false_authority(),
+        },
+        chain_execution_bundle=chain_bundle,
+    )
+    assert exact_handoff["entropy_stage_chain_candidate_count"] == 1
+    assert exact_handoff["entropy_stage_chain_archive_bound_candidate_count"] == 1
+    assert exact_handoff["archive_bound_candidate_count"] == 1
+    assert exact_handoff["archive_bound_rows"][0]["family_id"] == "entropy_stage_chain"
+    assert (
+        exact_handoff["archive_bound_rows"][0]["candidate_archive"]["sha256"]
+        == final_archive["sha256"]
+    )
 
 
 @pytest.mark.parametrize(

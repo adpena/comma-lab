@@ -370,6 +370,13 @@ def _build_one_chain(
             _write_json(stage_report_path, stage_report, allow_overwrite=allow_overwrite)
             _write_json(stage_bundle_path, stage_bundle, allow_overwrite=allow_overwrite)
             candidate = _mapping(stage_report.get("candidate_archive"))
+            proof_path_text = str(
+                candidate.get("runtime_consumption_proof_path")
+                or stage_report.get("runtime_consumption_proof_path")
+                or ""
+            ).strip()
+            proof_path = _resolve(proof_path_text, repo_root) if proof_path_text else None
+            proof_present = bool(proof_path and proof_path.is_file())
             next_archive, output_blockers = _candidate_output_record(
                 candidate,
                 repo_root=repo_root,
@@ -392,6 +399,25 @@ def _build_one_chain(
                     "stage_materialized": True,
                     "stage_receiver_proof_ready": (
                         candidate.get("runtime_consumption_proof_ready") is True
+                    ),
+                    "stage_runtime_consumption_proof_path": None
+                    if proof_path is None
+                    else _repo_rel(proof_path, repo_root),
+                    "stage_runtime_consumption_proof_sha256": (
+                        sha256_file(proof_path) if proof_present and proof_path else None
+                    ),
+                    "stage_runtime_consumption_proof_bytes": (
+                        proof_path.stat().st_size
+                        if proof_present and proof_path
+                        else None
+                    ),
+                    "stage_receiver_contract_kind": (
+                        stage_report.get("receiver_contract_kind")
+                        or candidate.get("receiver_contract_kind")
+                    ),
+                    "stage_receiver_contract_satisfied": (
+                        stage_report.get("receiver_contract_satisfied") is True
+                        or candidate.get("receiver_contract_satisfied") is True
                     ),
                     "stage_report_blockers": _string_list(stage_report.get("blockers")),
                     "stage_blockers": ordered_unique(output_blockers),
