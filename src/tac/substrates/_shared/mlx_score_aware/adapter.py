@@ -343,16 +343,114 @@ class MlxScoreAwareAdapter:
     def score_aware_components(
         self, model: Any, batch: Any
     ) -> Mapping[str, float] | None:
-        """Per-axis decomposition is DEFERRED to the PyTorch sister L2 path.
+        """Per-axis decomposition from the Hinton-distilled scorer surrogate.
 
-        Per the Z6 reference adapter + per-substrate symposium discipline:
-        true contest-grade per-axis SegNet/PoseNet decomposition routes
-        through the PyTorch sister (Catalog #164 + #226). The MLX L2 trainer
-        is reconstruction-proxy + Hinton-KL-surrogate only; per-axis is the
-        L3+ sister cascade's responsibility. Returns ``None`` (observability-
-        only; never fails the run).
+        PER_AXIS_DECOMPOSITION GAP FIX 2026-05-28 per Z6-v2 + Hinton + 600-pair
+        Contrarian VETO `.omx/research/z6_v2_cargo_cult_unwind_hinton_distill_600pair_long_mlx_landed_20260528.md`
+        op-routable #4 + CLAUDE.md "Subagent coherence-by-default" hook #1
+        sensitivity-map ACTIVE + Catalog #356 AxisDecomposition canonical
+        contract sub-surface at the per_epoch_metrics emission boundary.
+
+        The pre-fix behavior returned ``None`` because the legacy reasoning
+        (mirrored in `tac.substrates.time_traveler_l5_z6.long_training_adapter`
+        + sister adapters) was that the MLX L2 trainer is reconstruction-proxy
+        only. With the canonical Hinton-distilled scorer-bound surrogate
+        landed via the L2 BOTH-TEACHER-WIRED contract (Catalog #164):
+
+        - ``distill`` (KL T=2.0 on REAL SegNet teacher logits) IS the seg
+          axis scorer-bound surrogate gradient signal;
+        - ``pose_distill`` (MSE on REAL PoseNet teacher pose) IS the pose
+          axis scorer-bound surrogate gradient signal.
+
+        Per the Z6-v2 + Hinton apparatus-level finding (5th cross-family
+        parity instance confirming the Hinton-distilled scorer-bound
+        gradient as dominant in-training convergence driver), the per-axis
+        decomposition gap blocked cross-family seg/pose attribution
+        analysis — which IS the canonical downstream-of-in-training
+        differentiation surface where sub-0.18 lives.
+
+        The decomposition mapping (faithful to the loss math in
+        :func:`tac.substrates._shared.mlx_score_aware.loss.score_aware_loss`):
+
+        =========================  ==========================================
+        loss component             AxisDecomposition slot
+        =========================  ==========================================
+        ``parts["distill"]``       ``seg`` (Hinton-KL on real SegNet teacher)
+        ``parts["pose_distill"]``  ``pose`` (MSE on real PoseNet teacher)
+        ``parts["recon"]``         ``recon_aux`` (per-pixel; not per-axis
+                                   attributable but preserved for telemetry
+                                   per Catalog #305 observability surface)
+        archive_bytes              0.0 (per-step delta undefined; archive
+                                   built post-training via export_archive_fn;
+                                   the canonical `compose_score_from_axes`
+                                   accepts 0.0 as no-signal per
+                                   AxisDecomposition NaN-safe rule)
+        =========================  ==========================================
+
+        Backward compat (Catalog #341 Tier-A non-promotable preserved): when
+        BOTH ``distillation_weight=0.0`` AND ``pose_distillation_weight=0.0``
+        (the legacy pure-reconstruction MLX L2 path), returns ``None`` per
+        the original observability-only contract — no synthetic per-axis
+        signal is emitted from a scorer-unbound loss.
+
+        Per CLAUDE.md "MLX portable-local-substrate authority" + Catalog
+        #127/#192/#317/#341: the emitted per-axis values remain
+        non-promotable MLX-research-signal; downstream consumers (e.g.
+        cross-family attribution analyzers) MUST honor the ``[macOS-MLX
+        research-signal]`` axis_tag stamped on the parent TrainingArtifact's
+        canonical Provenance and NEVER promote to ``[contest-CPU]`` /
+        ``[contest-CUDA]`` without paired Linux x86_64 + NVIDIA evidence.
+
+        Returns:
+            ``None`` when neither scorer surrogate is active (pure-recon
+            mode; sister-adapter parity).
+
+            Otherwise a ``Mapping[str, float]`` with keys ``seg`` / ``pose``
+            / ``recon_aux`` / ``archive_bytes`` (the canonical 4-key shape
+            that maps directly into ``AxisDecomposition`` per Catalog #356
+            via ``compose_score_from_axes`` at the downstream cathedral
+            ranker boundary; the canonical helper accepts the missing
+            ``archive_bytes`` channel as 0.0 no-signal).
         """
-        return None
+        # Pure-reconstruction mode: preserve the legacy None contract so
+        # sister-adapter parity is unchanged and no synthetic scorer-unbound
+        # per-axis row pollutes per_epoch_metrics. Catalog #341 Tier-A
+        # observability-only is unaffected.
+        scorer_bound = (
+            self.bundle.distillation_weight > 0.0
+            or self.bundle.pose_distillation_weight > 0.0
+        )
+        if not scorer_bound:
+            return None
+
+        mx = self._mx
+        # Reuse the canonical loss decomposition — single source of truth
+        # for per-axis attribution per Catalog #290 ADOPT_CANONICAL.
+        _total, parts = score_aware_loss(self.bundle, batch)
+        out: dict[str, float] = {}
+        # seg axis: only emit when the SegNet teacher is wired (parts may
+        # legitimately omit "distill" when distillation_weight=0).
+        if "distill" in parts:
+            mx.eval(parts["distill"])
+            out["seg"] = float(parts["distill"].item())
+        else:
+            out["seg"] = 0.0
+        # pose axis: only emit when the PoseNet teacher is wired.
+        if "pose_distill" in parts:
+            mx.eval(parts["pose_distill"])
+            out["pose"] = float(parts["pose_distill"].item())
+        else:
+            out["pose"] = 0.0
+        # recon_aux: telemetry-only per-pixel reconstruction component
+        # (not per-axis attributable; preserved per Catalog #305
+        # observability "decomposable per signal" facet).
+        if "recon" in parts:
+            mx.eval(parts["recon"])
+            out["recon_aux"] = float(parts["recon"].item())
+        # archive_bytes: per-step delta undefined at MLX L2 (archive built
+        # post-training); emit 0.0 per AxisDecomposition NaN-safe rule.
+        out["archive_bytes"] = 0.0
+        return out
 
 
 __all__ = [

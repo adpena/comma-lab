@@ -297,16 +297,59 @@ def test_adapter_export_state_dict_writes_portable_npz(tmp_path: Path) -> None:
 
 
 @mlx_only
-def test_adapter_score_aware_components_defers_to_pytorch_sister() -> None:
+def test_adapter_score_aware_components_pure_recon_defers() -> None:
+    """Pure-recon mode preserves legacy None contract.
+
+    PER_AXIS_DECOMPOSITION GAP FIX 2026-05-28 per Z6-v2 + Hinton + 600-pair
+    Contrarian VETO op-routable #4: the legacy "always None" contract is now
+    "None when scorer-unbound" (sister-adapter parity preserved). When the
+    scorer surrogate is wired (the canonical Hinton-distilled path) the
+    adapter MUST populate per-axis seg/pose/recon_aux/archive_bytes so the
+    Contrarian VETO can be closed for cross-family attribution.
+    """
     import mlx.core as mx
 
     from tac.substrates._shared.mlx_score_aware_full_main import (
         MlxScoreAwareAdapter,
     )
 
-    bundle = _tiny_dreamer_bundle()
+    # Pure-recon mode (distill=0.0): no scorer surrogate; sister-adapter
+    # parity contract preserved - None signals N/A per-axis at L2 MLX.
+    bundle = _tiny_dreamer_bundle(distill=0.0)
     adapter = MlxScoreAwareAdapter(bundle, substrate_id="dreamer_v3_rssm")
     assert adapter.score_aware_components(adapter.model, mx.array([0])) is None
+
+
+@mlx_only
+def test_adapter_score_aware_components_scorer_bound_populates_per_axis() -> None:
+    """Hinton-distilled scorer-bound surrogate populates per-axis per Catalog #356.
+
+    PER_AXIS_DECOMPOSITION GAP FIX 2026-05-28: when the SegNet teacher is
+    wired (mock or real via the canonical fail-closed contract), per-axis
+    seg/pose/recon_aux/archive_bytes MUST populate so the canonical
+    AxisDecomposition.from_dict round-trip works at the cathedral ranker
+    boundary per Catalog #356 + #323 canonical Provenance umbrella.
+    """
+    import mlx.core as mx
+
+    from tac.substrates._shared.mlx_score_aware_full_main import (
+        MlxScoreAwareAdapter,
+    )
+
+    bundle = _tiny_dreamer_bundle(distill=0.5)
+    adapter = MlxScoreAwareAdapter(bundle, substrate_id="dreamer_v3_rssm")
+    out = adapter.score_aware_components(
+        adapter.model, mx.array([0, 1], dtype=mx.int32)
+    )
+    assert out is not None
+    assert "seg" in out
+    assert "pose" in out
+    assert "recon_aux" in out
+    assert "archive_bytes" in out
+    # NaN-safe per AxisDecomposition __post_init__ invariant.
+    for key, value in out.items():
+        assert isinstance(value, float), f"{key}={value!r} must be float"
+        assert value == value, f"{key}={value!r} must not be NaN"
 
 
 @mlx_only

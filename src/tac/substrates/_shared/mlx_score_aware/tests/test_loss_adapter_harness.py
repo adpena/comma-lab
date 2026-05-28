@@ -207,13 +207,150 @@ def test_adapter_export_state_dict_writes_portable_npsd(tmp_path: Path) -> None:
 
 
 @mlx_only
-def test_adapter_score_aware_components_defers() -> None:
+def test_adapter_score_aware_components_pure_recon_returns_none() -> None:
+    """Pure-reconstruction mode preserves legacy None contract.
+
+    PER_AXIS_DECOMPOSITION GAP FIX 2026-05-28: sister-adapter parity preserved
+    when neither scorer surrogate is active. The fix MUST NOT synthesize
+    scorer-unbound per-axis rows.
+    """
     import mlx.core as mx
 
     adapter = MlxScoreAwareAdapter(
-        _tiny_dreamer_bundle(), substrate_id="dreamer_v3_rssm"
+        _tiny_dreamer_bundle(distill=0.0), substrate_id="dreamer_v3_rssm"
     )
     assert adapter.score_aware_components(adapter.model, mx.array([0])) is None
+
+
+@mlx_only
+def test_adapter_score_aware_components_seg_bound_populates_per_axis() -> None:
+    """Hinton-distilled scorer-bound surrogate populates per-axis per Catalog #356.
+
+    PER_AXIS_DECOMPOSITION GAP FIX 2026-05-28 per Z6-v2 + Hinton + 600-pair
+    Contrarian VETO op-routable #4: when ``distillation_weight > 0`` (SegNet
+    teacher wired via mock or real) the per-axis decomposition MUST emit
+    seg+recon_aux+archive_bytes rows so the canonical
+    ``AxisDecomposition.from_dict`` round-trip works at the downstream
+    cathedral ranker boundary.
+    """
+    import mlx.core as mx
+
+    adapter = MlxScoreAwareAdapter(
+        _tiny_dreamer_bundle(distill=0.5), substrate_id="dreamer_v3_rssm"
+    )
+    out = adapter.score_aware_components(adapter.model, mx.array([0, 1], dtype=mx.int32))
+    assert out is not None
+    assert "seg" in out
+    assert "pose" in out  # 0.0 (no pose teacher in mock fixture) per fail-closed
+    assert "recon_aux" in out
+    assert "archive_bytes" in out
+    # All values finite per AxisDecomposition __post_init__ invariant.
+    for key, value in out.items():
+        assert isinstance(value, float), f"{key}={value!r} must be float"
+        assert value == value, f"{key}={value!r} must not be NaN"
+    # seg > 0 because Hinton-KL is non-negative + the bundle has distill=0.5.
+    assert out["seg"] >= 0.0
+    # pose = 0.0 because the mock fixture does not wire a pose teacher
+    # (no pose_distill component emitted by score_aware_loss).
+    assert out["pose"] == 0.0
+    # archive_bytes = 0.0 per AxisDecomposition NaN-safe rule (per-step
+    # delta undefined at MLX L2; archive built post-training).
+    assert out["archive_bytes"] == 0.0
+
+
+@mlx_only
+def test_adapter_score_aware_components_both_teachers_populates_seg_and_pose() -> None:
+    """Both SegNet + PoseNet teachers wired → per-axis seg AND pose populated.
+
+    PER_AXIS_DECOMPOSITION GAP FIX 2026-05-28 cross-family sister: the
+    canonical scorer-bound BOTH-TEACHER-WIRED contract (Catalog #164) IS
+    the surface where the GAP closed. Cross-family seg/pose attribution
+    becomes possible only when BOTH axes are populated empirically.
+    """
+    import mlx.core as mx
+
+    from tac.substrates.hinton_distilled_scorer_surrogate import (
+        RealPoseNetTeacherCache,
+        build_learnable_pose_student_head,
+    )
+
+    base = _tiny_dreamer_bundle(num_pairs=4, distill=0.5)
+    pose_teacher = RealPoseNetTeacherCache(
+        teacher_pose_np=mx.ones((4, 6)),
+        num_pairs=4,
+        pose_dims=6,
+    )
+    pose_head = build_learnable_pose_student_head(seed=17)
+    bundle = RendererBundle(
+        model=base.model,
+        target_rgb_0=base.target_rgb_0,
+        target_rgb_1=base.target_rgb_1,
+        num_pairs=base.num_pairs,
+        forward_convention=base.forward_convention,
+        distillation_weight=0.5,
+        allow_mock_scorer_teacher=True,  # seg side via mock (no real SegNet here)
+        pose_distillation_weight=0.5,
+        pose_scorer_teacher=pose_teacher,
+        learnable_pose_student_head=pose_head,
+    )
+    adapter = MlxScoreAwareAdapter(bundle, substrate_id="dreamer_v3_rssm")
+    out = adapter.score_aware_components(
+        adapter.model, mx.array([0, 1, 2, 3], dtype=mx.int32)
+    )
+    assert out is not None
+    assert out["seg"] >= 0.0
+    assert out["pose"] >= 0.0  # pose-MSE is non-negative
+    assert out["recon_aux"] >= 0.0
+    assert out["archive_bytes"] == 0.0
+
+
+@mlx_only
+def test_adapter_score_aware_components_compatible_with_axis_decomposition() -> None:
+    """Per-axis dict round-trips through canonical AxisDecomposition contract.
+
+    Catalog #356 STRICT preflight gate contract: the per-axis surface MUST
+    map directly into ``AxisDecomposition.from_dict``-like consumption. The
+    canonical mapping is: seg → predicted_d_seg_delta; pose →
+    predicted_d_pose_delta; archive_bytes → predicted_archive_bytes_delta.
+    """
+    import mlx.core as mx
+
+    from tac.cathedral.consumer_contract import AxisDecomposition
+    from tac.provenance import (
+        build_provenance_for_predicted,
+        provenance_to_dict,
+    )
+
+    adapter = MlxScoreAwareAdapter(
+        _tiny_dreamer_bundle(distill=0.5), substrate_id="dreamer_v3_rssm"
+    )
+    out = adapter.score_aware_components(
+        adapter.model, mx.array([0, 1], dtype=mx.int32)
+    )
+    assert out is not None
+    # Build a canonical AxisDecomposition from the per-axis dict + canonical
+    # Provenance per Catalog #323. This verifies the GAP-fix output integrates
+    # with the downstream cathedral ranker boundary contract.
+    prov = build_provenance_for_predicted(
+        model_id="mlx_score_aware_per_axis_decomposition_v1",
+        inputs_sha256="a" * 64,
+        measurement_axis="[macOS-MLX research-signal]",
+        hardware_substrate="macos_arm64",
+    )
+    decomp = AxisDecomposition(
+        predicted_d_seg_delta=out["seg"],
+        predicted_d_pose_delta=out["pose"],
+        predicted_archive_bytes_delta=int(out["archive_bytes"]),
+        axis_tag="[predicted]",
+        canonical_provenance=provenance_to_dict(prov),
+    )
+    # Round-trip stable (no NaN, no infinite, no type rejection).
+    d = decomp.as_dict()
+    assert d["predicted_d_seg_delta"] == out["seg"]
+    assert d["predicted_d_pose_delta"] == out["pose"]
+    assert d["predicted_archive_bytes_delta"] == 0
+    assert d["axis_tag"] == "[predicted]"
+    assert d["canonical_provenance"]["measurement_axis"] == "[macOS-MLX research-signal]"
 
 
 # --------------------------------------------------------------------------- #
