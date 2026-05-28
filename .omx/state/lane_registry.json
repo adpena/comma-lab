@@ -60073,6 +60073,211 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_wyner_ziv_pipeline_stage_codec_l1_long_mlx_600pair_20260528",
+      "name": "Wyner-Ziv pipeline-stage codec L1 LONG MLX (empirical-measurement harness)",
+      "phase": 2.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/wyner_ziv_pipeline_stage_codec/trainer.py + tools/export_wyner_ziv_pipeline_stage_codec_mlx_to_pytorch_state_dict.py + tools/gate_mlx_candidate_contest_equivalence_wyner_ziv_pipeline_stage_codec.py; 19 dedicated tests pass; L1 harness runs end-to-end on real PR101 fp16 state_dict in 0.53s"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "experiments/results/wyner_ziv_pipeline_stage_codec_l1_landing_20260528/training_artifact.json [empirical:Y-derivable-prefix density 0.000218% on PR101 fp16 raw bytes 457916 B vs canonical Y (Comma2k19/ImageNet/torch_defaults/math_constants); WZPSC01 archive 193467 B emitted + roundtrip byte-identical] [macOS-MLX research-signal] non-promotable per Catalog #192/#341"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/wyner_ziv_pipeline_stage_codec_l1_long_mlx_600pair_landed_20260528.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; lane_class=substrate_engineering per HNeRV parity L7. dispatch_enabled=false preserved until L2 paired-CUDA per Catalog #325 14-day window. L1 LONG MLX empirical-measurement harness landed 2026-05-28; Y-derivable-prefix density 0.000218% on real PR101 fp16 state_dict; IMPLEMENTATION-LEVEL FALSIFICATION per Catalog #307 (paradigm Wyner 1976 R(D|Y) INTACT)."
+    },
+    {
+      "id": "lane_pact_nerv_vq_l1_long_run_mlx_local_20260528",
+      "name": "PACT-NeRV-VQ L1 LONG-RUN MLX-LOCAL (2000ep 32 pairs; 185.5x reduction; FIRST orthogonal-paradigm L1)",
+      "phase": 4.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "MLX renderer 729 LOC + trainer 320+ LOC with substrate-specific export_state_dict_fn wire-in + bridge 382 LOC (pre-existed) + gate 487 LOC (NEW) + archive_candidate 200 LOC (NEW) + 38-key training checkpoint with VQ codebook + EMA buffers + bridge run successful + archive packed (135,960 bytes sha c700216e44c897d0) + Catalog #1265 gate FAIL OBSERVABILITY-ONLY (max_abs_drift=0.4227 SIREN-class drift-vs-depth; BEST of cascade -29%); 2000ep MLX-LOCAL in 115.5s on M5 Max final_loss=0.001825 reduction=185.5x; non-promotable [macOS-MLX research-signal]"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/pact_nerv_vq_l1_long_run_mlx_landed_20260528.md (Catalog #300 v2 frontmatter + Catalog #292 assumption-adversary HARD-EARNED-vs-CARGO-CULTED + Catalog #294 9-dim checklist + Catalog #303 cargo-cult audit + Catalog #305 observability + Catalog #346 roster complete=True + Catalog #307 paradigm-vs-implementation classification of canonical-harness-bug + FORMALIZATION_PENDING canonical equation per Catalog #344)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "L1 LONG-RUN MLX-LOCAL closure; FIRST orthogonal-paradigm (discrete-tokens VQ-VAE) L1 promotion from PACT-NeRV family; saturates SELECTOR-PARADIGM cascade pivot; van den Oord 1711.00937 \u00a73.1-3.2 canonical; non-promotable [macOS-MLX research-signal] per Catalog #192/#317/#341; research_only=true"
+    },
+    {
+      "id": "lane_z6_v2_cargo_cult_unwind_hinton_distill_600pair_long_mlx_20260528",
+      "name": "Z6-v2 Hinton-distilled 600-pair LONG MLX cross-family parity",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "Z6-v2 trainer Hinton-distilled wire-in commit 1a855a9a6 + 600-pair LONG MLX 2000ep landed commit d6168d9ef; archive sha 5cdcdcca02ea5d25481a84e6d97c089775b5676926889a40d53c366fbeef20be 612704 bytes; final loss 3.4038 (31.59x reduction); 247.71s wall-clock; non-promotable [macOS-MLX research-signal] per Catalog #192/#317/#341"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/z6_v2_cargo_cult_unwind_hinton_distill_600pair_long_mlx_landed_20260528.md commit d6168d9ef"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_dykstra_pareto_polytope_solver_wire_in_dim1_phase4_20260528",
+      "name": "Dykstra Pareto polytope solver wire-in (CATHEDRAL-SMARTER-DESIGN-MEMO Dim 1 Phase 4)",
+      "phase": 4.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/dykstra_pareto_solver/ + Catalog #372 STRICT preflight + canonical equation dykstra_pareto_polytope_intersection_compounding_v1 + cathedral consumer + landing memo + retroactive sweep + probe outcomes row (PROCEED 30-day expiry); 69/69 tests pass"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #372 check_cathedral_autopilot_main_invokes_dykstra_pareto_solver strict=True at preflight_all() live count 0; 18 dedicated tests pass"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/dykstra_pareto_polytope_solver_wire_in_dim1_phase4_landed_20260528.md + retroactive_sweep_for_catalog_372_20260528T133000Z.md + CLAUDE.md row"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_slot_2_wave_n5_z6_v2_cargo_cult_unwind_hinton_distill_600pair_long_mlx_orthogonal_pose_axis_candidate_b_20260528",
+      "name": "Z6-v2 cargo-cult-unwind Hinton 600-pair orthogonal pose-axis Candidate B extension Wave N+5 Slot 2",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "[empirical:experiments/results/z6_v2_per_axis_decomposition_validation_20260528/training_artifact.json] 50ep 600pair MLX-LOCAL pose-axis 3.74x reduction; canonical equation z6_v2_predictive_coding_pose_axis_savings_v1 registered; probe outcome PROCEED; Wave N+6 composition queued"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/z6_v2_cargo_cult_unwind_hinton_distill_600pair_long_mlx_orthogonal_pose_axis_candidate_b_landed_20260528.md (Catalog #300 v2 frontmatter T2 17-attendee + 9-dim checklist + cargo-cult audit + observability surface + predicted band + canonical-vs-unique decision + 6-hook wire-in)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -60082,5 +60287,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-28T06:18:11Z"
+  "updated_at": "2026-05-28T16:16:27Z"
 }
