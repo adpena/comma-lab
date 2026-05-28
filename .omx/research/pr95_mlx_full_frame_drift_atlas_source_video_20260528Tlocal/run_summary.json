@@ -1,13 +1,13 @@
 {
   "byte_closed_smoke_archive": {
-    "bytes": 6191,
+    "bytes": 6190,
     "compression_method": "stored",
     "dispatch_attempted": false,
     "dispatch_packet_ready": false,
     "gpu_launched": false,
     "member": "0.bin",
-    "member_bytes": 6083,
-    "member_sha256": "7a971537191cb89f508f5e560b264c6321a5285dba8c851d48caea73d01a7333",
+    "member_bytes": 6082,
+    "member_sha256": "430d1526d977a67d9722e3fa86c3d69b960dc4e1bb8ecd879490b2a0f10117bf",
     "path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/archive.zip",
     "pr95_1to1_reproduction_claim": false,
     "promotable": false,
@@ -22,7 +22,7 @@
     "score_claim": false,
     "score_claim_eligible": false,
     "score_claim_valid": false,
-    "sha256": "e9191156c14d13c2b0e19cfb22a2b7831a2c13f67611e7dc526476758b372e3d"
+    "sha256": "8d441910614923a40415bafbdf7279d8e4fe4b968abd6a53fb8799ab9a2837ea"
   },
   "candidate_id": "pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed29_steps1_c4_source_video_rgb_yuv6",
   "dispatch_attempted": false,
@@ -336,6 +336,7 @@
     },
     "dispatch_attempted": false,
     "dispatch_packet_ready": false,
+    "drift_localization_verdict": "mlx_decoder_or_mlx_bridge_arithmetic_drift",
     "exact_readiness_refusal": {
       "blockers": [
         "full_frame_inflate_parity_against_source_runtime_failed",
@@ -349,7 +350,7 @@
     "full_frame_inflate_output_parity_claim": false,
     "full_frame_inflate_parity_failed": true,
     "full_frame_inflate_parity_satisfied": false,
-    "generated_utc": "2026-05-28T13:53:53.500829+00:00",
+    "generated_utc": "2026-05-28T13:59:41.878802+00:00",
     "gpu_launched": false,
     "inflate_sh": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
     "lane_id": "lane_pr95_hnerv_mlx_reproduction",
@@ -398,10 +399,56 @@
     "score_claim_eligible": false,
     "score_claim_valid": false,
     "source_pr": 95,
-    "started_utc": "2026-05-28T13:53:52.583379+00:00",
+    "started_utc": "2026-05-28T13:59:40.964280+00:00",
     "stderr_tail": "",
     "stdout_tail": "Inflating 0.mkv ... saved 2 frames\n",
     "submission": "hnerv_muon",
+    "torch_direct_reference": {
+      "byte_exact_with_public_inflate": true,
+      "diff": {
+        "boundary_distance_changed_byte_count": {
+          "edge_0": 0,
+          "interior_ge9": 0,
+          "near_edge_1_2": 0,
+          "near_edge_3_8": 0
+        },
+        "byte_exact": true,
+        "changed_byte_count": 0,
+        "changed_byte_fraction": 0.0,
+        "first_mismatch": null,
+        "frame_shape_nhwc": [
+          2,
+          874,
+          1164,
+          3
+        ],
+        "max_abs_uint8": 0,
+        "mean_abs_uint8": 0.0,
+        "mismatch_sample_cap": 16,
+        "mismatch_sample_count": 0,
+        "mismatch_samples": [],
+        "mlx_count": 6104016,
+        "p999_abs_uint8": 0.0,
+        "p99_abs_uint8": 0.0,
+        "per_channel_changed_byte_count": {
+          "b": 0,
+          "g": 0,
+          "r": 0
+        },
+        "per_frame_changed_byte_count": [
+          0,
+          0
+        ],
+        "public_count": 6104016,
+        "raw_layout": "frames_nhwc_uint8",
+        "same_shape": true,
+        "signed_delta_histogram_mlx_minus_public": {}
+      },
+      "enabled": true,
+      "model_py": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py",
+      "raw_bytes": 6104016,
+      "raw_sha256": "826f545c608b91f0dfd43dcea6edea8d4a23008feae2c02f71a70808c74a5e6d"
+    },
     "work_dir": null
   },
   "gpu_launched": false,
@@ -696,10 +743,10 @@
         "1": 10
       }
     },
-    "full_frame_inflate_parity_proof_bytes": 11168,
+    "full_frame_inflate_parity_proof_bytes": 12575,
     "full_frame_inflate_parity_proof_path": ".omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/full_frame_inflate_parity_proof.json",
     "full_frame_inflate_parity_proof_present": true,
-    "full_frame_inflate_parity_proof_sha256": "16b787d0086e9800ce2bf061ef8403f843b12e237827cd2856784d1ffb5cb687",
+    "full_frame_inflate_parity_proof_sha256": "41e90c4f1ae2e6e232f3365da11f72258b8afdf125a26152de9820326456c336",
     "full_frame_inflate_parity_satisfied": false,
     "gpu_launched": false,
     "member": "0.bin",
@@ -734,7 +781,7 @@
     "runtime_consumption_proof_bytes": 4593,
     "runtime_consumption_proof_path": ".omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/runtime_consumption_proof.json",
     "runtime_consumption_proof_present": true,
-    "runtime_consumption_proof_sha256": "2ff049bc2d4ba16ea2ed2eff542995f50ccfe856b9cf6a0f8bb19075e83a1349",
+    "runtime_consumption_proof_sha256": "6874437b0e160a4ae3e11b3c267b4326f2fb08511c1fbed701e50a3cf28c8fdc",
     "runtime_consumption_proven": true,
     "schema": "pr95_hnerv_archive_export.v1",
     "score_claim": false,
@@ -840,7 +887,7 @@
       "conv2d_accumulation_overrides": {},
       "dispatch_attempted": false,
       "dispatch_packet_ready": false,
-      "elapsed_seconds": 0.04263470800651703,
+      "elapsed_seconds": 0.04005200001120102,
       "evidence_grade": "[macOS-MLX research-signal]",
       "exact_readiness_refusal": {
         "blockers": [
@@ -851,7 +898,7 @@
         "ready": false,
         "schema": "exact_readiness_refusal.v1"
       },
-      "generated_utc": "2026-05-28T13:53:51.904127+00:00",
+      "generated_utc": "2026-05-28T13:59:40.313089+00:00",
       "gpu_launched": false,
       "lane_id": "lane_pr95_hnerv_mlx_reproduction",
       "mlx_device": "cpu",
@@ -896,7 +943,7 @@
         512
       ]
     },
-    "generated_utc": "2026-05-28T13:53:51.904191+00:00",
+    "generated_utc": "2026-05-28T13:59:40.313150+00:00",
     "gpu_launched": false,
     "lane_id": "lane_pr95_hnerv_mlx_reproduction",
     "mlx_device": "cpu",
@@ -1316,7 +1363,7 @@
     "expected_raw_bytes": 6104016,
     "file_list": null,
     "full_frame_inflate_parity": false,
-    "generated_utc": "2026-05-28T13:53:52.488089+00:00",
+    "generated_utc": "2026-05-28T13:59:40.870578+00:00",
     "gpu_launched": false,
     "inflate_sh": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
     "lane_id": "lane_pr95_hnerv_mlx_reproduction",
@@ -1361,7 +1408,7 @@
     "score_claim_valid": false,
     "source_pr": 95,
     "staged_member": null,
-    "started_utc": "2026-05-28T13:53:51.984382+00:00",
+    "started_utc": "2026-05-28T13:59:40.388501+00:00",
     "stderr_tail": "",
     "stdout_tail": "Inflating 0.mkv ... saved 2 frames\n",
     "submission": "hnerv_muon",
@@ -1373,7 +1420,7 @@
   "score_claim": false,
   "score_claim_eligible": false,
   "score_claim_valid": false,
-  "seconds_per_step": 0.0292178329982562,
+  "seconds_per_step": 0.0270410829980392,
   "source_faithful_preprocess_smoke": {
     "camera_hw": [
       11,
@@ -1381,7 +1428,7 @@
     ],
     "dispatch_attempted": false,
     "dispatch_packet_ready": false,
-    "elapsed_seconds": 0.00316904200008139,
+    "elapsed_seconds": 0.0029665410111192614,
     "exact_readiness_refusal": {
       "blockers": [
         "pr95_source_video_loader_not_wired_to_mlx_preprocess_smoke",
@@ -1404,7 +1451,7 @@
       ],
       "dispatch_attempted": false,
       "dispatch_packet_ready": false,
-      "elapsed_seconds": 0.0013988330028951168,
+      "elapsed_seconds": 0.0024110829981509596,
       "gpu_launched": false,
       "gradient_reachable": true,
       "input_shape": [

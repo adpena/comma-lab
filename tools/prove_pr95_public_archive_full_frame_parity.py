@@ -6,8 +6,10 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import os
 import subprocess
+import sys
 import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
@@ -96,6 +98,24 @@ def _mlx_device(name: str) -> Any:
     if name == "gpu":
         return mx.gpu
     raise ValueError(f"unsupported MLX device {name!r}")
+
+
+def _load_public_pr95_decoder_cls(model_path: Path) -> Any:
+    if not model_path.is_file():
+        raise FileNotFoundError(f"public PR95 source model.py not found: {model_path}")
+    spec = importlib.util.spec_from_file_location(
+        f"public_pr95_hnerv_model_{abs(hash(model_path.resolve()))}",
+        model_path,
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot import public PR95 model.py: {model_path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    try:
+        return module.HNeRVDecoder
+    except AttributeError as exc:
+        raise RuntimeError(f"{model_path} does not define HNeRVDecoder") from exc
 
 
 def _run_public_inflate(
@@ -192,6 +212,58 @@ def _render_mlx_camera_frame_bytes(
             chunks.append(frames.tobytes())
     finally:
         mx.set_default_device(previous_device)
+    return chunks
+
+
+def _render_torch_camera_frame_bytes(
+    *,
+    archive_zip: Path,
+    member_name: str,
+    model_path: Path,
+    chunk_pairs: int,
+) -> list[bytes]:
+    import torch
+    import torch.nn.functional as F
+
+    packet = parse_pr95_public_archive_zip(archive_zip, member_name=member_name)
+    meta = packet.meta
+    eval_h, eval_w = [int(dim) for dim in meta["eval_size"]]
+    decoder_cls = _load_public_pr95_decoder_cls(model_path)
+    torch_state_dict = {
+        name: torch.from_numpy(value.astype(np.float32, copy=True))
+        for name, value in packet.state_dict.items()
+    }
+    model = decoder_cls(
+        latent_dim=int(meta["latent_dim"]),
+        base_channels=int(meta["base_channels"]),
+        eval_size=(eval_h, eval_w),
+    ).eval()
+    model.load_state_dict(torch_state_dict)
+
+    chunks: list[bytes] = []
+    with torch.no_grad():
+        for start in range(0, int(packet.latents.shape[0]), chunk_pairs):
+            stop = min(start + chunk_pairs, int(packet.latents.shape[0]))
+            latent_chunk = torch.from_numpy(
+                packet.latents[start:stop].astype(np.float32, copy=True)
+            )
+            decoded = model(latent_chunk).detach()
+            flat = decoded.reshape((stop - start) * 2, 3, eval_h, eval_w)
+            up = F.interpolate(
+                flat,
+                size=(CAMERA_H, CAMERA_W),
+                mode="bicubic",
+                align_corners=False,
+            )
+            frames = (
+                up.clamp(0, 255)
+                .permute(0, 2, 3, 1)
+                .round()
+                .to(torch.uint8)
+                .cpu()
+                .numpy()
+            )
+            chunks.append(frames.tobytes())
     return chunks
 
 
@@ -350,6 +422,19 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--archive-zip", type=Path, required=True)
     parser.add_argument("--output-json", type=Path, required=True)
     parser.add_argument("--inflate-sh", type=Path, default=DEFAULT_INFLATE_SH)
+    parser.add_argument(
+        "--torch-reference-model-py",
+        type=Path,
+        help=(
+            "Public PR95 model.py for direct PyTorch full-frame reconstruction. "
+            "Defaults to <inflate.sh parent>/src/model.py."
+        ),
+    )
+    parser.add_argument(
+        "--skip-torch-direct-reference",
+        action="store_true",
+        help="Skip direct PyTorch-vs-public full-frame reference localization.",
+    )
     parser.add_argument("--work-dir", type=Path)
     parser.add_argument("--member-name", default="0.bin")
     parser.add_argument("--file-base", default="0")
@@ -401,6 +486,11 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit("--max-mismatch-samples must be >= 0")
     archive_zip = args.archive_zip.resolve()
     inflate_sh = args.inflate_sh.resolve()
+    torch_reference_model_py = (
+        args.torch_reference_model_py.resolve()
+        if args.torch_reference_model_py is not None
+        else inflate_sh.parent / "src/model.py"
+    )
     output_json = args.output_json.resolve()
     if not inflate_sh.is_file():
         raise SystemExit(f"inflate.sh not found: {inflate_sh}")
@@ -442,6 +532,11 @@ def main(argv: list[str] | None = None) -> int:
         timeout_seconds=args.timeout_seconds,
     )
     public_raw = public_raw_path.read_bytes() if public_raw_path.is_file() else b""
+    public_ok = (
+        proc.returncode == 0
+        and public_raw_path.is_file()
+        and len(public_raw) == expected_bytes
+    )
     mlx_chunks = _render_mlx_camera_frame_bytes(
         archive_zip=archive_zip,
         member_name=args.member_name,
@@ -455,12 +550,45 @@ def main(argv: list[str] | None = None) -> int:
         mlx_chunks,
         max_samples=args.max_mismatch_samples,
     )
-    public_ok = (
-        proc.returncode == 0
-        and public_raw_path.is_file()
-        and len(public_raw) == expected_bytes
-    )
+    torch_reference: dict[str, Any] = {
+        "enabled": False,
+        "model_py": torch_reference_model_py.as_posix(),
+    }
+    if not args.skip_torch_direct_reference:
+        torch_chunks = _render_torch_camera_frame_bytes(
+            archive_zip=archive_zip,
+            member_name=args.member_name,
+            model_path=torch_reference_model_py,
+            chunk_pairs=args.chunk_pairs,
+        )
+        torch_stats = _diff_stats(
+            public_raw,
+            torch_chunks,
+            max_samples=args.max_mismatch_samples,
+        )
+        torch_reference = {
+            "enabled": True,
+            "model_py": torch_reference_model_py.as_posix(),
+            "raw_bytes": sum(len(chunk) for chunk in torch_chunks),
+            "raw_sha256": _sha256_bytes_iter(torch_chunks),
+            "diff": torch_stats,
+            "byte_exact_with_public_inflate": bool(
+                public_ok and torch_stats.get("byte_exact") is True
+            ),
+        }
     byte_exact = bool(public_ok and stats.get("byte_exact") is True)
+    if not public_ok:
+        drift_localization_verdict = "public_inflate_failed"
+    elif byte_exact:
+        drift_localization_verdict = "mlx_full_frame_byte_exact"
+    elif torch_reference.get("enabled") and torch_reference.get(
+        "byte_exact_with_public_inflate"
+    ):
+        drift_localization_verdict = "mlx_decoder_or_mlx_bridge_arithmetic_drift"
+    elif torch_reference.get("enabled"):
+        drift_localization_verdict = "public_runtime_parser_or_torch_reference_mismatch"
+    else:
+        drift_localization_verdict = "torch_reference_not_run"
     blockers = [
         "full_frame_inflate_parity_is_not_score_authority",
         "requires_exact_cpu_cuda_auth_eval_before_score_claim",
@@ -494,6 +622,8 @@ def main(argv: list[str] | None = None) -> int:
         else None,
         "mlx_raw_bytes": sum(len(chunk) for chunk in mlx_chunks),
         "mlx_raw_sha256": _sha256_bytes_iter(mlx_chunks),
+        "torch_direct_reference": torch_reference,
+        "drift_localization_verdict": drift_localization_verdict,
         "returncode": proc.returncode,
         "stdout_tail": proc.stdout[-4000:],
         "stderr_tail": proc.stderr[-4000:],

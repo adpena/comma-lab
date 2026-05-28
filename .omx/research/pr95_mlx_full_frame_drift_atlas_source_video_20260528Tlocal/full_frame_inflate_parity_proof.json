@@ -307,6 +307,7 @@
   },
   "dispatch_attempted": false,
   "dispatch_packet_ready": false,
+  "drift_localization_verdict": "mlx_decoder_or_mlx_bridge_arithmetic_drift",
   "exact_readiness_refusal": {
     "blockers": [
       "full_frame_inflate_parity_against_source_runtime_failed",
@@ -320,7 +321,7 @@
   "full_frame_inflate_output_parity_claim": false,
   "full_frame_inflate_parity_failed": true,
   "full_frame_inflate_parity_satisfied": false,
-  "generated_utc": "2026-05-28T13:53:53.500829+00:00",
+  "generated_utc": "2026-05-28T13:59:41.878802+00:00",
   "gpu_launched": false,
   "inflate_sh": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
   "lane_id": "lane_pr95_hnerv_mlx_reproduction",
@@ -369,9 +370,55 @@
   "score_claim_eligible": false,
   "score_claim_valid": false,
   "source_pr": 95,
-  "started_utc": "2026-05-28T13:53:52.583379+00:00",
+  "started_utc": "2026-05-28T13:59:40.964280+00:00",
   "stderr_tail": "",
   "stdout_tail": "Inflating 0.mkv ... saved 2 frames\n",
   "submission": "hnerv_muon",
+  "torch_direct_reference": {
+    "byte_exact_with_public_inflate": true,
+    "diff": {
+      "boundary_distance_changed_byte_count": {
+        "edge_0": 0,
+        "interior_ge9": 0,
+        "near_edge_1_2": 0,
+        "near_edge_3_8": 0
+      },
+      "byte_exact": true,
+      "changed_byte_count": 0,
+      "changed_byte_fraction": 0.0,
+      "first_mismatch": null,
+      "frame_shape_nhwc": [
+        2,
+        874,
+        1164,
+        3
+      ],
+      "max_abs_uint8": 0,
+      "mean_abs_uint8": 0.0,
+      "mismatch_sample_cap": 16,
+      "mismatch_sample_count": 0,
+      "mismatch_samples": [],
+      "mlx_count": 6104016,
+      "p999_abs_uint8": 0.0,
+      "p99_abs_uint8": 0.0,
+      "per_channel_changed_byte_count": {
+        "b": 0,
+        "g": 0,
+        "r": 0
+      },
+      "per_frame_changed_byte_count": [
+        0,
+        0
+      ],
+      "public_count": 6104016,
+      "raw_layout": "frames_nhwc_uint8",
+      "same_shape": true,
+      "signed_delta_histogram_mlx_minus_public": {}
+    },
+    "enabled": true,
+    "model_py": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py",
+    "raw_bytes": 6104016,
+    "raw_sha256": "826f545c608b91f0dfd43dcea6edea8d4a23008feae2c02f71a70808c74a5e6d"
+  },
   "work_dir": null
 }

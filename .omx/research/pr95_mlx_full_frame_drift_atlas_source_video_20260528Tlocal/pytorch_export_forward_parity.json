@@ -94,7 +94,7 @@
     "conv2d_accumulation_overrides": {},
     "dispatch_attempted": false,
     "dispatch_packet_ready": false,
-    "elapsed_seconds": 0.04263470800651703,
+    "elapsed_seconds": 0.04005200001120102,
     "evidence_grade": "[macOS-MLX research-signal]",
     "exact_readiness_refusal": {
       "blockers": [
@@ -105,7 +105,7 @@
       "ready": false,
       "schema": "exact_readiness_refusal.v1"
     },
-    "generated_utc": "2026-05-28T13:53:51.904127+00:00",
+    "generated_utc": "2026-05-28T13:59:40.313089+00:00",
     "gpu_launched": false,
     "lane_id": "lane_pr95_hnerv_mlx_reproduction",
     "mlx_device": "cpu",
@@ -150,7 +150,7 @@
       512
     ]
   },
-  "generated_utc": "2026-05-28T13:53:51.904191+00:00",
+  "generated_utc": "2026-05-28T13:59:40.313150+00:00",
   "gpu_launched": false,
   "lane_id": "lane_pr95_hnerv_mlx_reproduction",
   "mlx_device": "cpu",

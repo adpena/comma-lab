@@ -284,10 +284,10 @@
       "1": 10
     }
   },
-  "full_frame_inflate_parity_proof_bytes": 11168,
+  "full_frame_inflate_parity_proof_bytes": 12575,
   "full_frame_inflate_parity_proof_path": ".omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/full_frame_inflate_parity_proof.json",
   "full_frame_inflate_parity_proof_present": true,
-  "full_frame_inflate_parity_proof_sha256": "16b787d0086e9800ce2bf061ef8403f843b12e237827cd2856784d1ffb5cb687",
+  "full_frame_inflate_parity_proof_sha256": "41e90c4f1ae2e6e232f3365da11f72258b8afdf125a26152de9820326456c336",
   "full_frame_inflate_parity_satisfied": false,
   "gpu_launched": false,
   "member": "0.bin",
@@ -322,7 +322,7 @@
   "runtime_consumption_proof_bytes": 4593,
   "runtime_consumption_proof_path": ".omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/runtime_consumption_proof.json",
   "runtime_consumption_proof_present": true,
-  "runtime_consumption_proof_sha256": "2ff049bc2d4ba16ea2ed2eff542995f50ccfe856b9cf6a0f8bb19075e83a1349",
+  "runtime_consumption_proof_sha256": "6874437b0e160a4ae3e11b3c267b4326f2fb08511c1fbed701e50a3cf28c8fdc",
   "runtime_consumption_proven": true,
   "schema": "pr95_hnerv_archive_export.v1",
   "score_claim": false,

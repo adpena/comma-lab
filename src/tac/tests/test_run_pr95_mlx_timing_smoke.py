@@ -202,6 +202,15 @@ def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path
         "full_frame_inflate_parity_satisfied"
     ] is False
     full_frame_diff = summary["full_frame_inflate_parity_proof"]["diff"]
+    torch_reference = summary["full_frame_inflate_parity_proof"][
+        "torch_direct_reference"
+    ]
+    assert torch_reference["enabled"] is True
+    assert torch_reference["byte_exact_with_public_inflate"] is True
+    assert torch_reference["diff"]["byte_exact"] is True
+    assert summary["full_frame_inflate_parity_proof"][
+        "drift_localization_verdict"
+    ] == "mlx_decoder_or_mlx_bridge_arithmetic_drift"
     assert full_frame_diff["max_abs_uint8"] <= 1
     assert full_frame_diff["changed_byte_count"] > 0
     assert full_frame_diff["raw_layout"] == "frames_nhwc_uint8"
