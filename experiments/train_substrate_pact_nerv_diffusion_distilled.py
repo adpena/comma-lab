@@ -267,6 +267,7 @@ def _smoke_main(args: argparse.Namespace) -> int:
         "score_claim": False,
         "score_axis_tag": None,
         "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "custody_status": "ci-rebuildable",
         "evidence_grade": "scaffold-smoke-no-score-axis",
@@ -496,6 +497,7 @@ def _full_main(args: argparse.Namespace) -> int:
             "score_claim": contest_cuda_score is not None,
             "score_axis_tag": "[contest-CUDA]" if contest_cuda_score is not None else None,
             "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
             "ready_for_exact_eval_dispatch": False,
         }
         (args.output_dir / "provenance.json").write_text(
