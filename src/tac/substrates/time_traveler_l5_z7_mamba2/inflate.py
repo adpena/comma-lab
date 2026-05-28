@@ -70,8 +70,16 @@ def _build_decoder(
         output_width=int(meta.get("output_width", EVAL_HW[1])),
     ).to(device)
     # Cast fp16 archive weights to fp32 for decoder forward
+    # Wave N+9 Slot 1 self-containment fix 2026-05-28: strip the canonical
+    # "decoder." prefix that `export_state_dict` adds (per mlx_native.py:735+)
+    # before loading into the bare `_Z6Decoder` module which expects
+    # unprefixed keys (the prefix represents the field name in the parent
+    # PyTorch module that owns the decoder as a child). Empirically verified
+    # at landing: without prefix strip, `load_state_dict(strict=True)`
+    # raises with Missing+Unexpected keys for all 12 decoder params.
     state_dict_fp32 = {
-        k: v.to(torch.float32) for k, v in archive.decoder_state_dict.items()
+        (k[len("decoder."):] if k.startswith("decoder.") else k): v.to(torch.float32)
+        for k, v in archive.decoder_state_dict.items()
     }
     decoder.load_state_dict(state_dict_fp32, strict=True)
     return decoder.eval()
@@ -106,8 +114,18 @@ def _context_condition_latents(
             "latent_affine Z7MCM2 archive missing context conditioner state_dict "
             "in encoder_blob"
         )
+    # Wave N+9 Slot 1 self-containment fix 2026-05-28: strip the canonical
+    # "context_conditioner." / "conditioner." prefix that export_state_dict
+    # adds before loading into the bare `LatentAffineContextConditioner` module
+    # (sister of decoder.* + predictor.* prefix-strips above).
+    _PREFIXES = ("context_conditioner.", "conditioner.")
+    def _strip(k: str) -> str:
+        for pfx in _PREFIXES:
+            if k.startswith(pfx):
+                return k[len(pfx):]
+        return k
     state_dict_fp32 = {
-        k: v.to(torch.float32) for k, v in archive.encoder_state_dict.items()
+        _strip(k): v.to(torch.float32) for k, v in archive.encoder_state_dict.items()
     }
     conditioner.load_state_dict(state_dict_fp32, strict=True)
     conditioner.eval()

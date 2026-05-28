@@ -83,6 +83,7 @@ import math
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 CONTEST_NORMALIZER: float = 37_545_489.0
@@ -383,6 +384,9 @@ def write_contest_runtime(
     repo_root: Any,
     runtime_module_files: Sequence[str] = ("architecture.py", "archive.py", "inflate.py"),
     inflate_import_line: str | None = None,
+    vendor_extra_substrate_packages: Sequence[tuple[str, Sequence[str]]] | None = None,
+    vendor_shared_inflate_runtime: bool = False,
+    vendor_extra_tac_subpackages: Sequence[tuple[str, Sequence[str]]] | None = None,
 ) -> None:
     """Emit the contest-compliant ``inflate.sh`` + ``inflate.py`` pair.
 
@@ -399,6 +403,14 @@ def write_contest_runtime(
       depending on the dev repo); numpy/PIL-portable (no MLX dep) per the 8th
       standing directive.
 
+    Wave N+9 Slot 1 cross-substrate vendoring extension 2026-05-28
+    (catalog #295/#361 self-containment fix): substrates whose ``inflate.py``
+    imports from sister substrate packages OR ``tac.substrates._shared.inflate_runtime``
+    MUST declare those transitive deps via ``vendor_extra_substrate_packages``
+    and/or ``vendor_shared_inflate_runtime=True``. Without this, the shipped
+    ``submission/`` fails at first import (empirically verified at Wave N+9
+    Slot 1 landing on Z7-Mamba-2 follow-up — ``ModuleNotFoundError: tac.substrates._shared``).
+
     Args:
         submission_dir: pathlib.Path; the contest submission directory.
         substrate_pkg_name: e.g. ``"pact_nerv_ia3"`` (the substrates/ subdir).
@@ -406,6 +418,25 @@ def write_contest_runtime(
         runtime_module_files: substrate package modules to vendor.
         inflate_import_line: the ``from tac.substrates.<pkg>.inflate import
             inflate_one_video`` line; defaults to the canonical form.
+        vendor_extra_substrate_packages: optional sequence of
+            ``(pkg_name, (file1.py, file2.py, ...))`` tuples for sister
+            substrate packages whose modules are transitively imported by
+            this substrate's ``inflate.py``. Each package gets its own
+            ``submission/src/tac/substrates/<pkg>/`` directory + ``__init__.py``
+            stub + the requested files copied via ``shutil.copy2``. Per Catalog
+            #295 self-containment + Catalog #361 sister-extinction architecture.
+        vendor_shared_inflate_runtime: when True, also vendors
+            ``tac.substrates._shared.inflate_runtime`` (the canonical helpers
+            ``select_inflate_device`` / ``raw_output_path`` / ``write_rgb_pair_to_raw``
+            etc.) into ``submission/src/tac/substrates/_shared/`` so substrates
+            importing from it work in the shipped submission. Per Catalog
+            #205 + Catalog #295.
+        vendor_extra_tac_subpackages: optional sequence of
+            ``(subpkg_dotted_name, (file1.py, ...))`` tuples for transitively-
+            imported ``tac.<subpkg>`` packages (e.g. ``("optimization",
+            ("mamba2_predictor.py",))``). Each subpkg gets its own
+            ``submission/src/tac/<subpkg>/`` directory + ``__init__.py`` stub.
+            Per Catalog #295 self-containment.
     """
     import shutil
 
@@ -423,6 +454,48 @@ def write_contest_runtime(
         src_file = substrate_src / name
         if src_file.is_file():
             shutil.copy2(src_file, runtime_pkg / name)
+
+    # Wave N+9 Slot 1 extension: optional cross-substrate vendoring per Catalog
+    # #295 self-containment + Catalog #361 sister-extinction architecture.
+    # Per CLAUDE.md "Forbidden /tmp paths in any persisted artifact" + 8th MLX-
+    # FIRST standing directive (inflate stays numpy-portable, no MLX dep): the
+    # shared inflate_runtime helpers are PyTorch-portable; cross-substrate
+    # decoder architectures (e.g. _Z6Decoder for Z6/Z7 family) are PyTorch.
+    if vendor_shared_inflate_runtime:
+        shared_pkg = submission_dir / "src" / "tac" / "substrates" / "_shared"
+        shared_pkg.mkdir(parents=True, exist_ok=True)
+        (shared_pkg / "__init__.py").write_text("", encoding="utf-8")
+        shared_src = repo_root / "src" / "tac" / "substrates" / "_shared" / "inflate_runtime.py"
+        if shared_src.is_file():
+            shutil.copy2(shared_src, shared_pkg / "inflate_runtime.py")
+
+    if vendor_extra_substrate_packages:
+        for pkg_name, files in vendor_extra_substrate_packages:
+            extra_pkg = submission_dir / "src" / "tac" / "substrates" / pkg_name
+            extra_pkg.mkdir(parents=True, exist_ok=True)
+            (extra_pkg / "__init__.py").write_text("", encoding="utf-8")
+            extra_src = repo_root / "src" / "tac" / "substrates" / pkg_name
+            for name in files:
+                src_file = extra_src / name
+                if src_file.is_file():
+                    shutil.copy2(src_file, extra_pkg / name)
+
+    if vendor_extra_tac_subpackages:
+        for subpkg_dotted, files in vendor_extra_tac_subpackages:
+            # Support dotted paths like "optimization" or "optimization.subpkg".
+            parts = subpkg_dotted.split(".")
+            sub_dir = submission_dir / "src" / "tac"
+            for part in parts:
+                sub_dir = sub_dir / part
+                sub_dir.mkdir(parents=True, exist_ok=True)
+                init_file = sub_dir / "__init__.py"
+                if not init_file.exists():
+                    init_file.write_text("", encoding="utf-8")
+            sub_src = repo_root / "src" / "tac" / Path(*parts)
+            for name in files:
+                src_file = sub_src / name
+                if src_file.is_file():
+                    shutil.copy2(src_file, sub_dir / name)
 
     if inflate_import_line is None:
         inflate_import_line = f"from tac.substrates.{substrate_pkg_name}.inflate import inflate_one_video"

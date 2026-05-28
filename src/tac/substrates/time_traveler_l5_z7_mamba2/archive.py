@@ -575,8 +575,13 @@ def replay_latent_sequence_with_context(
     predictor = Mamba2Predictor(archive.config.to_mamba2_predictor_config())
     if not archive.config.identity_predictor:
         # Cast predictor weights to fp32 for stable replay
+        # Wave N+9 Slot 1 self-containment fix 2026-05-28: strip the canonical
+        # "predictor." prefix that `export_state_dict` adds before loading into
+        # the bare `Mamba2Predictor` module which expects unprefixed keys
+        # (sister of the decoder.* prefix-strip in inflate._build_decoder).
         state_dict_fp32 = {
-            k: v.to(torch.float32) for k, v in archive.predictor_state_dict.items()
+            (k[len("predictor."):] if k.startswith("predictor.") else k): v.to(torch.float32)
+            for k, v in archive.predictor_state_dict.items()
         }
         predictor.load_state_dict(state_dict_fp32, strict=True)
     predictor.eval()
