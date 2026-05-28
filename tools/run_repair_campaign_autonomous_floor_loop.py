@@ -62,6 +62,9 @@ from tac.repo_io import (  # noqa: E402
 REPAIR_CAMPAIGN_AUTONOMOUS_FLOOR_LOOP_SCHEMA = (
     "repair_campaign_autonomous_floor_loop.v1"
 )
+REPAIR_CAMPAIGN_AUTONOMOUS_FLOOR_LOOP_BLOCKER_REPORT_SCHEMA = (
+    "repair_campaign_autonomous_floor_loop_blocker_report.v1"
+)
 
 
 class RepairCampaignAutonomousFloorLoopError(ValueError):
@@ -107,6 +110,18 @@ def _load_json(path: Path) -> dict[str, Any]:
             f"{path} must contain a JSON object"
         )
     return payload
+
+
+def _string_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, (str, bytes, bytearray)):
+        text = str(value).strip()
+        return [text] if text else []
+    if isinstance(value, Sequence):
+        return [str(item).strip() for item in value if str(item).strip()]
+    text = str(value).strip()
+    return [text] if text else []
 
 
 def _run_worker(
@@ -180,6 +195,92 @@ def _iteration_stop_reason(stack_plan: dict[str, Any], worker_result: dict[str, 
     if stack_plan.get("candidate_improvement_observed") is True:
         return "candidate_improvement_observed"
     return "exact_axis_blocker"
+
+
+def _precise_blocker_stop_reason(summary: dict[str, Any]) -> str:
+    stack_plan = summary["stack_search_plan"]
+    decision = stack_plan.get("budget_routing_decision") or {}
+    route = str(decision.get("activation_action") or "")
+    if any(
+        _iteration.get("stop_reason") == "exact_axis_blocker_or_local_worker_failure"
+        for _iteration in summary.get("iterations") or []
+        if isinstance(_iteration, dict)
+    ):
+        return "local_worker_failure_or_exact_axis_blocker"
+    if int(summary.get("archive_bound_exact_handoff_candidate_count") or 0) > 0:
+        return "archive_bound_candidate_exact_axis_blocked"
+    if route == "demote_repair_family_until_new_component_signal":
+        return "family_demoted_by_posterior_evidence"
+    if int(stack_plan.get("execution_report_count") or 0) == 0:
+        return "materialization_execution_reports_missing"
+    if stack_plan.get("candidate_improvement_observed") is True:
+        return "local_mlx_candidate_improvement_observed_exact_axis_blocked"
+    if route:
+        return f"{route}_blocked"
+    return "exact_axis_blocker"
+
+
+def _build_blocker_report(summary: dict[str, Any]) -> dict[str, Any]:
+    stack_plan = summary["stack_search_plan"]
+    bridge_report = summary["exact_ready_bridge_report"]
+    decision = stack_plan.get("budget_routing_decision") or {}
+    stop_reason = _precise_blocker_stop_reason(summary)
+    selected_blocker = str(decision.get("selected_blocker_class") or "").strip()
+    activation_action = str(decision.get("activation_action") or "").strip()
+    priority_score = decision.get("priority_score")
+    if not selected_blocker and int(stack_plan.get("execution_report_count") or 0) == 0:
+        selected_blocker = "repair_family_byte_transform_execution_reports_missing"
+        activation_action = "materialize_repair_family_byte_transform_reports"
+        priority_score = 100
+    blockers = ordered_unique(
+        [
+            *_string_list(summary.get("blockers")),
+            *_string_list(stack_plan.get("exact_eval_handoff_gate", {}).get("blockers")),
+            *_string_list(bridge_report.get("blockers")),
+            selected_blocker,
+        ]
+    )
+    report = {
+        "schema": REPAIR_CAMPAIGN_AUTONOMOUS_FLOOR_LOOP_BLOCKER_REPORT_SCHEMA,
+        "materialization_queue_path": summary["materialization_queue_path"],
+        "stop_reason": stop_reason,
+        "selected_blocker_class": selected_blocker,
+        "activation_action": activation_action,
+        "priority_score": priority_score,
+        "execution_report_count": stack_plan.get("execution_report_count"),
+        "exact_eval_handoff_candidate_count": summary[
+            "exact_eval_handoff_candidate_count"
+        ],
+        "archive_bound_exact_handoff_candidate_count": summary[
+            "archive_bound_exact_handoff_candidate_count"
+        ],
+        "exact_ready_bridge_candidate_count": summary[
+            "exact_ready_bridge_candidate_count"
+        ],
+        "exact_ready_bridge_runtime_content_tree_custody_proven_count": summary[
+            "exact_ready_bridge_runtime_content_tree_custody_proven_count"
+        ],
+        "posterior_learning_signal_count": summary[
+            "posterior_learning_signal_count"
+        ],
+        "posterior_appended_count": summary["posterior_appended_count"],
+        "blockers": [blocker for blocker in blockers if blocker],
+        "required_next_authority": "contest_cpu_or_cuda_auth_axis_payload",
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "allowed_use": "repair_floor_loop_precise_blocker_and_routing_audit",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        report,
+        context="repair_campaign_autonomous_floor_loop_blocker_report",
+    )
+    return report
 
 
 def _build_summary(
@@ -331,6 +432,7 @@ def _build_summary(
             "exact_eval_handoff_fails_closed_without_contest_cpu_or_cuda_axis",
             "exact_ready_bridge_emits_source_queue_and_blocked_exact_ready_queue",
             "stack_and_bridge_outcomes_emit_posterior_learning_signals",
+            "precise_blocker_report_names_next_unblocked_action",
         ],
         "blockers": ordered_unique(
             [
@@ -470,6 +572,28 @@ def main(argv: list[str] | None = None) -> int:
                 summary,
                 context="repair_campaign_autonomous_floor_loop_summary_after_posterior",
             )
+        blocker_report = _build_blocker_report(summary)
+        blocker_report_path = output_dir / "repair_family_floor_loop_blocker_report.json"
+        expected_blocker_sha = (
+            sha256_file(blocker_report_path)
+            if blocker_report_path.exists() and args.overwrite
+            else None
+        )
+        write_json_artifact(
+            blocker_report_path,
+            blocker_report,
+            allow_overwrite=bool(args.overwrite),
+            expected_existing_sha256=expected_blocker_sha,
+        )
+        summary["exact_axis_blocker_report_path"] = _repo_rel(blocker_report_path)
+        summary["exact_axis_blocker_report_schema"] = blocker_report["schema"]
+        summary["exact_axis_blocker_report"] = blocker_report
+        summary["exact_axis_blocker_class"] = blocker_report["selected_blocker_class"]
+        summary["stop_reason"] = blocker_report["stop_reason"]
+        require_no_truthy_authority_fields(
+            summary,
+            context="repair_campaign_autonomous_floor_loop_summary_after_blocker",
+        )
         summary_out = _resolve(args.summary_out)
         expected_summary_sha = (
             sha256_file(summary_out) if summary_out.exists() and args.overwrite else None
@@ -522,6 +646,9 @@ def main(argv: list[str] | None = None) -> int:
                     "posterior_learning_signal_count"
                 ],
                 "posterior_appended_count": summary["posterior_appended_count"],
+                "exact_axis_blocker_report_path": summary[
+                    "exact_axis_blocker_report_path"
+                ],
                 "candidate_improvement_observed": summary["stack_search_plan"][
                     "candidate_improvement_observed"
                 ],

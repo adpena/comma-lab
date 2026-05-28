@@ -392,7 +392,7 @@ def test_repair_campaign_autonomous_floor_loop_cli_fails_closed(
     assert result.returncode == 0, result.stderr
     summary = json.loads(summary_path.read_text(encoding="utf-8"))
     assert summary["schema"] == "repair_campaign_autonomous_floor_loop.v1"
-    assert summary["stop_reason"] == "exact_axis_blocker"
+    assert summary["stop_reason"] == "materialization_execution_reports_missing"
     assert summary["stack_search_plan"]["execution_report_count"] == 0
     assert summary["exact_handoff_plan_schema"] == "repair_family_exact_handoff_plan.v1"
     assert summary["exact_eval_handoff_candidate_count"] == 0
@@ -406,6 +406,9 @@ def test_repair_campaign_autonomous_floor_loop_cli_fails_closed(
     )
     assert summary["posterior_learning_signal_count"] == 1
     assert summary["posterior_appended_count"] == 1
+    assert summary["exact_axis_blocker_report_schema"] == (
+        "repair_campaign_autonomous_floor_loop_blocker_report.v1"
+    )
     exact_handoff_plan = json.loads(
         (tmp_path / "loop" / "repair_family_exact_handoff_plan.json").read_text(
             encoding="utf-8"
@@ -428,8 +431,16 @@ def test_repair_campaign_autonomous_floor_loop_cli_fails_closed(
             encoding="utf-8"
         )
     )
+    blocker_report = json.loads(
+        (tmp_path / "loop" / "repair_family_floor_loop_blocker_report.json").read_text(
+            encoding="utf-8"
+        )
+    )
     assert bridge_report["candidate_count"] == 0
     assert blocked_queue["dispatch_ready_count"] == 0
     assert learning_signal_report["learning_signal_count"] == 1
+    assert blocker_report["selected_blocker_class"] == (
+        "repair_family_byte_transform_execution_reports_missing"
+    )
     assert posterior_path.is_file()
     assert summary["ready_for_exact_eval_dispatch"] is False
