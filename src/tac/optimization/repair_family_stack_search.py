@@ -1142,6 +1142,86 @@ def _build_fractal_marginal_surface(rows: Sequence[Mapping[str, Any]]) -> dict[s
     return surface
 
 
+def _build_measured_mlx_posterior_budget_routing_updates(
+    fractal_surface: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    updates: list[dict[str, Any]] = []
+    for cell in fractal_surface.get("cells") or []:
+        if not isinstance(cell, Mapping):
+            continue
+        for measured in cell.get("measured_mlx_marginal_updates") or []:
+            if not isinstance(measured, Mapping):
+                continue
+            improvement = _safe_float(
+                measured.get("local_mlx_expected_improvement_score_units")
+            )
+            delta_bytes = max(0, _safe_int(measured.get("delta_payload_bytes")))
+            if improvement > 0.0:
+                direction = "increase"
+                hint = "route_measured_positive_mlx_marginal_to_archive_bound_materializer"
+                policy = "materialize_archive_bound_candidate_for_measured_mlx_marginal"
+                demote = False
+            elif improvement < 0.0:
+                direction = "decrease"
+                hint = "demote_family_stage_scope_from_negative_mlx_marginal"
+                policy = "demote_negative_measured_mlx_marginal_before_more_budget"
+                demote = True
+            elif delta_bytes == 0:
+                direction = "hold"
+                hint = "remeasure_zero_byte_mlx_marginal_before_budget_routing"
+                policy = "remeasure_zero_byte_measured_mlx_marginal"
+                demote = False
+            else:
+                direction = "hold"
+                hint = "hold_measured_neutral_mlx_marginal_until_new_signal"
+                policy = "hold_neutral_measured_mlx_marginal"
+                demote = False
+            update = {
+                "schema": "repair_family_measured_mlx_posterior_budget_routing_update.v1",
+                "stack_row_key": measured.get("stack_row_key"),
+                "family_id": measured.get("family_id"),
+                "typed_response_id": measured.get("typed_response_id"),
+                "fractal_level": measured.get("fractal_level") or cell.get("level"),
+                "entropy_stage_order": measured.get("entropy_stage_order"),
+                "cell_key": cell.get("cell_key"),
+                "delta_payload_bytes": delta_bytes,
+                "local_mlx_expected_improvement_score_units": improvement,
+                "measured_improvement_per_byte": _safe_float(
+                    measured.get("measured_improvement_per_byte")
+                ),
+                "interaction_aware_stack_score": _safe_float(
+                    measured.get("interaction_aware_stack_score")
+                ),
+                "family_priority_direction": direction,
+                "recommended_acquisition_policy": policy,
+                "posterior_budget_routing_hint": hint,
+                "demote_responsible_family_stage_scope": demote,
+                "source_execution_report": measured.get("source_execution_report"),
+                "budget_spend_allowed": False,
+                "ready_for_budget_spend": False,
+                "ready_for_exact_eval_dispatch": False,
+                **FALSE_AUTHORITY,
+            }
+            require_no_truthy_authority_fields(
+                update,
+                context=(
+                    "repair_family_measured_mlx_posterior_budget_routing_update:"
+                    f"{update['stack_row_key']}:{update['fractal_level']}"
+                ),
+            )
+            updates.append(update)
+    updates.sort(
+        key=lambda item: (
+            item.get("family_priority_direction") != "increase",
+            -float(item.get("measured_improvement_per_byte") or 0.0),
+            int(item.get("entropy_stage_order") or 999),
+            str(item.get("family_id") or ""),
+            str(item.get("typed_response_id") or ""),
+        )
+    )
+    return updates
+
+
 def _build_stack_acquisition_frontier(
     *,
     rows: Sequence[Mapping[str, Any]],
@@ -1403,7 +1483,18 @@ def _budget_routing_decision(
     posterior_surface: Mapping[str, Any],
     archive_bound_handoff_count: int,
     primary_acquisition_path: Mapping[str, Any] | None = None,
+    measured_mlx_budget_updates: Sequence[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
+    positive_measured_update_count = sum(
+        1
+        for update in measured_mlx_budget_updates
+        if _safe_float(update.get("local_mlx_expected_improvement_score_units")) > 0.0
+    )
+    demoted_measured_update_count = sum(
+        1
+        for update in measured_mlx_budget_updates
+        if update.get("demote_responsible_family_stage_scope") is True
+    )
     if not rows:
         route = "materialize_repair_family_byte_transform_reports"
         blocker = "repair_family_byte_transform_execution_reports_missing"
@@ -1428,6 +1519,10 @@ def _budget_routing_decision(
         route = "demote_repair_family_until_new_component_signal"
         blocker = "automatic_negative_result_demotion_active"
         priority = 88
+    elif positive_measured_update_count > 0:
+        route = "materialize_archive_bound_candidate_for_measured_mlx_marginal"
+        blocker = "archive_bound_candidate_required_for_measured_mlx_marginal"
+        priority = 87
     elif any(
         _safe_int(prior.get("entropy_stage_contract_miss_count")) > 0
         for prior in posterior_surface.get("family_priors") or []
@@ -1446,6 +1541,14 @@ def _budget_routing_decision(
         "priority_score": priority,
         "selected_blocker_class": blocker,
         "archive_bound_handoff_count": archive_bound_handoff_count,
+        "measured_mlx_posterior_budget_routing_update_count": len(
+            measured_mlx_budget_updates
+        ),
+        "positive_measured_mlx_budget_update_count": positive_measured_update_count,
+        "demoted_measured_mlx_budget_update_count": demoted_measured_update_count,
+        "top_measured_mlx_budget_routing_updates": [
+            dict(update) for update in measured_mlx_budget_updates[:8]
+        ],
         "primary_acquisition_path_id": None
         if primary_acquisition_path is None
         else primary_acquisition_path.get("path_id"),
@@ -1700,6 +1803,9 @@ def plan_repair_family_stack_search(
         byte_credit_budget=byte_credit_budget,
     )
     fractal_marginal_surface = _build_fractal_marginal_surface(rows)
+    measured_mlx_budget_updates = _build_measured_mlx_posterior_budget_routing_updates(
+        fractal_marginal_surface
+    )
     stack_acquisition_frontier = _build_stack_acquisition_frontier(
         rows=rows,
         hypergraph_tensor=hypergraph_interaction_tensor,
@@ -1747,6 +1853,7 @@ def plan_repair_family_stack_search(
         posterior_surface=posterior_acquisition_surface,
         archive_bound_handoff_count=archive_bound_handoff_count,
         primary_acquisition_path=primary_acquisition_path,
+        measured_mlx_budget_updates=measured_mlx_budget_updates,
     )
     plan = {
         "schema": REPAIR_FAMILY_STACK_SEARCH_PLAN_SCHEMA,
@@ -1771,6 +1878,12 @@ def plan_repair_family_stack_search(
         "hypergraph_interaction_tensor_cell_count": hypergraph_interaction_tensor["cell_count"],
         "fractal_marginal_surface": fractal_marginal_surface,
         "fractal_marginal_surface_cell_count": fractal_marginal_surface["cell_count"],
+        "measured_mlx_posterior_budget_routing_updates": (
+            measured_mlx_budget_updates
+        ),
+        "measured_mlx_posterior_budget_routing_update_count": len(
+            measured_mlx_budget_updates
+        ),
         "stack_acquisition_frontier": stack_acquisition_frontier,
         "stack_acquisition_frontier_count": len(stack_acquisition_frontier),
         "hypergraph_stack_acquisition_path_count": len(hypergraph_acquisition_paths),

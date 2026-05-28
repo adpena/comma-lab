@@ -366,6 +366,7 @@ def run_repair_autonomous_multi_archive_runner(
     queue_id: str = "repair_multi_archive_materialization",
     execute_local: bool = False,
     close_runtime_custody: bool = False,
+    max_floor_iterations: int = 4,
     max_steps_per_iteration: int = 128,
     worker_max_experiments_per_iteration: int | None = None,
     byte_credit_budget: int | None = None,
@@ -451,7 +452,7 @@ def run_repair_autonomous_multi_archive_runner(
         "--max-steps-per-iteration",
         str(max_steps_per_iteration),
         "--max-iterations",
-        "1",
+        str(max(1, max_floor_iterations)),
         "--overwrite",
     ]
     if posterior is not None:
@@ -496,7 +497,7 @@ def run_repair_autonomous_multi_archive_runner(
             str(posterior_lock),
             "--require-all-queue-families",
             "--max-iterations",
-            "1",
+            str(max(1, max_floor_iterations)),
             "--overwrite",
         ]
         if posterior is not None:
@@ -565,6 +566,38 @@ def run_repair_autonomous_multi_archive_runner(
         "floor_loop_result": floor_loop_result,
         "floor_loop_summary_path": _repo_rel(floor_loop_summary_path, repo),
         "floor_loop_stop_reason": floor_loop_summary.get("stop_reason"),
+        "max_floor_iterations": max_floor_iterations,
+        "bounded_live_archive_loop": {
+            "schema": "repair_autonomous_multi_archive_bounded_live_loop.v1",
+            "max_floor_iterations": max_floor_iterations,
+            "observed_iteration_count": active_summary.get("iteration_count"),
+            "terminal_outcome": active_summary.get("stop_reason"),
+            "terminal_conditions": [
+                "strictly_better_archive_bound_candidate_exact_axis_blocked",
+                "archive_bound_candidate_exact_axis_blocked",
+                "precise_exact_axis_blocker",
+                "family_demoted_by_posterior_evidence",
+                "local_worker_failure_or_exact_axis_blocker",
+            ],
+            "archive_bound_exact_handoff_candidate_count": active_summary.get(
+                "archive_bound_exact_handoff_candidate_count"
+            ),
+            "exact_ready_bridge_runtime_content_tree_custody_proven_count": (
+                active_summary.get(
+                    "exact_ready_bridge_runtime_content_tree_custody_proven_count"
+                )
+            ),
+            "failure_rebudgeting_update_count": active_summary.get(
+                "failure_rebudgeting_update_count"
+            ),
+            "budget_spend_allowed": False,
+            "ready_for_budget_spend": False,
+            "ready_for_exact_eval_dispatch": False,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            **FALSE_AUTHORITY,
+        },
         "runtime_custody_requested": close_runtime_custody,
         "runtime_closure": runtime_closure,
         "runtime_floor_result": runtime_floor_result,

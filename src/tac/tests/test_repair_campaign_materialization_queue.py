@@ -873,6 +873,14 @@ def test_repair_campaign_autonomous_floor_loop_executes_all_required_queue_famil
     assert summary["primary_stack_acquisition_frontier_path"]["source_tensor"] == (
         "hypergraph_interaction_tensor"
     )
+    assert summary["measured_mlx_posterior_budget_routing_update_count"] > 0
+    assert summary["entropy_stage_materializer_work_order_count"] > 0
+    assert (
+        summary["entropy_stage_materializer_work_orders"][
+            "archive_bound_candidate_default"
+        ]
+        is True
+    )
     assert summary["exact_dispatch_preclaim_gate_count"] == 5
     assert summary["failure_rebudgeting_update_count"] == 5
     primary_path = summary["stack_search_plan"]["primary_stack_acquisition_path"]
@@ -1051,6 +1059,20 @@ def test_repair_campaign_autonomous_floor_loop_preserves_precise_terminal_class(
     assert summary["frontier_executable_selection_consumed"] is True
     assert selected_report["selected_experiment_count"] == 2
     assert selected_report["skipped_experiment_count"] == 1
+    assert (
+        selected_report["archive_bound_candidate_default_contract"][
+            "candidate_archive_emission_default"
+        ]
+        is True
+    )
+    assert (
+        selected_report["archive_bound_candidate_default_contract"][
+            "selected_missing_archive_bound_default_count"
+        ]
+        == 2
+    )
+    assert summary["measured_mlx_posterior_budget_routing_update_count"] > 0
+    assert summary["entropy_stage_materializer_work_order_count"] > 0
     assert iteration["worker_queue_path"].endswith(
         "iteration_1_frontier_selected_queue.json"
     )
@@ -1069,6 +1091,6 @@ def test_repair_campaign_autonomous_floor_loop_preserves_precise_terminal_class(
     blocker_report = summary["exact_axis_blocker_report"]
     assert blocker_report["stop_reason"] == "precise_exact_axis_blocker"
     assert blocker_report["selected_blocker_class"] == (
-        "exact_axis_required_before_score_or_budget"
+        "archive_bound_candidate_required_for_measured_mlx_marginal"
     )
     assert summary["ready_for_exact_eval_dispatch"] is False

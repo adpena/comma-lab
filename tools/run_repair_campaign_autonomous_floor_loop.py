@@ -402,6 +402,101 @@ def _experiment_matches_frontier_selection(
     )
 
 
+def _experiment_archive_bound_default_ready(experiment: dict[str, Any]) -> bool:
+    metadata = experiment.get("metadata")
+    metadata = metadata if isinstance(metadata, dict) else {}
+    if not str(
+        metadata.get("repair_family_byte_transform_execution_report_path") or ""
+    ).strip():
+        return False
+    for step in experiment.get("steps") or []:
+        if not isinstance(step, dict):
+            continue
+        if step.get("id") == "execute_repair_family_byte_transform":
+            return True
+        command = step.get("command")
+        if isinstance(command, list) and any(
+            str(item).endswith("run_repair_family_byte_transform_executor.py")
+            for item in command
+        ):
+            return True
+    return False
+
+
+def _with_frontier_archive_bound_default(
+    experiment: dict[str, Any],
+) -> dict[str, Any]:
+    cloned = dict(experiment)
+    metadata = dict(cloned.get("metadata") or {})
+    ready = _experiment_archive_bound_default_ready(experiment)
+    metadata.update(
+        {
+            "frontier_selected_archive_bound_candidate_default": True,
+            "frontier_selected_archive_bound_candidate_default_ready": ready,
+            "frontier_selected_candidate_archive_required": True,
+            "frontier_selected_runtime_consumption_proof_required": True,
+            "frontier_selected_exact_bridge_preclaim_required": True,
+            "frontier_selected_default_blockers": []
+            if ready
+            else [
+                "frontier_selected_experiment_missing_archive_bound_materializer_steps"
+            ],
+            "budget_spend_allowed": False,
+            "ready_for_budget_spend": False,
+            "ready_for_exact_eval_dispatch": False,
+            **FALSE_AUTHORITY,
+        }
+    )
+    cloned["metadata"] = metadata
+    return cloned
+
+
+def _frontier_archive_bound_default_contract(
+    *,
+    selected: Sequence[dict[str, Any]],
+    skipped: Sequence[dict[str, Any]],
+) -> dict[str, Any]:
+    ready_ids: list[str] = []
+    missing_ids: list[str] = []
+    for experiment in selected:
+        experiment_id = str(experiment.get("id") or "")
+        metadata = experiment.get("metadata")
+        metadata = metadata if isinstance(metadata, dict) else {}
+        if metadata.get("frontier_selected_archive_bound_candidate_default_ready") is True:
+            ready_ids.append(experiment_id)
+        else:
+            missing_ids.append(experiment_id)
+    contract = {
+        "schema": "repair_campaign_frontier_selected_archive_bound_default_contract.v1",
+        "candidate_archive_emission_default": True,
+        "receiver_runtime_proof_default": True,
+        "exact_ready_bridge_preclaim_default": True,
+        "selected_experiment_count": len(selected),
+        "skipped_experiment_count": len(skipped),
+        "selected_archive_bound_experiment_count": len(ready_ids),
+        "selected_missing_archive_bound_default_count": len(missing_ids),
+        "archive_bound_ready_experiment_ids": ready_ids,
+        "archive_bound_missing_experiment_ids": missing_ids,
+        "blockers": [
+            f"frontier_selected_archive_bound_default_missing:{experiment_id}"
+            for experiment_id in missing_ids
+            if experiment_id
+        ],
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        contract,
+        context="repair_campaign_frontier_selected_archive_bound_default_contract",
+    )
+    return contract
+
+
 def _frontier_selected_queue(
     *,
     queue: dict[str, Any],
@@ -413,12 +508,23 @@ def _frontier_selected_queue(
         for experiment in queue.get("experiments") or []
         if isinstance(experiment, dict)
     ]
-    selected = [
+    selected_source = [
         experiment
         for experiment in experiments
         if _experiment_matches_frontier_selection(experiment, selection)
     ]
-    skipped = [experiment for experiment in experiments if experiment not in selected]
+    selected_source_ids = {id(experiment) for experiment in selected_source}
+    selected = [
+        _with_frontier_archive_bound_default(experiment)
+        for experiment in selected_source
+    ]
+    skipped = [
+        experiment for experiment in experiments if id(experiment) not in selected_source_ids
+    ]
+    archive_bound_default_contract = _frontier_archive_bound_default_contract(
+        selected=selected,
+        skipped=skipped,
+    )
     filtered_queue = dict(queue)
     filtered_queue["queue_id"] = (
         f"{queue.get('queue_id') or 'repair_campaign_queue'}"
@@ -433,6 +539,10 @@ def _frontier_selected_queue(
             "frontier_execution_selection": selection,
             "frontier_selected_experiment_count": len(selected),
             "frontier_skipped_experiment_count": len(skipped),
+            "frontier_selected_queues_emit_archive_bound_candidates_by_default": True,
+            "archive_bound_candidate_default_contract": (
+                archive_bound_default_contract
+            ),
             "budget_spend_allowed": False,
             "ready_for_exact_eval_dispatch": False,
             **FALSE_AUTHORITY,
@@ -456,6 +566,17 @@ def _frontier_selected_queue(
             str(experiment.get("id") or "") for experiment in skipped
         ],
         "frontier_execution_selection": selection,
+        "archive_bound_candidate_default_contract": (
+            archive_bound_default_contract
+        ),
+        "selected_archive_bound_experiment_count": (
+            archive_bound_default_contract["selected_archive_bound_experiment_count"]
+        ),
+        "selected_missing_archive_bound_default_count": (
+            archive_bound_default_contract[
+                "selected_missing_archive_bound_default_count"
+            ]
+        ),
         "blockers": []
         if selected
         else ["frontier_selection_matched_no_queue_experiments"],
@@ -475,7 +596,142 @@ def _frontier_selected_queue(
         report,
         context="repair_campaign_frontier_selected_queue_report",
     )
+    report["blockers"] = ordered_unique(
+        [
+            *report["blockers"],
+            *_string_list(archive_bound_default_contract.get("blockers")),
+        ]
+    )
+    require_no_truthy_authority_fields(
+        report,
+        context="repair_campaign_frontier_selected_queue_report_after_contract",
+    )
     return filtered_queue, report
+
+
+def _entropy_compiler_stage(row: dict[str, Any]) -> str:
+    label = str(row.get("entropy_position_label") or "").strip()
+    order = int(row.get("entropy_stage_order") or 999)
+    if label.startswith("before_entropy_coder") or order <= 10:
+        return "before_coder"
+    if (
+        label.startswith("at_entropy_coder")
+        or label == "selector_codec_entropy"
+        or 10 < order <= 40
+    ):
+        return "coder_boundary"
+    if label.startswith("after_entropy_coder") or order >= 50:
+        return "after_coder"
+    return "unknown_entropy_position"
+
+
+def _compile_entropy_stage_materializer_work_orders(
+    stack_plan: dict[str, Any],
+) -> dict[str, Any]:
+    rows = [
+        row for row in stack_plan.get("stack_rows") or [] if isinstance(row, dict)
+    ]
+    selected_keys = set()
+    primary = stack_plan.get("primary_stack_acquisition_path")
+    if isinstance(primary, dict):
+        selected_keys.update(_string_list(primary.get("row_keys")))
+    if not selected_keys:
+        selected_keys.update(
+            str(row.get("stack_row_key") or "") for row in rows if row.get("stack_row_key")
+        )
+    selected_rows = [
+        row
+        for row in rows
+        if str(row.get("stack_row_key") or "") in selected_keys
+    ]
+    stage_order = ("before_coder", "coder_boundary", "after_coder")
+    work_orders: list[dict[str, Any]] = []
+    for stage in stage_order:
+        stage_rows = [row for row in selected_rows if _entropy_compiler_stage(row) == stage]
+        if not stage_rows:
+            continue
+        stage_rows.sort(
+            key=lambda row: (
+                int(row.get("entropy_stage_order") or 999),
+                int(row.get("planned_stack_order") or 999),
+                str(row.get("typed_response_id") or ""),
+            )
+        )
+        work_order = {
+            "schema": "repair_campaign_entropy_stage_materializer_work_order.v1",
+            "compiler_stage": stage,
+            "stage_materialization_order": len(work_orders) + 1,
+            "source_stack_plan_schema": stack_plan.get("schema"),
+            "source_row_keys": [
+                str(row.get("stack_row_key") or "") for row in stage_rows
+            ],
+            "family_order": [
+                str(row.get("family_id") or "") for row in stage_rows
+            ],
+            "typed_response_order": [
+                str(row.get("typed_response_id") or "") for row in stage_rows
+            ],
+            "entropy_stage_order": [
+                int(row.get("entropy_stage_order") or 999) for row in stage_rows
+            ],
+            "fractal_scope_union_levels": ordered_unique(
+                level
+                for row in stage_rows
+                for level in _string_list(row.get("fractal_scope_levels"))
+            ),
+            "total_delta_payload_bytes": sum(
+                max(0, int(row.get("delta_payload_bytes") or 0))
+                for row in stage_rows
+            ),
+            "total_local_mlx_expected_improvement_score_units": sum(
+                float(row.get("local_mlx_expected_improvement_score_units") or 0.0)
+                for row in stage_rows
+            ),
+            "candidate_archive_required": True,
+            "receiver_decode_only_runtime_proof_required": True,
+            "archive_bound_exact_ready_bridge_input_required": True,
+            "preclaim_gate_required_before_exact_dispatch": True,
+            "materializer_action": (
+                "emit_byte_closed_archive_bound_candidates_for_entropy_stage"
+            ),
+            "blockers": ordered_unique(
+                blocker
+                for row in stage_rows
+                for blocker in _string_list(row.get("blockers"))
+            ),
+            "budget_spend_allowed": False,
+            "ready_for_budget_spend": False,
+            "ready_for_exact_eval_dispatch": False,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            **FALSE_AUTHORITY,
+        }
+        require_no_truthy_authority_fields(
+            work_order,
+            context=f"repair_campaign_entropy_stage_materializer_work_order:{stage}",
+        )
+        work_orders.append(work_order)
+    bundle = {
+        "schema": "repair_campaign_entropy_stage_materializer_work_order_bundle.v1",
+        "source_stack_plan_schema": stack_plan.get("schema"),
+        "work_order_count": len(work_orders),
+        "stage_order": list(stage_order),
+        "work_orders": work_orders,
+        "archive_bound_candidate_default": True,
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        bundle,
+        context="repair_campaign_entropy_stage_materializer_work_order_bundle",
+    )
+    return bundle
 
 
 def _iteration_stop_reason(stack_plan: dict[str, Any], worker_result: dict[str, Any] | None) -> str:
@@ -961,6 +1217,12 @@ def _build_summary(
         if isinstance(path, dict)
     ]
     primary_frontier_path = acquisition_frontier[0] if acquisition_frontier else None
+    entropy_stage_materializer_work_orders = (
+        _compile_entropy_stage_materializer_work_orders(final_stack_plan)
+    )
+    entropy_stage_materializer_work_orders_path = (
+        output_dir / "repair_family_entropy_stage_materializer_work_orders.json"
+    )
     summary = {
         "schema": REPAIR_CAMPAIGN_AUTONOMOUS_FLOOR_LOOP_SCHEMA,
         "materialization_queue_path": _repo_rel(queue_path),
@@ -994,6 +1256,24 @@ def _build_summary(
         ),
         "stack_acquisition_frontier": acquisition_frontier,
         "primary_stack_acquisition_frontier_path": primary_frontier_path,
+        "measured_mlx_posterior_budget_routing_update_count": (
+            final_stack_plan.get(
+                "measured_mlx_posterior_budget_routing_update_count",
+                0,
+            )
+        ),
+        "measured_mlx_posterior_budget_routing_updates": (
+            final_stack_plan.get("measured_mlx_posterior_budget_routing_updates", [])
+        ),
+        "entropy_stage_materializer_work_orders_path": _repo_rel(
+            entropy_stage_materializer_work_orders_path
+        ),
+        "entropy_stage_materializer_work_order_count": (
+            entropy_stage_materializer_work_orders["work_order_count"]
+        ),
+        "entropy_stage_materializer_work_orders": (
+            entropy_stage_materializer_work_orders
+        ),
         "frontier_executable_selection_consumed": any(
             isinstance(item, dict)
             and isinstance(item.get("frontier_selected_queue_report"), dict)
@@ -1045,7 +1325,10 @@ def _build_summary(
             "exact_preclaim_receiver_and_runtime_failures_emit_rebudgeting_updates",
             "stack_and_bridge_outcomes_emit_posterior_learning_signals",
             "fractal_marginal_surface_and_ranked_frontier_are_operator_visible",
+            "measured_mlx_marginals_update_posterior_budget_routing_directly",
             "frontier_paths_filter_executable_iteration_queues_when_available",
+            "frontier_selected_queues_default_to_archive_bound_candidate_emission",
+            "entropy_stage_chain_compiler_emits_materializer_work_orders",
             "precise_blocker_report_names_next_unblocked_action",
         ],
         "blockers": ordered_unique(
@@ -1117,7 +1400,14 @@ def main(argv: list[str] | None = None) -> int:
         exact_ready_source_queue_path = output_dir / "repair_family_exact_ready_source_queue.json"
         blocked_exact_ready_queue_path = output_dir / "repair_family_blocked_exact_ready_queue.json"
         exact_ready_bridge_report_path = output_dir / "repair_family_exact_ready_bridge_report.json"
+        entropy_stage_materializer_work_orders_path = (
+            output_dir / "repair_family_entropy_stage_materializer_work_orders.json"
+        )
         for path, payload in (
+            (
+                entropy_stage_materializer_work_orders_path,
+                summary["entropy_stage_materializer_work_orders"],
+            ),
             (
                 exact_ready_source_queue_path,
                 summary["exact_ready_bridge"]["source_optimizer_queue"],
@@ -1241,6 +1531,12 @@ def main(argv: list[str] | None = None) -> int:
                 ],
                 "frontier_executable_selection_consumed": summary[
                     "frontier_executable_selection_consumed"
+                ],
+                "measured_mlx_posterior_budget_routing_update_count": summary[
+                    "measured_mlx_posterior_budget_routing_update_count"
+                ],
+                "entropy_stage_materializer_work_order_count": summary[
+                    "entropy_stage_materializer_work_order_count"
                 ],
                 "exact_dispatch_preclaim_gate_count": summary[
                     "exact_dispatch_preclaim_gate_count"

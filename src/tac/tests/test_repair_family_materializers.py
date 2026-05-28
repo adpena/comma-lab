@@ -1082,6 +1082,13 @@ def test_repair_family_stack_search_builds_pairwise_tensor_acquisition_path(
         ]
         == 10
     )
+    assert stack_plan["measured_mlx_posterior_budget_routing_update_count"] == 10
+    assert (
+        stack_plan["budget_routing_decision"][
+            "measured_mlx_posterior_budget_routing_update_count"
+        ]
+        == 10
+    )
     marginal_levels = {
         cell["level"] for cell in stack_plan["fractal_marginal_surface"]["cells"]
     }

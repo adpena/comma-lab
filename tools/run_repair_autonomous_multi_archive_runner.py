@@ -41,6 +41,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--queue-id", default="repair_multi_archive_materialization")
     parser.add_argument("--execute-local", action="store_true")
     parser.add_argument("--close-runtime-custody", action="store_true")
+    parser.add_argument("--max-floor-iterations", type=int, default=4)
     parser.add_argument("--max-steps-per-iteration", type=int, default=128)
     parser.add_argument("--worker-max-experiments-per-iteration", type=int)
     parser.add_argument("--byte-credit-budget", type=int)
@@ -65,6 +66,7 @@ def main(argv: list[str] | None = None) -> int:
             queue_id=args.queue_id,
             execute_local=args.execute_local,
             close_runtime_custody=args.close_runtime_custody,
+            max_floor_iterations=args.max_floor_iterations,
             max_steps_per_iteration=args.max_steps_per_iteration,
             worker_max_experiments_per_iteration=args.worker_max_experiments_per_iteration,
             byte_credit_budget=args.byte_credit_budget,
@@ -105,6 +107,8 @@ def main(argv: list[str] | None = None) -> int:
                     "blocked_exact_dispatch_blocked_candidate_count"
                 ],
                 "stop_reason": summary["stop_reason"],
+                "max_floor_iterations": summary["max_floor_iterations"],
+                "bounded_live_archive_loop": summary["bounded_live_archive_loop"],
                 "ready_for_exact_eval_dispatch": False,
                 "score_claim": False,
                 "promotion_eligible": False,
