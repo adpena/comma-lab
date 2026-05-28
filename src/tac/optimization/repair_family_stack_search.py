@@ -2037,6 +2037,31 @@ def _chain_exact_handoff_candidate_row(
             for stage in stages
             if str(stage.get("typed_response_id") or "").strip()
         ],
+        "chain_stage_identities": [
+            {
+                "schema": "repair_entropy_stage_chain_stage_identity.v1",
+                "chain_id": chain_id,
+                "stage_index": stage.get("stage_index"),
+                "family_id": stage.get("family_id"),
+                "typed_response_id": stage.get("typed_response_id"),
+                "entropy_position_label": stage.get("entropy_position_label"),
+                "entropy_stage_order": _chain_stage_order(stage),
+                "fractal_scope_levels": _chain_stage_scope_levels(stage),
+                "stage_input_archive_sha256": _mapping(
+                    stage.get("stage_input_archive")
+                ).get("sha256"),
+                "stage_output_archive_sha256": _mapping(
+                    stage.get("stage_output_archive")
+                ).get("sha256"),
+                "stage_runtime_consumption_proof_sha256": stage.get(
+                    "stage_runtime_consumption_proof_sha256"
+                ),
+                "budget_spend_allowed": False,
+                "ready_for_exact_eval_dispatch": False,
+                **FALSE_AUTHORITY,
+            }
+            for stage in stages
+        ],
         "entropy_position_label": "composed_entropy_stage_chain",
         "entropy_stage_order": _chain_stage_order(final_stage) if final_stage else 999,
         "candidate_archive": candidate_archive,
@@ -2567,11 +2592,177 @@ def _learning_signals_for_entropy_stage_chain_bundle(
     ]
 
 
+def _failure_update_scope_levels(update: Mapping[str, Any]) -> list[str]:
+    direct = _string_list(update.get("fractal_scope_levels"))
+    if direct:
+        return direct
+    levels: list[str] = []
+    for stage in update.get("chain_stage_identities") or []:
+        if isinstance(stage, Mapping):
+            levels.extend(_string_list(stage.get("fractal_scope_levels")))
+    return ordered_unique(levels)
+
+
+def _learning_signal_for_failure_rebudgeting_update(
+    update: Mapping[str, Any],
+) -> dict[str, Any]:
+    candidate_id = str(update.get("candidate_id") or "unknown_exact_candidate")
+    family = str(update.get("family_id") or "unclassified_repair_family")
+    typed_response_id = f"exact_failure:{candidate_id}"
+    blocker_class = str(update.get("selected_blocker_class") or "exact_axis_handoff_required")
+    policy = str(
+        update.get("recommended_acquisition_policy")
+        or "hold_until_byte_closed_exact_auth_handoff_available"
+    )
+    levels = _failure_update_scope_levels(update)
+    entropy_stage_order = _safe_int(update.get("entropy_stage_order"), default=999)
+    demote = update.get("demote_responsible_family_stage_scope") is True
+    blockers = ordered_unique(
+        [
+            *_string_list(update.get("blockers")),
+            *(
+                ["negative_result_demoted_from_exact_preclaim_or_receiver_failure"]
+                if demote
+                else []
+            ),
+            "repair_exact_failure_rebudgeting_signal_is_not_score_authority",
+            "exact_axis_component_response_required_before_budget_spend",
+        ]
+    )
+    identity = {
+        "schema": "repair_exact_failure_learning_identity.v1",
+        "candidate_id": candidate_id,
+        "family_id": family,
+        "typed_response_id": typed_response_id,
+        "source_typed_response_id": update.get("typed_response_id"),
+        "candidate_chain_id": update.get("candidate_chain_id"),
+        "candidate_chain_ids": _string_list(update.get("candidate_chain_ids")),
+        "entropy_position_label": update.get("entropy_position_label"),
+        "entropy_stage_order": entropy_stage_order,
+        "fractal_scope_levels": levels,
+        "selected_blocker_class": blocker_class,
+        "responsible_failure_surface": update.get("responsible_failure_surface"),
+        "source_archive_sha256": update.get("source_archive_sha256"),
+        "candidate_archive_sha256": update.get("candidate_archive_sha256"),
+        "runtime_consumption_proof_sha256": update.get(
+            "runtime_consumption_proof_sha256"
+        ),
+        "runtime_content_tree_sha256": update.get("runtime_content_tree_sha256"),
+        "chain_stage_identities": [
+            dict(item)
+            for item in update.get("chain_stage_identities") or []
+            if isinstance(item, Mapping)
+        ],
+    }
+    feature_vector = {
+        "materialization_signal_kind": "repair_exact_failure_rebudgeting_update",
+        "candidate_archive_materialized": bool(update.get("candidate_archive_sha256")),
+        "runtime_consumption_proof_present": bool(
+            update.get("runtime_consumption_proof_sha256")
+        ),
+        "component_response_replayed": False,
+        "expected_local_improvement_score_units": 0.0,
+        "improvement_per_allocated_byte": 0.0,
+        "blocker_count": len(blockers),
+        "missing_artifact_count": sum(
+            1 for blocker in blockers if "missing" in blocker or "incomplete" in blocker
+        ),
+        "entropy_position_label": update.get("entropy_position_label"),
+        "entropy_stage_order": entropy_stage_order,
+        "entropy_pipeline_stage_index": entropy_stage_order,
+        "fractal_active_levels": levels,
+        "fractal_ordered_levels": [level for level in _LEVEL_ORDER if level in set(levels)],
+        "interaction_order": len(levels),
+        "selection_blocker_class": blocker_class,
+        "responsible_failure_surface": update.get("responsible_failure_surface"),
+        "demote_responsible_family_stage_scope": demote,
+        "receiver_credit_exhausted": (
+            update.get("rebudget_receiver_closed_credit") is True
+        ),
+        "stackability_remeasure_required": demote,
+        "entropy_stage_contract_miss": (
+            blocker_class == "exact_dispatch_preclaim_failed"
+            and family == "entropy_stage_chain"
+        ),
+    }
+    signal = {
+        "schema": REPAIR_FAMILY_STACK_LEARNING_SIGNAL_SCHEMA,
+        "learning_signal_kind": "repair_exact_failure_rebudgeting_feedback",
+        "typed_response_id": typed_response_id,
+        "candidate_id": candidate_id,
+        "family_id": family,
+        "component_response_axis": "[contest-exact-axis-blocked]",
+        "evidence_grade": "exact_preclaim_or_bridge_failure_routing_signal_only",
+        "source_artifacts": [],
+        "replay_identity": {
+            "schema": "repair_exact_failure_learning_replay_identity.v1",
+            "replay_identity_kind": "repair_exact_failure_rebudgeting_feedback",
+            "hash_manifest_sha256": _stable_sha256(identity),
+            "source_records_sha256": _stable_sha256(
+                {
+                    "schema": "repair_exact_failure_learning_sources.v1",
+                    "failure_rebudgeting_update": dict(update),
+                }
+            ),
+            "replay_argv_sha256": None,
+            "execution_context_sha256": None,
+            "environment_sha256": None,
+        },
+        "local_planning_update": {
+            "schema": REPAIR_FAMILY_STACK_LOCAL_PLANNING_UPDATE_SCHEMA,
+            "posterior_surface": "repair_exact_failure_rebudgeting_posterior_feedback",
+            "local_planning_update_ready": True,
+            "recommended_acquisition_policy": policy,
+            "recommended_stackability_followup": (
+                "rebudget_or_demote_exact_failure_surface_before_next_dispatch"
+            ),
+            "planner_feature_vector": feature_vector,
+            "posterior_update_blockers": [
+                "repair_exact_failure_rebudgeting_signal_is_not_score_authority",
+                "exact_axis_component_response_required_before_budget_spend",
+            ],
+            "budget_spend_allowed": False,
+            "ready_for_budget_spend": False,
+            "ready_for_exact_eval_dispatch": False,
+            **FALSE_AUTHORITY,
+        },
+        "blockers": blockers,
+        "missing_artifacts": [
+            blocker for blocker in blockers if "missing" in blocker or "incomplete" in blocker
+        ],
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "allowed_use": "repair_exact_failure_rebudgeting_update_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        signal,
+        context=f"repair_exact_failure_learning_signal:{candidate_id}",
+    )
+    return signal
+
+
+def _learning_signals_for_failure_rebudgeting_updates(
+    failure_rebudgeting_updates: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    return [
+        _learning_signal_for_failure_rebudgeting_update(update)
+        for update in failure_rebudgeting_updates
+        if isinstance(update, Mapping)
+    ]
+
+
 def build_repair_family_stack_learning_signal_report(
     *,
     stack_plan: Mapping[str, Any],
     bridge_report: Mapping[str, Any] | None = None,
     chain_execution_bundle: Mapping[str, Any] | None = None,
+    failure_rebudgeting_updates: Sequence[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
     """Build posterior-consumable local learning signals from stack outcomes."""
 
@@ -2593,7 +2784,10 @@ def build_repair_family_stack_learning_signal_report(
     chain_signals = _learning_signals_for_entropy_stage_chain_bundle(
         chain_execution_bundle
     )
-    signals = [*stack_signals, *chain_signals]
+    failure_signals = _learning_signals_for_failure_rebudgeting_updates(
+        failure_rebudgeting_updates
+    )
+    signals = [*stack_signals, *chain_signals, *failure_signals]
     bridge_blockers = list(_string_list(_mapping(bridge_report).get("blockers"))) if bridge_report is not None else []
     report = {
         "schema": REPAIR_FAMILY_STACK_LEARNING_SIGNAL_REPORT_SCHEMA,
@@ -2607,6 +2801,7 @@ def build_repair_family_stack_learning_signal_report(
         "stack_row_count": len(rows),
         "stack_learning_signal_count": len(stack_signals),
         "entropy_stage_chain_learning_signal_count": len(chain_signals),
+        "exact_failure_rebudgeting_learning_signal_count": len(failure_signals),
         "learning_signal_count": len(signals),
         "learning_signal_rows": signals,
         "blockers": ordered_unique(

@@ -135,6 +135,10 @@ def _string_list(value: Any) -> list[str]:
     return [text] if text else []
 
 
+def _mapping(value: Any) -> dict[str, Any]:
+    return dict(value) if isinstance(value, dict) else {}
+
+
 def _family_from_experiment_metadata(metadata: dict[str, Any]) -> str:
     family = str(metadata.get("family_id") or "").strip()
     candidate = str(metadata.get("candidate_id") or "").strip()
@@ -895,6 +899,13 @@ def _exact_dispatch_preclaim_gates(
             "candidate_id": candidate_id,
             "family_id": row.get("family_id"),
             "typed_response_id": row.get("typed_response_id"),
+            "candidate_chain_id": row.get("candidate_chain_id"),
+            "candidate_chain_ids": _string_list(row.get("candidate_chain_ids")),
+            "entropy_position_label": row.get("entropy_position_label"),
+            "entropy_stage_order": row.get("entropy_stage_order"),
+            "failure_rebudgeting_identity": dict(
+                _mapping(row.get("failure_rebudgeting_identity"))
+            ),
             "provider": "lightning",
             "preclaim_check_path": _repo_rel(output_path),
             "preclaim_ready": payload.get("preclaim_ready") is True,
@@ -962,6 +973,29 @@ def _failure_rebudgeting_updates(
         typed_response_id = str(row.get("typed_response_id") or "")
         stack_row = stack_by_identity.get((family_id, typed_response_id), {})
         preclaim_gate = preclaim_by_candidate.get(candidate_id, {})
+        failure_identity = dict(_mapping(row.get("failure_rebudgeting_identity")))
+        if not failure_identity:
+            failure_identity = dict(
+                _mapping(preclaim_gate.get("failure_rebudgeting_identity"))
+            )
+        if not failure_identity:
+            failure_identity = {
+                "schema": "repair_family_exact_failure_rebudgeting_identity.v1",
+                "candidate_id": candidate_id,
+                "family_id": family_id,
+                "typed_response_id": typed_response_id,
+                "candidate_chain_id": row.get("candidate_chain_id"),
+                "candidate_chain_ids": _string_list(row.get("candidate_chain_ids")),
+                "entropy_position_label": row.get("entropy_position_label"),
+                "entropy_stage_order": (
+                    row.get("entropy_stage_order")
+                    or stack_row.get("entropy_stage_order")
+                ),
+                "fractal_scope_levels": stack_row.get("fractal_scope_levels", []),
+                "budget_spend_allowed": False,
+                "ready_for_exact_eval_dispatch": False,
+                **FALSE_AUTHORITY,
+            }
         blockers = ordered_unique(
             [
                 *_string_list(row.get("blockers")),
@@ -994,10 +1028,52 @@ def _failure_rebudgeting_updates(
             "candidate_id": candidate_id,
             "family_id": family_id,
             "typed_response_id": typed_response_id,
-            "entropy_stage_order": stack_row.get("entropy_stage_order"),
-            "fractal_scope_levels": stack_row.get("fractal_scope_levels", []),
+            "candidate_chain_id": failure_identity.get("candidate_chain_id"),
+            "candidate_chain_ids": _string_list(
+                failure_identity.get("candidate_chain_ids")
+            ),
+            "entropy_position_label": failure_identity.get("entropy_position_label"),
+            "entropy_stage_order": failure_identity.get("entropy_stage_order"),
+            "fractal_scope_levels": failure_identity.get(
+                "fractal_scope_levels",
+                stack_row.get("fractal_scope_levels", []),
+            ),
+            "chain_stage_identities": [
+                dict(item)
+                for item in failure_identity.get("chain_stage_identities") or []
+                if isinstance(item, dict)
+            ],
+            "source_archive_sha256": failure_identity.get("source_archive_sha256"),
+            "candidate_archive_sha256": failure_identity.get(
+                "candidate_archive_sha256"
+            ),
+            "runtime_consumption_proof_sha256": failure_identity.get(
+                "runtime_consumption_proof_sha256"
+            ),
+            "runtime_content_tree_sha256": failure_identity.get(
+                "runtime_content_tree_sha256"
+            ),
+            "failure_rebudgeting_identity": failure_identity,
             "selected_blocker_class": blocker_class,
             "recommended_acquisition_policy": policy,
+            "responsible_failure_surface": (
+                "exact_dispatch_preclaim"
+                if blocker_class == "exact_dispatch_preclaim_failed"
+                else (
+                    "receiver_runtime_proof"
+                    if blocker_class == "receiver_runtime_proof_rebudget_required"
+                    else (
+                        "runtime_content_tree"
+                        if blocker_class
+                        == "runtime_content_tree_custody_rebuild_required"
+                        else (
+                            "candidate_archive_custody"
+                            if blocker_class == "archive_custody_rebuild_required"
+                            else "exact_axis_handoff"
+                        )
+                    )
+                )
+            ),
             "demote_responsible_family_stage_scope": blocker_class
             in {
                 "exact_dispatch_preclaim_failed",
@@ -1241,6 +1317,7 @@ def _build_summary(
         stack_plan=final_stack_plan,
         bridge_report=exact_ready_bridge_report,
         chain_execution_bundle=entropy_stage_chain_execution_bundle,
+        failure_rebudgeting_updates=failure_rebudgeting_updates,
     )
     summary = {
         "schema": REPAIR_CAMPAIGN_AUTONOMOUS_FLOOR_LOOP_SCHEMA,
@@ -1363,6 +1440,12 @@ def _build_summary(
         ),
         "entropy_stage_chain_posterior_learning_signal_count": (
             learning_signal_report.get("entropy_stage_chain_learning_signal_count", 0)
+        ),
+        "exact_failure_rebudgeting_posterior_learning_signal_count": (
+            learning_signal_report.get(
+                "exact_failure_rebudgeting_learning_signal_count",
+                0,
+            )
         ),
         "posterior_learning_signal_count": learning_signal_report["learning_signal_count"],
         "posterior_learning_signal_report": learning_signal_report,

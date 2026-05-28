@@ -560,7 +560,8 @@ def test_real_archive_intake_runs_all_families_through_floor_loop(
     )
     assert summary["posterior_stack_learning_signal_count"] == 5
     assert summary["entropy_stage_chain_posterior_learning_signal_count"] == 5
-    assert summary["posterior_learning_signal_count"] == 10
+    assert summary["exact_failure_rebudgeting_posterior_learning_signal_count"] == 6
+    assert summary["posterior_learning_signal_count"] == 16
     assert summary["ready_for_exact_eval_dispatch"] is False
     source_queue_path = tmp_path / "real_archive_loop" / "repair_family_exact_ready_source_queue.json"
     source_queue = json.loads(source_queue_path.read_text(encoding="utf-8"))
@@ -909,10 +910,11 @@ def test_repair_campaign_autonomous_floor_loop_executes_all_required_queue_famil
     assert summary["entropy_stage_chain_posterior_learning_signal_count"] == 0
     assert summary["exact_dispatch_preclaim_gate_count"] == 5
     assert summary["failure_rebudgeting_update_count"] == 5
+    assert summary["exact_failure_rebudgeting_posterior_learning_signal_count"] == 5
     primary_path = summary["stack_search_plan"]["primary_stack_acquisition_path"]
     assert primary_path["path_kind"] == "n_way_hypergraph_interaction_tensor_acquisition"
     assert primary_path["source_hyperedge_order"] >= 2
-    assert summary["posterior_learning_signal_count"] == 5
+    assert summary["posterior_learning_signal_count"] == 10
     assert summary["ready_for_exact_eval_dispatch"] is False
 
 
@@ -1114,6 +1116,7 @@ def test_repair_campaign_autonomous_floor_loop_preserves_precise_terminal_class(
     assert summary["stop_reason"] == "precise_exact_axis_blocker"
     assert summary["exact_dispatch_preclaim_gate_count"] == 2
     assert summary["failure_rebudgeting_update_count"] == 2
+    assert summary["exact_failure_rebudgeting_posterior_learning_signal_count"] == 2
     blocker_report = summary["exact_axis_blocker_report"]
     assert blocker_report["stop_reason"] == "precise_exact_axis_blocker"
     assert blocker_report["selected_blocker_class"] == (

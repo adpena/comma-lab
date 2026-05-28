@@ -445,6 +445,11 @@ def _bridge_row(
         "family_id": family_id,
         "typed_response_id": typed_response_id,
         "candidate_chain_id": candidate_chain_id,
+        "candidate_chain_ids": _string_list(
+            handoff_row.get("candidate_chain_ids")
+        ),
+        "entropy_position_label": handoff_row.get("entropy_position_label"),
+        "entropy_stage_order": handoff_row.get("entropy_stage_order"),
         "lane_id": f"repair_family_exact_handoff::{_slug(family_id)}",
         "target_modes": ["contest_exact_eval"],
         "target_score_axes_required": ["contest_cpu", "contest_cuda"],
@@ -510,6 +515,14 @@ def _bridge_row(
         "family_id": family_id,
         "typed_response_id": typed_response_id,
         "candidate_chain_id": candidate_chain_id,
+        "candidate_chain_ids": _string_list(handoff_row.get("candidate_chain_ids")),
+        "entropy_position_label": handoff_row.get("entropy_position_label"),
+        "entropy_stage_order": handoff_row.get("entropy_stage_order"),
+        "chain_stage_identities": [
+            dict(item)
+            for item in handoff_row.get("chain_stage_identities") or []
+            if isinstance(item, Mapping)
+        ],
         "archive_custody": archive_custody,
         "runtime_consumption_proof_custody": proof_custody,
         "runtime_consumption_proof_schema": proof_payload.get("schema"),
@@ -521,6 +534,36 @@ def _bridge_row(
             submission_custody.get("custody_complete") is True
         ),
         "bridge_source_queue_row": bridge_source_row,
+        "failure_rebudgeting_identity": {
+            "schema": "repair_family_exact_failure_rebudgeting_identity.v1",
+            "candidate_id": candidate_id,
+            "family_id": family_id,
+            "typed_response_id": typed_response_id,
+            "candidate_chain_id": candidate_chain_id,
+            "candidate_chain_ids": _string_list(
+                handoff_row.get("candidate_chain_ids")
+            ),
+            "entropy_position_label": handoff_row.get("entropy_position_label"),
+            "entropy_stage_order": handoff_row.get("entropy_stage_order"),
+            "chain_stage_identities": [
+                dict(item)
+                for item in handoff_row.get("chain_stage_identities") or []
+                if isinstance(item, Mapping)
+            ],
+            "source_archive_sha256": source_archive.get("sha256"),
+            "source_archive_bytes": source_archive.get("bytes"),
+            "candidate_archive_sha256": archive_custody.get("sha256"),
+            "candidate_archive_bytes": archive_custody.get("bytes"),
+            "runtime_consumption_proof_sha256": proof_custody.get("sha256"),
+            "runtime_consumption_proof_bytes": proof_custody.get("bytes"),
+            "runtime_content_tree_sha256": submission_custody.get(
+                "runtime_content_tree_sha256"
+            ),
+            "runtime_tree_sha256": submission_custody.get("runtime_tree_sha256"),
+            "budget_spend_allowed": False,
+            "ready_for_exact_eval_dispatch": False,
+            **FALSE_AUTHORITY,
+        },
         "blockers": row_blockers,
         "budget_spend_allowed": False,
         "ready_for_budget_spend": False,
