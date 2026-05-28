@@ -60497,6 +60497,47 @@
         "bolt_on_loc_budget": 0,
         "no_op_detector_planned": true
       }
+    },
+    {
+      "id": "lane_fec8_3rd_order_markov_rate_attack_20260528",
+      "name": "FEC8 3rd-order Markov rate-attack codec (Wave N+24 Option A depth-axis extension)",
+      "phase": 11.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "submissions/hnerv_fec6_fixed_huffman_k16/encoder/build_pr101_frame_exploit_selector_packet_fec8_3rd_order_markov.py + tools/measure_fec8_markov_3rd_order_rate_attack.py + canonical equation fec8_3rd_order_markov_static_variant_c_savings_v1 + probe outcome DEFER blocking expires 2026-06-27 + landing memo .omx/research/fec8_3rd_order_markov_rate_attack_landed_20260528.md; roundtrip-verified static 240B + adaptive 304B on PR101 stream; IMPLEMENTATION-LEVEL FALSIFIED per Catalog 307 with 4 reactivation criteria"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/fec8_3rd_order_markov_rate_attack_landed_20260528.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -60506,5 +60547,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-28T22:16:26Z"
+  "updated_at": "2026-05-28T22:56:23Z"
 }
