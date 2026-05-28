@@ -467,6 +467,9 @@ def run_repair_autonomous_multi_archive_runner(
     runtime_closure: dict[str, Any] | None = None
     runtime_floor_summary: dict[str, Any] | None = None
     runtime_floor_result: dict[str, Any] | None = None
+    exact_dispatch_plan_result: dict[str, Any] | None = None
+    exact_dispatch_plan: dict[str, Any] | None = None
+    exact_dispatch_experiment_queue: dict[str, Any] | None = None
     if close_runtime_custody:
         source_queue_path = floor_loop_dir / "repair_family_exact_ready_source_queue.json"
         runtime_closure = close_multi_archive_submission_runtime_custody(
@@ -510,6 +513,33 @@ def run_repair_autonomous_multi_archive_runner(
                 "runtime-custody floor loop command failed"
             )
         runtime_floor_summary = _load_json(runtime_floor_summary_path)
+        exact_dispatch_plan_path = output / "blocked_exact_eval_dispatch_plan.json"
+        exact_dispatch_queue_path = output / "blocked_exact_eval_dispatch_queue.json"
+        exact_dispatch_plan_result = _run_command(
+            [
+                sys.executable,
+                str(repo / "tools" / "build_materializer_exact_eval_dispatch_plan.py"),
+                "--exact-ready-queue",
+                str(runtime_floor_dir / "repair_family_blocked_exact_ready_queue.json"),
+                "--dispatch-plan-out",
+                str(exact_dispatch_plan_path),
+                "--experiment-queue-out",
+                str(exact_dispatch_queue_path),
+                "--experiment-queue-id",
+                f"{queue_id}_blocked_exact_dispatch",
+                "--dispatch-mode",
+                "dry_run",
+                "--overwrite",
+            ],
+            repo_root=repo,
+            timeout_seconds=300,
+        )
+        if exact_dispatch_plan_result["returncode"] != 0:
+            raise RepairAutonomousMultiArchiveRunnerError(
+                "blocked exact-dispatch plan command failed"
+            )
+        exact_dispatch_plan = _load_json(exact_dispatch_plan_path)
+        exact_dispatch_experiment_queue = _load_json(exact_dispatch_queue_path)
     active_summary = runtime_floor_summary or floor_loop_summary
     floor_posterior_appended = int(floor_loop_summary.get("posterior_appended_count") or 0)
     runtime_posterior_appended = (
@@ -554,6 +584,24 @@ def run_repair_autonomous_multi_archive_runner(
         "runtime_floor_posterior_appended_count": runtime_posterior_appended,
         "posterior_appended_count": floor_posterior_appended + runtime_posterior_appended,
         "posterior_appended_count_total": floor_posterior_appended + runtime_posterior_appended,
+        "blocked_exact_dispatch_plan_result": exact_dispatch_plan_result,
+        "blocked_exact_dispatch_plan_path": (
+            None if exact_dispatch_plan is None else _repo_rel(output / "blocked_exact_eval_dispatch_plan.json", repo)
+        ),
+        "blocked_exact_dispatch_experiment_queue_path": (
+            None
+            if exact_dispatch_experiment_queue is None
+            else _repo_rel(output / "blocked_exact_eval_dispatch_queue.json", repo)
+        ),
+        "blocked_exact_dispatch_authorized_candidate_count": (
+            None if exact_dispatch_plan is None else exact_dispatch_plan.get("authorized_candidate_count")
+        ),
+        "blocked_exact_dispatch_blocked_candidate_count": (
+            None if exact_dispatch_plan is None else exact_dispatch_plan.get("blocked_candidate_count")
+        ),
+        "blocked_exact_dispatch_experiment_count": (
+            None if exact_dispatch_plan is None else exact_dispatch_plan.get("experiment_count")
+        ),
         "stop_reason": active_summary.get("stop_reason"),
         "primary_stack_acquisition_terminal_outcome": active_summary.get(
             "primary_stack_acquisition_terminal_outcome"

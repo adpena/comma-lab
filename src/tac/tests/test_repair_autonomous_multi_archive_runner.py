@@ -60,6 +60,9 @@ def test_multi_archive_runner_executes_and_closes_runtime_custody(
     assert summary["exact_ready_bridge_runtime_content_tree_custody_proven_count"] == 10
     assert summary["archive_bound_exact_handoff_candidate_count"] == 10
     assert summary["runtime_closure"]["closure_report_count"] == 10
+    assert summary["blocked_exact_dispatch_authorized_candidate_count"] == 0
+    assert summary["blocked_exact_dispatch_blocked_candidate_count"] == 1
+    assert summary["blocked_exact_dispatch_experiment_count"] == 0
     assert summary["posterior_appended_count_total"] == 0
     assert summary["ready_for_exact_eval_dispatch"] is False
     assert summary["score_claim"] is False

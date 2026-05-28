@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import struct
 import subprocess
 import sys
 import zipfile
@@ -27,6 +28,7 @@ from tac.optimization.repair_campaign_scorer import (
     score_repair_campaign,
 )
 from tac.optimization.repair_family_byte_transform_executor import (
+    FEC6_FIXED_K16_CODE_BITS,
     REPAIR_FAMILY_BYTE_TRANSFORM_EXECUTION_REPORT_SCHEMA,
     REPAIR_FAMILY_BYTE_TRANSFORM_REPLAY_BUNDLE_SCHEMA,
     build_repair_family_byte_transform_execution_report,
@@ -159,6 +161,15 @@ def _write_zip(path: Path, members: dict[str, bytes]) -> Path:
         for name, payload in members.items():
             archive.writestr(name, payload)
     return path
+
+
+def _fec6_selector_payload(codes: list[int]) -> bytes:
+    bits = "".join(FEC6_FIXED_K16_CODE_BITS[code] for code in codes)
+    bits += "0" * ((-len(bits)) % 8)
+    encoded = bytes(int(bits[index : index + 8], 2) for index in range(0, len(bits), 8))
+    selector = b"FEC6" + struct.pack("<H", len(codes)) + encoded
+    source_payload = b"hnerv-source-payload"
+    return b"FP11" + struct.pack("<I", len(source_payload)) + source_payload + struct.pack("<H", len(selector)) + selector
 
 
 def test_segnet_family_materializer_emits_ordered_fail_closed_manifest(
@@ -355,7 +366,14 @@ def test_byte_transform_executor_repacks_archive_native_candidate_when_custody_e
     candidate = report["candidate_archive"]
     assert report["byte_closed_candidate_emitted"] is True
     assert report["archive_native_transform_attempted"] is True
-    assert report["archive_native_transform_kind"] == "zip_repack_payload_identity"
+    assert report["archive_native_transform_kind"] in {
+        "packet_member_entropy_boundary_recompress",
+        "zip_repack_payload_identity",
+    }
+    assert {
+        variant["archive_native_transform_kind"]
+        for variant in report["candidate_archive_transform_variants"]
+    } >= {"packet_member_entropy_boundary_recompress", "zip_repack_payload_identity"}
     assert candidate["runtime_consumption_proof_ready"] is True
     assert candidate["receiver_contract_satisfied"] is True
     assert (tmp_path / candidate["path"]).is_file()
@@ -390,6 +408,80 @@ def test_byte_transform_executor_repacks_archive_native_candidate_when_custody_e
     assert exact_handoff_plan["archive_bound_candidate_count"] == 1
     assert exact_handoff_plan["archive_bound_custody_complete"] is True
     assert exact_handoff_plan["ready_for_exact_eval_dispatch"] is False
+
+
+def test_byte_transform_executor_mutates_fec6_selector_payload_when_detected(
+    tmp_path: Path,
+) -> None:
+    archive_path = _write_zip(
+        tmp_path / "fec6_source_archive.zip",
+        {"x": _fec6_selector_payload([0, 2, 7, 13, 0, 2, 7, 13, 0, 2])},
+    )
+    archive_sha = hashlib.sha256(archive_path.read_bytes()).hexdigest()
+    manifest = {
+        "schema": REPAIR_CAMPAIGN_FAMILY_MATERIALIZER_MANIFEST_SCHEMA,
+        "materializer_id": "repair_family_materializer:frame0_k16_palette_asymmetry",
+        "target_kind": "frame0_k16_palette_asymmetry",
+        "family_id": "frame0_k16_palette_asymmetry",
+        "typed_response_id": "fec6_palette_ready",
+        "candidate_chain_id": "fec6_palette_chain",
+        "candidate_chain_ids": ["fec6_palette_chain"],
+        "entropy_position_label": "before_entropy_coder_distribution_shaping",
+        "active_entropy_stage": {
+            "order": 10,
+            "stage": "before_entropy_coder_distribution_shaping",
+            "class": "pre_entropy_distribution_shaping",
+        },
+        "fractal_optimization_scope": {
+            "active_levels": ["bit", "byte", "frame", "pair"],
+            "declared_levels": ["bit", "byte", "frame", "pair"],
+        },
+        "component_response_replayed": True,
+        "component_response_replay": {
+            "axis_tag": "[macOS-MLX research-signal]",
+            "component_response_terms": {
+                "segnet_delta_score_units": -0.0001,
+                "posenet_delta_score_units": -0.0002,
+                **_false_authority(),
+            },
+            **_false_authority(),
+        },
+        "candidate_archive": {
+            "path": str(archive_path),
+            "sha256": archive_sha,
+            "bytes": archive_path.stat().st_size,
+        },
+        "receiver_contract_satisfied": False,
+        "byte_closed_candidate_emitted": True,
+        "readiness_blockers": [],
+        **_false_authority(),
+    }
+    manifest_path = _write_json(tmp_path / "fec6_manifest.json", manifest)
+
+    report, _bundle = build_repair_family_byte_transform_execution_report(
+        family_materializer_manifest=manifest,
+        family_materializer_manifest_path=manifest_path,
+        output_dir=tmp_path / "fec6_transform",
+        replay_argv=["python", "tools/run_repair_family_byte_transform_executor.py"],
+        invocation_argv=["pytest"],
+        repo_root=tmp_path,
+        allow_overwrite=False,
+    )
+
+    candidate = report["candidate_archive"]
+    assert report["archive_family_probe"]["detected_archive_families"] == [
+        "fp11_frame_selector_wrapper",
+        "fec6_fixed_huffman_k16_selector",
+    ]
+    assert report["selected_archive_transform_kind"] == "fec6_selector_payload_mutation"
+    assert report["semantic_payload_changed"] is True
+    assert report["score_affecting_payload_changed"] is False
+    assert candidate["semantic_payload_changed"] is True
+    assert candidate["score_affecting_payload_changed"] is False
+    assert candidate["runtime_consumption_proof_ready"] is True
+    assert candidate["mutation_details"]["changed_pair_count"] > 0
+    assert (tmp_path / candidate["path"]).is_file()
+    assert (tmp_path / candidate["runtime_consumption_proof_path"]).is_file()
 
 
 def test_repair_family_byte_transform_cli_writes_report_and_bundle(

@@ -98,6 +98,12 @@ def main(argv: list[str] | None = None) -> int:
                 "exact_ready_bridge_runtime_content_tree_custody_proven_count": summary[
                     "exact_ready_bridge_runtime_content_tree_custody_proven_count"
                 ],
+                "blocked_exact_dispatch_authorized_candidate_count": summary[
+                    "blocked_exact_dispatch_authorized_candidate_count"
+                ],
+                "blocked_exact_dispatch_blocked_candidate_count": summary[
+                    "blocked_exact_dispatch_blocked_candidate_count"
+                ],
                 "stop_reason": summary["stop_reason"],
                 "ready_for_exact_eval_dispatch": False,
                 "score_claim": False,

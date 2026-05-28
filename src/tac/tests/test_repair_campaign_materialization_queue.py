@@ -551,9 +551,14 @@ def test_real_archive_intake_runs_all_families_through_floor_loop(
     assert {
         row["receiver_contract_satisfied"] for row in source_queue["top_k"]
     } == {True}
-    assert {
+    receiver_contract_kinds = {
         row["receiver_contract_kind"] for row in source_queue["top_k"]
-    } == {"family_agnostic_archive_zip_repack"}
+    }
+    assert receiver_contract_kinds <= {
+        "family_agnostic_archive_zip_repack",
+        "family_agnostic_packet_member_recompress",
+    }
+    assert "family_agnostic_packet_member_recompress" in receiver_contract_kinds
 
     runtime_dir = _write_runtime_dir(tmp_path / "runtime")
     closure_report = build_materializer_submission_runtime_closures(

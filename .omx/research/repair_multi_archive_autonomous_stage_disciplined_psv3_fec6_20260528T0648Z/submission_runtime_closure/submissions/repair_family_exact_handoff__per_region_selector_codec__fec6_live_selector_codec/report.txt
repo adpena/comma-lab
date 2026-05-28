@@ -1,0 +1,12 @@
+Materializer submission runtime closure
+
+candidate_id: repair_family_exact_handoff__per_region_selector_codec__fec6_live_selector_codec
+archive_sha256: 40791373369485200b82142c78c4b090badafae6a10742a9ea1783f2287495f7
+archive_bytes: 178509
+score_claim: false
+promotion_eligible: false
+rank_or_kill_eligible: false
+ready_for_exact_eval_dispatch: false
+
+This packet is a local exact-readiness closure artifact. It is not a score,
+rank, promotion, or dispatch authority until the canonical exact-eval gates pass.

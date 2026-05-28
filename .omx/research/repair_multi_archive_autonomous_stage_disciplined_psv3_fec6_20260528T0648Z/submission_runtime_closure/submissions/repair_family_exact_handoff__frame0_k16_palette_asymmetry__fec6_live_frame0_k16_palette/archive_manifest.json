@@ -1,0 +1,79 @@
+{
+  "allowed_use": "archive_manifest_for_exact_readiness_static_custody_only",
+  "archive_bytes": 178512,
+  "archive_path": ".omx/research/repair_multi_archive_autonomous_stage_disciplined_psv3_fec6_20260528T0648Z/submission_runtime_closure/submissions/repair_family_exact_handoff__frame0_k16_palette_asymmetry__fec6_live_frame0_k16_palette/archive.zip",
+  "archive_sha256": "99876d497f8ec75eee4a05674f511166f0cc910b7287fb6a254db2d20271adbe",
+  "candidate_archive": {
+    "bytes": 178512,
+    "path": ".omx/research/repair_multi_archive_autonomous_stage_disciplined_psv3_fec6_20260528T0648Z/submission_runtime_closure/submissions/repair_family_exact_handoff__frame0_k16_palette_asymmetry__fec6_live_frame0_k16_palette/archive.zip",
+    "sha256": "99876d497f8ec75eee4a05674f511166f0cc910b7287fb6a254db2d20271adbe"
+  },
+  "candidate_id": "repair_family_exact_handoff__frame0_k16_palette_asymmetry__fec6_live_frame0_k16_palette",
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+  "generated_at_utc": "2026-05-28T06:42:47Z",
+  "gpu_launched": false,
+  "materializer_id": null,
+  "members": [
+    {
+      "bytes": 178412,
+      "compress_type": 0,
+      "compressed_bytes": 178412,
+      "member_name": "x",
+      "name": "x",
+      "sha256": "cd4403c4848bf5a6da6684d39aab93cc6df7be34b077369237da62229f269044",
+      "uncompressed_bytes": 178412,
+      "zip_compressed_bytes": 178412,
+      "zip_compression_method": 0,
+      "zip_uncompressed_bytes": 178412
+    }
+  ],
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "realized_saved_bytes": null,
+  "receiver_contract_kind": "repair_family_fec6_selector_payload_mutation_runtime_parse",
+  "schema": "materializer_submission_runtime_closure_archive_manifest.v1",
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "serialized_archive_delta": {
+    "archive_delta_bytes": -5,
+    "blockers": [],
+    "candidate_archive_bytes": 178512,
+    "dispatch_attempted": false,
+    "gpu_launched": false,
+    "modeled_cost_bytes": null,
+    "modeled_saved_bytes": 5,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "rate_only_control": false,
+    "ready_for_exact_eval_dispatch": false,
+    "realized_saved_bytes": 5,
+    "require_realized_saving": false,
+    "savings_realized": true,
+    "schema": "serialized_archive_delta_contract.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "source_archive_bytes": 178517,
+    "status": "realized_saving"
+  },
+  "source_archive": {
+    "bytes": 178517,
+    "path": null,
+    "sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf"
+  },
+  "source_queue_path": ".omx/research/repair_multi_archive_autonomous_stage_disciplined_psv3_fec6_20260528T0648Z/floor_loop/repair_family_exact_ready_source_queue.json",
+  "target_kind": null,
+  "zipwire": {
+    "blockers": [],
+    "duplicate_member_names": [],
+    "member_count": 1,
+    "zip_strict": true
+  }
+}

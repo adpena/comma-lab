@@ -1,0 +1,208 @@
+{
+  "allowed_use": "exact_readiness_static_submission_closure_only",
+  "archive_bytes": 178516,
+  "archive_manifest_path": ".omx/research/repair_multi_archive_autonomous_stage_disciplined_psv3_fec6_20260528T0648Z/submission_runtime_closure/submissions/repair_family_exact_handoff__segnet_class_region_waterfill__fec6_live_segnet_region/archive_manifest.json",
+  "archive_path": ".omx/research/repair_multi_archive_autonomous_stage_disciplined_psv3_fec6_20260528T0648Z/submission_runtime_closure/submissions/repair_family_exact_handoff__segnet_class_region_waterfill__fec6_live_segnet_region/archive.zip",
+  "archive_sha256": "f9120873a488588b2412bce01c312179120aaf0edeac4aeb49f24552923bed4e",
+  "candidate_id": "repair_family_exact_handoff__segnet_class_region_waterfill__fec6_live_segnet_region",
+  "charged_bits_changed": false,
+  "closed_source_queue_path": ".omx/research/repair_multi_archive_autonomous_stage_disciplined_psv3_fec6_20260528T0648Z/submission_runtime_closure/sidecars/repair_family_exact_handoff__segnet_class_region_waterfill__fec6_live_segnet_region/closed_source_queue.json",
+  "closure_queue_schema": "optimizer_candidate_queue_v1",
+  "contest_cuda_auth_eval": false,
+  "copied_runtime_file_count": 9,
+  "copied_runtime_files": [
+    {
+      "bytes": 18824,
+      "relative_path": "inflate.py",
+      "sha256": "45722504b03c1a08bfb28d223c6b2f5a73123b6b42b8c878c56940ace378230a"
+    },
+    {
+      "bytes": 818,
+      "relative_path": "inflate.sh",
+      "sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c"
+    },
+    {
+      "bytes": 1434,
+      "relative_path": "pre_submission_compliance.competitive_or_innovative_statement.txt",
+      "sha256": "edf20faffae5628df3d6943c834131416c6b6b095ee44d66b561c712c8015e19"
+    },
+    {
+      "bytes": 1577,
+      "relative_path": "pre_submission_compliance.hosted_archive_manifest.json",
+      "sha256": "e7db3aa67b687d2252f194f082e3f4c76e9fc41c38ad5a847b73d5649fc362c0"
+    },
+    {
+      "bytes": 809,
+      "relative_path": "report.txt",
+      "sha256": "32ea2cfc21928db44b25417ba40809470ea3c9930a191ffd4cfd9cde82a0a643"
+    },
+    {
+      "bytes": 6514,
+      "relative_path": "src/codec.py",
+      "sha256": "79bad598244d2d5afb7b7b3f258a88921b6dffc45a7071a496245989e24f6685"
+    },
+    {
+      "bytes": 12158,
+      "relative_path": "src/codec_sidecar.py",
+      "sha256": "cc4fa4f48a65910e18908a93a1cd05af0642b5897719eb3ea49d6eef36b96483"
+    },
+    {
+      "bytes": 7980,
+      "relative_path": "src/frame_selector.py",
+      "sha256": "e47d2ba86abc4b3fa493e6a079822e65fc610c9b58825308370e2c25067b7ea6"
+    },
+    {
+      "bytes": 2197,
+      "relative_path": "src/model.py",
+      "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+    }
+  ],
+  "deployment_target": "desktop_research",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "optimizer_candidate_queue_is_planning_only",
+    "requires_exact_eval_readiness_gate",
+    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+    "requires_non_proxy_score_evidence_before_promotion",
+    "submission_closure_report_is_not_dispatch_authority",
+    "run_exact_readiness_bridge_on_closed_source_queue",
+    "lane_claim_required_before_gpu_or_remote_eval",
+    "contest_exact_auth_eval_required_before_score_claim"
+  ],
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+  "generated_at_utc": "2026-05-28T06:42:47Z",
+  "gpu_launched": false,
+  "materializer_submission_closure_kind": "source_runtime_static_closure_with_candidate_archive",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "runtime_consumption_proof_path": ".omx/research/repair_multi_archive_autonomous_stage_disciplined_psv3_fec6_20260528T0648Z/submission_runtime_closure/submissions/repair_family_exact_handoff__segnet_class_region_waterfill__fec6_live_segnet_region/runtime_consumption_proof.json",
+  "runtime_manifest": {
+    "external_dependency_roots": [],
+    "files": [
+      {
+        "bytes": 3222,
+        "relative_path": "archive_manifest.json",
+        "repo_relative_path": ".omx/research/repair_multi_archive_autonomous_stage_disciplined_psv3_fec6_20260528T0648Z/submission_runtime_closure/submissions/repair_family_exact_handoff__segnet_class_region_waterfill__fec6_live_segnet_region/archive_manifest.json",
+        "sha256": "836f4c6d11f7b7ed53567bcbb7de1ceb1300f27440321fa8730c7a6dfaed8cf7"
+      },
+      {
+        "bytes": 18824,
+        "relative_path": "inflate.py",
+        "repo_relative_path": ".omx/research/repair_multi_archive_autonomous_stage_disciplined_psv3_fec6_20260528T0648Z/submission_runtime_closure/submissions/repair_family_exact_handoff__segnet_class_region_waterfill__fec6_live_segnet_region/inflate.py",
+        "sha256": "45722504b03c1a08bfb28d223c6b2f5a73123b6b42b8c878c56940ace378230a"
+      },
+      {
+        "bytes": 818,
+        "relative_path": "inflate.sh",
+        "repo_relative_path": ".omx/research/repair_multi_archive_autonomous_stage_disciplined_psv3_fec6_20260528T0648Z/submission_runtime_closure/submissions/repair_family_exact_handoff__segnet_class_region_waterfill__fec6_live_segnet_region/inflate.sh",
+        "sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c"
+      },
+      {
+        "bytes": 1434,
+        "relative_path": "pre_submission_compliance.competitive_or_innovative_statement.txt",
+        "repo_relative_path": ".omx/research/repair_multi_archive_autonomous_stage_disciplined_psv3_fec6_20260528T0648Z/submission_runtime_closure/submissions/repair_family_exact_handoff__segnet_class_region_waterfill__fec6_live_segnet_region/pre_submission_compliance.competitive_or_innovative_statement.txt",
+        "sha256": "edf20faffae5628df3d6943c834131416c6b6b095ee44d66b561c712c8015e19"
+      },
+      {
+        "bytes": 1577,
+        "relative_path": "pre_submission_compliance.hosted_archive_manifest.json",
+        "repo_relative_path": ".omx/research/repair_multi_archive_autonomous_stage_disciplined_psv3_fec6_20260528T0648Z/submission_runtime_closure/submissions/repair_family_exact_handoff__segnet_class_region_waterfill__fec6_live_segnet_region/pre_submission_compliance.hosted_archive_manifest.json",
+        "sha256": "e7db3aa67b687d2252f194f082e3f4c76e9fc41c38ad5a847b73d5649fc362c0"
+      },
+      {
+        "bytes": 512,
+        "relative_path": "report.txt",
+        "repo_relative_path": ".omx/research/repair_multi_archive_autonomous_stage_disciplined_psv3_fec6_20260528T0648Z/submission_runtime_closure/submissions/repair_family_exact_handoff__segnet_class_region_waterfill__fec6_live_segnet_region/report.txt",
+        "sha256": "43066e1fea3c8594883be8197b5667df4b2215d49621dfe160af0783ecfa6ec2"
+      },
+      {
+        "bytes": 3927,
+        "relative_path": "runtime_consumption_proof.json",
+        "repo_relative_path": ".omx/research/repair_multi_archive_autonomous_stage_disciplined_psv3_fec6_20260528T0648Z/submission_runtime_closure/submissions/repair_family_exact_handoff__segnet_class_region_waterfill__fec6_live_segnet_region/runtime_consumption_proof.json",
+        "sha256": "c5ce73ed1b3ed03df69b5f8748d6ca32c5e84c5673b9bc2d6f8ea677f49f3367"
+      },
+      {
+        "bytes": 6514,
+        "relative_path": "src/codec.py",
+        "repo_relative_path": ".omx/research/repair_multi_archive_autonomous_stage_disciplined_psv3_fec6_20260528T0648Z/submission_runtime_closure/submissions/repair_family_exact_handoff__segnet_class_region_waterfill__fec6_live_segnet_region/src/codec.py",
+        "sha256": "79bad598244d2d5afb7b7b3f258a88921b6dffc45a7071a496245989e24f6685"
+      },
+      {
+        "bytes": 12158,
+        "relative_path": "src/codec_sidecar.py",
+        "repo_relative_path": ".omx/research/repair_multi_archive_autonomous_stage_disciplined_psv3_fec6_20260528T0648Z/submission_runtime_closure/submissions/repair_family_exact_handoff__segnet_class_region_waterfill__fec6_live_segnet_region/src/codec_sidecar.py",
+        "sha256": "cc4fa4f48a65910e18908a93a1cd05af0642b5897719eb3ea49d6eef36b96483"
+      },
+      {
+        "bytes": 7980,
+        "relative_path": "src/frame_selector.py",
+        "repo_relative_path": ".omx/research/repair_multi_archive_autonomous_stage_disciplined_psv3_fec6_20260528T0648Z/submission_runtime_closure/submissions/repair_family_exact_handoff__segnet_class_region_waterfill__fec6_live_segnet_region/src/frame_selector.py",
+        "sha256": "e47d2ba86abc4b3fa493e6a079822e65fc610c9b58825308370e2c25067b7ea6"
+      },
+      {
+        "bytes": 2197,
+        "relative_path": "src/model.py",
+        "repo_relative_path": ".omx/research/repair_multi_archive_autonomous_stage_disciplined_psv3_fec6_20260528T0648Z/submission_runtime_closure/submissions/repair_family_exact_handoff__segnet_class_region_waterfill__fec6_live_segnet_region/src/model.py",
+        "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+      }
+    ],
+    "repo_local_tac_import_manifest": {
+      "discovery": "static_ast_recursive_import_closure",
+      "file_count": 0,
+      "files": [],
+      "module_count": 0,
+      "parse_errors": [],
+      "root_import_modules": [],
+      "runtime_root_name": "repair_family_exact_handoff__segnet_class_region_waterfill__fec6_live_segnet_region",
+      "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+      "tac_root_relative_path": "src/tac",
+      "unresolved_modules": []
+    },
+    "runtime_content_tree_sha256": "2c6a0ca673e83451f5872c62f032e4c1fc9d16d35b6eb0031aad70c6e74c5d03",
+    "runtime_file_count": 11,
+    "runtime_root": "/Users/adpena/Projects/pact/.omx/research/repair_multi_archive_autonomous_stage_disciplined_psv3_fec6_20260528T0648Z/submission_runtime_closure/submissions/repair_family_exact_handoff__segnet_class_region_waterfill__fec6_live_segnet_region",
+    "runtime_tree_sha256": "80da529d7accab0ebd8ee83cfdd56ed821a01f801ebfde7c39ab287585a44b91",
+    "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+    "upstream_evaluate_py": {
+      "bytes": 6005,
+      "relative_path": "evaluate.py",
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    }
+  },
+  "runtime_source_dir": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+  "saved_bytes_at_risk": null,
+  "schema": "materializer_submission_runtime_closure_report.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "source_queue_path": ".omx/research/repair_multi_archive_autonomous_stage_disciplined_psv3_fec6_20260528T0648Z/floor_loop/repair_family_exact_ready_source_queue.json",
+  "source_runtime_adapter_ready": false,
+  "source_runtime_dir": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+  "submission_dir": ".omx/research/repair_multi_archive_autonomous_stage_disciplined_psv3_fec6_20260528T0648Z/submission_runtime_closure/submissions/repair_family_exact_handoff__segnet_class_region_waterfill__fec6_live_segnet_region",
+  "target_kind": null,
+  "target_modes": [
+    "contest_exact_eval_planning"
+  ],
+  "targeted_correction_budget_signal": {
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "freed_bytes_require_receiver_and_exact_readiness_before_spend": true,
+    "gpu_launched": false,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "saved_bytes_at_risk": null,
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false
+  },
+  "tool": "tac.optimizer.materializer_submission_closure"
+}

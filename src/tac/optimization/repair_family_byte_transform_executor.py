@@ -9,10 +9,13 @@ authority.
 
 from __future__ import annotations
 
+import io
 import platform
+import struct
 import subprocess
 import sys
 import time
+import zipfile
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
@@ -21,6 +24,7 @@ from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY
 from tac.optimization.family_agnostic_materializers import (
     FamilyAgnosticMaterializerError,
     materialize_archive_zip_repack_candidate,
+    materialize_packet_member_recompress_candidate,
 )
 from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
@@ -39,6 +43,7 @@ from tac.repo_io import (
     sha256_bytes,
     sha256_file,
     write_bytes_artifact,
+    write_json_artifact,
 )
 
 REPAIR_FAMILY_BYTE_TRANSFORM_EXECUTION_REPORT_SCHEMA = "repair_family_byte_transform_execution_report.v1"
@@ -80,6 +85,36 @@ _FAMILY_SIGNAL_KEYS: Mapping[str, tuple[str, ...]] = {
         "repair_dynamics_palette_prior",
     ),
     "entropy_boundary_probe": ("entropy_boundary_probe_manifest",),
+}
+
+FEC6_FIXED_K16_CODE_BITS: tuple[str, ...] = (
+    "00",
+    "1100",
+    "01",
+    "111010",
+    "11010",
+    "111011",
+    "111100",
+    "100",
+    "111101",
+    "11011",
+    "1111110",
+    "111110",
+    "11111110",
+    "101",
+    "11100",
+    "11111111",
+)
+FEC6_FIXED_K16_DECODE: Mapping[str, int] = {
+    bits: index for index, bits in enumerate(FEC6_FIXED_K16_CODE_BITS)
+}
+
+_FEC6_FAMILY_TARGET_CODES: Mapping[str, int] = {
+    "posenet_null_bottom_decile": 0,
+    "segnet_class_region_waterfill": 2,
+    "per_region_selector_codec": 0,
+    "palette_frame_asymmetry_prior": 2,
+    "frame0_k16_palette_asymmetry": 2,
 }
 
 
@@ -180,6 +215,262 @@ def _file_record(
     if present:
         record.update({"sha256": sha256_file(resolved), "bytes": resolved.stat().st_size})
     return record
+
+
+def _archive_record(path: str | Path, *, repo_root: str | Path) -> dict[str, Any]:
+    resolved = _resolve(path, repo_root)
+    return {
+        "path": _repo_rel(resolved, repo_root),
+        "sha256": sha256_file(resolved),
+        "bytes": resolved.stat().st_size,
+    }
+
+
+def _zip_member_names(archive_path: str | Path) -> list[str]:
+    with zipfile.ZipFile(archive_path) as archive:
+        return [info.filename for info in archive.infolist()]
+
+
+def _zip_member_bytes(archive_path: str | Path, member_name: str) -> bytes:
+    with zipfile.ZipFile(archive_path) as archive:
+        return archive.read(member_name)
+
+
+def _member_record(
+    archive_path: str | Path,
+    member_name: str,
+    *,
+    payload: bytes | None = None,
+) -> dict[str, Any]:
+    with zipfile.ZipFile(archive_path) as archive:
+        info = archive.getinfo(member_name)
+        member_payload = archive.read(member_name) if payload is None else payload
+    return {
+        "name": member_name,
+        "sha256": sha256_bytes(member_payload),
+        "bytes": len(member_payload),
+        "zip_compression_method": info.compress_type,
+        "zip_compressed_bytes": info.compress_size,
+    }
+
+
+def _primary_payload_member(archive_path: str | Path) -> str:
+    """Choose the member most likely to be the score-affecting payload."""
+
+    with zipfile.ZipFile(archive_path) as archive:
+        infos = archive.infolist()
+    if not infos:
+        raise RepairFamilyByteTransformExecutorError("archive has no ZIP members")
+    by_name = {info.filename: info for info in infos}
+    for preferred in ("x", "0.bin", "archive.bin", "payload.bin", "renderer.bin"):
+        if preferred in by_name:
+            return preferred
+    payload_like = [
+        info
+        for info in infos
+        if not info.is_dir()
+        and not info.filename.endswith((".py", ".sh", ".txt", ".json", ".toml"))
+        and "__pycache__" not in info.filename
+    ]
+    candidates = payload_like or [info for info in infos if not info.is_dir()]
+    if not candidates:
+        raise RepairFamilyByteTransformExecutorError("archive has no file members")
+    return max(candidates, key=lambda info: (info.file_size, -len(info.filename), info.filename)).filename
+
+
+def _zip_archive_bytes_with_replacement(
+    archive_path: str | Path,
+    *,
+    member_name: str,
+    replacement: bytes,
+    compression: int | None = None,
+    compresslevel: int | None = None,
+) -> bytes:
+    output = io.BytesIO()
+    with zipfile.ZipFile(archive_path) as source, zipfile.ZipFile(
+        output,
+        "w",
+        compression=zipfile.ZIP_DEFLATED,
+        compresslevel=9,
+    ) as target:
+        for info in source.infolist():
+            if info.is_dir():
+                continue
+            payload = replacement if info.filename == member_name else source.read(info.filename)
+            target_info = zipfile.ZipInfo(info.filename)
+            target_info.date_time = (1980, 1, 1, 0, 0, 0)
+            target_info.external_attr = info.external_attr
+            target_info.compress_type = (
+                compression
+                if info.filename == member_name and compression is not None
+                else info.compress_type
+            )
+            level = (
+                compresslevel
+                if info.filename == member_name and compression == zipfile.ZIP_DEFLATED
+                else None
+            )
+            target.writestr(target_info, payload, compresslevel=level)
+    return output.getvalue()
+
+
+def _decode_fec6_codes(payload: bytes, *, n_pairs: int) -> list[int]:
+    codes: list[int] = []
+    prefix = ""
+    consumed_bits = 0
+    for byte in payload:
+        for shift in range(7, -1, -1):
+            bit = "1" if (byte >> shift) & 1 else "0"
+            prefix += bit
+            consumed_bits += 1
+            code = FEC6_FIXED_K16_DECODE.get(prefix)
+            if code is not None:
+                codes.append(code)
+                prefix = ""
+                if len(codes) == n_pairs:
+                    padding_bits = len(payload) * 8 - consumed_bits
+                    if padding_bits:
+                        mask = (1 << padding_bits) - 1
+                        if payload[-1] & mask:
+                            raise RepairFamilyByteTransformExecutorError(
+                                "FEC6 selector padding bits are non-zero"
+                            )
+                    return codes
+            elif len(prefix) > 8:
+                raise RepairFamilyByteTransformExecutorError(
+                    "FEC6 selector contains invalid prefix code"
+                )
+    raise RepairFamilyByteTransformExecutorError("FEC6 selector bitstream truncated")
+
+
+def _encode_fec6_codes(codes: Sequence[int]) -> bytes:
+    bits = "".join(FEC6_FIXED_K16_CODE_BITS[int(code)] for code in codes)
+    padding = (-len(bits)) % 8
+    bits += "0" * padding
+    return bytes(int(bits[index : index + 8], 2) for index in range(0, len(bits), 8))
+
+
+def _mutated_fec6_selector_member(
+    member_payload: bytes,
+    *,
+    family_id: str,
+) -> tuple[bytes, dict[str, Any]] | None:
+    if len(member_payload) < 12 or member_payload[:4] != b"FP11":
+        return None
+    source_len = struct.unpack_from("<I", member_payload, 4)[0]
+    selector_len_offset = 8 + source_len
+    if selector_len_offset + 2 > len(member_payload):
+        return None
+    selector_len = struct.unpack_from("<H", member_payload, selector_len_offset)[0]
+    selector_start = selector_len_offset + 2
+    selector_end = selector_start + selector_len
+    selector = member_payload[selector_start:selector_end]
+    if selector_end != len(member_payload) or len(selector) < 6 or selector[:4] != b"FEC6":
+        return None
+    n_pairs = struct.unpack_from("<H", selector, 4)[0]
+    codes = _decode_fec6_codes(selector[6:], n_pairs=n_pairs)
+    if len(codes) != n_pairs:
+        raise RepairFamilyByteTransformExecutorError("FEC6 selector pair count mismatch")
+    mutated = list(codes)
+    target_code = _FEC6_FAMILY_TARGET_CODES.get(family_id, 0)
+    span = max(1, n_pairs // 10)
+    if family_id == "posenet_null_bottom_decile":
+        indexes = range(max(0, n_pairs - span), n_pairs)
+    elif family_id == "segnet_class_region_waterfill":
+        indexes = range(0, n_pairs, max(1, n_pairs // 16))
+    elif family_id == "per_region_selector_codec":
+        indexes = range(0, n_pairs, 8)
+    else:
+        indexes = range(0, min(n_pairs, span))
+    changed_indexes: list[int] = []
+    for index in indexes:
+        if index >= n_pairs:
+            continue
+        old = mutated[index]
+        new = target_code if old != target_code else (old + 1) % len(FEC6_FIXED_K16_CODE_BITS)
+        if old != new:
+            mutated[index] = new
+            changed_indexes.append(index)
+    if not changed_indexes:
+        return None
+    encoded = _encode_fec6_codes(mutated)
+    new_selector = b"FEC6" + struct.pack("<H", n_pairs) + encoded
+    new_member = (
+        member_payload[:selector_len_offset]
+        + struct.pack("<H", len(new_selector))
+        + new_selector
+    )
+    details = {
+        "schema": "repair_family_fec6_selector_mutation_details.v1",
+        "source_format": "FP11+FEC6_FIXED_K16",
+        "n_pairs": n_pairs,
+        "source_selector_bytes": selector_len,
+        "candidate_selector_bytes": len(new_selector),
+        "changed_pair_count": len(changed_indexes),
+        "changed_pair_indexes_preview": changed_indexes[:32],
+        "target_code": target_code,
+        "source_code_histogram": {str(code): codes.count(code) for code in sorted(set(codes))},
+        "candidate_code_histogram": {str(code): mutated.count(code) for code in sorted(set(mutated))},
+        "semantic_stage": "pre_entropy_payload_distribution_shaping",
+    }
+    return new_member, details
+
+
+def _archive_family_probe(manifest: Mapping[str, Any], *, repo_root: str | Path) -> dict[str, Any]:
+    source, actual_sha, blockers = _source_archive_path_and_sha(manifest, repo_root=repo_root)
+    families: list[str] = []
+    member_name = None
+    member_head = ""
+    member_count = 0
+    if source is not None and source.is_file() and not blockers:
+        try:
+            names = _zip_member_names(source)
+            member_count = len(names)
+            member_name = _primary_payload_member(source)
+            head = _zip_member_bytes(source, member_name)[:16]
+            member_head = head.hex()
+            if head.startswith(b"FP11"):
+                families.append("fp11_frame_selector_wrapper")
+                payload = _zip_member_bytes(source, member_name)
+                source_len = struct.unpack_from("<I", payload, 4)[0] if len(payload) >= 8 else -1
+                selector_offset = 8 + source_len
+                if selector_offset + 8 <= len(payload) and payload[selector_offset + 2 : selector_offset + 6] == b"FEC6":
+                    families.append("fec6_fixed_huffman_k16_selector")
+                elif selector_offset + 8 <= len(payload) and payload[selector_offset + 2 : selector_offset + 5] == b"FEC":
+                    families.append("fec_selector_wrapper_other")
+            if head.startswith(b"PSV3"):
+                families.append("pact_nerv_selector_v3_packet")
+            if not families:
+                families.append("generic_zip_payload")
+        except (OSError, zipfile.BadZipFile, struct.error, KeyError, RepairFamilyByteTransformExecutorError) as exc:
+            blockers.append(f"archive_family_probe_failed:{exc}")
+    return {
+        "schema": "repair_family_archive_family_probe.v1",
+        "source_archive_path": None if source is None else _repo_rel(source, repo_root),
+        "source_archive_sha256": actual_sha or None,
+        "member_count": member_count,
+        "primary_payload_member": member_name,
+        "primary_payload_head_hex": member_head,
+        "detected_archive_families": ordered_unique(families),
+        "adapter_registry": {
+            "schema": "repair_family_byte_transform_archive_adapter_registry.v1",
+            "score_affecting_adapters": ["fec6_fixed_huffman_k16_selector"],
+            "coder_boundary_adapters": ["zip_packet_member_recompress"],
+            "post_container_adapters": ["zip_archive_repack"],
+            "unsupported_detected_families_fail_closed": True,
+            "next_adapter_classes": [
+                "fec2_fec3_fec5_selector_wrappers",
+                "pact_nerv_selector_v3_packet",
+                "hnerv_latent_sidecar",
+                "packet_member_merge_dfl1",
+                "tensor_factorize",
+            ],
+        },
+        "blockers": ordered_unique(blockers),
+        "budget_spend_allowed": False,
+        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
+    }
 
 
 def _artifact_path_from_statuses(manifest: Mapping[str, Any], key: str) -> str:
@@ -358,19 +649,346 @@ def _write_transform_payload(
     }
 
 
-def _optional_archive_copy(
+def _empty_candidate_archive(
+    *,
+    blockers: Sequence[str],
+    archive_native_transform_kind: str,
+) -> dict[str, Any]:
+    return {
+        "schema": "repair_family_archive_native_candidate.v1",
+        "materialized": False,
+        "archive_native_transform_attempted": False,
+        "archive_native_transform_kind": archive_native_transform_kind,
+        "path": None,
+        "sha256": None,
+        "bytes": None,
+        "runtime_consumption_proof_path": None,
+        "runtime_consumption_proof_ready": False,
+        "receiver_contract_satisfied": False,
+        "score_affecting_payload_changed": False,
+        "charged_bits_changed": False,
+        "saved_bytes": None,
+        "blockers": ordered_unique(blockers),
+        "budget_spend_allowed": False,
+        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _source_archive_path_and_sha(
+    manifest: Mapping[str, Any],
+    *,
+    repo_root: str | Path,
+) -> tuple[Path | None, str, list[str]]:
+    archive = _mapping(manifest.get("candidate_archive"))
+    path_text = str(archive.get("path") or "").strip()
+    blockers: list[str] = []
+    if not path_text:
+        return None, "", ["candidate_archive_path_missing"]
+    source = _resolve(path_text, repo_root)
+    if not source.is_file():
+        return source, "", ["candidate_archive_file_missing"]
+    expected_sha = str(archive.get("sha256") or "").strip()
+    actual_sha = sha256_file(source)
+    if expected_sha and expected_sha != actual_sha:
+        blockers.append("candidate_archive_sha256_mismatch")
+    return source, actual_sha, blockers
+
+
+def _write_json_with_expected(
+    path: Path,
+    payload: Mapping[str, Any],
+    *,
+    allow_overwrite: bool,
+) -> None:
+    write_json_artifact(
+        path,
+        payload,
+        allow_overwrite=allow_overwrite,
+        expected_existing_sha256=sha256_file(path) if path.exists() and allow_overwrite else None,
+    )
+
+
+def _write_bytes_with_expected(
+    path: Path,
+    payload: bytes,
+    *,
+    allow_overwrite: bool,
+) -> None:
+    write_bytes_artifact(
+        path,
+        payload,
+        allow_overwrite=allow_overwrite,
+        expected_existing_sha256=sha256_file(path) if path.exists() and allow_overwrite else None,
+    )
+
+
+def _fec6_payload_mutation_candidate(
+    *,
+    manifest: Mapping[str, Any],
+    output_dir: str | Path,
+    repo_root: str | Path,
+    family_id: str,
+    allow_overwrite: bool,
+) -> tuple[dict[str, Any], list[str]]:
+    blockers: list[str] = []
+    if family_id not in _FEC6_FAMILY_TARGET_CODES:
+        blockers.append(f"fec6_selector_payload_mutation_not_enabled_for_family:{family_id}")
+        return _empty_candidate_archive(
+            blockers=blockers,
+            archive_native_transform_kind="fec6_selector_payload_mutation",
+        ), blockers
+    source, actual_sha, source_blockers = _source_archive_path_and_sha(manifest, repo_root=repo_root)
+    blockers.extend(source_blockers)
+    if source is None or blockers:
+        return _empty_candidate_archive(
+            blockers=blockers,
+            archive_native_transform_kind="fec6_selector_payload_mutation",
+        ), blockers
+    try:
+        member_name = _primary_payload_member(source)
+        source_member_payload = _zip_member_bytes(source, member_name)
+        mutation = _mutated_fec6_selector_member(source_member_payload, family_id=family_id)
+    except (OSError, zipfile.BadZipFile, KeyError, RepairFamilyByteTransformExecutorError) as exc:
+        blockers.append(f"fec6_selector_payload_mutation_probe_failed:{exc}")
+        return _empty_candidate_archive(
+            blockers=blockers,
+            archive_native_transform_kind="fec6_selector_payload_mutation",
+        ), blockers
+    if mutation is None:
+        blockers.append("fec6_selector_payload_not_detected")
+        return _empty_candidate_archive(
+            blockers=blockers,
+            archive_native_transform_kind="fec6_selector_payload_mutation",
+        ), blockers
+    candidate_member_payload, mutation_details = mutation
+    output = _resolve(output_dir, repo_root) / "candidate_archive_fec6_selector_payload_mutation.zip"
+    proof = _resolve(output_dir, repo_root) / "candidate_archive_fec6_selector_payload_mutation_receiver_proof.json"
+    candidate_payload = _zip_archive_bytes_with_replacement(
+        source,
+        member_name=member_name,
+        replacement=candidate_member_payload,
+        compression=zipfile.ZIP_STORED,
+    )
+    try:
+        _write_bytes_with_expected(output, candidate_payload, allow_overwrite=allow_overwrite)
+        source_record = _archive_record(source, repo_root=repo_root)
+        candidate_record = _archive_record(output, repo_root=repo_root)
+        source_member = _member_record(source, member_name, payload=source_member_payload)
+        candidate_member = _member_record(output, member_name)
+        proof_payload = {
+            "schema": "repair_family_archive_payload_mutation_runtime_consumption_proof.v1",
+            "proof_kind": "fec6_selector_reencoded_runtime_adapter_parse_proof.v1",
+            "proof_scope": "score_affecting_fec6_selector_payload_changed_and_reparsed",
+            "target_kind": "repair_family_fec6_selector_payload_mutation_v1",
+            "materializer_id": f"repair_family_byte_transform_executor:{family_id}",
+            "receiver_contract_kind": "repair_family_fec6_selector_payload_mutation_runtime_parse",
+            "receiver_contract_id": "repair_family_fec6_selector_payload_mutation_v1.receiver.v1",
+            "source_archive": source_record,
+            "candidate_archive": candidate_record,
+            "selected_member_name": member_name,
+            "source_member": source_member,
+            "candidate_member": candidate_member,
+            "mutation_details": mutation_details,
+            "runtime_consumption_probe": {
+                "schema": "fec6_selector_payload_parse_probe.v1",
+                "passed": True,
+                "selected_member_name": member_name,
+                "source_member_sha256": source_member["sha256"],
+                "candidate_member_sha256": candidate_member["sha256"],
+                "member_payload_changed": source_member["sha256"] != candidate_member["sha256"],
+                "archive_zip_readable": True,
+            },
+            "receiver_contract_satisfied": True,
+            "runtime_consumption_proof_passed": True,
+            "passed": True,
+            "score_affecting_payload_changed": True,
+            "charged_bits_changed": True,
+            **FALSE_AUTHORITY,
+        }
+        _write_json_with_expected(proof, proof_payload, allow_overwrite=allow_overwrite)
+    except (ArtifactWriteError, OSError, zipfile.BadZipFile, ValueError) as exc:
+        blockers.append(f"fec6_selector_payload_mutation_write_failed:{exc}")
+        return _empty_candidate_archive(
+            blockers=blockers,
+            archive_native_transform_kind="fec6_selector_payload_mutation",
+        ), blockers
+    saved_bytes = int(source_record["bytes"]) - int(candidate_record["bytes"])
+    candidate = {
+        "schema": "repair_family_archive_native_candidate.v1",
+        "materialized": True,
+        "archive_native_transform_attempted": True,
+        "archive_native_transform_kind": "fec6_selector_payload_mutation",
+        "semantic_entropy_stage": "pre_entropy_payload_distribution_shaping",
+        "archive_native_materializer_schema": proof_payload["schema"],
+        "archive_native_materializer_id": proof_payload["materializer_id"],
+        "archive_native_target_kind": proof_payload["target_kind"],
+        "source_archive_path": _repo_rel(source, repo_root),
+        "source_archive_sha256": actual_sha,
+        "source_archive_bytes": source.stat().st_size,
+        "path": _repo_rel(output, repo_root),
+        "sha256": candidate_record["sha256"],
+        "bytes": candidate_record["bytes"],
+        "runtime_consumption_proof_path": _repo_rel(proof, repo_root),
+        "runtime_consumption_proof_ready": True,
+        "receiver_contract_kind": proof_payload["receiver_contract_kind"],
+        "receiver_contract_satisfied": True,
+        "selected_member_name": member_name,
+        "mutation_details": mutation_details,
+        "semantic_payload_changed": True,
+        "exact_axis_score_affecting_adjudication_required": True,
+        "score_affecting_payload_changed": True,
+        "charged_bits_changed": True,
+        "saved_bytes": saved_bytes,
+        "blockers": ordered_unique(blockers),
+        "budget_spend_allowed": False,
+        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        candidate,
+        context="repair_family_fec6_payload_mutation_candidate",
+    )
+    return candidate, blockers
+
+
+def _packet_member_recompress_candidate(
     *,
     manifest: Mapping[str, Any],
     output_dir: str | Path,
     repo_root: str | Path,
     allow_overwrite: bool,
 ) -> tuple[dict[str, Any], list[str]]:
-    return _archive_native_zip_repack_candidate(
-        manifest=manifest,
-        output_dir=output_dir,
-        repo_root=repo_root,
-        allow_overwrite=allow_overwrite,
+    blockers: list[str] = []
+    source, _actual_sha, source_blockers = _source_archive_path_and_sha(manifest, repo_root=repo_root)
+    blockers.extend(source_blockers)
+    if source is None or blockers:
+        return _empty_candidate_archive(
+            blockers=blockers,
+            archive_native_transform_kind="packet_member_entropy_boundary_recompress",
+        ), blockers
+    output = _resolve(output_dir, repo_root) / "candidate_archive_packet_member_recompress.zip"
+    proof = _resolve(output_dir, repo_root) / "candidate_archive_packet_member_recompress_receiver_proof.json"
+    try:
+        member_name = _primary_payload_member(source)
+        native_manifest = materialize_packet_member_recompress_candidate(
+            archive_path=source,
+            output_archive=output,
+            member_name=member_name,
+            runtime_consumption_proof_out=proof,
+            repo_root=repo_root,
+            allow_size_regression=True,
+            allow_overwrite=allow_overwrite,
+            expected_existing_output_sha256=sha256_file(output) if output.exists() and allow_overwrite else None,
+            expected_existing_runtime_consumption_proof_sha256=(
+                sha256_file(proof) if proof.exists() and allow_overwrite else None
+            ),
+        )
+    except (FamilyAgnosticMaterializerError, ArtifactWriteError, OSError, ValueError) as exc:
+        blockers.append(f"packet_member_entropy_boundary_recompress_failed:{exc}")
+        return _empty_candidate_archive(
+            blockers=blockers,
+            archive_native_transform_kind="packet_member_entropy_boundary_recompress",
+        ), blockers
+    blockers.extend(_string_list(native_manifest.get("readiness_blockers")))
+    candidate_record = _mapping(native_manifest.get("candidate_archive"))
+    source_record = _mapping(native_manifest.get("source_archive"))
+    selected = _mapping(native_manifest.get("selected_compression"))
+    proof_ready = native_manifest.get("receiver_contract_satisfied") is True
+    candidate = {
+        "schema": "repair_family_archive_native_candidate.v1",
+        "materialized": output.is_file(),
+        "archive_native_transform_attempted": True,
+        "archive_native_transform_kind": "packet_member_entropy_boundary_recompress",
+        "semantic_entropy_stage": "at_entropy_coder_integer_codeword_boundary",
+        "archive_native_materializer_schema": native_manifest.get("schema"),
+        "archive_native_materializer_id": native_manifest.get("materializer_id"),
+        "archive_native_target_kind": native_manifest.get("target_kind"),
+        "source_archive_path": source_record.get("path") or _repo_rel(source, repo_root),
+        "source_archive_sha256": source_record.get("sha256") or sha256_file(source),
+        "source_archive_bytes": source_record.get("bytes") or source.stat().st_size,
+        "path": candidate_record.get("path") or _repo_rel(output, repo_root),
+        "sha256": candidate_record.get("sha256") or sha256_file(output),
+        "bytes": candidate_record.get("bytes") or output.stat().st_size,
+        "runtime_consumption_proof_path": _repo_rel(proof, repo_root) if proof.is_file() else None,
+        "runtime_consumption_proof_ready": proof_ready,
+        "receiver_contract_kind": native_manifest.get("receiver_contract_kind"),
+        "receiver_contract_satisfied": proof_ready,
+        "selected_member_name": native_manifest.get("selected_member_name"),
+        "selected_compression": dict(selected),
+        "score_affecting_payload_changed": False,
+        "charged_bits_changed": True,
+        "saved_bytes": selected.get("saved_bytes"),
+        "blockers": ordered_unique(blockers),
+        "budget_spend_allowed": False,
+        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        candidate,
+        context="repair_family_packet_member_recompress_candidate",
     )
+    return candidate, blockers
+
+
+def _candidate_rank(candidate: Mapping[str, Any]) -> tuple[int, int, int, str]:
+    proof_ready = candidate.get("runtime_consumption_proof_ready") is True
+    score_affecting = candidate.get("score_affecting_payload_changed") is True
+    materialized = candidate.get("materialized") is True
+    return (
+        0 if materialized and proof_ready and score_affecting else 1,
+        0 if materialized and proof_ready else 1,
+        int(candidate.get("bytes") or 10**18),
+        str(candidate.get("archive_native_transform_kind") or ""),
+    )
+
+
+def _archive_transform_candidates(
+    *,
+    manifest: Mapping[str, Any],
+    output_dir: str | Path,
+    repo_root: str | Path,
+    family_id: str,
+    allow_overwrite: bool,
+) -> tuple[dict[str, Any], list[dict[str, Any]], list[str]]:
+    variants: list[dict[str, Any]] = []
+    blockers: list[str] = []
+    for builder in (
+        lambda: _fec6_payload_mutation_candidate(
+            manifest=manifest,
+            output_dir=output_dir,
+            repo_root=repo_root,
+            family_id=family_id,
+            allow_overwrite=allow_overwrite,
+        ),
+        lambda: _packet_member_recompress_candidate(
+            manifest=manifest,
+            output_dir=output_dir,
+            repo_root=repo_root,
+            allow_overwrite=allow_overwrite,
+        ),
+        lambda: _archive_native_zip_repack_candidate(
+            manifest=manifest,
+            output_dir=output_dir,
+            repo_root=repo_root,
+            allow_overwrite=allow_overwrite,
+        ),
+    ):
+        candidate, candidate_blockers = builder()
+        variants.append(candidate)
+        blockers.extend(candidate_blockers)
+    selected = min(variants, key=_candidate_rank)
+    selected_blockers = ordered_unique(_string_list(selected.get("blockers")))
+    all_blockers = ordered_unique(blockers)
+    selected = {
+        **selected,
+        "selected_archive_transform_variant": True,
+        "candidate_archive_transform_variant_count": len(variants),
+        "non_selected_archive_transform_variant_blockers": [
+            blocker for blocker in all_blockers if blocker not in set(selected_blockers)
+        ],
+    }
+    return selected, variants, selected_blockers
 
 
 def _archive_native_zip_repack_candidate(
@@ -720,6 +1338,10 @@ def build_repair_family_byte_transform_execution_report(
         manifest_path=family_materializer_manifest_path,
         family_id=family_id,
     )
+    archive_family_probe = _archive_family_probe(
+        family_materializer_manifest,
+        repo_root=repo_root,
+    )
     delta = _write_transform_payload(
         payload=transform_payload,
         output_dir=output_dir,
@@ -728,10 +1350,11 @@ def build_repair_family_byte_transform_execution_report(
         typed_response_id=str(family_materializer_manifest.get("typed_response_id") or ""),
         allow_overwrite=allow_overwrite,
     )
-    candidate_archive, archive_blockers = _optional_archive_copy(
+    candidate_archive, archive_variants, archive_blockers = _archive_transform_candidates(
         manifest=family_materializer_manifest,
         output_dir=output_dir,
         repo_root=repo_root,
+        family_id=family_id,
         allow_overwrite=allow_overwrite,
     )
     blockers.extend(archive_blockers)
@@ -765,6 +1388,7 @@ def build_repair_family_byte_transform_execution_report(
         "repair_budget_candidate_chain_ids": _string_list(
             family_materializer_manifest.get("repair_budget_candidate_chain_ids")
         ),
+        "archive_family_probe": archive_family_probe,
         "entropy_position_label": family_materializer_manifest.get("entropy_position_label"),
         "active_entropy_stage": dict(_mapping(family_materializer_manifest.get("active_entropy_stage"))),
         "fractal_optimization_scope": dict(_mapping(family_materializer_manifest.get("fractal_optimization_scope"))),
@@ -774,6 +1398,15 @@ def build_repair_family_byte_transform_execution_report(
         "byte_transform_delta": delta,
         "candidate_delta": delta,
         "candidate_archive": candidate_archive,
+        "candidate_archive_transform_variants": archive_variants,
+        "candidate_archive_transform_variant_count": len(archive_variants),
+        "selected_archive_transform_kind": candidate_archive.get("archive_native_transform_kind"),
+        "semantic_payload_changed": candidate_archive.get("semantic_payload_changed") is True,
+        "exact_axis_score_affecting_adjudication_required": (
+            candidate_archive.get("exact_axis_score_affecting_adjudication_required") is True
+        ),
+        "score_affecting_payload_changed": candidate_archive.get("score_affecting_payload_changed") is True,
+        "charged_bits_changed": candidate_archive.get("charged_bits_changed") is True,
         "archive_native_transform_attempted": (candidate_archive.get("archive_native_transform_attempted") is True),
         "archive_native_transform_kind": candidate_archive.get("archive_native_transform_kind"),
         "archive_native_saved_bytes": candidate_archive.get("saved_bytes"),
@@ -818,6 +1451,7 @@ def build_repair_family_byte_transform_execution_report(
 
 
 __all__ = [
+    "FEC6_FIXED_K16_CODE_BITS",
     "REPAIR_FAMILY_BYTE_TRANSFORM_DELTA_SCHEMA",
     "REPAIR_FAMILY_BYTE_TRANSFORM_EXECUTION_REPORT_SCHEMA",
     "REPAIR_FAMILY_BYTE_TRANSFORM_PAYLOAD_SCHEMA",
