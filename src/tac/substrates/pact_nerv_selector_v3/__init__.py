@@ -58,10 +58,14 @@ from .architecture import (
     RiceGolombSelectorCoder,
 )
 from .archive import (
-    PactNervSelectorV3Archive,
+    DECODER_QUANT_FP16_BROTLI_Q9,
+    DECODER_QUANT_FP16_BROTLI_Q11,
+    DECODER_QUANT_INT8_PER_CHANNEL_BROTLI_Q11,
+    DECODER_QUANTIZATION_KINDS,
     PSV3_HEADER_SIZE,
     PSV3_MAGIC,
     PSV3_SCHEMA_VERSION,
+    PactNervSelectorV3Archive,
     pack_archive,
     parse_archive,
 )
@@ -71,6 +75,10 @@ from .score_aware_loss import (
 )
 
 __all__ = [
+    "DECODER_QUANTIZATION_KINDS",
+    "DECODER_QUANT_FP16_BROTLI_Q9",
+    "DECODER_QUANT_FP16_BROTLI_Q11",
+    "DECODER_QUANT_INT8_PER_CHANNEL_BROTLI_Q11",
     "PSV3_HEADER_SIZE",
     "PSV3_MAGIC",
     "PSV3_SCHEMA_VERSION",

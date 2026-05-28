@@ -59,6 +59,7 @@ def pack_archive_from_exported_state_dict(
     exported_state_dict: dict[str, np.ndarray],
     cfg: PactNervSelectorV3Config,
     selectors: np.ndarray | None = None,
+    decoder_quantization: str = "fp16_brotli_q9",
 ) -> bytes:
     """Pack a PyTorch-layout exported MLX state dict into PSV3 ``0.bin`` bytes."""
 
@@ -92,6 +93,7 @@ def pack_archive_from_exported_state_dict(
         selector_bytes,
         selector_v3_meta_from_config(cfg),
         palette_size=int(cfg.selector_palette_size),
+        decoder_quantization=decoder_quantization,
     )
 
 
@@ -100,6 +102,7 @@ def export_pact_nerv_selector_v3_mlx_archive(
     output_dir: str | Path,
     *,
     repo_root: str | Path | None = None,
+    decoder_quantization: str = "fp16_brotli_q9",
 ) -> tuple[Path, str, int]:
     """Export an MLX SELECTOR-V3 model as a contest-shaped ``archive.zip``."""
 
@@ -118,6 +121,7 @@ def export_pact_nerv_selector_v3_mlx_archive(
         exported_state_dict=model.export_state_dict(),
         cfg=cfg,
         selectors=getattr(model, "selectors", None),
+        decoder_quantization=decoder_quantization,
     )
     bin_path = out_dir / "0.bin"
     bin_path.write_bytes(bin_bytes)

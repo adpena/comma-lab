@@ -1,0 +1,44 @@
+{
+  "axis_tag": "[macOS-CPU archive-proof]",
+  "blockers": [
+    "local_archive_repack_is_not_contest_score_authority",
+    "requires_paired_contest_cpu_plus_cuda_eval_before_score_claim",
+    "requires_dispatch_claim_and_runtime_custody_handoff_before_exact_eval"
+  ],
+  "candidate_0bin_bytes": 87822,
+  "candidate_0bin_path": ".omx/research/psv3_decoder_quant_repack_live_20260528T1305Z_rerun/0.bin",
+  "candidate_0bin_sha256": "28625058d6efbb8ce9695751ff2bbc2aaac5ae2dcf6b4496764a8bb37512c1b8",
+  "candidate_archive_zip_bytes": 96030,
+  "candidate_archive_zip_path": ".omx/research/psv3_decoder_quant_repack_live_20260528T1305Z_rerun/archive.zip",
+  "candidate_archive_zip_sha256": "a8180e2f85db4a03981c61c7548d4961c38d2d69b19c42ac5fd33d03cb35255c",
+  "candidate_label": "psv3_live_int8_per_channel_brotli_q11_n1_rerun",
+  "decoder_quantization": "int8_per_channel_brotli_q11",
+  "generated_utc": "2026-05-28T12:42:12.882625+00:00",
+  "local_decoder_drift": {
+    "decoder_output_space": "sigmoid_0_to_1",
+    "frame_shape": [
+      1,
+      2,
+      3,
+      384,
+      512
+    ],
+    "max_abs_drift_01": 0.004989743232727051,
+    "mean_abs_drift_01": 0.000508121564052999,
+    "n_pairs_measured": 1,
+    "render_seconds_cpu": 0.00886316699325107
+  },
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "rate_delta_0bin_bytes": -42388,
+  "rate_delta_0bin_fraction": -0.3255356731433838,
+  "rate_win": true,
+  "ready_for_exact_eval_dispatch": false,
+  "schema_version": "pact_nerv_selector_v3_decoder_quant_repack.v1",
+  "score_claim": false,
+  "source_0bin_bytes": 130210,
+  "source_0bin_sha256": "1209b74632ccb51aea373f4b040939870f9cad1628f720183fa9f54a74c37377",
+  "source_archive": "experiments/results/pact_nerv_selector_v3_hinton_distill_600pair_long_mlx_20260528T080350Z/archive.zip",
+  "source_archive_kind": "zip_member_0_bin",
+  "tool": "tools/repack_pact_nerv_selector_v3_decoder_quant.py"
+}

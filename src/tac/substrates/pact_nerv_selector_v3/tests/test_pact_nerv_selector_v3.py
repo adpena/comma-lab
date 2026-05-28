@@ -3,6 +3,11 @@
 
 from __future__ import annotations
 
+import json
+import subprocess
+import sys
+from pathlib import Path
+
 import torch
 
 from tac.substrates.pact_nerv_selector_v3.architecture import (
@@ -11,6 +16,7 @@ from tac.substrates.pact_nerv_selector_v3.architecture import (
     RiceGolombSelectorCoder,
 )
 from tac.substrates.pact_nerv_selector_v3.archive import (
+    DECODER_QUANT_INT8_PER_CHANNEL_BROTLI_Q11,
     PSV3_HEADER_SIZE,
     PSV3_MAGIC,
     PSV3_SCHEMA_VERSION,
@@ -122,6 +128,100 @@ def test_archive_pack_then_parse_roundtrip() -> None:
     assert blob[:4] == PSV3_MAGIC
     assert arc.palette_size == 16
     assert arc.selector_bytes == selector_bytes
+
+
+def test_archive_int8_decoder_quantization_roundtrip_is_fail_closed_parseable() -> None:
+    cfg = _smoke_cfg()
+    torch.manual_seed(42)
+    model = PactNervSelectorV3Substrate(cfg)
+    sd = model.state_dict()
+    decoder_sd = {k: v for k, v in sd.items() if k not in ("latents", "selectors")}
+    blob = pack_archive(
+        decoder_sd,
+        sd["latents"].clone(),
+        b"\x00\x01\x02",
+        _smoke_meta(cfg),
+        palette_size=16,
+        decoder_quantization=DECODER_QUANT_INT8_PER_CHANNEL_BROTLI_Q11,
+    )
+    arc = parse_archive(blob)
+
+    assert arc.meta["decoder_quantization"] == DECODER_QUANT_INT8_PER_CHANNEL_BROTLI_Q11
+    for name, original in decoder_sd.items():
+        recovered = arc.decoder_state_dict[name]
+        assert recovered.shape == original.shape
+        assert torch.is_floating_point(recovered)
+        assert torch.max((recovered.float() - original.float()).abs()) < 0.02
+
+
+def test_archive_rejects_unknown_decoder_quantization() -> None:
+    cfg = _smoke_cfg()
+    model = PactNervSelectorV3Substrate(cfg)
+    sd = model.state_dict()
+    decoder_sd = {k: v for k, v in sd.items() if k not in ("latents", "selectors")}
+    try:
+        pack_archive(
+            decoder_sd,
+            sd["latents"].clone(),
+            b"\x00",
+            _smoke_meta(cfg),
+            palette_size=16,
+            decoder_quantization="mystery_quant",
+        )
+    except ValueError as exc:
+        assert "unsupported decoder_quantization" in str(exc)
+    else:
+        raise AssertionError("expected ValueError for unknown decoder_quantization")
+
+
+def test_decoder_quant_repack_cli_writes_byte_closed_fail_closed_manifest(
+    tmp_path: Path,
+) -> None:
+    cfg = _smoke_cfg()
+    torch.manual_seed(43)
+    model = PactNervSelectorV3Substrate(cfg)
+    sd = model.state_dict()
+    decoder_sd = {k: v for k, v in sd.items() if k not in ("latents", "selectors")}
+    source = tmp_path / "source_0.bin"
+    source.write_bytes(
+        pack_archive(
+            decoder_sd,
+            sd["latents"].clone(),
+            b"\x00\x01\x02",
+            _smoke_meta(cfg),
+            palette_size=16,
+        )
+    )
+    out_dir = tmp_path / "candidate"
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(Path(__file__).resolve().parents[5] / "tools"
+                / "repack_pact_nerv_selector_v3_decoder_quant.py"),
+            "--archive",
+            str(source),
+            "--output-dir",
+            str(out_dir),
+            "--n-proof-pairs",
+            "1",
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+    stdout_payload = json.loads(proc.stdout)
+    manifest = json.loads(
+        (out_dir / "decoder_quant_repack_manifest.json").read_text(encoding="utf-8")
+    )
+    assert stdout_payload["schema_version"] == manifest["schema_version"]
+    assert (out_dir / "archive.zip").is_file()
+    assert (out_dir / "submission" / "inflate.py").is_file()
+    assert manifest["score_claim"] is False
+    assert manifest["promotion_eligible"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["decoder_quantization"] == DECODER_QUANT_INT8_PER_CHANNEL_BROTLI_Q11
+    assert manifest["local_decoder_drift"]["n_pairs_measured"] == 1
 
 
 def test_archive_header_size_invariant_is_26_bytes() -> None:
