@@ -1,0 +1,139 @@
+{
+  "archive_bytes": 166420,
+  "archive_path": "/Users/adpena/Projects/pact/.omx/research/z5_hinton_distilled_smoke_20260528T224255Z/archive.zip",
+  "archive_sha256": "5c76fb95b56ffb2679cd308e87783ce8d1b3b28fc15543c9b750ef31b77d2292",
+  "canonical_provenance": {
+    "artifact_kind": "predicted_from_model",
+    "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_predicted",
+    "captured_at_utc": "2026-05-28T22:43:01Z",
+    "evidence_grade": "predicted",
+    "hardware_substrate": "macos_arm64_mlx_local",
+    "measurement_axis": "[macOS-MLX research-signal]",
+    "promotion_eligible": false,
+    "score_claim_valid": false,
+    "source_path": "<predictor:long_training_canonical:time_traveler_l5_z5_mlx_local>",
+    "source_sha256": "60bcd4332f1467c707b1bb131fcce7bca9df80902cf6f3c30384d67cfce84362"
+  },
+  "captured_at_utc": "2026-05-28T22:43:01Z",
+  "config_snapshot": {
+    "batch_pair_indices_per_step": 8,
+    "checkpoint_dir": ".omx/research/z5_hinton_distilled_smoke_20260528T224255Z/checkpoints",
+    "checkpoint_interval_epochs": 10,
+    "curriculum_hash": "6521e64d6ebd7f60a2a0f386f4e47cf2865efaeb5129121105a471c1c22aead1",
+    "curriculum_stages": [
+      {
+        "enable_qat": false,
+        "end_epoch": 4,
+        "epoch_count": 4,
+        "freeze_layers": [],
+        "loss_weights": {
+          "recon": 1.0
+        },
+        "lr_scale": 1.0,
+        "name": "time_traveler_l5_z5_mlx_local_mlx_score_aware_full",
+        "notes": "MLX-first score-aware full-budget stage via canonical mlx_score_aware harness; reconstruction + optional Hinton-KL T=2.0 scorer surrogate.",
+        "start_epoch": 0
+      }
+    ],
+    "device": "mlx",
+    "early_stopping_patience": 5,
+    "ema_accumulation": "naive",
+    "ema_decay": 0.997,
+    "epochs": 4,
+    "evidence_grade": "[macOS-MLX research-signal]",
+    "lane_id": "lane_time_traveler_l5_z5_rao_ballard_mlx_local_scaffold_20260528",
+    "learning_rate": 0.0001,
+    "notes": "Z5 Rao-Ballard 2-level hierarchical predictive coding MLX-FIRST score-aware training via canonical mlx_score_aware harness + Hinton-distilled SegNet + PoseNet teacher per Catalog #164; 2-level Rao-Ballard hierarchy (z_low + z_high + predictor; low_latent_dim=24, high_latent_dim=16, ego_dim=6) is the substrate-distinguishing primitive per Catalog #272; FIRST among Z4/Z5/Z6/Z7/Z8 class-shift queue per T4 SYMPOSIUM Wave N+13 verdict; sister of Z6-v2 single-level FiLM (commit c26647891) + Z7-Mamba-2 state-space (commit 2224eff58) within the cooperative-receiver paradigm class per Catalog #311 + #312 hierarchical predictive coding canonical quadruple; non-promotable [macOS-MLX research-signal] per Catalog #192/#317/#341; per-axis + MLX->PyTorch bridge + paired CUDA/CPU anchor DEFERRED to sister L2 + per-substrate symposium Catalog #325; canonical equation `z5_rao_ballard_hierarchical_predictive_coding_pose_axis_savings_v1` anchor 0 -> 1 fires Catalog #371 auto-recalibration trigger after 2 more empirical anchors land.",
+    "optimizer_class": "adamw",
+    "output_dir": ".omx/research/z5_hinton_distilled_smoke_20260528T224255Z",
+    "resume_from_checkpoint": null,
+    "score_aware_loss_kwargs": {},
+    "seed": 0,
+    "substrate_id": "time_traveler_l5_z5_mlx_local",
+    "telemetry_path": ".omx/research/z5_hinton_distilled_smoke_20260528T224255Z/telemetry.jsonl"
+  },
+  "early_stop_reason": "",
+  "early_stopped": false,
+  "ema_shadow_checkpoint_path": ".omx/research/z5_hinton_distilled_smoke_20260528T224255Z/checkpoints/final_epoch000003_20260528T224301Z.ema_shadow.state.npsd",
+  "lane_id": "lane_time_traveler_l5_z5_rao_ballard_mlx_local_scaffold_20260528",
+  "live_checkpoint_path": ".omx/research/z5_hinton_distilled_smoke_20260528T224255Z/checkpoints/final_epoch000003_20260528T224301Z.live.state.npsd",
+  "per_epoch_metrics": [
+    {
+      "captured_at_utc": "2026-05-28T22:43:01Z",
+      "ema_drift_l2": 0.013925639365849389,
+      "epoch": 0,
+      "learning_rate": 0.0001,
+      "loss": 584.169677734375,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 590.54833984375,
+        "recon_aux": 0.33491989970207214,
+        "seg": 6.226832389831543
+      },
+      "stage_name": "time_traveler_l5_z5_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 0.1736891269683838
+    },
+    {
+      "captured_at_utc": "2026-05-28T22:43:01Z",
+      "ema_drift_l2": 0.03903203439849136,
+      "epoch": 1,
+      "learning_rate": 0.0001,
+      "loss": 594.047607421875,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 584.71728515625,
+        "recon_aux": 0.33354461193084717,
+        "seg": 6.179332733154297
+      },
+      "stage_name": "time_traveler_l5_z5_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 0.21590399742126465
+    },
+    {
+      "captured_at_utc": "2026-05-28T22:43:01Z",
+      "ema_drift_l2": 0.0748508473225624,
+      "epoch": 2,
+      "learning_rate": 0.0001,
+      "loss": 591.831298828125,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 585.593994140625,
+        "recon_aux": 0.3365176320075989,
+        "seg": 6.153414726257324
+      },
+      "stage_name": "time_traveler_l5_z5_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 0.2580292224884033
+    },
+    {
+      "captured_at_utc": "2026-05-28T22:43:01Z",
+      "ema_drift_l2": 0.11892340389501231,
+      "epoch": 3,
+      "learning_rate": 0.0001,
+      "loss": 590.2322998046875,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 583.0604858398438,
+        "recon_aux": 0.3345629870891571,
+        "seg": 6.161596298217773
+      },
+      "stage_name": "time_traveler_l5_z5_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 0.3001852035522461
+    }
+  ],
+  "per_epoch_metrics_count": 4,
+  "posterior_refusal_reason": "non-authoritative (advisory-grade) evidence_tag: '[MPS-research-signal]'",
+  "posterior_update_accepted": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema_version": "long_training_canonical_artifact.v1",
+  "score_claim": false,
+  "substrate_id": "time_traveler_l5_z5_mlx_local",
+  "telemetry_path": ".omx/research/z5_hinton_distilled_smoke_20260528T224255Z/telemetry.jsonl",
+  "total_epochs_completed": 4,
+  "total_wall_clock_seconds": 0.30518126487731934
+}
