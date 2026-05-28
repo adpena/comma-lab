@@ -1861,6 +1861,36 @@ def _feca_selector_reparameterization_command(
                 command.extend([flag, str(value)])
         else:
             command.extend([flag, str(values)])
+    for key, flag in (
+        ("codec_family", "--codec-family"),
+        ("codec_families", "--codec-family"),
+        ("selector_codec_family", "--codec-family"),
+        ("selector_codec_families", "--codec-family"),
+        ("upstream_entropy_position", "--upstream-entropy-position"),
+        ("upstream_entropy_positions", "--upstream-entropy-position"),
+        ("downstream_materializer_target", "--downstream-materializer-target"),
+        ("downstream_materializer_targets", "--downstream-materializer-target"),
+    ):
+        values = context.get(key)
+        if values is None:
+            continue
+        if isinstance(values, list | tuple):
+            for value in values:
+                command.extend([flag, str(value)])
+        else:
+            command.extend([flag, str(values)])
+    chain_parent = context.get("chain_parent_artifact") or context.get("chain_parent_manifest")
+    if isinstance(chain_parent, str) and chain_parent.strip():
+        command.extend(["--chain-parent-artifact", chain_parent])
+    chain_label = context.get("chain_label")
+    if isinstance(chain_label, str) and chain_label.strip():
+        command.extend(["--chain-label", chain_label])
+    parity_proof = (
+        context.get("full_frame_inflate_parity_proof")
+        or context.get("full_frame_inflate_parity_proof_path")
+    )
+    if isinstance(parity_proof, str) and parity_proof.strip():
+        command.extend(["--full-frame-inflate-parity-proof", parity_proof])
     if context.get("overwrite") is True or context.get("allow_overwrite") is True:
         command.append("--overwrite")
     manifest_path = str(Path(output_dir) / "feca_selector_reparameterization_manifest.json")

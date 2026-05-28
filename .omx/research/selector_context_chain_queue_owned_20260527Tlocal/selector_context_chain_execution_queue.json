@@ -1,0 +1,196 @@
+{
+  "controls": {
+    "local_first": true,
+    "max_concurrency": {
+      "local_cpu": 1
+    },
+    "mode": "running"
+  },
+  "experiments": [
+    {
+      "id": "materializer_work_cascade_c_p19_p18_selector_context_recode_then_p15_repack",
+      "lane_id": "selector_context_chain_queue_owned",
+      "metadata": {
+        "allowed_use": "local_materializer_proof_chain_only",
+        "backlog_key": "cascade_c_p19_p18_selector_context_recode_then_p15_repack",
+        "backlog_rank": 1,
+        "candidate_saved_bytes_sum": 16,
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "deployment_target": "desktop_research",
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "optimizer_candidate_queue_is_planning_only",
+          "requires_exact_eval_readiness_gate",
+          "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+          "requires_non_proxy_score_evidence_before_promotion",
+          "materializer_execution_queue_local_proof_chain_only",
+          "exact_auth_eval_required_before_score_claim"
+        ],
+        "exact_cuda_auth_eval": false,
+        "exact_readiness_followup_enabled": false,
+        "exact_readiness_followup_requested": false,
+        "exact_readiness_followup_skipped_reason": null,
+        "expected_score_gain_sum": 0.0,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "materializer_id": "feca_selector_reparameterize_adapter",
+        "operation_family": "selector_context_recode",
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_contract_id": "selector_stream_context_recode_v1.receiver.v1",
+        "receiver_contract_kind": "source_runtime_native_selector_context_recode",
+        "renderer_payload_dfl1_parity_followup_blockers": [],
+        "renderer_payload_dfl1_parity_followup_enabled": false,
+        "renderer_payload_dfl1_parity_followup_requested": false,
+        "schema": "byte_shaving_materializer_execution_experiment_metadata.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_plan_path": "/Users/adpena/Projects/pact/.omx/research/selector_context_chain_queue_owned_20260527Tlocal/selector_context_chain_backlog.json",
+        "source_selection_ids": [],
+        "source_state_path": ".omx/state/experiment_queue_selector_context_chain_queue_owned_20260527Tlocal.sqlite",
+        "source_unit_ids": [
+          "P19_posenet_null_bottom_decile",
+          "P18_segnet_class_region_waterfill",
+          "P11_selector_stream"
+        ],
+        "source_work_queue_path": ".omx/research/selector_context_chain_queue_owned_20260527Tlocal/selector_context_chain_work_queue.json",
+        "source_work_queue_schema": "byte_shaving_materializer_work_queue.v1",
+        "target_kind": "selector_stream_context_recode_v1",
+        "target_modes": [
+          "contest_exact_eval_planning"
+        ],
+        "unit_kind": "selector_stream",
+        "work_id": "materializer_work_cascade_c_p19_p18_selector_context_recode_then_p15_repack",
+        "work_rank": 1
+      },
+      "priority": 1,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_feca_selector_reparameterized_candidate.py",
+            "--source-submission-dir",
+            "experiments/results/v14_v2_dqs1_plus_fec10_substituted_20260526T023000Z/submission_dir",
+            "--output-dir",
+            "/Volumes/VertigoDataTier/experiments/results/selector_context_family_chain_queue_owned_20260527Tlocal",
+            "--scale",
+            "32",
+            "--scale",
+            "64",
+            "--scale",
+            "128",
+            "--scale",
+            "256",
+            "--alpha",
+            "1",
+            "--alpha",
+            "2",
+            "--alpha",
+            "4",
+            "--codec-family",
+            "fec10_adaptive_blend",
+            "--codec-family",
+            "fec8_markov_static_order1",
+            "--codec-family",
+            "fec8_markov_adaptive_order1",
+            "--codec-family",
+            "fec8_markov_static_order2",
+            "--upstream-entropy-position",
+            "P19",
+            "--upstream-entropy-position",
+            "P18",
+            "--downstream-materializer-target",
+            "archive_zip_repack_v1",
+            "--chain-parent-artifact",
+            "/Volumes/VertigoDataTier/experiments/results/feca_selector_reparameterized_runtime_stable_20260527Tlocal/feca_selector_reparameterization_manifest.json",
+            "--chain-label",
+            "cascade_c_p19_p18_to_p11_selector_context_recode_then_p15_repack",
+            "--full-frame-inflate-parity-proof",
+            "/Volumes/VertigoDataTier/experiments/results/feca_selector_reparameterized_runtime_stable_20260527Tlocal/feca_selector_full_frame_inflate_parity_proof.json",
+            "--overwrite"
+          ],
+          "id": "materialize_local_proof_chain",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "feca_selector_reparameterization_manifest.v1",
+              "key": "schema",
+              "path": "/Volumes/VertigoDataTier/experiments/results/selector_context_family_chain_queue_owned_20260527Tlocal/feca_selector_reparameterization_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "forbidden_statuses": [
+                "failed"
+              ],
+              "path": "/Volumes/VertigoDataTier/experiments/results/selector_context_family_chain_queue_owned_20260527Tlocal/feca_selector_reparameterization_manifest.json",
+              "required_artifact_records": [
+                "candidate_archive"
+              ],
+              "required_equals": {
+                "schema": "feca_selector_reparameterization_manifest.v1"
+              },
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "required_nonempty": [],
+              "required_nonempty_unless_true": [],
+              "required_positive_int": [
+                "candidate_archive.bytes"
+              ],
+              "required_runtime_adapter_identity": true,
+              "required_sha256": [
+                "candidate_archive.sha256"
+              ],
+              "required_true": [
+                "byte_closed_candidate_emitted"
+              ],
+              "type": "json_completion_contract"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "/Volumes/VertigoDataTier/experiments/results/selector_context_family_chain_queue_owned_20260527Tlocal"
+            ],
+            "feca_selector_reparameterization_manifest": "/Volumes/VertigoDataTier/experiments/results/selector_context_family_chain_queue_owned_20260527Tlocal/feca_selector_reparameterization_manifest.json",
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/v14_v2_dqs1_plus_fec10_substituted_20260526T023000Z/submission_dir"
+            ],
+            "max_recursive_entries": 256,
+            "pullback_artifact_paths": [
+              "/Volumes/VertigoDataTier/experiments/results/selector_context_family_chain_queue_owned_20260527Tlocal"
+            ],
+            "recursive": false
+          },
+          "timeout_seconds": 300
+        }
+      ],
+      "tags": [
+        "byte-shaving",
+        "materializer",
+        "local-proof-chain",
+        "no-score-authority"
+      ]
+    }
+  ],
+  "queue_id": "selector_context_chain_queue_owned_20260527Tlocal",
+  "schema": "experiment_queue.v1"
+}

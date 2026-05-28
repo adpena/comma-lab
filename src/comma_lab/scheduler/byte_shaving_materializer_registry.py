@@ -574,13 +574,15 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
         target_kind=FECA_SELECTOR_REPARAMETERIZE_TARGET_KIND,
         executable=True,
         description=(
-            "Source-runtime-native FECa selector-stream context recode. This "
-            "operates at the selector entropy position, patches the matching "
-            "runtime decoder constant, and requires full-frame inflate parity "
-            "plus exact auth eval before promotion."
+            "Source-runtime-native selector-stream context recode. This operates "
+            "at the P11 selector entropy position, sweeps FECa adaptive-blend "
+            "and FEC8 Markov/order families, emits chain metadata for upstream "
+            "P18/P19 scorer-region waterfill and downstream P15 repack, and "
+            "requires full-frame inflate parity plus exact auth eval before "
+            "promotion."
         ),
         receiver_contract_id=f"{FECA_SELECTOR_REPARAMETERIZE_TARGET_KIND}.receiver.v1",
-        receiver_contract_kind="source_runtime_native_feca_selector_recode",
+        receiver_contract_kind="source_runtime_native_selector_context_recode",
         cooperative_receiver_required=True,
         materialization_resource_kind="local_cpu",
         required_context_fields=(

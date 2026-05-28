@@ -1,0 +1,102 @@
+{
+  "candidate_id": "pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed505_steps1_c4",
+  "device": "mlx",
+  "dispatch_attempted": false,
+  "dispatch_packet_ready": false,
+  "examples_per_second": 32.04298066274368,
+  "full_pr95_source_faithful_training": false,
+  "gpu_launched": false,
+  "hardware_substrate": "Darwin_arm64_mlx",
+  "kernel_fusion_strategy_id": "native_mlx_pr95_hnerv_decoder_muon_adamw_v1",
+  "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+  "local_cloud_substitution": {
+    "cloud_gpu_reference": "PR95 HNeRV Muon stage timing and reproduction lane",
+    "intended_to_replace_cloud_gpu_training": true
+  },
+  "loss_surface_weights": {
+    "rgb_mse": 1.0
+  },
+  "operator_mix": {
+    "bilinear_resize2x": 6,
+    "conv2d": 15,
+    "linear": 1,
+    "newton_schulz5": 0,
+    "pixel_shuffle_2x": 6
+  },
+  "optimizer_config_sha256": "3a48c9864f5b4750dc5a7b3252416610d938cd3d155dd4da626fe558910b5831",
+  "optimizer_descriptor_id": "pr95_stage5_adamw_baseline_mlx",
+  "packet_compiler_bridge": {
+    "archive_export_schema": "pr95_hnerv_mlx_byte_closed_smoke_archive_v1",
+    "archive_export_tool": "tools/run_pr95_mlx_timing_smoke.py",
+    "blockers": [
+      "runtime_consumption_proof_missing",
+      "byte_closed_contest_archive_export_missing"
+    ],
+    "packet_compiler_target_declared": true,
+    "runtime_consumption_proof_present": false,
+    "runtime_consumption_proof_required": true
+  },
+  "parameter_group_fingerprint_sha256": "ae46005ffae1743ee1eb18cadc8f0226fc31a6a7298197803f121945c398a41a",
+  "parameter_group_lr_policy_id": "embedding_theta1_hidden_muon_adamw",
+  "parameter_group_lr_policy_sha256": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+  "profile_id": "pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed505_steps1_c4",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "representation_family": "hnerv",
+  "schema": "trainer_runtime_profile_observation.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "seconds_per_step": 0.03120808299718192,
+  "seed": 505,
+  "source_faithful_training": false,
+  "source_faithful_training_scope": "synthetic_timing_only",
+  "source_faithfulness_blockers": [
+    "pr95_source_video_loader_not_ported_to_mlx",
+    "pr95_eval_roundtrip_yuv6_preprocess_ported_but_scorer_loss_not_wired_to_mlx",
+    "pr95_stage_hparams_and_cosine_schedules_not_all_source_matched",
+    "pr95_qat_c1a_and_resume_semantics_not_ported_to_mlx",
+    "pr95_export_forward_parity_not_established"
+  ],
+  "source_stage_loss_contract": {
+    "cat_entropy_family": "cat_entropy_v2",
+    "cat_lambda": 0.01,
+    "cat_sigma": 0.2,
+    "l7_mult": 4.0,
+    "l7_threshold": 1.0,
+    "loss_surface": "pr95_stage_seg_pose_scorer_surrogate",
+    "mlx_loss_primitives_implemented": true,
+    "pose_loss_family": "sqrt_10x_mse_first6",
+    "pose_weight": 1.0,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "pr95_hnerv_mlx_stage_loss_contract.v1",
+    "score_claim": false,
+    "scorer_network_forward_gradient_wired": false,
+    "seg_loss_family": "l7_softplus_seg_loss",
+    "seg_weight": 100.0,
+    "source_pr": 95,
+    "stage_index": 5,
+    "stage_modules": [
+      "stage5_c1a_l7"
+    ],
+    "tau": 0.3,
+    "uses_muon": false,
+    "uses_qat": true
+  },
+  "source_video_target_loss_training": false,
+  "source_video_training": false,
+  "stage_id": "stage5_c1a_l7",
+  "stage_index": 5,
+  "state_bytes": 31712,
+  "substrate_family": "nerv_family",
+  "target_source": {},
+  "target_source_kind": "synthetic_rgb_pairs",
+  "target_yuv6_shape": null,
+  "training_backend": "mlx",
+  "training_fidelity": "synthetic_timing_only",
+  "training_loss_surface": "rgb_mse",
+  "yuv6_preprocess_kind": null
+}

@@ -1,0 +1,32 @@
+{
+  "generated_at_utc": "2026-05-27T00:00:00Z",
+  "rows": [
+    {
+      "backlog_key": "cascade_c_p19_p18_selector_context_recode_then_p15_repack",
+      "backlog_rank": 1,
+      "candidate_saved_bytes_sum": 16,
+      "chain_rule": "cascade_upstream_scorer_region_waterfill_then_selector_context_recode_then_repack",
+      "entropy_position_chain": [
+        "P19",
+        "P18",
+        "P11",
+        "P15"
+      ],
+      "expected_score_gain_sum": 0.0,
+      "materialization_resource_kind": "local_cpu",
+      "materializer_id": "feca_selector_reparameterize_adapter",
+      "operation_family": "selector_context_recode",
+      "receiver_contract_id": "selector_stream_context_recode_v1.receiver.v1",
+      "receiver_contract_kind": "source_runtime_native_selector_context_recode",
+      "schema": "byte_shaving_materializer_backlog_row.v1",
+      "source_unit_ids": [
+        "P19_posenet_null_bottom_decile",
+        "P18_segnet_class_region_waterfill",
+        "P11_selector_stream"
+      ],
+      "target_kind": "selector_stream_context_recode_v1",
+      "unit_kind": "selector_stream"
+    }
+  ],
+  "schema": "byte_shaving_materializer_backlog.v1"
+}

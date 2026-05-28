@@ -2874,6 +2874,72 @@ def test_json_completion_contract_accepts_receiver_contract_with_live_proof(
     assert _condition_passes(condition, repo_root=tmp_path) is True
 
 
+def test_json_completion_contract_accepts_shell_parity_as_companion_proof(
+    tmp_path: Path,
+) -> None:
+    manifest = tmp_path / "manifest.json"
+    archive = _postcondition_artifact(tmp_path / "candidate.zip", b"candidate")
+    runtime = _postcondition_runtime(tmp_path / "candidate_runtime")
+    proof = tmp_path / "receiver_proof.json"
+    proof.write_text(
+        json.dumps(
+            {
+                "schema": "family_agnostic_runtime_consumption_proof_v1",
+                "candidate_archive": archive,
+                "receiver_contract_satisfied": True,
+                "runtime_consumption_proof_passed": True,
+                "runtime_adapter_ready": True,
+                "passed": True,
+                **runtime,
+            }
+        ),
+        encoding="utf-8",
+    )
+    parity = tmp_path / "shell_parity.json"
+    parity.write_text(
+        json.dumps(
+            {
+                "schema": "shell_inflate_parity_proof_v2",
+                "full_frame_inflate_output_parity_claim": True,
+                "cmp_equal": True,
+                "output_sha256_match": True,
+                "right": {"archive_sha256": archive["sha256"]},
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "blockers": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    condition = {
+        "type": "json_completion_contract",
+        "path": manifest.name,
+        "required_true": ["receiver_contract_satisfied"],
+        "required_runtime_adapter_identity": True,
+    }
+    manifest.write_text(
+        json.dumps(
+            {
+                "candidate_archive": archive,
+                "receiver_contract_satisfied": True,
+                "runtime_adapter_ready": True,
+                "runtime_consumption_proof_path": proof.name,
+                "full_frame_inflate_parity_proof_path": parity.name,
+                "receiver_verification": {
+                    "receiver_contract_satisfied": True,
+                    "proof_present": True,
+                },
+                **runtime,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert _condition_passes(condition, repo_root=tmp_path) is True
+
+
 def test_materializer_chain_complete_allows_downstream_readiness_blockers(
     tmp_path: Path,
 ) -> None:

@@ -82,6 +82,7 @@ PROOF_SUCCESS_FIELDS = (
     "passed",
     "runtime_consumption_proof_passed",
     "full_frame_inflate_parity_satisfied",
+    "full_frame_inflate_output_parity_claim",
     "source_runtime_unpacker_parse_satisfied",
 )
 
@@ -1220,6 +1221,9 @@ def _proof_candidate_archive_sha256(proof: Mapping[str, Any]) -> str | None:
     candidate_archive = proof.get("candidate_archive")
     if isinstance(candidate_archive, Mapping) and _is_sha256(candidate_archive.get("sha256")):
         return str(candidate_archive["sha256"]).strip().lower()
+    right = proof.get("right")
+    if isinstance(right, Mapping) and _is_sha256(right.get("archive_sha256")):
+        return str(right["archive_sha256"]).strip().lower()
     for key in ("candidate_archive_sha256", "archive_sha256"):
         if _is_sha256(proof.get(key)):
             return str(proof[key]).strip().lower()
@@ -1275,7 +1279,12 @@ def _proof_record_valid(
         isinstance(runtime_manifest, Mapping)
         and runtime_manifest.get("runtime_adapter_ready") is True
     )
-    if require_runtime_identity:
+    proof_is_full_frame_parity = (
+        proof.get("full_frame_inflate_output_parity_claim") is True
+        and proof.get("cmp_equal") is True
+        and proof.get("output_sha256_match") is True
+    )
+    if require_runtime_identity and not proof_is_full_frame_parity:
         if runtime_adapter_identity_blockers(
             proof,
             repo_root=repo_root,

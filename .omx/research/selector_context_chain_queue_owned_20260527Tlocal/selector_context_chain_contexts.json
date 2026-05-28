@@ -1,0 +1,37 @@
+{
+  "contexts": {
+    "cascade_c_p19_p18_selector_context_recode_then_p15_repack": {
+      "alphas": [
+        1,
+        2,
+        4
+      ],
+      "chain_label": "cascade_c_p19_p18_to_p11_selector_context_recode_then_p15_repack",
+      "chain_parent_artifact": "/Volumes/VertigoDataTier/experiments/results/feca_selector_reparameterized_runtime_stable_20260527Tlocal/feca_selector_reparameterization_manifest.json",
+      "codec_families": [
+        "fec10_adaptive_blend",
+        "fec8_markov_static_order1",
+        "fec8_markov_adaptive_order1",
+        "fec8_markov_static_order2"
+      ],
+      "downstream_materializer_targets": [
+        "archive_zip_repack_v1"
+      ],
+      "full_frame_inflate_parity_proof": "/Volumes/VertigoDataTier/experiments/results/feca_selector_reparameterized_runtime_stable_20260527Tlocal/feca_selector_full_frame_inflate_parity_proof.json",
+      "output_dir": "/Volumes/VertigoDataTier/experiments/results/selector_context_family_chain_queue_owned_20260527Tlocal",
+      "overwrite": true,
+      "scales": [
+        32,
+        64,
+        128,
+        256
+      ],
+      "source_submission_dir": "experiments/results/v14_v2_dqs1_plus_fec10_substituted_20260526T023000Z/submission_dir",
+      "upstream_entropy_positions": [
+        "P19",
+        "P18"
+      ]
+    }
+  },
+  "schema": "selector_context_chain_contexts.v1"
+}

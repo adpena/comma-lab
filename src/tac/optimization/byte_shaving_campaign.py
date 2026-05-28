@@ -103,7 +103,7 @@ INVERSE_ACTION_COMPILER_TARGET_DEFAULTS: dict[str, dict[str, Any]] = {
         "unit_kind": "selector_stream",
         "operation_family": "selector_context_recode",
         "materializer": "feca_selector_reparameterize_adapter",
-        "receiver_contract_kind": "source_runtime_native_feca_selector_recode",
+        "receiver_contract_kind": "source_runtime_native_selector_context_recode",
     },
     "archive_section_header_elide_v1": {
         "unit_kind": "archive_section",

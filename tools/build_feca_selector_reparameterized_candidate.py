@@ -22,6 +22,7 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from tac.packet_compiler.feca_selector_reparameterize import (  # noqa: E402
+    DEFAULT_SELECTOR_CODEC_FAMILIES,
     FecaSelectorReparameterizationError,
     build_feca_selector_reparameterized_candidate,
 )
@@ -44,8 +45,24 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source-submission-dir", required=True, type=Path)
     parser.add_argument("--output-dir", required=True, type=Path)
+    parser.add_argument(
+        "--codec-family",
+        action="append",
+        default=[],
+        help=(
+            "Selector codec family to sweep. Repeatable. Defaults to FECa "
+            "adaptive-blend plus FEC8 Markov order families."
+        ),
+    )
     parser.add_argument("--scale", action="append", default=[])
     parser.add_argument("--alpha", action="append", default=[])
+    parser.add_argument("--upstream-entropy-position", action="append", default=[])
+    parser.add_argument("--downstream-materializer-target", action="append", default=[])
+    parser.add_argument("--chain-parent-artifact", type=Path)
+    parser.add_argument(
+        "--chain-label",
+        default="cascade_c_p19_p18_to_p11_selector_context_recode",
+    )
     parser.add_argument("--full-frame-inflate-parity-proof", type=Path)
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args(argv)
@@ -57,8 +74,15 @@ def main(argv: list[str] | None = None) -> int:
         manifest = build_feca_selector_reparameterized_candidate(
             source_submission_dir=args.source_submission_dir,
             output_dir=args.output_dir,
+            codec_families=tuple(args.codec_family or DEFAULT_SELECTOR_CODEC_FAMILIES),
             scales=_ints(args.scale, default=(256, 512, 1024, 2048, 4096, 8192, 16384)),
             alphas=_ints(args.alpha, default=tuple(range(1, 17))),
+            upstream_entropy_positions=tuple(args.upstream_entropy_position or ("P19", "P18")),
+            downstream_materializer_targets=tuple(
+                args.downstream_materializer_target or ("archive_zip_repack_v1",)
+            ),
+            chain_parent_artifact=args.chain_parent_artifact,
+            chain_label=args.chain_label,
             full_frame_inflate_parity_proof=args.full_frame_inflate_parity_proof,
             allow_overwrite=args.overwrite,
         )
