@@ -1,0 +1,70 @@
+{
+  "dispatch_attempted": false,
+  "dispatch_packet_ready": false,
+  "exact_readiness_refusal": {
+    "blockers": [
+      "pr95_source_video_rgb_yuv6_preprocess_loss_is_not_full_scorer_loss",
+      "pr95_segnet_posenet_network_loss_not_wired_to_mlx",
+      "source_video_rgb_yuv6_preprocess_loss_is_not_score_authority",
+      "requires_exact_cpu_cuda_auth_eval_before_score_claim"
+    ],
+    "ready": false
+  },
+  "gpu_launched": false,
+  "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+  "pr95_1to1_reproduction_claim": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "reproduction_claim": false,
+  "reproduction_equivalence": false,
+  "schema": "pr95_hnerv_mlx_source_video_training_target.v1",
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "source_video_training_ready": true,
+  "target_shape_n2chw": [
+    2,
+    2,
+    3,
+    384,
+    512
+  ],
+  "target_source": {
+    "frame_indices": [
+      0,
+      1,
+      742,
+      743
+    ],
+    "kind": "pr95_source_video_rgb_pairs",
+    "output_hw": [
+      384,
+      512
+    ],
+    "pair_indices": [
+      0,
+      371
+    ],
+    "source_frame_pair_shape": [
+      2,
+      2,
+      874,
+      1164,
+      3
+    ],
+    "target_shape_n2chw": [
+      2,
+      2,
+      3,
+      384,
+      512
+    ],
+    "training_loss_surface": "rgb_yuv6_mse",
+    "upstream_dir": "upstream",
+    "video_path": "upstream/videos/0.mkv"
+  },
+  "training_fidelity": "source_video_rgb_yuv6_preprocess_coupled_timing_only",
+  "training_loss_surface": "rgb_yuv6_mse"
+}

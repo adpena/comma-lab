@@ -1,0 +1,106 @@
+{
+  "archive_packet": {
+    "archive_zip_path": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/pr95_public_archive.zip",
+    "archive_zip_sha256": "89a55cd81c8913a49e0e168efe4d5cfeeab52ef8f0d7c27eb3fb76ad1eeeb869",
+    "dispatch_attempted": false,
+    "dispatch_packet_ready": false,
+    "gpu_launched": false,
+    "latent_shape": [
+      2,
+      28
+    ],
+    "member_bytes": 230326,
+    "member_compress_type": 0,
+    "member_name": "0.bin",
+    "member_sha256": "db7eca61f24823fd37837b3cf8facd27ce0db33c4714c79f493736e7ec3cb8b1",
+    "meta": {
+      "base_channels": 36,
+      "eval_size": [
+        384,
+        512
+      ],
+      "latent_dim": 28,
+      "n_pairs": 2
+    },
+    "pr95_1to1_reproduction_claim": false,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "reproduction_claim": false,
+    "reproduction_equivalence": false,
+    "schema": "pr95_hnerv_public_archive_packet.v1",
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "source_pr": 95,
+    "state_dict_tensor_count": 28,
+    "submission": "hnerv_muon"
+  },
+  "conv2d_accumulation_mode": "optimized",
+  "conv2d_accumulation_overrides": {
+    "blocks.0.conv": "kahan_fp32",
+    "blocks.0.skip_conv": "kahan_fp32",
+    "blocks.1.conv": "kahan_fp32",
+    "blocks.1.skip_conv": "kahan_fp32",
+    "blocks.2.conv": "kahan_fp32",
+    "blocks.2.skip_conv": "kahan_fp32"
+  },
+  "dispatch_attempted": false,
+  "dispatch_packet_ready": false,
+  "elapsed_seconds": 0.06668929199804552,
+  "evidence_grade": "[macOS-MLX research-signal]",
+  "exact_readiness_refusal": {
+    "blockers": [
+      "local_mlx_forward_parity_probe_is_not_contest_auth_eval",
+      "requires_full_frame_inflate_parity_before_runtime_consumption_claim",
+      "requires_exact_cpu_cuda_auth_eval_before_score_claim"
+    ],
+    "ready": false,
+    "schema": "exact_readiness_refusal.v1"
+  },
+  "generated_utc": "2026-05-28T13:03:55.197307+00:00",
+  "gpu_launched": false,
+  "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+  "mlx_device": "gpu",
+  "mlx_output_shape": [
+    1,
+    2,
+    3,
+    384,
+    512
+  ],
+  "parity": {
+    "atol_max": 0.002,
+    "atol_mean": 0.0001,
+    "max_abs": 3.0517578125e-05,
+    "mean_abs": 3.7957861422910355e-06,
+    "p999_abs": 3.0517578125e-05,
+    "p99_abs": 1.52587890625e-05,
+    "passed": true
+  },
+  "pr95_1to1_reproduction_claim": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "reproduction_claim": false,
+  "reproduction_equivalence": false,
+  "sample_count": 1,
+  "sample_indices": [
+    0
+  ],
+  "schema": "pr95_hnerv_public_archive_mlx_forward_parity.v1",
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "source_pr": 95,
+  "submission": "hnerv_muon",
+  "torch_output_shape": [
+    1,
+    2,
+    3,
+    384,
+    512
+  ]
+}

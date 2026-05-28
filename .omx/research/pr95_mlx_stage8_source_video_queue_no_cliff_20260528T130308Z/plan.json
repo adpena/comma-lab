@@ -1,0 +1,370 @@
+{
+  "candidate_family": "pr95_hnerv_mlx_reproduction_timing_smoke",
+  "candidate_id": "pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed23_steps2_c36_source_video_rgb_yuv6",
+  "device_requested": "mlx",
+  "device_selected": "mlx",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "pr95_hnerv_mlx_timing_smoke_plan_is_proxy_signal",
+    "pr95_hnerv_mlx_timing_smoke_is_local_training_signal_not_score",
+    "pr95_stage_hparams_and_cosine_schedules_not_all_source_matched",
+    "pr95_qat_c1a_and_resume_semantics_not_ported_to_mlx",
+    "pr95_export_forward_parity_not_established",
+    "byte_closed_smoke_archive_not_consumed_by_pr95_runtime",
+    "runtime_consumption_proof_missing",
+    "receiver_proof_missing",
+    "requires_pytorch_export_forward_parity_on_source_checkpoint",
+    "requires_byte_closed_contest_archive_export",
+    "requires_exact_cpu_cuda_auth_eval_before_score_claim",
+    "pr95_source_video_rgb_yuv6_preprocess_loss_is_not_full_scorer_loss",
+    "pr95_segnet_posenet_network_loss_not_wired_to_mlx",
+    "source_video_rgb_yuv6_preprocess_loss_is_not_score_authority"
+  ],
+  "dispatch_packet_ready": false,
+  "evidence_grade": "[macOS-MLX research-signal]",
+  "generated_utc": "2026-05-28T13:03:08.572297+00:00",
+  "gpu_launched": false,
+  "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+  "mlx_gpu_drift_conv2d_accumulation_mode": "optimized",
+  "mlx_gpu_drift_conv2d_accumulation_overrides": {
+    "blocks.0.conv": "kahan_fp32",
+    "blocks.0.skip_conv": "kahan_fp32",
+    "blocks.1.conv": "kahan_fp32",
+    "blocks.1.skip_conv": "kahan_fp32",
+    "blocks.2.conv": "kahan_fp32",
+    "blocks.2.skip_conv": "kahan_fp32"
+  },
+  "mlx_gpu_drift_conv2d_override_items": [],
+  "mlx_gpu_drift_conv2d_override_preset": "blocks02_kahan_fp32",
+  "optimizer_backend_status": "implemented_mlx_local_timing_proxy",
+  "optimizer_config_sha256": "c5d401d14216813875097611f6cb5a5582239d1b2bb1804d3bc9edd005acc3af",
+  "optimizer_descriptor_id": "pr95_stage8_muon_adamw_mlx",
+  "output_dir": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z",
+  "parameter_group_lr_policy_id": "embedding_theta1_hidden_muon_adamw",
+  "parameter_group_lr_policy_sha256": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+  "pr95_1to1_reproduction_claim": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "prove_pr95_runtime_consumption": false,
+  "public_pr95_source_model": "experiments/results/public_pr_intake_full/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py",
+  "pytorch_export_atol_max": 0.002,
+  "pytorch_export_atol_mean": 0.0001,
+  "pytorch_export_conv2d_accumulation_mode": "optimized",
+  "pytorch_export_conv2d_accumulation_overrides": {},
+  "pytorch_export_conv2d_override_items": [],
+  "pytorch_export_conv2d_override_preset": "none",
+  "pytorch_export_mlx_device": "cpu",
+  "pytorch_export_sample_indices": [
+    0
+  ],
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "recommended_execution": {
+    "archive_export_manifest": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/pr95_public_archive_export.json",
+    "archive_export_zip": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/pr95_public_archive.zip",
+    "candidate_generation_only": true,
+    "device": "mlx",
+    "dispatch_attempted": false,
+    "dispatch_packet_ready": false,
+    "extra_artifact_postconditions": [
+      {
+        "path": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/source_video_training_target.json",
+        "type": "path_exists"
+      },
+      {
+        "equals": "pr95_hnerv_mlx_source_video_training_target.v1",
+        "key": "schema",
+        "path": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/source_video_training_target.json",
+        "type": "json_equals"
+      },
+      {
+        "equals": true,
+        "key": "source_video_training_ready",
+        "path": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/source_video_training_target.json",
+        "type": "json_equals"
+      },
+      {
+        "equals": "pr95_source_video_rgb_pairs",
+        "key": "target_source.kind",
+        "path": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/source_video_training_target.json",
+        "type": "json_equals"
+      },
+      {
+        "equals": "rgb_yuv6_mse",
+        "key": "training_loss_surface",
+        "path": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/source_video_training_target.json",
+        "type": "json_equals"
+      },
+      {
+        "path": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/source_video_training_target.json",
+        "type": "json_false_authority"
+      },
+      {
+        "path": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/source_video_preprocess_smoke.json",
+        "type": "path_exists"
+      },
+      {
+        "equals": "pr95_hnerv_mlx_source_video_preprocess_smoke_v1",
+        "key": "schema",
+        "path": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/source_video_preprocess_smoke.json",
+        "type": "json_equals"
+      },
+      {
+        "equals": true,
+        "key": "source_video_loader_ready",
+        "path": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/source_video_preprocess_smoke.json",
+        "type": "json_equals"
+      },
+      {
+        "equals": true,
+        "key": "source_video_preprocess_ready",
+        "path": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/source_video_preprocess_smoke.json",
+        "type": "json_equals"
+      },
+      {
+        "equals": true,
+        "key": "gradient_probe.gradient_reachable",
+        "path": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/source_video_preprocess_smoke.json",
+        "type": "json_equals"
+      },
+      {
+        "equals": false,
+        "key": "exact_readiness_refusal.ready",
+        "path": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/source_video_preprocess_smoke.json",
+        "type": "json_equals"
+      },
+      {
+        "contains": "pr95_source_video_targets_ready_but_scorer_loss_not_wired_to_mlx",
+        "key": "exact_readiness_refusal.blockers",
+        "path": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/source_video_preprocess_smoke.json",
+        "type": "json_array_contains"
+      },
+      {
+        "path": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/source_video_preprocess_smoke.json",
+        "type": "json_false_authority"
+      },
+      {
+        "path": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/pr95_public_archive.zip",
+        "type": "path_exists"
+      },
+      {
+        "path": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/pr95_public_archive_export.json",
+        "type": "path_exists"
+      },
+      {
+        "equals": "pr95_hnerv_archive_export.v1",
+        "key": "schema",
+        "path": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/pr95_public_archive_export.json",
+        "type": "json_equals"
+      },
+      {
+        "equals": false,
+        "key": "runtime_consumption_proof_present",
+        "path": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/pr95_public_archive_export.json",
+        "type": "json_equals"
+      },
+      {
+        "path": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/pr95_public_archive_export.json",
+        "type": "json_false_authority"
+      },
+      {
+        "path": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/mlx_gpu_forward_drift_attestation.json",
+        "type": "path_exists"
+      },
+      {
+        "equals": "pr95_hnerv_public_archive_mlx_forward_parity.v1",
+        "key": "schema",
+        "path": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/mlx_gpu_forward_drift_attestation.json",
+        "type": "json_equals"
+      },
+      {
+        "equals": "gpu",
+        "key": "mlx_device",
+        "path": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/mlx_gpu_forward_drift_attestation.json",
+        "type": "json_equals"
+      },
+      {
+        "equals": false,
+        "key": "exact_readiness_refusal.ready",
+        "path": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/mlx_gpu_forward_drift_attestation.json",
+        "type": "json_equals"
+      },
+      {
+        "path": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/mlx_gpu_forward_drift_attestation.json",
+        "type": "json_false_authority"
+      },
+      {
+        "path": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/mlx_gpu_decoder_trace.json",
+        "type": "path_exists"
+      },
+      {
+        "equals": "pr95_hnerv_public_archive_mlx_decoder_trace.v1",
+        "key": "schema",
+        "path": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/mlx_gpu_decoder_trace.json",
+        "type": "json_equals"
+      },
+      {
+        "equals": "gpu",
+        "key": "mlx_device",
+        "path": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/mlx_gpu_decoder_trace.json",
+        "type": "json_equals"
+      },
+      {
+        "equals": false,
+        "key": "exact_readiness_refusal.ready",
+        "path": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/mlx_gpu_decoder_trace.json",
+        "type": "json_equals"
+      },
+      {
+        "path": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/mlx_gpu_decoder_trace.json",
+        "type": "json_false_authority"
+      }
+    ],
+    "gpu_launched": false,
+    "mlx_gpu_decoder_trace": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/mlx_gpu_decoder_trace.json",
+    "mlx_gpu_drift_conv2d_accumulation_mode": "optimized",
+    "mlx_gpu_drift_conv2d_accumulation_overrides": {
+      "blocks.0.conv": "kahan_fp32",
+      "blocks.0.skip_conv": "kahan_fp32",
+      "blocks.1.conv": "kahan_fp32",
+      "blocks.1.skip_conv": "kahan_fp32",
+      "blocks.2.conv": "kahan_fp32",
+      "blocks.2.skip_conv": "kahan_fp32"
+    },
+    "mlx_gpu_drift_conv2d_override_preset": "blocks02_kahan_fp32",
+    "mlx_gpu_forward_drift_attestation": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/mlx_gpu_forward_drift_attestation.json",
+    "optimizer_backend_status": "implemented_mlx_local_timing_proxy",
+    "optimizer_config_sha256": "c5d401d14216813875097611f6cb5a5582239d1b2bb1804d3bc9edd005acc3af",
+    "optimizer_descriptor_id": "pr95_stage8_muon_adamw_mlx",
+    "output_manifest": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/manifest.json",
+    "parameter_group_lr_policy_id": "embedding_theta1_hidden_muon_adamw",
+    "parameter_group_lr_policy_sha256": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+    "plan_manifest": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/plan.json",
+    "pr95_1to1_reproduction_claim": false,
+    "promotable": false,
+    "promotion_eligible": false,
+    "public_pr95_source_model": "experiments/results/public_pr_intake_full/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py",
+    "python_command_args": [
+      ".venv/bin/python",
+      "tools/run_pr95_mlx_timing_smoke.py",
+      "--stage",
+      "8",
+      "--steps",
+      "2",
+      "--batch-size",
+      "1",
+      "--synthetic-pairs",
+      "2",
+      "--seed",
+      "23",
+      "--base-channels",
+      "36",
+      "--latent-dim",
+      "28",
+      "--optimizer-descriptor-id",
+      "pr95_stage8_muon_adamw_mlx",
+      "--output-dir",
+      ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z",
+      "--allow-existing-output-dir",
+      "--write-byte-closed-smoke",
+      "--write-pr95-public-archive-export",
+      "--public-pr95-source-model",
+      "experiments/results/public_pr_intake_full/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py",
+      "--pytorch-export-atol-max",
+      "0.002",
+      "--pytorch-export-atol-mean",
+      "0.0001",
+      "--pytorch-export-sample-index",
+      "0",
+      "--write-mlx-gpu-drift-attestation",
+      "--mlx-gpu-drift-conv2d-accumulation-mode",
+      "optimized",
+      "--mlx-gpu-drift-conv2d-override-preset",
+      "blocks02_kahan_fp32",
+      "--write-source-video-preprocess-smoke",
+      "--source-video-path",
+      "upstream/videos/0.mkv",
+      "--source-video-upstream-dir",
+      "upstream",
+      "--source-video-output-hw",
+      "384,512",
+      "--source-video-gradient-shape",
+      "1,2,16,20,3",
+      "--source-video-pair-index",
+      "0",
+      "--source-video-pair-index",
+      "371",
+      "--train-on-source-video-pairs",
+      "--source-video-loss-surface",
+      "rgb_yuv6_mse"
+    ],
+    "pytorch_export_sample_indices": [
+      0
+    ],
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "representation_manifest": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/representation_training_manifest.json",
+    "reproduction_claim": false,
+    "reproduction_equivalence": false,
+    "resource_kind": "local_mlx",
+    "schema": "local_training_recommended_execution.v1",
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "source_video_gradient_shape": "1,2,16,20,3",
+    "source_video_loss_surface": "rgb_yuv6_mse",
+    "source_video_output_hw": "384,512",
+    "source_video_pair_indices": [
+      0,
+      371
+    ],
+    "source_video_path": "upstream/videos/0.mkv",
+    "source_video_preprocess_smoke": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/source_video_preprocess_smoke.json",
+    "source_video_training_target": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/source_video_training_target.json",
+    "source_video_upstream_dir": "upstream",
+    "tool": "tools/run_pr95_mlx_timing_smoke.py",
+    "train_on_source_video_pairs": true,
+    "training_backend": "mlx"
+  },
+  "representation_family": "hnerv",
+  "representation_family_class": "hnerv_variant",
+  "representation_training_plan": ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z/representation_training_plan.json",
+  "representation_training_plan_schema": "representation_training_probe_plan_v1",
+  "reproduction_claim": false,
+  "reproduction_equivalence": false,
+  "schema": "representation_training_probe_plan_v1",
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "seed": 23,
+  "source_preprocess_camera_hw": "874,1164",
+  "source_preprocess_gradient_shape": "1,2,16,20,3",
+  "source_preprocess_shape": "1,2,384,512,3",
+  "source_video_gradient_shape": "1,2,16,20,3",
+  "source_video_loss_surface": "rgb_yuv6_mse",
+  "source_video_output_hw": "384,512",
+  "source_video_pair_indices": [
+    0,
+    371
+  ],
+  "source_video_path": "upstream/videos/0.mkv",
+  "source_video_upstream_dir": "upstream",
+  "stage_count": 1,
+  "stage_index": 8,
+  "stage_module": "stage8_muon_finetune",
+  "stages": [
+    {
+      "index": 8,
+      "module": "stage8_muon_finetune"
+    }
+  ],
+  "substrate_family": "nerv_family",
+  "train_on_source_video_pairs": true,
+  "training_backend": "mlx",
+  "write_byte_closed_smoke": true,
+  "write_mlx_gpu_drift_attestation": true,
+  "write_pr95_public_archive_export": true,
+  "write_pytorch_export_parity": false,
+  "write_source_faithful_preprocess_smoke": false,
+  "write_source_video_preprocess_smoke": true
+}

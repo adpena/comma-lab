@@ -1,0 +1,118 @@
+{
+  "backlog_key_by_experiment": {},
+  "by_backlog_key": {},
+  "by_experiment": {
+    "local_training_0000_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed23_steps2_c36_source_video_rgb_yuv6": {
+      "artifact_record_bytes_mean": 414799.0,
+      "artifact_record_bytes_sum": 414799,
+      "artifact_record_count": 8,
+      "artifact_record_raw_bytes_mean": 414799.0,
+      "artifact_record_raw_bytes_sum": 414799,
+      "candidate_ids": [
+        "local_training_0000_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed23_steps2_c36_source_video_rgb_yuv6"
+      ],
+      "dominant_resource_kind": "local_mlx",
+      "elapsed_seconds_max": 7.3959469580004225,
+      "elapsed_seconds_mean": 7.3959469580004225,
+      "elapsed_seconds_min": 7.3959469580004225,
+      "elapsed_seconds_sum": 7.3959469580004225,
+      "experiment_ids": [
+        "local_training_0000_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed23_steps2_c36_source_video_rgb_yuv6"
+      ],
+      "failure_count": 0,
+      "log_bytes_mean": 35779.0,
+      "log_bytes_sum": 35779,
+      "resource_kind_counts": {
+        "local_mlx": 1
+      },
+      "run_count": 1,
+      "step_ids": [
+        "run_local_training"
+      ],
+      "success_count": 1
+    }
+  },
+  "by_resource_kind": {
+    "local_mlx": {
+      "artifact_record_bytes_mean": 414799.0,
+      "artifact_record_bytes_sum": 414799,
+      "artifact_record_count": 8,
+      "artifact_record_raw_bytes_mean": 414799.0,
+      "artifact_record_raw_bytes_sum": 414799,
+      "candidate_ids": [
+        "local_training_0000_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed23_steps2_c36_source_video_rgb_yuv6"
+      ],
+      "dominant_resource_kind": "local_mlx",
+      "elapsed_seconds_max": 7.3959469580004225,
+      "elapsed_seconds_mean": 7.3959469580004225,
+      "elapsed_seconds_min": 7.3959469580004225,
+      "elapsed_seconds_sum": 7.3959469580004225,
+      "experiment_ids": [
+        "local_training_0000_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed23_steps2_c36_source_video_rgb_yuv6"
+      ],
+      "failure_count": 0,
+      "log_bytes_mean": 35779.0,
+      "log_bytes_sum": 35779,
+      "resource_kind_counts": {
+        "local_mlx": 1
+      },
+      "run_count": 1,
+      "step_ids": [
+        "run_local_training"
+      ],
+      "success_count": 1
+    }
+  },
+  "by_source_selection_id": {},
+  "by_source_unit_id": {},
+  "by_step": {
+    "local_training_0000_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed23_steps2_c36_source_video_rgb_yuv6.run_local_training": {
+      "artifact_record_bytes_mean": 414799.0,
+      "artifact_record_bytes_sum": 414799,
+      "artifact_record_count": 8,
+      "artifact_record_raw_bytes_mean": 414799.0,
+      "artifact_record_raw_bytes_sum": 414799,
+      "candidate_ids": [
+        "local_training_0000_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed23_steps2_c36_source_video_rgb_yuv6"
+      ],
+      "dominant_resource_kind": "local_mlx",
+      "elapsed_seconds_max": 7.3959469580004225,
+      "elapsed_seconds_mean": 7.3959469580004225,
+      "elapsed_seconds_min": 7.3959469580004225,
+      "elapsed_seconds_sum": 7.3959469580004225,
+      "experiment_ids": [
+        "local_training_0000_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed23_steps2_c36_source_video_rgb_yuv6"
+      ],
+      "failure_count": 0,
+      "log_bytes_mean": 35779.0,
+      "log_bytes_sum": 35779,
+      "resource_kind_counts": {
+        "local_mlx": 1
+      },
+      "run_count": 1,
+      "step_ids": [
+        "run_local_training"
+      ],
+      "success_count": 1
+    }
+  },
+  "by_work_id": {},
+  "candidate_id_by_experiment": {
+    "local_training_0000_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed23_steps2_c36_source_video_rgb_yuv6": [
+      "local_training_0000_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed23_steps2_c36_source_video_rgb_yuv6"
+    ]
+  },
+  "event_count": 1,
+  "promotion_eligible": false,
+  "queue_id": "pr95_mlx_stage8_source_video_no_cliff_20260528T130308Z",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "experiment_queue_performance_summary.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "source_selection_ids_by_experiment": {},
+  "source_unit_ids_by_experiment": {},
+  "state": ".omx/state/experiment_queue_pr95_mlx_stage8_source_video_no_cliff_20260528T130308Z.sqlite",
+  "telemetry_only": true,
+  "work_id_by_experiment": {}
+}

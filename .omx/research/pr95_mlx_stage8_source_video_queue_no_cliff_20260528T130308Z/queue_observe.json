@@ -1,0 +1,261 @@
+{
+  "auto_parallelism": {
+    "idle_declared_resources": {
+      "local_cpu": 1,
+      "local_cuda": 1,
+      "local_mps": 1
+    },
+    "local_only": {
+      "max_parallel": 1,
+      "resource_limits": {
+        "local_mlx": 1
+      }
+    },
+    "used_resource_kinds": [
+      "local_mlx"
+    ],
+    "with_cloud": {
+      "max_parallel": 1,
+      "resource_limits": {
+        "local_mlx": 1
+      }
+    }
+  },
+  "blocked_steps": [],
+  "blocker_count": 0,
+  "blockers": [],
+  "definition_drift": {
+    "changed_step_count": 0,
+    "changed_steps": [],
+    "missing_hash_step_count": 0,
+    "missing_hash_steps": [],
+    "missing_step_count": 0,
+    "missing_steps": [],
+    "read_only": true,
+    "schema": "experiment_queue_definition_drift.v1"
+  },
+  "disabled_steps": [],
+  "failed_steps": [],
+  "frozen_steps": [],
+  "generated_at_utc": "2026-05-28T13:04:21Z",
+  "healthy": true,
+  "local_training_signal_observation_count": 0,
+  "local_training_signal_observations": [],
+  "mode": "running",
+  "observe_read_only": true,
+  "orphaned_step_count": 0,
+  "orphaned_steps": [],
+  "paused_steps": [],
+  "performance": {
+    "backlog_key_by_experiment": {},
+    "by_backlog_key": {},
+    "by_experiment": {
+      "local_training_0000_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed23_steps2_c36_source_video_rgb_yuv6": {
+        "artifact_record_bytes_mean": 414799.0,
+        "artifact_record_bytes_sum": 414799,
+        "artifact_record_count": 8,
+        "artifact_record_raw_bytes_mean": 414799.0,
+        "artifact_record_raw_bytes_sum": 414799,
+        "candidate_ids": [
+          "local_training_0000_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed23_steps2_c36_source_video_rgb_yuv6"
+        ],
+        "dominant_resource_kind": "local_mlx",
+        "elapsed_seconds_max": 7.3959469580004225,
+        "elapsed_seconds_mean": 7.3959469580004225,
+        "elapsed_seconds_min": 7.3959469580004225,
+        "elapsed_seconds_sum": 7.3959469580004225,
+        "experiment_ids": [
+          "local_training_0000_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed23_steps2_c36_source_video_rgb_yuv6"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 35779.0,
+        "log_bytes_sum": 35779,
+        "resource_kind_counts": {
+          "local_mlx": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_local_training"
+        ],
+        "success_count": 1
+      }
+    },
+    "by_resource_kind": {
+      "local_mlx": {
+        "artifact_record_bytes_mean": 414799.0,
+        "artifact_record_bytes_sum": 414799,
+        "artifact_record_count": 8,
+        "artifact_record_raw_bytes_mean": 414799.0,
+        "artifact_record_raw_bytes_sum": 414799,
+        "candidate_ids": [
+          "local_training_0000_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed23_steps2_c36_source_video_rgb_yuv6"
+        ],
+        "dominant_resource_kind": "local_mlx",
+        "elapsed_seconds_max": 7.3959469580004225,
+        "elapsed_seconds_mean": 7.3959469580004225,
+        "elapsed_seconds_min": 7.3959469580004225,
+        "elapsed_seconds_sum": 7.3959469580004225,
+        "experiment_ids": [
+          "local_training_0000_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed23_steps2_c36_source_video_rgb_yuv6"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 35779.0,
+        "log_bytes_sum": 35779,
+        "resource_kind_counts": {
+          "local_mlx": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_local_training"
+        ],
+        "success_count": 1
+      }
+    },
+    "by_source_selection_id": {},
+    "by_source_unit_id": {},
+    "by_step": {
+      "local_training_0000_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed23_steps2_c36_source_video_rgb_yuv6.run_local_training": {
+        "artifact_record_bytes_mean": 414799.0,
+        "artifact_record_bytes_sum": 414799,
+        "artifact_record_count": 8,
+        "artifact_record_raw_bytes_mean": 414799.0,
+        "artifact_record_raw_bytes_sum": 414799,
+        "candidate_ids": [
+          "local_training_0000_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed23_steps2_c36_source_video_rgb_yuv6"
+        ],
+        "dominant_resource_kind": "local_mlx",
+        "elapsed_seconds_max": 7.3959469580004225,
+        "elapsed_seconds_mean": 7.3959469580004225,
+        "elapsed_seconds_min": 7.3959469580004225,
+        "elapsed_seconds_sum": 7.3959469580004225,
+        "experiment_ids": [
+          "local_training_0000_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed23_steps2_c36_source_video_rgb_yuv6"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 35779.0,
+        "log_bytes_sum": 35779,
+        "resource_kind_counts": {
+          "local_mlx": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_local_training"
+        ],
+        "success_count": 1
+      }
+    },
+    "by_work_id": {},
+    "candidate_id_by_experiment": {
+      "local_training_0000_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed23_steps2_c36_source_video_rgb_yuv6": [
+        "local_training_0000_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed23_steps2_c36_source_video_rgb_yuv6"
+      ]
+    },
+    "event_count": 1,
+    "promotion_eligible": false,
+    "queue_id": "pr95_mlx_stage8_source_video_no_cliff_20260528T130308Z",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "experiment_queue_performance_summary.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "source_selection_ids_by_experiment": {},
+    "source_unit_ids_by_experiment": {},
+    "telemetry_only": true,
+    "work_id_by_experiment": {}
+  },
+  "queue_id": "pr95_mlx_stage8_source_video_no_cliff_20260528T130308Z",
+  "queue_sha256": "8a390bedc4d7fe6734a6bbd2f85f50dbe226a8677b1ca49a3122a31a6e204aeb",
+  "queued_steps": [],
+  "ready_steps": [],
+  "running_steps": [],
+  "runtime_policy": {
+    "advisory_only": true,
+    "apply_requires_explicit_call": true,
+    "backpressure": {
+      "local_io_heavy": {
+        "reason": "limit_file_tree_hashing_and_artifact_pullback_pressure",
+        "recommended_concurrency": 4
+      }
+    },
+    "current_max_concurrency": {
+      "local_cpu": 1,
+      "local_cuda": 1,
+      "local_mlx": 1,
+      "local_mps": 1
+    },
+    "dispatch_attempted": false,
+    "dispatch_packet_ready": false,
+    "generated_from_schema": "experiment_queue_performance_summary.v1",
+    "gpu_launched": false,
+    "input_event_count": 1,
+    "machine_capacity": {
+      "local_cpu": 18,
+      "local_io_heavy": 4,
+      "local_mlx": 1,
+      "local_mps": 1
+    },
+    "promotable": false,
+    "promotion_eligible": false,
+    "queue_id": "pr95_mlx_stage8_source_video_no_cliff_20260528T130308Z",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "recommended_max_concurrency": {
+      "local_mlx": 1
+    },
+    "recommended_timeout_seconds_by_resource": {
+      "local_mlx": 1800
+    },
+    "resource_policies": {
+      "local_mlx": {
+        "advisory_only": true,
+        "concurrency_reason": "single_local_accelerator_default",
+        "current_concurrency": 1,
+        "current_timeout_seconds_max": 1800,
+        "dispatch_packet_ready": false,
+        "elapsed_seconds_p50": 7.3959469580004225,
+        "elapsed_seconds_p95": 7.3959469580004225,
+        "observed_failure_count": 0,
+        "observed_run_count": 1,
+        "observed_timeout_count": 0,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "recommended_concurrency": 1,
+        "recommended_timeout_seconds": 1800,
+        "resource_kind": "local_mlx",
+        "score_claim": false,
+        "timeout_multiplier": 3.0
+      }
+    },
+    "schema": "scheduler_runtime_policy.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "telemetry_only": true
+  },
+  "schema": "experiment_queue_observation.v1",
+  "state": ".omx/state/experiment_queue_pr95_mlx_stage8_source_video_no_cliff_20260528T130308Z.sqlite",
+  "state_watermark": {
+    "control_mode": "running",
+    "control_updated_at_utc": "2026-05-28T13:03:40Z",
+    "event_count": 6,
+    "max_event_id": 6,
+    "max_step_updated_at_utc": "2026-05-28T13:03:58Z",
+    "queue_id": "pr95_mlx_stage8_source_video_no_cliff_20260528T130308Z",
+    "schema": "experiment_queue_state_watermark.v1",
+    "state_path": ".omx/state/experiment_queue_pr95_mlx_stage8_source_video_no_cliff_20260528T130308Z.sqlite",
+    "step_state_count": 1
+  },
+  "status_counts": {
+    "succeeded": 1
+  },
+  "step_count": 1,
+  "succeeded_artifact_failure_steps": [],
+  "succeeded_artifact_steps": [],
+  "succeeded_signal_steps": [],
+  "suggested_commands": {
+    "pause": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control paused --reason '<reason>'",
+    "refresh": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> observe --tail-lines 20",
+    "resume": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control running --reason '<reason>'",
+    "run_worker": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> run-worker --execute"
+  }
+}

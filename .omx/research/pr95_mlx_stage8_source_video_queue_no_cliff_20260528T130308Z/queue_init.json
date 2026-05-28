@@ -1,0 +1,92 @@
+{
+  "mode": "running",
+  "orphaned_step_count": 0,
+  "orphaned_steps": [],
+  "queue_id": "pr95_mlx_stage8_source_video_no_cliff_20260528T130308Z",
+  "ready_steps": [
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/run_pr95_mlx_timing_smoke.py",
+        "--stage",
+        "8",
+        "--steps",
+        "2",
+        "--batch-size",
+        "1",
+        "--synthetic-pairs",
+        "2",
+        "--seed",
+        "23",
+        "--base-channels",
+        "36",
+        "--latent-dim",
+        "28",
+        "--optimizer-descriptor-id",
+        "pr95_stage8_muon_adamw_mlx",
+        "--output-dir",
+        ".omx/research/pr95_mlx_stage8_source_video_queue_no_cliff_20260528T130308Z",
+        "--allow-existing-output-dir",
+        "--write-byte-closed-smoke",
+        "--write-pr95-public-archive-export",
+        "--public-pr95-source-model",
+        "experiments/results/public_pr_intake_full/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py",
+        "--pytorch-export-atol-max",
+        "0.002",
+        "--pytorch-export-atol-mean",
+        "0.0001",
+        "--pytorch-export-sample-index",
+        "0",
+        "--write-mlx-gpu-drift-attestation",
+        "--mlx-gpu-drift-conv2d-accumulation-mode",
+        "optimized",
+        "--mlx-gpu-drift-conv2d-override-preset",
+        "blocks02_kahan_fp32",
+        "--write-source-video-preprocess-smoke",
+        "--source-video-path",
+        "upstream/videos/0.mkv",
+        "--source-video-upstream-dir",
+        "upstream",
+        "--source-video-output-hw",
+        "384,512",
+        "--source-video-gradient-shape",
+        "1,2,16,20,3",
+        "--source-video-pair-index",
+        "0",
+        "--source-video-pair-index",
+        "371",
+        "--train-on-source-video-pairs",
+        "--source-video-loss-surface",
+        "rgb_yuv6_mse"
+      ],
+      "experiment_id": "local_training_0000_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed23_steps2_c36_source_video_rgb_yuv6",
+      "priority": 10,
+      "queue_id": "pr95_mlx_stage8_source_video_no_cliff_20260528T130308Z",
+      "resource_kind": "local_mlx",
+      "step_hashes": {
+        "command_hash": "ee3b0d79e998b1ff76ab79dc37e7f83f79b6041408b844cc2c6563fa17776e75",
+        "definition_hash": "ff3c1e0dd532ead53bb77dc663f3781f8a942ae8b455a83f9a4af2ebba56cb36",
+        "postcondition_hash": "221261aded8f87ad459f0f0a4fe18f221be3ac705fe9087214b92430fc0e4ecb"
+      },
+      "step_id": "run_local_training"
+    }
+  ],
+  "schema": "experiment_queue_summary.v1",
+  "state": ".omx/state/experiment_queue_pr95_mlx_stage8_source_video_no_cliff_20260528T130308Z.sqlite",
+  "status_counts": {
+    "queued": 1
+  },
+  "step_count": 1,
+  "steps": [
+    {
+      "attempts": 0,
+      "experiment_id": "local_training_0000_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed23_steps2_c36_source_video_rgb_yuv6",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "run_local_training",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T13:03:40Z"
+    }
+  ]
+}
