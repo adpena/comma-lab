@@ -2424,6 +2424,36 @@ def test_json_false_authority_explicit_false_or_missing_override_is_exact(
     assert _condition_passes(condition, repo_root=tmp_path) is True
 
 
+def test_json_false_authority_accepts_local_advisory_without_receiver_custody(
+    tmp_path: Path,
+) -> None:
+    advisory = tmp_path / "local_advisory.json"
+    advisory.write_text(
+        json.dumps(
+            {
+                "schema": "local_mlx_advisory.v1",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "exact_readiness_refusal": {
+                    "schema": "exact_readiness_refusal.v1",
+                    "ready": False,
+                    "blockers": ["local_advisory_not_auth_axis"],
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    condition = {
+        "type": "json_false_authority",
+        "path": advisory.name,
+    }
+
+    assert _condition_passes(condition, repo_root=tmp_path) is True
+
+
 def test_json_false_authority_rejects_receiver_contract_without_live_proof(
     tmp_path: Path,
 ) -> None:

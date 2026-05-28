@@ -459,7 +459,19 @@ def _receiver_runtime_proof_blockers(
 
 
 def _payload_has_custody_claim(payload: Mapping[str, Any]) -> bool:
-    if _candidate_archive_record(payload):
+    candidate_archive = payload.get("candidate_archive")
+    if isinstance(candidate_archive, Mapping) and candidate_archive:
+        return True
+    if any(
+        key in payload
+        for key in (
+            "candidate_archive_path",
+            "archive_path",
+            "candidate_archive_bytes",
+            "archive_bytes",
+            "candidate_archive_sha256",
+        )
+    ):
         return True
     if _runtime_proof_records(payload):
         return True

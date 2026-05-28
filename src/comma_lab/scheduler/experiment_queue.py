@@ -1452,7 +1452,10 @@ def _jsonl_false_authority_valid(
                 false_or_missing=false_or_missing,
             ):
                 return False
-            if not _receiver_runtime_custody_valid(payload, repo_root=repo_root):
+            if _payload_claims_receiver_runtime_custody(payload) and not _receiver_runtime_custody_valid(
+                payload,
+                repo_root=repo_root,
+            ):
                 return False
             if not _runtime_adapter_ready_claim_valid(payload, repo_root=repo_root):
                 return False
@@ -1763,7 +1766,10 @@ def _condition_passes(condition: Mapping[str, Any], *, repo_root: Path) -> bool:
             false_or_missing=false_or_missing,
         ):
             return False
-        if not _receiver_runtime_custody_valid(payload, repo_root=repo_root):
+        if _payload_claims_receiver_runtime_custody(payload) and not _receiver_runtime_custody_valid(
+            payload,
+            repo_root=repo_root,
+        ):
             return False
         if not _runtime_adapter_ready_claim_valid(payload, repo_root=repo_root):
             return False

@@ -508,6 +508,60 @@ def test_observer_honors_queue_false_authority_override_but_rejects_nested_truth
     )
 
 
+def test_observer_does_not_treat_archive_sha256_only_as_custody_claim(
+    tmp_path: Path,
+) -> None:
+    artifact = tmp_path / "local_advisory.json"
+    artifact.write_text(
+        json.dumps(
+            {
+                "schema": "local_advisory.v1",
+                "archive_sha256": "a" * 64,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    state = tmp_path / "queue.sqlite"
+    queue = _queue(artifact)
+    queue["experiments"][0]["steps"][0]["postconditions"] = [
+        {
+            "type": "json_false_authority",
+            "path": artifact.as_posix(),
+        }
+    ]
+
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'succeeded',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-05-28T20:26:00Z'
+            WHERE queue_id = 'observer_test'
+              AND experiment_id = 'exp0'
+              AND step_id = 'smoke'
+            """,
+            (json.dumps({"command": ["python", "-c", "print('hello queue')"]}),),
+        )
+        conn.commit()
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=0,
+    )
+
+    assert observation["healthy"] is True
+    assert observation["succeeded_artifact_failure_steps"] == []
+
+
 def test_observer_reports_definition_drift_without_mutating_state(
     tmp_path: Path,
 ) -> None:
