@@ -1,0 +1,685 @@
+{
+  "dispatch_ready": [
+    {
+      "archive_bytes": 178493,
+      "archive_manifest_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/archive_manifest.json",
+      "archive_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/archive.zip",
+      "archive_sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c",
+      "archive_size_bytes": 178493,
+      "candidate_archive_bytes": 178493,
+      "candidate_archive_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/archive.zip",
+      "candidate_archive_sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c",
+      "candidate_id": "fp11_source_brotli_recode_b7106c9bdbb8",
+      "candidate_row_adapter_runtime_tree_sha256": "a114b4f665713353c01a2a09467c5ac766d77d394945f6e951cbc8b0eaa4d1f3",
+      "candidate_runtime_adapter_blocker_cleared": true,
+      "candidate_runtime_tree_sha256": "a114b4f665713353c01a2a09467c5ac766d77d394945f6e951cbc8b0eaa4d1f3",
+      "charged_bits_changed": true,
+      "contest_cuda_auth_eval": false,
+      "contest_dispatch_verdict": "ready_for_contest_exact_eval_dispatch_after_lane_claim",
+      "cpu_or_proxy_score_not_cuda_evidence": true,
+      "cuda_component_risk_gate": null,
+      "cuda_component_risk_gate_required": false,
+      "cuda_component_risk_gate_status": null,
+      "cuda_gap_review_required_before_promotion": true,
+      "deployment_target": "t4_contest_runtime",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [],
+      "dispatch_claim_required_before_gpu_or_remote_eval": true,
+      "dispatch_packet_ready": true,
+      "evidence_grade": "[exact-eval-ready-no-score]",
+      "evidence_semantics": "byte_closed_archive_runtime_ready_for_exact_eval",
+      "exact_cuda_auth_eval": false,
+      "expected_runtime_tree_sha256": "a114b4f665713353c01a2a09467c5ac766d77d394945f6e951cbc8b0eaa4d1f3",
+      "full_frame_inflate_parity_proof_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/fp11_source_brotli_recode_full_frame_inflate_parity_proof.json",
+      "full_frame_inflate_parity_proof_sha256": "ccfa9d563cec816d43ab441994dbf7071d4ff55703a754798d1565413a75b156",
+      "full_frame_inflate_parity_proven": true,
+      "full_frame_inflate_parity_verification": null,
+      "inflate_sh_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/inflate.sh",
+      "lane_id": "materializer_harvest::fp11_source_brotli_recode_manifest.v1",
+      "materializer_id": "fp11_source_brotli_recode_adapter",
+      "operator_override_reason": null,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "readiness_gate_generated_at_utc": "2026-05-28T17:46:02Z",
+      "readiness_gate_tool": "tools/promote_optimizer_candidate_for_exact_eval.py",
+      "ready_for_exact_eval_dispatch": true,
+      "receiver_contract_kind": "source_runtime_native_fp11_source_brotli_recode",
+      "renderer_payload_dfl1_inflate_parity_proof_path": null,
+      "renderer_payload_dfl1_inflate_parity_proof_sha256": null,
+      "renderer_payload_dfl1_inflate_parity_satisfied": null,
+      "runtime_adapter_manifest": {},
+      "runtime_adapter_ready": true,
+      "runtime_consumption_proof_archive_sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c",
+      "runtime_consumption_proof_backed_by_full_frame_parity": true,
+      "runtime_consumption_proof_candidate_member_sha256": "c5e322c1cdfa7c059e1c1d88d2e700e8bc6631ef2effcdbbc51c4fbb1bb1b42c",
+      "runtime_consumption_proof_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/runtime_consumption_proof.json",
+      "runtime_consumption_proof_required": true,
+      "runtime_consumption_proof_runtime_tree_sha256": "a114b4f665713353c01a2a09467c5ac766d77d394945f6e951cbc8b0eaa4d1f3",
+      "runtime_consumption_proof_schema": "fp11_source_brotli_recode_runtime_consumption_proof.v1",
+      "runtime_consumption_proof_sha256": "f26a2cd06ae758a0a821a66fc56bde29475440960783a4625eda5f1ca9827d22",
+      "runtime_consumption_proof_status": "present",
+      "runtime_content_tree_sha256": "286d0bc2f0973f0f4e885e96d6b80f07f2134ca48b3c4ec037b24aef1e6aaeb8",
+      "runtime_manifest": {
+        "external_dependency_roots": [],
+        "files": [
+          {
+            "bytes": 3714,
+            "relative_path": "archive_manifest.json",
+            "repo_relative_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/archive_manifest.json",
+            "sha256": "070cb338250cba23c08e8ffa3e9610b8b00066eaad744b2527f9294e9441faa7"
+          },
+          {
+            "bytes": 20039,
+            "relative_path": "encoder/build_pr101_frame_exploit_selector_packet_fec10_hybrid.py",
+            "repo_relative_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/encoder/build_pr101_frame_exploit_selector_packet_fec10_hybrid.py",
+            "sha256": "344745770def674c9846003f1657fb6d216c0c7d646877e3d0655b52fd854398"
+          },
+          {
+            "bytes": 30120,
+            "relative_path": "encoder/build_pr101_frame_exploit_selector_packet_markov.py",
+            "repo_relative_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/encoder/build_pr101_frame_exploit_selector_packet_markov.py",
+            "sha256": "a06212314bb530d733e8d1b9c6953b85ba146fe9c287914f6cea04b17d295aaf"
+          },
+          {
+            "bytes": 28233,
+            "relative_path": "inflate.py",
+            "repo_relative_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/inflate.py",
+            "sha256": "c956bff6f1df9d61f7836db5d3caaf7c822acf4e0d16e29d34c79329163dda90"
+          },
+          {
+            "bytes": 851,
+            "relative_path": "inflate.sh",
+            "repo_relative_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/inflate.sh",
+            "sha256": "0878a7730e5caa2d6e0044ef3378c5772c67da0499958629ebca5285cfd503ab"
+          },
+          {
+            "bytes": 467,
+            "relative_path": "report.txt",
+            "repo_relative_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/report.txt",
+            "sha256": "3cc0717181332f2012d6ebd18ae7dd6ebfe66b427c8ab419dcd543b4333b688b"
+          },
+          {
+            "bytes": 8769,
+            "relative_path": "runtime_consumption_proof.json",
+            "repo_relative_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/runtime_consumption_proof.json",
+            "sha256": "f26a2cd06ae758a0a821a66fc56bde29475440960783a4625eda5f1ca9827d22"
+          },
+          {
+            "bytes": 6513,
+            "relative_path": "src/codec.py",
+            "repo_relative_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/src/codec.py",
+            "sha256": "4aa49b9e9d8ad46a4efdec72acb27a9fd8c34f30c19f4520206d7a9bd5cb449d"
+          },
+          {
+            "bytes": 12158,
+            "relative_path": "src/codec_sidecar.py",
+            "repo_relative_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/src/codec_sidecar.py",
+            "sha256": "cc4fa4f48a65910e18908a93a1cd05af0642b5897719eb3ea49d6eef36b96483"
+          },
+          {
+            "bytes": 993,
+            "relative_path": "src/fec10_hybrid_decoder.py",
+            "repo_relative_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/src/fec10_hybrid_decoder.py",
+            "sha256": "87252e0a08ccc0b967dd722640140b1b7de39a41af80e83da88cd1e4d94898e0"
+          },
+          {
+            "bytes": 7980,
+            "relative_path": "src/frame_selector.py",
+            "repo_relative_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/src/frame_selector.py",
+            "sha256": "e47d2ba86abc4b3fa493e6a079822e65fc610c9b58825308370e2c25067b7ea6"
+          },
+          {
+            "bytes": 2197,
+            "relative_path": "src/model.py",
+            "repo_relative_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/src/model.py",
+            "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+          }
+        ],
+        "repo_local_tac_import_manifest": {
+          "discovery": "static_ast_recursive_import_closure",
+          "file_count": 0,
+          "files": [],
+          "module_count": 0,
+          "parse_errors": [],
+          "root_import_modules": [],
+          "runtime_root_name": "fp11_source_brotli_recode_b7106c9bdbb8",
+          "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+          "tac_root_relative_path": "src/tac",
+          "unresolved_modules": []
+        },
+        "runtime_content_tree_sha256": "286d0bc2f0973f0f4e885e96d6b80f07f2134ca48b3c4ec037b24aef1e6aaeb8",
+        "runtime_file_count": 12,
+        "runtime_root": "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8",
+        "runtime_tree_sha256": "16301f7e1925e3c5c3432b877d0cb68841392798989f245f0c2baf36f867a2cd",
+        "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+        "upstream_evaluate_py": {
+          "bytes": 6005,
+          "relative_path": "evaluate.py",
+          "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+        }
+      },
+      "runtime_tree_sha256": "16301f7e1925e3c5c3432b877d0cb68841392798989f245f0c2baf36f867a2cd",
+      "score_affecting_change_proofs": [
+        "archive_changed=true",
+        "byte_different=true",
+        "charged_bits_changed=true",
+        "score_affecting_payload_changed=true",
+        "source_archive_bytes!=archive_bytes",
+        "source_archive_bytes!=archive_size_bytes",
+        "source_archive_bytes!=candidate_archive_bytes",
+        "source_archive_sha256!=archive_sha256",
+        "source_archive_sha256!=candidate_archive_sha256"
+      ],
+      "score_affecting_payload_changed": true,
+      "score_affecting_runtime_changed": false,
+      "score_axis": "contest_cuda",
+      "score_claim": false,
+      "score_claim_verified": false,
+      "serialized_archive_delta": {
+        "archive_delta_bytes": -37,
+        "blockers": [],
+        "candidate_archive_bytes": 178493,
+        "dispatch_attempted": false,
+        "gpu_launched": false,
+        "modeled_cost_bytes": null,
+        "modeled_saved_bytes": null,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "rate_only_control": false,
+        "ready_for_exact_eval_dispatch": false,
+        "realized_saved_bytes": 37,
+        "require_realized_saving": false,
+        "savings_realized": true,
+        "schema": "serialized_archive_delta_contract.v1",
+        "score_claim": false,
+        "score_claim_valid": false,
+        "source_archive_bytes": 178530,
+        "status": "realized_saving"
+      },
+      "source_candidate_fields": {
+        "candidate_family": "fp11_source_brotli_recode",
+        "lane_class": "family_agnostic_materializer_harvest",
+        "materializer_id": "fp11_source_brotli_recode_adapter",
+        "optimizer_tool": "tools/build_optimizer_candidate_queue.py",
+        "receiver_contract_kind": "source_runtime_native_fp11_source_brotli_recode",
+        "source_manifest_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/fp11_source_brotli_recode_manifest.json",
+        "source_paths": [
+          ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/fp11_source_brotli_recode_manifest.json"
+        ],
+        "target_kind": "fp11_source_brotli_recode_v1"
+      },
+      "source_candidate_id": "fp11_source_brotli_recode_b7106c9bdbb8",
+      "source_queue_list": "top_k",
+      "source_queue_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/closed_source_queue.json",
+      "submission_dir": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8",
+      "submission_runtime_content_tree_sha256": "286d0bc2f0973f0f4e885e96d6b80f07f2134ca48b3c4ec037b24aef1e6aaeb8",
+      "submission_runtime_tree_sha256": "16301f7e1925e3c5c3432b877d0cb68841392798989f245f0c2baf36f867a2cd",
+      "target_kind": "fp11_source_brotli_recode_v1",
+      "target_modes": [
+        "contest_exact_eval"
+      ],
+      "target_score_axis": "contest_cuda"
+    }
+  ],
+  "dispatch_ready_count": 1,
+  "evidence_boundary": {
+    "cpu_or_proxy_score_not_cuda_evidence": true,
+    "cuda_gap_review_required_before_promotion": true,
+    "exact_cuda_required_before_score_or_rank_claim": true,
+    "lane_dispatch_claim_required_before_gpu_or_remote_eval": true,
+    "readiness_scope": "local_byte_closed_archive_runtime_custody_only",
+    "score_claim": false
+  },
+  "generated_at_utc": "2026-05-28T17:46:02Z",
+  "n_candidates": 1,
+  "schema": "optimizer_candidate_exact_eval_ready_queue_v1",
+  "tool": "tools/promote_optimizer_candidate_for_exact_eval.py",
+  "top_k": [
+    {
+      "archive_bytes": 178493,
+      "archive_manifest_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/archive_manifest.json",
+      "archive_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/archive.zip",
+      "archive_sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c",
+      "archive_size_bytes": 178493,
+      "candidate_archive_bytes": 178493,
+      "candidate_archive_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/archive.zip",
+      "candidate_archive_sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c",
+      "candidate_id": "fp11_source_brotli_recode_b7106c9bdbb8",
+      "candidate_row_adapter_runtime_tree_sha256": "a114b4f665713353c01a2a09467c5ac766d77d394945f6e951cbc8b0eaa4d1f3",
+      "candidate_runtime_adapter_blocker_cleared": true,
+      "candidate_runtime_tree_sha256": "a114b4f665713353c01a2a09467c5ac766d77d394945f6e951cbc8b0eaa4d1f3",
+      "charged_bits_changed": true,
+      "contest_cuda_auth_eval": false,
+      "contest_dispatch_verdict": "ready_for_contest_exact_eval_dispatch_after_lane_claim",
+      "cpu_or_proxy_score_not_cuda_evidence": true,
+      "cuda_component_risk_gate": null,
+      "cuda_component_risk_gate_required": false,
+      "cuda_component_risk_gate_status": null,
+      "cuda_gap_review_required_before_promotion": true,
+      "deployment_target": "t4_contest_runtime",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [],
+      "dispatch_claim_required_before_gpu_or_remote_eval": true,
+      "dispatch_packet_ready": true,
+      "evidence_grade": "[exact-eval-ready-no-score]",
+      "evidence_semantics": "byte_closed_archive_runtime_ready_for_exact_eval",
+      "exact_cuda_auth_eval": false,
+      "expected_runtime_tree_sha256": "a114b4f665713353c01a2a09467c5ac766d77d394945f6e951cbc8b0eaa4d1f3",
+      "full_frame_inflate_parity_proof_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/fp11_source_brotli_recode_full_frame_inflate_parity_proof.json",
+      "full_frame_inflate_parity_proof_sha256": "ccfa9d563cec816d43ab441994dbf7071d4ff55703a754798d1565413a75b156",
+      "full_frame_inflate_parity_proven": true,
+      "full_frame_inflate_parity_verification": null,
+      "inflate_sh_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/inflate.sh",
+      "lane_id": "materializer_harvest::fp11_source_brotli_recode_manifest.v1",
+      "materializer_id": "fp11_source_brotli_recode_adapter",
+      "operator_override_reason": null,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "readiness_gate_generated_at_utc": "2026-05-28T17:46:02Z",
+      "readiness_gate_tool": "tools/promote_optimizer_candidate_for_exact_eval.py",
+      "ready_for_exact_eval_dispatch": true,
+      "receiver_contract_kind": "source_runtime_native_fp11_source_brotli_recode",
+      "renderer_payload_dfl1_inflate_parity_proof_path": null,
+      "renderer_payload_dfl1_inflate_parity_proof_sha256": null,
+      "renderer_payload_dfl1_inflate_parity_satisfied": null,
+      "runtime_adapter_manifest": {},
+      "runtime_adapter_ready": true,
+      "runtime_consumption_proof_archive_sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c",
+      "runtime_consumption_proof_backed_by_full_frame_parity": true,
+      "runtime_consumption_proof_candidate_member_sha256": "c5e322c1cdfa7c059e1c1d88d2e700e8bc6631ef2effcdbbc51c4fbb1bb1b42c",
+      "runtime_consumption_proof_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/runtime_consumption_proof.json",
+      "runtime_consumption_proof_required": true,
+      "runtime_consumption_proof_runtime_tree_sha256": "a114b4f665713353c01a2a09467c5ac766d77d394945f6e951cbc8b0eaa4d1f3",
+      "runtime_consumption_proof_schema": "fp11_source_brotli_recode_runtime_consumption_proof.v1",
+      "runtime_consumption_proof_sha256": "f26a2cd06ae758a0a821a66fc56bde29475440960783a4625eda5f1ca9827d22",
+      "runtime_consumption_proof_status": "present",
+      "runtime_content_tree_sha256": "286d0bc2f0973f0f4e885e96d6b80f07f2134ca48b3c4ec037b24aef1e6aaeb8",
+      "runtime_manifest": {
+        "external_dependency_roots": [],
+        "files": [
+          {
+            "bytes": 3714,
+            "relative_path": "archive_manifest.json",
+            "repo_relative_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/archive_manifest.json",
+            "sha256": "070cb338250cba23c08e8ffa3e9610b8b00066eaad744b2527f9294e9441faa7"
+          },
+          {
+            "bytes": 20039,
+            "relative_path": "encoder/build_pr101_frame_exploit_selector_packet_fec10_hybrid.py",
+            "repo_relative_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/encoder/build_pr101_frame_exploit_selector_packet_fec10_hybrid.py",
+            "sha256": "344745770def674c9846003f1657fb6d216c0c7d646877e3d0655b52fd854398"
+          },
+          {
+            "bytes": 30120,
+            "relative_path": "encoder/build_pr101_frame_exploit_selector_packet_markov.py",
+            "repo_relative_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/encoder/build_pr101_frame_exploit_selector_packet_markov.py",
+            "sha256": "a06212314bb530d733e8d1b9c6953b85ba146fe9c287914f6cea04b17d295aaf"
+          },
+          {
+            "bytes": 28233,
+            "relative_path": "inflate.py",
+            "repo_relative_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/inflate.py",
+            "sha256": "c956bff6f1df9d61f7836db5d3caaf7c822acf4e0d16e29d34c79329163dda90"
+          },
+          {
+            "bytes": 851,
+            "relative_path": "inflate.sh",
+            "repo_relative_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/inflate.sh",
+            "sha256": "0878a7730e5caa2d6e0044ef3378c5772c67da0499958629ebca5285cfd503ab"
+          },
+          {
+            "bytes": 467,
+            "relative_path": "report.txt",
+            "repo_relative_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/report.txt",
+            "sha256": "3cc0717181332f2012d6ebd18ae7dd6ebfe66b427c8ab419dcd543b4333b688b"
+          },
+          {
+            "bytes": 8769,
+            "relative_path": "runtime_consumption_proof.json",
+            "repo_relative_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/runtime_consumption_proof.json",
+            "sha256": "f26a2cd06ae758a0a821a66fc56bde29475440960783a4625eda5f1ca9827d22"
+          },
+          {
+            "bytes": 6513,
+            "relative_path": "src/codec.py",
+            "repo_relative_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/src/codec.py",
+            "sha256": "4aa49b9e9d8ad46a4efdec72acb27a9fd8c34f30c19f4520206d7a9bd5cb449d"
+          },
+          {
+            "bytes": 12158,
+            "relative_path": "src/codec_sidecar.py",
+            "repo_relative_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/src/codec_sidecar.py",
+            "sha256": "cc4fa4f48a65910e18908a93a1cd05af0642b5897719eb3ea49d6eef36b96483"
+          },
+          {
+            "bytes": 993,
+            "relative_path": "src/fec10_hybrid_decoder.py",
+            "repo_relative_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/src/fec10_hybrid_decoder.py",
+            "sha256": "87252e0a08ccc0b967dd722640140b1b7de39a41af80e83da88cd1e4d94898e0"
+          },
+          {
+            "bytes": 7980,
+            "relative_path": "src/frame_selector.py",
+            "repo_relative_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/src/frame_selector.py",
+            "sha256": "e47d2ba86abc4b3fa493e6a079822e65fc610c9b58825308370e2c25067b7ea6"
+          },
+          {
+            "bytes": 2197,
+            "relative_path": "src/model.py",
+            "repo_relative_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/src/model.py",
+            "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+          }
+        ],
+        "repo_local_tac_import_manifest": {
+          "discovery": "static_ast_recursive_import_closure",
+          "file_count": 0,
+          "files": [],
+          "module_count": 0,
+          "parse_errors": [],
+          "root_import_modules": [],
+          "runtime_root_name": "fp11_source_brotli_recode_b7106c9bdbb8",
+          "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+          "tac_root_relative_path": "src/tac",
+          "unresolved_modules": []
+        },
+        "runtime_content_tree_sha256": "286d0bc2f0973f0f4e885e96d6b80f07f2134ca48b3c4ec037b24aef1e6aaeb8",
+        "runtime_file_count": 12,
+        "runtime_root": "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8",
+        "runtime_tree_sha256": "16301f7e1925e3c5c3432b877d0cb68841392798989f245f0c2baf36f867a2cd",
+        "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+        "upstream_evaluate_py": {
+          "bytes": 6005,
+          "relative_path": "evaluate.py",
+          "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+        }
+      },
+      "runtime_tree_sha256": "16301f7e1925e3c5c3432b877d0cb68841392798989f245f0c2baf36f867a2cd",
+      "score_affecting_change_proofs": [
+        "archive_changed=true",
+        "byte_different=true",
+        "charged_bits_changed=true",
+        "score_affecting_payload_changed=true",
+        "source_archive_bytes!=archive_bytes",
+        "source_archive_bytes!=archive_size_bytes",
+        "source_archive_bytes!=candidate_archive_bytes",
+        "source_archive_sha256!=archive_sha256",
+        "source_archive_sha256!=candidate_archive_sha256"
+      ],
+      "score_affecting_payload_changed": true,
+      "score_affecting_runtime_changed": false,
+      "score_axis": "contest_cuda",
+      "score_claim": false,
+      "score_claim_verified": false,
+      "serialized_archive_delta": {
+        "archive_delta_bytes": -37,
+        "blockers": [],
+        "candidate_archive_bytes": 178493,
+        "dispatch_attempted": false,
+        "gpu_launched": false,
+        "modeled_cost_bytes": null,
+        "modeled_saved_bytes": null,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "rate_only_control": false,
+        "ready_for_exact_eval_dispatch": false,
+        "realized_saved_bytes": 37,
+        "require_realized_saving": false,
+        "savings_realized": true,
+        "schema": "serialized_archive_delta_contract.v1",
+        "score_claim": false,
+        "score_claim_valid": false,
+        "source_archive_bytes": 178530,
+        "status": "realized_saving"
+      },
+      "source_candidate_fields": {
+        "candidate_family": "fp11_source_brotli_recode",
+        "lane_class": "family_agnostic_materializer_harvest",
+        "materializer_id": "fp11_source_brotli_recode_adapter",
+        "optimizer_tool": "tools/build_optimizer_candidate_queue.py",
+        "receiver_contract_kind": "source_runtime_native_fp11_source_brotli_recode",
+        "source_manifest_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/fp11_source_brotli_recode_manifest.json",
+        "source_paths": [
+          ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/fp11_source_brotli_recode_manifest.json"
+        ],
+        "target_kind": "fp11_source_brotli_recode_v1"
+      },
+      "source_candidate_id": "fp11_source_brotli_recode_b7106c9bdbb8",
+      "source_queue_list": "top_k",
+      "source_queue_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/closed_source_queue.json",
+      "submission_dir": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8",
+      "submission_runtime_content_tree_sha256": "286d0bc2f0973f0f4e885e96d6b80f07f2134ca48b3c4ec037b24aef1e6aaeb8",
+      "submission_runtime_tree_sha256": "16301f7e1925e3c5c3432b877d0cb68841392798989f245f0c2baf36f867a2cd",
+      "target_kind": "fp11_source_brotli_recode_v1",
+      "target_modes": [
+        "contest_exact_eval"
+      ],
+      "target_score_axis": "contest_cuda"
+    }
+  ],
+  "top_k_count": 1,
+  "top_k_forensic": [
+    {
+      "archive_bytes": 178493,
+      "archive_manifest_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/archive_manifest.json",
+      "archive_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/archive.zip",
+      "archive_sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c",
+      "archive_size_bytes": 178493,
+      "candidate_archive_bytes": 178493,
+      "candidate_archive_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/archive.zip",
+      "candidate_archive_sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c",
+      "candidate_id": "fp11_source_brotli_recode_b7106c9bdbb8",
+      "candidate_row_adapter_runtime_tree_sha256": "a114b4f665713353c01a2a09467c5ac766d77d394945f6e951cbc8b0eaa4d1f3",
+      "candidate_runtime_adapter_blocker_cleared": true,
+      "candidate_runtime_tree_sha256": "a114b4f665713353c01a2a09467c5ac766d77d394945f6e951cbc8b0eaa4d1f3",
+      "charged_bits_changed": true,
+      "contest_cuda_auth_eval": false,
+      "contest_dispatch_verdict": "ready_for_contest_exact_eval_dispatch_after_lane_claim",
+      "cpu_or_proxy_score_not_cuda_evidence": true,
+      "cuda_component_risk_gate": null,
+      "cuda_component_risk_gate_required": false,
+      "cuda_component_risk_gate_status": null,
+      "cuda_gap_review_required_before_promotion": true,
+      "deployment_target": "t4_contest_runtime",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [],
+      "dispatch_claim_required_before_gpu_or_remote_eval": true,
+      "dispatch_packet_ready": true,
+      "evidence_grade": "[exact-eval-ready-no-score]",
+      "evidence_semantics": "byte_closed_archive_runtime_ready_for_exact_eval",
+      "exact_cuda_auth_eval": false,
+      "expected_runtime_tree_sha256": "a114b4f665713353c01a2a09467c5ac766d77d394945f6e951cbc8b0eaa4d1f3",
+      "full_frame_inflate_parity_proof_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/fp11_source_brotli_recode_full_frame_inflate_parity_proof.json",
+      "full_frame_inflate_parity_proof_sha256": "ccfa9d563cec816d43ab441994dbf7071d4ff55703a754798d1565413a75b156",
+      "full_frame_inflate_parity_proven": true,
+      "full_frame_inflate_parity_verification": null,
+      "inflate_sh_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/inflate.sh",
+      "lane_id": "materializer_harvest::fp11_source_brotli_recode_manifest.v1",
+      "materializer_id": "fp11_source_brotli_recode_adapter",
+      "operator_override_reason": null,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "readiness_gate_generated_at_utc": "2026-05-28T17:46:02Z",
+      "readiness_gate_tool": "tools/promote_optimizer_candidate_for_exact_eval.py",
+      "ready_for_exact_eval_dispatch": true,
+      "receiver_contract_kind": "source_runtime_native_fp11_source_brotli_recode",
+      "renderer_payload_dfl1_inflate_parity_proof_path": null,
+      "renderer_payload_dfl1_inflate_parity_proof_sha256": null,
+      "renderer_payload_dfl1_inflate_parity_satisfied": null,
+      "runtime_adapter_manifest": {},
+      "runtime_adapter_ready": true,
+      "runtime_consumption_proof_archive_sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c",
+      "runtime_consumption_proof_backed_by_full_frame_parity": true,
+      "runtime_consumption_proof_candidate_member_sha256": "c5e322c1cdfa7c059e1c1d88d2e700e8bc6631ef2effcdbbc51c4fbb1bb1b42c",
+      "runtime_consumption_proof_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/runtime_consumption_proof.json",
+      "runtime_consumption_proof_required": true,
+      "runtime_consumption_proof_runtime_tree_sha256": "a114b4f665713353c01a2a09467c5ac766d77d394945f6e951cbc8b0eaa4d1f3",
+      "runtime_consumption_proof_schema": "fp11_source_brotli_recode_runtime_consumption_proof.v1",
+      "runtime_consumption_proof_sha256": "f26a2cd06ae758a0a821a66fc56bde29475440960783a4625eda5f1ca9827d22",
+      "runtime_consumption_proof_status": "present",
+      "runtime_content_tree_sha256": "286d0bc2f0973f0f4e885e96d6b80f07f2134ca48b3c4ec037b24aef1e6aaeb8",
+      "runtime_manifest": {
+        "external_dependency_roots": [],
+        "files": [
+          {
+            "bytes": 3714,
+            "relative_path": "archive_manifest.json",
+            "repo_relative_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/archive_manifest.json",
+            "sha256": "070cb338250cba23c08e8ffa3e9610b8b00066eaad744b2527f9294e9441faa7"
+          },
+          {
+            "bytes": 20039,
+            "relative_path": "encoder/build_pr101_frame_exploit_selector_packet_fec10_hybrid.py",
+            "repo_relative_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/encoder/build_pr101_frame_exploit_selector_packet_fec10_hybrid.py",
+            "sha256": "344745770def674c9846003f1657fb6d216c0c7d646877e3d0655b52fd854398"
+          },
+          {
+            "bytes": 30120,
+            "relative_path": "encoder/build_pr101_frame_exploit_selector_packet_markov.py",
+            "repo_relative_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/encoder/build_pr101_frame_exploit_selector_packet_markov.py",
+            "sha256": "a06212314bb530d733e8d1b9c6953b85ba146fe9c287914f6cea04b17d295aaf"
+          },
+          {
+            "bytes": 28233,
+            "relative_path": "inflate.py",
+            "repo_relative_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/inflate.py",
+            "sha256": "c956bff6f1df9d61f7836db5d3caaf7c822acf4e0d16e29d34c79329163dda90"
+          },
+          {
+            "bytes": 851,
+            "relative_path": "inflate.sh",
+            "repo_relative_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/inflate.sh",
+            "sha256": "0878a7730e5caa2d6e0044ef3378c5772c67da0499958629ebca5285cfd503ab"
+          },
+          {
+            "bytes": 467,
+            "relative_path": "report.txt",
+            "repo_relative_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/report.txt",
+            "sha256": "3cc0717181332f2012d6ebd18ae7dd6ebfe66b427c8ab419dcd543b4333b688b"
+          },
+          {
+            "bytes": 8769,
+            "relative_path": "runtime_consumption_proof.json",
+            "repo_relative_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/runtime_consumption_proof.json",
+            "sha256": "f26a2cd06ae758a0a821a66fc56bde29475440960783a4625eda5f1ca9827d22"
+          },
+          {
+            "bytes": 6513,
+            "relative_path": "src/codec.py",
+            "repo_relative_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/src/codec.py",
+            "sha256": "4aa49b9e9d8ad46a4efdec72acb27a9fd8c34f30c19f4520206d7a9bd5cb449d"
+          },
+          {
+            "bytes": 12158,
+            "relative_path": "src/codec_sidecar.py",
+            "repo_relative_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/src/codec_sidecar.py",
+            "sha256": "cc4fa4f48a65910e18908a93a1cd05af0642b5897719eb3ea49d6eef36b96483"
+          },
+          {
+            "bytes": 993,
+            "relative_path": "src/fec10_hybrid_decoder.py",
+            "repo_relative_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/src/fec10_hybrid_decoder.py",
+            "sha256": "87252e0a08ccc0b967dd722640140b1b7de39a41af80e83da88cd1e4d94898e0"
+          },
+          {
+            "bytes": 7980,
+            "relative_path": "src/frame_selector.py",
+            "repo_relative_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/src/frame_selector.py",
+            "sha256": "e47d2ba86abc4b3fa493e6a079822e65fc610c9b58825308370e2c25067b7ea6"
+          },
+          {
+            "bytes": 2197,
+            "relative_path": "src/model.py",
+            "repo_relative_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/src/model.py",
+            "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+          }
+        ],
+        "repo_local_tac_import_manifest": {
+          "discovery": "static_ast_recursive_import_closure",
+          "file_count": 0,
+          "files": [],
+          "module_count": 0,
+          "parse_errors": [],
+          "root_import_modules": [],
+          "runtime_root_name": "fp11_source_brotli_recode_b7106c9bdbb8",
+          "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+          "tac_root_relative_path": "src/tac",
+          "unresolved_modules": []
+        },
+        "runtime_content_tree_sha256": "286d0bc2f0973f0f4e885e96d6b80f07f2134ca48b3c4ec037b24aef1e6aaeb8",
+        "runtime_file_count": 12,
+        "runtime_root": "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8",
+        "runtime_tree_sha256": "16301f7e1925e3c5c3432b877d0cb68841392798989f245f0c2baf36f867a2cd",
+        "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+        "upstream_evaluate_py": {
+          "bytes": 6005,
+          "relative_path": "evaluate.py",
+          "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+        }
+      },
+      "runtime_tree_sha256": "16301f7e1925e3c5c3432b877d0cb68841392798989f245f0c2baf36f867a2cd",
+      "score_affecting_change_proofs": [
+        "archive_changed=true",
+        "byte_different=true",
+        "charged_bits_changed=true",
+        "score_affecting_payload_changed=true",
+        "source_archive_bytes!=archive_bytes",
+        "source_archive_bytes!=archive_size_bytes",
+        "source_archive_bytes!=candidate_archive_bytes",
+        "source_archive_sha256!=archive_sha256",
+        "source_archive_sha256!=candidate_archive_sha256"
+      ],
+      "score_affecting_payload_changed": true,
+      "score_affecting_runtime_changed": false,
+      "score_axis": "contest_cuda",
+      "score_claim": false,
+      "score_claim_verified": false,
+      "serialized_archive_delta": {
+        "archive_delta_bytes": -37,
+        "blockers": [],
+        "candidate_archive_bytes": 178493,
+        "dispatch_attempted": false,
+        "gpu_launched": false,
+        "modeled_cost_bytes": null,
+        "modeled_saved_bytes": null,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "rate_only_control": false,
+        "ready_for_exact_eval_dispatch": false,
+        "realized_saved_bytes": 37,
+        "require_realized_saving": false,
+        "savings_realized": true,
+        "schema": "serialized_archive_delta_contract.v1",
+        "score_claim": false,
+        "score_claim_valid": false,
+        "source_archive_bytes": 178530,
+        "status": "realized_saving"
+      },
+      "source_candidate_fields": {
+        "candidate_family": "fp11_source_brotli_recode",
+        "lane_class": "family_agnostic_materializer_harvest",
+        "materializer_id": "fp11_source_brotli_recode_adapter",
+        "optimizer_tool": "tools/build_optimizer_candidate_queue.py",
+        "receiver_contract_kind": "source_runtime_native_fp11_source_brotli_recode",
+        "source_manifest_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/fp11_source_brotli_recode_manifest.json",
+        "source_paths": [
+          ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/fp11_source_brotli_recode_manifest.json"
+        ],
+        "target_kind": "fp11_source_brotli_recode_v1"
+      },
+      "source_candidate_id": "fp11_source_brotli_recode_b7106c9bdbb8",
+      "source_queue_list": "top_k",
+      "source_queue_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/closed_source_queue.json",
+      "submission_dir": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8",
+      "submission_runtime_content_tree_sha256": "286d0bc2f0973f0f4e885e96d6b80f07f2134ca48b3c4ec037b24aef1e6aaeb8",
+      "submission_runtime_tree_sha256": "16301f7e1925e3c5c3432b877d0cb68841392798989f245f0c2baf36f867a2cd",
+      "target_kind": "fp11_source_brotli_recode_v1",
+      "target_modes": [
+        "contest_exact_eval"
+      ],
+      "target_score_axis": "contest_cuda"
+    }
+  ]
+}

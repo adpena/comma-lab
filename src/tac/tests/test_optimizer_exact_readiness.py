@@ -51,6 +51,12 @@ from tac.optimizer.exact_readiness import (
     validate_runtime_consumption_proof,
 )
 from tac.optimizer.exact_ready_audit import audit_exact_ready_queue
+from tac.packet_compiler.fp11_source_brotli_recode import (
+    FP11_SOURCE_BROTLI_RECODE_MATERIALIZER_ID,
+    FP11_SOURCE_BROTLI_RECODE_PROOF_SCHEMA,
+    FP11_SOURCE_BROTLI_RECODE_RECEIVER_CONTRACT_KIND,
+    FP11_SOURCE_BROTLI_RECODE_TARGET_KIND,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -836,6 +842,133 @@ def test_promotes_byte_closed_candidate_without_score_claim(tmp_path: Path) -> N
     assert row["cpu_or_proxy_score_not_cuda_evidence"] is True
     assert row["cuda_gap_review_required_before_promotion"] is True
     assert promoted["evidence_boundary"]["cpu_or_proxy_score_not_cuda_evidence"] is True
+
+
+def test_fp11_generic_full_frame_parity_clears_runtime_probe_gap(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    source_archive = tmp_path / "source_archive.zip"
+    source_bytes, source_sha = _write_archive(source_archive, payload=b"source")
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    runtime_sha = "c" * 64
+    proof = _write_json(
+        submission / "runtime_consumption_proof.json",
+        {
+            "schema": FP11_SOURCE_BROTLI_RECODE_PROOF_SCHEMA,
+            "target_kind": FP11_SOURCE_BROTLI_RECODE_TARGET_KIND,
+            "materializer_id": FP11_SOURCE_BROTLI_RECODE_MATERIALIZER_ID,
+            "receiver_contract_kind": FP11_SOURCE_BROTLI_RECODE_RECEIVER_CONTRACT_KIND,
+            "candidate_archive": {
+                "path": "archive.zip",
+                "bytes": archive_bytes,
+                "sha256": archive_sha,
+            },
+            "candidate_archive_sha256": archive_sha,
+            "candidate_member": {"name": "0.bin", "sha256": "d" * 64},
+            "runtime_consumption_proof_passed": True,
+            "passed": True,
+            "receiver_contract_satisfied": True,
+            "runtime_adapter_ready": True,
+            "candidate_runtime_tree_sha256": runtime_sha,
+            "expected_runtime_tree_sha256": runtime_sha,
+            "decoder_raw_roundtrip_equal": True,
+            "source_tail_unchanged": True,
+            "selector_payload_unchanged": True,
+            "dqs1_tail_unchanged": True,
+            "blockers": [],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+    parity = _write_json(
+        submission / "full_frame_parity.json",
+        {
+            "schema": "shell_inflate_parity_proof_v2",
+            "full_frame_file_list_claim": True,
+            "full_frame_inflate_output_parity_claim": True,
+            "parity_scope_kind": "contest_full_sample",
+            "contest_full_sample_claim": True,
+            "contest_full_sample_parity_claim": True,
+            "full_frame_file_list_source": "fixture",
+            "expected_full_frame_file_list_sha256": "a" * 64,
+            "file_list_sha256": "a" * 64,
+            "full_frame_file_list_sha256_match": True,
+            "expected_full_frame_entry_count": 1,
+            "file_list_entry_count": 1,
+            "full_frame_entry_count_match": True,
+            "output_count": 1,
+            "output_bytes_match": True,
+            "output_sha256_match": True,
+            "output_manifest_sha256_match": True,
+            "cmp_equal": True,
+            "blockers": [],
+            "left": {
+                "label": "left",
+                "archive_sha256": source_sha,
+                "submission_tree_sha256": "1" * 64,
+                "output_manifest_sha256": "b" * 64,
+            },
+            "right": {
+                "label": "right",
+                "archive_sha256": archive_sha,
+                "submission_tree_sha256": "2" * 64,
+                "output_manifest_sha256": "b" * 64,
+            },
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+    payload = json.loads(queue.read_text(encoding="utf-8"))
+    row = payload["top_k"][0]
+    row.update(
+        {
+            "target_kind": FP11_SOURCE_BROTLI_RECODE_TARGET_KIND,
+            "materializer_id": FP11_SOURCE_BROTLI_RECODE_MATERIALIZER_ID,
+            "receiver_contract_kind": FP11_SOURCE_BROTLI_RECODE_RECEIVER_CONTRACT_KIND,
+            "source_archive_sha256": source_sha,
+            "source_archive_bytes": source_bytes,
+            "candidate_member_sha256": "d" * 64,
+            "runtime_adapter_ready": True,
+            "candidate_runtime_tree_sha256": runtime_sha,
+            "expected_runtime_tree_sha256": runtime_sha,
+            "runtime_consumption_proof_path": proof.relative_to(tmp_path).as_posix(),
+            "full_frame_inflate_parity_proven": True,
+            "strict_full_frame_inflate_parity_satisfied": True,
+            "full_frame_inflate_parity_proof_path": parity.relative_to(
+                tmp_path
+            ).as_posix(),
+            "full_frame_inflate_parity_proof_sha256": hashlib.sha256(
+                parity.read_bytes()
+            ).hexdigest(),
+        }
+    )
+    row["dispatch_blockers"].append("candidate_requires_exact_auth_eval_before_promotion")
+    queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["report"]["ready_for_exact_eval_dispatch"] is True
+    assert result["promoted_queue"]["dispatch_ready_count"] == 1
+    facts = result["report"]["facts"]
+    assert (
+        facts["runtime_consumption_proof_schema"]
+        == FP11_SOURCE_BROTLI_RECODE_PROOF_SCHEMA
+    )
+    promoted = result["promoted_queue"]["dispatch_ready"][0]
+    assert promoted["runtime_consumption_proof_backed_by_full_frame_parity"] is True
+    assert "runtime_consumption_proof_runtime_probe_missing" not in (
+        result["report"]["blockers"]
+    )
 
 
 def test_refuses_serialized_archive_delta_missing_bytes_contract(

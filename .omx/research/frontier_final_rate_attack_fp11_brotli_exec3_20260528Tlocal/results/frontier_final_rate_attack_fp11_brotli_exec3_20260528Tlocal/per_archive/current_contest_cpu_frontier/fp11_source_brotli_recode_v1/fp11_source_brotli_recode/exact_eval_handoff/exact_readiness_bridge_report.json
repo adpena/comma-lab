@@ -1,5 +1,5 @@
 {
-  "blocked_candidate_count": 1,
+  "blocked_candidate_count": 0,
   "candidate_count": 1,
   "charged_bits_changed": false,
   "clearable_source_blockers": [
@@ -29,26 +29,22 @@
   "exact_cuda_auth_eval": false,
   "exact_readiness_out_dir": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/exact_readiness",
   "field_selection_ready_for_exact_eval_dispatch": false,
-  "generated_at_utc": "2026-05-28T15:09:19Z",
+  "generated_at_utc": "2026-05-28T17:46:02Z",
   "gpu_launched": false,
   "operator_clearable_source_blockers": [],
   "promotable": false,
   "promotion_eligible": false,
   "rank_or_kill_eligible": false,
-  "ready_candidate_count": 0,
+  "ready_candidate_count": 1,
   "ready_for_exact_eval_dispatch": false,
   "rows": [
     {
-      "blockers": [
-        "unknown_uncleared_source_dispatch_blocker:candidate_requires_full_frame_inflate_output_parity_before_score_claim",
-        "unknown_uncleared_source_dispatch_blocker:candidate_requires_exact_auth_eval_before_promotion",
-        "runtime_consumption_proof_schema_unsupported"
-      ],
+      "blockers": [],
       "candidate_id": "fp11_source_brotli_recode_b7106c9bdbb8",
       "exact_readiness_report_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/exact_readiness/fp11_source_brotli_recode_b7106c9bdbb8.exact_readiness_report.json",
-      "exact_ready_queue_path": null,
-      "exact_ready_queue_written": false,
-      "readiness_verdict": "blocked"
+      "exact_ready_queue_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/exact_readiness/fp11_source_brotli_recode_b7106c9bdbb8.exact_ready_queue.json",
+      "exact_ready_queue_written": true,
+      "readiness_verdict": "exact_ready_queue_written"
     }
   ],
   "schema": "materializer_chain_exact_readiness_bridge_report.v1",

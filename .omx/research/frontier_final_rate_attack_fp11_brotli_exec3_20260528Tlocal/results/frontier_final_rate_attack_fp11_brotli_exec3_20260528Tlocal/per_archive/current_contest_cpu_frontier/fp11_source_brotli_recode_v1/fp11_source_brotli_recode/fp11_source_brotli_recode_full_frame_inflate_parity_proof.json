@@ -1,0 +1,83 @@
+{
+  "blockers": [],
+  "cmp_equal": true,
+  "contest_full_sample_claim": true,
+  "contest_full_sample_parity_claim": true,
+  "expected_full_frame_entry_count": 1,
+  "expected_full_frame_file_list_sha256": "7ff99d08c8351dd8167ec09213b758da5bbb705dedabe361ba881217374029a8",
+  "file_list_entries": [
+    "0.mkv"
+  ],
+  "file_list_entry": "0.mkv",
+  "file_list_entry_count": 1,
+  "file_list_sha256": "7ff99d08c8351dd8167ec09213b758da5bbb705dedabe361ba881217374029a8",
+  "full_frame_entry_count_match": true,
+  "full_frame_file_list_claim": true,
+  "full_frame_file_list_sha256_match": true,
+  "full_frame_file_list_source": "inline_contest_video_0_mkv_full_sample",
+  "full_frame_inflate_output_parity_claim": true,
+  "generated_at_utc": "2026-05-28T17:30:31Z",
+  "left": {
+    "archive": "/Volumes/VertigoDataTier/experiments/results/feca_selector_reparameterized_runtime_stable_20260527Tlocal/submission_dir/archive.zip",
+    "archive_bytes": 178530,
+    "archive_sha256": "18e3155fbbbe9ab23e1c21bc0d99ba8d18657a71c3129fc5ff9e0405b67d1669",
+    "inflate_seconds": 148.09550799999852,
+    "inflate_sh": "/Volumes/VertigoDataTier/experiments/results/feca_selector_reparameterized_runtime_stable_20260527Tlocal/submission_dir/inflate.sh",
+    "inflate_sh_sha256": "0878a7730e5caa2d6e0044ef3378c5772c67da0499958629ebca5285cfd503ab",
+    "label": "left",
+    "output_count": 1,
+    "output_manifest_sha256": "a4d7204b874422a2f08f16fd41db84af931778fdbdc14a6cb82cd5aa23885c20",
+    "output_raw_bytes": 3662409600,
+    "output_raw_sha256": "00b479229c97ede3e776846297269f7785285702b8dbf3e5dccc733557da605a",
+    "outputs": [
+      {
+        "file_list_entry": "0.mkv",
+        "output_basename": "0.raw",
+        "output_raw_bytes": 3662409600,
+        "output_raw_sha256": "00b479229c97ede3e776846297269f7785285702b8dbf3e5dccc733557da605a"
+      }
+    ],
+    "submission_dir": "/Volumes/VertigoDataTier/experiments/results/feca_selector_reparameterized_runtime_stable_20260527Tlocal/submission_dir",
+    "submission_tree_file_count": 10,
+    "submission_tree_sha256": "3e0db9c1705d6a8ec94fab477f0ae2f133e8d4bb351df4d65adfe636f991e31d"
+  },
+  "output_basename": "0.raw",
+  "output_bytes_match": true,
+  "output_count": 1,
+  "output_manifest_sha256_match": true,
+  "output_sha256_match": true,
+  "parity_scope_kind": "contest_full_sample",
+  "promotable": false,
+  "promotion_eligible": false,
+  "python_bin": ".venv/bin/python",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "right": {
+    "archive": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/submission_dir/archive.zip",
+    "archive_bytes": 178493,
+    "archive_sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c",
+    "inflate_seconds": 148.26156574999914,
+    "inflate_sh": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/submission_dir/inflate.sh",
+    "inflate_sh_sha256": "0878a7730e5caa2d6e0044ef3378c5772c67da0499958629ebca5285cfd503ab",
+    "label": "right",
+    "output_count": 1,
+    "output_manifest_sha256": "a4d7204b874422a2f08f16fd41db84af931778fdbdc14a6cb82cd5aa23885c20",
+    "output_raw_bytes": 3662409600,
+    "output_raw_sha256": "00b479229c97ede3e776846297269f7785285702b8dbf3e5dccc733557da605a",
+    "outputs": [
+      {
+        "file_list_entry": "0.mkv",
+        "output_basename": "0.raw",
+        "output_raw_bytes": 3662409600,
+        "output_raw_sha256": "00b479229c97ede3e776846297269f7785285702b8dbf3e5dccc733557da605a"
+      }
+    ],
+    "submission_dir": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/submission_dir",
+    "submission_tree_file_count": 10,
+    "submission_tree_sha256": "dd0002b702b482954af32e60e3a6c1d71dd2466305bcff1c8f259636ae5414ae"
+  },
+  "schema": "shell_inflate_parity_proof_v2",
+  "score_claim": false,
+  "scratch_dir": "/Volumes/VertigoDataTier/experiments/results/fp11_source_brotli_recode_full_frame_parity_20260528Tlocal/scratch",
+  "scratch_retained": false
+}

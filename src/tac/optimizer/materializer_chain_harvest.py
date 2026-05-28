@@ -484,6 +484,10 @@ def adapt_family_agnostic_materializer_manifest_to_candidate(
             runtime_proof=runtime_proof,
             repo_root=repo_root,
         ),
+        **_full_frame_inflate_parity_harvest_fields(
+            manifest,
+            repo_root=repo_root,
+        ),
         "local_advisory_axes": _local_advisory_axes(manifest),
         "local_advisory_axes_semantics": ("non_authoritative_planning_signal_only_not_score_claim"),
         "evidence_semantics": ("family_agnostic_materializer_candidate_pending_exact_readiness"),
@@ -768,6 +772,45 @@ def _renderer_payload_dfl1_harvest_fields(
             fields["native_unpacker_member_sha256s"] = {
                 str(name): str(sha) for name, sha in native_member_sha256s.items() if str(name) and str(sha)
             }
+    return fields
+
+
+def _full_frame_inflate_parity_harvest_fields(
+    manifest: Mapping[str, Any],
+    *,
+    repo_root: Path,
+) -> dict[str, Any]:
+    """Preserve generic shell full-frame parity proof custody on queue rows."""
+
+    fields: dict[str, Any] = {}
+    verification = manifest.get("full_frame_inflate_parity_verification")
+    if isinstance(verification, Mapping):
+        fields["full_frame_inflate_parity_verification"] = dict(verification)
+    proven = manifest.get("full_frame_inflate_parity_proven")
+    if isinstance(proven, bool):
+        fields["full_frame_inflate_parity_proven"] = proven
+        fields["strict_full_frame_inflate_parity_satisfied"] = proven
+    elif isinstance(verification, Mapping):
+        satisfied = verification.get("full_frame_inflate_parity_satisfied") is True
+        fields["full_frame_inflate_parity_proven"] = satisfied
+        fields["strict_full_frame_inflate_parity_satisfied"] = satisfied
+    proof_path = _nonempty_string(manifest.get("full_frame_inflate_parity_proof_path"))
+    if proof_path is None and isinstance(verification, Mapping):
+        proof_path = _nonempty_string(verification.get("proof_path"))
+    if proof_path is not None:
+        fields["full_frame_inflate_parity_proof_path"] = proof_path
+    proof_sha = _string_or_none(manifest.get("full_frame_inflate_parity_proof_sha256"))
+    if proof_sha is None and isinstance(verification, Mapping):
+        proof_sha = _string_or_none(verification.get("proof_sha256"))
+    if proof_sha is None and proof_path is not None:
+        resolved_proof = _resolve_path(proof_path, repo_root=repo_root)
+        if resolved_proof.is_file() and not resolved_proof.is_symlink():
+            proof_sha = _sha256_file(resolved_proof)
+    if proof_sha is not None:
+        fields["full_frame_inflate_parity_proof_sha256"] = proof_sha
+    proof_bytes = manifest.get("full_frame_inflate_parity_proof_bytes")
+    if isinstance(proof_bytes, int) and not isinstance(proof_bytes, bool):
+        fields["full_frame_inflate_parity_proof_bytes"] = proof_bytes
     return fields
 
 

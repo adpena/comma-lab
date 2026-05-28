@@ -2382,23 +2382,26 @@ def _is_sha256_text(value: str) -> bool:
     return len(value) == 64 and all(ch in "0123456789abcdef" for ch in value.lower())
 
 
-def verify_renderer_payload_dfl1_full_frame_inflate_parity_proof(
+def verify_shell_full_frame_inflate_parity_proof(
     *,
     full_frame_inflate_parity_proof: str | Path | Mapping[str, Any] | None,
     required_source_archive_sha256: str,
     required_candidate_archive_sha256: str,
     repo_root: str | Path | None = None,
+    require_same_submission_tree: bool,
+    verification_schema: str = "shell_full_frame_inflate_parity_verification.v1",
+    missing_blocker: str = "shell_full_frame_inflate_parity_proof_missing",
 ) -> dict[str, Any]:
-    """Validate a shell-level full-frame parity proof for DFL1 candidates."""
+    """Validate shell-level full-frame parity without assuming a codec family."""
 
     repo = _repo(repo_root)
     if full_frame_inflate_parity_proof is None:
         return {
-            "schema": "renderer_payload_dfl1_full_frame_parity_verification.v1",
+            "schema": verification_schema,
             "proof_present": False,
             "proof_path": None,
             "full_frame_inflate_parity_satisfied": False,
-            "blockers": ["renderer_payload_dfl1_full_frame_inflate_parity_proof_missing"],
+            "blockers": [missing_blocker],
             **FALSE_AUTHORITY,
         }
     proof_path = (
@@ -2476,10 +2479,11 @@ def verify_renderer_payload_dfl1_full_frame_inflate_parity_proof(
         blockers.append("shell_inflate_parity_archive_sha_pair_mismatch")
     left_tree = _clean_str(left.get("submission_tree_sha256"))
     right_tree = _clean_str(right.get("submission_tree_sha256"))
-    if not left_tree or not right_tree:
-        blockers.append("shell_inflate_parity_submission_tree_sha_missing")
-    elif left_tree != right_tree:
-        blockers.append("shell_inflate_parity_submission_tree_sha_mismatch")
+    if require_same_submission_tree:
+        if not left_tree or not right_tree:
+            blockers.append("shell_inflate_parity_submission_tree_sha_missing")
+        elif left_tree != right_tree:
+            blockers.append("shell_inflate_parity_submission_tree_sha_mismatch")
     file_list_entry_count = proof.get("file_list_entry_count")
     if not isinstance(file_list_entry_count, int) or file_list_entry_count < 1:
         blockers.append("shell_inflate_parity_file_list_entry_count_invalid")
@@ -2499,7 +2503,7 @@ def verify_renderer_payload_dfl1_full_frame_inflate_parity_proof(
     if not isinstance(output_count, int) or output_count != file_list_entry_count:
         blockers.append("shell_inflate_parity_output_count_invalid")
     return {
-        "schema": "renderer_payload_dfl1_full_frame_parity_verification.v1",
+        "schema": verification_schema,
         "proof_present": True,
         "proof_path": proof_path,
         "proof_sha256": sha256_file(_resolve_path(full_frame_inflate_parity_proof, repo=repo))
@@ -2520,12 +2524,35 @@ def verify_renderer_payload_dfl1_full_frame_inflate_parity_proof(
         "source_side_label": source_side.get("label") if source_side else None,
         "candidate_side_label": candidate_side.get("label") if candidate_side else None,
         "submission_tree_sha256": left_tree if left_tree == right_tree else None,
+        "same_submission_tree_required": bool(require_same_submission_tree),
         "output_manifest_sha256": _clean_str(left.get("output_manifest_sha256"))
         if _clean_str(left.get("output_manifest_sha256")) == _clean_str(right.get("output_manifest_sha256"))
         else None,
         "blockers": ordered_unique(blockers),
         **FALSE_AUTHORITY,
     }
+
+
+def verify_renderer_payload_dfl1_full_frame_inflate_parity_proof(
+    *,
+    full_frame_inflate_parity_proof: str | Path | Mapping[str, Any] | None,
+    required_source_archive_sha256: str,
+    required_candidate_archive_sha256: str,
+    repo_root: str | Path | None = None,
+) -> dict[str, Any]:
+    """Validate a shell-level full-frame parity proof for DFL1 candidates."""
+
+    return verify_shell_full_frame_inflate_parity_proof(
+        full_frame_inflate_parity_proof=full_frame_inflate_parity_proof,
+        required_source_archive_sha256=required_source_archive_sha256,
+        required_candidate_archive_sha256=required_candidate_archive_sha256,
+        repo_root=repo_root,
+        require_same_submission_tree=True,
+        verification_schema="renderer_payload_dfl1_full_frame_parity_verification.v1",
+        missing_blocker=(
+            "renderer_payload_dfl1_full_frame_inflate_parity_proof_missing"
+        ),
+    )
 
 
 def _match_parity_archive_sides(

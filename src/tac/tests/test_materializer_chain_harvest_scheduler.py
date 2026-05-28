@@ -65,6 +65,13 @@ from tac.optimization.tensor_factorize_receiver import (
     build_tensor_factorize_receiver_runtime,
     build_tensor_factorize_runtime_consumption_proof,
 )
+from tac.packet_compiler.fp11_source_brotli_recode import (
+    FP11_SOURCE_BROTLI_RECODE_MANIFEST_SCHEMA,
+    FP11_SOURCE_BROTLI_RECODE_MATERIALIZER_ID,
+    FP11_SOURCE_BROTLI_RECODE_PROOF_SCHEMA,
+    FP11_SOURCE_BROTLI_RECODE_RECEIVER_CONTRACT_KIND,
+    FP11_SOURCE_BROTLI_RECODE_TARGET_KIND,
+)
 from tac.repo_io import tree_sha256
 from tools.run_family_agnostic_materializer_sweep import (
     build_materializer_empirical_sweep,
@@ -2431,6 +2438,165 @@ def test_dfl1_materializer_consumes_full_frame_shell_parity_proof(
     )
     assert row["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_harvest_fp11_preserves_generic_full_frame_parity_proof(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    source = repo / "source.zip"
+    candidate = repo / "candidate.zip"
+    runtime = repo / "candidate_runtime"
+    runtime.mkdir()
+    (runtime / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    with zipfile.ZipFile(source, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("0", b"source")
+    with zipfile.ZipFile(candidate, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("0", b"candidate")
+    source_member = b"source"
+    candidate_member = b"candidate"
+    source_archive = {
+        "path": str(source),
+        "bytes": source.stat().st_size,
+        "sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+    }
+    candidate_archive = {
+        "path": str(candidate),
+        "bytes": candidate.stat().st_size,
+        "sha256": hashlib.sha256(candidate.read_bytes()).hexdigest(),
+    }
+    runtime_sha = tree_sha256(runtime)
+    parity = _write_json(
+        repo / "full_frame_parity.json",
+        {
+            "schema": "shell_inflate_parity_proof_v2",
+            "full_frame_file_list_claim": True,
+            "full_frame_inflate_output_parity_claim": True,
+            "parity_scope_kind": "contest_full_sample",
+            "contest_full_sample_claim": True,
+            "contest_full_sample_parity_claim": True,
+            "full_frame_file_list_source": "fixture",
+            "expected_full_frame_file_list_sha256": "a" * 64,
+            "file_list_sha256": "a" * 64,
+            "full_frame_file_list_sha256_match": True,
+            "expected_full_frame_entry_count": 1,
+            "file_list_entry_count": 1,
+            "full_frame_entry_count_match": True,
+            "output_count": 1,
+            "output_bytes_match": True,
+            "output_sha256_match": True,
+            "output_manifest_sha256_match": True,
+            "cmp_equal": True,
+            "blockers": [],
+            "left": {
+                "label": "left",
+                "archive_sha256": source_archive["sha256"],
+                "submission_tree_sha256": "1" * 64,
+                "output_manifest_sha256": "b" * 64,
+            },
+            "right": {
+                "label": "right",
+                "archive_sha256": candidate_archive["sha256"],
+                "submission_tree_sha256": "2" * 64,
+                "output_manifest_sha256": "b" * 64,
+            },
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+    proof = _write_json(
+        repo / "runtime_consumption_proof.json",
+        {
+            "schema": FP11_SOURCE_BROTLI_RECODE_PROOF_SCHEMA,
+            "target_kind": FP11_SOURCE_BROTLI_RECODE_TARGET_KIND,
+            "materializer_id": FP11_SOURCE_BROTLI_RECODE_MATERIALIZER_ID,
+            "receiver_contract_kind": FP11_SOURCE_BROTLI_RECODE_RECEIVER_CONTRACT_KIND,
+            "candidate_archive": candidate_archive,
+            "candidate_archive_sha256": candidate_archive["sha256"],
+            "candidate_member": {
+                "name": "0",
+                "bytes": len(candidate_member),
+                "sha256": hashlib.sha256(candidate_member).hexdigest(),
+            },
+            "runtime_consumption_proof_passed": True,
+            "passed": True,
+            "receiver_contract_satisfied": True,
+            "runtime_adapter_ready": True,
+            "candidate_runtime_tree_sha256": runtime_sha,
+            "expected_runtime_tree_sha256": runtime_sha,
+            "decoder_raw_roundtrip_equal": True,
+            "source_tail_unchanged": True,
+            "selector_payload_unchanged": True,
+            "dqs1_tail_unchanged": True,
+            "blockers": [],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+    manifest = {
+        "schema": FP11_SOURCE_BROTLI_RECODE_MANIFEST_SCHEMA,
+        "candidate_id": "fp11_fixture",
+        "target_kind": FP11_SOURCE_BROTLI_RECODE_TARGET_KIND,
+        "materializer_id": FP11_SOURCE_BROTLI_RECODE_MATERIALIZER_ID,
+        "receiver_contract_kind": FP11_SOURCE_BROTLI_RECODE_RECEIVER_CONTRACT_KIND,
+        "source_archive": source_archive,
+        "candidate_archive": candidate_archive,
+        "source_member": {
+            "name": "0",
+            "bytes": len(source_member),
+            "sha256": hashlib.sha256(source_member).hexdigest(),
+        },
+        "candidate_member": {
+            "name": "0",
+            "bytes": len(candidate_member),
+            "sha256": hashlib.sha256(candidate_member).hexdigest(),
+        },
+        "runtime_consumption_proof_path": str(proof),
+        "byte_closed_candidate_emitted": True,
+        "receiver_contract_satisfied": True,
+        "runtime_adapter_ready": True,
+        "candidate_runtime_adapter_blocker_cleared": True,
+        "candidate_runtime_dir": str(runtime),
+        "candidate_runtime_tree_sha256": runtime_sha,
+        "expected_runtime_tree_sha256": runtime_sha,
+        "receiver_verification": {
+            "receiver_contract_satisfied": True,
+            "runtime_adapter_ready": True,
+            "proof_path": str(proof),
+            "blockers": [],
+        },
+        "full_frame_inflate_parity_proven": True,
+        "full_frame_inflate_parity_proof_path": str(parity),
+        "full_frame_inflate_parity_proof_sha256": hashlib.sha256(
+            parity.read_bytes()
+        ).hexdigest(),
+        "readiness_blockers": ["candidate_requires_exact_auth_eval_before_promotion"],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    manifest_path = _write_json(repo / "fp11_manifest.json", manifest)
+
+    result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[manifest_path],
+    )
+
+    row = result["source_queue"]["top_k"][0]
+    assert row["candidate_id"] == "fp11_fixture"
+    assert row["candidate_family"] == "fp11_source_brotli_recode"
+    assert row["full_frame_inflate_parity_proven"] is True
+    assert row["strict_full_frame_inflate_parity_satisfied"] is True
+    assert row["full_frame_inflate_parity_proof_path"] == str(parity)
+    assert row["full_frame_inflate_parity_proof_sha256"] == hashlib.sha256(
+        parity.read_bytes()
+    ).hexdigest()
 
 
 def test_harvest_family_agnostic_packet_recompress_accepts_empty_member(

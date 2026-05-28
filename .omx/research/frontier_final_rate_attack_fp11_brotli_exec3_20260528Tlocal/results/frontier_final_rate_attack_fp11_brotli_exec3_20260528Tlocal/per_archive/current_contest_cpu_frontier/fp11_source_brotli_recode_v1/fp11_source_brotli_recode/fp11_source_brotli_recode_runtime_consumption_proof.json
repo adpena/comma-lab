@@ -2,7 +2,7 @@
   "archive_saved_bytes": 37,
   "candidate_archive": {
     "bytes": 178493,
-    "path": "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/submission_dir/archive.zip",
+    "path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/submission_dir/archive.zip",
     "sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c"
   },
   "candidate_decoder_bytes": 162127,
@@ -13,7 +13,7 @@
     "sha256": "c5e322c1cdfa7c059e1c1d88d2e700e8bc6631ef2effcdbbc51c4fbb1bb1b42c"
   },
   "candidate_runtime_adapter_blocker_cleared": true,
-  "candidate_runtime_dir": "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/submission_dir",
+  "candidate_runtime_dir": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/submission_dir",
   "candidate_runtime_tree_sha256": "a114b4f665713353c01a2a09467c5ac766d77d394945f6e951cbc8b0eaa4d1f3",
   "charged_bits_changed": false,
   "contest_cuda_auth_eval": false,
@@ -27,7 +27,6 @@
     "requires_exact_eval_readiness_gate",
     "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
     "requires_non_proxy_score_evidence_before_promotion",
-    "candidate_requires_full_frame_inflate_output_parity_before_score_claim",
     "candidate_requires_exact_auth_eval_before_promotion"
   ],
   "dqs1_tail_unchanged": true,
@@ -52,7 +51,7 @@
   "exact_cuda_auth_eval": false,
   "expected_runtime_tree_sha256": "a114b4f665713353c01a2a09467c5ac766d77d394945f6e951cbc8b0eaa4d1f3",
   "field_selection_ready_for_exact_eval_dispatch": false,
-  "generated_at_utc": "2026-05-28T15:09:18Z",
+  "generated_at_utc": "2026-05-28T17:30:46Z",
   "gpu_launched": false,
   "materializer_id": "fp11_source_brotli_recode_adapter",
   "operation_family": "source_brotli_recode",

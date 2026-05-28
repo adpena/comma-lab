@@ -47,6 +47,7 @@ from tac.optimization.byte_range_entropy_recode_materializer import (
 )
 from tac.optimization.family_agnostic_materializers import (
     verify_renderer_payload_dfl1_full_frame_inflate_parity_proof,
+    verify_shell_full_frame_inflate_parity_proof,
 )
 from tac.optimization.proxy_candidate_contract import PROXY_FALSE_AUTHORITY_FIELDS
 from tac.optimization.serialized_archive_economics import (
@@ -57,6 +58,9 @@ from tac.optimization.serialized_archive_economics import (
     SERIALIZED_SAVINGS_NOT_POSITIVE_BLOCKER,
     serialized_archive_delta_blockers,
 )
+from tac.packet_compiler.fp11_source_brotli_recode import (
+    FP11_SOURCE_BROTLI_RECODE_PROOF_SCHEMA,
+)
 from tac.zipwire_archive import inspect_zip_headers
 
 QUEUE_SCHEMA = "optimizer_candidate_exact_eval_ready_queue_v1"
@@ -66,6 +70,7 @@ FAMILY_AGNOSTIC_RUNTIME_CONSUMPTION_PROOF_SCHEMAS = frozenset(
     {
         "family_agnostic_runtime_consumption_proof_v1",
         "family_agnostic_runtime_consumption_proof_verification.v1",
+        FP11_SOURCE_BROTLI_RECODE_PROOF_SCHEMA,
     }
 )
 # Backward-compatible name used by dispatch gates for score comparisons.
@@ -107,6 +112,7 @@ CLEARABLE_SOURCE_BLOCKERS = frozenset(
         "gha_eval_required_before_exact_cuda_promotion",
         "operator_decision_required_before_gha_or_exact_cuda",
         "macos_cpu_is_not_contest_cuda_evidence",
+        "candidate_requires_exact_auth_eval_before_promotion",
     }
 )
 BLOCKED_SOURCE_BLOCKER_PREFIXES = (
@@ -787,6 +793,56 @@ def _has_strict_renderer_payload_dfl1_full_frame_parity(
     return verified.get("full_frame_inflate_parity_satisfied") is True
 
 
+def _has_strict_generic_shell_full_frame_parity(
+    row: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    queue_dir: Path | None,
+) -> bool:
+    if (
+        row.get("strict_full_frame_inflate_parity_satisfied") is not True
+        and row.get("full_frame_inflate_parity_proven") is not True
+    ):
+        return False
+    proof_ref = row.get("full_frame_inflate_parity_proof_path")
+    verification = row.get("full_frame_inflate_parity_verification")
+    if proof_ref is None and isinstance(verification, Mapping):
+        proof_ref = verification.get("proof_path")
+    proof_path = resolve_path(proof_ref, repo_root=repo_root, queue_dir=queue_dir)
+    if proof_path is None or not proof_path.is_file() or proof_path.is_symlink():
+        return False
+    if not _path_is_repo_confined(proof_path, repo_root):
+        return False
+    expected_proof_sha = row.get("full_frame_inflate_parity_proof_sha256")
+    if expected_proof_sha is None and isinstance(verification, Mapping):
+        expected_proof_sha = verification.get("proof_sha256")
+    if is_sha256(expected_proof_sha) and sha256_file(proof_path) != str(
+        expected_proof_sha
+    ).lower():
+        return False
+    candidate_sha = (
+        str(row.get("archive_sha256") or "")
+        if is_sha256(row.get("archive_sha256"))
+        else str(row.get("candidate_archive_sha256") or "")
+    )
+    source_sha = (
+        str(row.get("source_archive_sha256") or "")
+        if is_sha256(row.get("source_archive_sha256"))
+        else ""
+    )
+    if not is_sha256(candidate_sha) or not is_sha256(source_sha):
+        return False
+    verified = verify_shell_full_frame_inflate_parity_proof(
+        full_frame_inflate_parity_proof=proof_path,
+        required_source_archive_sha256=source_sha,
+        required_candidate_archive_sha256=candidate_sha,
+        repo_root=repo_root,
+        require_same_submission_tree=False,
+        verification_schema="generic_shell_full_frame_parity_verification.v1",
+    )
+    return verified.get("full_frame_inflate_parity_satisfied") is True
+
+
 def _has_strict_full_frame_parity(
     row: Mapping[str, Any],
     *,
@@ -798,6 +854,10 @@ def _has_strict_full_frame_parity(
         repo_root=repo_root,
         queue_dir=queue_dir,
     ) or _has_strict_renderer_payload_dfl1_full_frame_parity(
+        row,
+        repo_root=repo_root,
+        queue_dir=queue_dir,
+    ) or _has_strict_generic_shell_full_frame_parity(
         row,
         repo_root=repo_root,
         queue_dir=queue_dir,
@@ -1770,10 +1830,7 @@ def validate_runtime_consumption_proof(
             repo_root=repo_root,
             queue_dir=queue_dir,
         )
-        if semantic_blockers and not (
-            _is_renderer_payload_dfl1_candidate(row)
-            and proof_backed_by_full_frame_parity
-        ):
+        if semantic_blockers and not proof_backed_by_full_frame_parity:
             blockers.append("runtime_consumption_proof_not_proven")
             blockers.extend(semantic_blockers)
         for field in ("target_kind", "materializer_id", "receiver_contract_kind"):
@@ -2316,6 +2373,12 @@ def promoted_row(
         or source_row.get("renderer_payload_dfl1_full_frame_inflate_parity_proof_sha256"),
         "full_frame_inflate_parity_proven": source_row.get(
             "full_frame_inflate_parity_proven"
+        ),
+        "full_frame_inflate_parity_proof_path": source_row.get(
+            "full_frame_inflate_parity_proof_path"
+        ),
+        "full_frame_inflate_parity_proof_sha256": source_row.get(
+            "full_frame_inflate_parity_proof_sha256"
         ),
         "full_frame_inflate_parity_verification": source_row.get(
             "full_frame_inflate_parity_verification"
