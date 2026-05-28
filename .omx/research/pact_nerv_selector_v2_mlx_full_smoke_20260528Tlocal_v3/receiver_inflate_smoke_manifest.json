@@ -1,0 +1,35 @@
+{
+  "archive_path": ".omx/research/pact_nerv_selector_v2_mlx_full_smoke_20260528Tlocal_v3/archive.zip",
+  "archive_sha256": "d6de15db48763df5e8ad9e112705f896efbb102088e0a8138cc1848c32bd7dc7",
+  "command": "PYTHON=.venv/bin/python PYTHONDONTWRITEBYTECODE=1 bash submission/inflate.sh submission inflate_smoke_out file_list",
+  "expected_frame_count": 4,
+  "frame_count": 4,
+  "frame_manifest": [
+    {
+      "bytes": 1468,
+      "path": "inflate_smoke_out/0/0.png",
+      "sha256": "a2189652daac98250365ac9d4bbcef063007efe23d6fea7d5e00c60705a4b8cc"
+    },
+    {
+      "bytes": 1430,
+      "path": "inflate_smoke_out/0/1.png",
+      "sha256": "3d324156c6e7495af7866a0a0bfc734d74dfc36b018e8ab7c04cfb9b29aa9b1a"
+    },
+    {
+      "bytes": 1468,
+      "path": "inflate_smoke_out/0/2.png",
+      "sha256": "a2189652daac98250365ac9d4bbcef063007efe23d6fea7d5e00c60705a4b8cc"
+    },
+    {
+      "bytes": 1430,
+      "path": "inflate_smoke_out/0/3.png",
+      "sha256": "3d324156c6e7495af7866a0a0bfc734d74dfc36b018e8ab7c04cfb9b29aa9b1a"
+    }
+  ],
+  "promotable": false,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "runtime_consumption_smoke_passed": true,
+  "schema_version": "pact_nerv_selector_v2_receiver_inflate_smoke_manifest.v1",
+  "score_claim": false
+}

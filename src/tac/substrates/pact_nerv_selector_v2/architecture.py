@@ -31,6 +31,25 @@ _CONTEST_W = 512
 _NUM_FRAMES = 1200
 _PAIRS = _NUM_FRAMES // 2
 
+FEC6_FIXED_K16_MODE_IDS: tuple[str, ...] = (
+    "none",
+    "frame0_blue_chroma_amp_1",
+    "frame0_blue_chroma_amp_3",
+    "frame0_luma_bias_+1",
+    "frame0_luma_bias_-1",
+    "frame0_luma_bias_-2",
+    "frame0_luma_bias_-4",
+    "frame0_rgb_bias_m2_p1_p1",
+    "frame0_rgb_bias_m4_p2_p2",
+    "frame0_rgb_bias_p0_m1_p1",
+    "frame0_rgb_bias_p0_m2_p2",
+    "frame0_rgb_bias_p0_p1_m1",
+    "frame0_rgb_bias_p0_p2_m2",
+    "frame0_rgb_bias_p2_m1_m1",
+    "frame0_rgb_bias_p4_m2_m2",
+    "frame0_roll_dx+0_dy+1",
+)
+
 
 @dataclass(frozen=True)
 class PactNervSelectorV2Config:
@@ -192,6 +211,80 @@ class ArithmeticSelectorCoder:
             out.append(byte)
         return bytes(out)
 
+    def decode(self, payload: bytes, *, symbol_count: int) -> list[int]:
+        """Decode bytes produced by :meth:`encode`.
+
+        The archive grammar stores the pair count separately, so the arithmetic
+        payload does not spend header bytes on length. Padding bits after the
+        final emitted bit are interpreted as zero, matching :meth:`encode`.
+        """
+        if symbol_count < 0:
+            raise ValueError(f"symbol_count must be >= 0; got {symbol_count}")
+        if symbol_count == 0:
+            if payload:
+                raise ValueError("non-empty arithmetic payload for zero symbols")
+            return []
+        if not payload:
+            raise ValueError("empty arithmetic payload for non-empty stream")
+
+        bit_pos = 0
+
+        def _next_bit() -> int:
+            nonlocal bit_pos
+            if bit_pos >= len(payload) * 8:
+                bit_pos += 1
+                return 0
+            byte = payload[bit_pos // 8]
+            bit = (byte >> (7 - (bit_pos % 8))) & 1
+            bit_pos += 1
+            return int(bit)
+
+        low = 0
+        high = (1 << self.precision) - 1
+        value = 0
+        for _ in range(self.precision):
+            value = (value << 1) | _next_bit()
+
+        half = 1 << (self.precision - 1)
+        quarter = 1 << (self.precision - 2)
+        three_quarter = 3 * quarter
+        out: list[int] = []
+        for _ in range(symbol_count):
+            rng = high - low + 1
+            scaled = ((value - low + 1) * self.total_freq - 1) // rng
+            sym = 0
+            for candidate, sym_high in enumerate(self.cum_freq):
+                sym_low = self.cum_freq[candidate - 1] if candidate > 0 else 0
+                if sym_low <= scaled < sym_high:
+                    sym = candidate
+                    break
+            else:  # pragma: no cover - defensive corruption guard.
+                raise ValueError(f"arithmetic payload scaled value {scaled} out of range")
+
+            sym_low = self.cum_freq[sym - 1] if sym > 0 else 0
+            sym_high = self.cum_freq[sym]
+            high = low + (rng * sym_high) // self.total_freq - 1
+            low = low + (rng * sym_low) // self.total_freq
+            out.append(sym)
+
+            while True:
+                if high < half:
+                    pass
+                elif low >= half:
+                    low -= half
+                    high -= half
+                    value -= half
+                elif low >= quarter and high < three_quarter:
+                    low -= quarter
+                    high -= quarter
+                    value -= quarter
+                else:
+                    break
+                low <<= 1
+                high = (high << 1) | 1
+                value = (value << 1) | _next_bit()
+        return out
+
     def encoded_bit_length(self, symbols: list[int]) -> int:
         """Return the entropy estimate for a symbol stream.
 
@@ -208,7 +301,104 @@ class ArithmeticSelectorCoder:
                 self.cum_freq[sym] - (self.cum_freq[sym - 1] if sym > 0 else 0)
             )
             bits += math.log2(self.total_freq / freq)
-        return int(math.ceil(bits))
+        return math.ceil(bits)
+
+
+def _parse_signed_token(token: str) -> int:
+    if token.startswith("p"):
+        return int(token[1:])
+    if token.startswith("m"):
+        return -int(token[1:])
+    return int(token)
+
+
+def _mode_spec(mode_id: str) -> tuple[str, tuple[int, ...], int]:
+    if mode_id == "none":
+        return ("identity", (), 0)
+    frame_index = 1 if mode_id.startswith("frame1_") else 0
+    base = mode_id.replace("frame1_", "frame0_", 1)
+    if base.startswith("frame0_luma_bias_"):
+        value = int(base.removeprefix("frame0_luma_bias_"))
+        return ("rgb_bias", (value, value, value), frame_index)
+    if base.startswith("frame0_rgb_bias_"):
+        params = tuple(
+            _parse_signed_token(part)
+            for part in base.removeprefix("frame0_rgb_bias_").split("_")
+        )
+        if len(params) != 3:
+            raise ValueError(f"bad RGB selector mode {mode_id!r}")
+        return ("rgb_bias", params, frame_index)
+    if base.startswith("frame0_blue_chroma_amp_"):
+        return (
+            "blue_chroma",
+            (int(base.removeprefix("frame0_blue_chroma_amp_")),),
+            frame_index,
+        )
+    if base.startswith("frame0_roll_dx"):
+        suffix = base.removeprefix("frame0_roll_dx")
+        dx_token, dy_token = suffix.split("_dy", 1)
+        return ("roll", (int(dx_token), int(dy_token)), frame_index)
+    raise ValueError(f"unsupported selector mode {mode_id!r}")
+
+
+def _blue_tile(height: int, width: int, *, device: torch.device, dtype: torch.dtype) -> torch.Tensor:
+    tile = torch.tensor(
+        [
+            [-1, 1, -1, 1, 1, -1, 1, -1],
+            [1, -1, 1, -1, -1, 1, -1, 1],
+            [-1, 1, 1, -1, 1, -1, -1, 1],
+            [1, -1, -1, 1, -1, 1, 1, -1],
+            [1, 1, -1, -1, 1, 1, -1, -1],
+            [-1, -1, 1, 1, -1, -1, 1, 1],
+            [1, -1, -1, 1, 1, -1, -1, 1],
+            [-1, 1, 1, -1, -1, 1, 1, -1],
+        ],
+        dtype=dtype,
+        device=device,
+    )
+    reps_h = (height + 7) // 8
+    reps_w = (width + 7) // 8
+    return tile.repeat(reps_h, reps_w)[:height, :width]
+
+
+def apply_selector_code_to_pair_frames_255(
+    frames_2chw: torch.Tensor,
+    selector_code: int,
+    *,
+    mode_ids: tuple[str, ...] = FEC6_FIXED_K16_MODE_IDS,
+) -> torch.Tensor:
+    """Apply one K=16 frame selector to a rendered pair in byte space.
+
+    Input and output are float tensors shaped ``(2, 3, H, W)`` in RGB byte
+    space. The transform matches the PR110/FEC6 selector semantics: apply the
+    chosen deterministic mode after renderer decode, before PNG emission.
+    """
+    if frames_2chw.shape[0] != 2 or frames_2chw.shape[1] != 3:
+        raise ValueError(f"frames_2chw must be (2, 3, H, W); got {tuple(frames_2chw.shape)}")
+    if selector_code < 0 or selector_code >= len(mode_ids):
+        raise ValueError(f"selector code {selector_code} out of range {len(mode_ids)}")
+    family, params, frame_index = _mode_spec(mode_ids[selector_code])
+    if family == "identity":
+        return frames_2chw.clamp(0.0, 255.0).round()
+    out = frames_2chw.clone()
+    frame = out[frame_index]
+    if family == "rgb_bias":
+        delta = torch.tensor(params, dtype=out.dtype, device=out.device).view(3, 1, 1)
+        out[frame_index] = frame + delta
+    elif family == "blue_chroma":
+        amp = float(params[0])
+        _channels, height, width = frame.shape
+        tile = _blue_tile(height, width, device=out.device, dtype=out.dtype)
+        adjusted = frame.clone()
+        adjusted[0].add_(tile * amp)
+        adjusted[2].sub_(tile * amp)
+        out[frame_index] = adjusted
+    elif family == "roll":
+        dx, dy = int(params[0]), int(params[1])
+        out[frame_index] = torch.roll(frame, shifts=(dy, dx), dims=(1, 2))
+    else:  # pragma: no cover - _mode_spec owns supported families.
+        raise ValueError(f"unsupported selector family {family!r}")
+    return out.clamp(0.0, 255.0).round()
 
 
 class PactNervSelectorV2Substrate(nn.Module):

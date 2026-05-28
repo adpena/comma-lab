@@ -1534,6 +1534,17 @@ class CheckpointWriter:
         self.curriculum_hash = curriculum_hash
         self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
+    @staticmethod
+    def _resolved_export_path(requested_path: Path) -> Path:
+        """Return the file the adapter actually emitted for a requested state path."""
+        if requested_path.is_file():
+            return requested_path
+        for suffix in (".npsd", ".npz"):
+            candidate = requested_path.with_suffix(requested_path.suffix + suffix)
+            if candidate.is_file():
+                return candidate
+        return requested_path
+
     def write(
         self,
         adapter: SubstrateLongTrainingAdapter,
@@ -1559,6 +1570,7 @@ class CheckpointWriter:
 
         # Write live state via adapter's canonical export.
         adapter.export_state_dict(adapter.model, live_path)
+        live_state_path = self._resolved_export_path(live_path)
 
         # Write EMA shadow via snapshot+restore + adapter's export.
         live_snapshot = ema_shadow.apply_to(adapter.model)
@@ -1566,6 +1578,7 @@ class CheckpointWriter:
             adapter.export_state_dict(adapter.model, ema_path)
         finally:
             ema_shadow.restore_from_snapshot(adapter.model, live_snapshot)
+        ema_state_path = self._resolved_export_path(ema_path)
 
         if kahan_compensation_path is not None:
             ema_shadow.write_compensation_state(kahan_compensation_path)
@@ -1590,8 +1603,8 @@ class CheckpointWriter:
             "ema_kahan_compensation_state_path": (
                 str(kahan_compensation_path) if kahan_compensation_path else None
             ),
-            "live_state_path": str(live_path),
-            "ema_shadow_state_path": str(ema_path),
+            "live_state_path": str(live_state_path),
+            "ema_shadow_state_path": str(ema_state_path),
             "captured_at_utc": _utc_now_iso(),
             **CANONICAL_NON_PROMOTABLE_MARKERS,
         }

@@ -487,6 +487,40 @@ def test_checkpoint_writer_writes_canonical_metadata(tmp_path: Path) -> None:
     assert meta["promotion_eligible"] is False
 
 
+def test_checkpoint_writer_records_adapter_emitted_suffixed_state_paths(
+    tmp_path: Path,
+) -> None:
+    """MLX adapters write .state.npsd; metadata must point at the real file."""
+
+    class _SuffixedStateAdapter(_MockSubstrateAdapter):
+        def export_state_dict(self, model: Any, path: Path) -> None:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            emitted = path.with_suffix(path.suffix + ".npsd")
+            emitted.write_text(json.dumps(model.state_dict(), sort_keys=True))
+
+    config = _make_simple_config(tmp_path)
+    writer = CheckpointWriter(
+        checkpoint_dir=tmp_path / "ckpt",
+        substrate_id=config.substrate_id,
+        lane_id=config.lane_id,
+        curriculum_hash=config.curriculum_hash(),
+    )
+    adapter = _SuffixedStateAdapter()
+    ema = PolyakEMAShadow(adapter.model, decay=0.99)
+    meta_path = writer.write(
+        adapter=adapter,
+        ema_shadow=ema,
+        global_epoch=5,
+        loss=0.1,
+        wall_clock_seconds=10.0,
+    )
+    meta = json.loads(meta_path.read_text())
+    assert meta["live_state_path"].endswith(".live.state.npsd")
+    assert meta["ema_shadow_state_path"].endswith(".ema_shadow.state.npsd")
+    assert Path(meta["live_state_path"]).is_file()
+    assert Path(meta["ema_shadow_state_path"]).is_file()
+
+
 def test_checkpoint_writer_persists_kahan_compensation_metadata(tmp_path: Path) -> None:
     config = _make_simple_config(tmp_path)
     writer = CheckpointWriter(

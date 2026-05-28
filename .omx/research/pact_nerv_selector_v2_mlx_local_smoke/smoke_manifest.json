@@ -1,0 +1,64 @@
+{
+  "axis_tag": "[macOS-MLX research-signal]",
+  "canonical_provenance": {
+    "axis_tag": "[macOS-MLX research-signal]",
+    "evidence_grade": "predicted",
+    "kind": "predicted_from_model",
+    "promotable": false,
+    "rationale": "MLX-local smoke produces no score; this manifest documents renderer construction + single forward pass only. Non-promotable by construction per Catalog #192/#317/#341.",
+    "score_claim_valid": false
+  },
+  "config": {
+    "decoder_channels": [
+      48,
+      40,
+      32,
+      24,
+      20,
+      16,
+      12
+    ],
+    "embed_dim": 64,
+    "initial_grid_h": 3,
+    "initial_grid_w": 4,
+    "latent_dim": 24,
+    "num_pairs": 8,
+    "num_upsample_blocks": 7,
+    "output_height": 384,
+    "output_width": 512,
+    "selector_palette_size": 16,
+    "sin_frequency": 30.0
+  },
+  "evidence_grade": "[macOS-MLX research-signal]",
+  "forward_convention": "call_b2chw_255",
+  "forward_smoke": {
+    "input_indices": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "output_max": 127.5,
+    "output_mean": 127.5,
+    "output_min": 127.5,
+    "output_shape": [
+      4,
+      2,
+      3,
+      384,
+      512
+    ]
+  },
+  "lane_id": "lane_pact_nerv_selector_v2_l1_long_run_mlx_local_20260528",
+  "predicted_delta_adjustment": 0.0,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "renderer_module": "tac.substrates.pact_nerv_selector_v2.mlx_renderer",
+  "renderer_num_parameters": 54806,
+  "renderer_schema_version": "pact_nerv_selector_v2_mlx_renderer_v1",
+  "schema_version": "pact_nerv_selector_v2_mlx_smoke_manifest_v1_20260528",
+  "score_claim": false,
+  "substrate_id": "pact_nerv_selector_v2_mlx_local"
+}

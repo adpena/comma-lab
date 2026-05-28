@@ -6,6 +6,7 @@ from __future__ import annotations
 import torch
 
 from tac.substrates.pact_nerv_selector_v2.architecture import (
+    FEC6_FIXED_K16_MODE_IDS,
     ArithmeticSelectorCoder,
     PactNervSelectorV2Config,
     PactNervSelectorV2Substrate,
@@ -86,6 +87,13 @@ def test_arithmetic_coder_encode_returns_bounded_bytes() -> None:
     assert len(out) <= 16
 
 
+def test_arithmetic_coder_roundtrip_selector_stream() -> None:
+    coder = ArithmeticSelectorCoder(palette_size=16)
+    syms = [0, 1, 2, 3, 15, 0, 7, 2, 2, 14, 0, 4, 6, 9, 10, 11]
+    payload = coder.encode(syms)
+    assert coder.decode(payload, symbol_count=len(syms)) == syms
+
+
 def test_arithmetic_coder_rejects_invalid_symbols() -> None:
     coder = ArithmeticSelectorCoder(palette_size=16)
     try:
@@ -121,6 +129,40 @@ def test_archive_pack_then_parse_roundtrip() -> None:
     assert arc.palette_size == 16
     assert arc.selector_bytes == selector_bytes
     assert set(arc.decoder_state_dict.keys()) == set(decoder_sd.keys())
+
+
+def test_inflate_consumes_selector_stream_and_changes_frame0(tmp_path) -> None:
+    from tac.substrates.pact_nerv_selector_v2.archive_candidate import (
+        pack_archive_from_exported_state_dict,
+    )
+    from tac.substrates.pact_nerv_selector_v2.inflate import inflate_one_video
+
+    cfg = _smoke_cfg()
+    torch.manual_seed(4)
+    model = PactNervSelectorV2Substrate(cfg).eval()
+    exported = {
+        name: tensor.detach().cpu().numpy()
+        for name, tensor in model.state_dict().items()
+        if name != "selectors"
+    }
+    none_blob = pack_archive_from_exported_state_dict(
+        exported_state_dict=exported,
+        cfg=cfg,
+        selectors=torch.zeros(cfg.num_pairs, dtype=torch.long).numpy(),
+    )
+    selector = torch.zeros(cfg.num_pairs, dtype=torch.long)
+    selector[0] = FEC6_FIXED_K16_MODE_IDS.index("frame0_luma_bias_+1")
+    selected_blob = pack_archive_from_exported_state_dict(
+        exported_state_dict=exported,
+        cfg=cfg,
+        selectors=selector.numpy(),
+    )
+    none_out = tmp_path / "none"
+    selected_out = tmp_path / "selected"
+    inflate_one_video(none_blob, none_out, device="cpu")
+    inflate_one_video(selected_blob, selected_out, device="cpu")
+    assert (none_out / "0.png").read_bytes() != (selected_out / "0.png").read_bytes()
+    assert (none_out / "1.png").read_bytes() == (selected_out / "1.png").read_bytes()
 
 
 def test_archive_header_size_invariant_is_26_bytes() -> None:
@@ -165,6 +207,7 @@ def test_trainer_full_main_implemented_and_cuda_gated(tmp_path) -> None:
 def test_trainer_routes_through_canonical_scorer_loss_helper() -> None:
     """Catalog #164: score-aware path routes through canonical helper."""
     import inspect
+
     from tac.substrates.pact_nerv_selector_v2 import score_aware_loss as sal
     src = inspect.getsource(sal)
     assert "score_pair_components_dispatch" in src
@@ -174,6 +217,7 @@ def test_trainer_routes_through_canonical_scorer_loss_helper() -> None:
 def test_trainer_patches_differentiable_eval_roundtrip_before_scorer() -> None:
     """Catalog #6: trainer MUST patch yuv6 BEFORE scorer load."""
     import inspect
+
     import experiments.train_substrate_pact_nerv_selector_v2 as trainer_module
     src = inspect.getsource(trainer_module._smoke_main)
     assert "patch_upstream_yuv6_globally" in src
@@ -182,6 +226,7 @@ def test_trainer_patches_differentiable_eval_roundtrip_before_scorer() -> None:
 def test_recipe_research_only_and_dispatch_disabled() -> None:
     """Catalog #240: recipe opts out of dispatch at L0 SCAFFOLD."""
     from pathlib import Path
+
     import yaml  # type: ignore[import-untyped]
     recipe_path = (
         Path(__file__).resolve().parents[5]

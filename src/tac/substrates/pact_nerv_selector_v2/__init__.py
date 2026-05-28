@@ -99,17 +99,22 @@ sister boost_nerv at commit `d9aaf7c13`):
 """
 
 from .architecture import (
+    ArithmeticSelectorCoder,
     PactNervSelectorV2Config,
     PactNervSelectorV2Substrate,
-    ArithmeticSelectorCoder,
 )
 from .archive import (
-    PactNervSelectorV2Archive,
     PSV2_HEADER_SIZE,
     PSV2_MAGIC,
     PSV2_SCHEMA_VERSION,
+    PactNervSelectorV2Archive,
     pack_archive,
     parse_archive,
+)
+from .archive_candidate import (
+    export_pact_nerv_selector_v2_mlx_archive,
+    pack_archive_from_exported_state_dict,
+    selector_v2_meta_from_config,
 )
 from .score_aware_loss import (
     PactNervSelectorV2ScoreAwareLoss,
@@ -117,15 +122,18 @@ from .score_aware_loss import (
 )
 
 __all__ = [
-    "ArithmeticSelectorCoder",
     "PSV2_HEADER_SIZE",
     "PSV2_MAGIC",
     "PSV2_SCHEMA_VERSION",
+    "ArithmeticSelectorCoder",
     "PactNervSelectorV2Archive",
     "PactNervSelectorV2Config",
     "PactNervSelectorV2ScoreAwareLoss",
     "PactNervSelectorV2Substrate",
     "ScoreAwareLossWeights",
+    "export_pact_nerv_selector_v2_mlx_archive",
     "pack_archive",
+    "pack_archive_from_exported_state_dict",
     "parse_archive",
+    "selector_v2_meta_from_config",
 ]

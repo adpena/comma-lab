@@ -1,0 +1,1 @@
+{"captured_at_utc": "2026-05-28T04:49:18Z", "ema_drift_l2": 0.004752440787715598, "epoch": 0, "learning_rate": 0.0001, "loss": 0.3303644061088562, "loss_components": {}, "per_axis_decomposition": null, "stage_name": "pact_nerv_selector_v2_mlx_local_mlx_score_aware_full", "wall_clock_seconds": 0.043650150299072266}

@@ -21,7 +21,12 @@ from pathlib import Path
 
 import torch
 
-from .architecture import PactNervSelectorV2Config, PactNervSelectorV2Substrate
+from .architecture import (
+    ArithmeticSelectorCoder,
+    PactNervSelectorV2Config,
+    PactNervSelectorV2Substrate,
+    apply_selector_code_to_pair_frames_255,
+)
 from .archive import parse_archive
 
 
@@ -53,6 +58,13 @@ def inflate_one_video(
         model.latents.copy_(
             arc.latents.to(device=device, dtype=model.latents.dtype)
         )
+    cum_freq = meta.get("selector_cum_freq")
+    coder = ArithmeticSelectorCoder(
+        int(arc.palette_size),
+        cum_freq=tuple(int(v) for v in cum_freq) if isinstance(cum_freq, list) else None,
+        precision=int(meta.get("selector_precision", 32)),
+    )
+    selector_indices = coder.decode(arc.selector_bytes, symbol_count=cfg.num_pairs)
 
     output_dir.mkdir(parents=True, exist_ok=True)
     from PIL import Image  # type: ignore[import-not-found]
@@ -60,12 +72,16 @@ def inflate_one_video(
         for pair_idx in range(cfg.num_pairs):
             idx_tensor = torch.tensor([pair_idx], device=device, dtype=torch.long)
             rgb_0, rgb_1 = model(idx_tensor)
-            for off, rgb in ((0, rgb_0), (1, rgb_1)):
+            pair_frames = torch.cat([rgb_0, rgb_1], dim=0).clamp(0.0, 1.0) * 255.0
+            pair_frames = pair_frames.round()
+            pair_frames = apply_selector_code_to_pair_frames_255(
+                pair_frames,
+                int(selector_indices[pair_idx]),
+            )
+            for off, rgb255 in ((0, pair_frames[0]), (1, pair_frames[1])):
                 frame_idx = 2 * pair_idx + off
-                arr = (
-                    rgb[0].clamp(0.0, 1.0).permute(1, 2, 0).cpu().numpy() * 255.0
-                )
-                arr = arr.round().clip(0, 255).astype("uint8")
+                arr = rgb255.permute(1, 2, 0).cpu().numpy()
+                arr = arr.clip(0, 255).astype("uint8")
                 Image.fromarray(arr).save(output_dir / f"{frame_idx}.png")
 
 

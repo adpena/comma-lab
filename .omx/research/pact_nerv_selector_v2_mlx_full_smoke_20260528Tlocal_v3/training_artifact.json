@@ -1,0 +1,86 @@
+{
+  "archive_bytes": 110049,
+  "archive_path": "/Users/adpena/Projects/pact/.omx/research/pact_nerv_selector_v2_mlx_full_smoke_20260528Tlocal_v3/archive.zip",
+  "archive_sha256": "d6de15db48763df5e8ad9e112705f896efbb102088e0a8138cc1848c32bd7dc7",
+  "canonical_provenance": {
+    "artifact_kind": "predicted_from_model",
+    "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_predicted",
+    "captured_at_utc": "2026-05-28T04:49:18Z",
+    "evidence_grade": "predicted",
+    "hardware_substrate": "macos_arm64_mlx_local",
+    "measurement_axis": "[macOS-MLX research-signal]",
+    "promotion_eligible": false,
+    "score_claim_valid": false,
+    "source_path": "<predictor:long_training_canonical:pact_nerv_selector_v2_mlx_local>",
+    "source_sha256": "d93364828fc0360bb78c091051f6f34be3632e591f164dff14dc987918a659df"
+  },
+  "captured_at_utc": "2026-05-28T04:49:18Z",
+  "config_snapshot": {
+    "batch_pair_indices_per_step": 2,
+    "checkpoint_dir": ".omx/research/pact_nerv_selector_v2_mlx_full_smoke_20260528Tlocal_v3/checkpoints",
+    "checkpoint_interval_epochs": 10,
+    "curriculum_hash": "46ff1b5608e24972a7ea613547b3fffef2014c62a699a2d17944c387e27b6150",
+    "curriculum_stages": [
+      {
+        "enable_qat": false,
+        "end_epoch": 1,
+        "epoch_count": 1,
+        "freeze_layers": [],
+        "loss_weights": {
+          "recon": 1.0
+        },
+        "lr_scale": 1.0,
+        "name": "pact_nerv_selector_v2_mlx_local_mlx_score_aware_full",
+        "notes": "MLX-first score-aware full-budget stage via canonical mlx_score_aware harness; reconstruction + optional Hinton-KL T=2.0 scorer surrogate.",
+        "start_epoch": 0
+      }
+    ],
+    "device": "mlx",
+    "early_stopping_patience": 2,
+    "ema_accumulation": "naive",
+    "ema_decay": 0.997,
+    "epochs": 1,
+    "evidence_grade": "[macOS-MLX research-signal]",
+    "lane_id": "lane_pact_nerv_selector_v2_l1_long_run_mlx_local_20260528",
+    "learning_rate": 0.0001,
+    "notes": "PACT-NeRV-SELECTOR-V2 MLX-first score-aware LONG-RUN training via canonical mlx_score_aware harness; real contest video + reconstruction + optional Hinton-KL T=2.0 scorer surrogate; arithmetic-coded selector over k=16 palette (Witten 1987 \u00a73.2) is the substrate-distinguishing primitive operating at ARCHIVE-ENCODE TIME (NOT the MLX forward path; sister of PACT-NeRV-IA3 base HNeRV decoder backbone); non-promotable [macOS-MLX research-signal] per Catalog #192/#317/#341; per-axis + MLX->PyTorch bridge + paired CUDA/CPU anchor DEFERRED to sister L2 + per-substrate symposium Catalog #325.",
+    "optimizer_class": "adamw",
+    "output_dir": ".omx/research/pact_nerv_selector_v2_mlx_full_smoke_20260528Tlocal_v3",
+    "resume_from_checkpoint": null,
+    "score_aware_loss_kwargs": {},
+    "seed": 0,
+    "substrate_id": "pact_nerv_selector_v2_mlx_local",
+    "telemetry_path": ".omx/research/pact_nerv_selector_v2_mlx_full_smoke_20260528Tlocal_v3/telemetry.jsonl"
+  },
+  "early_stop_reason": "",
+  "early_stopped": false,
+  "ema_shadow_checkpoint_path": ".omx/research/pact_nerv_selector_v2_mlx_full_smoke_20260528Tlocal_v3/checkpoints/final_epoch000000_20260528T044918Z.ema_shadow.state.npsd",
+  "lane_id": "lane_pact_nerv_selector_v2_l1_long_run_mlx_local_20260528",
+  "live_checkpoint_path": ".omx/research/pact_nerv_selector_v2_mlx_full_smoke_20260528Tlocal_v3/checkpoints/final_epoch000000_20260528T044918Z.live.state.npsd",
+  "per_epoch_metrics": [
+    {
+      "captured_at_utc": "2026-05-28T04:49:18Z",
+      "ema_drift_l2": 0.004752440787715598,
+      "epoch": 0,
+      "learning_rate": 0.0001,
+      "loss": 0.3303644061088562,
+      "loss_components": {},
+      "per_axis_decomposition": null,
+      "stage_name": "pact_nerv_selector_v2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 0.043650150299072266
+    }
+  ],
+  "per_epoch_metrics_count": 1,
+  "posterior_refusal_reason": "non-authoritative (advisory-grade) evidence_tag: '[MPS-research-signal]'",
+  "posterior_update_accepted": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema_version": "long_training_canonical_artifact.v1",
+  "score_claim": false,
+  "substrate_id": "pact_nerv_selector_v2_mlx_local",
+  "telemetry_path": ".omx/research/pact_nerv_selector_v2_mlx_full_smoke_20260528Tlocal_v3/telemetry.jsonl",
+  "total_epochs_completed": 1,
+  "total_wall_clock_seconds": 0.050063133239746094
+}
