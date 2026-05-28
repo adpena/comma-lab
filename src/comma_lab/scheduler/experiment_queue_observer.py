@@ -2005,6 +2005,7 @@ def observe_experiment_queue(
                 f".venv/bin/python tools/experiment_queue.py --queue <queue-path> observe --tail-lines {tail_lines}"
             ),
             "control_status": ".venv/bin/python tools/queue_control.py --queue <queue-path> status",
+            "supervise": ".venv/bin/python tools/queue_supervisor.py --queue <queue-path> --output-dir <output-dir> --execute",
             "tail_logs": ".venv/bin/python tools/queue_control.py --queue <queue-path> tail-logs --lines 80",
             "pause": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control paused --reason '<reason>'",
             "resume": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control running --reason '<reason>'",

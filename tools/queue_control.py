@@ -131,6 +131,37 @@ def build_control_command(queue_path: str | Path, state_path: str | Path, mode: 
     ]
 
 
+def build_supervise_command(
+    queue_path: str | Path,
+    state_path: str | Path,
+    output_dir: str | Path,
+    *,
+    max_ticks: int = 16,
+    max_steps_per_tick: int = 16,
+    max_parallel: str = "auto",
+    execute: bool = True,
+) -> list[str]:
+    command = [
+        ".venv/bin/python",
+        "tools/queue_supervisor.py",
+        "--queue",
+        _command_path(queue_path),
+        "--state",
+        _command_path(state_path),
+        "--output-dir",
+        _command_path(output_dir),
+        "--max-ticks",
+        str(max_ticks),
+        "--max-steps-per-tick",
+        str(max_steps_per_tick),
+        "--max-parallel",
+        max_parallel,
+    ]
+    if execute:
+        command.append("--execute")
+    return command
+
+
 def _count(observation: Mapping[str, Any], status: str) -> int:
     counts = observation.get("status_counts")
     if not isinstance(counts, Mapping):
@@ -395,6 +426,13 @@ def summarize_observation(
         "queued_step_count": _count(observation, "queued"),
         "recommended_actions": recommended_actions,
         "resume_command": resume_command,
+        "supervise_command": build_supervise_command(
+            queue_path,
+            state_path,
+            Path(".omx") / "research" / f"queue_supervisor_{observation.get('queue_id')}",
+            max_steps_per_tick=max_steps,
+            max_parallel=str(max_parallel) if max_parallel is not None else "auto",
+        ),
         "pause_command": build_control_command(
             queue_path,
             state_path,
