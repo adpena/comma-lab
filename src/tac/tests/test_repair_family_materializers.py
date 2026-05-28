@@ -12,6 +12,9 @@ from pathlib import Path
 
 import pytest
 
+from tac.optimization.repair_archive_entropy_substrate_coverage import (
+    REPAIR_ARCHIVE_ENTROPY_SUBSTRATE_COVERAGE_SCHEMA,
+)
 from tac.optimization.repair_campaign_chain_contract import (
     RepairCampaignChainContractError,
 )
@@ -595,6 +598,15 @@ def test_byte_transform_executor_mutates_fec6_selector_payload_when_detected(
     assert "fp11_frame_selector_wrapper" in detected_families
     assert "fec6_fixed_huffman_k16_selector" in detected_families
     assert report["selected_archive_transform_kind"] == "fec6_selector_payload_mutation"
+    assert (
+        report["archive_entropy_substrate_coverage_schema"]
+        == REPAIR_ARCHIVE_ENTROPY_SUBSTRATE_COVERAGE_SCHEMA
+    )
+    coverage = report["archive_entropy_substrate_coverage"]
+    assert coverage["compiler_position_coverage"]["before_coder"] is True
+    assert "fec_variants" in coverage["materialized_substrates"]
+    assert "selector_streams" in coverage["materialized_substrates"]
+    assert "huffman_coding" in coverage["materialized_substrates"]
     assert report["semantic_payload_changed"] is True
     assert report["score_affecting_payload_changed"] is False
     assert candidate["semantic_payload_changed"] is True
@@ -673,6 +685,9 @@ def test_byte_transform_executor_mutates_non_fec6_fp11_selector_payloads(
     detected_families = report["archive_family_probe"]["detected_archive_families"]
     assert archive_family in detected_families
     assert report["selected_archive_transform_kind"] == "fp11_selector_payload_mutation"
+    assert report["archive_entropy_substrate_coverage"][
+        "compiler_position_coverage"
+    ]["before_coder"] is True
     assert report["semantic_payload_changed"] is True
     assert report["score_affecting_payload_changed"] is False
     assert candidate["semantic_payload_changed"] is True
@@ -796,6 +811,9 @@ def test_byte_transform_executor_mutates_psv4_selector_packet(
         "detected_archive_families"
     ]
     assert report["selected_archive_transform_kind"] == "psv4_selector_payload_mutation"
+    assert "header_elision_or_rewrite" in report[
+        "archive_entropy_substrate_coverage"
+    ]["materialized_substrates"]
     assert report["semantic_payload_changed"] is True
     assert report["score_affecting_payload_changed"] is False
     assert candidate["runtime_consumption_proof_ready"] is True
@@ -970,6 +988,7 @@ def test_entropy_stage_chain_executor_composes_selected_archive_stages(
     assert chain_bundle["schema"] == REPAIR_ENTROPY_STAGE_CHAIN_EXECUTION_BUNDLE_SCHEMA
     assert chain_bundle["chain_count"] == 1
     assert chain_bundle["materialized_chain_candidate_count"] == 1
+    assert chain_bundle["archive_entropy_substrate_coverage_count"] == 2
     chain_report = chain_bundle["chain_reports"][0]
     assert chain_report["stage_count"] == 2
     assert chain_report["planned_stage_count"] == 2

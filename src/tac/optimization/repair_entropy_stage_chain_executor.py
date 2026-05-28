@@ -310,6 +310,9 @@ def _build_one_chain(
             "allocated_repair_bytes": report.get("allocated_repair_bytes"),
             "byte_transform_delta": dict(_mapping(report.get("byte_transform_delta"))),
             "mlx_local_probe_delta": dict(_mapping(report.get("mlx_local_probe_delta"))),
+            "archive_entropy_substrate_coverage": dict(
+                _mapping(report.get("archive_entropy_substrate_coverage"))
+            ),
             "stage_input_archive": dict(current_archive),
             "stage_output_archive": None,
             "stage_execution_report_path": None,
@@ -420,6 +423,9 @@ def _build_one_chain(
                         or candidate.get("receiver_contract_satisfied") is True
                     ),
                     "stage_report_blockers": _string_list(stage_report.get("blockers")),
+                    "stage_archive_entropy_substrate_coverage": dict(
+                        _mapping(stage_report.get("archive_entropy_substrate_coverage"))
+                    ),
                     "stage_blockers": ordered_unique(output_blockers),
                 }
             )
@@ -462,6 +468,16 @@ def _build_one_chain(
         "source_archive_bytes": source_bytes,
         "candidate_archive_bytes": final_bytes if final_archive is not None else None,
         "cumulative_saved_bytes": source_bytes - final_bytes if final_archive is not None else None,
+        "archive_entropy_substrate_coverages": [
+            stage.get("stage_archive_entropy_substrate_coverage")
+            or stage.get("archive_entropy_substrate_coverage")
+            for stage in stages
+            if isinstance(
+                stage.get("stage_archive_entropy_substrate_coverage")
+                or stage.get("archive_entropy_substrate_coverage"),
+                Mapping,
+            )
+        ],
         "exact_axis_required": ["contest-CPU", "contest-CUDA"],
         "blockers": ordered_unique(
             [
@@ -556,6 +572,22 @@ def build_repair_entropy_stage_chain_execution_bundle(
             report.get("candidate_archive")
             for report in materialized
             if isinstance(report.get("candidate_archive"), Mapping)
+        ],
+        "archive_entropy_substrate_coverage_count": sum(
+            len(
+                [
+                    item
+                    for item in report.get("archive_entropy_substrate_coverages") or []
+                    if isinstance(item, Mapping)
+                ]
+            )
+            for report in chain_reports
+        ),
+        "archive_entropy_substrate_coverages": [
+            item
+            for report in chain_reports
+            for item in report.get("archive_entropy_substrate_coverages") or []
+            if isinstance(item, Mapping)
         ],
         "composed_archive_candidate_default": True,
         "encoder_side_only": True,

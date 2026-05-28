@@ -1392,6 +1392,18 @@ def _build_summary(
                 "runtime_consumption_proof_ready_count"
             ]
         ),
+        "archive_entropy_substrate_coverage_count": (
+            entropy_stage_chain_execution_bundle.get(
+                "archive_entropy_substrate_coverage_count",
+                0,
+            )
+        ),
+        "archive_entropy_substrate_coverages": (
+            entropy_stage_chain_execution_bundle.get(
+                "archive_entropy_substrate_coverages",
+                [],
+            )
+        ),
         "frontier_executable_selection_consumed": any(
             isinstance(item, dict)
             and isinstance(item.get("frontier_selected_queue_report"), dict)

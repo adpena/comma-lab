@@ -35,6 +35,10 @@ from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
     require_no_truthy_authority_fields,
 )
+from tac.optimization.repair_archive_entropy_substrate_coverage import (
+    REPAIR_ARCHIVE_ENTROPY_SUBSTRATE_COVERAGE_SCHEMA,
+    build_repair_archive_entropy_substrate_coverage,
+)
 from tac.optimization.repair_campaign_replay_bundle import (
     capture_safe_replay_environment,
     stable_json_sha256,
@@ -2143,6 +2147,13 @@ def build_repair_family_byte_transform_execution_report(
         family_id=family_id,
         allow_overwrite=allow_overwrite,
     )
+    archive_entropy_substrate_coverage = (
+        build_repair_archive_entropy_substrate_coverage(
+            archive_family_probe=archive_family_probe,
+            candidate_archive_transform_variants=archive_variants,
+            selected_candidate_archive=candidate_archive,
+        )
+    )
     blockers.extend(archive_blockers)
     replay_bundle = _build_replay_bundle(
         manifest_path=family_materializer_manifest_path,
@@ -2187,6 +2198,10 @@ def build_repair_family_byte_transform_execution_report(
         "candidate_archive_transform_variants": archive_variants,
         "candidate_archive_transform_variant_count": len(archive_variants),
         "selected_archive_transform_kind": candidate_archive.get("archive_native_transform_kind"),
+        "archive_entropy_substrate_coverage_schema": (
+            REPAIR_ARCHIVE_ENTROPY_SUBSTRATE_COVERAGE_SCHEMA
+        ),
+        "archive_entropy_substrate_coverage": archive_entropy_substrate_coverage,
         "semantic_payload_changed": candidate_archive.get("semantic_payload_changed") is True,
         "exact_axis_score_affecting_adjudication_required": (
             candidate_archive.get("exact_axis_score_affecting_adjudication_required") is True
