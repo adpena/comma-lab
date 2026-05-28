@@ -64,6 +64,8 @@ def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path
             "--write-pr95-full-frame-inflate-parity",
             "--full-frame-parity-max-output-bytes",
             "7000000",
+            "--full-frame-parity-max-mismatch-samples",
+            "5",
             "--full-frame-parity-timeout-seconds",
             "180",
             "--full-frame-parity-mlx-device",
@@ -140,6 +142,9 @@ def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path
     )
     assert export_summary["runtime_consumption_proof_present"] is True
     assert export_summary["runtime_consumption_proven"] is True
+    assert runtime_proof["work_dir_preserved"] is False
+    assert runtime_proof["raw_output_path"] is None
+    assert not (output_dir / "runtime_consumption_work").exists()
     assert (output_dir / "pr95_pytorch_state_dict.pt").is_file()
     assert pytorch_export_parity["schema"] == (
         "pr95_hnerv_mlx_pytorch_export_forward_parity.v1"
@@ -196,7 +201,24 @@ def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path
     assert summary["full_frame_inflate_parity_proof"][
         "full_frame_inflate_parity_satisfied"
     ] is False
-    assert summary["full_frame_inflate_parity_proof"]["diff"]["max_abs_uint8"] <= 1
+    full_frame_diff = summary["full_frame_inflate_parity_proof"]["diff"]
+    assert full_frame_diff["max_abs_uint8"] <= 1
+    assert full_frame_diff["changed_byte_count"] > 0
+    assert full_frame_diff["raw_layout"] == "frames_nhwc_uint8"
+    assert full_frame_diff["frame_shape_nhwc"][1:] == [874, 1164, 3]
+    assert sum(full_frame_diff["per_frame_changed_byte_count"]) == (
+        full_frame_diff["changed_byte_count"]
+    )
+    assert sum(full_frame_diff["per_channel_changed_byte_count"].values()) == (
+        full_frame_diff["changed_byte_count"]
+    )
+    assert sum(full_frame_diff["boundary_distance_changed_byte_count"].values()) == (
+        full_frame_diff["changed_byte_count"]
+    )
+    assert full_frame_diff["first_mismatch"]["abs_delta_uint8"] <= 1
+    assert full_frame_diff["first_mismatch"]["channel_name"] in {"r", "g", "b"}
+    assert full_frame_diff["mismatch_sample_count"] <= 5
+    assert full_frame_diff["mismatch_sample_cap"] == 5
     assert manifest["runtime_consumption_proof_present"] is True
     assert manifest["runtime_consumption_proven"] is True
     assert manifest["full_frame_inflate_parity_proof_present"] is True
@@ -260,6 +282,9 @@ def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path
         full_frame_parity["expected_raw_bytes"]
     )
     assert manifest["full_frame_inflate_parity_proof"]["diff"]["same_shape"] is True
+    assert manifest["full_frame_inflate_parity_proof"]["diff"]["first_mismatch"] == (
+        full_frame_diff["first_mismatch"]
+    )
     assert PR95_FULL_FRAME_INFLATE_PARITY_BLOCKER not in (
         manifest["exact_readiness_refusal"]["blockers"]
     )

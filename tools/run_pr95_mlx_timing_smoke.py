@@ -675,6 +675,7 @@ def _recommended_execution_command(
     full_frame_parity_chunk_pairs: int,
     full_frame_parity_timeout_seconds: float,
     full_frame_parity_max_output_bytes: int,
+    full_frame_parity_max_mismatch_samples: int,
     write_source_faithful_preprocess_smoke: bool,
     write_source_video_preprocess_smoke: bool,
     train_on_source_video_pairs: bool,
@@ -689,6 +690,7 @@ def _recommended_execution_command(
     source_video_gradient_shape: str,
     runtime_proof_timeout_seconds: float,
     runtime_proof_max_output_bytes: int,
+    runtime_proof_keep_work_dir: bool,
     optimizer_descriptor_id: str,
 ) -> list[str]:
     command = [
@@ -728,6 +730,8 @@ def _recommended_execution_command(
                 str(runtime_proof_max_output_bytes),
             ]
         )
+        if runtime_proof_keep_work_dir:
+            command.append("--runtime-proof-keep-work-dir")
     if write_pr95_full_frame_inflate_parity:
         command.append("--write-pr95-full-frame-inflate-parity")
         if require_pr95_full_frame_inflate_parity:
@@ -746,6 +750,8 @@ def _recommended_execution_command(
                 str(full_frame_parity_timeout_seconds),
                 "--full-frame-parity-max-output-bytes",
                 str(full_frame_parity_max_output_bytes),
+                "--full-frame-parity-max-mismatch-samples",
+                str(full_frame_parity_max_mismatch_samples),
             ]
         )
         for override_item in full_frame_parity_conv2d_override_items:
@@ -1116,6 +1122,7 @@ def _build_representation_training_plan(
     full_frame_parity_conv2d_override_items: list[str],
     full_frame_parity_conv2d_accumulation_overrides: dict[str, str],
     full_frame_parity_chunk_pairs: int,
+    full_frame_parity_max_mismatch_samples: int,
     write_source_faithful_preprocess_smoke: bool,
     write_source_video_preprocess_smoke: bool,
     train_on_source_video_pairs: bool,
@@ -1308,6 +1315,9 @@ def _build_representation_training_plan(
             "full_frame_parity_max_output_bytes": (
                 recommended_execution.get("full_frame_parity_max_output_bytes")
             ),
+            "full_frame_parity_max_mismatch_samples": (
+                full_frame_parity_max_mismatch_samples
+            ),
             "source_faithful_preprocess_smoke_requested": (
                 write_source_faithful_preprocess_smoke
             ),
@@ -1465,6 +1475,11 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
         "runtime_consumption_proof": _rel(output_dir / "runtime_consumption_proof.json")
         if args.prove_pr95_runtime_consumption
         else None,
+        "runtime_proof_keep_work_dir": (
+            bool(args.runtime_proof_keep_work_dir)
+            if args.prove_pr95_runtime_consumption
+            else None
+        ),
         "full_frame_inflate_parity_proof": _rel(
             output_dir / "full_frame_inflate_parity_proof.json"
         )
@@ -1502,6 +1517,11 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
         "full_frame_parity_max_output_bytes": args.full_frame_parity_max_output_bytes
         if args.write_pr95_full_frame_inflate_parity
         else None,
+        "full_frame_parity_max_mismatch_samples": (
+            args.full_frame_parity_max_mismatch_samples
+            if args.write_pr95_full_frame_inflate_parity
+            else None
+        ),
         "require_pr95_full_frame_inflate_parity": (
             args.require_pr95_full_frame_inflate_parity
             if args.write_pr95_full_frame_inflate_parity
@@ -1689,6 +1709,7 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
             source_video_gradient_shape=args.source_video_gradient_shape,
             runtime_proof_timeout_seconds=args.runtime_proof_timeout_seconds,
             runtime_proof_max_output_bytes=args.runtime_proof_max_output_bytes,
+            runtime_proof_keep_work_dir=args.runtime_proof_keep_work_dir,
             public_pr95_source_model=args.public_pr95_source_model,
             pytorch_export_sample_indices=args.pytorch_export_sample_index or [0],
             pytorch_export_mlx_device=args.pytorch_export_mlx_device,
@@ -1728,6 +1749,9 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
             ),
             full_frame_parity_max_output_bytes=(
                 args.full_frame_parity_max_output_bytes
+            ),
+            full_frame_parity_max_mismatch_samples=(
+                args.full_frame_parity_max_mismatch_samples
             ),
             optimizer_descriptor_id=optimizer_descriptor_id,
         ),
@@ -1802,6 +1826,9 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
             full_frame_parity_conv2d_accumulation_overrides
         ),
         full_frame_parity_chunk_pairs=args.full_frame_parity_chunk_pairs,
+        full_frame_parity_max_mismatch_samples=(
+            args.full_frame_parity_max_mismatch_samples
+        ),
         write_source_faithful_preprocess_smoke=(
             args.write_source_faithful_preprocess_smoke
         ),
@@ -1916,6 +1943,9 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
         "full_frame_parity_chunk_pairs": args.full_frame_parity_chunk_pairs,
         "full_frame_parity_timeout_seconds": args.full_frame_parity_timeout_seconds,
         "full_frame_parity_max_output_bytes": args.full_frame_parity_max_output_bytes,
+        "full_frame_parity_max_mismatch_samples": (
+            args.full_frame_parity_max_mismatch_samples
+        ),
         "pytorch_export_atol_max": args.pytorch_export_atol_max,
         "pytorch_export_atol_mean": args.pytorch_export_atol_mean,
         "write_source_faithful_preprocess_smoke": bool(
@@ -2136,6 +2166,9 @@ def _representation_manifest(
             ),
             "full_frame_parity_max_output_bytes": manifest.get(
                 "full_frame_parity_max_output_bytes"
+            ),
+            "full_frame_parity_max_mismatch_samples": manifest.get(
+                "full_frame_parity_max_mismatch_samples"
             ),
             "pytorch_export_forward_parity_requested": (
                 manifest.get("write_pytorch_export_parity") is True
@@ -2422,6 +2455,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=64 * 1024 * 1024,
     )
     parser.add_argument(
+        "--runtime-proof-keep-work-dir",
+        action="store_true",
+        help="Keep public runtime-consumption raw outputs. Default records hashes only.",
+    )
+    parser.add_argument(
         "--write-pr95-full-frame-inflate-parity",
         action="store_true",
         help=(
@@ -2467,6 +2505,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--full-frame-parity-max-output-bytes",
         type=int,
         default=64 * 1024 * 1024,
+    )
+    parser.add_argument(
+        "--full-frame-parity-max-mismatch-samples",
+        type=int,
+        default=32,
+        help="Localized mismatch sample cap for the PR95 full-frame drift atlas.",
     )
     parser.add_argument(
         "--write-source-faithful-preprocess-smoke",
@@ -2678,6 +2722,8 @@ def main(argv: list[str] | None = None) -> int:
             "fixed_fp64 full-frame parity accumulation is unsupported on MLX GPU; "
             "use --full-frame-parity-mlx-device cpu or choose fp32/kahan modes"
         )
+    if args.full_frame_parity_max_mismatch_samples < 0:
+        raise SystemExit("--full-frame-parity-max-mismatch-samples must be >= 0")
     if output_dir.exists() and not args.allow_existing_output_dir:
         raise SystemExit(
             f"output directory already exists: {_rel(output_dir)} "
@@ -2852,6 +2898,9 @@ def main(argv: list[str] | None = None) -> int:
     manifest["full_frame_parity_max_output_bytes"] = (
         args.full_frame_parity_max_output_bytes
     )
+    manifest["full_frame_parity_max_mismatch_samples"] = (
+        args.full_frame_parity_max_mismatch_samples
+    )
     manifest["pytorch_export_atol_max"] = args.pytorch_export_atol_max
     manifest["pytorch_export_atol_mean"] = args.pytorch_export_atol_mean
     archive_summary = (
@@ -3019,6 +3068,8 @@ def main(argv: list[str] | None = None) -> int:
             "--max-output-bytes",
             str(args.runtime_proof_max_output_bytes),
         ]
+        if args.runtime_proof_keep_work_dir:
+            proof_command.append("--keep-work-dir")
         if args.allow_existing_output_dir and proof_path.exists():
             proof_command.extend(
                 [
@@ -3102,6 +3153,8 @@ def main(argv: list[str] | None = None) -> int:
             args.full_frame_parity_conv2d_override_preset,
             "--chunk-pairs",
             str(args.full_frame_parity_chunk_pairs),
+            "--max-mismatch-samples",
+            str(args.full_frame_parity_max_mismatch_samples),
         ]
         for override_item in args.full_frame_parity_conv2d_override or []:
             proof_command.extend(["--conv2d-override", override_item])

@@ -1,0 +1,505 @@
+{
+  "archive_packet": {
+    "archive_zip_path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+    "archive_zip_sha256": "cace13c614f45f7eb7c29c44832ab50b4f07542c7a9b7cc570c4a8d50dfe3492",
+    "dispatch_attempted": false,
+    "dispatch_packet_ready": false,
+    "gpu_launched": false,
+    "latent_shape": [
+      1,
+      28
+    ],
+    "member_bytes": 8392,
+    "member_compress_type": 0,
+    "member_name": "0.bin",
+    "member_sha256": "f8206e3709734564b3fc74bf2183c9bc1897c091b21a97b8d5d16fa778a6d68b",
+    "meta": {
+      "base_channels": 4,
+      "eval_size": [
+        384,
+        512
+      ],
+      "latent_dim": 28,
+      "n_pairs": 1
+    },
+    "pr95_1to1_reproduction_claim": false,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "reproduction_claim": false,
+    "reproduction_equivalence": false,
+    "schema": "pr95_hnerv_public_archive_packet.v1",
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "source_pr": 95,
+    "state_dict_tensor_count": 26,
+    "submission": "hnerv_muon"
+  },
+  "conv2d_accumulation_mode": "kahan_fp32",
+  "conv2d_accumulation_overrides": {},
+  "dispatch_attempted": false,
+  "dispatch_packet_ready": false,
+  "evidence_grade": "[macOS-MLX research-signal]",
+  "exact_readiness_refusal": {
+    "blockers": [
+      "local_mlx_pytorch_export_parity_probe_is_not_contest_auth_eval",
+      "full_frame_inflate_parity_against_source_runtime_not_run",
+      "requires_exact_cpu_cuda_auth_eval_before_score_claim"
+    ],
+    "ready": false,
+    "schema": "exact_readiness_refusal.v1"
+  },
+  "forward_parity": {
+    "archive_packet": {
+      "archive_zip_path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_public_archive.zip",
+      "archive_zip_sha256": "cace13c614f45f7eb7c29c44832ab50b4f07542c7a9b7cc570c4a8d50dfe3492",
+      "dispatch_attempted": false,
+      "dispatch_packet_ready": false,
+      "gpu_launched": false,
+      "latent_shape": [
+        1,
+        28
+      ],
+      "member_bytes": 8392,
+      "member_compress_type": 0,
+      "member_name": "0.bin",
+      "member_sha256": "f8206e3709734564b3fc74bf2183c9bc1897c091b21a97b8d5d16fa778a6d68b",
+      "meta": {
+        "base_channels": 4,
+        "eval_size": [
+          384,
+          512
+        ],
+        "latent_dim": 28,
+        "n_pairs": 1
+      },
+      "pr95_1to1_reproduction_claim": false,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "reproduction_claim": false,
+      "reproduction_equivalence": false,
+      "schema": "pr95_hnerv_public_archive_packet.v1",
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "source_pr": 95,
+      "state_dict_tensor_count": 26,
+      "submission": "hnerv_muon"
+    },
+    "conv2d_accumulation_mode": "kahan_fp32",
+    "conv2d_accumulation_overrides": {},
+    "dispatch_attempted": false,
+    "dispatch_packet_ready": false,
+    "elapsed_seconds": 0.04263470800651703,
+    "evidence_grade": "[macOS-MLX research-signal]",
+    "exact_readiness_refusal": {
+      "blockers": [
+        "local_mlx_forward_parity_probe_is_not_contest_auth_eval",
+        "requires_full_frame_inflate_parity_before_runtime_consumption_claim",
+        "requires_exact_cpu_cuda_auth_eval_before_score_claim"
+      ],
+      "ready": false,
+      "schema": "exact_readiness_refusal.v1"
+    },
+    "generated_utc": "2026-05-28T13:53:51.904127+00:00",
+    "gpu_launched": false,
+    "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+    "mlx_device": "cpu",
+    "mlx_output_shape": [
+      1,
+      2,
+      3,
+      384,
+      512
+    ],
+    "parity": {
+      "atol_max": 0.002,
+      "atol_mean": 0.0001,
+      "max_abs": 3.0517578125e-05,
+      "mean_abs": 2.793152816593647e-06,
+      "p999_abs": 3.0517578125e-05,
+      "p99_abs": 1.52587890625e-05,
+      "passed": true
+    },
+    "pr95_1to1_reproduction_claim": false,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "reproduction_claim": false,
+    "reproduction_equivalence": false,
+    "sample_count": 1,
+    "sample_indices": [
+      0
+    ],
+    "schema": "pr95_hnerv_public_archive_mlx_forward_parity.v1",
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "source_pr": 95,
+    "submission": "hnerv_muon",
+    "torch_output_shape": [
+      1,
+      2,
+      3,
+      384,
+      512
+    ]
+  },
+  "generated_utc": "2026-05-28T13:53:51.904191+00:00",
+  "gpu_launched": false,
+  "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+  "mlx_device": "cpu",
+  "pr95_1to1_reproduction_claim": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "pt_bytes": 40085,
+  "pt_path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_pytorch_state_dict.pt",
+  "pt_sha256": "f4cc18b65501fa2d52b33db0f4425fdb058445680e0ee4863275cb4125159c78",
+  "pytorch_export_forward_parity_established": true,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "reproduction_claim": false,
+  "reproduction_equivalence": false,
+  "run_id": "pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed29_steps1_c4_source_video_rgb_yuv6",
+  "sample_count": 1,
+  "sample_indices": [
+    0
+  ],
+  "schema": "pr95_hnerv_mlx_pytorch_export_forward_parity.v1",
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "source_pr": 95,
+  "state_dict_pt_export": {
+    "blockers": [
+      "macos_mlx_research_signal_training_axis_only",
+      "requires_paired_cuda_t4_or_linux_x86_64_eval_for_promotion",
+      "export_step_does_not_change_evidence_grade"
+    ],
+    "dtype_policy": {
+      "default": "preserve_numpy_dtype",
+      "force_float32_names": []
+    },
+    "file_sha256": "f4cc18b65501fa2d52b33db0f4425fdb058445680e0ee4863275cb4125159c78",
+    "file_size_bytes": 40085,
+    "operator_routable_next_step": "Stage exported .pt + sister archive grammar; fire tools/operator_authorize.py --recipe <recipe> --target modal for [contest-CUDA] T4 eval via experiments/contest_auth_eval.py",
+    "output_pt_path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_full_frame_drift_atlas_source_video_20260528Tlocal/pr95_pytorch_state_dict.pt",
+    "per_tensor": {
+      "blocks.0.bias": {
+        "export_dtype": "float32",
+        "forced_float32": false,
+        "sha256": "68fa5419e03c245b0bf7df8a57e4c6099a3b15db60cc9ca5cd0d93865d891f14",
+        "shape": [
+          16
+        ],
+        "source_dtype": "float32"
+      },
+      "blocks.0.weight": {
+        "export_dtype": "float32",
+        "forced_float32": false,
+        "sha256": "3df6c57083c8fa34b78063d82054bcfd33ba81f49b5436d88cae89c6e589fdd9",
+        "shape": [
+          16,
+          4,
+          3,
+          3
+        ],
+        "source_dtype": "float32"
+      },
+      "blocks.1.bias": {
+        "export_dtype": "float32",
+        "forced_float32": false,
+        "sha256": "7244567039429fe9d2126c6f577bdf574794e27cfab299f5787b6a6b26579b1f",
+        "shape": [
+          16
+        ],
+        "source_dtype": "float32"
+      },
+      "blocks.1.weight": {
+        "export_dtype": "float32",
+        "forced_float32": false,
+        "sha256": "08fc38184a8fdb729e8cfdd0c8ff6e8e2af9085649948859194025fd91620dee",
+        "shape": [
+          16,
+          4,
+          3,
+          3
+        ],
+        "source_dtype": "float32"
+      },
+      "blocks.2.bias": {
+        "export_dtype": "float32",
+        "forced_float32": false,
+        "sha256": "076d938ebb41b234997c189b6c596c576ea4ccaae5ddeb2a13c652cc774a2a21",
+        "shape": [
+          12
+        ],
+        "source_dtype": "float32"
+      },
+      "blocks.2.weight": {
+        "export_dtype": "float32",
+        "forced_float32": false,
+        "sha256": "8e423019e73ec3b1f93257804222720c66c7a18af45390801cfa63e29dfed42d",
+        "shape": [
+          12,
+          4,
+          3,
+          3
+        ],
+        "source_dtype": "float32"
+      },
+      "blocks.3.bias": {
+        "export_dtype": "float32",
+        "forced_float32": false,
+        "sha256": "469922013bb8ad6e9e229a211e9983fa4b761d9443665f16af2f4009753931c3",
+        "shape": [
+          8
+        ],
+        "source_dtype": "float32"
+      },
+      "blocks.3.weight": {
+        "export_dtype": "float32",
+        "forced_float32": false,
+        "sha256": "fe6d9a60e0ad3cfbd0ee2aaf94cd742724ef86cdb28c84ab176e1756e26dc303",
+        "shape": [
+          8,
+          3,
+          3,
+          3
+        ],
+        "source_dtype": "float32"
+      },
+      "blocks.4.bias": {
+        "export_dtype": "float32",
+        "forced_float32": false,
+        "sha256": "0ffcb4a231e979e1ad9c068a3651f82915418e230c3d16f46bdbead19b7e0918",
+        "shape": [
+          8
+        ],
+        "source_dtype": "float32"
+      },
+      "blocks.4.weight": {
+        "export_dtype": "float32",
+        "forced_float32": false,
+        "sha256": "7a4278f378d51c19b3becdf4306bf4dcdeffc828f166f8951ab2336457e2aa3d",
+        "shape": [
+          8,
+          2,
+          3,
+          3
+        ],
+        "source_dtype": "float32"
+      },
+      "blocks.5.bias": {
+        "export_dtype": "float32",
+        "forced_float32": false,
+        "sha256": "964539080d3262c6146a47d3ca2945344939bf1484858cf36132dc11bee4729a",
+        "shape": [
+          8
+        ],
+        "source_dtype": "float32"
+      },
+      "blocks.5.weight": {
+        "export_dtype": "float32",
+        "forced_float32": false,
+        "sha256": "8c7fb5f3bcb1c31368afba9a94f8fc87550747ec847d6eef7da06af3619162b4",
+        "shape": [
+          8,
+          2,
+          3,
+          3
+        ],
+        "source_dtype": "float32"
+      },
+      "refine.0.bias": {
+        "export_dtype": "float32",
+        "forced_float32": false,
+        "sha256": "1e2a8d9f116f0ece8782c7f035725121d36774dca30488872a225a2a3de82434",
+        "shape": [
+          1
+        ],
+        "source_dtype": "float32"
+      },
+      "refine.0.weight": {
+        "export_dtype": "float32",
+        "forced_float32": false,
+        "sha256": "b0ffef9d1c7605545048fa999f40e42ebbd2d72f90f8734f9502e5168f07c2a8",
+        "shape": [
+          1,
+          2,
+          3,
+          3
+        ],
+        "source_dtype": "float32"
+      },
+      "refine.1.bias": {
+        "export_dtype": "float32",
+        "forced_float32": false,
+        "sha256": "5b55120f188bbf7a6cdaa24f918841721ea82b20cb4d45418c1d6750cc78e05d",
+        "shape": [
+          2
+        ],
+        "source_dtype": "float32"
+      },
+      "refine.1.weight": {
+        "export_dtype": "float32",
+        "forced_float32": false,
+        "sha256": "97edab2578967fc53ab5fe7fdc9b6a82d14465ae726fa753a4e881eb2666c970",
+        "shape": [
+          2,
+          1,
+          3,
+          3
+        ],
+        "source_dtype": "float32"
+      },
+      "rgb_0.bias": {
+        "export_dtype": "float32",
+        "forced_float32": false,
+        "sha256": "43d62eb6b21c03a3946273b6109c49e9fde817aba3d6eb24e6f8bb1fc135bd57",
+        "shape": [
+          3
+        ],
+        "source_dtype": "float32"
+      },
+      "rgb_0.weight": {
+        "export_dtype": "float32",
+        "forced_float32": false,
+        "sha256": "5fc6357ba03b7f4563584ad625cb46b94e579a26a4eaf8bbe941c024bd2db62d",
+        "shape": [
+          3,
+          2,
+          3,
+          3
+        ],
+        "source_dtype": "float32"
+      },
+      "rgb_1.bias": {
+        "export_dtype": "float32",
+        "forced_float32": false,
+        "sha256": "43d62eb6b21c03a3946273b6109c49e9fde817aba3d6eb24e6f8bb1fc135bd57",
+        "shape": [
+          3
+        ],
+        "source_dtype": "float32"
+      },
+      "rgb_1.weight": {
+        "export_dtype": "float32",
+        "forced_float32": false,
+        "sha256": "cd083db27988d15ada2bce2791dfe7aa20c9af6bf777c077acbac4abb865ca9d",
+        "shape": [
+          3,
+          2,
+          3,
+          3
+        ],
+        "source_dtype": "float32"
+      },
+      "skips.2.bias": {
+        "export_dtype": "float32",
+        "forced_float32": false,
+        "sha256": "129eb6af1ba7e423e66aa6f578989455c4defb7f54c146052aa271882bbab051",
+        "shape": [
+          3
+        ],
+        "source_dtype": "float32"
+      },
+      "skips.2.weight": {
+        "export_dtype": "float32",
+        "forced_float32": false,
+        "sha256": "e54bc959ea52147a2c6968279b9911d51ddcb5624fb0c91a0dfb60f0c3163a87",
+        "shape": [
+          3,
+          4,
+          1,
+          1
+        ],
+        "source_dtype": "float32"
+      },
+      "skips.3.bias": {
+        "export_dtype": "float32",
+        "forced_float32": false,
+        "sha256": "f5b3dc9744d06c86afbc3dc0dea06d9768f6aff25520d338af4a0262130f6391",
+        "shape": [
+          2
+        ],
+        "source_dtype": "float32"
+      },
+      "skips.3.weight": {
+        "export_dtype": "float32",
+        "forced_float32": false,
+        "sha256": "e6583da4034ecfa7d6f4c76e01fba67951030f9bf041a72e2834697aac3a4f55",
+        "shape": [
+          2,
+          3,
+          1,
+          1
+        ],
+        "source_dtype": "float32"
+      },
+      "stem.bias": {
+        "export_dtype": "float32",
+        "forced_float32": false,
+        "sha256": "3baf17734f9a821201f76278570c34ed6e84199e1393a2f19918c7a829e51057",
+        "shape": [
+          192
+        ],
+        "source_dtype": "float32"
+      },
+      "stem.weight": {
+        "export_dtype": "float32",
+        "forced_float32": false,
+        "sha256": "156dbf0434b50c331edc3ed48f29c77d2db8730617ccb8f7f77a613173f3e2f0",
+        "shape": [
+          192,
+          28
+        ],
+        "source_dtype": "float32"
+      }
+    },
+    "per_tensor_sha256_prefix": {
+      "blocks.0.bias": "68fa5419e03c245b",
+      "blocks.0.weight": "3df6c57083c8fa34",
+      "blocks.1.bias": "7244567039429fe9",
+      "blocks.1.weight": "08fc38184a8fdb72",
+      "blocks.2.bias": "076d938ebb41b234",
+      "blocks.2.weight": "8e423019e73ec3b1",
+      "blocks.3.bias": "469922013bb8ad6e",
+      "blocks.3.weight": "fe6d9a60e0ad3cfb",
+      "blocks.4.bias": "0ffcb4a231e979e1",
+      "blocks.4.weight": "7a4278f378d51c19",
+      "blocks.5.bias": "964539080d3262c6",
+      "blocks.5.weight": "8c7fb5f3bcb1c313",
+      "refine.0.bias": "1e2a8d9f116f0ece",
+      "refine.0.weight": "b0ffef9d1c760554",
+      "refine.1.bias": "5b55120f188bbf7a",
+      "refine.1.weight": "97edab2578967fc5",
+      "rgb_0.bias": "43d62eb6b21c03a3",
+      "rgb_0.weight": "5fc6357ba03b7f45",
+      "rgb_1.bias": "43d62eb6b21c03a3",
+      "rgb_1.weight": "cd083db27988d15a",
+      "skips.2.bias": "129eb6af1ba7e423",
+      "skips.2.weight": "e54bc959ea52147a",
+      "skips.3.bias": "f5b3dc9744d06c86",
+      "skips.3.weight": "e6583da4034ecfa7",
+      "stem.bias": "3baf17734f9a8212",
+      "stem.weight": "156dbf0434b50c33"
+    },
+    "promotable": false,
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "run_id": "pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed29_steps1_c4_source_video_rgb_yuv6",
+    "schema_version": "mlx_to_pytorch_export.v1",
+    "score_claim": false,
+    "substrate_id": "pr95_hnerv_mlx",
+    "tensor_count": 26,
+    "training_evidence_grade": "macOS-MLX-research-signal",
+    "training_evidence_tag": "[macOS-MLX research-signal]"
+  },
+  "submission": "hnerv_muon"
+}

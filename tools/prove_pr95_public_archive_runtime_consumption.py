@@ -103,6 +103,11 @@ def _build_parser() -> argparse.ArgumentParser:
         "--expected-existing-sha256",
         help="Expected current SHA-256 for --output-json when --allow-overwrite is set.",
     )
+    parser.add_argument(
+        "--keep-work-dir",
+        action="store_true",
+        help="Keep staged member and raw inflate output. Default records hashes only.",
+    )
     return parser
 
 
@@ -179,10 +184,11 @@ def main(argv: list[str] | None = None) -> int:
         "archive_packet": packet.custody_manifest(),
         "inflate_sh": inflate_sh.as_posix(),
         "runtime_files": _runtime_files(inflate_sh),
-        "work_dir": work_dir.as_posix(),
-        "staged_member": staged_member.as_posix(),
-        "file_list": file_list.as_posix(),
-        "raw_output_path": raw_path.as_posix(),
+        "work_dir_preserved": bool(args.keep_work_dir),
+        "work_dir": work_dir.as_posix() if args.keep_work_dir else None,
+        "staged_member": staged_member.as_posix() if args.keep_work_dir else None,
+        "file_list": file_list.as_posix() if args.keep_work_dir else None,
+        "raw_output_path": raw_path.as_posix() if args.keep_work_dir else None,
         "expected_raw_bytes": expected_bytes,
         "raw_output_bytes": raw_bytes,
         "raw_output_sha256": _sha256_file(raw_path) if raw_exists else None,
@@ -211,6 +217,14 @@ def main(argv: list[str] | None = None) -> int:
     )
     if not runtime_consumption_proven:
         return 1
+    if not args.keep_work_dir:
+        for path in sorted(work_dir.rglob("*"), reverse=True):
+            if path.is_file():
+                path.unlink()
+            elif path.is_dir():
+                path.rmdir()
+        if work_dir.exists():
+            work_dir.rmdir()
     return 0
 
 

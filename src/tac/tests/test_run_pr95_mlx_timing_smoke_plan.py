@@ -60,6 +60,8 @@ def test_pr95_mlx_plan_only_cli_builds_queueable_local_mlx_plan(
             "none",
             "--full-frame-parity-chunk-pairs",
             "4",
+            "--full-frame-parity-max-mismatch-samples",
+            "7",
             "--write-mlx-gpu-drift-attestation",
             "--mlx-gpu-drift-conv2d-accumulation-mode",
             "kahan_fp32",
@@ -140,6 +142,11 @@ def test_pr95_mlx_plan_only_cli_builds_queueable_local_mlx_plan(
     assert execution["full_frame_parity_conv2d_accumulation_mode"] == "fixed_fp32"
     assert execution["full_frame_parity_conv2d_override_preset"] == "none"
     assert execution["full_frame_parity_chunk_pairs"] == 4
+    assert execution["full_frame_parity_max_mismatch_samples"] == 7
+    assert "--full-frame-parity-max-mismatch-samples" in execution[
+        "python_command_args"
+    ]
+    assert "7" in execution["python_command_args"]
     assert "--write-mlx-gpu-drift-attestation" in execution["python_command_args"]
     assert "--mlx-gpu-drift-conv2d-accumulation-mode" in execution[
         "python_command_args"

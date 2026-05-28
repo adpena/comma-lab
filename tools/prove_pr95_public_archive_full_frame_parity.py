@@ -48,6 +48,7 @@ CAMERA_H = 874
 CAMERA_W = 1164
 RGB_CHANNELS = 3
 SCHEMA = "pr95_hnerv_public_full_frame_inflate_parity_proof.v1"
+CHANNEL_NAMES = ("r", "g", "b")
 
 
 def _sha256_file(path: Path) -> str:
@@ -194,7 +195,121 @@ def _render_mlx_camera_frame_bytes(
     return chunks
 
 
-def _diff_stats(public_raw: bytes, mlx_raw_chunks: list[bytes]) -> dict[str, Any]:
+def _frame_byte_stride() -> int:
+    return CAMERA_H * CAMERA_W * RGB_CHANNELS
+
+
+def _unravel_raw_index(index: int) -> dict[str, int | str]:
+    frame_index, rem = divmod(int(index), _frame_byte_stride())
+    y, rem = divmod(rem, CAMERA_W * RGB_CHANNELS)
+    x, channel = divmod(rem, RGB_CHANNELS)
+    channel_i = int(channel)
+    return {
+        "flat_index": int(index),
+        "frame_index": int(frame_index),
+        "y": int(y),
+        "x": int(x),
+        "channel": channel_i,
+        "channel_name": CHANNEL_NAMES[channel_i],
+        "boundary_distance_pixels": int(
+            min(y, x, CAMERA_H - 1 - y, CAMERA_W - 1 - x)
+        ),
+    }
+
+
+def _mismatch_row(
+    *,
+    index: int,
+    public: np.ndarray,
+    mlx: np.ndarray,
+) -> dict[str, Any]:
+    row = _unravel_raw_index(index)
+    public_value = int(public[index])
+    mlx_value = int(mlx[index])
+    signed_delta = int(mlx_value - public_value)
+    row.update(
+        {
+            "public_uint8": public_value,
+            "mlx_uint8": mlx_value,
+            "signed_delta_mlx_minus_public": signed_delta,
+            "abs_delta_uint8": abs(signed_delta),
+        }
+    )
+    return row
+
+
+def _diff_atlas(
+    *,
+    public: np.ndarray,
+    mlx: np.ndarray,
+    changed: np.ndarray,
+    max_samples: int,
+) -> dict[str, Any]:
+    changed_indices = np.flatnonzero(changed)
+    changed_count = int(changed_indices.size)
+    n_frames = int(public.size // _frame_byte_stride())
+    changed_nhwc = changed.reshape(n_frames, CAMERA_H, CAMERA_W, RGB_CHANNELS)
+    diff_i16 = mlx.astype(np.int16) - public.astype(np.int16)
+    changed_delta = diff_i16[changed]
+    per_frame = changed_nhwc.sum(axis=(1, 2, 3)).astype(np.int64)
+    per_channel = changed_nhwc.sum(axis=(0, 1, 2)).astype(np.int64)
+    samples = [
+        _mismatch_row(index=int(index), public=public, mlx=mlx)
+        for index in changed_indices[:max_samples]
+    ]
+    if changed_count:
+        ys = (changed_indices % _frame_byte_stride()) // (CAMERA_W * RGB_CHANNELS)
+        xs = (changed_indices % (CAMERA_W * RGB_CHANNELS)) // RGB_CHANNELS
+        distances = np.minimum.reduce(
+            [ys, xs, CAMERA_H - 1 - ys, CAMERA_W - 1 - xs]
+        )
+        boundary_buckets = {
+            "edge_0": int(np.count_nonzero(distances == 0)),
+            "near_edge_1_2": int(
+                np.count_nonzero((distances >= 1) & (distances <= 2))
+            ),
+            "near_edge_3_8": int(
+                np.count_nonzero((distances >= 3) & (distances <= 8))
+            ),
+            "interior_ge9": int(np.count_nonzero(distances >= 9)),
+        }
+    else:
+        boundary_buckets = {
+            "edge_0": 0,
+            "near_edge_1_2": 0,
+            "near_edge_3_8": 0,
+            "interior_ge9": 0,
+        }
+    signed_delta_histogram = {
+        str(int(value)): int(count)
+        for value, count in zip(
+            *np.unique(changed_delta.astype(np.int16), return_counts=True),
+            strict=True,
+        )
+    }
+    return {
+        "raw_layout": "frames_nhwc_uint8",
+        "frame_shape_nhwc": [n_frames, CAMERA_H, CAMERA_W, RGB_CHANNELS],
+        "per_frame_changed_byte_count": [int(value) for value in per_frame],
+        "per_channel_changed_byte_count": {
+            name: int(per_channel[index])
+            for index, name in enumerate(CHANNEL_NAMES)
+        },
+        "boundary_distance_changed_byte_count": boundary_buckets,
+        "signed_delta_histogram_mlx_minus_public": signed_delta_histogram,
+        "first_mismatch": samples[0] if samples else None,
+        "mismatch_samples": samples,
+        "mismatch_sample_count": len(samples),
+        "mismatch_sample_cap": int(max_samples),
+    }
+
+
+def _diff_stats(
+    public_raw: bytes,
+    mlx_raw_chunks: list[bytes],
+    *,
+    max_samples: int,
+) -> dict[str, Any]:
     public = np.frombuffer(public_raw, dtype=np.uint8)
     mlx = np.frombuffer(b"".join(mlx_raw_chunks), dtype=np.uint8)
     if public.shape != mlx.shape:
@@ -206,7 +321,7 @@ def _diff_stats(public_raw: bytes, mlx_raw_chunks: list[bytes]) -> dict[str, Any
         }
     diff = np.abs(public.astype(np.int16) - mlx.astype(np.int16))
     changed = diff != 0
-    return {
+    stats: dict[str, Any] = {
         "same_shape": True,
         "public_count": int(public.size),
         "mlx_count": int(mlx.size),
@@ -218,6 +333,16 @@ def _diff_stats(public_raw: bytes, mlx_raw_chunks: list[bytes]) -> dict[str, Any
         "p99_abs_uint8": float(np.quantile(diff, 0.99)) if diff.size else 0.0,
         "p999_abs_uint8": float(np.quantile(diff, 0.999)) if diff.size else 0.0,
     }
+    if public.size and public.size % _frame_byte_stride() == 0:
+        stats.update(
+            _diff_atlas(
+                public=public,
+                mlx=mlx,
+                changed=changed,
+                max_samples=max_samples,
+            )
+        )
+    return stats
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -251,6 +376,12 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--chunk-pairs", type=int, default=16)
     parser.add_argument("--timeout-seconds", type=float, default=900.0)
     parser.add_argument("--max-output-bytes", type=int, default=64 * 1024 * 1024)
+    parser.add_argument(
+        "--max-mismatch-samples",
+        type=int,
+        default=32,
+        help="Maximum localized mismatch rows embedded in the drift atlas.",
+    )
     parser.add_argument("--allow-large-output", action="store_true")
     parser.add_argument("--allow-overwrite", action="store_true")
     parser.add_argument("--expected-existing-sha256")
@@ -266,6 +397,8 @@ def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
     if args.chunk_pairs < 1:
         raise SystemExit("--chunk-pairs must be >= 1")
+    if args.max_mismatch_samples < 0:
+        raise SystemExit("--max-mismatch-samples must be >= 0")
     archive_zip = args.archive_zip.resolve()
     inflate_sh = args.inflate_sh.resolve()
     output_json = args.output_json.resolve()
@@ -317,7 +450,11 @@ def main(argv: list[str] | None = None) -> int:
         conv2d_accumulation_overrides=conv_overrides,
         chunk_pairs=args.chunk_pairs,
     )
-    stats = _diff_stats(public_raw, mlx_chunks)
+    stats = _diff_stats(
+        public_raw,
+        mlx_chunks,
+        max_samples=args.max_mismatch_samples,
+    )
     public_ok = (
         proc.returncode == 0
         and public_raw_path.is_file()
