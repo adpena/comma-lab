@@ -20,6 +20,10 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+from tac.optimization.archive_family_fingerprint import (
+    fingerprint_archive_family,
+    repair_archive_adapter_registry,
+)
 from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY
 from tac.optimization.family_agnostic_materializers import (
     FamilyAgnosticMaterializerError,
@@ -418,54 +422,22 @@ def _mutated_fec6_selector_member(
 
 def _archive_family_probe(manifest: Mapping[str, Any], *, repo_root: str | Path) -> dict[str, Any]:
     source, actual_sha, blockers = _source_archive_path_and_sha(manifest, repo_root=repo_root)
-    families: list[str] = []
-    member_name = None
-    member_head = ""
-    member_count = 0
+    fingerprint: Mapping[str, Any] = {}
     if source is not None and source.is_file() and not blockers:
-        try:
-            names = _zip_member_names(source)
-            member_count = len(names)
-            member_name = _primary_payload_member(source)
-            head = _zip_member_bytes(source, member_name)[:16]
-            member_head = head.hex()
-            if head.startswith(b"FP11"):
-                families.append("fp11_frame_selector_wrapper")
-                payload = _zip_member_bytes(source, member_name)
-                source_len = struct.unpack_from("<I", payload, 4)[0] if len(payload) >= 8 else -1
-                selector_offset = 8 + source_len
-                if selector_offset + 8 <= len(payload) and payload[selector_offset + 2 : selector_offset + 6] == b"FEC6":
-                    families.append("fec6_fixed_huffman_k16_selector")
-                elif selector_offset + 8 <= len(payload) and payload[selector_offset + 2 : selector_offset + 5] == b"FEC":
-                    families.append("fec_selector_wrapper_other")
-            if head.startswith(b"PSV3"):
-                families.append("pact_nerv_selector_v3_packet")
-            if not families:
-                families.append("generic_zip_payload")
-        except (OSError, zipfile.BadZipFile, struct.error, KeyError, RepairFamilyByteTransformExecutorError) as exc:
-            blockers.append(f"archive_family_probe_failed:{exc}")
+        fingerprint = fingerprint_archive_family(source, repo_root=repo_root)
+        blockers.extend(str(item) for item in fingerprint.get("blockers") or [])
     return {
         "schema": "repair_family_archive_family_probe.v1",
         "source_archive_path": None if source is None else _repo_rel(source, repo_root),
         "source_archive_sha256": actual_sha or None,
-        "member_count": member_count,
-        "primary_payload_member": member_name,
-        "primary_payload_head_hex": member_head,
-        "detected_archive_families": ordered_unique(families),
-        "adapter_registry": {
-            "schema": "repair_family_byte_transform_archive_adapter_registry.v1",
-            "score_affecting_adapters": ["fec6_fixed_huffman_k16_selector"],
-            "coder_boundary_adapters": ["zip_packet_member_recompress"],
-            "post_container_adapters": ["zip_archive_repack"],
-            "unsupported_detected_families_fail_closed": True,
-            "next_adapter_classes": [
-                "fec2_fec3_fec5_selector_wrappers",
-                "pact_nerv_selector_v3_packet",
-                "hnerv_latent_sidecar",
-                "packet_member_merge_dfl1",
-                "tensor_factorize",
-            ],
-        },
+        "member_count": int(fingerprint.get("zip_member_count") or 0),
+        "primary_payload_member": fingerprint.get("primary_payload_member"),
+        "primary_payload_head_hex": str(fingerprint.get("primary_payload_head_hex") or ""),
+        "detected_archive_families": ordered_unique(
+            str(item) for item in fingerprint.get("detected_archive_families") or []
+        ),
+        "archive_family_fingerprint": fingerprint,
+        "adapter_registry": repair_archive_adapter_registry(),
         "blockers": ordered_unique(blockers),
         "budget_spend_allowed": False,
         "ready_for_exact_eval_dispatch": False,

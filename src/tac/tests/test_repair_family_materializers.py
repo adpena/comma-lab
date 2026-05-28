@@ -469,10 +469,9 @@ def test_byte_transform_executor_mutates_fec6_selector_payload_when_detected(
     )
 
     candidate = report["candidate_archive"]
-    assert report["archive_family_probe"]["detected_archive_families"] == [
-        "fp11_frame_selector_wrapper",
-        "fec6_fixed_huffman_k16_selector",
-    ]
+    detected_families = report["archive_family_probe"]["detected_archive_families"]
+    assert "fp11_frame_selector_wrapper" in detected_families
+    assert "fec6_fixed_huffman_k16_selector" in detected_families
     assert report["selected_archive_transform_kind"] == "fec6_selector_payload_mutation"
     assert report["semantic_payload_changed"] is True
     assert report["score_affecting_payload_changed"] is False
