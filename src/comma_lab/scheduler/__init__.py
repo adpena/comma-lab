@@ -166,6 +166,15 @@ from .models import (
     SchedulerStatusReport,
     TrackStatus,
 )
+from .pact_nerv_diffusion_blocks_queue import (
+    PACT_NERV_DIFFUSION_BLOCKS_QUEUE_SCHEMA,
+    PACT_NERV_DIFFUSION_BLOCKS_SCHEDULE_SCHEMA,
+    PACT_NERV_DIFFUSION_DISTILLED_SMOKE_SCHEMA,
+    PACT_NERV_IA3_MLX_SMOKE_SCHEMA,
+    PactNervDiffusionBlocksQueueError,
+    build_pact_nerv_diffusion_blocks_mlx_queue,
+    build_pact_nerv_diffusion_blocks_schedule,
+)
 from .pair_frame_5d_coverage_acquisition_queue import (
     PAIR_FRAME_5D_COVERAGE_ACQUISITION_PLAN_SCHEMA,
     PAIR_FRAME_5D_COVERAGE_ACQUISITION_QUEUE_SCHEMA,
@@ -289,6 +298,10 @@ __all__ = [
     "MLX_RUNTIME_TELEMETRY_STATE_DISCOVERY_POLICY_SCHEMA",
     "PACKET_MEMBER_RECOMPRESS_MATERIALIZER",
     "PACKET_MEMBER_RECOMPRESS_TARGET_KIND",
+    "PACT_NERV_DIFFUSION_BLOCKS_QUEUE_SCHEMA",
+    "PACT_NERV_DIFFUSION_BLOCKS_SCHEDULE_SCHEMA",
+    "PACT_NERV_DIFFUSION_DISTILLED_SMOKE_SCHEMA",
+    "PACT_NERV_IA3_MLX_SMOKE_SCHEMA",
     "PAIR_FRAME_5D_COVERAGE_ACQUISITION_PLAN_SCHEMA",
     "PAIR_FRAME_5D_COVERAGE_ACQUISITION_QUEUE_SCHEMA",
     "PAIR_FRAME_5D_FOLLOWUP_EXECUTION_QUEUE_SCHEMA",
@@ -331,6 +344,7 @@ __all__ = [
     "FrontierRateAttackBootstrapError",
     "FrontierRateAttackFeedbackError",
     "LocalTrainingHarvestError",
+    "PactNervDiffusionBlocksQueueError",
     "PlatformBudgetReport",
     "PlatformRegistry",
     "PlatformSpec",
@@ -365,6 +379,8 @@ __all__ = [
     "build_mlx_learned_sweep_autopilot_queue",
     "build_mlx_master_gradient_replay_queue",
     "build_mlx_scorer_response_execution_queue",
+    "build_pact_nerv_diffusion_blocks_mlx_queue",
+    "build_pact_nerv_diffusion_blocks_schedule",
     "build_pair_frame_5d_coverage_acquisition_queue",
     "build_queue_feedback_replan_continuation_queue",
     "build_queue_feedback_replan_policy",
