@@ -1467,6 +1467,26 @@ def _build_summary(
             "archive_variant_signal_acquisition_penalty_sum",
             0,
         ),
+        "archive_bound_candidate_contract_count": final_stack_plan.get(
+            "archive_bound_candidate_contract_count",
+            0,
+        ),
+        "archive_bound_ready_contract_count": final_stack_plan.get(
+            "archive_bound_ready_contract_count",
+            0,
+        ),
+        "archive_bound_contract_substrate_tags": final_stack_plan.get(
+            "archive_bound_contract_substrate_tags",
+            [],
+        ),
+        "archive_bound_contract_acquisition_penalty_sum": final_stack_plan.get(
+            "archive_bound_contract_acquisition_penalty_sum",
+            0,
+        ),
+        "archive_bound_candidate_contracts": final_stack_plan.get(
+            "archive_bound_candidate_contracts",
+            [],
+        ),
         "archive_variant_materializer_backlog_task_count": final_stack_plan.get(
             "archive_variant_materializer_backlog_task_count",
             0,
@@ -1641,6 +1661,7 @@ def _build_summary(
             "entropy_stage_chain_compiler_executes_composed_archive_candidates",
             "probe_only_entropy_variant_signals_open_queue_owned_materializer_backlog_tasks",
             "range_ans_runtime_adapters_decode_candidate_members_inside_receiver_proofs",
+            "fec_selector_header_huffman_range_ans_zip_variants_emit_common_archive_bound_candidate_contracts",
             "precise_blocker_report_names_next_unblocked_action",
         ],
         "blockers": ordered_unique(
@@ -1857,6 +1878,12 @@ def main(argv: list[str] | None = None) -> int:
                 ],
                 "entropy_stage_materializer_work_order_count": summary[
                     "entropy_stage_materializer_work_order_count"
+                ],
+                "archive_bound_candidate_contract_count": summary[
+                    "archive_bound_candidate_contract_count"
+                ],
+                "archive_bound_ready_contract_count": summary[
+                    "archive_bound_ready_contract_count"
                 ],
                 "archive_variant_materializer_backlog_task_count": summary[
                     "archive_variant_materializer_backlog_task_count"

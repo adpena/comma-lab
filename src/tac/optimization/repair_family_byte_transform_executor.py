@@ -22,6 +22,11 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+from tac.optimization.archive_bound_candidate_contract import (
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA,
+    build_archive_bound_candidate_contract_surface,
+)
 from tac.optimization.archive_family_fingerprint import (
     fingerprint_archive_family,
     repair_archive_adapter_registry,
@@ -2042,7 +2047,7 @@ def _archive_transform_candidates(
     repo_root: str | Path,
     family_id: str,
     allow_overwrite: bool,
-) -> tuple[dict[str, Any], list[dict[str, Any]], list[str]]:
+) -> tuple[dict[str, Any], list[dict[str, Any]], list[str], dict[str, Any]]:
     variants: list[dict[str, Any]] = []
     blockers: list[str] = []
     for builder in (
@@ -2112,17 +2117,66 @@ def _archive_transform_candidates(
         variants.append(candidate)
         blockers.extend(candidate_blockers)
     selected = min(variants, key=_candidate_rank)
+    selected_kind = str(selected.get("archive_native_transform_kind") or "")
+    source_context = dict(_mapping(manifest.get("candidate_archive")))
+    contract_surface = build_archive_bound_candidate_contract_surface(
+        candidates=variants,
+        selected_transform_kind=selected_kind,
+        repo_root=repo_root,
+        source_context=source_context,
+        family_id=family_id,
+        typed_response_id=str(manifest.get("typed_response_id") or ""),
+        candidate_chain_id=str(manifest.get("candidate_chain_id") or ""),
+        entropy_position_label=str(manifest.get("entropy_position_label") or ""),
+        entropy_stage_order=_safe_int(
+            _mapping(manifest.get("active_entropy_stage")).get("order"),
+            default=999,
+        ),
+    )
+    contracts_by_kind = {
+        str(contract.get("archive_native_transform_kind") or ""): contract
+        for contract in contract_surface.get("candidate_contracts") or []
+        if isinstance(contract, Mapping)
+    }
+    variants = [
+        {
+            **variant,
+            "archive_bound_candidate_contract_schema": (
+                ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+            ),
+            "archive_bound_candidate_contract": contracts_by_kind.get(
+                str(variant.get("archive_native_transform_kind") or ""),
+                {},
+            ),
+        }
+        for variant in variants
+    ]
+    selected = next(
+        (
+            variant
+            for variant in variants
+            if str(variant.get("archive_native_transform_kind") or "") == selected_kind
+        ),
+        selected,
+    )
     selected_blockers = ordered_unique(_string_list(selected.get("blockers")))
     all_blockers = ordered_unique(blockers)
     selected = {
         **selected,
         "selected_archive_transform_variant": True,
+        "archive_bound_candidate_contract_schema": (
+            ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+        ),
+        "archive_bound_candidate_contract": contract_surface.get(
+            "selected_candidate_contract",
+            {},
+        ),
         "candidate_archive_transform_variant_count": len(variants),
         "non_selected_archive_transform_variant_blockers": [
             blocker for blocker in all_blockers if blocker not in set(selected_blockers)
         ],
     }
-    return selected, variants, selected_blockers
+    return selected, variants, selected_blockers, contract_surface
 
 
 def _archive_variant_signal_class(
@@ -2816,7 +2870,12 @@ def build_repair_family_byte_transform_execution_report(
         typed_response_id=str(family_materializer_manifest.get("typed_response_id") or ""),
         allow_overwrite=allow_overwrite,
     )
-    candidate_archive, archive_variants, archive_blockers = _archive_transform_candidates(
+    (
+        candidate_archive,
+        archive_variants,
+        archive_blockers,
+        archive_bound_candidate_contract_surface,
+    ) = _archive_transform_candidates(
         manifest=family_materializer_manifest,
         output_dir=output_dir,
         repo_root=repo_root,
@@ -2879,6 +2938,31 @@ def build_repair_family_byte_transform_execution_report(
         "byte_transform_delta": delta,
         "candidate_delta": delta,
         "candidate_archive": candidate_archive,
+        "archive_bound_candidate_contract_schema": (
+            ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+        ),
+        "archive_bound_candidate_contract": candidate_archive.get(
+            "archive_bound_candidate_contract",
+            {},
+        ),
+        "archive_bound_candidate_contract_surface_schema": (
+            ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA
+        ),
+        "archive_bound_candidate_contract_surface": (
+            archive_bound_candidate_contract_surface
+        ),
+        "archive_bound_candidate_contract_count": (
+            archive_bound_candidate_contract_surface["candidate_contract_count"]
+        ),
+        "archive_bound_ready_contract_count": (
+            archive_bound_candidate_contract_surface["archive_bound_ready_contract_count"]
+        ),
+        "archive_contract_substrate_tags": (
+            archive_bound_candidate_contract_surface["archive_substrate_tags"]
+        ),
+        "archive_contract_acquisition_penalty_sum": (
+            archive_bound_candidate_contract_surface["acquisition_penalty_sum"]
+        ),
         "candidate_archive_transform_variants": archive_variants,
         "candidate_archive_transform_variant_count": len(archive_variants),
         "selected_archive_transform_kind": candidate_archive.get("archive_native_transform_kind"),
@@ -2925,8 +3009,8 @@ def build_repair_family_byte_transform_execution_report(
         "archive_native_saved_bytes": candidate_archive.get("saved_bytes"),
         "byte_closed_candidate_emitted": candidate_archive.get("materialized") is True,
         "candidate_archive_materialized": candidate_archive.get("materialized") is True,
-        "runtime_consumption_proof_path": family_materializer_manifest.get("runtime_consumption_proof_path")
-        or candidate_archive.get("runtime_consumption_proof_path"),
+        "runtime_consumption_proof_path": candidate_archive.get("runtime_consumption_proof_path")
+        or family_materializer_manifest.get("runtime_consumption_proof_path"),
         "receiver_contract_kind": family_materializer_manifest.get("receiver_contract_kind")
         or candidate_archive.get("receiver_contract_kind"),
         "receiver_contract_satisfied": (

@@ -313,6 +313,12 @@ def _build_one_chain(
             "archive_entropy_substrate_coverage": dict(
                 _mapping(report.get("archive_entropy_substrate_coverage"))
             ),
+            "archive_bound_candidate_contract": dict(
+                _mapping(report.get("archive_bound_candidate_contract"))
+            ),
+            "archive_bound_candidate_contract_surface": dict(
+                _mapping(report.get("archive_bound_candidate_contract_surface"))
+            ),
             "archive_variant_materializer_backlog": dict(
                 _mapping(report.get("archive_variant_materializer_backlog"))
             ),
@@ -440,6 +446,14 @@ def _build_one_chain(
                         or candidate.get("receiver_contract_satisfied") is True
                     ),
                     "stage_report_blockers": _string_list(stage_report.get("blockers")),
+                    "stage_archive_bound_candidate_contract": dict(
+                        _mapping(stage_report.get("archive_bound_candidate_contract"))
+                    ),
+                    "stage_archive_bound_candidate_contract_surface": dict(
+                        _mapping(
+                            stage_report.get("archive_bound_candidate_contract_surface")
+                        )
+                    ),
                     "stage_archive_entropy_substrate_coverage": dict(
                         _mapping(stage_report.get("archive_entropy_substrate_coverage"))
                     ),
@@ -516,6 +530,34 @@ def _build_one_chain(
                 Mapping,
             )
         ],
+        "archive_bound_candidate_contracts": [
+            contract
+            for stage in stages
+            for contract in (
+                stage.get("stage_archive_bound_candidate_contract"),
+                stage.get("archive_bound_candidate_contract"),
+            )
+            if isinstance(contract, Mapping) and contract
+        ],
+        "archive_bound_candidate_contract_surfaces": [
+            surface
+            for stage in stages
+            for surface in (
+                stage.get("stage_archive_bound_candidate_contract_surface"),
+                stage.get("archive_bound_candidate_contract_surface"),
+            )
+            if isinstance(surface, Mapping) and surface
+        ],
+        "archive_bound_ready_contract_count": sum(
+            1
+            for stage in stages
+            for contract in (
+                stage.get("stage_archive_bound_candidate_contract"),
+                stage.get("archive_bound_candidate_contract"),
+            )
+            if isinstance(contract, Mapping)
+            and contract.get("archive_bound_candidate_ready") is True
+        ),
         "archive_variant_materializer_backlog_task_count": sum(
             _safe_int(
                 stage.get("stage_archive_variant_materializer_backlog_task_count")
@@ -662,6 +704,22 @@ def build_repair_entropy_stage_chain_execution_bundle(
             item
             for report in chain_reports
             for item in report.get("archive_entropy_substrate_coverages") or []
+            if isinstance(item, Mapping)
+        ],
+        "archive_bound_ready_contract_count": sum(
+            _safe_int(report.get("archive_bound_ready_contract_count"), default=0)
+            for report in chain_reports
+        ),
+        "archive_bound_candidate_contracts": [
+            item
+            for report in chain_reports
+            for item in report.get("archive_bound_candidate_contracts") or []
+            if isinstance(item, Mapping)
+        ],
+        "archive_bound_candidate_contract_surfaces": [
+            item
+            for report in chain_reports
+            for item in report.get("archive_bound_candidate_contract_surfaces") or []
             if isinstance(item, Mapping)
         ],
         "archive_variant_materializer_backlog_task_count": sum(

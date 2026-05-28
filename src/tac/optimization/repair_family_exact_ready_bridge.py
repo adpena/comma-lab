@@ -351,6 +351,9 @@ def _bridge_row(
     candidate_chain_id = str(handoff_row.get("candidate_chain_id") or typed_response_id)
     candidate_archive_row = _candidate_archive_from_row(handoff_row)
     runtime_proof_row = _runtime_proof_from_row(handoff_row)
+    archive_bound_contract = dict(
+        _mapping(handoff_row.get("archive_bound_candidate_contract"))
+    )
     expected_sha = str(
         candidate_archive_row.get("expected_sha256")
         or candidate_archive_row.get("sha256")
@@ -487,6 +490,13 @@ def _bridge_row(
         "archive_manifest_path": submission_custody.get("archive_manifest_path"),
         "inflate_sh_path": submission_custody.get("inflate_sh_path"),
         "serialized_archive_delta": serialized_delta,
+        "archive_bound_candidate_contract": archive_bound_contract,
+        "archive_bound_contract_substrate_tags": _string_list(
+            archive_bound_contract.get("archive_substrate_tags")
+        ),
+        "archive_bound_contract_acquisition_penalty": archive_bound_contract.get(
+            "acquisition_penalty"
+        ),
         "score_affecting_payload_changed": score_affecting_payload_changed,
         "charged_bits_changed": score_affecting_payload_changed,
         "score_claim": False,
@@ -527,6 +537,7 @@ def _bridge_row(
         "runtime_consumption_proof_custody": proof_custody,
         "runtime_consumption_proof_schema": proof_payload.get("schema"),
         "submission_runtime_custody": submission_custody,
+        "archive_bound_candidate_contract": archive_bound_contract,
         "archive_custody_complete": archive_custody.get("custody_complete") is True,
         "runtime_proof_custody_complete": proof_custody.get("custody_complete") is True
         and not proof_payload_blockers,

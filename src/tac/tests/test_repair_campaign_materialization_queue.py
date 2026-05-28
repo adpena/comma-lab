@@ -593,6 +593,12 @@ def test_real_archive_intake_runs_all_families_through_floor_loop(
     assert "ans_coder_entropy_probe" in summary["archive_variant_signal_kinds"]
     assert "range_coder_lzma_prototype" in summary["archive_variant_signal_kinds"]
     assert "ans_coder_rans_prototype" in summary["archive_variant_signal_kinds"]
+    assert summary["archive_bound_candidate_contract_count"] >= 45
+    assert summary["archive_bound_ready_contract_count"] >= 15
+    assert {"fec", "selector", "huffman", "range_coder", "ans_coder"} <= set(
+        summary["archive_bound_contract_substrate_tags"]
+    )
+    assert summary["archive_bound_contract_acquisition_penalty_sum"] > 0.0
     assert summary["archive_variant_materializer_backlog_task_count"] == 10
     assert summary["archive_variant_materializer_byte_closed_task_count"] == 10
     assert (

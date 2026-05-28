@@ -12,6 +12,11 @@ from pathlib import Path
 
 import pytest
 
+from tac.optimization.archive_bound_candidate_contract import (
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA,
+    archive_substrate_tags_for_transform_kind,
+)
 from tac.optimization.repair_archive_entropy_substrate_coverage import (
     REPAIR_ARCHIVE_ENTROPY_SUBSTRATE_COVERAGE_SCHEMA,
 )
@@ -114,6 +119,18 @@ def test_entropy_coder_runtime_adapters_roundtrip_receiver_decode() -> None:
             )
             == payload
         )
+
+
+def test_archive_bound_candidate_contract_classifies_entropy_substrates() -> None:
+    assert archive_substrate_tags_for_transform_kind(
+        "fec6_selector_payload_mutation"
+    ) == ["fec", "selector_stream", "selector", "huffman"]
+    assert archive_substrate_tags_for_transform_kind(
+        "range_coder_lzma_prototype"
+    ) == ["range_coder", "entropy_coder", "receiver_adapter"]
+    assert archive_substrate_tags_for_transform_kind(
+        "candidate_archive_native_zip_repack"
+    ) == ["zip_ordering", "zip_container"]
 
 
 def _repair_payload(tmp_path: Path) -> dict[str, object]:
@@ -537,6 +554,19 @@ def test_byte_transform_executor_repacks_archive_native_candidate_when_custody_e
     assert candidate["receiver_contract_satisfied"] is True
     assert (tmp_path / candidate["path"]).is_file()
     assert (tmp_path / candidate["runtime_consumption_proof_path"]).is_file()
+    assert report["archive_bound_candidate_contract_schema"] == (
+        ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+    )
+    assert report["archive_bound_candidate_contract_surface_schema"] == (
+        ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA
+    )
+    contract = report["archive_bound_candidate_contract"]
+    assert contract["schema"] == ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+    assert contract["archive_bound_candidate_ready"] is True
+    assert contract["receiver_contract_satisfied"] is True
+    assert contract["archive_file_custody"]["custody_complete"] is True
+    assert "zip_container" in report["archive_contract_substrate_tags"]
+    assert report["archive_bound_ready_contract_count"] >= 1
     assert report["exact_eval_handoff_gate"]["archive_bound_runtime_consumption_proof_ready"] is True
     assert report["exact_eval_handoff_gate"]["eligible_for_exact_eval_handoff"] is False
     report_path = _write_json(tmp_path / "byte_transform_report.json", report)
@@ -556,6 +586,9 @@ def test_byte_transform_executor_repacks_archive_native_candidate_when_custody_e
     handoff_row = stack_plan["exact_eval_handoff_candidates"][0]
     assert handoff_row["schema"] == REPAIR_FAMILY_EXACT_HANDOFF_CANDIDATE_ROW_SCHEMA
     assert handoff_row["archive_bound_custody_complete"] is True
+    assert handoff_row["archive_bound_candidate_contract"]["schema"] == (
+        ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+    )
     assert handoff_row["candidate_archive"]["custody_complete"] is True
     assert handoff_row["runtime_consumption_proof"]["custody_complete"] is True
     assert handoff_row["ready_for_exact_eval_dispatch"] is False
@@ -577,6 +610,20 @@ def test_byte_transform_executor_mutates_fec6_selector_payload_when_detected(
         {"x": _fec6_selector_payload([0, 2, 7, 13, 0, 2, 7, 13, 0, 2])},
     )
     archive_sha = hashlib.sha256(archive_path.read_bytes()).hexdigest()
+    source_proof_path = _write_json(
+        tmp_path / "source_archive_runtime_proof.json",
+        {
+            "schema": "source_archive_runtime_consumption_proof.v1",
+            "runtime_consumption_proof_passed": True,
+            "candidate_archive": {
+                "path": str(archive_path),
+                "sha256": archive_sha,
+                "bytes": archive_path.stat().st_size,
+            },
+            "blockers": [],
+            **_false_authority(),
+        },
+    )
     manifest = {
         "schema": REPAIR_CAMPAIGN_FAMILY_MATERIALIZER_MANIFEST_SCHEMA,
         "materializer_id": "repair_family_materializer:frame0_k16_palette_asymmetry",
@@ -610,6 +657,7 @@ def test_byte_transform_executor_mutates_fec6_selector_payload_when_detected(
             "sha256": archive_sha,
             "bytes": archive_path.stat().st_size,
         },
+        "runtime_consumption_proof_path": str(source_proof_path),
         "receiver_contract_satisfied": False,
         "byte_closed_candidate_emitted": True,
         "readiness_blockers": [],
@@ -672,6 +720,29 @@ def test_byte_transform_executor_mutates_fec6_selector_payload_when_detected(
         variant["archive_native_transform_kind"]: variant
         for variant in report["candidate_archive_transform_variants"]
     }
+    assert report["archive_bound_candidate_contract_surface_schema"] == (
+        ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA
+    )
+    contract_surface = report["archive_bound_candidate_contract_surface"]
+    assert contract_surface["schema"] == ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA
+    assert contract_surface["candidate_contract_count"] == report[
+        "candidate_archive_transform_variant_count"
+    ]
+    assert contract_surface["archive_bound_ready_contract_count"] >= 3
+    assert {"fec", "selector", "huffman", "range_coder", "ans_coder"} <= set(
+        contract_surface["archive_substrate_tags"]
+    )
+    selected_contract = report["archive_bound_candidate_contract"]
+    assert selected_contract["schema"] == ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+    assert selected_contract["selected_archive_transform_variant"] is True
+    assert selected_contract["archive_bound_candidate_ready"] is True
+    assert {"fec", "selector", "huffman"} <= set(
+        selected_contract["archive_substrate_tags"]
+    )
+    for variant in archive_variants.values():
+        assert variant["archive_bound_candidate_contract"]["schema"] == (
+            ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+        )
     assert (
         report["archive_variant_signal_surface_schema"]
         == REPAIR_ARCHIVE_VARIANT_SIGNAL_SURFACE_SCHEMA
@@ -782,6 +853,8 @@ def test_byte_transform_executor_mutates_fec6_selector_payload_when_detected(
     assert candidate["semantic_payload_changed"] is True
     assert candidate["score_affecting_payload_changed"] is False
     assert candidate["runtime_consumption_proof_ready"] is True
+    assert report["runtime_consumption_proof_path"] == candidate["runtime_consumption_proof_path"]
+    assert report["runtime_consumption_proof_path"] != str(source_proof_path)
     assert candidate["mutation_details"]["changed_pair_count"] > 0
     assert (tmp_path / candidate["path"]).is_file()
     assert (tmp_path / candidate["runtime_consumption_proof_path"]).is_file()
@@ -1592,6 +1665,9 @@ def test_repair_exact_ready_bridge_emits_blocked_source_queue(
     source_row = source_queue["top_k"][0]
     assert source_row["target_modes"] == ["contest_exact_eval"]
     assert source_row["ready_for_exact_eval_dispatch"] is False
+    assert source_row["archive_bound_candidate_contract"]["schema"] == (
+        ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+    )
     assert "submission_dir_missing_for_runtime_content_tree_custody" in source_row["dispatch_blockers"]
 
 

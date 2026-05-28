@@ -340,12 +340,30 @@ def _stack_row(
     archive_variant_materializer_backlog = _mapping(
         report.get("archive_variant_materializer_backlog")
     )
+    archive_bound_contract_surface = _mapping(
+        report.get("archive_bound_candidate_contract_surface")
+    )
+    archive_bound_contract = _mapping(
+        report.get("archive_bound_candidate_contract")
+    ) or _mapping(archive_bound_contract_surface.get("selected_candidate_contract"))
     archive_entropy_blockers = _string_list(archive_entropy_coverage.get("blockers"))
     archive_entropy_anti_pattern_penalty = _archive_entropy_anti_pattern_penalty(
         archive_entropy_coverage
     )
     archive_variant_signal_penalty = _archive_variant_signal_penalty(
         archive_variant_signal_surface
+    )
+    archive_bound_contract_surface_penalty = _safe_float(
+        archive_bound_contract_surface.get("acquisition_penalty_sum")
+    )
+    archive_bound_contract_count = max(
+        1,
+        _safe_int(archive_bound_contract_surface.get("candidate_contract_count")),
+    )
+    archive_bound_contract_budget_penalty = min(
+        0.18,
+        (archive_bound_contract_surface_penalty / archive_bound_contract_count)
+        * 0.25,
     )
     archive_variant_signal_blockers = _string_list(
         archive_variant_signal_surface.get("blockers")
@@ -363,6 +381,8 @@ def _stack_row(
         + scope_penalty
         + archive_entropy_anti_pattern_penalty
         + archive_variant_signal_penalty
+        + _safe_float(archive_bound_contract.get("acquisition_penalty"))
+        + archive_bound_contract_budget_penalty
     )
     feasible = _byte_credit_feasible(report, remaining_budget)
     negative_demoted = demotion.get("demoted") is True
@@ -376,6 +396,7 @@ def _stack_row(
             *_string_list(report.get("blockers")),
             *archive_entropy_blockers,
             *archive_variant_signal_blockers,
+            *_string_list(archive_bound_contract.get("blockers")),
             *([] if feasible else ["byte_credit_exhausted_for_stack_row"]),
             *(["automatic_negative_result_demotion_active"] if negative_demoted else []),
             *(
@@ -413,6 +434,37 @@ def _stack_row(
         "delta_payload_bytes": delta_bytes,
         "allocated_repair_bytes": allocated_repair_bytes,
         "archive_native_saved_bytes": archive_native_saved_bytes,
+        "archive_bound_candidate_contract_surface": dict(
+            archive_bound_contract_surface
+        ),
+        "archive_bound_candidate_contract": dict(archive_bound_contract),
+        "archive_bound_candidate_contract_count": _safe_int(
+            archive_bound_contract_surface.get("candidate_contract_count")
+        ),
+        "archive_bound_ready_contract_count": _safe_int(
+            archive_bound_contract_surface.get("archive_bound_ready_contract_count")
+        ),
+        "archive_bound_contract_substrate_tags": ordered_unique(
+            [
+                *_string_list(archive_bound_contract_surface.get("archive_substrate_tags")),
+                *_string_list(archive_bound_contract.get("archive_substrate_tags")),
+            ]
+        ),
+        "archive_bound_contract_acquisition_penalty": _safe_float(
+            archive_bound_contract.get("acquisition_penalty")
+        ),
+        "archive_bound_contract_surface_acquisition_penalty": (
+            archive_bound_contract_surface_penalty
+        ),
+        "archive_bound_contract_budget_routing_penalty": (
+            archive_bound_contract_budget_penalty
+        ),
+        "archive_bound_contract_selected_kind": archive_bound_contract.get(
+            "archive_native_transform_kind"
+        ),
+        "archive_bound_contract_ready": (
+            archive_bound_contract.get("archive_bound_candidate_ready") is True
+        ),
         "archive_entropy_substrate_coverage": dict(archive_entropy_coverage),
         "archive_entropy_substrate_materialized_substrates": _string_list(
             archive_entropy_coverage.get("materialized_substrates")
@@ -477,9 +529,14 @@ def _stack_row(
             exact_gate.get("archive_bound_runtime_consumption_proof_ready") is True
         ),
         "archive_bound_exact_handoff_candidate": (
-            report.get("byte_closed_candidate_emitted") is True
-            and report.get("candidate_archive_materialized") is True
-            and exact_gate.get("archive_bound_runtime_consumption_proof_ready") is True
+            archive_bound_contract.get("archive_bound_candidate_ready_for_exact_handoff")
+            is True
+            or (
+                report.get("byte_closed_candidate_emitted") is True
+                and report.get("candidate_archive_materialized") is True
+                and exact_gate.get("archive_bound_runtime_consumption_proof_ready")
+                is True
+            )
         ),
         "local_mlx_combined_delta_score_units": combined_delta,
         "local_mlx_expected_improvement_score_units": local_improvement,
@@ -532,6 +589,27 @@ def _interaction_feature_vector(row: Mapping[str, Any]) -> dict[str, Any]:
         "entropy_boundary_family": family == "entropy_boundary_probe",
         "byte_credit_feasible": row.get("byte_credit_feasible") is True,
         "archive_bound_exact_handoff_candidate": (row.get("archive_bound_exact_handoff_candidate") is True),
+        "archive_bound_contract_ready": (
+            row.get("archive_bound_contract_ready") is True
+        ),
+        "archive_bound_contract_acquisition_penalty": _safe_float(
+            row.get("archive_bound_contract_acquisition_penalty")
+        ),
+        "archive_bound_contract_surface_acquisition_penalty": _safe_float(
+            row.get("archive_bound_contract_surface_acquisition_penalty")
+        ),
+        "archive_bound_contract_budget_routing_penalty": _safe_float(
+            row.get("archive_bound_contract_budget_routing_penalty")
+        ),
+        "archive_bound_contract_substrate_tags": _string_list(
+            row.get("archive_bound_contract_substrate_tags")
+        ),
+        "archive_bound_candidate_contract_count": _safe_int(
+            row.get("archive_bound_candidate_contract_count")
+        ),
+        "archive_bound_ready_contract_count": _safe_int(
+            row.get("archive_bound_ready_contract_count")
+        ),
         "archive_variant_signal_count": _safe_int(row.get("archive_variant_signal_count")),
         "archive_variant_probe_count": _safe_int(row.get("archive_variant_probe_count")),
         "archive_variant_prototype_count": _safe_int(row.get("archive_variant_prototype_count")),
@@ -609,6 +687,9 @@ def _build_interaction_tensor(rows: Sequence[Mapping[str, Any]]) -> dict[str, An
                 "scope_feature_counts": {},
                 "row_count": 0,
                 "archive_bound_count": 0,
+                "archive_bound_contract_ready_count": 0,
+                "archive_bound_candidate_contract_count": 0,
+                "archive_bound_ready_contract_count": 0,
                 "negative_demoted_count": 0,
                 "byte_credit_feasible_count": 0,
                 "archive_variant_signal_count": 0,
@@ -630,6 +711,14 @@ def _build_interaction_tensor(rows: Sequence[Mapping[str, Any]]) -> dict[str, An
         cell["entropy_stage_orders"].append(vector.get("entropy_stage_order"))
         if vector.get("archive_bound_exact_handoff_candidate") is True:
             cell["archive_bound_count"] += 1
+        if vector.get("archive_bound_contract_ready") is True:
+            cell["archive_bound_contract_ready_count"] += 1
+        cell["archive_bound_candidate_contract_count"] += _safe_int(
+            vector.get("archive_bound_candidate_contract_count")
+        )
+        cell["archive_bound_ready_contract_count"] += _safe_int(
+            vector.get("archive_bound_ready_contract_count")
+        )
         if vector.get("negative_posterior_demoted") is True:
             cell["negative_demoted_count"] += 1
         if vector.get("byte_credit_feasible") is True:
@@ -1898,6 +1987,12 @@ def _exact_handoff_candidate_row(
         "entropy_position_label": report.get("entropy_position_label"),
         "entropy_stage_order": stack_row.get("entropy_stage_order"),
         "candidate_archive": candidate_archive,
+        "archive_bound_candidate_contract": dict(
+            _mapping(report.get("archive_bound_candidate_contract"))
+        ),
+        "archive_bound_candidate_contract_surface": dict(
+            _mapping(report.get("archive_bound_candidate_contract_surface"))
+        ),
         "runtime_consumption_proof": runtime_proof,
         "archive_bound_custody_complete": archive_bound_complete,
         "archive_bound_exact_handoff_candidate": archive_bound_complete,
@@ -2137,6 +2232,39 @@ def plan_repair_family_stack_search(
             _safe_float(row.get("archive_variant_signal_acquisition_penalty"))
             for row in rows
         ),
+        "archive_bound_candidate_contract_count": sum(
+            _safe_int(row.get("archive_bound_candidate_contract_count"))
+            for row in rows
+        ),
+        "archive_bound_ready_contract_count": sum(
+            _safe_int(row.get("archive_bound_ready_contract_count"))
+            for row in rows
+        ),
+        "archive_bound_contract_substrate_tags": ordered_unique(
+            tag
+            for row in rows
+            for tag in _string_list(row.get("archive_bound_contract_substrate_tags"))
+        ),
+        "archive_bound_contract_acquisition_penalty_sum": sum(
+            _safe_float(row.get("archive_bound_contract_surface_acquisition_penalty"))
+            for row in rows
+        ),
+        "archive_bound_contract_selected_acquisition_penalty_sum": sum(
+            _safe_float(row.get("archive_bound_contract_acquisition_penalty"))
+            for row in rows
+        ),
+        "archive_bound_contract_budget_routing_penalty_sum": sum(
+            _safe_float(row.get("archive_bound_contract_budget_routing_penalty"))
+            for row in rows
+        ),
+        "archive_bound_candidate_contracts": [
+            dict(contract)
+            for row in rows
+            for contract in [
+                _mapping(row.get("archive_bound_candidate_contract"))
+            ]
+            if contract
+        ],
         "archive_variant_materializer_backlog_task_count": sum(
             _safe_int(row.get("archive_variant_materializer_backlog_task_count"))
             for row in rows
@@ -2342,6 +2470,16 @@ def _chain_exact_handoff_candidate_row(
         "entropy_position_label": "composed_entropy_stage_chain",
         "entropy_stage_order": _chain_stage_order(final_stage) if final_stage else 999,
         "candidate_archive": candidate_archive,
+        "archive_bound_candidate_contracts": [
+            dict(contract)
+            for contract in chain_report.get("archive_bound_candidate_contracts") or []
+            if isinstance(contract, Mapping)
+        ],
+        "archive_bound_candidate_contract_surfaces": [
+            dict(surface)
+            for surface in chain_report.get("archive_bound_candidate_contract_surfaces") or []
+            if isinstance(surface, Mapping)
+        ],
         "runtime_consumption_proof": runtime_proof,
         "archive_bound_custody_complete": archive_bound_complete,
         "archive_bound_exact_handoff_candidate": archive_bound_complete,
@@ -2588,6 +2726,27 @@ def _learning_signal_for_stack_row(row: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "archive_variant_signal_acquisition_penalty": _safe_float(
             row.get("archive_variant_signal_acquisition_penalty")
+        ),
+        "archive_bound_contract_ready": (
+            row.get("archive_bound_contract_ready") is True
+        ),
+        "archive_bound_candidate_contract_count": _safe_int(
+            row.get("archive_bound_candidate_contract_count")
+        ),
+        "archive_bound_ready_contract_count": _safe_int(
+            row.get("archive_bound_ready_contract_count")
+        ),
+        "archive_bound_contract_substrate_tags": _string_list(
+            row.get("archive_bound_contract_substrate_tags")
+        ),
+        "archive_bound_contract_acquisition_penalty": _safe_float(
+            row.get("archive_bound_contract_acquisition_penalty")
+        ),
+        "archive_bound_contract_surface_acquisition_penalty": _safe_float(
+            row.get("archive_bound_contract_surface_acquisition_penalty")
+        ),
+        "archive_bound_contract_budget_routing_penalty": _safe_float(
+            row.get("archive_bound_contract_budget_routing_penalty")
         ),
         "archive_variant_materializer_backlog_task_count": _safe_int(
             row.get("archive_variant_materializer_backlog_task_count")
