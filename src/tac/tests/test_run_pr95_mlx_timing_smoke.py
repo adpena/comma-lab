@@ -60,6 +60,8 @@ def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path
             "7000000",
             "--runtime-proof-timeout-seconds",
             "180",
+            "--pytorch-export-conv2d-accumulation-mode",
+            "kahan_fp32",
             "--write-source-faithful-preprocess-smoke",
             "--source-preprocess-shape",
             "1,2,8,10,3",
@@ -132,6 +134,7 @@ def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path
         "mlx_to_pytorch_export.v1"
     )
     assert pytorch_export_parity["forward_parity"]["parity"]["passed"] is True
+    assert pytorch_export_parity["conv2d_accumulation_mode"] == "kahan_fp32"
     for key in FALSE_AUTHORITY:
         assert pytorch_export_parity[key] is False
     assert (
@@ -223,6 +226,7 @@ def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path
     assert manifest["pytorch_export_forward_parity"][
         "pytorch_export_forward_parity_established"
     ] is True
+    assert manifest["pytorch_export_conv2d_accumulation_mode"] == "kahan_fp32"
     assert manifest["pytorch_export_state_dict_pt_path"].endswith(
         "pr95_pytorch_state_dict.pt"
     )
@@ -270,6 +274,9 @@ def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path
     assert "blocker" not in representation["pytorch_export_parity"]
     assert representation["candidate_params"]["pytorch_export_forward_parity_present"] is True
     assert representation["candidate_params"]["pytorch_export_forward_parity_requested"] is True
+    assert representation["candidate_params"][
+        "pytorch_export_conv2d_accumulation_mode"
+    ] == "kahan_fp32"
     assert representation["source_faithful_preprocess_smoke"][
         "source_faithful_preprocess_ready"
     ] is True

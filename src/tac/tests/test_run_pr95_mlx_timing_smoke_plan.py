@@ -50,6 +50,8 @@ def test_pr95_mlx_plan_only_cli_builds_queueable_local_mlx_plan(
             "--runtime-proof-max-output-bytes",
             "7000000",
             "--write-mlx-gpu-drift-attestation",
+            "--mlx-gpu-drift-conv2d-accumulation-mode",
+            "kahan_fp32",
             "--write-source-video-preprocess-smoke",
             "--source-video-path",
             "upstream/videos/0.mkv",
@@ -114,9 +116,15 @@ def test_pr95_mlx_plan_only_cli_builds_queueable_local_mlx_plan(
     assert "--write-pr95-public-archive-export" in execution["python_command_args"]
     assert "--prove-pr95-runtime-consumption" in execution["python_command_args"]
     assert "--write-mlx-gpu-drift-attestation" in execution["python_command_args"]
+    assert "--mlx-gpu-drift-conv2d-accumulation-mode" in execution[
+        "python_command_args"
+    ]
+    assert "kahan_fp32" in execution["python_command_args"]
     assert execution["mlx_gpu_forward_drift_attestation"].endswith(
         "mlx_gpu_forward_drift_attestation.json"
     )
+    assert execution["mlx_gpu_decoder_trace"].endswith("mlx_gpu_decoder_trace.json")
+    assert execution["mlx_gpu_drift_conv2d_accumulation_mode"] == "kahan_fp32"
     assert execution["archive_export_manifest"].endswith(
         "pr95_public_archive_export.json"
     )
@@ -148,6 +156,13 @@ def test_pr95_mlx_plan_only_cli_builds_queueable_local_mlx_plan(
     )
     assert any(
         condition["type"] == "json_equals"
+        and condition["path"].endswith("mlx_gpu_decoder_trace.json")
+        and condition["key"] == "schema"
+        and condition["equals"] == "pr95_hnerv_public_archive_mlx_decoder_trace.v1"
+        for condition in execution["extra_artifact_postconditions"]
+    )
+    assert any(
+        condition["type"] == "json_equals"
         and condition["path"].endswith("source_video_preprocess_smoke.json")
         and condition["key"] == "source_video_loader_ready"
         and condition["equals"] is True
@@ -175,6 +190,10 @@ def test_pr95_mlx_plan_only_cli_builds_queueable_local_mlx_plan(
     assert representation_plan["candidate_params"][
         "mlx_gpu_forward_drift_attestation_requested"
     ] is True
+    assert representation_plan["candidate_params"]["mlx_gpu_decoder_trace_requested"] is True
+    assert representation_plan["candidate_params"][
+        "mlx_gpu_drift_conv2d_accumulation_mode"
+    ] == "kahan_fp32"
     assert PR95_SOURCE_VIDEO_LOADER_UNPORTED_BLOCKER not in representation_plan[
         "dispatch_blockers"
     ]

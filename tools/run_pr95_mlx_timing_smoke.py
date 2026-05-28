@@ -30,18 +30,21 @@ from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
     EXACT_READINESS_REFUSAL_BLOCKERS,
     FALSE_AUTHORITY,
     LANE_ID,
+    PR95_MLX_CONV2D_ACCUMULATION_MODES,
     PR95_MLX_LOSS_SURFACE_RGB_MSE,
     PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE,
     PR95_MLX_LOSS_SURFACES,
     PR95_MLX_TRAINING_FIDELITY_SOURCE_VIDEO_RGB_TIMING_ONLY,
     PR95_MLX_TRAINING_FIDELITY_SOURCE_VIDEO_RGB_YUV6_TIMING_ONLY,
     PR95_STAGE_MODULES,
+    PUBLIC_ARCHIVE_DECODER_TRACE_SCHEMA,
     SMOKE_MANIFEST_SCHEMA,
     compare_pr95_public_archive_forward_with_pytorch,
     parse_pr95_public_archive_zip,
     pr95_default_optimizer_descriptor_id,
     pr95_mlx_optimizer_descriptor_row,
     run_pr95_mlx_synthetic_timing_smoke,
+    trace_pr95_public_archive_decoder_with_pytorch,
     write_pr95_mlx_byte_closed_smoke_archive,
     write_pr95_public_archive_pytorch_export_forward_parity,
 )
@@ -518,8 +521,10 @@ def _recommended_execution_command(
     public_pr95_source_model: Path,
     pytorch_export_sample_indices: list[int],
     pytorch_export_mlx_device: str,
+    pytorch_export_conv2d_accumulation_mode: str,
     pytorch_export_atol_max: float,
     pytorch_export_atol_mean: float,
+    mlx_gpu_drift_conv2d_accumulation_mode: str,
     write_source_faithful_preprocess_smoke: bool,
     write_source_video_preprocess_smoke: bool,
     train_on_source_video_pairs: bool,
@@ -573,14 +578,11 @@ def _recommended_execution_command(
                 str(runtime_proof_max_output_bytes),
             ]
         )
-    if write_pytorch_export_parity:
-        command.append("--write-pytorch-export-parity")
+    if write_pytorch_export_parity or write_mlx_gpu_drift_attestation:
         command.extend(
             [
                 "--public-pr95-source-model",
                 _rel(public_pr95_source_model),
-                "--pytorch-export-mlx-device",
-                pytorch_export_mlx_device,
                 "--pytorch-export-atol-max",
                 str(pytorch_export_atol_max),
                 "--pytorch-export-atol-mean",
@@ -589,8 +591,24 @@ def _recommended_execution_command(
         )
         for sample_index in pytorch_export_sample_indices:
             command.extend(["--pytorch-export-sample-index", str(sample_index)])
+    if write_pytorch_export_parity:
+        command.append("--write-pytorch-export-parity")
+        command.extend(
+            [
+                "--pytorch-export-mlx-device",
+                pytorch_export_mlx_device,
+                "--pytorch-export-conv2d-accumulation-mode",
+                pytorch_export_conv2d_accumulation_mode,
+            ]
+        )
     if write_mlx_gpu_drift_attestation:
         command.append("--write-mlx-gpu-drift-attestation")
+        command.extend(
+            [
+                "--mlx-gpu-drift-conv2d-accumulation-mode",
+                mlx_gpu_drift_conv2d_accumulation_mode,
+            ]
+        )
     if write_source_faithful_preprocess_smoke:
         command.extend(
             [
@@ -797,6 +815,7 @@ def _extra_artifact_postconditions(
         )
     if write_mlx_gpu_drift_attestation:
         drift_path = _rel(output_dir / "mlx_gpu_forward_drift_attestation.json")
+        trace_path = _rel(output_dir / "mlx_gpu_decoder_trace.json")
         postconditions.extend(
             [
                 {"type": "path_exists", "path": drift_path},
@@ -812,6 +831,19 @@ def _extra_artifact_postconditions(
                     False,
                 ),
                 _json_false_authority_postcondition(drift_path),
+                {"type": "path_exists", "path": trace_path},
+                _json_equals_postcondition(
+                    trace_path,
+                    "schema",
+                    PUBLIC_ARCHIVE_DECODER_TRACE_SCHEMA,
+                ),
+                _json_equals_postcondition(trace_path, "mlx_device", "gpu"),
+                _json_equals_postcondition(
+                    trace_path,
+                    "exact_readiness_refusal.ready",
+                    False,
+                ),
+                _json_false_authority_postcondition(trace_path),
             ]
         )
     if prove_pr95_runtime_consumption:
@@ -853,8 +885,10 @@ def _build_representation_training_plan(
     public_pr95_source_model: Path,
     pytorch_export_sample_indices: list[int],
     pytorch_export_mlx_device: str,
+    pytorch_export_conv2d_accumulation_mode: str,
     pytorch_export_atol_max: float,
     pytorch_export_atol_mean: float,
+    mlx_gpu_drift_conv2d_accumulation_mode: str,
     write_source_faithful_preprocess_smoke: bool,
     write_source_video_preprocess_smoke: bool,
     train_on_source_video_pairs: bool,
@@ -991,11 +1025,18 @@ def _build_representation_training_plan(
             "mlx_gpu_forward_drift_attestation_requested": (
                 write_mlx_gpu_drift_attestation
             ),
+            "mlx_gpu_decoder_trace_requested": write_mlx_gpu_drift_attestation,
             "public_pr95_source_model": _rel(public_pr95_source_model),
             "pytorch_export_sample_indices": pytorch_export_sample_indices,
             "pytorch_export_mlx_device": pytorch_export_mlx_device,
+            "pytorch_export_conv2d_accumulation_mode": (
+                pytorch_export_conv2d_accumulation_mode
+            ),
             "pytorch_export_atol_max": pytorch_export_atol_max,
             "pytorch_export_atol_mean": pytorch_export_atol_mean,
+            "mlx_gpu_drift_conv2d_accumulation_mode": (
+                mlx_gpu_drift_conv2d_accumulation_mode
+            ),
             "source_faithful_preprocess_smoke_requested": (
                 write_source_faithful_preprocess_smoke
             ),
@@ -1137,19 +1178,32 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
         if args.write_pytorch_export_parity
         else None,
         "public_pr95_source_model": _rel(args.public_pr95_source_model)
-        if args.write_pytorch_export_parity
+        if args.write_pytorch_export_parity or args.write_mlx_gpu_drift_attestation
         else None,
         "pytorch_export_sample_indices": args.pytorch_export_sample_index or [0]
-        if args.write_pytorch_export_parity
+        if args.write_pytorch_export_parity or args.write_mlx_gpu_drift_attestation
         else None,
         "pytorch_export_mlx_device": args.pytorch_export_mlx_device
         if args.write_pytorch_export_parity
         else None,
+        "pytorch_export_conv2d_accumulation_mode": (
+            args.pytorch_export_conv2d_accumulation_mode
+            if args.write_pytorch_export_parity
+            else None
+        ),
         "mlx_gpu_forward_drift_attestation": _rel(
             output_dir / "mlx_gpu_forward_drift_attestation.json"
         )
         if args.write_mlx_gpu_drift_attestation
         else None,
+        "mlx_gpu_decoder_trace": _rel(output_dir / "mlx_gpu_decoder_trace.json")
+        if args.write_mlx_gpu_drift_attestation
+        else None,
+        "mlx_gpu_drift_conv2d_accumulation_mode": (
+            args.mlx_gpu_drift_conv2d_accumulation_mode
+            if args.write_mlx_gpu_drift_attestation
+            else None
+        ),
         "source_faithful_preprocess_smoke": _rel(
             output_dir / "source_faithful_preprocess_smoke.json"
         )
@@ -1258,8 +1312,14 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
             public_pr95_source_model=args.public_pr95_source_model,
             pytorch_export_sample_indices=args.pytorch_export_sample_index or [0],
             pytorch_export_mlx_device=args.pytorch_export_mlx_device,
+            pytorch_export_conv2d_accumulation_mode=(
+                args.pytorch_export_conv2d_accumulation_mode
+            ),
             pytorch_export_atol_max=args.pytorch_export_atol_max,
             pytorch_export_atol_mean=args.pytorch_export_atol_mean,
+            mlx_gpu_drift_conv2d_accumulation_mode=(
+                args.mlx_gpu_drift_conv2d_accumulation_mode
+            ),
             optimizer_descriptor_id=optimizer_descriptor_id,
         ),
         "candidate_generation_only": True,
@@ -1287,8 +1347,14 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
         public_pr95_source_model=args.public_pr95_source_model,
         pytorch_export_sample_indices=args.pytorch_export_sample_index or [0],
         pytorch_export_mlx_device=args.pytorch_export_mlx_device,
+        pytorch_export_conv2d_accumulation_mode=(
+            args.pytorch_export_conv2d_accumulation_mode
+        ),
         pytorch_export_atol_max=args.pytorch_export_atol_max,
         pytorch_export_atol_mean=args.pytorch_export_atol_mean,
+        mlx_gpu_drift_conv2d_accumulation_mode=(
+            args.mlx_gpu_drift_conv2d_accumulation_mode
+        ),
         write_source_faithful_preprocess_smoke=(
             args.write_source_faithful_preprocess_smoke
         ),
@@ -1357,6 +1423,12 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
         "public_pr95_source_model": _rel(args.public_pr95_source_model),
         "pytorch_export_sample_indices": args.pytorch_export_sample_index or [0],
         "pytorch_export_mlx_device": args.pytorch_export_mlx_device,
+        "pytorch_export_conv2d_accumulation_mode": (
+            args.pytorch_export_conv2d_accumulation_mode
+        ),
+        "mlx_gpu_drift_conv2d_accumulation_mode": (
+            args.mlx_gpu_drift_conv2d_accumulation_mode
+        ),
         "pytorch_export_atol_max": args.pytorch_export_atol_max,
         "pytorch_export_atol_mean": args.pytorch_export_atol_mean,
         "write_source_faithful_preprocess_smoke": bool(
@@ -1398,6 +1470,7 @@ def _representation_manifest(
     runtime_consumption_proof: dict[str, Any] | None,
     pytorch_export_forward_parity: dict[str, Any] | None,
     mlx_gpu_forward_drift_attestation: dict[str, Any] | None,
+    mlx_gpu_decoder_trace: dict[str, Any] | None,
     source_faithful_preprocess_smoke: dict[str, Any] | None,
     source_video_preprocess_smoke: dict[str, Any] | None,
 ) -> dict[str, Any]:
@@ -1545,11 +1618,21 @@ def _representation_manifest(
             "mlx_gpu_forward_drift_attestation_present": (
                 mlx_gpu_forward_drift_attestation is not None
             ),
+            "mlx_gpu_decoder_trace_requested": (
+                manifest.get("write_mlx_gpu_drift_attestation") is True
+            ),
+            "mlx_gpu_decoder_trace_present": mlx_gpu_decoder_trace is not None,
             "public_pr95_source_model": manifest.get("public_pr95_source_model"),
             "pytorch_export_sample_indices": manifest.get(
                 "pytorch_export_sample_indices"
             ),
             "pytorch_export_mlx_device": manifest.get("pytorch_export_mlx_device"),
+            "pytorch_export_conv2d_accumulation_mode": manifest.get(
+                "pytorch_export_conv2d_accumulation_mode"
+            ),
+            "mlx_gpu_drift_conv2d_accumulation_mode": manifest.get(
+                "mlx_gpu_drift_conv2d_accumulation_mode"
+            ),
             "pytorch_export_atol_max": manifest.get("pytorch_export_atol_max"),
             "pytorch_export_atol_mean": manifest.get("pytorch_export_atol_mean"),
             "source_video_training": source_video_training,
@@ -1614,6 +1697,7 @@ def _representation_manifest(
             "mlx_gpu_forward_drift_attestation": (
                 mlx_gpu_forward_drift_attestation or {}
             ),
+            "mlx_gpu_decoder_trace": mlx_gpu_decoder_trace or {},
             "byte_closed_smoke_archive": archive_summary,
             "pr95_public_archive_export": public_archive_export,
             "runtime_consumption_proof": manifest.get("runtime_consumption_proof", {}),
@@ -1721,6 +1805,21 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         choices=("cpu", "gpu"),
         default="cpu",
         help="MLX device for PyTorch export forward parity proof.",
+    )
+    parser.add_argument(
+        "--pytorch-export-conv2d-accumulation-mode",
+        choices=PR95_MLX_CONV2D_ACCUMULATION_MODES,
+        default="optimized",
+        help="PR95 MLX Conv2d accumulation path for export parity.",
+    )
+    parser.add_argument(
+        "--mlx-gpu-drift-conv2d-accumulation-mode",
+        choices=PR95_MLX_CONV2D_ACCUMULATION_MODES,
+        default="optimized",
+        help=(
+            "PR95 MLX Conv2d accumulation path for the GPU forward-drift "
+            "attestation and decoder trace."
+        ),
     )
     parser.add_argument("--pytorch-export-atol-max", type=float, default=2e-3)
     parser.add_argument("--pytorch-export-atol-mean", type=float, default=1e-4)
@@ -1833,6 +1932,15 @@ def main(argv: list[str] | None = None) -> int:
         or args.write_pytorch_export_parity
         or args.write_mlx_gpu_drift_attestation
     )
+    if (
+        args.write_mlx_gpu_drift_attestation
+        and args.mlx_gpu_drift_conv2d_accumulation_mode == "fixed_fp64"
+    ):
+        raise SystemExit(
+            "--mlx-gpu-drift-conv2d-accumulation-mode fixed_fp64 is unsupported "
+            "on MLX GPU; use optimized/fixed_fp32/kahan_fp32 for Metal or run "
+            "fixed_fp64 on the CPU parity path."
+        )
     if output_dir.exists() and not args.allow_existing_output_dir:
         raise SystemExit(
             f"output directory already exists: {_rel(output_dir)} "
@@ -1932,6 +2040,12 @@ def main(argv: list[str] | None = None) -> int:
     manifest["public_pr95_source_model"] = _rel(args.public_pr95_source_model)
     manifest["pytorch_export_sample_indices"] = args.pytorch_export_sample_index or [0]
     manifest["pytorch_export_mlx_device"] = args.pytorch_export_mlx_device
+    manifest["pytorch_export_conv2d_accumulation_mode"] = (
+        args.pytorch_export_conv2d_accumulation_mode
+    )
+    manifest["mlx_gpu_drift_conv2d_accumulation_mode"] = (
+        args.mlx_gpu_drift_conv2d_accumulation_mode
+    )
     manifest["pytorch_export_atol_max"] = args.pytorch_export_atol_max
     manifest["pytorch_export_atol_mean"] = args.pytorch_export_atol_mean
     archive_summary = (
@@ -1983,6 +2097,9 @@ def main(argv: list[str] | None = None) -> int:
                 mlx_device=args.pytorch_export_mlx_device,
                 atol_max=args.pytorch_export_atol_max,
                 atol_mean=args.pytorch_export_atol_mean,
+                conv2d_accumulation_mode=(
+                    args.pytorch_export_conv2d_accumulation_mode
+                ),
                 overwrite=True,
             )
         )
@@ -2029,6 +2146,7 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     mlx_gpu_forward_drift_attestation: dict[str, Any] | None = None
+    mlx_gpu_decoder_trace: dict[str, Any] | None = None
     if args.write_mlx_gpu_drift_attestation:
         assert torch_decoder_cls is not None
         assert packet is not None
@@ -2040,18 +2158,34 @@ def main(argv: list[str] | None = None) -> int:
                 mlx_device="gpu",
                 atol_max=args.pytorch_export_atol_max,
                 atol_mean=args.pytorch_export_atol_mean,
+                conv2d_accumulation_mode=(
+                    args.mlx_gpu_drift_conv2d_accumulation_mode
+                ),
             )
+        )
+        mlx_gpu_decoder_trace = trace_pr95_public_archive_decoder_with_pytorch(
+            packet,
+            torch_decoder_cls,
+            sample_indices=args.pytorch_export_sample_index or [0],
+            mlx_device="gpu",
+            cliff_threshold=args.pytorch_export_atol_mean,
+            conv2d_accumulation_mode=args.mlx_gpu_drift_conv2d_accumulation_mode,
         )
         manifest["mlx_gpu_forward_drift_attestation"] = (
             mlx_gpu_forward_drift_attestation
         )
+        manifest["mlx_gpu_decoder_trace"] = mlx_gpu_decoder_trace
         manifest["mlx_gpu_forward_drift_attestation_path"] = _rel(
             output_dir / "mlx_gpu_forward_drift_attestation.json"
+        )
+        manifest["mlx_gpu_decoder_trace_path"] = _rel(
+            output_dir / "mlx_gpu_decoder_trace.json"
         )
         _write_json(
             output_dir / "mlx_gpu_forward_drift_attestation.json",
             mlx_gpu_forward_drift_attestation,
         )
+        _write_json(output_dir / "mlx_gpu_decoder_trace.json", mlx_gpu_decoder_trace)
 
     runtime_consumption_proof: dict[str, Any] | None = None
     if args.prove_pr95_runtime_consumption:
@@ -2235,6 +2369,7 @@ def main(argv: list[str] | None = None) -> int:
         runtime_consumption_proof=runtime_consumption_proof,
         pytorch_export_forward_parity=pytorch_export_forward_parity,
         mlx_gpu_forward_drift_attestation=mlx_gpu_forward_drift_attestation,
+        mlx_gpu_decoder_trace=mlx_gpu_decoder_trace,
         source_faithful_preprocess_smoke=source_faithful_preprocess_smoke,
         source_video_preprocess_smoke=source_video_preprocess_smoke,
     )
@@ -2251,6 +2386,7 @@ def main(argv: list[str] | None = None) -> int:
         "runtime_consumption_proof": runtime_consumption_proof,
         "pytorch_export_forward_parity": pytorch_export_forward_parity,
         "mlx_gpu_forward_drift_attestation": mlx_gpu_forward_drift_attestation,
+        "mlx_gpu_decoder_trace": mlx_gpu_decoder_trace,
         "source_faithful_preprocess_smoke": source_faithful_preprocess_smoke,
         "source_video_preprocess_smoke": source_video_preprocess_smoke,
         "source_video_training": manifest.get("source_video_training"),
