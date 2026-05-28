@@ -76,6 +76,7 @@ workspace/tools/
 experiments/raft_flow.pt
 experiments/results/**/*.pt
 .omx/research/**/checkpoints/*.pt
+.omx/research/**/*.npsd
 .omx/research/**/pr95_pytorch_state_dict.pt
 .omx/research/**/runtime_consumption_work/
 # Large generated materializer portfolio debug products stay local. Keep compact

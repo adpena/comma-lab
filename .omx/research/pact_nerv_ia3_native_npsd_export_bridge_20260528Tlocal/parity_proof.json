@@ -1,0 +1,736 @@
+{
+  "axis_tag": "[predicted]",
+  "blockers": [
+    "predicted_axis_not_contest_authority_per_catalog_127_192_317_341",
+    "requires_paired_contest_cpu_plus_cuda_for_score_claim",
+    "bridge_export_step_does_not_change_evidence_grade"
+  ],
+  "config": {
+    "latent_dim": 24,
+    "num_pairs": 4,
+    "pose_dim": 6
+  },
+  "evidence_grade": "predicted",
+  "forward_parity": {
+    "atol_max_01": 0.001,
+    "atol_mean_01": 0.0001,
+    "backends_compared": "mlx_vs_pytorch_forward",
+    "decoder_output_space": "sigmoid_0_to_1",
+    "drift_vs_depth_anchor": "MLX vs PyTorch drift on a 7-PixelShuffle SIREN substrate is the canonical drift-vs-depth signature per Catalog #1305; a drift band wider than the threshold does NOT imply a bridge bug. sin(freq=30.0) activation amplifies per-layer ~1e-6 conv drift exponentially across 7 upsample blocks. The threshold is a research-signal disambiguator, not a contest-promotion gate; promotion requires paired contest-CUDA.",
+    "drift_within_band": true,
+    "frame_shape": [
+      3,
+      2,
+      3,
+      384,
+      512
+    ],
+    "max_abs_drift_01": 0.0,
+    "mean_abs_drift_01": 0.0,
+    "sample_pair_indices": [
+      0,
+      1,
+      2
+    ]
+  },
+  "generated_utc": "2026-05-28T03:41:13.942084+00:00",
+  "mlx_state_dict_bytes": 226182,
+  "mlx_state_dict_path": ".omx/research/pact_nerv_ia3_native_npsd_export_bridge_20260528Tlocal/ia3_native_mlx_state.npsd",
+  "mlx_state_dict_sha256": "bebc44ac9e9b8a2f0e62b1a974ad15571f6458979f04ea5820f72fed8ecb8b5c",
+  "operator_routable_next_step": "Pack PIA3 archive via tac.substrates.pact_nerv_ia3.archive.pack_archive, then route through tools/gate_mlx_candidate_contest_equivalence_pact_nerv_ia3.py (Catalog #1265 sister), then operator-authorize.py paired CPU+CUDA dispatch",
+  "output_pytorch_state_dict": ".omx/research/pact_nerv_ia3_native_npsd_export_bridge_20260528Tlocal/checkpoints/ia3_native.pt",
+  "per_tensor": {
+    "blocks.0.dsc.depthwise.bias": {
+      "dtype": "float32",
+      "layout": "preserved",
+      "sha256": "5341e6b2646979a7",
+      "shape_mlx": [
+        64
+      ],
+      "shape_pytorch": [
+        64
+      ]
+    },
+    "blocks.0.dsc.depthwise.weight": {
+      "dtype": "float32",
+      "layout": "mlx_hwio_to_pytorch_oihw",
+      "sha256": "edd8f747c7992055",
+      "shape_mlx": [
+        64,
+        3,
+        3,
+        1
+      ],
+      "shape_pytorch": [
+        64,
+        1,
+        3,
+        3
+      ]
+    },
+    "blocks.0.dsc.pointwise.bias": {
+      "dtype": "float32",
+      "layout": "preserved",
+      "sha256": "ef115a0e0c15cdc4",
+      "shape_mlx": [
+        192
+      ],
+      "shape_pytorch": [
+        192
+      ]
+    },
+    "blocks.0.dsc.pointwise.weight": {
+      "dtype": "float32",
+      "layout": "mlx_hwio_to_pytorch_oihw",
+      "sha256": "254f87bc85ca92ef",
+      "shape_mlx": [
+        192,
+        1,
+        1,
+        64
+      ],
+      "shape_pytorch": [
+        192,
+        64,
+        1,
+        1
+      ]
+    },
+    "blocks.1.dsc.depthwise.bias": {
+      "dtype": "float32",
+      "layout": "preserved",
+      "sha256": "5d89f056865052bc",
+      "shape_mlx": [
+        48
+      ],
+      "shape_pytorch": [
+        48
+      ]
+    },
+    "blocks.1.dsc.depthwise.weight": {
+      "dtype": "float32",
+      "layout": "mlx_hwio_to_pytorch_oihw",
+      "sha256": "e9c1d4a93c9cfa4d",
+      "shape_mlx": [
+        48,
+        3,
+        3,
+        1
+      ],
+      "shape_pytorch": [
+        48,
+        1,
+        3,
+        3
+      ]
+    },
+    "blocks.1.dsc.pointwise.bias": {
+      "dtype": "float32",
+      "layout": "preserved",
+      "sha256": "9e132485d5107211",
+      "shape_mlx": [
+        160
+      ],
+      "shape_pytorch": [
+        160
+      ]
+    },
+    "blocks.1.dsc.pointwise.weight": {
+      "dtype": "float32",
+      "layout": "mlx_hwio_to_pytorch_oihw",
+      "sha256": "976bb69570e5e698",
+      "shape_mlx": [
+        160,
+        1,
+        1,
+        48
+      ],
+      "shape_pytorch": [
+        160,
+        48,
+        1,
+        1
+      ]
+    },
+    "blocks.2.dsc.depthwise.bias": {
+      "dtype": "float32",
+      "layout": "preserved",
+      "sha256": "b393978842a0fa3d",
+      "shape_mlx": [
+        40
+      ],
+      "shape_pytorch": [
+        40
+      ]
+    },
+    "blocks.2.dsc.depthwise.weight": {
+      "dtype": "float32",
+      "layout": "mlx_hwio_to_pytorch_oihw",
+      "sha256": "0b89d8ce5dca6750",
+      "shape_mlx": [
+        40,
+        3,
+        3,
+        1
+      ],
+      "shape_pytorch": [
+        40,
+        1,
+        3,
+        3
+      ]
+    },
+    "blocks.2.dsc.pointwise.bias": {
+      "dtype": "float32",
+      "layout": "preserved",
+      "sha256": "076a27c79e5ace2a",
+      "shape_mlx": [
+        128
+      ],
+      "shape_pytorch": [
+        128
+      ]
+    },
+    "blocks.2.dsc.pointwise.weight": {
+      "dtype": "float32",
+      "layout": "mlx_hwio_to_pytorch_oihw",
+      "sha256": "732cb583a390f4da",
+      "shape_mlx": [
+        128,
+        1,
+        1,
+        40
+      ],
+      "shape_pytorch": [
+        128,
+        40,
+        1,
+        1
+      ]
+    },
+    "blocks.3.dsc.depthwise.bias": {
+      "dtype": "float32",
+      "layout": "preserved",
+      "sha256": "38723a2e5e8a17aa",
+      "shape_mlx": [
+        32
+      ],
+      "shape_pytorch": [
+        32
+      ]
+    },
+    "blocks.3.dsc.depthwise.weight": {
+      "dtype": "float32",
+      "layout": "mlx_hwio_to_pytorch_oihw",
+      "sha256": "6ee4d4527d2f37d4",
+      "shape_mlx": [
+        32,
+        3,
+        3,
+        1
+      ],
+      "shape_pytorch": [
+        32,
+        1,
+        3,
+        3
+      ]
+    },
+    "blocks.3.dsc.pointwise.bias": {
+      "dtype": "float32",
+      "layout": "preserved",
+      "sha256": "a1a4f5721c1c4610",
+      "shape_mlx": [
+        96
+      ],
+      "shape_pytorch": [
+        96
+      ]
+    },
+    "blocks.3.dsc.pointwise.weight": {
+      "dtype": "float32",
+      "layout": "mlx_hwio_to_pytorch_oihw",
+      "sha256": "347fcfaf3af781da",
+      "shape_mlx": [
+        96,
+        1,
+        1,
+        32
+      ],
+      "shape_pytorch": [
+        96,
+        32,
+        1,
+        1
+      ]
+    },
+    "blocks.4.dsc.depthwise.bias": {
+      "dtype": "float32",
+      "layout": "preserved",
+      "sha256": "2ea9ab9198d16380",
+      "shape_mlx": [
+        24
+      ],
+      "shape_pytorch": [
+        24
+      ]
+    },
+    "blocks.4.dsc.depthwise.weight": {
+      "dtype": "float32",
+      "layout": "mlx_hwio_to_pytorch_oihw",
+      "sha256": "8565476ea63c0ed9",
+      "shape_mlx": [
+        24,
+        3,
+        3,
+        1
+      ],
+      "shape_pytorch": [
+        24,
+        1,
+        3,
+        3
+      ]
+    },
+    "blocks.4.dsc.pointwise.bias": {
+      "dtype": "float32",
+      "layout": "preserved",
+      "sha256": "7b6436b0c98f6238",
+      "shape_mlx": [
+        80
+      ],
+      "shape_pytorch": [
+        80
+      ]
+    },
+    "blocks.4.dsc.pointwise.weight": {
+      "dtype": "float32",
+      "layout": "mlx_hwio_to_pytorch_oihw",
+      "sha256": "354d90df7b529148",
+      "shape_mlx": [
+        80,
+        1,
+        1,
+        24
+      ],
+      "shape_pytorch": [
+        80,
+        24,
+        1,
+        1
+      ]
+    },
+    "blocks.5.dsc.depthwise.bias": {
+      "dtype": "float32",
+      "layout": "preserved",
+      "sha256": "5b6fb58e61fa4759",
+      "shape_mlx": [
+        20
+      ],
+      "shape_pytorch": [
+        20
+      ]
+    },
+    "blocks.5.dsc.depthwise.weight": {
+      "dtype": "float32",
+      "layout": "mlx_hwio_to_pytorch_oihw",
+      "sha256": "65c3f68062d4a1e6",
+      "shape_mlx": [
+        20,
+        3,
+        3,
+        1
+      ],
+      "shape_pytorch": [
+        20,
+        1,
+        3,
+        3
+      ]
+    },
+    "blocks.5.dsc.pointwise.bias": {
+      "dtype": "float32",
+      "layout": "preserved",
+      "sha256": "5341e6b2646979a7",
+      "shape_mlx": [
+        64
+      ],
+      "shape_pytorch": [
+        64
+      ]
+    },
+    "blocks.5.dsc.pointwise.weight": {
+      "dtype": "float32",
+      "layout": "mlx_hwio_to_pytorch_oihw",
+      "sha256": "8670ba325cf62abc",
+      "shape_mlx": [
+        64,
+        1,
+        1,
+        20
+      ],
+      "shape_pytorch": [
+        64,
+        20,
+        1,
+        1
+      ]
+    },
+    "blocks.6.dsc.depthwise.bias": {
+      "dtype": "float32",
+      "layout": "preserved",
+      "sha256": "f5a5fd42d16a2030",
+      "shape_mlx": [
+        16
+      ],
+      "shape_pytorch": [
+        16
+      ]
+    },
+    "blocks.6.dsc.depthwise.weight": {
+      "dtype": "float32",
+      "layout": "mlx_hwio_to_pytorch_oihw",
+      "sha256": "5f35927f1a3f0217",
+      "shape_mlx": [
+        16,
+        3,
+        3,
+        1
+      ],
+      "shape_pytorch": [
+        16,
+        1,
+        3,
+        3
+      ]
+    },
+    "blocks.6.dsc.pointwise.bias": {
+      "dtype": "float32",
+      "layout": "preserved",
+      "sha256": "5d89f056865052bc",
+      "shape_mlx": [
+        48
+      ],
+      "shape_pytorch": [
+        48
+      ]
+    },
+    "blocks.6.dsc.pointwise.weight": {
+      "dtype": "float32",
+      "layout": "mlx_hwio_to_pytorch_oihw",
+      "sha256": "874e68be85ae40e7",
+      "shape_mlx": [
+        48,
+        1,
+        1,
+        16
+      ],
+      "shape_pytorch": [
+        48,
+        16,
+        1,
+        1
+      ]
+    },
+    "ego_poses": {
+      "dtype": "float32",
+      "layout": "preserved",
+      "sha256": "7a06000a5045c9d9",
+      "shape_mlx": [
+        4,
+        6
+      ],
+      "shape_pytorch": [
+        4,
+        6
+      ]
+    },
+    "head_rgb_0.bias": {
+      "dtype": "float32",
+      "layout": "preserved",
+      "sha256": "15ec7bf0b50732b4",
+      "shape_mlx": [
+        3
+      ],
+      "shape_pytorch": [
+        3
+      ]
+    },
+    "head_rgb_0.weight": {
+      "dtype": "float32",
+      "layout": "mlx_hwio_to_pytorch_oihw",
+      "sha256": "7358cfc06d3d1ae4",
+      "shape_mlx": [
+        3,
+        1,
+        1,
+        12
+      ],
+      "shape_pytorch": [
+        3,
+        12,
+        1,
+        1
+      ]
+    },
+    "head_rgb_1.bias": {
+      "dtype": "float32",
+      "layout": "preserved",
+      "sha256": "15ec7bf0b50732b4",
+      "shape_mlx": [
+        3
+      ],
+      "shape_pytorch": [
+        3
+      ]
+    },
+    "head_rgb_1.weight": {
+      "dtype": "float32",
+      "layout": "mlx_hwio_to_pytorch_oihw",
+      "sha256": "c9664a35250f2808",
+      "shape_mlx": [
+        3,
+        1,
+        1,
+        12
+      ],
+      "shape_pytorch": [
+        3,
+        12,
+        1,
+        1
+      ]
+    },
+    "ia3_mods.0.gamma_proj.bias": {
+      "dtype": "float32",
+      "layout": "preserved",
+      "sha256": "5d89f056865052bc",
+      "shape_mlx": [
+        48
+      ],
+      "shape_pytorch": [
+        48
+      ]
+    },
+    "ia3_mods.0.gamma_proj.weight": {
+      "dtype": "float32",
+      "layout": "preserved",
+      "sha256": "a5088665271e32de",
+      "shape_mlx": [
+        48,
+        6
+      ],
+      "shape_pytorch": [
+        48,
+        6
+      ]
+    },
+    "ia3_mods.1.gamma_proj.bias": {
+      "dtype": "float32",
+      "layout": "preserved",
+      "sha256": "b393978842a0fa3d",
+      "shape_mlx": [
+        40
+      ],
+      "shape_pytorch": [
+        40
+      ]
+    },
+    "ia3_mods.1.gamma_proj.weight": {
+      "dtype": "float32",
+      "layout": "preserved",
+      "sha256": "4eb611ea1de87844",
+      "shape_mlx": [
+        40,
+        6
+      ],
+      "shape_pytorch": [
+        40,
+        6
+      ]
+    },
+    "ia3_mods.2.gamma_proj.bias": {
+      "dtype": "float32",
+      "layout": "preserved",
+      "sha256": "38723a2e5e8a17aa",
+      "shape_mlx": [
+        32
+      ],
+      "shape_pytorch": [
+        32
+      ]
+    },
+    "ia3_mods.2.gamma_proj.weight": {
+      "dtype": "float32",
+      "layout": "preserved",
+      "sha256": "ddc9c7b1df1011ed",
+      "shape_mlx": [
+        32,
+        6
+      ],
+      "shape_pytorch": [
+        32,
+        6
+      ]
+    },
+    "ia3_mods.3.gamma_proj.bias": {
+      "dtype": "float32",
+      "layout": "preserved",
+      "sha256": "2ea9ab9198d16380",
+      "shape_mlx": [
+        24
+      ],
+      "shape_pytorch": [
+        24
+      ]
+    },
+    "ia3_mods.3.gamma_proj.weight": {
+      "dtype": "float32",
+      "layout": "preserved",
+      "sha256": "75b40f90e256d03f",
+      "shape_mlx": [
+        24,
+        6
+      ],
+      "shape_pytorch": [
+        24,
+        6
+      ]
+    },
+    "ia3_mods.4.gamma_proj.bias": {
+      "dtype": "float32",
+      "layout": "preserved",
+      "sha256": "5b6fb58e61fa4759",
+      "shape_mlx": [
+        20
+      ],
+      "shape_pytorch": [
+        20
+      ]
+    },
+    "ia3_mods.4.gamma_proj.weight": {
+      "dtype": "float32",
+      "layout": "preserved",
+      "sha256": "21ef8ca64a8c0bc6",
+      "shape_mlx": [
+        20,
+        6
+      ],
+      "shape_pytorch": [
+        20,
+        6
+      ]
+    },
+    "ia3_mods.5.gamma_proj.bias": {
+      "dtype": "float32",
+      "layout": "preserved",
+      "sha256": "f5a5fd42d16a2030",
+      "shape_mlx": [
+        16
+      ],
+      "shape_pytorch": [
+        16
+      ]
+    },
+    "ia3_mods.5.gamma_proj.weight": {
+      "dtype": "float32",
+      "layout": "preserved",
+      "sha256": "4c6d6c4245cb94da",
+      "shape_mlx": [
+        16,
+        6
+      ],
+      "shape_pytorch": [
+        16,
+        6
+      ]
+    },
+    "ia3_mods.6.gamma_proj.bias": {
+      "dtype": "float32",
+      "layout": "preserved",
+      "sha256": "17b0761f87b081d5",
+      "shape_mlx": [
+        12
+      ],
+      "shape_pytorch": [
+        12
+      ]
+    },
+    "ia3_mods.6.gamma_proj.weight": {
+      "dtype": "float32",
+      "layout": "preserved",
+      "sha256": "8a88d18fae926f5b",
+      "shape_mlx": [
+        12,
+        6
+      ],
+      "shape_pytorch": [
+        12,
+        6
+      ]
+    },
+    "latent_embed.bias": {
+      "dtype": "float32",
+      "layout": "preserved",
+      "sha256": "e80232b4d18d0bb7",
+      "shape_mlx": [
+        768
+      ],
+      "shape_pytorch": [
+        768
+      ]
+    },
+    "latent_embed.weight": {
+      "dtype": "float32",
+      "layout": "preserved",
+      "sha256": "d25ce210bc404440",
+      "shape_mlx": [
+        768,
+        24
+      ],
+      "shape_pytorch": [
+        768,
+        24
+      ]
+    },
+    "latents": {
+      "dtype": "float32",
+      "layout": "preserved",
+      "sha256": "a6bc19ee0275ca9c",
+      "shape_mlx": [
+        4,
+        24
+      ],
+      "shape_pytorch": [
+        4,
+        24
+      ]
+    }
+  },
+  "promotable": false,
+  "promotion_eligible": false,
+  "provenance": {
+    "artifact_kind": "predicted_from_model",
+    "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_predicted",
+    "captured_at_utc": "2026-05-28T03:41:13Z",
+    "composed_from": [],
+    "contest_archive_member_name": "",
+    "contest_archive_zip_path": "",
+    "evidence_grade": "predicted",
+    "hardware_substrate": "darwin_arm64_apple_silicon_mlx",
+    "measurement_axis": "[predicted]",
+    "promotion_eligible": false,
+    "rejection_reason": "",
+    "score_claim_valid": false,
+    "source_path": "<predictor:pact_nerv_ia3_mlx_pytorch_bridge:ia3_native_mlx_state>",
+    "source_sha256": "bebc44ac9e9b8a2f0e62b1a974ad15571f6458979f04ea5820f72fed8ecb8b5c"
+  },
+  "pytorch_state_dict_bytes": 239669,
+  "pytorch_state_dict_sha256": "8c1deac346b2af258172c16b7b026d53a23367b6f9bc445600364c3c57ca01ec",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema_version": "pact_nerv_ia3_mlx_pytorch_export_bridge.v1",
+  "score_claim": false,
+  "tensor_count": 50,
+  "tool": "tools/export_pact_nerv_ia3_mlx_to_pytorch_state_dict.py"
+}
