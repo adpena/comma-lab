@@ -294,3 +294,63 @@ def test_pr95_mlx_plan_only_cli_builds_queueable_local_mlx_plan(
     assert row["candidate_params"]["source_video_preprocess_smoke_requested"] is True
     assert row["candidate_params"]["train_on_source_video_pairs"] is True
     assert validate_proxy_candidate(row) == []
+
+
+def test_pr95_mlx_plan_defaults_gpu_drift_to_public_release_no_cliff_preset(
+    tmp_path: Path,
+) -> None:
+    output_dir = tmp_path / "pr95_mlx_stage8_plan_default_drift"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "run_pr95_mlx_timing_smoke.py"),
+            "--stage",
+            "8",
+            "--steps",
+            "1",
+            "--batch-size",
+            "1",
+            "--synthetic-pairs",
+            "1",
+            "--seed",
+            "23",
+            "--base-channels",
+            "36",
+            "--output-dir",
+            str(output_dir),
+            "--write-mlx-gpu-drift-attestation",
+            "--plan-only",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=120,
+    )
+
+    assert result.returncode == 0, result.stderr
+    plan = json.loads((output_dir / "plan.json").read_text(encoding="utf-8"))
+    representation_plan = json.loads(
+        (output_dir / "representation_training_plan.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    execution = plan["recommended_execution"]
+
+    assert execution["mlx_gpu_drift_conv2d_override_preset"] == "blocks02_kahan_fp32"
+    assert execution.get("mlx_gpu_drift_conv2d_override_items") is None
+    assert execution["mlx_gpu_drift_conv2d_accumulation_overrides"] == {
+        "blocks.0.conv": "kahan_fp32",
+        "blocks.0.skip_conv": "kahan_fp32",
+        "blocks.1.conv": "kahan_fp32",
+        "blocks.1.skip_conv": "kahan_fp32",
+        "blocks.2.conv": "kahan_fp32",
+        "blocks.2.skip_conv": "kahan_fp32",
+    }
+    command = execution["python_command_args"]
+    assert command[command.index("--mlx-gpu-drift-conv2d-override-preset") + 1] == (
+        "blocks02_kahan_fp32"
+    )
+    assert representation_plan["candidate_params"][
+        "mlx_gpu_drift_conv2d_override_preset"
+    ] == "blocks02_kahan_fp32"

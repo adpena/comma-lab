@@ -35,6 +35,7 @@ from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
     PR95_MLX_LOSS_SURFACE_RGB_MSE,
     PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE,
     PR95_MLX_LOSS_SURFACES,
+    PR95_MLX_PUBLIC_RELEASE_NO_CLIFF_CONV2D_OVERRIDE_PRESET,
     PR95_MLX_TRAINING_FIDELITY_SOURCE_VIDEO_RGB_TIMING_ONLY,
     PR95_MLX_TRAINING_FIDELITY_SOURCE_VIDEO_RGB_YUV6_TIMING_ONLY,
     PR95_STAGE_MODULES,
@@ -1993,10 +1994,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--mlx-gpu-drift-conv2d-override-preset",
         choices=tuple(PR95_MLX_CONV2D_ACCUMULATION_OVERRIDE_PRESETS),
-        default="none",
+        default=PR95_MLX_PUBLIC_RELEASE_NO_CLIFF_CONV2D_OVERRIDE_PRESET,
         help=(
             "Named per-layer Conv2d accumulation overrides for the GPU "
-            "forward-drift attestation and decoder trace."
+            "forward-drift attestation and decoder trace. Defaults to the "
+            "minimal public-PR95 no-cliff preset found by scope search."
         ),
     )
     parser.add_argument(
