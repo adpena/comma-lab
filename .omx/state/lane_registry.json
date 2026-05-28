@@ -59909,6 +59909,47 @@
         }
       },
       "notes": "L0 scaffold registers canonical SubstrateContract per Catalog #241/#242; Rao-Ballard capacity-critique-driven cargo-cult-unwind of Z6 ego-motion-conditioned predictive coding paradigm per Catalog #311 + N1 path-5 STRUCTURAL CEILING REINFORCED 2026-05-28 routing; MLX-first numpy-portable inflate per 8th standing directive 2026-05-26; INDIVIDUALLY-FRACTAL 11th standing directive 2026-05-27; lane_class=substrate_engineering; research_only=true; dispatch_enabled=false; design memo .omx/research/z6_v2_cargo_cult_unwind_design_20260527T053000Z.md; canonical posterior anchor pending sister landing"
+    },
+    {
+      "id": "lane_wyner_ziv_pipeline_stage_codec_l0_scaffold_20260528",
+      "name": "Wyner-Ziv pipeline-stage codec L0 SCAFFOLD",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/wyner_ziv_pipeline_stage_codec/ (5 files; ~1270 LOC incl tests + docstrings; routes through canonical tac.codec.wyner_ziv_layer primitive); 18 dedicated tests in src/tac/substrates/wyner_ziv_pipeline_stage_codec/tests/test_wyner_ziv_pipeline_stage_codec_smoke.py PASS; _smoke_main exits 0 on byte-identical roundtrip; _full_main raises NotImplementedError per Catalog #240; canonical SubstrateContract registered per Catalog #241/#242; 6-facet observability surface per Catalog #305; numpy-portable inflate per HNeRV parity L4 (200 LOC budget; 2 deps); MLX-first per 8th standing directive; INDIVIDUALLY-FRACTAL per 11th standing directive"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/wyner_ziv_pipeline_stage_codec_design_20260528.md (Catalog #325 6-step contract: cargo-cult audit per Catalog #303 + 9-dim checklist per Catalog #294 + observability surface per Catalog #305 + Catalog #296 Dykstra-feasibility predicted band + Catalog #292 per-deliberation assumption-adversary surfacing v2 frontmatter per Catalog #300 with 10 council attendees + 4 reactivation criteria per CLAUDE.md Forbidden premature KILL + Catalog #324 pending_post_training validation status + Catalog #309 horizon_class: asymptotic_pursuit + Catalog #290 canonical-vs-unique decision per layer)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -59918,5 +59959,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-28T02:15:01Z"
+  "updated_at": "2026-05-28T03:00:28Z"
 }
