@@ -1,0 +1,33 @@
+{
+  "allowed_use": "blocked_repair_campaign_posterior_append_audit",
+  "appended_count": 1,
+  "appended_row_ids": [
+    "8768b8a2c2fe6670e110d28728925f3bdb3165f7e26b5e66048125aa156e239d"
+  ],
+  "blocked_learning_signal_report_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/psv3_live_selector_codec/repair_materialization_learning_signal_report.json",
+  "budget_spend_allowed": false,
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "duplicate_row_ids": [],
+  "exact_cuda_auth_eval": false,
+  "existing_row_count": 352,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "final_row_count": 353,
+  "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+  "gpu_launched": false,
+  "lock_path": ".omx/state/.repair_campaign_stackability_posterior.lock",
+  "posterior_path": ".omx/state/repair_campaign_stackability_posterior.jsonl",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_budget_spend": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "repair_campaign_blocked_posterior_append_report.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "signal_count": 1,
+  "skipped_duplicate_count": 0
+}

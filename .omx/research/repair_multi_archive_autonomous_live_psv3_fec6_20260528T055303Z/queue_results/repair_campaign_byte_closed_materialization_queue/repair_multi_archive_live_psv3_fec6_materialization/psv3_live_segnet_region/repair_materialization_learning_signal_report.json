@@ -1,0 +1,192 @@
+{
+  "allowed_use": "repair_materialization_learning_signal_bundle_only",
+  "blocked_signal_count": 1,
+  "budget_spend_allowed": false,
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+  "gpu_launched": false,
+  "learning_signal_rows": [
+    {
+      "allowed_use": "repair_materialization_gate_acquisition_update_only",
+      "blockers": [
+        "exact_auth_eval_required_before_score_or_promotion_claim",
+        "candidate_archives_not_materialized",
+        "receiver_runtime_consumption_proof_missing",
+        "full_frame_inflate_parity_required_before_exact_readiness",
+        "receiver_closed_rate_credit_archive_path_missing",
+        "receiver_closed_rate_credit_runtime_consumption_proof_path_missing",
+        "no_rate_only_preservation_rows_available",
+        "no_rate_only_saved_bytes_available",
+        "candidate_chain_materializer_manifest_missing",
+        "candidate_archive_materialized_false",
+        "runtime_consumption_proof_present_false",
+        "receiver_consumed_false",
+        "parent_rate_only_archive_materialization_required",
+        "component_response_replayed_false",
+        "family_materializer_is_encoder_side_only",
+        "component_response_replay_is_mlx_advisory_only",
+        "repair_family_byte_transform_is_mlx_advisory_only",
+        "materialization_learning_signal_is_not_score_authority",
+        "exact_axis_component_response_required_before_budget_spend"
+      ],
+      "budget_spend_allowed": false,
+      "candidate_id": "segnet_class_region_waterfill",
+      "charged_bits_changed": false,
+      "component_response_axis": "[macOS-MLX research-signal]",
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "evidence_grade": "materialization_gate_local_custody_signal_only",
+      "exact_cuda_auth_eval": false,
+      "family_id": "segnet_class_region_waterfill",
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+      "gpu_launched": false,
+      "learning_signal_kind": "repair_campaign_materialization_gate",
+      "local_planning_update": {
+        "budget_spend_allowed": false,
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "local_planning_update_ready": true,
+        "planner_feature_vector": {
+          "blocker_count": 19,
+          "candidate_archive_materialized": false,
+          "component_response_replayed": true,
+          "entropy_pipeline_information_effect_class": "can_shape_symbols_before_entropy_concentration",
+          "entropy_pipeline_stage_index": 10,
+          "entropy_position_label": "before_entropy_coder_distribution_shaping",
+          "entropy_stage_class": "pre_entropy_distribution_shaping",
+          "entropy_stage_contract_miss": false,
+          "entropy_stage_order": 10,
+          "fractal_active_levels": [
+            "byte",
+            "pixel",
+            "boundary",
+            "region",
+            "frame",
+            "batch"
+          ],
+          "fractal_ordered_levels": [
+            "bit",
+            "byte",
+            "pixel",
+            "boundary",
+            "region",
+            "frame",
+            "pair",
+            "batch",
+            "full_video"
+          ],
+          "materialization_signal_kind": "repair_campaign_byte_closed_materialization_gate",
+          "missing_archive_after_component_replay": true,
+          "missing_artifact_count": 5,
+          "receiver_consumed": false,
+          "receiver_credit_exhausted": false,
+          "runtime_consumption_proof_present": false,
+          "selection_blocker_class": "receiver_credit_missing",
+          "stackability_remeasure_required": false
+        },
+        "posterior_surface": "repair_campaign_stackability_local_mlx_posterior",
+        "posterior_update_blockers": [
+          "materialization_learning_signal_is_not_score_authority",
+          "exact_axis_component_response_required_before_budget_spend"
+        ],
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_budget_spend": false,
+        "ready_for_exact_eval_dispatch": false,
+        "recommended_acquisition_policy": "prioritize_byte_closed_family_materializer_implementation",
+        "recommended_stackability_followup": "materialize_archive_and_runtime_proof_then_rerun_component_stackability",
+        "schema": "repair_campaign_local_planning_update.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false
+      },
+      "missing_artifacts": [
+        "candidate_archives_not_materialized",
+        "receiver_runtime_consumption_proof_missing",
+        "receiver_closed_rate_credit_archive_path_missing",
+        "receiver_closed_rate_credit_runtime_consumption_proof_path_missing",
+        "candidate_chain_materializer_manifest_missing"
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_budget_spend": false,
+      "ready_for_exact_eval_dispatch": false,
+      "replay_identity": {
+        "environment_sha256": null,
+        "execution_context_sha256": null,
+        "hash_manifest_sha256": "a0ba67db1f78a106c6b3c338d3849a09a8a6af86de3db212a7cfd91509b55efb",
+        "replay_argv_sha256": null,
+        "replay_identity_kind": "repair_materialization_gate",
+        "schema": "repair_materialization_learning_replay_identity.v1",
+        "source_records_sha256": "b57386951f6bf3cc057823a4d1af41a24a1352ec4d776b265cc6a5f68bf8442e"
+      },
+      "schema": "repair_campaign_learning_signal.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "source_artifacts": [
+        {
+          "bytes": 46668,
+          "label": "repair_budget_materialization_execution_report",
+          "path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/psv3_live_segnet_region/repair_budget_materialization_execution_report.json",
+          "sha256": "e6300fe152063a21937e7f151dec628c1decc31a3ea63858886d3c0584c643d2"
+        },
+        {
+          "bytes": 1752,
+          "label": "repair_campaign_byte_closed_materialization_gate",
+          "path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/psv3_live_segnet_region/repair_campaign_byte_closed_materialization_gate.json",
+          "sha256": "44b2b35a09d35ec73a555bbb082786f774febe4f2095b95fc814e574d8587710"
+        },
+        {
+          "bytes": 11788,
+          "label": "repair_campaign_family_materializer_manifest",
+          "path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/psv3_live_segnet_region/repair_family_materializer_manifest.json",
+          "sha256": "3fa043ddc471862732c481a03c6a8b153abc165dcfc1534f74fc74b4b64f8b82"
+        }
+      ],
+      "typed_response_id": "psv3_live_segnet_region"
+    }
+  ],
+  "learning_signal_schema": "repair_campaign_learning_signal.v1",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_budget_spend": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "repair_campaign_blocked_learning_signal_report.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "source_family_materializer_manifest": {
+    "bytes": 11788,
+    "label": "repair_campaign_family_materializer_manifest",
+    "path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/psv3_live_segnet_region/repair_family_materializer_manifest.json",
+    "sha256": "3fa043ddc471862732c481a03c6a8b153abc165dcfc1534f74fc74b4b64f8b82"
+  },
+  "source_materialization_execution_report": {
+    "bytes": 46668,
+    "label": "repair_budget_materialization_execution_report",
+    "path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/psv3_live_segnet_region/repair_budget_materialization_execution_report.json",
+    "sha256": "e6300fe152063a21937e7f151dec628c1decc31a3ea63858886d3c0584c643d2"
+  },
+  "source_materialization_gate": {
+    "bytes": 1752,
+    "label": "repair_campaign_byte_closed_materialization_gate",
+    "path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/psv3_live_segnet_region/repair_campaign_byte_closed_materialization_gate.json",
+    "sha256": "44b2b35a09d35ec73a555bbb082786f774febe4f2095b95fc814e574d8587710"
+  }
+}

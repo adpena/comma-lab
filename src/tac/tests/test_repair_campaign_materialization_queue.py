@@ -450,6 +450,38 @@ def test_archive_candidate_intake_builds_real_archive_five_family_work_order(
     assert palette_row["palette_dynamics_context"]["frame1_mode_count"] == 0
 
 
+def test_archive_candidate_intake_overwrite_is_deterministically_rerunnable(
+    tmp_path: Path,
+) -> None:
+    archive = _write_archive(tmp_path / "source_archive.zip")
+    output_dir = tmp_path / "intake"
+
+    first = build_repair_campaign_work_order_from_archives(
+        archive_paths=[archive],
+        output_dir=output_dir,
+        repo_root=REPO_ROOT,
+        source_labels=["unit_psv3"],
+        chain_id="unit_real_archive_repair",
+        overwrite=True,
+    )
+    second = build_repair_campaign_work_order_from_archives(
+        archive_paths=[archive],
+        output_dir=output_dir,
+        repo_root=REPO_ROOT,
+        source_labels=["unit_psv3"],
+        chain_id="unit_real_archive_repair",
+        overwrite=True,
+    )
+
+    first_row = first["typed_response_ledger"]["rows"][0]
+    second_row = second["typed_response_ledger"]["rows"][0]
+    assert second["schema"] == first["schema"]
+    assert second_row["candidate_archive_sha256"] == first_row["candidate_archive_sha256"]
+    assert second_row["runtime_consumption_proof_path"] == first_row[
+        "runtime_consumption_proof_path"
+    ]
+
+
 def test_real_archive_intake_runs_all_families_through_floor_loop(
     tmp_path: Path,
 ) -> None:

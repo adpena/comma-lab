@@ -1,0 +1,3286 @@
+{
+  "allowed_use": "real_archive_candidate_repair_campaign_local_planning_only",
+  "archive_candidate_intake": {
+    "archive_count": 2,
+    "budget_spend_allowed": false,
+    "charged_bits_changed": false,
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "generated_at_utc": "2026-05-28T05:57:36Z",
+    "gpu_launched": false,
+    "intake_sha256": "f0e7b1c0b723463387a307af909bf313894ea2289ecd717f993a9861cb863857",
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "rows": [
+      {
+        "archive_zip_repack_manifest": {
+          "artifact_write": {
+            "allow_overwrite": true,
+            "bytes_written": 112133,
+            "free_bytes_before": 588774391808,
+            "path": "/Users/adpena/Projects/pact/.omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/psv3_live/receiver_closed_archive.zip",
+            "sha256": "f3e49d0dec8402ef5d3233bf726c7f73372e93a955c8a002b67faf7bfb2484d6"
+          },
+          "byte_closed_candidate_emitted": true,
+          "candidate_archive": {
+            "bytes": 112133,
+            "path": "/Users/adpena/Projects/pact/.omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/psv3_live/receiver_closed_archive.zip",
+            "sha256": "f3e49d0dec8402ef5d3233bf726c7f73372e93a955c8a002b67faf7bfb2484d6"
+          },
+          "candidate_members": [
+            {
+              "bytes": 104458,
+              "name": "0.bin",
+              "sha256": "f02577606a96d8c4ce6584530b111f771b05e9a140d3f11c030292e833275e19",
+              "zip_compressed_bytes": 104458,
+              "zip_compressed_payload_sha256": "f02577606a96d8c4ce6584530b111f771b05e9a140d3f11c030292e833275e19",
+              "zip_compressed_sha256": "f02577606a96d8c4ce6584530b111f771b05e9a140d3f11c030292e833275e19",
+              "zip_compression_method": "stored"
+            },
+            {
+              "bytes": 448,
+              "name": "inflate.sh",
+              "sha256": "086d037f5bd5fe76a7eb3f79d07e49c614ddee858ecbb84a17e5178cbb0337a9",
+              "zip_compressed_bytes": 322,
+              "zip_compressed_payload_sha256": "5837db7409827f3a40177844849ed0c389ac9cbca4801d1690732c4069cbf60e",
+              "zip_compressed_sha256": "5837db7409827f3a40177844849ed0c389ac9cbca4801d1690732c4069cbf60e",
+              "zip_compression_method": "deflated"
+            },
+            {
+              "bytes": 1125,
+              "name": "inflate.py",
+              "sha256": "4a8246393403be40f77c539565be0820fcbc774bb40838ad8a82f7038c5a5fc3",
+              "zip_compressed_bytes": 574,
+              "zip_compressed_payload_sha256": "f857da31c5632c51fba9661519470db68b4f6ca66732bc7e8a02e456373e795b",
+              "zip_compressed_sha256": "f857da31c5632c51fba9661519470db68b4f6ca66732bc7e8a02e456373e795b",
+              "zip_compression_method": "deflated"
+            },
+            {
+              "bytes": 0,
+              "name": "src/tac/__init__.py",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "zip_compressed_bytes": 0,
+              "zip_compressed_payload_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "zip_compressed_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "zip_compression_method": "stored"
+            },
+            {
+              "bytes": 0,
+              "name": "src/tac/substrates/__init__.py",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "zip_compressed_bytes": 0,
+              "zip_compressed_payload_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "zip_compressed_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "zip_compression_method": "stored"
+            },
+            {
+              "bytes": 0,
+              "name": "src/tac/substrates/pact_nerv_selector_v3/__init__.py",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "zip_compressed_bytes": 0,
+              "zip_compressed_payload_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "zip_compressed_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "zip_compression_method": "stored"
+            },
+            {
+              "bytes": 7326,
+              "name": "src/tac/substrates/pact_nerv_selector_v3/architecture.py",
+              "sha256": "99db73b2367e6a8e34639d07c9f31bc2ecdd53bcaa4c621f842a8a439fc29786",
+              "zip_compressed_bytes": 2359,
+              "zip_compressed_payload_sha256": "8a0608c668ae4e21e3f9883480ed1597e9d6466f2f40390d192ad000a1119f5e",
+              "zip_compressed_sha256": "8a0608c668ae4e21e3f9883480ed1597e9d6466f2f40390d192ad000a1119f5e",
+              "zip_compression_method": "deflated"
+            },
+            {
+              "bytes": 5681,
+              "name": "src/tac/substrates/pact_nerv_selector_v3/archive.py",
+              "sha256": "99780d6fd3538e1bf597738f19564799a5c8ce2957e458748b52015015a3966f",
+              "zip_compressed_bytes": 2022,
+              "zip_compressed_payload_sha256": "ac63111654b715c4660803203f8d5cf15ad814fec9a67d67f8aef132ddb5bd22",
+              "zip_compressed_sha256": "ac63111654b715c4660803203f8d5cf15ad814fec9a67d67f8aef132ddb5bd22",
+              "zip_compression_method": "deflated"
+            },
+            {
+              "bytes": 2671,
+              "name": "src/tac/substrates/pact_nerv_selector_v3/inflate.py",
+              "sha256": "f150c6adb39c1a41805fadc651812c343616802f3c57c967b83b249d5e2ad355",
+              "zip_compressed_bytes": 1124,
+              "zip_compressed_payload_sha256": "9d1236bef7b616129b6e6287950043d0c53e6bfeae1ee7c53eb0a08c525cf363",
+              "zip_compressed_sha256": "9d1236bef7b616129b6e6287950043d0c53e6bfeae1ee7c53eb0a08c525cf363",
+              "zip_compression_method": "deflated"
+            }
+          ],
+          "candidate_trials": [
+            {
+              "archive_bytes": 122983,
+              "archive_sha256": "57f01aae56e6d677e15fb5b8c4bf07b38b43e3cba3a6dddc13309f1f0422adf7",
+              "compression_plan": [
+                {
+                  "member_name": "0.bin",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "inflate.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "inflate.sh",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/__init__.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/substrates/__init__.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/__init__.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/architecture.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/archive.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/inflate.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                }
+              ],
+              "plan_key": "0.bin:stored:default|inflate.py:stored:default|inflate.sh:stored:default|src/tac/__init__.py:stored:default|src/tac/substrates/__init__.py:stored:default|src/tac/substrates/pact_nerv_selector_v3/__init__.py:stored:default|src/tac/substrates/pact_nerv_selector_v3/architecture.py:stored:default|src/tac/substrates/pact_nerv_selector_v3/archive.py:stored:default|src/tac/substrates/pact_nerv_selector_v3/inflate.py:stored:default",
+              "strategy": "uniform"
+            },
+            {
+              "archive_bytes": 112703,
+              "archive_sha256": "408c748109361a08fadf4a01173d23c4943900aefe982559aca1a313bcaf16b8",
+              "compression_plan": [
+                {
+                  "member_name": "0.bin",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 1
+                },
+                {
+                  "member_name": "inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 1
+                },
+                {
+                  "member_name": "inflate.sh",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 1
+                },
+                {
+                  "member_name": "src/tac/__init__.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 1
+                },
+                {
+                  "member_name": "src/tac/substrates/__init__.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 1
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/__init__.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 1
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/architecture.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 1
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/archive.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 1
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 1
+                }
+              ],
+              "plan_key": "0.bin:deflated:1|inflate.py:deflated:1|inflate.sh:deflated:1|src/tac/__init__.py:deflated:1|src/tac/substrates/__init__.py:deflated:1|src/tac/substrates/pact_nerv_selector_v3/__init__.py:deflated:1|src/tac/substrates/pact_nerv_selector_v3/architecture.py:deflated:1|src/tac/substrates/pact_nerv_selector_v3/archive.py:deflated:1|src/tac/substrates/pact_nerv_selector_v3/inflate.py:deflated:1",
+              "strategy": "uniform"
+            },
+            {
+              "archive_bytes": 112177,
+              "archive_sha256": "cc80ac20af80881a07522a115985c23f2d545250001b60ff3dbf60f94e120ae6",
+              "compression_plan": [
+                {
+                  "member_name": "0.bin",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "inflate.sh",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/__init__.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/__init__.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/__init__.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/architecture.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/archive.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                }
+              ],
+              "plan_key": "0.bin:deflated:6|inflate.py:deflated:6|inflate.sh:deflated:6|src/tac/__init__.py:deflated:6|src/tac/substrates/__init__.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/__init__.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/architecture.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/archive.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/inflate.py:deflated:6",
+              "strategy": "uniform"
+            },
+            {
+              "archive_bytes": 112177,
+              "archive_sha256": "9c9db2bd59fb426552490a3cb28763460fa41e59481c361ac464bcf8d62fc3dc",
+              "compression_plan": [
+                {
+                  "member_name": "0.bin",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 9
+                },
+                {
+                  "member_name": "inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 9
+                },
+                {
+                  "member_name": "inflate.sh",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 9
+                },
+                {
+                  "member_name": "src/tac/__init__.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 9
+                },
+                {
+                  "member_name": "src/tac/substrates/__init__.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 9
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/__init__.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 9
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/architecture.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 9
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/archive.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 9
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 9
+                }
+              ],
+              "plan_key": "0.bin:deflated:9|inflate.py:deflated:9|inflate.sh:deflated:9|src/tac/__init__.py:deflated:9|src/tac/substrates/__init__.py:deflated:9|src/tac/substrates/pact_nerv_selector_v3/__init__.py:deflated:9|src/tac/substrates/pact_nerv_selector_v3/architecture.py:deflated:9|src/tac/substrates/pact_nerv_selector_v3/archive.py:deflated:9|src/tac/substrates/pact_nerv_selector_v3/inflate.py:deflated:9",
+              "strategy": "uniform"
+            },
+            {
+              "archive_bytes": 112142,
+              "archive_sha256": "9158bac4e4b76c5fc8c47ac266c4c0ad57118f46cda8b43488b1b358b8f6f3b5",
+              "compression_plan": [
+                {
+                  "member_name": "0.bin",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "inflate.sh",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/__init__.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/__init__.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/__init__.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/architecture.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/archive.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                }
+              ],
+              "plan_key": "0.bin:stored:default|inflate.py:deflated:6|inflate.sh:deflated:6|src/tac/__init__.py:deflated:6|src/tac/substrates/__init__.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/__init__.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/architecture.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/archive.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/inflate.py:deflated:6",
+              "strategy": "greedy_per_member"
+            },
+            {
+              "archive_bytes": 112177,
+              "archive_sha256": "1a0860d5bb064b7641bda4f605b4be235763c899670c68282314e99a7aeee66c",
+              "compression_plan": [
+                {
+                  "member_name": "0.bin",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 1
+                },
+                {
+                  "member_name": "inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "inflate.sh",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/__init__.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/__init__.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/__init__.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/architecture.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/archive.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                }
+              ],
+              "plan_key": "0.bin:deflated:1|inflate.py:deflated:6|inflate.sh:deflated:6|src/tac/__init__.py:deflated:6|src/tac/substrates/__init__.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/__init__.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/architecture.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/archive.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/inflate.py:deflated:6",
+              "strategy": "greedy_per_member"
+            },
+            {
+              "archive_bytes": 112268,
+              "archive_sha256": "1721b15b621bace26fe706de7c9a2328a6b8cc126f6e2dfaba5adf6aa7f67896",
+              "compression_plan": [
+                {
+                  "member_name": "0.bin",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "inflate.sh",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/__init__.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/__init__.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/__init__.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/architecture.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/archive.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                }
+              ],
+              "plan_key": "0.bin:stored:default|inflate.py:deflated:6|inflate.sh:stored:default|src/tac/__init__.py:deflated:6|src/tac/substrates/__init__.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/__init__.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/architecture.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/archive.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/inflate.py:deflated:6",
+              "strategy": "greedy_per_member"
+            },
+            {
+              "archive_bytes": 112144,
+              "archive_sha256": "f7f19d21d63afe3733f5adb2b8105b568034b69000973d92537c054c61f81e3b",
+              "compression_plan": [
+                {
+                  "member_name": "0.bin",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "inflate.sh",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 1
+                },
+                {
+                  "member_name": "src/tac/__init__.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/__init__.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/__init__.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/architecture.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/archive.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                }
+              ],
+              "plan_key": "0.bin:stored:default|inflate.py:deflated:6|inflate.sh:deflated:1|src/tac/__init__.py:deflated:6|src/tac/substrates/__init__.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/__init__.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/architecture.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/archive.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/inflate.py:deflated:6",
+              "strategy": "greedy_per_member"
+            },
+            {
+              "archive_bytes": 112693,
+              "archive_sha256": "d02336d1a8124fe084fc19d870507d1d13bafd2aca5cd0e1c7c016c621a080d0",
+              "compression_plan": [
+                {
+                  "member_name": "0.bin",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "inflate.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "inflate.sh",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/__init__.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/__init__.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/__init__.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/architecture.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/archive.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                }
+              ],
+              "plan_key": "0.bin:stored:default|inflate.py:stored:default|inflate.sh:deflated:6|src/tac/__init__.py:deflated:6|src/tac/substrates/__init__.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/__init__.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/architecture.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/archive.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/inflate.py:deflated:6",
+              "strategy": "greedy_per_member"
+            },
+            {
+              "archive_bytes": 112153,
+              "archive_sha256": "06911a3a0bb52689d1c07b250698625d1f36d1594ae73b49f74271e10f422c5a",
+              "compression_plan": [
+                {
+                  "member_name": "0.bin",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 1
+                },
+                {
+                  "member_name": "inflate.sh",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/__init__.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/__init__.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/__init__.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/architecture.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/archive.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                }
+              ],
+              "plan_key": "0.bin:stored:default|inflate.py:deflated:1|inflate.sh:deflated:6|src/tac/__init__.py:deflated:6|src/tac/substrates/__init__.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/__init__.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/architecture.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/archive.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/inflate.py:deflated:6",
+              "strategy": "greedy_per_member"
+            },
+            {
+              "archive_bytes": 112140,
+              "archive_sha256": "002f8e1696b0482c8e5c07ee6c68e5048e05ac0313c429c23d3733528f86a64e",
+              "compression_plan": [
+                {
+                  "member_name": "0.bin",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "inflate.sh",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/__init__.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/substrates/__init__.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/__init__.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/architecture.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/archive.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                }
+              ],
+              "plan_key": "0.bin:stored:default|inflate.py:deflated:6|inflate.sh:deflated:6|src/tac/__init__.py:stored:default|src/tac/substrates/__init__.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/__init__.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/architecture.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/archive.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/inflate.py:deflated:6",
+              "strategy": "greedy_per_member"
+            },
+            {
+              "archive_bytes": 112138,
+              "archive_sha256": "51eb5b4ca4f6e2f1827c131db4431597302b258c0c20f9eb681d3ba813f62d1b",
+              "compression_plan": [
+                {
+                  "member_name": "0.bin",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "inflate.sh",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/__init__.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/substrates/__init__.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/__init__.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/architecture.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/archive.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                }
+              ],
+              "plan_key": "0.bin:stored:default|inflate.py:deflated:6|inflate.sh:deflated:6|src/tac/__init__.py:stored:default|src/tac/substrates/__init__.py:stored:default|src/tac/substrates/pact_nerv_selector_v3/__init__.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/architecture.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/archive.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/inflate.py:deflated:6",
+              "strategy": "greedy_per_member"
+            },
+            {
+              "archive_bytes": 112136,
+              "archive_sha256": "f2d730d15755ad758620dbb21ec3662149c7c289cfaf45b3e7b5828de02b2b7e",
+              "compression_plan": [
+                {
+                  "member_name": "0.bin",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "inflate.sh",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/__init__.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/substrates/__init__.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/__init__.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/architecture.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/archive.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                }
+              ],
+              "plan_key": "0.bin:stored:default|inflate.py:deflated:6|inflate.sh:deflated:6|src/tac/__init__.py:stored:default|src/tac/substrates/__init__.py:stored:default|src/tac/substrates/pact_nerv_selector_v3/__init__.py:stored:default|src/tac/substrates/pact_nerv_selector_v3/architecture.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/archive.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/inflate.py:deflated:6",
+              "strategy": "greedy_per_member"
+            },
+            {
+              "archive_bytes": 117100,
+              "archive_sha256": "95a8e8e3acc0e0b1afc1c5d5fa6eb78203646eead0b5493c852dfdbd183e1d3f",
+              "compression_plan": [
+                {
+                  "member_name": "0.bin",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "inflate.sh",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/__init__.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/substrates/__init__.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/__init__.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/architecture.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/archive.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                }
+              ],
+              "plan_key": "0.bin:stored:default|inflate.py:deflated:6|inflate.sh:deflated:6|src/tac/__init__.py:stored:default|src/tac/substrates/__init__.py:stored:default|src/tac/substrates/pact_nerv_selector_v3/__init__.py:stored:default|src/tac/substrates/pact_nerv_selector_v3/architecture.py:stored:default|src/tac/substrates/pact_nerv_selector_v3/archive.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/inflate.py:deflated:6",
+              "strategy": "greedy_per_member"
+            },
+            {
+              "archive_bytes": 112401,
+              "archive_sha256": "3c49691599de30f4426ebe6d08160cabb07c1053dae232aaac5e40e4b295c132",
+              "compression_plan": [
+                {
+                  "member_name": "0.bin",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "inflate.sh",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/__init__.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/substrates/__init__.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/__init__.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/architecture.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 1
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/archive.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                }
+              ],
+              "plan_key": "0.bin:stored:default|inflate.py:deflated:6|inflate.sh:deflated:6|src/tac/__init__.py:stored:default|src/tac/substrates/__init__.py:stored:default|src/tac/substrates/pact_nerv_selector_v3/__init__.py:stored:default|src/tac/substrates/pact_nerv_selector_v3/architecture.py:deflated:1|src/tac/substrates/pact_nerv_selector_v3/archive.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/inflate.py:deflated:6",
+              "strategy": "greedy_per_member"
+            },
+            {
+              "archive_bytes": 112133,
+              "archive_sha256": "f3e49d0dec8402ef5d3233bf726c7f73372e93a955c8a002b67faf7bfb2484d6",
+              "compression_plan": [
+                {
+                  "member_name": "0.bin",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "inflate.sh",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/__init__.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/substrates/__init__.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/__init__.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/architecture.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 9
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/archive.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                }
+              ],
+              "plan_key": "0.bin:stored:default|inflate.py:deflated:6|inflate.sh:deflated:6|src/tac/__init__.py:stored:default|src/tac/substrates/__init__.py:stored:default|src/tac/substrates/pact_nerv_selector_v3/__init__.py:stored:default|src/tac/substrates/pact_nerv_selector_v3/architecture.py:deflated:9|src/tac/substrates/pact_nerv_selector_v3/archive.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/inflate.py:deflated:6",
+              "strategy": "greedy_per_member"
+            },
+            {
+              "archive_bytes": 115792,
+              "archive_sha256": "fe432f1cb46067b6ae51de07da79fe3b3b1b900c9a037ff947129b7cd65599ed",
+              "compression_plan": [
+                {
+                  "member_name": "0.bin",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "inflate.sh",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/__init__.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/substrates/__init__.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/__init__.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/architecture.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 9
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/archive.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                }
+              ],
+              "plan_key": "0.bin:stored:default|inflate.py:deflated:6|inflate.sh:deflated:6|src/tac/__init__.py:stored:default|src/tac/substrates/__init__.py:stored:default|src/tac/substrates/pact_nerv_selector_v3/__init__.py:stored:default|src/tac/substrates/pact_nerv_selector_v3/architecture.py:deflated:9|src/tac/substrates/pact_nerv_selector_v3/archive.py:stored:default|src/tac/substrates/pact_nerv_selector_v3/inflate.py:deflated:6",
+              "strategy": "greedy_per_member"
+            },
+            {
+              "archive_bytes": 112327,
+              "archive_sha256": "39fb591cc5019da9b7172c53bec868b15dcc5873d233d8e4ffd40376ee529727",
+              "compression_plan": [
+                {
+                  "member_name": "0.bin",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "inflate.sh",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/__init__.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/substrates/__init__.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/__init__.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/architecture.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 9
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/archive.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 1
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                }
+              ],
+              "plan_key": "0.bin:stored:default|inflate.py:deflated:6|inflate.sh:deflated:6|src/tac/__init__.py:stored:default|src/tac/substrates/__init__.py:stored:default|src/tac/substrates/pact_nerv_selector_v3/__init__.py:stored:default|src/tac/substrates/pact_nerv_selector_v3/architecture.py:deflated:9|src/tac/substrates/pact_nerv_selector_v3/archive.py:deflated:1|src/tac/substrates/pact_nerv_selector_v3/inflate.py:deflated:6",
+              "strategy": "greedy_per_member"
+            },
+            {
+              "archive_bytes": 113680,
+              "archive_sha256": "edadb127de811d505120669bc50eecce2097a66641be6a97404f9a2670a33972",
+              "compression_plan": [
+                {
+                  "member_name": "0.bin",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "inflate.sh",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/__init__.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/substrates/__init__.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/__init__.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/architecture.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 9
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/archive.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/inflate.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                }
+              ],
+              "plan_key": "0.bin:stored:default|inflate.py:deflated:6|inflate.sh:deflated:6|src/tac/__init__.py:stored:default|src/tac/substrates/__init__.py:stored:default|src/tac/substrates/pact_nerv_selector_v3/__init__.py:stored:default|src/tac/substrates/pact_nerv_selector_v3/architecture.py:deflated:9|src/tac/substrates/pact_nerv_selector_v3/archive.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/inflate.py:stored:default",
+              "strategy": "greedy_per_member"
+            },
+            {
+              "archive_bytes": 112187,
+              "archive_sha256": "73bcc472a62accdec6ff971819f9c4f5b6b60f6c6279ac30e90cce14a93659c4",
+              "compression_plan": [
+                {
+                  "member_name": "0.bin",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "inflate.sh",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/__init__.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/substrates/__init__.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/__init__.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/architecture.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 9
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/archive.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 1
+                }
+              ],
+              "plan_key": "0.bin:stored:default|inflate.py:deflated:6|inflate.sh:deflated:6|src/tac/__init__.py:stored:default|src/tac/substrates/__init__.py:stored:default|src/tac/substrates/pact_nerv_selector_v3/__init__.py:stored:default|src/tac/substrates/pact_nerv_selector_v3/architecture.py:deflated:9|src/tac/substrates/pact_nerv_selector_v3/archive.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/inflate.py:deflated:1",
+              "strategy": "greedy_per_member"
+            },
+            {
+              "archive_bytes": 112136,
+              "archive_sha256": "18fc8e990c7a1989ae09ee561061cde6fb939c4e0b8f57521d39b3e6399b5b20",
+              "compression_plan": [
+                {
+                  "member_name": "0.bin",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "inflate.sh",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/__init__.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/substrates/__init__.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/__init__.py",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/architecture.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 9
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/archive.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                },
+                {
+                  "member_name": "src/tac/substrates/pact_nerv_selector_v3/inflate.py",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 9
+                }
+              ],
+              "plan_key": "0.bin:stored:default|inflate.py:deflated:6|inflate.sh:deflated:6|src/tac/__init__.py:stored:default|src/tac/substrates/__init__.py:stored:default|src/tac/substrates/pact_nerv_selector_v3/__init__.py:stored:default|src/tac/substrates/pact_nerv_selector_v3/architecture.py:deflated:9|src/tac/substrates/pact_nerv_selector_v3/archive.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/inflate.py:deflated:9",
+              "strategy": "greedy_per_member"
+            }
+          ],
+          "dispatch_attempted": false,
+          "gpu_launched": false,
+          "materializer_id": "archive_zip_repack_adapter",
+          "portability_contract": {
+            "deterministic_surface": "python_stdlib_zipfile_archive_repack",
+            "implementation_language": "python",
+            "materializer_id": "archive_zip_repack_adapter",
+            "notes": "Archive-wide ZIP repack explores uniform and greedy per-member compression plans while preserving every decoded member payload.",
+            "portability_class": "portable_python_reference",
+            "promotion_authority": false,
+            "rank_or_kill_authority": false,
+            "required_python_modules": [
+              "zipfile"
+            ],
+            "requires_cuda": false,
+            "requires_gpu": false,
+            "requires_metal": false,
+            "requires_mlx": false,
+            "requires_mps": false,
+            "schema": "family_agnostic_materializer_portability_contract.v1",
+            "score_authority": false,
+            "target_kind": "archive_zip_repack_v1",
+            "unsupported_features": []
+          },
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "readiness_blockers": [],
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_contract_id": "archive_zip_repack_v1.receiver.v1",
+          "receiver_contract_kind": "family_agnostic_archive_zip_repack",
+          "receiver_contract_satisfied": true,
+          "receiver_verification": {
+            "blockers": [],
+            "candidate_archive_sha256": "f3e49d0dec8402ef5d3233bf726c7f73372e93a955c8a002b67faf7bfb2484d6",
+            "candidate_member_sha256": null,
+            "candidate_member_sha256s": {
+              "0.bin": "f02577606a96d8c4ce6584530b111f771b05e9a140d3f11c030292e833275e19",
+              "inflate.py": "4a8246393403be40f77c539565be0820fcbc774bb40838ad8a82f7038c5a5fc3",
+              "inflate.sh": "086d037f5bd5fe76a7eb3f79d07e49c614ddee858ecbb84a17e5178cbb0337a9",
+              "src/tac/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "src/tac/substrates/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "src/tac/substrates/pact_nerv_selector_v3/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "src/tac/substrates/pact_nerv_selector_v3/architecture.py": "99db73b2367e6a8e34639d07c9f31bc2ecdd53bcaa4c621f842a8a439fc29786",
+              "src/tac/substrates/pact_nerv_selector_v3/archive.py": "99780d6fd3538e1bf597738f19564799a5c8ce2957e458748b52015015a3966f",
+              "src/tac/substrates/pact_nerv_selector_v3/inflate.py": "f150c6adb39c1a41805fadc651812c343616802f3c57c967b83b249d5e2ad355"
+            },
+            "materializer_id": "archive_zip_repack_adapter",
+            "proof_kind": "archive_zip_repack_payload_identity_receiver_proof.v1",
+            "proof_path": "/Users/adpena/Projects/pact/.omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/psv3_live/receiver_closed_archive.runtime_consumption_proof.json",
+            "proof_present": true,
+            "proof_schema": "family_agnostic_runtime_consumption_proof_v1",
+            "receiver_contract_kind": "family_agnostic_archive_zip_repack",
+            "receiver_contract_satisfied": true,
+            "runtime_adapter_ready": false,
+            "runtime_adapter_sha256": null,
+            "schema": "family_agnostic_runtime_consumption_proof_verification.v1",
+            "target_kind": "archive_zip_repack_v1"
+          },
+          "runtime_consumption_proof_path": "/Users/adpena/Projects/pact/.omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/psv3_live/receiver_closed_archive.runtime_consumption_proof.json",
+          "runtime_consumption_proof_write": {
+            "allow_overwrite": true,
+            "bytes_written": 18687,
+            "free_bytes_before": 588774391808,
+            "path": "/Users/adpena/Projects/pact/.omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/psv3_live/receiver_closed_archive.runtime_consumption_proof.json",
+            "sha256": "999625d9b6057fd0c959919d76c81335c6714e3d54e91041f35a8f5a0f65ed9c"
+          },
+          "schema": "archive_zip_repack_candidate.v1",
+          "score_claim": false,
+          "score_claim_valid": false,
+          "selected_member_names": [
+            "0.bin",
+            "inflate.sh",
+            "inflate.py",
+            "src/tac/__init__.py",
+            "src/tac/substrates/__init__.py",
+            "src/tac/substrates/pact_nerv_selector_v3/__init__.py",
+            "src/tac/substrates/pact_nerv_selector_v3/architecture.py",
+            "src/tac/substrates/pact_nerv_selector_v3/archive.py",
+            "src/tac/substrates/pact_nerv_selector_v3/inflate.py"
+          ],
+          "selected_repack": {
+            "candidate_archive_bytes": 112133,
+            "compression_plan": [
+              {
+                "member_name": "0.bin",
+                "zip_compression_method": "stored",
+                "zip_compresslevel": null
+              },
+              {
+                "member_name": "inflate.py",
+                "zip_compression_method": "deflated",
+                "zip_compresslevel": 6
+              },
+              {
+                "member_name": "inflate.sh",
+                "zip_compression_method": "deflated",
+                "zip_compresslevel": 6
+              },
+              {
+                "member_name": "src/tac/__init__.py",
+                "zip_compression_method": "stored",
+                "zip_compresslevel": null
+              },
+              {
+                "member_name": "src/tac/substrates/__init__.py",
+                "zip_compression_method": "stored",
+                "zip_compresslevel": null
+              },
+              {
+                "member_name": "src/tac/substrates/pact_nerv_selector_v3/__init__.py",
+                "zip_compression_method": "stored",
+                "zip_compresslevel": null
+              },
+              {
+                "member_name": "src/tac/substrates/pact_nerv_selector_v3/architecture.py",
+                "zip_compression_method": "deflated",
+                "zip_compresslevel": 9
+              },
+              {
+                "member_name": "src/tac/substrates/pact_nerv_selector_v3/archive.py",
+                "zip_compression_method": "deflated",
+                "zip_compresslevel": 6
+              },
+              {
+                "member_name": "src/tac/substrates/pact_nerv_selector_v3/inflate.py",
+                "zip_compression_method": "deflated",
+                "zip_compresslevel": 6
+              }
+            ],
+            "member_count": 9,
+            "plan_key": "0.bin:stored:default|inflate.py:deflated:6|inflate.sh:deflated:6|src/tac/__init__.py:stored:default|src/tac/substrates/__init__.py:stored:default|src/tac/substrates/pact_nerv_selector_v3/__init__.py:stored:default|src/tac/substrates/pact_nerv_selector_v3/architecture.py:deflated:9|src/tac/substrates/pact_nerv_selector_v3/archive.py:deflated:6|src/tac/substrates/pact_nerv_selector_v3/inflate.py:deflated:6",
+            "saved_bytes": 44,
+            "source_archive_bytes": 112177,
+            "strategy": "greedy_per_member"
+          },
+          "selection_scope": "all_zip_members",
+          "serialized_archive_delta": {
+            "archive_delta_bytes": -44,
+            "blockers": [],
+            "candidate_archive_bytes": 112133,
+            "dispatch_attempted": false,
+            "gpu_launched": false,
+            "modeled_cost_bytes": null,
+            "modeled_saved_bytes": 44,
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "rate_only_control": false,
+            "ready_for_exact_eval_dispatch": false,
+            "realized_saved_bytes": 44,
+            "require_realized_saving": false,
+            "savings_realized": true,
+            "schema": "serialized_archive_delta_contract.v1",
+            "score_claim": false,
+            "score_claim_valid": false,
+            "source_archive_bytes": 112177,
+            "status": "realized_saving"
+          },
+          "source_archive": {
+            "bytes": 112177,
+            "path": "/Users/adpena/Projects/pact/experiments/results/pact_nerv_selector_v3_mlx_local_long_2000ep_32pairs_20260528T045801Z/archive.zip",
+            "sha256": "cc80ac20af80881a07522a115985c23f2d545250001b60ff3dbf60f94e120ae6"
+          },
+          "source_members": [
+            {
+              "bytes": 104458,
+              "name": "0.bin",
+              "sha256": "f02577606a96d8c4ce6584530b111f771b05e9a140d3f11c030292e833275e19",
+              "zip_compressed_bytes": 104493,
+              "zip_compressed_payload_sha256": "ce3edf89f6e0be0187ba9aff51d9c518f4b01fdc50151572f2417b9e3c766bfe",
+              "zip_compressed_sha256": "ce3edf89f6e0be0187ba9aff51d9c518f4b01fdc50151572f2417b9e3c766bfe",
+              "zip_compression_method": "deflated"
+            },
+            {
+              "bytes": 448,
+              "name": "inflate.sh",
+              "sha256": "086d037f5bd5fe76a7eb3f79d07e49c614ddee858ecbb84a17e5178cbb0337a9",
+              "zip_compressed_bytes": 322,
+              "zip_compressed_payload_sha256": "5837db7409827f3a40177844849ed0c389ac9cbca4801d1690732c4069cbf60e",
+              "zip_compressed_sha256": "5837db7409827f3a40177844849ed0c389ac9cbca4801d1690732c4069cbf60e",
+              "zip_compression_method": "deflated"
+            },
+            {
+              "bytes": 1125,
+              "name": "inflate.py",
+              "sha256": "4a8246393403be40f77c539565be0820fcbc774bb40838ad8a82f7038c5a5fc3",
+              "zip_compressed_bytes": 574,
+              "zip_compressed_payload_sha256": "f857da31c5632c51fba9661519470db68b4f6ca66732bc7e8a02e456373e795b",
+              "zip_compressed_sha256": "f857da31c5632c51fba9661519470db68b4f6ca66732bc7e8a02e456373e795b",
+              "zip_compression_method": "deflated"
+            },
+            {
+              "bytes": 0,
+              "name": "src/tac/__init__.py",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "zip_compressed_bytes": 2,
+              "zip_compressed_payload_sha256": "9b4fb24edd6d1d8830e272398263cdbf026b97392cc35387b991dc0248a628f9",
+              "zip_compressed_sha256": "9b4fb24edd6d1d8830e272398263cdbf026b97392cc35387b991dc0248a628f9",
+              "zip_compression_method": "deflated"
+            },
+            {
+              "bytes": 0,
+              "name": "src/tac/substrates/__init__.py",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "zip_compressed_bytes": 2,
+              "zip_compressed_payload_sha256": "9b4fb24edd6d1d8830e272398263cdbf026b97392cc35387b991dc0248a628f9",
+              "zip_compressed_sha256": "9b4fb24edd6d1d8830e272398263cdbf026b97392cc35387b991dc0248a628f9",
+              "zip_compression_method": "deflated"
+            },
+            {
+              "bytes": 0,
+              "name": "src/tac/substrates/pact_nerv_selector_v3/__init__.py",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "zip_compressed_bytes": 2,
+              "zip_compressed_payload_sha256": "9b4fb24edd6d1d8830e272398263cdbf026b97392cc35387b991dc0248a628f9",
+              "zip_compressed_sha256": "9b4fb24edd6d1d8830e272398263cdbf026b97392cc35387b991dc0248a628f9",
+              "zip_compression_method": "deflated"
+            },
+            {
+              "bytes": 7326,
+              "name": "src/tac/substrates/pact_nerv_selector_v3/architecture.py",
+              "sha256": "99db73b2367e6a8e34639d07c9f31bc2ecdd53bcaa4c621f842a8a439fc29786",
+              "zip_compressed_bytes": 2362,
+              "zip_compressed_payload_sha256": "ca9d10bea78b4d2dcad5538b811a65f23333e001b8147cc85078f9a47b70f499",
+              "zip_compressed_sha256": "ca9d10bea78b4d2dcad5538b811a65f23333e001b8147cc85078f9a47b70f499",
+              "zip_compression_method": "deflated"
+            },
+            {
+              "bytes": 5681,
+              "name": "src/tac/substrates/pact_nerv_selector_v3/archive.py",
+              "sha256": "99780d6fd3538e1bf597738f19564799a5c8ce2957e458748b52015015a3966f",
+              "zip_compressed_bytes": 2022,
+              "zip_compressed_payload_sha256": "ac63111654b715c4660803203f8d5cf15ad814fec9a67d67f8aef132ddb5bd22",
+              "zip_compressed_sha256": "ac63111654b715c4660803203f8d5cf15ad814fec9a67d67f8aef132ddb5bd22",
+              "zip_compression_method": "deflated"
+            },
+            {
+              "bytes": 2671,
+              "name": "src/tac/substrates/pact_nerv_selector_v3/inflate.py",
+              "sha256": "f150c6adb39c1a41805fadc651812c343616802f3c57c967b83b249d5e2ad355",
+              "zip_compressed_bytes": 1124,
+              "zip_compressed_payload_sha256": "9d1236bef7b616129b6e6287950043d0c53e6bfeae1ee7c53eb0a08c525cf363",
+              "zip_compressed_sha256": "9d1236bef7b616129b6e6287950043d0c53e6bfeae1ee7c53eb0a08c525cf363",
+              "zip_compression_method": "deflated"
+            }
+          ],
+          "target_kind": "archive_zip_repack_v1"
+        },
+        "budget_spend_allowed": false,
+        "candidate_archive_bytes": 112133,
+        "candidate_archive_path": "/Users/adpena/Projects/pact/.omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/psv3_live/receiver_closed_archive.zip",
+        "candidate_archive_sha256": "f3e49d0dec8402ef5d3233bf726c7f73372e93a955c8a002b67faf7bfb2484d6",
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "equivalence_gate_path": "experiments/results/pact_nerv_selector_v3_mlx_local_long_2000ep_32pairs_20260528T045801Z/pact_nerv_selector_v3_equivalence_gate.json",
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "local_mlx_response_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/local_mlx_response_summaries/psv3_live/local_mlx_response.json",
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_closed_saved_bytes": 44,
+        "receiver_consumed": true,
+        "reference_local_mlx_response_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/local_mlx_response_summaries/psv3_live/reference_local_mlx_response.json",
+        "runtime_consumption_proof_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/psv3_live/receiver_closed_archive.runtime_consumption_proof.json",
+        "runtime_consumption_proof_present": true,
+        "runtime_consumption_proof_sha256": "999625d9b6057fd0c959919d76c81335c6714e3d54e91041f35a8f5a0f65ed9c",
+        "schema": "repair_campaign_archive_candidate_intake_row.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "signal_multiplier": 1.2836536837751051,
+        "source_archive_bytes": 112177,
+        "source_archive_path": "/Users/adpena/Projects/pact/experiments/results/pact_nerv_selector_v3_mlx_local_long_2000ep_32pairs_20260528T045801Z/archive.zip",
+        "source_archive_sha256": "cc80ac20af80881a07522a115985c23f2d545250001b60ff3dbf60f94e120ae6",
+        "source_candidate_label": "psv3_live",
+        "training_artifact_path": "experiments/results/pact_nerv_selector_v3_mlx_local_long_2000ep_32pairs_20260528T045801Z/training_artifact.json",
+        "typed_response_ids": [
+          "psv3_live_posenet_bottom_decile",
+          "psv3_live_segnet_region",
+          "psv3_live_selector_codec",
+          "psv3_live_frame0_k16_palette",
+          "psv3_live_entropy_boundary"
+        ]
+      },
+      {
+        "archive_zip_repack_manifest": {
+          "artifact_write": {
+            "allow_overwrite": true,
+            "bytes_written": 178517,
+            "free_bytes_before": 588774371328,
+            "path": "/Users/adpena/Projects/pact/.omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/fec6_live/receiver_closed_archive.zip",
+            "sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf"
+          },
+          "byte_closed_candidate_emitted": true,
+          "candidate_archive": {
+            "bytes": 178517,
+            "path": "/Users/adpena/Projects/pact/.omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/fec6_live/receiver_closed_archive.zip",
+            "sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf"
+          },
+          "candidate_members": [
+            {
+              "bytes": 178417,
+              "name": "x",
+              "sha256": "f174192aeadfccf4b50fe7d45d1c9b98cec74eedfa33d06c35d480e6b46cd4dd",
+              "zip_compressed_bytes": 178417,
+              "zip_compressed_payload_sha256": "f174192aeadfccf4b50fe7d45d1c9b98cec74eedfa33d06c35d480e6b46cd4dd",
+              "zip_compressed_sha256": "f174192aeadfccf4b50fe7d45d1c9b98cec74eedfa33d06c35d480e6b46cd4dd",
+              "zip_compression_method": "stored"
+            }
+          ],
+          "candidate_trials": [
+            {
+              "archive_bytes": 178517,
+              "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+              "compression_plan": [
+                {
+                  "member_name": "x",
+                  "zip_compression_method": "stored",
+                  "zip_compresslevel": null
+                }
+              ],
+              "plan_key": "x:stored:default",
+              "strategy": "uniform"
+            },
+            {
+              "archive_bytes": 178572,
+              "archive_sha256": "2bd345d83c86df5459fa63674a7ef2694545bf0d64bebb6df8b26075003e7541",
+              "compression_plan": [
+                {
+                  "member_name": "x",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 1
+                }
+              ],
+              "plan_key": "x:deflated:1",
+              "strategy": "uniform"
+            },
+            {
+              "archive_bytes": 178572,
+              "archive_sha256": "5e679e586ddbb33c99e5a25fd2973e1f08596fa7881b850070d5f4df24c92be5",
+              "compression_plan": [
+                {
+                  "member_name": "x",
+                  "zip_compression_method": "deflated",
+                  "zip_compresslevel": 6
+                }
+              ],
+              "plan_key": "x:deflated:6",
+              "strategy": "uniform"
+            }
+          ],
+          "dispatch_attempted": false,
+          "gpu_launched": false,
+          "materializer_id": "archive_zip_repack_adapter",
+          "portability_contract": {
+            "deterministic_surface": "python_stdlib_zipfile_archive_repack",
+            "implementation_language": "python",
+            "materializer_id": "archive_zip_repack_adapter",
+            "notes": "Archive-wide ZIP repack explores uniform and greedy per-member compression plans while preserving every decoded member payload.",
+            "portability_class": "portable_python_reference",
+            "promotion_authority": false,
+            "rank_or_kill_authority": false,
+            "required_python_modules": [
+              "zipfile"
+            ],
+            "requires_cuda": false,
+            "requires_gpu": false,
+            "requires_metal": false,
+            "requires_mlx": false,
+            "requires_mps": false,
+            "schema": "family_agnostic_materializer_portability_contract.v1",
+            "score_authority": false,
+            "target_kind": "archive_zip_repack_v1",
+            "unsupported_features": []
+          },
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "readiness_blockers": [],
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_contract_id": "archive_zip_repack_v1.receiver.v1",
+          "receiver_contract_kind": "family_agnostic_archive_zip_repack",
+          "receiver_contract_satisfied": true,
+          "receiver_verification": {
+            "blockers": [],
+            "candidate_archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+            "candidate_member_sha256": null,
+            "candidate_member_sha256s": {
+              "x": "f174192aeadfccf4b50fe7d45d1c9b98cec74eedfa33d06c35d480e6b46cd4dd"
+            },
+            "materializer_id": "archive_zip_repack_adapter",
+            "proof_kind": "archive_zip_repack_payload_identity_receiver_proof.v1",
+            "proof_path": "/Users/adpena/Projects/pact/.omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/fec6_live/receiver_closed_archive.runtime_consumption_proof.json",
+            "proof_present": true,
+            "proof_schema": "family_agnostic_runtime_consumption_proof_v1",
+            "receiver_contract_kind": "family_agnostic_archive_zip_repack",
+            "receiver_contract_satisfied": true,
+            "runtime_adapter_ready": false,
+            "runtime_adapter_sha256": null,
+            "schema": "family_agnostic_runtime_consumption_proof_verification.v1",
+            "target_kind": "archive_zip_repack_v1"
+          },
+          "runtime_consumption_proof_path": "/Users/adpena/Projects/pact/.omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/fec6_live/receiver_closed_archive.runtime_consumption_proof.json",
+          "runtime_consumption_proof_write": {
+            "allow_overwrite": true,
+            "bytes_written": 3858,
+            "free_bytes_before": 588774371328,
+            "path": "/Users/adpena/Projects/pact/.omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/fec6_live/receiver_closed_archive.runtime_consumption_proof.json",
+            "sha256": "63b26b7f53938b15802b71fcb4ce90e08e5d8eff27cbd3c61243097173e19bb4"
+          },
+          "schema": "archive_zip_repack_candidate.v1",
+          "score_claim": false,
+          "score_claim_valid": false,
+          "selected_member_names": [
+            "x"
+          ],
+          "selected_repack": {
+            "candidate_archive_bytes": 178517,
+            "compression_plan": [
+              {
+                "member_name": "x",
+                "zip_compression_method": "stored",
+                "zip_compresslevel": null
+              }
+            ],
+            "member_count": 1,
+            "plan_key": "x:stored:default",
+            "saved_bytes": 0,
+            "source_archive_bytes": 178517,
+            "strategy": "uniform"
+          },
+          "selection_scope": "all_zip_members",
+          "serialized_archive_delta": {
+            "archive_delta_bytes": 0,
+            "blockers": [],
+            "candidate_archive_bytes": 178517,
+            "dispatch_attempted": false,
+            "gpu_launched": false,
+            "modeled_cost_bytes": null,
+            "modeled_saved_bytes": 0,
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "rate_only_control": false,
+            "ready_for_exact_eval_dispatch": false,
+            "realized_saved_bytes": 0,
+            "require_realized_saving": false,
+            "savings_realized": false,
+            "schema": "serialized_archive_delta_contract.v1",
+            "score_claim": false,
+            "score_claim_valid": false,
+            "source_archive_bytes": 178517,
+            "status": "zero_delta"
+          },
+          "source_archive": {
+            "bytes": 178517,
+            "path": "/Users/adpena/Projects/pact/experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
+            "sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf"
+          },
+          "source_members": [
+            {
+              "bytes": 178417,
+              "name": "x",
+              "sha256": "f174192aeadfccf4b50fe7d45d1c9b98cec74eedfa33d06c35d480e6b46cd4dd",
+              "zip_compressed_bytes": 178417,
+              "zip_compressed_payload_sha256": "f174192aeadfccf4b50fe7d45d1c9b98cec74eedfa33d06c35d480e6b46cd4dd",
+              "zip_compressed_sha256": "f174192aeadfccf4b50fe7d45d1c9b98cec74eedfa33d06c35d480e6b46cd4dd",
+              "zip_compression_method": "stored"
+            }
+          ],
+          "target_kind": "archive_zip_repack_v1"
+        },
+        "budget_spend_allowed": false,
+        "candidate_archive_bytes": 178517,
+        "candidate_archive_path": "/Users/adpena/Projects/pact/.omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/fec6_live/receiver_closed_archive.zip",
+        "candidate_archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "equivalence_gate_path": null,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "local_mlx_response_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/local_mlx_response_summaries/fec6_live/local_mlx_response.json",
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_closed_saved_bytes": 0,
+        "receiver_consumed": true,
+        "reference_local_mlx_response_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/local_mlx_response_summaries/fec6_live/reference_local_mlx_response.json",
+        "runtime_consumption_proof_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/fec6_live/receiver_closed_archive.runtime_consumption_proof.json",
+        "runtime_consumption_proof_present": true,
+        "runtime_consumption_proof_sha256": "63b26b7f53938b15802b71fcb4ce90e08e5d8eff27cbd3c61243097173e19bb4",
+        "schema": "repair_campaign_archive_candidate_intake_row.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "signal_multiplier": 1.0,
+        "source_archive_bytes": 178517,
+        "source_archive_path": "/Users/adpena/Projects/pact/experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
+        "source_archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+        "source_candidate_label": "fec6_live",
+        "training_artifact_path": null,
+        "typed_response_ids": [
+          "fec6_live_posenet_bottom_decile",
+          "fec6_live_segnet_region",
+          "fec6_live_selector_codec",
+          "fec6_live_frame0_k16_palette",
+          "fec6_live_entropy_boundary"
+        ]
+      }
+    ],
+    "schema": "repair_campaign_archive_candidate_intake.v1",
+    "score_affecting_payload_changed": false,
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "typed_response_count": 10
+  },
+  "budget_spend_allowed": false,
+  "chain_id": "repair_multi_archive_live_psv3_fec6",
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+  "gpu_launched": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_closed_rate_credit": {
+    "budget_spend_allowed": false,
+    "charged_bits_changed": false,
+    "contest_cuda_auth_eval": false,
+    "credit_source": "archive_native_zip_repack_receiver_proof_and_floor",
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "gpu_launched": false,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "receiver_closed_saved_bytes_total": 128,
+    "schema": "frontier_rate_attack_repair_waterfill_rate_credit.v1",
+    "score_affecting_payload_changed": false,
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "source_archive_count": 2
+  },
+  "schema": "frontier_rate_attack_repair_budget_waterfill_work_order.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "source_row_kind": "real_archive_candidate_repair_intake",
+  "typed_response_ledger": {
+    "available_receiver_closed_rate_credit_bytes": 128,
+    "budget_spend_allowed": false,
+    "charged_bits_changed": false,
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "gpu_launched": false,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "rows": [
+      {
+        "archive_byte_delta_vs_baseline": -44,
+        "budget_spend_allowed": false,
+        "candidate_archive_bytes": 112133,
+        "candidate_archive_path": "/Users/adpena/Projects/pact/.omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/psv3_live/receiver_closed_archive.zip",
+        "candidate_archive_sha256": "f3e49d0dec8402ef5d3233bf726c7f73372e93a955c8a002b67faf7bfb2484d6",
+        "candidate_id": "posenet_null_bottom_decile",
+        "charged_bits_changed": false,
+        "component_response_replay_manifest_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/local_mlx_response_summaries/psv3_live/local_mlx_response.json",
+        "contest_cuda_auth_eval": false,
+        "correction_family": "posenet_null_bottom_decile",
+        "dispatch_attempted": false,
+        "entropy_position_label": "before_entropy_coder_distribution_shaping",
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "interaction_scope": {
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "frame_ids": [
+            "frame0"
+          ],
+          "gpu_launched": false,
+          "pair_count": 4,
+          "pair_indices": [
+            0,
+            3,
+            7,
+            11
+          ],
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false
+        },
+        "legal_runtime_constraints": [
+          "receiver_decode_only",
+          "local_mlx_signal_is_advisory",
+          "contest_cpu_or_cuda_exact_axis_required_before_score"
+        ],
+        "local_mlx_component_terms": {
+          "budget_spend_allowed": false,
+          "charged_bits_changed": false,
+          "combined_delta_score_units": -0.0019254805256626577,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "measured_component_delta_score_units": -0.0019254805256626577,
+          "posenet_delta_score_units": -0.0019254805256626577,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "response_axis": "[macOS-MLX research-signal]",
+          "schema": "repair_archive_candidate_component_terms.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "segnet_delta_score_units": 0.00015403844205301263,
+          "source_candidate_label": "psv3_live"
+        },
+        "local_mlx_response_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/local_mlx_response_summaries/psv3_live/local_mlx_response.json",
+        "objective_delta_score_units": -0.0019254805256626577,
+        "operation_levels": [
+          "pixel",
+          "frame",
+          "pair",
+          "batch",
+          "full_video"
+        ],
+        "posenet_null_bottom_decile_pair_ids": [
+          "psv3_live:pair_000",
+          "psv3_live:pair_003",
+          "psv3_live:pair_007",
+          "psv3_live:pair_011"
+        ],
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_budget_spend": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_consumed": true,
+        "receiver_consumed_candidate_archive_bytes": 112133,
+        "receiver_consumed_candidate_archive_path": "/Users/adpena/Projects/pact/.omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/psv3_live/receiver_closed_archive.zip",
+        "receiver_consumed_candidate_archive_sha256": "f3e49d0dec8402ef5d3233bf726c7f73372e93a955c8a002b67faf7bfb2484d6",
+        "reference_local_mlx_response_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/local_mlx_response_summaries/psv3_live/reference_local_mlx_response.json",
+        "requested_repair_bytes": 10,
+        "runtime_consumption_proof_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/psv3_live/receiver_closed_archive.runtime_consumption_proof.json",
+        "runtime_consumption_proof_present": true,
+        "schema": "frontier_rate_attack_repair_budget_typed_response_row.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_candidate_label": "psv3_live",
+        "source_row_kind": "real_archive_candidate_repair_intake",
+        "stacking_interaction_terms": {
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "must_remeasure_with_parent_and_sibling_repairs": true,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "signal_multiplier": 1.2836536837751051,
+          "source_candidate_archive_sha256": "f3e49d0dec8402ef5d3233bf726c7f73372e93a955c8a002b67faf7bfb2484d6"
+        },
+        "targeted_dimensions": [
+          "posenet",
+          "pair",
+          "frame0"
+        ],
+        "typed_response_id": "psv3_live_posenet_bottom_decile"
+      },
+      {
+        "archive_byte_delta_vs_baseline": -44,
+        "budget_spend_allowed": false,
+        "candidate_archive_bytes": 112133,
+        "candidate_archive_path": "/Users/adpena/Projects/pact/.omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/psv3_live/receiver_closed_archive.zip",
+        "candidate_archive_sha256": "f3e49d0dec8402ef5d3233bf726c7f73372e93a955c8a002b67faf7bfb2484d6",
+        "candidate_id": "segnet_class_region_waterfill",
+        "charged_bits_changed": false,
+        "component_response_replay_manifest_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/local_mlx_response_summaries/psv3_live/local_mlx_response.json",
+        "contest_cuda_auth_eval": false,
+        "correction_family": "segnet_class_region_waterfill",
+        "dispatch_attempted": false,
+        "entropy_position_label": "before_entropy_coder_distribution_shaping",
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "interaction_scope": {
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "frame_ids": [
+            "frame0",
+            "frame1"
+          ],
+          "gpu_launched": false,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "region_count": 3,
+          "region_ids": [
+            "road_boundary",
+            "lane_marking_boundary",
+            "vehicle_edge"
+          ],
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false
+        },
+        "legal_runtime_constraints": [
+          "receiver_decode_only",
+          "local_mlx_signal_is_advisory",
+          "contest_cpu_or_cuda_exact_axis_required_before_score"
+        ],
+        "local_mlx_component_terms": {
+          "budget_spend_allowed": false,
+          "charged_bits_changed": false,
+          "combined_delta_score_units": -0.003080768841060252,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "measured_component_delta_score_units": -0.003080768841060252,
+          "posenet_delta_score_units": 0.00036969226092723026,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "response_axis": "[macOS-MLX research-signal]",
+          "schema": "repair_archive_candidate_component_terms.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "segnet_delta_score_units": -0.003080768841060252,
+          "source_candidate_label": "psv3_live"
+        },
+        "local_mlx_response_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/local_mlx_response_summaries/psv3_live/local_mlx_response.json",
+        "objective_delta_score_units": -0.003080768841060252,
+        "operation_levels": [
+          "pixel",
+          "boundary",
+          "region",
+          "frame",
+          "batch"
+        ],
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_budget_spend": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_consumed": true,
+        "receiver_consumed_candidate_archive_bytes": 112133,
+        "receiver_consumed_candidate_archive_path": "/Users/adpena/Projects/pact/.omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/psv3_live/receiver_closed_archive.zip",
+        "receiver_consumed_candidate_archive_sha256": "f3e49d0dec8402ef5d3233bf726c7f73372e93a955c8a002b67faf7bfb2484d6",
+        "reference_local_mlx_response_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/local_mlx_response_summaries/psv3_live/reference_local_mlx_response.json",
+        "requested_repair_bytes": 14,
+        "runtime_consumption_proof_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/psv3_live/receiver_closed_archive.runtime_consumption_proof.json",
+        "runtime_consumption_proof_present": true,
+        "schema": "frontier_rate_attack_repair_budget_typed_response_row.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "segnet_class_region_mask_ids": [
+          "road_boundary",
+          "lane_marking_boundary",
+          "vehicle_edge"
+        ],
+        "source_candidate_label": "psv3_live",
+        "source_row_kind": "real_archive_candidate_repair_intake",
+        "stacking_interaction_terms": {
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "must_remeasure_with_parent_and_sibling_repairs": true,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "signal_multiplier": 1.2836536837751051,
+          "source_candidate_archive_sha256": "f3e49d0dec8402ef5d3233bf726c7f73372e93a955c8a002b67faf7bfb2484d6"
+        },
+        "targeted_dimensions": [
+          "segnet",
+          "class_region",
+          "boundary"
+        ],
+        "typed_response_id": "psv3_live_segnet_region"
+      },
+      {
+        "archive_byte_delta_vs_baseline": -44,
+        "budget_spend_allowed": false,
+        "candidate_archive_bytes": 112133,
+        "candidate_archive_path": "/Users/adpena/Projects/pact/.omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/psv3_live/receiver_closed_archive.zip",
+        "candidate_archive_sha256": "f3e49d0dec8402ef5d3233bf726c7f73372e93a955c8a002b67faf7bfb2484d6",
+        "candidate_id": "per_region_selector_codec",
+        "charged_bits_changed": false,
+        "component_response_replay_manifest_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/local_mlx_response_summaries/psv3_live/local_mlx_response.json",
+        "contest_cuda_auth_eval": false,
+        "correction_family": "per_region_selector_codec",
+        "dispatch_attempted": false,
+        "entropy_position_label": "selector_codec_entropy",
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "interaction_scope": {
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "region_count": 3,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "selector_codec": "per_region_selector_codec"
+        },
+        "legal_runtime_constraints": [
+          "receiver_decode_only",
+          "local_mlx_signal_is_advisory",
+          "contest_cpu_or_cuda_exact_axis_required_before_score"
+        ],
+        "local_mlx_component_terms": {
+          "budget_spend_allowed": false,
+          "charged_bits_changed": false,
+          "combined_delta_score_units": -0.0014120190521526158,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "measured_component_delta_score_units": -0.0014120190521526158,
+          "posenet_delta_score_units": -0.0007060095260763079,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "response_axis": "[macOS-MLX research-signal]",
+          "schema": "repair_archive_candidate_component_terms.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "segnet_delta_score_units": -0.0007060095260763079,
+          "source_candidate_label": "psv3_live"
+        },
+        "local_mlx_response_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/local_mlx_response_summaries/psv3_live/local_mlx_response.json",
+        "objective_delta_score_units": -0.0014120190521526158,
+        "operation_levels": [
+          "bit",
+          "byte",
+          "boundary",
+          "region",
+          "pair"
+        ],
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_budget_spend": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_consumed": true,
+        "receiver_consumed_candidate_archive_bytes": 112133,
+        "receiver_consumed_candidate_archive_path": "/Users/adpena/Projects/pact/.omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/psv3_live/receiver_closed_archive.zip",
+        "receiver_consumed_candidate_archive_sha256": "f3e49d0dec8402ef5d3233bf726c7f73372e93a955c8a002b67faf7bfb2484d6",
+        "receiver_consumed_runtime_replay_proof": {
+          "budget_spend_allowed": false,
+          "candidate_archive_sha256": "f3e49d0dec8402ef5d3233bf726c7f73372e93a955c8a002b67faf7bfb2484d6",
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_decode_only": true,
+          "runtime_consumption_proof_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/psv3_live/receiver_closed_archive.runtime_consumption_proof.json",
+          "schema": "repair_archive_candidate_selector_runtime_replay_proof_ref.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "source_candidate_label": "psv3_live"
+        },
+        "reference_local_mlx_response_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/local_mlx_response_summaries/psv3_live/reference_local_mlx_response.json",
+        "requested_repair_bytes": 8,
+        "runtime_consumption_proof_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/psv3_live/receiver_closed_archive.runtime_consumption_proof.json",
+        "runtime_consumption_proof_present": true,
+        "schema": "frontier_rate_attack_repair_budget_typed_response_row.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "selector_payload_bits_per_region": {
+          "lane_marking_boundary": 12,
+          "road_boundary": 16,
+          "vehicle_edge": 10
+        },
+        "source_candidate_label": "psv3_live",
+        "source_row_kind": "real_archive_candidate_repair_intake",
+        "stacking_interaction_terms": {
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "must_remeasure_with_parent_and_sibling_repairs": true,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "signal_multiplier": 1.2836536837751051,
+          "source_candidate_archive_sha256": "f3e49d0dec8402ef5d3233bf726c7f73372e93a955c8a002b67faf7bfb2484d6"
+        },
+        "targeted_dimensions": [
+          "selector_stream",
+          "region",
+          "entropy"
+        ],
+        "typed_response_id": "psv3_live_selector_codec"
+      },
+      {
+        "archive_byte_delta_vs_baseline": -44,
+        "budget_spend_allowed": false,
+        "candidate_archive_bytes": 112133,
+        "candidate_archive_path": "/Users/adpena/Projects/pact/.omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/psv3_live/receiver_closed_archive.zip",
+        "candidate_archive_sha256": "f3e49d0dec8402ef5d3233bf726c7f73372e93a955c8a002b67faf7bfb2484d6",
+        "candidate_id": "frame0_k16_palette_asymmetry",
+        "charged_bits_changed": false,
+        "component_response_replay_manifest_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/local_mlx_response_summaries/psv3_live/local_mlx_response.json",
+        "contest_cuda_auth_eval": false,
+        "correction_family": "frame0_k16_palette_asymmetry",
+        "dispatch_attempted": false,
+        "entropy_position_label": "before_entropy_coder_distribution_shaping",
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "interaction_scope": {
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "frame_ids": [
+            "frame0"
+          ],
+          "gpu_launched": false,
+          "mode_count": 16,
+          "mode_ids": [
+            "none",
+            "frame0_blue_chroma_amp_1",
+            "frame0_blue_chroma_amp_3",
+            "frame0_luma_bias_+1",
+            "frame0_luma_bias_-1",
+            "frame0_luma_bias_-2",
+            "frame0_luma_bias_-4",
+            "frame0_rgb_bias_m2_p1_p1",
+            "frame0_rgb_bias_m4_p2_p2",
+            "frame0_rgb_bias_p0_m1_p1",
+            "frame0_rgb_bias_p0_m2_p2",
+            "frame0_rgb_bias_p0_p1_m1",
+            "frame0_rgb_bias_p0_p2_m2",
+            "frame0_rgb_bias_p2_m1_m1",
+            "frame0_rgb_bias_p4_m2_m2",
+            "frame0_roll_dx+0_dy+1"
+          ],
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false
+        },
+        "legal_runtime_constraints": [
+          "receiver_decode_only",
+          "local_mlx_signal_is_advisory",
+          "contest_cpu_or_cuda_exact_axis_required_before_score"
+        ],
+        "local_mlx_component_terms": {
+          "budget_spend_allowed": false,
+          "charged_bits_changed": false,
+          "combined_delta_score_units": -0.001540384420530126,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "measured_component_delta_score_units": -0.001540384420530126,
+          "posenet_delta_score_units": -0.001001249873344582,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "response_axis": "[macOS-MLX research-signal]",
+          "schema": "repair_archive_candidate_component_terms.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "segnet_delta_score_units": -0.0005391345471855441,
+          "source_candidate_label": "psv3_live"
+        },
+        "local_mlx_response_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/local_mlx_response_summaries/psv3_live/local_mlx_response.json",
+        "objective_delta_score_units": -0.001540384420530126,
+        "operation_levels": [
+          "pixel",
+          "byte",
+          "frame",
+          "pair",
+          "batch"
+        ],
+        "palette_dynamics_context": {
+          "budget_spend_allowed": false,
+          "canonical_k": 16,
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "dominant_dynamics_interpretation": "frame0_global_color_geometry_calibration_prior",
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "frame0_mode_count": 15,
+          "frame0_mode_fraction": 0.9375,
+          "frame0_non_identity_fraction": 1.0,
+          "frame1_mode_count": 0,
+          "gpu_launched": false,
+          "identity_mode_count": 1,
+          "mode_count": 16,
+          "non_identity_mode_count": 15,
+          "palette_modes": [
+            "none",
+            "frame0_blue_chroma_amp_1",
+            "frame0_blue_chroma_amp_3",
+            "frame0_luma_bias_+1",
+            "frame0_luma_bias_-1",
+            "frame0_luma_bias_-2",
+            "frame0_luma_bias_-4",
+            "frame0_rgb_bias_m2_p1_p1",
+            "frame0_rgb_bias_m4_p2_p2",
+            "frame0_rgb_bias_p0_m1_p1",
+            "frame0_rgb_bias_p0_m2_p2",
+            "frame0_rgb_bias_p0_p1_m1",
+            "frame0_rgb_bias_p0_p2_m2",
+            "frame0_rgb_bias_p2_m1_m1",
+            "frame0_rgb_bias_p4_m2_m2",
+            "frame0_roll_dx+0_dy+1"
+          ],
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "repair_campaign_frame0_k16_palette_context.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "source": "live_6bae0201_archive_manifest_and_repair_archive_candidate_intake",
+          "source_candidate_label": "psv3_live",
+          "zero_frame1_modes": true
+        },
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_budget_spend": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_consumed": true,
+        "receiver_consumed_candidate_archive_bytes": 112133,
+        "receiver_consumed_candidate_archive_path": "/Users/adpena/Projects/pact/.omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/psv3_live/receiver_closed_archive.zip",
+        "receiver_consumed_candidate_archive_sha256": "f3e49d0dec8402ef5d3233bf726c7f73372e93a955c8a002b67faf7bfb2484d6",
+        "reference_local_mlx_response_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/local_mlx_response_summaries/psv3_live/reference_local_mlx_response.json",
+        "requested_repair_bytes": 12,
+        "runtime_consumption_proof_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/psv3_live/receiver_closed_archive.runtime_consumption_proof.json",
+        "runtime_consumption_proof_present": true,
+        "schema": "frontier_rate_attack_repair_budget_typed_response_row.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_candidate_label": "psv3_live",
+        "source_row_kind": "real_archive_candidate_repair_intake",
+        "stacking_interaction_terms": {
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "must_remeasure_with_parent_and_sibling_repairs": true,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "signal_multiplier": 1.2836536837751051,
+          "source_candidate_archive_sha256": "f3e49d0dec8402ef5d3233bf726c7f73372e93a955c8a002b67faf7bfb2484d6"
+        },
+        "targeted_dimensions": [
+          "palette",
+          "frame0",
+          "posenet",
+          "segnet"
+        ],
+        "typed_response_id": "psv3_live_frame0_k16_palette"
+      },
+      {
+        "archive_byte_delta_vs_baseline": -44,
+        "budget_spend_allowed": false,
+        "candidate_archive_bytes": 112133,
+        "candidate_archive_path": "/Users/adpena/Projects/pact/.omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/psv3_live/receiver_closed_archive.zip",
+        "candidate_archive_sha256": "f3e49d0dec8402ef5d3233bf726c7f73372e93a955c8a002b67faf7bfb2484d6",
+        "candidate_id": "entropy_boundary_probe",
+        "charged_bits_changed": false,
+        "component_response_replay_manifest_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/local_mlx_response_summaries/psv3_live/local_mlx_response.json",
+        "contest_cuda_auth_eval": false,
+        "correction_family": "entropy_boundary_probe",
+        "dispatch_attempted": false,
+        "entropy_boundary_probe_manifest": {
+          "budget_spend_allowed": false,
+          "candidate_archive_bytes": 112133,
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "probe_kind": "integer_codeword_boundary_slack",
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "saved_bytes": 44,
+          "schema": "entropy_boundary_probe_manifest.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "source_archive_bytes": 112177,
+          "source_candidate_label": "psv3_live",
+          "stage": "at_entropy_coder_integer_codeword_boundary"
+        },
+        "entropy_position_label": "at_entropy_coder_integer_codeword_boundary",
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "interaction_scope": {
+          "byte_count": 112133,
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "entropy_boundary": "zip_member_codeword_plan",
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false
+        },
+        "legal_runtime_constraints": [
+          "receiver_decode_only",
+          "local_mlx_signal_is_advisory",
+          "contest_cpu_or_cuda_exact_axis_required_before_score"
+        ],
+        "local_mlx_component_terms": {
+          "budget_spend_allowed": false,
+          "charged_bits_changed": false,
+          "combined_delta_score_units": -0.0008985575786425735,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "measured_component_delta_score_units": -0.0008985575786425735,
+          "posenet_delta_score_units": -0.0004492787893212868,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "response_axis": "[macOS-MLX research-signal]",
+          "schema": "repair_archive_candidate_component_terms.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "segnet_delta_score_units": -0.0004492787893212868,
+          "source_candidate_label": "psv3_live"
+        },
+        "local_mlx_response_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/local_mlx_response_summaries/psv3_live/local_mlx_response.json",
+        "objective_delta_score_units": -0.0008985575786425735,
+        "operation_levels": [
+          "bit",
+          "byte"
+        ],
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_budget_spend": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_consumed": true,
+        "receiver_consumed_candidate_archive_bytes": 112133,
+        "receiver_consumed_candidate_archive_path": "/Users/adpena/Projects/pact/.omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/psv3_live/receiver_closed_archive.zip",
+        "receiver_consumed_candidate_archive_sha256": "f3e49d0dec8402ef5d3233bf726c7f73372e93a955c8a002b67faf7bfb2484d6",
+        "reference_local_mlx_response_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/local_mlx_response_summaries/psv3_live/reference_local_mlx_response.json",
+        "requested_repair_bytes": 6,
+        "runtime_consumption_proof_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/psv3_live/receiver_closed_archive.runtime_consumption_proof.json",
+        "runtime_consumption_proof_present": true,
+        "schema": "frontier_rate_attack_repair_budget_typed_response_row.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_candidate_label": "psv3_live",
+        "source_row_kind": "real_archive_candidate_repair_intake",
+        "stacking_interaction_terms": {
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "must_remeasure_with_parent_and_sibling_repairs": true,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "signal_multiplier": 1.2836536837751051,
+          "source_candidate_archive_sha256": "f3e49d0dec8402ef5d3233bf726c7f73372e93a955c8a002b67faf7bfb2484d6"
+        },
+        "targeted_dimensions": [
+          "rate_bytes",
+          "entropy_coder_boundary"
+        ],
+        "typed_response_id": "psv3_live_entropy_boundary"
+      },
+      {
+        "archive_byte_delta_vs_baseline": 0,
+        "budget_spend_allowed": false,
+        "candidate_archive_bytes": 178517,
+        "candidate_archive_path": "/Users/adpena/Projects/pact/.omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/fec6_live/receiver_closed_archive.zip",
+        "candidate_archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+        "candidate_id": "posenet_null_bottom_decile",
+        "charged_bits_changed": false,
+        "component_response_replay_manifest_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/local_mlx_response_summaries/fec6_live/local_mlx_response.json",
+        "contest_cuda_auth_eval": false,
+        "correction_family": "posenet_null_bottom_decile",
+        "dispatch_attempted": false,
+        "entropy_position_label": "before_entropy_coder_distribution_shaping",
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "interaction_scope": {
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "frame_ids": [
+            "frame0"
+          ],
+          "gpu_launched": false,
+          "pair_count": 4,
+          "pair_indices": [
+            0,
+            3,
+            7,
+            11
+          ],
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false
+        },
+        "legal_runtime_constraints": [
+          "receiver_decode_only",
+          "local_mlx_signal_is_advisory",
+          "contest_cpu_or_cuda_exact_axis_required_before_score"
+        ],
+        "local_mlx_component_terms": {
+          "budget_spend_allowed": false,
+          "charged_bits_changed": false,
+          "combined_delta_score_units": -0.0015,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "measured_component_delta_score_units": -0.0015,
+          "posenet_delta_score_units": -0.0015,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "response_axis": "[macOS-MLX research-signal]",
+          "schema": "repair_archive_candidate_component_terms.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "segnet_delta_score_units": 0.00012,
+          "source_candidate_label": "fec6_live"
+        },
+        "local_mlx_response_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/local_mlx_response_summaries/fec6_live/local_mlx_response.json",
+        "objective_delta_score_units": -0.0015,
+        "operation_levels": [
+          "pixel",
+          "frame",
+          "pair",
+          "batch",
+          "full_video"
+        ],
+        "posenet_null_bottom_decile_pair_ids": [
+          "fec6_live:pair_000",
+          "fec6_live:pair_003",
+          "fec6_live:pair_007",
+          "fec6_live:pair_011"
+        ],
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_budget_spend": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_consumed": true,
+        "receiver_consumed_candidate_archive_bytes": 178517,
+        "receiver_consumed_candidate_archive_path": "/Users/adpena/Projects/pact/.omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/fec6_live/receiver_closed_archive.zip",
+        "receiver_consumed_candidate_archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+        "reference_local_mlx_response_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/local_mlx_response_summaries/fec6_live/reference_local_mlx_response.json",
+        "requested_repair_bytes": 8,
+        "runtime_consumption_proof_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/fec6_live/receiver_closed_archive.runtime_consumption_proof.json",
+        "runtime_consumption_proof_present": true,
+        "schema": "frontier_rate_attack_repair_budget_typed_response_row.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_candidate_label": "fec6_live",
+        "source_row_kind": "real_archive_candidate_repair_intake",
+        "stacking_interaction_terms": {
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "must_remeasure_with_parent_and_sibling_repairs": true,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "signal_multiplier": 1.0,
+          "source_candidate_archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf"
+        },
+        "targeted_dimensions": [
+          "posenet",
+          "pair",
+          "frame0"
+        ],
+        "typed_response_id": "fec6_live_posenet_bottom_decile"
+      },
+      {
+        "archive_byte_delta_vs_baseline": 0,
+        "budget_spend_allowed": false,
+        "candidate_archive_bytes": 178517,
+        "candidate_archive_path": "/Users/adpena/Projects/pact/.omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/fec6_live/receiver_closed_archive.zip",
+        "candidate_archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+        "candidate_id": "segnet_class_region_waterfill",
+        "charged_bits_changed": false,
+        "component_response_replay_manifest_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/local_mlx_response_summaries/fec6_live/local_mlx_response.json",
+        "contest_cuda_auth_eval": false,
+        "correction_family": "segnet_class_region_waterfill",
+        "dispatch_attempted": false,
+        "entropy_position_label": "before_entropy_coder_distribution_shaping",
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "interaction_scope": {
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "frame_ids": [
+            "frame0",
+            "frame1"
+          ],
+          "gpu_launched": false,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "region_count": 3,
+          "region_ids": [
+            "road_boundary",
+            "lane_marking_boundary",
+            "vehicle_edge"
+          ],
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false
+        },
+        "legal_runtime_constraints": [
+          "receiver_decode_only",
+          "local_mlx_signal_is_advisory",
+          "contest_cpu_or_cuda_exact_axis_required_before_score"
+        ],
+        "local_mlx_component_terms": {
+          "budget_spend_allowed": false,
+          "charged_bits_changed": false,
+          "combined_delta_score_units": -0.0024,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "measured_component_delta_score_units": -0.0024,
+          "posenet_delta_score_units": 0.00028799999999999995,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "response_axis": "[macOS-MLX research-signal]",
+          "schema": "repair_archive_candidate_component_terms.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "segnet_delta_score_units": -0.0024,
+          "source_candidate_label": "fec6_live"
+        },
+        "local_mlx_response_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/local_mlx_response_summaries/fec6_live/local_mlx_response.json",
+        "objective_delta_score_units": -0.0024,
+        "operation_levels": [
+          "pixel",
+          "boundary",
+          "region",
+          "frame",
+          "batch"
+        ],
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_budget_spend": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_consumed": true,
+        "receiver_consumed_candidate_archive_bytes": 178517,
+        "receiver_consumed_candidate_archive_path": "/Users/adpena/Projects/pact/.omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/fec6_live/receiver_closed_archive.zip",
+        "receiver_consumed_candidate_archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+        "reference_local_mlx_response_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/local_mlx_response_summaries/fec6_live/reference_local_mlx_response.json",
+        "requested_repair_bytes": 12,
+        "runtime_consumption_proof_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/fec6_live/receiver_closed_archive.runtime_consumption_proof.json",
+        "runtime_consumption_proof_present": true,
+        "schema": "frontier_rate_attack_repair_budget_typed_response_row.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "segnet_class_region_mask_ids": [
+          "road_boundary",
+          "lane_marking_boundary",
+          "vehicle_edge"
+        ],
+        "source_candidate_label": "fec6_live",
+        "source_row_kind": "real_archive_candidate_repair_intake",
+        "stacking_interaction_terms": {
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "must_remeasure_with_parent_and_sibling_repairs": true,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "signal_multiplier": 1.0,
+          "source_candidate_archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf"
+        },
+        "targeted_dimensions": [
+          "segnet",
+          "class_region",
+          "boundary"
+        ],
+        "typed_response_id": "fec6_live_segnet_region"
+      },
+      {
+        "archive_byte_delta_vs_baseline": 0,
+        "budget_spend_allowed": false,
+        "candidate_archive_bytes": 178517,
+        "candidate_archive_path": "/Users/adpena/Projects/pact/.omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/fec6_live/receiver_closed_archive.zip",
+        "candidate_archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+        "candidate_id": "per_region_selector_codec",
+        "charged_bits_changed": false,
+        "component_response_replay_manifest_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/local_mlx_response_summaries/fec6_live/local_mlx_response.json",
+        "contest_cuda_auth_eval": false,
+        "correction_family": "per_region_selector_codec",
+        "dispatch_attempted": false,
+        "entropy_position_label": "selector_codec_entropy",
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "interaction_scope": {
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "region_count": 3,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "selector_codec": "per_region_selector_codec"
+        },
+        "legal_runtime_constraints": [
+          "receiver_decode_only",
+          "local_mlx_signal_is_advisory",
+          "contest_cpu_or_cuda_exact_axis_required_before_score"
+        ],
+        "local_mlx_component_terms": {
+          "budget_spend_allowed": false,
+          "charged_bits_changed": false,
+          "combined_delta_score_units": -0.0011,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "measured_component_delta_score_units": -0.0011,
+          "posenet_delta_score_units": -0.00055,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "response_axis": "[macOS-MLX research-signal]",
+          "schema": "repair_archive_candidate_component_terms.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "segnet_delta_score_units": -0.00055,
+          "source_candidate_label": "fec6_live"
+        },
+        "local_mlx_response_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/local_mlx_response_summaries/fec6_live/local_mlx_response.json",
+        "objective_delta_score_units": -0.0011,
+        "operation_levels": [
+          "bit",
+          "byte",
+          "boundary",
+          "region",
+          "pair"
+        ],
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_budget_spend": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_consumed": true,
+        "receiver_consumed_candidate_archive_bytes": 178517,
+        "receiver_consumed_candidate_archive_path": "/Users/adpena/Projects/pact/.omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/fec6_live/receiver_closed_archive.zip",
+        "receiver_consumed_candidate_archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+        "receiver_consumed_runtime_replay_proof": {
+          "budget_spend_allowed": false,
+          "candidate_archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_decode_only": true,
+          "runtime_consumption_proof_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/fec6_live/receiver_closed_archive.runtime_consumption_proof.json",
+          "schema": "repair_archive_candidate_selector_runtime_replay_proof_ref.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "source_candidate_label": "fec6_live"
+        },
+        "reference_local_mlx_response_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/local_mlx_response_summaries/fec6_live/reference_local_mlx_response.json",
+        "requested_repair_bytes": 6,
+        "runtime_consumption_proof_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/fec6_live/receiver_closed_archive.runtime_consumption_proof.json",
+        "runtime_consumption_proof_present": true,
+        "schema": "frontier_rate_attack_repair_budget_typed_response_row.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "selector_payload_bits_per_region": {
+          "lane_marking_boundary": 12,
+          "road_boundary": 16,
+          "vehicle_edge": 10
+        },
+        "source_candidate_label": "fec6_live",
+        "source_row_kind": "real_archive_candidate_repair_intake",
+        "stacking_interaction_terms": {
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "must_remeasure_with_parent_and_sibling_repairs": true,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "signal_multiplier": 1.0,
+          "source_candidate_archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf"
+        },
+        "targeted_dimensions": [
+          "selector_stream",
+          "region",
+          "entropy"
+        ],
+        "typed_response_id": "fec6_live_selector_codec"
+      },
+      {
+        "archive_byte_delta_vs_baseline": 0,
+        "budget_spend_allowed": false,
+        "candidate_archive_bytes": 178517,
+        "candidate_archive_path": "/Users/adpena/Projects/pact/.omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/fec6_live/receiver_closed_archive.zip",
+        "candidate_archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+        "candidate_id": "frame0_k16_palette_asymmetry",
+        "charged_bits_changed": false,
+        "component_response_replay_manifest_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/local_mlx_response_summaries/fec6_live/local_mlx_response.json",
+        "contest_cuda_auth_eval": false,
+        "correction_family": "frame0_k16_palette_asymmetry",
+        "dispatch_attempted": false,
+        "entropy_position_label": "before_entropy_coder_distribution_shaping",
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "interaction_scope": {
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "frame_ids": [
+            "frame0"
+          ],
+          "gpu_launched": false,
+          "mode_count": 16,
+          "mode_ids": [
+            "none",
+            "frame0_blue_chroma_amp_1",
+            "frame0_blue_chroma_amp_3",
+            "frame0_luma_bias_+1",
+            "frame0_luma_bias_-1",
+            "frame0_luma_bias_-2",
+            "frame0_luma_bias_-4",
+            "frame0_rgb_bias_m2_p1_p1",
+            "frame0_rgb_bias_m4_p2_p2",
+            "frame0_rgb_bias_p0_m1_p1",
+            "frame0_rgb_bias_p0_m2_p2",
+            "frame0_rgb_bias_p0_p1_m1",
+            "frame0_rgb_bias_p0_p2_m2",
+            "frame0_rgb_bias_p2_m1_m1",
+            "frame0_rgb_bias_p4_m2_m2",
+            "frame0_roll_dx+0_dy+1"
+          ],
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false
+        },
+        "legal_runtime_constraints": [
+          "receiver_decode_only",
+          "local_mlx_signal_is_advisory",
+          "contest_cpu_or_cuda_exact_axis_required_before_score"
+        ],
+        "local_mlx_component_terms": {
+          "budget_spend_allowed": false,
+          "charged_bits_changed": false,
+          "combined_delta_score_units": -0.0012,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "measured_component_delta_score_units": -0.0012,
+          "posenet_delta_score_units": -0.00078,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "response_axis": "[macOS-MLX research-signal]",
+          "schema": "repair_archive_candidate_component_terms.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "segnet_delta_score_units": -0.00041999999999999996,
+          "source_candidate_label": "fec6_live"
+        },
+        "local_mlx_response_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/local_mlx_response_summaries/fec6_live/local_mlx_response.json",
+        "objective_delta_score_units": -0.0012,
+        "operation_levels": [
+          "pixel",
+          "byte",
+          "frame",
+          "pair",
+          "batch"
+        ],
+        "palette_dynamics_context": {
+          "budget_spend_allowed": false,
+          "canonical_k": 16,
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "dominant_dynamics_interpretation": "frame0_global_color_geometry_calibration_prior",
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "frame0_mode_count": 15,
+          "frame0_mode_fraction": 0.9375,
+          "frame0_non_identity_fraction": 1.0,
+          "frame1_mode_count": 0,
+          "gpu_launched": false,
+          "identity_mode_count": 1,
+          "mode_count": 16,
+          "non_identity_mode_count": 15,
+          "palette_modes": [
+            "none",
+            "frame0_blue_chroma_amp_1",
+            "frame0_blue_chroma_amp_3",
+            "frame0_luma_bias_+1",
+            "frame0_luma_bias_-1",
+            "frame0_luma_bias_-2",
+            "frame0_luma_bias_-4",
+            "frame0_rgb_bias_m2_p1_p1",
+            "frame0_rgb_bias_m4_p2_p2",
+            "frame0_rgb_bias_p0_m1_p1",
+            "frame0_rgb_bias_p0_m2_p2",
+            "frame0_rgb_bias_p0_p1_m1",
+            "frame0_rgb_bias_p0_p2_m2",
+            "frame0_rgb_bias_p2_m1_m1",
+            "frame0_rgb_bias_p4_m2_m2",
+            "frame0_roll_dx+0_dy+1"
+          ],
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "repair_campaign_frame0_k16_palette_context.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "source": "live_6bae0201_archive_manifest_and_repair_archive_candidate_intake",
+          "source_candidate_label": "fec6_live",
+          "zero_frame1_modes": true
+        },
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_budget_spend": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_consumed": true,
+        "receiver_consumed_candidate_archive_bytes": 178517,
+        "receiver_consumed_candidate_archive_path": "/Users/adpena/Projects/pact/.omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/fec6_live/receiver_closed_archive.zip",
+        "receiver_consumed_candidate_archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+        "reference_local_mlx_response_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/local_mlx_response_summaries/fec6_live/reference_local_mlx_response.json",
+        "requested_repair_bytes": 10,
+        "runtime_consumption_proof_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/fec6_live/receiver_closed_archive.runtime_consumption_proof.json",
+        "runtime_consumption_proof_present": true,
+        "schema": "frontier_rate_attack_repair_budget_typed_response_row.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_candidate_label": "fec6_live",
+        "source_row_kind": "real_archive_candidate_repair_intake",
+        "stacking_interaction_terms": {
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "must_remeasure_with_parent_and_sibling_repairs": true,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "signal_multiplier": 1.0,
+          "source_candidate_archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf"
+        },
+        "targeted_dimensions": [
+          "palette",
+          "frame0",
+          "posenet",
+          "segnet"
+        ],
+        "typed_response_id": "fec6_live_frame0_k16_palette"
+      },
+      {
+        "archive_byte_delta_vs_baseline": 0,
+        "budget_spend_allowed": false,
+        "candidate_archive_bytes": 178517,
+        "candidate_archive_path": "/Users/adpena/Projects/pact/.omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/fec6_live/receiver_closed_archive.zip",
+        "candidate_archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+        "candidate_id": "entropy_boundary_probe",
+        "charged_bits_changed": false,
+        "component_response_replay_manifest_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/local_mlx_response_summaries/fec6_live/local_mlx_response.json",
+        "contest_cuda_auth_eval": false,
+        "correction_family": "entropy_boundary_probe",
+        "dispatch_attempted": false,
+        "entropy_boundary_probe_manifest": {
+          "budget_spend_allowed": false,
+          "candidate_archive_bytes": 178517,
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "probe_kind": "integer_codeword_boundary_slack",
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "saved_bytes": 0,
+          "schema": "entropy_boundary_probe_manifest.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "source_archive_bytes": 178517,
+          "source_candidate_label": "fec6_live",
+          "stage": "at_entropy_coder_integer_codeword_boundary"
+        },
+        "entropy_position_label": "at_entropy_coder_integer_codeword_boundary",
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "interaction_scope": {
+          "byte_count": 178517,
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "entropy_boundary": "zip_member_codeword_plan",
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false
+        },
+        "legal_runtime_constraints": [
+          "receiver_decode_only",
+          "local_mlx_signal_is_advisory",
+          "contest_cpu_or_cuda_exact_axis_required_before_score"
+        ],
+        "local_mlx_component_terms": {
+          "budget_spend_allowed": false,
+          "charged_bits_changed": false,
+          "combined_delta_score_units": -0.0007,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "measured_component_delta_score_units": -0.0007,
+          "posenet_delta_score_units": -0.00035,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "response_axis": "[macOS-MLX research-signal]",
+          "schema": "repair_archive_candidate_component_terms.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "segnet_delta_score_units": -0.00035,
+          "source_candidate_label": "fec6_live"
+        },
+        "local_mlx_response_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/local_mlx_response_summaries/fec6_live/local_mlx_response.json",
+        "objective_delta_score_units": -0.0007,
+        "operation_levels": [
+          "bit",
+          "byte"
+        ],
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_budget_spend": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_consumed": true,
+        "receiver_consumed_candidate_archive_bytes": 178517,
+        "receiver_consumed_candidate_archive_path": "/Users/adpena/Projects/pact/.omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/fec6_live/receiver_closed_archive.zip",
+        "receiver_consumed_candidate_archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+        "reference_local_mlx_response_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/local_mlx_response_summaries/fec6_live/reference_local_mlx_response.json",
+        "requested_repair_bytes": 4,
+        "runtime_consumption_proof_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/intake/source_archive_custody/fec6_live/receiver_closed_archive.runtime_consumption_proof.json",
+        "runtime_consumption_proof_present": true,
+        "schema": "frontier_rate_attack_repair_budget_typed_response_row.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_candidate_label": "fec6_live",
+        "source_row_kind": "real_archive_candidate_repair_intake",
+        "stacking_interaction_terms": {
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "must_remeasure_with_parent_and_sibling_repairs": true,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "signal_multiplier": 1.0,
+          "source_candidate_archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf"
+        },
+        "targeted_dimensions": [
+          "rate_bytes",
+          "entropy_coder_boundary"
+        ],
+        "typed_response_id": "fec6_live_entropy_boundary"
+      }
+    ],
+    "schema": "frontier_rate_attack_repair_budget_typed_response_ledger.v1",
+    "score_affecting_payload_changed": false,
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false
+  }
+}

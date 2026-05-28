@@ -1,0 +1,19 @@
+{
+  "schema": "hosted_archive_manifest_v1",
+  "url": "https://github.com/adpena/comma_video_compression_challenge/releases/download/fec6-frontier-submission-20260520/archive.zip",
+  "sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+  "size_bytes": 178517,
+  "release_tag": "fec6-frontier-submission-20260520",
+  "release_name": "FEC6 frontier submission — 0.192051 [contest-CPU] / 0.226210 [contest-CUDA T4]",
+  "release_published_at_utc": "2026-05-20T02:59:32Z",
+  "release_url": "https://github.com/adpena/comma_video_compression_challenge/releases/tag/fec6-frontier-submission-20260520",
+  "release_asset_api_url": "https://api.github.com/repos/adpena/comma_video_compression_challenge/releases/assets/424753841",
+  "release_asset_digest": "sha256:6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+  "github_owner": "adpena",
+  "github_repo": "comma_video_compression_challenge",
+  "verification_provenance": {
+    "verified_via": "gh release view fec6-frontier-submission-20260520 --repo adpena/comma_video_compression_challenge --json url,name,publishedAt,assets",
+    "verified_at_utc": "2026-05-20T03:10:00Z"
+  },
+  "notes": "Hosted release proves the public downloadable archive URL, SHA-256, and byte size per pre_submission_compliance_check.py --contest-final --strict hosted_archive_manifest_v1 contract. The URL is curl -L compatible and resolves to the canonical 178,517-byte archive.zip with sha256 6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf — bit-identical to submission_dir/archive.zip."
+}

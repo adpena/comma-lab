@@ -419,6 +419,12 @@ def _source_archive_custody(
         repo_root=repo_root,
         allow_size_regression=True,
         allow_overwrite=overwrite,
+        expected_existing_output_sha256=sha256_file(output_archive)
+        if overwrite and output_archive.is_file()
+        else None,
+        expected_existing_runtime_consumption_proof_sha256=sha256_file(proof_path)
+        if overwrite and proof_path.is_file()
+        else None,
     )
     candidate = _mapping(manifest.get("candidate_archive"))
     source = _mapping(manifest.get("source_archive"))
