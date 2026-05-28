@@ -2004,8 +2004,11 @@ def observe_experiment_queue(
             "refresh": (
                 f".venv/bin/python tools/experiment_queue.py --queue <queue-path> observe --tail-lines {tail_lines}"
             ),
+            "control_status": ".venv/bin/python tools/queue_control.py --queue <queue-path> status",
+            "tail_logs": ".venv/bin/python tools/queue_control.py --queue <queue-path> tail-logs --lines 80",
             "pause": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control paused --reason '<reason>'",
             "resume": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control running --reason '<reason>'",
+            "stop_freeze": ".venv/bin/python tools/queue_control.py --queue <queue-path> stop --reason '<reason>'",
             "run_worker": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> run-worker --execute",
         },
     }
