@@ -1,0 +1,875 @@
+{
+  "archive_bytes": 1400243,
+  "archive_path": "/Users/adpena/Projects/pact/.omx/research/z7_mamba2_slot3_stabilizer_lr1e4_20260528/archive.zip",
+  "archive_sha256": "e0164d4ef4aad7768eff0a45fe1fc64be9e3780f030fda5a88f51925fc1345a3",
+  "canonical_provenance": {
+    "artifact_kind": "predicted_from_model",
+    "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_predicted",
+    "captured_at_utc": "2026-05-28T19:54:07Z",
+    "evidence_grade": "predicted",
+    "hardware_substrate": "macos_arm64_mlx_local",
+    "measurement_axis": "[macOS-MLX research-signal]",
+    "promotion_eligible": false,
+    "score_claim_valid": false,
+    "source_path": "<predictor:long_training_canonical:time_traveler_l5_z7_mamba2_mlx_local>",
+    "source_sha256": "37a1d4eaf5d43a4f07b3d62603d5f3bc38e22b99c87d403661be7de8787992d5"
+  },
+  "captured_at_utc": "2026-05-28T19:54:07Z",
+  "config_snapshot": {
+    "batch_pair_indices_per_step": 8,
+    "checkpoint_dir": ".omx/research/z7_mamba2_slot3_stabilizer_lr1e4_20260528/checkpoints",
+    "checkpoint_interval_epochs": 10,
+    "curriculum_hash": "d63c69643aa5957b5716965d6ae56780d228f59f06ed5ece0611c004d94cb042",
+    "curriculum_stages": [
+      {
+        "enable_qat": false,
+        "end_epoch": 50,
+        "epoch_count": 50,
+        "freeze_layers": [],
+        "loss_weights": {
+          "recon": 1.0
+        },
+        "lr_scale": 1.0,
+        "name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+        "notes": "MLX-first score-aware full-budget stage via canonical mlx_score_aware harness; reconstruction + optional Hinton-KL T=2.0 scorer surrogate.",
+        "start_epoch": 0
+      }
+    ],
+    "device": "mlx",
+    "early_stopping_patience": 51,
+    "ema_accumulation": "naive",
+    "ema_decay": 0.997,
+    "epochs": 50,
+    "evidence_grade": "[macOS-MLX research-signal]",
+    "lane_id": "lane_z7_mamba2_mlx_nn_module_migration_wave_n8_slot1_followup_20260528",
+    "learning_rate": 0.0001,
+    "notes": "Z7-Mamba-2 state-space predictive-coding MLX-FIRST score-aware LONG-RUN training via canonical mlx_score_aware harness + Hinton-distilled SegNet + PoseNet teacher per Catalog #164; Mamba-2 selective state-space (d_model=64, d_state=16, d_inner=128) + Z6-compatible PixelShuffle decoder is the substrate-distinguishing primitive per Catalog #272; sister-architecture probe of Z6-v2 Rao-Ballard within cooperative-receiver paradigm class per Catalog #311 + #312 hierarchical predictive coding canonical quadruple; non-promotable [macOS-MLX research-signal] per Catalog #192/#317/#341; per-axis + MLX->PyTorch bridge + paired CUDA/CPU anchor DEFERRED to sister L2 + per-substrate symposium Catalog #325; canonical equation `z7_mamba2_state_space_predictive_coding_pose_axis_savings_v1` anchor 0 -> 1 fires Catalog #371 auto-recalibration trigger after 2 more empirical anchors land.",
+    "optimizer_class": "adamw",
+    "output_dir": ".omx/research/z7_mamba2_slot3_stabilizer_lr1e4_20260528",
+    "resume_from_checkpoint": null,
+    "score_aware_loss_kwargs": {},
+    "seed": 0,
+    "substrate_id": "time_traveler_l5_z7_mamba2_mlx_local",
+    "telemetry_path": ".omx/research/z7_mamba2_slot3_stabilizer_lr1e4_20260528/telemetry.jsonl"
+  },
+  "early_stop_reason": "",
+  "early_stopped": false,
+  "ema_shadow_checkpoint_path": ".omx/research/z7_mamba2_slot3_stabilizer_lr1e4_20260528/checkpoints/final_epoch000049_20260528T195407Z.ema_shadow.state.npsd",
+  "lane_id": "lane_z7_mamba2_mlx_nn_module_migration_wave_n8_slot1_followup_20260528",
+  "live_checkpoint_path": ".omx/research/z7_mamba2_slot3_stabilizer_lr1e4_20260528/checkpoints/final_epoch000049_20260528T195407Z.live.state.npsd",
+  "per_epoch_metrics": [
+    {
+      "captured_at_utc": "2026-05-28T19:50:18Z",
+      "ema_drift_l2": 0.000783023064460305,
+      "epoch": 0,
+      "learning_rate": 0.0001,
+      "loss": 107.53296661376953,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 107.527587890625,
+        "recon_aux": 0.3562327027320862,
+        "seg": 6.33905029296875
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 4.9709062576293945
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:50:23Z",
+      "ema_drift_l2": 0.0018251946535387776,
+      "epoch": 1,
+      "learning_rate": 0.0001,
+      "loss": 111.31816864013672,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 107.61761474609375,
+        "recon_aux": 0.359506756067276,
+        "seg": 6.409183502197266
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 9.575650215148926
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:50:28Z",
+      "ema_drift_l2": 0.003006524252594463,
+      "epoch": 2,
+      "learning_rate": 0.0001,
+      "loss": 106.61808776855469,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 104.62191009521484,
+        "recon_aux": 0.36587443947792053,
+        "seg": 6.251979827880859
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 14.081789016723633
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:50:32Z",
+      "ema_drift_l2": 0.004295056973705353,
+      "epoch": 3,
+      "learning_rate": 0.0001,
+      "loss": 115.08509826660156,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 104.9255599975586,
+        "recon_aux": 0.3589079976081848,
+        "seg": 6.343085289001465
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 18.735579013824463
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:50:37Z",
+      "ema_drift_l2": 0.005645078930509768,
+      "epoch": 4,
+      "learning_rate": 0.0001,
+      "loss": 105.73179626464844,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 107.60235595703125,
+        "recon_aux": 0.35278791189193726,
+        "seg": 6.334022045135498
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 23.393731117248535
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:50:41Z",
+      "ema_drift_l2": 0.006988623223019738,
+      "epoch": 5,
+      "learning_rate": 0.0001,
+      "loss": 109.03887939453125,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 105.0936508178711,
+        "recon_aux": 0.36060166358947754,
+        "seg": 6.307092666625977
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 27.92655611038208
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:50:46Z",
+      "ema_drift_l2": 0.008302394743600484,
+      "epoch": 6,
+      "learning_rate": 0.0001,
+      "loss": 106.38536834716797,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 105.25106048583984,
+        "recon_aux": 0.35659751296043396,
+        "seg": 6.39475154876709
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 32.46951603889465
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:50:50Z",
+      "ema_drift_l2": 0.009602640812883001,
+      "epoch": 7,
+      "learning_rate": 0.0001,
+      "loss": 106.13819885253906,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 102.97579956054688,
+        "recon_aux": 0.3661605715751648,
+        "seg": 6.286829948425293
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 36.97191405296326
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:50:55Z",
+      "ema_drift_l2": 0.010892921166913786,
+      "epoch": 8,
+      "learning_rate": 0.0001,
+      "loss": 109.70112609863281,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 102.7654037475586,
+        "recon_aux": 0.36181706190109253,
+        "seg": 6.334314346313477
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 41.710246086120605
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:51:00Z",
+      "ema_drift_l2": 0.01218113236580182,
+      "epoch": 9,
+      "learning_rate": 0.0001,
+      "loss": 110.6028060913086,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 100.3813705444336,
+        "recon_aux": 0.3677886426448822,
+        "seg": 6.356622219085693
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 46.18544602394104
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:51:04Z",
+      "ema_drift_l2": 0.013479209464620778,
+      "epoch": 10,
+      "learning_rate": 0.0001,
+      "loss": 108.09747314453125,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 107.56133270263672,
+        "recon_aux": 0.3557198643684387,
+        "seg": 6.222640514373779
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 50.73874807357788
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:51:09Z",
+      "ema_drift_l2": 0.014788692100903642,
+      "epoch": 11,
+      "learning_rate": 0.0001,
+      "loss": 110.65994262695312,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 101.35235595703125,
+        "recon_aux": 0.36151331663131714,
+        "seg": 6.335052490234375
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 55.44157004356384
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:51:13Z",
+      "ema_drift_l2": 0.016102871192686587,
+      "epoch": 12,
+      "learning_rate": 0.0001,
+      "loss": 105.24557495117188,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 104.32829284667969,
+        "recon_aux": 0.3553631901741028,
+        "seg": 6.344382286071777
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 59.99708127975464
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:51:18Z",
+      "ema_drift_l2": 0.01741103130230173,
+      "epoch": 13,
+      "learning_rate": 0.0001,
+      "loss": 109.0128402709961,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 102.53573608398438,
+        "recon_aux": 0.356232225894928,
+        "seg": 6.3634538650512695
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 64.7489869594574
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:51:23Z",
+      "ema_drift_l2": 0.026106232443131604,
+      "epoch": 14,
+      "learning_rate": 0.0001,
+      "loss": 109.53170776367188,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 100.2224349975586,
+        "recon_aux": 0.35819894075393677,
+        "seg": 6.451870918273926
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 69.44899725914001
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:51:27Z",
+      "ema_drift_l2": 0.0460921481785498,
+      "epoch": 15,
+      "learning_rate": 0.0001,
+      "loss": 105.68144989013672,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 98.474853515625,
+        "recon_aux": 0.3611574172973633,
+        "seg": 6.348576545715332
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 73.98371720314026
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:51:32Z",
+      "ema_drift_l2": 0.07878042088378036,
+      "epoch": 16,
+      "learning_rate": 0.0001,
+      "loss": 103.96630859375,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 102.92644500732422,
+        "recon_aux": 0.36033758521080017,
+        "seg": 6.380656719207764
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 78.55914306640625
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:51:37Z",
+      "ema_drift_l2": 0.12075394389481849,
+      "epoch": 17,
+      "learning_rate": 0.0001,
+      "loss": 105.67984771728516,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 98.96134948730469,
+        "recon_aux": 0.3609609007835388,
+        "seg": 6.320496559143066
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 83.32974004745483
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:51:42Z",
+      "ema_drift_l2": 0.17059194200005748,
+      "epoch": 18,
+      "learning_rate": 0.0001,
+      "loss": 108.37029266357422,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 98.71769714355469,
+        "recon_aux": 0.3605225086212158,
+        "seg": 6.342990875244141
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 88.2172040939331
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:51:46Z",
+      "ema_drift_l2": 0.228269947849871,
+      "epoch": 19,
+      "learning_rate": 0.0001,
+      "loss": 104.51493835449219,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 101.8498764038086,
+        "recon_aux": 0.3667357265949249,
+        "seg": 6.247528076171875
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 92.84660005569458
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:51:51Z",
+      "ema_drift_l2": 0.29361003189813806,
+      "epoch": 20,
+      "learning_rate": 0.0001,
+      "loss": 106.70042419433594,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 100.41838073730469,
+        "recon_aux": 0.36680275201797485,
+        "seg": 6.247544765472412
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 97.49979400634766
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:51:56Z",
+      "ema_drift_l2": 0.36661021681097444,
+      "epoch": 21,
+      "learning_rate": 0.0001,
+      "loss": 104.40328216552734,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 102.29570770263672,
+        "recon_aux": 0.36260777711868286,
+        "seg": 6.352825164794922
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 102.13445997238159
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:52:00Z",
+      "ema_drift_l2": 0.4468680139116478,
+      "epoch": 22,
+      "learning_rate": 0.0001,
+      "loss": 107.74272155761719,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 105.23533630371094,
+        "recon_aux": 0.3533480763435364,
+        "seg": 6.34218168258667
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 106.93322610855103
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:52:05Z",
+      "ema_drift_l2": 0.5345890644335685,
+      "epoch": 23,
+      "learning_rate": 0.0001,
+      "loss": 106.32161712646484,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 103.7198715209961,
+        "recon_aux": 0.3578754663467407,
+        "seg": 6.318056106567383
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 111.72247409820557
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:52:10Z",
+      "ema_drift_l2": 0.6296879315141619,
+      "epoch": 24,
+      "learning_rate": 0.0001,
+      "loss": 97.55260467529297,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 98.17376708984375,
+        "recon_aux": 0.3632321357727051,
+        "seg": 6.3421630859375
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 116.46206021308899
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:52:15Z",
+      "ema_drift_l2": 0.7322651991515422,
+      "epoch": 25,
+      "learning_rate": 0.0001,
+      "loss": 105.62777709960938,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 99.98906707763672,
+        "recon_aux": 0.3663378953933716,
+        "seg": 6.354825973510742
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 121.15971803665161
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:52:19Z",
+      "ema_drift_l2": 0.8452495738728486,
+      "epoch": 26,
+      "learning_rate": 0.0001,
+      "loss": 102.04952239990234,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 101.04032897949219,
+        "recon_aux": 0.3660266101360321,
+        "seg": 6.257279872894287
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 125.7087881565094
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:52:24Z",
+      "ema_drift_l2": 0.9721940324221965,
+      "epoch": 27,
+      "learning_rate": 0.0001,
+      "loss": 104.32072448730469,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 98.59515380859375,
+        "recon_aux": 0.3699195981025696,
+        "seg": 6.2085700035095215
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 130.47480511665344
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:52:29Z",
+      "ema_drift_l2": 1.1195179338081986,
+      "epoch": 28,
+      "learning_rate": 0.0001,
+      "loss": 103.17271423339844,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 97.86461639404297,
+        "recon_aux": 0.36544913053512573,
+        "seg": 6.288651466369629
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 135.11042523384094
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:52:33Z",
+      "ema_drift_l2": 1.2933020740415724,
+      "epoch": 29,
+      "learning_rate": 0.0001,
+      "loss": 106.28346252441406,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 98.96007537841797,
+        "recon_aux": 0.3617135286331177,
+        "seg": 6.431915283203125
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 139.95331621170044
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:52:38Z",
+      "ema_drift_l2": 1.498146914711004,
+      "epoch": 30,
+      "learning_rate": 0.0001,
+      "loss": 105.02227020263672,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 104.48848724365234,
+        "recon_aux": 0.3611389100551605,
+        "seg": 6.363974571228027
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 144.79111623764038
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:52:43Z",
+      "ema_drift_l2": 1.7370919494186599,
+      "epoch": 31,
+      "learning_rate": 0.0001,
+      "loss": 101.11834716796875,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 101.27862548828125,
+        "recon_aux": 0.3574376106262207,
+        "seg": 6.385517120361328
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 149.51482605934143
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:52:48Z",
+      "ema_drift_l2": 2.008872385180538,
+      "epoch": 32,
+      "learning_rate": 0.0001,
+      "loss": 105.48404693603516,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 96.16639709472656,
+        "recon_aux": 0.3669198155403137,
+        "seg": 6.33600378036499
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 154.2900002002716
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:52:53Z",
+      "ema_drift_l2": 2.3125792877600495,
+      "epoch": 33,
+      "learning_rate": 0.0001,
+      "loss": 104.72975158691406,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 100.4488754272461,
+        "recon_aux": 0.37584513425827026,
+        "seg": 6.278501033782959
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 159.0843060016632
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:52:57Z",
+      "ema_drift_l2": 2.643810638404016,
+      "epoch": 34,
+      "learning_rate": 0.0001,
+      "loss": 103.44132995605469,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 96.24752807617188,
+        "recon_aux": 0.36624985933303833,
+        "seg": 6.225131988525391
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 163.84492111206055
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:53:02Z",
+      "ema_drift_l2": 3.003889595228772,
+      "epoch": 35,
+      "learning_rate": 0.0001,
+      "loss": 100.2992172241211,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 102.23524475097656,
+        "recon_aux": 0.3677588105201721,
+        "seg": 6.358272075653076
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 168.50735592842102
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:53:07Z",
+      "ema_drift_l2": 3.387432328402393,
+      "epoch": 36,
+      "learning_rate": 0.0001,
+      "loss": 97.95304870605469,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 99.64506530761719,
+        "recon_aux": 0.3699966073036194,
+        "seg": 6.367117881774902
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 173.43662428855896
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:53:12Z",
+      "ema_drift_l2": 3.7830727013655014,
+      "epoch": 37,
+      "learning_rate": 0.0001,
+      "loss": 105.59054565429688,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 97.9244384765625,
+        "recon_aux": 0.39470553398132324,
+        "seg": 6.33476448059082
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 178.09079003334045
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:53:16Z",
+      "ema_drift_l2": 4.195500244167593,
+      "epoch": 38,
+      "learning_rate": 0.0001,
+      "loss": 101.6536636352539,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 93.90606689453125,
+        "recon_aux": 0.4161105751991272,
+        "seg": 6.120517730712891
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 182.68270921707153
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:53:21Z",
+      "ema_drift_l2": 4.62279430468101,
+      "epoch": 39,
+      "learning_rate": 0.0001,
+      "loss": 97.8271255493164,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 95.60570526123047,
+        "recon_aux": 0.42397069931030273,
+        "seg": 6.3143157958984375
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 187.46043610572815
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:53:26Z",
+      "ema_drift_l2": 5.059982586417808,
+      "epoch": 40,
+      "learning_rate": 0.0001,
+      "loss": 101.78721618652344,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 95.42748260498047,
+        "recon_aux": 0.4531589448451996,
+        "seg": 6.291921615600586
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 192.11761021614075
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:53:30Z",
+      "ema_drift_l2": 5.509515026314321,
+      "epoch": 41,
+      "learning_rate": 0.0001,
+      "loss": 100.0191650390625,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 96.17518615722656,
+        "recon_aux": 0.471351683139801,
+        "seg": 6.152861595153809
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 196.78877115249634
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:53:35Z",
+      "ema_drift_l2": 5.966936733037718,
+      "epoch": 42,
+      "learning_rate": 0.0001,
+      "loss": 99.99224853515625,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 95.9366683959961,
+        "recon_aux": 0.5112342834472656,
+        "seg": 6.313985347747803
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 201.371600151062
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:53:39Z",
+      "ema_drift_l2": 6.4244961545905035,
+      "epoch": 43,
+      "learning_rate": 0.0001,
+      "loss": 98.38455200195312,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 93.82780456542969,
+        "recon_aux": 0.5649693012237549,
+        "seg": 6.144573211669922
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 205.9933750629425
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:53:44Z",
+      "ema_drift_l2": 6.886005112808788,
+      "epoch": 44,
+      "learning_rate": 0.0001,
+      "loss": 99.22727966308594,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 90.77362060546875,
+        "recon_aux": 0.6120471954345703,
+        "seg": 6.387139797210693
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 210.59228515625
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:53:49Z",
+      "ema_drift_l2": 7.347563591196114,
+      "epoch": 45,
+      "learning_rate": 0.0001,
+      "loss": 98.11805725097656,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 86.92709350585938,
+        "recon_aux": 0.7018484473228455,
+        "seg": 6.270474433898926
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 215.25834202766418
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:53:53Z",
+      "ema_drift_l2": 7.813562495657307,
+      "epoch": 46,
+      "learning_rate": 0.0001,
+      "loss": 98.34037780761719,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 89.78672790527344,
+        "recon_aux": 0.7924478650093079,
+        "seg": 6.256843566894531
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 219.7861692905426
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:53:58Z",
+      "ema_drift_l2": 8.284386155118998,
+      "epoch": 47,
+      "learning_rate": 0.0001,
+      "loss": 98.35411071777344,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 89.79832458496094,
+        "recon_aux": 0.8581912517547607,
+        "seg": 6.563717842102051
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 224.3713972568512
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:54:03Z",
+      "ema_drift_l2": 8.75149535115658,
+      "epoch": 48,
+      "learning_rate": 0.0001,
+      "loss": 91.17232513427734,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 87.5626220703125,
+        "recon_aux": 0.9268556237220764,
+        "seg": 6.222444534301758
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 229.0573329925537
+    },
+    {
+      "captured_at_utc": "2026-05-28T19:54:07Z",
+      "ema_drift_l2": 9.206621872217003,
+      "epoch": 49,
+      "learning_rate": 0.0001,
+      "loss": 93.43830108642578,
+      "loss_components": {},
+      "per_axis_decomposition": {
+        "archive_bytes": 0.0,
+        "pose": 86.91567993164062,
+        "recon_aux": 0.9884411096572876,
+        "seg": 6.2228193283081055
+      },
+      "stage_name": "time_traveler_l5_z7_mamba2_mlx_local_mlx_score_aware_full",
+      "wall_clock_seconds": 233.7078161239624
+    }
+  ],
+  "per_epoch_metrics_count": 50,
+  "posterior_refusal_reason": "non-authoritative (advisory-grade) evidence_tag: '[MPS-research-signal]'",
+  "posterior_update_accepted": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema_version": "long_training_canonical_artifact.v1",
+  "score_claim": false,
+  "substrate_id": "time_traveler_l5_z7_mamba2_mlx_local",
+  "telemetry_path": ".omx/research/z7_mamba2_slot3_stabilizer_lr1e4_20260528/telemetry.jsonl",
+  "total_epochs_completed": 50,
+  "total_wall_clock_seconds": 233.71883821487427
+}

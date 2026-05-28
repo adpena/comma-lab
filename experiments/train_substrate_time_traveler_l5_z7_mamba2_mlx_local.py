@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: MIT
-"""Z7-Mamba-2 MLX-FIRST score-aware trainer SCAFFOLD — L1 SCAFFOLD pending migration.
+"""Z7-Mamba-2 MLX-FIRST score-aware trainer — L1 LONG-RUN MLX-LOCAL (Wave N+9 Slot 1).
 # NO_GRAD_WAIVED:MLX_substrate_trainer_uses_mlx_value_and_grad_lazy_eval_no_pytorch_autograd_per_mlx_first_canonical_doctrine_8th_standing_directive
 # AUTOCAST_FP16_WAIVED:MLX_substrate_trainer_does_not_use_PyTorch_CUDA_autocast_fp16_primitive_per_mlx_first_canonical_doctrine_8th_standing_directive
 # TORCH_COMPILE_WAIVED:MLX_substrate_trainer_has_no_pytorch_training_path_per_mlx_first_canonical_doctrine_8th_standing_directive
-# SYNTHETIC_NON_SMOKE_OK:synthetic_targets_only_in_smoke_full_path_blocked_per_optimal_form_dispatch_until_mlx_module_migration_lands
+# SYNTHETIC_NON_SMOKE_OK:synthetic_targets_only_in_smoke_full_path_decodes_real_contest_video_via_decode_mlx_targets_catalog_114
 # DISPATCH_OPTIMIZATION_PROTOCOL_OK:mlx_local_no_paid_dispatch_research_only_true_per_claude_md_substrate_scaffolds_must_be_complete_or_research_only
-# OPTIMAL_FORM_DISPATCH_OK:scaffold_only_full_main_raises_NotImplementedError_per_catalog_240_research_only_true_dispatch_enabled_false
+# OPTIMAL_FORM_DISPATCH_OK:scaffold_full_main_wires_canonical_mlx_score_aware_harness_via_Z7Mamba2MLXModule_per_wave_n9_slot_1_landed_20260528
 
 Per the operator mandate 2026-05-28 (Slot 1 of cap=2 atomic-pairing): this is
 the MLX-FIRST sister trainer for Z7-Mamba-2 within the cooperative-receiver
@@ -135,49 +135,211 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict] = {
 def _full_main(args: argparse.Namespace) -> int:
     """Run the canonical MLX-first score-aware ``_full_main`` body for Z7-Mamba-2.
 
-    **BLOCKED PER CATALOG #240 + LANDING MEMO §10 OPERATOR-ROUTABLE.**
-
-    The canonical Z6-v2 sister pattern at
-    ``experiments/train_substrate_z6_v2_cargo_cult_unwind_mlx_local.py`` lines
-    116-272 routes through the canonical
+    Routes through the canonical substrate-AGNOSTIC harness
     ``tac.substrates._shared.mlx_score_aware.run_mlx_score_aware_full_main``
-    harness, which calls ``mlx.nn.value_and_grad(self.model, _loss_fn_inner)``
-    at ``src/tac/substrates/_shared/mlx_score_aware/adapter.py`` line 161.
+    (sister of Z6-v2 canonical pattern at
+    ``experiments/train_substrate_z6_v2_cargo_cult_unwind_mlx_local.py``).
 
-    The existing ``Z7Mamba2MLXNativeRenderer`` at
-    ``src/tac/substrates/time_traveler_l5_z7_mamba2/mlx_native.py`` does NOT
-    extend ``mlx.nn.Module`` and does NOT expose ``.parameters()``. The
-    canonical harness call fails closed because ``mlx.nn.value_and_grad``
-    cannot differentiate a non-Module model.
+    Per the operator's 11th INDIVIDUALLY-FRACTAL standing directive 2026-05-27
+    + the 8th MLX-FIRST standing directive REINFORCED 2026-05-28 ("always
+    prefer MLX first always"): this is Z7-Mamba-2's OWN engineering pass —
+    the Mamba-2 selective state-space recurrence + Z6-compatible PixelShuffle
+    decoder under canonical Hinton-distilled scorer-bound gradient binds the
+    canonical Hinton-Vinyals-Dean 2014 KL T=2.0 + pose-MSE composition to
+    Z7-Mamba-2's specific substrate-distinguishing primitives per Catalog
+    #272 (sister-architecture probe of Z6-v2 within the same cooperative-
+    receiver paradigm class per Catalog #311).
 
-    **REACTIVATION CRITERIA** per landing memo §10:
+    Per CLAUDE.md "MLX portable-local-substrate authority": the harness auto-
+    stamps the canonical non-promotable markers (``score_claim=False``,
+    ``promotion_eligible=False``, ``ready_for_exact_eval_dispatch=False``).
 
-    1. Land ``src/tac/substrates/time_traveler_l5_z7_mamba2/mlx_module.py``
-       with ``Z7Mamba2MLXModule(mlx.nn.Module)`` wrapping the existing
-       parameter set.
-    2. Land sister tests verifying byte-parity vs the existing reference.
-    3. Replace this NotImplementedError body with the canonical Z6-v2
-       trainer pattern (substitute ``Z7Mamba2MLXModule`` for
-       ``Z6V2SubstrateMLX``).
-    4. Land ``src/tac/substrates/time_traveler_l5_z7_mamba2/archive_candidate.py``
-       MLX-state_dict -> Z7MCM2 archive bridge.
+    Distillation defaults to ``0.5`` for SegNet + ``1.0`` for PoseNet
+    (the canonical operating-point per CLAUDE.md "SegNet vs PoseNet
+    importance" — pose is DOMINANT at frontier; sister of Z6-v2 Wave N+5
+    anchor 3.74× pose-axis reduction).
     """
-    raise NotImplementedError(
-        "Z7-Mamba-2 MLX-FIRST `_full_main` is BLOCKED per Catalog #240 + "
-        "landing memo at .omx/research/"
-        "z7_mamba2_state_space_hinton_distill_600pair_long_mlx_landed_20260528.md "
-        "section 10 'Operator-routable next'. The canonical harness requires "
-        "`mlx.nn.value_and_grad(self.model, _loss_fn_inner)`, but the existing "
-        "`Z7Mamba2MLXNativeRenderer` is a plain Python class — it does NOT "
-        "extend `mlx.nn.Module`. Reactivation criteria: (1) author "
-        "`src/tac/substrates/time_traveler_l5_z7_mamba2/mlx_module.py` with "
-        "`Z7Mamba2MLXModule(mlx.nn.Module)`; (2) byte-parity tests; (3) replace "
-        "this NotImplementedError body with the canonical Z6-v2 pattern at "
-        "`experiments/train_substrate_z6_v2_cargo_cult_unwind_mlx_local.py` "
-        "lines 116-272; (4) author `archive_candidate.py` bridge. See landing "
-        "memo §10 for full migration plan + estimated wall-clock (~2-4h "
-        "migration + ~12-24h MLX-LOCAL 2000-epoch training on M5 Max; $0 GPU)."
+    # Wave N+10 Slot 3 stabilizer telemetry per task #1481 + Slot 1 RESUME
+    # IMPLEMENTATION-LEVEL falsification reactivation criteria (lr=3e-4 600pair
+    # NaN ep38 deterministic per 1e2b78163). Per Catalog #305 observability +
+    # CLAUDE.md "Max observability" non-negotiable: log every stabilizer flag
+    # at training start so the empirical anchor JSON records the EXACT
+    # stabilizer configuration even when the flags are not yet adapter-wired.
+    stabilizer_telemetry = {
+        "grad_clip_max_norm": (
+            float(args.grad_clip_max_norm)
+            if args.grad_clip_max_norm is not None
+            else None
+        ),
+        "warmup_epochs": int(args.warmup_epochs),
+        "effective_full_lr": float(args.full_lr),
+        "stabilizer_status": (
+            "ADAPTER_WIRING_DEFERRED_TO_SISTER_SUBAGENT"
+            if (args.grad_clip_max_norm is not None or args.warmup_epochs > 0)
+            else "BASELINE_NO_STABILIZER"
+        ),
+        "smallest_perturbation_this_turn": "reduced_full_lr_only",
+        "operator_routable_full_wiring": (
+            "land canonical mlx.optimizers.clip_grad_norm + linear-warmup "
+            "lr schedule in src/tac/substrates/_shared/mlx_score_aware/"
+            "adapter.py:130-163 (sister subagent; Slot 1/4 ALIVE per "
+            "task #1481 sister-coordination prevented this turn)"
+        ),
+    }
+    print(
+        f"[z7_mamba2_mlx_local:_full_main] stabilizer_telemetry={json.dumps(stabilizer_telemetry, sort_keys=True)}",
+        file=sys.stderr,
     )
+
+    from tac.substrates._shared.mlx_score_aware import (
+        RendererBundle,
+        build_mlx_posenet_pair_teacher,
+        build_mlx_segnet_pair_teacher,
+        decode_mlx_targets,
+        run_mlx_score_aware_full_main,
+    )
+    from tac.substrates.hinton_distilled_scorer_surrogate import (
+        DEFAULT_POSE_DIMS,
+        DEFAULT_SEGNET_CLASSES,
+        build_learnable_pose_student_head,
+        build_learnable_student_head,
+    )
+    from tac.substrates.time_traveler_l5_z7_mamba2.archive_candidate import (
+        export_z7_mamba2_mlx_archive,
+    )
+    from tac.substrates.time_traveler_l5_z7_mamba2.mlx_module import (
+        Z7Mamba2MLXModule,
+    )
+    from tac.substrates.time_traveler_l5_z7_mamba2.mlx_native import (
+        Z7Mamba2MLXRenderConfig,
+    )
+
+    cfg = Z7Mamba2MLXRenderConfig(num_pairs=int(args.num_pairs))
+    model = Z7Mamba2MLXModule(cfg, seed=int(args.seed))
+    out_h, out_w = int(cfg.output_height), int(cfg.output_width)
+    target_rgb_0, target_rgb_1 = decode_mlx_targets(
+        args.video_path,
+        num_pairs=int(args.num_pairs),
+        output_height=out_h,
+        output_width=out_w,
+    )
+
+    # Canonical Hinton-distilled scorer surrogate wiring per sister Z6-v2
+    # commit `c26647891` + V2/V4/VQ sister cascade commit `1860ea2ac` +
+    # V2+V4+VQ 600-pair Hinton landed commit `84a4893e4` + Catalog #164.
+    #
+    # Per CLAUDE.md "SegNet vs PoseNet importance" operating-point-dependent
+    # discipline: pose is DOMINANT at the PR106 frontier operating point
+    # (pose marginal 2.71x SegNet's); default --pose-distillation-weight=1.0
+    # wires both teachers. Z7-Mamba-2 output (384, 512) matches canonical
+    # SegNet/PoseNet eval resolution exactly (zero adapter).
+    #
+    # Cross-family hypothesis (operator-routable from Wave N+8 Slot 1 landing
+    # memo §10 + §11): does Z7-Mamba-2 (Mamba-2 selective state-space) produce
+    # empirically DIFFERENT pose-axis convergence signature than Z6-v2
+    # (Rao-Ballard FiLM-ego-motion) under the SAME Hinton-distilled scorer-
+    # bound gradient at 600-pair MLX-LOCAL? Canonical equation
+    # `z7_mamba2_state_space_predictive_coding_pose_axis_savings_v1` anchors
+    # 0 -> 1 (the 3-anchor Catalog #371 auto-recalibration trigger fires
+    # AFTER 2 more empirical anchors land).
+    scorer_teacher = None
+    pose_scorer_teacher = None
+    learnable_student_head = None
+    learnable_pose_student_head = None
+    pose_distillation_weight = 0.0
+    if (
+        float(args.distillation_weight) > 0.0
+        and not bool(args.allow_mock_scorer_teacher)
+    ):
+        bundle_no_teacher = RendererBundle(
+            model=model,
+            target_rgb_0=target_rgb_0,
+            target_rgb_1=target_rgb_1,
+            num_pairs=int(args.num_pairs),
+            forward_convention="reconstruct_pair_nchw01",
+            distillation_weight=0.0,
+            pose_distillation_weight=0.0,
+            pose_dims=DEFAULT_POSE_DIMS,
+        )
+        scorer_teacher = build_mlx_segnet_pair_teacher(
+            bundle_no_teacher,
+            upstream_dir=str(args.upstream_dir),
+            device="cpu",  # CLAUDE.md "MPS auth eval is NOISE" — CPU teacher only.
+        )
+        pose_scorer_teacher = build_mlx_posenet_pair_teacher(
+            bundle_no_teacher,
+            upstream_dir=str(args.upstream_dir),
+            device="cpu",
+        )
+        learnable_student_head = build_learnable_student_head(
+            num_classes=DEFAULT_SEGNET_CLASSES,
+            in_channels=3,
+            seed=int(args.seed),
+        )
+        learnable_pose_student_head = build_learnable_pose_student_head(
+            pose_dims=DEFAULT_POSE_DIMS,
+            seed=int(args.seed),
+        )
+        pose_distillation_weight = float(args.pose_distillation_weight)
+
+    bundle = RendererBundle(
+        model=model,
+        target_rgb_0=target_rgb_0,
+        target_rgb_1=target_rgb_1,
+        num_pairs=int(args.num_pairs),
+        # Z7-Mamba-2 reconstructs per-pair via the canonical
+        # ``reconstruct_pair_nchw01`` convention (mirrors the
+        # ``decode_frames_nhwc01`` harness path that calls
+        # ``model.reconstruct_pair(idx)`` + transposes NCHW -> NHWC).
+        forward_convention="reconstruct_pair_nchw01",
+        distillation_weight=float(args.distillation_weight),
+        scorer_teacher=scorer_teacher,
+        learnable_student_head=learnable_student_head,
+        pose_distillation_weight=pose_distillation_weight,
+        pose_scorer_teacher=pose_scorer_teacher,
+        learnable_pose_student_head=learnable_pose_student_head,
+        pose_dims=DEFAULT_POSE_DIMS,
+        allow_mock_scorer_teacher=bool(args.allow_mock_scorer_teacher),
+        export_archive_fn=export_z7_mamba2_mlx_archive,
+    )
+    artifact = run_mlx_score_aware_full_main(
+        bundle=bundle,
+        substrate_id="time_traveler_l5_z7_mamba2_mlx_local",
+        lane_id=(
+            "lane_z7_mamba2_mlx_nn_module_migration_wave_n8_slot1_followup"
+            "_20260528"
+        ),
+        output_dir=args.output_dir,
+        epochs=int(args.epochs),
+        batch_pair_indices_per_step=min(int(args.num_pairs), 8),
+        learning_rate=float(args.full_lr),
+        seed=int(args.seed),
+        notes=(
+            "Z7-Mamba-2 state-space predictive-coding MLX-FIRST score-aware "
+            "LONG-RUN training via canonical mlx_score_aware harness + "
+            "Hinton-distilled SegNet + PoseNet teacher per Catalog #164; "
+            "Mamba-2 selective state-space (d_model=64, d_state=16, d_inner=128) "
+            "+ Z6-compatible PixelShuffle decoder is the substrate-distinguishing "
+            "primitive per Catalog #272; sister-architecture probe of Z6-v2 "
+            "Rao-Ballard within cooperative-receiver paradigm class per "
+            "Catalog #311 + #312 hierarchical predictive coding canonical "
+            "quadruple; non-promotable [macOS-MLX research-signal] per "
+            "Catalog #192/#317/#341; per-axis + MLX->PyTorch bridge + paired "
+            "CUDA/CPU anchor DEFERRED to sister L2 + per-substrate symposium "
+            "Catalog #325; canonical equation "
+            "`z7_mamba2_state_space_predictive_coding_pose_axis_savings_v1` "
+            "anchor 0 -> 1 fires Catalog #371 auto-recalibration trigger "
+            "after 2 more empirical anchors land."
+        ),
+    )
+    print(
+        f"[z7_mamba2_mlx_local:_full_main] DONE "
+        f"epochs={artifact.total_epochs_completed} "
+        f"promotable={artifact.promotable} "
+        f"wall={artifact.total_wall_clock_seconds:.1f}s "
+        f"artifact={args.output_dir / 'training_artifact.json'}"
+    )
+    return 0
 
 
 def _smoke_main(args: argparse.Namespace) -> int:
@@ -292,10 +454,10 @@ def _smoke_main(args: argparse.Namespace) -> int:
         "ready_for_exact_eval_dispatch": False,
         "promotable": False,
         "predicted_delta_adjustment": 0.0,
-        "scaffold_state": "L1_scaffold_full_main_blocked_pending_mlx_module_migration",
-        "operator_routable_reactivation_criteria_memo": (
+        "scaffold_state": "L1_full_main_wired_via_z7_mamba2_mlx_module_wave_n9_slot1_landed_20260528",
+        "operator_routable_landing_memo": (
             ".omx/research/"
-            "z7_mamba2_state_space_hinton_distill_600pair_long_mlx_landed_20260528.md"
+            "z7_mamba2_mlx_nn_module_migration_plus_600pair_empirical_landed_20260528.md"
         ),
         "canonical_provenance": {
             "kind": "predicted_from_model",
@@ -320,7 +482,8 @@ def _smoke_main(args: argparse.Namespace) -> int:
     print(
         f"[z7_mamba2_mlx_local smoke] manifest written to: {manifest_path} "
         f"(rgb_0_shape={out_shape_0}; {MLX_EVIDENCE_GRADE}) "
-        f"non-promotable per Catalog #341; full path BLOCKED per landing memo §10",
+        f"non-promotable per Catalog #341; --full path WIRED via "
+        f"Z7Mamba2MLXModule (Wave N+9 Slot 1)",
         file=sys.stderr,
     )
     return 0
@@ -373,6 +536,46 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     p.add_argument("--full-lr", type=float, default=1e-3)
+    # Wave N+10 Slot 3 stabilizer flags per task #1481 + Slot 1 RESUME 1e2b78163
+    # IMPLEMENTATION-LEVEL falsification reactivation criteria (NaN at ep38 with
+    # lr=3e-4 600pair). Per Catalog #307: PARADIGM INTACT (30.7% pose-axis
+    # reduction in 30ep proves substrate learning); fix is IMPLEMENTATION-level
+    # stabilizer ordering. Per Gu+Dao 2023 (Mamba-2 selective state-space
+    # canonical stability) + Loshchilov+Hutter 2019 (Adam stability): grad clip
+    # max_norm=1.0 + warmup linear 0->lr over 5-10 epochs is the canonical
+    # smallest-perturbation cure for state-space + Adam NaN-at-specific-epoch.
+    #
+    # NOTE: Full grad-clip + warmup wiring at the optimizer level requires
+    # MlxScoreAwareAdapter modification (sister territory; Slot 1/4 ALIVE per
+    # task #1481 sister-coordination). The flags are accepted here and the
+    # effect is implemented via reduced --full-lr (the smallest-perturbation
+    # stabilizer that fits within current adapter contract). Operator-routable
+    # next: land canonical mlx.optimizers.clip_grad_norm + cosine warmup
+    # schedule in the canonical adapter (sister subagent; not this turn).
+    p.add_argument(
+        "--grad-clip-max-norm",
+        type=float,
+        default=None,
+        help=(
+            "Mamba+Adam stabilizer: gradient clipping max-norm. Per Gu+Dao 2023 "
+            "+ Loshchilov+Hutter 2019, max_norm=1.0 is canonical for Mamba "
+            "state-space. STATUS THIS TURN: flag accepted + recorded; full "
+            "wiring requires canonical adapter PR (operator-routable; Slot 1/4 "
+            "ALIVE this turn per task #1481 sister-coordination). The effective "
+            "fix is via reduced --full-lr as smallest-perturbation cure."
+        ),
+    )
+    p.add_argument(
+        "--warmup-epochs",
+        type=int,
+        default=0,
+        help=(
+            "Mamba+Adam stabilizer: linear warmup 0->lr over N epochs. "
+            "STATUS THIS TURN: flag accepted + recorded; full wiring requires "
+            "canonical adapter PR (Slot 1/4 ALIVE). Smallest-perturbation "
+            "stabilizer this turn is via reduced --full-lr."
+        ),
+    )
     return p
 
 
