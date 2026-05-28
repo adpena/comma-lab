@@ -561,25 +561,38 @@ def test_real_archive_intake_runs_all_families_through_floor_loop(
     assert summary["archive_entropy_substrate_coverage_count"] == 5
     assert summary["archive_entropy_substrate_coverages"]
     assert summary["archive_entropy_substrate_gap_count"] > 0
-    assert "range_coder_materializer_missing" in summary[
+    assert "range_coder_contest_runtime_adapter_missing" in summary[
         "archive_entropy_substrate_blockers"
     ]
-    assert "ans_coder_materializer_missing" in summary[
+    assert "ans_coder_contest_runtime_adapter_missing" in summary[
         "archive_entropy_substrate_blockers"
     ]
-    assert summary["archive_entropy_substrate_probe_count"] > 0
-    assert summary["archive_entropy_substrate_probed_substrates"] == [
+    assert summary["archive_entropy_substrate_probe_count"] == 0
+    assert summary["archive_entropy_substrate_probed_substrates"] == []
+    assert summary["archive_entropy_substrate_prototype_count"] > 0
+    assert summary["archive_entropy_substrate_prototype_substrates"] == [
         "range_coding",
         "ans_coding",
     ]
     assert summary["archive_entropy_probed_zero_order_savings_bytes"] >= 0
     assert summary["archive_entropy_anti_pattern_protection_count"] > 0
+    assert summary["archive_entropy_anti_pattern_acquisition_penalty_sum"] > 0.0
     assert "probe_only_side_report_orphaned_from_optimizer_v1" in summary[
         "archive_entropy_anti_pattern_ids"
     ]
     assert "zero_order_entropy_estimate_promoted_as_materialized_savings_v1" in summary[
         "archive_entropy_anti_pattern_ids"
     ]
+    assert summary["archive_variant_signal_count"] >= 45
+    assert summary["archive_variant_non_selected_signal_count"] >= 40
+    assert summary["archive_variant_probe_count"] == 10
+    assert summary["archive_variant_prototype_count"] == 10
+    assert summary["archive_variant_runtime_proof_ready_count"] >= 15
+    assert summary["archive_variant_signal_acquisition_penalty_sum"] > 0.0
+    assert "range_coder_entropy_probe" in summary["archive_variant_signal_kinds"]
+    assert "ans_coder_entropy_probe" in summary["archive_variant_signal_kinds"]
+    assert "range_coder_lzma_prototype" in summary["archive_variant_signal_kinds"]
+    assert "ans_coder_rans_prototype" in summary["archive_variant_signal_kinds"]
     assert summary["posterior_stack_learning_signal_count"] == 5
     assert summary["entropy_stage_chain_posterior_learning_signal_count"] == 5
     assert summary["exact_failure_rebudgeting_posterior_learning_signal_count"] == 6

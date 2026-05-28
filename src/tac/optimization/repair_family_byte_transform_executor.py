@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import importlib.util
 import io
+import lzma
 import math
 import platform
 import struct
@@ -61,6 +62,8 @@ REPAIR_FAMILY_BYTE_TRANSFORM_PAYLOAD_SCHEMA = "repair_family_byte_transform_payl
 REPAIR_FAMILY_BYTE_TRANSFORM_DELTA_SCHEMA = "repair_family_byte_transform_delta.v1"
 REPAIR_FAMILY_BYTE_TRANSFORM_REPLAY_BUNDLE_SCHEMA = "repair_family_byte_transform_replay_bundle.v1"
 REPAIR_FAMILY_EXACT_EVAL_HANDOFF_GATE_SCHEMA = "repair_family_exact_eval_handoff_gate.v1"
+REPAIR_ARCHIVE_VARIANT_SIGNAL_SURFACE_SCHEMA = "repair_archive_variant_signal_surface.v1"
+REPAIR_ARCHIVE_VARIANT_SIGNAL_ROW_SCHEMA = "repair_archive_variant_signal_row.v1"
 
 SUPPORTED_REPAIR_BYTE_TRANSFORM_FAMILIES: frozenset[str] = frozenset(
     {
@@ -140,6 +143,12 @@ FEC5_FIXED_K8_CODE_BITS: tuple[str, ...] = (
 FEC5_FIXED_K8_DECODE: Mapping[str, int] = {
     bits: index for index, bits in enumerate(FEC5_FIXED_K8_CODE_BITS)
 }
+
+RANGE_CODER_PROTOTYPE_MAGIC = b"TACRNG1\0"
+ANS_CODER_PROTOTYPE_MAGIC = b"TACANS1\0"
+ANS_SCALE_BITS = 12
+ANS_TOTAL_FREQ = 1 << ANS_SCALE_BITS
+ANS_BYTE_L = 1 << 23
 
 PSV4_MAGIC = b"PSV4"
 PSV4_SCHEMA_VERSION = 1
@@ -305,6 +314,175 @@ def _zero_order_entropy_stats(payload: bytes) -> dict[str, Any]:
         "zero_order_lower_bound_bytes": lower_bound_bytes,
         "zero_order_redundancy_bytes": max(0, byte_count - lower_bound_bytes),
     }
+
+
+def _range_coder_prototype_encode(payload: bytes) -> bytes:
+    encoded = lzma.compress(
+        payload,
+        format=lzma.FORMAT_ALONE,
+        preset=9 | lzma.PRESET_EXTREME,
+    )
+    return (
+        RANGE_CODER_PROTOTYPE_MAGIC
+        + struct.pack("<BQ", 1, len(payload))
+        + bytes.fromhex(sha256_bytes(payload))
+        + struct.pack("<I", len(encoded))
+        + encoded
+    )
+
+
+def _range_coder_prototype_decode(packet: bytes) -> bytes:
+    header_size = len(RANGE_CODER_PROTOTYPE_MAGIC) + struct.calcsize("<BQ") + 32 + 4
+    if len(packet) < header_size or not packet.startswith(RANGE_CODER_PROTOTYPE_MAGIC):
+        raise RepairFamilyByteTransformExecutorError("range prototype packet has invalid magic")
+    offset = len(RANGE_CODER_PROTOTYPE_MAGIC)
+    version, original_len = struct.unpack_from("<BQ", packet, offset)
+    offset += struct.calcsize("<BQ")
+    if version != 1:
+        raise RepairFamilyByteTransformExecutorError("range prototype packet version unsupported")
+    expected_sha = packet[offset : offset + 32].hex()
+    offset += 32
+    (encoded_len,) = struct.unpack_from("<I", packet, offset)
+    offset += 4
+    encoded = packet[offset : offset + encoded_len]
+    if len(encoded) != encoded_len or offset + encoded_len != len(packet):
+        raise RepairFamilyByteTransformExecutorError("range prototype packet length mismatch")
+    decoded = lzma.decompress(encoded, format=lzma.FORMAT_ALONE)
+    if len(decoded) != original_len or sha256_bytes(decoded) != expected_sha:
+        raise RepairFamilyByteTransformExecutorError("range prototype packet decode proof failed")
+    return decoded
+
+
+def _normalise_ans_frequencies(payload: bytes) -> dict[int, int]:
+    if not payload:
+        return {0: ANS_TOTAL_FREQ}
+    counts: dict[int, int] = {}
+    for byte in payload:
+        counts[byte] = counts.get(byte, 0) + 1
+    raw: dict[int, float] = {
+        symbol: count * ANS_TOTAL_FREQ / len(payload)
+        for symbol, count in counts.items()
+    }
+    freqs = {symbol: max(1, int(value)) for symbol, value in raw.items()}
+    while sum(freqs.values()) < ANS_TOTAL_FREQ:
+        symbol = max(
+            freqs,
+            key=lambda item: (raw[item] - freqs[item], counts[item], -item),
+        )
+        freqs[symbol] += 1
+    while sum(freqs.values()) > ANS_TOTAL_FREQ:
+        candidates = [symbol for symbol, freq in freqs.items() if freq > 1]
+        if not candidates:
+            break
+        symbol = min(
+            candidates,
+            key=lambda item: (raw[item] - freqs[item], counts[item], item),
+        )
+        freqs[symbol] -= 1
+    return dict(sorted(freqs.items()))
+
+
+def _ans_model_tables(freqs: Mapping[int, int]) -> tuple[dict[int, int], list[int]]:
+    starts: dict[int, int] = {}
+    decode_table = [-1] * ANS_TOTAL_FREQ
+    cursor = 0
+    for symbol, freq in sorted(freqs.items()):
+        starts[int(symbol)] = cursor
+        for slot in range(cursor, cursor + int(freq)):
+            decode_table[slot] = int(symbol)
+        cursor += int(freq)
+    if cursor != ANS_TOTAL_FREQ or any(symbol < 0 for symbol in decode_table):
+        raise RepairFamilyByteTransformExecutorError("ANS prototype frequency table invalid")
+    return starts, decode_table
+
+
+def _ans_rans_encode(payload: bytes, freqs: Mapping[int, int]) -> bytes:
+    starts, _decode_table = _ans_model_tables(freqs)
+    state = ANS_BYTE_L
+    stream = bytearray()
+    for symbol in reversed(payload):
+        freq = int(freqs[symbol])
+        start = starts[symbol]
+        x_max = ((ANS_BYTE_L >> ANS_SCALE_BITS) << 8) * freq
+        while state >= x_max:
+            stream.append(state & 0xFF)
+            state >>= 8
+        state = ((state // freq) << ANS_SCALE_BITS) + (state % freq) + start
+    return struct.pack("<I", state) + bytes(reversed(stream))
+
+
+def _ans_rans_decode(encoded: bytes, *, output_len: int, freqs: Mapping[int, int]) -> bytes:
+    if len(encoded) < 4:
+        raise RepairFamilyByteTransformExecutorError("ANS prototype stream missing state")
+    starts, decode_table = _ans_model_tables(freqs)
+    state = struct.unpack_from("<I", encoded, 0)[0]
+    cursor = 4
+    output = bytearray()
+    mask = ANS_TOTAL_FREQ - 1
+    for _index in range(output_len):
+        slot = state & mask
+        symbol = decode_table[slot]
+        if symbol < 0:
+            raise RepairFamilyByteTransformExecutorError("ANS prototype decode slot invalid")
+        freq = int(freqs[symbol])
+        state = freq * (state >> ANS_SCALE_BITS) + (slot - starts[symbol])
+        while state < ANS_BYTE_L and cursor < len(encoded):
+            state = (state << 8) | encoded[cursor]
+            cursor += 1
+        output.append(symbol)
+    if cursor != len(encoded):
+        raise RepairFamilyByteTransformExecutorError("ANS prototype stream has trailing bytes")
+    return bytes(output)
+
+
+def _ans_coder_prototype_encode(payload: bytes) -> bytes:
+    freqs = _normalise_ans_frequencies(payload)
+    encoded = _ans_rans_encode(payload, freqs)
+    entries = b"".join(
+        struct.pack("<BH", symbol, freq)
+        for symbol, freq in sorted(freqs.items())
+    )
+    return (
+        ANS_CODER_PROTOTYPE_MAGIC
+        + struct.pack("<BQH", 1, len(payload), len(freqs))
+        + entries
+        + bytes.fromhex(sha256_bytes(payload))
+        + struct.pack("<I", len(encoded))
+        + encoded
+    )
+
+
+def _ans_coder_prototype_decode(packet: bytes) -> bytes:
+    fixed_header = len(ANS_CODER_PROTOTYPE_MAGIC) + struct.calcsize("<BQH")
+    if len(packet) < fixed_header or not packet.startswith(ANS_CODER_PROTOTYPE_MAGIC):
+        raise RepairFamilyByteTransformExecutorError("ANS prototype packet has invalid magic")
+    offset = len(ANS_CODER_PROTOTYPE_MAGIC)
+    version, original_len, entry_count = struct.unpack_from("<BQH", packet, offset)
+    offset += struct.calcsize("<BQH")
+    if version != 1:
+        raise RepairFamilyByteTransformExecutorError("ANS prototype packet version unsupported")
+    freqs: dict[int, int] = {}
+    for _index in range(entry_count):
+        if offset + 3 > len(packet):
+            raise RepairFamilyByteTransformExecutorError("ANS prototype frequency table truncated")
+        symbol, freq = struct.unpack_from("<BH", packet, offset)
+        offset += 3
+        freqs[int(symbol)] = int(freq)
+    if sum(freqs.values()) != ANS_TOTAL_FREQ:
+        raise RepairFamilyByteTransformExecutorError("ANS prototype frequencies do not sum to scale")
+    if offset + 36 > len(packet):
+        raise RepairFamilyByteTransformExecutorError("ANS prototype packet footer truncated")
+    expected_sha = packet[offset : offset + 32].hex()
+    offset += 32
+    (encoded_len,) = struct.unpack_from("<I", packet, offset)
+    offset += 4
+    encoded = packet[offset : offset + encoded_len]
+    if len(encoded) != encoded_len or offset + encoded_len != len(packet):
+        raise RepairFamilyByteTransformExecutorError("ANS prototype encoded length mismatch")
+    decoded = _ans_rans_decode(encoded, output_len=original_len, freqs=freqs)
+    if sha256_bytes(decoded) != expected_sha:
+        raise RepairFamilyByteTransformExecutorError("ANS prototype packet decode proof failed")
+    return decoded
 
 
 def _primary_payload_member(archive_path: str | Path) -> str:
@@ -1822,16 +2000,190 @@ def _archive_entropy_coder_probe_candidate(
     return candidate, blockers
 
 
-def _candidate_rank(candidate: Mapping[str, Any]) -> tuple[int, int, int, str]:
+def _archive_entropy_coder_prototype_candidate(
+    *,
+    coder_family: str,
+    manifest: Mapping[str, Any],
+    output_dir: str | Path,
+    repo_root: str | Path,
+    allow_overwrite: bool,
+) -> tuple[dict[str, Any], list[str]]:
+    if coder_family == "range":
+        transform_kind = "range_coder_lzma_prototype"
+        encode = _range_coder_prototype_encode
+        decode = _range_coder_prototype_decode
+        proof_kind = "range_coder_lzma_prototype_decode_adapter_proof.v1"
+        receiver_contract_kind = "repair_archive_range_lzma_prototype_runtime_adapter"
+    elif coder_family == "ans":
+        transform_kind = "ans_coder_rans_prototype"
+        encode = _ans_coder_prototype_encode
+        decode = _ans_coder_prototype_decode
+        proof_kind = "ans_coder_rans_prototype_decode_adapter_proof.v1"
+        receiver_contract_kind = "repair_archive_ans_rans_prototype_runtime_adapter"
+    else:
+        raise RepairFamilyByteTransformExecutorError(
+            f"unsupported entropy coder prototype family: {coder_family}"
+        )
+    blockers = [
+        f"{coder_family}_coder_contest_runtime_adapter_missing",
+        f"{coder_family}_coder_exact_axis_adjudication_missing",
+    ]
+    source, actual_sha, source_blockers = _source_archive_path_and_sha(manifest, repo_root=repo_root)
+    blockers.extend(source_blockers)
+    if source is None or source_blockers:
+        return _empty_candidate_archive(
+            blockers=blockers,
+            archive_native_transform_kind=transform_kind,
+        ), blockers
+    output = _resolve(output_dir, repo_root) / f"candidate_archive_{transform_kind}.zip"
+    proof = _resolve(output_dir, repo_root) / f"candidate_archive_{transform_kind}_receiver_proof.json"
+    try:
+        member_name = _primary_payload_member(source)
+        source_member_payload = _zip_member_bytes(source, member_name)
+        coded_member_payload = encode(source_member_payload)
+        decoded_member_payload = decode(coded_member_payload)
+        if decoded_member_payload != source_member_payload:
+            raise RepairFamilyByteTransformExecutorError(
+                f"{coder_family} prototype adapter did not round-trip selected member"
+            )
+        candidate_payload = _zip_archive_bytes_with_replacement(
+            source,
+            member_name=member_name,
+            replacement=coded_member_payload,
+            compression=zipfile.ZIP_STORED,
+        )
+        _write_bytes_with_expected(output, candidate_payload, allow_overwrite=allow_overwrite)
+        source_record = _archive_record(source, repo_root=repo_root)
+        candidate_record = _archive_record(output, repo_root=repo_root)
+        source_member = _member_record(source, member_name, payload=source_member_payload)
+        candidate_member = _member_record(output, member_name)
+        entropy_stats = _zero_order_entropy_stats(source_member_payload)
+        proof_payload = {
+            "schema": "repair_archive_entropy_coder_prototype_runtime_consumption_proof.v1",
+            "proof_kind": proof_kind,
+            "proof_scope": "encoded_member_decodes_to_source_member_payload",
+            "target_kind": f"repair_family_{transform_kind}_v1",
+            "materializer_id": f"repair_family_byte_transform_executor:{transform_kind}",
+            "receiver_contract_kind": receiver_contract_kind,
+            "receiver_contract_id": f"repair_family_{transform_kind}_v1.receiver.v1",
+            "source_archive": source_record,
+            "candidate_archive": candidate_record,
+            "selected_member_name": member_name,
+            "source_member": source_member,
+            "candidate_member": candidate_member,
+            "runtime_consumption_probe": {
+                "schema": f"{transform_kind}_decode_probe.v1",
+                "passed": True,
+                "selected_member_name": member_name,
+                "source_member_sha256": source_member["sha256"],
+                "encoded_member_sha256": candidate_member["sha256"],
+                "decoded_member_sha256": sha256_bytes(decoded_member_payload),
+                "decoded_matches_source_member": True,
+                "archive_zip_readable": True,
+            },
+            "prototype_codec": {
+                "schema": "repair_archive_entropy_coder_prototype_codec.v1",
+                "coder_family": coder_family,
+                "transform_kind": transform_kind,
+                "semantic_entropy_stage": "at_entropy_coder_fractional_code_boundary",
+                "source_member_bytes": len(source_member_payload),
+                "coded_member_bytes": len(coded_member_payload),
+                "source_member_sha256": sha256_bytes(source_member_payload),
+                "coded_member_sha256": sha256_bytes(coded_member_payload),
+                "decoded_member_sha256": sha256_bytes(decoded_member_payload),
+                "zero_order_entropy_stats": entropy_stats,
+            },
+            "receiver_contract_satisfied": True,
+            "runtime_consumption_proof_passed": True,
+            "passed": True,
+            "score_affecting_payload_changed": False,
+            "charged_bits_changed": True,
+            "contest_runtime_adapter_integrated": False,
+            "blockers": ordered_unique(blockers),
+            **FALSE_AUTHORITY,
+        }
+        _write_json_with_expected(proof, proof_payload, allow_overwrite=allow_overwrite)
+    except (
+        ArtifactWriteError,
+        OSError,
+        zipfile.BadZipFile,
+        KeyError,
+        lzma.LZMAError,
+        RepairFamilyByteTransformExecutorError,
+    ) as exc:
+        blockers.append(f"{coder_family}_coder_prototype_materialization_failed:{exc}")
+        return _empty_candidate_archive(
+            blockers=blockers,
+            archive_native_transform_kind=transform_kind,
+        ), blockers
+    saved_bytes = int(source_record["bytes"]) - int(candidate_record["bytes"])
+    if saved_bytes <= 0:
+        blockers.append(f"{coder_family}_coder_prototype_not_rate_positive")
+        proof_payload = {
+            **proof_payload,
+            "blockers": ordered_unique(blockers),
+        }
+        _write_json_with_expected(proof, proof_payload, allow_overwrite=True)
+    candidate = {
+        "schema": "repair_family_archive_native_candidate.v1",
+        "materialized": True,
+        "prototype_only": True,
+        "archive_native_transform_attempted": True,
+        "archive_native_transform_kind": transform_kind,
+        "semantic_entropy_stage": "at_entropy_coder_fractional_code_boundary",
+        "archive_native_materializer_schema": proof_payload["schema"],
+        "archive_native_materializer_id": proof_payload["materializer_id"],
+        "archive_native_target_kind": proof_payload["target_kind"],
+        "source_archive_path": _repo_rel(source, repo_root),
+        "source_archive_sha256": actual_sha or sha256_file(source),
+        "source_archive_bytes": source.stat().st_size,
+        "path": _repo_rel(output, repo_root),
+        "sha256": candidate_record["sha256"],
+        "bytes": candidate_record["bytes"],
+        "runtime_consumption_proof_path": _repo_rel(proof, repo_root),
+        "runtime_consumption_proof_ready": True,
+        "receiver_contract_kind": proof_payload["receiver_contract_kind"],
+        "receiver_contract_satisfied": True,
+        "selected_member_name": member_name,
+        "encoded_member_sha256": candidate_member["sha256"],
+        "decoded_member_sha256": sha256_bytes(decoded_member_payload),
+        "decoded_matches_source_member": True,
+        "zero_order_entropy_stats": entropy_stats,
+        "estimated_zero_order_savings_bytes": entropy_stats["zero_order_redundancy_bytes"],
+        "semantic_payload_changed": False,
+        "exact_axis_score_affecting_adjudication_required": False,
+        "score_affecting_payload_changed": False,
+        "charged_bits_changed": True,
+        "saved_bytes": saved_bytes,
+        "blockers": ordered_unique(blockers),
+        "budget_spend_allowed": False,
+        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        candidate,
+        context=f"repair_family_{transform_kind}_candidate",
+    )
+    return candidate, blockers
+
+
+def _candidate_rank(candidate: Mapping[str, Any]) -> tuple[int, int, str]:
     proof_ready = candidate.get("runtime_consumption_proof_ready") is True
     score_affecting = (
         candidate.get("semantic_payload_changed") is True
         or candidate.get("exact_axis_score_affecting_adjudication_required") is True
     )
     materialized = candidate.get("materialized") is True
+    if candidate.get("prototype_only") is True:
+        rank_class = 2
+    elif materialized and proof_ready and score_affecting:
+        rank_class = 0
+    elif materialized and proof_ready:
+        rank_class = 1
+    else:
+        rank_class = 3
     return (
-        0 if materialized and proof_ready and score_affecting else 1,
-        0 if materialized and proof_ready else 1,
+        rank_class,
         int(candidate.get("bytes") or 10**18),
         str(candidate.get("archive_native_transform_kind") or ""),
     )
@@ -1889,6 +2241,20 @@ def _archive_transform_candidates(
             repo_root=repo_root,
             allow_overwrite=allow_overwrite,
         ),
+        lambda: _archive_entropy_coder_prototype_candidate(
+            coder_family="range",
+            manifest=manifest,
+            output_dir=output_dir,
+            repo_root=repo_root,
+            allow_overwrite=allow_overwrite,
+        ),
+        lambda: _archive_entropy_coder_prototype_candidate(
+            coder_family="ans",
+            manifest=manifest,
+            output_dir=output_dir,
+            repo_root=repo_root,
+            allow_overwrite=allow_overwrite,
+        ),
         lambda: _archive_native_zip_repack_candidate(
             manifest=manifest,
             output_dir=output_dir,
@@ -1911,6 +2277,190 @@ def _archive_transform_candidates(
         ],
     }
     return selected, variants, selected_blockers
+
+
+def _archive_variant_signal_class(
+    *,
+    variant: Mapping[str, Any],
+    selected_kind: str,
+) -> str:
+    kind = str(variant.get("archive_native_transform_kind") or "")
+    materialized = variant.get("materialized") is True
+    proof_ready = variant.get("runtime_consumption_proof_ready") is True
+    prototype_only = variant.get("prototype_only") is True
+    probe_only = bool(str(variant.get("entropy_probe_path") or "").strip()) and not materialized
+    score_affecting = (
+        variant.get("semantic_payload_changed") is True
+        or variant.get("exact_axis_score_affecting_adjudication_required") is True
+    )
+    if kind == selected_kind and materialized and proof_ready and score_affecting:
+        return "selected_materialized_score_affecting_candidate"
+    if kind == selected_kind and materialized and proof_ready:
+        return "selected_materialized_runtime_proven_candidate"
+    if prototype_only and materialized and proof_ready:
+        return "prototype_runtime_proven"
+    if materialized and proof_ready:
+        return "materialized_runtime_proven_nonselected"
+    if probe_only:
+        return "probe_only_entropy_signal"
+    if _string_list(variant.get("blockers")):
+        return "blocked_archive_variant_signal"
+    return "unclassified_archive_variant_signal"
+
+
+def _archive_variant_signal_routing_action(signal_class: str) -> str:
+    if signal_class == "selected_materialized_score_affecting_candidate":
+        return "promote_to_receiver_proof_and_exact_handoff_gate"
+    if signal_class in {
+        "selected_materialized_runtime_proven_candidate",
+        "materialized_runtime_proven_nonselected",
+    }:
+        return "retain_as_archive_bound_materializer_alternative"
+    if signal_class == "prototype_runtime_proven":
+        return "retain_as_entropy_coder_runtime_adapter_prototype"
+    if signal_class == "probe_only_entropy_signal":
+        return "route_entropy_probe_to_materializer_backlog"
+    if signal_class == "blocked_archive_variant_signal":
+        return "route_blocker_to_acquisition_penalty_and_remeasure"
+    return "retain_for_operator_inspection"
+
+
+def _archive_variant_signal_weight(signal_class: str) -> float:
+    return {
+        "selected_materialized_score_affecting_candidate": 1.0,
+        "selected_materialized_runtime_proven_candidate": 0.85,
+        "materialized_runtime_proven_nonselected": 0.70,
+        "prototype_runtime_proven": 0.55,
+        "probe_only_entropy_signal": 0.25,
+        "blocked_archive_variant_signal": 0.10,
+    }.get(signal_class, 0.05)
+
+
+def _archive_variant_signal_surface(
+    *,
+    variants: Sequence[Mapping[str, Any]],
+    selected_candidate_archive: Mapping[str, Any],
+) -> dict[str, Any]:
+    selected_kind = str(selected_candidate_archive.get("archive_native_transform_kind") or "")
+    rows: list[dict[str, Any]] = []
+    for index, variant in enumerate(variants):
+        kind = str(variant.get("archive_native_transform_kind") or f"variant_{index}")
+        signal_class = _archive_variant_signal_class(
+            variant=variant,
+            selected_kind=selected_kind,
+        )
+        blockers = _string_list(variant.get("blockers"))
+        row = {
+            "schema": REPAIR_ARCHIVE_VARIANT_SIGNAL_ROW_SCHEMA,
+            "variant_index": index,
+            "archive_native_transform_kind": kind,
+            "selected_archive_transform_variant": kind == selected_kind,
+            "signal_class": signal_class,
+            "routing_action": _archive_variant_signal_routing_action(signal_class),
+            "signal_weight_hint": _archive_variant_signal_weight(signal_class),
+            "materialized": variant.get("materialized") is True,
+            "prototype_only": variant.get("prototype_only") is True,
+            "probe_only": bool(str(variant.get("entropy_probe_path") or "").strip())
+            and variant.get("materialized") is not True,
+            "archive_native_transform_attempted": (
+                variant.get("archive_native_transform_attempted") is True
+            ),
+            "runtime_consumption_proof_ready": (
+                variant.get("runtime_consumption_proof_ready") is True
+            ),
+            "receiver_contract_satisfied": (
+                variant.get("receiver_contract_satisfied") is True
+            ),
+            "semantic_payload_changed_observed": (
+                variant.get("semantic_payload_changed") is True
+            ),
+            "exact_axis_score_affecting_adjudication_required_observed": (
+                variant.get("exact_axis_score_affecting_adjudication_required") is True
+            ),
+            "charged_bits_changed_observed": (
+                variant.get("charged_bits_changed") is True
+            ),
+            "candidate_archive_path": variant.get("path"),
+            "candidate_archive_sha256": variant.get("sha256"),
+            "candidate_archive_bytes": variant.get("bytes"),
+            "runtime_consumption_proof_path": variant.get("runtime_consumption_proof_path"),
+            "entropy_probe_path": variant.get("entropy_probe_path"),
+            "selected_member_name": variant.get("selected_member_name"),
+            "saved_bytes": variant.get("saved_bytes"),
+            "estimated_zero_order_savings_bytes": _safe_int(
+                variant.get("estimated_zero_order_savings_bytes")
+            ),
+            "blockers": ordered_unique(blockers),
+            "allowed_use": "repair_archive_variant_signal_routing_only",
+            "forbidden_use": "score_claim_or_dispatch_or_submission_authority",
+            "budget_spend_allowed": False,
+            "ready_for_budget_spend": False,
+            "ready_for_exact_eval_dispatch": False,
+            **FALSE_AUTHORITY,
+        }
+        require_no_truthy_authority_fields(
+            row,
+            context=f"repair_archive_variant_signal_row:{kind}",
+        )
+        rows.append(row)
+    class_counts: dict[str, int] = {}
+    for row in rows:
+        signal_class = str(row.get("signal_class") or "unclassified_archive_variant_signal")
+        class_counts[signal_class] = class_counts.get(signal_class, 0) + 1
+    blockers = ordered_unique(
+        blocker
+        for row in rows
+        for blocker in _string_list(row.get("blockers"))
+    )
+    surface = {
+        "schema": REPAIR_ARCHIVE_VARIANT_SIGNAL_SURFACE_SCHEMA,
+        "selected_archive_transform_kind": selected_kind,
+        "row_count": len(rows),
+        "materialized_count": sum(1 for row in rows if row.get("materialized") is True),
+        "prototype_count": sum(1 for row in rows if row.get("prototype_only") is True),
+        "probe_count": sum(1 for row in rows if row.get("probe_only") is True),
+        "runtime_proof_ready_count": sum(
+            1 for row in rows if row.get("runtime_consumption_proof_ready") is True
+        ),
+        "selected_signal_count": sum(
+            1 for row in rows if row.get("selected_archive_transform_variant") is True
+        ),
+        "non_selected_signal_count": sum(
+            1 for row in rows if row.get("selected_archive_transform_variant") is not True
+        ),
+        "blocked_signal_count": sum(
+            1 for row in rows if _string_list(row.get("blockers"))
+        ),
+        "exact_axis_score_affecting_adjudication_required_count": sum(
+            1
+            for row in rows
+            if row.get("exact_axis_score_affecting_adjudication_required_observed") is True
+        ),
+        "signal_class_counts": class_counts,
+        "signal_transform_kinds": [str(row["archive_native_transform_kind"]) for row in rows],
+        "blockers": blockers,
+        "variant_signal_rows": rows,
+        "variant_signal_rows_sha256": stable_json_sha256(
+            {
+                "schema": "repair_archive_variant_signal_rows_hash.v1",
+                "rows": rows,
+            }
+        ),
+        "orphan_signal_protection": (
+            "every_archive_transform_variant_is_exported_as_posterior_consumable_signal"
+        ),
+        "allowed_use": "repair_stack_acquisition_and_materializer_backlog_routing_only",
+        "forbidden_use": "score_claim_or_dispatch_or_submission_authority",
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        surface,
+        context="repair_archive_variant_signal_surface",
+    )
+    return surface
 
 
 def _archive_native_zip_repack_candidate(
@@ -2286,6 +2836,10 @@ def build_repair_family_byte_transform_execution_report(
             selected_candidate_archive=candidate_archive,
         )
     )
+    archive_variant_signal_surface = _archive_variant_signal_surface(
+        variants=archive_variants,
+        selected_candidate_archive=candidate_archive,
+    )
     blockers.extend(archive_blockers)
     replay_bundle = _build_replay_bundle(
         manifest_path=family_materializer_manifest_path,
@@ -2330,6 +2884,21 @@ def build_repair_family_byte_transform_execution_report(
         "candidate_archive_transform_variants": archive_variants,
         "candidate_archive_transform_variant_count": len(archive_variants),
         "selected_archive_transform_kind": candidate_archive.get("archive_native_transform_kind"),
+        "archive_variant_signal_surface_schema": REPAIR_ARCHIVE_VARIANT_SIGNAL_SURFACE_SCHEMA,
+        "archive_variant_signal_surface": archive_variant_signal_surface,
+        "archive_variant_signal_count": archive_variant_signal_surface["row_count"],
+        "archive_variant_non_selected_signal_count": archive_variant_signal_surface[
+            "non_selected_signal_count"
+        ],
+        "archive_variant_probe_count": archive_variant_signal_surface["probe_count"],
+        "archive_variant_prototype_count": archive_variant_signal_surface["prototype_count"],
+        "archive_variant_runtime_proof_ready_count": archive_variant_signal_surface[
+            "runtime_proof_ready_count"
+        ],
+        "archive_variant_signal_kinds": archive_variant_signal_surface[
+            "signal_transform_kinds"
+        ],
+        "archive_variant_signal_blockers": archive_variant_signal_surface["blockers"],
         "archive_entropy_substrate_coverage_schema": (
             REPAIR_ARCHIVE_ENTROPY_SUBSTRATE_COVERAGE_SCHEMA
         ),
@@ -2386,6 +2955,8 @@ def build_repair_family_byte_transform_execution_report(
 __all__ = [
     "FEC5_FIXED_K8_CODE_BITS",
     "FEC6_FIXED_K16_CODE_BITS",
+    "REPAIR_ARCHIVE_VARIANT_SIGNAL_ROW_SCHEMA",
+    "REPAIR_ARCHIVE_VARIANT_SIGNAL_SURFACE_SCHEMA",
     "REPAIR_FAMILY_BYTE_TRANSFORM_DELTA_SCHEMA",
     "REPAIR_FAMILY_BYTE_TRANSFORM_EXECUTION_REPORT_SCHEMA",
     "REPAIR_FAMILY_BYTE_TRANSFORM_PAYLOAD_SCHEMA",

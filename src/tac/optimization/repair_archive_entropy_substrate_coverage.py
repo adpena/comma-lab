@@ -287,8 +287,12 @@ def build_repair_archive_entropy_substrate_coverage(
     ]
     range_probe_available = "range_coder_entropy_probe" in kinds
     ans_probe_available = "ans_coder_entropy_probe" in kinds
+    range_prototype_materialized = "range_coder_lzma_prototype" in materialized
+    ans_prototype_materialized = "ans_coder_rans_prototype" in materialized
     range_probe = _variant_by_kind(variants, "range_coder_entropy_probe")
     ans_probe = _variant_by_kind(variants, "ans_coder_entropy_probe")
+    range_prototype = _variant_by_kind(variants, "range_coder_lzma_prototype")
+    ans_prototype = _variant_by_kind(variants, "ans_coder_rans_prototype")
     rows = [
         _row(
             substrate="fec_variants",
@@ -365,45 +369,65 @@ def build_repair_archive_entropy_substrate_coverage(
         _row(
             substrate="range_coding",
             status=(
-                "probe_only_materializer_missing"
+                "prototype_materialized_runtime_proven"
+                if range_prototype_materialized
+                else "probe_only_materializer_missing"
                 if range_probe_available
                 else "not_materialized"
             ),
             compiler_positions=["at_coder_boundary"],
-            implemented_transform_kinds=["range_coder_entropy_probe"]
-            if range_probe_available
-            else [],
+            implemented_transform_kinds=[
+                kind
+                for kind in ("range_coder_entropy_probe", "range_coder_lzma_prototype")
+                if kind in kinds
+            ],
             selected_transform_kind=selected
-            if selected == "range_coder_entropy_probe"
+            if selected in {"range_coder_entropy_probe", "range_coder_lzma_prototype"}
             else None,
             blockers=[
-                "range_coder_materializer_missing",
-                "range_coder_runtime_adapter_missing",
+                *(
+                    []
+                    if range_prototype_materialized
+                    else ["range_coder_materializer_missing"]
+                ),
+                "range_coder_contest_runtime_adapter_missing",
+                "range_coder_exact_axis_adjudication_missing",
             ],
             estimated_zero_order_savings_bytes=_safe_int(
-                range_probe.get("estimated_zero_order_savings_bytes")
+                range_prototype.get("estimated_zero_order_savings_bytes")
+                or range_probe.get("estimated_zero_order_savings_bytes")
             ),
         ),
         _row(
             substrate="ans_coding",
             status=(
-                "probe_only_materializer_missing"
+                "prototype_materialized_runtime_proven"
+                if ans_prototype_materialized
+                else "probe_only_materializer_missing"
                 if ans_probe_available
                 else "not_materialized"
             ),
             compiler_positions=["at_coder_boundary"],
-            implemented_transform_kinds=["ans_coder_entropy_probe"]
-            if ans_probe_available
-            else [],
+            implemented_transform_kinds=[
+                kind
+                for kind in ("ans_coder_entropy_probe", "ans_coder_rans_prototype")
+                if kind in kinds
+            ],
             selected_transform_kind=selected
-            if selected == "ans_coder_entropy_probe"
+            if selected in {"ans_coder_entropy_probe", "ans_coder_rans_prototype"}
             else None,
             blockers=[
-                "ans_coder_materializer_missing",
-                "ans_coder_runtime_adapter_missing",
+                *(
+                    []
+                    if ans_prototype_materialized
+                    else ["ans_coder_materializer_missing"]
+                ),
+                "ans_coder_contest_runtime_adapter_missing",
+                "ans_coder_exact_axis_adjudication_missing",
             ],
             estimated_zero_order_savings_bytes=_safe_int(
-                ans_probe.get("estimated_zero_order_savings_bytes")
+                ans_prototype.get("estimated_zero_order_savings_bytes")
+                or ans_probe.get("estimated_zero_order_savings_bytes")
             ),
         ),
         _row(
@@ -480,10 +504,15 @@ def build_repair_archive_entropy_substrate_coverage(
         for row in ordered_rows
         if str(row.get("coverage_status") or "").startswith("probe_only")
     ]
+    prototype_substrates = [
+        row["substrate"]
+        for row in ordered_rows
+        if str(row.get("coverage_status") or "").startswith("prototype_materialized")
+    ]
     probed_savings = sum(
         _safe_int(row.get("estimated_zero_order_savings_bytes"))
         for row in ordered_rows
-        if str(row.get("coverage_status") or "").startswith("probe_only")
+        if str(row.get("coverage_status") or "").startswith(("probe_only", "prototype_materialized"))
     )
     anti_pattern_protections = _anti_pattern_protections(
         probed_substrates=probed_substrates,
@@ -497,6 +526,8 @@ def build_repair_archive_entropy_substrate_coverage(
         "materialized_substrates": materialized_substrates,
         "probed_substrate_count": len(probed_substrates),
         "probed_substrates": probed_substrates,
+        "prototype_substrate_count": len(prototype_substrates),
+        "prototype_substrates": prototype_substrates,
         "probed_entropy_estimated_zero_order_savings_bytes": probed_savings,
         "anti_pattern_protection_count": len(anti_pattern_protections),
         "anti_pattern_protections": anti_pattern_protections,

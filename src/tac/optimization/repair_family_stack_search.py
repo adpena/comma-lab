@@ -231,6 +231,58 @@ def _scope_levels(report: Mapping[str, Any]) -> list[str]:
     return _string_list(scope.get("active_levels")) or _string_list(scope.get("declared_levels"))
 
 
+def _archive_entropy_anti_pattern_penalty(
+    archive_entropy_coverage: Mapping[str, Any],
+) -> float:
+    anti_pattern_ids = {
+        str(protection.get("anti_pattern_id") or "").strip()
+        for protection in archive_entropy_coverage.get("anti_pattern_protections") or []
+        if isinstance(protection, Mapping)
+    }
+    blockers = " ".join(_string_list(archive_entropy_coverage.get("blockers")))
+    prototype_substrates = _string_list(archive_entropy_coverage.get("prototype_substrates"))
+    penalty = 0.0
+    if (
+        "proxy_or_advisory_probe_masquerades_as_score_authority_v1" in anti_pattern_ids
+        and archive_entropy_coverage.get("ready_for_exact_eval_dispatch") is False
+    ):
+        penalty += 0.04
+    if (
+        "probe_only_side_report_orphaned_from_optimizer_v1" in anti_pattern_ids
+        and not (_string_list(archive_entropy_coverage.get("probed_substrates")) or prototype_substrates)
+    ):
+        penalty += 0.12
+    if (
+        "scaffold_or_probe_bytes_without_receiver_consumption_v1" in anti_pattern_ids
+        and prototype_substrates
+        and "contest_runtime_adapter_missing" in blockers
+    ):
+        penalty += 0.12
+    if (
+        "zero_order_entropy_estimate_promoted_as_materialized_savings_v1" in anti_pattern_ids
+        and "exact_axis_adjudication_missing" in blockers
+    ):
+        penalty += 0.08
+    if "entropy_coder_order_cargo_cult_v1" in anti_pattern_ids and blockers:
+        penalty += 0.04
+    return min(0.35, penalty)
+
+
+def _archive_variant_signal_penalty(
+    archive_variant_signal_surface: Mapping[str, Any],
+) -> float:
+    """Penalize unresolved archive-variant signals without discarding them."""
+
+    probe_count = _safe_int(archive_variant_signal_surface.get("probe_count"))
+    blocked_count = _safe_int(archive_variant_signal_surface.get("blocked_signal_count"))
+    blockers = " ".join(_string_list(archive_variant_signal_surface.get("blockers")))
+    runtime_adapter_misses = blockers.count("contest_runtime_adapter_missing")
+    penalty = min(0.08, 0.015 * probe_count)
+    penalty += min(0.08, 0.010 * blocked_count)
+    penalty += min(0.10, 0.025 * runtime_adapter_misses)
+    return min(0.22, penalty)
+
+
 def _stage_order(report: Mapping[str, Any]) -> int:
     stage = _mapping(report.get("active_entropy_stage"))
     return _safe_int(stage.get("order"), default=999)
@@ -284,7 +336,17 @@ def _stack_row(
     archive_entropy_coverage = _mapping(
         report.get("archive_entropy_substrate_coverage")
     )
+    archive_variant_signal_surface = _mapping(report.get("archive_variant_signal_surface"))
     archive_entropy_blockers = _string_list(archive_entropy_coverage.get("blockers"))
+    archive_entropy_anti_pattern_penalty = _archive_entropy_anti_pattern_penalty(
+        archive_entropy_coverage
+    )
+    archive_variant_signal_penalty = _archive_variant_signal_penalty(
+        archive_variant_signal_surface
+    )
+    archive_variant_signal_blockers = _string_list(
+        archive_variant_signal_surface.get("blockers")
+    )
     allocated_repair_bytes = _safe_int(report.get("allocated_repair_bytes"))
     delta_bytes = allocated_repair_bytes or _safe_int(byte_delta.get("bytes"))
     archive_native_saved_bytes = _safe_int(report.get("archive_native_saved_bytes"))
@@ -293,7 +355,12 @@ def _stack_row(
     demotion_multiplier = _safe_float(demotion.get("demotion_multiplier")) or 1.0
     acquisition_multiplier = _safe_float(demotion.get("acquisition_multiplier")) or demotion_multiplier
     scope_penalty = _level_penalty(levels)
-    stack_penalty = _safe_float(report.get("interaction_penalty")) + scope_penalty
+    stack_penalty = (
+        _safe_float(report.get("interaction_penalty"))
+        + scope_penalty
+        + archive_entropy_anti_pattern_penalty
+        + archive_variant_signal_penalty
+    )
     feasible = _byte_credit_feasible(report, remaining_budget)
     negative_demoted = demotion.get("demoted") is True
     score = (
@@ -305,6 +372,7 @@ def _stack_row(
         [
             *_string_list(report.get("blockers")),
             *archive_entropy_blockers,
+            *archive_variant_signal_blockers,
             *([] if feasible else ["byte_credit_exhausted_for_stack_row"]),
             *(["automatic_negative_result_demotion_active"] if negative_demoted else []),
             *(
@@ -349,12 +417,16 @@ def _stack_row(
         "archive_entropy_substrate_probed_substrates": _string_list(
             archive_entropy_coverage.get("probed_substrates")
         ),
+        "archive_entropy_substrate_prototype_substrates": _string_list(
+            archive_entropy_coverage.get("prototype_substrates")
+        ),
         "archive_entropy_probed_zero_order_savings_bytes": _safe_int(
             archive_entropy_coverage.get("probed_entropy_estimated_zero_order_savings_bytes")
         ),
         "archive_entropy_anti_pattern_protection_count": _safe_int(
             archive_entropy_coverage.get("anti_pattern_protection_count")
         ),
+        "archive_entropy_anti_pattern_acquisition_penalty": archive_entropy_anti_pattern_penalty,
         "archive_entropy_anti_pattern_ids": ordered_unique(
             str(protection.get("anti_pattern_id") or "").strip()
             for protection in archive_entropy_coverage.get("anti_pattern_protections") or []
@@ -362,6 +434,30 @@ def _stack_row(
             and str(protection.get("anti_pattern_id") or "").strip()
         ),
         "archive_entropy_substrate_blockers": archive_entropy_blockers,
+        "archive_variant_signal_surface": dict(archive_variant_signal_surface),
+        "archive_variant_signal_count": _safe_int(
+            archive_variant_signal_surface.get("row_count")
+        ),
+        "archive_variant_signal_kinds": _string_list(
+            archive_variant_signal_surface.get("signal_transform_kinds")
+        ),
+        "archive_variant_non_selected_signal_count": _safe_int(
+            archive_variant_signal_surface.get("non_selected_signal_count")
+        ),
+        "archive_variant_probe_count": _safe_int(
+            archive_variant_signal_surface.get("probe_count")
+        ),
+        "archive_variant_prototype_count": _safe_int(
+            archive_variant_signal_surface.get("prototype_count")
+        ),
+        "archive_variant_runtime_proof_ready_count": _safe_int(
+            archive_variant_signal_surface.get("runtime_proof_ready_count")
+        ),
+        "archive_variant_blocked_signal_count": _safe_int(
+            archive_variant_signal_surface.get("blocked_signal_count")
+        ),
+        "archive_variant_signal_blockers": archive_variant_signal_blockers,
+        "archive_variant_signal_acquisition_penalty": archive_variant_signal_penalty,
         "byte_closed_candidate_emitted": report.get("byte_closed_candidate_emitted") is True,
         "candidate_archive_materialized": (report.get("candidate_archive_materialized") is True),
         "archive_bound_runtime_consumption_proof_ready": (
@@ -423,6 +519,15 @@ def _interaction_feature_vector(row: Mapping[str, Any]) -> dict[str, Any]:
         "entropy_boundary_family": family == "entropy_boundary_probe",
         "byte_credit_feasible": row.get("byte_credit_feasible") is True,
         "archive_bound_exact_handoff_candidate": (row.get("archive_bound_exact_handoff_candidate") is True),
+        "archive_variant_signal_count": _safe_int(row.get("archive_variant_signal_count")),
+        "archive_variant_probe_count": _safe_int(row.get("archive_variant_probe_count")),
+        "archive_variant_prototype_count": _safe_int(row.get("archive_variant_prototype_count")),
+        "archive_variant_runtime_proof_ready_count": _safe_int(
+            row.get("archive_variant_runtime_proof_ready_count")
+        ),
+        "archive_variant_non_selected_signal_count": _safe_int(
+            row.get("archive_variant_non_selected_signal_count")
+        ),
         "negative_posterior_demoted": (row.get("automatic_negative_result_demoted") is True),
         "local_mlx_expected_improvement_score_units": _safe_float(
             row.get("local_mlx_expected_improvement_score_units")
@@ -484,6 +589,9 @@ def _build_interaction_tensor(rows: Sequence[Mapping[str, Any]]) -> dict[str, An
                 "archive_bound_count": 0,
                 "negative_demoted_count": 0,
                 "byte_credit_feasible_count": 0,
+                "archive_variant_signal_count": 0,
+                "archive_variant_probe_count": 0,
+                "archive_variant_prototype_count": 0,
                 "expected_improvement_sum": 0.0,
                 "stack_score_sum": 0.0,
                 "max_stack_score": 0.0,
@@ -501,6 +609,15 @@ def _build_interaction_tensor(rows: Sequence[Mapping[str, Any]]) -> dict[str, An
             cell["negative_demoted_count"] += 1
         if vector.get("byte_credit_feasible") is True:
             cell["byte_credit_feasible_count"] += 1
+        cell["archive_variant_signal_count"] += _safe_int(
+            vector.get("archive_variant_signal_count")
+        )
+        cell["archive_variant_probe_count"] += _safe_int(
+            vector.get("archive_variant_probe_count")
+        )
+        cell["archive_variant_prototype_count"] += _safe_int(
+            vector.get("archive_variant_prototype_count")
+        )
         improvement = _safe_float(vector.get("local_mlx_expected_improvement_score_units"))
         stack_score = _safe_float(vector.get("interaction_aware_stack_score"))
         cell["expected_improvement_sum"] += improvement
@@ -1925,6 +2042,15 @@ def plan_repair_family_stack_search(
             len(_string_list(row.get("archive_entropy_substrate_probed_substrates")))
             for row in rows
         ),
+        "archive_entropy_substrate_prototype_count": sum(
+            len(_string_list(row.get("archive_entropy_substrate_prototype_substrates")))
+            for row in rows
+        ),
+        "archive_entropy_substrate_prototype_substrates": ordered_unique(
+            substrate
+            for row in rows
+            for substrate in _string_list(row.get("archive_entropy_substrate_prototype_substrates"))
+        ),
         "archive_entropy_probed_zero_order_savings_bytes": sum(
             _safe_int(row.get("archive_entropy_probed_zero_order_savings_bytes"))
             for row in rows
@@ -1936,6 +2062,45 @@ def plan_repair_family_stack_search(
         ),
         "archive_entropy_anti_pattern_protection_count": sum(
             _safe_int(row.get("archive_entropy_anti_pattern_protection_count"))
+            for row in rows
+        ),
+        "archive_entropy_anti_pattern_acquisition_penalty_sum": sum(
+            _safe_float(row.get("archive_entropy_anti_pattern_acquisition_penalty"))
+            for row in rows
+        ),
+        "archive_variant_signal_count": sum(
+            _safe_int(row.get("archive_variant_signal_count")) for row in rows
+        ),
+        "archive_variant_non_selected_signal_count": sum(
+            _safe_int(row.get("archive_variant_non_selected_signal_count"))
+            for row in rows
+        ),
+        "archive_variant_probe_count": sum(
+            _safe_int(row.get("archive_variant_probe_count")) for row in rows
+        ),
+        "archive_variant_prototype_count": sum(
+            _safe_int(row.get("archive_variant_prototype_count")) for row in rows
+        ),
+        "archive_variant_runtime_proof_ready_count": sum(
+            _safe_int(row.get("archive_variant_runtime_proof_ready_count"))
+            for row in rows
+        ),
+        "archive_variant_blocked_signal_count": sum(
+            _safe_int(row.get("archive_variant_blocked_signal_count"))
+            for row in rows
+        ),
+        "archive_variant_signal_kinds": ordered_unique(
+            kind
+            for row in rows
+            for kind in _string_list(row.get("archive_variant_signal_kinds"))
+        ),
+        "archive_variant_signal_blockers": ordered_unique(
+            blocker
+            for row in rows
+            for blocker in _string_list(row.get("archive_variant_signal_blockers"))
+        ),
+        "archive_variant_signal_acquisition_penalty_sum": sum(
+            _safe_float(row.get("archive_variant_signal_acquisition_penalty"))
             for row in rows
         ),
         "measured_mlx_posterior_budget_routing_updates": (
@@ -2334,14 +2499,43 @@ def _learning_signal_for_stack_row(row: Mapping[str, Any]) -> dict[str, Any]:
         "archive_entropy_substrate_probed_substrates": _string_list(
             row.get("archive_entropy_substrate_probed_substrates")
         ),
+        "archive_entropy_substrate_prototype_substrates": _string_list(
+            row.get("archive_entropy_substrate_prototype_substrates")
+        ),
         "archive_entropy_probed_zero_order_savings_bytes": _safe_int(
             row.get("archive_entropy_probed_zero_order_savings_bytes")
         ),
         "archive_entropy_anti_pattern_ids": _string_list(
             row.get("archive_entropy_anti_pattern_ids")
         ),
+        "archive_entropy_anti_pattern_acquisition_penalty": _safe_float(
+            row.get("archive_entropy_anti_pattern_acquisition_penalty")
+        ),
         "archive_entropy_substrate_blockers": _string_list(
             row.get("archive_entropy_substrate_blockers")
+        ),
+        "archive_variant_signal_count": _safe_int(row.get("archive_variant_signal_count")),
+        "archive_variant_non_selected_signal_count": _safe_int(
+            row.get("archive_variant_non_selected_signal_count")
+        ),
+        "archive_variant_probe_count": _safe_int(row.get("archive_variant_probe_count")),
+        "archive_variant_prototype_count": _safe_int(
+            row.get("archive_variant_prototype_count")
+        ),
+        "archive_variant_runtime_proof_ready_count": _safe_int(
+            row.get("archive_variant_runtime_proof_ready_count")
+        ),
+        "archive_variant_blocked_signal_count": _safe_int(
+            row.get("archive_variant_blocked_signal_count")
+        ),
+        "archive_variant_signal_kinds": _string_list(
+            row.get("archive_variant_signal_kinds")
+        ),
+        "archive_variant_signal_blockers": _string_list(
+            row.get("archive_variant_signal_blockers")
+        ),
+        "archive_variant_signal_acquisition_penalty": _safe_float(
+            row.get("archive_variant_signal_acquisition_penalty")
         ),
         "selection_blocker_class": blocker_class,
         "receiver_credit_exhausted": blocker_class == "receiver_credit_exhausted",

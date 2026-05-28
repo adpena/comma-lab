@@ -38,6 +38,7 @@ from tac.optimization.repair_entropy_stage_chain_executor import (
 from tac.optimization.repair_family_byte_transform_executor import (
     FEC5_FIXED_K8_CODE_BITS,
     FEC6_FIXED_K16_CODE_BITS,
+    REPAIR_ARCHIVE_VARIANT_SIGNAL_SURFACE_SCHEMA,
     REPAIR_FAMILY_BYTE_TRANSFORM_EXECUTION_REPORT_SCHEMA,
     REPAIR_FAMILY_BYTE_TRANSFORM_REPLAY_BUNDLE_SCHEMA,
     build_repair_family_byte_transform_execution_report,
@@ -607,7 +608,8 @@ def test_byte_transform_executor_mutates_fec6_selector_payload_when_detected(
     assert "fec_variants" in coverage["materialized_substrates"]
     assert "selector_streams" in coverage["materialized_substrates"]
     assert "huffman_coding" in coverage["materialized_substrates"]
-    assert coverage["probed_substrates"] == ["range_coding", "ans_coding"]
+    assert coverage["probed_substrates"] == []
+    assert coverage["prototype_substrates"] == ["range_coding", "ans_coding"]
     assert coverage["probed_entropy_estimated_zero_order_savings_bytes"] >= 0
     anti_pattern_ids = {
         protection["anti_pattern_id"]
@@ -628,15 +630,50 @@ def test_byte_transform_executor_mutates_fec6_selector_payload_when_detected(
         row["substrate"]: row for row in coverage["rows"]
     }
     assert rows_by_substrate["range_coding"]["coverage_status"] == (
-        "probe_only_materializer_missing"
+        "prototype_materialized_runtime_proven"
     )
     assert rows_by_substrate["ans_coding"]["coverage_status"] == (
-        "probe_only_materializer_missing"
+        "prototype_materialized_runtime_proven"
     )
     archive_variants = {
         variant["archive_native_transform_kind"]: variant
         for variant in report["candidate_archive_transform_variants"]
     }
+    assert (
+        report["archive_variant_signal_surface_schema"]
+        == REPAIR_ARCHIVE_VARIANT_SIGNAL_SURFACE_SCHEMA
+    )
+    variant_surface = report["archive_variant_signal_surface"]
+    assert variant_surface["schema"] == REPAIR_ARCHIVE_VARIANT_SIGNAL_SURFACE_SCHEMA
+    assert variant_surface["row_count"] == report["candidate_archive_transform_variant_count"]
+    assert variant_surface["probe_count"] == 2
+    assert variant_surface["prototype_count"] == 2
+    assert variant_surface["runtime_proof_ready_count"] >= 3
+    assert variant_surface["non_selected_signal_count"] >= 4
+    assert "range_coder_entropy_probe" in variant_surface["signal_transform_kinds"]
+    assert "ans_coder_entropy_probe" in variant_surface["signal_transform_kinds"]
+    assert "range_coder_lzma_prototype" in variant_surface["signal_transform_kinds"]
+    assert "ans_coder_rans_prototype" in variant_surface["signal_transform_kinds"]
+    variant_rows = {
+        row["archive_native_transform_kind"]: row
+        for row in variant_surface["variant_signal_rows"]
+    }
+    for row in variant_rows.values():
+        assert row["score_claim"] is False
+        assert row["promotion_eligible"] is False
+        assert row["ready_for_exact_eval_dispatch"] is False
+    assert variant_rows["range_coder_entropy_probe"]["signal_class"] == (
+        "probe_only_entropy_signal"
+    )
+    assert variant_rows["ans_coder_entropy_probe"]["signal_class"] == (
+        "probe_only_entropy_signal"
+    )
+    assert variant_rows["range_coder_lzma_prototype"]["signal_class"] == (
+        "prototype_runtime_proven"
+    )
+    assert variant_rows["ans_coder_rans_prototype"]["signal_class"] == (
+        "prototype_runtime_proven"
+    )
     for transform_kind in ("range_coder_entropy_probe", "ans_coder_entropy_probe"):
         probe = archive_variants[transform_kind]
         assert probe["materialized"] is False
@@ -644,6 +681,17 @@ def test_byte_transform_executor_mutates_fec6_selector_payload_when_detected(
         assert probe["runtime_consumption_proof_ready"] is False
         assert probe["estimated_zero_order_savings_bytes"] >= 0
         assert (tmp_path / probe["entropy_probe_path"]).is_file()
+    for transform_kind in ("range_coder_lzma_prototype", "ans_coder_rans_prototype"):
+        prototype = archive_variants[transform_kind]
+        assert prototype["materialized"] is True
+        assert prototype["prototype_only"] is True
+        assert prototype["archive_native_transform_attempted"] is True
+        assert prototype["runtime_consumption_proof_ready"] is True
+        assert prototype["receiver_contract_satisfied"] is True
+        assert prototype["decoded_matches_source_member"] is True
+        assert prototype["score_affecting_payload_changed"] is False
+        assert (tmp_path / prototype["path"]).is_file()
+        assert (tmp_path / prototype["runtime_consumption_proof_path"]).is_file()
     assert report["semantic_payload_changed"] is True
     assert report["score_affecting_payload_changed"] is False
     assert candidate["semantic_payload_changed"] is True

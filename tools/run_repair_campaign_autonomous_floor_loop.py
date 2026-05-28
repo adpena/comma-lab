@@ -1361,6 +1361,14 @@ def _build_summary(
             "archive_entropy_substrate_probed_substrates",
             [],
         ),
+        "archive_entropy_substrate_prototype_count": final_stack_plan.get(
+            "archive_entropy_substrate_prototype_count",
+            0,
+        ),
+        "archive_entropy_substrate_prototype_substrates": final_stack_plan.get(
+            "archive_entropy_substrate_prototype_substrates",
+            [],
+        ),
         "archive_entropy_probed_zero_order_savings_bytes": final_stack_plan.get(
             "archive_entropy_probed_zero_order_savings_bytes",
             0,
@@ -1369,9 +1377,49 @@ def _build_summary(
             "archive_entropy_anti_pattern_protection_count",
             0,
         ),
+        "archive_entropy_anti_pattern_acquisition_penalty_sum": final_stack_plan.get(
+            "archive_entropy_anti_pattern_acquisition_penalty_sum",
+            0,
+        ),
         "archive_entropy_anti_pattern_ids": final_stack_plan.get(
             "archive_entropy_anti_pattern_ids",
             [],
+        ),
+        "archive_variant_signal_count": final_stack_plan.get(
+            "archive_variant_signal_count",
+            0,
+        ),
+        "archive_variant_non_selected_signal_count": final_stack_plan.get(
+            "archive_variant_non_selected_signal_count",
+            0,
+        ),
+        "archive_variant_probe_count": final_stack_plan.get(
+            "archive_variant_probe_count",
+            0,
+        ),
+        "archive_variant_prototype_count": final_stack_plan.get(
+            "archive_variant_prototype_count",
+            0,
+        ),
+        "archive_variant_runtime_proof_ready_count": final_stack_plan.get(
+            "archive_variant_runtime_proof_ready_count",
+            0,
+        ),
+        "archive_variant_blocked_signal_count": final_stack_plan.get(
+            "archive_variant_blocked_signal_count",
+            0,
+        ),
+        "archive_variant_signal_kinds": final_stack_plan.get(
+            "archive_variant_signal_kinds",
+            [],
+        ),
+        "archive_variant_signal_blockers": final_stack_plan.get(
+            "archive_variant_signal_blockers",
+            [],
+        ),
+        "archive_variant_signal_acquisition_penalty_sum": final_stack_plan.get(
+            "archive_variant_signal_acquisition_penalty_sum",
+            0,
         ),
         "top_fractal_marginal_surface_cells": fractal_cells[:8],
         "stack_acquisition_frontier_count": final_stack_plan.get(
