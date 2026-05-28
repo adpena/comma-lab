@@ -63,6 +63,7 @@ PACT-NeRV-IA3 derivatives sharing PIA3 grammar):
         --output-json "$REPORT_DIR/pact_nerv_ia3_equivalence_gate.json" \\
         || { echo "PACT-NeRV-IA3 gate FAIL - refusing paid CUDA dispatch"; exit 1; }
 """
+
 from __future__ import annotations
 
 import argparse
@@ -102,23 +103,14 @@ def _read_archive_bytes(archive_path: Path) -> tuple[bytes, str]:
     if raw[:4] == PIA3_MAGIC:
         return raw, "raw_pia3_bytes"
     if not zipfile.is_zipfile(archive_path):
-        raise ValueError(
-            f"archive at {archive_path} is neither raw PIA3 (magic "
-            f"{PIA3_MAGIC!r}) nor a valid ZIP file"
-        )
+        raise ValueError(f"archive at {archive_path} is neither raw PIA3 (magic {PIA3_MAGIC!r}) nor a valid ZIP file")
     with zipfile.ZipFile(archive_path) as zf:
         names = zf.namelist()
         if "0.bin" not in names:
-            raise ValueError(
-                f"ZIP archive at {archive_path} missing required member "
-                f"'0.bin'; members: {names}"
-            )
+            raise ValueError(f"ZIP archive at {archive_path} missing required member '0.bin'; members: {names}")
         member_bytes = zf.read("0.bin")
     if member_bytes[:4] != PIA3_MAGIC:
-        raise ValueError(
-            f"ZIP member '0.bin' magic {member_bytes[:4]!r} does not match "
-            f"PIA3 magic {PIA3_MAGIC!r}"
-        )
+        raise ValueError(f"ZIP member '0.bin' magic {member_bytes[:4]!r} does not match PIA3 magic {PIA3_MAGIC!r}")
     return member_bytes, f"zip_member_0_bin_size_{len(member_bytes)}"
 
 
@@ -158,17 +150,10 @@ def _build_pytorch_substrate_from_archive(archive_bytes: bytes) -> tuple[Any, An
             f"(allowed_missing={sorted(allowed_missing)})"
         )
     if set(load_result.unexpected_keys):
-        raise RuntimeError(
-            f"PACT-NeRV-IA3 gate: PyTorch unexpected_keys "
-            f"={sorted(load_result.unexpected_keys)}"
-        )
+        raise RuntimeError(f"PACT-NeRV-IA3 gate: PyTorch unexpected_keys ={sorted(load_result.unexpected_keys)}")
     with torch.no_grad():
-        model.latents.copy_(
-            arc.latents.to(device="cpu", dtype=model.latents.dtype)
-        )
-        model.ego_poses.copy_(
-            arc.ego_poses.to(device="cpu", dtype=model.ego_poses.dtype)
-        )
+        model.latents.copy_(arc.latents.to(device="cpu", dtype=model.latents.dtype))
+        model.ego_poses.copy_(arc.ego_poses.to(device="cpu", dtype=model.ego_poses.dtype))
     return model, arc
 
 
@@ -268,9 +253,7 @@ def measure_pact_nerv_ia3_decoder_parity(
     available_pairs = int(parsed_arc.latents.shape[0])
     effective_n_pairs = min(n_pairs, available_pairs)
     if effective_n_pairs <= 0:
-        raise ValueError(
-            f"PIA3 archive has 0 pairs (num_pairs={available_pairs}); cannot measure parity"
-        )
+        raise ValueError(f"PIA3 archive has 0 pairs (num_pairs={available_pairs}); cannot measure parity")
     pair_indices = list(range(effective_n_pairs))
 
     t3 = time.perf_counter()
@@ -280,9 +263,7 @@ def measure_pact_nerv_ia3_decoder_parity(
     t5 = time.perf_counter()
 
     if pytorch_frames.shape != mlx_frames.shape:
-        raise RuntimeError(
-            f"PyTorch shape {pytorch_frames.shape} != MLX {mlx_frames.shape}"
-        )
+        raise RuntimeError(f"PyTorch shape {pytorch_frames.shape} != MLX {mlx_frames.shape}")
 
     drift = np.abs(pytorch_frames - mlx_frames)
     max_abs_drift = float(drift.max())
@@ -366,9 +347,7 @@ def main() -> int:
     print(f"[gate-pia3]   n_pairs:  {args.n_pairs}")
 
     try:
-        measurement = measure_pact_nerv_ia3_decoder_parity(
-            args.archive, n_pairs=args.n_pairs
-        )
+        measurement = measure_pact_nerv_ia3_decoder_parity(args.archive, n_pairs=args.n_pairs)
     except Exception as exc:
         print(f"[gate-pia3] ERROR during measurement: {exc}", file=sys.stderr)
         return 2
@@ -386,9 +365,7 @@ def main() -> int:
 
     inputs_sha = _hash_file(args.archive)
     prov = build_provenance_for_predicted(
-        model_id=(
-            f"mlx_candidate_contest_equivalence_gate_pia3:{args.candidate_label}"
-        ),
+        model_id=(f"mlx_candidate_contest_equivalence_gate_pia3:{args.candidate_label}"),
         inputs_sha256=inputs_sha,
         measurement_axis="[macOS-MLX research-signal]",
         hardware_substrate="darwin_arm64_apple_silicon",
@@ -401,9 +378,7 @@ def main() -> int:
         "gate_threshold_decoder_parity": args.gate_threshold_decoder_parity,
         "margin_below_threshold": args.gate_threshold_decoder_parity - actual_drift,
         "ratio_actual_vs_pr95_empirical_anchor": (
-            actual_drift / EMPIRICAL_ANCHOR_DRIFT_PR95
-            if EMPIRICAL_ANCHOR_DRIFT_PR95 > 0
-            else None
+            actual_drift / EMPIRICAL_ANCHOR_DRIFT_PR95 if EMPIRICAL_ANCHOR_DRIFT_PR95 > 0 else None
         ),
         "candidate_label": args.candidate_label,
         "candidate_grammar": "PIA3",
@@ -437,9 +412,7 @@ def main() -> int:
         "measurement": measurement,
         "canonical_anchor": {
             "pr95_empirical_anchor_drift": EMPIRICAL_ANCHOR_DRIFT_PR95,
-            "pia3_archive_grammar_source": (
-                "src.tac.substrates.pact_nerv_ia3.archive::parse_archive (PIA3)"
-            ),
+            "pia3_archive_grammar_source": ("src.tac.substrates.pact_nerv_ia3.archive::parse_archive (PIA3)"),
             "pact_nerv_ia3_bridge_extension_landing": (
                 ".omx/research/pact_nerv_long_run_mlx_local_closure_landed_20260528.md"
             ),
@@ -495,12 +468,13 @@ def main() -> int:
     print(f"  threshold:    {args.gate_threshold_decoder_parity:.6f}")
     print(f"  margin:       {args.gate_threshold_decoder_parity - actual_drift:.6f}")
     if EMPIRICAL_ANCHOR_DRIFT_PR95 > 0:
-        print(
-            f"  ratio vs PR95 empirical anchor (0.000011): "
-            f"{actual_drift / EMPIRICAL_ANCHOR_DRIFT_PR95:.2f}x"
-        )
-    print(f"  build (PyTorch / MLX): {measurement['pytorch_build_seconds']:.2f}s / {measurement['mlx_build_seconds']:.2f}s")
-    print(f"  render (PyTorch / MLX): {measurement['pytorch_render_seconds']:.2f}s / {measurement['mlx_render_seconds']:.2f}s")
+        print(f"  ratio vs PR95 empirical anchor (0.000011): {actual_drift / EMPIRICAL_ANCHOR_DRIFT_PR95:.2f}x")
+    print(
+        f"  build (PyTorch / MLX): {measurement['pytorch_build_seconds']:.2f}s / {measurement['mlx_build_seconds']:.2f}s"
+    )
+    print(
+        f"  render (PyTorch / MLX): {measurement['pytorch_render_seconds']:.2f}s / {measurement['mlx_render_seconds']:.2f}s"
+    )
     print(f"  VERDICT: {verdict}")
     print(f"  exit code: {exit_code}")
     print(f"  output: {args.output_json}")

@@ -29,8 +29,8 @@ lane_id: lane_pact_nerv_ia3_mlx_pytorch_bridge_extension_20260528
 # operator_override per Catalog #300 (the override is REQUIRED to bypass
 # the dispatch_blockers below since the per-substrate symposium per
 # Catalog #325 explicitly returned PROCEED_WITH_REVISIONS not PROCEED).
-research_only: false
-dispatch_enabled: true
+research_only: true
+dispatch_enabled: false
 
 # Catalog #300 §"Mission alignment" Consequence 1 operator-frontier-override
 # invoked per operator verbatim 2026-05-28: "all spend approved" + "canonical
@@ -52,7 +52,12 @@ operator_override_rationale: |
   verbatim quote + memo reference below.
 operator_override_memo: .omx/research/pact_nerv_ia3_mlx_pytorch_bridge_extension_landed_20260528.md
 
-dispatch_blockers: []
+dispatch_blockers:
+  - local_mlx_pia3_byte_closed_smoke_is_advisory_only
+  - contest_cpu_or_cuda_auth_eval_requires_explicit_operator_dispatch_turn
+  - paired_dispatch_recipe_must_be_armed_by_operator_authorize_flow_not_yaml_default
+  - catalog_325_per_substrate_symposium_revalidation_required_before_paid_dispatch
+  - catalog_167_smoke_before_full_route_required_before_full_dispatch
 dispatch_blockers_cleared_via_operator_override:
   - catalog_325_per_substrate_symposium_window_validation_14d_PASS_2026_06_03
   - catalog_167_smoke_before_full_pattern_routed_via_tools_run_modal_smoke_before_full_per_phase_3_dispatch_chain

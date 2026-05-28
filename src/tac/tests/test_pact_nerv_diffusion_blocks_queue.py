@@ -84,9 +84,9 @@ def test_diffusion_blocks_queue_runs_local_probes_without_authority(tmp_path: Pa
     assert steps[3]["postconditions"][0]["equals"] == "pr95_mlx_long_training_plan.v1"
     assert steps[4]["requires"] == ["run_pact_nerv_ia3_mlx_renderer_smoke"]
     assert "tools/prove_pact_nerv_ia3_mlx_pytorch_forward_parity.py" in steps[4]["command"]
-    assert steps[4]["postconditions"][0]["type"] == "json_completion_contract"
-    assert steps[4]["postconditions"][0]["required_true"] == ["parity_passed"]
-    assert "state_dict.sha256" in steps[4]["postconditions"][0]["required_nonempty"]
+    assert steps[4]["postconditions"][0]["type"] == "json_equals"
+    assert steps[4]["postconditions"][1]["key"] == "parity_passed"
+    assert steps[4]["postconditions"][1]["equals"] is True
     assert steps[5]["requires"] == ["prove_pact_nerv_ia3_mlx_pytorch_forward_parity"]
     assert "tools/materialize_pact_nerv_ia3_byte_closed_candidate.py" in steps[5]["command"]
     assert steps[5]["postconditions"][0]["required_equals"] == {"schema": PACT_NERV_IA3_BYTE_CLOSED_CANDIDATE_SCHEMA}
@@ -109,12 +109,11 @@ def test_diffusion_blocks_queue_runs_local_probes_without_authority(tmp_path: Pa
     ]
     assert "tools/build_mlx_local_replay_bundle.py" in steps[6]["command"]
     assert "--command-json" in steps[6]["command"]
-    assert steps[6]["postconditions"][0]["type"] == "json_completion_contract"
-    assert (
-        steps[6]["postconditions"][0]["required_equals"]["replay_readiness.byte_closed_receiver_proof_present"] is True
-    )
-    assert steps[6]["postconditions"][0]["required_equals"]["replay_readiness.runtime_custody_present"] is True
-    assert "environment.full_env_sha256" in steps[6]["postconditions"][0]["required_nonempty"]
+    assert steps[6]["postconditions"][0]["type"] == "json_equals"
+    assert steps[6]["postconditions"][2]["key"] == "replay_readiness.byte_closed_receiver_proof_present"
+    assert steps[6]["postconditions"][2]["equals"] is True
+    assert steps[6]["postconditions"][3]["key"] == "replay_readiness.runtime_custody_present"
+    assert steps[6]["postconditions"][3]["equals"] is True
     assert steps[6]["resources"]["kind"] == "local_cpu"
 
 

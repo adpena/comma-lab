@@ -23,6 +23,7 @@ Discipline honored:
 - Catalog #287 placeholder rejection (rationale strings >= 4 chars)
 - Catalog #110/#113 APPEND-ONLY (tests don't mutate forensic artifacts)
 """
+
 from __future__ import annotations
 
 import json
@@ -67,46 +68,29 @@ def _build_synthetic_mlx_state_dict_npsd_blob(
     rng = np.random.default_rng(seed=42)
     channels = [cfg.embed_dim, *list(cfg.decoder_channels)]
     sd: dict[str, np.ndarray] = {}
-    sd["latents"] = rng.standard_normal((num_pairs, cfg.latent_dim)).astype(
-        np.float32
-    ) * 0.02
-    sd["ego_poses"] = rng.standard_normal((num_pairs, cfg.pose_dim)).astype(
-        np.float32
-    ) * 0.02
+    sd["latents"] = rng.standard_normal((num_pairs, cfg.latent_dim)).astype(np.float32) * 0.02
+    sd["ego_poses"] = rng.standard_normal((num_pairs, cfg.pose_dim)).astype(np.float32) * 0.02
     sd["latent_embed.weight"] = rng.standard_normal(
         (cfg.embed_dim * cfg.initial_grid_h * cfg.initial_grid_w, cfg.latent_dim)
     ).astype(np.float32)
-    sd["latent_embed.bias"] = np.zeros(
-        cfg.embed_dim * cfg.initial_grid_h * cfg.initial_grid_w, dtype=np.float32
-    )
+    sd["latent_embed.bias"] = np.zeros(cfg.embed_dim * cfg.initial_grid_h * cfg.initial_grid_w, dtype=np.float32)
     for i in range(cfg.num_upsample_blocks):
         in_ch = channels[i]
         out_ch_dsc = channels[i + 1] * 4  # before PixelShuffle(2)
         # MLX depthwise: (in_ch, 3, 3, 1)
-        sd[f"blocks.{i}.dsc.depthwise.weight"] = rng.standard_normal(
-            (in_ch, 3, 3, 1)
-        ).astype(np.float32)
+        sd[f"blocks.{i}.dsc.depthwise.weight"] = rng.standard_normal((in_ch, 3, 3, 1)).astype(np.float32)
         sd[f"blocks.{i}.dsc.depthwise.bias"] = np.zeros(in_ch, dtype=np.float32)
         # MLX pointwise: (out_ch_dsc, 1, 1, in_ch)
-        sd[f"blocks.{i}.dsc.pointwise.weight"] = rng.standard_normal(
-            (out_ch_dsc, 1, 1, in_ch)
-        ).astype(np.float32)
-        sd[f"blocks.{i}.dsc.pointwise.bias"] = np.zeros(
-            out_ch_dsc, dtype=np.float32
-        )
+        sd[f"blocks.{i}.dsc.pointwise.weight"] = rng.standard_normal((out_ch_dsc, 1, 1, in_ch)).astype(np.float32)
+        sd[f"blocks.{i}.dsc.pointwise.bias"] = np.zeros(out_ch_dsc, dtype=np.float32)
         # IA3 gamma_proj: Linear(pose_dim -> channels[i+1])
         sd[f"ia3_mods.{i}.gamma_proj.weight"] = (
-            rng.standard_normal((channels[i + 1], cfg.pose_dim)).astype(np.float32)
-            * cfg.ia3_init_delta_std
+            rng.standard_normal((channels[i + 1], cfg.pose_dim)).astype(np.float32) * cfg.ia3_init_delta_std
         )
-        sd[f"ia3_mods.{i}.gamma_proj.bias"] = np.zeros(
-            channels[i + 1], dtype=np.float32
-        )
+        sd[f"ia3_mods.{i}.gamma_proj.bias"] = np.zeros(channels[i + 1], dtype=np.float32)
     final_ch = channels[cfg.num_upsample_blocks]
     for head in ("head_rgb_0", "head_rgb_1"):
-        sd[f"{head}.weight"] = rng.standard_normal((3, 1, 1, final_ch)).astype(
-            np.float32
-        )
+        sd[f"{head}.weight"] = rng.standard_normal((3, 1, 1, final_ch)).astype(np.float32)
         sd[f"{head}.bias"] = np.zeros(3, dtype=np.float32)
     blob = pack_state_dict_numpy(sd, dtype="fp32")
     return blob, sd
@@ -140,11 +124,7 @@ def _build_tiny_pia3_archive(
     state = model.state_dict()
     latents = state["latents"]
     ego_poses = state["ego_poses"]
-    decoder_state = {
-        key: value
-        for key, value in state.items()
-        if key not in {"latents", "ego_poses"}
-    }
+    decoder_state = {key: value for key, value in state.items() if key not in {"latents", "ego_poses"}}
     if drop_decoder_key is not None:
         decoder_state.pop(drop_decoder_key)
     meta = {
@@ -194,9 +174,7 @@ def test_bridge_converts_synthetic_npsd_to_pytorch_pt(tmp_path: Path) -> None:
     assert manifest["score_claim"] is False
     assert manifest["promotable"] is False
     assert manifest["axis_tag"] == "[predicted]"
-    assert "predicted_axis_not_contest_authority_per_catalog_127_192_317_341" in (
-        manifest["blockers"]
-    )
+    assert "predicted_axis_not_contest_authority_per_catalog_127_192_317_341" in (manifest["blockers"])
 
 
 def test_bridge_transposes_conv2d_hwio_to_oihw_correctly(tmp_path: Path) -> None:
@@ -226,12 +204,8 @@ def test_bridge_transposes_conv2d_hwio_to_oihw_correctly(tmp_path: Path) -> None
     np.testing.assert_array_equal(pyt_dw, expected_pyt)
 
     # Linear / per-pair tensors: layout preserved (no transpose).
-    np.testing.assert_array_equal(
-        pyt_sd["latents"].numpy(), raw_sd["latents"]
-    )
-    np.testing.assert_array_equal(
-        pyt_sd["latent_embed.weight"].numpy(), raw_sd["latent_embed.weight"]
-    )
+    np.testing.assert_array_equal(pyt_sd["latents"].numpy(), raw_sd["latents"])
+    np.testing.assert_array_equal(pyt_sd["latent_embed.weight"].numpy(), raw_sd["latent_embed.weight"])
 
 
 def test_bridge_pytorch_substrate_loads_strict(tmp_path: Path) -> None:
@@ -427,10 +401,7 @@ def test_paired_dispatch_recipe_schema_validates() -> None:
         None,
     )
     assert repo_root is not None, "repo root with .omx/operator_authorize_recipes/ not found"
-    recipe_path = (
-        repo_root
-        / ".omx/operator_authorize_recipes/substrate_pact_nerv_ia3_modal_t4_paired_dispatch.yaml"
-    )
+    recipe_path = repo_root / ".omx/operator_authorize_recipes/substrate_pact_nerv_ia3_modal_t4_paired_dispatch.yaml"
     assert recipe_path.is_file(), recipe_path
     data = yaml.safe_load(recipe_path.read_text(encoding="utf-8"))
     # Catalog #240 recipe-vs-trainer-state consistency

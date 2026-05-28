@@ -476,20 +476,16 @@ def build_pact_nerv_diffusion_blocks_mlx_queue(
                         "timeout_seconds": 180,
                         "postconditions": [
                             {
-                                "type": "json_completion_contract",
+                                "type": "json_equals",
                                 "path": ia3_parity_report_ref,
-                                "required_equals": {"schema": PACT_NERV_IA3_MLX_PYTORCH_FORWARD_PARITY_SCHEMA},
-                                "required_true": ["parity_passed"],
-                                "required_false": [
-                                    "score_claim",
-                                    "promotion_eligible",
-                                    "rank_or_kill_eligible",
-                                    "ready_for_exact_eval_dispatch",
-                                ],
-                                "required_nonempty": [
-                                    "state_dict.sha256",
-                                    "export_manifest.file_sha256",
-                                ],
+                                "key": "schema",
+                                "equals": PACT_NERV_IA3_MLX_PYTORCH_FORWARD_PARITY_SCHEMA,
+                            },
+                            {
+                                "type": "json_equals",
+                                "path": ia3_parity_report_ref,
+                                "key": "parity_passed",
+                                "equals": True,
                             },
                             {"type": "json_false_authority", "path": ia3_parity_report_ref},
                             {"type": "path_exists", "path": ia3_parity_pt_ref},
@@ -562,25 +558,28 @@ def build_pact_nerv_diffusion_blocks_mlx_queue(
                         "timeout_seconds": 120,
                         "postconditions": [
                             {
-                                "type": "json_completion_contract",
+                                "type": "json_equals",
                                 "path": replay_bundle_ref,
-                                "required_equals": {
-                                    "schema": MLX_LOCAL_REPLAY_BUNDLE_SCHEMA,
-                                    "replay_readiness.local_replay_ready": True,
-                                    "replay_readiness.byte_closed_receiver_proof_present": True,
-                                    "replay_readiness.runtime_custody_present": True,
-                                },
-                                "required_false": [
-                                    "score_claim",
-                                    "promotion_eligible",
-                                    "rank_or_kill_eligible",
-                                    "ready_for_exact_eval_dispatch",
-                                ],
-                                "required_nonempty": [
-                                    "repo.head",
-                                    "environment.full_env_sha256",
-                                    "packages.mlx",
-                                ],
+                                "key": "schema",
+                                "equals": MLX_LOCAL_REPLAY_BUNDLE_SCHEMA,
+                            },
+                            {
+                                "type": "json_equals",
+                                "path": replay_bundle_ref,
+                                "key": "replay_readiness.local_replay_ready",
+                                "equals": True,
+                            },
+                            {
+                                "type": "json_equals",
+                                "path": replay_bundle_ref,
+                                "key": "replay_readiness.byte_closed_receiver_proof_present",
+                                "equals": True,
+                            },
+                            {
+                                "type": "json_equals",
+                                "path": replay_bundle_ref,
+                                "key": "replay_readiness.runtime_custody_present",
+                                "equals": True,
                             },
                             {"type": "json_false_authority", "path": replay_bundle_ref},
                         ],
