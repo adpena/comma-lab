@@ -35,6 +35,7 @@ from .materializer_chain_harvest import EXACT_READINESS_BRIDGE_SCHEMA
 DISPATCH_PLAN_SCHEMA = "materializer_exact_eval_dispatch_plan.v1"
 TOOL_NAME = "comma_lab.scheduler.materializer_exact_eval_dispatch_plan"
 CLAIM_STEP_ID = "claim_lane_dispatch"
+PROVIDER_PRECLAIM_STEP_ID = "provider_preclaim_check"
 DISPATCH_STEP_ID = "dispatch_exact_eval"
 DRY_RUN_DISPATCH_STEP_ID = "dispatch_exact_eval_dry_run"
 SUPPORTED_DISPATCH_MODES = frozenset({"dry_run", "execute"})
@@ -237,6 +238,12 @@ def build_materializer_exact_eval_dispatch_plan(
             plan_label=label_prefix,
             dry_run=mode == "dry_run",
         )
+        provider_preclaim_command = _provider_preclaim_command(
+            queue_path=queue_path,
+            provider=provider,
+            job_id=job_id,
+            dry_run=mode == "dry_run",
+        )
         dispatch_command = _dispatch_command(
             queue_path=queue_path,
             provider=provider,
@@ -262,6 +269,7 @@ def build_materializer_exact_eval_dispatch_plan(
                 lane_id=lane_id,
                 queue_path=queue_path,
                 repo_root=repo,
+                provider_preclaim_command=provider_preclaim_command,
             )
         )
         rows.append(
@@ -280,6 +288,8 @@ def build_materializer_exact_eval_dispatch_plan(
                 "dispatch_priority_rank": authorized_count + 1,
                 "dispatch_group_key": lane_id,
                 "authorized_for_dispatch_plan": True,
+                "provider_preclaim_required_before_claim": mode == "execute",
+                "provider_preclaim_command": provider_preclaim_command,
                 "claim_required_before_dispatch": True,
                 "claim_command": claim_command,
                 "dispatch_command": dispatch_command,
@@ -385,6 +395,7 @@ def build_materializer_exact_eval_dispatch_plan(
         },
         dispatch_blockers=[
             "dispatch_plan_is_not_score_authority",
+            "provider_preclaim_step_must_succeed_before_lane_claim",
             "lane_claim_step_must_succeed_before_dispatch_step",
             "contest_auth_eval_result_required_before_score_claim",
             *plan_blockers,
@@ -658,9 +669,37 @@ def _dispatch_experiment(
     lane_id: str,
     queue_path: Path,
     repo_root: Path,
+    provider_preclaim_command: Sequence[str] | None = None,
 ) -> dict[str, Any]:
     dispatch_step_id = (
         DRY_RUN_DISPATCH_STEP_ID if dispatch_mode == "dry_run" else DISPATCH_STEP_ID
+    )
+    steps: list[dict[str, Any]] = []
+    claim_requires: list[str] = []
+    if provider_preclaim_command is not None:
+        steps.append(
+            {
+                "id": PROVIDER_PRECLAIM_STEP_ID,
+                "command": list(provider_preclaim_command),
+                "resources": {"kind": "local_cpu"},
+            }
+        )
+        claim_requires = [PROVIDER_PRECLAIM_STEP_ID]
+    claim_step: dict[str, Any] = {
+        "id": CLAIM_STEP_ID,
+        "command": list(claim_command),
+        "resources": {"kind": "local_cpu"},
+    }
+    if claim_requires:
+        claim_step["requires"] = claim_requires
+    steps.append(claim_step)
+    steps.append(
+        {
+            "id": dispatch_step_id,
+            "requires": [CLAIM_STEP_ID],
+            "command": list(dispatch_command),
+            "resources": {"kind": "local_cpu"},
+        }
     )
     return {
         "id": experiment_id,
@@ -672,20 +711,33 @@ def _dispatch_experiment(
             "dispatch_mode": dispatch_mode,
             **FALSE_AUTHORITY,
         },
-        "steps": [
-            {
-                "id": CLAIM_STEP_ID,
-                "command": list(claim_command),
-                "resources": {"kind": "local_cpu"},
-            },
-            {
-                "id": dispatch_step_id,
-                "requires": [CLAIM_STEP_ID],
-                "command": list(dispatch_command),
-                "resources": {"kind": "local_cpu"},
-            },
-        ],
+        "steps": steps,
     }
+
+
+def _provider_preclaim_command(
+    *,
+    queue_path: Path,
+    provider: str,
+    job_id: str,
+    dry_run: bool,
+) -> list[str] | None:
+    if dry_run:
+        return None
+    return [
+        sys.executable,
+        "tools/check_exact_dispatch_provider_preclaim.py",
+        "--provider",
+        provider,
+        "--job-id",
+        job_id,
+        "--output",
+        (
+            queue_path.parent
+            / f"{_safe_slug(job_id)}.provider_preclaim_check.json"
+        ).as_posix(),
+        "--overwrite",
+    ]
 
 
 def _claim_command(

@@ -3469,9 +3469,17 @@ def test_materializer_dispatch_plan_execute_requires_active_claim_for_dispatch(
     assert plan["authorized_candidate_count"] == 1
     assert "execute_dispatch_queue_created_requires_operator_review" in plan["plan_blockers"]
     steps = dispatch_queue["experiments"][0]["steps"]
-    claim_command = steps[0]["command"]
-    dispatch_command = steps[1]["command"]
+    preclaim_command = steps[0]["command"]
+    claim_command = steps[1]["command"]
+    dispatch_command = steps[2]["command"]
     job_id = plan["rows"][0]["dispatch_job_id"]
+    assert steps[0]["id"] == "provider_preclaim_check"
+    assert steps[1]["id"] == "claim_lane_dispatch"
+    assert steps[1]["requires"] == ["provider_preclaim_check"]
+    assert steps[2]["requires"] == ["claim_lane_dispatch"]
+    assert "tools/check_exact_dispatch_provider_preclaim.py" in preclaim_command
+    assert "--output" in preclaim_command
+    assert job_id in preclaim_command
     assert "--dry-run" not in claim_command
     assert "--claim-policy" in dispatch_command
     assert "require_active_claim" in dispatch_command
@@ -3522,7 +3530,7 @@ def test_materializer_dispatch_plan_execute_records_operator_review_clearance(
         plan["execute_queue_operator_review_reason"]
         == "operator approved PSV3 exact eval execution in active Codex turn"
     )
-    assert result["experiment_queue"]["experiments"][0]["steps"][1]["id"] == (
+    assert result["experiment_queue"]["experiments"][0]["steps"][2]["id"] == (
         "dispatch_exact_eval"
     )
 

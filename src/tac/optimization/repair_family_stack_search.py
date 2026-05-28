@@ -1011,6 +1011,179 @@ def _build_hypergraph_stack_acquisition_paths(
     return [path]
 
 
+def _build_fractal_marginal_surface(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    cells_by_key: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        levels = _string_list(row.get("fractal_scope_levels")) or ["scope_unknown"]
+        stage = _safe_int(row.get("entropy_stage_order"), default=999)
+        for level in levels:
+            key = f"{level}|stage_{stage}"
+            cell = cells_by_key.setdefault(
+                key,
+                {
+                    "schema": "repair_family_fractal_marginal_surface_cell.v1",
+                    "cell_key": key,
+                    "level": level,
+                    "entropy_stage_order": stage,
+                    "family_ids": [],
+                    "row_keys": [],
+                    "row_count": 0,
+                    "archive_bound_count": 0,
+                    "negative_demoted_count": 0,
+                    "byte_credit_exhausted_count": 0,
+                    "delta_payload_bytes_sum": 0,
+                    "expected_improvement_sum": 0.0,
+                    "stack_score_sum": 0.0,
+                    "stackability_penalty_sum": 0.0,
+                    "budget_spend_allowed": False,
+                    "ready_for_exact_eval_dispatch": False,
+                    **FALSE_AUTHORITY,
+                },
+            )
+            row_key = str(row.get("stack_row_key") or _stack_row_key(row))
+            cell["family_ids"].append(str(row.get("family_id") or "unclassified_repair_family"))
+            cell["row_keys"].append(row_key)
+            cell["row_count"] += 1
+            if row.get("archive_bound_exact_handoff_candidate") is True:
+                cell["archive_bound_count"] += 1
+            if row.get("automatic_negative_result_demoted") is True:
+                cell["negative_demoted_count"] += 1
+            if row.get("byte_credit_feasible") is False:
+                cell["byte_credit_exhausted_count"] += 1
+            cell["delta_payload_bytes_sum"] += max(0, _safe_int(row.get("delta_payload_bytes")))
+            cell["expected_improvement_sum"] += _safe_float(
+                row.get("local_mlx_expected_improvement_score_units")
+            )
+            cell["stack_score_sum"] += _safe_float(row.get("interaction_aware_stack_score"))
+            cell["stackability_penalty_sum"] += _safe_float(row.get("stackability_penalty"))
+    cells = []
+    for cell in cells_by_key.values():
+        row_count = max(1, int(cell["row_count"]))
+        bytes_sum = max(1, int(cell["delta_payload_bytes_sum"]))
+        cell["family_ids"] = ordered_unique(cell["family_ids"])
+        cell["row_keys"] = ordered_unique(cell["row_keys"])
+        cell["mean_expected_improvement"] = float(cell["expected_improvement_sum"]) / row_count
+        cell["mean_stack_score"] = float(cell["stack_score_sum"]) / row_count
+        cell["mean_stackability_penalty"] = float(cell["stackability_penalty_sum"]) / row_count
+        cell["marginal_improvement_per_byte"] = float(cell["expected_improvement_sum"]) / bytes_sum
+        cell["marginal_stack_score_per_byte"] = float(cell["stack_score_sum"]) / bytes_sum
+        cell["selection_pressure"] = (
+            float(cell["marginal_stack_score_per_byte"])
+            * (1.0 - min(0.95, float(cell["mean_stackability_penalty"])))
+            * (1.0 - min(0.80, int(cell["negative_demoted_count"]) / row_count))
+        )
+        require_no_truthy_authority_fields(
+            cell,
+            context=f"repair_family_fractal_marginal_surface_cell:{cell['cell_key']}",
+        )
+        cells.append(cell)
+    cells.sort(
+        key=lambda cell: (
+            -float(cell.get("selection_pressure") or 0.0),
+            _LEVEL_RANK.get(str(cell.get("level") or ""), len(_LEVEL_ORDER)),
+            int(cell.get("entropy_stage_order") or 999),
+            str(cell.get("cell_key") or ""),
+        )
+    )
+    surface = {
+        "schema": "repair_family_fractal_marginal_surface.v1",
+        "level_order": list(_LEVEL_ORDER),
+        "cell_count": len(cells),
+        "cells": cells,
+        "acquisition_rule": (
+            "rank_level_stage_marginals_by_improvement_per_byte_stack_penalty_"
+            "negative_demotion_and_byte_credit_pressure"
+        ),
+        "budget_spend_allowed": False,
+        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        surface,
+        context="repair_family_fractal_marginal_surface",
+    )
+    return surface
+
+
+def _build_stack_acquisition_frontier(
+    *,
+    rows: Sequence[Mapping[str, Any]],
+    hypergraph_tensor: Mapping[str, Any],
+    byte_credit_budget: int | None,
+    max_paths: int = 8,
+) -> list[dict[str, Any]]:
+    row_by_key = {str(row.get("stack_row_key") or _stack_row_key(row)): row for row in rows}
+    frontier: list[dict[str, Any]] = []
+    for cell in hypergraph_tensor.get("cells") or []:
+        if not isinstance(cell, Mapping):
+            continue
+        if cell.get("transition_allowed_by_tensor") is not True:
+            continue
+        if _safe_float(cell.get("hypergraph_acquisition_score")) <= 0.0:
+            continue
+        row_keys = [key for key in _string_list(cell.get("row_keys")) if key in row_by_key]
+        if not row_keys:
+            continue
+        selected_rows = [row_by_key[key] for key in row_keys]
+        strict_archive_bound_improvement = any(
+            row.get("archive_bound_exact_handoff_candidate") is True
+            and _safe_float(row.get("local_mlx_expected_improvement_score_units")) > 0.0
+            for row in selected_rows
+        )
+        all_selected_demoted = bool(selected_rows) and all(
+            row.get("automatic_negative_result_demoted") is True for row in selected_rows
+        )
+        terminal_outcome_class = "precise_exact_axis_blocker"
+        if strict_archive_bound_improvement:
+            terminal_outcome_class = "strictly_better_archive_bound_candidate_exact_axis_blocked"
+        elif all_selected_demoted:
+            terminal_outcome_class = "family_demoted_by_posterior_evidence"
+        path = {
+            "schema": "repair_family_stack_acquisition_frontier_path.v1",
+            "frontier_rank": len(frontier) + 1,
+            "source_tensor": "hypergraph_interaction_tensor",
+            "source_hyperedge_key": cell.get("hyperedge_key"),
+            "source_hyperedge_order": cell.get("hyperedge_order"),
+            "row_keys": row_keys,
+            "family_order": [str(row.get("family_id") or "") for row in selected_rows],
+            "typed_response_order": [str(row.get("typed_response_id") or "") for row in selected_rows],
+            "entropy_stage_order": [_safe_int(row.get("entropy_stage_order"), default=999) for row in selected_rows],
+            "fractal_scope_union_levels": cell.get("scope_union_levels"),
+            "combined_delta_payload_bytes": cell.get("combined_delta_payload_bytes"),
+            "byte_credit_budget": byte_credit_budget,
+            "byte_credit_remaining": None
+            if byte_credit_budget is None
+            else max(0, byte_credit_budget - _safe_int(cell.get("combined_delta_payload_bytes"))),
+            "hypergraph_acquisition_score": cell.get("hypergraph_acquisition_score"),
+            "total_hypergraph_interaction_penalty": cell.get("total_hypergraph_interaction_penalty"),
+            "archive_bound_candidate_count": cell.get("archive_bound_count"),
+            "negative_demoted_count": cell.get("negative_demoted_count"),
+            "terminal_outcome_class": terminal_outcome_class,
+            "blockers": ordered_unique(
+                [
+                    *[blocker for row in selected_rows for blocker in _string_list(row.get("blockers"))],
+                    *_string_list(cell.get("blockers")),
+                    "contest_cpu_or_cuda_exact_axis_payload_required",
+                    "lane_dispatch_claim_required_before_exact_eval",
+                ]
+            ),
+            "budget_spend_allowed": False,
+            "ready_for_budget_spend": False,
+            "ready_for_exact_eval_dispatch": False,
+            "allowed_use": "repair_family_ranked_stack_acquisition_frontier_only",
+            "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+            **FALSE_AUTHORITY,
+        }
+        require_no_truthy_authority_fields(
+            path,
+            context=f"repair_family_stack_acquisition_frontier_path:{path['frontier_rank']}",
+        )
+        frontier.append(path)
+        if len(frontier) >= max_paths:
+            break
+    return frontier
+
+
 def _build_stack_acquisition_paths(
     *,
     rows: Sequence[Mapping[str, Any]],
@@ -1489,6 +1662,12 @@ def plan_repair_family_stack_search(
         hypergraph_tensor=hypergraph_interaction_tensor,
         byte_credit_budget=byte_credit_budget,
     )
+    fractal_marginal_surface = _build_fractal_marginal_surface(rows)
+    stack_acquisition_frontier = _build_stack_acquisition_frontier(
+        rows=rows,
+        hypergraph_tensor=hypergraph_interaction_tensor,
+        byte_credit_budget=byte_credit_budget,
+    )
     pairwise_acquisition_paths = _build_stack_acquisition_paths(
         rows=rows,
         pairwise_tensor=pairwise_interaction_tensor,
@@ -1553,6 +1732,10 @@ def plan_repair_family_stack_search(
         "n_way_hypergraph_acquisition_enabled": True,
         "hypergraph_interaction_tensor": hypergraph_interaction_tensor,
         "hypergraph_interaction_tensor_cell_count": hypergraph_interaction_tensor["cell_count"],
+        "fractal_marginal_surface": fractal_marginal_surface,
+        "fractal_marginal_surface_cell_count": fractal_marginal_surface["cell_count"],
+        "stack_acquisition_frontier": stack_acquisition_frontier,
+        "stack_acquisition_frontier_count": len(stack_acquisition_frontier),
         "hypergraph_stack_acquisition_path_count": len(hypergraph_acquisition_paths),
         "pairwise_stack_acquisition_path_count": len(pairwise_acquisition_paths),
         "stack_acquisition_path_count": len(acquisition_paths),
