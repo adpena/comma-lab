@@ -20,12 +20,12 @@ def _load_queue_fleet_tool():
     return module
 
 
-def _queue_file(tmp_path: Path) -> tuple[Path, Path]:
+def _queue_file(tmp_path: Path, *, mode: str = "running") -> tuple[Path, Path]:
     artifact = tmp_path / "artifact.json"
     queue = {
         "schema": "experiment_queue.v1",
         "queue_id": "unit_fleet_queue",
-        "controls": {"mode": "running", "max_concurrency": {"local_cpu": 2}},
+        "controls": {"mode": mode, "max_concurrency": {"local_cpu": 2}},
         "experiments": [
             {
                 "id": "exp",
@@ -223,6 +223,43 @@ def test_queue_fleet_exposes_init_commands_for_missing_state(tmp_path: Path, cap
     init_command = payload["next_init_commands"][0]
     assert "tools/experiment_queue.py" in init_command
     assert init_command[-1] == "init"
+
+
+def test_queue_fleet_exposes_resume_commands_for_paused_work(tmp_path: Path, capsys) -> None:
+    tool = _load_queue_fleet_tool()
+    queue_path, _artifact = _queue_file(tmp_path, mode="paused")
+    state_root = tmp_path / "state"
+    _init_state(queue_path, state_root)
+
+    rc = tool.main(
+        [
+            "--root",
+            str(queue_path),
+            "--state-root",
+            str(state_root),
+            "status",
+            "--format",
+            "json",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert rc == 0
+    assert payload["status_counts"] == {"PAUSED_WITH_QUEUED_WORK": 1}
+    assert payload["ready_to_supervise_count"] == 0
+    assert payload["paused_with_queued_work_count"] == 1
+    assert payload["next_supervise_commands"] == []
+    assert payload["next_resume_commands"]
+    resume_command = payload["next_resume_commands"][0]
+    assert "tools/experiment_queue.py" in resume_command
+    assert resume_command[-4:] == [
+        "control",
+        "running",
+        "--reason",
+        "queue_fleet_resume_paused_with_queued_work",
+    ]
+    assert payload["rows"][0]["resume_command"] == resume_command
+    assert payload["score_claim"] is False
 
 
 def test_queue_fleet_init_missing_initializes_missing_state(tmp_path: Path, capsys) -> None:

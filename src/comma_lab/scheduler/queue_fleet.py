@@ -379,6 +379,16 @@ def queue_fleet_row(
             supervise_dir,
             "--execute",
         ),
+        "resume_command": _queue_command(
+            repo,
+            "tools/experiment_queue.py",
+            path,
+            state_path,
+            "control",
+            "running",
+            "--reason",
+            "queue_fleet_resume_paused_with_queued_work",
+        ),
     }
 
 
@@ -476,6 +486,7 @@ def queue_fleet_status(
         "status_samples": _samples_by_status(rows),
         "actionable_count": len(actionable),
         "ready_to_supervise_count": counts.get("READY_TO_SUPERVISE", 0),
+        "paused_with_queued_work_count": counts.get("PAUSED_WITH_QUEUED_WORK", 0),
         "needs_recovery_count": counts.get("NEEDS_RECOVERY", 0) + counts.get("NEEDS_INIT", 0),
         "invalid_queue_count": counts.get("INVALID_QUEUE", 0),
         "non_executable_artifact_count": counts.get(NON_EXECUTABLE_QUEUE_ARTIFACT_STATUS, 0),
@@ -490,6 +501,12 @@ def queue_fleet_status(
             row["status_command"]
             for row in rows
             if row.get("status") in recovery_statuses and row.get("status_command")
+        ][:8],
+        "next_resume_commands": [
+            row["resume_command"]
+            for row in rows
+            if row.get("status") == "PAUSED_WITH_QUEUED_WORK"
+            and row.get("resume_command")
         ][:8],
         "next_init_commands": [
             _queue_command(
