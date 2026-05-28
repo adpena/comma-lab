@@ -858,6 +858,12 @@ def test_repair_campaign_autonomous_floor_loop_executes_all_required_queue_famil
     assert summary["stack_search_plan"]["pairwise_interaction_tensor_cell_count"] == 20
     assert summary["stack_search_plan"]["n_way_hypergraph_acquisition_enabled"] is True
     assert summary["stack_search_plan"]["hypergraph_interaction_tensor_cell_count"] == 26
+    assert (
+        summary["stack_search_plan"]["fractal_marginal_surface"][
+            "measured_mlx_marginal_update_count"
+        ]
+        > 0
+    )
     assert summary["fractal_marginal_surface_schema"] == (
         "repair_family_fractal_marginal_surface.v1"
     )
@@ -867,6 +873,8 @@ def test_repair_campaign_autonomous_floor_loop_executes_all_required_queue_famil
     assert summary["primary_stack_acquisition_frontier_path"]["source_tensor"] == (
         "hypergraph_interaction_tensor"
     )
+    assert summary["exact_dispatch_preclaim_gate_count"] == 5
+    assert summary["failure_rebudgeting_update_count"] == 5
     primary_path = summary["stack_search_plan"]["primary_stack_acquisition_path"]
     assert primary_path["path_kind"] == "n_way_hypergraph_interaction_tensor_acquisition"
     assert primary_path["source_hyperedge_order"] >= 2
@@ -882,7 +890,60 @@ def test_repair_campaign_autonomous_floor_loop_preserves_precise_terminal_class(
         {
             "schema": QUEUE_SCHEMA,
             "queue_id": "unit_pairwise_terminal",
-            "experiments": [],
+            "controls": {
+                "mode": "running",
+                "max_concurrency": {"local_cpu": 1},
+            },
+            "experiments": [
+                {
+                    "id": "segnet_region_ready",
+                    "metadata": {
+                        "queue_actuation_ready": True,
+                        "family_id": "segnet_class_region_waterfill",
+                        "typed_response_id": "segnet_region_ready",
+                        **_false_authority(),
+                    },
+                    "steps": [
+                        {
+                            "id": "noop",
+                            "command": [sys.executable, "-c", "print('segnet')"],
+                            "resources": {"kind": "local_cpu"},
+                        }
+                    ],
+                },
+                {
+                    "id": "selector_codec_ready",
+                    "metadata": {
+                        "queue_actuation_ready": True,
+                        "family_id": "per_region_selector_codec",
+                        "typed_response_id": "selector_codec_ready",
+                        **_false_authority(),
+                    },
+                    "steps": [
+                        {
+                            "id": "noop",
+                            "command": [sys.executable, "-c", "print('selector')"],
+                            "resources": {"kind": "local_cpu"},
+                        }
+                    ],
+                },
+                {
+                    "id": "entropy_boundary_not_selected",
+                    "metadata": {
+                        "queue_actuation_ready": True,
+                        "family_id": "entropy_boundary_probe",
+                        "typed_response_id": "entropy_boundary_not_selected",
+                        **_false_authority(),
+                    },
+                    "steps": [
+                        {
+                            "id": "noop",
+                            "command": [sys.executable, "-c", "print('entropy')"],
+                            "resources": {"kind": "local_cpu"},
+                        }
+                    ],
+                },
+            ],
             "metadata": {},
             **_false_authority(),
         },
@@ -967,6 +1028,11 @@ def test_repair_campaign_autonomous_floor_loop_preserves_precise_terminal_class(
             "64",
             "--max-iterations",
             "2",
+            "--execute-local",
+            "--worker-max-experiments-per-iteration",
+            "3",
+            "--max-steps-per-iteration",
+            "10",
         ],
         cwd=REPO_ROOT,
         text=True,
@@ -980,7 +1046,26 @@ def test_repair_campaign_autonomous_floor_loop_preserves_precise_terminal_class(
     assert summary["primary_stack_acquisition_terminal_outcome"] == (
         "precise_exact_axis_blocker"
     )
+    iteration = summary["iterations"][0]
+    selected_report = iteration["frontier_selected_queue_report"]
+    assert summary["frontier_executable_selection_consumed"] is True
+    assert selected_report["selected_experiment_count"] == 2
+    assert selected_report["skipped_experiment_count"] == 1
+    assert iteration["worker_queue_path"].endswith(
+        "iteration_1_frontier_selected_queue.json"
+    )
+    selected_queue = json.loads(
+        (output_dir / "iteration_1_frontier_selected_queue.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert [experiment["id"] for experiment in selected_queue["experiments"]] == [
+        "segnet_region_ready",
+        "selector_codec_ready",
+    ]
     assert summary["stop_reason"] == "precise_exact_axis_blocker"
+    assert summary["exact_dispatch_preclaim_gate_count"] == 2
+    assert summary["failure_rebudgeting_update_count"] == 2
     blocker_report = summary["exact_axis_blocker_report"]
     assert blocker_report["stop_reason"] == "precise_exact_axis_blocker"
     assert blocker_report["selected_blocker_class"] == (

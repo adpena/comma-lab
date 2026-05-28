@@ -1076,10 +1076,20 @@ def test_repair_family_stack_search_builds_pairwise_tensor_acquisition_path(
     assert stack_plan["n_way_hypergraph_acquisition_enabled"] is True
     assert stack_plan["hypergraph_interaction_tensor_cell_count"] == 1
     assert stack_plan["fractal_marginal_surface_cell_count"] >= 6
+    assert (
+        stack_plan["fractal_marginal_surface"][
+            "measured_mlx_marginal_update_count"
+        ]
+        == 10
+    )
     marginal_levels = {
         cell["level"] for cell in stack_plan["fractal_marginal_surface"]["cells"]
     }
     assert {"bit", "byte", "boundary", "region"} <= marginal_levels
+    assert all(
+        cell["measured_mlx_marginal_updates"]
+        for cell in stack_plan["fractal_marginal_surface"]["cells"]
+    )
     frontier = stack_plan["stack_acquisition_frontier"]
     assert stack_plan["stack_acquisition_frontier_count"] == 1
     assert frontier[0]["source_tensor"] == "hypergraph_interaction_tensor"

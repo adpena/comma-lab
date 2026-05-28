@@ -1035,12 +1035,43 @@ def _build_fractal_marginal_surface(rows: Sequence[Mapping[str, Any]]) -> dict[s
                     "expected_improvement_sum": 0.0,
                     "stack_score_sum": 0.0,
                     "stackability_penalty_sum": 0.0,
+                    "measured_mlx_marginal_updates": [],
                     "budget_spend_allowed": False,
                     "ready_for_exact_eval_dispatch": False,
                     **FALSE_AUTHORITY,
                 },
             )
             row_key = str(row.get("stack_row_key") or _stack_row_key(row))
+            delta_payload_bytes = max(0, _safe_int(row.get("delta_payload_bytes")))
+            expected_improvement = _safe_float(
+                row.get("local_mlx_expected_improvement_score_units")
+            )
+            measured_update = {
+                "schema": "repair_family_measured_mlx_marginal_update.v1",
+                "stack_row_key": row_key,
+                "family_id": row.get("family_id"),
+                "typed_response_id": row.get("typed_response_id"),
+                "entropy_stage_order": stage,
+                "fractal_level": level,
+                "delta_payload_bytes": delta_payload_bytes,
+                "local_mlx_expected_improvement_score_units": expected_improvement,
+                "local_mlx_combined_delta_score_units": row.get(
+                    "local_mlx_combined_delta_score_units"
+                ),
+                "measured_improvement_per_byte": expected_improvement
+                / max(1, delta_payload_bytes),
+                "interaction_aware_stack_score": _safe_float(
+                    row.get("interaction_aware_stack_score")
+                ),
+                "source_execution_report": row.get("source_execution_report"),
+                "budget_spend_allowed": False,
+                "ready_for_exact_eval_dispatch": False,
+                **FALSE_AUTHORITY,
+            }
+            require_no_truthy_authority_fields(
+                measured_update,
+                context=f"repair_family_measured_mlx_marginal_update:{row_key}:{level}",
+            )
             cell["family_ids"].append(str(row.get("family_id") or "unclassified_repair_family"))
             cell["row_keys"].append(row_key)
             cell["row_count"] += 1
@@ -1050,12 +1081,11 @@ def _build_fractal_marginal_surface(rows: Sequence[Mapping[str, Any]]) -> dict[s
                 cell["negative_demoted_count"] += 1
             if row.get("byte_credit_feasible") is False:
                 cell["byte_credit_exhausted_count"] += 1
-            cell["delta_payload_bytes_sum"] += max(0, _safe_int(row.get("delta_payload_bytes")))
-            cell["expected_improvement_sum"] += _safe_float(
-                row.get("local_mlx_expected_improvement_score_units")
-            )
+            cell["delta_payload_bytes_sum"] += delta_payload_bytes
+            cell["expected_improvement_sum"] += expected_improvement
             cell["stack_score_sum"] += _safe_float(row.get("interaction_aware_stack_score"))
             cell["stackability_penalty_sum"] += _safe_float(row.get("stackability_penalty"))
+            cell["measured_mlx_marginal_updates"].append(measured_update)
     cells = []
     for cell in cells_by_key.values():
         row_count = max(1, int(cell["row_count"]))
@@ -1067,6 +1097,9 @@ def _build_fractal_marginal_surface(rows: Sequence[Mapping[str, Any]]) -> dict[s
         cell["mean_stackability_penalty"] = float(cell["stackability_penalty_sum"]) / row_count
         cell["marginal_improvement_per_byte"] = float(cell["expected_improvement_sum"]) / bytes_sum
         cell["marginal_stack_score_per_byte"] = float(cell["stack_score_sum"]) / bytes_sum
+        cell["measured_mlx_marginal_update_count"] = len(
+            cell["measured_mlx_marginal_updates"]
+        )
         cell["selection_pressure"] = (
             float(cell["marginal_stack_score_per_byte"])
             * (1.0 - min(0.95, float(cell["mean_stackability_penalty"])))
@@ -1089,6 +1122,10 @@ def _build_fractal_marginal_surface(rows: Sequence[Mapping[str, Any]]) -> dict[s
         "schema": "repair_family_fractal_marginal_surface.v1",
         "level_order": list(_LEVEL_ORDER),
         "cell_count": len(cells),
+        "measured_mlx_marginal_update_count": sum(
+            int(cell.get("measured_mlx_marginal_update_count") or 0)
+            for cell in cells
+        ),
         "cells": cells,
         "acquisition_rule": (
             "rank_level_stage_marginals_by_improvement_per_byte_stack_penalty_"
