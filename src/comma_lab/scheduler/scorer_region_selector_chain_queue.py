@@ -15,6 +15,7 @@ from comma_lab.scheduler.repair_cascade_mlx_probe_queue import (
 )
 from comma_lab.scheduler.scorer_region_exact_ready_bridge import (
     SCORER_REGION_EXACT_READY_BRIDGE_REPORT_SCHEMA,
+    SHELL_INFLATE_OUTPUT_CHANGE_PROOF_SCHEMA,
 )
 from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY
 from tac.optimization.family_agnostic_materializers import (
@@ -24,6 +25,10 @@ from tac.optimization.family_agnostic_materializers import (
 from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
     require_no_truthy_authority_fields,
+)
+from tac.optimization.scorer_region_operator_contract import (
+    SCORER_REGION_OPERATOR_CONTRACT_SCHEMA,
+    build_scorer_region_operator_contract,
 )
 from tac.optimization.scorer_region_waterfill import (
     DISTORTION_BUDGET_ATTACK_PLAN_SCHEMA,
@@ -210,6 +215,10 @@ def build_scorer_region_selector_chain_context(
         "schema": SCORER_REGION_SELECTOR_CHAIN_CONTEXT_SCHEMA,
         "chain_label": chain_label,
         "chain_position_order": ["P19", "P18", "P11", "P15"],
+        "operator_contract": build_scorer_region_operator_contract(
+            chain_label=chain_label,
+            receiver_patch_enabled=False,
+        ),
         "source_submission_dir": _repo_rel(_resolve(source_submission_dir, repo_root), repo_root),
         "source_archive": _archive_record(archive, repo_root=repo_root),
         "source_waterfill_work_order": (
@@ -309,11 +318,18 @@ def build_scorer_region_selector_chain_report(
     )
     selected_archive = repack_archive if repack_positive else selector_archive
     selected_stage = "P15_archive_zip_repack" if repack_positive else "P11_selector_context_recode"
+    selected_stage_blockers = [
+        *[str(item) for item in selector_manifest.get("readiness_blockers") or [] if str(item)],
+        *(
+            [str(item) for item in repack_manifest.get("readiness_blockers") or [] if str(item)]
+            if repack_positive
+            else []
+        ),
+    ]
     readiness_blockers = ordered_unique(
         [
             *[str(item) for item in chain_context.get("blockers") or [] if str(item)],
-            *[str(item) for item in selector_manifest.get("readiness_blockers") or [] if str(item)],
-            *[str(item) for item in repack_manifest.get("readiness_blockers") or [] if str(item)],
+            *selected_stage_blockers,
             "contest_auth_eval_required_before_score_or_promotion_claim",
         ]
     )
@@ -321,6 +337,10 @@ def build_scorer_region_selector_chain_report(
         "schema": SCORER_REGION_SELECTOR_CHAIN_REPORT_SCHEMA,
         "chain_label": chain_context.get("chain_label"),
         "chain_position_order": ["P19", "P18", "P11", "P15"],
+        "operator_contract": build_scorer_region_operator_contract(
+            chain_label=str(chain_context.get("chain_label") or "unknown"),
+            receiver_patch_enabled=False,
+        ),
         "chain_context_artifact": _file_status("chain_context", chain_context_path, repo_root=repo_root),
         "selector_manifest_artifact": _file_status("selector_manifest", selector_manifest_path, repo_root=repo_root),
         "repack_manifest_artifact": _file_status("repack_manifest", repack_manifest_path, repo_root=repo_root),
@@ -385,6 +405,13 @@ def build_scorer_region_selector_chain_queue(
     receiver_patch_max_pairs: int = 12,
     receiver_patch_regions_per_pair: int = 1,
     receiver_patch_rgb_delta: tuple[int, int, int] = (-1, -1, -1),
+    prove_receiver_patch_output_change: bool = False,
+    receiver_patch_output_change_file_list_entries: Sequence[str] = ("0.raw",),
+    receiver_patch_output_change_expected_file_list_sha256: str | None = None,
+    receiver_patch_output_change_expected_entry_count: int | None = None,
+    receiver_patch_output_change_file_list_source: str | None = None,
+    receiver_patch_output_change_parity_scope_kind: str = "contest_full_sample",
+    receiver_patch_output_change_contest_full_sample_claim: bool = False,
     chain_label: str = "cascade_c_p19_p18_to_p11_selector_context_then_p15_repack",
     codec_families: Sequence[str] = (
         "fec10_adaptive_blend",
@@ -421,8 +448,9 @@ def build_scorer_region_selector_chain_queue(
     p19_posenet_null_pairs = root / "p19_posenet_null_pairs.json"
     p18_segnet_region_waterfill = root / "p18_segnet_region_waterfill.json"
     selector_dir = root / "p11_selector_context_recode"
+    selector_submission_dir = selector_dir / "submission_dir"
     selector_manifest = selector_dir / "feca_selector_reparameterization_manifest.json"
-    selector_archive = selector_dir / "submission_dir" / "archive.zip"
+    selector_archive = selector_submission_dir / "archive.zip"
     repack_dir = root / "p15_archive_zip_repack"
     repack_archive = repack_dir / "archive.zip"
     repack_manifest = repack_dir / "archive_zip_repack_manifest.json"
@@ -435,11 +463,16 @@ def build_scorer_region_selector_chain_queue(
     exact_ready_source_queue = root / "scorer_region_exact_ready_source_queue.json"
     blocked_exact_ready_queue = root / "scorer_region_blocked_exact_ready_queue.json"
     exact_ready_bridge_report = root / "scorer_region_exact_ready_bridge_report.json"
+    receiver_patch_output_change_dir = receiver_patch_dir / "full_frame_output_change_proof"
+    receiver_patch_output_change_proof = (
+        receiver_patch_output_change_dir / "shell_inflate_output_change.json"
+    )
 
     context_ref = _repo_rel(context_path, repo_root)
     p19_posenet_null_pairs_ref = _repo_rel(p19_posenet_null_pairs, repo_root)
     p18_segnet_region_waterfill_ref = _repo_rel(p18_segnet_region_waterfill, repo_root)
     selector_manifest_ref = _repo_rel(selector_manifest, repo_root)
+    selector_submission_ref = _repo_rel(selector_submission_dir, repo_root)
     selector_archive_ref = _repo_rel(selector_archive, repo_root)
     repack_archive_ref = _repo_rel(repack_archive, repo_root)
     repack_manifest_ref = _repo_rel(repack_manifest, repo_root)
@@ -451,6 +484,14 @@ def build_scorer_region_selector_chain_queue(
     exact_ready_source_queue_ref = _repo_rel(exact_ready_source_queue, repo_root)
     blocked_exact_ready_queue_ref = _repo_rel(blocked_exact_ready_queue, repo_root)
     exact_ready_bridge_report_ref = _repo_rel(exact_ready_bridge_report, repo_root)
+    receiver_patch_output_change_dir_ref = _repo_rel(
+        receiver_patch_output_change_dir,
+        repo_root,
+    )
+    receiver_patch_output_change_proof_ref = _repo_rel(
+        receiver_patch_output_change_proof,
+        repo_root,
+    )
     source_submission_ref = _repo_rel(_resolve(source_submission_dir, repo_root), repo_root)
     output_root_ref = _repo_rel(root, repo_root)
 
@@ -469,6 +510,27 @@ def build_scorer_region_selector_chain_queue(
     receiver_patch_inputs_available = bool(
         materialize_receiver_patch and effective_segnet_region_masks is not None
     )
+    output_change_entries = tuple(
+        str(entry).strip()
+        for entry in receiver_patch_output_change_file_list_entries
+        if str(entry).strip()
+    )
+    if prove_receiver_patch_output_change:
+        missing: list[str] = []
+        if not receiver_patch_inputs_available:
+            missing.append("materialize_receiver_patch_with_segnet_region_masks")
+        if not output_change_entries:
+            missing.append("receiver_patch_output_change_file_list_entries")
+        if not str(receiver_patch_output_change_expected_file_list_sha256 or "").strip():
+            missing.append("receiver_patch_output_change_expected_file_list_sha256")
+        if receiver_patch_output_change_expected_entry_count is None:
+            missing.append("receiver_patch_output_change_expected_entry_count")
+        if not str(receiver_patch_output_change_file_list_source or "").strip():
+            missing.append("receiver_patch_output_change_file_list_source")
+        if missing:
+            raise ScorerRegionSelectorChainQueueError(
+                "prove_receiver_patch_output_change requires: " + ", ".join(missing)
+            )
 
     context_cmd = [
         ".venv/bin/python",
@@ -525,6 +587,67 @@ def build_scorer_region_selector_chain_queue(
             ]
         )
 
+    receiver_patch_output_change_cmd = [
+        ".venv/bin/python",
+        "tools/prove_shell_inflate_output_change.py",
+        "--left-archive",
+        repack_archive_ref,
+        "--left-submission-dir",
+        selector_submission_ref,
+        "--right-archive",
+        _repo_rel(receiver_patch_submission_dir / "archive.zip", repo_root),
+        "--right-submission-dir",
+        receiver_patch_submission_ref,
+        "--full-frame-file-list-claim",
+        "--expected-full-frame-file-list-sha256",
+        str(receiver_patch_output_change_expected_file_list_sha256 or ""),
+        "--expected-full-frame-entry-count",
+        str(
+            int(
+                receiver_patch_output_change_expected_entry_count
+                if receiver_patch_output_change_expected_entry_count is not None
+                else len(output_change_entries)
+            )
+        ),
+        "--full-frame-file-list-source",
+        str(receiver_patch_output_change_file_list_source or ""),
+        "--parity-scope-kind",
+        str(receiver_patch_output_change_parity_scope_kind),
+        "--python-bin",
+        ".venv/bin/python",
+        "--output-dir",
+        receiver_patch_output_change_dir_ref,
+        "--require-output-change",
+        "--overwrite",
+    ]
+    for entry in output_change_entries:
+        receiver_patch_output_change_cmd.extend(["--file-list-entry", entry])
+    if receiver_patch_output_change_contest_full_sample_claim:
+        receiver_patch_output_change_cmd.append("--contest-full-sample-claim")
+
+    exact_ready_bridge_cmd = [
+        ".venv/bin/python",
+        "tools/build_scorer_region_exact_ready_bridge.py",
+        "--chain-report",
+        chain_report_ref,
+        "--receiver-patch-manifest",
+        receiver_patch_manifest_ref,
+        "--source-queue-out",
+        exact_ready_source_queue_ref,
+        "--blocked-exact-ready-queue-out",
+        blocked_exact_ready_queue_ref,
+        "--bridge-report-out",
+        exact_ready_bridge_report_ref,
+        "--overwrite",
+    ]
+    if prove_receiver_patch_output_change:
+        exact_ready_bridge_cmd.extend(
+            [
+                "--shell-inflate-output-change-proof",
+                receiver_patch_output_change_proof_ref,
+            ]
+        )
+
     queue = {
         "schema": QUEUE_SCHEMA,
         "queue_id": queue_id,
@@ -538,6 +661,10 @@ def build_scorer_region_selector_chain_queue(
             "queue_id": queue_id,
             "chain_label": chain_label,
             "chain_position_order": ["P19", "P18", "P11", "P15"],
+            "operator_contract": build_scorer_region_operator_contract(
+                chain_label=chain_label,
+                receiver_patch_enabled=receiver_patch_inputs_available,
+            ),
             "source_submission_dir": source_submission_ref,
             "source_archive": _archive_record(source_archive, repo_root=repo_root),
             "output_root": output_root_ref,
@@ -561,6 +688,7 @@ def build_scorer_region_selector_chain_queue(
                 )
             ),
             "selector_manifest_path": selector_manifest_ref,
+            "selector_submission_dir": selector_submission_ref,
             "repack_manifest_path": repack_manifest_ref,
             "chain_report_path": chain_report_ref,
             "distortion_budget_attack_plan_path": (
@@ -571,6 +699,9 @@ def build_scorer_region_selector_chain_queue(
             ),
             "frame1_region_waterfill_runtime_patch_submission_dir": (
                 receiver_patch_submission_ref if receiver_patch_inputs_available else None
+            ),
+            "frame1_region_waterfill_runtime_patch_base_submission_dir": (
+                selector_submission_ref if receiver_patch_inputs_available else None
             ),
             "scorer_region_exact_ready_source_queue_path": (
                 exact_ready_source_queue_ref if receiver_patch_inputs_available else None
@@ -586,8 +717,21 @@ def build_scorer_region_selector_chain_queue(
                 if receiver_patch_inputs_available
                 else None
             ),
+            "receiver_patch_output_change_proof_path": (
+                receiver_patch_output_change_proof_ref
+                if prove_receiver_patch_output_change
+                else None
+            ),
+            "receiver_patch_output_change_proof_schema": (
+                SHELL_INFLATE_OUTPUT_CHANGE_PROOF_SCHEMA
+                if prove_receiver_patch_output_change
+                else None
+            ),
             "materialize_upstream_artifacts": bool(materialize_upstream_artifacts),
             "materialize_receiver_patch": bool(materialize_receiver_patch),
+            "prove_receiver_patch_output_change": bool(
+                prove_receiver_patch_output_change
+            ),
             "local_mlx_or_cpu_first": True,
             "budget_spend_allowed": False,
             "ready_for_budget_spend": False,
@@ -611,6 +755,10 @@ def build_scorer_region_selector_chain_queue(
                 "metadata": {
                     "schema": "scorer_region_selector_chain_experiment_metadata.v1",
                     "chain_label": chain_label,
+                    "operator_contract": build_scorer_region_operator_contract(
+                        chain_label=chain_label,
+                        receiver_patch_enabled=receiver_patch_inputs_available,
+                    ),
                     "output_root": output_root_ref,
                     "budget_spend_allowed": False,
                     "ready_for_budget_spend": False,
@@ -889,7 +1037,7 @@ def build_scorer_region_selector_chain_queue(
                                     ".venv/bin/python",
                                     "tools/materialize_frame1_region_waterfill_runtime_patch.py",
                                     "--source-submission-dir",
-                                    source_submission_ref,
+                                    selector_submission_ref,
                                     "--segnet-region-waterfill",
                                     _repo_rel(
                                         _resolve(effective_segnet_region_masks, repo_root),
@@ -899,6 +1047,10 @@ def build_scorer_region_selector_chain_queue(
                                     receiver_patch_submission_ref,
                                     "--output-manifest",
                                     receiver_patch_manifest_ref,
+                                    "--candidate-archive",
+                                    repack_archive_ref,
+                                    "--candidate-archive-source",
+                                    "P15_archive_zip_repack_after_P11_selector_context_recode",
                                     "--max-pairs",
                                     str(int(receiver_patch_max_pairs)),
                                     "--regions-per-pair",
@@ -927,7 +1079,7 @@ def build_scorer_region_selector_chain_queue(
                                         receiver_patch_submission_ref,
                                     ],
                                     "input_artifact_paths": [
-                                        source_submission_ref,
+                                        selector_submission_ref,
                                         _repo_rel(
                                             _resolve(effective_segnet_region_masks, repo_root),
                                             repo_root,
@@ -943,24 +1095,54 @@ def build_scorer_region_selector_chain_queue(
                     *(
                         [
                             {
-                                "id": "emit_scorer_region_exact_ready_bridge_inputs",
+                                "id": "prove_receiver_patch_full_frame_output_change",
                                 "kind": "command",
                                 "requires": ["materialize_frame1_region_waterfill_runtime_patch"],
-                                "command": [
-                                    ".venv/bin/python",
-                                    "tools/build_scorer_region_exact_ready_bridge.py",
-                                    "--chain-report",
-                                    chain_report_ref,
-                                    "--receiver-patch-manifest",
-                                    receiver_patch_manifest_ref,
-                                    "--source-queue-out",
-                                    exact_ready_source_queue_ref,
-                                    "--blocked-exact-ready-queue-out",
-                                    blocked_exact_ready_queue_ref,
-                                    "--bridge-report-out",
-                                    exact_ready_bridge_report_ref,
-                                    "--overwrite",
+                                "command": receiver_patch_output_change_cmd,
+                                "resources": {"kind": "local_cpu"},
+                                "timeout_seconds": 600,
+                                "postconditions": [
+                                    {
+                                        "type": "json_equals",
+                                        "path": receiver_patch_output_change_proof_ref,
+                                        "key": "schema",
+                                        "equals": SHELL_INFLATE_OUTPUT_CHANGE_PROOF_SCHEMA,
+                                    },
+                                    {
+                                        "type": "json_false_authority",
+                                        "path": receiver_patch_output_change_proof_ref,
+                                    },
                                 ],
+                                "telemetry": {
+                                    "artifact_paths": [
+                                        receiver_patch_output_change_proof_ref,
+                                        receiver_patch_output_change_dir_ref,
+                                    ],
+                                    "input_artifact_paths": [
+                                        selector_submission_ref,
+                                        repack_archive_ref,
+                                        receiver_patch_submission_ref,
+                                    ],
+                                    "include_postcondition_paths": True,
+                                    "recursive": True,
+                                    "max_recursive_entries": 512,
+                                },
+                            },
+                        ]
+                        if prove_receiver_patch_output_change
+                        else []
+                    ),
+                    *(
+                        [
+                            {
+                                "id": "emit_scorer_region_exact_ready_bridge_inputs",
+                                "kind": "command",
+                                "requires": (
+                                    ["prove_receiver_patch_full_frame_output_change"]
+                                    if prove_receiver_patch_output_change
+                                    else ["materialize_frame1_region_waterfill_runtime_patch"]
+                                ),
+                                "command": exact_ready_bridge_cmd,
                                 "resources": {"kind": "local_cpu"},
                                 "timeout_seconds": 120,
                                 "postconditions": [
@@ -984,6 +1166,11 @@ def build_scorer_region_selector_chain_queue(
                                     "input_artifact_paths": [
                                         chain_report_ref,
                                         receiver_patch_manifest_ref,
+                                        *(
+                                            [receiver_patch_output_change_proof_ref]
+                                            if prove_receiver_patch_output_change
+                                            else []
+                                        ),
                                     ],
                                     "include_postcondition_paths": True,
                                 },
@@ -1000,6 +1187,7 @@ def build_scorer_region_selector_chain_queue(
 
 
 __all__ = [
+    "SCORER_REGION_OPERATOR_CONTRACT_SCHEMA",
     "SCORER_REGION_SELECTOR_CHAIN_CONTEXT_SCHEMA",
     "SCORER_REGION_SELECTOR_CHAIN_QUEUE_METADATA_SCHEMA",
     "SCORER_REGION_SELECTOR_CHAIN_REPORT_SCHEMA",

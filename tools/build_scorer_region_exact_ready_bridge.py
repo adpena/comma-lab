@@ -27,6 +27,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--chain-report", required=True, type=Path)
     parser.add_argument("--receiver-patch-manifest", required=True, type=Path)
+    parser.add_argument("--shell-inflate-output-change-proof", type=Path)
     parser.add_argument("--source-queue-out", required=True, type=Path)
     parser.add_argument("--blocked-exact-ready-queue-out", required=True, type=Path)
     parser.add_argument("--bridge-report-out", required=True, type=Path)
@@ -55,6 +56,9 @@ def main(argv: list[str] | None = None) -> int:
         bridge = build_scorer_region_exact_ready_bridge(
             chain_report_path=args.chain_report,
             receiver_patch_manifest_path=args.receiver_patch_manifest,
+            shell_inflate_output_change_proof_path=(
+                args.shell_inflate_output_change_proof
+            ),
             repo_root=REPO_ROOT,
         )
         bytes_written = 0
@@ -92,6 +96,9 @@ def main(argv: list[str] | None = None) -> int:
                 ],
                 "runtime_content_tree_custody_proven_count": report[
                     "runtime_content_tree_custody_proven_count"
+                ],
+                "output_change_proof_proven_count": report[
+                    "output_change_proof_proven_count"
                 ],
                 "bytes_written": bytes_written,
                 "score_claim": False,

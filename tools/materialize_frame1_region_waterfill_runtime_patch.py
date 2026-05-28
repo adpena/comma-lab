@@ -36,6 +36,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--segnet-region-waterfill", required=True, type=Path)
     parser.add_argument("--output-submission-dir", required=True, type=Path)
     parser.add_argument("--output-manifest", required=True, type=Path)
+    parser.add_argument("--candidate-archive", type=Path)
+    parser.add_argument("--candidate-archive-source")
     parser.add_argument("--max-pairs", type=int, default=12)
     parser.add_argument("--regions-per-pair", type=int, default=1)
     parser.add_argument("--rgb-delta", type=_rgb_delta, default=(-1, -1, -1))
@@ -55,6 +57,8 @@ def main(argv: list[str] | None = None) -> int:
             source_submission_dir=args.source_submission_dir,
             segnet_region_waterfill=args.segnet_region_waterfill,
             output_submission_dir=args.output_submission_dir,
+            candidate_archive=args.candidate_archive,
+            candidate_archive_source=args.candidate_archive_source,
             max_pairs=args.max_pairs,
             regions_per_pair=args.regions_per_pair,
             rgb_delta=args.rgb_delta,

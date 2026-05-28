@@ -77,6 +77,9 @@ EXACT_READINESS_BRIDGE_TOOL = (
 )
 DISPATCH_PLAN_TOOL = REPO_ROOT / "tools" / "build_materializer_exact_eval_dispatch_plan.py"
 SHELL_PARITY_TOOL = REPO_ROOT / "tools" / "prove_shell_inflate_parity.py"
+SHELL_OUTPUT_CHANGE_TOOL = (
+    REPO_ROOT / "tools" / "prove_shell_inflate_output_change.py"
+)
 
 
 def _write_json(path: Path, payload: object) -> Path:
@@ -1674,6 +1677,71 @@ def test_shell_inflate_parity_proof_supports_full_frame_multi_entry_scope(
     assert proof["rank_or_kill_eligible"] is False
     assert proof["ready_for_exact_eval_dispatch"] is False
     assert proof["promotable"] is False
+
+
+def test_shell_inflate_output_change_proof_is_shape_preserving_and_fail_closed(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    source = repo / "source.zip"
+    candidate = repo / "candidate.zip"
+    runtime = _write_simple_shell_runtime(repo / "runtime")
+    file_list = repo / "file_list.txt"
+    out_dir = repo / "output_change"
+    file_list.write_text("0.mkv\n", encoding="utf-8")
+    with zipfile.ZipFile(source, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("data.bin", b"payload")
+    with zipfile.ZipFile(candidate, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("data.bin", b"payloae")
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(SHELL_OUTPUT_CHANGE_TOOL),
+            "--left-archive",
+            str(source),
+            "--left-submission-dir",
+            str(runtime),
+            "--right-archive",
+            str(candidate),
+            "--right-submission-dir",
+            str(runtime),
+            "--file-list",
+            str(file_list),
+            "--full-frame-file-list-claim",
+            "--contest-full-sample-claim",
+            "--parity-scope-kind",
+            "contest_full_sample",
+            "--expected-full-frame-file-list-sha256",
+            hashlib.sha256(file_list.read_bytes()).hexdigest(),
+            "--expected-full-frame-entry-count",
+            "1",
+            "--full-frame-file-list-source",
+            "fixture_full_file_list",
+            "--output-dir",
+            str(out_dir),
+            "--require-output-change",
+        ],
+        check=True,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+    )
+
+    proof = json.loads((out_dir / "shell_inflate_output_change.json").read_text())
+    assert proof["schema"] == "shell_inflate_output_change_proof_v1"
+    assert proof["parity_probe_schema"] == "shell_inflate_parity_proof_v2"
+    assert proof["output_change_observed"] is True
+    assert proof["raw_shape_preserving_output_change_observed"] is True
+    assert proof["full_frame_output_change_claim"] is True
+    assert proof["contest_full_sample_change_claim"] is True
+    assert proof["differing_output_count"] == 1
+    assert proof["differing_byte_count"] == 1
+    assert proof["output_diffs"][0]["first_differing_offsets"]
+    assert proof["score_claim"] is False
+    assert proof["ready_for_exact_eval_dispatch"] is False
+    assert not (out_dir / "scratch").exists()
 
 
 def test_shell_inflate_parity_invokes_nonexecutable_chdir_runtime_with_absolute_paths(

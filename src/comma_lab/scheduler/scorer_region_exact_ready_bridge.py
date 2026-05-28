@@ -12,6 +12,10 @@ from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
     require_no_truthy_authority_fields,
 )
+from tac.optimization.scorer_region_operator_contract import (
+    SCORER_REGION_OPERATOR_CONTRACT_SCHEMA,
+    build_scorer_region_operator_contract,
+)
 from tac.optimization.scorer_region_waterfill import (
     FRAME1_REGION_WATERFILL_RUNTIME_PATCH_SCHEMA,
 )
@@ -24,6 +28,7 @@ SCORER_REGION_EXACT_READY_BRIDGE_REPORT_SCHEMA = (
 )
 SCORER_REGION_EXACT_READY_SOURCE_QUEUE_SCHEMA = "optimizer_candidate_queue_v1"
 SCORER_REGION_SELECTOR_CHAIN_REPORT_SCHEMA = "scorer_region_selector_chain_report.v1"
+SHELL_INFLATE_OUTPUT_CHANGE_PROOF_SCHEMA = "shell_inflate_output_change_proof_v1"
 
 
 class ScorerRegionExactReadyBridgeError(ValueError):
@@ -58,6 +63,20 @@ def _string_list(value: Any) -> list[str]:
         return [str(item).strip() for item in value if str(item).strip()]
     text = str(value).strip()
     return [text] if text else []
+
+
+def _filtered_patch_blockers(
+    patch_blockers: Sequence[str],
+    *,
+    runtime_custody_complete: bool,
+    output_change_proven: bool,
+) -> list[str]:
+    cleared: set[str] = set()
+    if runtime_custody_complete:
+        cleared.add("runtime_consumption_proof_required_before_exact_eval")
+    if output_change_proven:
+        cleared.add("inflated_output_change_proof_required_before_budget_spend_claim")
+    return [blocker for blocker in patch_blockers if blocker not in cleared]
 
 
 def _slug(value: Any) -> str:
@@ -212,10 +231,82 @@ def _submission_runtime_custody(
     }, blockers
 
 
+def _output_change_proof_custody(
+    *,
+    path: str | Path | None,
+    repo_root: str | Path,
+) -> tuple[dict[str, Any], list[str]]:
+    blockers: list[str] = []
+    text = str(path or "").strip()
+    if not text:
+        blockers.append("shell_inflate_output_change_proof_missing")
+        return {
+            "schema": "scorer_region_exact_ready_output_change_proof_custody.v1",
+            "path": None,
+            "present": False,
+            "proof": None,
+            "full_frame_output_change_proven": False,
+            "contest_full_sample_change_proven": False,
+            "custody_complete": False,
+            "blockers": blockers,
+            **FALSE_AUTHORITY,
+        }, blockers
+    resolved = _resolve(text, repo_root)
+    if not resolved.is_file():
+        blockers.append("shell_inflate_output_change_proof_file_missing")
+        return {
+            "schema": "scorer_region_exact_ready_output_change_proof_custody.v1",
+            "path": _repo_rel(resolved, repo_root),
+            "present": False,
+            "proof": None,
+            "full_frame_output_change_proven": False,
+            "contest_full_sample_change_proven": False,
+            "custody_complete": False,
+            "blockers": blockers,
+            **FALSE_AUTHORITY,
+        }, blockers
+    proof = _read_json_object(resolved, repo_root=repo_root)
+    if proof.get("schema") != SHELL_INFLATE_OUTPUT_CHANGE_PROOF_SCHEMA:
+        blockers.append("shell_inflate_output_change_proof_schema_mismatch")
+    require_no_truthy_authority_fields(
+        proof,
+        context="scorer_region_bridge_output_change_proof",
+    )
+    if proof.get("output_change_observed") is not True:
+        blockers.append("shell_inflate_output_change_not_observed")
+    if proof.get("raw_shape_preserving_output_change_observed") is not True:
+        blockers.append("raw_shape_preserving_output_change_not_observed")
+    if proof.get("full_frame_output_change_claim") is not True:
+        blockers.append("full_frame_output_change_claim_missing")
+    if proof.get("contest_full_sample_change_claim") is not True:
+        blockers.append("contest_full_sample_change_claim_missing")
+    proof_blockers = _string_list(proof.get("blockers"))
+    if proof_blockers:
+        blockers.extend(f"output_change_proof:{item}" for item in proof_blockers)
+    return {
+        "schema": "scorer_region_exact_ready_output_change_proof_custody.v1",
+        "path": _repo_rel(resolved, repo_root),
+        "present": True,
+        "sha256": sha256_file(resolved),
+        "bytes": resolved.stat().st_size,
+        "proof": proof,
+        "full_frame_output_change_proven": proof.get("full_frame_output_change_claim")
+        is True,
+        "contest_full_sample_change_proven": proof.get("contest_full_sample_change_claim")
+        is True,
+        "differing_byte_count": proof.get("differing_byte_count"),
+        "differing_output_count": proof.get("differing_output_count"),
+        "custody_complete": not blockers,
+        "blockers": ordered_unique(blockers),
+        **FALSE_AUTHORITY,
+    }, blockers
+
+
 def build_scorer_region_exact_ready_bridge(
     *,
     chain_report_path: str | Path,
     receiver_patch_manifest_path: str | Path,
+    shell_inflate_output_change_proof_path: str | Path | None = None,
     repo_root: str | Path,
 ) -> dict[str, Any]:
     """Build blocked exact-ready queue inputs from a scorer-region receiver patch."""
@@ -265,6 +356,23 @@ def build_scorer_region_exact_ready_bridge(
         else None,
         repo_root=repo_root,
     )
+    output_change_custody, output_change_blockers = _output_change_proof_custody(
+        path=shell_inflate_output_change_proof_path,
+        repo_root=repo_root,
+    )
+    patch_manifest_blockers = _filtered_patch_blockers(
+        _string_list(patch_manifest.get("blockers")),
+        runtime_custody_complete=runtime_custody.get("custody_complete") is True,
+        output_change_proven=output_change_custody.get("custody_complete") is True,
+    )
+    chain_operator_contract = _mapping(chain_report.get("operator_contract"))
+    operator_contract = build_scorer_region_operator_contract(
+        chain_label=str(chain_report.get("chain_label") or "unknown"),
+        receiver_patch_enabled=True,
+    )
+    operator_contract_source = "bridge_rebuilt_contract"
+    if chain_operator_contract.get("schema") == SCORER_REGION_OPERATOR_CONTRACT_SCHEMA:
+        operator_contract_source = "chain_report_contract_revalidated_with_receiver_patch"
     candidate_id = (
         "scorer_region_exact_ready__"
         f"{_slug(chain_report.get('chain_label'))}__"
@@ -276,8 +384,9 @@ def build_scorer_region_exact_ready_bridge(
             *patch_blockers,
             *inflate_blockers,
             *runtime_blockers,
+            *output_change_blockers,
             *_string_list(chain_report.get("readiness_blockers")),
-            *_string_list(patch_manifest.get("blockers")),
+            *patch_manifest_blockers,
             "contest_cpu_or_cuda_auth_axis_required_before_score_or_dispatch",
             "lane_dispatch_claim_required_before_exact_eval",
             "promote_optimizer_candidate_for_exact_eval_required_before_dispatch_ready",
@@ -288,6 +397,8 @@ def build_scorer_region_exact_ready_bridge(
         "candidate_family": "scorer_region_frame1_waterfill_runtime_patch",
         "chain_label": chain_report.get("chain_label"),
         "lane_id": "scorer_region_frame1_waterfill_exact_ready_bridge",
+        "operator_contract": operator_contract,
+        "operator_contract_source": operator_contract_source,
         "target_modes": ["contest_exact_eval"],
         "target_score_axes_required": ["contest_cpu", "contest_cuda"],
         "archive_path": archive_custody.get("path"),
@@ -304,6 +415,15 @@ def build_scorer_region_exact_ready_bridge(
         "submission_dir": runtime_custody.get("submission_dir"),
         "runtime_tree_sha256": runtime_custody.get("runtime_tree_sha256"),
         "runtime_content_tree_sha256": runtime_custody.get("runtime_content_tree_sha256"),
+        "shell_inflate_output_change_proof": output_change_custody.get("path"),
+        "full_frame_output_change_proven": output_change_custody.get(
+            "full_frame_output_change_proven"
+        )
+        is True,
+        "contest_full_sample_change_proven": output_change_custody.get(
+            "contest_full_sample_change_proven"
+        )
+        is True,
         "receiver_contract_target": patch_manifest.get("receiver_contract_target"),
         "runtime_consumption_proof_required": True,
         "runtime_consumption_proof_status": (
@@ -349,6 +469,8 @@ def build_scorer_region_exact_ready_bridge(
     }
     report = {
         "schema": SCORER_REGION_EXACT_READY_BRIDGE_REPORT_SCHEMA,
+        "operator_contract": operator_contract,
+        "operator_contract_source": operator_contract_source,
         "chain_report": _file_custody(
             path=chain_report_path,
             repo_root=repo_root,
@@ -365,6 +487,9 @@ def build_scorer_region_exact_ready_bridge(
         "runtime_content_tree_custody_proven_count": int(
             runtime_custody.get("custody_complete") is True
         ),
+        "output_change_proof_proven_count": int(
+            output_change_custody.get("custody_complete") is True
+        ),
         "source_optimizer_queue_schema": source_queue["schema"],
         "blocked_exact_ready_queue_schema": blocked_exact_ready_queue["schema"],
         "blocked_exact_ready_dispatch_ready_count": 0,
@@ -376,6 +501,7 @@ def build_scorer_region_exact_ready_bridge(
                 "runtime_patch_custody": patch_custody,
                 "patched_inflate_custody": inflate_custody,
                 "submission_runtime_custody": runtime_custody,
+                "output_change_proof_custody": output_change_custody,
                 "bridge_source_queue_row": bridge_row,
                 "blockers": blockers,
                 "budget_spend_allowed": False,
@@ -410,6 +536,8 @@ def build_scorer_region_exact_ready_bridge(
 __all__ = [
     "SCORER_REGION_EXACT_READY_BRIDGE_REPORT_SCHEMA",
     "SCORER_REGION_EXACT_READY_SOURCE_QUEUE_SCHEMA",
+    "SCORER_REGION_OPERATOR_CONTRACT_SCHEMA",
+    "SHELL_INFLATE_OUTPUT_CHANGE_PROOF_SCHEMA",
     "ScorerRegionExactReadyBridgeError",
     "build_scorer_region_exact_ready_bridge",
 ]

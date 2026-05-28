@@ -44,6 +44,26 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--receiver-patch-max-pairs", type=int, default=12)
     parser.add_argument("--receiver-patch-regions-per-pair", type=int, default=1)
     parser.add_argument("--receiver-patch-rgb-delta", default="-1,-1,-1")
+    parser.add_argument("--prove-receiver-patch-output-change", action="store_true")
+    parser.add_argument(
+        "--receiver-patch-output-change-file-list-entry",
+        action="append",
+        default=[],
+    )
+    parser.add_argument("--receiver-patch-output-change-expected-file-list-sha256")
+    parser.add_argument(
+        "--receiver-patch-output-change-expected-entry-count",
+        type=int,
+    )
+    parser.add_argument("--receiver-patch-output-change-file-list-source")
+    parser.add_argument(
+        "--receiver-patch-output-change-parity-scope-kind",
+        default="contest_full_sample",
+    )
+    parser.add_argument(
+        "--receiver-patch-output-change-contest-full-sample-claim",
+        action="store_true",
+    )
     parser.add_argument(
         "--chain-label",
         default="cascade_c_p19_p18_to_p11_selector_context_then_p15_repack",
@@ -84,6 +104,26 @@ def main(argv: list[str] | None = None) -> int:
             receiver_patch_regions_per_pair=args.receiver_patch_regions_per_pair,
             receiver_patch_rgb_delta=tuple(
                 int(part.strip()) for part in args.receiver_patch_rgb_delta.split(",")
+            ),
+            prove_receiver_patch_output_change=args.prove_receiver_patch_output_change,
+            receiver_patch_output_change_file_list_entries=tuple(
+                args.receiver_patch_output_change_file_list_entry
+            )
+            or ("0.raw",),
+            receiver_patch_output_change_expected_file_list_sha256=(
+                args.receiver_patch_output_change_expected_file_list_sha256
+            ),
+            receiver_patch_output_change_expected_entry_count=(
+                args.receiver_patch_output_change_expected_entry_count
+            ),
+            receiver_patch_output_change_file_list_source=(
+                args.receiver_patch_output_change_file_list_source
+            ),
+            receiver_patch_output_change_parity_scope_kind=(
+                args.receiver_patch_output_change_parity_scope_kind
+            ),
+            receiver_patch_output_change_contest_full_sample_claim=(
+                args.receiver_patch_output_change_contest_full_sample_claim
             ),
             chain_label=args.chain_label,
             codec_families=tuple(args.codec_family) if args.codec_family else (

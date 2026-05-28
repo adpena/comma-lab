@@ -577,6 +577,8 @@ def build_frame1_region_waterfill_runtime_patch(
     source_submission_dir: str | Path,
     segnet_region_waterfill: str | Path,
     output_submission_dir: str | Path,
+    candidate_archive: str | Path | None = None,
+    candidate_archive_source: str | None = None,
     max_pairs: int = 12,
     regions_per_pair: int = 1,
     rgb_delta: tuple[int, int, int] = (-1, -1, -1),
@@ -586,6 +588,9 @@ def build_frame1_region_waterfill_runtime_patch(
 
     source_dir = _resolve(source_submission_dir, repo_root)
     output_dir = _resolve(output_submission_dir, repo_root)
+    candidate_archive_path = (
+        _resolve(candidate_archive, repo_root) if candidate_archive is not None else None
+    )
     p18 = _read_json(segnet_region_waterfill, repo_root=repo_root)
     require_no_truthy_authority_fields(p18, context="frame1_region_patch_p18_input")
     if p18.get("schema") != P18_SEGNET_REGION_WATERFILL_SCHEMA:
@@ -594,6 +599,10 @@ def build_frame1_region_waterfill_runtime_patch(
         raise ScorerRegionWaterfillError("source submission must contain inflate.py and archive.zip")
     if len(rgb_delta) != 3:
         raise ScorerRegionWaterfillError("rgb_delta must contain exactly 3 values")
+    if candidate_archive_path is not None and not candidate_archive_path.is_file():
+        raise ScorerRegionWaterfillError(
+            f"candidate archive override missing: {candidate_archive_path}"
+        )
 
     rows = _runtime_patch_rows(
         p18,
@@ -601,6 +610,8 @@ def build_frame1_region_waterfill_runtime_patch(
         regions_per_pair=max(1, int(regions_per_pair)),
     )
     _copy_submission_tree(source_dir, output_dir, overwrite=overwrite)
+    if candidate_archive_path is not None:
+        shutil.copy2(candidate_archive_path, output_dir / "archive.zip")
     patch_path = output_dir / "src" / "region_waterfill_patch.py"
     patch_path.parent.mkdir(parents=True, exist_ok=True)
     patch_path.write_text(
@@ -620,6 +631,17 @@ def build_frame1_region_waterfill_runtime_patch(
         "output_submission_dir": _repo_rel(output_dir, repo_root),
         "source_archive": _artifact_record(source_dir / "archive.zip", repo_root=repo_root),
         "candidate_archive": _artifact_record(output_dir / "archive.zip", repo_root=repo_root),
+        "candidate_archive_override": (
+            _artifact_record(candidate_archive_path, repo_root=repo_root)
+            if candidate_archive_path is not None
+            else None
+        ),
+        "candidate_archive_source": (
+            str(candidate_archive_source).strip()
+            if candidate_archive_source is not None
+            and str(candidate_archive_source).strip()
+            else "source_submission_archive"
+        ),
         "segnet_region_waterfill": _artifact_record(segnet_region_waterfill, repo_root=repo_root),
         "runtime_patch": _artifact_record(patch_path, repo_root=repo_root),
         "patched_inflate": _artifact_record(inflate_path, repo_root=repo_root),

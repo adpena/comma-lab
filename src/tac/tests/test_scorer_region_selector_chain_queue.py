@@ -17,6 +17,9 @@ from comma_lab.scheduler.scorer_region_selector_chain_queue import (
 )
 from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY
 from tac.optimization.family_agnostic_materializers import ARCHIVE_ZIP_REPACK_SCHEMA
+from tac.optimization.scorer_region_operator_contract import (
+    SCORER_REGION_OPERATOR_CONTRACT_SCHEMA,
+)
 from tac.optimization.scorer_region_waterfill import (
     DISTORTION_BUDGET_ATTACK_PLAN_SCHEMA,
     FRAME1_REGION_WATERFILL_RUNTIME_PATCH_SCHEMA,
@@ -91,6 +94,8 @@ def test_chain_context_preserves_upstream_blockers_without_score_authority(
     )
 
     assert context["schema"] == SCORER_REGION_SELECTOR_CHAIN_CONTEXT_SCHEMA
+    assert context["operator_contract"]["schema"] == SCORER_REGION_OPERATOR_CONTRACT_SCHEMA
+    assert context["operator_contract"]["chain_position_order"] == ["P19", "P18", "P11", "P15"]
     assert context["p11_rate_anchor_can_run"] is True
     assert context["p18_p19_upstream_ready"] is False
     assert "p19_posenet_null_pairs_missing" in context["blockers"]
@@ -131,6 +136,11 @@ def test_chain_queue_orders_context_selector_repack_report(
     assert steps[3]["requires"] == ["materialize_p15_archive_zip_repack"]
     assert "--chain-parent-artifact" in steps[1]["command"]
     assert "archive_zip_repack_v1" in steps[2]["command"]
+    assert queue["metadata"]["operator_contract"]["schema"] == SCORER_REGION_OPERATOR_CONTRACT_SCHEMA
+    assert (
+        queue["metadata"]["operator_contract"]["composition_law"]["selected_survivor_rule"]
+        .startswith("use_P15_archive_zip_repack_only_when_rate_positive")
+    )
     assert queue["metadata"]["ready_for_exact_eval_dispatch"] is False
 
 
@@ -228,6 +238,71 @@ def test_chain_queue_can_materialize_receiver_patch(
     )
 
 
+def test_chain_queue_can_prove_receiver_patch_output_change_before_bridge(
+    tmp_path: Path,
+) -> None:
+    submission = _source_submission(tmp_path)
+    p18 = tmp_path / "p18.json"
+    _write_json(
+        p18,
+        {
+            "schema": P18_SEGNET_REGION_WATERFILL_SCHEMA,
+            "rows": [
+                {
+                    "pair_id": 0,
+                    "regions256": [
+                        {
+                            "box": {"x0": 0.0, "y0": 0.0, "x1": 0.25, "y1": 0.25},
+                            "class_id": 0,
+                        }
+                    ],
+                }
+            ],
+            **FALSE_AUTHORITY,
+        },
+    )
+
+    queue = build_scorer_region_selector_chain_queue(
+        repo_root=tmp_path,
+        queue_id="chain_q",
+        source_submission_dir=submission,
+        output_root=tmp_path / "chain_out",
+        full_frame_inflate_parity_proof=tmp_path / "parity.json",
+        segnet_region_masks=p18,
+        materialize_receiver_patch=True,
+        prove_receiver_patch_output_change=True,
+        receiver_patch_output_change_file_list_entries=("0.raw", "1.raw"),
+        receiver_patch_output_change_expected_file_list_sha256="a" * 64,
+        receiver_patch_output_change_expected_entry_count=2,
+        receiver_patch_output_change_file_list_source="tests/full_frame_file_list.txt",
+        receiver_patch_output_change_contest_full_sample_claim=True,
+        scales=(64,),
+        alphas=(1,),
+        codec_families=("fec10_adaptive_blend",),
+    )
+
+    steps = queue["experiments"][0]["steps"]
+    assert [step["id"] for step in steps][-3:] == [
+        "materialize_frame1_region_waterfill_runtime_patch",
+        "prove_receiver_patch_full_frame_output_change",
+        "emit_scorer_region_exact_ready_bridge_inputs",
+    ]
+    proof_step = steps[-2]
+    bridge_step = steps[-1]
+    assert proof_step["requires"] == ["materialize_frame1_region_waterfill_runtime_patch"]
+    assert proof_step["postconditions"][0]["equals"] == "shell_inflate_output_change_proof_v1"
+    assert proof_step["command"].count("--file-list-entry") == 2
+    assert "--require-output-change" in proof_step["command"]
+    assert "--contest-full-sample-claim" in proof_step["command"]
+    assert bridge_step["requires"] == ["prove_receiver_patch_full_frame_output_change"]
+    assert "--shell-inflate-output-change-proof" in bridge_step["command"]
+    assert (
+        queue["metadata"]["receiver_patch_output_change_proof_schema"]
+        == "shell_inflate_output_change_proof_v1"
+    )
+    assert queue["metadata"]["operator_contract"]["receiver_contract"]["enabled"] is True
+
+
 def test_chain_report_selects_repack_only_when_positive_and_receiver_closed(
     tmp_path: Path,
 ) -> None:
@@ -275,11 +350,61 @@ def test_chain_report_selects_repack_only_when_positive_and_receiver_closed(
 
     assert report["schema"] == SCORER_REGION_SELECTOR_CHAIN_REPORT_SCHEMA
     assert report["selected_local_survivor_stage"] == "P15_archive_zip_repack"
+    assert report["operator_contract"]["schema"] == SCORER_REGION_OPERATOR_CONTRACT_SCHEMA
     assert report["cumulative_rate_saved_bytes_vs_source"] == 14
     assert report["selected_local_survivor_archive"]["sha256"] == "c" * 64
     assert report["blockers"] == report["readiness_blockers"]
     assert report["score_claim"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
+
+
+def test_chain_report_ignores_nonpositive_repack_blocker_when_selector_saved_bytes(
+    tmp_path: Path,
+) -> None:
+    context_path = tmp_path / "chain_context.json"
+    selector_path = tmp_path / "selector.json"
+    repack_path = tmp_path / "repack.json"
+    context = {
+        "schema": SCORER_REGION_SELECTOR_CHAIN_CONTEXT_SCHEMA,
+        "chain_label": "cascade-c",
+        "p18_p19_upstream_ready": True,
+        "blockers": [],
+        **FALSE_AUTHORITY,
+    }
+    selector = {
+        "schema": FECA_REPARAMETERIZATION_MANIFEST_SCHEMA,
+        "candidate_archive": {"path": "selector/archive.zip", "bytes": 90, "sha256": "a" * 64},
+        "source_archive": {"path": "source/archive.zip", "bytes": 100, "sha256": "b" * 64},
+        "receiver_contract_satisfied": True,
+        "readiness_blockers": ["candidate_requires_exact_auth_eval_before_promotion"],
+        **FALSE_AUTHORITY,
+    }
+    repack = {
+        "schema": ARCHIVE_ZIP_REPACK_SCHEMA,
+        "candidate_archive": {"path": "repack/archive.zip", "bytes": 90, "sha256": "a" * 64},
+        "source_archive": {"path": "selector/archive.zip", "bytes": 90, "sha256": "a" * 64},
+        "selected_repack": {"saved_bytes": 0, "strategy": "uniform"},
+        "receiver_contract_satisfied": True,
+        "readiness_blockers": ["candidate_not_rate_positive"],
+        **FALSE_AUTHORITY,
+    }
+    _write_json(context_path, context)
+    _write_json(selector_path, selector)
+    _write_json(repack_path, repack)
+
+    report = build_scorer_region_selector_chain_report(
+        repo_root=tmp_path,
+        chain_context=context,
+        chain_context_path=context_path,
+        selector_manifest=selector,
+        selector_manifest_path=selector_path,
+        repack_manifest=repack,
+        repack_manifest_path=repack_path,
+    )
+
+    assert report["selected_local_survivor_stage"] == "P11_selector_context_recode"
+    assert report["cumulative_rate_saved_bytes_vs_source"] == 10
+    assert "candidate_not_rate_positive" not in report["readiness_blockers"]
 
 
 def test_p18_p19_artifacts_promote_rate_credit_without_authority(
@@ -493,3 +618,42 @@ def test_scorer_region_exact_ready_bridge_blocks_without_runtime_content_tree(
     assert source_queue["dispatch_ready_count"] == 0
     assert blocked_queue["dispatch_ready_count"] == 0
     assert "receiver_patch_inflate_sh_missing" in report["blockers"]
+    assert "shell_inflate_output_change_proof_missing" in report["blockers"]
+
+    output_change_proof = tmp_path / "shell_inflate_output_change.json"
+    _write_json(
+        output_change_proof,
+        {
+            "schema": "shell_inflate_output_change_proof_v1",
+            "output_change_observed": True,
+            "raw_shape_preserving_output_change_observed": True,
+            "full_frame_output_change_claim": True,
+            "contest_full_sample_change_claim": True,
+            "differing_byte_count": 8,
+            "differing_output_count": 1,
+            "blockers": [],
+            **FALSE_AUTHORITY,
+        },
+    )
+    bridge_with_change_proof = build_scorer_region_exact_ready_bridge(
+        chain_report_path=chain_report_path,
+        receiver_patch_manifest_path=patch_manifest_path,
+        shell_inflate_output_change_proof_path=output_change_proof,
+        repo_root=tmp_path,
+    )
+    report_with_change_proof = bridge_with_change_proof["bridge_report"]
+    row = report_with_change_proof["rows"][0]["bridge_source_queue_row"]
+    assert report_with_change_proof["output_change_proof_proven_count"] == 1
+    assert (
+        report_with_change_proof["operator_contract"]["receiver_contract"]["proof_required"]
+        == "shape_preserving_full_frame_shell_inflate_output_change"
+    )
+    assert row["operator_contract"]["schema"] == SCORER_REGION_OPERATOR_CONTRACT_SCHEMA
+    assert "shell_inflate_output_change_proof_missing" not in report_with_change_proof[
+        "blockers"
+    ]
+    assert "inflated_output_change_proof_required_before_budget_spend_claim" not in (
+        report_with_change_proof["blockers"]
+    )
+    assert row["full_frame_output_change_proven"] is True
+    assert row["contest_full_sample_change_proven"] is True
