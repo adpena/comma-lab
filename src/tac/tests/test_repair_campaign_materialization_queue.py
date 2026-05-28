@@ -553,7 +553,9 @@ def test_real_archive_intake_runs_all_families_through_floor_loop(
         summary["entropy_stage_chain_runtime_consumption_proof_ready_count"]
         == 1
     )
-    assert summary["posterior_learning_signal_count"] == 5
+    assert summary["posterior_stack_learning_signal_count"] == 5
+    assert summary["entropy_stage_chain_posterior_learning_signal_count"] == 5
+    assert summary["posterior_learning_signal_count"] == 10
     assert summary["ready_for_exact_eval_dispatch"] is False
     source_queue_path = tmp_path / "real_archive_loop" / "repair_family_exact_ready_source_queue.json"
     source_queue = json.loads(source_queue_path.read_text(encoding="utf-8"))
@@ -895,6 +897,7 @@ def test_repair_campaign_autonomous_floor_loop_executes_all_required_queue_famil
     )
     assert summary["entropy_stage_chain_count"] == 0
     assert summary["entropy_stage_chain_materialized_candidate_count"] == 0
+    assert summary["entropy_stage_chain_posterior_learning_signal_count"] == 0
     assert summary["exact_dispatch_preclaim_gate_count"] == 5
     assert summary["failure_rebudgeting_update_count"] == 5
     primary_path = summary["stack_search_plan"]["primary_stack_acquisition_path"]

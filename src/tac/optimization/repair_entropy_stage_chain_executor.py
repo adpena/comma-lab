@@ -302,6 +302,14 @@ def _build_one_chain(
             "family_id": family_id,
             "typed_response_id": typed_response_id,
             "source_execution_report_path": ref.get("path") or None,
+            "entropy_position_label": report.get("entropy_position_label"),
+            "active_entropy_stage": dict(_mapping(report.get("active_entropy_stage"))),
+            "fractal_optimization_scope": dict(
+                _mapping(report.get("fractal_optimization_scope"))
+            ),
+            "allocated_repair_bytes": report.get("allocated_repair_bytes"),
+            "byte_transform_delta": dict(_mapping(report.get("byte_transform_delta"))),
+            "mlx_local_probe_delta": dict(_mapping(report.get("mlx_local_probe_delta"))),
             "stage_input_archive": dict(current_archive),
             "stage_output_archive": None,
             "stage_execution_report_path": None,

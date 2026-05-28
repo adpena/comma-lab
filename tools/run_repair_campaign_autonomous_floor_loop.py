@@ -1201,10 +1201,6 @@ def _build_summary(
     exact_ready_source_queue_path = output_dir / "repair_family_exact_ready_source_queue.json"
     blocked_exact_ready_queue_path = output_dir / "repair_family_blocked_exact_ready_queue.json"
     exact_ready_bridge_report_path = output_dir / "repair_family_exact_ready_bridge_report.json"
-    learning_signal_report = build_repair_family_stack_learning_signal_report(
-        stack_plan=final_stack_plan,
-        bridge_report=exact_ready_bridge_report,
-    )
     learning_signal_report_path = output_dir / "repair_family_stack_learning_signal_report.json"
     primary_path = final_stack_plan.get("primary_stack_acquisition_path")
     primary_terminal_outcome = (
@@ -1239,6 +1235,11 @@ def _build_summary(
     )
     entropy_stage_chain_execution_bundle_path = (
         output_dir / "repair_family_entropy_stage_chain_execution_bundle.json"
+    )
+    learning_signal_report = build_repair_family_stack_learning_signal_report(
+        stack_plan=final_stack_plan,
+        bridge_report=exact_ready_bridge_report,
+        chain_execution_bundle=entropy_stage_chain_execution_bundle,
     )
     summary = {
         "schema": REPAIR_CAMPAIGN_AUTONOMOUS_FLOOR_LOOP_SCHEMA,
@@ -1347,6 +1348,12 @@ def _build_summary(
         "failure_rebudgeting_updates": failure_rebudgeting_updates,
         "posterior_learning_signal_report_path": _repo_rel(learning_signal_report_path),
         "posterior_learning_signal_report_schema": (REPAIR_FAMILY_STACK_LEARNING_SIGNAL_REPORT_SCHEMA),
+        "posterior_stack_learning_signal_count": (
+            learning_signal_report.get("stack_learning_signal_count", 0)
+        ),
+        "entropy_stage_chain_posterior_learning_signal_count": (
+            learning_signal_report.get("entropy_stage_chain_learning_signal_count", 0)
+        ),
         "posterior_learning_signal_count": learning_signal_report["learning_signal_count"],
         "posterior_learning_signal_report": learning_signal_report,
         "posterior_append_report": None,
