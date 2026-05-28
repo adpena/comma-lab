@@ -62,6 +62,8 @@ def test_module_import_resolves_canonical_symbols() -> None:
     assert hasattr(pkg, "parse_archive")
     assert hasattr(pkg, "PactNervVqScoreAwareLoss")
     assert hasattr(pkg, "PactNervVqArchive")
+    assert hasattr(pkg, "pack_archive_from_exported_state_dict")
+    assert hasattr(pkg, "export_pact_nerv_vq_mlx_archive")
 
 
 def test_substrate_forward_produces_unit_interval_rgb() -> None:
@@ -110,6 +112,36 @@ def test_archive_pack_then_parse_roundtrip_recovers_tensors() -> None:
     assert arc.codebook.shape == codebook.shape
     assert arc.indices.shape == indices.shape
     assert torch.equal(arc.indices, indices)
+
+
+def test_archive_candidate_quantizes_exported_state_dict_to_pvq_packet() -> None:
+    from tac.substrates.pact_nerv_vq.archive_candidate import (
+        pack_archive_from_exported_state_dict,
+    )
+
+    cfg = _smoke_cfg()
+    torch.manual_seed(7)
+    model = PactNervVqSubstrate(cfg)
+    exported = {
+        name: tensor.detach().cpu().numpy().copy()
+        for name, tensor in model.state_dict().items()
+    }
+
+    blob = pack_archive_from_exported_state_dict(
+        exported_state_dict=exported,
+        cfg=cfg,
+    )
+    arc = parse_archive(blob)
+
+    latents = torch.from_numpy(exported["latents"]).to(torch.float32)
+    codebook = torch.from_numpy(exported["quantizer.codebook"]).to(torch.float32)
+    expected_indices = torch.cdist(latents, codebook).argmin(dim=1)
+
+    assert blob[:4] == PVQ_MAGIC
+    assert arc.codebook.shape == codebook.shape
+    assert torch.equal(arc.indices, expected_indices)
+    assert "quantizer.codebook" not in arc.decoder_state_dict
+    assert "latents" not in arc.decoder_state_dict
 
 
 def test_archive_grammar_header_size_invariant_is_27_bytes() -> None:

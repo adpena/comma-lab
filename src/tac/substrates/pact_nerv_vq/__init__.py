@@ -17,7 +17,8 @@ commitment loss (§3.1). Discrete latents shrink the int16-quantized latent
 bytes per-pair to log2(codebook_size) bits each, providing a rate-axis lever
 the IA3 / DistilledScorer variants do not have.
 
-Status: **L0 SKETCH** (research_only=true).
+Status: **L1 MLX-LOCAL** (research_only=true). Local MLX artifacts are
+advisory only until paired contest CPU/CUDA evidence lands.
 
 Catalog #124 archive-grammar 8 fields:
     archive_grammar:           monolithic single-file 0.bin fixed offsets (PVQ)
@@ -55,6 +56,11 @@ from .archive import (
     pack_archive,
     parse_archive,
 )
+from .archive_candidate import (
+    export_pact_nerv_vq_mlx_archive,
+    pack_archive_from_exported_state_dict,
+    vq_meta_from_config,
+)
 from .score_aware_loss import PactNervVqScoreAwareLoss, ScoreAwareLossWeights
 
 __all__ = [
@@ -67,6 +73,9 @@ __all__ = [
     "PactNervVqSubstrate",
     "ScoreAwareLossWeights",
     "VectorQuantizerEMA",
+    "export_pact_nerv_vq_mlx_archive",
     "pack_archive",
+    "pack_archive_from_exported_state_dict",
     "parse_archive",
+    "vq_meta_from_config",
 ]
