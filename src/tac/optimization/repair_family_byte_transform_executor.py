@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import importlib.util
 import io
+import math
 import platform
 import struct
 import subprocess
@@ -279,6 +280,30 @@ def _member_record(
         "bytes": len(member_payload),
         "zip_compression_method": info.compress_type,
         "zip_compressed_bytes": info.compress_size,
+    }
+
+
+def _zero_order_entropy_stats(payload: bytes) -> dict[str, Any]:
+    counts = [0] * 256
+    for byte in payload:
+        counts[byte] += 1
+    byte_count = len(payload)
+    entropy_bits_per_symbol = 0.0
+    if byte_count:
+        for count in counts:
+            if count:
+                probability = count / byte_count
+                entropy_bits_per_symbol -= probability * math.log2(probability)
+    lower_bound_bits = entropy_bits_per_symbol * byte_count
+    lower_bound_bytes = math.ceil(lower_bound_bits / 8.0) if byte_count else 0
+    return {
+        "schema": "repair_archive_zero_order_entropy_stats.v1",
+        "byte_count": byte_count,
+        "unique_symbol_count": sum(1 for count in counts if count),
+        "entropy_bits_per_symbol": entropy_bits_per_symbol,
+        "zero_order_lower_bound_bits": lower_bound_bits,
+        "zero_order_lower_bound_bytes": lower_bound_bytes,
+        "zero_order_redundancy_bytes": max(0, byte_count - lower_bound_bytes),
     }
 
 
@@ -1704,6 +1729,99 @@ def _packet_member_recompress_candidate(
     return candidate, blockers
 
 
+def _archive_entropy_coder_probe_candidate(
+    *,
+    coder_family: str,
+    manifest: Mapping[str, Any],
+    output_dir: str | Path,
+    repo_root: str | Path,
+    allow_overwrite: bool,
+) -> tuple[dict[str, Any], list[str]]:
+    blockers = [
+        f"{coder_family}_coder_materializer_missing",
+        f"{coder_family}_coder_runtime_adapter_missing",
+    ]
+    source, actual_sha, source_blockers = _source_archive_path_and_sha(manifest, repo_root=repo_root)
+    blockers.extend(source_blockers)
+    transform_kind = f"{coder_family}_coder_entropy_probe"
+    if source is None or source_blockers:
+        return _empty_candidate_archive(
+            blockers=blockers,
+            archive_native_transform_kind=transform_kind,
+        ), blockers
+    output = _resolve(output_dir, repo_root) / f"{transform_kind}.json"
+    try:
+        member_name = _primary_payload_member(source)
+        member_payload = _zip_member_bytes(source, member_name)
+        entropy_stats = _zero_order_entropy_stats(member_payload)
+        member = _member_record(source, member_name, payload=member_payload)
+        probe = {
+            "schema": "repair_archive_entropy_coder_boundary_probe.v1",
+            "coder_family": coder_family,
+            "archive_native_transform_kind": transform_kind,
+            "semantic_entropy_stage": "at_entropy_coder_fractional_code_boundary",
+            "source_archive_path": _repo_rel(source, repo_root),
+            "source_archive_sha256": actual_sha or sha256_file(source),
+            "source_archive_bytes": source.stat().st_size,
+            "selected_member": member,
+            "zero_order_entropy_stats": entropy_stats,
+            "estimated_zero_order_savings_bytes": entropy_stats["zero_order_redundancy_bytes"],
+            "materializer_status": "probe_only_materializer_missing",
+            "receiver_contract_satisfied": False,
+            "runtime_consumption_proof_ready": False,
+            "blockers": ordered_unique(blockers),
+            "budget_spend_allowed": False,
+            "ready_for_exact_eval_dispatch": False,
+            **FALSE_AUTHORITY,
+        }
+        _write_json_with_expected(output, probe, allow_overwrite=allow_overwrite)
+    except (OSError, zipfile.BadZipFile, KeyError, RepairFamilyByteTransformExecutorError) as exc:
+        blockers.append(f"{coder_family}_coder_entropy_probe_failed:{exc}")
+        return _empty_candidate_archive(
+            blockers=blockers,
+            archive_native_transform_kind=transform_kind,
+        ), blockers
+    candidate = {
+        "schema": "repair_family_archive_native_candidate.v1",
+        "materialized": False,
+        "archive_native_transform_attempted": True,
+        "archive_native_transform_kind": transform_kind,
+        "semantic_entropy_stage": "at_entropy_coder_fractional_code_boundary",
+        "archive_native_materializer_schema": "repair_archive_entropy_coder_boundary_probe.v1",
+        "archive_native_materializer_id": f"repair_family_byte_transform_executor:{transform_kind}",
+        "archive_native_target_kind": f"repair_family_{transform_kind}_v1",
+        "source_archive_path": _repo_rel(source, repo_root),
+        "source_archive_sha256": actual_sha or sha256_file(source),
+        "source_archive_bytes": source.stat().st_size,
+        "path": None,
+        "sha256": None,
+        "bytes": None,
+        "entropy_probe_path": _repo_rel(output, repo_root),
+        "entropy_probe_sha256": sha256_file(output),
+        "entropy_probe_bytes": output.stat().st_size,
+        "runtime_consumption_proof_path": None,
+        "runtime_consumption_proof_ready": False,
+        "receiver_contract_kind": None,
+        "receiver_contract_satisfied": False,
+        "selected_member_name": member_name,
+        "selected_member": member,
+        "zero_order_entropy_stats": entropy_stats,
+        "estimated_zero_order_savings_bytes": entropy_stats["zero_order_redundancy_bytes"],
+        "score_affecting_payload_changed": False,
+        "charged_bits_changed": False,
+        "saved_bytes": None,
+        "blockers": ordered_unique(blockers),
+        "budget_spend_allowed": False,
+        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        candidate,
+        context=f"repair_family_{transform_kind}_candidate",
+    )
+    return candidate, blockers
+
+
 def _candidate_rank(candidate: Mapping[str, Any]) -> tuple[int, int, int, str]:
     proof_ready = candidate.get("runtime_consumption_proof_ready") is True
     score_affecting = (
@@ -1752,6 +1870,20 @@ def _archive_transform_candidates(
             allow_overwrite=allow_overwrite,
         ),
         lambda: _packet_member_recompress_candidate(
+            manifest=manifest,
+            output_dir=output_dir,
+            repo_root=repo_root,
+            allow_overwrite=allow_overwrite,
+        ),
+        lambda: _archive_entropy_coder_probe_candidate(
+            coder_family="range",
+            manifest=manifest,
+            output_dir=output_dir,
+            repo_root=repo_root,
+            allow_overwrite=allow_overwrite,
+        ),
+        lambda: _archive_entropy_coder_probe_candidate(
+            coder_family="ans",
             manifest=manifest,
             output_dir=output_dir,
             repo_root=repo_root,

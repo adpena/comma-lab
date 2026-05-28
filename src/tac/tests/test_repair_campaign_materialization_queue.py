@@ -567,6 +567,11 @@ def test_real_archive_intake_runs_all_families_through_floor_loop(
     assert "ans_coder_materializer_missing" in summary[
         "archive_entropy_substrate_blockers"
     ]
+    assert summary["archive_entropy_substrate_probe_count"] > 0
+    assert summary["archive_entropy_substrate_probed_substrates"] == [
+        "range_coding",
+        "ans_coding",
+    ]
     assert summary["posterior_stack_learning_signal_count"] == 5
     assert summary["entropy_stage_chain_posterior_learning_signal_count"] == 5
     assert summary["exact_failure_rebudgeting_posterior_learning_signal_count"] == 6

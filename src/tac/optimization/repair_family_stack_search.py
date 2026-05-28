@@ -346,6 +346,9 @@ def _stack_row(
         "archive_entropy_substrate_materialized_substrates": _string_list(
             archive_entropy_coverage.get("materialized_substrates")
         ),
+        "archive_entropy_substrate_probed_substrates": _string_list(
+            archive_entropy_coverage.get("probed_substrates")
+        ),
         "archive_entropy_substrate_blockers": archive_entropy_blockers,
         "byte_closed_candidate_emitted": report.get("byte_closed_candidate_emitted") is True,
         "candidate_archive_materialized": (report.get("candidate_archive_materialized") is True),
@@ -1901,6 +1904,15 @@ def plan_repair_family_stack_search(
             len(_string_list(row.get("archive_entropy_substrate_blockers")))
             for row in rows
         ),
+        "archive_entropy_substrate_probed_substrates": ordered_unique(
+            substrate
+            for row in rows
+            for substrate in _string_list(row.get("archive_entropy_substrate_probed_substrates"))
+        ),
+        "archive_entropy_substrate_probe_count": sum(
+            len(_string_list(row.get("archive_entropy_substrate_probed_substrates")))
+            for row in rows
+        ),
         "measured_mlx_posterior_budget_routing_updates": (
             measured_mlx_budget_updates
         ),
@@ -2293,6 +2305,9 @@ def _learning_signal_for_stack_row(row: Mapping[str, Any]) -> dict[str, Any]:
         "interaction_order": len(levels),
         "archive_entropy_substrate_materialized_substrates": _string_list(
             row.get("archive_entropy_substrate_materialized_substrates")
+        ),
+        "archive_entropy_substrate_probed_substrates": _string_list(
+            row.get("archive_entropy_substrate_probed_substrates")
         ),
         "archive_entropy_substrate_blockers": _string_list(
             row.get("archive_entropy_substrate_blockers")

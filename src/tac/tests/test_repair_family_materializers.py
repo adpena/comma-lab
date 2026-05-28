@@ -607,6 +607,27 @@ def test_byte_transform_executor_mutates_fec6_selector_payload_when_detected(
     assert "fec_variants" in coverage["materialized_substrates"]
     assert "selector_streams" in coverage["materialized_substrates"]
     assert "huffman_coding" in coverage["materialized_substrates"]
+    assert coverage["probed_substrates"] == ["range_coding", "ans_coding"]
+    rows_by_substrate = {
+        row["substrate"]: row for row in coverage["rows"]
+    }
+    assert rows_by_substrate["range_coding"]["coverage_status"] == (
+        "probe_only_materializer_missing"
+    )
+    assert rows_by_substrate["ans_coding"]["coverage_status"] == (
+        "probe_only_materializer_missing"
+    )
+    archive_variants = {
+        variant["archive_native_transform_kind"]: variant
+        for variant in report["candidate_archive_transform_variants"]
+    }
+    for transform_kind in ("range_coder_entropy_probe", "ans_coder_entropy_probe"):
+        probe = archive_variants[transform_kind]
+        assert probe["materialized"] is False
+        assert probe["archive_native_transform_attempted"] is True
+        assert probe["runtime_consumption_proof_ready"] is False
+        assert probe["estimated_zero_order_savings_bytes"] >= 0
+        assert (tmp_path / probe["entropy_probe_path"]).is_file()
     assert report["semantic_payload_changed"] is True
     assert report["score_affecting_payload_changed"] is False
     assert candidate["semantic_payload_changed"] is True

@@ -139,6 +139,8 @@ def build_repair_archive_entropy_substrate_coverage(
     selector_materialized = [
         kind for kind in materialized if kind in set(selector_transform_kinds)
     ]
+    range_probe_available = "range_coder_entropy_probe" in kinds
+    ans_probe_available = "ans_coder_entropy_probe" in kinds
     rows = [
         _row(
             substrate="fec_variants",
@@ -214,15 +216,41 @@ def build_repair_archive_entropy_substrate_coverage(
         ),
         _row(
             substrate="range_coding",
-            status="not_materialized",
+            status=(
+                "probe_only_materializer_missing"
+                if range_probe_available
+                else "not_materialized"
+            ),
             compiler_positions=["at_coder_boundary"],
-            blockers=["range_coder_materializer_missing"],
+            implemented_transform_kinds=["range_coder_entropy_probe"]
+            if range_probe_available
+            else [],
+            selected_transform_kind=selected
+            if selected == "range_coder_entropy_probe"
+            else None,
+            blockers=[
+                "range_coder_materializer_missing",
+                "range_coder_runtime_adapter_missing",
+            ],
         ),
         _row(
             substrate="ans_coding",
-            status="not_materialized",
+            status=(
+                "probe_only_materializer_missing"
+                if ans_probe_available
+                else "not_materialized"
+            ),
             compiler_positions=["at_coder_boundary"],
-            blockers=["ans_coder_materializer_missing"],
+            implemented_transform_kinds=["ans_coder_entropy_probe"]
+            if ans_probe_available
+            else [],
+            selected_transform_kind=selected
+            if selected == "ans_coder_entropy_probe"
+            else None,
+            blockers=[
+                "ans_coder_materializer_missing",
+                "ans_coder_runtime_adapter_missing",
+            ],
         ),
         _row(
             substrate="huffman_coding",
@@ -293,12 +321,19 @@ def build_repair_archive_entropy_substrate_coverage(
         for row in ordered_rows
         if str(row.get("coverage_status") or "").startswith("materialized")
     ]
+    probed_substrates = [
+        row["substrate"]
+        for row in ordered_rows
+        if str(row.get("coverage_status") or "").startswith("probe_only")
+    ]
     coverage = {
         "schema": REPAIR_ARCHIVE_ENTROPY_SUBSTRATE_COVERAGE_SCHEMA,
         "substrate_order": list(_SUBSTRATE_ORDER),
         "coverage_row_count": len(ordered_rows),
         "materialized_substrate_count": len(materialized_substrates),
         "materialized_substrates": materialized_substrates,
+        "probed_substrate_count": len(probed_substrates),
+        "probed_substrates": probed_substrates,
         "implemented_archive_transform_kinds": kinds,
         "materialized_archive_transform_kinds": materialized,
         "selected_archive_transform_kind": selected or None,

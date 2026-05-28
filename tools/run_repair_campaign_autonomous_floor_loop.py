@@ -1353,6 +1353,14 @@ def _build_summary(
             "archive_entropy_substrate_blockers",
             [],
         ),
+        "archive_entropy_substrate_probe_count": final_stack_plan.get(
+            "archive_entropy_substrate_probe_count",
+            0,
+        ),
+        "archive_entropy_substrate_probed_substrates": final_stack_plan.get(
+            "archive_entropy_substrate_probed_substrates",
+            [],
+        ),
         "top_fractal_marginal_surface_cells": fractal_cells[:8],
         "stack_acquisition_frontier_count": final_stack_plan.get(
             "stack_acquisition_frontier_count",
