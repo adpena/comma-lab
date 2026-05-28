@@ -21,9 +21,28 @@
 #
 # Per Catalog #326 driver-mode-hardcode-fix: this driver consumes
 # PACT_NERV_IA3_TRAINER_MODE > PACT_NERV_IA3_SMOKE > SMOKE_ONLY env var
-# precedence chain. Recipe MUST set PACT_NERV_IA3_SMOKE=1 OR SMOKE_ONLY=1.
-# Full mode is unreachable from this driver because the trainer's _full_main
-# raises NotImplementedError.
+# precedence chain. Recipe MUST explicitly set PACT_NERV_IA3_SMOKE=0 +
+# SMOKE_ONLY=0 (or PACT_NERV_IA3_TRAINER_MODE=full) for full-mode dispatch.
+# Default-when-unset is SMOKE per CLAUDE.md "Substrate scaffolds MUST be
+# COMPLETE or RESEARCH-ONLY" + Catalog #325 (per-substrate symposium gates
+# paid full dispatch).
+#
+# WAVE-3-PACT-NERV-IA3-L0-BUILD-STAGE-1-CATALOG-240-LANE-SCRIPT-DRIFT-FIX
+# 2026-05-28 (task #1437): the prior stale-override branches at lines 63-69
+# were extincted. The driver previously forced PACT_NERV_IA3_SMOKE="1"
+# even when the recipe correctly set PACT_NERV_IA3_SMOKE=0 because the
+# driver's logic assumed the trainer's _full_main raises NotImplementedError
+# (pre-commit 259292757 PACT-NERV-FULL-MAIN-IMPLEMENTATION-WAVE state). Per
+# Catalog #240 recipe-vs-trainer-state-consistency: the trainer's _full_main
+# is IMPLEMENTED at commit 259292757 (canonical pact_nerv_full_main helper +
+# score-aware loss + gate_auth_eval_call all wired); the
+# NotImplementedError-forcing override is the stale-driver-belief bug class
+# extincted by the canonical sister Catalog #326 pattern in
+# scripts/remote_lane_substrate_time_traveler_l5_z6.sh (Z6 + Z6-v2 sister
+# pattern). The paired-dispatch recipe at
+# .omx/operator_authorize_recipes/substrate_pact_nerv_ia3_modal_t4_paired_dispatch.yaml
+# now sets PACT_NERV_IA3_SMOKE=0 + SMOKE_ONLY=0 + PACT_NERV_IA3_TRAINER_MODE
+# left-unset; the driver MUST honor recipe intent.
 set -euo pipefail
 
 # === Catalog #244 / D1 incident anchor: canonical Modal/CUDA env hygiene ===
@@ -54,18 +73,36 @@ PACT_NERV_IA3_EPOCHS="${PACT_NERV_IA3_EPOCHS:-2}"
 PACT_NERV_IA3_UPSTREAM_DIR="${PACT_NERV_IA3_UPSTREAM_DIR:-$WORKSPACE/upstream}"
 PACT_NERV_IA3_DEVICE="${PACT_NERV_IA3_DEVICE:-cpu}"
 
-# Catalog #326: multi-key mode env-var consumption with explicit precedence
-# (PACT_NERV_IA3_TRAINER_MODE > PACT_NERV_IA3_SMOKE > SMOKE_ONLY > default).
-# Recipe MUST set PACT_NERV_IA3_SMOKE=1 OR SMOKE_ONLY=1 OR
-# PACT_NERV_IA3_TRAINER_MODE=smoke.
+# Catalog #326 canonical mode-routing per Z6 + Z6-v2 sister pattern.
+# Precedence: PACT_NERV_IA3_TRAINER_MODE (canonical) > PACT_NERV_IA3_SMOKE
+# (substrate-specific back-compat) > SMOKE_ONLY (cross-substrate back-compat)
+# > default=smoke (per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or
+# RESEARCH-ONLY"). Full-mode is REACHABLE post-CATALOG-240-LANE-SCRIPT-DRIFT-FIX
+# 2026-05-28 because trainer's _full_main is IMPLEMENTED at commit 259292757
+# (PACT-NERV-FULL-MAIN-IMPLEMENTATION-WAVE); the NotImplementedError-forcing
+# stale-driver-belief override is extincted per Catalog #240 + #326.
 PACT_NERV_IA3_TRAINER_MODE="${PACT_NERV_IA3_TRAINER_MODE:-}"
-PACT_NERV_IA3_SMOKE="${PACT_NERV_IA3_SMOKE:-${SMOKE_ONLY:-1}}"
-if [ "$PACT_NERV_IA3_TRAINER_MODE" = "full" ]; then
-    echo "[lane-pact-nerv-ia3-l0] WARNING: PACT_NERV_IA3_TRAINER_MODE=full; trainer _full_main raises NotImplementedError per Catalog #240. Forcing smoke." >&2
-    PACT_NERV_IA3_SMOKE="1"
-elif [ "$PACT_NERV_IA3_SMOKE" != "1" ]; then
-    echo "[lane-pact-nerv-ia3-l0] WARNING: PACT_NERV_IA3_SMOKE=$PACT_NERV_IA3_SMOKE; trainer _full_main raises NotImplementedError per Catalog #240. Forcing smoke." >&2
-    PACT_NERV_IA3_SMOKE="1"
+PACT_NERV_IA3_SMOKE="${PACT_NERV_IA3_SMOKE:-}"
+if [ -n "$PACT_NERV_IA3_TRAINER_MODE" ]; then
+    case "$PACT_NERV_IA3_TRAINER_MODE" in
+        smoke|SMOKE|Smoke)
+            PACT_NERV_IA3_SMOKE="1"
+            ;;
+        full|FULL|Full)
+            PACT_NERV_IA3_SMOKE="0"
+            ;;
+        *)
+            echo "[lane-pact-nerv-ia3] FATAL: invalid PACT_NERV_IA3_TRAINER_MODE=$PACT_NERV_IA3_TRAINER_MODE; expected smoke|full" >&2
+            exit 29
+            ;;
+    esac
+elif [ -z "$PACT_NERV_IA3_SMOKE" ]; then
+    if [ -n "${SMOKE_ONLY:-}" ]; then
+        PACT_NERV_IA3_SMOKE="$SMOKE_ONLY"
+    else
+        echo "[lane-pact-nerv-ia3] WARN: neither PACT_NERV_IA3_TRAINER_MODE nor PACT_NERV_IA3_SMOKE nor SMOKE_ONLY set; defaulting to smoke. Per Catalog #326 recipes SHOULD declare PACT_NERV_IA3_TRAINER_MODE=full or PACT_NERV_IA3_SMOKE=0 for full-mode dispatch." >&2
+        PACT_NERV_IA3_SMOKE="1"
+    fi
 fi
 
 DISPATCH_INSTANCE_JOB_ID="${PACT_NERV_IA3_DISPATCH_INSTANCE_JOB_ID:-${DISPATCH_INSTANCE_JOB_ID:-}}"
@@ -169,17 +206,28 @@ HEARTBEAT_PID=""
 HEARTBEAT_PID=$!
 trap 'if [ -n "$HEARTBEAT_PID" ]; then kill "$HEARTBEAT_PID" 2>/dev/null || true; fi' EXIT
 
-# Stage 4: invoke trainer in --smoke mode (full-mode unreachable).
-log "stage_4_trainer_invoke_begin video=$PACT_NERV_IA3_VIDEO_PATH epochs=$PACT_NERV_IA3_EPOCHS device=$PACT_NERV_IA3_DEVICE smoke=1"
+# Stage 4: invoke trainer; --smoke flag conditional on resolved mode per
+# Catalog #326 canonical pattern (Z6 sister at scripts/remote_lane_substrate_time_traveler_l5_z6.sh).
+# Per Catalog #240 + CATALOG-240-LANE-SCRIPT-DRIFT-FIX 2026-05-28: trainer's
+# _full_main is IMPLEMENTED at commit 259292757; full-mode is reachable when
+# the recipe sets PACT_NERV_IA3_SMOKE=0 or PACT_NERV_IA3_TRAINER_MODE=full.
+TRAIN_FLAG_ARGS=(
+    --video-path "$PACT_NERV_IA3_VIDEO_PATH"
+    --output-dir "$PACT_NERV_IA3_OUTPUT_DIR"
+    --epochs "$PACT_NERV_IA3_EPOCHS"
+    --upstream-dir "$PACT_NERV_IA3_UPSTREAM_DIR"
+    --device "$PACT_NERV_IA3_DEVICE"
+)
+if [ "$PACT_NERV_IA3_SMOKE" = "1" ]; then
+    TRAIN_FLAG_ARGS+=(--smoke)
+    log "stage_4_trainer_invoke_begin video=$PACT_NERV_IA3_VIDEO_PATH epochs=$PACT_NERV_IA3_EPOCHS device=$PACT_NERV_IA3_DEVICE mode=smoke"
+else
+    log "stage_4_trainer_invoke_begin video=$PACT_NERV_IA3_VIDEO_PATH epochs=$PACT_NERV_IA3_EPOCHS device=$PACT_NERV_IA3_DEVICE mode=full"
+fi
 TRAIN_START_UTC=$(date -u +%FT%TZ)
 set +e
 "$PYBIN" experiments/train_substrate_pact_nerv_ia3.py \
-    --video-path "$PACT_NERV_IA3_VIDEO_PATH" \
-    --output-dir "$PACT_NERV_IA3_OUTPUT_DIR" \
-    --epochs "$PACT_NERV_IA3_EPOCHS" \
-    --upstream-dir "$PACT_NERV_IA3_UPSTREAM_DIR" \
-    --device "$PACT_NERV_IA3_DEVICE" \
-    --smoke \
+    "${TRAIN_FLAG_ARGS[@]+"${TRAIN_FLAG_ARGS[@]}"}" \
     2>&1 | tee -a "$LOG_DIR/run.log"
 TRAIN_RC=${PIPESTATUS[0]}
 set -e

@@ -12,6 +12,19 @@ operational mechanism declaration) + Catalog #240 (recipe-vs-trainer-state
 consistency) + Catalog #315 (OPTIMAL FORM before paid dispatch) + Catalog
 #325 (per-substrate symposium).
 
+SUPERSEDED 2026-05-28 per PACT-NERV-FULL-MAIN-IMPLEMENTATION-WAVE commit
+259292757 + CATALOG-240-LANE-SCRIPT-DRIFT-FIX task #1437: ``_full_main`` is
+now IMPLEMENTED (canonical ``tac.substrates._shared.pact_nerv_full_main``
+helper + score-aware loss + ``gate_auth_eval_call`` all wired). The
+``NotImplementedError`` is extinguished at the function-body level. PAID
+DISPATCH is STILL gated by ``dispatch_enabled: false`` + ``research_only:
+true`` on the L0 SCAFFOLD recipe per Catalog #325 until the per-substrate
+symposium clears it; the PAIRED-DISPATCH recipe at
+``.omx/operator_authorize_recipes/substrate_pact_nerv_ia3_modal_t4_paired_dispatch.yaml``
+carries the canonical operator-frontier-override per Catalog #300
+Consequence 1 for the L0->L1 promotion path. Original SCAFFOLD claim
+preserved above per Catalog #110/#113 APPEND-ONLY HISTORICAL_PROVENANCE.
+
 This trainer's ``SubstrateContract`` declares ``research_only=True``;
 ``dispatch_enabled: false`` on the matching recipe ensures no paid GPU
 dispatch may fire from this scaffold until Stage 1 dispatch operator-gated.
@@ -38,8 +51,9 @@ Council-binding contract (CLAUDE.md non-negotiables) honored end-to-end:
 - ``@register_substrate(SubstrateContract(...))`` per Catalog #241 META layer.
 - Canonical scorer/device helpers per Catalog #164 / #205 / #226.
 - Smoke uses synthetic targets per Catalog #114 (``--smoke`` opt-in only).
-- Non-smoke path raises ``NotImplementedError`` (L0 SCAFFOLD posture);
-  reactivation criteria pinned per HNeRV parity L2.
+- Non-smoke path IS IMPLEMENTED post-2026-05-28 commit 259292757 (was
+  ``NotImplementedError`` at L0 SCAFFOLD landing 2026-05-20); paid dispatch
+  remains gated by recipe-level ``dispatch_enabled:false`` per Catalog #325.
 - eval_roundtrip MANDATORY DEFAULT per Catalog #6: smoke patches
   differentiable yuv6 BEFORE any future scorer construction.
 
@@ -49,9 +63,16 @@ Usage (smoke; CPU, tiny config, ~2 steps, synthetic batches)::
         --output-dir experiments/results/pact_nerv_ia3_smoke_<utc> \\
         --epochs 2 --device cpu --smoke
 
-Usage (full; refused at L0 SCAFFOLD until Stage 1 operator dispatch lands)::
+Usage (full; IMPLEMENTED post-2026-05-28 commit 259292757; gated by recipe
+``dispatch_enabled:false`` per Catalog #325 until per-substrate symposium
+clears or the canonical operator-frontier-override per Catalog #300 is
+invoked on the paired-dispatch recipe)::
 
-    # raises NotImplementedError per Catalog #240 + #315 + #325
+    .venv/bin/python experiments/train_substrate_pact_nerv_ia3.py \\
+        --video-path upstream/videos/0.mkv \\
+        --output-dir experiments/results/pact_nerv_ia3_full_<utc> \\
+        --epochs 100 --device cuda \\
+        --upstream-dir upstream
 
 Cross-ref:
     src/tac/substrates/pact_nerv_ia3/ (substrate package)
