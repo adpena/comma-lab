@@ -3,10 +3,15 @@
 
 from __future__ import annotations
 
+import json
 import time
 from pathlib import Path
 from typing import Any
 
+from tac.local_acceleration.mlx_replay_bundle import MLX_LOCAL_REPLAY_BUNDLE_SCHEMA
+from tac.local_acceleration.pact_nerv_ia3_export_parity import (
+    PACT_NERV_IA3_MLX_PYTORCH_FORWARD_PARITY_SCHEMA,
+)
 from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY
 from tac.optimization.proxy_candidate_contract import require_no_truthy_authority_fields
 
@@ -160,6 +165,9 @@ def build_pact_nerv_diffusion_blocks_mlx_queue(
     pr95_report = root / "pr95_mlx_blockwise_control_plan.json"
     pr95_checkpoints = root / "pr95_mlx_blockwise_checkpoints"
     pr95_telemetry = root / "pr95_mlx_blockwise_telemetry.jsonl"
+    ia3_parity_report = root / "pact_nerv_ia3_mlx_pytorch_forward_parity.json"
+    ia3_parity_pt = root / "pact_nerv_ia3_mlx_pytorch_forward_parity.pt"
+    replay_bundle = root / "mlx_local_replay_bundle.json"
 
     schedule_ref = _repo_rel(schedule_path, repo_root)
     ia3_smoke_dir_ref = _repo_rel(ia3_smoke_dir, repo_root)
@@ -169,8 +177,119 @@ def build_pact_nerv_diffusion_blocks_mlx_queue(
     pr95_report_ref = _repo_rel(pr95_report, repo_root)
     pr95_checkpoints_ref = _repo_rel(pr95_checkpoints, repo_root)
     pr95_telemetry_ref = _repo_rel(pr95_telemetry, repo_root)
+    ia3_parity_report_ref = _repo_rel(ia3_parity_report, repo_root)
+    ia3_parity_pt_ref = _repo_rel(ia3_parity_pt, repo_root)
+    replay_bundle_ref = _repo_rel(replay_bundle, repo_root)
     source_video_ref = _repo_rel(_resolve(source_video_path, repo_root), repo_root)
     output_root_ref = _repo_rel(root, repo_root)
+
+    schedule_command = [
+        ".venv/bin/python",
+        "tools/build_pact_nerv_diffusion_blocks_schedule.py",
+        "--output",
+        schedule_ref,
+        "--block-count",
+        str(block_count),
+        "--difficulty-mass-source",
+        difficulty_mass_source,
+        "--overlap-fraction",
+        str(overlap_fraction),
+        "--overwrite",
+    ]
+    diffusion_smoke_command = [
+        ".venv/bin/python",
+        "experiments/train_substrate_pact_nerv_diffusion_distilled.py",
+        "--smoke",
+        "--device",
+        "cpu",
+        "--epochs",
+        "1",
+        "--batch-size",
+        str(max(2, min(max_pairs, 8))),
+        "--output-dir",
+        diffusion_smoke_dir_ref,
+    ]
+    ia3_smoke_command = [
+        ".venv/bin/python",
+        "experiments/train_substrate_pact_nerv_ia3_mlx_local.py",
+        "--smoke",
+        "--output-dir",
+        ia3_smoke_dir_ref,
+        "--num-pairs",
+        str(max_pairs),
+    ]
+    pr95_control_command = [
+        ".venv/bin/python",
+        "tools/run_pr95_mlx_long_training.py",
+        "--output-report",
+        pr95_report_ref,
+        "--source-video-path",
+        source_video_ref,
+        "--checkpoint-root",
+        pr95_checkpoints_ref,
+        "--telemetry-path",
+        pr95_telemetry_ref,
+        "--operator-run-label",
+        "diffusionblocks_blockwise_control",
+        "--smoke-mode",
+        "--smoke-epochs-per-stage",
+        "1",
+        "--max-frames",
+        str(max_pairs * 2),
+        "--hash-source-video",
+        "--execute-smoke",
+    ]
+    ia3_parity_command = [
+        ".venv/bin/python",
+        "tools/prove_pact_nerv_ia3_mlx_pytorch_forward_parity.py",
+        "--report-out",
+        ia3_parity_report_ref,
+        "--pt-out",
+        ia3_parity_pt_ref,
+        "--pair-indices",
+        ",".join(str(index) for index in range(min(max_pairs, 3))),
+        "--overwrite",
+    ]
+    replay_commands = [
+        schedule_command,
+        diffusion_smoke_command,
+        ia3_smoke_command,
+        pr95_control_command,
+        ia3_parity_command,
+    ]
+    replay_bundle_command = [
+        ".venv/bin/python",
+        "tools/build_mlx_local_replay_bundle.py",
+        "--bundle-out",
+        replay_bundle_ref,
+        "--bundle-id",
+        f"{queue_id}:pact_nerv_diffusionblocks_mlx",
+        "--command-json",
+        json.dumps(replay_commands, sort_keys=True, separators=(",", ":")),
+        "--input-artifact",
+        source_video_ref,
+        "--input-artifact",
+        schedule_ref,
+        "--artifact",
+        diffusion_smoke_provenance_ref,
+        "--artifact",
+        ia3_smoke_manifest_ref,
+        "--artifact",
+        pr95_report_ref,
+        "--artifact",
+        ia3_parity_report_ref,
+        "--metadata-json",
+        json.dumps(
+            {
+                "paper_basis": PAPER_BASIS,
+                "queue_id": queue_id,
+                "substrate_family": "pact_nerv_diffusion_blocks",
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        ),
+        "--overwrite",
+    ]
 
     queue = {
         "schema": QUEUE_SCHEMA,
@@ -185,6 +304,8 @@ def build_pact_nerv_diffusion_blocks_mlx_queue(
             "schedule_path": schedule_ref,
             "pact_nerv_ia3_mlx_smoke_manifest_path": ia3_smoke_manifest_ref,
             "pact_nerv_diffusion_distilled_smoke_provenance_path": diffusion_smoke_provenance_ref,
+            "pact_nerv_ia3_mlx_pytorch_forward_parity_path": ia3_parity_report_ref,
+            "deterministic_replay_bundle_path": replay_bundle_ref,
             "block_count": block_count,
             "max_pairs": max_pairs,
             "difficulty_mass_source": difficulty_mass_source,
@@ -223,19 +344,7 @@ def build_pact_nerv_diffusion_blocks_mlx_queue(
                     {
                         "id": "emit_diffusion_blocks_schedule",
                         "kind": "command",
-                        "command": [
-                            ".venv/bin/python",
-                            "tools/build_pact_nerv_diffusion_blocks_schedule.py",
-                            "--output",
-                            schedule_ref,
-                            "--block-count",
-                            str(block_count),
-                            "--difficulty-mass-source",
-                            difficulty_mass_source,
-                            "--overlap-fraction",
-                            str(overlap_fraction),
-                            "--overwrite",
-                        ],
+                        "command": schedule_command,
                         "resources": {"kind": "local_cpu"},
                         "timeout_seconds": 60,
                         "postconditions": [
@@ -256,19 +365,7 @@ def build_pact_nerv_diffusion_blocks_mlx_queue(
                         "id": "run_pact_nerv_diffusion_distilled_smoke",
                         "kind": "command",
                         "requires": ["emit_diffusion_blocks_schedule"],
-                        "command": [
-                            ".venv/bin/python",
-                            "experiments/train_substrate_pact_nerv_diffusion_distilled.py",
-                            "--smoke",
-                            "--device",
-                            "cpu",
-                            "--epochs",
-                            "1",
-                            "--batch-size",
-                            str(max(2, min(max_pairs, 8))),
-                            "--output-dir",
-                            diffusion_smoke_dir_ref,
-                        ],
+                        "command": diffusion_smoke_command,
                         "resources": {"kind": "local_cpu"},
                         "timeout_seconds": 180,
                         "postconditions": [
@@ -292,15 +389,7 @@ def build_pact_nerv_diffusion_blocks_mlx_queue(
                         "id": "run_pact_nerv_ia3_mlx_renderer_smoke",
                         "kind": "command",
                         "requires": ["emit_diffusion_blocks_schedule"],
-                        "command": [
-                            ".venv/bin/python",
-                            "experiments/train_substrate_pact_nerv_ia3_mlx_local.py",
-                            "--smoke",
-                            "--output-dir",
-                            ia3_smoke_dir_ref,
-                            "--num-pairs",
-                            str(max_pairs),
-                        ],
+                        "command": ia3_smoke_command,
                         "resources": {"kind": "local_mlx"},
                         "timeout_seconds": 180,
                         "postconditions": [
@@ -324,27 +413,7 @@ def build_pact_nerv_diffusion_blocks_mlx_queue(
                         "id": "plan_pr95_mlx_blockwise_control",
                         "kind": "command",
                         "requires": ["emit_diffusion_blocks_schedule"],
-                        "command": [
-                            ".venv/bin/python",
-                            "tools/run_pr95_mlx_long_training.py",
-                            "--output-report",
-                            pr95_report_ref,
-                            "--source-video-path",
-                            source_video_ref,
-                            "--checkpoint-root",
-                            pr95_checkpoints_ref,
-                            "--telemetry-path",
-                            pr95_telemetry_ref,
-                            "--operator-run-label",
-                            "diffusionblocks_blockwise_control",
-                            "--smoke-mode",
-                            "--smoke-epochs-per-stage",
-                            "1",
-                            "--max-frames",
-                            str(max_pairs * 2),
-                            "--hash-source-video",
-                            "--execute-smoke",
-                        ],
+                        "command": pr95_control_command,
                         "resources": {"kind": "local_mlx"},
                         "timeout_seconds": 900,
                         "postconditions": [
@@ -359,6 +428,88 @@ def build_pact_nerv_diffusion_blocks_mlx_queue(
                         "telemetry": {
                             "artifact_paths": [pr95_report_ref],
                             "input_artifact_paths": [schedule_ref, source_video_ref],
+                            "include_postcondition_paths": True,
+                        },
+                    },
+                    {
+                        "id": "prove_pact_nerv_ia3_mlx_pytorch_forward_parity",
+                        "kind": "command",
+                        "requires": ["run_pact_nerv_ia3_mlx_renderer_smoke"],
+                        "command": ia3_parity_command,
+                        "resources": {"kind": "local_mlx"},
+                        "timeout_seconds": 180,
+                        "postconditions": [
+                            {
+                                "type": "json_completion_contract",
+                                "path": ia3_parity_report_ref,
+                                "required_equals": {
+                                    "schema": PACT_NERV_IA3_MLX_PYTORCH_FORWARD_PARITY_SCHEMA
+                                },
+                                "required_true": ["parity_passed"],
+                                "required_false": [
+                                    "score_claim",
+                                    "promotion_eligible",
+                                    "rank_or_kill_eligible",
+                                    "ready_for_exact_eval_dispatch",
+                                ],
+                                "required_nonempty": [
+                                    "state_dict.sha256",
+                                    "export_manifest.file_sha256",
+                                ],
+                            },
+                            {"type": "json_false_authority", "path": ia3_parity_report_ref},
+                            {"type": "path_exists", "path": ia3_parity_pt_ref},
+                        ],
+                        "telemetry": {
+                            "artifact_paths": [ia3_parity_report_ref, ia3_parity_pt_ref],
+                            "input_artifact_paths": [ia3_smoke_manifest_ref],
+                            "include_postcondition_paths": True,
+                        },
+                    },
+                    {
+                        "id": "emit_mlx_local_deterministic_replay_bundle",
+                        "kind": "command",
+                        "requires": [
+                            "run_pact_nerv_diffusion_distilled_smoke",
+                            "run_pact_nerv_ia3_mlx_renderer_smoke",
+                            "plan_pr95_mlx_blockwise_control",
+                            "prove_pact_nerv_ia3_mlx_pytorch_forward_parity",
+                        ],
+                        "command": replay_bundle_command,
+                        "resources": {"kind": "local_cpu"},
+                        "timeout_seconds": 120,
+                        "postconditions": [
+                            {
+                                "type": "json_completion_contract",
+                                "path": replay_bundle_ref,
+                                "required_equals": {
+                                    "schema": MLX_LOCAL_REPLAY_BUNDLE_SCHEMA,
+                                    "replay_readiness.local_replay_ready": True,
+                                },
+                                "required_false": [
+                                    "score_claim",
+                                    "promotion_eligible",
+                                    "rank_or_kill_eligible",
+                                    "ready_for_exact_eval_dispatch",
+                                ],
+                                "required_nonempty": [
+                                    "repo.head",
+                                    "environment.full_env_sha256",
+                                    "packages.mlx",
+                                ],
+                            },
+                            {"type": "json_false_authority", "path": replay_bundle_ref},
+                        ],
+                        "telemetry": {
+                            "artifact_paths": [replay_bundle_ref],
+                            "input_artifact_paths": [
+                                source_video_ref,
+                                schedule_ref,
+                                diffusion_smoke_provenance_ref,
+                                ia3_smoke_manifest_ref,
+                                pr95_report_ref,
+                                ia3_parity_report_ref,
+                            ],
                             "include_postcondition_paths": True,
                         },
                     },

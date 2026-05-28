@@ -10,6 +10,10 @@ from tac.local_acceleration.mlx_to_pytorch_export import (
     export_mlx_state_dict_to_torch_pt,
     load_pytorch_state_dict_from_pt,
 )
+from tac.local_acceleration.pact_nerv_ia3_export_parity import (
+    PACT_NERV_IA3_MLX_PYTORCH_FORWARD_PARITY_SCHEMA,
+    prove_pact_nerv_ia3_mlx_pytorch_forward_parity,
+)
 
 
 def test_mlx_to_pytorch_export_preserves_non_float_dtypes(tmp_path: Path) -> None:
@@ -74,3 +78,22 @@ def test_mlx_to_pytorch_export_rejects_unknown_force_float32_name(tmp_path: Path
             run_id="unit",
             force_float32_names=("missing",),
         )
+
+
+def test_pact_nerv_ia3_mlx_pytorch_forward_parity_smoke(tmp_path: Path) -> None:
+    pytest.importorskip("mlx.core")
+    pytest.importorskip("torch")
+
+    report = prove_pact_nerv_ia3_mlx_pytorch_forward_parity(
+        pair_indices=[0, 1, 2],
+        output_pt_path=tmp_path / "ia3.pt",
+        seed=7,
+    )
+
+    assert report["schema"] == PACT_NERV_IA3_MLX_PYTORCH_FORWARD_PARITY_SCHEMA
+    assert report["parity_passed"] is True
+    assert report["max_abs_diff_255"] <= report["tolerance"]
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["export_manifest"]["file_size_bytes"] > 0
+    assert (tmp_path / "ia3.pt").is_file()

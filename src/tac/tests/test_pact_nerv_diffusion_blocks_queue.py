@@ -62,6 +62,8 @@ def test_diffusion_blocks_queue_runs_local_probes_without_authority(tmp_path: Pa
         "run_pact_nerv_diffusion_distilled_smoke",
         "run_pact_nerv_ia3_mlx_renderer_smoke",
         "plan_pr95_mlx_blockwise_control",
+        "prove_pact_nerv_ia3_mlx_pytorch_forward_parity",
+        "emit_mlx_local_deterministic_replay_bundle",
     ]
     assert steps[1]["requires"] == ["emit_diffusion_blocks_schedule"]
     assert steps[1]["resources"]["kind"] == "local_cpu"
@@ -76,6 +78,18 @@ def test_diffusion_blocks_queue_runs_local_probes_without_authority(tmp_path: Pa
     assert "--execute-smoke" in steps[3]["command"]
     assert steps[3]["resources"]["kind"] == "local_mlx"
     assert steps[3]["postconditions"][0]["equals"] == "pr95_mlx_long_training_plan.v1"
+    assert steps[4]["requires"] == ["run_pact_nerv_ia3_mlx_renderer_smoke"]
+    assert "tools/prove_pact_nerv_ia3_mlx_pytorch_forward_parity.py" in steps[4]["command"]
+    assert steps[4]["postconditions"][0]["required_true"] == ["parity_passed"]
+    assert steps[5]["requires"] == [
+        "run_pact_nerv_diffusion_distilled_smoke",
+        "run_pact_nerv_ia3_mlx_renderer_smoke",
+        "plan_pr95_mlx_blockwise_control",
+        "prove_pact_nerv_ia3_mlx_pytorch_forward_parity",
+    ]
+    assert "tools/build_mlx_local_replay_bundle.py" in steps[5]["command"]
+    assert "--command-json" in steps[5]["command"]
+    assert steps[5]["resources"]["kind"] == "local_cpu"
 
 
 def test_diffusion_blocks_queue_cli(tmp_path: Path) -> None:

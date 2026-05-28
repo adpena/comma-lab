@@ -1,0 +1,425 @@
+{
+  "controls": {
+    "local_first": true,
+    "max_concurrency": {
+      "local_cpu": 1,
+      "local_mlx": 1
+    },
+    "mode": "running"
+  },
+  "experiments": [
+    {
+      "id": "pact_nerv_diffusion_blocks_mlx_smoke",
+      "lane_id": null,
+      "metadata": {
+        "budget_spend_allowed": false,
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "paper_basis": "arxiv:2506.14202v3",
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "pact_nerv_diffusion_blocks_mlx_experiment.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false
+      },
+      "priority": 1,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_pact_nerv_diffusion_blocks_schedule.py",
+            "--output",
+            ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/diffusion_blocks_schedule.json",
+            "--block-count",
+            "3",
+            "--difficulty-mass-source",
+            "scorer_region_waterfill_and_master_gradient",
+            "--overlap-fraction",
+            "0.0",
+            "--overwrite"
+          ],
+          "id": "emit_diffusion_blocks_schedule",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "pact_nerv_diffusion_blocks_schedule.v1",
+              "key": "schema",
+              "path": ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/diffusion_blocks_schedule.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/diffusion_blocks_schedule.json",
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/diffusion_blocks_schedule.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 60
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "experiments/train_substrate_pact_nerv_diffusion_distilled.py",
+            "--smoke",
+            "--device",
+            "cpu",
+            "--epochs",
+            "1",
+            "--batch-size",
+            "6",
+            "--output-dir",
+            ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pact_nerv_diffusion_distilled_smoke"
+          ],
+          "id": "run_pact_nerv_diffusion_distilled_smoke",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "pact_nerv_diffusion_distilled_l0_scaffold_smoke_v1",
+              "key": "schema",
+              "path": ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pact_nerv_diffusion_distilled_smoke/provenance.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pact_nerv_diffusion_distilled_smoke/provenance.json",
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "emit_diffusion_blocks_schedule"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pact_nerv_diffusion_distilled_smoke",
+              ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pact_nerv_diffusion_distilled_smoke/provenance.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/diffusion_blocks_schedule.json"
+            ],
+            "max_recursive_entries": 64,
+            "recursive": true
+          },
+          "timeout_seconds": 180
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "experiments/train_substrate_pact_nerv_ia3_mlx_local.py",
+            "--smoke",
+            "--output-dir",
+            ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pact_nerv_ia3_mlx_renderer_smoke",
+            "--num-pairs",
+            "6"
+          ],
+          "id": "run_pact_nerv_ia3_mlx_renderer_smoke",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "pact_nerv_ia3_mlx_smoke_manifest_v1_20260528",
+              "key": "schema_version",
+              "path": ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pact_nerv_ia3_mlx_renderer_smoke/smoke_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pact_nerv_ia3_mlx_renderer_smoke/smoke_manifest.json",
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "emit_diffusion_blocks_schedule"
+          ],
+          "resources": {
+            "kind": "local_mlx"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pact_nerv_ia3_mlx_renderer_smoke",
+              ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pact_nerv_ia3_mlx_renderer_smoke/smoke_manifest.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/diffusion_blocks_schedule.json"
+            ],
+            "max_recursive_entries": 64,
+            "recursive": true
+          },
+          "timeout_seconds": 180
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_pr95_mlx_long_training.py",
+            "--output-report",
+            ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pr95_mlx_blockwise_control_plan.json",
+            "--source-video-path",
+            "upstream/videos/0.mkv",
+            "--checkpoint-root",
+            ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pr95_mlx_blockwise_checkpoints",
+            "--telemetry-path",
+            ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pr95_mlx_blockwise_telemetry.jsonl",
+            "--operator-run-label",
+            "diffusionblocks_blockwise_control",
+            "--smoke-mode",
+            "--smoke-epochs-per-stage",
+            "1",
+            "--max-frames",
+            "12",
+            "--hash-source-video",
+            "--execute-smoke"
+          ],
+          "id": "plan_pr95_mlx_blockwise_control",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "pr95_mlx_long_training_plan.v1",
+              "key": "schema",
+              "path": ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pr95_mlx_blockwise_control_plan.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pr95_mlx_blockwise_control_plan.json",
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "emit_diffusion_blocks_schedule"
+          ],
+          "resources": {
+            "kind": "local_mlx"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pr95_mlx_blockwise_control_plan.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/diffusion_blocks_schedule.json",
+              "upstream/videos/0.mkv"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 900
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/prove_pact_nerv_ia3_mlx_pytorch_forward_parity.py",
+            "--report-out",
+            ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pact_nerv_ia3_mlx_pytorch_forward_parity.json",
+            "--pt-out",
+            ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pact_nerv_ia3_mlx_pytorch_forward_parity.pt",
+            "--pair-indices",
+            "0,1,2",
+            "--overwrite"
+          ],
+          "id": "prove_pact_nerv_ia3_mlx_pytorch_forward_parity",
+          "kind": "command",
+          "postconditions": [
+            {
+              "path": ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pact_nerv_ia3_mlx_pytorch_forward_parity.json",
+              "required_equals": {
+                "schema": "pact_nerv_ia3_mlx_pytorch_forward_parity.v1"
+              },
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch"
+              ],
+              "required_nonempty": [
+                "state_dict.sha256",
+                "export_manifest.file_sha256"
+              ],
+              "required_true": [
+                "parity_passed"
+              ],
+              "type": "json_completion_contract"
+            },
+            {
+              "path": ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pact_nerv_ia3_mlx_pytorch_forward_parity.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pact_nerv_ia3_mlx_pytorch_forward_parity.pt",
+              "type": "path_exists"
+            }
+          ],
+          "requires": [
+            "run_pact_nerv_ia3_mlx_renderer_smoke"
+          ],
+          "resources": {
+            "kind": "local_mlx"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pact_nerv_ia3_mlx_pytorch_forward_parity.json",
+              ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pact_nerv_ia3_mlx_pytorch_forward_parity.pt"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pact_nerv_ia3_mlx_renderer_smoke/smoke_manifest.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 180
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_mlx_local_replay_bundle.py",
+            "--bundle-out",
+            ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/mlx_local_replay_bundle.json",
+            "--bundle-id",
+            "pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal:pact_nerv_diffusionblocks_mlx",
+            "--command-json",
+            "[[\".venv/bin/python\",\"tools/build_pact_nerv_diffusion_blocks_schedule.py\",\"--output\",\".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/diffusion_blocks_schedule.json\",\"--block-count\",\"3\",\"--difficulty-mass-source\",\"scorer_region_waterfill_and_master_gradient\",\"--overlap-fraction\",\"0.0\",\"--overwrite\"],[\".venv/bin/python\",\"experiments/train_substrate_pact_nerv_diffusion_distilled.py\",\"--smoke\",\"--device\",\"cpu\",\"--epochs\",\"1\",\"--batch-size\",\"6\",\"--output-dir\",\".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pact_nerv_diffusion_distilled_smoke\"],[\".venv/bin/python\",\"experiments/train_substrate_pact_nerv_ia3_mlx_local.py\",\"--smoke\",\"--output-dir\",\".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pact_nerv_ia3_mlx_renderer_smoke\",\"--num-pairs\",\"6\"],[\".venv/bin/python\",\"tools/run_pr95_mlx_long_training.py\",\"--output-report\",\".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pr95_mlx_blockwise_control_plan.json\",\"--source-video-path\",\"upstream/videos/0.mkv\",\"--checkpoint-root\",\".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pr95_mlx_blockwise_checkpoints\",\"--telemetry-path\",\".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pr95_mlx_blockwise_telemetry.jsonl\",\"--operator-run-label\",\"diffusionblocks_blockwise_control\",\"--smoke-mode\",\"--smoke-epochs-per-stage\",\"1\",\"--max-frames\",\"12\",\"--hash-source-video\",\"--execute-smoke\"],[\".venv/bin/python\",\"tools/prove_pact_nerv_ia3_mlx_pytorch_forward_parity.py\",\"--report-out\",\".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pact_nerv_ia3_mlx_pytorch_forward_parity.json\",\"--pt-out\",\".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pact_nerv_ia3_mlx_pytorch_forward_parity.pt\",\"--pair-indices\",\"0,1,2\",\"--overwrite\"]]",
+            "--input-artifact",
+            "upstream/videos/0.mkv",
+            "--input-artifact",
+            ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/diffusion_blocks_schedule.json",
+            "--artifact",
+            ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pact_nerv_diffusion_distilled_smoke/provenance.json",
+            "--artifact",
+            ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pact_nerv_ia3_mlx_renderer_smoke/smoke_manifest.json",
+            "--artifact",
+            ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pr95_mlx_blockwise_control_plan.json",
+            "--artifact",
+            ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pact_nerv_ia3_mlx_pytorch_forward_parity.json",
+            "--metadata-json",
+            "{\"paper_basis\":\"arxiv:2506.14202v3\",\"queue_id\":\"pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal\",\"substrate_family\":\"pact_nerv_diffusion_blocks\"}",
+            "--overwrite"
+          ],
+          "id": "emit_mlx_local_deterministic_replay_bundle",
+          "kind": "command",
+          "postconditions": [
+            {
+              "path": ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/mlx_local_replay_bundle.json",
+              "required_equals": {
+                "replay_readiness.local_replay_ready": true,
+                "schema": "mlx_local_replay_bundle.v1"
+              },
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch"
+              ],
+              "required_nonempty": [
+                "repo.head",
+                "environment.full_env_sha256",
+                "packages.mlx"
+              ],
+              "type": "json_completion_contract"
+            },
+            {
+              "path": ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/mlx_local_replay_bundle.json",
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "run_pact_nerv_diffusion_distilled_smoke",
+            "run_pact_nerv_ia3_mlx_renderer_smoke",
+            "plan_pr95_mlx_blockwise_control",
+            "prove_pact_nerv_ia3_mlx_pytorch_forward_parity"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/mlx_local_replay_bundle.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "upstream/videos/0.mkv",
+              ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/diffusion_blocks_schedule.json",
+              ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pact_nerv_diffusion_distilled_smoke/provenance.json",
+              ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pact_nerv_ia3_mlx_renderer_smoke/smoke_manifest.json",
+              ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pr95_mlx_blockwise_control_plan.json",
+              ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pact_nerv_ia3_mlx_pytorch_forward_parity.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "pact-nerv",
+        "diffusionblocks",
+        "mlx-local",
+        "class-shift-probe",
+        "no-score-authority"
+      ]
+    }
+  ],
+  "metadata": {
+    "allowed_use": "local_training_probe_and_substrate_shift_acquisition",
+    "axis": "[macOS-MLX research-signal]",
+    "block_count": 3,
+    "charged_bits_changed": false,
+    "contest_cuda_auth_eval": false,
+    "deterministic_replay_bundle_path": ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/mlx_local_replay_bundle.json",
+    "difficulty_mass_source": "scorer_region_waterfill_and_master_gradient",
+    "dispatch_attempted": false,
+    "exact_cpu_cuda_required": true,
+    "exact_cuda_auth_eval": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "forbidden_use": "score_claim_or_promotion_or_exact_dispatch",
+    "gpu_launched": false,
+    "inflate_requires_mlx": false,
+    "max_pairs": 6,
+    "output_root": ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs",
+    "overlap_fraction": 0.0,
+    "pact_nerv_diffusion_distilled_smoke_provenance_path": ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pact_nerv_diffusion_distilled_smoke/provenance.json",
+    "pact_nerv_ia3_mlx_pytorch_forward_parity_path": ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pact_nerv_ia3_mlx_pytorch_forward_parity.json",
+    "pact_nerv_ia3_mlx_smoke_manifest_path": ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pact_nerv_ia3_mlx_renderer_smoke/smoke_manifest.json",
+    "paper_basis": "arxiv:2506.14202v3",
+    "promotable": false,
+    "promotion_eligible": false,
+    "queue_id": "pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schedule_path": ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/diffusion_blocks_schedule.json",
+    "schema": "pact_nerv_diffusion_blocks_mlx_queue.v1",
+    "score_affecting_payload_changed": false,
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "source_video_path": "upstream/videos/0.mkv",
+    "teacher_runtime_shipped": false
+  },
+  "queue_id": "pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal",
+  "schema": "experiment_queue.v1"
+}

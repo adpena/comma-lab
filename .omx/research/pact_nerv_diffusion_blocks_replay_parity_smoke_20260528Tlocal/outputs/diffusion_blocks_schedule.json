@@ -1,0 +1,117 @@
+{
+  "allowed_use": "local_mlx_training_acquisition_and_substrate_shift_probe",
+  "block_count": 3,
+  "blocks": [
+    {
+      "authority_after_export": "requires_pytorch_or_numpy_forward_parity_then_exact_cpu_cuda_eval",
+      "block_index": 0,
+      "difficulty_coordinate": "normalized_noise_or_mask_mass_u_in_[0,1]",
+      "difficulty_mass_interval": [
+        0.0,
+        0.3333333333333333
+      ],
+      "export_contract": "deterministic_student_block_only",
+      "local_training_axis": "[macOS-MLX research-signal]",
+      "overlap_fraction": 0.0,
+      "training_target": "corrupted_feature_or_frame_to_clean_feature_or_frame"
+    },
+    {
+      "authority_after_export": "requires_pytorch_or_numpy_forward_parity_then_exact_cpu_cuda_eval",
+      "block_index": 1,
+      "difficulty_coordinate": "normalized_noise_or_mask_mass_u_in_[0,1]",
+      "difficulty_mass_interval": [
+        0.3333333333333333,
+        0.6666666666666666
+      ],
+      "export_contract": "deterministic_student_block_only",
+      "local_training_axis": "[macOS-MLX research-signal]",
+      "overlap_fraction": 0.0,
+      "training_target": "corrupted_feature_or_frame_to_clean_feature_or_frame"
+    },
+    {
+      "authority_after_export": "requires_pytorch_or_numpy_forward_parity_then_exact_cpu_cuda_eval",
+      "block_index": 2,
+      "difficulty_coordinate": "normalized_noise_or_mask_mass_u_in_[0,1]",
+      "difficulty_mass_interval": [
+        0.6666666666666666,
+        1.0
+      ],
+      "export_contract": "deterministic_student_block_only",
+      "local_training_axis": "[macOS-MLX research-signal]",
+      "overlap_fraction": 0.0,
+      "training_target": "corrupted_feature_or_frame_to_clean_feature_or_frame"
+    }
+  ],
+  "charged_bits_changed": false,
+  "composition_constraints": {
+    "byte_tax_audit_required": true,
+    "inflate_requires_mlx": false,
+    "negative_result_posterior_update_required": true,
+    "receiver_runtime": "deterministic_student_only",
+    "schema": "diffusionblocks_chain_composition_constraints.v1",
+    "stack_penalty_required": true,
+    "teacher_runtime_shipped": false
+  },
+  "contest_cuda_auth_eval": false,
+  "difficulty_mass_source": "scorer_region_waterfill_and_master_gradient",
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "forbidden_use": "score_claim_or_rank_or_kill_or_exact_dispatch_authority",
+  "generated_at_utc": "2026-05-28T03:39:47Z",
+  "gpu_launched": false,
+  "optimization_functional": {
+    "authority": "local_mlx_research_signal_only_until_export_parity_and_exact_eval",
+    "difficulty_partition": "equal_mass_intervals_over_response_or_noise_coordinate",
+    "entropy_positions": [
+      "before_entropy_coder",
+      "at_entropy_coder",
+      "after_entropy_coder"
+    ],
+    "expression": "argmin_theta \u03a3_b E_u\u2208I_b[D_b(x_u,u,c)-x_0]^2 + \u03bb_byte*\u0394Bytes + \u03bb_axis*AxisShiftPenalty + \u03a3_(i,j) \u03c8_ij(stack_interaction)",
+    "interaction_axes": [
+      "pixel",
+      "bit",
+      "byte",
+      "frame",
+      "pair",
+      "region",
+      "boundary",
+      "batch",
+      "full_video"
+    ],
+    "schema": "blockwise_nerv_training_action_functional.v1"
+  },
+  "overlap_fraction": 0.0,
+  "paper_basis": "arxiv:2506.14202v3",
+  "portable_op_contract": [
+    "linear",
+    "conv2d",
+    "depthwise_conv2d",
+    "fixed_resize",
+    "pixel_shuffle",
+    "silu_or_gelu",
+    "film_or_adaln_conditioning",
+    "add",
+    "mul",
+    "clamp",
+    "round"
+  ],
+  "promotable": false,
+  "promotion_eligible": false,
+  "proof_obligations": [
+    "mlx_training_hash_manifest",
+    "numpy_or_pytorch_export_forward_parity",
+    "archive_byte_tax_audit",
+    "full_frame_inflate_parity_before_promotion",
+    "contest_cpu_or_cuda_auth_eval_before_score_claim"
+  ],
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "pact_nerv_diffusion_blocks_schedule.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "substrate_family": "pact_nerv_diffusion_blocks"
+}
