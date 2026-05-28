@@ -64,12 +64,35 @@ from tac.substrate_registry import (
     register_substrate,
 )
 
+# L1 LONG-RUN MLX-LOCAL public surfaces (landed 2026-05-28).
+from .architecture import Z6V2Config, Z6V2Substrate
+from .archive import (
+    Z6V2Archive,
+    Z6V2_HEADER_SIZE,
+    Z6V2_MAGIC,
+    Z6V2_SCHEMA_VERSION,
+    pack_archive,
+    parse_archive,
+)
+from .score_aware_loss import Z6V2ScoreAwareLoss, Z6V2ScoreAwareLossWeights
+
 
 __all__ = (
     "SUBSTRATE_ID",
     "LANE_ID",
     "Z6_V2_CONTRACT",
     "OBSERVABILITY_SURFACE",
+    # L1 exports
+    "Z6V2Archive",
+    "Z6V2Config",
+    "Z6V2ScoreAwareLoss",
+    "Z6V2ScoreAwareLossWeights",
+    "Z6V2Substrate",
+    "Z6V2_HEADER_SIZE",
+    "Z6V2_MAGIC",
+    "Z6V2_SCHEMA_VERSION",
+    "pack_archive",
+    "parse_archive",
 )
 
 SUBSTRATE_ID = "z6_v2_cargo_cult_unwind"
@@ -156,9 +179,15 @@ Z6_V2_CONTRACT = SubstrateContract(
     bolt_on_loc_budget=999,  # N/A; substrate_engineering scope per HNeRV parity L7
     no_op_detector_planned=True,  # per Catalog #105/#139 byte-mutation smoke discipline
     # 2.3 Operational mechanism (3 per Catalog #220)
-    archive_bytes_added=None,  # L0 scaffold has no archive yet; declared at L1 promotion
-    score_improvement_mechanism_status="RESEARCH_ONLY",  # L0; flips to OPERATIONAL at L1
-    runtime_overlay_consumed=False,  # paired with RESEARCH_ONLY per contract invariant
+    # L1 LONG-RUN MLX-LOCAL landing 2026-05-28: archive grammar Z6V2CU1 +
+    # numpy-portable inflate operationally consume FiLM-modulated decoder
+    # weights + per-pair latents + per-pair ego_vecs for frame reconstruction
+    # at contest resolution (384, 512) per architecture.py + inflate.py +
+    # archive.py canonical chain. Empirical archive bytes pending paired
+    # CUDA/CPU export per Catalog #325 14-day window (operator-routable).
+    archive_bytes_added=None,
+    score_improvement_mechanism_status="OPERATIONAL",
+    runtime_overlay_consumed=True,
     # 2.4 Recipe schema (8)
     recipe_smoke_only=True,  # L0 scaffold is smoke-only by construction
     recipe_research_only=True,  # transparent non-promotable per CLAUDE.md non-negotiable

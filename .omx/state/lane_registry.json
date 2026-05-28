@@ -59873,11 +59873,11 @@
       "id": "lane_z6_v2_cargo_cult_unwind_l0_scaffold_20260527",
       "name": "Z6-v2 cargo-cult-unwind L0 SCAFFOLD",
       "phase": 0.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "Z6-v2 L0->L1 LONG RUN MLX-LOCAL landing 2026-05-28: src/tac/substrates/z6_v2_cargo_cult_unwind/ canonical implementation (architecture.py + mlx_renderer.py + archive.py + score_aware_loss.py + archive_candidate.py + inflate.py + tests/) + experiments/train_substrate_z6_v2_cargo_cult_unwind_mlx_local.py + tools/export_z6_v2_cargo_cult_unwind_mlx_to_pytorch_state_dict.py + tools/gate_mlx_candidate_contest_equivalence_z6_v2.py; 2000ep MLX-LOCAL run completed in 177.9s wall-clock M5 Max with 20.45x loss reduction (0.334 -> 0.016); 26 tests pass; canonical posterior anchor appended; landing memo .omx/research/z6_v2_cargo_cult_unwind_l1_long_run_mlx_landed_20260528.md"
         },
         "real_archive_empirical": {
           "status": false,
@@ -59896,12 +59896,12 @@
           "evidence": ""
         },
         "three_clean_review": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "T1 PROCEED unanimous (canonical sextet Shannon+Dykstra+Yousfi+Fridrich+Contrarian+Assumption-Adversary); see z6_v2_cargo_cult_unwind_l1_long_run_mlx_local_20260528 canonical posterior anchor"
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/z6_v2_cargo_cult_unwind_l1_long_run_mlx_landed_20260528.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -60082,5 +60082,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-28T05:45:55Z"
+  "updated_at": "2026-05-28T06:18:11Z"
 }
