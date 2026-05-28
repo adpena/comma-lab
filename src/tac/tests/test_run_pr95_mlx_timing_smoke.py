@@ -170,6 +170,10 @@ def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path
         "local_mlx_pytorch_export_parity_probe_is_not_contest_auth_eval"
     )
     assert summary["runtime_consumption_proof"]["runtime_consumption_proven"] is True
+    assert manifest["runtime_consumption_proof_present"] is True
+    assert manifest["runtime_consumption_proven"] is True
+    assert manifest["receiver_contract_satisfied"] is True
+    assert manifest["receiver_proof_present"] is True
     assert summary["pytorch_export_forward_parity"][
         "pytorch_export_forward_parity_established"
     ] is True

@@ -2540,13 +2540,18 @@ def main(argv: list[str] | None = None) -> int:
                 f"{proof_result.stderr or proof_result.stdout}"
             )
         runtime_consumption_proof = json.loads(proof_path.read_text(encoding="utf-8"))
+        runtime_consumption_proven = (
+            runtime_consumption_proof.get("runtime_consumption_proven") is True
+        )
         manifest["runtime_consumption_proof"] = _embedded_runtime_consumption_proof(
             runtime_consumption_proof
         )
+        manifest["runtime_consumption_proof_present"] = True
+        manifest["runtime_consumption_proven"] = runtime_consumption_proven
         manifest["runtime_consumption_proof_path"] = _rel(proof_path)
         manifest["runtime_consumption_proof_bytes"] = proof_path.stat().st_size
         manifest["runtime_consumption_proof_sha256"] = _sha256_file(proof_path)
-        if runtime_consumption_proof.get("runtime_consumption_proven") is True:
+        if runtime_consumption_proven:
             manifest["receiver_contract_satisfied"] = True
             manifest["receiver_proof_present"] = True
         _mark_public_archive_export_runtime_consumed(
@@ -2557,7 +2562,7 @@ def main(argv: list[str] | None = None) -> int:
         _write_json(output_dir / "pr95_public_archive_export.json", public_archive_export)
         manifest["runtime_profile"]["packet_compiler_bridge"][
             "runtime_consumption_proof_present"
-        ] = runtime_consumption_proof.get("runtime_consumption_proven") is True
+        ] = runtime_consumption_proven
         manifest["runtime_profile"]["packet_compiler_bridge"][
             "runtime_consumption_proof_path"
         ] = _rel(proof_path)
