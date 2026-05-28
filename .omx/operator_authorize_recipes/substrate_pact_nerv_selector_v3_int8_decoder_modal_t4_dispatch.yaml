@@ -1,0 +1,207 @@
+schema_version: 1
+name: substrate_pact_nerv_selector_v3_int8_decoder_modal_t4_dispatch
+lane_id: lane_pact_nerv_selector_v3_int8_decoder_brotli_q11_paired_cuda_ratification_20260528
+summary: |
+  PACT-NeRV-SELECTOR-V3 int8 per-channel + brotli q=11 decoder quantization
+  paired-CUDA RATIFICATION recipe scaffold (Modal T4). Per Catalog #246
+  paired-dispatch discipline: this recipe scaffold is OPERATOR-ATTENDED;
+  dispatch_enabled stays FALSE until the operator flips it explicitly per
+  CLAUDE.md "Substrate MUST be at OPTIMAL FORM before paid empirical
+  dispatch" non-negotiable (Catalog #315) + per-substrate symposium
+  evidence per Catalog #325 (the V3 RE-RUN symposium 38d77eebd covers fp16
+  baseline; int8-decoder-quant variant requires its OWN per-substrate
+  symposium before this dispatch lands).
+
+  Empirical sub-0.18 candidate per parent decoder compression analysis
+  (.omx/research/decoder_compression_analysis_pact_nerv_cluster_landed_20260528.md):
+  -43.7% decoder bytes (analysis projection); empirical Slot 2 600-pair
+  MLX-LOCAL Hinton-distill landed -28.5% archive bytes (sha256
+  c67aa62d7f60f6f4 / 98,270B vs V3 baseline sha256 ef5a087ff6301dbf /
+  137,351B). Per CLAUDE.md "Apples-to-apples evidence discipline": the
+  projection requires paired-CUDA + paired-CPU ratification BEFORE score
+  promotion; the MLX-LOCAL anchor is [macOS-MLX research-signal]
+  non-promotable per Catalog #192/#317/#341.
+
+  Literature: Quantizr 0.33 [contest-CUDA] FP4 path (CLAUDE.md) +
+  int8 per-channel quantization canonical pattern (PyTorch torch.qint8 +
+  symmetric per-output-channel scales). The MLX forward path remains fp32
+  for training fidelity; quantization happens POST-training at archive
+  emit boundary.
+
+dispatch_enabled: false
+research_only: true
+
+dispatch_blockers:
+  - paired_cuda_ratification_operator_attended_per_catalog_246
+  - per_substrate_symposium_for_int8_decoder_variant_pending_per_catalog_325
+  - predicted_band_validation_status_pending_post_training_per_catalog_324
+  - mlx_to_pytorch_state_dict_bridge_required_for_contest_1164x874_resolution
+  - cls_stream_wire_in_blocker_per_yousfi_pr110_council_inheritance
+
+platform: modal
+gpu: T4
+min_vram_gb: 12
+min_smoke_gpu: T4
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - contest_one_video_replay
+  - contest_generalized
+canary_status: post_canary_dependent
+canary_dependency: substrate_pact_nerv_selector_v3
+lane_class: substrate_engineering
+
+cost_band:
+  epochs: 2000
+  all_flags_on: false
+  hand_calibrated_fallback_p50_usd: 1.00
+  platform_key: modal
+  gpu_key: T4
+
+predicted_band:
+  - 0.16
+  - 0.18
+predicted_band_validation_status: pending_post_training
+predicted_band_reactivation_criteria: |
+  Post-training Tier-C density re-measurement on landed archive sha256
+  via tools/mdl_scorer_conditional_ablation.py --tier c per Catalog #324.
+  Apples-to-apples paired-CUDA + paired-CPU per Catalog #246 + #316
+  canonical frontier pointer required for score-claim promotion.
+
+predicted_score_target: "0.168576_contest_cpu_scenario_b_pending_paired_cuda_ratification"
+predicted_delta: "-0.024_contest_cpu_vs_v3_baseline_pending_paired_cuda_ratification"
+literature_anchor: |
+  Quantizr 0.33 [contest-CUDA] FP4 quantization path (CLAUDE.md "Quantizr
+  intelligence" + "QAT pipeline" non-negotiable) + Hinton & Vinyals & Dean
+  2014 knowledge distillation (T=2.0 KL on real SegNet + MSE on real
+  PoseNet teacher per Catalog #164) + Wang & Rudin 2015 "Falling Rule
+  Lists" interpretable-ML discipline for the falling rate-axis ranking
+  across the 13-variant compression sweep.
+
+risk: |
+  L1 sister PyTorch trainer + L1 MLX-LOCAL sister both wire the int8
+  per-channel + brotli q=11 path (sha256 c67aa62d7f60f6f4 empirical
+  archive emitted Slot 2 2026-05-28). Risk classes:
+  - Scenario C upper-bound: paired-CUDA may amplify reconstruction
+    rel_l2=0.0039 to d_seg amplification beyond Scenario B linear
+    heuristic, landing 0.208317 (> 0.18 target).
+  - Resolution gap: MLX-LOCAL renders at 512x384; contest requires
+    1164x874 per Catalog #367 (paired-CUDA via PyTorch sister
+    experiments/train_substrate_pact_nerv_selector_v3.py renders at
+    contest resolution; the int8 path must be plumbed there too via
+    sister landing before this dispatch fires).
+  - QAT not yet applied: PACT-NeRV-V3 trained MLX-side at fp32 then
+    post-quantized; Quantizr 0.33 [contest-CUDA] achieved sub-0.40 with
+    FP4 + QAT; without QAT the 25% gap is empirical-pending. Cascade to
+    sister fp4_packed variant + FakeQuantSTE FP4 QAT per CLAUDE.md "QAT
+    pipeline" non-negotiable if sub-0.18 fails at int8.
+
+envelope_status: |
+  RESEARCH_ONLY: dispatch refused per recipe + 5 dispatch_blockers.
+  Operator-attended ratification per Catalog #246 + per-substrate
+  symposium per Catalog #325 + MLX->PyTorch bridge required before
+  dispatch_enabled flips to true.
+
+remote_driver: scripts/remote_lane_substrate_pact_nerv_selector_v3.sh
+timeout_hours: 2.0
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+  - flag: --output-dir
+    note: "required (no default)"
+
+modal:
+  lane_script: scripts/remote_lane_substrate_pact_nerv_selector_v3.sh
+  cost_band_trainer: experiments/train_substrate_pact_nerv_selector_v3.py
+  cost_band_epochs: 2000
+  cost_band_batch_size: 16
+  cost_band_all_flags_on: false
+
+required_input_files_trainer: experiments/train_substrate_pact_nerv_selector_v3.py
+
+env_overrides:
+  PACT_NERV_SELECTOR_V3_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  PACT_NERV_SELECTOR_V3_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  PACT_NERV_SELECTOR_V3_OUTPUT_DIR: /workspace/pact/lane_pact_nerv_selector_v3_int8_decoder_results/output
+  PACT_NERV_SELECTOR_V3_EPOCHS: "2000"
+  PACT_NERV_SELECTOR_V3_UPSTREAM_DIR: /workspace/pact/upstream
+  PACT_NERV_SELECTOR_V3_DEVICE: cuda
+  PACT_NERV_SELECTOR_V3_TRAINER_MODE: "full"
+  PACT_NERV_SELECTOR_V3_SMOKE: "0"
+  SMOKE_ONLY: "0"
+  LOCAL_CUDA_WORKER: "0"
+  # DECODER-COMPRESSION-INT8-PER-CHANNEL Slot 2 work 2026-05-28: the
+  # PyTorch sister trainer requires a sister landing wiring the
+  # decoder_quantization parameter through the archive emit path
+  # (currently the PyTorch sister hardcodes the fp16_brotli_q9 default
+  # at line 385); env override DECODER_QUANT documents the operator's
+  # intent for the paired-CUDA RATIFICATION cycle.
+  DECODER_QUANT: "int8_per_channel_brotli_q11"
+  BROTLI_QUALITY: "11"
+
+dependencies:
+  - scripts/remote_lane_substrate_pact_nerv_selector_v3.sh
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_pact_nerv_selector_v3.py
+  - src/tac/substrates/pact_nerv_selector_v3/__init__.py
+  - src/tac/substrates/pact_nerv_selector_v3/architecture.py
+  - src/tac/substrates/pact_nerv_selector_v3/archive.py
+  - src/tac/substrates/pact_nerv_selector_v3/inflate.py
+  - src/tac/substrates/pact_nerv_selector_v3/score_aware_loss.py
+  - src/tac/substrates/_shared/trainer_skeleton.py
+  - src/tac/differentiable_eval_roundtrip.py
+
+sentinel_files:
+  - src/tac/substrates/pact_nerv_selector_v3/architecture.py
+  - src/tac/substrates/pact_nerv_selector_v3/archive.py
+  - src/tac/substrates/_shared/trainer_skeleton.py
+  - src/tac/differentiable_eval_roundtrip.py
+
+reactivation_criteria: |
+  1. Per-substrate symposium per Catalog #325 covering the int8 decoder
+     quant variant of PACT-NeRV-V3 (the V3 RE-RUN symposium 38d77eebd
+     covers fp16 baseline only; the int8 variant needs its OWN
+     PROCEED-unconditional sextet pact + 6-step contract).
+  2. MLX->PyTorch state_dict bridge sister landing wiring the
+     decoder_quantization parameter through
+     experiments/train_substrate_pact_nerv_selector_v3.py:385 archive
+     emit path (currently hardcodes fp16_brotli_q9).
+  3. PyTorch sister contest-resolution rendering (1164x874 per Catalog
+     #367) verified empirically before dispatch.
+  4. Operator-attended ratification per Catalog #246 (paired CUDA + CPU
+     on 1:1 contest-compliant hardware per CLAUDE.md "Submission auth
+     eval - BOTH CPU AND CUDA").
+  5. dispatch_enabled flips to true; cost-band p50 ~$1.00 envelope
+     verified via Catalog #270 dispatch optimization protocol.
+
+notes: |
+  Sister cite: PACT-NERV-ULTIMATE (commit e3ad4243a) Variant #12
+  PRIORITY 1 + parent decoder compression analysis
+  (.omx/research/decoder_compression_analysis_pact_nerv_cluster_landed_20260528.md)
+  TOP-1 sub-0.18 candidate (int8 per-channel + brotli q=11) +
+  T3 council PR110-STACKING-PIVOT-ORDERING landed 2026-05-26 (commit
+  abdeefb00 frontier baseline).
+
+  6-hook wire-in per Catalog #125:
+  - hook #1 sensitivity-map: ACTIVE (per-axis seg/pose/recon
+    decomposition via Catalog #356 GAP FIX active in MLX trainer +
+    sister PyTorch trainer via run_pact_nerv_score_aware_training
+    contest-resolution auth-eval)
+  - hook #2 Pareto constraint: ACTIVE (per-axis Dykstra polytope;
+    rate-axis improved via -28.5% archive bytes; pose-axis preserved via
+    Hinton-distilled scorer surrogate Catalog #164; seg-axis pending
+    paired-CUDA ratification)
+  - hook #3 bit-allocator: ACTIVE (int8 per-channel quantization IS the
+    bit-allocator step; per-channel scales fp16 sidecar)
+  - hook #4 cathedral autopilot dispatch: ACTIVE via Catalog #335
+    auto-discovery once paired-CUDA anchor lands (current state:
+    pending_post_training per Catalog #324)
+  - hook #5 continual-learning posterior: ACTIVE - canonical equation
+    pact_nerv_decoder_state_dict_saturation_at_parity_floor_v1 anchor
+    #5 emitted by Slot 2 landing memo per Catalog #344; Catalog #371
+    auto-recalibrator refit triggered
+  - hook #6 probe-disambiguator: ACTIVE - int8 per-channel + brotli q=11
+    IS the disambiguator between Scenario A (fp4_packed; QAT-required)
+    vs Scenario B (int8; near-lossless) vs Scenario C (fp16; baseline)
+    sub-0.18 paths

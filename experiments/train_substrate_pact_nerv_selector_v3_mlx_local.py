@@ -159,6 +159,24 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
         "default": "upstream/videos/0.mkv",
         "required_input_file": True,
     },
+    "--decoder-quant": {
+        "env": "PACT_NERV_SELECTOR_V3_MLX_DECODER_QUANT",
+        "rationale": (
+            "Decoder state-dict archive-emit quantization strategy per parent "
+            "decoder compression analysis 2026-05-28 sub-0.18 candidate "
+            "identification. Acceptable values: 'fp16_brotli_q9' (V3 baseline "
+            "behavior; preserves sha256 ef5a087ff6301dbf parity); "
+            "'fp16_brotli_q11' (lossless +6.7% savings); "
+            "'int8_per_channel_brotli_q11' (-43.7% decoder bytes, cos=0.99999, "
+            "rel_l2=0.0039 near-lossless; empirical TOP-1 sub-0.18 candidate "
+            "projecting 0.168576 score under Scenario B per Catalog #324). "
+            "Per Catalog #192/#317/#341: this MLX-local trainer remains "
+            "non-promotable; paired-CUDA RATIFICATION per Catalog #246 "
+            "required BEFORE score promotion."
+        ),
+        "default": "fp16_brotli_q9",
+        "required_input_file": False,
+    },
 }
 
 
@@ -183,7 +201,25 @@ def _full_main(args: argparse.Namespace) -> int:
     real SegNet teacher (the harness fails closed otherwise unless
     ``--allow-mock-scorer-teacher`` is explicitly passed for a $0
     no-real-SegNet smoke).
+
+    Decoder quantization (DECODER-COMPRESSION-INT8-PER-CHANNEL Slot 2 work
+    2026-05-28): the ``--decoder-quant`` flag selects the archive emit-side
+    quantization strategy applied at ``export_archive_fn`` time (the MLX
+    forward path remains fp32 for training fidelity; quantization happens
+    POST-training at the byte-closed archive boundary). Default ``fp16_brotli_q9``
+    preserves the V3 baseline behavior (sha256 ``ef5a087ff6301dbf``).
+    ``int8_per_channel_brotli_q11`` emits the empirical TOP-1 sub-0.18
+    candidate from the parent decoder compression analysis
+    (``.omx/research/decoder_compression_analysis_pact_nerv_cluster_landed_20260528.md``):
+    -43.7% decoder bytes (-44,041B), cos=0.99999, rel_l2=0.0039 near-lossless,
+    projected score 0.168576 under Scenario B (sub-0.18 with 11.5 millipoint
+    headroom). Per CLAUDE.md "Apples-to-apples evidence discipline": the
+    projection requires paired-CUDA ratification per Catalog #246 BEFORE
+    score promotion; this MLX-local trainer remains non-promotable
+    ``[macOS-MLX research-signal]`` per Catalog #192/#317/#341.
     """
+    from functools import partial
+
     from tac.substrates._shared.mlx_score_aware import (
         RendererBundle,
         build_mlx_posenet_pair_teacher,
@@ -197,6 +233,9 @@ def _full_main(args: argparse.Namespace) -> int:
         build_learnable_pose_student_head,
         build_learnable_student_head,
     )
+    from tac.substrates.pact_nerv_selector_v3.archive import (
+        DECODER_QUANTIZATION_KINDS,
+    )
     from tac.substrates.pact_nerv_selector_v3.architecture import (
         PactNervSelectorV3Config,
     )
@@ -206,6 +245,20 @@ def _full_main(args: argparse.Namespace) -> int:
     from tac.substrates.pact_nerv_selector_v3.mlx_renderer import (
         PactNervSelectorV3SubstrateMLX,
     )
+
+    # Catalog #146 + Catalog #324: validate --decoder-quant against canonical
+    # set BEFORE forward path so the failure surfaces pre-training (not
+    # post-159s wall-clock at archive emit time).
+    decoder_quant = str(args.decoder_quant)
+    if decoder_quant not in DECODER_QUANTIZATION_KINDS:
+        raise ValueError(
+            f"unsupported --decoder-quant {decoder_quant!r}; "
+            f"expected one of {sorted(DECODER_QUANTIZATION_KINDS)}. "
+            "Per Catalog #324 predicted-band-validation-status + parent "
+            "decoder compression analysis sub-0.18 candidate identification: "
+            "use 'int8_per_channel_brotli_q11' for the empirical TOP-1 sub-0.18 "
+            "candidate; default 'fp16_brotli_q9' preserves V3 baseline behavior."
+        )
 
     cfg = PactNervSelectorV3Config(num_pairs=int(args.num_pairs))
     model = PactNervSelectorV3SubstrateMLX(cfg)
@@ -281,7 +334,15 @@ def _full_main(args: argparse.Namespace) -> int:
         learnable_pose_student_head=learnable_pose_student_head,
         pose_dims=DEFAULT_POSE_DIMS,
         allow_mock_scorer_teacher=bool(args.allow_mock_scorer_teacher),
-        export_archive_fn=export_pact_nerv_selector_v3_mlx_archive,
+        # Catalog #146 + parent decoder compression analysis op-routable #1:
+        # plumb --decoder-quant through to the archive emit path via
+        # functools.partial (the canonical export_archive_fn signature is
+        # (model, output_dir) -> (path, sha, bytes); the bundle accepts a
+        # decoder_quantization-bound partial that matches the signature).
+        export_archive_fn=partial(
+            export_pact_nerv_selector_v3_mlx_archive,
+            decoder_quantization=decoder_quant,
+        ),
     )
     artifact = run_mlx_score_aware_full_main(
         bundle=bundle,
@@ -304,7 +365,11 @@ def _full_main(args: argparse.Namespace) -> int:
             "backbone); non-promotable [macOS-MLX research-signal] per "
             "Catalog #192/#317/#341; per-axis + MLX->PyTorch bridge + "
             "paired CUDA/CPU anchor DEFERRED to sister L2 + per-substrate "
-            "symposium Catalog #325."
+            "symposium Catalog #325. "
+            f"decoder_quantization={decoder_quant} (Slot 2 DECODER-COMPRESSION-"
+            "INT8-PER-CHANNEL work 2026-05-28; default fp16_brotli_q9 preserves "
+            "V3 baseline; int8_per_channel_brotli_q11 is the empirical TOP-1 "
+            "sub-0.18 candidate per parent decoder compression analysis)."
         ),
     )
     print(
@@ -527,6 +592,30 @@ def _build_parser() -> argparse.ArgumentParser:
             "is wired. Default OFF — the harness fails closed otherwise. Set "
             "ONLY for a $0 no-real-SegNet smoke that explicitly accepts the "
             "result is reconstruction-proxy (NOT scorer-bound)."
+        ),
+    )
+    p.add_argument(
+        "--decoder-quant",
+        type=str,
+        default="fp16_brotli_q9",
+        choices=[
+            "fp16_brotli_q9",
+            "fp16_brotli_q11",
+            "int8_per_channel_brotli_q11",
+        ],
+        help=(
+            "Decoder state-dict archive-emit quantization strategy "
+            "(DECODER-COMPRESSION-INT8-PER-CHANNEL Slot 2 work 2026-05-28). "
+            "Default 'fp16_brotli_q9' preserves V3 baseline (sha256 "
+            "ef5a087ff6301dbf). 'int8_per_channel_brotli_q11' emits the "
+            "empirical TOP-1 sub-0.18 candidate per parent decoder compression "
+            "analysis: -43.7% decoder bytes, cos=0.99999, rel_l2=0.0039 "
+            "near-lossless, projected score 0.168576 [contest-CPU Scenario B] "
+            "under Catalog #324 pending paired-CUDA RATIFICATION per "
+            "Catalog #246. The MLX forward path remains fp32 for training "
+            "fidelity; quantization happens POST-training at archive emit "
+            "boundary. Per Catalog #192/#317/#341 the trainer output "
+            "remains non-promotable [macOS-MLX research-signal]."
         ),
     )
     return p
