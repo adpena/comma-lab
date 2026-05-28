@@ -8308,6 +8308,51 @@ def _repair_budget_rate_only_parent_row(
     }
 
 
+def _repair_budget_allocation_rows(work_order: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    direct_rows = [
+        row
+        for row in work_order.get("allocation_rows") or []
+        if isinstance(row, Mapping)
+    ]
+    if direct_rows:
+        return direct_rows
+    ledger = work_order.get("typed_response_ledger")
+    if not isinstance(ledger, Mapping):
+        return []
+    allocation_rows: list[Mapping[str, Any]] = []
+    for rank, row in enumerate(ledger.get("rows") or [], start=1):
+        if not isinstance(row, Mapping):
+            continue
+        requested_bytes = _finite_int_or_none(row.get("requested_repair_bytes")) or 0
+        objective_delta = _finite_float_or_none(row.get("objective_delta_score_units"))
+        improvement = max(0.0, -(objective_delta or 0.0))
+        allocation_rows.append(
+            {
+                **dict(row),
+                "rank": row.get("rank") or rank,
+                "proposed_encoder_repair_bytes": (
+                    row.get("proposed_encoder_repair_bytes") or requested_bytes
+                ),
+                "local_lagrangian_improvement_score_units": (
+                    row.get("local_lagrangian_improvement_score_units")
+                    if row.get("local_lagrangian_improvement_score_units") is not None
+                    else improvement
+                ),
+                "measured_component_delta_score_units": (
+                    row.get("measured_component_delta_score_units")
+                    if row.get("measured_component_delta_score_units") is not None
+                    else objective_delta
+                ),
+                "measured_lagrangian_delta_score_units": (
+                    row.get("measured_lagrangian_delta_score_units")
+                    if row.get("measured_lagrangian_delta_score_units") is not None
+                    else objective_delta
+                ),
+            }
+        )
+    return allocation_rows
+
+
 def _repair_budget_spent_child_rows(
     *,
     chain_id: str,
@@ -8315,7 +8360,7 @@ def _repair_budget_spent_child_rows(
     work_order: Mapping[str, Any],
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
-    for order, allocation in enumerate(work_order.get("allocation_rows") or [], start=2):
+    for order, allocation in enumerate(_repair_budget_allocation_rows(work_order), start=2):
         if not isinstance(allocation, Mapping):
             continue
         proposed_bytes = _finite_int_or_none(
@@ -8346,6 +8391,23 @@ def _repair_budget_spent_child_rows(
         blockers.extend(_string_list(allocation.get("budget_spend_blockers")))
         if proposed_bytes <= 0:
             blockers.append("no_encoder_repair_bytes_allocated")
+        candidate_archive_path = str(
+            allocation.get("candidate_archive_path")
+            or allocation.get("receiver_consumed_candidate_archive_path")
+            or ""
+        ).strip()
+        candidate_archive_sha = str(
+            allocation.get("candidate_archive_sha256")
+            or allocation.get("receiver_consumed_candidate_archive_sha256")
+            or allocation.get("archive_sha256")
+            or ""
+        ).strip()
+        candidate_archive_bytes = allocation.get("candidate_archive_bytes")
+        runtime_consumption_proof_path = str(
+            allocation.get("runtime_consumption_proof_path")
+            or allocation.get("receiver_runtime_consumption_proof_path")
+            or ""
+        ).strip()
         rows.append(
             {
                 "schema": REPAIR_BUDGET_MATERIALIZATION_PLAN_ROW_SCHEMA,
@@ -8435,9 +8497,18 @@ def _repair_budget_spent_child_rows(
                     "materialization_component_replay_and_exact_axis_confirmation"
                 ),
                 "candidate_archive_materialized": False,
-                "candidate_archive_path": None,
-                "runtime_consumption_proof_present": False,
-                "receiver_consumed": False,
+                "candidate_archive_path": candidate_archive_path or None,
+                "candidate_archive_sha256": candidate_archive_sha or None,
+                "candidate_archive_bytes": candidate_archive_bytes,
+                "runtime_consumption_proof_path": runtime_consumption_proof_path or None,
+                "runtime_consumption_proof_present": (
+                    allocation.get("runtime_consumption_proof_present") is True
+                    or (
+                        bool(runtime_consumption_proof_path)
+                        and allocation.get("receiver_consumed") is True
+                    )
+                ),
+                "receiver_consumed": allocation.get("receiver_consumed") is True,
                 "component_response_replayed": False,
                 "budget_spend_allowed": False,
                 "ready_for_budget_spend": False,

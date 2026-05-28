@@ -1,0 +1,17 @@
+{
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "gpu_launched": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "mlx_scorer_response.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false
+}

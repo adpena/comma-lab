@@ -51,6 +51,10 @@ experiments/queue_state*.db-*
 .omx/research/**/queue_state*.sqlite-*
 .omx/research/**/queue_state*.db
 .omx/research/**/queue_state*.db-*
+.omx/research/**/*queue_state.sqlite
+.omx/research/**/*queue_state.sqlite-*
+.omx/research/**/*queue_state.db
+.omx/research/**/*queue_state.db-*
 # Artifact-local experiment-queue state is replayable from the committed queue
 # JSON plus result manifests. Commit compact ledgers/memos, not SQLite worker
 # state that can go stale or collide with regenerated queue ids.

@@ -38,6 +38,7 @@ from tac.optimization.repair_campaign_posterior import (  # noqa: E402
 )
 from tac.optimization.repair_family_byte_transform_executor import (  # noqa: E402
     REPAIR_FAMILY_BYTE_TRANSFORM_EXECUTION_REPORT_SCHEMA,
+    SUPPORTED_REPAIR_BYTE_TRANSFORM_FAMILIES,
 )
 from tac.optimization.repair_family_exact_ready_bridge import (  # noqa: E402
     REPAIR_FAMILY_EXACT_READY_BRIDGE_REPORT_SCHEMA,
@@ -81,6 +82,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--byte-credit-budget", type=int)
     parser.add_argument("--max-iterations", type=int, default=1)
     parser.add_argument("--max-steps-per-iteration", type=int, default=32)
+    parser.add_argument("--worker-max-experiments-per-iteration", type=int)
+    parser.add_argument("--require-family-id", action="append", default=[])
+    parser.add_argument("--require-all-queue-families", action="store_true")
     parser.add_argument("--submission-dir", action="append", default=[], type=Path)
     parser.add_argument("--execute-local", action="store_true")
     parser.add_argument("--overwrite", action="store_true")
@@ -118,23 +122,101 @@ def _string_list(value: Any) -> list[str]:
     return [text] if text else []
 
 
+def _family_from_experiment_metadata(metadata: dict[str, Any]) -> str:
+    family = str(metadata.get("family_id") or "").strip()
+    candidate = str(metadata.get("candidate_id") or "").strip()
+    if (not family or family == "unclassified_repair_family") and candidate in SUPPORTED_REPAIR_BYTE_TRANSFORM_FAMILIES:
+        return candidate
+    return family
+
+
+def _queue_family_ids(queue: dict[str, Any]) -> list[str]:
+    families: list[str] = []
+    for experiment in queue.get("experiments") or []:
+        if not isinstance(experiment, dict):
+            continue
+        metadata = experiment.get("metadata")
+        if not isinstance(metadata, dict):
+            continue
+        if metadata.get("queue_actuation_ready") is not True:
+            continue
+        family = _family_from_experiment_metadata(metadata)
+        if family:
+            families.append(family)
+    return ordered_unique(families)
+
+
+def _execution_family_ids(reports: Sequence[dict[str, Any]]) -> list[str]:
+    return ordered_unique(
+        str(report.get("family_id") or "").strip()
+        for report in reports
+        if str(report.get("family_id") or "").strip()
+    )
+
+
+def _family_coverage_report(
+    *,
+    required_family_ids: Sequence[str],
+    queue_family_ids: Sequence[str],
+    reports: Sequence[dict[str, Any]],
+) -> dict[str, Any]:
+    executed = _execution_family_ids(reports)
+    required = ordered_unique(str(family).strip() for family in required_family_ids if str(family).strip())
+    missing = [family for family in required if family not in set(executed)]
+    report = {
+        "schema": "repair_campaign_floor_loop_family_coverage.v1",
+        "required_family_ids": required,
+        "required_family_count": len(required),
+        "queue_family_ids": ordered_unique(queue_family_ids),
+        "queue_family_count": len(ordered_unique(queue_family_ids)),
+        "executed_family_ids": executed,
+        "executed_family_count": len(executed),
+        "missing_required_family_ids": missing,
+        "missing_required_family_count": len(missing),
+        "coverage_satisfied": not missing,
+        "blockers": (
+            []
+            if not missing
+            else [
+                "required_repair_family_coverage_incomplete",
+                *[f"required_repair_family_not_executed:{family}" for family in missing],
+            ]
+        ),
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        report,
+        context="repair_campaign_floor_loop_family_coverage",
+    )
+    return report
+
+
 def _run_worker(
     *,
     queue_path: Path,
     output_path: Path,
     max_steps: int,
+    max_experiments: int,
 ) -> dict[str, Any]:
+    state_path = output_path.parent / "repair_campaign_floor_loop_queue_state.sqlite"
     command = [
         sys.executable,
         str(REPO_ROOT / "tools" / "experiment_queue.py"),
         "--queue",
         str(queue_path),
+        "--state",
+        str(state_path),
         "run-worker",
+        "--noncanonical-state-rationale",
+        "repair_campaign_autonomous_floor_loop_uses_isolated_replay_state_to_avoid_shared_queue_collision",
         "--execute",
         "--max-steps",
         str(max_steps),
         "--max-experiments",
-        "1",
+        str(max(1, max_experiments)),
         "--max-parallel",
         "1",
         "--output",
@@ -155,16 +237,53 @@ def _run_worker(
         "stdout_tail": result.stdout[-4000:],
         "stderr_tail": result.stderr[-4000:],
         "output_path": _repo_rel(output_path),
+        "state_path": _repo_rel(state_path),
         "budget_spend_allowed": False,
         "ready_for_exact_eval_dispatch": False,
         **FALSE_AUTHORITY,
     }
 
 
-def _discover_execution_reports(output_dir: Path) -> list[Path]:
-    return sorted(
-        path for path in output_dir.rglob("repair_family_byte_transform_execution_report.json") if path.is_file()
-    )
+def _discover_execution_reports(output_dir: Path, queue: dict[str, Any]) -> list[Path]:
+    paths = [
+        path
+        for path in output_dir.rglob("repair_family_byte_transform_execution_report.json")
+        if path.is_file()
+    ]
+    for experiment in queue.get("experiments") or []:
+        if not isinstance(experiment, dict):
+            continue
+        metadata = experiment.get("metadata")
+        if not isinstance(metadata, dict):
+            continue
+        path_text = str(metadata.get("repair_family_byte_transform_execution_report_path") or "").strip()
+        if not path_text:
+            for step in experiment.get("steps") or []:
+                if not isinstance(step, dict):
+                    continue
+                command = step.get("command")
+                if not isinstance(command, list):
+                    continue
+                for index, item in enumerate(command):
+                    text = str(item)
+                    if text == "--execution-report-out" and index + 1 < len(command):
+                        candidate = Path(str(command[index + 1]))
+                        if candidate.name == "repair_family_byte_transform_execution_report.json":
+                            path_text = str(candidate)
+                            break
+                    if text.endswith("/repair_family_byte_transform_execution_report.json"):
+                        path_text = text
+                        break
+                if path_text:
+                    break
+        if path_text:
+            path = _resolve(Path(path_text))
+            if path.is_file():
+                paths.append(path)
+    unique: dict[str, Path] = {}
+    for path in paths:
+        unique[str(path.resolve(strict=False))] = path
+    return sorted(unique.values())
 
 
 def _load_execution_reports(paths: list[Path]) -> list[dict[str, Any]]:
@@ -201,6 +320,9 @@ def _precise_blocker_stop_reason(summary: dict[str, Any]) -> str:
     stack_plan = summary["stack_search_plan"]
     decision = stack_plan.get("budget_routing_decision") or {}
     route = str(decision.get("activation_action") or "")
+    coverage = summary.get("repair_family_coverage") or {}
+    if coverage.get("missing_required_family_count"):
+        return "required_repair_family_coverage_incomplete"
     if any(
         _iteration.get("stop_reason") == "exact_axis_blocker_or_local_worker_failure"
         for _iteration in summary.get("iterations") or []
@@ -211,6 +333,7 @@ def _precise_blocker_stop_reason(summary: dict[str, Any]) -> str:
     terminal_outcome = str(primary_path.get("terminal_outcome_class") or "") if isinstance(primary_path, dict) else ""
     if terminal_outcome in {
         "strictly_better_archive_bound_candidate_exact_axis_blocked",
+        "precise_exact_axis_blocker",
         "family_demoted_by_posterior_evidence",
     }:
         return terminal_outcome
@@ -290,12 +413,30 @@ def _build_summary(
     byte_credit_budget: int | None,
     max_iterations: int,
     max_steps_per_iteration: int,
+    worker_max_experiments_per_iteration: int | None,
     execute_local: bool,
+    required_family_ids: Sequence[str] = (),
+    require_all_queue_families: bool = False,
     submission_dirs: Sequence[Path] = (),
 ) -> dict[str, Any]:
     queue = _load_json(queue_path)
     require_no_truthy_authority_fields(queue, context="autonomous_floor_loop_queue")
+    queue_family_ids = _queue_family_ids(queue)
+    required_families = ordered_unique(
+        [
+            *(_string_list(required_family_ids)),
+            *(queue_family_ids if require_all_queue_families else []),
+        ]
+    )
+    worker_experiment_limit = worker_max_experiments_per_iteration
+    if worker_experiment_limit is None:
+        worker_experiment_limit = max(1, len(required_families) if required_families else 1)
     iterations: list[dict[str, Any]] = []
+    final_coverage = _family_coverage_report(
+        required_family_ids=required_families,
+        queue_family_ids=queue_family_ids,
+        reports=[],
+    )
     final_stack_plan: dict[str, Any] = {
         "schema": REPAIR_FAMILY_STACK_SEARCH_PLAN_SCHEMA,
         "execution_report_count": 0,
@@ -312,9 +453,15 @@ def _build_summary(
                 queue_path=queue_path,
                 output_path=output_dir / f"iteration_{index}_worker_result.json",
                 max_steps=max_steps_per_iteration,
+                max_experiments=worker_experiment_limit,
             )
-        report_paths = _discover_execution_reports(output_dir)
+        report_paths = _discover_execution_reports(output_dir, queue)
         reports = _load_execution_reports(report_paths)
+        final_coverage = _family_coverage_report(
+            required_family_ids=required_families,
+            queue_family_ids=queue_family_ids,
+            reports=reports,
+        )
         if reports:
             final_stack_plan = plan_repair_family_stack_search(
                 execution_reports=reports,
@@ -324,6 +471,11 @@ def _build_summary(
                 byte_credit_budget=byte_credit_budget,
             )
         stop_reason = _iteration_stop_reason(final_stack_plan, worker_result)
+        if (
+            worker_result is None
+            or worker_result.get("returncode") in (0, None)
+        ) and final_coverage["coverage_satisfied"] is not True:
+            stop_reason = "required_repair_family_coverage_incomplete"
         iterations.append(
             {
                 "schema": "repair_campaign_autonomous_floor_loop_iteration.v1",
@@ -334,6 +486,7 @@ def _build_summary(
                 "execution_report_paths": [_repo_rel(path) for path in report_paths],
                 "stack_plan_schema": final_stack_plan.get("schema"),
                 "candidate_improvement_observed": final_stack_plan.get("candidate_improvement_observed") is True,
+                "repair_family_coverage": final_coverage,
                 "stop_reason": stop_reason,
                 "budget_spend_allowed": False,
                 "ready_for_exact_eval_dispatch": False,
@@ -383,6 +536,11 @@ def _build_summary(
         "max_iterations": max_iterations,
         "max_steps_per_iteration": max_steps_per_iteration,
         "execute_local": execute_local,
+        "worker_max_experiments_per_iteration": worker_experiment_limit,
+        "queue_family_ids": queue_family_ids,
+        "required_family_ids": required_families,
+        "require_all_queue_families": require_all_queue_families,
+        "repair_family_coverage": final_coverage,
         "iteration_count": len(iterations),
         "iterations": iterations,
         "stack_search_plan_path": _repo_rel(stack_plan_path),
@@ -432,6 +590,7 @@ def _build_summary(
                     if final_stack_plan.get("execution_report_count")
                     else ["repair_family_byte_transform_execution_reports_missing"]
                 ),
+                *_string_list(final_coverage.get("blockers")),
             ]
         ),
         "budget_spend_allowed": False,
@@ -463,7 +622,10 @@ def main(argv: list[str] | None = None) -> int:
             byte_credit_budget=args.byte_credit_budget,
             max_iterations=args.max_iterations,
             max_steps_per_iteration=args.max_steps_per_iteration,
+            worker_max_experiments_per_iteration=args.worker_max_experiments_per_iteration,
             execute_local=bool(args.execute_local),
+            required_family_ids=tuple(args.require_family_id),
+            require_all_queue_families=bool(args.require_all_queue_families),
             submission_dirs=tuple(args.submission_dir),
         )
         stack_plan_path = output_dir / "repair_family_stack_search_plan.json"
@@ -582,6 +744,9 @@ def main(argv: list[str] | None = None) -> int:
                 "primary_stack_acquisition_terminal_outcome": summary["primary_stack_acquisition_terminal_outcome"],
                 "iteration_count": summary["iteration_count"],
                 "execution_report_count": summary["stack_search_plan"]["execution_report_count"],
+                "required_family_count": summary["repair_family_coverage"]["required_family_count"],
+                "executed_family_count": summary["repair_family_coverage"]["executed_family_count"],
+                "missing_required_family_ids": summary["repair_family_coverage"]["missing_required_family_ids"],
                 "exact_eval_handoff_candidate_count": summary["stack_search_plan"].get(
                     "exact_eval_handoff_candidate_count",
                     0,

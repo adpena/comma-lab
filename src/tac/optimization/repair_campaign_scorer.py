@@ -462,6 +462,83 @@ def repair_operator_family_priors() -> dict[str, Any]:
         },
         {
             "schema": REPAIR_OPERATOR_FAMILY_PRIOR_ROW_SCHEMA,
+            "family_id": "frame0_k16_palette_asymmetry",
+            "aliases": [
+                "frame0_k16_palette_asymmetry",
+                "frame0-k16-palette-asymmetry",
+                "frame0_k16_palette",
+            ],
+            "targeted_dimensions": ["palette", "frame0", "posenet"],
+            "entropy_position_label": "before_entropy_coder_distribution_shaping",
+            "campaign_prior_multiplier": 1.14,
+            "required_local_artifacts": [
+                "local_mlx_response_path",
+                "reference_local_mlx_response_path",
+                "palette_dynamics_context",
+            ],
+            "missing_artifact_label": "frame0_k16_palette_asymmetry_probe_missing",
+            "stackability_role": "frame0_k16_palette_repair_interaction_prior",
+            "empirical_canonical_palette": canonical_palette,
+            "mathematical_prior": {
+                "schema": "repair_campaign_frame0_k16_palette_mathematical_prior.v1",
+                "observation": (
+                    "live K16 palette contains fifteen frame0 non-identity modes, "
+                    "one identity mode, and zero frame1 modes"
+                ),
+                "action_functional_effect": (
+                    "treat frame0 palette transforms as global interaction terms "
+                    "before entropy coding and before per-region selector choices"
+                ),
+                "hard_constraint": (
+                    "same-axis stackability remeasurement required before exact "
+                    "budget or score authority"
+                ),
+                "budget_spend_allowed": False,
+                "ready_for_exact_eval_dispatch": False,
+                **FALSE_AUTHORITY,
+            },
+            **FALSE_AUTHORITY,
+        },
+        {
+            "schema": REPAIR_OPERATOR_FAMILY_PRIOR_ROW_SCHEMA,
+            "family_id": "entropy_boundary_probe",
+            "aliases": [
+                "entropy_boundary_probe",
+                "entropy-boundary-probe",
+                "coder_boundary_probe",
+            ],
+            "targeted_dimensions": ["rate_bytes", "entropy_coder_boundary"],
+            "entropy_position_label": "at_entropy_coder_integer_codeword_boundary",
+            "campaign_prior_multiplier": 0.94,
+            "required_local_artifacts": [
+                "local_mlx_response_path",
+                "reference_local_mlx_response_path",
+                "entropy_boundary_probe_manifest",
+            ],
+            "missing_artifact_label": "entropy_boundary_probe_manifest_missing",
+            "stackability_role": "integer_codeword_boundary_slack_probe",
+            "mathematical_prior": {
+                "schema": "repair_campaign_entropy_boundary_mathematical_prior.v1",
+                "observation": (
+                    "at-coder transforms can only exploit model and codeword "
+                    "integer-boundary slack, not post-coder byte permutations"
+                ),
+                "action_functional_effect": (
+                    "separate before-coder distribution shaping from at-coder "
+                    "boundary savings before stack selection"
+                ),
+                "hard_constraint": (
+                    "archive-native byte accounting and receiver proof required "
+                    "before exact handoff"
+                ),
+                "budget_spend_allowed": False,
+                "ready_for_exact_eval_dispatch": False,
+                **FALSE_AUTHORITY,
+            },
+            **FALSE_AUTHORITY,
+        },
+        {
+            "schema": REPAIR_OPERATOR_FAMILY_PRIOR_ROW_SCHEMA,
             "family_id": "entropy_position_cascade",
             "aliases": ["entropy_position_cascade", "cascade_c", "Cascade C"],
             "targeted_dimensions": ["segnet", "posenet", "selector_stream"],

@@ -80,7 +80,7 @@ _FAMILY_REQUIRED_VALUE_KEYS: Mapping[str, tuple[str, ...]] = {
     "segnet_class_region_waterfill": ("segnet_class_region_mask_ids",),
     "posenet_null_bottom_decile": ("posenet_null_bottom_decile_pair_ids",),
     "palette_frame_asymmetry_prior": (),
-    "frame0_k16_palette_asymmetry": (),
+    "frame0_k16_palette_asymmetry": ("palette_dynamics_context",),
     "per_region_selector_codec": ("selector_payload_bits_per_region",),
     "entropy_boundary_probe": ("entropy_boundary_probe_manifest",),
 }
@@ -426,6 +426,12 @@ def _family_required_blockers(
         elif not _is_file(path_text, repo_root):
             blockers.append(f"{key}_file_missing")
     if family_id == "palette_frame_asymmetry_prior":
+        palette_context = _mapping(score_row.get("palette_dynamics_context")) or _mapping(
+            allocation.get("palette_dynamics_context")
+        )
+        if not palette_context:
+            blockers.append("palette_dynamics_context_missing")
+    if family_id == "frame0_k16_palette_asymmetry":
         palette_context = _mapping(score_row.get("palette_dynamics_context")) or _mapping(
             allocation.get("palette_dynamics_context")
         )
