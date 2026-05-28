@@ -13,6 +13,9 @@ from comma_lab.scheduler.repair_cascade_mlx_probe_queue import (
     REPAIR_CASCADE_OPPORTUNITY_ROW_SCHEMA,
     repair_cascade_rows_from_payload,
 )
+from comma_lab.scheduler.scorer_region_exact_ready_bridge import (
+    SCORER_REGION_EXACT_READY_BRIDGE_REPORT_SCHEMA,
+)
 from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY
 from tac.optimization.family_agnostic_materializers import (
     ARCHIVE_ZIP_REPACK_SCHEMA,
@@ -429,6 +432,9 @@ def build_scorer_region_selector_chain_queue(
     receiver_patch_dir = root / "frame1_region_waterfill_runtime_patch"
     receiver_patch_manifest = receiver_patch_dir / "frame1_region_waterfill_runtime_patch.json"
     receiver_patch_submission_dir = receiver_patch_dir / "submission_dir"
+    exact_ready_source_queue = root / "scorer_region_exact_ready_source_queue.json"
+    blocked_exact_ready_queue = root / "scorer_region_blocked_exact_ready_queue.json"
+    exact_ready_bridge_report = root / "scorer_region_exact_ready_bridge_report.json"
 
     context_ref = _repo_rel(context_path, repo_root)
     p19_posenet_null_pairs_ref = _repo_rel(p19_posenet_null_pairs, repo_root)
@@ -442,6 +448,9 @@ def build_scorer_region_selector_chain_queue(
     distortion_budget_attack_plan_ref = _repo_rel(distortion_budget_attack_plan, repo_root)
     receiver_patch_manifest_ref = _repo_rel(receiver_patch_manifest, repo_root)
     receiver_patch_submission_ref = _repo_rel(receiver_patch_submission_dir, repo_root)
+    exact_ready_source_queue_ref = _repo_rel(exact_ready_source_queue, repo_root)
+    blocked_exact_ready_queue_ref = _repo_rel(blocked_exact_ready_queue, repo_root)
+    exact_ready_bridge_report_ref = _repo_rel(exact_ready_bridge_report, repo_root)
     source_submission_ref = _repo_rel(_resolve(source_submission_dir, repo_root), repo_root)
     output_root_ref = _repo_rel(root, repo_root)
 
@@ -562,6 +571,20 @@ def build_scorer_region_selector_chain_queue(
             ),
             "frame1_region_waterfill_runtime_patch_submission_dir": (
                 receiver_patch_submission_ref if receiver_patch_inputs_available else None
+            ),
+            "scorer_region_exact_ready_source_queue_path": (
+                exact_ready_source_queue_ref if receiver_patch_inputs_available else None
+            ),
+            "scorer_region_blocked_exact_ready_queue_path": (
+                blocked_exact_ready_queue_ref if receiver_patch_inputs_available else None
+            ),
+            "scorer_region_exact_ready_bridge_report_path": (
+                exact_ready_bridge_report_ref if receiver_patch_inputs_available else None
+            ),
+            "scorer_region_exact_ready_bridge_report_schema": (
+                SCORER_REGION_EXACT_READY_BRIDGE_REPORT_SCHEMA
+                if receiver_patch_inputs_available
+                else None
             ),
             "materialize_upstream_artifacts": bool(materialize_upstream_artifacts),
             "materialize_receiver_patch": bool(materialize_receiver_patch),
@@ -909,6 +932,58 @@ def build_scorer_region_selector_chain_queue(
                                             _resolve(effective_segnet_region_masks, repo_root),
                                             repo_root,
                                         ),
+                                    ],
+                                    "include_postcondition_paths": True,
+                                },
+                            },
+                        ]
+                        if receiver_patch_inputs_available
+                        else []
+                    ),
+                    *(
+                        [
+                            {
+                                "id": "emit_scorer_region_exact_ready_bridge_inputs",
+                                "kind": "command",
+                                "requires": ["materialize_frame1_region_waterfill_runtime_patch"],
+                                "command": [
+                                    ".venv/bin/python",
+                                    "tools/build_scorer_region_exact_ready_bridge.py",
+                                    "--chain-report",
+                                    chain_report_ref,
+                                    "--receiver-patch-manifest",
+                                    receiver_patch_manifest_ref,
+                                    "--source-queue-out",
+                                    exact_ready_source_queue_ref,
+                                    "--blocked-exact-ready-queue-out",
+                                    blocked_exact_ready_queue_ref,
+                                    "--bridge-report-out",
+                                    exact_ready_bridge_report_ref,
+                                    "--overwrite",
+                                ],
+                                "resources": {"kind": "local_cpu"},
+                                "timeout_seconds": 120,
+                                "postconditions": [
+                                    {
+                                        "type": "json_equals",
+                                        "path": exact_ready_bridge_report_ref,
+                                        "key": "schema",
+                                        "equals": SCORER_REGION_EXACT_READY_BRIDGE_REPORT_SCHEMA,
+                                    },
+                                    {
+                                        "type": "json_false_authority",
+                                        "path": exact_ready_bridge_report_ref,
+                                    },
+                                ],
+                                "telemetry": {
+                                    "artifact_paths": [
+                                        exact_ready_source_queue_ref,
+                                        blocked_exact_ready_queue_ref,
+                                        exact_ready_bridge_report_ref,
+                                    ],
+                                    "input_artifact_paths": [
+                                        chain_report_ref,
+                                        receiver_patch_manifest_ref,
                                     ],
                                     "include_postcondition_paths": True,
                                 },

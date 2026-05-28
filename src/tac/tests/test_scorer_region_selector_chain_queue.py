@@ -4,6 +4,10 @@ import json
 import zipfile
 from pathlib import Path
 
+from comma_lab.scheduler.scorer_region_exact_ready_bridge import (
+    SCORER_REGION_EXACT_READY_BRIDGE_REPORT_SCHEMA,
+    build_scorer_region_exact_ready_bridge,
+)
 from comma_lab.scheduler.scorer_region_selector_chain_queue import (
     SCORER_REGION_SELECTOR_CHAIN_CONTEXT_SCHEMA,
     SCORER_REGION_SELECTOR_CHAIN_REPORT_SCHEMA,
@@ -209,11 +213,18 @@ def test_chain_queue_can_materialize_receiver_patch(
     )
 
     steps = [step["id"] for step in queue["experiments"][0]["steps"]]
-    assert steps[-1] == "materialize_frame1_region_waterfill_runtime_patch"
+    assert steps[-2:] == [
+        "materialize_frame1_region_waterfill_runtime_patch",
+        "emit_scorer_region_exact_ready_bridge_inputs",
+    ]
     assert queue["metadata"]["materialize_receiver_patch"] is True
     assert (
-        queue["experiments"][0]["steps"][-1]["postconditions"][0]["equals"]
+        queue["experiments"][0]["steps"][-2]["postconditions"][0]["equals"]
         == FRAME1_REGION_WATERFILL_RUNTIME_PATCH_SCHEMA
+    )
+    assert (
+        queue["experiments"][0]["steps"][-1]["postconditions"][0]["equals"]
+        == SCORER_REGION_EXACT_READY_BRIDGE_REPORT_SCHEMA
     )
 
 
@@ -405,3 +416,80 @@ def test_frame1_region_waterfill_runtime_patch_materializes_submission(
     assert "from region_waterfill_patch import apply_region_waterfill" in inflate
     assert "apply_region_waterfill(rounded, pair_start=i)" in inflate
     assert payload["ready_for_exact_eval_dispatch"] is False
+
+
+def test_scorer_region_exact_ready_bridge_blocks_without_runtime_content_tree(
+    tmp_path: Path,
+) -> None:
+    submission = tmp_path / "submission"
+    (submission / "src").mkdir(parents=True)
+    (submission / "archive.zip").write_bytes(b"fake")
+    (submission / "inflate.py").write_text(
+        "from model import HNeRVDecoder  # type: ignore[import-not-found]\n"
+        "def f():\n"
+        "            rounded = apply_pr101_selector_to_frames(\n"
+        "                rounded,\n"
+        "                selector_kind,\n"
+        "                selector_codes,\n"
+        "                selector_specs,\n"
+        "                pair_start=i,\n"
+        "            )\n",
+        encoding="utf-8",
+    )
+    p18 = tmp_path / "p18.json"
+    _write_json(
+        p18,
+        {
+            "schema": P18_SEGNET_REGION_WATERFILL_SCHEMA,
+            "rows": [
+                {
+                    "pair_id": 0,
+                    "regions256": [
+                        {"box": {"x0": 0.0, "y0": 0.0, "x1": 0.25, "y1": 0.25}}
+                    ],
+                }
+            ],
+            **FALSE_AUTHORITY,
+        },
+    )
+    patch_manifest = build_frame1_region_waterfill_runtime_patch(
+        repo_root=tmp_path,
+        source_submission_dir=submission,
+        segnet_region_waterfill=p18,
+        output_submission_dir=tmp_path / "patched",
+        overwrite=True,
+    )
+    patch_manifest_path = tmp_path / "patch_manifest.json"
+    _write_json(patch_manifest_path, patch_manifest)
+    chain_report_path = tmp_path / "chain_report.json"
+    _write_json(
+        chain_report_path,
+        {
+            "schema": SCORER_REGION_SELECTOR_CHAIN_REPORT_SCHEMA,
+            "chain_label": "cascade-c",
+            "selected_local_survivor_archive": patch_manifest["candidate_archive"],
+            "cumulative_rate_saved_bytes_vs_source": 0,
+            "readiness_blockers": [
+                "contest_auth_eval_required_before_score_or_promotion_claim"
+            ],
+            **FALSE_AUTHORITY,
+        },
+    )
+
+    bridge = build_scorer_region_exact_ready_bridge(
+        chain_report_path=chain_report_path,
+        receiver_patch_manifest_path=patch_manifest_path,
+        repo_root=tmp_path,
+    )
+
+    report = bridge["bridge_report"]
+    source_queue = bridge["source_optimizer_queue"]
+    blocked_queue = bridge["blocked_exact_ready_queue"]
+    assert report["schema"] == SCORER_REGION_EXACT_READY_BRIDGE_REPORT_SCHEMA
+    assert report["archive_custody_proven_count"] == 1
+    assert report["runtime_patch_custody_proven_count"] == 1
+    assert report["runtime_content_tree_custody_proven_count"] == 0
+    assert source_queue["top_k"][0]["score_affecting_runtime_changed"] is True
+    assert source_queue["dispatch_ready_count"] == 0
+    assert blocked_queue["dispatch_ready_count"] == 0
+    assert "receiver_patch_inflate_sh_missing" in report["blockers"]
