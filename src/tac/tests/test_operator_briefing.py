@@ -85,6 +85,7 @@ def test_briefing_runs_all_three_phases():
     assert "Phase 6e — PR95 MLX control profiles" in proc.stdout
     assert "Phase 6f — Distortion-axis scorer probe signals" in proc.stdout
     assert "Phase 6g — DQS1 drop-many greedy reducer" in proc.stdout
+    assert "Phase 6i — Experiment queue fleet supervisor" in proc.stdout
     assert "pr91_hpm1_readiness_bundle" in proc.stdout
     assert "wr01_apply_pr106x_half" in proc.stdout
     assert "pr106_q10_151byte_brotli" in proc.stdout
@@ -212,6 +213,12 @@ def test_briefing_json_composite_has_all_three_keys():
     assert out["dispatch_readiness"]["phase_6g_dqs1_drop_many_greedy"][
         "score_claim"
     ] is False
+    queue_fleet = out["queue_fleet"]
+    assert queue_fleet["schema"] == "experiment_queue_fleet_status.v1"
+    assert queue_fleet["score_claim"] is False
+    assert queue_fleet["promotion_eligible"] is False
+    assert queue_fleet["rank_or_kill_eligible"] is False
+    assert queue_fleet["ready_for_exact_eval_dispatch"] is False
     l5 = out["l5_v2_frontier_readiness"]
     assert l5["schema"] == "pact.l5_v2_frontier_readiness.v1"
     assert l5["score_claim"] is False

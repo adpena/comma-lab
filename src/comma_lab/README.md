@@ -42,6 +42,7 @@ score-authority-safe.
 | `comma_lab.research_state` | Track, summarize, externalize, or ignore research artifacts |
 | `comma_lab.reverse_engineering` | Public-submission tree hygiene and disposition helpers |
 | `comma_lab.scheduler` | Lightweight scheduler data models and reporting |
+| `comma_lab.scheduler.queue_fleet` | Live queue discovery, health classification, and bounded supervision across `.omx` / `experiments` queues |
 | `comma_lab.state_models` | Promoted-result and custody state models |
 | `comma_lab.state_sync` | Deterministic state projection and doctor/sync flows |
 | `comma_lab.snapshot` | Repository snapshot helpers |

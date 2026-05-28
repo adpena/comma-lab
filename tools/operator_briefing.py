@@ -128,6 +128,7 @@ from comma_lab.scheduler.experiment_queue_observer import (  # noqa: E402
 from comma_lab.scheduler.queue_feedback_replan_policy import (  # noqa: E402
     build_queue_observation_recovery_plan,
 )
+from comma_lab.scheduler.queue_fleet import queue_fleet_status  # noqa: E402
 from tac.authority_contract import apply_false_authority_contract  # noqa: E402
 from tac.optimization.atw_v2_phase2_gate import (  # noqa: E402
     atw_v2_phase2_gate_status,
@@ -3351,6 +3352,68 @@ def _format_dqs1_drop_many_greedy_summary() -> str:
                 lines.append(f"  - {action}")
     lines.append(
         "authority: research/planning only; no score, rank, promotion, or exact-dispatch authority."
+    )
+    return "\n".join(lines)
+
+
+def _queue_fleet_summary() -> dict[str, object]:
+    payload = queue_fleet_status(
+        REPO_ROOT,
+        (".omx/research", "experiments/results", "configs/experiment_queues"),
+        max_depth=5,
+        limit=40,
+        row_limit=12,
+        tail_lines=0,
+        include_orphans=True,
+        supervisor_output_root=".omx/research/queue_fleet_supervisor",
+    )
+    return {
+        **payload,
+        "operator_briefing_live_observation": True,
+        **_false_authority_fields(),
+    }
+
+
+def _format_queue_fleet_summary() -> str:
+    payload = _queue_fleet_summary()
+    lines = [
+        (
+            "status: "
+            f"queues={payload['queue_count']} "
+            f"actionable={payload['actionable_count']} "
+            f"ready={payload['ready_to_supervise_count']} "
+            f"needs_recovery={payload['needs_recovery_count']}"
+        ),
+        f"status_counts: {payload['status_counts']}",
+    ]
+    rows = payload.get("rows")
+    if isinstance(rows, list):
+        lines.append("top queue rows:")
+        for row in rows[:8]:
+            if not isinstance(row, dict):
+                continue
+            lines.append(
+                "  "
+                f"{row.get('status')} {row.get('queue_id') or '-'} "
+                f"counts={row.get('status_counts') or {}} "
+                f"path={row.get('queue_path')}"
+            )
+            blockers = row.get("blockers")
+            if blockers:
+                lines.append(f"    blockers={blockers}")
+    commands = payload.get("next_supervise_commands")
+    if isinstance(commands, list) and commands:
+        lines.append("next queue-fleet command:")
+        lines.append(
+            "  .venv/bin/python tools/queue_fleet.py "
+            "--root .omx/research --root experiments/results "
+            "supervise --output-dir .omx/research/queue_fleet_supervisor_${UTC} "
+            "--execute --max-queues 4 --max-parallel auto"
+        )
+    else:
+        lines.append("next queue-fleet command: no READY_TO_SUPERVISE rows in current scan")
+    lines.append(
+        "authority: queue telemetry and local supervision only; no score, rank, promotion, or exact-dispatch authority."
     )
     return "\n".join(lines)
 
@@ -7131,6 +7194,7 @@ def main(argv: list[str] | None = None) -> int:
                 _distortion_axis_learned_sweep_summary()
             ),
             "dqs1_drop_many_greedy": _dqs1_drop_many_greedy_summary(),
+            "queue_fleet": _queue_fleet_summary(),
             "l5_v2_frontier_readiness": _l5_v2_frontier_readiness(
                 dispatch_claim_summary=dispatch_claim_summary
             ),
@@ -7295,6 +7359,10 @@ def main(argv: list[str] | None = None) -> int:
     parts.append(_section(
         "Phase 6h — Distortion-axis learned-sweep bridge",
         _format_distortion_axis_learned_sweep_summary(),
+    ))
+    parts.append(_section(
+        "Phase 6i — Experiment queue fleet supervisor",
+        _format_queue_fleet_summary(),
     ))
     parts.append(_section(
         "Phase 7 — Constrained-coord-search status (sister subagent a8522fca)",
