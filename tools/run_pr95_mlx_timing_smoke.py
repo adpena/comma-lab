@@ -37,6 +37,7 @@ from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
     PR95_MLX_TRAINING_FIDELITY_SOURCE_VIDEO_RGB_YUV6_TIMING_ONLY,
     PR95_STAGE_MODULES,
     SMOKE_MANIFEST_SCHEMA,
+    compare_pr95_public_archive_forward_with_pytorch,
     parse_pr95_public_archive_zip,
     pr95_default_optimizer_descriptor_id,
     pr95_mlx_optimizer_descriptor_row,
@@ -513,6 +514,7 @@ def _recommended_execution_command(
     write_pr95_public_archive_export: bool,
     prove_pr95_runtime_consumption: bool,
     write_pytorch_export_parity: bool,
+    write_mlx_gpu_drift_attestation: bool,
     public_pr95_source_model: Path,
     pytorch_export_sample_indices: list[int],
     pytorch_export_mlx_device: str,
@@ -587,6 +589,8 @@ def _recommended_execution_command(
         )
         for sample_index in pytorch_export_sample_indices:
             command.extend(["--pytorch-export-sample-index", str(sample_index)])
+    if write_mlx_gpu_drift_attestation:
+        command.append("--write-mlx-gpu-drift-attestation")
     if write_source_faithful_preprocess_smoke:
         command.extend(
             [
@@ -640,6 +644,7 @@ def _extra_artifact_postconditions(
     write_pr95_public_archive_export: bool,
     prove_pr95_runtime_consumption: bool,
     write_pytorch_export_parity: bool,
+    write_mlx_gpu_drift_attestation: bool,
     write_source_faithful_preprocess_smoke: bool,
     write_source_video_preprocess_smoke: bool,
     train_on_source_video_pairs: bool,
@@ -790,6 +795,25 @@ def _extra_artifact_postconditions(
                 _json_false_authority_postcondition(parity_path),
             ]
         )
+    if write_mlx_gpu_drift_attestation:
+        drift_path = _rel(output_dir / "mlx_gpu_forward_drift_attestation.json")
+        postconditions.extend(
+            [
+                {"type": "path_exists", "path": drift_path},
+                _json_equals_postcondition(
+                    drift_path,
+                    "schema",
+                    "pr95_hnerv_public_archive_mlx_forward_parity.v1",
+                ),
+                _json_equals_postcondition(drift_path, "mlx_device", "gpu"),
+                _json_equals_postcondition(
+                    drift_path,
+                    "exact_readiness_refusal.ready",
+                    False,
+                ),
+                _json_false_authority_postcondition(drift_path),
+            ]
+        )
     if prove_pr95_runtime_consumption:
         proof_path = _rel(output_dir / "runtime_consumption_proof.json")
         postconditions.extend(
@@ -825,6 +849,7 @@ def _build_representation_training_plan(
     write_pr95_public_archive_export: bool,
     prove_pr95_runtime_consumption: bool,
     write_pytorch_export_parity: bool,
+    write_mlx_gpu_drift_attestation: bool,
     public_pr95_source_model: Path,
     pytorch_export_sample_indices: list[int],
     pytorch_export_mlx_device: str,
@@ -963,6 +988,9 @@ def _build_representation_training_plan(
             "pr95_public_archive_export_requested": write_pr95_public_archive_export,
             "pr95_runtime_consumption_proof_requested": prove_pr95_runtime_consumption,
             "pytorch_export_forward_parity_requested": write_pytorch_export_parity,
+            "mlx_gpu_forward_drift_attestation_requested": (
+                write_mlx_gpu_drift_attestation
+            ),
             "public_pr95_source_model": _rel(public_pr95_source_model),
             "pytorch_export_sample_indices": pytorch_export_sample_indices,
             "pytorch_export_mlx_device": pytorch_export_mlx_device,
@@ -1042,6 +1070,12 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
     stage = int(args.stage)
     stage_module = _stage_module(stage)
     source_video_pair_indices = _source_video_pair_indices(args)
+    needs_pr95_archive_export = (
+        args.write_pr95_public_archive_export
+        or args.prove_pr95_runtime_consumption
+        or args.write_pytorch_export_parity
+        or args.write_mlx_gpu_drift_attestation
+    )
     if args.train_on_source_video_pairs and _source_video_output_hw(args) != (384, 512):
         raise ValueError(
             "--train-on-source-video-pairs requires --source-video-output-hw 384,512"
@@ -1086,18 +1120,10 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
         ),
         "plan_manifest": _rel(output_dir / "plan.json"),
         "archive_export_manifest": _rel(output_dir / "pr95_public_archive_export.json")
-        if (
-            args.write_pr95_public_archive_export
-            or args.prove_pr95_runtime_consumption
-            or args.write_pytorch_export_parity
-        )
+        if needs_pr95_archive_export
         else None,
         "archive_export_zip": _rel(output_dir / "pr95_public_archive.zip")
-        if (
-            args.write_pr95_public_archive_export
-            or args.prove_pr95_runtime_consumption
-            or args.write_pytorch_export_parity
-        )
+        if needs_pr95_archive_export
         else None,
         "runtime_consumption_proof": _rel(output_dir / "runtime_consumption_proof.json")
         if args.prove_pr95_runtime_consumption
@@ -1118,6 +1144,11 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
         else None,
         "pytorch_export_mlx_device": args.pytorch_export_mlx_device
         if args.write_pytorch_export_parity
+        else None,
+        "mlx_gpu_forward_drift_attestation": _rel(
+            output_dir / "mlx_gpu_forward_drift_attestation.json"
+        )
+        if args.write_mlx_gpu_drift_attestation
         else None,
         "source_faithful_preprocess_smoke": _rel(
             output_dir / "source_faithful_preprocess_smoke.json"
@@ -1167,12 +1198,11 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
         "extra_artifact_postconditions": _extra_artifact_postconditions(
             output_dir=output_dir,
             write_pr95_public_archive_export=(
-                args.write_pr95_public_archive_export
-                or args.prove_pr95_runtime_consumption
-                or args.write_pytorch_export_parity
+                needs_pr95_archive_export
             ),
             prove_pr95_runtime_consumption=args.prove_pr95_runtime_consumption,
             write_pytorch_export_parity=args.write_pytorch_export_parity,
+            write_mlx_gpu_drift_attestation=args.write_mlx_gpu_drift_attestation,
             write_source_faithful_preprocess_smoke=(
                 args.write_source_faithful_preprocess_smoke
             ),
@@ -1202,12 +1232,11 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
             output_dir=output_dir,
             write_byte_closed_smoke=args.write_byte_closed_smoke,
             write_pr95_public_archive_export=(
-                args.write_pr95_public_archive_export
-                or args.prove_pr95_runtime_consumption
-                or args.write_pytorch_export_parity
+                needs_pr95_archive_export
             ),
             prove_pr95_runtime_consumption=args.prove_pr95_runtime_consumption,
             write_pytorch_export_parity=args.write_pytorch_export_parity,
+            write_mlx_gpu_drift_attestation=args.write_mlx_gpu_drift_attestation,
             write_source_faithful_preprocess_smoke=(
                 args.write_source_faithful_preprocess_smoke
             ),
@@ -1250,12 +1279,11 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
         output_dir=output_dir,
         write_byte_closed_smoke=args.write_byte_closed_smoke,
         write_pr95_public_archive_export=(
-            args.write_pr95_public_archive_export
-            or args.prove_pr95_runtime_consumption
-            or args.write_pytorch_export_parity
+            needs_pr95_archive_export
         ),
         prove_pr95_runtime_consumption=args.prove_pr95_runtime_consumption,
         write_pytorch_export_parity=args.write_pytorch_export_parity,
+        write_mlx_gpu_drift_attestation=args.write_mlx_gpu_drift_attestation,
         public_pr95_source_model=args.public_pr95_source_model,
         pytorch_export_sample_indices=args.pytorch_export_sample_index or [0],
         pytorch_export_mlx_device=args.pytorch_export_mlx_device,
@@ -1319,12 +1347,13 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
         "output_dir": _rel(output_dir),
         "write_byte_closed_smoke": bool(args.write_byte_closed_smoke),
         "write_pr95_public_archive_export": bool(
-            args.write_pr95_public_archive_export
-            or args.prove_pr95_runtime_consumption
-            or args.write_pytorch_export_parity
+            needs_pr95_archive_export
         ),
         "prove_pr95_runtime_consumption": bool(args.prove_pr95_runtime_consumption),
         "write_pytorch_export_parity": bool(args.write_pytorch_export_parity),
+        "write_mlx_gpu_drift_attestation": bool(
+            args.write_mlx_gpu_drift_attestation
+        ),
         "public_pr95_source_model": _rel(args.public_pr95_source_model),
         "pytorch_export_sample_indices": args.pytorch_export_sample_index or [0],
         "pytorch_export_mlx_device": args.pytorch_export_mlx_device,
@@ -1368,6 +1397,7 @@ def _representation_manifest(
     archive_summary: dict[str, Any] | None,
     runtime_consumption_proof: dict[str, Any] | None,
     pytorch_export_forward_parity: dict[str, Any] | None,
+    mlx_gpu_forward_drift_attestation: dict[str, Any] | None,
     source_faithful_preprocess_smoke: dict[str, Any] | None,
     source_video_preprocess_smoke: dict[str, Any] | None,
 ) -> dict[str, Any]:
@@ -1509,6 +1539,12 @@ def _representation_manifest(
             "pytorch_export_forward_parity_established": (
                 pytorch_export_forward_parity_proven
             ),
+            "mlx_gpu_forward_drift_attestation_requested": (
+                manifest.get("write_mlx_gpu_drift_attestation") is True
+            ),
+            "mlx_gpu_forward_drift_attestation_present": (
+                mlx_gpu_forward_drift_attestation is not None
+            ),
             "public_pr95_source_model": manifest.get("public_pr95_source_model"),
             "pytorch_export_sample_indices": manifest.get(
                 "pytorch_export_sample_indices"
@@ -1575,6 +1611,9 @@ def _representation_manifest(
             "exact_readiness_refusal": manifest["exact_readiness_refusal"],
             "pytorch_export_parity": manifest["pytorch_export_parity"],
             "pytorch_export_forward_parity": pytorch_export_forward_parity or {},
+            "mlx_gpu_forward_drift_attestation": (
+                mlx_gpu_forward_drift_attestation or {}
+            ),
             "byte_closed_smoke_archive": archive_summary,
             "pr95_public_archive_export": public_archive_export,
             "runtime_consumption_proof": manifest.get("runtime_consumption_proof", {}),
@@ -1654,6 +1693,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "Export the PR95 archive state dict as .pt and prove PyTorch/MLX "
             "forward parity on selected latent rows. Local implementation "
             "evidence only."
+        ),
+    )
+    parser.add_argument(
+        "--write-mlx-gpu-drift-attestation",
+        action="store_true",
+        help=(
+            "Emit a separate MLX GPU-vs-PyTorch forward-drift attestation for "
+            "Metal training calibration. This is not the PyTorch export parity "
+            "gate and never grants score or promotion authority."
         ),
     )
     parser.add_argument(
@@ -1779,6 +1827,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     output_dir = args.output_dir.resolve()
+    needs_pr95_archive_export = (
+        args.write_pr95_public_archive_export
+        or args.prove_pr95_runtime_consumption
+        or args.write_pytorch_export_parity
+        or args.write_mlx_gpu_drift_attestation
+    )
     if output_dir.exists() and not args.allow_existing_output_dir:
         raise SystemExit(
             f"output directory already exists: {_rel(output_dir)} "
@@ -1863,9 +1917,7 @@ def main(argv: list[str] | None = None) -> int:
         optimizer_descriptor_id=args.optimizer_descriptor_id,
         pr95_public_archive_export_path=(
             output_dir / "pr95_public_archive.zip"
-            if args.write_pr95_public_archive_export
-            or args.prove_pr95_runtime_consumption
-            or args.write_pytorch_export_parity
+            if needs_pr95_archive_export
             else None
         ),
         target_pairs_n2chw=target_pairs_n2chw,
@@ -1874,6 +1926,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     validate_runtime_profile_observation(manifest["runtime_profile"])
     manifest["write_pytorch_export_parity"] = bool(args.write_pytorch_export_parity)
+    manifest["write_mlx_gpu_drift_attestation"] = bool(
+        args.write_mlx_gpu_drift_attestation
+    )
     manifest["public_pr95_source_model"] = _rel(args.public_pr95_source_model)
     manifest["pytorch_export_sample_indices"] = args.pytorch_export_sample_index or [0]
     manifest["pytorch_export_mlx_device"] = args.pytorch_export_mlx_device
@@ -1903,12 +1958,21 @@ def main(argv: list[str] | None = None) -> int:
         manifest["archive_sha256"] = public_archive_export["archive_sha256"]
         _write_json(output_dir / "pr95_public_archive_export.json", public_archive_export)
 
-    pytorch_export_forward_parity: dict[str, Any] | None = None
-    if args.write_pytorch_export_parity:
+    torch_decoder_cls: Any | None = None
+    packet = None
+    if args.write_pytorch_export_parity or args.write_mlx_gpu_drift_attestation:
         if public_archive_export is None:
-            raise SystemExit("--write-pytorch-export-parity requires PR95 archive export")
+            raise SystemExit(
+                "PR95 archive export is required for export parity or MLX GPU drift "
+                "attestation"
+            )
         torch_decoder_cls = _load_public_pr95_decoder_cls(args.public_pr95_source_model)
         packet = parse_pr95_public_archive_zip(output_dir / "pr95_public_archive.zip")
+
+    pytorch_export_forward_parity: dict[str, Any] | None = None
+    if args.write_pytorch_export_parity:
+        assert torch_decoder_cls is not None
+        assert packet is not None
         pytorch_export_forward_parity = (
             write_pr95_public_archive_pytorch_export_forward_parity(
                 packet,
@@ -1962,6 +2026,31 @@ def main(argv: list[str] | None = None) -> int:
         _write_json(
             output_dir / "pytorch_export_forward_parity.json",
             pytorch_export_forward_parity,
+        )
+
+    mlx_gpu_forward_drift_attestation: dict[str, Any] | None = None
+    if args.write_mlx_gpu_drift_attestation:
+        assert torch_decoder_cls is not None
+        assert packet is not None
+        mlx_gpu_forward_drift_attestation = (
+            compare_pr95_public_archive_forward_with_pytorch(
+                packet,
+                torch_decoder_cls,
+                sample_indices=args.pytorch_export_sample_index or [0],
+                mlx_device="gpu",
+                atol_max=args.pytorch_export_atol_max,
+                atol_mean=args.pytorch_export_atol_mean,
+            )
+        )
+        manifest["mlx_gpu_forward_drift_attestation"] = (
+            mlx_gpu_forward_drift_attestation
+        )
+        manifest["mlx_gpu_forward_drift_attestation_path"] = _rel(
+            output_dir / "mlx_gpu_forward_drift_attestation.json"
+        )
+        _write_json(
+            output_dir / "mlx_gpu_forward_drift_attestation.json",
+            mlx_gpu_forward_drift_attestation,
         )
 
     runtime_consumption_proof: dict[str, Any] | None = None
@@ -2145,6 +2234,7 @@ def main(argv: list[str] | None = None) -> int:
         archive_summary=archive_summary,
         runtime_consumption_proof=runtime_consumption_proof,
         pytorch_export_forward_parity=pytorch_export_forward_parity,
+        mlx_gpu_forward_drift_attestation=mlx_gpu_forward_drift_attestation,
         source_faithful_preprocess_smoke=source_faithful_preprocess_smoke,
         source_video_preprocess_smoke=source_video_preprocess_smoke,
     )
@@ -2160,6 +2250,7 @@ def main(argv: list[str] | None = None) -> int:
         "pr95_public_archive_export": public_archive_export,
         "runtime_consumption_proof": runtime_consumption_proof,
         "pytorch_export_forward_parity": pytorch_export_forward_parity,
+        "mlx_gpu_forward_drift_attestation": mlx_gpu_forward_drift_attestation,
         "source_faithful_preprocess_smoke": source_faithful_preprocess_smoke,
         "source_video_preprocess_smoke": source_video_preprocess_smoke,
         "source_video_training": manifest.get("source_video_training"),

@@ -83,6 +83,8 @@ experiments/results/**/*.pt
 .omx/research/**/*.npsd
 .omx/research/**/pr95_pytorch_state_dict.pt
 .omx/research/**/runtime_consumption_work/
+.omx/research/**/archive.zip
+.omx/research/**/pr95_public_archive.zip
 # Large generated materializer portfolio debug products stay local. Keep compact
 # summaries, manifests, and work queues tracked when intentionally curated.
 .omx/research/codex_many_materializer_autonomous_portfolio_*/action_summary.json

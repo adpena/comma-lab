@@ -49,6 +49,7 @@ def test_pr95_mlx_plan_only_cli_builds_queueable_local_mlx_plan(
             "--prove-pr95-runtime-consumption",
             "--runtime-proof-max-output-bytes",
             "7000000",
+            "--write-mlx-gpu-drift-attestation",
             "--write-source-video-preprocess-smoke",
             "--source-video-path",
             "upstream/videos/0.mkv",
@@ -112,6 +113,10 @@ def test_pr95_mlx_plan_only_cli_builds_queueable_local_mlx_plan(
     assert "--write-byte-closed-smoke" in execution["python_command_args"]
     assert "--write-pr95-public-archive-export" in execution["python_command_args"]
     assert "--prove-pr95-runtime-consumption" in execution["python_command_args"]
+    assert "--write-mlx-gpu-drift-attestation" in execution["python_command_args"]
+    assert execution["mlx_gpu_forward_drift_attestation"].endswith(
+        "mlx_gpu_forward_drift_attestation.json"
+    )
     assert execution["archive_export_manifest"].endswith(
         "pr95_public_archive_export.json"
     )
@@ -132,6 +137,13 @@ def test_pr95_mlx_plan_only_cli_builds_queueable_local_mlx_plan(
         and condition["path"].endswith("runtime_consumption_proof.json")
         and condition["key"] == "runtime_consumption_proven"
         and condition["equals"] is True
+        for condition in execution["extra_artifact_postconditions"]
+    )
+    assert any(
+        condition["type"] == "json_equals"
+        and condition["path"].endswith("mlx_gpu_forward_drift_attestation.json")
+        and condition["key"] == "mlx_device"
+        and condition["equals"] == "gpu"
         for condition in execution["extra_artifact_postconditions"]
     )
     assert any(
@@ -159,6 +171,9 @@ def test_pr95_mlx_plan_only_cli_builds_queueable_local_mlx_plan(
     )
     assert representation_plan["candidate_params"][
         "source_video_preprocess_smoke_requested"
+    ] is True
+    assert representation_plan["candidate_params"][
+        "mlx_gpu_forward_drift_attestation_requested"
     ] is True
     assert PR95_SOURCE_VIDEO_LOADER_UNPORTED_BLOCKER not in representation_plan[
         "dispatch_blockers"
