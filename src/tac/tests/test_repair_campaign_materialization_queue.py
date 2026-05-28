@@ -858,6 +858,15 @@ def test_repair_campaign_autonomous_floor_loop_executes_all_required_queue_famil
     assert summary["stack_search_plan"]["pairwise_interaction_tensor_cell_count"] == 20
     assert summary["stack_search_plan"]["n_way_hypergraph_acquisition_enabled"] is True
     assert summary["stack_search_plan"]["hypergraph_interaction_tensor_cell_count"] == 26
+    assert summary["fractal_marginal_surface_schema"] == (
+        "repair_family_fractal_marginal_surface.v1"
+    )
+    assert summary["fractal_marginal_surface_cell_count"] > 0
+    assert summary["top_fractal_marginal_surface_cells"]
+    assert summary["stack_acquisition_frontier_count"] > 0
+    assert summary["primary_stack_acquisition_frontier_path"]["source_tensor"] == (
+        "hypergraph_interaction_tensor"
+    )
     primary_path = summary["stack_search_plan"]["primary_stack_acquisition_path"]
     assert primary_path["path_kind"] == "n_way_hypergraph_interaction_tensor_acquisition"
     assert primary_path["source_hyperedge_order"] >= 2

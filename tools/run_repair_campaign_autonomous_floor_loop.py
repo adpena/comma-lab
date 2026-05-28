@@ -526,6 +526,17 @@ def _build_summary(
     primary_terminal_outcome = (
         str(primary_path.get("terminal_outcome_class") or "") if isinstance(primary_path, dict) else None
     )
+    fractal_surface = final_stack_plan.get("fractal_marginal_surface")
+    fractal_surface = fractal_surface if isinstance(fractal_surface, dict) else {}
+    fractal_cells = [
+        cell for cell in fractal_surface.get("cells") or [] if isinstance(cell, dict)
+    ]
+    acquisition_frontier = [
+        path
+        for path in final_stack_plan.get("stack_acquisition_frontier") or []
+        if isinstance(path, dict)
+    ]
+    primary_frontier_path = acquisition_frontier[0] if acquisition_frontier else None
     summary = {
         "schema": REPAIR_CAMPAIGN_AUTONOMOUS_FLOOR_LOOP_SCHEMA,
         "materialization_queue_path": _repo_rel(queue_path),
@@ -547,6 +558,18 @@ def _build_summary(
         "stack_search_plan": final_stack_plan,
         "primary_stack_acquisition_terminal_outcome": primary_terminal_outcome,
         "primary_stack_acquisition_path": primary_path,
+        "fractal_marginal_surface_schema": fractal_surface.get("schema"),
+        "fractal_marginal_surface_cell_count": final_stack_plan.get(
+            "fractal_marginal_surface_cell_count",
+            0,
+        ),
+        "top_fractal_marginal_surface_cells": fractal_cells[:8],
+        "stack_acquisition_frontier_count": final_stack_plan.get(
+            "stack_acquisition_frontier_count",
+            0,
+        ),
+        "stack_acquisition_frontier": acquisition_frontier,
+        "primary_stack_acquisition_frontier_path": primary_frontier_path,
         "exact_handoff_plan_path": _repo_rel(exact_handoff_plan_path),
         "exact_handoff_plan_schema": REPAIR_FAMILY_EXACT_HANDOFF_PLAN_SCHEMA,
         "exact_handoff_plan": exact_handoff_plan,
@@ -579,6 +602,7 @@ def _build_summary(
             "exact_eval_handoff_fails_closed_without_contest_cpu_or_cuda_axis",
             "exact_ready_bridge_emits_source_queue_and_blocked_exact_ready_queue",
             "stack_and_bridge_outcomes_emit_posterior_learning_signals",
+            "fractal_marginal_surface_and_ranked_frontier_are_operator_visible",
             "precise_blocker_report_names_next_unblocked_action",
         ],
         "blockers": ordered_unique(
@@ -765,6 +789,12 @@ def main(argv: list[str] | None = None) -> int:
                 "posterior_appended_count": summary["posterior_appended_count"],
                 "exact_axis_blocker_report_path": summary["exact_axis_blocker_report_path"],
                 "candidate_improvement_observed": summary["stack_search_plan"]["candidate_improvement_observed"],
+                "fractal_marginal_surface_cell_count": summary[
+                    "fractal_marginal_surface_cell_count"
+                ],
+                "stack_acquisition_frontier_count": summary[
+                    "stack_acquisition_frontier_count"
+                ],
                 "bytes_written": write_result.bytes_written,
                 "score_claim": False,
                 "promotion_eligible": False,
