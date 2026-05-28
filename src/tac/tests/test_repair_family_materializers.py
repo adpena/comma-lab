@@ -31,6 +31,10 @@ from tac.optimization.repair_family_byte_transform_executor import (
     REPAIR_FAMILY_BYTE_TRANSFORM_REPLAY_BUNDLE_SCHEMA,
     build_repair_family_byte_transform_execution_report,
 )
+from tac.optimization.repair_family_exact_ready_bridge import (
+    REPAIR_FAMILY_EXACT_READY_BRIDGE_REPORT_SCHEMA,
+    build_repair_family_exact_ready_bridge,
+)
 from tac.optimization.repair_family_materializers import (
     REPAIR_CAMPAIGN_FAMILY_MATERIALIZER_MANIFEST_SCHEMA,
     build_repair_campaign_family_materializer_manifest,
@@ -410,6 +414,11 @@ def test_byte_transform_executor_supports_all_queue_owned_repair_families(
     tmp_path: Path,
     family_id: str,
 ) -> None:
+    archive_path = _write_zip(
+        tmp_path / f"{family_id}_source_archive.zip",
+        {"0.bin": (family_id.encode("utf-8") * 64)},
+    )
+    archive_sha = hashlib.sha256(archive_path.read_bytes()).hexdigest()
     manifest = {
         "schema": REPAIR_CAMPAIGN_FAMILY_MATERIALIZER_MANIFEST_SCHEMA,
         "materializer_id": f"repair_family_materializer:{family_id}",
@@ -442,8 +451,13 @@ def test_byte_transform_executor_supports_all_queue_owned_repair_families(
             **_false_authority(),
         },
         "receiver_contract_satisfied": False,
-        "byte_closed_candidate_emitted": False,
-        "readiness_blockers": ["candidate_archive_missing"],
+        "candidate_archive": {
+            "path": str(archive_path),
+            "sha256": archive_sha,
+            "bytes": archive_path.stat().st_size,
+        },
+        "byte_closed_candidate_emitted": True,
+        "readiness_blockers": [],
         **_false_authority(),
     }
     manifest_path = _write_json(tmp_path / f"{family_id}.json", manifest)
@@ -461,6 +475,11 @@ def test_byte_transform_executor_supports_all_queue_owned_repair_families(
     assert report["family_id"] == family_id
     assert report["byte_transform_supported"] is True
     assert report["byte_transform_delta"]["transform_kind"]
+    assert report["byte_closed_candidate_emitted"] is True
+    assert report["candidate_archive"]["runtime_consumption_proof_ready"] is True
+    assert report["exact_eval_handoff_gate"][
+        "archive_bound_runtime_consumption_proof_ready"
+    ] is True
     assert report["ready_for_exact_eval_dispatch"] is False
     assert bundle["schema"] == REPAIR_FAMILY_BYTE_TRANSFORM_REPLAY_BUNDLE_SCHEMA
 
@@ -525,7 +544,82 @@ def test_repair_family_stack_search_demotes_negative_posterior(
     row = stack_plan["stack_rows"][0]
     assert row["automatic_negative_result_demoted"] is True
     assert "automatic_negative_result_demotion_active" in row["blockers"]
+    assert row["interaction_feature_vector"]["segnet_region_family"] is True
+    assert stack_plan["interaction_tensor"]["cell_count"] == 1
+    assert stack_plan["interaction_tensor"]["cells"][0]["negative_demoted_count"] == 1
     assert stack_plan["ready_for_exact_eval_dispatch"] is False
+
+
+def test_repair_exact_ready_bridge_emits_blocked_source_queue(
+    tmp_path: Path,
+) -> None:
+    score_report = score_repair_campaign(payload=_repair_payload(tmp_path), repo_root=tmp_path)
+    plan = _plan_from_score_report(score_report)
+    archive_path = _write_zip(
+        tmp_path / "source_archive.zip",
+        {"0.bin": (b"segnet-region-waterfill" * 64)},
+    )
+    archive_sha = hashlib.sha256(archive_path.read_bytes()).hexdigest()
+    plan["candidate_chain_rows"][1]["candidate_archive_path"] = str(archive_path)
+    plan["candidate_chain_rows"][1]["candidate_archive_sha256"] = archive_sha
+    plan["candidate_chain_rows"][1]["candidate_archive_bytes"] = archive_path.stat().st_size
+    manifest = build_repair_campaign_family_materializer_manifest(
+        repo_root=tmp_path,
+        materialization_plan=plan,
+        score_report=score_report,
+        materialization_plan_path=tmp_path / "plan.json",
+        score_report_path=tmp_path / "score_report.json",
+        typed_response_id="segnet_region_ready",
+        candidate_id="segnet_class_region_waterfill",
+    )
+    report, _bundle = build_repair_family_byte_transform_execution_report(
+        family_materializer_manifest=manifest,
+        family_materializer_manifest_path=_write_json(
+            tmp_path / "family_manifest.json",
+            manifest,
+        ),
+        output_dir=tmp_path / "byte_transform",
+        replay_argv=["python", "tools/run_repair_family_byte_transform_executor.py"],
+        invocation_argv=["pytest"],
+        repo_root=tmp_path,
+        allow_overwrite=False,
+    )
+    report_path = _write_json(tmp_path / "byte_transform_report.json", report)
+    stack_plan = plan_repair_family_stack_search(
+        execution_reports=[report],
+        execution_report_paths=[report_path],
+        repo_root=tmp_path,
+        byte_credit_budget=10_000,
+    )
+    exact_handoff_plan = build_repair_family_exact_handoff_plan(
+        stack_plan=stack_plan,
+        stack_plan_path=tmp_path / "repair_family_exact_handoff_plan.json",
+    )
+
+    bridge = build_repair_family_exact_ready_bridge(
+        exact_handoff_plan=exact_handoff_plan,
+        exact_handoff_plan_path=tmp_path / "repair_family_exact_handoff_plan.json",
+        repo_root=tmp_path,
+    )
+
+    bridge_report = bridge["bridge_report"]
+    source_queue = bridge["source_optimizer_queue"]
+    blocked_queue = bridge["blocked_exact_ready_queue"]
+    assert bridge_report["schema"] == REPAIR_FAMILY_EXACT_READY_BRIDGE_REPORT_SCHEMA
+    assert bridge_report["candidate_count"] == 1
+    assert bridge_report["archive_custody_proven_count"] == 1
+    assert bridge_report["runtime_proof_custody_proven_count"] == 1
+    assert bridge_report["runtime_content_tree_custody_proven_count"] == 0
+    assert source_queue["schema"] == "optimizer_candidate_queue_v1"
+    assert source_queue["dispatch_ready"] == []
+    assert blocked_queue["schema"] == "optimizer_candidate_exact_eval_ready_queue_v1"
+    assert blocked_queue["dispatch_ready_count"] == 0
+    source_row = source_queue["top_k"][0]
+    assert source_row["target_modes"] == ["contest_exact_eval"]
+    assert source_row["ready_for_exact_eval_dispatch"] is False
+    assert "submission_dir_missing_for_runtime_content_tree_custody" in source_row[
+        "dispatch_blockers"
+    ]
 
 
 def test_materialization_gate_learning_signal_updates_posterior(

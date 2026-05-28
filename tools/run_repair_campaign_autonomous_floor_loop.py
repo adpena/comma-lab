@@ -8,6 +8,7 @@ import argparse
 import json
 import subprocess
 import sys
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -33,6 +34,10 @@ from tac.optimization.proxy_candidate_contract import (  # noqa: E402
 )
 from tac.optimization.repair_family_byte_transform_executor import (  # noqa: E402
     REPAIR_FAMILY_BYTE_TRANSFORM_EXECUTION_REPORT_SCHEMA,
+)
+from tac.optimization.repair_family_exact_ready_bridge import (  # noqa: E402
+    REPAIR_FAMILY_EXACT_READY_BRIDGE_REPORT_SCHEMA,
+    build_repair_family_exact_ready_bridge,
 )
 from tac.optimization.repair_family_stack_search import (  # noqa: E402
     REPAIR_FAMILY_EXACT_HANDOFF_PLAN_SCHEMA,
@@ -66,6 +71,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--byte-credit-budget", type=int)
     parser.add_argument("--max-iterations", type=int, default=1)
     parser.add_argument("--max-steps-per-iteration", type=int, default=32)
+    parser.add_argument("--submission-dir", action="append", default=[], type=Path)
     parser.add_argument("--execute-local", action="store_true")
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args(argv)
@@ -174,6 +180,7 @@ def _build_summary(
     max_iterations: int,
     max_steps_per_iteration: int,
     execute_local: bool,
+    submission_dirs: Sequence[Path] = (),
 ) -> dict[str, Any]:
     queue = _load_json(queue_path)
     require_no_truthy_authority_fields(queue, context="autonomous_floor_loop_queue")
@@ -236,6 +243,20 @@ def _build_summary(
         stack_plan=final_stack_plan,
         stack_plan_path=_repo_rel(stack_plan_path),
     )
+    exact_ready_bridge = build_repair_family_exact_ready_bridge(
+        exact_handoff_plan=exact_handoff_plan,
+        exact_handoff_plan_path=_repo_rel(exact_handoff_plan_path),
+        submission_dirs=tuple(submission_dirs),
+        repo_root=REPO_ROOT,
+    )
+    exact_ready_bridge_report = exact_ready_bridge["bridge_report"]
+    exact_ready_source_queue_path = output_dir / "repair_family_exact_ready_source_queue.json"
+    blocked_exact_ready_queue_path = (
+        output_dir / "repair_family_blocked_exact_ready_queue.json"
+    )
+    exact_ready_bridge_report_path = (
+        output_dir / "repair_family_exact_ready_bridge_report.json"
+    )
     summary = {
         "schema": REPAIR_CAMPAIGN_AUTONOMOUS_FLOOR_LOOP_SCHEMA,
         "materialization_queue_path": _repo_rel(queue_path),
@@ -257,6 +278,21 @@ def _build_summary(
         "archive_bound_exact_handoff_candidate_count": exact_handoff_plan[
             "archive_bound_candidate_count"
         ],
+        "exact_ready_bridge_source_queue_path": _repo_rel(exact_ready_source_queue_path),
+        "blocked_exact_ready_queue_path": _repo_rel(blocked_exact_ready_queue_path),
+        "exact_ready_bridge_report_path": _repo_rel(exact_ready_bridge_report_path),
+        "exact_ready_bridge_report_schema": REPAIR_FAMILY_EXACT_READY_BRIDGE_REPORT_SCHEMA,
+        "exact_ready_bridge_report": exact_ready_bridge_report,
+        "exact_ready_bridge_candidate_count": exact_ready_bridge_report[
+            "candidate_count"
+        ],
+        "exact_ready_bridge_archive_custody_proven_count": exact_ready_bridge_report[
+            "archive_custody_proven_count"
+        ],
+        "exact_ready_bridge_runtime_content_tree_custody_proven_count": (
+            exact_ready_bridge_report["runtime_content_tree_custody_proven_count"]
+        ),
+        "exact_ready_bridge": exact_ready_bridge,
         "stop_reason": iterations[-1]["stop_reason"] if iterations else "exact_axis_blocker",
         "autonomous_loop_closed": True,
         "loop_contract": [
@@ -264,6 +300,7 @@ def _build_summary(
             "local_worker_materializes_advisory_byte_transform_when_execute_local",
             "stack_search_routes_negative_results_and_byte_credit",
             "exact_eval_handoff_fails_closed_without_contest_cpu_or_cuda_axis",
+            "exact_ready_bridge_emits_source_queue_and_blocked_exact_ready_queue",
         ],
         "blockers": ordered_unique(
             [
@@ -306,6 +343,7 @@ def main(argv: list[str] | None = None) -> int:
             max_iterations=args.max_iterations,
             max_steps_per_iteration=args.max_steps_per_iteration,
             execute_local=bool(args.execute_local),
+            submission_dirs=tuple(args.submission_dir),
         )
         stack_plan_path = output_dir / "repair_family_stack_search_plan.json"
         expected_stack_sha = (
@@ -331,6 +369,38 @@ def main(argv: list[str] | None = None) -> int:
             allow_overwrite=bool(args.overwrite),
             expected_existing_sha256=expected_exact_handoff_sha,
         )
+        exact_ready_source_queue_path = (
+            output_dir / "repair_family_exact_ready_source_queue.json"
+        )
+        blocked_exact_ready_queue_path = (
+            output_dir / "repair_family_blocked_exact_ready_queue.json"
+        )
+        exact_ready_bridge_report_path = (
+            output_dir / "repair_family_exact_ready_bridge_report.json"
+        )
+        for path, payload in (
+            (
+                exact_ready_source_queue_path,
+                summary["exact_ready_bridge"]["source_optimizer_queue"],
+            ),
+            (
+                blocked_exact_ready_queue_path,
+                summary["exact_ready_bridge"]["blocked_exact_ready_queue"],
+            ),
+            (
+                exact_ready_bridge_report_path,
+                summary["exact_ready_bridge_report"],
+            ),
+        ):
+            expected_bridge_sha = (
+                sha256_file(path) if path.exists() and args.overwrite else None
+            )
+            write_json_artifact(
+                path,
+                payload,
+                allow_overwrite=bool(args.overwrite),
+                expected_existing_sha256=expected_bridge_sha,
+            )
         summary_out = _resolve(args.summary_out)
         expected_summary_sha = (
             sha256_file(summary_out) if summary_out.exists() and args.overwrite else None
@@ -370,6 +440,14 @@ def main(argv: list[str] | None = None) -> int:
                         "archive_bound_exact_handoff_candidate_count",
                         0,
                     )
+                ),
+                "exact_ready_bridge_candidate_count": summary[
+                    "exact_ready_bridge_candidate_count"
+                ],
+                "exact_ready_bridge_runtime_content_tree_custody_proven_count": (
+                    summary[
+                        "exact_ready_bridge_runtime_content_tree_custody_proven_count"
+                    ]
                 ),
                 "candidate_improvement_observed": summary["stack_search_plan"][
                     "candidate_improvement_observed"

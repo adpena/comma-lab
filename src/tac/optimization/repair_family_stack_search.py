@@ -283,6 +283,187 @@ def _stack_row(
     return row
 
 
+def _interaction_feature_vector(row: Mapping[str, Any]) -> dict[str, Any]:
+    levels = set(_string_list(row.get("fractal_scope_levels")))
+    family = str(row.get("family_id") or "unclassified_repair_family")
+    vector = {
+        "schema": "repair_family_stack_interaction_feature_vector.v1",
+        "family_id": family,
+        "entropy_stage_order": row.get("entropy_stage_order"),
+        "entropy_position_label": row.get("entropy_position_label"),
+        "has_bit_scope": "bit" in levels,
+        "has_byte_scope": "byte" in levels,
+        "has_pixel_scope": "pixel" in levels,
+        "has_boundary_scope": "boundary" in levels,
+        "has_region_scope": "region" in levels,
+        "has_frame_scope": "frame" in levels,
+        "has_pair_scope": "pair" in levels,
+        "has_batch_scope": "batch" in levels,
+        "has_full_video_scope": "full_video" in levels,
+        "frame0_palette_asymmetry_prior": family
+        in {"frame0_k16_palette_asymmetry", "palette_frame_asymmetry_prior"},
+        "selector_codec_family": family == "per_region_selector_codec",
+        "segnet_region_family": family == "segnet_class_region_waterfill",
+        "posenet_bottom_decile_family": family == "posenet_null_bottom_decile",
+        "entropy_boundary_family": family == "entropy_boundary_probe",
+        "byte_credit_feasible": row.get("byte_credit_feasible") is True,
+        "archive_bound_exact_handoff_candidate": (
+            row.get("archive_bound_exact_handoff_candidate") is True
+        ),
+        "negative_posterior_demoted": (
+            row.get("automatic_negative_result_demoted") is True
+        ),
+        "local_mlx_expected_improvement_score_units": _safe_float(
+            row.get("local_mlx_expected_improvement_score_units")
+        ),
+        "stackability_penalty": _safe_float(row.get("stackability_penalty")),
+        "interaction_aware_stack_score": _safe_float(
+            row.get("interaction_aware_stack_score")
+        ),
+        "budget_spend_allowed": False,
+        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        vector,
+        context=f"repair_family_stack_interaction_feature_vector:{family}",
+    )
+    return vector
+
+
+def _interaction_cell_key(vector: Mapping[str, Any]) -> str:
+    scope_parts = [
+        name.removeprefix("has_").removesuffix("_scope")
+        for name in (
+            "has_bit_scope",
+            "has_byte_scope",
+            "has_pixel_scope",
+            "has_boundary_scope",
+            "has_region_scope",
+            "has_frame_scope",
+            "has_pair_scope",
+            "has_batch_scope",
+            "has_full_video_scope",
+        )
+        if vector.get(name) is True
+    ]
+    tags = [
+        str(vector.get("family_id") or "family_unknown"),
+        f"stage_{vector.get('entropy_stage_order')}",
+        "+".join(scope_parts) or "scope_unknown",
+        "archive_bound"
+        if vector.get("archive_bound_exact_handoff_candidate") is True
+        else "archive_unbound",
+        "negative_demoted"
+        if vector.get("negative_posterior_demoted") is True
+        else "posterior_active",
+        "byte_feasible"
+        if vector.get("byte_credit_feasible") is True
+        else "byte_exhausted",
+    ]
+    return "|".join(tags)
+
+
+def _build_interaction_tensor(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    cell_map: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        vector = _interaction_feature_vector(row)
+        key = _interaction_cell_key(vector)
+        cell = cell_map.setdefault(
+            key,
+            {
+                "schema": "repair_family_stack_interaction_tensor_cell.v1",
+                "cell_key": key,
+                "family_ids": [],
+                "entropy_stage_orders": [],
+                "scope_feature_counts": {},
+                "row_count": 0,
+                "archive_bound_count": 0,
+                "negative_demoted_count": 0,
+                "byte_credit_feasible_count": 0,
+                "expected_improvement_sum": 0.0,
+                "stack_score_sum": 0.0,
+                "max_stack_score": 0.0,
+                "budget_spend_allowed": False,
+                "ready_for_exact_eval_dispatch": False,
+                **FALSE_AUTHORITY,
+            },
+        )
+        cell["row_count"] += 1
+        cell["family_ids"].append(str(vector.get("family_id")))
+        cell["entropy_stage_orders"].append(vector.get("entropy_stage_order"))
+        if vector.get("archive_bound_exact_handoff_candidate") is True:
+            cell["archive_bound_count"] += 1
+        if vector.get("negative_posterior_demoted") is True:
+            cell["negative_demoted_count"] += 1
+        if vector.get("byte_credit_feasible") is True:
+            cell["byte_credit_feasible_count"] += 1
+        improvement = _safe_float(
+            vector.get("local_mlx_expected_improvement_score_units")
+        )
+        stack_score = _safe_float(vector.get("interaction_aware_stack_score"))
+        cell["expected_improvement_sum"] += improvement
+        cell["stack_score_sum"] += stack_score
+        cell["max_stack_score"] = max(_safe_float(cell["max_stack_score"]), stack_score)
+        scope_counts = cell["scope_feature_counts"]
+        for key_name, value in vector.items():
+            if key_name.startswith("has_") and key_name.endswith("_scope") and value is True:
+                scope_counts[key_name] = int(scope_counts.get(key_name, 0)) + 1
+    cells = []
+    for cell in cell_map.values():
+        cell["family_ids"] = ordered_unique(cell["family_ids"])
+        cell["entropy_stage_orders"] = sorted(
+            {
+                int(order)
+                for order in cell["entropy_stage_orders"]
+                if not isinstance(order, bool) and order is not None
+            }
+        )
+        cell["mean_stack_score"] = (
+            float(cell["stack_score_sum"]) / max(1, int(cell["row_count"]))
+        )
+        cell["mean_expected_improvement"] = (
+            float(cell["expected_improvement_sum"]) / max(1, int(cell["row_count"]))
+        )
+        require_no_truthy_authority_fields(
+            cell,
+            context=f"repair_family_stack_interaction_tensor_cell:{cell['cell_key']}",
+        )
+        cells.append(cell)
+    cells.sort(
+        key=lambda cell: (
+            -float(cell.get("max_stack_score") or 0.0),
+            -int(cell.get("archive_bound_count") or 0),
+            str(cell.get("cell_key") or ""),
+        )
+    )
+    tensor = {
+        "schema": "repair_family_stack_interaction_tensor.v1",
+        "axis_names": [
+            "family_id",
+            "entropy_stage_order",
+            "fractal_scope",
+            "archive_bound_custody",
+            "negative_posterior",
+            "byte_credit_feasibility",
+        ],
+        "cell_count": len(cells),
+        "cells": cells,
+        "acquisition_policy": (
+            "prefer_pre_entropy_distribution_shaping_then_archive_bound_custody_"
+            "then_positive_mlx_expected_improvement_after_negative_demotion"
+        ),
+        "budget_spend_allowed": False,
+        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        tensor,
+        context="repair_family_stack_interaction_tensor",
+    )
+    return tensor
+
+
 def _candidate_archive_record(
     *,
     report: Mapping[str, Any],
@@ -516,7 +697,9 @@ def plan_repair_family_stack_search(
     )
     for index, (row, _report, _path) in enumerate(row_packages, start=1):
         row["planned_stack_order"] = index
+        row["interaction_feature_vector"] = _interaction_feature_vector(row)
     rows = [row for row, _report, _path in row_packages]
+    interaction_tensor = _build_interaction_tensor(rows)
     exact_handoff_candidates = [
         _exact_handoff_candidate_row(
             report=report,
@@ -555,6 +738,8 @@ def plan_repair_family_stack_search(
         ),
         "fractal_scope_order": list(_LEVEL_ORDER),
         "stack_rows": rows,
+        "interaction_tensor": interaction_tensor,
+        "interaction_tensor_cell_count": interaction_tensor["cell_count"],
         "exact_eval_handoff_candidate_count": len(exact_handoff_candidates),
         "archive_bound_exact_handoff_candidate_count": archive_bound_handoff_count,
         "exact_eval_handoff_candidates": exact_handoff_candidates,

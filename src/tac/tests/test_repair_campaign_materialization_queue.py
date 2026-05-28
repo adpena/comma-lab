@@ -392,6 +392,10 @@ def test_repair_campaign_autonomous_floor_loop_cli_fails_closed(
     assert summary["exact_handoff_plan_schema"] == "repair_family_exact_handoff_plan.v1"
     assert summary["exact_eval_handoff_candidate_count"] == 0
     assert summary["archive_bound_exact_handoff_candidate_count"] == 0
+    assert summary["exact_ready_bridge_report_schema"] == (
+        "repair_family_exact_ready_bridge_report.v1"
+    )
+    assert summary["exact_ready_bridge_candidate_count"] == 0
     exact_handoff_plan = json.loads(
         (tmp_path / "loop" / "repair_family_exact_handoff_plan.json").read_text(
             encoding="utf-8"
@@ -399,4 +403,16 @@ def test_repair_campaign_autonomous_floor_loop_cli_fails_closed(
     )
     assert exact_handoff_plan["schema"] == "repair_family_exact_handoff_plan.v1"
     assert exact_handoff_plan["candidate_count"] == 0
+    bridge_report = json.loads(
+        (tmp_path / "loop" / "repair_family_exact_ready_bridge_report.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    blocked_queue = json.loads(
+        (tmp_path / "loop" / "repair_family_blocked_exact_ready_queue.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert bridge_report["candidate_count"] == 0
+    assert blocked_queue["dispatch_ready_count"] == 0
     assert summary["ready_for_exact_eval_dispatch"] is False
