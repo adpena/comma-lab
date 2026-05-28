@@ -28,6 +28,8 @@ from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
     FALSE_AUTHORITY,
     PR95_MLX_CONV2D_ACCUMULATION_MODES,
     PR95_MLX_CONV2D_ACCUMULATION_OVERRIDE_PRESETS,
+    pr95_mlx_conv2d_accumulation_overrides_from_preset,
+    pr95_mlx_conv2d_scope_search_candidates,
 )
 from tac.repo_io import write_json_artifact  # noqa: E402
 
@@ -66,12 +68,54 @@ def _safe_id(value: str) -> str:
     return "".join(ch if ch.isalnum() else "_" for ch in value.lower()).strip("_")
 
 
-def _candidate_specs(raw_specs: list[str] | None, *, mlx_device: str) -> list[dict[str, str]]:
+def _override_items(overrides: dict[str, str]) -> list[str]:
+    return [f"{name}={mode}" for name, mode in sorted(overrides.items())]
+
+
+def _append_candidate(
+    rows: list[dict[str, Any]],
+    seen: set[tuple[str, tuple[tuple[str, str], ...]]],
+    *,
+    candidate_id: str,
+    mode: str,
+    preset: str,
+    overrides: dict[str, str],
+    source: str,
+    scope_search_kind: str | None = None,
+) -> None:
+    key = (mode, tuple(sorted(overrides.items())))
+    if key in seen:
+        return
+    seen.add(key)
+    rows.append(
+        {
+            "candidate_id": candidate_id,
+            "conv2d_accumulation_mode": mode,
+            "conv2d_override_preset": preset,
+            "conv2d_accumulation_overrides": overrides,
+            "conv2d_override_items": _override_items(overrides),
+            "candidate_source": source,
+            "scope_search_kind": scope_search_kind,
+        }
+    )
+
+
+def _candidate_specs(
+    raw_specs: list[str] | None,
+    *,
+    mlx_device: str,
+    include_scope_search_candidates: bool,
+    scope_block_count: int,
+    scope_include_presets: bool,
+    scope_include_single_blocks: bool,
+    scope_include_prefix_blocks: bool,
+    scope_search_candidate_limit: int,
+) -> list[dict[str, Any]]:
     specs = list(raw_specs or DEFAULT_CANDIDATES)
     if raw_specs is None and mlx_device == "cpu":
         specs.extend(CPU_EXTRA_CANDIDATES)
-    rows: list[dict[str, str]] = []
-    seen: set[tuple[str, str]] = set()
+    rows: list[dict[str, Any]] = []
+    seen: set[tuple[str, tuple[tuple[str, str], ...]]] = set()
     for raw in specs:
         parts = raw.split(":")
         if len(parts) != 2:
@@ -83,22 +127,43 @@ def _candidate_specs(raw_specs: list[str] | None, *, mlx_device: str) -> list[di
             raise ValueError(f"unknown Conv2d override preset {preset!r}")
         if mlx_device == "gpu" and mode == "fixed_fp64":
             raise ValueError("fixed_fp64 is unsupported on MLX GPU")
-        key = (mode, preset)
-        if key in seen:
-            continue
-        seen.add(key)
-        rows.append(
-            {
-                "candidate_id": f"{_safe_id(mode)}__{_safe_id(preset)}",
-                "conv2d_accumulation_mode": mode,
-                "conv2d_override_preset": preset,
-            }
+        _append_candidate(
+            rows,
+            seen,
+            candidate_id=f"{_safe_id(mode)}__{_safe_id(preset)}",
+            mode=mode,
+            preset=preset,
+            overrides=pr95_mlx_conv2d_accumulation_overrides_from_preset(preset),
+            source="explicit",
         )
+
+    if include_scope_search_candidates:
+        if scope_block_count < 1:
+            raise ValueError("--scope-block-count must be >= 1")
+        scope_candidates = pr95_mlx_conv2d_scope_search_candidates(
+            block_count=scope_block_count,
+            include_presets=scope_include_presets,
+            include_single_blocks=scope_include_single_blocks,
+            include_prefix_blocks=scope_include_prefix_blocks,
+        )
+        if scope_search_candidate_limit > 0:
+            scope_candidates = scope_candidates[:scope_search_candidate_limit]
+        for candidate in scope_candidates:
+            _append_candidate(
+                rows,
+                seen,
+                candidate_id=f"scope__{_safe_id(str(candidate['candidate_id']))}",
+                mode="optimized",
+                preset="none",
+                overrides=dict(candidate["conv2d_accumulation_overrides"]),
+                source="canonical_scope_search",
+                scope_search_kind=str(candidate["kind"]),
+            )
     return rows
 
 
 def _command_for_candidate(
-    candidate: dict[str, str],
+    candidate: dict[str, Any],
     *,
     archive_zip: Path,
     inflate_sh: Path,
@@ -136,6 +201,8 @@ def _command_for_candidate(
         "--max-mismatch-samples",
         str(max_mismatch_samples),
     ]
+    for item in candidate.get("conv2d_override_items", []):
+        command.extend(["--conv2d-override", str(item)])
     if allow_large_output:
         command.append("--allow-large-output")
     if skip_torch_direct_reference:
@@ -152,7 +219,7 @@ def _command_for_candidate(
 
 
 def _failure_row(
-    candidate: dict[str, str],
+    candidate: dict[str, Any],
     *,
     proof_path: Path,
     returncode: int | None,
@@ -164,6 +231,12 @@ def _failure_row(
         "candidate_id": candidate["candidate_id"],
         "conv2d_accumulation_mode": candidate["conv2d_accumulation_mode"],
         "conv2d_override_preset": candidate["conv2d_override_preset"],
+        "conv2d_accumulation_overrides": candidate.get(
+            "conv2d_accumulation_overrides", {}
+        ),
+        "conv2d_override_items": candidate.get("conv2d_override_items", []),
+        "candidate_source": candidate.get("candidate_source"),
+        "scope_search_kind": candidate.get("scope_search_kind"),
         "proof_path": _rel(proof_path),
         "returncode": returncode,
         "elapsed_seconds": float(elapsed_seconds),
@@ -178,7 +251,7 @@ def _failure_row(
 
 
 def _row_from_proof(
-    candidate: dict[str, str],
+    candidate: dict[str, Any],
     *,
     proof_path: Path,
     returncode: int,
@@ -192,6 +265,13 @@ def _row_from_proof(
         "candidate_id": candidate["candidate_id"],
         "conv2d_accumulation_mode": candidate["conv2d_accumulation_mode"],
         "conv2d_override_preset": candidate["conv2d_override_preset"],
+        "conv2d_accumulation_overrides": proof.get(
+            "conv2d_accumulation_overrides",
+            candidate.get("conv2d_accumulation_overrides", {}),
+        ),
+        "conv2d_override_items": candidate.get("conv2d_override_items", []),
+        "candidate_source": candidate.get("candidate_source"),
+        "scope_search_kind": candidate.get("scope_search_kind"),
         "proof_path": _rel(proof_path),
         "proof_sha256": _sha256_file(proof_path),
         "returncode": int(returncode),
@@ -222,7 +302,7 @@ def _rank_key(row: dict[str, Any]) -> tuple[int, int, float, float, str]:
     )
 
 
-def _build_plan(args: argparse.Namespace, *, candidates: list[dict[str, str]]) -> dict[str, Any]:
+def _build_plan(args: argparse.Namespace, *, candidates: list[dict[str, Any]]) -> dict[str, Any]:
     output_dir = args.output_dir.resolve()
     candidate_commands = []
     for candidate in candidates:
@@ -260,6 +340,8 @@ def _build_plan(args: argparse.Namespace, *, candidates: list[dict[str, str]]) -
         "mlx_device": args.mlx_device,
         "jobs": args.jobs,
         "candidate_count": len(candidates),
+        "include_scope_search_candidates": args.include_scope_search_candidates,
+        "scope_block_count": args.scope_block_count,
         "candidates": candidates,
         "candidate_commands": candidate_commands,
         "recommended_execution": {
@@ -307,6 +389,21 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--allow-existing-output-dir", action="store_true")
     parser.add_argument("--plan-only", action="store_true")
     parser.add_argument(
+        "--include-scope-search-candidates",
+        action="store_true",
+        help="Append canonical per-block/prefix Conv2d override candidates.",
+    )
+    parser.add_argument("--scope-block-count", type=int, default=6)
+    parser.add_argument("--scope-no-presets", action="store_true")
+    parser.add_argument("--scope-no-single-blocks", action="store_true")
+    parser.add_argument("--scope-no-prefix-blocks", action="store_true")
+    parser.add_argument(
+        "--scope-search-candidate-limit",
+        type=int,
+        default=0,
+        help="Optional cap after canonical scope candidate generation; 0 means no cap.",
+    )
+    parser.add_argument(
         "--jobs",
         type=int,
         default=1,
@@ -316,7 +413,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def _run_candidate(
-    candidate: dict[str, str],
+    candidate: dict[str, Any],
     *,
     args: argparse.Namespace,
     output_dir: Path,
@@ -384,7 +481,16 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit("--max-mismatch-samples must be >= 0")
     if args.jobs < 1:
         raise SystemExit("--jobs must be >= 1")
-    candidates = _candidate_specs(args.candidate, mlx_device=args.mlx_device)
+    candidates = _candidate_specs(
+        args.candidate,
+        mlx_device=args.mlx_device,
+        include_scope_search_candidates=args.include_scope_search_candidates,
+        scope_block_count=args.scope_block_count,
+        scope_include_presets=not args.scope_no_presets,
+        scope_include_single_blocks=not args.scope_no_single_blocks,
+        scope_include_prefix_blocks=not args.scope_no_prefix_blocks,
+        scope_search_candidate_limit=args.scope_search_candidate_limit,
+    )
     output_dir = args.output_dir.resolve()
     if output_dir.exists() and not args.allow_existing_output_dir:
         raise SystemExit(

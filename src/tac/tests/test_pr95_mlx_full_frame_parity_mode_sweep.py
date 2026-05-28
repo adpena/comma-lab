@@ -110,3 +110,59 @@ def test_pr95_mlx_full_frame_parity_mode_sweep_rejects_gpu_fp64(
 
     assert result.returncode != 0
     assert "fixed_fp64 is unsupported on MLX GPU" in result.stderr
+
+
+def test_pr95_mlx_full_frame_parity_mode_sweep_can_append_scope_candidates(
+    tmp_path: Path,
+) -> None:
+    output_dir = tmp_path / "pr95_scope_plan"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "run_pr95_mlx_full_frame_parity_mode_sweep.py"),
+            "--archive-zip",
+            str(tmp_path / "archive.zip"),
+            "--output-dir",
+            str(output_dir),
+            "--mlx-device",
+            "cpu",
+            "--candidate",
+            "optimized:none",
+            "--include-scope-search-candidates",
+            "--scope-block-count",
+            "2",
+            "--scope-no-presets",
+            "--jobs",
+            "2",
+            "--plan-only",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=60,
+    )
+
+    assert result.returncode == 0, result.stderr
+    plan = json.loads((output_dir / "plan.json").read_text(encoding="utf-8"))
+    commands = plan["candidate_commands"]
+
+    assert plan["include_scope_search_candidates"] is True
+    assert plan["scope_block_count"] == 2
+    assert {row["candidate_id"] for row in commands} == {
+        "optimized__none",
+        "scope__block0_kahan_fp32",
+        "scope__block1_kahan_fp32",
+        "scope__blocks0_1_kahan_fp32",
+    }
+    block0 = next(
+        row for row in commands if row["candidate_id"] == "scope__block0_kahan_fp32"
+    )
+    assert block0["candidate_source"] == "canonical_scope_search"
+    assert block0["scope_search_kind"] == "single_block"
+    assert block0["conv2d_override_preset"] == "none"
+    assert block0["conv2d_override_items"] == [
+        "blocks.0.conv=kahan_fp32",
+        "blocks.0.skip_conv=kahan_fp32",
+    ]
+    assert "--conv2d-override" in block0["python_command_args"]
