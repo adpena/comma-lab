@@ -1191,6 +1191,130 @@ def build_wyner_ziv_cross_substrate_composition_y_density_decoder_state_dict_sur
     )
 
 
+def build_main_thread_subagent_spawn_without_catalog_376_verify_head_state_before_spawn_pv_v1() -> AntiPattern:
+    """Anti-pattern #17: PARENT-MAIN-THREAD spawn-decision lacks Catalog #376 PV.
+
+    Sister of anti-pattern #13 (``subagent_spawn_without_head_state_premise_
+    verification_v1``) at the PARENT-side surface. #13 catches the
+    subagent-side first-checkpoint PV gap; #17 catches the PARENT-side
+    spawn-decision PV gap BEFORE the Agent.spawn() call returns. Per
+    Wave N+25 OPERATOR-CRITIQUE-DRIVEN AUDIT memo
+    ``.omx/research/operator_critique_existing_work_audit_20260528T222243Z.md``
+    op-routable #1.
+
+    Empirical anchors (today 2026-05-28; 4 STAND_DOWN incidents):
+      * PR111 Slot 4 RESUME STAND_DOWN — sister subagent owned identical
+        scope; predecessor crash + respawn re-discovered existing work.
+      * Z4 Wave N+23 STAND_DOWN — z4_atick_redlich_cooperative_receiver_
+        substrate_first_anchor STAND_DOWN per sister z4_atick_redlich_
+        substrate_scaffold owning identical scope.
+      * Cascade A FEC10 Wave N+24 STAND_DOWN — Cascade A FEC10 ALREADY
+        implemented + V14 paired Modal dispatched + canonical equation
+        ``cascade_a_fec10_hybrid_adaptive_blend_savings_v1`` registered;
+        predecessor crash + respawn re-discovered existing work.
+      * paper review Wave N+13.5 STAND_DOWN — sister 6.6 min earlier,
+        identical scope, identical WebFetch blocker.
+
+    All 4 incidents detected at STAGING via Catalog #340 sister-checkpoint
+    guard (POST-EDIT detection) rather than at SPAWN via the canonical
+    4-layer PV check. The PARENT-side spawn-decision PV gap is empirical
+    and structural.
+
+    Canonical unwind path: BEFORE every NEW Agent-tool spawn from the
+    main-thread context, the parent agent MUST invoke
+    ``tac.discipline_anti_pattern_guards.verify_head_state_before_main_thread_spawn(
+        declared_scope=[<file globs / scope tokens>],
+        lookback_minutes=60,
+    )`` and route on the ``MainThreadSpawnGuardVerdict.recommendation``:
+
+      * ``PROCEED``: spawn approved (no conflict across 4 PV layers).
+      * ``ABORT_DUPLICATE_WORK_ON_DISK``: Layer 1/2/3 detected duplicate
+        work at HEAD / on-disk / in canonical equations. Pivot scope to
+        COMPLEMENTARY-EXTEND or DEFER.
+      * ``ABORT_SISTER_IN_FLIGHT``: Layer 4 detected sister subagent with
+        overlapping files; coordinate via Catalog #230 ownership map OR
+        stand down per Catalog #229 PV.
+      * ``WAIT_AND_RETRY``: sister actively working; defer spawn until
+        sister completes.
+
+    Catalog #378 STRICT preflight gate enforces source-text discipline
+    that the canonical helper IS invoked at main-thread spawn-decision
+    sites.
+    """
+    return AntiPattern(
+        anti_pattern_id="main_thread_subagent_spawn_without_catalog_376_verify_head_state_before_spawn_pv_v1",
+        description=(
+            "Parent main-thread agent invoked Agent-tool spawn without "
+            "first invoking the canonical helper "
+            "tac.discipline_anti_pattern_guards."
+            "verify_head_state_before_main_thread_spawn(declared_scope, "
+            "...). The subagent subsequently discovers the work is "
+            "already landed at HEAD / on-disk / in canonical equations "
+            "registry / in a sister-subagent's in-flight checkpoint and "
+            "STANDS_DOWN. Catalog #376 SUBAGENT-side PV evidence is "
+            "necessary but NOT sufficient — the PARENT-side spawn-"
+            "decision PV remains structurally unwired."
+        ),
+        forbidden_pattern_predicate=(
+            "Agent.spawn(...) / spawn_subagent(...) called from PARENT-"
+            "MAIN-THREAD without preceding "
+            "verify_head_state_before_main_thread_spawn(declared_scope) "
+            "PV check per Catalog #378"
+        ),
+        falsification_band={
+            # Each STAND_DOWN is +1 wasted-subagent-spawn count; the band
+            # tracks observed recurrences in a single 24-hour window.
+            "stand_down_recurrences_per_24h_lo": 1.0,
+            "stand_down_recurrences_per_24h_hi": 4.0,
+        },
+        recurrence_conditions=(
+            "parent main-thread spawns Agent without verify_head_state_before_main_thread_spawn invocation",
+            "subagent reports STAND_DOWN due to already-landed work at HEAD",
+            "subagent reports STAND_DOWN due to sister-subagent owning identical scope",
+            "subagent reports STAND_DOWN due to canonical equation already registered",
+            "Catalog #340 sister-checkpoint guard fires on the subagent's commit attempt",
+        ),
+        canonical_source_anchor=(
+            "Wave N+25 OPERATOR-CRITIQUE-DRIVEN AUDIT memo "
+            "(.omx/research/operator_critique_existing_work_audit_"
+            "20260528T222243Z.md) + 4 STAND_DOWN incidents 2026-05-28 "
+            "(PR111 Slot 4 RESUME + Z4 Wave N+23 + Cascade A FEC10 Wave "
+            "N+24 + paper review Wave N+13.5); Catalog #376 SUBAGENT-"
+            "side sister gate + Catalog #340 STAGING-time guard + "
+            "Catalog #229 premise-verification-before-edit"
+        ),
+        canonical_unwind_path=(
+            "Before main-thread Agent spawn: invoke "
+            "tac.discipline_anti_pattern_guards."
+            "verify_head_state_before_main_thread_spawn(declared_scope) "
+            "and route on MainThreadSpawnGuardVerdict.recommendation: "
+            "PROCEED -> spawn; ABORT_DUPLICATE_WORK_ON_DISK -> read "
+            "cited evidence + pivot scope; ABORT_SISTER_IN_FLIGHT -> "
+            "coordinate via Catalog #230 ownership map; WAIT_AND_RETRY "
+            "-> defer until sister completes. Per Catalog #378: "
+            "structural enforcement of the canonical helper invocation."
+        ),
+        canonical_producers=(
+            "main_thread_parent_agent_spawn_decision_layer",
+            "tools/cathedral_autopilot_autonomous_loop.py (if main-thread spawns from autopilot)",
+            "tools/operator_authorize.py (if parallel agent dispatch surface)",
+        ),
+        canonical_consumers=(
+            "tac.discipline_anti_pattern_guards.verify_head_state_before_main_thread_spawn",
+            "src/tac/cathedral_consumers/anti_pattern_lookup_consumer/",
+            "tools/cathedral_autopilot_autonomous_loop.py",
+        ),
+        paradigm_class=PARADIGM_DISCIPLINE,
+        severity=SEVERITY_HIGH,
+        provenance=_design_provenance(
+            "main_thread_subagent_spawn_without_catalog_376_verify_head_state_before_spawn_pv_v1"
+        ),
+        empirical_falsifications=(),
+        last_recalibration_utc=_DESIGN_LANDING_UTC,
+        next_recalibration_trigger=RECALIBRATE_ON_NEW_FALSIFICATIONS,
+    )
+
+
 # -----------------------------------------------------------------------------
 # Population helpers
 # -----------------------------------------------------------------------------
@@ -1225,6 +1349,10 @@ def build_all_initial_anti_patterns() -> list[AntiPattern]:
         build_predecessor_working_tree_uncommitted_handoff_v1(),
         build_wyner_ziv_prefix_y_density_decoder_state_dict_surface_v1(),
         build_wyner_ziv_cross_substrate_composition_y_density_decoder_state_dict_surface_v1(),
+        # Wave N+25 OP1: PARENT-MAIN-THREAD spawn-decision PV gap
+        # extinction (sister of #13 at the PARENT-side surface; Catalog
+        # #378 STRICT preflight gate companion).
+        build_main_thread_subagent_spawn_without_catalog_376_verify_head_state_before_spawn_pv_v1(),
     ]
 
 
@@ -1263,6 +1391,7 @@ __all__ = [
     "build_docstring_overstatement_without_evidence_tag_v1",
     "build_fp4_packed_without_qat_cos_collapse_v1",
     "build_lzma_on_already_brotli_saturated_compounding_v1",
+    "build_main_thread_subagent_spawn_without_catalog_376_verify_head_state_before_spawn_pv_v1",
     "build_phantom_score_directory_naming_lie_v1",
     "build_predecessor_working_tree_uncommitted_handoff_v1",
     "build_predicted_band_from_random_init_tier_c_v1",

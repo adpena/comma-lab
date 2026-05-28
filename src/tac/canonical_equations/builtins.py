@@ -524,8 +524,101 @@ def build_canonical_frontier_pointer_v1() -> CanonicalEquation:
     )
 
 
+def build_main_thread_spawn_pv_gap_pre_catalog_376_extension_v1() -> CanonicalEquation:
+    """Equation: main-thread spawn-decision PV gap predicts STAND_DOWN rate.
+
+    Per Wave N+25 OPERATOR-CRITIQUE-DRIVEN AUDIT memo op-routable #6 +
+    operator NON-NEGOTIABLE 2026-05-28 "ensure no signal loss".
+
+    Mathematical predicate: P(STAND_DOWN | N_in_flight_sisters) >=
+    N_in_flight_sisters / S_total_substrates when NOT
+    Catalog_376_PV_invoked_at_main_thread. Empirical: today's 4
+    STAND_DOWNs (PR111 Slot 4 RESUME / Z4 Wave N+23 / Cascade A FEC10
+    Wave N+24 / paper review Wave N+13.5) all surfaced post-spawn at
+    STAGING/COMMIT surfaces rather than at SPAWN time. The PARENT-side
+    spawn-decision PV gap is empirical.
+
+    Anchor 1 (THIS Wave N+25 audit memo): 4-of-N spawn mandates today
+    produced STAND_DOWN where N >= 5 active subagents. P_STAND_DOWN >= 0.8
+    under the unstructured-PV condition; the canonical Catalog #378
+    structural enforcement is the canonical_unwind_path.
+    """
+    anchor = EmpiricalAnchor(
+        anchor_id="wave_n25_audit_4_stand_downs_today_20260528",
+        measurement_utc="2026-05-28T22:22:43Z",
+        inputs={
+            "n_in_flight_sisters": 5,
+            "catalog_376_pv_invoked_at_main_thread": False,
+            "session_duration_hours": 24,
+        },
+        predicted_output={"stand_down_count_lower_bound": 1, "stand_down_count_upper_bound": 4},
+        empirical_output={"stand_down_count": 4, "stand_down_events": [
+            "pr111_slot_4_resume_20260528",
+            "z4_wave_n23_atick_redlich_20260528",
+            "cascade_a_fec10_wave_n24_20260528",
+            "paper_review_wave_n135_20260528",
+        ]},
+        residual=0.0,  # empirical 4 is within predicted band [1, 4]
+        source_artifact=".omx/research/operator_critique_existing_work_audit_20260528T222243Z.md",
+        measurement_method="wave_n25_stand_down_incident_count",
+        provenance=_empirical_research_sidecar_provenance(
+            ".omx/research/operator_critique_existing_work_audit_20260528T222243Z.md"
+        ),
+    )
+    return CanonicalEquation(
+        equation_id="main_thread_spawn_pv_gap_pre_catalog_376_extension_v1",
+        name="Main-thread agent-spawn-decision PV gap predicts STAND_DOWN rate",
+        one_line_summary=(
+            "P(STAND_DOWN | N_in_flight_sisters) >= N_in_flight_sisters / S_total_substrates "
+            "when main-thread does NOT invoke Catalog #376 verify_head_state_before_main_thread_spawn."
+        ),
+        latex_form=(
+            r"P(\text{STAND\_DOWN}_{\text{new\_spawn}} | N_{\text{in\_flight\_sisters}}) "
+            r"\geq \frac{N_{\text{in\_flight\_sisters}}}{S_{\text{total\_substrates}}} "
+            r"\text{ when } \neg \text{Catalog\_378\_PV\_invoked\_at\_main\_thread}"
+        ),
+        python_callable_module_path=(
+            "tac.discipline_anti_pattern_guards.main_thread_spawn_decision_pv_guard:"
+            "verify_head_state_before_main_thread_spawn"
+        ),
+        domain_of_validity={
+            "apparatus_state": "in_flight_sister_count_geq_2",
+            "spawn_context": "main_thread_parent_agent_Agent_tool_call",
+            "pv_check_status": "catalog_378_not_invoked_at_main_thread",
+        },
+        units_in={
+            "n_in_flight_sisters": "int_count",
+            "catalog_376_pv_invoked_at_main_thread": "bool",
+            "session_duration_hours": "int_hours",
+        },
+        units_out={
+            "stand_down_count_lower_bound": "int_count",
+            "stand_down_count_upper_bound": "int_count",
+        },
+        empirical_anchors=(anchor,),
+        predicted_vs_empirical_residual={"wave_n25_stand_down_incident_count": 0.0},
+        last_calibration_utc="2026-05-28T22:22:43Z",
+        next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,
+        canonical_consumers=(
+            "tac.preflight:check_main_thread_spawn_mandate_invokes_catalog_376_verify_head_state",
+            "tools/cathedral_autopilot_autonomous_loop.py",
+            "src/tac/cathedral_consumers/anti_pattern_lookup_consumer/",
+        ),
+        canonical_producers=(
+            "tac.discipline_anti_pattern_guards.main_thread_spawn_decision_pv_guard:verify_head_state_before_main_thread_spawn",
+        ),
+        provenance=_design_provenance("main_thread_spawn_pv_gap_pre_catalog_376_extension.v1"),
+    )
+
+
 def build_all_initial_equations() -> list[CanonicalEquation]:
-    """Return the 6 initial canonical equations as a list (no registry write)."""
+    """Return the 6 initial canonical equations as a list (no registry write).
+
+    NOTE: ``main_thread_spawn_pv_gap_pre_catalog_376_extension_v1`` is
+    registered separately via the Wave N+25 OP6 landing path (NOT in
+    this 6-equation initial population to preserve historical schema
+    stability). Use ``populate_main_thread_spawn_pv_gap_equation()`` to
+    register it idempotently."""
     return [
         build_brotli_cascade_bounded_per_stream_v1(),
         build_mps_drift_architecture_class_dependent_v1(),
@@ -534,6 +627,37 @@ def build_all_initial_equations() -> list[CanonicalEquation]:
         build_master_gradient_locality_violation_by_codec_v1(),
         build_canonical_frontier_pointer_v1(),
     ]
+
+
+def populate_main_thread_spawn_pv_gap_equation(
+    *,
+    path: Path | None = None,
+    lock_path: Path | None = None,
+    agent: str | None = None,
+    subagent_id: str | None = None,
+) -> CanonicalEquation:
+    """Idempotent population of the Wave N+25 OP6 canonical equation.
+
+    Per CLAUDE.md "Canonical equations + models registry" non-negotiable:
+    every empirical finding memo claiming a STAND_DOWN-rate prediction
+    MUST be backed by a registered canonical equation. THIS helper
+    registers the equation idempotently (APPEND-ONLY via
+    ``tac.canonical_equations.register_canonical_equation``).
+
+    The registration appends a new ``registered`` event each time it
+    runs; the latest-row-wins query semantics in ``query_equations``
+    ensure consumers see the most recent payload.
+    """
+    eq = build_main_thread_spawn_pv_gap_pre_catalog_376_extension_v1()
+    register_canonical_equation(
+        eq,
+        path=path,
+        lock_path=lock_path,
+        agent=agent,
+        subagent_id=subagent_id,
+        notes="wave_n25_op6_main_thread_spawn_pv_gap_extension_20260528",
+    )
+    return eq
 
 
 def populate_initial_equations(
@@ -571,7 +695,9 @@ __all__ = [
     "build_per_pair_master_gradient_score_impact_taylor_v1",
     "build_master_gradient_locality_violation_by_codec_v1",
     "build_canonical_frontier_pointer_v1",
+    "build_main_thread_spawn_pv_gap_pre_catalog_376_extension_v1",
     "build_all_initial_equations",
     "populate_initial_equations",
+    "populate_main_thread_spawn_pv_gap_equation",
     "uniform_leverage_predictor",
 ]

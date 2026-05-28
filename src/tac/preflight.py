@@ -1856,6 +1856,57 @@ def preflight_all(
             ),
             strict=True,
         )
+        # 2026-05-28 Catalog #376 - spawn-event checkpoint rows MUST include
+        # PV evidence (sister of Catalog #229 at the SPAWN-time surface +
+        # Catalog #340 at the STAGING-time surface). Initial wire-in is
+        # WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule" because
+        # legacy in-flight checkpoints predate this gate; the strict-flip
+        # will land after a backfill sweep + cutoff bump. Memory:
+        # feedback_strict_gate_check_subagent_spawn_includes_head_state_pv_evidence_plus_canonical_helper_landed_20260528.md.
+        _parallel.run(
+            "check_subagent_spawn_includes_head_state_pv_evidence",
+            "[subagent-spawn-pv-evidence]",
+            lambda: check_subagent_spawn_includes_head_state_pv_evidence(
+                strict=False, verbose=verbose,
+            ),
+            strict=False,
+        )
+        # 2026-05-28 Catalog #377 - module-existence check is case-sensitive.
+        # Sister of Catalog #205 / #146 / #229 / #270 at the macOS case-fold
+        # runtime-tree-hash divergence surface. Refuses regression of the
+        # canonical _path_exists_case_sensitive helper that extincts the
+        # PR111-candidate paired-CUDA RATIFICATION 4× DEFER bug class
+        # (commit 6bc74e074; landing memo .omx/research/
+        # pr111_composite_paired_cuda_ratification_infrastructure_deferred_landed_20260528.md).
+        # STRICT from byte one per Strict-flip atomicity rule because the
+        # canonical fix lands in the same commit batch and live count = 0.
+        _parallel.run(
+            "check_module_existence_check_is_case_sensitive",
+            "[catalog-377]",
+            lambda: check_module_existence_check_is_case_sensitive(
+                strict=True, verbose=verbose,
+            ),
+            strict=True,
+        )
+        # 2026-05-28 Catalog #378 - main-thread spawn-mandate must invoke
+        # canonical PV helper. Sister of Catalog #376 at the PARENT-side
+        # spawn-decision surface (vs #376's SUBAGENT-side first-checkpoint
+        # surface). Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip
+        # atomicity rule" because the apparatus does not yet have a single
+        # canonical main-thread spawn invocation surface; strict-flip planned
+        # after one full session-cycle with main-thread spawn paths routing
+        # through canonical helper
+        # tac.discipline_anti_pattern_guards.verify_head_state_before_main_thread_spawn.
+        # Memory:
+        # feedback_canonical_2_landing_main_thread_spawn_pv_gap_extinction_landed_20260528.md.
+        _parallel.run(
+            "check_main_thread_spawn_mandate_invokes_catalog_376_verify_head_state",
+            "[main-thread-spawn-pv-invocation]",
+            lambda: check_main_thread_spawn_mandate_invokes_catalog_376_verify_head_state(
+                strict=False, verbose=verbose,
+            ),
+            strict=False,
+        )
         # 2026-05-14 Catalog #234 - subagent commits must not have
         # subject-only/markerless bodies. Warn-only initially because the
         # cutoff exempts historical sibling commits while the rule propagates.
@@ -81586,6 +81637,736 @@ def check_no_pr_submission_without_canonical_compliance_verdict(
             f"compliance + Phase 7 paired_auth_eval). Catalog #370 STRICT "
             f"gate enforces the canonical-submission-pipeline 7-layer "
             f"architecture per spec memo §3 Phase 8. First 3 violations:\n  "
+            + "\n  ".join(violations[:3])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #376 — check_subagent_spawn_includes_head_state_pv_evidence
+#
+# SPAWN-time PV self-protection gate per CLAUDE.md "Bugs must be permanently
+# fixed AND self-protected against" non-negotiable + Wave N+7 Slot 2 commit
+# 49bdcd78f (registered anti-patterns #13 + #14 + #15) + CLAUDE.md
+# "Subagent coherence-by-default" mandatory pre-flight.
+#
+# Sister of:
+#   * Catalog #229 (premise-verification-before-edit) — design-memo surface
+#   * Catalog #117 (subagent commit serializer must be used) — last-50-commit surface
+#   * Catalog #157 / #174 / #216 / #289 — commit-time surfaces
+#   * Catalog #206 (subagent crash-resume checkpoint discipline) — checkpoint-store surface
+#   * Catalog #230 (bulk-rewrite respects sister-subagent ownership map) — commit-message surface
+#   * Catalog #302 (sister-subagent scope overlap via checkpoint JSONL) — edit-time-collision surface
+#   * Catalog #314 (bare commit absorbs in-flight files) — POST-COMMIT detect surface
+#   * Catalog #340 (sister-checkpoint guard at STAGING surface) — STAGING-time PREVENT surface
+#   * Catalog #344 (canonical equations registry) — formalization surface
+#
+# Together they extinct the multi-subagent edit/commit/spawn collision class
+# across NINE orthogonal surfaces.
+#
+# Bug class anchor: 2 Wave N+5 STAND_DOWN incidents — Slot 1 Compound C
+# predecessor commit e61ea93b0 + Slot 2 framework_agnostic STAND_DOWN
+# resolved at 5d38bf9df — where a parent agent spawned a subagent without
+# first running `git log --oneline -30` + `git status` + sister-landing-memo
+# check, then the spawned subagent discovered an overlapping predecessor
+# landing at HEAD and had to STAND_DOWN. Per anti-pattern #13
+# (subagent_spawn_without_head_state_premise_verification_v1) canonical
+# unwind path = use the canonical helper
+# tac.discipline_anti_pattern_guards.verify_head_state_before_spawn BEFORE
+# spawn AND record the evidence in the subagent's first checkpoint row.
+#
+# Detection: scans .omx/state/subagent_progress.jsonl for rows whose
+# written_at_utc is AT-OR-AFTER ``_CHECK_376_DISCIPLINE_CUTOFF_UTC`` AND whose
+# step is "1" / step==1 (first checkpoint) AND status == "in_progress" — the
+# canonical "spawn-event" row. For each such row, requires that the
+# notes / next_action / files_touched contain at least one PV-evidence token
+# from ``_CHECK_376_PV_EVIDENCE_TOKENS`` OR the row carries an explicit
+# ``# SPAWN_PV_EVIDENCE_WAIVED:<rationale>`` waiver in the notes field with
+# a non-placeholder rationale (>=4 chars; placeholder ``<rationale>`` /
+# ``<reason>`` literals rejected per Catalog #287 sister discipline so the
+# gate's docstring example cannot self-waive).
+#
+# Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule"
+# because legacy in-flight subagent checkpoints predate this gate; the
+# strict-flip will land after a backfill sweep + cutoff bump.
+#
+# Catalog #299 quota brake decision: NEW gate (NOT scope extension of #340
+# / #314 / #302) because the SPAWN-time surface is distinct from the
+# STAGING-time (#340) / POST-COMMIT (#314) / edit-time-collision (#302)
+# surfaces; the canonical helper sister-extinction architecture at the
+# canonical helper layer is the cathedral-friendly pattern.
+#
+# Memory: feedback_strict_gate_check_subagent_spawn_includes_head_state_pv_evidence_plus_canonical_helper_landed_20260528.md
+# Lane: lane_strict_gate_check_subagent_spawn_includes_head_state_pv_evidence_plus_canonical_helper_20260528
+# ============================================================================
+
+# Canonical PV-evidence tokens that satisfy Catalog #376 for a spawn-event
+# checkpoint row. ANY of these tokens, when present in the row's notes /
+# next_action / files_touched field, satisfies the gate.
+_CHECK_376_PV_EVIDENCE_TOKENS = (
+    # git-log/status invocations
+    "git log",
+    "git status",
+    "git rev-parse",
+    "git show",
+    # Canonical helper invocation
+    "verify_head_state_before_spawn",
+    "verify_predecessor_working_tree_committed_or_auto_commit",
+    "discipline_anti_pattern_guards",
+    # Premise verification discipline tokens
+    "Catalog #229",
+    "catalog #229",
+    "premise verification",
+    "premise-verification",
+    "premise_verification",
+    "PV complete",
+    "PV verified",
+    "PV passed",
+    "PV done",
+    # Sister-landing-memo references
+    ".omx/research/",
+    "sister landing memo",
+    "sister-landing-memo",
+    "predecessor commit",
+    "predecessor_commit",
+    # Catalog citations indicating cross-surface PV
+    "Catalog #117",
+    "Catalog #157",
+    "Catalog #174",
+    "Catalog #206",
+    "Catalog #229",
+    "Catalog #230",
+    "Catalog #302",
+    "Catalog #314",
+    "Catalog #340",
+    # Sister-subagent coordination
+    "STAND_DOWN",
+    "stand_down",
+    "DISJOINT",
+    "ownership map",
+    "ownership_map",
+    # Resume-predecessor pattern
+    "Resuming predecessor",
+    "resume_predecessor",
+    "resume-predecessor",
+    "predecessor a",
+)
+
+# Same-line waiver: must declare a non-empty reason. The placeholder
+# literals "<rationale>" and "<reason>" are rejected so the docstring
+# above cannot self-waive (per Catalog #287 sister discipline).
+_CHECK_376_WAIVER_RE = re.compile(
+    r"#\s*SPAWN_PV_EVIDENCE_WAIVED:\s*([^\s<].*)"
+)
+
+# Catalog #376 STRICT-flip cutoff: commits whose written_at_utc is BEFORE
+# this ISO-8601 UTC timestamp are exempt (legacy backfill window per
+# CLAUDE.md "Strict-flip atomicity rule"). Initial value is FAR in the
+# future so the warn-only landing flags zero violations; a future strict-
+# flip wave will bump the cutoff backward to enforce on new spawn events.
+_CHECK_376_DISCIPLINE_CUTOFF_UTC = "2030-01-01T00:00:00Z"
+
+# Path to the canonical subagent_progress.jsonl per CLAUDE.md "Mandatory
+# crash-resume protocol" + Catalog #131 + #138 + #206.
+_CHECK_376_CHECKPOINT_RELPATH = ".omx/state/subagent_progress.jsonl"
+
+
+def _check_376_body_has_pv_evidence(text: str) -> bool:
+    """True iff ``text`` contains any canonical PV-evidence token or a valid
+    same-line waiver per Catalog #376."""
+    if not text:
+        return False
+    text_folded = text.casefold()
+    for tok in _CHECK_376_PV_EVIDENCE_TOKENS:
+        if tok.casefold() in text_folded:
+            return True
+    if _CHECK_376_WAIVER_RE.search(text):
+        return True
+    return False
+
+
+def _check_376_iter_spawn_event_rows(repo_root: Path) -> list[dict]:
+    """Return spawn-event rows from .omx/state/subagent_progress.jsonl.
+
+    A spawn-event row is the FIRST checkpoint a subagent writes:
+        * status == "in_progress"
+        * step in (1, "1")
+
+    Lenient on malformed JSONL: skips bad lines silently (the canonical
+    helper handles fail-closed strict-load per Catalog #138; this gate is
+    observability-only at WARN level until strict-flip).
+    """
+    path = repo_root / _CHECK_376_CHECKPOINT_RELPATH
+    if not path.exists():
+        return []
+    out: list[dict] = []
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            for raw in fh:
+                raw = raw.strip()
+                if not raw:
+                    continue
+                try:
+                    rec = json.loads(raw)
+                except json.JSONDecodeError:
+                    continue
+                if not isinstance(rec, dict):
+                    continue
+                status = rec.get("status")
+                if status != "in_progress":
+                    continue
+                step = rec.get("step")
+                if step not in (1, "1"):
+                    continue
+                out.append(rec)
+    except OSError:
+        return []
+    return out
+
+
+def check_subagent_spawn_includes_head_state_pv_evidence(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #376 — refuse spawn-event checkpoints lacking PV evidence.
+
+    Scans ``.omx/state/subagent_progress.jsonl`` for spawn-event rows
+    (status=in_progress, step=1) whose written_at_utc is AT-OR-AFTER the
+    canonical cutoff. For each in-scope row, refuses the row unless its
+    ``notes`` / ``next_action`` / ``files_touched`` contain at least one
+    PV-evidence token from ``_CHECK_376_PV_EVIDENCE_TOKENS`` OR the row
+    carries a same-line ``# SPAWN_PV_EVIDENCE_WAIVED:<rationale>`` waiver
+    in its ``notes`` field.
+
+    Sister of Catalog #340 STAGING-time guard at the SPAWN-time surface
+    + Catalog #229 PV non-negotiable at the agent-spawn surface. Per
+    CLAUDE.md "Subagent coherence-by-default" Mandatory pre-flight: every
+    subagent reads CLAUDE.md + AGENTS.md + lane registry + sibling
+    subagents + memory before starting work — the canonical SPAWN-event
+    checkpoint row must record this PV evidence so a forensic audit can
+    trace which evidence was consulted.
+
+    Per CLAUDE.md "Strict-flip atomicity rule": initial wire-in is
+    warn-only because legacy in-flight checkpoints predate this gate; the
+    strict-flip will land after a backfill sweep + cutoff bump.
+
+    Per CLAUDE.md "Bugs must be permanently fixed AND self-protected
+    against": THIS gate is the canonical 2-landing self-protect for the
+    canonical helper ``tac.discipline_anti_pattern_guards.verify_head_state_before_spawn``;
+    sister of Catalog #340 + #314 + #302 at the SPAWN-time surface.
+
+    Memory:
+    feedback_strict_gate_check_subagent_spawn_includes_head_state_pv_evidence_plus_canonical_helper_landed_20260528.md
+    Lane:
+    lane_strict_gate_check_subagent_spawn_includes_head_state_pv_evidence_plus_canonical_helper_20260528
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+
+    rows = _check_376_iter_spawn_event_rows(root)
+    if not rows:
+        if verbose:
+            print(
+                "  [subagent-spawn-pv-evidence] OK "
+                "(no spawn-event rows in checkpoint store)"
+            )
+        return []
+
+    violations: list[str] = []
+    scanned = 0
+    skipped_pre_cutoff = 0
+    for row in rows:
+        ts = row.get("written_at_utc")
+        # Cutoff: rows BEFORE the cutoff are legacy and exempt; rows
+        # AT-OR-AFTER MUST comply. Missing timestamp is treated as legacy.
+        if not isinstance(ts, str) or ts < _CHECK_376_DISCIPLINE_CUTOFF_UTC:
+            skipped_pre_cutoff += 1
+            continue
+        scanned += 1
+        # Concatenate every searchable field; the PV-evidence may live in
+        # notes OR next_action OR files_touched.
+        notes = row.get("notes", "")
+        next_action = row.get("next_action", "")
+        files_touched = row.get("files_touched", [])
+        if isinstance(files_touched, list):
+            files_text = " ".join(str(f) for f in files_touched if isinstance(f, str))
+        else:
+            files_text = ""
+        searchable = "\n".join([
+            str(notes) if isinstance(notes, str) else "",
+            str(next_action) if isinstance(next_action, str) else "",
+            files_text,
+        ])
+        if _check_376_body_has_pv_evidence(searchable):
+            continue
+        sid = row.get("subagent_id", "<unknown>")
+        violations.append(
+            f"subagent {sid!r} (spawn-event, written_at_utc={ts}) lacks PV "
+            f"evidence in notes/next_action/files_touched; expected one of: "
+            f"{', '.join(_CHECK_376_PV_EVIDENCE_TOKENS[:5])}... "
+            "OR a same-line `# SPAWN_PV_EVIDENCE_WAIVED:<rationale>` "
+            "waiver in notes. See CLAUDE.md Catalog #376 + "
+            "feedback_strict_gate_check_subagent_spawn_includes_head_state_pv_evidence_plus_canonical_helper_landed_20260528.md."
+        )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [subagent-spawn-pv-evidence] WARN: "
+                f"{len(violations)}/{scanned} post-cutoff spawn-event row(s) "
+                f"without PV evidence "
+                f"(skipped_pre_cutoff={skipped_pre_cutoff}, strict={strict}, "
+                f"cutoff={_CHECK_376_DISCIPLINE_CUTOFF_UTC})"
+            )
+        else:
+            print(
+                f"  [subagent-spawn-pv-evidence] OK "
+                f"({scanned} post-cutoff spawn-event row(s) scanned, "
+                f"{skipped_pre_cutoff} legacy pre-cutoff exempt)"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            f"check_subagent_spawn_includes_head_state_pv_evidence: "
+            f"{len(violations)} post-cutoff spawn-event row(s) lacking "
+            f"PV evidence (cutoff={_CHECK_376_DISCIPLINE_CUTOFF_UTC}). "
+            f"Per CLAUDE.md Catalog #376 + canonical helper "
+            f"tac.discipline_anti_pattern_guards.verify_head_state_before_spawn. "
+            f"First 3 violations:\n  "
+            + "\n  ".join(violations[:3])
+        )
+    return violations
+
+
+# ---------------------------------------------------------------------------
+# Catalog #377 - module-existence check is case-sensitive
+# ---------------------------------------------------------------------------
+# Sister of Catalog #205 (canonical select_inflate_device) + Catalog #146
+# (contest-compliant inflate runtime template). This gate refuses any state
+# of ``experiments/contest_auth_eval.py`` that drops the canonical
+# ``_path_exists_case_sensitive`` helper in ``_module_exists`` /
+# ``_module_paths``. Empirical anchor: PR111-candidate paired-CUDA
+# RATIFICATION 4× DEFER 2026-05-28 (commit ``6bc74e074``). LOCAL projector
+# picked up phantom ``tac.dykstra_pareto_solver.Polytope`` (capital P) via
+# macOS case-fold; Linux Modal worker correctly returned False;
+# module_count diverged 37 vs 36 -> runtime_tree_sha256 mismatch ->
+# 4 dispatches rc=1 pre-validation at $0.06 paid Modal spend producing
+# zero score evidence. Per CLAUDE.md "Apples-to-apples evidence discipline"
+# + "Bugs must be permanently fixed AND self-protected against"
+# non-negotiables: the canonical fix lands AND this STRICT gate refuses
+# regression in the SAME commit batch per Strict-flip atomicity rule.
+# Canonical equation:
+# ``modal_dispatch_runtime_tree_hash_local_vs_worker_parity_v1``.
+# Canonical anti-pattern:
+# ``modal_dispatch_local_projector_vs_worker_extraction_root_divergence_v1``.
+# ---------------------------------------------------------------------------
+
+_CHECK_377_REQUIRED_TOKENS = (
+    "_path_exists_case_sensitive",
+    "iterdir",
+)
+
+
+def check_module_existence_check_is_case_sensitive(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #377 - refuse regression of macOS case-fold runtime hash divergence.
+
+    Scans ``experiments/contest_auth_eval.py`` for the required canonical
+    tokens ``_path_exists_case_sensitive`` and ``iterdir``. Either token
+    absent indicates the helper was dropped or never landed; both must be
+    present for the LOCAL projector to match the Linux Modal worker on
+    case-insensitive LOCAL filesystems (macOS HFS+/APFS / Windows NTFS).
+
+    Per CLAUDE.md "Bugs must be permanently fixed AND self-protected
+    against" non-negotiable: empirical anchor PR111-candidate paired-CUDA
+    RATIFICATION 4× DEFER 2026-05-28. Sister Catalog #205 / #146 / #229 /
+    #270 / #287 / #307 / #313 / #323 / #344 / #348.
+
+    Returns a list of violation strings; raises ``PreflightError`` when
+    ``strict=True`` and any violation exists. STRICT from byte one per
+    Strict-flip atomicity rule (the canonical fix lands in same commit
+    batch).
+    """
+
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    target = root / "experiments" / "contest_auth_eval.py"
+    violations: list[str] = []
+    if not target.is_file():
+        # File-missing is silent (sister gates already enforce file existence).
+        if verbose:
+            print(f"  [catalog-377] OK (target missing: {target})")
+        return violations
+    try:
+        text = target.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        violations.append(
+            f"experiments/contest_auth_eval.py: read failed ({exc!r})"
+        )
+        text = ""
+
+    for token in _CHECK_377_REQUIRED_TOKENS:
+        if token not in text:
+            violations.append(
+                f"experiments/contest_auth_eval.py: missing required token "
+                f"{token!r} — _module_exists / _module_paths must route "
+                f"through _path_exists_case_sensitive helper that walks "
+                f"parent.iterdir() for exact basename match. Per Catalog "
+                f"#377 + PR111-candidate paired-CUDA RATIFICATION DEFER "
+                f"2026-05-28 anchor (4 dispatches lost to macOS case-fold)."
+            )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [catalog-377] {len(violations)} violation(s) in "
+                f"experiments/contest_auth_eval.py:"
+            )
+            for v in violations[:5]:
+                print(f"    - {v[:240]}")
+        else:
+            print(
+                f"  [catalog-377] OK "
+                f"(experiments/contest_auth_eval.py carries canonical "
+                f"_path_exists_case_sensitive + iterdir tokens)"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            f"check_module_existence_check_is_case_sensitive: "
+            f"{len(violations)} violation(s) in experiments/contest_auth_eval.py. "
+            f"Per CLAUDE.md Catalog #377 + PR111-candidate paired-CUDA "
+            f"RATIFICATION DEFER 2026-05-28: the canonical "
+            f"_path_exists_case_sensitive helper is required to keep "
+            f"LOCAL projector hashes equal to Modal worker actual hashes "
+            f"on macOS / Windows. Empirical receipts: "
+            f"composite sha dfff1358638ef7f7; expected efa31c12... "
+            f"actual 1e9bf123... (CUDA); module_count 37 vs 36; "
+            f"$0.06 paid Modal spend producing zero score evidence. "
+            f"First 3 violations:\n  "
+            + "\n  ".join(v[:300] for v in violations[:3])
+        )
+    return violations
+
+
+# ---------------------------------------------------------------------------
+# Catalog #378 - check_main_thread_spawn_mandate_invokes_catalog_376_verify_head_state
+# ---------------------------------------------------------------------------
+# Sister of Catalog #376 (SUBAGENT-side first-checkpoint PV evidence) at the
+# PARENT-MAIN-THREAD spawn-decision surface. Per Wave N+25 OPERATOR-CRITIQUE-
+# DRIVEN AUDIT memo (.omx/research/operator_critique_existing_work_audit_
+# 20260528T222243Z.md) op-routable #2 + #6 (canonical 2-landing pattern):
+# Catalog #376 covers the SUBAGENT-side PV (subagent's OWN first checkpoint
+# row carries PV tokens) but NOT the PARENT-side spawn-decision PV BEFORE
+# the Agent.spawn() call returns. The empirical 4 STAND_DOWNs today
+# (2026-05-28) — PR111 Slot 4 RESUME / Z4 Wave N+23 / Cascade A FEC10
+# Wave N+24 / paper review Wave N+13.5 — were all detected at STAGING via
+# Catalog #340 rather than at SPAWN via the canonical 4-layer PV check.
+# THIS gate is the structural protection that the canonical helper
+# tac.discipline_anti_pattern_guards.verify_head_state_before_main_thread_spawn
+# is invoked at PARENT-MAIN-THREAD spawn-decision sites.
+#
+# Sister of:
+#   * Catalog #229 (premise-verification-before-edit) — design-memo surface
+#   * Catalog #117 / #157 / #174 / #216 / #289 — commit-time surfaces
+#   * Catalog #206 (subagent crash-resume checkpoint discipline) — checkpoint-store surface
+#   * Catalog #230 (bulk-rewrite respects sister-subagent ownership map) — commit-message surface
+#   * Catalog #302 (sister-subagent scope overlap via checkpoint JSONL) — edit-time-collision surface
+#   * Catalog #314 (bare commit absorbs in-flight files) — POST-COMMIT detect surface
+#   * Catalog #340 (sister-checkpoint guard at STAGING surface) — STAGING-time PREVENT surface
+#   * Catalog #344 (canonical equations registry) — formalization surface (Layer 3 source)
+#   * Catalog #376 (SUBAGENT-side first-checkpoint PV evidence) — SUBAGENT-side SPAWN-time surface
+#
+# Together they extinct the multi-subagent edit/commit/spawn collision class
+# across TEN orthogonal surfaces (Catalog #378 added 2026-05-28).
+#
+# Bug class anchor: Wave N+25 audit memo §"empirical_falsifications" —
+# 4 STAND_DOWN incidents on 2026-05-28 alone all surfaced post-spawn at
+# STAGING/COMMIT surfaces rather than at SPAWN time. The PARENT-side
+# spawn-decision PV gap is empirical.
+#
+# Detection: scans dispatch wrappers + main-thread spawn invocation files
+# (canonical operator-authorize entry point + tools that emit Agent-tool
+# spawn mandates as subprocess commands) for evidence that the canonical
+# helper verify_head_state_before_main_thread_spawn is invoked BEFORE the
+# spawn mandate is emitted. Acceptance:
+#   (a) tools/operator_authorize.py invokes the canonical helper, OR
+#   (b) wrappers / tools call verify_head_state_before_main_thread_spawn
+#       directly, OR
+#   (c) same-line waiver `# MAIN_THREAD_SPAWN_PV_WAIVED:<rationale>`
+#       on the spawn-invocation line with non-placeholder rationale
+#       (>=4 chars; placeholder `<rationale>` / `<reason>` literals
+#       rejected per Catalog #287 sister discipline so the gate's own
+#       docstring example cannot self-waive).
+#
+# Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule"
+# because the apparatus does not yet have a single canonical main-thread
+# spawn invocation surface; the strict-flip will land after one full
+# session-cycle with all main-thread spawn paths routing through the
+# canonical helper.
+#
+# Catalog #299 quota brake decision: NEW gate (NOT scope extension of
+# Catalog #376) because the PARENT-MAIN-THREAD spawn-decision surface is
+# structurally distinct from the SUBAGENT-side first-checkpoint surface
+# (#376). Current count 378 is well under the 400 quota; sister-extinction
+# architecture preferred over scope-stretch per the 13th OPTIMAL-TRIO
+# standing directive.
+#
+# Memory: feedback_canonical_2_landing_main_thread_spawn_pv_gap_extinction_landed_20260528.md
+# Lane: lane_main_thread_spawn_pv_gap_extinction_20260528
+# ---------------------------------------------------------------------------
+
+# Canonical acceptance tokens that evidence main-thread spawn-decision PV
+# invocation. ANY of these tokens in the file's source body (within a
+# reasonable proximity to spawn-invocation tokens) satisfies the gate.
+_CHECK_378_PV_INVOCATION_TOKENS = (
+    "verify_head_state_before_main_thread_spawn",
+    "MainThreadSpawnGuardVerdict",
+    "tac.discipline_anti_pattern_guards.main_thread_spawn_decision_pv_guard",
+    "from tac.discipline_anti_pattern_guards import verify_head_state_before_main_thread_spawn",
+)
+
+# Spawn-mandate trigger tokens — files that emit Agent-tool spawn mandates
+# via subprocess or via dispatch wrappers. In-scope for this gate.
+# Each token must indicate ACTUAL CALL SYNTAX (not docstring mention).
+# Tokens containing `(` or `=` are tighter signals than bare identifiers.
+_CHECK_378_SPAWN_MANDATE_TOKENS = (
+    "Agent.spawn(",
+    "spawn_subagent(",
+    "spawn_agent_with_prompt(",
+    "spawn_subagent_via_agent_tool(",
+    'subprocess.run(["claude"',
+    "subprocess.run(['claude'",
+)
+
+# Files that are KNOWN main-thread spawn-decision surfaces. These are
+# explicitly checked. Empty for now since the main-thread spawn paths
+# emerge organically — the gate is structurally defensive (warn on NEW
+# files matching spawn-mandate triggers without canonical helper invocation).
+_CHECK_378_CANONICAL_SPAWN_DECISION_FILES = (
+    # Future: tools/operator_authorize.py wrapper for parallel agent dispatch
+    # Future: tools/cathedral_autopilot_autonomous_loop.py spawn_subagent path
+)
+
+# Same-line waiver. Placeholder rationales rejected per Catalog #287.
+_CHECK_378_WAIVER_RE = re.compile(
+    r"#\s*MAIN_THREAD_SPAWN_PV_WAIVED:\s*([^\s<].{3,})"
+)
+
+# Scan scope for the gate: dispatch / spawn-related source files only.
+_CHECK_378_SCAN_DIRS = (
+    "tools",
+    "scripts",
+    "experiments",
+    "src/tac",
+)
+
+# Exempt path markers — files in these subtrees are out of scope.
+_CHECK_378_EXEMPT_MARKERS = (
+    "/tests/",
+    "/test_",
+    "experiments/results/",
+    "_intake_",
+    ".omx/oss_export/",
+    "vendored",
+    "build/lib/",
+    "reports/raw/",
+    "__pycache__/",
+    ".venv/",
+)
+
+# Self-exempt files — gate's own definition + the canonical helper module +
+# canonical anti-pattern apparatus files that document the canonical
+# `Agent.spawn(...)` predicate in their docstrings as part of self-describing
+# the bug class being extincted.
+_CHECK_378_SELF_EXEMPT_RELPATHS = (
+    "src/tac/preflight.py",
+    "src/tac/discipline_anti_pattern_guards/main_thread_spawn_decision_pv_guard.py",
+    "src/tac/discipline_anti_pattern_guards/__init__.py",
+    "src/tac/discipline_anti_pattern_guards/subagent_spawn_head_pv_guard.py",
+    "src/tac/canonical_anti_patterns/builtins.py",
+    "src/tac/canonical_anti_patterns/pattern_matcher.py",
+    "src/tac/canonical_equations/builtins.py",
+)
+
+
+def _check_378_is_exempt(relpath: str) -> bool:
+    """True iff relpath is in the gate's scan-exclusion set."""
+    normalized = relpath.replace("\\", "/")
+    if normalized in _CHECK_378_SELF_EXEMPT_RELPATHS:
+        return True
+    for marker in _CHECK_378_EXEMPT_MARKERS:
+        if marker in normalized:
+            return True
+    return False
+
+
+def _check_378_body_has_pv_invocation(text: str) -> bool:
+    """True iff source text contains any canonical PV-invocation token."""
+    if not text:
+        return False
+    for tok in _CHECK_378_PV_INVOCATION_TOKENS:
+        if tok in text:
+            return True
+    return False
+
+
+def _check_378_line_has_spawn_mandate(line: str) -> bool:
+    """True iff line is a spawn-mandate trigger.
+
+    Detection uses CALL-SYNTAX tokens (containing `(`) so docstring /
+    comment mentions of `Agent.spawn` are correctly excluded (they don't
+    have the call-syntax open-paren). Per Catalog #168 sister AST-aware
+    discipline at the line-detection sub-surface."""
+    stripped = line.lstrip()
+    # Comment lines are unambiguously not call sites.
+    if stripped.startswith("#"):
+        return False
+    # Docstring open-delimiter lines (without inline call) are unambiguously
+    # not call sites. A line containing both `"""` AND a call-syntax token
+    # would be a one-line docstring with embedded call which is exotic; we
+    # err toward inclusion in that rare case.
+    for tok in _CHECK_378_SPAWN_MANDATE_TOKENS:
+        if tok in line:
+            return True
+    return False
+
+
+def _check_378_line_has_waiver(line: str) -> bool:
+    """True iff line carries the canonical same-line waiver with substantive rationale."""
+    m = _CHECK_378_WAIVER_RE.search(line)
+    if not m:
+        return False
+    rationale = m.group(1).strip()
+    if not rationale:
+        return False
+    # Placeholder rejection per Catalog #287.
+    placeholder_lower = rationale.lower()
+    if placeholder_lower in {"<rationale>", "<reason>", "tbd", "todo", "fixme"}:
+        return False
+    if len(rationale) < 4:
+        return False
+    return True
+
+
+def _check_378_iter_scan_files(repo_root: Path) -> list[Path]:
+    """Yield .py and .sh files under the gate's scan directories."""
+    files: list[Path] = []
+    for scan_dir in _CHECK_378_SCAN_DIRS:
+        scan_path = repo_root / scan_dir
+        if not scan_path.exists():
+            continue
+        for ext in ("*.py", "*.sh"):
+            for path in scan_path.rglob(ext):
+                if not path.is_file():
+                    continue
+                relpath = str(path.relative_to(repo_root))
+                if _check_378_is_exempt(relpath):
+                    continue
+                files.append(path)
+    return files
+
+
+def check_main_thread_spawn_mandate_invokes_catalog_376_verify_head_state(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #378 - refuse main-thread spawn mandate without canonical PV invocation.
+
+    Scans .py and .sh files under tools/ + scripts/ + experiments/ + src/tac/
+    (excluding tests + intake clones + OSS exports + results dirs) for
+    spawn-mandate trigger lines. For each file containing at least one
+    spawn-mandate trigger, requires EITHER (a) the file body contains any
+    canonical PV-invocation token, OR (b) the spawn-mandate trigger line
+    carries a same-line `# MAIN_THREAD_SPAWN_PV_WAIVED:<rationale>` waiver
+    with substantive non-placeholder rationale.
+
+    Sister of Catalog #376 STRICT gate at the PARENT-MAIN-THREAD surface.
+    Per CLAUDE.md "Bugs must be permanently fixed AND self-protected
+    against" canonical 2-landing pattern: this gate IS the structural
+    self-protect for the canonical helper
+    tac.discipline_anti_pattern_guards.verify_head_state_before_main_thread_spawn.
+
+    Per CLAUDE.md "Strict-flip atomicity rule": initial wire-in is
+    warn-only because the apparatus does not yet have a single canonical
+    main-thread spawn invocation surface; strict-flip planned after one
+    full session-cycle with main-thread spawn paths routing through the
+    canonical helper.
+
+    Memory:
+    feedback_canonical_2_landing_main_thread_spawn_pv_gap_extinction_landed_20260528.md
+    Lane:
+    lane_main_thread_spawn_pv_gap_extinction_20260528
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+
+    violations: list[str] = []
+    files = _check_378_iter_scan_files(root)
+
+    for file_path in files:
+        try:
+            body = file_path.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        # Fast-path: if body already has canonical PV invocation, no need
+        # to scan lines.
+        if _check_378_body_has_pv_invocation(body):
+            continue
+        # Per-line spawn-mandate trigger scan.
+        relpath = str(file_path.relative_to(root))
+        for lineno, line in enumerate(body.splitlines(), start=1):
+            if not _check_378_line_has_spawn_mandate(line):
+                continue
+            if _check_378_line_has_waiver(line):
+                continue
+            # Found a spawn-mandate trigger line without canonical PV
+            # invocation OR same-line waiver. Record violation.
+            violations.append(
+                f"{relpath}:{lineno}: spawn-mandate trigger without canonical "
+                f"`verify_head_state_before_main_thread_spawn` invocation OR "
+                f"same-line `# MAIN_THREAD_SPAWN_PV_WAIVED:<rationale>` "
+                f"waiver. Per CLAUDE.md Catalog #378 + Wave N+25 audit + "
+                f"canonical helper tac.discipline_anti_pattern_guards."
+                f"verify_head_state_before_main_thread_spawn."
+            )
+            # One violation per file is sufficient signal; break to next file.
+            break
+
+    if verbose:
+        if violations:
+            print(
+                f"  [main-thread-spawn-pv-invocation] WARN: "
+                f"{len(violations)} file(s) emit spawn-mandate triggers "
+                f"without canonical helper invocation (scanned={len(files)} files)"
+            )
+            for v in violations[:5]:
+                print(f"    - {v[:240]}")
+        else:
+            print(
+                f"  [main-thread-spawn-pv-invocation] OK "
+                f"({len(files)} file(s) scanned; no violations)"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            f"check_main_thread_spawn_mandate_invokes_catalog_376_verify_head_state: "
+            f"{len(violations)} file(s) emit spawn-mandate triggers without "
+            f"canonical PV invocation. Per CLAUDE.md Catalog #378 + Wave N+25 "
+            f"audit memo + canonical helper "
+            f"tac.discipline_anti_pattern_guards.verify_head_state_before_main_thread_spawn. "
+            f"First 3 violations:\n  "
             + "\n  ".join(violations[:3])
         )
     return violations
