@@ -54,6 +54,17 @@ CONTINUAL_LEARNING_EVIDENCE_GRADE = "[continual-learning posterior; non-authorit
 DEFAULT_POSTERIOR_PATH = Path(".omx/state/continual_learning_posterior.json")
 DEFAULT_POSTERIOR_LOCK_PATH = Path(".omx/state/.continual_learning.lock")
 
+ANCHOR_IDENTITY_METADATA_KEYS = (
+    "runtime_tree_sha256",
+    "runtime_content_tree_sha256",
+    "inflate_script_sha256",
+    "inflated_output_aggregate_sha256",
+    "inflated_output_manifest_sha256",
+    "pact_commit",
+    "upstream_commit",
+    "n_samples",
+)
+
 # ── Custody validator (codex round-2 HIGH 2 fix) ───────────────────────────
 #
 # Tag-only authority is INSUFFICIENT. The custody validator requires the
@@ -561,6 +572,38 @@ def _serialize(posterior: ContinualLearningPosterior) -> dict[str, Any]:
     }
 
 
+def _finite_score_identity(value: Any) -> str:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return "<missing>"
+    return format(parsed, ".17g")
+
+
+def _anchor_fingerprint_from_mapping(mapping: dict[str, Any]) -> tuple[tuple[str, str], ...]:
+    pairs: list[tuple[str, str]] = []
+    for key in ANCHOR_IDENTITY_METADATA_KEYS:
+        value = mapping.get(key)
+        if value is None or value == "":
+            continue
+        pairs.append((key, str(value)))
+    return tuple(pairs)
+
+
+def _result_anchor_identity(result: ContestResult) -> tuple[str, tuple[tuple[str, str], ...] | str]:
+    fingerprint = _anchor_fingerprint_from_mapping(result.metadata)
+    if fingerprint:
+        return ("exact-runtime", fingerprint)
+    return ("score-only", _finite_score_identity(result.score_value))
+
+
+def _history_anchor_identity(row: dict[str, Any]) -> tuple[str, tuple[tuple[str, str], ...] | str]:
+    fingerprint = _anchor_fingerprint_from_mapping(row)
+    if fingerprint:
+        return ("exact-runtime", fingerprint)
+    return ("score-only", _finite_score_identity(row.get("score_value")))
+
+
 def save_posterior(posterior: ContinualLearningPosterior, path: Path | None = None) -> None:
     """Persist the posterior to disk (atomic write).
 
@@ -830,6 +873,15 @@ def contest_result_from_auth_eval_payload(
     provenance = payload.get("provenance")
     if not isinstance(provenance, dict):
         provenance = {}
+    runtime_manifest = provenance.get("inflate_runtime_manifest")
+    if not isinstance(runtime_manifest, dict):
+        runtime_manifest = {}
+    inflated_manifest = provenance.get("inflated_output_manifest")
+    if not isinstance(inflated_manifest, dict):
+        inflated_manifest = {}
+    inflated_payload = inflated_manifest.get("payload")
+    if not isinstance(inflated_payload, dict):
+        inflated_payload = {}
 
     axis = _score_axis_from_payload(payload, provenance)
     hardware_substrate = _hardware_substrate_from_auth_eval_payload(
@@ -922,6 +974,16 @@ def contest_result_from_auth_eval_payload(
             "score_claim_valid": payload.get("score_claim_valid"),
             "promotion_eligible": payload.get("promotion_eligible"),
             "n_samples": _int_or_none(payload.get("n_samples")),
+            "canonical_score_source": payload.get("canonical_score_source"),
+            "runtime_tree_sha256": runtime_manifest.get("runtime_tree_sha256"),
+            "runtime_content_tree_sha256": runtime_manifest.get(
+                "runtime_content_tree_sha256"
+            ),
+            "inflate_script_sha256": provenance.get("inflate_script_sha256"),
+            "inflated_output_manifest_sha256": inflated_manifest.get("sha256"),
+            "inflated_output_aggregate_sha256": inflated_payload.get("aggregate_sha256"),
+            "pact_commit": provenance.get("pact_commit"),
+            "upstream_commit": provenance.get("upstream_commit"),
         },
     )
 
@@ -972,8 +1034,11 @@ def posterior_update(
       - macOS-CPU substrate → REFUSED for authoritative promotion even if an
         older caller passes ``forbid_macos_promotion=False``. macOS remains
         advisory/proxy only.
-      - duplicate archive_sha256 → REFUSED (idempotent; same anchor twice
-        does NOT double-count).
+      - duplicate exact anchor identity → REFUSED (idempotent; same archive,
+        axis, and runtime/eval fingerprint does NOT double-count). Same archive
+        bytes on the same axis with a distinct runtime tree or distinct legacy
+        score are preserved as separate evidence, because runtime can change
+        scorer output even when archive bytes do not.
     """
     if not isinstance(result, ContestResult):
         raise TypeError(
@@ -1041,18 +1106,23 @@ def posterior_update(
             notes=["custody validation failed; refused per codex round-2 HIGH 2"],
         )
 
-    # Refusal policy 3: duplicate archive_sha256.
+    # Refusal policy 3: duplicate exact anchor identity. The original
+    # archive+axis-only key caused signal loss for exact auth evals where the
+    # archive bytes were identical but the submission runtime tree differed.
+    result_identity = _result_anchor_identity(result)
     if any(
         h.get("archive_sha256") == result.archive_sha256
         and h.get("axis") == result.axis
+        and _history_anchor_identity(h) == result_identity
         for h in posterior.accepted_anchor_history
     ):
         posterior.refused_anchor_count += 1
         return PosteriorUpdate(
             accepted=False,
             refusal_reason=(
-                f"duplicate archive_sha256 {result.archive_sha256!r} on axis "
-                f"{result.axis!r}; refused for idempotence"
+                f"duplicate exact anchor identity for archive_sha256 "
+                f"{result.archive_sha256!r} on axis {result.axis!r}; refused "
+                "for idempotence"
             ),
             architecture_class=result.architecture_class,
             axis=result.axis,
@@ -1062,7 +1132,7 @@ def posterior_update(
             posterior_n_anchors_after=posterior.accepted_anchor_count,
             track_correction_factors_updated=[],
             cuda_cpu_drift_updated=False,
-            notes=["duplicate anchor refused; idempotent"],
+            notes=["duplicate exact anchor identity refused; idempotent"],
         )
 
     # Update accepted.
@@ -1119,6 +1189,20 @@ def posterior_update(
         "observed_at_utc": result.observed_at_utc,
         "track_updates": track_updated,
         "source_rho_estimate": result.source_rho_estimate,
+        "runtime_tree_sha256": result.metadata.get("runtime_tree_sha256"),
+        "runtime_content_tree_sha256": result.metadata.get(
+            "runtime_content_tree_sha256"
+        ),
+        "inflate_script_sha256": result.metadata.get("inflate_script_sha256"),
+        "inflated_output_manifest_sha256": result.metadata.get(
+            "inflated_output_manifest_sha256"
+        ),
+        "inflated_output_aggregate_sha256": result.metadata.get(
+            "inflated_output_aggregate_sha256"
+        ),
+        "pact_commit": result.metadata.get("pact_commit"),
+        "upstream_commit": result.metadata.get("upstream_commit"),
+        "n_samples": result.metadata.get("n_samples"),
         # 12-month premortem item #2: persist the upstream snapshot SHA-256
         # so later consumers can detect cross-snapshot anchor comparisons.
         # Legacy anchors written before this field landed serialize as

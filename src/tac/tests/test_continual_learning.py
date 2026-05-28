@@ -54,6 +54,7 @@ def _make_authoritative_result(
     substrate: str = "linux_x86_64_gha_cpu",
     track_obs: dict[str, float] | None = None,
     rho: float | None = None,
+    metadata: dict[str, object] | None = None,
 ) -> ContestResult:
     return ContestResult(
         axis=axis,
@@ -69,6 +70,7 @@ def _make_authoritative_result(
         cpu_seg=None,
         source_rho_estimate=rho,
         track_correction_observations=track_obs or {},
+        metadata=metadata or {},
     )
 
 
@@ -128,6 +130,67 @@ def test_duplicate_sha256_refused():
     assert "duplicate" in update.refusal_reason
     assert posterior.accepted_anchor_count == 1
     assert posterior.refused_anchor_count == 1
+
+
+def test_same_archive_axis_distinct_runtime_tree_accepted():
+    posterior = ContinualLearningPosterior()
+    sha = "r" * 64
+    first = _make_authoritative_result(
+        sha=sha,
+        metadata={"runtime_tree_sha256": "1" * 64, "n_samples": 600},
+    )
+    second = _make_authoritative_result(
+        sha=sha,
+        score=0.1920089730474962,
+        metadata={"runtime_tree_sha256": "2" * 64, "n_samples": 600},
+    )
+
+    assert posterior_update(posterior, first).accepted is True
+    update = posterior_update(posterior, second)
+
+    assert update.accepted is True
+    assert posterior.accepted_anchor_count == 2
+    assert {row["runtime_tree_sha256"] for row in posterior.accepted_anchor_history} == {
+        "1" * 64,
+        "2" * 64,
+    }
+
+
+def test_same_archive_axis_same_runtime_tree_refused_as_duplicate():
+    posterior = ContinualLearningPosterior()
+    sha = "s" * 64
+    metadata = {"runtime_tree_sha256": "3" * 64, "n_samples": 600}
+
+    first = posterior_update(
+        posterior,
+        _make_authoritative_result(sha=sha, metadata=metadata),
+    )
+    second = posterior_update(
+        posterior,
+        _make_authoritative_result(sha=sha, score=0.1920089, metadata=metadata),
+    )
+
+    assert first.accepted is True
+    assert second.accepted is False
+    assert "duplicate exact anchor identity" in second.refusal_reason
+    assert posterior.accepted_anchor_count == 1
+
+
+def test_same_archive_axis_legacy_distinct_score_accepted():
+    posterior = ContinualLearningPosterior()
+    sha = "t" * 64
+
+    assert posterior_update(
+        posterior,
+        _make_authoritative_result(sha=sha, score=0.1920099730474962),
+    ).accepted is True
+    update = posterior_update(
+        posterior,
+        _make_authoritative_result(sha=sha, score=0.1920089730474962),
+    )
+
+    assert update.accepted is True
+    assert posterior.accepted_anchor_count == 2
 
 
 def test_duplicate_sha_different_axis_accepted():
@@ -572,6 +635,43 @@ def test_contest_result_from_auth_eval_payload_modal_cpu_accepted_shape():
     assert result.evidence_tag == "[contest-CPU]"
     assert verdict.accepted is True
     assert verdict.refused_class is None
+
+
+def test_contest_result_from_auth_eval_payload_preserves_runtime_identity():
+    payload = _auth_eval_payload(
+        axis="contest_cpu",
+        device="cpu",
+        hardware="Modal CPU Linux x86_64",
+        gpu_model="",
+        gpu_t4_match=None,
+        evidence_grade="contest-CPU",
+        lane_tag="[contest-CPU]",
+        score_claim_valid=False,
+    )
+    payload["canonical_score_source"] = "score_recomputed_from_components"
+    payload["provenance"]["inflate_script_sha256"] = "a" * 64
+    payload["provenance"]["pact_commit"] = "pact-sha"
+    payload["provenance"]["upstream_commit"] = "upstream-sha"
+    payload["provenance"]["inflate_runtime_manifest"] = {
+        "runtime_tree_sha256": "b" * 64,
+        "runtime_content_tree_sha256": "c" * 64,
+    }
+    payload["provenance"]["inflated_output_manifest"] = {
+        "sha256": "d" * 64,
+        "payload": {"aggregate_sha256": "e" * 64},
+    }
+
+    result = contest_result_from_auth_eval_payload(
+        payload,
+        architecture_class="pr106_latent_sidecar",
+    )
+
+    assert result.metadata["runtime_tree_sha256"] == "b" * 64
+    assert result.metadata["runtime_content_tree_sha256"] == "c" * 64
+    assert result.metadata["inflate_script_sha256"] == "a" * 64
+    assert result.metadata["inflated_output_manifest_sha256"] == "d" * 64
+    assert result.metadata["inflated_output_aggregate_sha256"] == "e" * 64
+    assert result.metadata["canonical_score_source"] == "score_recomputed_from_components"
 
 
 def test_contest_result_from_auth_eval_payload_accepts_wrapper_expected_archive_fields():

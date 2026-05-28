@@ -18,10 +18,10 @@ architecture-lock/TT5L custody artifacts.
 ## Active Anchor
 
 - Canonical scanner-derived best CPU anchor:
-  `0.1920099730474962`
+  `0.1920089730474962`
   `[contest-CPU; Linux x86_64 1:1]`, archive
   `18e3155fbbbe9ab23e1c21bc0d99ba8d18657a71c3129fc5ff9e0405b67d1669`,
-  lane `feca_selector_reparam_scale64_alpha1_cpu_exact`.
+  lane `feca_selector_reparam_scale64_alpha1_stable_cpu_exact`.
   Refresh from `reports/latest.md` and
   `.omx/state/canonical_frontier_pointer.json`; this file is a mirror, not a
   frontier source of truth.
