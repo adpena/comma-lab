@@ -61,3 +61,40 @@ def test_mlx_replay_bundle_records_missing_artifact_blocker(tmp_path: Path) -> N
     assert bundle["replay_readiness"]["local_replay_ready"] is False
     assert bundle["missing_artifacts"] == ["missing.json"]
     assert "missing_replay_artifacts" in bundle["replay_readiness"]["exact_eval_blockers"]
+
+
+def test_mlx_replay_bundle_does_not_drop_byte_closed_receiver_proof_signal(
+    tmp_path: Path,
+) -> None:
+    candidate = tmp_path / "byte_closed_candidate.json"
+    write_json(
+        candidate,
+        {
+            "schema": "pact_nerv_ia3_byte_closed_candidate.v1",
+            "byte_closed_candidate_emitted": True,
+            "receiver_contract_satisfied": True,
+            "full_frame_inflate_parity_satisfied": True,
+            "receiver_verification": {"proof_sha256": "abc123"},
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+
+    bundle = build_mlx_local_replay_bundle(
+        repo_root=tmp_path,
+        bundle_id="unit_byte_closed",
+        axis="[macOS-MLX research-signal]",
+        commands=[["python", "materialize.py"]],
+        artifact_paths=[candidate],
+    )
+
+    readiness = bundle["replay_readiness"]
+    assert readiness["byte_closed_receiver_proof_present"] is True
+    assert (
+        "byte_closed_archive_and_receiver_runtime_proof_required_before_dispatch"
+        not in readiness["exact_eval_blockers"]
+    )
+    assert "contest_cpu_or_cuda_exact_eval_required_before_promotion" in readiness[
+        "exact_eval_blockers"
+    ]

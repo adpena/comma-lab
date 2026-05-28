@@ -14,6 +14,9 @@ from tac.local_acceleration.pact_nerv_ia3_export_parity import (
 )
 from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY
 from tac.optimization.proxy_candidate_contract import require_no_truthy_authority_fields
+from tac.substrates.pact_nerv_ia3.archive_candidate import (
+    PACT_NERV_IA3_BYTE_CLOSED_CANDIDATE_SCHEMA,
+)
 
 from .experiment_queue import QUEUE_SCHEMA, normalize_queue_definition
 
@@ -65,16 +68,16 @@ def build_pact_nerv_diffusion_blocks_schedule(
         hi = (index + 1) / block_count
         blocks.append(
             {
-            "block_index": index,
-            "difficulty_mass_interval": [lo, hi],
-            "overlap_fraction": overlap_fraction,
-            "difficulty_coordinate": "normalized_noise_or_mask_mass_u_in_[0,1]",
-            "local_training_axis": "[macOS-MLX research-signal]",
-            "training_target": "corrupted_feature_or_frame_to_clean_feature_or_frame",
-            "export_contract": "deterministic_student_block_only",
-            "authority_after_export": "requires_pytorch_or_numpy_forward_parity_then_exact_cpu_cuda_eval",
-        }
-    )
+                "block_index": index,
+                "difficulty_mass_interval": [lo, hi],
+                "overlap_fraction": overlap_fraction,
+                "difficulty_coordinate": "normalized_noise_or_mask_mass_u_in_[0,1]",
+                "local_training_axis": "[macOS-MLX research-signal]",
+                "training_target": "corrupted_feature_or_frame_to_clean_feature_or_frame",
+                "export_contract": "deterministic_student_block_only",
+                "authority_after_export": "requires_pytorch_or_numpy_forward_parity_then_exact_cpu_cuda_eval",
+            }
+        )
     schedule = {
         "schema": PACT_NERV_DIFFUSION_BLOCKS_SCHEDULE_SCHEMA,
         "generated_at_utc": _utc_now(),
@@ -167,6 +170,10 @@ def build_pact_nerv_diffusion_blocks_mlx_queue(
     pr95_telemetry = root / "pr95_mlx_blockwise_telemetry.jsonl"
     ia3_parity_report = root / "pact_nerv_ia3_mlx_pytorch_forward_parity.json"
     ia3_parity_pt = root / "pact_nerv_ia3_mlx_pytorch_forward_parity.pt"
+    ia3_byte_closed_dir = root / "pact_nerv_ia3_byte_closed_candidate"
+    ia3_byte_closed_manifest = root / "pact_nerv_ia3_byte_closed_candidate.json"
+    ia3_byte_closed_archive = ia3_byte_closed_dir / "archive.zip"
+    ia3_byte_closed_proof = ia3_byte_closed_dir / "receiver_inflate_proof.json"
     replay_bundle = root / "mlx_local_replay_bundle.json"
 
     schedule_ref = _repo_rel(schedule_path, repo_root)
@@ -179,6 +186,10 @@ def build_pact_nerv_diffusion_blocks_mlx_queue(
     pr95_telemetry_ref = _repo_rel(pr95_telemetry, repo_root)
     ia3_parity_report_ref = _repo_rel(ia3_parity_report, repo_root)
     ia3_parity_pt_ref = _repo_rel(ia3_parity_pt, repo_root)
+    ia3_byte_closed_dir_ref = _repo_rel(ia3_byte_closed_dir, repo_root)
+    ia3_byte_closed_manifest_ref = _repo_rel(ia3_byte_closed_manifest, repo_root)
+    ia3_byte_closed_archive_ref = _repo_rel(ia3_byte_closed_archive, repo_root)
+    ia3_byte_closed_proof_ref = _repo_rel(ia3_byte_closed_proof, repo_root)
     replay_bundle_ref = _repo_rel(replay_bundle, repo_root)
     source_video_ref = _repo_rel(_resolve(source_video_path, repo_root), repo_root)
     output_root_ref = _repo_rel(root, repo_root)
@@ -250,12 +261,28 @@ def build_pact_nerv_diffusion_blocks_mlx_queue(
         ",".join(str(index) for index in range(min(max_pairs, 3))),
         "--overwrite",
     ]
+    ia3_byte_closed_command = [
+        ".venv/bin/python",
+        "tools/materialize_pact_nerv_ia3_byte_closed_candidate.py",
+        "--pytorch-state-dict",
+        ia3_parity_pt_ref,
+        "--parity-report",
+        ia3_parity_report_ref,
+        "--output-dir",
+        ia3_byte_closed_dir_ref,
+        "--manifest-out",
+        ia3_byte_closed_manifest_ref,
+        "--label",
+        f"{queue_id}:pact_nerv_ia3_byte_closed",
+        "--overwrite",
+    ]
     replay_commands = [
         schedule_command,
         diffusion_smoke_command,
         ia3_smoke_command,
         pr95_control_command,
         ia3_parity_command,
+        ia3_byte_closed_command,
     ]
     replay_bundle_command = [
         ".venv/bin/python",
@@ -278,6 +305,12 @@ def build_pact_nerv_diffusion_blocks_mlx_queue(
         pr95_report_ref,
         "--artifact",
         ia3_parity_report_ref,
+        "--artifact",
+        ia3_byte_closed_manifest_ref,
+        "--artifact",
+        ia3_byte_closed_archive_ref,
+        "--artifact",
+        ia3_byte_closed_proof_ref,
         "--metadata-json",
         json.dumps(
             {
@@ -305,6 +338,9 @@ def build_pact_nerv_diffusion_blocks_mlx_queue(
             "pact_nerv_ia3_mlx_smoke_manifest_path": ia3_smoke_manifest_ref,
             "pact_nerv_diffusion_distilled_smoke_provenance_path": diffusion_smoke_provenance_ref,
             "pact_nerv_ia3_mlx_pytorch_forward_parity_path": ia3_parity_report_ref,
+            "pact_nerv_ia3_byte_closed_candidate_path": ia3_byte_closed_manifest_ref,
+            "pact_nerv_ia3_byte_closed_archive_path": ia3_byte_closed_archive_ref,
+            "pact_nerv_ia3_receiver_inflate_proof_path": ia3_byte_closed_proof_ref,
             "deterministic_replay_bundle_path": replay_bundle_ref,
             "block_count": block_count,
             "max_pairs": max_pairs,
@@ -442,9 +478,7 @@ def build_pact_nerv_diffusion_blocks_mlx_queue(
                             {
                                 "type": "json_completion_contract",
                                 "path": ia3_parity_report_ref,
-                                "required_equals": {
-                                    "schema": PACT_NERV_IA3_MLX_PYTORCH_FORWARD_PARITY_SCHEMA
-                                },
+                                "required_equals": {"schema": PACT_NERV_IA3_MLX_PYTORCH_FORWARD_PARITY_SCHEMA},
                                 "required_true": ["parity_passed"],
                                 "required_false": [
                                     "score_claim",
@@ -467,6 +501,48 @@ def build_pact_nerv_diffusion_blocks_mlx_queue(
                         },
                     },
                     {
+                        "id": "materialize_pact_nerv_ia3_byte_closed_candidate",
+                        "kind": "command",
+                        "requires": ["prove_pact_nerv_ia3_mlx_pytorch_forward_parity"],
+                        "command": ia3_byte_closed_command,
+                        "resources": {"kind": "local_cpu"},
+                        "timeout_seconds": 240,
+                        "postconditions": [
+                            {
+                                "type": "json_completion_contract",
+                                "path": ia3_byte_closed_manifest_ref,
+                                "required_equals": {"schema": PACT_NERV_IA3_BYTE_CLOSED_CANDIDATE_SCHEMA},
+                                "required_true": [
+                                    "byte_closed_candidate_emitted",
+                                    "receiver_contract_satisfied",
+                                    "full_frame_inflate_parity_satisfied",
+                                ],
+                                "required_false": [
+                                    "score_claim",
+                                    "promotion_eligible",
+                                    "rank_or_kill_eligible",
+                                    "ready_for_exact_eval_dispatch",
+                                ],
+                                "required_nonempty": [
+                                    "candidate_archive.sha256",
+                                    "receiver_verification.proof_sha256",
+                                ],
+                            },
+                            {"type": "json_false_authority", "path": ia3_byte_closed_manifest_ref},
+                            {"type": "path_exists", "path": ia3_byte_closed_archive_ref},
+                            {"type": "path_exists", "path": ia3_byte_closed_proof_ref},
+                        ],
+                        "telemetry": {
+                            "artifact_paths": [
+                                ia3_byte_closed_manifest_ref,
+                                ia3_byte_closed_archive_ref,
+                                ia3_byte_closed_proof_ref,
+                            ],
+                            "input_artifact_paths": [ia3_parity_report_ref, ia3_parity_pt_ref],
+                            "include_postcondition_paths": True,
+                        },
+                    },
+                    {
                         "id": "emit_mlx_local_deterministic_replay_bundle",
                         "kind": "command",
                         "requires": [
@@ -474,6 +550,7 @@ def build_pact_nerv_diffusion_blocks_mlx_queue(
                             "run_pact_nerv_ia3_mlx_renderer_smoke",
                             "plan_pr95_mlx_blockwise_control",
                             "prove_pact_nerv_ia3_mlx_pytorch_forward_parity",
+                            "materialize_pact_nerv_ia3_byte_closed_candidate",
                         ],
                         "command": replay_bundle_command,
                         "resources": {"kind": "local_cpu"},
@@ -509,6 +586,9 @@ def build_pact_nerv_diffusion_blocks_mlx_queue(
                                 ia3_smoke_manifest_ref,
                                 pr95_report_ref,
                                 ia3_parity_report_ref,
+                                ia3_byte_closed_manifest_ref,
+                                ia3_byte_closed_archive_ref,
+                                ia3_byte_closed_proof_ref,
                             ],
                             "include_postcondition_paths": True,
                         },

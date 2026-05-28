@@ -79,6 +79,7 @@ def _json_schema_fields(path: Path) -> dict[str, Any]:
         return {"json_kind": "unreadable_json"}
     if not isinstance(payload, Mapping):
         return {"json_kind": type(payload).__name__}
+    receiver_verification = payload.get("receiver_verification")
     return {
         "json_kind": "object",
         "schema": payload.get("schema"),
@@ -86,6 +87,14 @@ def _json_schema_fields(path: Path) -> dict[str, Any]:
         "score_claim": payload.get("score_claim"),
         "promotion_eligible": payload.get("promotion_eligible"),
         "ready_for_exact_eval_dispatch": payload.get("ready_for_exact_eval_dispatch"),
+        "byte_closed_candidate_emitted": payload.get("byte_closed_candidate_emitted"),
+        "receiver_contract_satisfied": payload.get("receiver_contract_satisfied"),
+        "full_frame_inflate_parity_satisfied": payload.get(
+            "full_frame_inflate_parity_satisfied"
+        ),
+        "receiver_proof_sha256": receiver_verification.get("proof_sha256")
+        if isinstance(receiver_verification, Mapping)
+        else None,
     }
 
 
@@ -197,11 +206,19 @@ def build_mlx_local_replay_bundle(
         if row.get("missing") is True
     ]
     env = _capture_environment()
+    byte_closed_receiver_proof_present = any(
+        row.get("byte_closed_candidate_emitted") is True
+        and row.get("receiver_contract_satisfied") is True
+        and row.get("full_frame_inflate_parity_satisfied") is True
+        and bool(row.get("receiver_proof_sha256"))
+        for row in output_artifacts
+    )
     blockers = [
         "macos_mlx_research_signal_has_no_score_authority",
         "contest_cpu_or_cuda_exact_eval_required_before_promotion",
-        "byte_closed_archive_and_receiver_runtime_proof_required_before_dispatch",
     ]
+    if not byte_closed_receiver_proof_present:
+        blockers.append("byte_closed_archive_and_receiver_runtime_proof_required_before_dispatch")
     if missing:
         blockers.append("missing_replay_artifacts")
     if env["redacted_key_count"]:
@@ -231,6 +248,7 @@ def build_mlx_local_replay_bundle(
         "replay_readiness": {
             "local_replay_ready": not missing,
             "contest_exact_eval_ready": False,
+            "byte_closed_receiver_proof_present": byte_closed_receiver_proof_present,
             "exact_eval_blockers": blockers,
         },
         "score_claim": False,
