@@ -60032,6 +60032,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_pact_nerv_selector_v4_l1_long_run_mlx_local_20260528",
+      "name": "PACT-NeRV-SELECTOR-V4 L1 LONG-RUN MLX-LOCAL (sister of V3 cascade)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "MLX renderer 545 LOC + trainer 471 LOC + bridge 416 LOC + gate 535 LOC + archive_candidate 159 LOC + 24 dedicated tests passing; 2000ep MLX-LOCAL training complete (201.3x loss reduction in 118.0s wall-clock on M5 Max); archive 112,143 bytes sha256 47ddd7a9833bdb6c per .omx/research/pact_nerv_selector_v4_l1_long_run_mlx_landed_20260528.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/pact_nerv_selector_v4_l1_long_run_mlx_landed_20260528.md (Catalog #300 v2 frontmatter + Catalog #292 assumption surfacing + Catalog #294 9-dim checklist + Catalog #303 cargo-cult audit + Catalog #305 observability surface + Catalog #309 horizon_class declared + Catalog #324 predicted_band_validation_status declared + Catalog #346 roster complete=True)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -60041,5 +60082,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-28T05:06:05Z"
+  "updated_at": "2026-05-28T05:45:55Z"
 }
