@@ -1,0 +1,121 @@
+schema_version: 1
+name: substrate_wyner_ziv_pipeline_stage_codec_per_pair_posenet_output_y_modal_paired_dispatch
+lane_id: lane_anti_pattern_registry_expansion_13_14_15_plus_wyner_ziv_op5_20260528
+summary: |
+  Wyner-Ziv pipeline-stage codec with per-pair PoseNet-output Y derivation
+  (Op-routable #5; Wave N+7 Slot 2 2026-05-28). This recipe is the
+  CANONICAL operator-attended paired-CUDA scaffold for reactivating the
+  Wyner-Ziv substrate after the MLX-LOCAL per-pair PoseNet-output Y
+  stand-in measurement empirically falsified the prefix-detector surface
+  on PR101 fp16 state_dict bytes at 0.000218% density (SECOND-SURFACE
+  FALSIFICATION per anti-pattern #15; PARADIGM Wyner 1976 R(D|Y) INTACT
+  per Catalog #307).
+
+  Per Catalog #325 PER-SUBSTRATE OPTIMAL FORM via adversarial grand
+  council symposium: this recipe is `dispatch_enabled: false` until the
+  6-step contract is satisfied via a fresh sextet pact deliberation that
+  authorizes the REAL PoseNet pre-compute path (the deterministic stand-in
+  was for MLX-LOCAL $0 GPU measurement; real PoseNet forward at compress
+  time requires CUDA dispatch + Catalog #320 attestation).
+
+  Per CLAUDE.md "Forbidden premature KILL without research exhaustion":
+  the substrate is DEFERRED-PENDING-research with 3 priority-ordered
+  reactivation paths (in order of operator-attested cost):
+
+  1. **Real PoseNet pre-compute Y (Op-routable #5 canonical path)**:
+     pre-compute per-pair PoseNet output on contest video 0.mkv via
+     CUDA dispatch (~$1-5 cost); ship per-pair pose tensor as decoder-
+     side side-info Y (~14400 bytes for 600 pairs * 6 dims * float32).
+     Decoder reproduces Y at inflate WITHOUT loading PoseNet per Catalog
+     #6 strict-scorer-rule + Catalog #320 (the per-pair pose IS in the
+     archive; no scorer load required). Predicted band: empirical-density-
+     dependent; if real PoseNet pose-axis bytes carry > 1% prefix overlap
+     with PR101 fp16 state_dict bytes, Wave N+8 composition queues with
+     real per-pair Y at additive composition alpha=1.0.
+
+  2. **Non-prefix Y derivation (substring overlap)**: extend the canonical
+     primitive `_detect_y_derivable_prefix` to support substring overlap
+     detection (not just prefix). The lzma ratio 0.4215 on PR101 fp16
+     bytes (vs sister prober anchor 0.217-0.228) suggests cross-byte
+     structure exists; the prefix-detector misses it. ~$0 MLX-LOCAL +
+     primitive extension cost.
+
+  3. **Cross-substrate composition Y**: derive Y from sister substrate's
+     already-shipped bytes (e.g. FEC6 archive bytes as Y for PR101). The
+     sister primitive's prober anchor (`pr101_state_dict` 0.47 score-
+     savings + `pr106_state_dict` 0.47) per
+     `lane_pre_entropy_substrate_pivot_prober_20260517` suggests this
+     yields meaningful density. Per Catalog #320/#321 non-promotable
+     until paired CUDA+CPU.
+
+platform: modal
+gpu: "${MODAL_GPU:-A100}"
+min_vram_gb: 24
+# Catalog #215: paired CUDA+CPU per Catalog #246 requires A100 for full-mode
+# determinism on Wyner-Ziv per-pair PoseNet pre-compute (PoseNet forward on
+# 600 pairs at contest resolution exceeds T4 budget per CLAUDE.md
+# "SegNet vs PoseNet importance" analysis).
+min_smoke_gpu: "A100"
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - contest_one_video_replay
+  - research_substrate
+canary_status: independent_substrate
+
+# Per Catalog #240 recipe-vs-trainer-state consistency + CLAUDE.md
+# "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY":
+# dispatch_enabled is FALSE until per-substrate symposium authorizes real
+# PoseNet pre-compute path per Catalog #325 6-step contract.
+dispatch_enabled: false
+research_only: true
+smoke_only: false
+
+# Per Catalog #324 post-training Tier-C validation discipline: predicted_band
+# is empirical-density-dependent; the MLX-LOCAL stand-in cannot prejudge real
+# PoseNet density. Tagged pending_post_training so the predicted band cannot
+# be promoted to a contest score claim until real PoseNet pre-compute lands.
+predicted_band:
+  predicted_score_delta_band_lo: -0.0470
+  predicted_score_delta_band_hi: 0.0
+  predicted_band_validation_status: pending_post_training
+  reactivation_criteria: |
+    Post-real-PoseNet-pre-compute density measurement on archive sha
+    pending generation via operator-attended L2 CUDA dispatch + paired
+    Catalog #246 CUDA + CPU auth-eval. The current MLX-LOCAL deterministic
+    stand-in measurement (density 0.000218%) is NON-PROMOTABLE per Catalog
+    #192/#317/#341 and CANNOT be used to predict real-PoseNet density.
+
+# Per Catalog #270 + Catalog #244: NVML env block + Tier 1 engineering
+# primitives are required at the trainer side per Catalog #172/#178/#179/#180
+# (the existing Wyner-Ziv trainer satisfies these — empirical measurement
+# harness has no gradient descent so most Tier 1 primitives are N/A; the
+# harness is "training" only in the empirical-measurement sense).
+
+env_overrides:
+  # Wyner-Ziv-specific env vars per Catalog #151 trainer-flag manifest
+  WZPSC_BASE_SUBSTRATE_BYTES_PATH: experiments/results/pr101_codecop_sweep_20260507_codex/pr101_decoder_state_dict.pt
+  WZPSC_MLX_OUTPUT_DIR: experiments/results/wyner_ziv_pipeline_stage_codec_l2_paired_cuda_per_pair_posenet_output_y_${DISPATCH_INSTANCE_JOB_ID}
+  # Per-pair PoseNet-output Y mode active
+  WYNER_ZIV_PER_PAIR_POSENET_OUTPUT_Y: "1"
+  WYNER_ZIV_PER_PAIR_POSENET_OUTPUT_Y_NUM_PAIRS: "600"
+  WYNER_ZIV_PER_PAIR_POSENET_OUTPUT_Y_POSE_DIM: "6"
+  WYNER_ZIV_PER_PAIR_POSENET_OUTPUT_Y_DTYPE: "float32"
+  # Catalog #244 canonical NVML/CUDA env block (auto-emitted by driver_generator
+  # at scaffold-time per Catalog #335 cathedral consumer auto-discovery)
+  DALI_DISABLE_NVML: "1"
+  CUBLAS_WORKSPACE_CONFIG: ":4096:8"
+  PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+
+cost_band:
+  epochs: 1  # empirical measurement harness has no training loop
+  estimated_cost_usd: 5.0  # PoseNet pre-compute on 600 pairs + paired CUDA+CPU auth-eval
+  estimated_wall_clock_minutes: 30.0
+  cost_band_token: l2_paired_cuda_cpu_real_posenet_pre_compute
+
+operator_required_attestations:
+  - catalog_246_paired_cuda_cpu_auth_eval_anchor_required_before_score_claim
+  - catalog_320_scorer_side_info_operator_attestation_for_pre_compute_phase
+  - catalog_325_per_substrate_symposium_within_14_days_before_dispatch
+  - anti_pattern_15_second_surface_falsification_acknowledged_and_unwound_via_real_posenet_pre_compute
+  - canonical_equation_344_wyner_ziv_per_pair_posenet_output_y_pose_axis_savings_v1_empirical_anchor_predicted_band_validated

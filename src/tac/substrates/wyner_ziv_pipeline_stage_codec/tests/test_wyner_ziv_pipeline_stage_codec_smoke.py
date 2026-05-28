@@ -58,7 +58,11 @@ from tac.substrates.wyner_ziv_pipeline_stage_codec.inflate import (
 )
 from tac.substrates.wyner_ziv_pipeline_stage_codec.trainer import (
     L0_SCAFFOLD_NOT_IMPLEMENTED_MESSAGE,
+    PER_PAIR_POSENET_OUTPUT_Y_NUM_PAIRS_DEFAULT,
+    PER_PAIR_POSENET_OUTPUT_Y_POSE_DIM,
+    _derive_per_pair_posenet_output_y_stand_in,
     _full_main,
+    _measure_per_pair_posenet_output_y_density,
     _smoke_main,
     build_arg_parser,
     main,
@@ -425,3 +429,104 @@ def test_main_cli_no_flag_prints_help_and_returns_one():
     """main() without --smoke or --full prints help + returns rc=1."""
     rc = main([])
     assert rc == 1
+
+
+# -----------------------------------------------------------------------------
+# Op-routable #5: per-pair PoseNet-output Y derivation (Wave N+7 NEW)
+# -----------------------------------------------------------------------------
+
+
+def test_per_pair_posenet_output_y_stand_in_is_deterministic():
+    """The per-pair Y stand-in MUST be byte-identical across calls (Wyner 1976 invariant)."""
+    y1 = _derive_per_pair_posenet_output_y_stand_in()
+    y2 = _derive_per_pair_posenet_output_y_stand_in()
+    assert y1 == y2, "per-pair Y stand-in is NON-DETERMINISTIC"
+    expected_len = (
+        PER_PAIR_POSENET_OUTPUT_Y_NUM_PAIRS_DEFAULT
+        * PER_PAIR_POSENET_OUTPUT_Y_POSE_DIM
+        * 4  # float32 = 4 bytes
+    )
+    assert len(y1) == expected_len, (
+        f"per-pair Y length {len(y1)} != expected {expected_len}"
+    )
+
+
+def test_per_pair_posenet_output_y_stand_in_float64_doubles_size():
+    """float64 variant doubles the byte length per dtype contract."""
+    y32 = _derive_per_pair_posenet_output_y_stand_in(dtype="float32")
+    y64 = _derive_per_pair_posenet_output_y_stand_in(dtype="float64")
+    assert len(y64) == 2 * len(y32), (
+        "float64 per-pair Y must be exactly 2x float32 size"
+    )
+    assert y32 != y64, "float32 and float64 byte forms must differ"
+
+
+def test_per_pair_posenet_output_y_stand_in_custom_shape():
+    """Custom num_pairs + pose_dim parameters produce correct byte length."""
+    y = _derive_per_pair_posenet_output_y_stand_in(
+        num_pairs=10, pose_dim=3, dtype="float32"
+    )
+    assert len(y) == 10 * 3 * 4, (
+        f"custom shape: len={len(y)} != 10 * 3 * 4 = 120"
+    )
+
+
+def test_per_pair_posenet_output_y_stand_in_rejects_invalid_params():
+    """Invalid num_pairs/pose_dim/dtype must raise ValueError."""
+    import pytest
+    with pytest.raises(ValueError):
+        _derive_per_pair_posenet_output_y_stand_in(num_pairs=0)
+    with pytest.raises(ValueError):
+        _derive_per_pair_posenet_output_y_stand_in(pose_dim=0)
+    with pytest.raises(ValueError):
+        _derive_per_pair_posenet_output_y_stand_in(dtype="bfloat16")
+
+
+def test_per_pair_posenet_output_y_density_measurement_schema():
+    """The per-pair Y density measurement record carries the canonical schema."""
+    pre_entropy = bytes(range(256)) * 100  # ~25 KB synthetic
+    m = _measure_per_pair_posenet_output_y_density(pre_entropy)
+    # Canonical schema fields shared with _measure_y_derivable_prefix_density_per_source
+    assert "y_bytes" in m
+    assert "y_sha256_prefix12" in m
+    assert "prefix_len_bytes" in m
+    assert "density_percent" in m
+    assert "derivation_succeeded" in m
+    assert "derivation_error_repr" in m
+    # Per-pair-specific fields
+    assert "num_pairs" in m
+    assert "pose_dim" in m
+    assert "dtype" in m
+    assert "test_object" in m
+    assert m["derivation_succeeded"] is True
+    assert m["num_pairs"] == PER_PAIR_POSENET_OUTPUT_Y_NUM_PAIRS_DEFAULT
+    assert m["pose_dim"] == PER_PAIR_POSENET_OUTPUT_Y_POSE_DIM
+    assert m["dtype"] == "float32"
+    assert "atick_redlich" in m["test_object"]
+    assert "catalog_311" in m["test_object"]
+    # Density is a non-negative float (0% or higher)
+    assert 0.0 <= m["density_percent"] <= 100.0
+
+
+def test_per_pair_posenet_output_y_argparse_flag_wires_into_namespace():
+    """--per-pair-posenet-output-y must populate args.per_pair_posenet_output_y."""
+    parser = build_arg_parser()
+    args = parser.parse_args([
+        "--full",
+        "--per-pair-posenet-output-y",
+        "--per-pair-posenet-output-y-num-pairs", "120",
+        "--per-pair-posenet-output-y-pose-dim", "4",
+        "--per-pair-posenet-output-y-dtype", "float64",
+        "--base-substrate-bytes-path", "/nonexistent/for_argparse_only.pt",
+    ])
+    assert args.per_pair_posenet_output_y is True
+    assert args.per_pair_posenet_output_y_num_pairs == 120
+    assert args.per_pair_posenet_output_y_pose_dim == 4
+    assert args.per_pair_posenet_output_y_dtype == "float64"
+
+
+def test_per_pair_posenet_output_y_argparse_default_off():
+    """Without --per-pair-posenet-output-y, the flag defaults False (opt-in)."""
+    parser = build_arg_parser()
+    args = parser.parse_args(["--smoke"])
+    assert args.per_pair_posenet_output_y is False

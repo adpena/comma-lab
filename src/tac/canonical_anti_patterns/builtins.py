@@ -48,6 +48,7 @@ from tac.canonical_anti_patterns.anti_pattern import (
     PARADIGM_COMPOUNDING_ORDER,
     PARADIGM_DATA_SOURCE,
     PARADIGM_DIAGNOSIS,
+    PARADIGM_DISCIPLINE,
     PARADIGM_OBSERVABILITY,
     PARADIGM_PROVENANCE,
     PARADIGM_QUANTIZATION,
@@ -57,6 +58,8 @@ from tac.canonical_anti_patterns.anti_pattern import (
     SEVERITY_HIGH,
     SEVERITY_LOW,
     SEVERITY_MEDIUM,
+    SEVERITY_OBSERVED_LOW,
+    SEVERITY_OBSERVED_MEDIUM,
     AntiPattern,
     EmpiricalFalsification,
 )
@@ -802,12 +805,280 @@ def build_docstring_overstatement_without_evidence_tag_v1() -> AntiPattern:
 
 
 # -----------------------------------------------------------------------------
+# Discipline anti-patterns (#13-#14) — per Slot 2 Wave N+7 audit 2026-05-28
+# -----------------------------------------------------------------------------
+
+
+def build_subagent_spawn_without_head_state_premise_verification_v1() -> AntiPattern:
+    """Anti-pattern #13: spawning Agent without HEAD-state PV check.
+
+    Empirical anchors (2 receipts):
+      * Wave N+5 Slot 1 Compound C STAND_DOWN (predecessor commit ``e61ea93b0``):
+        the parent agent dispatched the subagent without first reading
+        ``git log --oneline -30`` + ``git status``; predecessor had already
+        landed; subagent re-discovered the landed work + stood down with
+        landing memo trail.
+      * Wave N+5 Slot 2 framework_agnostic STAND_DOWN this session: same
+        class — Agent dispatched into a working tree with sister-subagent's
+        uncommitted edits visible at spawn time; sister landed cleanly via
+        commit ``5d38bf9df`` later, but the spawn-time visibility was a
+        signal to either coordinate or stand down BEFORE spawn.
+
+    Canonical unwind path per Catalog #229 (premise-verification-before-edit):
+    ALWAYS run ``git log --oneline -30`` + ``git status`` + check sister
+    landing memos BEFORE invoking Agent spawn so the parent agent decides
+    against an empirically-verified HEAD state instead of a stale prior.
+    """
+    return AntiPattern(
+        anti_pattern_id="subagent_spawn_without_head_state_premise_verification_v1",
+        description=(
+            "Parent agent invoked Agent spawn without first running "
+            "git log + git status + sister-landing-memo check. The subagent "
+            "subsequently discovers the work is already landed and STANDS_DOWN "
+            "(or worse: collides with a sister subagent's in-flight edits). "
+            "Wasted compute + audit-trail noise; canonical Catalog #229 "
+            "premise-verification-before-edit was bypassed at the spawn "
+            "decision boundary."
+        ),
+        forbidden_pattern_predicate=(
+            "Agent.spawn(...) called WITHOUT preceding git log --oneline -30 "
+            "AND git status AND sister-landing-memo PV per Catalog #229"
+        ),
+        falsification_band={
+            # Each STAND_DOWN is +1 wasted-subagent-spawn count; the band
+            # tracks observed recurrences-per-session.
+            "stand_down_recurrences_per_session_lo": 1.0,
+            "stand_down_recurrences_per_session_hi": 4.0,
+        },
+        recurrence_conditions=(
+            "parent agent spawns Agent without git log review in same turn",
+            "subagent reports STAND_DOWN due to already-landed predecessor",
+            "subagent encounters sister-subagent uncommitted edits in shared tree",
+            "Catalog #340 sister-checkpoint guard fires on the subagent's commit attempt",
+        ),
+        canonical_source_anchor=(
+            "Wave N+5 Slot 1 Compound C STAND_DOWN (predecessor commit "
+            "e61ea93b0) + Wave N+5 Slot 2 framework_agnostic STAND_DOWN; "
+            "Catalog #229 premise-verification-before-edit; Catalog #340 "
+            "sister-checkpoint guard"
+        ),
+        canonical_unwind_path=(
+            "Before Agent spawn: (1) run `git log --oneline -30` to verify "
+            "HEAD state; (2) run `git status` to detect sister-subagent "
+            "in-flight edits; (3) read sister landing memos under "
+            ".omx/research/*landed_<YYYYMMDD>.md to detect already-landed "
+            "work; (4) only THEN decide spawn vs STAND_DOWN. Per Catalog #229: "
+            "premise verification IS the discipline."
+        ),
+        canonical_producers=(
+            "parent_agent_dispatch_layer",
+            "Agent_tool_invocation_callsites",
+        ),
+        canonical_consumers=(
+            "tools/cathedral_autopilot_autonomous_loop.py",
+            "src/tac/cathedral_consumers/anti_pattern_lookup_consumer/",
+            "tools/subagent_checkpoint.py (predecessor-resume helper)",
+        ),
+        paradigm_class=PARADIGM_DISCIPLINE,
+        severity=SEVERITY_MEDIUM,
+        provenance=_design_provenance(
+            "subagent_spawn_without_head_state_premise_verification_v1"
+        ),
+        empirical_falsifications=(),
+        last_recalibration_utc=_DESIGN_LANDING_UTC,
+        next_recalibration_trigger=RECALIBRATE_ON_NEW_FALSIFICATIONS,
+    )
+
+
+def build_predecessor_working_tree_uncommitted_handoff_v1() -> AntiPattern:
+    """Anti-pattern #14: predecessor subagent leaves uncommitted edits.
+
+    Empirical anchor: Wave N+5 Slot 2 framework_agnostic STAND_DOWN this
+    session — predecessor's working-tree edits to multiple sister files were
+    uncommitted at spawn boundary; successor inherited a dirty working tree
+    that complicated PV. Resolution: predecessor's canonical-serializer
+    auto-commit at ``5d38bf9df`` landed the framework_agnostic primitives
+    cleanly with proper attribution, restoring the working tree to a
+    well-defined HEAD state.
+
+    Canonical unwind path: every subagent commits its incremental edits via
+    the canonical serializer at session-end checkpoint OR posts
+    SUPERSESSION-PENDING in its STAND_DOWN memo so the successor knows
+    the handoff is uncommitted. The post-spawn HEAD verification step in
+    the canonical Catalog #229 PV flow surfaces the gap.
+    """
+    return AntiPattern(
+        anti_pattern_id="predecessor_working_tree_uncommitted_handoff_v1",
+        description=(
+            "Predecessor subagent's STAND_DOWN or completion left files "
+            "uncommitted in the shared working tree; successor inherits a "
+            "dirty state that is hard to distinguish from sister-subagent "
+            "in-flight collision (Catalog #314 absorption-pattern). The "
+            "canonical fix is post-spawn HEAD verification + canonical-"
+            "serializer auto-commit by the predecessor."
+        ),
+        forbidden_pattern_predicate=(
+            "subagent SUBAGENT_TERMINATE without canonical-serializer "
+            "commit AND working-tree has predecessor-owned edits"
+        ),
+        falsification_band={
+            # Implementation-inefficiency cost is small (forensic re-investigation
+            # at handoff) but recurrent.
+            "wasted_pv_minutes_per_recurrence_lo": 2.0,
+            "wasted_pv_minutes_per_recurrence_hi": 10.0,
+        },
+        recurrence_conditions=(
+            "git status shows uncommitted modifications at subagent spawn time",
+            "predecessor STAND_DOWN memo does not declare SUPERSESSION-PENDING",
+            "Catalog #117 last-50-commit serializer-log shows no predecessor commit",
+            "successor's PV cannot disambiguate uncommitted-handoff vs sister-collision",
+        ),
+        canonical_source_anchor=(
+            "Wave N+5 Slot 2 framework_agnostic STAND_DOWN; resolved at "
+            "predecessor canonical-serializer auto-commit 5d38bf9df; "
+            "Catalog #117 + Catalog #229 + Catalog #314"
+        ),
+        canonical_unwind_path=(
+            "Every subagent at SUBAGENT_TERMINATE / STAND_DOWN MUST commit "
+            "its incremental edits via `tools/subagent_commit_serializer.py "
+            "--message <subject> --files <files> "
+            "--expected-content-sha256 <file>=<post-edit-sha>` OR explicitly "
+            "declare SUPERSESSION-PENDING in its STAND_DOWN memo so successor "
+            "knows the handoff is uncommitted. Catalog #117 forbids bare "
+            "git commit; #229 forces PV; #314 detects absorption post-hoc."
+        ),
+        canonical_producers=(
+            "any subagent at SUBAGENT_TERMINATE / STAND_DOWN boundary",
+        ),
+        canonical_consumers=(
+            "tools/cathedral_autopilot_autonomous_loop.py",
+            "src/tac/cathedral_consumers/anti_pattern_lookup_consumer/",
+            "tools/subagent_commit_serializer.py",
+            "src/tac/preflight.py (Catalog #314 absorption-pattern gate)",
+        ),
+        paradigm_class=PARADIGM_DISCIPLINE,
+        severity=SEVERITY_LOW,
+        provenance=_design_provenance(
+            "predecessor_working_tree_uncommitted_handoff_v1"
+        ),
+        empirical_falsifications=(),
+        last_recalibration_utc=_DESIGN_LANDING_UTC,
+        next_recalibration_trigger=RECALIBRATE_ON_NEW_FALSIFICATIONS,
+    )
+
+
+# -----------------------------------------------------------------------------
+# Diagnosis anti-patterns (#15) — Wyner-Ziv prefix-Y FALSIFICATION 2026-05-28
+# -----------------------------------------------------------------------------
+
+
+def build_wyner_ziv_prefix_y_density_decoder_state_dict_surface_v1() -> AntiPattern:
+    """Anti-pattern #15: Wyner-Ziv prefix-detector density on decoder-state-dict.
+
+    Empirical anchor: ``.omx/research/wyner_ziv_pipeline_stage_codec_l1_long_
+    mlx_600pair_landed_20260528.md`` commit ``6f5eabf30`` — L1 LONG MLX
+    measurement on real PR101 fp16 decoder state_dict bytes
+    (sha256=``79b804d9a5839eb3`` / 457916 B) yielded maximum
+    Y-derivable-prefix density **0.000218%** across all 4 canonical Y sources
+    (Comma2k19 / ImageNet / torch_defaults / math_constants) — **4 orders
+    of magnitude below 1% threshold** per op-routable #4. Per Catalog #307:
+    IMPLEMENTATION-LEVEL falsification (PARADIGM Wyner 1976 R(D|Y) INTACT).
+
+    Canonical unwind path per Catalog #311 Atick-Tishby-Wyner triple:
+    per-pair PoseNet-output Y derivation. Y is no longer a fixed canonical
+    source but a per-pair pose tensor shipped IN the archive (decoder
+    reproduces it deterministically via the pose-axis side-info; pre-
+    computed per-pair to avoid Catalog #6 strict-scorer-rule at inflate
+    time).
+    """
+    return AntiPattern(
+        anti_pattern_id="wyner_ziv_prefix_y_density_decoder_state_dict_surface_v1",
+        description=(
+            "Wyner-Ziv prefix-detector applied to a decoder-state-dict byte "
+            "form yields ~0% Y-derivable-prefix density vs canonical Y "
+            "sources. The byte distribution of fp16/fp32 tensor weights is "
+            "entropy-flat — there is no common prefix to extract via a "
+            "byte-prefix detector. The IMPLEMENTATION (prefix-detector at "
+            "the state_dict surface) is empirically falsified; the PARADIGM "
+            "(Wyner 1976 R(D|Y) with decoder-side side-info per Catalog #311 "
+            "Atick-Tishby-Wyner triple) is INTACT and the canonical unwind "
+            "path is per-pair PoseNet-output Y derivation."
+        ),
+        forbidden_pattern_predicate=(
+            "wyner_ziv_layer.intercept_location == STATE_DICT_SERIALIZATION "
+            "AND wyner_ziv_layer.side_info_source IN canonical_4_sources "
+            "AND base_substrate_bytes_form IN {raw_fp16, raw_fp32, torch_save}"
+        ),
+        falsification_band={
+            # Empirical: 0.000218% max density across 4 canonical Y sources
+            # on PR101 fp16 state_dict (457916 B). Falsification band tracks
+            # the observed density-percent on this byte form.
+            "max_density_percent_lo": 0.0,
+            "max_density_percent_hi": 0.01,
+            "threshold_percent_per_op_routable_4": 1.0,
+        },
+        recurrence_conditions=(
+            "wyner_ziv_pipeline_stage_codec measuring density on raw_fp16 state_dict",
+            "wyner_ziv_pipeline_stage_codec measuring density on raw_fp32 state_dict",
+            "wyner_ziv_pipeline_stage_codec measuring density on torch_save state_dict",
+            "prefix-detector applied to any entropy-flat tensor-weight byte stream",
+            "all 4 canonical Y sources yield density << 1% threshold",
+        ),
+        canonical_source_anchor=(
+            "commit:6f5eabf30 Wyner-Ziv L1 LONG MLX 600-PAIR landing; sister "
+            ".omx/research/wyner_ziv_pipeline_stage_codec_l1_long_mlx_"
+            "600pair_landed_20260528.md; Catalog #311 Atick-Tishby-Wyner "
+            "triple; Catalog #307 paradigm-vs-implementation classification"
+        ),
+        canonical_unwind_path=(
+            "Per-pair PoseNet-output Y derivation per Catalog #311 "
+            "Atick-Tishby-Wyner triple (Op-routable #5 in sister landing "
+            "memo). Y is a per-pair pose tensor (6-dim per Wyner 1976 "
+            "R(D|Y)) shipped IN the archive as decoder-side side-info; "
+            "decoder reproduces Y deterministically at inflate time WITHOUT "
+            "loading scorer per Catalog #6 strict-scorer-rule. Pre-compute "
+            "per-pair pose at compress time via PoseNet on M5 Max OR via "
+            "an Atick-Redlich ego-motion-conditioned deterministic stand-in. "
+            "Sister reactivation paths: non-prefix Y derivation (substring "
+            "overlap); cross-substrate composition Y (FEC6 archive bytes "
+            "as Y for PR101). Per CLAUDE.md 'Forbidden premature KILL': "
+            "DEFERRED-PENDING-research, NOT killed."
+        ),
+        canonical_producers=(
+            "experiments/train_substrate_wyner_ziv_pipeline_stage_codec.py",
+            "src/tac/substrates/wyner_ziv_pipeline_stage_codec/trainer.py",
+            "src/tac/codec/wyner_ziv_layer.py",
+        ),
+        canonical_consumers=(
+            "tools/cathedral_autopilot_autonomous_loop.py",
+            "src/tac/cathedral_consumers/anti_pattern_lookup_consumer/",
+            "src/tac/cathedral_consumers/wyner_ziv_pipeline_stage_codec/",
+            "src/tac/canonical_equations/registry.py (canonical equation #344 anchor)",
+        ),
+        paradigm_class=PARADIGM_DIAGNOSIS,
+        severity=SEVERITY_MEDIUM,
+        provenance=_design_provenance(
+            "wyner_ziv_prefix_y_density_decoder_state_dict_surface_v1"
+        ),
+        empirical_falsifications=(),
+        last_recalibration_utc=_DESIGN_LANDING_UTC,
+        next_recalibration_trigger=RECALIBRATE_ON_NEW_FALSIFICATIONS,
+    )
+
+
+# -----------------------------------------------------------------------------
 # Population helpers
 # -----------------------------------------------------------------------------
 
 
 def build_all_initial_anti_patterns() -> list[AntiPattern]:
-    """Return the 12 initial canonical anti-patterns as a list (no registry write)."""
+    """Return the 15 initial canonical anti-patterns as a list (no registry write).
+
+    Wave N+7 Slot 2 2026-05-28 expansion: added #13/#14 discipline anti-patterns
+    and #15 Wyner-Ziv prefix-Y diagnosis anti-pattern per operator directive
+    'ensure all negative findings audited' + Wyner-Ziv FALSIFICATION
+    reactivation criteria.
+    """
     return [
         build_lzma_on_already_brotli_saturated_compounding_v1(),
         build_quantize_then_svd_corrupted_low_rank_v1(),
@@ -821,6 +1092,9 @@ def build_all_initial_anti_patterns() -> list[AntiPattern]:
         build_source_selector_inherited_predicted_score_mean_v1(),
         build_silent_no_spawn_modal_dispatch_v1(),
         build_docstring_overstatement_without_evidence_tag_v1(),
+        build_subagent_spawn_without_head_state_premise_verification_v1(),
+        build_predecessor_working_tree_uncommitted_handoff_v1(),
+        build_wyner_ziv_prefix_y_density_decoder_state_dict_surface_v1(),
     ]
 
 
@@ -860,11 +1134,14 @@ __all__ = [
     "build_fp4_packed_without_qat_cos_collapse_v1",
     "build_lzma_on_already_brotli_saturated_compounding_v1",
     "build_phantom_score_directory_naming_lie_v1",
+    "build_predecessor_working_tree_uncommitted_handoff_v1",
     "build_predicted_band_from_random_init_tier_c_v1",
     "build_quantize_then_svd_corrupted_low_rank_v1",
     "build_rank_1_problem_spec_synergy_tautology_v1",
     "build_silent_no_spawn_modal_dispatch_v1",
     "build_source_selector_inherited_predicted_score_mean_v1",
+    "build_subagent_spawn_without_head_state_premise_verification_v1",
     "build_transient_tmp_path_in_persisted_artifact_v1",
+    "build_wyner_ziv_prefix_y_density_decoder_state_dict_surface_v1",
     "populate_initial_anti_patterns",
 ]

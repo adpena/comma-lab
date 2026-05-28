@@ -343,6 +343,10 @@ src/tac.egg-info/
 .omx/state/canonical_equations_registry.jsonl.lock
 .omx/state/canonical_equations_registry.jsonl.tmp.*
 .omx/state/canonical_equations_registry.jsonl.corrupt.*
+# canonical_anti_patterns_registry.jsonl: APPEND-ONLY per Catalog #110/#113;
+# negative-registry sister of canonical_equations_registry.jsonl per Catalog #344
+# sister discipline. Wave N+7 Slot 2 2026-05-28.
+!.omx/state/canonical_anti_patterns_registry.jsonl
 # Cathedral autopilot consumer verdict ledger (T3 council prioritization
 # 2026-05-19 rank #4 ACTIVATION sprint; observability-only HISTORICAL_PROVENANCE
 # per Catalog #287/#323 non-promotable invariant; queryable across sessions via

@@ -78,6 +78,7 @@ PARADIGM_DATA_SOURCE = "data_source_anti_pattern"
 PARADIGM_OBSERVABILITY = "observability_anti_pattern"
 PARADIGM_RIGOR_LOSS = "rigor_loss_anti_pattern"
 PARADIGM_PREMATURE_KILL = "premature_kill_anti_pattern"
+PARADIGM_DISCIPLINE = "discipline_anti_pattern"
 
 VALID_PARADIGM_CLASSES = frozenset(
     {
@@ -89,6 +90,7 @@ VALID_PARADIGM_CLASSES = frozenset(
         PARADIGM_OBSERVABILITY,
         PARADIGM_RIGOR_LOSS,
         PARADIGM_PREMATURE_KILL,
+        PARADIGM_DISCIPLINE,
     }
 )
 
@@ -515,6 +517,7 @@ __all__ = [
     "PARADIGM_COMPOUNDING_ORDER",
     "PARADIGM_DATA_SOURCE",
     "PARADIGM_DIAGNOSIS",
+    "PARADIGM_DISCIPLINE",
     "PARADIGM_OBSERVABILITY",
     "PARADIGM_PREMATURE_KILL",
     "PARADIGM_PROVENANCE",

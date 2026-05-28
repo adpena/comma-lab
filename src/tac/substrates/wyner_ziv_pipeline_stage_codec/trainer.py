@@ -85,11 +85,24 @@ __all__ = (
     "_smoke_main",
     "_full_main",
     "_measure_y_derivable_prefix_density_per_source",
+    "_measure_per_pair_posenet_output_y_density",
+    "_derive_per_pair_posenet_output_y_stand_in",
     "_load_base_substrate_pre_entropy_bytes",
     "L0_SCAFFOLD_NOT_IMPLEMENTED_MESSAGE",
     "MLX_EVIDENCE_GRADE",
+    "PER_PAIR_POSENET_OUTPUT_Y_NUM_PAIRS_DEFAULT",
+    "PER_PAIR_POSENET_OUTPUT_Y_POSE_DIM",
     "TIER_1_OPERATOR_REQUIRED_FLAGS",
 )
+
+
+# Per-pair PoseNet-output Y constants per Op-routable #5 + Catalog #311
+# Atick-Tishby-Wyner triple. The contest pose dimension is 6 (first 6 of the
+# 12-dim PoseNet head); the canonical 600-pair count matches the contest's
+# `seq_len=2` non-overlapping batching over 1200 frames per CLAUDE.md
+# "1199 OVERLAPPING PAIRS vs 600 NON-OVERLAPPING" anchor.
+PER_PAIR_POSENET_OUTPUT_Y_POSE_DIM = 6
+PER_PAIR_POSENET_OUTPUT_Y_NUM_PAIRS_DEFAULT = 600
 
 
 # Per CLAUDE.md "MPS auth eval is NOISE" + Catalog #192/#341 non-promotable
@@ -255,6 +268,61 @@ def build_arg_parser() -> argparse.ArgumentParser:
             "prober anchor's lzma ratio 0.217-0.228); 'raw_fp32' = same as "
             "fp16 but in fp32 (matches sister prober anchor); 'torch_save' = "
             "the full torch.save serialization (includes pickle header)."
+        ),
+    )
+    # --- Op-routable #5: per-pair PoseNet-output Y derivation per Catalog #311
+    parser.add_argument(
+        "--per-pair-posenet-output-y",
+        action="store_true",
+        help=(
+            "L1 ALTERNATIVE Y SURFACE per Op-routable #5 in sister design memo "
+            "+ Catalog #311 Atick-Tishby-Wyner triple. Switches Y derivation "
+            "from the 4 canonical sources (Comma2k19/ImageNet/torch_defaults/"
+            "math_constants - empirically FALSIFIED at 0.000218%% density on "
+            "PR101 fp16 state_dict bytes per Wave N+6 landing 6f5eabf30) to "
+            "a per-pair pose tensor Y. Per Catalog #6 strict-scorer-rule + "
+            "Catalog #320: the decoder CANNOT load PoseNet at inflate, so the "
+            "per-pair pose Y MUST be pre-computed at compress time and "
+            "deterministically reproducible by the decoder. For the MLX-LOCAL "
+            "$0 GPU measurement, the harness uses a DETERMINISTIC ego-motion-"
+            "conditioned per-pair pose Y stand-in per Atick-Redlich 1990 + "
+            "Catalog #311 (NOT a real PoseNet forward; PoseNet pre-computation "
+            "requires CUDA dispatch deferred to operator-attended L2 per "
+            "Catalog #246). The stand-in is the canonical TEST OBJECT for the "
+            "Op-routable #5 prefix-density measurement; if density >= 1%% the "
+            "paradigm path is empirically supported and Wave N+8 composition "
+            "(real PoseNet pre-compute) is queued via composition_matrix."
+        ),
+    )
+    parser.add_argument(
+        "--per-pair-posenet-output-y-num-pairs",
+        type=int,
+        default=PER_PAIR_POSENET_OUTPUT_Y_NUM_PAIRS_DEFAULT,
+        help=(
+            "Number of pairs in the per-pair pose tensor Y "
+            "(default: 600 per contest seq_len=2 non-overlapping batching "
+            "over 1200 frames; matches CLAUDE.md '1199 OVERLAPPING vs 600 "
+            "NON-OVERLAPPING' anchor)."
+        ),
+    )
+    parser.add_argument(
+        "--per-pair-posenet-output-y-pose-dim",
+        type=int,
+        default=PER_PAIR_POSENET_OUTPUT_Y_POSE_DIM,
+        help=(
+            "Pose dimension per pair (default: 6 = first 6 dims of 12-dim "
+            "PoseNet head; matches contest scorer per CLAUDE.md "
+            "'Exact scorer architectures — VERIFIED' anchor)."
+        ),
+    )
+    parser.add_argument(
+        "--per-pair-posenet-output-y-dtype",
+        type=str,
+        default="float32",
+        choices=("float32", "float64"),
+        help=(
+            "Per-pair pose Y dtype (default: float32 matches contest scorer "
+            "default; float64 emulates extended-precision pose-axis side-info)."
         ),
     )
     return parser
@@ -495,6 +563,190 @@ def _measure_y_derivable_prefix_density_per_source(
     return measurements
 
 
+def _derive_per_pair_posenet_output_y_stand_in(
+    num_pairs: int = PER_PAIR_POSENET_OUTPUT_Y_NUM_PAIRS_DEFAULT,
+    pose_dim: int = PER_PAIR_POSENET_OUTPUT_Y_POSE_DIM,
+    dtype: str = "float32",
+) -> bytes:
+    """Derive deterministic ego-motion-conditioned per-pair pose Y stand-in.
+
+    Per CLAUDE.md "Strict scorer rule" + Catalog #6/#320: the decoder CANNOT
+    load PoseNet at inflate time. Real PoseNet pre-computation at compress
+    time requires CUDA dispatch (FORBIDDEN at $0 GPU per the Slot 2 cap
+    NON-NEGOTIABLE). For the MLX-LOCAL $0 GPU empirical measurement of
+    Op-routable #5, this helper synthesizes a DETERMINISTIC per-pair pose
+    Y tensor that emulates the structure (but NOT the empirical content) of
+    a real PoseNet output sequence.
+
+    Per Catalog #311 Atick-Tishby-Wyner triple + Atick-Redlich 1990 ego-
+    motion-conditioned cooperative-receiver framing: the canonical per-pair
+    pose dimension is 6 (forward translation + rotation per axis), and the
+    canonical sequence length is 600 (non-overlapping pairs over 1200
+    contest frames per the canonical evaluator's seq_len=2 batching).
+
+    The stand-in is a deterministic ego-motion-conditioned signal where
+    pair i's 6-dim pose vector is derived from sin/cos of i + frequency-
+    modulated harmonics. This is NOT a real PoseNet output — it is a
+    deterministic structured stand-in that the empirical measurement uses
+    to test whether the per-pair surface (i.e., a 6 * 600 * 4 = 14400 byte
+    Y tensor) yields better Y-derivable-prefix density on real PR101 fp16
+    state_dict bytes than the 4 canonical sources (Comma2k19/etc.).
+
+    Per CLAUDE.md "Apples-to-apples evidence discipline": the verdict is
+    HONEST about what was measured:
+      * IF density >= 1%: the per-pair structural surface PASSES the
+        op-routable #4 threshold; queues Wave N+8 composition path with
+        REAL PoseNet pre-compute via operator-attended CUDA dispatch.
+      * IF density < 1%: IMPLEMENTATION-LEVEL falsification per Catalog
+        #307 EVEN at the per-pair structural surface; PARADIGM still INTACT;
+        sister anti-pattern registration documents the second-surface
+        falsification class.
+
+    Args:
+        num_pairs: number of pairs (default 600 per canonical contest).
+        pose_dim: pose dimension per pair (default 6 per PoseNet head).
+        dtype: 'float32' (canonical contest default) or 'float64'.
+
+    Returns:
+        Byte representation of the per-pair pose Y tensor (num_pairs *
+        pose_dim * dtype_width bytes).
+    """
+    import math
+
+    if num_pairs <= 0:
+        raise ValueError(f"num_pairs must be > 0; got {num_pairs!r}")
+    if pose_dim <= 0:
+        raise ValueError(f"pose_dim must be > 0; got {pose_dim!r}")
+    if dtype not in ("float32", "float64"):
+        raise ValueError(f"dtype must be float32 or float64; got {dtype!r}")
+
+    # Try MLX first per CLAUDE.md 8th MLX-FIRST standing directive; fall
+    # back to numpy if MLX isn't available (e.g. CI without Apple Silicon).
+    try:
+        import mlx.core as mx  # type: ignore
+
+        pair_indices = mx.arange(num_pairs, dtype=mx.float32)
+        # 6 ego-motion-conditioned channels:
+        #   0: sin(i / N * 2π * 1.0)  — base ego-translation X
+        #   1: cos(i / N * 2π * 1.0)  — base ego-translation Y
+        #   2: sin(i / N * 2π * 3.0)  — secondary harmonic Z
+        #   3: cos(i / N * 2π * 3.0)  — secondary harmonic rot-X
+        #   4: sin(i / N * 2π * 7.0)  — tertiary harmonic rot-Y
+        #   5: cos(i / N * 2π * 7.0)  — tertiary harmonic rot-Z
+        # We use 1 / 3 / 7 frequencies (coprime; Atick-Redlich's
+        # decorrelated cooperative-receiver basis per Catalog #311).
+        # Output shape: (num_pairs, pose_dim) flattened to bytes.
+        # For pose_dim != 6 we repeat / truncate the channel pattern.
+        normalized = pair_indices / float(num_pairs)
+        channels = []
+        freqs = (1.0, 1.0, 3.0, 3.0, 7.0, 7.0)
+        for k in range(pose_dim):
+            freq = freqs[k % 6]
+            phase_offset = 0.0 if k % 2 == 0 else math.pi / 2.0  # sin/cos pairing
+            channel = mx.sin(normalized * 2.0 * math.pi * freq + phase_offset)
+            channels.append(channel)
+        stacked = mx.stack(channels, axis=1)  # (num_pairs, pose_dim)
+        if dtype == "float64":
+            # MLX has no float64; round-trip via numpy.
+            import numpy as np
+            arr = np.asarray(stacked, dtype=np.float32).astype(np.float64)
+            return arr.tobytes()
+        # Default float32 path:
+        import numpy as np
+        arr = np.asarray(stacked, dtype=np.float32)
+        return arr.tobytes()
+    except ImportError:
+        # Numpy-only fallback (per CLAUDE.md MLX-first + numpy-portable
+        # standing directive — inflate-portability invariant).
+        import numpy as np
+
+        pair_indices = np.arange(num_pairs, dtype=np.float32)
+        normalized = pair_indices / float(num_pairs)
+        freqs = (1.0, 1.0, 3.0, 3.0, 7.0, 7.0)
+        out = np.zeros((num_pairs, pose_dim), dtype=np.float32)
+        for k in range(pose_dim):
+            freq = freqs[k % 6]
+            phase_offset = 0.0 if k % 2 == 0 else math.pi / 2.0
+            out[:, k] = np.sin(normalized * 2.0 * math.pi * freq + phase_offset)
+        if dtype == "float64":
+            return out.astype(np.float64).tobytes()
+        return out.tobytes()
+
+
+def _measure_per_pair_posenet_output_y_density(
+    pre_entropy_bytes: bytes,
+    num_pairs: int = PER_PAIR_POSENET_OUTPUT_Y_NUM_PAIRS_DEFAULT,
+    pose_dim: int = PER_PAIR_POSENET_OUTPUT_Y_POSE_DIM,
+    dtype: str = "float32",
+) -> dict[str, Any]:
+    """Measure Y-derivable-prefix density vs per-pair pose Y stand-in.
+
+    Op-routable #5 canonical sister measurement to the 4-canonical-source
+    measurement in :func:`_measure_y_derivable_prefix_density_per_source`.
+    Returns a single measurement record matching the canonical schema so
+    downstream consumers can compare like-for-like vs prefix-Y.
+
+    Per CLAUDE.md "Apples-to-apples evidence discipline": the verdict
+    reported is HONEST about the test object (a deterministic stand-in,
+    NOT a real PoseNet pre-computation). The density measurement IS still
+    diagnostic of whether the per-pair structural surface admits any
+    prefix overlap with real PR101 fp16 state_dict bytes.
+
+    Args:
+        pre_entropy_bytes: real base-substrate pre-entropy byte stream.
+        num_pairs: per-pair pose Y sequence length (default 600).
+        pose_dim: per-pair pose dimension (default 6).
+        dtype: per-pair pose dtype ('float32' or 'float64').
+
+    Returns:
+        Measurement record with the same schema as the canonical 4-source
+        measurement (y_bytes, y_sha256_prefix12, prefix_len_bytes,
+        density_percent, derivation_succeeded, derivation_error_repr) plus
+        per-pair-specific fields (num_pairs, pose_dim, dtype, test_object).
+    """
+    try:
+        y_bytes = _derive_per_pair_posenet_output_y_stand_in(
+            num_pairs=num_pairs, pose_dim=pose_dim, dtype=dtype,
+        )
+        prefix_len = _detect_y_derivable_prefix(pre_entropy_bytes, y_bytes)
+        density_pct = (
+            100.0 * prefix_len / len(pre_entropy_bytes)
+            if pre_entropy_bytes
+            else 0.0
+        )
+        return {
+            "y_bytes": len(y_bytes),
+            "y_sha256_prefix12": hashlib.sha256(y_bytes).hexdigest()[:12],
+            "prefix_len_bytes": prefix_len,
+            "density_percent": density_pct,
+            "derivation_succeeded": True,
+            "derivation_error_repr": None,
+            "num_pairs": num_pairs,
+            "pose_dim": pose_dim,
+            "dtype": dtype,
+            "test_object": (
+                "deterministic_ego_motion_conditioned_per_pair_pose_stand_in_"
+                "atick_redlich_1990_per_catalog_311"
+            ),
+        }
+    except Exception as exc:  # pragma: no cover — fail-closed per Catalog #229
+        return {
+            "y_bytes": 0,
+            "y_sha256_prefix12": "",
+            "prefix_len_bytes": 0,
+            "density_percent": 0.0,
+            "derivation_succeeded": False,
+            "derivation_error_repr": repr(exc)[:200],
+            "num_pairs": num_pairs,
+            "pose_dim": pose_dim,
+            "dtype": dtype,
+            "test_object": (
+                "deterministic_ego_motion_conditioned_per_pair_pose_stand_in_"
+                "atick_redlich_1990_per_catalog_311"
+            ),
+        }
+
+
 def _full_main(args: argparse.Namespace) -> int:
     """L1 LONG MLX empirical-measurement harness per Catalog #325 6-step contract.
 
@@ -588,6 +840,66 @@ def _full_main(args: argparse.Namespace) -> int:
         f"(best source: {best_source})"
     )
 
+    # Step 2b (Op-routable #5): per-pair PoseNet-output Y density measurement
+    # per Catalog #311 Atick-Tishby-Wyner triple. Optional via
+    # --per-pair-posenet-output-y; when active, this is the canonical
+    # alternative Y surface to the 4 canonical sources (which are
+    # empirically FALSIFIED at 0.000218% density on PR101 fp16 per Wave N+6
+    # landing 6f5eabf30). Per CLAUDE.md "Apples-to-apples evidence
+    # discipline": the measurement is HONEST about using a DETERMINISTIC
+    # stand-in (NOT a real PoseNet forward) per Catalog #6 strict-scorer-
+    # rule + the $0 GPU envelope. The verdict feeds: (a) Wave N+8 composition
+    # decision if density >= 1%, (b) anti-pattern #15 second-surface
+    # falsification class registration if density < 1%.
+    per_pair_y_measurement: dict[str, Any] | None = None
+    if getattr(args, "per_pair_posenet_output_y", False):
+        num_pairs = getattr(
+            args, "per_pair_posenet_output_y_num_pairs",
+            PER_PAIR_POSENET_OUTPUT_Y_NUM_PAIRS_DEFAULT,
+        )
+        pose_dim = getattr(
+            args, "per_pair_posenet_output_y_pose_dim",
+            PER_PAIR_POSENET_OUTPUT_Y_POSE_DIM,
+        )
+        per_pair_dtype = getattr(args, "per_pair_posenet_output_y_dtype", "float32")
+        print(
+            f"[wzpsc-l1] Op-routable #5: measuring per-pair PoseNet-output Y "
+            f"density (deterministic ego-motion-conditioned stand-in per "
+            f"Catalog #311 Atick-Tishby-Wyner) num_pairs={num_pairs} "
+            f"pose_dim={pose_dim} dtype={per_pair_dtype} ..."
+        )
+        per_pair_y_measurement = _measure_per_pair_posenet_output_y_density(
+            pre_entropy_bytes,
+            num_pairs=num_pairs,
+            pose_dim=pose_dim,
+            dtype=per_pair_dtype,
+        )
+        if per_pair_y_measurement["derivation_succeeded"]:
+            print(
+                f"  per_pair_posenet_output_y: Y={per_pair_y_measurement['y_bytes']} B "
+                f"(sha={per_pair_y_measurement['y_sha256_prefix12']}); "
+                f"prefix_len={per_pair_y_measurement['prefix_len_bytes']} B; "
+                f"density={per_pair_y_measurement['density_percent']:.6f}%"
+            )
+            print(
+                f"  [wzpsc-l1] per-pair Y verdict: density "
+                f"{per_pair_y_measurement['density_percent']:.6f}% "
+                f"{'>= 1% PASS (Wave N+8 composition queued)' if per_pair_y_measurement['density_percent'] >= 1.0 else '< 1% FALSIFIED (anti-pattern #15 second-surface receipt)'}"
+            )
+            # Update max_density_pct + best_source if per-pair Y wins
+            if per_pair_y_measurement["density_percent"] > max_density_pct:
+                max_density_pct = per_pair_y_measurement["density_percent"]
+                best_source = "per_pair_posenet_output_y_stand_in"
+                print(
+                    f"  [wzpsc-l1] per-pair Y SURPASSES canonical 4-source max; "
+                    f"new max_density_pct={max_density_pct:.6f}% (best_source={best_source})"
+                )
+        else:
+            print(
+                f"  per_pair_posenet_output_y: FAIL "
+                f"{per_pair_y_measurement['derivation_error_repr']}"
+            )
+
     # Step 3: lzma ratio sanity vs sister prober anchor (0.217-0.228).
     # Per CLAUDE.md "Bit-level deconstruction and entropy discipline".
     import lzma
@@ -609,9 +921,19 @@ def _full_main(args: argparse.Namespace) -> int:
 
     # Step 4: WZPSC01 archive grammar roundtrip on real bytes.
     # Per Catalog #105 / #139 / #220 / #272 no-op detector at the archive surface.
+    per_pair_y_won = best_source == "per_pair_posenet_output_y_stand_in"
+    # The WynerZivPipelineStageCodecArchitecture only accepts canonical
+    # LEGAL_SIDE_INFO_SOURCES; when per-pair Y wins, archive emission still
+    # uses the best canonical source label for arch construction, but the
+    # actual Y bytes routed to the encoder are the per-pair Y bytes.
+    arch_side_info_source = (
+        best_source
+        if (best_source != "none" and not per_pair_y_won)
+        else "math_constants"
+    )
     arch = WynerZivPipelineStageCodecArchitecture(
         intercept_location=InterceptLocation(args.intercept_location),
-        side_info_source=best_source if best_source != "none" else "math_constants",
+        side_info_source=arch_side_info_source,
         side_info_max_bytes=args.side_info_max_bytes,
         main_codec=args.main_codec,
         compression_codec_for_side=args.compression_codec_for_side,
@@ -621,11 +943,21 @@ def _full_main(args: argparse.Namespace) -> int:
     # canonical primitive; the decode roundtrip MUST be byte-identical to
     # the source pre_entropy_bytes per Wyner 1976 reconstructibility.
     try:
-        y_bytes_best = (
-            derive_side_info_from_canonical_source(best_source)
-            if best_source != "none"
-            else derive_side_info_from_canonical_source("math_constants")
-        )
+        if per_pair_y_won and per_pair_y_measurement is not None:
+            # Per-pair Y bytes (deterministic ego-motion-conditioned stand-in
+            # per Catalog #311). The same generator is used so the encoder
+            # and decoder agree on Y at byte level (key Wyner 1976 invariant).
+            y_bytes_best = _derive_per_pair_posenet_output_y_stand_in(
+                num_pairs=per_pair_y_measurement["num_pairs"],
+                pose_dim=per_pair_y_measurement["pose_dim"],
+                dtype=per_pair_y_measurement["dtype"],
+            )
+        else:
+            y_bytes_best = (
+                derive_side_info_from_canonical_source(best_source)
+                if best_source != "none"
+                else derive_side_info_from_canonical_source("math_constants")
+            )
     except Exception as exc:  # pragma: no cover
         print(f"[wzpsc-l1] FAIL: Y derivation for {best_source} failed: {exc!r}", file=sys.stderr)
         return 1
@@ -720,21 +1052,53 @@ def _full_main(args: argparse.Namespace) -> int:
     sub_018_target = 0.180  # per operator brief PHASE 4 sub-frontier directive
 
     density_threshold_pct = 1.0
+    per_pair_y_tested = (
+        per_pair_y_measurement is not None
+        and per_pair_y_measurement.get("derivation_succeeded", False)
+    )
     if max_density_pct < density_threshold_pct:
-        verdict_kind = "IMPLEMENTATION_LEVEL_FALSIFICATION_PER_CATALOG_307"
-        verdict_message = (
-            f"Y-derivable-prefix density {max_density_pct:.6f}% across all "
-            f"canonical Y sources is BELOW {density_threshold_pct}% threshold "
-            "per op-routable #4. The PARADIGM (Wyner 1976 R(D|Y); decoder-side "
-            "PoseNet as canonical Y per Catalog #311 Atick-Tishby-Wyner triple) "
-            "is INTACT. The IMPLEMENTATION at the prefix-detector + canonical "
-            "Y source layer is falsified for this base-substrate byte form. "
-            "Per CLAUDE.md 'Forbidden premature KILL without research "
-            "exhaustion': DEFERRED-PENDING-research. Reactivation paths in "
-            "sister design memo §Reactivation criteria (priority-ordered) + "
-            "op-routable #5 (per-pair PoseNet-output Y derivation; deepest "
-            "class-shift route)."
-        )
+        if per_pair_y_tested:
+            # Op-routable #5 (per-pair PoseNet-output Y stand-in) was tested
+            # and also fell below 1% — SECOND-SURFACE falsification per anti-
+            # pattern #15. Sister Wave N+8 composition reactivation path
+            # requires REAL PoseNet pre-compute via operator-attended L2.
+            verdict_kind = (
+                "IMPLEMENTATION_LEVEL_FALSIFICATION_PER_CATALOG_307_"
+                "PER_PAIR_Y_STAND_IN_ALSO_FALSIFIED_OP_ROUTABLE_5_SECOND_SURFACE"
+            )
+            verdict_message = (
+                f"Per-pair PoseNet-output Y stand-in density "
+                f"{per_pair_y_measurement['density_percent']:.6f}% (best across "
+                f"4 canonical + per-pair = {max_density_pct:.6f}%) is BELOW "
+                f"{density_threshold_pct}% threshold per op-routable #4. "
+                "BOTH the 4 canonical sources AND the per-pair PoseNet-output Y "
+                "stand-in (deterministic ego-motion-conditioned per Atick-Redlich "
+                "1990 per Catalog #311) are empirically falsified at the prefix-"
+                "detector surface for PR101 fp16 state_dict bytes. The PARADIGM "
+                "(Wyner 1976 R(D|Y); decoder-side PoseNet as canonical Y per "
+                "Catalog #311 Atick-Tishby-Wyner triple) is STILL INTACT — what "
+                "is falsified is the prefix-detector implementation against the "
+                "deterministic ego-motion stand-in. Per CLAUDE.md 'Forbidden "
+                "premature KILL': DEFERRED-PENDING-research. Reactivation path: "
+                "real PoseNet pre-compute via operator-attended L2 CUDA dispatch "
+                "per Catalog #246. Anti-pattern #15 second-surface falsification "
+                "receipt LOGGED."
+            )
+        else:
+            verdict_kind = "IMPLEMENTATION_LEVEL_FALSIFICATION_PER_CATALOG_307"
+            verdict_message = (
+                f"Y-derivable-prefix density {max_density_pct:.6f}% across all "
+                f"canonical Y sources is BELOW {density_threshold_pct}% threshold "
+                "per op-routable #4. The PARADIGM (Wyner 1976 R(D|Y); decoder-side "
+                "PoseNet as canonical Y per Catalog #311 Atick-Tishby-Wyner triple) "
+                "is INTACT. The IMPLEMENTATION at the prefix-detector + canonical "
+                "Y source layer is falsified for this base-substrate byte form. "
+                "Per CLAUDE.md 'Forbidden premature KILL without research "
+                "exhaustion': DEFERRED-PENDING-research. Reactivation paths in "
+                "sister design memo §Reactivation criteria (priority-ordered) + "
+                "op-routable #5 (per-pair PoseNet-output Y derivation; deepest "
+                "class-shift route)."
+            )
         predicted_delta_s_band = (0.0, 0.0)  # No score savings predicted
         sub_frontier_candidate = False
     elif max_density_pct < 5.0:
@@ -797,6 +1161,11 @@ def _full_main(args: argparse.Namespace) -> int:
             "pre_entropy_bytes_sha256": bytes_sha256,
         },
         "y_derivable_prefix_density_per_source": density_measurements,
+        "per_pair_posenet_output_y_measurement": per_pair_y_measurement,
+        "per_pair_posenet_output_y_active": bool(
+            getattr(args, "per_pair_posenet_output_y", False)
+        ),
+        "per_pair_posenet_output_y_won_best_source": per_pair_y_won,
         "max_density_percent": max_density_pct,
         "best_source": best_source,
         "lzma_ratio_sanity": {

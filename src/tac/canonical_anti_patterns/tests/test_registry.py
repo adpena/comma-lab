@@ -682,19 +682,34 @@ def test_full_lifecycle_register_falsify_recalibrate_query(temp_registry):
     assert "canonical_residual_lo" in final.falsification_band
 
 
-def test_initial_12_anti_patterns_all_register_cleanly(temp_registry):
-    """Every one of the 12 initial anti-patterns must register without error."""
+def test_initial_15_anti_patterns_all_register_cleanly(temp_registry):
+    """Every one of the 15 initial anti-patterns must register without error.
+
+    Wave N+7 Slot 2 2026-05-28 expansion (12 → 15): added
+    #13 subagent_spawn_without_head_state_premise_verification_v1 (discipline),
+    #14 predecessor_working_tree_uncommitted_handoff_v1 (discipline), and
+    #15 wyner_ziv_prefix_y_density_decoder_state_dict_surface_v1 (diagnosis)
+    per operator directive 'ensure all negative findings audited' + Wyner-Ziv
+    FALSIFICATION reactivation criteria per Op-routable #5 sister landing memo.
+    """
     path, lock = temp_registry
     registered = populate_initial_anti_patterns(path=path, lock_path=lock)
-    assert len(registered) == 12
+    assert len(registered) == 15
     all_aps = query_anti_patterns(path=path)
-    assert len(all_aps) == 12
+    assert len(all_aps) == 15
     ids = {ap.anti_pattern_id for ap in all_aps}
-    # Spot-check a handful
+    # Spot-check a handful (12 original + 3 NEW Wave N+7 2026-05-28)
     assert "lzma_on_already_brotli_saturated_compounding_v1" in ids
     assert "fp4_packed_without_qat_cos_collapse_v1" in ids
     assert "predicted_band_from_random_init_tier_c_v1" in ids
     assert "silent_no_spawn_modal_dispatch_v1" in ids
+    # Wave N+7 NEW anti-patterns
+    assert "subagent_spawn_without_head_state_premise_verification_v1" in ids
+    assert "predecessor_working_tree_uncommitted_handoff_v1" in ids
+    assert "wyner_ziv_prefix_y_density_decoder_state_dict_surface_v1" in ids
+    # Verify NEW discipline_anti_pattern paradigm class is present
+    paradigms = {ap.paradigm_class for ap in all_aps}
+    assert "discipline_anti_pattern" in paradigms
 
 
 # ---------------------------------------------------------------------------
