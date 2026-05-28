@@ -24,6 +24,7 @@ SCORE_AFFECTING_ARCHIVE_ADAPTERS: tuple[str, ...] = (
     "fec6_fixed_huffman_k16_selector",
     "fec8_static_second_order_k16_selector",
     "fes1_all_none_selector",
+    "pact_nerv_selector_v4_packet",
 )
 CODER_BOUNDARY_ARCHIVE_ADAPTERS: tuple[str, ...] = (
     "zip_packet_member_recompress",
@@ -33,7 +34,6 @@ POST_CONTAINER_ARCHIVE_ADAPTERS: tuple[str, ...] = (
 )
 NEXT_SCORE_AFFECTING_ADAPTER_CLASSES: tuple[str, ...] = (
     "pact_nerv_selector_v3_packet",
-    "pact_nerv_selector_v4_packet",
     "hnerv_latent_sidecar_hdm",
     "renderer_dfl1_payload",
     "renderer_rpk1_payload",
@@ -75,8 +75,8 @@ _FAMILY_AUTOMATION_SURFACES: Mapping[str, tuple[str, tuple[str, ...], str]] = {
         "before_entropy_coder_distribution_shaping",
     ),
     "pact_nerv_selector_v4_packet": (
-        "pact_nerv_packet_parser_mutator",
-        ("byte", "tensor", "frame", "pair", "batch", "full_video"),
+        "psv4_selector_payload_mutation",
+        ("byte", "selector", "frame", "pair", "batch", "full_video"),
         "before_entropy_coder_distribution_shaping",
     ),
     "hnerv_latent_sidecar_hdm": (
@@ -133,9 +133,9 @@ def ordered_unique(values: Iterable[str]) -> list[str]:
 def repair_archive_adapter_registry() -> dict[str, Any]:
     """Return the current archive adapter capability table.
 
-    The registry is intentionally conservative: only FEC6 is marked as a
-    score-affecting payload adapter; generic ZIP transforms remain coder-boundary
-    or post-container only.
+    The registry is intentionally conservative: score-affecting payload adapters
+    are listed only after a packet-aware parser/mutator and receiver proof exist.
+    Generic ZIP transforms remain coder-boundary or post-container only.
     """
 
     return {

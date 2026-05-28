@@ -77,16 +77,21 @@ def test_archive_family_coverage_report_rolls_up_adapter_gaps(tmp_path: Path) ->
     assert report["archive_count"] == 3
     assert report["implemented_score_affecting_family_counts"] == {
         "fec5_fixed_huffman_k8_selector": 1,
-        "fec6_fixed_huffman_k16_selector": 1
+        "fec6_fixed_huffman_k16_selector": 1,
+        "pact_nerv_selector_v4_packet": 1,
     }
-    assert report["unsupported_score_affecting_family_counts"]["pact_nerv_selector_v4_packet"] == 1
-    gap_rows = {
+    assert "pact_nerv_selector_v4_packet" not in report[
+        "unsupported_score_affecting_family_counts"
+    ]
+    implemented_rows = {
         str(row["family"]): row
-        for row in report["unsupported_score_affecting_adapter_gap_queue"]
+        for row in report["implemented_score_affecting_adapter_rows"]
     }
-    assert gap_rows["pact_nerv_selector_v4_packet"]["required_executor_surface"] == (
-        "pact_nerv_packet_parser_mutator"
+    assert implemented_rows["pact_nerv_selector_v4_packet"]["required_executor_surface"] == (
+        "psv4_selector_payload_mutation"
     )
-    assert "full_video" in gap_rows["pact_nerv_selector_v4_packet"]["optimization_scopes"]
+    assert "full_video" in implemented_rows["pact_nerv_selector_v4_packet"][
+        "optimization_scopes"
+    ]
     assert report["score_claim"] is False
     assert report["ready_for_exact_eval_dispatch"] is False

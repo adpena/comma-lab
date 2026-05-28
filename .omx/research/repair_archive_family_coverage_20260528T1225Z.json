@@ -1,0 +1,631 @@
+{
+  "adapter_registry": {
+    "coder_boundary_adapters": [
+      "zip_packet_member_recompress"
+    ],
+    "next_adapter_classes": [
+      "pact_nerv_selector_v3_packet",
+      "hnerv_latent_sidecar_hdm",
+      "renderer_dfl1_payload",
+      "renderer_rpk1_payload",
+      "renderer_asym_payload",
+      "raw_hnerv_payload",
+      "stc_raw_payload",
+      "tensor_factorize_payload"
+    ],
+    "next_score_affecting_adapter_classes": [
+      "pact_nerv_selector_v3_packet",
+      "hnerv_latent_sidecar_hdm",
+      "renderer_dfl1_payload",
+      "renderer_rpk1_payload",
+      "renderer_asym_payload",
+      "raw_hnerv_payload",
+      "stc_raw_payload",
+      "tensor_factorize_payload"
+    ],
+    "post_container_adapters": [
+      "zip_archive_repack"
+    ],
+    "schema": "repair_family_byte_transform_archive_adapter_registry.v2",
+    "score_affecting_adapters": [
+      "fec3_compact_selector",
+      "fec5_fixed_huffman_k8_selector",
+      "fec6_fixed_huffman_k16_selector",
+      "fec8_static_second_order_k16_selector",
+      "fes1_all_none_selector",
+      "pact_nerv_selector_v4_packet"
+    ],
+    "unsupported_detected_families_fail_closed": true
+  },
+  "archive_count": 5,
+  "family_counts": {
+    "fec3_compact_selector": 1,
+    "fec5_fixed_huffman_k8_selector": 1,
+    "fec8_static_second_order_k16_selector": 1,
+    "fes1_all_none_selector": 1,
+    "fp11_frame_selector_wrapper": 4,
+    "multi_member_runtime_archive": 1,
+    "pact_nerv_selector_v4_packet": 1,
+    "single_file_payload_archive": 4
+  },
+  "implemented_score_affecting_adapter_rows": [
+    {
+      "adapter_id": "fp11_selector_payload_mutation",
+      "archive_count": 1,
+      "entropy_position": "before_entropy_coder_distribution_shaping",
+      "family": "fec3_compact_selector",
+      "implemented": true,
+      "next_action": "route_to_existing_score_affecting_adapter",
+      "optimization_scopes": [
+        "bit",
+        "byte",
+        "pair",
+        "frame",
+        "entropy_coder"
+      ],
+      "priority": 1,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_executor_surface": "fp11_selector_payload_mutation",
+      "schema": "archive_family_adapter_automation_row.v1",
+      "score_claim": false
+    },
+    {
+      "adapter_id": "fp11_selector_payload_mutation",
+      "archive_count": 1,
+      "entropy_position": "before_entropy_coder_distribution_shaping",
+      "family": "fec5_fixed_huffman_k8_selector",
+      "implemented": true,
+      "next_action": "route_to_existing_score_affecting_adapter",
+      "optimization_scopes": [
+        "bit",
+        "byte",
+        "pair",
+        "frame",
+        "entropy_coder"
+      ],
+      "priority": 2,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_executor_surface": "fp11_selector_payload_mutation",
+      "schema": "archive_family_adapter_automation_row.v1",
+      "score_claim": false
+    },
+    {
+      "adapter_id": "fp11_selector_payload_mutation",
+      "archive_count": 1,
+      "entropy_position": "before_entropy_coder_distribution_shaping",
+      "family": "fec8_static_second_order_k16_selector",
+      "implemented": true,
+      "next_action": "route_to_existing_score_affecting_adapter",
+      "optimization_scopes": [
+        "bit",
+        "byte",
+        "pair",
+        "pair_transition",
+        "frame",
+        "entropy_coder"
+      ],
+      "priority": 3,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_executor_surface": "fp11_selector_payload_mutation",
+      "schema": "archive_family_adapter_automation_row.v1",
+      "score_claim": false
+    },
+    {
+      "adapter_id": "fp11_selector_payload_mutation",
+      "archive_count": 1,
+      "entropy_position": "before_entropy_coder_distribution_shaping",
+      "family": "fes1_all_none_selector",
+      "implemented": true,
+      "next_action": "route_to_existing_score_affecting_adapter",
+      "optimization_scopes": [
+        "bit",
+        "byte",
+        "pair",
+        "frame",
+        "palette"
+      ],
+      "priority": 4,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_executor_surface": "fp11_selector_payload_mutation",
+      "schema": "archive_family_adapter_automation_row.v1",
+      "score_claim": false
+    },
+    {
+      "adapter_id": "psv4_selector_payload_mutation",
+      "archive_count": 1,
+      "entropy_position": "before_entropy_coder_distribution_shaping",
+      "family": "pact_nerv_selector_v4_packet",
+      "implemented": true,
+      "next_action": "route_to_existing_score_affecting_adapter",
+      "optimization_scopes": [
+        "byte",
+        "selector",
+        "frame",
+        "pair",
+        "batch",
+        "full_video"
+      ],
+      "priority": 5,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_executor_surface": "psv4_selector_payload_mutation",
+      "schema": "archive_family_adapter_automation_row.v1",
+      "score_claim": false
+    }
+  ],
+  "implemented_score_affecting_family_counts": {
+    "fec3_compact_selector": 1,
+    "fec5_fixed_huffman_k8_selector": 1,
+    "fec8_static_second_order_k16_selector": 1,
+    "fes1_all_none_selector": 1,
+    "pact_nerv_selector_v4_packet": 1
+  },
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "rows": [
+    {
+      "adapter_registry": {
+        "coder_boundary_adapters": [
+          "zip_packet_member_recompress"
+        ],
+        "next_adapter_classes": [
+          "pact_nerv_selector_v3_packet",
+          "hnerv_latent_sidecar_hdm",
+          "renderer_dfl1_payload",
+          "renderer_rpk1_payload",
+          "renderer_asym_payload",
+          "raw_hnerv_payload",
+          "stc_raw_payload",
+          "tensor_factorize_payload"
+        ],
+        "next_score_affecting_adapter_classes": [
+          "pact_nerv_selector_v3_packet",
+          "hnerv_latent_sidecar_hdm",
+          "renderer_dfl1_payload",
+          "renderer_rpk1_payload",
+          "renderer_asym_payload",
+          "raw_hnerv_payload",
+          "stc_raw_payload",
+          "tensor_factorize_payload"
+        ],
+        "post_container_adapters": [
+          "zip_archive_repack"
+        ],
+        "schema": "repair_family_byte_transform_archive_adapter_registry.v2",
+        "score_affecting_adapters": [
+          "fec3_compact_selector",
+          "fec5_fixed_huffman_k8_selector",
+          "fec6_fixed_huffman_k16_selector",
+          "fec8_static_second_order_k16_selector",
+          "fes1_all_none_selector",
+          "pact_nerv_selector_v4_packet"
+        ],
+        "unsupported_detected_families_fail_closed": true
+      },
+      "archive_bytes": 178517,
+      "archive_path": ".omx/research/fp11_selector_adapter_live_proof_20260528T1221Z/fec3/candidate_archive_fp11_selector_payload_mutation.zip",
+      "archive_sha256": "f2c1093e3f0f9789f641d7d2901cc3ea1ba5d953d53cc81fef3bf36c560e44d8",
+      "blockers": [],
+      "coder_boundary_adapter_available": true,
+      "detected_archive_families": [
+        "single_file_payload_archive",
+        "fp11_frame_selector_wrapper",
+        "fec3_compact_selector"
+      ],
+      "fingerprint_details": {
+        "fp11_selector_bytes": 249,
+        "fp11_selector_magic": "FEC3",
+        "fp11_source_bytes": 178158
+      },
+      "implemented_score_affecting_families": [
+        "fec3_compact_selector"
+      ],
+      "post_container_adapter_available": true,
+      "primary_payload_bytes": 178417,
+      "primary_payload_head_hex": "46503131eeb702001bcd03f865a666a5",
+      "primary_payload_member": "x",
+      "primary_payload_zip_compressed_bytes": 178417,
+      "primary_payload_zip_compression_method": 0,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "archive_family_fingerprint.v1",
+      "score_affecting_adapter_implemented": true,
+      "score_affecting_unsupported_families_fail_closed": false,
+      "score_claim": false,
+      "unsupported_score_affecting_families": [],
+      "zip_member_count": 1,
+      "zip_members": [
+        {
+          "bytes": 178417,
+          "name": "x",
+          "zip_compressed_bytes": 178417,
+          "zip_compression_method": 0
+        }
+      ]
+    },
+    {
+      "adapter_registry": {
+        "coder_boundary_adapters": [
+          "zip_packet_member_recompress"
+        ],
+        "next_adapter_classes": [
+          "pact_nerv_selector_v3_packet",
+          "hnerv_latent_sidecar_hdm",
+          "renderer_dfl1_payload",
+          "renderer_rpk1_payload",
+          "renderer_asym_payload",
+          "raw_hnerv_payload",
+          "stc_raw_payload",
+          "tensor_factorize_payload"
+        ],
+        "next_score_affecting_adapter_classes": [
+          "pact_nerv_selector_v3_packet",
+          "hnerv_latent_sidecar_hdm",
+          "renderer_dfl1_payload",
+          "renderer_rpk1_payload",
+          "renderer_asym_payload",
+          "raw_hnerv_payload",
+          "stc_raw_payload",
+          "tensor_factorize_payload"
+        ],
+        "post_container_adapters": [
+          "zip_archive_repack"
+        ],
+        "schema": "repair_family_byte_transform_archive_adapter_registry.v2",
+        "score_affecting_adapters": [
+          "fec3_compact_selector",
+          "fec5_fixed_huffman_k8_selector",
+          "fec6_fixed_huffman_k16_selector",
+          "fec8_static_second_order_k16_selector",
+          "fes1_all_none_selector",
+          "pact_nerv_selector_v4_packet"
+        ],
+        "unsupported_detected_families_fail_closed": true
+      },
+      "archive_bytes": 178478,
+      "archive_path": ".omx/research/fp11_selector_adapter_live_proof_20260528T1221Z/fec5/candidate_archive_fp11_selector_payload_mutation.zip",
+      "archive_sha256": "d0c9c1d9f2a49193d4c0648e7dc2aba03809cacc989a126a4fc65ecf9d84a562",
+      "blockers": [],
+      "coder_boundary_adapter_available": true,
+      "detected_archive_families": [
+        "single_file_payload_archive",
+        "fp11_frame_selector_wrapper",
+        "fec5_fixed_huffman_k8_selector"
+      ],
+      "fingerprint_details": {
+        "fp11_selector_bytes": 210,
+        "fp11_selector_magic": "FEC5",
+        "fp11_source_bytes": 178158
+      },
+      "implemented_score_affecting_families": [
+        "fec5_fixed_huffman_k8_selector"
+      ],
+      "post_container_adapter_available": true,
+      "primary_payload_bytes": 178378,
+      "primary_payload_head_hex": "46503131eeb702001bcd03f865a666a5",
+      "primary_payload_member": "x",
+      "primary_payload_zip_compressed_bytes": 178378,
+      "primary_payload_zip_compression_method": 0,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "archive_family_fingerprint.v1",
+      "score_affecting_adapter_implemented": true,
+      "score_affecting_unsupported_families_fail_closed": false,
+      "score_claim": false,
+      "unsupported_score_affecting_families": [],
+      "zip_member_count": 1,
+      "zip_members": [
+        {
+          "bytes": 178378,
+          "name": "x",
+          "zip_compressed_bytes": 178378,
+          "zip_compression_method": 0
+        }
+      ]
+    },
+    {
+      "adapter_registry": {
+        "coder_boundary_adapters": [
+          "zip_packet_member_recompress"
+        ],
+        "next_adapter_classes": [
+          "pact_nerv_selector_v3_packet",
+          "hnerv_latent_sidecar_hdm",
+          "renderer_dfl1_payload",
+          "renderer_rpk1_payload",
+          "renderer_asym_payload",
+          "raw_hnerv_payload",
+          "stc_raw_payload",
+          "tensor_factorize_payload"
+        ],
+        "next_score_affecting_adapter_classes": [
+          "pact_nerv_selector_v3_packet",
+          "hnerv_latent_sidecar_hdm",
+          "renderer_dfl1_payload",
+          "renderer_rpk1_payload",
+          "renderer_asym_payload",
+          "raw_hnerv_payload",
+          "stc_raw_payload",
+          "tensor_factorize_payload"
+        ],
+        "post_container_adapters": [
+          "zip_archive_repack"
+        ],
+        "schema": "repair_family_byte_transform_archive_adapter_registry.v2",
+        "score_affecting_adapters": [
+          "fec3_compact_selector",
+          "fec5_fixed_huffman_k8_selector",
+          "fec6_fixed_huffman_k16_selector",
+          "fec8_static_second_order_k16_selector",
+          "fes1_all_none_selector",
+          "pact_nerv_selector_v4_packet"
+        ],
+        "unsupported_detected_families_fail_closed": true
+      },
+      "archive_bytes": 178511,
+      "archive_path": ".omx/research/fp11_selector_adapter_live_proof_20260528T1221Z/fec8/candidate_archive_fp11_selector_payload_mutation.zip",
+      "archive_sha256": "68279a676cd36e9dcce908c6ea0dc8c35924ec9db7535ec942c7df0b3b8a4cd4",
+      "blockers": [],
+      "coder_boundary_adapter_available": true,
+      "detected_archive_families": [
+        "single_file_payload_archive",
+        "fp11_frame_selector_wrapper",
+        "fec8_static_second_order_k16_selector"
+      ],
+      "fingerprint_details": {
+        "fp11_selector_bytes": 243,
+        "fp11_selector_magic": "FEC8",
+        "fp11_source_bytes": 178158
+      },
+      "implemented_score_affecting_families": [
+        "fec8_static_second_order_k16_selector"
+      ],
+      "post_container_adapter_available": true,
+      "primary_payload_bytes": 178411,
+      "primary_payload_head_hex": "46503131eeb702001bcd03f865a666a5",
+      "primary_payload_member": "x",
+      "primary_payload_zip_compressed_bytes": 178411,
+      "primary_payload_zip_compression_method": 0,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "archive_family_fingerprint.v1",
+      "score_affecting_adapter_implemented": true,
+      "score_affecting_unsupported_families_fail_closed": false,
+      "score_claim": false,
+      "unsupported_score_affecting_families": [],
+      "zip_member_count": 1,
+      "zip_members": [
+        {
+          "bytes": 178411,
+          "name": "x",
+          "zip_compressed_bytes": 178411,
+          "zip_compression_method": 0
+        }
+      ]
+    },
+    {
+      "adapter_registry": {
+        "coder_boundary_adapters": [
+          "zip_packet_member_recompress"
+        ],
+        "next_adapter_classes": [
+          "pact_nerv_selector_v3_packet",
+          "hnerv_latent_sidecar_hdm",
+          "renderer_dfl1_payload",
+          "renderer_rpk1_payload",
+          "renderer_asym_payload",
+          "raw_hnerv_payload",
+          "stc_raw_payload",
+          "tensor_factorize_payload"
+        ],
+        "next_score_affecting_adapter_classes": [
+          "pact_nerv_selector_v3_packet",
+          "hnerv_latent_sidecar_hdm",
+          "renderer_dfl1_payload",
+          "renderer_rpk1_payload",
+          "renderer_asym_payload",
+          "raw_hnerv_payload",
+          "stc_raw_payload",
+          "tensor_factorize_payload"
+        ],
+        "post_container_adapters": [
+          "zip_archive_repack"
+        ],
+        "schema": "repair_family_byte_transform_archive_adapter_registry.v2",
+        "score_affecting_adapters": [
+          "fec3_compact_selector",
+          "fec5_fixed_huffman_k8_selector",
+          "fec6_fixed_huffman_k16_selector",
+          "fec8_static_second_order_k16_selector",
+          "fes1_all_none_selector",
+          "pact_nerv_selector_v4_packet"
+        ],
+        "unsupported_detected_families_fail_closed": true
+      },
+      "archive_bytes": 178653,
+      "archive_path": ".omx/research/fp11_selector_adapter_live_proof_20260528T1221Z/fes1/candidate_archive_fp11_selector_payload_mutation.zip",
+      "archive_sha256": "43c1f2bc41fb425723a01992dfc3f37c54ad17be4f6a63e1b1a4e1c478eac60b",
+      "blockers": [],
+      "coder_boundary_adapter_available": true,
+      "detected_archive_families": [
+        "single_file_payload_archive",
+        "fp11_frame_selector_wrapper",
+        "fes1_all_none_selector"
+      ],
+      "fingerprint_details": {
+        "fp11_selector_bytes": 385,
+        "fp11_selector_magic": "FES1",
+        "fp11_source_bytes": 178158
+      },
+      "implemented_score_affecting_families": [
+        "fes1_all_none_selector"
+      ],
+      "post_container_adapter_available": true,
+      "primary_payload_bytes": 178553,
+      "primary_payload_head_hex": "46503131eeb702001bcd03f865a666a5",
+      "primary_payload_member": "x",
+      "primary_payload_zip_compressed_bytes": 178553,
+      "primary_payload_zip_compression_method": 0,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "archive_family_fingerprint.v1",
+      "score_affecting_adapter_implemented": true,
+      "score_affecting_unsupported_families_fail_closed": false,
+      "score_claim": false,
+      "unsupported_score_affecting_families": [],
+      "zip_member_count": 1,
+      "zip_members": [
+        {
+          "bytes": 178553,
+          "name": "x",
+          "zip_compressed_bytes": 178553,
+          "zip_compression_method": 0
+        }
+      ]
+    },
+    {
+      "adapter_registry": {
+        "coder_boundary_adapters": [
+          "zip_packet_member_recompress"
+        ],
+        "next_adapter_classes": [
+          "pact_nerv_selector_v3_packet",
+          "hnerv_latent_sidecar_hdm",
+          "renderer_dfl1_payload",
+          "renderer_rpk1_payload",
+          "renderer_asym_payload",
+          "raw_hnerv_payload",
+          "stc_raw_payload",
+          "tensor_factorize_payload"
+        ],
+        "next_score_affecting_adapter_classes": [
+          "pact_nerv_selector_v3_packet",
+          "hnerv_latent_sidecar_hdm",
+          "renderer_dfl1_payload",
+          "renderer_rpk1_payload",
+          "renderer_asym_payload",
+          "raw_hnerv_payload",
+          "stc_raw_payload",
+          "tensor_factorize_payload"
+        ],
+        "post_container_adapters": [
+          "zip_archive_repack"
+        ],
+        "schema": "repair_family_byte_transform_archive_adapter_registry.v2",
+        "score_affecting_adapters": [
+          "fec3_compact_selector",
+          "fec5_fixed_huffman_k8_selector",
+          "fec6_fixed_huffman_k16_selector",
+          "fec8_static_second_order_k16_selector",
+          "fes1_all_none_selector",
+          "pact_nerv_selector_v4_packet"
+        ],
+        "unsupported_detected_families_fail_closed": true
+      },
+      "archive_bytes": 111527,
+      "archive_path": "experiments/results/pact_nerv_selector_v4_mlx_full_layoutfix_20260528Tlocal/archive.zip",
+      "archive_sha256": "a8ebb822e50a41b1d00ef512ebf8a0ea006bac2323f57e3e94088d3594bd8171",
+      "blockers": [],
+      "coder_boundary_adapter_available": true,
+      "detected_archive_families": [
+        "multi_member_runtime_archive",
+        "pact_nerv_selector_v4_packet"
+      ],
+      "fingerprint_details": {},
+      "implemented_score_affecting_families": [
+        "pact_nerv_selector_v4_packet"
+      ],
+      "post_container_adapter_available": true,
+      "primary_payload_bytes": 103676,
+      "primary_payload_head_hex": "50535634011800200010bb8d01000006",
+      "primary_payload_member": "0.bin",
+      "primary_payload_zip_compressed_bytes": 103711,
+      "primary_payload_zip_compression_method": 8,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "archive_family_fingerprint.v1",
+      "score_affecting_adapter_implemented": true,
+      "score_affecting_unsupported_families_fail_closed": false,
+      "score_claim": false,
+      "unsupported_score_affecting_families": [],
+      "zip_member_count": 9,
+      "zip_members": [
+        {
+          "bytes": 103676,
+          "name": "0.bin",
+          "zip_compressed_bytes": 103711,
+          "zip_compression_method": 8
+        },
+        {
+          "bytes": 448,
+          "name": "inflate.sh",
+          "zip_compressed_bytes": 322,
+          "zip_compression_method": 8
+        },
+        {
+          "bytes": 1125,
+          "name": "inflate.py",
+          "zip_compressed_bytes": 574,
+          "zip_compression_method": 8
+        },
+        {
+          "bytes": 0,
+          "name": "src/tac/__init__.py",
+          "zip_compressed_bytes": 2,
+          "zip_compression_method": 8
+        },
+        {
+          "bytes": 0,
+          "name": "src/tac/substrates/__init__.py",
+          "zip_compressed_bytes": 2,
+          "zip_compression_method": 8
+        },
+        {
+          "bytes": 0,
+          "name": "src/tac/substrates/pact_nerv_selector_v4/__init__.py",
+          "zip_compressed_bytes": 2,
+          "zip_compression_method": 8
+        },
+        {
+          "bytes": 8394,
+          "name": "src/tac/substrates/pact_nerv_selector_v4/architecture.py",
+          "zip_compressed_bytes": 2687,
+          "zip_compression_method": 8
+        },
+        {
+          "bytes": 5303,
+          "name": "src/tac/substrates/pact_nerv_selector_v4/archive.py",
+          "zip_compressed_bytes": 1853,
+          "zip_compression_method": 8
+        },
+        {
+          "bytes": 2614,
+          "name": "src/tac/substrates/pact_nerv_selector_v4/inflate.py",
+          "zip_compressed_bytes": 1100,
+          "zip_compression_method": 8
+        }
+      ]
+    }
+  ],
+  "schema": "archive_family_coverage_report.v1",
+  "score_affecting_adapter_implemented_archive_count": 5,
+  "score_affecting_unsupported_archive_count": 0,
+  "score_claim": false,
+  "unsupported_score_affecting_adapter_gap_queue": [],
+  "unsupported_score_affecting_family_counts": {}
+}

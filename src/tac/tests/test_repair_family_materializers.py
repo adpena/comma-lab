@@ -240,6 +240,56 @@ def _fec8_selector_payload(codes: list[int]) -> bytes:
     return _fp11_selector_payload(selector)
 
 
+def _psv4_varint(value: int) -> bytes:
+    out = bytearray()
+    while value:
+        byte = value & 0x7F
+        value >>= 7
+        if value:
+            byte |= 0x80
+        out.append(byte)
+    return bytes(out or b"\x00")
+
+
+def _psv4_rle_selector(codes: list[int]) -> bytes:
+    out = bytearray()
+    index = 0
+    while index < len(codes):
+        code = int(codes[index])
+        run = 1
+        while index + run < len(codes) and int(codes[index + run]) == code:
+            run += 1
+        out.append(code)
+        out.extend(_psv4_varint(run))
+        index += run
+    return bytes(out)
+
+
+def _psv4_packet_payload(
+    codes: list[int],
+    *,
+    palette_size: int = 16,
+    latent_dim: int = 2,
+) -> bytes:
+    decoder_blob = b"unit-decoder-state-placeholder"
+    latent_blob = b"\x00" * (len(codes) * latent_dim * 2)
+    selector = _psv4_rle_selector(codes)
+    meta = b'{"unit":"psv4"}'
+    header = struct.pack(
+        "<4sBHHBIIII",
+        b"PSV4",
+        1,
+        latent_dim,
+        len(codes),
+        palette_size,
+        len(decoder_blob),
+        len(latent_blob),
+        len(selector),
+        len(meta),
+    )
+    return header + decoder_blob + latent_blob + selector + meta
+
+
 def test_segnet_family_materializer_emits_ordered_fail_closed_manifest(
     tmp_path: Path,
 ) -> None:
@@ -684,6 +734,73 @@ def test_byte_transform_executor_mutates_fec8_fp11_selector_payload(
     assert candidate["runtime_consumption_proof_ready"] is True
     assert candidate["semantic_payload_changed"] is True
     assert candidate["mutation_details"]["selector_magic"] == "FEC8"
+
+
+def test_byte_transform_executor_mutates_psv4_selector_packet(
+    tmp_path: Path,
+) -> None:
+    archive_path = _write_zip(
+        tmp_path / "psv4.zip",
+        {
+            "0.bin": _psv4_packet_payload([0, 0, 2, 2, 7, 7, 13, 13, 0, 0, 2, 2]),
+            "inflate.py": b"",
+        },
+    )
+    archive_sha = hashlib.sha256(archive_path.read_bytes()).hexdigest()
+    manifest = {
+        "schema": REPAIR_CAMPAIGN_FAMILY_MATERIALIZER_MANIFEST_SCHEMA,
+        "family_id": "segnet_class_region_waterfill",
+        "typed_response_id": "psv4_ready",
+        "candidate_chain_id": "psv4_chain",
+        "candidate_chain_ids": ["psv4_chain"],
+        "component_response_replay": {
+            "component_response_terms": {
+                "segnet_delta_score_units": -0.001,
+                "combined_delta_score_units": -0.001,
+            },
+            "local_mlx_custody_paths": [],
+            **_false_authority(),
+        },
+        "receiver_verification": {
+            "local_mlx_custody_paths": [],
+            **_false_authority(),
+        },
+        "candidate_archive": {
+            "path": str(archive_path),
+            "sha256": archive_sha,
+            "bytes": archive_path.stat().st_size,
+        },
+        "receiver_contract_satisfied": False,
+        "byte_closed_candidate_emitted": True,
+        "readiness_blockers": [],
+        **_false_authority(),
+    }
+    manifest_path = _write_json(tmp_path / "psv4_manifest.json", manifest)
+
+    report, _bundle = build_repair_family_byte_transform_execution_report(
+        family_materializer_manifest=manifest,
+        family_materializer_manifest_path=manifest_path,
+        output_dir=tmp_path / "psv4_transform",
+        replay_argv=["python", "tools/run_repair_family_byte_transform_executor.py"],
+        invocation_argv=["pytest"],
+        repo_root=tmp_path,
+        allow_overwrite=False,
+    )
+
+    candidate = report["candidate_archive"]
+    assert "pact_nerv_selector_v4_packet" in report["archive_family_probe"][
+        "detected_archive_families"
+    ]
+    assert report["selected_archive_transform_kind"] == "psv4_selector_payload_mutation"
+    assert report["semantic_payload_changed"] is True
+    assert report["score_affecting_payload_changed"] is False
+    assert candidate["runtime_consumption_proof_ready"] is True
+    assert candidate["semantic_payload_changed"] is True
+    assert candidate["score_affecting_payload_changed"] is False
+    assert candidate["mutation_details"]["selector_magic"] == "PSV4"
+    assert candidate["mutation_details"]["changed_pair_count"] > 0
+    assert (tmp_path / candidate["path"]).is_file()
+    assert (tmp_path / candidate["runtime_consumption_proof_path"]).is_file()
 
 
 def test_repair_family_byte_transform_cli_writes_report_and_bundle(

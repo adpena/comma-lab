@@ -1,0 +1,112 @@
+{
+  "candidate_archive": {
+    "bytes": 111554,
+    "path": ".omx/research/psv4_selector_adapter_live_proof_20260528T122327Z/byte_transform/candidate_archive_psv4_selector_payload_mutation.zip",
+    "sha256": "1a5bccded13afb8783a32e536765ebe04e7dec2b1a1d536668214bffb9b4e1b2"
+  },
+  "candidate_member": {
+    "bytes": 103738,
+    "name": "0.bin",
+    "sha256": "3fd5a1378234f7df3c6b4b0bc09f8863ef032b80eee4493353461428524f2b73",
+    "zip_compressed_bytes": 103738,
+    "zip_compression_method": 0
+  },
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "gpu_launched": false,
+  "materializer_id": "repair_family_byte_transform_executor:segnet_class_region_waterfill",
+  "mutation_details": {
+    "candidate_code_histogram": {
+      "0": 16,
+      "2": 16
+    },
+    "candidate_selector_bytes": 64,
+    "changed_pair_count": 16,
+    "changed_pair_indexes_preview": [
+      0,
+      2,
+      4,
+      6,
+      8,
+      10,
+      12,
+      14,
+      16,
+      18,
+      20,
+      22,
+      24,
+      26,
+      28,
+      30
+    ],
+    "decoder_bytes": 101819,
+    "latent_bytes": 1536,
+    "latent_dim": 24,
+    "meta_bytes": 293,
+    "n_pairs": 32,
+    "optimization_scopes": [
+      "byte",
+      "selector",
+      "pair",
+      "frame",
+      "batch",
+      "full_video"
+    ],
+    "palette_size": 16,
+    "schema": "repair_family_psv4_selector_mutation_details.v1",
+    "schema_version": 1,
+    "selector_magic": "PSV4",
+    "semantic_stage": "pre_entropy_payload_distribution_shaping",
+    "source_code_histogram": {
+      "0": 32
+    },
+    "source_format": "PACT_NERV_SELECTOR_V4_RLE",
+    "source_selector_bytes": 2,
+    "target_code": 2
+  },
+  "passed": true,
+  "promotable": false,
+  "promotion_eligible": false,
+  "proof_kind": "psv4_selector_reencoded_runtime_adapter_parse_proof.v1",
+  "proof_scope": "score_affecting_psv4_selector_payload_changed_and_reparsed",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_id": "repair_family_psv4_selector_payload_mutation_v1.receiver.v1",
+  "receiver_contract_kind": "repair_family_psv4_selector_payload_mutation_runtime_parse",
+  "receiver_contract_satisfied": true,
+  "runtime_consumption_probe": {
+    "archive_zip_readable": true,
+    "candidate_member_sha256": "3fd5a1378234f7df3c6b4b0bc09f8863ef032b80eee4493353461428524f2b73",
+    "member_payload_changed": true,
+    "packet_header_rewritten": true,
+    "passed": true,
+    "schema": "psv4_selector_payload_parse_probe.v1",
+    "selected_member_name": "0.bin",
+    "selector_redecoded_pair_count": 32,
+    "source_member_sha256": "999cb19cc74704bbe74df7c177dc2277161d5a7a094ce6f56d710a11083d6555"
+  },
+  "runtime_consumption_proof_passed": true,
+  "schema": "repair_family_archive_payload_mutation_runtime_consumption_proof.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "selected_member_name": "0.bin",
+  "source_archive": {
+    "bytes": 111527,
+    "path": "experiments/results/pact_nerv_selector_v4_mlx_full_layoutfix_20260528Tlocal/archive.zip",
+    "sha256": "a8ebb822e50a41b1d00ef512ebf8a0ea006bac2323f57e3e94088d3594bd8171"
+  },
+  "source_member": {
+    "bytes": 103676,
+    "name": "0.bin",
+    "sha256": "999cb19cc74704bbe74df7c177dc2277161d5a7a094ce6f56d710a11083d6555",
+    "zip_compressed_bytes": 103711,
+    "zip_compression_method": 8
+  },
+  "target_kind": "repair_family_psv4_selector_payload_mutation_v1"
+}

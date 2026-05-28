@@ -136,6 +136,11 @@ FEC5_FIXED_K8_DECODE: Mapping[str, int] = {
     bits: index for index, bits in enumerate(FEC5_FIXED_K8_CODE_BITS)
 }
 
+PSV4_MAGIC = b"PSV4"
+PSV4_SCHEMA_VERSION = 1
+PSV4_HEADER_FMT = "<4sBHHBIIII"
+PSV4_HEADER_SIZE = struct.calcsize(PSV4_HEADER_FMT)
+
 
 class RepairFamilyByteTransformExecutorError(ValueError):
     """Raised when a repair-family byte-transform executor cannot run."""
@@ -774,6 +779,180 @@ def _mutated_non_fec6_fp11_selector_member(
     return new_member, details
 
 
+def _decode_psv4_varint(blob: bytes, pos: int) -> tuple[int, int]:
+    value = 0
+    shift = 0
+    while True:
+        if pos >= len(blob):
+            raise RepairFamilyByteTransformExecutorError("PSV4 selector varint truncated")
+        byte = blob[pos]
+        pos += 1
+        value |= (byte & 0x7F) << shift
+        if (byte & 0x80) == 0:
+            return value, pos
+        shift += 7
+        if shift > 63:
+            raise RepairFamilyByteTransformExecutorError("PSV4 selector varint too long")
+
+
+def _encode_psv4_varint(value: int) -> bytes:
+    if value <= 0:
+        raise RepairFamilyByteTransformExecutorError(
+            f"PSV4 run length must be positive; got {value}"
+        )
+    out = bytearray()
+    while value:
+        byte = value & 0x7F
+        value >>= 7
+        if value:
+            byte |= 0x80
+        out.append(byte)
+    return bytes(out)
+
+
+def _decode_psv4_selector_rle(
+    selector: bytes,
+    *,
+    num_pairs: int,
+    palette_size: int,
+) -> list[int]:
+    codes: list[int] = []
+    pos = 0
+    while pos < len(selector):
+        code = selector[pos]
+        pos += 1
+        if code >= palette_size:
+            raise RepairFamilyByteTransformExecutorError(
+                f"PSV4 selector code {code} outside palette {palette_size}"
+            )
+        run_length, pos = _decode_psv4_varint(selector, pos)
+        if run_length <= 0:
+            raise RepairFamilyByteTransformExecutorError("PSV4 selector has zero run length")
+        if len(codes) + run_length > num_pairs:
+            raise RepairFamilyByteTransformExecutorError("PSV4 selector run exceeds pair count")
+        codes.extend([code] * run_length)
+    if len(codes) != num_pairs:
+        raise RepairFamilyByteTransformExecutorError(
+            f"PSV4 selector decoded {len(codes)} pairs, expected {num_pairs}"
+        )
+    return codes
+
+
+def _encode_psv4_selector_rle(codes: Sequence[int], *, palette_size: int) -> bytes:
+    if not codes:
+        return b""
+    out = bytearray()
+    index = 0
+    while index < len(codes):
+        code = int(codes[index])
+        if not 0 <= code < palette_size:
+            raise RepairFamilyByteTransformExecutorError(
+                f"PSV4 selector code {code} outside palette {palette_size}"
+            )
+        run_length = 1
+        while index + run_length < len(codes) and int(codes[index + run_length]) == code:
+            run_length += 1
+        out.append(code & 0xFF)
+        out.extend(_encode_psv4_varint(run_length))
+        index += run_length
+    return bytes(out)
+
+
+def _mutated_psv4_selector_member(
+    member_payload: bytes,
+    *,
+    family_id: str,
+) -> tuple[bytes, dict[str, Any]] | None:
+    if family_id not in _FEC6_FAMILY_TARGET_CODES:
+        return None
+    if len(member_payload) < PSV4_HEADER_SIZE:
+        return None
+    (
+        magic,
+        version,
+        latent_dim,
+        num_pairs,
+        palette_size,
+        decoder_len,
+        latent_len,
+        selector_len,
+        meta_len,
+    ) = struct.unpack_from(PSV4_HEADER_FMT, member_payload, 0)
+    if magic != PSV4_MAGIC:
+        return None
+    if version != PSV4_SCHEMA_VERSION:
+        raise RepairFamilyByteTransformExecutorError(f"PSV4 unsupported schema version {version}")
+    if not 2 <= palette_size <= 255:
+        raise RepairFamilyByteTransformExecutorError(f"PSV4 invalid palette size {palette_size}")
+    expected_latent_len = int(num_pairs) * int(latent_dim) * 2
+    if latent_len != expected_latent_len:
+        raise RepairFamilyByteTransformExecutorError(
+            f"PSV4 latent length {latent_len} != expected {expected_latent_len}"
+        )
+    selector_start = PSV4_HEADER_SIZE + decoder_len + latent_len
+    selector_end = selector_start + selector_len
+    expected_total = selector_end + meta_len
+    if selector_start > len(member_payload) or selector_end > len(member_payload):
+        raise RepairFamilyByteTransformExecutorError("PSV4 selector offsets exceed packet size")
+    if expected_total != len(member_payload):
+        raise RepairFamilyByteTransformExecutorError("PSV4 packet length/header mismatch")
+    codes = _decode_psv4_selector_rle(
+        member_payload[selector_start:selector_end],
+        num_pairs=num_pairs,
+        palette_size=palette_size,
+    )
+    candidate_codes, changed_indexes, target_code = _mutated_selector_codes(
+        codes,
+        family_id=family_id,
+        palette_size=palette_size,
+    )
+    if not changed_indexes:
+        return None
+    new_selector = _encode_psv4_selector_rle(candidate_codes, palette_size=palette_size)
+    header = struct.pack(
+        PSV4_HEADER_FMT,
+        PSV4_MAGIC,
+        version,
+        latent_dim,
+        num_pairs,
+        palette_size,
+        decoder_len,
+        latent_len,
+        len(new_selector),
+        meta_len,
+    )
+    new_member = (
+        header
+        + member_payload[PSV4_HEADER_SIZE:selector_start]
+        + new_selector
+        + member_payload[selector_end:]
+    )
+    details = {
+        "schema": "repair_family_psv4_selector_mutation_details.v1",
+        "source_format": "PACT_NERV_SELECTOR_V4_RLE",
+        "selector_magic": "PSV4",
+        "schema_version": version,
+        "latent_dim": latent_dim,
+        "n_pairs": num_pairs,
+        "palette_size": palette_size,
+        "decoder_bytes": decoder_len,
+        "latent_bytes": latent_len,
+        "meta_bytes": meta_len,
+        "source_selector_bytes": selector_len,
+        "candidate_selector_bytes": len(new_selector),
+        "changed_pair_count": len(changed_indexes),
+        "changed_pair_indexes_preview": changed_indexes[:32],
+        "target_code": target_code,
+        "source_code_histogram": {str(code): codes.count(code) for code in sorted(set(codes))},
+        "candidate_code_histogram": {
+            str(code): candidate_codes.count(code) for code in sorted(set(candidate_codes))
+        },
+        "semantic_stage": "pre_entropy_payload_distribution_shaping",
+        "optimization_scopes": ["byte", "selector", "pair", "frame", "batch", "full_video"],
+    }
+    return new_member, details
+
+
 def _archive_family_probe(manifest: Mapping[str, Any], *, repo_root: str | Path) -> dict[str, Any]:
     source, actual_sha, blockers = _source_archive_path_and_sha(manifest, repo_root=repo_root)
     fingerprint: Mapping[str, Any] = {}
@@ -1311,6 +1490,137 @@ def _fp11_selector_payload_mutation_candidate(
     return candidate, blockers
 
 
+def _psv4_selector_payload_mutation_candidate(
+    *,
+    manifest: Mapping[str, Any],
+    output_dir: str | Path,
+    repo_root: str | Path,
+    family_id: str,
+    allow_overwrite: bool,
+) -> tuple[dict[str, Any], list[str]]:
+    blockers: list[str] = []
+    if family_id not in _FEC6_FAMILY_TARGET_CODES:
+        blockers.append(f"psv4_selector_payload_mutation_not_enabled_for_family:{family_id}")
+        return _empty_candidate_archive(
+            blockers=blockers,
+            archive_native_transform_kind="psv4_selector_payload_mutation",
+        ), blockers
+    source, actual_sha, source_blockers = _source_archive_path_and_sha(manifest, repo_root=repo_root)
+    blockers.extend(source_blockers)
+    if source is None or blockers:
+        return _empty_candidate_archive(
+            blockers=blockers,
+            archive_native_transform_kind="psv4_selector_payload_mutation",
+        ), blockers
+    try:
+        member_name = _primary_payload_member(source)
+        source_member_payload = _zip_member_bytes(source, member_name)
+        mutation = _mutated_psv4_selector_member(source_member_payload, family_id=family_id)
+    except (OSError, zipfile.BadZipFile, KeyError, RepairFamilyByteTransformExecutorError) as exc:
+        blockers.append(f"psv4_selector_payload_mutation_probe_failed:{exc}")
+        return _empty_candidate_archive(
+            blockers=blockers,
+            archive_native_transform_kind="psv4_selector_payload_mutation",
+        ), blockers
+    if mutation is None:
+        blockers.append("psv4_selector_payload_not_detected")
+        return _empty_candidate_archive(
+            blockers=blockers,
+            archive_native_transform_kind="psv4_selector_payload_mutation",
+        ), blockers
+    candidate_member_payload, mutation_details = mutation
+    output = _resolve(output_dir, repo_root) / "candidate_archive_psv4_selector_payload_mutation.zip"
+    proof = _resolve(output_dir, repo_root) / "candidate_archive_psv4_selector_payload_mutation_receiver_proof.json"
+    candidate_payload = _zip_archive_bytes_with_replacement(
+        source,
+        member_name=member_name,
+        replacement=candidate_member_payload,
+        compression=zipfile.ZIP_STORED,
+    )
+    try:
+        _write_bytes_with_expected(output, candidate_payload, allow_overwrite=allow_overwrite)
+        source_record = _archive_record(source, repo_root=repo_root)
+        candidate_record = _archive_record(output, repo_root=repo_root)
+        source_member = _member_record(source, member_name, payload=source_member_payload)
+        candidate_member = _member_record(output, member_name)
+        proof_payload = {
+            "schema": "repair_family_archive_payload_mutation_runtime_consumption_proof.v1",
+            "proof_kind": "psv4_selector_reencoded_runtime_adapter_parse_proof.v1",
+            "proof_scope": "score_affecting_psv4_selector_payload_changed_and_reparsed",
+            "target_kind": "repair_family_psv4_selector_payload_mutation_v1",
+            "materializer_id": f"repair_family_byte_transform_executor:{family_id}",
+            "receiver_contract_kind": "repair_family_psv4_selector_payload_mutation_runtime_parse",
+            "receiver_contract_id": "repair_family_psv4_selector_payload_mutation_v1.receiver.v1",
+            "source_archive": source_record,
+            "candidate_archive": candidate_record,
+            "selected_member_name": member_name,
+            "source_member": source_member,
+            "candidate_member": candidate_member,
+            "mutation_details": mutation_details,
+            "runtime_consumption_probe": {
+                "schema": "psv4_selector_payload_parse_probe.v1",
+                "passed": True,
+                "selected_member_name": member_name,
+                "source_member_sha256": source_member["sha256"],
+                "candidate_member_sha256": candidate_member["sha256"],
+                "member_payload_changed": source_member["sha256"] != candidate_member["sha256"],
+                "archive_zip_readable": True,
+                "packet_header_rewritten": True,
+                "selector_redecoded_pair_count": mutation_details["n_pairs"],
+            },
+            "receiver_contract_satisfied": True,
+            "runtime_consumption_proof_passed": True,
+            "passed": True,
+            "score_affecting_payload_changed": True,
+            "charged_bits_changed": True,
+            **FALSE_AUTHORITY,
+        }
+        _write_json_with_expected(proof, proof_payload, allow_overwrite=allow_overwrite)
+    except (ArtifactWriteError, OSError, zipfile.BadZipFile, ValueError) as exc:
+        blockers.append(f"psv4_selector_payload_mutation_write_failed:{exc}")
+        return _empty_candidate_archive(
+            blockers=blockers,
+            archive_native_transform_kind="psv4_selector_payload_mutation",
+        ), blockers
+    saved_bytes = int(source_record["bytes"]) - int(candidate_record["bytes"])
+    candidate = {
+        "schema": "repair_family_archive_native_candidate.v1",
+        "materialized": True,
+        "archive_native_transform_attempted": True,
+        "archive_native_transform_kind": "psv4_selector_payload_mutation",
+        "semantic_entropy_stage": "pre_entropy_payload_distribution_shaping",
+        "archive_native_materializer_schema": proof_payload["schema"],
+        "archive_native_materializer_id": proof_payload["materializer_id"],
+        "archive_native_target_kind": proof_payload["target_kind"],
+        "source_archive_path": _repo_rel(source, repo_root),
+        "source_archive_sha256": actual_sha,
+        "source_archive_bytes": source.stat().st_size,
+        "path": _repo_rel(output, repo_root),
+        "sha256": candidate_record["sha256"],
+        "bytes": candidate_record["bytes"],
+        "runtime_consumption_proof_path": _repo_rel(proof, repo_root),
+        "runtime_consumption_proof_ready": True,
+        "receiver_contract_kind": proof_payload["receiver_contract_kind"],
+        "receiver_contract_satisfied": True,
+        "selected_member_name": member_name,
+        "mutation_details": mutation_details,
+        "semantic_payload_changed": True,
+        "exact_axis_score_affecting_adjudication_required": True,
+        "score_affecting_payload_changed": True,
+        "charged_bits_changed": True,
+        "saved_bytes": saved_bytes,
+        "blockers": ordered_unique(blockers),
+        "budget_spend_allowed": False,
+        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        candidate,
+        context="repair_family_psv4_selector_payload_mutation_candidate",
+    )
+    return candidate, blockers
+
+
 def _packet_member_recompress_candidate(
     *,
     manifest: Mapping[str, Any],
@@ -1424,6 +1734,13 @@ def _archive_transform_candidates(
             allow_overwrite=allow_overwrite,
         ),
         lambda: _fec6_payload_mutation_candidate(
+            manifest=manifest,
+            output_dir=output_dir,
+            repo_root=repo_root,
+            family_id=family_id,
+            allow_overwrite=allow_overwrite,
+        ),
+        lambda: _psv4_selector_payload_mutation_candidate(
             manifest=manifest,
             output_dir=output_dir,
             repo_root=repo_root,

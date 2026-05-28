@@ -1,0 +1,73 @@
+{
+  "candidate_archive": {
+    "bytes": 111492,
+    "path": "/Users/adpena/Projects/pact/.omx/research/psv4_selector_adapter_live_proof_20260528T122327Z/byte_transform/candidate_archive_packet_member_recompress.zip",
+    "sha256": "44fece6b26981ccfdaa63baef44de0b2fd9c8fecb8c687dce222e7aae98adbad"
+  },
+  "candidate_archive_sha256": "44fece6b26981ccfdaa63baef44de0b2fd9c8fecb8c687dce222e7aae98adbad",
+  "candidate_member": {
+    "bytes": 103676,
+    "name": "0.bin",
+    "sha256": "999cb19cc74704bbe74df7c177dc2277161d5a7a094ce6f56d710a11083d6555",
+    "zip_compressed_bytes": 103676,
+    "zip_compressed_payload_sha256": "999cb19cc74704bbe74df7c177dc2277161d5a7a094ce6f56d710a11083d6555",
+    "zip_compressed_sha256": "999cb19cc74704bbe74df7c177dc2277161d5a7a094ce6f56d710a11083d6555",
+    "zip_compression_method": "stored"
+  },
+  "candidate_member_payload_identical_to_source": true,
+  "candidate_member_sha256": "999cb19cc74704bbe74df7c177dc2277161d5a7a094ce6f56d710a11083d6555",
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "gpu_launched": false,
+  "materializer_id": "packet_member_recompress_adapter",
+  "member_sha256": "999cb19cc74704bbe74df7c177dc2277161d5a7a094ce6f56d710a11083d6555",
+  "passed": true,
+  "promotable": false,
+  "promotion_eligible": false,
+  "proof_kind": "packet_member_recompress_payload_identity_receiver_proof.v1",
+  "proof_scope": "zip_member_payload_identity_after_archive_recompression",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_id": "packet_member_recompress_v1.receiver.v1",
+  "receiver_contract_kind": "family_agnostic_packet_member_recompress",
+  "receiver_contract_satisfied": true,
+  "runtime_consumption_probe": {
+    "candidate_member_bytes": 103676,
+    "candidate_member_sha256": "999cb19cc74704bbe74df7c177dc2277161d5a7a094ce6f56d710a11083d6555",
+    "passed": true,
+    "schema": "packet_member_payload_identity_probe.v1",
+    "source_member_bytes": 103676,
+    "source_member_sha256": "999cb19cc74704bbe74df7c177dc2277161d5a7a094ce6f56d710a11083d6555"
+  },
+  "runtime_consumption_proof_passed": true,
+  "schema": "family_agnostic_runtime_consumption_proof_v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_valid": false,
+  "selected_compression": {
+    "candidate_archive_bytes": 111492,
+    "compression_method": "stored",
+    "compresslevel": null,
+    "saved_bytes": 35,
+    "source_archive_bytes": 111527
+  },
+  "selected_member_name": "0.bin",
+  "source_archive": {
+    "bytes": 111527,
+    "path": "/Users/adpena/Projects/pact/experiments/results/pact_nerv_selector_v4_mlx_full_layoutfix_20260528Tlocal/archive.zip",
+    "sha256": "a8ebb822e50a41b1d00ef512ebf8a0ea006bac2323f57e3e94088d3594bd8171"
+  },
+  "source_member": {
+    "bytes": 103676,
+    "name": "0.bin",
+    "sha256": "999cb19cc74704bbe74df7c177dc2277161d5a7a094ce6f56d710a11083d6555",
+    "zip_compressed_bytes": 103711,
+    "zip_compressed_payload_sha256": "1a97c626fff14dbd235e1ed498de599e4b9e0c719e14d7d659d6ae9d94cfe1d5",
+    "zip_compressed_sha256": "1a97c626fff14dbd235e1ed498de599e4b9e0c719e14d7d659d6ae9d94cfe1d5",
+    "zip_compression_method": "deflated"
+  },
+  "source_member_sha256": "999cb19cc74704bbe74df7c177dc2277161d5a7a094ce6f56d710a11083d6555",
+  "target_kind": "packet_member_recompress_v1"
+}
