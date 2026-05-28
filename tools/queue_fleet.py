@@ -155,10 +155,15 @@ def _format_status(payload: Mapping[str, Any]) -> str:
             f"queues={payload.get('queue_count')} "
             f"actionable={payload.get('actionable_count')} "
             f"ready={payload.get('ready_to_supervise_count')} "
-            f"needs_recovery={payload.get('needs_recovery_count')}"
+            f"needs_recovery={payload.get('needs_recovery_count')} "
+            f"invalid={payload.get('invalid_queue_count')} "
+            f"non_exec_artifacts={payload.get('non_executable_artifact_count')}"
         ),
         f"status_counts: {payload.get('status_counts')}",
     ]
+    samples = payload.get("status_samples")
+    if isinstance(samples, Mapping):
+        lines.append(f"status_samples: {samples}")
     rows = payload.get("rows")
     if isinstance(rows, Sequence) and not isinstance(rows, (str, bytes, bytearray)):
         for row in rows[:12]:
@@ -175,6 +180,18 @@ def _format_status(payload: Mapping[str, Any]) -> str:
     if isinstance(commands, Sequence) and commands:
         lines.append("next supervise:")
         for command in commands[:3]:
+            if isinstance(command, Sequence) and not isinstance(command, (str, bytes, bytearray)):
+                lines.append("  " + " ".join(str(part) for part in command))
+    init_commands = payload.get("next_init_commands")
+    if isinstance(init_commands, Sequence) and init_commands:
+        lines.append("next init:")
+        for command in init_commands[:3]:
+            if isinstance(command, Sequence) and not isinstance(command, (str, bytes, bytearray)):
+                lines.append("  " + " ".join(str(part) for part in command))
+    recovery_commands = payload.get("next_recovery_commands")
+    if isinstance(recovery_commands, Sequence) and recovery_commands:
+        lines.append("next recovery/status:")
+        for command in recovery_commands[:3]:
             if isinstance(command, Sequence) and not isinstance(command, (str, bytes, bytearray)):
                 lines.append("  " + " ".join(str(part) for part in command))
     lines.append("authority: local telemetry/supervision only; never score or promotion authority.")

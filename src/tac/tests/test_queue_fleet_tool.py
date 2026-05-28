@@ -95,6 +95,97 @@ def test_queue_fleet_status_discovers_ready_queue(tmp_path: Path, capsys) -> Non
     assert payload["promotion_eligible"] is False
 
 
+def test_queue_fleet_treats_native_work_queue_as_non_executable_artifact(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    tool = _load_queue_fleet_tool()
+    native_queue = tmp_path / "materializer_work_queue.json"
+    native_queue.write_text(
+        json.dumps(
+            {
+                "schema": "byte_shaving_materializer_work_queue.v1",
+                "items": [{"id": "native-only"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rc = tool.main(
+        [
+            "--root",
+            str(tmp_path),
+            "--row-limit",
+            "0",
+            "status",
+            "--format",
+            "json",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert rc == 0
+    assert payload["row_count"] == 0
+    assert payload["invalid_queue_count"] == 0
+    assert payload["non_executable_artifact_count"] == 1
+    assert payload["needs_recovery_count"] == 0
+    assert payload["next_supervise_commands"] == []
+    assert payload["next_init_commands"] == []
+    samples = payload["status_samples"]["NON_EXECUTABLE_QUEUE_ARTIFACT"]
+    assert samples[0]["artifact_schema"] == "byte_shaving_materializer_work_queue.v1"
+    assert samples[0]["recommended_action"] == "route_to_native_consumer_not_experiment_queue_supervisor"
+
+
+def test_queue_fleet_still_flags_malformed_experiment_queue(tmp_path: Path, capsys) -> None:
+    tool = _load_queue_fleet_tool()
+    bad_queue = tmp_path / "broken_queue.json"
+    bad_queue.write_text('{"schema":"experiment_queue.v1",', encoding="utf-8")
+
+    rc = tool.main(
+        [
+            "--root",
+            str(tmp_path),
+            "status",
+            "--format",
+            "json",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert rc == 0
+    assert payload["invalid_queue_count"] == 1
+    assert payload["non_executable_artifact_count"] == 0
+    assert payload["rows"][0]["status"] == "INVALID_QUEUE"
+    assert payload["rows"][0]["blockers"][0].startswith("load_queue_definition_failed:")
+
+
+def test_queue_fleet_exposes_init_commands_for_missing_state(tmp_path: Path, capsys) -> None:
+    tool = _load_queue_fleet_tool()
+    queue_path, _artifact = _queue_file(tmp_path)
+    state_root = tmp_path / "state"
+
+    rc = tool.main(
+        [
+            "--root",
+            str(queue_path),
+            "--state-root",
+            str(state_root),
+            "status",
+            "--format",
+            "json",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert rc == 0
+    assert payload["status_counts"] == {"NEEDS_INIT": 1}
+    assert payload["needs_recovery_count"] == 1
+    assert payload["next_init_commands"]
+    init_command = payload["next_init_commands"][0]
+    assert "tools/experiment_queue.py" in init_command
+    assert init_command[-1] == "init"
+
+
 def test_queue_fleet_supervise_plan_only_preserves_queue(tmp_path: Path, capsys) -> None:
     tool = _load_queue_fleet_tool()
     queue_path, artifact = _queue_file(tmp_path)

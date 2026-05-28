@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import time
 from collections import Counter
@@ -9,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from comma_lab.scheduler.experiment_queue import (
+    QUEUE_SCHEMA,
     ExperimentQueueError,
     default_state_path,
     load_queue_definition,
@@ -17,6 +19,7 @@ from comma_lab.scheduler.experiment_queue_observer import observe_experiment_que
 
 QUEUE_FLEET_STATUS_SCHEMA = "experiment_queue_fleet_status.v1"
 QUEUE_FLEET_ROW_SCHEMA = "experiment_queue_fleet_row.v1"
+NON_EXECUTABLE_QUEUE_ARTIFACT_STATUS = "NON_EXECUTABLE_QUEUE_ARTIFACT"
 
 FALSE_AUTHORITY: dict[str, bool] = {
     "score_claim": False,
@@ -70,6 +73,19 @@ def _candidate_name(path: Path) -> bool:
         return False
     name = path.name.lower()
     return any(token in name for token in QUEUE_FILENAME_TOKENS)
+
+
+def _raw_json_schema(path: Path) -> str | None:
+    if path.suffix.lower() != ".json":
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return None
+    if not isinstance(payload, Mapping):
+        return None
+    schema = payload.get("schema")
+    return schema if isinstance(schema, str) and schema.strip() else None
 
 
 def _stable_path_order_key(path: Path) -> tuple[int, str]:
@@ -214,7 +230,38 @@ def _priority(status: str) -> int:
         "TERMINAL": 70,
         "EMPTY_OR_IDLE": 80,
         "INVALID_QUEUE": 90,
+        NON_EXECUTABLE_QUEUE_ARTIFACT_STATUS: 95,
     }.get(status, 999)
+
+
+def _compact_row_sample(row: Mapping[str, Any]) -> dict[str, Any]:
+    sample: dict[str, Any] = {
+        "status": row.get("status"),
+        "queue_path": row.get("queue_path"),
+    }
+    for key in (
+        "queue_id",
+        "artifact_schema",
+        "state",
+        "state_exists",
+        "blockers",
+        "status_counts",
+        "recommended_action",
+    ):
+        value = row.get(key)
+        if value not in (None, {}, [], ""):
+            sample[key] = value
+    return sample
+
+
+def _samples_by_status(rows: Iterable[Mapping[str, Any]], *, per_status: int = 5) -> dict[str, list[dict[str, Any]]]:
+    samples: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        status = str(row.get("status") or "UNKNOWN")
+        bucket = samples.setdefault(status, [])
+        if len(bucket) < per_status:
+            bucket.append(_compact_row_sample(row))
+    return dict(sorted(samples.items()))
 
 
 def queue_fleet_row(
@@ -237,6 +284,18 @@ def queue_fleet_row(
     try:
         queue = load_queue_definition(path)
     except Exception as exc:
+        artifact_schema = _raw_json_schema(path)
+        if artifact_schema and artifact_schema != QUEUE_SCHEMA:
+            status = NON_EXECUTABLE_QUEUE_ARTIFACT_STATUS
+            return {
+                **base,
+                "status": status,
+                "priority": _priority(status),
+                "artifact_schema": artifact_schema,
+                "ignored_for_supervision": True,
+                "recommended_action": "route_to_native_consumer_not_experiment_queue_supervisor",
+                "blockers": [],
+            }
         return {
             **base,
             "status": "INVALID_QUEUE",
@@ -337,6 +396,7 @@ def queue_fleet_status(
         in {"NEEDS_RECOVERY", "NEEDS_INIT", "READY_TO_SUPERVISE", "RUNNING", "PAUSED_WITH_QUEUED_WORK"}
     ]
     visible_rows = rows[:row_limit] if row_limit is not None else rows
+    recovery_statuses = {"NEEDS_RECOVERY", "NEEDS_INIT"}
     return {
         "schema": QUEUE_FLEET_STATUS_SCHEMA,
         "generated_at_utc": utc_now(),
@@ -347,15 +407,34 @@ def queue_fleet_status(
         "candidate_path_count": len(paths),
         "queue_count": len(rows),
         "status_counts": dict(sorted(counts.items())),
+        "status_samples": _samples_by_status(rows),
         "actionable_count": len(actionable),
         "ready_to_supervise_count": counts.get("READY_TO_SUPERVISE", 0),
         "needs_recovery_count": counts.get("NEEDS_RECOVERY", 0) + counts.get("NEEDS_INIT", 0),
+        "invalid_queue_count": counts.get("INVALID_QUEUE", 0),
+        "non_executable_artifact_count": counts.get(NON_EXECUTABLE_QUEUE_ARTIFACT_STATUS, 0),
         "row_count": len(visible_rows),
         "rows": visible_rows,
         "next_supervise_commands": [
             row["supervise_command"]
             for row in rows
             if row.get("status") == "READY_TO_SUPERVISE"
+        ][:8],
+        "next_recovery_commands": [
+            row["status_command"]
+            for row in rows
+            if row.get("status") in recovery_statuses and row.get("status_command")
+        ][:8],
+        "next_init_commands": [
+            _queue_command(
+                repo,
+                "tools/experiment_queue.py",
+                row["queue_path"],
+                row["state"],
+                "init",
+            )
+            for row in rows
+            if row.get("status") == "NEEDS_INIT" and row.get("state")
         ][:8],
         "allowed_use": "queue_fleet_local_telemetry_and_bounded_supervision_only",
         "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_exact_eval_authority",
