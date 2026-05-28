@@ -24,6 +24,7 @@ ensure_repo_imports(REPO_ROOT)
 
 from tac.optimization.repair_family_stack_search import (  # noqa: E402
     RepairFamilyStackSearchError,
+    build_repair_family_exact_handoff_plan,
     plan_repair_family_stack_search,
 )
 from tac.repo_io import (  # noqa: E402
@@ -44,6 +45,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Repair-family byte-transform execution report. Repeatable.",
     )
     parser.add_argument("--stack-plan-out", required=True, type=Path)
+    parser.add_argument("--exact-handoff-plan-out", type=Path)
     parser.add_argument("--posterior-path", type=Path)
     parser.add_argument("--byte-credit-budget", type=int)
     parser.add_argument("--overwrite", action="store_true")
@@ -72,6 +74,10 @@ def main(argv: list[str] | None = None) -> int:
             posterior_path=args.posterior_path,
             byte_credit_budget=args.byte_credit_budget,
         )
+        exact_handoff_plan = build_repair_family_exact_handoff_plan(
+            stack_plan=plan,
+            stack_plan_path=args.stack_plan_out,
+        )
         out = _resolve(args.stack_plan_out)
         expected_existing_sha256 = None
         write_result = None
@@ -90,6 +96,25 @@ def main(argv: list[str] | None = None) -> int:
                 allow_overwrite=bool(args.overwrite),
                 expected_existing_sha256=expected_existing_sha256,
             )
+        exact_write_result = None
+        exact_skipped_identical_existing_artifact = False
+        if args.exact_handoff_plan_out is not None:
+            exact_out = _resolve(args.exact_handoff_plan_out)
+            exact_expected_existing_sha256 = None
+            if exact_out.exists() and args.overwrite:
+                existing_text = exact_out.read_text(encoding="utf-8")
+                next_text = json_text(exact_handoff_plan)
+                if existing_text == next_text:
+                    exact_skipped_identical_existing_artifact = True
+                else:
+                    exact_expected_existing_sha256 = sha256_file(exact_out)
+            if not exact_skipped_identical_existing_artifact:
+                exact_write_result = write_json_artifact(
+                    exact_out,
+                    exact_handoff_plan,
+                    allow_overwrite=bool(args.overwrite),
+                    expected_existing_sha256=exact_expected_existing_sha256,
+                )
     except (
         ArtifactWriteError,
         OSError,
@@ -108,11 +133,30 @@ def main(argv: list[str] | None = None) -> int:
                     "candidate_improvement_observed"
                 ],
                 "planned_family_order": plan["planned_family_order"],
+                "exact_eval_handoff_candidate_count": exact_handoff_plan[
+                    "candidate_count"
+                ],
+                "archive_bound_exact_handoff_candidate_count": exact_handoff_plan[
+                    "archive_bound_candidate_count"
+                ],
                 "bytes_written": (
                     write_result.bytes_written if write_result is not None else 0
                 ),
+                "exact_handoff_plan_out": (
+                    None
+                    if args.exact_handoff_plan_out is None
+                    else str(args.exact_handoff_plan_out)
+                ),
+                "exact_handoff_bytes_written": (
+                    exact_write_result.bytes_written
+                    if exact_write_result is not None
+                    else 0
+                ),
                 "skipped_identical_existing_artifact": (
                     skipped_identical_existing_artifact
+                ),
+                "exact_handoff_skipped_identical_existing_artifact": (
+                    exact_skipped_identical_existing_artifact
                 ),
                 "score_claim": False,
                 "promotion_eligible": False,

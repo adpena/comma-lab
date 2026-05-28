@@ -389,4 +389,14 @@ def test_repair_campaign_autonomous_floor_loop_cli_fails_closed(
     assert summary["schema"] == "repair_campaign_autonomous_floor_loop.v1"
     assert summary["stop_reason"] == "exact_axis_blocker"
     assert summary["stack_search_plan"]["execution_report_count"] == 0
+    assert summary["exact_handoff_plan_schema"] == "repair_family_exact_handoff_plan.v1"
+    assert summary["exact_eval_handoff_candidate_count"] == 0
+    assert summary["archive_bound_exact_handoff_candidate_count"] == 0
+    exact_handoff_plan = json.loads(
+        (tmp_path / "loop" / "repair_family_exact_handoff_plan.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert exact_handoff_plan["schema"] == "repair_family_exact_handoff_plan.v1"
+    assert exact_handoff_plan["candidate_count"] == 0
     assert summary["ready_for_exact_eval_dispatch"] is False

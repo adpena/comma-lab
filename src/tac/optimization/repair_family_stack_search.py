@@ -25,6 +25,7 @@ REPAIR_FAMILY_STACK_SEARCH_ROW_SCHEMA = "repair_family_stack_search_row.v1"
 REPAIR_FAMILY_EXACT_HANDOFF_CANDIDATE_ROW_SCHEMA = (
     "repair_family_exact_handoff_candidate_row.v1"
 )
+REPAIR_FAMILY_EXACT_HANDOFF_PLAN_SCHEMA = "repair_family_exact_handoff_plan.v1"
 
 _LEVEL_ORDER: tuple[str, ...] = (
     "bit",
@@ -591,10 +592,93 @@ def plan_repair_family_stack_search(
     return plan
 
 
+def build_repair_family_exact_handoff_plan(
+    *,
+    stack_plan: Mapping[str, Any],
+    stack_plan_path: str | Path | None = None,
+) -> dict[str, Any]:
+    """Summarize archive-bound repair candidates for exact-axis handoff.
+
+    This is an adapter artifact, not an exact-ready queue. It preserves the
+    byte-closed candidate/proof custody discovered by stack search while
+    leaving dispatch authority to the existing exact-ready/materializer gates.
+    """
+
+    if stack_plan.get("schema") != REPAIR_FAMILY_STACK_SEARCH_PLAN_SCHEMA:
+        raise RepairFamilyStackSearchError(
+            "repair family exact handoff plan requires repair family stack plan"
+        )
+    require_no_truthy_authority_fields(
+        stack_plan,
+        context="repair_family_exact_handoff_source_stack_plan",
+    )
+    rows = [
+        dict(row)
+        for row in stack_plan.get("exact_eval_handoff_candidates") or []
+        if isinstance(row, Mapping)
+    ]
+    archive_bound_rows = [
+        row for row in rows if row.get("archive_bound_custody_complete") is True
+    ]
+    gate = _mapping(stack_plan.get("exact_eval_handoff_gate"))
+    blockers = ordered_unique(
+        [
+            *_string_list(gate.get("blockers")),
+            *(
+                []
+                if archive_bound_rows
+                else ["archive_bound_exact_handoff_candidate_missing"]
+            ),
+            "materializer_exact_eval_dispatch_plan_or_exact_ready_queue_required",
+            "contest_cpu_or_cuda_exact_axis_payload_required",
+            "lane_dispatch_claim_required_before_exact_eval",
+        ]
+    )
+    plan = {
+        "schema": REPAIR_FAMILY_EXACT_HANDOFF_PLAN_SCHEMA,
+        "source_stack_plan_path": None if stack_plan_path is None else str(stack_plan_path),
+        "source_stack_plan_schema": stack_plan.get("schema"),
+        "execution_report_count": stack_plan.get("execution_report_count", 0),
+        "candidate_count": len(rows),
+        "archive_bound_candidate_count": len(archive_bound_rows),
+        "archive_bound_custody_complete": bool(archive_bound_rows),
+        "rows": rows,
+        "archive_bound_rows": archive_bound_rows,
+        "handoff_contract": {
+            "schema": "repair_family_exact_handoff_contract.v1",
+            "source": "repair_family_stack_search",
+            "adapter_artifact_only": True,
+            "next_authoritative_gate": (
+                "materializer_exact_eval_dispatch_plan_or_exact_ready_queue"
+            ),
+            "mlx_local_rows_are_advisory_only": True,
+            "receiver_must_remain_decode_only": True,
+            "budget_spend_allowed": False,
+            "ready_for_exact_eval_dispatch": False,
+            **FALSE_AUTHORITY,
+        },
+        "blockers": blockers,
+        "eligible_for_exact_eval_handoff": False,
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        "allowed_use": "operator_visible_archive_bound_repair_exact_handoff_planning",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        plan,
+        context="repair_family_exact_handoff_plan",
+    )
+    return plan
+
+
 __all__ = [
     "REPAIR_FAMILY_EXACT_HANDOFF_CANDIDATE_ROW_SCHEMA",
+    "REPAIR_FAMILY_EXACT_HANDOFF_PLAN_SCHEMA",
     "REPAIR_FAMILY_STACK_SEARCH_PLAN_SCHEMA",
     "REPAIR_FAMILY_STACK_SEARCH_ROW_SCHEMA",
     "RepairFamilyStackSearchError",
+    "build_repair_family_exact_handoff_plan",
     "plan_repair_family_stack_search",
 ]

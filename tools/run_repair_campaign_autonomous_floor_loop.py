@@ -35,8 +35,10 @@ from tac.optimization.repair_family_byte_transform_executor import (  # noqa: E4
     REPAIR_FAMILY_BYTE_TRANSFORM_EXECUTION_REPORT_SCHEMA,
 )
 from tac.optimization.repair_family_stack_search import (  # noqa: E402
+    REPAIR_FAMILY_EXACT_HANDOFF_PLAN_SCHEMA,
     REPAIR_FAMILY_STACK_SEARCH_PLAN_SCHEMA,
     RepairFamilyStackSearchError,
+    build_repair_family_exact_handoff_plan,
     plan_repair_family_stack_search,
 )
 from tac.repo_io import (  # noqa: E402
@@ -229,6 +231,11 @@ def _build_summary(
         }:
             break
     stack_plan_path = output_dir / "repair_family_stack_search_plan.json"
+    exact_handoff_plan_path = output_dir / "repair_family_exact_handoff_plan.json"
+    exact_handoff_plan = build_repair_family_exact_handoff_plan(
+        stack_plan=final_stack_plan,
+        stack_plan_path=_repo_rel(stack_plan_path),
+    )
     summary = {
         "schema": REPAIR_CAMPAIGN_AUTONOMOUS_FLOOR_LOOP_SCHEMA,
         "materialization_queue_path": _repo_rel(queue_path),
@@ -243,6 +250,13 @@ def _build_summary(
         "iterations": iterations,
         "stack_search_plan_path": _repo_rel(stack_plan_path),
         "stack_search_plan": final_stack_plan,
+        "exact_handoff_plan_path": _repo_rel(exact_handoff_plan_path),
+        "exact_handoff_plan_schema": REPAIR_FAMILY_EXACT_HANDOFF_PLAN_SCHEMA,
+        "exact_handoff_plan": exact_handoff_plan,
+        "exact_eval_handoff_candidate_count": exact_handoff_plan["candidate_count"],
+        "archive_bound_exact_handoff_candidate_count": exact_handoff_plan[
+            "archive_bound_candidate_count"
+        ],
         "stop_reason": iterations[-1]["stop_reason"] if iterations else "exact_axis_blocker",
         "autonomous_loop_closed": True,
         "loop_contract": [
@@ -304,6 +318,18 @@ def main(argv: list[str] | None = None) -> int:
             summary["stack_search_plan"],
             allow_overwrite=bool(args.overwrite),
             expected_existing_sha256=expected_stack_sha,
+        )
+        exact_handoff_plan_path = output_dir / "repair_family_exact_handoff_plan.json"
+        expected_exact_handoff_sha = (
+            sha256_file(exact_handoff_plan_path)
+            if exact_handoff_plan_path.exists() and args.overwrite
+            else None
+        )
+        write_json_artifact(
+            exact_handoff_plan_path,
+            summary["exact_handoff_plan"],
+            allow_overwrite=bool(args.overwrite),
+            expected_existing_sha256=expected_exact_handoff_sha,
         )
         summary_out = _resolve(args.summary_out)
         expected_summary_sha = (

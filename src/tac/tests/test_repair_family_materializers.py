@@ -37,7 +37,9 @@ from tac.optimization.repair_family_materializers import (
 )
 from tac.optimization.repair_family_stack_search import (
     REPAIR_FAMILY_EXACT_HANDOFF_CANDIDATE_ROW_SCHEMA,
+    REPAIR_FAMILY_EXACT_HANDOFF_PLAN_SCHEMA,
     REPAIR_FAMILY_STACK_SEARCH_PLAN_SCHEMA,
+    build_repair_family_exact_handoff_plan,
     plan_repair_family_stack_search,
 )
 
@@ -339,6 +341,14 @@ def test_byte_transform_executor_repacks_archive_native_candidate_when_custody_e
     assert handoff_row["candidate_archive"]["custody_complete"] is True
     assert handoff_row["runtime_consumption_proof"]["custody_complete"] is True
     assert handoff_row["ready_for_exact_eval_dispatch"] is False
+    exact_handoff_plan = build_repair_family_exact_handoff_plan(
+        stack_plan=stack_plan,
+        stack_plan_path=report_path,
+    )
+    assert exact_handoff_plan["schema"] == REPAIR_FAMILY_EXACT_HANDOFF_PLAN_SCHEMA
+    assert exact_handoff_plan["archive_bound_candidate_count"] == 1
+    assert exact_handoff_plan["archive_bound_custody_complete"] is True
+    assert exact_handoff_plan["ready_for_exact_eval_dispatch"] is False
 
 
 def test_repair_family_byte_transform_cli_writes_report_and_bundle(
