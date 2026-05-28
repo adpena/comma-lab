@@ -1,0 +1,121 @@
+# SPDX-License-Identifier: MIT
+# WAVE-N+2 SLOT 1 Compound C heterogeneous per-tensor bit allocation
+# PyTorch sister recipe scaffold (DISPATCH_ENABLED=FALSE pending
+# paired-CUDA RATIFICATION per Catalog #246 + per-substrate symposium
+# per Catalog #325).
+#
+# Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY"
+# non-negotiable + Catalog #240 (recipe-vs-trainer-state consistency):
+# this recipe is transparently non-dispatchable until the operator-
+# attended paired-Linux+NVIDIA anchor lands.
+#
+# Compound stacking sequence (per parent prompt):
+#   Compound A (V3 baseline)   = 0.191977 [contest-CPU baseline anchor]
+#   Compound B (Slot 2 int8)   = -0.024 ΔS predicted → ~0.168 [contest-CPU]
+#   Compound C (this)          = -0.005 to -0.010 ΔS additional
+#                              → score floor 0.158-0.163 [contest-CPU]
+#
+# Per Catalog #324 predicted_band_validation_status: phantom_random_init.
+# The predicted band is derived from PROJECTION (parent decoder compression
+# analysis + Quantizr 0.33 FP4-QAT empirical anchor); the empirical
+# anchor is OPERATOR-ROUTABLE via paired-CUDA RATIFICATION per Catalog #246.
+
+substrate_id: pact_nerv_selector_v3
+lane_id: lane_pact_nerv_selector_v3_heterogeneous_compound_c_paired_cuda_ratification_20260528
+platform: modal
+gpu: T4
+recipe_id: substrate_pact_nerv_selector_v3_heterogeneous_bit_modal_t4_dispatch
+dispatch_kind: substrate
+dispatch_enabled: false  # PENDING per-substrate symposium per Catalog #325
+research_only: true       # NON-PROMOTABLE [macOS-MLX research-signal]
+                          # pending paired-CUDA RATIFICATION per Catalog #246
+canary_status: post_canary_dependent
+canary_dependency: substrate_pact_nerv_selector_v3_int8_decoder_quant_brotli_q11
+
+# Catalog #240 transparency: corresponding trainer's _full_main path is
+# the canonical MLX-LOCAL trainer at
+# experiments/train_substrate_pact_nerv_selector_v3_mlx_local.py; the
+# PyTorch sister trainer at experiments/train_substrate_pact_nerv_selector_v3.py
+# requires wiring decoder_quantization=heterogeneous_per_tensor + fp4_qat_epochs
+# argparse parameters (operator-routable Wave N+3 sister landing).
+trainer_path: experiments/train_substrate_pact_nerv_selector_v3.py
+lane_script: scripts/remote_lane_substrate_pact_nerv_selector_v3.sh
+
+# Catalog #170 + Catalog #215: hardware floor declarations.
+min_vram_gb: 15
+min_smoke_gpu: T4
+target_modes:
+  - contest_one_video_replay
+  - production_generalized
+
+# Catalog #171 + Catalog #181: video / pyav decode strategy.
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+
+# Catalog #325 per-substrate symposium evidence (REQUIRED post-canary-dep).
+symposium_anchor_memo: .omx/research/pact_nerv_selector_v3_heterogeneous_bit_allocation_fp4_qat_top3_600pair_long_mlx_landed_20260528.md
+symposium_verdict_pending_paired_cuda_ratification: true
+
+# Catalog #324 predicted_band sourcing.
+predicted_band:
+  contest_cpu: [0.158, 0.163]
+  contest_cuda: [0.180, 0.230]  # widened per parent memo Scenario C amplification risk
+predicted_band_validation_status: pending_post_training  # PHANTOM_RANDOM_INIT
+                                                          # at MLX-LOCAL scaffold; the
+                                                          # 600-pair MLX-long run anchor
+                                                          # IS the canonical post-training
+                                                          # validation (research-signal,
+                                                          # non-promotable per Catalog #192)
+
+# Catalog #344 canonical equations.
+canonical_equation_anchor:
+  - equation_id: pact_nerv_decoder_state_dict_saturation_at_parity_floor_v1
+    anchor_id_to_append: pact_nerv_v3_heterogeneous_compound_c_empirical_20260528
+  - equation_id: heterogeneous_per_tensor_bit_allocation_compounding_v1
+    anchor_id_to_append: pact_nerv_v3_compound_c_first_empirical_20260528
+
+# Catalog #313 probe outcome routing.
+probe_outcomes_routing:
+  predecessor_outcome_check: enabled
+  blocking_verdict_action: refuse_dispatch_per_catalog_313
+
+# Per Catalog #270 dispatch optimization protocol Tier 1 engineering.
+env_overrides:
+  PACT_NERV_SELECTOR_V3_MLX_DECODER_QUANT: heterogeneous_per_tensor
+  PACT_NERV_SELECTOR_V3_MLX_FP4_QAT_EPOCHS: "200"
+  PACT_NERV_SELECTOR_V3_MLX_TOP_K_FP4: "3"
+  PACT_NERV_SELECTOR_V3_MLX_SENSITIVITY_RANKING_METHOD: magnitude_x_byte_cost
+  DALI_DISABLE_NVML: "1"  # Catalog #244
+  CUBLAS_WORKSPACE_CONFIG: ":4096:8"  # Catalog #244
+  PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True  # Catalog #244
+
+cost_band:
+  estimated_cost_usd: 1.50  # paired CUDA + CPU per Catalog #246
+  epochs: 2200
+  batch_size: 8
+  expected_wall_clock_minutes: 90
+
+# Reactivation criteria per CLAUDE.md "Substrate scaffolds MUST be COMPLETE"
+reactivation_criteria:
+  - "Wave N+3 sister PyTorch trainer landing wiring --decoder-quant heterogeneous_per_tensor + --fp4-qat-epochs through experiments/train_substrate_pact_nerv_selector_v3.py"
+  - "Per-substrate symposium per Catalog #325 covering Compound C heterogeneous bit allocation variant"
+  - "Paired-CUDA RATIFICATION per Catalog #246 confirming sub-0.18 score floor empirically"
+  - "Catalog #324 post-training Tier-C density re-measurement on the landed Compound C archive sha256"
+
+notes: >
+  Compound C heterogeneous per-tensor bit allocation per parent prompt
+  Wave N+2 Slot 1. Top-3 tensors (latent_embed 33.75% + pointwise.0 22.50%
+  + pointwise.1 14.06% = 70.31% of decoder cost) → FP4-QAT (Quantizr 0.33
+  pattern); mid-byte → int8 per-channel (V3 Slot 2 grammar); tail →
+  int4 groupwise NF4 (canonical bitsandbytes/QLoRA). Predicted ΔS
+  additional -0.005 to -0.010 over Slot 2 int8 baseline -0.024. Per
+  Catalog #192/#317/#341 NON-PROMOTABLE [macOS-MLX research-signal]
+  pending paired-CUDA RATIFICATION per Catalog #246.
+
+  Recipe DISPATCH_ENABLED=FALSE per Catalog #240 transparency: the
+  PyTorch sister trainer at experiments/train_substrate_pact_nerv_selector_v3.py
+  requires wiring decoder_quantization=heterogeneous_per_tensor +
+  fp4_qat_epochs argparse parameters (operator-routable Wave N+3 sister
+  landing). The MLX-LOCAL trainer at
+  experiments/train_substrate_pact_nerv_selector_v3_mlx_local.py IS
+  fully wired per this Wave N+2 Slot 1 landing.

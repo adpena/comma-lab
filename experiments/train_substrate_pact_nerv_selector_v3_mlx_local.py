@@ -169,12 +169,53 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
             "'fp16_brotli_q11' (lossless +6.7% savings); "
             "'int8_per_channel_brotli_q11' (-43.7% decoder bytes, cos=0.99999, "
             "rel_l2=0.0039 near-lossless; empirical TOP-1 sub-0.18 candidate "
-            "projecting 0.168576 score under Scenario B per Catalog #324). "
-            "Per Catalog #192/#317/#341: this MLX-local trainer remains "
-            "non-promotable; paired-CUDA RATIFICATION per Catalog #246 "
-            "required BEFORE score promotion."
+            "projecting 0.168576 score under Scenario B per Catalog #324); "
+            "'heterogeneous_per_tensor' (Wave N+2 Slot 1 Compound C: top-3 "
+            "tensors FP4-QAT + mid-byte int8-per-channel + tail int4-groupwise "
+            "NF4; predicted ΔS additional -0.005 to -0.010 over Slot 2 int8 "
+            "baseline -0.024 → score floor 0.158-0.163). Per Catalog "
+            "#192/#317/#341: this MLX-local trainer remains non-promotable; "
+            "paired-CUDA RATIFICATION per Catalog #246 required BEFORE score "
+            "promotion."
         ),
         "default": "fp16_brotli_q9",
+        "required_input_file": False,
+    },
+    "--fp4-qat-epochs": {
+        "env": "PACT_NERV_SELECTOR_V3_MLX_FP4_QAT_EPOCHS",
+        "rationale": (
+            "Wave N+2 Slot 1 Compound C: number of FP4-QAT post-training "
+            "fine-tune epochs on top-K tensors (Quantizr 0.33 canonical = "
+            "200; smoke = 50; default 0 disables QAT). Only applies when "
+            "--decoder-quant=heterogeneous_per_tensor. Per CLAUDE.md 'QAT "
+            "pipeline' non-negotiable: scalar-weight-only fine-tune at 0.1× "
+            "base_learning_rate (Quantizr canonical pattern)."
+        ),
+        "default": "0",
+        "required_input_file": False,
+    },
+    "--sensitivity-ranking-method": {
+        "env": "PACT_NERV_SELECTOR_V3_MLX_SENSITIVITY_RANKING_METHOD",
+        "rationale": (
+            "Wave N+2 Slot 1 Compound C: per-tensor sensitivity ranking "
+            "method. Acceptable: 'magnitude_x_byte_cost' (default; per "
+            "parent memo Daubechies wavelet-partitioning); 'taylor_gradient' "
+            "(uses grad_dict if available, falls back to magnitude); "
+            "'dykstra_lagrangian_dual' (consumes Slot 1 Wave N+1 solver to "
+            "decide top-K routing based on per-axis tight constraints)."
+        ),
+        "default": "magnitude_x_byte_cost",
+        "required_input_file": False,
+    },
+    "--top-k-fp4": {
+        "env": "PACT_NERV_SELECTOR_V3_MLX_TOP_K_FP4",
+        "rationale": (
+            "Wave N+2 Slot 1 Compound C: number of top-K tensors routed to "
+            "FP4-QAT. Default 3 (per parent memo: top-3 cover 70.31% of "
+            "decoder byte cost; latent_embed 33.75% + pointwise.0 22.50% + "
+            "pointwise.1 14.06%)."
+        ),
+        "default": "3",
         "required_input_file": False,
     },
 }
@@ -342,6 +383,9 @@ def _full_main(args: argparse.Namespace) -> int:
         export_archive_fn=partial(
             export_pact_nerv_selector_v3_mlx_archive,
             decoder_quantization=decoder_quant,
+            fp4_qat_epochs=int(args.fp4_qat_epochs),
+            fp4_qat_learning_rate_scale=0.1,
+            base_learning_rate=float(args.full_lr),
         ),
     )
     artifact = run_mlx_score_aware_full_main(
@@ -602,20 +646,58 @@ def _build_parser() -> argparse.ArgumentParser:
             "fp16_brotli_q9",
             "fp16_brotli_q11",
             "int8_per_channel_brotli_q11",
+            "heterogeneous_per_tensor",
         ],
         help=(
             "Decoder state-dict archive-emit quantization strategy "
-            "(DECODER-COMPRESSION-INT8-PER-CHANNEL Slot 2 work 2026-05-28). "
+            "(DECODER-COMPRESSION-INT8-PER-CHANNEL Slot 2 work 2026-05-28 + "
+            "WAVE-N+2 SLOT 1 Compound C 2026-05-28). "
             "Default 'fp16_brotli_q9' preserves V3 baseline (sha256 "
             "ef5a087ff6301dbf). 'int8_per_channel_brotli_q11' emits the "
-            "empirical TOP-1 sub-0.18 candidate per parent decoder compression "
-            "analysis: -43.7% decoder bytes, cos=0.99999, rel_l2=0.0039 "
-            "near-lossless, projected score 0.168576 [contest-CPU Scenario B] "
-            "under Catalog #324 pending paired-CUDA RATIFICATION per "
-            "Catalog #246. The MLX forward path remains fp32 for training "
-            "fidelity; quantization happens POST-training at archive emit "
-            "boundary. Per Catalog #192/#317/#341 the trainer output "
-            "remains non-promotable [macOS-MLX research-signal]."
+            "Slot 2 empirical -43.7% baseline. 'heterogeneous_per_tensor' "
+            "emits the Wave N+2 Slot 1 Compound C variant: top-3 tensors "
+            "(70.31% of decoder cost) FP4-QAT + mid-byte int8-per-channel "
+            "+ tail int4-groupwise NF4. Predicted additional -0.005 to "
+            "-0.010 over Slot 2 int8 baseline → score floor 0.158-0.163. "
+            "Per Catalog #192/#317/#341 non-promotable [macOS-MLX "
+            "research-signal] pending paired-CUDA RATIFICATION per "
+            "Catalog #246."
+        ),
+    )
+    p.add_argument(
+        "--fp4-qat-epochs",
+        type=int,
+        default=0,
+        help=(
+            "WAVE-N+2 SLOT 1 Compound C: FP4-QAT post-training fine-tune "
+            "epochs on top-K tensors (Quantizr 0.33 canonical = 200; smoke "
+            "= 50; default 0 disables QAT). Applies only when "
+            "--decoder-quant=heterogeneous_per_tensor."
+        ),
+    )
+    p.add_argument(
+        "--top-k-fp4",
+        type=int,
+        default=3,
+        help=(
+            "WAVE-N+2 SLOT 1 Compound C: number of top-K tensors routed to "
+            "FP4-QAT. Default 3 (parent memo: top-3 cover 70.31% of decoder "
+            "byte cost)."
+        ),
+    )
+    p.add_argument(
+        "--sensitivity-ranking-method",
+        type=str,
+        default="magnitude_x_byte_cost",
+        choices=[
+            "magnitude_x_byte_cost",
+            "taylor_gradient",
+            "dykstra_lagrangian_dual",
+        ],
+        help=(
+            "WAVE-N+2 SLOT 1 Compound C: per-tensor sensitivity ranking "
+            "method (informational; the canonical helper uses BYTE_COST × "
+            "sensitivity ranking regardless; future extension hook)."
         ),
     )
     return p

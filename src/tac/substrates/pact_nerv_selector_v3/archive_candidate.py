@@ -103,8 +103,21 @@ def export_pact_nerv_selector_v3_mlx_archive(
     *,
     repo_root: str | Path | None = None,
     decoder_quantization: str = "fp16_brotli_q9",
+    fp4_qat_epochs: int = 0,
+    fp4_qat_learning_rate_scale: float = 0.1,
+    base_learning_rate: float = 1e-3,
 ) -> tuple[Path, str, int]:
-    """Export an MLX SELECTOR-V3 model as a contest-shaped ``archive.zip``."""
+    """Export an MLX SELECTOR-V3 model as a contest-shaped ``archive.zip``.
+
+    WAVE-N+2 SLOT 1 (2026-05-28) Compound C extension: when
+    ``decoder_quantization == 'heterogeneous_per_tensor'`` AND
+    ``fp4_qat_epochs > 0`` the helper runs the canonical FP4-QAT
+    post-training fine-tune on the top-K tensors (selected by the
+    canonical sensitivity-ranking helper) BEFORE archive emit. Per
+    CLAUDE.md "QAT pipeline" non-negotiable + Quantizr 0.33 canonical
+    pattern: scalar-weight-only fine-tune at scaled LR (default 0.1×)
+    for ``fp4_qat_epochs`` (Quantizr canonical = 200; smoke = 50).
+    """
 
     root = (
         Path(repo_root)
@@ -116,9 +129,67 @@ def export_pact_nerv_selector_v3_mlx_archive(
         out_dir = root / out_dir
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    exported_state_dict = model.export_state_dict()
+
+    # WAVE-N+2 SLOT 1: optional FP4-QAT fine-tune on top-K tensors
+    # BEFORE archive emit. Only fires when heterogeneous quant + QAT epochs > 0.
+    qat_metrics: dict[str, object] = {}
+    if (
+        decoder_quantization == "heterogeneous_per_tensor"
+        and int(fp4_qat_epochs) > 0
+    ):
+        import json
+        import torch as _torch
+        from tac.substrates.pact_nerv_selector_v3.heterogeneous_bit_allocation import (
+            apply_fp4_qat_finetune_on_top_k_tensors,
+            compute_per_tensor_sensitivity_via_taylor_expansion,
+            derive_heterogeneous_bit_allocation,
+        )
+
+        sd_torch: dict[str, _torch.Tensor] = {}
+        for name, arr in exported_state_dict.items():
+            if name == "selectors":
+                continue
+            sd_torch[name] = _torch.from_numpy(np.asarray(arr).copy()).to(
+                dtype=_torch.float32
+            )
+        sensitivity = compute_per_tensor_sensitivity_via_taylor_expansion(sd_torch)
+        allocation = derive_heterogeneous_bit_allocation(sd_torch, sensitivity)
+        qat_result = apply_fp4_qat_finetune_on_top_k_tensors(
+            sd_torch,
+            allocation,
+            qat_epochs=int(fp4_qat_epochs),
+            qat_learning_rate_scale=float(fp4_qat_learning_rate_scale),
+            base_learning_rate=float(base_learning_rate),
+            seed=0,
+        )
+        # Replace exported state dict entries with QAT-fine-tuned floats so
+        # the archive emit's heterogeneous_per_tensor quantization runs over
+        # grid-snapped floats (near-zero quantization error per Quantizr).
+        for name in qat_result.fp4_tensors_finetuned:
+            t = qat_result.fine_tuned_state_dict[name]
+            exported_state_dict[name] = t.detach().cpu().numpy().astype(
+                np.float32
+            ).copy()
+        # Emit QAT metrics sidecar for landing-memo + observability.
+        qat_metrics = {
+            "fp4_tensors_finetuned": list(qat_result.fp4_tensors_finetuned),
+            "qat_epochs": qat_result.qat_epochs,
+            "qat_learning_rate": qat_result.qat_learning_rate,
+            "final_qat_loss": qat_result.final_qat_loss,
+            "per_tensor_cos_pre_qat": dict(qat_result.per_tensor_cos_pre_qat),
+            "per_tensor_cos_post_qat": dict(qat_result.per_tensor_cos_post_qat),
+            "allocation_rationale": allocation.rationale,
+            "rationale": qat_result.rationale,
+        }
+        (out_dir / "qat_metrics.json").write_text(
+            json.dumps(qat_metrics, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+
     cfg = model.cfg
     bin_bytes = pack_archive_from_exported_state_dict(
-        exported_state_dict=model.export_state_dict(),
+        exported_state_dict=exported_state_dict,
         cfg=cfg,
         selectors=getattr(model, "selectors", None),
         decoder_quantization=decoder_quantization,

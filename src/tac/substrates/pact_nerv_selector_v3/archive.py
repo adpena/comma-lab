@@ -34,11 +34,19 @@ BROTLI_QUALITY = 9
 DECODER_QUANT_FP16_BROTLI_Q9 = "fp16_brotli_q9"
 DECODER_QUANT_FP16_BROTLI_Q11 = "fp16_brotli_q11"
 DECODER_QUANT_INT8_PER_CHANNEL_BROTLI_Q11 = "int8_per_channel_brotli_q11"
+# WAVE-N+2 SLOT 1 (2026-05-28) Compound C heterogeneous per-tensor bit allocation
+# (top-3 tensors → FP4 packed-nibbles QAT; mid-byte → int8 per-channel;
+# tail → int4 groupwise NF4; biases → fp16 passthrough). Consumes the canonical
+# helper at tac.substrates.pact_nerv_selector_v3.heterogeneous_bit_allocation
+# per parent prompt + decoder_compression_analysis_pact_nerv_cluster TOP-2
+# compound sub-0.16 path.
+DECODER_QUANT_HETEROGENEOUS_PER_TENSOR = "heterogeneous_per_tensor"
 DECODER_QUANTIZATION_KINDS = frozenset(
     {
         DECODER_QUANT_FP16_BROTLI_Q9,
         DECODER_QUANT_FP16_BROTLI_Q11,
         DECODER_QUANT_INT8_PER_CHANNEL_BROTLI_Q11,
+        DECODER_QUANT_HETEROGENEOUS_PER_TENSOR,
     }
 )
 
@@ -142,6 +150,47 @@ def _serialize_state_dict(
             "state": _quantize_decoder_state_dict_int8_per_channel(sd),
         }
         quality = 11
+    elif decoder_quantization == DECODER_QUANT_HETEROGENEOUS_PER_TENSOR:
+        # WAVE-N+2 SLOT 1 Compound C: heterogeneous per-tensor bit allocation
+        # via canonical helper. Routes top-3 → FP4-QAT, mid → int8, tail →
+        # int4. The serialized payload wraps the canonical HBA1 grammar so
+        # the inflate consumer reconstructs the allocation deterministically.
+        from tac.substrates.pact_nerv_selector_v3.heterogeneous_bit_allocation import (  # noqa: E501
+            HBA_BROTLI_QUALITY,
+            derive_heterogeneous_bit_allocation,
+            serialize_heterogeneous_payload,
+        )
+
+        sd_clean = {k: v for k, v in sd.items() if k != "selectors"}
+        allocation = derive_heterogeneous_bit_allocation(sd_clean)
+        hba_bytes = serialize_heterogeneous_payload(
+            sd_clean, allocation, brotli_quality=HBA_BROTLI_QUALITY
+        )
+        # The HBA1 payload is ALREADY brotli-compressed internally; wrap in
+        # a thin pickle envelope so the canonical _deserialize_state_dict
+        # dispatcher recognizes the new kind.
+        payload = {
+            "__pact_decoder_quantization__": {
+                "kind": DECODER_QUANT_HETEROGENEOUS_PER_TENSOR,
+                "hba_schema_version": 1,
+            },
+            "hba_payload_bytes": hba_bytes,
+            # Stash allocation for forensic introspection (not required at
+            # inflate-time; the HBA payload carries its own canonical
+            # allocation manifest).
+            "allocation_summary": {
+                "fp4_qat_tensors": list(allocation.fp4_qat_tensors),
+                "int8_tensors": list(allocation.int8_tensors),
+                "int4_tensors": list(allocation.int4_tensors),
+                "fp16_passthrough_tensors": list(
+                    allocation.fp16_passthrough_tensors
+                ),
+                "rationale": allocation.rationale,
+            },
+        }
+        # Outer brotli q=11 over the pickle envelope (small overhead; keeps
+        # the wire format compatible with the existing dispatcher).
+        quality = 11
     else:
         payload = {
             k: v.detach().to("cpu", dtype=torch.float16).contiguous()
@@ -163,12 +212,24 @@ def _deserialize_state_dict(blob: bytes) -> dict[str, torch.Tensor]:
     quant_meta = sd.get("__pact_decoder_quantization__")
     if isinstance(quant_meta, dict):
         kind = quant_meta.get("kind")
-        if kind != DECODER_QUANT_INT8_PER_CHANNEL_BROTLI_Q11:
-            raise ValueError(f"unsupported decoder quantization kind: {kind!r}")
-        q_state = sd.get("state")
-        if not isinstance(q_state, dict):
-            raise ValueError("int8 decoder payload missing state dict")
-        return _dequantize_decoder_state_dict_int8_per_channel(q_state)
+        if kind == DECODER_QUANT_INT8_PER_CHANNEL_BROTLI_Q11:
+            q_state = sd.get("state")
+            if not isinstance(q_state, dict):
+                raise ValueError("int8 decoder payload missing state dict")
+            return _dequantize_decoder_state_dict_int8_per_channel(q_state)
+        if kind == DECODER_QUANT_HETEROGENEOUS_PER_TENSOR:
+            from tac.substrates.pact_nerv_selector_v3.heterogeneous_bit_allocation import (  # noqa: E501
+                deserialize_heterogeneous_payload,
+            )
+
+            hba_bytes = sd.get("hba_payload_bytes")
+            if not isinstance(hba_bytes, (bytes, bytearray)):
+                raise ValueError("heterogeneous decoder payload missing hba bytes")
+            dequant_sd, _allocation = deserialize_heterogeneous_payload(
+                bytes(hba_bytes)
+            )
+            return dequant_sd
+        raise ValueError(f"unsupported decoder quantization kind: {kind!r}")
     return sd
 
 
