@@ -49,6 +49,18 @@ chained' predicate IS NOT MET"). The table is decoupled from the
 back-compatible and downstream consumers see only the cleaner
 ``match_stack_against_anti_patterns`` return value.
 
+WAVE N+10 SLOT 2 EXTENSION 2026-05-28 (task #1479): per Yousfi adversarial
+audit gap surfaced earlier this session, the override table is extended
+from 5 entries to 15 entries, closing the override-predicate coverage
+gap across initial 12 + Wave N+7/N+9 additions #13/#14/#15/#16 (10 new
+entries; anti-pattern #12 docstring overstatement is NOT-APPLICABLE here
+because its forbidden state lives in source-text content, not stack_spec
+— per-source ``# DOCSTRING_PERCENT_CLAIM_OK`` waiver per Catalog #287
+sister discipline handles that surface separately). Each new predicate
+encodes the canonical structural-guarantee tokens that downstream
+operator-authorize recipes + cathedral autopilot ranker can declare to
+prove the forbidden predicate is structurally inapplicable.
+
 Sister of:
   * ``tac.canonical_anti_patterns.registry`` (the registered anti-patterns)
   * ``tac.canonical_anti_patterns.builtins`` (initial 12 anti-patterns)
@@ -395,6 +407,498 @@ def _explicit_override_quantize_then_svd_corrupted(
     return False, ""
 
 
+# ---------------------------------------------------------------------------
+# WAVE N+10 SLOT 2 EXTENSION 2026-05-28 (task #1479): cover anti-patterns
+# #6-#11 + #13-#16 (10 new override predicates). Anti-pattern #12 docstring
+# overstatement is NOT-APPLICABLE here because the forbidden state lives in
+# source-text content, not stack_spec; per-source `# DOCSTRING_PERCENT_CLAIM_OK`
+# waiver per Catalog #287 sister discipline handles that surface separately.
+# ---------------------------------------------------------------------------
+
+
+def _explicit_override_predicted_band_from_random_init_tier_c(
+    stack_spec: Mapping[str, Any],
+) -> tuple[bool, str]:
+    """Refuse predicted_band_from_random_init_tier_c_v1 match when validated.
+
+    The forbidden predicate is ``recipe.predicted_band_source IN
+    {random_init, pre_training} AND recipe.predicted_band_validation_status
+    NOT IN {validated_post_training, pending_post_training}``. The match is
+    STRUCTURALLY INAPPLICABLE when the stack_spec explicitly declares
+    validation status via any of:
+
+      * ``stack_spec["predicted_band_validation_status"]`` in
+        {validated_post_training, pending_post_training}
+      * ``stack_spec["predicted_band_source"]`` is post_training /
+        post_smoke_anchor / post_full_anchor (not pre-training)
+      * ``stack_spec["catalog_324_active"]`` is True
+      * ``stack_spec["recipe"]["predicted_band_validation_status"]`` in
+        {validated_post_training, pending_post_training}
+
+    Empirical anchor: C6 IBPS 22x miss; Catalog #324 STRICT preflight gate.
+    """
+    validation_status = stack_spec.get("predicted_band_validation_status")
+    if isinstance(validation_status, str) and validation_status.lower() in (
+        "validated_post_training",
+        "pending_post_training",
+    ):
+        return True, (
+            f"explicit override: stack_spec['predicted_band_validation_status']="
+            f"{validation_status!r} structurally satisfies Catalog #324 "
+            "post-training validation discipline"
+        )
+    source = stack_spec.get("predicted_band_source")
+    if isinstance(source, str):
+        source_lower = source.lower()
+        if source_lower in (
+            "post_training",
+            "post_smoke_anchor",
+            "post_full_anchor",
+            "validated_post_training",
+        ):
+            return True, (
+                f"explicit override: stack_spec['predicted_band_source']="
+                f"{source!r} is post-training (not random-init); the forbidden "
+                "pre-training predicate is structurally not met"
+            )
+    if stack_spec.get("catalog_324_active") is True:
+        return True, (
+            "explicit override: stack_spec['catalog_324_active']=True "
+            "structurally satisfies the Catalog #324 STRICT preflight gate"
+        )
+    recipe = stack_spec.get("recipe")
+    if isinstance(recipe, Mapping):
+        nested_status = recipe.get("predicted_band_validation_status")
+        if isinstance(nested_status, str) and nested_status.lower() in (
+            "validated_post_training",
+            "pending_post_training",
+        ):
+            return True, (
+                f"explicit override: stack_spec['recipe']"
+                f"['predicted_band_validation_status']={nested_status!r} "
+                "structurally satisfies Catalog #324 validation discipline"
+            )
+    return False, ""
+
+
+def _explicit_override_rank_1_problem_spec_synergy_tautology(
+    stack_spec: Mapping[str, Any],
+) -> tuple[bool, str]:
+    """Refuse rank_1_problem_spec_synergy_tautology_v1 match when rank>1.
+
+    The forbidden predicate is ``problem_spec.operator_gradient_matrix.rank
+    == 1 AND downstream_metric == 'synergy'``. The match is STRUCTURALLY
+    INAPPLICABLE when stack_spec explicitly declares the gradient matrix
+    rank is > 1 OR axis-decomposition is active:
+
+      * ``stack_spec["operator_gradient_matrix_rank"]`` is int >= 2
+      * ``stack_spec["per_pair_axis_decomposition_active"]`` is True
+      * ``stack_spec["catalog_356_active"]`` is True (per-axis decomposition
+        guarantees distinct per-axis operator gradients)
+      * ``stack_spec["operator_gradients_distinct_per_axis"]`` is True
+
+    Empirical anchor: paradox half 2 rigor review commit 21014faa7.
+    """
+    rank = stack_spec.get("operator_gradient_matrix_rank")
+    if (
+        isinstance(rank, int)
+        and not isinstance(rank, bool)
+        and rank >= 2
+    ):
+        return True, (
+            f"explicit override: stack_spec['operator_gradient_matrix_rank']="
+            f"{rank} >= 2 structurally refutes the rank-1 tautology predicate"
+        )
+    if stack_spec.get("per_pair_axis_decomposition_active") is True:
+        return True, (
+            "explicit override: stack_spec['per_pair_axis_decomposition_active']"
+            "=True structurally guarantees per-pair distinct operator gradients"
+        )
+    if stack_spec.get("operator_gradients_distinct_per_axis") is True:
+        return True, (
+            "explicit override: stack_spec['operator_gradients_distinct_per_axis']"
+            "=True structurally refutes the rank-1 tautology predicate"
+        )
+    if stack_spec.get("catalog_356_active") is True:
+        return True, (
+            "explicit override: stack_spec['catalog_356_active']=True per-axis "
+            "decomposition guarantees distinct per-axis operator gradients "
+            "(rank > 1 structurally)"
+        )
+    return False, ""
+
+
+def _explicit_override_phantom_score_directory_naming_lie(
+    stack_spec: Mapping[str, Any],
+) -> tuple[bool, str]:
+    """Refuse phantom_score_directory_naming_lie_v1 match when filename matches metadata.
+
+    The forbidden predicate is
+    ``artifact.filename.contains_device_token(cuda|cpu|mps) AND
+    artifact.metadata.device != artifact.filename.device_token``.
+    The match is STRUCTURALLY INAPPLICABLE when stack_spec explicitly
+    declares either:
+
+      * ``stack_spec["filename_device_token"] ==
+        stack_spec["metadata_device_token"]`` (filename matches metadata)
+      * ``stack_spec["artifact_filename_device_agnostic"]`` is True
+      * ``stack_spec["catalog_249_active"]`` is True (STRICT gate active)
+
+    Empirical anchor: Z3 v2 FULL Modal A100; Catalog #249 self-protection.
+    """
+    filename_token = stack_spec.get("filename_device_token")
+    metadata_token = stack_spec.get("metadata_device_token")
+    if (
+        isinstance(filename_token, str)
+        and isinstance(metadata_token, str)
+        and filename_token.lower() == metadata_token.lower()
+        and filename_token.strip()
+    ):
+        return True, (
+            f"explicit override: stack_spec['filename_device_token']="
+            f"{filename_token!r} matches metadata_device_token={metadata_token!r} "
+            "structurally refutes the phantom-score-directory predicate"
+        )
+    if stack_spec.get("artifact_filename_device_agnostic") is True:
+        return True, (
+            "explicit override: stack_spec['artifact_filename_device_agnostic']"
+            "=True (no device token in filename) structurally refutes the "
+            "phantom-score-directory predicate"
+        )
+    if stack_spec.get("catalog_249_active") is True:
+        return True, (
+            "explicit override: stack_spec['catalog_249_active']=True "
+            "structurally satisfies the Catalog #249 STRICT preflight gate"
+        )
+    return False, ""
+
+
+def _explicit_override_transient_tmp_path_in_persisted_artifact(
+    stack_spec: Mapping[str, Any],
+) -> tuple[bool, str]:
+    """Refuse transient_tmp_path_in_persisted_artifact_v1 match when no /tmp paths.
+
+    The forbidden predicate is
+    ``persisted_artifact.body.contains_path_starting_with('/tmp/') AND
+    artifact_category IN {lane_registry, dispatch_claim, build_manifest,
+    commit_message}``. The match is STRUCTURALLY INAPPLICABLE when the
+    stack_spec explicitly declares the persisted artifact paths are
+    durable (no /tmp/ prefix):
+
+      * ``stack_spec["persisted_artifact_paths"]`` is a list AND no
+        element starts with '/tmp/' / '/private/tmp/' / '/var/tmp/'
+      * ``stack_spec["artifact_paths_durable"]`` is True
+      * ``stack_spec["catalog_220_active"]`` is True (sister gate active)
+
+    Empirical anchor: lane_pr106_stacked; Catalog #220 sister discipline.
+    """
+    forbidden_prefixes = ("/tmp/", "/private/tmp/", "/var/tmp/")
+    paths = stack_spec.get("persisted_artifact_paths")
+    if isinstance(paths, (list, tuple)):
+        any_tmp = any(
+            isinstance(p, str)
+            and any(p.startswith(pfx) for pfx in forbidden_prefixes)
+            for p in paths
+        )
+        if not any_tmp:
+            return True, (
+                f"explicit override: stack_spec['persisted_artifact_paths']="
+                f"{list(paths)!r} is a structured list with NO /tmp / "
+                "/private/tmp / /var/tmp prefix; the forbidden transient-path "
+                "predicate is structurally not met"
+            )
+    if stack_spec.get("artifact_paths_durable") is True:
+        return True, (
+            "explicit override: stack_spec['artifact_paths_durable']=True "
+            "structurally refutes the transient-tmp-path predicate"
+        )
+    if stack_spec.get("catalog_220_active") is True:
+        return True, (
+            "explicit override: stack_spec['catalog_220_active']=True "
+            "sister-gate-active structurally guarantees no /tmp in persisted "
+            "artifact"
+        )
+    return False, ""
+
+
+def _explicit_override_source_selector_inherited_predicted_score_mean(
+    stack_spec: Mapping[str, Any],
+) -> tuple[bool, str]:
+    """Refuse source_selector_inherited_predicted_score_mean_v1 when paired-CPU backed.
+
+    The forbidden predicate is ``interaction_matrix.populated_from=
+    'predicted_score_mean' AND predicted_score_mean.derivation_path.includes
+    (source_selector)``. The match is STRUCTURALLY INAPPLICABLE when the
+    stack_spec explicitly declares the interaction matrix source is empirical:
+
+      * ``stack_spec["interaction_matrix_source"]`` in
+        {paired_cpu_exact_eval, modal_cpu_dispatch, paired_cuda_exact_eval}
+      * ``stack_spec["interaction_matrix_empirically_measured"]`` is True
+      * ``stack_spec["paired_cpu_exact_eval_ledger_present"]`` is True
+
+    Empirical anchor: DQS1 drop-many BUILD-1 verdict 2026-05-25.
+    """
+    source = stack_spec.get("interaction_matrix_source")
+    if isinstance(source, str):
+        source_lower = source.lower()
+        empirical_tokens = (
+            "paired_cpu_exact_eval",
+            "modal_cpu_dispatch",
+            "paired_cuda_exact_eval",
+            "empirical",
+            "exact_eval_ledger",
+        )
+        if any(tok in source_lower for tok in empirical_tokens):
+            return True, (
+                f"explicit override: stack_spec['interaction_matrix_source']="
+                f"{source!r} is an empirical paired-eval source; the forbidden "
+                "predicted_score_mean inheritance predicate is structurally "
+                "not met"
+            )
+    if stack_spec.get("interaction_matrix_empirically_measured") is True:
+        return True, (
+            "explicit override: stack_spec['interaction_matrix_empirically_"
+            "measured']=True structurally refutes the inherited-source predicate"
+        )
+    if stack_spec.get("paired_cpu_exact_eval_ledger_present") is True:
+        return True, (
+            "explicit override: stack_spec['paired_cpu_exact_eval_ledger_"
+            "present']=True structurally satisfies the canonical empirical "
+            "interaction-matrix backing"
+        )
+    return False, ""
+
+
+def _explicit_override_silent_no_spawn_modal_dispatch(
+    stack_spec: Mapping[str, Any],
+) -> tuple[bool, str]:
+    """Refuse silent_no_spawn_modal_dispatch_v1 match when register_pre_spawn_fatal wired.
+
+    The forbidden predicate is ``experiments/modal_*.py::main() contains
+    sys.exit(...) BEFORE fn.spawn() AND does NOT call
+    register_pre_spawn_fatal()``. The match is STRUCTURALLY INAPPLICABLE
+    when the stack_spec explicitly declares:
+
+      * ``stack_spec["modal_dispatch_pre_spawn_path"]`` is False (no pre-
+        spawn FATAL path possible)
+      * ``stack_spec["modal_register_pre_spawn_fatal_wired"]`` is True
+        (Catalog #360 helper is called before every sys.exit)
+      * ``stack_spec["catalog_360_active"]`` is True
+      * ``stack_spec["modal_dispatcher_route"]`` includes "register_pre_spawn_fatal"
+
+    Empirical anchor: STC v2 5th consecutive silent-no-spawn; Catalog #360.
+    """
+    if stack_spec.get("modal_dispatch_pre_spawn_path") is False:
+        return True, (
+            "explicit override: stack_spec['modal_dispatch_pre_spawn_path']="
+            "False structurally refutes the silent-no-spawn predicate (no "
+            "pre-spawn FATAL path exists)"
+        )
+    if stack_spec.get("modal_register_pre_spawn_fatal_wired") is True:
+        return True, (
+            "explicit override: stack_spec['modal_register_pre_spawn_fatal_"
+            "wired']=True structurally satisfies Catalog #360 (every "
+            "pre-spawn FATAL routes through canonical helper)"
+        )
+    if stack_spec.get("catalog_360_active") is True:
+        return True, (
+            "explicit override: stack_spec['catalog_360_active']=True "
+            "structurally satisfies the Catalog #360 STRICT preflight gate"
+        )
+    route = stack_spec.get("modal_dispatcher_route")
+    if isinstance(route, str) and "register_pre_spawn_fatal" in route.lower():
+        return True, (
+            f"explicit override: stack_spec['modal_dispatcher_route']="
+            f"{route!r} contains register_pre_spawn_fatal token; structurally "
+            "satisfies Catalog #360 canonical-helper routing"
+        )
+    return False, ""
+
+
+def _explicit_override_subagent_spawn_without_head_state_premise_verification(
+    stack_spec: Mapping[str, Any],
+) -> tuple[bool, str]:
+    """Refuse subagent_spawn_without_head_state_premise_verification_v1 when PV evidence present.
+
+    The forbidden predicate is ``Agent.spawn(...) called WITHOUT preceding
+    git log --oneline -30 AND git status AND sister-landing-memo PV per
+    Catalog #229``. The match is STRUCTURALLY INAPPLICABLE when the
+    stack_spec explicitly declares PV evidence:
+
+      * ``stack_spec["pv_evidence_present"]`` is True (Catalog #373)
+      * ``stack_spec["catalog_229_pv_active"]`` is True
+      * ``stack_spec["git_log_pv_in_prompt"]`` is True
+      * ``stack_spec["sister_landing_memo_check_done"]`` is True
+      * ``stack_spec["head_state_pv_check_done"]`` is True
+
+    Empirical anchors: Wave N+5 Slot 1 Compound C STAND_DOWN + Wave N+5
+    Slot 2 framework_agnostic STAND_DOWN.
+    """
+    if stack_spec.get("pv_evidence_present") is True:
+        return True, (
+            "explicit override: stack_spec['pv_evidence_present']=True "
+            "structurally satisfies the Catalog #229 premise-verification-"
+            "before-edit discipline (Catalog #373 sister gate)"
+        )
+    if stack_spec.get("catalog_229_pv_active") is True:
+        return True, (
+            "explicit override: stack_spec['catalog_229_pv_active']=True "
+            "structurally satisfies Catalog #229 PV discipline"
+        )
+    if stack_spec.get("git_log_pv_in_prompt") is True:
+        return True, (
+            "explicit override: stack_spec['git_log_pv_in_prompt']=True "
+            "structurally satisfies the pre-spawn HEAD-state PV step"
+        )
+    if (
+        stack_spec.get("sister_landing_memo_check_done") is True
+        and stack_spec.get("head_state_pv_check_done") is True
+    ):
+        return True, (
+            "explicit override: stack_spec['sister_landing_memo_check_done']"
+            "=True AND stack_spec['head_state_pv_check_done']=True together "
+            "structurally satisfy Catalog #229 PV"
+        )
+    return False, ""
+
+
+def _explicit_override_predecessor_working_tree_uncommitted_handoff(
+    stack_spec: Mapping[str, Any],
+) -> tuple[bool, str]:
+    """Refuse predecessor_working_tree_uncommitted_handoff_v1 when predecessor committed.
+
+    The forbidden predicate is ``subagent SUBAGENT_TERMINATE without
+    canonical-serializer commit AND working-tree has predecessor-owned
+    edits``. The match is STRUCTURALLY INAPPLICABLE when the stack_spec
+    declares the predecessor committed cleanly:
+
+      * ``stack_spec["predecessor_committed_via_serializer"]`` is True
+        (Catalog #117 + #157 + #174 canonical commit-serializer trace)
+      * ``stack_spec["working_tree_clean_at_spawn_time"]`` is True
+      * ``stack_spec["supersession_pending_declared"]`` is True (explicit
+        STAND_DOWN supersession declaration)
+      * ``stack_spec["catalog_117_serializer_log_has_predecessor_commit"]``
+        is True
+
+    Empirical anchor: Wave N+5 Slot 2 framework_agnostic STAND_DOWN.
+    """
+    if stack_spec.get("predecessor_committed_via_serializer") is True:
+        return True, (
+            "explicit override: stack_spec['predecessor_committed_via_"
+            "serializer']=True structurally satisfies Catalog #117 + #157 + "
+            "#174 canonical serializer discipline"
+        )
+    if stack_spec.get("working_tree_clean_at_spawn_time") is True:
+        return True, (
+            "explicit override: stack_spec['working_tree_clean_at_spawn_time']"
+            "=True structurally refutes the uncommitted-handoff predicate"
+        )
+    if stack_spec.get("supersession_pending_declared") is True:
+        return True, (
+            "explicit override: stack_spec['supersession_pending_declared']="
+            "True structurally satisfies the canonical STAND_DOWN "
+            "supersession-declaration discipline"
+        )
+    if stack_spec.get("catalog_117_serializer_log_has_predecessor_commit") is True:
+        return True, (
+            "explicit override: stack_spec['catalog_117_serializer_log_has_"
+            "predecessor_commit']=True structurally satisfies Catalog #117 "
+            "serializer-log discipline"
+        )
+    return False, ""
+
+
+def _explicit_override_wyner_ziv_prefix_y_density_decoder_state_dict_surface(
+    stack_spec: Mapping[str, Any],
+) -> tuple[bool, str]:
+    """Refuse wyner_ziv_prefix_y_density_decoder_state_dict_surface_v1 when surface differs.
+
+    The forbidden predicate is ``wyner_ziv_layer.intercept_location ==
+    STATE_DICT_SERIALIZATION AND wyner_ziv_layer.side_info_source IN
+    canonical_4_sources AND base_substrate_bytes_form IN {raw_fp16,
+    raw_fp32, torch_save}``. The match is STRUCTURALLY INAPPLICABLE when
+    stack_spec explicitly declares any of:
+
+      * ``stack_spec["wyner_ziv_intercept_location"]`` not in
+        {STATE_DICT_SERIALIZATION, state_dict, raw_weights} (the
+        intercept is at a different layer — e.g. POSE_AXIS_SIDE_INFO)
+      * ``stack_spec["wyner_ziv_side_info_source"]`` is per-pair PoseNet-
+        output Y (per Catalog #311 canonical unwind path)
+      * ``stack_spec["base_substrate_bytes_form"]`` is NOT in raw_fp16 /
+        raw_fp32 / torch_save (e.g. compressed_archive_zip_member)
+      * ``stack_spec["catalog_311_atick_tishby_wyner_active"]`` is True
+
+    Empirical anchor: Wyner-Ziv L1 LONG MLX 600-pair landing commit 6f5eabf30.
+    """
+    intercept = stack_spec.get("wyner_ziv_intercept_location")
+    if isinstance(intercept, str):
+        intercept_lower = intercept.lower()
+        forbidden_intercepts = ("state_dict_serialization", "state_dict", "raw_weights")
+        if intercept_lower and not any(
+            t in intercept_lower for t in forbidden_intercepts
+        ):
+            return True, (
+                f"explicit override: stack_spec['wyner_ziv_intercept_location']"
+                f"={intercept!r} is not at state_dict_serialization; the "
+                "forbidden predicate is structurally not met"
+            )
+    side_info = stack_spec.get("wyner_ziv_side_info_source")
+    if isinstance(side_info, str):
+        side_info_lower = side_info.lower()
+        canonical_unwind_tokens = (
+            "per_pair_posenet_output_y",
+            "per_pair_pose_y",
+            "atick_redlich_ego_motion_y",
+            "posenet_precomputed_per_pair",
+        )
+        if any(tok in side_info_lower for tok in canonical_unwind_tokens):
+            return True, (
+                f"explicit override: stack_spec['wyner_ziv_side_info_source']="
+                f"{side_info!r} uses canonical Catalog #311 unwind path "
+                "(per-pair PoseNet-output Y), not the falsified 4-canonical-"
+                "source family"
+            )
+    bytes_form = stack_spec.get("base_substrate_bytes_form")
+    if isinstance(bytes_form, str):
+        bytes_form_lower = bytes_form.lower()
+        forbidden_forms = ("raw_fp16", "raw_fp32", "torch_save")
+        if bytes_form_lower and not any(
+            t in bytes_form_lower for t in forbidden_forms
+        ):
+            return True, (
+                f"explicit override: stack_spec['base_substrate_bytes_form']="
+                f"{bytes_form!r} is not raw_fp16/fp32/torch_save; the entropy-"
+                "flat-surface predicate is structurally not met"
+            )
+    if stack_spec.get("catalog_311_atick_tishby_wyner_active") is True:
+        return True, (
+            "explicit override: stack_spec['catalog_311_atick_tishby_wyner_"
+            "active']=True structurally satisfies the canonical Catalog #311 "
+            "Atick-Tishby-Wyner triple unwind path"
+        )
+    return False, ""
+
+
+def _explicit_override_wyner_ziv_cross_substrate_composition_y_density_decoder_state_dict_surface(
+    stack_spec: Mapping[str, Any],
+) -> tuple[bool, str]:
+    """Refuse wyner_ziv_cross_substrate_composition_y_density_decoder_state_dict_surface_v1 sister.
+
+    Sister of the prefix-Y density override; the forbidden predicate is
+    the same family (raw_fp16/fp32 entropy-flat surface) but for cross-
+    substrate-composition-Y side-info specifically. Reuses the parent
+    sister-helper because both predicates fall away under the same
+    structural conditions (intercept-at-non-state-dict OR canonical
+    Catalog #311 unwind path OR non-raw bytes form).
+
+    Empirical anchor: Wave N+9 Slot 3 cross-substrate-composition Y
+    FALSIFIED commit 2cedcee48.
+    """
+    return _explicit_override_wyner_ziv_prefix_y_density_decoder_state_dict_surface(
+        stack_spec
+    )
+
+
 _EXPLICIT_OVERRIDE_PREDICATES: dict[str, _OverridePredicate] = {
     "fp4_packed_without_qat_cos_collapse_v1": (
         _explicit_override_fp4_packed_without_qat
@@ -410,6 +914,40 @@ _EXPLICIT_OVERRIDE_PREDICATES: dict[str, _OverridePredicate] = {
     ),
     "quantize_then_svd_corrupted_low_rank_v1": (
         _explicit_override_quantize_then_svd_corrupted
+    ),
+    # WAVE N+10 SLOT 2 EXTENSION 2026-05-28 (task #1479): +10 entries
+    # closing the override-coverage gap surfaced in Yousfi adversarial
+    # audit. Anti-pattern #12 docstring overstatement is NOT-APPLICABLE
+    # at the stack_spec surface (source-text content, not stack_spec).
+    "predicted_band_from_random_init_tier_c_v1": (
+        _explicit_override_predicted_band_from_random_init_tier_c
+    ),
+    "rank_1_problem_spec_synergy_tautology_v1": (
+        _explicit_override_rank_1_problem_spec_synergy_tautology
+    ),
+    "phantom_score_directory_naming_lie_v1": (
+        _explicit_override_phantom_score_directory_naming_lie
+    ),
+    "transient_tmp_path_in_persisted_artifact_v1": (
+        _explicit_override_transient_tmp_path_in_persisted_artifact
+    ),
+    "source_selector_inherited_predicted_score_mean_v1": (
+        _explicit_override_source_selector_inherited_predicted_score_mean
+    ),
+    "silent_no_spawn_modal_dispatch_v1": (
+        _explicit_override_silent_no_spawn_modal_dispatch
+    ),
+    "subagent_spawn_without_head_state_premise_verification_v1": (
+        _explicit_override_subagent_spawn_without_head_state_premise_verification
+    ),
+    "predecessor_working_tree_uncommitted_handoff_v1": (
+        _explicit_override_predecessor_working_tree_uncommitted_handoff
+    ),
+    "wyner_ziv_prefix_y_density_decoder_state_dict_surface_v1": (
+        _explicit_override_wyner_ziv_prefix_y_density_decoder_state_dict_surface
+    ),
+    "wyner_ziv_cross_substrate_composition_y_density_decoder_state_dict_surface_v1": (
+        _explicit_override_wyner_ziv_cross_substrate_composition_y_density_decoder_state_dict_surface
     ),
 }
 

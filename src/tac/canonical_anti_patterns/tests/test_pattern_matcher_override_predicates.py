@@ -39,7 +39,17 @@ from tac.canonical_anti_patterns.pattern_matcher import (
     _explicit_override_cross_paradigm_test_per_axis_decomposition,
     _explicit_override_fp4_packed_without_qat,
     _explicit_override_lzma_on_already_brotli,
+    _explicit_override_phantom_score_directory_naming_lie,
+    _explicit_override_predecessor_working_tree_uncommitted_handoff,
+    _explicit_override_predicted_band_from_random_init_tier_c,
     _explicit_override_quantize_then_svd_corrupted,
+    _explicit_override_rank_1_problem_spec_synergy_tautology,
+    _explicit_override_silent_no_spawn_modal_dispatch,
+    _explicit_override_source_selector_inherited_predicted_score_mean,
+    _explicit_override_subagent_spawn_without_head_state_premise_verification,
+    _explicit_override_transient_tmp_path_in_persisted_artifact,
+    _explicit_override_wyner_ziv_cross_substrate_composition_y_density_decoder_state_dict_surface,
+    _explicit_override_wyner_ziv_prefix_y_density_decoder_state_dict_surface,
     evaluate_explicit_override_for_anti_pattern,
     match_stack_against_anti_patterns,
 )
@@ -609,3 +619,725 @@ def test_evaluate_explicit_override_public_api_is_pure_function():
         "fp4_packed_without_qat_cos_collapse_v1", spec
     )
     assert a == b
+
+
+# ===========================================================================
+# WAVE N+10 SLOT 2 EXTENSION 2026-05-28 (task #1479): tests for 10 NEW
+# override predicates added per Yousfi adversarial-audit gap closure.
+# 10 tests per override × 10 overrides = 100 new false-positive guard tests
+# + integration tests below. Anti-pattern #12 docstring overstatement is
+# NOT-APPLICABLE here (source-text not stack_spec; Catalog #287 handles it).
+# ===========================================================================
+
+
+# ---------- #6 predicted_band_from_random_init_tier_c_v1 ------------------
+
+
+def test_predicted_band_override_fires_for_validated_post_training():
+    spec = {"predicted_band_validation_status": "validated_post_training"}
+    inapplicable, reason = _explicit_override_predicted_band_from_random_init_tier_c(spec)
+    assert inapplicable is True
+    assert "validated_post_training" in reason.lower()
+
+
+def test_predicted_band_override_fires_for_pending_post_training():
+    spec = {"predicted_band_validation_status": "pending_post_training"}
+    inapplicable, _ = _explicit_override_predicted_band_from_random_init_tier_c(spec)
+    assert inapplicable is True
+
+
+def test_predicted_band_override_fires_for_post_training_source():
+    spec = {"predicted_band_source": "post_training"}
+    inapplicable, _ = _explicit_override_predicted_band_from_random_init_tier_c(spec)
+    assert inapplicable is True
+
+
+def test_predicted_band_override_fires_for_post_smoke_anchor():
+    spec = {"predicted_band_source": "post_smoke_anchor"}
+    inapplicable, _ = _explicit_override_predicted_band_from_random_init_tier_c(spec)
+    assert inapplicable is True
+
+
+def test_predicted_band_override_fires_for_catalog_324_active():
+    spec = {"catalog_324_active": True}
+    inapplicable, reason = _explicit_override_predicted_band_from_random_init_tier_c(spec)
+    assert inapplicable is True
+    assert "catalog_324_active" in reason.lower()
+
+
+def test_predicted_band_override_fires_for_nested_recipe_validated():
+    spec = {"recipe": {"predicted_band_validation_status": "validated_post_training"}}
+    inapplicable, _ = _explicit_override_predicted_band_from_random_init_tier_c(spec)
+    assert inapplicable is True
+
+
+def test_predicted_band_override_does_not_fire_for_random_init():
+    spec = {"predicted_band_source": "random_init"}
+    inapplicable, _ = _explicit_override_predicted_band_from_random_init_tier_c(spec)
+    assert inapplicable is False
+
+
+def test_predicted_band_override_does_not_fire_for_empty_spec():
+    inapplicable, _ = _explicit_override_predicted_band_from_random_init_tier_c({})
+    assert inapplicable is False
+
+
+def test_predicted_band_override_handles_non_string_validation_status():
+    spec = {"predicted_band_validation_status": 42}
+    inapplicable, _ = _explicit_override_predicted_band_from_random_init_tier_c(spec)
+    assert inapplicable is False
+
+
+def test_predicted_band_override_does_not_fire_for_catalog_324_active_falsy():
+    spec = {"catalog_324_active": False}
+    inapplicable, _ = _explicit_override_predicted_band_from_random_init_tier_c(spec)
+    assert inapplicable is False
+
+
+def test_predicted_band_override_case_insensitive_validation_status():
+    spec = {"predicted_band_validation_status": "VALIDATED_POST_TRAINING"}
+    inapplicable, _ = _explicit_override_predicted_band_from_random_init_tier_c(spec)
+    assert inapplicable is True
+
+
+# ---------- #7 rank_1_problem_spec_synergy_tautology_v1 -------------------
+
+
+def test_rank1_synergy_override_fires_for_rank_2():
+    spec = {"operator_gradient_matrix_rank": 2}
+    inapplicable, reason = _explicit_override_rank_1_problem_spec_synergy_tautology(spec)
+    assert inapplicable is True
+    assert "rank" in reason.lower()
+
+
+def test_rank1_synergy_override_fires_for_rank_5():
+    spec = {"operator_gradient_matrix_rank": 5}
+    inapplicable, _ = _explicit_override_rank_1_problem_spec_synergy_tautology(spec)
+    assert inapplicable is True
+
+
+def test_rank1_synergy_override_fires_for_per_pair_axis_decomposition_active():
+    spec = {"per_pair_axis_decomposition_active": True}
+    inapplicable, _ = _explicit_override_rank_1_problem_spec_synergy_tautology(spec)
+    assert inapplicable is True
+
+
+def test_rank1_synergy_override_fires_for_operator_gradients_distinct_per_axis():
+    spec = {"operator_gradients_distinct_per_axis": True}
+    inapplicable, _ = _explicit_override_rank_1_problem_spec_synergy_tautology(spec)
+    assert inapplicable is True
+
+
+def test_rank1_synergy_override_fires_for_catalog_356_active():
+    spec = {"catalog_356_active": True}
+    inapplicable, reason = _explicit_override_rank_1_problem_spec_synergy_tautology(spec)
+    assert inapplicable is True
+    assert "356" in reason
+
+
+def test_rank1_synergy_override_does_not_fire_for_rank_1():
+    spec = {"operator_gradient_matrix_rank": 1}
+    inapplicable, _ = _explicit_override_rank_1_problem_spec_synergy_tautology(spec)
+    assert inapplicable is False
+
+
+def test_rank1_synergy_override_does_not_fire_for_empty_spec():
+    inapplicable, _ = _explicit_override_rank_1_problem_spec_synergy_tautology({})
+    assert inapplicable is False
+
+
+def test_rank1_synergy_override_rejects_bool_as_rank():
+    # bools are ints in Python; gate must guard
+    spec = {"operator_gradient_matrix_rank": True}
+    inapplicable, _ = _explicit_override_rank_1_problem_spec_synergy_tautology(spec)
+    assert inapplicable is False
+
+
+def test_rank1_synergy_override_does_not_fire_for_negative_rank():
+    spec = {"operator_gradient_matrix_rank": -1}
+    inapplicable, _ = _explicit_override_rank_1_problem_spec_synergy_tautology(spec)
+    assert inapplicable is False
+
+
+def test_rank1_synergy_override_does_not_fire_for_falsy_decomposition():
+    spec = {"per_pair_axis_decomposition_active": False, "catalog_356_active": False}
+    inapplicable, _ = _explicit_override_rank_1_problem_spec_synergy_tautology(spec)
+    assert inapplicable is False
+
+
+# ---------- #8 phantom_score_directory_naming_lie_v1 ---------------------
+
+
+def test_phantom_dir_override_fires_for_matching_device_tokens_cpu():
+    spec = {"filename_device_token": "cpu", "metadata_device_token": "cpu"}
+    inapplicable, _ = _explicit_override_phantom_score_directory_naming_lie(spec)
+    assert inapplicable is True
+
+
+def test_phantom_dir_override_fires_for_matching_device_tokens_cuda():
+    spec = {"filename_device_token": "cuda", "metadata_device_token": "cuda"}
+    inapplicable, _ = _explicit_override_phantom_score_directory_naming_lie(spec)
+    assert inapplicable is True
+
+
+def test_phantom_dir_override_case_insensitive_match():
+    spec = {"filename_device_token": "CPU", "metadata_device_token": "cpu"}
+    inapplicable, _ = _explicit_override_phantom_score_directory_naming_lie(spec)
+    assert inapplicable is True
+
+
+def test_phantom_dir_override_fires_for_device_agnostic_filename():
+    spec = {"artifact_filename_device_agnostic": True}
+    inapplicable, _ = _explicit_override_phantom_score_directory_naming_lie(spec)
+    assert inapplicable is True
+
+
+def test_phantom_dir_override_fires_for_catalog_249_active():
+    spec = {"catalog_249_active": True}
+    inapplicable, reason = _explicit_override_phantom_score_directory_naming_lie(spec)
+    assert inapplicable is True
+    assert "249" in reason
+
+
+def test_phantom_dir_override_does_not_fire_for_cuda_filename_cpu_metadata():
+    spec = {"filename_device_token": "cuda", "metadata_device_token": "cpu"}
+    inapplicable, _ = _explicit_override_phantom_score_directory_naming_lie(spec)
+    assert inapplicable is False
+
+
+def test_phantom_dir_override_does_not_fire_for_empty_filename_token():
+    spec = {"filename_device_token": "", "metadata_device_token": ""}
+    inapplicable, _ = _explicit_override_phantom_score_directory_naming_lie(spec)
+    assert inapplicable is False
+
+
+def test_phantom_dir_override_does_not_fire_for_empty_spec():
+    inapplicable, _ = _explicit_override_phantom_score_directory_naming_lie({})
+    assert inapplicable is False
+
+
+def test_phantom_dir_override_does_not_fire_when_only_one_token_present():
+    spec = {"filename_device_token": "cpu"}
+    inapplicable, _ = _explicit_override_phantom_score_directory_naming_lie(spec)
+    assert inapplicable is False
+
+
+def test_phantom_dir_override_falsy_device_agnostic_does_not_fire():
+    spec = {"artifact_filename_device_agnostic": False}
+    inapplicable, _ = _explicit_override_phantom_score_directory_naming_lie(spec)
+    assert inapplicable is False
+
+
+# ---------- #9 transient_tmp_path_in_persisted_artifact_v1 ---------------
+
+
+def test_tmp_path_override_fires_for_clean_durable_paths():
+    spec = {"persisted_artifact_paths": ["/Users/me/repo/state/foo.json"]}
+    inapplicable, _ = _explicit_override_transient_tmp_path_in_persisted_artifact(spec)
+    assert inapplicable is True
+
+
+def test_tmp_path_override_fires_for_artifact_paths_durable_flag():
+    spec = {"artifact_paths_durable": True}
+    inapplicable, _ = _explicit_override_transient_tmp_path_in_persisted_artifact(spec)
+    assert inapplicable is True
+
+
+def test_tmp_path_override_fires_for_catalog_220_active():
+    spec = {"catalog_220_active": True}
+    inapplicable, reason = _explicit_override_transient_tmp_path_in_persisted_artifact(spec)
+    assert inapplicable is True
+    assert "220" in reason
+
+
+def test_tmp_path_override_fires_for_empty_paths_list():
+    # No /tmp prefix in the structured list → predicate inapplicable
+    spec = {"persisted_artifact_paths": []}
+    inapplicable, _ = _explicit_override_transient_tmp_path_in_persisted_artifact(spec)
+    assert inapplicable is True
+
+
+def test_tmp_path_override_fires_for_multiple_durable_paths():
+    spec = {"persisted_artifact_paths": ["./reports/x.json", ".omx/state/y.json"]}
+    inapplicable, _ = _explicit_override_transient_tmp_path_in_persisted_artifact(spec)
+    assert inapplicable is True
+
+
+def test_tmp_path_override_does_not_fire_for_tmp_prefix():
+    spec = {"persisted_artifact_paths": ["/tmp/foo.json"]}
+    inapplicable, _ = _explicit_override_transient_tmp_path_in_persisted_artifact(spec)
+    assert inapplicable is False
+
+
+def test_tmp_path_override_does_not_fire_for_private_tmp_prefix():
+    spec = {"persisted_artifact_paths": ["/private/tmp/foo.json"]}
+    inapplicable, _ = _explicit_override_transient_tmp_path_in_persisted_artifact(spec)
+    assert inapplicable is False
+
+
+def test_tmp_path_override_does_not_fire_for_var_tmp_prefix():
+    spec = {"persisted_artifact_paths": ["/var/tmp/foo.json"]}
+    inapplicable, _ = _explicit_override_transient_tmp_path_in_persisted_artifact(spec)
+    assert inapplicable is False
+
+
+def test_tmp_path_override_does_not_fire_for_empty_spec():
+    inapplicable, _ = _explicit_override_transient_tmp_path_in_persisted_artifact({})
+    assert inapplicable is False
+
+
+def test_tmp_path_override_does_not_fire_for_mixed_paths_with_tmp():
+    spec = {"persisted_artifact_paths": ["./reports/x.json", "/tmp/leak.json"]}
+    inapplicable, _ = _explicit_override_transient_tmp_path_in_persisted_artifact(spec)
+    assert inapplicable is False
+
+
+# ---------- #10 source_selector_inherited_predicted_score_mean_v1 --------
+
+
+def test_source_selector_override_fires_for_paired_cpu_exact_eval():
+    spec = {"interaction_matrix_source": "paired_cpu_exact_eval"}
+    inapplicable, _ = _explicit_override_source_selector_inherited_predicted_score_mean(spec)
+    assert inapplicable is True
+
+
+def test_source_selector_override_fires_for_modal_cpu_dispatch():
+    spec = {"interaction_matrix_source": "modal_cpu_dispatch"}
+    inapplicable, _ = _explicit_override_source_selector_inherited_predicted_score_mean(spec)
+    assert inapplicable is True
+
+
+def test_source_selector_override_fires_for_paired_cuda_exact_eval():
+    spec = {"interaction_matrix_source": "paired_cuda_exact_eval"}
+    inapplicable, _ = _explicit_override_source_selector_inherited_predicted_score_mean(spec)
+    assert inapplicable is True
+
+
+def test_source_selector_override_fires_for_empirical_token():
+    spec = {"interaction_matrix_source": "empirical_anchor_v2"}
+    inapplicable, _ = _explicit_override_source_selector_inherited_predicted_score_mean(spec)
+    assert inapplicable is True
+
+
+def test_source_selector_override_fires_for_empirically_measured_flag():
+    spec = {"interaction_matrix_empirically_measured": True}
+    inapplicable, _ = _explicit_override_source_selector_inherited_predicted_score_mean(spec)
+    assert inapplicable is True
+
+
+def test_source_selector_override_fires_for_paired_cpu_ledger_present():
+    spec = {"paired_cpu_exact_eval_ledger_present": True}
+    inapplicable, _ = _explicit_override_source_selector_inherited_predicted_score_mean(spec)
+    assert inapplicable is True
+
+
+def test_source_selector_override_does_not_fire_for_predicted_score_mean_source():
+    spec = {"interaction_matrix_source": "predicted_score_mean"}
+    inapplicable, _ = _explicit_override_source_selector_inherited_predicted_score_mean(spec)
+    assert inapplicable is False
+
+
+def test_source_selector_override_does_not_fire_for_empty_spec():
+    inapplicable, _ = _explicit_override_source_selector_inherited_predicted_score_mean({})
+    assert inapplicable is False
+
+
+def test_source_selector_override_does_not_fire_for_non_string_source():
+    spec = {"interaction_matrix_source": 42}
+    inapplicable, _ = _explicit_override_source_selector_inherited_predicted_score_mean(spec)
+    assert inapplicable is False
+
+
+def test_source_selector_override_does_not_fire_for_falsy_flags():
+    spec = {"interaction_matrix_empirically_measured": False, "paired_cpu_exact_eval_ledger_present": False}
+    inapplicable, _ = _explicit_override_source_selector_inherited_predicted_score_mean(spec)
+    assert inapplicable is False
+
+
+# ---------- #11 silent_no_spawn_modal_dispatch_v1 ------------------------
+
+
+def test_silent_no_spawn_override_fires_for_no_pre_spawn_path_false():
+    spec = {"modal_dispatch_pre_spawn_path": False}
+    inapplicable, _ = _explicit_override_silent_no_spawn_modal_dispatch(spec)
+    assert inapplicable is True
+
+
+def test_silent_no_spawn_override_fires_for_register_pre_spawn_fatal_wired():
+    spec = {"modal_register_pre_spawn_fatal_wired": True}
+    inapplicable, _ = _explicit_override_silent_no_spawn_modal_dispatch(spec)
+    assert inapplicable is True
+
+
+def test_silent_no_spawn_override_fires_for_catalog_360_active():
+    spec = {"catalog_360_active": True}
+    inapplicable, reason = _explicit_override_silent_no_spawn_modal_dispatch(spec)
+    assert inapplicable is True
+    assert "360" in reason
+
+
+def test_silent_no_spawn_override_fires_for_dispatcher_route_with_register():
+    spec = {"modal_dispatcher_route": "path_with_register_pre_spawn_fatal_helper"}
+    inapplicable, _ = _explicit_override_silent_no_spawn_modal_dispatch(spec)
+    assert inapplicable is True
+
+
+def test_silent_no_spawn_override_case_insensitive_route():
+    spec = {"modal_dispatcher_route": "REGISTER_PRE_SPAWN_FATAL_HELPER"}
+    inapplicable, _ = _explicit_override_silent_no_spawn_modal_dispatch(spec)
+    assert inapplicable is True
+
+
+def test_silent_no_spawn_override_does_not_fire_for_empty_spec():
+    inapplicable, _ = _explicit_override_silent_no_spawn_modal_dispatch({})
+    assert inapplicable is False
+
+
+def test_silent_no_spawn_override_does_not_fire_for_pre_spawn_path_true():
+    spec = {"modal_dispatch_pre_spawn_path": True}
+    inapplicable, _ = _explicit_override_silent_no_spawn_modal_dispatch(spec)
+    assert inapplicable is False
+
+
+def test_silent_no_spawn_override_does_not_fire_for_dispatcher_route_without_helper():
+    spec = {"modal_dispatcher_route": "bare_sys_exit_only"}
+    inapplicable, _ = _explicit_override_silent_no_spawn_modal_dispatch(spec)
+    assert inapplicable is False
+
+
+def test_silent_no_spawn_override_does_not_fire_for_falsy_catalog_360():
+    spec = {"catalog_360_active": False}
+    inapplicable, _ = _explicit_override_silent_no_spawn_modal_dispatch(spec)
+    assert inapplicable is False
+
+
+def test_silent_no_spawn_override_does_not_fire_for_non_string_route():
+    spec = {"modal_dispatcher_route": 12345}
+    inapplicable, _ = _explicit_override_silent_no_spawn_modal_dispatch(spec)
+    assert inapplicable is False
+
+
+# ---------- #14 subagent_spawn_without_head_state_premise_verification_v1 -
+
+
+def test_spawn_pv_override_fires_for_pv_evidence_present():
+    spec = {"pv_evidence_present": True}
+    inapplicable, _ = _explicit_override_subagent_spawn_without_head_state_premise_verification(spec)
+    assert inapplicable is True
+
+
+def test_spawn_pv_override_fires_for_catalog_229_pv_active():
+    spec = {"catalog_229_pv_active": True}
+    inapplicable, reason = _explicit_override_subagent_spawn_without_head_state_premise_verification(spec)
+    assert inapplicable is True
+    assert "229" in reason
+
+
+def test_spawn_pv_override_fires_for_git_log_pv_in_prompt():
+    spec = {"git_log_pv_in_prompt": True}
+    inapplicable, _ = _explicit_override_subagent_spawn_without_head_state_premise_verification(spec)
+    assert inapplicable is True
+
+
+def test_spawn_pv_override_fires_for_paired_sister_memo_and_head_state_checks():
+    spec = {"sister_landing_memo_check_done": True, "head_state_pv_check_done": True}
+    inapplicable, _ = _explicit_override_subagent_spawn_without_head_state_premise_verification(spec)
+    assert inapplicable is True
+
+
+def test_spawn_pv_override_does_not_fire_for_only_sister_memo_check():
+    spec = {"sister_landing_memo_check_done": True}
+    inapplicable, _ = _explicit_override_subagent_spawn_without_head_state_premise_verification(spec)
+    assert inapplicable is False
+
+
+def test_spawn_pv_override_does_not_fire_for_only_head_state_check():
+    spec = {"head_state_pv_check_done": True}
+    inapplicable, _ = _explicit_override_subagent_spawn_without_head_state_premise_verification(spec)
+    assert inapplicable is False
+
+
+def test_spawn_pv_override_does_not_fire_for_empty_spec():
+    inapplicable, _ = _explicit_override_subagent_spawn_without_head_state_premise_verification({})
+    assert inapplicable is False
+
+
+def test_spawn_pv_override_does_not_fire_for_pv_evidence_false():
+    spec = {"pv_evidence_present": False}
+    inapplicable, _ = _explicit_override_subagent_spawn_without_head_state_premise_verification(spec)
+    assert inapplicable is False
+
+
+def test_spawn_pv_override_does_not_fire_for_falsy_catalog_229():
+    spec = {"catalog_229_pv_active": False}
+    inapplicable, _ = _explicit_override_subagent_spawn_without_head_state_premise_verification(spec)
+    assert inapplicable is False
+
+
+def test_spawn_pv_override_does_not_fire_for_partial_paired_flags_false():
+    spec = {"sister_landing_memo_check_done": True, "head_state_pv_check_done": False}
+    inapplicable, _ = _explicit_override_subagent_spawn_without_head_state_premise_verification(spec)
+    assert inapplicable is False
+
+
+# ---------- #15 predecessor_working_tree_uncommitted_handoff_v1 ----------
+
+
+def test_predecessor_handoff_override_fires_for_committed_via_serializer():
+    spec = {"predecessor_committed_via_serializer": True}
+    inapplicable, _ = _explicit_override_predecessor_working_tree_uncommitted_handoff(spec)
+    assert inapplicable is True
+
+
+def test_predecessor_handoff_override_fires_for_working_tree_clean():
+    spec = {"working_tree_clean_at_spawn_time": True}
+    inapplicable, _ = _explicit_override_predecessor_working_tree_uncommitted_handoff(spec)
+    assert inapplicable is True
+
+
+def test_predecessor_handoff_override_fires_for_supersession_pending_declared():
+    spec = {"supersession_pending_declared": True}
+    inapplicable, _ = _explicit_override_predecessor_working_tree_uncommitted_handoff(spec)
+    assert inapplicable is True
+
+
+def test_predecessor_handoff_override_fires_for_serializer_log_has_predecessor_commit():
+    spec = {"catalog_117_serializer_log_has_predecessor_commit": True}
+    inapplicable, reason = _explicit_override_predecessor_working_tree_uncommitted_handoff(spec)
+    assert inapplicable is True
+    assert "117" in reason
+
+
+def test_predecessor_handoff_override_does_not_fire_for_empty_spec():
+    inapplicable, _ = _explicit_override_predecessor_working_tree_uncommitted_handoff({})
+    assert inapplicable is False
+
+
+def test_predecessor_handoff_override_does_not_fire_for_falsy_serializer():
+    spec = {"predecessor_committed_via_serializer": False}
+    inapplicable, _ = _explicit_override_predecessor_working_tree_uncommitted_handoff(spec)
+    assert inapplicable is False
+
+
+def test_predecessor_handoff_override_does_not_fire_for_falsy_working_tree_clean():
+    spec = {"working_tree_clean_at_spawn_time": False}
+    inapplicable, _ = _explicit_override_predecessor_working_tree_uncommitted_handoff(spec)
+    assert inapplicable is False
+
+
+def test_predecessor_handoff_override_does_not_fire_for_falsy_supersession():
+    spec = {"supersession_pending_declared": False}
+    inapplicable, _ = _explicit_override_predecessor_working_tree_uncommitted_handoff(spec)
+    assert inapplicable is False
+
+
+def test_predecessor_handoff_override_does_not_fire_for_falsy_117():
+    spec = {"catalog_117_serializer_log_has_predecessor_commit": False}
+    inapplicable, _ = _explicit_override_predecessor_working_tree_uncommitted_handoff(spec)
+    assert inapplicable is False
+
+
+def test_predecessor_handoff_override_pure_function_idempotent():
+    spec = {"working_tree_clean_at_spawn_time": True}
+    a = _explicit_override_predecessor_working_tree_uncommitted_handoff(spec)
+    b = _explicit_override_predecessor_working_tree_uncommitted_handoff(spec)
+    assert a == b
+
+
+# ---------- #16 wyner_ziv_prefix_y_density_decoder_state_dict_surface_v1 -
+
+
+def test_wyner_ziv_prefix_override_fires_for_non_state_dict_intercept():
+    spec = {"wyner_ziv_intercept_location": "POSE_AXIS_SIDE_INFO"}
+    inapplicable, _ = _explicit_override_wyner_ziv_prefix_y_density_decoder_state_dict_surface(spec)
+    assert inapplicable is True
+
+
+def test_wyner_ziv_prefix_override_fires_for_per_pair_posenet_y():
+    spec = {"wyner_ziv_side_info_source": "per_pair_posenet_output_y"}
+    inapplicable, _ = _explicit_override_wyner_ziv_prefix_y_density_decoder_state_dict_surface(spec)
+    assert inapplicable is True
+
+
+def test_wyner_ziv_prefix_override_fires_for_atick_redlich_ego_motion_y():
+    spec = {"wyner_ziv_side_info_source": "atick_redlich_ego_motion_y"}
+    inapplicable, _ = _explicit_override_wyner_ziv_prefix_y_density_decoder_state_dict_surface(spec)
+    assert inapplicable is True
+
+
+def test_wyner_ziv_prefix_override_fires_for_compressed_archive_bytes_form():
+    spec = {"base_substrate_bytes_form": "compressed_archive_zip_member"}
+    inapplicable, _ = _explicit_override_wyner_ziv_prefix_y_density_decoder_state_dict_surface(spec)
+    assert inapplicable is True
+
+
+def test_wyner_ziv_prefix_override_fires_for_catalog_311_active():
+    spec = {"catalog_311_atick_tishby_wyner_active": True}
+    inapplicable, reason = _explicit_override_wyner_ziv_prefix_y_density_decoder_state_dict_surface(spec)
+    assert inapplicable is True
+    assert "311" in reason
+
+
+def test_wyner_ziv_prefix_override_does_not_fire_for_state_dict_intercept():
+    spec = {"wyner_ziv_intercept_location": "state_dict_serialization"}
+    inapplicable, _ = _explicit_override_wyner_ziv_prefix_y_density_decoder_state_dict_surface(spec)
+    assert inapplicable is False
+
+
+def test_wyner_ziv_prefix_override_does_not_fire_for_raw_fp16_bytes():
+    spec = {"base_substrate_bytes_form": "raw_fp16"}
+    inapplicable, _ = _explicit_override_wyner_ziv_prefix_y_density_decoder_state_dict_surface(spec)
+    assert inapplicable is False
+
+
+def test_wyner_ziv_prefix_override_does_not_fire_for_empty_spec():
+    inapplicable, _ = _explicit_override_wyner_ziv_prefix_y_density_decoder_state_dict_surface({})
+    assert inapplicable is False
+
+
+def test_wyner_ziv_prefix_override_does_not_fire_for_falsy_311():
+    spec = {"catalog_311_atick_tishby_wyner_active": False}
+    inapplicable, _ = _explicit_override_wyner_ziv_prefix_y_density_decoder_state_dict_surface(spec)
+    assert inapplicable is False
+
+
+def test_wyner_ziv_prefix_override_does_not_fire_for_non_string_intercept():
+    spec = {"wyner_ziv_intercept_location": None}
+    inapplicable, _ = _explicit_override_wyner_ziv_prefix_y_density_decoder_state_dict_surface(spec)
+    assert inapplicable is False
+
+
+# ---------- #17 wyner_ziv_cross_substrate_composition sister -------------
+
+
+def test_wyner_ziv_cross_substrate_override_fires_for_non_state_dict_intercept():
+    spec = {"wyner_ziv_intercept_location": "POSE_AXIS_SIDE_INFO"}
+    inapplicable, _ = _explicit_override_wyner_ziv_cross_substrate_composition_y_density_decoder_state_dict_surface(spec)
+    assert inapplicable is True
+
+
+def test_wyner_ziv_cross_substrate_override_fires_for_catalog_311_active():
+    spec = {"catalog_311_atick_tishby_wyner_active": True}
+    inapplicable, _ = _explicit_override_wyner_ziv_cross_substrate_composition_y_density_decoder_state_dict_surface(spec)
+    assert inapplicable is True
+
+
+def test_wyner_ziv_cross_substrate_override_delegates_to_prefix_sister():
+    spec = {"wyner_ziv_intercept_location": "POSE_AXIS_SIDE_INFO"}
+    prefix = _explicit_override_wyner_ziv_prefix_y_density_decoder_state_dict_surface(spec)
+    cross = _explicit_override_wyner_ziv_cross_substrate_composition_y_density_decoder_state_dict_surface(spec)
+    assert prefix == cross
+
+
+def test_wyner_ziv_cross_substrate_override_does_not_fire_for_state_dict():
+    spec = {"wyner_ziv_intercept_location": "state_dict_serialization"}
+    inapplicable, _ = _explicit_override_wyner_ziv_cross_substrate_composition_y_density_decoder_state_dict_surface(spec)
+    assert inapplicable is False
+
+
+def test_wyner_ziv_cross_substrate_override_does_not_fire_for_empty_spec():
+    inapplicable, _ = _explicit_override_wyner_ziv_cross_substrate_composition_y_density_decoder_state_dict_surface({})
+    assert inapplicable is False
+
+
+def test_wyner_ziv_cross_substrate_override_fires_for_compressed_archive_form():
+    spec = {"base_substrate_bytes_form": "compressed_archive_zip_member"}
+    inapplicable, _ = _explicit_override_wyner_ziv_cross_substrate_composition_y_density_decoder_state_dict_surface(spec)
+    assert inapplicable is True
+
+
+def test_wyner_ziv_cross_substrate_override_fires_for_canonical_unwind_path():
+    spec = {"wyner_ziv_side_info_source": "atick_redlich_ego_motion_y"}
+    inapplicable, _ = _explicit_override_wyner_ziv_cross_substrate_composition_y_density_decoder_state_dict_surface(spec)
+    assert inapplicable is True
+
+
+def test_wyner_ziv_cross_substrate_override_does_not_fire_for_raw_fp32():
+    spec = {"base_substrate_bytes_form": "raw_fp32"}
+    inapplicable, _ = _explicit_override_wyner_ziv_cross_substrate_composition_y_density_decoder_state_dict_surface(spec)
+    assert inapplicable is False
+
+
+def test_wyner_ziv_cross_substrate_override_idempotent_pure_function():
+    spec = {"catalog_311_atick_tishby_wyner_active": True}
+    a = _explicit_override_wyner_ziv_cross_substrate_composition_y_density_decoder_state_dict_surface(spec)
+    b = _explicit_override_wyner_ziv_cross_substrate_composition_y_density_decoder_state_dict_surface(spec)
+    assert a == b
+
+
+def test_wyner_ziv_cross_substrate_override_handles_torch_save_bytes_form():
+    spec = {"base_substrate_bytes_form": "torch_save"}
+    inapplicable, _ = _explicit_override_wyner_ziv_cross_substrate_composition_y_density_decoder_state_dict_surface(spec)
+    assert inapplicable is False
+
+
+# ---------- Wave N+10 Slot 2 integration: full table coverage --------------
+
+
+def test_table_size_15_after_extension():
+    """Catalog #344 canonical equation evidence: 5 initial + 10 new = 15."""
+    assert len(_EXPLICIT_OVERRIDE_PREDICATES) == 15
+
+
+def test_table_includes_all_10_new_anti_pattern_ids():
+    new_ids = {
+        "predicted_band_from_random_init_tier_c_v1",
+        "rank_1_problem_spec_synergy_tautology_v1",
+        "phantom_score_directory_naming_lie_v1",
+        "transient_tmp_path_in_persisted_artifact_v1",
+        "source_selector_inherited_predicted_score_mean_v1",
+        "silent_no_spawn_modal_dispatch_v1",
+        "subagent_spawn_without_head_state_premise_verification_v1",
+        "predecessor_working_tree_uncommitted_handoff_v1",
+        "wyner_ziv_prefix_y_density_decoder_state_dict_surface_v1",
+        "wyner_ziv_cross_substrate_composition_y_density_decoder_state_dict_surface_v1",
+    }
+    assert new_ids <= set(_EXPLICIT_OVERRIDE_PREDICATES.keys())
+
+
+def test_public_api_routes_through_new_overrides():
+    """Public evaluate_explicit_override_for_anti_pattern reaches new entries."""
+    overridden, reason = evaluate_explicit_override_for_anti_pattern(
+        "rank_1_problem_spec_synergy_tautology_v1",
+        {"catalog_356_active": True},
+    )
+    assert overridden is True
+    assert "356" in reason
+
+
+def test_evaluate_unknown_anti_pattern_returns_false():
+    """An anti-pattern id without an override predicate returns (False, '')."""
+    overridden, reason = evaluate_explicit_override_for_anti_pattern(
+        "definitely_not_registered_v1",
+        {"random_field": True},
+    )
+    assert overridden is False
+    assert reason == ""
+
+
+def test_full_canonical_z6_v2_stack_no_bug_class_match(temp_registry):
+    """Canonical Z6-v2 / Compound C stack with all explicit guarantees → no match."""
+    path, lock = temp_registry
+    populate_initial_anti_patterns(path=path, lock_path=lock)
+    canonical_stack = {
+        "quantization_aware_training": True,
+        "per_axis_decomposition_active": True,
+        "compression_ops": ["brotli_q11"],
+        "predicted_band_validation_status": "validated_post_training",
+        "operator_gradient_matrix_rank": 3,
+        "filename_device_token": "cpu",
+        "metadata_device_token": "cpu",
+        "persisted_artifact_paths": ["./reports/x.json"],
+        "interaction_matrix_source": "paired_cpu_exact_eval",
+        "modal_register_pre_spawn_fatal_wired": True,
+        "pv_evidence_present": True,
+        "predecessor_committed_via_serializer": True,
+        "wyner_ziv_intercept_location": "POSE_AXIS_SIDE_INFO",
+    }
+    matches = match_stack_against_anti_patterns(canonical_stack, path=path)
+    bug_class_ids = set(_EXPLICIT_OVERRIDE_PREDICATES.keys())
+    matched = {m.anti_pattern.anti_pattern_id for m in matches}
+    assert (matched & bug_class_ids) == set(), (
+        f"Canonical stack with all 15 override flags MUST be bug-class-clean; "
+        f"matched: {sorted(matched & bug_class_ids)}"
+    )

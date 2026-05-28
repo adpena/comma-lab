@@ -60401,6 +60401,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_wave_n10_slot2_override_predicate_extension_yousfi_audit_gap_closure_20260528",
+      "name": "Wave N+10 Slot 2 Override Predicate Extension (Yousfi Audit Gap Closure)",
+      "phase": 10.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/canonical_anti_patterns/pattern_matcher.py + src/tac/canonical_anti_patterns/tests/test_pattern_matcher_override_predicates.py (538 LOC predicate extension + 622 LOC test additions; 145/145 tests pass)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/feedback_wave_n10_slot2_override_predicate_extension_yousfi_audit_gap_closure_landed_20260528.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -60410,5 +60451,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-28T18:11:49Z"
+  "updated_at": "2026-05-28T19:25:03Z"
 }
