@@ -34,6 +34,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--posenet-null-pairs", type=Path)
     parser.add_argument("--segnet-region-masks", type=Path)
     parser.add_argument("--selector-region-bits", type=Path)
+    parser.add_argument("--pose-null-modes-artifact", type=Path)
+    parser.add_argument("--segnet-softmax-16", type=Path)
+    parser.add_argument("--segnet-softmax-256", type=Path)
+    parser.add_argument("--materialize-upstream-artifacts", action="store_true")
+    parser.add_argument("--materialize-receiver-patch", action="store_true")
+    parser.add_argument("--null-fraction", type=float, default=0.10)
+    parser.add_argument("--top-regions-per-pair", type=int, default=4)
+    parser.add_argument("--receiver-patch-max-pairs", type=int, default=12)
+    parser.add_argument("--receiver-patch-regions-per-pair", type=int, default=1)
+    parser.add_argument("--receiver-patch-rgb-delta", default="-1,-1,-1")
     parser.add_argument(
         "--chain-label",
         default="cascade_c_p19_p18_to_p11_selector_context_then_p15_repack",
@@ -63,6 +73,18 @@ def main(argv: list[str] | None = None) -> int:
             posenet_null_pairs=args.posenet_null_pairs,
             segnet_region_masks=args.segnet_region_masks,
             selector_region_bits=args.selector_region_bits,
+            pose_null_modes_artifact=args.pose_null_modes_artifact,
+            segnet_softmax_16=args.segnet_softmax_16,
+            segnet_softmax_256=args.segnet_softmax_256,
+            materialize_upstream_artifacts=args.materialize_upstream_artifacts,
+            materialize_receiver_patch=args.materialize_receiver_patch,
+            null_fraction=args.null_fraction,
+            top_regions_per_pair=args.top_regions_per_pair,
+            receiver_patch_max_pairs=args.receiver_patch_max_pairs,
+            receiver_patch_regions_per_pair=args.receiver_patch_regions_per_pair,
+            receiver_patch_rgb_delta=tuple(
+                int(part.strip()) for part in args.receiver_patch_rgb_delta.split(",")
+            ),
             chain_label=args.chain_label,
             codec_families=tuple(args.codec_family) if args.codec_family else (
                 "fec10_adaptive_blend",

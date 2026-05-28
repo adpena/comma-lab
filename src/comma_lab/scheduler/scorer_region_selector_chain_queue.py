@@ -22,6 +22,12 @@ from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
     require_no_truthy_authority_fields,
 )
+from tac.optimization.scorer_region_waterfill import (
+    DISTORTION_BUDGET_ATTACK_PLAN_SCHEMA,
+    FRAME1_REGION_WATERFILL_RUNTIME_PATCH_SCHEMA,
+    P18_SEGNET_REGION_WATERFILL_SCHEMA,
+    P19_POSENET_NULL_PAIRS_SCHEMA,
+)
 from tac.packet_compiler.feca_selector_reparameterize import (
     FECA_REPARAMETERIZATION_MANIFEST_SCHEMA,
 )
@@ -179,7 +185,7 @@ def build_scorer_region_selector_chain_context(
         [
             *(
                 []
-                if source_waterfill_work_order is not None and cascade is not None
+                if upstream_ready or (source_waterfill_work_order is not None and cascade is not None)
                 else ["source_repair_waterfill_cascade_row_missing"]
             ),
             *(
@@ -210,6 +216,16 @@ def build_scorer_region_selector_chain_context(
         ),
         "cascade_row": cascade,
         "artifact_status": artifact_status,
+        "posenet_null_pairs_artifact": (
+            _file_status("posenet_null_pairs_artifact", posenet_null_pairs, repo_root=repo_root)
+            if posenet_null_pairs is not None
+            else None
+        ),
+        "segnet_region_waterfill_artifact": (
+            _file_status("segnet_region_waterfill_artifact", segnet_region_masks, repo_root=repo_root)
+            if segnet_region_masks is not None
+            else None
+        ),
         "p18_p19_upstream_ready": upstream_ready,
         "p11_rate_anchor_can_run": True,
         "p15_repack_can_run_after_p11": True,
@@ -356,6 +372,16 @@ def build_scorer_region_selector_chain_queue(
     posenet_null_pairs: str | Path | None = None,
     segnet_region_masks: str | Path | None = None,
     selector_region_bits: str | Path | None = None,
+    pose_null_modes_artifact: str | Path | None = None,
+    segnet_softmax_16: str | Path | None = None,
+    segnet_softmax_256: str | Path | None = None,
+    materialize_upstream_artifacts: bool = False,
+    materialize_receiver_patch: bool = False,
+    null_fraction: float = 0.10,
+    top_regions_per_pair: int = 4,
+    receiver_patch_max_pairs: int = 12,
+    receiver_patch_regions_per_pair: int = 1,
+    receiver_patch_rgb_delta: tuple[int, int, int] = (-1, -1, -1),
     chain_label: str = "cascade_c_p19_p18_to_p11_selector_context_then_p15_repack",
     codec_families: Sequence[str] = (
         "fec10_adaptive_blend",
@@ -373,8 +399,24 @@ def build_scorer_region_selector_chain_queue(
         source_submission_dir,
         repo_root=repo_root,
     )
+    if materialize_upstream_artifacts:
+        missing = [
+            name
+            for name, value in (
+                ("pose_null_modes_artifact", pose_null_modes_artifact),
+                ("segnet_softmax_16", segnet_softmax_16),
+                ("segnet_softmax_256", segnet_softmax_256),
+            )
+            if value is None or not str(value).strip()
+        ]
+        if missing:
+            raise ScorerRegionSelectorChainQueueError(
+                "materialize_upstream_artifacts requires: " + ", ".join(missing)
+            )
     root = _resolve(output_root, repo_root)
     context_path = root / "chain_context.json"
+    p19_posenet_null_pairs = root / "p19_posenet_null_pairs.json"
+    p18_segnet_region_waterfill = root / "p18_segnet_region_waterfill.json"
     selector_dir = root / "p11_selector_context_recode"
     selector_manifest = selector_dir / "feca_selector_reparameterization_manifest.json"
     selector_archive = selector_dir / "submission_dir" / "archive.zip"
@@ -383,16 +425,41 @@ def build_scorer_region_selector_chain_queue(
     repack_manifest = repack_dir / "archive_zip_repack_manifest.json"
     repack_proof = repack_dir / "archive_zip_repack.runtime_consumption_proof.json"
     chain_report = root / "scorer_region_selector_chain_report.json"
+    distortion_budget_attack_plan = root / "receiver_closed_distortion_budget_attack_plan.json"
+    receiver_patch_dir = root / "frame1_region_waterfill_runtime_patch"
+    receiver_patch_manifest = receiver_patch_dir / "frame1_region_waterfill_runtime_patch.json"
+    receiver_patch_submission_dir = receiver_patch_dir / "submission_dir"
 
     context_ref = _repo_rel(context_path, repo_root)
+    p19_posenet_null_pairs_ref = _repo_rel(p19_posenet_null_pairs, repo_root)
+    p18_segnet_region_waterfill_ref = _repo_rel(p18_segnet_region_waterfill, repo_root)
     selector_manifest_ref = _repo_rel(selector_manifest, repo_root)
     selector_archive_ref = _repo_rel(selector_archive, repo_root)
     repack_archive_ref = _repo_rel(repack_archive, repo_root)
     repack_manifest_ref = _repo_rel(repack_manifest, repo_root)
     repack_proof_ref = _repo_rel(repack_proof, repo_root)
     chain_report_ref = _repo_rel(chain_report, repo_root)
+    distortion_budget_attack_plan_ref = _repo_rel(distortion_budget_attack_plan, repo_root)
+    receiver_patch_manifest_ref = _repo_rel(receiver_patch_manifest, repo_root)
+    receiver_patch_submission_ref = _repo_rel(receiver_patch_submission_dir, repo_root)
     source_submission_ref = _repo_rel(_resolve(source_submission_dir, repo_root), repo_root)
     output_root_ref = _repo_rel(root, repo_root)
+
+    effective_posenet_null_pairs = (
+        p19_posenet_null_pairs if materialize_upstream_artifacts else posenet_null_pairs
+    )
+    effective_segnet_region_masks = (
+        p18_segnet_region_waterfill if materialize_upstream_artifacts else segnet_region_masks
+    )
+    effective_selector_region_bits = (
+        p18_segnet_region_waterfill if materialize_upstream_artifacts else selector_region_bits
+    )
+    distortion_budget_inputs_available = (
+        effective_posenet_null_pairs is not None and effective_segnet_region_masks is not None
+    )
+    receiver_patch_inputs_available = bool(
+        materialize_receiver_patch and effective_segnet_region_masks is not None
+    )
 
     context_cmd = [
         ".venv/bin/python",
@@ -408,9 +475,9 @@ def build_scorer_region_selector_chain_queue(
     optional_flags = (
         ("--source-waterfill-work-order", source_waterfill_work_order),
         ("--full-frame-inflate-parity-proof", full_frame_inflate_parity_proof),
-        ("--posenet-null-pairs", posenet_null_pairs),
-        ("--segnet-region-masks", segnet_region_masks),
-        ("--selector-region-bits", selector_region_bits),
+        ("--posenet-null-pairs", effective_posenet_null_pairs),
+        ("--segnet-region-masks", effective_segnet_region_masks),
+        ("--selector-region-bits", effective_selector_region_bits),
     )
     for flag, value in optional_flags:
         if value is not None and str(value).strip():
@@ -466,9 +533,38 @@ def build_scorer_region_selector_chain_queue(
             "source_archive": _archive_record(source_archive, repo_root=repo_root),
             "output_root": output_root_ref,
             "chain_context_path": context_ref,
+            "p19_posenet_null_pairs_path": (
+                p19_posenet_null_pairs_ref
+                if materialize_upstream_artifacts
+                else (
+                    _repo_rel(_resolve(posenet_null_pairs, repo_root), repo_root)
+                    if posenet_null_pairs
+                    else None
+                )
+            ),
+            "p18_segnet_region_waterfill_path": (
+                p18_segnet_region_waterfill_ref
+                if materialize_upstream_artifacts
+                else (
+                    _repo_rel(_resolve(segnet_region_masks, repo_root), repo_root)
+                    if segnet_region_masks
+                    else None
+                )
+            ),
             "selector_manifest_path": selector_manifest_ref,
             "repack_manifest_path": repack_manifest_ref,
             "chain_report_path": chain_report_ref,
+            "distortion_budget_attack_plan_path": (
+                distortion_budget_attack_plan_ref if distortion_budget_inputs_available else None
+            ),
+            "frame1_region_waterfill_runtime_patch_manifest_path": (
+                receiver_patch_manifest_ref if receiver_patch_inputs_available else None
+            ),
+            "frame1_region_waterfill_runtime_patch_submission_dir": (
+                receiver_patch_submission_ref if receiver_patch_inputs_available else None
+            ),
+            "materialize_upstream_artifacts": bool(materialize_upstream_artifacts),
+            "materialize_receiver_patch": bool(materialize_receiver_patch),
             "local_mlx_or_cpu_first": True,
             "budget_spend_allowed": False,
             "ready_for_budget_spend": False,
@@ -499,9 +595,94 @@ def build_scorer_region_selector_chain_queue(
                     **FALSE_AUTHORITY,
                 },
                 "steps": [
+                    *(
+                        [
+                            {
+                                "id": "materialize_p19_posenet_null_pairs",
+                                "kind": "command",
+                                "command": [
+                                    ".venv/bin/python",
+                                    "tools/build_p19_posenet_null_pairs.py",
+                                    "--source-submission-dir",
+                                    source_submission_ref,
+                                    "--pose-null-modes-artifact",
+                                    _repo_rel(
+                                        _resolve(pose_null_modes_artifact, repo_root),
+                                        repo_root,
+                                    ),
+                                    "--output",
+                                    p19_posenet_null_pairs_ref,
+                                    "--null-fraction",
+                                    str(float(null_fraction)),
+                                    "--overwrite",
+                                ],
+                                "resources": {"kind": "local_cpu"},
+                                "timeout_seconds": 120,
+                                "postconditions": [
+                                    {
+                                        "type": "json_equals",
+                                        "path": p19_posenet_null_pairs_ref,
+                                        "key": "schema",
+                                        "equals": P19_POSENET_NULL_PAIRS_SCHEMA,
+                                    },
+                                    {"type": "json_false_authority", "path": p19_posenet_null_pairs_ref},
+                                ],
+                                "telemetry": {
+                                    "artifact_paths": [p19_posenet_null_pairs_ref],
+                                    "input_artifact_paths": [source_submission_ref],
+                                    "include_postcondition_paths": True,
+                                },
+                            },
+                            {
+                                "id": "materialize_p18_segnet_region_waterfill",
+                                "kind": "command",
+                                "requires": ["materialize_p19_posenet_null_pairs"],
+                                "command": [
+                                    ".venv/bin/python",
+                                    "tools/build_p18_segnet_region_waterfill.py",
+                                    "--posenet-null-pairs",
+                                    p19_posenet_null_pairs_ref,
+                                    "--segnet-softmax-16",
+                                    _repo_rel(_resolve(segnet_softmax_16, repo_root), repo_root),
+                                    "--segnet-softmax-256",
+                                    _repo_rel(_resolve(segnet_softmax_256, repo_root), repo_root),
+                                    "--output",
+                                    p18_segnet_region_waterfill_ref,
+                                    "--top-regions-per-pair",
+                                    str(int(top_regions_per_pair)),
+                                    "--overwrite",
+                                ],
+                                "resources": {"kind": "local_cpu"},
+                                "timeout_seconds": 120,
+                                "postconditions": [
+                                    {
+                                        "type": "json_equals",
+                                        "path": p18_segnet_region_waterfill_ref,
+                                        "key": "schema",
+                                        "equals": P18_SEGNET_REGION_WATERFILL_SCHEMA,
+                                    },
+                                    {"type": "json_false_authority", "path": p18_segnet_region_waterfill_ref},
+                                ],
+                                "telemetry": {
+                                    "artifact_paths": [p18_segnet_region_waterfill_ref],
+                                    "input_artifact_paths": [
+                                        p19_posenet_null_pairs_ref,
+                                    ],
+                                    "include_postcondition_paths": True,
+                                },
+                            },
+                        ]
+                        if materialize_upstream_artifacts
+                        else []
+                    ),
                     {
                         "id": "build_p18_p19_chain_context",
                         "kind": "command",
+                        **(
+                            {"requires": ["materialize_p18_segnet_region_waterfill"]}
+                            if materialize_upstream_artifacts
+                            else {}
+                        ),
                         "command": context_cmd,
                         "resources": {"kind": "local_cpu"},
                         "timeout_seconds": 120,
@@ -612,6 +793,130 @@ def build_scorer_region_selector_chain_queue(
                             "include_postcondition_paths": True,
                         },
                     },
+                    *(
+                        [
+                            {
+                                "id": "emit_receiver_closed_distortion_budget_attack_plan",
+                                "kind": "command",
+                                "requires": ["emit_composed_chain_report"],
+                                "command": [
+                                    ".venv/bin/python",
+                                    "tools/build_receiver_closed_distortion_budget_attack_plan.py",
+                                    "--chain-report",
+                                    chain_report_ref,
+                                    "--posenet-null-pairs",
+                                    _repo_rel(
+                                        _resolve(effective_posenet_null_pairs, repo_root),
+                                        repo_root,
+                                    ),
+                                    "--segnet-region-waterfill",
+                                    _repo_rel(
+                                        _resolve(effective_segnet_region_masks, repo_root),
+                                        repo_root,
+                                    ),
+                                    "--output",
+                                    distortion_budget_attack_plan_ref,
+                                    "--overwrite",
+                                ],
+                                "resources": {"kind": "local_cpu"},
+                                "timeout_seconds": 120,
+                                "postconditions": [
+                                    {
+                                        "type": "json_equals",
+                                        "path": distortion_budget_attack_plan_ref,
+                                        "key": "schema",
+                                        "equals": DISTORTION_BUDGET_ATTACK_PLAN_SCHEMA,
+                                    },
+                                    {
+                                        "type": "json_false_authority",
+                                        "path": distortion_budget_attack_plan_ref,
+                                    },
+                                ],
+                                "telemetry": {
+                                    "artifact_paths": [distortion_budget_attack_plan_ref],
+                                    "input_artifact_paths": [
+                                        chain_report_ref,
+                                        _repo_rel(
+                                            _resolve(effective_posenet_null_pairs, repo_root),
+                                            repo_root,
+                                        ),
+                                        _repo_rel(
+                                            _resolve(effective_segnet_region_masks, repo_root),
+                                            repo_root,
+                                        ),
+                                    ],
+                                    "include_postcondition_paths": True,
+                                },
+                            },
+                        ]
+                        if distortion_budget_inputs_available
+                        else []
+                    ),
+                    *(
+                        [
+                            {
+                                "id": "materialize_frame1_region_waterfill_runtime_patch",
+                                "kind": "command",
+                                "requires": (
+                                    ["emit_receiver_closed_distortion_budget_attack_plan"]
+                                    if distortion_budget_inputs_available
+                                    else ["emit_composed_chain_report"]
+                                ),
+                                "command": [
+                                    ".venv/bin/python",
+                                    "tools/materialize_frame1_region_waterfill_runtime_patch.py",
+                                    "--source-submission-dir",
+                                    source_submission_ref,
+                                    "--segnet-region-waterfill",
+                                    _repo_rel(
+                                        _resolve(effective_segnet_region_masks, repo_root),
+                                        repo_root,
+                                    ),
+                                    "--output-submission-dir",
+                                    receiver_patch_submission_ref,
+                                    "--output-manifest",
+                                    receiver_patch_manifest_ref,
+                                    "--max-pairs",
+                                    str(int(receiver_patch_max_pairs)),
+                                    "--regions-per-pair",
+                                    str(int(receiver_patch_regions_per_pair)),
+                                    "--rgb-delta="
+                                    + ",".join(str(int(v)) for v in receiver_patch_rgb_delta),
+                                    "--overwrite",
+                                ],
+                                "resources": {"kind": "local_cpu"},
+                                "timeout_seconds": 120,
+                                "postconditions": [
+                                    {
+                                        "type": "json_equals",
+                                        "path": receiver_patch_manifest_ref,
+                                        "key": "schema",
+                                        "equals": FRAME1_REGION_WATERFILL_RUNTIME_PATCH_SCHEMA,
+                                    },
+                                    {
+                                        "type": "json_false_authority",
+                                        "path": receiver_patch_manifest_ref,
+                                    },
+                                ],
+                                "telemetry": {
+                                    "artifact_paths": [
+                                        receiver_patch_manifest_ref,
+                                        receiver_patch_submission_ref,
+                                    ],
+                                    "input_artifact_paths": [
+                                        source_submission_ref,
+                                        _repo_rel(
+                                            _resolve(effective_segnet_region_masks, repo_root),
+                                            repo_root,
+                                        ),
+                                    ],
+                                    "include_postcondition_paths": True,
+                                },
+                            },
+                        ]
+                        if receiver_patch_inputs_available
+                        else []
+                    ),
                 ],
             }
         ],
