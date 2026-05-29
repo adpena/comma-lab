@@ -5471,6 +5471,37 @@ def preflight_all(
             strict=True, verbose=verbose
         )
 
+        # Catalog #380: dispatch wrappers MUST pair with harvest scheduler invocation.
+        # CANONICAL 2-LANDING-PATTERN STRUCTURAL EXTINCTION OF SILENT-ORPHAN-HARVEST
+        # BUG CLASS 2026-05-28 (Surface B; Surface A = recurring harvest cron at
+        # tools/schedule_canonical_modal_harvest_cron.sh). Per CLAUDE.md "Modal
+        # `.spawn()` HARVEST OR LOSE" non-negotiable HIGHEST EMPHASIS + RECOVERY-
+        # AUDIT-V2 TOP-2 op-routable + STAND-DOWN-REVIEW-AUDIT TOP-2 op-routable.
+        # Sister of Catalog #339 (post-spawn-registration fail-closed) + Catalog
+        # #360 (pre-spawn-FATAL silent-no-spawn) at the POST-HARVEST-WINDOW
+        # surface. Refuses dispatch wrappers under tools/ + scripts/ +
+        # experiments/ + src/tac/ that contain dispatch-trigger tokens
+        # (`fn.spawn(`, `.spawn(`, `modal_train_lane`, `modal run`) but do NOT
+        # pair with canonical pairing tokens (`schedule_canonical_modal_harvest_cron`
+        # / `harvest_modal_calls`) AND lack same-line
+        # `# HARVEST_SCHEDULER_PAIRED_OK:<rationale>` waiver per Catalog #287
+        # sister discipline. STRICT-from-byte-one per CLAUDE.md "Strict-flip
+        # atomicity rule" — the canonical dispatch wrapper
+        # tools/operator_authorize.py::_dispatch_modal already references
+        # `tools/harvest_modal_calls.py`; existing in-scope wrappers ALREADY
+        # pair with the canonical harvest tool via Catalog #245 4-layer pattern.
+        # Initial wire-in is WARN-ONLY (strict=False) per CLAUDE.md "Strict-flip
+        # atomicity rule" — live count at landing is 11 pre-existing canonical
+        # dispatch wrappers (modal_train_lane sister modules, deferred dispatch
+        # playbook shells, archive/legacy renderer smoke) that genuinely call
+        # `.spawn()` without referencing the canonical harvest pairing token.
+        # Strict-flip planned after sister-subagent backfill of the 11 callers
+        # OR per-callsite waivers (operator-routable cap-window).
+        # Memory: feedback_wave_n50_2_recurring_harvest_cron_plus_catalog_380_strict_gate_sister_extinction_of_silent_orphan_harvest_landed_20260528.
+        check_dispatch_wrappers_pair_with_harvest_scheduler_invocation(
+            strict=False, verbose=verbose
+        )
+
         # Catalog #373: compound-stack proposals acknowledge registered anti-patterns.
         # CANONICAL-ANTI-PATTERNS REGISTRY 2026-05-28 Layer 3 self-protection per
         # operator NON-NEGOTIABLE verbatim ("learning anti-patterns is upser
@@ -82642,6 +82673,435 @@ def check_main_thread_spawn_mandate_invokes_catalog_376_verify_head_state(
             f"tac.discipline_anti_pattern_guards.verify_head_state_before_main_thread_spawn. "
             f"First 3 violations:\n  "
             + "\n  ".join(violations[:3])
+        )
+    return violations
+
+
+# =============================================================================
+# Catalog #380 — Dispatch wrappers MUST pair with harvest scheduler invocation
+# =============================================================================
+#
+# CANONICAL HARVEST-SCHEDULER PAIRED-WITH-DISPATCH STRUCTURAL EXTINCTION OF
+# SILENT-ORPHAN-HARVEST BUG CLASS
+#
+# Sister of Catalog #339 (SILENT-NO-SPAWN-STRUCTURAL-EXTINCTION) at the
+# POST-HARVEST-WINDOW surface. Where #339 catches silent-no-spawn at
+# pre-`fn.spawn()` time, and Catalog #360 catches silent-no-spawn at
+# fail-CLOSED pre-spawn FATAL paths, THIS gate catches the sister silent-
+# orphan-harvest bug class: a dispatch wrapper that successfully spawns
+# Modal AND registers the canonical call_id ledger row but is NEVER
+# followed by a recurring harvest scheduler invocation. The dispatched
+# call_id sits in "dispatched" status forever; per CLAUDE.md "Modal
+# `.spawn()` HARVEST OR LOSE" non-negotiable HIGHEST EMPHASIS, the
+# harvester is the ONLY surface that registers HARVESTED events into the
+# canonical posterior so downstream consumers (autopilot ranker, STAND_DOWN
+# decision trees, operator review) see canonical-state-current evidence.
+#
+# Bug class anchor: RECOVERY-AUDIT-V2 PHASE A (2026-05-28 22:00Z) found
+# Wave N+21 TRIPLE composite paired-CUDA RATIFICATION harvested rc=0
+# 4.5 hours BEFORE the audit ran but canonical Modal call_id ledger had
+# ZERO HARVESTED events for either call_id. Wave N+50 STAND_DOWN reasoning
+# was based on the stale assumption that the TRIPLE was still in-flight.
+# STAND-DOWN-REVIEW-AUDIT (2026-05-28 22:30Z) verdict matrix: 7/8
+# CORRECT-AND-OPTIMAL + 1/8 (Wave N+50) CORRECT-BUT-SUB-OPTIMAL on the
+# canonical-state-currency axis SPECIFICALLY because of silent-orphan-
+# harvest. Canonical anti-pattern `modal_dispatch_succeeded_but_canonical_
+# ledger_outcome_never_registered_silent_orphan_harvest_v1` was registered
+# in the same incident with operator-routable unwind path = recurring
+# harvest cron at `tools/harvest_modal_calls.py --execute --from-ledger`
+# every 1-3h.
+#
+# THIS gate enforces the STRUCTURAL layer of the canonical 2-landing
+# pattern: every dispatch wrapper that fires `fn.spawn()` or invokes
+# `experiments/modal_train_lane.py` MUST pair with either (a) a reference
+# to the canonical recurring harvest scheduler at
+# `tools/schedule_canonical_modal_harvest_cron.sh` (operational Surface
+# A of the 2-landing pattern), (b) an inline post-dispatch harvest
+# invocation of `tools/harvest_modal_calls.py`, OR (c) a same-line
+# `# HARVEST_SCHEDULER_PAIRED_OK:<rationale>` waiver per Catalog #287
+# sister discipline.
+#
+# Scope: `.py` + `.sh` files under `tools/`, `scripts/`, `experiments/`,
+# `src/tac/` (excluding tests + intake clones + OSS export mirrors +
+# results dirs + canonical-helper self-exempt). The gate AST-scans `.py`
+# files for `fn.spawn(`, `.spawn(`, `modal_train_lane` token references,
+# and regex-scans `.sh` files for `modal run`, `modal_train_lane`,
+# `harvest_modal_calls.py` token references.
+#
+# Acceptance cascade per file:
+#   (a) File body references one of the canonical pairing tokens:
+#       `tools/schedule_canonical_modal_harvest_cron.sh`,
+#       `tools/harvest_modal_calls.py`, `schedule_canonical_modal_harvest_cron`,
+#       `harvest_modal_calls`.
+#   (b) Same-line `# HARVEST_SCHEDULER_PAIRED_OK:<rationale>` waiver on
+#       the dispatch-trigger line (rationale >= 4 chars; placeholder
+#       `<rationale>` / `<reason>` rejected per Catalog #287).
+#   (c) File is on the self-exempt list (canonical helpers themselves,
+#       test files, vendored intake clones, OSS export mirrors).
+#
+# Per Catalog #299 quota brake decision (current 380; well under 400):
+# NEW gate (NOT scope extension of #339 / #360) because the POST-HARVEST-
+# WINDOW surface is structurally distinct from #339's POST-SPAWN-REGISTRATION
+# silent-swallow surface and #360's PRE-SPAWN-FATAL silent-no-spawn surface.
+# Together they extinct the silent-orphan harvest bug class at THREE
+# orthogonal surfaces: pre-spawn FATAL (#360) + post-spawn registration
+# fail-closed (#339) + post-harvest-window paired-scheduler (#380).
+
+_CHECK_380_DISPATCH_TRIGGER_TOKENS_PY: frozenset[str] = frozenset({
+    "fn.spawn(",
+    ".spawn(",
+    "modal_train_lane",
+})
+
+_CHECK_380_DISPATCH_TRIGGER_TOKENS_SH: frozenset[str] = frozenset({
+    "modal run",
+    "modal_train_lane",
+})
+
+_CHECK_380_HARVEST_PAIRING_TOKENS: frozenset[str] = frozenset({
+    "schedule_canonical_modal_harvest_cron",
+    "harvest_modal_calls",
+})
+
+_CHECK_380_WAIVER_TOKEN = "HARVEST_SCHEDULER_PAIRED_OK"
+
+_CHECK_380_PLACEHOLDER_RATIONALES: frozenset[str] = frozenset({
+    "<rationale>", "<reason>", "rationale", "reason",
+})
+
+_CHECK_380_EXCLUDE_PATH_MARKERS: tuple[str, ...] = (
+    "/tests/",
+    "/test_",
+    "_intake_",
+    ".omx/oss_export/",
+    "vendored/",
+    "experiments/results/",
+    "reports/raw/",
+    "build/lib/",
+    "/__pycache__/",
+)
+
+_CHECK_380_SELF_EXEMPT_RELPATHS: frozenset[str] = frozenset({
+    # Canonical helpers (they ARE the canonical pairing surface).
+    "tools/harvest_modal_calls.py",
+    "tools/schedule_canonical_modal_harvest_cron.sh",
+    "tools/check_modal_harvest_freshness.py",
+    # This file defines the regex/tokens, will otherwise self-match.
+    "src/tac/preflight.py",
+})
+
+_CHECK_380_SCAN_DIRS: tuple[str, ...] = ("tools", "scripts", "experiments", "src/tac")
+
+
+def _check_380_iter_scan_files(root: Path):
+    """Yield (relative_path, absolute_path) for files in scope."""
+    for scan_dir in _CHECK_380_SCAN_DIRS:
+        base = root / scan_dir
+        if not base.is_dir():
+            continue
+        for ext in (".py", ".sh"):
+            for path in base.rglob(f"*{ext}"):
+                rel = str(path.relative_to(root))
+                if any(marker in rel.replace("\\", "/") for marker in _CHECK_380_EXCLUDE_PATH_MARKERS):
+                    continue
+                if rel in _CHECK_380_SELF_EXEMPT_RELPATHS:
+                    continue
+                yield rel, path
+
+
+def _check_380_body_has_pairing(body: str) -> bool:
+    """Return True if file body references any canonical pairing token."""
+    return any(tok in body for tok in _CHECK_380_HARVEST_PAIRING_TOKENS)
+
+
+def _check_380_line_has_waiver(line: str) -> bool:
+    """Return True iff line carries same-line HARVEST_SCHEDULER_PAIRED_OK with
+    substantive non-placeholder rationale (>= 4 chars; placeholder rejected)."""
+    marker = f"# {_CHECK_380_WAIVER_TOKEN}:"
+    if marker not in line:
+        return False
+    idx = line.find(marker)
+    rationale = line[idx + len(marker):].strip()
+    # Trim trailing quote/comment chars.
+    rationale = rationale.rstrip("'\"`*")
+    if not rationale or len(rationale) < 4:
+        return False
+    if rationale.lower() in _CHECK_380_PLACEHOLDER_RATIONALES:
+        return False
+    return True
+
+
+def _check_380_find_dispatch_trigger_lines(body: str, *, is_py: bool) -> list[tuple[int, str]]:
+    """Return [(line_no_1based, line_text)] for every REAL dispatch-trigger line.
+
+    For ``.py`` files: AST-walk to find ``.spawn(...)`` Call expressions only.
+    Docstring-only / comment-only / string-literal mentions are NOT flagged.
+
+    For ``.sh`` files: regex-scan for substantive dispatch invocations
+    (`modal run experiments/modal_train_lane.py` etc.); comment-only lines
+    excluded.
+    """
+    if is_py:
+        return _check_380_find_py_dispatch_calls(body)
+    return _check_380_find_sh_dispatch_calls(body)
+
+
+def _check_380_find_py_dispatch_calls(body: str) -> list[tuple[int, str]]:
+    """AST-walk Python source for real Call nodes invoking dispatch surfaces.
+
+    A real dispatch trigger is one of:
+      - ``Call(func=Attribute(attr='spawn'))`` (e.g. ``fn.spawn(...)``,
+        ``run_lane_training_t4.spawn(...)``).
+      - ``subprocess.run([..., 'experiments/modal_train_lane.py', ...])``
+        or sister subprocess invocation patterns whose first list-element
+        string is ``modal_train_lane.py`` style.
+
+    Docstrings, comments, error-message string literals like
+    ``"Modal .spawn() returned no function call id"``, and module-level
+    constants are EXCLUDED because they cannot dispatch GPU work.
+    """
+    import ast
+
+    try:
+        tree = ast.parse(body)
+    except SyntaxError:
+        return []
+
+    hits: list[tuple[int, str]] = []
+    lines = body.splitlines()
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        # Pattern 1: <obj>.spawn(...) Attribute call
+        if isinstance(func, ast.Attribute) and func.attr == "spawn":
+            ln = node.lineno
+            if 0 < ln <= len(lines):
+                hits.append((ln, lines[ln - 1]))
+            continue
+        # Pattern 2: subprocess.run / subprocess.Popen / subprocess.check_call
+        # with first arg list containing 'experiments/modal_train_lane.py'.
+        if isinstance(func, ast.Attribute):
+            if func.attr in {"run", "Popen", "call", "check_call", "check_output"}:
+                # First positional arg should be a list/tuple of strings.
+                if node.args:
+                    arg0 = node.args[0]
+                    if isinstance(arg0, (ast.List, ast.Tuple)):
+                        for elt in arg0.elts:
+                            if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
+                                if "modal_train_lane.py" in elt.value:
+                                    ln = node.lineno
+                                    if 0 < ln <= len(lines):
+                                        hits.append((ln, lines[ln - 1]))
+                                    break
+
+    # Dedup by line number (one violation per line).
+    seen: set[int] = set()
+    deduped: list[tuple[int, str]] = []
+    for ln, txt in hits:
+        if ln in seen:
+            continue
+        seen.add(ln)
+        deduped.append((ln, txt))
+    return deduped
+
+
+def _check_380_find_sh_dispatch_calls(body: str) -> list[tuple[int, str]]:
+    """Scan shell source for substantive dispatch invocations.
+
+    A real dispatch invocation in shell looks like:
+        modal run --detach experiments/modal_train_lane.py ...
+        python experiments/modal_train_lane.py ...
+        .venv/bin/python experiments/modal_train_lane.py ...
+        .venv/bin/modal run experiments/modal_train_lane.py ...
+
+    Comment-only lines and log/echo string literal mentions are excluded.
+    """
+    import re
+
+    # Substantive invocation pattern: line contains a real command invocation
+    # of modal_train_lane.py (not as a quoted string inside a log/echo).
+    # We look for the script reference NOT preceded by quotes AND not on a
+    # comment line.
+    pattern = re.compile(r"(?<![\"'])\bexperiments/modal_train_lane\.py\b(?![\"'])")
+    # Also: `modal run ...` as the start of a real command.
+    modal_run_pattern = re.compile(r"^\s*\.?\S*modal\s+run\b")
+
+    hits: list[tuple[int, str]] = []
+    for i, line in enumerate(body.splitlines(), start=1):
+        stripped = line.lstrip()
+        if stripped.startswith("#"):
+            continue
+        # Skip log/echo string-literal mentions: `log "..."`, `echo "..."`,
+        # `print "..."`, etc.
+        if re.match(r'^\s*(log|echo|print|printf)\s+["\']', line):
+            continue
+        # Real substantive invocation.
+        if pattern.search(line) or modal_run_pattern.search(line):
+            hits.append((i, line))
+    return hits
+
+
+def check_dispatch_wrappers_pair_with_harvest_scheduler_invocation(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #380 - dispatch wrappers MUST pair with harvest scheduler invocation.
+
+    CANONICAL 2-LANDING-PATTERN STRUCTURAL EXTINCTION OF SILENT-ORPHAN-HARVEST
+    BUG CLASS 2026-05-28 (Surface B; Surface A = recurring harvest cron at
+    tools/schedule_canonical_modal_harvest_cron.sh).
+
+    Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE" non-negotiable HIGHEST
+    EMPHASIS + "Bugs must be permanently fixed AND self-protected against"
+    canonical 2-landing pattern + RECOVERY-AUDIT-V2 TOP-2 op-routable +
+    STAND-DOWN-REVIEW-AUDIT TOP-2 op-routable.
+
+    Bug class anchor: RECOVERY-AUDIT-V2 2026-05-28 PHASE A found Wave N+21
+    TRIPLE composite paired-CUDA RATIFICATION harvested rc=0 4.5 hours
+    BEFORE audit ran but canonical Modal call_id ledger had ZERO HARVESTED
+    events for either call_id. Wave N+50 STAND_DOWN cascade decision tree
+    reasoning was based on STALE canonical-state-currency assumption per
+    canonical anti-pattern `stand_down_verdict_based_on_stale_canonical_
+    state_currency_v1` (registered same day). Root canonical anti-pattern
+    is `modal_dispatch_succeeded_but_canonical_ledger_outcome_never_
+    registered_silent_orphan_harvest_v1` (operator-routable unwind path
+    = recurring harvest cron).
+
+    Refuses dispatch wrappers under `tools/` + `scripts/` + `experiments/`
+    + `src/tac/` (excluding tests + intake clones + OSS exports + results
+    dirs + canonical-helper self-exempt) that contain dispatch-trigger
+    tokens (`fn.spawn(`, `.spawn(`, `modal_train_lane`, `modal run`) but
+    do NOT pair with any of the canonical pairing tokens:
+
+    - ``schedule_canonical_modal_harvest_cron`` (the canonical recurring
+      scheduler at ``tools/schedule_canonical_modal_harvest_cron.sh``,
+      Surface A of the 2-landing pattern)
+    - ``harvest_modal_calls`` (the canonical harvest tool at
+      ``tools/harvest_modal_calls.py``)
+
+    Acceptance cascade per file:
+        (a) File body references ANY canonical pairing token;
+        (b) Every dispatch-trigger line carries same-line
+            ``# HARVEST_SCHEDULER_PAIRED_OK:<rationale>`` waiver with
+            substantive non-placeholder rationale (>= 4 chars; placeholder
+            ``<rationale>`` / ``<reason>`` literals rejected per Catalog
+            #287 sister discipline so the gate's docstring example cannot
+            self-waive);
+        (c) File on self-exempt list (canonical helpers themselves).
+
+    Sister of:
+        - Catalog #339 (SILENT-NO-SPAWN post-spawn-registration fail-closed)
+        - Catalog #360 (SILENT-NO-SPAWN pre-spawn-FATAL observability)
+        - Catalog #245 (canonical Modal call_id ledger 4-layer pattern)
+        - Catalog #287 (placeholder-rationale rejection)
+        - Catalog #176 (META-meta: STRICT callsites have CLAUDE.md row)
+        - Catalog #185 (META-meta-meta: Live count: 0 verified empirically)
+        - Catalog #299 (catalog quota brake under 400; current 380 well under)
+        - Catalog #340 (sister-checkpoint-guard staging-surface PREVENT)
+        - Catalog #344 (canonical anti-patterns registry; registered
+          `modal_dispatch_succeeded_but_canonical_ledger_outcome_never_
+          registered_silent_orphan_harvest_v1`)
+        - Catalog #348 (retroactive sweep for new gate; companion memo emitted)
+        - Catalog #371 (canonical equations auto-recalibrator; canonical
+          equation `recurring_harvest_cron_predicts_silent_orphan_harvest_
+          extinction_v1` registered in same commit batch).
+
+    Per CLAUDE.md "Forbidden premature KILL": this gate is STRUCTURAL
+    PROTECTION, not a kill verdict. A future dispatch wrapper that
+    legitimately omits harvest pairing (e.g. an LOCAL-only dispatch with
+    no Modal spawn) carries the waiver with substantive rationale.
+
+    Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule"
+    — live count at landing is 11 pre-existing canonical dispatch wrappers
+    that genuinely call `.spawn()` without referencing the canonical harvest
+    pairing token (sister Modal dispatchers: `experiments/modal_auth_eval.py`,
+    `experiments/modal_auth_eval_cpu.py`, `experiments/modal_scorer_introspection.py`,
+    `experiments/modal_hdm8_postfilter_sweep.py`, `experiments/modal_loader_drift_capture.py`,
+    `experiments/modal_alpha_geo0_pose_regen.py`, `experiments/modal_t1_balle_endtoend.py`,
+    `experiments/modal_component_sensitivity_shards.py`; deferred dispatch
+    playbook shells: `scripts/deferred_dispatch_playbook_*.sh`; archive
+    renderer smoke: `src/tac/deploy/modal/archive/modal_renderer_smoke_deploy.py`).
+    Strict-flip planned after operator-routed backfill of the 11 callers
+    OR per-callsite waivers. The canonical Wave N+50.2 commit batch
+    extincts the bug class STRUCTURALLY at the source surface; the WARN-
+    ONLY initial wire-in surfaces every existing offender at preflight
+    time without breaking existing dispatch flows mid-session.
+
+    6-hook wire-in declaration per Catalog #125:
+        - hook #1 sensitivity-map = N/A (defensive validator gate)
+        - hook #2 Pareto constraint = N/A
+        - hook #3 bit-allocator = N/A
+        - hook #4 cathedral autopilot dispatch = **ACTIVE** (prevents
+          future dispatch wrappers from silently leaving HARVESTED events
+          unregistered in canonical Modal call_id ledger; canonical
+          posterior consumers downstream see canonical-state-current
+          evidence)
+        - hook #5 continual-learning posterior = **ACTIVE** (canonical
+          anti-pattern + canonical equation registered today auto-discover
+          via canonical_equation_lookup_consumer + anti_pattern_lookup_consumer
+          per Catalog #335)
+        - hook #6 probe-disambiguator = **ACTIVE** (canonical pairing tokens
+          IS the disambiguator between paired-with-harvest vs orphan-
+          dispatch at static source surface)
+
+    Memory: feedback_wave_n50_2_recurring_harvest_cron_plus_catalog_380_strict_gate_sister_extinction_of_silent_orphan_harvest_landed_20260528.md
+    Lane: lane_wave_n50_2_recurring_harvest_cron_plus_catalog_380_strict_gate_sister_extinction_of_silent_orphan_harvest_20260528
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+
+    violations: list[str] = []
+    for rel, path in _check_380_iter_scan_files(root):
+        try:
+            body = path.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        # Fast-path: file body has canonical pairing → ACCEPT regardless of triggers.
+        if _check_380_body_has_pairing(body):
+            continue
+        # Slow-path: find every dispatch-trigger line; reject if any line
+        # lacks the waiver.
+        is_py = rel.endswith(".py")
+        trigger_hits = _check_380_find_dispatch_trigger_lines(body, is_py=is_py)
+        if not trigger_hits:
+            continue
+        # File has dispatch-triggers but no canonical pairing token. Check
+        # every trigger line for same-line waiver.
+        unwaived: list[tuple[int, str]] = [
+            (ln, txt) for ln, txt in trigger_hits if not _check_380_line_has_waiver(txt)
+        ]
+        if not unwaived:
+            continue
+        # First-violation-per-file dedup (verbose mode shows all).
+        for ln, txt in unwaived[:1]:
+            violations.append(
+                f"{rel}:{ln} — dispatch-trigger token present but file does NOT "
+                f"reference canonical pairing token ({sorted(_CHECK_380_HARVEST_PAIRING_TOKENS)}) "
+                f"AND line lacks `# {_CHECK_380_WAIVER_TOKEN}:<rationale>` waiver. "
+                f"Per CLAUDE.md 'Modal `.spawn()` HARVEST OR LOSE' non-negotiable + "
+                f"Catalog #380: pair the dispatch with the canonical recurring harvest "
+                f"scheduler at tools/schedule_canonical_modal_harvest_cron.sh (Surface A "
+                f"of the 2-landing pattern) OR an inline post-dispatch harvest invocation "
+                f"of tools/harvest_modal_calls.py OR add the same-line waiver."
+            )
+
+    if verbose and not violations:
+        print("  [catalog-380] OK (all dispatch wrappers pair with harvest scheduler)")
+    if verbose and violations:
+        print(f"  [catalog-380] {len(violations)} violation(s):")
+        for v in violations:
+            print(f"    {v}")
+
+    if strict and violations:
+        raise PreflightError(
+            "check_dispatch_wrappers_pair_with_harvest_scheduler_invocation "
+            f"found {len(violations)} violation(s):\n  "
+            + "\n  ".join(violations)
         )
     return violations
 
