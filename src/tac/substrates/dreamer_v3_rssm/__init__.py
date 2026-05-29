@@ -138,6 +138,7 @@ from tac.substrates.dreamer_v3_rssm.module import (
     NUM_PAIRS,
     DreamerV3RSSMConfig,
     DreamerV3RSSMSubstrateMLX,
+    apply_unimix_to_logits,
     gumbel_softmax_sample,
     rssmc_decoder_param_count,
 )
@@ -280,6 +281,7 @@ __all__ = [
     "RSSMC1_MAGIC",
     "RSSMC1_SCHEMA_VERSION",
     "SUBSTRATE_ID",
+    "apply_unimix_to_logits",
     "emit_landing_posterior_anchor",
     "gumbel_softmax_sample",
     "pack_archive",

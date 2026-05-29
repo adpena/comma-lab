@@ -112,6 +112,29 @@ class DreamerV3RSSMConfig:
     use_straight_through: bool = True
     """If True, use STE reparametrization (canonical Hafner 2024 recipe)."""
 
+    unimix_alpha: float = 0.01
+    """Unimix coefficient α per Hafner 2023 DreamerV3 §3 "Robustness".
+
+    Canonical Hafner 2023 robustness technique: every categorical posterior is
+    parameterized as ``p_unimix = (1-α) * softmax(logits) + α * uniform(K)``
+    with α = 0.01 (1% uniform mixture). Prevents the posterior from collapsing
+    to a hard one-hot (the structural failure mode that breaks gradients
+    through the STE) and is the canonical "fixed hyperparameter across diverse
+    domains" enabler.
+
+    Wave 3 math-fidelity audit anchor (2026-05-29): the prior L0 SCAFFOLD
+    omitted this term; the omission was CARGO-CULTED relative to Hafner 2023
+    canonical (the docstring claimed "canonical Hafner 2024 recipe" while the
+    implementation skipped the canonical robustness mixture). Restored as a
+    HARD-EARNED canonical-1:1 element with α=0.01 default; configurable so
+    the K-capacity disambiguator can vary the mixture if needed.
+
+    Sources:
+    - Hafner et al. 2023 "Mastering Diverse Domains through World Models"
+      arXiv:2301.04104 §3 "Robustness" + Appendix categorical posterior
+    - Reference impl https://github.com/danijar/dreamerv3 (jaxutils.cast_to_compute / categorical_kl)
+    """
+
     @property
     def categorical_bits_per_sample(self) -> float:
         """H(T) = G * log2(K) bits/sample per Shannon canonical equation."""
@@ -131,34 +154,98 @@ class DreamerV3RSSMConfig:
 # -----------------------------------------------------------------------------
 
 
+def apply_unimix_to_logits(logits: Any, *, unimix_alpha: float = 0.01) -> Any:
+    """Apply Hafner 2023 1% unimix mixture to categorical logits.
+
+    Canonical Hafner 2023 §3 "Robustness" categorical posterior is
+    parameterized as a mixture of the network softmax and a uniform prior:
+
+        p_unimix(y|x) = (1 - α) * softmax(logits) + α * (1 / K)
+        logits_unimixed = log(p_unimix)
+
+    The returned logits are equivalent to sampling from p_unimix at any
+    temperature τ (the softmax + log invertibility preserves the mixture
+    distribution exactly). For α = 0 this is a no-op (returns the input
+    logits unchanged up to a constant log Z shift that cancels in softmax).
+
+    Args:
+        logits: ``(..., K)`` un-normalized log-probabilities.
+        unimix_alpha: mixing coefficient α ∈ [0, 1). 0.01 = Hafner 2023 canonical.
+
+    Returns:
+        ``(..., K)`` logits whose softmax equals the unimix mixture.
+
+    Source: Hafner et al. 2023 arXiv:2301.04104 §3 "Robustness" + canonical
+    reference https://github.com/danijar/dreamerv3 (categorical posterior
+    parameterization).
+    """
+    _require_mlx()
+    if not 0.0 <= float(unimix_alpha) < 1.0:
+        raise ValueError(
+            f"unimix_alpha must be in [0, 1); got {unimix_alpha}"
+        )
+    if float(unimix_alpha) == 0.0:
+        return logits
+    K = int(logits.shape[-1])
+    probs = mx.softmax(logits, axis=-1)  # type: ignore[union-attr]
+    uniform_probs = mx.full(  # type: ignore[union-attr]
+        shape=logits.shape, vals=1.0 / float(K)
+    )
+    mixed = (1.0 - float(unimix_alpha)) * probs + float(unimix_alpha) * uniform_probs
+    # Re-log to recover logits whose softmax equals the mixture.
+    return mx.log(mixed)  # type: ignore[union-attr]
+
+
 def gumbel_softmax_sample(
     logits: Any,
     *,
     temperature: float = 1.0,
     use_straight_through: bool = True,
+    unimix_alpha: float = 0.01,
     key: Any = None,
 ) -> tuple[Any, Any]:
     """Sample categorical from logits via Gumbel-Softmax reparametrization.
+
+    Canonical Hafner 2023 DreamerV3 + Jang 2016 + Maddison 2016 categorical
+    reparametrization, with the Hafner 2023 §3 1% unimix robustness mixture
+    applied to the logits BEFORE Gumbel perturbation.
 
     Args:
         logits: ``(..., K)`` un-normalized log-probabilities.
         temperature: Gumbel softmax τ; lower = sharper / more discrete.
         use_straight_through: if True, return one-hot in forward + soft gradient
             in backward (canonical STE).
+        unimix_alpha: Hafner 2023 1% unimix coefficient α. Default 0.01 matches
+            the canonical Hafner 2023 §3 robustness recipe. Set to 0.0 to
+            disable for ablation.
         key: MLX random key. If None, derive from current MLX rng.
 
     Returns:
         (soft_or_hard_sample, category_indices) — ``soft_or_hard_sample`` is
         ``(..., K)`` simplex (STE if use_straight_through else soft);
         ``category_indices`` is ``(...,)`` int32 of argmax for archive serialization.
+
+    Wave 3 math-fidelity audit 2026-05-29: added unimix_alpha parameter +
+    default 0.01 to match Hafner 2023 canonical. Prior L0 SCAFFOLD omitted
+    unimix; the omission was CARGO-CULTED relative to Hafner 2023.
+
+    Sources:
+    - Hafner et al. 2023 "Mastering Diverse Domains through World Models"
+      arXiv:2301.04104 §3 "Robustness"
+    - Jang et al. 2016 "Categorical Reparameterization with Gumbel-Softmax"
+      arXiv:1611.01144 (Gumbel-Softmax)
+    - Maddison et al. 2016 "The Concrete Distribution" arXiv:1611.00712
+      (concrete reparametrization)
     """
     _require_mlx()
     if key is None:
         key = mx.random.key(0)  # type: ignore[union-attr]
+    # Hafner 2023 §3 unimix: blend logits' softmax with uniform prior at α.
+    mixed_logits = apply_unimix_to_logits(logits, unimix_alpha=unimix_alpha)
     # Sample Gumbel(0, 1) noise: g = -log(-log(u)) for u ~ Uniform(0, 1).
     uniform = mx.random.uniform(low=1e-10, high=1.0, shape=logits.shape, key=key)  # type: ignore[union-attr]
     gumbel = -mx.log(-mx.log(uniform))  # type: ignore[union-attr]
-    perturbed = (logits + gumbel) / float(max(temperature, 1e-6))
+    perturbed = (mixed_logits + gumbel) / float(max(temperature, 1e-6))
     soft = mx.softmax(perturbed, axis=-1)  # type: ignore[union-attr]
     indices = mx.argmax(soft, axis=-1)  # type: ignore[union-attr]
     if use_straight_through:
@@ -383,6 +470,7 @@ class DreamerV3RSSMSubstrateMLX(nn.Module if nn is not None else object):  # typ
             logits,
             temperature=float(self.cfg.gumbel_temperature),
             use_straight_through=bool(self.cfg.use_straight_through),
+            unimix_alpha=float(self.cfg.unimix_alpha),
             key=gumbel_key,
         )
         B = int(logits.shape[0])
@@ -433,6 +521,7 @@ class DreamerV3RSSMSubstrateMLX(nn.Module if nn is not None else object):  # typ
             "num_pairs": self.cfg.num_pairs,
             "gumbel_temperature": self.cfg.gumbel_temperature,
             "use_straight_through": self.cfg.use_straight_through,
+            "unimix_alpha": self.cfg.unimix_alpha,
             "decoder_topology_source": (
                 "submissions/hnerv_muon/src/model.py::HNeRVDecoder via "
                 "tac.local_acceleration.pr95_hnerv_mlx::HNeRVDecoderMLX"
@@ -505,6 +594,7 @@ __all__ = [
     "DreamerV3RSSMSubstrateMLX",
     "EVAL_HW",
     "NUM_PAIRS",
+    "apply_unimix_to_logits",
     "gumbel_softmax_sample",
     "rssmc_decoder_param_count",
 ]
