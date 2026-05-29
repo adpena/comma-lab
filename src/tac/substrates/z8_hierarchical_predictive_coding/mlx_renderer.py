@@ -186,9 +186,21 @@ class Z8HierarchicalConfig:
 
 
 # -----------------------------------------------------------------------------
-# Gumbel-Softmax with straight-through estimator (canonical Hafner 2024 recipe
-# per Jang et al. 2016 + Maddison et al. 2016). Mirrors sister A=DreamerV3
-# canonical implementation per Catalog #290 ADOPT_CANONICAL_BECAUSE_SERVES.
+# Gumbel-Softmax with straight-through estimator + Hafner 2023 §3 1% unimix
+# robustness mixture. Z8 DELEGATES to sister A=DreamerV3 canonical helpers per
+# Catalog #290 ADOPT_CANONICAL_BECAUSE_SERVES + CLAUDE.md UNIQUE-AND-COMPLETE-
+# PER-METHOD operating mode (canonical helpers are TOOLS used WHEN they serve;
+# Z8 per-level categorical posterior is structurally identical to sister
+# DreamerV3 single-level so adoption serves measurably and by clear principle).
+#
+# Wave 10/11 (2026-05-29) gap closure: prior L0 SCAFFOLD reimplemented
+# gumbel_softmax_sample locally without unimix_alpha threading; the Wave 3
+# math-fidelity audit on sister DreamerV3 added the 1% unimix mixture per
+# Hafner 2023 §3 "Robustness" but the fix did NOT propagate here because the
+# Z8 path was a duplicate. The fix lands the delegation pattern so future
+# sister fixes propagate structurally; the canonical helpers
+# `apply_unimix_to_logits` + `gumbel_softmax_sample` now have a SINGLE source
+# of truth at `tac.substrates.dreamer_v3_rssm.module`.
 # -----------------------------------------------------------------------------
 
 
@@ -197,34 +209,72 @@ def gumbel_softmax_sample(
     *,
     temperature: float = 1.0,
     use_straight_through: bool = True,
+    unimix_alpha: float = 0.01,
     key: Any = None,
 ) -> tuple[Any, Any]:
     """Sample categorical from logits via Gumbel-Softmax reparametrization.
 
+    Delegates to sister `tac.substrates.dreamer_v3_rssm.gumbel_softmax_sample`
+    so the Hafner 2023 §3 1% unimix robustness mixture (Wave 3 fix
+    2026-05-29) propagates structurally to Z8 per-level categorical posteriors.
+
+    Args:
+        logits: ``(..., K)`` un-normalized log-probabilities.
+        temperature: Gumbel softmax τ; lower = sharper / more discrete.
+        use_straight_through: if True, return one-hot in forward + soft
+            gradient in backward (canonical STE per Jang 2016 + Maddison 2016).
+        unimix_alpha: Hafner 2023 1% unimix coefficient α. Default 0.01
+            matches the canonical recipe; set 0.0 to disable for ablation.
+        key: MLX random key. If None, derive via sister canonical helper.
+
     Returns:
         (soft_or_hard_sample, category_indices) — ``soft_or_hard_sample`` is
         ``(..., K)`` simplex (STE if use_straight_through else soft);
-        ``category_indices`` is ``(...,)`` int32 of argmax for archive serialization.
+        ``category_indices`` is ``(...,)`` int32 of argmax for archive
+        serialization.
 
-    Sister A=DreamerV3 canonical implementation reused per Catalog #290
-    ADOPT_CANONICAL_BECAUSE_SERVES decision; identical mathematical structure
-    at each Z8 hierarchy level.
+    Wave 10/11 audit 2026-05-29: replaced local duplicate implementation with
+    canonical delegation to sister `dreamer_v3_rssm` per Catalog #290
+    ADOPT_CANONICAL_BECAUSE_SERVES. Closes the "Z8 claimed canonical reuse
+    but reimplemented" gap surfaced during the Wave 10/11 RL + DreamerV3
+    sister cluster audit. Prior local implementation omitted unimix per Wave 3
+    cargo-cult audit finding (HARD-EARNED canonical Hafner 2023 §3).
+
+    Sources:
+    - Hafner et al. 2023 arXiv:2301.04104 §3 "Robustness"
+    - Jang et al. 2016 arXiv:1611.01144 Gumbel-Softmax
+    - Maddison et al. 2016 arXiv:1611.00712 Concrete distribution
+    - Sister canonical implementation:
+      `src/tac/substrates/dreamer_v3_rssm/module.py::gumbel_softmax_sample`
     """
-    _require_mlx()
-    if key is None:
-        key = mx.random.key(0)  # type: ignore[union-attr]
-    uniform = mx.random.uniform(low=1e-10, high=1.0, shape=logits.shape, key=key)  # type: ignore[union-attr]
-    gumbel = -mx.log(-mx.log(uniform))  # type: ignore[union-attr]
-    perturbed = (logits + gumbel) / float(max(temperature, 1e-6))
-    soft = mx.softmax(perturbed, axis=-1)  # type: ignore[union-attr]
-    indices = mx.argmax(soft, axis=-1)  # type: ignore[union-attr]
-    if use_straight_through:
-        K = int(logits.shape[-1])
-        eye = mx.eye(K)  # type: ignore[union-attr]
-        hard = mx.take(eye, indices, axis=0)  # type: ignore[union-attr]
-        ste_output = hard - mx.stop_gradient(soft) + soft  # type: ignore[union-attr]
-        return ste_output, indices
-    return soft, indices
+    from tac.substrates.dreamer_v3_rssm import (
+        gumbel_softmax_sample as _sister_gumbel_softmax_sample,
+    )
+
+    return _sister_gumbel_softmax_sample(
+        logits,
+        temperature=temperature,
+        use_straight_through=use_straight_through,
+        unimix_alpha=unimix_alpha,
+        key=key,
+    )
+
+
+def apply_unimix_to_logits(logits: Any, *, unimix_alpha: float = 0.01) -> Any:
+    """Apply Hafner 2023 1% unimix mixture to Z8 per-level categorical logits.
+
+    Delegates to sister `tac.substrates.dreamer_v3_rssm.apply_unimix_to_logits`
+    per Catalog #290 ADOPT_CANONICAL_BECAUSE_SERVES. Wave 10/11 (2026-05-29)
+    gap closure: re-exports the canonical helper at the Z8 surface so callers
+    that import from `tac.substrates.z8_hierarchical_predictive_coding.mlx_renderer`
+    inherit the canonical Hafner 2023 §3 robustness behavior without needing
+    to know about the sister cross-substrate reuse.
+    """
+    from tac.substrates.dreamer_v3_rssm import (
+        apply_unimix_to_logits as _sister_apply_unimix_to_logits,
+    )
+
+    return _sister_apply_unimix_to_logits(logits, unimix_alpha=unimix_alpha)
 
 
 # -----------------------------------------------------------------------------
