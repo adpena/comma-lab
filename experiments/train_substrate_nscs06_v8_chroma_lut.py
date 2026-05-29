@@ -115,13 +115,16 @@ from tac.substrates._shared.trainer_skeleton import (
 # Import the v8 substrate package — this triggers @register_substrate
 # decoration validation per Catalog #241/#242.
 from tac.substrates.nscs06_v8_chroma_lut import (
+    CANONICAL_AGGREGATION_POLICY_BYTE_DEFAULT,
     CHROMA_LUT_BYTES_DEFAULT,
     GRAYSCALE_LEVELS_DEFAULT,
     NSCS06_V8_CHROMA_LUT_SUBSTRATE_CONTRACT,
     NUM_SEGNET_CLASSES,
     POSE_DIMS,
     PROCEDURAL_SEED_SIZE_BYTES,
+    SUPPORTED_AGGREGATION_POLICIES,
     build_chroma_lut_from_ground_truth,
+    build_chroma_lut_with_policy,
     pack_archive,
     parse_archive,
     predicted_delta_s,
@@ -332,6 +335,27 @@ def _build_parser() -> argparse.ArgumentParser:
             "Default preserves archive-byte parity; `mode_per_cell` is the "
             "Wave 5 cargo-cult #6 boundary-preserving unwind path (operator "
             "opt-in; changes archive bytes)."
+        ),
+    )
+    # Wave 9 cargo-cult #4 unwind 2026-05-29: per-(level, class) chroma LUT
+    # aggregation policy selector. Default `median_byte_default` preserves
+    # archive-byte parity with all prior empirical anchors keyed by
+    # `architecture.build_chroma_lut_from_ground_truth`'s `np.median`;
+    # `mean` / `mode_per_cell` / `weighted_mean_by_cell_count` are
+    # UNWIND PATHS per Wave 9 re-audit. Operator opt-in REQUIRED to change
+    # because alternatives change archive bytes per CLAUDE.md "Frontier
+    # scores are pointer-only" non-negotiable.
+    p.add_argument(
+        "--chroma-lut-aggregation-policy",
+        type=str,
+        default=CANONICAL_AGGREGATION_POLICY_BYTE_DEFAULT,
+        choices=list(SUPPORTED_AGGREGATION_POLICIES),
+        help=(
+            "Per-(level, class) chroma LUT aggregation policy. "
+            "Default `median_byte_default` preserves archive-byte parity; "
+            "`mean` / `mode_per_cell` / `weighted_mean_by_cell_count` are "
+            "Wave 9 cargo-cult #4 unwind paths (operator opt-in; changes "
+            "archive bytes)."
         ),
     )
     return p
@@ -736,14 +760,25 @@ def _full_main(args: argparse.Namespace) -> int:
         )
         _stage(f"grayscale_full_and_lowres_built_{h_g}x{w_g}")
 
-        # Stage 6: build (16, 5, 3) chroma LUT via canonical helper
-        chroma_lut = build_chroma_lut_from_ground_truth(
+        # Stage 6: build (16, 5, 3) chroma LUT via Wave 9 canonical
+        # aggregation-policy helper. Default policy
+        # `median_byte_default` preserves archive-byte parity with
+        # legacy `build_chroma_lut_from_ground_truth` (Wave 9 byte-
+        # parity invariant; tested at
+        # ``test_wave_9_cargo_cult_4_aggregation_policy.py::
+        # test_byte_default_matches_legacy_implementation``).
+        chroma_lut, chroma_lut_aggregation_verdict = build_chroma_lut_with_policy(
             odd_rgb, cls_full,
             grayscale_levels=GRAYSCALE_LEVELS_DEFAULT,
             num_segnet_classes=NUM_SEGNET_CLASSES,
+            policy=args.chroma_lut_aggregation_policy,
         )
         chroma_lut_sha = _sha256_bytes(chroma_lut.tobytes())
-        _stage(f"chroma_lut_built_shape_{chroma_lut.shape}_sha_{chroma_lut_sha[:8]}")
+        _stage(
+            f"chroma_lut_built_shape_{chroma_lut.shape}_sha_{chroma_lut_sha[:8]}"
+            f"_policy_{chroma_lut_aggregation_verdict.policy}"
+            f"_agree_{chroma_lut_aggregation_verdict.median_vs_policy_agreement_fraction:.3f}"
+        )
 
         # Stage 7: PoseNet at compress-side (chunked; sister v7 dict slice)
         with torch.no_grad():

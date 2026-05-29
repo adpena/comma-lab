@@ -181,6 +181,22 @@ from .cls_lowres_downsample import (
     derive_cls_lowres_from_cls_full,
     verify_cls_lowres_downsample_invariants,
 )
+
+# Wave 9 cargo-cult #4 unwind canonical helper (2026-05-29):
+# per-(level, class) chroma LUT aggregation policy disambiguator per
+# Catalog #335 sister-extinction architecture. BYTE-DEFAULT =
+# median_byte_default preserves archive-byte parity with all prior
+# empirical anchors; mean / mode_per_cell / weighted_mean_by_cell_count
+# are UNWIND PATHS that require operator opt-in (change archive bytes).
+from .chroma_lut_per_class_aggregation_policy import (
+    CANONICAL_AGGREGATION_POLICY_BYTE_DEFAULT,
+    CHROMA_LUT_AGGREGATION_POLICY_NON_PROMOTABLE_PROVENANCE,
+    SUPPORTED_AGGREGATION_POLICIES,
+    ChromaLutAggregationError,
+    ChromaLutAggregationVerdict,
+    build_chroma_lut_with_policy,
+    verify_chroma_lut_invariants,
+)
 from .predicted_band_axis_attribution import (
     POSE_AXIS_UNKNOWN_PENDING_PAIRED_SMOKE_TOKEN,
     PREDICTED_BAND_VALIDATION_STATUS_PENDING_TOKEN,
@@ -253,6 +269,14 @@ __all__ = [
     "ClsLowresDownsampleVerdict",
     "derive_cls_lowres_from_cls_full",
     "verify_cls_lowres_downsample_invariants",
+    # Wave 9 cargo-cult #4 unwind exports (2026-05-29)
+    "CANONICAL_AGGREGATION_POLICY_BYTE_DEFAULT",
+    "CHROMA_LUT_AGGREGATION_POLICY_NON_PROMOTABLE_PROVENANCE",
+    "SUPPORTED_AGGREGATION_POLICIES",
+    "ChromaLutAggregationError",
+    "ChromaLutAggregationVerdict",
+    "build_chroma_lut_with_policy",
+    "verify_chroma_lut_invariants",
     "TOTAL_AXIS_UNKNOWN_PENDING_PAIRED_SMOKE_TOKEN",
     "axis_attribution_to_dict_for_metadata_json",
     "compute_lut_byte_offset_for_class",
