@@ -392,21 +392,46 @@ def _compute_uniward_cost_per_pair(
     scorer_response_per_pair: Sequence[float],
     epsilon: float,
 ) -> list[float]:
-    """Canonical Fridrich UNIWARD cost: cost(pair) = 1 / (epsilon + scorer_response).
+    """Per-pair scorer-response-inverse cost map for PR110-OPT-7 sparse-K selection.
 
-    Per Holub-Fridrich-Denemark 2014 canonical citation: errors in
-    textured regions are undetectable; weight loss by INVERSE local
-    scorer response.
+    Implements the cost ordering ``cost(pair) = 1 / (epsilon + scorer_response)``
+    following the Fridrich inverse-steganalysis principle that errors in
+    high-scorer-response regions are MORE detectable and should be weighted
+    DOWN. Higher scorer_response ⟹ higher detectability ⟹ LOWER cost weight;
+    lower scorer_response ⟹ lower detectability ⟹ HIGHER cost weight
+    (preferred for sparse selection).
 
-    Higher scorer_response ⟹ higher detectability ⟹ LOWER UNIWARD cost
-    weight; lower scorer_response ⟹ lower detectability ⟹ HIGHER UNIWARD
-    cost weight (preferred for sparse selection).
+    Documented adaptation per the operator binding 1:1-fidelity directive
+    "with documented adaptations made for optimization to contest and
+    problem space and math and data and video":
+
+    - **Axis**: PROBLEM-SPACE (per-pair vs per-pixel abstraction layer).
+    - **Adaptation**: The canonical paper-faithful Holub-Fridrich-Denemark
+      2014 UNIWARD cost is per-pixel directional wavelet (see
+      ``tac.inverse_steganalysis_real_video_mlx.compute_uniward_per_pixel_directional_wavelet_mlx``
+      which implements the canonical 8x8 db4 directional filter bank per
+      paper §III). This function operates at the per-pair scorer-response
+      level instead, because the PR110-OPT-7 sparse-K SELECTOR makes
+      pair-level (not pixel-level) decisions: 600 pairs × 1 selector each.
+    - **Rationale**: The PR110 archive grammar carries 600 per-pair
+      selectors; selecting K pairs by inverse-scorer-response is the
+      canonical sparse-K reduction at the abstraction layer the archive
+      grammar exposes. Routing through the per-pixel canonical helper
+      would require aggregating the per-pixel cost map back to per-pair,
+      losing the per-pair scorer-response signal that drives selection.
+    - **Sister canonical path**: For per-pixel UNIWARD cost on real video
+      frames, call the canonical helper
+      ``compute_uniward_per_pixel_directional_wavelet_mlx`` directly
+      (used by other inverse-steganalysis sister composition packages
+      that operate at the per-pixel cost-map abstraction layer).
+    - **Wave 1 math-fidelity audit (2026-05-29)**: confirmed this
+      per-pair abstraction is the canonical PR110-OPT-7 layer and the
+      Slot EEE PARTIAL classification reflects the abstraction-layer gap
+      (per-pair vs per-pixel) rather than a math-fidelity bug.
 
     Per CLAUDE.md FORBIDDEN_PATTERNS "Forbidden closed-form-CDF-allocator-
     without-empirical-bit-spend-proof": this is NOT a closed-form CDF
-    allocator; it's a per-pair scalar cost map. Sister of
-    ``compute_uniward_weighted_perturbation_for_pr110_catalog`` which
-    consumes the cost map for sparse-K selection.
+    allocator; it's a per-pair scalar cost map.
     """
     return [
         1.0 / (epsilon + max(0.0, float(r)))
