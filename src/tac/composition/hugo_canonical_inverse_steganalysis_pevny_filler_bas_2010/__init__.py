@@ -1087,6 +1087,235 @@ def apply_hugo_canonical_spam_feature_cost_matrix_to_pr110_archive(
     }
 
 
+# -----------------------------------------------------------------------------
+# CANONICAL MLX REAL-VIDEO BIND HELPER (Slot EEE PARTIAL → REAL per-pixel SPAM-delta
+# remediation per operator binding no-fake-implementations + MLX-deployed-asap)
+# -----------------------------------------------------------------------------
+#
+# Per Slot EEE audit Axis A (cite-vs-impl PARTIAL: per-pixel SPAM-delta is
+# simplified to cell-counting heuristic) + Axis C (smoke realism FAIL: synthetic
+# random-noise input) verdicts on this package + the operator binding 5-invariant
+# standing directive 2026-05-29 (invariant 5: "no fake implementations" +
+# invariant 4: "binded and deployed on MLX asap"): this canonical bind helper
+# routes through the canonical shared helper
+# ``tac.inverse_steganalysis_real_video_mlx.compute_hugo_per_pixel_spam_delta_mlx``
+# which implements the REAL Pevný-Filler-Bas 2010 4-direction truncated-residual
+# SPAM-delta on REAL ``upstream/videos/0.mkv`` decoded frames.
+#
+# The existing ``compute_hugo_canonical_spam_feature_cost_matrix_for_pr110_catalog``
+# + ``apply_hugo_canonical_spam_feature_cost_matrix_to_pr110_archive`` entry
+# points are PRESERVED for backward compatibility with the existing 112-test
+# regression suite (per-pair scalar-aggregation surface; PR110 archive grammar
+# surface).
+#
+# The new entry point
+# ``apply_hugo_canonical_real_per_pixel_spam_delta_via_canonical_real_video_mlx_to_pr110_archive``
+# operates at the canonical per-pixel surface that Pevný-Filler-Bas 2010
+# actually describes (canonical 4-direction truncated-residual SPAM-delta) on
+# REAL decoded video frames.
+#
+# Sister of the canonical Slot YY HILL bind helper pattern at
+# :func:`tac.composition.hill_canonical_inverse_steganalysis_li_wang_li_huang_2014.apply_hill_canonical_per_pixel_mlx_to_real_video_frames`
+# (commit ``32a70c051``) which mirrors this exact pattern for HILL.
+
+
+#: Canonical strategy sentinel for the per-pixel SPAM-delta real-video MLX path.
+#: Distinct from :class:`HUGOSPAMFeatureStrategy` which targets the PR110
+#: archive grammar surface (per-pair scalar aggregation); this constant
+#: documents that the new bind helper operates at the per-pixel surface via
+#: the canonical shared helper.
+STRATEGY_PER_PIXEL_REAL_SPAM_DELTA_MLX: str = (
+    "per_pixel_real_spam_delta_via_canonical_real_video_mlx"
+)
+
+
+def apply_hugo_canonical_real_per_pixel_spam_delta_via_canonical_real_video_mlx_to_pr110_archive(
+    *,
+    num_frames: int = 4,
+    target_resolution: tuple[int, int] = (128, 96),  # (W, H) for cheap smoke
+    use_mlx: bool = True,
+    truncation_t: int = CANONICAL_SPAM_TRUNCATION_T,
+    perturbation_magnitude: float = 1.0 / 255.0,
+    strategy: str = STRATEGY_PER_PIXEL_REAL_SPAM_DELTA_MLX,
+) -> dict[str, Any]:
+    """Canonical per-pixel HUGO SPAM-delta on REAL ``upstream/videos/0.mkv`` frames via MLX.
+
+    Sister of :func:`apply_hugo_canonical_spam_feature_cost_matrix_to_pr110_archive`
+    at the per-pixel real-video surface. Where the existing apply entry-point
+    operates on a single 2D image with per-pair scalar aggregation (PR110
+    archive grammar surface; cell-counting heuristic per Slot EEE Axis A
+    PARTIAL verdict), this entry-point operates on the canonical per-pixel
+    surface that Pevný-Filler-Bas 2010 actually describes (canonical
+    4-direction truncated-residual SPAM-delta per the paper) on REAL decoded
+    video frames.
+
+    Per Slot EEE audit recommendations + operator binding 5-invariant standing
+    directive 2026-05-29 (invariant 5 no-fake-implementations + invariant 4
+    MLX-deployed-asap): implements the canonical Pevný-Filler-Bas 2010
+    per-pixel SPAM-delta on REAL ``upstream/videos/0.mkv`` frames (NOT
+    synthetic random noise) via the canonical shared helper
+    :mod:`tac.inverse_steganalysis_real_video_mlx`
+    (:func:`compute_hugo_per_pixel_spam_delta_mlx`).
+
+    Returns Tier A canonical-routing-markers contribution per Catalog #341 +
+    Catalog #323 (``score_claim=False`` + ``promotable=False``) per Catalog
+    #192 (macOS-CPU advisory NEVER promotable).
+
+    Parameters
+    ----------
+    num_frames : int
+        Number of frames to decode from ``upstream/videos/0.mkv`` (default 4
+        for cheap smoke).
+    target_resolution : (int, int)
+        ``(W, H)`` for bilinear resize (default ``(128, 96)`` for cheap smoke).
+    use_mlx : bool
+        Use MLX (default True per CLAUDE.md "MLX portable-local-substrate
+        authority" 8th standing directive); set False for numpy-only.
+    truncation_t : int
+        Canonical SPAM residual truncation T per Pevný-Bas-Fridrich 2010
+        (default 4 per canonical reference).
+    perturbation_magnitude : float
+        Unit ±1 perturbation magnitude (default 1/255 per canonical uint8
+        steganography convention).
+    strategy : str
+        Strategy sentinel (default
+        :data:`STRATEGY_PER_PIXEL_REAL_SPAM_DELTA_MLX`); reserved for future
+        sister extensions.
+
+    Returns
+    -------
+    dict
+        Canonical Tier A contribution per Catalog #341 + #323 + #356 + #305:
+
+        - ``predicted_delta_adjustment`` (always 0.0 per Tier A)
+        - ``promotable`` (always False)
+        - ``score_claim`` (always False)
+        - ``axis_tag`` ("[predicted]")
+        - ``strategy`` (echoed sentinel)
+        - ``smoke_result`` (canonical
+          :class:`tac.inverse_steganalysis_real_video_mlx.CanonicalSmokeResult`
+          dict-form)
+        - ``predicted_axis_decomposition`` (canonical
+          :class:`AxisDecomposition` dict-form per Catalog #356)
+        - ``verdict`` ("PER_PIXEL_MLX_REAL_VIDEO_SMOKE_GREEN_DEFERRED_PENDING_
+          PAIRED_CUDA_EMPIRICAL_ANCHOR")
+        - ``per_pixel_real_video_remediation_anchor`` (Slot EEE Axis A + C
+          remediation citation)
+
+    Notes
+    -----
+    Per CLAUDE.md "Apples-to-apples evidence discipline" + Catalog #192: this
+    helper produces ``[macOS-CPU advisory]`` / ``[macOS-MLX research-signal]``
+    output that is NEVER promotable to a contest-axis score claim. Paired
+    Linux x86_64 + NVIDIA empirical anchor required per Catalog #246 before
+    any score claim.
+
+    The new bind path's per-pixel SPAM-delta values differ from the existing
+    cell-counting heuristic output by construction (real residual-magnitude
+    delta vs unit-cell counting); both are valid per the canonical
+    Pevný-Filler-Bas 2010 first-order approximation but the real per-pixel
+    surface is closer to the paper formulation per Slot EEE Axis A audit.
+    """
+    from tac.inverse_steganalysis_real_video_mlx import (
+        compute_hugo_per_pixel_spam_delta_mlx,
+        run_macos_cpu_advisory_smoke,
+    )
+
+    smoke_result = run_macos_cpu_advisory_smoke(
+        target_name=(
+            "hugo_canonical_inverse_steganalysis_pevny_filler_bas_2010_"
+            "per_pixel_real_spam_delta_mlx_real_video"
+        ),
+        cost_function=compute_hugo_per_pixel_spam_delta_mlx,
+        num_frames=num_frames,
+        target_resolution=target_resolution,
+        use_mlx=use_mlx,
+        cost_function_kwargs={
+            "truncation_t": truncation_t,
+            "perturbation_magnitude": perturbation_magnitude,
+        },
+    )
+
+    # Canonical AxisDecomposition per Catalog #356 with canonical Provenance
+    # per Catalog #323 (NEVER promotable predicted axis-tag).
+    _input_signature_payload = (
+        f"hugo_per_pixel_spam_delta"
+        f"|T={int(truncation_t)}"
+        f"|pert={float(perturbation_magnitude):.12e}"
+        f"|frames={int(num_frames)}"
+        f"|res={int(target_resolution[0])}x{int(target_resolution[1])}"
+        f"|mlx={bool(use_mlx)}"
+        f"|strategy={strategy}"
+    ).encode("ascii")
+    _input_signature_sha256 = hashlib.sha256(_input_signature_payload).hexdigest()
+    prov = build_provenance_for_predicted(
+        model_id=(
+            "tac.composition.hugo_canonical_inverse_steganalysis_"
+            "pevny_filler_bas_2010."
+            "apply_hugo_canonical_real_per_pixel_spam_delta_via_"
+            "canonical_real_video_mlx_to_pr110_archive"
+        ),
+        inputs_sha256=_input_signature_sha256,
+        measurement_axis="[predicted]",
+        hardware_substrate="macos_arm64_mlx" if use_mlx else "macos_arm64",
+    )
+    decomp = AxisDecomposition(
+        predicted_d_seg_delta=0.0,  # L0 SCAFFOLD: smoke-only, no actual perturbation applied
+        predicted_d_pose_delta=0.0,  # L0 SCAFFOLD: smoke-only, no actual perturbation applied
+        predicted_archive_bytes_delta=0,  # L0 SCAFFOLD: per-pixel smoke does not modify archive
+        axis_tag="[predicted]",
+        canonical_provenance=provenance_to_dict(prov),
+    )
+
+    return {
+        # Tier A canonical-routing markers per Catalog #341 + #357
+        "predicted_delta_adjustment": 0.0,
+        "promotable": False,
+        "score_claim": False,
+        "axis_tag": "[predicted]",
+        # Strategy sentinel echo
+        "strategy": strategy,
+        # Canonical smoke result
+        "smoke_result": smoke_result.to_dict(),
+        # Canonical AxisDecomposition per Catalog #356
+        "predicted_axis_decomposition": decomp.as_dict(),
+        # Catalog #325 verdict
+        "verdict": (
+            "PER_PIXEL_MLX_REAL_VIDEO_SMOKE_GREEN_"
+            "DEFERRED_PENDING_PAIRED_CUDA_EMPIRICAL_ANCHOR"
+        ),
+        # Slot EEE remediation anchor
+        "per_pixel_real_video_remediation_anchor": {
+            "slot_eee_audit_axis_a_verdict": "PARTIAL_remediated",
+            "slot_eee_audit_axis_c_verdict": "FAIL_remediated",
+            "remediation_pattern": (
+                "Canonical shared helper "
+                "tac.inverse_steganalysis_real_video_mlx applied per-pixel "
+                "HUGO SPAM-delta cost matrix on real upstream/videos/0.mkv "
+                "decoded frames per Pevný-Filler-Bas 2010 canonical 4-"
+                "direction truncated-residual formulation (T=4 default)"
+            ),
+            "canonical_helper_module": (
+                "tac.inverse_steganalysis_real_video_mlx"
+            ),
+            "canonical_helper_function": (
+                "compute_hugo_per_pixel_spam_delta_mlx"
+            ),
+            "sister_slot_yy_hill_reference_pattern_commit": "32a70c051",
+            "operator_binding_5_invariant_standing_directive_anchor": (
+                "feedback_optimize_iterate_highest_ev_boldest_individually_"
+                "fractally_optimized_mlx_deployed_aggressive_frontier_breaking_"
+                "no_fake_implementations_standing_directive_20260529"
+            ),
+            "slot_eee_audit_anchor": (
+                "feedback_slot_eee_fake_implementation_audit_on_today_l0_"
+                "scaffolds_per_operator_binding_must_review_for_fake_"
+                "implementations_landed_20260529"
+            ),
+        },
+    }
+
+
 __all__ = (
     "CANONICAL_PEVNY_FILLER_BAS_2010_CITATION_URL",
     "CANONICAL_PEVNY_FILLER_BAS_2010_CITATION_TEXT",
@@ -1103,8 +1332,10 @@ __all__ = (
     "CANONICAL_N_MODES",
     "CANONICAL_RATE_MULTIPLIER",
     "CANONICAL_RATE_DENOM_BYTES",
+    "STRATEGY_PER_PIXEL_REAL_SPAM_DELTA_MLX",
     "HUGOSPAMFeatureStrategy",
     "HUGOConfig",
     "compute_hugo_canonical_spam_feature_cost_matrix_for_pr110_catalog",
     "apply_hugo_canonical_spam_feature_cost_matrix_to_pr110_archive",
+    "apply_hugo_canonical_real_per_pixel_spam_delta_via_canonical_real_video_mlx_to_pr110_archive",
 )

@@ -575,7 +575,19 @@ def test_list_canonical_paired_cuda_targets_canonical_frontier_pointer_match(mod
 
 
 def test_canonical_all_exports_complete(mod):
-    """Canonical __all__ exposes every public API per Catalog #265 contract."""
+    """Canonical __all__ exposes every public API per Catalog #265 contract.
+
+    Updated 2026-05-29 per Slot RR FAKE rename + REAL perturbation migration
+    via canonical shared helper (Slot EEE 6-axis honesty audit remediation):
+    adds 3 NEW exports — the canonical menu-builder rename
+    ``build_pose_axis_null_projection_menu_for_pr110_archive``, the canonical
+    REAL perturbation apply
+    ``apply_pose_axis_null_projection_via_canonical_real_video_mlx_to_pr110_archive``,
+    and the canonical strategy identifier ``STRATEGY_PER_PIXEL_REAL_VIDEO_MLX``.
+    The legacy ``apply_pose_axis_null_projection_to_pr110_archive`` is
+    preserved as a backward-compat alias for the menu-builder per CLAUDE.md
+    "Forbidden premature KILL" non-negotiable.
+    """
     required_exports = {
         "OPT12_POSENET_NULL_TYPICAL_ABS_POSE_DELTA",
         "OPT12_POSENET_NULL_DOMINANT_FAMILY_FRACTION",
@@ -595,11 +607,14 @@ def test_canonical_all_exports_complete(mod):
         "CANONICAL_FRIDRICH_YOUSFI_INVERSE_STEGANALYSIS_PARADIGM_INTACT",
         "CANONICAL_EQUATION_CANDIDATE_ID",
         "CANONICAL_ANTI_PATTERN_CANDIDATE_ID",
+        "STRATEGY_PER_PIXEL_REAL_VIDEO_MLX",
         "PoseAxisNullProjectionStrategy",
         "MotionPairRepairPoseAxisNullProjectionConfig",
         "build_canonical_frame1_pose_axis_null_projection_menu",
         "build_axis_decomposition_for_pr110_opt_6",
+        "build_pose_axis_null_projection_menu_for_pr110_archive",
         "apply_pose_axis_null_projection_to_pr110_archive",
+        "apply_pose_axis_null_projection_via_canonical_real_video_mlx_to_pr110_archive",
         "list_canonical_paired_cuda_ratification_targets",
     }
     assert set(mod.__all__) == required_exports
