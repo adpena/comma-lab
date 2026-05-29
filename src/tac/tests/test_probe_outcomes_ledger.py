@@ -106,12 +106,23 @@ def test_valid_verdicts_includes_all_canonical_tokens() -> None:
     assert "PROCEED" in VALID_VERDICTS
     assert "PARTIAL" in VALID_VERDICTS
     assert "OPERATOR_REVIEW_REQUIRED" in VALID_VERDICTS
+    # Slot A NEGATIVE-RESULTS-AUDIT-V2 FIX O3 (2026-05-28): INFRASTRUCTURE_FAILURE
+    # is the canonical verdict semantically distinct from INDEPENDENT for the
+    # F19 segfault class. See VERDICT_INFRASTRUCTURE_FAILURE docstring.
+    assert "INFRASTRUCTURE_FAILURE" in VALID_VERDICTS
 
 
 def test_blocking_verdicts_canonical_set() -> None:
     """Per CLAUDE.md 'Forbidden premature KILL': blocking verdicts are
-    research-deferrals, NOT kills."""
-    assert frozenset({"INDEPENDENT", "KILL", "DEFER"}) == BLOCKING_VERDICTS
+    research-deferrals, NOT kills.
+
+    Slot A NEGATIVE-RESULTS-AUDIT-V2 FIX O3 (2026-05-28): INFRASTRUCTURE_FAILURE
+    added to BLOCKING_VERDICTS so re-running the exact same infrastructure-broken
+    probe is refused at the gate (would just re-crash and waste paid GPU spend).
+    Resolution requires sister probe with corrected infrastructure OR operator
+    override per Catalog #313 paired-env bypass.
+    """
+    assert frozenset({"INDEPENDENT", "KILL", "DEFER", "INFRASTRUCTURE_FAILURE"}) == BLOCKING_VERDICTS
 
 
 def test_valid_blocker_statuses_canonical_set() -> None:

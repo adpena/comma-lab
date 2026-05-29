@@ -186,6 +186,28 @@ VERDICT_PROMOTE = "PROMOTE"
 VERDICT_PROCEED = "PROCEED"
 VERDICT_PARTIAL = "PARTIAL"
 VERDICT_OPERATOR_REVIEW_REQUIRED = "OPERATOR_REVIEW_REQUIRED"
+# Slot A NEGATIVE-RESULTS-AUDIT-V2 FIX O3 (2026-05-28): infrastructure-failure
+# verdict semantically distinct from INDEPENDENT (paradigm-disambiguation empirical
+# null) per the F19 segfault empirical anchor + canonical
+# `paradigm_vs_implementation_falsification_distinct_from_infrastructure_failure_v1`
+# anti-pattern lineage. An INDEPENDENT verdict says "the probe ran cleanly and
+# the metric indicates no signal in the conditioning axis"; an
+# INFRASTRUCTURE_FAILURE verdict says "the probe could not be measured because
+# the code/runtime/dispatch infrastructure crashed (segfault, OOM, malformed
+# input, NaN propagation, etc.)" — fundamentally different signal classes that
+# the prior conflation poisoned downstream paradigm-vs-implementation
+# classification per Catalog #307. Per CLAUDE.md "Apples-to-apples evidence
+# discipline" non-negotiable: the verdict taxonomy must distinguish them so the
+# operator + autopilot ranker know to re-probe with corrected infrastructure
+# vs to accept paradigm-disambiguation null. F19 anchor:
+# ``v4_hand_rolled_faiss_ivf_pq_m2_ksub128_topk3_600pair_segfault_20260518``
+# SEGFAULTS at both 100-pair smoke AND 600-pair full on REAL A1 softmax data —
+# the verdict is NOT paradigm-INDEPENDENT (the V1/V2 sister Faiss codecs DID
+# disambiguate Shannon transition zones at MI=2.46) but rather a hand-rolled-V4
+# infrastructure-implementation failure. The canonical extinction sister to
+# this verdict class is the F19-style probe being re-routed to a non-segfaulting
+# Faiss variant (V5/V6/V7/V8) rather than treated as a paradigm-KILL.
+VERDICT_INFRASTRUCTURE_FAILURE = "INFRASTRUCTURE_FAILURE"
 
 VALID_VERDICTS = frozenset(
     {
@@ -196,6 +218,7 @@ VALID_VERDICTS = frozenset(
         VERDICT_PROCEED,
         VERDICT_PARTIAL,
         VERDICT_OPERATOR_REVIEW_REQUIRED,
+        VERDICT_INFRASTRUCTURE_FAILURE,
     }
 )
 
@@ -203,7 +226,11 @@ VALID_VERDICTS = frozenset(
 # outcome is within the staleness window. Per CLAUDE.md "Forbidden premature
 # KILL without research exhaustion": these verdicts are research-deferrals not
 # kills; the gate REFUSES re-dispatch but does NOT mark the lane killed.
-BLOCKING_VERDICTS = frozenset({VERDICT_INDEPENDENT, VERDICT_KILL, VERDICT_DEFER})
+# INFRASTRUCTURE_FAILURE is BLOCKING because re-running the exact same
+# infrastructure-broken probe again would just re-crash and waste paid GPU
+# spend; resolution requires either (a) sister probe with corrected
+# infrastructure, OR (b) operator override per Catalog #313 paired-env bypass.
+BLOCKING_VERDICTS = frozenset({VERDICT_INDEPENDENT, VERDICT_KILL, VERDICT_DEFER, VERDICT_INFRASTRUCTURE_FAILURE})
 
 # Blocker status taxonomy.
 BLOCKER_STATUS_BLOCKING = "blocking"
@@ -991,6 +1018,7 @@ __all__ = [
     "VALID_VERDICTS",
     "VERDICT_DEFER",
     "VERDICT_INDEPENDENT",
+    "VERDICT_INFRASTRUCTURE_FAILURE",
     "VERDICT_KILL",
     "VERDICT_OPERATOR_REVIEW_REQUIRED",
     "VERDICT_PARTIAL",

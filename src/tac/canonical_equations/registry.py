@@ -679,6 +679,71 @@ class RecalibrationReport:
 _AUTO_REFIT_MIN_ANCHORS = 3
 
 
+def _anchor_in_domain_context(anchor: EmpiricalAnchor) -> str | None:
+    """Return the canonical ``in_domain_context`` token attached to an anchor.
+
+    Anchors typically declare ``inputs.in_domain_context`` (string) per the
+    canonical anchor schema. This helper centralizes lookup so the recalibrator
+    + sister gate Catalog #359 (residual-hybrid misapplication) read the same
+    field consistently. Returns ``None`` when absent / non-string.
+    """
+    in_domain = anchor.inputs.get("in_domain_context") if isinstance(anchor.inputs, Mapping) else None
+    if isinstance(in_domain, str) and in_domain.strip():
+        return in_domain.strip()
+    return None
+
+
+def _anchor_is_in_excluded_context(
+    anchor: EmpiricalAnchor,
+    excluded_contexts: tuple[str, ...] | list[str] | None,
+) -> bool:
+    """Return True when the anchor's ``in_domain_context`` matches an excluded one.
+
+    Per Slot A NEGATIVE-RESULTS-AUDIT-V2 finding F05 + Catalog #359 sister
+    discipline: an anchor whose ``inputs.in_domain_context`` is enumerated in
+    the equation's ``domain_of_validity.excluded_contexts`` was landed for a
+    context the equation EXPLICITLY DOES NOT PREDICT FOR. The anchor remains
+    in the registry per Catalog #110/#113 APPEND-ONLY HISTORICAL_PROVENANCE
+    (the empirical measurement IS real evidence), but it MUST NOT pollute the
+    equation's residual SUMMARY because the residual would be paid against a
+    prediction the equation never claimed.
+
+    Empirical anchor: ``pose_axis_score_direction_matching_paradigm_savings_v1``
+    landed an anchor with ``in_domain_context=
+    'mlx_native_pose_axis_score_direction_matching_standalone_replaces_segnet'``
+    whose residual=30.68 — this context is in ``excluded_contexts`` because
+    standalone replacement (no SegNet) is a separate equation. Letting the
+    30.68 residual into the summary makes the equation look ~10x worse
+    calibrated than it actually is in its declared domain.
+    """
+    if not excluded_contexts:
+        return False
+    in_domain = _anchor_in_domain_context(anchor)
+    if in_domain is None:
+        return False
+    return in_domain in tuple(excluded_contexts)
+
+
+def _anchor_residual_is_nan_or_infinite(anchor: EmpiricalAnchor) -> bool:
+    """Return True when the anchor's stored residual is NaN / infinite.
+
+    Per Slot A NEGATIVE-RESULTS-AUDIT-V2 finding F08 + F09: 2 equations carry
+    pre-rejection NaN-sentinel anchors (``EmpiricalAnchor.__post_init__`` now
+    refuses NaN at construction per ``equation.py`` lines 146-147, but a
+    handful of historical payloads predated that invariant). The lenient
+    registry loader cannot detect this because the legacy NaN residuals were
+    embedded inside the residual SUMMARY map (``predicted_vs_empirical_residual``)
+    rather than inside an EmpiricalAnchor itself, but defense-in-depth: if any
+    future loader path slips a NaN anchor through, the refit MUST skip it
+    rather than propagating NaN into the summary (NaN poisons every downstream
+    consumer: ``is_well_calibrated`` returns False forever; cathedral autopilot
+    Catalog #335 lookup consumer sees a None-equivalent; arithmetic comparisons
+    silently fail because ``NaN != NaN``).
+    """
+    r = float(anchor.residual)
+    return r != r or r == float("inf") or r == float("-inf")
+
+
 def _refit_residual_map_from_anchors(
     equation: CanonicalEquation,
 ) -> dict[str, float]:
@@ -690,6 +755,22 @@ def _refit_residual_map_from_anchors(
     The latest anchor per axis wins (mirrors ``with_new_anchor`` semantics,
     which overwrite ``predicted_vs_empirical_residual[method]`` on append).
 
+    Two evidence-faithful filters applied per Slot A NEGATIVE-RESULTS-AUDIT-V2
+    FIX O1 + O2 (2026-05-28):
+
+    1. **Excluded-context filter (FIX O1)** — anchors whose
+       ``inputs.in_domain_context`` matches the equation's
+       ``domain_of_validity.excluded_contexts`` are SKIPPED. The anchor row
+       itself remains in the registry per Catalog #110/#113 APPEND-ONLY (it IS
+       real empirical evidence for an OUT-OF-DOMAIN context); only the residual
+       SUMMARY excludes it. Sister of Catalog #359
+       (``check_no_canonical_equation_misapplication_to_residual_hybrid_contexts``)
+       at the per-anchor recalibration surface.
+    2. **NaN-sentinel skip (FIX O2)** — anchors whose stored residual is NaN
+       or infinite are SKIPPED. Defense-in-depth: ``EmpiricalAnchor.__post_init__``
+       already refuses NaN at construction, but defensive coding here protects
+       against future loader-path regressions that might slip a NaN through.
+
     This does NOT synthesize new anchors and does NOT fabricate a measurement
     (Catalog #287 / #323): it only re-derives the residual *summary* from
     anchors that already landed via signed ``update_equation_with_empirical_anchor``
@@ -697,11 +778,45 @@ def _refit_residual_map_from_anchors(
     longer matches its own anchors because a sister appended anchors but never
     re-summarized) is what this extincts.
     """
+    excluded_contexts = equation.domain_of_validity.get("excluded_contexts") if isinstance(equation.domain_of_validity, Mapping) else None
     refit: dict[str, float] = {}
     for anchor in equation.empirical_anchors:
+        if _anchor_is_in_excluded_context(anchor, excluded_contexts):
+            # FIX O1: anchor measured in EXCLUDED context; the equation does
+            # not predict for this context, so its residual must not pollute
+            # the in-domain summary. Anchor row preserved per APPEND-ONLY.
+            continue
+        if _anchor_residual_is_nan_or_infinite(anchor):
+            # FIX O2: NaN/inf residual would poison every downstream consumer
+            # (is_well_calibrated; cathedral autopilot lookup; arithmetic).
+            # Defense-in-depth: EmpiricalAnchor.__post_init__ also refuses NaN
+            # at construction (equation.py L146-147).
+            continue
         # Latest-wins per axis (anchors are stored in append order).
         refit[anchor.measurement_method] = float(anchor.residual)
     return refit
+
+
+def _stored_map_has_corrupt_residual_keys(stored_map: Mapping[str, float]) -> bool:
+    """Return True when the stored residual map carries NaN/inf residuals.
+
+    Per Slot A NEGATIVE-RESULTS-AUDIT-V2 FIX O2: a handful of historical
+    equation payloads predate the EmpiricalAnchor NaN-rejection invariant
+    and now have NaN entries stuck in their residual SUMMARY map even though
+    no current anchor would justify a NaN. The recalibrator's primary
+    eligibility path (``RECALIBRATE_ON_NEW_ANCHORS`` + 3+ anchors) may not
+    cover these (1 or 2 anchors only); this helper enables the
+    NaN-cleanup-eligibility secondary path to fire whenever the stored map
+    contains a residual that the canonical EmpiricalAnchor invariants now
+    refuse at construction.
+    """
+    for v in stored_map.values():
+        if not isinstance(v, (int, float)):
+            continue
+        fv = float(v)
+        if fv != fv or fv == float("inf") or fv == float("-inf"):
+            return True
+    return False
 
 
 def auto_recalibrate_from_continual_learning_posterior(
@@ -739,6 +854,16 @@ def auto_recalibrate_from_continual_learning_posterior(
     are reported but NOT auto-refit here — those require an operator invocation
     or a drift-detection path, by design.
 
+    **Slot A NEGATIVE-RESULTS-AUDIT-V2 FIX O1 + O2 (2026-05-28)** ext:
+    every refit invocation now passes anchors through two evidence-faithful
+    filters in :func:`_refit_residual_map_from_anchors`: (FIX O1) skip
+    anchors whose ``inputs.in_domain_context`` matches the equation's
+    ``domain_of_validity.excluded_contexts``; (FIX O2) skip anchors with
+    NaN/inf residuals. Additionally, equations with NaN/inf in their stored
+    residual map (legacy payloads that predate the construction invariant)
+    qualify for refit even when below the 3-anchor threshold, via the
+    secondary NaN-cleanup-eligibility path.
+
     Returns a :class:`RecalibrationReport`. ``new_anchors_absorbed`` counts
     the (axis, residual) summary rows that were updated/added by the refit
     (the system "absorbing" already-landed evidence into the summary), NOT
@@ -757,16 +882,32 @@ def auto_recalibrate_from_continual_learning_posterior(
     for eq in equations:
         trigger = eq.next_recalibration_trigger
         anchor_count = len(eq.empirical_anchors)
+        # Primary refit eligibility: canonical RECALIBRATE_ON_NEW_ANCHORS trigger
+        # + 3+ anchors. Mirrors original intent.
         refit_eligible = (
             trigger == RECALIBRATE_ON_NEW_ANCHORS
             and anchor_count >= _AUTO_REFIT_MIN_ANCHORS
         )
-        refit_map = _refit_residual_map_from_anchors(eq) if refit_eligible else {}
+        # Secondary NaN-cleanup eligibility per FIX O2: even when below the
+        # 3-anchor threshold, if the stored residual map contains NaN/inf
+        # residuals that the current EmpiricalAnchor invariants now refuse
+        # at construction, the refit MUST run to drop those poison values
+        # from the summary. The refit IS still evidence-faithful (driven from
+        # the equation's own anchors only); it just additionally fires when
+        # the stored map carries values no anchor would now justify.
         stored_map = dict(eq.predicted_vs_empirical_residual)
+        nan_cleanup_eligible = (
+            trigger == RECALIBRATE_ON_NEW_ANCHORS
+            and not refit_eligible
+            and anchor_count >= 1
+            and _stored_map_has_corrupt_residual_keys(stored_map)
+        )
+        do_refit = refit_eligible or nan_cleanup_eligible
+        refit_map = _refit_residual_map_from_anchors(eq) if do_refit else {}
         # Drift detection: did the recomputed summary diverge from the stored
         # summary? (New axis keys, changed residual magnitudes, or stale keys
         # whose anchors were superseded.)
-        changed = refit_eligible and refit_map != stored_map
+        changed = do_refit and refit_map != stored_map
         did_recalibrate = False
 
         if changed:
@@ -780,6 +921,11 @@ def auto_recalibrate_from_continual_learning_posterior(
                 for k, v in refit_map.items()
                 if stored_map.get(k) != v
             ) + sum(1 for k in stored_map if k not in refit_map)
+            cleanup_reason = (
+                "stale-prior orphan extinction"
+                if refit_eligible
+                else "nan-cleanup eligibility (FIX O2 secondary path)"
+            )
             _append_event_locked(
                 EVENT_RECALIBRATED,
                 updated,
@@ -789,8 +935,9 @@ def auto_recalibrate_from_continual_learning_posterior(
                 subagent_id=subagent_id,
                 notes=(
                     f"auto_recalibrate: refit residual summary from "
-                    f"{anchor_count} landed anchors; {n_axes_changed} axis row(s) "
-                    f"changed (stale-prior orphan extinction)"
+                    f"{anchor_count} landed anchors (excluded_contexts + NaN "
+                    f"filters per Slot A FIX O1+O2 2026-05-28); "
+                    f"{n_axes_changed} axis row(s) changed ({cleanup_reason})"
                 ),
             )
             recalibrated_count += 1
@@ -804,6 +951,7 @@ def auto_recalibrate_from_continual_learning_posterior(
             "well_calibrated": eq.is_well_calibrated,
             "trigger": trigger,
             "refit_eligible": refit_eligible,
+            "nan_cleanup_eligible": nan_cleanup_eligible,
             "recalibrated": did_recalibrate,
         }
 
