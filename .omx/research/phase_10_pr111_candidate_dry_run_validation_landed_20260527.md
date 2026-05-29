@@ -365,3 +365,15 @@ attribution-clean; Catalog #370 strict-flip + 6-equation promotion deferred to a
 future PACKET-CLEAN run after the Layer 1 gap is closed.**
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+
+<!-- APPEND_ONLY_FOOTER per Catalog #110 + #113 HISTORICAL_PROVENANCE; landed 2026-05-29 by lane lane_layer_1_x_member_grammar_fix_phase_10_oproutable_1_v14_v2_pr111_unblock_20260529 -->
+
+## APPEND-ONLY 2026-05-29: Phase 10 op-routable #1 (Layer 1 x-member gap) — STRUCTURALLY RESOLVED AT HEAD
+
+Empirical verification 2026-05-29 confirms Phase 10 op-routable #1 is **structurally resolved at HEAD** — the canonical helper at `src/tac/submission_packet/archive_grammar.py::discover_section_specs_from_archive` is already member-name-agnostic per HNeRV parity L3 (docstring at lines 626-642 + `ArchiveGrammarManifest.__post_init__` invariant at lines 411-427 + auto-discovery branch at lines 653-669). V14-V2 PR111 candidate archive (sha `0a3abfe645c4fac0df9ea89237f25dd9bfc6b2471b897c36d7437795d27d1403`, 178546 bytes, single `x` member) empirically round-trips through `build_archive_grammar_from_compression_pipeline_result` with `monolithic_single_file=True` + `multi_file_justification=None`. 164/164 sister test suite pass including explicit x-member coverage at `test_archive_grammar.py:545-549`.
+
+Canonical apparatus mutation chain landed in same session: lane registry L1 + council T2 PROCEED 9-voice anchor + Catalog #313 probe outcome PROCEED + canonical equation candidate `pr101_lc_v2_clone_single_x_member_zip_monolithic_grammar_recognition_v1` FORMALIZATION_PENDING per Catalog #344 iterate-not-force. Phase 9 CLI Layer 1 advances from exit 5 (CLI-ERROR) to exit 4 (operator-gated final `gh`) per Catalog #362 STRICT gate Phase 8 Layer 6.
+
+Companion landing memo: `~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_layer_1_x_member_grammar_fix_phase_10_oproutable_1_v14_v2_pr111_unblock_exit_4_landed_20260529.md`. Catalog #348 retroactive sweep: `.omx/research/retroactive_sweep_for_layer_1_x_member_grammar_fix_20260529T090500Z.md`.
+
+Per canonical 11th standing directive ORDER + operator binding META directive #3 (EXTEND existing apparatus NOT parallel build): the canonical helper EXTENSION was completed by an earlier landing without parallel-namespace pollution — exactly as the canonical discipline prescribes.

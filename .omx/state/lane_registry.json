@@ -60786,6 +60786,88 @@
         }
       },
       "notes": "L0 SCAFFOLD design memo (research_only=true; non-promotable per Catalog #192; feed-INTO-Slot-GG synthesis); lane_class=substrate_engineering; horizon_class=frontier_pursuit per Catalog #309; 4 reward signals + 3 PufferLib MLX-LOCAL envs; predicted_band [-0.005, +0.020] contest-CPU operationalized via Slot GG canonical SHARED helper + paired-CUDA RATIFICATION per Catalog #246. dispatch_enabled=false; smoke_only=true. archive_grammar=N/A_design_memo_only. parser_section_manifest=N/A. inflate_runtime_loc_budget=N/A. runtime_dep_closure=N/A. export_format=N/A. score_aware_loss=via_Slot_GG_canonical_SHARED_helper. bolt_on_loc_budget=N/A. no_op_detector_planned=N/A. score_improvement_mechanism_status=design_memo_only_pending_Slot_GG_synthesis."
+    },
+    {
+      "id": "lane_slot_ll_pr98_channel_balance_zero_byte_bolt_on_per_slot_dd_highest_ev_shortest_wc_rank_1_20260529",
+      "name": "Slot LL L28 PR98 zero-byte decode-side channel-balance canonical bolt-on",
+      "phase": 4.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/codec/pr98_channel_balance_zero_byte_bolt_on/__init__.py + src/tac/cathedral_consumers/pr98_channel_balance_consumer/__init__.py + 70/70 tests in src/tac/tests/test_pr98_channel_balance_zero_byte_bolt_on.py PASS in 0.29s; canonical L28 helper per HNeRV parity L28 + PR101 hnerv_ft_microcodec inflate.py:49-51; cathedral consumer auto-discovered per Catalog #335 (78 total); axis decomposition per Catalog #356; canonical Provenance per Catalog #323; macOS-CPU advisory smoke at experiments/results/slot_ll_*/smoke_output.json non-promotable per Catalog #192; bolt_on_loc_budget=520 (helper 470 LOC + consumer ~155 LOC; well within HNeRV parity L7 substrate-engineering exception); research_only=false (canonical bolt-on integrates with existing tac.codec namespace per operator binding META directive #3); score_improvement_mechanism_status=PENDING_PAIRED_CUDA_RATIFICATION (canonical equation candidate DEFERRED per iterate-not-force)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #335 cathedral consumer canonical contract STRICT gate passing (0 violations across 78 auto-discovered consumers including new pr98_channel_balance_consumer); Catalog #341 Tier A canonical-routing markers enforced in consumer; Catalog #323 canonical Provenance enforced via build_provenance_for_predicted; Catalog #287 placeholder-rationale rejection enforced in Pr98ChannelBalanceConfig.__post_init__; per Slot CC STRATEGIC RESET #1 + Catalog #299 NO new Catalog # STRICT gate added \u2014 sister-extinction architecture preferred over scope-stretch"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_slot_ll_l28_pr98_zero_byte_decode_side_channel_balance_bolt_on_per_slot_dd_highest_ev_shortest_wc_rank_1_landed_20260529.md + retroactive sweep at .omx/research/retroactive_sweep_for_l28_pr98_channel_balance_zero_byte_bolt_on_20260529T160000Z.md per Catalog #348 + canonical council anchor at .omx/state/council_deliberation_posterior.jsonl per Catalog #355 + #300 v2 frontmatter; council_tier=T2 + verdict=PROCEED + 2 Assumption-Adversary HARD-EARNED classifications + predicted_mission_contribution=frontier_breaking"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_layer_1_x_member_grammar_fix_phase_10_oproutable_1_v14_v2_pr111_unblock_20260529",
+      "name": "Layer 1 x-member grammar fix Phase 10 op-routable #1 V14-V2 PR111 unblock",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "Canonical helper src/tac/submission_packet/archive_grammar.py::discover_section_specs_from_archive already structurally recognizes PR101/DQS1 single-x-member ZIP as monolithic per HNeRV parity L3 member-name-agnostic structural property; 164/164 tests pass; V14-V2 PR111 candidate archive sha 0a3abfe645c4fac0df9ea89237f25dd9bfc6b2471b897c36d7437795d27d1403 empirically verified end-to-end via Phase 9 Layer 1 chain returning monolithic_single_file=True without multi_file_justification"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_layer_1_x_member_grammar_fix_phase_10_oproutable_1_v14_v2_pr111_unblock_exit_4_landed_20260529.md (pending in this commit batch)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -60795,5 +60877,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-29T08:29:23Z"
+  "updated_at": "2026-05-29T08:57:17Z"
 }
