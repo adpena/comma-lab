@@ -83136,10 +83136,15 @@ def check_dispatch_wrappers_pair_with_harvest_scheduler_invocation(
 # Tools that write under .omx/research/**/*.json AND therefore MUST route through
 # tac.research_pipeline_output_dir_safety.enforce_research_pipeline_output_dir.
 # Per the canonical anti-pattern's canonical_producers list (5 producers).
+# Slot F 2026-05-29 extended the gate to the full 5-producer set per the
+# canonical anti-pattern producers field
+# (research_pipeline_tool_re_writes_historical_provenance_json_with_mutated_fields_v1).
 _CHECK_381_RESEARCH_PIPELINE_TOOLS: tuple[str, ...] = (
     "tools/run_pr95_local_training_probe.py",
     "tools/run_repair_autonomous_multi_archive_runner.py",
     "tools/build_frontier_final_rate_attack_queue.py",
+    "tools/build_pr95_mlx_optimizer_matrix_queue.py",
+    "tools/build_monolithic_runtime_consumption_proof.py",
 )
 
 # Canonical acceptance tokens — at least one MUST appear in the tool body.

@@ -12,9 +12,18 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import sys
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
+
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
 
 SCHEMA = "tac_runtime_consumption_proof_v1"
 MONOLITHIC_MANIFEST_SCHEMA = "tac_monolithic_packet_candidate_v1"
@@ -173,7 +182,52 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--runtime-log", type=Path, required=True)
     parser.add_argument("--json-out", type=Path)
     parser.add_argument("--fail-if-not-ready", action="store_true")
+    parser.add_argument(
+        "--allow-overwrite-existing-historical-provenance",
+        action="store_true",
+        help=(
+            "Opt-in to overwriting an existing .omx/research/<dir>/ that already "
+            "contains canonical HISTORICAL_PROVENANCE JSON files. Per Catalog #113 + "
+            "anti-pattern "
+            "research_pipeline_tool_re_writes_historical_provenance_json_with_mutated_fields_v1, "
+            "the default behavior is fail-closed; requires --overwrite-rationale."
+        ),
+    )
+    parser.add_argument(
+        "--overwrite-rationale",
+        type=str,
+        default=None,
+        help=(
+            "Substantive operator rationale (>=4 chars; non-placeholder per "
+            "Catalog #287) required when --allow-overwrite-existing-historical-provenance "
+            "is set."
+        ),
+    )
     args = parser.parse_args(argv)
+
+    # Canonical HISTORICAL_PROVENANCE safety per Catalog #113 + anti-pattern
+    # `research_pipeline_tool_re_writes_historical_provenance_json_with_mutated_fields_v1`
+    # (registered 2026-05-28). Validates the parent dir of --json-out when set;
+    # tool also supports stdout-only mode where no canonical file write happens.
+    # Slot F canonical helper extension 2026-05-29.
+    if args.json_out is not None:
+        from tac.research_pipeline_output_dir_safety import (
+            OutputDirSafetyError,
+            enforce_research_pipeline_output_dir,
+        )
+
+        try:
+            enforce_research_pipeline_output_dir(
+                args.json_out.parent,
+                repo_root=REPO_ROOT,
+                allow_overwrite_existing_historical_provenance=(
+                    args.allow_overwrite_existing_historical_provenance
+                ),
+                waiver_rationale=args.overwrite_rationale,
+            )
+        except OutputDirSafetyError as exc:
+            print(f"FATAL: {exc}", file=sys.stderr)
+            return 3
 
     try:
         payload = build_runtime_consumption_proof(

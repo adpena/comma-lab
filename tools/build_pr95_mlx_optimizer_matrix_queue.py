@@ -792,6 +792,27 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--local-mps-concurrency", type=int, default=1)
     parser.add_argument("--timeout-seconds", type=int, default=0)
     parser.add_argument("--allow-existing-plan-dirs", action="store_true")
+    parser.add_argument(
+        "--allow-overwrite-existing-historical-provenance",
+        action="store_true",
+        help=(
+            "Opt-in to overwriting an existing .omx/research/<dir>/ that already "
+            "contains canonical HISTORICAL_PROVENANCE JSON files. Per Catalog #113 + "
+            "anti-pattern "
+            "research_pipeline_tool_re_writes_historical_provenance_json_with_mutated_fields_v1, "
+            "the default behavior is fail-closed; requires --overwrite-rationale."
+        ),
+    )
+    parser.add_argument(
+        "--overwrite-rationale",
+        type=str,
+        default=None,
+        help=(
+            "Substantive operator rationale (>=4 chars; non-placeholder per "
+            "Catalog #287) required when --allow-overwrite-existing-historical-provenance "
+            "is set."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -854,6 +875,28 @@ def _apply_control_profile(args: argparse.Namespace) -> None:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     _apply_control_profile(args)
+    # Canonical HISTORICAL_PROVENANCE safety per Catalog #113 + anti-pattern
+    # `research_pipeline_tool_re_writes_historical_provenance_json_with_mutated_fields_v1`
+    # (registered 2026-05-28; 24 of 77 violations were on
+    # pr95_mlx_runtime_consumption_queue_* dirs from re-running with same
+    # --output-root). Slot F canonical helper extension 2026-05-29.
+    from tac.research_pipeline_output_dir_safety import (
+        OutputDirSafetyError,
+        enforce_research_pipeline_output_dir,
+    )
+
+    try:
+        enforce_research_pipeline_output_dir(
+            args.output_root,
+            repo_root=args.repo_root,
+            allow_overwrite_existing_historical_provenance=(
+                args.allow_overwrite_existing_historical_provenance
+            ),
+            waiver_rationale=args.overwrite_rationale,
+        )
+    except OutputDirSafetyError as exc:
+        print(f"FATAL: {exc}", file=sys.stderr)
+        return 3
     try:
         payload = build_pr95_mlx_optimizer_matrix_queue(
             repo_root=args.repo_root,
