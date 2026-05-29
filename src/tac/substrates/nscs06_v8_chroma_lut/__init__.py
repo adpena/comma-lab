@@ -167,6 +167,20 @@ from .gt_distribution_matched_seed import (
     expand_gt_matched_seed_to_lut,
     verify_seed_encodes_gt_fingerprint,
 )
+# Wave 5 cargo-cult #6 unwind canonical helper (2026-05-29):
+# cls_lowres downsample policy disambiguator per Catalog #335 sister-
+# extinction architecture. BYTE-DEFAULT = nearest_strided_top_left preserves
+# archive-byte parity with all prior empirical anchors; mode_per_cell is the
+# UNWIND PATH that requires operator opt-in (changes archive bytes).
+from .cls_lowres_downsample import (
+    CANONICAL_DOWNSAMPLE_POLICY_BYTE_DEFAULT,
+    CLS_LOWRES_DOWNSAMPLE_POLICY_NON_PROMOTABLE_PROVENANCE,
+    SUPPORTED_DOWNSAMPLE_POLICIES,
+    ClsLowresDownsampleError,
+    ClsLowresDownsampleVerdict,
+    derive_cls_lowres_from_cls_full,
+    verify_cls_lowres_downsample_invariants,
+)
 from .predicted_band_axis_attribution import (
     POSE_AXIS_UNKNOWN_PENDING_PAIRED_SMOKE_TOKEN,
     PREDICTED_BAND_VALIDATION_STATUS_PENDING_TOKEN,
@@ -230,7 +244,15 @@ __all__ = [
     "PerClassChromaDistinguishingFeatureVerdict",
     "SEG_AXIS_UNKNOWN_PENDING_PAIRED_SMOKE_TOKEN",
     "SUPPORTED_SEED_DERIVATION_KINDS",
+    "SUPPORTED_DOWNSAMPLE_POLICIES",
     "SegNetArgmaxDisplacementVerdict",
+    # Wave 5 cargo-cult #6 unwind exports (2026-05-29)
+    "CANONICAL_DOWNSAMPLE_POLICY_BYTE_DEFAULT",
+    "CLS_LOWRES_DOWNSAMPLE_POLICY_NON_PROMOTABLE_PROVENANCE",
+    "ClsLowresDownsampleError",
+    "ClsLowresDownsampleVerdict",
+    "derive_cls_lowres_from_cls_full",
+    "verify_cls_lowres_downsample_invariants",
     "TOTAL_AXIS_UNKNOWN_PENDING_PAIRED_SMOKE_TOKEN",
     "axis_attribution_to_dict_for_metadata_json",
     "compute_lut_byte_offset_for_class",

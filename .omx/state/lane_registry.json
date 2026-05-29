@@ -61818,11 +61818,11 @@
       "id": "lane_wave_5_nscs06_v8_cargo_cult_re_audit_plus_fix_20260529",
       "name": "Wave 5 NSCS06 v8 cargo-cult re-audit + fix",
       "phase": 2.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "src/tac/substrates/nscs06_v8_chroma_lut/cls_lowres_downsample.py canonical helper + trainer wire-in + 20 tests passing (226 total)"
         },
         "real_archive_empirical": {
           "status": false,
@@ -61845,8 +61845,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/wave_5_nscs06_v8_cargo_cult_re_audit_plus_fix_landed_20260529.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -61945,5 +61945,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-29T21:11:22Z"
+  "updated_at": "2026-05-29T21:25:01Z"
 }

@@ -132,6 +132,20 @@ from tac.substrates.nscs06_v8_chroma_lut.revisions import (
     run_carmack_mvp_first_pre_smoke_verification,
     verify_multi_scale_dykstra_feasibility,
 )
+# Wave 5 cargo-cult #3 unwind (2026-05-29): route GT-fingerprint seed
+# derivation through the canonical helper rather than inline hashlib.sha256
+# per CLAUDE.md "Bugs must be permanently fixed AND self-protected against" +
+# Catalog #335 sister-extinction architecture (canonical helper LANDED
+# 2026-05-26 commit `a6e2a06e3` but trainer bypassed it via inline sha256
+# until the Wave 5 re-audit caught the orphan-helper bug class).
+from tac.substrates.nscs06_v8_chroma_lut.gt_distribution_matched_seed import (
+    derive_chroma_lut_seed_from_gt_lut_bytes,
+)
+# Wave 5 cargo-cult #6 unwind canonical helper wire-in (2026-05-29).
+from tac.substrates.nscs06_v8_chroma_lut.cls_lowres_downsample import (
+    CANONICAL_DOWNSAMPLE_POLICY_BYTE_DEFAULT,
+    derive_cls_lowres_from_cls_full,
+)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_VIDEO_PATH = REPO_ROOT / "upstream" / "videos" / "0.mkv"
@@ -301,6 +315,24 @@ def _build_parser() -> argparse.ArgumentParser:
         "--skip-archive-build",
         action="store_true",
         help="Skip the archive.zip build (for trainer-only smoke).",
+    )
+    # Wave 5 cargo-cult #6 unwind 2026-05-29: cls_lowres downsample policy
+    # selector. Default `nearest_strided_top_left` preserves archive-byte
+    # parity with all prior empirical anchors; `mode_per_cell` is the
+    # boundary-preserving UNWIND PATH per Wave 5 re-audit. Operator opt-in
+    # REQUIRED to change because it changes archive bytes per CLAUDE.md
+    # "Frontier scores are pointer-only" non-negotiable.
+    p.add_argument(
+        "--cls-lowres-downsample-policy",
+        type=str,
+        default=CANONICAL_DOWNSAMPLE_POLICY_BYTE_DEFAULT,
+        choices=list(("nearest_strided_top_left", "mode_per_cell")),
+        help=(
+            "cls_lowres downsample policy for CH08 v3 cls_stream slot. "
+            "Default preserves archive-byte parity; `mode_per_cell` is the "
+            "Wave 5 cargo-cult #6 boundary-preserving unwind path (operator "
+            "opt-in; changes archive bytes)."
+        ),
     )
     return p
 
@@ -741,27 +773,36 @@ def _full_main(args: argparse.Namespace) -> int:
         # Stage 5b: derive per-cell SegNet class labels at low-res for the
         # CH08 v3 cls_stream slot (Catalog #233 L1→L2 promotion canonical
         # 4-gate unblocker per T3 council #1335 REVISION #2 Yousfi BLOCKER).
-        # NEAREST downsample (point-sample top-left pixel of each
-        # `args.grayscale_downsample`-sized cell) is the canonical sister of
-        # inflate.py's `Image.NEAREST` upsample; the pair forms a lossless
-        # round-trip for the "uniform-cls" boundary invariant enforced by
-        # `tests/test_cls_stream_wire_in.py::test_inflate_v3_with_uniform_class_matches_v2`.
-        # cls_full shape (n_pairs, H, W) was built at Stage 4; lowres shape
-        # MUST match Stage 5 gray_lowres (n_pairs, h_g, w_g).
-        cls_lowres = cls_full[
-            :,
-            : h_g * args.grayscale_downsample : args.grayscale_downsample,
-            : w_g * args.grayscale_downsample : args.grayscale_downsample,
-        ]
-        if cls_lowres.shape != (n_pairs, h_g, w_g):
-            raise RuntimeError(
-                f"cls_lowres shape {cls_lowres.shape} != ({n_pairs}, {h_g}, {w_g}) "
-                f"— Stage 5b NEAREST downsample shape invariant violated"
-            )
+        #
+        # Wave 5 cargo-cult #6 unwind 2026-05-29: route through canonical
+        # helper `derive_cls_lowres_from_cls_full` from
+        # `tac.substrates.nscs06_v8_chroma_lut.cls_lowres_downsample`.
+        # Default policy `nearest_strided_top_left` preserves archive-byte
+        # parity with all prior dispatches (sister-test
+        # `test_inflate_v3_with_uniform_class_matches_v2` invariant). MODE
+        # alternative policy `mode_per_cell` is an UNWIND PATH per Wave 5
+        # re-audit that requires operator opt-in via
+        # `--cls-lowres-downsample-policy mode_per_cell` because it
+        # changes archive bytes per CLAUDE.md "Frontier scores are
+        # pointer-only" non-negotiable.
+        policy_name = getattr(
+            args,
+            "cls_lowres_downsample_policy",
+            CANONICAL_DOWNSAMPLE_POLICY_BYTE_DEFAULT,
+        )
+        cls_lowres, cls_lowres_verdict = derive_cls_lowres_from_cls_full(
+            cls_full,
+            grayscale_h=h_g,
+            grayscale_w=w_g,
+            grayscale_downsample=args.grayscale_downsample,
+            num_segnet_classes=NUM_SEGNET_CLASSES,
+            policy=policy_name,
+        )
         cls_bytes = np.ascontiguousarray(cls_lowres, dtype=np.uint8).tobytes()
         cls_lowres_sha = _sha256_bytes(cls_bytes)
         _stage(
-            f"cls_lowres_nearest_downsample_shape_{cls_lowres.shape}_sha_{cls_lowres_sha[:8]}"
+            f"cls_lowres_{policy_name}_shape_{cls_lowres.shape}_sha_{cls_lowres_sha[:8]}"
+            f"_mode_vs_nearest_agreement_{cls_lowres_verdict.mode_vs_nearest_agreement_fraction:.4f}"
         )
 
         # Stage 8: (already invoked above as RATIFY-3 pre-smoke + Dykstra)
@@ -778,10 +819,22 @@ def _full_main(args: argparse.Namespace) -> int:
             # (REPLACEMENT savings, unchanged). v3 adds cls_stream ADDITIVE
             # bytes; total rate-axis ΔS is the empirical question per the
             # paired Modal T4 dispatch decision (Catalog #246).
-            # The seed is HASH-derived from the chroma LUT bytes so it is
-            # deterministic AND distinguishing per Catalog #272.
-            import hashlib
-            seed = hashlib.sha256(chroma_lut.tobytes()).digest()[:PROCEDURAL_SEED_SIZE_BYTES]
+            #
+            # Wave 5 cargo-cult #3 unwind (2026-05-29): route through canonical
+            # `derive_chroma_lut_seed_from_gt_lut_bytes` helper from
+            # `tac.substrates.nscs06_v8_chroma_lut.gt_distribution_matched_seed`
+            # rather than inline hashlib.sha256. The canonical helper validates
+            # input shape + seed_size against canonical PROCEDURAL_SEED domain
+            # of validity [8, 256] and surfaces in Catalog #335 auto-discovery
+            # so future cathedral consumers can route the GT-fingerprint seed
+            # surface. kind="sha256_truncated" matches the prior inline behavior
+            # byte-for-byte (SHA-256 truncated to 32 bytes is the canonical
+            # default per gt_distribution_matched_seed.py:251).
+            seed = derive_chroma_lut_seed_from_gt_lut_bytes(
+                chroma_lut.tobytes(),
+                seed_size=PROCEDURAL_SEED_SIZE_BYTES,
+                kind="sha256_truncated",
+            )
             bin_bytes = pack_archive(
                 num_pairs=n_pairs,
                 grayscale_h=h_g,
