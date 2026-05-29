@@ -61032,6 +61032,129 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_slot_tt_pr110_opt_5_boundary_region_waterfill_segnet_class_region_aware_perturbation_budget_canonical_fridrich_yousfi_3_axis_cascade_20260529",
+      "name": "Slot TT PR110-OPT-5 boundary/region waterfill SegNet class-region-aware perturbation budget canonical Fridrich-Yousfi 3-axis cascade Axis 3",
+      "phase": 5.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/composition/pr110_opt_5_boundary_region_waterfill/__init__.py + 89/89 tests pass in src/tac/tests/test_pr110_opt_5_boundary_region_waterfill.py + MLX-LOCAL macOS-CPU advisory smoke at experiments/results/slot_tt_pr110_opt_5_boundary_region_waterfill_smoke_20260529T140553Z/smoke_output.json (all 4 strategies green; PER_CLASS_UNIFORM canonical cheapest at 11 bytes / -238B vs FEC6 / -0.000158 proportional savings)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_slot_tt_pr110_opt_5_boundary_region_waterfill_segnet_class_region_aware_perturbation_budget_canonical_fridrich_yousfi_3_axis_cascade_landed_20260529.md + .omx/research/retroactive_sweep_for_slot_tt_pr110_opt_5_boundary_region_waterfill_20260529T140800Z.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; lane_class=substrate_engineering per HNeRV parity L7. Canonical Fridrich-Yousfi inverse-steganalysis 3-axis cascade Axis 3 (Axis 1=Slot FF OPT-7 LANDED 0adecdc5b; Axis 2=Slot RR OPT-6 LANDED; Axis 4 sister=Slot X OPT-4 LANDED 0eb7cb615). Per-substrate empirical verification stub per Slot QQ canonical META-LESSON 40476d935 IMPLEMENTATION-LEVEL FALSIFICATION extinction. L0 SCAFFOLD with 4 canonical BoundaryRegionWaterfillStrategy enum per Catalog #308 (PER_CLASS_UNIFORM canonical baseline 11 bytes / PER_CLASS_WEIGHTED_BY_AREA 16 / PER_REGION_AT_BOUNDARY 91 / PER_REGION_INTERIOR 131 vs FEC6 249). predicted_band=[-0.000080, +0.000040] per Catalog #296 Dykstra-feasibility check. Reactivation criterion: paired-CUDA empirical anchor per Catalog #246."
+    },
+    {
+      "id": "lane_slot_uu_yousfi_fridrich_canonical_inverse_steganalysis_tools_deep_research_per_operator_binding_directive_10_20260529",
+      "name": "Slot UU Yousfi-Fridrich canonical inverse-steganalysis tools deep-research per operator binding directive #10",
+      "phase": 4.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/yousfi_fridrich_canonical_inverse_steganalysis_tools_deep_research_for_score_lowering_continual_learning_compounding_automation_mathematical_grounding_optimal_individual_fractal_optimization_per_operator_binding_directive_10_20260529.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "Claude memory landing memo feedback_slot_uu_yousfi_fridrich_canonical_inverse_steganalysis_tools_deep_research_per_operator_binding_directive_10_landed_20260529"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; canonical L1 research design memo per operator binding directive #10 verbatim; canonical WebSearch per 10th standing directive triangulated 12+ canonical tools; canonical top-5 applicability ranking; 5 canonical equation candidates FORMALIZATION_PENDING per Catalog #344 protocol; 3 canonical anti-pattern candidates DEFERRED-to-operator-decision; canonical Slot WW-ZZ execution roadmap operator-routable per iterate-not-force + canonical 11th ORDER directive"
+    },
+    {
+      "id": "lane_slot_vv_canonical_stack_synergy_compounding_analysis_per_operator_binding_directive_9_20260529",
+      "name": "Slot VV canonical stack/synergy compounding analysis per operator binding directive #9",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/canonical_stack_synergy_compounding_analysis_vs_pr107_pr110_own_cpu_cuda_canonical_frontiers_competitor_pr101_pr102_pr103_scores_per_operator_binding_directive_9_20260529.md research_only=true notes=Slot_VV_canonical_research_synthesis_PHASE_A_B_C_D_complete predicted_band=[-0.054,-0.065]_aggregate_UPPER_BOUND lane_class=substrate_engineering 9_dim_checklist_complete cargo_cult_audit_complete observability_surface_complete horizon_class=plateau_adjacent"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_slot_vv_canonical_stack_synergy_compounding_analysis_vs_pr107_pr110_own_cpu_cuda_canonical_frontiers_competitor_pr101_pr102_pr103_scores_per_operator_binding_directive_9_landed_20260529.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -61041,5 +61164,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-29T14:01:53Z"
+  "updated_at": "2026-05-29T14:11:58Z"
 }
