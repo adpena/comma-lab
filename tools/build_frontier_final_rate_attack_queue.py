@@ -316,6 +316,27 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--poll-interval-seconds", type=float, default=0.05)
     parser.add_argument("--idle-sleep-seconds", type=float, default=0.0)
     parser.add_argument("--max-idle-cycles", type=int, default=1)
+    parser.add_argument(
+        "--allow-overwrite-existing-historical-provenance",
+        action="store_true",
+        help=(
+            "Opt-in to overwriting an existing .omx/research/<dir>/ that already "
+            "contains canonical HISTORICAL_PROVENANCE JSON files. Per Catalog #113 + "
+            "anti-pattern "
+            "research_pipeline_tool_re_writes_historical_provenance_json_with_mutated_fields_v1, "
+            "the default behavior is fail-closed; requires --overwrite-rationale."
+        ),
+    )
+    parser.add_argument(
+        "--overwrite-rationale",
+        type=str,
+        default=None,
+        help=(
+            "Substantive operator rationale (>=4 chars; non-placeholder per "
+            "Catalog #287) required when --allow-overwrite-existing-historical-provenance "
+            "is set."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -600,6 +621,27 @@ def main(argv: list[str] | None = None) -> int:
         REPO_ROOT / ".omx" / "research" / f"frontier_final_rate_attack_{stamp}"
     )
     results_root = args.results_root or (_default_results_root() / "frontier_final_rate_attack")
+    # Canonical HISTORICAL_PROVENANCE safety per Catalog #113 + anti-pattern
+    # `research_pipeline_tool_re_writes_historical_provenance_json_with_mutated_fields_v1`
+    # (registered 2026-05-28; 3 of 77 violations were on frontier_final_rate_attack_*
+    # dirs from re-running with same --output-dir).
+    from tac.research_pipeline_output_dir_safety import (
+        OutputDirSafetyError,
+        enforce_research_pipeline_output_dir,
+    )
+
+    try:
+        enforce_research_pipeline_output_dir(
+            output_dir,
+            repo_root=REPO_ROOT,
+            allow_overwrite_existing_historical_provenance=(
+                args.allow_overwrite_existing_historical_provenance
+            ),
+            waiver_rationale=args.overwrite_rationale,
+        )
+    except OutputDirSafetyError as exc:
+        print(f"FATAL: {exc}", file=sys.stderr)
+        return 3
     try:
         archive_records: list[dict[str, Any]] = []
         frontier_resolution = None

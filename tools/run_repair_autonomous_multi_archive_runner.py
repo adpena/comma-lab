@@ -48,11 +48,53 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--posterior-path", type=Path)
     parser.add_argument("--posterior-lock-path", type=Path)
     parser.add_argument("--overwrite", action="store_true")
+    parser.add_argument(
+        "--allow-overwrite-existing-historical-provenance",
+        action="store_true",
+        help=(
+            "Opt-in to overwriting an existing .omx/research/<dir>/ that already "
+            "contains canonical HISTORICAL_PROVENANCE JSON files. Per Catalog #113 + "
+            "anti-pattern "
+            "research_pipeline_tool_re_writes_historical_provenance_json_with_mutated_fields_v1, "
+            "the default behavior is fail-closed; requires --overwrite-rationale."
+        ),
+    )
+    parser.add_argument(
+        "--overwrite-rationale",
+        type=str,
+        default=None,
+        help=(
+            "Substantive operator rationale (>=4 chars; non-placeholder per "
+            "Catalog #287) required when --allow-overwrite-existing-historical-provenance "
+            "is set."
+        ),
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    # Canonical HISTORICAL_PROVENANCE safety per Catalog #113 + anti-pattern
+    # `research_pipeline_tool_re_writes_historical_provenance_json_with_mutated_fields_v1`
+    # (registered 2026-05-28; 50 of 77 violations were on repair_multi_archive_*
+    # dirs from re-running with same --output-dir).
+    from tac.research_pipeline_output_dir_safety import (
+        OutputDirSafetyError,
+        enforce_research_pipeline_output_dir,
+    )
+
+    try:
+        enforce_research_pipeline_output_dir(
+            args.output_dir,
+            repo_root=REPO_ROOT,
+            allow_overwrite_existing_historical_provenance=(
+                args.allow_overwrite_existing_historical_provenance
+            ),
+            waiver_rationale=args.overwrite_rationale,
+        )
+    except OutputDirSafetyError as exc:
+        print(f"FATAL: {exc}", file=sys.stderr)
+        return 3
     try:
         summary = run_repair_autonomous_multi_archive_runner(
             archives=args.archive,

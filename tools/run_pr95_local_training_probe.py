@@ -723,6 +723,22 @@ def run_probe(args: argparse.Namespace) -> dict[str, Any]:
         REPO_ROOT / "experiments/results" / f"pr95_local_training_probe_{_utc_stamp()}"
     )
     output_dir = output_dir.resolve()
+    # Canonical HISTORICAL_PROVENANCE safety per Catalog #113 + anti-pattern
+    # `research_pipeline_tool_re_writes_historical_provenance_json_with_mutated_fields_v1`
+    # (registered 2026-05-28 from preflight audit; 24 of 77 violations were on
+    # pr95_mlx_runtime_consumption_queue from re-running on existing output_dir).
+    from tac.research_pipeline_output_dir_safety import (
+        enforce_research_pipeline_output_dir,
+    )
+
+    enforce_research_pipeline_output_dir(
+        output_dir,
+        repo_root=REPO_ROOT,
+        allow_overwrite_existing_historical_provenance=getattr(
+            args, "allow_overwrite_existing_historical_provenance", False
+        ),
+        waiver_rationale=getattr(args, "overwrite_rationale", None),
+    )
     output_dir.mkdir(parents=True, exist_ok=True)
     stage_overrides = parse_stage_epoch_overrides(args.stage_epochs)
     plan = build_plan(
@@ -933,6 +949,27 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--auth-eval-inflate-timeout", type=int, default=1800)
     parser.add_argument("--auth-eval-evaluate-timeout", type=int, default=1800)
     parser.add_argument("--plan-only", action="store_true")
+    parser.add_argument(
+        "--allow-overwrite-existing-historical-provenance",
+        action="store_true",
+        help=(
+            "Opt-in to overwriting an existing .omx/research/<dir>/ that already "
+            "contains canonical HISTORICAL_PROVENANCE JSON files. Per Catalog #113 + "
+            "anti-pattern "
+            "research_pipeline_tool_re_writes_historical_provenance_json_with_mutated_fields_v1, "
+            "the default behavior is fail-closed; requires --overwrite-rationale."
+        ),
+    )
+    parser.add_argument(
+        "--overwrite-rationale",
+        type=str,
+        default=None,
+        help=(
+            "Substantive operator rationale (>=4 chars; non-placeholder per "
+            "Catalog #287) required when --allow-overwrite-existing-historical-provenance "
+            "is set."
+        ),
+    )
     return parser.parse_args(argv)
 
 

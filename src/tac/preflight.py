@@ -5502,6 +5502,26 @@ def preflight_all(
             strict=False, verbose=verbose
         )
 
+        # Catalog #381: research-pipeline tools route through canonical output-dir
+        # safety helper. Slot D HISTORICAL_PROVENANCE refactor wave 2026-05-28
+        # self-protection per CLAUDE.md "Bugs must be permanently fixed AND self-
+        # protected against" + canonical 2-landing pattern (companion to canonical
+        # helper landing at tac.research_pipeline_output_dir_safety). Refuses any
+        # of the 3 research-pipeline tools listed in canonical anti-pattern
+        # `research_pipeline_tool_re_writes_historical_provenance_json_with_mutated_fields_v1`
+        # canonical_producers list that bypass enforce_research_pipeline_output_dir.
+        # Empirical anchor: 2026-05-28T22:41 preflight raised 77 in-place field
+        # mutations across pr95_mlx (24) + repair_multi (50) + frontier_final (3).
+        # The canonical helper + this gate together extinct the bug class
+        # bidirectionally at the runtime per-call surface AND the source surface.
+        # STRICT-FROM-BYTE-ONE per CLAUDE.md "Strict-flip atomicity rule" because
+        # the canonical fix lands in the same commit batch driving live count to
+        # 0 (all 3 tools wire the canonical helper in same commit).
+        # Memory: feedback_slot_d_bugs_config_audit_top_priority_historical_provenance_refactor_3_tools_plus_derived_output_regen_header_backfill_landed_20260528.md
+        check_research_pipeline_tools_route_through_canonical_output_dir_safety_helper(
+            strict=True, verbose=verbose
+        )
+
         # Catalog #373: compound-stack proposals acknowledge registered anti-patterns.
         # CANONICAL-ANTI-PATTERNS REGISTRY 2026-05-28 Layer 3 self-protection per
         # operator NON-NEGOTIABLE verbatim ("learning anti-patterns is upser
@@ -83100,6 +83120,141 @@ def check_dispatch_wrappers_pair_with_harvest_scheduler_invocation(
     if strict and violations:
         raise PreflightError(
             "check_dispatch_wrappers_pair_with_harvest_scheduler_invocation "
+            f"found {len(violations)} violation(s):\n  "
+            + "\n  ".join(violations)
+        )
+    return violations
+
+
+# ---------------------------------------------------------------------------
+# Catalog #381 — research-pipeline tools must invoke canonical output-dir
+# safety helper (sister of Catalog #113 + canonical anti-pattern
+# research_pipeline_tool_re_writes_historical_provenance_json_with_mutated_fields_v1
+# registered 2026-05-28). Slot D HISTORICAL_PROVENANCE refactor wave.
+# ---------------------------------------------------------------------------
+
+# Tools that write under .omx/research/**/*.json AND therefore MUST route through
+# tac.research_pipeline_output_dir_safety.enforce_research_pipeline_output_dir.
+# Per the canonical anti-pattern's canonical_producers list (5 producers).
+_CHECK_381_RESEARCH_PIPELINE_TOOLS: tuple[str, ...] = (
+    "tools/run_pr95_local_training_probe.py",
+    "tools/run_repair_autonomous_multi_archive_runner.py",
+    "tools/build_frontier_final_rate_attack_queue.py",
+)
+
+# Canonical acceptance tokens — at least one MUST appear in the tool body.
+_CHECK_381_CANONICAL_TOKENS: tuple[str, ...] = (
+    "enforce_research_pipeline_output_dir",
+    "validate_research_pipeline_output_dir",
+    "tac.research_pipeline_output_dir_safety",
+    "from tac.research_pipeline_output_dir_safety import",
+)
+
+# Same-line waiver token per Catalog #287 sister discipline.
+_CHECK_381_WAIVER_TOKEN = "# RESEARCH_PIPELINE_OUTPUT_DIR_SAFETY_WAIVED:"
+_CHECK_381_WAIVER_PLACEHOLDERS = frozenset(
+    {"<rationale>", "<reason>", "tbd", "todo", "fixme", "xxx", "placeholder", ""}
+)
+
+
+def check_research_pipeline_tools_route_through_canonical_output_dir_safety_helper(
+    *,
+    strict: bool = False,
+    verbose: bool = False,
+    repo_root: str | Path | None = None,
+) -> list[str]:
+    """Refuse research-pipeline tools that bypass canonical output-dir safety helper.
+
+    Catalog #381 — Slot D HISTORICAL_PROVENANCE refactor wave 2026-05-28 self-
+    protection per CLAUDE.md "Bugs must be permanently fixed AND self-protected
+    against" non-negotiable + canonical 2-landing pattern (companion to the
+    canonical helper landing at ``tac.research_pipeline_output_dir_safety``).
+
+    **Bug class anchor**: preflight 2026-05-28T22:41 raised 77 in-place field
+    mutations across 3 dirs (pr95_mlx=24, repair_multi=50, frontier_final=3).
+    Per Catalog #113 + ``.omx/state/artifact_kind_registry.yaml``,
+    ``.omx/research/**/*.json`` is HISTORICAL_PROVENANCE (immutable; mutation
+    forbidden per the canonical 4-kind taxonomy). The canonical anti-pattern
+    ``research_pipeline_tool_re_writes_historical_provenance_json_with_mutated_fields_v1``
+    is registered with this empirical falsification.
+
+    **Acceptance**: (a) tool body references any of the canonical helper
+    tokens; (b) same-line waiver
+    ``# RESEARCH_PIPELINE_OUTPUT_DIR_SAFETY_WAIVED:<rationale>`` with
+    substantive non-placeholder rationale (>=4 chars; placeholder
+    ``<rationale>`` / ``<reason>`` literals rejected per Catalog #287 sister
+    discipline so the gate's docstring example cannot self-waive).
+
+    **6-hook wire-in declaration** per Catalog #125: hook #1 sensitivity-map
+    = N/A (defensive validator gate); hook #2 Pareto constraint = N/A; hook
+    #3 bit-allocator = N/A; hook #4 cathedral autopilot dispatch = ACTIVE
+    (prevents future research-pipeline tools from silently mutating
+    HISTORICAL_PROVENANCE JSON files which would corrupt downstream cathedral
+    autopilot ranking + canonical equation residual recalibration per Catalog
+    #371); hook #5 continual-learning posterior = ACTIVE (the canonical
+    helper IS the structural protection for the HISTORICAL_PROVENANCE
+    invariant the canonical posterior depends on); hook #6 probe-
+    disambiguator = ACTIVE (the canonical helper's 4-cascade falling-rule
+    output IS the disambiguator between PROCEED-fresh / PROCEED-explicit-
+    opt-in / REFUSE-existing-historical-provenance).
+    """
+
+    repo = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+
+    for tool_rel in _CHECK_381_RESEARCH_PIPELINE_TOOLS:
+        tool_path = repo / tool_rel
+        if not tool_path.is_file():
+            # Tool removed: silently skip (sister gates may handle removal).
+            continue
+        try:
+            body = tool_path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+
+        # Check for any same-line waiver first
+        waiver_found = False
+        for line in body.splitlines():
+            if _CHECK_381_WAIVER_TOKEN in line:
+                # Extract rationale after the token
+                idx = line.find(_CHECK_381_WAIVER_TOKEN) + len(_CHECK_381_WAIVER_TOKEN)
+                rationale = line[idx:].strip()
+                rationale_low = rationale.lower().strip()
+                if (
+                    len(rationale) >= 4
+                    and rationale_low not in _CHECK_381_WAIVER_PLACEHOLDERS
+                ):
+                    waiver_found = True
+                    break
+
+        if waiver_found:
+            continue
+
+        # Check for any canonical token
+        has_canonical = any(tok in body for tok in _CHECK_381_CANONICAL_TOKENS)
+        if not has_canonical:
+            violations.append(
+                f"{tool_rel}: research-pipeline tool writes under "
+                f".omx/research/**/*.json but does NOT route through canonical helper "
+                f"tac.research_pipeline_output_dir_safety.enforce_research_pipeline_output_dir "
+                f"-- the canonical structural protection against in-place HISTORICAL_PROVENANCE "
+                f"mutation per Catalog #113 + canonical anti-pattern "
+                f"research_pipeline_tool_re_writes_historical_provenance_json_with_mutated_fields_v1 "
+                f"(77 in-place field mutations anchored 2026-05-28T22:41). "
+                f"Operator-routable unwind: (a) import + invoke "
+                f"enforce_research_pipeline_output_dir(output_dir, repo_root=REPO_ROOT, ...) "
+                f"immediately after computing output_dir; OR (b) add same-line waiver "
+                f"# RESEARCH_PIPELINE_OUTPUT_DIR_SAFETY_WAIVED:<substantive-rationale>"
+            )
+
+    if verbose and violations:
+        print(f"  [catalog-381] {len(violations)} violation(s):")
+        for v in violations:
+            print(f"    {v}")
+
+    if strict and violations:
+        raise PreflightError(
+            "check_research_pipeline_tools_route_through_canonical_output_dir_safety_helper "
             f"found {len(violations)} violation(s):\n  "
             + "\n  ".join(violations)
         )
