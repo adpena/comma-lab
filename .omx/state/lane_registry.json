@@ -60621,6 +60621,48 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_slot_x_pr110_opt_4_grouped_color_geometry_calibration_l0_scaffold_cross_pair_perturbation_reuse_mlx_local_20260529",
+      "name": "Slot X PR110-OPT-4 Grouped Color/Geometry Calibration L0 SCAFFOLD",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/composition/pr110_opt_4_grouped_color_geometry_calibration/__init__.py + 47/47 tests PASS + MLX-LOCAL macOS-CPU advisory smoke [macOS-CPU advisory] (non-promotable per Catalog 192) confirms Wave N+34 IMPLEMENTATION_FALSIFIED under harsher uniform prior; verdict=DEFERRED_PENDING_ALTERNATIVE_REDUCER per Catalog 308; research_only=true per HNeRV parity L2 (no contest_cuda promotion); horizon_class=plateau_adjacent per Catalog 309; archive_bytes_added=0 KB (encoder-side analytical primitive only); score_improvement_mechanism_status=DEFERRED_PER_CATALOG_308"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_slot_x_pr110_opt_4_grouped_color_geometry_calibration_l0_scaffold_landed_20260529.md + design memo .omx/research/pr110_opt_4_grouped_color_geometry_calibration_cross_pair_perturbation_reuse_design_20260529.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "",
+      "research_only": true
     }
   ],
   "level_rules": {
@@ -60630,5 +60672,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-29T06:13:27Z"
+  "updated_at": "2026-05-29T07:01:51Z"
 }
