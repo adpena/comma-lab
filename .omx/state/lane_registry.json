@@ -60539,6 +60539,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_slot_j_cascade_item_6_tinygrad_portable_inflate_primitive_bridge_20260529",
+      "name": "Slot J Cascade Item 6 Tinygrad Portable Inflate Primitive Bridge",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/local_acceleration/tinygrad_bridge.py + src/tac/tests/test_tinygrad_portable_inflate_primitive_bridge.py (25 PASS + 3 skip); design memo at .omx/research/tinygrad_portable_inflate_primitive_bridge_design_20260529.md; archive_grammar=numpy_npz_zip_member_with_canonical_header / parser_section_manifest=TinygradBridgeManifest_with_per_tensor_metadata / inflate_runtime_loc_budget=200 / runtime_dep_closure=numpy,zipfile / export_format=numpy_npz_inside_zip_member / score_aware_loss=N/A_bridge_surface / bolt_on_loc_budget=350 / no_op_detector_planned=true / score_improvement_mechanism_status=BRIDGE_INFRASTRUCTURE_ONLY / horizon_class=plateau_adjacent; lane_class=substrate_engineering; research_only=true; lane_state=L1_scaffold_landed"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_slot_j_cascade_item_6_tinygrad_portable_inflate_primitive_bridge_landed_20260529.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Tinygrad-portable inflate primitive bridge per cascade item 6 of 7-item operator-bound cascade. Sister of MLX bridge (pr95_hnerv_mlx.py) at the 3rd portability surface per CLAUDE.md MLX-FIRST NUMPY-PORTABLE 8th standing directive. lane_class=substrate_engineering (Catalog #220 + #272 + HNeRV parity L7). research_only=true (numpy-portable inflate primitive scaffold; no operational paid-dispatch path)."
     }
   ],
   "level_rules": {
@@ -60548,5 +60589,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-28T23:41:30Z"
+  "updated_at": "2026-05-29T05:57:05Z"
 }
