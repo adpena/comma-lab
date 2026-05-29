@@ -61777,6 +61777,47 @@
       "id": "lane_wave_4_z7_mamba_2_dao_gu_fidelity_audit_20260529",
       "name": "Wave 4 Z7-Mamba-2 Dao-Gu fidelity audit",
       "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/mamba2_predictor.py docstring fix + src/tac/tests/test_wave_4_z7_mamba_2_dao_gu_fidelity_audit.py 14 tests + .omx/research/wave_4_z7_mamba_2_dao_gu_fidelity_audit_landed_20260529.md + .omx/research/z7_mamba_2_per_substrate_symposium_wave_4_20260529.md + canonical equation 5th anchor [contest-MLX-research-signal]"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_wave_4_z7_mamba_2_dao_gu_fidelity_audit_landed_20260529.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_wave_5_nscs06_v8_cargo_cult_re_audit_plus_fix_20260529",
+      "name": "Wave 5 NSCS06 v8 cargo-cult re-audit + fix",
+      "phase": 2.0,
       "level": 0,
       "gates": {
         "impl_complete": {
@@ -61813,6 +61854,88 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_wave_6_pr110_opt_cluster_math_audit_plus_fix_20260529",
+      "name": "Wave 6 PR110-OPT cluster math audit + fix",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/wave_6_pr110_opt_cluster_math_audit_plus_fix_landed_20260529.md [empirical:audit_only_no_archive_emission]"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_wave_6_pr110_opt_cluster_math_audit_plus_fix_landed_20260529.md [pointer:memory_file_pending]"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_wave_7_dreamerv3_rssm_phase_2_rl_push_20260529",
+      "name": "Wave 7 DreamerV3 RSSM Phase 2 RL push (trained-logits anchor)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "MLX-LOCAL training artifact at experiments/results/slot_mmm_wave_7_dreamerv3_rssm_phase_2_mlx_anchor_20260529T210415Z/training_artifact.json with 27.6x MSE reduction in 30ep/1.83s; 2nd anchor on canonical equation #344 [macOS-MLX research-signal]"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/wave_7_dreamerv3_rssm_phase_2_rl_push_landed_20260529.md + .omx/research/dreamerv3_rssm_per_substrate_symposium_wave_7_phase_2_20260529.md per Catalog #325 6-step contract"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -61822,5 +61945,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-29T20:49:33Z"
+  "updated_at": "2026-05-29T21:11:22Z"
 }
