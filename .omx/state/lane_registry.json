@@ -60950,6 +60950,88 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_slot_rr_pr110_opt_6_motion_pair_repair_pose_axis_null_projection_on_segnet_20260529",
+      "name": "Slot RR PR110-OPT-6 Motion-pair repair pose-axis null-project on SegNet L0 SCAFFOLD",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "L0 SCAFFOLD impl 615 LOC at src/tac/composition/pr110_opt_6_motion_pair_repair_pose_axis_null_projection_on_segnet/__init__.py; 62/62 tests PASS in 0.23s; MLX-LOCAL macOS-CPU advisory smoke at experiments/results/slot_rr_pr110_opt_6_motion_pair_repair_pose_axis_null_projection_on_segnet_macos_cpu_advisory_smoke_20260529T133600Z/smoke_output.json; canonical Catalog #313 probe outcome PROCEED 14-day expires 2026-06-12; canonical Catalog #355 council anchor T2 PROCEED_WITH_REVISIONS 8 attendees; canonical equation candidate pr110_opt_6_motion_pair_repair_pose_axis_null_projection_on_segnet_savings_v1 DEFERRED-to-operator-decision per iterate-not-force; research_only=true; lane_class=substrate_engineering; archive_grammar=PR110 FEC6 K=16 selector palette (HNeRV parity L7 bolt-on; encoder-side only no inflate.py emission required); parser_section_manifest=N/A (encoder-side only); inflate_runtime_loc_budget=0 (encoder-side only per HNeRV parity L4); runtime_dep_closure=N/A; export_format=PR110 FEC6 archive grammar (sister of Slot X + Slot FF L0 SCAFFOLDs); score_aware_loss=canonical Fridrich-Yousfi inverse-steganalysis; bolt_on_loc_budget=350 LOC compliant; no_op_detector_planned=true (Catalog #105+139 byte-mutation smoke methodology applied to canonical SegNet-null filter); operational_consumption=true; score_improvement_mechanism_status=OPERATIONAL_PENDING_PAIRED_CUDA_RATIFICATION; runtime_overlay_consumed=true; l2_integration_landed=false; archive_bytes_added=0 (canonical zero-byte bolt-on per per-pair selector reuse); distinguishing_feature_name=pose_axis_perturbation_null_project_on_segnet; distinguishing_bytes_path=N/A (canonical zero-byte bolt-on); inflate_consumer_function=N/A (encoder-side only); byte_mutation_smoke_passes=N/A (canonical zero-byte bolt-on; per Catalog #105+139 sister methodology applied at canonical SegNet-null filter)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "Landing memo: ~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_slot_rr_pr110_opt_6_motion_pair_repair_pose_axis_null_projection_on_segnet_per_operator_binding_frontier_breaking_landed_20260529.md (pending PHASE D)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_slot_ss_l28_pr98_cascade_application_audit_71_renderer_only_per_slot_oo_canonical_highest_ev_shortest_wall_clock_oproutable_20260529",
+      "name": "Slot SS L28 PR98 cascade application audit on 71 RENDERER_ONLY substrates per Slot OO canonical HIGHEST-EV-SHORTEST-WALL-CLOCK op-routable per Slot QQ canonical META-LESSON per operator binding frontier-breaking",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "26/26 L28_APPLIED_EMPIRICALLY_VERIFIED + 39 L28_STUB + 6 L28_NO_INFLATE per canonical empirical artifact experiments/results/slot_ss_l28_pr98_cascade_application_audit_71_renderer_only_20260529T135256Z/empirical_verification.json (16389B) + 24 L28_PATCH_MISSING + 2 L28_PATCH_ALREADY_PRESENT per PHASE B audit + canonical anti-pattern + canonical council T2 PROCEED + canonical probe outcome PROCEED 14-day"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_slot_ss_l28_pr98_cascade_application_audit_71_renderer_only_per_slot_oo_canonical_highest_ev_shortest_wall_clock_oproutable_landed_20260529.md + .omx/research/retroactive_sweep_for_slot_ss_l28_pr98_cascade_application_audit_71_renderer_only_20260529T140000Z.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -60959,5 +61041,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-29T13:40:30Z"
+  "updated_at": "2026-05-29T14:01:53Z"
 }
