@@ -587,6 +587,20 @@ def test_canonical_all_exports_complete(mod):
     The legacy ``apply_pose_axis_null_projection_to_pr110_archive`` is
     preserved as a backward-compat alias for the menu-builder per CLAUDE.md
     "Forbidden premature KILL" non-negotiable.
+
+    Re-updated 2026-05-29 per Slot GGG Part 3 real-scorer-axis verification
+    (Slot EEE Audit Axis F closure): adds 6 NEW exports — the canonical
+    scorer-axis verification helper
+    ``apply_pose_axis_null_projection_via_real_scorers_to_pr110_archive``,
+    invariant constants ``SEGNET_ARGMAX_NULL_TOLERANCE``,
+    ``POSENET_NULL_CARRIER_BAND_LOWER``, ``POSENET_NULL_CARRIER_BAND_UPPER``,
+    and per-mode verdict strings
+    ``VERDICT_NULL_PROJECTION_CONFIRMED_PER_MODE`` /
+    ``VERDICT_NULL_PROJECTION_FALSIFIED_PER_MODE``. The new helper closes
+    the cite-vs-impl gap by empirically verifying the function name's two
+    claims (SegNet argmax invariance + PoseNet carrier band) on real
+    upstream/videos/0.mkv frame pairs via the canonical
+    ``tac.substrates.score_aware_common.score_pair_components`` helper.
     """
     required_exports = {
         "OPT12_POSENET_NULL_TYPICAL_ABS_POSE_DELTA",
@@ -615,6 +629,13 @@ def test_canonical_all_exports_complete(mod):
         "build_pose_axis_null_projection_menu_for_pr110_archive",
         "apply_pose_axis_null_projection_to_pr110_archive",
         "apply_pose_axis_null_projection_via_canonical_real_video_mlx_to_pr110_archive",
+        # Slot GGG Part 3 real-scorer verification surfaces
+        "SEGNET_ARGMAX_NULL_TOLERANCE",
+        "POSENET_NULL_CARRIER_BAND_LOWER",
+        "POSENET_NULL_CARRIER_BAND_UPPER",
+        "VERDICT_NULL_PROJECTION_CONFIRMED_PER_MODE",
+        "VERDICT_NULL_PROJECTION_FALSIFIED_PER_MODE",
+        "apply_pose_axis_null_projection_via_real_scorers_to_pr110_archive",
         "list_canonical_paired_cuda_ratification_targets",
     }
     assert set(mod.__all__) == required_exports
