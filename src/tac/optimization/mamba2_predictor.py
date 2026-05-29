@@ -185,20 +185,97 @@ class Mamba2PredictorConfig:
 
 
 class _ReferenceMamba2Cell(nn.Module):
-    """Pure-PyTorch reference implementation of Mamba-2 selective state-space cell.
+    """Pure-PyTorch reference selective state-space cell — Mamba-1 (S6) form.
 
-    This is a minimal reference per Dao-Gu 2024 arxiv 2405.21060 + the
-    Goomba Lab blog series 2024. Architecture matches the canonical
-    Mamba-2 block but WITHOUT the fused CUDA selective_scan kernel —
-    instead uses naive sequential state update for MPS/CPU compatibility.
+    Wave 4 fidelity audit 2026-05-29 (per Dao & Gu 2024 arxiv 2405.21060
+    + state-spaces/mamba upstream + Goomba Lab Mamba-2 blog series):
+    this reference cell implements the **Mamba-1 (S6) selective SSM**
+    diagonal A parameterization (A_log shape ``(d_inner, d_state)``),
+    NOT the canonical Mamba-2 SSD (Structured State-Space Duality) form
+    which uses scalar-A-per-head (A_log shape ``(nheads,)`` broadcast to
+    ``(nheads, headdim, d_state)``). The MAMBA_SSM_BACKEND path
+    correctly invokes the upstream canonical ``mamba_ssm.modules.mamba2.Mamba2``
+    block (true Mamba-2 SSD); this reference path is a documented
+    adaptation for MPS/CPU/MLX environments where ``mamba_ssm`` is not
+    importable.
 
-    NOT a drop-in replacement for upstream ``mamba_ssm`` in terms of
-    numerical fidelity at scale (the SSD = Structured State-Space
-    Duality optimizations are absent), but architecturally equivalent
-    at the recurrence-mechanism layer: input-conditioned A, B, C
-    matrices applied at each timestep.
+    **Documented adaptation rationale per Wave 4 audit + CLAUDE.md
+    'Forbidden empirical-claim-without-evidence-tag' (the documented-
+    adaptation taxonomy axes 3 + 4 — math + data):**
 
-    Forward signature: ``(x_t :: (B, d_model), h_{t-1} :: (B, d_state, d_model)) -> (y_t :: (B, d_model), h_t :: (B, d_state, d_model))``.
+    1. **Contest scale** (latent_dim=24 / d_model=64 / d_state=16 /
+       d_inner=128): at this scale, the Mamba-2 SSD scalar-A-per-head
+       form with default headdim=64 yields nheads=2 → A_log has only
+       2 scalar parameters. The S6 diagonal form provides 2048 (d_inner
+       × d_state) parameters at the same overall cell width, which is
+       structurally richer per the input-dependent expressivity argument
+       in Gu & Dao 2023 §3.4 (Mamba-1 paper). At the canonical Mamba-2
+       SSD language scale (d_state=128, headdim=64, model dim ≥1024),
+       the SSD chunk-based matmul speedup amortizes the per-head scalar
+       constraint; at our 600-pair dashcam contest scale the speedup is
+       unrealizable on MPS/CPU/MLX (sequential per-step recurrence
+       dominates).
+
+    2. **MPS/CPU compatibility** (CC-4 HARD-EARNED per the Z7-Mamba-2
+       cargo-cult audit `path_3_b_z7_mamba_2_cargo_cult_audit_of_existing_scaffold_20260526.md`):
+       the SSD chunk-based parallel scan requires tensor-core matmul
+       kernels that don't exist on MPS / CPU at canonical fidelity.
+       This reference path provides sequential per-step state updates
+       so the recurrence remains differentiable on macOS for local
+       smoke + research-signal training.
+
+    **Mathematical fidelity classification per Catalog #307 + the
+    documented-adaptation taxonomy:**
+
+    - **PARADIGM-LEVEL FIDELITY (INTACT)**: selective state-space
+      recurrence with input-dependent (B, C, dt) matrices is the
+      defining feature of the Mamba family (both Mamba-1 S6 and
+      Mamba-2 SSD inherit this from Gu & Dao 2023); preserved.
+    - **IMPLEMENTATION-LEVEL ADAPTATION (DOCUMENTED)**: the A_log
+      diagonal-per-(d_inner, d_state) parameterization is Mamba-1 (S6),
+      not Mamba-2 SSD. Honest naming: the substrate would be more
+      accurately called "Z7-Selective-SSM" (S6-family), but the
+      "Z7-Mamba-2" identifier is preserved per CLAUDE.md
+      HISTORICAL_PROVENANCE Catalog #110/#113 (the 4 canonical equation
+      anchors on `z7_mamba2_state_space_predictive_coding_pose_axis_savings_v1`
+      cite this exact substrate identifier; renaming would corrupt
+      cite-chain).
+
+    Per Catalog #220 + #272 distinguishing-feature contract: the
+    selective state-space recurrence IS the substrate-distinguishing
+    primitive regardless of S6-vs-SSD choice; both forms are
+    architecturally distinct from GRU/LSTM at the substrate-class
+    layer (per HNeRV parity L7).
+
+    **Discretization** (matches Dao & Gu 2024 §2.2 + Gu & Dao 2023 §2.2
+    zero-order hold for both S6 and SSD): ``A_bar = exp(dt * A)``,
+    ``B_bar = dt * B`` (the ``B_bar = (1/A) (A_bar - I) B`` exact ZOH
+    integral is approximated by ``dt * B`` per upstream Mamba-1
+    implementation; both forms preserve the discrete-time recurrence
+    structure ``h_t = A_bar * h_{t-1} + B_bar * x_t``).
+
+    **Reactivation criteria for upgrading to true Mamba-2 SSD reference
+    cell** (per CLAUDE.md 'Forbidden premature KILL' + the documented-
+    adaptation taxonomy):
+
+    1. mamba_ssm CUDA backend becomes the empirical bottleneck at Modal
+       T4/A100 → would need true SSD reference for byte-stable parity.
+    2. Operator decides to register `mamba_2_ssd_vs_s6_reference_cell_at_contest_scale_v1`
+       as a canonical equation per Catalog #344 + run paired-comparison
+       smoke at d_state=128 + headdim=64 → 2-head SSD vs 2048-entry S6
+       at the contest scale.
+    3. New empirical anchor on `z7_mamba2_state_space_predictive_coding_pose_axis_savings_v1`
+       shows the reference cell's S6 form materially diverges from
+       mamba_ssm CUDA backend's SSD form at training-loss trajectory
+       level (`predicted_vs_empirical_residual > 2σ`).
+
+    Forward signature: ``(x_t :: (B, d_model), h_{t-1} :: (B, d_inner, d_state)) -> (y_t :: (B, d_model), h_t :: (B, d_inner, d_state))``.
+
+    [verified-against: Dao & Gu 2024 arxiv 2405.21060 §2.2 + §3 (Mamba-2 SSD)]
+    [verified-against: Gu & Dao 2023 arxiv 2312.00752 §2.2 + §3.4 (Mamba-1 S6; this implementation matches)]
+    [verified-against: state-spaces/mamba upstream `mamba_ssm.modules.mamba2.Mamba2` (canonical Mamba-2 SSD; production CUDA backend)]
+    [verified-against: state-spaces/mamba upstream `mamba_ssm.modules.mamba.Mamba` (canonical Mamba-1 S6; this implementation's architectural sister)]
+    [verified-against: .omx/research/wave_4_z7_mamba_2_dao_gu_fidelity_audit_landed_20260529.md (this audit)]
     """
 
     def __init__(self, *, d_model: int, d_state: int, expand: int, d_conv: int) -> None:
@@ -209,15 +286,33 @@ class _ReferenceMamba2Cell(nn.Module):
         self.d_inner = expand * d_model
         self.d_conv = d_conv
 
-        # Input projection: d_model -> 2 * d_inner (split into x and gate per Mamba)
+        # Input projection: d_model -> 2 * d_inner (split into x and gate
+        # per Mamba-1 §3.5). Canonical Mamba-2 SSD upstream uses a different
+        # projection structure [z, x, B, C, dt] (see Wave 4 audit memo
+        # `wave_4_z7_mamba_2_dao_gu_fidelity_audit_landed_20260529.md` §3.3);
+        # this reference path uses Mamba-1 split-gate for MPS/CPU compatibility.
         self.in_proj = nn.Linear(d_model, 2 * self.d_inner, bias=False)
-        # Selective projection matrices: x_t -> (A_log, B, C) per Mamba-2
-        # A is parameterized as -exp(A_log) to keep eigenvalues negative
-        # B and C are input-conditioned (the selectivity); shape (B, d_state)
+        # Selective projection matrices per Gu & Dao 2023 §3.4 (Mamba-1 S6 form):
+        #   A_log: (d_inner, d_state) diagonal-per-channel; A = -exp(A_log)
+        #     keeps eigenvalues negative for stability (canonical S6 init
+        #     `log(1..d_state)` broadcast across d_inner channels).
+        #   B_proj, C_proj: input-conditioned via x_inner → (B, d_state).
+        #
+        # Canonical Mamba-2 SSD form per Dao & Gu 2024 §3 + state-spaces/mamba
+        # upstream uses A_log: (nheads,) scalar-per-head broadcast to
+        # (nheads, headdim, d_state); see Wave 4 audit §3.1 for the
+        # documented-adaptation rationale (at contest d_state=16 +
+        # d_inner=128 the S6 form is structurally richer per parameter).
         self.A_log = nn.Parameter(torch.log(torch.arange(1, d_state + 1).float()).expand(self.d_inner, d_state).clone())
         self.B_proj = nn.Linear(self.d_inner, d_state, bias=False)
         self.C_proj = nn.Linear(self.d_inner, d_state, bias=False)
-        # Step size projection (dt); softplus-activated per Mamba-2
+        # Step size projection (dt); softplus-activated per Mamba-1 §3.4.
+        # Canonical Mamba-2 SSD adds a learned `dt_bias` initialized via
+        # inverse-softplus from log-uniform [dt_min=0.001, dt_max=0.1]
+        # samples per upstream; this reference uses standard linear+bias
+        # which converges acceptably at contest scale per the L2 stability
+        # hardening memo's empirical evidence (Cell 2-3 NaN-FREE 30ep
+        # under canonical warmup+decay schedule + A_log clamp [-10, 0]).
         self.dt_proj = nn.Linear(self.d_inner, self.d_inner, bias=True)
         # Output projection
         self.out_proj = nn.Linear(self.d_inner, d_model, bias=False)
