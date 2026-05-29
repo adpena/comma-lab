@@ -60663,6 +60663,88 @@
       },
       "notes": "",
       "research_only": true
+    },
+    {
+      "id": "lane_slot_ff_pr110_opt_7_uniward_inverse_scorer_basis_expansion_fridrich_canonical_parallel_cascade_20260529",
+      "name": "Slot FF PR110-OPT-7 UNIWARD inverse-scorer basis expansion Fridrich canonical parallel-cascade per Slot CC dissent",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/composition/pr110_opt_7_uniward_inverse_scorer_basis_expansion/__init__.py + 77/77 tests pass in src/tac/tests/test_pr110_opt_7_uniward_inverse_scorer_basis_expansion.py; archive_grammar=pr110_fec6_16symbol_K16_sparse_selector; parser_section_manifest=wave_n34_opt7_canonical; inflate_runtime_loc_budget=200_per_HNeRV_L4; runtime_dep_closure=tac.cathedral.consumer_contract+tac.provenance; export_format=pr110_fec6_compatible_sparse_K_selector; score_aware_loss=PoseNet_baseline_distortion_UNIWARD_weighted; bolt_on_loc_budget=550; no_op_detector_planned=via_paired_CUDA_byte_mutation_smoke_per_Catalog_139; research_only=true; lane_class=substrate_engineering; archive_bytes_added=303-603_per_BasisExpansionStrategy_enum; score_improvement_mechanism_status=DEFERRED_PENDING_PAIRED_CUDA_EMPIRICAL_ANCHOR_per_Catalog_325"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_slot_ff_pr110_opt_7_uniward_inverse_scorer_basis_expansion_fridrich_canonical_parallel_cascade_per_slot_cc_dissent_landed_20260529.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "L0 SCAFFOLD research_only=true per HNeRV parity L2 + Catalog #240 opt-out; lane_class=substrate_engineering per HNeRV parity L7; horizon_class=plateau_adjacent per Catalog #309; predicted_band=[-0.000146,+0.000079] per Wave N+34 OPT-7 anchor + Dykstra-feasibility check per Catalog #296; sister of lane_slot_x_pr110_opt_4 + lane_canonical_anti_patterns_layer_3_plus_5 + lane_canonical_equations_and_models_registry_formalization_framework; Slot CC dissent binding revision commit 18c6cd571"
+    },
+    {
+      "id": "lane_slot_ee_quantizr_catalog_325_audit_20260529",
+      "name": "Slot EE Quantizr canonical 3-stack audit per Slot CC binding revision #5",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/quantizr_canonical_3_stack_audit_design_20260529.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_slot_ee_quantizr_catalog_325_audit_ema_kl_eval_roundtrip_per_slot_cc_dissent_landed_20260529.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Slot EE Quantizr canonical 3-stack audit per Catalog #325 6-step symposium prerequisite for Class A wavelet + Class D Wyner-Ziv per Slot CC STRATEGIC RESET #2; research_only=true; canonical equation + canonical anti-pattern + canonical posterior anchor all landed"
     }
   ],
   "level_rules": {
@@ -60672,5 +60754,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-29T07:01:51Z"
+  "updated_at": "2026-05-29T08:05:48Z"
 }
