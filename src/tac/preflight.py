@@ -5450,6 +5450,27 @@ def preflight_all(
             strict=True, verbose=verbose
         )
 
+        # Catalog #379: cathedral_autopilot main() invokes META-orchestrator extension.
+        # Wave N+46 META-ORCHESTRATOR EXTENSION 2026-05-28 self-protection per
+        # operator binding correction 2026-05-28 ~23:55Z verbatim ("isn't the
+        # meta orchestrator ou descirbed what the cathedral autopilot was
+        # supopsed to be? proceed with all 7") + CLAUDE.md "Meta-Lagrangian/
+        # Pareto solver — NON-NEGOTIABLE, HIGHEST EMPHASIS" + Catalog #355/#372
+        # sister invoker-callsite pattern. Refuses any state of the canonical
+        # autopilot entry point where main() does NOT contain a call to
+        # invoke_meta_orchestrator_extension_on_candidates OR
+        # rank_candidates_via_three_metric_trichotomy. Per Catalog #287/#323/
+        # #341: contribution is OBSERVABILITY-ONLY (Tier A canonical-routing
+        # markers; per-candidate predicted_delta_adjustment=0.0; 3-metric
+        # trichotomy surfaces orthogonality for operator-facing audit).
+        # STRICT-from-byte-one per CLAUDE.md "Strict-flip atomicity rule" —
+        # Wave N+46 extension lands the invoker callsite in same commit batch
+        # driving live count to 0.
+        # Memory: feedback_wave_n46_cathedral_autopilot_extension_for_three_metric_trichotomy_plus_operator_correction_meta_pattern_plus_per_turn_helper_plus_invariants_landed_20260528.
+        check_cathedral_autopilot_main_invokes_meta_orchestrator_extension(
+            strict=True, verbose=verbose
+        )
+
         # Catalog #373: compound-stack proposals acknowledge registered anti-patterns.
         # CANONICAL-ANTI-PATTERNS REGISTRY 2026-05-28 Layer 3 self-protection per
         # operator NON-NEGOTIABLE verbatim ("learning anti-patterns is upser
@@ -30300,6 +30321,259 @@ def check_compound_stack_proposal_acknowledges_known_anti_patterns(
             "are the RIGHT side (active polytope exclusion). Together they "
             "extinct the 'compound stacking work re-discovers a known anti-"
             "pattern via paid GPU dispatch' failure mode bidirectionally:\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Catalog #379 — cathedral_autopilot main() invokes META-orchestrator extension
+# ────────────────────────────────────────────────────────────────────────────
+#
+# Wave N+46 META-ORCHESTRATOR EXTENSION self-protection 2026-05-28 per
+# operator binding correction 2026-05-28 ~23:55Z verbatim:
+# *"isn't the meta orchestrator ou descirbed what the cathedral
+# autopilot was supopsed to be? proceed with all 7"* + CLAUDE.md
+# "Meta-Lagrangian/Pareto solver — NON-NEGOTIABLE, HIGHEST EMPHASIS"
+# non-negotiable + Catalog #355/#372 sister invoker-callsite pattern.
+#
+# Refuses any state of the canonical autopilot entry point where main()
+# does NOT contain a call to one of the canonical invocation tokens:
+#
+#   - invoke_meta_orchestrator_extension_on_candidates (the canonical
+#     Wave N+46 helper that wraps
+#     :func:`tac.cathedral_autopilot.rank_candidates_via_three_metric_trichotomy`
+#     + per-candidate 3-metric trichotomy + per-metric top-candidate
+#     orthogonality surface).
+#   - rank_candidates_via_three_metric_trichotomy (direct invocation;
+#     acceptable if main() wires the verdict into the output payload).
+#
+# Per Catalog #287/#323/#341: contribution is OBSERVABILITY-ONLY at
+# landing (bounded scalar adjustment factor preserves Phase 1 safety
+# envelope per Catalog #355 sister discipline).
+
+_CHECK_379_TARGET_RELPATH = "tools/cathedral_autopilot_autonomous_loop.py"
+_CHECK_379_ACCEPTANCE_TOKENS: frozenset[str] = frozenset({
+    "invoke_meta_orchestrator_extension_on_candidates",
+    "rank_candidates_via_three_metric_trichotomy",
+})
+_CHECK_379_WAIVER_TOKEN = "META_ORCHESTRATOR_THREE_METRIC_TRICHOTOMY_INVOKER_WAIVED"
+_CHECK_379_PLACEHOLDER_RATIONALES: frozenset[str] = frozenset({
+    "<rationale>", "<reason>", "rationale", "reason",
+})
+
+
+def check_cathedral_autopilot_main_invokes_meta_orchestrator_extension(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #379 — cathedral_autopilot main() invokes META-orchestrator extension.
+
+    Wave N+46 META-ORCHESTRATOR EXTENSION self-protection per operator
+    binding correction 2026-05-28 ~23:55Z + CLAUDE.md
+    "Meta-Lagrangian/Pareto solver — NON-NEGOTIABLE, HIGHEST EMPHASIS"
+    non-negotiable. Refuses any state of the canonical autopilot entry
+    point where main() does NOT contain a call to one of the canonical
+    invocation tokens:
+
+    - ``invoke_meta_orchestrator_extension_on_candidates`` (the
+      canonical Wave N+46 helper wrapping
+      :func:`tac.cathedral_autopilot.rank_candidates_via_three_metric_trichotomy`).
+    - ``rank_candidates_via_three_metric_trichotomy`` (direct
+      invocation; rare; acceptable if main() wires the verdict into the
+      output payload).
+
+    Acceptance: (a) any of the 2 tokens appears as a Call node in the
+    main() function body via AST scan; OR (b) same-line waiver
+    ``# META_ORCHESTRATOR_THREE_METRIC_TRICHOTOMY_INVOKER_WAIVED:<rationale>``
+    on the ``def main`` line with non-placeholder rationale (>= 4 chars;
+    placeholder literals ``<rationale>`` / ``<reason>`` rejected per
+    Catalog #287 sister discipline so the gate's docstring example
+    cannot self-waive).
+
+    STRICT-from-byte-one per CLAUDE.md "Strict-flip atomicity rule" —
+    the Wave N+46 META-orchestrator extension lands the invoker
+    callsite in the same commit batch driving live count to 0.
+
+    Sister of:
+
+    - Catalog #336 (cathedral consumer discovery invoker; same META-
+      class at consumer surface)
+    - Catalog #337 (master-gradient rerank invoker; same META-class
+      at master-gradient surface)
+    - Catalog #355 (META-LAGRANGIAN-WIRE-1 Phase 1 invoker; same
+      META-class at meta-Lagrangian surface)
+    - Catalog #372 (DYKSTRA-PARETO-SOLVER WIRE-IN invoker; same
+      META-class at Pareto polytope surface; #379 is the 3-metric
+      trichotomy sub-surface)
+    - Catalog #287 (placeholder-rationale rejection)
+    - Catalog #125 (6-hook wire-in non-negotiable; THIS gate IS the
+      structural protection for hook #4 cathedral autopilot dispatch
+      + hook #6 probe-disambiguator on the 3-metric trichotomy surface)
+    - Catalog #176 (META-meta: STRICT callsites have CLAUDE.md row)
+    - Catalog #185 (META-meta: Live count: 0 verified empirically)
+    - Catalog #335 (canonical cathedral consumer contract; auto-
+      discovered :mod:`tac.cathedral_consumers.meta_orchestrator_consumer`)
+    - Catalog #341 (Tier A canonical-routing markers; consumer +
+      invoker both emit Tier A observability-only contributions)
+    - Catalog #344 (canonical equations + anti-patterns registry; 5
+      equations + 5 anti-patterns registered via Wave N+46
+      ``populate_wave_n46_canonical_apparatus``)
+
+    Per CLAUDE.md "Bugs must be permanently fixed AND self-protected
+    against": the canonical META-orchestrator extension helpers
+    existing at :mod:`tac.cathedral_autopilot` are necessary but not
+    sufficient; the candidate-list invoker callsite in main() is the
+    missing structural protection that THIS gate enforces.
+
+    Per the cathedral-autopilot-IS-the-canonical-META-orchestrator
+    lesson (operator-caught canonical anti-pattern 2026-05-28 ~23:55Z):
+    do NOT build a parallel orchestration package; EXTEND the
+    cathedral autopilot. THIS gate is the structural protection that
+    the canonical META-orchestrator extension actually FIRES in main().
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    target = root / _CHECK_379_TARGET_RELPATH
+    if not target.is_file():
+        if verbose:
+            print(
+                f"  [meta-orchestrator-trichotomy-invoker] "
+                f"{_CHECK_379_TARGET_RELPATH} not present, skipping"
+            )
+        return []
+
+    try:
+        source = target.read_text(encoding="utf-8")
+    except OSError as exc:
+        if strict:
+            raise PreflightError(
+                f"check_cathedral_autopilot_main_invokes_meta_orchestrator_extension: "
+                f"cannot read {target}: {exc}"
+            )
+        return [f"cannot read {target}: {exc}"]
+
+    # Check waiver on the def main line.
+    lines = source.splitlines()
+    main_lineno: int | None = None
+    for i, line in enumerate(lines, start=1):
+        stripped = line.strip()
+        if stripped.startswith("def main(") or stripped.startswith("def main "):
+            main_lineno = i
+            if _CHECK_379_WAIVER_TOKEN + ":" in line:
+                idx = line.find(_CHECK_379_WAIVER_TOKEN + ":")
+                rationale = line[idx + len(_CHECK_379_WAIVER_TOKEN) + 1:].strip()
+                rationale = rationale.rstrip("'\"`*")
+                if (
+                    rationale
+                    and len(rationale) >= 4
+                    and rationale.lower() not in _CHECK_379_PLACEHOLDER_RATIONALES
+                ):
+                    if verbose:
+                        print(
+                            f"  [meta-orchestrator-trichotomy-invoker] "
+                            f"waiver active: {rationale[:80]}"
+                        )
+                    return []
+            break
+
+    if main_lineno is None:
+        violations = [
+            f"{_CHECK_379_TARGET_RELPATH}: missing def main(); "
+            "Catalog #379 requires main() function present per Wave N+46 "
+            "META-ORCHESTRATOR EXTENSION contract"
+        ]
+        if strict:
+            raise PreflightError(
+                "check_cathedral_autopilot_main_invokes_meta_orchestrator_extension "
+                f"found {len(violations)} violation(s):\n  "
+                + "\n  ".join(violations)
+            )
+        return violations
+
+    import ast as _ast
+    try:
+        tree = _ast.parse(source, filename=str(target))
+    except SyntaxError as exc:
+        if strict:
+            raise PreflightError(
+                f"check_cathedral_autopilot_main_invokes_meta_orchestrator_extension: "
+                f"SyntaxError parsing {target}: {exc}"
+            )
+        return [f"SyntaxError parsing {target}: {exc}"]
+
+    main_node: _ast.FunctionDef | None = None
+    for node in tree.body:
+        if isinstance(node, _ast.FunctionDef) and node.name == "main":
+            main_node = node
+            break
+
+    if main_node is None:
+        violations = [
+            f"{_CHECK_379_TARGET_RELPATH}: no top-level def main found; "
+            "Catalog #379 requires main() function present per Wave N+46 "
+            "META-ORCHESTRATOR EXTENSION contract"
+        ]
+        if strict:
+            raise PreflightError(
+                "check_cathedral_autopilot_main_invokes_meta_orchestrator_extension "
+                f"found {len(violations)} violation(s):\n  "
+                + "\n  ".join(violations)
+            )
+        return violations
+
+    # Walk main() body looking for any Call to one of the acceptance tokens.
+    found_invoker = False
+    for sub in _ast.walk(main_node):
+        if isinstance(sub, _ast.Call):
+            func = sub.func
+            if isinstance(func, _ast.Name):
+                if func.id in _CHECK_379_ACCEPTANCE_TOKENS:
+                    found_invoker = True
+                    break
+            elif isinstance(func, _ast.Attribute):
+                if func.attr in _CHECK_379_ACCEPTANCE_TOKENS:
+                    found_invoker = True
+                    break
+
+    violations: list[str] = []
+    if not found_invoker:
+        violations.append(
+            f"{_CHECK_379_TARGET_RELPATH}: main() does NOT invoke any of "
+            f"{sorted(_CHECK_379_ACCEPTANCE_TOKENS)}; Catalog #379 enforces "
+            "the Wave N+46 META-ORCHESTRATOR EXTENSION invoker callsite "
+            "(the canonical tac.cathedral_autopilot surface existing is "
+            "necessary but NOT sufficient; the invoker callsite in main() "
+            "is the missing structural protection per CLAUDE.md 'Meta-"
+            "Lagrangian/Pareto solver — NON-NEGOTIABLE, HIGHEST EMPHASIS' + "
+            "operator binding correction 2026-05-28 ~23:55Z 'cathedral "
+            "autopilot IS the canonical META-orchestrator'). Add a call to "
+            "invoke_meta_orchestrator_extension_on_candidates OR add "
+            f"same-line `# {_CHECK_379_WAIVER_TOKEN}:<rationale>` waiver "
+            "on the def main line"
+        )
+
+    if verbose:
+        print(
+            f"  [meta-orchestrator-trichotomy-invoker] "
+            f"{len(violations)} violation(s)"
+        )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_cathedral_autopilot_main_invokes_meta_orchestrator_extension "
+            f"found {len(violations)} violation(s). Catalog #379 enforces "
+            "the Wave N+46 META-ORCHESTRATOR EXTENSION invoker-callsite "
+            "structural protection per CLAUDE.md 'Bugs must be permanently "
+            "fixed AND self-protected against' non-negotiable + 'Meta-"
+            "Lagrangian/Pareto solver — NON-NEGOTIABLE, HIGHEST EMPHASIS' + "
+            "operator binding correction 2026-05-28 ~23:55Z 'cathedral "
+            "autopilot IS the canonical META-orchestrator'. Sister of "
+            "Catalog #336 + #337 + #355 + #372 at the 3-metric trichotomy "
+            "surface:\n  "
             + "\n  ".join(v[:400] for v in violations[:5])
         )
     return violations

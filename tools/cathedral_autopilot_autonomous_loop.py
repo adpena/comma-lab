@@ -8166,6 +8166,190 @@ def invoke_dykstra_pareto_solver_on_candidates(
 # ─────────────────────────────────────────────────────────────────────────
 
 
+# ─────────────────────────────────────────────────────────────────────────
+# META-ORCHESTRATOR EXTENSION WIRE-IN per Catalog #379 + Wave N+46
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Per operator binding correction 2026-05-28 ~23:55Z verbatim:
+# *"isn't the meta orchestrator ou descirbed what the cathedral autopilot
+# was supopsed to be? proceed with all 7"*.
+#
+# The cathedral autopilot IS the canonical META-orchestrator. This
+# extension closes 4 missing gaps per
+# feedback_cathedral_autopilot_is_the_canonical_meta_orchestrator_proceed_with_all_7_cascade_20260528.md:
+#
+#   1. 3-metric trichotomy ranking (HYGIENE-EV / FRONTIER-BREAKING-EV /
+#      HIGHEST-EV-SHORTEST-WALL-CLOCK orthogonal independent ranking)
+#   2. Operator-correction META-pattern formalization
+#   3. Per-turn main-thread spawn-decision helper
+#   4. No-ad-hoc/signal-loss/rediscovery/duplicate/drift invariants
+#
+# Per Catalog #287/#323/#341: invocation is OBSERVABILITY-ONLY at landing
+# (bounded scalar adjustment factor in [0.95, 1.05] preserves the
+# Phase 1 safety envelope per Catalog #355).
+#
+# Sister of Catalog #336/#337/#355/#372 invoker-callsite pattern; Catalog
+# #379 STRICT preflight gate enforces the invocation callsite presence.
+
+META_ORCHESTRATOR_EXTENSION_INVOCATION_SCHEMA = (
+    "meta_orchestrator_extension_invocation_v1_wave_n46"
+)
+
+
+def invoke_meta_orchestrator_extension_on_candidates(
+    candidates: list["CandidateRow"],
+    *,
+    top_n: int | None = None,
+    panel_axis: str = "contest_cpu",
+    operator_canonical_metric: str | None = None,
+) -> dict[str, Any]:
+    """Canonical META-orchestrator extension invocation per Wave N+46.
+
+    Mirrors :func:`invoke_dykstra_pareto_solver_on_candidates` per
+    Catalog #355 invoker-callsite pattern. For each candidate (top_n
+    cap):
+
+      1. Computes the canonical 3-metric trichotomy via
+         :func:`tac.cathedral_autopilot.rank_candidates_via_three_metric_trichotomy`.
+      2. Surfaces per-candidate ``(hygiene_ev, frontier_breaking_ev,
+         highest_ev_shortest_wall_clock_ev)`` triple + per-metric top
+         candidate (orthogonality visibility).
+      3. Captures aggregate invocation verdict (rank order + operator-
+         canonical-metric routing default).
+
+    Per CLAUDE.md "Apples-to-apples evidence discipline" + Catalog
+    #287/#323/#341: contribution is OBSERVABILITY-ONLY at landing. The
+    cathedral autopilot ranker consumes the per-candidate 3-metric
+    trichotomy as routing signal; per-candidate ``predicted_delta_
+    adjustment`` is always 0.0 (Tier A canonical-routing markers).
+
+    Per CATHEDRAL AUTOPILOT IS THE CANONICAL META-ORCHESTRATOR (operator
+    binding correction 2026-05-28 ~23:55Z): the helper IS the structural
+    closure of GAP 1 (3-metric trichotomy ranking) of the 4-gap META-
+    orchestrator extension; sisters GAP 2/3/4 fire via
+    :func:`tac.cathedral_autopilot.register_operator_binding_correction`
+    + :func:`tac.cathedral_autopilot.select_canonical_next_spawn_for_main_thread`
+    + :func:`tac.cathedral_autopilot.validate_no_ad_hoc_no_signal_loss_no_rediscovery_no_duplicate_no_drift_invariants`
+    respectively.
+
+    Args
+    ----
+    candidates : list[CandidateRow]
+        Ranked candidate list (typically autopilot ranker output).
+    top_n : int | None
+        Cap at top-N. ``None`` means all (default).
+    panel_axis : str
+        Contest score axis (mirrors sister helpers).
+    operator_canonical_metric : str | None
+        Optional override for routing default; defaults to
+        :data:`tac.cathedral_autopilot.three_metric_trichotomy.DEFAULT_OPERATOR_CANONICAL_METRIC`
+        (= ``highest_ev_shortest_wall_clock`` per operator binding
+        correction 2026-05-28 ~23:40Z).
+
+    Returns
+    -------
+    dict
+        Schema-versioned payload with per-candidate 3-metric trichotomy +
+        aggregate orthogonality verdict + operator-canonical-metric
+        routing default.
+    """
+    target_candidates = list(candidates)
+    if top_n is not None and top_n > 0:
+        target_candidates = target_candidates[:top_n]
+
+    # Lazy import to keep cathedral autopilot import-tree light (mirrors
+    # sister Catalog #355/#372 invoker pattern).
+    try:
+        from tac.cathedral_autopilot.three_metric_trichotomy import (
+            DEFAULT_OPERATOR_CANONICAL_METRIC,
+            rank_candidates_via_three_metric_trichotomy,
+        )
+        _META_OK = True
+        _import_error: str | None = None
+    except Exception as exc:  # noqa: BLE001
+        _META_OK = False
+        _import_error = f"{type(exc).__name__}: {exc}"
+
+    if not _META_OK:
+        return {
+            "schema": META_ORCHESTRATOR_EXTENSION_INVOCATION_SCHEMA,
+            "evidence_grade": "[predicted, META-orchestrator extension invocation]",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "panel_axis": panel_axis,
+            "top_n": top_n,
+            "candidates_invoked": 0,
+            "phase": "wave_n46_canonical_meta_orchestrator_extension",
+            "operator_canonical_metric": (
+                operator_canonical_metric or "highest_ev_shortest_wall_clock"
+            ),
+            "import_error": _import_error,
+        }
+
+    routing_metric = operator_canonical_metric or DEFAULT_OPERATOR_CANONICAL_METRIC
+
+    # Convert CandidateRow rows to dict form for the helper.
+    candidate_dicts: list[dict[str, Any]] = []
+    for c in target_candidates:
+        d: dict[str, Any] = {
+            "candidate_id": str(getattr(c, "candidate_id", "unknown")),
+        }
+        for attr in (
+            "predicted_score_delta",
+            "estimated_dispatch_cost_usd",
+            "predicted_dispatch_risk",
+        ):
+            val = getattr(c, attr, None)
+            if val is not None:
+                d[attr] = val
+        candidate_dicts.append(d)
+
+    try:
+        ranking = rank_candidates_via_three_metric_trichotomy(
+            candidate_dicts, operator_canonical_metric=routing_metric
+        )
+    except Exception as exc:  # noqa: BLE001
+        return {
+            "schema": META_ORCHESTRATOR_EXTENSION_INVOCATION_SCHEMA,
+            "evidence_grade": "[predicted, META-orchestrator extension invocation]",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "panel_axis": panel_axis,
+            "top_n": top_n,
+            "candidates_invoked": 0,
+            "phase": "wave_n46_canonical_meta_orchestrator_extension",
+            "operator_canonical_metric": routing_metric,
+            "invocation_error": f"{type(exc).__name__}: {exc}",
+        }
+
+    return {
+        "schema": META_ORCHESTRATOR_EXTENSION_INVOCATION_SCHEMA,
+        "evidence_grade": "[predicted, META-orchestrator extension invocation]",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "panel_axis": panel_axis,
+        "top_n": top_n,
+        "candidates_invoked": len(ranking.candidates_with_three_metrics),
+        "phase": "wave_n46_canonical_meta_orchestrator_extension",
+        "operator_canonical_metric": routing_metric,
+        "ranking_result": ranking.as_dict(),
+        "canonical_equation_id": (
+            "meta_orchestrator_three_metric_trichotomy_orthogonality_v1"
+        ),
+        "canonical_anti_pattern_id_unwind": (
+            "hygiene_ev_vs_frontier_breaking_ev_vs_highest_ev_shortest_wall_clock_conflation_canonical_rediscovery_v1"
+        ),
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# End of META-ORCHESTRATOR EXTENSION WIRE-IN per Catalog #379 + Wave N+46
+# ─────────────────────────────────────────────────────────────────────────
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -8723,6 +8907,24 @@ def main(argv: list[str] | None = None) -> int:
             panel_axis=args.score_panel_axis,
         )
 
+        # META-ORCHESTRATOR EXTENSION WIRE-IN per Catalog #379 + Wave N+46
+        # (2026-05-28). Per operator binding correction 2026-05-28 ~23:55Z
+        # ("isn't the meta orchestrator ou descirbed what the cathedral
+        # autopilot was supopsed to be? proceed with all 7"): the
+        # cathedral autopilot IS the canonical META-orchestrator. This
+        # invocation closes GAP 1 (3-metric trichotomy ranking) of the
+        # 4-gap META-orchestrator extension per
+        # feedback_cathedral_autopilot_is_the_canonical_meta_orchestrator_proceed_with_all_7_cascade_20260528.md.
+        # Per Catalog #287/#323/#341: observability-only; per-candidate
+        # 3-metric trichotomy surfaces orthogonality.
+        meta_orchestrator_extension_invocations = (
+            invoke_meta_orchestrator_extension_on_candidates(
+                ranked,
+                top_n=top_n,
+                panel_axis=args.score_panel_axis,
+            )
+        )
+
         # WAVE-3-DIM-1-PHASE-2 (2026-05-20): per-adjuster ablation invocation
         # on the same ranked top-N. EXTENDS Phase 1 (does NOT replace it).
         # Per CLAUDE.md "Meta-Lagrangian/Pareto solver" non-negotiable:
@@ -8791,6 +8993,7 @@ def main(argv: list[str] | None = None) -> int:
                 "meta_lagrangian_invocation_active_catalog_355",
                 "phase_2_ablation_invocation_active_wave_3_dim_1",
                 "dykstra_pareto_solver_invocation_active_catalog_372",
+                "meta_orchestrator_extension_invocation_active_catalog_379",
                 "meta_lagrangian_phase_2_dual_solver_false_authority"
                 if args.use_phase_2_dual_solver
                 else "meta_lagrangian_phase_2_dual_solver_not_requested",
@@ -8801,6 +9004,9 @@ def main(argv: list[str] | None = None) -> int:
             "phase_2_ablation_invocations": phase_2_ablation_invocations,
             "phase_2_ablation_mode": args.phase_2_ablation_mode,
             "dykstra_pareto_invocations": dykstra_pareto_invocations,
+            "meta_orchestrator_extension_invocations": (
+                meta_orchestrator_extension_invocations
+            ),
             "rank_axis": args.rank_axis,
             "z1_empirical_revision_applied": True,
             "continual_posterior_loaded": args.load_continual_posterior,
@@ -8899,6 +9105,18 @@ def main(argv: list[str] | None = None) -> int:
             ranked_post_loop,
             top_n=min(args.max_dispatch_recommendations or 10, 10),
             panel_axis=args.score_panel_axis,
+        )
+
+        # META-ORCHESTRATOR EXTENSION WIRE-IN per Catalog #379 + Wave N+46
+        # (2026-05-28). Same post-loop wire-in as report-only path.
+        # Catalog #379 STRICT preflight gate enforces invocation callsite
+        # presence in main(). Per Catalog #287/#323/#341: observability-only.
+        meta_orchestrator_extension_invocations_post_loop = (
+            invoke_meta_orchestrator_extension_on_candidates(
+                ranked_post_loop,
+                top_n=min(args.max_dispatch_recommendations or 10, 10),
+                panel_axis=args.score_panel_axis,
+            )
         )
 
         # WAVE-3-DIM-1-PHASE-2 (2026-05-20): same post-loop wire-in as
