@@ -1,0 +1,153 @@
+schema_version: 1
+name: slot_ww_l28_pr98_patch_pr101_lc_v2_clone_paired_modal_dispatch
+lane_id: lane_slot_ww_canonical_l28_pr98_patch_wave_build_only_top_4_canonical_frontier_candidates_paired_cuda_ratification_operator_routable_prep_20260529
+summary: |
+  Slot WW canonical L28 PR98 zero-byte decode-side channel-balance bolt-on paired CPU + CUDA
+  RATIFICATION dispatch for pr101_lc_v2_clone substrate (covers V14-V2 DQS1 frontier
+  sub-anchor + fec6 canonical CPU frontier per Catalog #343). The L28 patch lives in
+  src/tac/substrates/pr101_lc_v2_clone/inflate.py lines 100-122 (post-bicubic-upsample,
+  pre-clamp/round/uint8) via canonical Slot LL helper
+  tac.codec.pr98_channel_balance_zero_byte_bolt_on PR98_CHANNEL_BALANCE_OFFSETS_CANONICAL
+  tuple import (NOT copy-paste; per operator binding directive #2 "no duplicative code").
+
+  Per Slot SS canonical FRONTIER-BREAKING ENABLER finding: this substrate IS in the
+  24/26 L28_PATCH_MISSING_OPERATOR_ROUTABLE list at Slot SS Phase B audit; THIS lane
+  closes the operator-routable surface by applying the canonical L28 patch.
+
+  Per Slot DD canonical highest-EV-shortest-WC RANK 1 finding: predicted score delta
+  band -0.0001 to -0.0005 [contest-CPU + contest-CUDA] per PR98 third-prize empirical
+  anchor (PR97 0.197 -> PR98 0.196 = -0.001 delta). Zero archive bytes added.
+
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+min_vram_gb: 16
+min_smoke_gpu: T4
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - contest_one_video_replay
+canary_status: post_canary_dependent
+canary_dependency: pr101_lc_v2_clone
+
+# DISPATCH GATED per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY"
+# non-negotiable + operator binding "iterate not force" + canonical 11th ORDER directive
+# Step 3: paired-CUDA RATIFICATION operator-attended only.
+dispatch_enabled: false
+research_only: false
+lane_class: substrate_engineering
+
+# Slot WW canonical scope: BUILD-ONLY operator-routable prep. Per Catalog #246 paired
+# CPU+CUDA discipline + canonical operator binding "all operator decisions approved":
+# operator-attended paired-CUDA RATIFICATION via the operator_authorize_*.sh wrapper.
+dispatch_blockers:
+  - slot_ww_canonical_build_only_scope_per_canonical_11th_order_directive_step_3_paired_cuda_ratification_third
+  - paired_cuda_ratification_operator_attended_via_operator_authorize_sh_wrapper_per_catalog_246
+  - reactivation_requires_explicit_operator_dispatch_authorization_per_canonical_iterate_not_force
+
+reactivation_criteria:
+  - operator_dispatch_authorization_via_scripts_operator_authorize_slot_ww_l28_pr98_patch_pr101_lc_v2_clone_paired_modal_dispatch_sh
+  - canonical_paired_cuda_ratification_via_tools_dispatch_modal_paired_auth_eval_per_catalog_246
+  - first_empirical_anchor_lands_canonical_equation_pr98_zero_byte_decode_side_channel_balance_score_savings_v1_promotion_FORMALIZATION_PENDING_to_REGISTERED_per_catalog_344
+
+cost_band:
+  epochs: 600
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 0.30
+  platform_key: modal
+  gpu_key: T4
+
+# Per Catalog #324 post-training Tier-C validation discipline: pending the first
+# paired-CUDA RATIFICATION empirical anchor.
+predicted_band_validation_status: pending_post_training
+predicted_score_target: 0.19193
+predicted_delta: "L28 PR98 zero-byte canonical decode-side channel-balance bolt-on; predicted band [-0.0005, -0.0001] [contest-CPU] + [-0.0005, -0.0001] [contest-CUDA] per Slot DD canonical L14-L70 + PR98 third-prize empirical anchor PR97 0.197 -> PR98 0.196 = -0.001 delta [empirical:PR98_third_prize_PR97_to_PR98_score_delta_0_001] [prediction]"
+predicted_delta_basis: |
+  CANONICAL PREDICTION BASIS (Slot DD canonical L14-L70 mining + HNeRV parity L28):
+    PR98 third-prize empirical anchor: PR97 0.197 -> PR98 0.196 = -0.001 delta
+    [empirical:PR98_third_prize_PR97_to_PR98_score_delta_0_001]. The L28 bolt-on
+    is the canonical SHIPPING PRIMITIVE in PR95-family PR98, PR101, PR103 winners.
+    Per Slot LL canonical helper docstring lines 16-22:
+      * Zero archive bytes (3 in-place subtractions on already-decoded RGB tensor)
+      * -0.0001 to -0.0005 score points (HARD-EARNED-EMPIRICALLY-VERIFIED)
+      * Medal-class jump primitive (PR97 0.197 -> PR98 0.196 -> PR101 0.193)
+      * Applies to ANY current frontier candidate (V14-V2 DQS1, NSCS06 v8, fec6, sister)
+
+  CANONICAL HELPER REFERENCE:
+    src/tac/codec/pr98_channel_balance_zero_byte_bolt_on/__init__.py
+    PR98_CHANNEL_BALANCE_OFFSETS_CANONICAL = (
+        (0, 0, 1.0),  # frame_0 RED   -= 1.0
+        (0, 2, 1.0),  # frame_0 BLUE  -= 1.0
+        (1, 1, 1.0),  # frame_1 GREEN -= 1.0
+    )
+
+  CANONICAL PR101 SOURCE-OF-TRUTH:
+    experiments/results/public_pr_intake_full/public_pr101_intake_20260505_auto/
+    source/submissions/hnerv_ft_microcodec/inflate.py:49-51
+
+literature_anchor: |
+  HNeRV parity discipline L28 (CLAUDE.md non-negotiable) + Slot DD canonical
+  highest-EV-shortest-WC RANK 1 finding + Slot LL canonical helper landing memo
+  + Slot SS canonical Phase B 24/26 L28_PATCH_MISSING_OPERATOR_ROUTABLE inventory.
+
+paired_cuda_ratification: true
+paired_cuda_envelope_usd: 0.30
+paired_cuda_method: tools/dispatch_modal_paired_auth_eval.py
+paired_cuda_axis_split: cpu_and_cuda
+paired_cuda_skip_axis_if_promotable_anchor_exists: true
+
+risk: |
+  LOW VARIANCE per Slot DD canonical HARD-EARNED L28 anchor + canonical SHARED helper
+  per Slot LL + Slot SS canonical Phase A empirical verification (this substrate
+  already verified L28_APPLIED_EMPIRICALLY_VERIFIED via Slot LL helper). Per Slot QQ
+  canonical META-lesson per-archive empirical verification REQUIRED BEFORE
+  classification overlay assignment: the canonical paired-CUDA RATIFICATION IS the
+  per-archive empirical verification.
+
+envelope_status: "FITS $5 hard-stop envelope at ~$0.30 paired CPU+CUDA"
+
+# Canonical observability surface per Catalog #305:
+observability_surface:
+  - inspectable_per_layer: archive_sha256_pre_patch + archive_sha256_post_patch (identical per zero-byte invariant) + inflate.py line 100-122 patch source
+  - decomposable_per_signal: per-axis (seg, pose, rate) delta per Catalog #356 AxisDecomposition surfaced by Slot LL canonical helper
+  - diff_able_across_runs: byte-identical archive bytes pre vs post patch (rate axis unchanged per HNeRV parity L28 zero-byte invariant); CPU + CUDA score axes diff via paired RATIFICATION
+  - queryable_post_hoc: canonical Modal call_id ledger per Catalog #245 + canonical posterior per Catalog #355
+  - cite_able: canonical Slot LL helper line 197-303 + canonical PR101 inflate.py:49-51 + canonical PR98 third-prize empirical anchor
+  - counterfactual_able: byte-mutation smoke per Catalog #105 + #139 (sister to Slot QQ pr106/pr107 pattern) on patched vs unpatched inflate.py
+
+# Canonical operator-routable command at operator-attended dispatch time:
+canonical_operator_routable_command: |
+  OPERATOR_AUTHORIZE_CONFIRMED_VIA_SESSION_DIRECTIVE=1 \
+  OPERATOR_AUTHORIZE_SESSION_BUDGET_USD=5.00 \
+  .venv/bin/python tools/operator_authorize.py \
+    --recipe slot_ww_l28_pr98_patch_pr101_lc_v2_clone_paired_modal_dispatch \
+    --confirm
+
+# Slot FFF BUILD step landed 2026-05-29T15:21Z resolved the
+# <PATH_TO_FRONTIER_ARCHIVE_BUILT_WITH_PATCHED_INFLATE> placeholder per Slot DDD
+# STAND_DOWN operator-routable #1. Empirical-honesty verdict per Catalog #105 +
+# #139 byte-mutation smoke at experiments/results/slot_fff_l28_patched_archive_bytes_20260529T152106Z/empirical_verification.json:
+#   pr101_lc_v2_clone L28 patch = REAL (per-pixel 20-pair sample shows canonical
+#   PR98 R/G/B subtraction signature; 86.4% -1, 13.6% -2 from bicubic upsample
+#   fractional rounding; frame_0 G and frame_1 R/B byte-identical between
+#   patched and unpatched per HNeRV parity L28 expected geometry).
+#
+# Substrate-specific source archive (NOT the canonical frontier b7106c9bdbb8
+# which is a fp11_source_brotli_recode-class archive that pr101_lc_v2_clone's
+# inflate.py cannot decode). Currently the canonical pr101_lc_v2_clone trainer
+# has only produced 720-byte smoke_archive placeholders on disk (smoke_zero_state_fallback_reason);
+# the BUILD empirical verification used such a smoke archive to verify the L28
+# patch geometry. A real-trained pr101_lc_v2_clone archive is the operator-routable
+# next step before paired-CUDA RATIFICATION produces score evidence at the
+# canonical frontier; see Slot FFF op-routable #1 for the canonical training queue.
+canonical_paired_cuda_source_archive_path: experiments/results/lane_substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260514T012029Z__smoke__100ep_modal/lane_pr95plus_results/output/archive.zip
+canonical_paired_cuda_source_archive_sha256: 56f775039fa0fb097736bce3563cb9ec60dedefe61c1ba0ed66adb18d39491d8
+canonical_paired_cuda_source_archive_bytes: 828
+canonical_paired_cuda_source_archive_caveat: 720-byte smoke_archive (smoke_zero_state_fallback_reason) per pr101_lc_v2_clone canonical state; L28 patch geometry verified REAL via Slot FFF byte-mutation smoke; promotion-grade RATIFICATION requires a real-trained pr101_lc_v2_clone archive
+
+canonical_paired_cuda_ratification_command: |
+  OPERATOR_AUTHORIZE_CONFIRMED_VIA_SESSION_DIRECTIVE=1 \
+  OPERATOR_AUTHORIZE_SESSION_BUDGET_USD=5.00 \
+  .venv/bin/python tools/dispatch_modal_paired_auth_eval.py \
+    --archive experiments/results/lane_substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260514T012029Z__smoke__100ep_modal/lane_pr95plus_results/output/archive.zip \
+    --expected-archive-sha256 56f775039fa0fb097736bce3563cb9ec60dedefe61c1ba0ed66adb18d39491d8 \
+    --skip-axis-if-promotable-anchor-exists

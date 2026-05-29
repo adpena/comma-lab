@@ -1,0 +1,157 @@
+schema_version: 1
+name: slot_ww_l28_pr98_patch_nscs06_carmack_hotz_strip_everything_paired_modal_dispatch
+lane_id: lane_slot_ww_canonical_l28_pr98_patch_wave_build_only_top_4_canonical_frontier_candidates_paired_cuda_ratification_operator_routable_prep_20260529
+summary: |
+  Slot WW canonical L28 PR98 zero-byte decode-side channel-balance bolt-on paired CPU + CUDA
+  RATIFICATION dispatch for nscs06_carmack_hotz_strip_everything substrate (covers NSCS06 v8
+  stacked composite per parent prompt). The L28 patch lives in
+  src/tac/substrates/nscs06_carmack_hotz_strip_everything/inflate.py via canonical Slot LL
+  helper tac.codec.pr98_channel_balance_zero_byte_bolt_on PR98_CHANNEL_BALANCE_OFFSETS_CANONICAL
+  tuple import + canonical adapter function _apply_pr98_l28_channel_balance_to_pair_uint8
+  (int16 underflow-safe; clip back to uint8 [0, 255] per PR101 canonical clamp BEFORE round).
+
+  Per Slot SS canonical FRONTIER-BREAKING ENABLER finding: this substrate IS in the
+  24/26 L28_PATCH_MISSING_OPERATOR_ROUTABLE list at Slot SS Phase B audit; THIS lane
+  closes the operator-routable surface by applying the canonical L28 patch.
+
+  Per Slot DD canonical highest-EV-shortest-WC RANK 1 finding: predicted score delta
+  band -0.0001 to -0.0005 [contest-CPU + contest-CUDA] per PR98 third-prize empirical
+  anchor (PR97 0.197 -> PR98 0.196 = -0.001 delta). Zero archive bytes added.
+
+  NSCS06 NOTE: per existing dispatch_blockers in
+  substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch.yaml the parent
+  substrate is DEFERRED-pending-research per NSCS06 v7 plateau at 58.89 [contest-CPU]
+  (307x worse than 0.192 frontier). The L28 patch alone is NOT EXPECTED to close
+  the 307x gap; this recipe is operator-routable PREP for the day the NSCS06 substrate
+  pivots to a sub-50 cargo-cult-unwind variant. Per CLAUDE.md "Forbidden premature KILL
+  without research exhaustion": the patch + recipe land structurally as canonical
+  reactivation prep; actual paired dispatch deferred to operator decision.
+
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+min_vram_gb: 16
+min_smoke_gpu: T4
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - contest_one_video_replay
+  - research_substrate
+canary_status: post_canary_dependent
+canary_dependency: nscs06_carmack_hotz_strip_everything
+
+dispatch_enabled: false
+research_only: true
+lane_class: substrate_engineering
+
+dispatch_blockers:
+  - slot_ww_canonical_build_only_scope_per_canonical_11th_order_directive_step_3_paired_cuda_ratification_third
+  - paired_cuda_ratification_operator_attended_via_operator_authorize_sh_wrapper_per_catalog_246
+  - nscs06_family_deferred_per_operator_decision_20260516_propagated_per_parent_substrate_recipe_dispatch_blockers
+  - v7_plateau_at_58p89_contest_cpu_307x_worse_than_0p192_frontier_l28_patch_alone_insufficient_to_close_gap
+  - reactivation_requires_either_a_new_cargo_cult_unwind_breaking_v7_plateau_OR_class_shift_below_50_OR_explicit_operator_directive
+
+reactivation_criteria:
+  - nscs06_v8_stacked_composite_lands_canonical_archive_below_50_contest_cpu_via_sister_substrate_insight
+  - operator_directive_revisit_nscs06_family_with_l28_patch_already_applied
+  - canonical_paired_cuda_ratification_authorized_for_diagnostic_anchor_only_NOT_promotion
+
+cost_band:
+  epochs: 600
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 0.30
+  platform_key: modal
+  gpu_key: T4
+
+predicted_band_validation_status: pending_post_training
+predicted_score_target: 58.88
+predicted_delta: "L28 PR98 zero-byte canonical decode-side channel-balance bolt-on; predicted band [-0.0005, -0.0001] [contest-CPU] + [-0.0005, -0.0001] [contest-CUDA] per Slot DD canonical L14-L70 + PR98 third-prize empirical anchor. NOTE: applied to NSCS06 v7 baseline 58.89 [diagnostic_cpu]; predicted post-patch 58.88-58.89; L28 patch DOES NOT close 307x v7 plateau gap [empirical:PR98_third_prize_PR97_to_PR98_score_delta_0_001] [prediction]"
+predicted_delta_basis: |
+  CANONICAL PREDICTION BASIS (Slot DD canonical L14-L70 mining + HNeRV parity L28):
+    PR98 third-prize empirical anchor: PR97 0.197 -> PR98 0.196 = -0.001 delta.
+    NSCS06 v7 baseline = 58.89 [diagnostic_cpu] per existing recipe.
+
+  NSCS06-SPECIFIC NOTE per Slot QQ canonical META-lesson:
+    The L28 PR98 pattern is empirically validated on PR95-family HNeRV-class
+    substrates (PR98, PR101, PR103 winners all ship the canonical 3-line
+    subtraction). NSCS06's CARMACK-HOTZ STRIP-EVERYTHING substrate uses a
+    DIFFERENT scorer-feedback path (per-class chroma anchor lookup, not
+    learned decoder weights), so the per-substrate empirical L28 delta may
+    differ from the canonical PR95-family band. The canonical PROCEED is to
+    apply the patch + measure empirically per Slot QQ META-lesson; the
+    canonical FALSIFICATION is documented if delta != predicted band.
+
+  CANONICAL HELPER REFERENCE:
+    src/tac/codec/pr98_channel_balance_zero_byte_bolt_on/__init__.py
+    PR98_CHANNEL_BALANCE_OFFSETS_CANONICAL = (
+        (0, 0, 1.0),  # frame_0 RED   -= 1.0
+        (0, 2, 1.0),  # frame_0 BLUE  -= 1.0
+        (1, 1, 1.0),  # frame_1 GREEN -= 1.0
+    )
+
+literature_anchor: |
+  HNeRV parity discipline L28 (CLAUDE.md non-negotiable) + Slot DD canonical
+  highest-EV-shortest-WC RANK 1 finding + Slot LL canonical helper landing memo
+  + Slot SS canonical Phase B 24/26 L28_PATCH_MISSING_OPERATOR_ROUTABLE inventory
+  + existing NSCS06 v6 -> v7 cargo-cult-unwind methodology canonical reference.
+
+paired_cuda_ratification: true
+paired_cuda_envelope_usd: 0.30
+paired_cuda_method: tools/dispatch_modal_paired_auth_eval.py
+paired_cuda_axis_split: cpu_and_cuda
+paired_cuda_skip_axis_if_promotable_anchor_exists: true
+
+risk: |
+  HIGH VARIANCE on NSCS06-specific empirical delta because NSCS06 is NOT a
+  PR95-family HNeRV-class substrate (it's an ANALYTICAL renderer via per-class
+  chroma anchor + 6-DOF affine warp). The L28 PR98 -1.0 channel offsets were
+  empirically anchored to PR95-family decoder-rendered RGB outputs; on an
+  analytical chroma-anchor-rendered substrate, the per-channel scorer-feedback
+  geometry may differ. Per Slot QQ canonical META-lesson per-archive empirical
+  verification REQUIRED. The canonical PROCEED is operator-attended paired
+  RATIFICATION for diagnostic-only purpose; the canonical FALSIFICATION is
+  documented if delta != predicted band.
+
+envelope_status: "FITS $5 hard-stop envelope at ~$0.30 paired CPU+CUDA (diagnostic-only; no promotion gate)"
+
+observability_surface:
+  - inspectable_per_layer: archive_sha256_pre_patch + archive_sha256_post_patch (identical per zero-byte invariant) + nscs06 inflate.py canonical adapter function _apply_pr98_l28_channel_balance_to_pair_uint8 source
+  - decomposable_per_signal: per-axis (seg, pose, rate) delta per Catalog #356 AxisDecomposition; NSCS06-specific decomposition expected to differ from PR95-family
+  - diff_able_across_runs: byte-identical archive bytes pre vs post patch + paired CPU + CUDA score axes diff via paired RATIFICATION
+  - queryable_post_hoc: canonical Modal call_id ledger per Catalog #245 + canonical posterior per Catalog #355
+  - cite_able: canonical Slot LL helper + canonical PR101 inflate.py:49-51 + canonical PR98 third-prize empirical anchor + existing NSCS06 v7 baseline 58.89 anchor
+  - counterfactual_able: byte-mutation smoke per Catalog #105 + #139 on patched vs unpatched inflate.py
+
+canonical_operator_routable_command: |
+  OPERATOR_AUTHORIZE_CONFIRMED_VIA_SESSION_DIRECTIVE=1 \
+  OPERATOR_AUTHORIZE_SESSION_BUDGET_USD=5.00 \
+  .venv/bin/python tools/operator_authorize.py \
+    --recipe slot_ww_l28_pr98_patch_nscs06_carmack_hotz_strip_everything_paired_modal_dispatch \
+    --confirm
+
+# Slot FFF BUILD step landed 2026-05-29T15:21Z resolved the source-archive
+# path per Slot DDD STAND_DOWN operator-routable #1. Empirical-honesty verdict
+# per Catalog #105 + #139 byte-mutation smoke at
+# experiments/results/slot_fff_l28_patched_archive_bytes_20260529T152106Z/empirical_verification.json:
+#   nscs06_carmack_hotz_strip_everything L28 patch = REAL (raw 3.66 GB output
+#   bytes; top byte transitions are 100% (n+1 -> n) clipped pattern matching the
+#   canonical PR98 R/G/B -1 subtraction; canonical adapter
+#   _apply_pr98_l28_channel_balance_to_pair_uint8 verified to apply the offsets
+#   to frame_0 R/B and frame_1 G with int16-cast underflow protection).
+#
+# NOTE per existing dispatch_blockers above: this substrate is DEFERRED-pending-research
+# per NSCS06 v7 plateau 58.89 [diagnostic_cpu]; the canonical paired-CUDA RATIFICATION
+# is diagnostic-only (no promotion). L28 patch alone is NOT EXPECTED to close
+# the v7 plateau gap; this recipe stays dispatch_enabled=false until operator
+# decides to consume the diagnostic anchor for a sister substrate insight per
+# CLAUDE.md "Forbidden premature KILL without research exhaustion".
+canonical_paired_cuda_source_archive_path: experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T142210Z__smoke__100ep_modal/lane_nscs06_carmack_hotz_results/output/archive.zip
+canonical_paired_cuda_source_archive_sha256: af80dc76b802e9b096cdd3bc5ca412d3ccb8a17ca81fb1382c9c11c2c7ca120a
+canonical_paired_cuda_source_archive_bytes: 4014234
+
+canonical_paired_cuda_ratification_command: |
+  OPERATOR_AUTHORIZE_CONFIRMED_VIA_SESSION_DIRECTIVE=1 \
+  OPERATOR_AUTHORIZE_SESSION_BUDGET_USD=5.00 \
+  .venv/bin/python tools/dispatch_modal_paired_auth_eval.py \
+    --archive experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T142210Z__smoke__100ep_modal/lane_nscs06_carmack_hotz_results/output/archive.zip \
+    --expected-archive-sha256 af80dc76b802e9b096cdd3bc5ca412d3ccb8a17ca81fb1382c9c11c2c7ca120a \
+    --skip-axis-if-promotable-anchor-exists

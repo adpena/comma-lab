@@ -61444,6 +61444,47 @@
       "notes": "",
       "research_only": true,
       "lane_class": "audit_apparatus_maintenance"
+    },
+    {
+      "id": "lane_slot_fff_l28_patched_archive_bytes_build_step_per_slot_ddd_operator_routable_1_20260529",
+      "name": "Slot FFF L28 patched archive bytes BUILD step per Slot DDD op-routable #1",
+      "phase": 4.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "Slot FFF BUILD landed 2026-05-29T15:21Z; empirical_verification.json at experiments/results/slot_fff_l28_patched_archive_bytes_20260529T152106Z/empirical_verification.json shows L28 patch REAL on both substrates (per-pixel pr101 + raw-byte nscs06); 2 Slot WW recipes updated with canonical source archive paths + sha256, dispatch_enabled remains false per iterate-not-force; archive_grammar=substrate_specific_zip; parser_section_manifest=parse_archive_at_src_tac_substrates_pr101_lc_v2_clone_and_nscs06; inflate_runtime_loc_budget=200_per_HNeRV_L4_substrate_engineering_L7; runtime_dep_closure=numpy_torch_PIL; export_format=substrate_specific_zip; score_aware_loss=per_substrate_canonical_already_landed; bolt_on_loc_budget=350_canonical_under_budget; no_op_detector_planned=Catalog_105_139_byte_mutation_smoke_REAL; research_only=true; lane_class=substrate_engineering"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_slot_fff_slot_ww_build_step_l28_patched_archive_bytes_per_slot_ddd_operator_routable_1_landed_20260529.md (Slot FFF landing memo at canonical Claude memory path; written in Phase D same commit batch)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -61453,5 +61494,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-29T15:16:57Z"
+  "updated_at": "2026-05-29T15:37:44Z"
 }
