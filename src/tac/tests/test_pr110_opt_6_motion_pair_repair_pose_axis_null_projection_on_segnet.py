@@ -637,5 +637,15 @@ def test_canonical_all_exports_complete(mod):
         "VERDICT_NULL_PROJECTION_FALSIFIED_PER_MODE",
         "apply_pose_axis_null_projection_via_real_scorers_to_pr110_archive",
         "list_canonical_paired_cuda_ratification_targets",
+        # Slot GGG SCALE-UP MATRIX 2026-05-30 (N modes x M pairs x contest resolution)
+        "SCALE_UP_TIER_A_DEFAULT_N_MODES",
+        "SCALE_UP_TIER_A_DEFAULT_NUM_PAIRS",
+        "SCALE_UP_TIER_A_DEFAULT_RESOLUTION_HW",
+        "VERDICT_SCALE_UP_ALL_MODES_CONFIRMED",
+        "VERDICT_SCALE_UP_ALL_MODES_FALSIFIED",
+        "VERDICT_SCALE_UP_PARTIAL_CONFIRMED",
+        "build_unified_canonical_scale_up_menu",
+        "rank_confirmed_modes_by_capacity_per_cost",
+        "apply_pose_axis_null_projection_scale_up_matrix_n_modes_x_m_pairs_x_contest_resolution",
     }
     assert set(mod.__all__) == required_exports

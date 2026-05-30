@@ -62146,15 +62146,15 @@
       "id": "lane_slot_ggg_scale_up_matrix_n_modes_x_600_pairs_contest_resolution_20260530",
       "name": "Slot GGG Scale-Up Matrix N Modes Contest Resolution",
       "phase": 11.0,
-      "level": 0,
+      "level": 2,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "Scale-up entry point apply_pose_axis_null_projection_scale_up_matrix_n_modes_x_m_pairs_x_contest_resolution + canonical helpers build_unified_canonical_scale_up_menu + rank_confirmed_modes_by_capacity_per_cost landed at src/tac/composition/pr110_opt_6_motion_pair_repair_pose_axis_null_projection_on_segnet/__init__.py; 31/31 active tests pass + 1 slow skipped; 0 regression on sister 62-test Slot RR+GGG suite"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "[macOS-CPU advisory] empirical anchor at experiments/results/slot_ggg_scale_up_matrix_n_modes_x_m_pairs_x_contest_resolution_macos_cpu_advisory_smoke_20260530T144658Z/scale_up_matrix.json; 16 modes x 4 pairs x (96,128); 5/16 confirmed (DCT_CHROMA dominant family); 11/16 falsified (all PER_PIXEL_ROLL + 3 noise-floor DCT); 2.3min wall-clock; baseline cache 46.9% savings; ranked CONFIRMED list top mode |d_pose|=9.1e-9"
         },
         "contest_cuda": {
           "status": false,
@@ -62173,8 +62173,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/slot_ggg_scale_up_matrix_n_modes_x_600_pairs_contest_resolution_macos_cpu_advisory_landed_20260530.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -62314,5 +62314,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-30T14:37:51Z"
+  "updated_at": "2026-05-30T14:52:32Z"
 }

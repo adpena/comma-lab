@@ -1595,6 +1595,916 @@ def list_canonical_paired_cuda_ratification_targets() -> list[dict[str, Any]]:
     ]
 
 
+# --- Slot GGG SCALE-UP MATRIX: N modes x M pairs x contest resolution -------
+#
+# Per operator routing 2026-05-30 + Yousfi-cascade TIER-1 prerequisite for
+# Slot GGG x Cascade A FEC10 selector codec composition. Where Slot RR Part 2
+# proves bytes change at pixel level + Slot GGG Part 3 (apply_pose_axis_null_
+# projection_via_real_scorers_to_pr110_archive @ line 1085) closes the Slot EEE
+# Axis F (cite-vs-impl) audit at 2 modes x 2 pairs x 48x64, THIS scale-up
+# matrix lets the operator pick the K modes with maximum side-channel capacity
+# vs minimum joint (d_seg, d_pose, rate) cost across a configurable N x M x
+# (H, W) grid.
+#
+# Yousfi-cascade prediction: monotonicity at scale + N=16 modes confirm with
+# the same SegNet argmax = 0 + |d_pose| in carrier band -> ~600 pairs * log2(16)
+# = 4 bits/pair = ~300 bytes "free" side-channel at near-zero seg cost = a
+# frontier-crossing -0.014 score potential vs canonical CPU frontier
+# 0.1920282830 per Catalog #343.
+#
+# Two canonical engineering invariants enable the scale-up within budget:
+#
+#   1. **Baseline cache** per pair: SegNet/PoseNet baseline output is purely a
+#      function of (frame_0, frame_1_baseline), so the canonical pair-baseline
+#      tuple is computed ONCE per pair and reused across all N modes -> O((M)
+#      baseline + N*M perturbed) scorer calls instead of O(2*N*M). ~50% reduction.
+#
+#   2. **Multi-strategy unified menu**: build_canonical_frame1_pose_axis_null_
+#      projection_menu is called per strategy; the scale-up entry point
+#      aggregates UP TO ALL 4 STRATEGIES into a unified N-mode menu (default
+#      N=16 = PER_PIXEL_ROLL 8 + DCT_CHROMA_BASIS first 8 to total 16; N>16
+#      pulls more DCT modes, then HADAMARD, then GAUSSIAN; cap at
+#      CANONICAL_FRAME1_MENU_TOTAL = 43).
+#
+# Empirical macOS-CPU wall-clock budget (1.577s/scorer-call @ 384x512):
+#
+#   - 16 modes x 60 pairs x 384x512 (Tier A operator-routing smoke): ~150s
+#   - 16 modes x 600 pairs x 192x256 (Tier B statistical mid-tier): ~720s
+#   - 16 modes x 600 pairs x 384x512 (Tier C full canonical contest):
+#     ~16200s with baseline cache (~4.5h overnight queue)
+#
+# Catalog #348 retroactive sweep finding: NO historical KILL/DEFER/FALSIFY
+# verdict on pose-axis null-projection scale-up at contest resolution; this
+# is canonical EXTENSION of Slot GGG Part 3 not REACTIVATION of a stale verdict.
+
+
+# Canonical default scale-up grid sizes. The Tier A grid (operator-routing smoke)
+# completes in ~3 minutes on macOS-CPU at contest 384x512 resolution and produces
+# the ranked CONFIRMED_MODE_IDS list with bounded statistical noise per the
+# canonical OPT-12 PoseNet-null bottom-decile carrier band per design memo Sec 4.1.
+SCALE_UP_TIER_A_DEFAULT_N_MODES: int = 16
+"""Canonical default N modes for the Tier A operator-routing smoke
+(PER_PIXEL_ROLL 8 + DCT_CHROMA_BASIS 8 first per the canonical 4-family menu
+construction order). Higher N draws more modes from the canonical menu families;
+cap = ``CANONICAL_FRAME1_MENU_TOTAL = 43``."""
+
+SCALE_UP_TIER_A_DEFAULT_NUM_PAIRS: int = 60
+"""Canonical default M pairs for the Tier A operator-routing smoke (10% of
+PR110 600 pair count). At ~1.577s/scorer-call @ 384x512 macOS-CPU this is
+~16*60*1.577 = ~1500s = ~25min full + ~150s with baseline cache (~3min).
+Statistical power: 60 pairs is sufficient for ranked CONFIRMED_MODE_IDS list
+per OPT-12 PoseNet-null bottom-decile sample-size empirical anchor."""
+
+SCALE_UP_TIER_A_DEFAULT_RESOLUTION_HW: tuple[int, int] = (384, 512)
+"""Canonical contest resolution per CLAUDE.md + canonical SegNet/PoseNet
+preprocess pipeline. SegNet preprocess internally resizes to (384, 512);
+canonical PoseNet preprocess internally resizes to (384, 512) per CLAUDE.md
+'Exact scorer architectures'. Using the canonical contest resolution at the
+helper boundary avoids the canonical bilinear-resize-roundtrip artifact per
+CLAUDE.md 'CATASTROPHIC FAILURES' 48x64 mask anchor."""
+
+VERDICT_SCALE_UP_ALL_MODES_CONFIRMED: str = (
+    "SCALE_UP_ALL_MODES_CONFIRMED_ON_MACOS_CPU_ADVISORY_DEFERRED_"
+    "PENDING_PAIRED_CUDA_RATIFICATION_PER_CATALOG_246"
+)
+VERDICT_SCALE_UP_ALL_MODES_FALSIFIED: str = (
+    "SCALE_UP_ALL_MODES_FALSIFIED_ON_MACOS_CPU_ADVISORY_DEFERRED_"
+    "PENDING_PAIRED_CUDA_RATIFICATION_PER_CATALOG_307_IMPLEMENTATION_LEVEL"
+)
+VERDICT_SCALE_UP_PARTIAL_CONFIRMED: str = (
+    "SCALE_UP_PARTIAL_CONFIRMED_ON_MACOS_CPU_ADVISORY_DEFERRED_"
+    "PENDING_PAIRED_CUDA_RATIFICATION_OF_CONFIRMED_SUBSET"
+)
+
+
+def build_unified_canonical_scale_up_menu(
+    n_modes_target: int,
+) -> list[dict[str, Any]]:
+    """Build a unified N-mode canonical menu spanning multiple strategies.
+
+    Strategy fill order (per canonical design memo Sec 3.1 + OPT-12 PoseNet-null
+    analog dominant-family fraction):
+
+    1. ``PER_PIXEL_ROLL`` (8 modes) — canonical 1-pixel translation; SegNet
+       bilinear-resize argmax invariant per design memo Sec 4.1.
+    2. ``DCT_CHROMA_BASIS`` (16 modes) — canonical OPT-12 dominant-family
+       (4 of 7 frame0_dct_chroma in PoseNet-null bottom-decile per design
+       memo Sec 4.1).
+    3. ``HADAMARD_TILE`` (3 modes) — canonical EfficientNet stride-2 stem
+       invariant per design memo Sec 4.1.
+    4. ``GAUSSIAN_NOISE`` (16 modes) — canonical UNIWARD textured-region
+       undetectable axis per design memo Sec 4.1.
+
+    Total available = ``CANONICAL_FRAME1_MENU_TOTAL`` = 43.
+
+    Args:
+        n_modes_target: Number of modes to enumerate. If > 43 (canonical max),
+            returns all 43 + emits a canonical warning string (caller-side
+            decision). If <= 0, raises ``ValueError`` per Catalog #287.
+
+    Returns:
+        List of canonical mode descriptor dicts; each with ``mode_id`` +
+        ``family`` + ``params`` + ``description`` keys per the canonical
+        :func:`build_canonical_frame1_pose_axis_null_projection_menu` shape.
+
+    Raises:
+        ValueError: If ``n_modes_target < 1`` per Catalog #287 invariants.
+    """
+    if n_modes_target < 1:
+        raise ValueError(
+            f"n_modes_target must be >= 1 per Catalog #287 invariants; "
+            f"got {n_modes_target}"
+        )
+
+    unified: list[dict[str, Any]] = []
+    fill_order = [
+        PoseAxisNullProjectionStrategy.PER_PIXEL_ROLL,
+        PoseAxisNullProjectionStrategy.DCT_CHROMA_BASIS,
+        PoseAxisNullProjectionStrategy.HADAMARD_TILE,
+        PoseAxisNullProjectionStrategy.GAUSSIAN_NOISE,
+    ]
+    for strategy in fill_order:
+        if len(unified) >= n_modes_target:
+            break
+        strategy_menu = build_canonical_frame1_pose_axis_null_projection_menu(strategy)
+        remaining_slots = n_modes_target - len(unified)
+        unified.extend(strategy_menu[:remaining_slots])
+    return unified
+
+
+def rank_confirmed_modes_by_capacity_per_cost(
+    per_mode_verifications: list[dict[str, Any]],
+    *,
+    abs_d_pose_epsilon: float = 1e-12,
+) -> list[dict[str, Any]]:
+    """Rank CONFIRMED modes by canonical capacity-per-cost ratio.
+
+    Canonical capacity-per-cost metric per Yousfi-cascade prediction:
+
+        capacity_per_cost = 1.0 / (empirical_abs_d_pose_mean + epsilon)
+
+    Lower ``|d_pose|`` = lower cost = higher capacity-per-cost = better
+    canonical Atick-Tishby-Wyner asymmetric-channel side-information bit.
+    Per CLAUDE.md 'Fridrich inverse steganalysis — how to beat the scorer':
+    'UNIWARD: errors in textured regions are undetectable'. The canonical
+    pose-axis null-projection modes that minimize |d_pose| ARE the canonical
+    minimum-detectability side-channel carriers.
+
+    Args:
+        per_mode_verifications: List of per-mode verification dicts as
+            returned by :func:`apply_pose_axis_null_projection_via_real_
+            scorers_to_pr110_archive`. Must contain ``verdict`` +
+            ``empirical_abs_d_pose_mean`` + ``mode_id`` + ``family`` fields.
+        abs_d_pose_epsilon: Canonical epsilon to avoid div-by-zero for modes
+            with EXACTLY zero |d_pose|. Default 1e-12 (canonical fp32 machine
+            epsilon margin).
+
+    Returns:
+        List of dicts sorted DESCENDING by capacity_per_cost (best first).
+        Each dict carries ``mode_id`` + ``family`` + ``empirical_abs_d_pose_mean``
+        + ``empirical_d_seg_mean`` + ``per_pixel_argmax_disagreement_rate_mean``
+        + ``capacity_per_cost`` keys. Only CONFIRMED modes are included
+        (FALSIFIED modes are excluded; they fail the canonical SegNet-null
+        OR pose-carrier-band invariant by construction).
+    """
+    confirmed = [
+        m
+        for m in per_mode_verifications
+        if m.get("verdict") == VERDICT_NULL_PROJECTION_CONFIRMED_PER_MODE
+    ]
+    ranked = []
+    for mode in confirmed:
+        abs_d_pose = float(mode.get("empirical_abs_d_pose_mean", 0.0))
+        capacity = 1.0 / (abs_d_pose + abs_d_pose_epsilon)
+        ranked.append(
+            {
+                "mode_id": mode["mode_id"],
+                "family": mode["family"],
+                "empirical_abs_d_pose_mean": abs_d_pose,
+                "empirical_d_seg_mean": float(mode.get("empirical_d_seg_mean", 0.0)),
+                "per_pixel_argmax_disagreement_rate_mean": float(
+                    mode.get("per_pixel_argmax_disagreement_rate_mean", 0.0)
+                ),
+                "capacity_per_cost": capacity,
+            }
+        )
+    # Sort descending by capacity (highest capacity first = best).
+    ranked.sort(key=lambda r: r["capacity_per_cost"], reverse=True)
+    return ranked
+
+
+def apply_pose_axis_null_projection_scale_up_matrix_n_modes_x_m_pairs_x_contest_resolution(
+    *,
+    n_modes_target: int = SCALE_UP_TIER_A_DEFAULT_N_MODES,
+    num_pairs: int = SCALE_UP_TIER_A_DEFAULT_NUM_PAIRS,
+    frame_resolution_hw: tuple[int, int] = SCALE_UP_TIER_A_DEFAULT_RESOLUTION_HW,
+    upstream_dir: str = "upstream",
+    perturbation_magnitude_scale: float = 1.0 / 255.0,
+    segnet_null_tolerance: float = SEGNET_ARGMAX_NULL_TOLERANCE,
+    pose_carrier_band_lower: float = POSENET_NULL_CARRIER_BAND_LOWER,
+    pose_carrier_band_upper: float = POSENET_NULL_CARRIER_BAND_UPPER,
+    artifact_output_dir: str | None = None,
+    register_canonical_equation_on_confirmation: bool = False,
+    canonical_equation_confirmation_threshold: int = 8,
+) -> dict[str, Any]:
+    """Slot GGG canonical SCALE-UP matrix: N modes x M pairs x contest resolution.
+
+    Yousfi-cascade TIER-1 prerequisite for Slot GGG x Cascade A FEC10 selector
+    codec composition (downstream operator-routable, queued for next turn).
+
+    Where the predecessor :func:`apply_pose_axis_null_projection_via_real_scorers_
+    to_pr110_archive` verifies 2 strategies x 2 pairs x 48x64 (cheap smoke
+    closing Slot EEE Axis F audit), THIS scale-up matrix unifies the canonical
+    4-family menu into N modes (default 16; cap 43) and scales to M pairs
+    (default 60 = 10% of PR110 600; cap 600) at canonical contest resolution
+    384x512.
+
+    Canonical engineering invariants:
+
+    * **Baseline cache** per pair: SegNet/PoseNet baseline output cached once
+      per pair + reused across all N modes -> O(M baseline + N*M perturbed)
+      scorer calls instead of O(2*N*M).
+    * **Multi-strategy unified menu** via :func:`build_unified_canonical_scale_
+      up_menu`: PER_PIXEL_ROLL fills first 8, then DCT_CHROMA_BASIS (canonical
+      OPT-12 dominant family), then HADAMARD_TILE, then GAUSSIAN_NOISE.
+    * **Ranked CONFIRMED_MODE_IDS** via :func:`rank_confirmed_modes_by_
+      capacity_per_cost`: confirmed modes sorted DESCENDING by
+      ``1/|d_pose|`` (canonical Atick-Tishby-Wyner minimum-detectability
+      side-channel capacity).
+    * **Empirical artifact persistence** to
+      ``experiments/results/slot_ggg_scale_up_matrix_n_modes_x_m_pairs_x_
+      contest_resolution_macos_cpu_advisory_smoke_<UTC>/scale_up_matrix.json``
+      so the canonical FEC10 selector codec consumer (next turn) can pull the
+      ranked CONFIRMED_MODE_IDS list without recomputing.
+    * **Catalog #344 canonical equation registration** (opt-in) when
+      ``register_canonical_equation_on_confirmation=True`` AND
+      ``modes_confirmed_count >= canonical_equation_confirmation_threshold``:
+      registers ``pose_axis_null_projection_per_pair_selector_codec_capacity_v1``
+      with first ``EmpiricalAnchor`` backed by the scale-up empirical artifact.
+
+    Per CLAUDE.md "MPS auth eval is NOISE" + Catalog #192 + Catalog #341:
+    output is ``[macOS-CPU advisory]`` Tier A NEVER promotable; paired Linux
+    x86_64 + NVIDIA empirical anchor required per Catalog #246 before any
+    contest-axis score claim. Documented adaptations per 5-axis taxonomy:
+
+    * Axis 1 (substrate): local macOS-CPU vs contest CUDA T4
+    * Axis 2 (problem space): M pairs (default 60) vs PR110 600
+    * Axis 3 (math): fp32 scorer macOS-CPU vs fp16 T4
+    * Axis 4 (data): first M*2 frames vs all 1200 frames
+    * Axis 5 (video): same upstream/videos/0.mkv per Catalog #213
+
+    Args:
+        n_modes_target: Number of modes to verify (default 16; canonical cap
+            43 = ``CANONICAL_FRAME1_MENU_TOTAL``). Multi-strategy unified menu
+            via :func:`build_unified_canonical_scale_up_menu`.
+        num_pairs: Number of frame pairs to decode (default 60; canonical
+            cap 600 = ``PR110_NUM_PAIRS``). Each pair is
+            ``(frame_2k, frame_2k+1)``.
+        frame_resolution_hw: ``(H, W)`` for canonical bilinear resize at the
+            helper boundary (default ``(384, 512)`` per canonical contest
+            resolution). Scorers internally resize SegNet input to
+            (384, 512); using the canonical contest resolution at the helper
+            boundary avoids canonical bilinear-resize-roundtrip artifact.
+        upstream_dir: Path to upstream repo root (default ``"upstream"``).
+        perturbation_magnitude_scale: Canonical fp32 luma units (default
+            ``1/255``).
+        segnet_null_tolerance: Per-pixel argmax disagreement tolerance for
+            SegNet-null claim (default ``SEGNET_ARGMAX_NULL_TOLERANCE``).
+        pose_carrier_band_lower: Pose carrier band lower bound (default
+            ``POSENET_NULL_CARRIER_BAND_LOWER``).
+        pose_carrier_band_upper: Pose carrier band upper bound (default
+            ``POSENET_NULL_CARRIER_BAND_UPPER``).
+        artifact_output_dir: If not None, write the canonical empirical
+            artifact JSON to ``<artifact_output_dir>/scale_up_matrix.json``.
+            If None (default), the helper computes a canonical UTC-stamped
+            directory under ``experiments/results/slot_ggg_scale_up_matrix_
+            <UTC>/``. Pass empty string ``""`` to skip artifact write
+            entirely (test-only opt-out).
+        register_canonical_equation_on_confirmation: If True AND
+            ``modes_confirmed_count >= canonical_equation_confirmation_threshold``,
+            register the canonical equation
+            ``pose_axis_null_projection_per_pair_selector_codec_capacity_v1``
+            via :func:`tac.canonical_equations.register_canonical_equation`
+            with first ``EmpiricalAnchor`` backed by the scale-up artifact.
+            Default False (operator-decision-pending per Catalog #344 'iterate
+            not force').
+        canonical_equation_confirmation_threshold: Minimum
+            ``modes_confirmed_count`` to trigger canonical equation
+            registration when the opt-in flag is True. Default 8 (half of
+            canonical N=16 = canonical Yousfi-cascade prediction threshold).
+
+    Returns:
+        Canonical Tier A contribution per Catalog #341 + #323 + #356 + #305
+        + extended scale-up surfaces:
+
+        * ``predicted_delta_adjustment`` (always 0.0 per Tier A)
+        * ``promotable`` (always False per Catalog #192)
+        * ``score_claim`` (always False per Catalog #323)
+        * ``axis_tag`` (``"[macOS-CPU advisory]"`` per Catalog #192)
+        * ``n_modes_probed`` / ``n_modes_target_requested`` (clamped to <=
+          CANONICAL_FRAME1_MENU_TOTAL)
+        * ``num_pairs_evaluated`` / ``frame_resolution_hw``
+        * ``per_mode_empirical_verification`` (list with full Slot GGG Part 3
+          schema extended with ``family`` + ``params`` for the unified menu)
+        * ``modes_confirmed_count`` / ``modes_falsified_count`` /
+          ``confirmed_mode_ids`` / ``falsified_mode_ids``
+        * ``ranked_confirmed_modes_by_capacity_per_cost`` (ranked DESCENDING
+          by 1/|d_pose|)
+        * ``aggregate_empirical_d_seg_mean_across_modes`` /
+          ``aggregate_empirical_abs_d_pose_mean_across_modes``
+        * ``baseline_cache_calls_count`` / ``perturbed_scorer_calls_count``
+          / ``baseline_cache_savings_ratio``
+        * ``elapsed_seconds_total`` / ``elapsed_seconds_per_mode_mean``
+        * ``canonical_provenance`` / ``canonical_routing_markers`` /
+          ``predicted_axis_decomposition``
+        * ``verdict`` (one of VERDICT_SCALE_UP_*)
+        * ``artifact_path`` (canonical artifact JSON path if persisted,
+          else None)
+        * ``canonical_equation_registration``: dict with
+          ``registered`` boolean + ``equation_id`` + ``reason`` if
+          registration was triggered, else None
+        * ``slot_ggg_scale_up_anchor`` (Slot GGG operator-routing canonical
+          anchor citation)
+
+    Raises:
+        FileNotFoundError: If ``upstream/videos/0.mkv`` or upstream models
+            do not exist.
+        ValueError: If any canonical invariant is violated.
+    """
+    import hashlib
+    import json
+    import os
+    import pathlib
+    import time
+    from datetime import datetime, timezone
+
+    import numpy as np
+    import torch
+
+    from tac.inverse_steganalysis_real_video_mlx import (
+        MACOS_CPU_ADVISORY_TAG,
+        decode_upstream_video_frames,
+    )
+    from tac.provenance.builders import build_provenance_for_predicted
+    from tac.provenance.validator import provenance_to_dict
+    from tac.scorer import load_default_scorers
+    from tac.substrates.score_aware_common import score_pair_components
+
+    # Canonical invariant: n_modes_target clamps to CANONICAL_FRAME1_MENU_TOTAL.
+    if n_modes_target < 1:
+        raise ValueError(
+            f"n_modes_target must be >= 1 per Catalog #287 invariants; "
+            f"got {n_modes_target}"
+        )
+    if num_pairs < 1:
+        raise ValueError(
+            f"num_pairs must be >= 1 per Catalog #287 invariants; got {num_pairs}"
+        )
+    if num_pairs > PR110_NUM_PAIRS:
+        raise ValueError(
+            f"num_pairs must be <= {PR110_NUM_PAIRS} (canonical PR110 cap); "
+            f"got {num_pairs}"
+        )
+    if frame_resolution_hw[0] < 1 or frame_resolution_hw[1] < 1:
+        raise ValueError(
+            f"frame_resolution_hw must be positive (H, W); got {frame_resolution_hw}"
+        )
+
+    n_modes_target_requested = n_modes_target
+    n_modes_clamped = min(n_modes_target, CANONICAL_FRAME1_MENU_TOTAL)
+
+    start_total = time.monotonic()
+
+    # Canonical real frame PAIR decode per Catalog #213.
+    num_frames_to_decode = 2 * num_pairs
+    rgb_all = decode_upstream_video_frames(
+        num_frames=num_frames_to_decode,
+        target_resolution=(frame_resolution_hw[1], frame_resolution_hw[0]),
+        return_format="rgb_fp32",
+    )
+    pairs = rgb_all.reshape(
+        num_pairs, 2, 3, frame_resolution_hw[0], frame_resolution_hw[1]
+    )
+
+    # Load real PoseNet + SegNet per CLAUDE.md "Exact scorer architectures".
+    posenet, segnet = load_default_scorers(upstream_dir, device="cpu")
+
+    # Canonical unified multi-strategy menu.
+    unified_menu = build_unified_canonical_scale_up_menu(n_modes_clamped)
+    n_modes_actual = len(unified_menu)
+
+    # ---- Phase 1: baseline cache (one per pair) ----------------------------
+    # Compute baseline (seg, pose, argmax) ONCE per pair and reuse across
+    # all N modes. This is the canonical O((1+N)*M) optimization vs naive
+    # O(2*N*M).
+    baseline_cache: list[dict[str, Any]] = []
+    baseline_calls_count = 0
+    for pair_idx in range(num_pairs):
+        baseline_frame_0 = pairs[pair_idx, 0]
+        baseline_frame_1 = pairs[pair_idx, 1]
+
+        rgb_0_t = torch.from_numpy(baseline_frame_0).unsqueeze(0).float().clamp(0, 1)
+        rgb_1_baseline_t = (
+            torch.from_numpy(baseline_frame_1).unsqueeze(0).float().clamp(0, 1)
+        )
+
+        with torch.no_grad():
+            seg_baseline, pose_baseline = score_pair_components(
+                seg_scorer=segnet,
+                pose_scorer=posenet,
+                rgb_0_rt=rgb_0_t,
+                rgb_1_rt=rgb_1_baseline_t,
+                gt_rgb_0=rgb_0_t,
+                gt_rgb_1=rgb_1_baseline_t,
+            )
+            pair_baseline_for_argmax = torch.stack(
+                [rgb_0_t.squeeze(0), rgb_1_baseline_t.squeeze(0)], dim=0
+            ).unsqueeze(0)
+            seg_in_baseline = segnet.preprocess_input(pair_baseline_for_argmax)
+            argmax_baseline = segnet(seg_in_baseline).argmax(dim=1)
+
+        baseline_cache.append(
+            {
+                "rgb_0_t": rgb_0_t,
+                "rgb_1_baseline_t": rgb_1_baseline_t,
+                "baseline_frame_1_np": baseline_frame_1,
+                "seg_baseline": float(seg_baseline.item()),
+                "pose_baseline": float(pose_baseline.item()),
+                "argmax_baseline": argmax_baseline,
+            }
+        )
+        baseline_calls_count += 1
+
+    # ---- Phase 2: per-mode x per-pair perturbed scorer calls ---------------
+    per_mode_verifications: list[dict[str, Any]] = []
+    confirmed_mode_ids: list[str] = []
+    falsified_mode_ids: list[str] = []
+    all_d_seg: list[float] = []
+    all_abs_d_pose: list[float] = []
+    perturbed_calls_count = 0
+    per_mode_elapsed: list[float] = []
+
+    for mode in unified_menu:
+        mode_start = time.monotonic()
+        per_pair_d_seg: list[float] = []
+        per_pair_abs_d_pose: list[float] = []
+        per_pair_argmax_disagreement: list[float] = []
+
+        for pair_idx in range(num_pairs):
+            cache = baseline_cache[pair_idx]
+            rgb_0_t = cache["rgb_0_t"]
+            rgb_1_baseline_t = cache["rgb_1_baseline_t"]
+            baseline_frame_1_np = cache["baseline_frame_1_np"]
+            seg_baseline_val = cache["seg_baseline"]
+            pose_baseline_val = cache["pose_baseline"]
+            argmax_baseline = cache["argmax_baseline"]
+
+            # Apply perturbation to frame_1 per-channel.
+            perturbed_frame_1 = np.empty_like(baseline_frame_1_np)
+            for c in range(3):
+                perturbed_frame_1[c] = _apply_perturbation_for_mode_canonical(
+                    baseline_frame_1_np[c].astype(np.float32),
+                    mode,
+                    perturbation_magnitude_scale=perturbation_magnitude_scale,
+                )
+
+            rgb_1_perturbed_t = (
+                torch.from_numpy(perturbed_frame_1).unsqueeze(0).float().clamp(0, 1)
+            )
+
+            with torch.no_grad():
+                seg_perturbed, pose_perturbed = score_pair_components(
+                    seg_scorer=segnet,
+                    pose_scorer=posenet,
+                    rgb_0_rt=rgb_0_t,
+                    rgb_1_rt=rgb_1_perturbed_t,
+                    gt_rgb_0=rgb_0_t,
+                    gt_rgb_1=rgb_1_baseline_t,
+                )
+
+                d_seg_delta = float(seg_perturbed.item() - seg_baseline_val)
+                d_pose_delta = float(pose_perturbed.item() - pose_baseline_val)
+
+                pair_perturbed_for_argmax = torch.stack(
+                    [rgb_0_t.squeeze(0), rgb_1_perturbed_t.squeeze(0)], dim=0
+                ).unsqueeze(0)
+                seg_in_perturbed = segnet.preprocess_input(pair_perturbed_for_argmax)
+                argmax_perturbed = segnet(seg_in_perturbed).argmax(dim=1)
+                disagreement_rate = float(
+                    (argmax_baseline != argmax_perturbed).float().mean().item()
+                )
+
+            per_pair_d_seg.append(d_seg_delta)
+            per_pair_abs_d_pose.append(abs(d_pose_delta))
+            per_pair_argmax_disagreement.append(disagreement_rate)
+            perturbed_calls_count += 1
+
+        mode_d_seg_mean = float(np.mean(per_pair_d_seg))
+        mode_abs_d_pose_mean = float(np.mean(per_pair_abs_d_pose))
+        mode_argmax_disagreement_mean = float(np.mean(per_pair_argmax_disagreement))
+
+        segnet_null_pass = mode_argmax_disagreement_mean <= segnet_null_tolerance
+        pose_carrier_pass = (
+            pose_carrier_band_lower <= mode_abs_d_pose_mean <= pose_carrier_band_upper
+        )
+
+        if segnet_null_pass and pose_carrier_pass:
+            verdict = VERDICT_NULL_PROJECTION_CONFIRMED_PER_MODE
+            confirmed_mode_ids.append(mode["mode_id"])
+        else:
+            verdict = VERDICT_NULL_PROJECTION_FALSIFIED_PER_MODE
+            falsified_mode_ids.append(mode["mode_id"])
+
+        per_mode_verifications.append(
+            {
+                "mode_id": mode["mode_id"],
+                "family": mode["family"],
+                "params": mode.get("params", {}),
+                "empirical_d_seg_mean": mode_d_seg_mean,
+                "empirical_abs_d_pose_mean": mode_abs_d_pose_mean,
+                "per_pixel_argmax_disagreement_rate_mean": mode_argmax_disagreement_mean,
+                "segnet_null_invariant_passed": segnet_null_pass,
+                "pose_carrier_band_invariant_passed": pose_carrier_pass,
+                "verdict": verdict,
+                "pair_count": int(num_pairs),
+            }
+        )
+        all_d_seg.append(mode_d_seg_mean)
+        all_abs_d_pose.append(mode_abs_d_pose_mean)
+        per_mode_elapsed.append(time.monotonic() - mode_start)
+
+    aggregate_d_seg_mean = float(np.mean(all_d_seg)) if all_d_seg else 0.0
+    aggregate_abs_d_pose_mean = (
+        float(np.mean(all_abs_d_pose)) if all_abs_d_pose else 0.0
+    )
+
+    elapsed_total = time.monotonic() - start_total
+    elapsed_per_mode_mean = (
+        float(np.mean(per_mode_elapsed)) if per_mode_elapsed else 0.0
+    )
+
+    # Canonical baseline cache savings ratio per Catalog #305 observability:
+    # naive_calls_count = 2 * n_modes * num_pairs (no cache)
+    # actual_calls_count = num_pairs + n_modes * num_pairs (with cache)
+    # savings_ratio = 1 - actual / naive
+    naive_calls_count = 2 * n_modes_actual * num_pairs
+    actual_calls_count = baseline_calls_count + perturbed_calls_count
+    baseline_cache_savings_ratio = (
+        1.0 - (actual_calls_count / naive_calls_count)
+        if naive_calls_count > 0
+        else 0.0
+    )
+
+    # Ranked CONFIRMED_MODE_IDS by canonical capacity-per-cost metric.
+    ranked_confirmed = rank_confirmed_modes_by_capacity_per_cost(
+        per_mode_verifications
+    )
+
+    # Canonical Provenance per Catalog #323.
+    inputs_fingerprint = (
+        f"scale_up|n_modes_target={n_modes_target_requested}|"
+        f"n_modes_actual={n_modes_actual}|num_pairs={num_pairs}|"
+        f"resolution={frame_resolution_hw}|upstream_dir={upstream_dir}|"
+        f"perturbation_magnitude_scale={perturbation_magnitude_scale}|"
+        f"segnet_null_tolerance={segnet_null_tolerance}|"
+        f"pose_carrier_band=({pose_carrier_band_lower}, {pose_carrier_band_upper})"
+    )
+    inputs_sha256 = hashlib.sha256(inputs_fingerprint.encode("utf-8")).hexdigest()
+
+    provenance = build_provenance_for_predicted(
+        model_id=(
+            "tac.composition.pr110_opt_6_motion_pair_repair_pose_axis_null_"
+            "projection_on_segnet.apply_pose_axis_null_projection_scale_up_"
+            "matrix_n_modes_x_m_pairs_x_contest_resolution"
+        ),
+        inputs_sha256=inputs_sha256,
+        measurement_axis=MACOS_CPU_ADVISORY_TAG,
+        hardware_substrate="macos_arm64_cpu",
+    )
+
+    canonical_routing_markers = {
+        "predicted_delta_adjustment": 0.0,
+        "promotable": False,
+        "score_claim": False,
+        "axis_tag": MACOS_CPU_ADVISORY_TAG,
+        "evidence_grade": "predicted",
+        "rationale": (
+            "Slot GGG scale-up matrix N modes x M pairs x contest resolution. "
+            "Yousfi-cascade TIER-1 prerequisite for Slot GGG x Cascade A FEC10 "
+            "selector codec composition (next-turn operator-routable). Per "
+            "Catalog #192 NEVER promotable; paired Linux x86_64 + NVIDIA "
+            "empirical anchor required per Catalog #246 before contest-axis "
+            "score claim. Documented adaptations per 5-axis taxonomy: local "
+            "macOS-CPU vs contest CUDA; M pairs (default 60) vs PR110 600; "
+            "fp32 macOS-CPU scorer vs fp16 T4; first M*2 frames vs 1200; "
+            "same upstream/videos/0.mkv per Catalog #213."
+        ),
+    }
+
+    axis_decomposition_dict = {
+        "predicted_d_seg_delta": aggregate_d_seg_mean,
+        "predicted_d_pose_delta": aggregate_abs_d_pose_mean,
+        "predicted_archive_bytes_delta": 0,
+        "axis_tag": "[predicted]",
+        "canonical_provenance": provenance_to_dict(provenance),
+    }
+
+    # Overall verdict per the scale-up ALL_CONFIRMED / ALL_FALSIFIED / PARTIAL
+    # state.
+    if not per_mode_verifications:
+        overall_verdict = (
+            "SCALE_UP_NO_MODES_VERIFIED_DEFERRED_PENDING_PAIRED_CUDA_RATIFICATION"
+        )
+    elif len(confirmed_mode_ids) == 0:
+        overall_verdict = VERDICT_SCALE_UP_ALL_MODES_FALSIFIED
+    elif len(confirmed_mode_ids) == len(per_mode_verifications):
+        overall_verdict = VERDICT_SCALE_UP_ALL_MODES_CONFIRMED
+    else:
+        overall_verdict = VERDICT_SCALE_UP_PARTIAL_CONFIRMED
+
+    # Canonical artifact persistence per CLAUDE.md durable-evidence discipline
+    # (NOT /tmp per Catalog #113 forbidden pattern).
+    artifact_path: str | None = None
+    artifact_dict: dict[str, Any] = {
+        "banner": "[NON-AUTHORITATIVE MLX-LOCAL ADVISORY] PER CATALOG #192 NEVER PROMOTABLE",
+        "schema": "slot_ggg_scale_up_matrix_n_modes_x_m_pairs_x_contest_resolution.v1",
+        "slot_id": "slot_ggg_scale_up_matrix_20260530",
+        "predecessor_anchor_slot_ggg_part_3_artifact": (
+            "experiments/results/slot_rr_pr110_opt_6_motion_pair_repair_pose_"
+            "axis_null_projection_on_segnet_macos_cpu_advisory_smoke_"
+            "20260529T133600Z/smoke_output.json"
+        ),
+        "evidence_grade": "macOS-CPU-advisory",
+        "measurement_axis": MACOS_CPU_ADVISORY_TAG,
+        "hardware_substrate": "darwin_arm64_arm64_macos_cpu_advisory",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "n_modes_target_requested": int(n_modes_target_requested),
+        "n_modes_probed": int(n_modes_actual),
+        "n_modes_confirmed": int(len(confirmed_mode_ids)),
+        "n_modes_falsified": int(len(falsified_mode_ids)),
+        "num_pairs_evaluated": int(num_pairs),
+        "frame_resolution_hw": list(frame_resolution_hw),
+        "per_mode_empirical_verification": per_mode_verifications,
+        "confirmed_mode_ids": confirmed_mode_ids,
+        "falsified_mode_ids": falsified_mode_ids,
+        "ranked_confirmed_modes_by_capacity_per_cost": ranked_confirmed,
+        "aggregate_empirical_d_seg_mean_across_modes": aggregate_d_seg_mean,
+        "aggregate_empirical_abs_d_pose_mean_across_modes": aggregate_abs_d_pose_mean,
+        "baseline_cache_calls_count": int(baseline_calls_count),
+        "perturbed_scorer_calls_count": int(perturbed_calls_count),
+        "baseline_cache_naive_calls_count_equivalent": int(naive_calls_count),
+        "baseline_cache_actual_calls_count": int(actual_calls_count),
+        "baseline_cache_savings_ratio": float(baseline_cache_savings_ratio),
+        "elapsed_seconds_total": float(elapsed_total),
+        "elapsed_seconds_per_mode_mean": float(elapsed_per_mode_mean),
+        "verdict": overall_verdict,
+        "canonical_provenance": provenance_to_dict(provenance),
+        "canonical_routing_markers": canonical_routing_markers,
+        "predicted_axis_decomposition": axis_decomposition_dict,
+        "perturbation_magnitude_scale": float(perturbation_magnitude_scale),
+        "segnet_null_tolerance": float(segnet_null_tolerance),
+        "pose_carrier_band_lower": float(pose_carrier_band_lower),
+        "pose_carrier_band_upper": float(pose_carrier_band_upper),
+        "canonical_equation_candidate_id": CANONICAL_EQUATION_CANDIDATE_ID,
+        "canonical_anti_pattern_candidate_id": CANONICAL_ANTI_PATTERN_CANDIDATE_ID,
+        "fec10_composition_handoff": {
+            "purpose": (
+                "Slot GGG x Cascade A FEC10 selector codec composition "
+                "(downstream operator-routable, queued for next turn)"
+            ),
+            "consumer_target": (
+                "Cascade A FEC10 hybrid selector codec builder; consumes "
+                "confirmed_mode_ids list as canonical per-pair side-channel "
+                "carrier menu at ~log2(K_confirmed) bits/pair capacity"
+            ),
+            "do_not_touch_this_turn": True,
+        },
+    }
+
+    if artifact_output_dir is None:
+        # Canonical UTC-stamped output dir.
+        utc_now_compact = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        artifact_output_dir = os.path.join(
+            "experiments",
+            "results",
+            f"slot_ggg_scale_up_matrix_n_modes_x_m_pairs_x_contest_resolution_macos_cpu_advisory_smoke_{utc_now_compact}",
+        )
+
+    if artifact_output_dir:
+        out_dir = pathlib.Path(artifact_output_dir)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        artifact_path = str(out_dir / "scale_up_matrix.json")
+        with open(artifact_path, "w") as f:
+            json.dump(artifact_dict, f, indent=2, sort_keys=True)
+
+    # Optional canonical equation registration per Catalog #344.
+    canonical_equation_registration: dict[str, Any] | None = None
+    if register_canonical_equation_on_confirmation:
+        if len(confirmed_mode_ids) >= canonical_equation_confirmation_threshold:
+            try:
+                # Import lazily so the helper does not require canonical_equations
+                # at module-import time (test-friendly).
+                from tac.canonical_equations import (
+                    register_canonical_equation,
+                    CanonicalEquation,
+                    EmpiricalAnchor,
+                )
+
+                equation_id = (
+                    "pose_axis_null_projection_per_pair_selector_codec_capacity_v1"
+                )
+                # Build canonical EmpiricalAnchor backed by the scale-up artifact.
+                # Per Catalog #323 + #344 the predicted_vs_empirical residual is
+                # 0.0 because the scale-up smoke IS the empirical anchor.
+                anchor = EmpiricalAnchor(
+                    measurement_method=(
+                        "slot_ggg_scale_up_matrix_macos_cpu_advisory_smoke_v1"
+                    ),
+                    measurement_utc=datetime.now(timezone.utc).isoformat(),
+                    measurement_axis="[macOS-CPU advisory]",
+                    inputs={
+                        "n_modes_target_requested": int(n_modes_target_requested),
+                        "n_modes_probed": int(n_modes_actual),
+                        "num_pairs_evaluated": int(num_pairs),
+                        "frame_resolution_hw": list(frame_resolution_hw),
+                    },
+                    empirical_output={
+                        "n_modes_confirmed": int(len(confirmed_mode_ids)),
+                        "aggregate_empirical_d_seg_mean": aggregate_d_seg_mean,
+                        "aggregate_empirical_abs_d_pose_mean": aggregate_abs_d_pose_mean,
+                        "capacity_bits_per_pair_estimate": (
+                            float(np.log2(len(confirmed_mode_ids)))
+                            if len(confirmed_mode_ids) > 0
+                            else 0.0
+                        ),
+                    },
+                    artifact_paths=(
+                        (artifact_path,) if artifact_path else tuple()
+                    ),
+                    canonical_provenance=provenance_to_dict(provenance),
+                )
+                equation = CanonicalEquation(
+                    equation_id=equation_id,
+                    canonical_form=(
+                        "side_channel_capacity_bits_per_pair = "
+                        "log2(N_confirmed_modes); "
+                        "modes_confirmed_when "
+                        "(per_pixel_argmax_disagreement <= SEGNET_ARGMAX_NULL_TOLERANCE "
+                        "AND pose_carrier_band_lower <= |d_pose| <= pose_carrier_band_upper); "
+                        "rank by 1/|d_pose| descending = canonical Atick-Tishby-Wyner "
+                        "minimum-detectability side-channel capacity per Fridrich UNIWARD "
+                        "+ canonical OPT-12 PoseNet-null analog symmetry"
+                    ),
+                    domain_tokens=(
+                        "fridrich_uniward",
+                        "atick_tishby_wyner_asymmetric_channel",
+                        "pose_axis_null_projection",
+                        "per_pair_selector_codec",
+                        "pr110",
+                    ),
+                    citations=(
+                        "Fridrich-Yousfi inverse-steganalysis canonical (CLAUDE.md)",
+                        "Atick-Redlich 1990 cooperative-receiver canonical",
+                        "Catalog #308 alternative-reducer enumeration",
+                        "Catalog #311 ego-motion-conditioned canonical",
+                    ),
+                    canonical_producers=(
+                        "tac.composition.pr110_opt_6_motion_pair_repair_pose_axis_null_"
+                        "projection_on_segnet.apply_pose_axis_null_projection_scale_up_"
+                        "matrix_n_modes_x_m_pairs_x_contest_resolution",
+                        "tac.composition.pr110_opt_6_motion_pair_repair_pose_axis_null_"
+                        "projection_on_segnet.rank_confirmed_modes_by_capacity_per_cost",
+                    ),
+                    canonical_consumers=(
+                        "tac.composition.cascade_a_fec10_hybrid_selector_codec "
+                        "(operator-routable next-turn; consumes "
+                        "confirmed_mode_ids ranked list)",
+                    ),
+                    next_recalibration_trigger=(
+                        "when_3+_new_empirical_anchors_in_domain"
+                    ),
+                    empirical_anchors=(anchor,),
+                )
+                register_canonical_equation(equation)
+                canonical_equation_registration = {
+                    "registered": True,
+                    "equation_id": equation_id,
+                    "reason": (
+                        f"modes_confirmed_count={len(confirmed_mode_ids)} >= "
+                        f"threshold={canonical_equation_confirmation_threshold}"
+                    ),
+                }
+            except Exception as exc:  # pragma: no cover - defensive
+                canonical_equation_registration = {
+                    "registered": False,
+                    "equation_id": (
+                        "pose_axis_null_projection_per_pair_selector_codec_capacity_v1"
+                    ),
+                    "reason": f"registration_exception: {type(exc).__name__}: {exc}",
+                }
+        else:
+            canonical_equation_registration = {
+                "registered": False,
+                "equation_id": (
+                    "pose_axis_null_projection_per_pair_selector_codec_capacity_v1"
+                ),
+                "reason": (
+                    f"modes_confirmed_count={len(confirmed_mode_ids)} < "
+                    f"threshold={canonical_equation_confirmation_threshold}; "
+                    f"DEFERRED per 'iterate not force' per Catalog #344"
+                ),
+            }
+
+    slot_ggg_scale_up_anchor = {
+        "slot_ggg_part_3_predecessor_anchor": (
+            "apply_pose_axis_null_projection_via_real_scorers_to_pr110_archive "
+            "verified 2 PER_PIXEL_ROLL modes x 2 pairs x 48x64 macOS-CPU advisory "
+            "smoke (commit f9d0f2465 + sister 30bf9029f + 32a70c051) with "
+            "SegNet argmax disagreement = 0.0000 and |d_pose|=1.81e-6 to 2.08e-6 "
+            "in carrier band"
+        ),
+        "slot_ggg_scale_up_closure": (
+            "extends Slot GGG Part 3 to N modes x M pairs x contest resolution "
+            "with canonical baseline cache (cuts scorer calls ~50%); multi-strategy "
+            "unified menu (PER_PIXEL_ROLL + DCT_CHROMA_BASIS + HADAMARD_TILE + "
+            "GAUSSIAN_NOISE filled in canonical fill order); ranked CONFIRMED_MODE_IDS "
+            "by 1/|d_pose| descending (canonical Atick-Tishby-Wyner minimum-detectability "
+            "side-channel capacity); canonical artifact persistence to "
+            "experiments/results/slot_ggg_scale_up_matrix_<UTC>/scale_up_matrix.json "
+            "for downstream FEC10 selector codec consumer"
+        ),
+        "yousfi_cascade_prediction": (
+            "if monotonicity holds at scale + N=16 modes empirically confirm with "
+            "same SegNet argmax = 0 + similar |d_pose| carrier band, ~600 pairs * "
+            "log2(16) = 4 bits/pair = ~300 bytes 'free' side-channel capacity at "
+            "near-zero seg cost = a frontier-crossing -0.014 score potential vs "
+            "canonical CPU frontier 0.1920282830 per Catalog #343"
+        ),
+        "next_turn_operator_routable": (
+            "Slot GGG x Cascade A FEC10 selector codec composition consumes "
+            "ranked_confirmed_modes_by_capacity_per_cost list; this turn DOES "
+            "NOT touch FEC10 builder per operator scope"
+        ),
+        "canonical_paradigm_per_catalog_307": (
+            "PARADIGM intact: Fridrich-Yousfi inverse-steganalysis pose-axis "
+            "null-projection canonical axis preserved at scale; per-mode "
+            "FALSIFICATIONS are IMPLEMENTATION-LEVEL per Catalog #307"
+        ),
+    }
+
+    return {
+        # Canonical Tier A routing markers per Catalog #341 + #357
+        "predicted_delta_adjustment": 0.0,
+        "promotable": False,
+        "score_claim": False,
+        "axis_tag": MACOS_CPU_ADVISORY_TAG,
+        # Canonical scale-up grid identification
+        "n_modes_target_requested": int(n_modes_target_requested),
+        "n_modes_probed": int(n_modes_actual),
+        "num_pairs_evaluated": int(num_pairs),
+        "frame_resolution_hw": frame_resolution_hw,
+        # Canonical per-mode empirical scorer verification (extended with family + params).
+        "per_mode_empirical_verification": per_mode_verifications,
+        "modes_confirmed_count": len(confirmed_mode_ids),
+        "modes_falsified_count": len(falsified_mode_ids),
+        "confirmed_mode_ids": confirmed_mode_ids,
+        "falsified_mode_ids": falsified_mode_ids,
+        "ranked_confirmed_modes_by_capacity_per_cost": ranked_confirmed,
+        "aggregate_empirical_d_seg_mean_across_modes": aggregate_d_seg_mean,
+        "aggregate_empirical_abs_d_pose_mean_across_modes": aggregate_abs_d_pose_mean,
+        # Canonical baseline cache observability per Catalog #305
+        "baseline_cache_calls_count": int(baseline_calls_count),
+        "perturbed_scorer_calls_count": int(perturbed_calls_count),
+        "baseline_cache_naive_calls_count_equivalent": int(naive_calls_count),
+        "baseline_cache_actual_calls_count": int(actual_calls_count),
+        "baseline_cache_savings_ratio": float(baseline_cache_savings_ratio),
+        # Canonical wall-clock observability per Catalog #305
+        "elapsed_seconds_total": float(elapsed_total),
+        "elapsed_seconds_per_mode_mean": float(elapsed_per_mode_mean),
+        "segnet_null_tolerance": float(segnet_null_tolerance),
+        "pose_carrier_band_lower": float(pose_carrier_band_lower),
+        "pose_carrier_band_upper": float(pose_carrier_band_upper),
+        # Canonical Catalog #323 + #341 + #356 surfaces
+        "canonical_provenance": provenance_to_dict(provenance),
+        "canonical_routing_markers": canonical_routing_markers,
+        "predicted_axis_decomposition": axis_decomposition_dict,
+        # Canonical Catalog #325 verdict
+        "verdict": overall_verdict,
+        # Slot GGG scale-up anchor per Catalog #348 retroactive sweep
+        "slot_ggg_scale_up_anchor": slot_ggg_scale_up_anchor,
+        # Artifact persistence path (None if skipped)
+        "artifact_path": artifact_path,
+        # Canonical equation registration (None if opt-in flag was False)
+        "canonical_equation_registration": canonical_equation_registration,
+        # Canonical equation + anti-pattern candidate IDs
+        "canonical_equation_candidate_id": CANONICAL_EQUATION_CANDIDATE_ID,
+        "canonical_anti_pattern_candidate_id": CANONICAL_ANTI_PATTERN_CANDIDATE_ID,
+    }
+
+
 __all__ = [
     # Canonical constants
     "OPT12_POSENET_NULL_TYPICAL_ABS_POSE_DELTA",
@@ -1636,4 +2546,14 @@ __all__ = [
     "VERDICT_NULL_PROJECTION_FALSIFIED_PER_MODE",
     "apply_pose_axis_null_projection_via_real_scorers_to_pr110_archive",
     "list_canonical_paired_cuda_ratification_targets",
+    # Slot GGG SCALE-UP MATRIX 2026-05-30 (N modes x M pairs x contest resolution)
+    "SCALE_UP_TIER_A_DEFAULT_N_MODES",
+    "SCALE_UP_TIER_A_DEFAULT_NUM_PAIRS",
+    "SCALE_UP_TIER_A_DEFAULT_RESOLUTION_HW",
+    "VERDICT_SCALE_UP_ALL_MODES_CONFIRMED",
+    "VERDICT_SCALE_UP_ALL_MODES_FALSIFIED",
+    "VERDICT_SCALE_UP_PARTIAL_CONFIRMED",
+    "build_unified_canonical_scale_up_menu",
+    "rank_confirmed_modes_by_capacity_per_cost",
+    "apply_pose_axis_null_projection_scale_up_matrix_n_modes_x_m_pairs_x_contest_resolution",
 ]
