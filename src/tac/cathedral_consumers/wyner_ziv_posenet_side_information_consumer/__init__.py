@@ -1,0 +1,233 @@
+# SPDX-License-Identifier: MIT
+"""Cathedral consumer for the Wyner-Ziv decoder-side PoseNet side-information equation.
+
+Per CLAUDE.md "Canonical equations + models registry" non-negotiable + operator
+task #1496 Wave N+36 routing + Catalog #335 paradigm-shift (canonical contract
+auto-discovery). Wires the orphan-signal closure for the canonical equation
+``wyner_ziv_decoder_side_posenet_side_information_conditional_entropy_reduction_v1``
+so the cathedral autopilot ranker sees per-candidate Wyner-Ziv conditional-entropy
+savings predictions whenever a candidate matches the equation's domain.
+
+This consumer is **Tier A** (per Catalog #341 canonical-routing markers):
+``predicted_delta_adjustment=0.0`` + ``promotable=False`` + ``axis_tag="[predicted]"``.
+Per-equation predictions are NEVER promoted to score adjustments — they surface as
+``[predicted]`` annotations that future paired-CUDA RATIFICATION dispatches can
+compare against to refresh the equation's ``predicted_vs_empirical_residual``.
+
+Hook assignments per Catalog #125:
+  * #1 sensitivity-map — ACTIVE (PoseNet output IS canonical sensitivity surface)
+  * #2 Pareto constraint — ACTIVE (Wyner-Ziv R(D|Y) bound IS canonical Pareto constraint)
+  * #3 bit-allocator — ACTIVE PRIMARY (canonical pose_conditional mode for per_pair allocator)
+  * #4 cathedral autopilot dispatch — ACTIVE (annotate candidates)
+  * #5 continual-learning posterior — ACTIVE (refresh equation calibration on new anchors)
+  * #6 probe-disambiguator — ACTIVE (Wyner-Ziv conditional vs unconditional IS disambiguator)
+
+Cross-references:
+  * Canonical equation module: ``tac.canonical_equations.wyner_ziv_decoder_side_posenet_side_information``
+  * Sister consumer: ``tac.cathedral_consumers.canonical_equation_lookup_consumer`` (the
+    general canonical-equations cathedral consumer; THIS consumer is the specific
+    paradigm-bound complement for Wyner-Ziv PoseNet side-info matches)
+  * Catalog #335 (canonical cathedral consumer contract)
+  * Catalog #341 (Tier A canonical-routing markers)
+  * Catalog #323 (canonical Provenance umbrella)
+  * Z8 M6 landing memo: ``.omx/research/z8_m6_wyner_ziv_top_level_coder_full_implementation_landed_20260530.md``
+"""
+from __future__ import annotations
+
+from typing import Any, Mapping
+
+from tac.cathedral.consumer_contract import HookNumber
+
+
+CONSUMER_NAME = "wyner_ziv_posenet_side_information_consumer"
+CONSUMER_VERSION = "0.1.0"
+CONSUMER_HOOK_NUMBERS = (
+    HookNumber.SENSITIVITY_MAP,
+    HookNumber.PARETO_CONSTRAINT,
+    HookNumber.BIT_ALLOCATOR,
+    HookNumber.CATHEDRAL_AUTOPILOT_DISPATCH,
+    HookNumber.CONTINUAL_LEARNING_POSTERIOR,
+    HookNumber.PROBE_DISAMBIGUATOR,
+)
+
+# Equation id this consumer specializes on; lookup uses startswith match to
+# tolerate version bumps (vN suffix per equation_id pattern).
+_EQUATION_ID_PREFIX = (
+    "wyner_ziv_decoder_side_posenet_side_information_conditional_entropy_reduction"
+)
+
+
+def update_from_anchor(anchor: Any) -> None:
+    """Catalog #125 hook #5 — continual-learning posterior update.
+
+    When a new empirical anchor (paired-CUDA / paired-CPU / advisory) lands
+    that matches the Wyner-Ziv decoder-side PoseNet side-information domain,
+    the canonical refresh path is ``tac.canonical_equations.auto_recalibrate_from_continual_learning_posterior``
+    per Catalog #371 sister discipline (triggers when >=3 in-domain anchors land).
+    This consumer is structurally NO-OP at the per-anchor surface; the canonical
+    refresh is operator-triggered via ``tools/recalibrate_equation.py`` because
+    automatic refit requires explicit signed measurement Provenance per Catalog
+    #287/#323.
+
+    Per the canonical Tier A contract (Catalog #341): this consumer never
+    mutates posterior state directly; it is observability-only.
+    """
+    _ = anchor
+
+
+def _candidate_matches_wyner_ziv_posenet_domain(
+    candidate: Mapping[str, Any],
+) -> tuple[bool, str]:
+    """Best-effort match heuristic for candidates that admit Wyner-Ziv PoseNet side info.
+
+    A candidate matches when its substrate / lane / archive_family token
+    references a known Wyner-Ziv consumer, a PoseNet conditional coding
+    surface, or any of the canonical consumer module paths registered on
+    the equation.
+
+    Returns ``(matches, rationale)``. The rationale always carries the
+    canonical Tier A ``[predicted]`` axis tag per Catalog #341.
+    """
+    # Walk candidate dict values that are strings or numerics; build a
+    # single search corpus so we can apply multi-keyword token matching.
+    corpus_parts: list[str] = []
+    for k, v in candidate.items():
+        if isinstance(v, (str, int, float)):
+            corpus_parts.append(f"{k}={v}".lower())
+        elif isinstance(v, Mapping):
+            for sk, sv in v.items():
+                if isinstance(sv, (str, int, float)):
+                    corpus_parts.append(f"{k}.{sk}={sv}".lower())
+    corpus = " ".join(corpus_parts)
+    if not corpus:
+        return (False, "candidate carries no string/numeric fields [predicted]")
+
+    # Canonical match tokens. Order them by specificity (most specific first).
+    canonical_match_tokens = (
+        "wyner_ziv",
+        "wyner-ziv",
+        "wynerziv",
+        "posenet_side_info",
+        "posenet_conditional",
+        "decoder_side_posenet",
+        "conditional_entropy_reduction",
+        "z8_hierarchical_predictive_coding",
+        "wyner_ziv_layer",
+        "wyner_ziv_pipeline_stage",
+        "cooperative_receiver",  # Atick-Redlich sister surface
+    )
+    for token in canonical_match_tokens:
+        if token in corpus:
+            return (
+                True,
+                (
+                    f"candidate matches Wyner-Ziv PoseNet side-info domain via "
+                    f"token '{token}' [predicted]"
+                ),
+            )
+    return (False, "no canonical Wyner-Ziv PoseNet side-info token [predicted]")
+
+
+def _query_equation_residual_summary() -> dict[str, Any]:
+    """Return latest residual summary for the canonical equation; safe-default on failure."""
+    try:
+        from tac.canonical_equations import query_equations
+    except ImportError:
+        return {
+            "equation_id_prefix": _EQUATION_ID_PREFIX,
+            "registry_available": False,
+            "residuals": {},
+            "is_well_calibrated": False,
+        }
+    try:
+        for eq in query_equations():
+            if eq.equation_id.startswith(_EQUATION_ID_PREFIX):
+                return {
+                    "equation_id_prefix": _EQUATION_ID_PREFIX,
+                    "equation_id": eq.equation_id,
+                    "registry_available": True,
+                    "anchor_count": len(eq.empirical_anchors),
+                    "residuals": dict(eq.predicted_vs_empirical_residual),
+                    "is_well_calibrated": eq.is_well_calibrated,
+                    "last_calibration_utc": eq.last_calibration_utc,
+                }
+    except Exception:  # noqa: BLE001 — defensive; registry may be empty/corrupt
+        pass
+    return {
+        "equation_id_prefix": _EQUATION_ID_PREFIX,
+        "registry_available": True,
+        "anchor_count": 0,
+        "residuals": {},
+        "is_well_calibrated": False,
+        "rationale": "equation not registered yet",
+    }
+
+
+def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
+    """Catalog #125 hook #4 — annotate candidate with Wyner-Ziv PoseNet side-info prediction.
+
+    For each candidate the cathedral autopilot ranker dispatches, this consumer:
+
+    1. Checks whether the candidate's substrate / lane / archive_family token
+       maps to the Wyner-Ziv PoseNet side-info domain (best-effort string match).
+    2. If matched, queries the canonical equation registry for the latest
+       per-axis residual summary.
+    3. Returns a Tier A canonical-routing-markers contribution per Catalog #341:
+       ``predicted_delta_adjustment=0.0`` + ``promotable=False`` + ``axis_tag=[predicted]``.
+
+    The consumer is observability-only by canonical contract. Per CLAUDE.md
+    "Apples-to-apples evidence discipline" + "Forbidden empirical-claim-
+    without-evidence-tag" non-negotiables: per-equation predictions are
+    NEVER promoted to score adjustments — they surface as ``[predicted]``
+    annotations that downstream consumers (operator review / paired-CUDA
+    RATIFICATION queue) can act on.
+    """
+    matches, match_rationale = _candidate_matches_wyner_ziv_posenet_domain(candidate)
+    if not matches:
+        return {
+            "predicted_delta_adjustment": 0.0,
+            "rationale": match_rationale,
+            "axis_tag": "[predicted]",
+            "promotable": False,
+            "confidence": 0.0,
+            "wyner_ziv_posenet_side_info_match": False,
+        }
+
+    residual_summary = _query_equation_residual_summary()
+    well_calibrated = bool(residual_summary.get("is_well_calibrated", False))
+    anchor_count = int(residual_summary.get("anchor_count", 0))
+    residuals = residual_summary.get("residuals", {})
+    equation_id = residual_summary.get("equation_id", "")
+
+    rationale = (
+        f"{match_rationale}; "
+        f"canonical equation {equation_id or _EQUATION_ID_PREFIX} "
+        f"(anchor_count={anchor_count}, "
+        f"well_calibrated={well_calibrated}, "
+        f"per-axis residuals={residuals}); "
+        "Wyner-Ziv 1976 Theorem 1 predicts rate-axis savings "
+        "R(D|Y)<<R(D) when this substrate adopts PoseNet-conditional coding; "
+        "see tools/list_canonical_equations.py for canonical readback"
+    )
+
+    return {
+        "predicted_delta_adjustment": 0.0,
+        "rationale": rationale,
+        "axis_tag": "[predicted]",
+        "promotable": False,
+        "confidence": 0.0,
+        "wyner_ziv_posenet_side_info_match": True,
+        "matched_equation_id": equation_id,
+        "anchor_count": anchor_count,
+        "is_well_calibrated": well_calibrated,
+        "per_axis_residuals": dict(residuals),
+    }
+
+
+__all__ = [
+    "CONSUMER_NAME",
+    "CONSUMER_VERSION",
+    "CONSUMER_HOOK_NUMBERS",
+    "consume_candidate",
+    "update_from_anchor",
+]

@@ -125,6 +125,10 @@ from tac.canonical_equations.scorer_input_cache_hash_identity import (
     build_scorer_input_cache_hash_identity_v1,
     scorer_input_cache_hash_identity,
 )
+from tac.canonical_equations.wyner_ziv_decoder_side_posenet_side_information import (
+    build_wyner_ziv_decoder_side_posenet_side_information_conditional_entropy_reduction_v1,
+    predict_wyner_ziv_posenet_side_info_savings,
+)
 
 __all__ = [
     "CANONICAL_EQUATIONS_REGISTRY_LOCK",
@@ -161,6 +165,7 @@ __all__ = [
     "build_pairset_component_marginal_score_decomposition_v1",
     "build_procedural_predictor_plus_residual_correction_savings_v1",
     "build_scorer_input_cache_hash_identity_v1",
+    "build_wyner_ziv_decoder_side_posenet_side_information_conditional_entropy_reduction_v1",
     "classify_mlx_matmul_drift",
     "compute_predicted_band_from_posterior",
     "get_equation_by_id",
@@ -171,6 +176,7 @@ __all__ = [
     "pairset_component_marginal_score_delta",
     "populate_initial_equations",
     "predict_procedural_predictor_plus_residual_correction_savings",
+    "predict_wyner_ziv_posenet_side_info_savings",
     "query_equations",
     "query_equations_by_consumer",
     "query_equations_by_domain",
