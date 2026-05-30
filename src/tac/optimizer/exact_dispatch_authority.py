@@ -20,6 +20,7 @@ from tac.optimization.proxy_candidate_contract import (
 )
 from tac.optimizer.exact_readiness import (
     PREDICTED_SCORE_FIELDS,
+    archive_bound_contract_required_for_row,
     claim_status_terminal,
     is_sha256,
     parse_claim_rows,
@@ -174,6 +175,45 @@ def _optional_resolved_path(
     return None
 
 
+def _source_contract_snapshot_blockers(row: Mapping[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    snapshot_required = (
+        row.get("source_archive_bound_candidate_contract_required") is True
+    )
+    source_contract = row.get("source_archive_bound_candidate_contract")
+    contract = source_contract if isinstance(source_contract, Mapping) else {}
+    if snapshot_required and not contract:
+        return ["source_archive_bound_candidate_contract_missing"]
+    if not contract:
+        return []
+    if contract.get("archive_bound_candidate_ready") is not True:
+        blockers.append("source_archive_bound_candidate_contract_not_ready")
+    if (
+        contract.get("archive_bound_candidate_ready_for_exact_handoff")
+        is not True
+    ):
+        blockers.append(
+            "source_archive_bound_candidate_contract_not_ready_for_exact_handoff"
+        )
+    candidate_archive = contract.get("candidate_archive")
+    archive = candidate_archive if isinstance(candidate_archive, Mapping) else {}
+    contract_sha = archive.get("sha256") or archive.get("archive_sha256")
+    row_sha = row.get("candidate_archive_sha256") or row.get("archive_sha256")
+    if is_sha256(contract_sha) and is_sha256(row_sha):
+        if str(contract_sha).lower() != str(row_sha).lower():
+            blockers.append("source_archive_bound_candidate_contract_sha256_mismatch")
+    elif snapshot_required:
+        blockers.append("source_archive_bound_candidate_contract_sha256_missing")
+    contract_bytes = archive.get("bytes") or archive.get("archive_bytes")
+    row_bytes = row.get("candidate_archive_bytes") or row.get("archive_bytes")
+    if isinstance(contract_bytes, int) and isinstance(row_bytes, int):
+        if contract_bytes != row_bytes:
+            blockers.append("source_archive_bound_candidate_contract_bytes_mismatch")
+    elif snapshot_required:
+        blockers.append("source_archive_bound_candidate_contract_bytes_missing")
+    return blockers
+
+
 def active_dispatch_claim_present(
     *,
     lane_id: str,
@@ -275,6 +315,8 @@ def exact_dispatch_authority(
         blockers.append("ready_for_exact_eval_dispatch_not_true")
     if require_contest_target and not contest_target:
         blockers.append("contest_exact_eval_target_mode_missing")
+    if archive_bound_contract_required_for_row(row):
+        blockers.append("archive_bound_candidate_contract_requires_readiness_promotion")
     score_axis_blockers, declared_score_axes = _score_axis_blockers(
         row,
         required_score_axis=required_score_axis,
@@ -331,6 +373,7 @@ def exact_dispatch_authority(
         else (),
     )
     blockers.extend(readiness)
+    blockers.extend(_source_contract_snapshot_blockers(row))
     facts["claim_policy"] = claim_policy
     facts["required_score_axis"] = (
         _normalize_score_axis(required_score_axis)
