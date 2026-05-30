@@ -293,9 +293,33 @@ def _coerce_float(value: object) -> float | None:
     return None
 
 
+def _mapping(value: object) -> dict:
+    return value if isinstance(value, dict) else {}
+
+
+def _source_archive_bound_contract(candidate: dict) -> dict:
+    for key in (
+        "source_archive_bound_candidate_contract",
+        "archive_bound_candidate_contract",
+    ):
+        value = candidate.get(key)
+        if isinstance(value, dict):
+            return value
+    return {}
+
+
+def _contract_candidate_archive(candidate: dict) -> dict:
+    return _mapping(_source_archive_bound_contract(candidate).get("candidate_archive"))
+
+
 def _candidate_archive_path_value(candidate: dict) -> object:
     for key in ("archive_path", "candidate_archive_path"):
         value = candidate.get(key)
+        if value:
+            return value
+    archive = _contract_candidate_archive(candidate)
+    for key in ("path", "archive_path"):
+        value = archive.get(key)
         if value:
             return value
     return None
@@ -338,6 +362,13 @@ def _candidate_archive_byte_values(candidate: dict) -> dict[str, int]:
         parsed = _coerce_positive_int(candidate.get(key))
         if parsed is not None:
             values[key] = parsed
+    archive = _contract_candidate_archive(candidate)
+    for key in ("bytes", "archive_bytes"):
+        parsed = _coerce_positive_int(archive.get(key))
+        if parsed is not None:
+            values[f"source_archive_bound_candidate_contract.candidate_archive.{key}"] = (
+                parsed
+            )
     return values
 
 
@@ -349,6 +380,11 @@ def _candidate_archive_bytes(candidate: dict) -> int | None:
 def _candidate_archive_sha256(candidate: dict) -> str:
     for key in ("candidate_archive_sha256", "archive_sha256", "expected_archive_sha256"):
         value = candidate.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip().lower()
+    archive = _contract_candidate_archive(candidate)
+    for key in ("sha256", "archive_sha256"):
+        value = archive.get(key)
         if isinstance(value, str) and value.strip():
             return value.strip().lower()
     return ""
@@ -677,6 +713,17 @@ def _authority_repo_root_for_candidate(
     queue_root = ranked_input_dir.resolve()
     if not (queue_root / "upstream" / "evaluate.py").is_file():
         return REPO
+    archive_path_value = _candidate_archive_path_value(candidate)
+    archive_path = _resolve_archive_path(
+        archive_path_value,
+        ranked_input_dir=ranked_input_dir,
+    )
+    if (
+        archive_path is not None
+        and archive_path.exists()
+        and _path_is_relative_to(archive_path, queue_root)
+    ):
+        return queue_root
     for key in (
         "archive_path",
         "candidate_archive_path",

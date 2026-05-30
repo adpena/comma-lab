@@ -459,6 +459,62 @@ def test_parallel_dispatch_rejects_ready_candidate_without_exact_archive_custody
     assert "archive_custody:archive_sha256_missing_or_invalid" in message
 
 
+def test_parallel_dispatch_reads_archive_custody_from_source_contract_snapshot(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool("parallel_dispatch_top_k")
+    candidate = _ready_custody_candidate(tmp_path)
+    archive_path = candidate["archive_path"]
+    archive_sha = candidate["archive_sha256"]
+    archive_bytes = candidate["archive_size_bytes"]
+    candidate["source_archive_bound_candidate_contract_required"] = True
+    candidate["source_archive_bound_candidate_contract"] = {
+        "schema": "tac_archive_bound_candidate_contract.v1",
+        "archive_bound_candidate_ready": True,
+        "archive_bound_candidate_ready_for_exact_handoff": True,
+        "candidate_archive": {
+            "path": archive_path,
+            "sha256": archive_sha,
+            "bytes": archive_bytes,
+        },
+        "archive_file_custody": {
+            "custody_complete": True,
+            "path": archive_path,
+            "sha256": archive_sha,
+            "bytes": archive_bytes,
+        },
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    for key in (
+        "archive_path",
+        "candidate_archive_path",
+        "archive_sha256",
+        "candidate_archive_sha256",
+        "archive_size_bytes",
+        "archive_bytes",
+        "candidate_archive_bytes",
+    ):
+        candidate.pop(key, None)
+    ranked = _write_ranked_input(tmp_path, [candidate])
+
+    loaded = tool._load_top_k(ranked, k=None)
+    cmd = tool._build_dispatch_cmd(
+        loaded[0],
+        provider="lightning",
+        lane_script="scripts/ignored.sh",
+        label_prefix="batch",
+        estimated_cost=0.11,
+        max_dph=0.50,
+    )
+
+    assert loaded == [candidate]
+    assert "--archive" in cmd
+    assert archive_path in cmd
+
+
 def test_parallel_dispatch_rejects_ready_candidate_without_runtime_tree_custody(
     tmp_path: Path,
 ) -> None:

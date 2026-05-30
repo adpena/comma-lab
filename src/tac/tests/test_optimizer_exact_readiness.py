@@ -43,6 +43,7 @@ from tac.optimization.serialized_archive_economics import (
     MODELED_SAVINGS_WITHOUT_REALIZED_BLOCKER,
     build_serialized_archive_delta_contract,
 )
+from tac.optimizer.exact_dispatch_authority import exact_dispatch_authority
 from tac.optimizer.exact_readiness import (
     ACTIVE_FLOOR_ARCHIVE_BYTES,
     ACTIVE_FLOOR_SCORE,
@@ -903,6 +904,77 @@ def test_exact_readiness_reads_archive_custody_from_shared_contract(
     assert promoted_row["runtime_consumption_proof_schema"] == (
         "pr101_kaggle_proxy_runtime_consumption_proof_v1"
     )
+
+
+def test_exact_ready_consumers_accept_source_contract_snapshot_custody(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    payload = json.loads(queue.read_text(encoding="utf-8"))
+    row = payload["top_k"][0]
+    row.update(
+        {
+            "receiver_contract_satisfied": True,
+            "runtime_consumption_proof_ready": True,
+            "byte_closed_candidate_materialized": True,
+            "candidate_archive_materialized": True,
+            "candidate_archive_path": row["archive_path"],
+        }
+    )
+    row.update(
+        archive_bound_candidate_contract_fields_for_row(
+            row,
+            repo_root=tmp_path,
+        )
+    )
+    queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+    promoted = result["promoted_queue"]
+    promoted_row = promoted["dispatch_ready"][0]
+    for key in (
+        "archive_path",
+        "candidate_archive_path",
+        "archive_sha256",
+        "candidate_archive_sha256",
+        "archive_size_bytes",
+        "archive_bytes",
+        "candidate_archive_bytes",
+    ):
+        promoted_row.pop(key, None)
+
+    verdict = exact_dispatch_authority(
+        promoted_row,
+        repo_root=tmp_path,
+        source="test",
+        active_floor_archive_bytes=None,
+    )
+
+    assert verdict.authorized is True
+    assert verdict.blockers == ()
+
+    exact_ready = tmp_path / "exact_ready_queue.json"
+    exact_ready.write_text(json.dumps(promoted, indent=2, sort_keys=True))
+    claims = tmp_path / ".omx/state/active_lane_dispatch_claims.md"
+    claims.parent.mkdir(parents=True)
+    claims.write_text(
+        "| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |\n"
+        "|---|---|---|---|---|---|---|---|\n",
+        encoding="utf-8",
+    )
+    audit = audit_exact_ready_queue(
+        exact_ready,
+        repo_root=tmp_path,
+        dispatch_claims_path=claims,
+    )
+
+    assert audit["stale_ready_rows"] == []
 
 
 def test_exact_readiness_requires_contract_for_mlx_advisory_origin(

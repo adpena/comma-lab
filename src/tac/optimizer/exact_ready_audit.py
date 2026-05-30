@@ -44,9 +44,33 @@ def _claim_lane_aliases(lane_id: str) -> tuple[str, ...]:
     return (lane_id, f"lane_{lane_id}")
 
 
+def _mapping(value: Any) -> Mapping[str, Any]:
+    return value if isinstance(value, Mapping) else {}
+
+
+def _source_archive_bound_contract(row: Mapping[str, Any]) -> Mapping[str, Any]:
+    for key in (
+        "source_archive_bound_candidate_contract",
+        "archive_bound_candidate_contract",
+    ):
+        value = row.get(key)
+        if isinstance(value, Mapping):
+            return value
+    return {}
+
+
+def _contract_candidate_archive(row: Mapping[str, Any]) -> Mapping[str, Any]:
+    return _mapping(_source_archive_bound_contract(row).get("candidate_archive"))
+
+
 def _row_archive_sha(row: Mapping[str, Any]) -> str | None:
     for key in ("candidate_archive_sha256", "archive_sha256", "expected_archive_sha256"):
         value = row.get(key)
+        if is_sha256(value):
+            return str(value).lower()
+    archive = _contract_candidate_archive(row)
+    for key in ("sha256", "archive_sha256"):
+        value = archive.get(key)
         if is_sha256(value):
             return str(value).lower()
     return None
@@ -114,7 +138,28 @@ def _row_archive_path(row: Mapping[str, Any], *, repo_root: Path, queue_dir: Pat
         path = resolve_path(row.get(key), repo_root=repo_root, queue_dir=queue_dir)
         if path is not None:
             return path
+    archive = _contract_candidate_archive(row)
+    for key in ("path", "archive_path"):
+        path = resolve_path(archive.get(key), repo_root=repo_root, queue_dir=queue_dir)
+        if path is not None:
+            return path
     return None
+
+
+def _row_archive_byte_values(row: Mapping[str, Any]) -> dict[str, int]:
+    values = dict(candidate_archive_byte_values(row))
+    archive = _contract_candidate_archive(row)
+    for key in ("bytes", "archive_bytes"):
+        parsed = candidate_archive_byte_values(
+            {
+                "candidate_archive_bytes": archive.get(key),
+            }
+        ).get("candidate_archive_bytes")
+        if parsed is not None:
+            values[f"source_archive_bound_candidate_contract.candidate_archive.{key}"] = (
+                parsed
+            )
+    return values
 
 
 def _row_submission_dir(row: Mapping[str, Any], *, repo_root: Path, queue_dir: Path) -> Path | None:
@@ -388,7 +433,7 @@ def _ready_row_live_custody_blockers(
                     "ready_row_archive_sha_mismatch:"
                     f"{actual_archive_sha}!={archive_sha}"
                 )
-            byte_values = candidate_archive_byte_values(row)
+            byte_values = _row_archive_byte_values(row)
             if not byte_values:
                 blockers.append("ready_row_archive_bytes_missing_or_invalid")
             elif len(set(byte_values.values())) > 1:

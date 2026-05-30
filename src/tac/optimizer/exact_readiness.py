@@ -415,6 +415,16 @@ def archive_bound_contract_for_row(
     label: str,
 ) -> tuple[Mapping[str, Any] | None, list[str]]:
     if not has_archive_bound_candidate_contract_payload(row):
+        source_contract = row.get("source_archive_bound_candidate_contract")
+        if isinstance(source_contract, Mapping):
+            try:
+                contract = selected_archive_bound_candidate_contract_from_payload(
+                    {"archive_bound_candidate_contract": source_contract},
+                    label=f"{label}:source_archive_bound_candidate_contract",
+                )
+            except ArchiveBoundCandidateContractError as exc:
+                return None, [f"archive_bound_candidate_contract_invalid:{exc}"]
+            return contract, []
         return None, []
     try:
         contract = selected_archive_bound_candidate_contract_from_payload(

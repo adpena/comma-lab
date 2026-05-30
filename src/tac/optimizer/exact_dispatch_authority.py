@@ -202,14 +202,14 @@ def _source_contract_snapshot_blockers(row: Mapping[str, Any]) -> list[str]:
     if is_sha256(contract_sha) and is_sha256(row_sha):
         if str(contract_sha).lower() != str(row_sha).lower():
             blockers.append("source_archive_bound_candidate_contract_sha256_mismatch")
-    elif snapshot_required:
+    elif snapshot_required and not is_sha256(contract_sha):
         blockers.append("source_archive_bound_candidate_contract_sha256_missing")
     contract_bytes = archive.get("bytes") or archive.get("archive_bytes")
     row_bytes = row.get("candidate_archive_bytes") or row.get("archive_bytes")
     if isinstance(contract_bytes, int) and isinstance(row_bytes, int):
         if contract_bytes != row_bytes:
             blockers.append("source_archive_bound_candidate_contract_bytes_mismatch")
-    elif snapshot_required:
+    elif snapshot_required and not isinstance(contract_bytes, int):
         blockers.append("source_archive_bound_candidate_contract_bytes_missing")
     return blockers
 
