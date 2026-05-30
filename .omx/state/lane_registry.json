@@ -62719,6 +62719,47 @@
         }
       },
       "notes": "T1 single-voice canonical Yousfi voice review per operator directive 2026-05-30 verbatim 'Need yousfi review first' (in response to Z8 M12a paid Modal T4 L2 long-training dispatch operator-routable CLI command surface). Sister of canonical Catalog #325 T3 grand council symposium 4bcc84fc0 PROCEED_WITH_REVISIONS unanimous 23-of-23. Verdict: PROCEED_WITH_REVISIONS \u2014 2 of 5 canonical axes HARD-EARNED (M5 Mallat design + L28+L32 quick-wins) + 3 of 5 CARGO-CULTED (M7 UNIFORM default + Wyner-Ziv spatial-mean side_info + 3-level Mallat NOT exploiting SegNet stride-2 blind spot). Canonical Revisions #1 (Z8_TRAINER_MODE=full) + #2 (M7 Path B2) MANDATORY before M12a paid dispatch. lane_class=research_substrate per Catalog #240. research_only=true. dispatch_enabled=false. $0 paid spend. canonical_paid_dispatch_authorization_status=GATED_PENDING_REVISION_1_AND_2. predicted_band_validation_status=research_only_t1_review. Canonical equation #150 wyner_ziv_decoder_side_information_rate_savings_v1 reference. Sister probe outcome PARTIAL advisory 14-day expires 2026-06-13T17:59:26Z."
+    },
+    {
+      "id": "lane_tasklist_audit_no_fake_verification_20260530",
+      "name": "TaskList Audit + NO FAKE IMPLEMENTATIONS Verification 50-task sample",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/tasklist_audit_no_fake_verification_landed_20260530.md (50-task audit; 28 ACTUALLY_DONE + 18 GENUINELY_PENDING + 2 PARTIAL + 2 STALE + 0 FAKE_IMPL; lane_class=research_substrate; research_only=true)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/tasklist_audit_no_fake_verification_landed_20260530.md + retroactive_sweep_for_tasklist_audit_no_fake_verification_20260530.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "TaskList audit 50-task sample 2026-05-30; lane_class=research_substrate; research_only=true; mission_predicted_contribution=apparatus_maintenance; 0 FAKE_IMPL found; 28/50 ACTUALLY_DONE but TaskList still marks in_progress/pending = structural drift bug class; canonical fix recommended via in-source cascade_progress.py sister of z8 build_progress.py per Z8 Phase 2 standing directive 2026-05-29"
     }
   ],
   "level_rules": {
@@ -62728,5 +62769,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-30T17:59:52Z"
+  "updated_at": "2026-05-30T18:39:12Z"
 }
