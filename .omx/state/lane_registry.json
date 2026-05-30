@@ -62554,6 +62554,47 @@
         }
       },
       "notes": "operator-routed Yousfi-cascade TOP-1 post-M10; canonical 5-stage cycle binding through upstream/evaluate.py --device cpu per CLAUDE.md Auth eval EVERYWHERE non-negotiable; non-promotable [macOS-CPU advisory] per Catalog #192; lane_class=substrate_engineering; research_only=true; unblocks M12 paired-CUDA per Catalog #246."
+    },
+    {
+      "id": "lane_z8_m12_per_substrate_symposium_canonical_sub_0_189_attempt_clearance_per_catalog_325_20260530",
+      "name": "Z8 M12 per-substrate symposium canonical Catalog #325 clearance for paid Modal T4 L2 long-training + paired-CUDA sub-0.189 attempt",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/council_t3_grand_council_per_substrate_symposium_z8_hierarchical_predictive_coding_m12_paid_modal_t4_l2_long_training_plus_paired_cuda_canonical_sub_0_189_attempt_20260530.md (Catalog #325 6-step contract complete: cargo-cult audit per #303 + 9-dim checklist per #294 + observability surface per #305 + sextet pact deliberation per #292 + per-substrate reactivation criteria pinned per #298 + Catalog #324 post-training Tier-C validation discipline declaration; PROCEED_WITH_REVISIONS unanimous 23-of-23; canonical posterior anchor LANDED via tac.council_continual_learning.append_council_anchor; lane_class=substrate_engineering per HNeRV parity L7) [symposium_memo_only_no_paid_dispatch]"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/council_t3_grand_council_per_substrate_symposium_z8_hierarchical_predictive_coding_m12_paid_modal_t4_l2_long_training_plus_paired_cuda_canonical_sub_0_189_attempt_20260530.md (canonical Catalog #325 T3 grand council symposium memo; supersedes 2026-05-18 DEFER_PENDING_EVIDENCE + 2026-05-19 DRAFT_PENDING_OPERATOR_CONVOCATION per 14-day window + M11 Phase 2 promotion empirical anchor satisfaction) [symposium_memo_only_no_paid_dispatch]"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Canonical Catalog #325 T3 grand council per-substrate symposium memo LANDED .omx/research/council_t3_grand_council_per_substrate_symposium_z8_hierarchical_predictive_coding_m12_paid_modal_t4_l2_long_training_plus_paired_cuda_canonical_sub_0_189_attempt_20260530.md. Verdict: PROCEED_WITH_REVISIONS (23-of-23 council attendees, 6-of-6 sextet pact, 16-of-20 grand council with topical match per Catalog #346). M12a-FIRST sequencing addresses Contrarian VETO + Assumption-Adversary HARD-EARNED-vs-CARGO-CULTED resolution. Canonical posterior anchor LANDED via tac.council_continual_learning.append_council_anchor. Slot W Wave N+40 blocker SUPERSEDED per Catalog #313 EVENT_SUPERSEDED on Z8. M12 dispatch is structurally unblocked + operator-routable per Catalog #325 14-day window. NO PAID DISPATCH FIRED at this gate. lane_class=substrate_engineering per HNeRV parity L7 + Catalog #220. research_only=false per Catalog #240 contest-CUDA-chain since this is M12 paid Modal dispatch clearance scope. dispatch_enabled=false per CLAUDE.md user-asks-Authorization non-negotiable. M11 LANDED commit 2f8570755 IS canonical reactivation evidence."
     }
   ],
   "level_rules": {
@@ -62563,5 +62604,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-30T16:28:35Z"
+  "updated_at": "2026-05-30T17:13:30Z"
 }
