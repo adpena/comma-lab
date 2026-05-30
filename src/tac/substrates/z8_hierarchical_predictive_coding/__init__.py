@@ -215,6 +215,10 @@ from tac.substrates.z8_hierarchical_predictive_coding.build_progress import (
     render_progress_summary,
     validate_milestone_tuple,
 )
+from tac.substrates.z8_hierarchical_predictive_coding.mamba2_adapter import (
+    Z8Mamba2DeterministicStateUpdate,
+    build_z8_mamba2_adapter_for_level,
+)
 
 # Catalog #124 8-field representation-lane declaration (canonical tokens for
 # the AST walker per the gate's regex set). DO NOT remove without operator
@@ -319,6 +323,9 @@ __all__ = [
     "BuildMilestone",
     "BuildMilestoneStatus",
     "Z8_PHASE_2_BUILD_MILESTONES",
+    # M4 adapter (Mamba-2 binding; operator commit 2026-05-29)
+    "Z8Mamba2DeterministicStateUpdate",
+    "build_z8_mamba2_adapter_for_level",
     "get_in_progress_milestones",
     "get_landed_milestones",
     "get_next_actionable_milestones",

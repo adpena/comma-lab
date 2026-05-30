@@ -608,6 +608,101 @@ class Mamba2Predictor(nn.Module):
         z_pred = self.output_projection(y_t)
         return z_pred
 
+    def step_externalized_state(
+        self,
+        prior_state: torch.Tensor,
+        z_prev: torch.Tensor,
+        ego_motion: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Single-step recurrence with externalized state pass-through.
+
+        Sister to ``forward`` but does NOT touch ``self._h``. The caller
+        passes the recurrent state in explicitly and receives the updated
+        state back. This is the canonical interface required by sister
+        consumers that want explicit state management — for example the
+        Z8 hierarchical predictive coding substrate's
+        ``DeterministicStateUpdate`` Protocol per-level recurrence
+        (``src/tac/substrates/z8_hierarchical_predictive_coding/
+        binding_contract.py``) and any DP1/Z7-Mamba-2 trainer that wants
+        deterministic checkpointable hidden-state flow.
+
+        Mathematical grounding
+        ----------------------
+
+        The reference cell implements the diagonal-A Mamba-1 S6 selective
+        SSM (per Wave 4 fidelity audit landed 2026-05-29 + parent design
+        memo §7 + ``_ReferenceMamba2Cell`` docstring). The hidden state
+        ``h`` has shape ``(B, d_inner, d_state)`` per Dao & Gu 2024 §3
+        (Mamba-1) or ``(B, nheads, headdim, d_state)`` per §4 SSD form
+        when the upstream ``mamba_ssm.Mamba2`` backend is active. The
+        externalized state shape matches whichever backend is active;
+        callers that need shape uniformity should flatten via
+        ``state.reshape(B, -1)`` and reshape back at step boundaries.
+
+        Args:
+            prior_state: ``(B, d_inner, d_state)`` for the reference
+                cell; matching SSD shape for the upstream backend.
+            z_prev: ``(B, latent_dim)``.
+            ego_motion: ``(B, ego_motion_dim)``.
+
+        Returns:
+            ``(next_state, predicted_z)`` where ``next_state`` has the
+            same shape as ``prior_state`` and ``predicted_z`` has shape
+            ``(B, latent_dim)``.
+
+        Raises:
+            RuntimeError: in identity_predictor mode (the identity
+                predictor is stateless by construction; the caller must
+                handle that case explicitly per Catalog #125 hook #6
+                disambiguator semantics).
+            NotImplementedError: when the upstream ``mamba_ssm.Mamba2``
+                backend is active. The upstream Mamba2 ``forward`` does
+                not expose incremental state via a public single-step
+                signature; canonical externalization requires
+                ``mamba_ssm.utils.inference_params``. Use
+                ``backend='reference_torch'`` for externalized-state
+                consumers per parent design memo §13.
+        """
+        if self.identity_predictor:
+            raise RuntimeError(
+                "Mamba2Predictor.step_externalized_state called on identity_predictor "
+                "mode; the identity predictor is stateless by construction. The caller "
+                "must handle identity mode explicitly (return z_prev, no state update) "
+                "per Catalog #125 hook #6 disambiguator semantics."
+            )
+        if self.backend_active == MAMBA_SSM_BACKEND:
+            raise NotImplementedError(
+                "Mamba2Predictor.step_externalized_state currently supports only "
+                "backend='reference_torch'. The upstream mamba_ssm.Mamba2 sequence-mode "
+                "forward does not expose incremental state via a stable single-step "
+                "signature; canonical externalization requires mamba_ssm.utils."
+                "inference_params (per parent design memo §13). For externalized-state "
+                "consumers (Z8 DeterministicStateUpdate, DP1, etc.) use "
+                "backend='reference_torch'."
+            )
+        if z_prev.shape[-1] != self.latent_dim:
+            raise ValueError(
+                f"z_prev last dim {z_prev.shape[-1]} != latent_dim {self.latent_dim}"
+            )
+        if ego_motion.shape[-1] != self.ego_motion_dim:
+            raise ValueError(
+                f"ego_motion last dim {ego_motion.shape[-1]} != ego_motion_dim "
+                f"{self.ego_motion_dim}"
+            )
+        expected_h_shape = (z_prev.shape[0], self.config.d_inner, self.config.d_state)
+        if tuple(prior_state.shape) != expected_h_shape:
+            raise ValueError(
+                f"prior_state shape {tuple(prior_state.shape)} != expected "
+                f"{expected_h_shape} (B, d_inner, d_state)"
+            )
+
+        # Pure functional step — does NOT mutate self._h.
+        predictor_input = torch.cat([z_prev, ego_motion], dim=-1)
+        x_t = self.input_projection(predictor_input)
+        y_t, next_state = self.mamba_cell(x_t, prior_state)
+        z_pred = self.output_projection(y_t)
+        return next_state, z_pred
+
     def num_parameters(self) -> int:
         """Count of trainable parameters (sister signature to Z6 predictors)."""
         return sum(p.numel() for p in self.parameters() if p.requires_grad)

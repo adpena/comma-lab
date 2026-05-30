@@ -363,31 +363,47 @@ Z8_PHASE_2_BUILD_MILESTONES: tuple[BuildMilestone, ...] = (
         ),
     ),
     BuildMilestone(
-        milestone_id="mamba_2_ssd_replaces_gru_at_step_5",
+        milestone_id="mamba_2_adapter_binds_canonical_primitive_to_protocol",
         description=(
-            "True Mamba-2 SSD (Dao & Gu 2024) replaces DreamerV3 GRUCell "
-            "at step 5 of Z8 forward pass; satisfies "
-            "DeterministicStateUpdate Protocol."
+            "Z8Mamba2DeterministicStateUpdate adapter wraps the canonical "
+            "tac.optimization.mamba2_predictor.Mamba2Predictor primitive "
+            "to satisfy DeterministicStateUpdate Protocol. Adapter pivot "
+            "per operator binding-first methodology (2026-05-29): reuse "
+            "the existing Wave-4-audited Mamba-2 primitive + add canonical "
+            "step_externalized_state surface to it; do NOT reimplement "
+            "the selective state-space recurrence inside Z8."
         ),
         acceptance_criteria=(
-            "Mamba-2 SSD module implements DeterministicStateUpdate "
-            "Protocol (runtime_checkable isinstance returns True)",
-            "state_dim matches contract.deterministic_state_dim",
-            "matrix-A-shared-across-channels parameterization per Dao & "
-            "Gu 2024 §4 (not Mamba-1 S6 selective scan)",
-            "structured-masked-attention equivalence verified empirically "
-            "on small test case (Dao & Gu Theorem 1)",
-            "byte-friendliness validated: per-pair state compresses better "
-            "than DreamerV3 GRU state under same brotli q=11 baseline",
+            "Z8Mamba2DeterministicStateUpdate satisfies "
+            "DeterministicStateUpdate Protocol (runtime_checkable "
+            "isinstance returns True)",
+            "state_dim property matches contract.deterministic_state_dim",
+            "Mamba2Predictor.step_externalized_state landed as canonical "
+            "sister surface (iteration of underlying primitive per "
+            "operator 'iterate and optimize underlying pieces as well' "
+            "directive)",
+            "Backend honest classification: adapter pins "
+            "REFERENCE_TORCH_BACKEND (Mamba-1 S6 per Wave 4 fidelity "
+            "audit landed 2026-05-29); true Mamba-2 SSD upgrade deferred "
+            "to sister milestone when upstream mamba_ssm.utils."
+            "inference_params single-step surface is wired",
+            "Mathematical grounding: structured state shape (B, d_inner, "
+            "d_state) per Dao & Gu 2024 §3; adapter reshapes to flat "
+            "(B, state_dim) for Protocol contract; reshape is byte-stable "
+            "and gradient-preserving",
         ),
-        status=BuildMilestoneStatus.PENDING,
+        status=BuildMilestoneStatus.LANDED,
+        landed_at_utc="2026-05-29T00:00:00Z",
         predecessor_milestone_ids=(
             "binding_contract_landed",
             "existing_config_satisfies_per_level_contract",
         ),
         notes=(
-            "Current Z7-Mamba-2 implementation is Mamba-1 S6 (documented "
-            "adaptation per Slot HHH); Z8 upgrade is TRUE SSD."
+            "Adapter pivot per operator 2026-05-29 'binding-first + iterate "
+            "underlying pieces'. Reference cell honestly = Mamba-1 S6 per "
+            "Wave 4 fidelity audit; upstream mamba_ssm.Mamba2 IS true SSD "
+            "but lacks public single-step inference-params surface. Sub-"
+            "milestone (true-SSD upgrade) queued post-MLX-pyhsm closure."
         ),
     ),
     BuildMilestone(
@@ -518,7 +534,7 @@ Z8_PHASE_2_BUILD_MILESTONES: tuple[BuildMilestone, ...] = (
         ),
         status=BuildMilestoneStatus.PENDING,
         predecessor_milestone_ids=(
-            "mamba_2_ssd_replaces_gru_at_step_5",
+            "mamba_2_adapter_binds_canonical_primitive_to_protocol",
             "mallat_full_dwt_replaces_sum_pool_proxy",
             "wyner_ziv_full_top_level_coder_landed",
             "score_aware_level_loss_uniward_analog_landed",
