@@ -248,6 +248,12 @@ def _full_main(args: argparse.Namespace) -> int:
         batch_pair_indices_per_step=min(int(args.num_pairs), 8),
         learning_rate=float(args.full_lr),
         seed=int(args.seed),
+        pr95_faithful_curriculum_enabled=bool(
+            getattr(args, "pr95_faithful_curriculum_enabled", False)
+        ),
+        pr95_curriculum_total_epochs=getattr(
+            args, "pr95_curriculum_total_epochs", None
+        ),
         notes=(
             "Z6-v2 cargo-cult-unwind MLX-first score-aware LONG-RUN training "
             "via canonical mlx_score_aware harness; real contest video + "
@@ -465,6 +471,37 @@ def _build_parser() -> argparse.ArgumentParser:
             "is wired. Default OFF — the harness fails closed otherwise. Set "
             "ONLY for a $0 no-real-SegNet smoke that explicitly accepts the "
             "result is reconstruction-proxy (NOT scorer-bound)."
+        ),
+    )
+    p.add_argument(
+        "--pr95-faithful-curriculum-enabled",
+        action="store_true",
+        default=False,
+        help=(
+            "Opt-in to PR95-faithful 8-stage Muon+AdamW canonical curriculum "
+            "per CLAUDE.md 'HNeRV / leaderboard-implementation parity "
+            "discipline' L14 (canonical 8-stage 29,650-epoch curriculum) + L15 "
+            "(Muon optimizer in final stage only) + the optimizer stack "
+            "research memo Option A MINIMUM-VIABLE + the m9-v3 canonical "
+            "helper (commit c91481212). Default OFF preserves the legacy "
+            "default-on AdamW behavior. When ON, the canonical harness routes "
+            "per-stage optimizer state through apply_pr95_mlx_optimizer_step "
+            "via PR95FaithfulCurriculumFactory so each canonical stage "
+            "actually uses its declared optimizer + loss_family + sigma + "
+            "lambda + qat hyperparameters per CLAUDE.md 'NO FAKE "
+            "IMPLEMENTATIONS' non-negotiable."
+        ),
+    )
+    p.add_argument(
+        "--pr95-curriculum-total-epochs",
+        type=int,
+        default=None,
+        help=(
+            "Total epoch budget for the PR95-faithful 8-stage curriculum; "
+            "defaults to the canonical 29,650 per L14 (sum of 3000+5650+1500+"
+            "500+9000+2000+3000+5000). Smaller budgets proportionally scale "
+            "each stage's epoch share per the canonical ratio. Used only "
+            "when --pr95-faithful-curriculum-enabled."
         ),
     )
     return p

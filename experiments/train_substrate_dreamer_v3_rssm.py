@@ -246,6 +246,33 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Weight on the gradient-reachable Hinton-KL T=2.0 scorer "
         "surrogate term in the MLX --full score-aware loss (0.0 disables).",
     )
+    p.add_argument(
+        "--pr95-faithful-curriculum-enabled",
+        action="store_true",
+        default=False,
+        help=(
+            "Opt-in to PR95-faithful 8-stage Muon+AdamW canonical curriculum "
+            "per CLAUDE.md 'HNeRV / leaderboard-implementation parity "
+            "discipline' L14 + L15 + the m9-v3 canonical helper (commit "
+            "c91481212). Default OFF preserves legacy default-on AdamW. "
+            "When ON the canonical harness routes per-stage optimizer state "
+            "through apply_pr95_mlx_optimizer_step via PR95FaithfulCurriculum"
+            "Factory so each stage actually uses its declared optimizer + "
+            "loss_family + sigma + lambda + qat per CLAUDE.md 'NO FAKE "
+            "IMPLEMENTATIONS' non-negotiable."
+        ),
+    )
+    p.add_argument(
+        "--pr95-curriculum-total-epochs",
+        type=int,
+        default=None,
+        help=(
+            "Total epoch budget for the PR95-faithful 8-stage curriculum; "
+            "defaults to canonical 29,650 per L14. Smaller budgets "
+            "proportionally scale each stage. Used only when "
+            "--pr95-faithful-curriculum-enabled."
+        ),
+    )
     return p
 
 
@@ -538,6 +565,12 @@ def _full_main(args: argparse.Namespace) -> int:
         batch_pair_indices_per_step=min(int(args.num_pairs), 8),
         learning_rate=float(args.full_lr),
         seed=int(args.seed),
+        pr95_faithful_curriculum_enabled=bool(
+            getattr(args, "pr95_faithful_curriculum_enabled", False)
+        ),
+        pr95_curriculum_total_epochs=getattr(
+            args, "pr95_curriculum_total_epochs", None
+        ),
         notes=(
             "DreamerV3 RSSM MLX-first score-aware full training via canonical "
             "mlx_score_aware_full_main harness; real contest video + "

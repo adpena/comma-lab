@@ -63176,11 +63176,11 @@
       "id": "lane_pose_vulnerability_map_yousfi_alaska_analog_20260530",
       "name": "Deliverable A: per-pair pose-vulnerability map (Yousfi-alaska analog)",
       "phase": 3.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "L1 SCAFFOLD impl_complete=true 81/81 tests pass; Slot EEE NO FAKE invariants verified; canonical Provenance per Catalog #323 + Tier A markers per Catalog #341 + AxisDecomposition per Catalog #356; research_only=true; lane_class=substrate_engineering per HNeRV parity L7; score_improvement_mechanism_status=DEFERRED-pending-sister-bolt-on per Catalog #220 SCAFFOLD_DEFERRED_INTEGRATION_OK rationale: foundation operator; sister combinatorial bolt-ons compose with this on the YUV6 / pose-axis surface"
         },
         "real_archive_empirical": {
           "status": false,
@@ -63217,11 +63217,11 @@
       "id": "lane_posenet_mae_v_canonical_surrogate_20260530",
       "name": "Deliverable B: PoseNet MAE-V canonical surrogate (numpy-portable)",
       "phase": 3.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "L1 SCAFFOLD impl_complete=true 81/81 tests pass; Slot EEE NO FAKE invariants verified; canonical Provenance per Catalog #323 + Tier A markers per Catalog #341 + AxisDecomposition per Catalog #356; research_only=true; lane_class=substrate_engineering per HNeRV parity L7; score_improvement_mechanism_status=DEFERRED-pending-sister-bolt-on per Catalog #220 SCAFFOLD_DEFERRED_INTEGRATION_OK rationale: foundation operator; sister combinatorial bolt-ons compose with this on the YUV6 / pose-axis surface"
         },
         "real_archive_empirical": {
           "status": false,
@@ -63258,11 +63258,11 @@
       "id": "lane_yuv6_chroma_subsampled_perturbation_operator_20260530",
       "name": "Deliverable C: YUV6 chroma-subsampled perturbation operator (Yousfi blind-spot exploit)",
       "phase": 3.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "L1 SCAFFOLD impl_complete=true 81/81 tests pass; Slot EEE NO FAKE invariants verified; canonical Provenance per Catalog #323 + Tier A markers per Catalog #341 + AxisDecomposition per Catalog #356; research_only=true; lane_class=substrate_engineering per HNeRV parity L7; score_improvement_mechanism_status=DEFERRED-pending-sister-bolt-on per Catalog #220 SCAFFOLD_DEFERRED_INTEGRATION_OK rationale: foundation operator; sister combinatorial bolt-ons compose with this on the YUV6 / pose-axis surface"
         },
         "real_archive_empirical": {
           "status": false,
@@ -63303,5 +63303,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-30T20:04:08Z"
+  "updated_at": "2026-05-30T20:04:20Z"
 }

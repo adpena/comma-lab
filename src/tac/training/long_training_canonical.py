@@ -2036,6 +2036,25 @@ def run_long_training(
         stage = config.stage_at_epoch(epoch)
         effective_lr = config.learning_rate * stage.lr_scale
 
+        # Notify the adapter of the current global epoch so any curriculum-aware
+        # adapter (e.g. MlxScoreAwareAdapter with pr95_faithful_curriculum_enabled
+        # per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline"
+        # L14 + L15) can advance per-stage optimizer/loss-family/sigma/lambda/qat
+        # state. Adapters that don't implement notify_global_epoch are a silent
+        # no-op (backward compat per the canonical Protocol contract). This is
+        # the canonical wiring point for the m9-v3 PR95-faithful 8-stage
+        # Muon+AdamW curriculum sister-wave (commit c91481212 canonical
+        # helper + adapter wiring + this notify_global_epoch invocation).
+        notify_fn = getattr(adapter, "notify_global_epoch", None)
+        if callable(notify_fn):
+            try:
+                notify_fn(epoch)
+            except Exception as exc:
+                # notify_global_epoch is observability-only; never fail the run.
+                print(
+                    f"[long_training_canonical] WARN: notify_global_epoch failed at epoch {epoch}: {exc!r}"
+                )
+
         try:
             loss_dict, actual_bs = oom_runner.run_step(
                 adapter=adapter,

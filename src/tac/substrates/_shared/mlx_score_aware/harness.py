@@ -59,6 +59,8 @@ def run_mlx_score_aware_full_main(
     inflate_py_path: Any | None = None,
     notes: str = "",
     on_epoch_end: Callable[[Any], None] | None = None,
+    pr95_faithful_curriculum_enabled: bool = False,
+    pr95_curriculum_total_epochs: int | None = None,
 ) -> Any:
     """Run the canonical MLX-first score-aware ``_full_main`` body.
 
@@ -95,6 +97,27 @@ def run_mlx_score_aware_full_main(
         notes: substantive rationale (Catalog #287 placeholder rejected by the
             config).
         on_epoch_end: optional per-epoch callback.
+        pr95_faithful_curriculum_enabled: opt-in to PR95-faithful 8-stage
+            Muon+AdamW canonical curriculum per CLAUDE.md "HNeRV /
+            leaderboard-implementation parity discipline" L14 + L15 +
+            the optimizer stack research memo (commit 118ddb1a4) Option A
+            MINIMUM-VIABLE recommendation + the m9-v3 canonical helper
+            (commit c91481212). Default False preserves the legacy
+            default-on AdamW behavior (backward compat per CLAUDE.md
+            "Beauty, simplicity, and developer experience"). When True,
+            the adapter routes per-stage optimizer state through the
+            canonical ``apply_pr95_mlx_optimizer_step`` via the canonical
+            ``PR95FaithfulCurriculumFactory``; the canonical
+            ``run_long_training`` epoch loop notifies the adapter of the
+            current global epoch via the new ``notify_global_epoch``
+            wiring point so each stage actually advances per CLAUDE.md
+            "NO FAKE IMPLEMENTATIONS" non-negotiable.
+        pr95_curriculum_total_epochs: total epoch budget for the PR95
+            curriculum; defaults to the canonical 29,650 per L14.
+            Used only when ``pr95_faithful_curriculum_enabled=True``;
+            ignored otherwise. Smaller budgets (e.g. 100 for an MLX
+            smoke) scale per ``PR95FaithfulCurriculumFactory`` canonical
+            proportional-ratio rule.
 
     Returns:
         the canonical ``TrainingArtifact`` from ``run_long_training``.
@@ -129,7 +152,20 @@ def run_mlx_score_aware_full_main(
             ),
         )
 
-    adapter = MlxScoreAwareAdapter(bundle, substrate_id=substrate_id)
+    # Construct the canonical MLX score-aware adapter. When
+    # ``pr95_faithful_curriculum_enabled=True``, the adapter routes per-stage
+    # optimizer state through the canonical
+    # ``apply_pr95_mlx_optimizer_step`` via the canonical
+    # ``PR95FaithfulCurriculumFactory`` (commit c91481212 m9-v3 helper) and
+    # the canonical ``run_long_training`` epoch loop notifies the adapter of
+    # the current global epoch via ``notify_global_epoch`` per CLAUDE.md
+    # "HNeRV / leaderboard-implementation parity discipline" L14 + L15.
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id=substrate_id,
+        pr95_faithful_curriculum_enabled=pr95_faithful_curriculum_enabled,
+        pr95_curriculum_total_epochs=pr95_curriculum_total_epochs,
+    )
 
     config = LongTrainingConfig(
         substrate_id=substrate_id,
