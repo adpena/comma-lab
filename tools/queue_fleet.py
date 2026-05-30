@@ -158,7 +158,8 @@ def _format_status(payload: Mapping[str, Any]) -> str:
             f"ready={payload.get('ready_to_supervise_count')} "
             f"needs_recovery={payload.get('needs_recovery_count')} "
             f"invalid={payload.get('invalid_queue_count')} "
-            f"non_exec_artifacts={payload.get('non_executable_artifact_count')}"
+            f"non_exec_artifacts={payload.get('non_executable_artifact_count')} "
+            f"native_consumers={payload.get('known_native_consumer_artifact_count')}"
         ),
         f"status_counts: {payload.get('status_counts')}",
     ]
@@ -193,6 +194,12 @@ def _format_status(payload: Mapping[str, Any]) -> str:
     if isinstance(recovery_commands, Sequence) and recovery_commands:
         lines.append("next recovery/status:")
         for command in recovery_commands[:3]:
+            if isinstance(command, Sequence) and not isinstance(command, (str, bytes, bytearray)):
+                lines.append("  " + " ".join(str(part) for part in command))
+    native_commands = payload.get("next_native_consumer_commands")
+    if isinstance(native_commands, Sequence) and native_commands:
+        lines.append("next native consumers:")
+        for command in native_commands[:3]:
             if isinstance(command, Sequence) and not isinstance(command, (str, bytes, bytearray)):
                 lines.append("  " + " ".join(str(part) for part in command))
     lines.append("authority: local telemetry/supervision only; never score or promotion authority.")

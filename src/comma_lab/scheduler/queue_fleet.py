@@ -19,8 +19,36 @@ from comma_lab.scheduler.experiment_queue_observer import observe_experiment_que
 
 QUEUE_FLEET_STATUS_SCHEMA = "experiment_queue_fleet_status.v1"
 QUEUE_FLEET_ROW_SCHEMA = "experiment_queue_fleet_row.v1"
+QUEUE_FLEET_NATIVE_CONSUMER_HINT_SCHEMA = "experiment_queue_fleet_native_consumer_hint.v1"
 NON_EXECUTABLE_QUEUE_ARTIFACT_STATUS = "NON_EXECUTABLE_QUEUE_ARTIFACT"
 PAUSED_EXACT_DISPATCH_GATE_STATUS = "PAUSED_EXACT_DISPATCH_GATE"
+MATERIALIZER_WORK_QUEUE_SCHEMA = "byte_shaving_materializer_work_queue.v1"
+FRONTIER_FINAL_RATE_ATTACK_CHILD_RUNS_SCHEMA = (
+    "frontier_final_rate_attack_post_feedback_child_queue_runs.v1"
+)
+EXPERIMENT_QUEUE_VALIDATION_REPORT_SCHEMA = "experiment_queue_validation_report.v1"
+OPTIMIZER_CANDIDATE_QUEUE_SCHEMA = "optimizer_candidate_queue_v1"
+OPTIMIZER_CANDIDATE_EXACT_READY_QUEUE_SCHEMA = (
+    "optimizer_candidate_exact_eval_ready_queue_v1"
+)
+REPORT_ONLY_NATIVE_CONSUMERS = {
+    "experiment_queue_observation.v1": (
+        "experiment_queue_observation_report",
+        "read_as_queue_observation_report_not_experiment_queue",
+    ),
+    "experiment_queue_performance_summary.v1": (
+        "experiment_queue_performance_report",
+        "read_as_queue_performance_report_not_experiment_queue",
+    ),
+    "experiment_queue_fleet_status.v1": (
+        "experiment_queue_fleet_status_report",
+        "read_as_queue_fleet_status_report_not_experiment_queue",
+    ),
+    "experiment_queue_summary.v1": (
+        "experiment_queue_summary_report",
+        "read_as_queue_summary_report_not_experiment_queue",
+    ),
+}
 EXACT_DISPATCH_QUEUE_ID_MARKERS = ("exact_eval_dispatch", "blocked_exact_eval_dispatch")
 EXACT_DISPATCH_STEP_ID_MARKERS = ("dispatch_exact_eval",)
 EXACT_DISPATCH_COMMAND_MARKERS = (
@@ -203,6 +231,172 @@ def _queue_command(
     ]
 
 
+def _slug(text: str, *, limit: int = 48) -> str:
+    out = []
+    previous_underscore = False
+    for char in text.lower():
+        if char.isalnum():
+            out.append(char)
+            previous_underscore = False
+        elif not previous_underscore:
+            out.append("_")
+            previous_underscore = True
+    slug = "".join(out).strip("_")
+    return (slug or "queue")[:limit].strip("_") or "queue"
+
+
+def _materializer_execution_queue_ref(path: Path) -> Path:
+    stem = path.stem
+    stem = (
+        stem.replace("work_queue", "execution_queue", 1)
+        if "work_queue" in stem
+        else f"{stem}_execution_queue"
+    )
+    return path.with_name(f"{stem}.json")
+
+
+def _submission_closure_dir(path: Path) -> Path:
+    return path.parent / f"{path.stem}_submission_closure"
+
+
+def _exact_eval_consumer_queue_ref(path: Path) -> Path:
+    stem = path.stem
+    stem = (
+        stem.replace("exact_ready_queue", "exact_eval_consumer_queue", 1)
+        if "exact_ready_queue" in stem
+        else f"{stem}_exact_eval_consumer_queue"
+    )
+    return path.with_name(f"{stem}.json")
+
+
+def _native_consumer_hint(
+    repo_root: str | Path,
+    path: Path,
+    artifact_schema: str,
+) -> dict[str, Any]:
+    repo = Path(repo_root)
+    base: dict[str, Any] = {
+        "schema": QUEUE_FLEET_NATIVE_CONSUMER_HINT_SCHEMA,
+        "artifact_schema": artifact_schema,
+        "artifact_path": repo_rel(path, repo),
+        "known_native_consumer": False,
+        "consumer_kind": "unknown",
+        "recommended_action": "route_to_native_consumer_not_experiment_queue_supervisor",
+        "allowed_use": "local_artifact_routing_hint_only",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_exact_eval_authority",
+        **FALSE_AUTHORITY,
+    }
+    if artifact_schema == MATERIALIZER_WORK_QUEUE_SCHEMA:
+        output_path = _materializer_execution_queue_ref(path)
+        digest = hashlib.sha256(repo_rel(path, repo).encode("utf-8")).hexdigest()[:10]
+        queue_id = f"materializer_exec_{_slug(path.stem, limit=38)}_{digest}"
+        command = [
+            ".venv/bin/python",
+            "tools/build_materializer_execution_queue.py",
+            "--work-queue",
+            repo_rel(path, repo),
+            "--queue-out",
+            repo_rel(output_path, repo),
+            "--queue-id",
+            queue_id,
+            "--local-cpu-concurrency",
+            "auto",
+        ]
+        return {
+            **base,
+            "known_native_consumer": True,
+            "consumer_kind": "byte_shaving_materializer_work_queue",
+            "recommended_action": (
+                "build_materializer_execution_queue_then_supervise_with_experiment_queue"
+            ),
+            "native_consumer_command": command,
+            "output_queue_path": repo_rel(output_path, repo),
+            "output_queue_schema": QUEUE_SCHEMA,
+            "output_queue_id": queue_id,
+        }
+    if artifact_schema == OPTIMIZER_CANDIDATE_QUEUE_SCHEMA:
+        if path.name == "closed_source_queue.json" or "submission_closure" in path.parts:
+            return {
+                **base,
+                "known_native_consumer": True,
+                "consumer_kind": "materializer_submission_closed_source_queue",
+                "recommended_action": "read_as_closed_submission_source_queue",
+            }
+        output_dir = _submission_closure_dir(path)
+        command = [
+            ".venv/bin/python",
+            "tools/build_materializer_submission_closure.py",
+            "--source-queue",
+            repo_rel(path, repo),
+            "--submission-dir-out",
+            repo_rel(output_dir / "submission", repo),
+            "--closed-source-queue-out",
+            repo_rel(output_dir / "closed_source_queue.json", repo),
+            "--closure-report-out",
+            repo_rel(output_dir / "submission_closure_report.json", repo),
+        ]
+        return {
+            **base,
+            "known_native_consumer": True,
+            "consumer_kind": "optimizer_candidate_submission_closure",
+            "recommended_action": "build_submission_runtime_closure_before_exact_readiness",
+            "native_consumer_command": command,
+            "output_report_path": repo_rel(output_dir / "submission_closure_report.json", repo),
+            "closed_source_queue_path": repo_rel(output_dir / "closed_source_queue.json", repo),
+        }
+    if artifact_schema == OPTIMIZER_CANDIDATE_EXACT_READY_QUEUE_SCHEMA:
+        output_path = _exact_eval_consumer_queue_ref(path)
+        output_report = output_path.with_suffix(".consumer_report.json")
+        digest = hashlib.sha256(repo_rel(path, repo).encode("utf-8")).hexdigest()[:10]
+        queue_id = f"exact_eval_consumer_{_slug(path.stem, limit=36)}_{digest}"
+        command = [
+            ".venv/bin/python",
+            "tools/build_materializer_exact_eval_consumer.py",
+            "--exact-ready-queue",
+            repo_rel(path, repo),
+            "--consumer-report-out",
+            repo_rel(output_report, repo),
+            "--experiment-queue-out",
+            repo_rel(output_path, repo),
+            "--queue-id",
+            queue_id,
+        ]
+        return {
+            **base,
+            "known_native_consumer": True,
+            "consumer_kind": "optimizer_candidate_exact_eval_consumer",
+            "recommended_action": "build_paused_exact_eval_consumer_queue",
+            "native_consumer_command": command,
+            "output_queue_path": repo_rel(output_path, repo),
+            "output_queue_schema": QUEUE_SCHEMA,
+            "output_queue_id": queue_id,
+            "output_report_path": repo_rel(output_report, repo),
+        }
+    if artifact_schema == FRONTIER_FINAL_RATE_ATTACK_CHILD_RUNS_SCHEMA:
+        return {
+            **base,
+            "known_native_consumer": True,
+            "consumer_kind": "frontier_final_rate_attack_child_run_manifest",
+            "recommended_action": "read_as_child_queue_run_manifest_not_experiment_queue",
+        }
+    if artifact_schema == EXPERIMENT_QUEUE_VALIDATION_REPORT_SCHEMA:
+        return {
+            **base,
+            "known_native_consumer": True,
+            "consumer_kind": "experiment_queue_validation_report",
+            "recommended_action": "use_as_validation_report_not_experiment_queue_supervisor",
+        }
+    if artifact_schema in REPORT_ONLY_NATIVE_CONSUMERS:
+        consumer_kind, recommended_action = REPORT_ONLY_NATIVE_CONSUMERS[artifact_schema]
+        return {
+            **base,
+            "known_native_consumer": True,
+            "consumer_kind": consumer_kind,
+            "recommended_action": recommended_action,
+        }
+    return base
+
+
 def _supervisor_output_dir(
     repo_root: str | Path,
     output_root: str | Path,
@@ -312,6 +506,9 @@ def _compact_row_sample(row: Mapping[str, Any]) -> dict[str, Any]:
         "blockers",
         "status_counts",
         "recommended_action",
+        "ignored_for_supervision",
+        "native_consumer",
+        "native_consumer_command",
         "conflict_status_before",
         "identity_conflict",
     ):
@@ -355,16 +552,19 @@ def queue_fleet_row(
         artifact_schema = artifact_metadata.get("artifact_schema")
         if artifact_schema and artifact_schema != QUEUE_SCHEMA:
             status = NON_EXECUTABLE_QUEUE_ARTIFACT_STATUS
+            native_consumer = _native_consumer_hint(repo, path, str(artifact_schema))
+            recommended_action = artifact_metadata.get("recommended_action") or native_consumer.get(
+                "recommended_action"
+            )
             return {
                 **base,
                 "status": status,
                 "priority": _priority(status),
                 "artifact_schema": artifact_schema,
                 "ignored_for_supervision": True,
-                "recommended_action": artifact_metadata.get(
-                    "recommended_action",
-                    "route_to_native_consumer_not_experiment_queue_supervisor",
-                ),
+                "recommended_action": recommended_action,
+                "native_consumer": native_consumer,
+                "native_consumer_command": native_consumer.get("native_consumer_command"),
                 "blockers": [],
             }
         return {
@@ -524,6 +724,18 @@ def queue_fleet_status(
     ]
     visible_rows = rows[:row_limit] if row_limit is not None else rows
     recovery_statuses = {"NEEDS_RECOVERY", "NEEDS_INIT"}
+    native_consumer_rows = [
+        row
+        for row in rows
+        if row.get("status") == NON_EXECUTABLE_QUEUE_ARTIFACT_STATUS
+        and isinstance(row.get("native_consumer"), Mapping)
+    ]
+    known_native_consumer_rows = [
+        row
+        for row in native_consumer_rows
+        if isinstance(row.get("native_consumer"), Mapping)
+        and row["native_consumer"].get("known_native_consumer") is True
+    ]
     return {
         "schema": QUEUE_FLEET_STATUS_SCHEMA,
         "generated_at_utc": utc_now(),
@@ -542,6 +754,8 @@ def queue_fleet_status(
         "needs_recovery_count": counts.get("NEEDS_RECOVERY", 0) + counts.get("NEEDS_INIT", 0),
         "invalid_queue_count": counts.get("INVALID_QUEUE", 0),
         "non_executable_artifact_count": counts.get(NON_EXECUTABLE_QUEUE_ARTIFACT_STATUS, 0),
+        "native_consumer_artifact_count": len(native_consumer_rows),
+        "known_native_consumer_artifact_count": len(known_native_consumer_rows),
         "row_count": len(visible_rows),
         "rows": visible_rows,
         "next_supervise_commands": [
@@ -570,6 +784,12 @@ def queue_fleet_status(
             )
             for row in rows
             if row.get("status") == "NEEDS_INIT" and row.get("state")
+        ][:8],
+        "next_native_consumer_commands": [
+            row["native_consumer_command"]
+            for row in rows
+            if row.get("status") == NON_EXECUTABLE_QUEUE_ARTIFACT_STATUS
+            and row.get("native_consumer_command")
         ][:8],
         "allowed_use": "queue_fleet_local_telemetry_and_bounded_supervision_only",
         "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_exact_eval_authority",

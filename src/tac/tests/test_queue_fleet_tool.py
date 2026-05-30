@@ -10,8 +10,27 @@ from comma_lab.scheduler.experiment_queue import connect_state, initialize_queue
 
 def _load_queue_fleet_tool():
     repo = Path(__file__).resolve().parents[3]
+    if str(repo) not in sys.path:
+        sys.path.insert(0, str(repo))
     path = repo / "tools" / "queue_fleet.py"
     spec = importlib.util.spec_from_file_location("queue_fleet_tool_under_test", path)
+    assert spec is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def _load_build_materializer_execution_queue_tool():
+    repo = Path(__file__).resolve().parents[3]
+    if str(repo) not in sys.path:
+        sys.path.insert(0, str(repo))
+    path = repo / "tools" / "build_materializer_execution_queue.py"
+    spec = importlib.util.spec_from_file_location(
+        "build_materializer_execution_queue_tool_under_test",
+        path,
+    )
     assert spec is not None
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
@@ -128,12 +147,30 @@ def test_queue_fleet_treats_native_work_queue_as_non_executable_artifact(
     assert payload["row_count"] == 0
     assert payload["invalid_queue_count"] == 0
     assert payload["non_executable_artifact_count"] == 1
+    assert payload["native_consumer_artifact_count"] == 1
+    assert payload["known_native_consumer_artifact_count"] == 1
     assert payload["needs_recovery_count"] == 0
     assert payload["next_supervise_commands"] == []
     assert payload["next_init_commands"] == []
+    assert payload["next_native_consumer_commands"]
+    assert "tools/build_materializer_execution_queue.py" in payload[
+        "next_native_consumer_commands"
+    ][0]
     samples = payload["status_samples"]["NON_EXECUTABLE_QUEUE_ARTIFACT"]
     assert samples[0]["artifact_schema"] == "byte_shaving_materializer_work_queue.v1"
-    assert samples[0]["recommended_action"] == "route_to_native_consumer_not_experiment_queue_supervisor"
+    assert samples[0]["ignored_for_supervision"] is True
+    assert samples[0]["recommended_action"] == (
+        "build_materializer_execution_queue_then_supervise_with_experiment_queue"
+    )
+    assert samples[0]["native_consumer"]["known_native_consumer"] is True
+    assert samples[0]["native_consumer"]["score_claim"] is False
+    assert samples[0]["native_consumer"]["promotion_eligible"] is False
+    assert samples[0]["native_consumer"]["consumer_kind"] == (
+        "byte_shaving_materializer_work_queue"
+    )
+    assert samples[0]["native_consumer_command"] == payload[
+        "next_native_consumer_commands"
+    ][0]
 
 
 def test_queue_fleet_treats_queue_validation_report_as_non_executable_artifact(
@@ -170,9 +207,140 @@ def test_queue_fleet_treats_queue_validation_report_as_non_executable_artifact(
     assert rc == 0
     assert payload["invalid_queue_count"] == 0
     assert payload["non_executable_artifact_count"] == 1
+    assert payload["known_native_consumer_artifact_count"] == 1
+    assert payload["next_native_consumer_commands"] == []
     samples = payload["status_samples"]["NON_EXECUTABLE_QUEUE_ARTIFACT"]
     assert samples[0]["artifact_schema"] == "experiment_queue_validation_report.v1"
     assert samples[0]["recommended_action"] == "use_as_validation_report_not_experiment_queue_supervisor"
+    assert samples[0]["native_consumer"]["consumer_kind"] == "experiment_queue_validation_report"
+
+
+def test_queue_fleet_routes_optimizer_candidate_queue_to_submission_closure(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    tool = _load_queue_fleet_tool()
+    candidate_queue = tmp_path / "optimizer_candidate_queue.json"
+    candidate_queue.write_text(
+        json.dumps({"schema": "optimizer_candidate_queue_v1", "top_k": []}),
+        encoding="utf-8",
+    )
+
+    rc = tool.main(
+        [
+            "--root",
+            str(tmp_path),
+            "--row-limit",
+            "0",
+            "status",
+            "--format",
+            "json",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert rc == 0
+    assert payload["known_native_consumer_artifact_count"] == 1
+    assert payload["next_native_consumer_commands"]
+    command = payload["next_native_consumer_commands"][0]
+    assert "tools/build_materializer_submission_closure.py" in command
+    samples = payload["status_samples"]["NON_EXECUTABLE_QUEUE_ARTIFACT"]
+    assert samples[0]["native_consumer"]["consumer_kind"] == (
+        "optimizer_candidate_submission_closure"
+    )
+    assert samples[0]["native_consumer"]["ready_for_exact_eval_dispatch"] is False
+
+
+def test_queue_fleet_routes_exact_ready_queue_to_paused_consumer_queue(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    tool = _load_queue_fleet_tool()
+    exact_ready_queue = tmp_path / "blocked_exact_ready_queue.json"
+    exact_ready_queue.write_text(
+        json.dumps(
+            {
+                "schema": "optimizer_candidate_exact_eval_ready_queue_v1",
+                "rows": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rc = tool.main(
+        [
+            "--root",
+            str(tmp_path),
+            "--row-limit",
+            "0",
+            "status",
+            "--format",
+            "json",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert rc == 0
+    assert payload["known_native_consumer_artifact_count"] == 1
+    command = payload["next_native_consumer_commands"][0]
+    assert "tools/build_materializer_exact_eval_consumer.py" in command
+    samples = payload["status_samples"]["NON_EXECUTABLE_QUEUE_ARTIFACT"]
+    assert samples[0]["native_consumer"]["consumer_kind"] == (
+        "optimizer_candidate_exact_eval_consumer"
+    )
+    assert samples[0]["native_consumer"]["score_claim"] is False
+
+
+def test_build_materializer_execution_queue_tool_consumes_native_work_queue(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    tool = _load_build_materializer_execution_queue_tool()
+    work_queue = tmp_path / "materializer_work_queue.json"
+    queue_out = tmp_path / "materializer_execution_queue.json"
+    work_queue.write_text(
+        json.dumps(
+            {
+                "schema": "byte_shaving_materializer_work_queue.v1",
+                "rows": [
+                    {
+                        "work_id": "unit_work",
+                        "executable": True,
+                        "command": [sys.executable, "-c", "print('ok')"],
+                        "resource_kind": "local_cpu",
+                        "postconditions": [],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rc = tool.main(
+        [
+            "--work-queue",
+            str(work_queue),
+            "--queue-out",
+            str(queue_out),
+            "--queue-id",
+            "unit_materializer_exec",
+            "--local-cpu-concurrency",
+            "2",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+    queue = json.loads(queue_out.read_text(encoding="utf-8"))
+
+    assert rc == 0
+    assert payload["schema"] == "materializer_execution_queue_build_result.v1"
+    assert payload["source_work_queue_schema"] == "byte_shaving_materializer_work_queue.v1"
+    assert payload["queue_schema"] == "experiment_queue.v1"
+    assert payload["score_claim"] is False
+    assert payload["promotion_eligible"] is False
+    assert queue["schema"] == "experiment_queue.v1"
+    assert queue["queue_id"] == "unit_materializer_exec"
+    assert queue["controls"]["max_concurrency"]["local_cpu"] == 2
+    assert queue["experiments"][0]["metadata"]["work_id"] == "unit_work"
 
 
 def test_queue_fleet_still_flags_malformed_experiment_queue(tmp_path: Path, capsys) -> None:
