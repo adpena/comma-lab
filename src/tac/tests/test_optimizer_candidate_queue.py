@@ -2124,6 +2124,20 @@ def test_pr103_hidden_gem_release_manifest_becomes_exact_eval_planning_row(
     assert row["charged_bits_changed"] is True
     assert row["runtime_consumed_section_changed"] is True
     assert row["decoded_state_changed"] is True
+    assert row["archive_bound_candidate_contract_schema"] == (
+        ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+    )
+    assert row["archive_bound_candidate_contract_surface_schema"] == (
+        ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA
+    )
+    contract = row["archive_bound_candidate_contract"]
+    assert contract["family_id"] == "pr103_ac_byte_hidden_gem"
+    assert contract["candidate_chain_id"] == row["candidate_id"]
+    assert contract["entropy_position_label"] == "coder_boundary"
+    assert contract["byte_closed_candidate_materialized"] is True
+    assert contract["ready_for_exact_eval_dispatch"] is False
+    assert contract["score_claim"] is False
+    assert "archive_bound_receiver_runtime_proof_missing" in contract["blockers"]
 
 
 def test_queue_sanitizes_non_finite_legacy_telemetry(tmp_path: Path) -> None:

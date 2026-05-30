@@ -22,6 +22,7 @@ from typing import Any
 from tac.exact_eval_custody import CONTEST_EXACT_SAMPLE_COUNT
 from tac.optimization.archive_bound_candidate_contract import (
     ArchiveBoundCandidateContractError,
+    archive_bound_candidate_contract_fields_for_row,
     has_archive_bound_candidate_contract_payload,
     selected_archive_bound_candidate_contract_from_payload,
 )
@@ -1582,6 +1583,11 @@ def _pr103_hidden_gem_candidates(
             "candidate_archive_bytes": archive_bytes,
             "source_archive_sha256": _archive_record_sha(source_archive),
             "source_archive_bytes": _archive_record_bytes(source_archive),
+            "archive_native_transform_kind": "pr103_ac_byte_hidden_gem",
+            "entropy_position_label": "coder_boundary",
+            "byte_closed_candidate_emitted": True,
+            "byte_closed_candidate_materialized": True,
+            "candidate_archive_materialized": True,
             "score_affecting_payload_changed": True,
             "charged_bits_changed": True,
             "runtime_consumed_section_changed": bool(
@@ -1606,6 +1612,16 @@ def _pr103_hidden_gem_candidates(
             "requires_exact_eval_readiness_gate",
             "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
         ],
+    )
+    row.update(
+        archive_bound_candidate_contract_fields_for_row(
+            row,
+            repo_root=repo_root,
+            selected_transform_kind="pr103_ac_byte_hidden_gem",
+            family_id="pr103_ac_byte_hidden_gem",
+            candidate_chain_id=candidate_id,
+            entropy_position_label="coder_boundary",
+        )
     )
     return [row]
 
