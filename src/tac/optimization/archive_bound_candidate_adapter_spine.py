@@ -17,6 +17,7 @@ from tac.optimization.archive_bound_candidate_contract import (
     ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA,
     ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA,
     archive_bound_candidate_contract_fields_for_row,
+    archive_bound_candidate_contract_stale_field_blockers,
 )
 from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY
 from tac.optimization.proxy_candidate_contract import (
@@ -24,20 +25,16 @@ from tac.optimization.proxy_candidate_contract import (
     require_no_truthy_authority_fields,
 )
 
-ARCHIVE_BOUND_CANDIDATE_REPLAY_BUNDLE_SCHEMA = (
-    "tac_archive_bound_candidate_replay_bundle.v1"
-)
-ARCHIVE_BOUND_CANDIDATE_MLX_TRIAGE_REQUEST_SCHEMA = (
-    "tac_archive_bound_candidate_mlx_triage_request.v1"
-)
-ARCHIVE_BOUND_CANDIDATE_RECEIVER_PROOF_GATE_SCHEMA = (
-    "tac_archive_bound_candidate_receiver_proof_gate.v1"
-)
-ARCHIVE_BOUND_CANDIDATE_EXACT_BLOCKER_SCHEMA = (
-    "tac_archive_bound_candidate_exact_axis_blocker.v1"
-)
-ARCHIVE_BOUND_CANDIDATE_POSTERIOR_HOOK_SCHEMA = (
-    "tac_archive_bound_candidate_posterior_update_hook.v1"
+ARCHIVE_BOUND_CANDIDATE_REPLAY_BUNDLE_SCHEMA = "tac_archive_bound_candidate_replay_bundle.v1"
+ARCHIVE_BOUND_CANDIDATE_MLX_TRIAGE_REQUEST_SCHEMA = "tac_archive_bound_candidate_mlx_triage_request.v1"
+ARCHIVE_BOUND_CANDIDATE_RECEIVER_PROOF_GATE_SCHEMA = "tac_archive_bound_candidate_receiver_proof_gate.v1"
+ARCHIVE_BOUND_CANDIDATE_EXACT_BLOCKER_SCHEMA = "tac_archive_bound_candidate_exact_axis_blocker.v1"
+ARCHIVE_BOUND_CANDIDATE_POSTERIOR_HOOK_SCHEMA = "tac_archive_bound_candidate_posterior_update_hook.v1"
+_MLX_TRIAGE_IGNORED_EXACT_AXIS_BLOCKERS: frozenset[str] = frozenset(
+    {
+        "contest_cpu_or_cuda_exact_axis_payload_required",
+        "lane_dispatch_claim_required_before_exact_eval",
+    }
 )
 
 
@@ -84,9 +81,7 @@ def _candidate_archive(row: Mapping[str, Any]) -> Mapping[str, Any]:
 
 
 def _runtime_proof_path(row: Mapping[str, Any]) -> str:
-    value = row.get("runtime_consumption_proof_path") or _contract(row).get(
-        "runtime_consumption_proof_path"
-    )
+    value = row.get("runtime_consumption_proof_path") or _contract(row).get("runtime_consumption_proof_path")
     return value.strip() if isinstance(value, str) else ""
 
 
@@ -116,9 +111,7 @@ def _replay_bundle(row: Mapping[str, Any], *, index: int) -> dict[str, Any]:
         "candidate_archive": dict(candidate_archive),
         "source_archive": dict(source_archive),
         "runtime_consumption_proof_path": _runtime_proof_path(row),
-        "runtime_adapter_manifest": dict(
-            _mapping(contract.get("runtime_adapter_manifest"))
-        ),
+        "runtime_adapter_manifest": dict(_mapping(contract.get("runtime_adapter_manifest"))),
         "replay_argv": _string_list(row.get("replay_argv")),
         "replay_env": dict(_mapping(row.get("replay_env"))),
         "input_artifacts": _string_list(row.get("input_artifacts")),
@@ -132,14 +125,45 @@ def _replay_bundle(row: Mapping[str, Any], *, index: int) -> dict[str, Any]:
 
 def _mlx_triage_request(row: Mapping[str, Any], *, index: int) -> dict[str, Any]:
     command = _string_list(row.get("mlx_triage_argv") or row.get("mlx_probe_argv"))
-    blockers = [] if command else ["mlx_local_triage_command_missing"]
+    contract = _contract(row)
+    archive_file_custody = _mapping(contract.get("archive_file_custody"))
+    stale_blockers = archive_bound_candidate_contract_stale_field_blockers(
+        row,
+        contract=contract,
+    )
+    contract_blockers = [
+        blocker
+        for blocker in _string_list(contract.get("blockers"))
+        if blocker not in _MLX_TRIAGE_IGNORED_EXACT_AXIS_BLOCKERS
+    ]
+    ready_for_exact_handoff = contract.get("archive_bound_candidate_ready_for_exact_handoff") is True
+    custody_complete = archive_file_custody.get("custody_complete") is True
+    proof_ready = contract.get("runtime_consumption_proof_ready") is True
+    receiver_ok = contract.get("receiver_contract_satisfied") is True
+    blockers = ordered_unique(
+        [
+            *([] if command else ["mlx_local_triage_command_missing"]),
+            *([] if contract else ["archive_bound_candidate_contract_missing"]),
+            *([] if ready_for_exact_handoff else ["archive_bound_candidate_not_ready_for_mlx_triage"]),
+            *([] if custody_complete else ["archive_bound_candidate_file_custody_incomplete"]),
+            *([] if proof_ready else ["receiver_runtime_proof_missing"]),
+            *([] if receiver_ok else ["receiver_contract_not_satisfied"]),
+            *stale_blockers,
+            *contract_blockers,
+        ]
+    )
     return {
         "schema": ARCHIVE_BOUND_CANDIDATE_MLX_TRIAGE_REQUEST_SCHEMA,
         "candidate_id": _row_id(row, index),
-        "contract_key": _contract(row).get("contract_key"),
+        "contract_key": contract.get("contract_key"),
         "mlx_triage_argv": command,
+        "archive_bound_candidate_ready_for_exact_handoff": ready_for_exact_handoff,
+        "archive_file_custody_complete": custody_complete,
+        "runtime_consumption_proof_ready": proof_ready,
+        "receiver_contract_satisfied": receiver_ok,
+        "contract_blockers": ordered_unique(contract_blockers),
         "blockers": blockers,
-        "ready_for_mlx_local_triage": bool(command),
+        "ready_for_mlx_local_triage": bool(command) and not blockers,
         "score_authority": False,
         "allowed_use": "macos_mlx_research_signal_for_budget_routing_only",
         "forbidden_use": "score_claim_promotion_rank_or_kill_authority",
@@ -204,9 +228,7 @@ def _posterior_hook(row: Mapping[str, Any], *, index: int) -> dict[str, Any]:
         "family_id": contract.get("family_id"),
         "entropy_position_label": contract.get("entropy_position_label"),
         "archive_substrate_tags": _string_list(contract.get("archive_substrate_tags")),
-        "posterior_update_trigger": (
-            "append_after_mlx_receiver_preclaim_or_exact_axis_result"
-        ),
+        "posterior_update_trigger": ("append_after_mlx_receiver_preclaim_or_exact_axis_result"),
         "negative_result_demotes_family_stage_scope": True,
         "allowed_use": "continual_learning_append_hook_only",
         "forbidden_use": "score_claim_or_dispatch_authority",
@@ -223,15 +245,11 @@ def build_archive_bound_candidate_adapter_package(
     """Run one adapter and emit the complete reusable candidate package."""
 
     if not isinstance(adapter, ArchiveBoundCandidateAdapter):
-        raise ArchiveBoundCandidateAdapterError(
-            "adapter must satisfy ArchiveBoundCandidateAdapter Protocol"
-        )
+        raise ArchiveBoundCandidateAdapterError("adapter must satisfy ArchiveBoundCandidateAdapter Protocol")
     adapter_context = dict(context or {})
     raw_rows = adapter.emit_archive_bound_candidate_rows(adapter_context)
     if not isinstance(raw_rows, Sequence) or isinstance(raw_rows, bytes | bytearray):
-        raise ArchiveBoundCandidateAdapterError(
-            "emit_archive_bound_candidate_rows must return a sequence of mappings"
-        )
+        raise ArchiveBoundCandidateAdapterError("emit_archive_bound_candidate_rows must return a sequence of mappings")
     rows: list[dict[str, Any]] = []
     surfaces: list[dict[str, Any]] = []
     for index, raw_row in enumerate(raw_rows):
@@ -254,21 +272,13 @@ def build_archive_bound_candidate_adapter_package(
         )
         surface = row["archive_bound_candidate_contract_surface"]
         if surface.get("schema") != ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA:
-            raise ArchiveBoundCandidateAdapterError(
-                f"row {index} emitted invalid archive-bound contract surface"
-            )
+            raise ArchiveBoundCandidateAdapterError(f"row {index} emitted invalid archive-bound contract surface")
         rows.append(row)
         surfaces.append(surface)
     replay_bundles = [_replay_bundle(row, index=index) for index, row in enumerate(rows)]
-    mlx_triage_requests = [
-        _mlx_triage_request(row, index=index) for index, row in enumerate(rows)
-    ]
-    receiver_proof_gates = [
-        _receiver_proof_gate(row, index=index) for index, row in enumerate(rows)
-    ]
-    exact_axis_blockers = [
-        _exact_axis_blocker(row, index=index) for index, row in enumerate(rows)
-    ]
+    mlx_triage_requests = [_mlx_triage_request(row, index=index) for index, row in enumerate(rows)]
+    receiver_proof_gates = [_receiver_proof_gate(row, index=index) for index, row in enumerate(rows)]
+    exact_axis_blockers = [_exact_axis_blocker(row, index=index) for index, row in enumerate(rows)]
     posterior_hooks = [_posterior_hook(row, index=index) for index, row in enumerate(rows)]
     package = {
         "schema": ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA,
@@ -283,20 +293,13 @@ def build_archive_bound_candidate_adapter_package(
         "exact_axis_blockers": exact_axis_blockers,
         "posterior_update_hooks": posterior_hooks,
         "ready_contract_count": sum(
-            1
-            for row in rows
-            if _contract(row).get("archive_bound_candidate_ready_for_exact_handoff")
-            is True
+            1 for row in rows if _contract(row).get("archive_bound_candidate_ready_for_exact_handoff") is True
         ),
         "mlx_triage_ready_count": sum(
-            1
-            for row in mlx_triage_requests
-            if row.get("ready_for_mlx_local_triage") is True
+            1 for row in mlx_triage_requests if row.get("ready_for_mlx_local_triage") is True
         ),
         "receiver_proof_gate_passed_count": sum(
-            1
-            for row in receiver_proof_gates
-            if row.get("receiver_proof_gate_passed") is True
+            1 for row in receiver_proof_gates if row.get("receiver_proof_gate_passed") is True
         ),
         "allowed_use": "archive_bound_candidate_pipeline_package_only",
         "forbidden_use": "score_claim_budget_spend_or_dispatch_authority",
