@@ -63135,11 +63135,11 @@
       "id": "lane_yousfi_cascade_tier_1_pose_axis_canonical_helpers_20260530",
       "name": "Yousfi-cascade tier-1 pose-axis canonical helpers (A+B+C umbrella)",
       "phase": 3.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "Umbrella lane for 3 deliverable lanes; impl_complete=true verified by aggregate 81/81 tests pass across all sub-lanes; sister-disjoint with 4 parallel in-flight subagents; canonical apparatus mutation chain complete (3 equations + 4 lanes + landing memo + retroactive sweep)"
         },
         "real_archive_empirical": {
           "status": false,
@@ -63162,8 +63162,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_yousfi_cascade_tier_1_pose_axis_canonical_helpers_a_plus_b_plus_c_landed_20260530.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -63203,8 +63203,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_yousfi_cascade_tier_1_pose_axis_canonical_helpers_a_plus_b_plus_c_landed_20260530.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -63244,8 +63244,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_yousfi_cascade_tier_1_pose_axis_canonical_helpers_a_plus_b_plus_c_landed_20260530.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -63285,8 +63285,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_yousfi_cascade_tier_1_pose_axis_canonical_helpers_a_plus_b_plus_c_landed_20260530.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -63303,5 +63303,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-30T20:04:20Z"
+  "updated_at": "2026-05-30T20:10:29Z"
 }
