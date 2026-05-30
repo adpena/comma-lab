@@ -75,6 +75,7 @@ def write_rgb_pair_to_raw(
     *,
     input_range: str = "unit",
     resize_mode: str = "bicubic",
+    apply_pr98_l28_channel_postprocess: bool = False,
 ) -> int:
     """Append one rendered frame-pair to an open contest ``.raw`` file.
 
@@ -84,6 +85,22 @@ def write_rgb_pair_to_raw(
         input_range: ``"unit"`` for tensors in ``[0, 1]`` or ``"byte"`` for
             tensors already in ``[0, 255]``.
         resize_mode: interpolation mode for scorer-resolution outputs.
+        apply_pr98_l28_channel_postprocess: opt-in canonical PR98 third-prize
+            decode-side channel postprocess per CLAUDE.md HNeRV parity
+            discipline L28 (``pr95_family_l28_decode_side_channel_postprocess_v1``).
+            When True, AFTER bicubic upsample to CAMERA_HW and BEFORE clamp +
+            uint8 cast, subtracts 1.0 from frame_0 RED channel, frame_0 BLUE
+            channel, and frame_1 GREEN channel. Per CLAUDE.md L28: "0 archive
+            bytes, ~-0.0001 to -0.0005 score points." Default ``False``
+            preserves backward compatibility for sister substrates per
+            CLAUDE.md "UNIQUE-AND-COMPLETE-PER-METHOD operating mode"
+            (the canonical fork-vs-canonical decision per Catalog #290 is
+            ADOPT_CANONICAL_BECAUSE_SERVES at the helper-extension level so
+            substrates opt in per their per-substrate empirical evidence).
+            Canonical PR101 reference:
+            ``experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/source/submissions/hnerv_ft_microcodec/inflate.py``
+            lines 49-51 (``up[:, 0, 0].sub_(1.0); up[:, 0, 2].sub_(1.0);
+            up[:, 1, 1].sub_(1.0)``).
 
     Returns:
         Number of frames written, always 2 for valid inputs.
@@ -101,6 +118,22 @@ def write_rgb_pair_to_raw(
         raise ValueError(f"input_range must be 'unit' or 'byte', got {input_range!r}")
     if tuple(frames.shape[-2:]) != CAMERA_HW:
         frames = F.interpolate(frames, size=CAMERA_HW, mode=resize_mode, align_corners=False)
+    if apply_pr98_l28_channel_postprocess:
+        # Canonical PR98 third-prize decode-side channel postprocess per
+        # CLAUDE.md HNeRV parity discipline L28
+        # (pr95_family_l28_decode_side_channel_postprocess_v1).
+        # ``frames`` here is shape (2, 3, CAMERA_H, CAMERA_W) — index 0 is
+        # frame_0 of the pair, index 1 is frame_1. Per PR101 canonical
+        # inflate.py:49-51 reference, subtract 1.0 from:
+        #   frame_0 RED channel   (frames[0, 0])
+        #   frame_0 BLUE channel  (frames[0, 2])
+        #   frame_1 GREEN channel (frames[1, 1])
+        # The subtraction happens on the [0, 255]-scale frames AFTER
+        # bicubic upsample and BEFORE clamp + uint8 cast, exactly matching
+        # the PR101 reference at lines 49-51 + 52-60.
+        frames[0, 0].sub_(1.0)
+        frames[0, 2].sub_(1.0)
+        frames[1, 1].sub_(1.0)
     frames_u8 = (
         frames.clamp(0.0, 255.0)
         .permute(0, 2, 3, 1)

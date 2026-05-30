@@ -958,8 +958,15 @@ def _serialize_pair_wavelet_pyramid(
           deepest first) holding (LH, HL, HH) coefficients as numpy float32.
         - ``frame_1_details``: list of ``WaveletDetail2D`` mirroring above.
 
-    Returns brotli-compressed (quality=9) bytes per the canonical sister
-    DreamerV3 + Z8 archive grammar discipline.
+    Returns brotli-compressed (quality=11) bytes per canonical PR95-family
+    L32 (``pr95_family_l32_brotli_quality_11_max_v1``). Bumped from q=9 to
+    q=11 per the canonical PR-or-greater binding-depth standing directive
+    2026-05-30 + the operator-routed Yousfi-cascade TOP-1 quick-wins
+    bolt-on cascade. Per CLAUDE.md HNeRV parity discipline L32:
+    "5-10% per-pair byte savings; compression time is offline overhead so
+    quality=11 is free at deploy time." This is the dominant L32 surface
+    because the per-pair wavelet pyramid blobs cover ~99.5% of the
+    canonical Z8HPC1 archive bytes at L1 SCAFFOLD scale.
     """
     import brotli  # type: ignore[import-not-found]
 
@@ -999,7 +1006,9 @@ def _serialize_pair_wavelet_pyramid(
                 parts.append(struct.pack("<HHH", *sub.shape))
                 parts.append(sub.tobytes(order="C"))
     raw = b"".join(parts)
-    return bytes(brotli.compress(raw, quality=9))
+    # L32 canonical PR95-family q=11 (was q=9). Per CLAUDE.md HNeRV parity
+    # L32 + canonical equation pr95_family_l32_brotli_quality_11_max_v1.
+    return bytes(brotli.compress(raw, quality=11))
 
 
 def _deserialize_pair_wavelet_pyramid(blob: bytes) -> dict[str, Any]:

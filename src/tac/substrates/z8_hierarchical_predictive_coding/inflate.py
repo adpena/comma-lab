@@ -24,6 +24,19 @@ discipline L7 (substrate engineering UNIQUE-IFIES); the canonical
 distinguishing feature here is the canonical quadruple compose pattern
 (M4 Mamba-2 + M5 Mallat DWT + M6 Wyner-Ziv + M8 ScoreAwareLevelLoss)
 per Catalog #312.
+
+## Canonical PR98 L28 decode-side channel postprocess (2026-05-30)
+
+Per CLAUDE.md HNeRV parity discipline L28
+(``pr95_family_l28_decode_side_channel_postprocess_v1``): inflate applies
+the canonical PR98 third-prize decode-side channel postprocess (subtract
+1.0 from frame_0 RED, frame_0 BLUE, frame_1 GREEN at camera resolution
+AFTER bicubic upsample and BEFORE clamp + uint8 cast). Per CLAUDE.md L28:
+"0 archive bytes, ~-0.0001 to -0.0005 score points." This is a canonical
+PR101 reference at inflate.py:49-51 (the L28 anchor lives in the canonical
+``write_rgb_pair_to_raw`` helper under
+``apply_pr98_l28_channel_postprocess=True`` per Catalog #290
+ADOPT_CANONICAL_BECAUSE_SERVES decision).
 """
 
 from __future__ import annotations
@@ -152,8 +165,18 @@ def inflate_one_video_from_archive_bytes(
             )
             rgb_0 = torch.from_numpy(rgb_0_nchw_np).to(_render_device)
             rgb_1 = torch.from_numpy(rgb_1_nchw_np).to(_render_device)
+            # L28 canonical PR98 third-prize decode-side channel postprocess
+            # opt-in per CLAUDE.md HNeRV parity discipline L28
+            # (pr95_family_l28_decode_side_channel_postprocess_v1).
+            # Applied at camera resolution AFTER bicubic upsample and BEFORE
+            # clamp + uint8 cast (the canonical helper handles the per-channel
+            # subtract internally per the PR101 inflate.py:49-51 reference).
             frames_written += write_rgb_pair_to_raw(
-                fh, rgb_0, rgb_1, input_range="unit"
+                fh,
+                rgb_0,
+                rgb_1,
+                input_range="unit",
+                apply_pr98_l28_channel_postprocess=True,
             )
 
     actual_bytes = output_raw_path.stat().st_size

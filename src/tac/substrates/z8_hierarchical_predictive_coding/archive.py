@@ -97,8 +97,20 @@ assert Z8HPC1_HEADER_SIZE == 62, (
     f"Z8HPC1 header size invariant: expected 62, got {Z8HPC1_HEADER_SIZE}"
 )
 
-# Deterministic brotli quality (matches DreamerV3 / Z6 / NSCS06 v8 siblings).
-_BROTLI_QUALITY: int = 9
+# Deterministic brotli quality. Bumped from q=9 to canonical PR95-family L32
+# (``pr95_family_l32_brotli_quality_11_max_v1``) value q=11 per the canonical
+# PR-or-greater binding-depth standing directive 2026-05-30 + the operator-routed
+# Yousfi-cascade TOP-1 quick-wins bolt-on cascade. Per CLAUDE.md HNeRV parity
+# discipline L32: "5-10% per-pair byte savings; compression time is offline
+# overhead so quality=11 is free at deploy time."
+#
+# Companion brotli q=11 bump lives in
+# ``canonical_quadruple_binding._serialize_pair_wavelet_pyramid`` (covers
+# 99.5% of the archive bytes — per-pair wavelet pyramid blobs). The q=11
+# bump here covers the decoder_blob + dreamer_state_blob sub-surfaces
+# (~0.07% of total archive bytes at L1 SCAFFOLD scale but the bump is
+# canonical and applies uniformly per PR101 L32 precedent).
+_BROTLI_QUALITY: int = 11
 
 # Canonical hierarchy depth at this schema version. Schema bump required to
 # change. Per design memo Section 8.
