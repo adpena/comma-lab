@@ -62760,6 +62760,88 @@
         }
       },
       "notes": "TaskList audit 50-task sample 2026-05-30; lane_class=research_substrate; research_only=true; mission_predicted_contribution=apparatus_maintenance; 0 FAKE_IMPL found; 28/50 ACTUALLY_DONE but TaskList still marks in_progress/pending = structural drift bug class; canonical fix recommended via in-source cascade_progress.py sister of z8 build_progress.py per Z8 Phase 2 standing directive 2026-05-29"
+    },
+    {
+      "id": "lane_deferred_items_feeder_audit_20260530",
+      "name": "Deferred items feeder audit (queue + DAG insertion)",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/deferred_items_feeder_audit_landed_20260530.md (canonical landing memo) + .omx/tmp/deferred_audit_phase{1,2,3,4}_*.json (audit artifacts)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_deferred_items_feeder_audit_landed_20260530.md memory entry + .omx/research/deferred_items_feeder_audit_landed_20260530.md research-dir memo"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; lane_class=research_substrate. First instance of recurring feeder pass per CLAUDE.md \"deferred items must feed canonical work queue and DAG\" standing directive 2026-05-30 (memory: feedback_deferred_items_must_feed_canonical_work_queue_and_dag_standing_directive_20260530.md). 7-surface audit produced 86 blocking probes + 159 deferred lanes inventory; honest Phase 2 classification of 43 recent DEFERs per CLAUDE.md NO FAKE IMPLEMENTATIONS rejected 4 false-positive REACTIVATION_CRITERION_MET pattern matches. Phase 3 queue insertion plan + Phase 4 6 DAG edges in landing memo."
+    },
+    {
+      "id": "lane_z8_yousfi_revisions_3_4_5_20260530",
+      "name": "Z8 M12a Yousfi Revisions #3+#4+#5 substrate-engineering scaffolding",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/z8_hierarchical_predictive_coding/canonical_quadruple_binding.py POSE_SIDE_INFO_DIM=6 + compute_pose_side_info_canonical_equation_150 + _deterministic_pose_proxy_6dim + _project_pose_6dim_to_side_info_shape + pose_side_info_canonical_equation_150_enabled opt-in kwarg through forward_step + training_loop; recipe .omx/operator_authorize_recipes/substrate_z8_hierarchical_predictive_coding_modal_t4_dispatch.yaml predicted_band_m12c_deep_yousfi_grounded_reference + reactivation_path added; archive_grammar=z8hpc1_self_contained (unchanged); parser_section_manifest=archive.parse_archive (unchanged); inflate_runtime_loc_budget=under_substrate_engineering_HNeRV_L7_waiver (unchanged); runtime_dep_closure=torch+numpy+brotli (unchanged); export_format=monolithic_zip_with_0_bin (unchanged); score_aware_loss=ScoreAwareLevelLossImpl per M8 (unchanged); bolt_on_loc_budget=substrate_engineering_exception per HNeRV L7 (unchanged); no_op_detector_planned=true_via_canonical_equation_150_archive_byte_mutation_smoke_at_M12c; research_only=true because canonical_quadruple_binding path not active at M12a Z8_TRAINER_MODE=full; lane_class=substrate_engineering; [empirical:experiments/results/z8_yousfi_revisions_3_4_5_smoke_20260530T184139Z/yousfi_revisions_smoke_output.json macOS-CPU advisory]"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/z8_m12a_yousfi_revisions_3_4_5_landed_20260530.md (landing memo with 9-dim checklist + cargo-cult audit + 5-axis falsification check + horizon_class=plateau_adjacent + observability surface + canonical-vs-unique per layer + per-revision verdicts + operator-routable next steps + 6-hook wire-in declaration); .omx/research/retroactive_sweep_for_yousfi_revisions_3_4_5_substrate_engineering_20260530.md (Catalog #348 retroactive sweep companion; ZERO historical KILL/DEFER/FALSIFY invalidated)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "lane_class=substrate_engineering per HNeRV parity L7; M12c-scope scaffolding for canonical_quadruple_binding compose pattern; Rev #3 PoseNet 6-dim Wyner-Ziv side_info per canonical equation #150 + Rev #4 4-level Mallat below SegNet blind-spot + Rev #5 recipe deep band reference; default OFF preserves backward compat; 278 z8 tests pass; research_only=true because canonical_quadruple_binding path not active at M12a Z8_TRAINER_MODE=full; mission_predicted_contribution=apparatus_maintenance"
     }
   ],
   "level_rules": {
@@ -62769,5 +62851,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-30T18:39:12Z"
+  "updated_at": "2026-05-30T18:45:39Z"
 }
