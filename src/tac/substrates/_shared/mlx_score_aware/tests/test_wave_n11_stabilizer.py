@@ -228,6 +228,7 @@ def test_build_optimizer_warmup_only_uses_linear_schedule(
         **adapter_kwargs,
     )
     opt = a._build_wave_n11_optimizer(learning_rate=1e-3)
+    assert opt is not None
     # The optimizer's learning_rate should be a callable (schedule), not a float.
     # Verify by checking the schedule produces ramping values.
     # MLX optimizers expose learning_rate as a property; reading at step=0 should be ~0.
@@ -263,6 +264,7 @@ def test_build_optimizer_warmup_plus_cosine_uses_join_schedules(
         **adapter_kwargs,
     )
     opt = a._build_wave_n11_optimizer(learning_rate=1e-3)
+    assert opt is not None
     # The composition path is verified by the canonical mlx schedule primitives.
     # Sanity: warmup_steps = 10, decay_steps = 90. Build the identical
     # composition and verify boundary points.
@@ -290,7 +292,7 @@ def test_build_optimizer_weight_decay_threaded_into_adamw(
     # mlx.optimizers.AdamW stores weight_decay as attribute
     assert hasattr(opt, "weight_decay")
     # value may be wrapped in mx.array; convert to float for comparison
-    wd = float(getattr(opt, "weight_decay"))
+    wd = float(opt.weight_decay)
     assert wd == pytest.approx(1e-4, abs=1e-9)
 
 
@@ -302,7 +304,7 @@ def test_build_optimizer_no_weight_decay_uses_adamw_default(
 
     a = MlxScoreAwareAdapter(minimal_bundle, **adapter_kwargs)
     opt = a._build_wave_n11_optimizer(learning_rate=1e-3)
-    wd = float(getattr(opt, "weight_decay"))
+    wd = float(opt.weight_decay)
     assert wd == pytest.approx(0.01, abs=1e-9)
 
 
