@@ -17,8 +17,6 @@ reference implementation of the duplicated-then-extracted pattern).
 """
 from __future__ import annotations
 
-import hashlib
-
 import numpy as np
 import pytest
 
@@ -154,7 +152,9 @@ def test_skip_buffer_name_predicate_preserves_vq_quantizer_principled_fork() -> 
         # even though it would otherwise match the .weight + ndim==4 rule
         "quantizer.synthetic_4d_buffer.weight": np.zeros((8, 3, 3, 4), dtype=np.float32),
     }
-    skip_predicate = lambda name: name.startswith("quantizer.")
+    def skip_predicate(name: str) -> bool:
+        return name.startswith("quantizer.")
+
     pytorch_sd, per_tensor = convert_mlx_state_dict_to_pytorch_oihw(
         mlx_sd, skip_buffer_name_predicate=skip_predicate
     )

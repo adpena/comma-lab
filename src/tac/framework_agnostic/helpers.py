@@ -30,12 +30,13 @@ Cross-references:
 from __future__ import annotations
 
 import io
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from tac.framework_agnostic.backend import (
+    _AVAILABILITY_CHECK,
     Backend,
     BackendUnavailableError,
-    _AVAILABILITY_CHECK,
 )
 
 
@@ -114,7 +115,7 @@ def mlx_state_dict_to_npz_bridge(mlx_state_dict: Mapping[str, Any]) -> bytes:
             "mlx_state_dict_to_npz_bridge requires MLX installed; "
             "install via `uv pip install mlx` (Darwin ARM64 only)"
         )
-    import numpy as np  # noqa: PLC0415
+    import numpy as np
     # Convert every MLX array to numpy via np.asarray (MLX supports __array__).
     numpy_dict = {k: np.asarray(v) for k, v in mlx_state_dict.items()}
     buf = io.BytesIO()
@@ -144,8 +145,8 @@ def pytorch_state_dict_to_npz_bridge(pytorch_state_dict: Mapping[str, Any]) -> b
             "pytorch_state_dict_to_npz_bridge requires torch installed; "
             "install via `uv pip install torch`"
         )
-    import numpy as np  # noqa: PLC0415
-    import torch  # noqa: PLC0415
+    import numpy as np
+    import torch
     numpy_dict = {}
     for k, v in pytorch_state_dict.items():
         if isinstance(v, torch.Tensor):
@@ -177,8 +178,8 @@ def tinygrad_state_dict_to_npz_bridge(tinygrad_state_dict: Mapping[str, Any]) ->
             "tinygrad_state_dict_to_npz_bridge requires tinygrad installed; "
             "install via `uv pip install tinygrad` (optional)"
         )
-    import numpy as np  # noqa: PLC0415
-    from tinygrad import Tensor  # noqa: PLC0415
+    import numpy as np
+    from tinygrad import Tensor
     numpy_dict = {}
     for k, v in tinygrad_state_dict.items():
         if isinstance(v, Tensor):
@@ -209,7 +210,7 @@ def npz_to_numpy_primitives(npz_bytes: bytes) -> dict[str, Any]:
     Returns:
         Dict[str, numpy.ndarray].
     """
-    import numpy as np  # noqa: PLC0415
+    import numpy as np
     buf = io.BytesIO(npz_bytes)
     with np.load(buf, allow_pickle=False) as data:
         # NpzFile is lazy; materialize to dict.
@@ -292,9 +293,10 @@ def convert_mlx_state_dict_to_pytorch_oihw(
             "convert_mlx_state_dict_to_pytorch_oihw requires torch installed; "
             "install via `uv pip install torch`"
         )
-    import hashlib  # noqa: PLC0415
-    import numpy as np  # noqa: PLC0415
-    import torch  # noqa: PLC0415
+    import hashlib
+
+    import numpy as np
+    import torch
 
     pytorch_sd: dict[str, Any] = {}
     per_tensor: dict[str, dict[str, Any]] = {}
