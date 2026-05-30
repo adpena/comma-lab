@@ -117,6 +117,39 @@ def archive_substrate_tags_for_transform_kind(transform_kind: str) -> list[str]:
     return ordered_unique(tags)
 
 
+def entropy_position_label_for_transform_kind(transform_kind: str) -> str:
+    """Return the entropy-pipeline position for a transform kind."""
+
+    kind = str(transform_kind or "").lower()
+    if not kind:
+        return "archive_transform_unknown_entropy_position"
+    if "zip_header" in kind or "header_elide" in kind:
+        return "after_entropy_coder"
+    if "zip_order" in kind:
+        return "after_entropy_coder"
+    if "dqs1" in kind or "pairset" in kind or "selector" in kind or "fec" in kind:
+        return "before_entropy_coder"
+    if any(
+        token in kind
+        for token in (
+            "range",
+            "arithmetic",
+            "ans",
+            "huffman",
+            "entropy_recode",
+            "recompress",
+            "brotli",
+            "lzma",
+            "zip_repack",
+            "packet_member_merge",
+            "tensor_factorize",
+            "section_entropy",
+        )
+    ):
+        return "at_entropy_coder"
+    return "archive_transform_unknown_entropy_position"
+
+
 def _file_custody(
     *,
     path_text: str,
@@ -184,6 +217,204 @@ def _file_custody(
     }
 
 
+def _first_text(*values: Any) -> str:
+    for value in values:
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return ""
+
+
+def _first_int(*values: Any) -> int | None:
+    for value in values:
+        if isinstance(value, int) and not isinstance(value, bool):
+            return value
+    return None
+
+
+def _runtime_consumption_proof_ready(row: Mapping[str, Any]) -> bool:
+    if row.get("runtime_consumption_proof_ready") is True:
+        return True
+    if row.get("runtime_consumption_proof_passed") is True:
+        return True
+    if row.get("receiver_contract_satisfied") is not True:
+        return False
+    return str(row.get("runtime_consumption_proof_status") or "") in {
+        "present",
+        "revalidated",
+        "archive_bound_proof_custody_present",
+    }
+
+
+def _runtime_adapter_manifest(row: Mapping[str, Any]) -> dict[str, Any]:
+    manifest = dict(_mapping(row.get("runtime_adapter_manifest")))
+    for key in (
+        "runtime_tree_sha256",
+        "runtime_content_tree_sha256",
+        "candidate_runtime_tree_sha256",
+        "expected_runtime_tree_sha256",
+        "candidate_runtime_dir",
+        "runtime_dir",
+        "source_runtime_dir",
+        "submission_dir",
+    ):
+        if key in row and key not in manifest:
+            manifest[key] = row[key]
+    if row.get("runtime_adapter_ready") is True:
+        manifest["runtime_adapter_ready"] = True
+    return manifest
+
+
+def archive_bound_candidate_contract_fields_for_row(
+    row: Mapping[str, Any],
+    *,
+    repo_root: str | Path | None = None,
+    selected_transform_kind: str | None = None,
+    source_context: Mapping[str, Any] | None = None,
+    family_id: str | None = None,
+    typed_response_id: str | None = None,
+    candidate_chain_id: str | None = None,
+    entropy_position_label: str | None = None,
+    entropy_stage_order: int | None = None,
+    byte_credit_budget: int | None = None,
+) -> dict[str, Any]:
+    """Return canonical archive-bound contract fields for a generic row.
+
+    This is the migration shim for existing emitters: rows may still use
+    historic names such as ``candidate_archive_path`` or nested
+    ``candidate_archive`` objects, but downstream consumers receive one shared
+    contract surface.
+    """
+
+    candidate_archive = _mapping(row.get("candidate_archive"))
+    source_archive = _mapping(row.get("source_archive"))
+    transform_kind = _first_text(
+        selected_transform_kind,
+        row.get("archive_native_transform_kind"),
+        row.get("target_kind"),
+        row.get("materializer_id"),
+        row.get("schema"),
+    )
+    runtime_manifest = _runtime_adapter_manifest(row)
+    candidate = {
+        "archive_native_transform_kind": transform_kind,
+        "path": _first_text(
+            row.get("candidate_archive_path"),
+            row.get("archive_path"),
+            candidate_archive.get("path"),
+        ),
+        "sha256": _first_text(
+            row.get("candidate_archive_sha256"),
+            row.get("archive_sha256"),
+            candidate_archive.get("sha256"),
+            candidate_archive.get("archive_sha256"),
+        ),
+        "bytes": _first_int(
+            row.get("candidate_archive_bytes"),
+            row.get("archive_bytes"),
+            candidate_archive.get("bytes"),
+            candidate_archive.get("archive_bytes"),
+        ),
+        "source_archive_path": _first_text(
+            row.get("source_archive_path"),
+            source_archive.get("path"),
+        ),
+        "source_archive_sha256": _first_text(
+            row.get("source_archive_sha256"),
+            source_archive.get("sha256"),
+            source_archive.get("archive_sha256"),
+        ),
+        "source_archive_bytes": _first_int(
+            row.get("source_archive_bytes"),
+            source_archive.get("bytes"),
+            source_archive.get("archive_bytes"),
+        ),
+        "materialized": (
+            row.get("byte_closed_candidate_emitted") is True
+            or row.get("byte_closed_candidate_materialized") is True
+            or row.get("candidate_archive_materialized") is True
+        ),
+        "runtime_consumption_proof_ready": _runtime_consumption_proof_ready(row),
+        "runtime_consumption_proof_path": _first_text(
+            row.get("runtime_consumption_proof_path"),
+            _mapping(row.get("runtime_consumption_proof")).get("path"),
+        ),
+        "receiver_contract_kind": row.get("receiver_contract_kind"),
+        "receiver_contract_satisfied": row.get("receiver_contract_satisfied") is True,
+        "runtime_adapter_ready": (
+            row.get("runtime_adapter_ready") is True
+            or runtime_manifest.get("runtime_adapter_ready") is True
+        ),
+        "runtime_adapter_manifest": runtime_manifest,
+        "contest_runtime_decoder_adapter_ready": (
+            row.get("contest_runtime_decoder_adapter_ready") is True
+            or bool(row.get("runtime_content_tree_sha256"))
+        ),
+        "semantic_payload_changed": row.get("semantic_payload_changed") is True,
+        "score_affecting_payload_changed": (
+            row.get("score_affecting_payload_changed") is True
+        ),
+        "exact_axis_score_affecting_adjudication_required": (
+            row.get("exact_axis_score_affecting_adjudication_required") is True
+        ),
+        "charged_bits_changed": row.get("charged_bits_changed") is True,
+        "prototype_only": row.get("prototype_only") is True,
+        "entropy_probe_path": row.get("entropy_probe_path"),
+        "saved_bytes": row.get("realized_saved_bytes") or row.get("saved_bytes"),
+        "estimated_zero_order_savings_bytes": row.get(
+            "estimated_zero_order_savings_bytes"
+        ),
+        "blockers": ordered_unique(
+            [
+                *_string_list(row.get("blockers")),
+                *_string_list(row.get("readiness_blockers")),
+                *_string_list(row.get("dispatch_blockers")),
+            ]
+        ),
+    }
+    resolved_source_context = {
+        **dict(_mapping(source_context)),
+        **{
+            key: value
+            for key, value in {
+                "path": candidate["source_archive_path"],
+                "sha256": candidate["source_archive_sha256"],
+                "bytes": candidate["source_archive_bytes"],
+            }.items()
+            if value not in ("", None)
+        },
+    }
+    surface = build_archive_bound_candidate_contract_surface(
+        candidates=[candidate],
+        selected_transform_kind=transform_kind,
+        repo_root=repo_root,
+        source_context=resolved_source_context,
+        family_id=family_id or _first_text(row.get("family_id"), row.get("candidate_family")),
+        typed_response_id=typed_response_id or _first_text(row.get("typed_response_id")),
+        candidate_chain_id=(
+            candidate_chain_id
+            or _first_text(row.get("candidate_chain_id"), row.get("candidate_id"))
+        ),
+        entropy_position_label=(
+            entropy_position_label
+            or _first_text(row.get("entropy_position_label"))
+            or entropy_position_label_for_transform_kind(transform_kind)
+        ),
+        entropy_stage_order=entropy_stage_order,
+        byte_credit_budget=byte_credit_budget,
+    )
+    contract = dict(_mapping(surface.get("selected_candidate_contract")))
+    return {
+        "archive_bound_candidate_contract_schema": (
+            ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+        ),
+        "archive_bound_candidate_contract": contract,
+        "archive_bound_candidate_contract_surface_schema": (
+            ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA
+        ),
+        "archive_bound_candidate_contract_surface": surface,
+    }
+
+
 def _contract_penalty(
     *,
     blockers: Sequence[str],
@@ -234,6 +465,11 @@ def build_archive_bound_candidate_contract(
 
     source = dict(_mapping(source_context))
     transform_kind = str(candidate.get("archive_native_transform_kind") or "")
+    resolved_entropy_position_label = (
+        entropy_position_label
+        if isinstance(entropy_position_label, str) and entropy_position_label.strip()
+        else entropy_position_label_for_transform_kind(transform_kind)
+    )
     materialized = candidate.get("materialized") is True
     proof_ready = candidate.get("runtime_consumption_proof_ready") is True
     receiver_satisfied = candidate.get("receiver_contract_satisfied") is True
@@ -311,7 +547,7 @@ def build_archive_bound_candidate_contract(
         "family_id": family_id,
         "typed_response_id": typed_response_id,
         "candidate_chain_id": candidate_chain_id,
-        "entropy_position_label": entropy_position_label,
+        "entropy_position_label": resolved_entropy_position_label,
         "entropy_stage_order": entropy_stage_order,
         "archive_native_transform_kind": transform_kind,
         "archive_substrate_tags": archive_substrate_tags_for_transform_kind(transform_kind),
@@ -490,7 +726,9 @@ def build_archive_bound_candidate_contract_surface(
 __all__ = [
     "ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA",
     "ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA",
+    "archive_bound_candidate_contract_fields_for_row",
     "archive_substrate_tags_for_transform_kind",
     "build_archive_bound_candidate_contract",
     "build_archive_bound_candidate_contract_surface",
+    "entropy_position_label_for_transform_kind",
 ]

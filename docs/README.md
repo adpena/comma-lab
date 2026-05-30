@@ -13,6 +13,9 @@ Start with the files that describe the current public repository contract:
 - [docs/contest_compliance_authority.md](contest_compliance_authority.md):
   upstream rule reading, public PR precedent ladder, and procedural-generation
   authority packet protocol.
+- [docs/archive_bound_candidate_pipeline.md](archive_bound_candidate_pipeline.md):
+  shared archive-bound contract, adapter spine, acquisition input, and
+  fail-closed exact handoff rules.
 
 ## Current Public Docs
 

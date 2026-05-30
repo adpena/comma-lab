@@ -96,6 +96,27 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="hfv1_to_hfv2_sparse_sidecar_candidate_v1 JSON. May repeat.",
     )
     parser.add_argument(
+        "--archive-contract-surface",
+        type=Path,
+        action="append",
+        default=[],
+        help=(
+            "tac_archive_bound_candidate_contract_surface.v1 or "
+            "tac_archive_bound_candidate_contract.v1 JSON; adapter packages "
+            "with embedded contract surfaces are also accepted. May repeat."
+        ),
+    )
+    parser.add_argument(
+        "--posterior-ledger",
+        type=Path,
+        action="append",
+        default=[],
+        help=(
+            "Planning posterior JSON/JSONL carrying negative outcomes, stack "
+            "penalties, byte-credit blockers, or entropy-stage misses."
+        ),
+    )
+    parser.add_argument(
         "--candidate-json",
         type=Path,
         action="append",
@@ -185,6 +206,42 @@ def _manual_candidates(paths: list[Path]) -> list[dict[str, Any]]:
             if not isinstance(row, dict):
                 raise CrossFamilyCandidatePortfolioError(
                     f"{path}: candidate {index} must be object"
+                )
+            out.append(row)
+    return out
+
+
+def _json_or_jsonl_rows(paths: list[Path]) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for path in paths:
+        if path.suffix == ".jsonl":
+            for line_no, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                if not isinstance(payload, dict):
+                    raise CrossFamilyCandidatePortfolioError(
+                        f"{path}:{line_no}: expected JSON object"
+                    )
+                out.append(payload)
+            continue
+        payload = read_json(path)
+        if isinstance(payload, list):
+            rows = payload
+        elif isinstance(payload, dict) and isinstance(payload.get("rows"), list):
+            rows = payload["rows"]
+        elif isinstance(payload, dict) and isinstance(payload.get("posterior_rows"), list):
+            rows = payload["posterior_rows"]
+        elif isinstance(payload, dict):
+            rows = [payload]
+        else:
+            raise CrossFamilyCandidatePortfolioError(
+                f"{path}: expected JSON object/list"
+            )
+        for index, row in enumerate(rows):
+            if not isinstance(row, dict):
+                raise CrossFamilyCandidatePortfolioError(
+                    f"{path}: row {index} must be object"
                 )
             out.append(row)
     return out
@@ -439,6 +496,8 @@ def main(argv: list[str] | None = None) -> int:
                 "pairset_acquisitions": args.pairset_acquisition,
                 "dqs1_drop_many_greedy_verdicts": args.dqs1_drop_many_greedy_verdict,
                 "hfv2_manifests": args.hfv2_manifest,
+                "archive_contract_surfaces": args.archive_contract_surface,
+                "posterior_ledgers": args.posterior_ledger,
                 "manual_candidate_json": args.candidate_json,
                 "family_beliefs": args.family_beliefs,
                 "observation_jsonl": args.observation_jsonl,
@@ -459,8 +518,10 @@ def main(argv: list[str] | None = None) -> int:
                 args.dqs1_drop_many_greedy_verdict
             ),
             hfv2_manifests=_json_objects(args.hfv2_manifest),
+            archive_contract_surfaces=_json_objects(args.archive_contract_surface),
             manual_candidates=_manual_candidates(args.candidate_json),
             observations=observations,
+            posterior_ledger_rows=_json_or_jsonl_rows(args.posterior_ledger),
             incumbent_scores_by_axis=_axis_scores(args.incumbent_score_by_axis),
             family_beliefs=family_beliefs,
             source_artifacts=source_artifacts,
@@ -473,6 +534,12 @@ def main(argv: list[str] | None = None) -> int:
                     path.as_posix() for path in args.dqs1_drop_many_greedy_verdict
                 ],
                 "hfv2_manifests": [path.as_posix() for path in args.hfv2_manifest],
+                "archive_contract_surfaces": [
+                    path.as_posix() for path in args.archive_contract_surface
+                ],
+                "posterior_ledgers": [
+                    path.as_posix() for path in args.posterior_ledger
+                ],
             },
             top_k=args.top_k,
             expected_improvement_weight=args.expected_improvement_weight,

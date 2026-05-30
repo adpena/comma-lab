@@ -8,6 +8,9 @@ from pathlib import Path
 
 import pytest
 
+from tac.optimization.archive_bound_candidate_contract import (
+    build_archive_bound_candidate_contract_surface,
+)
 from tac.optimization.cross_family_candidate_portfolio import (
     CrossFamilyCandidatePortfolioError,
     build_cross_family_candidate_portfolio,
@@ -27,6 +30,47 @@ def _false_authority() -> dict[str, bool]:
         "rank_or_kill_eligible": False,
         "promotable": False,
     }
+
+
+def _archive_contract_surface(
+    tmp_path: Path,
+    *,
+    name: str,
+    transform_kind: str,
+    candidate_payload: bytes,
+    family_id: str,
+) -> dict[str, object]:
+    source = tmp_path / f"{name}_source.zip"
+    candidate = tmp_path / f"{name}_candidate.zip"
+    source.write_bytes(b"S" * 128)
+    candidate.write_bytes(candidate_payload)
+    return build_archive_bound_candidate_contract_surface(
+        candidates=[
+            {
+                "archive_native_transform_kind": transform_kind,
+                "path": candidate.as_posix(),
+                "sha256": sha256_file(candidate),
+                "bytes": candidate.stat().st_size,
+                "source_archive_path": source.as_posix(),
+                "source_archive_sha256": sha256_file(source),
+                "source_archive_bytes": source.stat().st_size,
+                "materialized": True,
+                "runtime_consumption_proof_ready": True,
+                "runtime_consumption_proof_path": (
+                    tmp_path / f"{name}_receiver_proof.json"
+                ).as_posix(),
+                "receiver_contract_kind": "fixture_receiver_contract",
+                "receiver_contract_satisfied": True,
+                "runtime_adapter_ready": True,
+                "contest_runtime_decoder_adapter_ready": True,
+                "score_affecting_payload_changed": True,
+                "charged_bits_changed": True,
+            }
+        ],
+        selected_transform_kind=transform_kind,
+        family_id=family_id,
+        candidate_chain_id=name,
+    )
 
 
 def _mlx_selection() -> dict[str, object]:
@@ -1070,6 +1114,58 @@ def test_portfolio_preserves_custody_readiness_as_advisory_only(
     assert row["ready_for_exact_eval_dispatch"] is False
     assert "auth_axis_gate_required_before_dispatch" in row["dispatch_blockers"]
     assert "exact_contest_cuda_eval_missing" in row["dispatch_blockers"]
+
+
+def test_portfolio_consumes_archive_contracts_with_posterior_demotion(
+    tmp_path: Path,
+) -> None:
+    good = _archive_contract_surface(
+        tmp_path,
+        name="range_ready",
+        transform_kind="range_coder_entropy_recode_v1",
+        candidate_payload=b"G" * 48,
+        family_id="range_coder",
+    )
+    demoted = _archive_contract_surface(
+        tmp_path,
+        name="header_demoted",
+        transform_kind="packet_member_zip_header_elide_v1",
+        candidate_payload=b"H" * 32,
+        family_id="zip_header",
+    )
+    demoted_key = demoted["candidate_contracts"][0]["contract_key"]  # type: ignore[index]
+
+    portfolio = build_cross_family_candidate_portfolio(
+        incumbent_score=0.2,
+        archive_contract_surfaces=[good, demoted],
+        posterior_ledger_rows=[
+            {
+                "schema": "archive_contract_posterior_update.v1",
+                "contract_key": demoted_key,
+                "status": "negative_result_demote",
+                **_false_authority(),
+            }
+        ],
+    )
+
+    assert portfolio["portfolio_summary"]["archive_contract_surface_count"] == 2
+    assert portfolio["portfolio_summary"]["posterior_ledger_row_count"] == 1
+    assert portfolio["portfolio_summary"]["source_counts"] == {
+        "archive_bound_candidate_contract": 2
+    }
+    assert portfolio["operator_action_rows"][0]["family_id"] == "range_coder"
+    demoted_row = next(
+        row for row in portfolio["ranked_rows"] if row["family_id"] == "zip_header"
+    )
+    assert "posterior_negative_demoted_archive_contract" in demoted_row[
+        "dispatch_blockers"
+    ]
+    assert demoted_row["operator_next_action"] == (
+        "hold_archive_contract_until_new_evidence_or_repair"
+    )
+    assert demoted_row["source_metadata"]["entropy_stage_penalty_score"] > 0.0
+    assert demoted_row["source_metadata"]["posterior_demotion_penalty_score"] > 0.0
+    assert demoted_row["ready_for_exact_eval_dispatch"] is False
 
 
 def test_portfolio_rejects_authoritative_source_rows() -> None:

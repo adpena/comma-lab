@@ -13,6 +13,13 @@ from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+from tac.optimization.archive_bound_candidate_adapter_spine import (
+    ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA,
+)
+from tac.optimization.archive_bound_candidate_contract import (
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA,
+)
 from tac.optimization.bayesian_experimental_design import (
     BayesianExperimentalDesignError,
     rank_exact_eval_candidates,
@@ -59,6 +66,7 @@ DEFAULT_OUTSIDE_CLASS_VARIANCE = 1e-3
 DEFAULT_COMPONENT_COMBO_VARIANCE_PER_PAIR = 7.5e-9
 DEFAULT_COMPONENT_COMBO_BEAM_WIDTH = 64
 DEFAULT_COMPONENT_COMBO_POOL_LIMIT = 48
+ARCHIVE_CONTRACT_POSTERIOR_DEMOTION_SCORE = 0.002
 _EXACT_AXIS_ALIASES = {
     "contest_cpu": "contest_cpu",
     "contest-CPU": "contest_cpu",
@@ -868,6 +876,250 @@ def _manual_candidate_rows(
                     else None
                 ),
                 source_metadata=source_metadata or None,
+            )
+        )
+    return out
+
+
+def _string_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        text = value.strip()
+        return [text] if text else []
+    if isinstance(value, Sequence) and not isinstance(value, bytes | bytearray):
+        return [str(item).strip() for item in value if str(item).strip()]
+    text = str(value).strip()
+    return [text] if text else []
+
+
+def _safe_int(value: Any, *, default: int = 0) -> int:
+    if value is None or isinstance(value, bool):
+        return default
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _archive_contract_rows_from_surfaces(
+    surfaces: Sequence[Mapping[str, Any]] | None,
+) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for index, surface in enumerate(surfaces or ()):
+        _require_false_authority(surface, label=f"archive contract surface {index}")
+        schema = surface.get("schema")
+        if schema == ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA:
+            nested_surfaces = surface.get("archive_bound_candidate_contract_surfaces")
+            if not isinstance(nested_surfaces, list):
+                raise CrossFamilyCandidatePortfolioError(
+                    f"archive contract surface {index} adapter package lacks "
+                    "archive_bound_candidate_contract_surfaces[]"
+                )
+            out.extend(_archive_contract_rows_from_surfaces(nested_surfaces))
+            continue
+        if schema == ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA:
+            out.append(dict(surface))
+            continue
+        if schema != ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA:
+            raise CrossFamilyCandidatePortfolioError(
+                f"archive contract surface {index} schema mismatch: {schema!r}"
+            )
+        contracts = surface.get("candidate_contracts")
+        if not isinstance(contracts, list):
+            raise CrossFamilyCandidatePortfolioError(
+                f"archive contract surface {index} candidate_contracts[] missing"
+            )
+        for contract_index, contract in enumerate(contracts):
+            if not isinstance(contract, Mapping):
+                raise CrossFamilyCandidatePortfolioError(
+                    f"archive contract surface {index} contract {contract_index} "
+                    "must be object"
+                )
+            _require_false_authority(
+                contract,
+                label=(
+                    f"archive contract surface {index} contract {contract_index}"
+                ),
+            )
+            if contract.get("schema") != ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA:
+                raise CrossFamilyCandidatePortfolioError(
+                    f"archive contract surface {index} contract {contract_index} "
+                    "schema mismatch"
+                )
+            out.append(dict(contract))
+    return out
+
+
+def _archive_contract_identity_keys(contract: Mapping[str, Any]) -> set[str]:
+    keys = {str(contract.get("contract_key") or "").strip()}
+    identity = contract.get("contract_identity")
+    if isinstance(identity, Mapping):
+        for key in (
+            "candidate_archive_sha256",
+            "candidate_chain_id",
+            "typed_response_id",
+            "family_id",
+        ):
+            keys.add(str(identity.get(key) or "").strip())
+    candidate_archive = contract.get("candidate_archive")
+    if isinstance(candidate_archive, Mapping):
+        keys.add(str(candidate_archive.get("sha256") or "").strip())
+        keys.add(str(candidate_archive.get("path") or "").strip())
+    keys.add(str(contract.get("candidate_chain_id") or "").strip())
+    keys.add(str(contract.get("typed_response_id") or "").strip())
+    return {key for key in keys if key}
+
+
+def _posterior_demotions_by_key(
+    posterior_rows: Sequence[Mapping[str, Any]] | None,
+) -> dict[str, list[dict[str, Any]]]:
+    out: dict[str, list[dict[str, Any]]] = {}
+    negative_tokens = (
+        "negative",
+        "regressed",
+        "failed",
+        "demote",
+        "blocked",
+        "blocker",
+        "exhausted",
+    )
+    for index, row in enumerate(posterior_rows or ()):
+        _require_false_authority(row, label=f"posterior ledger row {index}")
+        text = " ".join(
+            str(row.get(key) or "")
+            for key in (
+                "status",
+                "verdict",
+                "outcome",
+                "result",
+                "posterior_action",
+                "recommended_action",
+                "terminal_outcome_class",
+            )
+        ).lower()
+        if not any(token in text for token in negative_tokens):
+            continue
+        keys = {
+            str(row.get(key) or "").strip()
+            for key in (
+                "contract_key",
+                "candidate_id",
+                "candidate_chain_id",
+                "candidate_archive_sha256",
+                "archive_sha256",
+                "family_id",
+                "typed_response_id",
+            )
+        }
+        for key in {item for item in keys if item}:
+            out.setdefault(key, []).append(dict(row))
+    return out
+
+
+def _archive_contract_entropy_stage_penalty(contract: Mapping[str, Any]) -> float:
+    penalty = 0.0
+    label = str(contract.get("entropy_position_label") or "")
+    if label == "after_entropy_coder":
+        penalty += 0.00025
+    elif label == "archive_transform_unknown_entropy_position":
+        penalty += 0.0004
+    if contract.get("byte_credit_exhausted") is True:
+        penalty += 0.0002
+    blocker_text = " ".join(_string_list(contract.get("blockers"))).lower()
+    if "anti_pattern" in blocker_text or "cargo" in blocker_text:
+        penalty += 0.0005
+    if "negative" in blocker_text or "regressed" in blocker_text:
+        penalty += 0.00035
+    return penalty
+
+
+def _archive_contract_candidate_rows(
+    archive_contract_surfaces: Sequence[Mapping[str, Any]] | None,
+    *,
+    incumbent_score: float,
+    posterior_ledger_rows: Sequence[Mapping[str, Any]] | None,
+) -> list[dict[str, Any]]:
+    contracts = _archive_contract_rows_from_surfaces(archive_contract_surfaces)
+    demotions = _posterior_demotions_by_key(posterior_ledger_rows)
+    out: list[dict[str, Any]] = []
+    for index, contract in enumerate(contracts):
+        contract_key = str(contract.get("contract_key") or f"contract_{index}")
+        candidate_archive = (
+            contract.get("candidate_archive")
+            if isinstance(contract.get("candidate_archive"), Mapping)
+            else {}
+        )
+        saved_bytes = _safe_int(contract.get("saved_bytes"))
+        rate_delta = (
+            -CONTEST_RATE_MULTIPLIER
+            * float(saved_bytes)
+            / float(CONTEST_RATE_DENOMINATOR_BYTES)
+        )
+        acquisition_penalty = _finite_float(
+            contract.get("acquisition_penalty", 0.0),
+            label=f"{contract_key}.acquisition_penalty",
+        )
+        stage_penalty = _archive_contract_entropy_stage_penalty(contract)
+        matching_demotions = [
+            row
+            for key in _archive_contract_identity_keys(contract)
+            for row in demotions.get(key, [])
+        ]
+        posterior_penalty = (
+            ARCHIVE_CONTRACT_POSTERIOR_DEMOTION_SCORE
+            if matching_demotions
+            else 0.0
+        )
+        family = str(
+            contract.get("family_id")
+            or (_string_list(contract.get("archive_substrate_tags")) or ["archive_bound"])[0]
+        )
+        candidate_id = f"archive_contract_{family}_{contract_key[:12]}"
+        source_blockers = set(_string_list(contract.get("blockers")))
+        if contract.get("archive_bound_candidate_ready_for_exact_handoff") is not True:
+            source_blockers.add("archive_contract_not_ready_for_exact_handoff")
+        if matching_demotions:
+            source_blockers.add("posterior_negative_demoted_archive_contract")
+        source_metadata = {
+            "archive_bound_candidate_contract": dict(contract),
+            "contract_key": contract_key,
+            "archive_substrate_tags": _string_list(
+                contract.get("archive_substrate_tags")
+            ),
+            "entropy_position_label": contract.get("entropy_position_label"),
+            "entropy_stage_order": contract.get("entropy_stage_order"),
+            "saved_bytes": saved_bytes,
+            "rate_delta_from_contract_bytes": rate_delta,
+            "contract_acquisition_penalty_score": acquisition_penalty * 0.001,
+            "entropy_stage_penalty_score": stage_penalty,
+            "posterior_demotion_penalty_score": posterior_penalty,
+            "posterior_demotion_rows": matching_demotions,
+        }
+        out.append(
+            _candidate(
+                candidate_id=candidate_id,
+                family=family,
+                predicted_score_mean=(
+                    incumbent_score
+                    + rate_delta
+                    + acquisition_penalty * 0.001
+                    + stage_penalty
+                    + posterior_penalty
+                ),
+                predicted_score_variance=max(
+                    1e-9,
+                    1e-7 + acquisition_penalty * 1e-6 + stage_penalty * 1e-3,
+                ),
+                source_kind="archive_bound_candidate_contract",
+                source_rank=index + 1,
+                exact_archive_custody={
+                    "archive_path": str(candidate_archive.get("path") or ""),
+                    "archive_sha256": str(candidate_archive.get("sha256") or ""),
+                    "archive_size_bytes": candidate_archive.get("bytes"),
+                },
+                source_dispatch_blockers=sorted(source_blockers),
+                source_metadata=source_metadata,
             )
         )
     return out
@@ -2581,6 +2833,12 @@ def _operator_action_for_row(row: Mapping[str, Any]) -> str:
         return "materialize_pairset_archive_and_run_local_controls"
     if source_kind == "mlx_effective_spend_triage_selection":
         return "materialize_mlx_selected_window_archive_and_run_controls"
+    if source_kind == "archive_bound_candidate_contract":
+        if "posterior_negative_demoted_archive_contract" in blockers:
+            return "hold_archive_contract_until_new_evidence_or_repair"
+        if "archive_contract_not_ready_for_exact_handoff" in blockers:
+            return "repair_or_materialize_archive_contract_candidate"
+        return "promote_archive_contract_to_receiver_exact_bridge"
     if source_kind == "hfv2_sparse_sidecar_manifest" and blockers:
         return "hold_or_refresh_current_runtime_anchor_only_if_deliberately_needed"
     if source_kind == "hfv2_sparse_sidecar_manifest":
@@ -2619,6 +2877,8 @@ def _operator_action_priority(row: Mapping[str, Any]) -> tuple[Any, ...]:
         base = 10
     elif source_kind == "mlx_effective_spend_triage_selection":
         base = 20
+    elif source_kind == "archive_bound_candidate_contract":
+        base = 25 if not source_blocked else 70
     elif source_kind == "hfv2_sparse_sidecar_manifest":
         base = 80 if source_blocked else 30
     else:
@@ -2685,8 +2945,10 @@ def build_cross_family_candidate_portfolio(
     pairset_acquisitions: Sequence[Mapping[str, Any]] | None = None,
     drop_many_greedy_verdicts: Sequence[Mapping[str, Any]] | None = None,
     hfv2_manifests: Sequence[Mapping[str, Any]] | None = None,
+    archive_contract_surfaces: Sequence[Mapping[str, Any]] | None = None,
     manual_candidates: Sequence[Mapping[str, Any]] | None = None,
     observations: Sequence[Mapping[str, Any]] | None = None,
+    posterior_ledger_rows: Sequence[Mapping[str, Any]] | None = None,
     incumbent_scores_by_axis: Mapping[str, Any] | None = None,
     family_beliefs: Mapping[str, Any] | Iterable[Mapping[str, Any]] | None = None,
     source_artifacts: Mapping[str, Any] | None = None,
@@ -2731,6 +2993,13 @@ def build_cross_family_candidate_portfolio(
                 source_artifact_path=path,
             )
         )
+    candidates.extend(
+        _archive_contract_candidate_rows(
+            archive_contract_surfaces,
+            incumbent_score=incumbent,
+            posterior_ledger_rows=posterior_ledger_rows,
+        )
+    )
     candidates.extend(
         _manual_candidate_rows(
             manual_candidates,
@@ -2893,6 +3162,8 @@ def build_cross_family_candidate_portfolio(
             "materialization_required_count": materialization_required_count,
             "source_counts": dict(sorted(source_counts.items())),
             "observation_row_count": len(normalized_observations),
+            "posterior_ledger_row_count": len(posterior_ledger_rows or ()),
+            "archive_contract_surface_count": len(archive_contract_surfaces or ()),
             "observed_candidate_count": len(
                 {
                     str(row.get("candidate_id") or "")

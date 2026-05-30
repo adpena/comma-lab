@@ -8,6 +8,10 @@ from pathlib import Path
 
 import pytest
 
+from tac.optimization.archive_bound_candidate_contract import (
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA,
+)
 from tac.optimization.family_agnostic_materializers import (
     PACKET_MEMBER_MERGE_SCHEMA,
     PACKET_MEMBER_RECOMPRESS_SCHEMA,
@@ -24,6 +28,7 @@ from tac.optimization.serialized_archive_economics import (
 from tac.optimizer import candidate_queue as candidate_queue_module
 from tac.optimizer.candidate_queue import QUEUE_SCHEMA, build_candidate_queue
 from tac.optimizer.materializer_chain_harvest import MaterializerChainHarvestError
+from tac.repo_io import tree_sha256
 
 
 def _write_json(path: Path, payload: object) -> Path:
@@ -64,6 +69,12 @@ def _materializer_chain_manifest(
         repo / "outputs/candidate_manifest.json",
         {"schema": "fixture_materializer_artifact_v1"},
     )
+    runtime = repo / "runtime"
+    runtime.mkdir(parents=True, exist_ok=True)
+    (runtime / "inflate.sh").write_text(
+        "#!/usr/bin/env bash\nset -euo pipefail\n", encoding="utf-8"
+    )
+    runtime_tree_sha = tree_sha256(runtime)
     artifact_record = _file_record(repo, artifact)
     serialized_archive_delta = build_serialized_archive_delta_contract(
         source_archive=source_archive,
@@ -89,6 +100,9 @@ def _materializer_chain_manifest(
         "serialized_archive_delta": serialized_archive_delta,
         "byte_closed_candidate_emitted": True,
         "runtime_adapter_ready": True,
+        "candidate_runtime_dir": runtime.relative_to(repo).as_posix(),
+        "candidate_runtime_tree_sha256": runtime_tree_sha,
+        "expected_runtime_tree_sha256": runtime_tree_sha,
         "receiver_proof_ready": True,
         "receiver_contract_satisfied": True,
         "candidate_runtime_adapter_blocker_cleared": True,
@@ -206,6 +220,32 @@ def _packet_member_merge_materializer_manifest(repo: Path) -> Path:
     (runtime / "inflate.sh").write_text(
         "#!/usr/bin/env bash\nset -euo pipefail\n", encoding="utf-8"
     )
+    runtime_tree_sha = tree_sha256(runtime)
+    runtime_manifest = {
+        "schema": "packet_member_merge_receiver_runtime.v1",
+        "runtime_adapter_ready": True,
+        "runtime_dir": runtime.relative_to(repo).as_posix(),
+        "runtime_manifest_path": "outputs/candidate.runtime_adapter.json",
+        "runtime_tree_sha256": runtime_tree_sha,
+        "expected_runtime_tree_sha256": runtime_tree_sha,
+        "source_runtime_dir": "submissions/robust_current",
+        "blockers": [],
+    }
+    proof_payload = json.loads(proof.read_text(encoding="utf-8"))
+    proof_payload.update(
+        {
+            "runtime_adapter_manifest": runtime_manifest,
+            "runtime_consumption_probe": {
+                "schema": "packet_member_merge_runtime_adapter_probe.v1",
+                "passed": True,
+                "shadow_archive_reconstruction_passed": True,
+            },
+            "candidate_runtime_dir": runtime_manifest["runtime_dir"],
+            "candidate_runtime_tree_sha256": runtime_tree_sha,
+            "expected_runtime_tree_sha256": runtime_tree_sha,
+        }
+    )
+    _write_json(proof, proof_payload)
     payload = {
         "schema": PACKET_MEMBER_MERGE_SCHEMA,
         "candidate_id": "fixture_packet_member_merge_candidate",
@@ -230,18 +270,10 @@ def _packet_member_merge_materializer_manifest(repo: Path) -> Path:
             "proof_present": True,
             "proof_path": proof.relative_to(repo).as_posix(),
             "runtime_adapter_ready": True,
-            "runtime_adapter_sha256": "b" * 64,
+            "runtime_adapter_sha256": runtime_tree_sha,
             "blockers": [],
         },
-        "packet_member_merge_receiver_runtime": {
-            "schema": "packet_member_merge_receiver_runtime.v1",
-            "runtime_adapter_ready": True,
-            "runtime_dir": runtime.relative_to(repo).as_posix(),
-            "runtime_manifest_path": "outputs/candidate.runtime_adapter.json",
-            "runtime_tree_sha256": "b" * 64,
-            "source_runtime_dir": "submissions/robust_current",
-            "blockers": [],
-        },
+        "packet_member_merge_receiver_runtime": runtime_manifest,
         "selected_member_names": [
             "renderer.bin",
             "masks.mkv",
@@ -561,9 +593,12 @@ def test_packet_member_merge_materializer_harvest_preserves_receiver_runtime(
     assert row["receiver_contract_satisfied"] is True
     assert row["runtime_adapter_ready"] is True
     assert row["candidate_runtime_dir"] == "outputs/candidate.runtime"
-    assert row["candidate_runtime_tree_sha256"] == "b" * 64
+    expected_runtime_sha = tree_sha256(tmp_path / "outputs/candidate.runtime")
+    assert row["candidate_runtime_tree_sha256"] == expected_runtime_sha
     assert row["packet_member_merge_runtime_dir"] == "outputs/candidate.runtime"
-    assert row["packet_member_merge_receiver_runtime_tree_sha256"] == "b" * 64
+    assert row["packet_member_merge_receiver_runtime_tree_sha256"] == (
+        expected_runtime_sha
+    )
     assert row["packet_member_merge_source_runtime_dir"] == (
         "submissions/robust_current"
     )
@@ -610,11 +645,14 @@ def test_candidate_queue_merge_prefers_adapter_ready_runtime_contract(
     assert row["receiver_contract_satisfied"] is True
     assert row["candidate_runtime_adapter_blocker_cleared"] is True
     assert row["candidate_runtime_dir"] == "outputs/candidate.runtime"
-    assert row["candidate_runtime_tree_sha256"] == "b" * 64
+    expected_runtime_sha = tree_sha256(tmp_path / "outputs/candidate.runtime")
+    assert row["candidate_runtime_tree_sha256"] == expected_runtime_sha
     assert row["packet_member_merge_receiver_runtime"]["runtime_dir"] == (
         "outputs/candidate.runtime"
     )
-    assert row["packet_member_merge_receiver_runtime_tree_sha256"] == "b" * 64
+    assert row["packet_member_merge_receiver_runtime_tree_sha256"] == (
+        expected_runtime_sha
+    )
 
 
 def test_materializer_chain_harvest_preserves_runtime_context(
@@ -650,6 +688,39 @@ def test_materializer_chain_harvest_preserves_runtime_context(
     assert row["runtime_consumption_proof_required"] is True
     assert row["runtime_consumption_proof_status"] == "present"
     assert row["runtime_consumption_proof_path"] == "outputs/receiver_proof.json"
+    assert row["archive_bound_candidate_contract_schema"] == (
+        ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+    )
+    assert row["archive_bound_candidate_contract_surface_schema"] == (
+        ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA
+    )
+    contract = row["archive_bound_candidate_contract"]
+    assert contract["candidate_chain_id"] == "fixture_materializer_candidate"
+    assert contract["archive_substrate_tags"] == ["archive_transform"]
+    assert contract["byte_closed_candidate_materialized"] is True
+    assert contract["ready_for_exact_eval_dispatch"] is False
+
+
+def test_family_agnostic_harvest_emits_archive_bound_contract(
+    tmp_path: Path,
+) -> None:
+    manifest = _family_agnostic_materializer_manifest(tmp_path)
+
+    queue = build_candidate_queue([manifest], repo_root=tmp_path)
+    row = queue["top_k"][0]
+
+    assert row["archive_bound_candidate_contract_schema"] == (
+        ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+    )
+    assert row["archive_bound_candidate_contract_surface_schema"] == (
+        ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA
+    )
+    contract = row["archive_bound_candidate_contract"]
+    assert contract["family_id"] == "packet_member_recompress"
+    assert contract["entropy_position_label"] == "at_entropy_coder"
+    assert "archive_bound_receiver_contract_not_satisfied" in contract["blockers"]
+    assert "zip_member" in contract["archive_substrate_tags"]
+    assert contract["archive_bound_candidate_ready"] is False
 
 
 def test_materializer_chain_truthy_authority_fails_closed(tmp_path: Path) -> None:

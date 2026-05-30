@@ -16,6 +16,9 @@ from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
+from tac.optimization.archive_bound_candidate_contract import (
+    archive_bound_candidate_contract_fields_for_row,
+)
 from tac.optimization.family_agnostic_materializers import (
     ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
     ARCHIVE_ZIP_REPACK_SCHEMA,
@@ -307,6 +310,15 @@ def adapt_materializer_chain_manifest_to_candidate(
     )
     out["score_affecting_payload_changed"] = archive_changed
     out["charged_bits_changed"] = byte_changed
+    out.update(
+        archive_bound_candidate_contract_fields_for_row(
+            out,
+            repo_root=repo_root,
+            selected_transform_kind=str(out.get("target_kind") or schema),
+            family_id=str(out.get("candidate_family") or _candidate_family(schema)),
+            candidate_chain_id=str(out.get("candidate_id") or ""),
+        )
+    )
     return out
 
 
@@ -511,6 +523,15 @@ def adapt_family_agnostic_materializer_manifest_to_candidate(
     out["runtime_adapter_ready"] = runtime_adapter_ready
     out["receiver_contract_satisfied"] = receiver_satisfied
     out["candidate_runtime_adapter_blocker_cleared"] = runtime_adapter_ready
+    out.update(
+        archive_bound_candidate_contract_fields_for_row(
+            out,
+            repo_root=repo_root,
+            selected_transform_kind=str(out.get("target_kind") or schema),
+            family_id=str(out.get("candidate_family") or _candidate_family(schema)),
+            candidate_chain_id=str(out.get("candidate_id") or ""),
+        )
+    )
     return out
 
 

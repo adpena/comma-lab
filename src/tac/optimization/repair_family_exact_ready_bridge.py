@@ -7,6 +7,9 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+from tac.optimization.archive_bound_candidate_contract import (
+    archive_bound_candidate_contract_fields_for_row,
+)
 from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY
 from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
@@ -195,6 +198,12 @@ def _runtime_proof_from_row(row: Mapping[str, Any]) -> Mapping[str, Any]:
     return proof if isinstance(proof, Mapping) else {}
 
 
+def _contract_candidate_sha256(contract: Mapping[str, Any]) -> str | None:
+    archive = contract.get("candidate_archive")
+    value = archive.get("sha256") if isinstance(archive, Mapping) else None
+    return value if isinstance(value, str) and value.strip() else None
+
+
 def _submission_runtime_custody(
     *,
     candidate_id: str | None = None,
@@ -351,7 +360,7 @@ def _bridge_row(
     candidate_chain_id = str(handoff_row.get("candidate_chain_id") or typed_response_id)
     candidate_archive_row = _candidate_archive_from_row(handoff_row)
     runtime_proof_row = _runtime_proof_from_row(handoff_row)
-    archive_bound_contract = dict(
+    handoff_archive_bound_contract = dict(
         _mapping(handoff_row.get("archive_bound_candidate_contract"))
     )
     expected_sha = str(
@@ -426,6 +435,13 @@ def _bridge_row(
             *proof_file_blockers,
             *proof_payload_blockers,
             *submission_blockers,
+            *(
+                ["archive_bound_candidate_contract_stale_candidate_sha256"]
+                if handoff_archive_bound_contract
+                and _contract_candidate_sha256(handoff_archive_bound_contract)
+                not in (None, archive_custody.get("sha256"))
+                else []
+            ),
             *_string_list(handoff_row.get("blockers")),
             "repair_family_exact_handoff_bridge_requires_exact_readiness_gate",
             "contest_cpu_or_cuda_auth_axis_required_before_score_or_dispatch",
@@ -490,13 +506,6 @@ def _bridge_row(
         "archive_manifest_path": submission_custody.get("archive_manifest_path"),
         "inflate_sh_path": submission_custody.get("inflate_sh_path"),
         "serialized_archive_delta": serialized_delta,
-        "archive_bound_candidate_contract": archive_bound_contract,
-        "archive_bound_contract_substrate_tags": _string_list(
-            archive_bound_contract.get("archive_substrate_tags")
-        ),
-        "archive_bound_contract_acquisition_penalty": archive_bound_contract.get(
-            "acquisition_penalty"
-        ),
         "score_affecting_payload_changed": score_affecting_payload_changed,
         "charged_bits_changed": score_affecting_payload_changed,
         "score_claim": False,
@@ -515,6 +524,34 @@ def _bridge_row(
         score_affecting_payload_changed
     )
     bridge_source_row["charged_bits_changed"] = score_affecting_payload_changed
+    bridge_source_row.update(
+        archive_bound_candidate_contract_fields_for_row(
+            bridge_source_row,
+            repo_root=repo_root,
+            selected_transform_kind=str(
+                handoff_row.get("archive_native_transform_kind")
+                or handoff_row.get("target_kind")
+                or family_id
+            ),
+            family_id=family_id,
+            typed_response_id=typed_response_id,
+            candidate_chain_id=candidate_chain_id,
+            entropy_position_label=handoff_row.get("entropy_position_label")
+            if isinstance(handoff_row.get("entropy_position_label"), str)
+            else None,
+            entropy_stage_order=handoff_row.get("entropy_stage_order")
+            if isinstance(handoff_row.get("entropy_stage_order"), int)
+            and not isinstance(handoff_row.get("entropy_stage_order"), bool)
+            else None,
+        )
+    )
+    archive_bound_contract = bridge_source_row["archive_bound_candidate_contract"]
+    bridge_source_row["archive_bound_contract_substrate_tags"] = _string_list(
+        archive_bound_contract.get("archive_substrate_tags")
+    )
+    bridge_source_row["archive_bound_contract_acquisition_penalty"] = (
+        archive_bound_contract.get("acquisition_penalty")
+    )
     require_no_truthy_authority_fields(
         bridge_source_row,
         context=f"repair_family_exact_ready_bridge_source_row:{candidate_id}",
