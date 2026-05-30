@@ -224,6 +224,15 @@ from tac.substrates.z8_hierarchical_predictive_coding.mallat_dwt_adapter import 
     Z8MallatDaubechiesPartition,
     build_z8_mallat_dwt_adapter_for_level,
 )
+from tac.substrates.z8_hierarchical_predictive_coding.scorer_sensitivity_map import (
+    EmpiricalSensitivityMapNotYetLandedError,
+    ScorerSensitivityMapSource,
+    Z8ScorerSensitivityMap,
+    build_z8_scorer_sensitivity_map_for_level,
+    empirical_sensitivity_map_from_slot_ggg,
+    uniform_sensitivity_map_for_level,
+    yousfi_uniward_finite_difference_sensitivity_map,
+)
 
 # Catalog #124 8-field representation-lane declaration (canonical tokens for
 # the AST walker per the gate's regex set). DO NOT remove without operator
@@ -335,6 +344,17 @@ __all__ = [
     "WaveletDetail2D",
     "Z8MallatDaubechiesPartition",
     "build_z8_mallat_dwt_adapter_for_level",
+    # M7 canonical scorer-sensitivity-map helper (Yousfi-grounded; operator
+    # 2026-05-30; Path A LANDED; Path B + Path C are DEFERRED-pending-research
+    # stubs with reactivation criteria pinned per CLAUDE.md "Forbidden
+    # premature KILL without research exhaustion").
+    "EmpiricalSensitivityMapNotYetLandedError",
+    "ScorerSensitivityMapSource",
+    "Z8ScorerSensitivityMap",
+    "build_z8_scorer_sensitivity_map_for_level",
+    "empirical_sensitivity_map_from_slot_ggg",
+    "uniform_sensitivity_map_for_level",
+    "yousfi_uniward_finite_difference_sensitivity_map",
     "get_in_progress_milestones",
     "get_landed_milestones",
     "get_next_actionable_milestones",
