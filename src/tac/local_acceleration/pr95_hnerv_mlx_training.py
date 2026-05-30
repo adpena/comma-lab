@@ -104,7 +104,36 @@ def apply_eval_roundtrip_nhwc(
 
 
 def rgb_to_yuv6_mlx(rgb_nhwc: Any) -> Any:
-    """Autograd-preserving BT.601 RGB->YUV6 for ``(..., H, W, 3)`` MLX tensors."""
+    """NHWC MLX training-time wrapper around the canonical rgb_to_yuv6.
+
+    Canonical math lives in
+    :func:`tac.framework_agnostic.canonical_kernels.rgb_to_yuv6` (the
+    extracted single source of truth per MLX canonicalization audit
+    inventory A.2.6 and canonical equation
+    ``mlx_primitive_canonicalization_compounding_savings_v1``).
+
+    PRINCIPLED FORK per Catalog #290 falling-rule list: the
+    ``pr95_hnerv_mlx`` training stack standardizes on NHWC layout
+    (channels-last; ``axis=-1`` stack) to match the upstream MLX
+    primitives this module exposes (``resize_nhwc_align_corners_false``,
+    ``pixel_shuffle_2x_nhwc``, ``_flatten_rgb_nhwc``, etc.). The
+    canonical helper hard-requires NCHW. This wrapper performs the
+    canonical layout adaptation (NHWC -> NCHW for each leading-dim
+    batch, dispatch through canonical helper, NCHW -> NHWC restore)
+    while preserving byte-stable autograd-preserving BT.601 parity per
+    the existing PR95 training-time differentiable contract.
+
+    Args:
+        rgb_nhwc: ``(..., H, W, 3)`` MLX tensor in ``[0, 255]``.
+
+    Returns:
+        ``(..., H//2, W//2, 6)`` MLX tensor with channel order
+        ``[Y00, Y10, Y01, Y11, U_sub, V_sub]`` at channels-last.
+    """
+    from tac.framework_agnostic.canonical_kernels import (
+        rgb_to_yuv6 as _canonical_rgb_to_yuv6,
+        Backend,
+    )
 
     require_mlx()
     _validate_rgb_nhwc(rgb_nhwc)
@@ -116,39 +145,21 @@ def rgb_to_yuv6_mlx(rgb_nhwc: Any) -> Any:
         raise Pr95HNeRVMlxError(
             f"rgb_to_yuv6_mlx requires spatial dims at least 2x2; got {(height, width)}"
         )
+    # Crop to even spatial dims and flatten leading dims to a single batch dim,
+    # then permute NHWC -> NCHW for canonical dispatch.
     rgb = rgb_nhwc[..., : 2 * h2, : 2 * w2, :]
-    red = rgb[..., 0]
-    green = rgb[..., 1]
-    blue = rgb[..., 2]
-
-    y = mx.clip(red * 0.299 + green * 0.587 + blue * 0.114, 0.0, 255.0)  # type: ignore[union-attr]
-    u = mx.clip((blue - y) / 1.772 + 128.0, 0.0, 255.0)  # type: ignore[union-attr]
-    v = mx.clip((red - y) / 1.402 + 128.0, 0.0, 255.0)  # type: ignore[union-attr]
-
-    u_sub = (
-        u[..., 0::2, 0::2]
-        + u[..., 1::2, 0::2]
-        + u[..., 0::2, 1::2]
-        + u[..., 1::2, 1::2]
-    ) * 0.25
-    v_sub = (
-        v[..., 0::2, 0::2]
-        + v[..., 1::2, 0::2]
-        + v[..., 0::2, 1::2]
-        + v[..., 1::2, 1::2]
-    ) * 0.25
-
-    return mx.stack(  # type: ignore[union-attr]
-        [
-            y[..., 0::2, 0::2],
-            y[..., 1::2, 0::2],
-            y[..., 0::2, 1::2],
-            y[..., 1::2, 1::2],
-            u_sub,
-            v_sub,
-        ],
-        axis=-1,
-    )
+    leading_shape = rgb.shape[:-3]
+    cropped_h = 2 * h2
+    cropped_w = 2 * w2
+    flat_nhwc = mx.reshape(rgb, (-1, cropped_h, cropped_w, 3))  # type: ignore[union-attr]
+    # NHWC -> NCHW: (B', H, W, 3) -> (B', 3, H, W)
+    flat_nchw = mx.transpose(flat_nhwc, (0, 3, 1, 2))  # type: ignore[union-attr]
+    yuv6_nchw = _canonical_rgb_to_yuv6(
+        flat_nchw, backend=Backend.MLX, value_range=255.0
+    )  # (B', 6, H2, W2)
+    # NCHW -> NHWC: (B', 6, H2, W2) -> (B', H2, W2, 6) then restore leading dims
+    yuv6_nhwc = mx.transpose(yuv6_nchw, (0, 2, 3, 1))  # type: ignore[union-attr]
+    return mx.reshape(yuv6_nhwc, (*leading_shape, h2, w2, 6))  # type: ignore[union-attr]
 
 
 def pr95_pair_frame_indices(pair_indices: Sequence[int]) -> list[int]:

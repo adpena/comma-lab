@@ -95,12 +95,26 @@ TEMPORAL_SMOOTHNESS_WEIGHT = 0.5
 
 
 def rgb_to_yuv6(rgb_chw: torch.Tensor) -> torch.Tensor:
-    """Convert RGB CHW to YUV420 6-channel representation.
+    """NCHW PyTorch training-time wrapper around the canonical rgb_to_yuv6.
+
+    Canonical math lives in
+    :func:`tac.framework_agnostic.canonical_kernels.rgb_to_yuv6` (the
+    extracted single source of truth per MLX canonicalization audit
+    inventory A.2.6 and canonical equation
+    ``mlx_primitive_canonicalization_compounding_savings_v1``).
 
     Must match upstream ``frame_utils.rgb_to_yuv6`` exactly. Any divergence
     will cause scorer-space optimization to silently produce wrong gradients.
     Use :func:`validate_yuv_parity` to cross-validate against the upstream
     implementation after any modification.
+
+    PRINCIPLED FORK per Catalog #290 falling-rule list: the canonical
+    helper hard-requires 4D NCHW ``(N, 3, H, W)``; the training-time
+    constrained-generation stack feeds arbitrary leading dims such as
+    ``(B, S, 3, H, W)``. This wrapper flattens leading dims, dispatches
+    canonical math, and restores leading dims while preserving exact
+    byte-stable contest parity per the
+    ``tac.differentiable_eval_roundtrip`` non-negotiable.
 
     Args:
         rgb_chw: (..., 3, H, W) float tensor in [0, 255].
@@ -108,37 +122,24 @@ def rgb_to_yuv6(rgb_chw: torch.Tensor) -> torch.Tensor:
     Returns:
         (..., 6, H//2, W//2) tensor: [y00, y10, y01, y11, U_sub, V_sub].
     """
+    from tac.framework_agnostic.canonical_kernels import (
+        rgb_to_yuv6 as _canonical_rgb_to_yuv6,
+        Backend,
+    )
+
+    if rgb_chw.shape[-3] != 3:
+        raise ValueError(
+            f"rgb_to_yuv6 expects NCHW with 3 channels at dim -3; "
+            f"got shape {tuple(rgb_chw.shape)}."
+        )
+    leading_shape = rgb_chw.shape[:-3]
     H, W = rgb_chw.shape[-2], rgb_chw.shape[-1]
-    H2, W2 = H // 2, W // 2
-    rgb = rgb_chw[..., :, : 2 * H2, : 2 * W2]
-
-    R = rgb[..., 0, :, :]
-    G = rgb[..., 1, :, :]
-    B = rgb[..., 2, :, :]
-
-    kYR, kYG, kYB = 0.299, 0.587, 0.114
-    Y = (R * kYR + G * kYG + B * kYB).clamp(0.0, 255.0)
-    U = ((B - Y) / 1.772 + 128.0).clamp(0.0, 255.0)
-    V = ((R - Y) / 1.402 + 128.0).clamp(0.0, 255.0)
-
-    U_sub = (
-        U[..., 0::2, 0::2]
-        + U[..., 1::2, 0::2]
-        + U[..., 0::2, 1::2]
-        + U[..., 1::2, 1::2]
-    ) * 0.25
-    V_sub = (
-        V[..., 0::2, 0::2]
-        + V[..., 1::2, 0::2]
-        + V[..., 0::2, 1::2]
-        + V[..., 1::2, 1::2]
-    ) * 0.25
-
-    y00 = Y[..., 0::2, 0::2]
-    y10 = Y[..., 1::2, 0::2]
-    y01 = Y[..., 0::2, 1::2]
-    y11 = Y[..., 1::2, 1::2]
-    return torch.stack([y00, y10, y01, y11, U_sub, V_sub], dim=-3)
+    flat_nchw = rgb_chw.reshape(-1, 3, H, W)  # (B', 3, H, W)
+    yuv6_nchw = _canonical_rgb_to_yuv6(
+        flat_nchw, backend=Backend.PYTORCH, value_range=255.0
+    )  # (B', 6, H2, W2)
+    H2, W2 = yuv6_nchw.shape[-2], yuv6_nchw.shape[-1]
+    return yuv6_nchw.reshape(*leading_shape, 6, H2, W2)
 
 
 def yuv6_to_rgb(yuv6: torch.Tensor) -> torch.Tensor:

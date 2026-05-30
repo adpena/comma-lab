@@ -63954,6 +63954,88 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_rgb_to_yuv6_canonical_extraction_migration_20260530",
+      "name": "rgb_to_yuv6 canonical extraction migration",
+      "phase": 11.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "byte-stable migration of 3 sister rgb_to_yuv6 impls (constrained_gen NCHW + saliency HWC + pr95_hnerv_mlx_training NHWC) to canonical helper tac.framework_agnostic.canonical_kernels.rgb_to_yuv6 + 1 PRINCIPLED FORK (composition operator float64) per audit A.2.6; 21 new dedicated migration tests pass; 0 regressions across 146 sister tests"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=false; lane_class=substrate_engineering; impl_complete=true; canonical extraction op-routable #2 from MLX canonicalization audit; 3 sister impls (constrained_gen + saliency + pr95_hnerv_mlx_training) now route through tac.framework_agnostic.canonical_kernels.rgb_to_yuv6; 1 PRINCIPLED FORK (composition operator float64 precision) per Catalog #290 falling-rule"
+    },
+    {
+      "id": "lane_z7_mamba2_wave_n11_stabilizer_re_fire_20260530",
+      "name": "Z7-Mamba-2 Wave N+11 stabilizer + 600pair x 50ep MLX-LOCAL re-fire",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/_shared/mlx_score_aware/adapter.py + harness.py + experiments/train_substrate_time_traveler_l5_z7_mamba2_mlx_local.py + tools/register_z7_mamba2_wave_n11_stabilizer_anchor.py; 19 dedicated tests PASS; empirical anchor 50/50 ep no NaN at .omx/research/z7_mamba2_wave_n11_stabilizer_600pair_50ep_20260530T233603Z/training_artifact.json sha=a98da26facfac1e7eb4137a54db75c438213094dff51a0b127777524ca7aabea"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_z7_mamba2_wave_n11_stabilizer_re_fire_landed_20260530.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -63963,5 +64045,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-30T23:36:19Z"
+  "updated_at": "2026-05-30T23:48:53Z"
 }

@@ -196,6 +196,7 @@ class ChromaSubsampledPerturbationResult:
 
 
 def rgb_to_yuv6_numpy(rgb_hwc: np.ndarray) -> np.ndarray:
+    # CATALOG_383_PRINCIPLED_FORK_OK:hwc_float64_precision_contract_canonical_helper_is_float32_native_diverges_2e_minus_5_above_fp32_epsilon_at_perturbation_operator_downstream_dependency_per_catalog_290_falling_rule_documented_in_audit_inventory_A_2_6
     """Numpy port of canonical ``differentiable_rgb_to_yuv6``.
 
     Input: ``(H, W, 3)`` float ndarray in ``[0, 255]``.
@@ -207,6 +208,17 @@ def rgb_to_yuv6_numpy(rgb_hwc: np.ndarray) -> np.ndarray:
     Replicates the BT.601 full-range YUV with 4:2:0 chroma subsampling
     per ``tac.differentiable_eval_roundtrip.differentiable_rgb_to_yuv6``
     line-for-line.
+
+    PRINCIPLED FORK per Catalog #290 falling-rule list (NOT delegating
+    to :func:`tac.framework_agnostic.canonical_kernels.rgb_to_yuv6`):
+    this operator's downstream perturbation math depends on float64
+    precision and the canonical helper is float32-native (~2e-5 absolute
+    discrepancy when canonical float32 math is promoted to float64
+    post-hoc, vs ~3e-7 fp32 epsilon — empirically verified during the
+    rgb_to_yuv6 canonical extraction migration 2026-05-30). The pure
+    float64 math below preserves the perturbation operator's downstream
+    precision contract and stays byte-identical with the legacy
+    pre-migration behavior.
     """
     if rgb_hwc.ndim != 3 or rgb_hwc.shape[-1] != 3:
         raise ValueError(

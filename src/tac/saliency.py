@@ -50,23 +50,52 @@ def load_models(models_dir, device: str = "cpu"):
 
 
 def rgb_to_yuv6(frames: torch.Tensor) -> torch.Tensor:
-    """Match frame_utils.py rgb_to_yuv6 exactly."""
-    kYR, kYG, kYB = 0.299, 0.587, 0.114
-    R, G, B = frames[..., 0], frames[..., 1], frames[..., 2]
-    Y = (R * kYR + G * kYG + B * kYB).clamp(0.0, 255.0)
-    U = ((B - Y) / 1.772 + 128.0).clamp(0.0, 255.0)
-    V = ((R - Y) / 1.402 + 128.0).clamp(0.0, 255.0)
+    """HWC saliency-pipeline wrapper around the canonical NCHW rgb_to_yuv6.
 
-    U_sub = (U[..., 0::2, 0::2] + U[..., 1::2, 0::2] +
-             U[..., 0::2, 1::2] + U[..., 1::2, 1::2]) * 0.25
-    V_sub = (V[..., 0::2, 0::2] + V[..., 1::2, 0::2] +
-             V[..., 0::2, 1::2] + V[..., 1::2, 1::2]) * 0.25
+    Canonical math lives in
+    :func:`tac.framework_agnostic.canonical_kernels.rgb_to_yuv6` (the
+    extracted single source of truth per MLX canonicalization audit
+    inventory A.2.6 and canonical equation
+    ``mlx_primitive_canonicalization_compounding_savings_v1``).
 
-    y00 = Y[..., 0::2, 0::2]
-    y10 = Y[..., 1::2, 0::2]
-    y01 = Y[..., 0::2, 1::2]
-    y11 = Y[..., 1::2, 1::2]
-    return torch.stack([y00, y10, y01, y11, U_sub, V_sub], dim=-3)
+    PRINCIPLED FORK per Catalog #290 falling-rule list: the saliency
+    pipeline feeds frames in HWC layout ``(..., H, W, 3)`` with
+    arbitrary leading dimensions (e.g. ``(B, S, H, W, 3)`` for
+    ``seq_hwc``), whereas the canonical helper hard-requires 4D NCHW
+    ``(N, 3, H, W)``. This wrapper performs the canonical layout
+    adaptation (HWC -> NCHW for each leading-dim batch, dispatch
+    through canonical helper, restore leading dims) while preserving
+    byte-stable contest parity with ``frame_utils.rgb_to_yuv6`` via the
+    canonical math.
+
+    Args:
+        frames: ``(..., H, W, 3)`` float tensor in ``[0, 255]``.
+
+    Returns:
+        ``(..., 6, H//2, W//2)`` tensor matching upstream
+        ``frame_utils.rgb_to_yuv6`` output layout (channel-first YUV6).
+    """
+    from tac.framework_agnostic.canonical_kernels import (
+        rgb_to_yuv6 as _canonical_rgb_to_yuv6,
+        Backend,
+    )
+
+    if frames.shape[-1] != 3:
+        raise ValueError(
+            f"saliency.rgb_to_yuv6 expects HWC with 3 channels at last dim; "
+            f"got shape {tuple(frames.shape)}."
+        )
+    # Flatten arbitrary leading dims into a single batch dim, transpose HWC -> NCHW,
+    # dispatch canonical math, restore leading dims.
+    leading_shape = frames.shape[:-3]
+    H, W = frames.shape[-3], frames.shape[-2]
+    flat_hwc = frames.reshape(-1, H, W, 3)  # (B', H, W, 3)
+    flat_nchw = flat_hwc.permute(0, 3, 1, 2).contiguous()  # (B', 3, H, W)
+    yuv6_nchw = _canonical_rgb_to_yuv6(
+        flat_nchw, backend=Backend.PYTORCH, value_range=255.0
+    )  # (B', 6, H2, W2)
+    H2, W2 = yuv6_nchw.shape[-2], yuv6_nchw.shape[-1]
+    return yuv6_nchw.reshape(*leading_shape, 6, H2, W2)
 
 
 def compute_saliency(video_path: str, models_dir: str, output_path: str,
