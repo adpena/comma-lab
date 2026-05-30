@@ -62595,6 +62595,89 @@
         }
       },
       "notes": "Canonical Catalog #325 T3 grand council per-substrate symposium memo LANDED .omx/research/council_t3_grand_council_per_substrate_symposium_z8_hierarchical_predictive_coding_m12_paid_modal_t4_l2_long_training_plus_paired_cuda_canonical_sub_0_189_attempt_20260530.md. Verdict: PROCEED_WITH_REVISIONS (23-of-23 council attendees, 6-of-6 sextet pact, 16-of-20 grand council with topical match per Catalog #346). M12a-FIRST sequencing addresses Contrarian VETO + Assumption-Adversary HARD-EARNED-vs-CARGO-CULTED resolution. Canonical posterior anchor LANDED via tac.council_continual_learning.append_council_anchor. Slot W Wave N+40 blocker SUPERSEDED per Catalog #313 EVENT_SUPERSEDED on Z8. M12 dispatch is structurally unblocked + operator-routable per Catalog #325 14-day window. NO PAID DISPATCH FIRED at this gate. lane_class=substrate_engineering per HNeRV parity L7 + Catalog #220. research_only=false per Catalog #240 contest-CUDA-chain since this is M12 paid Modal dispatch clearance scope. dispatch_enabled=false per CLAUDE.md user-asks-Authorization non-negotiable. M11 LANDED commit 2f8570755 IS canonical reactivation evidence."
+    },
+    {
+      "id": "lane_z8_m12a_modal_t4_l2_long_training_per_catalog_325_symposium_proceed_with_revisions_20260530",
+      "name": "Z8 M12a Modal T4 L2 long-training recipe + driver (canonical apparatus setup per Catalog #325 symposium 4bcc84fc0 PROCEED_WITH_REVISIONS)",
+      "phase": 12.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "canonical apparatus setup LANDED 2026-05-30: .omx/operator_authorize_recipes/substrate_z8_hierarchical_predictive_coding_modal_t4_dispatch.yaml + scripts/remote_lane_substrate_z8_hierarchical_predictive_coding.sh. lane_class=substrate_engineering per HNeRV parity L7. research_only=false per Catalog #240 post-symposium PROCEED_WITH_REVISIONS. dispatch_enabled=true authorized by Catalog #325 symposium 4bcc84fc0 + Catalog #324 PASS pending_post_training + Catalog #270 Tier 2 PASS + Catalog #244 NVML PASS + Catalog #326 PASS + Catalog #313 PROCEED. Operator-explicit paid Modal dispatch authorization required per CLAUDE.md user-asks-Authorization + sub-0.189 threshold + 5+ dollar hard-stop."
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "MEMORY.md + canonical landing memo at .omx/research/z8_m12a_modal_t4_l2_long_training_recipe_authoring_per_catalog_325_symposium_proceed_with_revisions_landed_20260530.md to land in same commit batch per Catalog #348 retroactive sweep"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_z8_canonical_l28_plus_l30_plus_l32_pr_family_quick_wins_bolt_on_cascade_on_z8_substrate_mlx_local_20260530",
+      "name": "Z8 canonical L28+L32 PR-family quick-wins bolt-on cascade",
+      "phase": 2.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "L28+L32 patches landed: archive.py _BROTLI_QUALITY=11; canonical_quadruple_binding._serialize_pair_wavelet_pyramid uses brotli.compress(raw, quality=11); _shared/inflate_runtime.write_rgb_pair_to_raw accepts apply_pr98_l28_channel_postprocess kwarg; Z8 inflate.py opts in. 252 Z8 tests pass + 10 new dedicated L28+L32 tests pass."
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "[macOS-CPU advisory] Z8 canonical L28+L32 PR-family quick-wins bolt-on cascade end-to-end smoke at experiments/results/z8_canonical_l28_plus_l30_plus_l32_pr_family_quick_wins_bolt_on_cascade_20260530T171352Z/quick_wins_smoke_output.json; L32 archive.zip 92409B vs M11 baseline 92516B (delta -107B / -0.116%); per-section: wavelet_blob -103B (-0.11%); decoder_blob -3B (-8.11%); dreamer_state_blob -1B (-3.12%). Evaluator final score pending. NEVER promotable per Catalog #192 macOS-CPU advisory only."
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/z8_canonical_l28_plus_l30_plus_l32_pr_family_quick_wins_bolt_on_cascade_on_z8_substrate_landed_20260530.md + .omx/research/retroactive_sweep_for_z8_canonical_l28_plus_l30_plus_l32_bolt_on_cascade_20260530T172732Z.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "",
+      "lane_class": "substrate_engineering"
     }
   ],
   "level_rules": {
@@ -62604,5 +62687,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-30T17:13:30Z"
+  "updated_at": "2026-05-30T17:32:58Z"
 }

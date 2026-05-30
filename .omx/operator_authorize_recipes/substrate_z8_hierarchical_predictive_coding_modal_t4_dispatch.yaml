@@ -1,0 +1,257 @@
+schema_version: 1
+name: substrate_z8_hierarchical_predictive_coding_modal_t4_dispatch
+lane_id: lane_z8_m12a_modal_t4_l2_long_training_per_catalog_325_symposium_proceed_with_revisions_20260530
+summary: |
+  Z8 hierarchical predictive coding M12a Modal T4 L2 long-training canonical
+  dispatch recipe per Catalog #325 symposium 4bcc84fc0 PROCEED_WITH_REVISIONS
+  (unanimous 23-of-23 T3 grand council; 2026-05-30).
+
+  Mechanism (Catalog #312 canonical quadruple binding-depth):
+
+      Rao-Ballard 1999 hierarchical predictive coding (3-level V1/V2/V3 analog)
+    + Mallat 1989 full Daubechies-4 DWT (per-level wavelet pyramid)
+    + Hafner DreamerV3 2023 latent dynamics (per-level categorical posterior
+                                              + Gumbel-Softmax STE)
+    + Wyner-Ziv 1976 top-level conditional coder (R(X|Y) << R(X))
+
+  M12a canonical L2 long-training scope: 2000 epochs Modal T4 with
+  score-aware optimizer wiring (M7 sensitivity-map + M8 ScoreAwareLevelLoss)
+  producing canonical PoseNet trajectory evidence per Contrarian VETO
+  reconciliation. M12b paired-CUDA is GATED on M12a empirical PoseNet
+  sub-1.0 trajectory evidence per Contrarian + Assumption-Adversary + Hotz
+  consensus.
+
+  Predicted [contest-CPU] band [0.183, 0.195] canonical sub-0.189-candidate
+  range (predicted_band_validation_status: pending_post_training per Catalog
+  #324; M12a empirical anchor IS the canonical Tier-C calibration).
+
+  Per CLAUDE.md "user-asks-Authorization" non-negotiable + the operator's
+  sub-0.189 submission threshold + 5+ dollar hard-stop: paid Modal dispatch
+  authorization is OPERATOR-GATED. THIS recipe sets dispatch_enabled: true
+  per Catalog #240 (post-symposium PROCEED_WITH_REVISIONS), and the
+  canonical Catalog #325 14-day window expires 2026-06-13T17:02:07Z.
+
+  Symposium memo: .omx/research/council_t3_grand_council_per_substrate_symposium_z8_hierarchical_predictive_coding_m12_paid_modal_t4_l2_long_training_plus_paired_cuda_canonical_sub_0_189_attempt_20260530.md
+  Canonical anchor: .omx/state/council_deliberation_posterior.jsonl
+
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+min_vram_gb: 14
+min_smoke_gpu: "T4"
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - contest_one_video_replay
+  - contest_generalized
+  - research_substrate
+canary_status: independent_substrate
+# Z8 is canonical Catalog #312 substrate-class shift (4-primitive canonical
+# quadruple binding-depth). Architecturally distinct from HNeRV-family
+# within-class lineage; canonical independent_substrate per Catalog #173.
+
+active_dispatch_contract: z8_hpc_m12a_canonical_quadruple_long_training
+dispatch_contracts:
+  - id: z8_hpc_m12a_canonical_quadruple_long_training
+    archive_role: monolithic_z8hpc1_self_contained
+    builder_surface: experiments/train_substrate_z8_hierarchical_predictive_coding_mlx.py
+    builder_mode_flag: --canonical-quadruple-binding
+    status: active_recipe_contract_post_symposium_proceed_with_revisions
+    exact_eval_path: archive.zip -> submission/inflate.sh -> experiments/contest_auth_eval.py --device cuda
+    canonical_compose: m4_mamba2_ssd + m5_mallat_full_dwt + m6_wyner_ziv_top_level + m8_score_aware_level_loss
+
+# Catalog #270 Tier 1 engineering primitives (canonical per dispatch optimization protocol)
+cost_band:
+  epochs: 2000
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 8.00
+  platform_key: modal
+  gpu_key: T4
+
+# Catalog #324 post-training Tier-C validation discipline
+predicted_score_target: 0.189
+predicted_band: [0.183, 0.195]
+predicted_band_validation_status: pending_post_training
+predicted_band_reactivation_criterion: "Post-training Tier-C density re-measurement via tools/mdl_scorer_conditional_ablation.py --tier c on the M12a landed archive sha256. Round 2 self-reflection per Catalog #363 triggered if M12a empirical anchor reveals predicted-band miss >2x. Per symposium frontmatter: M12b paired-CUDA empirical anchor for sister Linux x86_64 [contest-CPU] vs [contest-CUDA] CPU-CUDA gap calibration after M12a confirms PoseNet sub-1.0 trajectory."
+predicted_band_contest_cuda: [0.197, 0.213]
+predicted_band_contest_cuda_rationale: "Per CLAUDE.md SegNet-vs-PoseNet importance + canonical PR101/PR106 frontier CPU-CUDA gap: apply delta_cpu_cuda ~+0.014 to predicted [contest-CPU] band yielding [0.197, 0.213]. M12b paired-CUDA empirical anchor IS the canonical Tier-C calibration per Catalog #246."
+smoke_score_band: [0.20, 5.00]
+predicted_delta: "Predicted delta -0.005 to -0.012 from canonical frontier [contest-CPU] 0.19198533 (lane fp11_source_brotli_recode; archive sha b7106c9bdbb8) -> predicted band [0.183, 0.195] [prediction] per canonical Catalog #312 quadruple binding-depth at 100x-200x M11 L1 fixture scope + score-aware optimizer wiring + canonical 4-primitive Pareto polytope per Dykstra-feasibility intersection. Sub-0.189 contingent on PoseNet trajectory sub-1.0 per Contrarian VETO reconciliation."
+predicted_delta_basis: ".omx/research/council_t3_grand_council_per_substrate_symposium_z8_hierarchical_predictive_coding_m12_paid_modal_t4_l2_long_training_plus_paired_cuda_canonical_sub_0_189_attempt_20260530.md (PROCEED_WITH_REVISIONS unanimous 23-of-23 T3 grand council; canonical 6-step Catalog #325 clearance) + Z8 M11 L1 anchor commit 2f8570755 (cycle-closure validated through upstream/evaluate.py --device cpu) + Z8 M9 commit bb48f691c + Z8 M10 commit 59bdf9c93"
+literature_anchor: |
+  Rao & Ballard (1999) "Predictive coding in the visual cortex" Nature
+    Neuroscience 2(1):79-87 DOI 10.1038/4580;
+  Mallat (1989) "A theory for multiresolution signal decomposition: the
+    wavelet representation" IEEE PAMI 11(7):674-693;
+  Hafner et al. (2023) "Mastering Diverse Domains through World Models"
+    arXiv:2301.04104 (DreamerV3);
+  Wyner & Ziv (1976) "The rate-distortion function for source coding with
+    side information at the decoder" IEEE Trans. Info. Theory 22(1):1-10;
+  Daubechies (1988) "Orthonormal bases of compactly supported wavelets"
+    Commun. Pure Appl. Math. 41(7):909-996;
+  Yousfi et al. challenge-design papers (UNIWARD + MiPOD + HILL + HUGO);
+  Tishby & Zaslavsky (2015) "Deep Learning and the Information Bottleneck
+    Principle" IEEE ITW DOI 10.1109/ITW.2015.7133169;
+  Atick & Redlich (1990) "Towards a Theory of Early Visual Processing"
+    Neural Computation 2(3):308-320 (cooperative-receiver).
+
+# Catalog #325 per-substrate optimal form symposium reference (canonical)
+per_substrate_symposium_memo: .omx/research/council_t3_grand_council_per_substrate_symposium_z8_hierarchical_predictive_coding_m12_paid_modal_t4_l2_long_training_plus_paired_cuda_canonical_sub_0_189_attempt_20260530.md
+per_substrate_symposium_verdict: PROCEED_WITH_REVISIONS
+per_substrate_symposium_expires_utc: 2026-06-13T17:02:07Z
+per_substrate_symposium_canonical_anchor_id: council_t3_grand_council_per_substrate_symposium_z8_hierarchical_predictive_coding_m12_paid_modal_t4_l2_long_training_plus_paired_cuda_canonical_sub_0_189_attempt_20260530
+per_substrate_symposium_sequencing_revision: "M12a-FIRST sequencing MANDATORY per Contrarian VETO + Assumption-Adversary HARD-EARNED-vs-CARGO-CULTED + Hotz consensus. M12b paired-CUDA GATED on M12a empirical PoseNet sub-1.0 trajectory evidence; if M12a sub-linear, M12b ESCALATE_TO_OPERATOR per Catalog #300."
+
+# Catalog #167 smoke-before-full discipline
+smoke_before_full_required: true
+smoke_before_full_canonical_helper: tools/run_modal_smoke_before_full.py
+
+# Catalog #166 mounted_code_git_head parity
+require_clean_head: true
+
+# Catalog #240 recipe-vs-trainer-state consistency
+# Post-symposium PROCEED_WITH_REVISIONS authorizes dispatch_enabled: true;
+# the Z8 trainer's --canonical-quadruple-binding mode routes through
+# tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_binding
+# .run_canonical_quadruple_training_loop which is implemented (NOT
+# NotImplementedError) per M9 commit bb48f691c.
+dispatch_enabled: true
+research_only: false
+smoke_only: false
+
+# Operator authorization required per CLAUDE.md "user-asks-Authorization" non-negotiable
+# + the operator's sub-0.189 submission threshold + 5+ dollar hard-stop. THIS recipe
+# is dispatch_enabled: true per Catalog #240 + the symposium's PROCEED_WITH_REVISIONS
+# verdict, but tools/operator_authorize.py invocation requires the operator's explicit
+# command. The canonical CLI command is documented in the landing memo + final report.
+operator_authorization_required: true
+operator_authorization_envelope_usd: 18.00
+operator_authorization_rationale: "M12a Modal T4 L2 long-training ~5-15 USD envelope + M12b paired-CUDA ~1.50-3.00 USD per Catalog #246 = ~6.50-18.00 USD total; operator-bounded per BLANK_THIS_IS_OPERATOR_GATED standing directive."
+
+envelope_status: "FITS 18 USD envelope at p50 fallback for T4 long-training (8 USD M12a) + paired Catalog #246 (1.50-3 USD M12b). M12b GATED on M12a PoseNet sub-1.0 trajectory."
+
+remote_driver: scripts/remote_lane_substrate_z8_hierarchical_predictive_coding.sh
+timeout_hours: 6.0
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_z8_hierarchical_predictive_coding.sh
+  cost_band_trainer: experiments/train_substrate_z8_hierarchical_predictive_coding_mlx.py
+  cost_band_epochs: 2000
+  cost_band_batch_size: 16
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_z8_hierarchical_predictive_coding_mlx.py
+
+# Per Catalog #191 sentinel-file SHA-stability gate. The substrate's source files
+# MUST remain byte-stable between dispatch-spawn and worker-start; a sibling-
+# subagent edit triggers rc=13 BEFORE the GPU meter starts.
+sentinel_files:
+  - src/tac/substrates/z8_hierarchical_predictive_coding/__init__.py
+  - src/tac/substrates/z8_hierarchical_predictive_coding/canonical_quadruple_binding.py
+  - src/tac/substrates/z8_hierarchical_predictive_coding/binding_contract.py
+  - src/tac/substrates/z8_hierarchical_predictive_coding/inflate.py
+  - src/tac/substrates/z8_hierarchical_predictive_coding/mamba2_adapter.py
+  - src/tac/substrates/z8_hierarchical_predictive_coding/mallat_dwt_adapter.py
+  - src/tac/substrates/z8_hierarchical_predictive_coding/wyner_ziv_coder.py
+  - src/tac/substrates/z8_hierarchical_predictive_coding/scorer_sensitivity_map.py
+  - src/tac/substrates/z8_hierarchical_predictive_coding/loss.py
+  - src/tac/substrates/z8_hierarchical_predictive_coding/mlx_renderer.py
+  - src/tac/substrates/z8_hierarchical_predictive_coding/archive.py
+  - src/tac/substrates/z8_hierarchical_predictive_coding/m11_l1_macos_cpu_smoke.py
+  - src/tac/substrates/_shared/inflate_runtime.py
+  - src/tac/substrates/_shared/smoke_auth_eval_gate.py
+  - src/tac/substrates/_shared/trainer_skeleton.py
+  - src/tac/substrates/score_aware_common.py
+  - src/tac/substrates/dreamer_v3_rssm/__init__.py
+
+# Catalog #244 NVML / CUDA env hygiene (auto-emitted by driver immediately
+# after set -euo pipefail; canonical 3-export block per Catalog #244 sister
+# discipline anchored at D1 commit 611495f26).
+# Catalog #326 multi-key trainer mode resolution: Z8_TRAINER_MODE primary
+# (full|smoke|canonical_quadruple) with fail-loud warning when no key set.
+env_overrides:
+  Z8_TRAINER_MODE: "canonical_quadruple"
+  SMOKE_ONLY: "0"
+  Z8_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  Z8_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  Z8_OUTPUT_DIR: /workspace/pact/lane_substrate_z8_hierarchical_predictive_coding_results/output
+  Z8_EPOCHS: "2000"
+  Z8_NUM_PAIRS: "600"
+  Z8_CANONICAL_QUADRUPLE_EVAL_H: "32"
+  Z8_CANONICAL_QUADRUPLE_EVAL_W: "32"
+  Z8_DEVICE: cuda
+  Z8_ENABLE_AUTOCAST_FP16: "1"
+  Z8_ENABLE_GT_SCORER_CACHE: "1"
+  Z8_ENABLE_TORCH_COMPILE: "0"
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - scripts/remote_lane_substrate_z8_hierarchical_predictive_coding.sh
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_z8_hierarchical_predictive_coding_mlx.py
+  - tools/validate_dispatch_required_inputs.py
+  - src/tac/substrates/z8_hierarchical_predictive_coding/
+
+notes: |
+  Z8 M12a Modal T4 L2 long-training canonical apparatus-setup recipe per
+  Catalog #325 symposium 4bcc84fc0 PROCEED_WITH_REVISIONS unanimous 23-of-23
+  T3 grand council (2026-05-30).
+
+  Catalog #313 sister probe outcome reference:
+    - z8_hierarchical_predictive_coding PROCEED 14-day expires 2026-06-13T17:02:07Z
+      (post-symposium PROCEED; predecessor Slot W Wave N+40 DEFER RATIFIED_SUPERSEDED_BY_M11_PHASE_2_PROMOTION_LANDING)
+
+  Sister canonical equations per Catalog #344:
+    - categorical_posterior_capacity_vs_continuous_gaussian_v1 (3-of-3 anchors; Catalog #371 auto-recalibrator ACTIVE)
+    - wyner_ziv_decoder_side_information_rate_savings_v1 (registered Wave N+36 commit c2780c7ba)
+    - z8_m12a_l2_long_training_posenet_trajectory_v1 (RESERVED-PENDING-M12a-LANDING; first empirical anchor)
+    - z8_m12b_paired_cuda_cpu_cuda_gap_calibration_v1 (RESERVED-PENDING-M12b-LANDING)
+    - z8_canonical_quadruple_binding_depth_score_contribution_v1 (RESERVED-PENDING-3-ANCHOR-AGGREGATE)
+
+  Catalog #312 canonical quadruple binding (4 primitives bound simultaneously):
+    - Rao-Ballard hierarchy: ADOPTED via binding_contract.py per-level Protocols
+    - Mallat wavelet: ADOPTED via mallat_dwt_adapter.py canonical full Daubechies-4 DWT
+    - DreamerV3 RSSM: ADOPTED via tac.substrates.dreamer_v3_rssm delegation (Wave 10/11 sister-cluster commit 244866789)
+    - Wyner-Ziv: ADOPTED via wyner_ziv_coder.py per Wyner-Ziv 1976 Theorem 1
+
+  Canonical Catalog #313 sister reactivation paths (per symposium Step 5):
+    - M12a sub-linear PoseNet trajectory -> M12a-v2 extended curriculum 300-500ep OR Mamba-2 stability-fix (Z7 Wave N+2 transfer; ~10-25 USD Modal T4)
+    - M12a NaN/inf crash -> Mamba-1 S6 fallback OR DreamerV3 deterministic-only (~5-10 USD Modal T4)
+    - M12b sub-0.189 NOT crossed but [contest-CPU] < 0.200 -> M12c stack-of-stacks composition (~15-30 USD Modal A100)
+    - M12b sub-0.189 NOT crossed AND [contest-CPU] > 0.200 -> M12d cargo-cult unwind audit per Catalog #303 + #307
+    - M12b sub-0.189 IS crossed -> M13 submission cascade per CLAUDE.md "Submission auth eval - BOTH CPU AND CUDA" + Catalog #370
+
+  Operator-routable canonical CLI command (canonical apparatus-setup; paid dispatch operator-gated):
+
+    .venv/bin/python tools/operator_authorize.py \\
+        --recipe substrate_z8_hierarchical_predictive_coding_modal_t4_dispatch \\
+        --platform modal \\
+        --gpu T4
+
+  The canonical Catalog #243 local pre-deploy harness + Catalog #270 dispatch optimization
+  protocol + Catalog #271 codex pre-dispatch review + Catalog #167 smoke-before-full
+  pattern all fire BEFORE the paid Modal meter starts.
+
+  Per CLAUDE.md "Modal .spawn() HARVEST OR LOSE": modal_train_lane.py uses
+  .spawn(); harvest within 24h via tools/harvest_modal_calls.py --execute
+  OR experiments/modal_recover_lane.py.
+
+  Per CLAUDE.md "Auth eval EVERYWHERE": dispatch ends with CUDA auth eval
+  on EMA shadow via canonical gate_auth_eval_call routing through
+  tac.substrates._shared.smoke_auth_eval_gate per Catalog #226. CUDA-only
+  at M12a; paired CPU axis on Linux x86_64 required at M12b per CLAUDE.md
+  "Submission auth eval - BOTH CPU AND CUDA" before frontier-claim language.
+
+  Cross-ref:
+    .omx/research/council_t3_grand_council_per_substrate_symposium_z8_hierarchical_predictive_coding_m12_paid_modal_t4_l2_long_training_plus_paired_cuda_canonical_sub_0_189_attempt_20260530.md (canonical symposium)
+    .omx/state/council_deliberation_posterior.jsonl (canonical posterior anchor)
+    src/tac/substrates/z8_hierarchical_predictive_coding/build_progress.py (M1-M11 LANDED; M12 PENDING per canonical in-source tracking surface)
+    src/tac/substrates/z8_hierarchical_predictive_coding/canonical_quadruple_binding.py (canonical compose pattern; run_canonical_quadruple_training_loop entrypoint)
+    src/tac/substrates/z8_hierarchical_predictive_coding/__init__.py (substrate docstring + Catalog #124 8 fields)
+    experiments/train_substrate_z8_hierarchical_predictive_coding_mlx.py (canonical trainer; --canonical-quadruple-binding flag routes through canonical compose for M12a)
+    feedback_z8_m11_l1_macos_cpu_mlx_local_end_to_end_smoke_canonical_evaluate_cpu_binding_landed_20260530.md (M11 cycle-closure anchor commit 2f8570755)
+    feedback_z8_m10_inflate_consumes_real_trained_weights_per_catalog_369_landed_20260530.md (M10 canonical inflate per Catalog #369)
+    feedback_z8_m9_full_main_canonical_quadruple_binding_integration_landed_20260530.md (M9 _full_main lift commit bb48f691c)
