@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pytest
 
+from tac.optimization import repair_family_stack_search as repair_stack_search_module
 from tac.optimization.archive_bound_candidate_adapter_spine import (
     ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA,
 )
@@ -124,6 +125,25 @@ def test_entropy_coder_runtime_adapters_roundtrip_receiver_decode() -> None:
             )
             == payload
         )
+
+
+def test_archive_entropy_orphan_anti_pattern_penalizes_prototype_rows() -> None:
+    penalty = repair_stack_search_module._archive_entropy_anti_pattern_penalty(
+        {
+            "anti_pattern_protections": [
+                {
+                    "anti_pattern_id": (
+                        "probe_only_side_report_orphaned_from_optimizer_v1"
+                    )
+                }
+            ],
+            "probed_substrates": [],
+            "prototype_substrates": ["range_coding"],
+            "blockers": [],
+        }
+    )
+
+    assert penalty > 0.0
 
 
 def test_archive_bound_candidate_contract_classifies_entropy_substrates() -> None:

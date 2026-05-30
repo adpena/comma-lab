@@ -275,11 +275,12 @@ def _archive_entropy_anti_pattern_penalty(
         and archive_entropy_coverage.get("ready_for_exact_eval_dispatch") is False
     ):
         penalty += 0.04
-    if (
-        "probe_only_side_report_orphaned_from_optimizer_v1" in anti_pattern_ids
-        and not (_string_list(archive_entropy_coverage.get("probed_substrates")) or prototype_substrates)
-    ):
-        penalty += 0.12
+    if "probe_only_side_report_orphaned_from_optimizer_v1" in anti_pattern_ids:
+        penalty += (
+            0.06
+            if (_string_list(archive_entropy_coverage.get("probed_substrates")) or prototype_substrates)
+            else 0.12
+        )
     if (
         "scaffold_or_probe_bytes_without_receiver_consumption_v1" in anti_pattern_ids
         and prototype_substrates

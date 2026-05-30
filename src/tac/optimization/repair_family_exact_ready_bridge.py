@@ -203,10 +203,9 @@ def _runtime_proof_from_row(row: Mapping[str, Any]) -> Mapping[str, Any]:
 def _archive_contracts_from_handoff_row(
     handoff_row: Mapping[str, Any],
 ) -> list[dict[str, Any]]:
-    if (
-        "archive_bound_candidate_contract" not in handoff_row
-        and "archive_bound_candidate_contract_surface" not in handoff_row
-    ):
+    contract = handoff_row.get("archive_bound_candidate_contract")
+    surface = handoff_row.get("archive_bound_candidate_contract_surface")
+    if not contract and not surface:
         return []
     try:
         return archive_bound_candidate_contracts_from_payload(
