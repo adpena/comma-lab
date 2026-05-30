@@ -4,6 +4,7 @@
 Per operator task #1496 Wave N+36 routing + CLAUDE.md "Canonical equations
 + models registry" non-negotiable + Catalog #344 sister discipline.
 """
+
 from __future__ import annotations
 
 import math
@@ -15,10 +16,8 @@ from tac.canonical_equations import (
     EmpiricalAnchor,
     build_wyner_ziv_decoder_side_posenet_side_information_conditional_entropy_reduction_v1,
     predict_wyner_ziv_posenet_side_info_savings,
-    query_equations,
 )
 from tac.canonical_equations.equation import (
-    INFERRED_FROM_DOMAIN_LITERATURE,
     RECALIBRATE_ON_NEW_ANCHORS,
     VERIFIED_VIA_EMPIRICAL_ANCHOR,
 )
@@ -26,7 +25,6 @@ from tac.canonical_equations.wyner_ziv_decoder_side_posenet_side_information imp
     EQUATION_ID,
 )
 from tac.provenance.contract import Provenance
-
 
 # ---------------------------------------------------------------------------
 # Canonical equation builder invariants
@@ -80,10 +78,18 @@ def test_canonical_equation_excludes_posenet_as_source_degenerate_case() -> None
     excluded_ids = {e["context_id"] for e in eq.domain_of_validity["excluded"]}
     assert "posenet_as_source_degenerate" in excluded_ids
     assert "non_video_signals" in excluded_ids
-    assert "non_decoder_reproducible_substrates" in excluded_ids
+    assert "free_posenet_decoder_side_info_without_archive_custody" in excluded_ids
     # Catalog #359 sister discipline: REPLACEMENT-savings equations don't
     # apply to RESIDUAL-CORRECTION-stacking contexts.
     assert "residual_hybrid_contexts_per_catalog_359" in excluded_ids
+
+
+def test_canonical_equation_domain_requires_charged_or_fixed_input_side_info() -> None:
+    eq = build_wyner_ziv_decoder_side_posenet_side_information_conditional_entropy_reduction_v1()
+    in_domain = eq.domain_of_validity["in_domain"][0]
+    assert in_domain["inflate_time_scorer_access_allowed"] is False
+    assert in_domain["side_info_must_be_charged_or_fixed_input_reproducible"] is True
+    assert "FREE" not in in_domain["rationale"]
 
 
 def test_canonical_equation_first_anchor_cites_z8_m6() -> None:
@@ -118,9 +124,7 @@ def test_canonical_equation_predicts_within_calibration_tolerance() -> None:
     # Predicted savings = 523 * 0.736 = 385 bytes; empirical = 523 - 138 = 385.
     # Residual should be 0 (predicted matches empirical exactly at the
     # canonical synthetic-Gaussian high-correlation reference point).
-    residual = eq.predicted_vs_empirical_residual[
-        "synthetic_gaussian_z8_m6_paradigm_anchor"
-    ]
+    residual = eq.predicted_vs_empirical_residual["synthetic_gaussian_z8_m6_paradigm_anchor"]
     # Canonical 2x tolerance per is_well_calibrated; we expect much tighter.
     assert residual < 2.0
     assert residual >= 0
@@ -142,18 +146,15 @@ def test_canonical_equation_units_declared() -> None:
 def test_canonical_equation_consumers_include_cathedral_sister() -> None:
     eq = build_wyner_ziv_decoder_side_posenet_side_information_conditional_entropy_reduction_v1()
     consumers = list(eq.canonical_consumers)
-    assert (
-        "tac.cathedral_consumers.wyner_ziv_posenet_side_information_consumer"
-        in consumers
-    )
+    assert "tac.cathedral_consumers.wyner_ziv_posenet_side_information_consumer" in consumers
     assert "tac.cathedral_consumers.canonical_equation_lookup_consumer" in consumers
     assert "tools.cathedral_autopilot_autonomous_loop" in consumers
 
 
-def test_canonical_equation_producers_include_z8_m6_and_upstream_posenet() -> None:
+def test_canonical_equation_producers_include_z8_m6_and_not_free_posenet_runtime() -> None:
     eq = build_wyner_ziv_decoder_side_posenet_side_information_conditional_entropy_reduction_v1()
     producers = list(eq.canonical_producers)
-    assert "upstream.modules.PoseNet" in producers
+    assert "upstream.modules.PoseNet" not in producers
     assert any("z8_hierarchical_predictive_coding" in p for p in producers)
     assert any("predict_wyner_ziv_posenet_side_info_savings" in p for p in producers)
 
@@ -204,7 +205,42 @@ def test_predict_helper_returns_dict_with_canonical_fields() -> None:
     assert result["ready_for_exact_eval_dispatch"] is False
     assert result["rank_or_kill_eligible"] is False
     assert result["axis_tag"] == "[predicted]"
+    assert result["decoder_side_info_custody_proven"] is True
+    assert result["delivery_blockers"] == ()
     assert "Wyner-Ziv 1976" in result["rationale"]
+
+
+def test_predict_helper_forbids_free_scorer_runtime_side_info() -> None:
+    result = predict_wyner_ziv_posenet_side_info_savings(
+        source_bytes_unconditional=1000,
+        mutual_information_estimate_bits=48.0,
+        source_distortion_target=0.1,
+        side_info_delivery_mode="scorer_runtime_free",
+    )
+    assert result["bytes_saved_predicted"] == 0
+    assert result["predicted_delta_s_rate_axis"] == 0.0
+    assert result["decoder_side_info_custody_proven"] is False
+    assert "non_compliant_inflate_time_scorer_side_information_forbidden" in result["delivery_blockers"]
+
+
+def test_predict_helper_subtracts_charged_side_info_bytes() -> None:
+    gross = predict_wyner_ziv_posenet_side_info_savings(
+        source_bytes_unconditional=1000,
+        mutual_information_estimate_bits=48.0,
+        source_distortion_target=0.1,
+        side_info_delivery_mode="archive_charged",
+        side_info_charged_bytes=0,
+        side_info_correlation_proxy=1.0,
+    )
+    charged = predict_wyner_ziv_posenet_side_info_savings(
+        source_bytes_unconditional=1000,
+        mutual_information_estimate_bits=48.0,
+        source_distortion_target=0.1,
+        side_info_delivery_mode="archive_charged",
+        side_info_charged_bytes=100,
+        side_info_correlation_proxy=1.0,
+    )
+    assert charged["bytes_saved_predicted"] == gross["bytes_saved_predicted"] - 100
 
 
 def test_predict_helper_zero_correlation_zero_savings() -> None:

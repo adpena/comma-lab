@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Canonical equation: Wyner-Ziv decoder-side PoseNet side-information conditional entropy reduction.
+"""Canonical equation: Wyner-Ziv PoseNet-conditioned entropy reduction.
 
 Per operator NON-NEGOTIABLE 2026-05-19 verbatim: *"we need to formalize all
 of this and canonicalize and operationalize because I am afraid we are
@@ -7,15 +7,14 @@ learning but if we don't have systems of equations and models and such we
 are just gaining tribal knowledge"* + operator task #1496 Wave N+36 routing.
 
 This module registers the canonical Wyner-Ziv (1976) Theorem 1 paradigm-
-elevation equation that formalizes the following decoder-side-information
-identity: PoseNet IS canonical decoder-reproducible side information at
-contest runtime, because the contest scorer ``upstream/evaluate.py`` loads
-PoseNet weights and computes per-pair pose distortion on the inflated
-frames — the weights are NOT charged to ``archive.zip`` (per CLAUDE.md
-"Strict scorer rule"), so PoseNet outputs are FREE side info at the
-decoder. Any substrate that adopts conditional coding against
-``Y = PoseNet(frame_pair)`` can encode its source ``X`` at rate
-``R(D|Y) << R(D)`` per Wyner-Ziv 1976 § 3 Theorem 1::
+elevation equation for PoseNet-conditioned coding while preserving the
+contest strict-scorer boundary. PoseNet may be used at encoder/training time
+to estimate conditional structure, but inflate/runtime code MUST NOT load
+PoseNet or SegNet. Therefore ``Y = PoseNet(frame_pair)`` is legal decoder
+side information only when it is either carried as charged archive payload or
+replaced by a deterministic fixed-contest-input proxy that does not inspect
+scorer state. Any substrate that proves that custody can encode its source
+``X`` at rate ``R(D|Y) << R(D)`` per Wyner-Ziv 1976 § 3 Theorem 1::
 
     R(D|Y) = inf_{p(x_hat | x, y) : E[d(X, X_hat)] <= D} I(X; X_hat | Y)
 
@@ -54,23 +53,22 @@ Catalog cross-references
 * Catalog #341 (Tier A canonical-routing markers; consumer is Tier A)
 * Catalog #323 (canonical Provenance umbrella)
 * Catalog #371 (auto-recalibrator when >=3 in-domain anchors land)
-* CLAUDE.md "Strict scorer rule" (PoseNet NOT in archive.zip — FREE side info)
-* CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA" (PoseNet IS decoder-runtime)
+* CLAUDE.md "Strict scorer rule" (NO PoseNet/SegNet at inflate time)
+* AGENTS.md "Treat side information as charged bytes inside the archive"
 """
+
 from __future__ import annotations
 
 from tac.canonical_equations.equation import (
-    CanonicalEquation,
-    EmpiricalAnchor,
-    INFERRED_FROM_DOMAIN_LITERATURE,
     RECALIBRATE_ON_NEW_ANCHORS,
     VERIFIED_VIA_EMPIRICAL_ANCHOR,
+    CanonicalEquation,
+    EmpiricalAnchor,
 )
 from tac.provenance.builders import (
     build_provenance_for_predicted,
     build_provenance_for_research_sidecar,
 )
-
 
 EQUATION_ID = "wyner_ziv_decoder_side_posenet_side_information_conditional_entropy_reduction_v1"
 
@@ -82,6 +80,8 @@ def predict_wyner_ziv_posenet_side_info_savings(
     source_distortion_target: float,
     side_info_dim: int = 6,
     side_info_correlation_proxy: float = 0.5,
+    side_info_delivery_mode: str = "archive_charged",
+    side_info_charged_bytes: int = 0,
 ) -> dict[str, float | str | bool]:
     """Closed-form prediction of Wyner-Ziv rate-axis savings.
 
@@ -93,7 +93,8 @@ def predict_wyner_ziv_posenet_side_info_savings(
     are bounded above by ``source_bytes_unconditional * (1 - R(D|Y)/R(D))``.
     This helper produces a closed-form upper bound that downstream
     cathedral consumers + bit-allocators can use as a sensitivity-map
-    signal at the rate-axis surface.
+    signal at the rate-axis surface. The signal is fail-closed when the
+    side-information delivery mode would require inflate-time scorer access.
 
     The helper does NOT produce a score claim; per CLAUDE.md "Strict
     scorer rule" the only authoritative score signal is
@@ -114,29 +115,44 @@ def predict_wyner_ziv_posenet_side_info_savings(
         side_info_correlation_proxy: scalar in [0, 1] approximating the
             normalized Pearson correlation between source X and side
             info Y. Default 0.5 is the canonical neutral prior.
+        side_info_delivery_mode: one of ``archive_charged``,
+            ``fixed_contest_input``, ``compress_time_advisory_only``, or
+            ``scorer_runtime_free``. The last mode is non-compliant and
+            produces zero net savings with blockers.
+        side_info_charged_bytes: charged archive bytes required to deliver
+            Y when ``side_info_delivery_mode="archive_charged"``.
 
     Returns:
         dict with predicted savings + verdict + observability fields.
     """
     if source_bytes_unconditional < 0:
-        raise ValueError(
-            f"source_bytes_unconditional must be >= 0; got {source_bytes_unconditional}"
-        )
+        raise ValueError(f"source_bytes_unconditional must be >= 0; got {source_bytes_unconditional}")
     if mutual_information_estimate_bits < 0:
-        raise ValueError(
-            f"mutual_information_estimate_bits must be >= 0; got {mutual_information_estimate_bits}"
-        )
+        raise ValueError(f"mutual_information_estimate_bits must be >= 0; got {mutual_information_estimate_bits}")
     if source_distortion_target < 0:
-        raise ValueError(
-            f"source_distortion_target must be >= 0; got {source_distortion_target}"
-        )
+        raise ValueError(f"source_distortion_target must be >= 0; got {source_distortion_target}")
     if side_info_dim < 1:
         raise ValueError(f"side_info_dim must be >= 1; got {side_info_dim}")
     if not (0.0 <= side_info_correlation_proxy <= 1.0):
+        raise ValueError(f"side_info_correlation_proxy must be in [0, 1]; got {side_info_correlation_proxy}")
+    if side_info_charged_bytes < 0:
+        raise ValueError(f"side_info_charged_bytes must be >= 0; got {side_info_charged_bytes}")
+    valid_delivery_modes = {
+        "archive_charged",
+        "fixed_contest_input",
+        "compress_time_advisory_only",
+        "scorer_runtime_free",
+    }
+    if side_info_delivery_mode not in valid_delivery_modes:
         raise ValueError(
-            "side_info_correlation_proxy must be in [0, 1]; "
-            f"got {side_info_correlation_proxy}"
+            f"side_info_delivery_mode must be one of {sorted(valid_delivery_modes)}; got {side_info_delivery_mode!r}"
         )
+
+    delivery_blockers: list[str] = []
+    if side_info_delivery_mode == "scorer_runtime_free":
+        delivery_blockers.append("non_compliant_inflate_time_scorer_side_information_forbidden")
+    if side_info_delivery_mode == "compress_time_advisory_only":
+        delivery_blockers.append("compress_time_posenet_signal_is_not_decoder_side_information")
 
     # Canonical Wyner-Ziv 1976 Theorem 1 upper bound on savings.
     # Savings <= source_bytes * (I(X;Y) / max_bits_per_pair) where
@@ -151,32 +167,39 @@ def predict_wyner_ziv_posenet_side_info_savings(
         )
     # Empirical correlation-proxy adjustment per Z8 M6 anchor:
     # synthetic Gaussian 64-74% savings observed at high correlation.
-    savings_ratio_predicted = (
-        savings_ratio_upper_bound * float(side_info_correlation_proxy)
-    )
-    bytes_saved_predicted = int(
-        float(source_bytes_unconditional) * savings_ratio_predicted
-    )
-    bytes_after_wyner_ziv = max(0, int(source_bytes_unconditional) - bytes_saved_predicted)
+    savings_ratio_predicted = savings_ratio_upper_bound * float(side_info_correlation_proxy)
+    gross_bytes_saved_predicted = int(float(source_bytes_unconditional) * savings_ratio_predicted)
+    if delivery_blockers:
+        bytes_saved_predicted = 0
+        bytes_after_wyner_ziv = int(source_bytes_unconditional)
+    else:
+        bytes_saved_predicted = max(0, gross_bytes_saved_predicted - int(side_info_charged_bytes))
+        bytes_after_wyner_ziv = max(
+            0,
+            int(source_bytes_unconditional) - gross_bytes_saved_predicted + int(side_info_charged_bytes),
+        )
 
     # Canonical contest rate term per CLAUDE.md.
     CONTEST_RATE_DENOM_BYTES = 37_545_489
     CONTEST_RATE_MULTIPLIER = 25.0
     predicted_delta_s_rate_axis = (
-        -CONTEST_RATE_MULTIPLIER
-        * float(bytes_saved_predicted)
-        / float(CONTEST_RATE_DENOM_BYTES)
+        -CONTEST_RATE_MULTIPLIER * float(bytes_saved_predicted) / float(CONTEST_RATE_DENOM_BYTES)
     )
 
     return {
         "equation_id": EQUATION_ID,
         "source_bytes_unconditional": int(source_bytes_unconditional),
         "bytes_after_wyner_ziv_predicted": int(bytes_after_wyner_ziv),
+        "gross_bytes_saved_predicted": int(gross_bytes_saved_predicted),
+        "side_info_charged_bytes": int(side_info_charged_bytes),
         "bytes_saved_predicted": int(bytes_saved_predicted),
         "savings_ratio_predicted": float(savings_ratio_predicted),
         "savings_ratio_upper_bound": float(savings_ratio_upper_bound),
         "predicted_delta_s_rate_axis": float(predicted_delta_s_rate_axis),
         "wyner_ziv_1976_theorem_1_bound_satisfied": True,
+        "side_info_delivery_mode": side_info_delivery_mode,
+        "decoder_side_info_custody_proven": not delivery_blockers,
+        "delivery_blockers": tuple(delivery_blockers),
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
@@ -185,16 +208,14 @@ def predict_wyner_ziv_posenet_side_info_savings(
         "rationale": (
             "Wyner-Ziv 1976 Theorem 1 upper bound on rate-axis savings "
             f"when source X has I(X;Y)={float(mutual_information_estimate_bits):.3f} "
-            f"bits per pair with PoseNet side info Y; predicted savings "
-            f"{float(savings_ratio_predicted) * 100:.1f}% of unconditional bytes "
-            "[predicted]"
+            "bits per pair with PoseNet-conditioned side info Y; net savings "
+            "subtract charged side-information bytes and are zero when decoder "
+            "custody would require inflate-time scorer access [predicted]"
         ),
     }
 
 
-def build_wyner_ziv_decoder_side_posenet_side_information_conditional_entropy_reduction_v1() -> (
-    CanonicalEquation
-):
+def build_wyner_ziv_decoder_side_posenet_side_information_conditional_entropy_reduction_v1() -> CanonicalEquation:
     """Build the canonical Wyner-Ziv decoder-side PoseNet side-info equation.
 
     First EmpiricalAnchor cites Z8 M6 64-74% empirical byte savings
@@ -214,14 +235,12 @@ def build_wyner_ziv_decoder_side_posenet_side_information_conditional_entropy_re
     z8_m6_empirical_bytes_saved = 523 - 138  # 523 - measured 138 = 385
 
     # Residual = |predicted - empirical| / max(predicted, empirical), normalized.
-    z8_m6_residual = abs(
-        z8_m6_predicted_bytes_saved - z8_m6_empirical_bytes_saved
-    ) / max(z8_m6_predicted_bytes_saved, z8_m6_empirical_bytes_saved)
+    z8_m6_residual = abs(z8_m6_predicted_bytes_saved - z8_m6_empirical_bytes_saved) / max(
+        z8_m6_predicted_bytes_saved, z8_m6_empirical_bytes_saved
+    )
 
     z8_m6_paradigm_anchor = EmpiricalAnchor(
-        anchor_id=(
-            "z8_m6_wyner_ziv_top_level_coder_synthetic_gaussian_paradigm_anchor_20260530"
-        ),
+        anchor_id=("z8_m6_wyner_ziv_top_level_coder_synthetic_gaussian_paradigm_anchor_20260530"),
         measurement_utc="2026-05-30T14:45:00Z",
         inputs={
             "z8_m6_contract": {
@@ -248,14 +267,10 @@ def build_wyner_ziv_decoder_side_posenet_side_information_conditional_entropy_re
             "wyner_ziv_1976_r_d_y_bound_satisfied_empirically": True,
         },
         residual=float(z8_m6_residual),
-        source_artifact=(
-            ".omx/research/z8_m6_wyner_ziv_top_level_coder_full_implementation_landed_20260530.md"
-        ),
+        source_artifact=(".omx/research/z8_m6_wyner_ziv_top_level_coder_full_implementation_landed_20260530.md"),
         measurement_method="synthetic_gaussian_z8_m6_paradigm_anchor",
         provenance=build_provenance_for_research_sidecar(
-            sidecar_path=(
-                ".omx/research/z8_m6_wyner_ziv_top_level_coder_full_implementation_landed_20260530.md"
-            ),
+            sidecar_path=(".omx/research/z8_m6_wyner_ziv_top_level_coder_full_implementation_landed_20260530.md"),
             reactivation_criteria=(
                 "per-substrate paired-CUDA RATIFICATION lands per-axis empirical "
                 "anchor with measurement_method='contest_cuda_paired_substrate_<id>' "
@@ -272,17 +287,15 @@ def build_wyner_ziv_decoder_side_posenet_side_information_conditional_entropy_re
 
     return CanonicalEquation(
         equation_id=EQUATION_ID,
-        name=(
-            "Wyner-Ziv decoder-side PoseNet side-information conditional entropy reduction"
-        ),
+        name=("Wyner-Ziv PoseNet-conditioned charged side-information entropy reduction"),
         one_line_summary=(
-            "Wyner-Ziv 1976 R(D|Y)<<R(D) bound when Y=PoseNet(frame_pair) "
-            "is canonical decoder-reproducible side info at contest runtime"
+            "Wyner-Ziv 1976 R(D|Y)<<R(D) bound for PoseNet-conditioned coding "
+            "only when Y is archive-charged or fixed-input reproducible"
         ),
         latex_form=(
             r"R(D|Y) = \inf_{p(\hat{X}|X,Y) : E[d(X,\hat{X})] \le D} I(X; \hat{X}|Y)"
             r" \quad \text{where } Y = \mathrm{PoseNet}(\mathrm{pair})"
-            r" \text{ is decoder-reproducible at } \mathrm{upstream/evaluate.py}"
+            r" \text{ must be charged in the archive or fixed-input reproducible}"
         ),
         python_callable_module_path=(
             "tac.canonical_equations.wyner_ziv_decoder_side_posenet_side_information:"
@@ -291,18 +304,17 @@ def build_wyner_ziv_decoder_side_posenet_side_information_conditional_entropy_re
         domain_of_validity={
             "in_domain": [
                 {
-                    "context_id": (
-                        "decoder_side_posenet_reproducible_substrate_with_rate_axis_source"
-                    ),
-                    "decoder_side_posenet_reproducibility": True,
-                    "source_signal_kind": (
-                        "rate_axis_bytes_or_per_pair_latent_residual_or_archive_section_bytes"
-                    ),
+                    "context_id": ("archive_charged_or_fixed_input_posenet_conditioned_source"),
+                    "decoder_side_posenet_reproducibility": False,
+                    "inflate_time_scorer_access_allowed": False,
+                    "side_info_must_be_charged_or_fixed_input_reproducible": True,
+                    "source_signal_kind": ("rate_axis_bytes_or_per_pair_latent_residual_or_archive_section_bytes"),
                     "side_info_kind": "posenet_output_per_pair_6_to_12_dim",
                     "rationale": (
-                        "PoseNet weights are loaded by upstream/evaluate.py:53 "
-                        "and computed on inflated frames; weights NOT in archive.zip "
-                        "per CLAUDE.md 'Strict scorer rule' = FREE rate-axis side info"
+                        "PoseNet may condition encoder/training decisions, but "
+                        "inflate-time scorer access is forbidden. Decoder-side Y "
+                        "must be shipped as charged archive bytes or derived "
+                        "from fixed contest inputs without scorer state."
                     ),
                 },
             ],
@@ -316,17 +328,15 @@ def build_wyner_ziv_decoder_side_posenet_side_information_conditional_entropy_re
                 },
                 {
                     "context_id": "non_video_signals",
-                    "rationale": (
-                        "PoseNet is video-specific; non-video sources cannot use "
-                        "video-pose side info"
-                    ),
+                    "rationale": ("PoseNet is video-specific; non-video sources cannot use video-pose side info"),
                 },
                 {
-                    "context_id": "non_decoder_reproducible_substrates",
+                    "context_id": "free_posenet_decoder_side_info_without_archive_custody",
                     "rationale": (
-                        "substrates whose decoder does NOT run upstream/evaluate.py "
-                        "or sister PoseNet-reproducible path cannot extract Y "
-                        "without rate-axis cost"
+                        "upstream/evaluate.py runs after inflate; its PoseNet "
+                        "state is scorer state, not legal free decoder state. "
+                        "Treat this as non-compliant unless Y is charged or "
+                        "fixed-input reproducible."
                     ),
                 },
                 {
@@ -346,6 +356,8 @@ def build_wyner_ziv_decoder_side_posenet_side_information_conditional_entropy_re
             "source_distortion_target": "scorer_distortion_units",
             "side_info_dim": "scalar_dim_count",
             "side_info_correlation_proxy": "normalized_correlation_in_0_to_1",
+            "side_info_delivery_mode": "enum",
+            "side_info_charged_bytes": "bytes",
         },
         units_out={
             "bytes_saved_predicted": "bytes",
@@ -368,18 +380,14 @@ def build_wyner_ziv_decoder_side_posenet_side_information_conditional_entropy_re
             "tac.dykstra_pareto_solver",
         ),
         canonical_producers=(
-            "upstream.modules.PoseNet",
-            "tac.substrates.z8_hierarchical_predictive_coding.wyner_ziv_coder:"
-            "WynerZivTopLevelCoderImpl.encode",
+            "archive_charged_or_fixed_input_side_information_source",
+            "tac.substrates.z8_hierarchical_predictive_coding.wyner_ziv_coder:WynerZivTopLevelCoderImpl.encode",
             "tac.codec.wyner_ziv_layer:apply",
             "tac.canonical_equations.wyner_ziv_decoder_side_posenet_side_information:"
             "predict_wyner_ziv_posenet_side_info_savings",
         ),
         provenance=build_provenance_for_predicted(
-            model_id=(
-                "wyner_ziv_decoder_side_posenet_side_information_"
-                "conditional_entropy_reduction.v1"
-            ),
+            model_id=("wyner_ziv_decoder_side_posenet_side_information_conditional_entropy_reduction.v1"),
             inputs_sha256=(
                 # sha256 over the canonical Wyner-Ziv 1976 R(D|Y) bound + Z8 M6
                 # paradigm-anchor citation. Deterministic; computed offline.

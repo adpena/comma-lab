@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Cathedral consumer for the Wyner-Ziv decoder-side PoseNet side-information equation.
+"""Cathedral consumer for the Wyner-Ziv PoseNet-conditioned side-information equation.
 
 Per CLAUDE.md "Canonical equations + models registry" non-negotiable + operator
 task #1496 Wave N+36 routing + Catalog #335 paradigm-shift (canonical contract
@@ -13,9 +13,12 @@ This consumer is **Tier A** (per Catalog #341 canonical-routing markers):
 Per-equation predictions are NEVER promoted to score adjustments — they surface as
 ``[predicted]`` annotations that future paired-CUDA RATIFICATION dispatches can
 compare against to refresh the equation's ``predicted_vs_empirical_residual``.
+Candidates that mention PoseNet/Wyner-Ziv without archive-charged or fixed-input
+side-information custody are deliberately marked as unmatched with a blocker;
+free inflate-time scorer side information violates the strict scorer rule.
 
 Hook assignments per Catalog #125:
-  * #1 sensitivity-map — ACTIVE (PoseNet output IS canonical sensitivity surface)
+  * #1 sensitivity-map — ACTIVE (PoseNet output is encoder-side sensitivity signal)
   * #2 Pareto constraint — ACTIVE (Wyner-Ziv R(D|Y) bound IS canonical Pareto constraint)
   * #3 bit-allocator — ACTIVE PRIMARY (canonical pose_conditional mode for per_pair allocator)
   * #4 cathedral autopilot dispatch — ACTIVE (annotate candidates)
@@ -32,12 +35,13 @@ Cross-references:
   * Catalog #323 (canonical Provenance umbrella)
   * Z8 M6 landing memo: ``.omx/research/z8_m6_wyner_ziv_top_level_coder_full_implementation_landed_20260530.md``
 """
+
 from __future__ import annotations
 
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from tac.cathedral.consumer_contract import HookNumber
-
 
 CONSUMER_NAME = "wyner_ziv_posenet_side_information_consumer"
 CONSUMER_VERSION = "0.1.0"
@@ -52,9 +56,7 @@ CONSUMER_HOOK_NUMBERS = (
 
 # Equation id this consumer specializes on; lookup uses startswith match to
 # tolerate version bumps (vN suffix per equation_id pattern).
-_EQUATION_ID_PREFIX = (
-    "wyner_ziv_decoder_side_posenet_side_information_conditional_entropy_reduction"
-)
+_EQUATION_ID_PREFIX = "wyner_ziv_decoder_side_posenet_side_information_conditional_entropy_reduction"
 
 
 def update_from_anchor(anchor: Any) -> None:
@@ -75,17 +77,42 @@ def update_from_anchor(anchor: Any) -> None:
     _ = anchor
 
 
+def _candidate_side_info_custody(candidate: Mapping[str, Any]) -> tuple[bool, list[str]]:
+    """Return whether the candidate proves legal decoder-side-info custody."""
+    blockers: list[str] = []
+    delivery_mode = str(
+        candidate.get("side_info_delivery_mode") or candidate.get("decoder_side_info_delivery_mode") or ""
+    ).lower()
+    if delivery_mode in {"archive_charged", "fixed_contest_input"}:
+        return True, blockers
+    if candidate.get("archive_bound_side_info") is True:
+        return True, blockers
+    if candidate.get("side_info_charged_bytes") is not None:
+        try:
+            if int(candidate["side_info_charged_bytes"]) >= 0:
+                return True, blockers
+        except (TypeError, ValueError):
+            blockers.append("side_info_charged_bytes_not_integer")
+    if delivery_mode == "scorer_runtime_free":
+        blockers.append("non_compliant_inflate_time_scorer_side_information_forbidden")
+    elif delivery_mode == "compress_time_advisory_only":
+        blockers.append("compress_time_posenet_signal_is_not_decoder_side_information")
+    else:
+        blockers.append("posenet_side_info_archive_custody_or_fixed_input_proof_missing")
+    return False, blockers
+
+
 def _candidate_matches_wyner_ziv_posenet_domain(
     candidate: Mapping[str, Any],
-) -> tuple[bool, str]:
+) -> tuple[bool, str, list[str]]:
     """Best-effort match heuristic for candidates that admit Wyner-Ziv PoseNet side info.
 
-    A candidate matches when its substrate / lane / archive_family token
-    references a known Wyner-Ziv consumer, a PoseNet conditional coding
-    surface, or any of the canonical consumer module paths registered on
-    the equation.
+    A candidate matches only when its substrate / lane / archive_family token
+    references a known Wyner-Ziv/PoseNet conditional coding surface AND it proves
+    legal side-information custody. Generic Wyner-Ziv prose without custody is
+    deliberately fail-closed so it cannot become an acquisition prior.
 
-    Returns ``(matches, rationale)``. The rationale always carries the
+    Returns ``(matches, rationale, blockers)``. The rationale always carries the
     canonical Tier A ``[predicted]`` axis tag per Catalog #341.
     """
     # Walk candidate dict values that are strings or numerics; build a
@@ -100,7 +127,7 @@ def _candidate_matches_wyner_ziv_posenet_domain(
                     corpus_parts.append(f"{k}.{sk}={sv}".lower())
     corpus = " ".join(corpus_parts)
     if not corpus:
-        return (False, "candidate carries no string/numeric fields [predicted]")
+        return (False, "candidate carries no string/numeric fields [predicted]", [])
 
     # Canonical match tokens. Order them by specificity (most specific first).
     canonical_match_tokens = (
@@ -118,14 +145,25 @@ def _candidate_matches_wyner_ziv_posenet_domain(
     )
     for token in canonical_match_tokens:
         if token in corpus:
+            custody_ok, blockers = _candidate_side_info_custody(candidate)
+            if custody_ok:
+                return (
+                    True,
+                    (
+                        f"candidate matches Wyner-Ziv PoseNet side-info domain via "
+                        f"token '{token}' with legal side-info custody [predicted]"
+                    ),
+                    [],
+                )
             return (
-                True,
+                False,
                 (
-                    f"candidate matches Wyner-Ziv PoseNet side-info domain via "
-                    f"token '{token}' [predicted]"
+                    f"candidate has Wyner-Ziv/PoseNet token '{token}' but lacks "
+                    "archive-charged or fixed-input side-info custody [predicted]"
                 ),
+                blockers,
             )
-    return (False, "no canonical Wyner-Ziv PoseNet side-info token [predicted]")
+    return (False, "no canonical Wyner-Ziv PoseNet side-info token [predicted]", [])
 
 
 def _query_equation_residual_summary() -> dict[str, Any]:
@@ -151,7 +189,7 @@ def _query_equation_residual_summary() -> dict[str, Any]:
                     "is_well_calibrated": eq.is_well_calibrated,
                     "last_calibration_utc": eq.last_calibration_utc,
                 }
-    except Exception:  # noqa: BLE001 — defensive; registry may be empty/corrupt
+    except Exception:
         pass
     return {
         "equation_id_prefix": _EQUATION_ID_PREFIX,
@@ -182,7 +220,7 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
     annotations that downstream consumers (operator review / paired-CUDA
     RATIFICATION queue) can act on.
     """
-    matches, match_rationale = _candidate_matches_wyner_ziv_posenet_domain(candidate)
+    matches, match_rationale, custody_blockers = _candidate_matches_wyner_ziv_posenet_domain(candidate)
     if not matches:
         return {
             "predicted_delta_adjustment": 0.0,
@@ -191,6 +229,8 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
             "promotable": False,
             "confidence": 0.0,
             "wyner_ziv_posenet_side_info_match": False,
+            "decoder_side_info_custody_proven": False,
+            "blockers": custody_blockers,
         }
 
     residual_summary = _query_equation_residual_summary()
@@ -206,7 +246,8 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
         f"well_calibrated={well_calibrated}, "
         f"per-axis residuals={residuals}); "
         "Wyner-Ziv 1976 Theorem 1 predicts rate-axis savings "
-        "R(D|Y)<<R(D) when this substrate adopts PoseNet-conditional coding; "
+        "R(D|Y)<<R(D) when this substrate adopts PoseNet-conditioned coding "
+        "with archive-charged or fixed-input decoder side information; "
         "see tools/list_canonical_equations.py for canonical readback"
     )
 
@@ -217,6 +258,8 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
         "promotable": False,
         "confidence": 0.0,
         "wyner_ziv_posenet_side_info_match": True,
+        "decoder_side_info_custody_proven": True,
+        "blockers": [],
         "matched_equation_id": equation_id,
         "anchor_count": anchor_count,
         "is_well_calibrated": well_calibrated,
@@ -225,9 +268,9 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
 
 
 __all__ = [
+    "CONSUMER_HOOK_NUMBERS",
     "CONSUMER_NAME",
     "CONSUMER_VERSION",
-    "CONSUMER_HOOK_NUMBERS",
     "consume_candidate",
     "update_from_anchor",
 ]

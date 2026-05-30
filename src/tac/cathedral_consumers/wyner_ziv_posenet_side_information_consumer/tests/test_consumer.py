@@ -5,21 +5,17 @@ Per operator task #1496 Wave N+36 routing + CLAUDE.md "Subagent coherence-by-def
 non-negotiable + Catalog #335 paradigm-shift (canonical contract auto-discovery)
 + Catalog #341 Tier A canonical-routing markers.
 """
+
 from __future__ import annotations
 
 import importlib
-
-import pytest
 
 from tac.cathedral.consumer_contract import (
     HookNumber,
     validate_consumer_module,
 )
 
-
-MODULE_PATH = (
-    "tac.cathedral_consumers.wyner_ziv_posenet_side_information_consumer"
-)
+MODULE_PATH = "tac.cathedral_consumers.wyner_ziv_posenet_side_information_consumer"
 
 
 def _load_module():
@@ -81,6 +77,8 @@ def test_consume_candidate_returns_canonical_tier_a_markers_for_matching_candida
             "lane_id": "test_wyner_ziv_substrate",
             "substrate_id": "z8_hierarchical_predictive_coding",
             "archive_family": "wyner_ziv_layer",
+            "side_info_delivery_mode": "archive_charged",
+            "side_info_charged_bytes": 128,
         }
     )
     # Catalog #341 canonical Tier A markers MUST be present + correct.
@@ -88,14 +86,13 @@ def test_consume_candidate_returns_canonical_tier_a_markers_for_matching_candida
     assert out["promotable"] is False
     assert out["axis_tag"] == "[predicted]"
     assert out["confidence"] == 0.0
+    assert out["decoder_side_info_custody_proven"] is True
 
 
 def test_consume_candidate_returns_canonical_tier_a_markers_for_non_matching_candidate() -> None:
     """Even when candidate does NOT match, Tier A markers MUST still hold."""
     mod = _load_module()
-    out = mod.consume_candidate(
-        {"lane_id": "unrelated", "archive_family": "pr101_baseline"}
-    )
+    out = mod.consume_candidate({"lane_id": "unrelated", "archive_family": "pr101_baseline"})
     assert out["predicted_delta_adjustment"] == 0.0
     assert out["promotable"] is False
     assert out["axis_tag"] == "[predicted]"
@@ -108,42 +105,84 @@ def test_consume_candidate_returns_canonical_tier_a_markers_for_non_matching_can
 
 def test_match_via_wyner_ziv_token() -> None:
     mod = _load_module()
-    out = mod.consume_candidate({"lane_id": "wyner_ziv_substrate"})
+    out = mod.consume_candidate(
+        {
+            "lane_id": "wyner_ziv_substrate",
+            "side_info_delivery_mode": "archive_charged",
+            "side_info_charged_bytes": 64,
+        }
+    )
     assert out["wyner_ziv_posenet_side_info_match"] is True
 
 
 def test_match_via_wyner_dash_ziv_token() -> None:
     mod = _load_module()
-    out = mod.consume_candidate({"lane_id": "lane_wyner-ziv_pipeline"})
+    out = mod.consume_candidate(
+        {
+            "lane_id": "lane_wyner-ziv_pipeline",
+            "side_info_delivery_mode": "fixed_contest_input",
+        }
+    )
     assert out["wyner_ziv_posenet_side_info_match"] is True
 
 
 def test_match_via_z8_hierarchical_predictive_coding_token() -> None:
     mod = _load_module()
     out = mod.consume_candidate(
-        {"substrate_id": "z8_hierarchical_predictive_coding"}
+        {
+            "substrate_id": "z8_hierarchical_predictive_coding",
+            "archive_bound_side_info": True,
+        }
     )
     assert out["wyner_ziv_posenet_side_info_match"] is True
 
 
 def test_match_via_posenet_conditional_token() -> None:
     mod = _load_module()
-    out = mod.consume_candidate({"description": "posenet_conditional coding"})
+    out = mod.consume_candidate(
+        {
+            "description": "posenet_conditional coding",
+            "side_info_delivery_mode": "archive_charged",
+        }
+    )
     assert out["wyner_ziv_posenet_side_info_match"] is True
 
 
 def test_match_via_cooperative_receiver_atick_redlich_sister() -> None:
     """Atick-Redlich cooperative-receiver IS a canonical sister surface."""
     mod = _load_module()
-    out = mod.consume_candidate({"lane_id": "cooperative_receiver_substrate"})
+    out = mod.consume_candidate(
+        {
+            "lane_id": "cooperative_receiver_substrate",
+            "side_info_delivery_mode": "archive_charged",
+        }
+    )
     assert out["wyner_ziv_posenet_side_info_match"] is True
+
+
+def test_wyner_ziv_token_without_custody_fails_closed() -> None:
+    mod = _load_module()
+    out = mod.consume_candidate({"lane_id": "wyner_ziv_substrate"})
+    assert out["wyner_ziv_posenet_side_info_match"] is False
+    assert out["decoder_side_info_custody_proven"] is False
+    assert "posenet_side_info_archive_custody_or_fixed_input_proof_missing" in out["blockers"]
+
+
+def test_free_scorer_runtime_side_info_fails_closed() -> None:
+    mod = _load_module()
+    out = mod.consume_candidate(
+        {
+            "lane_id": "wyner_ziv_substrate",
+            "side_info_delivery_mode": "scorer_runtime_free",
+        }
+    )
+    assert out["wyner_ziv_posenet_side_info_match"] is False
+    assert "non_compliant_inflate_time_scorer_side_information_forbidden" in out["blockers"]
 
 
 def test_no_match_for_unrelated_candidate() -> None:
     mod = _load_module()
-    out = mod.consume_candidate(
-        {"lane_id": "fec6_pr101", "archive_family": "selector_codec"}
-    )
+    out = mod.consume_candidate({"lane_id": "fec6_pr101", "archive_family": "selector_codec"})
     assert out["wyner_ziv_posenet_side_info_match"] is False
 
 
@@ -162,6 +201,7 @@ def test_match_via_nested_mapping_field() -> None:
                 "codec_lineage": "wyner_ziv_layer",
                 "score_axis": "cuda",
             },
+            "side_info_delivery_mode": "archive_charged",
         }
     )
     assert out["wyner_ziv_posenet_side_info_match"] is True
@@ -196,6 +236,7 @@ def test_consume_candidate_surfaces_matched_equation_id_when_match() -> None:
     out = mod.consume_candidate(
         {
             "lane_id": "test_wyner_ziv_z8_substrate",
+            "side_info_delivery_mode": "archive_charged",
         }
     )
     assert out["wyner_ziv_posenet_side_info_match"] is True
@@ -217,7 +258,12 @@ def test_consume_candidate_rationale_carries_predicted_axis_tag_when_no_match() 
 def test_consume_candidate_rationale_carries_wyner_ziv_1976_citation_when_match() -> None:
     """When matched, the rationale MUST cite the canonical Wyner-Ziv 1976 paradigm."""
     mod = _load_module()
-    out = mod.consume_candidate({"lane_id": "wyner_ziv_substrate"})
+    out = mod.consume_candidate(
+        {
+            "lane_id": "wyner_ziv_substrate",
+            "side_info_delivery_mode": "archive_charged",
+        }
+    )
     assert "Wyner-Ziv 1976" in out["rationale"]
 
 
