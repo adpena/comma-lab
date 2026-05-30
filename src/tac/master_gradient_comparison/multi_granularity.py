@@ -81,12 +81,16 @@ __all__ = [
     "ContestGradientTensor",
     "EquivalenceClass",
     "InflatedGradientTensor",
+    "LEGAL_PIXEL_REDUCTIONS",
     "M_ARCHIVE_VIA_CHAIN_RULE_PROVENANCE_KIND",
     "M_CONTEST_PROVENANCE_KIND",
     "M_INFLATED_PROVENANCE_KIND",
+    "M_PIXEL_PROVENANCE_KIND",
     "MultiGranularityComparisonError",
     "PerPairDifficulty",
     "PerPixelReconstructionError",
+    "PerPixelSensitivityMap",
+    "broadcast_sensitivity_map_to_channels",
     "cluster_pairs_by_gradient_similarity",
     "compute_per_pair_difficulty_atlas",
     "compute_score_weighted_reconstruction_error",
@@ -95,6 +99,7 @@ __all__ = [
     "extract_M_archive_via_chain_rule",
     "extract_M_contest",
     "extract_M_inflated",
+    "extract_M_pixel",
     "persist_comparison_artifact",
 ]
 
@@ -107,6 +112,15 @@ M_ARCHIVE_VIA_CHAIN_RULE_PROVENANCE_KIND = (
     "tac.master_gradient_comparison.extract_M_archive_via_chain_rule"
 )
 M_INFLATED_PROVENANCE_KIND = "tac.master_gradient_comparison.extract_M_inflated"
+M_PIXEL_PROVENANCE_KIND = "tac.master_gradient_comparison.extract_M_pixel"
+
+
+# Canonical reductions for per-pixel sensitivity extraction (Phase A; Yousfi
+# UNIWARD-analog grounding). L2_NORM is the canonical scorer-blindness
+# inverse (sqrt of sum of squared axis gradients per pixel); L1_NORM is the
+# canonical sparse-saliency variant (sum of abs); MAX is the conservative
+# bound (max abs across axes).
+LEGAL_PIXEL_REDUCTIONS = frozenset({"l2_norm", "l1_norm", "max"})
 
 # Default canonical persistence root per Catalog #245 sister discipline -
 # never /tmp.
@@ -1270,3 +1284,276 @@ def persist_comparison_artifact(
         tmp_path = Path(f.name)
     os.replace(tmp_path, out_path)
     return out_path
+
+
+# -----------------------------------------------------------------------------
+# Helper #10 - per-pixel sensitivity map extraction (Phase A, Yousfi-grounded)
+# -----------------------------------------------------------------------------
+#
+# Operator 2026-05-30: cap=1-per-turn Phase A landing. Lifts the per-pixel
+# scalar scorer-sensitivity weight from inside
+# ``compute_score_weighted_reconstruction_error`` (which already computes
+# ``||M_contest[:, axes, h, w]||^2`` as an intermediate) into a first-class
+# canonical helper that downstream substrates (Z8 M7 Path B, Cascade C'
+# per-pair waterfill, PR110-OPT-7 Fridrich UNIWARD-analog) consume without
+# needing a paired contest+inflated video pair.
+#
+# Phase B (per-subband) and Phase C (per-Z8-level) are explicitly DEFERRED
+# to future turns per cap=1-per-turn discipline. The Yousfi-grounded
+# scorer-blindness-map naming convention: SMALLER values = scorer is BLINDER
+# at that pixel = Fridrich UNIWARD-analog "cheaper to perturb"; LARGER
+# values = scorer is MORE SENSITIVE there = "expensive to perturb".
+
+
+@dataclass(frozen=True)
+class PerPixelSensitivityMap:
+    """Per-pixel scalar scorer-sensitivity weight derived from a gradient tensor.
+
+    Shape: ``(N_pairs, H, W)`` non-negative float32 weights. Computed by
+    reducing the scorer-axis dimension of a ``ContestGradientTensor`` or
+    ``InflatedGradientTensor`` via L2 norm (canonical), L1 norm (sparse-
+    saliency variant), or max (conservative bound).
+
+    The map IS the Yousfi/Fridrich-grounded "scorer-blindness inverse":
+    SMALLER values mean the scorer is more blind at that pixel (per UNIWARD
+    cost-map convention, low-cost regions are where perturbation hides);
+    LARGER values mean the scorer is more sensitive there (perturbation
+    will move the score). Score-aware encoder losses (e.g. Z8 M8
+    ``ScoreAwareLevelLoss``) consume this as a per-pixel weight to
+    prioritize score-faithful reconstruction over uniform L2.
+
+    Per Catalog #192 + #317: NEVER promotable as a contest score; this is
+    a ``[predicted]``-grade sensitivity surface, not a scorer measurement.
+    """
+
+    array_path: str
+    array_sha256: str
+    n_pairs: int
+    height: int
+    width: int
+    source_video_sha256: str  # contest_video_sha256 or inflated_video_sha256
+    source_kind: str  # one of "m_contest", "m_inflated"
+    reduction: str  # one of "l2_norm", "l1_norm", "max"
+    operating_point: OperatingPoint
+    captured_at_utc: str
+    measurement_axis: str = "[predicted]"
+
+    def __post_init__(self) -> None:
+        if self.n_pairs <= 0:
+            raise MultiGranularityComparisonError("n_pairs must be > 0")
+        if self.height <= 0 or self.width <= 0:
+            raise MultiGranularityComparisonError("height and width must be > 0")
+        if len(self.array_sha256) != 64:
+            raise MultiGranularityComparisonError(
+                f"array_sha256 must be 64 hex chars, got len={len(self.array_sha256)}"
+            )
+        if self.source_kind not in {"m_contest", "m_inflated"}:
+            raise MultiGranularityComparisonError(
+                f"source_kind must be 'm_contest' or 'm_inflated'; got {self.source_kind!r}"
+            )
+        if self.reduction not in LEGAL_PIXEL_REDUCTIONS:
+            raise MultiGranularityComparisonError(
+                f"reduction must be one of {sorted(LEGAL_PIXEL_REDUCTIONS)}; got {self.reduction!r}"
+            )
+        if not self.measurement_axis.startswith("["):
+            raise MultiGranularityComparisonError(
+                f"measurement_axis must be lane-tagged, got {self.measurement_axis!r}"
+            )
+
+    def shape(self) -> tuple[int, int, int]:
+        return (self.n_pairs, self.height, self.width)
+
+    def load(self):
+        """Load the (N_pairs, H, W) array; requires numpy."""
+        _require_numpy()
+        arr = np.load(self.array_path)
+        if arr.shape != self.shape():
+            raise MultiGranularityComparisonError(
+                f"loaded shape {arr.shape} != declared {self.shape()}"
+            )
+        return arr
+
+
+def extract_M_pixel(
+    gradient_tensor,
+    *,
+    reduction: str = "l2_norm",
+    cache_path: Path | str | None = None,
+    measurement_axis: str = "[predicted]",
+) -> PerPixelSensitivityMap:
+    """Extract per-pixel scalar scorer-sensitivity from a gradient tensor.
+
+    Polymorphic in source: accepts either ``ContestGradientTensor`` (the
+    canonical Yousfi-grounded "scorer-blindness map on contest video"
+    surface) or ``InflatedGradientTensor`` (the substrate-fit variant).
+    The provenance records which source via ``source_kind``.
+
+    Reductions per ``LEGAL_PIXEL_REDUCTIONS``:
+
+    * ``"l2_norm"`` (canonical default): ``sqrt(sum(M[:, axes, h, w]**2))``
+      across the seg/pose/rate axes. This IS the Fridrich UNIWARD canonical
+      scorer-blindness inverse - pixels with high L2 norm are where the
+      scorer's gradient is large; per UNIWARD low cost = perturbation hides.
+    * ``"l1_norm"``: ``sum(|M[:, axes, h, w]|)`` - sparse-saliency variant.
+    * ``"max"``: ``max(|M[:, axes, h, w]|)`` - conservative dominant-axis
+      bound.
+
+    All reductions yield non-negative ``(N_pairs, H, W)`` float32 arrays.
+    Result persisted under ``_PERSIST_ROOT`` (never /tmp) per Catalog #245
+    sister discipline.
+
+    Per Catalog #287: this helper does NOT make a score claim; the emitted
+    map is ``[predicted]``-grade sensitivity, non-promotable per Catalog
+    #192 + #317. Consumers must NOT route the output through any custody
+    validator as if it were an authoritative score.
+    """
+    _require_numpy()
+    if reduction not in LEGAL_PIXEL_REDUCTIONS:
+        raise MultiGranularityComparisonError(
+            f"reduction must be one of {sorted(LEGAL_PIXEL_REDUCTIONS)}; got {reduction!r}"
+        )
+    # Polymorphic source detection - both tensors have the same (N, 3, H, W)
+    # shape contract per their docstrings and shape() methods.
+    if isinstance(gradient_tensor, ContestGradientTensor):
+        source_kind = "m_contest"
+        source_video_sha256 = gradient_tensor.contest_video_sha256
+    elif isinstance(gradient_tensor, InflatedGradientTensor):
+        source_kind = "m_inflated"
+        source_video_sha256 = gradient_tensor.inflated_video_sha256
+    else:
+        raise MultiGranularityComparisonError(
+            "gradient_tensor must be ContestGradientTensor or "
+            f"InflatedGradientTensor; got {type(gradient_tensor).__name__}"
+        )
+
+    m_arr = gradient_tensor.load()
+    if m_arr.ndim != 4 or m_arr.shape[1] != 3:
+        raise MultiGranularityComparisonError(
+            f"gradient tensor must have shape (N_pairs, 3, H, W); got {m_arr.shape}"
+        )
+    n_pairs, _, h, w = m_arr.shape
+
+    # Per the reduction contract: all reductions are non-negative scalars
+    # per pixel. The seg/pose/rate axes are reduced; output is (N, H, W).
+    if reduction == "l2_norm":
+        # sqrt(sum(M^2)) across axis 1 (seg/pose/rate).
+        m_pixel = np.sqrt(np.sum(np.square(m_arr.astype(np.float64)), axis=1))
+    elif reduction == "l1_norm":
+        m_pixel = np.sum(np.abs(m_arr.astype(np.float64)), axis=1)
+    else:  # max
+        m_pixel = np.max(np.abs(m_arr.astype(np.float64)), axis=1)
+
+    # Cast to float32 for storage (matches the sister helper convention in
+    # compute_score_weighted_reconstruction_error which also stores float32).
+    m_pixel_f32 = m_pixel.astype(np.float32)
+
+    captured_at_utc = _utc_now_iso()
+    array_sha256 = _sha256_array(m_pixel_f32)
+    if cache_path is None:
+        ts = captured_at_utc.replace(":", "").replace("-", "")[:15]
+        sha_prefix = source_video_sha256[:12]
+        cache_path = (
+            _PERSIST_ROOT / f"m_pixel_{source_kind}_{reduction}_{sha_prefix}_{ts}.npy"
+        )
+    cache_path = Path(cache_path)
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    np.save(cache_path, m_pixel_f32)
+
+    meta_path = cache_path.with_suffix(".meta.json")
+    meta_payload = {
+        "schema": "m_pixel_meta_v1",
+        "array_sha256": array_sha256,
+        "n_pairs": n_pairs,
+        "height": h,
+        "width": w,
+        "source_video_sha256": source_video_sha256,
+        "source_kind": source_kind,
+        "reduction": reduction,
+        "captured_at_utc": captured_at_utc,
+        "operating_point": gradient_tensor.operating_point.as_dict(),
+        "measurement_axis": measurement_axis,
+        "canonical_helper_invocation": M_PIXEL_PROVENANCE_KIND,
+    }
+    meta_path.write_text(json.dumps(meta_payload, sort_keys=True, indent=2))
+
+    return PerPixelSensitivityMap(
+        array_path=str(cache_path),
+        array_sha256=array_sha256,
+        n_pairs=n_pairs,
+        height=h,
+        width=w,
+        source_video_sha256=source_video_sha256,
+        source_kind=source_kind,
+        reduction=reduction,
+        operating_point=gradient_tensor.operating_point,
+        captured_at_utc=captured_at_utc,
+        measurement_axis=measurement_axis,
+    )
+
+
+def broadcast_sensitivity_map_to_channels(
+    m_pixel,
+    *,
+    batch_size: int = 1,
+    num_channels: int = 3,
+    pair_aggregation: str = "first",
+    dtype=None,
+):
+    """Broadcast a per-pixel sensitivity map to ``(B, C, H, W)`` for loss consumption.
+
+    The Z8 M8 ``ScoreAwareLevelLoss`` Protocol takes a sensitivity map
+    shaped ``(B, C, H, W)`` (RGB channel axis). The canonical map produced
+    by ``extract_M_pixel`` is ``(N_pairs, H, W)`` - one scalar weight per
+    pixel per pair. This helper converts between the two shapes:
+
+    * ``pair_aggregation="first"``: take the first pair's map (canonical
+      smoke-test pattern - Z8 trains on one (B, 3, H, W) batch).
+    * ``pair_aggregation="mean"``: per-pixel mean across pairs (canonical
+      production - smooths per-pair noise; reduces to per-pixel sensitivity).
+    * ``pair_aggregation="max"``: per-pixel max across pairs (conservative -
+      preserves worst-case sensitivity).
+
+    The result is replicated across ``batch_size`` and ``num_channels`` so
+    the M8 Protocol invariant (uniform sensitivity reduces to standard L2)
+    holds: every channel of a given pixel gets the same weight, matching
+    the Fridrich UNIWARD per-pixel cost convention where the cost is per
+    spatial location, not per channel.
+
+    Accepts either a ``PerPixelSensitivityMap`` instance or a raw
+    ``(N_pairs, H, W)`` numpy array.
+    """
+    _require_numpy()
+    if isinstance(m_pixel, PerPixelSensitivityMap):
+        arr = m_pixel.load()
+    else:
+        arr = np.asarray(m_pixel)
+    if arr.ndim != 3:
+        raise MultiGranularityComparisonError(
+            f"sensitivity map must have shape (N_pairs, H, W); got {arr.shape}"
+        )
+    n_pairs, h, w = arr.shape
+    if batch_size <= 0:
+        raise MultiGranularityComparisonError("batch_size must be positive")
+    if num_channels <= 0:
+        raise MultiGranularityComparisonError("num_channels must be positive")
+    valid_aggs = {"first", "mean", "max"}
+    if pair_aggregation not in valid_aggs:
+        raise MultiGranularityComparisonError(
+            f"pair_aggregation must be one of {sorted(valid_aggs)}; got {pair_aggregation!r}"
+        )
+
+    if pair_aggregation == "first":
+        pixel_map = arr[0]  # (H, W)
+    elif pair_aggregation == "mean":
+        pixel_map = arr.mean(axis=0)
+    else:  # max
+        pixel_map = arr.max(axis=0)
+
+    # Replicate to (B, C, H, W) - every channel at a given pixel gets the
+    # same weight per Fridrich UNIWARD convention (per-pixel cost).
+    out_dtype = dtype if dtype is not None else arr.dtype
+    out = np.broadcast_to(
+        pixel_map[None, None, :, :],  # (1, 1, H, W)
+        (batch_size, num_channels, h, w),
+    ).astype(out_dtype, copy=True)
+    return out
