@@ -726,6 +726,7 @@ def _write_runtime_refused_submission_closure(
     archive_bytes: int,
     blocker: str,
     closure_kind: str,
+    include_missing_runtime_blocker: bool = True,
 ) -> dict[str, Any]:
     archive_out = submission_dir / "archive.zip"
     shutil.copy2(candidate_archive, archive_out)
@@ -745,7 +746,9 @@ def _write_runtime_refused_submission_closure(
     )
     archive_manifest_path = submission_dir / "archive_manifest.json"
     _write_json(archive_manifest_path, archive_manifest)
-    blockers = [blocker, "submission_runtime_closure_refused_missing_runtime"]
+    blockers = [blocker]
+    if include_missing_runtime_blocker:
+        blockers.append("submission_runtime_closure_refused_missing_runtime")
 
     closed_row = dict(row)
     closed_dispatch_blockers = list(row.get("dispatch_blockers") or [])
@@ -851,6 +854,88 @@ def _write_runtime_refused_submission_closure(
     return report
 
 
+def _write_empty_submission_closure_refusal(
+    *,
+    repo: Path,
+    source_queue: Path,
+    queue_payload: Mapping[str, Any],
+    submission_dir: Path,
+    closed_queue_path: Path,
+    closure_report_path: Path,
+    blocker: str,
+) -> dict[str, Any]:
+    submission_dir.mkdir(parents=True, exist_ok=True)
+    (submission_dir / "report.txt").write_text(
+        "\n".join(
+            [
+                "Materializer submission runtime closure refused",
+                "",
+                f"source_queue_path: {_repo_rel(source_queue, repo)}",
+                f"blocker: {blocker}",
+                "score_claim: false",
+                "promotion_eligible: false",
+                "rank_or_kill_eligible: false",
+                "ready_for_exact_eval_dispatch: false",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    closed_queue = _closed_queue_payload_many(
+        source_queue=queue_payload,
+        source_rows=[],
+        closed_rows=[],
+    )
+    closed_queue.update(
+        {
+            "materializer_submission_closure_kind": "empty_source_queue_refusal",
+            "materializer_submission_closure_blockers": [blocker],
+            "readiness_blockers": [blocker],
+            "dispatch_blockers": [
+                "submission_closure_report_is_not_dispatch_authority",
+                blocker,
+            ],
+        }
+    )
+    require_no_truthy_authority_fields(
+        closed_queue,
+        context="materializer_submission_closure_empty_refusal_queue",
+    )
+    _write_json(closed_queue_path, closed_queue)
+    report = apply_proxy_evidence_boundary(
+        {
+            "schema": SUBMISSION_CLOSURE_REPORT_SCHEMA,
+            "tool": "tac.optimizer.materializer_submission_closure",
+            "generated_at_utc": _utc_now(),
+            "source_queue_path": _repo_rel(source_queue, repo),
+            "closed_source_queue_path": _repo_rel(closed_queue_path, repo),
+            "submission_dir": _repo_rel(submission_dir, repo),
+            "candidate_count": 0,
+            "candidate_ids": [],
+            "rows": [],
+            "materializer_submission_closure_kind": "empty_source_queue_refusal",
+            "closure_blockers": [blocker],
+            "allowed_use": "multi_candidate_materializer_submission_closure_static_custody",
+            "forbidden_use": (
+                "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+            ),
+            **FALSE_AUTHORITY,
+        },
+        dispatch_blockers=[
+            "submission_closure_report_is_not_dispatch_authority",
+            "run_exact_readiness_bridge_on_closed_source_queue",
+            "contest_exact_auth_eval_required_before_score_claim",
+            blocker,
+        ],
+    )
+    require_no_truthy_authority_fields(
+        report,
+        context="materializer_submission_closure_empty_refusal_report",
+    )
+    _write_json(closure_report_path, report)
+    return dict(report)
+
+
 def build_materializer_submission_runtime_closure(
     *,
     repo_root: str | Path,
@@ -885,8 +970,11 @@ def build_materializer_submission_runtime_closure(
         row,
         context=f"materializer_submission_closure_source_row:{row.get('candidate_id')}",
     )
-    if row.get("receiver_contract_satisfied") is not True:
-        raise MaterializerSubmissionClosureError("receiver_contract_not_satisfied")
+    receiver_contract_blocker = (
+        None
+        if row.get("receiver_contract_satisfied") is True
+        else "receiver_contract_not_satisfied"
+    )
     candidate_archive = _resolve_path(
         _candidate_archive_path(row),
         repo_root=repo,
@@ -920,6 +1008,24 @@ def build_materializer_submission_runtime_closure(
     proof_payload = read_json(proof_source)
     if not isinstance(proof_payload, Mapping):
         raise MaterializerSubmissionClosureError("runtime_consumption_proof_not_object")
+
+    if receiver_contract_blocker is not None:
+        return _write_runtime_refused_submission_closure(
+            repo=repo,
+            source_queue=source_queue,
+            queue_payload=queue_payload,
+            row=row,
+            candidate_archive=candidate_archive,
+            proof_source=proof_source,
+            submission_dir=submission_dir,
+            closed_queue_path=closed_queue_path,
+            closure_report_path=closure_report_path,
+            archive_sha=archive_sha,
+            archive_bytes=archive_bytes,
+            blocker=receiver_contract_blocker,
+            closure_kind="receiver_contract_refused_static_closure_with_candidate_archive",
+            include_missing_runtime_blocker=False,
+        )
 
     # Static submission closure copies the source contest runtime and swaps only
     # the candidate archive.  Some family-agnostic transforms, such as ZIP
@@ -1170,13 +1276,26 @@ def build_materializer_submission_runtime_closures(
         queue_payload,
         context=f"materializer_submission_closure_source_queue:{source_queue}",
     )
-    source_rows = _selected_candidate_rows(queue_payload, candidate_ids=candidate_ids)
     submission_root = _resolve_path(submission_dir_out, repo_root=repo)
     closed_queue_path = _resolve_path(closed_source_queue_out, repo_root=repo)
     closure_report_path = _resolve_path(closure_report_out, repo_root=repo)
     if submission_root is None or closed_queue_path is None or closure_report_path is None:
         raise MaterializerSubmissionClosureError("closure_output_path_missing")
     _prepare_submission_dir(submission_root, overwrite=overwrite, repo_root=repo)
+    try:
+        source_rows = _selected_candidate_rows(queue_payload, candidate_ids=candidate_ids)
+    except MaterializerSubmissionClosureError as exc:
+        if str(exc) != "source_queue_has_no_candidate_rows":
+            raise
+        return _write_empty_submission_closure_refusal(
+            repo=repo,
+            source_queue=source_queue,
+            queue_payload=queue_payload,
+            submission_dir=submission_root,
+            closed_queue_path=closed_queue_path,
+            closure_report_path=closure_report_path,
+            blocker=str(exc),
+        )
 
     per_candidate_reports: list[dict[str, Any]] = []
     closed_rows: list[Mapping[str, Any]] = []

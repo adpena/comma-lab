@@ -20,6 +20,15 @@ from comma_lab.scheduler.experiment_queue_observer import observe_experiment_que
 QUEUE_FLEET_STATUS_SCHEMA = "experiment_queue_fleet_status.v1"
 QUEUE_FLEET_ROW_SCHEMA = "experiment_queue_fleet_row.v1"
 NON_EXECUTABLE_QUEUE_ARTIFACT_STATUS = "NON_EXECUTABLE_QUEUE_ARTIFACT"
+PAUSED_EXACT_DISPATCH_GATE_STATUS = "PAUSED_EXACT_DISPATCH_GATE"
+EXACT_DISPATCH_QUEUE_ID_MARKERS = ("exact_eval_dispatch", "blocked_exact_eval_dispatch")
+EXACT_DISPATCH_STEP_ID_MARKERS = ("dispatch_exact_eval",)
+EXACT_DISPATCH_COMMAND_MARKERS = (
+    "tools/parallel_dispatch_top_k.py",
+    "parallel_dispatch_top_k.py",
+    "tools/claim_lane_dispatch.py",
+    "claim_lane_dispatch.py",
+)
 
 FALSE_AUTHORITY: dict[str, bool] = {
     "score_claim": False,
@@ -203,7 +212,42 @@ def _supervisor_output_dir(
     return repo_rel(Path(output_root) / f"{queue_id}_{digest}", repo_root)
 
 
-def classify_queue_observation(observation: Mapping[str, Any]) -> tuple[str, list[str]]:
+def _queue_is_exact_dispatch_gate(queue: Mapping[str, Any], queue_path: str | Path | None = None) -> bool:
+    queue_id = str(queue.get("queue_id") or "").lower()
+    path_text = str(queue_path or "").lower()
+    if any(marker in queue_id for marker in EXACT_DISPATCH_QUEUE_ID_MARKERS):
+        return True
+    if "exact_eval" in path_text and "dispatch" in path_text:
+        return True
+    for experiment in queue.get("experiments") or []:
+        if not isinstance(experiment, Mapping):
+            continue
+        experiment_id = str(experiment.get("id") or "").lower()
+        if any(marker in experiment_id for marker in EXACT_DISPATCH_QUEUE_ID_MARKERS):
+            return True
+        steps = experiment.get("steps")
+        if not isinstance(steps, Sequence) or isinstance(steps, (str, bytes, bytearray)):
+            continue
+        for step in steps:
+            if not isinstance(step, Mapping):
+                continue
+            step_id = str(step.get("id") or "").lower()
+            if any(marker in step_id for marker in EXACT_DISPATCH_STEP_ID_MARKERS):
+                return True
+            command = step.get("command")
+            if isinstance(command, Sequence) and not isinstance(command, (str, bytes, bytearray)):
+                command_text = " ".join(str(part) for part in command).lower()
+                if any(marker in command_text for marker in EXACT_DISPATCH_COMMAND_MARKERS):
+                    return True
+    return False
+
+
+def classify_queue_observation(
+    observation: Mapping[str, Any],
+    *,
+    queue: Mapping[str, Any] | None = None,
+    queue_path: str | Path | None = None,
+) -> tuple[str, list[str]]:
     blockers = [str(item) for item in observation.get("blockers") or [] if str(item)]
     state_watermark = observation.get("state_watermark")
     state_watermark = state_watermark if isinstance(state_watermark, Mapping) else {}
@@ -227,6 +271,12 @@ def classify_queue_observation(observation: Mapping[str, Any]) -> tuple[str, lis
     if queued and mode == "running":
         return "READY_TO_SUPERVISE", []
     if queued:
+        if queue is not None and _queue_is_exact_dispatch_gate(queue, queue_path):
+            return PAUSED_EXACT_DISPATCH_GATE_STATUS, [
+                f"mode={mode or 'unknown'}",
+                "exact_dispatch_gate_paused",
+                "mlx_first_no_auto_cloud_dispatch",
+            ]
         return "PAUSED_WITH_QUEUED_WORK", [f"mode={mode or 'unknown'}"]
     if succeeded:
         return "TERMINAL", []
@@ -242,6 +292,7 @@ def _priority(status: str) -> int:
         "PAUSED_WITH_QUEUED_WORK": 50,
         "NEEDS_REVIEW": 60,
         "TERMINAL": 70,
+        PAUSED_EXACT_DISPATCH_GATE_STATUS: 75,
         "EMPTY_OR_IDLE": 80,
         "INVALID_QUEUE": 90,
         NON_EXECUTABLE_QUEUE_ARTIFACT_STATUS: 95,
@@ -342,7 +393,7 @@ def queue_fleet_row(
             "blockers": blockers,
         }
     else:
-        status, blockers = classify_queue_observation(observation)
+        status, blockers = classify_queue_observation(observation, queue=queue, queue_path=path)
     supervise_dir = _supervisor_output_dir(repo, supervisor_output_root, queue_id)
     return {
         **base,
@@ -487,6 +538,7 @@ def queue_fleet_status(
         "actionable_count": len(actionable),
         "ready_to_supervise_count": counts.get("READY_TO_SUPERVISE", 0),
         "paused_with_queued_work_count": counts.get("PAUSED_WITH_QUEUED_WORK", 0),
+        "paused_exact_dispatch_gate_count": counts.get(PAUSED_EXACT_DISPATCH_GATE_STATUS, 0),
         "needs_recovery_count": counts.get("NEEDS_RECOVERY", 0) + counts.get("NEEDS_INIT", 0),
         "invalid_queue_count": counts.get("INVALID_QUEUE", 0),
         "non_executable_artifact_count": counts.get(NON_EXECUTABLE_QUEUE_ARTIFACT_STATUS, 0),

@@ -469,6 +469,7 @@ def cmd_reconcile_satisfied(args: argparse.Namespace) -> int:
             conn,
             queue,
             repo_root=REPO_ROOT,
+            include_failed=args.include_failed,
         )
         after = queue_summary(conn, queue, repo_root=REPO_ROOT)
     _json_print({"state": str(state), "before": before, "after": after, **reconciled})
@@ -670,6 +671,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     sp = sub.add_parser(
         "reconcile-satisfied",
         help="mark queued steps succeeded when their postconditions already pass",
+    )
+    sp.add_argument(
+        "--include-failed",
+        action="store_true",
+        help=(
+            "also reconcile failed steps whose postconditions already pass; "
+            "for terminal negative/refusal artifacts written before a nonzero exit"
+        ),
     )
     sp.set_defaults(func=cmd_reconcile_satisfied)
 

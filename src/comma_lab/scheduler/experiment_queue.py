@@ -3585,13 +3585,17 @@ def reconcile_satisfied_queued_steps(
     queue: Mapping[str, Any],
     *,
     repo_root: str | Path,
+    include_failed: bool = False,
 ) -> dict[str, Any]:
-    """Mark queued steps succeeded when their declared postconditions already pass.
+    """Mark terminal-safe steps succeeded when their postconditions already pass.
 
     This is intentionally artifact-backed: it only advances queued steps that
     have at least one postcondition and whose current queue definition passes
     every postcondition. It refreshes definition hashes at the same time, so
     harmless timeout/resource/telemetry edits do not force redundant reruns.
+    Failed-step reconciliation is opt-in and still postcondition-backed; it is
+    for old queue commands whose nonzero return code represented a terminal
+    negative/refusal signal after valid artifacts had already been written.
     """
 
     repo = Path(repo_root)
@@ -3611,7 +3615,10 @@ def reconcile_satisfied_queued_steps(
                 """,
                 (queue_id, experiment["id"], step["id"]),
             ).fetchone()
-            if row is None or str(row["status"]) != "queued":
+            allowed_statuses = {"queued"}
+            if include_failed:
+                allowed_statuses.add("failed")
+            if row is None or str(row["status"]) not in allowed_statuses:
                 continue
             postconditions = [dict(item) for item in step.get("postconditions", [])]
             if not postconditions:

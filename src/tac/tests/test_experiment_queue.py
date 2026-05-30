@@ -666,6 +666,69 @@ def test_experiment_queue_reconcile_respects_dependency_causality(
     assert summary["status_counts"] == {"queued": 2}
 
 
+def test_experiment_queue_reconcile_failed_is_opt_in_and_artifact_backed(
+    tmp_path: Path,
+) -> None:
+    artifact = tmp_path / "artifact.json"
+    artifact.write_text(json.dumps({"schema": "artifact.v1"}), encoding="utf-8")
+    queue = normalize_queue_definition(
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "failed_reconcile_queue",
+            "controls": {"mode": "running"},
+            "experiments": [
+                {
+                    "id": "candidate",
+                    "steps": [
+                        {
+                            "id": "harvest",
+                            "command": [sys.executable, "-c", "raise SystemExit(2)"],
+                            "postconditions": [
+                                {
+                                    "type": "json_equals",
+                                    "path": artifact.name,
+                                    "key": "schema",
+                                    "equals": "artifact.v1",
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+
+    with connect_state(tmp_path / "queue.sqlite") as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'failed',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-05-30T18:30:00Z'
+            WHERE queue_id = 'failed_reconcile_queue'
+              AND experiment_id = 'candidate'
+              AND step_id = 'harvest'
+            """,
+            (json.dumps({"returncode": 2}),),
+        )
+        conn.commit()
+        skipped = reconcile_satisfied_queued_steps(conn, queue, repo_root=tmp_path)
+        assert skipped["reconciled_step_count"] == 0
+        applied = reconcile_satisfied_queued_steps(
+            conn,
+            queue,
+            repo_root=tmp_path,
+            include_failed=True,
+        )
+        summary = queue_summary(conn, queue, repo_root=tmp_path)
+
+    assert applied["reconciled_step_count"] == 1
+    assert applied["reconciled_steps"][0]["previous_status"] == "failed"
+    assert summary["status_counts"] == {"succeeded": 1}
+
+
 def test_experiment_queue_pause_freeze_and_rewind(tmp_path: Path) -> None:
     queue = _queue(tmp_path)
     with connect_state(tmp_path / "queue.sqlite") as conn:

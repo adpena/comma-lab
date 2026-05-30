@@ -4601,7 +4601,6 @@ def _materializer_exact_readiness_followup_steps(
         _repo_rel(source_queue_path, repo_root),
         "--report-out",
         _repo_rel(harvest_report_path, repo_root),
-        "--require-accepted",
         "--overwrite",
     ]
     if manifest_ref_kind == "sweep_manifest":
@@ -4612,6 +4611,7 @@ def _materializer_exact_readiness_followup_steps(
             ]
         )
     else:
+        harvest_command.append("--require-accepted")
         harvest_command.extend(
             [
                 "--work-queue",

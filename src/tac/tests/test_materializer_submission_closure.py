@@ -888,3 +888,131 @@ def test_materializer_submission_closure_closes_all_source_queue_rows(
         active_floor_score=None,
     )
     assert bridge["ready_candidate_count"] == 2
+
+
+def test_materializer_submission_closure_emits_empty_refusal_for_no_candidates(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path
+    source_queue_path = repo / "artifacts" / "source_queue.json"
+    source_queue_path.parent.mkdir(parents=True)
+    source_queue_path.write_text(
+        json.dumps(
+            {
+                "schema": "optimizer_candidate_queue_v1",
+                **FALSE_AUTHORITY,
+                "n_candidates": 0,
+                "top_k_count": 0,
+                "dispatch_ready_count": 0,
+                "dispatch_ready": [],
+                "top_k": [],
+                "top_k_forensic": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = build_materializer_submission_runtime_closures(
+        repo_root=repo,
+        source_queue_path=source_queue_path,
+        submission_dir_out=repo / "closure" / "submissions",
+        closed_source_queue_out=repo / "closure" / "closed_source_queue.json",
+        closure_report_out=repo / "closure" / "submission_closure_report.json",
+    )
+
+    assert report["schema"] == SUBMISSION_CLOSURE_REPORT_SCHEMA
+    assert report["candidate_count"] == 0
+    assert report["closure_blockers"] == ["source_queue_has_no_candidate_rows"]
+    closed_queue = json.loads(
+        (repo / "closure" / "closed_source_queue.json").read_text(encoding="utf-8")
+    )
+    assert closed_queue["schema"] == "optimizer_candidate_queue_v1"
+    assert closed_queue["n_candidates"] == 0
+    assert closed_queue["top_k"] == []
+    assert closed_queue["ready_for_exact_eval_dispatch"] is False
+
+
+def test_materializer_submission_closure_preserves_receiver_refusal_artifacts(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path
+    source_archive = repo / "source" / "archive.zip"
+    candidate_archive = repo / "artifacts" / "candidate.zip"
+    source_archive.parent.mkdir(parents=True)
+    candidate_archive.parent.mkdir(parents=True)
+    _write_zip(source_archive, b"A" * 40)
+    _write_zip(candidate_archive, b"B" * 40)
+    candidate_sha = _sha256(candidate_archive)
+    source_sha = _sha256(source_archive)
+    proof_path = repo / "artifacts" / "runtime_consumption_proof.json"
+    proof_path.write_text(
+        json.dumps(
+            {
+                "schema": "feca_selector_runtime_consumption_proof.v1",
+                "receiver_contract_satisfied": False,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    source_queue_path = repo / "artifacts" / "source_queue.json"
+    source_queue_path.write_text(
+        json.dumps(
+            {
+                "schema": "optimizer_candidate_queue_v1",
+                **FALSE_AUTHORITY,
+                "n_candidates": 1,
+                "top_k_count": 1,
+                "dispatch_ready_count": 0,
+                "dispatch_ready": [],
+                "top_k": [
+                    {
+                        "schema": "feca_selector_reparameterization_manifest.v1",
+                        **FALSE_AUTHORITY,
+                        "candidate_id": "selector_refused",
+                        "target_kind": "selector_stream_context_recode_v1",
+                        "materializer_id": "feca_selector_reparameterize_adapter",
+                        "receiver_contract_kind": "source_runtime_native_selector_context_recode",
+                        "receiver_contract_satisfied": False,
+                        "runtime_consumption_proof_path": proof_path.relative_to(repo).as_posix(),
+                        "candidate_archive_path": candidate_archive.relative_to(repo).as_posix(),
+                        "candidate_archive_sha256": candidate_sha,
+                        "candidate_archive_bytes": candidate_archive.stat().st_size,
+                        "source_archive_path": source_archive.relative_to(repo).as_posix(),
+                        "source_archive_sha256": source_sha,
+                        "source_archive_bytes": source_archive.stat().st_size,
+                        "readiness_blockers": [
+                            "runtime_consumption_proof_schema_unsupported:feca_selector_runtime_consumption_proof.v1"
+                        ],
+                        "dispatch_blockers": [
+                            "family_agnostic_receiver_contract_not_satisfied"
+                        ],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = build_materializer_submission_runtime_closure(
+        repo_root=repo,
+        source_queue_path=source_queue_path,
+        candidate_id="selector_refused",
+        submission_dir_out=repo / "closure" / "submission",
+        closed_source_queue_out=repo / "closure" / "closed_source_queue.json",
+        closure_report_out=repo / "closure" / "submission_closure_report.json",
+    )
+
+    assert report["schema"] == SUBMISSION_CLOSURE_REPORT_SCHEMA
+    assert report["closure_blockers"] == ["receiver_contract_not_satisfied"]
+    assert (repo / "closure" / "submission" / "archive.zip").is_file()
+    closed_queue = json.loads(
+        (repo / "closure" / "closed_source_queue.json").read_text(encoding="utf-8")
+    )
+    closed_row = closed_queue["top_k"][0]
+    assert "receiver_contract_not_satisfied" in closed_row["readiness_blockers"]
+    assert closed_row["candidate_archive_path"] == "closure/submission/archive.zip"
+    assert closed_row["ready_for_exact_eval_dispatch"] is False

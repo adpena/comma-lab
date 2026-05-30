@@ -439,6 +439,266 @@ def test_observer_allows_explicit_planning_completion_contract_custody_opt_out(
     )
 
     assert observation["healthy"] is True
+
+
+def test_observer_legacy_materializer_sweep_completion_contract_is_planning_only(
+    tmp_path: Path,
+) -> None:
+    artifact = tmp_path / "sweep.json"
+    artifact.write_text(
+        json.dumps(
+            {
+                "schema": "family_agnostic_materializer_empirical_sweep.v1",
+                "target_kind": "archive_zip_repack_v1",
+                "status": "succeeded",
+                "observation_count": 1,
+                "observations": [{"candidate_saved_bytes": 0}],
+                "planner_feedback": [{"verdict": "negative"}],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    state = tmp_path / "queue.sqlite"
+    queue = _queue(artifact)
+    queue["experiments"][0]["steps"][0]["postconditions"] = [
+        {
+            "type": "json_completion_contract",
+            "path": artifact.as_posix(),
+            "required_equals": {
+                "schema": "family_agnostic_materializer_empirical_sweep.v1",
+                "target_kind": "archive_zip_repack_v1",
+            },
+            "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+            ],
+            "false_or_missing": ["ready_for_exact_eval_dispatch"],
+            "required_positive_int": ["observation_count"],
+            "required_nonempty": ["observations", "planner_feedback"],
+        }
+    ]
+
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'succeeded',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-05-30T18:15:00Z'
+            WHERE queue_id = 'observer_test'
+              AND experiment_id = 'exp0'
+              AND step_id = 'smoke'
+            """,
+            (json.dumps({"command": ["python", "-c", "print('hello queue')"]}),),
+        )
+        conn.commit()
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=0,
+    )
+
+    assert observation["healthy"] is True
+    artifact_record = observation["succeeded_artifact_steps"][0]["expected_artifacts"][0]
+    assert artifact_record["postcondition_passed"] is True
+    assert not artifact_record.get("artifact_revalidation_blockers")
+
+
+def test_observer_accepts_receiver_blocked_optimizer_queue_as_terminal_signal(
+    tmp_path: Path,
+) -> None:
+    artifact = tmp_path / "source_queue.json"
+    artifact.write_text(
+        json.dumps(
+            {
+                "schema": "optimizer_candidate_queue_v1",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "top_k": [
+                    {
+                        "schema": "feca_selector_reparameterization_manifest.v1",
+                        "candidate_id": "blocked_selector",
+                        "target_kind": "selector_stream_context_recode_v1",
+                        "materializer_id": "feca_selector_reparameterize_adapter",
+                        "receiver_contract_kind": "source_runtime_native_selector_context_recode",
+                        "receiver_contract_satisfied": False,
+                        "candidate_archive_path": "candidate.zip",
+                        "candidate_archive_sha256": "a" * 64,
+                        "candidate_archive_bytes": 123,
+                        "serialized_archive_delta": {
+                            "schema": "serialized_archive_delta_contract.v1",
+                            "source_archive_bytes": 123,
+                            "candidate_archive_bytes": 123,
+                            "realized_saved_bytes": 0,
+                            "status": "zero_delta",
+                        },
+                        "readiness_blockers": [
+                            "family_agnostic_receiver_contract_not_satisfied"
+                        ],
+                        "dispatch_blockers": [
+                            "family_agnostic_receiver_contract_not_satisfied"
+                        ],
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                        "rank_or_kill_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    state = tmp_path / "queue.sqlite"
+    queue = _queue(artifact)
+    queue["experiments"][0]["steps"][0]["postconditions"] = [
+        {
+            "type": "json_equals",
+            "path": artifact.as_posix(),
+            "key": "schema",
+            "equals": "optimizer_candidate_queue_v1",
+        }
+    ]
+
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'succeeded',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-05-30T18:20:00Z'
+            WHERE queue_id = 'observer_test'
+              AND experiment_id = 'exp0'
+              AND step_id = 'smoke'
+            """,
+            (json.dumps({"command": ["python", "-c", "print('hello queue')"]}),),
+        )
+        conn.commit()
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=0,
+    )
+
+    assert observation["healthy"] is True
+    artifact_record = observation["succeeded_artifact_steps"][0]["expected_artifacts"][0]
+    assert artifact_record["postcondition_passed"] is True
+    assert artifact_record["optimizer_candidate_queue_materializer_row_count"] == 1
+
+
+def test_observer_accepts_planning_optimizer_queue_with_deferred_runtime_identity(
+    tmp_path: Path,
+) -> None:
+    artifact = tmp_path / "source_queue.json"
+    candidate = tmp_path / "candidate.zip"
+    candidate.write_bytes(b"candidate-bytes")
+    candidate_sha = hashlib.sha256(candidate.read_bytes()).hexdigest()
+    proof = tmp_path / "runtime_consumption_proof.json"
+    _write_receiver_proof(
+        proof,
+        candidate_archive={
+            "path": candidate.as_posix(),
+            "bytes": candidate.stat().st_size,
+            "sha256": candidate_sha,
+        },
+    )
+    artifact.write_text(
+        json.dumps(
+            {
+                "schema": "optimizer_candidate_queue_v1",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "top_k": [
+                    {
+                        "schema": "feca_selector_reparameterization_manifest.v1",
+                        "candidate_id": "planning_selector",
+                        "target_kind": "selector_stream_context_recode_v1",
+                        "materializer_id": "feca_selector_reparameterize_adapter",
+                        "receiver_contract_kind": "source_runtime_native_selector_context_recode",
+                        "receiver_contract_satisfied": True,
+                        "runtime_consumption_proof_path": proof.as_posix(),
+                        "candidate_archive_path": candidate.as_posix(),
+                        "candidate_archive_sha256": candidate_sha,
+                        "candidate_archive_bytes": candidate.stat().st_size,
+                        "serialized_archive_delta": {
+                            "schema": "serialized_archive_delta_contract.v1",
+                            "source_archive_bytes": 123,
+                            "candidate_archive_bytes": candidate.stat().st_size,
+                            "realized_saved_bytes": 0,
+                            "status": "zero_delta",
+                        },
+                        "readiness_blockers": [
+                            "candidate_requires_exact_auth_eval_before_promotion"
+                        ],
+                        "dispatch_blockers": [
+                            "requires_exact_eval_readiness_gate",
+                            "materializer_candidate_is_not_dispatch_authorization",
+                        ],
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                        "rank_or_kill_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    state = tmp_path / "queue.sqlite"
+    queue = _queue(artifact)
+    queue["experiments"][0]["steps"][0]["postconditions"] = [
+        {
+            "type": "json_equals",
+            "path": artifact.as_posix(),
+            "key": "schema",
+            "equals": "optimizer_candidate_queue_v1",
+        }
+    ]
+
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'succeeded',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-05-30T18:25:00Z'
+            WHERE queue_id = 'observer_test'
+              AND experiment_id = 'exp0'
+              AND step_id = 'smoke'
+            """,
+            (json.dumps({"command": ["python", "-c", "print('hello queue')"]}),),
+        )
+        conn.commit()
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=0,
+    )
+
+    assert observation["healthy"] is True
+    artifact_record = observation["succeeded_artifact_steps"][0]["expected_artifacts"][0]
+    assert artifact_record["postcondition_passed"] is True
+    assert artifact_record["optimizer_candidate_queue_materializer_row_count"] == 1
     assert observation["blockers"] == []
     assert observation["succeeded_artifact_failure_steps"] == []
 

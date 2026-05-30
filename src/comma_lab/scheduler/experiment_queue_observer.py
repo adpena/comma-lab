@@ -77,6 +77,11 @@ ARCHIVE_RUNTIME_RECEIVER_CUSTODY_POSTCONDITION_TYPES = frozenset(
         "json_completion_contract",
     }
 )
+PLANNING_ONLY_COMPLETION_CONTRACT_SCHEMAS = frozenset(
+    {
+        FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_SWEEP_SCHEMA,
+    }
+)
 
 
 def _utc_now() -> str:
@@ -550,6 +555,14 @@ def _postcondition_requires_archive_runtime_receiver_custody(
     if condition.get("required_archive_runtime_custody") is False:
         return False
     if condition.get("required_receiver_custody") is False:
+        return False
+    required_equals = condition.get("required_equals")
+    schema = (
+        required_equals.get("schema")
+        if isinstance(required_equals, Mapping)
+        else condition.get("schema")
+    )
+    if schema in PLANNING_ONLY_COMPLETION_CONTRACT_SCHEMAS:
         return False
     postcondition_type = str(condition.get("type") or "")
     return (
@@ -1093,10 +1106,47 @@ def _optimizer_candidate_queue_materializer_rows(
             context=f"optimizer_candidate_queue_top_k_{row_index}",
         )
         if not revalidation.get("valid"):
-            blockers.extend(
-                f"top_k[{row_index}]:{blocker}"
+            row_blockers = [
+                str(blocker)
                 for blocker in revalidation.get("blockers", [])
                 if str(blocker)
+            ]
+            if _materializer_queue_row_is_expected_receiver_blocked(raw_row):
+                materializer_row = _optimizer_candidate_queue_materializer_row(
+                    raw_row,
+                    row_index=row_index,
+                )
+                if materializer_row is not None:
+                    materializer_row["artifact_revalidation"] = {
+                        **revalidation,
+                        "valid": False,
+                        "expected_terminal_blocker": (
+                            "receiver_contract_not_satisfied"
+                        ),
+                    }
+                    rows.append(materializer_row)
+                continue
+            if _materializer_queue_row_allows_deferred_runtime_identity(
+                raw_row,
+                row_blockers,
+            ):
+                materializer_row = _optimizer_candidate_queue_materializer_row(
+                    raw_row,
+                    row_index=row_index,
+                )
+                if materializer_row is not None:
+                    materializer_row["artifact_revalidation"] = {
+                        **revalidation,
+                        "valid": False,
+                        "expected_terminal_blocker": (
+                            "runtime_identity_deferred_until_exact_readiness"
+                        ),
+                    }
+                    rows.append(materializer_row)
+                continue
+            blockers.extend(
+                f"top_k[{row_index}]:{blocker}"
+                for blocker in row_blockers
             )
             continue
         materializer_row = _optimizer_candidate_queue_materializer_row(
@@ -1107,6 +1157,52 @@ def _optimizer_candidate_queue_materializer_rows(
             materializer_row["artifact_revalidation"] = revalidation
             rows.append(materializer_row)
     return rows, blockers
+
+
+def _materializer_queue_row_is_expected_receiver_blocked(row: Mapping[str, Any]) -> bool:
+    if row.get("receiver_contract_satisfied") is True:
+        return False
+    blocker_text = "\n".join(
+        str(item)
+        for key in ("readiness_blockers", "dispatch_blockers")
+        for item in _string_list(row.get(key))
+    )
+    return "receiver_contract_not_satisfied" in blocker_text
+
+
+def _materializer_queue_row_allows_deferred_runtime_identity(
+    row: Mapping[str, Any],
+    revalidation_blockers: Sequence[str],
+) -> bool:
+    if not revalidation_blockers:
+        return False
+    allowed_runtime_identity_blockers = (
+        "expected_runtime_tree_sha256_missing",
+        "runtime_tree_sha256_missing",
+    )
+    if any(
+        not any(suffix in blocker for suffix in allowed_runtime_identity_blockers)
+        for blocker in revalidation_blockers
+    ):
+        return False
+    if row.get("ready_for_exact_eval_dispatch") is True:
+        return False
+    if row.get("dispatch_attempted") is True or row.get("gpu_launched") is True:
+        return False
+    blocker_text = "\n".join(
+        str(item)
+        for key in ("readiness_blockers", "dispatch_blockers")
+        for item in _string_list(row.get(key))
+    )
+    return any(
+        marker in blocker_text
+        for marker in (
+            "requires_exact_eval_readiness_gate",
+            "materializer_candidate_is_not_dispatch_authorization",
+            "submission_runtime_closure_refused_missing_runtime",
+            "runtime_adapter_expected_tree_sha_missing",
+        )
+    )
 
 
 def _optimizer_candidate_queue_materializer_row(

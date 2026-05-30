@@ -262,6 +262,47 @@ def test_queue_fleet_exposes_resume_commands_for_paused_work(tmp_path: Path, cap
     assert payload["score_claim"] is False
 
 
+def test_queue_fleet_paused_exact_dispatch_gate_is_not_actionable(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    tool = _load_queue_fleet_tool()
+    queue_path, artifact = _queue_file(tmp_path, mode="paused")
+    queue = json.loads(queue_path.read_text(encoding="utf-8"))
+    queue["queue_id"] = "unit_exact_eval_dispatch"
+    queue["experiments"][0]["steps"][0]["id"] = "dispatch_exact_eval"
+    queue["experiments"][0]["steps"][0]["command"] = [
+        sys.executable,
+        "tools/parallel_dispatch_top_k.py",
+        "--ranked-input",
+        str(artifact),
+    ]
+    queue_path.write_text(json.dumps(queue), encoding="utf-8")
+    state_root = tmp_path / "state"
+    _init_state(queue_path, state_root)
+
+    rc = tool.main(
+        [
+            "--root",
+            str(queue_path),
+            "--state-root",
+            str(state_root),
+            "status",
+            "--format",
+            "json",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert rc == 0
+    assert payload["actionable_count"] == 0
+    assert payload["paused_with_queued_work_count"] == 0
+    assert payload["paused_exact_dispatch_gate_count"] == 1
+    assert payload["next_resume_commands"] == []
+    assert payload["rows"][0]["status"] == "PAUSED_EXACT_DISPATCH_GATE"
+    assert payload["rows"][0]["score_claim"] is False
+
+
 def test_queue_fleet_init_missing_initializes_missing_state(tmp_path: Path, capsys) -> None:
     tool = _load_queue_fleet_tool()
     queue_path, _artifact = _queue_file(tmp_path)
