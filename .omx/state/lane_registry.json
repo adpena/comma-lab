@@ -62059,6 +62059,252 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_slot_ggg_yousfi_fridrich_pose_axis_null_real_scorer_verification_20260529",
+      "name": "Slot GGG Yousfi-Fridrich pose-axis null-projection FAKE-to-REAL via real-scorer verification",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/composition/pr110_opt_6_motion_pair_repair_pose_axis_null_projection_on_segnet/__init__.py canonical sister apply_pose_axis_null_projection_via_real_scorers_to_pr110_archive landed; 17 dedicated tests pass in 175s; 89 baseline tests pass; smoke ALL_MODES_CONFIRMED on macOS-CPU advisory"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/yousfi_fridrich_slot_rr_fake_to_real_landed_20260529.md + sister memory file feedback_yousfi_fridrich_slot_rr_fake_to_real_via_real_scorer_verification_landed_20260529.md + Catalog #348 retroactive sweep at .omx/research/retroactive_sweep_for_slot_ggg_yousfi_fridrich_real_scorer_20260529.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "L0 SCAFFOLD; closes Slot EEE Audit Axis F cite-vs-impl at scorer-axis surface; sister of Slot RR Parts 1+2 (predecessor commits 30bf9029f + 32a70c051); real PoseNet + SegNet forward on real video pairs per Catalog #213; ALL_MODES_CONFIRMED on macOS-CPU advisory smoke; NEVER promotable per Catalog #192; paired-CUDA RATIFICATION operator-routable per Catalog #246; canonical equation pr110_opt_6_motion_pair_repair_pose_axis_null_projection_on_segnet_savings_v1 DEFERRED per Catalog #344 iterate-not-force; lane_class=substrate_engineering; research_only=true"
+    },
+    {
+      "id": "lane_layer_1_x_member_grammar_fix_phase_10_op_routable_1_20260530",
+      "name": "Layer 1 X Member Grammar Fix Phase 10 OP Routable 1 STAND_DOWN",
+      "phase": 10.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_slot_ggg_scale_up_matrix_n_modes_x_600_pairs_contest_resolution_20260530",
+      "name": "Slot GGG Scale-Up Matrix N Modes Contest Resolution",
+      "phase": 11.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_z8_phase_e_score_aware_level_loss_protocol_implementation_20260530",
+      "name": "Z8 Phase E ScoreAwareLevelLoss Protocol Impl",
+      "phase": 12.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_z8_phase_b_decompose_m_contest_per_subband_mallat_wavelet_hierarchy_20260530",
+      "name": "Z8 Phase B decompose_M_contest_per_subband Mallat Wavelet",
+      "phase": 12.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/master_gradient_comparison/multi_granularity.py decompose_M_contest_per_subband + SubbandSensitivityDecomposition + WaveletDecompositionError + LEGAL_WAVELET_FAMILIES + LEGAL_SUBBAND_REDUCTIONS + M_CONTEST_PER_SUBBAND_PROVENANCE_KIND landed; 25/25 dedicated Phase B tests PASS in 0.07s (70/70 file-wide); Haar LL=2*mean identity verified atol=1e-5; Parseval energy preservation rtol=1e-5 across db1/db2/db4"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/z8_phase_b_decompose_m_contest_per_subband_mallat_wavelet_hierarchy_landed_20260530.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_z8_m6_wyner_ziv_top_level_coder_full_implementation_20260530",
+      "name": "Z8 M6 WynerZivTopLevelCoderImpl Full Implementation",
+      "phase": 12.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -62068,5 +62314,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-29T23:30:49Z"
+  "updated_at": "2026-05-30T14:37:51Z"
 }

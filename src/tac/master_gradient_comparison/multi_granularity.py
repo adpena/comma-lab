@@ -64,6 +64,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 try:
     import numpy as np
@@ -83,8 +84,11 @@ __all__ = [
     "InflatedGradientTensor",
     "LEGAL_LEVEL_PROJECTION_REDUCTIONS",
     "LEGAL_PIXEL_REDUCTIONS",
+    "LEGAL_SUBBAND_REDUCTIONS",
+    "LEGAL_WAVELET_FAMILIES",
     "M_ARCHIVE_VIA_CHAIN_RULE_PROVENANCE_KIND",
     "M_CONTEST_PER_LEVEL_PROVENANCE_KIND",
+    "M_CONTEST_PER_SUBBAND_PROVENANCE_KIND",
     "M_CONTEST_PROVENANCE_KIND",
     "M_INFLATED_PROVENANCE_KIND",
     "M_PIXEL_PROVENANCE_KIND",
@@ -93,12 +97,15 @@ __all__ = [
     "PerPairDifficulty",
     "PerPixelReconstructionError",
     "PerPixelSensitivityMap",
+    "SubbandSensitivityDecomposition",
+    "WaveletDecompositionError",
     "broadcast_sensitivity_map_to_channels",
     "cluster_pairs_by_gradient_similarity",
     "compute_per_pair_difficulty_atlas",
     "compute_score_weighted_reconstruction_error",
     "decompose_M_contest_per_level",
     "decompose_M_contest_per_segnet_class",
+    "decompose_M_contest_per_subband",
     "estimate_information_theoretic_floor",
     "extract_M_archive_via_chain_rule",
     "extract_M_contest",
@@ -1790,4 +1797,614 @@ def decompose_M_contest_per_level(
         operating_point=m_pixel.operating_point,
         captured_at_utc=captured_at_utc,
         measurement_axis=m_pixel.measurement_axis,
+    )
+
+
+# --- Phase B: per-subband Mallat wavelet hierarchy decomposition (2026-05-30) ---
+#
+# Sister of Phase C (decompose_M_contest_per_level). Phase C projects
+# per-pixel sensitivity from gradient-native (H, W) to wavelet-LEVEL
+# (H_level, W_level) via dyadic stride down-sample (one scalar per coarse
+# cell). Phase B decomposes per-pixel sensitivity into per-SUBBAND
+# (approximation LL + detail LH + detail HL + detail HH) per the canonical
+# Daubechies discrete wavelet transform per Mallat 1989 §7.7. Where Phase
+# C produces a single (N, H_level, W_level) tensor per level, Phase B
+# produces FOUR (N, H/2, W/2) tensors per level: one per subband.
+#
+# Canonical reference:
+# - Mallat 1989 "A Theory for Multiresolution Signal Decomposition: The
+#   Wavelet Representation" IEEE PAMI 11(7):674-693 §7.7
+#   (2D separable construction).
+# - Daubechies 1988 "Orthonormal bases of compactly supported wavelets"
+#   Communications on Pure and Applied Mathematics 41(7):909-996
+#   (compactly-supported orthonormal Daubechies filters; db4 = 4-tap
+#   per the canonical primitive at tac.symposium_impls.daubechies_wavelet_codec).
+#
+# Per Catalog #290 canonical-vs-unique decision per layer (for Phase B):
+# - Daubechies filter coefficients: ADOPT canonical
+#   tac.symposium_impls.daubechies_wavelet_codec.select_filter
+#   (DB1/Haar, DB2/4-tap, DB4/8-tap per Daubechies 1992 Table 6.1).
+# - 1D periodic-extension convolution: FORK with a per-(N_pairs)-loop
+#   numpy implementation that mirrors the proven Z8 mallat_dwt_adapter
+#   _dwt_1d_one_level_along_axis pattern. Same math, applied to (N_pairs,
+#   H, W) sensitivity maps rather than (B, H, W, C) NHWC architecture
+#   tensors. FORKED because the gradient-comparison surface is NCHW-
+#   adjacent (N_pairs, H, W) not NHWC; the canonical Z8 adapter is bound
+#   to LevelDimensionContract which is overkill for sensitivity maps.
+# - PerPixelSensitivityMap output shape: ADOPT canonical (each subband
+#   IS a PerPixelSensitivityMap at half spatial dims with chained
+#   provenance to the input map).
+# - Persistence: ADOPT canonical sister .meta.json sidecar pattern from
+#   extract_M_pixel + decompose_M_contest_per_level (atomic JSON per
+#   Catalog #131 + #128 sister discipline).
+#
+# Subband non-negativity: the wavelet detail subbands (LH, HL, HH) ARE
+# signed by construction (high-pass filters produce signed coefficients).
+# The Yousfi/Fridrich-grounded scorer-sensitivity contract requires a
+# non-negative per-pixel weight. Phase B reduces signed wavelet
+# coefficients to non-negative magnitudes via subband_reduction:
+# - "abs" (canonical default): per-coefficient absolute value. Preserves
+#   the canonical "non-zero detail magnitude indicates spatial-frequency
+#   sensitivity" semantic; sister of L1 norm at the per-subband surface.
+# - "square": per-coefficient square (energy). Preserves Parseval-style
+#   energy accounting; sister of L2 norm at the per-subband surface.
+# - "magnitude": alias for "abs" (operator-facing readability convenience).
+#
+# Z8 Mallat hierarchy fit: at level=1, a 384x512 input map decomposes into
+# 4 subbands each (192, 256) — the canonical Z8 LevelDimensionContract
+# subband shape at level 1. This unblocks per-subband score-aware
+# weighting in Z8 M8 ScoreAwareLevelLoss (sister wave per Catalog #356
+# AxisDecomposition decomposes sensitivity per axis × per pixel; Phase B
+# decomposes per axis × per pixel × per spatial-frequency-band).
+
+
+M_CONTEST_PER_SUBBAND_PROVENANCE_KIND = (
+    "tac.master_gradient_comparison.decompose_M_contest_per_subband"
+)
+
+LEGAL_WAVELET_FAMILIES = frozenset({"db1", "db2", "db4", "haar"})
+"""Canonical Daubechies filter families supported by Phase B.
+
+* ``db1`` / ``haar``: 2-tap Daubechies (Haar wavelet); orthogonality
+  diagnostic baseline. ``haar`` is an alias for ``db1`` per the canonical
+  primitive's enum.
+* ``db2``: 4-tap Daubechies; default wavelet in the Z8 Mallat DWT adapter
+  (canonical Z8 M5 milestone choice). Same canonical filter the sister
+  adapter at ``tac.substrates.z8_hierarchical_predictive_coding.mallat_dwt_adapter``
+  defaults to.
+* ``db4``: 8-tap Daubechies; smoother decomposition (better frequency
+  localization); higher computational cost. Per Mallat 1989 §7.7 the
+  smoother filter trades spatial localization for frequency localization;
+  operator-routable choice per substrate.
+
+Sister of ``DaubechiesFilter`` enum at the canonical primitive; this
+gate's frozenset preserves the case-insensitive lowercase canonical
+names per Catalog #168 AST-aware discipline.
+"""
+
+LEGAL_SUBBAND_REDUCTIONS = frozenset({"abs", "square", "magnitude"})
+"""Canonical wavelet-coefficient → non-negative weight reductions.
+
+Wavelet detail subbands (LH, HL, HH) are signed by construction. Phase B
+maps signed coefficients to non-negative scorer-sensitivity weights via:
+
+* ``abs`` (canonical default): per-coefficient absolute value. Sister of
+  L1 norm at the per-subband surface; preserves "non-zero detail magnitude
+  IS sensitivity" semantic.
+* ``square``: per-coefficient square (energy). Sister of L2 norm at the
+  per-subband surface; preserves Parseval-style energy accounting.
+* ``magnitude``: alias for ``abs`` per operator-facing readability.
+
+The LL approximation subband is always non-negative when the input map is
+non-negative (low-pass-only mass-conserving filter); the reduction is a
+no-op for LL when the input PerPixelSensitivityMap satisfies its
+non-negativity invariant.
+"""
+
+
+class WaveletDecompositionError(MultiGranularityComparisonError):
+    """Raised when Phase B decomposition fails for non-recoverable reasons.
+
+    Sister of ``MallatDyadicMismatchError`` (Phase C). Phase B's failure
+    modes are distinct: unknown wavelet family, negative level, odd-length
+    spatial dim incompatible with one-level Daubechies dyadic decomposition,
+    or unsupported subband reduction. ``MallatDyadicMismatchError``
+    specifically signals dyadic-divisibility (Phase C scope); Phase B
+    raises this broader class for wavelet-specific contract violations.
+
+    Inherits from ``MultiGranularityComparisonError`` so callers catching
+    the broader contract-violation class capture Phase B failures naturally.
+    """
+
+
+@dataclass(frozen=True)
+class SubbandSensitivityDecomposition:
+    """4-subband Mallat wavelet decomposition of a per-pixel sensitivity map.
+
+    Carries the canonical {LL, LH, HL, HH} 4-subband output of a 2D
+    separable Daubechies wavelet transform per Mallat 1989 §7.7. Each
+    field is a ``PerPixelSensitivityMap`` at level ``L`` spatial shape
+    ``(H >> L, W >> L)`` per the canonical dyadic hierarchy.
+
+    The 4 subbands together partition the original signal's spectral
+    content at level ``L`` (per Parseval's identity for orthonormal
+    Daubechies wavelets per Mallat §7.5):
+
+    * ``approximation`` (LL): low-pass on both axes; the coarse-scale
+      ``M_contest`` at level ``L``. Captures DC + smooth spatial structure.
+    * ``detail_horizontal`` (LH): high-pass along rows after low-pass
+      along columns. Captures vertical edges (horizontal frequency
+      content); per Yousfi-Fridrich UNIWARD cost convention these are
+      where horizontal-axis perturbation moves the score.
+    * ``detail_vertical`` (HL): low-pass along rows after high-pass
+      along columns. Captures horizontal edges (vertical frequency
+      content); UNIWARD-analog for vertical-axis perturbation.
+    * ``detail_diagonal`` (HH): high-pass on both axes. Captures
+      diagonal edges + textures; UNIWARD-analog for diagonal perturbation.
+
+    Per the canonical operator-facing semantic: high magnitude in a detail
+    subband at coordinate (h, w) means the scorer is sensitive to
+    spatial-frequency-band-at-that-orientation perturbations at that
+    coarse-spatial location. This IS the per-subband sister of the
+    per-pixel scorer-blindness inverse from Phase A.
+
+    Per Catalog #192 + #317: ALL 4 subbands are ``[predicted]``-grade
+    sensitivity surfaces, NEVER promotable as contest scores. The
+    Provenance chain through all 4 maps preserves source video sha + scorer
+    weights sha + operating point per Catalog #323.
+
+    Frozen dataclass per CLAUDE.md "Beauty, simplicity, and developer
+    experience" + Catalog #357 dual-tier consumer architecture.
+    """
+
+    approximation: PerPixelSensitivityMap
+    """LL band (low-low): coarse-scale approximation at level L."""
+
+    detail_horizontal: PerPixelSensitivityMap
+    """LH band (low-high): vertical-edge detail (horizontal high-pass)."""
+
+    detail_vertical: PerPixelSensitivityMap
+    """HL band (high-low): horizontal-edge detail (vertical high-pass)."""
+
+    detail_diagonal: PerPixelSensitivityMap
+    """HH band (high-high): diagonal-edge detail (both axes high-pass)."""
+
+    wavelet_family: str
+    """Daubechies filter family used (one of LEGAL_WAVELET_FAMILIES)."""
+
+    level: int
+    """Wavelet decomposition level (>= 1; level=0 identity not stored here)."""
+
+    subband_reduction: str
+    """How signed wavelet coefficients mapped to non-negative weights."""
+
+    predecessor_array_sha256: str
+    """sha256 of the input PerPixelSensitivityMap's array (provenance chain)."""
+
+    def __post_init__(self) -> None:
+        if self.wavelet_family not in LEGAL_WAVELET_FAMILIES:
+            raise WaveletDecompositionError(
+                f"wavelet_family must be one of {sorted(LEGAL_WAVELET_FAMILIES)}; "
+                f"got {self.wavelet_family!r}"
+            )
+        if self.level < 1:
+            raise WaveletDecompositionError(
+                f"level must be >= 1 (level=0 identity not stored in "
+                f"SubbandSensitivityDecomposition); got level={self.level}"
+            )
+        if self.subband_reduction not in LEGAL_SUBBAND_REDUCTIONS:
+            raise WaveletDecompositionError(
+                f"subband_reduction must be one of {sorted(LEGAL_SUBBAND_REDUCTIONS)}; "
+                f"got {self.subband_reduction!r}"
+            )
+        if len(self.predecessor_array_sha256) != 64:
+            raise WaveletDecompositionError(
+                f"predecessor_array_sha256 must be 64 hex chars; "
+                f"got len={len(self.predecessor_array_sha256)}"
+            )
+        # All 4 subbands must share spatial shape (canonical Mallat 4-subband
+        # invariant: each subband is (N, H >> L, W >> L)).
+        ll_shape = self.approximation.shape()
+        for name, sub in (
+            ("detail_horizontal", self.detail_horizontal),
+            ("detail_vertical", self.detail_vertical),
+            ("detail_diagonal", self.detail_diagonal),
+        ):
+            if sub.shape() != ll_shape:
+                raise WaveletDecompositionError(
+                    f"subband {name} shape {sub.shape()} != approximation "
+                    f"shape {ll_shape} (Mallat 4-subband invariant violated)"
+                )
+
+    def subband_shape(self) -> tuple[int, int, int]:
+        """Common shape ``(N_pairs, H_sub, W_sub)`` of all 4 subbands."""
+        return self.approximation.shape()
+
+
+def _select_daubechies_filter_for_family(family: str) -> tuple[Any, Any]:
+    """Map Phase B's LEGAL_WAVELET_FAMILIES string to canonical (h, g) filters.
+
+    Delegates to the canonical primitive at
+    ``tac.symposium_impls.daubechies_wavelet_codec.select_filter`` per
+    Catalog #290 canonical-vs-unique decision (ADOPT canonical filter
+    coefficients).
+    """
+    _require_numpy()
+    # Lazy import to avoid hard dependency at module-load (sister of the
+    # canonical Z8 mallat_dwt_adapter import-time pattern).
+    from tac.symposium_impls.daubechies_wavelet_codec import (
+        DaubechiesFilter,
+        select_filter,
+    )
+
+    # Normalize "haar" -> DB1 alias per the canonical primitive's enum.
+    normalized = family.lower()
+    if normalized == "haar":
+        canonical_id = DaubechiesFilter.DB1
+    elif normalized == "db1":
+        canonical_id = DaubechiesFilter.DB1
+    elif normalized == "db2":
+        canonical_id = DaubechiesFilter.DB2
+    elif normalized == "db4":
+        canonical_id = DaubechiesFilter.DB4
+    else:  # pragma: no cover - dataclass __post_init__ already gates this
+        raise WaveletDecompositionError(
+            f"unknown wavelet family {family!r}; expected one of "
+            f"{sorted(LEGAL_WAVELET_FAMILIES)}"
+        )
+    h, g = select_filter(canonical_id)
+    return h, g
+
+
+def _dwt_1d_periodic_along_axis(
+    arr,
+    *,
+    h,
+    g,
+    axis: int,
+):
+    """Apply 1D periodic-extension Daubechies one level along a single axis.
+
+    Returns ``(low, high)`` each with shape equal to ``arr`` except the
+    ``axis`` dimension is halved. Sister of
+    ``tac.substrates.z8_hierarchical_predictive_coding.mallat_dwt_adapter._dwt_1d_one_level_along_axis``
+    (functionally identical; FORKED inside this module per Catalog #290
+    canonical-vs-unique decision to avoid binding the
+    gradient-comparison surface to Z8's NHWC adapter convention — the
+    sensitivity-map surface uses (N_pairs, H, W) not NHWC).
+
+    Per Mallat 1989 §7.3 + Daubechies 1992 §6: periodic-extension
+    convolution + downsample-by-2 IS the canonical analysis filter.
+    """
+    _require_numpy()
+    n = arr.shape[axis]
+    if n % 2 != 0:
+        raise WaveletDecompositionError(
+            f"Daubechies 1-level DWT requires even axis length; "
+            f"got {n} along axis {axis}"
+        )
+    a = np.moveaxis(arr, axis, -1)
+    leading_shape = a.shape[:-1]
+    flat = a.reshape(-1, n)
+
+    k = h.size
+    ext = np.concatenate([flat, flat[:, : k - 1]], axis=1)
+
+    low_out = np.zeros((flat.shape[0], n // 2), dtype=np.float64)
+    high_out = np.zeros((flat.shape[0], n // 2), dtype=np.float64)
+    for i in range(flat.shape[0]):
+        conv_low = np.convolve(ext[i], h, mode="valid")
+        conv_high = np.convolve(ext[i], g, mode="valid")
+        low_out[i] = conv_low[::2]
+        high_out[i] = conv_high[::2]
+
+    low = low_out.reshape(*leading_shape, n // 2)
+    high = high_out.reshape(*leading_shape, n // 2)
+    low = np.moveaxis(low, -1, axis)
+    high = np.moveaxis(high, -1, axis)
+    return low, high
+
+
+def _apply_subband_reduction(arr, *, subband_reduction: str):
+    """Map signed wavelet coefficients to non-negative scalar weights."""
+    _require_numpy()
+    if subband_reduction in ("abs", "magnitude"):
+        return np.abs(arr)
+    if subband_reduction == "square":
+        return np.square(arr)
+    raise WaveletDecompositionError(  # pragma: no cover - dataclass gates this
+        f"subband_reduction must be one of {sorted(LEGAL_SUBBAND_REDUCTIONS)}; "
+        f"got {subband_reduction!r}"
+    )
+
+
+def _persist_subband(
+    arr_reduced_f32,
+    *,
+    m_pixel: PerPixelSensitivityMap,
+    subband_name: str,
+    wavelet_family: str,
+    level: int,
+    subband_reduction: str,
+    cache_root: Path,
+    captured_at_utc: str,
+    timestamp_token: str,
+) -> PerPixelSensitivityMap:
+    """Persist a single subband as PerPixelSensitivityMap with .meta.json sidecar.
+
+    Sister of the inline persistence pattern in ``extract_M_pixel`` and
+    ``decompose_M_contest_per_level``; refactored to a helper because Phase
+    B persists 4 maps per invocation.
+    """
+    _require_numpy()
+    array_sha256 = _sha256_array(arr_reduced_f32)
+    sha_prefix = m_pixel.source_video_sha256[:12]
+    n_pairs, h_sub, w_sub = arr_reduced_f32.shape
+    cache_path = (
+        cache_root
+        / f"m_pixel_per_subband_{m_pixel.source_kind}_{wavelet_family}_"
+        f"L{level}_{subband_name}_{subband_reduction}_"
+        f"{sha_prefix}_{h_sub}x{w_sub}_{timestamp_token}.npy"
+    )
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    np.save(cache_path, arr_reduced_f32)
+
+    meta_path = cache_path.with_suffix(".meta.json")
+    meta_payload = {
+        "schema": "m_pixel_per_subband_meta_v1",
+        "array_sha256": array_sha256,
+        "n_pairs": n_pairs,
+        "height": h_sub,
+        "width": w_sub,
+        "source_video_sha256": m_pixel.source_video_sha256,
+        "source_kind": m_pixel.source_kind,
+        "reduction": m_pixel.reduction,  # native scorer-axis reduction preserved
+        "wavelet_family": wavelet_family,
+        "level": level,
+        "subband_name": subband_name,
+        "subband_reduction": subband_reduction,
+        "native_shape": [m_pixel.height, m_pixel.width],
+        "subband_shape": [h_sub, w_sub],
+        "captured_at_utc": captured_at_utc,
+        "operating_point": m_pixel.operating_point.as_dict(),
+        "measurement_axis": m_pixel.measurement_axis,
+        "canonical_helper_invocation": M_CONTEST_PER_SUBBAND_PROVENANCE_KIND,
+        "predecessor_array_sha256": m_pixel.array_sha256,
+    }
+    meta_path.write_text(json.dumps(meta_payload, sort_keys=True, indent=2))
+
+    return PerPixelSensitivityMap(
+        array_path=str(cache_path),
+        array_sha256=array_sha256,
+        n_pairs=n_pairs,
+        height=h_sub,
+        width=w_sub,
+        source_video_sha256=m_pixel.source_video_sha256,
+        source_kind=m_pixel.source_kind,
+        reduction=m_pixel.reduction,
+        operating_point=m_pixel.operating_point,
+        captured_at_utc=captured_at_utc,
+        measurement_axis=m_pixel.measurement_axis,
+    )
+
+
+def decompose_M_contest_per_subband(
+    m_pixel: PerPixelSensitivityMap,
+    *,
+    level: int = 1,
+    wavelet: str = "db2",
+    subband_reduction: str = "abs",
+    cache_path: Path | str | None = None,
+) -> SubbandSensitivityDecomposition:
+    """Decompose a per-pixel sensitivity map into 4 wavelet subbands per Mallat.
+
+    Sister of Phase C (``decompose_M_contest_per_level``). Where Phase C
+    projects gradient-native ``(H, W)`` to a single wavelet-LEVEL
+    ``(H_level, W_level)`` via dyadic stride down-sample, Phase B
+    decomposes the same input into the canonical 4 Daubechies subbands
+    ``{LL, LH, HL, HH}`` per Mallat 1989 §7.7 2D separable construction.
+
+    Canonical Daubechies db2 default (4-tap; sister of the canonical Z8
+    Mallat DWT adapter at
+    ``tac.substrates.z8_hierarchical_predictive_coding.mallat_dwt_adapter``
+    which also defaults to db2 per the M5 milestone). Operator-routable
+    via ``wavelet`` ∈ LEGAL_WAVELET_FAMILIES.
+
+    Identity-level short-circuit: when ``level=0`` returns a degenerate
+    ``SubbandSensitivityDecomposition`` is NOT possible because level=0
+    means "no decomposition" — instead the canonical contract requires
+    ``level >= 1``. Callers wanting the identity should use Phase C with
+    ``level_shape == m_pixel.shape()[1:]`` (Phase C handles identity).
+    Phase B is structurally for ``level >= 1`` 4-subband decomposition.
+
+    Per Catalog #192 + Catalog #317: the 4 emitted subband maps are
+    ``[predicted]``-grade sensitivity, NEVER promotable as contest scores.
+    Per Catalog #287 evidence-tag discipline: this helper does NOT make
+    a score claim; the emitted decomposition is observability-only
+    sensitivity transfer per Catalog #356 AxisDecomposition pattern at
+    the per-subband sister surface.
+
+    Per Catalog #290 canonical-vs-unique decision: ADOPT canonical
+    Daubechies filter coefficients from
+    ``tac.symposium_impls.daubechies_wavelet_codec.select_filter``; FORK
+    the 1D convolution loop to match the (N_pairs, H, W) sensitivity-map
+    surface (sister of the proven Z8 mallat_dwt_adapter pattern).
+
+    Args:
+        m_pixel: input ``PerPixelSensitivityMap`` (shape ``(N_pairs, H, W)``).
+        level: wavelet decomposition level (>= 1; default 1). Each level
+            halves both spatial dims via the canonical Mallat dyadic
+            hierarchy. Level=1 produces 4 subbands at ``(H/2, W/2)`` each;
+            level=2 produces 4 subbands at ``(H/4, W/4)`` each.
+        wavelet: Daubechies filter family (default ``"db2"`` per canonical
+            Z8 Mallat DWT adapter). One of ``LEGAL_WAVELET_FAMILIES``.
+        subband_reduction: how signed wavelet coefficients map to non-
+            negative weights. Default ``"abs"`` (canonical L1 sister at
+            per-subband surface). ``"square"`` for Parseval-style energy.
+            ``"magnitude"`` alias for ``"abs"``.
+        cache_path: optional root directory for the 4 sidecars (when
+            ``None`` derived from ``_PERSIST_ROOT``). When provided MUST
+            be a directory (not a single file path) because 4 maps are
+            persisted; the directory is created if missing.
+
+    Returns:
+        ``SubbandSensitivityDecomposition`` with 4 ``PerPixelSensitivityMap``
+        fields ``(approximation, detail_horizontal, detail_vertical,
+        detail_diagonal)``, all at shape ``(N_pairs, H >> level, W >> level)``
+        with provenance chain back to ``m_pixel.array_sha256``.
+
+    Raises:
+        WaveletDecompositionError: unknown wavelet family; negative or
+            zero level; unsupported subband_reduction; OR odd spatial
+            dim incompatible with the requested level's dyadic
+            decomposition (each level needs even dims at THAT level).
+        MultiGranularityComparisonError: parent class for the above;
+            caller catching the broader contract-violation class captures
+            Phase B failures naturally.
+    """
+    _require_numpy()
+    # Contract validations BEFORE we touch the array (fail fast per Catalog #138).
+    if level < 1:
+        raise WaveletDecompositionError(
+            f"level must be >= 1 (level=0 identity not supported by Phase B; "
+            f"use Phase C decompose_M_contest_per_level with level_shape == "
+            f"input shape); got level={level}"
+        )
+    normalized_wavelet = wavelet.lower() if isinstance(wavelet, str) else wavelet
+    if normalized_wavelet not in LEGAL_WAVELET_FAMILIES:
+        raise WaveletDecompositionError(
+            f"wavelet must be one of {sorted(LEGAL_WAVELET_FAMILIES)}; "
+            f"got {wavelet!r}"
+        )
+    if subband_reduction not in LEGAL_SUBBAND_REDUCTIONS:
+        raise WaveletDecompositionError(
+            f"subband_reduction must be one of {sorted(LEGAL_SUBBAND_REDUCTIONS)}; "
+            f"got {subband_reduction!r}"
+        )
+
+    h_native = m_pixel.height
+    w_native = m_pixel.width
+    # Each level requires even dims at THAT level (Daubechies 1-level DWT
+    # invariant per the canonical primitive).
+    for L in range(1, level + 1):
+        h_at_L = h_native >> (L - 1)
+        w_at_L = w_native >> (L - 1)
+        if h_at_L % 2 != 0 or w_at_L % 2 != 0:
+            raise WaveletDecompositionError(
+                f"level {L} requires even spatial dims; got "
+                f"({h_at_L}, {w_at_L}) at that level from native "
+                f"({h_native}, {w_native}). Daubechies 1-level DWT "
+                f"requires even axis length per Mallat §7.5."
+            )
+
+    # Select canonical Daubechies filter via the canonical primitive.
+    h_filter, g_filter = _select_daubechies_filter_for_family(normalized_wavelet)
+
+    # Load input (N_pairs, H_native, W_native).
+    m_native = m_pixel.load().astype(np.float64, copy=False)
+
+    # Iterative L-level 2D separable Daubechies: at each level, transform
+    # the CURRENT LL band into the next level's 4 subbands. After L levels
+    # the "approximation" returned IS the level-L LL band; the 3 details
+    # returned ARE the level-L details (NOT the per-level details for L > 1
+    # — Phase B's canonical contract is "decompose to level L and return
+    # the 4 subbands AT level L"; callers wanting per-level details across
+    # all levels can iterate with level=1 on each LL).
+    current = m_native
+    for L in range(1, level + 1):
+        # Step 1: 1D-DWT along columns (axis 1 = H) -> (low_h, high_h)
+        low_h, high_h = _dwt_1d_periodic_along_axis(
+            current, h=h_filter, g=g_filter, axis=1
+        )
+        # Step 2: 1D-DWT along rows (axis 2 = W) of each -> 4 subbands
+        ll, lh = _dwt_1d_periodic_along_axis(
+            low_h, h=h_filter, g=g_filter, axis=2
+        )
+        hl, hh = _dwt_1d_periodic_along_axis(
+            high_h, h=h_filter, g=g_filter, axis=2
+        )
+        # The level-L LL band becomes input to level-(L+1) (if more levels).
+        current = ll
+        # ll, lh, hl, hh are the level-L subbands; we keep only the deepest
+        # level's per Phase B canonical contract.
+
+    # Apply subband_reduction to map signed coefficients to non-negative
+    # weights (Yousfi/Fridrich scorer-blindness-inverse contract preserved).
+    ll_reduced = _apply_subband_reduction(ll, subband_reduction=subband_reduction)
+    lh_reduced = _apply_subband_reduction(lh, subband_reduction=subband_reduction)
+    hl_reduced = _apply_subband_reduction(hl, subband_reduction=subband_reduction)
+    hh_reduced = _apply_subband_reduction(hh, subband_reduction=subband_reduction)
+
+    # Cast to float32 for storage (sister of extract_M_pixel + Phase C
+    # convention).
+    ll_f32 = ll_reduced.astype(np.float32)
+    lh_f32 = lh_reduced.astype(np.float32)
+    hl_f32 = hl_reduced.astype(np.float32)
+    hh_f32 = hh_reduced.astype(np.float32)
+
+    # Per Catalog #245 sister discipline: never /tmp. Per Phase A + C
+    # pattern: emit sidecars under _PERSIST_ROOT with a stable
+    # timestamp-indexed name. Phase B writes 4 sidecars (one per subband).
+    captured_at_utc = _utc_now_iso()
+    timestamp_token = captured_at_utc.replace(":", "").replace("-", "")[:15]
+    if cache_path is None:
+        cache_root = _PERSIST_ROOT
+    else:
+        cache_root = Path(cache_path)
+    cache_root.mkdir(parents=True, exist_ok=True)
+
+    approximation = _persist_subband(
+        ll_f32,
+        m_pixel=m_pixel,
+        subband_name="LL",
+        wavelet_family=normalized_wavelet,
+        level=level,
+        subband_reduction=subband_reduction,
+        cache_root=cache_root,
+        captured_at_utc=captured_at_utc,
+        timestamp_token=timestamp_token,
+    )
+    detail_horizontal = _persist_subband(
+        lh_f32,
+        m_pixel=m_pixel,
+        subband_name="LH",
+        wavelet_family=normalized_wavelet,
+        level=level,
+        subband_reduction=subband_reduction,
+        cache_root=cache_root,
+        captured_at_utc=captured_at_utc,
+        timestamp_token=timestamp_token,
+    )
+    detail_vertical = _persist_subband(
+        hl_f32,
+        m_pixel=m_pixel,
+        subband_name="HL",
+        wavelet_family=normalized_wavelet,
+        level=level,
+        subband_reduction=subband_reduction,
+        cache_root=cache_root,
+        captured_at_utc=captured_at_utc,
+        timestamp_token=timestamp_token,
+    )
+    detail_diagonal = _persist_subband(
+        hh_f32,
+        m_pixel=m_pixel,
+        subband_name="HH",
+        wavelet_family=normalized_wavelet,
+        level=level,
+        subband_reduction=subband_reduction,
+        cache_root=cache_root,
+        captured_at_utc=captured_at_utc,
+        timestamp_token=timestamp_token,
+    )
+
+    return SubbandSensitivityDecomposition(
+        approximation=approximation,
+        detail_horizontal=detail_horizontal,
+        detail_vertical=detail_vertical,
+        detail_diagonal=detail_diagonal,
+        wavelet_family=normalized_wavelet,
+        level=level,
+        subband_reduction=subband_reduction,
+        predecessor_array_sha256=m_pixel.array_sha256,
     )

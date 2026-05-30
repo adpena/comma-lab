@@ -763,3 +763,656 @@ def test_decompose_per_level_uniform_input_preserves_uniformity(tmp_path: Path) 
     )
     # stride^2 = 2x2 = 4.
     assert np.allclose(result_sum.load(), 4.0)
+
+
+# ----------------------------------------------------------------------
+# Section J: Phase B — decompose_M_contest_per_subband
+#
+# Canonical 2D separable Daubechies wavelet decomposition per Mallat 1989
+# §7.7. Sister of Phase C (per-level dyadic projection); where Phase C
+# produces a single (N, H_level, W_level) tensor, Phase B produces 4
+# subbands {LL, LH, HL, HH} per the canonical Daubechies multi-resolution
+# analysis.
+#
+# Test discipline per Catalog #229 (premise-verification-before-edit):
+# each test is paired with an explicit canonical identity OR shape contract
+# the helper must satisfy. Per Catalog #287: tests verify behavior, not
+# just structural existence.
+# ----------------------------------------------------------------------
+
+
+def test_phase_b_provenance_kind_canonical_value() -> None:
+    """Canonical provenance kind matches the helper import path."""
+    from tac.master_gradient_comparison.multi_granularity import (
+        M_CONTEST_PER_SUBBAND_PROVENANCE_KIND,
+    )
+
+    assert M_CONTEST_PER_SUBBAND_PROVENANCE_KIND == (
+        "tac.master_gradient_comparison.decompose_M_contest_per_subband"
+    )
+
+
+def test_phase_b_legal_wavelet_families_canonical_set() -> None:
+    """Pinned canonical wavelet families per Daubechies 1992 + Haar."""
+    from tac.master_gradient_comparison.multi_granularity import (
+        LEGAL_WAVELET_FAMILIES,
+    )
+
+    assert LEGAL_WAVELET_FAMILIES == frozenset({"db1", "db2", "db4", "haar"})
+
+
+def test_phase_b_legal_subband_reductions_canonical_set() -> None:
+    """Pinned canonical subband reductions: abs (L1), square (L2), magnitude (alias)."""
+    from tac.master_gradient_comparison.multi_granularity import (
+        LEGAL_SUBBAND_REDUCTIONS,
+    )
+
+    assert LEGAL_SUBBAND_REDUCTIONS == frozenset({"abs", "square", "magnitude"})
+
+
+def test_phase_b_wavelet_decomposition_error_is_multi_granularity_error() -> None:
+    """WaveletDecompositionError inherits from MultiGranularityComparisonError so
+    callers catching the broader contract-violation class capture Phase B failures.
+    """
+    from tac.master_gradient_comparison.multi_granularity import (
+        WaveletDecompositionError,
+    )
+
+    assert issubclass(WaveletDecompositionError, MultiGranularityComparisonError)
+
+
+def test_phase_b_level_zero_rejected(tmp_path: Path) -> None:
+    """level=0 is identity per Phase C; Phase B requires level >= 1 by contract."""
+    from tac.master_gradient_comparison.multi_granularity import (
+        WaveletDecompositionError,
+        decompose_M_contest_per_subband,
+    )
+
+    gt = _make_synthetic_contest_tensor(tmp_path, n_pairs=1, h=8, w=8)
+    m_pixel = extract_M_pixel(gt, reduction="l2_norm")
+    with pytest.raises(WaveletDecompositionError, match="level must be >= 1"):
+        decompose_M_contest_per_subband(m_pixel, level=0, cache_path=tmp_path)
+
+
+def test_phase_b_negative_level_rejected(tmp_path: Path) -> None:
+    from tac.master_gradient_comparison.multi_granularity import (
+        WaveletDecompositionError,
+        decompose_M_contest_per_subband,
+    )
+
+    gt = _make_synthetic_contest_tensor(tmp_path, n_pairs=1, h=8, w=8)
+    m_pixel = extract_M_pixel(gt, reduction="l2_norm")
+    with pytest.raises(WaveletDecompositionError, match="level must be >= 1"):
+        decompose_M_contest_per_subband(m_pixel, level=-1, cache_path=tmp_path)
+
+
+def test_phase_b_unknown_wavelet_rejected(tmp_path: Path) -> None:
+    from tac.master_gradient_comparison.multi_granularity import (
+        WaveletDecompositionError,
+        decompose_M_contest_per_subband,
+    )
+
+    gt = _make_synthetic_contest_tensor(tmp_path, n_pairs=1, h=8, w=8)
+    m_pixel = extract_M_pixel(gt, reduction="l2_norm")
+    with pytest.raises(WaveletDecompositionError, match="wavelet must be one of"):
+        decompose_M_contest_per_subband(
+            m_pixel, level=1, wavelet="biorthogonal", cache_path=tmp_path
+        )
+
+
+def test_phase_b_unknown_subband_reduction_rejected(tmp_path: Path) -> None:
+    from tac.master_gradient_comparison.multi_granularity import (
+        WaveletDecompositionError,
+        decompose_M_contest_per_subband,
+    )
+
+    gt = _make_synthetic_contest_tensor(tmp_path, n_pairs=1, h=8, w=8)
+    m_pixel = extract_M_pixel(gt, reduction="l2_norm")
+    with pytest.raises(
+        WaveletDecompositionError, match="subband_reduction must be one of"
+    ):
+        decompose_M_contest_per_subband(
+            m_pixel,
+            level=1,
+            subband_reduction="rectified_linear",
+            cache_path=tmp_path,
+        )
+
+
+def test_phase_b_odd_spatial_dim_rejected(tmp_path: Path) -> None:
+    """Daubechies 1-level DWT requires even axis length per Mallat §7.5."""
+    from tac.master_gradient_comparison.multi_granularity import (
+        WaveletDecompositionError,
+        decompose_M_contest_per_subband,
+    )
+
+    # (8, 9) is odd along W; level=1 cannot decompose.
+    gt = _make_synthetic_contest_tensor(tmp_path, n_pairs=1, h=8, w=9)
+    m_pixel = extract_M_pixel(gt, reduction="l2_norm")
+    with pytest.raises(WaveletDecompositionError, match="even spatial dims"):
+        decompose_M_contest_per_subband(m_pixel, level=1, cache_path=tmp_path)
+
+
+def test_phase_b_level_2_requires_even_at_level_2(tmp_path: Path) -> None:
+    """Level 2 needs even spatial dims at level 1 (i.e., dims div by 4)."""
+    from tac.master_gradient_comparison.multi_granularity import (
+        WaveletDecompositionError,
+        decompose_M_contest_per_subband,
+    )
+
+    # (10, 12): level 1 yields (5, 6); 5 is odd so level 2 cannot decompose.
+    # Need to construct a map with non-Phase-A path because Phase A enforces
+    # n_pairs * h * w shape; use the raw PerPixelSensitivityMap dataclass.
+    n_pairs, h, w = 1, 10, 12
+    arr = np.ones((n_pairs, h, w), dtype=np.float32)
+    arr_path = tmp_path / "level2_odd.npy"
+    np.save(arr_path, arr)
+    import hashlib
+
+    sha = hashlib.sha256(np.ascontiguousarray(arr).tobytes()).hexdigest()
+    op = OperatingPoint(d_seg=0.067, d_pose=3.4e-5, rate=0.119, score=0.192)
+    m_pixel = PerPixelSensitivityMap(
+        array_path=str(arr_path),
+        array_sha256=sha,
+        n_pairs=n_pairs,
+        height=h,
+        width=w,
+        source_video_sha256="d" * 64,
+        source_kind="m_contest",
+        reduction="l2_norm",
+        operating_point=op,
+        captured_at_utc="2026-05-30T00:00:00+00:00",
+        measurement_axis="[predicted]",
+    )
+    with pytest.raises(WaveletDecompositionError, match="even spatial dims"):
+        decompose_M_contest_per_subband(m_pixel, level=2, cache_path=tmp_path)
+
+
+def test_phase_b_canonical_db2_default_produces_4_subbands(tmp_path: Path) -> None:
+    """Canonical default wavelet is db2; produces 4 subbands at (N, H/2, W/2)."""
+    from tac.master_gradient_comparison.multi_granularity import (
+        SubbandSensitivityDecomposition,
+        decompose_M_contest_per_subband,
+    )
+
+    gt = _make_synthetic_contest_tensor(tmp_path, n_pairs=2, h=8, w=12)
+    m_pixel = extract_M_pixel(gt, reduction="l2_norm")
+    decomp = decompose_M_contest_per_subband(m_pixel, level=1, cache_path=tmp_path)
+
+    assert isinstance(decomp, SubbandSensitivityDecomposition)
+    assert decomp.wavelet_family == "db2"
+    assert decomp.level == 1
+    assert decomp.subband_reduction == "abs"
+    expected_shape = (2, 4, 6)
+    assert decomp.approximation.shape() == expected_shape
+    assert decomp.detail_horizontal.shape() == expected_shape
+    assert decomp.detail_vertical.shape() == expected_shape
+    assert decomp.detail_diagonal.shape() == expected_shape
+    assert decomp.subband_shape() == expected_shape
+
+
+def test_phase_b_all_subbands_non_negative_across_reductions(tmp_path: Path) -> None:
+    """All 3 subband_reduction modes produce non-negative scorer-sensitivity maps
+    (Yousfi/Fridrich-grounded contract per Phase A docstring).
+    """
+    from tac.master_gradient_comparison.multi_granularity import (
+        decompose_M_contest_per_subband,
+    )
+
+    gt = _make_synthetic_contest_tensor(tmp_path, n_pairs=2, h=8, w=12)
+    m_pixel = extract_M_pixel(gt, reduction="l2_norm")
+
+    for reduction in ("abs", "square", "magnitude"):
+        decomp = decompose_M_contest_per_subband(
+            m_pixel,
+            level=1,
+            subband_reduction=reduction,
+            cache_path=tmp_path,
+        )
+        for name, sub in (
+            ("LL", decomp.approximation),
+            ("LH", decomp.detail_horizontal),
+            ("HL", decomp.detail_vertical),
+            ("HH", decomp.detail_diagonal),
+        ):
+            arr = sub.load()
+            assert (arr >= 0).all(), (
+                f"non-negativity violated: subband={name}, reduction={reduction}"
+            )
+
+
+def test_phase_b_canonical_z8_mallat_hierarchy_levels(tmp_path: Path) -> None:
+    """Canonical Z8 Mallat dyadic hierarchy: 32x48 -> 16x24 -> 8x12 -> 4x6.
+
+    Smaller proxy for the 384x512 contest video (preserves dyadic structure
+    at lower compute). Each level halves both dims.
+    """
+    from tac.master_gradient_comparison.multi_granularity import (
+        decompose_M_contest_per_subband,
+    )
+
+    gt = _make_synthetic_contest_tensor(tmp_path, n_pairs=1, h=32, w=48)
+    m_pixel = extract_M_pixel(gt, reduction="l2_norm")
+
+    # Level 1: 32x48 -> 16x24 per subband
+    l1 = decompose_M_contest_per_subband(m_pixel, level=1, cache_path=tmp_path)
+    assert l1.subband_shape() == (1, 16, 24)
+
+    # Level 2: 32x48 -> 8x12 per subband
+    l2 = decompose_M_contest_per_subband(m_pixel, level=2, cache_path=tmp_path)
+    assert l2.subband_shape() == (1, 8, 12)
+
+    # Level 3: 32x48 -> 4x6 per subband
+    l3 = decompose_M_contest_per_subband(m_pixel, level=3, cache_path=tmp_path)
+    assert l3.subband_shape() == (1, 4, 6)
+
+
+def test_phase_b_provenance_chain_preserves_source_metadata(tmp_path: Path) -> None:
+    """All 4 subbands preserve source video sha + source_kind + reduction +
+    operating point + measurement_axis. .meta.json sidecar carries
+    predecessor_array_sha256 forensic chain per Catalog #323.
+    """
+    from tac.master_gradient_comparison.multi_granularity import (
+        decompose_M_contest_per_subband,
+    )
+
+    gt = _make_synthetic_contest_tensor(tmp_path, n_pairs=2, h=8, w=12)
+    m_pixel = extract_M_pixel(gt, reduction="l2_norm")
+    decomp = decompose_M_contest_per_subband(
+        m_pixel, level=1, wavelet="db2", cache_path=tmp_path
+    )
+
+    for name, sub in (
+        ("LL", decomp.approximation),
+        ("LH", decomp.detail_horizontal),
+        ("HL", decomp.detail_vertical),
+        ("HH", decomp.detail_diagonal),
+    ):
+        assert sub.source_video_sha256 == m_pixel.source_video_sha256
+        assert sub.source_kind == m_pixel.source_kind
+        assert sub.reduction == m_pixel.reduction
+        assert sub.operating_point == m_pixel.operating_point
+        assert sub.measurement_axis == m_pixel.measurement_axis
+        # Each subband has its OWN array_sha256 (new bytes after decomp).
+        assert sub.array_sha256 != m_pixel.array_sha256, name
+        # Sister sidecar provenance.
+        meta_path = Path(sub.array_path).with_suffix(".meta.json")
+        meta = json.loads(meta_path.read_text())
+        assert meta["schema"] == "m_pixel_per_subband_meta_v1"
+        assert meta["canonical_helper_invocation"] == (
+            "tac.master_gradient_comparison.decompose_M_contest_per_subband"
+        )
+        assert meta["predecessor_array_sha256"] == m_pixel.array_sha256
+        assert meta["wavelet_family"] == "db2"
+        assert meta["level"] == 1
+        assert meta["subband_reduction"] == "abs"
+        assert meta["native_shape"] == [8, 12]
+        assert meta["subband_shape"] == [4, 6]
+
+
+def test_phase_b_meta_json_schema_pinned(tmp_path: Path) -> None:
+    """The sidecar schema string is the canonical machine-readable contract."""
+    from tac.master_gradient_comparison.multi_granularity import (
+        decompose_M_contest_per_subband,
+    )
+
+    gt = _make_synthetic_contest_tensor(tmp_path, n_pairs=1, h=8, w=8)
+    m_pixel = extract_M_pixel(gt, reduction="l2_norm")
+    decomp = decompose_M_contest_per_subband(m_pixel, level=1, cache_path=tmp_path)
+    meta = json.loads(Path(decomp.approximation.array_path).with_suffix(".meta.json").read_text())
+    # Canonical schema literal for downstream consumers.
+    assert meta["schema"] == "m_pixel_per_subband_meta_v1"
+
+
+def test_phase_b_haar_ll_identity_vs_phase_c_mean(tmp_path: Path) -> None:
+    """Sister-check Phase B vs Phase C identity for Haar wavelet.
+
+    For orthonormal Haar (db1): LL coefficient at coarse cell (h, w) equals
+    ``(input[2h,2w]+input[2h,2w+1]+input[2h+1,2w]+input[2h+1,2w+1]) / 2``
+    per Mallat §7.5. Therefore ``Phase_B_LL_haar = 2 * Phase_C_mean``
+    exactly (for non-negative input where ``subband_reduction='abs'`` is
+    a no-op on the LL band).
+
+    Empirical verification anchor for the Phase B canonical contract: the
+    Haar wavelet's analytically-known LL identity must hold to fp32 numerical
+    precision when the canonical implementation is correct.
+    """
+    from tac.master_gradient_comparison.multi_granularity import (
+        decompose_M_contest_per_level,
+        decompose_M_contest_per_subband,
+    )
+
+    # Use a non-negative random map (Phase A maps are non-negative by construction).
+    n_pairs, h, w = 1, 8, 8
+    rng = np.random.RandomState(42)
+    rand_arr = rng.rand(n_pairs, h, w).astype(np.float32)
+    rand_path = tmp_path / "rand_haar.npy"
+    np.save(rand_path, rand_arr)
+    import hashlib
+
+    sha = hashlib.sha256(np.ascontiguousarray(rand_arr).tobytes()).hexdigest()
+    op = OperatingPoint(d_seg=0.067, d_pose=3.4e-5, rate=0.119, score=0.192)
+    m_pixel = PerPixelSensitivityMap(
+        array_path=str(rand_path),
+        array_sha256=sha,
+        n_pairs=n_pairs,
+        height=h,
+        width=w,
+        source_video_sha256="d" * 64,
+        source_kind="m_contest",
+        reduction="l2_norm",
+        operating_point=op,
+        captured_at_utc="2026-05-30T00:00:00+00:00",
+        measurement_axis="[predicted]",
+    )
+
+    decomp_haar = decompose_M_contest_per_subband(
+        m_pixel, level=1, wavelet="db1", cache_path=tmp_path
+    )
+    phase_c_mean = decompose_M_contest_per_level(
+        m_pixel, level_shape=(h // 2, w // 2), reduction="mean"
+    )
+
+    ll = decomp_haar.approximation.load()
+    mean_c = phase_c_mean.load()
+    # Canonical Haar identity: LL = 2 * mean (orthonormal Haar low-pass).
+    np.testing.assert_allclose(ll, 2.0 * mean_c, atol=1e-5)
+
+
+def test_phase_b_haar_alias_equivalent_to_db1(tmp_path: Path) -> None:
+    """The 'haar' wavelet name is a canonical alias for 'db1'."""
+    from tac.master_gradient_comparison.multi_granularity import (
+        decompose_M_contest_per_subband,
+    )
+
+    gt = _make_synthetic_contest_tensor(tmp_path, n_pairs=1, h=8, w=8)
+    m_pixel = extract_M_pixel(gt, reduction="l2_norm")
+
+    decomp_db1 = decompose_M_contest_per_subband(
+        m_pixel, level=1, wavelet="db1", cache_path=tmp_path
+    )
+    decomp_haar = decompose_M_contest_per_subband(
+        m_pixel, level=1, wavelet="haar", cache_path=tmp_path
+    )
+    # Different wavelet_family stored (alias preserved for operator
+    # readability), but actual LL bytes equal.
+    np.testing.assert_allclose(
+        decomp_db1.approximation.load(),
+        decomp_haar.approximation.load(),
+        atol=1e-7,
+    )
+
+
+def test_phase_b_parseval_energy_preservation_orthonormal(tmp_path: Path) -> None:
+    """Per Mallat §7.5 + Daubechies 1988: orthonormal Daubechies wavelets
+    preserve total energy. ``sum(LL² + LH² + HL² + HH²) == sum(input²)`` to
+    fp64 numerical precision (atol ~1e-6 at fp32 storage).
+
+    This is the canonical near-Parseval cross-check between Phase B's 4
+    subbands and the input signal energy.
+    """
+    from tac.master_gradient_comparison.multi_granularity import (
+        decompose_M_contest_per_subband,
+    )
+
+    # Use random non-negative input; energy preservation holds for ANY input.
+    n_pairs, h, w = 1, 8, 8
+    rng = np.random.RandomState(123)
+    rand_arr = rng.rand(n_pairs, h, w).astype(np.float32)
+    rand_path = tmp_path / "rand_parseval.npy"
+    np.save(rand_path, rand_arr)
+    import hashlib
+
+    sha = hashlib.sha256(np.ascontiguousarray(rand_arr).tobytes()).hexdigest()
+    op = OperatingPoint(d_seg=0.067, d_pose=3.4e-5, rate=0.119, score=0.192)
+    m_pixel = PerPixelSensitivityMap(
+        array_path=str(rand_path),
+        array_sha256=sha,
+        n_pairs=n_pairs,
+        height=h,
+        width=w,
+        source_video_sha256="d" * 64,
+        source_kind="m_contest",
+        reduction="l2_norm",
+        operating_point=op,
+        captured_at_utc="2026-05-30T00:00:00+00:00",
+        measurement_axis="[predicted]",
+    )
+
+    # Verify across db2 and db4 (both orthonormal); subband_reduction="square"
+    # IS the per-coefficient energy.
+    for wavelet in ("db1", "db2", "db4"):
+        decomp = decompose_M_contest_per_subband(
+            m_pixel,
+            level=1,
+            wavelet=wavelet,
+            subband_reduction="square",
+            cache_path=tmp_path,
+        )
+        energy_subbands = (
+            decomp.approximation.load().sum()
+            + decomp.detail_horizontal.load().sum()
+            + decomp.detail_vertical.load().sum()
+            + decomp.detail_diagonal.load().sum()
+        )
+        energy_input = np.sum(rand_arr.astype(np.float64) ** 2)
+        # Tolerance per fp32 storage of subband coefficients (input is fp32).
+        np.testing.assert_allclose(
+            float(energy_subbands), float(energy_input), rtol=1e-5,
+            err_msg=f"Parseval violated for wavelet={wavelet}",
+        )
+
+
+def test_phase_b_integrates_with_extract_M_pixel(tmp_path: Path) -> None:
+    """Phase B canonically consumes Phase A's output without intermediate
+    transforms — the canonical pipeline is Phase A -> Phase B sister to
+    Phase A -> Phase C.
+    """
+    from tac.master_gradient_comparison.multi_granularity import (
+        decompose_M_contest_per_subband,
+    )
+
+    gt = _make_synthetic_contest_tensor(tmp_path, n_pairs=3, h=16, w=24)
+    # Verify every Phase A reduction feeds Phase B cleanly.
+    for axis_reduction in ("l2_norm", "l1_norm", "max"):
+        m_pixel = extract_M_pixel(gt, reduction=axis_reduction)
+        decomp = decompose_M_contest_per_subband(
+            m_pixel, level=1, cache_path=tmp_path
+        )
+        # Subband shape halves spatial dims.
+        assert decomp.subband_shape() == (3, 8, 12)
+        # Phase A reduction is preserved in the per-subband meta.
+        assert decomp.approximation.reduction == axis_reduction
+
+
+def test_phase_b_dataclass_invariants_rejected(tmp_path: Path) -> None:
+    """SubbandSensitivityDecomposition __post_init__ enforces canonical contract."""
+    from tac.master_gradient_comparison.multi_granularity import (
+        SubbandSensitivityDecomposition,
+        WaveletDecompositionError,
+    )
+
+    gt = _make_synthetic_contest_tensor(tmp_path, n_pairs=1, h=8, w=8)
+    m_pixel = extract_M_pixel(gt, reduction="l2_norm")
+    from tac.master_gradient_comparison.multi_granularity import (
+        decompose_M_contest_per_subband,
+    )
+
+    valid_decomp = decompose_M_contest_per_subband(
+        m_pixel, level=1, cache_path=tmp_path
+    )
+
+    # Invalid wavelet_family.
+    with pytest.raises(WaveletDecompositionError, match="wavelet_family must"):
+        SubbandSensitivityDecomposition(
+            approximation=valid_decomp.approximation,
+            detail_horizontal=valid_decomp.detail_horizontal,
+            detail_vertical=valid_decomp.detail_vertical,
+            detail_diagonal=valid_decomp.detail_diagonal,
+            wavelet_family="biorthogonal",  # invalid
+            level=1,
+            subband_reduction="abs",
+            predecessor_array_sha256="x" * 64,
+        )
+
+    # Invalid level (< 1).
+    with pytest.raises(WaveletDecompositionError, match="level must be >= 1"):
+        SubbandSensitivityDecomposition(
+            approximation=valid_decomp.approximation,
+            detail_horizontal=valid_decomp.detail_horizontal,
+            detail_vertical=valid_decomp.detail_vertical,
+            detail_diagonal=valid_decomp.detail_diagonal,
+            wavelet_family="db2",
+            level=0,  # invalid: identity not stored
+            subband_reduction="abs",
+            predecessor_array_sha256="x" * 64,
+        )
+
+    # Invalid subband_reduction.
+    with pytest.raises(WaveletDecompositionError, match="subband_reduction must"):
+        SubbandSensitivityDecomposition(
+            approximation=valid_decomp.approximation,
+            detail_horizontal=valid_decomp.detail_horizontal,
+            detail_vertical=valid_decomp.detail_vertical,
+            detail_diagonal=valid_decomp.detail_diagonal,
+            wavelet_family="db2",
+            level=1,
+            subband_reduction="rectified_linear",  # invalid
+            predecessor_array_sha256="x" * 64,
+        )
+
+    # Invalid predecessor_array_sha256 length.
+    with pytest.raises(
+        WaveletDecompositionError, match="predecessor_array_sha256 must be 64"
+    ):
+        SubbandSensitivityDecomposition(
+            approximation=valid_decomp.approximation,
+            detail_horizontal=valid_decomp.detail_horizontal,
+            detail_vertical=valid_decomp.detail_vertical,
+            detail_diagonal=valid_decomp.detail_diagonal,
+            wavelet_family="db2",
+            level=1,
+            subband_reduction="abs",
+            predecessor_array_sha256="short",  # invalid
+        )
+
+
+def test_phase_b_subband_shape_mismatch_rejected(tmp_path: Path) -> None:
+    """Mallat 4-subband invariant: all 4 subbands must share spatial shape.
+
+    A mis-constructed SubbandSensitivityDecomposition with mismatched subband
+    shapes is refused by __post_init__ per the canonical Mallat contract.
+    """
+    from tac.master_gradient_comparison.multi_granularity import (
+        SubbandSensitivityDecomposition,
+        WaveletDecompositionError,
+        decompose_M_contest_per_subband,
+    )
+
+    gt8 = _make_synthetic_contest_tensor(tmp_path, n_pairs=1, h=8, w=8)
+    m_pixel8 = extract_M_pixel(gt8, reduction="l2_norm")
+    decomp = decompose_M_contest_per_subband(m_pixel8, level=1, cache_path=tmp_path)
+    # Build a sister at a DIFFERENT shape.
+    gt16 = _make_synthetic_contest_tensor(tmp_path, n_pairs=1, h=16, w=16)
+    m_pixel16 = extract_M_pixel(gt16, reduction="l2_norm")
+    decomp16 = decompose_M_contest_per_subband(m_pixel16, level=1, cache_path=tmp_path)
+
+    # Mix shapes — fails Mallat 4-subband invariant.
+    with pytest.raises(WaveletDecompositionError, match="4-subband invariant"):
+        SubbandSensitivityDecomposition(
+            approximation=decomp.approximation,  # (1, 4, 4)
+            detail_horizontal=decomp16.detail_horizontal,  # (1, 8, 8) — mismatch
+            detail_vertical=decomp.detail_vertical,
+            detail_diagonal=decomp.detail_diagonal,
+            wavelet_family="db2",
+            level=1,
+            subband_reduction="abs",
+            predecessor_array_sha256="x" * 64,
+        )
+
+
+def test_phase_b_inflated_source_kind_supported(tmp_path: Path) -> None:
+    """Phase B works with InflatedGradientTensor source per the polymorphic
+    Phase A contract (source_kind="m_inflated" preserved through decomp).
+    """
+    from tac.master_gradient_comparison.multi_granularity import (
+        decompose_M_contest_per_subband,
+    )
+
+    gt_inflated = _make_synthetic_inflated_tensor(tmp_path, n_pairs=2, h=8, w=8)
+    m_pixel = extract_M_pixel(gt_inflated, reduction="l2_norm")
+    assert m_pixel.source_kind == "m_inflated"
+
+    decomp = decompose_M_contest_per_subband(m_pixel, level=1, cache_path=tmp_path)
+    for sub in (
+        decomp.approximation,
+        decomp.detail_horizontal,
+        decomp.detail_vertical,
+        decomp.detail_diagonal,
+    ):
+        assert sub.source_kind == "m_inflated"
+
+
+def test_phase_b_predicted_grade_non_promotable(tmp_path: Path) -> None:
+    """Per Catalog #192 + Catalog #317: ALL 4 subbands are ``[predicted]``
+    grade sensitivity surfaces, NEVER promotable as contest scores. The
+    measurement_axis MUST be lane-tagged.
+    """
+    from tac.master_gradient_comparison.multi_granularity import (
+        decompose_M_contest_per_subband,
+    )
+
+    gt = _make_synthetic_contest_tensor(tmp_path, n_pairs=1, h=8, w=8)
+    m_pixel = extract_M_pixel(gt, reduction="l2_norm")
+    decomp = decompose_M_contest_per_subband(m_pixel, level=1, cache_path=tmp_path)
+    for sub in (
+        decomp.approximation,
+        decomp.detail_horizontal,
+        decomp.detail_vertical,
+        decomp.detail_diagonal,
+    ):
+        assert sub.measurement_axis.startswith("["), sub.measurement_axis
+        assert sub.measurement_axis == "[predicted]"
+
+
+def test_phase_b_canonical_z8_contest_resolution_smoke(tmp_path: Path) -> None:
+    """Canonical Z8 contest-resolution-equivalent surface: 384x512 input
+    decomposes to (192, 256) per subband at level 1 (sister of M5 milestone
+    canonical Z8 LevelDimensionContract).
+
+    Uses a uniform sentinel-tiny constant to keep the test cheap; the
+    shape contract is the canonical assertion.
+    """
+    from tac.master_gradient_comparison.multi_granularity import (
+        decompose_M_contest_per_subband,
+    )
+
+    # Build a small ContestGradientTensor at the canonical contest shape.
+    n_pairs, h, w = 1, 384, 512
+    rng = np.random.RandomState(0)
+    arr = rng.randn(n_pairs, 3, h, w).astype(np.float32)
+    arr_path = tmp_path / "contest_resolution.npy"
+    np.save(arr_path, arr)
+    import hashlib
+
+    sha = hashlib.sha256(np.ascontiguousarray(arr).tobytes()).hexdigest()
+    op = OperatingPoint(d_seg=0.067, d_pose=3.4e-5, rate=0.119, score=0.192)
+    gt = ContestGradientTensor(
+        array_path=str(arr_path),
+        array_sha256=sha,
+        n_pairs=n_pairs,
+        height=h,
+        width=w,
+        contest_video_sha256="a" * 64,
+        scorer_seg_sha256="b" * 64,
+        scorer_pose_sha256="c" * 64,
+        operating_point=op,
+        captured_at_utc="2026-05-30T00:00:00+00:00",
+        measurement_axis="[predicted]",
+    )
+    m_pixel = extract_M_pixel(gt, reduction="l2_norm")
+    assert m_pixel.shape() == (1, 384, 512)
+
+    decomp = decompose_M_contest_per_subband(m_pixel, level=1, cache_path=tmp_path)
+    # Canonical Z8 M5 level-1 subband shape: (H/2, W/2).
+    assert decomp.subband_shape() == (1, 192, 256)
