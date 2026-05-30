@@ -76,13 +76,13 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 # does not use these PyTorch-canonical helpers (MLX-first per CLAUDE.md
 # "MLX portable-local-substrate authority"); the wire-in fires when
 # PR110_OPT7_TRAINER_MODE=full per Catalog #326.
-from tac.substrates._shared.inflate_runtime import (  # noqa: E402  Catalog #205
+from tac.substrates._shared.inflate_runtime import (  # Catalog #205
     select_inflate_device as _canon_select_inflate_device,
 )
-from tac.substrates._shared.smoke_auth_eval_gate import (  # noqa: E402  Catalog #226
+from tac.substrates._shared.smoke_auth_eval_gate import (  # Catalog #226
     gate_auth_eval_call as _canon_gate_auth_eval_call,
 )
-from tac.substrates.score_aware_common import (  # noqa: E402  Catalog #164 + #270
+from tac.substrates.score_aware_common import (  # Catalog #164 + #270
     score_pair_components as _canon_score_pair_components,
 )
 
@@ -146,7 +146,6 @@ def _emit_substrate_archive(
     import zlib
 
     from tac.substrates.pr110_opt7_fridrich_uniward_inverse_scorer_basis_via_yousfi_t1.archive_grammar import (
-        ARCHIVE_MAGIC,
         ARCHIVE_VERSION,
         pack_header,
     )
@@ -195,8 +194,6 @@ def _emit_substrate_archive(
             f.write(struct.pack("<I", len(compressed)))
             f.write(compressed)
         f.write(pr110_base_bytes)
-
-    archive_bytes = archive_bin_path.stat().st_size
 
     # Write inflate.sh + inflate.py
     inflate_sh = archive_dir / "inflate.sh"
@@ -362,14 +359,14 @@ def _full_main(args: argparse.Namespace) -> int:
         unpatch_upstream_yuv6,
     )
     from tac.scorer import load_differentiable_scorers
+    from tac.substrates._shared.trainer_skeleton import (
+        decode_real_pairs,
+        detect_hardware_substrate,
+    )
     from tac.substrates.pr110_opt7_fridrich_uniward_inverse_scorer_basis_via_yousfi_t1 import (
         PR110OPT7ViaYousfiT1Config,
         apply_substrate_to_pr110_canonical,
         verify_canonical_helper_invocation,
-    )
-    from tac.substrates._shared.trainer_skeleton import (
-        decode_real_pairs,
-        detect_hardware_substrate,
     )
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -391,9 +388,9 @@ def _full_main(args: argparse.Namespace) -> int:
         # paired-CUDA RATIFICATION REQUIRES cuda. Refuse non-CUDA environments
         # with a clear error.
         print(
-            f"[pr110-opt7-via-yousfi-t1-l1-trainer] FATAL: full mode requires "
-            f"CUDA but torch.cuda.is_available()=False. Use _smoke_main for "
-            f"macOS-MLX research-signal or run on a CUDA-equipped host.",
+            "[pr110-opt7-via-yousfi-t1-l1-trainer] FATAL: full mode requires "
+            "CUDA but torch.cuda.is_available()=False. Use _smoke_main for "
+            "macOS-MLX research-signal or run on a CUDA-equipped host.",
             file=sys.stderr,
         )
         return 4
@@ -554,7 +551,6 @@ def _full_main(args: argparse.Namespace) -> int:
         # Sister of pack: also emit a contest-compliant submission/archive.zip
         # next to the OPT7VYT1 binary so the canonical auth-eval helper can
         # consume an archive.zip alongside the canonical inflate.sh.
-        import shutil
         import zipfile
 
         submission_dir = archive_path.parent

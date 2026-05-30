@@ -42,6 +42,13 @@ from tac.hnerv_entropy_frontier_selector import (  # noqa: E402
     RATE_ONLY_FLOOR_BLOCKER_PREFIX,
     build_rate_only_floor_proof,
 )
+from tac.optimization.archive_bound_candidate_contract import (  # noqa: E402
+    ArchiveBoundCandidateContractError,
+    has_archive_bound_candidate_contract_payload,
+    selected_archive_bound_candidate_contract_from_payload,
+    source_archive_bound_candidate_contract_from_row,
+    source_archive_bound_contract_snapshot_blockers,
+)
 from tac.optimization.meta_lagrangian_allocator import rate_score_delta  # noqa: E402
 from tac.repo_io import json_text, read_json, repo_relative, sha256_file  # noqa: E402
 
@@ -428,7 +435,9 @@ def _archive_identity_candidates(
     )
     artifact_relative = archive.get("artifact_relative_path")
     artifact_path = manifest_dir / str(artifact_relative) if artifact_relative else None
+    contract_candidates = _archive_bound_contract_identity_candidates(payload)
     candidates = [
+        *contract_candidates,
         {
             "source": "candidate_archive_fields",
             "path_value": payload.get("candidate_archive_path"),
@@ -472,10 +481,59 @@ def _archive_identity_candidates(
         score += int(bool(candidate["path_value"])) * 4
         score += int(_is_sha256(candidate["sha256"])) * 2
         score += int(_coerce_positive_int(candidate["bytes"]) is not None)
-        if score:
-            scored.append({**candidate, "sort_key": (-score, index)})
+        contract_priority = 0 if str(candidate["source"]).startswith("archive_bound") else 1
+        if score or contract_priority == 0:
+            scored.append({**candidate, "sort_key": (contract_priority, -score, index)})
     scored.sort(key=lambda item: item["sort_key"])
     return scored
+
+
+def _archive_bound_contract_identity_candidates(
+    payload: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    source_contract = source_archive_bound_candidate_contract_from_row(payload)
+    has_source_contract = bool(
+        source_contract and "source_archive_bound_candidate_contract" in payload
+    )
+    if not has_source_contract and not has_archive_bound_candidate_contract_payload(payload):
+        return []
+    try:
+        if has_source_contract:
+            contract = selected_archive_bound_candidate_contract_from_payload(
+                {"archive_bound_candidate_contract": source_contract},
+                label="field_meta_dispatch_selection:source_archive_bound_candidate_contract",
+            )
+            blockers = source_archive_bound_contract_snapshot_blockers(payload)
+        else:
+            contract = selected_archive_bound_candidate_contract_from_payload(
+                payload,
+                label="field_meta_dispatch_selection:archive_bound_candidate_contract",
+            )
+            blockers = []
+    except (ArchiveBoundCandidateContractError, ValueError) as exc:
+        return [
+            {
+                "source": "archive_bound_candidate_contract_invalid",
+                "path_value": None,
+                "sha256": None,
+                "bytes": None,
+                "blockers": [f"archive_bound_candidate_contract_invalid:{exc}"],
+            }
+        ]
+    candidate_archive = (
+        contract.get("candidate_archive") if isinstance(contract, Mapping) else {}
+    )
+    if not isinstance(candidate_archive, Mapping):
+        candidate_archive = {}
+    return [
+        {
+            "source": "archive_bound_candidate_contract",
+            "path_value": candidate_archive.get("path"),
+            "sha256": candidate_archive.get("sha256") or candidate_archive.get("archive_sha256"),
+            "bytes": candidate_archive.get("bytes", candidate_archive.get("archive_bytes")),
+            "blockers": blockers,
+        }
+    ]
 
 
 def _archive_proof(
@@ -506,7 +564,7 @@ def _archive_proof(
     )
     expected_sha = str(selected.get("sha256") or "")
     expected_bytes = _coerce_positive_int(selected.get("bytes"))
-    blockers: list[str] = []
+    blockers: list[str] = list(selected.get("blockers") or [])
     actual_sha = ""
     actual_bytes: int | None = None
     zip_custody = _zip_custody_proof(None)

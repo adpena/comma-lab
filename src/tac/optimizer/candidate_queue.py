@@ -114,6 +114,12 @@ RUNTIME_ADAPTER_BOOLEAN_FIELDS: frozenset[str] = frozenset(
     }
 )
 UNKNOWN_CANDIDATES_REASON = "unsupported_candidates_schema_requires_explicit_adapter_or_codec_op_param_sweep_manifest_v1"
+ARCHIVE_BOUND_CONTRACT_TRIGGER_FIELDS: frozenset[str] = frozenset(
+    {
+        "archive_path",
+        "candidate_archive_path",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -267,6 +273,38 @@ def _mapping(value: Any) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
 
 
+def _has_source_archive_bound_contract_snapshot(row: Mapping[str, Any]) -> bool:
+    return "source_archive_bound_candidate_contract" in row
+
+
+def _has_archive_bound_contract_input(row: Mapping[str, Any]) -> bool:
+    return has_archive_bound_candidate_contract_payload(
+        row
+    ) or _has_source_archive_bound_contract_snapshot(row)
+
+
+def _has_archive_bound_candidate_signal(row: Mapping[str, Any]) -> bool:
+    if any(
+        row.get(key) not in ("", None, [], {})
+        for key in ARCHIVE_BOUND_CONTRACT_TRIGGER_FIELDS
+    ):
+        return True
+    candidate_archive = _mapping(row.get("candidate_archive"))
+    return candidate_archive.get("path") not in ("", None)
+
+
+def _ensure_archive_bound_candidate_contract(
+    row: dict[str, Any],
+    *,
+    repo_root: Path,
+) -> None:
+    if _has_archive_bound_contract_input(row):
+        return
+    if not _has_archive_bound_candidate_signal(row):
+        return
+    row.update(archive_bound_candidate_contract_fields_for_row(row, repo_root=repo_root))
+
+
 def _archive_bound_contract_for_row(
     row: dict[str, Any],
     *,
@@ -274,7 +312,7 @@ def _archive_bound_contract_for_row(
 ) -> Mapping[str, Any] | None:
     raw_source_snapshot = row.get("source_archive_bound_candidate_contract")
     if (
-        "source_archive_bound_candidate_contract" in row
+        _has_source_archive_bound_contract_snapshot(row)
         and not isinstance(raw_source_snapshot, Mapping)
     ):
         blocker = "source_archive_bound_candidate_contract_invalid"
@@ -286,7 +324,7 @@ def _archive_bound_contract_for_row(
         return None
     source_snapshot = source_archive_bound_candidate_contract_from_row(row)
     has_source_snapshot = bool(
-        source_snapshot and "source_archive_bound_candidate_contract" in row
+        source_snapshot and _has_source_archive_bound_contract_snapshot(row)
     )
     if not has_archive_bound_candidate_contract_payload(row) and not has_source_snapshot:
         return None
@@ -301,7 +339,7 @@ def _archive_bound_contract_for_row(
                 row,
                 label=label,
             )
-    except ArchiveBoundCandidateContractError as exc:
+    except (ArchiveBoundCandidateContractError, ValueError) as exc:
         blocker = f"archive_bound_candidate_contract_invalid:{exc}"
         row["archive_bound_candidate_contract_valid"] = False
         row["archive_bound_candidate_contract_blockers"] = _ordered_unique(
@@ -334,6 +372,8 @@ def _contract_first_exact_dispatch_ready(row: dict[str, Any]) -> bool:
         label=f"optimizer_candidate_queue_promotion_view:{row.get('candidate_id')}",
     )
     if contract is not None:
+        if not _has_source_archive_bound_contract_snapshot(row):
+            return contract.get("ready_for_exact_eval_dispatch") is True
         custody = _mapping(contract.get("archive_file_custody"))
         return bool(
             row.get("ready_for_exact_eval_dispatch") is True
@@ -343,7 +383,7 @@ def _contract_first_exact_dispatch_ready(row: dict[str, Any]) -> bool:
         )
     if (
         has_archive_bound_candidate_contract_payload(row)
-        or row.get("source_archive_bound_candidate_contract") is not None
+        or _has_source_archive_bound_contract_snapshot(row)
     ):
         return False
     return row.get("ready_for_exact_eval_dispatch") is True
@@ -468,8 +508,20 @@ def _annotate_archive_candidate_verification(
     )
     if contract is None and (
         has_archive_bound_candidate_contract_payload(row)
-        or row.get("source_archive_bound_candidate_contract") is not None
+        or _has_source_archive_bound_contract_snapshot(row)
     ):
+        archive_path = _resolve_repo_path(
+            row.get("candidate_archive_path") or row.get("archive_path"),
+            repo_root,
+        )
+        if archive_path is not None and archive_path.is_file():
+            observed_sha = _sha256_file(archive_path)
+            row["candidate_archive_sha256_observed"] = observed_sha
+            archive_sha = _shaish(
+                row.get("candidate_archive_sha256") or row.get("archive_sha256")
+            )
+            if archive_sha is not None and observed_sha != archive_sha:
+                _add_blockers(row, ["candidate_archive_sha256_mismatch"])
         row["archive_candidate_verified"] = False
         row["candidate_archive_path_unverified"] = True
         return
@@ -1882,6 +1934,7 @@ def build_candidate_queue(
                 merged[identity_key] = row
 
     for row in merged.values():
+        _ensure_archive_bound_candidate_contract(row, repo_root=repo_root)
         _annotate_archive_candidate_verification(row, repo_root)
 
     sorted_rows = sorted(merged.values(), key=_candidate_sort_key)

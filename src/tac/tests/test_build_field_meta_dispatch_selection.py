@@ -13,6 +13,9 @@ from tac.hnerv_entropy_frontier_selector import (
     ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES,
     RATE_ONLY_FLOOR_BLOCKER_PREFIX,
 )
+from tac.optimization.archive_bound_candidate_contract import (
+    archive_bound_candidate_contract_fields_for_row,
+)
 from tools.build_field_meta_dispatch_selection import build_selection_report
 
 REPO = Path(__file__).resolve().parents[3]
@@ -301,6 +304,96 @@ def test_field_meta_selector_uses_hnerv_rate_only_packet_delta(tmp_path: Path) -
     ]
     assert row["field_interaction_contract"]["status"] == "passed"
     assert "field_interaction_contract_blocked" not in row["exact_dispatch_blockers"]["blockers"]
+
+
+def test_field_meta_selector_reads_archive_identity_from_source_contract(
+    tmp_path: Path,
+) -> None:
+    manifest = _packet_manifest(
+        tmp_path,
+        candidate_id="contract_backed_packet",
+        lane_id="lane_contract_backed_packet",  # FAKE_LANE_OK:test-fixture lane_id
+        job_name="job_contract_backed_packet",
+    )
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    source_row = {
+        "candidate_id": payload["candidate_id"],
+        "target_kind": "packet_member_zip_header_elide_v1",
+        "receiver_contract_satisfied": True,
+        "runtime_consumption_proof_ready": True,
+        "byte_closed_candidate_materialized": True,
+        "candidate_archive_path": payload["archive"]["path"],
+        "candidate_archive_sha256": payload["archive"]["sha256"],
+        "candidate_archive_bytes": payload["archive"]["bytes"],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "gpu_launched": False,
+    }
+    source_row.update(
+        archive_bound_candidate_contract_fields_for_row(source_row, repo_root=REPO)
+    )
+    payload["source_archive_bound_candidate_contract_required"] = True
+    payload["source_archive_bound_candidate_contract"] = source_row[
+        "archive_bound_candidate_contract"
+    ]
+    payload.pop("archive")
+    manifest.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    report = build_selection_report(repo_root=REPO, manifest_paths=[manifest])
+
+    row = report["rows"][0]
+    assert row["archive_proof"]["source"] == "archive_bound_candidate_contract"
+    assert row["archive_proof"]["byte_closed"] is True
+    assert row["candidate_archive_sha256"] == source_row["candidate_archive_sha256"]
+    assert row["candidate_archive_bytes"] == source_row["candidate_archive_bytes"]
+
+
+def test_field_meta_selector_rejects_stale_flat_archive_duplicates(
+    tmp_path: Path,
+) -> None:
+    manifest = _packet_manifest(
+        tmp_path,
+        candidate_id="stale_contract_backed_packet",
+        lane_id="lane_stale_contract_backed_packet",  # FAKE_LANE_OK:test-fixture lane_id
+        job_name="job_stale_contract_backed_packet",
+    )
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    source_row = {
+        "candidate_id": payload["candidate_id"],
+        "target_kind": "packet_member_zip_header_elide_v1",
+        "receiver_contract_satisfied": True,
+        "runtime_consumption_proof_ready": True,
+        "byte_closed_candidate_materialized": True,
+        "candidate_archive_path": payload["archive"]["path"],
+        "candidate_archive_sha256": payload["archive"]["sha256"],
+        "candidate_archive_bytes": payload["archive"]["bytes"],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "gpu_launched": False,
+    }
+    source_row.update(
+        archive_bound_candidate_contract_fields_for_row(source_row, repo_root=REPO)
+    )
+    payload["source_archive_bound_candidate_contract_required"] = True
+    payload["source_archive_bound_candidate_contract"] = source_row[
+        "archive_bound_candidate_contract"
+    ]
+    payload["candidate_archive_sha256"] = "0" * 64
+    manifest.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    report = build_selection_report(repo_root=REPO, manifest_paths=[manifest])
+
+    row = report["rows"][0]
+    assert row["archive_proof"]["byte_closed"] is False
+    assert "source_archive_bound_candidate_contract_sha256_mismatch" in row[
+        "archive_proof"
+    ]["blockers"]
 
 
 def test_field_meta_selector_normalizes_apogee_intn_forensic_metadata(tmp_path: Path) -> None:
