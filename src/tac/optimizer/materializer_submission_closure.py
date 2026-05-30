@@ -21,6 +21,10 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from tac.optimization.archive_bound_candidate_contract import (
+    ArchiveBoundCandidateContractError,
+    archive_bound_candidate_contracts_from_payload,
+)
 from tac.optimization.proxy_candidate_contract import (
     apply_proxy_evidence_boundary,
     require_no_truthy_authority_fields,
@@ -103,10 +107,22 @@ SOURCE_JSON_SKIP_NAMES = {
     "runtime_consumption_proof.json",
     "runtime_packet_manifest.json",
 }
+ARCHIVE_BOUND_CONTRACT_PAYLOAD_KEYS = frozenset(
+    {
+        "archive_bound_candidate_contract",
+        "archive_bound_candidate_contract_surface",
+        "archive_bound_candidate_contract_schema",
+        "archive_bound_candidate_contract_surface_schema",
+    }
+)
 
 
 class MaterializerSubmissionClosureError(ValueError):
     """Raised when a materializer source row cannot be closed safely."""
+
+
+def _mapping(value: Any) -> Mapping[str, Any]:
+    return value if isinstance(value, Mapping) else {}
 
 
 def _utc_now() -> str:
@@ -264,18 +280,71 @@ def _selected_candidate_rows(
     return selected
 
 
-def _candidate_archive_path(row: Mapping[str, Any]) -> Any:
-    return row.get("candidate_archive_path") or row.get("archive_path")
+def _row_archive_bound_contract(
+    row: Mapping[str, Any],
+    *,
+    label: str,
+) -> Mapping[str, Any] | None:
+    if not any(key in row for key in ARCHIVE_BOUND_CONTRACT_PAYLOAD_KEYS):
+        return None
+    try:
+        contracts = archive_bound_candidate_contracts_from_payload(row, label=label)
+    except ArchiveBoundCandidateContractError as exc:
+        raise MaterializerSubmissionClosureError(str(exc)) from exc
+    selected = [
+        contract
+        for contract in contracts
+        if contract.get("selected_archive_transform_variant") is True
+    ]
+    return selected[0] if selected else contracts[0] if contracts else None
 
 
-def _candidate_archive_sha(row: Mapping[str, Any]) -> str | None:
-    value = row.get("candidate_archive_sha256") or row.get("archive_sha256")
+def _candidate_archive_path(
+    row: Mapping[str, Any],
+    *,
+    contract: Mapping[str, Any] | None = None,
+) -> Any:
+    candidate_archive = _mapping(
+        contract.get("candidate_archive") if contract is not None else None
+    )
+    return (
+        row.get("candidate_archive_path")
+        or row.get("archive_path")
+        or candidate_archive.get("path")
+    )
+
+
+def _candidate_archive_sha(
+    row: Mapping[str, Any],
+    *,
+    contract: Mapping[str, Any] | None = None,
+) -> str | None:
+    candidate_archive = _mapping(
+        contract.get("candidate_archive") if contract is not None else None
+    )
+    value = (
+        row.get("candidate_archive_sha256")
+        or row.get("archive_sha256")
+        or candidate_archive.get("sha256")
+        or candidate_archive.get("archive_sha256")
+    )
     return str(value).lower() if isinstance(value, str) and len(value) == 64 else None
 
 
-def _candidate_archive_bytes(row: Mapping[str, Any]) -> int | None:
+def _candidate_archive_bytes(
+    row: Mapping[str, Any],
+    *,
+    contract: Mapping[str, Any] | None = None,
+) -> int | None:
+    candidate_archive = _mapping(
+        contract.get("candidate_archive") if contract is not None else None
+    )
     for key in ("candidate_archive_bytes", "archive_bytes", "archive_size_bytes"):
         value = row.get(key)
+        if isinstance(value, int) and not isinstance(value, bool) and value > 0:
+            return value
+    for key in ("bytes", "archive_bytes"):
+        value = candidate_archive.get(key)
         if isinstance(value, int) and not isinstance(value, bool) and value > 0:
             return value
     return None
@@ -970,24 +1039,35 @@ def build_materializer_submission_runtime_closure(
         row,
         context=f"materializer_submission_closure_source_row:{row.get('candidate_id')}",
     )
+    archive_bound_contract = _row_archive_bound_contract(
+        row,
+        label=(
+            "materializer_submission_closure_source_row:"
+            f"{row.get('candidate_id')}"
+        ),
+    )
     receiver_contract_blocker = (
         None
-        if row.get("receiver_contract_satisfied") is True
+        if (
+            archive_bound_contract.get("receiver_contract_satisfied") is True
+            if archive_bound_contract is not None
+            else row.get("receiver_contract_satisfied") is True
+        )
         else "receiver_contract_not_satisfied"
     )
     candidate_archive = _resolve_path(
-        _candidate_archive_path(row),
+        _candidate_archive_path(row, contract=archive_bound_contract),
         repo_root=repo,
         queue_dir=queue_dir,
     )
     if candidate_archive is None or not candidate_archive.is_file():
         raise MaterializerSubmissionClosureError("candidate_archive_missing")
     archive_sha = sha256_file(candidate_archive)
-    expected_sha = _candidate_archive_sha(row)
+    expected_sha = _candidate_archive_sha(row, contract=archive_bound_contract)
     if expected_sha is not None and archive_sha != expected_sha:
         raise MaterializerSubmissionClosureError("candidate_archive_sha_mismatch")
     archive_bytes = candidate_archive.stat().st_size
-    expected_bytes = _candidate_archive_bytes(row)
+    expected_bytes = _candidate_archive_bytes(row, contract=archive_bound_contract)
     if expected_bytes is not None and archive_bytes != expected_bytes:
         raise MaterializerSubmissionClosureError("candidate_archive_bytes_mismatch")
 

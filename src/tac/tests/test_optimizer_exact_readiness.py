@@ -19,6 +19,9 @@ from tac.hdm8_selector_cuda_gate import (
     HDM8_SELECTOR_CUDA_COMPONENT_GATE_SCHEMA,
     SELECTOR_CUDA_TRANSFER_CALIBRATION_SCHEMA,
 )
+from tac.optimization.archive_bound_candidate_contract import (
+    archive_bound_candidate_contract_fields_for_row,
+)
 from tac.optimization.byte_range_entropy_recode_materializer import (
     MATERIALIZER_ID as BYTE_RANGE_MATERIALIZER_ID,
 )
@@ -842,6 +845,96 @@ def test_promotes_byte_closed_candidate_without_score_claim(tmp_path: Path) -> N
     assert row["cpu_or_proxy_score_not_cuda_evidence"] is True
     assert row["cuda_gap_review_required_before_promotion"] is True
     assert promoted["evidence_boundary"]["cpu_or_proxy_score_not_cuda_evidence"] is True
+
+
+def test_exact_readiness_reads_archive_custody_from_shared_contract(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    payload = json.loads(queue.read_text(encoding="utf-8"))
+    row = payload["top_k"][0]
+    row.update(
+        {
+            "receiver_contract_satisfied": True,
+            "runtime_consumption_proof_ready": True,
+            "byte_closed_candidate_materialized": True,
+            "candidate_archive_materialized": True,
+            "candidate_archive_path": row["archive_path"],
+        }
+    )
+    row.update(
+        archive_bound_candidate_contract_fields_for_row(
+            row,
+            repo_root=tmp_path,
+        )
+    )
+    for key in (
+        "archive_path",
+        "candidate_archive_path",
+        "candidate_archive_sha256",
+        "candidate_archive_bytes",
+        "runtime_consumption_proof_status",
+        "runtime_consumption_proof_path",
+    ):
+        row.pop(key, None)
+    queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["report"]["ready_for_exact_eval_dispatch"] is True
+    promoted_row = result["promoted_queue"]["dispatch_ready"][0]
+    assert promoted_row["archive_sha256"] == archive_sha
+    assert promoted_row["candidate_archive_bytes"] == archive_bytes
+    assert promoted_row["runtime_consumption_proof_schema"] == (
+        "pr101_kaggle_proxy_runtime_consumption_proof_v1"
+    )
+
+
+def test_exact_readiness_rejects_stale_archive_bound_contract(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    payload = json.loads(queue.read_text(encoding="utf-8"))
+    row = payload["top_k"][0]
+    row.update(
+        {
+            "receiver_contract_satisfied": True,
+            "runtime_consumption_proof_ready": True,
+            "byte_closed_candidate_materialized": True,
+            "candidate_archive_materialized": True,
+            "candidate_archive_path": row["archive_path"],
+        }
+    )
+    row.update(
+        archive_bound_candidate_contract_fields_for_row(
+            row,
+            repo_root=tmp_path,
+        )
+    )
+    row["candidate_archive_sha256"] = "0" * 64
+    queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["report"]["ready_for_exact_eval_dispatch"] is False
+    assert result["promoted_queue"] is None
+    assert any(
+        "archive_bound_contract_stale_duplicate_field:candidate_archive_sha256"
+        in blocker
+        for blocker in result["report"]["blockers"]
+    )
 
 
 def test_fp11_generic_full_frame_parity_clears_runtime_probe_gap(

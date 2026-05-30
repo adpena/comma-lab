@@ -6,12 +6,18 @@ import os
 import zipfile
 from pathlib import Path
 
+import pytest
+
 from comma_lab.scheduler.materializer_chain_harvest import (
     run_exact_readiness_bridge_for_harvested_queue,
+)
+from tac.optimization.archive_bound_candidate_contract import (
+    archive_bound_candidate_contract_fields_for_row,
 )
 from tac.optimizer.exact_readiness import runtime_dependency_manifest
 from tac.optimizer.materializer_submission_closure import (
     SUBMISSION_CLOSURE_REPORT_SCHEMA,
+    MaterializerSubmissionClosureError,
     build_materializer_submission_runtime_closure,
     build_materializer_submission_runtime_closures,
 )
@@ -1016,3 +1022,76 @@ def test_materializer_submission_closure_preserves_receiver_refusal_artifacts(
     assert "receiver_contract_not_satisfied" in closed_row["readiness_blockers"]
     assert closed_row["candidate_archive_path"] == "closure/submission/archive.zip"
     assert closed_row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_materializer_submission_closure_rejects_stale_archive_contract_receiver_flag(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path
+    source_archive = repo / "source" / "archive.zip"
+    candidate_archive = repo / "artifacts" / "candidate.zip"
+    source_archive.parent.mkdir(parents=True)
+    candidate_archive.parent.mkdir(parents=True)
+    _write_zip(source_archive, b"A" * 40)
+    _write_zip(candidate_archive, b"B" * 24)
+    candidate_sha = _sha256(candidate_archive)
+    source_sha = _sha256(source_archive)
+    proof_path = repo / "artifacts" / "runtime_consumption_proof.json"
+    proof_path.write_text(
+        json.dumps(
+            {
+                "schema": "family_agnostic_runtime_consumption_proof_v1",
+                "receiver_contract_satisfied": True,
+                "runtime_consumption_proof_passed": True,
+                **FALSE_AUTHORITY,
+            }
+        ),
+        encoding="utf-8",
+    )
+    row = {
+        "schema": "packet_member_zip_header_elide_candidate.v1",
+        **FALSE_AUTHORITY,
+        "candidate_id": "stale_receiver_flag",
+        "target_kind": "packet_member_zip_header_elide_v1",
+        "receiver_contract_satisfied": True,
+        "runtime_consumption_proof_ready": True,
+        "runtime_consumption_proof_path": proof_path.relative_to(repo).as_posix(),
+        "byte_closed_candidate_materialized": True,
+        "candidate_archive_materialized": True,
+        "candidate_archive_path": candidate_archive.relative_to(repo).as_posix(),
+        "candidate_archive_sha256": candidate_sha,
+        "candidate_archive_bytes": candidate_archive.stat().st_size,
+        "source_archive_path": source_archive.relative_to(repo).as_posix(),
+        "source_archive_sha256": source_sha,
+        "source_archive_bytes": source_archive.stat().st_size,
+    }
+    row.update(archive_bound_candidate_contract_fields_for_row(row, repo_root=repo))
+    row["receiver_contract_satisfied"] = False
+    source_queue_path = repo / "artifacts" / "source_queue.json"
+    source_queue_path.write_text(
+        json.dumps(
+            {
+                "schema": "optimizer_candidate_queue_v1",
+                **FALSE_AUTHORITY,
+                "n_candidates": 1,
+                "top_k_count": 1,
+                "dispatch_ready_count": 0,
+                "dispatch_ready": [],
+                "top_k": [row],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        MaterializerSubmissionClosureError,
+        match="archive_bound_contract_stale_duplicate_field:receiver_contract_satisfied",
+    ):
+        build_materializer_submission_runtime_closure(
+            repo_root=repo,
+            source_queue_path=source_queue_path,
+            candidate_id="stale_receiver_flag",
+            submission_dir_out=repo / "closure" / "submission",
+            closed_source_queue_out=repo / "closure" / "closed_source_queue.json",
+            closure_report_out=repo / "closure" / "submission_closure_report.json",
+        )

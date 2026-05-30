@@ -11,6 +11,7 @@ import pytest
 from tac.optimization.archive_bound_candidate_contract import (
     ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
     ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA,
+    archive_bound_candidate_contract_fields_for_row,
 )
 from tac.optimization.family_agnostic_materializers import (
     PACKET_MEMBER_MERGE_SCHEMA,
@@ -721,6 +722,124 @@ def test_family_agnostic_harvest_emits_archive_bound_contract(
     assert "archive_bound_receiver_contract_not_satisfied" in contract["blockers"]
     assert "zip_member" in contract["archive_substrate_tags"]
     assert contract["archive_bound_candidate_ready"] is False
+
+
+def test_candidate_queue_reads_archive_custody_from_contract_only(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    candidate_archive = _write_bytes(
+        tmp_path, tmp_path / "outputs/archive.zip", b"candidate"
+    )
+    source_archive = _write_bytes(tmp_path, tmp_path / "inputs/source.zip", b"source")
+    source_path = _write_json(
+        tmp_path / "inputs/source_manifest.json",
+        {"schema": "fixture_source_manifest.v1"},
+    )
+    row = {
+        "schema": "fixture_contract_only_candidate.v1",
+        "candidate_id": "contract_only_candidate",
+        "target_kind": "packet_member_zip_header_elide_v1",
+        "receiver_contract_satisfied": True,
+        "runtime_consumption_proof_ready": True,
+        "byte_closed_candidate_materialized": True,
+        "candidate_archive_path": candidate_archive["path"],
+        "candidate_archive_sha256": candidate_archive["sha256"],
+        "candidate_archive_bytes": candidate_archive["bytes"],
+        "source_archive_path": source_archive["path"],
+        "source_archive_sha256": source_archive["sha256"],
+        "source_archive_bytes": source_archive["bytes"],
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "gpu_launched": False,
+    }
+    row.update(archive_bound_candidate_contract_fields_for_row(row, repo_root=tmp_path))
+    for key in (
+        "candidate_archive_path",
+        "candidate_archive_sha256",
+        "candidate_archive_bytes",
+    ):
+        row.pop(key)
+
+    monkeypatch.setattr(
+        candidate_queue_module,
+        "extract_candidates_from_source",
+        lambda path, *, repo_root: candidate_queue_module.SourceExtraction(
+            schema="fixture_source_manifest.v1",
+            rows=[dict(row)],
+        ),
+    )
+
+    queue = build_candidate_queue([source_path], repo_root=tmp_path)
+    promoted = queue["top_k"][0]
+    assert promoted["archive_bound_candidate_contract_valid"] is True
+    assert promoted["archive_candidate_verified"] is True
+    assert promoted["candidate_archive_path_unverified"] is False
+    assert queue["dispatch_ready_count"] == 0
+
+
+def test_candidate_queue_demotes_stale_contract_before_promotion_view(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    candidate_archive = _write_bytes(
+        tmp_path, tmp_path / "outputs/archive.zip", b"candidate"
+    )
+    source_archive = _write_bytes(tmp_path, tmp_path / "inputs/source.zip", b"source")
+    source_path = _write_json(
+        tmp_path / "inputs/source_manifest.json",
+        {"schema": "fixture_source_manifest.v1"},
+    )
+    row = {
+        "schema": "fixture_stale_contract_candidate.v1",
+        "candidate_id": "stale_contract_candidate",
+        "target_kind": "packet_member_zip_header_elide_v1",
+        "receiver_contract_satisfied": True,
+        "runtime_consumption_proof_ready": True,
+        "byte_closed_candidate_materialized": True,
+        "candidate_archive_path": candidate_archive["path"],
+        "candidate_archive_sha256": candidate_archive["sha256"],
+        "candidate_archive_bytes": candidate_archive["bytes"],
+        "source_archive_path": source_archive["path"],
+        "source_archive_sha256": source_archive["sha256"],
+        "source_archive_bytes": source_archive["bytes"],
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "gpu_launched": False,
+    }
+    row.update(archive_bound_candidate_contract_fields_for_row(row, repo_root=tmp_path))
+    row["receiver_contract_satisfied"] = False
+
+    monkeypatch.setattr(
+        candidate_queue_module,
+        "extract_candidates_from_source",
+        lambda path, *, repo_root: candidate_queue_module.SourceExtraction(
+            schema="fixture_source_manifest.v1",
+            rows=[dict(row)],
+        ),
+    )
+
+    queue = build_candidate_queue([source_path], repo_root=tmp_path)
+    demoted = queue["top_k"][0]
+    assert demoted["archive_bound_candidate_contract_valid"] is False
+    assert demoted["archive_candidate_verified"] is False
+    assert demoted["candidate_archive_path_unverified"] is True
+    assert queue["dispatch_ready_count"] == 0
+    assert any(
+        "archive_bound_contract_stale_duplicate_field:receiver_contract_satisfied"
+        in blocker
+        for blocker in demoted["dispatch_blockers"]
+    )
 
 
 def test_materializer_chain_truthy_authority_fails_closed(tmp_path: Path) -> None:

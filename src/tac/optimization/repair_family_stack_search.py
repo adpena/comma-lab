@@ -9,6 +9,10 @@ from itertools import combinations, pairwise
 from pathlib import Path
 from typing import Any
 
+from tac.optimization.archive_bound_candidate_contract import (
+    ArchiveBoundCandidateContractError,
+    archive_bound_candidate_contracts_from_payload,
+)
 from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY
 from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
@@ -29,6 +33,14 @@ REPAIR_FAMILY_EXACT_HANDOFF_PLAN_SCHEMA = "repair_family_exact_handoff_plan.v1"
 REPAIR_FAMILY_STACK_LEARNING_SIGNAL_REPORT_SCHEMA = "repair_campaign_blocked_learning_signal_report.v1"
 REPAIR_FAMILY_STACK_LEARNING_SIGNAL_SCHEMA = "repair_campaign_learning_signal.v1"
 REPAIR_FAMILY_STACK_LOCAL_PLANNING_UPDATE_SCHEMA = "repair_campaign_local_planning_update.v1"
+ARCHIVE_BOUND_CONTRACT_PAYLOAD_KEYS = frozenset(
+    {
+        "archive_bound_candidate_contract",
+        "archive_bound_candidate_contract_surface",
+        "archive_bound_candidate_contract_schema",
+        "archive_bound_candidate_contract_surface_schema",
+    }
+)
 
 _LEVEL_ORDER: tuple[str, ...] = (
     "bit",
@@ -72,6 +84,39 @@ def _repo_rel(path: str | Path, repo_root: str | Path) -> str:
 
 def _mapping(value: Any) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
+
+
+def _has_archive_bound_contract_payload(payload: Mapping[str, Any]) -> bool:
+    return any(key in payload for key in ARCHIVE_BOUND_CONTRACT_PAYLOAD_KEYS)
+
+
+def _archive_bound_contract_for_payload(
+    payload: Mapping[str, Any],
+    *,
+    label: str,
+) -> tuple[dict[str, Any], list[str]]:
+    if not _has_archive_bound_contract_payload(payload):
+        return {}, []
+    try:
+        contracts = archive_bound_candidate_contracts_from_payload(payload, label=label)
+    except ArchiveBoundCandidateContractError as exc:
+        return {}, [f"archive_bound_candidate_contract_invalid:{exc}"]
+    selected = [
+        contract
+        for contract in contracts
+        if contract.get("selected_archive_transform_variant") is True
+    ]
+    return dict(selected[0] if selected else contracts[0] if contracts else {}), []
+
+
+def _validated_archive_bound_contract_surface(
+    payload: Mapping[str, Any],
+    *,
+    contract_blockers: Sequence[str],
+) -> Mapping[str, Any]:
+    if contract_blockers:
+        return {}
+    return _mapping(payload.get("archive_bound_candidate_contract_surface"))
 
 
 def _string_list(value: Any) -> list[str]:
@@ -340,12 +385,16 @@ def _stack_row(
     archive_variant_materializer_backlog = _mapping(
         report.get("archive_variant_materializer_backlog")
     )
-    archive_bound_contract_surface = _mapping(
-        report.get("archive_bound_candidate_contract_surface")
+    archive_bound_contract, archive_bound_contract_reader_blockers = (
+        _archive_bound_contract_for_payload(
+            report,
+            label=f"repair_family_stack_search_contract:{report_path}",
+        )
     )
-    archive_bound_contract = _mapping(
-        report.get("archive_bound_candidate_contract")
-    ) or _mapping(archive_bound_contract_surface.get("selected_candidate_contract"))
+    archive_bound_contract_surface = _validated_archive_bound_contract_surface(
+        report,
+        contract_blockers=archive_bound_contract_reader_blockers,
+    )
     archive_entropy_blockers = _string_list(archive_entropy_coverage.get("blockers"))
     archive_entropy_anti_pattern_penalty = _archive_entropy_anti_pattern_penalty(
         archive_entropy_coverage
@@ -383,6 +432,7 @@ def _stack_row(
         + archive_variant_signal_penalty
         + _safe_float(archive_bound_contract.get("acquisition_penalty"))
         + archive_bound_contract_budget_penalty
+        + (0.20 if archive_bound_contract_reader_blockers else 0.0)
     )
     feasible = _byte_credit_feasible(report, remaining_budget)
     negative_demoted = demotion.get("demoted") is True
@@ -394,6 +444,7 @@ def _stack_row(
     blockers = ordered_unique(
         [
             *_string_list(report.get("blockers")),
+            *archive_bound_contract_reader_blockers,
             *archive_entropy_blockers,
             *archive_variant_signal_blockers,
             *_string_list(archive_bound_contract.get("blockers")),
@@ -1843,7 +1894,30 @@ def _candidate_archive_record(
     report: Mapping[str, Any],
     repo_root: str | Path,
 ) -> tuple[dict[str, Any], list[str]]:
-    candidate = _mapping(report.get("candidate_archive"))
+    archive_bound_contract, contract_blockers = _archive_bound_contract_for_payload(
+        report,
+        label=f"repair_family_exact_handoff_candidate_archive:{report.get('candidate_chain_id')}",
+    )
+    if contract_blockers:
+        return {
+            "schema": "repair_family_exact_handoff_candidate_archive_custody.v1",
+            "path": None,
+            "expected_sha256": None,
+            "expected_bytes": None,
+            "present": False,
+            "sha256": None,
+            "bytes": None,
+            "sha256_matches": False,
+            "bytes_match": False,
+            "custody_complete": False,
+            "blockers": ordered_unique(contract_blockers),
+            "budget_spend_allowed": False,
+            "ready_for_exact_eval_dispatch": False,
+            **FALSE_AUTHORITY,
+        }, list(contract_blockers)
+    candidate = _mapping(
+        archive_bound_contract.get("candidate_archive")
+    ) or _mapping(report.get("candidate_archive"))
     path_text = str(candidate.get("path") or "").strip()
     expected_sha = str(candidate.get("sha256") or "").strip()
     expected_bytes = candidate.get("bytes")
@@ -1900,7 +1974,27 @@ def _runtime_proof_record(
     report: Mapping[str, Any],
     repo_root: str | Path,
 ) -> tuple[dict[str, Any], list[str]]:
-    candidate = _mapping(report.get("candidate_archive"))
+    archive_bound_contract, contract_blockers = _archive_bound_contract_for_payload(
+        report,
+        label=f"repair_family_exact_handoff_runtime_proof:{report.get('candidate_chain_id')}",
+    )
+    if contract_blockers:
+        return {
+            "schema": "repair_family_exact_handoff_runtime_proof_custody.v1",
+            "path": None,
+            "present": False,
+            "sha256": None,
+            "bytes": None,
+            "archive_bound_runtime_consumption_proof_ready": False,
+            "custody_complete": False,
+            "blockers": ordered_unique(contract_blockers),
+            "budget_spend_allowed": False,
+            "ready_for_exact_eval_dispatch": False,
+            **FALSE_AUTHORITY,
+        }, list(contract_blockers)
+    candidate = _mapping(
+        archive_bound_contract.get("candidate_archive")
+    ) or _mapping(report.get("candidate_archive"))
     path_text = str(
         candidate.get("runtime_consumption_proof_path") or report.get("runtime_consumption_proof_path") or ""
     ).strip()
@@ -1919,7 +2013,8 @@ def _runtime_proof_record(
             sha256 = sha256_file(path)
             byte_count = path.stat().st_size
     proof_ready = (
-        candidate.get("runtime_consumption_proof_ready") is True
+        archive_bound_contract.get("runtime_consumption_proof_ready") is True
+        or candidate.get("runtime_consumption_proof_ready") is True
         or _mapping(report.get("exact_eval_handoff_gate")).get("archive_bound_runtime_consumption_proof_ready") is True
     )
     if not proof_ready:
@@ -1946,6 +2041,16 @@ def _exact_handoff_candidate_row(
     stack_row: Mapping[str, Any],
     repo_root: str | Path,
 ) -> dict[str, Any]:
+    archive_bound_contract, archive_bound_contract_reader_blockers = (
+        _archive_bound_contract_for_payload(
+            report,
+            label=f"repair_family_exact_handoff_candidate_contract:{report.get('candidate_chain_id')}",
+        )
+    )
+    archive_bound_contract_surface = _validated_archive_bound_contract_surface(
+        report,
+        contract_blockers=archive_bound_contract_reader_blockers,
+    )
     candidate_archive, archive_blockers = _candidate_archive_record(
         report=report,
         repo_root=repo_root,
@@ -1964,6 +2069,7 @@ def _exact_handoff_candidate_row(
     blockers = ordered_unique(
         [
             *_string_list(report.get("blockers")),
+            *archive_bound_contract_reader_blockers,
             *_string_list(exact_gate.get("blockers")),
             *archive_blockers,
             *proof_blockers,
@@ -1987,12 +2093,8 @@ def _exact_handoff_candidate_row(
         "entropy_position_label": report.get("entropy_position_label"),
         "entropy_stage_order": stack_row.get("entropy_stage_order"),
         "candidate_archive": candidate_archive,
-        "archive_bound_candidate_contract": dict(
-            _mapping(report.get("archive_bound_candidate_contract"))
-        ),
-        "archive_bound_candidate_contract_surface": dict(
-            _mapping(report.get("archive_bound_candidate_contract_surface"))
-        ),
+        "archive_bound_candidate_contract": dict(archive_bound_contract),
+        "archive_bound_candidate_contract_surface": dict(archive_bound_contract_surface),
         "runtime_consumption_proof": runtime_proof,
         "archive_bound_custody_complete": archive_bound_complete,
         "archive_bound_exact_handoff_candidate": archive_bound_complete,

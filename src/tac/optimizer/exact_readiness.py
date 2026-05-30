@@ -30,6 +30,10 @@ from tac.hnerv_frontier_defaults import (
     ACTIVE_SCORE_FRONTIER_LABEL,
     ACTIVE_SCORE_FRONTIER_SCORE,
 )
+from tac.optimization.archive_bound_candidate_contract import (
+    ArchiveBoundCandidateContractError,
+    archive_bound_candidate_contracts_from_payload,
+)
 from tac.optimization.byte_range_entropy_recode_materializer import (
     MATERIALIZER_ID as BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER_ID,
 )
@@ -66,6 +70,14 @@ from tac.zipwire_archive import inspect_zip_headers
 QUEUE_SCHEMA = "optimizer_candidate_exact_eval_ready_queue_v1"
 TOOL_NAME = "tools/promote_optimizer_candidate_for_exact_eval.py"
 PR101_RUNTIME_CONSUMPTION_PROOF_SCHEMA = "pr101_kaggle_proxy_runtime_consumption_proof_v1"
+ARCHIVE_BOUND_CONTRACT_PAYLOAD_KEYS = frozenset(
+    {
+        "archive_bound_candidate_contract",
+        "archive_bound_candidate_contract_surface",
+        "archive_bound_candidate_contract_schema",
+        "archive_bound_candidate_contract_surface_schema",
+    }
+)
 FAMILY_AGNOSTIC_RUNTIME_CONSUMPTION_PROOF_SCHEMAS = frozenset(
     {
         "family_agnostic_runtime_consumption_proof_v1",
@@ -329,23 +341,77 @@ def resolve_path(
     return candidates[0]
 
 
-def candidate_archive_path(row: Mapping[str, Any]) -> Any:
+def _mapping(value: Any) -> Mapping[str, Any]:
+    return value if isinstance(value, Mapping) else {}
+
+
+def _has_archive_bound_contract_payload(row: Mapping[str, Any]) -> bool:
+    return any(key in row for key in ARCHIVE_BOUND_CONTRACT_PAYLOAD_KEYS)
+
+
+def archive_bound_contract_for_row(
+    row: Mapping[str, Any],
+    *,
+    label: str,
+) -> tuple[Mapping[str, Any] | None, list[str]]:
+    if not _has_archive_bound_contract_payload(row):
+        return None, []
+    try:
+        contracts = archive_bound_candidate_contracts_from_payload(row, label=label)
+    except ArchiveBoundCandidateContractError as exc:
+        return None, [f"archive_bound_candidate_contract_invalid:{exc}"]
+    selected = [
+        contract
+        for contract in contracts
+        if contract.get("selected_archive_transform_variant") is True
+    ]
+    return selected[0] if selected else contracts[0] if contracts else None, []
+
+
+def candidate_archive_path(
+    row: Mapping[str, Any],
+    *,
+    archive_bound_contract: Mapping[str, Any] | None = None,
+) -> Any:
+    contract_archive = _mapping(
+        archive_bound_contract.get("candidate_archive")
+        if archive_bound_contract is not None
+        else None
+    )
     for key in ("candidate_archive_path", "archive_path"):
         value = row.get(key)
         if value:
             return value
+    if contract_archive.get("path"):
+        return contract_archive.get("path")
     return None
 
 
-def candidate_archive_sha(row: Mapping[str, Any]) -> str | None:
+def candidate_archive_sha(
+    row: Mapping[str, Any],
+    *,
+    archive_bound_contract: Mapping[str, Any] | None = None,
+) -> str | None:
+    contract_archive = _mapping(
+        archive_bound_contract.get("candidate_archive")
+        if archive_bound_contract is not None
+        else None
+    )
     for key in ("candidate_archive_sha256", "archive_sha256", "expected_archive_sha256"):
         value = row.get(key)
         if is_sha256(value):
             return str(value).lower()
+    value = contract_archive.get("sha256") or contract_archive.get("archive_sha256")
+    if is_sha256(value):
+        return str(value).lower()
     return None
 
 
-def candidate_archive_byte_values(row: Mapping[str, Any]) -> dict[str, int]:
+def candidate_archive_byte_values(
+    row: Mapping[str, Any],
+    *,
+    archive_bound_contract: Mapping[str, Any] | None = None,
+) -> dict[str, int]:
     values: dict[str, int] = {}
     for key in (
         "candidate_archive_bytes",
@@ -356,6 +422,14 @@ def candidate_archive_byte_values(row: Mapping[str, Any]) -> dict[str, int]:
         parsed = as_positive_int(row.get(key))
         if parsed is not None:
             values[key] = parsed
+    contract_archive = _mapping(
+        archive_bound_contract.get("candidate_archive")
+        if archive_bound_contract is not None
+        else None
+    )
+    parsed = as_positive_int(contract_archive.get("bytes"))
+    if parsed is not None:
+        values["archive_bound_candidate_contract.candidate_archive.bytes"] = parsed
     return values
 
 
@@ -1749,18 +1823,27 @@ def validate_runtime_consumption_proof(
     queue_dir: Path | None,
     submission_dir: Path | None,
     archive_sha256: str | None,
+    archive_bound_contract: Mapping[str, Any] | None = None,
 ) -> tuple[list[str], dict[str, Any]]:
     proof_backed_by_full_frame_parity = _has_strict_full_frame_parity(
         row,
         repo_root=repo_root,
         queue_dir=queue_dir,
     )
-    required = row.get("runtime_consumption_proof_required") is True or (
+    contract_proof_ready = (
+        archive_bound_contract is not None
+        and archive_bound_contract.get("runtime_consumption_proof_ready") is True
+    )
+    required = row.get("runtime_consumption_proof_required") is True or contract_proof_ready or (
         any(as_bool(row.get(field)) for field in TRUE_CHANGE_FIELDS)
         and not proof_backed_by_full_frame_parity
     )
     status = row.get("runtime_consumption_proof_status")
+    if status is None and contract_proof_ready:
+        status = "present"
     proof_ref = row.get("runtime_consumption_proof_path")
+    if proof_ref is None and archive_bound_contract is not None:
+        proof_ref = archive_bound_contract.get("runtime_consumption_proof_path")
     if not required and status is None and proof_ref is None:
         return [], {}
 
@@ -1988,6 +2071,20 @@ def readiness_blockers(
             extra_clearable_source_blockers=effective_clearable_source_blockers,
         )
     )
+    archive_bound_contract, archive_bound_contract_blockers = (
+        archive_bound_contract_for_row(
+            row,
+            label=f"exact_readiness_source_row:{row.get('candidate_id')}",
+        )
+    )
+    blockers.extend(archive_bound_contract_blockers)
+    if archive_bound_contract is not None:
+        facts["archive_bound_candidate_contract_key"] = archive_bound_contract.get(
+            "contract_key"
+        )
+        facts["archive_bound_candidate_contract_schema"] = archive_bound_contract.get(
+            "schema"
+        )
 
     effective_lane_id = lane_id or row.get("lane_id")
     if not isinstance(effective_lane_id, str) or not effective_lane_id.strip():
@@ -2016,15 +2113,28 @@ def readiness_blockers(
     if not change_proven:
         blockers.append("score_affecting_change_proof_missing")
 
-    archive_path = resolve_path(candidate_archive_path(row), repo_root=repo_root, queue_dir=queue_dir)
+    archive_path = resolve_path(
+        candidate_archive_path(
+            row,
+            archive_bound_contract=archive_bound_contract,
+        ),
+        repo_root=repo_root,
+        queue_dir=queue_dir,
+    )
     if archive_path is None:
         blockers.append("archive_path_missing")
     elif not archive_path.is_file():
         blockers.append("archive_file_missing")
     facts["archive_path"] = archive_path
 
-    expected_sha = candidate_archive_sha(row)
-    byte_values = candidate_archive_byte_values(row)
+    expected_sha = candidate_archive_sha(
+        row,
+        archive_bound_contract=archive_bound_contract,
+    )
+    byte_values = candidate_archive_byte_values(
+        row,
+        archive_bound_contract=archive_bound_contract,
+    )
     expected_bytes = next(iter(byte_values.values()), None)
     if expected_sha is None:
         blockers.append("archive_sha256_missing_or_invalid")
@@ -2212,6 +2322,7 @@ def readiness_blockers(
         archive_sha256=facts.get("archive_sha256")
         if isinstance(facts.get("archive_sha256"), str)
         else None,
+        archive_bound_contract=archive_bound_contract,
     )
     blockers.extend(proof_blockers)
     facts.update(proof_facts)
