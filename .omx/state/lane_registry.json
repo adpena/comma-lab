@@ -62513,6 +62513,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_z8_m11_l1_macos_cpu_mlx_local_end_to_end_smoke_canonical_evaluate_cpu_binding_20260530",
+      "name": "Z8 M11 L1 macOS-CPU MLX-LOCAL end-to-end smoke through upstream/evaluate.py --device cpu",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "M11 canonical 5-stage cycle runner src/tac/substrates/z8_hierarchical_predictive_coding/m11_l1_macos_cpu_smoke.py + 27 tests; archive_bytes_added=~92KB; score_improvement_mechanism_status=OPERATIONAL via canonical M9 build_z8hpc1_archive_bytes_from_canonical_quadruple + M10 inflate_one_video_from_archive_bytes routing; runtime_overlay_consumed=true; operational_consumption=true; lane_class=substrate_engineering; research_only=true; archive_grammar=Z8HPC1_monolithic_single_file_per_M9_inheritance; parser_section_manifest=inherited_from_M9_pack_archive_via_parse_archive; inflate_runtime_loc_budget=247_LOC_per_M10_substrate_engineering_waiver; runtime_dep_closure=torch_brotli_numpy_av_via_subprocess_PYTHONPATH; export_format=z8hpc1_v1; score_aware_loss=M9_anneal_to_zero_optimizer_free_per_build_progress_M9_acceptance_3_M12_will_land_score_aware; bolt_on_loc_budget=substrate_engineering_~700_LOC; no_op_detector_planned=inherited_from_M10_test_inflate_one_video_different_archives_produce_different_raw_bytes"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/z8_m11_l1_macos_cpu_mlx_local_end_to_end_smoke_canonical_evaluate_cpu_binding_landed_20260530.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "operator-routed Yousfi-cascade TOP-1 post-M10; canonical 5-stage cycle binding through upstream/evaluate.py --device cpu per CLAUDE.md Auth eval EVERYWHERE non-negotiable; non-promotable [macOS-CPU advisory] per Catalog #192; lane_class=substrate_engineering; research_only=true; unblocks M12 paired-CUDA per Catalog #246."
     }
   ],
   "level_rules": {
@@ -62522,5 +62563,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-30T16:05:07Z"
+  "updated_at": "2026-05-30T16:28:35Z"
 }
