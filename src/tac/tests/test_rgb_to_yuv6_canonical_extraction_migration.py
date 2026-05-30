@@ -30,8 +30,10 @@ import pytest
 
 torch = pytest.importorskip("torch")
 
-from tac.framework_agnostic.canonical_kernels import Backend, rgb_to_yuv6 as canonical_rgb_to_yuv6
-
+from tac.framework_agnostic.canonical_kernels import Backend  # noqa: E402
+from tac.framework_agnostic.canonical_kernels import (  # noqa: E402
+    rgb_to_yuv6 as canonical_rgb_to_yuv6,
+)
 
 # -----------------------------------------------------------------------------
 # Sister 1: tac.constrained_gen.rgb_to_yuv6 (PyTorch NCHW, leading dims)

@@ -131,8 +131,10 @@ def rgb_to_yuv6_mlx(rgb_nhwc: Any) -> Any:
         ``[Y00, Y10, Y01, Y11, U_sub, V_sub]`` at channels-last.
     """
     from tac.framework_agnostic.canonical_kernels import (
-        rgb_to_yuv6 as _canonical_rgb_to_yuv6,
         Backend,
+    )
+    from tac.framework_agnostic.canonical_kernels import (
+        rgb_to_yuv6 as _canonical_rgb_to_yuv6,
     )
 
     require_mlx()

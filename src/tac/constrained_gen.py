@@ -33,8 +33,9 @@ import json
 import logging
 import math
 import struct
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import numpy as np
 import torch
@@ -53,34 +54,34 @@ from tac.mask_codec import SEGNET_H, SEGNET_W  # noqa: F401 — used by downstre
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    "CAMERA_W",
     "CAMERA_H",
-    "SEGNET_INPUT_W",
-    "SEGNET_INPUT_H",
+    "CAMERA_W",
     "CLASS_MEAN_COLORS",
-    "rgb_to_yuv6",
-    "yuv6_to_rgb",
-    "validate_yuv_parity",
-    "generate_initial_frames",
-    "compute_segnet_class_weights",
-    "compute_segnet_constraint_loss",
+    "SEGNET_INPUT_H",
+    "SEGNET_INPUT_W",
+    "ConstrainedFrameGenerator",
+    "alternating_projections_optimize",
+    "build_constrained_archive",
+    "compute_compressibility_loss",
     "compute_posenet_constraint_loss",
     "compute_posenet_embedding_constraint_loss",
-    "compute_compressibility_loss",
-    "estimate_expected_pose",
+    "compute_segnet_class_weights",
+    "compute_segnet_constraint_loss",
     "constrained_generate",
-    "build_constrained_archive",
-    "load_constrained_archive",
+    "coupled_trajectory_optimize",
+    "estimate_expected_pose",
+    "generate_in_scorer_space",
+    "generate_initial_frames",
+    "gpu_lane_full_pipeline",
     "inflate_constrained",
     "inverse_preprocess_input",
-    "generate_in_scorer_space",
-    "scorer_as_compressor",
-    "yuv_null_space_projection",
-    "coupled_trajectory_optimize",
-    "gpu_lane_full_pipeline",
-    "alternating_projections_optimize",
+    "load_constrained_archive",
     "newton_step_optimize",
-    "ConstrainedFrameGenerator",
+    "rgb_to_yuv6",
+    "scorer_as_compressor",
+    "validate_yuv_parity",
+    "yuv6_to_rgb",
+    "yuv_null_space_projection",
 ]
 
 # Constants are now imported from tac.camera (canonical source of truth).
@@ -123,8 +124,10 @@ def rgb_to_yuv6(rgb_chw: torch.Tensor) -> torch.Tensor:
         (..., 6, H//2, W//2) tensor: [y00, y10, y01, y11, U_sub, V_sub].
     """
     from tac.framework_agnostic.canonical_kernels import (
-        rgb_to_yuv6 as _canonical_rgb_to_yuv6,
         Backend,
+    )
+    from tac.framework_agnostic.canonical_kernels import (
+        rgb_to_yuv6 as _canonical_rgb_to_yuv6,
     )
 
     if rgb_chw.shape[-3] != 3:
@@ -638,7 +641,7 @@ def compute_posenet_embedding_constraint_loss(
         # Hook to capture intermediate features
         features = []
 
-        def _hook_fn(module, input, output):
+        def _hook_fn(module, input, output, *, features=features):
             features.append(output)
 
         handle = target_module.register_forward_hook(_hook_fn)
@@ -2258,8 +2261,8 @@ def gpu_lane_full_pipeline(
             'diagnostics': dict with per-stage timing and metrics
     """
     from tac.fridrich import (
-        estimate_detection_boundary,
         compute_pixel_cost_map,
+        estimate_detection_boundary,
         fridrich_constrained_optimize,
         optimal_quantization_stc,
     )
@@ -2283,7 +2286,7 @@ def gpu_lane_full_pipeline(
     diagnostics: dict[str, Any] = {}
 
     # --- Stage 1: Pose targets ---
-    expected_pose = cfg.get("expected_pose", None)
+    expected_pose = cfg.get("expected_pose")
     if expected_pose is None:
         t0 = time.time()
         logger.info("[gpu_lane_pipeline] Stage 1: Estimating expected pose from masks...")

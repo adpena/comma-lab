@@ -21,7 +21,6 @@ from typing import Any
 
 import numpy as np
 
-
 # Canonical BT.601 full-range YUV coefficients per
 # tac.differentiable_eval_roundtrip.differentiable_rgb_to_yuv6.
 BT601_KYR = 0.299
@@ -109,27 +108,34 @@ class ChromaSubsampledPerturbationConfig:
                 "atick_redlich_blend_coefficients must all be >= 0"
             )
         # Strategy-specific arg requirements
-        if self.strategy is ChromaPerturbationStrategy.SEGNET_GRADIENT_WEIGHTED:
-            if self.segnet_gradient_map is None:
-                raise ChromaSubsampledPerturbationConfigInvalidError(
-                    "SEGNET_GRADIENT_WEIGHTED requires segnet_gradient_map"
-                )
-        if self.strategy is ChromaPerturbationStrategy.POSENET_GRADIENT_WEIGHTED_VIA_MAE_V:
-            if self.posenet_gradient_map is None:
-                raise ChromaSubsampledPerturbationConfigInvalidError(
-                    "POSENET_GRADIENT_WEIGHTED_VIA_MAE_V requires "
-                    "posenet_gradient_map"
-                )
+        if (
+            self.strategy is ChromaPerturbationStrategy.SEGNET_GRADIENT_WEIGHTED
+            and self.segnet_gradient_map is None
+        ):
+            raise ChromaSubsampledPerturbationConfigInvalidError(
+                "SEGNET_GRADIENT_WEIGHTED requires segnet_gradient_map"
+            )
+        if (
+            self.strategy
+            is ChromaPerturbationStrategy.POSENET_GRADIENT_WEIGHTED_VIA_MAE_V
+            and self.posenet_gradient_map is None
+        ):
+            raise ChromaSubsampledPerturbationConfigInvalidError(
+                "POSENET_GRADIENT_WEIGHTED_VIA_MAE_V requires "
+                "posenet_gradient_map"
+            )
         if (
             self.strategy is ChromaPerturbationStrategy.JOINT_ATICK_REDLICH_LINEAR_COMBINATION
+            and (
+                self.segnet_gradient_map is None or self.posenet_gradient_map is None
+            )
         ):
             # Joint requires BOTH gradient maps (variance is computed from input
             # so it's always available; segnet + posenet must be supplied).
-            if self.segnet_gradient_map is None or self.posenet_gradient_map is None:
-                raise ChromaSubsampledPerturbationConfigInvalidError(
-                    "JOINT_ATICK_REDLICH_LINEAR_COMBINATION requires BOTH "
-                    "segnet_gradient_map AND posenet_gradient_map"
-                )
+            raise ChromaSubsampledPerturbationConfigInvalidError(
+                "JOINT_ATICK_REDLICH_LINEAR_COMBINATION requires BOTH "
+                "segnet_gradient_map AND posenet_gradient_map"
+            )
 
 
 @dataclass(frozen=True)

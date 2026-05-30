@@ -8,11 +8,10 @@ Output: per-frame importance maps based on scorer gradient magnitude.
 """
 import sys
 
+import av
 import numpy as np
 import torch
 import torch.nn.functional as F
-
-import av
 
 
 def load_models(models_dir, device: str = "cpu"):
@@ -31,10 +30,10 @@ def load_models(models_dir, device: str = "cpu"):
         ``(posenet, segnet)`` in eval mode on *device*.
     """
     from pathlib import Path
-    from safetensors.torch import load_file
 
     # Upstream modules must be importable (caller is responsible for sys.path)
     from modules import PoseNet, SegNet
+    from safetensors.torch import load_file
 
     models_dir = Path(models_dir)
 
@@ -76,8 +75,10 @@ def rgb_to_yuv6(frames: torch.Tensor) -> torch.Tensor:
         ``frame_utils.rgb_to_yuv6`` output layout (channel-first YUV6).
     """
     from tac.framework_agnostic.canonical_kernels import (
-        rgb_to_yuv6 as _canonical_rgb_to_yuv6,
         Backend,
+    )
+    from tac.framework_agnostic.canonical_kernels import (
+        rgb_to_yuv6 as _canonical_rgb_to_yuv6,
     )
 
     if frames.shape[-1] != 3:
@@ -120,7 +121,7 @@ def compute_saliency(video_path: str, models_dir: str, output_path: str,
     np.ndarray
         Saliency maps with shape ``(N, H, W)``.
     """
-    from frame_utils import yuv420_to_rgb, camera_size, segnet_model_input_size
+    from frame_utils import camera_size, segnet_model_input_size, yuv420_to_rgb
 
     posenet, segnet = load_models(models_dir, device)
     W, H = camera_size  # 1164, 874
