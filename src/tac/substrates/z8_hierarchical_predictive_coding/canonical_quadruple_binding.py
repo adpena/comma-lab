@@ -446,11 +446,231 @@ def _l2_norm(arr: np.ndarray) -> float:
     return float(np.sqrt(np.sum(arr.astype(np.float64) ** 2)))
 
 
+# ---------------------------------------------------------------------------
+# Rev #3: PoseNet 6-dim Wyner-Ziv side_info per canonical equation #150
+# (per Yousfi memo `843b4bfd8` Axis 3 + CLAUDE.md "Forbidden premature KILL")
+# ---------------------------------------------------------------------------
+#
+# Per canonical equation #150 `wyner_ziv_decoder_side_information_rate_savings_v1`
+# (registered Wave N+36 commit `c2780c7ba`): R(X|Y) << R(X) when Y is well-
+# correlated with X. The canonical Y for dashcam ego-motion video is the
+# per-pair PoseNet 6-dim pose vector (NOT the generic top-LL spatial mean
+# that the prior wiring used; per Yousfi memo Axis 3 finding the prior
+# top-LL spatial mean was CARGO-CULTED-WYNER-ZIV-SIDE-INFO-WIRING).
+#
+# Honest scope per CLAUDE.md strict-scorer-rule + Catalog #6
+# (`check_no_scorer_load_at_inflate`): PoseNet is computed AT COMPRESS TIME
+# only. The 6-dim vector is serialized into archive bytes (NOT into PoseNet
+# weight bytes — those are forbidden at inflate per CLAUDE.md). The decoder
+# reads the serialized 6-dim vector from the archive and projects to
+# `side_info_shape` deterministically; the encoder + decoder both honor the
+# same projection so Wyner-Ziv 1976 Theorem 1's decoder-reproducibility
+# property holds without inflate-side scorer access.
+#
+# This is M12c+ scope substrate engineering per recipe DEFERRED note
+# (Z8_TRAINER_MODE=full does NOT route through canonical_quadruple_binding
+# at M12a so this scaffolding does not affect M12a behavior; it is the
+# canonical foundation for a future Z8_TRAINER_MODE=canonical_quadruple_v2
+# routing that consumes this side_info path).
+
+
+_POSE_SIDE_INFO_PROJECTION_SEED_DEFAULT: int = 17
+"""Deterministic seed for PoseNet 6-dim → side_info_shape projection.
+
+Encoder + decoder MUST agree on this seed for round-trip parity. The seed
+17 is chosen to avoid collision with the canonical M6 Wyner-Ziv projection
+seed (default 0 per ``CANONICAL_PROJECTION_SEED_DEFAULT``) so the two
+projection matrices are statistically independent.
+"""
+
+
+POSE_SIDE_INFO_DIM: int = 6
+"""Canonical PoseNet pose vector dimensionality per CLAUDE.md "Exact scorer
+architectures": "Distortion = MSE on first 6 pose dimensions"."""
+
+
+def _project_pose_6dim_to_side_info_shape(
+    pose_6dim_batch: np.ndarray,
+    side_info_shape: tuple[int, int, int],
+    *,
+    projection_seed: int = _POSE_SIDE_INFO_PROJECTION_SEED_DEFAULT,
+) -> np.ndarray:
+    """Project (B, 6) PoseNet pose vector to (B, side_c, side_h, side_w).
+
+    Per Wyner-Ziv 1976 Theorem 1 + canonical equation #150 the side info
+    Y need only carry correlation with X to reduce R(X|Y) below R(X); a
+    deterministic linear projection of the 6-dim pose vector to the
+    contract's side_info_shape preserves this correlation (no information
+    LOST in the projection beyond the rank-6 subspace) while satisfying
+    the M6 Wyner-Ziv coder's (B, C, H, W) shape contract.
+
+    Args:
+        pose_6dim_batch: (B, 6) numpy array of per-pair PoseNet pose
+            vectors (canonical units; raw output of the contest PoseNet).
+        side_info_shape: (C, H, W) canonical M6 side_info_shape per
+            contract.wyner_ziv_top_level_side_info_shape.
+        projection_seed: deterministic seed; encoder + decoder MUST agree.
+
+    Returns:
+        (B, C, H, W) numpy float32 side_info tensor; row-stochastic
+        per-(C, H, W) cell is the deterministic linear combination of the
+        6 pose dimensions.
+
+    Raises:
+        ValueError: pose_6dim_batch is not (B, 6) or side_info_shape
+            is not a 3-tuple of positive ints.
+    """
+    if pose_6dim_batch.ndim != 2 or pose_6dim_batch.shape[-1] != POSE_SIDE_INFO_DIM:
+        raise ValueError(
+            f"pose_6dim_batch must be (B, {POSE_SIDE_INFO_DIM}); got "
+            f"shape {pose_6dim_batch.shape}"
+        )
+    if len(side_info_shape) != 3 or any(int(d) <= 0 for d in side_info_shape):
+        raise ValueError(
+            f"side_info_shape must be a 3-tuple of positive ints; got "
+            f"{side_info_shape}"
+        )
+    batch_size = int(pose_6dim_batch.shape[0])
+    side_c, side_h, side_w = (int(d) for d in side_info_shape)
+    flat_dim = side_c * side_h * side_w
+    rng = np.random.RandomState(int(projection_seed))
+    # Project (B, 6) -> (B, side_c * side_h * side_w) via Gaussian random
+    # matrix. The scaling 1/sqrt(6) makes the projection roughly
+    # variance-preserving per pose-dim, so each side_info cell carries
+    # comparable energy to the pose vector itself.
+    proj_matrix = rng.randn(POSE_SIDE_INFO_DIM, flat_dim).astype(np.float32) / (
+        np.sqrt(POSE_SIDE_INFO_DIM)
+    )
+    flat_side_info = (
+        pose_6dim_batch.astype(np.float32) @ proj_matrix
+    )  # (B, flat_dim)
+    return flat_side_info.reshape(batch_size, side_c, side_h, side_w).astype(
+        np.float32, copy=False
+    )
+
+
+def _deterministic_pose_proxy_6dim(
+    pair_rgb_target: np.ndarray,
+    *,
+    proxy_seed: int = 17,
+) -> np.ndarray:
+    """Deterministic 6-dim pose-proxy for compress-time PoseNet unavailability.
+
+    Per CLAUDE.md NO FAKE IMPLEMENTATIONS non-negotiable: when the canonical
+    PoseNet is unavailable (e.g. macOS-CPU local smoke without
+    upstream/modules.py + checkpoint), we DO NOT fabricate the canonical
+    PoseNet output. Instead we compute a deterministic 6-dim summary of
+    the pair RGB frame via per-channel spatial statistics (mean of R, G, B
+    over (H, W) + spatial-gradient L2 norm of R, G, B). This is an HONEST
+    proxy explicitly labeled as such per Catalog #287 (the proxy is NOT
+    PoseNet; the caller MUST flag it as such in observability output).
+
+    Per Yousfi memo Axis 3: the canonical encoder + decoder both need
+    access to the SAME deterministic function of the pair frames so the
+    Wyner-Ziv 1976 decoder-reproducibility property holds. This proxy
+    satisfies that property at compress-time AND inflate-time (both can
+    compute it from the same RGB frames; the inflate path computes it
+    from the reconstructed frame_0 before consuming the Wyner-Ziv payload).
+
+    For the canonical M12c+ paid-CUDA path the canonical replacement is
+    to call the real PoseNet at compress-time and serialize the 6-dim
+    vector into archive bytes; this proxy is the canonical M11 macOS-CPU
+    smoke path that does not require PoseNet weights.
+
+    Args:
+        pair_rgb_target: (B, H, W, C) NHWC numpy in [0, 1].
+        proxy_seed: deterministic seed for the spatial-gradient combo.
+
+    Returns:
+        (B, 6) numpy float32 proxy-pose vector.
+    """
+    if pair_rgb_target.ndim != 4 or pair_rgb_target.shape[-1] != 3:
+        raise ValueError(
+            f"pair_rgb_target must be (B, H, W, 3); got shape "
+            f"{pair_rgb_target.shape}"
+        )
+    arr = pair_rgb_target.astype(np.float32, copy=False)
+    # Per-channel spatial means (3 features).
+    mean_per_channel = arr.mean(axis=(1, 2))  # (B, 3)
+    # Per-channel spatial-gradient L2 norm: || dRGB/dx ||_2 + || dRGB/dy ||_2.
+    # Centred finite-difference along H + W axes.
+    dx = np.diff(arr, axis=2)  # (B, H, W-1, 3)
+    dy = np.diff(arr, axis=1)  # (B, H-1, W, 3)
+    grad_l2_per_channel = np.sqrt(
+        np.sum(dx**2, axis=(1, 2)) + np.sum(dy**2, axis=(1, 2))
+    )  # (B, 3)
+    return np.concatenate(
+        [mean_per_channel, grad_l2_per_channel], axis=-1
+    ).astype(np.float32, copy=False)
+
+
+def compute_pose_side_info_canonical_equation_150(
+    pair_rgb_target: np.ndarray,
+    side_info_shape: tuple[int, int, int],
+    *,
+    pose_6dim_batch: np.ndarray | None = None,
+    projection_seed: int = _POSE_SIDE_INFO_PROJECTION_SEED_DEFAULT,
+) -> tuple[np.ndarray, np.ndarray, str]:
+    """Canonical equation #150 Wyner-Ziv side info derivation.
+
+    Per canonical equation #150 `wyner_ziv_decoder_side_information_rate_savings_v1`
+    + Yousfi memo Axis 3 + Catalog #287 (NO FAKE IMPLEMENTATIONS): produce
+    a per-pair PoseNet 6-dim pose vector + project to the M6 Wyner-Ziv
+    coder's side_info_shape.
+
+    Args:
+        pair_rgb_target: (B, H, W, 3) NHWC numpy in [0, 1].
+        side_info_shape: (C, H, W) per contract.wyner_ziv_top_level_side_info_shape.
+        pose_6dim_batch: optional caller-supplied PoseNet 6-dim output of
+            shape (B, 6). If None, falls back to the deterministic 6-dim
+            pose-proxy per ``_deterministic_pose_proxy_6dim``. The caller
+            is responsible for computing PoseNet at compress-time when
+            available; this helper does NOT call PoseNet directly to
+            avoid coupling the M9 forward pass to the contest scorer
+            import surface.
+        projection_seed: deterministic projection seed.
+
+    Returns:
+        Tuple ``(side_info, pose_6dim, pose_source)`` where:
+            - ``side_info``: (B, C, H, W) numpy float32 ready for M6.encode.
+            - ``pose_6dim``: (B, 6) numpy float32 — the actual pose vector
+              used (for archive serialization at compress-time).
+            - ``pose_source``: canonical string label per Catalog #287 —
+              one of "posenet_6dim_caller_supplied" or
+              "deterministic_pose_proxy_6dim_compress_time_fallback".
+
+    Raises:
+        ValueError: shape contracts violated.
+    """
+    if pose_6dim_batch is not None:
+        if (
+            pose_6dim_batch.ndim != 2
+            or pose_6dim_batch.shape[-1] != POSE_SIDE_INFO_DIM
+            or int(pose_6dim_batch.shape[0]) != int(pair_rgb_target.shape[0])
+        ):
+            raise ValueError(
+                f"pose_6dim_batch must be (B={pair_rgb_target.shape[0]}, "
+                f"{POSE_SIDE_INFO_DIM}); got shape {pose_6dim_batch.shape}"
+            )
+        pose_6dim = pose_6dim_batch.astype(np.float32, copy=False)
+        pose_source = "posenet_6dim_caller_supplied"
+    else:
+        pose_6dim = _deterministic_pose_proxy_6dim(pair_rgb_target)
+        pose_source = "deterministic_pose_proxy_6dim_compress_time_fallback"
+    side_info = _project_pose_6dim_to_side_info_shape(
+        pose_6dim, side_info_shape, projection_seed=int(projection_seed)
+    )
+    return side_info, pose_6dim, pose_source
+
+
 def canonical_quadruple_forward_step(
     binding: Z8CanonicalQuadrupleBinding,
     pair_rgb_target: np.ndarray,
     *,
     epoch_perturbation: float = 0.0,
+    pose_side_info_canonical_equation_150_enabled: bool = False,
+    pose_6dim_caller_supplied: np.ndarray | None = None,
+    pose_side_info_projection_seed: int = _POSE_SIDE_INFO_PROJECTION_SEED_DEFAULT,
 ) -> dict[str, Any]:
     """Single canonical-quadruple forward pass on one pair-RGB target.
 
@@ -480,6 +700,26 @@ def canonical_quadruple_forward_step(
             acceptance #3 in an OPTIMIZER-FREE manner. Larger value =
             more noise (worse loss); the training loop uses 1.0 at epoch
             0 and 0.0 at epoch N-1 (canonical anneal-to-zero schedule).
+        pose_side_info_canonical_equation_150_enabled: opt-in to use
+            canonical equation #150 (Wyner-Ziv decoder side information
+            from PoseNet 6-dim per Yousfi memo `843b4bfd8` Axis 3 / Rev
+            #3). Default ``False`` preserves backward compatibility with
+            the M9 prior wiring (top-LL spatial mean per
+            canonical_quadruple_binding.py:559-572). When ``True`` the
+            forward step uses
+            :func:`compute_pose_side_info_canonical_equation_150` to
+            derive side_info from the canonical PoseNet 6-dim path. This
+            is M12c+ scope substrate engineering per recipe DEFERRED
+            note (Z8_TRAINER_MODE=full does NOT route through this path
+            at M12a so this opt-in does not affect M12a behavior).
+        pose_6dim_caller_supplied: optional caller-supplied PoseNet 6-dim
+            output of shape (B, 6). If None and the canonical equation
+            #150 path is enabled, falls back to
+            :func:`_deterministic_pose_proxy_6dim` (canonical per
+            Catalog #287 NO FAKE IMPLEMENTATIONS). Only consulted when
+            ``pose_side_info_canonical_equation_150_enabled=True``.
+        pose_side_info_projection_seed: deterministic projection seed
+            for the PoseNet 6-dim → side_info_shape canonical projection.
 
     Returns:
         Dict with keys:
@@ -489,6 +729,14 @@ def canonical_quadruple_forward_step(
           - ``wyner_ziv_payload_bytes``: int
           - ``wyner_ziv_round_trip_error``: float
           - ``total_loss``: float
+          - ``wyner_ziv_side_info_source``: canonical string label per
+            Catalog #287 (one of "top_ll_per_channel_spatial_mean" /
+            "posenet_6dim_caller_supplied" /
+            "deterministic_pose_proxy_6dim_compress_time_fallback").
+          - ``wyner_ziv_pose_6dim``: optional (B, 6) numpy array — only
+            present when canonical equation #150 path is enabled. The
+            canonical archive serialization slot for this vector per
+            Yousfi memo Axis 3 / Rev #3.
     """
     import torch  # M4 is torch-based; imported here for lazy dependency.
 
@@ -550,26 +798,48 @@ def canonical_quadruple_forward_step(
     # ----- Step 3: M6 at top level — encode + decode -----
     # Build side_info shape (B, C, H, W) per contract.
     side_c, side_h, side_w = contract.wyner_ziv_top_level_side_info_shape
-    # Project top-level LL band to the side_info shape. The canonical
-    # approach: tile / pad the (B, C, H_top, W_top) tensor to match
-    # (B, side_c, side_h, side_w). For the smoke we use a deterministic
-    # repeat / broadcast.
-    top_ll_nchw = _to_nchw_from_nhwc(top_ll_nhwc)
-    # Broadcast over channels: take per-channel mean, then tile to side_c.
-    top_ll_per_channel = top_ll_nchw.mean(axis=1, keepdims=True)  # (B, 1, H_top, W_top)
-    # Tile channels (B, 1, H_top, W_top) -> (B, side_c, H_top, W_top), then
-    # crop/pad to (side_h, side_w).
-    side_info = np.tile(top_ll_per_channel, (1, side_c, 1, 1))
-    if side_info.shape[-2:] != (side_h, side_w):
-        # Crop or pad to match the contract shape (smoke path).
-        h_min = min(side_info.shape[-2], side_h)
-        w_min = min(side_info.shape[-1], side_w)
-        result = np.zeros(
-            (batch_size, side_c, side_h, side_w), dtype=np.float32
+    side_info_shape = (int(side_c), int(side_h), int(side_w))
+    wyner_ziv_pose_6dim: np.ndarray | None = None
+
+    if pose_side_info_canonical_equation_150_enabled:
+        # Rev #3: canonical equation #150 Wyner-Ziv decoder side information
+        # from PoseNet 6-dim pose vector (per Yousfi memo `843b4bfd8` Axis 3).
+        # Per Wyner-Ziv 1976 Theorem 1: a low-dim side info Y that correlates
+        # with X reduces R(X|Y) below R(X). The canonical Y for dashcam
+        # ego-motion video is the PoseNet 6-dim pose vector.
+        (
+            side_info,
+            wyner_ziv_pose_6dim,
+            wyner_ziv_side_info_source,
+        ) = compute_pose_side_info_canonical_equation_150(
+            pair_rgb_target,
+            side_info_shape,
+            pose_6dim_batch=pose_6dim_caller_supplied,
+            projection_seed=int(pose_side_info_projection_seed),
         )
-        result[:, :, :h_min, :w_min] = side_info[:, :, :h_min, :w_min]
-        side_info = result
-    side_info = side_info.astype(np.float32, copy=False)
+    else:
+        # Backward-compat: prior wiring used top-LL per-channel spatial
+        # mean tiled to side_info_shape. Per Yousfi memo Axis 3 this is
+        # CARGO-CULTED-WYNER-ZIV-SIDE-INFO-WIRING but is preserved at
+        # default to keep existing M9 acceptance tests passing.
+        top_ll_nchw = _to_nchw_from_nhwc(top_ll_nhwc)
+        # Broadcast over channels: take per-channel mean, then tile to side_c.
+        top_ll_per_channel = top_ll_nchw.mean(axis=1, keepdims=True)  # (B, 1, H_top, W_top)
+        # Tile channels (B, 1, H_top, W_top) -> (B, side_c, H_top, W_top), then
+        # crop/pad to (side_h, side_w).
+        side_info = np.tile(top_ll_per_channel, (1, side_c, 1, 1))
+        if side_info.shape[-2:] != (side_h, side_w):
+            # Crop or pad to match the contract shape (smoke path).
+            h_min = min(side_info.shape[-2], side_h)
+            w_min = min(side_info.shape[-1], side_w)
+            result = np.zeros(
+                (batch_size, side_c, side_h, side_w), dtype=np.float32
+            )
+            result[:, :, :h_min, :w_min] = side_info[:, :, :h_min, :w_min]
+            side_info = result
+        side_info = side_info.astype(np.float32, copy=False)
+        wyner_ziv_side_info_source = "top_ll_per_channel_spatial_mean"
+
     payload = binding.m6.encode(next_state_np, side_info)
     recon_state = binding.m6.decode(payload, side_info)
     wyner_ziv_round_trip_error = float(
@@ -647,14 +917,22 @@ def canonical_quadruple_forward_step(
 
     total_loss = sum(per_level_l2_loss)
     mamba2_state_l2 = _l2_norm(next_state_np)
-    return {
+    result_dict: dict[str, Any] = {
         "per_level_l2_loss": tuple(per_level_l2_loss),
         "wavelet_subband_l2_norm": tuple(wavelet_subband_l2_norm),
         "mamba2_state_l2_norm": mamba2_state_l2,
         "wyner_ziv_payload_bytes": len(payload),
         "wyner_ziv_round_trip_error": wyner_ziv_round_trip_error,
         "total_loss": float(total_loss),
+        "wyner_ziv_side_info_source": wyner_ziv_side_info_source,
     }
+    if wyner_ziv_pose_6dim is not None:
+        # Rev #3 observability surface per Catalog #305 6-facet: the
+        # per-pair PoseNet 6-dim pose vector (used as Wyner-Ziv side info).
+        # The canonical archive serialization slot for this vector at
+        # M12c+ paid-CUDA scope is the canonical equation #150 surface.
+        result_dict["wyner_ziv_pose_6dim"] = wyner_ziv_pose_6dim
+    return result_dict
 
 
 def _classify_convergence(
@@ -691,6 +969,8 @@ def run_canonical_quadruple_training_loop(
     ),
     hardware_substrate: str = "macos_arm64",
     notes: str = "",
+    pose_side_info_canonical_equation_150_enabled: bool = False,
+    pose_6dim_per_pair: np.ndarray | None = None,
 ) -> CanonicalQuadrupleTrainingArtifact:
     """Canonical compose-pattern training loop per M9 acceptance criteria.
 
@@ -743,6 +1023,17 @@ def run_canonical_quadruple_training_loop(
             f"pair_rgb_targets must have at least one pair; "
             f"got num_pairs={num_pairs}"
         )
+    if pose_6dim_per_pair is not None:
+        if (
+            pose_6dim_per_pair.ndim != 2
+            or pose_6dim_per_pair.shape[-1] != POSE_SIDE_INFO_DIM
+            or int(pose_6dim_per_pair.shape[0]) != num_pairs
+        ):
+            raise ValueError(
+                f"pose_6dim_per_pair must be ({num_pairs}, "
+                f"{POSE_SIDE_INFO_DIM}); got shape "
+                f"{pose_6dim_per_pair.shape}"
+            )
 
     per_step_records: list[TrainingStepObservability] = []
     per_epoch_total_loss: list[float] = []
@@ -769,10 +1060,24 @@ def run_canonical_quadruple_training_loop(
             target_single_pair = pair_rgb_targets[
                 pair_idx : pair_idx + 1
             ].astype(np.float32, copy=False)
+            # Rev #3: forward per-pair pose 6-dim slice when canonical
+            # equation #150 path is enabled. Slice shape: (1, 6).
+            pose_6dim_this_pair: np.ndarray | None = None
+            if (
+                pose_side_info_canonical_equation_150_enabled
+                and pose_6dim_per_pair is not None
+            ):
+                pose_6dim_this_pair = pose_6dim_per_pair[
+                    pair_idx : pair_idx + 1
+                ].astype(np.float32, copy=False)
             forward_result = canonical_quadruple_forward_step(
                 binding,
                 target_single_pair,
                 epoch_perturbation=epoch_perturbation,
+                pose_side_info_canonical_equation_150_enabled=(
+                    pose_side_info_canonical_equation_150_enabled
+                ),
+                pose_6dim_caller_supplied=pose_6dim_this_pair,
             )
             step_elapsed = time.time() - step_start
             record = TrainingStepObservability(
@@ -1370,12 +1675,14 @@ __all__ = [
     "CANONICAL_PROJECTION_SEED_DEFAULT",
     "DEFAULT_M4_LATENT_DIM_PER_LEVEL",
     "DEFAULT_M4_D_STATE",
+    "POSE_SIDE_INFO_DIM",
     "CanonicalQuadrupleTrainingArtifact",
     "TrainingStepObservability",
     "Z8CanonicalQuadrupleBinding",
     "build_canonical_quadruple_binding_from_z8_config",
     "build_z8hpc1_archive_bytes_from_canonical_quadruple",
     "canonical_quadruple_forward_step",
+    "compute_pose_side_info_canonical_equation_150",
     "load_real_video_targets_numpy",
     "parse_pair_blobs_from_wavelet_blob",
     "reconstruct_pair_rgb_from_pyramid",

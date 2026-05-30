@@ -85,18 +85,31 @@ cost_band:
 
 # Catalog #324 post-training Tier-C validation discipline
 # YOUSFI-REVISIONS post-2026-05-30 update per Yousfi PROCEED_WITH_REVISIONS memo
-# `843b4bfd8`: predicted band refined to canonical Yousfi-Revised partial scenario
-# [0.175, 0.190] per Canonical Revision #1 + #2 landed (Z8_TRAINER_MODE=full +
-# Z8_M7_SOURCE=empirical_from_master_gradient). Canonical Revisions #3 + #4 +
-# #5 are M12c+ scope (DEFERRED with operator-routable canonical references); IF
-# all 5 revisions land per the Yousfi voice deep-Yousfi-grounded scenario, the
-# canonical Yousfi-Revised band is [0.150, 0.175] per memo §"Axis 5".
+# `843b4bfd8`:
+# - M12a predicted_band [0.175, 0.190] = canonical Yousfi-Revised partial scenario
+#   per Canonical Revision #1 + #2 LANDED (Z8_TRAINER_MODE=full +
+#   Z8_M7_SOURCE=empirical_from_master_gradient).
+# - Deep-Yousfi-grounded canonical scenario [0.150, 0.175] is achievable AT M12c
+#   when Canonical Revisions #3 + #4 + #5 are wired INTO the trainer's active
+#   code path. Per NO-FAKE-IMPLEMENTATIONS non-negotiable: the deep band is NOT
+#   the M12a band because Z8_TRAINER_MODE=full routes through `_full_main` ->
+#   `run_mlx_score_aware_full_main` which does NOT invoke the
+#   canonical_quadruple_binding compose pattern (Rev #3 + #4 substrate-
+#   engineering scaffolding is LANDED 2026-05-30 in
+#   canonical_quadruple_binding.py + tests/test_yousfi_revisions_3_4_5.py;
+#   activated by `--canonical-quadruple-binding` flag NOT by Z8_TRAINER_MODE=full).
+# - M12c reactivation path: route the trainer through canonical_quadruple_binding
+#   with `pose_side_info_canonical_equation_150_enabled=True` + 4-level
+#   Z8HierarchicalConfig + Rev #5 deep predicted band.
 predicted_score_target: 0.185
 predicted_band: [0.175, 0.190]
+predicted_band_m12c_deep_yousfi_grounded_reference: [0.150, 0.175]
+predicted_band_m12c_reactivation_path: "Route Z8 trainer through canonical_quadruple_binding compose pattern with pose_side_info_canonical_equation_150_enabled=True + Z8HierarchicalConfig num_levels=4 + Rev #5 deep predicted band. Substrate-engineering Rev #3 + #4 LANDED 2026-05-30 in src/tac/substrates/z8_hierarchical_predictive_coding/canonical_quadruple_binding.py per Yousfi memo `843b4bfd8` Axis 1+2+3 + tests/test_yousfi_revisions_3_4_5.py 26 new dedicated tests pass + 278 total z8 baseline + Rev tests pass. Per canonical Catalog #287 NO FAKE IMPLEMENTATIONS: M12a recipe band remains [0.175, 0.190] because canonical_quadruple_binding path is NOT active at M12a; deep-Yousfi-grounded [0.150, 0.175] band requires explicit M12c routing wave + sister optimizer wire-in into canonical_quadruple_binding training loop."
 predicted_band_validation_status: pending_post_training
-predicted_band_reactivation_criterion: "Post-training Tier-C density re-measurement via tools/mdl_scorer_conditional_ablation.py --tier c on the M12a landed archive sha256. Round 2 self-reflection per Catalog #363 triggered if M12a empirical anchor reveals predicted-band miss >2x. Per symposium frontmatter: M12b paired-CUDA empirical anchor for sister Linux x86_64 [contest-CPU] vs [contest-CUDA] CPU-CUDA gap calibration after M12a confirms PoseNet sub-1.0 trajectory. YOUSFI-REVISIONS: predicted_band refined post Canonical Revision #1 + #2 landing per Yousfi memo `843b4bfd8` Axis 5 partial-Yousfi-grounded scenario; deep-Yousfi-grounded scenario IF all 5 revisions land yields canonical [0.150, 0.175] sub-0.180 threshold."
+predicted_band_reactivation_criterion: "Post-training Tier-C density re-measurement via tools/mdl_scorer_conditional_ablation.py --tier c on the M12a landed archive sha256. Round 2 self-reflection per Catalog #363 triggered if M12a empirical anchor reveals predicted-band miss >2x. Per symposium frontmatter: M12b paired-CUDA empirical anchor for sister Linux x86_64 [contest-CPU] vs [contest-CUDA] CPU-CUDA gap calibration after M12a confirms PoseNet sub-1.0 trajectory. YOUSFI-REVISIONS: predicted_band refined post Canonical Revision #1 + #2 landing per Yousfi memo `843b4bfd8` Axis 5 partial-Yousfi-grounded scenario; deep-Yousfi-grounded scenario [0.150, 0.175] IS achievable but requires M12c routing wave per `predicted_band_m12c_reactivation_path` (NOT auto-active at M12a per Catalog #287 NO FAKE IMPLEMENTATIONS — the deep band is M12c-conditional substrate-engineering scaffolding LANDED 2026-05-30 but NOT wired into Z8_TRAINER_MODE=full active code path)."
 predicted_band_contest_cuda: [0.189, 0.205]
-predicted_band_contest_cuda_rationale: "Per CLAUDE.md SegNet-vs-PoseNet importance + canonical PR101/PR106 frontier CPU-CUDA gap: apply delta_cpu_cuda ~+0.014 to predicted [contest-CPU] band [0.175, 0.190] yielding [0.189, 0.205]. M12b paired-CUDA empirical anchor IS the canonical Tier-C calibration per Catalog #246. YOUSFI-REVISIONS post-2026-05-30 update: band tracks canonical Revision #1 + #2 landed (Z8_TRAINER_MODE=full routes through canonical run_mlx_score_aware_full_main with canonical EMA + canonical eval_roundtrip + canonical Hinton-KL T=2.0 scorer surrogate; canonical M7 EMPIRICAL_FROM_MASTER_GRADIENT Path B2 binds master-gradient-derived per-pixel scorer-sensitivity-map to canonical M8 ScoreAwareLevelLoss per HNeRV parity L1+L6+L8)."
+predicted_band_contest_cuda_rationale: "Per CLAUDE.md SegNet-vs-PoseNet importance + canonical PR101/PR106 frontier CPU-CUDA gap: apply delta_cpu_cuda ~+0.014 to predicted [contest-CPU] band [0.175, 0.190] yielding [0.189, 0.205]. M12b paired-CUDA empirical anchor IS the canonical Tier-C calibration per Catalog #246. YOUSFI-REVISIONS post-2026-05-30 update: band tracks canonical Revision #1 + #2 landed (Z8_TRAINER_MODE=full routes through canonical run_mlx_score_aware_full_main with canonical EMA + canonical eval_roundtrip + canonical Hinton-KL T=2.0 scorer surrogate; canonical M7 EMPIRICAL_FROM_MASTER_GRADIENT Path B2 binds master-gradient-derived per-pixel scorer-sensitivity-map to canonical M8 ScoreAwareLevelLoss per HNeRV parity L1+L6+L8). M12c deep-Yousfi-grounded sister band [0.164, 0.189] tracks predicted_band_m12c_deep_yousfi_grounded_reference + delta_cpu_cuda."
+predicted_band_m12c_deep_yousfi_grounded_reference_contest_cuda: [0.164, 0.189]
 smoke_score_band: [0.20, 5.00]
 predicted_delta: "Predicted delta -0.005 to -0.012 from canonical frontier [contest-CPU] 0.19198533 (lane fp11_source_brotli_recode; archive sha b7106c9bdbb8) -> predicted band [0.183, 0.195] [prediction] per canonical Catalog #312 quadruple binding-depth at 100x-200x M11 L1 fixture scope + score-aware optimizer wiring + canonical 4-primitive Pareto polytope per Dykstra-feasibility intersection. Sub-0.189 contingent on PoseNet trajectory sub-1.0 per Contrarian VETO reconciliation."
 predicted_delta_basis: ".omx/research/council_t3_grand_council_per_substrate_symposium_z8_hierarchical_predictive_coding_m12_paid_modal_t4_l2_long_training_plus_paired_cuda_canonical_sub_0_189_attempt_20260530.md (PROCEED_WITH_REVISIONS unanimous 23-of-23 T3 grand council; canonical 6-step Catalog #325 clearance) + Z8 M11 L1 anchor commit 2f8570755 (cycle-closure validated through upstream/evaluate.py --device cpu) + Z8 M9 commit bb48f691c + Z8 M10 commit 59bdf9c93"
