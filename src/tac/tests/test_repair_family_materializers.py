@@ -15,6 +15,7 @@ import pytest
 from tac.optimization.archive_bound_candidate_contract import (
     ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
     ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA,
+    archive_bound_candidate_contract_fields_for_row,
     archive_substrate_tags_for_transform_kind,
 )
 from tac.optimization.repair_archive_entropy_substrate_coverage import (
@@ -58,6 +59,7 @@ from tac.optimization.repair_family_byte_transform_executor import (
 )
 from tac.optimization.repair_family_exact_ready_bridge import (
     REPAIR_FAMILY_EXACT_READY_BRIDGE_REPORT_SCHEMA,
+    RepairFamilyExactReadyBridgeError,
     build_repair_family_exact_ready_bridge,
 )
 from tac.optimization.repair_family_materializers import (
@@ -1669,6 +1671,78 @@ def test_repair_exact_ready_bridge_emits_blocked_source_queue(
         ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
     )
     assert "submission_dir_missing_for_runtime_content_tree_custody" in source_row["dispatch_blockers"]
+
+
+def test_repair_exact_ready_bridge_rejects_stale_archive_contract_row(
+    tmp_path: Path,
+) -> None:
+    source_archive = _write_zip(tmp_path / "source_archive.zip", {"0.bin": b"source"})
+    source_sha = hashlib.sha256(source_archive.read_bytes()).hexdigest()
+    candidate_archive = _write_zip(
+        tmp_path / "candidate_archive.zip",
+        {"0.bin": b"candidate"},
+    )
+    candidate_sha = hashlib.sha256(candidate_archive.read_bytes()).hexdigest()
+    proof_path = _write_json(
+        tmp_path / "receiver_proof.json",
+        {
+            "schema": "fixture_runtime_consumption_proof.v1",
+            "receiver_contract_satisfied": True,
+            "runtime_consumption_proof_passed": True,
+            "source_archive": {
+                "path": str(source_archive),
+                "sha256": source_sha,
+                "bytes": source_archive.stat().st_size,
+            },
+        },
+    )
+    proof_sha = hashlib.sha256(proof_path.read_bytes()).hexdigest()
+    handoff_row: dict[str, object] = {
+        **_false_authority(),
+        "family_id": "segnet_region",
+        "typed_response_id": "segnet_region_ready",
+        "candidate_chain_id": "segnet_region_chain",
+        "candidate_archive": {
+            "path": str(candidate_archive),
+            "sha256": candidate_sha,
+            "bytes": candidate_archive.stat().st_size,
+        },
+        "runtime_consumption_proof": {
+            "path": str(proof_path),
+            "sha256": proof_sha,
+            "bytes": proof_path.stat().st_size,
+        },
+        "runtime_consumption_proof_path": str(proof_path),
+        "runtime_consumption_proof_status": "present",
+        "receiver_contract_satisfied": True,
+        "runtime_adapter_ready": True,
+        "byte_closed_candidate_emitted": True,
+        "score_affecting_payload_changed": True,
+        "charged_bits_changed": True,
+    }
+    handoff_row.update(
+        archive_bound_candidate_contract_fields_for_row(
+            handoff_row,
+            repo_root=tmp_path,
+            family_id="segnet_region",
+            typed_response_id="segnet_region_ready",
+            candidate_chain_id="segnet_region_chain",
+        )
+    )
+    handoff_row["receiver_contract_satisfied"] = False
+
+    with pytest.raises(
+        RepairFamilyExactReadyBridgeError,
+        match="archive_bound_contract_stale_duplicate_field:receiver_contract_satisfied",
+    ):
+        build_repair_family_exact_ready_bridge(
+            exact_handoff_plan={
+                "schema": REPAIR_FAMILY_EXACT_HANDOFF_PLAN_SCHEMA,
+                "archive_bound_rows": [handoff_row],
+                **_false_authority(),
+            },
+            repo_root=tmp_path,
+        )
 
 
 def test_materialization_gate_learning_signal_updates_posterior(

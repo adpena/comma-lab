@@ -8,7 +8,9 @@ from pathlib import Path
 from typing import Any
 
 from tac.optimization.archive_bound_candidate_contract import (
+    ArchiveBoundCandidateContractError,
     archive_bound_candidate_contract_fields_for_row,
+    archive_bound_candidate_contracts_from_payload,
 )
 from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY
 from tac.optimization.proxy_candidate_contract import (
@@ -198,6 +200,23 @@ def _runtime_proof_from_row(row: Mapping[str, Any]) -> Mapping[str, Any]:
     return proof if isinstance(proof, Mapping) else {}
 
 
+def _archive_contracts_from_handoff_row(
+    handoff_row: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    if (
+        "archive_bound_candidate_contract" not in handoff_row
+        and "archive_bound_candidate_contract_surface" not in handoff_row
+    ):
+        return []
+    try:
+        return archive_bound_candidate_contracts_from_payload(
+            handoff_row,
+            label="repair_family_exact_ready_bridge_handoff_row",
+        )
+    except ArchiveBoundCandidateContractError as exc:
+        raise RepairFamilyExactReadyBridgeError(str(exc)) from exc
+
+
 def _contract_candidate_sha256(contract: Mapping[str, Any]) -> str | None:
     archive = contract.get("candidate_archive")
     value = archive.get("sha256") if isinstance(archive, Mapping) else None
@@ -360,9 +379,8 @@ def _bridge_row(
     candidate_chain_id = str(handoff_row.get("candidate_chain_id") or typed_response_id)
     candidate_archive_row = _candidate_archive_from_row(handoff_row)
     runtime_proof_row = _runtime_proof_from_row(handoff_row)
-    handoff_archive_bound_contract = dict(
-        _mapping(handoff_row.get("archive_bound_candidate_contract"))
-    )
+    handoff_contracts = _archive_contracts_from_handoff_row(handoff_row)
+    handoff_archive_bound_contract = handoff_contracts[0] if handoff_contracts else {}
     expected_sha = str(
         candidate_archive_row.get("expected_sha256")
         or candidate_archive_row.get("sha256")
