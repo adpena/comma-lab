@@ -130,13 +130,7 @@ def test_entropy_coder_runtime_adapters_roundtrip_receiver_decode() -> None:
 def test_archive_entropy_orphan_anti_pattern_penalizes_prototype_rows() -> None:
     penalty = repair_stack_search_module._archive_entropy_anti_pattern_penalty(
         {
-            "anti_pattern_protections": [
-                {
-                    "anti_pattern_id": (
-                        "probe_only_side_report_orphaned_from_optimizer_v1"
-                    )
-                }
-            ],
+            "anti_pattern_protections": [{"anti_pattern_id": ("probe_only_side_report_orphaned_from_optimizer_v1")}],
             "probed_substrates": [],
             "prototype_substrates": ["range_coding"],
             "blockers": [],
@@ -147,15 +141,21 @@ def test_archive_entropy_orphan_anti_pattern_penalizes_prototype_rows() -> None:
 
 
 def test_archive_bound_candidate_contract_classifies_entropy_substrates() -> None:
-    assert archive_substrate_tags_for_transform_kind(
-        "fec6_selector_payload_mutation"
-    ) == ["fec", "selector_stream", "selector", "huffman"]
-    assert archive_substrate_tags_for_transform_kind(
-        "range_coder_lzma_prototype"
-    ) == ["range_coder", "entropy_coder", "receiver_adapter"]
-    assert archive_substrate_tags_for_transform_kind(
-        "candidate_archive_native_zip_repack"
-    ) == ["zip_ordering", "zip_container"]
+    assert archive_substrate_tags_for_transform_kind("fec6_selector_payload_mutation") == [
+        "fec",
+        "selector_stream",
+        "selector",
+        "huffman",
+    ]
+    assert archive_substrate_tags_for_transform_kind("range_coder_lzma_prototype") == [
+        "range_coder",
+        "entropy_coder",
+        "receiver_adapter",
+    ]
+    assert archive_substrate_tags_for_transform_kind("candidate_archive_native_zip_repack") == [
+        "zip_ordering",
+        "zip_container",
+    ]
 
 
 def _repair_payload(tmp_path: Path) -> dict[str, object]:
@@ -254,7 +254,9 @@ def _fec6_selector_payload(codes: list[int]) -> bytes:
     encoded = bytes(int(bits[index : index + 8], 2) for index in range(0, len(bits), 8))
     selector = b"FEC6" + struct.pack("<H", len(codes)) + encoded
     source_payload = b"hnerv-source-payload"
-    return b"FP11" + struct.pack("<I", len(source_payload)) + source_payload + struct.pack("<H", len(selector)) + selector
+    return (
+        b"FP11" + struct.pack("<I", len(source_payload)) + source_payload + struct.pack("<H", len(selector)) + selector
+    )
 
 
 def _pack_lsb_codes(codes: list[int], bits_per_symbol: int) -> bytes:
@@ -272,11 +274,7 @@ def _pack_lsb_codes(codes: list[int], bits_per_symbol: int) -> bytes:
 def _fp11_selector_payload(selector: bytes) -> bytes:
     source_payload = b"hnerv-source-payload"
     return (
-        b"FP11"
-        + struct.pack("<I", len(source_payload))
-        + source_payload
-        + struct.pack("<H", len(selector))
-        + selector
+        b"FP11" + struct.pack("<I", len(source_payload)) + source_payload + struct.pack("<H", len(selector)) + selector
     )
 
 
@@ -307,8 +305,7 @@ def _fes1_selector_payload(codes: list[int]) -> bytes:
 
 def _fec8_selector_payload(codes: list[int]) -> bytes:
     module_path = (
-        REPO_ROOT
-        / "submissions/hnerv_fec6_fixed_huffman_k16/encoder/"
+        REPO_ROOT / "submissions/hnerv_fec6_fixed_huffman_k16/encoder/"
         "build_pr101_frame_exploit_selector_packet_markov.py"
     )
     spec = importlib.util.spec_from_file_location("_test_fec8_markov_codec", module_path)
@@ -571,17 +568,15 @@ def test_byte_transform_executor_repacks_archive_native_candidate_when_custody_e
         "packet_member_entropy_boundary_recompress",
         "zip_repack_payload_identity",
     }
-    assert {
-        variant["archive_native_transform_kind"]
-        for variant in report["candidate_archive_transform_variants"]
-    } >= {"packet_member_entropy_boundary_recompress", "zip_repack_payload_identity"}
+    assert {variant["archive_native_transform_kind"] for variant in report["candidate_archive_transform_variants"]} >= {
+        "packet_member_entropy_boundary_recompress",
+        "zip_repack_payload_identity",
+    }
     assert candidate["runtime_consumption_proof_ready"] is True
     assert candidate["receiver_contract_satisfied"] is True
     assert (tmp_path / candidate["path"]).is_file()
     assert (tmp_path / candidate["runtime_consumption_proof_path"]).is_file()
-    assert report["archive_bound_candidate_contract_schema"] == (
-        ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
-    )
+    assert report["archive_bound_candidate_contract_schema"] == (ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA)
     assert report["archive_bound_candidate_contract_surface_schema"] == (
         ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA
     )
@@ -590,18 +585,14 @@ def test_byte_transform_executor_repacks_archive_native_candidate_when_custody_e
     assert contract["archive_bound_candidate_ready"] is True
     assert contract["receiver_contract_satisfied"] is True
     assert contract["archive_file_custody"]["custody_complete"] is True
-    assert report["archive_bound_candidate_adapter_package_schema"] == (
-        ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA
-    )
+    assert report["archive_bound_candidate_adapter_package_schema"] == (ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA)
     adapter_package = report["archive_bound_candidate_adapter_package"]
     assert adapter_package["schema"] == ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA
     assert adapter_package["candidate_row_count"] == 1
     assert adapter_package["deterministic_replay_bundles"][0]["replay_bundle_ready"] is True
     assert adapter_package["receiver_proof_gates"][0]["receiver_proof_gate_passed"] is True
     assert adapter_package["exact_axis_blockers"][0]["ready_for_exact_eval_dispatch"] is False
-    assert adapter_package["posterior_update_hooks"][0][
-        "negative_result_demotes_family_stage_scope"
-    ] is True
+    assert adapter_package["posterior_update_hooks"][0]["negative_result_demotes_family_stage_scope"] is True
     assert "zip_container" in report["archive_contract_substrate_tags"]
     assert report["archive_bound_ready_contract_count"] >= 1
     assert report["exact_eval_handoff_gate"]["archive_bound_runtime_consumption_proof_ready"] is True
@@ -623,9 +614,7 @@ def test_byte_transform_executor_repacks_archive_native_candidate_when_custody_e
     handoff_row = stack_plan["exact_eval_handoff_candidates"][0]
     assert handoff_row["schema"] == REPAIR_FAMILY_EXACT_HANDOFF_CANDIDATE_ROW_SCHEMA
     assert handoff_row["archive_bound_custody_complete"] is True
-    assert handoff_row["archive_bound_candidate_contract"]["schema"] == (
-        ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
-    )
+    assert handoff_row["archive_bound_candidate_contract"]["schema"] == (ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA)
     assert handoff_row["candidate_archive"]["custody_complete"] is True
     assert handoff_row["runtime_consumption_proof"]["custody_complete"] is True
     assert handoff_row["ready_for_exact_eval_dispatch"] is False
@@ -717,10 +706,7 @@ def test_byte_transform_executor_mutates_fec6_selector_payload_when_detected(
     assert "fp11_frame_selector_wrapper" in detected_families
     assert "fec6_fixed_huffman_k16_selector" in detected_families
     assert report["selected_archive_transform_kind"] == "fec6_selector_payload_mutation"
-    assert (
-        report["archive_entropy_substrate_coverage_schema"]
-        == REPAIR_ARCHIVE_ENTROPY_SUBSTRATE_COVERAGE_SCHEMA
-    )
+    assert report["archive_entropy_substrate_coverage_schema"] == REPAIR_ARCHIVE_ENTROPY_SUBSTRATE_COVERAGE_SCHEMA
     coverage = report["archive_entropy_substrate_coverage"]
     assert coverage["compiler_position_coverage"]["before_coder"] is True
     assert "fec_variants" in coverage["materialized_substrates"]
@@ -729,10 +715,7 @@ def test_byte_transform_executor_mutates_fec6_selector_payload_when_detected(
     assert coverage["probed_substrates"] == []
     assert coverage["prototype_substrates"] == ["range_coding", "ans_coding"]
     assert coverage["probed_entropy_estimated_zero_order_savings_bytes"] >= 0
-    anti_pattern_ids = {
-        protection["anti_pattern_id"]
-        for protection in coverage["anti_pattern_protections"]
-    }
+    anti_pattern_ids = {protection["anti_pattern_id"] for protection in coverage["anti_pattern_protections"]}
     assert "proxy_or_advisory_probe_masquerades_as_score_authority_v1" in anti_pattern_ids
     assert "probe_only_side_report_orphaned_from_optimizer_v1" in anti_pattern_ids
     assert "zero_order_entropy_estimate_promoted_as_materialized_savings_v1" in anti_pattern_ids
@@ -744,46 +727,28 @@ def test_byte_transform_executor_mutates_fec6_selector_payload_when_detected(
         "exact_eval_dispatch",
         "archive_submission",
     ]
-    rows_by_substrate = {
-        row["substrate"]: row for row in coverage["rows"]
-    }
-    assert rows_by_substrate["range_coding"]["coverage_status"] == (
-        "prototype_materialized_runtime_adapter_proven"
-    )
-    assert rows_by_substrate["ans_coding"]["coverage_status"] == (
-        "prototype_materialized_runtime_adapter_proven"
-    )
+    rows_by_substrate = {row["substrate"]: row for row in coverage["rows"]}
+    assert rows_by_substrate["range_coding"]["coverage_status"] == ("prototype_materialized_runtime_adapter_proven")
+    assert rows_by_substrate["ans_coding"]["coverage_status"] == ("prototype_materialized_runtime_adapter_proven")
     archive_variants = {
-        variant["archive_native_transform_kind"]: variant
-        for variant in report["candidate_archive_transform_variants"]
+        variant["archive_native_transform_kind"]: variant for variant in report["candidate_archive_transform_variants"]
     }
     assert report["archive_bound_candidate_contract_surface_schema"] == (
         ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA
     )
     contract_surface = report["archive_bound_candidate_contract_surface"]
     assert contract_surface["schema"] == ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA
-    assert contract_surface["candidate_contract_count"] == report[
-        "candidate_archive_transform_variant_count"
-    ]
+    assert contract_surface["candidate_contract_count"] == report["candidate_archive_transform_variant_count"]
     assert contract_surface["archive_bound_ready_contract_count"] >= 3
-    assert {"fec", "selector", "huffman", "range_coder", "ans_coder"} <= set(
-        contract_surface["archive_substrate_tags"]
-    )
+    assert {"fec", "selector", "huffman", "range_coder", "ans_coder"} <= set(contract_surface["archive_substrate_tags"])
     selected_contract = report["archive_bound_candidate_contract"]
     assert selected_contract["schema"] == ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
     assert selected_contract["selected_archive_transform_variant"] is True
     assert selected_contract["archive_bound_candidate_ready"] is True
-    assert {"fec", "selector", "huffman"} <= set(
-        selected_contract["archive_substrate_tags"]
-    )
+    assert {"fec", "selector", "huffman"} <= set(selected_contract["archive_substrate_tags"])
     for variant in archive_variants.values():
-        assert variant["archive_bound_candidate_contract"]["schema"] == (
-            ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
-        )
-    assert (
-        report["archive_variant_signal_surface_schema"]
-        == REPAIR_ARCHIVE_VARIANT_SIGNAL_SURFACE_SCHEMA
-    )
+        assert variant["archive_bound_candidate_contract"]["schema"] == (ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA)
+    assert report["archive_variant_signal_surface_schema"] == REPAIR_ARCHIVE_VARIANT_SIGNAL_SURFACE_SCHEMA
     variant_surface = report["archive_variant_signal_surface"]
     assert variant_surface["schema"] == REPAIR_ARCHIVE_VARIANT_SIGNAL_SURFACE_SCHEMA
     assert variant_surface["row_count"] == report["candidate_archive_transform_variant_count"]
@@ -795,30 +760,16 @@ def test_byte_transform_executor_mutates_fec6_selector_payload_when_detected(
     assert "ans_coder_entropy_probe" in variant_surface["signal_transform_kinds"]
     assert "range_coder_lzma_prototype" in variant_surface["signal_transform_kinds"]
     assert "ans_coder_rans_prototype" in variant_surface["signal_transform_kinds"]
-    variant_rows = {
-        row["archive_native_transform_kind"]: row
-        for row in variant_surface["variant_signal_rows"]
-    }
+    variant_rows = {row["archive_native_transform_kind"]: row for row in variant_surface["variant_signal_rows"]}
     for row in variant_rows.values():
         assert row["score_claim"] is False
         assert row["promotion_eligible"] is False
         assert row["ready_for_exact_eval_dispatch"] is False
-    assert variant_rows["range_coder_entropy_probe"]["signal_class"] == (
-        "probe_only_entropy_signal"
-    )
-    assert variant_rows["ans_coder_entropy_probe"]["signal_class"] == (
-        "probe_only_entropy_signal"
-    )
-    assert variant_rows["range_coder_lzma_prototype"]["signal_class"] == (
-        "prototype_runtime_proven"
-    )
-    assert variant_rows["ans_coder_rans_prototype"]["signal_class"] == (
-        "prototype_runtime_proven"
-    )
-    assert (
-        report["archive_variant_materializer_backlog_schema"]
-        == REPAIR_ARCHIVE_VARIANT_MATERIALIZER_BACKLOG_SCHEMA
-    )
+    assert variant_rows["range_coder_entropy_probe"]["signal_class"] == ("probe_only_entropy_signal")
+    assert variant_rows["ans_coder_entropy_probe"]["signal_class"] == ("probe_only_entropy_signal")
+    assert variant_rows["range_coder_lzma_prototype"]["signal_class"] == ("prototype_runtime_proven")
+    assert variant_rows["ans_coder_rans_prototype"]["signal_class"] == ("prototype_runtime_proven")
+    assert report["archive_variant_materializer_backlog_schema"] == REPAIR_ARCHIVE_VARIANT_MATERIALIZER_BACKLOG_SCHEMA
     backlog = report["archive_variant_materializer_backlog"]
     assert backlog["schema"] == REPAIR_ARCHIVE_VARIANT_MATERIALIZER_BACKLOG_SCHEMA
     assert backlog["row_count"] == 2
@@ -827,12 +778,8 @@ def test_byte_transform_executor_mutates_fec6_selector_payload_when_detected(
     assert backlog["byte_closed_materialized_task_count"] == 2
     assert backlog["runtime_adapter_ready_task_count"] == 2
     assert backlog["opened_by_pipeline"] is True
-    assert backlog["pipeline_consumer"] == (
-        "repair_campaign_entropy_stage_materializer_work_order_bundle"
-    )
-    backlog_rows = {
-        row["target_archive_transform_kind"]: row for row in backlog["task_rows"]
-    }
+    assert backlog["pipeline_consumer"] == ("repair_campaign_entropy_stage_materializer_work_order_bundle")
+    backlog_rows = {row["target_archive_transform_kind"]: row for row in backlog["task_rows"]}
     assert set(backlog_rows) == {
         "range_coder_lzma_prototype",
         "ans_coder_rans_prototype",
@@ -870,28 +817,16 @@ def test_byte_transform_executor_mutates_fec6_selector_payload_when_detected(
         assert prototype["runtime_adapter_scope"] == "member_decode_helper_only"
         assert prototype["contest_runtime_decoder_adapter_ready"] is False
         assert prototype["contest_runtime_adapter_integrated"] is False
-        assert prototype["runtime_adapter_manifest"]["schema"] == (
-            REPAIR_ENTROPY_CODER_RUNTIME_ADAPTER_MANIFEST_SCHEMA
-        )
-        proof = json.loads(
-            (tmp_path / prototype["runtime_consumption_proof_path"]).read_text(
-                encoding="utf-8"
-            )
-        )
-        assert proof["runtime_adapter_manifest"]["schema"] == (
-            REPAIR_ENTROPY_CODER_RUNTIME_ADAPTER_MANIFEST_SCHEMA
-        )
+        assert prototype["runtime_adapter_manifest"]["schema"] == (REPAIR_ENTROPY_CODER_RUNTIME_ADAPTER_MANIFEST_SCHEMA)
+        proof = json.loads((tmp_path / prototype["runtime_consumption_proof_path"]).read_text(encoding="utf-8"))
+        assert proof["runtime_adapter_manifest"]["schema"] == (REPAIR_ENTROPY_CODER_RUNTIME_ADAPTER_MANIFEST_SCHEMA)
         assert proof["runtime_consumption_probe"]["decoder_adapter_invoked"] is True
         assert proof["proof_scope"] == "encoded_member_decodes_to_source_member_payload"
         assert proof["runtime_adapter_scope"] == "member_decode_helper_only"
         assert proof["contest_runtime_decoder_adapter_integrated"] is False
         assert proof["contest_runtime_adapter_integrated"] is False
-        assert "contest_runtime_decoder_adapter_integration_missing" in " ".join(
-            prototype.get("blockers", [])
-        )
-        assert "contest_runtime_adapter_missing" not in " ".join(
-            prototype.get("blockers", [])
-        )
+        assert "contest_runtime_decoder_adapter_integration_missing" in " ".join(prototype.get("blockers", []))
+        assert "contest_runtime_adapter_missing" not in " ".join(prototype.get("blockers", []))
     assert report["semantic_payload_changed"] is True
     assert report["score_affecting_payload_changed"] is False
     assert candidate["semantic_payload_changed"] is True
@@ -956,9 +891,7 @@ def test_repair_stack_search_demotes_stale_archive_bound_contract(
             "path": archive_path.relative_to(tmp_path).as_posix(),
             "sha256": archive_sha,
             "bytes": archive_path.stat().st_size,
-            "runtime_consumption_proof_path": proof_path.relative_to(
-                tmp_path
-            ).as_posix(),
+            "runtime_consumption_proof_path": proof_path.relative_to(tmp_path).as_posix(),
         },
         "runtime_consumption_proof_path": proof_path.relative_to(tmp_path).as_posix(),
         "runtime_consumption_proof_ready": True,
@@ -990,8 +923,7 @@ def test_repair_stack_search_demotes_stale_archive_bound_contract(
     assert handoff_row["archive_bound_custody_complete"] is False
     assert stack_plan["archive_bound_exact_handoff_candidate_count"] == 0
     assert any(
-        "archive_bound_contract_stale_duplicate_field:receiver_contract_satisfied"
-        in blocker
+        "archive_bound_contract_stale_duplicate_field:receiver_contract_satisfied" in blocker
         for blocker in handoff_row["blockers"]
     )
 
@@ -1064,9 +996,7 @@ def test_byte_transform_executor_mutates_non_fec6_fp11_selector_payloads(
     detected_families = report["archive_family_probe"]["detected_archive_families"]
     assert archive_family in detected_families
     assert report["selected_archive_transform_kind"] == "fp11_selector_payload_mutation"
-    assert report["archive_entropy_substrate_coverage"][
-        "compiler_position_coverage"
-    ]["before_coder"] is True
+    assert report["archive_entropy_substrate_coverage"]["compiler_position_coverage"]["before_coder"] is True
     assert report["semantic_payload_changed"] is True
     assert report["score_affecting_payload_changed"] is False
     assert candidate["semantic_payload_changed"] is True
@@ -1186,13 +1116,9 @@ def test_byte_transform_executor_mutates_psv4_selector_packet(
     )
 
     candidate = report["candidate_archive"]
-    assert "pact_nerv_selector_v4_packet" in report["archive_family_probe"][
-        "detected_archive_families"
-    ]
+    assert "pact_nerv_selector_v4_packet" in report["archive_family_probe"]["detected_archive_families"]
     assert report["selected_archive_transform_kind"] == "psv4_selector_payload_mutation"
-    assert "header_elision_or_rewrite" in report[
-        "archive_entropy_substrate_coverage"
-    ]["materialized_substrates"]
+    assert "header_elision_or_rewrite" in report["archive_entropy_substrate_coverage"]["materialized_substrates"]
     assert report["semantic_payload_changed"] is True
     assert report["score_affecting_payload_changed"] is False
     assert candidate["runtime_consumption_proof_ready"] is True
@@ -1398,10 +1324,7 @@ def test_entropy_stage_chain_executor_composes_selected_archive_stages(
     assert exact_handoff["entropy_stage_chain_archive_bound_candidate_count"] == 1
     assert exact_handoff["archive_bound_candidate_count"] == 1
     assert exact_handoff["archive_bound_rows"][0]["family_id"] == "entropy_stage_chain"
-    assert (
-        exact_handoff["archive_bound_rows"][0]["candidate_archive"]["sha256"]
-        == final_archive["sha256"]
-    )
+    assert exact_handoff["archive_bound_rows"][0]["candidate_archive"]["sha256"] == final_archive["sha256"]
 
 
 @pytest.mark.parametrize(
@@ -1632,27 +1555,12 @@ def test_repair_family_stack_search_builds_pairwise_tensor_acquisition_path(
     assert stack_plan["n_way_hypergraph_acquisition_enabled"] is True
     assert stack_plan["hypergraph_interaction_tensor_cell_count"] == 1
     assert stack_plan["fractal_marginal_surface_cell_count"] >= 6
-    assert (
-        stack_plan["fractal_marginal_surface"][
-            "measured_mlx_marginal_update_count"
-        ]
-        == 10
-    )
+    assert stack_plan["fractal_marginal_surface"]["measured_mlx_marginal_update_count"] == 10
     assert stack_plan["measured_mlx_posterior_budget_routing_update_count"] == 10
-    assert (
-        stack_plan["budget_routing_decision"][
-            "measured_mlx_posterior_budget_routing_update_count"
-        ]
-        == 10
-    )
-    marginal_levels = {
-        cell["level"] for cell in stack_plan["fractal_marginal_surface"]["cells"]
-    }
+    assert stack_plan["budget_routing_decision"]["measured_mlx_posterior_budget_routing_update_count"] == 10
+    marginal_levels = {cell["level"] for cell in stack_plan["fractal_marginal_surface"]["cells"]}
     assert {"bit", "byte", "boundary", "region"} <= marginal_levels
-    assert all(
-        cell["measured_mlx_marginal_updates"]
-        for cell in stack_plan["fractal_marginal_surface"]["cells"]
-    )
+    assert all(cell["measured_mlx_marginal_updates"] for cell in stack_plan["fractal_marginal_surface"]["cells"])
     frontier = stack_plan["stack_acquisition_frontier"]
     assert stack_plan["stack_acquisition_frontier_count"] == 1
     assert frontier[0]["source_tensor"] == "hypergraph_interaction_tensor"
@@ -1801,9 +1709,7 @@ def test_repair_exact_ready_bridge_emits_blocked_source_queue(
     source_row = source_queue["top_k"][0]
     assert source_row["target_modes"] == ["contest_exact_eval"]
     assert source_row["ready_for_exact_eval_dispatch"] is False
-    assert source_row["archive_bound_candidate_contract"]["schema"] == (
-        ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
-    )
+    assert source_row["archive_bound_candidate_contract"]["schema"] == (ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA)
     assert "submission_dir_missing_for_runtime_content_tree_custody" in source_row["dispatch_blockers"]
 
 
@@ -1877,6 +1783,96 @@ def test_repair_exact_ready_bridge_rejects_stale_archive_contract_row(
             },
             repo_root=tmp_path,
         )
+
+
+def test_repair_exact_ready_bridge_consumes_contract_only_custody(
+    tmp_path: Path,
+) -> None:
+    source_archive = _write_zip(tmp_path / "source_archive.zip", {"0.bin": b"source"})
+    source_sha = hashlib.sha256(source_archive.read_bytes()).hexdigest()
+    candidate_archive = _write_zip(
+        tmp_path / "candidate_archive.zip",
+        {"0.bin": b"candidate"},
+    )
+    candidate_sha = hashlib.sha256(candidate_archive.read_bytes()).hexdigest()
+    proof_path = _write_json(
+        tmp_path / "receiver_proof.json",
+        {
+            "schema": "fixture_runtime_consumption_proof.v1",
+            "receiver_contract_satisfied": True,
+            "runtime_consumption_proof_passed": True,
+            "source_archive": {
+                "path": str(source_archive),
+                "sha256": source_sha,
+                "bytes": source_archive.stat().st_size,
+            },
+            **_false_authority(),
+        },
+    )
+    raw_handoff_row: dict[str, object] = {
+        **_false_authority(),
+        "family_id": "segnet_region",
+        "typed_response_id": "segnet_region_ready",
+        "candidate_chain_id": "segnet_region_chain",
+        "candidate_archive": {
+            "path": str(candidate_archive),
+            "sha256": candidate_sha,
+            "bytes": candidate_archive.stat().st_size,
+        },
+        "runtime_consumption_proof": {
+            "path": str(proof_path),
+            "bytes": proof_path.stat().st_size,
+        },
+        "runtime_consumption_proof_path": str(proof_path),
+        "runtime_consumption_proof_status": "present",
+        "receiver_contract_satisfied": True,
+        "runtime_adapter_ready": True,
+        "byte_closed_candidate_emitted": True,
+        "score_affecting_payload_changed": True,
+        "charged_bits_changed": True,
+    }
+    raw_handoff_row.update(
+        archive_bound_candidate_contract_fields_for_row(
+            raw_handoff_row,
+            repo_root=tmp_path,
+            family_id="segnet_region",
+            typed_response_id="segnet_region_ready",
+            candidate_chain_id="segnet_region_chain",
+        )
+    )
+    contract_only_handoff_row = {
+        **_false_authority(),
+        "family_id": "segnet_region",
+        "typed_response_id": "segnet_region_ready",
+        "candidate_chain_id": "segnet_region_chain",
+        "archive_bound_candidate_contract": raw_handoff_row["archive_bound_candidate_contract"],
+        "archive_bound_candidate_contract_schema": raw_handoff_row["archive_bound_candidate_contract_schema"],
+        "archive_bound_candidate_contract_surface": raw_handoff_row["archive_bound_candidate_contract_surface"],
+        "archive_bound_candidate_contract_surface_schema": raw_handoff_row[
+            "archive_bound_candidate_contract_surface_schema"
+        ],
+    }
+
+    bridge = build_repair_family_exact_ready_bridge(
+        exact_handoff_plan={
+            "schema": REPAIR_FAMILY_EXACT_HANDOFF_PLAN_SCHEMA,
+            "archive_bound_rows": [contract_only_handoff_row],
+            **_false_authority(),
+        },
+        repo_root=tmp_path,
+    )
+
+    bridge_report = bridge["bridge_report"]
+    assert bridge_report["candidate_count"] == 1
+    assert bridge_report["archive_custody_proven_count"] == 1
+    assert bridge_report["runtime_proof_custody_proven_count"] == 1
+    bridge_row = bridge_report["rows"][0]
+    assert bridge_row["archive_custody"]["sha256"] == candidate_sha
+    assert bridge_row["runtime_consumption_proof_custody"]["present"] is True
+    source_row = bridge["source_optimizer_queue"]["top_k"][0]
+    assert source_row["candidate_archive_sha256"] == candidate_sha
+    assert source_row["source_archive_sha256"] == source_sha
+    assert "archive_bound_candidate_contract_missing" not in source_row["dispatch_blockers"]
 
 
 def test_materialization_gate_learning_signal_updates_posterior(

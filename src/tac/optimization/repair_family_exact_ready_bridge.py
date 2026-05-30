@@ -29,12 +29,8 @@ from tac.optimizer.exact_readiness import (
 from tac.optimizer.exact_readiness import runtime_dependency_manifest
 from tac.repo_io import read_json, sha256_file
 
-REPAIR_FAMILY_EXACT_READY_BRIDGE_REPORT_SCHEMA = (
-    "repair_family_exact_ready_bridge_report.v1"
-)
-REPAIR_FAMILY_EXACT_READY_BRIDGE_ROW_SCHEMA = (
-    "repair_family_exact_ready_bridge_row.v1"
-)
+REPAIR_FAMILY_EXACT_READY_BRIDGE_REPORT_SCHEMA = "repair_family_exact_ready_bridge_report.v1"
+REPAIR_FAMILY_EXACT_READY_BRIDGE_ROW_SCHEMA = "repair_family_exact_ready_bridge_row.v1"
 REPAIR_FAMILY_EXACT_READY_SOURCE_QUEUE_SCHEMA = "optimizer_candidate_queue_v1"
 
 
@@ -222,6 +218,32 @@ def _contract_candidate_sha256(contract: Mapping[str, Any]) -> str | None:
     return value if isinstance(value, str) and value.strip() else None
 
 
+def _contract_candidate_archive(contract: Mapping[str, Any]) -> Mapping[str, Any]:
+    archive = contract.get("candidate_archive")
+    return archive if isinstance(archive, Mapping) else {}
+
+
+def _contract_source_archive(contract: Mapping[str, Any]) -> Mapping[str, Any]:
+    archive = contract.get("source_archive")
+    return archive if isinstance(archive, Mapping) else {}
+
+
+def _contract_runtime_proof_row(contract: Mapping[str, Any]) -> Mapping[str, Any]:
+    proof_path = contract.get("runtime_consumption_proof_path")
+    if isinstance(proof_path, str) and proof_path.strip():
+        return {"path": proof_path.strip()}
+    return {}
+
+
+def _merged_mapping(
+    primary: Mapping[str, Any],
+    fallback: Mapping[str, Any],
+) -> dict[str, Any]:
+    merged = dict(fallback)
+    merged.update({key: value for key, value in primary.items() if value not in ("", None)})
+    return merged
+
+
 def _submission_runtime_custody(
     *,
     candidate_id: str | None = None,
@@ -274,15 +296,11 @@ def _submission_runtime_custody(
                 archive_manifest = read_json(archive_manifest_path)
             except (OSError, ValueError) as exc:
                 archive_manifest = {}
-                local_blockers.append(
-                    f"submission_archive_manifest_read_failed:{exc}"
-                )
+                local_blockers.append(f"submission_archive_manifest_read_failed:{exc}")
             if candidate_id and isinstance(archive_manifest, Mapping):
                 manifest_candidate_id = str(archive_manifest.get("candidate_id") or "")
                 if manifest_candidate_id and manifest_candidate_id != candidate_id:
-                    local_blockers.append(
-                        "submission_archive_manifest_candidate_id_mismatch"
-                    )
+                    local_blockers.append("submission_archive_manifest_candidate_id_mismatch")
         if not report_txt.is_file():
             local_blockers.append("submission_report_txt_missing")
         if not inflate_sh.is_file():
@@ -294,14 +312,10 @@ def _submission_runtime_custody(
             except (OSError, RuntimeError, SyntaxError, ValueError) as exc:
                 local_blockers.append(f"runtime_dependency_manifest_failed:{exc}")
         runtime_tree_sha = (
-            runtime_manifest.get("runtime_tree_sha256")
-            if isinstance(runtime_manifest, Mapping)
-            else None
+            runtime_manifest.get("runtime_tree_sha256") if isinstance(runtime_manifest, Mapping) else None
         )
         runtime_content_sha = (
-            runtime_manifest.get("runtime_content_tree_sha256")
-            if isinstance(runtime_manifest, Mapping)
-            else None
+            runtime_manifest.get("runtime_content_tree_sha256") if isinstance(runtime_manifest, Mapping) else None
         )
         if not isinstance(runtime_tree_sha, str) or len(runtime_tree_sha) != 64:
             local_blockers.append("runtime_tree_sha256_missing")
@@ -309,9 +323,7 @@ def _submission_runtime_custody(
             local_blockers.append("runtime_content_tree_sha256_missing")
         if not local_blockers:
             return {
-                "schema": (
-                    "repair_family_exact_ready_bridge_submission_runtime_custody.v1"
-                ),
+                "schema": ("repair_family_exact_ready_bridge_submission_runtime_custody.v1"),
                 "submission_dir": _repo_rel(submission_dir, repo),
                 "archive_path": _repo_rel(archive_path, repo),
                 "archive_manifest_path": _repo_rel(archive_manifest_path, repo),
@@ -376,24 +388,25 @@ def _bridge_row(
     family_id = str(handoff_row.get("family_id") or "repair_family")
     typed_response_id = str(handoff_row.get("typed_response_id") or "typed_response")
     candidate_chain_id = str(handoff_row.get("candidate_chain_id") or typed_response_id)
-    candidate_archive_row = _candidate_archive_from_row(handoff_row)
-    runtime_proof_row = _runtime_proof_from_row(handoff_row)
     handoff_contracts = _archive_contracts_from_handoff_row(handoff_row)
     handoff_archive_bound_contract = handoff_contracts[0] if handoff_contracts else {}
-    expected_sha = str(
-        candidate_archive_row.get("expected_sha256")
-        or candidate_archive_row.get("sha256")
-        or ""
-    ).strip() or None
+    candidate_archive_row = _merged_mapping(
+        _contract_candidate_archive(handoff_archive_bound_contract),
+        _candidate_archive_from_row(handoff_row),
+    )
+    runtime_proof_row = _merged_mapping(
+        _contract_runtime_proof_row(handoff_archive_bound_contract),
+        _runtime_proof_from_row(handoff_row),
+    )
+    expected_sha = (
+        str(candidate_archive_row.get("expected_sha256") or candidate_archive_row.get("sha256") or "").strip() or None
+    )
     expected_bytes = candidate_archive_row.get("expected_bytes")
     if not isinstance(expected_bytes, int) or isinstance(expected_bytes, bool):
         expected_bytes = candidate_archive_row.get("bytes")
     if not isinstance(expected_bytes, int) or isinstance(expected_bytes, bool):
         expected_bytes = None
-    candidate_id = (
-        "repair_family_exact_handoff__"
-        f"{_slug(family_id)}__{_slug(typed_response_id)}"
-    )
+    candidate_id = f"repair_family_exact_handoff__{_slug(family_id)}__{_slug(typed_response_id)}"
     archive_custody, archive_blockers = _file_custody(
         path_text=str(candidate_archive_row.get("path") or ""),
         repo_root=repo_root,
@@ -406,8 +419,7 @@ def _bridge_row(
         repo_root=repo_root,
         expected_sha256=str(runtime_proof_row.get("sha256") or "").strip() or None,
         expected_bytes=runtime_proof_row.get("bytes")
-        if isinstance(runtime_proof_row.get("bytes"), int)
-        and not isinstance(runtime_proof_row.get("bytes"), bool)
+        if isinstance(runtime_proof_row.get("bytes"), int) and not isinstance(runtime_proof_row.get("bytes"), bool)
         else None,
         label="runtime_consumption_proof",
     )
@@ -420,7 +432,10 @@ def _bridge_row(
         and not proof_payload_blockers
         and proof_payload.get("receiver_contract_satisfied") is True
     )
-    source_archive = dict(_candidate_source_archive(proof_payload))
+    source_archive = _merged_mapping(
+        _candidate_source_archive(proof_payload),
+        _contract_source_archive(handoff_archive_bound_contract),
+    )
     candidate_archive = {
         "path": archive_custody.get("path"),
         "sha256": archive_custody.get("sha256"),
@@ -452,6 +467,8 @@ def _bridge_row(
             *proof_file_blockers,
             *proof_payload_blockers,
             *submission_blockers,
+            *(["archive_bound_candidate_contract_missing"] if not handoff_archive_bound_contract else []),
+            *_string_list(handoff_archive_bound_contract.get("blockers")),
             *(
                 ["archive_bound_candidate_contract_stale_candidate_sha256"]
                 if handoff_archive_bound_contract
@@ -468,10 +485,8 @@ def _bridge_row(
     score_affecting_payload_changed = bool(
         serialized_delta
         and (
-            serialized_delta.get("source_archive_sha256")
-            != serialized_delta.get("candidate_archive_sha256")
-            or serialized_delta.get("source_archive_bytes")
-            != serialized_delta.get("candidate_archive_bytes")
+            serialized_delta.get("source_archive_sha256") != serialized_delta.get("candidate_archive_sha256")
+            or serialized_delta.get("source_archive_bytes") != serialized_delta.get("candidate_archive_bytes")
         )
     )
     bridge_source_row = {
@@ -481,9 +496,7 @@ def _bridge_row(
         "family_id": family_id,
         "typed_response_id": typed_response_id,
         "candidate_chain_id": candidate_chain_id,
-        "candidate_chain_ids": _string_list(
-            handoff_row.get("candidate_chain_ids")
-        ),
+        "candidate_chain_ids": _string_list(handoff_row.get("candidate_chain_ids")),
         "entropy_position_label": handoff_row.get("entropy_position_label"),
         "entropy_stage_order": handoff_row.get("entropy_stage_order"),
         "lane_id": f"repair_family_exact_handoff::{_slug(family_id)}",
@@ -504,8 +517,7 @@ def _bridge_row(
         "runtime_consumption_proof_required": True,
         "runtime_consumption_proof_schema": proof_payload.get("schema"),
         "runtime_consumption_proof_passed": (
-            proof_payload.get("runtime_consumption_proof_passed") is True
-            or proof_payload.get("passed") is True
+            proof_payload.get("runtime_consumption_proof_passed") is True or proof_payload.get("passed") is True
         ),
         "runtime_consumption_proof_status": (
             "archive_bound_proof_custody_present"
@@ -516,9 +528,7 @@ def _bridge_row(
         "receiver_contract_kind": proof_payload.get("receiver_contract_kind"),
         "receiver_contract_satisfied": receiver_contract_satisfied,
         "runtime_tree_sha256": submission_custody.get("runtime_tree_sha256"),
-        "runtime_content_tree_sha256": submission_custody.get(
-            "runtime_content_tree_sha256"
-        ),
+        "runtime_content_tree_sha256": submission_custody.get("runtime_content_tree_sha256"),
         "submission_dir": submission_custody.get("submission_dir"),
         "archive_manifest_path": submission_custody.get("archive_manifest_path"),
         "inflate_sh_path": submission_custody.get("inflate_sh_path"),
@@ -531,24 +541,18 @@ def _bridge_row(
         "ready_for_exact_eval_dispatch": False,
         "dispatch_packet_ready": False,
         "local_mlx_rows_are_advisory_only": True,
-        "evidence_semantics": (
-            "repair_family_archive_bound_handoff_bridge_input_fail_closed"
-        ),
+        "evidence_semantics": ("repair_family_archive_bound_handoff_bridge_input_fail_closed"),
         "dispatch_blockers": row_blockers,
     }
     bridge_source_row.update(FALSE_AUTHORITY)
-    bridge_source_row["score_affecting_payload_changed"] = (
-        score_affecting_payload_changed
-    )
+    bridge_source_row["score_affecting_payload_changed"] = score_affecting_payload_changed
     bridge_source_row["charged_bits_changed"] = score_affecting_payload_changed
     bridge_source_row.update(
         archive_bound_candidate_contract_fields_for_row(
             bridge_source_row,
             repo_root=repo_root,
             selected_transform_kind=str(
-                handoff_row.get("archive_native_transform_kind")
-                or handoff_row.get("target_kind")
-                or family_id
+                handoff_row.get("archive_native_transform_kind") or handoff_row.get("target_kind") or family_id
             ),
             family_id=family_id,
             typed_response_id=typed_response_id,
@@ -566,9 +570,7 @@ def _bridge_row(
     bridge_source_row["archive_bound_contract_substrate_tags"] = _string_list(
         archive_bound_contract.get("archive_substrate_tags")
     )
-    bridge_source_row["archive_bound_contract_acquisition_penalty"] = (
-        archive_bound_contract.get("acquisition_penalty")
-    )
+    bridge_source_row["archive_bound_contract_acquisition_penalty"] = archive_bound_contract.get("acquisition_penalty")
     require_no_truthy_authority_fields(
         bridge_source_row,
         context=f"repair_family_exact_ready_bridge_source_row:{candidate_id}",
@@ -583,9 +585,7 @@ def _bridge_row(
         "entropy_position_label": handoff_row.get("entropy_position_label"),
         "entropy_stage_order": handoff_row.get("entropy_stage_order"),
         "chain_stage_identities": [
-            dict(item)
-            for item in handoff_row.get("chain_stage_identities") or []
-            if isinstance(item, Mapping)
+            dict(item) for item in handoff_row.get("chain_stage_identities") or [] if isinstance(item, Mapping)
         ],
         "archive_custody": archive_custody,
         "runtime_consumption_proof_custody": proof_custody,
@@ -593,11 +593,8 @@ def _bridge_row(
         "submission_runtime_custody": submission_custody,
         "archive_bound_candidate_contract": archive_bound_contract,
         "archive_custody_complete": archive_custody.get("custody_complete") is True,
-        "runtime_proof_custody_complete": proof_custody.get("custody_complete") is True
-        and not proof_payload_blockers,
-        "runtime_content_tree_custody_complete": (
-            submission_custody.get("custody_complete") is True
-        ),
+        "runtime_proof_custody_complete": proof_custody.get("custody_complete") is True and not proof_payload_blockers,
+        "runtime_content_tree_custody_complete": (submission_custody.get("custody_complete") is True),
         "bridge_source_queue_row": bridge_source_row,
         "failure_rebudgeting_identity": {
             "schema": "repair_family_exact_failure_rebudgeting_identity.v1",
@@ -605,15 +602,11 @@ def _bridge_row(
             "family_id": family_id,
             "typed_response_id": typed_response_id,
             "candidate_chain_id": candidate_chain_id,
-            "candidate_chain_ids": _string_list(
-                handoff_row.get("candidate_chain_ids")
-            ),
+            "candidate_chain_ids": _string_list(handoff_row.get("candidate_chain_ids")),
             "entropy_position_label": handoff_row.get("entropy_position_label"),
             "entropy_stage_order": handoff_row.get("entropy_stage_order"),
             "chain_stage_identities": [
-                dict(item)
-                for item in handoff_row.get("chain_stage_identities") or []
-                if isinstance(item, Mapping)
+                dict(item) for item in handoff_row.get("chain_stage_identities") or [] if isinstance(item, Mapping)
             ],
             "source_archive_sha256": source_archive.get("sha256"),
             "source_archive_bytes": source_archive.get("bytes"),
@@ -621,9 +614,7 @@ def _bridge_row(
             "candidate_archive_bytes": archive_custody.get("bytes"),
             "runtime_consumption_proof_sha256": proof_custody.get("sha256"),
             "runtime_consumption_proof_bytes": proof_custody.get("bytes"),
-            "runtime_content_tree_sha256": submission_custody.get(
-                "runtime_content_tree_sha256"
-            ),
+            "runtime_content_tree_sha256": submission_custody.get("runtime_content_tree_sha256"),
             "runtime_tree_sha256": submission_custody.get("runtime_tree_sha256"),
             "budget_spend_allowed": False,
             "ready_for_exact_eval_dispatch": False,
@@ -678,9 +669,7 @@ def build_repair_family_exact_ready_bridge(
     source_queue = {
         "schema": REPAIR_FAMILY_EXACT_READY_SOURCE_QUEUE_SCHEMA,
         "tool": "tac.optimization.repair_family_exact_ready_bridge",
-        "source_exact_handoff_plan_path": (
-            None if exact_handoff_plan_path is None else str(exact_handoff_plan_path)
-        ),
+        "source_exact_handoff_plan_path": (None if exact_handoff_plan_path is None else str(exact_handoff_plan_path)),
         "top_k": source_queue_rows,
         "dispatch_ready": [],
         "dispatch_ready_count": 0,
@@ -693,9 +682,7 @@ def build_repair_family_exact_ready_bridge(
     blocked_exact_ready_queue = {
         "schema": EXACT_READY_QUEUE_SCHEMA,
         "tool": "tac.optimization.repair_family_exact_ready_bridge",
-        "source_exact_handoff_plan_path": (
-            None if exact_handoff_plan_path is None else str(exact_handoff_plan_path)
-        ),
+        "source_exact_handoff_plan_path": (None if exact_handoff_plan_path is None else str(exact_handoff_plan_path)),
         "n_candidates": len(source_queue_rows),
         "top_k_count": len(source_queue_rows),
         "dispatch_ready_count": 0,
@@ -712,38 +699,20 @@ def build_repair_family_exact_ready_bridge(
             **FALSE_AUTHORITY,
         },
     }
-    archive_count = sum(
-        1 for row in bridge_rows if row.get("archive_custody_complete") is True
-    )
-    proof_count = sum(
-        1 for row in bridge_rows if row.get("runtime_proof_custody_complete") is True
-    )
-    runtime_content_count = sum(
-        1
-        for row in bridge_rows
-        if row.get("runtime_content_tree_custody_complete") is True
-    )
+    archive_count = sum(1 for row in bridge_rows if row.get("archive_custody_complete") is True)
+    proof_count = sum(1 for row in bridge_rows if row.get("runtime_proof_custody_complete") is True)
+    runtime_content_count = sum(1 for row in bridge_rows if row.get("runtime_content_tree_custody_complete") is True)
     blockers = ordered_unique(
         [
-            *(
-                []
-                if bridge_rows
-                else ["repair_family_exact_handoff_rows_missing"]
-            ),
-            *[
-                blocker
-                for row in bridge_rows
-                for blocker in _string_list(row.get("blockers"))
-            ],
+            *([] if bridge_rows else ["repair_family_exact_handoff_rows_missing"]),
+            *[blocker for row in bridge_rows for blocker in _string_list(row.get("blockers"))],
             "promote_optimizer_candidate_for_exact_eval_required_before_dispatch_ready",
             "contest_cpu_or_cuda_auth_axis_required_before_score_or_dispatch",
         ]
     )
     report = {
         "schema": REPAIR_FAMILY_EXACT_READY_BRIDGE_REPORT_SCHEMA,
-        "source_exact_handoff_plan_path": (
-            None if exact_handoff_plan_path is None else str(exact_handoff_plan_path)
-        ),
+        "source_exact_handoff_plan_path": (None if exact_handoff_plan_path is None else str(exact_handoff_plan_path)),
         "source_exact_handoff_plan_schema": exact_handoff_plan.get("schema"),
         "candidate_count": len(bridge_rows),
         "archive_custody_proven_count": archive_count,
