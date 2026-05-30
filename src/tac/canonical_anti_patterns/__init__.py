@@ -59,6 +59,7 @@ from tac.canonical_anti_patterns.anti_pattern import (
     PARADIGM_COMPOUNDING_ORDER,
     PARADIGM_DATA_SOURCE,
     PARADIGM_DIAGNOSIS,
+    PARADIGM_DISCIPLINE,
     PARADIGM_OBSERVABILITY,
     PARADIGM_PREMATURE_KILL,
     PARADIGM_PROVENANCE,
@@ -88,6 +89,13 @@ from tac.canonical_anti_patterns.anti_pattern import (
 from tac.canonical_anti_patterns.builtins import (
     build_all_initial_anti_patterns,
     populate_initial_anti_patterns,
+)
+from tac.canonical_anti_patterns.d7_d8_d9_builders import (
+    build_all_d7_d8_d9_anti_patterns,
+    build_canonical_default_plateau_substrate_disguised_as_class_shift_v1,
+    build_hnerv_pr95_language_anchoring_local_minima_perpetuation_v1,
+    build_micro_optimization_without_macro_escape_polishing_plateau_ceiling_v1,
+    populate_d7_d8_d9_anti_patterns,
 )
 from tac.canonical_anti_patterns.pattern_matcher import (
     AntiPatternMatch,
@@ -135,6 +143,7 @@ __all__ = [
     "PARADIGM_COMPOUNDING_ORDER",
     "PARADIGM_DATA_SOURCE",
     "PARADIGM_DIAGNOSIS",
+    "PARADIGM_DISCIPLINE",
     "PARADIGM_OBSERVABILITY",
     "PARADIGM_PREMATURE_KILL",
     "PARADIGM_PROVENANCE",
@@ -169,12 +178,17 @@ __all__ = [
     # Registry helpers
     "append_empirical_falsification",
     "auto_recalibrate_from_continual_learning_posterior",
+    "build_all_d7_d8_d9_anti_patterns",
     "build_all_initial_anti_patterns",
+    "build_canonical_default_plateau_substrate_disguised_as_class_shift_v1",
+    "build_hnerv_pr95_language_anchoring_local_minima_perpetuation_v1",
+    "build_micro_optimization_without_macro_escape_polishing_plateau_ceiling_v1",
     "evaluate_explicit_override_for_anti_pattern",
     "get_anti_pattern_by_id",
     "load_anti_patterns_events_lenient",
     "load_anti_patterns_strict",
     "match_stack_against_anti_patterns",
+    "populate_d7_d8_d9_anti_patterns",
     "populate_initial_anti_patterns",
     "query_anti_patterns",
     "query_anti_patterns_by_substrate",

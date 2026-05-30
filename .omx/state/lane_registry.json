@@ -63665,6 +63665,47 @@
         }
       },
       "notes": "Mission: frontier_breaking_enabler per operator MLX-first paradigm correction 2026-05-30. lane_class=substrate_engineering per HNeRV-parity L7 + research_only=true per Catalog #192 macOS-MLX never promotable. Sister-DISJOINT vs Z8 trainer wire-in gap closure a320e0fe5d32a95d2 and PR110-OPT-7 acd4123aaaba505a9. Phase A FULL RUN GREEN rc=0 wall=3162s=52.7min on M5 Max at $0 spend per Catalog #192. Phase B substantive verification 8/8 axes PASS (stages 1->8 + per-stage hparam + Muon-final-stage + Rao-Ballard arch + EMA + archive emit + loss converge). Phase C BLOCKED: z6_v2 inflate.py emits PNG output_dir/<base>/<frame>.png not canonical contest-required output_dir/<base>.raw uint8 concat per upstream/evaluate.py TensorVideoDataset; also --num-pairs 32 produces only 64 frames vs canonical 1200; substrate-trainer integration gap per CLAUDE.md Substrate-MUST-be-COMPLETE-or-RESEARCH-ONLY non-negotiable; archive.zip 580467 bytes => rate term ALONE = 0.386 > canonical frontier 0.192 by 2x => structurally incapable of frontier without substrate shrinkage; IMPLEMENTATION-LEVEL gap per Catalog #307 (paradigm INTACT). Phase D: DEFER-pending-canonical-inflate-extension + substrate-shrinkage. archive_sha256=46b6cf6730f24079686ee713c8a77d99ad7a5e3ba5841771402703c1dfe89476 archive_bytes=580467"
+    },
+    {
+      "id": "lane_d7_d8_d9_canonical_anti_patterns_registration_20260530",
+      "name": "D7+D8+D9 canonical anti-patterns registration",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/canonical_anti_patterns/d7_d8_d9_builders.py + populate_d7_d8_d9_anti_patterns registered 3 anti-patterns to canonical JSONL registry .omx/state/canonical_anti_patterns_registry.jsonl (106 -> 109 rows verified)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_d7_d8_d9_canonical_anti_patterns_registered_landed_20260530.md (pending commit) + MEMORY.md index entry prepended"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -63674,5 +63715,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-30T21:46:19Z"
+  "updated_at": "2026-05-30T22:03:58Z"
 }
