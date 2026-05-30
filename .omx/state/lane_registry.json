@@ -62965,6 +62965,88 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_pr110_opt7_fridrich_uniward_inverse_scorer_basis_l0_scaffold_20260530",
+      "name": "PR110-OPT-7 Fridrich UNIWARD inverse-scorer basis L0 SCAFFOLD",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/composition/pr110_opt_7_fridrich_uniward_inverse_scorer_basis/__init__.py \u2014 4 InverseScorerBasisStrategy enum branches structurally distinct (Slot EEE substantive-distinctness gate PASSED on real PR101 600-pair data; Jaccard < 1.0 across all 6 pairs); 79/79 tests PASS in 0.81s; archive_grammar=PR110_OPT_7_SPARSE_SELECTOR_K100_HEADER_3B_ENTRY_3B; parser_section_manifest=encoder_side_no_inflate_runtime; inflate_runtime_loc_budget=encoder_side_no_inflate; runtime_dep_closure=numpy_only_no_pywt_no_torch; export_format=sparse_k100_selector_bytes; score_aware_loss=via_canonical_pr101_paired_component_rows; bolt_on_loc_budget=1140_LOC_substrate_engineering_per_HNeRV_parity_L7_exemption; no_op_detector_planned=yes_per_Catalog_220; research_only=true; lane_class=substrate_engineering; archive_bytes_added=encoder_side_only; score_improvement_mechanism_status=research_only"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_pr110_opt7_fridrich_uniward_inverse_scorer_basis_l0_scaffold_landed_20260530.md (pending Phase D)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "L0 SCAFFOLD per Catalog #308 alternative-reducer enumeration + Catalog #220 SCAFFOLD_DEFERRED_INTEGRATION_OK pattern + research_only=true until paired-CUDA empirical anchor lands per Catalog #246; sister of Slot FF WEIGHTING-axis lane_slot_ff_pr110_opt_7_uniward_inverse_scorer_basis_expansion_fridrich_canonical_parallel_cascade_20260529; lane_class=substrate_engineering per HNeRV parity L7"
+    },
+    {
+      "id": "lane_mamba2_ssd_mlx_port_tri_backend_20260530",
+      "name": "Mamba-2 SSD tri-backend canonical helper (MLX/PyTorch/numpy)",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -62974,5 +63056,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-30T19:23:58Z"
+  "updated_at": "2026-05-30T19:30:36Z"
 }
