@@ -25,6 +25,8 @@ from tac.optimization.archive_bound_candidate_contract import (
     archive_bound_candidate_contract_fields_for_row,
     has_archive_bound_candidate_contract_payload,
     selected_archive_bound_candidate_contract_from_payload,
+    source_archive_bound_candidate_contract_from_row,
+    source_archive_bound_contract_snapshot_blockers,
 )
 from tac.optimization.local_cpu_contest_drift import (
     EUREKA_SIGNAL_SCHEMA,
@@ -270,13 +272,35 @@ def _archive_bound_contract_for_row(
     *,
     label: str,
 ) -> Mapping[str, Any] | None:
-    if not has_archive_bound_candidate_contract_payload(row):
+    raw_source_snapshot = row.get("source_archive_bound_candidate_contract")
+    if (
+        "source_archive_bound_candidate_contract" in row
+        and not isinstance(raw_source_snapshot, Mapping)
+    ):
+        blocker = "source_archive_bound_candidate_contract_invalid"
+        row["archive_bound_candidate_contract_valid"] = False
+        row["archive_bound_candidate_contract_blockers"] = _ordered_unique(
+            [*row.get("archive_bound_candidate_contract_blockers", []), blocker]
+        )
+        _add_blockers(row, [blocker])
+        return None
+    source_snapshot = source_archive_bound_candidate_contract_from_row(row)
+    has_source_snapshot = bool(
+        source_snapshot and "source_archive_bound_candidate_contract" in row
+    )
+    if not has_archive_bound_candidate_contract_payload(row) and not has_source_snapshot:
         return None
     try:
-        contract = selected_archive_bound_candidate_contract_from_payload(
-            row,
-            label=label,
-        )
+        if has_source_snapshot:
+            contract = selected_archive_bound_candidate_contract_from_payload(
+                {"archive_bound_candidate_contract": source_snapshot},
+                label=f"{label}:source_archive_bound_candidate_contract",
+            )
+        else:
+            contract = selected_archive_bound_candidate_contract_from_payload(
+                row,
+                label=label,
+            )
     except ArchiveBoundCandidateContractError as exc:
         blocker = f"archive_bound_candidate_contract_invalid:{exc}"
         row["archive_bound_candidate_contract_valid"] = False
@@ -284,6 +308,21 @@ def _archive_bound_contract_for_row(
             [*row.get("archive_bound_candidate_contract_blockers", []), blocker]
         )
         _add_blockers(row, [blocker])
+        return None
+    snapshot_blockers = (
+        source_archive_bound_contract_snapshot_blockers(row)
+        if has_source_snapshot
+        else []
+    )
+    if snapshot_blockers:
+        row["archive_bound_candidate_contract_valid"] = False
+        row["archive_bound_candidate_contract_blockers"] = _ordered_unique(
+            [
+                *row.get("archive_bound_candidate_contract_blockers", []),
+                *snapshot_blockers,
+            ]
+        )
+        _add_blockers(row, snapshot_blockers)
         return None
     row["archive_bound_candidate_contract_valid"] = True
     return contract
@@ -295,8 +334,17 @@ def _contract_first_exact_dispatch_ready(row: dict[str, Any]) -> bool:
         label=f"optimizer_candidate_queue_promotion_view:{row.get('candidate_id')}",
     )
     if contract is not None:
-        return contract.get("ready_for_exact_eval_dispatch") is True
-    if has_archive_bound_candidate_contract_payload(row):
+        custody = _mapping(contract.get("archive_file_custody"))
+        return bool(
+            row.get("ready_for_exact_eval_dispatch") is True
+            and contract.get("archive_bound_candidate_ready") is True
+            and contract.get("archive_bound_candidate_ready_for_exact_handoff") is True
+            and custody.get("custody_complete") is True
+        )
+    if (
+        has_archive_bound_candidate_contract_payload(row)
+        or row.get("source_archive_bound_candidate_contract") is not None
+    ):
         return False
     return row.get("ready_for_exact_eval_dispatch") is True
 
@@ -418,7 +466,10 @@ def _annotate_archive_candidate_verification(
         row,
         label=f"optimizer_candidate_queue_archive_verification:{row.get('candidate_id')}",
     )
-    if contract is None and has_archive_bound_candidate_contract_payload(row):
+    if contract is None and (
+        has_archive_bound_candidate_contract_payload(row)
+        or row.get("source_archive_bound_candidate_contract") is not None
+    ):
         row["archive_candidate_verified"] = False
         row["candidate_archive_path_unverified"] = True
         return

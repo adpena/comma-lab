@@ -10,6 +10,9 @@ from pathlib import Path
 from typing import Any
 
 from tac.hdm8_selector_cuda_gate import validate_hdm8_selector_cuda_gate_context
+from tac.optimization.archive_bound_candidate_contract import (
+    source_archive_bound_contract_candidate_archive,
+)
 from tac.optimizer.exact_readiness import (
     ACTIVE_FLOOR_SCORE,
     active_claim_conflicts,
@@ -48,19 +51,8 @@ def _mapping(value: Any) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
 
 
-def _source_archive_bound_contract(row: Mapping[str, Any]) -> Mapping[str, Any]:
-    for key in (
-        "source_archive_bound_candidate_contract",
-        "archive_bound_candidate_contract",
-    ):
-        value = row.get(key)
-        if isinstance(value, Mapping):
-            return value
-    return {}
-
-
 def _contract_candidate_archive(row: Mapping[str, Any]) -> Mapping[str, Any]:
-    return _mapping(_source_archive_bound_contract(row).get("candidate_archive"))
+    return source_archive_bound_contract_candidate_archive(row)
 
 
 def _row_archive_sha(row: Mapping[str, Any]) -> str | None:

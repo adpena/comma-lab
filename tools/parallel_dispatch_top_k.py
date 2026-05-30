@@ -64,6 +64,9 @@ from tac.hnerv_frontier_defaults import (  # noqa: E402
     ACTIVE_SCORE_FRONTIER_LABEL,
     ACTIVE_SCORE_FRONTIER_SCORE,
 )
+from tac.optimization.archive_bound_candidate_contract import (  # noqa: E402
+    source_archive_bound_contract_candidate_archive,
+)
 from tac.optimizer.exact_dispatch_authority import (  # noqa: E402
     ClaimPolicy,
     exact_dispatch_authority,
@@ -297,19 +300,8 @@ def _mapping(value: object) -> dict:
     return value if isinstance(value, dict) else {}
 
 
-def _source_archive_bound_contract(candidate: dict) -> dict:
-    for key in (
-        "source_archive_bound_candidate_contract",
-        "archive_bound_candidate_contract",
-    ):
-        value = candidate.get(key)
-        if isinstance(value, dict):
-            return value
-    return {}
-
-
 def _contract_candidate_archive(candidate: dict) -> dict:
-    return _mapping(_source_archive_bound_contract(candidate).get("candidate_archive"))
+    return dict(source_archive_bound_contract_candidate_archive(candidate))
 
 
 def _candidate_archive_path_value(candidate: dict) -> object:

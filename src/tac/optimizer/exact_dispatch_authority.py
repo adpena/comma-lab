@@ -14,6 +14,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
+from tac.optimization.archive_bound_candidate_contract import (
+    source_archive_bound_contract_snapshot_blockers,
+)
 from tac.optimization.proxy_candidate_contract import (
     CONSUMER_PAYLOAD_FORBIDDEN_TRUE_AUTHORITY_FIELDS,
     truthy_authority_field_violations,
@@ -176,42 +179,7 @@ def _optional_resolved_path(
 
 
 def _source_contract_snapshot_blockers(row: Mapping[str, Any]) -> list[str]:
-    blockers: list[str] = []
-    snapshot_required = (
-        row.get("source_archive_bound_candidate_contract_required") is True
-    )
-    source_contract = row.get("source_archive_bound_candidate_contract")
-    contract = source_contract if isinstance(source_contract, Mapping) else {}
-    if snapshot_required and not contract:
-        return ["source_archive_bound_candidate_contract_missing"]
-    if not contract:
-        return []
-    if contract.get("archive_bound_candidate_ready") is not True:
-        blockers.append("source_archive_bound_candidate_contract_not_ready")
-    if (
-        contract.get("archive_bound_candidate_ready_for_exact_handoff")
-        is not True
-    ):
-        blockers.append(
-            "source_archive_bound_candidate_contract_not_ready_for_exact_handoff"
-        )
-    candidate_archive = contract.get("candidate_archive")
-    archive = candidate_archive if isinstance(candidate_archive, Mapping) else {}
-    contract_sha = archive.get("sha256") or archive.get("archive_sha256")
-    row_sha = row.get("candidate_archive_sha256") or row.get("archive_sha256")
-    if is_sha256(contract_sha) and is_sha256(row_sha):
-        if str(contract_sha).lower() != str(row_sha).lower():
-            blockers.append("source_archive_bound_candidate_contract_sha256_mismatch")
-    elif snapshot_required and not is_sha256(contract_sha):
-        blockers.append("source_archive_bound_candidate_contract_sha256_missing")
-    contract_bytes = archive.get("bytes") or archive.get("archive_bytes")
-    row_bytes = row.get("candidate_archive_bytes") or row.get("archive_bytes")
-    if isinstance(contract_bytes, int) and isinstance(row_bytes, int):
-        if contract_bytes != row_bytes:
-            blockers.append("source_archive_bound_candidate_contract_bytes_mismatch")
-    elif snapshot_required and not isinstance(contract_bytes, int):
-        blockers.append("source_archive_bound_candidate_contract_bytes_missing")
-    return blockers
+    return source_archive_bound_contract_snapshot_blockers(row)
 
 
 def active_dispatch_claim_present(

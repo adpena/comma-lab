@@ -462,6 +462,96 @@ def selected_archive_bound_candidate_contract_from_payload(
     return dict(selected[0] if selected else contracts[0] if contracts else {})
 
 
+def source_archive_bound_candidate_contract_from_row(
+    row: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    """Return the source archive-bound contract snapshot carried by a promoted row."""
+
+    source_contract = row.get("source_archive_bound_candidate_contract")
+    if isinstance(source_contract, Mapping):
+        return source_contract
+    embedded_contract = row.get("archive_bound_candidate_contract")
+    if isinstance(embedded_contract, Mapping):
+        return embedded_contract
+    return {}
+
+
+def source_archive_bound_contract_candidate_archive(
+    row: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    """Return candidate-archive custody from a source contract snapshot."""
+
+    return _mapping(
+        source_archive_bound_candidate_contract_from_row(row).get("candidate_archive")
+    )
+
+
+def source_archive_bound_contract_snapshot_blockers(
+    row: Mapping[str, Any],
+    *,
+    required: bool | None = None,
+) -> list[str]:
+    """Validate a promoted exact-ready row's source contract snapshot.
+
+    The source snapshot is evidence about the upstream byte-closed materializer,
+    not a new dispatch-authority contract.  Therefore raw exact-ready fields on
+    the promoted row may be true, but the snapshot must still prove archive
+    readiness, exact-handoff readiness, and archive SHA/byte custody.
+    """
+
+    snapshot_required = (
+        row.get("source_archive_bound_candidate_contract_required") is True
+        if required is None
+        else required
+    )
+    contract = source_archive_bound_candidate_contract_from_row(row)
+    if snapshot_required and not contract:
+        return ["source_archive_bound_candidate_contract_missing"]
+    if not contract:
+        return []
+
+    blockers: list[str] = []
+    if contract.get("schema") != ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA:
+        blockers.append("source_archive_bound_candidate_contract_schema_mismatch")
+    if contract.get("archive_bound_candidate_ready") is not True:
+        blockers.append("source_archive_bound_candidate_contract_not_ready")
+    if contract.get("archive_bound_candidate_ready_for_exact_handoff") is not True:
+        blockers.append(
+            "source_archive_bound_candidate_contract_not_ready_for_exact_handoff"
+        )
+    custody = _mapping(contract.get("archive_file_custody"))
+    if (snapshot_required and not custody) or (
+        custody and custody.get("custody_complete") is not True
+    ):
+        blockers.append("source_archive_bound_candidate_contract_custody_incomplete")
+
+    archive = _mapping(contract.get("candidate_archive"))
+    contract_sha = archive.get("sha256") or archive.get("archive_sha256")
+    row_sha = row.get("candidate_archive_sha256") or row.get("archive_sha256")
+    if isinstance(contract_sha, str) and len(contract_sha.strip()) == 64:
+        if (
+            isinstance(row_sha, str)
+            and len(row_sha.strip()) == 64
+            and contract_sha.strip().lower() != row_sha.strip().lower()
+        ):
+            blockers.append("source_archive_bound_candidate_contract_sha256_mismatch")
+    elif snapshot_required:
+        blockers.append("source_archive_bound_candidate_contract_sha256_missing")
+
+    contract_bytes = archive.get("bytes") or archive.get("archive_bytes")
+    row_bytes = row.get("candidate_archive_bytes") or row.get("archive_bytes")
+    if isinstance(contract_bytes, int) and not isinstance(contract_bytes, bool):
+        if (
+            isinstance(row_bytes, int)
+            and not isinstance(row_bytes, bool)
+            and contract_bytes != row_bytes
+        ):
+            blockers.append("source_archive_bound_candidate_contract_bytes_mismatch")
+    elif snapshot_required:
+        blockers.append("source_archive_bound_candidate_contract_bytes_missing")
+    return ordered_unique(blockers)
+
+
 def _resolve(path: str | Path, repo_root: str | Path | None) -> Path:
     value = Path(path).expanduser()
     if value.is_absolute() or repo_root is None:
@@ -1224,4 +1314,7 @@ __all__ = [
     "has_archive_bound_candidate_contract_payload",
     "require_fresh_archive_bound_candidate_contract_row",
     "selected_archive_bound_candidate_contract_from_payload",
+    "source_archive_bound_candidate_contract_from_row",
+    "source_archive_bound_contract_candidate_archive",
+    "source_archive_bound_contract_snapshot_blockers",
 ]
