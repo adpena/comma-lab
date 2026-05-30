@@ -255,6 +255,18 @@ def _candidate_from_selection_row(
         raise MLXEffectiveSpendTriageLearnedSweepAdapterError(
             f"{candidate_id}.requires_exact_auth_eval_before_score_claim must be true"
         )
+    if row.get("source_evidence_grade") != EVIDENCE_GRADE_MLX:
+        raise MLXEffectiveSpendTriageLearnedSweepAdapterError(
+            f"{candidate_id}.source_evidence_grade must be {EVIDENCE_GRADE_MLX}"
+        )
+    if row.get("source_evidence_tag") != EVIDENCE_TAG_MLX:
+        raise MLXEffectiveSpendTriageLearnedSweepAdapterError(
+            f"{candidate_id}.source_evidence_tag must be {EVIDENCE_TAG_MLX}"
+        )
+    if "canonical_provenance" in row and not isinstance(row["canonical_provenance"], Mapping):
+        raise MLXEffectiveSpendTriageLearnedSweepAdapterError(
+            f"{candidate_id}.canonical_provenance must be an object when present"
+        )
     try:
         metrics = require_normalized_full_video_objective(
             row,
@@ -308,6 +320,9 @@ def _candidate_from_selection_row(
         **FALSE_AUTHORITY,
         "source_schema": SELECTION_SCHEMA,
         "source_row_schema": SELECTION_ROW_SCHEMA,
+        "source_evidence_grade": row.get("source_evidence_grade"),
+        "source_evidence_tag": row.get("source_evidence_tag"),
+        "canonical_provenance": row.get("canonical_provenance"),
         "adapter_tool": CLI_TOOL,
         "calibrated_score_mean": predicted_score,
         "calibrated_gain_mean": normalized_gain,

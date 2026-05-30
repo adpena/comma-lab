@@ -60,6 +60,17 @@ _COMPILER_HINT_PASSTHROUGH_FIELDS = (
     "region_bbox",
     "params",
 )
+_PROVENANCE_PASSTHROUGH_FIELDS = (
+    "source_schema",
+    "source_evidence_grade",
+    "source_evidence_tag",
+    "canonical_provenance",
+    "archive_bound_candidate_contract",
+    "archive_bound_candidate_contract_surface",
+    "archive_bound_candidate_contract_schema",
+    "archive_bound_candidate_contract_count",
+    "archive_bound_candidate_contracts",
+)
 
 _FALSE_AUTHORITY_FIELDS = (
     "score_claim",
@@ -459,6 +470,7 @@ def _selection_row(
         "row_id": row.get("row_id"),
         "family": row.get("family"),
         "candidate_id": row.get("candidate_id"),
+        **_provenance_passthrough(row),
         "pair_indices": row.get("pair_indices"),
         "source_pair_window": row.get("source_pair_window"),
         "source_path": row.get("source_path"),
@@ -549,6 +561,22 @@ def _compiler_hint_passthrough(row: dict[str, Any]) -> dict[str, Any]:
             )
         except ValueError as exc:
             raise MLXEffectiveSpendTriageSelectionError(str(exc)) from exc
+    return passthrough
+
+
+def _provenance_passthrough(row: dict[str, Any]) -> dict[str, Any]:
+    passthrough = {
+        key: row[key]
+        for key in _PROVENANCE_PASSTHROUGH_FIELDS
+        if key in row and row[key] is not None
+    }
+    for key in (
+        "canonical_provenance",
+        "archive_bound_candidate_contract",
+        "archive_bound_candidate_contract_surface",
+    ):
+        if key in passthrough and not isinstance(passthrough[key], dict):
+            raise MLXEffectiveSpendTriageSelectionError(f"{key} must be an object when present")
     return passthrough
 
 

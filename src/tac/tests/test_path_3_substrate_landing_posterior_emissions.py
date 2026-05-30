@@ -13,12 +13,13 @@ verifies each of the 8 LANDED Path 3 substrates exposes a canonical
 4. Carries canonical Provenance (Catalog #323)
 5. Refuses promotion at the contest-axis posterior (custody validator
    advisory-grade refusal; bumps refused_anchor_count)
-6. Appends a row to the MPS-research-signal manifest with canonical
+6. Appends a row to the MLX research-signal manifest with canonical
    substrate identifiers + canonical equation IDs
 
 Each per-substrate test uses isolated tmp paths so the live canonical
 state is not polluted by the test suite.
 """
+
 from __future__ import annotations
 
 import importlib
@@ -26,7 +27,6 @@ import json
 from pathlib import Path
 
 import pytest
-
 
 # The 8 LANDED Path 3 substrates per the audit utility matrix (commit
 # ``e757bb74c`` STEP 2). Each tuple is (substrate_id, module_path,
@@ -90,18 +90,14 @@ def test_substrate_exposes_canonical_emit_landing_posterior_anchor(
     assert hasattr(module, "emit_landing_posterior_anchor"), (
         f"{substrate_id} missing emit_landing_posterior_anchor per WAVE-1"
     )
-    assert hasattr(module, "SUBSTRATE_ID"), (
-        f"{substrate_id} missing SUBSTRATE_ID constant per WAVE-1"
-    )
-    assert hasattr(module, "ARCHITECTURE_CLASS"), (
-        f"{substrate_id} missing ARCHITECTURE_CLASS constant per WAVE-1"
-    )
+    assert hasattr(module, "SUBSTRATE_ID"), f"{substrate_id} missing SUBSTRATE_ID constant per WAVE-1"
+    assert hasattr(module, "ARCHITECTURE_CLASS"), f"{substrate_id} missing ARCHITECTURE_CLASS constant per WAVE-1"
     assert hasattr(module, "CANONICAL_EQUATION_IDS"), (
         f"{substrate_id} missing CANONICAL_EQUATION_IDS constant per WAVE-1"
     )
 
     # 2) Canonical identifiers match expected
-    assert getattr(module, "SUBSTRATE_ID") == substrate_id
+    assert substrate_id == module.SUBSTRATE_ID
 
 
 @pytest.mark.parametrize(
@@ -134,14 +130,14 @@ def test_substrate_emits_anchor_with_canonical_markers(
     assert anchor.rank_or_kill_eligible is False
 
     # Canonical evidence_tag + hardware_substrate
-    assert anchor.evidence_tag == "[MPS-research-signal]"
-    assert anchor.hardware_substrate == "macos_arm64"
+    assert anchor.evidence_tag == "[macOS-MLX research-signal]"
+    assert anchor.hardware_substrate == "macos_arm64_mlx"
 
     # Canonical Provenance present
     assert anchor.provenance.promotion_eligible is False
     assert anchor.provenance.score_claim_valid is False
     assert anchor.provenance.canonical_helper_invocation == (
-        "tac.provenance.builders.build_provenance_for_mps_proxy"
+        "tac.provenance.builders.build_provenance_for_macos_mlx_research_signal"
     )
 
 
@@ -165,11 +161,13 @@ def test_substrate_posterior_refused_per_advisory_grade(
         manifest_path=manifest_p,
     )
 
-    # Per CLAUDE.md "MPS auth eval is NOISE" + custody validator:
-    # [MPS-research-signal] is NON_PROMOTABLE_TAGS → REFUSED.
+    # Per CLAUDE.md local-substrate authority + custody validator:
+    # [macOS-MLX research-signal] is NON_PROMOTABLE_TAGS -> REFUSED.
     assert anchor.posterior_update.accepted is False
-    assert "advisory" in anchor.posterior_update.refusal_reason.lower() or \
-           "non-authoritative" in anchor.posterior_update.refusal_reason.lower()
+    assert (
+        "advisory" in anchor.posterior_update.refusal_reason.lower()
+        or "non-authoritative" in anchor.posterior_update.refusal_reason.lower()
+    )
 
     # Posterior state recorded refusal (bumped refused_anchor_count).
     posterior_data = json.loads(post_p.read_text())
@@ -184,7 +182,7 @@ def test_substrate_posterior_refused_per_advisory_grade(
 def test_substrate_manifest_row_emitted_with_canonical_extras(
     substrate_id: str, module_path: str, expected_paradigm: str, tmp_path: Path
 ) -> None:
-    """Each Path 3 substrate emits a canonical manifest row to MPS JSONL."""
+    """Each Path 3 substrate emits a canonical manifest row to MLX JSONL."""
     module = importlib.import_module(module_path)
     post_p = tmp_path / "posterior.json"
     lock_p = tmp_path / "posterior.lock"
@@ -210,7 +208,10 @@ def test_substrate_manifest_row_emitted_with_canonical_extras(
     assert row["promotion_eligible"] is False
     assert row["promotable"] is False
     assert row["predicted_delta_adjustment"] == 0.0
-    assert row["axis_tag"] == "[MPS-research-signal]"
+    assert row["axis_tag"] == "[macOS-MLX research-signal]"
+    assert row["evidence_tag"] == "[macOS-MLX research-signal]"
+    assert row["evidence_grade"] == "macOS-MLX-research-signal"
+    assert row["hardware_substrate"] == "macos_arm64_mlx"
 
     # Substrate-specific paradigm token threaded through
     assert row["paradigm"] == expected_paradigm
@@ -261,7 +262,7 @@ def test_all_8_path_3_substrates_emit_into_shared_manifest(tmp_path: Path) -> No
     manifest_p = tmp_path / "manifest.jsonl"
 
     emitted_substrate_ids: set[str] = set()
-    for substrate_id, module_path, _ in PATH_3_SUBSTRATES:
+    for _substrate_id, module_path, _ in PATH_3_SUBSTRATES:
         module = importlib.import_module(module_path)
         anchor = module.emit_landing_posterior_anchor(
             posterior_path=post_p,
@@ -305,7 +306,4 @@ def test_canonical_equation_id_lineage_per_substrate(tmp_path: Path) -> None:
         # At least one canonical equation reference includes the expected token
         expected_token = expected_lineage[substrate_id]
         match = any(expected_token in eq_id for eq_id in ids)
-        assert match, (
-            f"{substrate_id} missing expected canonical equation lineage "
-            f"{expected_token!r} in {ids}"
-        )
+        assert match, f"{substrate_id} missing expected canonical equation lineage {expected_token!r} in {ids}"

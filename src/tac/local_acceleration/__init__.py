@@ -68,7 +68,9 @@ __all__ = [
     "MLX_ACQUISITION_BATCH_OPERATION_SET_SCHEMA",
     "MLX_ACQUISITION_BATCH_SCHEMA",
     "MLX_ACQUISITION_REPRESENTATION_CONTRACT_SCHEMA",
+    "PROVENANCE_EVIDENCE_GRADE_MLX",
     "SCHEMA_VERSION",
+    "build_mlx_research_signal_provenance",
 ]
 
 SCHEMA_VERSION = "local_acceleration.v1"
@@ -79,6 +81,7 @@ SCHEMA_VERSION = "local_acceleration.v1"
 # tac.optimization.macos_cpu_advisory_signal.EVIDENCE_GRADE.
 EVIDENCE_GRADE_MLX = "macOS-MLX-research-signal"
 EVIDENCE_TAG_MLX = "[macOS-MLX research-signal]"
+PROVENANCE_EVIDENCE_GRADE_MLX = "macos_mlx_research_signal"
 
 EVIDENCE_GRADE_METAL = "macOS-Metal-research-signal"
 EVIDENCE_TAG_METAL = "[macOS-Metal research-signal]"
@@ -88,3 +91,26 @@ MLX_ACQUISITION_BATCH_OPERATION_SET_SCHEMA = "mlx_acquisition_operation_set.v1"
 MLX_ACQUISITION_REPRESENTATION_CONTRACT_SCHEMA = (
     "mlx_acquisition_representation_contract.v1"
 )
+
+
+def build_mlx_research_signal_provenance(
+    *,
+    artifact_sha256: str,
+    source_path: str,
+    captured_at_utc: str | None = None,
+):
+    """Build canonical Provenance for a local MLX research-signal artifact.
+
+    ``EVIDENCE_GRADE_MLX`` remains the legacy row-display grade consumed by
+    older queues. This helper emits the canonical enum value
+    ``macos_mlx_research_signal`` through ``tac.provenance`` so new rows can
+    carry both without vocabulary drift.
+    """
+
+    from tac.provenance import build_provenance_for_macos_mlx_research_signal
+
+    return build_provenance_for_macos_mlx_research_signal(
+        artifact_sha256=artifact_sha256,
+        source_path=source_path,
+        captured_at_utc=captured_at_utc,
+    )

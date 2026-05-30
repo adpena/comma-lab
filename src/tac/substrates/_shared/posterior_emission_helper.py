@@ -18,18 +18,18 @@ guard + Catalog #138 strict-load discipline: the canonical write path is
 ``tac.continual_learning.posterior_update_locked``.
 
 Per CLAUDE.md "MLX portable-local-substrate authority" + Catalog #317
-canonical local-MPS dispatch markers + Catalog #341 cathedral consumer
+canonical local-signal dispatch markers + Catalog #341 cathedral consumer
 canonical-routing-markers discipline: MLX research signals are
 NON-PROMOTABLE by construction. They:
 
-  - carry ``evidence_tag = "[MPS-research-signal]"`` (NON_PROMOTABLE_TAGS)
-  - carry ``hardware_substrate = "macos_arm64"`` (macOS Apple Silicon)
+  - carry ``evidence_tag = "[macOS-MLX research-signal]"`` (NON_PROMOTABLE_TAGS)
+  - carry ``hardware_substrate = "macos_arm64_mlx"`` (macOS Apple Silicon + MLX)
   - are REFUSED by ``posterior_update_locked`` custody validator
     (recorded in ``refused_anchor_count``, not promoted to
     ``accepted_anchor_history``)
-  - ALSO append to the canonical MPS-research-signal posterior at
-    ``.omx/state/mps_research_signal_manifest.jsonl`` via
-    ``tac.optimization.mps_research_signal.append_manifest_row_to_jsonl``
+  - ALSO append to the canonical MLX research-signal posterior at
+    ``.omx/state/mlx_research_signal_manifest.jsonl`` via
+    ``tac.optimization.mlx_research_signal.append_manifest_row_to_jsonl``
     (which cathedral consumers like ``cpu_axis_optimal_consumer`` and
     ``canonical_equation_lookup_consumer`` can query)
 
@@ -37,7 +37,7 @@ Per CLAUDE.md "Apples-to-apples evidence discipline" + Catalog #323
 canonical Provenance umbrella + Catalog #287 placeholder-rationale
 rejection: every emitted anchor carries:
 
-  - canonical Provenance via ``tac.provenance.builders.build_provenance_for_mps_proxy``
+  - canonical Provenance via ``tac.provenance.builders.build_provenance_for_macos_mlx_research_signal``
     (which auto-stamps ``promotion_eligible=False`` + ``score_claim_valid=False``)
   - canonical non-promotable markers (``score_claim=False`` /
     ``promotion_eligible=False`` / ``ready_for_exact_eval_dispatch=False`` /
@@ -58,7 +58,7 @@ Optional fields for richer cathedral consumer observability:
 
   - predicted_score (float; the MLX-local predicted contest score; if
     supplied, carried in the canonical ContestResult.score_value field
-    AND in the MPS manifest row's proxy_score field for downstream
+    AND in the MLX manifest row's proxy_score field for downstream
     queryability)
   - predicted_d_seg / predicted_d_pose (float; per-axis predictions)
   - architecture_class (str; the substrate's canonical architecture
@@ -83,7 +83,7 @@ Catalog cross-refs:
     — placeholder ``<rationale>`` / ``<reason>`` literals REJECTED in the
     notes/rationale fields.
   * Catalog #317 ``check_local_research_signal_dispatches_stamp_evidence_grade``
-    — sister MPS-research-signal canonical routing discipline.
+    — sister MLX-research-signal canonical routing discipline.
   * Catalog #323 ``check_no_score_claim_without_canonical_provenance``
     — canonical Provenance umbrella every emitted anchor carries.
   * Catalog #335 ``check_cathedral_consumer_directory_package_exposes_canonical_contract``
@@ -95,6 +95,7 @@ Catalog cross-refs:
     — sister meta-Lagrangian wire-in that consumes the posterior anchors
     emitted by this helper.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -111,27 +112,37 @@ from tac.continual_learning import (
     PosteriorUpdate,
     posterior_update_locked,
 )
-from tac.optimization.mps_research_signal import (
-    EVIDENCE_GRADE as MPS_RESEARCH_SIGNAL_EVIDENCE_GRADE,
+from tac.optimization.mlx_research_signal import (
+    DISPATCH_BLOCKERS as MLX_RESEARCH_SIGNAL_DISPATCH_BLOCKERS,
+)
+from tac.optimization.mlx_research_signal import (
+    EVIDENCE_GRADE as MLX_RESEARCH_SIGNAL_EVIDENCE_GRADE,
+)
+from tac.optimization.mlx_research_signal import (
+    EVIDENCE_TAG as MLX_RESEARCH_SIGNAL_EVIDENCE_TAG,
+)
+from tac.optimization.mlx_research_signal import (
+    HARDWARE_SUBSTRATE as MLX_RESEARCH_SIGNAL_HARDWARE_SUBSTRATE,
+)
+from tac.optimization.mlx_research_signal import (
     append_manifest_row_to_jsonl,
 )
 from tac.provenance import (
     Provenance,
-    build_provenance_for_mps_proxy,
+    build_provenance_for_macos_mlx_research_signal,
 )
 
-# Canonical MPS-research-signal posterior JSONL path. Sister of
+# Canonical MLX research-signal posterior JSONL path. Sister of
 # ``DEFAULT_POSTERIOR_PATH`` (tac.continual_learning) which is the
 # canonical contest-axis posterior JSON. Per CLAUDE.md "MLX portable-
 # local-substrate authority" this is the canonical MLX-research-signal
 # posterior surface.
-DEFAULT_MPS_RESEARCH_SIGNAL_MANIFEST_PATH: Path = (
-    Path(os.environ.get("PACT_REPO_ROOT", "")) / ".omx" / "state"
-    / "mps_research_signal_manifest.jsonl"
+DEFAULT_MLX_RESEARCH_SIGNAL_MANIFEST_PATH: Path = (
+    Path(os.environ.get("PACT_REPO_ROOT", "")) / ".omx" / "state" / "mlx_research_signal_manifest.jsonl"
     if os.environ.get("PACT_REPO_ROOT")
-    else Path(__file__).resolve().parents[4] / ".omx" / "state"
-    / "mps_research_signal_manifest.jsonl"
+    else Path(__file__).resolve().parents[4] / ".omx" / "state" / "mlx_research_signal_manifest.jsonl"
 )
+DEFAULT_MPS_RESEARCH_SIGNAL_MANIFEST_PATH: Path = DEFAULT_MLX_RESEARCH_SIGNAL_MANIFEST_PATH
 
 # Canonical non-promotable markers per Catalog #127/#192/#317/#341.
 # Every MLX research-signal manifest row carries these flags. The
@@ -148,20 +159,20 @@ _CANONICAL_NON_PROMOTABLE_FLAGS: dict[str, bool] = {
 # non-authoritative. Surfaced in the manifest row so downstream consumers
 # + operator briefings see structured non-promotability rationale.
 _CANONICAL_MLX_NON_AUTHORITATIVE_BLOCKERS: tuple[str, ...] = (
-    "macos_mlx_research_signal_not_contest_authority",
-    "requires_paired_contest_cpu_plus_cuda_for_score_claim",
-    "macos_mps_drift_23x_vs_cuda_per_claude_md_mps_auth_eval_is_noise",
+    *MLX_RESEARCH_SIGNAL_DISPATCH_BLOCKERS,
     "predicted_band_validation_status_pending_post_training_per_catalog_324",
 )
 
 # Placeholder rationale literals refused per Catalog #287 sister
 # discipline so the helper's docstring example cannot self-waive.
-_PLACEHOLDER_RATIONALE_TOKENS: frozenset[str] = frozenset({
-    "<rationale>",
-    "<reason>",
-    "<rationale_here>",
-    "<reason_here>",
-})
+_PLACEHOLDER_RATIONALE_TOKENS: frozenset[str] = frozenset(
+    {
+        "<rationale>",
+        "<reason>",
+        "<rationale_here>",
+        "<reason_here>",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -207,13 +218,10 @@ class SubstrateLandingPosteriorAnchor:
                 "leak guard; MLX research-signal anchors NEVER promote."
             )
         if self.promotion_eligible:
-            raise ValueError(
-                "promotion_eligible=True forbidden per the same non-negotiables."
-            )
+            raise ValueError("promotion_eligible=True forbidden per the same non-negotiables.")
         if self.ready_for_exact_eval_dispatch:
             raise ValueError(
-                "ready_for_exact_eval_dispatch=True forbidden; MLX anchors are "
-                "non-promotable signal only."
+                "ready_for_exact_eval_dispatch=True forbidden; MLX anchors are non-promotable signal only."
             )
         if self.rank_or_kill_eligible:
             raise ValueError(
@@ -225,16 +233,9 @@ class SubstrateLandingPosteriorAnchor:
 
 def _validate_archive_sha256(archive_sha256: str) -> None:
     if not isinstance(archive_sha256, str):
-        raise TypeError(
-            f"archive_sha256 must be str; got {type(archive_sha256).__name__}"
-        )
-    if len(archive_sha256) != 64 or not all(
-        c in "0123456789abcdef" for c in archive_sha256.lower()
-    ):
-        raise ValueError(
-            f"archive_sha256 must be 64-char lowercase hex; got "
-            f"{archive_sha256!r}"
-        )
+        raise TypeError(f"archive_sha256 must be str; got {type(archive_sha256).__name__}")
+    if len(archive_sha256) != 64 or not all(c in "0123456789abcdef" for c in archive_sha256.lower()):
+        raise ValueError(f"archive_sha256 must be 64-char lowercase hex; got {archive_sha256!r}")
 
 
 def _validate_notes_no_placeholder(notes: str) -> None:
@@ -288,7 +289,7 @@ def emit_substrate_landing_posterior_anchor(
         archive_bytes: positive int; the canonical archive size in bytes.
         source_path: path to the artifact that produced this anchor
             (typically the trainer's output dir or a test fixture). Per
-            :func:`tac.provenance.builders.build_provenance_for_mps_proxy`
+            :func:`tac.provenance.builders.build_provenance_for_macos_mlx_research_signal`
             transient ``/tmp`` paths are REFUSED.
         predicted_score: float; the MLX-local predicted contest score.
             Defaults to 0.20 (mid-band predicted-pursuit) when caller
@@ -304,8 +305,8 @@ def emit_substrate_landing_posterior_anchor(
             ``continual_learning_posterior.json`` paths; defaults to
             ``tac.continual_learning.DEFAULT_POSTERIOR_PATH`` + sister
             lock.
-        manifest_path: canonical MPS-research-signal manifest JSONL path;
-            defaults to ``.omx/state/mps_research_signal_manifest.jsonl``.
+        manifest_path: canonical MLX research-signal manifest JSONL path;
+            defaults to ``.omx/state/mlx_research_signal_manifest.jsonl``.
         extra_manifest_fields: optional Mapping of substrate-specific
             extra fields to surface in the manifest row (e.g. substrate
             paradigm + canonical equation refs). Per
@@ -327,13 +328,9 @@ def emit_substrate_landing_posterior_anchor(
     if not isinstance(substrate_id, str) or not substrate_id.strip():
         raise ValueError("substrate_id must be non-empty str")
     if not isinstance(archive_bytes, int) or isinstance(archive_bytes, bool):
-        raise TypeError(
-            f"archive_bytes must be int; got {type(archive_bytes).__name__}"
-        )
+        raise TypeError(f"archive_bytes must be int; got {type(archive_bytes).__name__}")
     if archive_bytes <= 0:
-        raise ValueError(
-            f"archive_bytes must be positive int; got {archive_bytes!r}"
-        )
+        raise ValueError(f"archive_bytes must be positive int; got {archive_bytes!r}")
     _validate_archive_sha256(archive_sha256)
     _validate_notes_no_placeholder(notes)
 
@@ -342,12 +339,12 @@ def emit_substrate_landing_posterior_anchor(
         raise ValueError("architecture_class must be non-empty str")
 
     source_path_str = str(source_path)
-    manifest_p = manifest_path or DEFAULT_MPS_RESEARCH_SIGNAL_MANIFEST_PATH
+    manifest_p = manifest_path or DEFAULT_MLX_RESEARCH_SIGNAL_MANIFEST_PATH
 
-    # 1) Build canonical Provenance via build_provenance_for_mps_proxy.
+    # 1) Build canonical Provenance via build_provenance_for_macos_mlx_research_signal.
     # Per Catalog #323 canonical Provenance umbrella: the helper auto-
     # stamps promotion_eligible=False + score_claim_valid=False.
-    provenance = build_provenance_for_mps_proxy(
+    provenance = build_provenance_for_macos_mlx_research_signal(
         artifact_sha256=archive_sha256,
         source_path=source_path_str,
     )
@@ -357,11 +354,11 @@ def emit_substrate_landing_posterior_anchor(
     # promotion (NON_PROMOTABLE_TAGS) but the anchor IS recorded in
     # refused_anchor_count via posterior_update_locked.
     result = ContestResult(
-        axis="cpu",  # MLX runs on Apple Silicon CPU/MPS; axis is non-authoritative-CPU
-        hardware_substrate="macos_arm64",
+        axis="cpu",  # MLX local signal is non-authoritative for contest score.
+        hardware_substrate=MLX_RESEARCH_SIGNAL_HARDWARE_SUBSTRATE,
         architecture_class=arch_class,
         score_value=float(predicted_score),
-        evidence_tag="[MPS-research-signal]",
+        evidence_tag=MLX_RESEARCH_SIGNAL_EVIDENCE_TAG,
         archive_sha256=archive_sha256.lower(),
         archive_bytes=int(archive_bytes),
         cpu_pose=float(predicted_d_pose) if predicted_d_pose is not None else None,
@@ -371,7 +368,7 @@ def emit_substrate_landing_posterior_anchor(
             "source": "substrate_landing_posterior_emission_helper",
             "substrate_id": substrate_id,
             "source_path": source_path_str,
-            "evidence_grade": MPS_RESEARCH_SIGNAL_EVIDENCE_GRADE,
+            "evidence_grade": MLX_RESEARCH_SIGNAL_EVIDENCE_GRADE,
             "provenance_kind": provenance.artifact_kind.value,
             "provenance_evidence_grade": provenance.evidence_grade.value,
             "provenance_canonical_helper": provenance.canonical_helper_invocation,
@@ -392,11 +389,11 @@ def emit_substrate_landing_posterior_anchor(
         forbid_macos_promotion=True,
     )
 
-    # 4) Append to the canonical MPS-research-signal posterior at
-    # .omx/state/mps_research_signal_manifest.jsonl via the canonical
+    # 4) Append to the canonical MLX research-signal posterior at
+    # .omx/state/mlx_research_signal_manifest.jsonl via the canonical
     # fcntl-locked sister helper. This IS the cathedral-consumer-
     # queryable surface for MLX research signals (per Catalog #317
-    # canonical local-MPS dispatch markers).
+    # canonical local-signal dispatch markers).
     manifest_row: dict[str, Any] = {
         "substrate_id": substrate_id,
         "architecture_class": arch_class,
@@ -404,10 +401,10 @@ def emit_substrate_landing_posterior_anchor(
         "archive_bytes": int(archive_bytes),
         "predicted_score": float(predicted_score),
         "source_path": source_path_str,
-        "evidence_tag": "[MPS-research-signal]",
-        "hardware_substrate": "macos_arm64",
-        "axis_tag": "[MPS-research-signal]",  # Catalog #341 canonical marker
-        "device": "mps",
+        "evidence_tag": MLX_RESEARCH_SIGNAL_EVIDENCE_TAG,
+        "hardware_substrate": MLX_RESEARCH_SIGNAL_HARDWARE_SUBSTRATE,
+        "axis_tag": MLX_RESEARCH_SIGNAL_EVIDENCE_TAG,
+        "device": "mlx",
         "predicted_delta_adjustment": 0.0,  # Catalog #341 routing-marker
         "promotable": False,  # Catalog #341 routing-marker
         "non_authoritative_blockers": list(_CANONICAL_MLX_NON_AUTHORITATIVE_BLOCKERS),
@@ -444,8 +441,8 @@ def emit_substrate_landing_posterior_anchor(
         archive_sha256=archive_sha256.lower(),
         archive_bytes=int(archive_bytes),
         predicted_score=float(predicted_score),
-        evidence_tag="[MPS-research-signal]",
-        hardware_substrate="macos_arm64",
+        evidence_tag=MLX_RESEARCH_SIGNAL_EVIDENCE_TAG,
+        hardware_substrate=MLX_RESEARCH_SIGNAL_HARDWARE_SUBSTRATE,
         provenance=provenance,
         posterior_update=posterior_update,
         manifest_row=manifest_row,
@@ -481,11 +478,12 @@ def synthesize_substrate_archive_sha256(
     """
     if not isinstance(substrate_id, str) or not substrate_id.strip():
         raise ValueError("substrate_id must be non-empty str")
-    payload = f"{salt}:{substrate_id}".encode("utf-8")
+    payload = f"{salt}:{substrate_id}".encode()
     return hashlib.sha256(payload).hexdigest()
 
 
 __all__ = [
+    "DEFAULT_MLX_RESEARCH_SIGNAL_MANIFEST_PATH",
     "DEFAULT_MPS_RESEARCH_SIGNAL_MANIFEST_PATH",
     "SubstrateLandingPosteriorAnchor",
     "emit_substrate_landing_posterior_anchor",

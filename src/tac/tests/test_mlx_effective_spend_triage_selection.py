@@ -51,6 +51,13 @@ def _row(
         "source_evidence_grade": "macOS-MLX-research-signal",
         "source_evidence_tag": "[macOS-MLX research-signal]",
         "source_schema": "mlx_scorer_response.v1",
+        "canonical_provenance": {
+            "measurement_axis": "[macOS-MLX research-signal]",
+            "hardware_substrate": "macos_arm64_mlx",
+            "evidence_grade": "macos_mlx_research_signal",
+            "score_claim_valid": False,
+            "promotion_eligible": False,
+        },
         "source_batch_pairs": 1,
         "source_n_samples": 1,
         "source_pair_window": [10, 11],
@@ -182,6 +189,10 @@ def test_selection_uses_observed_strict_gated_rows_not_positive_predictions() ->
     assert selection["selection_policy"]["planning_value_accessor"] == (
         "scorer_response_planning_value_for_target"
     )
+    selected = selection["selected_rows"][0]
+    assert selected["source_evidence_grade"] == "macOS-MLX-research-signal"
+    assert selected["source_evidence_tag"] == "[macOS-MLX research-signal]"
+    assert selected["canonical_provenance"]["evidence_grade"] == "macos_mlx_research_signal"
 
 
 def test_selection_preserves_operation_set_compiler_hints_for_acquisition() -> None:

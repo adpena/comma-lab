@@ -9,24 +9,29 @@ Tests the canonical landing-time posterior emission helper that 8+ Path
 autopilot's 62 auto-discovered consumers via canonical posterior
 surfaces.
 """
+
 from __future__ import annotations
 
 import json
-import tempfile
 from pathlib import Path
 
 import pytest
 
+from tac.optimization.mlx_research_signal import (
+    MLXResearchSignalError,
+    append_manifest_row_to_jsonl,
+)
+from tac.provenance import InvalidProvenanceError
 from tac.substrates._shared.posterior_emission_helper import (
+    DEFAULT_MLX_RESEARCH_SIGNAL_MANIFEST_PATH,
     DEFAULT_MPS_RESEARCH_SIGNAL_MANIFEST_PATH,
     SubstrateLandingPosteriorAnchor,
     emit_substrate_landing_posterior_anchor,
     synthesize_substrate_archive_sha256,
 )
 
-
 # ─── Helper: produce canonical isolated tmp paths for the canonical
-# posterior + canonical MPS manifest so tests don't touch live state.
+# posterior + canonical MLX manifest so tests don't touch live state.
 
 
 def _isolated_paths(tmpdir: Path) -> tuple[Path, Path, Path]:
@@ -94,9 +99,7 @@ class TestEmitSubstrateLandingPosteriorAnchorHappyPath:
         assert anchor.archive_bytes == 12345
         assert anchor.predicted_score == 0.195
 
-    def test_posterior_refused_per_mps_research_signal_non_promotable(
-        self, tmp_path: Path
-    ) -> None:
+    def test_posterior_refused_per_mlx_research_signal_non_promotable(self, tmp_path: Path) -> None:
         post_p, lock_p, manifest_p = _isolated_paths(tmp_path)
         anchor = emit_substrate_landing_posterior_anchor(
             substrate_id="dreamer_v3_rssm",
@@ -108,12 +111,14 @@ class TestEmitSubstrateLandingPosteriorAnchorHappyPath:
             posterior_lock_path=lock_p,
             manifest_path=manifest_p,
         )
-        # Per CLAUDE.md "MPS auth eval is NOISE" + custody validator:
-        # [MPS-research-signal] tag is NON_PROMOTABLE_TAGS so the
+        # Per CLAUDE.md local-substrate authority + custody validator:
+        # [macOS-MLX research-signal] tag is NON_PROMOTABLE_TAGS so the
         # posterior REFUSES the anchor (advisory-grade refusal).
         assert anchor.posterior_update.accepted is False
-        assert "advisory" in anchor.posterior_update.refusal_reason.lower() or \
-               "non-authoritative" in anchor.posterior_update.refusal_reason.lower()
+        assert (
+            "advisory" in anchor.posterior_update.refusal_reason.lower()
+            or "non-authoritative" in anchor.posterior_update.refusal_reason.lower()
+        )
 
     def test_posterior_state_bumps_refused_anchor_count(self, tmp_path: Path) -> None:
         post_p, lock_p, manifest_p = _isolated_paths(tmp_path)
@@ -160,13 +165,13 @@ class TestEmitSubstrateLandingPosteriorAnchorHappyPath:
         assert row["rank_or_kill_eligible"] is False
         assert row["promotable"] is False
         assert row["predicted_delta_adjustment"] == 0.0
-        assert row["axis_tag"] == "[MPS-research-signal]"
-        assert row["evidence_tag"] == "[MPS-research-signal]"
-        assert row["hardware_substrate"] == "macos_arm64"
+        assert row["axis_tag"] == "[macOS-MLX research-signal]"
+        assert row["evidence_tag"] == "[macOS-MLX research-signal]"
+        assert row["evidence_grade"] == "macOS-MLX-research-signal"
+        assert row["hardware_substrate"] == "macos_arm64_mlx"
+        assert row["device"] == "mlx"
 
-    def test_provenance_canonical_helper_invocation_present(
-        self, tmp_path: Path
-    ) -> None:
+    def test_provenance_canonical_helper_invocation_present(self, tmp_path: Path) -> None:
         post_p, lock_p, manifest_p = _isolated_paths(tmp_path)
         anchor = emit_substrate_landing_posterior_anchor(
             substrate_id="dreamer_v3_rssm",
@@ -180,7 +185,7 @@ class TestEmitSubstrateLandingPosteriorAnchorHappyPath:
         )
         # Per Catalog #323 canonical Provenance:
         assert anchor.provenance.canonical_helper_invocation == (
-            "tac.provenance.builders.build_provenance_for_mps_proxy"
+            "tac.provenance.builders.build_provenance_for_macos_mlx_research_signal"
         )
         assert anchor.provenance.promotion_eligible is False
         assert anchor.provenance.score_claim_valid is False
@@ -207,9 +212,7 @@ class TestEmitSubstrateLandingPosteriorAnchorHappyPath:
         assert row["canonical_equation_id"] == "predictive_coding_residual_capacity_v1"
         assert row["mlx_pytorch_decoder_parity_max_abs"] == 0.000011
 
-    def test_extra_manifest_fields_cannot_override_non_promotable_markers(
-        self, tmp_path: Path
-    ) -> None:
+    def test_extra_manifest_fields_cannot_override_non_promotable_markers(self, tmp_path: Path) -> None:
         post_p, lock_p, manifest_p = _isolated_paths(tmp_path)
         emit_substrate_landing_posterior_anchor(
             substrate_id="dreamer_v3_rssm",
@@ -391,9 +394,9 @@ class TestValidation:
 
     def test_rejects_transient_tmp_source_path(self, tmp_path: Path) -> None:
         post_p, lock_p, manifest_p = _isolated_paths(tmp_path)
-        # build_provenance_for_mps_proxy refuses /tmp paths per
+        # build_provenance_for_macos_mlx_research_signal refuses /tmp paths per
         # CLAUDE.md "Forbidden /tmp paths in any persisted artifact".
-        with pytest.raises(Exception):
+        with pytest.raises(InvalidProvenanceError):
             emit_substrate_landing_posterior_anchor(
                 substrate_id="x",
                 archive_sha256=synthesize_substrate_archive_sha256("x"),
@@ -431,9 +434,7 @@ class TestSubstrateLandingPosteriorAnchorInvariants:
         anchor = self._build_anchor(tmp_path)
         assert anchor.promotion_eligible is False
 
-    def test_ready_for_exact_eval_dispatch_default_false(
-        self, tmp_path: Path
-    ) -> None:
+    def test_ready_for_exact_eval_dispatch_default_false(self, tmp_path: Path) -> None:
         anchor = self._build_anchor(tmp_path)
         assert anchor.ready_for_exact_eval_dispatch is False
 
@@ -446,7 +447,7 @@ class TestSubstrateLandingPosteriorAnchorInvariants:
         assert len(anchor.non_authoritative_blockers) >= 1
         # Canonical blocker tokens present
         joined = " ".join(anchor.non_authoritative_blockers)
-        assert "macos" in joined.lower() or "mps" in joined.lower()
+        assert "macos" in joined.lower() or "mlx" in joined.lower()
 
 
 # ─── Default manifest path canonical location ──────────────────────────
@@ -454,12 +455,25 @@ class TestSubstrateLandingPosteriorAnchorInvariants:
 
 class TestDefaultManifestPath:
     def test_canonical_default_under_omx_state(self) -> None:
-        assert ".omx/state/mps_research_signal_manifest.jsonl" in str(
-            DEFAULT_MPS_RESEARCH_SIGNAL_MANIFEST_PATH
-        )
+        assert ".omx/state/mlx_research_signal_manifest.jsonl" in str(DEFAULT_MLX_RESEARCH_SIGNAL_MANIFEST_PATH)
 
     def test_canonical_default_is_jsonl(self) -> None:
-        assert DEFAULT_MPS_RESEARCH_SIGNAL_MANIFEST_PATH.suffix == ".jsonl"
+        assert DEFAULT_MLX_RESEARCH_SIGNAL_MANIFEST_PATH.suffix == ".jsonl"
+
+    def test_legacy_mps_constant_aliases_mlx_path(self) -> None:
+        assert DEFAULT_MPS_RESEARCH_SIGNAL_MANIFEST_PATH == DEFAULT_MLX_RESEARCH_SIGNAL_MANIFEST_PATH
+
+
+class TestMLXResearchSignalManifestHelper:
+    def test_rejects_authority_true_rows(self, tmp_path: Path) -> None:
+        with pytest.raises(MLXResearchSignalError, match="cannot carry score authority"):
+            append_manifest_row_to_jsonl(
+                {
+                    "substrate_id": "x",
+                    "score_claim": True,
+                },
+                output_path=tmp_path / "mlx.jsonl",
+            )
 
 
 # ─── End-to-end: 8 substrate emissions land cleanly in isolation ───────
@@ -507,8 +521,8 @@ class TestPath3SubstrateBulkEmissions:
         assert len(anchors) == 8
         # All 8 are MLX research-signal anchors
         for a in anchors:
-            assert a.evidence_tag == "[MPS-research-signal]"
-            assert a.hardware_substrate == "macos_arm64"
+            assert a.evidence_tag == "[macOS-MLX research-signal]"
+            assert a.hardware_substrate == "macos_arm64_mlx"
             assert a.posterior_update.accepted is False  # advisory-grade refusal
 
         # Manifest JSONL has exactly 8 rows
@@ -521,9 +535,7 @@ class TestPath3SubstrateBulkEmissions:
         posterior_data = json.loads(post_p.read_text())
         assert posterior_data["refused_anchor_count"] >= 8
 
-    def test_canonical_helper_is_idempotent_for_same_anchor(
-        self, tmp_path: Path
-    ) -> None:
+    def test_canonical_helper_is_idempotent_for_same_anchor(self, tmp_path: Path) -> None:
         """Per Catalog #128 + sister: emitting the same anchor twice is
         recorded both times in manifest JSONL (APPEND-ONLY) and is
         refused at the posterior surface (duplicate sha guard)."""

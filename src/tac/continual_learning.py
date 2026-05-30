@@ -118,6 +118,7 @@ AUTHORITATIVE_TAGS = frozenset({
 NON_PROMOTABLE_TAGS = frozenset({
     "[macOS-CPU advisory only]",
     "[macOS-CPU calibrated]",
+    "[macOS-MLX research-signal]",
     "[MPS-PROXY]",
     "[MPS-research-signal]",
     "[advisory only]",

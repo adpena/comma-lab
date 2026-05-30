@@ -85,6 +85,16 @@ def _selection() -> dict[str, object]:
                 "candidate_id": "mlx_scorer_response:window:501:502",
                 "row_id": "window_501_502",
                 "family": "mlx_decoder_q",
+                "source_schema": "mlx_scorer_response.v1",
+                "source_evidence_grade": EVIDENCE_GRADE_MLX,
+                "source_evidence_tag": EVIDENCE_TAG_MLX,
+                "canonical_provenance": {
+                    "measurement_axis": EVIDENCE_TAG_MLX,
+                    "hardware_substrate": "macos_arm64_mlx",
+                    "evidence_grade": "macos_mlx_research_signal",
+                    "score_claim_valid": False,
+                    "promotion_eligible": False,
+                },
                 "rank": 1,
                 "observed_delta_vs_baseline_score": -0.012,
                 "observed_scorer_delta_vs_baseline": -0.012,
@@ -135,6 +145,8 @@ def test_adapter_emits_quality_evidence_consumed_by_dynamic_sweep() -> None:
         "production_contract": "strict_pass",
         "effective_spend_triage": "strict_pass",
     }
+    assert candidate["quality_evidence"]["source_evidence_tag"] == EVIDENCE_TAG_MLX
+    assert candidate["quality_evidence"]["canonical_provenance"]["evidence_grade"] == "macos_mlx_research_signal"
 
     plan = build_mlx_dynamic_learned_sweep_plan(
         incumbent_score=INCUMBENT_SCORE,
@@ -185,6 +197,20 @@ def test_adapter_rejects_truthy_row_authority() -> None:
     with pytest.raises(
         MLXEffectiveSpendTriageLearnedSweepAdapterError,
         match="score_claim",
+    ):
+        build_mlx_effective_spend_triage_learned_sweep_candidates(
+            selection,
+            incumbent_score=INCUMBENT_SCORE,
+        )
+
+
+def test_adapter_rejects_selection_rows_missing_mlx_source_evidence() -> None:
+    selection = _selection()
+    selection["selected_rows"][0].pop("source_evidence_grade")
+
+    with pytest.raises(
+        MLXEffectiveSpendTriageLearnedSweepAdapterError,
+        match="source_evidence_grade",
     ):
         build_mlx_effective_spend_triage_learned_sweep_candidates(
             selection,
