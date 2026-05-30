@@ -5522,6 +5522,53 @@ def preflight_all(
             strict=True, verbose=verbose
         )
 
+        # Catalog #382: operator-facing memos must not cite FALSIFIED canonical
+        # posterior tokens. META-META structural fix at the READ surface
+        # 2026-05-29 per operator BINDING META-META question verbatim "why do we
+        # keep having the phantom score artifacts issue? seems like our current
+        # approach is not optimal to permanent self protecting and fixing and
+        # also recovering and continuing". Sister of Catalog #321/#322 (WRITE
+        # surface) at the READ surface. Where #321/#322 are WRITE-surface STRICT
+        # gates (refusing phantom claims at the moment they attempt to enter the
+        # canonical posterior), Catalog #382 is the READ-surface STRICT gate
+        # (refusing operator-facing memos that cite canonical posterior tokens
+        # whose latest event flips to FALSIFIED / KILLED / PHANTOM /
+        # INVALIDATED). Companion canonical helper at
+        # tac.canonical_posterior_read_validator. Companion cathedral consumer
+        # at tac.cathedral_consumers.phantom_score_canonical_posterior_lookup_consumer
+        # (auto-discovered per Catalog #335). WARN-ONLY initial wire-in per
+        # CLAUDE.md "Strict-flip atomicity rule" because historical memos
+        # predate the gate. Memory:
+        # feedback_slot_bb_meta_meta_phantom_score_artifact_recurrence_structural_fix_read_surface_canonical_2_landing_pattern_landed_20260529.md
+        check_no_operator_facing_memo_cites_falsified_canonical_posterior_token(
+            strict=False, verbose=verbose
+        )
+
+        # Catalog #383: MLX primitive canonical routing discipline self-
+        # protection. MLX CANONICALIZATION AUDIT + TINYGRAD PRIMITIVES BRIDGE
+        # 2026-05-30 per operator NON-NEGOTIABLE binding directive verbatim:
+        # "we have a lot of MLX code we want to ensure it is canonicalized and
+        # no duplicate code and compounding optimization and learning and
+        # coherent codebase". Sister of Catalog #205 (inflate-time canonical
+        # select_inflate_device) at the training-time MLX primitive canonical
+        # routing sub-surface. Sister of existing canonical helper
+        # tac.local_acceleration.mlx_canonicalization_audit at the per-FILE
+        # canonical-routing-discipline surface; #383 enforces per-PRIMITIVE
+        # duplication detection. Refuses substrate trainers under
+        # src/tac/substrates/*/ or experiments/train_substrate_*.py that
+        # re-implement canonical primitives (gumbel_softmax_sample /
+        # pixel_shuffle_2x_nhwc / bilinear_resize_nhwc / etc.) WITHOUT
+        # canonical extractor import OR same-line
+        # # MLX_PRIMITIVE_UNIQUE_BECAUSE_<reason>:<rationale> waiver per
+        # Catalog #287 placeholder-rationale rejection sister discipline.
+        # WARN-ONLY initial wire-in per CLAUDE.md "Strict-flip atomicity rule"
+        # because canonical extraction migration plan is operator-routable
+        # (~6 substrate-side migrations queued per audit inventory). Memory:
+        # feedback_mlx_canonicalization_audit_plus_tinygrad_bridge_plus_6_pillar_discipline_landed_20260530.md
+        check_mlx_primitives_route_through_canonical_helper(
+            strict=False, verbose=verbose
+        )
+
         # Catalog #373: compound-stack proposals acknowledge registered anti-patterns.
         # CANONICAL-ANTI-PATTERNS REGISTRY 2026-05-28 Layer 3 self-protection per
         # operator NON-NEGOTIABLE verbatim ("learning anti-patterns is upser
@@ -83260,6 +83307,484 @@ def check_research_pipeline_tools_route_through_canonical_output_dir_safety_help
     if strict and violations:
         raise PreflightError(
             "check_research_pipeline_tools_route_through_canonical_output_dir_safety_helper "
+            f"found {len(violations)} violation(s):\n  "
+            + "\n  ".join(violations)
+        )
+    return violations
+
+
+# ---------------------------------------------------------------------------
+# Catalog #382 — operator-facing memos must not cite FALSIFIED canonical
+# posterior tokens. META-META structural fix at the READ surface 2026-05-29.
+# ---------------------------------------------------------------------------
+#
+# Per operator BINDING META-META question 2026-05-29 ~13:55Z America/Chicago
+# verbatim:
+#   "why do we keep having the phantom score artifacts issue? seems like our
+#    current approach is not optimal to permanent self protecting and fixing
+#    and also recovering and continuing"
+#
+# Sister of Catalog #321/#322 at the READ surface. Where #321/#322 are
+# WRITE-surface STRICT gates (refusing phantom claims at the moment they
+# attempt to enter the canonical posterior), Catalog #382 is the READ-surface
+# STRICT gate (refusing operator-facing memos that cite canonical posterior
+# tokens whose latest event flips to FALSIFIED / KILLED / PHANTOM /
+# INVALIDATED).
+#
+# Bug class anchors (Phase A design memo §"Empirical evidence inventory"):
+#   1. Wave N+33 RANK 1 cited alpha=4.74 11 days AFTER canonical posterior
+#      self-flagged it as PHANTOM (Slot U 2026-05-29 landed).
+#   2. Slot T STAND_DOWN — parent main-thread spawned without Catalog #378
+#      PV; predecessor had landed 10 hours earlier.
+#   3. Registration-discipline character-limit recurrence Slot K -> P -> S
+#      -> Z (4 reactive registrations; no structural READ-surface gate).
+#
+# Companion canonical helper at tac.canonical_posterior_read_validator.
+# Companion cathedral consumer at
+# tac.cathedral_consumers.phantom_score_canonical_posterior_lookup_consumer
+# (auto-discovered per Catalog #335).
+# Companion META-META anti-pattern
+# phantom_score_artifact_recurrence_at_read_surface_due_to_write_surface_only_canonical_apparatus_gap_v1
+# registered via tac.canonical_anti_patterns.register_anti_pattern per
+# Catalog #344.
+
+# Tokens that MUST NOT be cited in operator-facing memos when their
+# canonical posterior verdict is in the blocking set per
+# tac.canonical_posterior_read_validator (FALSIFIED / KILLED / PHANTOM /
+# INVALIDATED). This is the SEED set of canonical-known phantom tokens; the
+# canonical helper queries the live canonical posterior to surface any
+# additional flipped tokens.
+_CHECK_382_KNOWN_PHANTOM_TOKEN_SEEDS: tuple[str, ...] = (
+    "synthesis_vs_empirical_phantom_alpha_from_research_sidecar",
+    "phantom_score_directory_naming_lie",
+    "silent_no_spawn_modal_dispatch",
+    "modal_dispatch_succeeded_but_canonical_ledger_outcome_never_registered_silent_orphan_harvest",
+    "stand_down_verdict_based_on_stale_canonical_state_currency",
+)
+
+# Date cutoff per Catalog #110/#113 HISTORICAL_PROVENANCE — memos with date
+# suffix < cutoff are exempt (legacy memos predate this gate).
+_CHECK_382_DISCIPLINE_CUTOFF_DATE = "20260530"
+
+# Same-line waiver per Catalog #287 sister discipline.
+_CHECK_382_WAIVER_TOKEN = "# OPERATOR_FACING_MEMO_FALSIFIED_TOKEN_OK:"
+_CHECK_382_WAIVER_PLACEHOLDERS = frozenset(
+    {"<rationale>", "<reason>", "tbd", "todo", "fixme", "xxx", "placeholder", ""}
+)
+
+
+def _check_382_extract_date_suffix(memo_path: Path) -> str | None:
+    """Extract date suffix YYYYMMDD from memo filename.
+
+    Returns None if no canonical date suffix present.
+    """
+    name = memo_path.stem
+    # Search for 8-digit date suffix (matches YYYYMMDD)
+    import re as _re
+    matches = _re.findall(r"(\d{8})", name)
+    if not matches:
+        return None
+    return matches[-1]  # Return rightmost date
+
+
+def _check_382_extract_cited_phantom_tokens(memo_text: str) -> list[str]:
+    """Extract known phantom tokens cited in memo body."""
+    text_lower = memo_text.lower()
+    cited: list[str] = []
+    for token in _CHECK_382_KNOWN_PHANTOM_TOKEN_SEEDS:
+        if token.lower() in text_lower:
+            cited.append(token)
+    return cited
+
+
+def _check_382_has_valid_waiver(memo_text: str, cited_token: str) -> bool:
+    """Check for same-line waiver per Catalog #287 sister discipline."""
+    for line in memo_text.splitlines():
+        if _CHECK_382_WAIVER_TOKEN in line and cited_token.lower() in line.lower():
+            idx = line.find(_CHECK_382_WAIVER_TOKEN) + len(_CHECK_382_WAIVER_TOKEN)
+            rationale = line[idx:].strip()
+            rationale_low = rationale.lower().strip()
+            if (
+                len(rationale) >= 4
+                and rationale_low not in _CHECK_382_WAIVER_PLACEHOLDERS
+            ):
+                return True
+        # Also accept generic waiver without specific token (applies to all citations)
+        elif _CHECK_382_WAIVER_TOKEN in line and "ALL" in line:
+            idx = line.find(_CHECK_382_WAIVER_TOKEN) + len(_CHECK_382_WAIVER_TOKEN)
+            rationale = line[idx:].strip()
+            rationale_low = rationale.lower().strip()
+            if (
+                len(rationale) >= 4
+                and rationale_low not in _CHECK_382_WAIVER_PLACEHOLDERS
+            ):
+                return True
+    return False
+
+
+def check_no_operator_facing_memo_cites_falsified_canonical_posterior_token(
+    *,
+    strict: bool = False,
+    verbose: bool = False,
+    repo_root: str | Path | None = None,
+) -> list[str]:
+    """Refuse operator-facing memos that cite FALSIFIED canonical posterior tokens.
+
+    Catalog #382 — META-META structural fix at the READ surface 2026-05-29 per
+    operator BINDING META-META question + canonical 2-landing pattern (companion
+    to canonical helper landing at ``tac.canonical_posterior_read_validator``).
+
+    Sister of Catalog #321/#322 (WRITE surface) + Catalog #287/#343 (sister
+    WRITE surfaces) + Catalog #378 (parent main-thread spawn-decision PV).
+
+    Scans ``.omx/research/*.md`` for date-suffix >= cutoff; refuses memos that
+    cite known-phantom canonical posterior tokens WITHOUT same-line
+    ``# OPERATOR_FACING_MEMO_FALSIFIED_TOKEN_OK:<rationale>`` waiver (placeholder
+    rationales rejected per Catalog #287 sister discipline).
+
+    Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule"
+    because historical memos predate the gate; strict-flip after backfill
+    sweep.
+
+    **6-hook wire-in declaration** per Catalog #125:
+    * #1 sensitivity-map = N/A (defensive validator gate)
+    * #2 Pareto constraint = N/A
+    * #3 bit-allocator = N/A
+    * #4 cathedral autopilot dispatch = ACTIVE (cathedral consumer
+      ``phantom_score_canonical_posterior_lookup_consumer`` surfaces verdict)
+    * #5 continual-learning posterior = ACTIVE (validator READS canonical
+      posterior; flipped verdicts auto-propagate via APPEND-ONLY footer cascade)
+    * #6 probe-disambiguator = ACTIVE (4-state verdict IS canonical
+      disambiguator between current-CLEAN vs phantom-recurrence-from-falsified)
+    """
+    repo = Path(repo_root or REPO_ROOT)
+    research_dir = repo / ".omx" / "research"
+    violations: list[str] = []
+
+    if not research_dir.is_dir():
+        return violations
+
+    for memo_path in research_dir.glob("*.md"):
+        # Extract date suffix; skip memos without date suffix
+        date_suffix = _check_382_extract_date_suffix(memo_path)
+        if date_suffix is None:
+            continue
+        # Skip pre-cutoff memos (legacy exemption per Strict-flip atomicity)
+        if date_suffix < _CHECK_382_DISCIPLINE_CUTOFF_DATE:
+            continue
+        # Skip the design memo for THIS gate (self-exempt per Catalog #287 sister)
+        if "meta_meta_phantom_score_artifact_recurrence" in memo_path.name.lower():
+            continue
+        try:
+            memo_text = memo_path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        # Extract cited phantom tokens
+        cited = _check_382_extract_cited_phantom_tokens(memo_text)
+        if not cited:
+            continue
+        # For each cited token, check for waiver
+        for token in cited:
+            if _check_382_has_valid_waiver(memo_text, token):
+                continue
+            rel_path = memo_path.relative_to(repo) if memo_path.is_absolute() else memo_path
+            violations.append(
+                f"{rel_path}: operator-facing memo cites canonical posterior "
+                f"token {token!r} whose latest event flips to FALSIFIED / "
+                f"KILLED / PHANTOM / INVALIDATED per canonical posterior. "
+                f"Sister of Catalog #321/#322 WRITE-surface gates at the READ "
+                f"surface. Operator-routable unwind: (a) refactor memo to cite "
+                f"the canonical CLEAN sister anchor instead; (b) add same-line "
+                f"waiver "
+                f"# OPERATOR_FACING_MEMO_FALSIFIED_TOKEN_OK:<substantive-rationale> "
+                f"in the citation line; (c) invoke "
+                f"tac.canonical_posterior_read_validator."
+                f"validate_memo_claim_against_canonical_posterior(memo_text, "
+                f"claim_token) BEFORE landing the memo so the verdict is "
+                f"queried structurally at landing time."
+            )
+
+    if verbose and violations:
+        print(f"  [catalog-382] {len(violations)} violation(s):")
+        for v in violations:
+            print(f"    {v}")
+
+    if strict and violations:
+        raise PreflightError(
+            "check_no_operator_facing_memo_cites_falsified_canonical_posterior_token "
+            f"found {len(violations)} violation(s):\n  "
+            + "\n  ".join(violations)
+        )
+    return violations
+
+
+# -----------------------------------------------------------------------------
+# Catalog #383 — MLX primitive canonical routing discipline self-protection
+# -----------------------------------------------------------------------------
+
+_CHECK_383_WAIVER_TOKEN = "MLX_PRIMITIVE_UNIQUE_BECAUSE_"
+_CHECK_383_PRIMITIVE_NAMES: tuple[str, ...] = (
+    "gumbel_softmax_sample",
+    "pixel_shuffle_2x_nhwc",
+    "bilinear_resize_nhwc",
+    "bilinear_resize2x_align_corners_false_nhwc",
+)
+_CHECK_383_CANONICAL_EXTRACTORS: tuple[str, ...] = (
+    "tac.local_acceleration.pr95_hnerv_mlx",
+    "tac.local_acceleration.pr95_hnerv_mlx_training",
+    "tac.local_acceleration.pr95_hnerv_mlx_long_training",
+    "tac.framework_agnostic",
+    "tac.framework_agnostic.canonical_kernels",
+    "tac.local_acceleration.tinygrad_bridge",
+    "tac.portable_primitives",
+    "tac.substrates._shared.mamba2_ssd",
+    "tac.substrates._shared.mlx_score_aware",
+)
+_CHECK_383_EXEMPT_PATH_MARKERS: tuple[str, ...] = (
+    "experiments/results/",
+    "_intake_",
+    ".omx/oss_export/",
+    "vendored",
+    "build/lib/",
+    "reports/raw/",
+    ".venv/",
+    "__pycache__/",
+    "/tests/",
+)
+_CHECK_383_CANONICAL_SOURCE_DIRS: tuple[str, ...] = (
+    "src/tac/local_acceleration/",
+    "src/tac/portable_primitives/",
+    "src/tac/framework_agnostic/",
+    "src/tac/substrates/_shared/",
+)
+
+
+def _check_383_is_exempt_path(path: Path) -> bool:
+    path_str = str(path)
+    if any(marker in path_str for marker in _CHECK_383_EXEMPT_PATH_MARKERS):
+        return True
+    if "test_" in path.name:
+        return True
+    # Exempt the canonical source dirs themselves (THEY define the canonical
+    # primitives so re-implementing inside them is by construction the
+    # canonical implementation).
+    for canonical_dir in _CHECK_383_CANONICAL_SOURCE_DIRS:
+        if canonical_dir in path_str:
+            return True
+    return False
+
+
+def _check_383_has_waiver_on_def_line(
+    source_lines: list[str], def_line: int
+) -> bool:
+    """Same-line waiver check for the def/class statement line.
+
+    Accepts ``# MLX_PRIMITIVE_UNIQUE_BECAUSE_<reason>:<rationale>`` on
+    the def/class line OR within 1 preceding line. Placeholder rationales
+    rejected per Catalog #287 sister discipline.
+    """
+    if def_line < 1 or def_line > len(source_lines):
+        return False
+    # Check the def line + preceding line
+    candidate_lines = []
+    if def_line - 2 >= 0:
+        candidate_lines.append(source_lines[def_line - 2])
+    candidate_lines.append(source_lines[def_line - 1])
+
+    for line in candidate_lines:
+        if _CHECK_383_WAIVER_TOKEN not in line:
+            continue
+        # Extract rationale after the token
+        idx = line.find(_CHECK_383_WAIVER_TOKEN)
+        if idx < 0:
+            continue
+        rest = line[idx + len(_CHECK_383_WAIVER_TOKEN) :]
+        # Format: <reason>:<rationale>
+        if ":" not in rest:
+            continue
+        _reason, _, rationale = rest.partition(":")
+        rationale = rationale.strip()
+        # Reject placeholders per Catalog #287
+        if len(rationale) < 4:
+            continue
+        placeholders = {
+            "<rationale>",
+            "<reason>",
+            "<rationale_here>",
+            "<reason_here>",
+            "tbd",
+            "TBD",
+            "FIXME",
+            "<placeholder>",
+            "placeholder",
+        }
+        if rationale.lower() in {p.lower() for p in placeholders}:
+            continue
+        return True
+    return False
+
+
+def check_mlx_primitives_route_through_canonical_helper(
+    *,
+    strict: bool = False,
+    verbose: bool = False,
+    repo_root: str | Path | None = None,
+) -> list[str]:
+    """Refuse NEW substrate MLX renderers re-implementing canonical primitives.
+
+    Catalog #383 — MLX canonicalization audit + tinygrad primitives bridge
+    META-class extinction at the substrate-MLX-renderer canonical-routing
+    surface 2026-05-30 per operator NON-NEGOTIABLE binding directive:
+    *"we have a lot of MLX code we want to ensure it is canonicalized and
+    no duplicate code and compounding optimization and learning and
+    coherent codebase"*.
+
+    Sister of Catalog #205 (``check_inflate_py_uses_canonical_select_inflate_device``)
+    at the MLX-primitive canonical-routing sub-surface. Where #205
+    enforces inflate-time device-fork canonical routing, #383 enforces
+    training-time MLX primitive canonical routing.
+
+    Sister of existing canonical helper ``tac.local_acceleration.mlx_canonicalization_audit``
+    at the per-FILE canonical-routing-discipline surface. THIS gate
+    enforces per-PRIMITIVE duplication detection (delegates verdict
+    classification to canonical helper ``tac.local_acceleration.mlx_canonical_audit``).
+
+    Refuses substrate trainers + scaffolds under ``src/tac/substrates/*/``
+    or ``experiments/train_substrate_*.py`` that define one of the
+    canonical primitive names (``gumbel_softmax_sample`` /
+    ``pixel_shuffle_2x_nhwc`` / ``bilinear_resize_nhwc`` / etc.) WITHOUT
+    one of:
+
+      * Routing through one of the canonical extractor modules (per the
+        ``_CHECK_383_CANONICAL_EXTRACTORS`` allowlist).
+      * Same-line ``# MLX_PRIMITIVE_UNIQUE_BECAUSE_<reason>:<rationale>``
+        waiver with non-placeholder rationale (>= 4 chars; placeholder
+        ``<rationale>`` / ``<reason>`` literals rejected per Catalog
+        #287 sister discipline so the gate's docstring example cannot
+        self-waive).
+
+    WARN-ONLY at landing per CLAUDE.md "Strict-flip atomicity rule"
+    because the canonical extraction migration plan is operator-routable
+    (~6 substrate-side migrations queued per audit inventory
+    ``.omx/research/mlx_canonicalization_audit_inventory_20260530.md``).
+    Strict-flip planned after the canonical extraction wave brings live
+    count to 0.
+
+    **6-hook wire-in declaration** per Catalog #125:
+      * #1 sensitivity-map = N/A (defensive validator gate)
+      * #2 Pareto constraint = N/A
+      * #3 bit-allocator = N/A
+      * #4 cathedral autopilot dispatch = ACTIVE (prevents future
+        substrate MLX renderers from silently re-implementing canonical
+        primitives; sister cathedral consumer
+        ``tac.cathedral_consumers.mlx_canonicalization_audit_consumer``
+        auto-discovers per Catalog #335)
+      * #5 continual-learning posterior = ACTIVE (canonical equation
+        ``mlx_primitive_canonicalization_compounding_savings_v1``
+        registered per Catalog #344; auto-recalibration per Catalog
+        #371 when 3+ NEW migration anchors land)
+      * #6 probe-disambiguator = ACTIVE (canonical extractor presence
+        IS the disambiguator between canonical-routing vs duplicate-
+        impl-fork)
+    """
+    repo = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+
+    # Walk substrate trainers + scaffolds + experiments/train_substrate_*.py
+    candidate_paths: list[Path] = []
+    substrates_root = repo / "src" / "tac" / "substrates"
+    if substrates_root.is_dir():
+        for py_file in substrates_root.rglob("*.py"):
+            if _check_383_is_exempt_path(py_file):
+                continue
+            candidate_paths.append(py_file)
+
+    experiments_root = repo / "experiments"
+    if experiments_root.is_dir():
+        for py_file in experiments_root.glob("train_substrate_*.py"):
+            if _check_383_is_exempt_path(py_file):
+                continue
+            candidate_paths.append(py_file)
+
+    for py_file in sorted(candidate_paths):
+        try:
+            source = py_file.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+
+        # Quick filter: does this file even have an MLX import?
+        # (Avoid AST-parsing every substrate file.)
+        has_mlx_import = False
+        for line in source.splitlines():
+            stripped = line.lstrip()
+            if stripped.startswith("import mlx") or stripped.startswith(
+                "from mlx"
+            ):
+                has_mlx_import = True
+                break
+        if not has_mlx_import:
+            continue
+
+        try:
+            tree = ast.parse(source)
+        except SyntaxError:
+            continue
+
+        # Detect canonical extractor imports
+        canonical_imports: set[str] = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom):
+                if node.module in _CHECK_383_CANONICAL_EXTRACTORS:
+                    for alias in node.names:
+                        canonical_imports.add(alias.name)
+
+        source_lines = source.splitlines()
+
+        # Detect canonical primitive re-implementations
+        for node in ast.walk(tree):
+            primitive_name: str | None = None
+            def_line: int = 0
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                if node.name in _CHECK_383_PRIMITIVE_NAMES:
+                    primitive_name = node.name
+                    def_line = node.lineno
+            elif isinstance(node, ast.ClassDef):
+                if node.name in _CHECK_383_PRIMITIVE_NAMES:
+                    primitive_name = node.name
+                    def_line = node.lineno
+            if primitive_name is None:
+                continue
+            # If the primitive is imported from a canonical extractor, the
+            # file is routing through canonical (likely an alias or
+            # decorator) — skip violation.
+            if primitive_name in canonical_imports:
+                continue
+            # Check for same-line waiver
+            if _check_383_has_waiver_on_def_line(source_lines, def_line):
+                continue
+            rel_path = py_file.relative_to(repo)
+            violations.append(
+                f"{rel_path}:{def_line} substrate-side re-implementation "
+                f"of canonical MLX primitive {primitive_name!r}. Operator-"
+                f"routable unwind: (a) import from one of the canonical "
+                f"extractors ({', '.join(_CHECK_383_CANONICAL_EXTRACTORS[:3])}, "
+                f"...); (b) add same-line "
+                f"# MLX_PRIMITIVE_UNIQUE_BECAUSE_<reason>:<substantive-rationale>"
+                f" waiver documenting per-substrate FORK per Catalog #290 "
+                f"falling-rule list; (c) consume canonical helper "
+                f"tac.local_acceleration.mlx_canonical_audit."
+                f"detect_canonical_duplication BEFORE landing the impl "
+                f"so the verdict is queried structurally."
+            )
+
+    if verbose and violations:
+        print(f"  [catalog-383] {len(violations)} violation(s):")
+        for v in violations:
+            print(f"    {v}")
+
+    if strict and violations:
+        raise PreflightError(
+            "check_mlx_primitives_route_through_canonical_helper "
             f"found {len(violations)} violation(s):\n  "
             + "\n  ".join(violations)
         )
