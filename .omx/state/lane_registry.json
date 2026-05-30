@@ -63540,6 +63540,49 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_pr110_opt7_l1_promotion_via_yousfi_t1_20260530",
+      "name": "PR110-OPT-7 Fridrich UNIWARD Inverse-Scorer Basis via Yousfi-T1 Enablement (L1 PROMOTION)",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "L1 IMPL_COMPLETE: src/tac/substrates/pr110_opt7_fridrich_uniward_inverse_scorer_basis_via_yousfi_t1/ 4 files + experiments/train_substrate_pr110_opt7_fridrich_uniward_inverse_scorer_basis_via_yousfi_t1.py + recipe; 41/41 tests pass; Phase C MLX-LOCAL N=100 smoke GREEN 7/7 substantive axes; archive_bytes_added=~530B OPT7VYT1; score_improvement_mechanism_status=OPERATIONAL via 5-canonical-helper composition; runtime_overlay_consumed=true; research_only=true; lane_class=substrate_engineering"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "Memory: feedback_pr110_opt7_l1_promotion_via_yousfi_t1_landed_20260530.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "",
+      "research_only": true,
+      "lane_class": "substrate_engineering"
     }
   ],
   "level_rules": {
@@ -63549,5 +63592,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-30T20:40:05Z"
+  "updated_at": "2026-05-30T20:56:27Z"
 }

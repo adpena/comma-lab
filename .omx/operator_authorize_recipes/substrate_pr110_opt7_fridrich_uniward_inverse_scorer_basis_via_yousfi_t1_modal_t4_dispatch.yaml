@@ -1,0 +1,286 @@
+# SPDX-License-Identifier: MIT
+schema_version: 1
+name: substrate_pr110_opt7_fridrich_uniward_inverse_scorer_basis_via_yousfi_t1_modal_t4_dispatch
+lane_id: lane_pr110_opt7_l1_promotion_via_yousfi_t1_20260530
+summary: |
+  PR110-OPT-7 Fridrich UNIWARD inverse-scorer basis via Yousfi-Tier-1
+  enablement L1 PROMOTION paired-CUDA + paired-CPU empirical anchor
+  dispatch per deferred-items feeder audit `46aa6ad86` Phase E TOP-1
+  op-routable. Substrate-engineering per HNeRV parity L7. Composes 5 LANDED
+  canonical primitives (alaska commit `61a91a48e` + Yousfi-T1 A+B+C commit
+  `3d027ecf9` + PR110-OPT-7 L0 SCAFFOLD commit `3fd28b5b2`) into ONE
+  coherent substrate per PR-or-greater parity binding-depth discipline.
+  horizon_class=frontier_pursuit per Catalog #309.
+
+# Catalog #240 substrate_contest_cuda_chain coherence: dispatch_enabled: false
+# per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY".
+# This recipe is OPERATOR-ROUTABLE per Phase D scaffolding contract;
+# operator-attended paired-CUDA dispatch routes through tools/operator_authorize.py
+# canonical entry point per Catalog #176/#199/#243/#271 sister discipline.
+dispatch_enabled: false
+research_only: true
+
+# Catalog #246 paired CPU + CUDA 1:1 contest-compliant hardware. Modal T4 CUDA
+# arm + Linux x86_64 CPU arm (separate dispatch per CLAUDE.md "Submission auth
+# eval — BOTH CPU AND CUDA"). Per HNeRV parity discipline lesson 9 runtime
+# closure: paired-CUDA RATIFICATION required before any contest-axis score claim.
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+min_vram_gb: 16
+# Catalog #215 smoke-vs-full GPU compatibility: T4 smoke + T4 full both
+# canonical at 100ep + 1000ep envelope per substrate-engineering smoke wall-clock.
+min_smoke_gpu: "T4"
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - contest_one_video_replay
+  - research_substrate
+canary_status: independent_substrate
+
+cost_band:
+  epochs: 1000
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 0.30
+  platform_key: modal
+  gpu_key: T4
+
+# Catalog #325 per-substrate symposium anchor reference per 6-step contract
+# (Phase E apparatus mutation chain emits the canonical symposium memo at
+# .omx/research/per_substrate_symposium_pr110_opt7_via_yousfi_t1_20260530.md
+# in the same commit batch as this recipe).
+symposium_memo_path: .omx/research/per_substrate_symposium_pr110_opt7_via_yousfi_t1_20260530.md
+symposium_council_verdict: PROCEED_WITH_REVISIONS
+symposium_council_anchor_id: per_substrate_symposium_pr110_opt7_via_yousfi_t1_20260530
+symposium_window_opened_utc: 2026-05-30T20:00:00Z
+symposium_window_closes_utc: 2026-06-13T20:00:00Z
+
+# Catalog #324 post-training Tier-C validation discipline
+predicted_score_target: 0.190
+predicted_delta: "[predicted] PR110-OPT-7 Fridrich UNIWARD inverse-scorer basis via Yousfi-Tier-1 enablement per the 5-helper canonical composition: alaska Y0_UV YUV6 channel slice + Yousfi-T1 Deliverable A pose-vulnerability map (vulnerability_ratio empirical anchor ~363x on canonical 600-pair fp64 tensor) + Yousfi-T1 Deliverable B PoseNet MAE-V surrogate (582 params canonical numpy-portable) + Yousfi-T1 Deliverable C YUV6 chroma-subsampled perturbation operator (luma preservation exact 0.0 in YUV6 space) + PR110-OPT-7 L0 SCAFFOLD inverse-scorer basis (4 strategies; canonical JOINT default per Atick-Redlich linear combination)"
+predicted_delta_basis: ".omx/research/per_substrate_symposium_pr110_opt7_via_yousfi_t1_20260530.md#dykstra-feasibility-predicted-band-per-catalog-296"
+literature_anchor: "Holub-Fridrich-Denemark 2014 UNIWARD canonical universal embedding cost + Yousfi-Filler-Fridrich 2017 selection-channel-aware framing + Atick-Redlich 1990 cooperative-receiver linear combination + 5-helper canonical composition per PR-or-greater parity binding-depth discipline"
+
+predicted_band: [-0.0030, 0.0010]
+predicted_band_validation_status: pending_post_training
+predicted_band_reactivation_criteria: |
+  Catalog #324 + Phase D operator-routable reactivation: BEFORE promotion or
+  full-run score-band authority, (a) execute the canonical MLX-LOCAL N=100
+  smoke per Phase C verification (5/5 helpers invoked; substantive PASS;
+  $0 spend) which IS already complete at landing per the Phase C landing
+  evidence; (b) post paired-CUDA empirical anchor landing per Phase D
+  operator-attended dispatch, measure Tier-C density on the post-training
+  archive via tools/mdl_scorer_conditional_ablation.py --tier c and replace
+  this pending status with validated_post_training plus artifact path;
+  (c) IF empirical score deviates from predicted [-0.0030, 0.0010] band
+  → DEFER paid full-run dispatch + revise canonical equation per Catalog
+  #344 auto-recalibration via Catalog #371; (d) IF empirical score matches
+  predicted band → ratify the canonical equation `pr110_opt7_fridrich_uniward_inverse_scorer_basis_via_yousfi_t1_savings_v1`
+  (FORMALIZATION_PENDING per Catalog #344) via tac.canonical_equations.update_equation_with_empirical_anchor;
+  (e) IF >2x deviation → IMPLEMENTATION-LEVEL falsification per Catalog #307
+  (paradigm INTACT; reactivation paths per Catalog #308: alternative Fridrich
+  weighting basis OR alternative alaska color branch OR alternative Yousfi-T1
+  chroma perturbation strategy OR alternative PoseNet MAE-V surrogate
+  initialization); until then the band is planning-only, not dispatch /
+  promotion authority.
+
+# Catalog #368 substitution-stacking baseline canonical frontier pointer
+# discipline: PR110-OPT-7 L1 PROMOTION substrate composes 5 canonical
+# primitives on top of PR110 fec6 frontier baseline.
+baseline_archive_sha: stacking_on_pr110_fec6_baseline_via_5_canonical_primitive_composition_per_pr_or_greater_parity_binding_depth_discipline
+baseline_canonical_frontier_pointer_path: .omx/state/canonical_frontier_pointer.json
+stacked_archive_built_on: pr110_fec6_fixed_huffman_k16_canonical_baseline_via_5_helper_canonical_composition
+
+# Catalog #244 NVML 3-export block per canonical Modal/CUDA env hygiene
+# per OVERNIGHT-J + D1 NVML 999 6×24h anchor + Catalog #245 canonical Modal
+# call_id ledger 4-layer pattern
+remote_driver: scripts/remote_lane_substrate_pr110_opt7_via_yousfi_t1.sh
+timeout_hours: 2.0
+
+required_input_files:
+  - flag: --pr110-base-archive-path
+    default_path: experiments/results/pr110_fec6_fixed_huffman_k16_baseline/archive.zip
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_pr110_opt7_via_yousfi_t1.sh
+  cost_band_trainer: experiments/train_substrate_pr110_opt7_fridrich_uniward_inverse_scorer_basis_via_yousfi_t1.py
+  cost_band_epochs: 1000
+  cost_band_batch_size: 16
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_pr110_opt7_fridrich_uniward_inverse_scorer_basis_via_yousfi_t1.py
+
+# Catalog #244 canonical NVML/CUDA env hygiene 3-export block per
+# tac.deploy.modal.runtime canonical constants + Catalog #163 sentinel
+env_overrides:
+  PR110_OPT7_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  PR110_OPT7_BASE_ARCHIVE: /workspace/pact/experiments/results/pr110_fec6_fixed_huffman_k16_baseline/archive.zip
+  PR110_OPT7_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  # Catalog #358 + Catalog #204 Modal-aware OUTPUT_DIR 3-branch override:
+  # driver script implements /modal_results/${INSTANCE_JOB_ID}/output/ on
+  # Modal worker per OVERNIGHT-J + canonical pattern per commit 75d39f32e.
+  PR110_OPT7_OUTPUT_DIR: /modal_results/${INSTANCE_JOB_ID}/output
+  PR110_OPT7_EPOCHS: "1000"
+  PR110_OPT7_UPSTREAM_DIR: /workspace/pact/upstream
+  PR110_OPT7_DEVICE: cuda
+  PR110_OPT7_SUBSTRATE_ID: pr110_opt7_via_yousfi_t1
+  PR110_OPT7_FRAMEWORK_BACKEND: pytorch
+  PR110_OPT7_N_PAIRS: "600"
+  PR110_OPT7_VULNERABLE_PAIR_BUDGET: "100"
+  PR110_OPT7_ALASKA_COLOR_BRANCH: "Y0_UV"
+  PR110_OPT7_INVERSE_SCORER_BASIS_STRATEGY: "uniward_inverse_joint_scorer_basis_linear_combination"
+  PR110_OPT7_CHROMA_PERTURBATION_STRATEGY: "joint_atick_redlich_linear_combination"
+  PR110_OPT7_CHROMA_PERTURBATION_MAGNITUDE: "4.0"
+  PR110_OPT7_USE_CANONICAL_POSE_VULNERABILITY_ANCHOR: "1"
+  PR110_OPT7_RANDOM_SEED: "42"
+  PR110_OPT7_TRAINER_MODE: "full"
+  SMOKE_ONLY: "0"
+  # Catalog #244 canonical NVML 3-export block
+  DALI_DISABLE_NVML: "1"
+  CUBLAS_WORKSPACE_CONFIG: ":4096:8"
+  PYTORCH_CUDA_ALLOC_CONF: "expandable_segments:True"
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - experiments/train_substrate_pr110_opt7_fridrich_uniward_inverse_scorer_basis_via_yousfi_t1.py
+  - src/tac/substrates/pr110_opt7_fridrich_uniward_inverse_scorer_basis_via_yousfi_t1/__init__.py
+  - src/tac/substrates/pr110_opt7_fridrich_uniward_inverse_scorer_basis_via_yousfi_t1/substrate.py
+  - src/tac/substrates/pr110_opt7_fridrich_uniward_inverse_scorer_basis_via_yousfi_t1/archive_grammar.py
+  - src/tac/substrates/pr110_opt7_fridrich_uniward_inverse_scorer_basis_via_yousfi_t1/inflate.py
+  - src/tac/composition/pr110_opt_7_fridrich_uniward_inverse_scorer_basis/__init__.py
+  - src/tac/composition/alaska_inverse_steganalysis_patterns/__init__.py
+  - src/tac/composition/yuv6_chroma_subsampled_perturbation_operator/__init__.py
+  - src/tac/master_gradient_pose_vulnerability/__init__.py
+  - src/tac/scorer_surrogate/posenet_mae_v/__init__.py
+  - upstream/videos/0.mkv
+  - tools/validate_dispatch_required_inputs.py
+  - tools/run_modal_smoke_before_full.py
+  - tools/operator_authorize.py
+
+# Catalog #201 mount-set parity + Catalog #166 worker source-parity ledger
+sentinel_files:
+  - experiments/train_substrate_pr110_opt7_fridrich_uniward_inverse_scorer_basis_via_yousfi_t1.py
+  - src/tac/substrates/pr110_opt7_fridrich_uniward_inverse_scorer_basis_via_yousfi_t1/substrate.py
+  - src/tac/substrates/pr110_opt7_fridrich_uniward_inverse_scorer_basis_via_yousfi_t1/inflate.py
+  - src/tac/composition/pr110_opt_7_fridrich_uniward_inverse_scorer_basis/__init__.py
+
+# Catalog #270 dispatch optimization protocol Tier 1+2+3 declarations
+dispatch_optimization_protocol_tier_1_signals:
+  - autocast_fp16
+  - tf32
+  - torch_compile
+  - no_grad_at_eval
+  - canonical_scorer_loss_helper_routing
+dispatch_optimization_protocol_tier_2_signals:
+  - min_vram_gb
+  - min_smoke_gpu
+  - video_input_strategy
+  - pyav_decode_strategy
+  - target_modes
+  - canonical_nvml_env_block
+dispatch_optimization_protocol_tier_3_signals:
+  - canonical_auth_eval_helper_routing
+  - canonical_inflate_device
+  - scorer_loader_assignment_order_pose_first
+  - recipe_vs_trainer_state_consistency
+  - no_phantom_device_named_output_directories
+
+notes: |
+  Deferred-items feeder audit `46aa6ad86` Phase E TOP-1 op-routable: PR110-OPT-7
+  L1 promotion via Yousfi-T1 enablement — canonical compounding sister of
+  Yousfi-Tier-1 pose-axis foundation. Substrate-engineering per HNeRV-parity-or-
+  greater binding-depth discipline.
+
+  ## 5 LANDED canonical primitives composed (PR-or-greater parity)
+
+  Per `[[pr-or-greater-parity-synergy-binding-integration-not-hnerv-specific-meta-class-lesson-correction]]`
+  2026-05-30 binding META-class correction: the canonical principle is
+  BINDING DEPTH across canonical L1-L32 + Catalog #344 canonical equations
+  + Tier-1 engineering. THIS substrate binds 5 canonical primitives
+  DEEPLY in ONE coherent substrate-engineering package:
+
+  1. alaska canonical inverse-steganalysis color separation (commit `61a91a48e`)
+     -> `tac.composition.alaska_inverse_steganalysis_patterns.branch_to_yuv6_channel_slice`
+     -> Y0_UV YUV6 channel slice = (0, 4, 5) — SegNet stride-2 stem 256x192
+        blind spot matches Y0+U+V at 192x256 yuv6-grid.
+
+  2. Yousfi-Tier-1 Deliverable A pose-vulnerability map (commit `3d027ecf9`)
+     -> `tac.master_gradient_pose_vulnerability.build_default_pose_vulnerability_map_from_canonical_anchor`
+     -> empirical anchor: vulnerability_ratio ~363x on canonical 600-pair
+        fp64 tensor; substrate preferentially targets POSE-VULNERABLE pairs.
+
+  3. Yousfi-Tier-1 Deliverable B PoseNet MAE-V surrogate (commit `3d027ecf9`)
+     -> `tac.scorer_surrogate.posenet_mae_v.PoseNetMaeVSurrogate`
+     -> canonical 582 params (96-feature × 6 pose-dim + 6 bias); numpy-portable
+        so the substrate can compute per-pixel PoseNet-grounded UNIWARD weights
+        WITHOUT loading real PoseNet at inflate time (strict-scorer-rule).
+
+  4. Yousfi-Tier-1 Deliverable C YUV6 chroma-subsampled perturbation operator
+     (commit `3d027ecf9`)
+     -> `tac.composition.yuv6_chroma_subsampled_perturbation_operator.apply_chroma_subsampled_perturbation`
+     -> luma preservation EXACT 0.0 in YUV6 space; chroma delta = 4.0 per
+        per-byte magnitude config; 4 canonical strategies (LOCAL_VARIANCE /
+        SEGNET_GRAD / POSENET_GRAD_VIA_MAE_V / JOINT_ATICK_REDLICH).
+
+  5. PR110-OPT-7 inverse-scorer basis L0 SCAFFOLD (commit `3fd28b5b2`)
+     -> `tac.composition.pr110_opt_7_fridrich_uniward_inverse_scorer_basis.apply_uniward_inverse_scorer_basis_to_pr110_archive`
+     -> 4 canonical strategies (LOCAL_VARIANCE_BASELINE / SEGNET_GRADIENT /
+        POSENET_GRADIENT / JOINT linear combination); canonical JOINT default.
+
+  Composition surface: substrate INTERSECTS the POSE-VULNERABLE pair budget
+  (Yousfi-T1 prior) with the inverse-scorer-basis selector (Fridrich UNIWARD
+  prior) into ONE selector palette per the canonical 5-helper binding contract.
+
+  ## Phase C MLX-LOCAL smoke complete (Phase D operator-routable)
+
+  Phase C MLX-LOCAL N=100 smoke landed 2026-05-30 GREEN per 7/7 substantive
+  axes: (1) trainer rc=0; (2) byte-stable 530-byte OPT7VYT1 archive emitted;
+  (3) Yousfi-T1 A invoked (vulnerability_ratio=2823 on synthetic seed=42);
+  (4) Yousfi-T1 B invoked (582 params); (5) Yousfi-T1 C invoked (luma=0.0
+  + chroma=4.0); (6) alaska invoked (slice = [0, 4, 5]); (7) PR110-OPT-7
+  invoked (16 selected pairs; 51 wire bytes). Slot EEE NO FAKE
+  IMPLEMENTATIONS verdict = PASS.
+
+  Phase D operator-routable paired-CUDA RATIFICATION:
+
+      .venv/bin/python tools/operator_authorize.py \\
+          --recipe substrate_pr110_opt7_fridrich_uniward_inverse_scorer_basis_via_yousfi_t1_modal_t4_dispatch \\
+          --estimated-cost-usd 0.30
+
+  Cost band ~$0.30 paired CPU+CUDA per Catalog #246 envelope. dispatch_enabled:
+  false until operator routes per Phase D op-routable.
+
+  ## Slot EEE NO FAKE IMPLEMENTATIONS attestation
+
+  Per CLAUDE.md NO FAKE IMPLEMENTATIONS non-negotiable 2026-05-30: substrate
+  ACTUALLY composes all 5 canonical helpers in its forward pass; tests verify
+  behavioral invariants including mock.patch verification + distinct-output
+  invariant + canonical Tier A markers + canonical Provenance per Catalog
+  #323. NOT a returns-canonical-markers-without-doing-work scaffold. 41/41
+  dedicated tests pass in 4.59s.
+
+  ## Smoke-before-full pattern (Catalog #167)
+
+  Operator-authorize wrapper routes through tools/run_modal_smoke_before_full.py
+  which fires a 100-epoch ~$0.30 Modal T4 smoke FIRST, validates rc=0 + auth-eval
+  JSON present + score in plausible band per predicted_band, then fires the
+  full 1000-epoch T4 dispatch only on smoke-green.
+
+  ## Cross-references
+
+  - Phase A substrate package: src/tac/substrates/pr110_opt7_fridrich_uniward_inverse_scorer_basis_via_yousfi_t1/
+  - Phase B trainer: experiments/train_substrate_pr110_opt7_fridrich_uniward_inverse_scorer_basis_via_yousfi_t1.py
+  - Phase C smoke artifacts: experiments/results/pr110_opt7_via_yousfi_t1_l1_promotion_smoke_*/
+  - Phase E per-substrate symposium: .omx/research/per_substrate_symposium_pr110_opt7_via_yousfi_t1_20260530.md
+  - L0 SCAFFOLD landing: feedback_pr110_opt7_fridrich_uniward_inverse_scorer_basis_l0_scaffold_landed_20260530.md
+  - Yousfi-T1 landing: feedback_yousfi_cascade_tier_1_pose_axis_canonical_helpers_a_plus_b_plus_c_landed_20260530.md
+  - alaska landing: feedback_alaska_yousfi_canonical_pattern_extraction_landed_20260530.md
+  - Deferred-items feeder audit: feedback_deferred_items_feeder_audit_post_alaska_m9v3_yousfi_tier_1_wave_landed_20260530.md
+  - L1 PROMOTION landing memo: feedback_pr110_opt7_l1_promotion_via_yousfi_t1_landed_20260530.md
+  - Retroactive sweep per Catalog #348: .omx/research/retroactive_sweep_for_pr110_opt7_l1_promotion_via_yousfi_t1_20260530.md
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": modal_train_lane.py uses
+  .spawn(); harvest within 24h via tools/harvest_modal_calls.py + Catalog #245
+  canonical Modal call_id ledger. Recurring harvest cron per Catalog #380:
+  tools/schedule_canonical_modal_harvest_cron.sh.
