@@ -56,9 +56,9 @@ Cross-references:
 from __future__ import annotations
 
 from tac.framework_agnostic.backend import (
+    DEFAULT_ENV_VAR,
     Backend,
     BackendUnavailableError,
-    DEFAULT_ENV_VAR,
     detect_available_backends,
     select_backend,
 )
@@ -70,11 +70,25 @@ from tac.framework_agnostic.decorators import (
 )
 from tac.framework_agnostic.helpers import (
     assert_no_framework_mismatch,
+    convert_mlx_state_dict_to_pytorch_oihw,
     detect_available_backends_dict,
     mlx_state_dict_to_npz_bridge,
     npz_to_numpy_primitives,
     pytorch_state_dict_to_npz_bridge,
     tinygrad_state_dict_to_npz_bridge,
+)
+from tac.framework_agnostic.mlx_runtime import (
+    MlxRuntime,
+    is_mlx_runtime_available,
+    mlx_array,
+    mlx_compile,
+    mlx_eval,
+    optional_mlx_runtime,
+    require_mlx_core,
+    require_mlx_nn,
+    require_mlx_optimizers,
+    require_mlx_runtime,
+    require_mlx_utils,
 )
 from tac.framework_agnostic.operations import (
     brotli_compress,
@@ -88,8 +102,7 @@ from tac.framework_agnostic.tensor_protocol import (
     shape_of,
 )
 
-
-__all__ = [
+__all__ = [  # noqa: RUF022 - grouped by public contract surface.
     # Backend selection (Catalog #205 sister)
     "Backend",
     "BackendUnavailableError",
@@ -98,7 +111,9 @@ __all__ = [
     "select_backend",
     # Tensor Protocol (Catalog #335 sister)
     "FrameworkAgnosticTensor",
+    "MlxRuntime",
     "dtype_name",
+    "is_mlx_runtime_available",
     "shape_of",
     # Operations (canonical primitives per CLAUDE.md QAT pipeline)
     "brotli_compress",
@@ -108,10 +123,20 @@ __all__ = [
     # Decorators (operator META directive 2026-05-28)
     "framework_agnostic",
     "inflate_runtime_helper",
+    "mlx_array",
+    "mlx_compile",
+    "mlx_eval",
     "mlx_first_with_numpy_fallback",
+    "optional_mlx_runtime",
     "pytorch_first_with_numpy_fallback",
+    "require_mlx_core",
+    "require_mlx_nn",
+    "require_mlx_optimizers",
+    "require_mlx_runtime",
+    "require_mlx_utils",
     # Bridge helpers (CLAUDE.md 8th standing directive)
     "assert_no_framework_mismatch",
+    "convert_mlx_state_dict_to_pytorch_oihw",
     "detect_available_backends_dict",
     "mlx_state_dict_to_npz_bridge",
     "npz_to_numpy_primitives",

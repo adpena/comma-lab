@@ -229,8 +229,107 @@ def detect_available_backends_dict() -> dict[Backend, bool]:
     return {b: _AVAILABILITY_CHECK[b]() for b in (Backend.MLX, Backend.PYTORCH, Backend.NUMPY, Backend.TINYGRAD)}
 
 
+# -----------------------------------------------------------------------------
+# Canonical bridge helpers: MLX HWIO Conv2d weight -> PyTorch OIHW Conv2d weight
+# -----------------------------------------------------------------------------
+
+
+def convert_mlx_state_dict_to_pytorch_oihw(
+    mlx_state_dict_numpy: Mapping[str, Any],
+    *,
+    skip_buffer_name_predicate: Any = None,
+) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+    """Canonical MLX HWIO -> PyTorch OIHW Conv2d weight transpose bridge.
+
+    Empirically extracted 2026-05-30 from 5-of-6 MLX -> PyTorch export tools
+    (``tools/export_pact_nerv_{ia3,selector_v2,selector_v3,selector_v4}_mlx_to_pytorch_state_dict.py``
+    + ``tools/export_z6_v2_cargo_cult_unwind_mlx_to_pytorch_state_dict.py``)
+    where the identical Conv2d weight transpose pattern was duplicated
+    verbatim. The 6th tool (``tools/export_pact_nerv_vq_mlx_to_pytorch_state_dict.py``)
+    is a PRINCIPLED FORK per Catalog #290 because it must skip
+    ``quantizer.*`` VQ buffer names; the optional
+    ``skip_buffer_name_predicate`` callback preserves that distinction
+    without forcing the VQ tool to fork the canonical helper.
+
+    Per CLAUDE.md "UNIQUE-AND-COMPLETE-PER-METHOD operating mode" Catalog #290
+    falling-rule: this extraction is OBVIOUS-FIT for 5 tools (identical
+    transpose semantics) while VQ remains substrate-distinguished via the
+    predicate. Per CLAUDE.md NO FAKE IMPLEMENTATIONS Slot EEE Class 5:
+    this helper performs SUBSTANTIVE work (transpose + ascontiguousarray +
+    fp32 cast + torch.from_numpy + per-tensor sha256 sidecar) — NOT a
+    cargo-culted thin wrapper.
+
+    Args:
+        mlx_state_dict_numpy: ``{key: np.ndarray}`` from
+            :func:`tac.substrates._shared.numpy_portable_inflate.unpack_state_dict_numpy`
+            (canonical MLX numpy-portable state_dict consumer).
+        skip_buffer_name_predicate: Optional callable ``str -> bool``; when
+            it returns ``True`` for a given tensor name, the tensor's
+            Conv2d HWIO -> OIHW transpose is SKIPPED (preserves substrate-
+            distinguishing buffer layouts; canonical example: VQ
+            ``quantizer.*`` buffers per VQ-VAE §3.2). Default ``None``
+            applies the transpose to every ``.weight`` tensor with
+            ``ndim == 4``.
+
+    Returns:
+        ``(pytorch_sd, per_tensor)`` where:
+          * ``pytorch_sd``: ``{name: torch.Tensor}`` mapping ready for
+            ``torch.nn.Module.load_state_dict(strict=True)``; Conv2d
+            weights in canonical OIHW layout (out_channels, in_channels,
+            kH, kW); all tensors cast to ``np.float32`` for canonical
+            contest-faithful storage.
+          * ``per_tensor``: ``{name: {shape_mlx, shape_pytorch, dtype,
+            sha256, layout}}`` sidecar dict for the export manifest
+            (canonical sha256 per Catalog #323 Provenance; layout token
+            ``"mlx_hwio_to_pytorch_oihw"`` vs ``"preserved"`` vs
+            ``"skipped_by_predicate"``).
+
+    Raises:
+        BackendUnavailableError: If PyTorch + numpy not installed.
+    """
+    if not _AVAILABILITY_CHECK[Backend.PYTORCH]():
+        raise BackendUnavailableError(
+            "convert_mlx_state_dict_to_pytorch_oihw requires torch installed; "
+            "install via `uv pip install torch`"
+        )
+    import hashlib  # noqa: PLC0415
+    import numpy as np  # noqa: PLC0415
+    import torch  # noqa: PLC0415
+
+    pytorch_sd: dict[str, Any] = {}
+    per_tensor: dict[str, dict[str, Any]] = {}
+    for name, arr in mlx_state_dict_numpy.items():
+        out_arr = arr
+        layout_note = "preserved"
+        predicate_skip = (
+            skip_buffer_name_predicate is not None
+            and bool(skip_buffer_name_predicate(name))
+        )
+        if predicate_skip:
+            # Predicate explicitly skips transpose for substrate-
+            # distinguishing buffer (e.g. VQ ``quantizer.*`` per Catalog
+            # #290 PRINCIPLED FORK).
+            layout_note = "skipped_by_predicate"
+        elif name.endswith(".weight") and arr.ndim == 4:
+            # MLX Conv2d weight is (out_channels, kH, kW, in_channels);
+            # PyTorch wants (out_channels, in_channels, kH, kW).
+            out_arr = np.transpose(arr, (0, 3, 1, 2))
+            layout_note = "mlx_hwio_to_pytorch_oihw"
+        out_arr = np.ascontiguousarray(out_arr).astype(np.float32)
+        pytorch_sd[name] = torch.from_numpy(out_arr.copy())
+        per_tensor[name] = {
+            "shape_mlx": list(arr.shape),
+            "shape_pytorch": list(out_arr.shape),
+            "dtype": str(out_arr.dtype),
+            "sha256": hashlib.sha256(out_arr.tobytes()).hexdigest()[:16],
+            "layout": layout_note,
+        }
+    return pytorch_sd, per_tensor
+
+
 __all__ = [
     "assert_no_framework_mismatch",
+    "convert_mlx_state_dict_to_pytorch_oihw",
     "detect_available_backends_dict",
     "mlx_state_dict_to_npz_bridge",
     "npz_to_numpy_primitives",

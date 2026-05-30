@@ -95,6 +95,9 @@ def export_pact_nerv_selector_v3_mlx_to_pytorch(
     import numpy as np
     import torch
 
+    from tac.framework_agnostic.helpers import (
+        convert_mlx_state_dict_to_pytorch_oihw,
+    )
     from tac.provenance.builders import build_provenance_for_predicted
     from tac.provenance.validator import provenance_to_dict
     from tac.substrates._shared.numpy_portable_inflate import (
@@ -115,25 +118,12 @@ def export_pact_nerv_selector_v3_mlx_to_pytorch(
     # 1) Unpack MLX-side state_dict (numpy arrays in MLX HWIO Conv2d layout).
     mlx_sd_np = unpack_state_dict_numpy(src.read_bytes())
 
-    # 2) Transpose Conv2d weights MLX HWIO -> PyTorch OIHW; preserve everything
-    #    else (Linear weights / biases / per-pair tensors already match).
-    pytorch_sd: dict[str, torch.Tensor] = {}
-    per_tensor: dict[str, dict[str, Any]] = {}
-    for name, arr in mlx_sd_np.items():
-        out_arr = arr
-        layout_note = "preserved"
-        if name.endswith(".weight") and arr.ndim == 4:
-            out_arr = np.transpose(arr, (0, 3, 1, 2))
-            layout_note = "mlx_hwio_to_pytorch_oihw"
-        out_arr = np.ascontiguousarray(out_arr).astype(np.float32)
-        pytorch_sd[name] = torch.from_numpy(out_arr.copy())
-        per_tensor[name] = {
-            "shape_mlx": list(arr.shape),
-            "shape_pytorch": list(out_arr.shape),
-            "dtype": str(out_arr.dtype),
-            "sha256": hashlib.sha256(out_arr.tobytes()).hexdigest()[:16],
-            "layout": layout_note,
-        }
+    # 2) Transpose Conv2d weights MLX HWIO -> PyTorch OIHW via the canonical
+    #    helper. Extracted 2026-05-30 from 5-tool duplication per Catalog
+    #    #290 OBVIOUS-FIT classification — byte-identical to the prior
+    #    inline pattern (verified via canonical apples-to-apples test
+    #    ``test_byte_stable_transpose_matches_canonical_reference_implementation``).
+    pytorch_sd, per_tensor = convert_mlx_state_dict_to_pytorch_oihw(mlx_sd_np)
 
     # 3) Build the PyTorch sister substrate. Infer (num_pairs, latent_dim).
     #    SELECTOR-V3 has NO pose_dim (vs IA3); the selector primitive operates
@@ -167,7 +157,9 @@ def export_pact_nerv_selector_v3_mlx_to_pytorch(
     #    on non-Apple-Silicon hosts so the bridge works as a pure converter.
     parity: dict[str, Any]
     try:
-        import mlx.core as mx  # type: ignore[import-not-found]
+        from tac.framework_agnostic import require_mlx_core
+
+        mx = require_mlx_core()
 
         from tac.substrates.pact_nerv_selector_v3.mlx_renderer import (
             PactNervSelectorV3SubstrateMLX,
@@ -281,7 +273,9 @@ def export_pact_nerv_selector_v3_mlx_to_pytorch(
 
 def _assign_mlx_param(mlx_model: Any, dotted_name: str, np_arr: Any) -> None:
     """Walk dotted name + assign a numpy array onto MLX param (MLX layout preserved)."""
-    import mlx.core as mx  # type: ignore[import-not-found]
+    from tac.framework_agnostic import require_mlx_core
+
+    mx = require_mlx_core()
 
     parts = dotted_name.split(".")
     obj: Any = mlx_model

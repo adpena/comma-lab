@@ -117,8 +117,25 @@ def export_pact_nerv_vq_mlx_to_pytorch(
 
     # 2) Transpose Conv2d weights MLX HWIO -> PyTorch OIHW; preserve VQ
     #    buffers + Linear weights + biases + per-pair tensors.
-    #    VQ buffer names: quantizer.codebook / quantizer.ema_cluster_size /
-    #    quantizer.ema_w (all 1-D or 2-D non-Conv tensors per VQ-VAE §3.2).
+    #
+    # PRINCIPLED FORK per Catalog #290 (canonical-vs-unique decision per
+    # layer): the canonical helper
+    # ``tac.framework_agnostic.helpers.convert_mlx_state_dict_to_pytorch_oihw``
+    # (extracted 2026-05-30 from 5-tool duplication) supports a
+    # ``skip_buffer_name_predicate`` callback, but consuming it would change
+    # this tool's persisted ``per_tensor[name]["layout"]`` token for
+    # quantizer.* buffers from ``"preserved"`` to ``"skipped_by_predicate"``
+    # — NOT byte-stable, would break downstream consumers that check
+    # ``layout == "preserved"``. Plus this tool carries a
+    # substrate-distinguishing ``is_vq_buffer: bool`` sidecar field per
+    # VQ-VAE §3.2 that the canonical helper does not expose. FORK_BECAUSE_
+    # SUPPRESSES per the canonical falling-rule. (Sister tools IA3 +
+    # SELECTOR_V2/V3/V4 + Z6_V2_CARGO_CULT_UNWIND consume the canonical
+    # helper because they have no quantizer.* buffers + no
+    # is_vq_buffer sidecar.)
+    #
+    # VQ buffer names: quantizer.codebook / quantizer.ema_cluster_size /
+    # quantizer.ema_w (all 1-D or 2-D non-Conv tensors per VQ-VAE §3.2).
     pytorch_sd: dict[str, torch.Tensor] = {}
     per_tensor: dict[str, dict[str, Any]] = {}
     for name, arr in mlx_sd_np.items():
@@ -172,7 +189,9 @@ def export_pact_nerv_vq_mlx_to_pytorch(
     #    on non-Apple-Silicon hosts so the bridge works as a pure converter.
     parity: dict[str, Any]
     try:
-        import mlx.core as mx  # type: ignore[import-not-found]
+        from tac.framework_agnostic import require_mlx_core
+
+        mx = require_mlx_core()
 
         from tac.substrates.pact_nerv_vq.mlx_renderer import (
             PactNervVqSubstrateMLX,
@@ -302,7 +321,9 @@ def _assign_mlx_param(mlx_model: Any, dotted_name: str, np_arr: Any) -> None:
     ``_ema_cluster_size`` / ``_ema_w``) on the MLX quantizer; the assignment
     routes through the underscore-prefixed name.
     """
-    import mlx.core as mx  # type: ignore[import-not-found]
+    from tac.framework_agnostic import require_mlx_core
+
+    mx = require_mlx_core()
 
     parts = dotted_name.split(".")
     obj: Any = mlx_model
