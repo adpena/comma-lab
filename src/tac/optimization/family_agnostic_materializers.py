@@ -22,6 +22,9 @@ from typing import Any
 
 import brotli
 
+from tac.optimization.archive_bound_candidate_contract import (
+    archive_bound_candidate_contract_fields_for_row,
+)
 from tac.optimization.materializer_schemas import (
     ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
     ARCHIVE_ZIP_REPACK_SCHEMA,
@@ -143,6 +146,58 @@ def _serialized_archive_delta_contract(
     )
 
 
+def _mapping(value: Any) -> Mapping[str, Any]:
+    return value if isinstance(value, Mapping) else {}
+
+
+def _with_archive_bound_candidate_contract(
+    payload: dict[str, Any],
+    *,
+    repo: Path,
+) -> dict[str, Any]:
+    receiver_verification = _mapping(payload.get("receiver_verification"))
+    runtime_proof_path = (
+        payload.get("runtime_consumption_proof_path")
+        or receiver_verification.get("proof_path")
+    )
+    contract_fields = archive_bound_candidate_contract_fields_for_row(
+        {
+            "archive_native_transform_kind": payload.get("target_kind")
+            or payload.get("schema"),
+            "candidate_archive": _mapping(payload.get("candidate_archive")),
+            "source_archive": _mapping(payload.get("source_archive")),
+            "byte_closed_candidate_materialized": (
+                payload.get("byte_closed_candidate_emitted") is True
+            ),
+            "candidate_archive_materialized": (
+                payload.get("byte_closed_candidate_emitted") is True
+            ),
+            "runtime_consumption_proof_ready": (
+                receiver_verification.get("proof_present") is True
+            ),
+            "runtime_consumption_proof_path": runtime_proof_path,
+            "receiver_contract_kind": payload.get("receiver_contract_kind"),
+            "receiver_contract_satisfied": (
+                payload.get("receiver_contract_satisfied") is True
+            ),
+            "runtime_adapter_ready": payload.get("runtime_adapter_ready") is True,
+            "readiness_blockers": payload.get("readiness_blockers") or [],
+            "saved_bytes": _mapping(
+                payload.get("serialized_archive_delta")
+            ).get("realized_saved_bytes"),
+        },
+        repo_root=repo,
+        family_id="family_agnostic_materializer",
+        candidate_chain_id=str(
+            payload.get("target_kind")
+            or payload.get("materializer_id")
+            or "family_agnostic_candidate"
+        ),
+    )
+    payload.update(contract_fields)
+    return payload
+
+
 def materialize_archive_zip_repack_candidate(
     *,
     archive_path: str | Path,
@@ -250,7 +305,7 @@ def materialize_archive_zip_repack_candidate(
         receiver_verification,
         receiver_blocker="archive_zip_repack_receiver_contract_not_satisfied",
     )
-    return {
+    return _with_archive_bound_candidate_contract({
         "schema": ARCHIVE_ZIP_REPACK_SCHEMA,
         "materializer_id": ARCHIVE_ZIP_REPACK_MATERIALIZER_ID,
         "target_kind": ARCHIVE_ZIP_REPACK_TARGET_KIND,
@@ -299,7 +354,7 @@ def materialize_archive_zip_repack_candidate(
         "readiness_blockers": readiness_blockers,
         "artifact_write": write_result.__dict__,
         **FALSE_AUTHORITY,
-    }
+    }, repo=repo)
 
 
 def _archive_zip_repack_runtime_consumption_proof(
@@ -510,7 +565,7 @@ def materialize_packet_member_recompress_candidate(
         receiver_verification,
         receiver_blocker="packet_member_recompress_receiver_contract_not_satisfied",
     )
-    return {
+    return _with_archive_bound_candidate_contract({
         "schema": PACKET_MEMBER_RECOMPRESS_SCHEMA,
         "materializer_id": PACKET_MEMBER_RECOMPRESS_MATERIALIZER_ID,
         "target_kind": PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
@@ -550,7 +605,7 @@ def materialize_packet_member_recompress_candidate(
         "readiness_blockers": readiness_blockers,
         "artifact_write": write_result.__dict__,
         **FALSE_AUTHORITY,
-    }
+    }, repo=repo)
 
 
 def _packet_member_recompress_runtime_consumption_proof(
@@ -781,7 +836,7 @@ def materialize_packet_member_merge_candidate(
         receiver_verification,
         receiver_blocker="packet_member_merge_receiver_contract_not_satisfied",
     )
-    return {
+    return _with_archive_bound_candidate_contract({
         "schema": PACKET_MEMBER_MERGE_SCHEMA,
         "materializer_id": PACKET_MEMBER_MERGE_MATERIALIZER_ID,
         "target_kind": PACKET_MEMBER_MERGE_TARGET_KIND,
@@ -849,7 +904,7 @@ def materialize_packet_member_merge_candidate(
         "readiness_blockers": readiness_blockers,
         "artifact_write": write_result.__dict__,
         **FALSE_AUTHORITY,
-    }
+    }, repo=repo)
 
 
 def materialize_renderer_payload_dfl1_candidate(
@@ -994,7 +1049,7 @@ def materialize_renderer_payload_dfl1_candidate(
         receiver_verification,
         receiver_blocker="renderer_payload_dfl1_receiver_contract_not_satisfied",
     )
-    return {
+    return _with_archive_bound_candidate_contract({
         "schema": RENDERER_PAYLOAD_DFL1_SCHEMA,
         "materializer_id": RENDERER_PAYLOAD_DFL1_MATERIALIZER_ID,
         "target_kind": RENDERER_PAYLOAD_DFL1_TARGET_KIND,
@@ -1059,7 +1114,7 @@ def materialize_renderer_payload_dfl1_candidate(
         "readiness_blockers": readiness_blockers,
         "artifact_write": write_result.__dict__,
         **FALSE_AUTHORITY,
-    }
+    }, repo=repo)
 
 
 def _packet_member_merge_runtime_consumption_proof(
@@ -1351,7 +1406,7 @@ def materialize_packet_member_zip_header_elide_candidate(
         receiver_verification,
         receiver_blocker="packet_member_zip_header_elide_receiver_contract_not_satisfied",
     )
-    return {
+    return _with_archive_bound_candidate_contract({
         "schema": PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
         "materializer_id": PACKET_MEMBER_ZIP_HEADER_ELIDE_MATERIALIZER_ID,
         "target_kind": PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
@@ -1407,7 +1462,7 @@ def materialize_packet_member_zip_header_elide_candidate(
         "readiness_blockers": readiness_blockers,
         "artifact_write": write_result.__dict__,
         **FALSE_AUTHORITY,
-    }
+    }, repo=repo)
 
 
 def _packet_member_zip_header_elide_runtime_consumption_proof(
@@ -1705,7 +1760,7 @@ def materialize_archive_section_entropy_recode_candidate(
         receiver_verification,
         receiver_blocker="archive_section_entropy_recode_receiver_contract_not_satisfied",
     )
-    return {
+    return _with_archive_bound_candidate_contract({
         "schema": ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
         "materializer_id": ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER_ID,
         "target_kind": ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
@@ -1747,7 +1802,7 @@ def materialize_archive_section_entropy_recode_candidate(
         "readiness_blockers": readiness_blockers,
         "artifact_write": write_result.__dict__,
         **FALSE_AUTHORITY,
-    }
+    }, repo=repo)
 
 
 def _archive_section_entropy_recode_runtime_consumption_proof(
@@ -1995,7 +2050,7 @@ def materialize_tensor_factorize_candidate(
         receiver_verification,
         receiver_blocker="tensor_factorize_receiver_contract_not_satisfied",
     )
-    return {
+    return _with_archive_bound_candidate_contract({
         "schema": TENSOR_FACTORIZE_SCHEMA,
         "materializer_id": TENSOR_FACTORIZE_MATERIALIZER_ID,
         "target_kind": TENSOR_FACTORIZE_TARGET_KIND,
@@ -2046,7 +2101,7 @@ def materialize_tensor_factorize_candidate(
         "readiness_blockers": readiness_blockers,
         "artifact_write": write_result.__dict__,
         **FALSE_AUTHORITY,
-    }
+    }, repo=repo)
 
 
 def _tensor_factorize_runtime_consumption_proof(

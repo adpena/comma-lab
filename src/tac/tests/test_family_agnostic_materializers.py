@@ -10,6 +10,10 @@ from pathlib import Path
 import brotli
 import numpy as np
 
+from tac.optimization.archive_bound_candidate_contract import (
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
+    archive_bound_candidate_contracts_from_payload,
+)
 from tac.optimization.family_agnostic_materializers import (
     ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
     ARCHIVE_ZIP_REPACK_SCHEMA,
@@ -52,6 +56,29 @@ from tac.optimization.tensor_factorize_receiver import (
 from tac.repo_io import sha256_bytes
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+
+
+def _assert_archive_bound_contract(
+    payload: dict,
+    *,
+    exact_handoff_ready: bool,
+) -> None:
+    assert payload["archive_bound_candidate_contract_schema"] == (
+        ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+    )
+    contracts = archive_bound_candidate_contracts_from_payload(payload)
+    assert len(contracts) == 1
+    contract = contracts[0]
+    assert contract["candidate_archive"]["sha256"] == payload["candidate_archive"]["sha256"]
+    assert contract["byte_closed_candidate_materialized"] is True
+    assert contract["receiver_contract_satisfied"] is (
+        payload["receiver_contract_satisfied"] is True
+    )
+    assert contract["archive_bound_candidate_ready_for_exact_handoff"] is (
+        exact_handoff_ready
+    )
+    assert contract["ready_for_exact_eval_dispatch"] is False
+    assert contract["score_claim"] is False
 
 
 def _write_zip(path: Path, members: dict[str, bytes], *, compression: int = zipfile.ZIP_STORED) -> None:
@@ -107,6 +134,7 @@ def test_packet_member_recompress_materializer_preserves_member_payload(
     assert delta["ready_for_exact_eval_dispatch"] is False
     assert result["score_claim"] is False
     assert result["ready_for_exact_eval_dispatch"] is False
+    _assert_archive_bound_contract(result, exact_handoff_ready=False)
     assert "runtime_consumption_proof_missing" in result["readiness_blockers"]
 
 
@@ -152,6 +180,7 @@ def test_packet_member_recompress_materializer_emits_payload_identity_proof(
     )
     assert result["score_claim"] is False
     assert result["ready_for_exact_eval_dispatch"] is False
+    _assert_archive_bound_contract(result, exact_handoff_ready=True)
 
 
 def test_archive_zip_repack_materializer_preserves_all_member_payloads(
@@ -196,6 +225,7 @@ def test_archive_zip_repack_materializer_preserves_all_member_payloads(
         assert zf.read("sidecar.bin") == payloads["sidecar.bin"]
     assert result["score_claim"] is False
     assert result["ready_for_exact_eval_dispatch"] is False
+    _assert_archive_bound_contract(result, exact_handoff_ready=True)
 
 
 def test_packet_member_recompress_materializer_rejects_stale_member_proof(
@@ -429,6 +459,7 @@ def test_packet_member_merge_materializer_emits_reconstruction_proof(
     assert result["runtime_adapter_ready"] is False
     assert result["score_claim"] is False
     assert result["ready_for_exact_eval_dispatch"] is False
+    _assert_archive_bound_contract(result, exact_handoff_ready=False)
     assert (
         "packet_member_merge_exact_readiness_refused_until_byte_closed_runtime_adapter_lands"
         in result["readiness_blockers"]
@@ -889,6 +920,7 @@ def test_renderer_payload_dfl1_materializer_uses_native_payload_member(
     assert result["runtime_adapter_ready"] is False
     assert result["score_claim"] is False
     assert result["ready_for_exact_eval_dispatch"] is False
+    _assert_archive_bound_contract(result, exact_handoff_ready=False)
     assert "renderer_payload_dfl1_full_frame_inflate_parity_missing" in (
         result["readiness_blockers"]
     )
@@ -1070,6 +1102,7 @@ def test_packet_member_merge_materializer_requires_cooperative_receiver(
     assert "packet_member_merge_receiver_contract_not_satisfied" in result["readiness_blockers"]
     assert result["score_claim"] is False
     assert result["ready_for_exact_eval_dispatch"] is False
+    _assert_archive_bound_contract(result, exact_handoff_ready=False)
 
 
 def test_packet_member_zip_header_elide_materializer_preserves_payload(
@@ -1183,6 +1216,7 @@ def test_packet_member_zip_header_elide_materializer_can_elide_all_members(
     }
     assert result["score_claim"] is False
     assert result["ready_for_exact_eval_dispatch"] is False
+    _assert_archive_bound_contract(result, exact_handoff_ready=True)
 
 
 def test_packet_member_zip_header_elide_materializer_emits_runtime_proof(
@@ -1222,6 +1256,7 @@ def test_packet_member_zip_header_elide_materializer_emits_runtime_proof(
     )
     assert result["score_claim"] is False
     assert result["ready_for_exact_eval_dispatch"] is False
+    _assert_archive_bound_contract(result, exact_handoff_ready=True)
 
 
 def test_packet_member_zip_header_elide_materializer_rejects_wrong_proof_metadata(
@@ -1320,6 +1355,7 @@ def test_archive_section_entropy_recode_materializer_uses_section_manifest(
     assert result["sections"][1]["selected"] is False
     assert result["score_claim"] is False
     assert result["ready_for_exact_eval_dispatch"] is False
+    _assert_archive_bound_contract(result, exact_handoff_ready=False)
     assert "runtime_consumption_proof_missing" in result["readiness_blockers"]
 
 
@@ -1617,6 +1653,7 @@ def test_tensor_factorize_materializer_emits_cooperative_receiver_packet(
     assert delta["rank_or_kill_eligible"] is False
     assert result["score_claim"] is False
     assert result["ready_for_exact_eval_dispatch"] is False
+    _assert_archive_bound_contract(result, exact_handoff_ready=False)
     assert "tensor_factorized_payload_requires_cooperative_receiver" in (
         result["readiness_blockers"]
     )
