@@ -26,6 +26,9 @@ from comma_lab.scheduler.byte_shaving_campaign_queue import (  # noqa: E402
     GROUPED_ARCHIVE_STATE_SUPPORTED_TARGET_KINDS,
     MATERIALIZER_WORK_QUEUE_SCHEMA,
 )
+from tac.optimization.archive_bound_candidate_contract import (  # noqa: E402
+    archive_bound_candidate_contract_fields_for_row,
+)
 from tac.optimization.byte_shaving_campaign import FALSE_AUTHORITY  # noqa: E402
 from tac.optimization.proxy_candidate_contract import (  # noqa: E402
     ordered_unique,
@@ -155,6 +158,46 @@ def _archive_record(path: Path, *, repo_root: Path) -> dict[str, Any]:
     }
 
 
+def _archive_bound_contract_fields_for_chain(
+    *,
+    request_id: str,
+    source_record: Mapping[str, Any],
+    final_record: Mapping[str, Any],
+    operations: Sequence[Mapping[str, Any]],
+    blockers: Sequence[str],
+    repo_root: Path,
+) -> dict[str, Any]:
+    final_runtime_proof_path = None
+    if operations:
+        final_runtime_proof_path = operations[-1].get("runtime_consumption_proof_path")
+    ready = not blockers
+    return archive_bound_candidate_contract_fields_for_row(
+        {
+            "archive_native_transform_kind": GROUPED_ARCHIVE_STATE_MATERIALIZER_CHAIN_SCHEMA,
+            "target_kind": GROUPED_ARCHIVE_STATE_MATERIALIZER_CHAIN_SCHEMA,
+            "candidate_id": request_id,
+            "candidate_chain_id": request_id,
+            "candidate_archive": dict(final_record),
+            "source_archive": dict(source_record),
+            "byte_closed_candidate_emitted": ready,
+            "byte_closed_candidate_materialized": ready,
+            "candidate_archive_materialized": ready,
+            "runtime_consumption_proof_ready": ready,
+            "runtime_consumption_proof_path": final_runtime_proof_path,
+            "receiver_contract_kind": "grouped_archive_state_runtime_consumption_chain",
+            "receiver_contract_satisfied": ready,
+            "runtime_adapter_ready": ready,
+            "readiness_blockers": list(blockers),
+            "saved_bytes": int(source_record["bytes"]) - int(final_record["bytes"]),
+            **FALSE_AUTHORITY,
+        },
+        repo_root=repo_root,
+        selected_transform_kind=GROUPED_ARCHIVE_STATE_MATERIALIZER_CHAIN_SCHEMA,
+        family_id="grouped_family_agnostic_materializer",
+        candidate_chain_id=request_id,
+    )
+
+
 def run_grouped_request(
     *,
     work_queue_path: Path,
@@ -260,6 +303,14 @@ def run_grouped_request(
     blockers = ordered_unique(blockers)
     source_record = _archive_record(source_archive, repo_root=repo_root)
     final_record = _archive_record(current_archive, repo_root=repo_root)
+    contract_fields = _archive_bound_contract_fields_for_chain(
+        request_id=request_id,
+        source_record=source_record,
+        final_record=final_record,
+        operations=operations,
+        blockers=blockers,
+        repo_root=repo_root,
+    )
     manifest = {
         "schema": GROUPED_ARCHIVE_STATE_MATERIALIZER_CHAIN_SCHEMA,
         "request_id": request_id,
@@ -288,6 +339,7 @@ def run_grouped_request(
         "receiver_contract_satisfied": not blockers,
         "candidate_runtime_adapter_blocker_cleared": not blockers,
         "readiness_blockers": blockers,
+        **contract_fields,
         **FALSE_AUTHORITY,
     }
     write_json_artifact(output_manifest, manifest, allow_overwrite=allow_overwrite)

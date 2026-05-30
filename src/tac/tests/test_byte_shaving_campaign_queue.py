@@ -107,6 +107,9 @@ from comma_lab.scheduler.staircase_dag import (
     build_staircase_dag_from_experiment_queue,
     plan_staircase_dispatch,
 )
+from tac.optimization.archive_bound_candidate_contract import (
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
+)
 from tac.optimization.byte_range_entropy_recode_chain import (
     CHAIN_MANIFEST_NAME,
     CHAIN_SCHEMA,
@@ -2982,6 +2985,17 @@ def test_grouped_family_agnostic_materializer_chains_archive_state(
     assert manifest["readiness_blockers"] == []
     assert manifest["score_claim"] is False
     assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert (
+        manifest["archive_bound_candidate_contract_schema"]
+        == ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+    )
+    contract = manifest["archive_bound_candidate_contract"]
+    assert contract["schema"] == ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+    assert contract["candidate_archive"]["sha256"] == manifest["candidate_archive"]["sha256"]
+    assert contract["source_archive"]["sha256"] == manifest["source_archive"]["sha256"]
+    assert contract["archive_bound_candidate_ready"] is True
+    assert contract["ready_for_exact_eval_dispatch"] is False
+    assert contract["candidate_chain_id"] == "grouped_fixture"
     assert commands[0][commands[0].index("--archive-path") + 1] == str(source_archive)
     assert commands[1][commands[1].index("--archive-path") + 1] == str(
         output_dir / "step_01_materializer_work_first.archive.zip"
