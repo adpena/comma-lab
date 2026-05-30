@@ -23,8 +23,12 @@ from src.comma_lab.scheduler.dqs1_local_first_queue import (
     find_latest_cross_family_action_summary,
 )
 from src.comma_lab.scheduler.experiment_queue import ExperimentQueueError, load_queue_definition
+from src.tac.optimization.archive_bound_candidate_adapter_spine import (
+    ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA,
+)
 from src.tac.optimization.archive_bound_candidate_contract import (
     ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
+    archive_bound_candidate_contracts_from_payload,
 )
 from src.tac.optimization.local_cpu_contest_drift import EUREKA_FALSE_AUTHORITY_FIELDS
 from tools import build_dqs1_local_first_queue as queue_cli
@@ -1292,6 +1296,31 @@ def test_dqs1_harvest_observe_only_reroutes_queue(tmp_path: Path) -> None:
     assert harvest.harvest_record["recommended_action"] == "observe_only"
     assert harvest.harvest_record["score_claim"] is False
     assert harvest.harvest_record["promotion_eligible"] is False
+    assert harvest.harvest_record["candidate_archive_bytes"] == _archive.stat().st_size
+    assert harvest.harvest_record["archive_bound_candidate_adapter_package_schema"] == (
+        ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA
+    )
+    package = harvest.harvest_record["archive_bound_candidate_adapter_package"]
+    assert package["candidate_row_count"] == 1
+    assert harvest.harvest_record[
+        "archive_bound_candidate_adapter_package_candidate_count"
+    ] == 1
+    assert harvest.harvest_record[
+        "archive_bound_candidate_adapter_package_receiver_gate_passed_count"
+    ] == 0
+    assert harvest.harvest_record[
+        "archive_bound_candidate_adapter_package_exact_blocker_count"
+    ] == 1
+    assert package["deterministic_replay_bundles"][0]["replay_bundle_ready"] is True
+    assert package["receiver_proof_gates"][0]["receiver_proof_gate_passed"] is False
+    contracts = archive_bound_candidate_contracts_from_payload(package)
+    assert len(contracts) == 1
+    contract = contracts[0]
+    assert contract["candidate_archive"]["sha256"] == archive_sha
+    assert contract["byte_closed_candidate_materialized"] is True
+    assert contract["receiver_contract_satisfied"] is False
+    assert contract["ready_for_exact_eval_dispatch"] is False
+    assert "dqs1" in contract["archive_substrate_tags"]
     assert harvest.exact_auth_request is None
     assert harvest.rerouted_queue is not None
     assert harvest.rerouted_queue["experiments"][0]["id"] == "pairset_drop_one_rank024_pair0112"
@@ -1449,6 +1478,12 @@ def test_dqs1_harvest_positive_eureka_creates_exact_auth_request(tmp_path: Path)
     assert request["schema"] == EXACT_AUTH_ANCHOR_REQUEST_SCHEMA
     assert request["candidate_id"] == "pairset_drop_one_rank023_pair0440"
     assert request["requested_axes"] == ["contest-CPU", "contest-CUDA"]
+    assert request["archive_bound_candidate_adapter_package_schema"] == (
+        ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA
+    )
+    assert request["archive_bound_candidate_adapter_package"] == (
+        harvest.harvest_record["archive_bound_candidate_adapter_package"]
+    )
     assert request["score_claim"] is False
     assert request["promotion_eligible"] is False
     assert request["ready_for_exact_eval_dispatch"] is False

@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 import json
+import sys
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from tac.optimization.archive_bound_candidate_adapter_spine import (
+    ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA,
+    build_archive_bound_candidate_adapter_package,
+)
 from tac.optimization.local_cpu_contest_drift import (
     EUREKA_SIGNAL_SCHEMA,
     LocalCPUContestDriftError,
@@ -33,6 +38,22 @@ class Dqs1HarvestResult:
     harvest_record: dict[str, Any]
     exact_auth_request: dict[str, Any] | None
     rerouted_queue: dict[str, Any] | None = None
+
+
+class _SingleDqs1HarvestArchiveCandidateAdapter:
+    """Adapter-spine bridge for one local DQS1 harvest candidate."""
+
+    adapter_id = "dqs1_local_first_harvest:archive_bound_adapter"
+    candidate_family = "dqs1_local_first"
+
+    def __init__(self, row: dict[str, Any]) -> None:
+        self._row = row
+
+    def emit_archive_bound_candidate_rows(
+        self,
+        context: dict[str, Any],
+    ) -> list[dict[str, Any]]:
+        return [dict(self._row)]
 
 
 def _utc_stamp() -> str:
@@ -198,6 +219,65 @@ def _archive_sha_from_advisory(advisory: dict[str, Any]) -> str:
     raise ExperimentQueueError("local advisory missing archive sha256 provenance")
 
 
+def _archive_bytes_from_advisory(advisory: dict[str, Any]) -> int:
+    provenance = advisory.get("provenance")
+    if isinstance(provenance, dict):
+        archive_bytes = provenance.get("archive_size_bytes")
+        if isinstance(archive_bytes, int) and not isinstance(archive_bytes, bool):
+            return archive_bytes
+    archive_bytes = advisory.get("archive_size_bytes")
+    if isinstance(archive_bytes, int) and not isinstance(archive_bytes, bool):
+        return archive_bytes
+    raise ExperimentQueueError("local advisory missing archive byte-size provenance")
+
+
+def _archive_bound_candidate_adapter_package_for_harvest(
+    *,
+    harvest: dict[str, Any],
+    advisory_path: Path,
+    eureka_path: Path,
+) -> dict[str, Any]:
+    candidate_id = str(harvest["candidate_id"])
+    row = {
+        "schema": "dqs1_local_first_harvest_archive_bound_candidate_row.v1",
+        "candidate_id": candidate_id,
+        "candidate_family": "dqs1_local_first",
+        "archive_native_transform_kind": "dqs1_pairset_local_first_archive_candidate",
+        "candidate_archive_path": harvest["candidate_archive_path"],
+        "candidate_archive_sha256": harvest["candidate_archive_sha256"],
+        "candidate_archive_bytes": harvest["candidate_archive_bytes"],
+        "byte_closed_candidate_materialized": True,
+        "candidate_archive_materialized": True,
+        "runtime_consumption_proof_ready": False,
+        "receiver_contract_kind": "dqs1_local_advisory_without_receiver_runtime_proof",
+        "receiver_contract_satisfied": False,
+        "readiness_blockers": [
+            "dqs1_harvest_local_advisory_is_not_receiver_runtime_proof",
+            "contest_cpu_cuda_auth_eval_required_before_frontier_claim",
+        ],
+        "dispatch_blockers": harvest.get("dispatch_blockers") or [],
+        "replay_argv": [
+            sys.executable,
+            "tools/harvest_dqs1_local_first_result.py",
+            "--candidate-id",
+            candidate_id,
+        ],
+        "input_artifacts": [
+            str(advisory_path),
+            str(eureka_path),
+            str(harvest["candidate_archive_path"]),
+        ],
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+    }
+    return build_archive_bound_candidate_adapter_package(
+        _SingleDqs1HarvestArchiveCandidateAdapter(row)
+    )
+
+
 def build_dqs1_harvest_result(
     *,
     queue_path: str | Path = DEFAULT_QUEUE_PATH,
@@ -261,6 +341,7 @@ def build_dqs1_harvest_result(
             "eureka_signal_path": str(eureka_path),
             "candidate_archive_path": _archive_path_from_advisory(advisory),
             "candidate_archive_sha256": _archive_sha_from_advisory(advisory),
+            "candidate_archive_bytes": _archive_bytes_from_advisory(advisory),
             "local_score": local_score,
             "auth_frontier_score": eureka.get("auth_frontier_score"),
             "projected_contest_score": eureka.get("projected_contest_score"),
@@ -280,6 +361,28 @@ def build_dqs1_harvest_result(
             "exact_cpu_cuda_auth_eval_required_before_frontier_claim",
         ),
     )
+    adapter_package = _archive_bound_candidate_adapter_package_for_harvest(
+        harvest=harvest,
+        advisory_path=advisory_path,
+        eureka_path=eureka_path,
+    )
+    harvest.update(
+        {
+            "archive_bound_candidate_adapter_package_schema": (
+                ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA
+            ),
+            "archive_bound_candidate_adapter_package": adapter_package,
+            "archive_bound_candidate_adapter_package_candidate_count": (
+                adapter_package["candidate_row_count"]
+            ),
+            "archive_bound_candidate_adapter_package_receiver_gate_passed_count": (
+                adapter_package["receiver_proof_gate_passed_count"]
+            ),
+            "archive_bound_candidate_adapter_package_exact_blocker_count": len(
+                adapter_package["exact_axis_blockers"]
+            ),
+        }
+    )
     exact_request = None
     if recommended_action == "dispatch_exact_auth_anchor":
         exact_request = apply_proxy_evidence_boundary(
@@ -291,6 +394,12 @@ def build_dqs1_harvest_result(
                 "candidate_archive_sha256": harvest["candidate_archive_sha256"],
                 "source_harvest_schema": HARVEST_SCHEMA,
                 "source_eureka_signal_path": str(eureka_path),
+                "archive_bound_candidate_adapter_package_schema": harvest[
+                    "archive_bound_candidate_adapter_package_schema"
+                ],
+                "archive_bound_candidate_adapter_package": harvest[
+                    "archive_bound_candidate_adapter_package"
+                ],
                 "requested_axes": ["contest-CPU", "contest-CUDA"],
                 "created_at_utc": stamp,
                 "score_claim": False,
