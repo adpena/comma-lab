@@ -567,7 +567,9 @@ Z8_PHASE_2_BUILD_MILESTONES: tuple[BuildMilestone, ...] = (
             "sensitivity map at that level's resolution (downsampled "
             "where needed)",
         ),
-        status=BuildMilestoneStatus.PENDING,
+        status=BuildMilestoneStatus.LANDED,
+        landed_commit_sha=None,  # self-referential; backfilled next commit
+        landed_at_utc="2026-05-30T14:30:00Z",
         predecessor_milestone_ids=(
             "binding_contract_landed",
             "empirical_scorer_sensitivity_map_v1_landed",
@@ -575,7 +577,40 @@ Z8_PHASE_2_BUILD_MILESTONES: tuple[BuildMilestone, ...] = (
         notes=(
             "The Yousfi-grounding made concrete: cost function at each "
             "level uses empirical scorer-sensitivity weights, not "
-            "generic L2."
+            "generic L2. LANDED 2026-05-30 (operator-routed Yousfi-cascade "
+            "TOP-2 Phase E) at src/tac/substrates/z8_hierarchical_predictive_coding/loss.py "
+            "(150 LOC): ScoreAwareLevelLossImpl frozen dataclass satisfies "
+            "the binding_contract.py:419-472 Protocol via canonical Yousfi-"
+            "grounded weighted reconstruction loss "
+            "(REDUCE(sensitivity * |recon - target|^p), p=2 default per "
+            "Fridrich UNIWARD; reduction='mean' default per Yousfi "
+            "convention). 33 dedicated tests in "
+            "tests/test_score_aware_level_loss.py covering all 4 "
+            "acceptance criteria + Protocol satisfaction via "
+            "isinstance(...) @runtime_checkable + uniform-reduces-to-L2 "
+            "invariant + non-uniform reweights per-pixel + zero-sensitivity "
+            "drops error contribution (Slot GGG SegNet-null sister anchor) "
+            "+ shape contract at multiple resolutions + non-negative "
+            "sensitivity invariant + InvalidSensitivityMapError on "
+            "negative entries + torch tensor framework-agnostic path with "
+            "autograd flow + end-to-end M7 Path A (UNIFORM) integration + "
+            "end-to-end M7 Path B2 (EMPIRICAL_FROM_MASTER_GRADIENT) "
+            "identity-resolution + end-to-end M7 Path B2 + Phase C "
+            "(auto_project_to_level=True; dyadic projection) + builder "
+            "convenience surface tests. Consumes M7's "
+            "Z8ScorerSensitivityMap.get_for_level(...) landed at commits "
+            "8a95c9cc5 (Phase A extract_M_pixel + "
+            "broadcast_sensitivity_map_to_channels) + 300702cdf "
+            "(Phase C decompose_M_contest_per_level + Phase D "
+            "auto_project_to_level opt-in). Sister of Slot GGG's per-"
+            "pixel-roll SegNet-null finding (commit 32a70c051) as the "
+            "first empirical anchor in the canonical sensitivity map. "
+            "M9 (full_main_trainer_lifts_notimplementederror) is now "
+            "unblocked — Z8 trainer's _full_main can hold one "
+            "ScoreAwareLevelLossImpl per level + query "
+            "Z8ScorerSensitivityMap per-level per-step + invoke "
+            "per_level_loss(recon, target, sensitivity_map) in the "
+            "forward pass."
         ),
     ),
     BuildMilestone(

@@ -236,6 +236,19 @@ from tac.substrates.z8_hierarchical_predictive_coding.scorer_sensitivity_map imp
     yousfi_uniward_finite_difference_sensitivity_map,
 )
 
+# M8 canonical Yousfi-grounded score-aware per-level loss
+# (operator-routed Yousfi-cascade TOP-2 Phase E; 2026-05-30). Consumes M7's
+# Z8ScorerSensitivityMap.get_for_level(...) at the per-level Mallat dyadic
+# resolution; satisfies the binding_contract.py:419-472 ScoreAwareLevelLoss
+# Protocol with the canonical L2-reduction-under-uniform invariant; lands the
+# first concrete implementation of the Yousfi-grounded loss form per the
+# Protocol docstring verbatim ("loss = sum_pixel(sensitivity * error)").
+from tac.substrates.z8_hierarchical_predictive_coding.loss import (
+    InvalidSensitivityMapError,
+    ScoreAwareLevelLossImpl,
+    build_score_aware_level_loss_for_level,
+)
+
 # Catalog #124 8-field representation-lane declaration (canonical tokens for
 # the AST walker per the gate's regex set). DO NOT remove without operator
 # review per Catalog #229 premise verification.
@@ -362,6 +375,14 @@ __all__ = [
     "empirical_sensitivity_map_from_slot_ggg",
     "uniform_sensitivity_map_for_level",
     "yousfi_uniward_finite_difference_sensitivity_map",
+    # M8 canonical Yousfi-grounded score-aware per-level loss (operator-
+    # routed Yousfi-cascade TOP-2 Phase E; 2026-05-30). Implements the
+    # ScoreAwareLevelLoss Protocol from binding_contract.py:419-472. Sister
+    # of Slot GGG's per-pixel-roll SegNet-null finding as the first empirical
+    # anchor in the canonical sensitivity map.
+    "InvalidSensitivityMapError",
+    "ScoreAwareLevelLossImpl",
+    "build_score_aware_level_loss_for_level",
     "get_in_progress_milestones",
     "get_landed_milestones",
     "get_next_actionable_milestones",
