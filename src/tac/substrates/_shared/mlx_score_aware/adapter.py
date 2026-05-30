@@ -49,7 +49,29 @@ class MlxScoreAwareAdapter:
         bundle: RendererBundle,
         *,
         substrate_id: str,
+        pr95_faithful_curriculum_enabled: bool = False,
+        pr95_curriculum_total_epochs: int | None = None,
     ) -> None:
+        """Initialize the canonical MLX score-aware adapter.
+
+        Args:
+            bundle: substrate RendererBundle (UNIQUE axis).
+            substrate_id: canonical substrate id (passed to canonical posterior).
+            pr95_faithful_curriculum_enabled: opt-in to PR95-faithful 8-stage
+                Muon+AdamW canonical curriculum per CLAUDE.md "HNeRV /
+                leaderboard-implementation parity discipline" L14 + L15 +
+                the optimizer stack research memo (commit 118ddb1a4) Option A
+                MINIMUM-VIABLE recommendation. Default False preserves the
+                legacy default-on AdamW behavior (backward compat per
+                CLAUDE.md "Beauty, simplicity, and developer experience").
+                When True, ``train_step`` routes per-stage optimizer state
+                through the canonical ``apply_pr95_mlx_optimizer_step`` via
+                the canonical ``PR95FaithfulCurriculumFactory``.
+            pr95_curriculum_total_epochs: total epoch budget for the PR95
+                curriculum; defaults to the canonical 29,650 per L14.
+                Required when ``pr95_faithful_curriculum_enabled=True``;
+                ignored otherwise.
+        """
         mx = require_mlx_for_harness()
         import mlx.nn as mlx_nn
         import mlx.optimizers as mlx_optim
@@ -62,6 +84,35 @@ class MlxScoreAwareAdapter:
         self.substrate_id = substrate_id
         self._optimizer: Any = None
         self._optimizer_lr: float | None = None
+
+        # PR95-faithful 8-stage Muon+AdamW canonical curriculum state per
+        # CLAUDE.md L14 + L15 (Option A). Default-off preserves legacy adapter
+        # behavior; opt-in routes per-stage optimizer state through canonical
+        # apply_pr95_mlx_optimizer_step via PR95FaithfulCurriculumFactory.
+        self._pr95_faithful_curriculum_enabled = bool(
+            pr95_faithful_curriculum_enabled
+        )
+        self._pr95_curriculum_factory: Any = None
+        self._pr95_optimizer_state: Any = None
+        self._pr95_global_epoch: int = 0
+        self._pr95_last_stage_verdict: Any = None
+        if self._pr95_faithful_curriculum_enabled:
+            from tac.local_acceleration.pr95_hnerv_mlx import (
+                Pr95MlxOptimizerState,
+            )
+            from tac.substrates._shared.mlx_score_aware.pr95_faithful_curriculum import (
+                CANONICAL_PR95_TOTAL_EPOCHS,
+                PR95FaithfulCurriculumFactory,
+            )
+
+            self._pr95_curriculum_factory = PR95FaithfulCurriculumFactory(
+                total_epoch_budget=(
+                    pr95_curriculum_total_epochs
+                    if pr95_curriculum_total_epochs is not None
+                    else CANONICAL_PR95_TOTAL_EPOCHS
+                ),
+            )
+            self._pr95_optimizer_state = Pr95MlxOptimizerState()
         # Sibling optimizer for the learnable student head (real-scorer-bound
         # distillation path per Catalog #164). The head's ~20 params train
         # JOINTLY with the renderer: the renderer is differentiated by the
@@ -146,6 +197,22 @@ class MlxScoreAwareAdapter:
         mx = self._mx
         mlx_nn = self._mlx_nn
         mlx_optim = self._mlx_optim
+
+        # PR95-faithful 8-stage Muon+AdamW canonical curriculum opt-in path
+        # per CLAUDE.md L14 + L15 + the optimizer stack research memo Option A.
+        # When enabled, the per-stage optimizer config is loaded from the
+        # canonical PR95FaithfulCurriculumFactory and applied via the
+        # canonical apply_pr95_mlx_optimizer_step (which routes Muon-eligible
+        # vs AdamW-handled params per the canonical partition_pr95_mlx_parameter_names
+        # PR95-faithful split). Sister NS kernel (zeropower_via_newtonschulz5_mlx)
+        # is the canonical 1:1 PR95 hnerv_muon source implementation.
+        if self._pr95_faithful_curriculum_enabled:
+            return self._train_step_pr95_faithful_curriculum(
+                batch=batch,
+                learning_rate=learning_rate,
+                loss_weights=loss_weights,
+            )
+
         if self._optimizer is None or self._optimizer_lr != learning_rate:
             self._optimizer = mlx_optim.AdamW(learning_rate=learning_rate)
             self._optimizer_lr = learning_rate
@@ -286,6 +353,118 @@ class MlxScoreAwareAdapter:
 
         mx.eval(*eval_targets)
         return {"total": float(loss_value.item())}
+
+    def _train_step_pr95_faithful_curriculum(
+        self,
+        *,
+        batch: Any,
+        learning_rate: float,
+        loss_weights: Mapping[str, float],
+    ) -> Mapping[str, float]:
+        """PR95-faithful 8-stage Muon+AdamW canonical training step (Option A).
+
+        Routes the per-stage optimizer state through the canonical
+        ``apply_pr95_mlx_optimizer_step`` (which embeds the canonical
+        Muon NS kernel + canonical Muon/AdamW partition + canonical
+        per-name routing). Each stage actually uses its declared optimizer
+        + hyperparameters per CLAUDE.md "NO FAKE IMPLEMENTATIONS"
+        non-negotiable.
+
+        The current stage is derived from ``self._pr95_global_epoch`` via
+        the canonical ``PR95FaithfulCurriculumFactory.current_stage_verdict``.
+        Stage transitions trigger Muon momentum buffer reset (canonical
+        Muon-final-stage-only L15 invariant: pre-stage-8 stages use no
+        Muon so the buffer set is empty; stage 8 onwards uses fresh buffers).
+
+        Args:
+            batch: MLX array of pair indices (from ``sample_batch``).
+            learning_rate: ignored at the canonical Pr95MlxOptimizerConfig
+                level (stage-specific lr comes from the canonical descriptor);
+                preserved in the API for harness backward-compat per Catalog
+                #341 canonical-routing-markers + the canonical
+                ``SubstrateLongTrainingAdapter`` Protocol contract.
+            loss_weights: passed through to ``score_aware_loss``; the stage's
+                ``cat_sigma`` + ``cat_lambda`` are auxiliary canonical
+                hyperparameters not consumed by the current
+                ``score_aware_loss`` surface (they bind to a sister
+                C1a-aware loss path that lands in a follow-on sister wave
+                per the optimizer research memo § "Phase 2-N").
+        """
+        mx = self._mx
+        mlx_nn = self._mlx_nn
+        from tac.local_acceleration.pr95_hnerv_mlx import (
+            apply_pr95_mlx_optimizer_step,
+        )
+
+        # Load the canonical per-stage verdict for the current global_epoch.
+        stage_verdict = self._pr95_curriculum_factory.current_stage_verdict(
+            self._pr95_global_epoch
+        )
+        # Stage transition reset for Muon buffers per L15 (Muon-final-stage-only).
+        if self._pr95_last_stage_verdict is not None:
+            prev_stage = self._pr95_last_stage_verdict.stage_index
+            curr_stage = stage_verdict.stage_index
+            if prev_stage != curr_stage:
+                # Reset Muon buffers on stage transition (canonical:
+                # pre-stage-8 stages never populate Muon buffers because
+                # use_muon=False routes ALL params through the AdamW branch
+                # of apply_pr95_mlx_optimizer_step; stage 8 onwards starts
+                # with fresh Muon buffers because pre-stage-8 buffers are
+                # by construction empty).
+                from tac.local_acceleration.pr95_hnerv_mlx import (
+                    Pr95MlxOptimizerState,
+                )
+
+                self._pr95_optimizer_state = Pr95MlxOptimizerState(
+                    step=self._pr95_optimizer_state.step,
+                    muon_buffers={},
+                    adamw_m=self._pr95_optimizer_state.adamw_m,
+                    adamw_v=self._pr95_optimizer_state.adamw_v,
+                )
+        self._pr95_last_stage_verdict = stage_verdict
+
+        def _loss_fn_inner(model: Any) -> Any:
+            # NOTE: score_aware_loss reads bundle.model; the value_and_grad
+            # closure differentiates ``self.model`` which IS bundle.model.
+            total, _parts = score_aware_loss(
+                self.bundle, batch, loss_weights=loss_weights
+            )
+            return total
+
+        loss_and_grad_fn = mlx_nn.value_and_grad(self.model, _loss_fn_inner)
+        loss_value, grads = loss_and_grad_fn(self.model)
+
+        # Apply ONE canonical Muon+AdamW (or AdamW-only) step. The canonical
+        # helper handles Muon NS iteration + Muon/AdamW partition + per-name
+        # parameter routing internally. config.use_muon controls whether
+        # Muon-eligible params get the NS treatment (stage 8 ON) or fall
+        # through to AdamW (stages 1-7 OFF).
+        config = stage_verdict.optimizer_config
+        _summary = apply_pr95_mlx_optimizer_step(
+            self.model,
+            grads,
+            self._pr95_optimizer_state,
+            config,
+        )
+
+        mx.eval(self.model.parameters(), loss_value)
+        return {
+            "total": float(loss_value.item()),
+            "pr95_stage_index": float(stage_verdict.stage_index),
+            "pr95_stage_uses_muon": float(int(stage_verdict.uses_muon)),
+            "pr95_stage_cat_lambda": float(stage_verdict.cat_lambda),
+            "pr95_stage_cat_sigma": float(stage_verdict.cat_sigma),
+        }
+
+    def notify_global_epoch(self, global_epoch: int) -> None:
+        """Notify the adapter of the current global epoch (PR95 curriculum-aware).
+
+        The canonical long-training harness calls this once per epoch so the
+        PR95 curriculum factory can advance the stage index correctly. When
+        ``pr95_faithful_curriculum_enabled=False`` this is a no-op (preserves
+        backward compat per the legacy adapter API).
+        """
+        self._pr95_global_epoch = int(global_epoch)
 
     def export_state_dict(self, model: Any, path: Path) -> None:
         """Export the model state for checkpointing.

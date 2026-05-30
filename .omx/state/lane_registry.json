@@ -62883,6 +62883,88 @@
         }
       },
       "notes": "research_only=true; lane_class=research_substrate; read-only research wave; recommendations-only memo at .omx/research/optimizer_stack_inventory_and_bleeding_edge_recommendations_landed_20260530.md; sister-DISJOINT vs yousfi-rev-3-4-5-substrate-engineering-z8-m12a-20260530"
+    },
+    {
+      "id": "lane_meta_finding_a_auto_derive_reactivation_criteria_canonical_helper_fix_20260530",
+      "name": "META Finding A canonical 2-landing pattern: auto-derive reactivation_criteria from next_action at register_probe_outcome + sister backfill tool",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/probe_outcomes_ledger.py + tools/backfill_empty_reactivation_criteria_from_next_action.py + 113/113 tests pass (50 baseline + 42 Landing 1 + 21 Landing 2); 63 sister consumer tests pass (master_gradient_wire_in + provenance/builders); lane_class=substrate_engineering per Catalog #287 substantive impl"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/meta_finding_a_auto_derive_reactivation_criteria_canonical_2_landing_landed_20260530.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_m9_v3_pr95_faithful_8_stage_curriculum_scaffold_20260530",
+      "name": "M9-v3 PR95-faithful 8-stage Muon+AdamW canonical curriculum scaffold (Option A)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/_shared/mlx_score_aware/pr95_faithful_curriculum.py + src/tac/substrates/_shared/mlx_score_aware/adapter.py:150 wire-in + 26/26 NEW tests + 67/67 baseline = 93/93 PASS in 9.26s + smoke GREEN at experiments/results/m9_v3_pr95_faithful_curriculum_smoke_20260530T192027Z/smoke_output.json [macOS-CPU advisory]; lane_class=substrate_engineering per HNeRV parity L7"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/m9_v3_pr95_faithful_8_stage_curriculum_scaffold_option_a_landed_20260530.md + sister retroactive sweep at .omx/research/retroactive_sweep_for_m9_v3_pr95_faithful_curriculum_20260530T192800Z.md per Catalog #348"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -62892,5 +62974,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-30T18:48:13Z"
+  "updated_at": "2026-05-30T19:23:58Z"
 }
