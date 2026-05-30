@@ -97,11 +97,8 @@ CUDA smoke archive sha via `tools/mdl_scorer_conditional_ablation.py --tier c`.
 """
 from __future__ import annotations
 
-import hashlib
 import json
-import os
 import platform
-import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -109,11 +106,10 @@ from typing import Any
 
 import numpy as np
 
+from tac.framework_agnostic import is_mlx_runtime_available, mlx_eval, require_mlx_core
+
 from .architecture import (
-    FRAME_0,
     FRAME_1,
-    POSE_SQRT_INNER,
-    SEG_MULTIPLIER,
     PerPairRoutingDecision,
     compute_per_pair_lagrangian_dual_routing,
 )
@@ -193,11 +189,7 @@ def is_mlx_available() -> bool:
     Sister of `tac.substrates.nscs06_v8_chroma_lut.mlx_iteration.is_mlx_available`.
     Trainer fails-closed on non-Apple platforms (raises MLXFirstTrainerError).
     """
-    try:  # pragma: no cover - exercised on Apple Silicon only
-        import mlx.core  # noqa: F401
-    except Exception:  # pragma: no cover - import guard
-        return False
-    return True
+    return is_mlx_runtime_available()
 
 
 # ---------------------------------------------------------------------------
@@ -360,7 +352,7 @@ def _enumerate_mlx_perturbations(
             "MLX unavailable; trainer is Apple-Silicon-only per "
             "`tac.substrates.nscs06_v8_chroma_lut.mlx_iteration.is_mlx_available` pattern"
         )
-    import mlx.core as mx
+    mx = require_mlx_core()
 
     mx.random.seed(cfg.seed)
     np.random.seed(cfg.seed)
@@ -380,19 +372,19 @@ def _enumerate_mlx_perturbations(
 
     # Frame-0 pose: NEGATIVE half-normal (pose savings via PR110 sister)
     f0_pose_mlx = mx.random.normal(shape=(n_pairs, n_f0))
-    mx.eval(f0_pose_mlx)
+    mlx_eval(f0_pose_mlx)
     f0_pose_np = -np.abs(np.array(f0_pose_mlx)) * cfg.perturbation_scale_pose
     frame_0_pose_delta = f0_pose_np.astype(np.float64)
 
     # Frame-1 seg: POSITIVE half-normal (SegNet cost via x[:,-1,...] slice)
     f1_seg_mlx = mx.random.normal(shape=(n_pairs, n_f1))
-    mx.eval(f1_seg_mlx)
+    mlx_eval(f1_seg_mlx)
     f1_seg_np = np.abs(np.array(f1_seg_mlx)) * cfg.perturbation_scale_seg
     frame_1_seg_penalty = f1_seg_np.astype(np.float64)
 
     # Frame-1 pose: NEGATIVE half-normal (pose savings via frame-1 alt path)
     f1_pose_mlx = mx.random.normal(shape=(n_pairs, n_f1))
-    mx.eval(f1_pose_mlx)
+    mlx_eval(f1_pose_mlx)
     f1_pose_np = -np.abs(np.array(f1_pose_mlx)) * cfg.perturbation_scale_pose
     frame_1_pose_delta = f1_pose_np.astype(np.float64)
 

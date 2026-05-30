@@ -36,19 +36,7 @@ from __future__ import annotations
 import math
 from typing import Any
 
-try:
-    import mlx.core as mx
-    import mlx.nn as nn
-    _MLX_AVAILABLE = True
-except ImportError:
-    # Sister substrates follow this pattern: numpy_reference.py is the
-    # fallback when MLX is not installed (e.g. GHA CPU CI). Importing this
-    # module on a non-Apple-Silicon host without MLX produces an explicit
-    # ImportError at first MLX-API call, not a silent fallback.
-    mx = None  # type: ignore[assignment]
-    nn = None  # type: ignore[assignment]
-    _MLX_AVAILABLE = False
-
+from tac.framework_agnostic import optional_mlx_runtime
 from tac.substrates.mdl_ibps_j_discrete_categorical_mine_hybrid import (
     CATEGORICAL_G,
     CATEGORICAL_K,
@@ -57,6 +45,11 @@ from tac.substrates.mdl_ibps_j_discrete_categorical_mine_hybrid import (
     NUM_HIDDEN_LAYERS,
     POS_DIM,
 )
+
+_MLX_RUNTIME = optional_mlx_runtime(nn=True)
+mx = _MLX_RUNTIME.mx if _MLX_RUNTIME is not None else None
+nn = _MLX_RUNTIME.nn if _MLX_RUNTIME is not None else None
+_MLX_AVAILABLE = _MLX_RUNTIME is not None
 
 
 def _require_mlx() -> None:

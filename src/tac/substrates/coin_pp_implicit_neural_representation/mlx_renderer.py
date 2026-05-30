@@ -33,12 +33,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-try:  # pragma: no cover — exercised on Apple Silicon with MLX installed
-    import mlx.core as mx
-    import mlx.nn as nn
-except Exception:  # pragma: no cover — import guard for non-Apple CI
-    mx = None  # type: ignore[assignment]
-    nn = None  # type: ignore[assignment]
+from tac.framework_agnostic import optional_mlx_runtime, require_mlx_core
+
+_MLX_RUNTIME = optional_mlx_runtime(nn=True)
+mx = _MLX_RUNTIME.mx if _MLX_RUNTIME is not None else None
+nn = _MLX_RUNTIME.nn if _MLX_RUNTIME is not None else None
 
 # Module-level config. MLX is imported lazily inside the factory to keep
 # top-level import cheap (sister substrates' canonical pattern).
@@ -109,17 +108,7 @@ class CoinPPImplicitNeuralRepresentationConfig:
 
 def _ensure_mlx_available() -> Any:
     """Lazy import MLX. Raises with actionable message if not installed."""
-    try:
-        import mlx.core as mx
-
-        return mx
-    except ImportError as exc:
-        raise RuntimeError(
-            "MLX is not installed. Install via `uv pip install mlx` "
-            "(macOS only). For non-Apple-Silicon iteration, route through "
-            "`tac.substrates.coin_pp_implicit_neural_representation.numpy_reference` per axis 3 "
-            "portability discipline."
-        ) from exc
+    return require_mlx_core()
 
 
 def base_mlp_param_count(cfg: CoinPPImplicitNeuralRepresentationConfig) -> int:

@@ -31,30 +31,25 @@ from __future__ import annotations
 
 import dataclasses
 import hashlib
-import json
 import time
-from collections.abc import Mapping
 from typing import Any
 
 import numpy as np
 
+from tac.framework_agnostic import optional_mlx_runtime
 from tac.substrates.boost_nerv_pr110_residual.bpr1_variant_b_sign_bitmap_codec import (
     build_variant_b_d_sidecar,
     compute_sign_bitmap_entropy_diagnostic,
 )
 from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (
     DEFAULT_DISTILLATION_TEMPERATURE,
-    DEFAULT_SEGNET_CLASSES,
     LearnableConv1x1StudentHead,
-    build_learnable_student_head,
     kl_divergence_between_softmax,
     softmax_with_temperature,
 )
 
-try:  # pragma: no cover — MLX is required for catalyst_cascade
-    import mlx.core as mx  # type: ignore[import-not-found]
-except ImportError:  # pragma: no cover
-    mx = None  # type: ignore[assignment]
+_MLX_RUNTIME = optional_mlx_runtime()
+mx = _MLX_RUNTIME.mx if _MLX_RUNTIME is not None else None
 
 
 # Canonical FP4 codebook (mask2mask competitor + Quantizr canonical anchor)
@@ -627,11 +622,11 @@ def run_catalyst_cascade_pipeline(
 __all__ = [
     "FP4_DEFAULT_CODEBOOK",
     "FP4_HEAD_BLOCK_SIZE_DEFAULT",
-    "CatalystSidecarManifest",
     "CatalystCascadeArmTelemetry",
+    "CatalystSidecarManifest",
+    "build_catalyst_bpr1_sidecar",
     "fake_quant_fp4_mlx",
     "quantize_head_fp4",
-    "build_catalyst_bpr1_sidecar",
     "run_catalyst_cascade_arm",
     "run_catalyst_cascade_pipeline",
 ]

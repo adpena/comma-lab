@@ -75,6 +75,8 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from tac.framework_agnostic import require_mlx_core
+
 
 class NirvanaCascadingNervLongTrainingAdapter:
     """G=NIRVANA canonical adapter shell — L1-PROMOTION-CASCADE structural skeleton.
@@ -103,15 +105,7 @@ class NirvanaCascadingNervLongTrainingAdapter:
         target_rgb_1: Any,
         residual_loss_weight: float = 1.0,
     ):
-        try:
-            import mlx.core as mx  # noqa: F401
-        except ImportError as exc:
-            raise ImportError(
-                "G=NIRVANA-cascading-NeRV long-training adapter requires MLX "
-                "(Apple Silicon only). Install via `pip install mlx`. The "
-                "numpy reference at tac.substrates.nirvana_cascading_nerv."
-                "numpy_reference covers CPU-only inference."
-            ) from exc
+        require_mlx_core()
 
         self.config = config
         self.target_rgb_0 = target_rgb_0
@@ -143,7 +137,7 @@ class NirvanaCascadingNervLongTrainingAdapter:
         """Sample a batch of pair_indices for one training step."""
         import numpy as np
 
-        import mlx.core as mx
+        mx = require_mlx_core()
 
         num_pairs = int(getattr(self.config, "num_pairs", 600))
         rng = np.random.RandomState(seed)

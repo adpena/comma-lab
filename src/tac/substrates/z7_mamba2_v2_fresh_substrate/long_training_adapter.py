@@ -83,6 +83,8 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from tac.framework_agnostic import require_mlx_core
+
 
 class Z7Mamba2V2LongTrainingAdapter:
     """B'=Z7-Mamba-2-v2 canonical adapter shell — L1-PROMOTION-CASCADE skeleton.
@@ -110,13 +112,7 @@ class Z7Mamba2V2LongTrainingAdapter:
         target_rgb_0: Any,
         target_rgb_1: Any,
     ):
-        try:
-            import mlx.core as mx  # noqa: F401
-        except ImportError as exc:
-            raise ImportError(
-                "B'=Z7-Mamba-2-v2 long-training adapter requires MLX "
-                "(Apple Silicon only). Install via `pip install mlx`."
-            ) from exc
+        require_mlx_core()
 
         self.config = config
         self.target_rgb_0 = target_rgb_0
@@ -147,7 +143,7 @@ class Z7Mamba2V2LongTrainingAdapter:
         """Sample a batch of pair_indices for one training step."""
         import numpy as np
 
-        import mlx.core as mx
+        mx = require_mlx_core()
 
         num_pairs = int(getattr(self.config, "num_pairs", 600))
         rng = np.random.RandomState(seed)

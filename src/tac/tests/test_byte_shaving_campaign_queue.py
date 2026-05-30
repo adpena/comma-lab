@@ -4870,7 +4870,7 @@ def test_materializer_execution_queue_can_append_exact_readiness_followups(
     assert "--allow-unfinished-state" not in harvest_step["command"]
     assert "--overwrite" in harvest_step["command"]
     assert f"chain_out/{CHAIN_MANIFEST_NAME}" in harvest_step["command"]
-    assert "chain_out/exact_eval_handoff/source_queue.json" in (harvest_step["command"])
+    assert "chain_out_exact_eval_handoff/source_queue.json" in (harvest_step["command"])
     assert dispatch_step["command"][:2] == [
         ".venv/bin/python",
         "tools/build_materializer_exact_eval_dispatch_plan.py",
@@ -4885,16 +4885,16 @@ def test_materializer_execution_queue_can_append_exact_readiness_followups(
     ]
     assert [
         "--source-queue",
-        "chain_out/exact_eval_handoff/source_queue.json",
+        "chain_out_exact_eval_handoff/source_queue.json",
     ] in [closure_step["command"][index : index + 2] for index in range(len(closure_step["command"]) - 1)]
     assert [
         "--source-queue",
-        "chain_out/exact_eval_handoff/submission_closure/closed_source_queue.json",
+        "chain_out_exact_eval_handoff/submission_closure/closed_source_queue.json",
     ] in [bridge_step["command"][index : index + 2] for index in range(len(bridge_step["command"]) - 1)]
     assert "--dispatch-mode" not in dispatch_step["command"]
     assert "--allow-paid-dispatch-queue" not in dispatch_step["command"]
     assert "--overwrite" in dispatch_step["command"]
-    assert "chain_out/exact_eval_handoff/dispatch_queue.json" in (dispatch_step["command"])
+    assert "chain_out_exact_eval_handoff/dispatch_queue.json" in (dispatch_step["command"])
 
     dag = build_staircase_dag_from_experiment_queue(
         execution_queue,
@@ -4983,10 +4983,10 @@ def test_materializer_execution_queue_isolates_followups_for_shared_manifest_par
         experiment["steps"][1]["command"]
         for experiment in execution_queue["experiments"]
     ]
-    assert "shared_candidates/exact_eval_handoff/candidate_a/source_queue.json" in (
+    assert "shared_candidates_exact_eval_handoff/candidate_a/source_queue.json" in (
         harvest_commands[0]
     )
-    assert "shared_candidates/exact_eval_handoff/candidate_b/source_queue.json" in (
+    assert "shared_candidates_exact_eval_handoff/candidate_b/source_queue.json" in (
         harvest_commands[1]
     )
     assert harvest_commands[0] != harvest_commands[1]

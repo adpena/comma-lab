@@ -228,6 +228,92 @@ def test_queue_control_recover_pauses_and_reconciles_stale_running(tmp_path: Pat
     assert summary["status_counts"] == {"succeeded": 1}
 
 
+def test_queue_control_recover_rewinds_succeeded_missing_artifact_step(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    qc = _load_queue_control()
+    missing_marker = tmp_path / "missing.json"
+    queue_path = tmp_path / "queue.json"
+    queue_path.write_text(
+        json.dumps(
+            {
+                "schema": "experiment_queue.v1",
+                "queue_id": "unit_recover_artifact_queue",
+                "controls": {"mode": "running", "max_concurrency": {"local_cpu": 1}},
+                "experiments": [
+                    {
+                        "id": "exp",
+                        "steps": [
+                            {
+                                "id": "materialize",
+                                "command": [sys.executable, "-c", "print('materialize')"],
+                                "resources": {"kind": "local_cpu"},
+                                "postconditions": [
+                                    {
+                                        "type": "json_equals",
+                                        "path": str(missing_marker),
+                                        "key": "schema",
+                                        "equals": "done.v1",
+                                    }
+                                ],
+                            },
+                            {
+                                "id": "followup",
+                                "command": [sys.executable, "-c", "print('followup')"],
+                                "resources": {"kind": "local_cpu"},
+                                "requires": ["materialize"],
+                            },
+                        ],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    state_path = tmp_path / "queue.sqlite"
+    queue = load_queue_definition(queue_path)
+    with connect_state(state_path) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'succeeded'
+            WHERE queue_id = ? AND experiment_id = ? AND step_id IN (?, ?)
+            """,
+            ("unit_recover_artifact_queue", "exp", "materialize", "followup"),
+        )
+        conn.commit()
+
+    rc = qc.main(
+        [
+            "--queue",
+            str(queue_path),
+            "--state",
+            str(state_path),
+            "recover",
+            "--reason",
+            "unit test artifact recovery",
+            "--strict",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert rc == 0
+    assert payload["auto_recovery_rewinds"]["rewind_count"] == 1
+    assert payload["auto_recovery_rewinds"]["rewound_steps"][0] == {
+        "action": "rewind_succeeded_step_with_artifact_failure",
+        "experiment_id": "exp",
+        "step_id": "materialize",
+        "cascade": True,
+    }
+    assert payload["after_auto_recovery"]["status_counts"] == {"queued": 2}
+    with connect_state(state_path) as conn:
+        summary = queue_summary(conn, queue)
+    assert summary["mode"] == "paused"
+    assert summary["status_counts"] == {"queued": 2}
+
+
 def test_queue_control_missing_queue_fails_without_traceback(capsys, tmp_path: Path) -> None:
     qc = _load_queue_control()
     rc = qc.main(["--queue", str(tmp_path / "missing.json"), "status"])

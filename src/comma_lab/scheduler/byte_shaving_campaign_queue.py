@@ -4543,7 +4543,13 @@ def _materializer_exact_readiness_handoff_dir(
     experiment_id: str,
     shared_manifest_parent_keys: set[str],
 ) -> Path:
-    base = materializer_manifest_path.parent / "exact_eval_handoff"
+    # Keep follow-up custody outside the materializer output directory. Several
+    # materializers are intentionally rerunnable with overwrite semantics, and
+    # placing exact-readiness handoff children under that directory lets a later
+    # local rerun erase downstream proof artifacts.
+    base = materializer_manifest_path.parent.parent / (
+        f"{materializer_manifest_path.parent.name}_exact_eval_handoff"
+    )
     parent_key = materializer_manifest_path.parent.resolve(strict=False).as_posix()
     if parent_key not in shared_manifest_parent_keys:
         return base

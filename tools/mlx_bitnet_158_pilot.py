@@ -27,12 +27,16 @@ from pathlib import Path
 import numpy as np
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT / "src"))
 
 try:
-    import mlx.core as mx
-    import mlx.nn as nn
-    import mlx.optimizers as optim
-except ImportError as e:
+    from tac.framework_agnostic import mlx_eval, require_mlx_runtime
+
+    _MLX_RUNTIME = require_mlx_runtime(nn=True, optimizers=True)
+    mx = _MLX_RUNTIME.mx
+    nn = _MLX_RUNTIME.nn
+    optim = _MLX_RUNTIME.optimizers
+except Exception as e:
     print(f"FATAL: MLX not installed: {e}", file=sys.stderr)
     print("Install with: .venv/bin/pip install mlx", file=sys.stderr)
     sys.exit(2)
@@ -120,7 +124,7 @@ def train_model(model, latents, targets, lr=1e-3, n_steps=200, label=""):
     for step in range(n_steps):
         loss, grads = loss_grad(model, latents, targets)
         optimizer.update(model, grads)
-        mx.eval(model.parameters(), optimizer.state, loss)
+        mlx_eval(model.parameters(), optimizer.state, loss)
         if step % 20 == 0:
             losses.append(float(loss))
     elapsed = time.time() - t0

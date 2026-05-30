@@ -33,12 +33,11 @@ sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(REPO_ROOT / "src"))
 sys.path.insert(0, str(REPO_ROOT / "upstream"))
 
-import mlx.core as mx  # noqa: E402
-
 from tac.canonical_equations.equation import EmpiricalAnchor  # noqa: E402
 from tac.canonical_equations.registry import (  # noqa: E402
     update_equation_with_empirical_anchor,
 )
+from tac.framework_agnostic import require_mlx_core  # noqa: E402
 from tac.provenance.builders import build_provenance_for_predicted  # noqa: E402
 from tac.substrates.hinton_distilled_scorer_surrogate.catalyst_cascade import (  # noqa: E402
     run_catalyst_cascade_pipeline,
@@ -49,8 +48,8 @@ from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (  # noqa:
     build_learnable_student_head,
 )
 
-
 CANONICAL_EQUATION_ID = "hinton_kl_distill_enables_qat_catalyst_composition_savings_v1"
+mx = require_mlx_core()
 
 
 def _build_synthetic_50_pair_fixture(

@@ -61,7 +61,6 @@ import sys
 import time
 from pathlib import Path
 
-import mlx.core as mx
 import numpy as np
 
 try:
@@ -73,6 +72,7 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 sys.path.insert(0, str(REPO_ROOT / "upstream"))
 
+from tac.framework_agnostic import mlx_eval, require_mlx_core  # noqa: E402
 from tac.substrates.hinton_distilled_scorer_surrogate import (  # noqa: E402
     MockTeacherLogitsProvider,
     build_learnable_student_head,
@@ -87,6 +87,8 @@ from tac.substrates.hinton_distilled_scorer_surrogate.catalyst_cascade import ( 
 from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (  # noqa: E402
     LearnableConv1x1StudentHead,
 )
+
+mx = require_mlx_core()
 
 # Path A canonical config (sister wave 1 defaults)
 PATH_A_DEFAULT_N_FRAMES = 600
@@ -199,9 +201,9 @@ def train_path_a(
             loss_val, (gw, gb) = grad_fn(w, b, indices_mx, targets_mx)
             w = w - lr * gw
             b = b - lr * gb
-            mx.eval(w, b, loss_val)
+            mlx_eval(w, b, loss_val)
             _, distill_only = loss_for_step(w, b, indices_mx, targets_mx)
-            mx.eval(distill_only)
+            mlx_eval(distill_only)
             ep_losses.append(float(distill_only.item()))
         avg = float(np.mean(ep_losses))
         losses.append(avg)
@@ -274,9 +276,9 @@ def fine_tune_post_qat(
             loss_val, (gw, gb) = grad_fn(w, b, indices_mx, targets_mx)
             w = w - lr * gw
             b = b - lr * gb
-            mx.eval(w, b, loss_val)
+            mlx_eval(w, b, loss_val)
             _, distill_only = loss_for_step_qat(w, b, indices_mx, targets_mx)
-            mx.eval(distill_only)
+            mlx_eval(distill_only)
             ep_losses.append(float(distill_only.item()))
         avg = float(np.mean(ep_losses))
         losses.append(avg)
@@ -323,7 +325,7 @@ def evaluate_kl(
             raise ValueError("either head or deterministic_provider must be provided")
         teacher_logits = cache.teacher_logits_for_indices(indices_mx)
         kl = _kl_t2_loss(student_logits, teacher_logits, temperature=temperature)
-        mx.eval(kl)
+        mlx_eval(kl)
         kl_vals.append(float(kl.item()))
     return float(np.mean(kl_vals))
 

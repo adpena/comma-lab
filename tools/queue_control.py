@@ -35,9 +35,13 @@ from comma_lab.scheduler.experiment_queue import (  # noqa: E402
     load_queue_definition,
     queue_summary,
     reconcile_stale_running_steps,
+    rewind_step,
     set_control_mode,
 )
 from comma_lab.scheduler.experiment_queue_observer import observe_experiment_queue  # noqa: E402
+from comma_lab.scheduler.queue_feedback_replan_policy import (  # noqa: E402
+    build_queue_observation_recovery_plan,
+)
 from tac.repo_io import ArtifactWriteError, write_json_artifact  # noqa: E402
 
 QUEUE_CONTROL_SCHEMA = "experiment_queue_control_surface.v1"
@@ -45,6 +49,9 @@ QUEUE_CONTROL_ACTION_SCHEMA = "experiment_queue_control_action.v1"
 QUEUE_CONTROL_LOG_TAIL_SCHEMA = "experiment_queue_control_log_tail.v1"
 QUEUE_CONTROL_RESUME_COMMAND_SCHEMA = "experiment_queue_resume_command.v1"
 QUEUE_CONTROL_RECOVERY_SCHEMA = "experiment_queue_crash_recovery.v1"
+QUEUE_CONTROL_AUTO_RECOVERY_REWINDS_SCHEMA = "experiment_queue_auto_recovery_rewinds.v1"
+
+AUTO_RECOVERY_REWIND_ACTIONS = {"rewind_succeeded_step_with_artifact_failure"}
 
 FALSE_AUTHORITY = {
     "score_claim": False,
@@ -505,6 +512,90 @@ def observe_for_control(
     return observation, state
 
 
+def _auto_rewind_recoverable_steps(
+    conn: Any,
+    queue: Mapping[str, Any],
+    *,
+    queue_path: str | Path,
+    state_path: str | Path,
+    reason: str,
+    tail_lines: int,
+    include_orphans: bool,
+) -> dict[str, Any]:
+    """Apply recovery-policy rewinds that are local, typed, and artifact-backed."""
+
+    conn.commit()
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state_path,
+        repo_root=REPO_ROOT,
+        tail_lines=tail_lines,
+        include_orphans=include_orphans,
+    )
+    plan = build_queue_observation_recovery_plan(
+        observation,
+        queue_path=_command_path(queue_path),
+        state_path=_command_path(state_path),
+        reason=reason,
+    )
+    rewound: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+    for action in plan.get("actions") or []:
+        if not isinstance(action, Mapping):
+            continue
+        action_name = str(action.get("action") or "")
+        if action.get("required") is not True or action_name not in AUTO_RECOVERY_REWIND_ACTIONS:
+            continue
+        experiment_id = str(action.get("experiment_id") or "")
+        step_id = str(action.get("step_id") or "")
+        if not experiment_id or not step_id:
+            skipped.append({"action": action_name, "reason": "missing_step_identity"})
+            continue
+        key = (experiment_id, step_id)
+        if key in seen:
+            continue
+        command = action.get("command")
+        if not isinstance(command, Sequence) or isinstance(command, (str, bytes, bytearray)):
+            skipped.append({"action": action_name, "experiment_id": experiment_id, "step_id": step_id, "reason": "missing_command"})
+            continue
+        if "rewind" not in [str(item) for item in command]:
+            skipped.append({"action": action_name, "experiment_id": experiment_id, "step_id": step_id, "reason": "non_rewind_command"})
+            continue
+        rewind_step(
+            conn,
+            str(queue["queue_id"]),
+            experiment_id,
+            step_id,
+            reason=reason,
+            queue=queue,
+            cascade=True,
+        )
+        seen.add(key)
+        rewound.append(
+            {
+                "action": action_name,
+                "experiment_id": experiment_id,
+                "step_id": step_id,
+                "cascade": True,
+            }
+        )
+    return {
+        "schema": QUEUE_CONTROL_AUTO_RECOVERY_REWINDS_SCHEMA,
+        "source_observation_generated_at_utc": observation.get("generated_at_utc"),
+        "source_blockers": [str(item) for item in observation.get("blockers") or []],
+        "recovery_plan_schema": plan.get("schema"),
+        "recovery_required": plan.get("recovery_required"),
+        "rewind_count": len(rewound),
+        "rewound_steps": rewound,
+        "skipped_count": len(skipped),
+        "skipped_steps": skipped,
+        "allowed_use": "local_queue_recovery_state_mutation_only",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_exact_eval_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
 def _write_output_if_requested(payload: dict[str, Any], output: Path | None, expected_sha256: str | None) -> None:
     if output is None:
         return
@@ -772,6 +863,16 @@ def cmd_recover(args: argparse.Namespace) -> int:
             stale_after_seconds=args.stale_after_seconds,
         )
         after_reconcile = queue_summary(conn, queue, repo_root=REPO_ROOT)
+        auto_recovery_rewinds = _auto_rewind_recoverable_steps(
+            conn,
+            queue,
+            queue_path=args.queue,
+            state_path=state,
+            reason=args.reason,
+            tail_lines=args.tail_lines,
+            include_orphans=args.include_orphans,
+        )
+        after_auto_recovery = queue_summary(conn, queue, repo_root=REPO_ROOT)
         if args.resume_after_recovery:
             set_control_mode(
                 conn,
@@ -813,6 +914,11 @@ def cmd_recover(args: argparse.Namespace) -> int:
         "after_reconcile": {
             "mode": after_reconcile.get("mode"),
             "status_counts": after_reconcile.get("status_counts", {}),
+        },
+        "auto_recovery_rewinds": auto_recovery_rewinds,
+        "after_auto_recovery": {
+            "mode": after_auto_recovery.get("mode"),
+            "status_counts": after_auto_recovery.get("status_counts", {}),
         },
         "after": {
             "mode": after.get("mode"),

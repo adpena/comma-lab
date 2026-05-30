@@ -88,6 +88,8 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
+from tac.framework_agnostic import require_mlx_core  # noqa: E402
+
 SCHEMA_VERSION = "mlx_candidate_contest_equivalence_gate_z6pcwm1_v1"
 
 # Canonical empirical anchor per #1258 corrected closure footer + #1265 LANDED
@@ -147,12 +149,13 @@ def _build_pytorch_substrate_from_archive(archive_bytes: bytes) -> tuple[Any, An
     canonical inflate device contract (Catalog #205); no MPS per Catalog #1.
     """
     import torch
-    from tac.substrates.time_traveler_l5_z6.archive import parse_archive
+
     from tac.substrates.time_traveler_l5_z6.architecture import (
         EVAL_HW,
         Z6PredictiveCodingConfig,
         Z6PredictiveCodingSubstrate,
     )
+    from tac.substrates.time_traveler_l5_z6.archive import parse_archive
 
     arc = parse_archive(archive_bytes)
     meta = arc.meta
@@ -209,14 +212,14 @@ def _build_mlx_renderer_from_archive(archive_bytes: bytes) -> Any:
     The MLX renderer's :meth:`reconstruct_pair` produces decoder output in the
     same canonical [0, 1] sigmoid space as the PyTorch sister.
     """
-    import mlx.core as mx
+    mx = require_mlx_core()
     import numpy as np
 
-    from tac.substrates.time_traveler_l5_z6.archive import parse_archive
     from tac.substrates.time_traveler_l5_z6.architecture import (
         EVAL_HW,
         Z6PredictiveCodingConfig,
     )
+    from tac.substrates.time_traveler_l5_z6.archive import parse_archive
     from tac.substrates.time_traveler_l5_z6.mlx_renderer import (
         Z6PredictiveCodingMLXRenderer,
     )
@@ -323,7 +326,7 @@ def _render_pair_batch_mlx(renderer: Any, pair_indices: list[int]) -> Any:
     to NCHW (B, 3, H, W) so direct comparison to the PyTorch sister is
     layout-aligned.
     """
-    import mlx.core as mx
+    mx = require_mlx_core()
     import numpy as np
 
     idx_mx = mx.array(np.asarray(pair_indices, dtype=np.int32))
@@ -452,17 +455,17 @@ def main() -> int:
         return 2
     if args.gate_threshold_decoder_parity <= 0:
         print(
-            f"[gate-z6] ERROR: --gate-threshold-decoder-parity must be > 0",
+            "[gate-z6] ERROR: --gate-threshold-decoder-parity must be > 0",
             file=sys.stderr,
         )
         return 2
     if args.n_pairs <= 0:
-        print(f"[gate-z6] ERROR: --n-pairs must be > 0", file=sys.stderr)
+        print("[gate-z6] ERROR: --n-pairs must be > 0", file=sys.stderr)
         return 2
 
     args.output_json.parent.mkdir(parents=True, exist_ok=True)
 
-    print(f"[gate-z6] Measuring Z6PCWM1 MLX↔PyTorch decoder parity")
+    print("[gate-z6] Measuring Z6PCWM1 MLX↔PyTorch decoder parity")
     print(f"[gate-z6]   archive: {args.archive}")
     print(f"[gate-z6]   threshold: max_abs(MLX−PyTorch) < {args.gate_threshold_decoder_parity}")
     print(f"[gate-z6]   n_pairs:  {args.n_pairs}")

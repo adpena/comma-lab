@@ -102,6 +102,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from tac.framework_agnostic import require_mlx_core
+
 # Module-level config. MLX imports are lazy inside primitive functions to keep
 # top-level import cheap on non-Apple-Silicon CI (sister substrates' canonical
 # pattern per Catalog #1 device-selection-defaults discipline + axis-3
@@ -234,17 +236,7 @@ def _ensure_mlx_available() -> Any:
     defaults discipline + axis-3 portability per operator directive #3
     2026-05-26.
     """
-    try:
-        import mlx.core as mx  # noqa: F401
-
-        return mx
-    except ImportError as exc:
-        raise RuntimeError(
-            "MLX is not installed. Install via `uv pip install mlx` "
-            "(macOS only). For non-Apple-Silicon iteration, route through "
-            "`tac.substrates.faiss_ivf_pq_residual.numpy_reference` per axis 3 "
-            "portability discipline."
-        ) from exc
+    return require_mlx_core()
 
 
 # ---------------------------------------------------------------------------
@@ -466,7 +458,7 @@ def mlx_decode_per_pair_residual(
     are exact in fp32); end-to-end MLX vs PyTorch parity is verified via
     sister test ``test_mlx_pytorch_decode_per_pair_residual_parity``.
     """
-    mx = _ensure_mlx_available()
+    _ensure_mlx_available()
     # Step 1: PQ decode → flat tile vectors
     tile_vectors_mx = mlx_pq_reconstruct_tile_vectors(codebook_mx, codewords_mx)
     # Step 2: tile reassemble → per-pair frame at EVAL_HW
@@ -543,9 +535,9 @@ __all__ = [
     "EVAL_HW",
     "EVIDENCE_GRADE",
     "EVIDENCE_TAG",
-    "FaissIVFPQResidualConfig",
     "LANE_ID",
     "SCHEMA_VERSION",
+    "FaissIVFPQResidualConfig",
     "_ensure_mlx_available",
     "_full_main",
     "estimate_archive_bytes",

@@ -80,6 +80,8 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from tac.framework_agnostic import require_mlx_core
+
 
 class MdlIbpsJLongTrainingAdapter:
     """J=MDL-IBPS canonical adapter shell — L1-PROMOTION-CASCADE structural skeleton.
@@ -113,15 +115,7 @@ class MdlIbpsJLongTrainingAdapter:
         beta_ib: float = 1e-3,
         lambda_sparse: float = 1e-4,
     ):
-        try:
-            import mlx.core as mx  # noqa: F401
-        except ImportError as exc:
-            raise ImportError(
-                "J=MDL-IBPS long-training adapter requires MLX (Apple Silicon "
-                "only). Install via `pip install mlx`. The numpy reference at "
-                "tac.substrates.mdl_ibps_j_discrete_categorical_mine_hybrid."
-                "numpy_reference covers CPU-only inference."
-            ) from exc
+        require_mlx_core()
 
         # Stash inputs for L1 follow-up.
         self.config = config
@@ -154,7 +148,7 @@ class MdlIbpsJLongTrainingAdapter:
         """Sample a batch of pair_indices for one training step."""
         import numpy as np
 
-        import mlx.core as mx
+        mx = require_mlx_core()
 
         from tac.substrates.mdl_ibps_j_discrete_categorical_mine_hybrid import NUM_PAIRS
 

@@ -63,16 +63,11 @@ import hashlib
 from collections.abc import Callable
 from typing import Any, Protocol
 
+from tac.framework_agnostic import optional_mlx_runtime
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 
-# MLX is required for this canonical loss but is imported lazily so the
-# package remains importable on machines without an MLX runtime (the test
-# fixtures + CLI then fail-closed at the first MLX-bound call with a clear
-# RuntimeError instead of an ImportError at module-load time).
-try:  # pragma: no cover — guard exercised only on non-MLX hosts.
-    import mlx.core as mx  # type: ignore[import-not-found]
-except ImportError:  # pragma: no cover
-    mx = None  # type: ignore[assignment]
+_MLX_RUNTIME = optional_mlx_runtime()
+mx = _MLX_RUNTIME.mx if _MLX_RUNTIME is not None else None
 
 # Canonical defaults per Hinton 2014 + Quantizr empirical anchor.
 DEFAULT_DISTILLATION_TEMPERATURE: float = 2.0

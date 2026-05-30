@@ -116,6 +116,11 @@ from typing import Any
 
 import numpy as np
 
+from tac.framework_agnostic import Backend
+from tac.framework_agnostic.canonical_kernels import (
+    bilinear_resize_nhwc,
+    pixel_shuffle_2x_nhwc,
+)
 from tac.substrates.time_traveler_l5_z7_mamba2.architecture import (
     EVAL_HW,
     NUM_PAIRS,
@@ -125,8 +130,8 @@ from tac.substrates.time_traveler_l5_z7_mamba2.architecture import (
 __all__ = [
     "Z7Mamba2MLXNativeRenderer",
     "Z7Mamba2MLXRenderConfig",
-    "require_mlx",
     "render_pair_mlx",
+    "require_mlx",
 ]
 
 
@@ -213,7 +218,7 @@ class Z7Mamba2MLXRenderConfig:
     @classmethod
     def from_pytorch_config(
         cls, cfg: Z7Mamba2PredictiveCodingConfig
-    ) -> "Z7Mamba2MLXRenderConfig":
+    ) -> Z7Mamba2MLXRenderConfig:
         """Build an MLX render config from the canonical PyTorch config.
 
         Used by export-bridge tools so the MLX-side architecture is
@@ -592,13 +597,16 @@ class Z7Mamba2MLXNativeRenderer:
         h = mx.transpose(grid, (0, 2, 3, 1))
 
         for i in range(cfg.decoder_num_upsample_blocks):
-            out_ch = cfg.decoder_channels[i]
             # Conv2d(in_ch, 4*out_ch, k=3, p=1) — MLX channels-last
             h = mx.conv2d(h, self.dec_block_w[i], padding=1)
             h = h + self.dec_block_b[i]
             # PixelShuffle(upscale=2) in channels-last:
             # (P, H, W, 4*out_ch) -> (P, 2*H, 2*W, out_ch)
-            h = _pixel_shuffle_channels_last(h, upscale_factor=2)
+            h = pixel_shuffle_2x_nhwc(
+                h,
+                backend=Backend.MLX,
+                upscale_factor=2,
+            )
             # ReLU activation
             h = mx.maximum(h, 0.0)
 
@@ -611,14 +619,14 @@ class Z7Mamba2MLXNativeRenderer:
         # Bilinear upsample to (output_height, output_width) if needed
         cur_h, cur_w = int(h.shape[-2]), int(h.shape[-1])
         if cur_h != cfg.output_height or cur_w != cfg.output_width:
-            # MLX bilinear upsample via array indexing; for L0 SCAFFOLD,
-            # fall back through numpy for correctness; an MLX-native
-            # bilinear is deferred to a sister L1 EXTENSION.
-            h_np = np.asarray(h)
-            h_np = _bilinear_resize_np(
-                h_np, cfg.output_height, cfg.output_width
+            h = mx.transpose(h, (0, 2, 3, 1))
+            h = bilinear_resize_nhwc(
+                h,
+                target_h=cfg.output_height,
+                target_w=cfg.output_width,
+                backend=Backend.MLX,
             )
-            h = mx.array(h_np)
+            h = mx.transpose(h, (0, 3, 1, 2))
 
         # Sigmoid for unit-domain output
         h = mx.sigmoid(h)
@@ -692,7 +700,6 @@ class Z7Mamba2MLXNativeRenderer:
         Conv2d weights are transposed from MLX channels-last
         ``(out, kH, kW, in)`` to PyTorch ``(out, in, kH, kW)``.
         """
-        import mlx.core as mx
         cfg = self.cfg
         out: dict[str, np.ndarray] = {}
 
@@ -844,65 +851,6 @@ class Z7Mamba2MLXNativeRenderer:
         total += cfg.latent_dim
         total += cfg.num_pairs * cfg.latent_dim
         return total
-
-
-# ---------------------------------------------------------------------------
-# Module-level helpers
-# ---------------------------------------------------------------------------
-
-
-def _pixel_shuffle_channels_last(x: Any, *, upscale_factor: int) -> Any:
-    """PixelShuffle for MLX channels-last tensors.
-
-    Mirrors :func:`torch.nn.functional.pixel_shuffle` semantics but
-    operates on ``(P, H, W, C * r^2)`` -> ``(P, H * r, W * r, C)``.
-
-    For L0 SCAFFOLD correctness this falls back through numpy when MLX
-    primitives are insufficient. A native-MLX implementation is deferred
-    to a sister L1 EXTENSION once the architecture is empirically anchored.
-    """
-    import mlx.core as mx
-    arr_np = np.asarray(x)
-    p, h, w, c_full = arr_np.shape
-    r = int(upscale_factor)
-    if c_full % (r * r) != 0:
-        raise ValueError(
-            f"channels {c_full} must be divisible by upscale_factor^2 = {r * r}"
-        )
-    c_out = c_full // (r * r)
-    # Reshape (P, H, W, r, r, C_out) then transpose to (P, H, r, W, r, C_out)
-    # then merge to (P, H*r, W*r, C_out).
-    a = arr_np.reshape(p, h, w, r, r, c_out)
-    a = np.transpose(a, (0, 1, 3, 2, 4, 5))
-    a = a.reshape(p, h * r, w * r, c_out)
-    return mx.array(a)
-
-
-def _bilinear_resize_np(
-    arr_np: np.ndarray, target_h: int, target_w: int
-) -> np.ndarray:
-    """Bilinear-resize a (P, C, H, W) numpy array to (P, C, target_h, target_w).
-
-    Uses PIL bilinear via per-channel resize for correctness parity with
-    PyTorch's ``F.interpolate(..., mode='bilinear', align_corners=False)``.
-    Sister L1 EXTENSION will native-implement this in MLX for performance.
-    """
-    from PIL import Image  # local import; pillow is a project dep
-    p, c, h, w = arr_np.shape
-    if h == target_h and w == target_w:
-        return arr_np
-    out = np.empty((p, c, target_h, target_w), dtype=arr_np.dtype)
-    # Process per-batch per-channel via PIL for align_corners=False
-    # bilinear semantics. Done as a single per-(batch, channel) loop for
-    # L0 SCAFFOLD correctness; throughput is not the L0 metric.
-    for bi in range(p):
-        for ch in range(c):
-            slab = arr_np[bi, ch]
-            # PIL expects (H, W); float32 path via 'F' mode
-            img = Image.fromarray(slab.astype(np.float32), mode="F")
-            resized = img.resize((target_w, target_h), Image.BILINEAR)
-            out[bi, ch] = np.array(resized, dtype=arr_np.dtype)
-    return out
 
 
 def render_pair_mlx(

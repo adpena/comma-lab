@@ -13,6 +13,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from tac.framework_agnostic import require_mlx_core, require_mlx_nn
+
 _CONTEST_H = 384
 _CONTEST_W = 512
 _NUM_FRAMES = 1200
@@ -73,16 +75,12 @@ class BoostNervPr110ResidualConfig:
 
 def _import_mlx_nn():
     """Lazy MLX import — keeps shape tests cheap on machines without mlx installed."""
-    import mlx.nn as nn
-
-    return nn
+    return require_mlx_nn()
 
 
 def _import_mlx_core():
     """Lazy MLX core import."""
-    import mlx.core as mx
-
-    return mx
+    return require_mlx_core()
 
 
 class ResidualHeadMLX:

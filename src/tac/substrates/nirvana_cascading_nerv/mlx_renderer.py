@@ -40,15 +40,11 @@ from typing import Any
 
 import numpy as np
 
-try:  # pragma: no cover - exercised on Apple Silicon with MLX installed.
-    import mlx.core as mx
-    import mlx.nn as nn
-except Exception as exc:  # pragma: no cover - import guard for non-Apple CI.
-    mx = None  # type: ignore[assignment]
-    nn = None  # type: ignore[assignment]
-    _MLX_IMPORT_ERROR: Exception | None = exc
-else:
-    _MLX_IMPORT_ERROR = None
+from tac.framework_agnostic import optional_mlx_runtime, require_mlx_core
+
+_MLX_RUNTIME = optional_mlx_runtime(nn=True)
+mx = _MLX_RUNTIME.mx if _MLX_RUNTIME is not None else None
+nn = _MLX_RUNTIME.nn if _MLX_RUNTIME is not None else None
 
 # Module-level config. MLX is imported lazily inside the factory to keep
 # top-level import cheap (sister substrates' canonical pattern).
@@ -122,15 +118,7 @@ class NirvanaCascadingNervConfig:
 
 def _ensure_mlx_available() -> Any:
     """Lazy import MLX. Raises with actionable message if not installed."""
-    if mx is None or nn is None:
-        raise RuntimeError(
-            "MLX is not installed. Install via `uv pip install mlx` "
-            "(macOS only). For non-Apple-Silicon iteration, route through "
-            "`tac.substrates.nirvana_cascading_nerv.numpy_reference` per axis 3 "
-            "portability discipline."
-            f" Original import error: {_MLX_IMPORT_ERROR!r}"
-        )
-    return mx
+    return require_mlx_core()
 
 
 def renderer_param_count(cfg: NirvanaCascadingNervConfig) -> int:

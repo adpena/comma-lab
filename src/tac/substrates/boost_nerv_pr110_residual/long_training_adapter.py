@@ -82,6 +82,8 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from tac.framework_agnostic import require_mlx_core
+
 
 class BoostNervPr110ResidualLongTrainingAdapter:
     """E=BoostNeRV canonical adapter shell — L1-PROMOTION-CASCADE structural skeleton.
@@ -116,13 +118,7 @@ class BoostNervPr110ResidualLongTrainingAdapter:
         pr110_base_path: Path | None = None,
         residual_loss_weight: float = 1.0,
     ):
-        try:
-            import mlx.core as mx  # noqa: F401
-        except ImportError as exc:
-            raise ImportError(
-                "E=BoostNeRV-PR110-residual long-training adapter requires MLX "
-                "(Apple Silicon only). Install via `pip install mlx`."
-            ) from exc
+        require_mlx_core()
 
         self.config = config
         self.target_rgb_0 = target_rgb_0
@@ -157,7 +153,7 @@ class BoostNervPr110ResidualLongTrainingAdapter:
         """Sample a batch of pair_indices for one training step."""
         import numpy as np
 
-        import mlx.core as mx
+        mx = require_mlx_core()
 
         # L1 follow-up reads num_pairs from config; here hard-coded to
         # avoid premature import; the L1 trainer passes a real config.

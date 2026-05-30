@@ -79,6 +79,8 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
+from tac.framework_agnostic import require_mlx_core  # noqa: E402
+
 SCHEMA_VERSION = "mlx_candidate_contest_equivalence_gate_pia3_v1"
 
 # Canonical empirical anchor per #1265 LANDED 69c316ca4 (PR95/HNeRV grammar
@@ -159,7 +161,7 @@ def _build_pytorch_substrate_from_archive(archive_bytes: bytes) -> tuple[Any, An
 
 def _build_mlx_renderer_from_archive(archive_bytes: bytes) -> Any:
     """Parse PIA3 + build MLX ``PactNervIa3SubstrateMLX`` with state loaded."""
-    import mlx.core as mx
+    mx = require_mlx_core()
     import numpy as np
 
     from tac.substrates.pact_nerv_ia3.architecture import PactNervIa3Config
@@ -225,7 +227,7 @@ def _render_pair_batch_pytorch(model: Any, pair_indices: list[int]) -> Any:
 
 def _render_pair_batch_mlx(renderer: Any, pair_indices: list[int]) -> Any:
     """Render N pairs via MLX; normalize MLX [0,255] -> [0,1] sigmoid space."""
-    import mlx.core as mx
+    mx = require_mlx_core()
     import numpy as np
 
     idx = mx.array(np.asarray(pair_indices, dtype=np.int32))

@@ -46,6 +46,8 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from tac.framework_agnostic import mlx_eval, require_mlx_runtime
+
 
 class Z6LongTrainingAdapter:
     """Canonical Z6 substrate adapter for tac.training.long_training_canonical.
@@ -75,17 +77,10 @@ class Z6LongTrainingAdapter:
         target_rgb_1: Any,
         lambda_residual: float = 1.0,
     ):
-        try:
-            import mlx.core as mx
-            import mlx.nn as mlx_nn
-            import mlx.optimizers as mlx_optim
-        except ImportError as exc:
-            raise ImportError(
-                "Z6 long-training adapter requires MLX (Apple Silicon only). "
-                "Install via `pip install mlx`. The PyTorch sister trainer at "
-                "experiments/train_substrate_time_traveler_l5_z6.py covers the "
-                "CUDA / paid-dispatch path."
-            ) from exc
+        mlx_runtime = require_mlx_runtime(nn=True, optimizers=True)
+        mx = mlx_runtime.mx
+        mlx_nn = mlx_runtime.nn
+        mlx_optim = mlx_runtime.optimizers
 
         from tac.substrates.time_traveler_l5_z6.mlx_renderer import (
             Z6PredictiveCodingMLXRenderer,
@@ -148,7 +143,7 @@ class Z6LongTrainingAdapter:
         recon_w = float(loss_weights.get("recon", 1.0))
         resid_w = float(loss_weights.get("residual", self.lambda_residual))
         total = recon_w * recon_loss + resid_w * residual_l2
-        mx.eval(total)
+        mlx_eval(total)
         return {
             "total": float(total.item()),
             "recon": float(recon_loss.item()),
@@ -214,7 +209,7 @@ class Z6LongTrainingAdapter:
         loss_and_grad_fn = mlx_nn.value_and_grad(self.model, _loss_fn_inner)
         loss_value, grads = loss_and_grad_fn(self.model)
         self._optimizer.update(self.model, grads)
-        mx.eval(self.model.parameters(), self._optimizer.state)
+        mlx_eval(self.model.parameters(), self._optimizer.state)
         return {
             "total": float(loss_value.item()),
         }
@@ -240,7 +235,7 @@ class Z6LongTrainingAdapter:
 
         output_dir.mkdir(parents=True, exist_ok=True)
         archive_path = output_dir / "0.bin"
-        manifest = build_z6pcwm1_archive_from_mlx_renderer(
+        build_z6pcwm1_archive_from_mlx_renderer(
             model, archive_path, overwrite=True,
             lambda_residual_entropy=self.lambda_residual,
         )

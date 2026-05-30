@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+# ruff: noqa: E402
 """UNIWARD 6th-order integration into BoostNeRV-PR110-residual capacity-
 constrained substrate empirical sweep (MLX-local).
 
@@ -31,7 +32,6 @@ import time
 from datetime import UTC, datetime
 from pathlib import Path
 
-import mlx.core as mx
 import numpy as np
 import torch
 
@@ -40,7 +40,16 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "upstream"))
 
+from tac.framework_agnostic import mlx_eval, require_mlx_core
 from tac.scorer import load_differentiable_scorers
+
+# Sister-disjoint READ-ONLY import of BoostNeRV substrate per Catalog #230
+from tac.substrates.boost_nerv_pr110_residual import (
+    BoostNervPr110ResidualConfig,
+)
+from tac.substrates.boost_nerv_pr110_residual.architecture import (
+    num_residual_parameters,
+)
 from tac.substrates.score_aware_common import score_pair_components
 from tac.substrates.uniward_per_pixel_distortion import (
     compute_per_pixel_uniward_weight_map_numpy,
@@ -48,17 +57,10 @@ from tac.substrates.uniward_per_pixel_distortion import (
 from tac.substrates.uniward_per_pixel_distortion.weight_map import (
     normalize_weight_map_to_unit_mean,
 )
-# Sister-disjoint READ-ONLY import of BoostNeRV substrate per Catalog #230
-from tac.substrates.boost_nerv_pr110_residual import (
-    BoostNervPr110ResidualConfig,
-    DEFAULT_NUM_BOOSTING_ROUNDS,
-)
-from tac.substrates.boost_nerv_pr110_residual.architecture import (
-    num_residual_parameters,
-)
 
 UPSTREAM = ROOT / "upstream"
 VIDEO_PATH = UPSTREAM / "videos" / "0.mkv"
+mx = require_mlx_core()
 
 N_PAIRS = 50
 SPATIAL_H = 96
@@ -162,7 +164,7 @@ def init_capacity_constrained_residual_head(cfg: BoostNervPr110ResidualConfig, p
 def total_params(params_dict) -> int:
     """Total parameter count summed over all MLX arrays."""
     total = 0
-    for k, v in params_dict.items():
+    for _k, v in params_dict.items():
         total += int(np.prod(v.shape))
     return total
 
@@ -292,8 +294,6 @@ def train_capacity_constrained_arm(
             total_loss = total_loss + mx.mean(weighted)
         return total_loss / N_PAIRS
 
-    val_and_grad = mx.value_and_grad(loss_fn)
-
     # Adam state (manual implementation)
     m_state = {k: mx.zeros_like(v) for k, v in params.items()}
     v_state = {k: mx.zeros_like(v) for k, v in params.items()}
@@ -313,7 +313,7 @@ def train_capacity_constrained_arm(
             residual = forward_residual_head(params_eval, rgb_base_pair, z_pair_2frame)
             composed = compose_base_plus_residual(rgb_base_pair, residual, cfg.boosting_gain_clamp)
             composed_rt = eval_roundtrip_sim(composed)
-            mx.eval(composed_rt)
+            mlx_eval(composed_rt)
             composed_arr[p] = np.asarray(composed_rt).copy()
         return composed_arr
 
@@ -329,7 +329,7 @@ def train_capacity_constrained_arm(
         loss_val, (grad_params, grad_z) = mx.value_and_grad(loss_fn, argnums=(0, 1))(params, z_latents)
         # Adam update for params dict
         new_params = {}
-        for k in params.keys():
+        for k in params:
             m_state[k] = adam_beta1 * m_state[k] + (1.0 - adam_beta1) * grad_params[k]
             v_state[k] = adam_beta2 * v_state[k] + (1.0 - adam_beta2) * grad_params[k] * grad_params[k]
             m_hat = m_state[k] / (1.0 - adam_beta1 ** epoch)
@@ -342,10 +342,10 @@ def train_capacity_constrained_arm(
         z_v_hat = z_v_state / (1.0 - adam_beta2 ** epoch)
         z_latents = z_latents - LEARNING_RATE * z_m_hat / (mx.sqrt(z_v_hat) + adam_eps)
         # EMA update
-        for k in params.keys():
+        for k in params:
             ema_params[k] = EMA_DECAY * ema_params[k] + (1.0 - EMA_DECAY) * new_params[k]
         params = new_params
-        mx.eval(loss_val, z_latents, *params.values(), *ema_params.values())
+        mlx_eval(loss_val, z_latents, *params.values(), *ema_params.values())
         if epoch in measurement_epochs:
             # Use EMA shadow per CLAUDE.md EMA non-negotiable
             pred_arr = compute_composed_rgb_for_eval(ema_params, z_latents)
@@ -372,7 +372,7 @@ def train_capacity_constrained_arm(
 
 def main() -> int:
     t_total_start = time.time()
-    print(f"=== UNIWARD 6th-order integration into BoostNeRV-PR110-residual sweep ===")
+    print("=== UNIWARD 6th-order integration into BoostNeRV-PR110-residual sweep ===")
     print(f"  fixture: {VIDEO_PATH} (N_PAIRS={N_PAIRS}, {SPATIAL_H}x{SPATIAL_W})")
     print(f"  epochs: {EPOCHS}, lr={LEARNING_RATE}, seed={SEED}, ema={EMA_DECAY}")
     print(f"  uniward_lambda: {UNIWARD_LAMBDA}")
@@ -410,7 +410,7 @@ def main() -> int:
         return 1
 
     # Phase 4: compute UNIWARD weight maps
-    print(f"Phase 4: computing UNIWARD weight maps...", flush=True)
+    print("Phase 4: computing UNIWARD weight maps...", flush=True)
     weight_maps = np.zeros((N_PAIRS, SPATIAL_H, SPATIAL_W), dtype=np.float32)
     for p in range(N_PAIRS):
         w = compute_per_pixel_uniward_weight_map_numpy(seg_grads[p], pose_grads[p])
@@ -420,13 +420,13 @@ def main() -> int:
     print(f"  weight_map dynamic range: {weight_maps.max()/max(weight_maps.min(), 1e-12):.2f}x", flush=True)
 
     # Phase 5: train BASELINE arm (BoostNeRV uniform per-pixel weighting)
-    print(f"\n=== Phase 5: BASELINE arm (BoostNeRV uniform per-pixel weighting) ===", flush=True)
+    print("\n=== Phase 5: BASELINE arm (BoostNeRV uniform per-pixel weighting) ===", flush=True)
     baseline_result = train_capacity_constrained_arm(
         "BASELINE", pairs_gt, None, posenet, segnet, cfg
     )
 
     # Phase 6: train VARIANT arm (BoostNeRV + UNIWARD)
-    print(f"\n=== Phase 6: VARIANT arm (BoostNeRV + UNIWARD per-pixel weighting) ===", flush=True)
+    print("\n=== Phase 6: VARIANT arm (BoostNeRV + UNIWARD per-pixel weighting) ===", flush=True)
     variant_result = train_capacity_constrained_arm(
         "VARIANT_UNIWARD_INTO_BOOSTNERV", pairs_gt, weight_maps, posenet, segnet, cfg
     )
@@ -438,7 +438,7 @@ def main() -> int:
     v_pose = variant_result["final_pose_distortion_mean"]
     seg_ratio = v_seg / max(b_seg, 1e-12)
     pose_ratio = v_pose / max(b_pose, 1e-12)
-    print(f"\n=== Phase 7: PER-AXIS COMPARISON (BoostNeRV capacity-constrained substrate) ===", flush=True)
+    print("\n=== Phase 7: PER-AXIS COMPARISON (BoostNeRV capacity-constrained substrate) ===", flush=True)
     print(f"  d_seg : baseline={b_seg:.6f}  variant={v_seg:.6f}  ratio={seg_ratio:.4f}  (<1 = improvement)", flush=True)
     print(f"  d_pose: baseline={b_pose:.6f}  variant={v_pose:.6f}  ratio={pose_ratio:.4f}  (<1 = improvement)", flush=True)
     b_contest_partial = 100.0 * b_seg + math.sqrt(10.0 * b_pose)

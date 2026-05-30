@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
+# ruff: noqa: E402
 """Cascade B Path A learnable student head minimum-viable smoke.
 
 Per CASCADE B HINTON KL-DISTILL CATALYST DISTORTION-ATTACK 2026-05-26
@@ -27,21 +28,20 @@ head architecture.
 from __future__ import annotations
 
 import argparse
-import dataclasses
 import hashlib
 import json
 import sys
 import time
 from pathlib import Path
 
-import mlx.core as mx
 import numpy as np
 
 # Make src/ importable
-REPO_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 sys.path.insert(0, str(REPO_ROOT / "upstream"))
 
+from tac.framework_agnostic import mlx_eval, require_mlx_core
 from tac.substrates.hinton_distilled_scorer_surrogate import (
     HintonMlxCustomLossFnConfig,
     MockTeacherLogitsProvider,
@@ -49,9 +49,8 @@ from tac.substrates.hinton_distilled_scorer_surrogate import (
     build_real_segnet_teacher_cache,
     hinton_distilled_kl_t2_loss,
 )
-from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (
-    _student_logits_from_decoded,
-)
+
+mx = require_mlx_core()
 
 
 def _sha256_file(path: Path) -> str:
@@ -124,7 +123,7 @@ def run_smoke(
     print(f"[cascade-b-smoke] decoded {frames_thwc.shape} in {decode_secs:.1f}s", flush=True)
 
     # Stage 2: build real SegNet teacher cache (CPU)
-    print(f"[cascade-b-smoke] building real SegNet teacher cache (CPU)...", flush=True)
+    print("[cascade-b-smoke] building real SegNet teacher cache (CPU)...", flush=True)
     t0 = time.time()
     cache = build_real_segnet_teacher_cache(
         frames_thwc,
@@ -220,10 +219,10 @@ def run_smoke(
                 w = w - lr * gw
                 b = b - lr * gb
                 # Force MLX eval so loss is concrete
-                mx.eval(w, b, loss_val)
+                mlx_eval(w, b, loss_val)
                 # Recover distill-only term for logging
                 _, distill_only = loss_for_step(w, b, indices_mx, targets_mx)
-                mx.eval(distill_only)
+                mlx_eval(distill_only)
                 ep_losses.append(float(distill_only.item()))
             avg = float(np.mean(ep_losses))
             losses.append(avg)
@@ -250,7 +249,7 @@ def run_smoke(
                     teacher_logits=teacher_logits_stopped,
                     temperature=temperature,
                 )
-                mx.eval(distill)
+                mlx_eval(distill)
                 ep_losses.append(float(distill.item()))
             avg = float(np.mean(ep_losses))
             losses.append(avg)

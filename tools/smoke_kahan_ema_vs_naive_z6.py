@@ -74,13 +74,16 @@ def _capture_live_weight_sequence(
     is a list of cloned per-step state_dicts and telemetry carries
     wall-clock + loss trajectory for the canonical artifact.
     """
-    import mlx.core as mx
     import numpy as np
-    from mlx.utils import tree_flatten
 
     from tac.data import decode_video
+    from tac.framework_agnostic import require_mlx_runtime
     from tac.substrates.time_traveler_l5_z6.architecture import Z6PredictiveCodingConfig
     from tac.substrates.time_traveler_l5_z6.long_training_adapter import Z6LongTrainingAdapter
+
+    mlx_runtime = require_mlx_runtime(utils=True)
+    mx = mlx_runtime.mx
+    tree_flatten = mlx_runtime.utils.tree_flatten
 
     np.random.seed(seed)
     mx.random.seed(seed)
@@ -335,8 +338,10 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        import mlx.core  # noqa: F401
-    except ImportError:
+        from tac.framework_agnostic import require_mlx_core
+
+        require_mlx_core()
+    except Exception:
         print(
             "[smoke] FATAL: MLX required (Apple Silicon); see CLAUDE.md "
             "'MLX portable-local-substrate authority'",

@@ -91,6 +91,8 @@ from typing import Any
 
 import numpy as np
 
+from tac.framework_agnostic import is_mlx_runtime_available
+
 from .architecture import (
     GRAYSCALE_LEVELS_DEFAULT,
     NUM_SEGNET_CLASSES,
@@ -108,11 +110,11 @@ __all__ = [
     "DEFAULT_MLX_AXIS_TAG",
     "DEFAULT_PARITY_TOLERANCE_ARGMAX_FLIP_FRACTION",
     "DEFAULT_SEGNET_NOISE_FLOOR_FRACTION_PATH3CPRIME",
+    "MLX_NON_PROMOTABLE_PROVENANCE",
     "MLXIterationArm",
     "MLXIterationError",
     "MLXIterationVerdict",
     "MLXParityVerdict",
-    "MLX_NON_PROMOTABLE_PROVENANCE",
     "SegNetArgmaxDisplacementVerdict",
     "derive_chroma_lut_via_mlx_scorer",
     "enumerate_cargo_cult_unwind_arms",
@@ -198,11 +200,7 @@ def is_mlx_available() -> bool:
     callers MUST gate via this helper and fall back to the canonical PyTorch
     compress path when MLX is unavailable.
     """
-    try:  # pragma: no cover - exercised on Apple Silicon only
-        import mlx.core  # noqa: F401
-    except Exception:  # pragma: no cover - import guard
-        return False
-    return True
+    return is_mlx_runtime_available()
 
 
 # ---------------------------------------------------------------------------

@@ -56,15 +56,16 @@ import json
 import os
 import sys
 import time
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 
 from tac.codec.wyner_ziv_layer import (
     InterceptLocation,
     _detect_y_derivable_prefix,
     derive_side_info_from_canonical_source,
 )
-
+from tac.framework_agnostic import BackendUnavailableError, require_mlx_core
 from tac.substrates.wyner_ziv_pipeline_stage_codec.architecture import (
     WynerZivPipelineStageCodecArchitecture,
     encode_pre_entropy_via_pipeline_stage_codec,
@@ -78,23 +79,22 @@ from tac.substrates.wyner_ziv_pipeline_stage_codec.inflate import (
     inflate_wyner_ziv_pipeline_stage_codec_scaffold,
 )
 
-
 __all__ = (
-    "build_arg_parser",
-    "main",
-    "_smoke_main",
-    "_full_main",
-    "_measure_y_derivable_prefix_density_per_source",
-    "_measure_per_pair_posenet_output_y_density",
-    "_derive_per_pair_posenet_output_y_stand_in",
-    "_load_base_substrate_pre_entropy_bytes",
-    "_derive_cross_substrate_composition_y_fec6_for_pr101",
-    "_measure_cross_substrate_composition_y_density_fec6_for_pr101",
     "L0_SCAFFOLD_NOT_IMPLEMENTED_MESSAGE",
     "MLX_EVIDENCE_GRADE",
     "PER_PAIR_POSENET_OUTPUT_Y_NUM_PAIRS_DEFAULT",
     "PER_PAIR_POSENET_OUTPUT_Y_POSE_DIM",
     "TIER_1_OPERATOR_REQUIRED_FLAGS",
+    "_derive_cross_substrate_composition_y_fec6_for_pr101",
+    "_derive_per_pair_posenet_output_y_stand_in",
+    "_full_main",
+    "_load_base_substrate_pre_entropy_bytes",
+    "_measure_cross_substrate_composition_y_density_fec6_for_pr101",
+    "_measure_per_pair_posenet_output_y_density",
+    "_measure_y_derivable_prefix_density_per_source",
+    "_smoke_main",
+    "build_arg_parser",
+    "main",
 )
 
 
@@ -464,18 +464,16 @@ def _smoke_main(args: argparse.Namespace) -> int:
     # produced internally. We re-invoke the primitive and capture them via
     # re-compression; since the primitive is deterministic the byte output
     # is identical (regression test pins this invariant).
-    import lzma
-    main_raw_smoke = source_pre_entropy[result.main_bytes_raw and 0 or 0:]  # placeholder
+    main_raw_smoke = source_pre_entropy[(result.main_bytes_raw and 0) or 0:]  # placeholder
     # The simplest reproducible roundtrip path: re-run insert_wyner_ziv_layer
     # and use its emitted bytes by serializing via the primitive's contract.
     # We synthesize main_compressed + side_compressed_baked by deterministic
     # re-derivation per the primitive's __init__.py-documented split scheme.
     from tac.codec.wyner_ziv_layer import _compress, _detect_y_derivable_prefix
     prefix_len = _detect_y_derivable_prefix(source_pre_entropy, side_info_y)
-    if prefix_len > 0:
-        offset_in_y = side_info_y.find(source_pre_entropy[:prefix_len])
-    else:
-        offset_in_y = 0
+    offset_in_y = (
+        side_info_y.find(source_pre_entropy[:prefix_len]) if prefix_len > 0 else 0
+    )
     main_raw_smoke = source_pre_entropy[prefix_len:]
     side_raw_smoke = offset_in_y.to_bytes(8, "big") + prefix_len.to_bytes(8, "big")
     main_compressed_smoke = _compress(arch.main_codec, main_raw_smoke)
@@ -697,8 +695,7 @@ def _derive_per_pair_posenet_output_y_stand_in(
     # Try MLX first per CLAUDE.md 8th MLX-FIRST standing directive; fall
     # back to numpy if MLX isn't available (e.g. CI without Apple Silicon).
     try:
-        import mlx.core as mx  # type: ignore
-
+        mx = require_mlx_core()
         pair_indices = mx.arange(num_pairs, dtype=mx.float32)
         # 6 ego-motion-conditioned channels:
         #   0: sin(i / N * 2π * 1.0)  — base ego-translation X
@@ -729,7 +726,7 @@ def _derive_per_pair_posenet_output_y_stand_in(
         import numpy as np
         arr = np.asarray(stacked, dtype=np.float32)
         return arr.tobytes()
-    except ImportError:
+    except BackendUnavailableError:
         # Numpy-only fallback (per CLAUDE.md MLX-first + numpy-portable
         # standing directive — inflate-portability invariant).
         import numpy as np

@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+# ruff: noqa: E402
 """UNIWARD per-pixel N+1 real-scorer-anchored empirical sweep (MLX-local).
 
 Sister of just-landed scaffold subagent (commit aa2612d9b; substrate
@@ -37,34 +38,32 @@ import json
 import math
 import sys
 import time
-from dataclasses import dataclass, asdict
 from datetime import UTC, datetime
 from pathlib import Path
 
-import mlx.core as mx
-import mlx.optimizers as optim
 import numpy as np
 import torch
 
 # Repo root
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "upstream"))
 
+from tac.framework_agnostic import mlx_eval, require_mlx_core
 from tac.scorer import load_differentiable_scorers
 from tac.substrates.score_aware_common import score_pair_components
 from tac.substrates.uniward_per_pixel_distortion import (
     compute_per_pixel_uniward_weight_map_numpy,
-    compose_uniward_weighted_score_loss,
 )
 from tac.substrates.uniward_per_pixel_distortion.weight_map import (
     decompose_per_axis_weights,
-    normalize_weight_map_to_unit_mean,
     histogram_weight_distribution,
+    normalize_weight_map_to_unit_mean,
 )
 
 UPSTREAM = ROOT / "upstream"
 VIDEO_PATH = UPSTREAM / "videos" / "0.mkv"
+mx = require_mlx_core()
 
 N_PAIRS = 50
 SPATIAL_H = 96
@@ -165,7 +164,6 @@ def measure_per_axis_scores(
     """Measure d_seg + d_pose averaged over all pairs via canonical helper."""
     seg_sum = 0.0
     pose_sum = 0.0
-    rate_sum = 0.0
     n = pairs_pred.shape[0]
     with torch.no_grad():
         for p in range(n):
@@ -220,7 +218,6 @@ def train_arm(
 
     # MLX parameter: one big tensor (N_PAIRS, 2, 3, H, W)
     theta = mx.array(init_rgb)
-    optimizer = optim.Adam(learning_rate=LEARNING_RATE)
     # State for EMA
     ema_state = mx.array(init_rgb)
 
@@ -276,7 +273,7 @@ def train_arm(
         theta = theta - LEARNING_RATE * m_hat / (mx.sqrt(v_hat) + adam_eps)
         # EMA update
         ema_state = EMA_DECAY * ema_state + (1.0 - EMA_DECAY) * theta
-        mx.eval(theta, ema_state, m_state, v_state, loss_val)
+        mlx_eval(theta, ema_state, m_state, v_state, loss_val)
         if epoch in measurement_epochs:
             # Use EMA shadow for evaluation per CLAUDE.md EMA non-negotiable
             pred_arr = np.asarray(ema_state).copy()
@@ -298,7 +295,7 @@ def train_arm(
 
 def main() -> int:
     t_total_start = time.time()
-    print(f"=== UNIWARD per-pixel N+1 real-scorer-anchored empirical sweep ===")
+    print("=== UNIWARD per-pixel N+1 real-scorer-anchored empirical sweep ===")
     print(f"  fixture: {VIDEO_PATH} (N_PAIRS={N_PAIRS}, {SPATIAL_H}x{SPATIAL_W})")
     print(f"  epochs: {EPOCHS}, lr={LEARNING_RATE}, seed={SEED}, ema={EMA_DECAY}")
 
@@ -347,7 +344,7 @@ def main() -> int:
     print(f"  pose_grad stats: min={pose_grads.min():.6e} max={pose_grads.max():.6e} mean={pose_grads.mean():.6e}", flush=True)
 
     # Phase 4: compute UNIWARD weight map per pair
-    print(f"Phase 4: computing UNIWARD weight maps + observability...", flush=True)
+    print("Phase 4: computing UNIWARD weight maps + observability...", flush=True)
     weight_maps = np.zeros((N_PAIRS, SPATIAL_H, SPATIAL_W), dtype=np.float32)
     per_axis_decomp_samples = []
     histograms = []
@@ -378,11 +375,11 @@ def main() -> int:
     print(f"  weight_map dynamic range (max/min ratio): {weight_maps.max()/max(weight_maps.min(), 1e-12):.2f}", flush=True)
 
     # Phase 5: train BASELINE arm (uniform weight)
-    print(f"\n=== Phase 5: BASELINE arm (uniform weight) ===", flush=True)
+    print("\n=== Phase 5: BASELINE arm (uniform weight) ===", flush=True)
     baseline_result = train_arm("BASELINE", pairs_gt, None, posenet, segnet)
 
     # Phase 6: train VARIANT arm (UNIWARD weight)
-    print(f"\n=== Phase 6: VARIANT arm (UNIWARD per-pixel weight) ===", flush=True)
+    print("\n=== Phase 6: VARIANT arm (UNIWARD per-pixel weight) ===", flush=True)
     variant_result = train_arm("VARIANT_UNIWARD", pairs_gt, weight_maps, posenet, segnet)
 
     # Phase 7: per-axis comparison + verdict
@@ -392,7 +389,7 @@ def main() -> int:
     v_pose = variant_result["final_pose_distortion_mean"]
     seg_ratio = v_seg / max(b_seg, 1e-12)
     pose_ratio = v_pose / max(b_pose, 1e-12)
-    print(f"\n=== Phase 7: PER-AXIS COMPARISON ===", flush=True)
+    print("\n=== Phase 7: PER-AXIS COMPARISON ===", flush=True)
     print(f"  d_seg : baseline={b_seg:.6f}  variant={v_seg:.6f}  ratio={seg_ratio:.4f}  (<1 = improvement)", flush=True)
     print(f"  d_pose: baseline={b_pose:.6f}  variant={v_pose:.6f}  ratio={pose_ratio:.4f}  (<1 = improvement)", flush=True)
     # Composite contest-axis contributions (canonical formula)

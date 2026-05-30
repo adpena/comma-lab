@@ -21,10 +21,11 @@ from tac.framework_agnostic.canonical_kernels import (
     CANONICAL_CROSS_BACKEND_FP32_ATOL,
     CANONICAL_UNIMIX_ALPHA,
     assert_cross_backend_parity,
+    bilinear_resize_nhwc,
     gumbel_softmax_sample,
+    pixel_shuffle_2x_nhwc,
     rgb_to_yuv6,
 )
-
 
 # -----------------------------------------------------------------------------
 # gumbel_softmax_sample canonical contract tests
@@ -207,6 +208,89 @@ class TestRgbToYuv6:
             np.testing.assert_allclose(
                 yuv6[:, c], 0.0, atol=1e-9, err_msg=f"channel {c}"
             )
+
+
+# -----------------------------------------------------------------------------
+# Canonical NHWC pixel shuffle + bilinear resize tests
+# -----------------------------------------------------------------------------
+
+
+class TestCanonicalNhwcImageKernels:
+    def test_pixel_shuffle_matches_portable_reference(self):
+        x = np.arange(1 * 2 * 3 * 8, dtype=np.float32).reshape(1, 2, 3, 8)
+        y = pixel_shuffle_2x_nhwc(x, backend=Backend.NUMPY)
+        assert y.shape == (1, 4, 6, 2)
+
+        expected = np.empty((1, 4, 6, 2), dtype=np.float32)
+        for h in range(2):
+            for w in range(3):
+                block = x[0, h, w].reshape(2, 2, 2)
+                expected[0, 2 * h : 2 * h + 2, 2 * w : 2 * w + 2, :] = block.transpose(1, 2, 0)
+        np.testing.assert_array_equal(y, expected)
+
+    def test_pixel_shuffle_rejects_non_2x(self):
+        x = np.zeros((1, 2, 2, 4), dtype=np.float32)
+        with pytest.raises(ValueError, match="supports only 2x"):
+            pixel_shuffle_2x_nhwc(x, backend=Backend.NUMPY, upscale_factor=3)
+
+    def test_bilinear_resize_identity_preserves_values(self):
+        x = np.random.default_rng(42).standard_normal((1, 3, 4, 2)).astype(
+            np.float32
+        )
+        y = bilinear_resize_nhwc(
+            x,
+            target_h=3,
+            target_w=4,
+            backend=Backend.NUMPY,
+        )
+        np.testing.assert_allclose(y, x, atol=0.0)
+
+    def test_bilinear_resize_rejects_bad_target(self):
+        x = np.zeros((1, 2, 2, 1), dtype=np.float32)
+        with pytest.raises(ValueError, match="must be positive"):
+            bilinear_resize_nhwc(
+                x,
+                target_h=0,
+                target_w=2,
+                backend=Backend.NUMPY,
+            )
+
+    def test_pytorch_pixel_shuffle_parity_when_available(self):
+        pytest.importorskip("torch")
+        x = np.arange(1 * 2 * 3 * 8, dtype=np.float32).reshape(1, 2, 3, 8)
+        np_y = pixel_shuffle_2x_nhwc(x, backend=Backend.NUMPY)
+        torch_y = pixel_shuffle_2x_nhwc(x, backend=Backend.PYTORCH)
+        assert_cross_backend_parity(
+            np_y,
+            torch_y,
+            atol=0.0,
+            rtol=0.0,
+            name="pixel_shuffle_2x_nhwc",
+        )
+
+    def test_pytorch_bilinear_resize_parity_when_available(self):
+        pytest.importorskip("torch")
+        x = np.random.default_rng(42).standard_normal((1, 3, 4, 2)).astype(
+            np.float32
+        )
+        np_y = bilinear_resize_nhwc(
+            x,
+            target_h=5,
+            target_w=7,
+            backend=Backend.NUMPY,
+        )
+        torch_y = bilinear_resize_nhwc(
+            x,
+            target_h=5,
+            target_w=7,
+            backend=Backend.PYTORCH,
+        )
+        assert_cross_backend_parity(
+            np_y,
+            torch_y,
+            atol=CANONICAL_CROSS_BACKEND_FP32_ATOL,
+            name="bilinear_resize_nhwc",
+        )
 
 
 # -----------------------------------------------------------------------------

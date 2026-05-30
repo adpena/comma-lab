@@ -409,6 +409,10 @@ reports/public/.env
 **/.*.backup.*
 **/.*.tmp-*
 
+# Queue-fleet cycle directories are replay scratch; promote top-level
+# result/status ledgers instead of committing transient supervisor state.
+.omx/research/queue_fleet_local_drain_exec_*/cycle_*/
+
 # Ralph tool backup files (auto-generated)
 .ralph/*.bak
 # Ephemeral .omx/tmp/ scratch (never commit)

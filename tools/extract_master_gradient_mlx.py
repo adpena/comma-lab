@@ -132,7 +132,9 @@ def _set_best_effort_determinism(seed: int) -> dict[str, object]:
     except Exception:
         torch_seeded = False
     try:
-        import mlx.core as mx
+        from tac.framework_agnostic import require_mlx_core
+
+        mx = require_mlx_core()
 
         mx.random.seed(seed)
         mlx_seeded = True

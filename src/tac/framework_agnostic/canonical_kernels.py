@@ -85,7 +85,6 @@ from tac.framework_agnostic.backend import (
     select_backend,
 )
 
-
 # Canonical Slot 16 numerical tolerance for cross-backend parity per
 # `mlx_pytorch_conv2d_fp64_accumulation_drift_reduction_v1` empirical
 # anchor (registered canonical equation).
@@ -260,7 +259,7 @@ def _gumbel_softmax_sample_mlx(
     except ImportError as exc:
         raise BackendUnavailableError(
             f"gumbel_softmax_sample MLX backend: mlx.core not installed ({exc})."
-        )
+        ) from exc
     # Convert MLX → numpy → forward → MLX
     logits_np = np.asarray(logits)
     result_np = _gumbel_softmax_sample_numpy(
@@ -286,11 +285,11 @@ def _gumbel_softmax_sample_pytorch(
     """
     try:
         import torch
-        import torch.nn.functional as F  # noqa: N812
+        import torch.nn.functional as F
     except ImportError as exc:
         raise BackendUnavailableError(
             f"gumbel_softmax_sample PyTorch backend: torch not installed ({exc})."
-        )
+        ) from exc
     if seed is not None:
         torch.manual_seed(seed)
     if isinstance(logits, np.ndarray):
@@ -321,12 +320,9 @@ def _gumbel_softmax_sample_tinygrad(
     except ImportError as exc:
         raise BackendUnavailableError(
             f"gumbel_softmax_sample tinygrad backend: tinygrad not installed ({exc})."
-        )
+        ) from exc
     # Convert tinygrad → numpy → forward → tinygrad
-    if hasattr(logits, "numpy"):
-        logits_np = logits.numpy()
-    else:
-        logits_np = np.asarray(logits)
+    logits_np = logits.numpy() if hasattr(logits, "numpy") else np.asarray(logits)
     result_np = _gumbel_softmax_sample_numpy(
         logits_np,
         temperature=temperature,
@@ -436,7 +432,7 @@ def _rgb_to_yuv6_mlx(rgb: Any) -> Any:
     except ImportError as exc:
         raise BackendUnavailableError(
             f"rgb_to_yuv6 MLX backend: mlx.core not installed ({exc})."
-        )
+        ) from exc
     rgb_np = np.asarray(rgb)
     result_np = _rgb_to_yuv6_numpy(rgb_np)
     return mx.array(result_np)
@@ -448,7 +444,7 @@ def _rgb_to_yuv6_pytorch(rgb: Any) -> Any:
     except ImportError as exc:
         raise BackendUnavailableError(
             f"rgb_to_yuv6 PyTorch backend: torch not installed ({exc})."
-        )
+        ) from exc
     if isinstance(rgb, np.ndarray):
         rgb_torch = torch.from_numpy(rgb.astype(np.float32))
     elif isinstance(rgb, torch.Tensor):
@@ -466,13 +462,151 @@ def _rgb_to_yuv6_tinygrad(rgb: Any) -> Any:
     except ImportError as exc:
         raise BackendUnavailableError(
             f"rgb_to_yuv6 tinygrad backend: tinygrad not installed ({exc})."
-        )
-    if hasattr(rgb, "numpy"):
-        rgb_np = rgb.numpy()
-    else:
-        rgb_np = np.asarray(rgb)
+        ) from exc
+    rgb_np = rgb.numpy() if hasattr(rgb, "numpy") else np.asarray(rgb)
     result_np = _rgb_to_yuv6_numpy(rgb_np)
     return Tensor(result_np)
+
+
+# -----------------------------------------------------------------------------
+# Canonical primitive: NHWC pixel shuffle + bilinear resize
+# -----------------------------------------------------------------------------
+
+def pixel_shuffle_2x_nhwc_canonical(
+    x: Any,
+    *,
+    backend: Backend | None = None,
+    upscale_factor: int = 2,
+) -> Any:
+    """Canonical PyTorch-compatible ``PixelShuffle(2)`` for NHWC tensors.
+
+    MLX routes through the PR95 canonical native helper so training gradients are
+    preserved. Numpy uses the portable-inflate reference. PyTorch uses
+    ``torch.nn.functional.pixel_shuffle`` after explicit NHWC/NCHW layout
+    conversion. Tinygrad currently uses the numpy reference and converts back.
+    """
+    resolved = _resolve_backend(backend)
+    if upscale_factor != 2:
+        raise ValueError("pixel_shuffle_2x_nhwc_canonical supports only 2x")
+    if resolved is Backend.NUMPY:
+        from tac.substrates._shared.numpy_portable_inflate import (
+            pixel_shuffle_2x_nhwc as _np_pixel_shuffle_2x_nhwc,
+        )
+
+        return _np_pixel_shuffle_2x_nhwc(np.asarray(x, dtype=np.float32))
+    if resolved is Backend.MLX:
+        from tac.local_acceleration.pr95_hnerv_mlx import (
+            pixel_shuffle_2x_nhwc as _mlx_pixel_shuffle_2x_nhwc,
+        )
+
+        return _mlx_pixel_shuffle_2x_nhwc(x, upscale_factor=upscale_factor)
+    if resolved is Backend.PYTORCH:
+        try:
+            import torch
+            import torch.nn.functional as F
+        except ImportError as exc:
+            raise BackendUnavailableError(
+                f"pixel_shuffle_2x_nhwc PyTorch backend unavailable ({exc})."
+            ) from exc
+        xt = torch.from_numpy(x.astype(np.float32)) if isinstance(x, np.ndarray) else x
+        if xt.ndim != 4:
+            raise ValueError(f"expected NHWC tensor, got shape {tuple(xt.shape)}")
+        y = F.pixel_shuffle(xt.permute(0, 3, 1, 2), upscale_factor)
+        return y.permute(0, 2, 3, 1).contiguous()
+    if resolved is Backend.TINYGRAD:
+        try:
+            from tinygrad.tensor import Tensor
+        except ImportError as exc:
+            raise BackendUnavailableError(
+                f"pixel_shuffle_2x_nhwc tinygrad backend unavailable ({exc})."
+            ) from exc
+        arr = x.numpy() if hasattr(x, "numpy") else np.asarray(x)
+        out = pixel_shuffle_2x_nhwc_canonical(
+            arr, backend=Backend.NUMPY, upscale_factor=upscale_factor
+        )
+        return Tensor(out)
+    raise BackendUnavailableError(
+        f"pixel_shuffle_2x_nhwc_canonical: backend {resolved!r} unsupported."
+    )
+
+
+def bilinear_resize_nhwc_canonical(
+    x: Any,
+    *,
+    target_h: int,
+    target_w: int,
+    align_corners: bool = False,
+    backend: Backend | None = None,
+) -> Any:
+    """Canonical PyTorch-compatible bilinear resize for NHWC tensors."""
+    if target_h <= 0 or target_w <= 0:
+        raise ValueError(
+            f"target_h and target_w must be positive; got ({target_h}, {target_w})"
+        )
+    resolved = _resolve_backend(backend)
+    if resolved is Backend.NUMPY:
+        from tac.substrates._shared.numpy_portable_inflate import (
+            bilinear_resize_nhwc as _np_bilinear_resize_nhwc,
+        )
+
+        return _np_bilinear_resize_nhwc(
+            np.asarray(x, dtype=np.float32),
+            target_h=target_h,
+            target_w=target_w,
+            align_corners=align_corners,
+        )
+    if resolved is Backend.MLX:
+        from tac.local_acceleration.pr95_hnerv_mlx import (
+            bilinear_resize_nhwc as _mlx_bilinear_resize_nhwc,
+        )
+
+        return _mlx_bilinear_resize_nhwc(
+            x,
+            target_h=target_h,
+            target_w=target_w,
+            align_corners=align_corners,
+        )
+    if resolved is Backend.PYTORCH:
+        try:
+            import torch
+            import torch.nn.functional as F
+        except ImportError as exc:
+            raise BackendUnavailableError(
+                f"bilinear_resize_nhwc PyTorch backend unavailable ({exc})."
+            ) from exc
+        xt = torch.from_numpy(x.astype(np.float32)) if isinstance(x, np.ndarray) else x
+        if xt.ndim != 4:
+            raise ValueError(f"expected NHWC tensor, got shape {tuple(xt.shape)}")
+        y = F.interpolate(
+            xt.permute(0, 3, 1, 2),
+            size=(target_h, target_w),
+            mode="bilinear",
+            align_corners=align_corners,
+        )
+        return y.permute(0, 2, 3, 1).contiguous()
+    if resolved is Backend.TINYGRAD:
+        try:
+            from tinygrad.tensor import Tensor
+        except ImportError as exc:
+            raise BackendUnavailableError(
+                f"bilinear_resize_nhwc tinygrad backend unavailable ({exc})."
+            ) from exc
+        arr = x.numpy() if hasattr(x, "numpy") else np.asarray(x)
+        out = bilinear_resize_nhwc_canonical(
+            arr,
+            target_h=target_h,
+            target_w=target_w,
+            align_corners=align_corners,
+            backend=Backend.NUMPY,
+        )
+        return Tensor(out)
+    raise BackendUnavailableError(
+        f"bilinear_resize_nhwc_canonical: backend {resolved!r} unsupported."
+    )
+
+
+pixel_shuffle_2x_nhwc = pixel_shuffle_2x_nhwc_canonical
+bilinear_resize_nhwc = bilinear_resize_nhwc_canonical
 
 
 # -----------------------------------------------------------------------------
@@ -535,6 +669,10 @@ __all__ = [
     "CANONICAL_CROSS_BACKEND_FP64_ATOL",
     "CANONICAL_UNIMIX_ALPHA",
     "assert_cross_backend_parity",
+    "bilinear_resize_nhwc",
+    "bilinear_resize_nhwc_canonical",
     "gumbel_softmax_sample",
+    "pixel_shuffle_2x_nhwc",
+    "pixel_shuffle_2x_nhwc_canonical",
     "rgb_to_yuv6",
 ]

@@ -66,6 +66,8 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from tac.framework_agnostic import require_mlx_core
+
 
 class Nscs06V8ChromaLutLongTrainingAdapter:
     """C'=NSCS06-v8-chroma-LUT canonical adapter shell — paradigm-routed shell.
@@ -90,14 +92,7 @@ class Nscs06V8ChromaLutLongTrainingAdapter:
         target_rgb_0: Any,
         target_rgb_1: Any,
     ):
-        try:
-            import mlx.core as mx  # noqa: F401
-        except ImportError as exc:
-            raise ImportError(
-                "C'=NSCS06-v8-chroma-LUT long-training adapter requires MLX "
-                "(Apple Silicon only) for the iterative policy refinement "
-                "sister at mlx_iteration.py. Install via `pip install mlx`."
-            ) from exc
+        require_mlx_core()
 
         self.config = config
         self.target_rgb_0 = target_rgb_0
@@ -132,7 +127,7 @@ class Nscs06V8ChromaLutLongTrainingAdapter:
         """Sample a batch of pair_indices for one iteration step."""
         import numpy as np
 
-        import mlx.core as mx
+        mx = require_mlx_core()
 
         rng = np.random.RandomState(seed)
         size = min(batch_size, 600)
