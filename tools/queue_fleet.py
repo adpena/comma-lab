@@ -33,6 +33,7 @@ from tac.repo_io import ArtifactWriteError, sha256_file, write_json_artifact  # 
 FLEET_SUPERVISOR_SCHEMA = "experiment_queue_fleet_supervisor_run.v1"
 FLEET_LOCK_SCHEMA = "experiment_queue_fleet_supervisor_lock.v1"
 FLEET_INIT_MISSING_SCHEMA = "experiment_queue_fleet_init_missing_run.v1"
+FLEET_NATIVE_CONSUMER_SCHEMA = "experiment_queue_fleet_native_consumer_run.v1"
 
 
 def _utc_now() -> str:
@@ -134,7 +135,7 @@ def _run(command: Sequence[str]) -> dict[str, Any]:
     }
 
 
-def _fleet_status_from_args(args: argparse.Namespace) -> dict[str, Any]:
+def _fleet_status_from_args(args: argparse.Namespace, *, full_rows: bool = False) -> dict[str, Any]:
     roots = args.root or None
     return queue_fleet_status(
         REPO_ROOT,
@@ -142,7 +143,7 @@ def _fleet_status_from_args(args: argparse.Namespace) -> dict[str, Any]:
         state_root=args.state_root,
         max_depth=args.max_depth,
         limit=args.scan_limit,
-        row_limit=args.row_limit,
+        row_limit=None if full_rows else args.row_limit,
         tail_lines=args.tail_lines,
         include_orphans=args.include_orphans,
         supervisor_output_root=args.supervisor_output_root,
@@ -341,6 +342,135 @@ def _init_command_from_row(row: Mapping[str, Any]) -> list[str]:
     ]
 
 
+def _select_native_consumer_rows(
+    rows: Sequence[Any],
+    *,
+    artifact_schemas: Sequence[str],
+    consumer_kinds: Sequence[str],
+    max_artifacts: int,
+) -> list[Mapping[str, Any]]:
+    schema_filter = {str(item) for item in artifact_schemas if str(item).strip()}
+    kind_filter = {str(item) for item in consumer_kinds if str(item).strip()}
+    selected: list[Mapping[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, Mapping):
+            continue
+        command = row.get("native_consumer_command")
+        if not isinstance(command, Sequence) or isinstance(command, (str, bytes, bytearray)):
+            continue
+        native_consumer = row.get("native_consumer")
+        if not isinstance(native_consumer, Mapping):
+            continue
+        if schema_filter and str(row.get("artifact_schema") or "") not in schema_filter:
+            continue
+        if kind_filter and str(native_consumer.get("consumer_kind") or "") not in kind_filter:
+            continue
+        selected.append(row)
+        if len(selected) >= max_artifacts:
+            break
+    return selected
+
+
+def cmd_consume_native(args: argparse.Namespace) -> int:
+    if args.max_artifacts < 1:
+        raise ExperimentQueueError("max-artifacts must be >= 1")
+    output_root = Path(args.output_dir)
+    output_root.mkdir(parents=True, exist_ok=True)
+    lock_path = Path(args.lock_path) if args.lock_path else output_root / "fleet.lock"
+    started_at = _utc_now()
+    with FleetLock(
+        lock_path,
+        {
+            "pid": str(__import__("os").getpid()),
+            "output_dir": repo_rel(output_root, REPO_ROOT),
+            "execute": args.execute,
+            "operation": "consume_native",
+        },
+    ):
+        initial = _fleet_status_from_args(args, full_rows=True)
+        rows = initial.get("rows", [])
+        if not isinstance(rows, Sequence) or isinstance(rows, (str, bytes, bytearray)):
+            rows = []
+        selected = _select_native_consumer_rows(
+            rows,
+            artifact_schemas=args.artifact_schema or [],
+            consumer_kinds=args.consumer_kind or [],
+            max_artifacts=args.max_artifacts,
+        )
+        events_path = output_root / "fleet_native_consumer_events.jsonl"
+        runs: list[dict[str, Any]] = []
+        for index, row in enumerate(selected):
+            native_consumer = row.get("native_consumer")
+            command = [str(part) for part in row.get("native_consumer_command") or []]
+            result: dict[str, Any] = {
+                "schema": "experiment_queue_fleet_native_consumer_child.v1",
+                "index": index,
+                "queue_path": row.get("queue_path"),
+                "artifact_schema": row.get("artifact_schema"),
+                "consumer_kind": (
+                    native_consumer.get("consumer_kind")
+                    if isinstance(native_consumer, Mapping)
+                    else None
+                ),
+                "recommended_action": row.get("recommended_action"),
+                "command": command,
+                "execute": args.execute,
+                **FALSE_AUTHORITY,
+            }
+            if args.execute:
+                result["started_at_utc"] = _utc_now()
+                result["native_consumer_result"] = _run(command)
+                result["finished_at_utc"] = _utc_now()
+            runs.append(result)
+            _append_jsonl(events_path, result)
+            child_result = result.get("native_consumer_result")
+            if isinstance(child_result, Mapping) and child_result.get("failed") and args.stop_on_child_failure:
+                break
+        final = _fleet_status_from_args(args, full_rows=True)
+        failed_count = sum(
+            1
+            for row in runs
+            if isinstance(row.get("native_consumer_result"), Mapping)
+            and row["native_consumer_result"].get("failed")
+        )
+        payload = {
+            "schema": FLEET_NATIVE_CONSUMER_SCHEMA,
+            "started_at_utc": started_at,
+            "finished_at_utc": _utc_now(),
+            "execute": args.execute,
+            "output_dir": repo_rel(output_root, REPO_ROOT),
+            "lock_path": repo_rel(lock_path, REPO_ROOT),
+            "events_jsonl": repo_rel(events_path, REPO_ROOT),
+            "selected_count": len(selected),
+            "completed_child_count": len(runs),
+            "failed_child_count": failed_count,
+            "initial_status": initial,
+            "final_status": final,
+            "child_runs": runs,
+            "allowed_use": "queue_fleet_bounded_native_consumer_execution_only",
+            "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_exact_eval_authority",
+            **FALSE_AUTHORITY,
+        }
+        result_path = output_root / "fleet_native_consumer_result.json"
+        try:
+            expected = sha256_file(result_path) if result_path.exists() else None
+            artifact = write_json_artifact(
+                result_path,
+                payload,
+                allow_overwrite=expected is not None,
+                expected_existing_sha256=expected,
+            )
+        except ArtifactWriteError as exc:
+            raise ExperimentQueueError(str(exc)) from exc
+        payload["artifact"] = {
+            "path": artifact.path,
+            "bytes": artifact.bytes_written,
+            "sha256": artifact.sha256,
+        }
+    _json_print(payload)
+    return 4 if args.strict and payload["failed_child_count"] else 0
+
+
 def cmd_init_missing(args: argparse.Namespace) -> int:
     output_root = Path(args.output_dir)
     output_root.mkdir(parents=True, exist_ok=True)
@@ -468,6 +598,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     supervise.add_argument("--lock-path", default=None)
     supervise.add_argument("--strict", action="store_true")
     supervise.set_defaults(func=cmd_supervise)
+
+    consume_native = sub.add_parser("consume-native")
+    consume_native.add_argument("--output-dir", required=True)
+    consume_native.add_argument("--execute", action="store_true")
+    consume_native.add_argument("--max-artifacts", type=int, default=4)
+    consume_native.add_argument("--artifact-schema", action="append", default=[])
+    consume_native.add_argument("--consumer-kind", action="append", default=[])
+    consume_native.add_argument("--stop-on-child-failure", action=argparse.BooleanOptionalAction, default=True)
+    consume_native.add_argument("--lock-path", default=None)
+    consume_native.add_argument("--strict", action="store_true")
+    consume_native.set_defaults(func=cmd_consume_native)
 
     init_missing = sub.add_parser("init-missing")
     init_missing.add_argument("--output-dir", required=True)

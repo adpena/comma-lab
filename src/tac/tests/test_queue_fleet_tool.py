@@ -617,6 +617,60 @@ def test_queue_fleet_supervise_executes_selected_queue(tmp_path: Path, capsys) -
     assert payload["final_status"]["status_counts"]["TERMINAL"] == 1
 
 
+def test_queue_fleet_consume_native_executes_materializer_builder(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    tool = _load_queue_fleet_tool()
+    work_queue = tmp_path / "materializer_work_queue.json"
+    execution_queue = tmp_path / "materializer_execution_queue.json"
+    work_queue.write_text(
+        json.dumps(
+            {
+                "schema": "byte_shaving_materializer_work_queue.v1",
+                "rows": [
+                    {
+                        "work_id": "unit_work",
+                        "executable": True,
+                        "command": [sys.executable, "-c", "print('ok')"],
+                        "resource_kind": "local_cpu",
+                        "postconditions": [],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rc = tool.main(
+        [
+            "--root",
+            str(tmp_path),
+            "--row-limit",
+            "0",
+            "consume-native",
+            "--output-dir",
+            str(tmp_path / "native_run"),
+            "--max-artifacts",
+            "1",
+            "--execute",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+    queue = json.loads(execution_queue.read_text(encoding="utf-8"))
+
+    assert rc == 0
+    assert payload["schema"] == "experiment_queue_fleet_native_consumer_run.v1"
+    assert payload["selected_count"] == 1
+    assert payload["failed_child_count"] == 0
+    assert payload["score_claim"] is False
+    child = payload["child_runs"][0]
+    assert child["consumer_kind"] == "byte_shaving_materializer_work_queue"
+    assert child["native_consumer_result"]["returncode"] == 0
+    assert queue["schema"] == "experiment_queue.v1"
+    assert queue["experiments"][0]["metadata"]["work_id"] == "unit_work"
+
+
 def test_queue_fleet_lives_in_comma_lab_control_plane() -> None:
     import comma_lab.scheduler.queue_fleet as queue_fleet
 
