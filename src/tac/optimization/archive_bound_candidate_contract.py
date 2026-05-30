@@ -105,6 +105,88 @@ def _optional_mapping(value: Any) -> Mapping[str, Any] | None:
     return value if isinstance(value, Mapping) else None
 
 
+def _anti_pattern_id_values(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, Mapping):
+        direct = _first_text(
+            value.get("anti_pattern_id"),
+            value.get("canonical_anti_pattern_id"),
+            value.get("pattern_id"),
+            value.get("id"),
+        )
+        return [direct] if direct else []
+    if isinstance(value, (str, bytes, bytearray)):
+        text = str(value).strip()
+        return [text] if text else []
+    if isinstance(value, Sequence):
+        out: list[str] = []
+        for item in value:
+            out.extend(_anti_pattern_id_values(item))
+        return out
+    text = str(value).strip()
+    return [text] if text else []
+
+
+def _canonical_anti_pattern_ids(candidate: Mapping[str, Any]) -> list[str]:
+    coverage = _mapping(candidate.get("archive_entropy_substrate_coverage"))
+    return ordered_unique(
+        [
+            *_anti_pattern_id_values(candidate.get("anti_pattern_id")),
+            *_anti_pattern_id_values(candidate.get("anti_pattern_ids")),
+            *_anti_pattern_id_values(candidate.get("canonical_anti_pattern_id")),
+            *_anti_pattern_id_values(candidate.get("canonical_anti_pattern_ids")),
+            *_anti_pattern_id_values(candidate.get("anti_pattern_matches")),
+            *_anti_pattern_id_values(candidate.get("anti_pattern_protections")),
+            *_anti_pattern_id_values(coverage.get("anti_pattern_protections")),
+            *_anti_pattern_id_values(coverage.get("anti_pattern_matches")),
+        ]
+    )
+
+
+def _anti_pattern_acquisition_penalty(anti_pattern_ids: Sequence[str]) -> float:
+    penalty = 0.0
+    for raw_id in anti_pattern_ids:
+        anti_pattern_id = str(raw_id or "").lower()
+        if not anti_pattern_id:
+            continue
+        if (
+            "proxy_or_advisory" in anti_pattern_id
+            or "masquerades_as_score" in anti_pattern_id
+        ):
+            penalty += 0.18
+        elif (
+            "probe_only_side_report" in anti_pattern_id
+            or "orphaned_from_optimizer" in anti_pattern_id
+        ):
+            penalty += 0.14
+        elif "without_receiver_consumption" in anti_pattern_id:
+            penalty += 0.12
+        elif "zero_order_entropy" in anti_pattern_id:
+            penalty += 0.10
+        elif (
+            "entropy_coder_order_cargo_cult" in anti_pattern_id
+            or "canonical_default_plateau_substrate" in anti_pattern_id
+        ):
+            penalty += 0.08
+        elif "micro_optimization_without_macro_escape" in anti_pattern_id:
+            penalty += 0.06
+        elif "hnerv_pr95_language_anchoring" in anti_pattern_id:
+            penalty += 0.04
+        elif "cargo_cult" in anti_pattern_id or "false_authority" in anti_pattern_id:
+            penalty += 0.08
+        elif "orphan" in anti_pattern_id:
+            penalty += 0.07
+        elif (
+            "probe" in anti_pattern_id
+            or "prototype" in anti_pattern_id
+            or "stale" in anti_pattern_id
+            or "mismatch" in anti_pattern_id
+        ):
+            penalty += 0.04
+    return min(0.35, penalty)
+
+
 def _archive_field_value(
     row: Mapping[str, Any],
     *,
@@ -135,7 +217,9 @@ def archive_bound_candidate_contract_stale_field_blockers(
     """
 
     resolved_contract = _mapping(
-        contract if contract is not None else row.get("archive_bound_candidate_contract")
+        contract
+        if contract is not None
+        else row.get("archive_bound_candidate_contract")
     )
     if not resolved_contract:
         return []
@@ -259,8 +343,7 @@ def archive_bound_candidate_contracts_from_payload(
         for index, surface in enumerate(nested_surfaces):
             if not isinstance(surface, Mapping):
                 raise ArchiveBoundCandidateContractError(
-                    f"{label} archive_bound_candidate_contract_surfaces[{index}] "
-                    "must be object"
+                    f"{label} archive_bound_candidate_contract_surfaces[{index}] must be object"
                 )
             contracts.extend(
                 archive_bound_candidate_contracts_from_payload(
@@ -294,7 +377,9 @@ def archive_bound_candidate_contracts_from_payload(
                 )
             )
         return out
-    embedded_contract = _optional_mapping(payload.get("archive_bound_candidate_contract"))
+    embedded_contract = _optional_mapping(
+        payload.get("archive_bound_candidate_contract")
+    )
     if embedded_contract is not None:
         require_fresh_archive_bound_candidate_contract_row(payload, label=label)
         return [_validated_contract_from_payload(embedded_contract, label=label)]
@@ -307,9 +392,7 @@ def archive_bound_candidate_contracts_from_payload(
             embedded_surface,
             label=f"{label} archive_bound_candidate_contract_surface",
         )
-    raise ArchiveBoundCandidateContractError(
-        f"{label} schema mismatch: {schema!r}"
-    )
+    raise ArchiveBoundCandidateContractError(f"{label} schema mismatch: {schema!r}")
 
 
 def has_archive_bound_candidate_contract_payload(payload: Mapping[str, Any]) -> bool:
@@ -351,7 +434,11 @@ def _repo_rel(path: Path, repo_root: str | Path | None) -> str:
         return path.as_posix()
     repo = Path(repo_root)
     try:
-        return path.resolve(strict=False).relative_to(repo.resolve(strict=False)).as_posix()
+        return (
+            path.resolve(strict=False)
+            .relative_to(repo.resolve(strict=False))
+            .as_posix()
+        )
     except ValueError:
         return path.as_posix()
 
@@ -648,6 +735,15 @@ def archive_bound_candidate_contract_fields_for_row(
                 *_string_list(row.get("dispatch_blockers")),
             ]
         ),
+        "anti_pattern_id": row.get("anti_pattern_id"),
+        "anti_pattern_ids": row.get("anti_pattern_ids"),
+        "canonical_anti_pattern_id": row.get("canonical_anti_pattern_id"),
+        "canonical_anti_pattern_ids": row.get("canonical_anti_pattern_ids"),
+        "anti_pattern_matches": row.get("anti_pattern_matches"),
+        "anti_pattern_protections": row.get("anti_pattern_protections"),
+        "archive_entropy_substrate_coverage": row.get(
+            "archive_entropy_substrate_coverage"
+        ),
     }
     resolved_source_context = {
         **dict(_mapping(source_context)),
@@ -666,8 +762,10 @@ def archive_bound_candidate_contract_fields_for_row(
         selected_transform_kind=transform_kind,
         repo_root=repo_root,
         source_context=resolved_source_context,
-        family_id=family_id or _first_text(row.get("family_id"), row.get("candidate_family")),
-        typed_response_id=typed_response_id or _first_text(row.get("typed_response_id")),
+        family_id=family_id
+        or _first_text(row.get("family_id"), row.get("candidate_family")),
+        typed_response_id=typed_response_id
+        or _first_text(row.get("typed_response_id")),
         candidate_chain_id=(
             candidate_chain_id
             or _first_text(row.get("candidate_chain_id"), row.get("candidate_id"))
@@ -696,6 +794,7 @@ def archive_bound_candidate_contract_fields_for_row(
 def _contract_penalty(
     *,
     blockers: Sequence[str],
+    anti_pattern_ids: Sequence[str],
     materialized: bool,
     receiver_proof_ready: bool,
     receiver_contract_satisfied: bool,
@@ -717,12 +816,19 @@ def _contract_penalty(
     if probe_only:
         penalty += 0.16
     blocker_text = " ".join(blockers)
-    if "materializer_missing" in blocker_text or "target_entropy_coder_prototype_missing" in blocker_text:
+    if (
+        "materializer_missing" in blocker_text
+        or "target_entropy_coder_prototype_missing" in blocker_text
+    ):
         penalty += 0.12
-    if "runtime_proof_missing" in blocker_text or "receiver_runtime_proof_missing" in blocker_text:
+    if (
+        "runtime_proof_missing" in blocker_text
+        or "receiver_runtime_proof_missing" in blocker_text
+    ):
         penalty += 0.10
     if "orphan" in blocker_text or "probe_only" in blocker_text:
         penalty += 0.08
+    penalty += _anti_pattern_acquisition_penalty(anti_pattern_ids)
     return round(min(0.95, penalty), 6)
 
 
@@ -751,8 +857,13 @@ def build_archive_bound_candidate_contract(
     materialized = candidate.get("materialized") is True
     proof_ready = candidate.get("runtime_consumption_proof_ready") is True
     receiver_satisfied = candidate.get("receiver_contract_satisfied") is True
-    probe_only = bool(str(candidate.get("entropy_probe_path") or "").strip()) and not materialized
+    probe_only = (
+        bool(str(candidate.get("entropy_probe_path") or "").strip())
+        and not materialized
+    )
     prototype_only = candidate.get("prototype_only") is True
+    anti_pattern_ids = _canonical_anti_pattern_ids(candidate)
+    anti_pattern_penalty = round(_anti_pattern_acquisition_penalty(anti_pattern_ids), 6)
     expected_sha = str(candidate.get("sha256") or "").strip() or None
     expected_bytes = candidate.get("bytes")
     if not isinstance(expected_bytes, int) or isinstance(expected_bytes, bool):
@@ -775,7 +886,9 @@ def build_archive_bound_candidate_contract(
         candidate_bytes - source_bytes if source_bytes and candidate_bytes else None
     )
     saved_bytes = (
-        source_bytes - candidate_bytes if source_bytes and candidate_bytes else _safe_int(candidate.get("saved_bytes"))
+        source_bytes - candidate_bytes
+        if source_bytes and candidate_bytes
+        else _safe_int(candidate.get("saved_bytes"))
     )
     byte_credit_exhausted = (
         byte_credit_budget is not None
@@ -788,8 +901,16 @@ def build_archive_bound_candidate_contract(
             *_string_list(file_custody.get("blockers")),
             *([] if materialized else ["archive_bound_candidate_not_materialized"]),
             *([] if proof_ready else ["archive_bound_receiver_runtime_proof_missing"]),
-            *([] if receiver_satisfied else ["archive_bound_receiver_contract_not_satisfied"]),
-            *([] if not byte_credit_exhausted else ["archive_bound_candidate_byte_credit_exhausted"]),
+            *(
+                []
+                if receiver_satisfied
+                else ["archive_bound_receiver_contract_not_satisfied"]
+            ),
+            *(
+                []
+                if not byte_credit_exhausted
+                else ["archive_bound_candidate_byte_credit_exhausted"]
+            ),
             "contest_cpu_or_cuda_exact_axis_payload_required",
             "lane_dispatch_claim_required_before_exact_eval",
         ]
@@ -802,6 +923,7 @@ def build_archive_bound_candidate_contract(
     )
     acquisition_penalty = _contract_penalty(
         blockers=blockers,
+        anti_pattern_ids=anti_pattern_ids,
         materialized=materialized,
         receiver_proof_ready=proof_ready,
         receiver_contract_satisfied=receiver_satisfied,
@@ -815,8 +937,11 @@ def build_archive_bound_candidate_contract(
         "typed_response_id": typed_response_id,
         "candidate_chain_id": candidate_chain_id,
         "archive_native_transform_kind": transform_kind,
-        "candidate_archive_sha256": file_custody.get("sha256") or candidate.get("sha256"),
-        "runtime_consumption_proof_path": candidate.get("runtime_consumption_proof_path"),
+        "candidate_archive_sha256": file_custody.get("sha256")
+        or candidate.get("sha256"),
+        "runtime_consumption_proof_path": candidate.get(
+            "runtime_consumption_proof_path"
+        ),
     }
     contract = {
         "schema": ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
@@ -828,7 +953,12 @@ def build_archive_bound_candidate_contract(
         "entropy_position_label": resolved_entropy_position_label,
         "entropy_stage_order": entropy_stage_order,
         "archive_native_transform_kind": transform_kind,
-        "archive_substrate_tags": archive_substrate_tags_for_transform_kind(transform_kind),
+        "archive_substrate_tags": archive_substrate_tags_for_transform_kind(
+            transform_kind
+        ),
+        "canonical_anti_pattern_ids": anti_pattern_ids,
+        "anti_pattern_protection_count": len(anti_pattern_ids),
+        "anti_pattern_acquisition_penalty": anti_pattern_penalty,
         "selected_archive_transform_variant": selected,
         "archive_bound_candidate_ready": archive_bound_ready,
         "archive_bound_candidate_ready_for_exact_handoff": archive_bound_ready,
@@ -837,9 +967,14 @@ def build_archive_bound_candidate_contract(
         "runtime_consumption_proof_ready": proof_ready,
         "receiver_contract_kind": candidate.get("receiver_contract_kind"),
         "receiver_contract_satisfied": receiver_satisfied,
-        "runtime_adapter_manifest": dict(_mapping(candidate.get("runtime_adapter_manifest"))),
+        "runtime_adapter_manifest": dict(
+            _mapping(candidate.get("runtime_adapter_manifest"))
+        ),
         "runtime_adapter_ready": candidate.get("runtime_adapter_ready") is True
-        or _mapping(candidate.get("runtime_adapter_manifest")).get("runtime_adapter_ready") is True,
+        or _mapping(candidate.get("runtime_adapter_manifest")).get(
+            "runtime_adapter_ready"
+        )
+        is True,
         "contest_runtime_decoder_adapter_ready": (
             candidate.get("contest_runtime_decoder_adapter_ready") is True
         ),
@@ -854,8 +989,11 @@ def build_archive_bound_candidate_contract(
             "sha256": candidate.get("source_archive_sha256") or source.get("sha256"),
             "bytes": candidate.get("source_archive_bytes") or source.get("bytes"),
         },
-        "runtime_consumption_proof_path": candidate.get("runtime_consumption_proof_path"),
-        "semantic_payload_changed_observed": candidate.get("semantic_payload_changed") is True,
+        "runtime_consumption_proof_path": candidate.get(
+            "runtime_consumption_proof_path"
+        ),
+        "semantic_payload_changed_observed": candidate.get("semantic_payload_changed")
+        is True,
         "score_affecting_payload_changed_observed": (
             candidate.get("score_affecting_payload_changed") is True
         ),
@@ -939,7 +1077,9 @@ def build_archive_bound_candidate_contract_surface(
             contract.get("archive_bound_candidate_ready") is not True,
             _safe_float(contract.get("acquisition_penalty")),
             -_safe_float(contract.get("acquisition_score_hint")),
-            _safe_int(_mapping(contract.get("candidate_archive")).get("bytes"), default=10**18),
+            _safe_int(
+                _mapping(contract.get("candidate_archive")).get("bytes"), default=10**18
+            ),
             str(contract.get("archive_native_transform_kind") or ""),
         ),
     )
@@ -950,16 +1090,22 @@ def build_archive_bound_candidate_contract_surface(
         "selected_archive_transform_kind": selected_transform_kind,
         "candidate_contract_count": len(contracts),
         "archive_bound_ready_contract_count": sum(
-            1 for contract in contracts if contract.get("archive_bound_candidate_ready") is True
+            1
+            for contract in contracts
+            if contract.get("archive_bound_candidate_ready") is True
         ),
         "runtime_adapter_ready_contract_count": sum(
             1 for contract in contracts if contract.get("runtime_adapter_ready") is True
         ),
         "receiver_contract_satisfied_count": sum(
-            1 for contract in contracts if contract.get("receiver_contract_satisfied") is True
+            1
+            for contract in contracts
+            if contract.get("receiver_contract_satisfied") is True
         ),
         "probe_only_contract_count": sum(
-            1 for contract in contracts if contract.get("probe_only_entropy_signal") is True
+            1
+            for contract in contracts
+            if contract.get("probe_only_entropy_signal") is True
         ),
         "prototype_contract_count": sum(
             1 for contract in contracts if contract.get("prototype_only") is True
@@ -968,6 +1114,24 @@ def build_archive_bound_candidate_contract_surface(
             tag
             for contract in contracts
             for tag in _string_list(contract.get("archive_substrate_tags"))
+        ),
+        "canonical_anti_pattern_ids": ordered_unique(
+            anti_pattern_id
+            for contract in contracts
+            for anti_pattern_id in _string_list(
+                contract.get("canonical_anti_pattern_ids")
+            )
+        ),
+        "anti_pattern_protection_count": sum(
+            _safe_int(contract.get("anti_pattern_protection_count"))
+            for contract in contracts
+        ),
+        "anti_pattern_acquisition_penalty_sum": round(
+            sum(
+                _safe_float(contract.get("anti_pattern_acquisition_penalty"))
+                for contract in contracts
+            ),
+            6,
         ),
         "selected_candidate_contract": dict(selected),
         "best_acquisition_contract": dict(best),
@@ -979,7 +1143,10 @@ def build_archive_bound_candidate_contract_surface(
             }
         ),
         "acquisition_penalty_sum": round(
-            sum(_safe_float(contract.get("acquisition_penalty")) for contract in contracts),
+            sum(
+                _safe_float(contract.get("acquisition_penalty"))
+                for contract in contracts
+            ),
             6,
         ),
         "blockers": ordered_unique(

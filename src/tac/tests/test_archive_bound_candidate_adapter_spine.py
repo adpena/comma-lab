@@ -83,6 +83,27 @@ class _FixtureArchiveAdapter:
         ]
 
 
+class _AntiPatternFixtureArchiveAdapter(_FixtureArchiveAdapter):
+    adapter_id = "fixture_range_adapter_with_anti_patterns"
+
+    def emit_archive_bound_candidate_rows(
+        self,
+        context: Mapping[str, Any],
+    ) -> Sequence[Mapping[str, Any]]:
+        row = dict(super().emit_archive_bound_candidate_rows(context)[0])
+        row["archive_entropy_substrate_coverage"] = {
+            "anti_pattern_protections": [
+                {
+                    "anti_pattern_id": (
+                        "probe_only_side_report_orphaned_from_optimizer_v1"
+                    )
+                },
+                {"anti_pattern_id": "entropy_coder_order_cargo_cult_v1"},
+            ]
+        }
+        return [row]
+
+
 def test_archive_bound_adapter_spine_emits_full_pipeline_package(
     tmp_path: Path,
 ) -> None:
@@ -117,9 +138,10 @@ def test_archive_bound_adapter_spine_emits_full_pipeline_package(
     assert package["exact_axis_blockers"][0]["schema"] == (
         ARCHIVE_BOUND_CANDIDATE_EXACT_BLOCKER_SCHEMA
     )
-    assert "contest_cpu_or_cuda_authority_required" in package[
-        "exact_axis_blockers"
-    ][0]["blockers"]
+    assert (
+        "contest_cpu_or_cuda_authority_required"
+        in package["exact_axis_blockers"][0]["blockers"]
+    )
     assert package["posterior_update_hooks"][0]["schema"] == (
         ARCHIVE_BOUND_CANDIDATE_POSTERIOR_HOOK_SCHEMA
     )
@@ -184,3 +206,41 @@ def test_archive_contract_reader_rejects_stale_duplicate_fields(
             incumbent_score=0.2,
             archive_contract_surfaces=[row],
         )
+
+
+def test_archive_contract_routes_anti_patterns_into_acquisition_penalty(
+    tmp_path: Path,
+) -> None:
+    package = build_archive_bound_candidate_adapter_package(
+        _AntiPatternFixtureArchiveAdapter(tmp_path),
+        repo_root=tmp_path,
+    )
+
+    surface = package["archive_bound_candidate_contract_surfaces"][0]
+    contract = surface["candidate_contracts"][0]
+
+    assert contract["canonical_anti_pattern_ids"] == [
+        "probe_only_side_report_orphaned_from_optimizer_v1",
+        "entropy_coder_order_cargo_cult_v1",
+    ]
+    assert contract["anti_pattern_protection_count"] == 2
+    assert contract["anti_pattern_acquisition_penalty"] > 0
+    assert (
+        contract["acquisition_penalty"] >= contract["anti_pattern_acquisition_penalty"]
+    )
+    assert (
+        surface["anti_pattern_acquisition_penalty_sum"]
+        == contract["anti_pattern_acquisition_penalty"]
+    )
+
+    portfolio = build_cross_family_candidate_portfolio(
+        incumbent_score=0.2,
+        archive_contract_surfaces=[package],
+    )
+    row = portfolio["ranked_rows"][0]
+    metadata = row["source_metadata"]
+    assert metadata["contract_acquisition_penalty_score"] > 0
+    assert (
+        metadata["archive_bound_candidate_contract"]["canonical_anti_pattern_ids"]
+        == contract["canonical_anti_pattern_ids"]
+    )
