@@ -249,6 +249,26 @@ from tac.substrates.z8_hierarchical_predictive_coding.loss import (
     build_score_aware_level_loss_for_level,
 )
 
+# M6 canonical Wyner-Ziv (1976) top-level conditional coder
+# (operator-routed Yousfi-cascade TOP-4 elevation; 2026-05-30). Satisfies
+# the binding_contract.py:376-419 WynerZivTopLevelCoder Protocol via the
+# canonical Wyner-Ziv 1976 Theorem 1 linear-prediction + uniform-
+# quantization-residual instantiation. Closes 3 of 4 Catalog #312
+# canonical-quadruple primitives (M5 Mallat full DWT + M7 DreamerV3 + M6
+# Wyner-Ziv; M8 score-aware loss already LANDED) so M9 _full_main lift
+# is now unblocked.
+from tac.substrates.z8_hierarchical_predictive_coding.wyner_ziv_coder import (
+    WYNER_ZIV_TOP_LEVEL_CODER_PAYLOAD_MAGIC,
+    WYNER_ZIV_TOP_LEVEL_CODER_PAYLOAD_VERSION,
+    WynerZivCoderHeaderError,
+    WynerZivCoderRoundTripError,
+    WynerZivCoderShapeMismatchError,
+    WynerZivTopLevelCoderImpl,
+    build_wyner_ziv_top_level_coder_for_contract,
+    predict_top_state_from_side_info,
+    side_info_projection_matrix_for_contract,
+)
+
 # Catalog #124 8-field representation-lane declaration (canonical tokens for
 # the AST walker per the gate's regex set). DO NOT remove without operator
 # review per Catalog #229 premise verification.
@@ -383,6 +403,20 @@ __all__ = [
     "InvalidSensitivityMapError",
     "ScoreAwareLevelLossImpl",
     "build_score_aware_level_loss_for_level",
+    # M6 canonical Wyner-Ziv (1976) top-level conditional coder (operator-
+    # routed Yousfi-cascade TOP-4 elevation; 2026-05-30). Implements the
+    # WynerZivTopLevelCoder Protocol from binding_contract.py:376-419 via the
+    # canonical Wyner-Ziv 1976 Theorem 1 linear-prediction + uniform-
+    # quantization-residual instantiation. M9 _full_main lift unblocked.
+    "WYNER_ZIV_TOP_LEVEL_CODER_PAYLOAD_MAGIC",
+    "WYNER_ZIV_TOP_LEVEL_CODER_PAYLOAD_VERSION",
+    "WynerZivCoderHeaderError",
+    "WynerZivCoderRoundTripError",
+    "WynerZivCoderShapeMismatchError",
+    "WynerZivTopLevelCoderImpl",
+    "build_wyner_ziv_top_level_coder_for_contract",
+    "predict_top_state_from_side_info",
+    "side_info_projection_matrix_for_contract",
     "get_in_progress_milestones",
     "get_landed_milestones",
     "get_next_actionable_milestones",
