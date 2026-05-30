@@ -186,6 +186,36 @@ from tac.substrates.z8_hierarchical_predictive_coding.mlx_renderer import (
     z8_decoder_param_count,
 )
 
+# Phase 2 binding-first build (operator commit 2026-05-29): per-level
+# binding contract (Protocols + frozen dataclasses) that every Phase-2
+# piece (Mamba-2 SSD, Mallat full DWT, Wyner-Ziv full coder, score-aware
+# loss) builds against. Plus in-source build-progress tracking surface
+# per sister memory ``z8-phase-2-build-tracking-in-source-not-tasklist-
+# not-memos-20260529``.
+from tac.substrates.z8_hierarchical_predictive_coding.binding_contract import (
+    CONTEST_PAIR_COUNT,
+    CONTEST_PAIR_RGB_SHAPE,
+    CONTEST_SCORER_RESOLUTION,
+    DeterministicStateUpdate,
+    HierarchyBindingContract,
+    LevelDimensionContract,
+    ScoreAwareLevelLoss,
+    WaveletPartition,
+    WynerZivTopLevelCoder,
+    build_canonical_contract_from_config,
+)
+from tac.substrates.z8_hierarchical_predictive_coding.build_progress import (
+    BuildMilestone,
+    BuildMilestoneStatus,
+    Z8_PHASE_2_BUILD_MILESTONES,
+    get_in_progress_milestones,
+    get_landed_milestones,
+    get_next_actionable_milestones,
+    get_pending_milestones,
+    render_progress_summary,
+    validate_milestone_tuple,
+)
+
 # Catalog #124 8-field representation-lane declaration (canonical tokens for
 # the AST walker per the gate's regex set). DO NOT remove without operator
 # review per Catalog #229 premise verification.
@@ -275,6 +305,26 @@ __all__ = [
     "SUBSTRATE_ID",
     "ARCHITECTURE_CLASS",
     "emit_landing_posterior_anchor",
+    # Phase 2 binding-first build (operator commit 2026-05-29)
+    "CONTEST_PAIR_COUNT",
+    "CONTEST_PAIR_RGB_SHAPE",
+    "CONTEST_SCORER_RESOLUTION",
+    "DeterministicStateUpdate",
+    "HierarchyBindingContract",
+    "LevelDimensionContract",
+    "ScoreAwareLevelLoss",
+    "WaveletPartition",
+    "WynerZivTopLevelCoder",
+    "build_canonical_contract_from_config",
+    "BuildMilestone",
+    "BuildMilestoneStatus",
+    "Z8_PHASE_2_BUILD_MILESTONES",
+    "get_in_progress_milestones",
+    "get_landed_milestones",
+    "get_next_actionable_milestones",
+    "get_pending_milestones",
+    "render_progress_summary",
+    "validate_milestone_tuple",
 ]
 
 
