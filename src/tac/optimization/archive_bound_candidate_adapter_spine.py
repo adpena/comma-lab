@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
 from tac.optimization.archive_bound_candidate_contract import (
+    ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA,
     ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA,
     archive_bound_candidate_contract_fields_for_row,
 )
@@ -23,9 +24,6 @@ from tac.optimization.proxy_candidate_contract import (
     require_no_truthy_authority_fields,
 )
 
-ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA = (
-    "tac_archive_bound_candidate_adapter_package.v1"
-)
 ARCHIVE_BOUND_CANDIDATE_REPLAY_BUNDLE_SCHEMA = (
     "tac_archive_bound_candidate_replay_bundle.v1"
 )

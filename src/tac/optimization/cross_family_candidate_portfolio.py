@@ -13,12 +13,9 @@ from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-from tac.optimization.archive_bound_candidate_adapter_spine import (
-    ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA,
-)
 from tac.optimization.archive_bound_candidate_contract import (
-    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
-    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA,
+    ArchiveBoundCandidateContractError,
+    archive_bound_candidate_contracts_from_payload,
 )
 from tac.optimization.bayesian_experimental_design import (
     BayesianExperimentalDesignError,
@@ -907,47 +904,15 @@ def _archive_contract_rows_from_surfaces(
 ) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     for index, surface in enumerate(surfaces or ()):
-        _require_false_authority(surface, label=f"archive contract surface {index}")
-        schema = surface.get("schema")
-        if schema == ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA:
-            nested_surfaces = surface.get("archive_bound_candidate_contract_surfaces")
-            if not isinstance(nested_surfaces, list):
-                raise CrossFamilyCandidatePortfolioError(
-                    f"archive contract surface {index} adapter package lacks "
-                    "archive_bound_candidate_contract_surfaces[]"
+        try:
+            out.extend(
+                archive_bound_candidate_contracts_from_payload(
+                    surface,
+                    label=f"archive contract surface {index}",
                 )
-            out.extend(_archive_contract_rows_from_surfaces(nested_surfaces))
-            continue
-        if schema == ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA:
-            out.append(dict(surface))
-            continue
-        if schema != ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA:
-            raise CrossFamilyCandidatePortfolioError(
-                f"archive contract surface {index} schema mismatch: {schema!r}"
             )
-        contracts = surface.get("candidate_contracts")
-        if not isinstance(contracts, list):
-            raise CrossFamilyCandidatePortfolioError(
-                f"archive contract surface {index} candidate_contracts[] missing"
-            )
-        for contract_index, contract in enumerate(contracts):
-            if not isinstance(contract, Mapping):
-                raise CrossFamilyCandidatePortfolioError(
-                    f"archive contract surface {index} contract {contract_index} "
-                    "must be object"
-                )
-            _require_false_authority(
-                contract,
-                label=(
-                    f"archive contract surface {index} contract {contract_index}"
-                ),
-            )
-            if contract.get("schema") != ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA:
-                raise CrossFamilyCandidatePortfolioError(
-                    f"archive contract surface {index} contract {contract_index} "
-                    "schema mismatch"
-                )
-            out.append(dict(contract))
+        except ArchiveBoundCandidateContractError as exc:
+            raise CrossFamilyCandidatePortfolioError(str(exc)) from exc
     return out
 
 

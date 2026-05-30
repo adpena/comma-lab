@@ -20,6 +20,29 @@ ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA = "tac_archive_bound_candidate_contract.
 ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA = (
     "tac_archive_bound_candidate_contract_surface.v1"
 )
+ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA = (
+    "tac_archive_bound_candidate_adapter_package.v1"
+)
+
+
+class ArchiveBoundCandidateContractError(ValueError):
+    """Raised when archive-bound candidate contract payloads are invalid."""
+
+
+_DUPLICATE_BOOL_CONTRACT_FIELDS = (
+    "archive_bound_candidate_ready",
+    "archive_bound_candidate_ready_for_exact_handoff",
+    "byte_closed_candidate_materialized",
+    "candidate_archive_materialized",
+    "runtime_consumption_proof_ready",
+    "receiver_contract_satisfied",
+    "runtime_adapter_ready",
+    "contest_runtime_decoder_adapter_ready",
+    "ready_for_exact_eval_dispatch",
+    "score_claim",
+    "promotion_eligible",
+    "rank_or_kill_eligible",
+)
 
 
 def _stable_sha256(payload: Mapping[str, Any]) -> str:
@@ -59,6 +82,217 @@ def _safe_float(value: Any) -> float:
         return float(value)
     except (TypeError, ValueError):
         return 0.0
+
+
+def _optional_mapping(value: Any) -> Mapping[str, Any] | None:
+    return value if isinstance(value, Mapping) else None
+
+
+def _archive_field_value(
+    row: Mapping[str, Any],
+    *,
+    object_key: str,
+    direct_keys: Sequence[str],
+    nested_keys: Sequence[str],
+) -> Any:
+    for key in direct_keys:
+        if key in row and row.get(key) not in ("", None):
+            return row.get(key)
+    nested = _mapping(row.get(object_key))
+    for key in nested_keys:
+        if key in nested and nested.get(key) not in ("", None):
+            return nested.get(key)
+    return None
+
+
+def archive_bound_candidate_contract_stale_field_blockers(
+    row: Mapping[str, Any],
+    *,
+    contract: Mapping[str, Any] | None = None,
+) -> list[str]:
+    """Return duplicate-field mismatches between a row and its contract.
+
+    Legacy emitters still carry historic readiness/archive fields next to the
+    shared contract. Consumers must fail closed when those duplicate fields
+    disagree instead of picking whichever one is convenient.
+    """
+
+    resolved_contract = _mapping(
+        contract if contract is not None else row.get("archive_bound_candidate_contract")
+    )
+    if not resolved_contract:
+        return []
+    blockers: list[str] = []
+    embedded_schema = row.get("archive_bound_candidate_contract_schema")
+    if (
+        embedded_schema not in ("", None)
+        and embedded_schema != ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+    ):
+        blockers.append("archive_bound_contract_stale_duplicate_field:schema")
+    for key in _DUPLICATE_BOOL_CONTRACT_FIELDS:
+        if (
+            key in row
+            and isinstance(row.get(key), bool)
+            and isinstance(resolved_contract.get(key), bool)
+            and row.get(key) != resolved_contract.get(key)
+        ):
+            blockers.append(f"archive_bound_contract_stale_duplicate_field:{key}")
+    candidate_archive = _mapping(resolved_contract.get("candidate_archive"))
+    source_archive = _mapping(resolved_contract.get("source_archive"))
+    duplicate_specs = (
+        (
+            "candidate_archive_sha256",
+            _archive_field_value(
+                row,
+                object_key="candidate_archive",
+                direct_keys=("candidate_archive_sha256", "archive_sha256"),
+                nested_keys=("sha256", "archive_sha256"),
+            ),
+            candidate_archive.get("sha256"),
+        ),
+        (
+            "candidate_archive_bytes",
+            _archive_field_value(
+                row,
+                object_key="candidate_archive",
+                direct_keys=("candidate_archive_bytes", "archive_bytes"),
+                nested_keys=("bytes", "archive_bytes"),
+            ),
+            candidate_archive.get("bytes"),
+        ),
+        (
+            "source_archive_sha256",
+            _archive_field_value(
+                row,
+                object_key="source_archive",
+                direct_keys=("source_archive_sha256",),
+                nested_keys=("sha256", "archive_sha256"),
+            ),
+            source_archive.get("sha256"),
+        ),
+        (
+            "source_archive_bytes",
+            _archive_field_value(
+                row,
+                object_key="source_archive",
+                direct_keys=("source_archive_bytes",),
+                nested_keys=("bytes", "archive_bytes"),
+            ),
+            source_archive.get("bytes"),
+        ),
+    )
+    for field, row_value, contract_value in duplicate_specs:
+        if row_value in ("", None) or contract_value in ("", None):
+            continue
+        if str(row_value) != str(contract_value):
+            blockers.append(f"archive_bound_contract_stale_duplicate_field:{field}")
+    return ordered_unique(blockers)
+
+
+def require_fresh_archive_bound_candidate_contract_row(
+    row: Mapping[str, Any],
+    *,
+    label: str = "archive_bound_candidate_contract_row",
+) -> None:
+    blockers = archive_bound_candidate_contract_stale_field_blockers(row)
+    if blockers:
+        raise ArchiveBoundCandidateContractError(f"{label}: {', '.join(blockers)}")
+
+
+def _validated_contract_from_payload(
+    payload: Mapping[str, Any],
+    *,
+    label: str,
+) -> dict[str, Any]:
+    require_no_truthy_authority_fields(payload, context=label)
+    if payload.get("schema") != ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA:
+        raise ArchiveBoundCandidateContractError(f"{label} schema mismatch")
+    return dict(payload)
+
+
+def archive_bound_candidate_contracts_from_payload(
+    payload: Mapping[str, Any],
+    *,
+    label: str = "archive_bound_candidate_contract_payload",
+) -> list[dict[str, Any]]:
+    """Extract validated archive-bound contracts from any shared payload shape."""
+
+    require_no_truthy_authority_fields(payload, context=label)
+    schema = payload.get("schema")
+    if schema == ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA:
+        rows = payload.get("candidate_rows")
+        if isinstance(rows, Sequence) and not isinstance(rows, bytes | bytearray):
+            for row_index, row in enumerate(rows):
+                if not isinstance(row, Mapping):
+                    raise ArchiveBoundCandidateContractError(
+                        f"{label} candidate_rows[{row_index}] must be object"
+                    )
+                require_fresh_archive_bound_candidate_contract_row(
+                    row,
+                    label=f"{label} candidate_rows[{row_index}]",
+                )
+        nested_surfaces = payload.get("archive_bound_candidate_contract_surfaces")
+        if not isinstance(nested_surfaces, Sequence) or isinstance(
+            nested_surfaces, bytes | bytearray
+        ):
+            raise ArchiveBoundCandidateContractError(
+                f"{label} adapter package lacks archive_bound_candidate_contract_surfaces[]"
+            )
+        contracts: list[dict[str, Any]] = []
+        for index, surface in enumerate(nested_surfaces):
+            if not isinstance(surface, Mapping):
+                raise ArchiveBoundCandidateContractError(
+                    f"{label} archive_bound_candidate_contract_surfaces[{index}] "
+                    "must be object"
+                )
+            contracts.extend(
+                archive_bound_candidate_contracts_from_payload(
+                    surface,
+                    label=(
+                        f"{label} archive_bound_candidate_contract_surfaces[{index}]"
+                    ),
+                )
+            )
+        return contracts
+    if schema == ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA:
+        return [_validated_contract_from_payload(payload, label=label)]
+    if schema == ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA:
+        contracts = payload.get("candidate_contracts")
+        if not isinstance(contracts, Sequence) or isinstance(
+            contracts, bytes | bytearray
+        ):
+            raise ArchiveBoundCandidateContractError(
+                f"{label} candidate_contracts[] missing"
+            )
+        out: list[dict[str, Any]] = []
+        for index, contract in enumerate(contracts):
+            if not isinstance(contract, Mapping):
+                raise ArchiveBoundCandidateContractError(
+                    f"{label} candidate_contracts[{index}] must be object"
+                )
+            out.append(
+                _validated_contract_from_payload(
+                    contract,
+                    label=f"{label} candidate_contracts[{index}]",
+                )
+            )
+        return out
+    embedded_contract = _optional_mapping(payload.get("archive_bound_candidate_contract"))
+    if embedded_contract is not None:
+        require_fresh_archive_bound_candidate_contract_row(payload, label=label)
+        return [_validated_contract_from_payload(embedded_contract, label=label)]
+    embedded_surface = _optional_mapping(
+        payload.get("archive_bound_candidate_contract_surface")
+    )
+    if embedded_surface is not None:
+        require_fresh_archive_bound_candidate_contract_row(payload, label=label)
+        return archive_bound_candidate_contracts_from_payload(
+            embedded_surface,
+            label=f"{label} archive_bound_candidate_contract_surface",
+        )
+    raise ArchiveBoundCandidateContractError(
+        f"{label} schema mismatch: {schema!r}"
+    )
 
 
 def _resolve(path: str | Path, repo_root: str | Path | None) -> Path:
@@ -724,11 +958,16 @@ def build_archive_bound_candidate_contract_surface(
 
 
 __all__ = [
+    "ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA",
     "ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA",
     "ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA",
+    "ArchiveBoundCandidateContractError",
     "archive_bound_candidate_contract_fields_for_row",
+    "archive_bound_candidate_contract_stale_field_blockers",
+    "archive_bound_candidate_contracts_from_payload",
     "archive_substrate_tags_for_transform_kind",
     "build_archive_bound_candidate_contract",
     "build_archive_bound_candidate_contract_surface",
     "entropy_position_label_for_transform_kind",
+    "require_fresh_archive_bound_candidate_contract_row",
 ]

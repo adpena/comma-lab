@@ -6,8 +6,9 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from tac.optimization.archive_bound_candidate_adapter_spine import (
-    ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA,
     ARCHIVE_BOUND_CANDIDATE_EXACT_BLOCKER_SCHEMA,
     ARCHIVE_BOUND_CANDIDATE_MLX_TRIAGE_REQUEST_SCHEMA,
     ARCHIVE_BOUND_CANDIDATE_POSTERIOR_HOOK_SCHEMA,
@@ -15,7 +16,13 @@ from tac.optimization.archive_bound_candidate_adapter_spine import (
     ARCHIVE_BOUND_CANDIDATE_REPLAY_BUNDLE_SCHEMA,
     build_archive_bound_candidate_adapter_package,
 )
+from tac.optimization.archive_bound_candidate_contract import (
+    ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA,
+    ArchiveBoundCandidateContractError,
+    archive_bound_candidate_contracts_from_payload,
+)
 from tac.optimization.cross_family_candidate_portfolio import (
+    CrossFamilyCandidatePortfolioError,
     build_cross_family_candidate_portfolio,
 )
 
@@ -116,6 +123,10 @@ def test_archive_bound_adapter_spine_emits_full_pipeline_package(
     assert package["posterior_update_hooks"][0]["schema"] == (
         ARCHIVE_BOUND_CANDIDATE_POSTERIOR_HOOK_SCHEMA
     )
+    extracted = archive_bound_candidate_contracts_from_payload(package)
+    assert [contract["contract_key"] for contract in extracted] == [
+        contract["contract_key"]
+    ]
 
 
 def test_portfolio_consumes_adapter_package_contract_surface(tmp_path: Path) -> None:
@@ -139,3 +150,37 @@ def test_portfolio_consumes_adapter_package_contract_surface(tmp_path: Path) -> 
         "promote_archive_contract_to_receiver_exact_bridge"
     )
     assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_archive_contract_reader_rejects_stale_duplicate_fields(
+    tmp_path: Path,
+) -> None:
+    package = build_archive_bound_candidate_adapter_package(
+        _FixtureArchiveAdapter(tmp_path),
+        repo_root=tmp_path,
+    )
+    row = dict(package["candidate_rows"][0])
+    row["receiver_contract_satisfied"] = False
+
+    with pytest.raises(
+        ArchiveBoundCandidateContractError,
+        match="archive_bound_contract_stale_duplicate_field:receiver_contract_satisfied",
+    ):
+        archive_bound_candidate_contracts_from_payload(row)
+
+    stale_package = dict(package)
+    stale_package["candidate_rows"] = [row]
+    with pytest.raises(
+        ArchiveBoundCandidateContractError,
+        match="archive_bound_contract_stale_duplicate_field:receiver_contract_satisfied",
+    ):
+        archive_bound_candidate_contracts_from_payload(stale_package)
+
+    with pytest.raises(
+        CrossFamilyCandidatePortfolioError,
+        match="archive_bound_contract_stale_duplicate_field:receiver_contract_satisfied",
+    ):
+        build_cross_family_candidate_portfolio(
+            incumbent_score=0.2,
+            archive_contract_surfaces=[row],
+        )
