@@ -12,6 +12,8 @@ The canonical builders mirror the ProvenanceKind values:
   * ``build_provenance_for_research_sidecar`` — RESEARCH_SIDECAR
   * ``build_provenance_for_predicted`` — PREDICTED_FROM_MODEL
   * ``build_provenance_for_macos_cpu_advisory`` — ADVISORY_NON_PROMOTABLE (macOS-CPU)
+  * ``build_provenance_for_macos_mlx_research_signal`` —
+    ADVISORY_NON_PROMOTABLE (macOS-MLX research signal)
   * ``build_provenance_for_mps_proxy`` — ADVISORY_NON_PROMOTABLE (MPS)
   * ``build_provenance_aggregate`` — AGGREGATE_OF_PROVENANCES
   * ``build_provenance_invalid_byte_identity_artifact`` — INVALID_BYTE_IDENTITY_ARTIFACT
@@ -128,6 +130,7 @@ def _sha256_of_archive_member(archive_zip_path: Path, member_name: str) -> str:
 # Builder: CONTEST_ARCHIVE_MEMBER
 # -----------------------------------------------------------------------------
 
+
 def build_provenance_for_archive_member(
     archive_zip_path: str | Path,
     member_name: str,
@@ -165,16 +168,13 @@ def build_provenance_for_archive_member(
 
     if not archive_path.exists():
         raise InvalidProvenanceError(
-            f"Archive zip not found at {archive_path_str!r}; cannot build"
-            " CONTEST_ARCHIVE_MEMBER Provenance"
+            f"Archive zip not found at {archive_path_str!r}; cannot build CONTEST_ARCHIVE_MEMBER Provenance"
         )
 
     try:
         member_sha256 = _sha256_of_archive_member(archive_path, member_name)
     except (KeyError, zipfile.BadZipFile) as exc:
-        raise InvalidProvenanceError(
-            f"Cannot read member {member_name!r} from {archive_path_str!r}: {exc}"
-        ) from exc
+        raise InvalidProvenanceError(f"Cannot read member {member_name!r} from {archive_path_str!r}: {exc}") from exc
 
     source_path = f"{archive_path_str}:{member_name}"
 
@@ -203,6 +203,7 @@ def build_provenance_for_archive_member(
 # -----------------------------------------------------------------------------
 # Builder: RESEARCH_SIDECAR
 # -----------------------------------------------------------------------------
+
 
 def build_provenance_for_research_sidecar(
     sidecar_path: str | Path,
@@ -239,8 +240,7 @@ def build_provenance_for_research_sidecar(
 
     if not reactivation_criteria or not reactivation_criteria.strip():
         raise InvalidProvenanceError(
-            "RESEARCH_SIDECAR requires non-empty reactivation_criteria"
-            " (per CLAUDE.md 'Forbidden premature KILL')"
+            "RESEARCH_SIDECAR requires non-empty reactivation_criteria (per CLAUDE.md 'Forbidden premature KILL')"
         )
 
     # Allow missing sidecars so DEFERRED-pending-research artifacts can carry
@@ -265,6 +265,7 @@ def build_provenance_for_research_sidecar(
 # -----------------------------------------------------------------------------
 # Builder: PREDICTED_FROM_MODEL
 # -----------------------------------------------------------------------------
+
 
 def build_provenance_for_predicted(
     model_id: str,
@@ -312,6 +313,7 @@ def build_provenance_for_predicted(
 # Builder: macOS-CPU advisory (Catalog #192 anchor)
 # -----------------------------------------------------------------------------
 
+
 def build_provenance_for_macos_cpu_advisory(
     archive_sha256: str,
     source_path: str,
@@ -342,8 +344,44 @@ def build_provenance_for_macos_cpu_advisory(
 
 
 # -----------------------------------------------------------------------------
+# Builder: macOS-MLX research signal
+# -----------------------------------------------------------------------------
+
+
+def build_provenance_for_macos_mlx_research_signal(
+    artifact_sha256: str,
+    source_path: str,
+    captured_at_utc: str | None = None,
+) -> Provenance:
+    """Canonical builder for macOS-MLX research-signal Provenance.
+
+    MLX-local measurements are useful for local acquisition, long-training
+    triage, and substrate debugging, but they are never contest score authority.
+    This distinct grade prevents MLX rows from being collapsed into macOS-CPU
+    advisory or MPS proxy evidence while preserving fail-closed promotion gates.
+    """
+    if not artifact_sha256:
+        raise InvalidProvenanceError("macOS-MLX research signal requires non-empty artifact_sha256")
+    _refuse_transient_path(source_path)
+
+    return Provenance(
+        artifact_kind=ProvenanceKind.ADVISORY_NON_PROMOTABLE,
+        source_path=source_path,
+        source_sha256=artifact_sha256,
+        measurement_axis="[macOS-MLX research-signal]",
+        hardware_substrate="macos_arm64_mlx",
+        evidence_grade=ProvenanceEvidenceGrade.MACOS_MLX_RESEARCH_SIGNAL,
+        promotion_eligible=False,
+        score_claim_valid=False,
+        captured_at_utc=captured_at_utc or _utc_now_iso(),
+        canonical_helper_invocation=("tac.provenance.builders.build_provenance_for_macos_mlx_research_signal"),
+    )
+
+
+# -----------------------------------------------------------------------------
 # Builder: MPS proxy (per CLAUDE.md "MPS auth eval is NOISE")
 # -----------------------------------------------------------------------------
+
 
 def build_provenance_for_mps_proxy(
     artifact_sha256: str,
@@ -377,6 +415,7 @@ def build_provenance_for_mps_proxy(
 # Builder: AGGREGATE_OF_PROVENANCES (composition)
 # -----------------------------------------------------------------------------
 
+
 def build_provenance_aggregate(
     parts: Sequence[Provenance],
     aggregation_rationale: str,
@@ -405,9 +444,7 @@ def build_provenance_aggregate(
         Frozen Provenance; byte-identity detected → invalid sentinel grade.
     """
     if not parts:
-        raise InvalidProvenanceError(
-            "AGGREGATE_OF_PROVENANCES requires non-empty parts"
-        )
+        raise InvalidProvenanceError("AGGREGATE_OF_PROVENANCES requires non-empty parts")
 
     parts_tuple = tuple(parts)
 
@@ -416,9 +453,7 @@ def build_provenance_aggregate(
     duplicates = sorted({sha for sha in shas if shas.count(sha) > 1})
 
     # Aggregate sha is hash over concatenated child shas (deterministic)
-    aggregate_sha = _sha256_of_bytes(
-        "|".join(sorted(shas)).encode("utf-8")
-    )
+    aggregate_sha = _sha256_of_bytes("|".join(sorted(shas)).encode("utf-8"))
 
     # Determine grade: WORST of components, or sentinel if byte-identity
     if duplicates:
@@ -436,7 +471,8 @@ def build_provenance_aggregate(
         grade = _worst_grade_in([p.evidence_grade for p in parts_tuple])
         rejection_reason = ""
         is_promotable = all(p.promotion_eligible for p in parts_tuple) and (
-            grade in (
+            grade
+            in (
                 ProvenanceEvidenceGrade.PROMOTABLE_EXACT_CONTEST_CUDA,
                 ProvenanceEvidenceGrade.PROMOTABLE_EXACT_CONTEST_CPU,
             )
@@ -472,18 +508,20 @@ def _worst_grade_in(grades: Iterable[ProvenanceEvidenceGrade]) -> ProvenanceEvid
 
     Ordering (most-promotable → least-promotable):
         PROMOTABLE_EXACT_CONTEST_CUDA > PROMOTABLE_EXACT_CONTEST_CPU >
-        EMPIRICAL_CPU_NON_GHA > MACOS_CPU_ADVISORY > MPS_PROXY >
-        PREDICTED > RESEARCH_ONLY > INVALID_BYTE_IDENTITY_ARTIFACT
+        EMPIRICAL_CPU_NON_GHA > MACOS_CPU_ADVISORY >
+        MACOS_MLX_RESEARCH_SIGNAL > MPS_PROXY > PREDICTED > RESEARCH_ONLY >
+        INVALID_BYTE_IDENTITY_ARTIFACT
     """
     rank = {
         ProvenanceEvidenceGrade.PROMOTABLE_EXACT_CONTEST_CUDA: 0,
         ProvenanceEvidenceGrade.PROMOTABLE_EXACT_CONTEST_CPU: 1,
         ProvenanceEvidenceGrade.EMPIRICAL_CPU_NON_GHA: 2,
         ProvenanceEvidenceGrade.MACOS_CPU_ADVISORY: 3,
-        ProvenanceEvidenceGrade.MPS_PROXY: 4,
-        ProvenanceEvidenceGrade.PREDICTED: 5,
-        ProvenanceEvidenceGrade.RESEARCH_ONLY: 6,
-        ProvenanceEvidenceGrade.INVALID_BYTE_IDENTITY_ARTIFACT: 7,
+        ProvenanceEvidenceGrade.MACOS_MLX_RESEARCH_SIGNAL: 4,
+        ProvenanceEvidenceGrade.MPS_PROXY: 5,
+        ProvenanceEvidenceGrade.PREDICTED: 6,
+        ProvenanceEvidenceGrade.RESEARCH_ONLY: 7,
+        ProvenanceEvidenceGrade.INVALID_BYTE_IDENTITY_ARTIFACT: 8,
     }
     grade_list = list(grades)
     if not grade_list:
@@ -494,6 +532,7 @@ def _worst_grade_in(grades: Iterable[ProvenanceEvidenceGrade]) -> ProvenanceEvid
 # -----------------------------------------------------------------------------
 # Builder: INVALID_BYTE_IDENTITY_ARTIFACT (explicit sentinel)
 # -----------------------------------------------------------------------------
+
 
 def build_provenance_invalid_byte_identity_artifact(
     source_path_a: str,
@@ -510,13 +549,10 @@ def build_provenance_invalid_byte_identity_artifact(
     """
     if not rejection_reason or not rejection_reason.strip():
         raise InvalidProvenanceError(
-            "INVALID_BYTE_IDENTITY_ARTIFACT requires non-empty rejection_reason"
-            " (forensic context for audit)"
+            "INVALID_BYTE_IDENTITY_ARTIFACT requires non-empty rejection_reason (forensic context for audit)"
         )
     if not identical_sha256:
-        raise InvalidProvenanceError(
-            "INVALID_BYTE_IDENTITY_ARTIFACT requires non-empty identical_sha256"
-        )
+        raise InvalidProvenanceError("INVALID_BYTE_IDENTITY_ARTIFACT requires non-empty identical_sha256")
 
     composed_path = f"<byte-identity-artifact:{source_path_a}::{source_path_b}>"
 
@@ -539,6 +575,7 @@ def build_provenance_invalid_byte_identity_artifact(
 # Builders: contest-compliance procedural-generation boundary kinds
 # -----------------------------------------------------------------------------
 
+
 def build_provenance_for_archive_seed_procedural_generation(
     seed_source_path: str,
     seed_sha256: str,
@@ -551,9 +588,7 @@ def build_provenance_for_archive_seed_procedural_generation(
     support a future exact-eval score claim, but it is not a score claim itself.
     """
     if not rationale or not rationale.strip():
-        raise InvalidProvenanceError(
-            "PROCEDURAL_GENERATION_FROM_ARCHIVE_SEED requires non-empty rationale"
-        )
+        raise InvalidProvenanceError("PROCEDURAL_GENERATION_FROM_ARCHIVE_SEED requires non-empty rationale")
     _refuse_transient_path(seed_source_path)
     return Provenance(
         artifact_kind=ProvenanceKind.PROCEDURAL_GENERATION_FROM_ARCHIVE_SEED,
@@ -565,10 +600,7 @@ def build_provenance_for_archive_seed_procedural_generation(
         promotion_eligible=False,
         score_claim_valid=False,
         captured_at_utc=captured_at_utc or _utc_now_iso(),
-        canonical_helper_invocation=(
-            "tac.provenance.builders."
-            "build_provenance_for_archive_seed_procedural_generation"
-        ),
+        canonical_helper_invocation=("tac.provenance.builders.build_provenance_for_archive_seed_procedural_generation"),
         rejection_reason=rationale,
     )
 
@@ -581,9 +613,7 @@ def build_provenance_for_weight_derived_codebook(
 ) -> Provenance:
     """Canonical builder for codebooks derived from shipped archive weights."""
     if not rationale or not rationale.strip():
-        raise InvalidProvenanceError(
-            "WEIGHT_DERIVED_CODEBOOK requires non-empty rationale"
-        )
+        raise InvalidProvenanceError("WEIGHT_DERIVED_CODEBOOK requires non-empty rationale")
     _refuse_transient_path(weight_source_path)
     return Provenance(
         artifact_kind=ProvenanceKind.WEIGHT_DERIVED_CODEBOOK,
@@ -595,9 +625,7 @@ def build_provenance_for_weight_derived_codebook(
         promotion_eligible=False,
         score_claim_valid=False,
         captured_at_utc=captured_at_utc or _utc_now_iso(),
-        canonical_helper_invocation=(
-            "tac.provenance.builders.build_provenance_for_weight_derived_codebook"
-        ),
+        canonical_helper_invocation=("tac.provenance.builders.build_provenance_for_weight_derived_codebook"),
         rejection_reason=rationale,
     )
 
@@ -610,9 +638,7 @@ def build_provenance_for_forbidden_out_of_archive_payload(
 ) -> Provenance:
     """Canonical fail-closed sentinel for output-affecting external payloads."""
     if not rejection_reason or not rejection_reason.strip():
-        raise InvalidProvenanceError(
-            "FORBIDDEN_OUT_OF_ARCHIVE_PAYLOAD requires non-empty rejection_reason"
-        )
+        raise InvalidProvenanceError("FORBIDDEN_OUT_OF_ARCHIVE_PAYLOAD requires non-empty rejection_reason")
     return Provenance(
         artifact_kind=ProvenanceKind.FORBIDDEN_OUT_OF_ARCHIVE_PAYLOAD,
         source_path=payload_source_path,
@@ -623,10 +649,7 @@ def build_provenance_for_forbidden_out_of_archive_payload(
         promotion_eligible=False,
         score_claim_valid=False,
         captured_at_utc=captured_at_utc or _utc_now_iso(),
-        canonical_helper_invocation=(
-            "tac.provenance.builders."
-            "build_provenance_for_forbidden_out_of_archive_payload"
-        ),
+        canonical_helper_invocation=("tac.provenance.builders.build_provenance_for_forbidden_out_of_archive_payload"),
         rejection_reason=rejection_reason,
     )
 
@@ -670,13 +693,9 @@ def register_forbidden_out_of_archive_payload_probe_outcome(
             "ProvenanceKind.FORBIDDEN_OUT_OF_ARCHIVE_PAYLOAD"
         )
     if not evidence_path or not evidence_path.strip():
-        raise InvalidProvenanceError(
-            "forbidden out-of-archive probe outcome requires non-empty evidence_path"
-        )
+        raise InvalidProvenanceError("forbidden out-of-archive probe outcome requires non-empty evidence_path")
     if not provenance.rejection_reason:
-        raise InvalidProvenanceError(
-            "forbidden out-of-archive probe outcome requires rejection_reason"
-        )
+        raise InvalidProvenanceError("forbidden out-of-archive probe outcome requires rejection_reason")
 
     from tac.probe_outcomes_ledger import register_probe_outcome
 
@@ -698,8 +717,7 @@ def register_forbidden_out_of_archive_payload_probe_outcome(
         threshold=0.0,
         threshold_token="ANY_OUTPUT_AFFECTING_PAYLOAD_OUTSIDE_ARCHIVE_FORBIDDEN",
         evidence_path=evidence_path,
-        next_action=next_action
-        or "move output-affecting bytes inside archive.zip or prove no-score-impact",
+        next_action=next_action or "move output-affecting bytes inside archive.zip or prove no-score-impact",
         blocker_status="blocking",
         staleness_window_days=365,
         agent=agent,
@@ -717,6 +735,7 @@ def register_forbidden_out_of_archive_payload_probe_outcome(
 # -----------------------------------------------------------------------------
 # Class-method shorthand on Provenance (ergonomics)
 # -----------------------------------------------------------------------------
+
 
 def _from_archive_zip_member(
     cls,
@@ -755,6 +774,7 @@ Provenance.from_archive_zip_member = classmethod(_from_archive_zip_member)  # ty
 # -----------------------------------------------------------------------------
 # Decorator: @requires_canonical_provenance
 # -----------------------------------------------------------------------------
+
 
 def requires_canonical_provenance(
     score_attr: str = "provenance",
@@ -796,8 +816,7 @@ def requires_canonical_provenance(
             if isinstance(result, dict):
                 if score_attr not in result:
                     raise MissingProvenanceError(
-                        f"{fn.__qualname__} returned dict without {score_attr!r}"
-                        " key; canonical Provenance required."
+                        f"{fn.__qualname__} returned dict without {score_attr!r} key; canonical Provenance required."
                     )
                 value = result[score_attr]
                 if not isinstance(value, (Provenance, dict)):
@@ -833,6 +852,7 @@ __all__ = [
     "build_provenance_for_archive_seed_procedural_generation",
     "build_provenance_for_forbidden_out_of_archive_payload",
     "build_provenance_for_macos_cpu_advisory",
+    "build_provenance_for_macos_mlx_research_signal",
     "build_provenance_for_mps_proxy",
     "build_provenance_for_predicted",
     "build_provenance_for_research_sidecar",

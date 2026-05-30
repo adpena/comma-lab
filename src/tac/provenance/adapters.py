@@ -48,26 +48,23 @@ get a Provenance, never a None.
 
 from __future__ import annotations
 
-import hashlib
-from datetime import datetime, timezone
-from typing import Any, Mapping, Optional
+from collections.abc import Mapping
+from datetime import UTC, datetime
+from typing import Any
 
+from tac.provenance.builders import (
+    build_provenance_for_research_sidecar,
+)
 from tac.provenance.contract import (
     NULL_NOT_A_SCORE_CLAIM,
     Provenance,
     ProvenanceEvidenceGrade,
     ProvenanceKind,
 )
-from tac.provenance.builders import (
-    build_provenance_for_research_sidecar,
-    build_provenance_for_predicted,
-    build_provenance_for_macos_cpu_advisory,
-    build_provenance_for_mps_proxy,
-)
 
 
 def _utc_now_iso() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _placeholder_sha() -> str:
@@ -86,6 +83,8 @@ def _normalize_axis_string(axis: str | None) -> str:
             return "[contest-CUDA]"
         if "cpu" in low and "contest" in low and "macos" not in low:
             return "[contest-CPU]"
+        if "mlx" in low:
+            return "[macOS-MLX research-signal]"
         if "macos" in low or "mac-os" in low:
             return "[macOS-CPU advisory]"
         if "mps" in low:
@@ -114,18 +113,27 @@ def _normalize_hardware_substrate(hw: str | None) -> str:
         "modal_cpu": "linux_x86_64_modal_cpu",
         "darwin": "macos_arm64",
         "macos": "macos_arm64",
+        "mlx": "macos_arm64_mlx",
+        "macos_mlx": "macos_arm64_mlx",
+        "macos_arm64_mlx": "macos_arm64_mlx",
     }
     return mappings.get(h, h if h.startswith(("linux_", "macos_", "windows_")) else "unknown")
 
 
 def _grade_for_axis(axis: str) -> ProvenanceEvidenceGrade:
     """Best-effort grade inference from canonical axis."""
-    if axis == "[contest-CUDA]":  # CUSTODY_VALIDATOR_OK:this_function_IS_provenance_grade_inference_for_canonical_axis_per_comprehensive_bug_audit_cascade_20260526
+    if (
+        axis == "[contest-CUDA]"
+    ):  # CUSTODY_VALIDATOR_OK:this_function_IS_provenance_grade_inference_for_canonical_axis_per_comprehensive_bug_audit_cascade_20260526
         return ProvenanceEvidenceGrade.PROMOTABLE_EXACT_CONTEST_CUDA
-    if axis == "[contest-CPU]":  # CUSTODY_VALIDATOR_OK:this_function_IS_provenance_grade_inference_for_canonical_axis_per_comprehensive_bug_audit_cascade_20260526
+    if (
+        axis == "[contest-CPU]"
+    ):  # CUSTODY_VALIDATOR_OK:this_function_IS_provenance_grade_inference_for_canonical_axis_per_comprehensive_bug_audit_cascade_20260526
         return ProvenanceEvidenceGrade.PROMOTABLE_EXACT_CONTEST_CPU
     if axis == "[macOS-CPU advisory]":
         return ProvenanceEvidenceGrade.MACOS_CPU_ADVISORY
+    if axis == "[macOS-MLX research-signal]":
+        return ProvenanceEvidenceGrade.MACOS_MLX_RESEARCH_SIGNAL
     if axis == "[MPS-PROXY]":
         return ProvenanceEvidenceGrade.MPS_PROXY
     if axis == "[predicted]":
@@ -143,6 +151,7 @@ def _safe_attr(obj: Any, name: str, default: Any = None) -> Any:
 # -----------------------------------------------------------------------------
 # ContestResult adapter
 # -----------------------------------------------------------------------------
+
 
 def contest_result_to_provenance(result: Any) -> Provenance:
     """Adapt ``tac.continual_learning.ContestResult`` → ``Provenance``.
@@ -182,16 +191,17 @@ def contest_result_to_provenance(result: Any) -> Provenance:
         grade = ProvenanceEvidenceGrade.EMPIRICAL_CPU_NON_GHA
 
     # Validate sha256 shape; replace with placeholder if invalid
-    if not isinstance(archive_sha, str) or len(archive_sha) != 64 or not all(c in "0123456789abcdef" for c in archive_sha.lower()):
+    if (
+        not isinstance(archive_sha, str)
+        or len(archive_sha) != 64
+        or not all(c in "0123456789abcdef" for c in archive_sha.lower())
+    ):
         archive_sha = _placeholder_sha()
     else:
         archive_sha = archive_sha.lower()
 
-    # Build source_path: prefer archive:member form if we have archive_path
-    if archive_path:
-        source_path = f"{archive_path}:{member_name}"
-    else:
-        source_path = f"<contest_result:{archive_sha[:12]}>"
+    # Build source_path: prefer archive:member form if we have archive_path.
+    source_path = f"{archive_path}:{member_name}" if archive_path else f"<contest_result:{archive_sha[:12]}>"
 
     # For PROMOTABLE grades we need CONTEST_ARCHIVE_MEMBER kind; else demote
     if grade in (
@@ -238,6 +248,7 @@ def contest_result_to_provenance(result: Any) -> Provenance:
 # Cost-band anchor adapter
 # -----------------------------------------------------------------------------
 
+
 def cost_band_anchor_to_provenance(anchor: Any) -> Provenance:
     """Adapt ``tac.cost_band_calibration`` anchor row → ``Provenance``.
 
@@ -259,6 +270,7 @@ def cost_band_anchor_to_provenance(anchor: Any) -> Provenance:
 # CouncilDeliberationRecord adapter
 # -----------------------------------------------------------------------------
 
+
 def council_record_to_provenance(record: Any) -> Provenance:
     """Adapt ``CouncilDeliberationRecord`` → ``Provenance`` for evidence cite-chain."""
     deliberation_id = _safe_attr(record, "deliberation_id", "unknown")
@@ -272,6 +284,7 @@ def council_record_to_provenance(record: Any) -> Provenance:
 # -----------------------------------------------------------------------------
 # SubstrateCompositionRow adapter (sister-contended)
 # -----------------------------------------------------------------------------
+
 
 def substrate_composition_row_to_provenance(row: Any) -> Provenance:
     """Adapt ``CompositionResult`` (or sister composition row dict) → ``Provenance``.
@@ -291,6 +304,7 @@ def substrate_composition_row_to_provenance(row: Any) -> Provenance:
     # Catalog #823 byte-identity detection
     if sha_a and sha_b and sha_a == sha_b:
         from tac.provenance.builders import build_provenance_invalid_byte_identity_artifact
+
         return build_provenance_invalid_byte_identity_artifact(
             source_path_a=str(_safe_attr(row, "candidate_a_path", "<a>")),
             source_path_b=str(_safe_attr(row, "candidate_b_path", "<b>")),
@@ -299,9 +313,7 @@ def substrate_composition_row_to_provenance(row: Any) -> Provenance:
         )
 
     # If verdict carries phantom-score markers, demote
-    if isinstance(verdict, str) and any(
-        m in verdict.lower() for m in ("phantom", "false_signal", "byte_identity")
-    ):
+    if isinstance(verdict, str) and any(m in verdict.lower() for m in ("phantom", "false_signal", "byte_identity")):
         return build_provenance_for_research_sidecar(
             sidecar_path=f"<composition_row:{pair_key}>",
             reactivation_criteria=f"phantom composition row: {verdict}",
@@ -316,6 +328,7 @@ def substrate_composition_row_to_provenance(row: Any) -> Provenance:
 # -----------------------------------------------------------------------------
 # DeliverabilityProof adapter
 # -----------------------------------------------------------------------------
+
 
 def deliverability_proof_to_provenance(proof: Any) -> Provenance:
     """Adapt ``DeliverabilityProof`` → ``Provenance``.
@@ -343,6 +356,7 @@ def deliverability_proof_to_provenance(proof: Any) -> Provenance:
 # WynerZivLayerResult adapter
 # -----------------------------------------------------------------------------
 
+
 def wyner_ziv_layer_result_to_provenance(result: Any) -> Provenance:
     """Adapt ``WynerZivLayerResult`` → ``Provenance``."""
     layer_name = _safe_attr(result, "layer_name", "unknown")
@@ -355,6 +369,7 @@ def wyner_ziv_layer_result_to_provenance(result: Any) -> Provenance:
 # -----------------------------------------------------------------------------
 # OptimalPerPairTreatmentPlan adapter
 # -----------------------------------------------------------------------------
+
 
 def master_gradient_plan_to_provenance(plan: Any) -> Provenance:
     """Adapt ``OptimalPerPairTreatmentPlan`` → ``Provenance``."""
@@ -387,6 +402,7 @@ def master_gradient_plan_to_provenance(plan: Any) -> Provenance:
 # Modal call_id ledger event adapter
 # -----------------------------------------------------------------------------
 
+
 def modal_call_id_ledger_event_to_provenance(event: Any) -> Provenance:
     """Adapt Modal call_id ledger event → ``Provenance``."""
     call_id = _safe_attr(event, "call_id", "unknown")
@@ -399,7 +415,6 @@ def modal_call_id_ledger_event_to_provenance(event: Any) -> Provenance:
     if score is not None:
         axis = _normalize_axis_string(score_axis)
         hw = _normalize_hardware_substrate(hardware)
-        grade = _grade_for_axis(axis)
         # Conservative: ledger events become DERIVED_AGGREGATE non-promotable
         # until the canonical caller embeds Provenance directly.
         return Provenance(
@@ -425,9 +440,9 @@ __all__ = [
     "contest_result_to_provenance",
     "cost_band_anchor_to_provenance",
     "council_record_to_provenance",
-    "substrate_composition_row_to_provenance",
     "deliverability_proof_to_provenance",
-    "wyner_ziv_layer_result_to_provenance",
     "master_gradient_plan_to_provenance",
     "modal_call_id_ledger_event_to_provenance",
+    "substrate_composition_row_to_provenance",
+    "wyner_ziv_layer_result_to_provenance",
 ]

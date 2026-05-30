@@ -13,19 +13,19 @@ import pytest
 from tac.provenance.contract import (
     CANONICAL_HARDWARE_SUBSTRATES,
     CANONICAL_MEASUREMENT_AXES,
-    InvalidProvenanceError,
     NULL_NOT_A_SCORE_CLAIM,
     PROVENANCE_SCHEMA_VERSION,
+    InvalidProvenanceError,
     Provenance,
     ProvenanceEvidenceGrade,
     ProvenanceKind,
     ScoreClaim,
 )
 
-
 # -----------------------------------------------------------------------------
 # Constants
 # -----------------------------------------------------------------------------
+
 
 def test_schema_version_pinned():
     assert PROVENANCE_SCHEMA_VERSION == "provenance_v1_20260517"
@@ -36,6 +36,7 @@ def test_canonical_measurement_axes_includes_all_lane_tags():
     assert "[contest-CUDA]" in CANONICAL_MEASUREMENT_AXES
     assert "[contest-CPU]" in CANONICAL_MEASUREMENT_AXES
     assert "[macOS-CPU advisory]" in CANONICAL_MEASUREMENT_AXES
+    assert "[macOS-MLX research-signal]" in CANONICAL_MEASUREMENT_AXES
     assert "[MPS-PROXY]" in CANONICAL_MEASUREMENT_AXES
 
 
@@ -43,27 +44,29 @@ def test_canonical_hardware_substrates_includes_modal_and_macos():
     assert "linux_x86_64_t4" in CANONICAL_HARDWARE_SUBSTRATES
     assert "linux_x86_64_modal_cpu" in CANONICAL_HARDWARE_SUBSTRATES
     assert "macos_arm64" in CANONICAL_HARDWARE_SUBSTRATES
+    assert "macos_arm64_mlx" in CANONICAL_HARDWARE_SUBSTRATES
 
 
 # -----------------------------------------------------------------------------
 # Provenance: basic shape validation
 # -----------------------------------------------------------------------------
 
+
 def _valid_contest_archive_member_kwargs() -> dict:
-    return dict(
-        artifact_kind=ProvenanceKind.CONTEST_ARCHIVE_MEMBER,
-        source_path="submissions/a1/archive.zip:0.bin",
-        source_sha256="a" * 64,
-        measurement_axis="[contest-CUDA]",
-        hardware_substrate="linux_x86_64_t4",
-        evidence_grade=ProvenanceEvidenceGrade.PROMOTABLE_EXACT_CONTEST_CUDA,
-        promotion_eligible=True,
-        score_claim_valid=True,
-        captured_at_utc="2026-05-17T22:00:00Z",
-        canonical_helper_invocation="tac.provenance.builders.build_provenance_for_archive_member",
-        contest_archive_zip_path="submissions/a1/archive.zip",
-        contest_archive_member_name="0.bin",
-    )
+    return {
+        "artifact_kind": ProvenanceKind.CONTEST_ARCHIVE_MEMBER,
+        "source_path": "submissions/a1/archive.zip:0.bin",
+        "source_sha256": "a" * 64,
+        "measurement_axis": "[contest-CUDA]",
+        "hardware_substrate": "linux_x86_64_t4",
+        "evidence_grade": ProvenanceEvidenceGrade.PROMOTABLE_EXACT_CONTEST_CUDA,
+        "promotion_eligible": True,
+        "score_claim_valid": True,
+        "captured_at_utc": "2026-05-17T22:00:00Z",
+        "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_archive_member",
+        "contest_archive_zip_path": "submissions/a1/archive.zip",
+        "contest_archive_member_name": "0.bin",
+    }
 
 
 def test_canonical_contest_archive_member_constructs():
@@ -112,6 +115,7 @@ def test_canonical_helper_invocation_non_dotted_rejected():
 # -----------------------------------------------------------------------------
 # Provenance: kind-specific invariants
 # -----------------------------------------------------------------------------
+
 
 def test_contest_archive_member_requires_zip_path():
     kwargs = _valid_contest_archive_member_kwargs()
@@ -307,10 +311,7 @@ def test_archive_seed_procedural_generation_is_non_promotable_supporting_provena
         promotion_eligible=False,
         score_claim_valid=False,
         captured_at_utc="2026-05-18T16:00:00Z",
-        canonical_helper_invocation=(
-            "tac.provenance.builders."
-            "build_provenance_for_archive_seed_procedural_generation"
-        ),
+        canonical_helper_invocation=("tac.provenance.builders.build_provenance_for_archive_seed_procedural_generation"),
         rejection_reason="seed bytes are charged inside archive.zip",
     )
     assert prov.artifact_kind == ProvenanceKind.PROCEDURAL_GENERATION_FROM_ARCHIVE_SEED
@@ -329,8 +330,7 @@ def test_archive_seed_procedural_generation_requires_rationale():
             score_claim_valid=False,
             captured_at_utc="2026-05-18T16:00:00Z",
             canonical_helper_invocation=(
-                "tac.provenance.builders."
-                "build_provenance_for_archive_seed_procedural_generation"
+                "tac.provenance.builders.build_provenance_for_archive_seed_procedural_generation"
             ),
         )
 
@@ -347,9 +347,7 @@ def test_weight_derived_codebook_cannot_have_valid_score_claim():
             promotion_eligible=False,
             score_claim_valid=True,
             captured_at_utc="2026-05-18T16:00:00Z",
-            canonical_helper_invocation=(
-                "tac.provenance.builders.build_provenance_for_weight_derived_codebook"
-            ),
+            canonical_helper_invocation=("tac.provenance.builders.build_provenance_for_weight_derived_codebook"),
             rejection_reason="codebook derived from shipped renderer weights",
         )
 
@@ -367,8 +365,7 @@ def test_forbidden_out_of_archive_payload_requires_rejection_reason():
             score_claim_valid=False,
             captured_at_utc="2026-05-18T16:00:00Z",
             canonical_helper_invocation=(
-                "tac.provenance.builders."
-                "build_provenance_for_forbidden_out_of_archive_payload"
+                "tac.provenance.builders.build_provenance_for_forbidden_out_of_archive_payload"
             ),
         )
 
@@ -376,6 +373,7 @@ def test_forbidden_out_of_archive_payload_requires_rejection_reason():
 # -----------------------------------------------------------------------------
 # Provenance: grade × axis × hardware cross-checks
 # -----------------------------------------------------------------------------
+
 
 def test_cuda_promotable_requires_cuda_axis():
     kwargs = _valid_contest_archive_member_kwargs()
@@ -419,6 +417,55 @@ def test_macos_advisory_requires_macos_axis():
         )
 
 
+def test_macos_mlx_research_signal_constructs_non_promotable():
+    prov = Provenance(
+        artifact_kind=ProvenanceKind.ADVISORY_NON_PROMOTABLE,
+        source_path="experiments/results/mlx_probe/replay.json",
+        source_sha256="4" * 64,
+        measurement_axis="[macOS-MLX research-signal]",
+        hardware_substrate="macos_arm64_mlx",
+        evidence_grade=ProvenanceEvidenceGrade.MACOS_MLX_RESEARCH_SIGNAL,
+        promotion_eligible=False,
+        score_claim_valid=False,
+        captured_at_utc="2026-05-30T22:00:00Z",
+        canonical_helper_invocation="tac.tests.test",
+    )
+    assert not prov.promotion_eligible
+    assert not prov.score_claim_valid
+
+
+def test_macos_mlx_research_signal_requires_mlx_axis():
+    with pytest.raises(InvalidProvenanceError, match="macOS-MLX"):
+        Provenance(
+            artifact_kind=ProvenanceKind.ADVISORY_NON_PROMOTABLE,
+            source_path="experiments/results/mlx_probe/replay.json",
+            source_sha256="4" * 64,
+            measurement_axis="[macOS-CPU advisory]",
+            hardware_substrate="macos_arm64_mlx",
+            evidence_grade=ProvenanceEvidenceGrade.MACOS_MLX_RESEARCH_SIGNAL,
+            promotion_eligible=False,
+            score_claim_valid=False,
+            captured_at_utc="2026-05-30T22:00:00Z",
+            canonical_helper_invocation="tac.tests.test",
+        )
+
+
+def test_macos_mlx_research_signal_requires_mlx_hardware():
+    with pytest.raises(InvalidProvenanceError, match="macos_arm64_mlx"):
+        Provenance(
+            artifact_kind=ProvenanceKind.ADVISORY_NON_PROMOTABLE,
+            source_path="experiments/results/mlx_probe/replay.json",
+            source_sha256="4" * 64,
+            measurement_axis="[macOS-MLX research-signal]",
+            hardware_substrate="macos_arm64",
+            evidence_grade=ProvenanceEvidenceGrade.MACOS_MLX_RESEARCH_SIGNAL,
+            promotion_eligible=False,
+            score_claim_valid=False,
+            captured_at_utc="2026-05-30T22:00:00Z",
+            canonical_helper_invocation="tac.tests.test",
+        )
+
+
 def test_mps_proxy_requires_macos_arm64_hardware():
     """Per CLAUDE.md MPS auth eval is NOISE."""
     with pytest.raises(InvalidProvenanceError):
@@ -457,6 +504,7 @@ def test_invalid_byte_identity_requires_rejection_reason():
 # -----------------------------------------------------------------------------
 # ScoreClaim invariants
 # -----------------------------------------------------------------------------
+
 
 def test_score_claim_auto_derives_contest_compliant():
     prov = Provenance(**_valid_contest_archive_member_kwargs())
@@ -519,6 +567,7 @@ def test_score_claim_default_contest_compliant_false():
 # Sentinel
 # -----------------------------------------------------------------------------
 
+
 def test_null_sentinel_is_research_sidecar():
     assert NULL_NOT_A_SCORE_CLAIM.artifact_kind == ProvenanceKind.RESEARCH_SIDECAR
     assert not NULL_NOT_A_SCORE_CLAIM.promotion_eligible
@@ -529,12 +578,14 @@ def test_null_sentinel_is_research_sidecar():
 def test_null_sentinel_identity():
     """Sentinel is a module-level constant; identity should hold."""
     from tac.provenance import NULL_NOT_A_SCORE_CLAIM as imported_again
+
     assert NULL_NOT_A_SCORE_CLAIM is imported_again
 
 
 # -----------------------------------------------------------------------------
 # Frozen invariant
 # -----------------------------------------------------------------------------
+
 
 def test_provenance_is_frozen():
     """Provenance is frozen per HISTORICAL_PROVENANCE Catalog #110/#113."""

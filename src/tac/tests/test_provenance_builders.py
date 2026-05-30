@@ -21,6 +21,7 @@ from tac.provenance import (
     build_provenance_for_archive_seed_procedural_generation,
     build_provenance_for_forbidden_out_of_archive_payload,
     build_provenance_for_macos_cpu_advisory,
+    build_provenance_for_macos_mlx_research_signal,
     build_provenance_for_mps_proxy,
     build_provenance_for_predicted,
     build_provenance_for_research_sidecar,
@@ -33,6 +34,7 @@ from tac.provenance import (
 # -----------------------------------------------------------------------------
 # build_provenance_for_archive_member
 # -----------------------------------------------------------------------------
+
 
 @pytest.fixture
 def tmp_archive(tmp_path: Path) -> tuple[Path, str, str]:
@@ -122,6 +124,7 @@ def test_build_archive_member_non_promotable_grade_no_promotion():
 # build_provenance_for_research_sidecar
 # -----------------------------------------------------------------------------
 
+
 def test_build_research_sidecar_constructs(tmp_path):
     sidecar = tmp_path / "state_dict.pt"
     sidecar.write_bytes(b"pretend pt bytes")
@@ -165,6 +168,7 @@ def test_build_research_sidecar_missing_file_uses_placeholder_sha(tmp_path):
 # build_provenance_for_predicted
 # -----------------------------------------------------------------------------
 
+
 def test_build_predicted_requires_model_id():
     with pytest.raises(InvalidProvenanceError):
         build_provenance_for_predicted(model_id="", inputs_sha256="a" * 64)
@@ -187,6 +191,7 @@ def test_build_predicted_constructs():
 # -----------------------------------------------------------------------------
 # contest-compliance procedural-generation boundary builders
 # -----------------------------------------------------------------------------
+
 
 def test_build_archive_seed_procedural_generation_constructs():
     prov = build_provenance_for_archive_seed_procedural_generation(
@@ -279,6 +284,7 @@ def test_register_forbidden_probe_outcome_rejects_wrong_kind(tmp_path: Path):
 # build_provenance_for_macos_cpu_advisory
 # -----------------------------------------------------------------------------
 
+
 def test_build_macos_advisory_constructs():
     prov = build_provenance_for_macos_cpu_advisory(
         archive_sha256="c" * 64,
@@ -298,8 +304,34 @@ def test_build_macos_advisory_refuses_transient_path():
 
 
 # -----------------------------------------------------------------------------
+# build_provenance_for_macos_mlx_research_signal
+# -----------------------------------------------------------------------------
+
+
+def test_build_macos_mlx_research_signal_constructs():
+    prov = build_provenance_for_macos_mlx_research_signal(
+        artifact_sha256="e" * 64,
+        source_path="experiments/results/mlx_probe/replay_bundle.json",
+    )
+    assert prov.evidence_grade == ProvenanceEvidenceGrade.MACOS_MLX_RESEARCH_SIGNAL
+    assert prov.measurement_axis == "[macOS-MLX research-signal]"
+    assert prov.hardware_substrate == "macos_arm64_mlx"
+    assert not prov.promotion_eligible
+    assert not prov.score_claim_valid
+
+
+def test_build_macos_mlx_research_signal_refuses_transient_path():
+    with pytest.raises(InvalidProvenanceError):
+        build_provenance_for_macos_mlx_research_signal(
+            artifact_sha256="e" * 64,
+            source_path="/tmp/mlx_probe.json",
+        )
+
+
+# -----------------------------------------------------------------------------
 # build_provenance_for_mps_proxy
 # -----------------------------------------------------------------------------
+
 
 def test_build_mps_proxy_constructs():
     prov = build_provenance_for_mps_proxy(
@@ -313,6 +345,7 @@ def test_build_mps_proxy_constructs():
 # -----------------------------------------------------------------------------
 # build_provenance_aggregate
 # -----------------------------------------------------------------------------
+
 
 def test_aggregate_empty_raises():
     with pytest.raises(InvalidProvenanceError):
@@ -409,6 +442,7 @@ def test_aggregate_all_promotable_stays_promotable():
 # build_provenance_invalid_byte_identity_artifact
 # -----------------------------------------------------------------------------
 
+
 def test_invalid_byte_identity_explicit_constructor():
     prov = build_provenance_invalid_byte_identity_artifact(
         source_path_a="experiments/results/lane_g_v3/renderer.bin",
@@ -434,6 +468,7 @@ def test_invalid_byte_identity_requires_reason():
 # Provenance.from_archive_zip_member class method
 # -----------------------------------------------------------------------------
 
+
 def test_from_archive_zip_member_classmethod(tmp_archive):
     archive_path, member, expected_sha = tmp_archive
     prov = Provenance.from_archive_zip_member(
@@ -449,6 +484,7 @@ def test_from_archive_zip_member_classmethod(tmp_archive):
 # -----------------------------------------------------------------------------
 # @requires_canonical_provenance decorator
 # -----------------------------------------------------------------------------
+
 
 def test_decorator_passes_when_provenance_returned():
     prov_fixture = build_provenance_for_predicted(model_id="m", inputs_sha256="a" * 64)

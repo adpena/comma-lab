@@ -46,7 +46,7 @@ experience" non-negotiable):
   Enums:
     - ``ProvenanceKind`` (9 canonical kinds including contest-compliance
       procedural-generation boundary sentinels)
-    - ``ProvenanceEvidenceGrade`` (8 canonical grades incl. INVALID
+    - ``ProvenanceEvidenceGrade`` (9 canonical grades incl. INVALID
       sentinel for the #823 byte-identity artifact class)
 
   Dataclasses (both frozen):
@@ -84,7 +84,8 @@ Sister of:
 
 Per CLAUDE.md "Apples-to-apples evidence discipline":
   Every numeric score MUST carry (a) measurement_axis ∈ {[contest-CUDA],
-  [contest-CPU], [macOS-CPU advisory], [MPS-PROXY], [predicted], ...},
+  [contest-CPU], [macOS-CPU advisory], [macOS-MLX research-signal],
+  [MPS-PROXY], [predicted], ...},
   (b) hardware_substrate ∈ {linux_x86_64_t4, modal_a100, macos_arm64, ...},
   (c) source_path + source_sha256 of the artifact that produced it.
   The Provenance dataclass enforces this at __post_init__ — invalid
@@ -92,9 +93,10 @@ Per CLAUDE.md "Apples-to-apples evidence discipline":
 
 Per CLAUDE.md "MPS auth eval is NOISE" + "Submission auth eval — BOTH
 CPU AND CUDA, ON 1:1 CONTEST-COMPLIANT HARDWARE":
-  evidence_grade={MACOS_CPU_ADVISORY, MPS_PROXY, RESEARCH_ONLY} all imply
-  promotion_eligible=False AND score_claim_valid=False. The dataclass
-  refuses to construct a Provenance with these grades + promotion_eligible=True.
+  evidence_grade={MACOS_CPU_ADVISORY, MACOS_MLX_RESEARCH_SIGNAL,
+  MPS_PROXY, RESEARCH_ONLY} all imply promotion_eligible=False AND
+  score_claim_valid=False. The dataclass refuses to construct a Provenance
+  with these grades + promotion_eligible=True.
 
 Per CLAUDE.md "Forbidden component-aliasing for baselines":
   evidence_grade=INVALID_BYTE_IDENTITY_ARTIFACT REQUIRES rejection_reason
@@ -109,8 +111,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import Optional, Tuple
+from enum import StrEnum
 
 # Schema version pinned in module-level constant so external readers can
 # verify compatibility without parsing dataclass internals.
@@ -119,50 +120,54 @@ PROVENANCE_SCHEMA_VERSION: str = "provenance_v1_20260517"
 # Canonical measurement axis vocabulary. The Provenance validator checks
 # membership but does NOT enforce strict closure (e.g. future axes can be
 # added without rewriting the validator).
-CANONICAL_MEASUREMENT_AXES: frozenset[str] = frozenset({
-    "[contest-CUDA]",
-    "[contest-CPU]",
-    "[macOS-CPU advisory]",
-    "[MPS-PROXY]",
-    "[predicted]",
-    "[advisory only]",
-    "[research-signal]",
-    "[diagnostic]",
-    "[byte-anchor]",
-    "[CPU-prep]",
-    "[empirical]",
-})
+CANONICAL_MEASUREMENT_AXES: frozenset[str] = frozenset(
+    {
+        "[contest-CUDA]",
+        "[contest-CPU]",
+        "[macOS-CPU advisory]",
+        "[macOS-MLX research-signal]",
+        "[MPS-PROXY]",
+        "[predicted]",
+        "[advisory only]",
+        "[research-signal]",
+        "[diagnostic]",
+        "[byte-anchor]",
+        "[CPU-prep]",
+        "[empirical]",
+    }
+)
 
 # Canonical hardware substrate vocabulary mirroring
 # tac.substrates._shared.trainer_skeleton.detect_hardware_substrate.
-CANONICAL_HARDWARE_SUBSTRATES: frozenset[str] = frozenset({
-    "linux_x86_64_t4",
-    "linux_x86_64_a10g",
-    "linux_x86_64_a100",
-    "linux_x86_64_h100",
-    "linux_x86_64_4090",
-    "linux_x86_64_l40s",
-    "linux_x86_64_cpu",
-    "linux_x86_64_unknown_cuda",
-    "linux_x86_64_modal_cpu",
-    "macos_arm64",
-    "macos_x86_64",
-    "windows_x86_64",
-    "unknown",
-})
+CANONICAL_HARDWARE_SUBSTRATES: frozenset[str] = frozenset(
+    {
+        "linux_x86_64_t4",
+        "linux_x86_64_a10g",
+        "linux_x86_64_a100",
+        "linux_x86_64_h100",
+        "linux_x86_64_4090",
+        "linux_x86_64_l40s",
+        "linux_x86_64_cpu",
+        "linux_x86_64_unknown_cuda",
+        "linux_x86_64_modal_cpu",
+        "macos_arm64",
+        "macos_arm64_mlx",
+        "macos_x86_64",
+        "windows_x86_64",
+        "unknown",
+    }
+)
 
 # Canonical helper invocation pattern: helpers SHOULD populate this with
 # their fully-qualified function name (e.g. "tac.provenance.builders.build_provenance_for_archive_member")
 # so audit tools can trace which canonical helper created each Provenance.
-_CANONICAL_HELPER_INVOCATION_RE = re.compile(
-    r"^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)+$"
-)
+_CANONICAL_HELPER_INVOCATION_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)+$")
 
 # SHA-256 canonical hex form (64 chars, lowercase).
 _SHA256_HEX_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
-class ProvenanceKind(str, Enum):
+class ProvenanceKind(StrEnum):
     """The canonical kinds of Provenance.
 
     Each kind has distinct invariants enforced in Provenance.__post_init__:
@@ -213,8 +218,8 @@ class ProvenanceKind(str, Enum):
     FORBIDDEN_OUT_OF_ARCHIVE_PAYLOAD = "forbidden_out_of_archive_payload"
 
 
-class ProvenanceEvidenceGrade(str, Enum):
-    """The 8 canonical evidence grades.
+class ProvenanceEvidenceGrade(StrEnum):
+    """The 9 canonical evidence grades.
 
     PROMOTABLE_* grades require kind=CONTEST_ARCHIVE_MEMBER OR
     AGGREGATE_OF_PROVENANCES (all aggregated parts must be promotable).
@@ -228,25 +233,31 @@ class ProvenanceEvidenceGrade(str, Enum):
     PREDICTED = "predicted"
     EMPIRICAL_CPU_NON_GHA = "empirical_cpu_non_gha"
     MACOS_CPU_ADVISORY = "macos_cpu_advisory"
+    MACOS_MLX_RESEARCH_SIGNAL = "macos_mlx_research_signal"
     MPS_PROXY = "mps_proxy"
     RESEARCH_ONLY = "research_only"
     INVALID_BYTE_IDENTITY_ARTIFACT = "invalid_byte_identity_artifact"
 
 
 # Grades that imply non-promotable + invalid score claim.
-_NON_PROMOTABLE_GRADES: frozenset[ProvenanceEvidenceGrade] = frozenset({
-    ProvenanceEvidenceGrade.PREDICTED,
-    ProvenanceEvidenceGrade.MACOS_CPU_ADVISORY,
-    ProvenanceEvidenceGrade.MPS_PROXY,
-    ProvenanceEvidenceGrade.RESEARCH_ONLY,
-    ProvenanceEvidenceGrade.INVALID_BYTE_IDENTITY_ARTIFACT,
-})
+_NON_PROMOTABLE_GRADES: frozenset[ProvenanceEvidenceGrade] = frozenset(
+    {
+        ProvenanceEvidenceGrade.PREDICTED,
+        ProvenanceEvidenceGrade.MACOS_CPU_ADVISORY,
+        ProvenanceEvidenceGrade.MACOS_MLX_RESEARCH_SIGNAL,
+        ProvenanceEvidenceGrade.MPS_PROXY,
+        ProvenanceEvidenceGrade.RESEARCH_ONLY,
+        ProvenanceEvidenceGrade.INVALID_BYTE_IDENTITY_ARTIFACT,
+    }
+)
 
 # Grades that may flow into a contest-promotion decision.
-_PROMOTABLE_GRADES: frozenset[ProvenanceEvidenceGrade] = frozenset({
-    ProvenanceEvidenceGrade.PROMOTABLE_EXACT_CONTEST_CUDA,
-    ProvenanceEvidenceGrade.PROMOTABLE_EXACT_CONTEST_CPU,
-})
+_PROMOTABLE_GRADES: frozenset[ProvenanceEvidenceGrade] = frozenset(
+    {
+        ProvenanceEvidenceGrade.PROMOTABLE_EXACT_CONTEST_CUDA,
+        ProvenanceEvidenceGrade.PROMOTABLE_EXACT_CONTEST_CPU,
+    }
+)
 
 
 class MissingProvenanceError(Exception):
@@ -265,12 +276,9 @@ class InvalidProvenanceError(Exception):
     blockers list so callers that grep the exception text can match.
     """
 
-    def __init__(self, message: str, blockers: Optional[list[str]] = None):
+    def __init__(self, message: str, blockers: list[str] | None = None):
         self.blockers: list[str] = list(blockers or [])
-        if self.blockers:
-            full = f"{message}: {'; '.join(self.blockers)}"
-        else:
-            full = message
+        full = f"{message}: {'; '.join(self.blockers)}" if self.blockers else message
         super().__init__(full)
 
 
@@ -317,6 +325,7 @@ class Provenance:
               * PROMOTABLE_EXACT_CONTEST_CPU requires CPU axis +
                 linux_x86_64_cpu or linux_x86_64_modal_cpu hardware
               * MACOS_CPU_ADVISORY requires macos_arm64 / macos_x86_64
+              * MACOS_MLX_RESEARCH_SIGNAL requires macos_arm64_mlx
               * MPS_PROXY requires macos_arm64
 
         promotion_eligible:
@@ -371,7 +380,7 @@ class Provenance:
 
     contest_archive_zip_path: str = ""
     contest_archive_member_name: str = ""
-    composed_from: Tuple["Provenance", ...] = field(default_factory=tuple)
+    composed_from: tuple[Provenance, ...] = field(default_factory=tuple)
     rejection_reason: str = ""
 
     def __post_init__(self) -> None:
@@ -379,21 +388,15 @@ class Provenance:
 
         # Basic field shape checks
         if not isinstance(self.artifact_kind, ProvenanceKind):
-            blockers.append(
-                f"artifact_kind={self.artifact_kind!r} not ProvenanceKind"
-            )
+            blockers.append(f"artifact_kind={self.artifact_kind!r} not ProvenanceKind")
         if not isinstance(self.evidence_grade, ProvenanceEvidenceGrade):
-            blockers.append(
-                f"evidence_grade={self.evidence_grade!r} not ProvenanceEvidenceGrade"
-            )
+            blockers.append(f"evidence_grade={self.evidence_grade!r} not ProvenanceEvidenceGrade")
         if not self.source_path:
             blockers.append("source_path must be non-empty")
         if not self.source_sha256:
             blockers.append("source_sha256 must be non-empty")
         elif not _SHA256_HEX_RE.match(self.source_sha256):
-            blockers.append(
-                f"source_sha256={self.source_sha256!r} not lowercase 64-char hex"
-            )
+            blockers.append(f"source_sha256={self.source_sha256!r} not lowercase 64-char hex")
         if not self.measurement_axis:
             blockers.append("measurement_axis must be non-empty")
         if not self.hardware_substrate:
@@ -402,60 +405,39 @@ class Provenance:
             blockers.append("captured_at_utc must be non-empty")
         if not self.canonical_helper_invocation:
             blockers.append("canonical_helper_invocation must be non-empty")
-        elif not _CANONICAL_HELPER_INVOCATION_RE.match(
-            self.canonical_helper_invocation
-        ):
+        elif not _CANONICAL_HELPER_INVOCATION_RE.match(self.canonical_helper_invocation):
             blockers.append(
-                f"canonical_helper_invocation={self.canonical_helper_invocation!r}"
-                " not dotted-fully-qualified name"
+                f"canonical_helper_invocation={self.canonical_helper_invocation!r} not dotted-fully-qualified name"
             )
 
         # If basic shape failed we cannot reason about kind invariants.
         if blockers:
-            raise InvalidProvenanceError(
-                "Provenance basic-field validation failed", blockers=blockers
-            )
+            raise InvalidProvenanceError("Provenance basic-field validation failed", blockers=blockers)
 
         # Kind-specific invariants
         if self.artifact_kind == ProvenanceKind.CONTEST_ARCHIVE_MEMBER:
             if not self.contest_archive_zip_path:
-                blockers.append(
-                    "CONTEST_ARCHIVE_MEMBER requires contest_archive_zip_path"
-                )
+                blockers.append("CONTEST_ARCHIVE_MEMBER requires contest_archive_zip_path")
             if not self.contest_archive_member_name:
-                blockers.append(
-                    "CONTEST_ARCHIVE_MEMBER requires contest_archive_member_name"
-                )
+                blockers.append("CONTEST_ARCHIVE_MEMBER requires contest_archive_member_name")
 
         elif self.artifact_kind == ProvenanceKind.RESEARCH_SIDECAR:
             if self.promotion_eligible:
-                blockers.append(
-                    "RESEARCH_SIDECAR cannot be promotion_eligible (Catalog #321)"
-                )
+                blockers.append("RESEARCH_SIDECAR cannot be promotion_eligible (Catalog #321)")
             if self.score_claim_valid:
-                blockers.append(
-                    "RESEARCH_SIDECAR cannot have score_claim_valid (Catalog #321)"
-                )
+                blockers.append("RESEARCH_SIDECAR cannot have score_claim_valid (Catalog #321)")
 
         elif self.artifact_kind == ProvenanceKind.AGGREGATE_OF_PROVENANCES:
             if not self.composed_from:
-                blockers.append(
-                    "AGGREGATE_OF_PROVENANCES requires non-empty composed_from"
-                )
+                blockers.append("AGGREGATE_OF_PROVENANCES requires non-empty composed_from")
             # Catalog #823 byte-identity detector: if 2+ composed_from parts
             # share source_sha256 AND grade != INVALID_BYTE_IDENTITY_ARTIFACT
             # the construction is INVALID.
-            if (
-                self.composed_from
-                and self.evidence_grade
-                != ProvenanceEvidenceGrade.INVALID_BYTE_IDENTITY_ARTIFACT
-            ):
+            if self.composed_from and self.evidence_grade != ProvenanceEvidenceGrade.INVALID_BYTE_IDENTITY_ARTIFACT:
                 shas = [p.source_sha256 for p in self.composed_from]
                 # Detect any duplicate sha256 across composed parts
                 if len(shas) != len(set(shas)):
-                    duplicates = sorted(
-                        {sha for sha in shas if shas.count(sha) > 1}
-                    )
+                    duplicates = sorted({sha for sha in shas if shas.count(sha) > 1})
                     blockers.append(
                         "AGGREGATE_OF_PROVENANCES with byte-identical composed_from"
                         f" parts (duplicate sha256: {duplicates}) MUST set"
@@ -465,17 +447,11 @@ class Provenance:
 
         elif self.artifact_kind == ProvenanceKind.ADVISORY_NON_PROMOTABLE:
             if self.promotion_eligible:
-                blockers.append(
-                    "ADVISORY_NON_PROMOTABLE cannot be promotion_eligible"
-                    " (Catalog #192)"
-                )
+                blockers.append("ADVISORY_NON_PROMOTABLE cannot be promotion_eligible (Catalog #192)")
 
         elif self.artifact_kind == ProvenanceKind.PREDICTED_FROM_MODEL:
             if self.promotion_eligible:
-                blockers.append(
-                    "PREDICTED_FROM_MODEL cannot be promotion_eligible"
-                    " until an empirical anchor lands"
-                )
+                blockers.append("PREDICTED_FROM_MODEL cannot be promotion_eligible until an empirical anchor lands")
         elif self.artifact_kind in (
             ProvenanceKind.PROCEDURAL_GENERATION_FROM_ARCHIVE_SEED,
             ProvenanceKind.WEIGHT_DERIVED_CODEBOOK,
@@ -497,17 +473,11 @@ class Provenance:
                 )
         elif self.artifact_kind == ProvenanceKind.FORBIDDEN_OUT_OF_ARCHIVE_PAYLOAD:
             if self.promotion_eligible:
-                blockers.append(
-                    "FORBIDDEN_OUT_OF_ARCHIVE_PAYLOAD cannot be promotion_eligible"
-                )
+                blockers.append("FORBIDDEN_OUT_OF_ARCHIVE_PAYLOAD cannot be promotion_eligible")
             if self.score_claim_valid:
-                blockers.append(
-                    "FORBIDDEN_OUT_OF_ARCHIVE_PAYLOAD cannot have score_claim_valid"
-                )
+                blockers.append("FORBIDDEN_OUT_OF_ARCHIVE_PAYLOAD cannot have score_claim_valid")
             if not self.rejection_reason:
-                blockers.append(
-                    "FORBIDDEN_OUT_OF_ARCHIVE_PAYLOAD requires non-empty rejection_reason"
-                )
+                blockers.append("FORBIDDEN_OUT_OF_ARCHIVE_PAYLOAD requires non-empty rejection_reason")
 
         # Grade × Kind cross-checks
         if self.evidence_grade in _PROMOTABLE_GRADES:
@@ -520,41 +490,26 @@ class Provenance:
                     " ∈ {CONTEST_ARCHIVE_MEMBER, AGGREGATE_OF_PROVENANCES}"
                 )
             if not self.promotion_eligible:
-                blockers.append(
-                    f"evidence_grade={self.evidence_grade.value} requires"
-                    " promotion_eligible=True"
-                )
+                blockers.append(f"evidence_grade={self.evidence_grade.value} requires promotion_eligible=True")
 
         # Non-promotable grades MUST have promotion_eligible=False
         if self.evidence_grade in _NON_PROMOTABLE_GRADES:
             if self.promotion_eligible:
-                blockers.append(
-                    f"evidence_grade={self.evidence_grade.value} cannot have"
-                    " promotion_eligible=True"
-                )
+                blockers.append(f"evidence_grade={self.evidence_grade.value} cannot have promotion_eligible=True")
             if self.score_claim_valid:
-                blockers.append(
-                    f"evidence_grade={self.evidence_grade.value} cannot have"
-                    " score_claim_valid=True"
-                )
+                blockers.append(f"evidence_grade={self.evidence_grade.value} cannot have score_claim_valid=True")
 
         # INVALID_BYTE_IDENTITY_ARTIFACT requires non-empty rejection_reason
-        if (
-            self.evidence_grade
-            == ProvenanceEvidenceGrade.INVALID_BYTE_IDENTITY_ARTIFACT
-            and not self.rejection_reason
-        ):
-            blockers.append(
-                "INVALID_BYTE_IDENTITY_ARTIFACT requires non-empty rejection_reason"
-            )
+        if self.evidence_grade == ProvenanceEvidenceGrade.INVALID_BYTE_IDENTITY_ARTIFACT and not self.rejection_reason:
+            blockers.append("INVALID_BYTE_IDENTITY_ARTIFACT requires non-empty rejection_reason")
 
         # Axis × hardware × grade canonical pairings
         # CUDA promotable requires CUDA hardware + CUDA axis
         if self.evidence_grade == ProvenanceEvidenceGrade.PROMOTABLE_EXACT_CONTEST_CUDA:
-            if self.measurement_axis != "[contest-CUDA]":  # CUSTODY_VALIDATOR_OK:this_function_IS_provenance_contract_validator_creating_promotable_grade_blockers_per_comprehensive_bug_audit_cascade_20260526
-                blockers.append(
-                    "PROMOTABLE_EXACT_CONTEST_CUDA requires measurement_axis=[contest-CUDA]"
-                )
+            if (
+                self.measurement_axis != "[contest-CUDA]"
+            ):  # CUSTODY_VALIDATOR_OK:this_function_IS_provenance_contract_validator_creating_promotable_grade_blockers_per_comprehensive_bug_audit_cascade_20260526
+                blockers.append("PROMOTABLE_EXACT_CONTEST_CUDA requires measurement_axis=[contest-CUDA]")
             cuda_hardware_prefixes = (
                 "linux_x86_64_t4",
                 "linux_x86_64_a10g",
@@ -564,10 +519,7 @@ class Provenance:
                 "linux_x86_64_l40s",
                 "linux_x86_64_unknown_cuda",
             )
-            if not any(
-                self.hardware_substrate.startswith(p)
-                for p in cuda_hardware_prefixes
-            ):
+            if not any(self.hardware_substrate.startswith(p) for p in cuda_hardware_prefixes):
                 blockers.append(
                     "PROMOTABLE_EXACT_CONTEST_CUDA requires linux_x86_64_* CUDA"
                     f" hardware; got {self.hardware_substrate!r}"
@@ -575,10 +527,10 @@ class Provenance:
 
         # CPU promotable requires CPU hardware + CPU axis
         if self.evidence_grade == ProvenanceEvidenceGrade.PROMOTABLE_EXACT_CONTEST_CPU:
-            if self.measurement_axis != "[contest-CPU]":  # CUSTODY_VALIDATOR_OK:this_function_IS_provenance_contract_validator_creating_promotable_grade_blockers_per_comprehensive_bug_audit_cascade_20260526
-                blockers.append(
-                    "PROMOTABLE_EXACT_CONTEST_CPU requires measurement_axis=[contest-CPU]"
-                )
+            if (
+                self.measurement_axis != "[contest-CPU]"
+            ):  # CUSTODY_VALIDATOR_OK:this_function_IS_provenance_contract_validator_creating_promotable_grade_blockers_per_comprehensive_bug_audit_cascade_20260526
+                blockers.append("PROMOTABLE_EXACT_CONTEST_CPU requires measurement_axis=[contest-CPU]")
             if self.hardware_substrate not in (
                 "linux_x86_64_cpu",
                 "linux_x86_64_modal_cpu",
@@ -592,28 +544,24 @@ class Provenance:
         # macOS / MPS axis × hardware pairings
         if self.evidence_grade == ProvenanceEvidenceGrade.MACOS_CPU_ADVISORY:
             if self.measurement_axis != "[macOS-CPU advisory]":
-                blockers.append(
-                    "MACOS_CPU_ADVISORY requires measurement_axis=[macOS-CPU advisory]"
-                )
+                blockers.append("MACOS_CPU_ADVISORY requires measurement_axis=[macOS-CPU advisory]")
             if not self.hardware_substrate.startswith("macos_"):
-                blockers.append(
-                    "MACOS_CPU_ADVISORY requires macos_* hardware"
-                )
+                blockers.append("MACOS_CPU_ADVISORY requires macos_* hardware")
+
+        if self.evidence_grade == ProvenanceEvidenceGrade.MACOS_MLX_RESEARCH_SIGNAL:
+            if self.measurement_axis != "[macOS-MLX research-signal]":
+                blockers.append("MACOS_MLX_RESEARCH_SIGNAL requires measurement_axis=[macOS-MLX research-signal]")
+            if self.hardware_substrate != "macos_arm64_mlx":
+                blockers.append("MACOS_MLX_RESEARCH_SIGNAL requires macos_arm64_mlx hardware")
 
         if self.evidence_grade == ProvenanceEvidenceGrade.MPS_PROXY:
             if self.measurement_axis != "[MPS-PROXY]":
-                blockers.append(
-                    "MPS_PROXY requires measurement_axis=[MPS-PROXY]"
-                )
+                blockers.append("MPS_PROXY requires measurement_axis=[MPS-PROXY]")
             if self.hardware_substrate != "macos_arm64":
-                blockers.append(
-                    "MPS_PROXY requires macos_arm64 hardware"
-                )
+                blockers.append("MPS_PROXY requires macos_arm64 hardware")
 
         if blockers:
-            raise InvalidProvenanceError(
-                "Provenance invariant validation failed", blockers=blockers
-            )
+            raise InvalidProvenanceError("Provenance invariant validation failed", blockers=blockers)
 
 
 @dataclass(frozen=True)
@@ -642,22 +590,17 @@ class ScoreClaim:
 
         if not isinstance(self.provenance, Provenance):
             blockers.append("provenance must be a Provenance instance")
-            raise InvalidProvenanceError(
-                "ScoreClaim requires canonical Provenance", blockers=blockers
-            )
+            raise InvalidProvenanceError("ScoreClaim requires canonical Provenance", blockers=blockers)
 
         # Auto-derive contest_compliant from Provenance.
         derived_compliant = bool(
-            self.provenance.score_claim_valid
-            and self.provenance.evidence_grade in _PROMOTABLE_GRADES
+            self.provenance.score_claim_valid and self.provenance.evidence_grade in _PROMOTABLE_GRADES
         )
         # If caller passed contest_compliant=True with a non-derived-True
         # Provenance, refuse (catches phantom-score class).
         if self.contest_compliant and not derived_compliant:
             blockers.append(
-                "contest_compliant=True requires"
-                " provenance.score_claim_valid AND"
-                " evidence_grade ∈ promotable grades"
+                "contest_compliant=True requires provenance.score_claim_valid AND evidence_grade ∈ promotable grades"
             )
 
         # Force contest_compliant to the derived value.
@@ -665,9 +608,7 @@ class ScoreClaim:
         object.__setattr__(self, "contest_compliant", derived_compliant)
 
         if blockers:
-            raise InvalidProvenanceError(
-                "ScoreClaim invariant validation failed", blockers=blockers
-            )
+            raise InvalidProvenanceError("ScoreClaim invariant validation failed", blockers=blockers)
 
 
 # Sentinel Provenance for pure-aggregate helpers that legitimately do NOT
@@ -693,14 +634,14 @@ NULL_NOT_A_SCORE_CLAIM: Provenance = Provenance(
 
 
 __all__ = [
-    "PROVENANCE_SCHEMA_VERSION",
-    "CANONICAL_MEASUREMENT_AXES",
     "CANONICAL_HARDWARE_SUBSTRATES",
-    "ProvenanceKind",
-    "ProvenanceEvidenceGrade",
-    "MissingProvenanceError",
-    "InvalidProvenanceError",
-    "Provenance",
-    "ScoreClaim",
+    "CANONICAL_MEASUREMENT_AXES",
     "NULL_NOT_A_SCORE_CLAIM",
+    "PROVENANCE_SCHEMA_VERSION",
+    "InvalidProvenanceError",
+    "MissingProvenanceError",
+    "Provenance",
+    "ProvenanceEvidenceGrade",
+    "ProvenanceKind",
+    "ScoreClaim",
 ]

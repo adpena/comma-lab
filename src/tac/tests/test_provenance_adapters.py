@@ -6,7 +6,6 @@ from __future__ import annotations
 import pytest
 
 from tac.provenance import (
-    NULL_NOT_A_SCORE_CLAIM,
     Provenance,
     ProvenanceEvidenceGrade,
     ProvenanceKind,
@@ -20,10 +19,10 @@ from tac.provenance import (
     wyner_ziv_layer_result_to_provenance,
 )
 
-
 # -----------------------------------------------------------------------------
 # contest_result_to_provenance
 # -----------------------------------------------------------------------------
+
 
 def test_contest_result_promotable_cuda():
     """Legacy ContestResult with archive_path + CUDA axis → PROMOTABLE."""
@@ -64,6 +63,19 @@ def test_contest_result_advisory_macos():
     }
     prov = contest_result_to_provenance(legacy_dict)
     assert prov.evidence_grade == ProvenanceEvidenceGrade.MACOS_CPU_ADVISORY
+    assert not prov.promotion_eligible
+
+
+def test_contest_result_advisory_macos_mlx():
+    legacy_dict = {
+        "archive_sha256": "c" * 64,
+        "axis": "macOS-MLX research-signal",
+        "hardware_substrate": "mlx",
+    }
+    prov = contest_result_to_provenance(legacy_dict)
+    assert prov.evidence_grade == ProvenanceEvidenceGrade.MACOS_MLX_RESEARCH_SIGNAL
+    assert prov.measurement_axis == "[macOS-MLX research-signal]"
+    assert prov.hardware_substrate == "macos_arm64_mlx"
     assert not prov.promotion_eligible
 
 
@@ -120,6 +132,7 @@ def test_contest_result_object_attribute_access():
 # cost_band_anchor_to_provenance
 # -----------------------------------------------------------------------------
 
+
 def test_cost_band_anchor_without_nested_result():
     anchor = {"anchor_path": ".omx/state/cost_band/anchor_1.json"}
     prov = cost_band_anchor_to_provenance(anchor)
@@ -143,6 +156,7 @@ def test_cost_band_anchor_with_nested_contest_result():
 # council_record_to_provenance
 # -----------------------------------------------------------------------------
 
+
 def test_council_record_basic():
     record = {
         "deliberation_id": "feedback_council_x_20260517",
@@ -157,6 +171,7 @@ def test_council_record_basic():
 # -----------------------------------------------------------------------------
 # substrate_composition_row_to_provenance (Catalog #823 detection)
 # -----------------------------------------------------------------------------
+
 
 def test_composition_row_byte_identity_detected():
     """Sister-contended REDO_PIVOT_FIX_ALL surface — verify byte-identity flag."""
@@ -190,6 +205,7 @@ def test_composition_row_clean_returns_research_default():
 # deliverability_proof_to_provenance
 # -----------------------------------------------------------------------------
 
+
 def test_deliverability_proof_basic():
     proof = {"archive_sha256": "7" * 64}
     prov = deliverability_proof_to_provenance(proof)
@@ -206,6 +222,7 @@ def test_deliverability_proof_tier_4_forbidden_demotes():
 # wyner_ziv_layer_result_to_provenance
 # -----------------------------------------------------------------------------
 
+
 def test_wyner_ziv_layer_result_basic():
     result = {"layer_name": "test_layer"}
     prov = wyner_ziv_layer_result_to_provenance(result)
@@ -216,6 +233,7 @@ def test_wyner_ziv_layer_result_basic():
 # -----------------------------------------------------------------------------
 # master_gradient_plan_to_provenance
 # -----------------------------------------------------------------------------
+
 
 def test_master_gradient_plan_with_archive():
     plan = {
@@ -238,6 +256,7 @@ def test_master_gradient_plan_minimal():
 # -----------------------------------------------------------------------------
 # modal_call_id_ledger_event_to_provenance
 # -----------------------------------------------------------------------------
+
 
 def test_modal_call_id_ledger_event_with_score():
     event = {
@@ -263,6 +282,7 @@ def test_modal_call_id_ledger_event_without_score():
 # -----------------------------------------------------------------------------
 # Adapter resilience
 # -----------------------------------------------------------------------------
+
 
 def test_adapter_returns_valid_provenance_for_garbage_input():
     """Adapter should NEVER raise; returns NULL sentinel on total failure."""
