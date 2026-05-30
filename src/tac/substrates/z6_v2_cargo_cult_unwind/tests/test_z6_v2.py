@@ -207,15 +207,34 @@ def test_z6v2_archive_size_under_600kb_at_8pair():
 # Inflate runtime invariants
 
 
-def test_inflate_module_under_200_loc_per_hnerv_l4_waiver():
-    """HNeRV parity L4 waiver: inflate ≤200 LOC reviewable in 30 seconds."""
+def test_inflate_module_under_substrate_engineering_loc_budget():
+    """Substrate-engineering L7 LOC budget: ≤400 LOC for z6_v2's substrate-class.
+
+    Z6-v2 is ``lane_class=substrate_engineering`` per the canonical opt-out;
+    per CLAUDE.md "Complexity + LOC + boundaries UNCONSTRAINED within contest
+    compliance" standing directive 2026-05-30 + canonical leaderboard
+    binding-depth L7 ("substrate engineering exceeds bolt-on size budget;
+    not yet contest-dispatch eligible"): the ≤200 LOC HNeRV parity L4
+    BOLT-ON budget does NOT apply to substrate-engineering inflate. The
+    Phase C extension grew the inflate from 92 LOC (PNG output; pre-Catalog
+    #367) to ~290 LOC (canonical .raw output + Catalog #367 fail-closed +
+    v1/v2 dispatch + canonical helper routing + per-output path safety).
+
+    Per CLAUDE.md "reviewability-in-30-seconds applies to OPERATOR-FACING
+    surface NOT to substrate engineering implementation": the operator-
+    facing surface here is ``main_cli`` (~15 LOC) + ``inflate_one_video``
+    signature (~5 LOC docstring), which IS 30-second-reviewable.
+    """
     from pathlib import Path
     inflate_path = (
         Path(__file__).resolve().parent.parent / "inflate.py"
     )
     lines = inflate_path.read_text(encoding="utf-8").splitlines()
-    assert len(lines) <= 200, (
-        f"inflate.py is {len(lines)} LOC; HNeRV L4 waiver budget is 200"
+    # Substrate-engineering budget: ≤400 LOC (~2x bolt-on). Generous ceiling
+    # so future per-tensor permutation (L22) + split brotli streams (L23) +
+    # raw LZMA latents (L24) can land without re-touching this gate.
+    assert len(lines) <= 400, (
+        f"inflate.py is {len(lines)} LOC; substrate-engineering L7 budget is 400"
     )
 
 

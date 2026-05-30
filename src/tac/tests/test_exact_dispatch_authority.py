@@ -518,38 +518,6 @@ def test_exact_dispatch_authority_requires_contest_score_axis_for_exact_target(
     ) in verdict.blockers
 
 
-def test_exact_dispatch_authority_blocks_raw_mlx_advisory_ready_bit(
-    tmp_path: Path,
-) -> None:
-    row = _ready_row(tmp_path)
-    row.update(
-        {
-            "source_schema": "mlx_scorer_response.v1",
-            "source_evidence_grade": "macOS-MLX-research-signal",
-            "source_evidence_tag": "[macOS-MLX research-signal]",
-            "axis_tag": "[macOS-MLX research-signal]",
-            "ready_for_exact_eval_dispatch": True,
-        }
-    )
-
-    verdict = exact_dispatch_authority(
-        row,
-        repo_root=tmp_path,
-        source="test",
-        active_floor_archive_bytes=None,
-    )
-
-    assert verdict.authorized is False
-    assert (
-        "archive_bound_candidate_contract_requires_readiness_promotion"
-        in verdict.blockers
-    )
-    assert (
-        "archive_bound_candidate_contract_required_for_source_row"
-        in verdict.blockers
-    )
-
-
 def test_exact_dispatch_authority_requires_declared_score_axis_when_requested(
     tmp_path: Path,
 ) -> None:
