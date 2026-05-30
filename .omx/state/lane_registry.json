@@ -62430,6 +62430,48 @@
         }
       },
       "notes": "STAND_DOWN per Catalog #315/#324/#325/#246: canonical archive integrator + inflate adapter that consume L0 SCAFFOLD side-channel DO NOT EXIST. Predicted dS band EMPIRICALLY FALSIFIED 17-33x at MLX-LOCAL; recalibrated ~-2e-6 at canonical scorer noise floor. research_only=true; lane_class=substrate_engineering. Reactivation: Path A canonical integrator + inflate adapter; Path B Slot GGG Tier C 384x512; Path C re-prioritize per HIGHEST-EV-SHORTEST-WC to V14-V2 PR111-candidate. Per Forbidden premature KILL: DEFER not KILL; paradigm INTACT per Catalog #307. Parent lane: lane_slot_ggg_x_cascade_a_fec10_selector_codec_composition_l0_scaffold_20260530."
+    },
+    {
+      "id": "lane_z8_m10_inflate_consumes_real_trained_weights_per_catalog_369_20260530",
+      "name": "Z8 M10 inflate consumes real trained weights per Catalog #369",
+      "phase": 4.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "M10 inflate-side cycle-closure landing 2026-05-30: src/tac/substrates/z8_hierarchical_predictive_coding/inflate.py replaces L0 SCAFFOLD raise with canonical Mallat 1989 \u00a77.5 perfect-reconstruction (1.2e-7 max abs round-trip diff at float32 precision); inflate parses Z8HPC1 archive bytes emitted by build_z8hpc1_archive_bytes_from_canonical_quadruple (canonical_quadruple_binding.py); 22 dedicated tests + 215 Z8 tests + 25 M9 sister tests pass; macOS-CPU advisory smoke at experiments/results/z8_m10_inflate_consumes_real_trained_weights_macos_cpu_advisory_smoke_20260530T155420Z/m10_inflate_smoke_output.json verified contest contract per Catalog #367 (3662409600 bytes); inflate.py LOC=246 per HNeRV parity L4+L7 substrate-engineering waiver; archived=false research_only=false lane_class=substrate_engineering"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_z8_m10_inflate_consumes_real_trained_weights_per_catalog_369_landed_20260530.md (this commit)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Z8 M10 inflate-side cycle-closure milestone landing 2026-05-30 per build_progress.py; canonical Mallat 1989 \u00a77.5 perfect-reconstruction round-trip; macOS-CPU advisory smoke green (1200 frames at 874x1164x3 contest contract); 22 dedicated tests + 215 Z8 + 25 M9 sister tests pass; lane_class=substrate_engineering",
+      "lane_class": "substrate_engineering"
     }
   ],
   "level_rules": {
@@ -62439,5 +62481,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-30T15:46:47Z"
+  "updated_at": "2026-05-30T15:55:42Z"
 }

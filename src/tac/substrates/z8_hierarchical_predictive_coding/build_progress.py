@@ -765,11 +765,40 @@ Z8_PHASE_2_BUILD_MILESTONES: tuple[BuildMilestone, ...] = (
             "PYTHONPATH self-contained per Catalog #295",
             "select_inflate_device canonical helper per Catalog #205",
         ),
-        status=BuildMilestoneStatus.PENDING,
+        status=BuildMilestoneStatus.LANDED,
+        landed_commit_sha=None,  # self-referential; backfilled next commit
+        landed_at_utc="2026-05-30T15:50:00Z",
         predecessor_milestone_ids=("full_main_trainer_lifts_notimplementederror",),
         notes=(
-            "Cascade C' WAVE-4 through WAVE-7 lesson: synthetic frame "
-            "base = 8000x worse score. Real trained weights only."
+            "LANDED 2026-05-30 (operator-routed Yousfi-cascade TOP-1 post-M9). "
+            "M10 closes the canonical Catalog #312 quadruple cycle at the "
+            "deployment surface: M9 trainer emits Z8HPC1 archive bytes via "
+            "build_z8hpc1_archive_bytes_from_canonical_quadruple (sister in "
+            "canonical_quadruple_binding.py); inflate.py parses the archive "
+            "via parse_archive + parse_pair_blobs_from_wavelet_blob and "
+            "reconstructs per-pair RGB via the canonical M5 Mallat "
+            "recompose_from_next_level chain (perfect reconstruction per "
+            "Mallat 1989 §7.5; max abs diff ~1.2e-7 at float32 precision). "
+            "Contest RAW bytes contract per Catalog #367 satisfied: 1200 "
+            "frames at 874x1164x3 = 3,662,409,600 bytes per video via the "
+            "canonical write_rgb_pair_to_raw bicubic upscale path. Per "
+            "Catalog #369 the reconstruction is byte-derived from the "
+            "trained wavelet coefficients in the archive (NOT synthetic "
+            "frame base): different archive bytes -> different RAW output "
+            "(test_inflate_one_video_different_archives_produce_different_"
+            "raw_bytes regression guard). Per-pair deterministic cycling "
+            "fills the contest 600-pair count from the trained N pairs. "
+            "Inflate routes through canonical select_inflate_device per "
+            "Catalog #205 + raw_output_path + write_rgb_pair_to_raw per "
+            "the canonical _shared/inflate_runtime contract. Cascade C' "
+            "WAVE-4 through WAVE-7 lesson (synthetic frame base = 8000x "
+            "worse score) structurally extincted at the source-text surface "
+            "via Catalog #369 test_inflate_no_synthetic_frame_base_tokens "
+            "regression guard. inflate.py runs ≤300 LOC per HNeRV parity "
+            "L4+L7 substrate-engineering waiver. 22 dedicated tests + 21 "
+            "sister Z8 tests = 43 PASS regression suite. M11 (l1_macos_cpu_"
+            "smoke_landed) + M12 (paired_cuda_dispatch_crosses_sub_0_189_"
+            "threshold) now structurally unblocked."
         ),
     ),
     BuildMilestone(

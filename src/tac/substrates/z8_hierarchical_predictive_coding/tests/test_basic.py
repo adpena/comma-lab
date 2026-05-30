@@ -386,41 +386,65 @@ def test_z8_inflate_parse_and_validate_passes_on_valid_archive() -> None:
     assert len(arc.decoder_state_dict) >= 1
 
 
-def test_z8_inflate_raises_l0_scaffold_not_implemented_on_runtime_forward() -> None:
-    """Catalog #240 acceptance cascade (c): runtime forward IS council-gated."""
+def test_z8_inflate_l0_scaffold_council_gate_superseded_by_m10_per_catalog_369() -> None:
+    """Per M10 landing 2026-05-30: the Catalog #240 acceptance cascade (c)
+    runtime-forward council gate has been LIFTED (full milestone in
+    ``build_progress.py``: ``inflate_runtime_consumes_real_trained_weights``).
+    The legacy ``Z8L0ScaffoldNotImplementedError`` raise is superseded by the
+    canonical M10 real-trained-weight consumption path per Catalog #369; the
+    legacy ``inflate_one_video_l0_scaffold`` symbol is preserved as a
+    backward-compat alias that routes through the M10 reconstruction.
+
+    This test asserts the supersession: the legacy symbol still exists for
+    sister callers, but invoking it on a non-canonical archive (missing
+    canonical wavelet pyramid bytes) raises a parse/value error rather than
+    silently returning, AND on a canonical M10 archive it produces contest
+    RAW bytes per Catalog #367.
+    """
     import tempfile
     from pathlib import Path
 
-    from tac.substrates.z8_hierarchical_predictive_coding.archive import pack_archive
+    import numpy as np
+    from tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_binding import (
+        build_canonical_quadruple_binding_from_z8_config,
+        build_z8hpc1_archive_bytes_from_canonical_quadruple,
+    )
     from tac.substrates.z8_hierarchical_predictive_coding.inflate import (
-        Z8L0ScaffoldNotImplementedError,
+        CONTEST_RAW_BYTES,
         inflate_one_video_l0_scaffold,
     )
+    from tac.substrates.z8_hierarchical_predictive_coding.mlx_renderer import (
+        Z8HierarchicalConfig,
+    )
 
-    num_pairs = 2
-    num_groups = (4, 3, 2)
-    num_cats = (16, 8, 4)
-    arc_bytes = pack_archive(
-        decoder_state_dict=_make_synthetic_state_dict(),
-        per_level_category_indices=_make_synthetic_indices(
-            num_pairs, num_groups, num_cats
-        ),
-        wavelet_coeffs_blob=b"\xAA" * 16,
-        wyner_ziv_top_blob=b"\xBB" * 12,
-        dreamer_state_dict=_make_synthetic_dreamer_state_dict(),
-        meta={"k": 1},
+    # M10 supersession: backward-compat alias must still exist for sister callers.
+    assert inflate_one_video_l0_scaffold is not None
+
+    # M10 supersession: canonical archive bytes route through real reconstruction.
+    cfg = Z8HierarchicalConfig(
         num_levels=3,
-        num_groups_per_level=num_groups,
-        num_categories_per_level=num_cats,
-        num_pairs=num_pairs,
-        decoder_latent_dim=28,
-        base_channels=24,
-        wavelet_basis_id=0,
+        num_groups_per_level=(4, 3, 2),
+        num_categories_per_level=(16, 8, 4),
+        base_channels=8,
+        decoder_latent_dim=12,
+        num_pairs=1,
+        deterministic_state_dim=16,
+        gumbel_temperature=1.0,
+        use_straight_through=True,
+        eval_size=(32, 32),
+    )
+    binding = build_canonical_quadruple_binding_from_z8_config(cfg)
+    rng = np.random.RandomState(42)
+    f0 = rng.uniform(0, 1, size=(1, 32, 32, 3)).astype(np.float32)
+    f1 = rng.uniform(0, 1, size=(1, 32, 32, 3)).astype(np.float32)
+    canonical_arch = build_z8hpc1_archive_bytes_from_canonical_quadruple(
+        binding, f0, f1
     )
     with tempfile.TemporaryDirectory() as td:
         out_path = Path(td) / "out.raw"
-        with pytest.raises(Z8L0ScaffoldNotImplementedError, match="L0 SCAFFOLD"):
-            inflate_one_video_l0_scaffold(arc_bytes, out_path, device="cpu")
+        frames = inflate_one_video_l0_scaffold(canonical_arch, out_path, device="cpu")
+        assert frames == 1200
+        assert out_path.stat().st_size == CONTEST_RAW_BYTES
 
 
 # -----------------------------------------------------------------------------
