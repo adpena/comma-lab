@@ -1,0 +1,523 @@
+{
+  "action": "run_worker",
+  "allowed_use": "queue_supervisor_local_execution_telemetry_only",
+  "automation_blockers": [],
+  "execute": true,
+  "final_reason_if_stopping": "worker_command_failed",
+  "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_exact_eval_authority",
+  "generated_at_utc": "2026-05-30T19:06:36Z",
+  "max_parallel": 4,
+  "promotable": false,
+  "promotion_eligible": false,
+  "queue_id": "materializer_exec_materializer_work_queue_9c04e37c9c",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "recovery_result": null,
+  "schema": "experiment_queue_supervisor_tick.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "summary": {
+    "allowed_use": "operator_queue_control_and_local_telemetry_only",
+    "auto_parallelism": {
+      "idle_declared_resources": {},
+      "local_only": {
+        "max_parallel": 18,
+        "resource_limits": {
+          "local_cpu": 18
+        }
+      },
+      "used_resource_kinds": [
+        "local_cpu"
+      ],
+      "with_cloud": {
+        "max_parallel": 18,
+        "resource_limits": {
+          "local_cpu": 18
+        }
+      }
+    },
+    "automation_blockers": [
+      "queue_observation_unhealthy",
+      "queue_has_failed_steps:2"
+    ],
+    "automation_verdict": "needs_recovery_or_operator_attention",
+    "blocked_steps": [],
+    "blocker_count": 1,
+    "blockers": [
+      "experiment_queue_observation_failed_steps:2"
+    ],
+    "failed_steps": [
+      "materializer_work_frontier_rate_attack_archive_zip_repack_v1.materialize_local_proof_chain",
+      "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1.materialize_local_proof_chain"
+    ],
+    "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_exact_eval_authority",
+    "healthy": false,
+    "mode": "running",
+    "orphaned_step_count": 0,
+    "pause_command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/frontier_final_rate_attack_current_cpu_20260528T0508Z/materializer_execution_queue.json",
+      "--state",
+      ".omx/state/experiment_queue_materializer_exec_materializer_work_queue_9c04e37c9c.sqlite",
+      "control",
+      "paused",
+      "--reason",
+      "operator_pause_from_queue_control"
+    ],
+    "performance": {
+      "by_resource_kind": {
+        "local_cpu": {
+          "artifact_record_bytes_mean": 14448.5,
+          "artifact_record_bytes_sum": 28897,
+          "artifact_record_count": 6,
+          "artifact_record_raw_bytes_mean": 14448.5,
+          "artifact_record_raw_bytes_sum": 28897,
+          "backlog_keys": [
+            "frontier_rate_attack:archive_zip_repack_v1",
+            "frontier_rate_attack:packet_member_zip_header_elide_v1"
+          ],
+          "candidate_ids": [
+            "current_contest_cpu_frontier"
+          ],
+          "dominant_resource_kind": "local_cpu",
+          "elapsed_seconds_max": 0.26513162499759346,
+          "elapsed_seconds_mean": 0.26283031250932254,
+          "elapsed_seconds_min": 0.2605290000210516,
+          "elapsed_seconds_sum": 0.5256606250186451,
+          "experiment_ids": [
+            "materializer_work_frontier_rate_attack_archive_zip_repack_v1",
+            "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+          ],
+          "failure_count": 2,
+          "log_bytes_mean": 311.0,
+          "log_bytes_sum": 622,
+          "resource_kind_counts": {
+            "local_cpu": 2
+          },
+          "run_count": 2,
+          "source_selection_ids": [
+            "current_contest_cpu_frontier"
+          ],
+          "source_unit_ids": [
+            "current_contest_cpu_frontier"
+          ],
+          "step_ids": [
+            "materialize_local_proof_chain"
+          ],
+          "success_count": 0,
+          "work_ids": [
+            "materializer_work_frontier_rate_attack_archive_zip_repack_v1",
+            "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+          ]
+        }
+      },
+      "event_count": 2,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "experiment_queue_performance_summary.v1",
+      "score_claim": false,
+      "telemetry_only": true
+    },
+    "promotable": false,
+    "promotion_eligible": false,
+    "queue_id": "materializer_exec_materializer_work_queue_9c04e37c9c",
+    "queue_path": ".omx/research/frontier_final_rate_attack_current_cpu_20260528T0508Z/materializer_execution_queue.json",
+    "queued_step_count": 1,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "recommended_actions": [
+      {
+        "action": "run_worker",
+        "command": [
+          ".venv/bin/python",
+          "tools/experiment_queue.py",
+          "--queue",
+          ".omx/research/frontier_final_rate_attack_current_cpu_20260528T0508Z/materializer_execution_queue.json",
+          "--state",
+          ".omx/state/experiment_queue_materializer_exec_materializer_work_queue_9c04e37c9c.sqlite",
+          "run-worker",
+          "--execute",
+          "--max-steps",
+          "2"
+        ],
+        "rank": 50,
+        "reason": "1_queued_steps_available"
+      },
+      {
+        "action": "inspect_failed_or_blocked",
+        "blocked_steps": [],
+        "command": [
+          ".venv/bin/python",
+          "tools/experiment_queue.py",
+          "--queue",
+          ".omx/research/frontier_final_rate_attack_current_cpu_20260528T0508Z/materializer_execution_queue.json",
+          "--state",
+          ".omx/state/experiment_queue_materializer_exec_materializer_work_queue_9c04e37c9c.sqlite",
+          "observe",
+          "--format",
+          "markdown",
+          "--tail-lines",
+          "80"
+        ],
+        "failed_steps": [
+          "materializer_work_frontier_rate_attack_archive_zip_repack_v1.materialize_local_proof_chain",
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1.materialize_local_proof_chain"
+        ],
+        "rank": 70,
+        "reason": "failed=2 blocked=0"
+      }
+    ],
+    "resume_command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/frontier_final_rate_attack_current_cpu_20260528T0508Z/materializer_execution_queue.json",
+      "--state",
+      ".omx/state/experiment_queue_materializer_exec_materializer_work_queue_9c04e37c9c.sqlite",
+      "run-worker",
+      "--execute",
+      "--max-steps",
+      "2"
+    ],
+    "running_steps": [],
+    "runtime_policy": {
+      "advisory_only": true,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "recommended_max_concurrency": {
+        "local_cpu": 18
+      },
+      "recommended_timeout_seconds_by_resource": {
+        "local_cpu": 30
+      },
+      "schema": "scheduler_runtime_policy.v1",
+      "score_claim": false
+    },
+    "schema": "experiment_queue_control_surface.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "state": ".omx/state/experiment_queue_materializer_exec_materializer_work_queue_9c04e37c9c.sqlite",
+    "state_watermark": {
+      "control_mode": "running",
+      "control_updated_at_utc": "2026-05-30T19:06:23Z",
+      "event_count": 11,
+      "max_event_id": 11,
+      "max_step_updated_at_utc": "2026-05-30T19:06:36Z",
+      "queue_id": "materializer_exec_materializer_work_queue_9c04e37c9c",
+      "schema": "experiment_queue_state_watermark.v1",
+      "state_path": ".omx/state/experiment_queue_materializer_exec_materializer_work_queue_9c04e37c9c.sqlite",
+      "step_state_count": 3
+    },
+    "status_counts": {
+      "failed": 2,
+      "queued": 1
+    },
+    "stop_command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/frontier_final_rate_attack_current_cpu_20260528T0508Z/materializer_execution_queue.json",
+      "--state",
+      ".omx/state/experiment_queue_materializer_exec_materializer_work_queue_9c04e37c9c.sqlite",
+      "control",
+      "frozen",
+      "--reason",
+      "operator_stop_freeze_from_queue_control"
+    ],
+    "supervise_command": [
+      ".venv/bin/python",
+      "tools/queue_supervisor.py",
+      "--queue",
+      ".omx/research/frontier_final_rate_attack_current_cpu_20260528T0508Z/materializer_execution_queue.json",
+      "--state",
+      ".omx/state/experiment_queue_materializer_exec_materializer_work_queue_9c04e37c9c.sqlite",
+      "--output-dir",
+      ".omx/research/queue_supervisor_materializer_exec_materializer_work_queue_9c04e37c9c",
+      "--max-ticks",
+      "16",
+      "--max-steps-per-tick",
+      "2",
+      "--max-parallel",
+      "auto",
+      "--execute"
+    ]
+  },
+  "tick_index": 0,
+  "worker_result": {
+    "command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/frontier_final_rate_attack_current_cpu_20260528T0508Z/materializer_execution_queue.json",
+      "--state",
+      ".omx/state/experiment_queue_materializer_exec_materializer_work_queue_9c04e37c9c.sqlite",
+      "run-worker",
+      "--execute",
+      "--max-steps",
+      "2",
+      "--max-parallel",
+      "4",
+      "--noncanonical-state-rationale",
+      "queue_supervisor_explicit_state_path_prevents_default_worker_collision"
+    ],
+    "elapsed_seconds": 0.9206920409924351,
+    "failed": true,
+    "json_payload": {
+      "allow_cloud": false,
+      "claim_refused_count": 0,
+      "execute": true,
+      "failure_count": 2,
+      "idle_cycles": 0,
+      "max_experiments": null,
+      "max_parallel": 4,
+      "noncanonical_state_rationale": "queue_supervisor_explicit_state_path_prevents_default_worker_collision",
+      "orphaned_state_rationale": null,
+      "planned_steps": [],
+      "queue_id": "materializer_exec_materializer_work_queue_9c04e37c9c",
+      "requested_max_parallel": 4,
+      "resource_limits": {
+        "local_cpu": 18
+      },
+      "schema": "experiment_queue_worker_result.v1",
+      "stale_running_reconciliations": [],
+      "started_at_utc": "2026-05-30T19:06:35Z",
+      "started_experiment_ids": [
+        "materializer_work_frontier_rate_attack_archive_zip_repack_v1",
+        "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+      ],
+      "state": ".omx/state/experiment_queue_materializer_exec_materializer_work_queue_9c04e37c9c.sqlite",
+      "step_results": [
+        {
+          "command": [
+            ".venv/bin/python",
+            "tools/run_family_agnostic_materializer_sweep.py",
+            "--target-kind",
+            "archive_zip_repack_v1",
+            "--output-dir",
+            "/Users/adpena/Projects/pact/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_current_cpu_20260528T0508Z/archive_zip_repack_v1",
+            "--output-json",
+            "/Users/adpena/Projects/pact/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_current_cpu_20260528T0508Z/archive_zip_repack_v1/sweep.json",
+            "--observation-jsonl",
+            "/Users/adpena/Projects/pact/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_current_cpu_20260528T0508Z/archive_zip_repack_v1/observations.jsonl",
+            "--archive",
+            "current_contest_cpu_frontier=experiments/results/feca_selector_reparameterized_scale64_alpha1_rebuilt_20260528Tlocal/submission_dir/archive.zip",
+            "--zip-compression-method",
+            "stored",
+            "--zip-compression-method",
+            "deflated",
+            "--zip-compresslevel",
+            "1",
+            "--zip-compresslevel",
+            "6",
+            "--zip-compresslevel",
+            "9",
+            "--min-free-bytes",
+            "100000000000",
+            "--allow-overwrite"
+          ],
+          "elapsed_seconds": 0.26513162499759346,
+          "executed": true,
+          "execution_error": null,
+          "failed_postconditions": [],
+          "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/materializer_exec_materializer_work_queue_9c04e37c9c/materializer_work_frontier_rate_attack_archive_zip_repack_v1/materialize_local_proof_chain/20260530T190635Z_0d6ee62834492394.log",
+          "pid": 1179,
+          "postcondition_errors": [],
+          "ready_step": {
+            "command": [
+              ".venv/bin/python",
+              "tools/run_family_agnostic_materializer_sweep.py",
+              "--target-kind",
+              "archive_zip_repack_v1",
+              "--output-dir",
+              "/Users/adpena/Projects/pact/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_current_cpu_20260528T0508Z/archive_zip_repack_v1",
+              "--output-json",
+              "/Users/adpena/Projects/pact/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_current_cpu_20260528T0508Z/archive_zip_repack_v1/sweep.json",
+              "--observation-jsonl",
+              "/Users/adpena/Projects/pact/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_current_cpu_20260528T0508Z/archive_zip_repack_v1/observations.jsonl",
+              "--archive",
+              "current_contest_cpu_frontier=experiments/results/feca_selector_reparameterized_scale64_alpha1_rebuilt_20260528Tlocal/submission_dir/archive.zip",
+              "--zip-compression-method",
+              "stored",
+              "--zip-compression-method",
+              "deflated",
+              "--zip-compresslevel",
+              "1",
+              "--zip-compresslevel",
+              "6",
+              "--zip-compresslevel",
+              "9",
+              "--min-free-bytes",
+              "100000000000",
+              "--allow-overwrite"
+            ],
+            "experiment_id": "materializer_work_frontier_rate_attack_archive_zip_repack_v1",
+            "priority": 1,
+            "queue_id": "materializer_exec_materializer_work_queue_9c04e37c9c",
+            "resource_kind": "local_cpu",
+            "step_hashes": {
+              "command_hash": "5759a91c4642866b449e799050d434bae5c35d7d67ca1685cd3053fe1341b0fc",
+              "definition_hash": "68d144f854d7f9e646a2e69892ab2f59f28eb01334f865d070c7ed4721c98f4a",
+              "postcondition_hash": "b9864d23ffb23d552d5113bad3902501f3a2381191d43f772b5760c1a452dbaf"
+            },
+            "step_id": "materialize_local_proof_chain"
+          },
+          "resource_kind": "local_cpu",
+          "returncode": 2,
+          "succeeded": false,
+          "telemetry": {
+            "artifact_record_count": 3,
+            "artifact_records": [
+              {
+                "bytes": 192,
+                "exists": true,
+                "is_dir": true,
+                "is_file": false,
+                "is_symlink": false,
+                "mtime_utc": "2026-05-28T05:33:49Z",
+                "path": "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_current_cpu_20260528T0508Z/archive_zip_repack_v1",
+                "source": "step.telemetry.artifact_paths"
+              },
+              {
+                "bytes": 8393,
+                "exists": true,
+                "is_dir": false,
+                "is_file": true,
+                "is_symlink": false,
+                "mtime_utc": "2026-05-28T05:33:49Z",
+                "path": "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_current_cpu_20260528T0508Z/archive_zip_repack_v1/sweep.json",
+                "source": "step.telemetry.artifact_paths"
+              },
+              {
+                "bytes": 5849,
+                "exists": true,
+                "is_dir": false,
+                "is_file": true,
+                "is_symlink": false,
+                "mtime_utc": "2026-05-28T05:33:49Z",
+                "path": "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_current_cpu_20260528T0508Z/archive_zip_repack_v1/observations.jsonl",
+                "source": "step.telemetry.artifact_paths"
+              }
+            ],
+            "log_bytes": 305,
+            "recursive_truncated": false,
+            "schema": "experiment_queue_step_telemetry.v1"
+          },
+          "timed_out": false,
+          "worker_run_id": "0d6ee62834492394"
+        },
+        {
+          "command": [
+            ".venv/bin/python",
+            "tools/run_family_agnostic_materializer_sweep.py",
+            "--target-kind",
+            "packet_member_zip_header_elide_v1",
+            "--output-dir",
+            "/Users/adpena/Projects/pact/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_current_cpu_20260528T0508Z/packet_member_zip_header_elide_v1",
+            "--output-json",
+            "/Users/adpena/Projects/pact/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_current_cpu_20260528T0508Z/packet_member_zip_header_elide_v1/sweep.json",
+            "--observation-jsonl",
+            "/Users/adpena/Projects/pact/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_current_cpu_20260528T0508Z/packet_member_zip_header_elide_v1/observations.jsonl",
+            "--archive",
+            "current_contest_cpu_frontier=experiments/results/feca_selector_reparameterized_scale64_alpha1_rebuilt_20260528Tlocal/submission_dir/archive.zip",
+            "--member-name",
+            "x",
+            "--min-free-bytes",
+            "100000000000",
+            "--allow-overwrite"
+          ],
+          "elapsed_seconds": 0.2605290000210516,
+          "executed": true,
+          "execution_error": null,
+          "failed_postconditions": [],
+          "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/materializer_exec_materializer_work_queue_9c04e37c9c/materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1/materialize_local_proof_chain/20260530T190635Z_db104f927ce42ec3.log",
+          "pid": 1180,
+          "postcondition_errors": [],
+          "ready_step": {
+            "command": [
+              ".venv/bin/python",
+              "tools/run_family_agnostic_materializer_sweep.py",
+              "--target-kind",
+              "packet_member_zip_header_elide_v1",
+              "--output-dir",
+              "/Users/adpena/Projects/pact/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_current_cpu_20260528T0508Z/packet_member_zip_header_elide_v1",
+              "--output-json",
+              "/Users/adpena/Projects/pact/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_current_cpu_20260528T0508Z/packet_member_zip_header_elide_v1/sweep.json",
+              "--observation-jsonl",
+              "/Users/adpena/Projects/pact/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_current_cpu_20260528T0508Z/packet_member_zip_header_elide_v1/observations.jsonl",
+              "--archive",
+              "current_contest_cpu_frontier=experiments/results/feca_selector_reparameterized_scale64_alpha1_rebuilt_20260528Tlocal/submission_dir/archive.zip",
+              "--member-name",
+              "x",
+              "--min-free-bytes",
+              "100000000000",
+              "--allow-overwrite"
+            ],
+            "experiment_id": "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1",
+            "priority": 2,
+            "queue_id": "materializer_exec_materializer_work_queue_9c04e37c9c",
+            "resource_kind": "local_cpu",
+            "step_hashes": {
+              "command_hash": "51ec268c4394037b9441ee114e17db50bcc0cee64dcee803860d040686d07ef8",
+              "definition_hash": "ea3d213de50f0b219e2425f85795b51a59647a8d9aae20bbf98be7972c4690b6",
+              "postcondition_hash": "18f82086965aa1c5a1c75c74c6b4b9675720892107b755b2d52a0fed58797efb"
+            },
+            "step_id": "materialize_local_proof_chain"
+          },
+          "resource_kind": "local_cpu",
+          "returncode": 2,
+          "succeeded": false,
+          "telemetry": {
+            "artifact_record_count": 3,
+            "artifact_records": [
+              {
+                "bytes": 192,
+                "exists": true,
+                "is_dir": true,
+                "is_file": false,
+                "is_symlink": false,
+                "mtime_utc": "2026-05-28T05:33:49Z",
+                "path": "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_current_cpu_20260528T0508Z/packet_member_zip_header_elide_v1",
+                "source": "step.telemetry.artifact_paths"
+              },
+              {
+                "bytes": 8415,
+                "exists": true,
+                "is_dir": false,
+                "is_file": true,
+                "is_symlink": false,
+                "mtime_utc": "2026-05-28T05:33:49Z",
+                "path": "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_current_cpu_20260528T0508Z/packet_member_zip_header_elide_v1/sweep.json",
+                "source": "step.telemetry.artifact_paths"
+              },
+              {
+                "bytes": 5856,
+                "exists": true,
+                "is_dir": false,
+                "is_file": true,
+                "is_symlink": false,
+                "mtime_utc": "2026-05-28T05:33:49Z",
+                "path": "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_current_cpu_20260528T0508Z/packet_member_zip_header_elide_v1/observations.jsonl",
+                "source": "step.telemetry.artifact_paths"
+              }
+            ],
+            "log_bytes": 317,
+            "recursive_truncated": false,
+            "schema": "experiment_queue_step_telemetry.v1"
+          },
+          "timed_out": false,
+          "worker_run_id": "db104f927ce42ec3"
+        }
+      ],
+      "steps_started": 2,
+      "stop_reason": "max_steps_reached",
+      "stop_signals": [],
+      "success_count": 0
+    },
+    "label": "run_worker",
+    "returncode": 2,
+    "stderr_tail": "",
+    "stdout_tail": "ecution_error\": null,\n      \"failed_postconditions\": [],\n      \"log_path\": \"/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/materializer_exec_materializer_work_queue_9c04e37c9c/materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1/materialize_local_proof_chain/20260530T190635Z_db104f927ce42ec3.log\",\n      \"pid\": 1180,\n      \"postcondition_errors\": [],\n      \"ready_step\": {\n        \"command\": [\n          \".venv/bin/python\",\n          \"tools/run_family_agnostic_materializer_sweep.py\",\n          \"--target-kind\",\n          \"packet_member_zip_header_elide_v1\",\n          \"--output-dir\",\n          \"/Users/adpena/Projects/pact/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_current_cpu_20260528T0508Z/packet_member_zip_header_elide_v1\",\n          \"--output-json\",\n          \"/Users/adpena/Projects/pact/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_current_cpu_20260528T0508Z/packet_member_zip_header_elide_v1/sweep.json\",\n          \"--observation-jsonl\",\n          \"/Users/adpena/Projects/pact/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_current_cpu_20260528T0508Z/packet_member_zip_header_elide_v1/observations.jsonl\",\n          \"--archive\",\n          \"current_contest_cpu_frontier=experiments/results/feca_selector_reparameterized_scale64_alpha1_rebuilt_20260528Tlocal/submission_dir/archive.zip\",\n          \"--member-name\",\n          \"x\",\n          \"--min-free-bytes\",\n          \"100000000000\",\n          \"--allow-overwrite\"\n        ],\n        \"experiment_id\": \"materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1\",\n        \"priority\": 2,\n        \"queue_id\": \"materializer_exec_materializer_work_queue_9c04e37c9c\",\n        \"resource_kind\": \"local_cpu\",\n        \"step_hashes\": {\n          \"command_hash\": \"51ec268c4394037b9441ee114e17db50bcc0cee64dcee803860d040686d07ef8\",\n          \"definition_hash\": \"ea3d213de50f0b219e2425f85795b51a59647a8d9aae20bbf98be7972c4690b6\",\n          \"postcondition_hash\": \"18f82086965aa1c5a1c75c74c6b4b9675720892107b755b2d52a0fed58797efb\"\n        },\n        \"step_id\": \"materialize_local_proof_chain\"\n      },\n      \"resource_kind\": \"local_cpu\",\n      \"returncode\": 2,\n      \"succeeded\": false,\n      \"telemetry\": {\n        \"artifact_record_count\": 3,\n        \"artifact_records\": [\n          {\n            \"bytes\": 192,\n            \"exists\": true,\n            \"is_dir\": true,\n            \"is_file\": false,\n            \"is_symlink\": false,\n            \"mtime_utc\": \"2026-05-28T05:33:49Z\",\n            \"path\": \"experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_current_cpu_20260528T0508Z/packet_member_zip_header_elide_v1\",\n            \"source\": \"step.telemetry.artifact_paths\"\n          },\n          {\n            \"bytes\": 8415,\n            \"exists\": true,\n            \"is_dir\": false,\n            \"is_file\": true,\n            \"is_symlink\": false,\n            \"mtime_utc\": \"2026-05-28T05:33:49Z\",\n            \"path\": \"experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_current_cpu_20260528T0508Z/packet_member_zip_header_elide_v1/sweep.json\",\n            \"source\": \"step.telemetry.artifact_paths\"\n          },\n          {\n            \"bytes\": 5856,\n            \"exists\": true,\n            \"is_dir\": false,\n            \"is_file\": true,\n            \"is_symlink\": false,\n            \"mtime_utc\": \"2026-05-28T05:33:49Z\",\n            \"path\": \"experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_current_cpu_20260528T0508Z/packet_member_zip_header_elide_v1/observations.jsonl\",\n            \"source\": \"step.telemetry.artifact_paths\"\n          }\n        ],\n        \"log_bytes\": 317,\n        \"recursive_truncated\": false,\n        \"schema\": \"experiment_queue_step_telemetry.v1\"\n      },\n      \"timed_out\": false,\n      \"worker_run_id\": \"db104f927ce42ec3\"\n    }\n  ],\n  \"steps_started\": 2,\n  \"stop_reason\": \"max_steps_reached\",\n  \"stop_signals\": [],\n  \"success_count\": 0\n}\n"
+  }
+}

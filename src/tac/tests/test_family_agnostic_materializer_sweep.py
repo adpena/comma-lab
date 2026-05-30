@@ -476,6 +476,63 @@ def test_materializer_empirical_sweep_cli_writes_json_and_jsonl(
     assert stdout_payload["ready_for_exact_eval_dispatch"] is False
 
 
+def test_materializer_empirical_sweep_cli_allow_overwrite_is_idempotent(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "archive_repack.zip"
+    output_dir = tmp_path / "sweep"
+    output_json = tmp_path / "sweep.json"
+    output_jsonl = tmp_path / "observations.jsonl"
+    _write_archive_repack_zip(archive)
+    command = [
+        sys.executable,
+        str(REPO_ROOT / "tools" / "run_family_agnostic_materializer_sweep.py"),
+        "--target-kind",
+        "archive_zip_repack_v1",
+        "--archive",
+        f"fixture={archive}",
+        "--output-dir",
+        str(output_dir),
+        "--output-json",
+        str(output_json),
+        "--observation-jsonl",
+        str(output_jsonl),
+        "--zip-compression-method",
+        "stored",
+        "--zip-compression-method",
+        "deflated",
+        "--zip-compresslevel",
+        "1",
+        "--zip-compresslevel",
+        "9",
+        "--allow-overwrite",
+    ]
+
+    subprocess.run(
+        command,
+        check=True,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+    )
+    completed = subprocess.run(
+        command,
+        check=True,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+    )
+
+    stdout_payload = json.loads(completed.stdout)
+    row = stdout_payload["observations"][0]
+    assert stdout_payload["schema"] == SWEEP_SCHEMA
+    assert row["rate_positive"] is True
+    assert Path(row["candidate_archive_path"]).is_file()
+    assert Path(row["runtime_consumption_proof_path"]).is_file()
+    assert json.loads(output_json.read_text(encoding="utf-8"))["schema"] == SWEEP_SCHEMA
+    assert output_jsonl.read_text(encoding="utf-8").strip()
+
+
 def test_materializer_empirical_sweep_cli_writes_packet_merge_runtime_adapter(
     tmp_path: Path,
 ) -> None:

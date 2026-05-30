@@ -59,6 +59,7 @@ from tac.repo_io import (  # noqa: E402
     json_line,
     json_text,
     sha256_file,
+    tree_sha256,
     write_json_artifact,
     write_text_artifact,
 )
@@ -81,6 +82,20 @@ FALSE_AUTHORITY = {
 }
 LOCAL_MATERIALIZER_AXIS = "[local-materializer-proof]"
 LOCAL_RATE_SCORE_PER_BYTE = CANONICAL_RATE_MULTIPLIER / float(CANONICAL_RATE_DENOM_BYTES)
+
+
+def _expected_existing_file_sha256(path: str | Path, *, allow_overwrite: bool) -> str | None:
+    candidate = Path(path)
+    if not allow_overwrite or not candidate.is_file():
+        return None
+    return sha256_file(candidate)
+
+
+def _expected_existing_tree_sha256(path: str | Path, *, allow_overwrite: bool) -> str | None:
+    candidate = Path(path)
+    if not allow_overwrite or not candidate.exists():
+        return None
+    return tree_sha256(candidate)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -175,7 +190,13 @@ def main(argv: list[str] | None = None) -> int:
             output_json,
             payload,
             allow_overwrite=args.allow_overwrite,
-            expected_existing_sha256=args.expected_existing_output_json_sha256,
+            expected_existing_sha256=(
+                args.expected_existing_output_json_sha256
+                or _expected_existing_file_sha256(
+                    output_json,
+                    allow_overwrite=args.allow_overwrite,
+                )
+            ),
             min_free_bytes=args.min_free_bytes,
         )
         if observation_jsonl is not None:
@@ -183,7 +204,13 @@ def main(argv: list[str] | None = None) -> int:
                 observation_jsonl,
                 "".join(json_line(row) for row in payload["observations"]),
                 allow_overwrite=args.allow_overwrite,
-                expected_existing_sha256=args.expected_existing_observation_jsonl_sha256,
+                expected_existing_sha256=(
+                    args.expected_existing_observation_jsonl_sha256
+                    or _expected_existing_file_sha256(
+                        observation_jsonl,
+                        allow_overwrite=args.allow_overwrite,
+                    )
+                ),
                 min_free_bytes=args.min_free_bytes,
             )
     except (
@@ -298,6 +325,10 @@ def build_materializer_empirical_sweep(
             manifest_path,
             result,
             allow_overwrite=allow_overwrite,
+            expected_existing_sha256=_expected_existing_file_sha256(
+                manifest_path,
+                allow_overwrite=allow_overwrite,
+            ),
             min_free_bytes=min_free_bytes,
         )
         rows.append(
@@ -373,6 +404,14 @@ def _materialize_target(
             runtime_consumption_proof_out=proof_path,
             repo_root=REPO_ROOT,
             allow_overwrite=allow_overwrite,
+            expected_existing_output_sha256=_expected_existing_file_sha256(
+                candidate_path,
+                allow_overwrite=allow_overwrite,
+            ),
+            expected_existing_runtime_consumption_proof_sha256=_expected_existing_file_sha256(
+                proof_path,
+                allow_overwrite=allow_overwrite,
+            ),
             min_free_bytes=min_free_bytes,
         )
     if target_kind == ARCHIVE_ZIP_REPACK_TARGET_KIND:
@@ -384,6 +423,14 @@ def _materialize_target(
             runtime_consumption_proof_out=proof_path,
             repo_root=REPO_ROOT,
             allow_overwrite=allow_overwrite,
+            expected_existing_output_sha256=_expected_existing_file_sha256(
+                candidate_path,
+                allow_overwrite=allow_overwrite,
+            ),
+            expected_existing_runtime_consumption_proof_sha256=_expected_existing_file_sha256(
+                proof_path,
+                allow_overwrite=allow_overwrite,
+            ),
             min_free_bytes=min_free_bytes,
         )
     if target_kind == PACKET_MEMBER_MERGE_TARGET_KIND:
@@ -402,6 +449,18 @@ def _materialize_target(
             runtime_consumption_proof_out=materializer_proof_path,
             repo_root=REPO_ROOT,
             allow_overwrite=allow_overwrite,
+            expected_existing_output_sha256=_expected_existing_file_sha256(
+                candidate_path,
+                allow_overwrite=allow_overwrite,
+            ),
+            expected_existing_runtime_consumption_proof_sha256=(
+                None
+                if materializer_proof_path is None
+                else _expected_existing_file_sha256(
+                    proof_path,
+                    allow_overwrite=allow_overwrite,
+                )
+            ),
             min_free_bytes=min_free_bytes,
         )
         if packet_member_merge_source_runtime_dir is None:
@@ -416,6 +475,10 @@ def _materialize_target(
             repo_root=REPO_ROOT,
             allow_runtime_sidecars=allow_packet_member_merge_runtime_sidecars,
             allow_overwrite=allow_overwrite,
+            expected_existing_runtime_tree_sha256=_expected_existing_tree_sha256(
+                runtime_dir,
+                allow_overwrite=allow_overwrite,
+            ),
             min_free_bytes=min_free_bytes,
         )
         runtime_proof = build_packet_member_merge_runtime_consumption_proof(
@@ -427,6 +490,10 @@ def _materialize_target(
             proof_path,
             runtime_proof,
             allow_overwrite=allow_overwrite,
+            expected_existing_sha256=_expected_existing_file_sha256(
+                proof_path,
+                allow_overwrite=allow_overwrite,
+            ),
             min_free_bytes=min_free_bytes,
         )
         receiver_verification = verify_runtime_consumption_proof(
@@ -484,6 +551,14 @@ def _materialize_target(
             runtime_consumption_proof_out=proof_path,
             repo_root=REPO_ROOT,
             allow_overwrite=allow_overwrite,
+            expected_existing_output_sha256=_expected_existing_file_sha256(
+                candidate_path,
+                allow_overwrite=allow_overwrite,
+            ),
+            expected_existing_runtime_consumption_proof_sha256=_expected_existing_file_sha256(
+                proof_path,
+                allow_overwrite=allow_overwrite,
+            ),
             min_free_bytes=min_free_bytes,
         )
     if target_kind == PACKET_MEMBER_RECOMPRESS_TARGET_KIND:
@@ -497,6 +572,14 @@ def _materialize_target(
             runtime_consumption_proof_out=proof_path,
             repo_root=REPO_ROOT,
             allow_overwrite=allow_overwrite,
+            expected_existing_output_sha256=_expected_existing_file_sha256(
+                candidate_path,
+                allow_overwrite=allow_overwrite,
+            ),
+            expected_existing_runtime_consumption_proof_sha256=_expected_existing_file_sha256(
+                proof_path,
+                allow_overwrite=allow_overwrite,
+            ),
             min_free_bytes=min_free_bytes,
         )
     if target_kind == RENDERER_PAYLOAD_DFL1_TARGET_KIND:
@@ -510,6 +593,14 @@ def _materialize_target(
             full_frame_inflate_parity_proof=full_frame_inflate_parity_proof,
             repo_root=REPO_ROOT,
             allow_overwrite=allow_overwrite,
+            expected_existing_output_sha256=_expected_existing_file_sha256(
+                candidate_path,
+                allow_overwrite=allow_overwrite,
+            ),
+            expected_existing_runtime_consumption_proof_sha256=_expected_existing_file_sha256(
+                proof_path,
+                allow_overwrite=allow_overwrite,
+            ),
             min_free_bytes=min_free_bytes,
         )
     if target_kind == TENSOR_FACTORIZE_TARGET_KIND:
@@ -530,6 +621,14 @@ def _materialize_target(
             runtime_consumption_proof_out=proof_path,
             repo_root=REPO_ROOT,
             allow_overwrite=allow_overwrite,
+            expected_existing_output_sha256=_expected_existing_file_sha256(
+                candidate_path,
+                allow_overwrite=allow_overwrite,
+            ),
+            expected_existing_runtime_consumption_proof_sha256=_expected_existing_file_sha256(
+                proof_path,
+                allow_overwrite=allow_overwrite,
+            ),
             min_free_bytes=min_free_bytes,
         )
     raise FamilyAgnosticMaterializerError(f"unsupported target kind: {target_kind}")
