@@ -74,6 +74,13 @@ experiments/external_results/
 experiments/cold_store/
 workspace/tools/
 
+# Vendored upstream / read-only intake clones per Catalog #109 pristine
+# discipline. Never tracked; canonical pattern extractors port conceptual
+# patterns to tac.composition.* with proper attribution.
+# Example: external/alaska_yousfi/ (Yousfi 2019 ALASKA-#1 repo;
+# Copyright (c) 2019 DDE Lab, Binghamton University; landed 2026-05-30).
+external/
+
 # Model checkpoints and large tensors (use Git LFS or external storage instead)
 # Note: some .pt files are intentionally tracked (small backups, reports).
 # The ones below are known large files that should never be in git.

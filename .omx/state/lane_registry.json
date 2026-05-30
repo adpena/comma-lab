@@ -63011,6 +63011,130 @@
       "id": "lane_mamba2_ssd_mlx_port_tri_backend_20260530",
       "name": "Mamba-2 SSD tri-backend canonical helper (MLX/PyTorch/numpy)",
       "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tri-backend canonical helper at src/tac/substrates/_shared/mamba2_ssd/ ~1136 LOC across 4 files; numpy reference (Dao+Gu 2024 \u00a73 sequential) + PyTorch (gradient-preserving) + MLX (Darwin ARM64 Metal); 33/33 byte-stable parity tests pass; 91/91 sister Z7-Mamba-2 tests pass = 124 total; canonical equation mamba2_ssd_mlx_pytorch_numpy_tri_backend_byte_stable_v1 registered with 1 empirical anchor residual=0.0"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/mamba2_ssd_mlx_port_tri_backend_canonical_helper_landed_20260530.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_m9_v3_pr95_faithful_curriculum_wire_in_substrate_cascade_20260530",
+      "name": "M9-v3 PR95-faithful 8-stage Muon+AdamW curriculum substrate wire-in sister cascade",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "experiments/train_substrate_z6_v2_cargo_cult_unwind_mlx_local.py + experiments/train_substrate_z8_hierarchical_predictive_coding_mlx.py + experiments/train_substrate_dreamer_v3_rssm.py + src/tac/substrates/_shared/mlx_score_aware/harness.py + src/tac/training/long_training_canonical.py wired pr95_faithful_curriculum_enabled cascade per m9-v3 verdict op-routable #1; 15/15 new tests + 173/173 baseline PASS; archive_bytes_added=0_B; score_improvement_mechanism_status=OPERATIONAL; runtime_overlay_consumed=true; l2_integration_landed=true; lane_class=substrate_engineering per HNeRV parity L7; horizon_class=plateau_adjacent; predicted_band [0.178, 0.190]"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_m9_v3_pr95_faithful_curriculum_sister_wave_wire_in_landed_20260530.md (landing memo + Catalog #303 hard-earned-vs-cargo-culted classification + 6-hook wire-in + apparatus mutation chain)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "",
+      "lane_class": "substrate_engineering"
+    },
+    {
+      "id": "lane_alaska_yousfi_canonical_pattern_extraction_20260530",
+      "name": "ALASKA Yousfi canonical pattern extraction",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/composition/alaska_inverse_steganalysis_patterns/ (6 canonical pattern modules + 82 tests pass) + external/alaska_yousfi/ (read-only clone)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/alaska_yousfi_repo_deep_research_landed_20260530.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_yousfi_cascade_tier_1_pose_axis_canonical_helpers_20260530",
+      "name": "Yousfi-cascade tier-1 pose-axis canonical helpers (A+B+C umbrella)",
+      "phase": 3.0,
       "level": 0,
       "gates": {
         "impl_complete": {
@@ -63046,7 +63170,130 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "Umbrella lane for 3 sister-disjoint pose-axis canonical helpers (Deliverable A pose-vulnerability map / Deliverable B PoseNet MAE-V surrogate / Deliverable C YUV6 chroma-subsampled perturbation operator). 81/81 tests pass. Per-pair vulnerability_ratio 363x verified on canonical 600-pair fp64 tensor. Canonical YUV6 parity vs differentiable_rgb_to_yuv6 within float32 tolerance. lane_class=substrate_engineering per HNeRV parity L7. Tier A canonical-routing markers per Catalog #341 (never promotable). Closes pose-axis canonical-helper gap surfaced by Yousfi-voice critique 2026-05-30. research_only=true until paired-CUDA RATIFICATION lands per Catalog #370."
+    },
+    {
+      "id": "lane_pose_vulnerability_map_yousfi_alaska_analog_20260530",
+      "name": "Deliverable A: per-pair pose-vulnerability map (Yousfi-alaska analog)",
+      "phase": 3.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Sister-DISJOINT scope src/tac/master_gradient_pose_vulnerability/. 28/28 tests pass. Yousfi-alaska CMD-C-VAR canonical analog for poses; 363x cost-discrimination ratio on canonical 600-pair fp64 tensor. Tier A non-promotable. Canonical Provenance per Catalog #323. lane_class=substrate_engineering per HNeRV parity L7. research_only=true."
+    },
+    {
+      "id": "lane_posenet_mae_v_canonical_surrogate_20260530",
+      "name": "Deliverable B: PoseNet MAE-V canonical surrogate (numpy-portable)",
+      "phase": 3.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Sister-DISJOINT scope src/tac/scorer_surrogate/posenet_mae_v/. 25/25 tests pass. Numpy-portable wrapper of canonical Hinton-distilled PoseNet primitives + per-byte FD Jacobian + Catalog #1265 parity helper. Tier A non-promotable per Catalog #341. lane_class=substrate_engineering per HNeRV parity L7. research_only=true."
+    },
+    {
+      "id": "lane_yuv6_chroma_subsampled_perturbation_operator_20260530",
+      "name": "Deliverable C: YUV6 chroma-subsampled perturbation operator (Yousfi blind-spot exploit)",
+      "phase": 3.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Sister-DISJOINT scope src/tac/composition/yuv6_chroma_subsampled_perturbation_operator/. 28/28 tests pass. Canonical Fridrich-Yousfi inversion of PoseNet FastViT-T12 attention via 4:2:0 chroma-only perturbation. 4 canonical strategies (LOCAL_VARIANCE_WEIGHTED / SEGNET_GRADIENT_WEIGHTED / POSENET_GRADIENT_WEIGHTED_VIA_MAE_V / JOINT_ATICK_REDLICH_LINEAR_COMBINATION). Tier A non-promotable per Catalog #341. YUV6 forward parity vs canonical differentiable_rgb_to_yuv6 within float32 tolerance. Catalog #356 AxisDecomposition emission. lane_class=substrate_engineering per HNeRV parity L7. research_only=true."
     }
   ],
   "level_rules": {
@@ -63056,5 +63303,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-30T19:30:36Z"
+  "updated_at": "2026-05-30T20:04:08Z"
 }
