@@ -112,6 +112,50 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Weight on the gradient-reachable Hinton-KL T=2.0 scorer "
         "surrogate term in the --full score-aware loss (0.0 disables).",
     )
+    # M9 canonical quadruple binding-integration flag (operator-routed
+    # Yousfi-cascade TOP-1 post-M6; 2026-05-30). When set, _full_main routes
+    # through the canonical M4+M5+M6+M8 compose pattern at
+    # tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_binding
+    # instead of the MLX-harness path. Lifts the M9 milestone per
+    # build_progress.py to LANDED. Uses real upstream/videos/0.mkv frames
+    # per Catalog #213 + CLAUDE.md "Forbidden make_synthetic_pair_batch"
+    # non-negotiable.
+    parser.add_argument(
+        "--canonical-quadruple-binding",
+        action="store_true",
+        help=(
+            "Route _full_main through the M9 canonical quadruple binding-"
+            "integration path (M4 Mamba-2 + M5 Mallat full DWT + M6 "
+            "Wyner-Ziv + M8 ScoreAwareLevelLoss compose pattern per "
+            "Catalog #312). Non-promotable [macOS-CPU advisory] per Catalog "
+            "#192. Real video frames per Catalog #213 mandatory."
+        ),
+    )
+    parser.add_argument(
+        "--canonical-quadruple-output-dir",
+        type=Path,
+        default=None,
+        help=(
+            "Output dir for --canonical-quadruple-binding artifact JSON. "
+            "Required when --canonical-quadruple-binding is set."
+        ),
+    )
+    parser.add_argument(
+        "--canonical-quadruple-eval-h",
+        type=int,
+        default=32,
+        help=(
+            "Per-pair target height for canonical quadruple binding (default "
+            "32 = smoke-friendly; production uses 384 per CONTEST_SCORER_"
+            "RESOLUTION but the M9 milestone does NOT couple to the decoder)."
+        ),
+    )
+    parser.add_argument(
+        "--canonical-quadruple-eval-w",
+        type=int,
+        default=32,
+        help="Per-pair target width for canonical quadruple binding (default 32).",
+    )
     return parser
 
 
@@ -384,10 +428,138 @@ def _full_main(args: argparse.Namespace) -> int:
     return 0
 
 
+def _canonical_quadruple_main(args: argparse.Namespace) -> int:
+    """M9 canonical quadruple binding-integration training loop.
+
+    Operator-routed Yousfi-cascade TOP-1 post-M6 (2026-05-30). Lifts the
+    Z8 ``_full_main`` from the prior MLX-harness-only path to the canonical
+    M4 + M5 + M6 + M8 compose pattern per Catalog #312 canonical quadruple +
+    HNeRV parity discipline L7 substrate-engineering UNIQUE-IFIES.
+
+    The compose pattern (from Z8 Phase E landing memo):
+
+        m5.decompose(input) -> per-level latents
+        m6.encode(top_state, side_info=m5(reconstruct(input))) -> archive bytes
+        m8.per_level_loss(reconstruction, target,
+                           sensitivity=m7.get_for_level(level)) -> scalar
+
+    Lands M9 ``full_main_trainer_lifts_notimplementederror`` to LANDED in
+    ``build_progress.py``. M10 (inflate consumes real trained weights per
+    Catalog #369) + M11 (L1 MLX-LOCAL end-to-end smoke) + M12 (paired-CUDA
+    Modal T4 sub-0.189 threshold attempt) are now unblocked.
+
+    Per CLAUDE.md "Forbidden make_synthetic_pair_batch in any non-smoke
+    training path" non-negotiable: this path REQUIRES real
+    upstream/videos/0.mkv frames per Catalog #213. Synthetic-only fixtures
+    are forbidden outside the canonical _smoke_main path.
+
+    Per Catalog #192 the output artifact is non-promotable by construction
+    (axis_tag=[macOS-CPU advisory] / score_claim=False / promotable=False).
+    """
+    if args.canonical_quadruple_output_dir is None:
+        print(
+            "[Z8 M9 canonical quadruple] --canonical-quadruple-output-dir "
+            "is required.",
+            file=sys.stderr,
+        )
+        return 2
+
+    from tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_binding import (
+        build_canonical_quadruple_binding_from_z8_config,
+        load_real_video_targets_numpy,
+        run_canonical_quadruple_training_loop,
+    )
+    from tac.substrates.z8_hierarchical_predictive_coding.mlx_renderer import (
+        Z8HierarchicalConfig,
+    )
+
+    eval_h = int(args.canonical_quadruple_eval_h)
+    eval_w = int(args.canonical_quadruple_eval_w)
+    num_pairs = int(args.num_pairs)
+    epochs = int(args.epochs)
+    cfg = Z8HierarchicalConfig(
+        num_levels=3,
+        num_groups_per_level=(4, 3, 2),
+        num_categories_per_level=(16, 8, 4),
+        base_channels=8,
+        decoder_latent_dim=12,
+        num_pairs=num_pairs,
+        deterministic_state_dim=16,
+        gumbel_temperature=1.0,
+        use_straight_through=True,
+        eval_size=(eval_h, eval_w),
+    )
+    binding = build_canonical_quadruple_binding_from_z8_config(cfg)
+
+    print(
+        f"[Z8 M9 canonical quadruple] decoding {num_pairs} pairs from "
+        f"{args.video_path!s} at ({eval_h}, {eval_w}) per Catalog #213.",
+    )
+    try:
+        pair_rgb_targets = load_real_video_targets_numpy(
+            args.video_path,
+            num_pairs=num_pairs,
+            output_height=eval_h,
+            output_width=eval_w,
+        )
+    except (FileNotFoundError, RuntimeError) as exc:
+        print(f"[Z8 M9 canonical quadruple] FATAL: {exc}", file=sys.stderr)
+        return 65  # canonical "real video unavailable" exit code
+
+    print(
+        f"[Z8 M9 canonical quadruple] running {epochs} epochs x "
+        f"{num_pairs} pairs canonical compose pattern (M4+M5+M6+M8)...",
+    )
+    artifact = run_canonical_quadruple_training_loop(
+        binding,
+        pair_rgb_targets,
+        epochs=epochs,
+        notes=(
+            f"Z8 M9 canonical quadruple binding-integration smoke "
+            f"(operator-routed Yousfi-cascade TOP-1 post-M6); "
+            f"real video {args.video_path!s} at ({eval_h}, {eval_w}); "
+            f"non-promotable [macOS-CPU advisory] per Catalog #192; "
+            f"lifts build_progress.py M9 to LANDED."
+        ),
+    )
+
+    output_dir = args.canonical_quadruple_output_dir
+    # Refuse /tmp/ as an absolute prefix (matches /tmp/X, /private/tmp/X)
+    # but explicitly allow .omx/tmp (the canonical operator scratch sub-dir).
+    output_dir_str = str(output_dir)
+    if (
+        output_dir_str.startswith("/tmp/")
+        or output_dir_str.startswith("/private/tmp/")
+        or output_dir_str.startswith("/var/tmp/")
+    ):
+        print(
+            f"[Z8 M9 canonical quadruple] refusing absolute /tmp/ output_dir "
+            f"per CLAUDE.md transient-evidence trap: {output_dir}",
+            file=sys.stderr,
+        )
+        return 4
+    output_dir.mkdir(parents=True, exist_ok=True)
+    out_path = output_dir / "m9_canonical_quadruple_artifact.json"
+    out_path.write_text(
+        json.dumps(artifact.as_dict(), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    print(
+        f"[Z8 M9 canonical quadruple] DONE epochs={artifact.total_epochs_completed} "
+        f"convergence={artifact.convergence_verdict} "
+        f"final_payload_bytes={artifact.final_wyner_ziv_payload_bytes} "
+        f"wall_clock={artifact.total_wall_clock_seconds:.2f}s "
+        f"artifact={out_path}",
+    )
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
     if args.smoke:
         return _smoke_main(args)
+    if args.canonical_quadruple_binding:
+        return _canonical_quadruple_main(args)
     return _full_main(args)
 
 

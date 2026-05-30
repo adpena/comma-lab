@@ -62305,6 +62305,90 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_slot_ggg_x_cascade_a_fec10_selector_codec_composition_l0_scaffold_20260530",
+      "name": "Slot GGG x Cascade A FEC10 selector codec composition L0 SCAFFOLD",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/composition/slot_ggg_x_cascade_a_fec10_selector_codec_composition/__init__.py + 46/46 tests pass in 0.53s + MLX-LOCAL macOS-CPU advisory smoke at experiments/results/slot_ggg_x_cascade_a_fec10_composition_macos_cpu_advisory_smoke_20260530T150848Z/composition_smoke_output.json [contest-axis tag: macOS-CPU advisory]; lane_class=substrate_engineering per HNeRV parity L7; research_only=true; horizon_class=frontier_pursuit per Catalog #309; Catalog #341 + #357 Tier A markers; Catalog #356 AxisDecomposition; Catalog #323 canonical Provenance; archive_grammar=monolithic_FECA_header_plus_arithmetic_coded_bitstream_per_Cascade_A_FEC10_sister; parser_section_manifest=FECA_magic_4B+variant_2B+n_pairs_2B+payload_NB; inflate_runtime_loc_budget=under_200_LOC; runtime_dep_closure=numpy_optional_no_torch_no_DALI; export_format=monolithic_FECA_bytes; score_aware_loss=N/A_for_L0_SCAFFOLD; bolt_on_loc_budget=substrate_engineering_exception_per_HNeRV_L7; no_op_detector_planned=paired_CUDA_RATIFICATION_per_Catalog_246; distinguishing_feature_name=slot_ggg_x_cascade_a_fec10_selector_codec_composition; distinguishing_bytes_path=selector_codec_payload_bytes_per_pair_log2_K_bits; inflate_consumer_function=apply_pose_axis_null_projection_with_per_pair_selector_at_inflate; byte_mutation_smoke_passes=DEFERRED_PENDING_PAIRED_CUDA_RATIFICATION"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/slot_ggg_x_cascade_a_fec10_selector_codec_composition_l0_scaffold_landed_20260530.md + .omx/research/retroactive_sweep_for_slot_ggg_x_cascade_a_fec10_composition_l0_scaffold_20260530T151155Z.md + council_t1_slot_ggg_x_cascade_a_fec10_composition_l0_scaffold_20260530 anchor at .omx/state/council_deliberation_posterior.jsonl + probe_slot_ggg_x_cascade_a_fec10_composition_l0_scaffold_20260530 PROCEED 14-day at .omx/state/probe_outcomes.jsonl"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_z8_m9_full_main_notimplementederror_lift_canonical_quadruple_binding_integration_20260530",
+      "name": "Z8 M9 _full_main NotImplementedError lift via canonical quadruple binding-integration",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/z8_hierarchical_predictive_coding/canonical_quadruple_binding.py + experiments/train_substrate_z8_hierarchical_predictive_coding_mlx.py::_canonical_quadruple_main; 25 tests in src/tac/tests/test_train_substrate_z8_canonical_quadruple_binding.py all PASS; MLX-LOCAL smoke at experiments/results/z8_m9_full_main_macos_cpu_advisory_smoke_20260530T152144Z/m9_canonical_quadruple_artifact.json CONVERGED_MONOTONIC over 5 epochs x 4 real video pairs in ~30 ms"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/z8_m9_full_main_notimplementederror_lift_canonical_quadruple_binding_integration_landed_20260530.md + .omx/research/retroactive_sweep_for_z8_m9_full_main_lift_20260530T152331Z.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "M9 binding-integration milestone per build_progress.py; lifts canonical compose pattern m5.decompose -> m6.encode(top_state, side_info) -> m8.per_level_loss; Catalog #312 canonical quadruple + HNeRV parity L7 substrate-engineering. research_only=true (L0 SCAFFOLD substrate per parent __init__.py); lane_class=substrate_engineering; horizon_class=frontier_pursuit. Sister memory: feedback_z8_m9_full_main_notimplementederror_lift_canonical_quadruple_binding_integration_landed_20260530.md",
+      "research_only": true,
+      "lane_class": "substrate_engineering"
     }
   ],
   "level_rules": {
@@ -62314,5 +62398,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-30T14:52:32Z"
+  "updated_at": "2026-05-30T15:26:24Z"
 }

@@ -269,6 +269,27 @@ from tac.substrates.z8_hierarchical_predictive_coding.wyner_ziv_coder import (
     side_info_projection_matrix_for_contract,
 )
 
+# M9 canonical quadruple binding-integration (operator-routed Yousfi-cascade
+# TOP-1 post-M6 elevation; 2026-05-30). Lifts the M9 milestone in
+# build_progress.py to LANDED by binding all four Catalog #312 canonical-
+# quadruple primitives (M4 Mamba-2 + M5 Mallat full DWT + M6 Wyner-Ziv + M8
+# ScoreAwareLevelLoss) SIMULTANEOUSLY per HNeRV parity L7 substrate-
+# engineering UNIQUE-IFIES discipline. M10 (inflate consumes real trained
+# weights per Catalog #369) + M11 (L1 MLX-LOCAL smoke) + M12 (paired-CUDA
+# sub-0.189 attempt) are now structurally unblocked.
+from tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_binding import (
+    CANONICAL_PROJECTION_SEED_DEFAULT,
+    DEFAULT_M4_D_STATE,
+    DEFAULT_M4_LATENT_DIM_PER_LEVEL,
+    CanonicalQuadrupleTrainingArtifact,
+    TrainingStepObservability,
+    Z8CanonicalQuadrupleBinding,
+    build_canonical_quadruple_binding_from_z8_config,
+    canonical_quadruple_forward_step,
+    load_real_video_targets_numpy,
+    run_canonical_quadruple_training_loop,
+)
+
 # Catalog #124 8-field representation-lane declaration (canonical tokens for
 # the AST walker per the gate's regex set). DO NOT remove without operator
 # review per Catalog #229 premise verification.
@@ -417,6 +438,23 @@ __all__ = [
     "build_wyner_ziv_top_level_coder_for_contract",
     "predict_top_state_from_side_info",
     "side_info_projection_matrix_for_contract",
+    # M9 canonical quadruple binding-integration (operator-routed
+    # Yousfi-cascade TOP-1 post-M6 elevation; 2026-05-30). Lifts the M9
+    # milestone in build_progress.py to LANDED via the canonical compose
+    # pattern m5.decompose -> m6.encode(top_state, side_info) ->
+    # m8.per_level_loss(recon, target, m7.get_for_level(level)) per
+    # Catalog #312 canonical quadruple + HNeRV parity L7 substrate-
+    # engineering UNIQUE-IFIES.
+    "CANONICAL_PROJECTION_SEED_DEFAULT",
+    "DEFAULT_M4_D_STATE",
+    "DEFAULT_M4_LATENT_DIM_PER_LEVEL",
+    "CanonicalQuadrupleTrainingArtifact",
+    "TrainingStepObservability",
+    "Z8CanonicalQuadrupleBinding",
+    "build_canonical_quadruple_binding_from_z8_config",
+    "canonical_quadruple_forward_step",
+    "load_real_video_targets_numpy",
+    "run_canonical_quadruple_training_loop",
     "get_in_progress_milestones",
     "get_landed_milestones",
     "get_next_actionable_milestones",

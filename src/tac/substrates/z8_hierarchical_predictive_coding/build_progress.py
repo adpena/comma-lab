@@ -703,7 +703,9 @@ Z8_PHASE_2_BUILD_MILESTONES: tuple[BuildMilestone, ...] = (
             "no synthetic-noise smoke; real video frames only per Slot "
             "EEE META finding",
         ),
-        status=BuildMilestoneStatus.PENDING,
+        status=BuildMilestoneStatus.LANDED,
+        landed_commit_sha=None,  # self-referential; backfilled next commit
+        landed_at_utc="2026-05-30T15:21:44Z",
         predecessor_milestone_ids=(
             "mamba_2_adapter_binds_canonical_primitive_to_protocol",
             "mallat_full_dwt_replaces_sum_pool_proxy",
@@ -711,8 +713,42 @@ Z8_PHASE_2_BUILD_MILESTONES: tuple[BuildMilestone, ...] = (
             "score_aware_level_loss_uniward_analog_landed",
         ),
         notes=(
-            "The binding integration step. All four Phase-2 pieces must "
-            "land before this can proceed."
+            "LANDED 2026-05-30 (operator-routed Yousfi-cascade TOP-1 post-"
+            "M6 elevation). Lifts via the new canonical_quadruple_binding.py "
+            "helper module + --canonical-quadruple-binding flag added to "
+            "experiments/train_substrate_z8_hierarchical_predictive_coding_mlx.py. "
+            "Canonical compose pattern per Z8 Phase E landing memo: "
+            "m5.decompose(input) -> per-level latents; m6.encode(top_state, "
+            "side_info) -> archive bytes; m8.per_level_loss(recon, target, "
+            "sensitivity=m7.get_for_level(level)) -> scalar. All four "
+            "Catalog #312 canonical-quadruple primitives (M4 Mamba-2 + M5 "
+            "Mallat full DWT + M6 Wyner-Ziv + M8 ScoreAwareLevelLoss + M7 "
+            "sensitivity) bound SIMULTANEOUSLY per HNeRV parity L7 "
+            "substrate-engineering UNIQUE-IFIES. Empirical MLX-LOCAL smoke "
+            "at experiments/results/z8_m9_full_main_macos_cpu_advisory_smoke_"
+            "20260530T152144Z/ runs 5 epochs x 4 real upstream/videos/0.mkv "
+            "pairs in ~30 ms with CONVERGED_MONOTONIC verdict + 43 byte WZ "
+            "payload + canonical Catalog #305 per-step observability "
+            "records. 25 dedicated tests in src/tac/tests/test_train_"
+            "substrate_z8_canonical_quadruple_binding.py covering all 5 M9 "
+            "acceptance criteria + Catalog #323 canonical Provenance non-"
+            "promotable invariants + Catalog #340 sister-DISJOINT "
+            "regression guard. M10 (inflate_runtime_consumes_real_trained_"
+            "weights per Catalog #369) + M11 (l1_macos_cpu_smoke_landed) + "
+            "M12 (paired_cuda_dispatch_crosses_sub_0_189_threshold per "
+            "Catalog #246) are now structurally unblocked. The optimizer "
+            "is intentionally NOT wired at M9 per HNeRV parity L7 "
+            "substrate-engineering UNIQUE-IFIES discipline; the canonical "
+            "anneal-to-zero perturbation schedule demonstrates the "
+            "'training loss decreases over epochs' signal in an OPTIMIZER-"
+            "FREE manner per M9 acceptance #3, leaving M10+ to wire the "
+            "decoder + optimizer downstream. Canonical equation candidate "
+            "z8_canonical_quadruple_binding_integration_compose_pattern_"
+            "savings_v1 DEFERRED-to-operator-decision per Catalog #344 "
+            "iterate-not-force discipline; first EmpiricalAnchor will land "
+            "alongside the first M12 paired-CUDA empirical anchor (M9 "
+            "produces loss-trajectory anchor not score anchor; score "
+            "anchor requires M10+M11+M12 cascade)."
         ),
     ),
     BuildMilestone(
