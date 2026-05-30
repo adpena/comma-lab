@@ -34,6 +34,7 @@ from tac.probe_outcomes_ledger import (
     BLOCKING_VERDICTS,
     DEFAULT_STALENESS_WINDOW_DAYS,
     EVENT_ADJUDICATED,
+    EVENT_BACKFILL,
     EVENT_EXPIRED,
     EVENT_OPERATOR_OVERRIDE,
     EVENT_RATIFIED,
@@ -87,6 +88,10 @@ def test_schema_version_pinned() -> None:
 
 
 def test_valid_event_types_canonical_set() -> None:
+    # META Finding A canonical 2-landing pattern (2026-05-30): EVENT_BACKFILL
+    # added to the canonical event taxonomy so the backfill tool can append
+    # APPEND-ONLY rows with auto-derived reactivation_criteria from next_action
+    # WITHOUT mutating the original adjudicated row.
     assert frozenset(
         {
             EVENT_ADJUDICATED,
@@ -94,6 +99,7 @@ def test_valid_event_types_canonical_set() -> None:
             EVENT_SUPERSEDED,
             EVENT_EXPIRED,
             EVENT_OPERATOR_OVERRIDE,
+            EVENT_BACKFILL,
         }
     ) == VALID_EVENT_TYPES
 

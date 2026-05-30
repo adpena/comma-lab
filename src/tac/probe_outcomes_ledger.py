@@ -167,6 +167,15 @@ EVENT_RATIFIED = "ratified"
 EVENT_SUPERSEDED = "superseded"
 EVENT_EXPIRED = "expired"
 EVENT_OPERATOR_OVERRIDE = "operator_override"
+# META Finding A canonical 2-landing pattern (2026-05-30; per the deferred-items
+# feeder audit landed at commit `a9d45b171`): backfill rows append a new
+# ``reactivation_criteria`` value derived from the original probe's
+# ``next_action`` field WITHOUT mutating the original adjudicated row (per
+# CLAUDE.md HISTORICAL_PROVENANCE Catalog #110/#113 APPEND-ONLY non-negotiable).
+# The auto-derive provenance is recorded in
+# ``reactivation_criteria_derivation_provenance`` so downstream feeder consumers
+# can distinguish auto-derived vs operator-supplied criteria.
+EVENT_BACKFILL = "backfill"
 
 VALID_EVENT_TYPES = frozenset(
     {
@@ -175,8 +184,48 @@ VALID_EVENT_TYPES = frozenset(
         EVENT_SUPERSEDED,
         EVENT_EXPIRED,
         EVENT_OPERATOR_OVERRIDE,
+        EVENT_BACKFILL,
     }
 )
+
+# Canonical provenance string recorded on auto-derived ``reactivation_criteria``.
+# Sister of Catalog #371 auto-recalibrator pattern. Operator-routable downstream
+# consumers query this field to distinguish auto-derived from operator-supplied.
+AUTO_DERIVE_PROVENANCE_FROM_NEXT_ACTION = (
+    "auto_derived_from_next_action_at_register_probe_outcome_per_meta_finding_a_v1"
+)
+AUTO_DERIVE_PROVENANCE_FROM_NEXT_ACTION_BACKFILL = (
+    "auto_derived_from_next_action_at_backfill_per_meta_finding_a_v1"
+)
+
+# Canonical placeholder literals rejected per Catalog #287 sister discipline.
+# The auto-derive helper REFUSES to populate reactivation_criteria from a
+# next_action that is itself a placeholder (honest emptiness > fake content per
+# the new NO FAKE IMPLEMENTATIONS non-negotiable in CLAUDE.md).
+_REACTIVATION_PLACEHOLDER_LITERALS = frozenset(
+    {
+        "<rationale>",
+        "<reason>",
+        "<reactivation-criteria>",
+        "<criterion>",
+        "<reactivation_criterion>",
+        "<reactivation_criteria>",
+        "tbd",
+        "TBD",
+        "todo",
+        "TODO",
+        "placeholder",
+        "<placeholder>",
+        "n/a",
+        "N/A",
+        "none",
+        "None",
+    }
+)
+# Minimum substantive rationale length per Catalog #287 sister discipline.
+# A 1-3 char string like "x" or "ok" is not substantive enough to be a credible
+# reactivation criterion derived from next_action.
+_REACTIVATION_MIN_RATIONALE_CHARS = 4
 
 # Canonical verdict taxonomy.
 VERDICT_INDEPENDENT = "INDEPENDENT"
@@ -325,6 +374,92 @@ def _ledger_lock(lock_path: Path | None = None):
 def _now_iso() -> str:
     """Return UTC timestamp in ISO-8601 format with microsecond precision."""
     return _dt.datetime.now(_dt.UTC).isoformat(timespec="microseconds").replace("+00:00", "Z")
+
+
+def _is_substantive_string(text: Any) -> bool:
+    """Return True if ``text`` is a non-placeholder string of substantive length.
+
+    Per Catalog #287 sister discipline + CLAUDE.md "NO FAKE IMPLEMENTATIONS"
+    non-negotiable: a string is "substantive" only when it (a) is a real ``str``
+    instance, (b) is at least ``_REACTIVATION_MIN_RATIONALE_CHARS`` chars long
+    after stripping whitespace, and (c) is NOT a known placeholder literal.
+
+    Used by the auto-derive helper to refuse silently deriving
+    ``reactivation_criteria`` from a ``next_action`` that is itself a
+    placeholder string (which would propagate fake content into the canonical
+    posterior).
+    """
+    if not isinstance(text, str):
+        return False
+    stripped = text.strip()
+    if len(stripped) < _REACTIVATION_MIN_RATIONALE_CHARS:
+        return False
+    if stripped in _REACTIVATION_PLACEHOLDER_LITERALS:
+        return False
+    return True
+
+
+def _auto_derive_reactivation_criteria_from_next_action(
+    next_action: str | None,
+) -> tuple[list[str] | None, str | None]:
+    """Auto-derive ``reactivation_criteria`` from a probe's ``next_action`` field.
+
+    Returns ``(reactivation_criteria, derivation_provenance)`` per Catalog #371
+    sister auto-recalibrator pattern. When ``next_action`` is substantive
+    (non-empty, non-placeholder, >= 4 chars), the canonical fallback is
+    ``[f"next_action_satisfied: {next_action}"]`` — a single-element list that
+    propagates the FULL next_action text verbatim (no information loss).
+
+    Per CLAUDE.md "NO FAKE IMPLEMENTATIONS" non-negotiable: the fallback is
+    HONEST because the full ``next_action`` text is preserved; this is NOT a
+    canonical-marker placeholder per the 5 forbidden classes. The derived
+    criterion gives the feeder consumer a queryable shape (list[str]) without
+    fabricating new content.
+
+    Returns:
+        ``(None, None)`` when ``next_action`` is empty/None/placeholder — HONEST
+        emptiness per the new NO FAKE IMPLEMENTATIONS non-negotiable. The
+        canonical caller (``register_probe_outcome`` / backfill tool) leaves
+        ``reactivation_criteria`` unset in this branch rather than fabricating.
+
+        ``([criterion_string], provenance_string)`` when ``next_action`` is
+        substantive. The criterion_string is ``f"next_action_satisfied: {next_action}"``
+        unless a recognized canonical pattern (``Re-fire X when Y``) is matched,
+        in which case the extracted Y is used.
+    """
+    if not _is_substantive_string(next_action):
+        return None, None
+
+    # At this point next_action is a substantive non-placeholder string.
+    assert isinstance(next_action, str)  # narrow type for mypy
+    stripped = next_action.strip()
+
+    # Canonical pattern extraction: "Re-fire <X> when <Y>" → criterion = Y
+    # (case-insensitive). Sister patterns: "Resume <X> when <Y>", "Reactivate <X>
+    # when <Y>". The empirical evidence for these patterns is the operator's own
+    # next_action vocabulary in `.omx/state/probe_outcomes.jsonl` historical
+    # rows.
+    lowered = stripped.lower()
+    for keyword in ("re-fire ", "resume ", "reactivate ", "re-run "):
+        if keyword in lowered:
+            idx = lowered.find(" when ")
+            if idx > 0:
+                criterion_text = stripped[idx + len(" when "):].strip()
+                if _is_substantive_string(criterion_text):
+                    return (
+                        [f"{criterion_text} empirically met"],
+                        AUTO_DERIVE_PROVENANCE_FROM_NEXT_ACTION,
+                    )
+            break  # found keyword but no canonical " when " separator
+
+    # Canonical fallback: preserve full next_action text verbatim per CLAUDE.md
+    # NO FAKE IMPLEMENTATIONS non-negotiable. The fallback is HONEST because
+    # the full text propagates; the feeder consumer can parse it the same way
+    # it parses any other reactivation_criteria string.
+    return (
+        [f"next_action_satisfied: {stripped}"],
+        AUTO_DERIVE_PROVENANCE_FROM_NEXT_ACTION,
+    )
 
 
 def _quarantine_corrupt_file(path: Path) -> Path:
@@ -559,6 +694,70 @@ def _compute_expires_at_utc(
 # ─────────────────────────────────────────────────────────────────────────
 
 
+def _resolve_reactivation_criteria(
+    *,
+    reactivation_criteria: list[str] | str | None,
+    next_action: str | None,
+    auto_derive_provenance: str,
+) -> tuple[list[str] | None, str | None]:
+    """Normalize + auto-derive ``reactivation_criteria`` per META Finding A.
+
+    Returns ``(resolved_criteria, derivation_provenance)`` where:
+
+    - If ``reactivation_criteria`` is a substantive ``list[str]`` (every element
+      is a substantive string per ``_is_substantive_string``), normalize to a
+      copy of the list and provenance is ``None`` (caller supplied → no
+      derivation).
+    - If ``reactivation_criteria`` is a substantive single ``str``, normalize to
+      ``[criterion_str]`` and provenance is ``None`` (caller supplied).
+    - If ``reactivation_criteria`` is None/empty AND ``next_action`` is
+      substantive, auto-derive via
+      ``_auto_derive_reactivation_criteria_from_next_action`` and return the
+      canonical provenance string ``auto_derive_provenance``.
+    - If BOTH are empty/placeholder, return ``(None, None)`` — HONEST emptiness
+      per CLAUDE.md "NO FAKE IMPLEMENTATIONS" non-negotiable.
+
+    Raises:
+        ValueError: when ``reactivation_criteria`` is a type other than
+            ``list[str]`` / ``str`` / None.
+    """
+    # Caller-supplied path: list[str].
+    if isinstance(reactivation_criteria, list):
+        if reactivation_criteria:
+            substantive_elements = [
+                element for element in reactivation_criteria
+                if _is_substantive_string(element)
+            ]
+            if substantive_elements:
+                # Preserve caller-supplied content verbatim (no derivation).
+                return list(substantive_elements), None
+        # Empty list OR all-placeholder list → treat as "not supplied" and try
+        # auto-derive from next_action.
+
+    # Caller-supplied path: single str (legacy schema; some historical rows use
+    # this shape per the empirical landscape audit).
+    elif isinstance(reactivation_criteria, str):
+        if _is_substantive_string(reactivation_criteria):
+            return [reactivation_criteria.strip()], None
+        # Placeholder str → treat as "not supplied" and try auto-derive.
+
+    elif reactivation_criteria is not None:
+        raise ValueError(
+            "reactivation_criteria must be list[str] | str | None, "
+            f"got {type(reactivation_criteria).__name__!r}"
+        )
+
+    # Auto-derive path: caller did not supply substantive criteria.
+    derived_criteria, _ = _auto_derive_reactivation_criteria_from_next_action(
+        next_action
+    )
+    if derived_criteria is None:
+        # Both reactivation_criteria AND next_action empty/placeholder.
+        # HONEST emptiness per NO FAKE IMPLEMENTATIONS.
+        return None, None
+    return derived_criteria, auto_derive_provenance
+
+
 def register_probe_outcome(
     *,
     probe_id: str,
@@ -572,6 +771,7 @@ def register_probe_outcome(
     threshold_token: str | None = None,
     evidence_path: str | None = None,
     next_action: str | None = None,
+    reactivation_criteria: list[str] | str | None = None,
     blocker_status: str | None = None,
     dispatched_at_utc: str | None = None,
     adjudicated_at_utc: str | None = None,
@@ -591,8 +791,25 @@ def register_probe_outcome(
     ``BLOCKING_VERDICTS`` (INDEPENDENT / KILL / DEFER), else ``advisory``.
     The expires_at_utc is auto-computed = adjudicated + staleness_window_days.
 
+    META Finding A canonical 2-landing pattern (2026-05-30; per the deferred-items
+    feeder audit at commit ``a9d45b171``): when ``reactivation_criteria`` is
+    None/empty AND ``next_action`` is substantive (non-empty, non-placeholder,
+    >= 4 chars per Catalog #287 sister discipline), the canonical helper
+    auto-derives ``reactivation_criteria`` via
+    ``_auto_derive_reactivation_criteria_from_next_action`` and records the
+    provenance in the new ``reactivation_criteria_derivation_provenance``
+    field. When BOTH ``reactivation_criteria`` AND ``next_action`` are empty,
+    BOTH fields are left None (HONEST emptiness per CLAUDE.md "NO FAKE
+    IMPLEMENTATIONS" non-negotiable).
+
+    When ``reactivation_criteria`` is supplied as ``str``, it is normalized to
+    ``[criterion_string]`` for canonical list[str] shape consistency. Lists are
+    accepted verbatim. Any other type raises ``ValueError``.
+
     Returns the appended record (including server-side fields like
-    ``written_at_utc`` / ``expires_at_utc`` / ``written_pid`` / ``written_host``).
+    ``written_at_utc`` / ``expires_at_utc`` / ``written_pid`` / ``written_host``
+    AND the new ``reactivation_criteria`` + ``reactivation_criteria_derivation_provenance``
+    fields).
     """
     if not isinstance(probe_id, str) or not probe_id.strip():
         raise ValueError("probe_id must be a non-empty string")
@@ -620,6 +837,16 @@ def register_probe_outcome(
         staleness_window_days=staleness_window_days,
     )
 
+    # META Finding A canonical 2-landing pattern: auto-derive reactivation_criteria
+    # from next_action when caller does NOT supply it.
+    resolved_reactivation_criteria, reactivation_criteria_derivation_provenance = (
+        _resolve_reactivation_criteria(
+            reactivation_criteria=reactivation_criteria,
+            next_action=next_action,
+            auto_derive_provenance=AUTO_DERIVE_PROVENANCE_FROM_NEXT_ACTION,
+        )
+    )
+
     record: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
         "event_type": EVENT_ADJUDICATED,
@@ -634,6 +861,10 @@ def register_probe_outcome(
         "threshold_token": threshold_token,
         "evidence_path": evidence_path,
         "next_action": next_action,
+        "reactivation_criteria": resolved_reactivation_criteria,
+        "reactivation_criteria_derivation_provenance": (
+            reactivation_criteria_derivation_provenance
+        ),
         "blocker_status": resolved_blocker_status,
         "dispatched_at_utc": dispatched_at_utc,
         "adjudicated_at_utc": resolved_adjudicated_at,
@@ -738,6 +969,14 @@ def update_probe_outcome(
         "threshold_token": existing.get("threshold_token"),
         "evidence_path": existing.get("evidence_path"),
         "next_action": existing.get("next_action"),
+        # META Finding A canonical 2-landing pattern: propagate the new fields
+        # from the prior row so the latest-row-wins semantics remain stable;
+        # the backfill tool appends NEW rows that override via the canonical
+        # EVENT_BACKFILL event_type.
+        "reactivation_criteria": existing.get("reactivation_criteria"),
+        "reactivation_criteria_derivation_provenance": existing.get(
+            "reactivation_criteria_derivation_provenance"
+        ),
         "blocker_status": resolved_blocker_status,
         "dispatched_at_utc": existing.get("dispatched_at_utc"),
         "adjudicated_at_utc": existing.get("adjudicated_at_utc"),
@@ -999,12 +1238,15 @@ def query_all_post_utc(
 
 
 __all__ = [
+    "AUTO_DERIVE_PROVENANCE_FROM_NEXT_ACTION",
+    "AUTO_DERIVE_PROVENANCE_FROM_NEXT_ACTION_BACKFILL",
     "BLOCKER_STATUS_ADVISORY",
     "BLOCKER_STATUS_BLOCKING",
     "BLOCKER_STATUS_EXPIRED",
     "BLOCKING_VERDICTS",
     "DEFAULT_STALENESS_WINDOW_DAYS",
     "EVENT_ADJUDICATED",
+    "EVENT_BACKFILL",
     "EVENT_EXPIRED",
     "EVENT_OPERATOR_OVERRIDE",
     "EVENT_RATIFIED",
@@ -1026,6 +1268,10 @@ __all__ = [
     "VERDICT_PROMOTE",
     "ProbeOutcomeView",
     "ProbeOutcomesLedgerCorruptError",
+    "_append_event_locked",
+    "_auto_derive_reactivation_criteria_from_next_action",
+    "_is_substantive_string",
+    "_resolve_reactivation_criteria",
     "latest_blocking_outcome_by_recipe",
     "latest_blocking_outcome_by_substrate",
     "latest_outcome_by_probe_id",
