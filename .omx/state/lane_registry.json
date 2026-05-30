@@ -63872,6 +63872,88 @@
       "notes": "",
       "lane_class": "substrate_engineering",
       "research_only": true
+    },
+    {
+      "id": "lane_null_byte_probe_matrix_11_anchor_sweep_20260530",
+      "name": "NULL-BYTE PROBE MATRIX 11-anchor cross-substrate sweep",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "READ-ONLY sweep over .omx/state/master_gradient_anchors.jsonl + .npy files; per_anchor_audit.json at experiments/results/null_byte_probe_matrix_11_anchor_sweep_20260530/per_anchor_audit.json; 11/11 anchors verified"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/null_byte_probe_matrix_11_anchor_sweep_20260530.md + ~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_null_byte_probe_matrix_11_anchor_sweep_landed_20260530.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_pr110_opt7_trainer_4_helper_wire_in_20260530",
+      "name": "PR110-OPT-7 trainer 4-helper canonical wire-in via Yousfi-T1",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "experiments/train_substrate_pr110_opt7_fridrich_uniward_inverse_scorer_basis_via_yousfi_t1.py (4 canonical helpers wired in _full_main; Catalog #270 overall_pass=true; 19/19 wire-in tests + 41/41 existing substrate tests PASS; Phase C MLX-LOCAL N=100 re-validation 5/5 helpers + substantive=PASS preserved at experiments/results/pr110_opt7_wire_in_phase_c_revalidation_20260530T233412Z/)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_pr110_opt7_trainer_4_helper_wire_in_landed_20260530.md (canonical 6 reactivation criteria satisfied; predecessor DEFER probe_id superseded via EVENT_SUPERSEDED; new PROCEED probe outcome registered at .omx/state/probe_outcomes.jsonl)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -63881,5 +63963,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-30T23:12:27Z"
+  "updated_at": "2026-05-30T23:36:19Z"
 }
