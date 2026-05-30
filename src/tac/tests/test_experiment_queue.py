@@ -1037,6 +1037,62 @@ def test_experiment_queue_rejects_shell_string_commands() -> None:
         raise AssertionError("queue accepted a shell string command")
 
 
+def test_experiment_queue_normalizes_rerunnable_materializer_commands() -> None:
+    payload = {
+        "schema": "experiment_queue.v1",
+        "queue_id": "rerunnable_materializers",
+        "experiments": [
+            {
+                "id": "candidate",
+                "steps": [
+                    {
+                        "id": "sweep",
+                        "command": [
+                            ".venv/bin/python",
+                            "tools/run_family_agnostic_materializer_sweep.py",
+                            "--target-kind",
+                            "packet_member_recompress_v1",
+                        ],
+                    },
+                    {
+                        "id": "selector",
+                        "command": [
+                            ".venv/bin/python",
+                            "tools/build_feca_selector_reparameterized_candidate.py",
+                            "--source-submission-dir",
+                            "submission",
+                            "--output-dir",
+                            "out",
+                        ],
+                    },
+                    {
+                        "id": "fp11",
+                        "command": [
+                            ".venv/bin/python",
+                            "tools/build_fp11_source_brotli_recode_candidate.py",
+                            "--source-submission-dir",
+                            "submission",
+                            "--output-dir",
+                            "out",
+                        ],
+                    },
+                ],
+            }
+        ],
+    }
+
+    queue = normalize_queue_definition(payload)
+    commands = [step["command"] for step in queue["experiments"][0]["steps"]]
+
+    assert commands[0].count("--allow-overwrite") == 1
+    for command in commands[1:]:
+        assert command.count("--allow-nonpositive-candidate") == 1
+        assert command.count("--overwrite") == 1
+    normalized_again = normalize_queue_definition(queue)
+    commands_again = [step["command"] for step in normalized_again["experiments"][0]["steps"]]
+    assert commands_again == commands
+
+
 def test_experiment_queue_normalizes_input_artifact_paths() -> None:
     payload = {
         "schema": "experiment_queue.v1",

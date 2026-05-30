@@ -59,6 +59,20 @@ DEFAULT_FALSE_OR_MISSING_AUTHORITY_FIELDS = (
     "score_affecting_payload_changed",
     "charged_bits_changed",
 )
+RERUNNABLE_MATERIALIZER_SWEEP_TOOLS = frozenset(
+    {
+        "tools/run_family_agnostic_materializer_sweep.py",
+        "run_family_agnostic_materializer_sweep.py",
+    }
+)
+RERUNNABLE_NONPOSITIVE_CANDIDATE_TOOLS = frozenset(
+    {
+        "tools/build_feca_selector_reparameterized_candidate.py",
+        "build_feca_selector_reparameterized_candidate.py",
+        "tools/build_fp11_source_brotli_recode_candidate.py",
+        "build_fp11_source_brotli_recode_candidate.py",
+    }
+)
 SCHEDULER_RUNTIME_POLICY_FORBIDDEN_AUTHORITY_FIELDS = tuple(
     dict.fromkeys(
         (
@@ -241,6 +255,32 @@ def _load_json_compatible(path: Path) -> dict[str, Any]:
     return payload
 
 
+def _append_flag_once(command_items: list[str], flag: str) -> None:
+    if flag not in command_items:
+        command_items.append(flag)
+
+
+def _normalize_rerunnable_command_items(command_items: list[str]) -> list[str]:
+    """Canonicalize known queue materializers so old queues are safe to rerun.
+
+    Existing campaign queues are durable intent, but some were built before the
+    rerunnable materializer contract existed. Normalizing at load time makes the
+    queue state hash-drift machinery requeue the affected steps explicitly
+    instead of failing later on existing output directories.
+    """
+
+    if len(command_items) <= 1:
+        return command_items
+    tool = command_items[1]
+    normalized = list(command_items)
+    if tool in RERUNNABLE_MATERIALIZER_SWEEP_TOOLS:
+        _append_flag_once(normalized, "--allow-overwrite")
+    if tool in RERUNNABLE_NONPOSITIVE_CANDIDATE_TOOLS:
+        _append_flag_once(normalized, "--allow-nonpositive-candidate")
+        _append_flag_once(normalized, "--overwrite")
+    return normalized
+
+
 def _normalize_step(raw: Mapping[str, Any], *, experiment_id: str, index: int) -> dict[str, Any]:
     step_id = _require_text(raw.get("id"), f"experiments[{experiment_id}].steps[{index}].id")
     kind = _require_text(raw.get("kind", "command"), f"{step_id}.kind")
@@ -249,7 +289,9 @@ def _normalize_step(raw: Mapping[str, Any], *, experiment_id: str, index: int) -
     command = raw.get("command")
     if not isinstance(command, list) or not command:
         raise ExperimentQueueError(f"{step_id}.command must be a non-empty argv list")
-    command_items = [_require_text(item, f"{step_id}.command[{idx}]") for idx, item in enumerate(command)]
+    command_items = _normalize_rerunnable_command_items(
+        [_require_text(item, f"{step_id}.command[{idx}]") for idx, item in enumerate(command)]
+    )
     resources = _optional_mapping(raw.get("resources"), f"{step_id}.resources")
     resource_kind = _resource_kind_value(
         resources.get("kind", "local_cpu"),

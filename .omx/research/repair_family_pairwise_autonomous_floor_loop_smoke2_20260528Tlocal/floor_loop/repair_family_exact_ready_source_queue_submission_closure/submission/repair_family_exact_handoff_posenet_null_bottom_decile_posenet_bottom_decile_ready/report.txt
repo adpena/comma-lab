@@ -1,0 +1,9 @@
+Materializer submission runtime closure refused
+
+candidate_id: repair_family_exact_handoff__posenet_null_bottom_decile__posenet_bottom_decile_ready
+source_queue_path: .omx/research/repair_family_pairwise_autonomous_floor_loop_smoke2_20260528Tlocal/floor_loop/repair_family_exact_ready_source_queue.json
+blocker: candidate_archive_missing
+score_claim: false
+promotion_eligible: false
+rank_or_kill_eligible: false
+ready_for_exact_eval_dispatch: false

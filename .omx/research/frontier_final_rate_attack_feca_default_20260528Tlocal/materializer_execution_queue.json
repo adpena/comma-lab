@@ -97,7 +97,8 @@
             "--zip-compresslevel",
             "9",
             "--min-free-bytes",
-            "0"
+            "0",
+            "--allow-overwrite"
           ],
           "id": "materialize_local_proof_chain",
           "kind": "command",
@@ -267,7 +268,8 @@
             "--member-name",
             "x",
             "--min-free-bytes",
-            "0"
+            "0",
+            "--allow-overwrite"
           ],
           "id": "materialize_local_proof_chain",
           "kind": "command",
@@ -447,7 +449,8 @@
             "--zip-compresslevel",
             "9",
             "--min-free-bytes",
-            "0"
+            "0",
+            "--allow-overwrite"
           ],
           "id": "materialize_local_proof_chain",
           "kind": "command",
@@ -623,7 +626,9 @@
             "--downstream-materializer-target",
             "archive_zip_repack_v1",
             "--chain-label",
-            "frontier_final_rate_attack_p19_p18_to_p11_selector_then_p15_repack"
+            "frontier_final_rate_attack_p19_p18_to_p11_selector_then_p15_repack",
+            "--allow-nonpositive-candidate",
+            "--overwrite"
           ],
           "id": "materialize_local_proof_chain",
           "kind": "command",

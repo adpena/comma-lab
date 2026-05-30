@@ -4379,10 +4379,26 @@ def _idempotent_materializer_execution_command_items(
     """Make queue-owned materializer steps rerunnable against prior artifacts."""
 
     command_items = [str(item) for item in command]
-    if len(command_items) <= 1 or command_items[1] != FAMILY_AGNOSTIC_MATERIALIZER_TOOL:
+    if len(command_items) <= 1:
+        return command_items
+    if command_items[1] in {
+        FECA_SELECTOR_REPARAMETERIZATION_TOOL,
+        FP11_SOURCE_BROTLI_RECODE_TOOL,
+    }:
+        if "--allow-nonpositive-candidate" not in command_items:
+            command_items.append("--allow-nonpositive-candidate")
+        if "--overwrite" not in command_items:
+            command_items.append("--overwrite")
+        return command_items
+    if command_items[1] not in {
+        FAMILY_AGNOSTIC_MATERIALIZER_TOOL,
+        FAMILY_AGNOSTIC_MATERIALIZER_SWEEP_TOOL,
+    }:
         return command_items
     if "--allow-overwrite" not in command_items:
         command_items.append("--allow-overwrite")
+    if command_items[1] == FAMILY_AGNOSTIC_MATERIALIZER_SWEEP_TOOL:
+        return command_items
     for output_flag, expected_flag in (
         ("--output-archive", "--expected-existing-output-sha256"),
         ("--output-manifest", "--expected-existing-manifest-sha256"),

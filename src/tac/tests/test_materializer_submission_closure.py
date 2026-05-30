@@ -896,6 +896,59 @@ def test_materializer_submission_closure_closes_all_source_queue_rows(
     assert bridge["ready_candidate_count"] == 2
 
 
+def test_materializer_submission_closure_blocks_missing_candidate_archive_in_many(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path
+    source_queue_path = repo / "artifacts" / "source_queue.json"
+    source_queue_path.parent.mkdir(parents=True)
+    source_queue_path.write_text(
+        json.dumps(
+            {
+                "schema": "optimizer_candidate_queue_v1",
+                **FALSE_AUTHORITY,
+                "n_candidates": 1,
+                "top_k_count": 1,
+                "dispatch_ready_count": 0,
+                "dispatch_ready": [],
+                "top_k": [
+                    {
+                        "schema": "packet_member_zip_header_elide_candidate.v1",
+                        **FALSE_AUTHORITY,
+                        "candidate_id": "missing_archive_fixture",
+                        "target_kind": "packet_member_zip_header_elide_v1",
+                        "candidate_archive_path": "artifacts/missing.zip",
+                        "receiver_contract_satisfied": True,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = build_materializer_submission_runtime_closures(
+        repo_root=repo,
+        source_queue_path=source_queue_path,
+        submission_dir_out=repo / "closure" / "submissions",
+        closed_source_queue_out=repo / "closure" / "closed_source_queue.json",
+        closure_report_out=repo / "closure" / "submission_closure_report.json",
+    )
+
+    assert report["schema"] == SUBMISSION_CLOSURE_REPORT_SCHEMA
+    assert report["candidate_count"] == 1
+    row_report = report["rows"][0]
+    assert row_report["closure_blockers"] == ["candidate_archive_missing"]
+    closed_queue = json.loads(
+        (repo / "closure" / "closed_source_queue.json").read_text(encoding="utf-8")
+    )
+    closed_row = closed_queue["top_k"][0]
+    assert closed_row["materializer_submission_closure_kind"] == (
+        "candidate_blocked_refusal"
+    )
+    assert "candidate_archive_missing" in closed_row["readiness_blockers"]
+    assert closed_row["ready_for_exact_eval_dispatch"] is False
+
+
 def test_materializer_submission_closure_emits_empty_refusal_for_no_candidates(
     tmp_path: Path,
 ) -> None:

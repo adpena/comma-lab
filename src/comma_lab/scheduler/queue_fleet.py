@@ -373,6 +373,7 @@ def _native_consumer_hint(
             repo_rel(output_dir / "closed_source_queue.json", repo),
             "--closure-report-out",
             repo_rel(output_dir / "submission_closure_report.json", repo),
+            "--overwrite",
         ]
         return {
             **base,

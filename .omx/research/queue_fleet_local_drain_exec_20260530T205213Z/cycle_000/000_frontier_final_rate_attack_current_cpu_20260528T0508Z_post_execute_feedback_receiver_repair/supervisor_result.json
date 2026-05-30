@@ -1,0 +1,230 @@
+{
+  "allowed_use": "queue_supervisor_local_execution_telemetry_only",
+  "execute": true,
+  "final_reason": "max_ticks_reached",
+  "final_summary": {
+    "allowed_use": "operator_queue_control_and_local_telemetry_only",
+    "auto_parallelism": {
+      "idle_declared_resources": {
+        "local_cpu": 1
+      },
+      "local_only": {
+        "max_parallel": 1,
+        "resource_limits": {
+          "local_io_heavy": 1
+        }
+      },
+      "used_resource_kinds": [
+        "local_io_heavy"
+      ],
+      "with_cloud": {
+        "max_parallel": 1,
+        "resource_limits": {
+          "local_io_heavy": 1
+        }
+      }
+    },
+    "automation_blockers": [],
+    "automation_verdict": "safe_to_resume_or_continue",
+    "blocked_steps": [],
+    "blocker_count": 0,
+    "blockers": [],
+    "failed_steps": [],
+    "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_exact_eval_authority",
+    "healthy": true,
+    "mode": "running",
+    "orphaned_step_count": 0,
+    "pause_command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/frontier_final_rate_attack_current_cpu_20260528T0508Z/post_execute_feedback_refresh/receiver_repair_queue.json",
+      "--state",
+      ".omx/state/experiment_queue_frontier_final_rate_attack_current_cpu_20260528T0508Z_post_execute_feedback_receiver_repair.sqlite",
+      "control",
+      "paused",
+      "--reason",
+      "operator_pause_from_queue_control"
+    ],
+    "performance": {
+      "by_resource_kind": {
+        "local_io_heavy": {
+          "artifact_record_bytes_mean": 5365.5,
+          "artifact_record_bytes_sum": 10731,
+          "artifact_record_count": 2,
+          "artifact_record_raw_bytes_mean": 5365.5,
+          "artifact_record_raw_bytes_sum": 10731,
+          "candidate_ids": [
+            "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_byte_range_entropy_recode_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof"
+          ],
+          "dominant_resource_kind": "local_io_heavy",
+          "elapsed_seconds_max": 1.2835729169892147,
+          "elapsed_seconds_mean": 1.2806668959965464,
+          "elapsed_seconds_min": 1.277760875003878,
+          "elapsed_seconds_sum": 2.5613337919930927,
+          "experiment_ids": [
+            "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_byte_range_entropy_recode_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof"
+          ],
+          "failure_count": 0,
+          "log_bytes_mean": 831.0,
+          "log_bytes_sum": 1662,
+          "resource_kind_counts": {
+            "local_io_heavy": 2
+          },
+          "run_count": 2,
+          "step_ids": [
+            "emit_receiver_repair_work_order"
+          ],
+          "success_count": 2
+        }
+      },
+      "event_count": 2,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "experiment_queue_performance_summary.v1",
+      "score_claim": false,
+      "telemetry_only": true
+    },
+    "promotable": false,
+    "promotion_eligible": false,
+    "queue_id": "frontier_final_rate_attack_current_cpu_20260528T0508Z_post_execute_feedback_receiver_repair",
+    "queue_path": ".omx/research/frontier_final_rate_attack_current_cpu_20260528T0508Z/post_execute_feedback_refresh/receiver_repair_queue.json",
+    "queued_step_count": 2,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "recommended_actions": [
+      {
+        "action": "run_worker",
+        "command": [
+          ".venv/bin/python",
+          "tools/experiment_queue.py",
+          "--queue",
+          ".omx/research/frontier_final_rate_attack_current_cpu_20260528T0508Z/post_execute_feedback_refresh/receiver_repair_queue.json",
+          "--state",
+          ".omx/state/experiment_queue_frontier_final_rate_attack_current_cpu_20260528T0508Z_post_execute_feedback_receiver_repair.sqlite",
+          "run-worker",
+          "--execute",
+          "--max-steps",
+          "2"
+        ],
+        "rank": 50,
+        "reason": "2_queued_steps_available"
+      }
+    ],
+    "resume_command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/frontier_final_rate_attack_current_cpu_20260528T0508Z/post_execute_feedback_refresh/receiver_repair_queue.json",
+      "--state",
+      ".omx/state/experiment_queue_frontier_final_rate_attack_current_cpu_20260528T0508Z_post_execute_feedback_receiver_repair.sqlite",
+      "run-worker",
+      "--execute",
+      "--max-steps",
+      "2"
+    ],
+    "running_steps": [],
+    "runtime_policy": {
+      "advisory_only": true,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "recommended_max_concurrency": {
+        "local_io_heavy": 1
+      },
+      "recommended_timeout_seconds_by_resource": {
+        "local_io_heavy": 120
+      },
+      "schema": "scheduler_runtime_policy.v1",
+      "score_claim": false
+    },
+    "schema": "experiment_queue_control_surface.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "state": ".omx/state/experiment_queue_frontier_final_rate_attack_current_cpu_20260528T0508Z_post_execute_feedback_receiver_repair.sqlite",
+    "state_watermark": {
+      "control_mode": "running",
+      "control_updated_at_utc": "2026-05-30T19:06:24Z",
+      "event_count": 9,
+      "max_event_id": 9,
+      "max_step_updated_at_utc": "2026-05-30T20:53:33Z",
+      "queue_id": "frontier_final_rate_attack_current_cpu_20260528T0508Z_post_execute_feedback_receiver_repair",
+      "schema": "experiment_queue_state_watermark.v1",
+      "state_path": ".omx/state/experiment_queue_frontier_final_rate_attack_current_cpu_20260528T0508Z_post_execute_feedback_receiver_repair.sqlite",
+      "step_state_count": 4
+    },
+    "status_counts": {
+      "queued": 2,
+      "succeeded": 2
+    },
+    "stop_command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/frontier_final_rate_attack_current_cpu_20260528T0508Z/post_execute_feedback_refresh/receiver_repair_queue.json",
+      "--state",
+      ".omx/state/experiment_queue_frontier_final_rate_attack_current_cpu_20260528T0508Z_post_execute_feedback_receiver_repair.sqlite",
+      "control",
+      "frozen",
+      "--reason",
+      "operator_stop_freeze_from_queue_control"
+    ],
+    "supervise_command": [
+      ".venv/bin/python",
+      "tools/queue_supervisor.py",
+      "--queue",
+      ".omx/research/frontier_final_rate_attack_current_cpu_20260528T0508Z/post_execute_feedback_refresh/receiver_repair_queue.json",
+      "--state",
+      ".omx/state/experiment_queue_frontier_final_rate_attack_current_cpu_20260528T0508Z_post_execute_feedback_receiver_repair.sqlite",
+      "--output-dir",
+      ".omx/research/queue_supervisor_frontier_final_rate_attack_current_cpu_20260528T0508Z_post_execute_feedback_receiver_repair",
+      "--max-ticks",
+      "16",
+      "--max-steps-per-tick",
+      "2",
+      "--max-parallel",
+      "auto",
+      "--execute"
+    ]
+  },
+  "finished_at_utc": "2026-05-30T20:53:33Z",
+  "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_exact_eval_authority",
+  "heartbeat_path": ".omx/research/queue_fleet_local_drain_exec_20260530T205213Z/cycle_000/000_frontier_final_rate_attack_current_cpu_20260528T0508Z_post_execute_feedback_receiver_repair/heartbeat.json",
+  "last_tick": {
+    "action": "run_worker",
+    "automation_verdict": "safe_to_resume_or_continue",
+    "final_reason_if_stopping": "max_ticks_reached",
+    "promotion_eligible": false,
+    "queue_id": "frontier_final_rate_attack_current_cpu_20260528T0508Z_post_execute_feedback_receiver_repair",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "experiment_queue_supervisor_tick.v1",
+    "score_claim": false,
+    "status_counts": {
+      "queued": 2,
+      "succeeded": 2
+    },
+    "tick_artifact": {
+      "bytes": 23317,
+      "path": ".omx/research/queue_fleet_local_drain_exec_20260530T205213Z/cycle_000/000_frontier_final_rate_attack_current_cpu_20260528T0508Z_post_execute_feedback_receiver_repair/tick_0000/tick.json",
+      "sha256": "5aa5b40bfb6093f38a171ac009f303383f3b4a97a4196b4b2fa82f843b0ed99b"
+    },
+    "tick_index": 0
+  },
+  "lock_path": ".omx/research/queue_fleet_local_drain_exec_20260530T205213Z/cycle_000/000_frontier_final_rate_attack_current_cpu_20260528T0508Z_post_execute_feedback_receiver_repair/supervisor.lock",
+  "output_dir": ".omx/research/queue_fleet_local_drain_exec_20260530T205213Z/cycle_000/000_frontier_final_rate_attack_current_cpu_20260528T0508Z_post_execute_feedback_receiver_repair",
+  "promotable": false,
+  "promotion_eligible": false,
+  "queue_id": "frontier_final_rate_attack_current_cpu_20260528T0508Z_post_execute_feedback_receiver_repair",
+  "queue_path": ".omx/research/frontier_final_rate_attack_current_cpu_20260528T0508Z/post_execute_feedback_refresh/receiver_repair_queue.json",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "experiment_queue_supervisor_run.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "started_at_utc": "2026-05-30T20:53:29Z",
+  "state": ".omx/state/experiment_queue_frontier_final_rate_attack_current_cpu_20260528T0508Z_post_execute_feedback_receiver_repair.sqlite",
+  "tick_count": 1,
+  "ticks_jsonl": ".omx/research/queue_fleet_local_drain_exec_20260530T205213Z/cycle_000/000_frontier_final_rate_attack_current_cpu_20260528T0508Z_post_execute_feedback_receiver_repair/ticks.jsonl"
+}

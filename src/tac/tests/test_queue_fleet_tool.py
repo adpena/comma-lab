@@ -354,6 +354,7 @@ def test_queue_fleet_routes_optimizer_candidate_queue_to_submission_closure(
     assert payload["next_native_consumer_commands"]
     command = payload["next_native_consumer_commands"][0]
     assert "tools/build_materializer_submission_closure.py" in command
+    assert "--overwrite" in command
     samples = payload["status_samples"]["NON_EXECUTABLE_QUEUE_ARTIFACT"]
     assert samples[0]["native_consumer"]["consumer_kind"] == (
         "optimizer_candidate_submission_closure"

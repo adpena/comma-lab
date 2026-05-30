@@ -57,6 +57,7 @@ from comma_lab.scheduler.byte_shaving_materializer_registry import (
     DQS1_PAIRSET_TARGET_KIND,
     DQS1_RECEIVER_CONTRACT_ID,
     DQS1_RECEIVER_CONTRACT_KIND,
+    FECA_SELECTOR_REPARAMETERIZE_TARGET_KIND,
     FP11_SOURCE_BROTLI_RECODE_MATERIALIZER,
     FP11_SOURCE_BROTLI_RECODE_TARGET_KIND,
     INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER,
@@ -5050,6 +5051,105 @@ def test_materializer_execution_queue_guards_family_overwrite_with_existing_hash
         "--expected-existing-runtime-consumption-proof-sha256",
         hashlib.sha256(runtime_proof.read_bytes()).hexdigest(),
     ] in [command[index : index + 2] for index in range(len(command) - 1)]
+
+
+def test_materializer_execution_queue_makes_sweep_commands_rerunnable(
+    tmp_path: Path,
+) -> None:
+    work_queue = {
+        "schema": MATERIALIZER_WORK_QUEUE_SCHEMA,
+        "rows": [
+            {
+                "work_id": "zip_repack_sweep_fixture",
+                "work_rank": 1,
+                "target_kind": ARCHIVE_ZIP_REPACK_TARGET_KIND,
+                "executable": True,
+                "resource_kind": "local_cpu",
+                "command": [
+                    ".venv/bin/python",
+                    "tools/run_family_agnostic_materializer_sweep.py",
+                    "--target-kind",
+                    ARCHIVE_ZIP_REPACK_TARGET_KIND,
+                    "--output-dir",
+                    "sweep",
+                    "--output-json",
+                    "sweep/sweep.json",
+                    "--observation-jsonl",
+                    "sweep/observations.jsonl",
+                    "--archive",
+                    "a=archive.zip",
+                ],
+                "postconditions": [],
+                "telemetry": {},
+                **_false_authority(),
+            }
+        ],
+    }
+
+    execution_queue = build_materializer_execution_queue(
+        work_queue,
+        queue_id="sweep_overwrite_fixture",
+        repo_root=tmp_path,
+    )
+
+    command = execution_queue["experiments"][0]["steps"][0]["command"]
+    assert command[1] == "tools/run_family_agnostic_materializer_sweep.py"
+    assert "--allow-overwrite" in command
+    assert "--expected-existing-output-sha256" not in command
+
+
+@pytest.mark.parametrize(
+    ("tool", "target_kind"),
+    [
+        (
+            "tools/build_feca_selector_reparameterized_candidate.py",
+            FECA_SELECTOR_REPARAMETERIZE_TARGET_KIND,
+        ),
+        (
+            "tools/build_fp11_source_brotli_recode_candidate.py",
+            FP11_SOURCE_BROTLI_RECODE_TARGET_KIND,
+        ),
+    ],
+)
+def test_materializer_execution_queue_preserves_nonpositive_recode_signal(
+    tmp_path: Path,
+    tool: str,
+    target_kind: str,
+) -> None:
+    work_queue = {
+        "schema": MATERIALIZER_WORK_QUEUE_SCHEMA,
+        "rows": [
+            {
+                "work_id": "source_native_recode_fixture",
+                "work_rank": 1,
+                "target_kind": target_kind,
+                "executable": True,
+                "resource_kind": "local_cpu",
+                "command": [
+                    ".venv/bin/python",
+                    tool,
+                    "--source-submission-dir",
+                    "submission",
+                    "--output-dir",
+                    "candidate",
+                ],
+                "postconditions": [],
+                "telemetry": {},
+                **_false_authority(),
+            }
+        ],
+    }
+
+    execution_queue = build_materializer_execution_queue(
+        work_queue,
+        queue_id="source_native_recode_fixture",
+        repo_root=tmp_path,
+    )
+
+    command = execution_queue["experiments"][0]["steps"][0]["command"]
+    assert command[1] == tool
+    assert "--allow-nonpositive-candidate" in command
+    assert "--overwrite" in command
 
 
 def test_materializer_execution_queue_requires_source_work_queue_path_for_exact_followup(
