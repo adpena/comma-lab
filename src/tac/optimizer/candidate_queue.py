@@ -425,30 +425,28 @@ def _annotate_archive_candidate_verification(
     candidate_archive_contract = _mapping(
         contract.get("candidate_archive") if contract is not None else None
     )
-    archive_path = _resolve_repo_path(
-        row.get("candidate_archive_path")
-        or row.get("archive_path")
-        or candidate_archive_contract.get("path"),
-        repo_root,
-    )
+    if contract is not None:
+        archive_path = _resolve_repo_path(candidate_archive_contract.get("path"), repo_root)
+        archive_sha = _shaish(candidate_archive_contract.get("sha256"))
+        archive_bytes = _as_int(candidate_archive_contract.get("bytes"))
+    else:
+        archive_path = _resolve_repo_path(
+            row.get("candidate_archive_path") or row.get("archive_path"),
+            repo_root,
+        )
+        archive_sha = _shaish(row.get("candidate_archive_sha256") or row.get("archive_sha256"))
+        archive_bytes = _as_int(
+            row.get("candidate_archive_bytes")
+            or row.get("archive_bytes")
+            or row.get("archive_size_bytes")
+        )
     submission_dir = _resolve_repo_path(row.get("submission_dir"), repo_root)
-    if archive_path is None and submission_dir is not None:
+    if contract is None and archive_path is None and submission_dir is not None:
         archive_path = submission_dir / "archive.zip"
     if archive_path is None and submission_dir is None:
         return
 
     blockers: list[str] = []
-    archive_sha = _shaish(
-        row.get("candidate_archive_sha256")
-        or row.get("archive_sha256")
-        or candidate_archive_contract.get("sha256")
-    )
-    archive_bytes = _as_int(
-        row.get("candidate_archive_bytes")
-        or row.get("archive_bytes")
-        or row.get("archive_size_bytes")
-        or candidate_archive_contract.get("bytes")
-    )
     if archive_path is None or not archive_path.is_file():
         blockers.append("candidate_archive_path_unverified")
     if archive_sha is None:

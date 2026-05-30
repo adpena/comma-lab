@@ -204,6 +204,22 @@ def _archive_field_value(
     return None
 
 
+def _archive_path_values_differ(row_value: Any, contract_value: Any) -> bool:
+    row_text = str(row_value).strip().replace("\\", "/")
+    contract_text = str(contract_value).strip().replace("\\", "/")
+    if not row_text or not contract_text:
+        return False
+    row_norm = row_text.lstrip("./")
+    contract_norm = contract_text.lstrip("./")
+    if row_norm == contract_norm:
+        return False
+    if row_text.startswith("/") and not contract_text.startswith("/"):
+        return not row_text.endswith(f"/{contract_norm}")
+    if contract_text.startswith("/") and not row_text.startswith("/"):
+        return not contract_text.endswith(f"/{row_norm}")
+    return True
+
+
 def archive_bound_candidate_contract_stale_field_blockers(
     row: Mapping[str, Any],
     *,
@@ -242,6 +258,16 @@ def archive_bound_candidate_contract_stale_field_blockers(
     source_archive = _mapping(resolved_contract.get("source_archive"))
     duplicate_specs = (
         (
+            "candidate_archive_path",
+            _archive_field_value(
+                row,
+                object_key="candidate_archive",
+                direct_keys=("candidate_archive_path", "archive_path"),
+                nested_keys=("path", "archive_path"),
+            ),
+            candidate_archive.get("path"),
+        ),
+        (
             "candidate_archive_sha256",
             _archive_field_value(
                 row,
@@ -260,6 +286,16 @@ def archive_bound_candidate_contract_stale_field_blockers(
                 nested_keys=("bytes", "archive_bytes"),
             ),
             candidate_archive.get("bytes"),
+        ),
+        (
+            "source_archive_path",
+            _archive_field_value(
+                row,
+                object_key="source_archive",
+                direct_keys=("source_archive_path",),
+                nested_keys=("path", "archive_path"),
+            ),
+            source_archive.get("path"),
         ),
         (
             "source_archive_sha256",
@@ -284,6 +320,10 @@ def archive_bound_candidate_contract_stale_field_blockers(
     )
     for field, row_value, contract_value in duplicate_specs:
         if row_value in ("", None) or contract_value in ("", None):
+            continue
+        if field.endswith("_path"):
+            if _archive_path_values_differ(row_value, contract_value):
+                blockers.append(f"archive_bound_contract_stale_duplicate_field:{field}")
             continue
         if str(row_value) != str(contract_value):
             blockers.append(f"archive_bound_contract_stale_duplicate_field:{field}")
