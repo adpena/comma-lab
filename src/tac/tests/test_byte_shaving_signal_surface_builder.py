@@ -8,6 +8,9 @@ from pathlib import Path
 
 import pytest
 
+from tac.optimization.archive_bound_candidate_contract import (
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
+)
 from tac.optimization.byte_shaving_campaign import (
     ByteShavingCampaignError,
     build_byte_shaving_campaign_plan,
@@ -364,6 +367,7 @@ def _dqs1_observations(
     *,
     truthy_authority: bool = False,
     malformed_pair_id: object | None = None,
+    stale_contract: bool = False,
 ) -> None:
     false_authority = {
         "score_claim": False,
@@ -417,6 +421,19 @@ def _dqs1_observations(
     }
     if truthy_authority:
         row["promotion_eligible"] = True
+    if stale_contract:
+        row["receiver_contract_satisfied"] = False
+        row["archive_bound_candidate_contract_schema"] = "stale_contract_schema.v0"
+        row["archive_bound_candidate_contract"] = {
+            "schema": ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
+            "selected_archive_transform_variant": True,
+            "runtime_consumption_proof_ready": True,
+            "receiver_contract_satisfied": True,
+            "ready_for_exact_eval_dispatch": False,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+        }
     path.write_text(json.dumps(row, sort_keys=True) + "\n", encoding="utf-8")
 
 
@@ -598,6 +615,32 @@ def test_builder_promotes_dqs1_outcomes_to_solver_anchor_units(
     assert provenance_operation["score_claim"] is False
     assert "macos_cpu_advisory_is_not_contest_authority" in ranked["blockers"]
     assert plan["score_claim"] is False
+
+
+def test_builder_blocks_dqs1_outcome_with_stale_archive_bound_contract(
+    tmp_path: Path,
+) -> None:
+    pairset = tmp_path / "pairset_acquisition.json"
+    observations = tmp_path / "dqs1_observations.jsonl"
+    _pairset_acquisition(pairset)
+    _dqs1_observations(observations, stale_contract=True)
+
+    surface = build_byte_shaving_signal_surface(
+        repo_root=tmp_path,
+        campaign_id="dqs1_stale_contract_surface",
+        pairset_acquisition_paths=[pairset],
+        dqs1_observation_paths=[observations],
+    )
+
+    ref = surface["pair_frame_geometry_outcome_refs"][0]
+    assert ref["dqs1_row_count"] == 1
+    assert ref["archive_bound_contract_blocked_row_count"] == 1
+    assert ref["emitted_unit_count"] == 0
+    assert any(
+        "archive_bound_contract_stale_duplicate_field:schema"
+        in blocker
+        for blocker in ref["archive_bound_contract_blockers"]
+    )
 
 
 def test_builder_rejects_dqs1_outcome_truthy_authority(tmp_path: Path) -> None:

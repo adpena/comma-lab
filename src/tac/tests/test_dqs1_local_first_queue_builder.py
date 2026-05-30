@@ -23,6 +23,9 @@ from src.comma_lab.scheduler.dqs1_local_first_queue import (
     find_latest_cross_family_action_summary,
 )
 from src.comma_lab.scheduler.experiment_queue import ExperimentQueueError, load_queue_definition
+from src.tac.optimization.archive_bound_candidate_contract import (
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
+)
 from src.tac.optimization.local_cpu_contest_drift import EUREKA_FALSE_AUTHORITY_FIELDS
 from tools import build_dqs1_local_first_queue as queue_cli
 from tools.harvest_dqs1_local_first_result import _write_json as write_harvest_json
@@ -607,6 +610,57 @@ def test_dqs1_queue_builder_stamps_materializer_feedback_bridge(
     assert all(
         experiment["metadata"]["materializer_feedback_bridge"] == bridge
         for experiment in result.queue["experiments"]
+    )
+
+
+def test_dqs1_materializer_feedback_bridge_demotes_stale_contract_positive(
+    tmp_path: Path,
+) -> None:
+    summary = _write_summary(tmp_path)
+    materializer_feedback = {
+        "schema": "family_agnostic_materializer_empirical_sweep.v1",
+        **_false_authority(),
+        "observations": [
+            {
+                "schema": "family_agnostic_materializer_empirical_observation.v1",
+                **_false_authority(),
+                "observation_id": "stale_contract_rate_positive",
+                "candidate_id": "stale_contract_rate_positive",
+                "target_kind": "packet_member_recompress_v1",
+                "saved_bytes": 128,
+                "rate_positive": True,
+                "receiver_contract_satisfied": False,
+                "archive_bound_candidate_contract": {
+                    "schema": ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
+                    "selected_archive_transform_variant": True,
+                    "runtime_consumption_proof_ready": True,
+                    "receiver_contract_satisfied": True,
+                    "ready_for_exact_eval_dispatch": False,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                },
+            }
+        ],
+    }
+
+    result = build_queue_from_action_summary(
+        summary,
+        repo_root=tmp_path,
+        results_root="results",
+        candidate_limit=1,
+        materializer_feedback_payloads=(materializer_feedback,),
+    )
+
+    bridge = result.materializer_feedback_bridge
+    assert bridge is not None
+    target = bridge["materializer_target_groups"][0]
+    assert target["receiver_positive_rate_saving_count"] == 0
+    assert target["demotion_reason"] == "rate_saving_without_receiver_contract"
+    assert any(
+        "archive_bound_contract_stale_duplicate_field:receiver_contract_satisfied"
+        in blocker
+        for blocker in target["readiness_blockers"]
     )
 
 

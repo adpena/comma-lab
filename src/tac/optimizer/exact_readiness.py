@@ -32,7 +32,8 @@ from tac.hnerv_frontier_defaults import (
 )
 from tac.optimization.archive_bound_candidate_contract import (
     ArchiveBoundCandidateContractError,
-    archive_bound_candidate_contracts_from_payload,
+    has_archive_bound_candidate_contract_payload,
+    selected_archive_bound_candidate_contract_from_payload,
 )
 from tac.optimization.byte_range_entropy_recode_materializer import (
     MATERIALIZER_ID as BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER_ID,
@@ -70,14 +71,6 @@ from tac.zipwire_archive import inspect_zip_headers
 QUEUE_SCHEMA = "optimizer_candidate_exact_eval_ready_queue_v1"
 TOOL_NAME = "tools/promote_optimizer_candidate_for_exact_eval.py"
 PR101_RUNTIME_CONSUMPTION_PROOF_SCHEMA = "pr101_kaggle_proxy_runtime_consumption_proof_v1"
-ARCHIVE_BOUND_CONTRACT_PAYLOAD_KEYS = frozenset(
-    {
-        "archive_bound_candidate_contract",
-        "archive_bound_candidate_contract_surface",
-        "archive_bound_candidate_contract_schema",
-        "archive_bound_candidate_contract_surface_schema",
-    }
-)
 FAMILY_AGNOSTIC_RUNTIME_CONSUMPTION_PROOF_SCHEMAS = frozenset(
     {
         "family_agnostic_runtime_consumption_proof_v1",
@@ -345,27 +338,21 @@ def _mapping(value: Any) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
 
 
-def _has_archive_bound_contract_payload(row: Mapping[str, Any]) -> bool:
-    return any(key in row for key in ARCHIVE_BOUND_CONTRACT_PAYLOAD_KEYS)
-
-
 def archive_bound_contract_for_row(
     row: Mapping[str, Any],
     *,
     label: str,
 ) -> tuple[Mapping[str, Any] | None, list[str]]:
-    if not _has_archive_bound_contract_payload(row):
+    if not has_archive_bound_candidate_contract_payload(row):
         return None, []
     try:
-        contracts = archive_bound_candidate_contracts_from_payload(row, label=label)
+        contract = selected_archive_bound_candidate_contract_from_payload(
+            row,
+            label=label,
+        )
     except ArchiveBoundCandidateContractError as exc:
         return None, [f"archive_bound_candidate_contract_invalid:{exc}"]
-    selected = [
-        contract
-        for contract in contracts
-        if contract.get("selected_archive_transform_variant") is True
-    ]
-    return selected[0] if selected else contracts[0] if contracts else None, []
+    return contract, []
 
 
 def candidate_archive_path(
@@ -2004,6 +1991,33 @@ def validate_runtime_consumption_proof(
             field
             for field in FAMILY_AGNOSTIC_RUNTIME_PROOF_REQUIRED_FALSE_AUTHORITY_FIELDS
             if field in proof_raw
+        ):
+            if proof_raw.get(false_authority_field) is not False:
+                blockers.append(
+                    f"runtime_consumption_proof_false_authority_violation:{false_authority_field}"
+                )
+    elif (
+        proof_schema == "inverse_scorer_cell_inflate_parity_probe_v1"
+        and _is_inverse_scorer_cell_candidate_chain(row)
+    ):
+        if not _inverse_scorer_parity_payload_verified(proof_raw):
+            blockers.append("runtime_consumption_proof_not_proven")
+        proof_archive = _mapping(proof_raw.get("candidate_archive"))
+        proof_archive_sha = proof_archive.get("sha256")
+        facts["runtime_consumption_proof_archive_sha256"] = proof_archive_sha
+        if archive_sha256 is not None:
+            if not is_sha256(proof_archive_sha):
+                blockers.append("runtime_consumption_proof_archive_sha_missing")
+            elif str(proof_archive_sha).lower() != archive_sha256:
+                blockers.append("runtime_consumption_proof_archive_sha_mismatch")
+        inflate_runtime = _mapping(proof_raw.get("inflate_runtime"))
+        facts["runtime_consumption_proof_runtime_path"] = inflate_runtime.get("path")
+        if submission_dir is not None:
+            expected_runtime_path = repo_rel(submission_dir, repo_root)
+            if inflate_runtime.get("path") != expected_runtime_path:
+                blockers.append("runtime_consumption_proof_runtime_path_mismatch")
+        for false_authority_field in (
+            field for field in PROXY_FALSE_AUTHORITY_FIELDS if field in proof_raw
         ):
             if proof_raw.get(false_authority_field) is not False:
                 blockers.append(

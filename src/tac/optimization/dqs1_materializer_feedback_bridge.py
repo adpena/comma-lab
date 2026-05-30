@@ -54,7 +54,45 @@ def _safe_float(value: Any) -> float | None:
     return out if isfinite(out) else None
 
 
+def _archive_bound_contract_blockers(row: Mapping[str, Any]) -> list[str]:
+    from tac.optimization.archive_bound_candidate_contract import (
+        ArchiveBoundCandidateContractError,
+        has_archive_bound_candidate_contract_payload,
+        selected_archive_bound_candidate_contract_from_payload,
+    )
+
+    if not has_archive_bound_candidate_contract_payload(row):
+        return []
+    try:
+        selected_archive_bound_candidate_contract_from_payload(
+            row,
+            label=f"dqs1_materializer_feedback_bridge:{row.get('candidate_id')}",
+        )
+    except ArchiveBoundCandidateContractError as exc:
+        return [f"archive_bound_candidate_contract_invalid:{exc}"]
+    return []
+
+
 def _receiver_satisfied(row: Mapping[str, Any]) -> bool:
+    from tac.optimization.archive_bound_candidate_contract import (
+        ArchiveBoundCandidateContractError,
+        has_archive_bound_candidate_contract_payload,
+        selected_archive_bound_candidate_contract_from_payload,
+    )
+
+    if has_archive_bound_candidate_contract_payload(row):
+        try:
+            contract = selected_archive_bound_candidate_contract_from_payload(
+                row,
+                label=f"dqs1_materializer_feedback_bridge:{row.get('candidate_id')}",
+            )
+        except ArchiveBoundCandidateContractError:
+            return False
+        return (
+            contract is not None
+            and contract.get("receiver_contract_satisfied") is True
+            and contract.get("runtime_consumption_proof_ready") is True
+        )
     return (
         row.get("receiver_contract_satisfied") is True
         or row.get("inflate_parity_satisfied") is True
@@ -125,6 +163,7 @@ def _target_group_rows(rows: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]
         if manifest_path:
             group["manifest_paths"].append(manifest_path)
         blockers[target].extend(str(item) for item in row.get("readiness_blockers") or [])
+        blockers[target].extend(_archive_bound_contract_blockers(row))
         action = str(row.get("recommended_planner_action") or "").strip()
         if action:
             actions[target].append(action)

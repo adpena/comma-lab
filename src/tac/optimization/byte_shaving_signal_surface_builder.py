@@ -21,6 +21,11 @@ from tac.auth_eval_schema import (
     eval_metric_summary,
     required_contest_auth_axis_payload_blockers,
 )
+from tac.optimization.archive_bound_candidate_contract import (
+    ArchiveBoundCandidateContractError,
+    has_archive_bound_candidate_contract_payload,
+    selected_archive_bound_candidate_contract_from_payload,
+)
 from tac.optimization.byte_shaving_campaign import (
     FALSE_AUTHORITY,
     SIGNAL_SURFACE_SCHEMA,
@@ -856,6 +861,16 @@ def _dqs1_observation_is_harvest(row: Mapping[str, Any]) -> bool:
     )
 
 
+def _archive_bound_contract_blockers(payload: Mapping[str, Any], *, label: str) -> list[str]:
+    if not has_archive_bound_candidate_contract_payload(payload):
+        return []
+    try:
+        selected_archive_bound_candidate_contract_from_payload(payload, label=label)
+    except ArchiveBoundCandidateContractError as exc:
+        return [f"archive_bound_candidate_contract_invalid:{exc}"]
+    return []
+
+
 def _operation_dropped_pairs(operation: Mapping[str, Any], *, context: str) -> list[int]:
     raw = _as_list(operation.get("dropped_pair_indices"))
     if not raw and operation.get("dropped_pair_index") is not None:
@@ -882,6 +897,8 @@ def _dqs1_outcome_surface(
     improved_row_count = 0
     regressed_row_count = 0
     k_gt_one_row_count = 0
+    contract_blocked_row_count = 0
+    contract_blockers: list[str] = []
     operation_kind_counts: dict[str, int] = {}
     emitted_saved_bytes_sum = 0
 
@@ -897,6 +914,14 @@ def _dqs1_outcome_surface(
             )
         except ValueError as exc:
             raise ByteShavingCampaignError(str(exc)) from exc
+        row_contract_blockers = _archive_bound_contract_blockers(
+            row,
+            label=f"byte_shaving_dqs1_observation.rows[{row_index}]",
+        )
+        if row_contract_blockers:
+            contract_blocked_row_count += 1
+            contract_blockers.extend(row_contract_blockers)
+            continue
         required_evidence = (
             "archive_sha256",
             "runtime_sha256",
@@ -1104,6 +1129,8 @@ def _dqs1_outcome_surface(
         "improved_row_count": improved_row_count,
         "regressed_row_count": regressed_row_count,
         "k_gt_one_row_count": k_gt_one_row_count,
+        "archive_bound_contract_blocked_row_count": contract_blocked_row_count,
+        "archive_bound_contract_blockers": ordered_unique(contract_blockers),
         "operation_kind_counts": dict(sorted(operation_kind_counts.items())),
         "planner_consumers": [
             "byte_shaving_campaign_plan",

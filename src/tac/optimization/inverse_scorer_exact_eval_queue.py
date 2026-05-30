@@ -12,6 +12,12 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from tac.optimization.archive_bound_candidate_contract import (
+    ArchiveBoundCandidateContractError,
+    archive_bound_candidate_contract_fields_for_row,
+    has_archive_bound_candidate_contract_payload,
+    selected_archive_bound_candidate_contract_from_payload,
+)
 from tac.optimization.proxy_candidate_contract import PROXY_FALSE_AUTHORITY_FIELDS
 from tac.repo_io import tree_sha256
 
@@ -421,9 +427,42 @@ def _load_parity_payload(step: Mapping[str, Any], repo_root: Path) -> dict[str, 
     return raw
 
 
+def _archive_bound_contract_for_chain(
+    chain: Mapping[str, Any],
+    *,
+    label: str,
+) -> dict[str, Any]:
+    if not has_archive_bound_candidate_contract_payload(chain):
+        return {}
+    try:
+        contract = selected_archive_bound_candidate_contract_from_payload(chain, label=label)
+    except ArchiveBoundCandidateContractError as exc:
+        raise InverseScorerExactEvalQueueError(
+            f"archive_bound_candidate_contract_invalid:{exc}"
+        ) from exc
+    return dict(contract or {})
+
+
 def _validate_chain(chain: Mapping[str, Any], repo_root: Path) -> dict[str, Any]:
     if chain.get("schema") != CHAIN_SCHEMA:
         raise InverseScorerExactEvalQueueError("chain_schema_mismatch")
+    archive_bound_contract = _archive_bound_contract_for_chain(
+        chain,
+        label="inverse_scorer_chain_manifest",
+    )
+    if archive_bound_contract:
+        if archive_bound_contract.get("byte_closed_candidate_materialized") is not True:
+            raise InverseScorerExactEvalQueueError(
+                "archive_bound_candidate_contract_not_materialized"
+            )
+        if archive_bound_contract.get("receiver_contract_satisfied") is not True:
+            raise InverseScorerExactEvalQueueError(
+                "archive_bound_candidate_contract_receiver_not_satisfied"
+            )
+        if archive_bound_contract.get("runtime_consumption_proof_ready") is not True:
+            raise InverseScorerExactEvalQueueError(
+                "archive_bound_candidate_contract_runtime_proof_missing"
+            )
     if chain.get("byte_closed_candidate_emitted") is not True:
         raise InverseScorerExactEvalQueueError("byte_closed_candidate_not_emitted")
     if chain.get("receiver_contract_satisfied") is not True:
@@ -670,6 +709,14 @@ def build_source_queue(
     candidate_id = candidate_id or f"ias1_chain_{str(candidate_archive['sha256'])[:12]}"
     archive_changed = candidate_archive["sha256"] != source_archive["sha256"]
     byte_changed = candidate_archive["bytes"] != source_archive["bytes"]
+    chain_steps = _sanitized_chain_steps(chain, repo_root)
+    runtime_consumption_proof_path = None
+    for step in chain_steps:
+        if step.get("step_id") == "build_inflate_parity_probe":
+            artifact = step.get("artifact")
+            if isinstance(artifact, Mapping):
+                runtime_consumption_proof_path = artifact.get("path")
+            break
     row = {
         **SOURCE_FALSE_AUTHORITY,
         "candidate_id": candidate_id,
@@ -701,12 +748,16 @@ def build_source_queue(
             "byte_different": byte_changed,
         },
         "byte_closed_candidate_emitted": chain.get("byte_closed_candidate_emitted") is True,
+        "runtime_consumption_proof_ready": True,
+        "runtime_consumption_proof_path": runtime_consumption_proof_path,
         "receiver_contract_satisfied": chain.get("receiver_contract_satisfied") is True,
         "inflate_parity_satisfied": chain.get("inflate_parity_satisfied") is True,
+        "runtime_adapter_ready": True,
+        "contest_runtime_decoder_adapter_ready": True,
         "readiness_blockers": list(chain.get("readiness_blockers") or []),
         "dispatch_blockers": list(chain.get("dispatch_blockers") or []),
         "next_required_gates": list(chain.get("next_required_gates") or []),
-        "chain_steps": _sanitized_chain_steps(chain, repo_root),
+        "chain_steps": chain_steps,
         "inflate_parity_probe": {
             "schema": parity_payload.get("schema"),
             "proof_scope": parity_payload.get("proof_scope"),
@@ -724,6 +775,16 @@ def build_source_queue(
             "runtime_submission_dir": runtime_submission["path"],
         },
     }
+    row.update(
+        archive_bound_candidate_contract_fields_for_row(
+            row,
+            repo_root=repo_root,
+            selected_transform_kind="inverse_scorer_exact_eval_archive_bridge_v1",
+            family_id="inverse_scorer_cell",
+            candidate_chain_id=candidate_id,
+            entropy_position_label="after_entropy_coder",
+        )
+    )
     return {
         "schema": QUEUE_SCHEMA,
         "tool": TOOL_NAME,

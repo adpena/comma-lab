@@ -15,6 +15,11 @@ from typing import Any
 
 import numpy as np
 
+from tac.optimization.archive_bound_candidate_contract import (
+    ArchiveBoundCandidateContractError,
+    has_archive_bound_candidate_contract_payload,
+    selected_archive_bound_candidate_contract_from_payload,
+)
 from tac.optimization.byte_shaving_campaign import FALSE_AUTHORITY
 from tac.optimization.inverse_steganalysis_operation_set_compiler import (
     OPERATION_SET_COMPILER_HINT_SCHEMA,
@@ -348,6 +353,20 @@ def _observation_rate_score(
     return 0.0
 
 
+def _archive_bound_contract_for_observation(
+    row: Mapping[str, Any],
+    *,
+    label: str = "observation_feedback_row",
+) -> tuple[dict[str, Any], list[str]]:
+    if not has_archive_bound_candidate_contract_payload(row):
+        return {}, []
+    try:
+        contract = selected_archive_bound_candidate_contract_from_payload(row, label=label)
+    except ArchiveBoundCandidateContractError as exc:
+        return {}, [f"archive_bound_candidate_contract_invalid:{exc}"]
+    return dict(contract or {}), []
+
+
 def _observation_channel_scores(
     row: Mapping[str, Any],
     *,
@@ -356,8 +375,17 @@ def _observation_channel_scores(
 ) -> dict[str, float]:
     rate_score = _observation_rate_score(row, rate_score_per_byte=rate_score_per_byte)
     elapsed = _optional_finite_float(row.get("elapsed_seconds"), label="elapsed_seconds")
-    receiver_ok = row.get("receiver_contract_satisfied") is True or row.get("inflate_parity_satisfied") is True
-    queue_health_ok = row.get("queue_observation_health") is not False
+    contract, contract_blockers = _archive_bound_contract_for_observation(row)
+    if contract:
+        receiver_ok = (
+            contract.get("receiver_contract_satisfied") is True
+            and contract.get("runtime_consumption_proof_ready") is True
+        )
+    elif contract_blockers:
+        receiver_ok = False
+    else:
+        receiver_ok = row.get("receiver_contract_satisfied") is True or row.get("inflate_parity_satisfied") is True
+    queue_health_ok = row.get("queue_observation_health") is not False and not contract_blockers
     score_by_channel: dict[str, float] = {}
     for channel_id in channel_ids:
         if channel_id == "rate_saving":
@@ -423,6 +451,11 @@ def _observation_candidate(
     if materializer:
         params["materializer_id"] = materializer
     receiver_contract_kind = _first_nonempty_text(row.get("receiver_contract_kind"))
+    archive_bound_contract, archive_bound_contract_blockers = _archive_bound_contract_for_observation(
+        row
+    )
+    if archive_bound_contract:
+        params["archive_bound_candidate_contract"] = dict(archive_bound_contract)
     candidate = {
         "unit_id": source_id,
         "operation_id": f"dynamic_sparse_observation_{source_id}",
@@ -436,6 +469,7 @@ def _observation_candidate(
             [
                 *_string_list(row.get("readiness_blockers")),
                 *_string_list(row.get("dispatch_blockers")),
+                *archive_bound_contract_blockers,
                 "dynamic_sparse_observation_feedback_candidate_generation_only",
             ]
         ),

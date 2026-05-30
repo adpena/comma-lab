@@ -9,8 +9,8 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY
 from tac.optimization.proxy_candidate_contract import (
+    PROXY_FALSE_AUTHORITY_FIELDS,
     ordered_unique,
     require_no_truthy_authority_fields,
 )
@@ -23,6 +23,23 @@ ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA = (
 ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA = (
     "tac_archive_bound_candidate_adapter_package.v1"
 )
+ARCHIVE_BOUND_CANDIDATE_CONTRACT_PAYLOAD_KEYS = frozenset(
+    {
+        "archive_bound_candidate_contract",
+        "archive_bound_candidate_contract_surface",
+        "archive_bound_candidate_contract_schema",
+        "archive_bound_candidate_contract_surface_schema",
+    }
+)
+FALSE_AUTHORITY: dict[str, bool] = {
+    **PROXY_FALSE_AUTHORITY_FIELDS,
+    "score_claim_valid": False,
+    "score_claim_eligible": False,
+    "dispatch_attempted": False,
+    "gpu_launched": False,
+    "exact_cuda_auth_eval": False,
+    "contest_cuda_auth_eval": False,
+}
 
 
 class ArchiveBoundCandidateContractError(ValueError):
@@ -293,6 +310,33 @@ def archive_bound_candidate_contracts_from_payload(
     raise ArchiveBoundCandidateContractError(
         f"{label} schema mismatch: {schema!r}"
     )
+
+
+def has_archive_bound_candidate_contract_payload(payload: Mapping[str, Any]) -> bool:
+    """Return true when ``payload`` carries any shared contract surface."""
+
+    return any(key in payload for key in ARCHIVE_BOUND_CANDIDATE_CONTRACT_PAYLOAD_KEYS)
+
+
+def selected_archive_bound_candidate_contract_from_payload(
+    payload: Mapping[str, Any],
+    *,
+    label: str = "archive_bound_candidate_contract_payload",
+) -> dict[str, Any] | None:
+    """Return the selected contract from any shared payload shape.
+
+    This is the consumer-side helper for queue/readiness code that needs one
+    canonical custody/readiness contract and must inherit stale-field rejection
+    from ``archive_bound_candidate_contracts_from_payload``.
+    """
+
+    contracts = archive_bound_candidate_contracts_from_payload(payload, label=label)
+    selected = [
+        contract
+        for contract in contracts
+        if contract.get("selected_archive_transform_variant") is True
+    ]
+    return dict(selected[0] if selected else contracts[0] if contracts else {})
 
 
 def _resolve(path: str | Path, repo_root: str | Path | None) -> Path:
@@ -959,6 +1003,7 @@ def build_archive_bound_candidate_contract_surface(
 
 __all__ = [
     "ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA",
+    "ARCHIVE_BOUND_CANDIDATE_CONTRACT_PAYLOAD_KEYS",
     "ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA",
     "ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA",
     "ArchiveBoundCandidateContractError",
@@ -969,5 +1014,7 @@ __all__ = [
     "build_archive_bound_candidate_contract",
     "build_archive_bound_candidate_contract_surface",
     "entropy_position_label_for_transform_kind",
+    "has_archive_bound_candidate_contract_payload",
     "require_fresh_archive_bound_candidate_contract_row",
+    "selected_archive_bound_candidate_contract_from_payload",
 ]

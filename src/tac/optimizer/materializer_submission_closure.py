@@ -23,7 +23,8 @@ from typing import Any
 
 from tac.optimization.archive_bound_candidate_contract import (
     ArchiveBoundCandidateContractError,
-    archive_bound_candidate_contracts_from_payload,
+    has_archive_bound_candidate_contract_payload,
+    selected_archive_bound_candidate_contract_from_payload,
 )
 from tac.optimization.proxy_candidate_contract import (
     apply_proxy_evidence_boundary,
@@ -107,15 +108,6 @@ SOURCE_JSON_SKIP_NAMES = {
     "runtime_consumption_proof.json",
     "runtime_packet_manifest.json",
 }
-ARCHIVE_BOUND_CONTRACT_PAYLOAD_KEYS = frozenset(
-    {
-        "archive_bound_candidate_contract",
-        "archive_bound_candidate_contract_surface",
-        "archive_bound_candidate_contract_schema",
-        "archive_bound_candidate_contract_surface_schema",
-    }
-)
-
 
 class MaterializerSubmissionClosureError(ValueError):
     """Raised when a materializer source row cannot be closed safely."""
@@ -285,18 +277,12 @@ def _row_archive_bound_contract(
     *,
     label: str,
 ) -> Mapping[str, Any] | None:
-    if not any(key in row for key in ARCHIVE_BOUND_CONTRACT_PAYLOAD_KEYS):
+    if not has_archive_bound_candidate_contract_payload(row):
         return None
     try:
-        contracts = archive_bound_candidate_contracts_from_payload(row, label=label)
+        return selected_archive_bound_candidate_contract_from_payload(row, label=label)
     except ArchiveBoundCandidateContractError as exc:
         raise MaterializerSubmissionClosureError(str(exc)) from exc
-    selected = [
-        contract
-        for contract in contracts
-        if contract.get("selected_archive_transform_variant") is True
-    ]
-    return selected[0] if selected else contracts[0] if contracts else None
 
 
 def _candidate_archive_path(
@@ -923,6 +909,123 @@ def _write_runtime_refused_submission_closure(
     return report
 
 
+def _write_candidate_blocked_submission_closure_refusal(
+    *,
+    repo: Path,
+    source_queue: Path,
+    queue_payload: Mapping[str, Any],
+    row: Mapping[str, Any],
+    submission_dir: Path,
+    closed_queue_path: Path,
+    closure_report_path: Path,
+    blocker: str,
+) -> dict[str, Any]:
+    submission_dir.mkdir(parents=True, exist_ok=True)
+    (submission_dir / "report.txt").write_text(
+        "\n".join(
+            [
+                "Materializer submission runtime closure refused",
+                "",
+                f"candidate_id: {row.get('candidate_id')}",
+                f"source_queue_path: {_repo_rel(source_queue, repo)}",
+                f"blocker: {blocker}",
+                "score_claim: false",
+                "promotion_eligible: false",
+                "rank_or_kill_eligible: false",
+                "ready_for_exact_eval_dispatch: false",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    blockers = [blocker]
+    closed_row = dict(row)
+    closed_dispatch_blockers = list(row.get("dispatch_blockers") or [])
+    closed_readiness_blockers = list(row.get("readiness_blockers") or [])
+    closed_row.update(
+        {
+            "submission_dir": _repo_rel(submission_dir, repo),
+            "materializer_submission_closure_report_path": _repo_rel(
+                closure_report_path,
+                repo,
+            ),
+            "materializer_submission_closure_kind": "candidate_blocked_refusal",
+            "materializer_submission_closure_blockers": blockers,
+            "readiness_blockers": list(
+                dict.fromkeys([*closed_readiness_blockers, *blockers])
+            ),
+            "dispatch_blockers": list(
+                dict.fromkeys([*closed_dispatch_blockers, *blockers])
+            ),
+            "candidate_archive_path_unverified": True,
+            "evidence_semantics": (
+                "submission_closure_refusal_no_byte_closed_archive"
+            ),
+            "allowed_use": "materializer_submission_closure_source_row_only",
+            "forbidden_use": (
+                "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+            ),
+            **FALSE_AUTHORITY,
+        }
+    )
+    closed_queue = _closed_queue_payload(
+        source_queue=queue_payload,
+        source_row=row,
+        closed_row=closed_row,
+    )
+    require_no_truthy_authority_fields(
+        closed_queue,
+        context="materializer_submission_closure_candidate_blocked_queue",
+    )
+    _write_json(closed_queue_path, closed_queue)
+
+    report = apply_proxy_evidence_boundary(
+        {
+            "schema": SUBMISSION_CLOSURE_REPORT_SCHEMA,
+            "tool": "tac.optimizer.materializer_submission_closure",
+            "generated_at_utc": _utc_now(),
+            "source_queue_path": _repo_rel(source_queue, repo),
+            "closed_source_queue_path": _repo_rel(closed_queue_path, repo),
+            "candidate_id": row.get("candidate_id"),
+            "target_kind": row.get("target_kind"),
+            "submission_dir": _repo_rel(submission_dir, repo),
+            "materializer_submission_closure_kind": "candidate_blocked_refusal",
+            "archive_path": None,
+            "archive_sha256": None,
+            "archive_bytes": None,
+            "copied_runtime_file_count": 0,
+            "copied_runtime_files": [],
+            "runtime_manifest": None,
+            "closure_queue_schema": closed_queue.get("schema"),
+            "saved_bytes_at_risk": row.get("realized_saved_bytes"),
+            "source_runtime_adapter_ready": False,
+            "closure_blockers": blockers,
+            "targeted_correction_budget_signal": {
+                "freed_bytes_require_receiver_and_exact_readiness_before_spend": True,
+                "saved_bytes_at_risk": row.get("realized_saved_bytes"),
+                **FALSE_AUTHORITY,
+            },
+            "allowed_use": "exact_readiness_static_submission_closure_only",
+            "forbidden_use": (
+                "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+            ),
+            **FALSE_AUTHORITY,
+        },
+        dispatch_blockers=[
+            "submission_closure_report_is_not_dispatch_authority",
+            "run_exact_readiness_bridge_on_closed_source_queue",
+            "contest_exact_auth_eval_required_before_score_claim",
+            *blockers,
+        ],
+    )
+    require_no_truthy_authority_fields(
+        report,
+        context="materializer_submission_closure_candidate_blocked_report",
+    )
+    _write_json(closure_report_path, report)
+    return dict(report)
+
+
 def _write_empty_submission_closure_refusal(
     *,
     repo: Path,
@@ -1390,16 +1493,31 @@ def build_materializer_submission_runtime_closures(
         candidate_dir = submission_root / candidate_slug
         candidate_sidecar_dir = candidate_sidecar_root / candidate_slug
         candidate_closed_queue_path = candidate_sidecar_dir / "closed_source_queue.json"
-        candidate_report = build_materializer_submission_runtime_closure(
-            repo_root=repo,
-            source_queue_path=source_queue,
-            candidate_id=candidate_id,
-            source_runtime_dir=source_runtime_dir,
-            submission_dir_out=candidate_dir,
-            closed_source_queue_out=candidate_closed_queue_path,
-            closure_report_out=candidate_sidecar_dir / "submission_closure_report.json",
-            overwrite=True,
-        )
+        candidate_report_path = candidate_sidecar_dir / "submission_closure_report.json"
+        try:
+            candidate_report = build_materializer_submission_runtime_closure(
+                repo_root=repo,
+                source_queue_path=source_queue,
+                candidate_id=candidate_id,
+                source_runtime_dir=source_runtime_dir,
+                submission_dir_out=candidate_dir,
+                closed_source_queue_out=candidate_closed_queue_path,
+                closure_report_out=candidate_report_path,
+                overwrite=True,
+            )
+        except MaterializerSubmissionClosureError as exc:
+            if str(exc) != "candidate_archive_missing":
+                raise
+            candidate_report = _write_candidate_blocked_submission_closure_refusal(
+                repo=repo,
+                source_queue=source_queue,
+                queue_payload=queue_payload,
+                row=row,
+                submission_dir=candidate_dir,
+                closed_queue_path=candidate_closed_queue_path,
+                closure_report_path=candidate_report_path,
+                blocker=str(exc),
+            )
         per_candidate_reports.append(candidate_report)
         candidate_closed_queue = read_json(candidate_closed_queue_path)
         if not isinstance(candidate_closed_queue, Mapping):

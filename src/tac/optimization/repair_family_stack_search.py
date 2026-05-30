@@ -11,7 +11,8 @@ from typing import Any
 
 from tac.optimization.archive_bound_candidate_contract import (
     ArchiveBoundCandidateContractError,
-    archive_bound_candidate_contracts_from_payload,
+    has_archive_bound_candidate_contract_payload,
+    selected_archive_bound_candidate_contract_from_payload,
 )
 from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY
 from tac.optimization.proxy_candidate_contract import (
@@ -33,15 +34,6 @@ REPAIR_FAMILY_EXACT_HANDOFF_PLAN_SCHEMA = "repair_family_exact_handoff_plan.v1"
 REPAIR_FAMILY_STACK_LEARNING_SIGNAL_REPORT_SCHEMA = "repair_campaign_blocked_learning_signal_report.v1"
 REPAIR_FAMILY_STACK_LEARNING_SIGNAL_SCHEMA = "repair_campaign_learning_signal.v1"
 REPAIR_FAMILY_STACK_LOCAL_PLANNING_UPDATE_SCHEMA = "repair_campaign_local_planning_update.v1"
-ARCHIVE_BOUND_CONTRACT_PAYLOAD_KEYS = frozenset(
-    {
-        "archive_bound_candidate_contract",
-        "archive_bound_candidate_contract_surface",
-        "archive_bound_candidate_contract_schema",
-        "archive_bound_candidate_contract_surface_schema",
-    }
-)
-
 _LEVEL_ORDER: tuple[str, ...] = (
     "bit",
     "byte",
@@ -86,27 +78,18 @@ def _mapping(value: Any) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
 
 
-def _has_archive_bound_contract_payload(payload: Mapping[str, Any]) -> bool:
-    return any(key in payload for key in ARCHIVE_BOUND_CONTRACT_PAYLOAD_KEYS)
-
-
 def _archive_bound_contract_for_payload(
     payload: Mapping[str, Any],
     *,
     label: str,
 ) -> tuple[dict[str, Any], list[str]]:
-    if not _has_archive_bound_contract_payload(payload):
+    if not has_archive_bound_candidate_contract_payload(payload):
         return {}, []
     try:
-        contracts = archive_bound_candidate_contracts_from_payload(payload, label=label)
+        contract = selected_archive_bound_candidate_contract_from_payload(payload, label=label)
     except ArchiveBoundCandidateContractError as exc:
         return {}, [f"archive_bound_candidate_contract_invalid:{exc}"]
-    selected = [
-        contract
-        for contract in contracts
-        if contract.get("selected_archive_transform_variant") is True
-    ]
-    return dict(selected[0] if selected else contracts[0] if contracts else {}), []
+    return dict(contract or {}), []
 
 
 def _validated_archive_bound_contract_surface(

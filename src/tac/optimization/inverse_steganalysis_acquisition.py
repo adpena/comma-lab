@@ -20,6 +20,11 @@ from typing import Any
 from tac.local_acceleration.mlx_acquisition_batch import (
     validate_mlx_acquisition_batch,
 )
+from tac.optimization.archive_bound_candidate_contract import (
+    ArchiveBoundCandidateContractError,
+    has_archive_bound_candidate_contract_payload,
+    selected_archive_bound_candidate_contract_from_payload,
+)
 from tac.optimization.byte_shaving_campaign import (
     COUPLED_OPERATION_SET_SCHEMA as BYTE_SHAVING_OPERATION_SET_SCHEMA,
 )
@@ -278,6 +283,23 @@ def normalize_inverse_steganalysis_atom(row: Mapping[str, Any]) -> dict[str, Any
     )
 
 
+def _archive_bound_contract_feedback(
+    payload: Mapping[str, Any],
+    *,
+    label: str,
+) -> tuple[dict[str, Any], list[str]]:
+    if not has_archive_bound_candidate_contract_payload(payload):
+        return {}, []
+    try:
+        contract = selected_archive_bound_candidate_contract_from_payload(
+            payload,
+            label=label,
+        )
+    except ArchiveBoundCandidateContractError as exc:
+        return {}, [f"archive_bound_candidate_contract_invalid:{exc}"]
+    return dict(contract or {}), []
+
+
 def normalize_inverse_steganalysis_observation(row: Mapping[str, Any]) -> dict[str, Any]:
     """Normalize a local/proxy scorer observation used by acquisition ranking."""
 
@@ -304,6 +326,21 @@ def normalize_inverse_steganalysis_observation(row: Mapping[str, Any]) -> dict[s
         raise InverseSteganalysisAcquisitionError(
             "inverse-steganalysis observations must not masquerade as contest "
             "auth evidence; use auth-eval payload validation for contest axes"
+        )
+    archive_bound_contract, archive_bound_contract_blockers = (
+        _archive_bound_contract_feedback(
+            row,
+            label=f"inverse_steganalysis_observation:{candidate_id}",
+        )
+    )
+    if archive_bound_contract:
+        receiver_contract_satisfied = (
+            archive_bound_contract.get("receiver_contract_satisfied") is True
+            and archive_bound_contract.get("runtime_consumption_proof_ready") is True
+        )
+    else:
+        receiver_contract_satisfied = False if archive_bound_contract_blockers else (
+            row.get("receiver_contract_satisfied") is True
         )
     out = {
         "schema": OBSERVATION_SCHEMA,
@@ -359,7 +396,12 @@ def normalize_inverse_steganalysis_observation(row: Mapping[str, Any]) -> dict[s
         "quality_spend_allowed": row.get("quality_spend_allowed") is True,
         "materializer_rate_outcome": _optional_text(row.get("materializer_rate_outcome")),
         "signal_semantics": _optional_text(row.get("signal_semantics")),
-        "readiness_blockers": _list_strings(row.get("readiness_blockers")),
+        "readiness_blockers": ordered_unique(
+            [
+                *_list_strings(row.get("readiness_blockers")),
+                *archive_bound_contract_blockers,
+            ]
+        ),
         "dispatch_blockers": _list_strings(row.get("dispatch_blockers")),
         "expected_artifact_paths": _list_strings(row.get("expected_artifact_paths")),
         "candidate_ids": _list_strings(row.get("candidate_ids")),
@@ -376,7 +418,7 @@ def normalize_inverse_steganalysis_observation(row: Mapping[str, Any]) -> dict[s
         "charged_bits_changed_proxy_signal": row.get("charged_bits_changed_proxy_signal") is True
         or rate_positive,
         "score_affecting_payload_changed": row.get("score_affecting_payload_changed") is True,
-        "receiver_contract_satisfied": row.get("receiver_contract_satisfied") is True,
+        "receiver_contract_satisfied": receiver_contract_satisfied,
         "artifact_record_count": _optional_int(
             row.get("artifact_record_count"),
             "artifact_record_count",
@@ -419,6 +461,8 @@ def normalize_inverse_steganalysis_observation(row: Mapping[str, Any]) -> dict[s
         "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
         "tool": TOOL,
     }
+    if archive_bound_contract:
+        out["archive_bound_candidate_contract"] = dict(archive_bound_contract)
     if row.get("exact_auth_calibration") is not None:
         if not isinstance(row.get("exact_auth_calibration"), Mapping):
             raise InverseSteganalysisAcquisitionError("exact_auth_calibration must be an object")
@@ -4745,6 +4789,20 @@ def _merge_saved_bytes(*values: Any) -> int | None:
 
 
 def _artifact_receiver_contract_satisfied(artifact: Mapping[str, Any]) -> bool:
+    archive_bound_contract, archive_bound_contract_blockers = _archive_bound_contract_feedback(
+        artifact,
+        label=(
+            "inverse_steganalysis_artifact_receiver:"
+            f"{artifact.get('candidate_id') or artifact.get('path')}"
+        ),
+    )
+    if archive_bound_contract_blockers:
+        return False
+    if archive_bound_contract:
+        return (
+            archive_bound_contract.get("receiver_contract_satisfied") is True
+            and archive_bound_contract.get("runtime_consumption_proof_ready") is True
+        )
     if "receiver_contract_satisfied" in artifact:
         return artifact.get("receiver_contract_satisfied") is True
     receiver = artifact.get("receiver_verification")
@@ -4856,6 +4914,14 @@ def _queue_step_health_blockers(
     blockers = [kind, f"queue_observation_step_status:{status}"]
     blockers.extend(str(item) for item in observation_blockers if str(item))
     for artifact in _sequence_of_mappings(step.get("expected_artifacts")):
+        contract_blockers = _archive_bound_contract_feedback(
+            artifact,
+            label=(
+                "inverse_steganalysis_queue_observation_artifact:"
+                f"{artifact.get('candidate_id') or artifact.get('path')}"
+            ),
+        )[1]
+        blockers.extend(contract_blockers)
         if artifact.get("postcondition_passed") is False:
             path = _optional_text(artifact.get("path")) or "unknown"
             blockers.append(f"queue_observation_artifact_postcondition_failed:{path}")
@@ -4877,6 +4943,15 @@ def _queue_step_health_blockers(
 def _queue_step_materializer_readiness_blockers(step: Mapping[str, Any]) -> list[str]:
     blockers: list[str] = []
     for artifact in _sequence_of_mappings(step.get("expected_artifacts")):
+        blockers.extend(
+            _archive_bound_contract_feedback(
+                artifact,
+                label=(
+                    "inverse_steganalysis_queue_step_artifact:"
+                    f"{artifact.get('candidate_id') or artifact.get('path')}"
+                ),
+            )[1]
+        )
         blockers.extend(_list_strings(artifact.get("readiness_blockers")))
         receiver = artifact.get("receiver_verification")
         if isinstance(receiver, Mapping):
@@ -4887,6 +4962,25 @@ def _queue_step_materializer_readiness_blockers(step: Mapping[str, Any]) -> list
 def _queue_step_receiver_contract_satisfied(step: Mapping[str, Any]) -> bool:
     saw_receiver_artifact = False
     for artifact in _sequence_of_mappings(step.get("expected_artifacts")):
+        archive_bound_contract, archive_bound_contract_blockers = (
+            _archive_bound_contract_feedback(
+                artifact,
+                label=(
+                    "inverse_steganalysis_queue_step_receiver:"
+                    f"{artifact.get('candidate_id') or artifact.get('path')}"
+                ),
+            )
+        )
+        if archive_bound_contract_blockers:
+            return False
+        if archive_bound_contract:
+            saw_receiver_artifact = True
+            if (
+                archive_bound_contract.get("receiver_contract_satisfied") is not True
+                or archive_bound_contract.get("runtime_consumption_proof_ready")
+                is not True
+            ):
+                return False
         if "receiver_contract_satisfied" in artifact:
             saw_receiver_artifact = True
             if artifact.get("receiver_contract_satisfied") is not True:

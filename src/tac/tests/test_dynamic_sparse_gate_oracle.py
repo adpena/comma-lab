@@ -7,6 +7,9 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from tac.optimization.archive_bound_candidate_contract import (
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
+)
 from tac.optimization.dynamic_sparse_gate_oracle import (
     DynamicSparseGateOracleError,
     dynamic_sparse_skip_mixture,
@@ -264,6 +267,64 @@ def test_observation_feedback_builds_channel_gate_hint() -> None:
     assert gate["source_id"] == "mudd_value_h9"
     assert selected["score_claim"] is False
     assert packet_ir["selected_operations"][0]["score_claim"] is False
+
+
+def test_observation_feedback_rejects_stale_archive_bound_contract_fields() -> None:
+    stale_contract = {
+        "schema": ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
+        "selected_archive_transform_variant": True,
+        "runtime_consumption_proof_ready": True,
+        "receiver_contract_satisfied": True,
+        "ready_for_exact_eval_dispatch": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+    }
+    fresh_contract = {
+        **stale_contract,
+        "receiver_contract_satisfied": True,
+    }
+    hint = operation_set_compiler_hint_from_observation_feedback(
+        [
+            {
+                "schema": "family_agnostic_materializer_empirical_observation.v1",
+                "observation_id": "stale_contract_positive_rate",
+                "candidate_id": "stale_contract_candidate",
+                "target_kind": "packet_member_recompress_v1",
+                "source_unit_ids": ["stale_unit"],
+                "saved_bytes": 800,
+                "rate_positive": True,
+                "receiver_contract_satisfied": False,
+                "archive_bound_candidate_contract": stale_contract,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            {
+                "schema": "family_agnostic_materializer_empirical_observation.v1",
+                "observation_id": "fresh_contract_smaller_rate",
+                "candidate_id": "fresh_contract_candidate",
+                "target_kind": "packet_member_recompress_v1",
+                "source_unit_ids": ["fresh_unit"],
+                "saved_bytes": 10,
+                "rate_positive": True,
+                "receiver_contract_satisfied": True,
+                "archive_bound_candidate_contract": fresh_contract,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+        ],
+        operation_set_id="stale_contract_feedback_fixture",
+        max_operations=1,
+    )
+
+    selected = hint["selected_operations"][0]
+    assert hint["observation_feedback"]["selectable_observation_count"] == 1
+    assert selected["candidate_id"] == "fresh_contract_candidate"
+    assert selected["params"]["archive_bound_candidate_contract"]["schema"] == (
+        ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+    )
 
 
 def test_materializer_feedback_builds_channel_gate_hint() -> None:

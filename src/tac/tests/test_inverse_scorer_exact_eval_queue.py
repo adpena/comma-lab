@@ -9,6 +9,9 @@ from pathlib import Path
 
 import pytest
 
+from tac.optimization.archive_bound_candidate_contract import (
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
+)
 from tac.optimization.inverse_scorer_exact_eval_queue import (
     DEFAULT_LANE_ID,
     InverseScorerExactEvalQueueError,
@@ -237,6 +240,13 @@ def test_build_inverse_scorer_exact_eval_queue_promotes_after_readiness(
     assert row["score_affecting_payload_changed"] is True
     assert row["charged_bits_changed"] is True
     assert row["score_claim"] is False
+    assert row["archive_bound_candidate_contract_schema"] == (
+        ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+    )
+    assert row["archive_bound_candidate_contract"]["archive_bound_candidate_ready"] is True
+    assert row["archive_bound_candidate_contract"]["runtime_consumption_proof_ready"] is True
+    assert row["archive_bound_candidate_contract"]["receiver_contract_satisfied"] is True
+    assert row["archive_bound_candidate_contract"]["ready_for_exact_eval_dispatch"] is False
     assert result.archive_manifest["ready_for_exact_eval_dispatch"] is False
     assert result.archive_manifest["score_affecting_payload_changed"] is True
     assert result.archive_manifest["charged_bits_changed"] is True
@@ -256,6 +266,43 @@ def test_build_inverse_scorer_exact_eval_queue_promotes_after_readiness(
     assert ready["score_claim"] is False
     assert ready["promotion_eligible"] is False
     assert ready["archive_sha256"] == _sha(candidate_archive)
+
+
+def test_build_inverse_scorer_exact_eval_queue_rejects_stale_contract_duplicate(
+    tmp_path: Path,
+) -> None:
+    runtime = tmp_path / "runtime"
+    _write_runtime(runtime)
+    chain_path, _candidate_archive = _write_chain_fixture(tmp_path, runtime=runtime)
+    chain = json.loads(chain_path.read_text(encoding="utf-8"))
+    chain["archive_bound_candidate_contract"] = {
+        "schema": ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
+        "selected_archive_transform_variant": True,
+        "byte_closed_candidate_materialized": True,
+        "runtime_consumption_proof_ready": True,
+        "receiver_contract_satisfied": True,
+        "runtime_adapter_ready": True,
+        "contest_runtime_decoder_adapter_ready": True,
+        "ready_for_exact_eval_dispatch": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+    }
+    chain["receiver_contract_satisfied"] = False
+    chain_path.write_text(json.dumps(chain, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    with pytest.raises(
+        InverseScorerExactEvalQueueError,
+        match="archive_bound_contract_stale_duplicate_field:receiver_contract_satisfied",
+    ):
+        build_inverse_scorer_exact_eval_source_queue(
+            chain_manifest_path=chain_path,
+            runtime_submission_dir=runtime,
+            archive_manifest_path=tmp_path / "out" / "archive_manifest.json",
+            repo_root=tmp_path,
+            candidate_id="ias1_fixture",
+            lane_id=DEFAULT_LANE_ID,
+        )
 
 
 def test_build_inverse_scorer_exact_eval_queue_refuses_unbacked_parity(

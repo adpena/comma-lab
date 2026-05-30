@@ -22,7 +22,8 @@ from typing import Any
 from tac.exact_eval_custody import CONTEST_EXACT_SAMPLE_COUNT
 from tac.optimization.archive_bound_candidate_contract import (
     ArchiveBoundCandidateContractError,
-    archive_bound_candidate_contracts_from_payload,
+    has_archive_bound_candidate_contract_payload,
+    selected_archive_bound_candidate_contract_from_payload,
 )
 from tac.optimization.local_cpu_contest_drift import (
     EUREKA_SIGNAL_SCHEMA,
@@ -110,14 +111,6 @@ RUNTIME_ADAPTER_BOOLEAN_FIELDS: frozenset[str] = frozenset(
     }
 )
 UNKNOWN_CANDIDATES_REASON = "unsupported_candidates_schema_requires_explicit_adapter_or_codec_op_param_sweep_manifest_v1"
-ARCHIVE_BOUND_CONTRACT_PAYLOAD_KEYS = frozenset(
-    {
-        "archive_bound_candidate_contract",
-        "archive_bound_candidate_contract_surface",
-        "archive_bound_candidate_contract_schema",
-        "archive_bound_candidate_contract_surface_schema",
-    }
-)
 
 
 @dataclass(frozen=True)
@@ -271,19 +264,18 @@ def _mapping(value: Any) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
 
 
-def _has_archive_bound_contract_payload(row: Mapping[str, Any]) -> bool:
-    return any(key in row for key in ARCHIVE_BOUND_CONTRACT_PAYLOAD_KEYS)
-
-
 def _archive_bound_contract_for_row(
     row: dict[str, Any],
     *,
     label: str,
 ) -> Mapping[str, Any] | None:
-    if not _has_archive_bound_contract_payload(row):
+    if not has_archive_bound_candidate_contract_payload(row):
         return None
     try:
-        contracts = archive_bound_candidate_contracts_from_payload(row, label=label)
+        contract = selected_archive_bound_candidate_contract_from_payload(
+            row,
+            label=label,
+        )
     except ArchiveBoundCandidateContractError as exc:
         blocker = f"archive_bound_candidate_contract_invalid:{exc}"
         row["archive_bound_candidate_contract_valid"] = False
@@ -292,13 +284,8 @@ def _archive_bound_contract_for_row(
         )
         _add_blockers(row, [blocker])
         return None
-    selected = [
-        contract
-        for contract in contracts
-        if contract.get("selected_archive_transform_variant") is True
-    ]
     row["archive_bound_candidate_contract_valid"] = True
-    return selected[0] if selected else contracts[0] if contracts else None
+    return contract
 
 
 def _contract_first_exact_dispatch_ready(row: dict[str, Any]) -> bool:
@@ -308,7 +295,7 @@ def _contract_first_exact_dispatch_ready(row: dict[str, Any]) -> bool:
     )
     if contract is not None:
         return contract.get("ready_for_exact_eval_dispatch") is True
-    if _has_archive_bound_contract_payload(row):
+    if has_archive_bound_candidate_contract_payload(row):
         return False
     return row.get("ready_for_exact_eval_dispatch") is True
 
@@ -430,7 +417,7 @@ def _annotate_archive_candidate_verification(
         row,
         label=f"optimizer_candidate_queue_archive_verification:{row.get('candidate_id')}",
     )
-    if contract is None and _has_archive_bound_contract_payload(row):
+    if contract is None and has_archive_bound_candidate_contract_payload(row):
         row["archive_candidate_verified"] = False
         row["candidate_archive_path_unverified"] = True
         return
