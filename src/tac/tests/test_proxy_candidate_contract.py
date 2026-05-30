@@ -68,6 +68,32 @@ def test_consumer_payload_authority_validator_recurses_into_nested_payloads() ->
         require_no_truthy_authority_fields(payload, context="fixture")
 
 
+def test_consumer_payload_authority_validator_rejects_new_authority_aliases() -> None:
+    payload = {
+        "score_authority": True,
+        "contest_authority": "yes",
+        "exact_axis_dispatch_allowed": 1,
+        "budget_spend_allowed": "true",
+        "candidate": {
+            "ready_for_budget_spend": True,
+            "mlx_spend_triage_allowed": True,
+        },
+    }
+
+    violations = truthy_authority_field_violations(payload)
+
+    assert violations == [
+        "score_authority=truthy",
+        "contest_authority=truthy",
+        "exact_axis_dispatch_allowed=truthy",
+        "budget_spend_allowed=truthy",
+        "candidate.ready_for_budget_spend=truthy",
+    ]
+    assert "candidate.mlx_spend_triage_allowed=truthy" not in violations
+    with pytest.raises(ValueError, match="score_authority=truthy"):
+        require_no_truthy_authority_fields(payload, context="fixture")
+
+
 def test_consumer_payload_authority_validator_rejects_string_and_numeric_truthy() -> None:
     payload = {
         "score_claim_valid": "true",
