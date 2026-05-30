@@ -62389,6 +62389,47 @@
       "notes": "M9 binding-integration milestone per build_progress.py; lifts canonical compose pattern m5.decompose -> m6.encode(top_state, side_info) -> m8.per_level_loss; Catalog #312 canonical quadruple + HNeRV parity L7 substrate-engineering. research_only=true (L0 SCAFFOLD substrate per parent __init__.py); lane_class=substrate_engineering; horizon_class=frontier_pursuit. Sister memory: feedback_z8_m9_full_main_notimplementederror_lift_canonical_quadruple_binding_integration_landed_20260530.md",
       "research_only": true,
       "lane_class": "substrate_engineering"
+    },
+    {
+      "id": "lane_slot_ggg_x_cascade_a_fec10_composition_paired_cuda_ratification_canonical_pointer_baseline_fp11_respawn_20260530",
+      "name": "Slot GGG x Cascade A FEC10 paired-CUDA RATIFICATION canonical pointer baseline fp11 respawn STAND_DOWN",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/slot_ggg_x_cascade_a_fec10_composition_paired_cuda_ratification_canonical_pointer_baseline_fp11_respawn_stand_down_landed_20260530.md; .omx/research/retroactive_sweep_for_slot_ggg_x_cascade_a_fec10_paired_cuda_respawn_stand_down_20260530T154130Z.md; council_t1_slot_ggg_x_cascade_a_fec10_paired_cuda_respawn_stand_down_20260530 anchor at .omx/state/council_deliberation_posterior.jsonl; probe_slot_ggg_x_cascade_a_fec10_paired_cuda_respawn_stand_down_20260530 DEFER blocking 30-day at .omx/state/probe_outcomes.jsonl; refused_dispatch_stand_down at .omx/state/active_lane_dispatch_claims.md; STAND_DOWN scope - canonical archive integrator + inflate adapter missing per Catalog #315/#324/#325/#246; research_only=true; lane_class=substrate_engineering; $0 paid spend"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/slot_ggg_x_cascade_a_fec10_composition_paired_cuda_ratification_canonical_pointer_baseline_fp11_respawn_stand_down_landed_20260530.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "STAND_DOWN per Catalog #315/#324/#325/#246: canonical archive integrator + inflate adapter that consume L0 SCAFFOLD side-channel DO NOT EXIST. Predicted dS band EMPIRICALLY FALSIFIED 17-33x at MLX-LOCAL; recalibrated ~-2e-6 at canonical scorer noise floor. research_only=true; lane_class=substrate_engineering. Reactivation: Path A canonical integrator + inflate adapter; Path B Slot GGG Tier C 384x512; Path C re-prioritize per HIGHEST-EV-SHORTEST-WC to V14-V2 PR111-candidate. Per Forbidden premature KILL: DEFER not KILL; paradigm INTACT per Catalog #307. Parent lane: lane_slot_ggg_x_cascade_a_fec10_selector_codec_composition_l0_scaffold_20260530."
     }
   ],
   "level_rules": {
@@ -62398,5 +62439,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-30T15:26:24Z"
+  "updated_at": "2026-05-30T15:46:47Z"
 }
