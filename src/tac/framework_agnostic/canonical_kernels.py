@@ -73,6 +73,7 @@ Cross-references:
   * tac.local_acceleration.pr95_hnerv_mlx — canonical MLX core
   * tac.local_acceleration.tinygrad_bridge — sister tinygrad bridge
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -107,6 +108,7 @@ def _resolve_backend(backend: Backend | None) -> Backend:
 # -----------------------------------------------------------------------------
 # Canonical primitive: gumbel_softmax_sample
 # -----------------------------------------------------------------------------
+
 
 def gumbel_softmax_sample(
     logits: Any,
@@ -149,15 +151,9 @@ def gumbel_softmax_sample(
             installed.
     """
     if temperature <= 0:
-        raise ValueError(
-            f"gumbel_softmax_sample: temperature must be > 0; got "
-            f"{temperature}."
-        )
+        raise ValueError(f"gumbel_softmax_sample: temperature must be > 0; got {temperature}.")
     if not (0.0 <= unimix_alpha <= 1.0):
-        raise ValueError(
-            f"gumbel_softmax_sample: unimix_alpha must be in [0, 1]; "
-            f"got {unimix_alpha}."
-        )
+        raise ValueError(f"gumbel_softmax_sample: unimix_alpha must be in [0, 1]; got {unimix_alpha}.")
     resolved = _resolve_backend(backend)
     if resolved is Backend.NUMPY:
         return _gumbel_softmax_sample_numpy(
@@ -187,14 +183,10 @@ def gumbel_softmax_sample(
             unimix_alpha=unimix_alpha,
             seed=seed,
         )
-    raise BackendUnavailableError(
-        f"gumbel_softmax_sample: backend {resolved!r} unsupported."
-    )
+    raise BackendUnavailableError(f"gumbel_softmax_sample: backend {resolved!r} unsupported.")
 
 
-def _apply_unimix_to_logits_numpy(
-    logits: np.ndarray, unimix_alpha: float
-) -> np.ndarray:
+def _apply_unimix_to_logits_numpy(logits: np.ndarray, unimix_alpha: float) -> np.ndarray:
     """Apply unimix-alpha robustness mixture per Hafner 2023 §3.
 
     The canonical form mixes the categorical distribution with a uniform
@@ -208,7 +200,11 @@ def _apply_unimix_to_logits_numpy(
         return logits
     # Convert to probs in log-space for numerical stability
     K = logits.shape[-1]
-    log_softmax = logits - np.log(np.sum(np.exp(logits - np.max(logits, axis=-1, keepdims=True)), axis=-1, keepdims=True)) - np.max(logits, axis=-1, keepdims=True)
+    log_softmax = (
+        logits
+        - np.log(np.sum(np.exp(logits - np.max(logits, axis=-1, keepdims=True)), axis=-1, keepdims=True))
+        - np.max(logits, axis=-1, keepdims=True)
+    )
     probs = np.exp(log_softmax)
     mixed = (1.0 - unimix_alpha) * probs + unimix_alpha / K
     # Convert back to logits
@@ -226,9 +222,7 @@ def _gumbel_softmax_sample_numpy(
     logits_np = np.asarray(logits, dtype=np.float32)
     rng = np.random.default_rng(seed)
     # Gumbel(0, 1): -log(-log(U)) where U ~ Uniform(0, 1)
-    uniform = rng.uniform(low=1e-9, high=1.0, size=logits_np.shape).astype(
-        np.float32
-    )
+    uniform = rng.uniform(low=1e-9, high=1.0, size=logits_np.shape).astype(np.float32)
     gumbel_noise = -np.log(-np.log(uniform))
     perturbed = (logits_np + gumbel_noise) / temperature
     # Apply unimix
@@ -257,9 +251,7 @@ def _gumbel_softmax_sample_mlx(
     try:
         import mlx.core as mx
     except ImportError as exc:
-        raise BackendUnavailableError(
-            f"gumbel_softmax_sample MLX backend: mlx.core not installed ({exc})."
-        ) from exc
+        raise BackendUnavailableError(f"gumbel_softmax_sample MLX backend: mlx.core not installed ({exc}).") from exc
     # Convert MLX → numpy → forward → MLX
     logits_np = np.asarray(logits)
     result_np = _gumbel_softmax_sample_numpy(
@@ -287,9 +279,7 @@ def _gumbel_softmax_sample_pytorch(
         import torch
         import torch.nn.functional as F
     except ImportError as exc:
-        raise BackendUnavailableError(
-            f"gumbel_softmax_sample PyTorch backend: torch not installed ({exc})."
-        ) from exc
+        raise BackendUnavailableError(f"gumbel_softmax_sample PyTorch backend: torch not installed ({exc}).") from exc
     if seed is not None:
         torch.manual_seed(seed)
     if isinstance(logits, np.ndarray):
@@ -298,9 +288,7 @@ def _gumbel_softmax_sample_pytorch(
         logits_torch = logits.float()
     else:
         logits_torch = torch.as_tensor(logits, dtype=torch.float32)
-    sample = F.gumbel_softmax(
-        logits_torch, tau=temperature, hard=False, dim=-1
-    )
+    sample = F.gumbel_softmax(logits_torch, tau=temperature, hard=False, dim=-1)
     if unimix_alpha > 0.0:
         K = sample.shape[-1]
         sample = (1.0 - unimix_alpha) * sample + unimix_alpha / K
@@ -348,6 +336,7 @@ def rgb_to_yuv6(
     rgb: Any,
     *,
     backend: Backend | None = None,
+    value_range: float = 1.0,
 ) -> Any:
     """Canonical contest-faithful RGB → YUV6 forward.
 
@@ -366,111 +355,168 @@ def rgb_to_yuv6(
     training-time gradient path requires a different normalization.
 
     Args:
-        rgb: RGB tensor in NCHW format (any backend); float32 in [0, 1].
+        rgb: RGB tensor in NCHW format (any backend); float32 in
+            ``[0, value_range]``. Use ``value_range=255.0`` for direct
+            upstream/contest parity.
         backend: framework backend (default auto-detect).
+        value_range: numeric range of the RGB/YUV tensor.
 
     Returns:
-        YUV6 tensor in the same backend; first 3 channels = YUV;
-        remaining 3 = chroma-subsampled UV (placeholder zeros for the
-        canonical contract — sister callers MAY apply chroma
-        subsampling per their training-time gradient requirements).
+        YUV6 tensor in the same backend with shape ``(N, 6, H//2, W//2)``,
+        stacked as ``[y00, y10, y01, y11, U_sub, V_sub]``.
 
     Raises:
         BackendUnavailableError: if the resolved backend is not
             installed.
     """
+    if value_range <= 0:
+        raise ValueError(f"rgb_to_yuv6 value_range must be positive; got {value_range}")
     resolved = _resolve_backend(backend)
     if resolved is Backend.NUMPY:
-        return _rgb_to_yuv6_numpy(rgb)
+        return _rgb_to_yuv6_numpy(rgb, value_range=value_range)
     if resolved is Backend.MLX:
-        return _rgb_to_yuv6_mlx(rgb)
+        return _rgb_to_yuv6_mlx(rgb, value_range=value_range)
     if resolved is Backend.PYTORCH:
-        return _rgb_to_yuv6_pytorch(rgb)
+        return _rgb_to_yuv6_pytorch(rgb, value_range=value_range)
     if resolved is Backend.TINYGRAD:
-        return _rgb_to_yuv6_tinygrad(rgb)
-    raise BackendUnavailableError(
-        f"rgb_to_yuv6: backend {resolved!r} unsupported."
-    )
+        return _rgb_to_yuv6_tinygrad(rgb, value_range=value_range)
+    raise BackendUnavailableError(f"rgb_to_yuv6: backend {resolved!r} unsupported.")
 
 
-def _rgb_to_yuv6_numpy(rgb: Any) -> np.ndarray:
+def _yuv6_chroma_center(value_range: float) -> float:
+    """Return the digital chroma center for the requested numeric range."""
+    if np.isclose(value_range, 255.0):
+        return 128.0
+    return value_range * 0.5
+
+
+def _rgb_to_yuv6_numpy(rgb: Any, *, value_range: float) -> np.ndarray:
     """Canonical numpy reference per audit inventory A.2.6."""
     rgb_np = np.asarray(rgb, dtype=np.float32)
-    # NCHW: (N, 3, H, W) → (N, 6, H, W)
     if rgb_np.ndim != 4 or rgb_np.shape[1] != 3:
-        raise ValueError(
-            f"rgb_to_yuv6 expects NCHW with 3 channels; got shape "
-            f"{rgb_np.shape}."
-        )
-    r = rgb_np[:, 0:1]
-    g = rgb_np[:, 1:2]
-    b = rgb_np[:, 2:3]
-    y = _YUV6_RGB_TO_Y[0] * r + _YUV6_RGB_TO_Y[1] * g + _YUV6_RGB_TO_Y[2] * b
-    u = (
-        _YUV6_RGB_TO_U[0] * r
-        + _YUV6_RGB_TO_U[1] * g
-        + _YUV6_RGB_TO_U[2] * b
-        + 0.5
+        raise ValueError(f"rgb_to_yuv6 expects NCHW with 3 channels; got shape {rgb_np.shape}.")
+    h2 = rgb_np.shape[-2] // 2
+    w2 = rgb_np.shape[-1] // 2
+    rgb_np = rgb_np[:, :, : 2 * h2, : 2 * w2]
+    r = rgb_np[:, 0]
+    g = rgb_np[:, 1]
+    b = rgb_np[:, 2]
+    y = np.clip(
+        _YUV6_RGB_TO_Y[0] * r + _YUV6_RGB_TO_Y[1] * g + _YUV6_RGB_TO_Y[2] * b,
+        0.0,
+        value_range,
     )
-    v = (
-        _YUV6_RGB_TO_V[0] * r
-        + _YUV6_RGB_TO_V[1] * g
-        + _YUV6_RGB_TO_V[2] * b
-        + 0.5
-    )
-    # 6-channel = (Y, U, V, Y_padded, U_subsampled, V_subsampled).
-    # For canonical contract emit YUV + zero-pad to 6 channels; sister
-    # callers apply chroma subsampling per their training-time gradient
-    # requirements.
-    zero = np.zeros_like(y)
-    return np.concatenate([y, u, v, zero, zero, zero], axis=1)
+    center = _yuv6_chroma_center(value_range)
+    u = np.clip((b - y) / 1.772 + center, 0.0, value_range)
+    v = np.clip((r - y) / 1.402 + center, 0.0, value_range)
+    u_sub = (u[:, 0::2, 0::2] + u[:, 1::2, 0::2] + u[:, 0::2, 1::2] + u[:, 1::2, 1::2]) * 0.25
+    v_sub = (v[:, 0::2, 0::2] + v[:, 1::2, 0::2] + v[:, 0::2, 1::2] + v[:, 1::2, 1::2]) * 0.25
+    return np.stack(
+        [
+            y[:, 0::2, 0::2],
+            y[:, 1::2, 0::2],
+            y[:, 0::2, 1::2],
+            y[:, 1::2, 1::2],
+            u_sub,
+            v_sub,
+        ],
+        axis=1,
+    ).astype(np.float32, copy=False)
 
 
-def _rgb_to_yuv6_mlx(rgb: Any) -> Any:
+def _rgb_to_yuv6_mlx(rgb: Any, *, value_range: float) -> Any:
     try:
         import mlx.core as mx
     except ImportError as exc:
-        raise BackendUnavailableError(
-            f"rgb_to_yuv6 MLX backend: mlx.core not installed ({exc})."
-        ) from exc
-    rgb_np = np.asarray(rgb)
-    result_np = _rgb_to_yuv6_numpy(rgb_np)
-    return mx.array(result_np)
+        raise BackendUnavailableError(f"rgb_to_yuv6 MLX backend: mlx.core not installed ({exc}).") from exc
+    rgb_mx = mx.array(rgb)
+    if len(rgb_mx.shape) != 4 or rgb_mx.shape[1] != 3:
+        raise ValueError(f"rgb_to_yuv6 expects NCHW with 3 channels; got shape {tuple(rgb_mx.shape)}.")
+    h2 = rgb_mx.shape[-2] // 2
+    w2 = rgb_mx.shape[-1] // 2
+    rgb_mx = rgb_mx[:, :, : 2 * h2, : 2 * w2]
+    r = rgb_mx[:, 0]
+    g = rgb_mx[:, 1]
+    b = rgb_mx[:, 2]
+    y = mx.clip(
+        _YUV6_RGB_TO_Y[0] * r + _YUV6_RGB_TO_Y[1] * g + _YUV6_RGB_TO_Y[2] * b,
+        0.0,
+        value_range,
+    )
+    center = _yuv6_chroma_center(value_range)
+    u = mx.clip((b - y) / 1.772 + center, 0.0, value_range)
+    v = mx.clip((r - y) / 1.402 + center, 0.0, value_range)
+    u_sub = (u[:, 0::2, 0::2] + u[:, 1::2, 0::2] + u[:, 0::2, 1::2] + u[:, 1::2, 1::2]) * 0.25
+    v_sub = (v[:, 0::2, 0::2] + v[:, 1::2, 0::2] + v[:, 0::2, 1::2] + v[:, 1::2, 1::2]) * 0.25
+    return mx.stack(
+        [
+            y[:, 0::2, 0::2],
+            y[:, 1::2, 0::2],
+            y[:, 0::2, 1::2],
+            y[:, 1::2, 1::2],
+            u_sub,
+            v_sub,
+        ],
+        axis=1,
+    )
 
 
-def _rgb_to_yuv6_pytorch(rgb: Any) -> Any:
+def _rgb_to_yuv6_pytorch(rgb: Any, *, value_range: float) -> Any:
     try:
         import torch
     except ImportError as exc:
-        raise BackendUnavailableError(
-            f"rgb_to_yuv6 PyTorch backend: torch not installed ({exc})."
-        ) from exc
+        raise BackendUnavailableError(f"rgb_to_yuv6 PyTorch backend: torch not installed ({exc}).") from exc
     if isinstance(rgb, np.ndarray):
         rgb_torch = torch.from_numpy(rgb.astype(np.float32))
     elif isinstance(rgb, torch.Tensor):
         rgb_torch = rgb.float()
     else:
         rgb_torch = torch.as_tensor(rgb, dtype=torch.float32)
-    # Convert via numpy for canonical parity
-    result_np = _rgb_to_yuv6_numpy(rgb_torch.detach().cpu().numpy())
-    return torch.from_numpy(result_np)
+    if rgb_torch.ndim != 4 or rgb_torch.shape[1] != 3:
+        raise ValueError(f"rgb_to_yuv6 expects NCHW with 3 channels; got shape {tuple(rgb_torch.shape)}.")
+    h2 = rgb_torch.shape[-2] // 2
+    w2 = rgb_torch.shape[-1] // 2
+    rgb_torch = rgb_torch[:, :, : 2 * h2, : 2 * w2]
+    r = rgb_torch[:, 0]
+    g = rgb_torch[:, 1]
+    b = rgb_torch[:, 2]
+    y = torch.clamp(
+        _YUV6_RGB_TO_Y[0] * r + _YUV6_RGB_TO_Y[1] * g + _YUV6_RGB_TO_Y[2] * b,
+        0.0,
+        value_range,
+    )
+    center = _yuv6_chroma_center(value_range)
+    u = torch.clamp((b - y) / 1.772 + center, 0.0, value_range)
+    v = torch.clamp((r - y) / 1.402 + center, 0.0, value_range)
+    u_sub = (u[:, 0::2, 0::2] + u[:, 1::2, 0::2] + u[:, 0::2, 1::2] + u[:, 1::2, 1::2]) * 0.25
+    v_sub = (v[:, 0::2, 0::2] + v[:, 1::2, 0::2] + v[:, 0::2, 1::2] + v[:, 1::2, 1::2]) * 0.25
+    return torch.stack(
+        [
+            y[:, 0::2, 0::2],
+            y[:, 1::2, 0::2],
+            y[:, 0::2, 1::2],
+            y[:, 1::2, 1::2],
+            u_sub,
+            v_sub,
+        ],
+        dim=1,
+    )
 
 
-def _rgb_to_yuv6_tinygrad(rgb: Any) -> Any:
+def _rgb_to_yuv6_tinygrad(rgb: Any, *, value_range: float) -> Any:
     try:
         from tinygrad.tensor import Tensor
     except ImportError as exc:
-        raise BackendUnavailableError(
-            f"rgb_to_yuv6 tinygrad backend: tinygrad not installed ({exc})."
-        ) from exc
+        raise BackendUnavailableError(f"rgb_to_yuv6 tinygrad backend: tinygrad not installed ({exc}).") from exc
     rgb_np = rgb.numpy() if hasattr(rgb, "numpy") else np.asarray(rgb)
-    result_np = _rgb_to_yuv6_numpy(rgb_np)
+    result_np = _rgb_to_yuv6_numpy(rgb_np, value_range=value_range)
     return Tensor(result_np)
 
 
 # -----------------------------------------------------------------------------
 # Canonical primitive: NHWC pixel shuffle + bilinear resize
 # -----------------------------------------------------------------------------
+
 
 def pixel_shuffle_2x_nhwc_canonical(
     x: Any,
@@ -505,9 +551,7 @@ def pixel_shuffle_2x_nhwc_canonical(
             import torch
             import torch.nn.functional as F
         except ImportError as exc:
-            raise BackendUnavailableError(
-                f"pixel_shuffle_2x_nhwc PyTorch backend unavailable ({exc})."
-            ) from exc
+            raise BackendUnavailableError(f"pixel_shuffle_2x_nhwc PyTorch backend unavailable ({exc}).") from exc
         xt = torch.from_numpy(x.astype(np.float32)) if isinstance(x, np.ndarray) else x
         if xt.ndim != 4:
             raise ValueError(f"expected NHWC tensor, got shape {tuple(xt.shape)}")
@@ -517,17 +561,11 @@ def pixel_shuffle_2x_nhwc_canonical(
         try:
             from tinygrad.tensor import Tensor
         except ImportError as exc:
-            raise BackendUnavailableError(
-                f"pixel_shuffle_2x_nhwc tinygrad backend unavailable ({exc})."
-            ) from exc
+            raise BackendUnavailableError(f"pixel_shuffle_2x_nhwc tinygrad backend unavailable ({exc}).") from exc
         arr = x.numpy() if hasattr(x, "numpy") else np.asarray(x)
-        out = pixel_shuffle_2x_nhwc_canonical(
-            arr, backend=Backend.NUMPY, upscale_factor=upscale_factor
-        )
+        out = pixel_shuffle_2x_nhwc_canonical(arr, backend=Backend.NUMPY, upscale_factor=upscale_factor)
         return Tensor(out)
-    raise BackendUnavailableError(
-        f"pixel_shuffle_2x_nhwc_canonical: backend {resolved!r} unsupported."
-    )
+    raise BackendUnavailableError(f"pixel_shuffle_2x_nhwc_canonical: backend {resolved!r} unsupported.")
 
 
 def bilinear_resize_nhwc_canonical(
@@ -540,9 +578,7 @@ def bilinear_resize_nhwc_canonical(
 ) -> Any:
     """Canonical PyTorch-compatible bilinear resize for NHWC tensors."""
     if target_h <= 0 or target_w <= 0:
-        raise ValueError(
-            f"target_h and target_w must be positive; got ({target_h}, {target_w})"
-        )
+        raise ValueError(f"target_h and target_w must be positive; got ({target_h}, {target_w})")
     resolved = _resolve_backend(backend)
     if resolved is Backend.NUMPY:
         from tac.substrates._shared.numpy_portable_inflate import (
@@ -571,9 +607,7 @@ def bilinear_resize_nhwc_canonical(
             import torch
             import torch.nn.functional as F
         except ImportError as exc:
-            raise BackendUnavailableError(
-                f"bilinear_resize_nhwc PyTorch backend unavailable ({exc})."
-            ) from exc
+            raise BackendUnavailableError(f"bilinear_resize_nhwc PyTorch backend unavailable ({exc}).") from exc
         xt = torch.from_numpy(x.astype(np.float32)) if isinstance(x, np.ndarray) else x
         if xt.ndim != 4:
             raise ValueError(f"expected NHWC tensor, got shape {tuple(xt.shape)}")
@@ -588,9 +622,7 @@ def bilinear_resize_nhwc_canonical(
         try:
             from tinygrad.tensor import Tensor
         except ImportError as exc:
-            raise BackendUnavailableError(
-                f"bilinear_resize_nhwc tinygrad backend unavailable ({exc})."
-            ) from exc
+            raise BackendUnavailableError(f"bilinear_resize_nhwc tinygrad backend unavailable ({exc}).") from exc
         arr = x.numpy() if hasattr(x, "numpy") else np.asarray(x)
         out = bilinear_resize_nhwc_canonical(
             arr,
@@ -600,9 +632,7 @@ def bilinear_resize_nhwc_canonical(
             backend=Backend.NUMPY,
         )
         return Tensor(out)
-    raise BackendUnavailableError(
-        f"bilinear_resize_nhwc_canonical: backend {resolved!r} unsupported."
-    )
+    raise BackendUnavailableError(f"bilinear_resize_nhwc_canonical: backend {resolved!r} unsupported.")
 
 
 pixel_shuffle_2x_nhwc = pixel_shuffle_2x_nhwc_canonical
@@ -639,6 +669,7 @@ def assert_cross_backend_parity(
     Raises:
         AssertionError: if tensors differ beyond tolerance.
     """
+
     # Normalize to numpy for comparison
     def _to_numpy(x: Any) -> np.ndarray:
         if isinstance(x, np.ndarray):
@@ -653,14 +684,12 @@ def assert_cross_backend_parity(
     s_np = _to_numpy(secondary).astype(np.float64)
     if p_np.shape != s_np.shape:
         raise AssertionError(
-            f"cross_backend_parity {name}: shape mismatch "
-            f"primary={p_np.shape} vs secondary={s_np.shape}."
+            f"cross_backend_parity {name}: shape mismatch primary={p_np.shape} vs secondary={s_np.shape}."
         )
     max_abs = float(np.max(np.abs(p_np - s_np)))
     if not np.allclose(p_np, s_np, atol=atol, rtol=rtol):
         raise AssertionError(
-            f"cross_backend_parity {name}: max abs delta {max_abs:.6e} "
-            f"exceeds atol={atol:.6e} rtol={rtol:.6e}."
+            f"cross_backend_parity {name}: max abs delta {max_abs:.6e} exceeds atol={atol:.6e} rtol={rtol:.6e}."
         )
 
 
