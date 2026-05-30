@@ -15,15 +15,31 @@ summary: |
     + Wyner-Ziv 1976 top-level conditional coder (R(X|Y) << R(X))
 
   M12a canonical L2 long-training scope: 2000 epochs Modal T4 with
-  score-aware optimizer wiring (M7 sensitivity-map + M8 ScoreAwareLevelLoss)
+  canonical Yousfi-grounded score-aware optimizer wiring (Canonical Revision
+  #1: Z8_TRAINER_MODE=full routes through `_full_main` →
+  `run_mlx_score_aware_full_main` with canonical EMA decay=0.997 + canonical
+  eval_roundtrip=True + canonical Hinton-KL T=2.0 scorer surrogate; Canonical
+  Revision #2: Z8_M7_SOURCE=empirical_from_master_gradient binds canonical
+  M7 Path B2 to canonical M8 ScoreAwareLevelLoss per HNeRV parity L1+L6+L8)
   producing canonical PoseNet trajectory evidence per Contrarian VETO
   reconciliation. M12b paired-CUDA is GATED on M12a empirical PoseNet
   sub-1.0 trajectory evidence per Contrarian + Assumption-Adversary + Hotz
   consensus.
 
-  Predicted [contest-CPU] band [0.183, 0.195] canonical sub-0.189-candidate
-  range (predicted_band_validation_status: pending_post_training per Catalog
-  #324; M12a empirical anchor IS the canonical Tier-C calibration).
+  Canonical Yousfi voice PROCEED_WITH_REVISIONS verdict per memo `843b4bfd8`
+  2026-05-30: Canonical Revisions #1 + #2 LANDED in this commit batch;
+  Canonical Revisions #3 (PoseNet 6-dim Wyner-Ziv side_info per canonical
+  equation #150) + #4 (num_levels=4 SegNet stride-2 blind-spot extension) +
+  #5 (Path C UNIWARD finite-difference paid-GPU primitive) are M12c+
+  scope (DEFERRED-pending-substrate-engineering-wave with substantive
+  non-placeholder rationale per CLAUDE.md "Forbidden premature KILL").
+
+  Predicted [contest-CPU] band [0.175, 0.190] canonical sub-0.189-candidate
+  range (post-Yousfi-Revisions partial-Yousfi-grounded scenario per Yousfi
+  voice Axis 5; predicted_band_validation_status: pending_post_training per
+  Catalog #324; M12a empirical anchor IS the canonical Tier-C calibration).
+  Canonical Yousfi voice deep-Yousfi-grounded predicted band [0.150, 0.175]
+  is achievable IF Canonical Revisions #3 + #4 + #5 land at M12c+ scope.
 
   Per CLAUDE.md "user-asks-Authorization" non-negotiable + the operator's
   sub-0.189 submission threshold + 5+ dollar hard-stop: paid Modal dispatch
@@ -68,12 +84,19 @@ cost_band:
   gpu_key: T4
 
 # Catalog #324 post-training Tier-C validation discipline
-predicted_score_target: 0.189
-predicted_band: [0.183, 0.195]
+# YOUSFI-REVISIONS post-2026-05-30 update per Yousfi PROCEED_WITH_REVISIONS memo
+# `843b4bfd8`: predicted band refined to canonical Yousfi-Revised partial scenario
+# [0.175, 0.190] per Canonical Revision #1 + #2 landed (Z8_TRAINER_MODE=full +
+# Z8_M7_SOURCE=empirical_from_master_gradient). Canonical Revisions #3 + #4 +
+# #5 are M12c+ scope (DEFERRED with operator-routable canonical references); IF
+# all 5 revisions land per the Yousfi voice deep-Yousfi-grounded scenario, the
+# canonical Yousfi-Revised band is [0.150, 0.175] per memo §"Axis 5".
+predicted_score_target: 0.185
+predicted_band: [0.175, 0.190]
 predicted_band_validation_status: pending_post_training
-predicted_band_reactivation_criterion: "Post-training Tier-C density re-measurement via tools/mdl_scorer_conditional_ablation.py --tier c on the M12a landed archive sha256. Round 2 self-reflection per Catalog #363 triggered if M12a empirical anchor reveals predicted-band miss >2x. Per symposium frontmatter: M12b paired-CUDA empirical anchor for sister Linux x86_64 [contest-CPU] vs [contest-CUDA] CPU-CUDA gap calibration after M12a confirms PoseNet sub-1.0 trajectory."
-predicted_band_contest_cuda: [0.197, 0.213]
-predicted_band_contest_cuda_rationale: "Per CLAUDE.md SegNet-vs-PoseNet importance + canonical PR101/PR106 frontier CPU-CUDA gap: apply delta_cpu_cuda ~+0.014 to predicted [contest-CPU] band yielding [0.197, 0.213]. M12b paired-CUDA empirical anchor IS the canonical Tier-C calibration per Catalog #246."
+predicted_band_reactivation_criterion: "Post-training Tier-C density re-measurement via tools/mdl_scorer_conditional_ablation.py --tier c on the M12a landed archive sha256. Round 2 self-reflection per Catalog #363 triggered if M12a empirical anchor reveals predicted-band miss >2x. Per symposium frontmatter: M12b paired-CUDA empirical anchor for sister Linux x86_64 [contest-CPU] vs [contest-CUDA] CPU-CUDA gap calibration after M12a confirms PoseNet sub-1.0 trajectory. YOUSFI-REVISIONS: predicted_band refined post Canonical Revision #1 + #2 landing per Yousfi memo `843b4bfd8` Axis 5 partial-Yousfi-grounded scenario; deep-Yousfi-grounded scenario IF all 5 revisions land yields canonical [0.150, 0.175] sub-0.180 threshold."
+predicted_band_contest_cuda: [0.189, 0.205]
+predicted_band_contest_cuda_rationale: "Per CLAUDE.md SegNet-vs-PoseNet importance + canonical PR101/PR106 frontier CPU-CUDA gap: apply delta_cpu_cuda ~+0.014 to predicted [contest-CPU] band [0.175, 0.190] yielding [0.189, 0.205]. M12b paired-CUDA empirical anchor IS the canonical Tier-C calibration per Catalog #246. YOUSFI-REVISIONS post-2026-05-30 update: band tracks canonical Revision #1 + #2 landed (Z8_TRAINER_MODE=full routes through canonical run_mlx_score_aware_full_main with canonical EMA + canonical eval_roundtrip + canonical Hinton-KL T=2.0 scorer surrogate; canonical M7 EMPIRICAL_FROM_MASTER_GRADIENT Path B2 binds master-gradient-derived per-pixel scorer-sensitivity-map to canonical M8 ScoreAwareLevelLoss per HNeRV parity L1+L6+L8)."
 smoke_score_band: [0.20, 5.00]
 predicted_delta: "Predicted delta -0.005 to -0.012 from canonical frontier [contest-CPU] 0.19198533 (lane fp11_source_brotli_recode; archive sha b7106c9bdbb8) -> predicted band [0.183, 0.195] [prediction] per canonical Catalog #312 quadruple binding-depth at 100x-200x M11 L1 fixture scope + score-aware optimizer wiring + canonical 4-primitive Pareto polytope per Dykstra-feasibility intersection. Sub-0.189 contingent on PoseNet trajectory sub-1.0 per Contrarian VETO reconciliation."
 predicted_delta_basis: ".omx/research/council_t3_grand_council_per_substrate_symposium_z8_hierarchical_predictive_coding_m12_paid_modal_t4_l2_long_training_plus_paired_cuda_canonical_sub_0_189_attempt_20260530.md (PROCEED_WITH_REVISIONS unanimous 23-of-23 T3 grand council; canonical 6-step Catalog #325 clearance) + Z8 M11 L1 anchor commit 2f8570755 (cycle-closure validated through upstream/evaluate.py --device cpu) + Z8 M9 commit bb48f691c + Z8 M10 commit 59bdf9c93"
@@ -172,8 +195,43 @@ sentinel_files:
 # discipline anchored at D1 commit 611495f26).
 # Catalog #326 multi-key trainer mode resolution: Z8_TRAINER_MODE primary
 # (full|smoke|canonical_quadruple) with fail-loud warning when no key set.
+#
+# YOUSFI-REVISIONS post-2026-05-30 update per Yousfi PROCEED_WITH_REVISIONS
+# memo `843b4bfd8`:
+#
+# - Canonical Revision #1 (MANDATORY per Yousfi voice Axis 4 + canonical
+#   EMA non-negotiable + canonical eval_roundtrip non-negotiable): Z8_TRAINER_MODE
+#   changed from "canonical_quadruple" (which routes through `_canonical_quadruple_main`
+#   OPTIMIZER-FREE binding-integration loop per canonical_quadruple_binding.py:475/588/698-715
+#   docstring + anneal-to-zero noise schedule line 766; cannot compress score) to
+#   "full" (routes through `_full_main` → `run_mlx_score_aware_full_main` —
+#   the canonical Yousfi-grounded fully-trained surface with canonical EMA
+#   decay=0.997 + canonical eval_roundtrip=True + canonical Hinton-KL T=2.0
+#   scorer surrogate at train_substrate_z8_hierarchical_predictive_coding_mlx.py:404).
+#
+# - Canonical Revision #2 (RECOMMENDED per Yousfi voice Axis 1 + canonical
+#   Yousfi-grounded standing directive): Z8_M7_SOURCE binds the canonical M7
+#   ScorerSensitivityMapSource to "empirical_from_master_gradient" (Path B2)
+#   instead of default UNIFORM (Path A "empty prior" per scorer_sensitivity_map.py:22-26).
+#   Path B2 consumes the canonical `tac.master_gradient_comparison.extract_M_pixel`
+#   + sister `broadcast_sensitivity_map_to_channels` chain (Phase A commit `8a95c9cc5`
+#   + Phase D commit `300702cdf`) to produce per-pixel empirical scorer sensitivity
+#   maps consumed by canonical M8 ScoreAwareLevelLoss per HNeRV parity L1+L6+L8.
+#
+# Canonical Revisions #3 (PoseNet 6-dim Wyner-Ziv side_info per canonical equation
+# #150) + #4 (num_levels=4 SegNet stride-2 blind-spot extension per Yousfi voice
+# Axis 2) + #5 (canonical Path C UNIWARD finite-difference paid-GPU primitive)
+# are OPERATOR-ROUTABLE for M12c+ scope per Yousfi memo §"OPERATOR-ROUTABLE for
+# M12c+ scope" classification — DEFERRED-pending-substrate-engineering-wave with
+# substantive non-placeholder rationale (each requires ~300-800 LOC substrate-
+# engineering wave + sister wire-in across M5/M6/M8/M9/M10/inflate per HNeRV
+# parity L7 substrate-engineering UNIQUE-IFIES). Per CLAUDE.md "Forbidden
+# premature KILL without research exhaustion" Rev #3-5 are DEFERRED not KILLED;
+# canonical Yousfi voice deep-Yousfi-grounded predicted band [0.150, 0.175]
+# requires all 5 revisions canonical-bound (M12c+ scope).
 env_overrides:
-  Z8_TRAINER_MODE: "canonical_quadruple"
+  Z8_TRAINER_MODE: "full"  # Canonical Revision #1 per Yousfi memo `843b4bfd8`
+  Z8_M7_SOURCE: "empirical_from_master_gradient"  # Canonical Revision #2 per Yousfi memo
   SMOKE_ONLY: "0"
   Z8_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
   Z8_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
@@ -203,6 +261,49 @@ notes: |
   Catalog #313 sister probe outcome reference:
     - z8_hierarchical_predictive_coding PROCEED 14-day expires 2026-06-13T17:02:07Z
       (post-symposium PROCEED; predecessor Slot W Wave N+40 DEFER RATIFIED_SUPERSEDED_BY_M11_PHASE_2_PROMOTION_LANDING)
+    - Yousfi voice PROCEED_WITH_REVISIONS 14-day advisory per memo `843b4bfd8`
+      2026-05-30 (Canonical Revisions #1 + #2 LANDED; Rev #3 + #4 + #5
+      DEFERRED-pending-M12c+-scope-substrate-engineering-wave)
+
+  YOUSFI-REVISIONS landing per memo `843b4bfd8` (this commit batch):
+    - Canonical Revision #1 (MANDATORY) LANDED: Z8_TRAINER_MODE=full env
+      override (was canonical_quadruple) routes through canonical
+      `run_mlx_score_aware_full_main` per CLAUDE.md "EMA — NON-NEGOTIABLE"
+      + "eval_roundtrip — NON-NEGOTIABLE" + HNeRV parity L1+L6+L8
+    - Canonical Revision #2 (RECOMMENDED) LANDED: Z8_M7_SOURCE=
+      empirical_from_master_gradient env override binds canonical M7 Path
+      B2 to canonical M8 ScoreAwareLevelLoss via canonical `extract_M_pixel`
+      + `broadcast_sensitivity_map_to_channels` chain per Phase A commit
+      `8a95c9cc5` + Phase D commit `300702cdf`
+    - Canonical Revision #3 (OPERATOR-ROUTABLE for M12c+ scope) DEFERRED-
+      pending-substrate-engineering-wave: replace canonical_quadruple_binding
+      .py:559-572 spatial-mean Wyner-Ziv side_info with canonical per-pair
+      previous-frame PoseNet 6-dim pose decoder reconstruction per canonical
+      equation #150 `wyner_ziv_decoder_side_posenet_side_information_
+      conditional_entropy_reduction_v1`. Reactivation criterion: PoseNet
+      6-dim side_info wired in canonical M9 forward step + canonical M6
+      Wyner-Ziv coder encode/decode + canonical M10 inflate. Sister canonical
+      equation #150 lands 2nd EmpiricalAnchor at M12b paired-CUDA with
+      canonical PoseNet 6-dim side_info wired. Estimated wall-clock: ~1-2h
+      substrate-engineering wave per HNeRV parity L7.
+    - Canonical Revision #4 (OPERATOR-ROUTABLE for M12c+ scope) DEFERRED-
+      pending-substrate-engineering-wave: extend Z8HierarchicalConfig
+      num_levels from 3 to 4 + sister canonical Wyner-Ziv conditional coder
+      at Level 3 (BELOW 256x192 SegNet stride-2 blind-spot threshold per
+      Yousfi voice Axis 2). Canonical Mallat Level 4 ≈ 72x54 (clearly below
+      256x192 → canonical SegNet blind-spot). Reactivation criterion: M5
+      Mallat full DWT extended to 4-level pyramid + sister wire-in across
+      M6 + M8 + M9 + M10 + inflate per HNeRV parity L7. Estimated wall-clock:
+      ~1-2h substrate-engineering wave.
+    - Canonical Revision #5 (OPERATOR-ROUTABLE for M12c+ scope) DEFERRED-
+      pending-paid-GPU: wire canonical M7 source = ScorerSensitivityMapSource
+      .FINITE_DIFFERENCE_UNIWARD (Path C) via canonical Yousfi UNIWARD
+      analytic backpropagation through differentiable PoseNet + SegNet per
+      scorer_sensitivity_map.py:289-364. Reactivation criteria (all): paid-
+      GPU compute allocated + patch_upstream_yuv6_globally() called + canonical
+      eval_roundtrip=True active. Sister Slot FF UNIWARD canonical helper at
+      `tac.composition.uniward_canonical_inverse_steganalysis_holub_fridrich
+      _denemark_2014` per Slot FF landing memo.
 
   Sister canonical equations per Catalog #344:
     - categorical_posterior_capacity_vs_continuous_gaussian_v1 (3-of-3 anchors; Catalog #371 auto-recalibrator ACTIVE)
