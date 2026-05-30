@@ -19,6 +19,10 @@ from typing import Any
 import numpy as np
 
 from tac.hnerv_lowlevel_packer import read_strict_single_member_zip
+from tac.optimization.archive_bound_candidate_adapter_spine import (
+    ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA,
+    build_archive_bound_candidate_adapter_package,
+)
 from tac.pr103_arithmetic_transform_plan import CANDIDATE_SCHEMA
 from tac.repo_io import (
     json_text,
@@ -49,6 +53,27 @@ EXCLUDED_SUFFIXES = (".pyc", ".pyo")
 
 class Pr103RuntimeAdapterError(ValueError):
     """Raised when a PR103 runtime adapter cannot be built safely."""
+
+
+class _SinglePr103ArchiveCandidateAdapter:
+    """Adapter-spine bridge for one PR103 archive/runtime packet."""
+
+    def __init__(
+        self,
+        *,
+        adapter_id: str,
+        candidate_family: str,
+        row: dict[str, Any],
+    ) -> None:
+        self.adapter_id = adapter_id
+        self.candidate_family = candidate_family
+        self._row = row
+
+    def emit_archive_bound_candidate_rows(
+        self,
+        context: dict[str, Any],
+    ) -> list[dict[str, Any]]:
+        return [dict(self._row)]
 
 
 def build_pr103_lc_ac_runtime_adapter(
@@ -115,6 +140,11 @@ def build_pr103_lc_ac_runtime_adapter(
             "path": repo_relative(candidate_archive, repo),
             "bytes": candidate_archive.stat().st_size,
             "sha256": sha256_file(candidate_archive),
+        },
+        "source_archive": {
+            "path": repo_relative(source_archive, repo),
+            "bytes": source_archive.stat().st_size,
+            "sha256": sha256_file(source_archive),
         },
         "source_runtime_dir": repo_relative(source_dir, repo),
         "output_runtime_dir": repo_relative(output_dir, repo),
@@ -246,6 +276,29 @@ def build_pr103_lc_ac_candidate_packet(
             *packet_blockers,
         ],
     }
+    adapter_package = _archive_bound_candidate_adapter_package_for_packet(
+        packet_manifest=packet_manifest,
+        runtime_adapter_manifest=manifest,
+        runtime_adapter_manifest_path=manifest_path,
+        repo=repo,
+    )
+    packet_manifest.update(
+        {
+            "archive_bound_candidate_adapter_package_schema": (
+                ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA
+            ),
+            "archive_bound_candidate_adapter_package": adapter_package,
+            "archive_bound_candidate_adapter_package_candidate_count": (
+                adapter_package["candidate_row_count"]
+            ),
+            "archive_bound_candidate_adapter_package_receiver_gate_passed_count": (
+                adapter_package["receiver_proof_gate_passed_count"]
+            ),
+            "archive_bound_candidate_adapter_package_exact_blocker_count": len(
+                adapter_package["exact_axis_blockers"]
+            ),
+        }
+    )
     write_json(output_dir / "packet_manifest.json", packet_manifest)
     return packet_manifest
 
@@ -932,6 +985,86 @@ def _archive_manifest(path: Path, *, repo: Path) -> dict[str, Any]:
                 }
             )
     return record
+
+
+def _archive_bound_candidate_adapter_package_for_packet(
+    *,
+    packet_manifest: dict[str, Any],
+    runtime_adapter_manifest: dict[str, Any],
+    runtime_adapter_manifest_path: Path,
+    repo: Path,
+) -> dict[str, Any]:
+    archive = _mapping(packet_manifest.get("archive"))
+    source_archive = _mapping(runtime_adapter_manifest.get("source_archive"))
+    parity = _mapping(runtime_adapter_manifest.get("decoder_state_parity_proof"))
+    runtime_probe = _mapping(runtime_adapter_manifest.get("runtime_consumption_probe"))
+    runtime_adapter_record = {
+        "path": repo_relative(runtime_adapter_manifest_path, repo),
+        "sha256": sha256_file(runtime_adapter_manifest_path),
+        "runtime_tree_sha256": runtime_adapter_manifest.get("runtime_tree_sha256"),
+        "runtime_file_records_sha256": runtime_adapter_manifest.get(
+            "runtime_file_records_sha256"
+        ),
+        "runtime_dir": runtime_adapter_manifest.get("output_runtime_dir"),
+        "runtime_adapter_ready": True,
+        "schema": runtime_adapter_manifest.get("schema"),
+    }
+    candidate_id = (
+        "pr103_lc_ac_candidate_packet:"
+        + str(archive.get("sha256") or "")[:16]
+    )
+    packet_archive_path = str(Path(packet_manifest["packet_dir"]) / "archive.zip")
+    row = {
+        "schema": "pr103_lc_ac_archive_bound_candidate_row.v1",
+        "candidate_id": candidate_id,
+        "candidate_family": "pr103_lc_ac",
+        "archive_native_transform_kind": "pr103_lc_ac_range_arithmetic_runtime_packet",
+        "candidate_archive_path": packet_archive_path,
+        "candidate_archive_sha256": str(archive.get("sha256") or ""),
+        "candidate_archive_bytes": archive.get("bytes"),
+        "source_archive_path": source_archive.get("path"),
+        "source_archive_sha256": source_archive.get("sha256"),
+        "source_archive_bytes": source_archive.get("bytes"),
+        "byte_closed_candidate_materialized": True,
+        "candidate_archive_materialized": True,
+        "runtime_consumption_proof_ready": runtime_probe.get("passed") is True,
+        "runtime_consumption_proof_status": "present",
+        "runtime_consumption_proof_path": repo_relative(runtime_adapter_manifest_path, repo),
+        "receiver_contract_kind": "pr103_lc_ac_decoder_state_parity_runtime_adapter",
+        "receiver_contract_satisfied": parity.get("passed") is True,
+        "runtime_adapter_ready": True,
+        "contest_runtime_decoder_adapter_ready": True,
+        "runtime_adapter_manifest": runtime_adapter_record,
+        "readiness_blockers": packet_manifest.get("readiness_blockers") or [],
+        "dispatch_blockers": packet_manifest.get("dispatch_blockers") or [],
+        "replay_argv": [
+            sys.executable,
+            "tools/build_pr103_lc_ac_candidate_packet.py",
+            "--runtime-adapter-manifest",
+            repo_relative(runtime_adapter_manifest_path, repo),
+            "--packet-dir",
+            str(packet_manifest["packet_dir"]),
+        ],
+        "input_artifacts": [
+            repo_relative(runtime_adapter_manifest_path, repo),
+            str(_mapping(runtime_adapter_manifest.get("candidate_manifest")).get("path") or ""),
+            str(source_archive.get("path") or ""),
+            packet_archive_path,
+        ],
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+    }
+    return build_archive_bound_candidate_adapter_package(
+        _SinglePr103ArchiveCandidateAdapter(
+            adapter_id="pr103_lc_ac_candidate_packet:archive_bound_adapter",
+            candidate_family="pr103_lc_ac",
+            row=row,
+        ),
+        repo_root=repo,
+    )
 
 
 def _packet_report_text(

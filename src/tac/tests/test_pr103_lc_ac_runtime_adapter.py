@@ -9,6 +9,12 @@ from pathlib import Path
 import pytest
 
 from tac.hnerv_lowlevel_packer import write_stored_single_member_zip
+from tac.optimization.archive_bound_candidate_adapter_spine import (
+    ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA,
+)
+from tac.optimization.archive_bound_candidate_contract import (
+    archive_bound_candidate_contracts_from_payload,
+)
 from tac.pr103_lc_ac_runtime_adapter import (
     ADAPTER_SCHEMA,
     FRAME_PARITY_SCHEMA,
@@ -195,6 +201,62 @@ def test_pr103_candidate_packet_copies_archive_runtime_and_custody(
         "full_frame_output_parity_proven"
     ] is True
     assert packet_with_shell_parity["frame_output_parity_proof"]["source_output_sha256"] == "b" * 64
+
+
+def test_pr103_candidate_packet_emits_archive_bound_adapter_package(
+    tmp_path: Path,
+) -> None:
+    fixture = _fixture(tmp_path)
+    adapter = build_pr103_lc_ac_runtime_adapter(
+        candidate_manifest=fixture["manifest"],
+        source_runtime_dir=fixture["runtime"],
+        output_runtime_dir=tmp_path / "adapted",
+        repo_root=tmp_path,
+    )
+    adapter_manifest = tmp_path / "adapter_manifest.json"
+    write_json(adapter_manifest, adapter)
+
+    packet = build_pr103_lc_ac_candidate_packet(
+        runtime_adapter_manifest=adapter_manifest,
+        packet_dir=tmp_path / "packet",
+        repo_root=tmp_path,
+    )
+
+    assert packet["archive_bound_candidate_adapter_package_schema"] == (
+        ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA
+    )
+    package = packet["archive_bound_candidate_adapter_package"]
+    assert package["schema"] == ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA
+    assert package["candidate_row_count"] == 1
+    assert packet["archive_bound_candidate_adapter_package_candidate_count"] == 1
+    assert packet[
+        "archive_bound_candidate_adapter_package_receiver_gate_passed_count"
+    ] == 1
+    assert packet["archive_bound_candidate_adapter_package_exact_blocker_count"] == 1
+    assert package["deterministic_replay_bundles"][0]["replay_bundle_ready"] is True
+    assert package["receiver_proof_gates"][0]["receiver_proof_gate_passed"] is True
+    assert package["exact_axis_blockers"][0]["ready_for_exact_eval_dispatch"] is False
+    assert (
+        "full_frame_render_output_parity_missing"
+        in package["exact_axis_blockers"][0]["blockers"]
+    )
+    assert (
+        "contest_cpu_or_cuda_authority_required"
+        in package["exact_axis_blockers"][0]["blockers"]
+    )
+    contracts = archive_bound_candidate_contracts_from_payload(package)
+    assert len(contracts) == 1
+    contract = contracts[0]
+    assert contract["archive_substrate_tags"] == [
+        "range_coder",
+        "entropy_coder",
+    ]
+    assert contract["candidate_archive"]["path"] == "packet/archive.zip"
+    assert contract["candidate_archive"]["sha256"] == packet["archive"]["sha256"]
+    assert contract["runtime_adapter_ready"] is True
+    assert contract["contest_runtime_decoder_adapter_ready"] is True
+    assert contract["receiver_contract_satisfied"] is True
+    assert contract["ready_for_exact_eval_dispatch"] is False
 
 
 def test_pr103_frame_parity_probe_hashes_same_runtime_rendered_pairs(tmp_path: Path) -> None:
