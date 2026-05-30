@@ -63294,6 +63294,129 @@
         }
       },
       "notes": "Sister-DISJOINT scope src/tac/composition/yuv6_chroma_subsampled_perturbation_operator/. 28/28 tests pass. Canonical Fridrich-Yousfi inversion of PoseNet FastViT-T12 attention via 4:2:0 chroma-only perturbation. 4 canonical strategies (LOCAL_VARIANCE_WEIGHTED / SEGNET_GRADIENT_WEIGHTED / POSENET_GRADIENT_WEIGHTED_VIA_MAE_V / JOINT_ATICK_REDLICH_LINEAR_COMBINATION). Tier A non-promotable per Catalog #341. YUV6 forward parity vs canonical differentiable_rgb_to_yuv6 within float32 tolerance. Catalog #356 AxisDecomposition emission. lane_class=substrate_engineering per HNeRV parity L7. research_only=true."
+    },
+    {
+      "id": "lane_pr95_curriculum_mlx_local_smoke_validation_20260530",
+      "name": "PR95 Curriculum MLX-LOCAL Smoke Validation (m9-v3 op-routable #2 paired-CUDA RATIFICATION pre-flight)",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "experiments/results/pr95_curriculum_mlx_local_smoke_validation_20260530T201931Z/smoke_validation_summary.json"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_pr95_curriculum_mlx_local_smoke_validation_landed_20260530.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; lane_class=substrate_engineering; macOS-MLX research-signal validation of m9-v3 sister-wave wire-in 3-layer architecture (long_training_canonical notify_global_epoch + harness kwargs + adapter routing); ALL 3 substrates (z6_v2 + z8 + dreamer_v3_rssm) PASS all 4 substantive verification axes at N=100 scaled; predecessor c91481212 canonical helper + 49f41e22c sister-wave wire-in commit chain validated"
+    },
+    {
+      "id": "lane_z7_z8_mamba2_adapter_canonical_helper_rewire_20260530",
+      "name": "Z7+Z8 Mamba-2 canonical SSD adapter rewire",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "Z8 mamba2_adapter use_canonical_ssd opt-in + Z7-Mamba-2 backend=ssd_reference opt-in + _CanonicalHelperSSDCell class landing per src/tac/optimization/mamba2_predictor.py + src/tac/substrates/z8_hierarchical_predictive_coding/mamba2_adapter.py + src/tac/substrates/time_traveler_l5_z7_mamba2/architecture.py; verified via 30 new dedicated tests + 102 baseline preserved"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_z7_z8_mamba2_adapter_canonical_helper_rewire_landed_20260530.md + .omx/research/retroactive_sweep_for_z7_z8_mamba2_adapter_rewire_20260530.md per Catalog #348"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_deferred_items_feeder_audit_post_alaska_m9v3_yousfi_tier_1_wave_20260530",
+      "name": "Deferred-Items Feeder Audit Post-Wave (alaska + m9-v3 + Yousfi-Tier-1)",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "Phase A 7-surface inventory + Phase B HONEST 11-candidate classification (0 reactivated empirically; 1 FOUNDATION_LANDED + 1 PARTIAL + 9 NOT_MET); Phase C 4-cascade routing + Phase D apparatus mutation chain; per Catalog #229 PV CLEAN; sister-DISJOINT vs in-flight per Catalog #340 PROCEED"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -63303,5 +63426,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-30T20:10:29Z"
+  "updated_at": "2026-05-30T20:25:48Z"
 }
