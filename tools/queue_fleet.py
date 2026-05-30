@@ -34,6 +34,7 @@ FLEET_SUPERVISOR_SCHEMA = "experiment_queue_fleet_supervisor_run.v1"
 FLEET_LOCK_SCHEMA = "experiment_queue_fleet_supervisor_lock.v1"
 FLEET_INIT_MISSING_SCHEMA = "experiment_queue_fleet_init_missing_run.v1"
 FLEET_NATIVE_CONSUMER_SCHEMA = "experiment_queue_fleet_native_consumer_run.v1"
+FLEET_LOCAL_DRAIN_SCHEMA = "experiment_queue_fleet_local_drain_run.v1"
 
 
 def _utc_now() -> str:
@@ -148,6 +149,139 @@ def _fleet_status_from_args(args: argparse.Namespace, *, full_rows: bool = False
         include_orphans=args.include_orphans,
         supervisor_output_root=args.supervisor_output_root,
     )
+
+
+def _rows_from_status(payload: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    rows = payload.get("rows", [])
+    if not isinstance(rows, Sequence) or isinstance(rows, (str, bytes, bytearray)):
+        return []
+    return [row for row in rows if isinstance(row, Mapping)]
+
+
+def _compact_status_snapshot(payload: Mapping[str, Any]) -> dict[str, Any]:
+    command_keys = (
+        "next_supervise_commands",
+        "next_recovery_commands",
+        "next_resume_commands",
+        "next_init_commands",
+        "next_native_consumer_commands",
+    )
+    out: dict[str, Any] = {
+        "schema": payload.get("schema"),
+        "generated_at_utc": payload.get("generated_at_utc"),
+        "queue_count": payload.get("queue_count"),
+        "candidate_path_count": payload.get("candidate_path_count"),
+        "row_count": payload.get("row_count"),
+        "actionable_count": payload.get("actionable_count"),
+        "ready_to_supervise_count": payload.get("ready_to_supervise_count"),
+        "paused_with_queued_work_count": payload.get("paused_with_queued_work_count"),
+        "paused_exact_dispatch_gate_count": payload.get("paused_exact_dispatch_gate_count"),
+        "needs_recovery_count": payload.get("needs_recovery_count"),
+        "invalid_queue_count": payload.get("invalid_queue_count"),
+        "non_executable_artifact_count": payload.get("non_executable_artifact_count"),
+        "native_consumer_artifact_count": payload.get("native_consumer_artifact_count"),
+        "known_native_consumer_artifact_count": payload.get("known_native_consumer_artifact_count"),
+        "status_counts": payload.get("status_counts") if isinstance(payload.get("status_counts"), Mapping) else {},
+        **FALSE_AUTHORITY,
+    }
+    for key in command_keys:
+        commands = payload.get(key)
+        out[f"{key}_count"] = (
+            len(commands)
+            if isinstance(commands, Sequence) and not isinstance(commands, (str, bytes, bytearray))
+            else 0
+        )
+    return out
+
+
+def _compact_row(row: Mapping[str, Any]) -> dict[str, Any]:
+    out: dict[str, Any] = {
+        "status": row.get("status"),
+        "queue_id": row.get("queue_id"),
+        "queue_path": row.get("queue_path"),
+    }
+    native_consumer = row.get("native_consumer")
+    if isinstance(native_consumer, Mapping):
+        out["consumer_kind"] = native_consumer.get("consumer_kind")
+    for key in (
+        "artifact_schema",
+        "state",
+        "status_counts",
+        "blockers",
+        "recommended_action",
+        "native_consumer_command",
+    ):
+        value = row.get(key)
+        if value not in (None, {}, [], ""):
+            out[key] = value
+    return out
+
+
+def _compact_json_payload(payload: Mapping[str, Any]) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    for key in (
+        "schema",
+        "started_at_utc",
+        "finished_at_utc",
+        "execute",
+        "output_dir",
+        "artifact",
+        "queue_id",
+        "queue_schema",
+        "source_work_queue_schema",
+        "selected_count",
+        "completed_child_count",
+        "failed_child_count",
+        "final_reason",
+        "final_status_counts",
+        "score_claim",
+        "promotion_eligible",
+        "ready_for_exact_eval_dispatch",
+    ):
+        if key in payload:
+            out[key] = payload[key]
+    initial_status = payload.get("initial_status")
+    if isinstance(initial_status, Mapping):
+        out["initial_status"] = _compact_status_snapshot(initial_status)
+    final_status = payload.get("final_status")
+    if isinstance(final_status, Mapping):
+        out["final_status"] = _compact_status_snapshot(final_status)
+    child_runs = payload.get("child_runs")
+    if isinstance(child_runs, Sequence) and not isinstance(child_runs, (str, bytes, bytearray)):
+        out["child_run_count"] = len(child_runs)
+    return out
+
+
+def _compact_run_result(result: Mapping[str, Any]) -> dict[str, Any]:
+    out = dict(result)
+    json_payload = out.get("json_payload")
+    if isinstance(json_payload, Mapping):
+        out["json_payload"] = _compact_json_payload(json_payload)
+    return out
+
+
+def _select_init_rows(rows: Sequence[Mapping[str, Any]], *, max_queues: int) -> list[Mapping[str, Any]]:
+    if max_queues < 0:
+        raise ExperimentQueueError("max-init-queues must be >= 0")
+    if max_queues == 0:
+        return []
+    return [row for row in rows if row.get("status") == "NEEDS_INIT"][:max_queues]
+
+
+def _native_consumer_output_exists(row: Mapping[str, Any]) -> bool:
+    native_consumer = row.get("native_consumer")
+    if not isinstance(native_consumer, Mapping):
+        return False
+    for key in ("output_queue_path", "output_report_path", "closed_source_queue_path"):
+        value = native_consumer.get(key)
+        if not isinstance(value, str) or not value.strip():
+            continue
+        path = Path(value)
+        if not path.is_absolute():
+            path = REPO_ROOT / path
+        if path.exists():
+            return True
+    return False
 
 
 def _format_status(payload: Mapping[str, Any]) -> str:
@@ -559,6 +693,302 @@ def cmd_init_missing(args: argparse.Namespace) -> int:
     return 4 if args.strict and payload["failed_child_count"] else 0
 
 
+def _run_drain_phase_child(
+    *,
+    events_path: Path,
+    cycle_index: int,
+    phase: str,
+    index: int,
+    row: Mapping[str, Any],
+    command: Sequence[str],
+    execute: bool,
+) -> dict[str, Any]:
+    child: dict[str, Any] = {
+        "schema": "experiment_queue_fleet_local_drain_child.v1",
+        "cycle_index": cycle_index,
+        "phase": phase,
+        "index": index,
+        "row": _compact_row(row),
+        "command": [str(part) for part in command],
+        "execute": execute,
+        "failed": False,
+        **FALSE_AUTHORITY,
+    }
+    if execute:
+        child["started_at_utc"] = _utc_now()
+        result = _compact_run_result(_run(command))
+        child["command_result"] = result
+        child["finished_at_utc"] = _utc_now()
+        child["failed"] = bool(result.get("failed"))
+    _append_jsonl(events_path, child)
+    return child
+
+
+def _drain_native_phase(
+    *,
+    args: argparse.Namespace,
+    cycle_index: int,
+    rows: Sequence[Mapping[str, Any]],
+    events_path: Path,
+) -> dict[str, Any]:
+    selected = (
+        _select_native_consumer_rows(
+            rows,
+            artifact_schemas=args.artifact_schema or [],
+            consumer_kinds=args.consumer_kind or [],
+            max_artifacts=max(1, len(rows))
+            if args.skip_existing_native_outputs
+            else args.max_native_artifacts,
+        )
+        if args.max_native_artifacts
+        else []
+    )
+    if args.skip_existing_native_outputs:
+        selected = [row for row in selected if not _native_consumer_output_exists(row)]
+    selected = selected[: args.max_native_artifacts]
+    children: list[dict[str, Any]] = []
+    for index, row in enumerate(selected):
+        command = row.get("native_consumer_command") or []
+        child = _run_drain_phase_child(
+            events_path=events_path,
+            cycle_index=cycle_index,
+            phase="native_consumer",
+            index=index,
+            row=row,
+            command=[str(part) for part in command],
+            execute=args.execute,
+        )
+        children.append(child)
+        if child["failed"] and args.stop_on_child_failure:
+            break
+    return {
+        "schema": "experiment_queue_fleet_local_drain_phase.v1",
+        "cycle_index": cycle_index,
+        "phase": "native_consumer",
+        "selected_count": len(selected),
+        "completed_child_count": len(children),
+        "failed_child_count": sum(1 for child in children if child.get("failed")),
+        "children": children,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _drain_init_phase(
+    *,
+    args: argparse.Namespace,
+    cycle_index: int,
+    rows: Sequence[Mapping[str, Any]],
+    events_path: Path,
+) -> dict[str, Any]:
+    selected = _select_init_rows(rows, max_queues=args.max_init_queues)
+    children: list[dict[str, Any]] = []
+    for index, row in enumerate(selected):
+        child = _run_drain_phase_child(
+            events_path=events_path,
+            cycle_index=cycle_index,
+            phase="init_missing",
+            index=index,
+            row=row,
+            command=_init_command_from_row(row),
+            execute=args.execute,
+        )
+        children.append(child)
+        if child["failed"] and args.stop_on_child_failure:
+            break
+    return {
+        "schema": "experiment_queue_fleet_local_drain_phase.v1",
+        "cycle_index": cycle_index,
+        "phase": "init_missing",
+        "selected_count": len(selected),
+        "completed_child_count": len(children),
+        "failed_child_count": sum(1 for child in children if child.get("failed")),
+        "children": children,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _drain_supervise_phase(
+    *,
+    args: argparse.Namespace,
+    cycle_index: int,
+    rows: Sequence[Mapping[str, Any]],
+    output_root: Path,
+    events_path: Path,
+) -> dict[str, Any]:
+    selected = (
+        select_supervision_rows(
+            rows,
+            include_recovery=args.include_recovery,
+            max_queues=args.max_supervise_queues,
+        )
+        if args.max_supervise_queues
+        else []
+    )
+    children: list[dict[str, Any]] = []
+    for index, row in enumerate(selected):
+        queue_id = str(row.get("queue_id") or f"queue_{index}")
+        queue_dir = output_root / f"cycle_{cycle_index:03d}" / f"{index:03d}_{queue_id}"
+        child = _run_drain_phase_child(
+            events_path=events_path,
+            cycle_index=cycle_index,
+            phase="supervise",
+            index=index,
+            row=row,
+            command=_supervisor_command_from_row(row, args, queue_dir),
+            execute=args.execute,
+        )
+        children.append(child)
+        if child["failed"] and args.stop_on_child_failure:
+            break
+    return {
+        "schema": "experiment_queue_fleet_local_drain_phase.v1",
+        "cycle_index": cycle_index,
+        "phase": "supervise",
+        "selected_count": len(selected),
+        "completed_child_count": len(children),
+        "failed_child_count": sum(1 for child in children if child.get("failed")),
+        "children": children,
+        **FALSE_AUTHORITY,
+    }
+
+
+def cmd_drain_local(args: argparse.Namespace) -> int:
+    if args.max_cycles < 1:
+        raise ExperimentQueueError("max-cycles must be >= 1")
+    for attr in ("max_native_artifacts", "max_init_queues", "max_supervise_queues"):
+        if int(getattr(args, attr)) < 0:
+            raise ExperimentQueueError(f"{attr.replace('_', '-')} must be >= 0")
+    output_root = Path(args.output_dir)
+    output_root.mkdir(parents=True, exist_ok=True)
+    lock_path = Path(args.lock_path) if args.lock_path else output_root / "fleet.lock"
+    events_path = output_root / "fleet_local_drain_events.jsonl"
+    started_at = _utc_now()
+    with FleetLock(
+        lock_path,
+        {
+            "pid": str(__import__("os").getpid()),
+            "output_dir": repo_rel(output_root, REPO_ROOT),
+            "execute": args.execute,
+            "operation": "drain_local",
+        },
+    ):
+        initial = _fleet_status_from_args(args, full_rows=True)
+        current = initial
+        cycles: list[dict[str, Any]] = []
+        halted_reason = ""
+        for cycle_index in range(args.max_cycles):
+            cycle_started_at = _utc_now()
+            status_before = current
+            phases: list[dict[str, Any]] = []
+
+            native_phase = _drain_native_phase(
+                args=args,
+                cycle_index=cycle_index,
+                rows=_rows_from_status(status_before),
+                events_path=events_path,
+            )
+            phases.append(native_phase)
+            if args.execute and native_phase["completed_child_count"]:
+                current = _fleet_status_from_args(args, full_rows=True)
+
+            native_failed = bool(native_phase["failed_child_count"])
+            if native_failed and args.stop_on_child_failure:
+                halted_reason = "native_consumer_child_failed"
+            else:
+                init_phase = _drain_init_phase(
+                    args=args,
+                    cycle_index=cycle_index,
+                    rows=_rows_from_status(current),
+                    events_path=events_path,
+                )
+                phases.append(init_phase)
+                if args.execute and init_phase["completed_child_count"]:
+                    current = _fleet_status_from_args(args, full_rows=True)
+
+                init_failed = bool(init_phase["failed_child_count"])
+                if init_failed and args.stop_on_child_failure:
+                    halted_reason = "init_missing_child_failed"
+                else:
+                    supervise_phase = _drain_supervise_phase(
+                        args=args,
+                        cycle_index=cycle_index,
+                        rows=_rows_from_status(current),
+                        output_root=output_root,
+                        events_path=events_path,
+                    )
+                    phases.append(supervise_phase)
+                    if args.execute and supervise_phase["completed_child_count"]:
+                        current = _fleet_status_from_args(args, full_rows=True)
+                    if supervise_phase["failed_child_count"] and args.stop_on_child_failure:
+                        halted_reason = "supervise_child_failed"
+
+            selected_count = sum(int(phase["selected_count"]) for phase in phases)
+            failed_count = sum(int(phase["failed_child_count"]) for phase in phases)
+            cycle = {
+                "schema": "experiment_queue_fleet_local_drain_cycle.v1",
+                "cycle_index": cycle_index,
+                "started_at_utc": cycle_started_at,
+                "finished_at_utc": _utc_now(),
+                "execute": args.execute,
+                "selected_count": selected_count,
+                "completed_child_count": sum(int(phase["completed_child_count"]) for phase in phases),
+                "failed_child_count": failed_count,
+                "status_before": _compact_status_snapshot(status_before),
+                "status_after": _compact_status_snapshot(current),
+                "phases": phases,
+                **FALSE_AUTHORITY,
+            }
+            cycles.append(cycle)
+            _append_jsonl(events_path, cycle)
+            if halted_reason:
+                break
+            if selected_count == 0:
+                halted_reason = "no_selectable_local_work"
+                break
+            if not args.execute:
+                halted_reason = "plan_only"
+                break
+        final = _fleet_status_from_args(args, full_rows=True)
+        failed_child_count = sum(int(cycle["failed_child_count"]) for cycle in cycles)
+        payload = {
+            "schema": FLEET_LOCAL_DRAIN_SCHEMA,
+            "started_at_utc": started_at,
+            "finished_at_utc": _utc_now(),
+            "execute": args.execute,
+            "output_dir": repo_rel(output_root, REPO_ROOT),
+            "lock_path": repo_rel(lock_path, REPO_ROOT),
+            "events_jsonl": repo_rel(events_path, REPO_ROOT),
+            "max_cycles": args.max_cycles,
+            "completed_cycle_count": len(cycles),
+            "failed_child_count": failed_child_count,
+            "halted_reason": halted_reason or "max_cycles_exhausted",
+            "initial_status": _compact_status_snapshot(initial),
+            "final_status": _compact_status_snapshot(final),
+            "cycles": cycles,
+            "allowed_use": "queue_fleet_bounded_local_native_init_supervision_only",
+            "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_exact_eval_authority",
+            **FALSE_AUTHORITY,
+        }
+        result_path = output_root / "fleet_local_drain_result.json"
+        try:
+            expected = sha256_file(result_path) if result_path.exists() else None
+            artifact = write_json_artifact(
+                result_path,
+                payload,
+                allow_overwrite=expected is not None,
+                expected_existing_sha256=expected,
+            )
+        except ArtifactWriteError as exc:
+            raise ExperimentQueueError(str(exc)) from exc
+        payload["artifact"] = {
+            "path": artifact.path,
+            "bytes": artifact.bytes_written,
+            "sha256": artifact.sha256,
+        }
+    _json_print(payload)
+    return 4 if args.strict and failed_child_count else 0
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", action="append", help="scan root; repeatable")
@@ -618,6 +1048,29 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     init_missing.add_argument("--lock-path", default=None)
     init_missing.add_argument("--strict", action="store_true")
     init_missing.set_defaults(func=cmd_init_missing)
+
+    drain_local = sub.add_parser("drain-local")
+    drain_local.add_argument("--output-dir", required=True)
+    drain_local.add_argument("--execute", action="store_true")
+    drain_local.add_argument("--max-cycles", type=int, default=2)
+    drain_local.add_argument("--max-native-artifacts", type=int, default=4)
+    drain_local.add_argument("--artifact-schema", action="append", default=[])
+    drain_local.add_argument("--consumer-kind", action="append", default=[])
+    drain_local.add_argument("--skip-existing-native-outputs", action=argparse.BooleanOptionalAction, default=True)
+    drain_local.add_argument("--max-init-queues", type=int, default=4)
+    drain_local.add_argument("--max-supervise-queues", type=int, default=4)
+    drain_local.add_argument("--include-recovery", action="store_true")
+    drain_local.add_argument("--max-ticks-per-queue", type=int, default=16)
+    drain_local.add_argument("--max-steps-per-tick", type=int, default=16)
+    drain_local.add_argument("--max-parallel", default="auto")
+    drain_local.add_argument("--max-parallel-cap", type=int, default=8)
+    drain_local.add_argument("--allow-cloud", action="store_true")
+    drain_local.add_argument("--no-recover", action="store_true")
+    drain_local.add_argument("--stop-on-child-failure", action=argparse.BooleanOptionalAction, default=True)
+    drain_local.add_argument("--log-root", default=None)
+    drain_local.add_argument("--lock-path", default=None)
+    drain_local.add_argument("--strict", action="store_true")
+    drain_local.set_defaults(func=cmd_drain_local)
     return parser.parse_args(argv)
 
 

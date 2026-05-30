@@ -125,6 +125,14 @@ def _raw_json_metadata(path: Path) -> dict[str, Any] | None:
     schema = payload.get("schema")
     if isinstance(schema, str) and schema.strip():
         out["artifact_schema"] = schema
+    if schema == MATERIALIZER_WORK_QUEUE_SCHEMA:
+        rows = payload.get("rows")
+        if not isinstance(rows, Sequence) or isinstance(rows, (str, bytes, bytearray)):
+            rows = []
+        materializer_rows = [row for row in rows if isinstance(row, Mapping)]
+        executable_rows = [row for row in materializer_rows if row.get("executable") is True]
+        out["materializer_work_row_count"] = len(materializer_rows)
+        out["materializer_executable_row_count"] = len(executable_rows)
     if (
         "experiments" not in payload
         and isinstance(payload.get("queue_id"), str)
@@ -273,8 +281,10 @@ def _native_consumer_hint(
     repo_root: str | Path,
     path: Path,
     artifact_schema: str,
+    artifact_metadata: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     repo = Path(repo_root)
+    metadata = artifact_metadata if isinstance(artifact_metadata, Mapping) else {}
     base: dict[str, Any] = {
         "schema": QUEUE_FLEET_NATIVE_CONSUMER_HINT_SCHEMA,
         "artifact_schema": artifact_schema,
@@ -287,9 +297,35 @@ def _native_consumer_hint(
         **FALSE_AUTHORITY,
     }
     if artifact_schema == MATERIALIZER_WORK_QUEUE_SCHEMA:
+        executable_count = metadata.get("materializer_executable_row_count")
+        if executable_count == 0:
+            return {
+                **base,
+                "known_native_consumer": True,
+                "consumer_kind": "byte_shaving_materializer_work_queue",
+                "recommended_action": "preserve_blocked_materializer_work_queue_no_executable_rows",
+                "ready_for_native_consumer": False,
+                "blockers": ["materializer_work_queue_has_no_executable_rows"],
+                "materializer_work_row_count": metadata.get("materializer_work_row_count", 0),
+                "materializer_executable_row_count": 0,
+            }
         output_path = _materializer_execution_queue_ref(path)
         digest = hashlib.sha256(repo_rel(path, repo).encode("utf-8")).hexdigest()[:10]
         queue_id = f"materializer_exec_{_slug(path.stem, limit=38)}_{digest}"
+        if output_path.exists():
+            return {
+                **base,
+                "known_native_consumer": True,
+                "consumer_kind": "byte_shaving_materializer_work_queue",
+                "recommended_action": "use_existing_materializer_execution_queue",
+                "ready_for_native_consumer": False,
+                "output_queue_path": repo_rel(output_path, repo),
+                "output_queue_schema": QUEUE_SCHEMA,
+                "output_queue_id": queue_id,
+                "output_queue_exists": True,
+                "materializer_work_row_count": metadata.get("materializer_work_row_count"),
+                "materializer_executable_row_count": executable_count,
+            }
         command = [
             ".venv/bin/python",
             "tools/build_materializer_execution_queue.py",
@@ -313,6 +349,9 @@ def _native_consumer_hint(
             "output_queue_path": repo_rel(output_path, repo),
             "output_queue_schema": QUEUE_SCHEMA,
             "output_queue_id": queue_id,
+            "ready_for_native_consumer": True,
+            "materializer_work_row_count": metadata.get("materializer_work_row_count"),
+            "materializer_executable_row_count": executable_count,
         }
     if artifact_schema == OPTIMIZER_CANDIDATE_QUEUE_SCHEMA:
         if path.name == "closed_source_queue.json" or "submission_closure" in path.parts:
@@ -552,7 +591,12 @@ def queue_fleet_row(
         artifact_schema = artifact_metadata.get("artifact_schema")
         if artifact_schema and artifact_schema != QUEUE_SCHEMA:
             status = NON_EXECUTABLE_QUEUE_ARTIFACT_STATUS
-            native_consumer = _native_consumer_hint(repo, path, str(artifact_schema))
+            native_consumer = _native_consumer_hint(
+                repo,
+                path,
+                str(artifact_schema),
+                artifact_metadata=artifact_metadata,
+            )
             recommended_action = artifact_metadata.get("recommended_action") or native_consumer.get(
                 "recommended_action"
             )

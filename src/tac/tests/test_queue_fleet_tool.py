@@ -124,7 +124,15 @@ def test_queue_fleet_treats_native_work_queue_as_non_executable_artifact(
         json.dumps(
             {
                 "schema": "byte_shaving_materializer_work_queue.v1",
-                "items": [{"id": "native-only"}],
+                "rows": [
+                    {
+                        "work_id": "native-only",
+                        "executable": True,
+                        "command": [sys.executable, "-c", "print('ok')"],
+                        "resource_kind": "local_cpu",
+                        "postconditions": [],
+                    }
+                ],
             }
         ),
         encoding="utf-8",
@@ -168,9 +176,111 @@ def test_queue_fleet_treats_native_work_queue_as_non_executable_artifact(
     assert samples[0]["native_consumer"]["consumer_kind"] == (
         "byte_shaving_materializer_work_queue"
     )
+    assert samples[0]["native_consumer"]["ready_for_native_consumer"] is True
+    assert samples[0]["native_consumer"]["materializer_executable_row_count"] == 1
     assert samples[0]["native_consumer_command"] == payload[
         "next_native_consumer_commands"
     ][0]
+
+
+def test_queue_fleet_refuses_materializer_work_queue_with_no_executable_rows(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    tool = _load_queue_fleet_tool()
+    native_queue = tmp_path / "blocked_materializer_work_queue.json"
+    native_queue.write_text(
+        json.dumps(
+            {
+                "schema": "byte_shaving_materializer_work_queue.v1",
+                "rows": [
+                    {
+                        "work_id": "blocked_work",
+                        "executable": False,
+                        "blockers": ["receiver_contract_missing"],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rc = tool.main(
+        [
+            "--root",
+            str(tmp_path),
+            "--row-limit",
+            "0",
+            "status",
+            "--format",
+            "json",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert rc == 0
+    assert payload["non_executable_artifact_count"] == 1
+    assert payload["known_native_consumer_artifact_count"] == 1
+    assert payload["next_native_consumer_commands"] == []
+    samples = payload["status_samples"]["NON_EXECUTABLE_QUEUE_ARTIFACT"]
+    native_consumer = samples[0]["native_consumer"]
+    assert native_consumer["consumer_kind"] == "byte_shaving_materializer_work_queue"
+    assert native_consumer["ready_for_native_consumer"] is False
+    assert native_consumer["blockers"] == ["materializer_work_queue_has_no_executable_rows"]
+    assert native_consumer["materializer_work_row_count"] == 1
+    assert native_consumer["materializer_executable_row_count"] == 0
+    assert "native_consumer_command" not in samples[0]
+
+
+def test_queue_fleet_uses_existing_materializer_execution_queue_without_rebuild(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    tool = _load_queue_fleet_tool()
+    work_queue = tmp_path / "materializer_work_queue.json"
+    work_queue.write_text(
+        json.dumps(
+            {
+                "schema": "byte_shaving_materializer_work_queue.v1",
+                "rows": [
+                    {
+                        "work_id": "unit_work",
+                        "executable": True,
+                        "command": [sys.executable, "-c", "print('ok')"],
+                        "resource_kind": "local_cpu",
+                        "postconditions": [],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    execution_queue = tmp_path / "materializer_execution_queue.json"
+    execution_queue.write_text(
+        json.dumps({"schema": "experiment_queue.v1", "queue_id": "existing", "experiments": []}),
+        encoding="utf-8",
+    )
+
+    rc = tool.main(
+        [
+            "--root",
+            str(tmp_path),
+            "--row-limit",
+            "0",
+            "status",
+            "--format",
+            "json",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert rc == 0
+    assert payload["next_native_consumer_commands"] == []
+    samples = payload["status_samples"]["NON_EXECUTABLE_QUEUE_ARTIFACT"]
+    native_consumer = samples[0]["native_consumer"]
+    assert native_consumer["recommended_action"] == "use_existing_materializer_execution_queue"
+    assert native_consumer["ready_for_native_consumer"] is False
+    assert native_consumer["output_queue_exists"] is True
 
 
 def test_queue_fleet_treats_queue_validation_report_as_non_executable_artifact(
@@ -669,6 +779,153 @@ def test_queue_fleet_consume_native_executes_materializer_builder(
     assert child["native_consumer_result"]["returncode"] == 0
     assert queue["schema"] == "experiment_queue.v1"
     assert queue["experiments"][0]["metadata"]["work_id"] == "unit_work"
+
+
+def test_queue_fleet_drain_local_plan_records_native_init_supervise_phases(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    tool = _load_queue_fleet_tool()
+    work_queue = tmp_path / "materializer_work_queue.json"
+    work_queue.write_text(
+        json.dumps(
+            {
+                "schema": "byte_shaving_materializer_work_queue.v1",
+                "rows": [
+                    {
+                        "work_id": "unit_work",
+                        "executable": True,
+                        "command": [sys.executable, "-c", "print('ok')"],
+                        "resource_kind": "local_cpu",
+                        "postconditions": [],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    queue_path, _artifact = _queue_file(tmp_path)
+    state_root = tmp_path / "state"
+    _init_state(queue_path, state_root)
+
+    rc = tool.main(
+        [
+            "--root",
+            str(tmp_path),
+            "--state-root",
+            str(state_root),
+            "drain-local",
+            "--output-dir",
+            str(tmp_path / "fleet_drain"),
+            "--max-cycles",
+            "3",
+            "--max-native-artifacts",
+            "1",
+            "--max-init-queues",
+            "1",
+            "--max-supervise-queues",
+            "1",
+            "--strict",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert rc == 0
+    assert payload["schema"] == "experiment_queue_fleet_local_drain_run.v1"
+    assert payload["execute"] is False
+    assert payload["completed_cycle_count"] == 1
+    assert payload["halted_reason"] == "plan_only"
+    assert payload["score_claim"] is False
+    phases = payload["cycles"][0]["phases"]
+    assert [phase["phase"] for phase in phases] == [
+        "native_consumer",
+        "init_missing",
+        "supervise",
+    ]
+    assert phases[0]["selected_count"] == 1
+    assert phases[1]["selected_count"] == 0
+    assert phases[2]["selected_count"] == 1
+
+
+def test_queue_fleet_drain_local_executes_native_init_and_supervise(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    tool = _load_queue_fleet_tool()
+    artifact = tmp_path / "native_artifact.json"
+    work_queue = tmp_path / "materializer_work_queue.json"
+    execution_queue = tmp_path / "materializer_execution_queue.json"
+    work_queue.write_text(
+        json.dumps(
+            {
+                "schema": "byte_shaving_materializer_work_queue.v1",
+                "rows": [
+                    {
+                        "work_id": "unit_work",
+                        "executable": True,
+                        "command": [
+                            sys.executable,
+                            "-c",
+                            (
+                                "import json, pathlib; "
+                                f"pathlib.Path({str(artifact)!r}).write_text("
+                                "json.dumps({'schema':'fleet-drain-done.v1'}))"
+                            ),
+                        ],
+                        "resource_kind": "local_cpu",
+                        "postconditions": [
+                            {
+                                "type": "json_equals",
+                                "path": str(artifact),
+                                "key": "schema",
+                                "equals": "fleet-drain-done.v1",
+                            }
+                        ],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    state_root = tmp_path / "state"
+
+    rc = tool.main(
+        [
+            "--root",
+            str(tmp_path),
+            "--state-root",
+            str(state_root),
+            "drain-local",
+            "--output-dir",
+            str(tmp_path / "fleet_drain"),
+            "--execute",
+            "--max-cycles",
+            "1",
+            "--max-native-artifacts",
+            "1",
+            "--max-init-queues",
+            "1",
+            "--max-supervise-queues",
+            "1",
+            "--max-ticks-per-queue",
+            "4",
+            "--max-steps-per-tick",
+            "2",
+            "--strict",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert rc == 0
+    assert payload["execute"] is True
+    assert payload["failed_child_count"] == 0
+    assert payload["completed_cycle_count"] == 1
+    assert execution_queue.is_file()
+    assert artifact.is_file()
+    phases = payload["cycles"][0]["phases"]
+    assert [phase["selected_count"] for phase in phases] == [1, 1, 1]
+    assert payload["final_status"]["status_counts"]["TERMINAL"] == 1
+    assert payload["final_status"]["status_counts"]["NON_EXECUTABLE_QUEUE_ARTIFACT"] == 1
 
 
 def test_queue_fleet_lives_in_comma_lab_control_plane() -> None:
