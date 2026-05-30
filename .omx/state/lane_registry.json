@@ -63706,6 +63706,88 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_mlx_pytorch_export_tools_canonical_refactor_20260530",
+      "name": "MLX->PyTorch export tools canonical-helper refactor (Catalog #290 falling-rule)",
+      "phase": 11.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "5 of 8 tools refactored to canonical helper tac.framework_agnostic.helpers.convert_mlx_state_dict_to_pytorch_oihw; 3 PRINCIPLED FORKS documented per Catalog #290 (VQ + PR95 + wyner_ziv); 14/14 tests pass; byte-stable PV verified; -34 LOC across 8 tools (1.3% reduction vs audit-predicted 88% which was CARGO-CULTED-LOC-MINIMIZATION per Catalog #307); .omx/research/mlx_pytorch_export_tools_refactor_loc_reduction_20260530.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_mlx_pytorch_export_tools_canonical_refactor_landed_20260530.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "lane_class=substrate_engineering research_only=false mission=apparatus_maintenance horizon=plateau_adjacent"
+    },
+    {
+      "id": "lane_deferred_items_feeder_audit_post_recovery_wave_20260530",
+      "name": "Deferred-items feeder audit post-recovery wave",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "3rd recurring feeder pass: 87 blocking probes + 336 deferred-marked lanes + 0 reactivation_met (HONEST per CLAUDE.md NO FAKE IMPLEMENTATIONS); audit memo .omx/research/deferred_items_feeder_audit_post_recovery_wave_20260530.md; META Finding C MLX-LOCAL \u2260 paired-CUDA; META Finding D Surface 4 authoritative aggregation 336"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_deferred_items_feeder_audit_post_recovery_wave_landed_20260530.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -63715,5 +63797,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-30T22:03:58Z"
+  "updated_at": "2026-05-30T22:14:27Z"
 }
