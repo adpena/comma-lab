@@ -888,11 +888,86 @@ def test_exact_readiness_reads_archive_custody_from_shared_contract(
     )
 
     assert result["report"]["ready_for_exact_eval_dispatch"] is True
+    assert result["report"]["facts"]["archive_bound_candidate_contract_required"] is True
+    assert result["report"]["facts"]["archive_bound_candidate_contract_present"] is True
+    assert result["report"]["facts"]["archive_bound_candidate_contract_key"]
     promoted_row = result["promoted_queue"]["dispatch_ready"][0]
     assert promoted_row["archive_sha256"] == archive_sha
     assert promoted_row["candidate_archive_bytes"] == archive_bytes
+    assert promoted_row["source_archive_bound_candidate_contract_required"] is True
+    assert promoted_row["source_archive_bound_candidate_contract_present"] is True
+    assert promoted_row["source_archive_bound_candidate_contract_key"]
+    assert promoted_row["source_archive_bound_candidate_contract"]["contract_key"] == (
+        promoted_row["source_archive_bound_candidate_contract_key"]
+    )
     assert promoted_row["runtime_consumption_proof_schema"] == (
         "pr101_kaggle_proxy_runtime_consumption_proof_v1"
+    )
+
+
+def test_exact_readiness_requires_contract_for_mlx_advisory_origin(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    payload = json.loads(queue.read_text(encoding="utf-8"))
+    row = payload["top_k"][0]
+    row.update(
+        {
+            "source_schema": "mlx_scorer_response.v1",
+            "source_evidence_grade": "macOS-MLX-research-signal",
+            "source_evidence_tag": "[macOS-MLX research-signal]",
+            "axis_tag": "[macOS-MLX research-signal]",
+            "ready_for_exact_eval_dispatch": True,
+        }
+    )
+    queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["report"]["ready_for_exact_eval_dispatch"] is False
+    assert result["promoted_queue"] is None
+    assert result["report"]["facts"]["archive_bound_candidate_contract_required"] is True
+    assert result["report"]["facts"]["archive_bound_candidate_contract_present"] is False
+    assert (
+        "archive_bound_candidate_contract_required_for_source_row"
+        in result["report"]["blockers"]
+    )
+
+
+def test_exact_readiness_rejects_contract_not_ready_for_exact_handoff(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    payload = json.loads(queue.read_text(encoding="utf-8"))
+    row = payload["top_k"][0]
+    row.update(
+        archive_bound_candidate_contract_fields_for_row(
+            row,
+            repo_root=tmp_path,
+        )
+    )
+    queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["report"]["ready_for_exact_eval_dispatch"] is False
+    assert result["promoted_queue"] is None
+    assert "archive_bound_candidate_contract_not_ready" in result["report"]["blockers"]
+    assert (
+        "archive_bound_candidate_contract_not_ready_for_exact_handoff"
+        in result["report"]["blockers"]
     )
 
 

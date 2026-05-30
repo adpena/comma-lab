@@ -338,6 +338,77 @@ def _mapping(value: Any) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
 
 
+ARCHIVE_BOUND_CONTRACT_REQUIRED_TEXT_FIELDS = (
+    "source_schema",
+    "schema",
+    "source_evidence_grade",
+    "source_evidence_tag",
+    "axis_tag",
+    "evidence_grade",
+    "evidence_tag",
+    "evidence_semantics",
+    "local_advisory_axes_semantics",
+    "lane_class",
+    "candidate_family",
+    "target_kind",
+    "materializer_id",
+    "receiver_contract_kind",
+    "archive_native_transform_kind",
+    "optimizer_tool",
+)
+ARCHIVE_BOUND_CONTRACT_REQUIRED_TEXT_TOKENS = (
+    "macos-mlx",
+    "macos_mlx",
+    "macos-cpu-advisory",
+    "macos_cpu_advisory",
+    "research-signal",
+    "advisory",
+    "mlx_scorer_response",
+    "mlx_effective_spend",
+    "materializer_chain_harvest",
+    "family_agnostic_materializer_harvest",
+    "pending_exact_readiness",
+    "repair_family",
+    "repair_campaign",
+    "entropy_probe",
+    "probe_only",
+    "range_coder",
+    "ans_coder",
+    "huffman",
+    "selector_codec",
+    "zip_ordering",
+    "byte_shaving",
+    "dqs1",
+    "pr103",
+    "public_frontier",
+)
+ARCHIVE_BOUND_CONTRACT_REQUIRED_BOOL_FIELDS = (
+    "byte_closed_candidate_emitted",
+    "byte_closed_candidate_materialized",
+    "candidate_archive_materialized",
+)
+
+
+def archive_bound_contract_required_for_row(row: Mapping[str, Any]) -> bool:
+    """Return true when a row's origin must be governed by the shared contract."""
+
+    if has_archive_bound_candidate_contract_payload(row):
+        return True
+    for key in ARCHIVE_BOUND_CONTRACT_REQUIRED_BOOL_FIELDS:
+        if row.get(key) is True:
+            return True
+    if row.get("local_advisory_axes"):
+        return True
+    for key in ARCHIVE_BOUND_CONTRACT_REQUIRED_TEXT_FIELDS:
+        value = row.get(key)
+        if not isinstance(value, str):
+            continue
+        token = value.strip().lower().replace(" ", "_")
+        if any(required in token for required in ARCHIVE_BOUND_CONTRACT_REQUIRED_TEXT_TOKENS):
+            return True
+    return False
+
+
 def archive_bound_contract_for_row(
     row: Mapping[str, Any],
     *,
@@ -2092,13 +2163,40 @@ def readiness_blockers(
         )
     )
     blockers.extend(archive_bound_contract_blockers)
+    archive_bound_contract_required = archive_bound_contract_required_for_row(row)
+    facts["archive_bound_candidate_contract_required"] = (
+        archive_bound_contract_required
+    )
+    facts["archive_bound_candidate_contract_present"] = (
+        archive_bound_contract is not None
+    )
+    if archive_bound_contract_required and archive_bound_contract is None:
+        blockers.append("archive_bound_candidate_contract_required_for_source_row")
     if archive_bound_contract is not None:
+        facts["archive_bound_candidate_contract"] = dict(archive_bound_contract)
+        surface = row.get("archive_bound_candidate_contract_surface")
+        if isinstance(surface, Mapping):
+            facts["archive_bound_candidate_contract_surface"] = dict(surface)
         facts["archive_bound_candidate_contract_key"] = archive_bound_contract.get(
             "contract_key"
         )
         facts["archive_bound_candidate_contract_schema"] = archive_bound_contract.get(
             "schema"
         )
+        if archive_bound_contract.get("archive_bound_candidate_ready") is not True:
+            blockers.append("archive_bound_candidate_contract_not_ready")
+        if (
+            archive_bound_contract.get(
+                "archive_bound_candidate_ready_for_exact_handoff"
+            )
+            is not True
+        ):
+            blockers.append(
+                "archive_bound_candidate_contract_not_ready_for_exact_handoff"
+            )
+        file_custody = _mapping(archive_bound_contract.get("archive_file_custody"))
+        if file_custody and file_custody.get("custody_complete") is not True:
+            blockers.append("archive_bound_candidate_contract_custody_incomplete")
 
     effective_lane_id = lane_id or row.get("lane_id")
     if not isinstance(effective_lane_id, str) or not effective_lane_id.strip():
@@ -2485,6 +2583,24 @@ def promoted_row(
         "runtime_consumption_proof_candidate_member_sha256": facts.get(
             "runtime_consumption_proof_candidate_member_sha256"
         ),
+        "source_archive_bound_candidate_contract_required": bool(
+            facts.get("archive_bound_candidate_contract_required")
+        ),
+        "source_archive_bound_candidate_contract_present": bool(
+            facts.get("archive_bound_candidate_contract_present")
+        ),
+        "source_archive_bound_candidate_contract_key": facts.get(
+            "archive_bound_candidate_contract_key"
+        ),
+        "source_archive_bound_candidate_contract_schema": facts.get(
+            "archive_bound_candidate_contract_schema"
+        ),
+        "source_archive_bound_candidate_contract": facts.get(
+            "archive_bound_candidate_contract"
+        ),
+        "source_archive_bound_candidate_contract_surface": facts.get(
+            "archive_bound_candidate_contract_surface"
+        ),
         "renderer_payload_dfl1_inflate_parity_satisfied": source_row.get(
             "renderer_payload_dfl1_inflate_parity_satisfied"
         ),
@@ -2676,6 +2792,18 @@ def promote_candidate_for_exact_eval(
             "runtime_consumption_proof_candidate_member_sha256": facts.get(
                 "runtime_consumption_proof_candidate_member_sha256"
             ),
+            "archive_bound_candidate_contract_required": facts.get(
+                "archive_bound_candidate_contract_required"
+            ),
+            "archive_bound_candidate_contract_present": facts.get(
+                "archive_bound_candidate_contract_present"
+            ),
+            "archive_bound_candidate_contract_key": facts.get(
+                "archive_bound_candidate_contract_key"
+            ),
+            "archive_bound_candidate_contract_schema": facts.get(
+                "archive_bound_candidate_contract_schema"
+            ),
             "cuda_component_risk_gate_required": facts.get(
                 "hdm8_selector_cuda_component_gate_required"
             ),
@@ -2728,6 +2856,7 @@ __all__ = [
     "ACTIVE_SCORE_FRONTIER_SCORE",
     "QUEUE_SCHEMA",
     "ExactReadinessError",
+    "archive_bound_contract_required_for_row",
     "as_integral",
     "promote_candidate_for_exact_eval",
     "validate_serialized_archive_delta_contract",
