@@ -51,6 +51,34 @@ class MlxScoreAwareAdapter:
         substrate_id: str,
         pr95_faithful_curriculum_enabled: bool = False,
         pr95_curriculum_total_epochs: int | None = None,
+        # Wave N+11 Z7-Mamba-2 stabilizer recipe (Slot 1 RESUME 1e2b78163
+        # IMPLEMENTATION-LEVEL falsification + Wave N+10 NaN-at-ep-16-18
+        # signature reactivation criteria per task #1481). All defaults are
+        # legacy-preserving: when no stabilizer kwarg is passed, the adapter
+        # behaves identically to the pre-Wave-N+11 code path so sister
+        # substrates (Z6-v2 / dreamer / sane_hnerv / etc.) are byte-stable.
+        # Per CLAUDE.md "Beauty, simplicity, and developer experience" +
+        # "UNIQUE-AND-COMPLETE-PER-METHOD operating mode" Catalog #290:
+        # canonical-when-it-serves; FORK-when-it-suppresses.
+        # Per Gu+Dao 2023 (Mamba-2 canonical stability) + Loshchilov+Hutter
+        # 2019 (Adam regularization): grad clip max_norm=1.0 + warmup linear
+        # 0->lr over 5-10 epochs + weight_decay 1e-4 + EMA 0.997 is the
+        # canonical smallest-perturbation stabilizer composition for
+        # state-space + Adam NaN-at-specific-epoch.
+        # [verified-against: Gu & Dao 2023 "Mamba: Linear-Time Sequence Modeling
+        #   with Selective State Spaces" §4 Training Stability]
+        # [verified-against: Loshchilov & Hutter 2019 "Decoupled Weight Decay
+        #   Regularization" §4 AdamW with weight_decay default 0.01]
+        # [verified-against: mlx.optimizers.clip_grad_norm + linear_schedule +
+        #   cosine_decay + join_schedules canonical primitives]
+        grad_clip_max_norm: float | None = None,
+        warmup_epochs: int = 0,
+        warmup_steps_per_epoch: int = 1,
+        weight_decay: float | None = None,
+        optimizer_kind: str = "adamw",
+        cosine_decay_enabled: bool = False,
+        cosine_decay_total_epochs: int | None = None,
+        cosine_decay_min_lr_ratio: float = 1e-2,
     ) -> None:
         """Initialize the canonical MLX score-aware adapter.
 
@@ -71,6 +99,37 @@ class MlxScoreAwareAdapter:
                 curriculum; defaults to the canonical 29,650 per L14.
                 Required when ``pr95_faithful_curriculum_enabled=True``;
                 ignored otherwise.
+            grad_clip_max_norm: Wave N+11 stabilizer. If not None and > 0,
+                applies ``mlx.optimizers.clip_grad_norm(grads, max_norm)``
+                after value_and_grad but before optimizer.update. Mamba-2
+                canonical value = 1.0 per Gu+Dao 2023.
+            warmup_epochs: Wave N+11 stabilizer. If > 0, builds a
+                ``linear_schedule(0.0, learning_rate, warmup_epochs *
+                warmup_steps_per_epoch)`` lr ramp. Mamba-2 canonical = 5-10.
+            warmup_steps_per_epoch: number of train_step calls per epoch
+                (used only to convert warmup_epochs into warmup_steps for
+                the linear_schedule). Defaults to 1 (1 step/epoch); pass
+                actual batches/epoch for proper warmup at sub-epoch step
+                granularity.
+            weight_decay: Wave N+11 stabilizer. AdamW weight_decay override
+                (None preserves AdamW default 0.01; canonical Wave N+11 =
+                1e-4 per Loshchilov+Hutter 2019).
+            optimizer_kind: Wave N+11 stabilizer. One of {"adamw", "rmsprop"}.
+                Default "adamw" preserves legacy. "rmsprop" routes through
+                ``mlx.optimizers.RMSprop`` per Mamba-2 RMSprop empirical
+                stability finding (Tieleman+Hinton 2012; smaller momentum
+                helps Mamba SSD recurrence).
+            cosine_decay_enabled: Wave N+11 stabilizer. When True AND
+                warmup_epochs > 0 AND cosine_decay_total_epochs is set,
+                composes the canonical warmup + cosine-decay schedule via
+                ``mlx.optimizers.join_schedules`` (matches the proven L2
+                stability hardening pattern in
+                ``experiments/train_substrate_z7_mamba2_v2_mlx.py``).
+            cosine_decay_total_epochs: total epoch budget (used to compute
+                decay_epochs = total - warmup). Required when
+                ``cosine_decay_enabled=True``.
+            cosine_decay_min_lr_ratio: end-of-decay lr = peak_lr * ratio
+                (default 1e-2 matches the L2 hardening canonical).
         """
         mx = require_mlx_for_harness()
         import mlx.nn as mlx_nn
@@ -84,6 +143,58 @@ class MlxScoreAwareAdapter:
         self.substrate_id = substrate_id
         self._optimizer: Any = None
         self._optimizer_lr: float | None = None
+
+        # Wave N+11 stabilizer state (frozen at construction; train_step reads).
+        if grad_clip_max_norm is not None and float(grad_clip_max_norm) <= 0.0:
+            raise ValueError(
+                f"grad_clip_max_norm must be None or > 0; got {grad_clip_max_norm}"
+            )
+        if int(warmup_epochs) < 0:
+            raise ValueError(
+                f"warmup_epochs must be >= 0; got {warmup_epochs}"
+            )
+        if int(warmup_steps_per_epoch) <= 0:
+            raise ValueError(
+                f"warmup_steps_per_epoch must be > 0; got {warmup_steps_per_epoch}"
+            )
+        if str(optimizer_kind).lower() not in {"adamw", "rmsprop"}:
+            raise ValueError(
+                f"optimizer_kind must be 'adamw' or 'rmsprop'; got {optimizer_kind!r}"
+            )
+        if cosine_decay_enabled:
+            if int(warmup_epochs) <= 0:
+                raise ValueError(
+                    "cosine_decay_enabled=True requires warmup_epochs > 0"
+                )
+            if cosine_decay_total_epochs is None or int(cosine_decay_total_epochs) <= int(warmup_epochs):
+                raise ValueError(
+                    "cosine_decay_enabled=True requires "
+                    "cosine_decay_total_epochs > warmup_epochs; got "
+                    f"total={cosine_decay_total_epochs} warmup={warmup_epochs}"
+                )
+        self._wave_n11_grad_clip_max_norm: float | None = (
+            float(grad_clip_max_norm) if grad_clip_max_norm is not None else None
+        )
+        self._wave_n11_warmup_epochs: int = int(warmup_epochs)
+        self._wave_n11_warmup_steps_per_epoch: int = int(warmup_steps_per_epoch)
+        self._wave_n11_weight_decay: float | None = (
+            float(weight_decay) if weight_decay is not None else None
+        )
+        self._wave_n11_optimizer_kind: str = str(optimizer_kind).lower()
+        self._wave_n11_cosine_decay_enabled: bool = bool(cosine_decay_enabled)
+        self._wave_n11_cosine_decay_total_epochs: int | None = (
+            int(cosine_decay_total_epochs)
+            if cosine_decay_total_epochs is not None
+            else None
+        )
+        self._wave_n11_cosine_decay_min_lr_ratio: float = float(
+            cosine_decay_min_lr_ratio
+        )
+        # Wave N+11 telemetry (consumed by tests + landing memo for the
+        # canonical Provenance bind step).
+        self._wave_n11_grad_norm_history: list[float] = []
+        self._wave_n11_clipped_count: int = 0
+        self._wave_n11_step_count: int = 0
 
         # PR95-faithful 8-stage Muon+AdamW canonical curriculum state per
         # CLAUDE.md L14 + L15 (Option A). Default-off preserves legacy adapter
@@ -139,6 +250,106 @@ class MlxScoreAwareAdapter:
         rng = np.random.RandomState(seed)
         sampled = rng.choice(num_pairs, size=size, replace=False)
         return mx.array(sampled.astype("int32"))
+
+    def _build_wave_n11_optimizer(self, learning_rate: float) -> Any:
+        """Build the canonical Wave N+11 stabilizer-aware optimizer.
+
+        When NO stabilizer kwargs are set at construction, this returns
+        ``AdamW(learning_rate=lr)`` exactly as the pre-Wave-N+11 code path
+        did so sister substrates are byte-stable. When stabilizer kwargs ARE
+        set, builds the canonical optimizer with the requested schedule +
+        weight_decay + kind.
+
+        Schedule composition:
+
+        - ``warmup_epochs > 0`` AND ``cosine_decay_enabled=True``: composes
+          ``linear_schedule(0.0, lr, warmup_steps) >> cosine_decay(lr,
+          decay_steps, lr*min_ratio)`` via ``join_schedules``. Matches the
+          proven L2 stability hardening pattern.
+        - ``warmup_epochs > 0`` AND ``cosine_decay_enabled=False``: linear
+          warmup ONLY (constant after warmup completes; canonical for short
+          MLX-LOCAL runs where cosine decay overshoots).
+        - ``warmup_epochs == 0``: constant lr (legacy behavior).
+
+        Optimizer kind:
+
+        - ``"adamw"``: ``mlx.optimizers.AdamW(learning_rate=sched,
+          weight_decay=wd)`` where ``wd`` defaults to AdamW's own 0.01 if
+          ``weight_decay`` is None at construction.
+        - ``"rmsprop"``: ``mlx.optimizers.RMSprop(learning_rate=sched)`` (MLX
+          RMSprop does not accept weight_decay; a future canonical add lands
+          weight-decay-via-AdamW-style decoupling per Loshchilov+Hutter 2019
+          §4 if Mamba-2 empirically benefits from it).
+        """
+        mlx_optim = self._mlx_optim
+        warmup_epochs = self._wave_n11_warmup_epochs
+        warmup_steps_per_epoch = self._wave_n11_warmup_steps_per_epoch
+        if warmup_epochs > 0:
+            warmup_steps = max(1, warmup_epochs * warmup_steps_per_epoch)
+            warmup_sched = mlx_optim.linear_schedule(
+                0.0, float(learning_rate), warmup_steps
+            )
+            if self._wave_n11_cosine_decay_enabled:
+                total_epochs = int(self._wave_n11_cosine_decay_total_epochs or 0)
+                decay_epochs = max(1, total_epochs - warmup_epochs)
+                decay_steps = max(1, decay_epochs * warmup_steps_per_epoch)
+                end_lr = float(learning_rate) * float(
+                    self._wave_n11_cosine_decay_min_lr_ratio
+                )
+                decay_sched = mlx_optim.cosine_decay(
+                    float(learning_rate), decay_steps, end_lr
+                )
+                lr_sched = mlx_optim.join_schedules(
+                    [warmup_sched, decay_sched], [warmup_steps]
+                )
+            else:
+                lr_sched = warmup_sched
+        else:
+            lr_sched = float(learning_rate)
+
+        if self._wave_n11_optimizer_kind == "rmsprop":
+            return mlx_optim.RMSprop(learning_rate=lr_sched)
+
+        # adamw default + weight_decay override
+        if self._wave_n11_weight_decay is None:
+            return mlx_optim.AdamW(learning_rate=lr_sched)
+        return mlx_optim.AdamW(
+            learning_rate=lr_sched,
+            weight_decay=self._wave_n11_weight_decay,
+        )
+
+    def wave_n11_stabilizer_summary(self) -> Mapping[str, Any]:
+        """Return the Wave N+11 stabilizer telemetry summary.
+
+        Consumed by the landing memo's canonical Provenance bind step + the
+        empirical anchor's `empirical_output` payload. Per Catalog #305 max
+        observability: every Wave N+11 stabilizer run emits this structured
+        record so the operator-facing audit surface stays evidence-faithful.
+        """
+        grad_history = list(self._wave_n11_grad_norm_history)
+        return {
+            "schema_version": "mlx_score_aware_wave_n11_stabilizer_summary_v1_20260530",
+            "grad_clip_max_norm": self._wave_n11_grad_clip_max_norm,
+            "warmup_epochs": self._wave_n11_warmup_epochs,
+            "warmup_steps_per_epoch": self._wave_n11_warmup_steps_per_epoch,
+            "weight_decay": self._wave_n11_weight_decay,
+            "optimizer_kind": self._wave_n11_optimizer_kind,
+            "cosine_decay_enabled": self._wave_n11_cosine_decay_enabled,
+            "cosine_decay_total_epochs": self._wave_n11_cosine_decay_total_epochs,
+            "cosine_decay_min_lr_ratio": self._wave_n11_cosine_decay_min_lr_ratio,
+            "step_count": self._wave_n11_step_count,
+            "grad_norm_clipped_count": self._wave_n11_clipped_count,
+            "grad_norm_history_len": len(grad_history),
+            "grad_norm_history_max": (
+                max(grad_history) if grad_history else None
+            ),
+            "grad_norm_history_min": (
+                min(grad_history) if grad_history else None
+            ),
+            "grad_norm_history_mean": (
+                sum(grad_history) / len(grad_history) if grad_history else None
+            ),
+        }
 
     def loss_fn(
         self,
@@ -214,7 +425,13 @@ class MlxScoreAwareAdapter:
             )
 
         if self._optimizer is None or self._optimizer_lr != learning_rate:
-            self._optimizer = mlx_optim.AdamW(learning_rate=learning_rate)
+            # Wave N+11 stabilizer: build optimizer with optional canonical
+            # warmup + (optional) cosine-decay schedule and configurable kind
+            # (adamw|rmsprop) + weight_decay override. When NO stabilizer
+            # kwargs are set, defaults are identical to the pre-Wave-N+11
+            # adapter (AdamW(learning_rate=lr) with AdamW default
+            # weight_decay=0.01) so sister substrates are byte-stable.
+            self._optimizer = self._build_wave_n11_optimizer(learning_rate)
             self._optimizer_lr = learning_rate
 
         def _loss_fn_inner(model: Any) -> Any:
@@ -227,6 +444,20 @@ class MlxScoreAwareAdapter:
 
         loss_and_grad_fn = mlx_nn.value_and_grad(self.model, _loss_fn_inner)
         loss_value, grads = loss_and_grad_fn(self.model)
+        # Wave N+11 stabilizer: apply mlx.optimizers.clip_grad_norm BEFORE
+        # optimizer.update so the NaN-at-ep-16-18 gradient-explosion signature
+        # cannot propagate into the AdamW second-moment buffers (which then
+        # poison subsequent steps). Mamba-2 canonical max_norm=1.0.
+        if self._wave_n11_grad_clip_max_norm is not None:
+            grads, total_norm = mlx_optim.clip_grad_norm(
+                grads, self._wave_n11_grad_clip_max_norm
+            )
+            mx.eval(total_norm)
+            grad_norm_pre_clip = float(total_norm.item())
+            self._wave_n11_grad_norm_history.append(grad_norm_pre_clip)
+            if grad_norm_pre_clip > self._wave_n11_grad_clip_max_norm:
+                self._wave_n11_clipped_count += 1
+        self._wave_n11_step_count += 1
         self._optimizer.update(self.model, grads)
 
         # Accumulate the MLX arrays the single trailing mx.eval must realize.

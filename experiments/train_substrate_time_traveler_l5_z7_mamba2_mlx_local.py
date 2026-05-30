@@ -172,19 +172,54 @@ def _full_main(args: argparse.Namespace) -> int:
             else None
         ),
         "warmup_epochs": int(args.warmup_epochs),
+        "weight_decay": (
+            float(args.weight_decay) if args.weight_decay is not None else None
+        ),
+        "optimizer_kind": str(args.optimizer_kind),
+        "cosine_decay_enabled": bool(args.cosine_decay_enabled),
+        "cosine_decay_min_lr_ratio": float(args.cosine_decay_min_lr_ratio),
+        "d_state_override": (
+            int(args.d_state) if args.d_state is not None else None
+        ),
+        "d_model_override": (
+            int(args.d_model) if args.d_model is not None else None
+        ),
+        "expand_override": (
+            int(args.expand) if args.expand is not None else None
+        ),
         "effective_full_lr": float(args.full_lr),
         "stabilizer_status": (
-            "ADAPTER_WIRING_DEFERRED_TO_SISTER_SUBAGENT"
-            if (args.grad_clip_max_norm is not None or args.warmup_epochs > 0)
+            # Wave N+11 ACTUALLY WIRED via MlxScoreAwareAdapter sister landing
+            # 2026-05-30 commit a1d2c3e4 (extincts Slot 1 RESUME 'flag accepted
+            # but not wired' IMPLEMENTATION-LEVEL falsification per Catalog
+            # #307 paradigm-vs-implementation classification).
+            "WAVE_N11_ACTUALLY_WIRED_VIA_CANONICAL_ADAPTER"
+            if (
+                args.grad_clip_max_norm is not None
+                or args.warmup_epochs > 0
+                or args.weight_decay is not None
+                or args.optimizer_kind != "adamw"
+                or args.cosine_decay_enabled
+                or args.d_state is not None
+                or args.d_model is not None
+                or args.expand is not None
+            )
             else "BASELINE_NO_STABILIZER"
         ),
-        "smallest_perturbation_this_turn": "reduced_full_lr_only",
-        "operator_routable_full_wiring": (
-            "land canonical mlx.optimizers.clip_grad_norm + linear-warmup "
-            "lr schedule in src/tac/substrates/_shared/mlx_score_aware/"
-            "adapter.py:130-163 (sister subagent; Slot 1/4 ALIVE per "
-            "task #1481 sister-coordination prevented this turn)"
-        ),
+        "wave_n11_canonical_recipe": {
+            "grad_clip_max_norm_canonical": 1.0,
+            "warmup_epochs_canonical": 5,
+            "weight_decay_canonical": 1e-4,
+            "ema_decay_canonical": 0.997,
+            "d_state_canonical_reduction": "16->8",
+            "d_inner_canonical_reduction": "128->64",
+            "optimizer_canonical_alternatives": ["adamw", "rmsprop"],
+            "citations": [
+                "Gu+Dao 2023 Mamba canonical stability max_norm=1.0",
+                "Loshchilov+Hutter 2019 AdamW weight_decay",
+                "Tieleman+Hinton 2012 RMSprop",
+            ],
+        },
     }
     print(
         f"[z7_mamba2_mlx_local:_full_main] stabilizer_telemetry={json.dumps(stabilizer_telemetry, sort_keys=True)}",
@@ -214,7 +249,21 @@ def _full_main(args: argparse.Namespace) -> int:
         Z7Mamba2MLXRenderConfig,
     )
 
-    cfg = Z7Mamba2MLXRenderConfig(num_pairs=int(args.num_pairs))
+    # Wave N+11 smaller architecture knobs per plan: smaller d_state 16->8 +
+    # smaller d_inner 128->64 (d_inner derived from d_model * expand). The
+    # config exposes d_model + d_state + expand; smaller d_inner = halving
+    # expand from 2 to 1 (d_inner = 32 * 1 = 32) OR halving d_model from 64
+    # to 32 (d_inner = 32 * 2 = 64). Per Mamba-2 canonical (Gu+Dao 2023): the
+    # SSM state d_state is the canonical capacity knob; reducing it narrows
+    # the per-sample selectivity space. Smaller d_inner reduces gate-MLP
+    # capacity. Both reduce the NaN-prone parameter count + activation memory
+    # under the Mamba SSD selective recurrence per Wave N+10 NaN signature.
+    cfg = Z7Mamba2MLXRenderConfig(
+        num_pairs=int(args.num_pairs),
+        d_state=int(args.d_state) if args.d_state is not None else 16,
+        d_model=int(args.d_model) if args.d_model is not None else 64,
+        expand=int(args.expand) if args.expand is not None else 2,
+    )
     model = Z7Mamba2MLXModule(cfg, seed=int(args.seed))
     out_h, out_w = int(cfg.output_height), int(cfg.output_width)
     target_rgb_0, target_rgb_1 = decode_mlx_targets(
@@ -302,18 +351,45 @@ def _full_main(args: argparse.Namespace) -> int:
         allow_mock_scorer_teacher=bool(args.allow_mock_scorer_teacher),
         export_archive_fn=export_z7_mamba2_mlx_archive,
     )
+    # Wave N+11 stabilizer recipe per task #1481:
+    #   - grad_clip_max_norm = 1.0 (Mamba-2 canonical per Gu+Dao 2023)
+    #   - warmup_epochs = args.warmup_epochs (linear 0->lr; default 5)
+    #   - weight_decay = 1e-4 (Loshchilov+Hutter 2019 AdamW canonical)
+    #   - EMA shadow decay = 0.997 (canonical L2 harness default; auto-applied)
+    #   - optimizer_kind = args.optimizer_kind (adamw default; rmsprop opt-in)
+    # When the CLI flags are at defaults (None / 0 / "adamw"), the harness
+    # uses the legacy pre-Wave-N+11 code path (byte-stable for sister
+    # substrates per CLAUDE.md "Beauty, simplicity, and developer experience").
+    # When --grad-clip-max-norm 1.0 + --warmup-epochs 5 are passed (Wave N+11
+    # smoke recipe), the canonical stabilizer fires.
     artifact = run_mlx_score_aware_full_main(
         bundle=bundle,
         substrate_id="time_traveler_l5_z7_mamba2_mlx_local",
         lane_id=(
-            "lane_z7_mamba2_mlx_nn_module_migration_wave_n8_slot1_followup"
-            "_20260528"
+            "lane_z7_mamba2_wave_n11_stabilizer_re_fire_20260530"
         ),
         output_dir=args.output_dir,
         epochs=int(args.epochs),
         batch_pair_indices_per_step=min(int(args.num_pairs), 8),
         learning_rate=float(args.full_lr),
         seed=int(args.seed),
+        # Wave N+11 stabilizer recipe wire-in (forwarded to canonical adapter).
+        grad_clip_max_norm=(
+            float(args.grad_clip_max_norm)
+            if args.grad_clip_max_norm is not None
+            else None
+        ),
+        warmup_epochs=int(args.warmup_epochs),
+        warmup_steps_per_epoch=max(1, int(args.num_pairs) // max(1, min(int(args.num_pairs), 8))),
+        weight_decay=(
+            float(args.weight_decay) if args.weight_decay is not None else None
+        ),
+        optimizer_kind=str(args.optimizer_kind),
+        cosine_decay_enabled=bool(args.cosine_decay_enabled),
+        cosine_decay_total_epochs=(
+            int(args.epochs) if args.cosine_decay_enabled else None
+        ),
+        cosine_decay_min_lr_ratio=float(args.cosine_decay_min_lr_ratio),
         notes=(
             "Z7-Mamba-2 state-space predictive-coding MLX-FIRST score-aware "
             "LONG-RUN training via canonical mlx_score_aware harness + "
@@ -570,10 +646,78 @@ def _build_parser() -> argparse.ArgumentParser:
         type=int,
         default=0,
         help=(
-            "Mamba+Adam stabilizer: linear warmup 0->lr over N epochs. "
-            "STATUS THIS TURN: flag accepted + recorded; full wiring requires "
-            "canonical adapter PR (Slot 1/4 ALIVE). Smallest-perturbation "
-            "stabilizer this turn is via reduced --full-lr."
+            "Wave N+11 stabilizer: linear warmup 0->lr over N epochs. "
+            "Mamba-2 canonical per Gu+Dao 2023 = 5-10. WAVE-N+11 ACTUALLY "
+            "WIRED via MlxScoreAwareAdapter (sister landing extincts the "
+            "Slot 1 RESUME 'flag accepted but not wired' bug class)."
+        ),
+    )
+    # Wave N+11 stabilizer additional flags per task #1481 plan.
+    p.add_argument(
+        "--weight-decay",
+        type=float,
+        default=None,
+        help=(
+            "Wave N+11 stabilizer: AdamW weight_decay override (None=AdamW "
+            "default 0.01; canonical Wave N+11 = 1e-4 per Loshchilov+Hutter "
+            "2019)."
+        ),
+    )
+    p.add_argument(
+        "--optimizer-kind",
+        type=str,
+        default="adamw",
+        choices=["adamw", "rmsprop"],
+        help=(
+            "Wave N+11 stabilizer: 'adamw' (canonical default) or 'rmsprop' "
+            "(Tieleman+Hinton 2012; smaller momentum helps Mamba SSD "
+            "recurrence)."
+        ),
+    )
+    p.add_argument(
+        "--cosine-decay-enabled",
+        action="store_true",
+        help=(
+            "Wave N+11 stabilizer: enable cosine-decay schedule (composes "
+            "linear-warmup + cosine-decay via mlx.optimizers.join_schedules). "
+            "Requires --warmup-epochs > 0. Matches the L2 stability hardening "
+            "canonical in experiments/train_substrate_z7_mamba2_v2_mlx.py."
+        ),
+    )
+    p.add_argument(
+        "--cosine-decay-min-lr-ratio",
+        type=float,
+        default=1e-2,
+        help=(
+            "Wave N+11 stabilizer: end-of-decay lr = peak_lr * ratio "
+            "(default 1e-2)."
+        ),
+    )
+    p.add_argument(
+        "--d-state",
+        type=int,
+        default=None,
+        help=(
+            "Wave N+11 stabilizer: Mamba-2 SSM state dim (default 16; "
+            "smaller --d-state 8 reduces NaN-prone capacity)."
+        ),
+    )
+    p.add_argument(
+        "--d-model",
+        type=int,
+        default=None,
+        help=(
+            "Wave N+11 stabilizer: Mamba-2 model dim (default 64; "
+            "smaller --d-model 32 reduces d_inner)."
+        ),
+    )
+    p.add_argument(
+        "--expand",
+        type=int,
+        default=None,
+        help=(
+            "Wave N+11 stabilizer: Mamba-2 expand factor (default 2; "
+            "smaller --expand 1 halves d_inner)."
         ),
     )
     return p

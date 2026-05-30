@@ -61,6 +61,17 @@ def run_mlx_score_aware_full_main(
     on_epoch_end: Callable[[Any], None] | None = None,
     pr95_faithful_curriculum_enabled: bool = False,
     pr95_curriculum_total_epochs: int | None = None,
+    # Wave N+11 Z7-Mamba-2 stabilizer recipe (forwarded to adapter; see
+    # MlxScoreAwareAdapter.__init__ for canonical contract docstring).
+    # All None/0/"adamw"/False defaults preserve byte-stable legacy behavior.
+    grad_clip_max_norm: float | None = None,
+    warmup_epochs: int = 0,
+    warmup_steps_per_epoch: int = 1,
+    weight_decay: float | None = None,
+    optimizer_kind: str = "adamw",
+    cosine_decay_enabled: bool = False,
+    cosine_decay_total_epochs: int | None = None,
+    cosine_decay_min_lr_ratio: float = 1e-2,
 ) -> Any:
     """Run the canonical MLX-first score-aware ``_full_main`` body.
 
@@ -165,6 +176,16 @@ def run_mlx_score_aware_full_main(
         substrate_id=substrate_id,
         pr95_faithful_curriculum_enabled=pr95_faithful_curriculum_enabled,
         pr95_curriculum_total_epochs=pr95_curriculum_total_epochs,
+        # Wave N+11 stabilizer kwargs (forwarded; defaults are
+        # legacy-preserving so sister substrates remain byte-stable).
+        grad_clip_max_norm=grad_clip_max_norm,
+        warmup_epochs=warmup_epochs,
+        warmup_steps_per_epoch=warmup_steps_per_epoch,
+        weight_decay=weight_decay,
+        optimizer_kind=optimizer_kind,
+        cosine_decay_enabled=cosine_decay_enabled,
+        cosine_decay_total_epochs=cosine_decay_total_epochs,
+        cosine_decay_min_lr_ratio=cosine_decay_min_lr_ratio,
     )
 
     config = LongTrainingConfig(
