@@ -23,7 +23,6 @@ from pathlib import Path
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # Module loading helper (the tool is in tools/, not in the package)
 # ---------------------------------------------------------------------------
@@ -309,6 +308,8 @@ def test_main_emits_manifest_and_inventory(tmp_path, monkeypatch) -> None:
     # Custody fields per CLAUDE.md gate B2 (no naked bytes).
     assert manifest["score_claim"] is False
     assert manifest["promotion_eligible"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["archive_bound_candidate_contract_required"] is True
     assert manifest["lane_tag"] == "[T9-substrate-composition]"
     assert manifest["target_modes"] == ["contest_exact_eval"]
     # The dispatch_blockers / reactivation_criteria fields must always populate.
@@ -323,6 +324,89 @@ def test_main_emits_manifest_and_inventory(tmp_path, monkeypatch) -> None:
         isinstance(manifest["reactivation_criteria"], list)
         and len(manifest["reactivation_criteria"]) > 0
     )
+
+
+def test_smoke_inflate_pass_does_not_grant_exact_dispatch(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    out = tmp_path / "t9_smoke"
+    registry = (
+        T9.SubstrateEntry(
+            name="A1",
+            archive_relpath="unused_anchor.zip",
+            submission_relpath="unused_submission",
+            anchored_score=0.19,
+            anchored_score_tag="[contest-CPU GHA]",
+            member_name="x",
+            section_layout="X",
+        ),
+        T9.SubstrateEntry(
+            name="DONOR_EXACT",
+            archive_relpath="unused_donor.zip",
+            submission_relpath="unused_submission",
+            anchored_score=0.18,
+            anchored_score_tag="[contest-CPU GHA]",
+            member_name="x",
+            section_layout="X",
+        ),
+    )
+
+    def fake_inventory(entry: object) -> dict:
+        name = entry.name
+        return {
+            "name": name,
+            "available": True,
+            "section_layout": "X",
+            "sections": [
+                {
+                    "name": "sidecar",
+                    "offset": 0,
+                    "length": 8 if name == "A1" else 10,
+                    "codec": "brotli_per_pair_corrections",
+                    "sha256": (name.encode().hex() * 8)[:64],
+                    "notes": "",
+                }
+            ],
+            "anchored_score": entry.anchored_score,
+            "anchored_score_tag": entry.anchored_score_tag,
+            "archive_relpath": entry.archive_relpath,
+            "archive_sha256": ("a" if name == "A1" else "b") * 64,
+            "member_name": "x",
+            "member_size_bytes": 8 if name == "A1" else 10,
+            "exact_evidence_eligible": True,
+        }
+
+    monkeypatch.setattr(T9, "SUBSTRATE_REGISTRY", registry)
+    monkeypatch.setattr(T9, "inventory_substrate", fake_inventory)
+    monkeypatch.setattr(T9, "_assemble_swapped_blob", lambda *args: b"payload")
+    monkeypatch.setattr(T9, "_smoke_inflate", lambda *args: {"smoke_ok": True})
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "build_cross_archive_substrate_composition.py",
+            "--output-root",
+            str(out),
+            "--build",
+            "--smoke-inflate",
+            "--gha-dispatch",
+        ],
+    )
+
+    rc = T9.main()
+
+    assert rc == 0
+    manifest = json.loads((out / "build_manifest.json").read_text())
+    assert manifest["smoke_inflate_passed"] is True
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["score_claim"] is False
+    assert "proposed_gha_dispatch_command" not in manifest
+    assert "blocked_gha_dispatch_command" in manifest
+    assert manifest["gha_dispatch_blocked_reason"] == (
+        T9.EXACT_DISPATCH_CONTRACT_BLOCKER
+    )
+    assert T9.EXACT_DISPATCH_CONTRACT_BLOCKER in manifest["dispatch_blockers"]
+    assert T9.SMOKE_INFLATE_AUTHORITY_BLOCKER in manifest["dispatch_blockers"]
 
 
 # ---------------------------------------------------------------------------

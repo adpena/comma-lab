@@ -1862,7 +1862,10 @@ def _archive_entropy_coder_prototype_candidate(
         raise RepairFamilyByteTransformExecutorError(
             f"unsupported entropy coder prototype family: {coder_family}"
         )
-    blockers = [f"{coder_family}_coder_exact_axis_adjudication_missing"]
+    blockers = [
+        f"{coder_family}_coder_exact_axis_adjudication_missing",
+        "contest_runtime_decoder_adapter_integration_missing",
+    ]
     source, actual_sha, source_blockers = _source_archive_path_and_sha(manifest, repo_root=repo_root)
     blockers.extend(source_blockers)
     if source is None or source_blockers:
@@ -1912,7 +1915,8 @@ def _archive_entropy_coder_prototype_candidate(
             "candidate_member": candidate_member,
             "runtime_adapter_manifest": runtime_adapter_manifest,
             "runtime_adapter_ready": True,
-            "contest_runtime_decoder_adapter_ready": True,
+            "runtime_adapter_scope": "member_decode_helper_only",
+            "contest_runtime_decoder_adapter_ready": False,
             "runtime_consumption_probe": {
                 "schema": f"{transform_kind}_decode_probe.v1",
                 "passed": True,
@@ -1943,8 +1947,8 @@ def _archive_entropy_coder_prototype_candidate(
             "passed": True,
             "score_affecting_payload_changed": False,
             "charged_bits_changed": True,
-            "contest_runtime_decoder_adapter_integrated": True,
-            "contest_runtime_adapter_integrated": True,
+            "contest_runtime_decoder_adapter_integrated": False,
+            "contest_runtime_adapter_integrated": False,
             "blockers": ordered_unique(blockers),
             **FALSE_AUTHORITY,
         }
@@ -1992,9 +1996,10 @@ def _archive_entropy_coder_prototype_candidate(
         "receiver_contract_satisfied": True,
         "runtime_adapter_manifest": runtime_adapter_manifest,
         "runtime_adapter_ready": True,
-        "contest_runtime_decoder_adapter_ready": True,
-        "contest_runtime_decoder_adapter_integrated": True,
-        "contest_runtime_adapter_integrated": True,
+        "runtime_adapter_scope": "member_decode_helper_only",
+        "contest_runtime_decoder_adapter_ready": False,
+        "contest_runtime_decoder_adapter_integrated": False,
+        "contest_runtime_adapter_integrated": False,
         "selected_member_name": member_name,
         "encoded_member_sha256": candidate_member["sha256"],
         "decoded_member_sha256": sha256_bytes(decoded_member_payload),

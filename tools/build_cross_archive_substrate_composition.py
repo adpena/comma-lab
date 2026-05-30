@@ -84,7 +84,7 @@ Other compositions are marked DEFERRED-pending-decoder-wiring with
 specific reactivation criteria.
 
 Tagged: ``[T9-substrate-composition]`` ``score_claim=false``
-        ``ready_for_exact_eval_dispatch={smoke_inflate_pass}``
+        ``ready_for_exact_eval_dispatch=false``
         ``promotion_eligible=false``
 """
 
@@ -101,10 +101,12 @@ import tempfile
 import time
 import zipfile
 from pathlib import Path
-from typing import Optional
-
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+EXACT_DISPATCH_CONTRACT_BLOCKER = (
+    "archive_bound_candidate_contract_required_before_exact_dispatch"
+)
+SMOKE_INFLATE_AUTHORITY_BLOCKER = "smoke_inflate_is_not_exact_eval_authority"
 
 
 def _is_under_repo_root(path: Path) -> bool:
@@ -315,13 +317,20 @@ def parse_hnerv_lc_ac_layout(blob: bytes) -> list[Section]:
             f"hnerv_lc_ac blob too small: {len(blob)} < {head_len}"
         )
     o = 0
-    sca = blob[o : o + SCA_LEN]; o += SCA_LEN
-    br = blob[o : o + BR_LEN]; o += BR_LEN
-    hists = blob[o : o + HIST_LEN]; o += HIST_LEN
-    merged_ac = blob[o : o + MERGED_AC_LEN]; o += MERGED_AC_LEN
-    mins_scales = blob[o : o + LATENT_META_LEN]; o += LATENT_META_LEN
-    lo_b = blob[o : o + LO_LEN]; o += LO_LEN
-    hi_hist = blob[o : o + HI_HIST_LEN]; o += HI_HIST_LEN
+    sca = blob[o : o + SCA_LEN]
+    o += SCA_LEN
+    br = blob[o : o + BR_LEN]
+    o += BR_LEN
+    hists = blob[o : o + HIST_LEN]
+    o += HIST_LEN
+    merged_ac = blob[o : o + MERGED_AC_LEN]
+    o += MERGED_AC_LEN
+    mins_scales = blob[o : o + LATENT_META_LEN]
+    o += LATENT_META_LEN
+    lo_b = blob[o : o + LO_LEN]
+    o += LO_LEN
+    hi_hist = blob[o : o + HI_HIST_LEN]
+    o += HI_HIST_LEN
     wrp = blob[o:]
     return [
         Section("scales", 0, SCA_LEN, "raw_fp16",
@@ -525,7 +534,7 @@ def composability_matrix(inventory: list[dict]) -> dict:
 # Build smoke composition + inflate roundtrip validation
 # ---------------------------------------------------------------------------
 
-def _select_smoke_composition(inventory: list[dict], matrix: dict) -> Optional[dict]:
+def _select_smoke_composition(inventory: list[dict], matrix: dict) -> dict | None:
     """Pick the cheapest, most-compatible smoke composition.
 
     Strategy: anchor on A1 (highest-scoring `[contest-CPU GHA]` substrate
@@ -729,16 +738,23 @@ def main() -> int:
         "score_claim": False,
         "ready_for_exact_eval_dispatch": False,
         "promotion_eligible": False,
+        "smoke_inflate_passed": False,
+        "archive_bound_candidate_contract_required": True,
         "evidence_grade": "byte-anchor-and-composability-only",
         "lane_tag": "[T9-substrate-composition]",
         "target_modes": ["contest_exact_eval"],
         "deployment_target": "t4_contest_runtime",
         "next_required_actions": [
             "Run --build --smoke-inflate to validate the A1-anchor sidecar swap.",
-            "If smoke passes, --gha-dispatch to emit the GHA CPU eval command.",
-            "Operator approves dispatch (estimated $0 GHA free minutes).",
+            (
+                "If smoke passes, build an archive-bound candidate contract "
+                "and exact-ready bridge before any CPU/CUDA dispatch."
+            ),
+            "Operator approves dispatch only after exact readiness signs custody.",
         ],
         "dispatch_blockers": [
+            EXACT_DISPATCH_CONTRACT_BLOCKER,
+            SMOKE_INFLATE_AUTHORITY_BLOCKER,
             (
                 "public_frontier_advisory_rows_inventory_only: PR101/PR103"
                 " host-claimed rows are not exact local contest-CUDA or"
@@ -778,8 +794,8 @@ def main() -> int:
         "verdict_counts": counts,
     }
 
-    smoke_composition: Optional[dict] = None
-    archive_out: Optional[Path] = None
+    smoke_composition: dict | None = None
+    archive_out: Path | None = None
 
     # Stage 3: optional build smoke composition.
     if args.build:
@@ -827,15 +843,17 @@ def main() -> int:
                 build_manifest["smoke_inflate"] = smoke_result
                 print(f"[T9] smoke inflate: {smoke_result}")
                 if smoke_result.get("smoke_ok"):
-                    build_manifest["ready_for_exact_eval_dispatch"] = True
+                    build_manifest["smoke_inflate_passed"] = True
+                    build_manifest["ready_for_exact_eval_dispatch"] = False
                     build_manifest["next_required_actions"][0] = (
-                        "Smoke inflate PASSED — run --gha-dispatch to emit"
-                        " the GHA CPU eval command (operator approves spend)."
+                        "Smoke inflate PASSED — build archive-bound candidate"
+                        " contract plus exact-ready bridge before CPU/CUDA dispatch."
                     )
 
-            # Optionally emit the GHA dispatch command (does NOT execute it).
-            if args.gha_dispatch and build_manifest.get("ready_for_exact_eval_dispatch"):
-                gha_cmd = (
+            # Optionally record the GHA dispatch command as blocked until the
+            # archive-bound contract and exact readiness bridge sign custody.
+            if args.gha_dispatch and build_manifest.get("smoke_inflate_passed"):
+                blocked_gha_cmd = (
                     ".venv/bin/python tools/dispatch_cpu_eval_via_github_actions.py "
                     f"--archive-path {archive_out.relative_to(REPO_ROOT) if _is_under_repo_root(args.output_root) else args.output_root} "
                     f"--archive-sha {archive_sha} "
@@ -843,8 +861,14 @@ def main() -> int:
                     f"sidecar_swap_{time.strftime('%Y%m%dT%H%M%SZ', time.gmtime())} "
                     f"--output-dir experiments/results/t9_smoke_eval_$(date -u +%Y%m%dT%H%M%SZ)"
                 )
-                build_manifest["proposed_gha_dispatch_command"] = gha_cmd
-                print(f"[T9] proposed GHA dispatch command:\n  {gha_cmd}")
+                build_manifest["blocked_gha_dispatch_command"] = blocked_gha_cmd
+                build_manifest["gha_dispatch_blocked_reason"] = (
+                    EXACT_DISPATCH_CONTRACT_BLOCKER
+                )
+                print(
+                    "[T9] GHA dispatch blocked until archive-bound exact "
+                    f"readiness: {blocked_gha_cmd}"
+                )
 
     # Stage 4: write build_manifest + rebuild_command.
     manifest_path = args.output_root / "build_manifest.json"

@@ -832,8 +832,9 @@ def test_byte_transform_executor_mutates_fec6_selector_payload_when_detected(
         assert prototype["score_affecting_payload_changed"] is False
         assert (tmp_path / prototype["path"]).is_file()
         assert (tmp_path / prototype["runtime_consumption_proof_path"]).is_file()
-        assert prototype["contest_runtime_decoder_adapter_ready"] is True
-        assert prototype["contest_runtime_adapter_integrated"] is True
+        assert prototype["runtime_adapter_scope"] == "member_decode_helper_only"
+        assert prototype["contest_runtime_decoder_adapter_ready"] is False
+        assert prototype["contest_runtime_adapter_integrated"] is False
         assert prototype["runtime_adapter_manifest"]["schema"] == (
             REPAIR_ENTROPY_CODER_RUNTIME_ADAPTER_MANIFEST_SCHEMA
         )
@@ -846,7 +847,13 @@ def test_byte_transform_executor_mutates_fec6_selector_payload_when_detected(
             REPAIR_ENTROPY_CODER_RUNTIME_ADAPTER_MANIFEST_SCHEMA
         )
         assert proof["runtime_consumption_probe"]["decoder_adapter_invoked"] is True
-        assert proof["contest_runtime_decoder_adapter_integrated"] is True
+        assert proof["proof_scope"] == "encoded_member_decodes_to_source_member_payload"
+        assert proof["runtime_adapter_scope"] == "member_decode_helper_only"
+        assert proof["contest_runtime_decoder_adapter_integrated"] is False
+        assert proof["contest_runtime_adapter_integrated"] is False
+        assert "contest_runtime_decoder_adapter_integration_missing" in " ".join(
+            prototype.get("blockers", [])
+        )
         assert "contest_runtime_adapter_missing" not in " ".join(
             prototype.get("blockers", [])
         )
