@@ -63458,6 +63458,88 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_z8_m12a_canonical_29650ep_mlx_local_pre_flight_verification_20260530",
+      "name": "Z8 M12a Canonical 29,650ep MLX-LOCAL Pre-Flight Verification",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "Phase A canonical helper composition pre-flight PASS + Phase B N=100 substantive verification GREEN on 5/7 axes (1,2,3,6,7); Axes 4+5 N/A on _full_main path covered via --canonical-quadruple-binding N=20 verification CONVERGED_MONOTONIC. Sister DISJOINT vs 3 in-flight subagents per Catalog #302. macOS-MLX research-signal per Catalog #192 NEVER promotable. [empirical:experiments/results/z8_m12a_canonical_29650ep_mlx_local_pre_flight_verification_20260530T202732Z/]"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_z8_m12a_canonical_29650ep_mlx_local_pre_flight_verification_landed_20260530.md + MEMORY.md index entry < 200 chars"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_z6_v2_canonical_29650ep_mlx_local_pre_flight_verification_20260530",
+      "name": "z6_v2 Canonical 29,650-Epoch MLX-LOCAL Pre-Flight Verification",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "PR95 8-stage 29650-ep canonical curriculum + Z6V2 substrate-distinguishing primitives (2-level Rao-Ballard FiLM-ego-motion predictor depth=3 ~307K params + FoE ego conditioning + Atick-Redlich cooperative-receiver per Catalog #311) wired through canonical mlx_score_aware harness; N=100 + N=500 + N=100-reproducibility (3 smokes RC=0) all GREEN with 8/8 stage transitions + Muon-final-stage-only per L15 + lambda 0.0\u21920.01\u21920.02 + sigma 0.2\u21920.1 per L16+L17; canonical inflate.py + archive.zip + 0.bin emitted; experiments/results/z6_v2_canonical_29650ep_mlx_local_pre_flight_verification_20260530T203216Z/; research_only=true [macOS-MLX research-signal]"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_z6_v2_canonical_29650ep_mlx_local_pre_flight_verification_landed_20260530.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -63467,5 +63549,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-30T20:30:06Z"
+  "updated_at": "2026-05-30T20:40:05Z"
 }
