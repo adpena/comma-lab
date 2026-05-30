@@ -196,6 +196,7 @@ def apply_unimix_to_logits(logits: Any, *, unimix_alpha: float = 0.01) -> Any:
     return mx.log(mixed)  # type: ignore[union-attr]
 
 
+# MLX_PRIMITIVE_UNIQUE_BECAUSE_substrate_optimal_signature:DreamerV3_canonical_returns_tuple_soft_indices_with_STE_flag_and_MLX_random_key_per_Hafner_2023_eq3_canonical_RSSM_categorical_posterior_contract_callers_consume_tuple_canonical_helper_supports_only_single_tensor_return_principled_fork_per_catalog_290
 def gumbel_softmax_sample(
     logits: Any,
     *,

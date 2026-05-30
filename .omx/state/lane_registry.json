@@ -63788,6 +63788,90 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_gumbel_softmax_sample_canonical_extraction_migration_20260530",
+      "name": "gumbel_softmax_sample canonical extraction migration",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/gumbel_softmax_canonical_extraction_migration_20260530.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_gumbel_softmax_canonical_extraction_migration_landed_20260530.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_z6_v2_phase_c_canonical_inflate_format_extension_20260530",
+      "name": "z6_v2 Phase C canonical inflate format extension",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "Phase C canonical inflate format extension: PNG->raw via canonical write_rgb_pair_to_raw + Catalog #367 fail-closed + 1200-frame contest contract + v2 INT8 archive (45% reduction 580KB->324KB) per Catalog #146 + #205 + L21+L29+L32; 49/49 tests pass; MLX-LOCAL smoke verified .raw bytes match 874x1164x3 per frame; lane_class=substrate_engineering per HNeRV parity L7 research_only=true"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_z6_v2_phase_c_canonical_inflate_format_extension_landed_20260530.md + retroactive_sweep_for_z6_v2_phase_c_canonical_inflate_format_extension_20260530.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "",
+      "lane_class": "substrate_engineering",
+      "research_only": true
     }
   ],
   "level_rules": {
@@ -63797,5 +63881,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-30T23:01:41Z"
+  "updated_at": "2026-05-30T23:12:27Z"
 }

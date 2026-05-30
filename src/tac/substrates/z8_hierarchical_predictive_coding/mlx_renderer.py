@@ -204,6 +204,7 @@ class Z8HierarchicalConfig:
 # -----------------------------------------------------------------------------
 
 
+# MLX_PRIMITIVE_UNIQUE_BECAUSE_thin_substrate_delegation_to_dreamerv3:Z8_function_signature_preserves_substrate_API_pinned_by_wave_10_11_regression_test_inspect_getsource_check_body_delegates_to_sister_dreamerv3_canonical_helper_NO_local_math_per_wave_10_11_fix_2026_05_29_principled_fork_per_catalog_290_ADOPT_CANONICAL_BECAUSE_SERVES
 def gumbel_softmax_sample(
     logits: Any,
     *,
