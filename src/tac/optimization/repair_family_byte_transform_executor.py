@@ -22,6 +22,10 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+from tac.optimization.archive_bound_candidate_adapter_spine import (
+    ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA,
+    build_archive_bound_candidate_adapter_package,
+)
 from tac.optimization.archive_bound_candidate_contract import (
     ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
     ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA,
@@ -90,6 +94,27 @@ SUPPORTED_REPAIR_BYTE_TRANSFORM_FAMILIES: frozenset[str] = frozenset(
         "entropy_boundary_probe",
     }
 )
+
+
+class _SingleRepairArchiveCandidateAdapter:
+    """Adapter-spine bridge for one selected repair archive candidate."""
+
+    def __init__(
+        self,
+        *,
+        adapter_id: str,
+        candidate_family: str,
+        row: Mapping[str, Any],
+    ) -> None:
+        self.adapter_id = adapter_id
+        self.candidate_family = candidate_family
+        self._row = dict(row)
+
+    def emit_archive_bound_candidate_rows(
+        self,
+        context: Mapping[str, Any],
+    ) -> Sequence[Mapping[str, Any]]:
+        return [self._row]
 
 _FAMILY_TRANSFORM_KINDS: Mapping[str, str] = {
     "posenet_null_bottom_decile": "posenet_null_bottom_decile_frame0_repair_packet",
@@ -2916,6 +2941,48 @@ def build_repair_family_byte_transform_execution_report(
         candidate_archive=candidate_archive,
         blockers=blockers,
     )
+    adapter_candidate_id = (
+        str(family_materializer_manifest.get("candidate_chain_id") or "").strip()
+        or str(family_materializer_manifest.get("typed_response_id") or "").strip()
+        or family_id
+    )
+    adapter_input_artifacts = ordered_unique(
+        [
+            _repo_rel(family_materializer_manifest_path, repo_root),
+            str(candidate_archive.get("path") or ""),
+            str(candidate_archive.get("runtime_consumption_proof_path") or ""),
+        ]
+    )
+    archive_bound_candidate_adapter_package = (
+        build_archive_bound_candidate_adapter_package(
+            _SingleRepairArchiveCandidateAdapter(
+                adapter_id=(
+                    f"repair_family_byte_transform_executor:{family_id}:"
+                    "selected_archive_candidate"
+                ),
+                candidate_family=family_id,
+                row={
+                    **candidate_archive,
+                    "candidate_id": adapter_candidate_id,
+                    "candidate_family": family_id,
+                    "typed_response_id": str(
+                        family_materializer_manifest.get("typed_response_id") or ""
+                    ),
+                    "candidate_chain_id": str(
+                        family_materializer_manifest.get("candidate_chain_id") or ""
+                    ),
+                    "candidate_archive_path": str(candidate_archive.get("path") or ""),
+                    "candidate_archive_sha256": str(
+                        candidate_archive.get("sha256") or ""
+                    ),
+                    "candidate_archive_bytes": candidate_archive.get("bytes"),
+                    "replay_argv": _string_list(replay_argv),
+                    "input_artifacts": adapter_input_artifacts,
+                },
+            ),
+            repo_root=repo_root,
+        )
+    )
     component_delta = _component_probe_delta(family_materializer_manifest)
     report = {
         "schema": REPAIR_FAMILY_BYTE_TRANSFORM_EXECUTION_REPORT_SCHEMA,
@@ -2967,6 +3034,23 @@ def build_repair_family_byte_transform_execution_report(
         ),
         "archive_contract_acquisition_penalty_sum": (
             archive_bound_candidate_contract_surface["acquisition_penalty_sum"]
+        ),
+        "archive_bound_candidate_adapter_package_schema": (
+            ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA
+        ),
+        "archive_bound_candidate_adapter_package": (
+            archive_bound_candidate_adapter_package
+        ),
+        "archive_bound_candidate_adapter_package_candidate_count": (
+            archive_bound_candidate_adapter_package["candidate_row_count"]
+        ),
+        "archive_bound_candidate_adapter_package_receiver_gate_passed_count": (
+            archive_bound_candidate_adapter_package[
+                "receiver_proof_gate_passed_count"
+            ]
+        ),
+        "archive_bound_candidate_adapter_package_exact_blocker_count": len(
+            archive_bound_candidate_adapter_package["exact_axis_blockers"]
         ),
         "candidate_archive_transform_variants": archive_variants,
         "candidate_archive_transform_variant_count": len(archive_variants),

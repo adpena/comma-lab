@@ -12,6 +12,9 @@ from pathlib import Path
 
 import pytest
 
+from tac.optimization.archive_bound_candidate_adapter_spine import (
+    ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA,
+)
 from tac.optimization.archive_bound_candidate_contract import (
     ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
     ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA,
@@ -567,6 +570,18 @@ def test_byte_transform_executor_repacks_archive_native_candidate_when_custody_e
     assert contract["archive_bound_candidate_ready"] is True
     assert contract["receiver_contract_satisfied"] is True
     assert contract["archive_file_custody"]["custody_complete"] is True
+    assert report["archive_bound_candidate_adapter_package_schema"] == (
+        ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA
+    )
+    adapter_package = report["archive_bound_candidate_adapter_package"]
+    assert adapter_package["schema"] == ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA
+    assert adapter_package["candidate_row_count"] == 1
+    assert adapter_package["deterministic_replay_bundles"][0]["replay_bundle_ready"] is True
+    assert adapter_package["receiver_proof_gates"][0]["receiver_proof_gate_passed"] is True
+    assert adapter_package["exact_axis_blockers"][0]["ready_for_exact_eval_dispatch"] is False
+    assert adapter_package["posterior_update_hooks"][0][
+        "negative_result_demotes_family_stage_scope"
+    ] is True
     assert "zip_container" in report["archive_contract_substrate_tags"]
     assert report["archive_bound_ready_contract_count"] >= 1
     assert report["exact_eval_handoff_gate"]["archive_bound_runtime_consumption_proof_ready"] is True
