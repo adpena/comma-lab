@@ -373,6 +373,8 @@ def empirical_sensitivity_map_from_master_gradient(
     num_channels: int = 3,
     dtype: Any = np.float32,
     pair_aggregation: str = "first",
+    auto_project_to_level: bool = False,
+    level_projection_reduction: str = "mean",
 ) -> np.ndarray:
     """Path B2: empirical sensitivity from canonical master-gradient tensor.
 
@@ -468,20 +470,42 @@ def empirical_sensitivity_map_from_master_gradient(
     # validation; we surface those errors unchanged.
     m_pixel = extract_M_pixel(gradient_tensor, reduction=reduction)
 
-    # Step 3 (early-fail): identity-resolution invariant. Phase D
-    # ONLY supports the matched-resolution case; resolution projection
-    # is canonical Phase C scope.
+    # Step 3 (early-fail): identity-resolution invariant. Phase D backward-
+    # compat default = strict identity-resolution (no auto-project). The
+    # Phase C wire-in (Yousfi-ordered 2026-05-30) is opt-in via
+    # auto_project_to_level=True: when the gradient-native shape does not
+    # match level.wavelet_subband_shape AND auto_project_to_level=True,
+    # call decompose_M_contest_per_level for the canonical Mallat dyadic
+    # projection. When auto_project_to_level=False (default), raise
+    # ResolutionMismatchAwaitingPerLevelProjectionError unchanged.
     n_pairs, H_grad, W_grad = m_pixel.shape()
     if (H_grad, W_grad) != (H_level, W_level):
-        raise ResolutionMismatchAwaitingPerLevelProjectionError(
-            f"gradient_tensor native shape ({H_grad}, {W_grad}) does not "
-            f"match level.wavelet_subband_shape ({H_level}, {W_level}) at "
-            f"level_index={level.level_index}. Phase D wires the canonical "
-            f"identity-resolution path only; per-level resolution projection "
-            f"is canonical Phase C scope (decompose_M_contest_per_level "
-            f"in tac.master_gradient_comparison.multi_granularity). EITHER "
-            f"(a) provide a gradient tensor whose native (H, W) matches "
-            f"level.wavelet_subband_shape, OR (b) wait for Phase C."
+        if not auto_project_to_level:
+            raise ResolutionMismatchAwaitingPerLevelProjectionError(
+                f"gradient_tensor native shape ({H_grad}, {W_grad}) does not "
+                f"match level.wavelet_subband_shape ({H_level}, {W_level}) at "
+                f"level_index={level.level_index}. Phase D backward-compat "
+                f"default raises here (strict identity-resolution); the "
+                f"Phase C wire-in (decompose_M_contest_per_level) is OPT-IN "
+                f"via auto_project_to_level=True. EITHER (a) provide a "
+                f"gradient tensor whose native (H, W) matches "
+                f"level.wavelet_subband_shape, OR (b) pass "
+                f"auto_project_to_level=True to use canonical Mallat dyadic "
+                f"projection per Phase C (level_projection_reduction defaults "
+                f"to 'mean' per Rao-Ballard 1999)."
+            )
+        # Phase C wire-in: opt-in canonical Mallat dyadic projection.
+        # decompose_M_contest_per_level handles its own MallatDyadicMismatchError
+        # surface (non-dyadic / non-uniform-stride); we surface it unchanged
+        # so callers see the canonical Phase B reactivation criterion.
+        from tac.master_gradient_comparison.multi_granularity import (
+            decompose_M_contest_per_level,
+        )
+
+        m_pixel = decompose_M_contest_per_level(
+            m_pixel,
+            level_shape=(H_level, W_level),
+            reduction=level_projection_reduction,
         )
 
     # Step 2: broadcast (N_pairs, H, W) -> (B, C, H, W) per M8 contract.
@@ -536,6 +560,8 @@ class Z8ScorerSensitivityMap:
         gradient_tensor: Any = None,
         reduction: str = "l2_norm",
         pair_aggregation: str = "first",
+        auto_project_to_level: bool = False,
+        level_projection_reduction: str = "mean",
     ) -> np.ndarray:
         """Return the sensitivity tensor for ``level`` per the bound source.
 
@@ -592,6 +618,8 @@ class Z8ScorerSensitivityMap:
                 num_channels=num_channels,
                 dtype=dtype,
                 pair_aggregation=pair_aggregation,
+                auto_project_to_level=auto_project_to_level,
+                level_projection_reduction=level_projection_reduction,
             )
         if self._source is ScorerSensitivityMapSource.EMPIRICAL_SLOT_GGG:
             return empirical_sensitivity_map_from_slot_ggg(
@@ -621,6 +649,8 @@ def build_z8_scorer_sensitivity_map_for_level(
     gradient_tensor: Any = None,
     reduction: str = "l2_norm",
     pair_aggregation: str = "first",
+    auto_project_to_level: bool = False,
+    level_projection_reduction: str = "mean",
 ) -> np.ndarray:
     """Single-call canonical builder for M8 trainer callsites.
 
@@ -628,8 +658,9 @@ def build_z8_scorer_sensitivity_map_for_level(
     for the common case where M8's trainer wants the canonical sensitivity
     tensor for a single level without holding a dispatcher instance.
 
-    The ``gradient_tensor`` / ``reduction`` / ``pair_aggregation`` kwargs
-    are forwarded through to Path B2 (``EMPIRICAL_FROM_MASTER_GRADIENT``);
+    The ``gradient_tensor`` / ``reduction`` / ``pair_aggregation`` /
+    ``auto_project_to_level`` / ``level_projection_reduction`` kwargs are
+    forwarded through to Path B2 (``EMPIRICAL_FROM_MASTER_GRADIENT``);
     ignored for other paths.
     """
     return Z8ScorerSensitivityMap(source).get_for_level(
@@ -640,4 +671,6 @@ def build_z8_scorer_sensitivity_map_for_level(
         gradient_tensor=gradient_tensor,
         reduction=reduction,
         pair_aggregation=pair_aggregation,
+        auto_project_to_level=auto_project_to_level,
+        level_projection_reduction=level_projection_reduction,
     )

@@ -81,11 +81,14 @@ __all__ = [
     "ContestGradientTensor",
     "EquivalenceClass",
     "InflatedGradientTensor",
+    "LEGAL_LEVEL_PROJECTION_REDUCTIONS",
     "LEGAL_PIXEL_REDUCTIONS",
     "M_ARCHIVE_VIA_CHAIN_RULE_PROVENANCE_KIND",
+    "M_CONTEST_PER_LEVEL_PROVENANCE_KIND",
     "M_CONTEST_PROVENANCE_KIND",
     "M_INFLATED_PROVENANCE_KIND",
     "M_PIXEL_PROVENANCE_KIND",
+    "MallatDyadicMismatchError",
     "MultiGranularityComparisonError",
     "PerPairDifficulty",
     "PerPixelReconstructionError",
@@ -94,6 +97,7 @@ __all__ = [
     "cluster_pairs_by_gradient_similarity",
     "compute_per_pair_difficulty_atlas",
     "compute_score_weighted_reconstruction_error",
+    "decompose_M_contest_per_level",
     "decompose_M_contest_per_segnet_class",
     "estimate_information_theoretic_floor",
     "extract_M_archive_via_chain_rule",
@@ -1557,3 +1561,233 @@ def broadcast_sensitivity_map_to_channels(
         (batch_size, num_channels, h, w),
     ).astype(out_dtype, copy=True)
     return out
+
+
+# --- Phase C: per-level Mallat dyadic projection (Yousfi-ordered, 2026-05-30) ---
+#
+# Sister of Phase A (extract_M_pixel + broadcast_sensitivity_map_to_channels).
+# Phase D's empirical_sensitivity_map_from_master_gradient consumes this when
+# the gradient-native (H, W) does not match the Z8 LevelDimensionContract's
+# wavelet_subband_shape — projects per the Mallat dyadic hierarchy
+# (Daubechies wavelet construction: each level halves both spatial dims).
+#
+# Per Rao-Ballard 1999 hierarchical predictive coding: each coarser level
+# predicts the residual of the next finer level; mean-pooling is the canonical
+# down-sampling operator that preserves prediction energy per coarse cell.
+
+
+M_CONTEST_PER_LEVEL_PROVENANCE_KIND = (
+    "tac.master_gradient_comparison.decompose_M_contest_per_level"
+)
+
+LEGAL_LEVEL_PROJECTION_REDUCTIONS = frozenset({"mean", "max", "sum"})
+
+
+class MallatDyadicMismatchError(NotImplementedError):
+    """Raised when ``level_shape`` is not a Mallat dyadic projection of ``m_pixel``.
+
+    Phase C implements the canonical Mallat wavelet hierarchy projection only
+    (uniform integer stride per Daubechies wavelet construction). Non-dyadic
+    projections (e.g. 384x512 -> 100x200) and non-uniform-stride projections
+    (e.g. 384x512 -> 192x128 with stride_h=2 != stride_w=4) are not yet
+    supported.
+
+    Reactivation criterion: Phase B (``decompose_M_contest_per_subband``) lands
+    a canonical helper that handles non-dyadic + non-uniform wavelet subband
+    shapes via per-subband Mallat repacking. Until then, callers must use
+    Mallat-compatible dyadic ``level_shape`` values (e.g. 384x512 ->
+    192x256 -> 96x128 -> 48x64 -> 24x32) where ``H_native % H_level == 0``,
+    ``W_native % W_level == 0``, AND ``H_native // H_level == W_native // W_level``.
+    """
+
+
+def decompose_M_contest_per_level(
+    m_pixel: PerPixelSensitivityMap,
+    *,
+    level_shape: tuple[int, int],
+    reduction: str = "mean",
+    cache_path: Path | str | None = None,
+) -> PerPixelSensitivityMap:
+    """Project a per-pixel sensitivity map to a coarser wavelet-level shape.
+
+    The canonical Mallat wavelet hierarchy decomposes a ``(H, W)`` signal into
+    dyadic subband shapes ``(H >> L, W >> L)`` at each level ``L`` per
+    Daubechies' wavelet construction. Phase C projects the gradient-native
+    per-pixel sensitivity map to a target level's spatial shape so the
+    downstream Z8 M8 ``ScoreAwareLevelLoss`` can consume per-level sensitivity
+    at the SAME spatial resolution as the level's wavelet subband.
+
+    Per Rao-Ballard 1999 hierarchical predictive coding: each coarser level
+    predicts the residual of the next finer level; mean-pooling is the canonical
+    down-sampling operator that preserves prediction energy per coarse cell.
+
+    Reductions per ``LEGAL_LEVEL_PROJECTION_REDUCTIONS``:
+
+    * ``"mean"`` (canonical default): each coarse cell IS the mean of its
+      dyadic block. Matches Rao-Ballard predictive-coding default.
+    * ``"max"``: each coarse cell is the MAX of its dyadic block. Preserves
+      UNIWARD-style high-sensitivity locations (Fridrich conservative bound).
+    * ``"sum"``: each coarse cell is the SUM of its dyadic block. Preserves
+      total contribution per coarse cell (proportional to mean by stride^2).
+
+    Mallat dyadic invariant: ``m_pixel.height % level_shape[0] == 0`` AND
+    ``m_pixel.width % level_shape[1] == 0`` AND the height/width strides
+    are equal (uniform Mallat dyadic stride). Non-dyadic projections raise
+    ``MallatDyadicMismatchError`` with the canonical Phase B reactivation
+    criterion.
+
+    Identity-projection short-circuit: when ``level_shape ==
+    m_pixel.shape()[1:]`` spatial dims match exactly, returns the input
+    ``PerPixelSensitivityMap`` unchanged (no copy, no new sidecar) — sister
+    of the M8 Protocol identity-resolution invariant per Catalog #287
+    observability-only contract.
+
+    Provenance: emits a NEW ``.npy`` + ``.meta.json`` sidecar pair with
+    ``canonical_helper_invocation = M_CONTEST_PER_LEVEL_PROVENANCE_KIND``
+    and ``predecessor_array_sha256`` linking back to ``m_pixel.array_sha256``
+    (forensic chain through the canonical posterior per Catalog #323).
+    Source video sha256 + source_kind + scorer-axis reduction + operating
+    point + measurement_axis are preserved unchanged (the projection is
+    local to the sensitivity map; the underlying contest video and the
+    seg/pose/rate reduction are unchanged).
+
+    Per Catalog #192 + Catalog #317: the projected map is still
+    ``[predicted]``-grade sensitivity, NOT promotable as a contest score
+    by construction.
+
+    Args:
+        m_pixel: input ``PerPixelSensitivityMap`` (shape ``(N_pairs,
+            H_native, W_native)``) produced by ``extract_M_pixel``.
+        level_shape: target ``(H_level, W_level)`` per the Z8
+            ``LevelDimensionContract.wavelet_subband_shape`` of the
+            downstream M8 ``per_level_loss`` callsite.
+        reduction: ``mean`` (default) / ``max`` / ``sum`` per the spatial
+            projection rule above.
+        cache_path: optional ``.npy`` path for the projected sidecar; when
+            ``None`` derived from ``_PERSIST_ROOT`` + source kind + reduction
+            + sha-prefix + level shape + timestamp.
+
+    Returns:
+        NEW ``PerPixelSensitivityMap`` (shape ``(N_pairs, H_level, W_level)``)
+        with provenance chain back to ``m_pixel``. Identity-short-circuit
+        returns ``m_pixel`` unchanged when shapes already match.
+
+    Raises:
+        MultiGranularityComparisonError: ``reduction`` not in
+            ``LEGAL_LEVEL_PROJECTION_REDUCTIONS``, OR ``level_shape`` malformed.
+        MallatDyadicMismatchError: ``(H_native, W_native)`` -> ``level_shape``
+            is not a Mallat dyadic projection (integer-divisible + uniform-stride).
+    """
+    _require_numpy()
+    if reduction not in LEGAL_LEVEL_PROJECTION_REDUCTIONS:
+        raise MultiGranularityComparisonError(
+            f"reduction must be one of {sorted(LEGAL_LEVEL_PROJECTION_REDUCTIONS)}; "
+            f"got {reduction!r}"
+        )
+    if (
+        not isinstance(level_shape, tuple)
+        or len(level_shape) != 2
+        or not all(isinstance(x, int) for x in level_shape)
+    ):
+        raise MultiGranularityComparisonError(
+            f"level_shape must be a 2-tuple (H_level, W_level) of ints; "
+            f"got {level_shape!r}"
+        )
+    h_level, w_level = level_shape
+    if h_level <= 0 or w_level <= 0:
+        raise MultiGranularityComparisonError(
+            f"level_shape entries must be positive; got {level_shape!r}"
+        )
+    h_native = m_pixel.height
+    w_native = m_pixel.width
+
+    # Identity-projection short-circuit: shapes already match, no copy/sidecar.
+    if h_level == h_native and w_level == w_native:
+        return m_pixel
+
+    # Mallat dyadic invariant: integer-divisible spatial dims.
+    if h_native % h_level != 0 or w_native % w_level != 0:
+        raise MallatDyadicMismatchError(
+            f"Mallat dyadic projection requires integer-divisible shape; got "
+            f"native ({h_native}, {w_native}) -> level ({h_level}, {w_level}). "
+            f"Phase B (decompose_M_contest_per_subband) is the canonical "
+            f"unblocker for non-dyadic projections."
+        )
+    stride_h = h_native // h_level
+    stride_w = w_native // w_level
+    if stride_h != stride_w:
+        raise MallatDyadicMismatchError(
+            f"Mallat dyadic projection requires uniform stride; got "
+            f"stride_h={stride_h} != stride_w={stride_w} for native "
+            f"({h_native}, {w_native}) -> level ({h_level}, {w_level}). "
+            f"Phase B (decompose_M_contest_per_subband) is the canonical "
+            f"unblocker for non-uniform-stride projections."
+        )
+
+    # Block-reduce: reshape (N, H_native, W_native) -> (N, H_level, stride,
+    # W_level, stride), then reduce axes (2, 4) per the canonical Mallat
+    # dyadic projection. Compute in float64 then cast to float32 for storage
+    # (sister-of-extract_M_pixel convention).
+    m_native = m_pixel.load()  # (N, H_native, W_native) per Phase A contract
+    n_pairs = m_pixel.n_pairs
+    m_blocked = m_native.astype(np.float64).reshape(
+        n_pairs, h_level, stride_h, w_level, stride_w
+    )
+    if reduction == "mean":
+        m_level = m_blocked.mean(axis=(2, 4))
+    elif reduction == "max":
+        m_level = m_blocked.max(axis=(2, 4))
+    else:  # sum
+        m_level = m_blocked.sum(axis=(2, 4))
+    m_level_f32 = m_level.astype(np.float32)
+
+    # Persist + emit sidecar (sister of extract_M_pixel pattern).
+    captured_at_utc = _utc_now_iso()
+    array_sha256 = _sha256_array(m_level_f32)
+    if cache_path is None:
+        ts = captured_at_utc.replace(":", "").replace("-", "")[:15]
+        sha_prefix = m_pixel.source_video_sha256[:12]
+        cache_path = (
+            _PERSIST_ROOT
+            / f"m_pixel_per_level_{m_pixel.source_kind}_{reduction}_"
+            f"{sha_prefix}_{h_level}x{w_level}_{ts}.npy"
+        )
+    cache_path = Path(cache_path)
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    np.save(cache_path, m_level_f32)
+
+    meta_path = cache_path.with_suffix(".meta.json")
+    meta_payload = {
+        "schema": "m_pixel_per_level_meta_v1",
+        "array_sha256": array_sha256,
+        "n_pairs": n_pairs,
+        "height": h_level,
+        "width": w_level,
+        "source_video_sha256": m_pixel.source_video_sha256,
+        "source_kind": m_pixel.source_kind,
+        "reduction": m_pixel.reduction,  # native scorer-axis reduction preserved
+        "level_projection_reduction": reduction,  # canonical "mean"/"max"/"sum"
+        "native_shape": [m_pixel.height, m_pixel.width],
+        "level_shape": [h_level, w_level],
+        "mallat_dyadic_stride": stride_h,
+        "captured_at_utc": captured_at_utc,
+        "operating_point": m_pixel.operating_point.as_dict(),
+        "measurement_axis": m_pixel.measurement_axis,
+        "canonical_helper_invocation": M_CONTEST_PER_LEVEL_PROVENANCE_KIND,
+        "predecessor_array_sha256": m_pixel.array_sha256,
+    }
+    meta_path.write_text(json.dumps(meta_payload, sort_keys=True, indent=2))
+
+    return PerPixelSensitivityMap(
+        array_path=str(cache_path),
+        array_sha256=array_sha256,
+        n_pairs=n_pairs,
+        height=h_level,
+        width=w_level,
+        source_video_sha256=m_pixel.source_video_sha256,
+        source_kind=m_pixel.source_kind,
+        reduction=m_pixel.reduction,
+        operating_point=m_pixel.operating_point,
+        captured_at_utc=captured_at_utc,
+        measurement_axis=m_pixel.measurement_axis,
+    )
