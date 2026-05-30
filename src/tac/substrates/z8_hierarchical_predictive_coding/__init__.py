@@ -219,6 +219,11 @@ from tac.substrates.z8_hierarchical_predictive_coding.mamba2_adapter import (
     Z8Mamba2DeterministicStateUpdate,
     build_z8_mamba2_adapter_for_level,
 )
+from tac.substrates.z8_hierarchical_predictive_coding.mallat_dwt_adapter import (
+    WaveletDetail2D,
+    Z8MallatDaubechiesPartition,
+    build_z8_mallat_dwt_adapter_for_level,
+)
 
 # Catalog #124 8-field representation-lane declaration (canonical tokens for
 # the AST walker per the gate's regex set). DO NOT remove without operator
@@ -326,6 +331,10 @@ __all__ = [
     # M4 adapter (Mamba-2 binding; operator commit 2026-05-29)
     "Z8Mamba2DeterministicStateUpdate",
     "build_z8_mamba2_adapter_for_level",
+    # M5 adapter (Mallat full DWT binding; operator commit 2026-05-29)
+    "WaveletDetail2D",
+    "Z8MallatDaubechiesPartition",
+    "build_z8_mallat_dwt_adapter_for_level",
     "get_in_progress_milestones",
     "get_landed_milestones",
     "get_next_actionable_milestones",

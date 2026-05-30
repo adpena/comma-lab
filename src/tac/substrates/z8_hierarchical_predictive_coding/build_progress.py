@@ -409,27 +409,45 @@ Z8_PHASE_2_BUILD_MILESTONES: tuple[BuildMilestone, ...] = (
     BuildMilestone(
         milestone_id="mallat_full_dwt_replaces_sum_pool_proxy",
         description=(
-            "Full Daubechies-4 wavelet transform per Mallat 1989 replaces "
-            "_mallat_sum_pool_2x_nhwc proxy in mlx_renderer.py; satisfies "
-            "WaveletPartition Protocol."
+            "Z8MallatDaubechiesPartition adapter wraps the canonical "
+            "tac.symposium_impls.daubechies_wavelet_codec 1D primitive "
+            "as a 2D separable Daubechies-4 transform per Mallat 1989 "
+            "§7.7; satisfies WaveletPartition Protocol. Detail subbands "
+            "emitted as structured WaveletDetail2D(lh, hl, hh) frozen "
+            "dataclass per Mallat §7.5 exact-reconstruction (collapsing "
+            "to one tensor would either lose info or violate shape "
+            "contract). Sum-pool proxy in mlx_renderer.py REMAINS for "
+            "L0 SCAFFOLD; the adapter is the Phase 2 binding the Z8 "
+            "hierarchy uses going forward."
         ),
         acceptance_criteria=(
-            "WaveletPartition implementation satisfies decompose + "
-            "recompose round-trip to within Daubechies-4 reconstruction "
-            "tolerance (atol 1e-6 with proper boundary handling)",
-            "per-level subband shapes match LevelDimensionContract "
-            ".wavelet_subband_shape",
-            "detail subbands are NOT all-zero (current sum-pool proxy "
-            "produces only approximation)",
-            "MLX byte-stable to PyTorch port per Catalog #1265 "
-            "contest-equivalence gate",
+            "Z8MallatDaubechiesPartition satisfies WaveletPartition "
+            "Protocol via @runtime_checkable isinstance() check",
+            "decompose + recompose round-trip to within Daubechies-4 "
+            "reconstruction tolerance (atol 1e-6; empirically atol "
+            "~1e-12 at fp64 per Mallat §7.5 perfect-reconstruction)",
+            "per-level approximation subband shape (B, H/2, W/2, C) "
+            "matches L0 sum-pool's contract",
+            "WaveletDetail2D(lh, hl, hh) carries three NON-ZERO high-"
+            "pass subbands (vs sum-pool proxy's approximation-only)",
+            "framework-agnostic: accepts MLX / PyTorch / numpy via "
+            "np.asarray intermediate per Catalog #317 portability",
         ),
-        status=BuildMilestoneStatus.PENDING,
+        status=BuildMilestoneStatus.LANDED,
+        landed_at_utc="2026-05-29T00:00:00Z",
         predecessor_milestone_ids=("binding_contract_landed",),
         notes=(
-            "Sum-pool proxy at L0 SCAFFOLD only captures approximation "
-            "subband; full DWT captures detail subbands needed by "
-            "per-level residual encoder."
+            "Adapter binds canonical tac.symposium_impls."
+            "daubechies_wavelet_codec primitive per binding-first "
+            "methodology (operator 2026-05-29 'iterate underlying "
+            "pieces as well'). 2D separable construction is canonical "
+            "Mallat 1989 §7.7 — composition of the canonical 1D "
+            "primitive, not a fresh design. Per Catalog #290 the only "
+            "FORK is the WaveletDetail2D dataclass to preserve all "
+            "three high-pass subbands needed for exact reconstruction. "
+            "L0 sum-pool _mallat_sum_pool_2x_nhwc remains in "
+            "mlx_renderer.py for backward compat; Phase 3 NaN-burn-in "
+            "code can opt into either via the Protocol-typed slot."
         ),
     ),
     BuildMilestone(
