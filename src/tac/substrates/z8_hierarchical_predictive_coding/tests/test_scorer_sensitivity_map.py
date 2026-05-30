@@ -30,10 +30,12 @@ from tac.substrates.z8_hierarchical_predictive_coding import (
     BuildMilestoneStatus,
     EmpiricalSensitivityMapNotYetLandedError,
     LevelDimensionContract,
+    ResolutionMismatchAwaitingPerLevelProjectionError,
     ScorerSensitivityMapSource,
     Z8_PHASE_2_BUILD_MILESTONES,
     Z8ScorerSensitivityMap,
     build_z8_scorer_sensitivity_map_for_level,
+    empirical_sensitivity_map_from_master_gradient,
     empirical_sensitivity_map_from_slot_ggg,
     uniform_sensitivity_map_for_level,
     yousfi_uniward_finite_difference_sensitivity_map,
@@ -249,12 +251,304 @@ def test_m7_milestone_is_landed_with_honest_path_documentation() -> None:
     assert "empirical_scorer_sensitivity_map_v1_landed" in by_id
     m7 = by_id["empirical_scorer_sensitivity_map_v1_landed"]
     assert m7.status == BuildMilestoneStatus.LANDED
-    # The description must reflect the honest 3-path landing per the module
-    # docstring (not the original "first v1 empirical" framing that was
-    # premature-verified before the master_gradient ledger domain-mismatch
-    # was empirically discovered).
+    # The description must reflect the honest 4-path landing per the module
+    # docstring (Phase A baseline + Path B2 master-gradient operational +
+    # Path B + Path C honest stubs).
     assert "Path A" in m7.description
     assert "Path B" in m7.description
     assert "Path C" in m7.description
+    assert "Path B2" in m7.description  # Phase D wire-in (2026-05-30)
     assert "LANDED" in m7.description
     assert "M8" in m7.description
+
+
+# -----------------------------------------------------------------
+# Section E: Phase D Path B2 (empirical_sensitivity_map_from_master_gradient)
+# Yousfi-ordered wire-in 2026-05-30 consuming Phase A canonical extract_M_pixel
+# + broadcast_sensitivity_map_to_channels per the M8 Protocol docstring
+# verbatim: "The map itself comes from tac.master_gradient empirical
+# per-pixel sensitivity measurement."
+# -----------------------------------------------------------------
+
+
+def _make_matching_resolution_contest_tensor(
+    level: LevelDimensionContract,
+    *,
+    n_pairs: int = 4,
+    n_axes: int = 3,
+    seed: int = 0,
+):
+    """Build a synthetic ContestGradientTensor whose (H, W) matches the level.
+
+    Phase A canonical helper signature requires a polymorphic
+    ContestGradientTensor or InflatedGradientTensor. Phase D's identity-
+    resolution requirement means the gradient's native (H, W) must equal
+    level.wavelet_subband_shape; this fixture builds exactly that.
+    """
+    import hashlib
+    from pathlib import Path
+
+    from tac.master_gradient_comparison.multi_granularity import (
+        ContestGradientTensor,
+        OperatingPoint,
+    )
+
+    H, W = level.wavelet_subband_shape
+    rng = np.random.RandomState(seed)
+    arr = rng.randn(n_pairs, n_axes, H, W).astype(np.float32)
+    sha = hashlib.sha256(arr.tobytes()).hexdigest()
+    tmp = (
+        Path(".omx/state/master_gradient_comparison")
+        / f"test_phase_d_contest_{sha[:8]}.npy"
+    )
+    tmp.parent.mkdir(parents=True, exist_ok=True)
+    np.save(tmp, arr)
+    return ContestGradientTensor(
+        array_path=str(tmp),
+        array_sha256=sha,
+        n_pairs=n_pairs,
+        height=H,
+        width=W,
+        contest_video_sha256="0" * 64,
+        scorer_seg_sha256="1" * 64,
+        scorer_pose_sha256="2" * 64,
+        operating_point=OperatingPoint(
+            d_seg=0.067, d_pose=3.4e-5, rate=0.119, score=0.192
+        ),
+        captured_at_utc="2026-05-30T00:00:00Z",
+        measurement_axis="[predicted]",
+    )
+
+
+def test_path_b2_returns_correct_shape(
+    synthetic_level: LevelDimensionContract,
+) -> None:
+    """Path B2 produces (B, C, H, W) matching M8 Protocol contract."""
+    gt = _make_matching_resolution_contest_tensor(synthetic_level)
+    arr = empirical_sensitivity_map_from_master_gradient(
+        synthetic_level, gt, batch_size=1, num_channels=3
+    )
+    assert arr.shape == (1, 3, 192, 256)
+
+
+def test_path_b2_is_non_negative(
+    synthetic_level: LevelDimensionContract,
+) -> None:
+    """L2 / L1 / max reductions of master-gradient are all >= 0."""
+    gt = _make_matching_resolution_contest_tensor(synthetic_level, seed=1)
+    for reduction in ("l2_norm", "l1_norm", "max"):
+        arr = empirical_sensitivity_map_from_master_gradient(
+            synthetic_level, gt, reduction=reduction
+        )
+        assert np.all(arr >= 0), f"reduction={reduction} produced negative values"
+
+
+def test_path_b2_channel_uniformity_invariant(
+    synthetic_level: LevelDimensionContract,
+) -> None:
+    """Fridrich per-spatial-location cost: all channels at (h,w) same weight."""
+    gt = _make_matching_resolution_contest_tensor(synthetic_level, seed=2)
+    arr = empirical_sensitivity_map_from_master_gradient(
+        synthetic_level, gt, batch_size=1, num_channels=3
+    )
+    # All channels at each (h, w) must be identical per Fridrich convention
+    np.testing.assert_array_equal(arr[0, 0], arr[0, 1])
+    np.testing.assert_array_equal(arr[0, 1], arr[0, 2])
+
+
+def test_path_b2_raises_on_resolution_mismatch(
+    synthetic_level_coarse: LevelDimensionContract,
+) -> None:
+    """Phase D identity-resolution invariant: mismatch raises with Phase C hint."""
+    # Build tensor at native (192, 256) but pass to coarse level (48, 64)
+    fine_level = LevelDimensionContract(
+        level_index=0,
+        num_categorical_groups=8,
+        num_categorical_classes=16,
+        deterministic_state_dim=64,
+        wavelet_subband_shape=(192, 256),
+        ego_motion_dim=8,
+        bit_budget_estimate=128,
+    )
+    gt = _make_matching_resolution_contest_tensor(fine_level, seed=3)
+    with pytest.raises(
+        ResolutionMismatchAwaitingPerLevelProjectionError
+    ) as exc_info:
+        empirical_sensitivity_map_from_master_gradient(
+            synthetic_level_coarse, gt
+        )
+    msg = str(exc_info.value)
+    # Operator-actionable error must name both shapes + Phase C unblocker
+    assert "192" in msg and "256" in msg
+    assert "48" in msg and "64" in msg
+    assert "Phase C" in msg
+    assert "decompose_M_contest_per_level" in msg
+
+
+def test_path_b2_rejects_invalid_reduction(
+    synthetic_level: LevelDimensionContract,
+) -> None:
+    """Forwards extract_M_pixel's reduction-validation; helper-specific error
+    propagates (tac.master_gradient_comparison raises
+    MultiGranularityComparisonError, not ValueError — we surface it unchanged
+    per the canonical Phase A helper contract)."""
+    from tac.master_gradient_comparison.multi_granularity import (
+        MultiGranularityComparisonError,
+    )
+
+    gt = _make_matching_resolution_contest_tensor(synthetic_level, seed=4)
+    with pytest.raises(MultiGranularityComparisonError, match="reduction"):
+        empirical_sensitivity_map_from_master_gradient(
+            synthetic_level, gt, reduction="bogus_reduction"
+        )
+
+
+def test_path_b2_m8_invariant_holds_under_uniform_gradient(
+    synthetic_level: LevelDimensionContract,
+) -> None:
+    """M8 Protocol invariant: when gradient is constant across (h,w), Path B2
+    output is spatially uniform and M8's weighted L2 == per-channel rescaled L2.
+
+    This is the canonical sanity check that empirical sensitivity converges
+    to L2 in the limit of uniform scorer response — Yousfi's 'empty prior'.
+    """
+    import hashlib
+    from pathlib import Path
+
+    from tac.master_gradient_comparison.multi_granularity import (
+        ContestGradientTensor,
+        OperatingPoint,
+    )
+
+    H, W = synthetic_level.wavelet_subband_shape
+    # Constant gradient = 1.0 across every (pair, axis, h, w)
+    arr_grad = np.ones((4, 3, H, W), dtype=np.float32)
+    sha = hashlib.sha256(arr_grad.tobytes()).hexdigest()
+    tmp = (
+        Path(".omx/state/master_gradient_comparison")
+        / f"test_phase_d_uniform_{sha[:8]}.npy"
+    )
+    tmp.parent.mkdir(parents=True, exist_ok=True)
+    np.save(tmp, arr_grad)
+    gt = ContestGradientTensor(
+        array_path=str(tmp),
+        array_sha256=sha,
+        n_pairs=4,
+        height=H,
+        width=W,
+        contest_video_sha256="0" * 64,
+        scorer_seg_sha256="1" * 64,
+        scorer_pose_sha256="2" * 64,
+        operating_point=OperatingPoint(
+            d_seg=0.067, d_pose=3.4e-5, rate=0.119, score=0.192
+        ),
+        captured_at_utc="2026-05-30T00:00:00Z",
+        measurement_axis="[predicted]",
+    )
+    arr = empirical_sensitivity_map_from_master_gradient(
+        synthetic_level, gt, reduction="l2_norm"
+    )
+    # L2 of [1, 1, 1] = sqrt(3); broadcast uniformly across all pixels
+    expected = float(np.sqrt(3.0))
+    np.testing.assert_allclose(arr, expected, rtol=1e-5)
+
+
+# -----------------------------------------------------------------
+# Section F: Dispatcher routing for ScorerSensitivityMapSource.EMPIRICAL_FROM_MASTER_GRADIENT
+# -----------------------------------------------------------------
+
+
+def test_dispatcher_enum_has_path_b2_member() -> None:
+    """Phase D added EMPIRICAL_FROM_MASTER_GRADIENT to the enum (4 members)."""
+    assert (
+        ScorerSensitivityMapSource.EMPIRICAL_FROM_MASTER_GRADIENT.value
+        == "empirical_from_master_gradient"
+    )
+    members = {m.name for m in ScorerSensitivityMapSource}
+    assert members == {
+        "UNIFORM",
+        "EMPIRICAL_SLOT_GGG",
+        "FINITE_DIFFERENCE_UNIWARD",
+        "EMPIRICAL_FROM_MASTER_GRADIENT",
+    }
+
+
+def test_dispatcher_path_b2_routes_with_gradient_tensor(
+    synthetic_level: LevelDimensionContract,
+) -> None:
+    """Dispatcher with source=EMPIRICAL_FROM_MASTER_GRADIENT forwards gradient."""
+    gt = _make_matching_resolution_contest_tensor(synthetic_level, seed=5)
+    sm = Z8ScorerSensitivityMap(
+        ScorerSensitivityMapSource.EMPIRICAL_FROM_MASTER_GRADIENT
+    )
+    arr = sm.get_for_level(synthetic_level, gradient_tensor=gt)
+    assert arr.shape == (1, 3, 192, 256)
+    assert np.all(arr >= 0)
+
+
+def test_dispatcher_path_b2_raises_without_gradient_tensor(
+    synthetic_level: LevelDimensionContract,
+) -> None:
+    """Path B2 dispatch without gradient_tensor must raise with actionable hint."""
+    sm = Z8ScorerSensitivityMap(
+        ScorerSensitivityMapSource.EMPIRICAL_FROM_MASTER_GRADIENT
+    )
+    with pytest.raises(ValueError) as exc_info:
+        sm.get_for_level(synthetic_level)  # No gradient_tensor
+    msg = str(exc_info.value)
+    assert "EMPIRICAL_FROM_MASTER_GRADIENT" in msg
+    assert "gradient_tensor" in msg
+    assert "Path A" in msg  # Operator-actionable fallback hint
+
+
+def test_dispatcher_uniform_ignores_gradient_tensor(
+    synthetic_level: LevelDimensionContract,
+) -> None:
+    """UNIFORM path ignores gradient_tensor (Phase A unchanged by Phase D)."""
+    gt = _make_matching_resolution_contest_tensor(synthetic_level, seed=6)
+    sm = Z8ScorerSensitivityMap(ScorerSensitivityMapSource.UNIFORM)
+    arr = sm.get_for_level(synthetic_level, gradient_tensor=gt)
+    # Still returns all-ones per Path A
+    assert np.all(arr == 1.0)
+
+
+def test_convenience_builder_path_b2_routes(
+    synthetic_level: LevelDimensionContract,
+) -> None:
+    """build_z8_scorer_sensitivity_map_for_level forwards Phase D kwargs."""
+    gt = _make_matching_resolution_contest_tensor(synthetic_level, seed=7)
+    arr = build_z8_scorer_sensitivity_map_for_level(
+        synthetic_level,
+        source=ScorerSensitivityMapSource.EMPIRICAL_FROM_MASTER_GRADIENT,
+        gradient_tensor=gt,
+        reduction="l1_norm",
+    )
+    assert arr.shape == (1, 3, 192, 256)
+    assert np.all(arr >= 0)
+
+
+def test_existing_path_b_stub_still_raises_after_phase_d(
+    synthetic_level: LevelDimensionContract,
+) -> None:
+    """Phase D adds Path B2 WITHOUT changing the Path B (slot_ggg) stub."""
+    sm = Z8ScorerSensitivityMap(ScorerSensitivityMapSource.EMPIRICAL_SLOT_GGG)
+    with pytest.raises(EmpiricalSensitivityMapNotYetLandedError):
+        sm.get_for_level(synthetic_level)
+
+
+def test_existing_path_c_stub_still_raises_after_phase_d(
+    synthetic_level: LevelDimensionContract,
+) -> None:
+    """Phase D adds Path B2 WITHOUT changing the Path C (UNIWARD-FD) stub."""
+    sm = Z8ScorerSensitivityMap(
+        ScorerSensitivityMapSource.FINITE_DIFFERENCE_UNIWARD
+    )
+    with pytest.raises(EmpiricalSensitivityMapNotYetLandedError):
+        sm.get_for_level(synthetic_level)
+
+
+def test_resolution_mismatch_error_is_notimplementederror_subclass() -> None:
+    """Per CLAUDE.md 'Forbidden premature KILL': honest deferral via NotImplementedError."""
+    assert issubclass(
+        ResolutionMismatchAwaitingPerLevelProjectionError, NotImplementedError
+    )

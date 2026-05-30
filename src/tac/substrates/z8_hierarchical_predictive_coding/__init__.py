@@ -226,9 +226,11 @@ from tac.substrates.z8_hierarchical_predictive_coding.mallat_dwt_adapter import 
 )
 from tac.substrates.z8_hierarchical_predictive_coding.scorer_sensitivity_map import (
     EmpiricalSensitivityMapNotYetLandedError,
+    ResolutionMismatchAwaitingPerLevelProjectionError,
     ScorerSensitivityMapSource,
     Z8ScorerSensitivityMap,
     build_z8_scorer_sensitivity_map_for_level,
+    empirical_sensitivity_map_from_master_gradient,
     empirical_sensitivity_map_from_slot_ggg,
     uniform_sensitivity_map_for_level,
     yousfi_uniward_finite_difference_sensitivity_map,
@@ -345,13 +347,18 @@ __all__ = [
     "Z8MallatDaubechiesPartition",
     "build_z8_mallat_dwt_adapter_for_level",
     # M7 canonical scorer-sensitivity-map helper (Yousfi-grounded; operator
-    # 2026-05-30; Path A LANDED; Path B + Path C are DEFERRED-pending-research
-    # stubs with reactivation criteria pinned per CLAUDE.md "Forbidden
-    # premature KILL without research exhaustion").
+    # 2026-05-30; Path A LANDED; Path B2 EMPIRICAL_FROM_MASTER_GRADIENT
+    # LANDED 2026-05-30 wiring Phase A canonical extract_M_pixel +
+    # broadcast_sensitivity_map_to_channels; Path B (slot_ggg) + Path C
+    # (UNIWARD finite-difference) remain DEFERRED-pending-research stubs
+    # with reactivation criteria pinned per CLAUDE.md "Forbidden premature
+    # KILL without research exhaustion").
     "EmpiricalSensitivityMapNotYetLandedError",
+    "ResolutionMismatchAwaitingPerLevelProjectionError",
     "ScorerSensitivityMapSource",
     "Z8ScorerSensitivityMap",
     "build_z8_scorer_sensitivity_map_for_level",
+    "empirical_sensitivity_map_from_master_gradient",
     "empirical_sensitivity_map_from_slot_ggg",
     "uniform_sensitivity_map_for_level",
     "yousfi_uniward_finite_difference_sensitivity_map",

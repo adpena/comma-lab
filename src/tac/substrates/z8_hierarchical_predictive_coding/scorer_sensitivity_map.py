@@ -89,21 +89,30 @@ __all__ = [
     "Z8ScorerSensitivityMap",
     "build_z8_scorer_sensitivity_map_for_level",
     "uniform_sensitivity_map_for_level",
+    "empirical_sensitivity_map_from_master_gradient",
     "EmpiricalSensitivityMapNotYetLandedError",
+    "ResolutionMismatchAwaitingPerLevelProjectionError",
 ]
 
 
 class ScorerSensitivityMapSource(enum.Enum):
-    """Three honest production paths per the module docstring.
+    """Four honest production paths per the module docstring.
 
     Per CLAUDE.md "Forbidden premature KILL": EMPIRICAL_SLOT_GGG and
     FINITE_DIFFERENCE_UNIWARD ANALOG are DEFERRED-pending-research, not
     killed; reactivation criteria pinned in helper docstrings.
+
+    EMPIRICAL_FROM_MASTER_GRADIENT (Path B2) was added 2026-05-30 per
+    Phase D Yousfi-ordered cap=1-per-turn (Phase A landed
+    ``extract_M_pixel`` + ``broadcast_sensitivity_map_to_channels`` at
+    commit ``8a95c9cc5``; this enum value wires that canonical helper
+    chain into the M8 Protocol dispatcher).
     """
 
     UNIFORM = "uniform"  # Path A: trivial all-ones; satisfies M8 invariant
     EMPIRICAL_SLOT_GGG = "empirical_slot_ggg"  # Path B: NotImplementedError stub
     FINITE_DIFFERENCE_UNIWARD = "finite_difference_uniward"  # Path C: stub
+    EMPIRICAL_FROM_MASTER_GRADIENT = "empirical_from_master_gradient"  # Path B2
 
 
 class EmpiricalSensitivityMapNotYetLandedError(NotImplementedError):
@@ -115,6 +124,34 @@ class EmpiricalSensitivityMapNotYetLandedError(NotImplementedError):
     paradigm IS the canonical Yousfi UNIWARD-analog finite-difference
     sensitivity map; the implementation requires paid-GPU compute that has
     not yet been allocated.
+    """
+
+
+class ResolutionMismatchAwaitingPerLevelProjectionError(NotImplementedError):
+    """Path B2 gradient_tensor shape does not match level.wavelet_subband_shape.
+
+    Per CLAUDE.md "Forbidden premature KILL without research exhaustion" +
+    Yousfi-ordered cap=1-per-turn discipline: Phase D (this landing) wires
+    ``extract_M_pixel`` + ``broadcast_sensitivity_map_to_channels`` end-to-end
+    for the identity-resolution case where the gradient tensor's native
+    ``(H, W)`` already matches ``level.wavelet_subband_shape``. The
+    per-level resolution-projection step (bilinear downsample for coarser
+    levels, identity for matching, raise on upsample) is canonical Phase C
+    scope (``decompose_M_contest_per_level``).
+
+    Reactivation criterion (single):
+
+    1. **Phase C ``decompose_M_contest_per_level`` lands** in
+       ``tac.master_gradient_comparison.multi_granularity`` (sister cap=1
+       cycle after Phase D). The Phase C helper will accept a
+       ``PerPixelSensitivityMap`` at native gradient resolution and emit
+       per-level-projected maps via the canonical Mallat
+       wavelet-hierarchical-prior bilinear downsample.
+
+    Until Phase C lands, this error fires with operator-actionable shapes
+    in the message. Callers can EITHER (a) provide a gradient tensor whose
+    native ``(H, W)`` matches ``level.wavelet_subband_shape``, OR (b) wait
+    for Phase C.
     """
 
 
@@ -327,6 +364,138 @@ def yousfi_uniward_finite_difference_sensitivity_map(
     )
 
 
+def empirical_sensitivity_map_from_master_gradient(
+    level: LevelDimensionContract,
+    gradient_tensor: Any,
+    *,
+    reduction: str = "l2_norm",
+    batch_size: int = 1,
+    num_channels: int = 3,
+    dtype: Any = np.float32,
+    pair_aggregation: str = "first",
+) -> np.ndarray:
+    """Path B2: empirical sensitivity from canonical master-gradient tensor.
+
+    Phase D Yousfi-ordered wire-in (2026-05-30): consumes Phase A's canonical
+    ``tac.master_gradient_comparison.extract_M_pixel`` + sister
+    ``broadcast_sensitivity_map_to_channels`` to produce M8-compatible
+    ``(B, C, H, W)`` tensors from a ``ContestGradientTensor`` or
+    ``InflatedGradientTensor``.
+
+    Per the M8 Protocol docstring at ``binding_contract.py`` (verbatim):
+
+        "The map itself comes from ``tac.master_gradient`` empirical
+         per-pixel sensitivity measurement (cross-substrate per Slot AA +
+         sister work)."
+
+    This helper IS that wire-in. Three honest steps:
+
+    1. **Extract per-pixel scorer sensitivity** via
+       ``extract_M_pixel(gradient_tensor, reduction=reduction)`` — reduces
+       over the scorer-axis dimension (seg, pose, archive_bytes) per the
+       canonical Fridrich UNIWARD scorer-blindness inverse interpretation
+       (L2: ``sqrt(sum_axes(M[:, axes, h, w]**2))``).
+
+    2. **Broadcast to (B, C, H, W)** via
+       ``broadcast_sensitivity_map_to_channels(m_pixel, batch_size=...,
+       num_channels=..., pair_aggregation=...)`` — channel-uniformity
+       invariant preserves Fridrich per-spatial-location cost convention.
+
+    3. **Identity-resolution invariant check**: assert the gradient
+       tensor's native ``(H, W)`` matches ``level.wavelet_subband_shape``.
+       Mismatched cases raise
+       ``ResolutionMismatchAwaitingPerLevelProjectionError`` with
+       operator-actionable reactivation criterion (Phase C
+       ``decompose_M_contest_per_level``).
+
+    Per CLAUDE.md "MPS auth eval is NOISE" + Catalog #192 + Catalog #317:
+    the gradient tensor's evidence-grade tag (``measurement_axis``) is
+    inherited from the source ``PerPixelSensitivityMap`` sidecar
+    ``.meta.json`` (per Catalog #323 canonical Provenance). For
+    ``[predicted]``-tagged input the output is non-promotable; for
+    ``[contest-CUDA T4]``-tagged input the output carries the canonical
+    paid-anchor provenance. This helper does NOT mutate provenance; the
+    sidecar trail through ``extract_M_pixel`` is the canonical record.
+
+    Args:
+        level: per-level contract giving the (H, W) shape via
+            ``level.wavelet_subband_shape``.
+        gradient_tensor: ``ContestGradientTensor`` or
+            ``InflatedGradientTensor`` from
+            ``tac.master_gradient_comparison.multi_granularity``. Native
+            shape ``(N_pairs, n_axes, H, W)``; native ``(H, W)`` MUST
+            match ``level.wavelet_subband_shape`` (Phase C unblocks
+            mismatched-resolution cases).
+        reduction: one of ``LEGAL_PIXEL_REDUCTIONS`` (``l2_norm`` /
+            ``l1_norm`` / ``max``). Defaults to ``l2_norm`` per Fridrich
+            UNIWARD canonical formulation.
+        batch_size: ``B`` dimension for M8 output. Defaults to 1.
+        num_channels: ``C`` dimension for M8 output. Defaults to 3 (RGB).
+        dtype: output numpy dtype. Defaults to ``np.float32``.
+        pair_aggregation: how to reduce the ``N_pairs`` dimension to a
+            single map for the level. ``first`` (default) takes pair 0
+            (canonical for single-pair M8 callsites). ``mean`` averages
+            across pairs. ``max`` takes per-pixel max — useful when M8
+            wants the conservative dominant-pair bound. Forwarded to
+            ``broadcast_sensitivity_map_to_channels``.
+
+    Returns:
+        Sensitivity-map tensor of shape ``(batch_size, num_channels, H, W)``
+        of the given dtype. All entries non-negative. Channel-uniform per
+        Fridrich per-spatial-location cost convention.
+
+    Raises:
+        TypeError: ``level`` is not a ``LevelDimensionContract``, OR
+            ``gradient_tensor`` is not a recognized
+            ``ContestGradientTensor`` / ``InflatedGradientTensor``.
+        ValueError: ``reduction`` is not in ``LEGAL_PIXEL_REDUCTIONS``,
+            OR ``batch_size`` / ``num_channels`` is non-positive.
+        ResolutionMismatchAwaitingPerLevelProjectionError: gradient
+            tensor's native ``(H, W)`` does not match
+            ``level.wavelet_subband_shape``. Phase C is the canonical
+            unblocker per the error's docstring.
+    """
+    # Lazy import to avoid module-level coupling; Phase A canonical helper.
+    from tac.master_gradient_comparison.multi_granularity import (
+        broadcast_sensitivity_map_to_channels,
+        extract_M_pixel,
+    )
+
+    H_level, W_level = _validate_level(level)
+
+    # Step 1: extract per-pixel sensitivity (axes-reduced per `reduction`).
+    # extract_M_pixel handles its own input-type validation + reduction
+    # validation; we surface those errors unchanged.
+    m_pixel = extract_M_pixel(gradient_tensor, reduction=reduction)
+
+    # Step 3 (early-fail): identity-resolution invariant. Phase D
+    # ONLY supports the matched-resolution case; resolution projection
+    # is canonical Phase C scope.
+    n_pairs, H_grad, W_grad = m_pixel.shape()
+    if (H_grad, W_grad) != (H_level, W_level):
+        raise ResolutionMismatchAwaitingPerLevelProjectionError(
+            f"gradient_tensor native shape ({H_grad}, {W_grad}) does not "
+            f"match level.wavelet_subband_shape ({H_level}, {W_level}) at "
+            f"level_index={level.level_index}. Phase D wires the canonical "
+            f"identity-resolution path only; per-level resolution projection "
+            f"is canonical Phase C scope (decompose_M_contest_per_level "
+            f"in tac.master_gradient_comparison.multi_granularity). EITHER "
+            f"(a) provide a gradient tensor whose native (H, W) matches "
+            f"level.wavelet_subband_shape, OR (b) wait for Phase C."
+        )
+
+    # Step 2: broadcast (N_pairs, H, W) -> (B, C, H, W) per M8 contract.
+    # broadcast_sensitivity_map_to_channels handles aggregation +
+    # channel/batch shaping + dtype.
+    return broadcast_sensitivity_map_to_channels(
+        m_pixel,
+        batch_size=batch_size,
+        num_channels=num_channels,
+        pair_aggregation=pair_aggregation,
+        dtype=dtype,
+    )
+
+
 class Z8ScorerSensitivityMap:
     """Canonical M7 source dispatcher consumed by M8's per_level_loss.
 
@@ -364,13 +533,38 @@ class Z8ScorerSensitivityMap:
         batch_size: int = 1,
         num_channels: int = 3,
         dtype: Any = np.float32,
+        gradient_tensor: Any = None,
+        reduction: str = "l2_norm",
+        pair_aggregation: str = "first",
     ) -> np.ndarray:
         """Return the sensitivity tensor for ``level`` per the bound source.
 
         Dispatches to ``uniform_sensitivity_map_for_level`` (Path A) when
-        ``source == UNIFORM``; to the Path B / Path C stubs otherwise.
-        Stubs raise ``EmpiricalSensitivityMapNotYetLandedError`` until
-        their per-helper reactivation criteria are satisfied.
+        ``source == UNIFORM``; to ``empirical_sensitivity_map_from_master_gradient``
+        (Path B2) when ``source == EMPIRICAL_FROM_MASTER_GRADIENT`` (requires
+        ``gradient_tensor``); to the Path B / Path C stubs otherwise. Stubs
+        raise ``EmpiricalSensitivityMapNotYetLandedError`` until their
+        per-helper reactivation criteria are satisfied.
+
+        Args:
+            level, batch_size, num_channels, dtype: per-level + shape
+                contract; forwarded to the path-specific helper.
+            gradient_tensor: REQUIRED when ``source ==
+                EMPIRICAL_FROM_MASTER_GRADIENT`` (Path B2);
+                ``ContestGradientTensor`` or ``InflatedGradientTensor``.
+                Ignored for other paths.
+            reduction: ``l2_norm`` (default) / ``l1_norm`` / ``max``;
+                forwarded to ``extract_M_pixel`` when source is Path B2.
+            pair_aggregation: ``first`` (default) / ``mean`` / ``max``;
+                forwarded to ``broadcast_sensitivity_map_to_channels``
+                when source is Path B2.
+
+        Raises:
+            ValueError: ``source == EMPIRICAL_FROM_MASTER_GRADIENT`` AND
+                ``gradient_tensor is None``.
+            ResolutionMismatchAwaitingPerLevelProjectionError: Path B2
+                gradient tensor's native ``(H, W)`` does not match
+                ``level.wavelet_subband_shape``.
         """
         if self._source is ScorerSensitivityMapSource.UNIFORM:
             return uniform_sensitivity_map_for_level(
@@ -378,6 +572,26 @@ class Z8ScorerSensitivityMap:
                 batch_size=batch_size,
                 num_channels=num_channels,
                 dtype=dtype,
+            )
+        if self._source is ScorerSensitivityMapSource.EMPIRICAL_FROM_MASTER_GRADIENT:
+            if gradient_tensor is None:
+                raise ValueError(
+                    "source == EMPIRICAL_FROM_MASTER_GRADIENT requires a "
+                    "non-None gradient_tensor (ContestGradientTensor or "
+                    "InflatedGradientTensor from "
+                    "tac.master_gradient_comparison.multi_granularity). "
+                    "EITHER (a) pass gradient_tensor=..., OR (b) bind "
+                    "source=ScorerSensitivityMapSource.UNIFORM for the "
+                    "Path A baseline."
+                )
+            return empirical_sensitivity_map_from_master_gradient(
+                level,
+                gradient_tensor,
+                reduction=reduction,
+                batch_size=batch_size,
+                num_channels=num_channels,
+                dtype=dtype,
+                pair_aggregation=pair_aggregation,
             )
         if self._source is ScorerSensitivityMapSource.EMPIRICAL_SLOT_GGG:
             return empirical_sensitivity_map_from_slot_ggg(
@@ -404,16 +618,26 @@ def build_z8_scorer_sensitivity_map_for_level(
     batch_size: int = 1,
     num_channels: int = 3,
     dtype: Any = np.float32,
+    gradient_tensor: Any = None,
+    reduction: str = "l2_norm",
+    pair_aggregation: str = "first",
 ) -> np.ndarray:
     """Single-call canonical builder for M8 trainer callsites.
 
     Convenience wrapper around ``Z8ScorerSensitivityMap(source).get_for_level(level, ...)``
     for the common case where M8's trainer wants the canonical sensitivity
     tensor for a single level without holding a dispatcher instance.
+
+    The ``gradient_tensor`` / ``reduction`` / ``pair_aggregation`` kwargs
+    are forwarded through to Path B2 (``EMPIRICAL_FROM_MASTER_GRADIENT``);
+    ignored for other paths.
     """
     return Z8ScorerSensitivityMap(source).get_for_level(
         level,
         batch_size=batch_size,
         num_channels=num_channels,
         dtype=dtype,
+        gradient_tensor=gradient_tensor,
+        reduction=reduction,
+        pair_aggregation=pair_aggregation,
     )
