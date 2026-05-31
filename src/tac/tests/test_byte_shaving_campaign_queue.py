@@ -325,6 +325,54 @@ def _write_constant_inflate_runtime(path: Path) -> None:
     inflate.chmod(0o755)
 
 
+def _write_runtime_consumption_proof(
+    path: Path,
+    *,
+    candidate_archive_sha256: str,
+    runtime_dir: Path | None = None,
+    runtime_tree_sha256: str | None = None,
+    adapter_file: Path | None = None,
+    adapter_sha256: str | None = None,
+) -> dict[str, object]:
+    proof: dict[str, object] = {
+        "schema": "family_agnostic_runtime_consumption_proof.v1",
+        "passed": True,
+        "runtime_consumption_proof_passed": True,
+        "receiver_contract_satisfied": True,
+        "candidate_archive_sha256": candidate_archive_sha256,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "blockers": [],
+    }
+    if runtime_dir is not None and runtime_tree_sha256 is not None:
+        proof.update(
+            {
+                "runtime_adapter_ready": True,
+                "runtime_adapter_manifest": {
+                    "runtime_adapter_ready": True,
+                    "runtime_dir": runtime_dir.as_posix(),
+                    "runtime_tree_sha256": runtime_tree_sha256,
+                    "expected_runtime_tree_sha256": runtime_tree_sha256,
+                },
+            }
+        )
+    if adapter_file is not None and adapter_sha256 is not None:
+        proof.update(
+            {
+                "runtime_adapter_ready": True,
+                "runtime_adapter_manifest": {
+                    "runtime_adapter_ready": True,
+                    "path": adapter_file.as_posix(),
+                    "sha256": adapter_sha256,
+                },
+            }
+        )
+    path.write_text(json.dumps(proof), encoding="utf-8")
+    return _write_artifact(path, path.read_bytes())
+
+
 def _false_authority() -> dict[str, bool]:
     return {
         "score_claim": False,
@@ -876,6 +924,7 @@ def test_byte_shaving_materializer_registry_exposes_dqs1_and_byte_range_contract
         ARCHIVE_ZIP_REPACK_TARGET_KIND,
         BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND,
         DQS1_PAIRSET_TARGET_KIND,
+        FP11_SOURCE_BROTLI_RECODE_TARGET_KIND,
         INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND,
         INVERSE_SCORER_CELL_TARGET_KIND,
         INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND,
@@ -884,6 +933,7 @@ def test_byte_shaving_materializer_registry_exposes_dqs1_and_byte_range_contract
         PACKET_MEMBER_REORDER_TARGET_KIND,
         PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
         RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+        FECA_SELECTOR_REPARAMETERIZE_TARGET_KIND,
         TENSOR_FACTORIZE_TARGET_KIND,
         TENSOR_PRUNE_TARGET_KIND,
         TENSOR_QUANTIZE_TARGET_KIND,
@@ -2435,6 +2485,15 @@ def test_materializer_work_queue_builds_byte_range_chain_command(
     runtime_tree_sha = tree_sha256(runtime_dir)
     payload["candidate_runtime_dir"] = runtime_dir.as_posix()
     payload["candidate_runtime_tree_sha256"] = runtime_tree_sha
+    payload["expected_runtime_tree_sha256"] = runtime_tree_sha
+    receiver_proof = _write_runtime_consumption_proof(
+        output_dir / "receiver_proof.json",
+        candidate_archive_sha256=str(archive["sha256"]),
+        runtime_dir=runtime_dir,
+        runtime_tree_sha256=runtime_tree_sha,
+    )
+    payload["runtime_consumption_proof_path"] = receiver_proof["path"]
+    payload["artifacts"]["receiver_proof"] = receiver_proof
     manifest.write_text(json.dumps(payload), encoding="utf-8")
     assert _condition_passes(row["postconditions"][1], repo_root=Path("/")) is True
     assert _condition_passes(row["postconditions"][2], repo_root=Path("/")) is True
@@ -3777,27 +3836,40 @@ def test_family_agnostic_candidate_postconditions_reject_weak_receiver_manifest(
     out_manifest.write_text(json.dumps(weak_manifest), encoding="utf-8")
     assert not _condition_passes(completion_contract, repo_root=tmp_path)
 
-    proof_path = tmp_path / "runtime_consumption_proof.json"
-    proof_path.write_text(
-        json.dumps(
-            {
-                "schema": "family_agnostic_runtime_consumption_proof.v1",
-                "receiver_contract_satisfied": True,
-                "score_claim": False,
-                "promotion_eligible": False,
-                "rank_or_kill_eligible": False,
-                "ready_for_exact_eval_dispatch": False,
-            }
-        ),
+    runtime_dir = tmp_path / "candidate_runtime"
+    runtime_dir.mkdir()
+    (runtime_dir / "inflate.sh").write_text(
+        "#!/usr/bin/env bash\nexit 0\n",
         encoding="utf-8",
+    )
+    runtime_tree_sha = tree_sha256(runtime_dir)
+    proof_path = tmp_path / "runtime_consumption_proof.json"
+    proof_artifact = _write_runtime_consumption_proof(
+        proof_path,
+        candidate_archive_sha256=str(candidate_archive["sha256"]),
+        runtime_dir=runtime_dir,
+        runtime_tree_sha256=runtime_tree_sha,
     )
     strong_manifest = {
         **weak_manifest,
+        "runtime_adapter_ready": True,
+        "candidate_runtime_dir": runtime_dir.as_posix(),
+        "candidate_runtime_tree_sha256": runtime_tree_sha,
+        "expected_runtime_tree_sha256": runtime_tree_sha,
         "receiver_contract_satisfied": True,
         "receiver_verification": {
             "schema": "family_agnostic_runtime_consumption_proof_verification.v1",
             "receiver_contract_satisfied": True,
+            "runtime_adapter_ready": True,
             "proof_path": str(proof_path),
+            "proof_sha256": proof_artifact["sha256"],
+            "proof_bytes": proof_artifact["bytes"],
+            "runtime_adapter_manifest": {
+                "runtime_adapter_ready": True,
+                "runtime_dir": runtime_dir.as_posix(),
+                "runtime_tree_sha256": runtime_tree_sha,
+                "expected_runtime_tree_sha256": runtime_tree_sha,
+            },
         },
         "runtime_consumption_proof_path": str(proof_path),
         "readiness_blockers": [],
@@ -3867,7 +3939,6 @@ def test_materializer_chain_completion_contract_rejects_schema_only_and_failure(
 
     archive = _write_artifact(tmp_path / "candidate_archive.zip", b"archive-bytes")
     candidate_manifest = _write_artifact(tmp_path / "candidate_manifest.json")
-    receiver_proof = _write_artifact(tmp_path / "receiver_proof.json")
     runtime_dir = tmp_path / "candidate_runtime"
     runtime_dir.mkdir()
     (runtime_dir / "inflate.sh").write_text(
@@ -3875,6 +3946,12 @@ def test_materializer_chain_completion_contract_rejects_schema_only_and_failure(
         encoding="utf-8",
     )
     runtime_tree_sha = tree_sha256(runtime_dir)
+    receiver_proof = _write_runtime_consumption_proof(
+        tmp_path / "receiver_proof.json",
+        candidate_archive_sha256=str(archive["sha256"]),
+        runtime_dir=runtime_dir,
+        runtime_tree_sha256=runtime_tree_sha,
+    )
     manifest.write_text(
         json.dumps(
             {
@@ -3890,6 +3967,7 @@ def test_materializer_chain_completion_contract_rejects_schema_only_and_failure(
                 "candidate_runtime_dir": runtime_dir.as_posix(),
                 "candidate_runtime_tree_sha256": runtime_tree_sha,
                 "expected_runtime_tree_sha256": runtime_tree_sha,
+                "runtime_consumption_proof_path": receiver_proof["path"],
                 "readiness_blockers": [],
                 "artifacts": {
                     "candidate_manifest": candidate_manifest,
@@ -3926,7 +4004,7 @@ def test_materializer_chain_completion_contract_rejects_schema_only_and_failure(
     }
     manifest.write_text(json.dumps(payload), encoding="utf-8")
 
-    assert _condition_passes(postconditions[1], repo_root=tmp_path) is True
+    assert _condition_passes(postconditions[1], repo_root=tmp_path) is False
     assert _condition_passes(postconditions[2], repo_root=tmp_path) is False
 
 
@@ -5283,7 +5361,12 @@ def test_materializer_execution_queue_builds_dfl1_parity_followup(
         MATERIALIZER_DISPATCH_PLAN_STEP_ID,
     ]
     materialize_step, parity_step, harvest_step, closure_step, bridge_step, dispatch_step = steps
-    proof_path = "exact_eval_handoff/renderer_payload_dfl1_shell_parity/shell_inflate_parity.json"
+    parity_dir = (
+        tmp_path.parent
+        / f"{tmp_path.name}_exact_eval_handoff"
+        / "renderer_payload_dfl1_shell_parity"
+    )
+    proof_path = (parity_dir / "shell_inflate_parity.json").as_posix()
     assert parity_step["requires"] == [MATERIALIZER_EXECUTION_STEP_ID]
     assert parity_step["resources"]["kind"] == "local_io_heavy"
     assert parity_step["timeout_seconds"] == 600
@@ -5344,7 +5427,7 @@ def test_materializer_execution_queue_builds_dfl1_parity_followup(
     ] in [harvest_step["command"][index : index + 2] for index in range(len(harvest_step["command"]) - 1)]
     assert [
         "--allowed-artifact-root",
-        "exact_eval_handoff/renderer_payload_dfl1_shell_parity",
+        parity_dir.as_posix(),
     ] in [harvest_step["command"][index : index + 2] for index in range(len(harvest_step["command"]) - 1)]
     assert closure_step["requires"] == [MATERIALIZER_HARVEST_STEP_ID]
     assert bridge_step["requires"] == [MATERIALIZER_SUBMISSION_CLOSURE_STEP_ID]
@@ -5478,8 +5561,8 @@ def test_materializer_execution_queue_rejects_dfl1_parity_output_outside_workloa
 ) -> None:
     workload = tmp_path / "workload"
     archive = tmp_path / "source.zip"
-    output = workload / "renderer_payload_candidate.zip"
-    out_manifest = workload / "renderer_payload_candidate.json"
+    output = workload / "materializer" / "renderer_payload_candidate.zip"
+    out_manifest = workload / "materializer" / "renderer_payload_candidate.json"
     runtime = tmp_path / "runtime"
     file_list = tmp_path / "file_list.txt"
     outside_parity = tmp_path / "outside_parity"
@@ -6644,6 +6727,15 @@ def test_renderer_payload_dfl1_postconditions_require_runtime_and_full_frame_par
         "path": native_unpacker.name,
         "sha256": native_unpacker_sha,
     }
+    proof_artifact = _write_runtime_consumption_proof(
+        tmp_path / "runtime_consumption_proof.json",
+        candidate_archive_sha256=archive_sha,
+        adapter_file=native_unpacker,
+        adapter_sha256=native_unpacker_sha,
+    )
+    payload["receiver_verification"]["proof_path"] = proof_artifact["path"]
+    payload["receiver_verification"]["proof_sha256"] = proof_artifact["sha256"]
+    payload["receiver_verification"]["proof_bytes"] = proof_artifact["bytes"]
     payload["full_frame_inflate_parity_proven"] = True
     payload["full_frame_inflate_parity_verification"]["full_frame_inflate_parity_satisfied"] = True
     payload["renderer_payload_dfl1_inflate_parity_satisfied"] = True
@@ -6713,10 +6805,21 @@ def test_tensor_factorize_postconditions_require_runtime_adapter_ready(
 
     payload["receiver_verification"]["runtime_adapter_sha256"] = runtime_tree_sha
     payload["receiver_verification"]["runtime_adapter_tree_sha256"] = runtime_tree_sha
+    payload["receiver_verification"]["expected_runtime_tree_sha256"] = runtime_tree_sha
+    proof_artifact = _write_runtime_consumption_proof(
+        tmp_path / "runtime_consumption_proof.json",
+        candidate_archive_sha256=archive_sha,
+        runtime_dir=runtime,
+        runtime_tree_sha256=runtime_tree_sha,
+    )
+    payload["receiver_verification"]["proof_path"] = proof_artifact["path"]
+    payload["receiver_verification"]["proof_sha256"] = proof_artifact["sha256"]
+    payload["receiver_verification"]["proof_bytes"] = proof_artifact["bytes"]
     payload["tensor_factorize_receiver_runtime"] = {
         "runtime_adapter_ready": True,
         "runtime_dir": runtime.name,
         "runtime_tree_sha256": runtime_tree_sha,
+        "expected_runtime_tree_sha256": runtime_tree_sha,
     }
     manifest_path.write_text(json.dumps(payload), encoding="utf-8")
 
