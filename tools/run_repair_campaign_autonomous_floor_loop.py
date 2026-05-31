@@ -63,6 +63,9 @@ from tac.repo_io import (  # noqa: E402
     sha256_file,
     write_json_artifact,
 )
+from tac.substrates.predictive_coding_stack_of_stacks import (  # noqa: E402
+    build_predictive_coding_stack_of_stacks_plan,
+)
 from tools.check_exact_dispatch_provider_preclaim import (  # noqa: E402
     build_preclaim_check,
 )
@@ -1180,6 +1183,7 @@ def _build_summary(
     worker_experiment_limit = worker_max_experiments_per_iteration
     if worker_experiment_limit is None:
         worker_experiment_limit = max(1, len(required_families) if required_families else 1)
+    predictive_stack_plan = build_predictive_coding_stack_of_stacks_plan()
     iterations: list[dict[str, Any]] = []
     final_coverage = _family_coverage_report(
         required_family_ids=required_families,
@@ -1379,6 +1383,17 @@ def _build_summary(
         "queue_family_ids": queue_family_ids,
         "required_family_ids": required_families,
         "require_all_queue_families": require_all_queue_families,
+        "predictive_coding_stack_of_stacks_plan": predictive_stack_plan,
+        "predictive_coding_stack_member_count": predictive_stack_plan["member_count"],
+        "predictive_coding_stack_archive_bound_bridge_ready_count": (
+            predictive_stack_plan["archive_bound_bridge_ready_count"]
+        ),
+        "predictive_coding_stack_archive_bound_bridge_complete": (
+            predictive_stack_plan["archive_bound_bridge_complete"]
+        ),
+        "predictive_coding_stack_compound_c_leakage_detected": (
+            predictive_stack_plan["compound_c_leakage_detected"]
+        ),
         "repair_family_coverage": final_coverage,
         "iteration_count": len(iterations),
         "iterations": iterations,
@@ -1662,6 +1677,7 @@ def _build_summary(
             "probe_only_entropy_variant_signals_open_queue_owned_materializer_backlog_tasks",
             "range_ans_runtime_adapters_decode_candidate_members_inside_receiver_proofs",
             "fec_selector_header_huffman_range_ans_zip_variants_emit_common_archive_bound_candidate_contracts",
+            "validated_predictive_coding_stack_of_stacks_consumed_by_runner",
             "precise_blocker_report_names_next_unblocked_action",
         ],
         "blockers": ordered_unique(
@@ -1669,6 +1685,7 @@ def _build_summary(
                 "contest_cpu_or_cuda_exact_axis_payload_required_before_score",
                 "lane_dispatch_claim_required_before_exact_eval",
                 *_string_list(entropy_stage_chain_execution_bundle.get("blockers")),
+                *_string_list(predictive_stack_plan.get("blockers")),
                 *(
                     []
                     if final_stack_plan.get("execution_report_count")
@@ -1872,6 +1889,15 @@ def main(argv: list[str] | None = None) -> int:
                 ],
                 "frontier_executable_selection_consumed": summary[
                     "frontier_executable_selection_consumed"
+                ],
+                "predictive_coding_stack_member_count": summary[
+                    "predictive_coding_stack_member_count"
+                ],
+                "predictive_coding_stack_archive_bound_bridge_ready_count": summary[
+                    "predictive_coding_stack_archive_bound_bridge_ready_count"
+                ],
+                "predictive_coding_stack_compound_c_leakage_detected": summary[
+                    "predictive_coding_stack_compound_c_leakage_detected"
                 ],
                 "measured_mlx_posterior_budget_routing_update_count": summary[
                     "measured_mlx_posterior_budget_routing_update_count"
