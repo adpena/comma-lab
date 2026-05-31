@@ -19,6 +19,13 @@ from typing import Any
 
 import numpy as np
 
+from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
+from tac.optimization.joint_p18_p19_waterfill import (
+    FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION,
+    PROPOSAL_ONLY_SCOPE,
+    JointP18P19WaterfillConfig,
+    build_joint_p18_p19_waterfill_surface,
+)
 from tac.optimization.target_modes import (
     CONTEST_VIDEO_OVERFIT_MODE,
     CORPUS_GENERALIZATION_MODE,
@@ -31,8 +38,20 @@ from tac.repo_io import write_json
 from tac.substrates.z8_hierarchical_predictive_coding.archive import parse_archive
 
 Z8_FULL_VIDEO_VJP_ACQUISITION_PLAN_SCHEMA = "z8_full_video_vjp_acquisition_plan.v1"
+Z8_FULL_VIDEO_VJP_SURFACE_SHARD_SCHEMA = "z8_full_video_vjp_surface_shard.v1"
 Z8_FULL_VIDEO_VJP_SURFACE_BUNDLE_SCHEMA = "z8_full_video_vjp_surface_bundle.v1"
-FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION = "full_video_exact_accumulation"
+Z8_FULL_VIDEO_VJP_MLX_SHARD_BACKEND = "mlx_autograd_raw_pair_p18_p19_vjp.v1"
+
+FALSE_AUTHORITY: dict[str, bool] = {
+    "score_claim": False,
+    "score_claim_valid": False,
+    "promotion_eligible": False,
+    "promotable": False,
+    "rank_or_kill_eligible": False,
+    "ready_for_exact_eval_dispatch": False,
+    "dispatch_attempted": False,
+    "gpu_launched": False,
+}
 SINGLE_UPDATE_AFTER_FULL_REDUCTION = "single_update_after_all_pair_shards_reduce"
 
 
@@ -61,8 +80,424 @@ class Z8FullVideoVjpAcquisitionConfig:
         return normalize_target_optimization_mode(self.target_mode)
 
 
+@dataclass(frozen=True)
+class Z8FullVideoMlxVjpShardConfig:
+    """Config for one MLX-autograd P18/P19 VJP shard.
+
+    The shard backprops through the MLX scorer preprocessing and scorer models
+    to candidate pair RGB pixels. It is not budget-spend authority by itself;
+    the complete full-video reduction is the authority boundary.
+    """
+
+    shard_index: int
+    pair_start: int
+    pair_end: int
+    full_video_pair_count: int
+    full_video_d_pose: float
+    target_mode: str = CONTEST_VIDEO_OVERFIT_MODE
+    rgb_value_range: float = 255.0
+    scorer_hw: tuple[int, int] = (384, 512)
+    seg_margin_delta: float = 1.0
+    pose_null_threshold: float = 1e-8
+
+    def __post_init__(self) -> None:
+        normalize_target_optimization_mode(self.target_mode)
+        if self.shard_index < 0:
+            raise ValueError("shard_index must be non-negative")
+        if self.pair_start < 0 or self.pair_end <= self.pair_start:
+            raise ValueError("pair_start/pair_end must describe a non-empty positive span")
+        if self.full_video_pair_count <= 0:
+            raise ValueError("full_video_pair_count must be positive")
+        if self.pair_end > self.full_video_pair_count:
+            raise ValueError("pair_end cannot exceed full_video_pair_count")
+        if self.full_video_d_pose < 0.0:
+            raise ValueError("full_video_d_pose must be >= 0")
+        if self.rgb_value_range <= 0.0:
+            raise ValueError("rgb_value_range must be positive")
+        if self.scorer_hw[0] <= 1 or self.scorer_hw[1] <= 1:
+            raise ValueError("scorer_hw must be positive and at least 2x2")
+        if self.seg_margin_delta < 0.0:
+            raise ValueError("seg_margin_delta must be >= 0")
+        if self.pose_null_threshold < 0.0:
+            raise ValueError("pose_null_threshold must be >= 0")
+
+    @property
+    def normalized_target_mode(self) -> str:
+        return normalize_target_optimization_mode(self.target_mode)
+
+
 def _sha256_bytes(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
+
+
+def _array_sha256(array: np.ndarray) -> str:
+    arr = np.ascontiguousarray(array)
+    digest = hashlib.sha256()
+    digest.update(str(arr.dtype).encode("utf-8"))
+    digest.update(json.dumps(list(arr.shape), sort_keys=True).encode("utf-8"))
+    digest.update(arr.tobytes())
+    return digest.hexdigest()
+
+
+def _as_pair_rgb_array(value: Any, *, name: str) -> np.ndarray:
+    arr = np.asarray(value, dtype=np.float32)
+    if arr.ndim != 5 or arr.shape[1] != 2 or arr.shape[-1] != 3:
+        raise ValueError(f"{name} must have shape (pairs, 2, H, W, 3); got {arr.shape}")
+    if arr.shape[2] < 2 or arr.shape[3] < 2:
+        raise ValueError(f"{name} spatial dimensions must be at least 2x2; got {arr.shape[2:4]}")
+    if not np.all(np.isfinite(arr)):
+        raise ValueError(f"{name} contains non-finite values")
+    return np.ascontiguousarray(arr)
+
+
+def _jsonable(value: Any) -> Any:
+    if isinstance(value, np.generic):
+        return value.item()
+    if isinstance(value, np.ndarray):
+        return value.tolist()
+    if isinstance(value, Mapping):
+        return {str(k): _jsonable(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_jsonable(v) for v in value]
+    return value
+
+
+def _mlx_pairs_to_scorer_inputs_nhwc(pairs_rgb_255: Any, *, scorer_hw: tuple[int, int]) -> tuple[Any, Any]:
+    """Return ``(segnet_last_rgb_nhwc, posenet_yuv6_pair_nhwc)`` in MLX."""
+
+    import mlx.core as mx
+
+    from tac.local_acceleration.pr95_hnerv_mlx_training import (
+        resize_nhwc_align_corners_false,
+        rgb_to_yuv6_mlx,
+    )
+
+    shape = tuple(int(dim) for dim in pairs_rgb_255.shape)
+    if len(shape) != 5 or shape[1] != 2 or shape[-1] != 3:
+        raise ValueError(f"expected pair RGB MLX tensor (B,2,H,W,3), got {shape}")
+    flat = mx.reshape(pairs_rgb_255, (-1, shape[2], shape[3], 3))
+    scorer_flat = resize_nhwc_align_corners_false(flat, size=scorer_hw, mode="bilinear")
+    scorer_pairs = mx.reshape(
+        scorer_flat,
+        (shape[0], 2, int(scorer_hw[0]), int(scorer_hw[1]), 3),
+    )
+    segnet_last_rgb = scorer_pairs[:, 1, :, :, :]
+    yuv6 = rgb_to_yuv6_mlx(scorer_pairs)
+    h2, w2 = int(yuv6.shape[2]), int(yuv6.shape[3])
+    pose = mx.reshape(mx.transpose(yuv6, (0, 2, 3, 1, 4)), (shape[0], h2, w2, 12))
+    return segnet_last_rgb, pose
+
+
+def _mlx_value_to_numpy(value: Any) -> np.ndarray:
+    import mlx.core as mx
+
+    mx.eval(value)
+    try:
+        mx.synchronize()
+    except AttributeError:
+        pass
+    return np.asarray(value)
+
+
+def build_z8_full_video_mlx_vjp_surface_shard(
+    archive_bytes: bytes,
+    *,
+    reference_pairs_rgb: Any,
+    candidate_pairs_rgb: Any,
+    mlx_scorer: Any,
+    config: Z8FullVideoMlxVjpShardConfig,
+) -> dict[str, Any]:
+    """Emit one exact chunked MLX P18/P19 VJP shard over pair RGB pixels.
+
+    ``reference_pairs_rgb`` and ``candidate_pairs_rgb`` must describe the same
+    full-video pair grid. The function slices ``config.pair_start:pair_end``,
+    computes MLX VJPs of a nonsmooth SegNet margin surrogate and the PoseNet
+    MSE term through scorer preprocessing, and converts the two gradients into
+    the canonical joint water-fill surface. No optimizer update is performed.
+    """
+
+    import mlx.core as mx
+
+    ref_full = _as_pair_rgb_array(reference_pairs_rgb, name="reference_pairs_rgb")
+    cand_full = _as_pair_rgb_array(candidate_pairs_rgb, name="candidate_pairs_rgb")
+    if ref_full.shape != cand_full.shape:
+        raise ValueError(
+            "reference_pairs_rgb and candidate_pairs_rgb must have identical shape; "
+            f"got {ref_full.shape} vs {cand_full.shape}"
+        )
+    if ref_full.shape[0] != config.full_video_pair_count:
+        raise ValueError(
+            f"full_video_pair_count must match pair array length: {config.full_video_pair_count} vs {ref_full.shape[0]}"
+        )
+    ref = np.ascontiguousarray(
+        ref_full[config.pair_start : config.pair_end] * (255.0 / float(config.rgb_value_range)),
+        dtype=np.float32,
+    )
+    cand = np.ascontiguousarray(
+        cand_full[config.pair_start : config.pair_end] * (255.0 / float(config.rgb_value_range)),
+        dtype=np.float32,
+    )
+    archive_sha = _sha256_bytes(archive_bytes)
+
+    ref_mx = mx.array(ref)
+    ref_seg_input, ref_pose_input = _mlx_pairs_to_scorer_inputs_nhwc(
+        ref_mx,
+        scorer_hw=config.scorer_hw,
+    )
+    ref_seg_logits = mlx_scorer.segnet(ref_seg_input)
+    ref_classes = mx.argmax(ref_seg_logits, axis=-1)
+    ref_pose = mlx_scorer.posenet(ref_pose_input)["pose"]
+    mx.eval(ref_classes, ref_pose)
+
+    cand_mx = mx.array(cand)
+
+    def seg_margin_loss(pair_rgb_255: Any) -> Any:
+        seg_input, _pose_input = _mlx_pairs_to_scorer_inputs_nhwc(
+            pair_rgb_255,
+            scorer_hw=config.scorer_hw,
+        )
+        logits = mlx_scorer.segnet(seg_input)
+        class_count = int(logits.shape[-1])
+        labels = mx.arange(class_count, dtype=ref_classes.dtype)
+        one_hot = labels.reshape((1, 1, 1, class_count)) == ref_classes[..., None]
+        true_logit = mx.sum(mx.where(one_hot, logits, 0.0), axis=-1)
+        other_logit = mx.max(mx.where(one_hot, -1.0e9, logits), axis=-1)
+        hinge = mx.maximum(0.0, other_logit - true_logit + float(config.seg_margin_delta))
+        return mx.mean(hinge)
+
+    def pose_mse_loss(pair_rgb_255: Any) -> Any:
+        _seg_input, pose_input = _mlx_pairs_to_scorer_inputs_nhwc(
+            pair_rgb_255,
+            scorer_hw=config.scorer_hw,
+        )
+        pose = mlx_scorer.posenet(pose_input)["pose"]
+        dims = min(6, int(pose.shape[-1]), int(ref_pose.shape[-1]))
+        diff = pose[..., :dims] - ref_pose[..., :dims]
+        return mx.mean(diff * diff)
+
+    seg_grad = mx.grad(seg_margin_loss)(cand_mx)
+    pose_grad = mx.grad(pose_mse_loss)(cand_mx)
+    mx.eval(seg_grad, pose_grad)
+    seg_grad_np = np.abs(_mlx_value_to_numpy(seg_grad)).astype(np.float64, copy=False)
+    pose_grad_np = np.abs(_mlx_value_to_numpy(pose_grad)).astype(np.float64, copy=False)
+
+    full_atom_count = int(config.full_video_pair_count * np.prod(cand_full.shape[1:]))
+    surface = build_joint_p18_p19_waterfill_surface(
+        segnet_argmax_gradient=seg_grad_np,
+        pose_jacobian=pose_grad_np[..., None],
+        config=JointP18P19WaterfillConfig(
+            d_pose=float(config.full_video_d_pose),
+            pose_inverse_variance=(1.0,),
+            target_mode=config.normalized_target_mode,
+            pose_null_threshold=float(config.pose_null_threshold),
+            evidence_scope=PROPOSAL_ONLY_SCOPE,
+            full_video_atom_count=full_atom_count,
+            linearization_archive_sha=archive_sha,
+            gradient_reduction_semantics=FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION,
+        ),
+    )
+    joint = np.asarray(surface["joint_weight"], dtype=np.float64)
+    mask = np.asarray(surface["rate_attack_deadzone_mask"], dtype=bool)
+    shard_pair_count = int(config.pair_end - config.pair_start)
+    return {
+        "schema": Z8_FULL_VIDEO_VJP_SURFACE_SHARD_SCHEMA,
+        "surface_generation_backend": Z8_FULL_VIDEO_VJP_MLX_SHARD_BACKEND,
+        "local_axis": EVIDENCE_TAG_MLX,
+        "evidence_grade": EVIDENCE_GRADE_MLX,
+        "target_mode": config.normalized_target_mode,
+        "archive_sha256": archive_sha,
+        "linearization_archive_sha": archive_sha,
+        "shard_index": int(config.shard_index),
+        "pair_start": int(config.pair_start),
+        "pair_end": int(config.pair_end),
+        "pair_count": shard_pair_count,
+        "full_video_pair_count": int(config.full_video_pair_count),
+        "full_video_atom_count": full_atom_count,
+        "covered_atom_count": int(joint.size),
+        "gradient_reduction_semantics": FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION,
+        "pair_chunk_updates_forbidden": True,
+        "optimizer_update_applied": False,
+        "budget_spend_authority": False,
+        "optimizer_update_authority": False,
+        "surface_relinearization_required_after_accepted_mutation": True,
+        "vjp_coordinate_system": "candidate_pair_rgb_before_scorer_preprocess",
+        "preprocess_backend": "mlx_bilinear_resize_align_corners_false_plus_mlx_yuv6",
+        "segnet_loss_kind": "reference_argmax_nonsmooth_margin_hinge_vjp",
+        "seg_margin_delta": float(config.seg_margin_delta),
+        "pose_loss_kind": "reference_pose_head_first6_mse_vjp",
+        "full_video_d_pose": float(config.full_video_d_pose),
+        "pose_null_threshold": float(config.pose_null_threshold),
+        "scorer_hw": [int(config.scorer_hw[0]), int(config.scorer_hw[1])],
+        "rgb_value_range": float(config.rgb_value_range),
+        "reference_pairs_sha256": _array_sha256(ref),
+        "candidate_pairs_sha256": _array_sha256(cand),
+        "segnet_vjp_abs_max": float(seg_grad_np.max(initial=0.0)),
+        "pose_vjp_abs_max": float(pose_grad_np.max(initial=0.0)),
+        "joint_weight": joint,
+        "rate_attack_deadzone_mask": mask,
+        "joint_surface_report": {
+            key: value
+            for key, value in surface.items()
+            if key
+            not in {
+                "joint_weight",
+                "rate_attack_deadzone_mask",
+                "safe_rate_spend_mask",
+                "distortion_protect_mask",
+                "segnet_term",
+                "pose_term",
+                "pose_null_mask",
+            }
+        },
+        **FALSE_AUTHORITY,
+    }
+
+
+def reconstruct_z8_archive_pairs_rgb255(archive_bytes: bytes) -> np.ndarray:
+    """Reconstruct Z8 archive pairs as ``(pairs,2,H,W,3)`` float32 RGB in [0,255]."""
+
+    from tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_binding import (
+        reconstruct_pair_rgb_from_pyramid,
+    )
+    from tac.substrates.z8_hierarchical_predictive_coding.runtime_payload_bridge import (
+        projected_pair_pyramids_from_archive_bytes,
+    )
+
+    binding, pair_pyramids, _stats = projected_pair_pyramids_from_archive_bytes(archive_bytes)
+    pairs: list[np.ndarray] = []
+    for pyramid in pair_pyramids:
+        r0, r1 = reconstruct_pair_rgb_from_pyramid(binding, pyramid)
+        f0 = np.transpose(np.asarray(r0[0], dtype=np.float32), (1, 2, 0))
+        f1 = np.transpose(np.asarray(r1[0], dtype=np.float32), (1, 2, 0))
+        pairs.append(np.stack([f0, f1], axis=0))
+    if not pairs:
+        raise ValueError("Z8 archive reconstructs zero pairs")
+    return np.clip(np.stack(pairs, axis=0) * 255.0, 0.0, 255.0).astype(np.float32)
+
+
+def compute_full_video_mlx_pose_distortion(
+    *,
+    reference_pairs_rgb: Any,
+    candidate_pairs_rgb: Any,
+    mlx_scorer: Any,
+    rgb_value_range: float = 255.0,
+    scorer_hw: tuple[int, int] = (384, 512),
+    pair_chunk_size: int = 64,
+) -> float:
+    """Compute full-video PoseNet d_pose with MLX scorer preprocessing."""
+
+    import mlx.core as mx
+
+    ref = _as_pair_rgb_array(reference_pairs_rgb, name="reference_pairs_rgb")
+    cand = _as_pair_rgb_array(candidate_pairs_rgb, name="candidate_pairs_rgb")
+    if ref.shape != cand.shape:
+        raise ValueError(f"reference/candidate pair shapes disagree: {ref.shape} vs {cand.shape}")
+    if rgb_value_range <= 0.0:
+        raise ValueError("rgb_value_range must be positive")
+    if pair_chunk_size <= 0:
+        raise ValueError("pair_chunk_size must be positive")
+    pose_sum = 0.0
+    pose_count = 0
+    scale = 255.0 / float(rgb_value_range)
+    for start in range(0, int(ref.shape[0]), int(pair_chunk_size)):
+        end = min(int(ref.shape[0]), start + int(pair_chunk_size))
+        ref_mx = mx.array(np.ascontiguousarray(ref[start:end] * scale, dtype=np.float32))
+        cand_mx = mx.array(np.ascontiguousarray(cand[start:end] * scale, dtype=np.float32))
+        _ref_seg, ref_pose_input = _mlx_pairs_to_scorer_inputs_nhwc(ref_mx, scorer_hw=scorer_hw)
+        _cand_seg, cand_pose_input = _mlx_pairs_to_scorer_inputs_nhwc(cand_mx, scorer_hw=scorer_hw)
+        ref_pose = mlx_scorer.posenet(ref_pose_input)["pose"]
+        cand_pose = mlx_scorer.posenet(cand_pose_input)["pose"]
+        dims = min(6, int(ref_pose.shape[-1]), int(cand_pose.shape[-1]))
+        diff = cand_pose[..., :dims] - ref_pose[..., :dims]
+        per_pair = mx.mean(diff * diff, axis=1)
+        per_pair_np = _mlx_value_to_numpy(per_pair).astype(np.float64, copy=False)
+        pose_sum += float(np.sum(per_pair_np))
+        pose_count += int(per_pair_np.size)
+    return float(pose_sum / max(pose_count, 1))
+
+
+def build_z8_full_video_mlx_surface_provider(
+    *,
+    reference_pairs_rgb: Any,
+    mlx_scorer: Any,
+    acquisition_config: Z8FullVideoVjpAcquisitionConfig | None = None,
+    rgb_value_range: float = 255.0,
+    scorer_hw: tuple[int, int] = (384, 512),
+    seg_margin_delta: float = 1.0,
+    pose_null_threshold: float = 1e-8,
+    artifact_dir: str | Path | None = None,
+):
+    """Return a fresh-surface provider for relinearized dead-zone search.
+
+    The returned callable implements the loop spine's acquisition side:
+    current archive -> reconstruct candidate pairs -> full-video d_pose ->
+    all MLX VJP shards -> deterministic reduction bundle. It performs no
+    accept/reject decision itself; the materializer/search loop remains the
+    authority for hard archive projection and replay.
+    """
+
+    ref = _as_pair_rgb_array(reference_pairs_rgb, name="reference_pairs_rgb")
+    cfg = acquisition_config or Z8FullVideoVjpAcquisitionConfig()
+    artifact_root = Path(artifact_dir) if artifact_dir is not None else None
+
+    def _provider(iteration_index: int, current_archive_bytes: bytes) -> dict[str, Any]:
+        current_archive = bytes(current_archive_bytes)
+        candidate_pairs = reconstruct_z8_archive_pairs_rgb255(current_archive)
+        if candidate_pairs.shape != ref.shape:
+            raise ValueError(
+                "reference_pairs_rgb shape must match archive reconstruction shape: "
+                f"{ref.shape} vs {candidate_pairs.shape}"
+            )
+        d_pose = compute_full_video_mlx_pose_distortion(
+            reference_pairs_rgb=ref,
+            candidate_pairs_rgb=candidate_pairs,
+            mlx_scorer=mlx_scorer,
+            rgb_value_range=rgb_value_range,
+            scorer_hw=scorer_hw,
+            pair_chunk_size=cfg.pair_chunk_size,
+        )
+        plan = build_z8_full_video_vjp_acquisition_plan(current_archive, config=cfg)
+        shards: list[dict[str, Any]] = []
+        iter_dir = None
+        if artifact_root is not None:
+            iter_dir = artifact_root / f"iteration_{int(iteration_index):04d}"
+            write_z8_full_video_vjp_acquisition_plan(current_archive, iter_dir / "plan", config=cfg)
+        for shard_row in plan["pair_shards"]:
+            shard = build_z8_full_video_mlx_vjp_surface_shard(
+                current_archive,
+                reference_pairs_rgb=ref,
+                candidate_pairs_rgb=candidate_pairs,
+                mlx_scorer=mlx_scorer,
+                config=Z8FullVideoMlxVjpShardConfig(
+                    shard_index=int(shard_row["shard_index"]),
+                    pair_start=int(shard_row["pair_start"]),
+                    pair_end=int(shard_row["pair_end"]),
+                    full_video_pair_count=int(plan["archive_num_pairs"]),
+                    full_video_d_pose=d_pose,
+                    target_mode=cfg.normalized_target_mode,
+                    rgb_value_range=rgb_value_range,
+                    scorer_hw=scorer_hw,
+                    seg_margin_delta=seg_margin_delta,
+                    pose_null_threshold=pose_null_threshold,
+                ),
+            )
+            shards.append(shard)
+            if iter_dir is not None:
+                write_z8_full_video_vjp_surface_shard(shard, iter_dir / "shards")
+        bundle = assemble_z8_full_video_vjp_surface_bundle(
+            current_archive,
+            shard_surfaces=shards,
+            config=cfg,
+        )
+        bundle["provider_iteration_index"] = int(iteration_index)
+        bundle["full_video_d_pose"] = d_pose
+        bundle["surface_provider_backend"] = "z8_full_video_mlx_archive_fresh_surface_provider.v1"
+        if iter_dir is not None:
+            manifest = write_z8_full_video_vjp_surface_bundle(bundle, iter_dir / "bundle")
+            bundle["surface_provider_bundle_manifest"] = manifest
+        return bundle
+
+    return _provider
 
 
 def _pair_shards(num_pairs: int, chunk_size: int) -> list[dict[str, Any]]:
@@ -300,6 +735,54 @@ def write_z8_full_video_vjp_surface_bundle(
     return manifest
 
 
+def write_z8_full_video_vjp_surface_shard(
+    shard: Mapping[str, Any],
+    output_dir: str | Path,
+) -> dict[str, Any]:
+    """Write one archive-pinned MLX VJP shard plus queue manifest."""
+
+    out_dir = Path(output_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    shard_index = int(shard.get("shard_index", 0))
+    shard_path = out_dir / f"z8_full_video_vjp_surface_shard_{shard_index:04d}.npz"
+    metadata = {key: value for key, value in shard.items() if key not in {"joint_weight", "rate_attack_deadzone_mask"}}
+    np.savez_compressed(
+        shard_path,
+        joint_weight=np.asarray(shard["joint_weight"], dtype=np.float32),
+        rate_attack_deadzone_mask=np.asarray(shard["rate_attack_deadzone_mask"], dtype=bool),
+        shard_index=np.asarray(shard_index),
+        pair_start=np.asarray(int(shard["pair_start"])),
+        pair_end=np.asarray(int(shard["pair_end"])),
+        linearization_archive_sha=np.asarray(str(shard["linearization_archive_sha"])),
+        metadata_json=np.asarray(json.dumps(_jsonable(metadata), sort_keys=True)),
+    )
+    manifest = {
+        "schema": "z8_full_video_vjp_surface_shard_manifest.v1",
+        "surface_shard_schema": shard.get("schema", Z8_FULL_VIDEO_VJP_SURFACE_SHARD_SCHEMA),
+        "shard_path": shard_path.as_posix(),
+        "shard_sha256": _sha256_bytes(shard_path.read_bytes()),
+        "archive_sha256": shard.get("archive_sha256"),
+        "linearization_archive_sha": shard.get("linearization_archive_sha"),
+        "target_mode": shard.get("target_mode"),
+        "evidence_grade": shard.get("evidence_grade"),
+        "local_axis": shard.get("local_axis"),
+        "shard_index": shard_index,
+        "pair_start": int(shard["pair_start"]),
+        "pair_end": int(shard["pair_end"]),
+        "pair_count": int(shard["pair_end"]) - int(shard["pair_start"]),
+        "full_video_pair_count": shard.get("full_video_pair_count"),
+        "gradient_reduction_semantics": shard.get("gradient_reduction_semantics"),
+        "optimizer_update_applied": False,
+        "budget_spend_authority": False,
+        **FALSE_AUTHORITY,
+    }
+    manifest_path = out_dir / f"z8_full_video_vjp_surface_shard_{shard_index:04d}_manifest.json"
+    write_json(manifest_path, manifest)
+    manifest["manifest_path"] = manifest_path.as_posix()
+    write_json(manifest_path, manifest)
+    return manifest
+
+
 def write_z8_full_video_vjp_acquisition_plan(
     archive_bytes: bytes,
     output_dir: str | Path,
@@ -334,7 +817,12 @@ def load_z8_full_video_vjp_surface_shard_file(path: str | Path) -> dict[str, Any
         missing = sorted(key for key in required if key not in data)
         if missing:
             raise ValueError(f"{p} missing required shard keys: {missing}")
+        metadata: dict[str, Any] = {}
+        if "metadata_json" in data:
+            metadata_text = str(np.asarray(data["metadata_json"]).reshape(-1)[0])
+            metadata = json.loads(metadata_text) if metadata_text else {}
         return {
+            **metadata,
             "shard_index": int(np.asarray(data.get("shard_index", 0)).reshape(-1)[0]),
             "pair_start": int(np.asarray(data["pair_start"]).reshape(-1)[0]),
             "pair_end": int(np.asarray(data["pair_end"]).reshape(-1)[0]),
@@ -344,14 +832,16 @@ def load_z8_full_video_vjp_surface_shard_file(path: str | Path) -> dict[str, Any
                 data["rate_attack_deadzone_mask"],
                 dtype=bool,
             ),
-            "optimizer_update_applied": bool(np.asarray(data.get("optimizer_update_applied", False)).reshape(-1)[0]),
+            "optimizer_update_applied": bool(
+                np.asarray(metadata.get("optimizer_update_applied", False)).reshape(-1)[0]
+            ),
             "optimizer_update_authority": bool(
-                np.asarray(data.get("optimizer_update_authority", False)).reshape(-1)[0]
+                np.asarray(metadata.get("optimizer_update_authority", False)).reshape(-1)[0]
             ),
             "gradient_reduction_authority": bool(
-                np.asarray(data.get("gradient_reduction_authority", False)).reshape(-1)[0]
+                np.asarray(metadata.get("gradient_reduction_authority", False)).reshape(-1)[0]
             ),
-            "budget_spend_authority": bool(np.asarray(data.get("budget_spend_authority", False)).reshape(-1)[0]),
+            "budget_spend_authority": bool(np.asarray(metadata.get("budget_spend_authority", False)).reshape(-1)[0]),
         }
     payload = json.loads(p.read_text(encoding="utf-8"))
     return {
@@ -402,12 +892,20 @@ def build_z8_full_video_vjp_acquisition_contract() -> dict[str, Any]:
 
 __all__ = [
     "Z8_FULL_VIDEO_VJP_ACQUISITION_PLAN_SCHEMA",
+    "Z8_FULL_VIDEO_VJP_MLX_SHARD_BACKEND",
     "Z8_FULL_VIDEO_VJP_SURFACE_BUNDLE_SCHEMA",
+    "Z8_FULL_VIDEO_VJP_SURFACE_SHARD_SCHEMA",
+    "Z8FullVideoMlxVjpShardConfig",
     "Z8FullVideoVjpAcquisitionConfig",
     "assemble_z8_full_video_vjp_surface_bundle",
+    "build_z8_full_video_mlx_surface_provider",
+    "build_z8_full_video_mlx_vjp_surface_shard",
     "build_z8_full_video_vjp_acquisition_contract",
     "build_z8_full_video_vjp_acquisition_plan",
+    "compute_full_video_mlx_pose_distortion",
     "load_z8_full_video_vjp_surface_shard_file",
+    "reconstruct_z8_archive_pairs_rgb255",
     "write_z8_full_video_vjp_acquisition_plan",
     "write_z8_full_video_vjp_surface_bundle",
+    "write_z8_full_video_vjp_surface_shard",
 ]

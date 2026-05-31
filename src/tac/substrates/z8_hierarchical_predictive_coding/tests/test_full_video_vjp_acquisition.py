@@ -16,13 +16,19 @@ from tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_bindin
 from tac.substrates.z8_hierarchical_predictive_coding.full_video_vjp_acquisition import (
     FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION,
     SINGLE_UPDATE_AFTER_FULL_REDUCTION,
+    Z8_FULL_VIDEO_VJP_MLX_SHARD_BACKEND,
+    Z8FullVideoMlxVjpShardConfig,
     Z8FullVideoVjpAcquisitionConfig,
     assemble_z8_full_video_vjp_surface_bundle,
+    build_z8_full_video_mlx_surface_provider,
+    build_z8_full_video_mlx_vjp_surface_shard,
     build_z8_full_video_vjp_acquisition_contract,
     build_z8_full_video_vjp_acquisition_plan,
     load_z8_full_video_vjp_surface_shard_file,
+    reconstruct_z8_archive_pairs_rgb255,
     write_z8_full_video_vjp_acquisition_plan,
     write_z8_full_video_vjp_surface_bundle,
+    write_z8_full_video_vjp_surface_shard,
 )
 from tac.substrates.z8_hierarchical_predictive_coding.mlx_renderer import (
     Z8HierarchicalConfig,
@@ -66,6 +72,19 @@ def _surface_shard(
         "joint_weight": np.full(shape, value, dtype=np.float32),
         "rate_attack_deadzone_mask": np.ones(shape, dtype=bool),
     }
+
+
+class _ToyMlxScorer:
+    def __init__(self, mx_module):
+        self.mx = mx_module
+
+    def segnet(self, x_nhwc):
+        signal = self.mx.mean(x_nhwc, axis=-1, keepdims=True) * (0.1 / 255.0)
+        return self.mx.concatenate([signal, -signal], axis=-1)
+
+    def posenet(self, x_nhwc):
+        spatial = self.mx.mean(self.mx.mean(x_nhwc, axis=2), axis=1)
+        return {"pose": spatial}
 
 
 def test_full_video_vjp_plan_shards_archive_pairs_and_marks_probes_non_authority() -> None:
@@ -250,3 +269,80 @@ def test_full_video_vjp_contract_keeps_contest_and_production_modes_explicit() -
     assert "declared_corpus_manifest" in contract["production_budget_spend_requires"]
     assert contract["minibatch_window_gradients_role"] == "ranking_probe_only_between_full_video_passes"
     assert contract["score_claim"] is False
+
+
+def test_mlx_vjp_shard_producer_emits_non_authority_exact_reduction_surface(tmp_path: Path) -> None:
+    mx = pytest.importorskip("mlx.core")
+
+    archive = _archive_bytes(num_pairs=2)
+    rng = np.random.default_rng(316)
+    reference = rng.uniform(16, 220, size=(2, 2, 8, 10, 3)).astype(np.float32)
+    candidate = np.clip(
+        reference + rng.normal(0, 2.0, size=reference.shape),
+        0,
+        255,
+    ).astype(np.float32)
+
+    shard = build_z8_full_video_mlx_vjp_surface_shard(
+        archive,
+        reference_pairs_rgb=reference,
+        candidate_pairs_rgb=candidate,
+        mlx_scorer=_ToyMlxScorer(mx),
+        config=Z8FullVideoMlxVjpShardConfig(
+            shard_index=0,
+            pair_start=0,
+            pair_end=2,
+            full_video_pair_count=2,
+            full_video_d_pose=0.01,
+            scorer_hw=(8, 10),
+            seg_margin_delta=1.0,
+        ),
+    )
+
+    assert shard["surface_generation_backend"] == Z8_FULL_VIDEO_VJP_MLX_SHARD_BACKEND
+    assert shard["gradient_reduction_semantics"] == FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION
+    assert shard["optimizer_update_applied"] is False
+    assert shard["budget_spend_authority"] is False
+    assert shard["joint_weight"].shape == (2, 2, 8, 10, 3)
+    assert shard["rate_attack_deadzone_mask"].shape == (2, 2, 8, 10, 3)
+    assert shard["segnet_vjp_abs_max"] > 0.0
+    assert shard["pose_vjp_abs_max"] > 0.0
+    assert shard["score_claim"] is False
+
+    manifest = write_z8_full_video_vjp_surface_shard(shard, tmp_path)
+    loaded = load_z8_full_video_vjp_surface_shard_file(manifest["shard_path"])
+    bundle = assemble_z8_full_video_vjp_surface_bundle(
+        archive,
+        shard_surfaces=[loaded],
+        config=Z8FullVideoVjpAcquisitionConfig(pair_chunk_size=2),
+    )
+
+    assert loaded["surface_generation_backend"] == Z8_FULL_VIDEO_VJP_MLX_SHARD_BACKEND
+    assert loaded["budget_spend_authority"] is False
+    assert bundle["full_video_reduction_complete"] is True
+    assert bundle["gradient_reduction_authority"] is True
+    assert bundle["budget_spend_authority"] is True
+
+
+def test_mlx_surface_provider_reconstructs_archive_and_reduces_fresh_bundle(tmp_path: Path) -> None:
+    mx = pytest.importorskip("mlx.core")
+    archive = _archive_bytes(num_pairs=2)
+    reference_pairs = reconstruct_z8_archive_pairs_rgb255(archive)
+
+    provider = build_z8_full_video_mlx_surface_provider(
+        reference_pairs_rgb=reference_pairs,
+        mlx_scorer=_ToyMlxScorer(mx),
+        acquisition_config=Z8FullVideoVjpAcquisitionConfig(pair_chunk_size=1),
+        scorer_hw=(16, 16),
+        artifact_dir=tmp_path / "provider_artifacts",
+    )
+    bundle = provider(0, archive)
+
+    assert bundle["surface_provider_backend"] == "z8_full_video_mlx_archive_fresh_surface_provider.v1"
+    assert bundle["linearization_archive_sha"] == build_z8_full_video_vjp_acquisition_plan(archive)["archive_sha256"]
+    assert bundle["full_video_surface_coverage"] is True
+    assert bundle["full_video_reduction_complete"] is True
+    assert bundle["gradient_reduction_authority"] is True
+    assert bundle["budget_spend_authority"] is True
+    assert bundle["joint_weight"].shape == reference_pairs.shape
+    assert Path(bundle["surface_provider_bundle_manifest"]["manifest_path"]).is_file()
