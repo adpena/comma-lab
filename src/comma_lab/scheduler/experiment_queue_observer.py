@@ -23,6 +23,11 @@ from comma_lab.scheduler.experiment_queue import (
     queue_summary,
     resolve_worker_max_parallel,
 )
+from tac.optimization.archive_bound_candidate_contract import (
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_PAYLOAD_KEYS,
+    has_archive_bound_candidate_contract_payload,
+    selected_archive_bound_candidate_contract_from_payload,
+)
 from tac.optimization.materializer_feedback import (
     MATERIALIZER_FALSE_AUTHORITY,
     materializer_archive_delta,
@@ -629,6 +634,25 @@ def _payload_has_materializer_contract(payload: Mapping[str, Any]) -> bool:
     )
 
 
+def _archive_bound_candidate_contract_for_observer(
+    payload: Mapping[str, Any],
+    *,
+    context: str,
+) -> tuple[dict[str, Any] | None, list[str]]:
+    if not has_archive_bound_candidate_contract_payload(payload):
+        return None, []
+    try:
+        contract = selected_archive_bound_candidate_contract_from_payload(
+            payload,
+            label=f"{context}.archive_bound_candidate_contract",
+        )
+    except ValueError as exc:
+        return None, [f"archive_bound_candidate_contract_invalid:{exc}"]
+    if not contract:
+        return None, ["archive_bound_candidate_contract_missing"]
+    return dict(contract), []
+
+
 def _materializer_payload_revalidation(
     payload: Mapping[str, Any],
     *,
@@ -640,7 +664,16 @@ def _materializer_payload_revalidation(
         context=context,
         allow_materializer_effect_flags=True,
     )
-    candidate_archive = _candidate_archive_record(payload)
+    contract, contract_blockers = _archive_bound_candidate_contract_for_observer(
+        payload,
+        context=context,
+    )
+    blockers.extend(contract_blockers)
+    candidate_archive = (
+        dict(contract.get("candidate_archive") or {}) if contract else {}
+    )
+    if not candidate_archive:
+        candidate_archive = _candidate_archive_record(payload)
     candidate_validation = _file_custody_revalidation(
         candidate_archive,
         repo_root=repo_root,
@@ -659,12 +692,20 @@ def _materializer_payload_revalidation(
         )
     )
     blockers.extend(_runtime_identity_blockers(payload, repo_root=repo_root, context=context))
-    return {
+    out = {
         "schema": "observer_materializer_payload_revalidation.v1",
         "valid": not blockers,
         "blockers": blockers,
         "candidate_archive": candidate_validation,
     }
+    if contract is not None or contract_blockers:
+        out["archive_bound_candidate_contract_valid"] = (
+            contract is not None and not contract_blockers
+        )
+        out["archive_bound_candidate_contract_blockers"] = contract_blockers
+        if contract is not None:
+            out["archive_bound_candidate_contract_key"] = contract.get("contract_key")
+    return out
 
 
 def _jsonl_false_authority_revalidation(
@@ -1185,7 +1226,16 @@ def _materializer_queue_row_allows_deferred_runtime_identity(
         for blocker in revalidation_blockers
     ):
         return False
-    if row.get("ready_for_exact_eval_dispatch") is True:
+    contract, contract_blockers = _archive_bound_candidate_contract_for_observer(
+        row,
+        context="materializer_queue_row_deferred_runtime_identity",
+    )
+    if contract_blockers:
+        return False
+    if contract is not None:
+        if contract.get("ready_for_exact_eval_dispatch") is True:
+            return False
+    elif row.get("ready_for_exact_eval_dispatch") is True:
         return False
     if row.get("dispatch_attempted") is True or row.get("gpu_launched") is True:
         return False
@@ -1216,6 +1266,15 @@ def _optimizer_candidate_queue_materializer_row(
     serialized_delta = row.get("serialized_archive_delta")
     if delta is None and not isinstance(serialized_delta, Mapping):
         return None
+    contract, contract_blockers = _archive_bound_candidate_contract_for_observer(
+        row,
+        context="optimizer_candidate_queue_materializer_row",
+    )
+    has_contract_payload = has_archive_bound_candidate_contract_payload(row)
+    readiness_blockers = [
+        str(item) for item in row.get("readiness_blockers") or [] if str(item)
+    ]
+    readiness_blockers.extend(contract_blockers)
     out: dict[str, Any] = {
         "optimizer_candidate_queue_row_index": row_index,
         "candidate_id": row.get("candidate_id"),
@@ -1223,12 +1282,22 @@ def _optimizer_candidate_queue_materializer_row(
         "materializer_id": row.get("materializer_id"),
         "receiver_contract_kind": row.get("receiver_contract_kind"),
         "receiver_contract_satisfied": row.get("receiver_contract_satisfied"),
-        "readiness_blockers": [
-            str(item) for item in row.get("readiness_blockers") or [] if str(item)
-        ],
+        "readiness_blockers": _dedupe_strings(readiness_blockers),
     }
+    if has_contract_payload:
+        out["archive_bound_candidate_contract_valid"] = (
+            contract is not None and not contract_blockers
+        )
+        out["archive_bound_candidate_contract_blockers"] = contract_blockers
+        if contract is not None:
+            out["archive_bound_candidate_contract_key"] = contract.get("contract_key")
+        for key in ARCHIVE_BOUND_CANDIDATE_CONTRACT_PAYLOAD_KEYS:
+            if key in row:
+                out[key] = row[key]
     for key in MATERIALIZER_FALSE_AUTHORITY:
         if key in {"score_affecting_payload_changed", "charged_bits_changed"}:
+            continue
+        if has_contract_payload and key == "ready_for_exact_eval_dispatch":
             continue
         if key in row:
             out[key] = row[key]
@@ -1236,8 +1305,16 @@ def _optimizer_candidate_queue_materializer_row(
         if key in row:
             out[f"materializer_{key}"] = row[key] is True
     for key in REQUIRED_MATERIALIZER_FEEDBACK_FALSE_AUTHORITY_FIELDS:
+        if has_contract_payload and key == "ready_for_exact_eval_dispatch":
+            continue
         if key in row:
             out[key] = row[key]
+    if has_contract_payload:
+        out["ready_for_exact_eval_dispatch"] = (
+            bool(contract.get("ready_for_exact_eval_dispatch") is True)
+            if contract is not None and not contract_blockers
+            else False
+        )
     receiver = row.get("receiver_verification")
     if isinstance(receiver, Mapping):
         out["receiver_verification"] = {
