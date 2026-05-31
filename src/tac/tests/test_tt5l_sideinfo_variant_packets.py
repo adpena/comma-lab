@@ -135,6 +135,24 @@ def test_build_tt5l_sideinfo_variant_packets_writes_byte_closed_archives(
         assert archive_manifest["members"][0]["name"] == "0.bin"
         assert archive_manifest["score_claim"] is False
         assert archive_manifest["promotion_eligible"] is False
+        assert row["archive_bound_candidate_contract_count"] == 1
+        contract = row["archive_bound_candidate_contract"]
+        assert contract["family_id"] == "tt5l_sideinfo_effect_curve"
+        assert contract["entropy_position_label"] == "before_entropy_coder"
+        assert contract["candidate_archive"]["sha256"] == row["archive_sha256"]
+        assert contract["candidate_archive"]["bytes"] == row["archive_bytes"]
+        assert contract["archive_file_custody"]["custody_complete"] is True
+        assert contract["score_claim"] is False
+        assert (
+            archive_manifest["archive_bound_candidate_contract"]["contract_key"]
+            == contract["contract_key"]
+        )
+        assert (
+            archive_manifest["archive_bound_candidate_contract_surface"][
+                "selected_candidate_contract"
+            ]["contract_key"]
+            == contract["contract_key"]
+        )
         assert row["score_claim"] is False
         assert row["rank_or_kill_eligible"] is False
         assert row["dispatch_attempted"] is False
@@ -227,6 +245,12 @@ def test_build_tt5l_sideinfo_variant_packets_materializes_runtime_report(
     }
     assert "inflate.sh" in runtime_files
     assert "report.txt" in runtime_files
+    for row in manifest["variants"]:
+        contract = row["archive_bound_candidate_contract"]
+        assert contract["runtime_adapter_ready"] is True
+        assert contract["contest_runtime_decoder_adapter_ready"] is True
+        assert contract["runtime_consumption_proof_ready"] is False
+        assert contract["archive_bound_candidate_ready_for_exact_handoff"] is False
 
 
 def test_build_tt5l_sideinfo_variant_packets_blocks_noop_variant_bytes(

@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 import subprocess
+import sys
 from pathlib import Path
 
 from tac.exact_eval_custody import contest_score
@@ -452,6 +453,7 @@ def test_harvest_cells_cli_writes_builder_ready_json(tmp_path: Path) -> None:
 
     proc = subprocess.run(
         [
+            sys.executable,
             str(
                 REPO_ROOT
                 / "tools/build_l5_v2_tt5l_sideinfo_effect_curve_cells_from_lightning_plan.py"

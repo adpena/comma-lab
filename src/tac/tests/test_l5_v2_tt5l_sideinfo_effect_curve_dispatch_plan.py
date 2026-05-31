@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 from zipfile import ZipFile
 
@@ -236,6 +237,24 @@ def test_tt5l_sideinfo_dispatch_plan_materializes_five_byte_closed_work_units(
         assert row["archive"]["expected_sha256_match"] is True
         assert row["archive"]["path"] in command
         assert row["archive"]["sha256"] in command
+        assert row["archive_bound_candidate_contract_count"] == 1
+        contract = row["archive_bound_candidate_contract"]
+        assert contract["family_id"] == "tt5l_sideinfo_effect_curve"
+        assert contract["entropy_position_label"] == "before_entropy_coder"
+        assert contract["archive_bound_candidate_ready_for_exact_handoff"] is True
+        assert contract["candidate_archive"]["sha256"] == row["archive"]["sha256"]
+        assert (
+            row["archive_bound_candidate_contract_surface"][
+                "selected_candidate_contract"
+            ]["contract_key"]
+            == contract["contract_key"]
+        )
+        assert (
+            row["variant_manifest_row"]["archive_bound_candidate_contract"][
+                "contract_key"
+            ]
+            == contract["contract_key"]
+        )
         assert "tools/dispatch_modal_paired_auth_eval.py" in command
         assert "experiments/modal_auth_eval.py" not in command
         assert "experiments/modal_auth_eval_cpu.py" not in command
@@ -248,6 +267,12 @@ def test_tt5l_sideinfo_dispatch_plan_materializes_five_byte_closed_work_units(
         assert row["dispatch_blockers"] == []
         assert row["exact_dispatch_authority"]["authorized"] is True
         assert row["exact_dispatch_authority"]["blockers"] == []
+        for verdict in row["exact_dispatch_authority"]["axis_verdicts"].values():
+            assert verdict["facts"]["archive_bound_candidate_contract_present"] is True
+            assert (
+                verdict["facts"]["archive_bound_candidate_contract_key"]
+                == contract["contract_key"]
+            )
         assert "requires_paired_cpu_cuda_exact_eval_before_score_claim" in row[
             "score_claim_blockers"
         ]
@@ -376,6 +401,7 @@ def test_tt5l_sideinfo_dispatch_plan_cli_writes_json_and_markdown(
 
         proc = subprocess.run(
             [
+                sys.executable,
                 str(root / "tools" / "build_l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan.py"),
                 "--variant-manifest",
                 str(manifest),

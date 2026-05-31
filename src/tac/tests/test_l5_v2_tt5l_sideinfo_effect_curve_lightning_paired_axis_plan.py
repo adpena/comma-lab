@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 from tac.optimization.l5_v2_measurement_schedule import (
@@ -164,6 +165,7 @@ def test_tt5l_lightning_paired_axis_plan_cli_writes_json_and_markdown(
         manifest = _write_manifest(artifact_root)
         proc = subprocess.run(
             [
+                sys.executable,
                 str(
                     root
                     / "tools"

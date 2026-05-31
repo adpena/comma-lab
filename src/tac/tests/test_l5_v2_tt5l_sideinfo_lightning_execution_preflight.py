@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 from pathlib import Path
 
 from tac.optimization.l5_v2_measurement_schedule import (
@@ -163,6 +164,7 @@ def test_tt5l_lightning_execution_preflight_cli_writes_json_and_markdown(
 
     proc = subprocess.run(
         [
+            sys.executable,
             str(root / "tools" / "build_l5_v2_tt5l_sideinfo_lightning_execution_preflight.py"),
             "--lightning-plan-json",
             str(plan_path),

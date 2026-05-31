@@ -31,6 +31,10 @@ from tac.deploy.modal.paired_dispatch import (
 from tac.deploy.modal.paired_dispatch_contract import (
     paired_auth_eval_dispatch_command_blockers,
 )
+from tac.optimization.archive_bound_candidate_contract import (
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_PAYLOAD_KEYS,
+    archive_bound_candidate_contract_fields_for_row,
+)
 from tac.optimization.l5_v2_measurement_schedule import (
     L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES,
     L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS,
@@ -293,6 +297,92 @@ def _variant_custody_blockers(row: Mapping[str, Any]) -> list[str]:
     return blockers
 
 
+def _variant_contract_payload(row: Mapping[str, Any]) -> dict[str, Any]:
+    payload = {
+        key: row[key]
+        for key in ARCHIVE_BOUND_CANDIDATE_CONTRACT_PAYLOAD_KEYS
+        if key in row
+    }
+    if "archive_bound_candidate_contract_count" in row:
+        payload["archive_bound_candidate_contract_count"] = row[
+            "archive_bound_candidate_contract_count"
+        ]
+    return payload
+
+
+def _variant_archive_bound_contract_fields(
+    *,
+    variant: str,
+    row: Mapping[str, Any],
+    archive: Mapping[str, Any],
+    runtime: Mapping[str, Any],
+    repo_root: Path,
+) -> dict[str, Any]:
+    if row.get("archive_bound_candidate_contract"):
+        return _variant_contract_payload(row)
+    proof_path_text = str(row.get("runtime_consumption_proof_path") or "").strip()
+    proof_exists = (
+        bool(proof_path_text)
+        and _resolve_repo_path(proof_path_text, repo_root).is_file()
+    )
+    runtime_available = bool(runtime.get("submission_dir"))
+    contract_row = {
+        **dict(row),
+        "candidate_id": f"l5_v2_tt5l_sideinfo_effect_curve_{_slug(variant)}",
+        "candidate_family": "tt5l_sideinfo_effect_curve",
+        "target_kind": "tt5l_sideinfo_variant_packet",
+        "candidate_archive_path": archive.get("path") or row.get("archive_path"),
+        "candidate_archive_sha256": archive.get("sha256") or row.get("archive_sha256"),
+        "candidate_archive_bytes": archive.get("bytes") or row.get("archive_bytes"),
+        "byte_closed_candidate_materialized": archive.get("expected_sha256_match") is True,
+        "candidate_archive_materialized": archive.get("expected_sha256_match") is True,
+        "runtime_consumption_proof_ready": proof_exists,
+        "runtime_consumption_proof_path": proof_path_text,
+        "receiver_contract_kind": "tt5l_sideinfo_decode_only_receiver",
+        "receiver_contract_satisfied": proof_exists,
+        "runtime_adapter_ready": runtime_available,
+        "contest_runtime_decoder_adapter_ready": runtime_available,
+        "runtime_adapter_manifest": {
+            "schema": "tt5l_sideinfo_variant_runtime_adapter_manifest.v1",
+            "runtime_adapter_ready": runtime_available,
+            "contest_runtime_decoder_adapter_ready": runtime_available,
+            "decode_only_receiver_contract": runtime_available,
+            "submission_dir": runtime.get("submission_dir"),
+            "runtime_tree_sha256": runtime.get("runtime_tree_sha256"),
+            "runtime_content_tree_sha256": runtime.get("runtime_content_tree_sha256"),
+            "runtime_file_count": runtime.get("runtime_file_count"),
+        },
+        "semantic_payload_changed": row.get("sideinfo_changed_from_source") is True,
+        "score_affecting_payload_changed": (
+            row.get("archive_member_sha_changed_from_source") is True
+        ),
+        "charged_bits_changed": row.get("archive_sha_changed_from_source") is True,
+        "exact_axis_score_affecting_adjudication_required": True,
+    }
+    return archive_bound_candidate_contract_fields_for_row(
+        contract_row,
+        repo_root=repo_root,
+        family_id="tt5l_sideinfo_effect_curve",
+        candidate_chain_id=f"tt5l_sideinfo_variant_{_slug(variant)}",
+        entropy_position_label="before_entropy_coder",
+    )
+
+
+def _variant_archive_bound_contract_blockers(row: Mapping[str, Any]) -> list[str]:
+    contract = row.get("archive_bound_candidate_contract")
+    if not isinstance(contract, Mapping):
+        return ["archive_bound_candidate_contract_missing"]
+    blockers: list[str] = []
+    if contract.get("archive_bound_candidate_ready") is not True:
+        blockers.append("archive_bound_candidate_contract_not_ready")
+    if contract.get("archive_bound_candidate_ready_for_exact_handoff") is not True:
+        blockers.append("archive_bound_candidate_contract_not_ready_for_exact_handoff")
+    custody = contract.get("archive_file_custody")
+    if isinstance(custody, Mapping) and custody.get("custody_complete") is not True:
+        blockers.append("archive_bound_candidate_contract_custody_incomplete")
+    return blockers
+
+
 def _variant_lane_id_base(variant: str) -> str:
     return f"lane_l5_v2_tt5l_sideinfo_effect_curve_{_slug(variant)}"
 
@@ -515,6 +605,24 @@ def _exact_dispatch_authority_for_variant(
             or (Path(submission_dir) / "runtime_consumption_proof.json").as_posix()
         ),
     }
+    contract = row.get("archive_bound_candidate_contract")
+    contract_surface = row.get("archive_bound_candidate_contract_surface")
+    base_authority_row["source_archive_bound_candidate_contract_required"] = True
+    base_authority_row["source_archive_bound_candidate_contract_present"] = (
+        isinstance(contract, Mapping)
+    )
+    if isinstance(contract, Mapping):
+        base_authority_row["source_archive_bound_candidate_contract"] = dict(contract)
+        base_authority_row["source_archive_bound_candidate_contract_key"] = contract.get(
+            "contract_key"
+        )
+        base_authority_row["source_archive_bound_candidate_contract_schema"] = (
+            contract.get("schema")
+        )
+    if isinstance(contract_surface, Mapping):
+        base_authority_row["source_archive_bound_candidate_contract_surface"] = dict(
+            contract_surface
+        )
     verdicts: dict[str, Any] = {}
     combined_blockers: list[str] = []
     claims_path = repo_root / ".omx" / "state" / "active_lane_dispatch_claims.md"
@@ -586,9 +694,20 @@ def build_l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan(
     top_blockers: list[str] = list(manifest_blockers)
 
     for variant in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS:
-        row = variants_by_name.get(variant, {})
+        row = dict(variants_by_name.get(variant, {}))
         archive, archive_blockers = _variant_archive_status(row=row, repo_root=root)
+        row.update(
+            _variant_archive_bound_contract_fields(
+                variant=variant,
+                row=row,
+                archive=archive,
+                runtime=runtime,
+                repo_root=root,
+            )
+        )
+        row["archive_bound_candidate_contract_count"] = 1
         custody_blockers = _variant_custody_blockers(row)
+        contract_blockers = _variant_archive_bound_contract_blockers(row)
         archive_sha = str(archive.get("sha256") or "")
         command: list[str] = []
         command_blockers: list[str] = []
@@ -608,6 +727,7 @@ def build_l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan(
             list(manifest_blockers)
             + archive_blockers
             + custody_blockers
+            + contract_blockers
             + command_blockers
         )
         score_claim_blockers = _dedupe(
@@ -650,6 +770,7 @@ def build_l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan(
                 "required_axes": list(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES),
                 "required_cells": _required_cells(variant),
                 "archive": archive,
+                **_variant_contract_payload(row),
                 "runtime": {
                     "submission_dir": submission_dir,
                     "runtime_tree_sha256": runtime.get("runtime_tree_sha256"),
@@ -877,9 +998,20 @@ def build_l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan(
     blockers: list[str] = list(manifest_blockers)
 
     for variant in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS:
-        row = variants_by_name.get(variant, {})
+        row = dict(variants_by_name.get(variant, {}))
         archive, archive_blockers = _variant_archive_status(row=row, repo_root=root)
+        row.update(
+            _variant_archive_bound_contract_fields(
+                variant=variant,
+                row=row,
+                archive=archive,
+                runtime=runtime,
+                repo_root=root,
+            )
+        )
+        row["archive_bound_candidate_contract_count"] = 1
         custody_blockers = _variant_custody_blockers(row)
+        contract_blockers = _variant_archive_bound_contract_blockers(row)
         archive_sha = str(archive.get("sha256") or "")
         archive_bytes = archive.get("bytes")
         if not isinstance(archive_bytes, int):
@@ -887,7 +1019,10 @@ def build_l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan(
         pair_group_id = _variant_pair_group_id(variant, archive_sha) if archive_sha else ""
         run_id = _variant_run_id(variant, archive_sha) if archive_sha else ""
         variant_blockers = _dedupe(
-            list(manifest_blockers) + archive_blockers + custody_blockers
+            list(manifest_blockers)
+            + archive_blockers
+            + custody_blockers
+            + contract_blockers
         )
         if not submission_dir:
             variant_blockers.append("variant_manifest_submission_dir_missing")
@@ -1012,6 +1147,7 @@ def build_l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan(
                 "required_device": eval_device,
                 "archive_sha256": archive_sha,
                 "archive_size_bytes": archive_bytes,
+                **_variant_contract_payload(row),
                 "pair_group_id": pair_group_id,
                 "run_id": run_id,
                 "local_artifact_dir": local_dir_rel,

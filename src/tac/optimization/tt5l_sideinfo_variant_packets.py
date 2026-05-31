@@ -20,6 +20,9 @@ from typing import Any
 import brotli  # type: ignore[import-not-found]
 import numpy as np
 
+from tac.optimization.archive_bound_candidate_contract import (
+    archive_bound_candidate_contract_fields_for_row,
+)
 from tac.optimization.l5_v2_measurement_schedule import (
     L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS,
     L5V2_TT5L_SIDEINFO_VARIANT_PACKET_ARTIFACT_PATH,
@@ -87,11 +90,24 @@ def _write_json(path: Path, payload: Mapping[str, Any]) -> None:
     )
 
 
+def _as_text_list(value: object) -> list[str]:
+    if not isinstance(value, list | tuple):
+        return []
+    return [str(item).strip() for item in value if str(item).strip()]
+
+
 def _repo_relative(path: Path, repo_root: Path) -> str:
     try:
         return str(path.resolve().relative_to(repo_root.resolve()))
     except ValueError:
         return str(path)
+
+
+def _resolve_repo_path(path: str | Path, repo_root: Path) -> Path:
+    candidate = Path(path)
+    if not candidate.is_absolute():
+        candidate = repo_root / candidate
+    return candidate
 
 
 def _select_archive_member(zf: zipfile.ZipFile) -> zipfile.ZipInfo:
@@ -451,6 +467,72 @@ def _runtime_custody(
     }
 
 
+def _runtime_adapter_manifest(runtime: Mapping[str, Any]) -> dict[str, Any]:
+    runtime_available = runtime.get("available") is True
+    return {
+        "schema": "tt5l_sideinfo_variant_runtime_adapter_manifest.v1",
+        "runtime_adapter_ready": runtime_available,
+        "contest_runtime_decoder_adapter_ready": runtime_available,
+        "decode_only_receiver_contract": runtime_available,
+        "submission_dir": runtime.get("submission_dir"),
+        "runtime_tree_sha256": runtime.get("runtime_tree_sha256"),
+        "runtime_content_tree_sha256": runtime.get("runtime_content_tree_sha256"),
+        "runtime_file_count": runtime.get("runtime_file_count"),
+    }
+
+
+def _contractize_variant_row(
+    row: dict[str, Any],
+    *,
+    runtime: Mapping[str, Any],
+    repo_root: Path,
+) -> None:
+    variant = str(row.get("variant") or "unknown").strip() or "unknown"
+    proof_path_text = str(row.get("runtime_consumption_proof_path") or "").strip()
+    proof_exists = (
+        bool(proof_path_text)
+        and _resolve_repo_path(proof_path_text, repo_root).is_file()
+    )
+    runtime_available = runtime.get("available") is True
+    contract_input = {
+        **row,
+        "candidate_id": f"tt5l_sideinfo_variant_{variant}",
+        "candidate_family": "tt5l_sideinfo_effect_curve",
+        "target_kind": "tt5l_sideinfo_variant_packet",
+        "candidate_archive_path": row.get("archive_path"),
+        "candidate_archive_sha256": row.get("archive_sha256"),
+        "candidate_archive_bytes": row.get("archive_bytes"),
+        "byte_closed_candidate_materialized": True,
+        "candidate_archive_materialized": True,
+        "runtime_consumption_proof_ready": proof_exists,
+        "runtime_consumption_proof_path": proof_path_text,
+        "receiver_contract_kind": "tt5l_sideinfo_decode_only_receiver",
+        "receiver_contract_satisfied": proof_exists,
+        "runtime_adapter_ready": runtime_available,
+        "contest_runtime_decoder_adapter_ready": runtime_available,
+        "runtime_adapter_manifest": _runtime_adapter_manifest(runtime),
+        "semantic_payload_changed": row.get("sideinfo_changed_from_source") is True,
+        "score_affecting_payload_changed": (
+            row.get("archive_member_sha_changed_from_source") is True
+        ),
+        "charged_bits_changed": row.get("archive_sha_changed_from_source") is True,
+        "exact_axis_score_affecting_adjudication_required": True,
+        "blockers": [
+            *_as_text_list(row.get("blockers")),
+            *([] if proof_exists else ["runtime_consumption_proof_missing"]),
+        ],
+    }
+    contract_fields = archive_bound_candidate_contract_fields_for_row(
+        contract_input,
+        repo_root=repo_root,
+        family_id="tt5l_sideinfo_effect_curve",
+        candidate_chain_id=f"tt5l_sideinfo_variant_{variant}",
+        entropy_position_label="before_entropy_coder",
+    )
+    row.update(contract_fields)
+    row["archive_bound_candidate_contract_count"] = 1
+
+
 def build_tt5l_sideinfo_variant_packets(
     *,
     source_archive: str | Path,
@@ -633,6 +715,26 @@ def build_tt5l_sideinfo_variant_packets(
     if runtime_report_path:
         runtime["report_path"] = runtime_report_path
     manifest_blockers.extend(str(item) for item in runtime.get("blockers", []))
+    for row in variant_rows:
+        _contractize_variant_row(row, runtime=runtime, repo_root=root)
+        archive_manifest_path = root / str(row["archive_manifest_path"])
+        archive_manifest = dict(row.get("archive_manifest") or {})
+        archive_manifest.update(
+            {
+                key: row[key]
+                for key in (
+                    "archive_bound_candidate_contract_schema",
+                    "archive_bound_candidate_contract",
+                    "archive_bound_candidate_contract_surface_schema",
+                    "archive_bound_candidate_contract_surface",
+                    "archive_bound_candidate_contract_count",
+                )
+                if key in row
+            }
+        )
+        _write_json(archive_manifest_path, archive_manifest)
+        row["archive_manifest_sha256"] = _sha256_file(archive_manifest_path)
+        row["archive_manifest"] = archive_manifest
 
     return {
         "schema": TT5L_SIDEINFO_VARIANT_PACKET_SCHEMA,
