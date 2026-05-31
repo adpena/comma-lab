@@ -83,6 +83,8 @@ Z7_MAMBA2_MLX_ARCHIVE_TRANSFORM_KIND = (
 Z7_MAMBA2_MLX_REFERENCE_ARCHIVE_TRANSFORM_KIND = (
     "z7_mamba2_mlx_reference_s6_predictive_coding_archive"
 )
+Z7_MAMBA2_MLX_CONTEST_NUM_PAIRS = 600
+Z7_MAMBA2_MLX_CONTEST_RAW_BYTES = 1164 * 874 * 1200 * 3
 
 
 def z7_mamba2_pytorch_config_from_mlx(
@@ -283,11 +285,55 @@ def _archive_transform_kind_from_config(cfg: Any) -> str:
 
 
 def _archive_extra_blockers_from_config(cfg: Any) -> list[str]:
+    blockers: list[str] = []
     if bool(getattr(cfg, "use_canonical_ssd_mlx_backend", False)):
         ssd_blocker = str(getattr(cfg, "canonical_ssd_mlx_blocker", "") or "")
         if ssd_blocker:
-            return [ssd_blocker]
-    return []
+            blockers.append(ssd_blocker)
+    if int(getattr(cfg, "num_pairs", 0)) != Z7_MAMBA2_MLX_CONTEST_NUM_PAIRS:
+        blockers.extend(
+            [
+                "z7_mamba2_mlx_partial_archive_not_contest_runtime_closure",
+                "z7_mamba2_mlx_600_pair_archive_or_runtime_cycling_required",
+            ]
+        )
+    return blockers
+
+
+def expected_receiver_output_bytes_for_pairs(num_pairs: int) -> int:
+    """Return full contest raw bytes required for exact-ready Z7 handoff."""
+
+    if not isinstance(num_pairs, int) or num_pairs < 1:
+        raise ValueError(f"num_pairs must be a positive int; got {num_pairs!r}")
+    return Z7_MAMBA2_MLX_CONTEST_RAW_BYTES
+
+
+def _runtime_manifest_extra_from_config(
+    cfg: Any,
+    *,
+    expected_receiver_output_bytes: int,
+    meta: Mapping[str, object] | None,
+) -> dict[str, object]:
+    archive_meta = dict(meta or {})
+    return {
+        "schema": "z7_mamba2_mlx_runtime_adapter_manifest.v1",
+        "mamba2_archive_backend": (
+            "ssd_reference"
+            if bool(getattr(cfg, "use_canonical_ssd_mlx_backend", False))
+            else "reference_torch"
+        ),
+        "canonical_ssd_mlx_runtime_bridge_wired": bool(
+            getattr(cfg, "use_canonical_ssd_mlx_backend", False)
+        ),
+        "mamba2_num_pairs": int(getattr(cfg, "num_pairs", 0)),
+        "contest_num_pairs_required": Z7_MAMBA2_MLX_CONTEST_NUM_PAIRS,
+        "partial_archive_receiver_proof_advisory_only": (
+            int(getattr(cfg, "num_pairs", 0)) != Z7_MAMBA2_MLX_CONTEST_NUM_PAIRS
+        ),
+        "receiver_expected_raw_bytes": int(expected_receiver_output_bytes),
+        "score_aware_training": archive_meta.get("score_aware_training"),
+        "training_replay_argv": archive_meta.get("training_replay_argv"),
+    }
 
 
 def export_z7_mamba2_mlx_archive(
@@ -371,6 +417,7 @@ def export_z7_mamba2_mlx_archive(
     )
     archive_sha256 = sha256_file(archive_zip_path)
     archive_bytes = archive_zip_path.stat().st_size
+    expected_raw_bytes = expected_receiver_output_bytes_for_pairs(int(cfg.num_pairs))
     if emit_archive_bound_candidate_package:
         receiver_proof = run_generated_inflate_receiver_proof(
             archive_zip_path=archive_zip_path,
@@ -382,6 +429,7 @@ def export_z7_mamba2_mlx_archive(
             proof_schema=Z7_MAMBA2_MLX_RECEIVER_PROOF_SCHEMA,
             proof_filename="z7_mamba2_mlx_receiver_proof.json",
             candidate_label="z7_mamba2",
+            expected_receiver_output_bytes=expected_raw_bytes,
             retain_receiver_output=retain_receiver_proof_output,
         )
         build_archive_bound_candidate_runtime_package(
@@ -399,23 +447,11 @@ def export_z7_mamba2_mlx_archive(
             receiver_contract_kind=(
                 "z7_mamba2_mlx_generated_inflate_sh_decode_only_receiver"
             ),
-            runtime_adapter_manifest_extra={
-                "schema": "z7_mamba2_mlx_runtime_adapter_manifest.v1",
-                "mamba2_archive_backend": (
-                    "ssd_reference"
-                    if bool(getattr(cfg, "use_canonical_ssd_mlx_backend", False))
-                    else "reference_torch"
-                ),
-                "canonical_ssd_mlx_runtime_bridge_wired": bool(
-                    getattr(cfg, "use_canonical_ssd_mlx_backend", False)
-                ),
-                "score_aware_training": dict(meta or {}).get(
-                    "score_aware_training"
-                ),
-                "training_replay_argv": dict(meta or {}).get(
-                    "training_replay_argv"
-                ),
-            },
+            runtime_adapter_manifest_extra=_runtime_manifest_extra_from_config(
+                cfg,
+                expected_receiver_output_bytes=expected_raw_bytes,
+                meta=meta,
+            ),
             candidate_row_schema="z7_mamba2_mlx_archive_bound_candidate_row.v1",
             wrapper_schema=Z7_MAMBA2_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
             extra_blockers=_archive_extra_blockers_from_config(cfg),
@@ -451,6 +487,7 @@ def export_z7_mamba2_mlx_archive_bound_candidate_package(
         out_dir = root / out_dir
     submission_dir = out_dir / "submission"
     cfg = model.cfg
+    expected_raw_bytes = expected_receiver_output_bytes_for_pairs(int(cfg.num_pairs))
     receiver_proof = run_generated_inflate_receiver_proof(
         archive_zip_path=archive_zip_path,
         archive_sha256=archive_sha256,
@@ -461,6 +498,7 @@ def export_z7_mamba2_mlx_archive_bound_candidate_package(
         proof_schema=Z7_MAMBA2_MLX_RECEIVER_PROOF_SCHEMA,
         proof_filename="z7_mamba2_mlx_receiver_proof.json",
         candidate_label="z7_mamba2",
+        expected_receiver_output_bytes=expected_raw_bytes,
         retain_receiver_output=retain_receiver_proof_output,
     )
     return build_archive_bound_candidate_runtime_package(
@@ -476,19 +514,11 @@ def export_z7_mamba2_mlx_archive_bound_candidate_package(
         repo_root=root,
         receiver_proof=receiver_proof,
         receiver_contract_kind="z7_mamba2_mlx_generated_inflate_sh_decode_only_receiver",
-        runtime_adapter_manifest_extra={
-            "schema": "z7_mamba2_mlx_runtime_adapter_manifest.v1",
-            "mamba2_archive_backend": (
-                "ssd_reference"
-                if bool(getattr(cfg, "use_canonical_ssd_mlx_backend", False))
-                else "reference_torch"
-            ),
-            "canonical_ssd_mlx_runtime_bridge_wired": bool(
-                getattr(cfg, "use_canonical_ssd_mlx_backend", False)
-            ),
-            "score_aware_training": dict(meta or {}).get("score_aware_training"),
-            "training_replay_argv": dict(meta or {}).get("training_replay_argv"),
-        },
+        runtime_adapter_manifest_extra=_runtime_manifest_extra_from_config(
+            cfg,
+            expected_receiver_output_bytes=expected_raw_bytes,
+            meta=meta,
+        ),
         candidate_row_schema="z7_mamba2_mlx_archive_bound_candidate_row.v1",
         wrapper_schema=Z7_MAMBA2_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
         extra_blockers=_archive_extra_blockers_from_config(cfg),
@@ -501,7 +531,10 @@ __all__ = [
     "Z7_MAMBA2_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA",
     "Z7_MAMBA2_MLX_ARCHIVE_CANDIDATE_FAMILY",
     "Z7_MAMBA2_MLX_ARCHIVE_TRANSFORM_KIND",
+    "Z7_MAMBA2_MLX_CONTEST_NUM_PAIRS",
+    "Z7_MAMBA2_MLX_CONTEST_RAW_BYTES",
     "Z7_MAMBA2_MLX_REFERENCE_ARCHIVE_TRANSFORM_KIND",
+    "expected_receiver_output_bytes_for_pairs",
     "export_z7_mamba2_mlx_archive",
     "export_z7_mamba2_mlx_archive_bound_candidate_package",
     "pack_archive_from_exported_state_dict",

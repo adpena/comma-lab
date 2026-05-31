@@ -72,6 +72,13 @@ def test_z8_archive_export_emits_runtime_tree_without_mlx_import(tmp_path: Path)
     assert "wavelet_blob" in proof["pixel_consumed_sections"]
     assert "dreamer_state_blob" in proof["custody_only_sections"]
     assert proof["mamba_dreamer_wyner_ziv_pixel_consumption_proven"] is False
+    bridge_report_path = tmp_path / "z8_hpc1_runtime_payload_bridge_report.json"
+    assert bridge_report_path.is_file()
+    bridge_report = json.loads(bridge_report_path.read_text(encoding="utf-8"))
+    assert bridge_report["wyner_ziv_top_state_decode_ready"] is True
+    assert bridge_report["wyner_ziv_top_state_count"] == 1
+    assert bridge_report["state_to_pixel_projection_ready"] is False
+    assert bridge_report["pixel_consumption_proven"] is False
     submission = tmp_path / "submission"
     assert (submission / "0.bin").is_file()
     assert (submission / "inflate.sh").is_file()
@@ -129,6 +136,14 @@ def test_z8_archive_bound_package_stays_false_authority_when_receiver_blocked(
             "_proved_not_pixel_consumed"
         )
         assert status == expected_status
+        bridge_report = manifest_extra["runtime_payload_bridge_report"]
+        assert bridge_report["wyner_ziv_top_state_decode_ready"] is True
+        assert bridge_report["wyner_ziv_top_state_count"] == 1
+        assert bridge_report["state_to_pixel_projection_ready"] is False
+        assert bridge_report["pixel_consumption_proven"] is False
+        assert bridge_report["next_required_task"] == (
+            "fit_and_archive_state_to_top_ll_projection"
+        )
         assert "mamba_mallat_dreamer_wyner_ziv_stack" not in (
             manifest_extra["predictive_coding_family"]
         )
@@ -197,5 +212,9 @@ def test_z8_archive_bound_package_stays_false_authority_when_receiver_blocked(
     assert "archive_bound_candidate_contract" in row
     assert any(
         str(path).endswith("z8_hpc1_byte_mutation_proof.json")
+        for path in row["input_artifacts"]
+    )
+    assert any(
+        str(path).endswith("z8_hpc1_runtime_payload_bridge_report.json")
         for path in row["input_artifacts"]
     )

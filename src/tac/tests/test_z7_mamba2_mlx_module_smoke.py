@@ -78,6 +78,7 @@ def test_z7_mamba2_mlx_canonical_ssd_backend_uses_helper_and_exports_bridge(
         Z7_MAMBA2_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
         Z7_MAMBA2_MLX_ARCHIVE_CANDIDATE_FAMILY,
         Z7_MAMBA2_MLX_ARCHIVE_TRANSFORM_KIND,
+        Z7_MAMBA2_MLX_CONTEST_RAW_BYTES,
         export_z7_mamba2_mlx_archive,
         pack_archive_from_exported_state_dict,
     )
@@ -167,29 +168,41 @@ def test_z7_mamba2_mlx_canonical_ssd_backend_uses_helper_and_exports_bridge(
     adapter_package = json.loads(adapter_package_path.read_text(encoding="utf-8"))
     assert adapter_package["schema"] == Z7_MAMBA2_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA
     receiver_proof = adapter_package["receiver_proof"]
-    assert receiver_proof["runtime_consumption_proof_ready"] is True
-    assert receiver_proof["receiver_contract_satisfied"] is True
+    assert receiver_proof["runtime_consumption_proof_ready"] is False
+    assert receiver_proof["receiver_contract_satisfied"] is False
     assert receiver_proof["receiver_output_retained"] is False
     assert receiver_proof["receiver_output_sha256"]
+    assert receiver_proof["expected_receiver_output_bytes"] == (
+        Z7_MAMBA2_MLX_CONTEST_RAW_BYTES
+    )
+    assert "z7_mamba2_generated_inflate_sh_output_bytes_mismatch" in (
+        receiver_proof["blockers"]
+    )
     assert not (archive_zip.parent / "receiver_proof" / "runtime_out" / "0").exists()
     shared_package = adapter_package["archive_bound_candidate_adapter_package"]
     assert shared_package["candidate_family"] == Z7_MAMBA2_MLX_ARCHIVE_CANDIDATE_FAMILY
-    assert shared_package["ready_contract_count"] == 1
-    assert shared_package["receiver_proof_gate_passed_count"] == 1
+    assert shared_package["ready_contract_count"] == 0
+    assert shared_package["receiver_proof_gate_passed_count"] == 0
     assert shared_package["mlx_triage_ready_count"] == 0
-    contract = shared_package["candidate_rows"][0]["archive_bound_candidate_contract"]
-    assert shared_package["candidate_rows"][0]["runtime_adapter_manifest"][
-        "score_aware_training"
-    ] == score_aware_training
+    row = shared_package["candidate_rows"][0]
+    contract = row["archive_bound_candidate_contract"]
+    runtime_manifest = row["runtime_adapter_manifest"]
+    assert runtime_manifest["score_aware_training"] == score_aware_training
+    assert runtime_manifest["receiver_expected_raw_bytes"] == (
+        Z7_MAMBA2_MLX_CONTEST_RAW_BYTES
+    )
+    assert runtime_manifest["partial_archive_receiver_proof_advisory_only"] is True
     assert contract["archive_native_transform_kind"] == Z7_MAMBA2_MLX_ARCHIVE_TRANSFORM_KIND
     assert contract["entropy_position_label"] == "before_entropy_coder"
     assert "z7_mamba2" in contract["archive_substrate_tags"]
     assert "mlx_substrate" in contract["archive_substrate_tags"]
     assert contract["runtime_adapter_ready"] is True
     assert contract["contest_runtime_decoder_adapter_ready"] is True
-    assert contract["archive_bound_candidate_ready_for_exact_handoff"] is True
+    assert contract["archive_bound_candidate_ready_for_exact_handoff"] is False
     assert contract["ready_for_exact_eval_dispatch"] is False
     exact_blockers = shared_package["exact_axis_blockers"][0]["blockers"]
+    assert "z7_mamba2_generated_inflate_sh_output_bytes_mismatch" in exact_blockers
+    assert "z7_mamba2_mlx_partial_archive_not_contest_runtime_closure" in exact_blockers
     assert "canonical_ssd_mlx_exact_cpu_cuda_replay_required" in exact_blockers
     assert "contest_cpu_or_cuda_authority_required" in exact_blockers
     assert "lane_preclaim_required_before_exact_eval" in exact_blockers

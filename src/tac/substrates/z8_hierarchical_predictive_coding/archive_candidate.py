@@ -34,6 +34,9 @@ from tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_bindin
     build_z8hpc1_archive_bytes_from_canonical_quadruple,
 )
 from tac.substrates.z8_hierarchical_predictive_coding.inflate import CONTEST_RAW_BYTES
+from tac.substrates.z8_hierarchical_predictive_coding.runtime_payload_bridge import (
+    build_runtime_payload_bridge_report,
+)
 
 Z8_HPC_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA = (
     "z8_hierarchical_predictive_coding_archive_bound_adapter_package.v1"
@@ -123,6 +126,7 @@ def _write_z8_runtime(
 def _z8_runtime_adapter_manifest_extra(
     *,
     byte_mutation_proof: Mapping[str, Any] | None = None,
+    runtime_payload_bridge_report: Mapping[str, Any] | None = None,
     repo_root: Path | None = None,
 ) -> dict[str, Any]:
     mamba_dreamer_wz_proven = (
@@ -162,6 +166,36 @@ def _z8_runtime_adapter_manifest_extra(
             subpkg for subpkg, _files in Z8_RUNTIME_EXTRA_TAC_SUBPACKAGES
         ],
     }
+    if runtime_payload_bridge_report is not None:
+        report_path = str(runtime_payload_bridge_report.get("report_path") or "")
+        if report_path and repo_root is not None:
+            report_path = _repo_relative(Path(report_path), repo_root)
+        manifest["runtime_payload_bridge_report"] = {
+            "schema": runtime_payload_bridge_report.get("schema"),
+            "report_path": report_path or None,
+            "wyner_ziv_top_state_decode_ready": bool(
+                runtime_payload_bridge_report.get(
+                    "wyner_ziv_top_state_decode_ready"
+                )
+            ),
+            "wyner_ziv_top_state_count": runtime_payload_bridge_report.get(
+                "wyner_ziv_top_state_count"
+            ),
+            "wyner_ziv_top_state_sha256": runtime_payload_bridge_report.get(
+                "wyner_ziv_top_state_sha256"
+            ),
+            "state_to_pixel_projection_ready": bool(
+                runtime_payload_bridge_report.get(
+                    "state_to_pixel_projection_ready"
+                )
+            ),
+            "pixel_consumption_proven": bool(
+                runtime_payload_bridge_report.get("pixel_consumption_proven")
+            ),
+            "next_required_task": runtime_payload_bridge_report.get(
+                "next_required_task"
+            ),
+        }
     if byte_mutation_proof is not None:
         proof_path = str(byte_mutation_proof.get("proof_path") or "")
         if proof_path and repo_root is not None:
@@ -222,6 +256,13 @@ def export_z8hpc1_archive_bytes(
     archive_bytes_count = archive_zip_path.stat().st_size
     byte_mutation_proof: dict[str, Any] | None = None
     byte_mutation_proof_path = out_dir / "z8_hpc1_byte_mutation_proof.json"
+    runtime_payload_bridge_report_path = (
+        out_dir / "z8_hpc1_runtime_payload_bridge_report.json"
+    )
+    runtime_payload_bridge_report = build_runtime_payload_bridge_report(
+        bin_bytes,
+        report_out=runtime_payload_bridge_report_path,
+    )
     if emit_byte_mutation_proof:
         byte_mutation_proof = probe_z8_archive_distinguishing_feature(
             out_dir / "0.bin",
@@ -239,6 +280,9 @@ def export_z8hpc1_archive_bytes(
         ]
         if byte_mutation_proof is not None:
             input_artifacts.append(_repo_relative(byte_mutation_proof_path, root))
+        input_artifacts.append(
+            _repo_relative(runtime_payload_bridge_report_path, root)
+        )
         emit_archive_bound_candidate_runtime_package(
             adapter_id=Z8_HPC_ARCHIVE_BOUND_ADAPTER_ID,
             candidate_family=Z8_HPC_ARCHIVE_CANDIDATE_FAMILY,
@@ -260,6 +304,7 @@ def export_z8hpc1_archive_bytes(
             retain_receiver_output=retain_receiver_proof_output,
             runtime_adapter_manifest_extra=_z8_runtime_adapter_manifest_extra(
                 byte_mutation_proof=byte_mutation_proof,
+                runtime_payload_bridge_report=runtime_payload_bridge_report,
                 repo_root=root,
             ),
             candidate_row_schema="z8_hpc1_archive_bound_candidate_row.v1",
