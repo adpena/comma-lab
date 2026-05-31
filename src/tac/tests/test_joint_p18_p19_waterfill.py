@@ -11,6 +11,7 @@ from tac.optimization.joint_p18_p19_waterfill import (
     JOINT_P18_P19_IMPLICIT_ALLOCATOR_SCHEMA,
     JOINT_P18_P19_RATE_ATTACK_ROLE,
     JOINT_P18_P19_WEIGHT_FORMULA,
+    JOINT_P18_SEGNET_CLASS_BOUNDARY_SCHEMA,
     JointP18P19WaterfillAuthorityError,
     JointP18P19WaterfillConfig,
     build_joint_p18_p19_waterfill_surface,
@@ -111,6 +112,44 @@ def test_joint_p18_p19_weight_uses_segnet_and_pose_mahalanobis_terms() -> None:
     assert surface["ready_for_budget_spend"] is False
     assert surface["score_claim"] is False
     assert surface["ready_for_exact_eval_dispatch"] is False
+
+
+def test_joint_p18_p19_class_boundary_modifier_blocks_boundary_coarsening() -> None:
+    seg = np.array([0.01, 0.01, 0.01, 0.01], dtype=np.float64)
+    pose_j = np.zeros((4, 1), dtype=np.float64)
+    class_weight = np.array([1.0, 4.0, 1.0, 1.0], dtype=np.float64)
+    boundary_mask = np.array([False, True, False, False])
+    class_ids = np.array([0, 1, 0, 2], dtype=np.int64)
+
+    surface = build_joint_p18_p19_waterfill_surface(
+        segnet_argmax_gradient=seg,
+        pose_jacobian=pose_j,
+        segnet_class_region_weight=class_weight,
+        segnet_boundary_protect_mask=boundary_mask,
+        segnet_class_ids=class_ids,
+        config=JointP18P19WaterfillConfig(
+            d_pose=1e-4,
+            pose_inverse_variance=(1.0,),
+            evidence_scope=FULL_VIDEO_AUTHORITY_SCOPE,
+            full_video_atom_count=seg.size,
+            linearization_archive_sha=ARCHIVE_A_SHA,
+            gradient_reduction_semantics=FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION,
+        ),
+    )
+
+    report = surface["segnet_class_boundary_report"]
+    assert report["schema"] == JOINT_P18_SEGNET_CLASS_BOUNDARY_SCHEMA
+    assert report["class_region_weight_applied"] is True
+    assert report["boundary_protect_mask_applied"] is True
+    assert report["boundary_protect_atom_count"] == 1
+    assert report["safe_rate_spend_atom_count"] == 3
+    assert report["class_histogram"] == {"0": 2, "1": 1, "2": 1}
+    assert surface["safe_rate_spend_mask"].tolist() == [True, False, True, True]
+    assert surface["rate_attack_deadzone_mask"][1].item() is False
+    assert surface["distortion_protect_mask"][1].item() is True
+    np.testing.assert_allclose(surface["segnet_term"], 100.0 * seg * class_weight)
+    assert surface["ready_for_budget_spend"] is True
+    assert surface["implicit_allocator_authority"] is True
 
 
 def test_joint_p18_p19_requires_full_video_authority_for_budget_spend() -> None:

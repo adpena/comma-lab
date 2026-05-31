@@ -85,6 +85,8 @@ def _surface_for_archive(
         "pose_axis_count": 6,
         "pose_inverse_variance": [1.0] * 6,
         "pose_surface_blockers": [],
+        "segnet_class_boundary_authority": True,
+        "segnet_class_boundary_blockers": [],
     }
 
 
@@ -116,6 +118,7 @@ def test_joint_p18_p19_deadzone_mutates_wavelet_details_and_reduces_rate() -> No
     assert result["surface_freshness_report"]["fresh_for_current_archive"] is True
     assert result["surface_gradient_reduction_report"]["exact_full_video_gradient_reduction"] is True
     assert result["surface_true_p19_report"]["true_p19_pose_surface"] is True
+    assert result["surface_p18_class_boundary_report"]["p18_class_boundary_surface"] is True
     np.testing.assert_allclose(
         mutated_pyramids[0]["frame_0_top_ll"],
         original_pyramids[0]["frame_0_top_ll"],
@@ -756,6 +759,26 @@ def test_joint_p18_p19_deadzone_rejects_non_exact_reduced_surface() -> None:
         )
 
 
+def test_joint_p18_p19_deadzone_rejects_stale_pre_class_boundary_surface() -> None:
+    archive_bytes = _archive_bytes()
+    joint_weight = np.zeros((1, 2, 16, 16, 3), dtype=np.float32)
+    pose_null_mask = np.ones_like(joint_weight, dtype=bool)
+    surface = _surface_for_archive(archive_bytes, joint_weight, pose_null_mask)
+    surface.pop("segnet_class_boundary_authority")
+    surface.pop("segnet_class_boundary_blockers")
+
+    with pytest.raises(ValueError, match="p18_class_boundary_authority_missing"):
+        apply_joint_p18_p19_deadzone_to_z8_archive(
+            archive_bytes,
+            joint_weight=surface,
+            config=Z8JointCoefficientWaterfillConfig(
+                joint_weight_quantile=1.0,
+                coefficient_deadzone_quantile=1.0,
+                quantization_step=0.25,
+            ),
+        )
+
+
 def test_joint_p18_p19_npz_surface_loader_preserves_archive_freshness(
     tmp_path: Path,
 ) -> None:
@@ -781,6 +804,8 @@ def test_joint_p18_p19_npz_surface_loader_preserves_archive_freshness(
         pose_surface_authority=np.asarray(surface["pose_surface_authority"]),
         pose_axis_count=np.asarray(surface["pose_axis_count"]),
         pose_inverse_variance=np.asarray(surface["pose_inverse_variance"], dtype=np.float64),
+        segnet_class_boundary_authority=np.asarray(surface["segnet_class_boundary_authority"]),
+        segnet_class_boundary_blockers_json=np.asarray("[]"),
     )
 
     loaded = load_joint_p18_p19_surface_file(surface_path)
@@ -797,3 +822,4 @@ def test_joint_p18_p19_npz_surface_loader_preserves_archive_freshness(
     assert result["surface_freshness_report"]["fresh_for_current_archive"] is True
     assert result["surface_gradient_reduction_report"]["exact_full_video_gradient_reduction"] is True
     assert result["surface_true_p19_report"]["true_p19_pose_surface"] is True
+    assert result["surface_p18_class_boundary_report"]["p18_class_boundary_surface"] is True

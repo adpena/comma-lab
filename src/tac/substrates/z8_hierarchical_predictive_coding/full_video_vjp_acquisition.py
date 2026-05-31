@@ -107,6 +107,10 @@ class Z8FullVideoMlxVjpShardConfig:
     rgb_value_range: float = 255.0
     scorer_hw: tuple[int, int] = (384, 512)
     seg_margin_delta: float = 1.0
+    segnet_class_boundary_enabled: bool = True
+    segnet_boundary_margin_quantile: float = 0.10
+    segnet_class_weight_mode: str = "inverse_sqrt_frequency"
+    segnet_class_weight_clip: float = 4.0
     pose_axis_count: int = 6
     pose_inverse_variance: tuple[float, ...] = (1.0, 1.0, 1.0, 1.0, 1.0, 1.0)
     pose_null_threshold: float = 1e-8
@@ -131,6 +135,12 @@ class Z8FullVideoMlxVjpShardConfig:
             raise ValueError("scorer_hw must be positive and at least 2x2")
         if self.seg_margin_delta < 0.0:
             raise ValueError("seg_margin_delta must be >= 0")
+        if not 0.0 <= self.segnet_boundary_margin_quantile <= 1.0:
+            raise ValueError("segnet_boundary_margin_quantile must be in [0, 1]")
+        if self.segnet_class_weight_mode not in {"none", "inverse_sqrt_frequency"}:
+            raise ValueError("segnet_class_weight_mode must be 'none' or 'inverse_sqrt_frequency'")
+        if self.segnet_class_weight_clip < 1.0:
+            raise ValueError("segnet_class_weight_clip must be >= 1")
         if self.pose_axis_count <= 0:
             raise ValueError("pose_axis_count must be positive")
         if not self.pose_inverse_variance:
@@ -220,6 +230,116 @@ def _mlx_value_to_numpy(value: Any) -> np.ndarray:
     except AttributeError:
         pass
     return np.asarray(value)
+
+
+def _nearest_resize_hw(array: np.ndarray, *, out_h: int, out_w: int) -> np.ndarray:
+    arr = np.asarray(array)
+    if arr.ndim < 2:
+        raise ValueError("array must have at least H,W dimensions")
+    in_h, in_w = int(arr.shape[-2]), int(arr.shape[-1])
+    y_idx = np.clip(np.rint(np.linspace(0, in_h - 1, out_h)).astype(np.int64), 0, in_h - 1)
+    x_idx = np.clip(np.rint(np.linspace(0, in_w - 1, out_w)).astype(np.int64), 0, in_w - 1)
+    return arr[..., y_idx[:, None], x_idx]
+
+
+def _segnet_class_boundary_modifier_for_shard(
+    *,
+    ref_classes: np.ndarray,
+    ref_seg_logits: np.ndarray,
+    target_shape: tuple[int, int, int, int, int],
+    config: Z8FullVideoMlxVjpShardConfig,
+) -> dict[str, Any]:
+    """Build class-region weights and boundary-protect masks on pair RGB atoms."""
+
+    pair_count, frame_count, out_h, out_w, channels = target_shape
+    if frame_count != 2 or channels != 3:
+        raise ValueError(f"expected target shape (pairs,2,H,W,3); got {target_shape}")
+    classes = np.asarray(ref_classes, dtype=np.int64)
+    logits = np.asarray(ref_seg_logits, dtype=np.float64)
+    if classes.ndim != 3:
+        raise ValueError(f"ref_classes must have shape (pairs,H,W); got {classes.shape}")
+    if logits.ndim != 4 or logits.shape[:3] != classes.shape:
+        raise ValueError("ref_seg_logits must have shape (pairs,H,W,C) matching ref_classes")
+    if classes.shape[0] != pair_count:
+        raise ValueError("ref_classes pair count must match target shape")
+
+    if logits.shape[-1] >= 2:
+        sorted_logits = np.sort(logits, axis=-1)
+        margin = sorted_logits[..., -1] - sorted_logits[..., -2]
+    else:
+        margin = np.full(classes.shape, np.inf, dtype=np.float64)
+    if config.segnet_class_boundary_enabled:
+        margin_threshold = float(np.quantile(margin.reshape(-1), float(config.segnet_boundary_margin_quantile)))
+        boundary_grid = margin <= margin_threshold
+        boundary_grid[:, 1:, :] |= classes[:, 1:, :] != classes[:, :-1, :]
+        boundary_grid[:, :-1, :] |= classes[:, :-1, :] != classes[:, 1:, :]
+        boundary_grid[:, :, 1:] |= classes[:, :, 1:] != classes[:, :, :-1]
+        boundary_grid[:, :, :-1] |= classes[:, :, :-1] != classes[:, :, 1:]
+    else:
+        margin_threshold = float("nan")
+        boundary_grid = np.zeros(classes.shape, dtype=bool)
+
+    flat_classes = classes.reshape(-1)
+    if config.segnet_class_weight_mode == "inverse_sqrt_frequency" and flat_classes.size:
+        unique, counts = np.unique(flat_classes, return_counts=True)
+        freq = counts.astype(np.float64) / float(flat_classes.size)
+        raw_weight = 1.0 / np.sqrt(np.maximum(freq, 1.0 / float(flat_classes.size)))
+        raw_weight = np.clip(
+            raw_weight,
+            1.0 / float(config.segnet_class_weight_clip),
+            float(config.segnet_class_weight_clip),
+        )
+        class_weights = {
+            int(class_id): float(weight)
+            for class_id, weight in zip(unique, raw_weight, strict=False)
+        }
+    else:
+        class_weights = {int(class_id): 1.0 for class_id in np.unique(flat_classes)}
+
+    class_weight_grid = np.ones(classes.shape, dtype=np.float64)
+    for class_id, weight in class_weights.items():
+        class_weight_grid[classes == class_id] = float(weight)
+    pixel_mean = float(np.mean(class_weight_grid)) if class_weight_grid.size else 1.0
+    if pixel_mean > 0.0:
+        class_weight_grid /= pixel_mean
+    class_weights = {
+        int(class_id): float(np.mean(class_weight_grid[classes == class_id]))
+        for class_id in class_weights
+        if np.any(classes == class_id)
+    }
+
+    class_ids_hw = _nearest_resize_hw(classes, out_h=out_h, out_w=out_w)
+    class_weight_hw = _nearest_resize_hw(class_weight_grid, out_h=out_h, out_w=out_w)
+    boundary_hw = _nearest_resize_hw(
+        boundary_grid.astype(np.uint8),
+        out_h=out_h,
+        out_w=out_w,
+    ).astype(bool)
+
+    class_ids_full = np.full(target_shape, -1, dtype=np.int64)
+    class_weight_full = np.ones(target_shape, dtype=np.float64)
+    boundary_full = np.zeros(target_shape, dtype=bool)
+    class_ids_full[:, 1, :, :, :] = class_ids_hw[:, :, :, None]
+    class_weight_full[:, 1, :, :, :] = class_weight_hw[:, :, :, None]
+    boundary_full[:, 1, :, :, :] = boundary_hw[:, :, :, None]
+    return {
+        "segnet_class_ids": class_ids_full,
+        "segnet_class_region_weight": class_weight_full,
+        "segnet_boundary_protect_mask": boundary_full,
+        "segnet_class_boundary_metadata": {
+            "schema": "z8_full_video_p18_segnet_class_boundary_modifier.v1",
+            "enabled": bool(config.segnet_class_boundary_enabled),
+            "class_weight_mode": config.segnet_class_weight_mode,
+            "class_weight_clip": float(config.segnet_class_weight_clip),
+            "boundary_margin_quantile": float(config.segnet_boundary_margin_quantile),
+            "boundary_margin_threshold": margin_threshold,
+            "class_weights": {str(key): value for key, value in sorted(class_weights.items())},
+            "boundary_atom_count": int(np.count_nonzero(boundary_full)),
+            "class_region_weight_min": float(np.min(class_weight_full)),
+            "class_region_weight_max": float(np.max(class_weight_full)),
+            "class_region_weight_mean": float(np.mean(class_weight_full)),
+        },
+    }
 
 
 def _candidate_archive_runtime_custody_report(
@@ -402,11 +522,20 @@ def build_z8_full_video_mlx_vjp_surface_shard(
         ],
         axis=-1,
     )
+    class_boundary = _segnet_class_boundary_modifier_for_shard(
+        ref_classes=_mlx_value_to_numpy(ref_classes),
+        ref_seg_logits=_mlx_value_to_numpy(ref_seg_logits),
+        target_shape=tuple(int(dim) for dim in cand.shape),
+        config=config,
+    )
 
     full_atom_count = int(config.full_video_pair_count * np.prod(cand_full.shape[1:]))
     surface = build_joint_p18_p19_waterfill_surface(
         segnet_argmax_gradient=seg_grad_np,
         pose_jacobian=pose_jacobian_np,
+        segnet_class_region_weight=class_boundary["segnet_class_region_weight"],
+        segnet_boundary_protect_mask=class_boundary["segnet_boundary_protect_mask"],
+        segnet_class_ids=class_boundary["segnet_class_ids"],
         config=JointP18P19WaterfillConfig(
             d_pose=float(config.full_video_d_pose),
             pose_inverse_variance=pose_inverse_variance,
@@ -480,10 +609,17 @@ def build_z8_full_video_mlx_vjp_surface_shard(
                 "safe_rate_spend_mask",
                 "distortion_protect_mask",
                 "segnet_term",
+                "segnet_class_region_weight",
+                "segnet_boundary_protect_mask",
+                "segnet_class_ids",
                 "pose_term",
                 "pose_null_mask",
             }
         },
+        "segnet_class_boundary_metadata": class_boundary["segnet_class_boundary_metadata"],
+        "segnet_class_region_weight": class_boundary["segnet_class_region_weight"],
+        "segnet_boundary_protect_mask": class_boundary["segnet_boundary_protect_mask"],
+        "segnet_class_ids": class_boundary["segnet_class_ids"],
         **FALSE_AUTHORITY,
     }
 
@@ -974,8 +1110,12 @@ def assemble_z8_full_video_vjp_surface_bundle(
     mask_chunks: list[np.ndarray] = []
     seg_grad_chunks: list[np.ndarray] = []
     pose_grad_chunks: list[np.ndarray] = []
+    class_weight_chunks: list[np.ndarray] = []
+    boundary_mask_chunks: list[np.ndarray] = []
+    class_id_chunks: list[np.ndarray] = []
     shard_reports: list[dict[str, Any]] = []
     pose_surface_blockers: list[str] = []
+    class_boundary_blockers: list[str] = []
     full_video_d_pose: float | None = None
     pose_null_threshold: float = 1e-8
     pose_inverse_variance: tuple[float, ...] | None = None
@@ -1023,6 +1163,27 @@ def assemble_z8_full_video_vjp_surface_bundle(
         if pose_grad.ndim < 1 or pose_grad.shape[:-1] != joint.shape:
             raise ValueError(
                 "surface shard PoseNet Jacobian tensor must have joint_weight shape plus pose axis dimension"
+            )
+        has_class_boundary = all(
+            key in raw
+            for key in (
+                "segnet_class_region_weight",
+                "segnet_boundary_protect_mask",
+                "segnet_class_ids",
+            )
+        )
+        if has_class_boundary:
+            class_weight = _as_array(raw, "segnet_class_region_weight", dtype=np.float64)
+            boundary_mask = _as_array(raw, "segnet_boundary_protect_mask", dtype=bool)
+            class_ids = _as_array(raw, "segnet_class_ids", dtype=np.int64)
+            if class_weight.shape != joint.shape or boundary_mask.shape != joint.shape or class_ids.shape != joint.shape:
+                raise ValueError("P18 class/boundary shard tensors must match joint_weight shape")
+            class_weight_chunks.append(class_weight)
+            boundary_mask_chunks.append(boundary_mask)
+            class_id_chunks.append(class_ids)
+        else:
+            class_boundary_blockers.append(
+                f"p18_segnet_class_boundary_modifier_missing:shard_{int(raw.get('shard_index', shard_index))}"
             )
         shard_pose_inverse_variance = _pose_inverse_variance_from_raw(raw)
         if proposal_pose_inverse_variance is None and shard_pose_inverse_variance:
@@ -1077,6 +1238,7 @@ def assemble_z8_full_video_vjp_surface_bundle(
                 "pose_surface_kind": pose_surface_kind,
                 "pose_surface_authority": bool(pose_surface_true),
                 "pose_axis_count": int(pose_grad.shape[-1]),
+                "segnet_class_boundary_modifier_present": bool(has_class_boundary),
             }
         )
 
@@ -1087,12 +1249,16 @@ def assemble_z8_full_video_vjp_surface_bundle(
             "full-video VJP surface does not cover archive pair grid: "
             f"covered={expected_start} required={archive_num_pairs}"
         )
+    class_boundary_authority = full_coverage and not class_boundary_blockers and len(class_weight_chunks) == len(joint_chunks)
     pose_surface_authority = full_coverage and not pose_surface_blockers
     joint_full = np.concatenate(joint_chunks, axis=0) if joint_chunks else np.zeros((0, 2, 1, 1, 1))
     mask_full = np.concatenate(mask_chunks, axis=0) if mask_chunks else np.zeros_like(joint_full, dtype=bool)
     if full_coverage:
         seg_grad_full = np.concatenate(seg_grad_chunks, axis=0)
         pose_grad_full = np.concatenate(pose_grad_chunks, axis=0)
+        class_weight_full = np.concatenate(class_weight_chunks, axis=0) if class_boundary_authority else None
+        boundary_mask_full = np.concatenate(boundary_mask_chunks, axis=0) if class_boundary_authority else None
+        class_id_full = np.concatenate(class_id_chunks, axis=0) if class_boundary_authority else None
         pose_inverse_variance_for_surface = (
             pose_inverse_variance
             or proposal_pose_inverse_variance
@@ -1101,6 +1267,9 @@ def assemble_z8_full_video_vjp_surface_bundle(
         global_surface = build_joint_p18_p19_waterfill_surface(
             segnet_argmax_gradient=seg_grad_full,
             pose_jacobian=pose_grad_full,
+            segnet_class_region_weight=class_weight_full,
+            segnet_boundary_protect_mask=boundary_mask_full,
+            segnet_class_ids=class_id_full,
             config=JointP18P19WaterfillConfig(
                 d_pose=float(full_video_d_pose if full_video_d_pose is not None else 0.0),
                 pose_inverse_variance=pose_inverse_variance_for_surface,
@@ -1114,19 +1283,19 @@ def assemble_z8_full_video_vjp_surface_bundle(
         )
         joint_full = np.asarray(global_surface["joint_weight"], dtype=np.float64)
         mask_full = np.asarray(global_surface["rate_attack_deadzone_mask"], dtype=bool)
-        if not pose_surface_authority:
+        if not pose_surface_authority or not class_boundary_authority:
             global_surface = {
                 **global_surface,
                 "implicit_allocator_authority": False,
-                "implicit_allocator_blockers": sorted(set(pose_surface_blockers)),
+                "implicit_allocator_blockers": sorted(set(pose_surface_blockers + class_boundary_blockers)),
             }
     else:
         global_surface = {
             "implicit_allocator_authority": False,
             "implicit_allocator_blockers": ["partial_full_video_vjp_surface_probe_only"],
         }
-    authority_blockers = sorted(set(pose_surface_blockers))
-    budget_spend_authority = bool(full_coverage and pose_surface_authority)
+    authority_blockers = sorted(set(pose_surface_blockers + class_boundary_blockers))
+    budget_spend_authority = bool(full_coverage and pose_surface_authority and class_boundary_authority)
     return {
         "schema": Z8_FULL_VIDEO_VJP_SURFACE_BUNDLE_SCHEMA,
         "surface_assembly_backend": "global_kkt_dykstra_after_full_shard_reduction.v1",
@@ -1162,9 +1331,11 @@ def assemble_z8_full_video_vjp_surface_bundle(
         if pose_surface_authority
         else SCALAR_POSE_LOSS_VJP_SURFACE_KIND,
         "pose_surface_authority": bool(pose_surface_authority),
-        "pose_surface_blockers": authority_blockers,
+        "pose_surface_blockers": sorted(set(pose_surface_blockers)),
         "pose_axis_count": len(pose_inverse_variance or proposal_pose_inverse_variance or ()),
         "pose_inverse_variance": list(pose_inverse_variance or proposal_pose_inverse_variance or ()),
+        "segnet_class_boundary_authority": bool(class_boundary_authority),
+        "segnet_class_boundary_blockers": sorted(set(class_boundary_blockers)),
         "implicit_allocator_authority": bool(
             budget_spend_authority and global_surface.get("implicit_allocator_authority", False)
         ),
@@ -1179,6 +1350,9 @@ def assemble_z8_full_video_vjp_surface_bundle(
                 "safe_rate_spend_mask",
                 "distortion_protect_mask",
                 "segnet_term",
+                "segnet_class_region_weight",
+                "segnet_boundary_protect_mask",
+                "segnet_class_ids",
                 "pose_term",
                 "pose_null_mask",
                 "pose_mahalanobis_norm",
@@ -1222,6 +1396,12 @@ def write_z8_full_video_vjp_surface_bundle(
         optimizer_update_semantics=np.asarray(str(bundle["optimizer_update_semantics"])),
         full_video_reduction_complete=np.asarray(bool(bundle["full_video_reduction_complete"])),
         budget_spend_authority=np.asarray(bool(bundle["budget_spend_authority"])),
+        segnet_class_boundary_authority=np.asarray(
+            bool(bundle.get("segnet_class_boundary_authority", False))
+        ),
+        segnet_class_boundary_blockers_json=np.asarray(
+            json.dumps(_jsonable(bundle.get("segnet_class_boundary_blockers", [])), sort_keys=True)
+        ),
         implicit_allocator_authority=np.asarray(bool(bundle.get("implicit_allocator_authority", False))),
         pose_surface_kind=np.asarray(str(bundle.get("pose_surface_kind", ""))),
         pose_surface_authority=np.asarray(bool(bundle.get("pose_surface_authority", False))),
@@ -1251,6 +1431,8 @@ def write_z8_full_video_vjp_surface_bundle(
         "pose_surface_blockers": bundle.get("pose_surface_blockers", []),
         "pose_axis_count": bundle.get("pose_axis_count", 0),
         "pose_inverse_variance": bundle.get("pose_inverse_variance", []),
+        "segnet_class_boundary_authority": bundle.get("segnet_class_boundary_authority", False),
+        "segnet_class_boundary_blockers": bundle.get("segnet_class_boundary_blockers", []),
         "implicit_allocator_authority": bundle.get("implicit_allocator_authority", False),
         "implicit_allocator_blockers": bundle.get("implicit_allocator_blockers", []),
         "shard_count": bundle["shard_count"],
@@ -1284,6 +1466,9 @@ def write_z8_full_video_vjp_surface_shard(
             "rate_attack_deadzone_mask",
             "segnet_argmax_gradient_abs",
             "pose_jacobian_abs",
+            "segnet_class_region_weight",
+            "segnet_boundary_protect_mask",
+            "segnet_class_ids",
         }
     }
     joint_weight = _finite_surface_array(shard["joint_weight"], name="joint_weight", dtype=np.float32)
@@ -1297,12 +1482,28 @@ def write_z8_full_video_vjp_surface_shard(
         name="pose_jacobian_abs",
         dtype=np.float32,
     )
+    class_region_weight = _finite_surface_array(
+        shard.get("segnet_class_region_weight", np.ones_like(joint_weight)),
+        name="segnet_class_region_weight",
+        dtype=np.float32,
+    )
+    boundary_protect_mask = np.asarray(
+        shard.get("segnet_boundary_protect_mask", np.zeros_like(joint_weight, dtype=bool)),
+        dtype=bool,
+    )
+    class_ids = np.asarray(
+        shard.get("segnet_class_ids", np.full(joint_weight.shape, -1, dtype=np.int64)),
+        dtype=np.int64,
+    )
     np.savez_compressed(
         shard_path,
         joint_weight=joint_weight,
         rate_attack_deadzone_mask=np.asarray(shard["rate_attack_deadzone_mask"], dtype=bool),
         segnet_argmax_gradient_abs=seg_grad,
         pose_jacobian_abs=pose_grad,
+        segnet_class_region_weight=class_region_weight,
+        segnet_boundary_protect_mask=boundary_protect_mask,
+        segnet_class_ids=class_ids,
         shard_index=np.asarray(shard_index),
         pair_start=np.asarray(int(shard["pair_start"])),
         pair_end=np.asarray(int(shard["pair_end"])),
@@ -1393,6 +1594,24 @@ def load_z8_full_video_vjp_surface_shard_file(path: str | Path) -> dict[str, Any
             ),
             "segnet_argmax_gradient_abs": np.asarray(data["segnet_argmax_gradient_abs"], dtype=np.float64),
             "pose_jacobian_abs": np.asarray(data["pose_jacobian_abs"], dtype=np.float64),
+            "segnet_class_region_weight": np.asarray(
+                data["segnet_class_region_weight"]
+                if "segnet_class_region_weight" in data
+                else np.ones_like(data["joint_weight"]),
+                dtype=np.float64,
+            ),
+            "segnet_boundary_protect_mask": np.asarray(
+                data["segnet_boundary_protect_mask"]
+                if "segnet_boundary_protect_mask" in data
+                else np.zeros_like(data["joint_weight"], dtype=bool),
+                dtype=bool,
+            ),
+            "segnet_class_ids": np.asarray(
+                data["segnet_class_ids"]
+                if "segnet_class_ids" in data
+                else np.full(np.asarray(data["joint_weight"]).shape, -1, dtype=np.int64),
+                dtype=np.int64,
+            ),
             "optimizer_update_applied": bool(
                 np.asarray(metadata.get("optimizer_update_applied", False)).reshape(-1)[0]
             ),
@@ -1432,6 +1651,18 @@ def load_z8_full_video_vjp_surface_shard_file(path: str | Path) -> dict[str, Any
         ),
         "segnet_argmax_gradient_abs": np.asarray(payload["segnet_argmax_gradient_abs"], dtype=np.float64),
         "pose_jacobian_abs": np.asarray(payload["pose_jacobian_abs"], dtype=np.float64),
+        "segnet_class_region_weight": np.asarray(
+            payload.get("segnet_class_region_weight", np.ones_like(payload["joint_weight"])),
+            dtype=np.float64,
+        ),
+        "segnet_boundary_protect_mask": np.asarray(
+            payload.get("segnet_boundary_protect_mask", np.zeros_like(payload["joint_weight"], dtype=bool)),
+            dtype=bool,
+        ),
+        "segnet_class_ids": np.asarray(
+            payload.get("segnet_class_ids", np.full(np.asarray(payload["joint_weight"]).shape, -1)),
+            dtype=np.int64,
+        ),
         "optimizer_update_applied": bool(payload.get("optimizer_update_applied", False)),
         "optimizer_update_authority": bool(payload.get("optimizer_update_authority", False)),
         "gradient_reduction_authority": bool(payload.get("gradient_reduction_authority", False)),
@@ -1464,6 +1695,7 @@ def build_z8_full_video_vjp_acquisition_contract() -> dict[str, Any]:
             "linearization_archive_sha_equals_current_archive_sha",
             "candidate_pairs_equal_archive_runtime_reconstruction",
             "raw_p18_p19_gradients_reduced_before_global_kkt_dykstra_allocation",
+            "p18_segnet_class_region_boundary_modifier_reduced_before_budget_spend",
             "true_per_axis_posenet_jacobian_mahalanobis_surface",
             "single_optimizer_update_after_full_shard_reduction",
             "relinearize_after_each_accepted_archive_mutation",

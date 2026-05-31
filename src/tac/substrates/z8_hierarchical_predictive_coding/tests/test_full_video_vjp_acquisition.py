@@ -79,6 +79,9 @@ def _surface_shard(
         "rate_attack_deadzone_mask": np.ones(shape, dtype=bool),
         "segnet_argmax_gradient_abs": joint,
         "pose_jacobian_abs": np.zeros((*shape, pose_axis_count), dtype=np.float32),
+        "segnet_class_region_weight": np.ones(shape, dtype=np.float32),
+        "segnet_boundary_protect_mask": np.zeros(shape, dtype=bool),
+        "segnet_class_ids": np.zeros(shape, dtype=np.int64),
         "pose_surface_kind": TRUE_P19_POSE_SURFACE_KIND,
         "pose_jacobian_abs_is_true_jacobian": True,
         "pose_surface_authority": True,
@@ -350,6 +353,9 @@ def test_full_video_vjp_contract_keeps_contest_and_production_modes_explicit() -
     assert "raw_p18_p19_gradients_reduced_before_global_kkt_dykstra_allocation" in contract[
         "contest_budget_spend_requires"
     ]
+    assert "p18_segnet_class_region_boundary_modifier_reduced_before_budget_spend" in contract[
+        "contest_budget_spend_requires"
+    ]
     assert "true_per_axis_posenet_jacobian_mahalanobis_surface" in contract["contest_budget_spend_requires"]
     assert "single_optimizer_update_after_full_shard_reduction" in contract["contest_budget_spend_requires"]
     assert "declared_corpus_manifest" in contract["production_budget_spend_requires"]
@@ -397,6 +403,18 @@ def test_mlx_vjp_shard_producer_emits_true_p19_exact_reduction_surface(tmp_path:
     assert shard["pose_axis_count"] == 6
     assert shard["pose_inverse_variance"] == [1.0] * 6
     assert shard["pose_surface_blockers"] == []
+    assert shard["segnet_class_boundary_metadata"]["schema"] == (
+        "z8_full_video_p18_segnet_class_boundary_modifier.v1"
+    )
+    assert shard["segnet_boundary_protect_mask"].shape == candidate.shape
+    assert shard["segnet_class_region_weight"].shape == candidate.shape
+    assert shard["segnet_class_ids"].shape == candidate.shape
+    np.testing.assert_allclose(
+        float(np.mean(shard["segnet_class_region_weight"][:, 1])),
+        1.0,
+        rtol=1e-6,
+        atol=1e-6,
+    )
     assert shard["joint_weight"].shape == candidate.shape
     assert shard["pose_jacobian_abs"].shape == (*candidate.shape, 6)
     assert shard["rate_attack_deadzone_mask"].shape == candidate.shape
@@ -419,7 +437,11 @@ def test_mlx_vjp_shard_producer_emits_true_p19_exact_reduction_surface(tmp_path:
     assert bundle["budget_spend_authority"] is True
     assert bundle["budget_spend_blockers"] == []
     assert bundle["pose_surface_authority"] is True
+    assert bundle["segnet_class_boundary_authority"] is True
     assert bundle["optimizer_update_semantics"] == SINGLE_UPDATE_AFTER_FULL_REDUCTION
+    bundle_manifest = write_z8_full_video_vjp_surface_bundle(bundle, tmp_path / "bundle")
+    with np.load(bundle_manifest["surface_path"]) as data:
+        assert bool(data["segnet_class_boundary_authority"].item()) is True
 
 
 def test_mlx_surface_provider_reconstructs_archive_and_reduces_fresh_bundle(tmp_path: Path) -> None:

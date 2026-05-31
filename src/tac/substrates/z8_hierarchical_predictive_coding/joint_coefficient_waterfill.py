@@ -88,6 +88,7 @@ class Z8JointCoefficientWaterfillConfig:
     require_surface_archive_freshness: bool = True
     require_exact_full_video_gradient_reduction: bool = True
     require_true_p19_pose_surface: bool = True
+    require_p18_class_boundary_surface: bool = True
     measure_receiver_distortion: bool = True
     mutate_coefficients: bool = True
     entropy_code_quantized_details: bool = False
@@ -158,6 +159,7 @@ class Z8JointCoefficientRelinearizationSearchConfig:
     require_surface_archive_freshness: bool = True
     require_exact_full_video_gradient_reduction: bool = True
     require_true_p19_pose_surface: bool = True
+    require_p18_class_boundary_surface: bool = True
     local_replay_prefilter_top_k: int | None = None
     skip_receiver_mse_proxy_when_full_video_replay: bool = True
     mutate_coefficients: bool = True
@@ -281,6 +283,29 @@ def _surface_bool(value: Any | None) -> bool | None:
     return bool(value)
 
 
+def _surface_list(value: Any | None) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, np.ndarray):
+        if value.shape == () or value.size == 1:
+            return _surface_list(value.reshape(-1)[0].item())
+        return [str(item) for item in value.reshape(-1).tolist() if str(item)]
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return []
+        if text.startswith("["):
+            try:
+                decoded = json.loads(text)
+            except json.JSONDecodeError:
+                return [text]
+            return _surface_list(decoded)
+        return [text]
+    if isinstance(value, Sequence) and not isinstance(value, (bytes, bytearray)):
+        return [str(item) for item in value if str(item)]
+    return [str(value)]
+
+
 def _surface_payload(
     surface: Any,
     rate_attack_deadzone_mask: Any | None = None,
@@ -309,7 +334,13 @@ def _surface_payload(
             "pose_surface_authority": _surface_bool(surface.get("pose_surface_authority")),
             "pose_axis_count": surface.get("pose_axis_count"),
             "pose_inverse_variance": surface.get("pose_inverse_variance"),
-            "pose_surface_blockers": list(surface.get("pose_surface_blockers") or []),
+            "pose_surface_blockers": _surface_list(surface.get("pose_surface_blockers")),
+            "segnet_class_boundary_authority": _surface_bool(
+                surface.get("segnet_class_boundary_authority")
+            ),
+            "segnet_class_boundary_blockers": _surface_list(
+                surface.get("segnet_class_boundary_blockers")
+            ),
         }
     if isinstance(surface, tuple) and len(surface) == 2:
         return _surface_payload(
@@ -337,6 +368,8 @@ def _surface_payload(
         "pose_axis_count": None,
         "pose_inverse_variance": None,
         "pose_surface_blockers": [],
+        "segnet_class_boundary_authority": None,
+        "segnet_class_boundary_blockers": [],
     }
 
 
@@ -380,6 +413,14 @@ def load_joint_p18_p19_surface_file(path: str | Path) -> dict[str, Any]:
                 "pose_surface_authority": data.get("pose_surface_authority", None),
                 "pose_axis_count": data.get("pose_axis_count", None),
                 "pose_inverse_variance": data.get("pose_inverse_variance", None),
+                "segnet_class_boundary_authority": data.get(
+                    "segnet_class_boundary_authority",
+                    None,
+                ),
+                "segnet_class_boundary_blockers": data.get(
+                    "segnet_class_boundary_blockers_json",
+                    data.get("segnet_class_boundary_blockers", None),
+                ),
             }
         )
     if p.suffix == ".npy":
@@ -534,6 +575,24 @@ def _surface_true_p19_report(
         "pose_axis_count": axis_count,
         "pose_inverse_variance": [float(v) for v in inverse_variance.tolist()],
         "true_p19_pose_surface": not blockers,
+        "blockers": blockers,
+    }
+
+
+def _surface_p18_class_boundary_report(
+    *,
+    surface_payload: Mapping[str, Any],
+) -> dict[str, Any]:
+    authority = _surface_bool(surface_payload.get("segnet_class_boundary_authority"))
+    raw_blockers = _surface_list(surface_payload.get("segnet_class_boundary_blockers"))
+    blockers: list[str] = []
+    if authority is not True:
+        blockers.append("z8_joint_surface_p18_class_boundary_authority_missing")
+    blockers.extend(raw_blockers)
+    return {
+        "schema": "z8_joint_p18_class_boundary_surface_report.v1",
+        "segnet_class_boundary_authority": authority,
+        "p18_class_boundary_surface": not blockers,
         "blockers": blockers,
     }
 
@@ -1036,6 +1095,12 @@ def apply_joint_p18_p19_deadzone_to_z8_archive(
         true_p19_report = _surface_true_p19_report(surface_payload=surface)
         if cfg.require_true_p19_pose_surface and not true_p19_report["true_p19_pose_surface"]:
             raise ValueError(",".join(str(item) for item in true_p19_report["blockers"]))
+        p18_class_boundary_report = _surface_p18_class_boundary_report(surface_payload=surface)
+        if (
+            cfg.require_p18_class_boundary_surface
+            and not p18_class_boundary_report["p18_class_boundary_surface"]
+        ):
+            raise ValueError(",".join(str(item) for item in p18_class_boundary_report["blockers"]))
     else:
         joint_surface = np.zeros((), dtype=np.float64)
         safe_mask = None
@@ -1069,6 +1134,13 @@ def apply_joint_p18_p19_deadzone_to_z8_archive(
             "pose_axis_count": None,
             "pose_inverse_variance": [],
             "true_p19_pose_surface": True,
+            "blockers": [],
+            "storage_only_no_surface_required": True,
+        }
+        p18_class_boundary_report = {
+            "schema": "z8_joint_p18_class_boundary_surface_report.v1",
+            "segnet_class_boundary_authority": None,
+            "p18_class_boundary_surface": True,
             "blockers": [],
             "storage_only_no_surface_required": True,
         }
@@ -1134,6 +1206,7 @@ def apply_joint_p18_p19_deadzone_to_z8_archive(
                 "pose_null_required": bool(cfg.pose_null_required),
                 "mutate_coefficients": bool(cfg.mutate_coefficients),
                 "require_full_video_surface_coverage": bool(cfg.require_full_video_surface_coverage),
+                "require_p18_class_boundary_surface": bool(cfg.require_p18_class_boundary_surface),
                 "entropy_code_quantized_details": bool(cfg.entropy_code_quantized_details),
                 "entropy_detail_quantization_step": entropy_detail_step,
                 "entropy_detail_quantization_steps": dict(cfg.entropy_detail_quantization_steps or {}),
@@ -1190,6 +1263,7 @@ def apply_joint_p18_p19_deadzone_to_z8_archive(
         "surface_freshness_report": freshness_report,
         "surface_gradient_reduction_report": gradient_reduction_report,
         "surface_true_p19_report": true_p19_report,
+        "surface_p18_class_boundary_report": p18_class_boundary_report,
         "axis_tag": "[macOS-CPU advisory]",
         "allowed_use": "local_z8_rate_attack_materialization_and_acquisition_signal",
         "forbidden_use": "score_claim_or_exact_promotion_without_contest_eval",

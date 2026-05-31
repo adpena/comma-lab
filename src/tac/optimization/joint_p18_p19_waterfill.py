@@ -48,11 +48,15 @@ from tac.optimization.target_modes import (
 )
 
 JOINT_P18_P19_WATERFILL_SCHEMA = "joint_p18_p19_waterfill_surface.v1"
+JOINT_P18_SEGNET_CLASS_BOUNDARY_SCHEMA = "joint_p18_segnet_class_boundary_modifier.v1"
 JOINT_P18_P19_IMPLICIT_ALLOCATOR_SCHEMA = "joint_p18_p19_implicit_kkt_dykstra_allocator.v1"
-JOINT_P18_P19_WEIGHT_FORMULA = "w_i = 100*abs(dL_seg/dx_i) + 5/sqrt(10*d_pose)*||J_pose_i||_{Sigma^-1}"
+JOINT_P18_P19_WEIGHT_FORMULA = (
+    "w_i = 100*class_boundary_weight_i*abs(dL_seg/dx_i) "
+    "+ 5/sqrt(10*d_pose)*||J_pose_i||_{Sigma^-1}"
+)
 JOINT_P18_P19_RATE_ATTACK_ROLE = (
     "dead_zone_low_joint_weight_wavelet_detail_atoms_to_reduce_rate_while_"
-    "protecting_seg_boundary_and_pose_sensitive_atoms"
+    "protecting_seg_class_boundary_and_pose_sensitive_atoms"
 )
 FULL_VIDEO_AUTHORITY_SCOPE = "full_video"
 PROPOSAL_ONLY_SCOPE = "proposal_only"
@@ -138,6 +142,21 @@ def mahalanobis_pose_jacobian_norm(
     if jac.shape[-1] != inv_var.shape[0]:
         raise ValueError("pose_jacobian last dimension must match pose_inverse_variance length")
     return np.sqrt(np.sum((jac * jac) * inv_var, axis=-1))
+
+
+def _optional_array_matching(
+    value: np.ndarray | None,
+    *,
+    shape: tuple[int, ...],
+    name: str,
+    dtype: Any,
+) -> np.ndarray | None:
+    if value is None:
+        return None
+    arr = np.asarray(value, dtype=dtype)
+    if arr.shape != shape:
+        raise ValueError(f"{name} shape must match segnet_argmax_gradient; got {arr.shape}, expected {shape}")
+    return arr
 
 
 def _full_video_authority_blockers(
@@ -464,6 +483,9 @@ def build_joint_p18_p19_waterfill_surface(
     segnet_argmax_gradient: np.ndarray,
     pose_jacobian: np.ndarray,
     config: JointP18P19WaterfillConfig,
+    segnet_class_region_weight: np.ndarray | None = None,
+    segnet_boundary_protect_mask: np.ndarray | None = None,
+    segnet_class_ids: np.ndarray | None = None,
 ) -> dict[str, Any]:
     """Build a coupled P18/P19 acquisition surface.
 
@@ -473,13 +495,39 @@ def build_joint_p18_p19_waterfill_surface(
     """
 
     seg = np.abs(np.asarray(segnet_argmax_gradient, dtype=np.float64))
+    class_region_weight = _optional_array_matching(
+        segnet_class_region_weight,
+        shape=seg.shape,
+        name="segnet_class_region_weight",
+        dtype=np.float64,
+    )
+    if class_region_weight is None:
+        class_region_weight = np.ones_like(seg, dtype=np.float64)
+    if not np.all(np.isfinite(class_region_weight)):
+        raise ValueError("segnet_class_region_weight must be finite")
+    if np.any(class_region_weight <= 0.0):
+        raise ValueError("segnet_class_region_weight entries must be > 0")
+    boundary_protect_mask = _optional_array_matching(
+        segnet_boundary_protect_mask,
+        shape=seg.shape,
+        name="segnet_boundary_protect_mask",
+        dtype=bool,
+    )
+    if boundary_protect_mask is None:
+        boundary_protect_mask = np.zeros_like(seg, dtype=bool)
+    class_ids = _optional_array_matching(
+        segnet_class_ids,
+        shape=seg.shape,
+        name="segnet_class_ids",
+        dtype=np.int64,
+    )
     pose_norm = mahalanobis_pose_jacobian_norm(
         np.asarray(pose_jacobian, dtype=np.float64),
         np.asarray(config.pose_inverse_variance, dtype=np.float64),
     )
     if seg.shape != pose_norm.shape:
         raise ValueError("segnet_argmax_gradient shape must match pose_jacobian leading shape")
-    seg_term = 100.0 * seg
+    seg_term = 100.0 * seg * class_region_weight
     pose_term = config.pose_ail_gain * pose_norm
     joint = seg_term + pose_term
     coarsening_priority = 1.0 / (1.0 + joint)
@@ -493,15 +541,16 @@ def build_joint_p18_p19_waterfill_surface(
     gradient_reduction_blockers = _gradient_reduction_blockers(config.gradient_reduction_semantics)
     target_mode = config.normalized_target_mode
     pose_null_mask = pose_norm <= float(config.pose_null_threshold)
+    safe_rate_spend_mask = pose_null_mask & ~boundary_protect_mask
     ready_for_budget_spend = not authority_blockers and not fresh_blockers and not gradient_reduction_blockers
     allocator_budget = (
-        float(np.count_nonzero(pose_null_mask))
+        float(np.count_nonzero(safe_rate_spend_mask))
         * float(config.allocator_atom_capacity)
         * float(config.allocator_budget_fraction)
     )
     allocator = solve_joint_p18_p19_implicit_kkt_dykstra_allocator(
         coarsening_priority=coarsening_priority,
-        safe_rate_spend_mask=pose_null_mask,
+        safe_rate_spend_mask=safe_rate_spend_mask,
         budget=allocator_budget,
         atom_capacity=config.allocator_atom_capacity,
     )
@@ -509,7 +558,26 @@ def build_joint_p18_p19_waterfill_surface(
     if not ready_for_budget_spend:
         allocator_blockers.append("joint_p18_p19_allocator_budget_spend_authority_missing")
     rate_attack_deadzone_mask = np.asarray(allocator["allocation"], dtype=np.float64) > 0.0
-    distortion_protect_mask = ~rate_attack_deadzone_mask
+    distortion_protect_mask = ~rate_attack_deadzone_mask | boundary_protect_mask
+    class_boundary_report = {
+        "schema": JOINT_P18_SEGNET_CLASS_BOUNDARY_SCHEMA,
+        "class_region_weight_applied": bool(segnet_class_region_weight is not None),
+        "class_ids_present": bool(class_ids is not None),
+        "boundary_protect_mask_applied": bool(segnet_boundary_protect_mask is not None),
+        "boundary_protect_atom_count": int(np.count_nonzero(boundary_protect_mask)),
+        "pose_null_atom_count": int(np.count_nonzero(pose_null_mask)),
+        "safe_rate_spend_atom_count": int(np.count_nonzero(safe_rate_spend_mask)),
+        "class_region_weight_min": float(np.min(class_region_weight)) if class_region_weight.size else 0.0,
+        "class_region_weight_max": float(np.max(class_region_weight)) if class_region_weight.size else 0.0,
+        "class_region_weight_mean": float(np.mean(class_region_weight)) if class_region_weight.size else 0.0,
+    }
+    if class_ids is not None:
+        valid_class_ids = class_ids[class_ids >= 0]
+        unique_ids, counts = np.unique(valid_class_ids, return_counts=True) if valid_class_ids.size else ([], [])
+        class_boundary_report["class_histogram"] = {
+            str(int(class_id)): int(count)
+            for class_id, count in zip(unique_ids, counts, strict=False)
+        }
     return {
         "schema": JOINT_P18_P19_WATERFILL_SCHEMA,
         "formula": JOINT_P18_P19_WEIGHT_FORMULA,
@@ -553,6 +621,10 @@ def build_joint_p18_p19_waterfill_surface(
         "fresh_surface_blockers": fresh_blockers,
         "ready_for_budget_spend": ready_for_budget_spend,
         "segnet_term": seg_term,
+        "segnet_class_boundary_report": class_boundary_report,
+        "segnet_class_region_weight": class_region_weight,
+        "segnet_boundary_protect_mask": boundary_protect_mask,
+        "segnet_class_ids": class_ids,
         "pose_mahalanobis_norm": pose_norm,
         "pose_term": pose_term,
         "joint_weight": joint,
@@ -561,7 +633,7 @@ def build_joint_p18_p19_waterfill_surface(
         "rate_attack_allocation": allocator["allocation"],
         "rate_attack_deadzone_mask": rate_attack_deadzone_mask,
         "distortion_protect_mask": distortion_protect_mask,
-        "safe_rate_spend_mask": pose_null_mask,
+        "safe_rate_spend_mask": safe_rate_spend_mask,
         "implicit_kkt_dykstra_allocator": {
             key: value
             for key, value in allocator.items()
@@ -590,6 +662,7 @@ __all__ = [
     "JOINT_P18_P19_RATE_ATTACK_ROLE",
     "JOINT_P18_P19_WATERFILL_SCHEMA",
     "JOINT_P18_P19_WEIGHT_FORMULA",
+    "JOINT_P18_SEGNET_CLASS_BOUNDARY_SCHEMA",
     "PROPOSAL_ONLY_SCOPE",
     "PROPOSAL_OR_SAMPLED_REDUCTION",
     "JointP18P19WaterfillAuthorityError",
