@@ -121,7 +121,10 @@ CANONICAL_STACK_MEMBERS: dict[str, PredictiveCodingStackMember] = {
         entropy_position_label="before_entropy_coder",
         provenance_status="provenance_clean_validated_member",
         archive_surface="tac.substrates.dreamer_v3_rssm.archive.pack_archive",
-        archive_bound_bridge_entrypoint=None,
+        archive_bound_bridge_entrypoint=(
+            "tac.substrates.dreamer_v3_rssm.archive_candidate."
+            "export_dreamer_v3_rssm_mlx_archive_bound_candidate_package"
+        ),
         tags=("dreamer_v3", "rssm", "categorical_posterior", "mlx_substrate"),
     ),
     "z6_v2_cargo_cult_unwind": PredictiveCodingStackMember(

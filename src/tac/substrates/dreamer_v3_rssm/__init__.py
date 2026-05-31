@@ -120,7 +120,6 @@ from __future__ import annotations
 
 # Re-export canonical public API surfaces so callers route through
 # ``from tac.substrates.dreamer_v3_rssm import ...`` instead of internal modules.
-
 from tac.substrates.dreamer_v3_rssm.archive import (
     RSSMC1_HEADER_FMT,
     RSSMC1_HEADER_SIZE,
@@ -130,6 +129,20 @@ from tac.substrates.dreamer_v3_rssm.archive import (
     pack_archive,
     parse_archive,
     parse_rssmc1_archive_bytes,
+)
+from tac.substrates.dreamer_v3_rssm.archive_candidate import (
+    DREAMER_V3_RSSM_MLX_ARCHIVE_BOUND_ADAPTER_ID,
+    DREAMER_V3_RSSM_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
+    DREAMER_V3_RSSM_MLX_ARCHIVE_CANDIDATE_FAMILY,
+    DREAMER_V3_RSSM_MLX_ARCHIVE_TRANSFORM_KIND,
+    DREAMER_V3_RSSM_MLX_CONTEST_RAW_BYTES,
+    DREAMER_V3_RSSM_MLX_RECEIVER_PROOF_SCHEMA,
+    category_indices_from_model,
+    dreamer_v3_rssm_meta_from_config,
+    export_dreamer_v3_rssm_mlx_archive,
+    export_dreamer_v3_rssm_mlx_archive_bound_candidate_package,
+    exported_decoder_state_dict_from_model,
+    pack_archive_from_model,
 )
 from tac.substrates.dreamer_v3_rssm.module import (
     DEFAULT_G,
@@ -271,9 +284,12 @@ __all__ = [
     "CANONICAL_EQUATION_IDS",
     "DEFAULT_G",
     "DEFAULT_K",
-    "DreamerV3RSSMArchive",
-    "DreamerV3RSSMConfig",
-    "DreamerV3RSSMSubstrateMLX",
+    "DREAMER_V3_RSSM_MLX_ARCHIVE_BOUND_ADAPTER_ID",
+    "DREAMER_V3_RSSM_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA",
+    "DREAMER_V3_RSSM_MLX_ARCHIVE_CANDIDATE_FAMILY",
+    "DREAMER_V3_RSSM_MLX_ARCHIVE_TRANSFORM_KIND",
+    "DREAMER_V3_RSSM_MLX_CONTEST_RAW_BYTES",
+    "DREAMER_V3_RSSM_MLX_RECEIVER_PROOF_SCHEMA",
     "EVAL_HW",
     "NUM_PAIRS",
     "RSSMC1_HEADER_FMT",
@@ -281,10 +297,19 @@ __all__ = [
     "RSSMC1_MAGIC",
     "RSSMC1_SCHEMA_VERSION",
     "SUBSTRATE_ID",
+    "DreamerV3RSSMArchive",
+    "DreamerV3RSSMConfig",
+    "DreamerV3RSSMSubstrateMLX",
     "apply_unimix_to_logits",
+    "category_indices_from_model",
+    "dreamer_v3_rssm_meta_from_config",
     "emit_landing_posterior_anchor",
+    "export_dreamer_v3_rssm_mlx_archive",
+    "export_dreamer_v3_rssm_mlx_archive_bound_candidate_package",
+    "exported_decoder_state_dict_from_model",
     "gumbel_softmax_sample",
     "pack_archive",
+    "pack_archive_from_model",
     "parse_archive",
     "parse_rssmc1_archive_bytes",
     "rssmc_decoder_param_count",

@@ -156,6 +156,18 @@ def test_archive_bound_candidate_contract_classifies_entropy_substrates() -> Non
         "zip_ordering",
         "zip_container",
     ]
+    assert archive_substrate_tags_for_transform_kind(
+        "dreamer_v3_rssm_mlx_categorical_predictive_coding_archive"
+    ) == [
+        "neural_archive",
+        "mlx_substrate",
+        "predictive_coding",
+        "dreamer_v3",
+        "rssm",
+    ]
+    assert archive_substrate_tags_for_transform_kind(
+        "z8_hierarchical_predictive_coding_archive"
+    ) == ["neural_archive", "predictive_coding", "z8"]
 
 
 def _repair_payload(tmp_path: Path) -> dict[str, object]:

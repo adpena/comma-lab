@@ -609,6 +609,10 @@ def archive_substrate_tags_for_transform_kind(transform_kind: str) -> list[str]:
         "z4" in kind
         or "atick_redlich" in kind
         or "cooperative_receiver" in kind
+        or "z8" in kind
+        or "dreamer" in kind
+        or "rssm" in kind
+        or "categorical_posterior" in kind
         or "z7" in kind
         or "mamba" in kind
         or "predictive_coding" in kind
@@ -623,6 +627,9 @@ def archive_substrate_tags_for_transform_kind(transform_kind: str) -> list[str]:
         "z7" in kind
         or "z6" in kind
         or "z5" in kind
+        or "z8" in kind
+        or "dreamer" in kind
+        or "rssm" in kind
         or "mamba" in kind
         or "rao_ballard" in kind
         or "predictive_coding" in kind
@@ -635,6 +642,10 @@ def archive_substrate_tags_for_transform_kind(transform_kind: str) -> list[str]:
             tags.append("predictive_coding")
         if "z4" in kind or "atick_redlich" in kind or "cooperative_receiver" in kind:
             tags.extend(["z4", "cooperative_receiver"])
+        if "z8" in kind:
+            tags.append("z8")
+        if "dreamer" in kind or "rssm" in kind:
+            tags.extend(["dreamer_v3", "rssm"])
         if "z7" in kind or "mamba" in kind:
             tags.append("z7_mamba2")
         if "z6" in kind or "rao_ballard" in kind:
@@ -670,6 +681,10 @@ def entropy_position_label_for_transform_kind(transform_kind: str) -> str:
         "z4" in kind
         or "atick_redlich" in kind
         or "cooperative_receiver" in kind
+        or "z8" in kind
+        or "dreamer" in kind
+        or "rssm" in kind
+        or "categorical_posterior" in kind
         or "z7" in kind
         or "mamba" in kind
         or "predictive_coding" in kind

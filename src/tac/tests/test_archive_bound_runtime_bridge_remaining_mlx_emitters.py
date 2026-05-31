@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+import pytest
 import torch
 
 if TYPE_CHECKING:
@@ -120,6 +121,53 @@ def test_z4_export_emits_shared_archive_bound_package_fail_closed(tmp_path: Path
         family=Z4_ARCHIVE_CANDIDATE_FAMILY,
         required_tags={"neural_archive", "z4", "cooperative_receiver"},
         forbidden_tags={"z5", "z6_v2", "z7_mamba2", "pact_nerv"},
+    )
+
+
+def test_dreamer_export_emits_shared_archive_bound_package_fail_closed(
+    tmp_path: Path,
+) -> None:
+    pytest.importorskip("mlx")
+    from tac.substrates.dreamer_v3_rssm import (
+        DreamerV3RSSMConfig,
+        DreamerV3RSSMSubstrateMLX,
+    )
+    from tac.substrates.dreamer_v3_rssm.archive_candidate import (
+        DREAMER_V3_RSSM_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
+        DREAMER_V3_RSSM_MLX_ARCHIVE_CANDIDATE_FAMILY,
+        export_dreamer_v3_rssm_mlx_archive,
+    )
+
+    cfg = DreamerV3RSSMConfig(
+        num_pairs=1,
+        num_groups=2,
+        num_categories=4,
+        decoder_latent_dim=4,
+        base_channels=4,
+    )
+    model = DreamerV3RSSMSubstrateMLX(cfg)
+
+    archive_zip, sha, size = export_dreamer_v3_rssm_mlx_archive(
+        model,
+        tmp_path / "dreamer_export",
+    )
+
+    assert archive_zip.is_file()
+    assert len(sha) == 64
+    assert size == archive_zip.stat().st_size
+    package = _load_package(archive_zip.parent)
+    _assert_fail_closed_package(
+        package,
+        wrapper_schema=DREAMER_V3_RSSM_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
+        family=DREAMER_V3_RSSM_MLX_ARCHIVE_CANDIDATE_FAMILY,
+        required_tags={
+            "dreamer_v3",
+            "mlx_substrate",
+            "neural_archive",
+            "predictive_coding",
+            "rssm",
+        },
+        forbidden_tags={"z4", "z5", "z6_v2", "z7_mamba2", "pact_nerv"},
     )
 
 

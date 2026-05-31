@@ -62,15 +62,17 @@ def test_exact_bridge_requirement_blocks_archive_bytes_only_members() -> None:
 
     assert plan["provenance_clean"] is True
     assert plan["archive_bound_bridge_complete"] is False
+    assert plan["archive_bound_bridge_ready_count"] == 4
     assert plan["stack_executable"] is False
     assert "z8_hierarchical_predictive_coding_archive_bound_bridge_missing" in (
         plan["blockers"]
     )
-    assert "dreamer_v3_rssm_archive_bound_bridge_missing" in plan["blockers"]
+    assert "dreamer_v3_rssm_archive_bound_bridge_missing" not in plan["blockers"]
     bridge_ready = {
         row["member_id"]: row["archive_bound_bridge_ready"]
         for row in plan["member_rows"]
     }
+    assert bridge_ready["dreamer_v3_rssm"] is True
     assert bridge_ready["z7_mamba2"] is True
     assert bridge_ready["z6_v2_cargo_cult_unwind"] is True
     assert bridge_ready["z4_atick_redlich"] is True
