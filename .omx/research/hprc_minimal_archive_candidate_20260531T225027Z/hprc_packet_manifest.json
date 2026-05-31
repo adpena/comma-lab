@@ -1,0 +1,72 @@
+{
+  "byte_accounting": {
+    "authority_note": "hprc.bin payload accounting only; contest byte ceiling must include archive.zip, inflate runtime, config, tables, and any bundled decoder dependencies before promotion",
+    "contest_rate_bytes_authority": false,
+    "header_bytes": 38,
+    "packet_bytes": 1315,
+    "runtime_bytes_included": false,
+    "section_payload_bytes": 1007,
+    "section_table_bytes": 270,
+    "zip_container_bytes_included": false
+  },
+  "config": {
+    "color_transform_id": 0,
+    "decoder_family_id": 95,
+    "frames": 1200,
+    "gop_size": 2,
+    "height": 384,
+    "pairs": 600,
+    "width": 512
+  },
+  "magic": "HPRC",
+  "promotion_eligible": false,
+  "receiver_proof": {
+    "required_for_promotion": "valid semantic section mutation plus full receiver replay; raw byte flip/hash failure is parser integrity only",
+    "status": "raw_flip_only"
+  },
+  "schema": "hprc_packet_manifest.v1",
+  "schema_version": 1,
+  "score_claim": false,
+  "sections": [
+    {
+      "crc32": "89557607",
+      "id": 1,
+      "length": 30,
+      "name": "decoder_qw",
+      "offset": 308,
+      "sha256": "2bc0d153819944b23f02bc6f231236712959d62b6198e5379f6e8cb7ea5a8fa5"
+    },
+    {
+      "crc32": "7c5e56a4",
+      "id": 2,
+      "length": 600,
+      "name": "latents_rc",
+      "offset": 338,
+      "sha256": "52505e36e81f74ae4f5f7998870651e4bc7b1ff4e4f19186bf3b9a9b18fa6f7a"
+    },
+    {
+      "crc32": "00000000",
+      "id": 5,
+      "length": 0,
+      "name": "residual_rc",
+      "offset": 938,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "crc32": "13b43a9c",
+      "id": 6,
+      "length": 116,
+      "name": "rdo_plan",
+      "offset": 938,
+      "sha256": "3561e9fd01d6693897d74b4b214f0a83b9b9493fa400b233a52c59586947cf11"
+    },
+    {
+      "crc32": "7f2b5044",
+      "id": 8,
+      "length": 261,
+      "name": "manifest_json",
+      "offset": 1054,
+      "sha256": "0e97776878c2e0df451bd0b3b09cfa4ec51e0fa1d673f2132e3bc7df447a47df"
+    }
+  ]
+}

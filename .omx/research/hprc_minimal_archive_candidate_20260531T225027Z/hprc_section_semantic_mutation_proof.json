@@ -1,0 +1,86 @@
+{
+  "archive_sha256": "e6216eb874713b2dd99f6a16663188ce8758bc52f5e813a18cd720ac31cd62e4",
+  "base_preview_digest": "12fe32c26ef11d25ab9b4eddc788919e783dbe420cd627222417cf30b5738d1c",
+  "blockers": [],
+  "dispatch_attempted": false,
+  "gpu_launched": false,
+  "metadata_only_sections": [
+    "manifest_json"
+  ],
+  "per_section": [
+    {
+      "id": 1,
+      "metadata_only_expected": false,
+      "pixel_driving_expected": true,
+      "preview_digest_after": "579a8f9d2bbb5606c9b0e68eafd8fa35f4b12616b24091e99205f3fbf381d1f5",
+      "preview_digest_before": "12fe32c26ef11d25ab9b4eddc788919e783dbe420cd627222417cf30b5738d1c",
+      "proof_scope": "valid_semantic_packet_mutation_preview; full_receiver_replay is run for the unmutated archive-bound candidate",
+      "receiver_preview_changed": true,
+      "section": "decoder_qw",
+      "section_sha256": "2bc0d153819944b23f02bc6f231236712959d62b6198e5379f6e8cb7ea5a8fa5",
+      "valid_packet_mutation": true
+    },
+    {
+      "id": 2,
+      "metadata_only_expected": false,
+      "pixel_driving_expected": true,
+      "preview_digest_after": "808bb1365d409dce2870784ae81f5c6abafa65456f2a3d0a11a0d4d15599f821",
+      "preview_digest_before": "12fe32c26ef11d25ab9b4eddc788919e783dbe420cd627222417cf30b5738d1c",
+      "proof_scope": "valid_semantic_packet_mutation_preview; full_receiver_replay is run for the unmutated archive-bound candidate",
+      "receiver_preview_changed": true,
+      "section": "latents_rc",
+      "section_sha256": "52505e36e81f74ae4f5f7998870651e4bc7b1ff4e4f19186bf3b9a9b18fa6f7a",
+      "valid_packet_mutation": true
+    },
+    {
+      "id": 5,
+      "metadata_only_expected": false,
+      "pixel_driving_expected": true,
+      "preview_digest_after": "4fc2f98d2a075783da03faa9a2c3407566e76b7c0df374f10c0d2b6d70b8611a",
+      "preview_digest_before": "12fe32c26ef11d25ab9b4eddc788919e783dbe420cd627222417cf30b5738d1c",
+      "proof_scope": "valid_semantic_packet_mutation_preview; full_receiver_replay is run for the unmutated archive-bound candidate",
+      "receiver_preview_changed": true,
+      "section": "residual_rc",
+      "section_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "valid_packet_mutation": true
+    },
+    {
+      "id": 6,
+      "metadata_only_expected": false,
+      "pixel_driving_expected": true,
+      "preview_digest_after": "8d1f6574c42f3ae41112140ae93a60d443c6489f4c23a3b17eac80decf30242e",
+      "preview_digest_before": "12fe32c26ef11d25ab9b4eddc788919e783dbe420cd627222417cf30b5738d1c",
+      "proof_scope": "valid_semantic_packet_mutation_preview; full_receiver_replay is run for the unmutated archive-bound candidate",
+      "receiver_preview_changed": true,
+      "section": "rdo_plan",
+      "section_sha256": "3561e9fd01d6693897d74b4b214f0a83b9b9493fa400b233a52c59586947cf11",
+      "valid_packet_mutation": true
+    },
+    {
+      "id": 8,
+      "metadata_only_expected": true,
+      "pixel_driving_expected": false,
+      "preview_digest_after": "12fe32c26ef11d25ab9b4eddc788919e783dbe420cd627222417cf30b5738d1c",
+      "preview_digest_before": "12fe32c26ef11d25ab9b4eddc788919e783dbe420cd627222417cf30b5738d1c",
+      "proof_scope": "valid_semantic_packet_mutation_preview; full_receiver_replay is run for the unmutated archive-bound candidate",
+      "receiver_preview_changed": false,
+      "section": "manifest_json",
+      "section_sha256": "0e97776878c2e0df451bd0b3b09cfa4ec51e0fa1d673f2132e3bc7df447a47df",
+      "valid_packet_mutation": true
+    }
+  ],
+  "pixel_driving_sections": [
+    "decoder_qw",
+    "latents_rc",
+    "residual_rc",
+    "rdo_plan"
+  ],
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "hprc_section_semantic_mutation_proof.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "section_mutation_preview_ready": true
+}
