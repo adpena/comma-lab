@@ -497,7 +497,8 @@ class MlxScoreAwareAdapter:
                     decode_frames_nhwc01,
                 )
                 from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (
-                    hinton_distilled_kl_t2_loss,
+                    HintonMlxCustomLossFnConfig,
+                    score_teacher_distillation_loss,
                 )
 
                 rgb_0, rgb_1 = decode_frames_nhwc01(self.bundle, batch)
@@ -514,10 +515,17 @@ class MlxScoreAwareAdapter:
                 teacher = mx.stop_gradient(
                     self.bundle.scorer_teacher.teacher_logits_for_indices(batch)
                 )
-                return self.bundle.distillation_weight * hinton_distilled_kl_t2_loss(
+                loss_cfg = HintonMlxCustomLossFnConfig(
+                    temperature=self.bundle.distillation_temperature,
+                    distillation_objective=self.bundle.segnet_distillation_objective,
+                    tau_boundary=self.bundle.segnet_tau_boundary,
+                    hinge_margin=self.bundle.segnet_hinge_margin,
+                    student_head_out_channels=self.bundle.distillation_num_classes,
+                )
+                return self.bundle.distillation_weight * score_teacher_distillation_loss(
                     student_logits=student,
                     teacher_logits=teacher,
-                    temperature=self.bundle.distillation_temperature,
+                    config=loss_cfg,
                 )
 
             head_params = {"weight": head.weight, "bias": head.bias}

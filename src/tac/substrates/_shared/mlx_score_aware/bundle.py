@@ -24,6 +24,10 @@ from typing import Any, Protocol, runtime_checkable
 from tac.substrates._shared.mlx_score_aware.device_gate import (
     MlxScoreAwareHarnessError,
 )
+from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (
+    DISTILLATION_OBJECTIVE_KL_T2,
+    VALID_DISTILLATION_OBJECTIVES,
+)
 
 #: The two canonical renderer forward conventions the harness auto-detects.
 FORWARD_CONVENTIONS: frozenset[str] = frozenset(
@@ -220,6 +224,13 @@ class RendererBundle:
             two-frame contest pair. ``0`` is allowed only for deliberate
             frame-0 research probes; the default must stay contest-aligned.
         distillation_temperature: Hinton-KL temperature ``T`` (default 2.0).
+        segnet_distillation_objective: SegNet scorer-teacher objective. Defaults
+            to KL T=2.0; boundary objectives route through the same scorer-bound
+            loss and sibling-head optimizer.
+        segnet_tau_boundary: boundary-band temperature for boundary-aware SegNet
+            objectives.
+        segnet_hinge_margin: Crammer-Singer margin buffer for the
+            ``boundary_argmax_hinge`` objective.
         distillation_num_classes: SegNet surrogate class count (default 5).
         pose_distillation_weight: weight ``lambda_pose`` on the gradient-reachable
             POSE-MSE score-aware surrogate term. ``0.0`` disables it. PoseNet is
@@ -276,6 +287,9 @@ class RendererBundle:
     allow_mock_scorer_teacher: bool = False
     segnet_teacher_frame_index: int = 1
     distillation_temperature: float = 2.0
+    segnet_distillation_objective: str = DISTILLATION_OBJECTIVE_KL_T2
+    segnet_tau_boundary: float = 1.0
+    segnet_hinge_margin: float = 1.0
     distillation_num_classes: int = 5
     pose_distillation_weight: float = 0.0
     pose_scorer_teacher: Any | None = None
@@ -316,6 +330,20 @@ class RendererBundle:
             raise MlxScoreAwareHarnessError(
                 f"distillation_temperature must be > 0; got "
                 f"{self.distillation_temperature}"
+            )
+        if self.segnet_distillation_objective not in VALID_DISTILLATION_OBJECTIVES:
+            raise MlxScoreAwareHarnessError(
+                "segnet_distillation_objective must be one of "
+                f"{VALID_DISTILLATION_OBJECTIVES!r}; got "
+                f"{self.segnet_distillation_objective!r}"
+            )
+        if self.segnet_tau_boundary <= 0.0:
+            raise MlxScoreAwareHarnessError(
+                f"segnet_tau_boundary must be > 0; got {self.segnet_tau_boundary}"
+            )
+        if self.segnet_hinge_margin <= 0.0:
+            raise MlxScoreAwareHarnessError(
+                f"segnet_hinge_margin must be > 0; got {self.segnet_hinge_margin}"
             )
         if self.distillation_num_classes < 1:
             raise MlxScoreAwareHarnessError(

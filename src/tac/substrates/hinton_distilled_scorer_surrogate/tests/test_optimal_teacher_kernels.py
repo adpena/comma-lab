@@ -23,6 +23,7 @@ mx = pytest.importorskip("mlx.core")
 import mlx.optimizers as optim  # noqa: E402
 
 from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (  # noqa: E402
+    boundary_argmax_hinge_loss,
     boundary_decision_tckd_loss,
     boundary_weighted_tckd_loss,
     hinton_distilled_kl_t2_loss,
@@ -300,6 +301,51 @@ def test_decision_tckd_positive_when_student_differs():
     assert val > 0.0 and np.isfinite(val)
 
 
+def test_decision_tckd_penalizes_out_of_pair_impostor_class():
+    """A non-top2 class winning student argmax is a real d_seg error."""
+
+    teacher = mx.array([[3.0, 0.0, 2.9, 0.0, -4.0]])
+    # Preserve the teacher top1/top2 logits exactly, but make class 4 dominate.
+    # A pure softmax([top1, top2]) decision loss would be zero here even though
+    # the full student argmax disagrees with the teacher.
+    student = mx.array([[3.0, 0.0, 2.9, 0.0, 100.0]])
+    assert int(mx.argmax(teacher, axis=-1)[0]) == 0
+    assert int(mx.argmax(student, axis=-1)[0]) == 4
+
+    val = float(
+        boundary_decision_tckd_loss(
+            student,
+            teacher,
+            temperature=2.0,
+            tau_boundary=1.0,
+        )
+    )
+    assert val > 0.5
+
+
+def test_boundary_argmax_hinge_zero_iff_argmax_correct_with_margin():
+    teacher = mx.array(
+        [
+            [3.0, 0.0, 2.9, 0.0, 0.0],
+            [3.0, 0.0, 2.9, 0.0, 0.0],
+        ]
+    )
+    correct = mx.array(
+        [
+            [4.0, 0.0, 2.5, 0.0, 0.0],
+            [4.0, 0.0, 2.5, 0.0, 0.0],
+        ]
+    )
+    wrong = mx.array(
+        [
+            [3.0, 0.0, 2.9, 0.0, 100.0],
+            [3.0, 0.0, 2.9, 0.0, 100.0],
+        ]
+    )
+    assert float(boundary_argmax_hinge_loss(correct, teacher, margin=0.5)) < 1e-6
+    assert float(boundary_argmax_hinge_loss(wrong, teacher, margin=0.5)) > 90.0
+
+
 def test_decision_tckd_gradient_flows():
     teacher = _mixed_5class_teacher()
     student = teacher + mx.random.normal(teacher.shape) * 0.5
@@ -356,6 +402,140 @@ def test_decision_tckd_rejects_nonpositive_params():
         boundary_decision_tckd_loss(teacher, teacher, temperature=0.0)
     with pytest.raises(ValueError):
         boundary_decision_tckd_loss(teacher, teacher, tau_boundary=-1.0)
+
+
+# --------------------------------------------------------------------------- #
+# boundary_argmax_hinge_loss — the d_seg-FAITHFUL seg teacher (loss=0 <=> argmax-correct).
+# --------------------------------------------------------------------------- #
+def test_argmax_hinge_zero_when_confidently_correct():
+    """loss = 0 IFF the student's argmax matches the teacher's, with margin.
+
+    A confidently-correct student (argmax == teacher argmax, gap >= margin) is
+    d_seg-correct, so the hinge must be ~0 even though the student does NOT match
+    the teacher's soft distribution.
+    """
+    teacher = mx.array([[3.0, 0.0, 2.9, 0.0, 0.0]])  # boundary: top1=0, top2=2, margin 0.1
+    student = mx.array([[10.0, 0.0, 0.0, 0.0, 0.0]])  # confidently correct (argmax 0, gap 10)
+    assert int(mx.argmax(student, axis=-1)[0]) == int(mx.argmax(teacher, axis=-1)[0])
+    assert float(boundary_argmax_hinge_loss(student, teacher, margin=1.0)) < 1e-6
+
+
+def test_argmax_hinge_rewards_overconfidence_where_soft_losses_punish():
+    """THE d_seg-faithfulness proof — why every soft loss is the wrong object.
+
+    The student is CONFIDENTLY CORRECT (argmax matches the teacher, large margin)
+    but does NOT match the teacher's fragile boundary softness. For ``d_seg`` this
+    is IDEAL (confident-correct => no flip). The hinge correctly assigns ~0 loss;
+    every soft probability-matching loss (KL T=2.0, target-vs-rest TCKD, 3-bucket
+    decision-KD) PENALIZES the over-confidence — i.e. they would pull the student
+    BACK toward the teacher's flip-prone uncertainty. That is exactly why all three
+    soft arms lost the near-correct A/B and the hinge is the faithful object.
+    """
+    teacher = mx.array([[3.0, 0.0, 2.9, 0.0, 0.0]])  # uncertain boundary (top1~0.51, top2~0.49)
+    student = mx.array([[10.0, 0.0, 0.0, 0.0, 0.0]])  # confident-correct (d_seg-ideal)
+
+    hinge = float(boundary_argmax_hinge_loss(student, teacher, margin=1.0))
+    kl = float(hinton_distilled_kl_t2_loss(student, teacher, temperature=2.0))
+    tvr = float(boundary_weighted_tckd_loss(student, teacher, temperature=2.0))
+    dec = float(boundary_decision_tckd_loss(student, teacher, temperature=2.0))
+
+    assert hinge < 1e-6  # hinge: confident-correct is FREE (d_seg-faithful)
+    assert kl > 0.1  # KL: punishes the over-confidence (wrong object for d_seg)
+    assert tvr > 0.01  # target-vs-rest: punishes it too
+    assert dec > 0.01  # decision-KD: punishes it too
+
+
+def test_argmax_hinge_nonzero_for_out_of_pair_impostor():
+    """The operator's literal scenario: cannot be zero while d_seg is wrong.
+
+    The student's argmax is an OUT-OF-PAIR impostor (class 4, NOT the teacher's
+    top2). ``d_seg`` is wrong, so the hinge must be strictly positive — the
+    ``max_{j != t}`` sweep includes class 4.
+    """
+    teacher = mx.array([[3.0, 0.0, 2.9, 0.0, -4.0]])  # top1=0, top2=2 (class 4 is far below)
+    student = mx.array([[3.0, 0.0, 2.9, 0.0, 9.0]])  # argmax flips to OUT-OF-PAIR class 4
+    assert int(mx.argmax(teacher, axis=-1)[0]) == 0
+    assert int(mx.argmax(student, axis=-1)[0]) == 4  # NOT the teacher's top2 (=2)
+    val = float(boundary_argmax_hinge_loss(student, teacher, margin=1.0))
+    assert val > 0.0  # cannot be zero while d_seg is wrong
+
+
+def test_argmax_hinge_nonzero_for_top2_flip():
+    """The in-pair flip is penalised too (the hinge handles BOTH top2 and impostors)."""
+    teacher = mx.array([[3.0, 0.0, 2.9, 0.0, 0.0]])  # top1=0, top2=2
+    student = mx.array([[3.0, 0.0, 5.0, 0.0, 0.0]])  # argmax flips to teacher's top2 (=2)
+    assert int(mx.argmax(student, axis=-1)[0]) == 2
+    assert float(boundary_argmax_hinge_loss(student, teacher, margin=1.0)) > 0.0
+
+
+def test_argmax_hinge_gradient_flows():
+    teacher = _mixed_5class_teacher()
+    student = teacher + mx.random.normal(teacher.shape) * 0.5
+
+    def loss_fn(s):
+        return boundary_argmax_hinge_loss(s, teacher, margin=1.0)
+
+    g = mx.grad(loss_fn)(student)
+    assert bool(mx.all(mx.isfinite(g)))
+    assert float(mx.sqrt(mx.sum(g * g))) > 0.0  # actually trains (non-zero grad)
+
+
+def test_argmax_hinge_concentrates_on_boundary_not_interior():
+    """The boundary perturbation drives a larger loss INCREASE than the interior.
+
+    Measured as the perturbation-induced DELTA over the teacher's own baseline loss
+    (``loss(teacher, teacher)``). The hinge has a sub-margin floor: even a perfect
+    student incurs loss wherever the teacher's own top-2 gap is below the margin
+    (the teacher's irreducible boundary uncertainty). That floor is a COMMON
+    baseline in both arms, so the faithful measure of "where the gradient
+    concentrates" is the delta. Interior perturbation (+2.0, gap 4 >> margin 1 =>
+    hinge unchanged at 0) => delta ~0; boundary perturbation (+2.0 across the
+    ~0.1-margin decision => the runner-up wins) => large delta.
+    """
+    teacher = _mixed_5class_teacher()
+    base = float(boundary_argmax_hinge_loss(teacher, teacher, margin=1.0))
+    s_interior = mx.array(teacher)
+    pert_i = mx.zeros(teacher.shape)
+    pert_i[:100, 1] = 2.0  # interior class 1 -> ~2.0, gap to class 0 (~6) is 4 >> margin
+    s_interior = s_interior + pert_i
+    s_boundary = mx.array(teacher)
+    pert_b = mx.zeros(teacher.shape)
+    pert_b[100:200, 2] = 2.0  # push the runner-up across the ~0.1-margin boundary
+    s_boundary = s_boundary + pert_b
+    d_interior = float(boundary_argmax_hinge_loss(s_interior, teacher, margin=1.0)) - base
+    d_boundary = float(boundary_argmax_hinge_loss(s_boundary, teacher, margin=1.0)) - base
+    assert d_boundary > 5.0 * max(d_interior, 1e-9)
+
+
+def test_argmax_hinge_actually_trains_reduces_d_seg():
+    """NO-FAKE: optimizing the hinge must REDUCE the actual argmax-disagreement rate."""
+    teacher = _mixed_5class_teacher(seed=1)
+    teacher_argmax = mx.argmax(teacher, axis=-1)
+
+    def d_seg(s):
+        return float((mx.argmax(s, axis=-1) != teacher_argmax).astype(mx.float32).mean())
+
+    mx.random.seed(7)
+    student = teacher + mx.random.normal(teacher.shape) * 1.5  # noisy near-correct start
+    d0 = d_seg(student)
+    opt = optim.Adam(learning_rate=0.5)
+    fn = lambda z: boundary_argmax_hinge_loss(z, teacher, margin=1.0)  # noqa: E731
+    grad_fn = mx.value_and_grad(fn)
+    for _ in range(40):
+        _, g = grad_fn(student)
+        student = opt.apply_gradients({"s": g}, {"s": student})["s"]
+        mx.eval(student)
+    d1 = d_seg(student)
+    assert d1 < d0  # the hinge actually lowers d_seg (not a no-op)
+    assert d0 > 0.0  # the start was genuinely wrong somewhere (real test)
+
+
+def test_argmax_hinge_rejects_nonpositive_params():
+    teacher = _mixed_5class_teacher()
+    with pytest.raises(ValueError):
+        boundary_argmax_hinge_loss(teacher, teacher, margin=0.0)
+    with pytest.raises(ValueError):
+        boundary_argmax_hinge_loss(teacher, teacher, tau_boundary=-1.0)
 
 
 # --------------------------------------------------------------------------- #

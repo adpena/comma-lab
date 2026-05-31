@@ -203,6 +203,51 @@ def test_real_scorer_distill_selects_contest_segnet_frame_by_default() -> None:
     assert frame_0_head.last_mean == pytest.approx(0.0)
 
 
+def test_score_aware_loss_routes_configured_segnet_objective() -> None:
+    target_0 = mx.zeros((2, 4, 4, 3))
+    target_1 = mx.ones((2, 4, 4, 3))
+
+    class _Teacher:
+        num_classes = 5
+
+        def teacher_logits_for_indices(self, idx):
+            arr = np.zeros((idx.shape[0], 4, 4, self.num_classes), dtype=np.float32)
+            arr[..., 0] = 3.0
+            arr[..., 2] = 2.9
+            return mx.array(arr)
+
+    class _Head:
+        def __call__(self, frames):
+            b, h, w, _c = frames.shape
+            return mx.zeros((b, h, w, 5))
+
+    common = {
+        "model": ReconstructPairModel(target_0, target_1),
+        "target_rgb_0": target_0,
+        "target_rgb_1": target_1,
+        "num_pairs": 2,
+        "forward_convention": "reconstruct_pair_nchw01",
+        "distillation_weight": 1.0,
+        "scorer_teacher": _Teacher(),
+        "learnable_student_head": _Head(),
+        "allow_segnet_only_research": True,
+    }
+    kl_bundle = RendererBundle(**common, segnet_distillation_objective="kl_t2")
+    hinge_bundle = RendererBundle(
+        **common,
+        segnet_distillation_objective="boundary_argmax_hinge",
+        segnet_tau_boundary=0.75,
+        segnet_hinge_margin=0.5,
+    )
+
+    _kl_total, kl_parts = score_aware_loss(kl_bundle, mx.array([0, 1]))
+    _hinge_total, hinge_parts = score_aware_loss(hinge_bundle, mx.array([0, 1]))
+
+    assert _scalar(kl_parts["distill"]) != pytest.approx(
+        _scalar(hinge_parts["distill"])
+    )
+
+
 def test_pose_distill_composes_real_pose_teacher_and_head() -> None:
     target_0, target_1 = _targets()
 

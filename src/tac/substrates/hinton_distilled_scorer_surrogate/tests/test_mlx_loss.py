@@ -27,6 +27,11 @@ from tac.substrates.hinton_distilled_scorer_surrogate import (  # noqa: E402
     DEFAULT_POSE_DIMS,
     DEFAULT_POSE_POOL_GRID,
     DEFAULT_SEGNET_CLASSES,
+    DISTILLATION_OBJECTIVE_BOUNDARY_ARGMAX_HINGE,
+    DISTILLATION_OBJECTIVE_BOUNDARY_DECISION_TCKD,
+    DISTILLATION_OBJECTIVE_BOUNDARY_TCKD,
+    DISTILLATION_OBJECTIVE_KL_T2,
+    VALID_DISTILLATION_OBJECTIVES,
     HintonMlxCustomLossFnConfig,
     LearnablePoseStudentHead,
     MockTeacherLogitsProvider,
@@ -275,6 +280,9 @@ def test_hinton_config_default_values() -> None:
     cfg = HintonMlxCustomLossFnConfig()
     assert cfg.distillation_weight == 0.5
     assert cfg.temperature == 2.0
+    assert cfg.distillation_objective == DISTILLATION_OBJECTIVE_KL_T2
+    assert cfg.tau_boundary == 1.0
+    assert cfg.hinge_margin == 1.0
     assert cfg.student_head_out_channels == 5
     assert cfg.evidence_grade == EVIDENCE_GRADE_MLX
 
@@ -287,6 +295,15 @@ def test_hinton_config_rejects_negative_weight() -> None:
 def test_hinton_config_rejects_invalid_temperature() -> None:
     with pytest.raises(ValueError, match="temperature must be > 0"):
         HintonMlxCustomLossFnConfig(temperature=0.0)
+
+
+def test_hinton_config_rejects_invalid_objective_and_boundary_tau() -> None:
+    with pytest.raises(ValueError, match="distillation_objective must be"):
+        HintonMlxCustomLossFnConfig(distillation_objective="cargo_cult_loss")
+    with pytest.raises(ValueError, match="tau_boundary must be > 0"):
+        HintonMlxCustomLossFnConfig(tau_boundary=0.0)
+    with pytest.raises(ValueError, match="hinge_margin must be > 0"):
+        HintonMlxCustomLossFnConfig(hinge_margin=0.0)
 
 
 def test_hinton_config_rejects_invalid_num_classes() -> None:
@@ -347,6 +364,47 @@ def test_make_hinton_custom_loss_fn_returns_scalar_loss() -> None:
     val = float(loss.item())
     assert val == val  # not NaN
     assert val > 0.0
+
+
+@pytest.mark.parametrize(
+    "objective",
+    [
+        DISTILLATION_OBJECTIVE_KL_T2,
+        DISTILLATION_OBJECTIVE_BOUNDARY_TCKD,
+        DISTILLATION_OBJECTIVE_BOUNDARY_DECISION_TCKD,
+        DISTILLATION_OBJECTIVE_BOUNDARY_ARGMAX_HINGE,
+    ],
+)
+def test_make_hinton_custom_loss_fn_supports_all_distillation_objectives(
+    objective: str,
+) -> None:
+    """The trainer-facing factory must expose every validated teacher objective."""
+
+    import numpy as np
+
+    decoded_arr = (
+        np.random.RandomState(30).rand(2, 2, 3, 16, 16).astype(np.float32) * 255.0
+    )
+    targets = mx.array(np.random.RandomState(31).rand(2, 16, 16, 3).astype(np.float32))
+    indices = mx.array([0, 1], dtype=mx.int32)
+
+    class _FakeBundle:
+        def __call__(self, _indices: object) -> object:
+            return mx.array(decoded_arr)
+
+    fn = make_hinton_custom_loss_fn(
+        HintonMlxCustomLossFnConfig(
+            distillation_objective=objective,
+            teacher_provider=MockTeacherLogitsProvider(
+                num_classes=5,
+                spatial_downsample_factor=4,
+            ),
+        )
+    )
+
+    loss = fn(_FakeBundle(), indices, targets)
+    assert loss.shape == ()
+    assert float(loss.item()) > 0.0
 
 
 def test_make_hinton_custom_loss_fn_distillation_term_is_nonzero() -> None:
@@ -445,6 +503,12 @@ def test_hinton_smoke_plan_records_real_segnet_effective_downsample_and_provenan
             "real_segnet",
             "--teacher-cache-device",
             "cpu",
+            "--distillation-objective",
+            "boundary_decision_tckd",
+            "--tau-boundary",
+            "0.75",
+            "--hinge-margin",
+            "0.25",
             "--max-frames",
             "4",
             "--smoke-epochs",
@@ -460,6 +524,10 @@ def test_hinton_smoke_plan_records_real_segnet_effective_downsample_and_provenan
 
     assert stdout["mode"] == "plan_only"
     assert report["teacher_provider"] == "real_segnet"
+    assert report["distillation_objective"] == "boundary_decision_tckd"
+    assert report["tau_boundary"] == 0.75
+    assert report["hinge_margin"] == 0.25
+    assert report["distillation_objective"] in VALID_DISTILLATION_OBJECTIVES
     assert report["teacher_cache_device"] == "cpu"
     assert report["spatial_downsample_factor"] == 4
     assert report["effective_spatial_downsample_factor"] == 1

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Run a Hinton-distilled scorer surrogate MLX long-training smoke.
+"""Run a scorer-distilled surrogate MLX long-training smoke.
 
-This CLI binds the canonical Hinton KL T=2.0 ``custom_loss_fn`` (per
+This CLI binds the canonical scorer-teacher ``custom_loss_fn`` (per
 ``tac.substrates.hinton_distilled_scorer_surrogate``) into the Slot 1 PR95
 MLX long-training pipeline
 (``tac.local_acceleration.pr95_hnerv_mlx_long_training.MLXLongTrainingPipeline``)
@@ -76,6 +76,8 @@ from tac.local_acceleration.pr95_hnerv_mlx_long_training import (  # noqa: E402
 from tac.substrates.hinton_distilled_scorer_surrogate import (  # noqa: E402
     DEFAULT_DISTILLATION_TEMPERATURE,
     DEFAULT_SEGNET_CLASSES,
+    DISTILLATION_OBJECTIVE_KL_T2,
+    VALID_DISTILLATION_OBJECTIVES,
     HintonMlxCustomLossFnConfig,
     MockTeacherLogitsProvider,
     build_real_segnet_teacher_cache,
@@ -475,6 +477,37 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=float,
     )
     parser.add_argument(
+        "--distillation-objective",
+        choices=VALID_DISTILLATION_OBJECTIVES,
+        default=DISTILLATION_OBJECTIVE_KL_T2,
+        help=(
+            "Scorer-teacher loss objective. kl_t2 is the original Hinton "
+            "KL path; boundary_tckd and boundary_decision_tckd are soft "
+            "diagnostic boundary objectives; boundary_argmax_hinge is the "
+            "raw-logit d_seg-faithful objective with a configurable margin "
+            "buffer. All remain [macOS-MLX research-signal] only."
+        ),
+    )
+    parser.add_argument(
+        "--tau-boundary",
+        default=1.0,
+        type=float,
+        help=(
+            "Boundary-band temperature for boundary_tckd and "
+            "boundary_decision_tckd objectives."
+        ),
+    )
+    parser.add_argument(
+        "--hinge-margin",
+        default=1.0,
+        type=float,
+        help=(
+            "Crammer-Singer margin buffer for the boundary_argmax_hinge "
+            "objective. This is intentionally configurable because the "
+            "optimal buffer is a measured contest-operating-point property."
+        ),
+    )
+    parser.add_argument(
         "--distillation-weight",
         default=0.5,
         type=float,
@@ -627,6 +660,9 @@ def main(argv: list[str] | None = None) -> int:
     hinton_config = HintonMlxCustomLossFnConfig(
         distillation_weight=args.distillation_weight,
         temperature=args.distillation_temperature,
+        distillation_objective=args.distillation_objective,
+        tau_boundary=args.tau_boundary,
+        hinge_margin=args.hinge_margin,
         student_head_out_channels=args.num_classes,
         teacher_provider=MockTeacherLogitsProvider(
             num_classes=args.num_classes,
@@ -651,6 +687,9 @@ def main(argv: list[str] | None = None) -> int:
         "max_frames": config.max_frames,
         "smoke_epochs": args.smoke_epochs,
         "distillation_temperature": args.distillation_temperature,
+        "distillation_objective": args.distillation_objective,
+        "tau_boundary": args.tau_boundary,
+        "hinge_margin": args.hinge_margin,
         "distillation_weight": args.distillation_weight,
         "num_classes": args.num_classes,
         "spatial_downsample_factor": args.spatial_downsample_factor,

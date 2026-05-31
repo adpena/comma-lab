@@ -57,6 +57,33 @@ def test_rejects_nonpositive_temperature() -> None:
         )
 
 
+def test_rejects_bad_segnet_distillation_objective_and_tau() -> None:
+    with pytest.raises(MlxScoreAwareHarnessError, match="segnet_distillation_objective"):
+        RendererBundle(
+            model=object(),
+            target_rgb_0=None,
+            target_rgb_1=None,
+            num_pairs=4,
+            segnet_distillation_objective="not_a_real_objective",
+        )
+    with pytest.raises(MlxScoreAwareHarnessError, match="segnet_tau_boundary"):
+        RendererBundle(
+            model=object(),
+            target_rgb_0=None,
+            target_rgb_1=None,
+            num_pairs=4,
+            segnet_tau_boundary=0.0,
+        )
+    with pytest.raises(MlxScoreAwareHarnessError, match="segnet_hinge_margin"):
+        RendererBundle(
+            model=object(),
+            target_rgb_0=None,
+            target_rgb_1=None,
+            num_pairs=4,
+            segnet_hinge_margin=0.0,
+        )
+
+
 def test_rejects_bad_num_classes() -> None:
     with pytest.raises(MlxScoreAwareHarnessError, match="distillation_num_classes"):
         RendererBundle(
@@ -176,6 +203,9 @@ def test_accepts_canonical_conventions_with_defaults() -> None:
         assert b.forward_convention == conv
         assert b.distillation_weight == 0.0
         assert b.distillation_temperature == 2.0
+        assert b.segnet_distillation_objective == "kl_t2"
+        assert b.segnet_tau_boundary == 1.0
+        assert b.segnet_hinge_margin == 1.0
         assert b.distillation_num_classes == 5
         assert b.segnet_teacher_frame_index == 1
         assert b.pose_distillation_weight == 0.0

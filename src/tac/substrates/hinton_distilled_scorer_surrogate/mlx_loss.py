@@ -73,6 +73,16 @@ mx = _MLX_RUNTIME.mx if _MLX_RUNTIME is not None else None
 DEFAULT_DISTILLATION_TEMPERATURE: float = 2.0
 DEFAULT_SEGNET_CLASSES: int = 5  # canonical SegNet output classes per
 # `upstream/modules.py` (smp.Unet(classes=5)).
+DISTILLATION_OBJECTIVE_KL_T2 = "kl_t2"
+DISTILLATION_OBJECTIVE_BOUNDARY_TCKD = "boundary_tckd"
+DISTILLATION_OBJECTIVE_BOUNDARY_DECISION_TCKD = "boundary_decision_tckd"
+DISTILLATION_OBJECTIVE_BOUNDARY_ARGMAX_HINGE = "boundary_argmax_hinge"
+VALID_DISTILLATION_OBJECTIVES = (
+    DISTILLATION_OBJECTIVE_KL_T2,
+    DISTILLATION_OBJECTIVE_BOUNDARY_TCKD,
+    DISTILLATION_OBJECTIVE_BOUNDARY_DECISION_TCKD,
+    DISTILLATION_OBJECTIVE_BOUNDARY_ARGMAX_HINGE,
+)
 # Tiny numerical floor for log + division stability in KL across MLX float32.
 _NUMERIC_FLOOR: float = 1.0e-12
 
@@ -401,28 +411,31 @@ def boundary_decision_tckd_loss(
     temperature: float = DEFAULT_DISTILLATION_TEMPERATURE,
     tau_boundary: float = 1.0,
 ) -> Any:
-    """Runner-up-AWARE boundary-decision distillation (the OPTIMAL seg teacher v2).
+    """Runner-up-AWARE guarded boundary-decision distillation.
 
     Fixes the "TCKD-loses-runner-up" property of :func:`boundary_weighted_tckd_loss`:
     target-vs-rest binarisation ``[p_target, 1-p_target]`` lumps ALL non-target
     classes into "rest", so on a weak-margin boundary it cannot model WHICH class is
     the competitor. But ``d_seg`` flips happen specifically at the **top1<->top2
-    decision surface** (the third/fourth/fifth classes are far below and irrelevant
-    to whether THIS pixel flips). So the faithful object is the binary decision over
-    the teacher's TWO competing classes::
+    decision surface** while still failing if any other class wins student argmax.
+    So the faithful soft object is a guarded top1/top2/other decision over the
+    teacher's two competing classes plus the remaining impostor mass::
 
         a, b      = teacher's top-1 (decision) and top-2 (runner-up) class indices
-        q_teach   = softmax([teacher_a/T, teacher_b/T])     (the 2-way decision)
-        q_stud    = softmax([student_a/T, student_b/T])     (student at SAME pair)
-        decKL_i   = KL(q_stud || q_teach)                   (2-class, not target-vs-rest)
+        p_teach   = softmax(teacher/T) over ALL classes
+        p_stud    = softmax(student/T) over ALL classes
+        q_teach   = [p_teach[a], p_teach[b], 1-p_teach[a]-p_teach[b]]
+        q_stud    = [p_stud[a],  p_stud[b],  1-p_stud[a]-p_stud[b]]
+        decKL_i   = KL(q_stud || q_teach)                   (top1/top2/other)
         L_seg**   = T^2 * sum_i w_i * decKL_i / sum_i w_i
 
-    This is the DERIVED "perfectly model the boundary" object: the boundary IS the
-    top1<->top2 surface, and we distil exactly that surface (zero params — read off
-    the teacher's sorted logits). On confident interiors top1>>top2 so ``q_teach``
-    is near-degenerate and ``decKL`` ->0; the band weight ``w_i`` zeros it anyway.
-    Strictly more faithful than :func:`boundary_weighted_tckd_loss` because it
-    preserves the runner-up identity that the contest argmax-flip actually contests.
+    This is the DERIVED boundary object with a contest-critical guard: the boundary
+    IS the top1<->top2 surface, but ``d_seg`` is wrong if ANY out-of-pair class
+    wins the student's argmax. A pure 2-way softmax over ``[a,b]`` is therefore
+    insufficient: it can be zero while class 4 dominates the full student logits.
+    The third "other" bucket keeps runner-up identity while penalizing out-of-pair
+    impostors, so zero loss implies the student matches the teacher's top1/top2
+    distribution AND keeps non-competing classes at the teacher's mass.
 
     Args:
         student_logits: MLX ``(..., num_classes)`` student per-pixel logits.
@@ -445,25 +458,113 @@ def boundary_decision_tckd_loss(
     order = mx.argsort(teacher_logits, axis=-1)  # ascending -> [-1]=top1, [-2]=top2
     top1_idx = order[..., -1:]  # (..., 1)
     top2_idx = order[..., -2:-1]  # (..., 1)
-    # gather the TWO competing logits for teacher AND student at the SAME pair.
-    t1 = mx.take_along_axis(teacher_logits, top1_idx, axis=-1)
-    t2 = mx.take_along_axis(teacher_logits, top2_idx, axis=-1)
-    s1 = mx.take_along_axis(student_logits, top1_idx, axis=-1)
-    s2 = mx.take_along_axis(student_logits, top2_idx, axis=-1)
-    teacher_pair = mx.concatenate([t1, t2], axis=-1)  # (..., 2)
-    student_pair = mx.concatenate([s1, s2], axis=-1)  # (..., 2)
-    teacher_dec = softmax_with_temperature(teacher_pair, temperature)  # (..., 2)
-    student_dec = softmax_with_temperature(student_pair, temperature)  # (..., 2)
+    # Compute full-class probabilities, then collapse to a guarded
+    # top1/top2/other decision. This preserves the runner-up surface while
+    # retaining sensitivity to any out-of-pair class that would flip d_seg.
+    teacher_soft = softmax_with_temperature(teacher_logits, temperature)
+    student_soft = softmax_with_temperature(student_logits, temperature)
+    t1 = mx.take_along_axis(teacher_soft, top1_idx, axis=-1)
+    t2 = mx.take_along_axis(teacher_soft, top2_idx, axis=-1)
+    s1 = mx.take_along_axis(student_soft, top1_idx, axis=-1)
+    s2 = mx.take_along_axis(student_soft, top2_idx, axis=-1)
+    t_other = mx.maximum(1.0 - t1 - t2, 0.0)
+    s_other = mx.maximum(1.0 - s1 - s2, 0.0)
+    teacher_dec = mx.concatenate([t1, t2, t_other], axis=-1)  # (..., 3)
+    student_dec = mx.concatenate([s1, s2, s_other], axis=-1)  # (..., 3)
     eps = _NUMERIC_FLOOR
     p_s = mx.clip(student_dec, eps, 1.0)
     p_t = mx.clip(teacher_dec, eps, 1.0)
-    # 2-class KL(student || teacher) over the decision pair.
+    # 3-bucket KL(student || teacher) over top1/top2/other.
     decision_kl = mx.sum(p_s * (mx.log(p_s) - mx.log(p_t)), axis=-1)  # (...)
     w = mx.stop_gradient(
         segnet_boundary_band_weights_mlx(teacher_logits, tau_boundary=tau_boundary)
     )  # (...)
     denom = mx.sum(w) + _NUMERIC_FLOOR
     return (temperature * temperature) * mx.sum(w * decision_kl) / denom
+
+
+def boundary_argmax_hinge_loss(
+    student_logits: Any,
+    teacher_logits: Any,
+    *,
+    margin: float = 1.0,
+    tau_boundary: float = 1.0,
+) -> Any:
+    """Impostor-complete boundary argmax-hinge loss (the d_seg-FAITHFUL seg teacher).
+
+    The empirical correction to :func:`boundary_decision_tckd_loss` and
+    :func:`boundary_weighted_tckd_loss`. Three-arm A/B (2026-05-31, near-correct
+    regime) showed every SOFT probability-matching seg loss (KL T=2.0,
+    target-vs-rest TCKD, guarded 3-bucket decision-KD) teaches the student to MATCH the
+    teacher's softness — and at a boundary pixel the teacher is genuinely
+    uncertain (top1~0.30, top2~0.28 at T=2.0), so they teach the student to STAY
+    uncertain rather than to get the argmax right. None directly optimizes the
+    property that matters for ``d_seg``::
+
+        teacher_argmax_logit >= every_student_impostor_logit
+
+    Per the operator's diagnosis (2026-05-31): the old other-bucket approach was
+    a soft-probability compromise, not the optimum. The faithful contest surrogate
+    is the Crammer-Singer multiclass hinge (Crammer & Singer 2001 JMLR) on RAW
+    logits, using the teacher's argmax as the reference class ``t``::
+
+        t            = argmax(teacher)                  (the d_seg reference class)
+        m_impostor   = max_{j != t} student_logit_j     (ALL impostors, incl. top3/4/5)
+        hinge_i      = relu(m_impostor - student_logit_t + margin)
+        w_i          = exp(-teacher_margin_i / tau_b)   (boundary-band weight)
+        L_seg+       = sum_i w_i * hinge_i / sum_i w_i
+
+    Three properties that the soft losses lack:
+
+    1. ``hinge_i = 0`` IFF ``student_logit_t >= m_impostor + margin`` -> the
+       student's argmax is ``t`` with margin -> ``d_seg`` is correct at pixel i.
+       With ``margin -> 0`` this approaches the exact argmax-correct decision
+       boundary; with positive margin it is the stricter optimization target we
+       want for stable training.
+    2. ``m_impostor`` is the max over ALL ``j != t``, so any out-of-pair impostor
+       (the class-4-wins-while-top1/top2-look-fine case) makes the hinge positive.
+       Structurally extincts the "can be zero while d_seg wrong" blind spot.
+    3. Operates on raw logits (``margin`` replaces the distillation temperature):
+       there is no teacher softness to match, so it pushes the student to be
+       CONFIDENTLY correct at the boundary, not softly uncertain.
+
+    The boundary-band weight ``w_i`` (a fixed reweighting, stop-gradient) keeps the
+    gradient on the ~5-15% flippable boundary band. Margin = 1.0 is the canonical
+    SVM unit margin in logit units.
+
+    Args:
+        student_logits: MLX ``(..., num_classes)`` student per-pixel logits.
+        teacher_logits: MLX ``(..., num_classes)`` real-SegNet teacher logits
+            (caller passes ``mx.stop_gradient(...)`` if the teacher is frozen).
+        margin: Crammer-Singer hinge margin in logit units (default 1.0).
+        tau_boundary: boundary-band temperature ``tau_b`` (smaller = tighter band).
+
+    Returns:
+        Scalar MLX array (the boundary-weighted argmax-hinge loss).
+    """
+    _require_mlx()
+    if margin <= 0.0:
+        raise ValueError(f"margin must be > 0 (Crammer-Singer unit margin); got {margin}")
+    if tau_boundary <= 0.0:
+        raise ValueError(f"tau_boundary must be > 0; got {tau_boundary}")
+    num_classes = student_logits.shape[-1]
+    # teacher's argmax = the d_seg reference class t at each pixel.
+    target_idx = mx.argmax(teacher_logits, axis=-1, keepdims=True)  # (..., 1)
+    student_logit_t = mx.take_along_axis(student_logits, target_idx, axis=-1)  # (..., 1)
+    # mask out the target position, then max over impostors j != t (ALL of them).
+    eye = mx.eye(num_classes, dtype=student_logits.dtype)  # (K, K)
+    target_oh = mx.take(eye, mx.squeeze(target_idx, axis=-1), axis=0)  # (..., K) one-hot at t
+    masked = student_logits - target_oh * 1.0e30  # push target position to ~ -inf
+    max_impostor = mx.max(masked, axis=-1, keepdims=True)  # (..., 1) = max_{j!=t} student_j
+    # Crammer-Singer hinge: 0 IFF student_logit_t >= max_impostor + margin.
+    hinge = mx.maximum(max_impostor - student_logit_t + margin, 0.0)  # (..., 1)
+    hinge = mx.squeeze(hinge, axis=-1)  # (...)
+    # boundary-band weight (fixed reweighting -> stop gradient).
+    w = mx.stop_gradient(
+        segnet_boundary_band_weights_mlx(teacher_logits, tau_boundary=tau_boundary)
+    )  # (...)
+    denom = mx.sum(w) + _NUMERIC_FLOOR
+    return mx.sum(w * hinge) / denom
 
 
 def pose_sensitivity_weighted_mse_loss(
@@ -961,6 +1062,13 @@ class HintonMlxCustomLossFnConfig:
             module's added scorer-aware signal).
         temperature: Hinton distillation temperature. Default 2.0 per
             Quantizr canonical anchor + Probe 6 + Probe 7 empirical anchors.
+        distillation_objective: Which scorer-teacher functional to optimize.
+            ``kl_t2`` is the original Hinton KL. ``boundary_tckd`` and
+            ``boundary_decision_tckd`` are soft diagnostic objectives that can
+            still inherit teacher-softness failure modes. ``boundary_argmax_hinge``
+            is the d_seg-faithful raw-logit hinge with an explicit margin buffer.
+        tau_boundary: Boundary-band temperature for the two boundary objectives.
+        hinge_margin: Crammer-Singer margin for ``boundary_argmax_hinge``.
         student_head_out_channels: Number of student-side classes the
             student decoder emits as logits. Defaults to
             :data:`DEFAULT_SEGNET_CLASSES` = 5 (matching canonical SegNet).
@@ -975,6 +1083,9 @@ class HintonMlxCustomLossFnConfig:
 
     distillation_weight: float = 0.5
     temperature: float = DEFAULT_DISTILLATION_TEMPERATURE
+    distillation_objective: str = DISTILLATION_OBJECTIVE_KL_T2
+    tau_boundary: float = 1.0
+    hinge_margin: float = 1.0
     student_head_out_channels: int = DEFAULT_SEGNET_CLASSES
     teacher_provider: TeacherLogitsProvider | None = None
     real_teacher_cache: RealSegNetTeacherLogitsCache | None = None
@@ -991,7 +1102,10 @@ class HintonMlxCustomLossFnConfig:
     learnable_student_head: LearnableConv1x1StudentHead | None = None
 
     def __post_init__(self) -> None:
-        if self.real_teacher_cache is not None and self.real_teacher_cache.num_classes != self.student_head_out_channels:
+        if (
+            self.real_teacher_cache is not None
+            and self.real_teacher_cache.num_classes != self.student_head_out_channels
+        ):
             raise ValueError(
                 f"real_teacher_cache.num_classes ({self.real_teacher_cache.num_classes}) "
                 f"must match student_head_out_channels ({self.student_head_out_channels})"
@@ -1004,6 +1118,20 @@ class HintonMlxCustomLossFnConfig:
         if self.temperature <= 0.0:
             raise ValueError(
                 f"temperature must be > 0 (Hinton 2014 canonical T=2.0); got {self.temperature}"
+            )
+        if self.distillation_objective not in VALID_DISTILLATION_OBJECTIVES:
+            raise ValueError(
+                f"distillation_objective must be one of "
+                f"{VALID_DISTILLATION_OBJECTIVES!r}; got "
+                f"{self.distillation_objective!r}"
+            )
+        if self.tau_boundary <= 0.0:
+            raise ValueError(
+                f"tau_boundary must be > 0 for boundary distillation; got {self.tau_boundary}"
+            )
+        if self.hinge_margin <= 0.0:
+            raise ValueError(
+                f"hinge_margin must be > 0 for boundary_argmax_hinge; got {self.hinge_margin}"
             )
         if self.student_head_out_channels < 2:
             raise ValueError(
@@ -1469,10 +1597,57 @@ def _student_logits_from_decoded(
     return provider.teacher_logits(decoded_bhwc)
 
 
+def score_teacher_distillation_loss(
+    *,
+    student_logits: Any,
+    teacher_logits: Any,
+    config: HintonMlxCustomLossFnConfig,
+) -> Any:
+    """Evaluate the configured scorer-teacher objective.
+
+    Keeping the selector inside the factory path prevents boundary-aware MLX
+    work from forking into A/B-only scripts while the substrate trainer keeps
+    running KL-only.
+    """
+    if config.distillation_objective == DISTILLATION_OBJECTIVE_KL_T2:
+        return hinton_distilled_kl_t2_loss(
+            student_logits=student_logits,
+            teacher_logits=teacher_logits,
+            temperature=config.temperature,
+        )
+    if config.distillation_objective == DISTILLATION_OBJECTIVE_BOUNDARY_TCKD:
+        return boundary_weighted_tckd_loss(
+            student_logits=student_logits,
+            teacher_logits=teacher_logits,
+            temperature=config.temperature,
+            tau_boundary=config.tau_boundary,
+        )
+    if (
+        config.distillation_objective
+        == DISTILLATION_OBJECTIVE_BOUNDARY_DECISION_TCKD
+    ):
+        return boundary_decision_tckd_loss(
+            student_logits=student_logits,
+            teacher_logits=teacher_logits,
+            temperature=config.temperature,
+            tau_boundary=config.tau_boundary,
+        )
+    if config.distillation_objective == DISTILLATION_OBJECTIVE_BOUNDARY_ARGMAX_HINGE:
+        return boundary_argmax_hinge_loss(
+            student_logits=student_logits,
+            teacher_logits=teacher_logits,
+            margin=config.hinge_margin,
+            tau_boundary=config.tau_boundary,
+        )
+    raise ValueError(
+        f"unsupported distillation_objective: {config.distillation_objective!r}"
+    )
+
+
 def make_hinton_custom_loss_fn(
     config: HintonMlxCustomLossFnConfig | None = None,
 ) -> Callable[[Any, Any, Any], Any]:
-    """Build a canonical Hinton-distilled KL T=2.0 ``custom_loss_fn``.
+    """Build a canonical scorer-distillation ``custom_loss_fn``.
 
     The returned callable matches the
     :class:`tac.local_acceleration.pr95_hnerv_mlx_long_training.SubstrateAdapterScaffold.custom_loss_fn`
@@ -1484,15 +1659,17 @@ def make_hinton_custom_loss_fn(
 
     The combined loss is::
 
-        L = mse(decoded_frame_0, targets) + λ * T**2 * KL(student || teacher)
+        L = mse(decoded_frame_0, targets) + λ * scorer_teacher_objective
 
     where:
       * ``decoded_frame_0 = bundle(indices)[:, 0]`` is the canonical Slot
         1 reconstruction (in [0, 255] then normalized to [0, 1]).
       * ``mse`` is the Slot 1 canonical RGB MSE term (same definition as
         :meth:`MLXLongTrainingPipeline.loss_fn`).
-      * ``student`` = ``softmax(student_logits_from(decoded_frame_0) / T)``.
-      * ``teacher`` = ``softmax(teacher_provider.teacher_logits(targets_batch) / T)``.
+      * ``student`` = logits from ``decoded_frame_0``.
+      * ``teacher`` = stopped logits from the provider/cache on ``targets_batch``.
+      * ``scorer_teacher_objective`` is selected by
+        :attr:`HintonMlxCustomLossFnConfig.distillation_objective`.
 
     The student consumes the DECODED frame while the stopped teacher consumes
     the TARGET frame. This avoids the self-KL false positive where student
@@ -1530,7 +1707,9 @@ def make_hinton_custom_loss_fn(
         # Reconstruction MSE (sister of the Slot 1 canonical loss_fn).
         diff = decoded_bhwc - targets_batch
         mse = mx.mean(diff * diff)
-        # Hinton KL T=2.0 distillation term.
+        # Scorer-teacher distillation term. KL T=2.0 is the default; boundary
+        # objectives share this same path so they are real substrate-training
+        # modes, not orphaned A/B-only kernels.
         # Student-side: always the MLX-native projection on decoded frames
         # (pure-MLX, gradient-bearing path from KL -> decoder weights).
         student_logits = _student_logits_from_decoded(decoded_bhwc, config)
@@ -1551,10 +1730,10 @@ def make_hinton_custom_loss_fn(
         # (mock) or a pre-computed cache (real SegNet) — both are gradient-
         # blocked here as defense-in-depth.
         teacher_logits_stopped = mx.stop_gradient(teacher_logits)
-        distill = hinton_distilled_kl_t2_loss(
+        distill = score_teacher_distillation_loss(
             student_logits=student_logits,
             teacher_logits=teacher_logits_stopped,
-            temperature=config.temperature,
+            config=config,
         )
         combined = mse + config.distillation_weight * distill
         return combined
@@ -1573,10 +1752,13 @@ def custom_loss_fn_canonical_signature_hash() -> str:
         "custom_loss_fn(bundle: Any, indices: Any, targets_batch: Any) -> Any "
         f"| evidence_grade={EVIDENCE_GRADE_MLX} "
         f"| evidence_tag={EVIDENCE_TAG_MLX} "
-        "| canonical=hinton_distilled_kl_t2_loss "
+        "| canonical=score_teacher_distillation_loss "
+        f"| objectives={','.join(VALID_DISTILLATION_OBJECTIVES)} "
         "| student_logits=provider(decoded_frame_0) "
         "| teacher_logits=stop_gradient(provider(targets_batch)) "
         "| temperature=DEFAULT_DISTILLATION_TEMPERATURE=2.0 "
+        "| tau_boundary=1.0 "
+        "| hinge_margin=1.0 "
         "| num_classes=DEFAULT_SEGNET_CLASSES=5"
     )
     return hashlib.sha256(sig.encode("utf-8")).hexdigest()

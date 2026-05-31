@@ -2,7 +2,7 @@
 """Gradient-reachable MLX score-aware Lagrangian (separation of concerns).
 
 This module owns ONLY the loss math: reconstruction MSE + the optional
-gradient-reachable Hinton-distilled KL T=2.0 scorer surrogate + optional
+gradient-reachable scorer-distilled surrogate + optional
 substrate-specific extra terms. It is substrate-AGNOSTIC: the renderer forward
 convention is decoded via :func:`decode_frames_nhwc01` so the loss never
 assumes a fixed model signature.
@@ -15,7 +15,7 @@ student is a learnable head on the decoded frame, and gradient flows KL ->
 decoded -> renderer params. The explicit mock path is allowed only for
 scorer-blind smoke tests.
 
-[verified-against: tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss.hinton_distilled_kl_t2_loss canonical scorer surrogate]
+[verified-against: tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss.score_teacher_distillation_loss canonical scorer surrogate]
 """
 from __future__ import annotations
 
@@ -74,12 +74,12 @@ def score_aware_loss(
     The combined loss is::
 
         L = recon_weight * (mse(rgb_0, gt_0) + mse(rgb_1, gt_1))
-            + distillation_weight * T**2 * KL(student || teacher)
+            + distillation_weight * scorer_teacher_objective(student, teacher)
             + sum_k extra_weight[k] * extra_term_k
 
     The reconstruction MSE is over the canonical NHWC ``[0, 1]`` frames. The
-    optional score-aware term is the canonical Hinton-distilled KL T=2.0
-    surrogate (gradient-reachable from KL -> decoded frame -> renderer params)
+    optional score-aware term is the configured scorer-teacher surrogate
+    (gradient-reachable from distill -> decoded frame -> renderer params)
     per CLAUDE.md "eval_roundtrip" + Catalog #164 sister discipline.
 
     Args:
@@ -109,9 +109,17 @@ def score_aware_loss(
 
     if bundle.distillation_weight > 0.0:
         from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (
-            hinton_distilled_kl_t2_loss,
+            HintonMlxCustomLossFnConfig,
+            score_teacher_distillation_loss,
         )
 
+        loss_cfg = HintonMlxCustomLossFnConfig(
+            temperature=bundle.distillation_temperature,
+            distillation_objective=bundle.segnet_distillation_objective,
+            tau_boundary=bundle.segnet_tau_boundary,
+            hinge_margin=bundle.segnet_hinge_margin,
+            student_head_out_channels=bundle.distillation_num_classes,
+        )
         if bundle.scorer_teacher is not None:
             # PRODUCTION path (Catalog #164 + C6 IBPS / DreamerV3 lesson): the
             # distill term BINDS THE REAL SCORER. The student is the learnable
@@ -138,10 +146,10 @@ def score_aware_loss(
             teacher_logits = mx.stop_gradient(
                 bundle.scorer_teacher.teacher_logits_for_indices(idx)
             )
-            distill = hinton_distilled_kl_t2_loss(
+            distill = score_teacher_distillation_loss(
                 student_logits=student_logits,
                 teacher_logits=teacher_logits,
-                temperature=bundle.distillation_temperature,
+                config=loss_cfg,
             )
         else:
             # SCORER-BLIND mock fallback — reachable ONLY when
@@ -159,10 +167,10 @@ def score_aware_loss(
             )
             student_logits = provider.teacher_logits(rgb_0)
             teacher_logits = mx.stop_gradient(provider.teacher_logits(gt_0))
-            distill = hinton_distilled_kl_t2_loss(
+            distill = score_teacher_distillation_loss(
                 student_logits=student_logits,
                 teacher_logits=teacher_logits,
-                temperature=bundle.distillation_temperature,
+                config=loss_cfg,
             )
         total = total + bundle.distillation_weight * distill
         parts["distill"] = distill
