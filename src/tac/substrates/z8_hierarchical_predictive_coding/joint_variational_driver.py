@@ -166,10 +166,18 @@ def build_z8_joint_p18_p19_gradient_waterfill_contract() -> dict[str, Any]:
         },
         "posenet_surface": {
             "stage": "P19",
-            "role": ("null_subset_detection_plus_mahalanobis_or_ail_pair_weighting"),
+            "role": ("six_axis_posenet_jacobian_null_subset_plus_mahalanobis_pair_weighting"),
+            "surface_kind": "per_axis_posenet_jacobian_mahalanobis_v1",
+            "authority_requires": [
+                "pose_axis_count_equals_6",
+                "positive_finite_inverse_variance_for_each_axis",
+                "archive_runtime_candidate_custody",
+                "full_video_exact_reduced_before_budget_spend",
+            ],
             "required_measurements": [
-                "posenet_null_subset_pair_ids",
-                "posenet_mahalanobis_or_ail_pair_weights",
+                "per_axis_posenet_vjp_or_jvp",
+                "contest_inverse_variance_mahalanobis_weights",
+                "pose_null_mask_from_mahalanobis_jacobian_norm",
             ],
         },
         "rate_spend_guard": (
@@ -223,7 +231,7 @@ def build_z8_joint_variational_driver_metadata(
             "not_claimed; MLX-local path uses real scorer teacher caches plus "
             "learnable heads, exact CPU/CUDA remains promotion authority"
         ),
-        "implicit_dykstra_allocator_diff_status": "pending_follow_on",
+        "implicit_dykstra_allocator_diff_status": "wired_global_kkt_dykstra_after_full_vjp_reduction",
     }
 
 

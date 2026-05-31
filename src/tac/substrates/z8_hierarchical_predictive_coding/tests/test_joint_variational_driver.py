@@ -38,7 +38,10 @@ def test_joint_variational_metadata_is_non_authority_and_score_grounded() -> Non
     assert "25.0 * expected_categorical_bytes / 37545489" in metadata["rate_formula"]
     assert metadata["ste_boundary"] == "gumbel_softmax_argmax_indices_to_archive"
     assert metadata["archive_export_enabled"] is True
-    assert metadata["implicit_dykstra_allocator_diff_status"] == "pending_follow_on"
+    assert (
+        metadata["implicit_dykstra_allocator_diff_status"]
+        == "wired_global_kkt_dykstra_after_full_vjp_reduction"
+    )
     joint = metadata["joint_p18_p19_gradient_waterfill_contract"]
     assert joint["schema"] == Z8_JOINT_P18_P19_WATERFILL_CONTRACT_SCHEMA
     assert joint["operator_stages"] == ["P19", "P18"]
@@ -62,6 +65,7 @@ def test_joint_variational_metadata_is_non_authority_and_score_grounded() -> Non
         "linearization_archive_sha_equals_current_archive_sha",
         "candidate_pairs_equal_archive_runtime_reconstruction",
         "raw_p18_p19_gradients_reduced_before_global_kkt_dykstra_allocation",
+        "true_per_axis_posenet_jacobian_mahalanobis_surface",
         "single_optimizer_update_after_full_shard_reduction",
         "relinearize_after_each_accepted_archive_mutation",
         "receiver_proof_plus_exact_cpu_cuda_before_score_authority",
@@ -74,7 +78,14 @@ def test_joint_variational_metadata_is_non_authority_and_score_grounded() -> Non
     assert joint["forbidden_policy"] == "segnet_only_waterfill"
     assert joint["segnet_surface"]["stage"] == "P18"
     assert joint["posenet_surface"]["stage"] == "P19"
-    assert "mahalanobis_or_ail" in joint["posenet_surface"]["role"]
+    assert "six_axis_posenet_jacobian" in joint["posenet_surface"]["role"]
+    assert joint["posenet_surface"]["surface_kind"] == "per_axis_posenet_jacobian_mahalanobis_v1"
+    assert joint["posenet_surface"]["authority_requires"] == [
+        "pose_axis_count_equals_6",
+        "positive_finite_inverse_variance_for_each_axis",
+        "archive_runtime_candidate_custody",
+        "full_video_exact_reduced_before_budget_spend",
+    ]
     assert "score_claim" not in metadata
     assert "promotion_eligible" not in metadata
     assert "ready_for_exact_eval_dispatch" not in metadata
@@ -87,9 +98,11 @@ def test_joint_p18_p19_waterfill_contract_blocks_segnet_only_spend() -> None:
     assert contract["operator_stages"] == ["P19", "P18"]
     assert contract["segnet_surface"]["required_measurement"] == ("boundary_argmax_hinge_marginal_surface")
     assert contract["posenet_surface"]["required_measurements"] == [
-        "posenet_null_subset_pair_ids",
-        "posenet_mahalanobis_or_ail_pair_weights",
+        "per_axis_posenet_vjp_or_jvp",
+        "contest_inverse_variance_mahalanobis_weights",
+        "pose_null_mask_from_mahalanobis_jacobian_norm",
     ]
+    assert contract["posenet_surface"]["surface_kind"] == "per_axis_posenet_jacobian_mahalanobis_v1"
     assert contract["forbidden_policy"] == "segnet_only_waterfill"
     assert "dead_zone_low_joint_weight_wavelet_atoms" in contract["rate_spend_guard"]
     assert contract["score_claim"] is False
