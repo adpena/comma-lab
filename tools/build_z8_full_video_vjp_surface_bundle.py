@@ -15,8 +15,8 @@ from tac.substrates.z8_hierarchical_predictive_coding.full_video_vjp_acquisition
     build_z8_full_video_mlx_vjp_surface_shard,
     load_z8_full_video_vjp_surface_shard_file,
     write_z8_full_video_vjp_acquisition_plan,
-    write_z8_full_video_vjp_surface_shard,
     write_z8_full_video_vjp_surface_bundle,
+    write_z8_full_video_vjp_surface_shard,
 )
 
 
