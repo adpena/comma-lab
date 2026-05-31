@@ -32,11 +32,14 @@ Catalog #272 + Catalog #105/#139 no-op detector contracts verify.
 
 from __future__ import annotations
 
-import torch
+from typing import TYPE_CHECKING
 
 from .archive import Z4ATR_SCHEMA_VERSION, pack_archive
-from .architecture import Z4AtickRedlichConfig, Z4AtickRedlichSubstrate
 
+if TYPE_CHECKING:
+    import torch
+
+    from .architecture import Z4AtickRedlichConfig, Z4AtickRedlichSubstrate
 
 # Canonical state_dict keys that are NOT part of the decoder blob (they
 # get their own dedicated archive sections per Catalog #272 distinguishing-

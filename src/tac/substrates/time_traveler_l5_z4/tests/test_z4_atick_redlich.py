@@ -35,19 +35,17 @@ from tac.substrates.time_traveler_l5_z4 import (
     DECODER_EXCLUDED_KEYS,
     Z4ATR_MAGIC,
     Z4ATR_SCHEMA_VERSION,
-    Z4ATRArchive,
     Z4AtickRedlichConfig,
     Z4AtickRedlichScoreAwareLoss,
     Z4AtickRedlichScoreAwareLossWeights,
     Z4AtickRedlichSubstrate,
+    Z4ATRArchive,
     build_archive_bytes,
     build_meta,
     extract_decoder_state_dict,
     inflate_one_video,
-    pack_archive,
     parse_archive,
 )
-
 
 # -------------------------------------------------------------------------
 # Architecture: forward pass + decorrelator behavior

@@ -121,32 +121,27 @@ from tac.substrates.time_traveler_l5_z4.score_aware_loss import (
 )
 
 __all__ = [
-    # architecture
-    "Z4AtickRedlichConfig",
-    "Z4AtickRedlichSubstrate",
-    # archive grammar
     "BROTLI_QUALITY_V1",
-    "Z4ATRArchive",
-    "Z4ATR_HEADER_FMT",
-    "Z4ATR_HEADER_SIZE",
-    "Z4ATR_MAGIC",
-    "Z4ATR_SCHEMA_VERSION",
-    "pack_archive",
-    "parse_archive",
-    # archive candidate bridge
-    "DECODER_EXCLUDED_KEYS",
-    "build_archive_bytes",
-    "build_meta",
-    "extract_decoder_state_dict",
-    # inflate runtime
     "CONTEST_NUM_FRAMES",
     "CONTEST_OUT_H",
     "CONTEST_OUT_W",
     "CONTEST_RAW_BYTES",
-    "inflate_one_video",
-    "main_cli",
-    "select_inflate_device",
-    # score-aware loss
+    "DECODER_EXCLUDED_KEYS",
+    "Z4ATR_HEADER_FMT",
+    "Z4ATR_HEADER_SIZE",
+    "Z4ATR_MAGIC",
+    "Z4ATR_SCHEMA_VERSION",
+    "Z4ATRArchive",
+    "Z4AtickRedlichConfig",
     "Z4AtickRedlichScoreAwareLoss",
     "Z4AtickRedlichScoreAwareLossWeights",
+    "Z4AtickRedlichSubstrate",
+    "build_archive_bytes",
+    "build_meta",
+    "extract_decoder_state_dict",
+    "inflate_one_video",
+    "main_cli",
+    "pack_archive",
+    "parse_archive",
+    "select_inflate_device",
 ]

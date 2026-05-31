@@ -313,11 +313,11 @@ def parse_archive(blob: bytes) -> Z4ATRArchive:
 
 __all__ = [
     "BROTLI_QUALITY_V1",
-    "Z4ATRArchive",
     "Z4ATR_HEADER_FMT",
     "Z4ATR_HEADER_SIZE",
     "Z4ATR_MAGIC",
     "Z4ATR_SCHEMA_VERSION",
+    "Z4ATRArchive",
     "pack_archive",
     "parse_archive",
 ]

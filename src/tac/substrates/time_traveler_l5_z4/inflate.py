@@ -42,8 +42,10 @@ import torch
 
 from tac.substrates._shared.inflate_runtime import (
     CAMERA_HW,
-    select_inflate_device as _shared_select_inflate_device,
     write_rgb_pair_to_raw,
+)
+from tac.substrates._shared.inflate_runtime import (
+    select_inflate_device as _shared_select_inflate_device,
 )
 
 from .architecture import Z4AtickRedlichConfig, Z4AtickRedlichSubstrate
@@ -130,10 +132,7 @@ def inflate_one_video(
         ),
     )
 
-    if device is not None:
-        device_t = torch.device(device)
-    else:
-        device_t = select_inflate_device()
+    device_t = torch.device(device) if device is not None else select_inflate_device()
 
     model = Z4AtickRedlichSubstrate(cfg).to(device_t).eval()
     # strict=False because state_dict may carry fp16 weights into the fp32
