@@ -12,6 +12,7 @@ import hashlib
 import json
 import os
 import shutil
+import subprocess
 import sys
 from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field
@@ -23,6 +24,7 @@ SCHEMA = "comma_lab.artifact_retention_plan.v1"
 EXECUTION_SCHEMA = "comma_lab.artifact_retention_execution.v1"
 EXECUTION_JOURNAL_SCHEMA = "comma_lab.artifact_retention_execution_journal.v1"
 UNKNOWN_RAW_KIND = "blocked_unknown_raw_surface"
+ORPHANED_EVAL_RAW_SCRATCH_KIND = "orphaned_eval_raw_scratch"
 INVERSE_SCORER_INFLATE_PARITY_RAW_KIND = "inverse_scorer_inflate_parity_raw_output"
 INVERSE_SCORER_INFLATE_PARITY_PROBE_SCHEMA = "inverse_scorer_cell_inflate_parity_probe_v1"
 INVERSE_SCORER_INFLATE_PARITY_SCOPE = "full_frame_inflate_output_tree"
@@ -49,6 +51,7 @@ DEFAULT_RETENTION_KINDS = frozenset(
         "locality_inflated_raw",
         "local_cpu_advisory_inflated_raw",
         "local_cpu_advisory_extracted_scratch",
+        ORPHANED_EVAL_RAW_SCRATCH_KIND,
         INVERSE_SCORER_INFLATE_PARITY_RAW_KIND,
     }
 )
@@ -156,6 +159,28 @@ def directory_digest(path: Path) -> dict[str, Any]:
         "sha256": digest.hexdigest(),
         "files": files,
     }
+
+
+def _path_digest(path: Path) -> dict[str, Any]:
+    if path.is_dir():
+        digest = directory_digest(path)
+        digest["path_kind"] = "directory"
+        return digest
+    if path.is_file() and not path.is_symlink():
+        stat = path.stat()
+        return {
+            "path_kind": "file",
+            "bytes": int(stat.st_size),
+            "sha256": sha256_file(path),
+        }
+    raise ArtifactRetentionError(f"cannot digest non-file/non-directory path: {path}")
+
+
+def _remove_path(path: Path) -> None:
+    if path.is_dir() and not path.is_symlink():
+        shutil.rmtree(path, ignore_errors=True)
+    elif path.exists() or path.is_symlink():
+        path.unlink()
 
 
 def load_json_object(path: Path) -> dict[str, Any]:
@@ -1325,17 +1350,186 @@ def _certify_unknown_raw_workdir(path: Path, repo_root: Path) -> RetentionCandid
     )
 
 
-def _iter_candidate_dirs(root: Path) -> Iterable[Path]:
+def _path_is_git_tracked(path: Path, repo_root: Path) -> bool:
+    git_dir = repo_root / ".git"
+    if not git_dir.exists():
+        return False
+    try:
+        rel = _rel(path, repo_root)
+    except ArtifactRetentionError:
+        return False
+    try:
+        proc = subprocess.run(
+            ["git", "ls-files", "--", rel],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return True
+    if proc.returncode != 0:
+        return True
+    return bool(proc.stdout.strip())
+
+
+def _orphaned_eval_raw_reason(path: Path, repo_root: Path) -> str | None:
+    try:
+        resolved = path.resolve()
+        rel_parts = resolved.relative_to(repo_root.resolve()).parts
+    except ValueError:
+        return None
+    parts = set(rel_parts)
+    if len(rel_parts) >= 2 and rel_parts[0] == ".omx" and rel_parts[1] == "tmp":
+        return "omx_tmp_inflate_scratch"
+    if path.name == "inflated" and "eval_runs" in parts:
+        return "eval_runs_inflated_scratch"
+    if path.name == "inflated" and len(rel_parts) >= 2 and rel_parts[0] == "workspace":
+        return "workspace_upstream_inflated_scratch"
+    if (
+        path.name == "inflated"
+        and len(rel_parts) >= 2
+        and rel_parts[0] == "reports"
+        and rel_parts[1] == "raw"
+    ):
+        return "reports_raw_inflated_scratch"
+    if (
+        path.name in {"inflated", "out_dir", "output_dir"}
+        and len(rel_parts) >= 2
+        and rel_parts[0] == ".omx"
+        and rel_parts[1] == "research"
+    ):
+        return "omx_research_inflate_scratch"
+    if (
+        path.name == "raw"
+        and path.parent.name == "runtime_consumption_work"
+        and len(rel_parts) >= 2
+        and rel_parts[0] == ".omx"
+        and rel_parts[1] == "research"
+    ):
+        return "runtime_consumption_work_raw_scratch"
+    return None
+
+
+def _certify_orphaned_eval_raw_scratch(
+    path: Path,
+    repo_root: Path,
+) -> RetentionCandidate | None:
+    if path.is_file() and path.suffix == ".raw":
+        reason = _orphaned_eval_raw_reason(path.parent, repo_root)
+        if reason is None:
+            return None
+        blockers: list[str] = []
+        if _path_is_git_tracked(path, repo_root):
+            blockers.append(f"raw_file_tracked:{_rel(path, repo_root)}")
+        try:
+            stat = path.stat()
+        except OSError:
+            return RetentionCandidate(
+                path=_rel(path, repo_root),
+                kind=ORPHANED_EVAL_RAW_SCRATCH_KIND,
+                bytes=0,
+                certified_rebuildable=False,
+                certificate={
+                    "kind": ORPHANED_EVAL_RAW_SCRATCH_KIND,
+                    "path_kind": "file",
+                    "reason": reason,
+                },
+                blockers=["raw_file_stat_failed"],
+            )
+        return RetentionCandidate(
+            path=_rel(path, repo_root),
+            kind=ORPHANED_EVAL_RAW_SCRATCH_KIND,
+            bytes=int(stat.st_size),
+            certified_rebuildable=not blockers,
+            certificate={
+                "kind": ORPHANED_EVAL_RAW_SCRATCH_KIND,
+                "path_kind": "file",
+                "reason": reason,
+                "direct_raw_file_count": 1,
+                "direct_raw_bytes": int(stat.st_size),
+                "files": [
+                    {
+                        "path": path.name,
+                        "bytes": int(stat.st_size),
+                        "mtime_ns": int(stat.st_mtime_ns),
+                    }
+                ],
+                "hashes_omitted": "raw inflate scratch is rebuildable and intentionally not rehashed before deletion",
+            },
+            blockers=blockers,
+        )
+    try:
+        children = sorted(path.iterdir())
+    except OSError:
+        return None
+    raw_files = [child for child in children if child.is_file() and child.suffix == ".raw"]
+    if not raw_files:
+        return None
+    reason = _orphaned_eval_raw_reason(path, repo_root)
+    if reason is None:
+        return None
+    blockers: list[str] = []
+    non_raw_children = [
+        child.name
+        for child in children
+        if not (child.is_file() and child.suffix == ".raw")
+    ]
+    if non_raw_children:
+        blockers.append("non_raw_children_present:" + ",".join(non_raw_children[:8]))
+    for raw_file in raw_files:
+        if _path_is_git_tracked(raw_file, repo_root):
+            blockers.append(f"raw_file_tracked:{_rel(raw_file, repo_root)}")
+    file_rows = []
+    raw_bytes = 0
+    for raw_file in raw_files:
+        try:
+            stat = raw_file.stat()
+        except OSError:
+            blockers.append(f"raw_file_stat_failed:{raw_file.name}")
+            continue
+        raw_bytes += int(stat.st_size)
+        file_rows.append(
+            {
+                "path": raw_file.name,
+                "bytes": int(stat.st_size),
+                "mtime_ns": int(stat.st_mtime_ns),
+            }
+        )
+    return RetentionCandidate(
+        path=_rel(path, repo_root),
+        kind=ORPHANED_EVAL_RAW_SCRATCH_KIND,
+        bytes=directory_size_bytes(path),
+        certified_rebuildable=not blockers,
+        certificate={
+            "kind": ORPHANED_EVAL_RAW_SCRATCH_KIND,
+            "reason": reason,
+            "direct_raw_file_count": len(raw_files),
+            "direct_raw_bytes": raw_bytes,
+            "files": file_rows,
+            "hashes_omitted": "raw inflate scratch is rebuildable and intentionally not rehashed before deletion",
+        },
+        blockers=blockers,
+    )
+
+
+def _iter_candidate_paths(root: Path) -> Iterable[Path]:
     if root.is_dir():
-        for dirpath, dirnames, _filenames in os.walk(root):
+        for dirpath, dirnames, filenames in os.walk(root):
             current = Path(dirpath)
             yield current
+            for filename in filenames:
+                if filename.endswith(".raw"):
+                    yield current / filename
             if current.name in {
                 "inflated",
                 "extracted",
                 *KNOWN_MLX_SCORER_INPUT_CACHE_DIR_NAMES,
             }:
                 dirnames[:] = []
+    elif root.exists():
+        yield root
 
 
 def _is_excluded(path: Path, exclude_paths: set[Path]) -> bool:
@@ -1362,15 +1556,22 @@ def build_retention_plan(
     candidates: list[RetentionCandidate] = []
     blocked: list[RetentionCandidate] = []
     seen: set[Path] = set()
+    covered_roots: list[Path] = []
     certifiers = (
         _certify_locality_inflated,
         _certify_local_cpu_advisory,
         _certify_mlx_cache,
         _certify_inverse_scorer_inflate_parity_raw,
+        _certify_orphaned_eval_raw_scratch,
     )
     for root in roots:
-        for path in _iter_candidate_dirs(root):
+        for path in _iter_candidate_paths(root):
             resolved = path.resolve()
+            if any(
+                resolved != covered and _is_under_any(resolved, [covered])
+                for covered in covered_roots
+            ):
+                continue
             if resolved in seen or _is_excluded(path, excludes):
                 continue
             seen.add(resolved)
@@ -1392,6 +1593,8 @@ def build_retention_plan(
                 continue
             if candidate.certified_rebuildable:
                 candidates.append(candidate)
+                if path.is_dir():
+                    covered_roots.append(resolved)
             else:
                 blocked.append(candidate)
     candidates.sort(key=lambda row: (-row.bytes, row.path))
@@ -1798,7 +2001,11 @@ def _execution_revalidation_blockers(
         blockers.append("candidate_not_certified_rebuildable")
     if source.is_symlink():
         blockers.append("source_is_symlink")
-    if not source.is_dir():
+    if not source.is_dir() and not (
+        candidate.kind == ORPHANED_EVAL_RAW_SCRATCH_KIND
+        and source.is_file()
+        and source.suffix == ".raw"
+    ):
         blockers.append("source_not_directory")
     certifier = {
         "locality_inflated_raw": _certify_locality_inflated,
@@ -1806,6 +2013,7 @@ def _execution_revalidation_blockers(
         "local_cpu_advisory_extracted_scratch": _certify_local_cpu_advisory,
         "mlx_scorer_input_cache": _certify_mlx_cache,
         INVERSE_SCORER_INFLATE_PARITY_RAW_KIND: _certify_inverse_scorer_inflate_parity_raw,
+        ORPHANED_EVAL_RAW_SCRATCH_KIND: _certify_orphaned_eval_raw_scratch,
     }.get(candidate.kind)
     if certifier is None:
         blockers.append(f"unknown_candidate_kind:{candidate.kind}")
@@ -1838,7 +2046,10 @@ def _delete_certified_tree(
     try:
         resolved.relative_to(experiments_results)
     except ValueError:
-        shutil.rmtree(source)
+        _remove_path(source)
+        return
+    if source.is_file():
+        source.unlink()
         return
     if str(repo_root) not in sys.path:
         sys.path.insert(0, str(repo_root))
@@ -1885,19 +2096,19 @@ def _copy_verify_then_delete(
     source_device_id = _path_device_id(source)
     destination_device_id = _path_device_id(destination.parent)
     same_device_as_source = source_device_id == destination_device_id
-    source_digest = directory_digest(source)
+    source_digest = _path_digest(source)
     if same_device_as_source:
         moved_to_partial = False
         finalized = False
         try:
             source.replace(partial_destination)
             moved_to_partial = True
-            destination_digest = directory_digest(partial_destination)
+            destination_digest = _path_digest(partial_destination)
             if source_digest["sha256"] != destination_digest["sha256"]:
                 raise ArtifactRetentionError("cold-store copy verification failed")
             partial_destination.replace(destination)
             finalized = True
-            final_digest = directory_digest(destination)
+            final_digest = _path_digest(destination)
             if source_digest["sha256"] != final_digest["sha256"]:
                 raise ArtifactRetentionError("cold-store copy verification failed")
         except Exception:
@@ -1911,7 +2122,7 @@ def _copy_verify_then_delete(
                     partial_destination.replace(source)
                 except OSError:
                     pass
-            shutil.rmtree(partial_destination, ignore_errors=True)
+            _remove_path(partial_destination)
             raise
         return {
             "schema": "comma_lab.artifact_retention_cold_store_copy.v1",
@@ -1927,19 +2138,22 @@ def _copy_verify_then_delete(
             "ready_for_exact_eval_dispatch": False,
         }
     try:
-        shutil.copytree(source, partial_destination, symlinks=False)
-        destination_digest = directory_digest(partial_destination)
+        if source.is_dir():
+            shutil.copytree(source, partial_destination, symlinks=False)
+        else:
+            shutil.copy2(source, partial_destination)
+        destination_digest = _path_digest(partial_destination)
         if source_digest["sha256"] != destination_digest["sha256"]:
             raise ArtifactRetentionError("cold-store copy verification failed")
         partial_destination.replace(destination)
     except Exception:
-        shutil.rmtree(partial_destination, ignore_errors=True)
+        _remove_path(partial_destination)
         if destination.exists():
-            shutil.rmtree(destination, ignore_errors=True)
+            _remove_path(destination)
         raise
-    final_digest = directory_digest(destination)
+    final_digest = _path_digest(destination)
     if source_digest["sha256"] != final_digest["sha256"]:
-        shutil.rmtree(destination, ignore_errors=True)
+        _remove_path(destination)
         raise ArtifactRetentionError("cold-store copy verification failed")
     _delete_certified_tree(
         source,

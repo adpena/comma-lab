@@ -43,6 +43,9 @@ class EvaluationSummary:
     rule_faithful_rate: float | None
     rule_faithful_score: float | None
     rule_faithful_status: str
+    inflated_dir: str
+    inflated_dir_retained: bool
+    inflated_dir_cleanup: str
 
     def to_json(self) -> str:
         return json.dumps(asdict(self), indent=2, sort_keys=True)
@@ -111,6 +114,7 @@ def evaluate_submission(
     sync: bool = True,
     package: bool = False,
     report_copy: Path | None = None,
+    keep_inflated: bool = False,
 ) -> EvaluationSummary:
     root = repo_root()
     upstream_root = upstream_root or default_upstream_root()
@@ -139,14 +143,20 @@ def evaluate_submission(
         inflated_dir = submission_dir / "inflated"
         if inflated_dir.exists():
             shutil.rmtree(inflated_dir)
-        _run([
-            "bash",
-            str(evaluate_sh),
-            "--submission-dir",
-            str(submission_dir),
-            "--device",
-            device,
-        ], cwd=root, env=env)
+        inflated_dir_cleanup = "not_started"
+        try:
+            _run([
+                "bash",
+                str(evaluate_sh),
+                "--submission-dir",
+                str(submission_dir),
+                "--device",
+                device,
+            ], cwd=root, env=env)
+            inflated_dir_cleanup = "pending_success_cleanup"
+        except BaseException:
+            inflated_dir_cleanup = "retained_after_failed_evaluation"
+            raise
 
         report_path = submission_dir / "report.txt"
         if not report_path.exists():
@@ -176,6 +186,11 @@ def evaluate_submission(
             rule_rate = rule_bytes / original_bytes
             rule_score = _score(seg, pose, rule_rate)
             rule_status = "estimated_from_scorer_distortions_plus_installed_runtime_payload"
+        if keep_inflated:
+            inflated_dir_cleanup = "retained_by_request"
+        else:
+            shutil.rmtree(inflated_dir, ignore_errors=True)
+            inflated_dir_cleanup = "deleted_after_success"
 
         return EvaluationSummary(
             track=name,
@@ -193,4 +208,7 @@ def evaluate_submission(
             rule_faithful_rate=rule_rate,
             rule_faithful_score=rule_score,
             rule_faithful_status=rule_status,
+            inflated_dir=str(inflated_dir),
+            inflated_dir_retained=keep_inflated,
+            inflated_dir_cleanup=inflated_dir_cleanup,
         )

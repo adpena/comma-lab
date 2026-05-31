@@ -34,6 +34,7 @@ from comma_lab.scheduler.experiment_queue import (  # noqa: E402
     initialize_queue_state,
     load_queue_definition,
     queue_summary,
+    reconcile_satisfied_queued_steps,
     reconcile_stale_running_steps,
     rewind_step,
     set_control_mode,
@@ -869,6 +870,12 @@ def cmd_recover(args: argparse.Namespace) -> int:
             repo_root=REPO_ROOT,
             stale_after_seconds=args.stale_after_seconds,
         )
+        postcondition_reconciliation = reconcile_satisfied_queued_steps(
+            conn,
+            queue,
+            repo_root=REPO_ROOT,
+            include_failed=False,
+        )
         after_reconcile = queue_summary(conn, queue, repo_root=REPO_ROOT)
         auto_recovery_rewinds = _auto_rewind_recoverable_steps(
             conn,
@@ -922,6 +929,7 @@ def cmd_recover(args: argparse.Namespace) -> int:
             "mode": after_reconcile.get("mode"),
             "status_counts": after_reconcile.get("status_counts", {}),
         },
+        "postcondition_reconciliation": postcondition_reconciliation,
         "auto_recovery_rewinds": auto_recovery_rewinds,
         "after_auto_recovery": {
             "mode": after_auto_recovery.get("mode"),

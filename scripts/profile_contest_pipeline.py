@@ -75,6 +75,9 @@ class PipelineProfile:
     submission_dir: str = ""
     archive_size_bytes: int = 0
     raw_size_bytes: int = 0
+    inflated_dir: str = ""
+    inflated_dir_retained: bool = False
+    inflated_dir_cleanup: str = "not_started"
     total_elapsed: float = 0.0
 
     @property
@@ -121,6 +124,9 @@ class PipelineProfile:
             "submission_dir": self.submission_dir,
             "archive_size_bytes": self.archive_size_bytes,
             "raw_size_bytes": self.raw_size_bytes,
+            "inflated_dir": self.inflated_dir,
+            "inflated_dir_retained": self.inflated_dir_retained,
+            "inflated_dir_cleanup": self.inflated_dir_cleanup,
             "contest_timeout_seconds": CONTEST_TIMEOUT_SECONDS,
             "total_elapsed_seconds": round(self.total_elapsed, 3),
             "tto_budget_estimate_seconds": round(self.tto_budget_estimate, 3),
@@ -276,6 +282,7 @@ def profile_pipeline(
     video_names_file: Path,
     device: str,
     skip_scoring: bool = False,
+    keep_inflated: bool = False,
 ) -> PipelineProfile:
     """Run all contest pipeline stages with timing.
 
@@ -295,6 +302,8 @@ def profile_pipeline(
     archive_dir = submission_dir / "archive"
     inflated_dir = submission_dir / "inflated"
     inflate_sh = submission_dir / "inflate.sh"
+    profile.inflated_dir = str(inflated_dir)
+    profile.inflated_dir_retained = keep_inflated
 
     if not archive_zip.exists():
         raise FileNotFoundError(f"archive.zip not found: {archive_zip}")
@@ -365,6 +374,13 @@ def profile_pipeline(
         _print_stage_result(result)
 
     profile.total_elapsed = time.monotonic() - t_pipeline_start
+    if keep_inflated:
+        profile.inflated_dir_cleanup = "retained_by_request"
+    elif all(stage.success for stage in profile.stages):
+        shutil.rmtree(inflated_dir, ignore_errors=True)
+        profile.inflated_dir_cleanup = "deleted_after_success"
+    else:
+        profile.inflated_dir_cleanup = "retained_after_failed_profile"
     return profile
 
 
@@ -385,6 +401,7 @@ def print_budget_table(profile: PipelineProfile) -> None:
     print(f"  Submission: {profile.submission_dir}")
     print(f"  Archive size: {profile.archive_size_bytes:,} bytes")
     print(f"  Raw output: {profile.raw_size_bytes:,} bytes")
+    print(f"  Raw scratch cleanup: {profile.inflated_dir_cleanup}")
     print()
     print(f"  {'Stage':<20s}  {'Time (s)':>10s}  {'% Budget':>10s}  {'Status':<8s}")
     print(f"  {'-' * 20}  {'-' * 10}  {'-' * 10}  {'-' * 8}")
@@ -449,6 +466,11 @@ def main() -> None:
         help="Skip the evaluate.py scoring stage (useful for quick inflate profiling)",
     )
     parser.add_argument(
+        "--keep-inflated",
+        action="store_true",
+        help="Preserve inflated/*.raw scratch after a successful profile run.",
+    )
+    parser.add_argument(
         "--output-json", type=Path, default=None,
         help="Write JSON profile report to this path",
     )
@@ -494,6 +516,7 @@ def main() -> None:
         video_names_file=video_names_file,
         device=device,
         skip_scoring=args.skip_scoring,
+        keep_inflated=args.keep_inflated,
     )
 
     print_budget_table(profile)

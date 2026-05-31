@@ -52,7 +52,13 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         "roots",
         nargs="*",
         type=Path,
-        default=[Path("experiments/results")],
+        default=[
+            Path("experiments/results"),
+            Path(".omx/tmp"),
+            Path(".omx/research"),
+            Path("submissions/robust_current/eval_runs"),
+            Path("reports/raw"),
+        ],
         help="Experiment roots to scan.",
     )
     parser.add_argument("--repo-root", type=Path, default=REPO_ROOT)

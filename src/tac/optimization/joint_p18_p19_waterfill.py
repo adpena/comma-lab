@@ -28,6 +28,12 @@ JOINT_P18_P19_RATE_ATTACK_ROLE = (
     "dead_zone_low_joint_weight_wavelet_detail_atoms_to_reduce_rate_while_"
     "protecting_seg_boundary_and_pose_sensitive_atoms"
 )
+FULL_VIDEO_AUTHORITY_SCOPE = "full_video"
+PROPOSAL_ONLY_SCOPE = "proposal_only"
+
+
+class JointP18P19WaterfillAuthorityError(ValueError):
+    """Raised when a joint P18/P19 surface is used beyond its evidence scope."""
 
 
 @dataclass(frozen=True)
@@ -38,6 +44,8 @@ class JointP18P19WaterfillConfig:
     pose_inverse_variance: tuple[float, ...]
     pose_null_threshold: float = 1e-8
     d_pose_floor: float = 1e-12
+    evidence_scope: str = PROPOSAL_ONLY_SCOPE
+    full_video_atom_count: int | None = None
 
     def __post_init__(self) -> None:
         if self.d_pose < 0.0:
@@ -50,6 +58,12 @@ class JointP18P19WaterfillConfig:
             raise ValueError("pose_inverse_variance must not be empty")
         if any(value <= 0.0 for value in self.pose_inverse_variance):
             raise ValueError("pose_inverse_variance entries must be > 0")
+        if self.evidence_scope not in {PROPOSAL_ONLY_SCOPE, FULL_VIDEO_AUTHORITY_SCOPE}:
+            raise ValueError(
+                f"evidence_scope must be {PROPOSAL_ONLY_SCOPE!r} or {FULL_VIDEO_AUTHORITY_SCOPE!r}"
+            )
+        if self.full_video_atom_count is not None and self.full_video_atom_count <= 0:
+            raise ValueError("full_video_atom_count must be positive when provided")
 
     @property
     def pose_ail_gain(self) -> float:
@@ -71,6 +85,38 @@ def mahalanobis_pose_jacobian_norm(
             "pose_jacobian last dimension must match pose_inverse_variance length"
         )
     return np.sqrt(np.sum((jac * jac) * inv_var, axis=-1))
+
+
+def _full_video_authority_blockers(
+    *,
+    evidence_scope: str,
+    observed_atom_count: int,
+    full_video_atom_count: int | None,
+) -> list[str]:
+    blockers: list[str] = []
+    if evidence_scope != FULL_VIDEO_AUTHORITY_SCOPE:
+        blockers.append("joint_p18_p19_surface_not_full_video_scope")
+    if full_video_atom_count is None:
+        blockers.append("joint_p18_p19_full_video_atom_count_missing")
+    elif observed_atom_count != int(full_video_atom_count):
+        blockers.append(
+            "joint_p18_p19_atom_coverage_incomplete:"
+            f"observed={observed_atom_count}:full_video={int(full_video_atom_count)}"
+        )
+    return blockers
+
+
+def require_full_video_joint_surface(
+    surface: dict[str, Any],
+    *,
+    context: str = "joint_p18_p19_waterfill_surface",
+) -> None:
+    """Refuse budget spend from crop/window-only P18/P19 gradients."""
+
+    blockers = list(surface.get("full_video_authority_blockers") or [])
+    if surface.get("full_video_authority") is not True or blockers:
+        detail = ",".join(str(blocker) for blocker in blockers) or "full_video_authority_false"
+        raise JointP18P19WaterfillAuthorityError(f"{context}: {detail}")
 
 
 def build_joint_p18_p19_waterfill_surface(
@@ -98,6 +144,12 @@ def build_joint_p18_p19_waterfill_surface(
     seg_term = 100.0 * seg
     pose_term = config.pose_ail_gain * pose_norm
     joint = seg_term + pose_term
+    observed_atom_count = int(seg.size)
+    authority_blockers = _full_video_authority_blockers(
+        evidence_scope=config.evidence_scope,
+        observed_atom_count=observed_atom_count,
+        full_video_atom_count=config.full_video_atom_count,
+    )
     pose_null_mask = pose_norm <= float(config.pose_null_threshold)
     rate_attack_deadzone_mask = pose_null_mask & (joint <= np.median(joint))
     distortion_protect_mask = ~rate_attack_deadzone_mask
@@ -108,6 +160,17 @@ def build_joint_p18_p19_waterfill_surface(
         "d_pose": float(config.d_pose),
         "pose_ail_gain": float(config.pose_ail_gain),
         "pose_null_threshold": float(config.pose_null_threshold),
+        "evidence_scope": config.evidence_scope,
+        "observed_atom_count": observed_atom_count,
+        "full_video_atom_count": config.full_video_atom_count,
+        "full_video_coverage_fraction": (
+            None
+            if config.full_video_atom_count is None
+            else float(observed_atom_count) / float(config.full_video_atom_count)
+        ),
+        "full_video_authority": not authority_blockers,
+        "full_video_authority_blockers": authority_blockers,
+        "ready_for_budget_spend": not authority_blockers,
         "segnet_term": seg_term,
         "pose_mahalanobis_norm": pose_norm,
         "pose_term": pose_term,
@@ -123,10 +186,14 @@ def build_joint_p18_p19_waterfill_surface(
 
 
 __all__ = [
+    "FULL_VIDEO_AUTHORITY_SCOPE",
     "JOINT_P18_P19_RATE_ATTACK_ROLE",
     "JOINT_P18_P19_WATERFILL_SCHEMA",
     "JOINT_P18_P19_WEIGHT_FORMULA",
+    "JointP18P19WaterfillAuthorityError",
     "JointP18P19WaterfillConfig",
+    "PROPOSAL_ONLY_SCOPE",
     "build_joint_p18_p19_waterfill_surface",
     "mahalanobis_pose_jacobian_norm",
+    "require_full_video_joint_surface",
 ]

@@ -17,6 +17,8 @@ from tac.local_acceleration.mlx_scorer_response import (
     CANDIDATE_CACHE_TRANSFER_BLOCKER,
     GPU_RESEARCH_SIGNAL_BLOCKER,
     LOCAL_ADVISORY_CACHE_IDENTITY_BLOCKER,
+    MANIFEST_CACHE_INTEGRITY_MODE,
+    STRICT_CACHE_INTEGRITY_MODE,
     ScorerInputCache,
     build_mlx_scorer_response_payload,
     load_scorer_input_cache,
@@ -459,6 +461,44 @@ def test_mlx_scorer_response_cli_rejects_mutated_cache_after_manifest_stamp(
     assert CACHE_INTEGRITY_BLOCKER in completed.stderr
     assert "array_sha256_segnet_last_rgb_mismatch" in completed.stderr
     assert "artifact_segnet_last_rgb_sha256_mismatch" in completed.stderr
+
+
+def test_manifest_cache_integrity_mode_reuses_manifest_hashes_without_rehash(
+    tmp_path: Path,
+) -> None:
+    pair_indices = np.array([[0, 1]], dtype=np.int64)
+    seg = np.zeros((1, 3, 64, 80), dtype=np.float32)
+    pose = np.zeros((1, 12, 64, 80), dtype=np.float32)
+    cache_dir = _write_test_cache(
+        tmp_path / "cache",
+        seg=seg,
+        pose=pose,
+        pair_indices=pair_indices,
+    )
+    manifest = json.loads((cache_dir / "manifest.json").read_text(encoding="utf-8"))
+    np.save(cache_dir / "segnet_last_rgb.npy", np.ones_like(seg))
+
+    strict_error = None
+    try:
+        load_scorer_input_cache(cache_dir, integrity_mode=STRICT_CACHE_INTEGRITY_MODE)
+    except ValueError as exc:
+        strict_error = str(exc)
+    assert strict_error is not None
+    assert "array_sha256_segnet_last_rgb_mismatch" in strict_error
+
+    loaded = load_scorer_input_cache(
+        cache_dir,
+        integrity_mode=MANIFEST_CACHE_INTEGRITY_MODE,
+    )
+
+    assert loaded.cache_integrity["passed"] is True
+    assert loaded.cache_integrity["integrity_mode"] == MANIFEST_CACHE_INTEGRITY_MODE
+    assert loaded.cache_integrity["strict_rehash_performed"] is False
+    assert loaded.cache_integrity["manifest_hashes_reused"] is True
+    assert loaded.cache_integrity["array_sha256"] == manifest["array_sha256"]
+    assert loaded.cache_integrity["artifact_sha256"]["segnet_last_rgb"] == manifest[
+        "artifacts"
+    ]["segnet_last_rgb"]["sha256"]
 
 
 def test_mlx_scorer_response_cli_can_score_deterministic_pair_window(tmp_path: Path) -> None:

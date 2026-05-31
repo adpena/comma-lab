@@ -13,6 +13,7 @@ import hashlib
 import json
 import sys
 import time
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -43,6 +44,12 @@ LOCAL_ADVISORY_CACHE_IDENTITY_BLOCKER = (
 )
 CACHE_INTEGRITY_BLOCKER = "mlx_scorer_input_cache_integrity_failed"
 AUDIT_STAMP_DEREFERENCE_BLOCKER = "mlx_scorer_response_cache_audit_stamp_dereference_failed"
+STRICT_CACHE_INTEGRITY_MODE = "strict"
+MANIFEST_CACHE_INTEGRITY_MODE = "manifest"
+VALID_CACHE_INTEGRITY_MODES = {
+    STRICT_CACHE_INTEGRITY_MODE,
+    MANIFEST_CACHE_INTEGRITY_MODE,
+}
 
 
 @dataclass(frozen=True)
@@ -66,9 +73,30 @@ class CachePairingPlan:
     pair_indices_equal: bool
 
 
-def load_scorer_input_cache(cache_dir: str | Path, *, mmap_mode: str | None = "r") -> ScorerInputCache:
+@dataclass(frozen=True)
+class MLXScorerResponseBatchJob:
+    """One candidate scorer-response job for a shared MLX scorer process."""
+
+    candidate_cache_dir: str | Path
+    archive_size_bytes: int
+    output: str | Path
+    components_dir: str | Path | None = None
+    response_family: str | None = None
+
+
+def load_scorer_input_cache(
+    cache_dir: str | Path,
+    *,
+    mmap_mode: str | None = "r",
+    integrity_mode: str = STRICT_CACHE_INTEGRITY_MODE,
+) -> ScorerInputCache:
     """Load a full tensor scorer-input cache and validate basic shape contracts."""
 
+    if integrity_mode not in VALID_CACHE_INTEGRITY_MODES:
+        raise ValueError(
+            "integrity_mode must be one of "
+            f"{sorted(VALID_CACHE_INTEGRITY_MODES)}, got {integrity_mode!r}"
+        )
     root = Path(cache_dir)
     manifest_path = root / "manifest.json"
     manifest = _load_json_object(manifest_path)
@@ -92,6 +120,7 @@ def load_scorer_input_cache(cache_dir: str | Path, *, mmap_mode: str | None = "r
         seg=seg,
         pose=pose,
         pairs=pairs,
+        integrity_mode=integrity_mode,
     )
     return ScorerInputCache(
         root=root,
@@ -120,104 +149,240 @@ def build_mlx_scorer_response_payload(
     allow_unaudited_candidate_cache_debug: bool = False,
     allow_local_cpu_advisory_cache_identity: bool = False,
     response_family: str | None = None,
+    cache_integrity_mode: str = STRICT_CACHE_INTEGRITY_MODE,
 ) -> dict[str, Any]:
     """Run MLX scorer responses for reference/candidate caches and summarize metrics."""
 
-    if int(archive_size_bytes) < 0:
-        raise ValueError(f"archive_size_bytes must be non-negative, got {archive_size_bytes}")
-    batch_pairs_int = int(batch_pairs)
-    if batch_pairs_int < 1:
-        raise ValueError(f"batch_pairs must be >= 1, got {batch_pairs}")
-    if device_type not in {"cpu", "gpu"}:
-        raise ValueError(f"device_type must be 'cpu' or 'gpu', got {device_type!r}")
-    if device_type == "gpu" and not allow_gpu_research_signal:
-        raise ValueError(
-            f"{GPU_RESEARCH_SIGNAL_BLOCKER}: device_type='gpu' is local MLX "
-            "prescreen signal only; pass allow_gpu_research_signal=True after "
-            "recording CPU-transfer calibration or a research-only rationale"
-        )
-    if batch_pairs_int != 1 and not allow_batch_shape_research_signal:
-        raise ValueError(
-            f"{BATCH_SHAPE_RESEARCH_SIGNAL_BLOCKER}: clean-head FEC6 parity "
-            "found batch-shape-sensitive SegNet argmax drift for MLX scorer "
-            "responses; use batch_pairs=1 for production local signal or pass "
-            "allow_batch_shape_research_signal=True only for explicitly "
-            "recorded batch-shape research probes"
-        )
-    if int(progress_every) < 0:
-        raise ValueError(f"progress_every must be >= 0, got {progress_every}")
-    if int(start_pair) < 0:
-        raise ValueError(f"start_pair must be >= 0, got {start_pair}")
-    if max_pairs is not None and int(max_pairs) < 1:
-        raise ValueError(f"max_pairs must be >= 1 when set, got {max_pairs}")
-    family = _normalize_response_family(response_family)
-
-    reference = load_scorer_input_cache(reference_cache_dir)
-    candidate = load_scorer_input_cache(candidate_cache_dir)
-    pairing_plan = _build_cache_pairing_plan(reference, candidate)
-    candidate_cache_identity_mode = _validate_candidate_transfer_cache(
-        candidate,
+    batch_pairs_int, family = _validate_response_request(
+        archive_size_bytes=archive_size_bytes,
+        batch_pairs=batch_pairs,
+        device_type=device_type,
+        progress_every=progress_every,
+        start_pair=start_pair,
+        max_pairs=max_pairs,
+        allow_gpu_research_signal=allow_gpu_research_signal,
+        allow_batch_shape_research_signal=allow_batch_shape_research_signal,
+        response_family=response_family,
+    )
+    reference = load_scorer_input_cache(
+        reference_cache_dir,
+        integrity_mode=cache_integrity_mode,
+    )
+    candidate, pairing_plan, candidate_cache_identity_mode = _prepare_candidate_response_inputs(
+        reference=reference,
+        candidate_cache_dir=candidate_cache_dir,
+        cache_integrity_mode=cache_integrity_mode,
         allow_unaudited_candidate_cache_debug=allow_unaudited_candidate_cache_debug,
         allow_local_cpu_advisory_cache_identity=allow_local_cpu_advisory_cache_identity,
     )
-
     started = time.time()
     dist = _load_upstream_distortion_net(Path(repo_root).resolve())
+    with temporary_mlx_device(device_type):
+        adapter = torch_distortion_net_to_mlx(dist)
+        return _build_mlx_scorer_response_payload_loaded(
+            reference=reference,
+            candidate=candidate,
+            pairing_plan=pairing_plan,
+            candidate_cache_identity_mode=candidate_cache_identity_mode,
+            adapter=adapter,
+            archive_size_bytes=archive_size_bytes,
+            batch_pairs_int=batch_pairs_int,
+            device_type=device_type,
+            components_dir=components_dir,
+            progress_every=progress_every,
+            start_pair=start_pair,
+            max_pairs=max_pairs,
+            family=family,
+            started=started,
+            allow_gpu_research_signal=allow_gpu_research_signal,
+            allow_batch_shape_research_signal=allow_batch_shape_research_signal,
+            allow_unaudited_candidate_cache_debug=allow_unaudited_candidate_cache_debug,
+            allow_local_cpu_advisory_cache_identity=allow_local_cpu_advisory_cache_identity,
+        )
+
+
+def build_mlx_scorer_response_payload_batch(
+    *,
+    reference_cache_dir: str | Path,
+    jobs: Sequence[MLXScorerResponseBatchJob],
+    repo_root: str | Path = ".",
+    batch_pairs: int = 1,
+    device_type: str = "cpu",
+    progress_every: int = 0,
+    start_pair: int = 0,
+    max_pairs: int | None = None,
+    allow_gpu_research_signal: bool = False,
+    allow_batch_shape_research_signal: bool = False,
+    allow_unaudited_candidate_cache_debug: bool = False,
+    allow_local_cpu_advisory_cache_identity: bool = False,
+    cache_integrity_mode: str = MANIFEST_CACHE_INTEGRITY_MODE,
+) -> list[dict[str, Any]]:
+    """Run multiple candidate caches while reusing the loaded MLX scorer."""
+
+    if not jobs:
+        raise ValueError("jobs must contain at least one MLX scorer-response job")
+    batch_pairs_int, _ = _validate_response_request(
+        archive_size_bytes=0,
+        batch_pairs=batch_pairs,
+        device_type=device_type,
+        progress_every=progress_every,
+        start_pair=start_pair,
+        max_pairs=max_pairs,
+        allow_gpu_research_signal=allow_gpu_research_signal,
+        allow_batch_shape_research_signal=allow_batch_shape_research_signal,
+        response_family=None,
+    )
+    reference = load_scorer_input_cache(
+        reference_cache_dir,
+        integrity_mode=cache_integrity_mode,
+    )
+    dist = _load_upstream_distortion_net(Path(repo_root).resolve())
+    payloads: list[dict[str, Any]] = []
+    batch_started = time.time()
+    with temporary_mlx_device(device_type):
+        adapter = torch_distortion_net_to_mlx(dist)
+        for index, job in enumerate(jobs):
+            if int(job.archive_size_bytes) < 0:
+                raise ValueError(
+                    f"archive_size_bytes must be non-negative, got {job.archive_size_bytes}"
+                )
+            family = _normalize_response_family(job.response_family)
+            candidate, pairing_plan, candidate_cache_identity_mode = (
+                _prepare_candidate_response_inputs(
+                    reference=reference,
+                    candidate_cache_dir=job.candidate_cache_dir,
+                    cache_integrity_mode=cache_integrity_mode,
+                    allow_unaudited_candidate_cache_debug=(
+                        allow_unaudited_candidate_cache_debug
+                    ),
+                    allow_local_cpu_advisory_cache_identity=(
+                        allow_local_cpu_advisory_cache_identity
+                    ),
+                )
+            )
+            payload = _build_mlx_scorer_response_payload_loaded(
+                reference=reference,
+                candidate=candidate,
+                pairing_plan=pairing_plan,
+                candidate_cache_identity_mode=candidate_cache_identity_mode,
+                adapter=adapter,
+                archive_size_bytes=job.archive_size_bytes,
+                batch_pairs_int=batch_pairs_int,
+                device_type=device_type,
+                components_dir=job.components_dir,
+                progress_every=progress_every,
+                start_pair=start_pair,
+                max_pairs=max_pairs,
+                family=family,
+                started=time.time(),
+                allow_gpu_research_signal=allow_gpu_research_signal,
+                allow_batch_shape_research_signal=allow_batch_shape_research_signal,
+                allow_unaudited_candidate_cache_debug=allow_unaudited_candidate_cache_debug,
+                allow_local_cpu_advisory_cache_identity=(
+                    allow_local_cpu_advisory_cache_identity
+                ),
+            )
+            payload["batch_process"] = {
+                "schema": "mlx_scorer_response_batch_process_member.v1",
+                "job_index": index,
+                "job_count": len(jobs),
+                "output": str(job.output),
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+            payloads.append(payload)
+    total_elapsed = time.time() - batch_started
+    for payload in payloads:
+        payload["batch_process_summary"] = {
+            "schema": "mlx_scorer_response_batch_process_summary.v1",
+            "job_count": len(jobs),
+            "batch_process_wall_seconds": total_elapsed,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+    return payloads
+
+
+def _build_mlx_scorer_response_payload_loaded(
+    *,
+    reference: ScorerInputCache,
+    candidate: ScorerInputCache,
+    pairing_plan: CachePairingPlan,
+    candidate_cache_identity_mode: str,
+    adapter: Any,
+    archive_size_bytes: int,
+    batch_pairs_int: int,
+    device_type: str,
+    components_dir: str | Path | None,
+    progress_every: int,
+    start_pair: int,
+    max_pairs: int | None,
+    family: str | None,
+    started: float,
+    allow_gpu_research_signal: bool,
+    allow_batch_shape_research_signal: bool,
+    allow_unaudited_candidate_cache_debug: bool,
+    allow_local_cpu_advisory_cache_identity: bool,
+) -> dict[str, Any]:
     pose_chunks: list[np.ndarray] = []
     seg_chunks: list[np.ndarray] = []
     total_pair_count = int(candidate.pair_indices.shape[0])
     start = int(start_pair)
     if start >= total_pair_count:
         raise ValueError(f"start_pair {start} is outside cache pair count {total_pair_count}")
-    stop_exclusive = total_pair_count if max_pairs is None else min(total_pair_count, start + int(max_pairs))
+    stop_exclusive = (
+        total_pair_count if max_pairs is None else min(total_pair_count, start + int(max_pairs))
+    )
     pair_count = stop_exclusive - start
 
-    with temporary_mlx_device(device_type):
-        adapter = torch_distortion_net_to_mlx(dist)
-        for batch_index, batch_start in enumerate(
-            range(start, stop_exclusive, int(batch_pairs)),
-            start=1,
-        ):
-            stop = min(stop_exclusive, batch_start + int(batch_pairs))
-            ref_rows = pairing_plan.reference_row_indices[batch_start:stop]
-            ref_pose = np.asarray(reference.posenet_yuv6_pair[ref_rows], dtype=np.float32)
-            ref_seg = np.asarray(reference.segnet_last_rgb[ref_rows], dtype=np.float32)
-            cand_pose = np.asarray(candidate.posenet_yuv6_pair[batch_start:stop], dtype=np.float32)
-            cand_seg = np.asarray(candidate.segnet_last_rgb[batch_start:stop], dtype=np.float32)
-            ref_outputs = run_mlx_distortion_scorer_nchw(
+    for batch_index, batch_start in enumerate(
+        range(start, stop_exclusive, batch_pairs_int),
+        start=1,
+    ):
+        stop = min(stop_exclusive, batch_start + batch_pairs_int)
+        ref_rows = pairing_plan.reference_row_indices[batch_start:stop]
+        ref_pose = np.asarray(reference.posenet_yuv6_pair[ref_rows], dtype=np.float32)
+        ref_seg = np.asarray(reference.segnet_last_rgb[ref_rows], dtype=np.float32)
+        cand_pose = np.asarray(candidate.posenet_yuv6_pair[batch_start:stop], dtype=np.float32)
+        cand_seg = np.asarray(candidate.segnet_last_rgb[batch_start:stop], dtype=np.float32)
+        ref_outputs = run_mlx_distortion_scorer_nchw(
+            adapter,
+            ref_pose,
+            ref_seg,
+        )
+        if np.array_equal(ref_pose, cand_pose) and np.array_equal(ref_seg, cand_seg):
+            cand_outputs = ref_outputs
+        else:
+            cand_outputs = run_mlx_distortion_scorer_nchw(
                 adapter,
-                ref_pose,
-                ref_seg,
+                cand_pose,
+                cand_seg,
             )
-            if np.array_equal(ref_pose, cand_pose) and np.array_equal(ref_seg, cand_seg):
-                cand_outputs = ref_outputs
-            else:
-                cand_outputs = run_mlx_distortion_scorer_nchw(
-                    adapter,
-                    cand_pose,
-                    cand_seg,
-                )
-            components = scorer_distortion_components_numpy(ref_outputs, cand_outputs)
-            pose_chunks.append(components["posenet"])
-            seg_chunks.append(components["segnet"])
-            if progress_every and batch_index % int(progress_every) == 0:
-                elapsed = time.time() - started
-                done = stop - start
-                rate = done / elapsed if elapsed > 0 else 0.0
-                print(
-                    json.dumps(
-                        {
-                            "event": "mlx_scorer_response_progress",
-                            "done_pairs": done,
-                            "total_pairs": pair_count,
-                            "pairs_per_second": rate,
-                            "elapsed_seconds": elapsed,
-                        },
-                        sort_keys=True,
-                    ),
-                    file=sys.stderr,
-                    flush=True,
-                )
+        components = scorer_distortion_components_numpy(ref_outputs, cand_outputs)
+        pose_chunks.append(components["posenet"])
+        seg_chunks.append(components["segnet"])
+        if progress_every and batch_index % int(progress_every) == 0:
+            elapsed = time.time() - started
+            done = stop - start
+            rate = done / elapsed if elapsed > 0 else 0.0
+            print(
+                json.dumps(
+                    {
+                        "event": "mlx_scorer_response_progress",
+                        "done_pairs": done,
+                        "total_pairs": pair_count,
+                        "pairs_per_second": rate,
+                        "elapsed_seconds": elapsed,
+                    },
+                    sort_keys=True,
+                ),
+                file=sys.stderr,
+                flush=True,
+            )
 
     pose_distortion = np.concatenate(pose_chunks).astype(np.float32, copy=False)
     seg_distortion = np.concatenate(seg_chunks).astype(np.float32, copy=False)
@@ -277,7 +442,7 @@ def build_mlx_scorer_response_payload(
             candidate.pair_indices[start].tolist(),
             candidate.pair_indices[stop_exclusive - 1].tolist(),
         ],
-        "batch_pairs": int(batch_pairs),
+        "batch_pairs": int(batch_pairs_int),
         "elapsed_seconds": elapsed,
         "components": {
             "posenet_shape": list(pose_distortion.shape),
@@ -341,6 +506,69 @@ def build_mlx_scorer_response_payload(
             ],
         },
     }
+
+
+def _validate_response_request(
+    *,
+    archive_size_bytes: int,
+    batch_pairs: int,
+    device_type: str,
+    progress_every: int,
+    start_pair: int,
+    max_pairs: int | None,
+    allow_gpu_research_signal: bool,
+    allow_batch_shape_research_signal: bool,
+    response_family: str | None,
+) -> tuple[int, str | None]:
+    if int(archive_size_bytes) < 0:
+        raise ValueError(f"archive_size_bytes must be non-negative, got {archive_size_bytes}")
+    batch_pairs_int = int(batch_pairs)
+    if batch_pairs_int < 1:
+        raise ValueError(f"batch_pairs must be >= 1, got {batch_pairs}")
+    if device_type not in {"cpu", "gpu"}:
+        raise ValueError(f"device_type must be 'cpu' or 'gpu', got {device_type!r}")
+    if device_type == "gpu" and not allow_gpu_research_signal:
+        raise ValueError(
+            f"{GPU_RESEARCH_SIGNAL_BLOCKER}: device_type='gpu' is local MLX "
+            "prescreen signal only; pass allow_gpu_research_signal=True after "
+            "recording CPU-transfer calibration or a research-only rationale"
+        )
+    if batch_pairs_int != 1 and not allow_batch_shape_research_signal:
+        raise ValueError(
+            f"{BATCH_SHAPE_RESEARCH_SIGNAL_BLOCKER}: clean-head FEC6 parity "
+            "found batch-shape-sensitive SegNet argmax drift for MLX scorer "
+            "responses; use batch_pairs=1 for production local signal or pass "
+            "allow_batch_shape_research_signal=True only for explicitly "
+            "recorded batch-shape research probes"
+        )
+    if int(progress_every) < 0:
+        raise ValueError(f"progress_every must be >= 0, got {progress_every}")
+    if int(start_pair) < 0:
+        raise ValueError(f"start_pair must be >= 0, got {start_pair}")
+    if max_pairs is not None and int(max_pairs) < 1:
+        raise ValueError(f"max_pairs must be >= 1 when set, got {max_pairs}")
+    return batch_pairs_int, _normalize_response_family(response_family)
+
+
+def _prepare_candidate_response_inputs(
+    *,
+    reference: ScorerInputCache,
+    candidate_cache_dir: str | Path,
+    cache_integrity_mode: str,
+    allow_unaudited_candidate_cache_debug: bool,
+    allow_local_cpu_advisory_cache_identity: bool,
+) -> tuple[ScorerInputCache, CachePairingPlan, str]:
+    candidate = load_scorer_input_cache(
+        candidate_cache_dir,
+        integrity_mode=cache_integrity_mode,
+    )
+    pairing_plan = _build_cache_pairing_plan(reference, candidate)
+    candidate_cache_identity_mode = _validate_candidate_transfer_cache(
+        candidate,
+        allow_unaudited_candidate_cache_debug=allow_unaudited_candidate_cache_debug,
+        allow_local_cpu_advisory_cache_identity=allow_local_cpu_advisory_cache_identity,
+    )
+    return candidate, pairing_plan, candidate_cache_identity_mode
 
 
 def _allowed_uses_for_device_contract(
@@ -439,41 +667,53 @@ def _verify_cache_integrity(
     seg: np.ndarray,
     pose: np.ndarray,
     pairs: np.ndarray,
+    integrity_mode: str,
 ) -> dict[str, Any]:
     blockers: list[str] = []
-    array_actual = {
-        "segnet_last_rgb": _array_sha256(seg),
-        "posenet_yuv6_pair": _array_sha256(pose),
-        "pair_indices": _array_sha256(pairs),
-    }
     artifact_paths = {
         "segnet_last_rgb": root / "segnet_last_rgb.npy",
         "posenet_yuv6_pair": root / "posenet_yuv6_pair.npy",
         "pair_indices": root / "pair_indices.npy",
     }
-    artifact_actual = {
-        key: {
-            "bytes": path.stat().st_size,
-            "sha256": _file_sha256(path),
-        }
-        for key, path in artifact_paths.items()
-    }
-
     expected_array = manifest.get("array_sha256")
     if not isinstance(expected_array, dict):
         blockers.append("array_sha256_missing")
         expected_array = {}
-    for key, actual in array_actual.items():
-        expected = expected_array.get(key)
-        if expected is None:
-            blockers.append(f"array_sha256_{key}_missing")
-        elif expected != actual:
-            blockers.append(f"array_sha256_{key}_mismatch")
-
     expected_artifacts = manifest.get("artifacts")
     if not isinstance(expected_artifacts, dict):
         blockers.append("artifacts_missing")
         expected_artifacts = {}
+
+    artifact_actual: dict[str, dict[str, Any]] = {}
+    array_actual: dict[str, str] = {}
+    if integrity_mode == STRICT_CACHE_INTEGRITY_MODE:
+        array_actual = {
+            "segnet_last_rgb": _array_sha256(seg),
+            "posenet_yuv6_pair": _array_sha256(pose),
+            "pair_indices": _array_sha256(pairs),
+        }
+        artifact_actual = {
+            key: {
+                "bytes": path.stat().st_size,
+                "sha256": _file_sha256(path),
+            }
+            for key, path in artifact_paths.items()
+        }
+        for key, actual in array_actual.items():
+            expected = expected_array.get(key)
+            if expected is None:
+                blockers.append(f"array_sha256_{key}_missing")
+            elif expected != actual:
+                blockers.append(f"array_sha256_{key}_mismatch")
+    else:
+        for key, path in artifact_paths.items():
+            artifact_actual[key] = {"bytes": path.stat().st_size}
+            expected_array_hash = expected_array.get(key)
+            if not _looks_like_sha256(expected_array_hash):
+                blockers.append(f"array_sha256_{key}_missing_or_invalid")
+            else:
+                array_actual[key] = str(expected_array_hash)
+
     for key, actual in artifact_actual.items():
         expected = expected_artifacts.get(key)
         if not isinstance(expected, dict):
@@ -481,7 +721,12 @@ def _verify_cache_integrity(
             continue
         if expected.get("bytes") != actual["bytes"]:
             blockers.append(f"artifact_{key}_bytes_mismatch")
-        if expected.get("sha256") != actual["sha256"]:
+        expected_sha256 = expected.get("sha256")
+        if integrity_mode == STRICT_CACHE_INTEGRITY_MODE:
+            actual_sha256 = actual.get("sha256")
+            if expected_sha256 != actual_sha256:
+                blockers.append(f"artifact_{key}_sha256_mismatch")
+        elif not _looks_like_sha256(expected_sha256):
             blockers.append(f"artifact_{key}_sha256_mismatch")
 
     hash_domain = manifest.get("hash_domain")
@@ -492,9 +737,17 @@ def _verify_cache_integrity(
         "passed": not blockers,
         "blockers": blockers,
         "hash_domain": hash_domain,
+        "integrity_mode": integrity_mode,
+        "strict_rehash_performed": integrity_mode == STRICT_CACHE_INTEGRITY_MODE,
+        "manifest_hashes_reused": integrity_mode == MANIFEST_CACHE_INTEGRITY_MODE,
         "array_sha256": array_actual,
         "artifact_sha256": {
-            key: value["sha256"] for key, value in artifact_actual.items()
+            key: (
+                value.get("sha256")
+                if "sha256" in value
+                else _manifest_artifact_sha256(expected_artifacts, key)
+            )
+            for key, value in artifact_actual.items()
         },
         "artifact_bytes": {
             key: value["bytes"] for key, value in artifact_actual.items()
@@ -712,6 +965,20 @@ def _array_sha256(arr: np.ndarray) -> str:
     return h.hexdigest()
 
 
+def _looks_like_sha256(value: Any) -> bool:
+    if not isinstance(value, str) or len(value) != 64:
+        return False
+    return all(ch in "0123456789abcdef" for ch in value.lower())
+
+
+def _manifest_artifact_sha256(expected_artifacts: dict[str, Any], key: str) -> str:
+    artifact = expected_artifacts.get(key)
+    if not isinstance(artifact, dict):
+        return ""
+    value = artifact.get("sha256")
+    return str(value) if isinstance(value, str) else ""
+
+
 def _file_sha256(path: Path) -> str:
     h = hashlib.sha256()
     with path.open("rb") as handle:
@@ -756,8 +1023,12 @@ __all__ = [
     "CANDIDATE_CACHE_TRANSFER_BLOCKER",
     "GPU_BATCH_SHAPE_BLOCKER",
     "GPU_RESEARCH_SIGNAL_BLOCKER",
+    "MANIFEST_CACHE_INTEGRITY_MODE",
     "SCHEMA_VERSION",
+    "STRICT_CACHE_INTEGRITY_MODE",
+    "MLXScorerResponseBatchJob",
     "ScorerInputCache",
+    "build_mlx_scorer_response_payload_batch",
     "build_mlx_scorer_response_payload",
     "load_scorer_input_cache",
     "write_mlx_scorer_response_payload",

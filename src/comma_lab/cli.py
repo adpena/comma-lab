@@ -106,6 +106,7 @@ def cmd_eval_submission(args: argparse.Namespace) -> int:
         sync=not args.no_sync,
         package=args.package,
         report_copy=Path(args.report_copy) if args.report_copy else None,
+        keep_inflated=args.keep_inflated,
     )
     print(summary.to_json())
     return 0
@@ -117,6 +118,7 @@ def cmd_smoke_submission(args: argparse.Namespace) -> int:
         upstream_root=Path(args.upstream_root) if args.upstream_root else None,
         sync=not args.no_sync,
         package=args.package,
+        keep_inflated=args.keep_inflated,
     )
     print(summary.to_json())
     return 0
@@ -413,6 +415,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--package", action="store_true", help="package the submission before evaluation")
     p.add_argument("--no-sync", action="store_true", help="skip copying the submission into upstream before evaluation")
     p.add_argument("--report-copy", default=None, help="optional repo-local path to copy the raw report to after evaluation")
+    p.add_argument("--keep-inflated", action="store_true", help="preserve raw inflated scratch after success for debugging")
     p.set_defaults(func=cmd_eval_submission)
 
     p = sub.add_parser("smoke-submission", help="package/sync/inflate a submission and verify raw output count, geometry, and sampled RGB semantics before scorer runs")
@@ -420,6 +423,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--upstream-root", default=None)
     p.add_argument("--package", action="store_true", help="package the submission before the smoke check")
     p.add_argument("--no-sync", action="store_true", help="skip copying the submission into upstream before the smoke check")
+    p.add_argument("--keep-inflated", action="store_true", help="preserve raw inflated scratch after success for debugging")
     p.set_defaults(func=cmd_smoke_submission)
 
     p = sub.add_parser("package-submission", help="refresh a submission artifact in-place")

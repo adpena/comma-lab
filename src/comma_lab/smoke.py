@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 from dataclasses import asdict, dataclass
@@ -58,6 +59,8 @@ class SmokeSummary:
     video_names_file: str
     archive_path: str
     inflated_dir: str
+    inflated_dir_retained: bool
+    inflated_dir_cleanup: str
     all_passed: bool
     file_count_matches: bool
     results: list[VideoSmokeResult]
@@ -226,6 +229,7 @@ def smoke_submission(
     upstream_root: Path | None = None,
     sync: bool = True,
     package: bool = False,
+    keep_inflated: bool = False,
 ) -> SmokeSummary:
     root = repo_root()
     upstream_root = upstream_root or default_upstream_root()
@@ -339,12 +343,21 @@ def smoke_submission(
             r.raw_exists and r.size_matches and r.frame_count_matches and r.semantic_check_passed
             for r in results
         )
+        if keep_inflated:
+            inflated_dir_cleanup = "retained_by_request"
+        elif all_passed:
+            shutil.rmtree(inflated_dir, ignore_errors=True)
+            inflated_dir_cleanup = "deleted_after_success"
+        else:
+            inflated_dir_cleanup = "retained_after_failed_smoke"
         return SmokeSummary(
             track=name,
             upstream_root=str(upstream_root),
             video_names_file=str(video_names_file),
             archive_path=str(archive_path),
             inflated_dir=str(inflated_dir),
+            inflated_dir_retained=keep_inflated,
+            inflated_dir_cleanup=inflated_dir_cleanup,
             all_passed=all_passed,
             file_count_matches=file_count_matches,
             results=results,

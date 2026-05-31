@@ -314,6 +314,105 @@ def test_queue_control_recover_rewinds_succeeded_missing_artifact_step(
     assert summary["status_counts"] == {"queued": 2}
 
 
+def test_queue_control_recover_reconciles_queued_skip_policy_artifacts(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    qc = _load_queue_control()
+    gate = tmp_path / "gate.json"
+    gate.write_text(
+        json.dumps(
+            {
+                "schema": "mlx_response_cpu_spend_gate.v1",
+                "cpu_gate_allowed": False,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    queue_path = tmp_path / "queue.json"
+    queue_path.write_text(
+        json.dumps(
+            {
+                "schema": "experiment_queue.v1",
+                "queue_id": "unit_recover_skip_gate_queue",
+                "controls": {"mode": "running", "max_concurrency": {"local_cpu": 1}},
+                "experiments": [
+                    {
+                        "id": "exp",
+                        "steps": [
+                            {
+                                "id": "gate",
+                                "command": [sys.executable, "-c", "print('gate')"],
+                                "resources": {"kind": "local_cpu"},
+                                "on_postcondition_failure": "skipped",
+                                "postconditions": [
+                                    {
+                                        "type": "json_equals",
+                                        "path": str(gate),
+                                        "key": "cpu_gate_allowed",
+                                        "equals": True,
+                                    },
+                                    {
+                                        "type": "json_false_authority",
+                                        "path": str(gate),
+                                    },
+                                ],
+                            },
+                            {
+                                "id": "cpu_eval",
+                                "command": [sys.executable, "-c", "print('cpu')"],
+                                "resources": {"kind": "local_cpu"},
+                                "requires": ["gate"],
+                            },
+                        ],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    state_path = tmp_path / "queue.sqlite"
+    queue = load_queue_definition(queue_path)
+    with connect_state(state_path) as conn:
+        initialize_queue_state(conn, queue)
+
+    rc = qc.main(
+        [
+            "--queue",
+            str(queue_path),
+            "--state",
+            str(state_path),
+            "recover",
+            "--reason",
+            "unit test queued gate artifact recovery",
+            "--strict",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert rc == 0
+    assert payload["postcondition_reconciliation"]["skipped_step_count"] == 1
+    assert payload["postcondition_reconciliation"]["skipped_steps"][0] == {
+        "experiment_id": "exp",
+        "step_id": "gate",
+        "postcondition_count": 2,
+        "previous_status": "queued",
+    }
+    assert payload["postcondition_reconciliation"]["dependency_skipped_reconciliation"][
+        "skipped_step_count"
+    ] == 1
+    assert payload["recovery_verdict"] == "ready"
+    assert payload["score_claim"] is False
+    with connect_state(state_path) as conn:
+        summary = queue_summary(conn, queue)
+    assert summary["mode"] == "paused"
+    assert summary["status_counts"] == {"skipped": 2}
+
+
 def test_queue_control_missing_queue_fails_without_traceback(capsys, tmp_path: Path) -> None:
     qc = _load_queue_control()
     rc = qc.main(["--queue", str(tmp_path / "missing.json"), "status"])

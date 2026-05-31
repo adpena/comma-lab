@@ -254,6 +254,44 @@ def test_observer_marks_existing_artifact_failed_when_postcondition_fails(
     assert "0/1" in markdown
 
 
+def test_observer_does_not_block_on_queued_skip_policy_artifact_failure(
+    tmp_path: Path,
+) -> None:
+    artifact = tmp_path / "gate.json"
+    artifact.write_text(
+        json.dumps({"schema": "gate.v1", "cpu_gate_allowed": False}),
+        encoding="utf-8",
+    )
+    state = tmp_path / "queue.sqlite"
+    queue = _queue(artifact)
+    queue["experiments"][0]["steps"][0]["on_postcondition_failure"] = "skipped"
+    queue["experiments"][0]["steps"][0]["postconditions"] = [
+        {
+            "type": "json_equals",
+            "path": artifact.as_posix(),
+            "key": "cpu_gate_allowed",
+            "equals": True,
+        }
+    ]
+
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=1,
+    )
+    artifact_record = observation["queued_steps"][0]["expected_artifacts"][0]
+
+    assert artifact_record["exists"] is True
+    assert artifact_record["postcondition_passed"] is False
+    assert observation["queued_steps"][0]["postcondition_failure_policy"] == "skipped"
+    assert observation["healthy"] is True
+    assert observation["blockers"] == []
+
+
 def test_observer_revalidates_required_runtime_identity_claim(
     tmp_path: Path,
 ) -> None:

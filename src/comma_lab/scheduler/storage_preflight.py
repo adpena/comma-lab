@@ -207,7 +207,9 @@ def build_scheduler_storage_preflight_experiment(
     cleanup_roots = proactive_cleanup_roots or (
         "experiments/results",
         ".omx/tmp",
+        ".omx/research",
         "submissions/robust_current/eval_runs",
+        "reports/raw",
     )
     cleanup_command = [
         ".venv/bin/python",

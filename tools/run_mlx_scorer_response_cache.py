@@ -85,6 +85,16 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="Optional directory for per-pair PoseNet/SegNet distortion .npy arrays.",
     )
     parser.add_argument(
+        "--cache-integrity-mode",
+        choices=("strict", "manifest"),
+        default="strict",
+        help=(
+            "strict re-hashes cache arrays/files; manifest trusts recorded "
+            "manifest hashes and size-checks files for queue-owned local "
+            "acquisition."
+        ),
+    )
+    parser.add_argument(
         "--response-family",
         help=(
             "Optional candidate-family label for downstream scorer-response "
@@ -113,6 +123,7 @@ def main(argv: list[str] | None = None) -> int:
             allow_unaudited_candidate_cache_debug=args.allow_unaudited_candidate_cache_debug,
             allow_local_cpu_advisory_cache_identity=args.allow_local_cpu_advisory_cache_identity,
             response_family=args.response_family,
+            cache_integrity_mode=args.cache_integrity_mode,
         )
     except (OSError, ValueError, NotImplementedError) as exc:
         print(f"FATAL: {exc}", file=sys.stderr)

@@ -361,6 +361,96 @@ def test_retention_deletes_only_certified_locality_raw(tmp_path: Path) -> None:
     assert (tmp_path / "candidate_a" / "submission_dir" / "archive.zip").is_file()
 
 
+def test_retention_deletes_orphaned_omx_tmp_raw_scratch(tmp_path: Path) -> None:
+    raw_dir = tmp_path / ".omx" / "tmp" / "scratch" / "output_dir"
+    _write(raw_dir / "0.raw", b"r" * 64)
+
+    plan = build_retention_plan([tmp_path / ".omx" / "tmp"], repo_root=tmp_path, min_bytes=1)
+
+    assert [row.kind for row in plan.candidates] == [retention.ORPHANED_EVAL_RAW_SCRATCH_KIND]
+    assert plan.candidates[0].certificate["reason"] == "omx_tmp_inflate_scratch"
+    assert plan.candidates[0].certificate["hashes_omitted"]
+
+    execution = execute_retention_plan(plan, action="delete")
+
+    assert execution["executed_count"] == 1
+    assert not raw_dir.exists()
+
+
+def test_retention_deletes_orphaned_eval_runs_inflated_scratch(tmp_path: Path) -> None:
+    raw_dir = (
+        tmp_path
+        / "submissions"
+        / "robust_current"
+        / "eval_runs"
+        / "verify"
+        / "submission"
+        / "inflated"
+    )
+    _write(raw_dir / "0.raw", b"r" * 64)
+
+    plan = build_retention_plan(
+        [tmp_path / "submissions" / "robust_current" / "eval_runs"],
+        repo_root=tmp_path,
+        min_bytes=1,
+    )
+
+    assert [row.kind for row in plan.candidates] == [retention.ORPHANED_EVAL_RAW_SCRATCH_KIND]
+    assert plan.candidates[0].certificate["reason"] == "eval_runs_inflated_scratch"
+
+
+def test_retention_deletes_runtime_consumption_raw_scratch(tmp_path: Path) -> None:
+    raw_dir = (
+        tmp_path
+        / ".omx"
+        / "research"
+        / "pr95_fixture"
+        / "runtime_consumption_work"
+        / "raw"
+    )
+    _write(raw_dir / "0.raw", b"r" * 64)
+    _write(raw_dir.parent / "data" / "0.bin", b"model")
+    _write(raw_dir.parent / "file_list.txt", b"0.mkv\n")
+
+    plan = build_retention_plan(
+        [tmp_path / ".omx" / "research"],
+        repo_root=tmp_path,
+        min_bytes=1,
+    )
+
+    assert [row.kind for row in plan.candidates] == [retention.ORPHANED_EVAL_RAW_SCRATCH_KIND]
+    assert plan.candidates[0].certificate["reason"] == "runtime_consumption_work_raw_scratch"
+
+    execution = execute_retention_plan(plan, action="delete")
+
+    assert execution["executed_count"] == 1
+    assert not raw_dir.exists()
+    assert (raw_dir.parent / "data" / "0.bin").is_file()
+    assert (raw_dir.parent / "file_list.txt").is_file()
+
+
+def test_retention_blocks_orphaned_raw_scratch_with_non_raw_children(tmp_path: Path) -> None:
+    raw_dir = tmp_path / ".omx" / "tmp" / "scratch" / "inflated"
+    _write(raw_dir / "0.raw", b"r" * 64)
+    _write(raw_dir / "keep.json", b"{}")
+
+    plan = build_retention_plan([tmp_path / ".omx" / "tmp"], repo_root=tmp_path, min_bytes=1)
+
+    assert [row.path for row in plan.candidates] == [".omx/tmp/scratch/inflated/0.raw"]
+    assert [row.kind for row in plan.blocked_candidates] == [
+        retention.ORPHANED_EVAL_RAW_SCRATCH_KIND,
+    ]
+    assert any(
+        blocker.startswith("non_raw_children_present")
+        for blocker in plan.blocked_candidates[0].blockers
+    )
+    execution = execute_retention_plan(plan, action="delete")
+
+    assert execution["executed_count"] == 1
+    assert not (raw_dir / "0.raw").exists()
+    assert (raw_dir / "keep.json").is_file()
+
+
 def test_compact_cli_execute_stdout_writes_default_journal(
     tmp_path: Path,
     capsys,

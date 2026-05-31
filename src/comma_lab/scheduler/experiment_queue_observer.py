@@ -1851,6 +1851,9 @@ def _step_observation(
         "expected_artifact_paths": [],
     }
     if step_definition is not None:
+        observation["postcondition_failure_policy"] = str(
+            step_definition.get("on_postcondition_failure", "failed")
+        )
         resources = step_definition.get("resources")
         if isinstance(resources, Mapping):
             observation["resource_kind"] = resources.get("kind")
@@ -2325,11 +2328,14 @@ def _observation_blockers(
     artifact_failures = 0
     for step in active_steps:
         status = step.get("status") if isinstance(step, Mapping) else None
+        policy = step.get("postcondition_failure_policy") if isinstance(step, Mapping) else None
         artifacts = step.get("expected_artifacts") if isinstance(step, Mapping) else None
         if not isinstance(artifacts, Sequence) or isinstance(
             artifacts,
             (str, bytes, bytearray),
         ):
+            continue
+        if status == "queued" and policy == "skipped":
             continue
         artifact_failures += sum(
             1

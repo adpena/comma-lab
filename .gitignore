@@ -199,11 +199,14 @@ submissions/*/archive.zip
 !submissions/pr106_latent_sidecar_r2_pr101_grammar/archive.zip
 submissions/*/submission.zip
 submissions/*/inflated/
+submissions/**/eval_runs/**/inflated/
 submissions/*/__pycache__/
 submissions/robust_current/archive/
 submissions/robust_current/inflated/
+workspace/**/submissions/**/inflated/
 submission_packets/
 reports/public/submission_packets/
+reports/raw/**/inflated/
 reports/graphs/site/comparison/*.mp4
 reports/graphs/site/comparison/*.gif
 reports/graphs/site/comparison/frames/
@@ -212,6 +215,7 @@ reports/graphs/site/comma_format/*.gif
 reports/graphs/public_site/
 
 # Data directories (large, machine-generated)
+.omx/tmp/
 precomputed_local/
 precomputed/
 data/runs/*/*.csv

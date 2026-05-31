@@ -5,7 +5,7 @@
 # No stale data possible. No manual steps.
 #
 # Usage:
-#   ./tools/auth_eval.sh <checkpoint.pt> [--crf 34] [--tag myrun]
+#   ./tools/auth_eval.sh <checkpoint.pt> [--crf 34] [--tag myrun] [--keep-inflated]
 #
 # Examples:
 #   ./tools/auth_eval.sh .backups/postfilter_standard_h64_long2500_v3_best_int8.pt
@@ -23,12 +23,14 @@ CONFIG_ENV="$SUBMISSION/config.env"
 CHECKPOINT="${1:?Usage: auth_eval.sh <checkpoint.pt> [--crf N] [--tag NAME]}"
 CRF=""
 TAG="auth_eval_$(date +%Y%m%dT%H%M%S)"
+KEEP_INFLATED=0
 
 shift
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --crf) CRF="$2"; shift 2 ;;
         --tag) TAG="$2"; shift 2 ;;
+        --keep-inflated) KEEP_INFLATED=1; shift ;;
         *) echo "Unknown arg: $1" >&2; exit 1 ;;
     esac
 done
@@ -172,4 +174,10 @@ REPORTS_DIR="$REPO_ROOT/reports/raw/auth_eval"
 mkdir -p "$REPORTS_DIR"
 cp "$REPORT" "$REPORTS_DIR/${TAG}_report.txt" 2>/dev/null
 echo "Report saved: reports/raw/auth_eval/${TAG}_report.txt"
+if [ "$KEEP_INFLATED" -eq 0 ]; then
+    rm -rf "$SUBMISSION/inflated"
+    echo "Raw scratch cleanup: deleted $SUBMISSION/inflated"
+else
+    echo "Raw scratch cleanup: retained by --keep-inflated"
+fi
 echo "Total time: $((INFLATE_SEC + SCORE_SEC))s"

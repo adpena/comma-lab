@@ -1,0 +1,633 @@
+{
+  "artifact_catalog_metadata": {
+    "artifact_paths": [
+      ".omx/research/codex_raw_scratch_retention_20260531T164425Z.json",
+      ".omx/research/codex_raw_scratch_retention_20260531T164425Z.json.journal.jsonl"
+    ],
+    "cleanup_plan_path": ".omx/research/codex_raw_scratch_retention_20260531T164425Z.json",
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "gpu_launched": false,
+    "journal_path": ".omx/research/codex_raw_scratch_retention_20260531T164425Z.json.journal.jsonl",
+    "lifecycle_kind": "HISTORICAL_PROVENANCE",
+    "policy_id": "operator_storage_waterfall.v1",
+    "policy_schema": "comma_lab.operator_storage_waterfall.v1",
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "comma_lab.operator_storage_waterfall_artifact_catalog_metadata.v1",
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "storage_plan_path": null,
+    "tracked_local_boundary": {
+      ".omx/research/codex_raw_scratch_retention_20260531T164425Z.json": {
+        "artifact_kind_registry_pattern": ".omx/research/**/*.json*",
+        "git_boundary": "trackable_when_promoted",
+        "lifecycle_kind": "HISTORICAL_PROVENANCE",
+        "local_only": false
+      },
+      ".omx/research/codex_raw_scratch_retention_20260531T164425Z.json.journal.jsonl": {
+        "artifact_kind_registry_pattern": ".omx/research/**/*.json*",
+        "git_boundary": "trackable_when_promoted",
+        "lifecycle_kind": "HISTORICAL_PROVENANCE",
+        "local_only": false
+      }
+    }
+  },
+  "execution": {
+    "action": "delete",
+    "cold_store_contract": null,
+    "cold_store_contracts": [],
+    "cold_store_reserve_bytes": 0,
+    "cold_store_root": null,
+    "cold_store_roots": [],
+    "executed_bytes": 35964862272,
+    "executed_count": 11,
+    "generated_at_utc": "2026-05-31T16:44:29.310663+00:00",
+    "journal_path": ".omx/research/codex_raw_scratch_retention_20260531T164425Z.json.journal.jsonl",
+    "local_bytes_reclaimed": 35964862272,
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "rows": [
+      {
+        "action": "delete",
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_bytes": 3662409600,
+          "direct_raw_file_count": 1,
+          "files": [
+            {
+              "bytes": 3662409600,
+              "mtime_ns": 1780228617458013703,
+              "path": "0.raw"
+            }
+          ],
+          "hashes_omitted": "raw inflate scratch is rebuildable and intentionally not rehashed before deletion",
+          "kind": "orphaned_eval_raw_scratch",
+          "reason": "omx_research_inflate_scratch"
+        },
+        "certified_rebuildable": true,
+        "kind": "orphaned_eval_raw_scratch",
+        "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/inflated",
+        "preflight_revalidated": true,
+        "status": "deleted"
+      },
+      {
+        "action": "delete",
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_bytes": 3662409600,
+          "direct_raw_file_count": 1,
+          "files": [
+            {
+              "bytes": 3662409600,
+              "mtime_ns": 1779816101630421351,
+              "path": "0.raw"
+            }
+          ],
+          "hashes_omitted": "raw inflate scratch is rebuildable and intentionally not rehashed before deletion",
+          "kind": "orphaned_eval_raw_scratch",
+          "reason": "omx_tmp_inflate_scratch"
+        },
+        "certified_rebuildable": true,
+        "kind": "orphaned_eval_raw_scratch",
+        "path": ".omx/tmp/boostnerv_pr110_l1_stage0_workdir/output_dir",
+        "preflight_revalidated": true,
+        "status": "deleted"
+      },
+      {
+        "action": "delete",
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_bytes": 3662409600,
+          "direct_raw_file_count": 1,
+          "files": [
+            {
+              "bytes": 3662409600,
+              "mtime_ns": 1778522552186997765,
+              "path": "0.raw"
+            }
+          ],
+          "hashes_omitted": "raw inflate scratch is rebuildable and intentionally not rehashed before deletion",
+          "kind": "orphaned_eval_raw_scratch",
+          "reason": "omx_tmp_inflate_scratch"
+        },
+        "certified_rebuildable": true,
+        "kind": "orphaned_eval_raw_scratch",
+        "path": ".omx/tmp/pr101_grammar_baseline_cpu_out",
+        "preflight_revalidated": true,
+        "status": "deleted"
+      },
+      {
+        "action": "delete",
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_bytes": 3662409600,
+          "direct_raw_file_count": 1,
+          "files": [
+            {
+              "bytes": 3662409600,
+              "mtime_ns": 1778522496559989915,
+              "path": "0.raw"
+            }
+          ],
+          "hashes_omitted": "raw inflate scratch is rebuildable and intentionally not rehashed before deletion",
+          "kind": "orphaned_eval_raw_scratch",
+          "reason": "omx_tmp_inflate_scratch"
+        },
+        "certified_rebuildable": true,
+        "kind": "orphaned_eval_raw_scratch",
+        "path": ".omx/tmp/pr101_grammar_local_smoke_out",
+        "preflight_revalidated": true,
+        "status": "deleted"
+      },
+      {
+        "action": "delete",
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_bytes": 3662409600,
+          "direct_raw_file_count": 1,
+          "files": [
+            {
+              "bytes": 3662409600,
+              "mtime_ns": 1778791707348181684,
+              "path": "0.raw"
+            }
+          ],
+          "hashes_omitted": "raw inflate scratch is rebuildable and intentionally not rehashed before deletion",
+          "kind": "orphaned_eval_raw_scratch",
+          "reason": "omx_tmp_inflate_scratch"
+        },
+        "certified_rebuildable": true,
+        "kind": "orphaned_eval_raw_scratch",
+        "path": ".omx/tmp/z3_v2_inflate_test/out_dir",
+        "preflight_revalidated": true,
+        "status": "deleted"
+      },
+      {
+        "action": "delete",
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_bytes": 3662409600,
+          "direct_raw_file_count": 1,
+          "files": [
+            {
+              "bytes": 3662409600,
+              "mtime_ns": 1776230662416282893,
+              "path": "0.raw"
+            }
+          ],
+          "hashes_omitted": "raw inflate scratch is rebuildable and intentionally not rehashed before deletion",
+          "kind": "orphaned_eval_raw_scratch",
+          "reason": "reports_raw_inflated_scratch"
+        },
+        "certified_rebuildable": true,
+        "kind": "orphaned_eval_raw_scratch",
+        "path": "reports/raw/kaggle_ingest/kaggle-dilated-h64-long1000-retry-v6-20260410T234220Z/comma_video_compression_challenge/submissions/gt_passthrough/inflated",
+        "preflight_revalidated": true,
+        "status": "deleted"
+      },
+      {
+        "action": "delete",
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_bytes": 3662409600,
+          "direct_raw_file_count": 1,
+          "files": [
+            {
+              "bytes": 3662409600,
+              "mtime_ns": 1775976273979225755,
+              "path": "0.raw"
+            }
+          ],
+          "hashes_omitted": "raw inflate scratch is rebuildable and intentionally not rehashed before deletion",
+          "kind": "orphaned_eval_raw_scratch",
+          "reason": "eval_runs_inflated_scratch"
+        },
+        "certified_rebuildable": true,
+        "kind": "orphaned_eval_raw_scratch",
+        "path": "submissions/robust_current/eval_runs/verify_136_original/submission/inflated",
+        "preflight_revalidated": true,
+        "status": "deleted"
+      },
+      {
+        "action": "delete",
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_bytes": 3662409600,
+          "direct_raw_file_count": 1,
+          "files": [
+            {
+              "bytes": 3662409600,
+              "mtime_ns": 1775984823910549571,
+              "path": "0.raw"
+            }
+          ],
+          "hashes_omitted": "raw inflate scratch is rebuildable and intentionally not rehashed before deletion",
+          "kind": "orphaned_eval_raw_scratch",
+          "reason": "eval_runs_inflated_scratch"
+        },
+        "certified_rebuildable": true,
+        "kind": "orphaned_eval_raw_scratch",
+        "path": "submissions/robust_current/eval_runs/verify_correct_ckpt/submission/inflated",
+        "preflight_revalidated": true,
+        "status": "deleted"
+      },
+      {
+        "action": "delete",
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_bytes": 3662409600,
+          "direct_raw_file_count": 1,
+          "files": [
+            {
+              "bytes": 3662409600,
+              "mtime_ns": 1775503268991640395,
+              "path": "0.raw"
+            }
+          ],
+          "hashes_omitted": "raw inflate scratch is rebuildable and intentionally not rehashed before deletion",
+          "kind": "orphaned_eval_raw_scratch",
+          "reason": "workspace_upstream_inflated_scratch"
+        },
+        "certified_rebuildable": true,
+        "kind": "orphaned_eval_raw_scratch",
+        "path": "workspace/upstream/comma_video_compression_challenge/submissions/exact_current/inflated",
+        "preflight_revalidated": true,
+        "status": "deleted"
+      },
+      {
+        "action": "delete",
+        "blockers": [],
+        "bytes": 2221861824,
+        "certificate": {
+          "direct_raw_bytes": 2221861824,
+          "direct_raw_file_count": 1,
+          "files": [
+            {
+              "bytes": 2221861824,
+              "mtime_ns": 1775974374487113071,
+              "path": "0.raw"
+            }
+          ],
+          "hashes_omitted": "raw inflate scratch is rebuildable and intentionally not rehashed before deletion",
+          "kind": "orphaned_eval_raw_scratch",
+          "reason": "eval_runs_inflated_scratch"
+        },
+        "certified_rebuildable": true,
+        "kind": "orphaned_eval_raw_scratch",
+        "path": "workspace/upstream/comma_video_compression_challenge/submissions/robust_current/eval_runs/baseline_verify/submission/inflated",
+        "preflight_revalidated": true,
+        "status": "deleted"
+      },
+      {
+        "action": "delete",
+        "blockers": [],
+        "bytes": 781314048,
+        "certificate": {
+          "direct_raw_bytes": 781314048,
+          "direct_raw_file_count": 1,
+          "files": [
+            {
+              "bytes": 781314048,
+              "mtime_ns": 1775986344682880613,
+              "path": "0.raw"
+            }
+          ],
+          "hashes_omitted": "raw inflate scratch is rebuildable and intentionally not rehashed before deletion",
+          "kind": "orphaned_eval_raw_scratch",
+          "reason": "eval_runs_inflated_scratch"
+        },
+        "certified_rebuildable": true,
+        "kind": "orphaned_eval_raw_scratch",
+        "path": "submissions/robust_current/eval_runs/crf_32/submission/inflated",
+        "preflight_revalidated": true,
+        "status": "deleted"
+      }
+    ],
+    "schema": "comma_lab.artifact_retention_execution.v1",
+    "score_claim": false,
+    "skipped_count": 0,
+    "tiered_cold_store": true
+  },
+  "operator_storage_policy": {
+    "cold_store_roots": [
+      "/Volumes/VertigoDataTier/pact/cold_store",
+      "/Volumes/APDataStore/pact/cold_store"
+    ],
+    "cold_store_subdir": "cold_store",
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "explicit_cold_store_override": false,
+    "explicit_storage_tier_override": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "gpu_launched": false,
+    "local_disk_enabled": false,
+    "local_disk_enabled_by_default": false,
+    "local_disk_requires_explicit_opt_in": true,
+    "policy_id": "operator_storage_waterfall.v1",
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "comma_lab.operator_storage_waterfall.v1",
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "storage_tier_cli_specs": [
+      "vertigo=/Volumes/VertigoDataTier/pact",
+      "apdatastore=/Volumes/APDataStore/pact"
+    ],
+    "work_tier_order": [
+      {
+        "allow_local_disk": false,
+        "name": "vertigo",
+        "priority": 0,
+        "root": "/Volumes/VertigoDataTier/pact",
+        "source": "operator_policy"
+      },
+      {
+        "allow_local_disk": false,
+        "name": "apdatastore",
+        "priority": 1,
+        "root": "/Volumes/APDataStore/pact",
+        "source": "operator_policy"
+      }
+    ]
+  },
+  "plan": {
+    "blocked_candidate_count": 0,
+    "blocked_candidates": [],
+    "candidate_count": 11,
+    "candidates": [
+      {
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_bytes": 3662409600,
+          "direct_raw_file_count": 1,
+          "files": [
+            {
+              "bytes": 3662409600,
+              "mtime_ns": 1780228617458013703,
+              "path": "0.raw"
+            }
+          ],
+          "hashes_omitted": "raw inflate scratch is rebuildable and intentionally not rehashed before deletion",
+          "kind": "orphaned_eval_raw_scratch",
+          "reason": "omx_research_inflate_scratch"
+        },
+        "certified_rebuildable": true,
+        "kind": "orphaned_eval_raw_scratch",
+        "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/inflated"
+      },
+      {
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_bytes": 3662409600,
+          "direct_raw_file_count": 1,
+          "files": [
+            {
+              "bytes": 3662409600,
+              "mtime_ns": 1779816101630421351,
+              "path": "0.raw"
+            }
+          ],
+          "hashes_omitted": "raw inflate scratch is rebuildable and intentionally not rehashed before deletion",
+          "kind": "orphaned_eval_raw_scratch",
+          "reason": "omx_tmp_inflate_scratch"
+        },
+        "certified_rebuildable": true,
+        "kind": "orphaned_eval_raw_scratch",
+        "path": ".omx/tmp/boostnerv_pr110_l1_stage0_workdir/output_dir"
+      },
+      {
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_bytes": 3662409600,
+          "direct_raw_file_count": 1,
+          "files": [
+            {
+              "bytes": 3662409600,
+              "mtime_ns": 1778522552186997765,
+              "path": "0.raw"
+            }
+          ],
+          "hashes_omitted": "raw inflate scratch is rebuildable and intentionally not rehashed before deletion",
+          "kind": "orphaned_eval_raw_scratch",
+          "reason": "omx_tmp_inflate_scratch"
+        },
+        "certified_rebuildable": true,
+        "kind": "orphaned_eval_raw_scratch",
+        "path": ".omx/tmp/pr101_grammar_baseline_cpu_out"
+      },
+      {
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_bytes": 3662409600,
+          "direct_raw_file_count": 1,
+          "files": [
+            {
+              "bytes": 3662409600,
+              "mtime_ns": 1778522496559989915,
+              "path": "0.raw"
+            }
+          ],
+          "hashes_omitted": "raw inflate scratch is rebuildable and intentionally not rehashed before deletion",
+          "kind": "orphaned_eval_raw_scratch",
+          "reason": "omx_tmp_inflate_scratch"
+        },
+        "certified_rebuildable": true,
+        "kind": "orphaned_eval_raw_scratch",
+        "path": ".omx/tmp/pr101_grammar_local_smoke_out"
+      },
+      {
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_bytes": 3662409600,
+          "direct_raw_file_count": 1,
+          "files": [
+            {
+              "bytes": 3662409600,
+              "mtime_ns": 1778791707348181684,
+              "path": "0.raw"
+            }
+          ],
+          "hashes_omitted": "raw inflate scratch is rebuildable and intentionally not rehashed before deletion",
+          "kind": "orphaned_eval_raw_scratch",
+          "reason": "omx_tmp_inflate_scratch"
+        },
+        "certified_rebuildable": true,
+        "kind": "orphaned_eval_raw_scratch",
+        "path": ".omx/tmp/z3_v2_inflate_test/out_dir"
+      },
+      {
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_bytes": 3662409600,
+          "direct_raw_file_count": 1,
+          "files": [
+            {
+              "bytes": 3662409600,
+              "mtime_ns": 1776230662416282893,
+              "path": "0.raw"
+            }
+          ],
+          "hashes_omitted": "raw inflate scratch is rebuildable and intentionally not rehashed before deletion",
+          "kind": "orphaned_eval_raw_scratch",
+          "reason": "reports_raw_inflated_scratch"
+        },
+        "certified_rebuildable": true,
+        "kind": "orphaned_eval_raw_scratch",
+        "path": "reports/raw/kaggle_ingest/kaggle-dilated-h64-long1000-retry-v6-20260410T234220Z/comma_video_compression_challenge/submissions/gt_passthrough/inflated"
+      },
+      {
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_bytes": 3662409600,
+          "direct_raw_file_count": 1,
+          "files": [
+            {
+              "bytes": 3662409600,
+              "mtime_ns": 1775976273979225755,
+              "path": "0.raw"
+            }
+          ],
+          "hashes_omitted": "raw inflate scratch is rebuildable and intentionally not rehashed before deletion",
+          "kind": "orphaned_eval_raw_scratch",
+          "reason": "eval_runs_inflated_scratch"
+        },
+        "certified_rebuildable": true,
+        "kind": "orphaned_eval_raw_scratch",
+        "path": "submissions/robust_current/eval_runs/verify_136_original/submission/inflated"
+      },
+      {
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_bytes": 3662409600,
+          "direct_raw_file_count": 1,
+          "files": [
+            {
+              "bytes": 3662409600,
+              "mtime_ns": 1775984823910549571,
+              "path": "0.raw"
+            }
+          ],
+          "hashes_omitted": "raw inflate scratch is rebuildable and intentionally not rehashed before deletion",
+          "kind": "orphaned_eval_raw_scratch",
+          "reason": "eval_runs_inflated_scratch"
+        },
+        "certified_rebuildable": true,
+        "kind": "orphaned_eval_raw_scratch",
+        "path": "submissions/robust_current/eval_runs/verify_correct_ckpt/submission/inflated"
+      },
+      {
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_bytes": 3662409600,
+          "direct_raw_file_count": 1,
+          "files": [
+            {
+              "bytes": 3662409600,
+              "mtime_ns": 1775503268991640395,
+              "path": "0.raw"
+            }
+          ],
+          "hashes_omitted": "raw inflate scratch is rebuildable and intentionally not rehashed before deletion",
+          "kind": "orphaned_eval_raw_scratch",
+          "reason": "workspace_upstream_inflated_scratch"
+        },
+        "certified_rebuildable": true,
+        "kind": "orphaned_eval_raw_scratch",
+        "path": "workspace/upstream/comma_video_compression_challenge/submissions/exact_current/inflated"
+      },
+      {
+        "blockers": [],
+        "bytes": 2221861824,
+        "certificate": {
+          "direct_raw_bytes": 2221861824,
+          "direct_raw_file_count": 1,
+          "files": [
+            {
+              "bytes": 2221861824,
+              "mtime_ns": 1775974374487113071,
+              "path": "0.raw"
+            }
+          ],
+          "hashes_omitted": "raw inflate scratch is rebuildable and intentionally not rehashed before deletion",
+          "kind": "orphaned_eval_raw_scratch",
+          "reason": "eval_runs_inflated_scratch"
+        },
+        "certified_rebuildable": true,
+        "kind": "orphaned_eval_raw_scratch",
+        "path": "workspace/upstream/comma_video_compression_challenge/submissions/robust_current/eval_runs/baseline_verify/submission/inflated"
+      },
+      {
+        "blockers": [],
+        "bytes": 781314048,
+        "certificate": {
+          "direct_raw_bytes": 781314048,
+          "direct_raw_file_count": 1,
+          "files": [
+            {
+              "bytes": 781314048,
+              "mtime_ns": 1775986344682880613,
+              "path": "0.raw"
+            }
+          ],
+          "hashes_omitted": "raw inflate scratch is rebuildable and intentionally not rehashed before deletion",
+          "kind": "orphaned_eval_raw_scratch",
+          "reason": "eval_runs_inflated_scratch"
+        },
+        "certified_rebuildable": true,
+        "kind": "orphaned_eval_raw_scratch",
+        "path": "submissions/robust_current/eval_runs/crf_32/submission/inflated"
+      }
+    ],
+    "exclude_paths": [],
+    "generated_at_utc": "2026-05-31T16:44:28.643926+00:00",
+    "include_kinds": [
+      "inverse_scorer_inflate_parity_raw_output",
+      "local_cpu_advisory_extracted_scratch",
+      "local_cpu_advisory_inflated_raw",
+      "locality_inflated_raw",
+      "orphaned_eval_raw_scratch"
+    ],
+    "min_bytes": 104857600,
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "repo_root": ".",
+    "roots": [
+      ".omx/tmp",
+      ".omx/research",
+      "submissions/robust_current/eval_runs",
+      "reports/raw",
+      "workspace/upstream/comma_video_compression_challenge/submissions"
+    ],
+    "schema": "comma_lab.artifact_retention_plan.v1",
+    "score_claim": false,
+    "total_reclaimable_bytes": 35964862272
+  }
+}
