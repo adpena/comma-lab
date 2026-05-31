@@ -14,7 +14,6 @@ from typing import Any
 from comma_lab.scheduler.experiment_queue import QUEUE_SCHEMA, normalize_queue_definition
 from comma_lab.scheduler.scorer_region_selector_chain_queue import (
     DEFAULT_MLX_REFERENCE_CACHE_DIR,
-    ScorerRegionSelectorChainQueueError,
     build_scorer_region_selector_chain_queue,
 )
 from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY
