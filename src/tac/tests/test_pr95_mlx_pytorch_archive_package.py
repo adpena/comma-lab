@@ -60,6 +60,22 @@ def test_package_pr95_mlx_pytorch_state_dict_byte_closed_runtime_smoke(
     assert report["score_claim"] is False
     assert report["promotion_eligible"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
+    bridge = report["archive_bound_candidate_runtime_bridge"]
+    assert Path(report["archive_bound_candidate_runtime_bridge_path"]).is_file()
+    assert bridge["score_claim"] is False
+    assert bridge["promotion_eligible"] is False
+    assert bridge["receiver_proof"]["runtime_consumption_proof_ready"] is False
+    assert "pr95_mlx_pytorch_package_generated_inflate_sh_output_bytes_mismatch" in bridge[
+        "receiver_proof"
+    ]["blockers"]
+    package = report["archive_bound_candidate_adapter_package"]
+    assert package["candidate_family"] == "pr95_mlx_hnerv"
+    assert package["ready_contract_count"] == 0
+    row = package["candidate_rows"][0]
+    assert row["archive_bound_candidate_contract"]["runtime_consumption_proof_ready"] is False
+    assert "neural_archive" in row["archive_bound_candidate_contract"][
+        "archive_substrate_tags"
+    ]
     assert report["exact_readiness_refusal"]["ready"] is False
     assert (submission_dir / "archive.zip").is_file()
     assert (submission_dir / "inflate.sh").is_file()

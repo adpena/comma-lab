@@ -65,6 +65,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from tac.optimization.archive_bound_candidate_runtime_bridge import (
+    ARCHIVE_BOUND_RUNTIME_ADAPTER_PACKAGE_SCHEMA,
+    emit_archive_bound_candidate_runtime_package,
+)
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SOURCE_MODEL = (
     REPO_ROOT
@@ -73,6 +78,11 @@ DEFAULT_SOURCE_MODEL = (
 )
 CANONICAL_VENDOR_FILES = ("src/model.py", "src/codec.py")
 PR95_MLX_PACKAGE_SCHEMA = "pr95_mlx_pytorch_state_dict_to_contest_archive.v1"
+PR95_MLX_ARCHIVE_BOUND_ADAPTER_ID = "pr95_mlx_pytorch_package_export"
+PR95_MLX_ARCHIVE_CANDIDATE_FAMILY = "pr95_mlx_hnerv"
+PR95_MLX_ARCHIVE_TRANSFORM_KIND = "pr95_mlx_pytorch_state_dict_contest_archive"
+PR95_MLX_RECEIVER_PROOF_SCHEMA = "pr95_mlx_pytorch_package_receiver_proof.v1"
+PR95_MLX_CONTEST_RAW_BYTES = 1164 * 874 * 1200 * 3
 
 FALSE_AUTHORITY: dict[str, Any] = {
     "score_claim": False,
@@ -484,12 +494,91 @@ def _write_archive_manifest(
     return path
 
 
+def _emit_pr95_archive_bound_runtime_bridge(
+    *,
+    archive_zip_path: Path,
+    archive_zip_sha256: str,
+    archive_zip_bytes: int,
+    archive_member_name: str,
+    output_submission_dir: Path,
+    bridge_output_dir: Path,
+    input_pt_path: Path,
+    input_pt_sha256: str,
+    source_archive_zip: Path,
+    source_archive_sha256: str,
+    latents_source: str,
+    runtime_files: dict[str, str],
+) -> dict[str, Any]:
+    """Emit shared archive-bound custody around the PR95 runtime package."""
+
+    if bridge_output_dir.exists():
+        shutil.rmtree(bridge_output_dir)
+    archive_dir_for_inflate = bridge_output_dir / "archive_dir"
+    archive_dir_for_inflate.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(archive_zip_path) as zf:
+        (archive_dir_for_inflate / archive_member_name).write_bytes(
+            zf.read(archive_member_name)
+        )
+
+    package = emit_archive_bound_candidate_runtime_package(
+        adapter_id=PR95_MLX_ARCHIVE_BOUND_ADAPTER_ID,
+        candidate_family=PR95_MLX_ARCHIVE_CANDIDATE_FAMILY,
+        candidate_id_prefix="pr95_mlx_pytorch_package",
+        transform_kind=PR95_MLX_ARCHIVE_TRANSFORM_KIND,
+        archive_zip_path=archive_zip_path,
+        archive_sha256=archive_zip_sha256,
+        archive_bytes=archive_zip_bytes,
+        submission_dir=output_submission_dir,
+        archive_dir_for_inflate=archive_dir_for_inflate,
+        output_dir=bridge_output_dir,
+        repo_root=REPO_ROOT,
+        receiver_contract_kind="pr95_hnerv_inflate_sh_archive_dir_to_raw_rgb",
+        proof_schema=PR95_MLX_RECEIVER_PROOF_SCHEMA,
+        proof_filename="pr95_mlx_pytorch_package_receiver_proof.json",
+        candidate_label="pr95_mlx_pytorch_package",
+        video_name="0.mp4",
+        expected_receiver_output_name="0.raw",
+        expected_receiver_output_bytes=PR95_MLX_CONTEST_RAW_BYTES,
+        runtime_adapter_manifest_extra={
+            "source_public_pr": 95,
+            "archive_member_name": archive_member_name,
+            "archive_dir_for_inflate": archive_dir_for_inflate.as_posix(),
+            "expected_receiver_output_name": "0.raw",
+            "expected_receiver_output_bytes": PR95_MLX_CONTEST_RAW_BYTES,
+            "full_contest_raw_byte_gate": True,
+            "source_archive_zip_path": source_archive_zip.as_posix(),
+            "source_archive_zip_sha256": source_archive_sha256,
+            "input_pt_path": input_pt_path.as_posix(),
+            "input_pt_sha256": input_pt_sha256,
+            "latents_source": latents_source,
+            "runtime_files": runtime_files,
+        },
+        input_artifacts=[
+            archive_zip_path.as_posix(),
+            archive_dir_for_inflate.as_posix(),
+            output_submission_dir.as_posix(),
+            input_pt_path.as_posix(),
+            source_archive_zip.as_posix(),
+        ],
+    )
+    return {
+        "schema": ARCHIVE_BOUND_RUNTIME_ADAPTER_PACKAGE_SCHEMA,
+        "package_path": (
+            bridge_output_dir / "archive_bound_candidate_adapter_package.json"
+        ).as_posix(),
+        "bridge_output_dir": bridge_output_dir.as_posix(),
+        "archive_dir_for_inflate": archive_dir_for_inflate.as_posix(),
+        **package,
+    }
+
+
 def package_pytorch_state_dict_to_contest_archive(
     *,
     input_pt: Path,
     source_archive_zip: Path,
     output_submission_dir: Path,
     source_submission_root: Path = DEFAULT_SOURCE_MODEL,
+    archive_bound_package_dir: Path | None = None,
     latents_from_pt: bool = False,
     latents_npy: Path | None = None,
     overwrite: bool = True,
@@ -586,6 +675,30 @@ def package_pytorch_state_dict_to_contest_archive(
         "README.md": readme_sha,
         **{f"vendored_{rel.replace('/', '_')}": sha for rel, sha in vendored.items()},
     }
+    report_latents_source = source_custody.get("latents_source") or (
+        "checkpoint_pt" if latents_from_pt else "source_archive"
+    )
+    bridge_output_dir = (
+        Path(archive_bound_package_dir)
+        if archive_bound_package_dir is not None
+        else output_submission_dir.with_name(
+            f"{output_submission_dir.name}_archive_bound_candidate"
+        )
+    )
+    archive_bound_candidate_runtime_bridge = _emit_pr95_archive_bound_runtime_bridge(
+        archive_zip_path=archive_zip_path,
+        archive_zip_sha256=write_report["archive_zip_sha256"],
+        archive_zip_bytes=int(write_report["archive_zip_bytes"]),
+        archive_member_name=write_report["member_name"],
+        output_submission_dir=output_submission_dir,
+        bridge_output_dir=bridge_output_dir,
+        input_pt_path=input_pt,
+        input_pt_sha256=pt_sha256,
+        source_archive_zip=source_archive_zip,
+        source_archive_sha256=source_custody["archive_zip_sha256"],
+        latents_source=str(report_latents_source),
+        runtime_files=runtime_files,
+    )
 
     report = {
         "schema_version": PR95_MLX_PACKAGE_SCHEMA,
@@ -597,8 +710,7 @@ def package_pytorch_state_dict_to_contest_archive(
         "source_archive_zip_path": source_archive_zip.as_posix(),
         "source_archive_zip_sha256": source_custody["archive_zip_sha256"],
         "source_archive_member_sha256": source_custody["member_sha256"],
-        "latents_source": source_custody.get("latents_source")
-        or ("checkpoint_pt" if latents_from_pt else "source_archive"),
+        "latents_source": report_latents_source,
         "latents_npy_path": source_custody.get("latents_npy_path"),
         "latents_npy_sha256": source_custody.get("latents_npy_sha256"),
         "latents_npy_bytes": source_custody.get("latents_npy_bytes"),
@@ -622,6 +734,28 @@ def package_pytorch_state_dict_to_contest_archive(
         else [],
         "runtime_files_emitted": runtime_files,
         "archive_manifest_path": str(manifest_path),
+        "archive_bound_candidate_runtime_bridge_schema": (
+            ARCHIVE_BOUND_RUNTIME_ADAPTER_PACKAGE_SCHEMA
+        ),
+        "archive_bound_candidate_runtime_bridge_path": (
+            archive_bound_candidate_runtime_bridge["package_path"]
+        ),
+        "archive_bound_candidate_runtime_bridge": (
+            archive_bound_candidate_runtime_bridge
+        ),
+        "archive_bound_candidate_adapter_package_schema": (
+            archive_bound_candidate_runtime_bridge[
+                "archive_bound_candidate_adapter_package"
+            ]["schema"]
+        ),
+        "archive_bound_candidate_adapter_package": (
+            archive_bound_candidate_runtime_bridge[
+                "archive_bound_candidate_adapter_package"
+            ]
+        ),
+        "archive_bound_candidate_receiver_proof": (
+            archive_bound_candidate_runtime_bridge["receiver_proof"]
+        ),
         "axis_tag": "[macOS-CPU advisory]",
         "evidence_grade": "macOS-CPU advisory",
         "canonical_provenance": {

@@ -25,18 +25,32 @@ used by the inflate runtime.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import torch
 
+from tac.optimization.archive_bound_candidate_runtime_bridge import (
+    emit_archive_bound_candidate_runtime_package,
+)
 from tac.repo_io import sha256_file
 from tac.substrates._shared.pact_nerv_full_main import (
     build_archive_zip,
     write_contest_runtime,
 )
-from tac.substrates.time_traveler_l5_z5.architecture import Z5RaoBallardConfig
 from tac.substrates.time_traveler_l5_z5.archive import pack_archive
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from tac.substrates.time_traveler_l5_z5.architecture import Z5RaoBallardConfig
+
+Z5_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA = "z5_mlx_archive_bound_adapter_package.v1"
+Z5_MLX_RECEIVER_PROOF_SCHEMA = "z5_mlx_generated_receiver_proof.v1"
+Z5_MLX_ARCHIVE_BOUND_ADAPTER_ID = "z5_mlx_archive_export"
+Z5_MLX_ARCHIVE_CANDIDATE_FAMILY = "time_traveler_l5_z5_mlx"
+Z5_MLX_ARCHIVE_TRANSFORM_KIND = "z5_mlx_rao_ballard_predictive_coding_archive"
+Z5_MLX_CONTEST_RAW_BYTES = 1164 * 874 * 1200 * 3
 
 
 def z5_meta_from_config(cfg: Z5RaoBallardConfig) -> dict[str, object]:
@@ -120,6 +134,9 @@ def export_z5_mlx_archive(
     output_dir: str | Path,
     *,
     repo_root: str | Path | None = None,
+    emit_archive_bound_candidate_package: bool = True,
+    retain_receiver_proof_output: bool = False,
+    mlx_triage_argv: Sequence[str] | None = None,
 ) -> tuple[Path, str, int]:
     """Export an MLX Z5 model as a contest-shaped ``archive.zip``.
 
@@ -149,6 +166,7 @@ def export_z5_mlx_archive(
         submission_dir,
         substrate_pkg_name="time_traveler_l5_z5",
         repo_root=root,
+        vendor_shared_inflate_runtime=True,
     )
     (submission_dir / "0.bin").write_bytes(bin_bytes)
     archive_zip_path = out_dir / "archive.zip"
@@ -157,15 +175,99 @@ def export_z5_mlx_archive(
         bin_bytes=bin_bytes,
         submission_dir=submission_dir,
     )
-    return (
-        archive_zip_path,
-        sha256_file(archive_zip_path),
-        archive_zip_path.stat().st_size,
+    archive_sha256 = sha256_file(archive_zip_path)
+    archive_bytes = archive_zip_path.stat().st_size
+    if emit_archive_bound_candidate_package:
+        emit_archive_bound_candidate_runtime_package(
+            adapter_id=Z5_MLX_ARCHIVE_BOUND_ADAPTER_ID,
+            candidate_family=Z5_MLX_ARCHIVE_CANDIDATE_FAMILY,
+            candidate_id_prefix="z5_mlx",
+            transform_kind=Z5_MLX_ARCHIVE_TRANSFORM_KIND,
+            archive_zip_path=archive_zip_path,
+            archive_sha256=archive_sha256,
+            archive_bytes=archive_bytes,
+            submission_dir=submission_dir,
+            output_dir=out_dir,
+            repo_root=root,
+            receiver_contract_kind="z5_mlx_generated_inflate_sh_decode_only_receiver",
+            proof_schema=Z5_MLX_RECEIVER_PROOF_SCHEMA,
+            proof_filename="z5_mlx_receiver_proof.json",
+            candidate_label="z5",
+            expected_receiver_output_bytes=Z5_MLX_CONTEST_RAW_BYTES,
+            retain_receiver_output=retain_receiver_proof_output,
+            runtime_adapter_manifest_extra={
+                "schema": "z5_mlx_runtime_adapter_manifest.v1",
+                "predictive_coding_family": "rao_ballard_two_level_hierarchical",
+                "cooperative_receiver_beta": float(cfg.cooperative_receiver_beta),
+            },
+            candidate_row_schema="z5_mlx_archive_bound_candidate_row.v1",
+            wrapper_schema=Z5_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
+            mlx_triage_argv=mlx_triage_argv,
+        )
+    return (archive_zip_path, archive_sha256, archive_bytes)
+
+
+def export_z5_mlx_archive_bound_candidate_package(
+    model: Any,
+    output_dir: str | Path,
+    *,
+    repo_root: str | Path | None = None,
+    retain_receiver_proof_output: bool = False,
+    mlx_triage_argv: Sequence[str] | None = None,
+) -> dict[str, Any]:
+    """Export Z5 MLX bytes and emit the shared archive-bound package."""
+
+    archive_zip_path, archive_sha256, archive_bytes = export_z5_mlx_archive(
+        model,
+        output_dir,
+        repo_root=repo_root,
+        emit_archive_bound_candidate_package=False,
+    )
+    root = (
+        Path(repo_root)
+        if repo_root is not None
+        else Path(__file__).resolve().parents[4]
+    )
+    out_dir = Path(output_dir)
+    if not out_dir.is_absolute():
+        out_dir = root / out_dir
+    cfg = model.cfg
+    return emit_archive_bound_candidate_runtime_package(
+        adapter_id=Z5_MLX_ARCHIVE_BOUND_ADAPTER_ID,
+        candidate_family=Z5_MLX_ARCHIVE_CANDIDATE_FAMILY,
+        candidate_id_prefix="z5_mlx",
+        transform_kind=Z5_MLX_ARCHIVE_TRANSFORM_KIND,
+        archive_zip_path=archive_zip_path,
+        archive_sha256=archive_sha256,
+        archive_bytes=archive_bytes,
+        submission_dir=out_dir / "submission",
+        output_dir=out_dir,
+        repo_root=root,
+        receiver_contract_kind="z5_mlx_generated_inflate_sh_decode_only_receiver",
+        proof_schema=Z5_MLX_RECEIVER_PROOF_SCHEMA,
+        proof_filename="z5_mlx_receiver_proof.json",
+        candidate_label="z5",
+        expected_receiver_output_bytes=Z5_MLX_CONTEST_RAW_BYTES,
+        retain_receiver_output=retain_receiver_proof_output,
+        runtime_adapter_manifest_extra={
+            "schema": "z5_mlx_runtime_adapter_manifest.v1",
+            "predictive_coding_family": "rao_ballard_two_level_hierarchical",
+            "cooperative_receiver_beta": float(cfg.cooperative_receiver_beta),
+        },
+        candidate_row_schema="z5_mlx_archive_bound_candidate_row.v1",
+        wrapper_schema=Z5_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
+        mlx_triage_argv=mlx_triage_argv,
     )
 
 
 __all__ = [
+    "Z5_MLX_ARCHIVE_BOUND_ADAPTER_ID",
+    "Z5_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA",
+    "Z5_MLX_ARCHIVE_CANDIDATE_FAMILY",
+    "Z5_MLX_ARCHIVE_TRANSFORM_KIND",
+    "Z5_MLX_CONTEST_RAW_BYTES",
     "export_z5_mlx_archive",
+    "export_z5_mlx_archive_bound_candidate_package",
     "pack_archive_from_exported_state_dict",
     "z5_meta_from_config",
 ]

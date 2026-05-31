@@ -605,28 +605,41 @@ def archive_substrate_tags_for_transform_kind(transform_kind: str) -> list[str]:
         tags.extend(["zip_ordering", "zip_container"])
     if "packet_member" in kind:
         tags.extend(["zip_member", "member_payload"])
-    neural_predictive_archive = (
+    neural_archive = (
         "z7" in kind
         or "mamba" in kind
         or "predictive_coding" in kind
         or "neural_archive" in kind
         or "ssd_reference" in kind
+        or "pact_nerv" in kind
+        or "nerv" in kind
+        or "_vq" in kind
         or ("mlx" in kind and ("archive" in kind or "substrate" in kind))
     )
-    if neural_predictive_archive:
-        tags.extend(
-            [
-                "neural_archive",
-                "predictive_coding",
-                "mlx_substrate",
-            ]
-        )
+    predictive_coding_archive = (
+        "z7" in kind
+        or "z6" in kind
+        or "z5" in kind
+        or "mamba" in kind
+        or "rao_ballard" in kind
+        or "predictive_coding" in kind
+    )
+    if neural_archive:
+        tags.append("neural_archive")
+        if "mlx" in kind:
+            tags.append("mlx_substrate")
+        if predictive_coding_archive:
+            tags.append("predictive_coding")
         if "z7" in kind or "mamba" in kind:
             tags.append("z7_mamba2")
         if "z6" in kind or "rao_ballard" in kind:
             tags.append("z6_v2")
         if "z5" in kind:
             tags.append("z5")
+        if "pact_nerv" in kind or "nerv" in kind:
+            tags.append("pact_nerv")
+        if "_vq" in kind or "vq" in kind:
+            tags.append("vq")
         if "ssd" in kind or "ssd_reference" in kind:
             tags.append("ssd_reference")
     if "prototype" in kind:
@@ -648,15 +661,18 @@ def entropy_position_label_for_transform_kind(transform_kind: str) -> str:
         return "after_entropy_coder"
     if "dqs1" in kind or "pairset" in kind or "selector" in kind or "fec" in kind:
         return "before_entropy_coder"
-    neural_predictive_archive = (
+    neural_archive = (
         "z7" in kind
         or "mamba" in kind
         or "predictive_coding" in kind
         or "neural_archive" in kind
         or "ssd_reference" in kind
+        or "pact_nerv" in kind
+        or "nerv" in kind
+        or "_vq" in kind
         or ("mlx" in kind and ("archive" in kind or "substrate" in kind))
     )
-    if neural_predictive_archive:
+    if neural_archive:
         return "before_entropy_coder"
     if any(
         token in kind

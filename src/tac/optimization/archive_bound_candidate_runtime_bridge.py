@@ -58,10 +58,13 @@ def run_generated_inflate_receiver_proof(
     submission_dir: Path,
     output_dir: Path,
     repo_root: Path,
+    archive_dir_for_inflate: Path | None = None,
     proof_schema: str = ARCHIVE_BOUND_RUNTIME_RECEIVER_PROOF_SCHEMA,
     proof_filename: str = "archive_bound_candidate_receiver_proof.json",
     candidate_label: str = "archive_bound_candidate",
     video_name: str = "0.mkv",
+    expected_receiver_output_name: str | None = None,
+    expected_receiver_output_bytes: int | None = None,
     retain_receiver_output: bool = False,
     timeout_seconds: int = 1800,
 ) -> dict[str, object]:
@@ -78,11 +81,12 @@ def run_generated_inflate_receiver_proof(
     file_list.write_text(f"{video_name}\n", encoding="utf-8")
     receiver_out_dir = proof_dir / "runtime_out"
     receiver_out_dir.mkdir(parents=True, exist_ok=True)
-    output_name = Path(video_name).stem
+    output_name = expected_receiver_output_name or Path(video_name).stem
     receiver_raw = receiver_out_dir / output_name
+    archive_arg_dir = archive_dir_for_inflate or submission_dir
     inflate_argv = [
         str(submission_dir / "inflate.sh"),
-        str(submission_dir),
+        str(archive_arg_dir),
         str(receiver_out_dir),
         str(file_list),
     ]
@@ -132,7 +136,21 @@ def run_generated_inflate_receiver_proof(
         blockers.append(f"{candidate_label}_generated_inflate_sh_output_missing")
     if output_present and not output_bytes:
         blockers.append(f"{candidate_label}_generated_inflate_sh_output_empty")
-    passed = returncode == 0 and output_present and bool(output_bytes) and not timed_out
+    if (
+        expected_receiver_output_bytes is not None
+        and output_present
+        and output_bytes != int(expected_receiver_output_bytes)
+    ):
+        blockers.append(
+            f"{candidate_label}_generated_inflate_sh_output_bytes_mismatch"
+        )
+    passed = (
+        returncode == 0
+        and output_present
+        and bool(output_bytes)
+        and not timed_out
+        and not blockers
+    )
     proof_path = proof_dir / proof_filename
     proof = {
         "schema": proof_schema,
@@ -141,6 +159,7 @@ def run_generated_inflate_receiver_proof(
         "archive_sha256": archive_sha256,
         "archive_bytes": int(archive_bytes),
         "submission_dir": _repo_relative(submission_dir, repo_root),
+        "archive_dir_for_inflate": _repo_relative(archive_arg_dir, repo_root),
         "runtime_tree_sha256": tree_sha256(submission_dir),
         "inflate_argv": [
             _repo_relative(Path(inflate_argv[0]), repo_root),
@@ -153,6 +172,7 @@ def run_generated_inflate_receiver_proof(
         "receiver_output_retained": bool(retain_receiver_output and output_present),
         "receiver_output_sha256": output_sha256,
         "receiver_output_bytes": output_bytes,
+        "expected_receiver_output_bytes": expected_receiver_output_bytes,
         "returncode": returncode,
         "timed_out": timed_out,
         "wall_seconds": wall_seconds,
@@ -198,6 +218,7 @@ def build_archive_bound_candidate_runtime_package(
     archive_sha256: str,
     archive_bytes: int,
     submission_dir: Path,
+    archive_dir_for_inflate: Path | None = None,
     output_dir: Path,
     repo_root: Path,
     receiver_proof: Mapping[str, Any],
@@ -288,9 +309,82 @@ def build_archive_bound_candidate_runtime_package(
     return wrapped
 
 
+def emit_archive_bound_candidate_runtime_package(
+    *,
+    adapter_id: str,
+    candidate_family: str,
+    candidate_id_prefix: str,
+    transform_kind: str,
+    archive_zip_path: Path,
+    archive_sha256: str,
+    archive_bytes: int,
+    submission_dir: Path,
+    output_dir: Path,
+    repo_root: Path,
+    receiver_contract_kind: str,
+    archive_dir_for_inflate: Path | None = None,
+    proof_schema: str = ARCHIVE_BOUND_RUNTIME_RECEIVER_PROOF_SCHEMA,
+    proof_filename: str = "archive_bound_candidate_receiver_proof.json",
+    candidate_label: str = "archive_bound_candidate",
+    video_name: str = "0.mkv",
+    expected_receiver_output_name: str | None = None,
+    expected_receiver_output_bytes: int | None = None,
+    retain_receiver_output: bool = False,
+    timeout_seconds: int = 1800,
+    runtime_adapter_manifest_extra: Mapping[str, Any] | None = None,
+    candidate_row_schema: str = "archive_bound_runtime_candidate_row.v1",
+    wrapper_schema: str = ARCHIVE_BOUND_RUNTIME_ADAPTER_PACKAGE_SCHEMA,
+    package_filename: str = "archive_bound_candidate_adapter_package.json",
+    input_artifacts: Sequence[str] | None = None,
+    extra_blockers: Sequence[str] | None = None,
+    mlx_triage_argv: Sequence[str] | None = None,
+) -> dict[str, Any]:
+    """Run receiver proof, then emit the shared archive-bound package."""
+
+    receiver_proof = run_generated_inflate_receiver_proof(
+        archive_zip_path=archive_zip_path,
+        archive_sha256=archive_sha256,
+        archive_bytes=archive_bytes,
+        submission_dir=submission_dir,
+        archive_dir_for_inflate=archive_dir_for_inflate,
+        output_dir=output_dir,
+        repo_root=repo_root,
+        proof_schema=proof_schema,
+        proof_filename=proof_filename,
+        candidate_label=candidate_label,
+        video_name=video_name,
+        expected_receiver_output_name=expected_receiver_output_name,
+        expected_receiver_output_bytes=expected_receiver_output_bytes,
+        retain_receiver_output=retain_receiver_output,
+        timeout_seconds=timeout_seconds,
+    )
+    return build_archive_bound_candidate_runtime_package(
+        adapter_id=adapter_id,
+        candidate_family=candidate_family,
+        candidate_id_prefix=candidate_id_prefix,
+        transform_kind=transform_kind,
+        archive_zip_path=archive_zip_path,
+        archive_sha256=archive_sha256,
+        archive_bytes=archive_bytes,
+        submission_dir=submission_dir,
+        output_dir=output_dir,
+        repo_root=repo_root,
+        receiver_proof=receiver_proof,
+        receiver_contract_kind=receiver_contract_kind,
+        runtime_adapter_manifest_extra=runtime_adapter_manifest_extra,
+        candidate_row_schema=candidate_row_schema,
+        wrapper_schema=wrapper_schema,
+        package_filename=package_filename,
+        input_artifacts=input_artifacts,
+        extra_blockers=extra_blockers,
+        mlx_triage_argv=mlx_triage_argv,
+    )
+
+
 __all__ = [
     "ARCHIVE_BOUND_RUNTIME_ADAPTER_PACKAGE_SCHEMA",
     "ARCHIVE_BOUND_RUNTIME_RECEIVER_PROOF_SCHEMA",
     "build_archive_bound_candidate_runtime_package",
+    "emit_archive_bound_candidate_runtime_package",
     "run_generated_inflate_receiver_proof",
 ]
