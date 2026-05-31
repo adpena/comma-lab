@@ -38,8 +38,6 @@ import math
 from dataclasses import dataclass
 from typing import Any
 
-import numpy as np
-
 try:  # pragma: no cover - exercised in environments with MLX installed
     import mlx.core as mx
     import mlx.nn as nn
@@ -74,6 +72,44 @@ levels per scale-invariant entropy bound (coarser scales carry less detail)."""
 
 DEFAULT_EGO_MOTION_DIM: int = 6
 """Ego-motion vector dimensionality (6-DOF pose per Z6 sister pattern)."""
+
+# τ-ANNEAL WAVE 2026-05-31: canonical Jang 2016 / Hafner 2023 Gumbel-Softmax
+# anneal bounds. Z8 DELEGATES the schedule to the sister DreamerV3 canonical
+# helper (sister of how ``gumbel_softmax_sample`` already delegates) per
+# Catalog #290 ADOPT_CANONICAL_BECAUSE_SERVES so a future sister fix to the
+# anneal curve propagates structurally to Z8 per-level categorical posteriors.
+_CANONICAL_GUMBEL_TAU_MIN: float = 0.1
+"""Canonical Gumbel-Softmax τ floor (Jang 2016 §3.2 sharp late-training)."""
+
+
+def _gumbel_temperature_for_epoch(
+    epoch: int,
+    total_epochs: int,
+    *,
+    tau_start: float = 1.0,
+    tau_min: float = _CANONICAL_GUMBEL_TAU_MIN,
+) -> float:
+    """Lazily delegate to the sister DreamerV3 canonical τ-anneal schedule.
+
+    Sister of ``gumbel_softmax_sample`` below: a thin delegation to
+    ``tac.substrates.dreamer_v3_rssm.gumbel_temperature_for_epoch`` so the
+    canonical cosine schedule (``τ(e) = τ_min + 0.5·(τ_start−τ_min)·(1+cos(π·
+    e/(E−1)))`` per Jang 2016 anneal-from-high-to-low + Loshchilov-Hutter 2017
+    SGDR cosine shape) is a SINGLE source of truth. Lazy import keeps
+    ``import mlx_renderer`` fast for CLI introspection.
+    """
+    from tac.substrates.dreamer_v3_rssm import (
+        gumbel_temperature_for_epoch as _sister_tau_for_epoch,
+    )
+
+    return float(
+        _sister_tau_for_epoch(
+            int(epoch),
+            int(total_epochs),
+            tau_start=float(tau_start),
+            tau_min=float(tau_min),
+        )
+    )
 
 
 def _require_mlx() -> None:
@@ -168,7 +204,9 @@ class Z8HierarchicalConfig:
             sum(
                 g * math.log2(k)
                 for g, k in zip(
-                    self.num_groups_per_level, self.num_categories_per_level
+                    self.num_groups_per_level,
+                    self.num_categories_per_level,
+                    strict=True,
                 )
             )
         )
@@ -177,7 +215,11 @@ class Z8HierarchicalConfig:
     def total_latent_packing_bytes_per_pair(self) -> int:
         """Total per-pair archive cost for category indices across all levels."""
         total = 0
-        for g, k in zip(self.num_groups_per_level, self.num_categories_per_level):
+        for g, k in zip(
+            self.num_groups_per_level,
+            self.num_categories_per_level,
+            strict=True,
+        ):
             if k <= 256:
                 total += g  # 1 byte per group
             else:
@@ -430,6 +472,21 @@ class Z8HierarchicalPredictiveCoderMLX(nn.Module if nn is not None else object):
         _require_mlx()
         super().__init__()
         self.cfg = cfg
+        # τ-ANNEAL WAVE 2026-05-31 (sister of DreamerV3 v2 commit e7b1e85f0).
+        # Closes the "Comment-only contracts are FORBIDDEN" violation: the
+        # config docstring at ``gumbel_temperature`` claimed "Annealed during
+        # training (1.0 → 0.1)" but ``forward_training`` read a STATIC
+        # ``cfg.gumbel_temperature``. The annealed τ lives on a plain Python
+        # float so it is NOT treated as a trainable parameter by MLX's
+        # ``nn.Module`` (kept out of ``module.parameters()`` / state_dict
+        # export). ``notify_global_epoch`` (called by the canonical harness via
+        # the adapter once per epoch) recomputes it on the canonical cosine
+        # schedule. Static behavior is preserved until ``set_anneal_schedule``
+        # configures a budget (backward compat per CLAUDE.md "Beauty,
+        # simplicity, and developer experience").
+        self._current_gumbel_temperature: float = float(cfg.gumbel_temperature)
+        self._anneal_total_epochs: int | None = None
+        self._anneal_tau_min: float = float(_CANONICAL_GUMBEL_TAU_MIN)
         L = int(cfg.num_levels)
         N = int(cfg.num_pairs)
         base_h, base_w = 6, 8  # PR95 canonical base grid for 384×512 output
@@ -559,7 +616,12 @@ class Z8HierarchicalPredictiveCoderMLX(nn.Module if nn is not None else object):
             K_l = int(cfg.num_categories_per_level[level_idx])
             soft, indices = gumbel_softmax_sample(
                 level_logits,
-                temperature=float(cfg.gumbel_temperature),
+                # τ-ANNEAL WAVE 2026-05-31: read the ANNEALED τ (mutated per
+                # epoch by ``notify_global_epoch``), NOT the static
+                # ``cfg.gumbel_temperature``. Closes the comment-only-contract
+                # violation; without a configured schedule this equals
+                # ``cfg.gumbel_temperature`` (backward-compatible static).
+                temperature=float(self._current_gumbel_temperature),
                 use_straight_through=bool(cfg.use_straight_through),
                 key=gumbel_key,
             )
@@ -635,6 +697,73 @@ class Z8HierarchicalPredictiveCoderMLX(nn.Module if nn is not None else object):
 
         return self._decoder_forward(decoder_embedding)
 
+    @property
+    def current_gumbel_temperature(self) -> float:
+        """The annealed Gumbel-Softmax τ ``forward_training`` will use NEXT.
+
+        Equals ``cfg.gumbel_temperature`` until ``set_anneal_schedule`` +
+        ``notify_global_epoch`` have run (backward-compatible static τ).
+        """
+        return float(self._current_gumbel_temperature)
+
+    def set_anneal_schedule(
+        self,
+        *,
+        total_epochs: int,
+        tau_min: float = _CANONICAL_GUMBEL_TAU_MIN,
+    ) -> None:
+        """Configure the cosine τ-anneal schedule used by ``notify_global_epoch``.
+
+        Sister of ``DreamerV3RSSMSubstrateMLX.set_anneal_schedule``. The Z8
+        ``_full_main`` calls this once before training so the per-level
+        categorical posterior τ anneals 1.0 → ``tau_min`` over the run.
+
+        Args:
+            total_epochs: total epoch budget E (τ reaches ``tau_min`` at epoch
+                E-1).
+            tau_min: τ floor (default = canonical Jang 2016 floor 0.1).
+        """
+        total_epochs_int = int(total_epochs)
+        tau_min_float = float(tau_min)
+        tau_start = float(self.cfg.gumbel_temperature)
+        if total_epochs_int <= 0:
+            raise ValueError("total_epochs must be > 0 for Z8 τ anneal")
+        if (
+            not math.isfinite(tau_min_float)
+            or tau_min_float <= 0.0
+            or tau_min_float > tau_start
+        ):
+            raise ValueError(
+                "tau_min must satisfy 0 < tau_min <= cfg.gumbel_temperature "
+                f"({tau_start}); got {tau_min_float}"
+            )
+        self._anneal_total_epochs = total_epochs_int
+        self._anneal_tau_min = tau_min_float
+
+    def notify_global_epoch(self, global_epoch: int) -> None:
+        """Canonical per-epoch hook: anneal τ for ``global_epoch``.
+
+        The canonical long-training harness calls
+        ``adapter.notify_global_epoch(epoch)`` once per epoch; the adapter
+        forwards to THIS method (it detects the renderer hook via
+        ``getattr``). When a schedule has been configured via
+        ``set_anneal_schedule``, τ is recomputed on the canonical cosine
+        schedule and pushed to ``self._current_gumbel_temperature`` so the next
+        ``forward_training`` reads the annealed value. When NO schedule is
+        configured this is a no-op (static-τ backward compat).
+
+        Args:
+            global_epoch: current 0-indexed global epoch.
+        """
+        if self._anneal_total_epochs is None:
+            return
+        self._current_gumbel_temperature = _gumbel_temperature_for_epoch(
+            int(global_epoch),
+            int(self._anneal_total_epochs),
+            tau_start=float(self.cfg.gumbel_temperature),
+            tau_min=float(self._anneal_tau_min),
+        )
+
     def __call__(self, pair_indices: Any) -> Any:
         """Default __call__ is training forward (returns rgb_pair only)."""
         rgb_pair, _indices, _soft = self.forward_training(pair_indices)
@@ -661,6 +790,9 @@ class Z8HierarchicalPredictiveCoderMLX(nn.Module if nn is not None else object):
             "ego_motion_dim": self.cfg.ego_motion_dim,
             "deterministic_state_dim": self.cfg.deterministic_state_dim,
             "gumbel_temperature": self.cfg.gumbel_temperature,
+            "current_gumbel_temperature": self.current_gumbel_temperature,
+            "anneal_total_epochs": self._anneal_total_epochs,
+            "anneal_tau_min": self._anneal_tau_min,
             "use_straight_through": self.cfg.use_straight_through,
             "wavelet_basis_id": self.cfg.wavelet_basis_id,
             "decoder_topology_source": (
@@ -747,10 +879,10 @@ def z8_decoder_param_count(cfg: Z8HierarchicalConfig) -> int:
 
 
 __all__ = [
-    "DEFAULT_NUM_LEVELS",
-    "DEFAULT_NUM_GROUPS_PER_LEVEL",
-    "DEFAULT_NUM_CATEGORIES_PER_LEVEL",
     "DEFAULT_EGO_MOTION_DIM",
+    "DEFAULT_NUM_CATEGORIES_PER_LEVEL",
+    "DEFAULT_NUM_GROUPS_PER_LEVEL",
+    "DEFAULT_NUM_LEVELS",
     "EVAL_HW",
     "NUM_PAIRS",
     "Z8HierarchicalConfig",

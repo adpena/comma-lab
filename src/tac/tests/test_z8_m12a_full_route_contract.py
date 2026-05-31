@@ -10,6 +10,8 @@ canonical-quadruple diagnostic loop or a scorer-blind reconstruction proxy.
 from __future__ import annotations
 
 import ast
+import importlib.util
+from argparse import Namespace
 from pathlib import Path
 
 import yaml
@@ -25,6 +27,14 @@ RECIPE = (
 
 def _module_ast() -> ast.Module:
     return ast.parse(TRAINER.read_text(encoding="utf-8"))
+
+
+def _load_trainer_module():
+    spec = importlib.util.spec_from_file_location("_z8_m12a_trainer_contract", TRAINER)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def _function(tree: ast.Module, name: str) -> ast.FunctionDef:
@@ -71,6 +81,10 @@ def test_z8_full_parser_exposes_real_pose_and_stabilizer_flags() -> None:
     assert "--warmup-epochs" in flag_names
     assert "--weight-decay" in flag_names
     assert "--optimizer-kind" in flag_names
+    assert "--gumbel-tau-anneal-enabled" in flag_names
+    assert "--gumbel-tau-min" in flag_names
+    assert "--cosine-lr-decay-enabled" in flag_names
+    assert "--cosine-lr-min-ratio" in flag_names
 
 
 def test_z8_full_main_wires_real_segnet_posenet_teachers() -> None:
@@ -101,8 +115,56 @@ def test_z8_full_main_wires_real_segnet_posenet_teachers() -> None:
         "warmup_epochs",
         "weight_decay",
         "optimizer_kind",
+        "cosine_decay_enabled",
+        "cosine_decay_total_epochs",
+        "cosine_decay_min_lr_ratio",
     }
     assert any(required_run_kwargs <= kws for kws in run_kw_sets)
+
+    text = TRAINER.read_text(encoding="utf-8")
+    for key in (
+        "z8_mlx_schedule_provenance",
+        "gumbel_tau_anneal_enabled",
+        "gumbel_tau_start",
+        "gumbel_tau_min",
+        "gumbel_tau_expected_final",
+        "cosine_lr_decay_enabled",
+        "cosine_lr_min_ratio",
+        "cosine_lr_expected_final",
+    ):
+        assert key in text
+
+
+def test_z8_full_main_rejects_invalid_tau_before_mlx_import(tmp_path: Path) -> None:
+    trainer = _load_trainer_module()
+    args = Namespace(
+        output_dir=tmp_path,
+        gumbel_tau_anneal_enabled=True,
+        gumbel_tau_min=0.0,
+        cosine_lr_decay_enabled=False,
+        cosine_lr_min_ratio=1e-2,
+        warmup_epochs=5,
+        epochs=10,
+    )
+
+    assert trainer._full_main(args) == 2
+
+
+def test_z8_full_main_rejects_invalid_cosine_schedule_before_mlx_import(
+    tmp_path: Path,
+) -> None:
+    trainer = _load_trainer_module()
+    args = Namespace(
+        output_dir=tmp_path,
+        gumbel_tau_anneal_enabled=False,
+        gumbel_tau_min=0.1,
+        cosine_lr_decay_enabled=True,
+        cosine_lr_min_ratio=1.5,
+        warmup_epochs=0,
+        epochs=10,
+    )
+
+    assert trainer._full_main(args) == 2
 
 
 def test_z8_remote_driver_defaults_to_full_route_and_harvests_training_artifact() -> None:

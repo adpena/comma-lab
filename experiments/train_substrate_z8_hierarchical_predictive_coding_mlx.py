@@ -37,6 +37,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 import time
 from pathlib import Path
@@ -253,7 +254,78 @@ def _build_parser() -> argparse.ArgumentParser:
         choices=("adamw", "rmsprop"),
         help="Optimizer for the MLX score-aware adapter.",
     )
+    # τ-ANNEAL WAVE 2026-05-31 (sister of DreamerV3 v2 commit e7b1e85f0):
+    # cosine Gumbel-Softmax τ anneal for the per-level categorical posterior.
+    parser.add_argument(
+        "--gumbel-tau-anneal-enabled",
+        action="store_true",
+        default=False,
+        help=(
+            "Enable cosine Gumbel-Softmax τ anneal (1.0 → --gumbel-tau-min) "
+            "over the full epoch budget for the Z8 per-level categorical "
+            "posterior in --full. Closes the comment-only-contract τ-static "
+            "bug per Jang 2016 / Hafner 2023. Default OFF preserves static τ."
+        ),
+    )
+    parser.add_argument(
+        "--gumbel-tau-min",
+        type=float,
+        default=0.1,
+        help="Canonical Jang 2016 τ floor for the cosine anneal (default 0.1).",
+    )
+    # Cosine LR decay (Loshchilov-Hutter 2017 SGDR); the curve is usually
+    # still descending at a hard cutoff so cosine decay extracts the late-stage
+    # gains. The canonical MLX harness exposes the schedule.
+    parser.add_argument(
+        "--cosine-lr-decay-enabled",
+        action="store_true",
+        default=False,
+        help=(
+            "Enable cosine LR decay over the full epoch budget in --full "
+            "(requires --warmup-epochs > 0; canonical warmup+cosine schedule "
+            "via the MLX harness). Default OFF preserves constant LR."
+        ),
+    )
+    parser.add_argument(
+        "--cosine-lr-min-ratio",
+        type=float,
+        default=1e-2,
+        help="End-of-decay LR = peak_lr * ratio (default 1e-2).",
+    )
     return parser
+
+
+def _validate_full_schedule_args(args: argparse.Namespace, *, tau_start: float) -> bool:
+    """Fail closed before MLX import when schedule flags cannot take effect."""
+
+    if bool(getattr(args, "gumbel_tau_anneal_enabled", False)):
+        tau_min = float(getattr(args, "gumbel_tau_min", 0.0))
+        if not math.isfinite(tau_min) or tau_min <= 0.0 or tau_min > float(tau_start):
+            print(
+                "[Z8 MLX full] --gumbel-tau-min must satisfy "
+                f"0 < tau_min <= tau_start ({tau_start}); got {tau_min}",
+                file=sys.stderr,
+            )
+            return False
+    if bool(getattr(args, "cosine_lr_decay_enabled", False)):
+        min_ratio = float(getattr(args, "cosine_lr_min_ratio", 0.0))
+        warmup_epochs = int(getattr(args, "warmup_epochs", 0))
+        epochs = int(getattr(args, "epochs", 0))
+        if not math.isfinite(min_ratio) or min_ratio <= 0.0 or min_ratio > 1.0:
+            print(
+                "[Z8 MLX full] --cosine-lr-min-ratio must satisfy 0 < ratio <= 1; "
+                f"got {min_ratio}",
+                file=sys.stderr,
+            )
+            return False
+        if warmup_epochs <= 0 or epochs <= warmup_epochs:
+            print(
+                "[Z8 MLX full] --cosine-lr-decay-enabled requires "
+                f"0 < warmup_epochs < epochs; got warmup={warmup_epochs} epochs={epochs}",
+                file=sys.stderr,
+            )
+            return False
+    return True
 
 
 def _smoke_main(args: argparse.Namespace) -> int:
@@ -455,6 +527,9 @@ def _full_main(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
         return 2
+    tau_start = 1.0
+    if not _validate_full_schedule_args(args, tau_start=tau_start):
+        return 2
 
     from tac.substrates._shared.mlx_score_aware_full_main import (
         MlxScoreAwareHarnessError,
@@ -483,10 +558,21 @@ def _full_main(args: argparse.Namespace) -> int:
         decoder_latent_dim=12,
         num_pairs=int(args.num_pairs),
         deterministic_state_dim=8,
-        gumbel_temperature=1.0,
+        gumbel_temperature=tau_start,
         use_straight_through=True,
     )
     model = Z8HierarchicalPredictiveCoderMLX(cfg)
+    # τ-ANNEAL WAVE 2026-05-31: configure the cosine Gumbel-Softmax τ anneal
+    # schedule BEFORE training so the canonical harness per-epoch hook
+    # (adapter.notify_global_epoch -> model.notify_global_epoch) anneals the
+    # per-level categorical posterior τ from cfg.gumbel_temperature (1.0) to
+    # --gumbel-tau-min over the full epoch budget. Closes the comment-only-
+    # contract τ-static bug per Jang 2016 / Hafner 2023.
+    if bool(getattr(args, "gumbel_tau_anneal_enabled", False)):
+        model.set_anneal_schedule(
+            total_epochs=int(args.epochs),
+            tau_min=float(args.gumbel_tau_min),
+        )
     out_h, out_w = cfg.eval_size  # HNeRV decoder hardcodes 384x512 output.
     try:
         target_rgb_0, target_rgb_1 = decode_mlx_targets(
@@ -535,6 +621,43 @@ def _full_main(args: argparse.Namespace) -> int:
             seed=int(args.seed),
         )
         pose_distillation_weight = float(args.pose_distillation_weight)
+    gumbel_tau_anneal_enabled = bool(
+        getattr(args, "gumbel_tau_anneal_enabled", False)
+    )
+    gumbel_tau_min = float(getattr(args, "gumbel_tau_min", 0.1))
+    cosine_lr_decay_enabled = bool(
+        getattr(args, "cosine_lr_decay_enabled", False)
+    )
+    cosine_lr_min_ratio = float(getattr(args, "cosine_lr_min_ratio", 1e-2))
+    z8_schedule_metadata = {
+        "schema": "z8_mlx_schedule_provenance.v1",
+        "gumbel_tau_anneal_enabled": gumbel_tau_anneal_enabled,
+        "gumbel_tau_start": float(cfg.gumbel_temperature),
+        "gumbel_tau_min": gumbel_tau_min if gumbel_tau_anneal_enabled else None,
+        "gumbel_tau_total_epochs": (
+            int(args.epochs) if gumbel_tau_anneal_enabled else None
+        ),
+        "gumbel_tau_expected_final": (
+            gumbel_tau_min if gumbel_tau_anneal_enabled else float(cfg.gumbel_temperature)
+        ),
+        "gumbel_tau_current_at_bundle_build": model.current_gumbel_temperature,
+        "cosine_lr_decay_enabled": cosine_lr_decay_enabled,
+        "cosine_lr_start": float(args.full_lr),
+        "cosine_lr_min_ratio": (
+            cosine_lr_min_ratio if cosine_lr_decay_enabled else None
+        ),
+        "cosine_lr_total_epochs": (
+            int(args.epochs) if cosine_lr_decay_enabled else None
+        ),
+        "cosine_lr_expected_final": (
+            float(args.full_lr) * cosine_lr_min_ratio
+            if cosine_lr_decay_enabled
+            else float(args.full_lr)
+        ),
+        "warmup_epochs": int(args.warmup_epochs),
+        "optimizer_kind": str(args.optimizer_kind),
+        "weight_decay": float(args.weight_decay),
+    }
     bundle = RendererBundle(
         model=model,
         target_rgb_0=target_rgb_0,
@@ -556,6 +679,7 @@ def _full_main(args: argparse.Namespace) -> int:
                 else "explicit_mock_or_reconstruction_proxy"
             ),
             "z8_trainer_mode": "full",
+            "z8_mlx_schedule_provenance": z8_schedule_metadata,
         },
     )
     grad_clip = float(args.grad_clip_max_norm)
@@ -579,6 +703,17 @@ def _full_main(args: argparse.Namespace) -> int:
         warmup_epochs=int(args.warmup_epochs),
         weight_decay=float(args.weight_decay),
         optimizer_kind=str(args.optimizer_kind),
+        cosine_decay_enabled=bool(
+            getattr(args, "cosine_lr_decay_enabled", False)
+        ),
+        cosine_decay_total_epochs=(
+            int(args.epochs)
+            if bool(getattr(args, "cosine_lr_decay_enabled", False))
+            else None
+        ),
+        cosine_decay_min_lr_ratio=float(
+            getattr(args, "cosine_lr_min_ratio", 1e-2)
+        ),
         notes=(
             "Z8 hierarchical predictive coding MLX-first score-aware full "
             "training via canonical mlx_score_aware_full_main harness; real "
