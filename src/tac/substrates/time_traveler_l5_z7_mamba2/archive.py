@@ -212,6 +212,14 @@ def _false_authority_meta(
         "context_conditioner_state_dict_in_encoder_blob",
         context_mode != "none",
     )
+    mamba2_backend = str(meta.get("mamba2_archive_backend", config.backend))
+    if mamba2_backend == "ssd_reference":
+        blockers.append("canonical_ssd_mlx_exact_cpu_cuda_replay_required")
+    meta.setdefault("mamba2_archive_backend", mamba2_backend)
+    if config.ssd_nheads is not None:
+        meta.setdefault("ssd_nheads", int(config.ssd_nheads))
+    if config.ssd_headdim is not None:
+        meta.setdefault("ssd_headdim", int(config.ssd_headdim))
     meta["z7_mamba2_recurrent_predictive_coding_meta"] = {
         "schema": "z7_mamba2_recurrent_predictive_coding_meta_v1",
         "substrate_id": "time_traveler_l5_z7_mamba2",
@@ -230,6 +238,12 @@ def _false_authority_meta(
         "mamba2_d_state": config.d_state,
         "mamba2_expand": config.expand,
         "mamba2_d_conv": config.d_conv,
+        "mamba2_archive_backend": mamba2_backend,
+        "ssd_nheads": config.ssd_nheads,
+        "ssd_headdim": config.ssd_headdim,
+        "canonical_ssd_mlx_runtime_bridge_wired": bool(
+            meta.get("canonical_ssd_mlx_runtime_bridge_wired", False)
+        ),
         "stateful": config.stateful,
         "identity_predictor": config.identity_predictor,
         "beta_ib": float(config.beta_ib),
@@ -516,6 +530,29 @@ def parse_archive(blob: bytes) -> Z7Mamba2PredictiveCodingArchive:
     else:
         raise TypeError("z7mcm2 metadata decoder_channels must be list/tuple/string")
 
+    mamba2_backend = str(meta.get("mamba2_archive_backend", "reference_torch"))
+    use_ssd_backend = mamba2_backend == "ssd_reference" or bool(
+        meta.get("use_canonical_ssd_mlx_backend", False)
+    )
+    if use_ssd_backend:
+        mamba2_backend = "ssd_reference"
+        raw_ssd_nheads = meta.get("ssd_nheads")
+        raw_ssd_headdim = meta.get("ssd_headdim")
+        ssd_nheads = (
+            int(raw_ssd_nheads)
+            if raw_ssd_nheads is not None
+            else None
+        )
+        ssd_headdim = (
+            int(raw_ssd_headdim)
+            if raw_ssd_headdim is not None
+            else 64
+        )
+    else:
+        mamba2_backend = "reference_torch"
+        ssd_nheads = None
+        ssd_headdim = 64
+
     config = Z7Mamba2PredictiveCodingConfig(
         latent_dim=int(latent_dim),
         ego_motion_dim=int(ego_dim),
@@ -523,11 +560,13 @@ def parse_archive(blob: bytes) -> Z7Mamba2PredictiveCodingArchive:
         d_state=int(d_state),
         expand=int(expand),
         d_conv=int(d_conv),
-        # Backend reference_torch at inflate-time to avoid CUDA-kernel
-        # dependency on inflate device (per HNeRV parity L4 + L9 runtime
-        # closure: inflate runtime must NOT depend on mamba_ssm CUDA
-        # kernels for byte-faithful replay).
-        backend="reference_torch",
+        # Inflate-time backends are scorer-free deterministic references:
+        # legacy S6 uses reference_torch; canonical SSD-MLX exports use the
+        # PyTorch SSD reference adapter. Neither path depends on mamba_ssm
+        # CUDA kernels at receiver time.
+        backend=mamba2_backend,
+        ssd_nheads=ssd_nheads,
+        ssd_headdim=ssd_headdim,
         stateful=bool(int(flags) & _FLAG_STATEFUL),
         identity_predictor=bool(int(flags) & _FLAG_IDENTITY),
         num_pairs=int(num_pairs),

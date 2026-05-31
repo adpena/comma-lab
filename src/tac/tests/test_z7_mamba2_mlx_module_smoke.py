@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
+import subprocess
 import sys
 from pathlib import Path
 from unittest import mock
@@ -62,11 +64,21 @@ def test_z7_mamba2_mlx_module_forward_shape_and_false_authority() -> None:
     assert cfg.canonical_ssd_mlx_blocker == "canonical_ssd_mlx_backend_not_wired"
 
 
-def test_z7_mamba2_mlx_canonical_ssd_backend_uses_helper_and_blocks_export() -> None:
-    """SSD opt-in is real recurrence execution but not archive/export authority."""
+def test_z7_mamba2_mlx_canonical_ssd_backend_uses_helper_and_exports_bridge(
+    tmp_path: Path,
+) -> None:
+    """SSD opt-in executes real recurrence and exports receiver-consumed weights."""
     import mlx.core as mx
 
     from tac.substrates._shared import mamba2_ssd
+    from tac.substrates.time_traveler_l5_z7_mamba2.archive import (
+        parse_archive,
+    )
+    from tac.substrates.time_traveler_l5_z7_mamba2.archive_candidate import (
+        export_z7_mamba2_mlx_archive,
+        pack_archive_from_exported_state_dict,
+    )
+    from tac.substrates.time_traveler_l5_z7_mamba2.inflate import inflate_one_video
     from tac.substrates.time_traveler_l5_z7_mamba2.mlx_module import (
         Z7Mamba2MLXModule,
     )
@@ -85,7 +97,7 @@ def test_z7_mamba2_mlx_canonical_ssd_backend_uses_helper_and_blocks_export() -> 
     )
     assert cfg.canonical_ssd_mlx_backend_wired is True
     assert cfg.canonical_ssd_mlx_blocker == (
-        "canonical_ssd_mlx_pytorch_bridge_export_not_wired"
+        "canonical_ssd_mlx_exact_cpu_cuda_replay_required"
     )
 
     with pytest.raises(NotImplementedError, match="Z7Mamba2MLXModule"):
@@ -104,8 +116,60 @@ def test_z7_mamba2_mlx_canonical_ssd_backend_uses_helper_and_blocks_export() -> 
     assert tuple(int(x) for x in rgb_1.shape) == (2, 3, 384, 512)
     assert tuple(int(x) for x in latents.shape) == (2, 24)
     assert model.num_parameters() > 0
-    with pytest.raises(NotImplementedError, match="pytorch_bridge_export_not_wired"):
-        model.export_state_dict()
+
+    exported = model.export_state_dict()
+    assert {
+        "predictor.mamba_cell.A_log",
+        "predictor.mamba_cell.B_proj.weight",
+        "predictor.mamba_cell.C_proj.weight",
+        "predictor.mamba_cell.dt_proj.weight",
+        "predictor.mamba_cell.dt_proj.bias",
+        "predictor.mamba_cell.D",
+    } <= set(exported)
+    blob = pack_archive_from_exported_state_dict(
+        exported_state_dict=exported,
+        mlx_cfg=cfg,
+    )
+    archive = parse_archive(blob)
+    assert archive.config.backend == "ssd_reference"
+    assert archive.config.ssd_nheads == 2
+    assert archive.config.ssd_headdim == 8
+    authority = archive.meta["z7_mamba2_recurrent_predictive_coding_meta"]
+    assert authority["ready_for_exact_eval_dispatch"] is False
+    assert "canonical_ssd_mlx_exact_cpu_cuda_replay_required" in authority["blockers"]
+    out_path = tmp_path / "z7_ssd_mlx_bridge_smoke.raw"
+    frames = inflate_one_video(blob, out_path)
+    assert frames == cfg.num_pairs * 2
+    assert out_path.stat().st_size > 0
+
+    archive_zip, archive_sha, archive_size = export_z7_mamba2_mlx_archive(
+        model,
+        tmp_path / "z7_ssd_mlx_bridge_export",
+    )
+    assert archive_zip.is_file()
+    assert len(archive_sha) == 64
+    assert archive_size == archive_zip.stat().st_size
+
+    submission_dir = archive_zip.parent / "submission"
+    file_list = tmp_path / "file_list.txt"
+    file_list.write_text("0.mkv\n", encoding="utf-8")
+    runtime_out = tmp_path / "runtime_out"
+    result = subprocess.run(
+        [
+            str(submission_dir / "inflate.sh"),
+            str(submission_dir),
+            str(runtime_out),
+            str(file_list),
+        ],
+        check=True,
+        capture_output=True,
+        env={**os.environ, "PYTHON": sys.executable},
+        text=True,
+    )
+    assert result.stderr == ""
+    runtime_raw = runtime_out / "0"
+    assert runtime_raw.is_file()
+    assert runtime_raw.stat().st_size == out_path.stat().st_size
 
 
 def test_z7_mamba2_mlx_smoke_manifest_uses_trainable_module(tmp_path: Path) -> None:
@@ -186,6 +250,6 @@ def test_z7_mamba2_mlx_smoke_manifest_can_use_canonical_ssd_backend(
     )
     assert manifest["canonical_ssd_mlx_backend_wired"] is True
     assert manifest["canonical_ssd_mlx_blocker"] == (
-        "canonical_ssd_mlx_pytorch_bridge_export_not_wired"
+        "canonical_ssd_mlx_exact_cpu_cuda_replay_required"
     )
     assert manifest["ready_for_exact_eval_dispatch"] is False

@@ -11,6 +11,8 @@ top: architecture (Z7Mamba2PredictiveCodingSubstrate), archive
 
 from __future__ import annotations
 
+import importlib.util
+import sys
 import tempfile
 from pathlib import Path
 
@@ -40,6 +42,21 @@ def tiny_config():
         output_height=16,
         output_width=16,
     )
+
+
+def _load_z7_torch_trainer_module():
+    trainer_path = (
+        Path(__file__).resolve().parents[3]
+        / "experiments"
+        / "train_substrate_time_traveler_l5_z7_mamba2.py"
+    )
+    spec = importlib.util.spec_from_file_location("z7_mamba2_torch_trainer", trainer_path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
 
 
 def test_substrate_package_imports_canonical_public_api():
@@ -164,16 +181,69 @@ def test_z7mcm2_pack_parse_roundtrip_preserves_config_and_tensors(tiny_config):
     assert archive.residuals.shape == (tiny_config.num_pairs, tiny_config.latent_dim)
 
 
+def test_z7mcm2_ssd_reference_archive_replays_through_runtime_adapter(tiny_config):
+    """SSD reference backend must parse and inflate through the receiver adapter."""
+    from tac.substrates._shared.inflate_runtime import CAMERA_HW
+    from tac.substrates.time_traveler_l5_z7_mamba2 import (
+        Z7Mamba2PredictiveCodingConfig,
+        Z7Mamba2PredictiveCodingSubstrate,
+        pack_archive,
+        parse_archive,
+    )
+    from tac.substrates.time_traveler_l5_z7_mamba2.inflate import inflate_one_video
+
+    ssd_cfg = Z7Mamba2PredictiveCodingConfig(
+        **{
+            **tiny_config.__dict__,
+            "backend": "ssd_reference",
+            "ssd_nheads": 2,
+            "ssd_headdim": tiny_config.d_inner // 2,
+        }
+    )
+    sub = Z7Mamba2PredictiveCodingSubstrate(ssd_cfg)
+    sub.eval()
+    meta = {
+        **sub.decoder_metadata(),
+        "loss_mode": "proxy",
+        "mamba2_archive_backend": "ssd_reference",
+        "use_canonical_ssd_mlx_backend": True,
+        "ssd_nheads": 2,
+        "ssd_headdim": tiny_config.d_inner // 2,
+        "canonical_ssd_mlx_runtime_bridge_wired": True,
+    }
+    blob = pack_archive(
+        {},
+        sub.decoder.state_dict(),
+        sub.predictor.state_dict(),
+        sub.latent_init.detach().cpu(),
+        sub.residuals.detach().cpu(),
+        sub.ego_motion_buffer.detach().cpu(),
+        meta,
+        config=ssd_cfg,
+    )
+    archive = parse_archive(blob)
+    assert archive.config.backend == "ssd_reference"
+    assert archive.config.ssd_nheads == 2
+    assert archive.config.ssd_headdim == tiny_config.d_inner // 2
+    authority = archive.meta["z7_mamba2_recurrent_predictive_coding_meta"]
+    assert authority["canonical_ssd_mlx_runtime_bridge_wired"] is True
+    assert "canonical_ssd_mlx_exact_cpu_cuda_replay_required" in authority["blockers"]
+    with tempfile.TemporaryDirectory() as tmp:
+        out_path = Path(tmp) / "ssd.raw"
+        frames = inflate_one_video(blob, out_path)
+        assert frames == tiny_config.num_pairs * 2
+        expected = tiny_config.num_pairs * 2 * 3 * CAMERA_HW[0] * CAMERA_HW[1]
+        assert out_path.stat().st_size == expected
+
+
 def test_runtime_geometry_positive_control_uses_actual_archive_header(tiny_config):
     """Stats positive-control must bind sampled raw hashes to Z7MCM2 geometry."""
-    from experiments.train_substrate_time_traveler_l5_z7_mamba2 import (
-        _build_runtime_geometry_positive_control,
-    )
     from tac.substrates.time_traveler_l5_z7_mamba2 import (
         Z7Mamba2PredictiveCodingSubstrate,
         pack_archive,
     )
 
+    trainer = _load_z7_torch_trainer_module()
     sub = Z7Mamba2PredictiveCodingSubstrate(tiny_config)
     sub.eval()
     meta = {**sub.decoder_metadata(), "loss_mode": "proxy"}
@@ -192,7 +262,7 @@ def test_runtime_geometry_positive_control_uses_actual_archive_header(tiny_confi
     recurrent_raw = bytes(i % 251 for i in range(expected_raw_bytes))
     static_raw = bytes((i + 7) % 251 for i in range(expected_raw_bytes))
 
-    block = _build_runtime_geometry_positive_control(
+    block = trainer._build_runtime_geometry_positive_control(
         archive_bytes=blob,
         recurrent_raw_bytes=recurrent_raw,
         static_raw_bytes=static_raw,

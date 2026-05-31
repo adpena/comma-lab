@@ -37,7 +37,7 @@ def test_z7_mlx_archive_meta_carries_ssd_claim_blocker() -> None:
     assert meta["canonical_ssd_mlx_blocker"] == "canonical_ssd_mlx_backend_not_wired"
 
 
-def test_z7_mlx_config_can_opt_into_canonical_ssd_with_export_blocker() -> None:
+def test_z7_mlx_config_can_opt_into_canonical_ssd_with_exact_axis_blocker() -> None:
     cfg = Z7Mamba2MLXRenderConfig(
         num_pairs=2,
         d_model=8,
@@ -55,7 +55,7 @@ def test_z7_mlx_config_can_opt_into_canonical_ssd_with_export_blocker() -> None:
     )
     assert cfg.canonical_ssd_mlx_backend_wired is True
     assert cfg.canonical_ssd_mlx_blocker == (
-        "canonical_ssd_mlx_pytorch_bridge_export_not_wired"
+        "canonical_ssd_mlx_exact_cpu_cuda_replay_required"
     )
 
 
@@ -76,7 +76,7 @@ def test_z7_mlx_config_rejects_phantom_ssd_provenance() -> None:
         )
 
 
-def test_z7_mlx_archive_meta_records_canonical_ssd_without_export_authority() -> None:
+def test_z7_mlx_archive_meta_records_canonical_ssd_runtime_bridge_without_score_authority() -> None:
     cfg = Z7Mamba2MLXRenderConfig(
         num_pairs=2,
         d_model=8,
@@ -90,14 +90,18 @@ def test_z7_mlx_archive_meta_records_canonical_ssd_without_export_authority() ->
     assert meta["use_canonical_ssd_mlx_backend"] is True
     assert meta["ssd_nheads"] == 2
     assert meta["ssd_headdim"] == 8
+    assert meta["mamba2_archive_backend"] == "ssd_reference"
     assert meta["canonical_ssd_mlx_backend_wired"] is True
+    assert meta["canonical_ssd_mlx_runtime_bridge_wired"] is True
     assert meta["canonical_ssd_mlx_blocker"] == (
-        "canonical_ssd_mlx_pytorch_bridge_export_not_wired"
+        "canonical_ssd_mlx_exact_cpu_cuda_replay_required"
     )
 
-    with pytest.raises(NotImplementedError, match="pytorch_bridge_export_not_wired"):
-        z7_mamba2_pytorch_config_from_mlx(cfg)
-    with pytest.raises(NotImplementedError, match="legacy S6-shaped Z7MCM2"):
+    pytorch_cfg = z7_mamba2_pytorch_config_from_mlx(cfg)
+    assert pytorch_cfg.backend == "ssd_reference"
+    assert pytorch_cfg.ssd_nheads == 2
+    assert pytorch_cfg.ssd_headdim == 8
+    with pytest.raises(ValueError, match="missing required"):
         pack_archive_from_exported_state_dict(exported_state_dict={}, mlx_cfg=cfg)
 
 

@@ -64,12 +64,13 @@ Canonical-vs-unique decision per layer (extends parent
    is NOT yet implemented in MLX. Operator iterates with ``"none"`` mode
    only at L0; the affine path lands as a sister L1 EXTENSION once a council
    anchor justifies the per-pair affine modulation cost on MLX.
-5. **SSD lineage (OPT-IN + FAIL-CLOSED EXPORT)**: default behavior remains
+5. **SSD lineage (OPT-IN + FAIL-CLOSED AUTHORITY)**: default behavior remains
    the MLX port of the reference S6-shaped recurrence for PyTorch bridge
    compatibility. ``use_canonical_ssd_mlx_backend=True`` switches the
    recurrent core to the canonical
-   ``tac.substrates._shared.mamba2_ssd`` MLX step helper, but PyTorch bridge
-   export remains blocked until a matching contest runtime adapter lands.
+   ``tac.substrates._shared.mamba2_ssd`` MLX step helper. MLX artifacts can
+   now export into the canonical SSD PyTorch runtime adapter, but remain
+   non-authoritative until contest CPU/CUDA auth replay signs the packet.
 
 Architecture mirror (PyTorch -> MLX field names preserved for byte-stable
 export bridge per Catalog #1251):
@@ -206,7 +207,7 @@ class Z7Mamba2MLXRenderConfig:
         canonical_ssd_mlx_backend_wired: true only when the recurrent core
             delegates to ``tac.substrates._shared.mamba2_ssd``.
         canonical_ssd_mlx_blocker: exact fail-closed blocker for any canonical
-            SSD archive/export claim on current Z7 MLX artifacts.
+            SSD score/dispatch claim on current Z7 MLX artifacts.
     """
 
     latent_dim: int = 24
@@ -258,7 +259,7 @@ class Z7Mamba2MLXRenderConfig:
             object.__setattr__(
                 self,
                 "canonical_ssd_mlx_blocker",
-                "canonical_ssd_mlx_pytorch_bridge_export_not_wired",
+                "canonical_ssd_mlx_exact_cpu_cuda_replay_required",
             )
         elif self.canonical_ssd_mlx_backend_wired:
             raise ValueError(
@@ -390,8 +391,7 @@ class Z7Mamba2MLXNativeRenderer:
             raise NotImplementedError(
                 "Z7Mamba2MLXNativeRenderer preserves the reference S6-shaped "
                 "PyTorch bridge path only. Use Z7Mamba2MLXModule for the "
-                "canonical SSD-MLX recurrent core; archive/runtime export "
-                "remains blocked by canonical_ssd_mlx_pytorch_bridge_export_not_wired."
+                "canonical SSD-MLX recurrent core and its SSD runtime adapter."
             )
         if cfg.num_pairs <= 0:
             raise ValueError("num_pairs must be positive")

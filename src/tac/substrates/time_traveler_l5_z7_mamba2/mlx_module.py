@@ -196,11 +196,11 @@ class Z7Mamba2MLXModule(nn.Module if nn is not None else object):  # type: ignor
         self.cfg = cfg
         self._seed = int(seed)
 
-        # Build the existing renderer once; it owns all S6/PyTorch-bridge
+        # Build the existing renderer once; it owns all bridge-compatible
         # parameter creation + Kaiming inits + decoder weights. Canonical
-        # SSD-MLX opt-in deliberately uses a bridge-compatible init renderer
-        # with SSD disabled; the real SSD recurrent core lives in this module
-        # and export remains fail-closed until the runtime adapter exists.
+        # SSD-MLX opt-in deliberately uses an S6-disabled init renderer for
+        # shared projection/decoder shapes; the real SSD recurrent core lives
+        # in this module and exports into the canonical SSD runtime adapter.
         renderer_cfg = cfg
         if cfg.use_canonical_ssd_mlx_backend:
             renderer_cfg = replace(
@@ -297,7 +297,8 @@ class Z7Mamba2MLXModule(nn.Module if nn is not None else object):  # type: ignor
         boundary rather than the Module-internal boundary.
         """
         for name in _FLAT_PARAM_ATTRS:
-            setattr(self._renderer, name, getattr(self, name))
+            if hasattr(self, name):
+                setattr(self._renderer, name, getattr(self, name))
         # Decoder block lists: write each element back to keep the delegate
         # in sync with possibly-replaced array references.
         for i in range(len(self.dec_block_w)):
@@ -634,8 +635,86 @@ class Z7Mamba2MLXModule(nn.Module if nn is not None else object):  # type: ignor
         return self.reconstruct_pair(pair_indices)
 
     # ------------------------------------------------------------------
-    # state_dict bridge (delegated to existing renderer)
+    # state_dict bridge
     # ------------------------------------------------------------------
+
+    @staticmethod
+    def _array_to_numpy(value: Any) -> np.ndarray:
+        """Materialize an MLX array as a detached float32 numpy array."""
+        mx.eval(value)
+        return np.asarray(value, dtype=np.float32).copy()
+
+    def _export_canonical_ssd_state_dict(self) -> dict[str, np.ndarray]:
+        """Export canonical SSD-MLX parameters into PyTorch SSD runtime keys.
+
+        The emitted names match ``Mamba2Predictor(backend="ssd_reference")``:
+        shared input/output projections, Z7 gate/out projection, and the
+        canonical helper's scalar-A-per-head SSD tensors. Decoder weights keep
+        the existing MLX channels-last -> PyTorch channels-first transpose.
+        """
+        cfg = self.cfg
+        out: dict[str, np.ndarray] = {}
+
+        out["predictor.input_projection.weight"] = self._array_to_numpy(
+            self.input_projection_w
+        )
+        out["predictor.input_projection.bias"] = self._array_to_numpy(
+            self.input_projection_b
+        )
+        out["predictor.mamba_cell.in_proj.weight"] = self._array_to_numpy(
+            self.mamba_in_proj_w
+        )
+        out["predictor.mamba_cell.A_log"] = self._array_to_numpy(self.ssd_A_log)
+        out["predictor.mamba_cell.B_proj.weight"] = self._array_to_numpy(
+            self.ssd_B_proj_w
+        )
+        out["predictor.mamba_cell.C_proj.weight"] = self._array_to_numpy(
+            self.ssd_C_proj_w
+        )
+        out["predictor.mamba_cell.dt_proj.weight"] = self._array_to_numpy(
+            self.ssd_dt_proj_w
+        )
+        out["predictor.mamba_cell.dt_proj.bias"] = self._array_to_numpy(
+            self.ssd_dt_proj_b
+        )
+        out["predictor.mamba_cell.D"] = self._array_to_numpy(self.ssd_D)
+        out["predictor.mamba_cell.out_proj.weight"] = self._array_to_numpy(
+            self.mamba_out_proj_w
+        )
+        out["predictor.output_projection.weight"] = self._array_to_numpy(
+            self.output_projection_w
+        )
+        out["predictor.output_projection.bias"] = self._array_to_numpy(
+            self.output_projection_b
+        )
+
+        out["decoder.initial_proj.weight"] = self._array_to_numpy(
+            self.dec_initial_proj_w
+        )
+        out["decoder.initial_proj.bias"] = self._array_to_numpy(
+            self.dec_initial_proj_b
+        )
+        for i in range(cfg.decoder_num_upsample_blocks):
+            w_np = self._array_to_numpy(self.dec_block_w[i])
+            out[f"decoder.blocks.{3 * i}.weight"] = np.transpose(
+                w_np, (0, 3, 1, 2)
+            ).copy()
+            out[f"decoder.blocks.{3 * i}.bias"] = self._array_to_numpy(
+                self.dec_block_b[i]
+            )
+        final_idx = 3 * cfg.decoder_num_upsample_blocks
+        w_final_np = self._array_to_numpy(self.dec_final_w)
+        out[f"decoder.blocks.{final_idx}.weight"] = np.transpose(
+            w_final_np, (0, 3, 1, 2)
+        ).copy()
+        out[f"decoder.blocks.{final_idx}.bias"] = self._array_to_numpy(
+            self.dec_final_b
+        )
+
+        out["latent_init"] = self._array_to_numpy(self.latent_init)
+        out["residuals"] = self._array_to_numpy(self.residuals)
+        out["ego_motion_buffer"] = self._array_to_numpy(self.ego_motion_buffer)
+        return out
 
     def export_state_dict(self) -> dict[str, np.ndarray]:
         """Export parameters in PyTorch-layout numpy dict (Catalog #1251 bridge).
@@ -645,13 +724,7 @@ class Z7Mamba2MLXModule(nn.Module if nn is not None else object):  # type: ignor
         canonical PyTorch :class:`Z7Mamba2PredictiveCodingSubstrate` 1:1.
         """
         if self.cfg.use_canonical_ssd_mlx_backend:
-            raise NotImplementedError(
-                "canonical_ssd_mlx_pytorch_bridge_export_not_wired: "
-                "Z7 canonical SSD-MLX training uses a different recurrent "
-                "parameterization from the existing S6-shaped PyTorch bridge. "
-                "Export is intentionally blocked until the matching contest "
-                "runtime adapter is implemented."
-            )
+            return self._export_canonical_ssd_state_dict()
         self._sync_to_renderer()
         return self._renderer.export_state_dict()
 

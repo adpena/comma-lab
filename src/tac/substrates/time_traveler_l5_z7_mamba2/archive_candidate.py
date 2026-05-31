@@ -75,12 +75,7 @@ def z7_mamba2_pytorch_config_from_mlx(
     ``Z7Mamba2MLXRenderConfig`` docstring); we fill in the PyTorch-specific
     fields with their canonical defaults so ``pack_archive`` validates clean.
     """
-    if bool(getattr(mlx_cfg, "use_canonical_ssd_mlx_backend", False)):
-        raise NotImplementedError(
-            "canonical_ssd_mlx_pytorch_bridge_export_not_wired: Z7 canonical "
-            "SSD-MLX artifacts cannot be translated through the existing "
-            "S6-shaped PyTorch archive config without a dedicated runtime adapter."
-        )
+    use_ssd = bool(getattr(mlx_cfg, "use_canonical_ssd_mlx_backend", False))
     return Z7Mamba2PredictiveCodingConfig(
         latent_dim=mlx_cfg.latent_dim,
         ego_motion_dim=mlx_cfg.ego_motion_dim,
@@ -102,6 +97,17 @@ def z7_mamba2_pytorch_config_from_mlx(
         # MLX scaffold is "none" context mode only (per existing
         # ``Z7Mamba2MLXRenderConfig`` docstring; ``latent_affine`` is a sister
         # L1 EXTENSION). The PyTorch sister default also matches "none".
+        backend="ssd_reference" if use_ssd else "reference_torch",
+        ssd_nheads=(
+            int(mlx_cfg.effective_ssd_nheads)
+            if use_ssd and mlx_cfg.effective_ssd_nheads is not None
+            else None
+        ),
+        ssd_headdim=(
+            int(mlx_cfg.effective_ssd_headdim)
+            if use_ssd and mlx_cfg.effective_ssd_headdim is not None
+            else 64
+        ),
         context_conditioning_mode="none",
     )
 
@@ -192,6 +198,11 @@ def z7_mamba2_meta_from_config(
         "stateful": bool(cfg.stateful),
         "identity_predictor": bool(cfg.identity_predictor),
         "context_conditioning_mode": "none",
+        "mamba2_archive_backend": (
+            "ssd_reference"
+            if bool(getattr(cfg, "use_canonical_ssd_mlx_backend", False))
+            else "reference_torch"
+        ),
         "use_canonical_ssd_mlx_backend": bool(
             getattr(cfg, "use_canonical_ssd_mlx_backend", False)
         ),
@@ -207,6 +218,9 @@ def z7_mamba2_meta_from_config(
         ),
         "mamba2_mlx_backend_lineage": str(cfg.mamba2_mlx_backend_lineage),
         "canonical_ssd_mlx_backend_wired": bool(cfg.canonical_ssd_mlx_backend_wired),
+        "canonical_ssd_mlx_runtime_bridge_wired": bool(
+            getattr(cfg, "use_canonical_ssd_mlx_backend", False)
+        ),
         "canonical_ssd_mlx_blocker": str(cfg.canonical_ssd_mlx_blocker),
     }
 
@@ -217,12 +231,6 @@ def pack_archive_from_exported_state_dict(
     mlx_cfg: Z7Mamba2MLXRenderConfig,
 ) -> bytes:
     """Pack a PyTorch-layout exported MLX state dict into Z7MCM2 ``0.bin`` bytes."""
-    if bool(getattr(mlx_cfg, "use_canonical_ssd_mlx_backend", False)):
-        raise NotImplementedError(
-            "canonical_ssd_mlx_pytorch_bridge_export_not_wired: Z7 canonical "
-            "SSD-MLX uses a canonical SSD recurrent core and must not be "
-            "packed through the legacy S6-shaped Z7MCM2 bridge."
-        )
     (
         encoder_sd,
         decoder_sd,
@@ -299,6 +307,16 @@ def export_z7_mamba2_mlx_archive(
         ),
         vendor_extra_tac_subpackages=(
             ("optimization", ("mamba2_predictor.py",)),
+            ("framework_agnostic", ("backend.py",)),
+            (
+                "substrates._shared.mamba2_ssd",
+                (
+                    "__init__.py",
+                    "numpy_backend.py",
+                    "pytorch_backend.py",
+                    "mlx_backend.py",
+                ),
+            ),
         ),
     )
     (submission_dir / "0.bin").write_bytes(bin_bytes)
