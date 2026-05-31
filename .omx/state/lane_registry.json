@@ -64496,11 +64496,11 @@
       "id": "lane_uniward_cost_map_to_bit_allocator_to_nscs06_v8_wire_in_20260530",
       "name": "UNIWARD cost-map -> bit_allocator -> NSCS06 v8 chroma wire-in (HALT-CLEAN real blocker)",
       "phase": 2.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "src/tac/substrates/uniward_per_pixel_distortion/nscs06_v8_chroma_lut_integration/bit_allocation_per_lut_byte.py + 15 NO-FAKE tests pass; end-to-end UNIWARD->allocate_per_byte->v8 LUT wire"
         },
         "real_archive_empirical": {
           "status": false,
@@ -64523,8 +64523,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/uniward_cost_map_to_bit_allocator_nscs06_v8_wire_in_landed_20260531.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -65152,6 +65152,47 @@
       "id": "lane_z5_rao_ballard_paired_cuda_ratification_wave2a_20260531",
       "name": "Z5 Rao-Ballard paired CUDA+CPU ratification (WAVE-2A funded)",
       "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/z5_rao_ballard_hinton_distilled_long_20260528T224334Z/submission/ (self-contained inflate; byte-closes 3,662,409,600 raw rc=0; sha 8ea36c7e)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "tools/dispatch_modal_paired_auth_eval.py paired CPU+CUDA fired call_ids fc-01KSZ7438Z9T0WXB22AN6D5H0T (CUDA) + fc-01KSZ74F7PDTC0T7N9B7AV30PR (CPU); commit 826cc63ab mount-ignore hardening"
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_z8_seg_lever_faithful_render_confirm_20260531",
+      "name": "Seg lever on Z8 faithful render",
+      "phase": 2.0,
       "level": 0,
       "gates": {
         "impl_complete": {
@@ -65197,5 +65238,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-31T14:30:36Z"
+  "updated_at": "2026-05-31T15:01:59Z"
 }
