@@ -21,6 +21,12 @@ from tac.substrates.hprc.archive import (
     HprcSectionKind,
     parse_hprc_packet,
 )
+from tac.substrates.hprc.learned_receiver import (
+    build_compact_preview_digest,
+    decode_compact_receiver_packet,
+    is_compact_receiver_packet,
+    write_compact_receiver_raw,
+)
 
 CAMERA_H = 874
 CAMERA_W = 1164
@@ -97,6 +103,16 @@ def hprc_preview_digest(
     """Return a small deterministic digest of receiver pixels."""
 
     packet = _packet_from_bytes(packet_bytes)
+    if is_compact_receiver_packet(packet):
+        compact_frame_indices = tuple(
+            idx for idx in frame_indices if 0 <= idx < packet.config.frames
+        ) or (0,)
+        return build_compact_preview_digest(
+            decode_compact_receiver_packet(packet),
+            frame_indices=compact_frame_indices,
+            height=height,
+            width=width,
+        )
     pixel_digest = hprc_pixel_driver_digest(packet)
     h = hashlib.sha256()
     for frame_index in frame_indices:
@@ -124,6 +140,14 @@ def inflate_one_video(
     if device not in {"cpu", "auto"}:
         raise RuntimeError(f"HPRC V0 inflate supports cpu/auto only, got {device!r}")
     packet = _packet_from_bytes(archive_bytes)
+    if is_compact_receiver_packet(packet):
+        write_compact_receiver_raw(
+            packet,
+            output_path,
+            height=CAMERA_H,
+            width=CAMERA_W,
+        )
+        return
     pixel_digest = hprc_pixel_driver_digest(packet)
     out = Path(output_path)
     out.parent.mkdir(parents=True, exist_ok=True)

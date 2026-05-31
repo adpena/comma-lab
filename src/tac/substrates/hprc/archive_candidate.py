@@ -26,11 +26,19 @@ from tac.substrates.hprc.archive import (
     parse_hprc_packet,
 )
 from tac.substrates.hprc.inflate import (
+    CAMERA_H,
+    CAMERA_W,
     CONTEST_RAW_BYTES,
     HPRC_METADATA_ONLY_SECTIONS,
     HPRC_PIXEL_DRIVING_SECTIONS,
     hprc_preview_digest,
 )
+from tac.substrates.hprc.learned_receiver import (
+    COMPACT_RECEIVER_MODE,
+    is_compact_receiver_packet,
+    mutate_compact_receiver_section,
+)
+from tac.substrates.hprc.resolution_contract import hprc_resolution_contract
 
 HPRC_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA = (
     "hprc_archive_bound_adapter_package.v1"
@@ -41,7 +49,11 @@ HPRC_ARCHIVE_CANDIDATE_FAMILY = "hprc_hierarchical_predictive_receiver_codec"
 HPRC_ARCHIVE_TRANSFORM_KIND = (
     "hprc_predictive_coding_compact_receiver_latent_stream_plus_scorer_residual_sidecar"
 )
-HPRC_RUNTIME_MODULE_FILES: tuple[str, ...] = ("archive.py", "inflate.py")
+HPRC_RUNTIME_MODULE_FILES: tuple[str, ...] = (
+    "archive.py",
+    "inflate.py",
+    "learned_receiver.py",
+)
 HPRC_SUB019_ZERO_DISTORTION_BYTE_CEILING = int(0.19 * CONTEST_ORIGINAL_BYTES / 25)
 HPRC_RECEIVER_PROOF_SCRATCH_BYTES = CONTEST_RAW_BYTES + (1 << 30)
 
@@ -94,6 +106,10 @@ def _assert_receiver_proof_scratch_space(output_dir: Path) -> int:
             f"path={output_dir}"
         )
     return int(free_bytes)
+
+
+def _expected_receiver_output_bytes_for_packet(packet: Any) -> int:
+    return int(packet.config.frames) * CAMERA_H * CAMERA_W * 3
 
 
 def _sha256_bytes(payload: bytes) -> str:
@@ -156,13 +172,23 @@ def build_hprc_section_mutation_proof(
     """Prove which sections are pixel-driving under valid packet mutations."""
 
     packet = parse_hprc_packet(archive_bytes)
+    compact_receiver_packet = is_compact_receiver_packet(packet)
     base_preview = hprc_preview_digest(archive_bytes)
     section_payloads = packet.section_map()
     per_section: list[dict[str, Any]] = []
     blockers: list[str] = []
     for index, section in enumerate(packet.sections):
         mutated = dict(section_payloads)
-        mutated[section.kind] = _mutate_payload(section.payload, salt=index + 1)
+        semantic_mutation = mutate_compact_receiver_section(
+            packet,
+            section.kind,
+            salt=index + 1,
+        )
+        mutated[section.kind] = (
+            semantic_mutation
+            if semantic_mutation is not None
+            else _mutate_payload(section.payload, salt=index + 1)
+        )
         mutated_packet = pack_hprc_packet(mutated, config=packet.config)
         mutated_preview = hprc_preview_digest(mutated_packet)
         preview_changed = mutated_preview != base_preview
@@ -184,14 +210,23 @@ def build_hprc_section_mutation_proof(
                 "pixel_driving_expected": pixel_driving_expected,
                 "metadata_only_expected": metadata_only_expected,
                 "proof_scope": (
-                    "valid_semantic_packet_mutation_preview; full_receiver_replay "
-                    "is run for the unmutated archive-bound candidate"
+                    "valid_semantic_packet_mutation_preview"
+                    if compact_receiver_packet
+                    else (
+                        "valid_packet_mutation_preview_for_v0_scaffold; "
+                        "full_receiver_replay is run for the unmutated "
+                        "archive-bound candidate"
+                    )
                 ),
+                "compact_receiver_mode": compact_receiver_packet,
             }
         )
     return {
         "schema": "hprc_section_semantic_mutation_proof.v1",
         "archive_sha256": _sha256_bytes(bytes(archive_bytes)),
+        "receiver_mode": (
+            COMPACT_RECEIVER_MODE if compact_receiver_packet else "hprc_v0_digest_scaffold"
+        ),
         "base_preview_digest": base_preview,
         "pixel_driving_sections": [
             section.name
@@ -212,6 +247,8 @@ def build_hprc_section_mutation_proof(
 
 def _runtime_payload_consumption_manifest(
     section_proof: Mapping[str, Any],
+    *,
+    packet: Any | None = None,
 ) -> dict[str, Any]:
     section_pixel_proofs: dict[str, dict[str, Any]] = {}
     pixel_consumed: list[str] = []
@@ -235,17 +272,44 @@ def _runtime_payload_consumption_manifest(
         }
         if proven:
             pixel_consumed.append(section)
+    compact_receiver = str(section_proof.get("receiver_mode") or "") == COMPACT_RECEIVER_MODE
+    if compact_receiver:
+        next_tasks = [
+            "attach_z8_scorer_weighted_residual_sidecar",
+            "prove_mamba_dreamer_wyner_ziv_sections_drive_receiver_pixels",
+            "run_exact_cpu_cuda_auth_eval_for_compact_receiver_candidate",
+        ]
+        status_note = "compact learned receiver sections are semantic-pixel-consuming"
+    else:
+        next_tasks = [
+            "replace_hprc_v0_receiver_scaffold_with_trained_renderer_export",
+            "attach_z8_scorer_weighted_residual_sidecar",
+            "prove_mamba_dreamer_wyner_ziv_sections_drive_receiver_pixels",
+        ]
+        status_note = "digest scaffold must be replaced before score promotion"
+    decoder_grid: dict[str, Any] = {}
+    if packet is not None:
+        decoder_grid = {
+            "decoder_grid_height": int(packet.config.height),
+            "decoder_grid_width": int(packet.config.width),
+            "contest_output_height": CAMERA_H,
+            "contest_output_width": CAMERA_W,
+            "resolution_authority_note": (
+                "HPRC compact receiver decodes on its charged learned grid, "
+                "then deterministic inflate emits contest raw camera resolution; "
+                "exact SegNet/PoseNet authority still requires contest CPU/CUDA replay."
+            ),
+        }
     return {
         "section_pixel_consumption_proofs": section_pixel_proofs,
         "pixel_consumed_archive_sections": pixel_consumed,
-        "full_stack_pixel_consumption_claim": False,
+        "full_stack_pixel_consumption_claim": compact_receiver and bool(pixel_consumed),
         "predictive_stack_pixel_consumption": {
             "schema": "hprc_predictive_stack_pixel_consumption_backlog.v1",
-            "next_required_tasks": [
-                "replace_hprc_v0_receiver_scaffold_with_trained_renderer_export",
-                "attach_z8_scorer_weighted_residual_sidecar",
-                "prove_mamba_dreamer_wyner_ziv_sections_drive_receiver_pixels",
-            ],
+            "receiver_mode": section_proof.get("receiver_mode"),
+            "status_note": status_note,
+            "next_required_tasks": next_tasks,
+            **decoder_grid,
         },
     }
 
@@ -281,6 +345,7 @@ def export_hprc_archive_bytes(
     preflight_free_bytes = _assert_receiver_proof_scratch_space(out_dir)
     bin_bytes = bytes(archive_bytes)
     packet = parse_hprc_packet(bin_bytes)
+    compact_receiver_packet = is_compact_receiver_packet(packet)
     (out_dir / "0.bin").write_bytes(bin_bytes)
     (out_dir / "hprc_packet_manifest.json").write_text(
         json.dumps(packet.manifest(), indent=2, sort_keys=True) + "\n",
@@ -346,7 +411,7 @@ def export_hprc_archive_bytes(
             proof_filename="hprc_receiver_proof.json",
             candidate_label="hprc",
             expected_receiver_output_name="0.raw",
-            expected_receiver_output_bytes=CONTEST_RAW_BYTES,
+            expected_receiver_output_bytes=_expected_receiver_output_bytes_for_packet(packet),
             retain_receiver_output=retain_receiver_proof_output,
             runtime_adapter_manifest_extra={
                 "schema": "hprc_runtime_adapter_manifest.v1",
@@ -358,16 +423,34 @@ def export_hprc_archive_bytes(
                 "section_mutation_preview_ready": bool(
                     section_proof["section_mutation_preview_ready"]
                 ),
-                **_runtime_payload_consumption_manifest(section_proof),
+                **_runtime_payload_consumption_manifest(
+                    section_proof,
+                    packet=packet,
+                ),
                 "byte_ledger": byte_ledger,
-                "trained_renderer_export_ready": False,
+                "trained_renderer_export_ready": compact_receiver_packet,
                 "z8_residual_sidecar_ready": False,
+                "resolution_contract": {
+                    **hprc_resolution_contract(),
+                    "decoder_grid": {
+                        "height": int(packet.config.height),
+                        "width": int(packet.config.width),
+                        "exact_axis_required_for_resolution_authority": True,
+                    },
+                },
             },
             candidate_row_schema="hprc_archive_bound_candidate_row.v1",
             wrapper_schema=HPRC_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
             input_artifacts=input_artifacts,
             extra_blockers=[
-                "hprc_v0_receiver_scaffold_not_trained_renderer",
+                *(
+                    [
+                        "hprc_compact_receiver_missing_z8_scorer_weighted_residual_sidecar",
+                        "hprc_compact_receiver_exact_distortion_replay_not_executed",
+                    ]
+                    if compact_receiver_packet
+                    else ["hprc_v0_receiver_scaffold_not_trained_renderer"]
+                ),
                 "contest_cpu_cuda_exact_eval_not_executed",
             ],
             mlx_triage_argv=mlx_triage_argv,
