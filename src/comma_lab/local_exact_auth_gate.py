@@ -64,7 +64,7 @@ class LocalExactAuthGateReport:
     next_required_action: str
     blockers: list[str]
     warnings: list[str]
-    local_replay_checks: dict[str, Any]
+    local_replay_checks: dict[str, Any] | None
     mlx_prefilter_checks: dict[str, Any] | None
     score_claim: bool
     score_claim_valid: bool
@@ -212,18 +212,27 @@ def _mlx_prefilter_checks(
 
 def build_local_exact_auth_gate_report(
     *,
-    local_replay_summary: Mapping[str, Any],
+    local_replay_summary: Mapping[str, Any] | None = None,
     config: LocalExactAuthGateConfig | None = None,
     mlx_prefilter_summary: Mapping[str, Any] | None = None,
     local_replay_summary_path: str | Path | None = None,
     mlx_prefilter_summary_path: str | Path | None = None,
 ) -> LocalExactAuthGateReport:
     cfg = config or LocalExactAuthGateConfig()
-    local_payload, local_shape_blockers = _as_mapping(local_replay_summary, label="local_replay")
-    local_checks, local_blockers, local_warnings, local_score, local_axis = _local_replay_checks(
-        local_payload,
-        config=cfg,
-    )
+    local_shape_blockers: list[str] = []
+    local_blockers: list[str] = []
+    local_warnings: list[str] = []
+    local_checks: dict[str, Any] | None = None
+    local_score: float | None = None
+    local_axis: str | None = None
+    if local_replay_summary is None:
+        local_blockers.append("local_replay_required_for_exact_auth")
+    else:
+        local_payload, local_shape_blockers = _as_mapping(local_replay_summary, label="local_replay")
+        local_checks, local_blockers, local_warnings, local_score, local_axis = _local_replay_checks(
+            local_payload,
+            config=cfg,
+        )
     mlx_checks, mlx_blockers, mlx_warnings, mlx_action, mlx_axis = _mlx_prefilter_checks(
         dict(mlx_prefilter_summary) if isinstance(mlx_prefilter_summary, Mapping) else None,
         config=cfg,
@@ -234,15 +243,19 @@ def build_local_exact_auth_gate_report(
     blockers = ordered_unique([*local_shape_blockers, *local_blockers, *mlx_blockers])
     warnings = ordered_unique([*local_warnings, *mlx_warnings])
     exact_axis = str(cfg.exact_auth_axis)
-    exact_auth_recommended = not blockers
+    exact_auth_recommended = not blockers and local_replay_summary is not None
     axis_lc = exact_axis.strip().lower()
-    next_action = (
-        "claim_lane_and_run_exact_cpu_auth_eval"
-        if exact_auth_recommended and "cpu" in axis_lc
-        else "claim_lane_and_run_exact_auth_eval"
-        if exact_auth_recommended
-        else "do_not_dispatch_exact_auth"
-    )
+    mlx_prefilter_passed = mlx_prefilter_summary is not None and not mlx_blockers
+    if exact_auth_recommended and "cpu" in axis_lc:
+        next_action = "claim_lane_and_run_exact_cpu_auth_eval"
+    elif exact_auth_recommended:
+        next_action = "claim_lane_and_run_exact_auth_eval"
+    elif local_replay_summary is None and mlx_prefilter_passed:
+        next_action = "run_local_cpu_replay"
+    elif mlx_prefilter_summary is not None and mlx_blockers:
+        next_action = "do_not_run_local_cpu_replay"
+    else:
+        next_action = "do_not_dispatch_exact_auth"
     return LocalExactAuthGateReport(
         schema=LOCAL_EXACT_AUTH_GATE_SCHEMA,
         exact_auth_axis=exact_axis,

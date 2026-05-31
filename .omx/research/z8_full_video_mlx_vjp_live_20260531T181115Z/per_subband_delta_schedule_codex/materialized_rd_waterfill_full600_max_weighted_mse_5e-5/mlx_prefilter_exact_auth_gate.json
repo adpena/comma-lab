@@ -1,0 +1,56 @@
+{
+  "auth_target_score": 0.1919853363,
+  "blockers": [
+    "local_replay_required_for_exact_auth",
+    "mlx_prefilter_action_not_below_target"
+  ],
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_auth_axis": "[contest-CPU]",
+  "exact_auth_dispatch_recommended": false,
+  "exact_cpu_dispatch_recommended": false,
+  "exact_cuda_auth_eval": false,
+  "exact_cuda_dispatch_recommended": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "gpu_launched": false,
+  "local_axis_tag": null,
+  "local_baseline_score": null,
+  "local_replay_checks": null,
+  "local_replay_summary_path": null,
+  "local_score_estimate": null,
+  "min_local_improvement": 0.0,
+  "mlx_action_proxy": 17.42269727711851,
+  "mlx_axis_tag": "[macOS-MLX research-signal]",
+  "mlx_prefilter_checks": {
+    "axis_tag": "[macOS-MLX research-signal]",
+    "blockers": [
+      "mlx_prefilter_action_not_below_target"
+    ],
+    "contest_action_proxy": 17.42269727711851,
+    "expected_axis_tag": "[macOS-MLX research-signal]",
+    "full_video_local_replay_executed": true,
+    "full_video_local_replay_scope": "full_video",
+    "mlx_target_action": 0.1919853363,
+    "replay_ok": true,
+    "schema": "z8_full_video_mlx_replay.v1",
+    "warnings": [
+      "mlx_axis_is_research_signal_cpu_replay_still_required"
+    ]
+  },
+  "mlx_prefilter_summary_path": ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/per_subband_delta_schedule_codex/materialized_rd_waterfill_full600_max_weighted_mse_5e-5/full_video_mlx_replay.json",
+  "mlx_target_action": 0.1919853363,
+  "next_required_action": "do_not_run_local_cpu_replay",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "local_candidate_exact_auth_gate.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "warnings": [
+    "mlx_axis_is_research_signal_cpu_replay_still_required"
+  ]
+}

@@ -17,7 +17,7 @@ from comma_lab.local_exact_auth_gate import (
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--local-replay-summary-json", required=True, type=Path)
+    parser.add_argument("--local-replay-summary-json", type=Path, default=None)
     parser.add_argument("--mlx-prefilter-summary-json", type=Path, default=None)
     parser.add_argument("--auth-frontier-score", type=float, default=None)
     parser.add_argument("--local-baseline-score", type=float, default=None)
@@ -33,7 +33,13 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> int:
     args = build_parser().parse_args()
-    local_summary = load_json_object(args.local_replay_summary_json)
+    if args.local_replay_summary_json is None and args.mlx_prefilter_summary_json is None:
+        raise SystemExit("at least one of --local-replay-summary-json or --mlx-prefilter-summary-json is required")
+    local_summary = (
+        load_json_object(args.local_replay_summary_json)
+        if args.local_replay_summary_json is not None
+        else None
+    )
     mlx_summary = (
         load_json_object(args.mlx_prefilter_summary_json)
         if args.mlx_prefilter_summary_json is not None

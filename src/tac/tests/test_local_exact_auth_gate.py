@@ -109,6 +109,36 @@ def test_gate_blocks_when_mlx_prefilter_required_but_missing() -> None:
     assert "mlx_prefilter_required_but_missing" in report.blockers
 
 
+def test_gate_routes_mlx_only_winner_to_local_cpu_replay() -> None:
+    report = build_local_exact_auth_gate_report(
+        mlx_prefilter_summary=_mlx_summary(action=0.17),
+        config=LocalExactAuthGateConfig(
+            auth_target_score=0.19,
+            mlx_target_action=0.18,
+        ),
+    )
+
+    assert report.exact_auth_dispatch_recommended is False
+    assert report.ready_for_exact_eval_dispatch is False
+    assert report.next_required_action == "run_local_cpu_replay"
+    assert report.local_replay_checks is None
+    assert "local_replay_required_for_exact_auth" in report.blockers
+
+
+def test_gate_blocks_cpu_replay_when_mlx_prefilter_fails() -> None:
+    report = build_local_exact_auth_gate_report(
+        mlx_prefilter_summary=_mlx_summary(action=17.4),
+        config=LocalExactAuthGateConfig(
+            auth_target_score=0.19,
+            mlx_target_action=0.18,
+        ),
+    )
+
+    assert report.exact_auth_dispatch_recommended is False
+    assert report.next_required_action == "do_not_run_local_cpu_replay"
+    assert "mlx_prefilter_action_not_below_target" in report.blockers
+
+
 def test_cli_writes_fail_closed_report_for_non_winner(tmp_path: Path) -> None:
     local_path = tmp_path / "local.json"
     out_path = tmp_path / "gate.json"
