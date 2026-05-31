@@ -8,6 +8,7 @@ from tac.optimization.joint_p18_p19_waterfill import (
     CONTEST_VIDEO_OVERFIT_MODE,
     FULL_VIDEO_AUTHORITY_SCOPE,
     FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION,
+    JOINT_P18_P19_IMPLICIT_ALLOCATOR_SCHEMA,
     JOINT_P18_P19_RATE_ATTACK_ROLE,
     JOINT_P18_P19_WEIGHT_FORMULA,
     JointP18P19WaterfillAuthorityError,
@@ -17,6 +18,7 @@ from tac.optimization.joint_p18_p19_waterfill import (
     require_exact_full_video_gradient_reduction,
     require_fresh_joint_surface,
     require_full_video_joint_surface,
+    solve_joint_p18_p19_implicit_kkt_dykstra_allocator,
     surface_is_stale_for_archive,
 )
 from tac.optimization.target_modes import CORPUS_GENERALIZATION_MODE
@@ -94,6 +96,11 @@ def test_joint_p18_p19_weight_uses_segnet_and_pose_mahalanobis_terms() -> None:
     assert surface["rate_attack_deadzone_mask"].tolist() == [True, False, False]
     assert surface["distortion_protect_mask"].tolist() == [False, True, True]
     assert surface["safe_rate_spend_mask"].tolist() == [True, False, False]
+    assert surface["rate_attack_allocation"][0] > 0.0
+    assert surface["implicit_kkt_dykstra_allocator"]["schema"] == JOINT_P18_P19_IMPLICIT_ALLOCATOR_SCHEMA
+    assert surface["implicit_kkt_dykstra_allocator"]["solver_converged"] is True
+    assert surface["implicit_allocator_authority"] is False
+    assert "joint_p18_p19_allocator_budget_spend_authority_missing" in surface["implicit_allocator_blockers"]
     assert surface["full_video_authority"] is False
     assert "joint_p18_p19_surface_not_full_video_scope" in surface["full_video_authority_blockers"]
     assert surface["gradient_reduction_authority"] is False
@@ -302,6 +309,37 @@ def test_joint_surface_requires_exact_full_video_reduction_for_budget_spend() ->
 
     require_exact_full_video_gradient_reduction(exact)
     assert exact["ready_for_budget_spend"] is True
+    assert exact["implicit_allocator_authority"] is True
+
+
+def test_implicit_kkt_dykstra_allocator_solves_box_budget_projection() -> None:
+    priority = np.array([3.0, 2.0, 1.0, 9.0], dtype=np.float64)
+    safe = np.array([True, True, True, False])
+
+    result = solve_joint_p18_p19_implicit_kkt_dykstra_allocator(
+        coarsening_priority=priority,
+        safe_rate_spend_mask=safe,
+        budget=1.5,
+        atom_capacity=1.0,
+    )
+
+    assert result["schema"] == JOINT_P18_P19_IMPLICIT_ALLOCATOR_SCHEMA
+    assert result["solver_converged"] is True
+    assert result["budget_binding"] is True
+    np.testing.assert_allclose(result["allocation"], np.array([1.0, 0.5, 0.0, 0.0]), atol=1e-7)
+    assert float(np.sum(result["allocation"])) <= result["effective_budget"] + 1e-9
+    assert result["allocation"][3] == 0.0
+    assert result["kkt_residuals"]["dykstra_projection_linf"] <= 1e-7
+    assert result["implicit_budget_jacobian"][1] == pytest.approx(1.0)
+
+
+def test_implicit_kkt_dykstra_allocator_rejects_nonmatching_mask() -> None:
+    with pytest.raises(ValueError, match="shape"):
+        solve_joint_p18_p19_implicit_kkt_dykstra_allocator(
+            coarsening_priority=np.zeros((2,)),
+            safe_rate_spend_mask=np.zeros((3,), dtype=bool),
+            budget=1.0,
+        )
 
 
 def test_joint_surface_rejects_unknown_target_mode() -> None:
