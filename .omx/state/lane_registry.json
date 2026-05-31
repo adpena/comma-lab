@@ -65398,6 +65398,47 @@
       "id": "lane_detector_informed_lever_magnitude_high_dseg_surface_20260531",
       "name": "Detector-informed lever magnitude test on high-d_seg render",
       "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "module + 18 NO-FAKE tests PASS; harness; register tool; full-grid SegNet response (77.3% dense) per codex Finding 2; commit pending"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/detector_informed_lever_magnitude_high_dseg_surface_landed_20260531.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_z8_600pair_byte_closed_contest_score_advisory_20260531",
+      "name": "Z8 600-pair byte-closed contest-score advisory baseline",
+      "phase": 2.0,
       "level": 0,
       "gates": {
         "impl_complete": {
@@ -65443,5 +65484,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-31T16:10:28Z"
+  "updated_at": "2026-05-31T16:19:27Z"
 }
