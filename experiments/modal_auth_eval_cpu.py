@@ -83,7 +83,18 @@ AUTH_CACHE_VOLUME_NAME = "comma-auth-eval-cache-artifacts"
 AUTH_CACHE_VOLUME_ROOT = Path("/modal_auth_cache")
 REQUIRED_SAMPLES = 600
 
-app = modal.App(APP_NAME)
+# ``include_source=False``: this dispatcher self-mounts every dir it needs via the
+# explicit ``add_local_dir(...)`` / ``add_local_file(...)`` calls on ``eval_image``
+# below (src / upstream / submissions / contest_auth_eval.py / pyproject.toml /
+# uv.lock). Modal's default automatic local-source inclusion otherwise scans from
+# the repo root and aborts the dispatch with ``[Errno 102] Operation not supported
+# on socket`` when it hits an ephemeral ``.git/fsmonitor--daemon.ipc`` Unix-domain
+# socket in a public-PR intake clone (the daemon is recreated by any concurrent
+# ``git -c core.fsmonitor=true`` invocation). Self-mounting + ``include_source=False``
+# is the canonical "I control my own mounts" pattern that extincts this bug class
+# (sister of CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE" mount-stability discipline;
+# Catalog #361 Modal artifact filter sister at the upload surface).
+app = modal.App(APP_NAME, include_source=False)
 auth_cache_vol = modal.Volume.from_name(AUTH_CACHE_VOLUME_NAME, create_if_missing=True)
 
 
