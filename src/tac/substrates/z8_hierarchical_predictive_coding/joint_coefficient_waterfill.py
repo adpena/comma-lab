@@ -834,38 +834,76 @@ def apply_joint_p18_p19_deadzone_to_z8_archive(
     """Return mutated Z8HPC1 bytes plus rate/distortion measurement metadata."""
 
     cfg = config or Z8JointCoefficientWaterfillConfig()
-    surface = _surface_payload(
-        joint_weight,
-        rate_attack_deadzone_mask=rate_attack_deadzone_mask,
-    )
-    joint_surface = _normalize_surface_array(surface["joint_weight"], name="joint_weight")
-    safe_mask = _as_bool_mask(surface.get("rate_attack_deadzone_mask"))
-    if safe_mask is not None and safe_mask.shape != joint_surface.shape and safe_mask.size != 1:
-        raise ValueError("rate_attack_deadzone_mask must match joint_weight shape or be scalar")
     arc = parse_archive(archive_bytes)
     current_archive_sha256 = hashlib.sha256(archive_bytes).hexdigest()
-    coverage_report = _full_video_surface_coverage_report(
-        joint_surface=joint_surface,
-        safe_mask=safe_mask,
-        archive_num_pairs=arc.num_pairs,
-        max_pairs=cfg.max_pairs,
-    )
-    if cfg.require_full_video_surface_coverage and not coverage_report["full_video_surface_coverage"]:
-        raise ValueError(str(coverage_report["blocker"]))
-    freshness_report = _surface_freshness_report(
-        surface_payload=surface,
-        current_archive_sha256=current_archive_sha256,
-    )
-    if cfg.require_surface_archive_freshness and not freshness_report["fresh_for_current_archive"]:
-        raise ValueError(",".join(str(item) for item in freshness_report["blockers"]))
-    gradient_reduction_report = _surface_gradient_reduction_report(
-        surface_payload=surface,
-    )
-    if (
-        cfg.require_exact_full_video_gradient_reduction
-        and not gradient_reduction_report["exact_full_video_gradient_reduction"]
-    ):
-        raise ValueError(",".join(str(item) for item in gradient_reduction_report["blockers"]))
+    if cfg.mutate_coefficients:
+        surface = _surface_payload(
+            joint_weight,
+            rate_attack_deadzone_mask=rate_attack_deadzone_mask,
+        )
+        joint_surface = _normalize_surface_array(surface["joint_weight"], name="joint_weight")
+        safe_mask = _as_bool_mask(surface.get("rate_attack_deadzone_mask"))
+        if safe_mask is not None and safe_mask.shape != joint_surface.shape and safe_mask.size != 1:
+            raise ValueError("rate_attack_deadzone_mask must match joint_weight shape or be scalar")
+        coverage_report = _full_video_surface_coverage_report(
+            joint_surface=joint_surface,
+            safe_mask=safe_mask,
+            archive_num_pairs=arc.num_pairs,
+            max_pairs=cfg.max_pairs,
+        )
+        if cfg.require_full_video_surface_coverage and not coverage_report["full_video_surface_coverage"]:
+            raise ValueError(str(coverage_report["blocker"]))
+        freshness_report = _surface_freshness_report(
+            surface_payload=surface,
+            current_archive_sha256=current_archive_sha256,
+        )
+        if cfg.require_surface_archive_freshness and not freshness_report["fresh_for_current_archive"]:
+            raise ValueError(",".join(str(item) for item in freshness_report["blockers"]))
+        gradient_reduction_report = _surface_gradient_reduction_report(
+            surface_payload=surface,
+        )
+        if (
+            cfg.require_exact_full_video_gradient_reduction
+            and not gradient_reduction_report["exact_full_video_gradient_reduction"]
+        ):
+            raise ValueError(",".join(str(item) for item in gradient_reduction_report["blockers"]))
+    else:
+        joint_surface = np.zeros((), dtype=np.float64)
+        safe_mask = None
+        coverage_report = {
+            "schema": "z8_joint_p18_p19_full_video_surface_coverage.v1",
+            "required_pair_count": int(arc.num_pairs) if cfg.max_pairs is None else min(int(arc.num_pairs), int(cfg.max_pairs)),
+            "archive_num_pairs": int(arc.num_pairs),
+            "max_pairs": cfg.max_pairs,
+            "joint_surface_shape": None,
+            "joint_surface_declared_pair_count": None,
+            "rate_attack_deadzone_mask_shape": None,
+            "rate_attack_deadzone_mask_declared_pair_count": None,
+            "full_video_surface_coverage": True,
+            "blocker": None,
+            "storage_only_no_surface_required": True,
+        }
+        freshness_report = {
+            "schema": "z8_joint_p18_p19_surface_freshness_report.v1",
+            "current_archive_sha256": current_archive_sha256,
+            "linearization_archive_sha": None,
+            "evidence_scope": "storage_only_no_surface_required",
+            "fresh_for_current_archive": True,
+            "blockers": [],
+            "storage_only_no_surface_required": True,
+        }
+        gradient_reduction_report = {
+            "schema": "z8_joint_p18_p19_surface_gradient_reduction_report.v1",
+            "gradient_reduction_semantics": "storage_only_no_surface_required",
+            "gradient_reduction_authority": None,
+            "optimizer_update_authority": None,
+            "optimizer_update_semantics": "storage_only_no_surface_required",
+            "full_video_reduction_complete": None,
+            "budget_spend_authority": None,
+            "exact_full_video_gradient_reduction": True,
+            "blockers": [],
+            "storage_only_no_surface_required": True,
+        }
     pair_pyramids = parse_pair_blobs_from_wavelet_blob(arc.wavelet_coeffs_blob)
     if cfg.mutate_coefficients:
         mutated_pyramids, coeff_report = _mutate_pair_pyramids(

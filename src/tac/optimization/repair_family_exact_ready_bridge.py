@@ -866,7 +866,7 @@ def build_repair_family_exact_ready_bridge(
     )
     source_rows = [
         row
-        for row in exact_handoff_plan.get("archive_bound_rows") or exact_handoff_plan.get("rows") or []
+        for row in exact_handoff_plan.get("archive_bound_rows") or []
         if isinstance(row, Mapping)
     ]
     bridge_rows = [

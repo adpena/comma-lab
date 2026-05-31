@@ -378,6 +378,28 @@ def test_joint_p18_p19_can_emit_lossless_brotli_preconditioned_details() -> None
     assert decoded[0]["frame_1_details"][0].hh.dtype == np.float32
 
 
+def test_storage_only_entropy_transcode_does_not_require_surface() -> None:
+    archive_bytes = _archive_bytes()
+    original = parse_archive(archive_bytes)
+    pyramids = parse_pair_blobs_from_wavelet_blob(original.wavelet_coeffs_blob)
+
+    result = apply_joint_p18_p19_deadzone_to_z8_archive(
+        archive_bytes,
+        joint_weight=None,
+        config=Z8JointCoefficientWaterfillConfig(
+            mutate_coefficients=False,
+            entropy_code_quantized_details=True,
+            entropy_detail_quantization_steps=_all_detail_step_keys(pyramids[0], 0.25),
+        ),
+    )
+
+    assert result["coefficient_report"]["mutated_pair_count"] == 0
+    assert result["full_video_surface_coverage_report"]["storage_only_no_surface_required"] is True
+    assert result["surface_freshness_report"]["fresh_for_current_archive"] is True
+    assert result["surface_gradient_reduction_report"]["exact_full_video_gradient_reduction"] is True
+    assert result["rate_report"]["after_detail_codec_summary"]["float32_detail_subband_count"] == 0
+
+
 def test_joint_p18_p19_deadzone_rejects_pair_broadcast_surface_for_full_video() -> None:
     archive_bytes = _archive_bytes(num_pairs=2)
     joint_weight = np.zeros((1, 2, 16, 16, 3), dtype=np.float32)

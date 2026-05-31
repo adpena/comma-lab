@@ -2665,6 +2665,7 @@ def plan_repair_family_stack_search(
             else primary_acquisition_path.get("terminal_outcome_class"),
             "stop_conditions": [
                 "strictly_better_archive_bound_candidate_exact_axis_blocked",
+                "archive_bound_noop_candidates_refused",
                 "precise_exact_axis_blocker",
                 "family_demoted_by_posterior_evidence",
             ],

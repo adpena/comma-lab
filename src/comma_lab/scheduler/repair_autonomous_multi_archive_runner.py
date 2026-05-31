@@ -575,6 +575,7 @@ def run_repair_autonomous_multi_archive_runner(
             "terminal_conditions": [
                 "strictly_better_archive_bound_candidate_exact_axis_blocked",
                 "archive_bound_candidate_exact_axis_blocked",
+                "archive_bound_noop_candidates_refused",
                 "precise_exact_axis_blocker",
                 "family_demoted_by_posterior_evidence",
                 "local_worker_failure_or_exact_axis_blocker",

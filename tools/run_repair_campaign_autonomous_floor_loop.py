@@ -8,7 +8,7 @@ import argparse
 import json
 import subprocess
 import sys
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -943,6 +943,8 @@ def _compile_entropy_stage_materializer_work_orders(
 def _iteration_stop_reason(stack_plan: dict[str, Any], worker_result: dict[str, Any] | None) -> str:
     if worker_result is not None and worker_result.get("returncode") not in (0, None):
         return "exact_axis_blocker_or_local_worker_failure"
+    if _archive_bound_noop_candidates_refused(stack_plan):
+        return "archive_bound_noop_candidates_refused"
     primary_path = stack_plan.get("primary_stack_acquisition_path")
     terminal_outcome = str(primary_path.get("terminal_outcome_class") or "") if isinstance(primary_path, dict) else ""
     if terminal_outcome in {
@@ -969,6 +971,12 @@ def _precise_blocker_stop_reason(summary: dict[str, Any]) -> str:
         if isinstance(_iteration, dict)
     ):
         return "local_worker_failure_or_exact_axis_blocker"
+    if any(
+        _iteration.get("stop_reason") == "archive_bound_noop_candidates_refused"
+        for _iteration in summary.get("iterations") or []
+        if isinstance(_iteration, dict)
+    ) or _archive_bound_noop_candidates_refused(stack_plan):
+        return "archive_bound_noop_candidates_refused"
     primary_path = stack_plan.get("primary_stack_acquisition_path")
     terminal_outcome = str(primary_path.get("terminal_outcome_class") or "") if isinstance(primary_path, dict) else ""
     if terminal_outcome in {
@@ -988,6 +996,22 @@ def _precise_blocker_stop_reason(summary: dict[str, Any]) -> str:
     if route:
         return f"{route}_blocked"
     return "exact_axis_blocker"
+
+
+def _archive_bound_noop_candidates_refused(stack_plan: Mapping[str, Any]) -> bool:
+    if int(stack_plan.get("execution_report_count") or 0) <= 0:
+        return False
+    if int(stack_plan.get("archive_bound_exact_handoff_candidate_count") or 0) > 0:
+        return False
+    rows = stack_plan.get("stack_rows")
+    if not isinstance(rows, list):
+        return False
+    return any(
+        isinstance(row, Mapping)
+        and "archive_bound_candidate_material_change_not_proven"
+        in _string_list(row.get("blockers"))
+        for row in rows
+    )
 
 
 def _build_blocker_report(summary: dict[str, Any]) -> dict[str, Any]:
@@ -1453,6 +1477,7 @@ def _build_summary(
         if stop_reason in {
             "candidate_improvement_observed",
             "exact_axis_blocker_or_local_worker_failure",
+            "archive_bound_noop_candidates_refused",
             "strictly_better_archive_bound_candidate_exact_axis_blocked",
             "precise_exact_axis_blocker",
             "family_demoted_by_posterior_evidence",

@@ -137,6 +137,45 @@ class _IncompleteCustodyMlxArchiveAdapter(_FixtureArchiveAdapter):
         ]
 
 
+class _NoopArchiveAdapter(_FixtureArchiveAdapter):
+    adapter_id = "fixture_range_adapter_noop_candidate"
+
+    def emit_archive_bound_candidate_rows(
+        self,
+        context: Mapping[str, Any],
+    ) -> Sequence[Mapping[str, Any]]:
+        source = self.root / "source.zip"
+        candidate = self.root / "candidate.zip"
+        proof = self.root / "receiver_proof.json"
+        source.write_bytes(b"S" * 128)
+        candidate.write_bytes(source.read_bytes())
+        proof.write_text('{"schema":"fixture_receiver_proof.v1"}\n', encoding="utf-8")
+        return [
+            {
+                "candidate_id": "fixture_range_candidate_noop",
+                "target_kind": "range_coder_entropy_recode_v1",
+                "candidate_archive": _record(self.root, candidate),
+                "source_archive": _record(self.root, source),
+                "byte_closed_candidate_emitted": True,
+                "runtime_consumption_proof_status": "present",
+                "runtime_consumption_proof_path": proof.relative_to(self.root).as_posix(),
+                "receiver_contract_kind": "fixture_receiver_contract",
+                "receiver_contract_satisfied": True,
+                "runtime_adapter_ready": True,
+                "score_affecting_payload_changed": False,
+                "charged_bits_changed": False,
+                "score_claim": False,
+                "score_claim_valid": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "promotable": False,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+                "gpu_launched": False,
+            }
+        ]
+
+
 class _NestedRuntimeManifestArchiveAdapter(_FixtureArchiveAdapter):
     adapter_id = "fixture_nested_runtime_manifest_adapter"
 
@@ -269,6 +308,24 @@ def test_archive_bound_adapter_spine_emits_full_pipeline_package(
     assert package["posterior_update_hooks"][0]["schema"] == (ARCHIVE_BOUND_CANDIDATE_POSTERIOR_HOOK_SCHEMA)
     extracted = archive_bound_candidate_contracts_from_payload(package)
     assert [contract["contract_key"] for contract in extracted] == [contract["contract_key"]]
+
+
+def test_archive_bound_adapter_refuses_noop_exact_handoff(
+    tmp_path: Path,
+) -> None:
+    package = build_archive_bound_candidate_adapter_package(
+        _NoopArchiveAdapter(tmp_path),
+        repo_root=tmp_path,
+    )
+
+    assert package["candidate_row_count"] == 1
+    assert package["ready_contract_count"] == 0
+    row = package["candidate_rows"][0]
+    contract = row["archive_bound_candidate_contract"]
+    assert contract["archive_bound_candidate_ready_for_exact_handoff"] is False
+    assert contract["material_change_proven"] is False
+    assert contract["candidate_archive_distinct_from_source"] is False
+    assert "archive_bound_candidate_material_change_not_proven" in contract["blockers"]
 
 
 def test_archive_contract_reader_consumes_runtime_wrapper_package(

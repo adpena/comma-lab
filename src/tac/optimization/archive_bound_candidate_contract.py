@@ -113,6 +113,15 @@ def _safe_float(value: Any) -> float:
         return 0.0
 
 
+def _sha256_or_none(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    text = value.strip().lower()
+    if len(text) == 64 and all(ch in "0123456789abcdef" for ch in text):
+        return text
+    return None
+
+
 def _optional_mapping(value: Any) -> Mapping[str, Any] | None:
     return value if isinstance(value, Mapping) else None
 
@@ -1390,6 +1399,17 @@ def build_archive_bound_candidate_contract(
         file_custody.get("bytes") or candidate.get("bytes"),
         default=0,
     )
+    source_sha = _sha256_or_none(
+        str(candidate.get("source_archive_sha256") or source.get("sha256") or "")
+    )
+    candidate_sha = _sha256_or_none(
+        str(file_custody.get("sha256") or candidate.get("sha256") or "")
+    )
+    archive_distinct_from_source = bool(
+        source_sha is not None
+        and candidate_sha is not None
+        and source_sha != candidate_sha
+    )
     byte_delta_vs_source = (
         candidate_bytes - source_bytes if source_bytes and candidate_bytes else None
     )
@@ -1402,6 +1422,13 @@ def build_archive_bound_candidate_contract(
         byte_credit_budget is not None
         and candidate_bytes > 0
         and candidate_bytes > max(0, byte_credit_budget)
+    )
+    material_change_proven = bool(
+        archive_distinct_from_source
+        or candidate.get("charged_bits_changed") is True
+        or candidate.get("score_affecting_payload_changed") is True
+        or candidate.get("semantic_payload_changed") is True
+        or (byte_delta_vs_source is not None and byte_delta_vs_source != 0)
     )
     blockers = ordered_unique(
         [
@@ -1419,6 +1446,11 @@ def build_archive_bound_candidate_contract(
                 if not byte_credit_exhausted
                 else ["archive_bound_candidate_byte_credit_exhausted"]
             ),
+            *(
+                []
+                if material_change_proven
+                else ["archive_bound_candidate_material_change_not_proven"]
+            ),
             "contest_cpu_or_cuda_exact_axis_payload_required",
             "lane_dispatch_claim_required_before_exact_eval",
         ]
@@ -1428,6 +1460,7 @@ def build_archive_bound_candidate_contract(
         and proof_ready
         and receiver_satisfied
         and file_custody.get("custody_complete") is True
+        and material_change_proven
     )
     acquisition_penalty = round(
         min(
@@ -1520,6 +1553,8 @@ def build_archive_bound_candidate_contract(
             candidate.get("exact_axis_score_affecting_adjudication_required") is True
         ),
         "charged_bits_changed_observed": candidate.get("charged_bits_changed") is True,
+        "material_change_proven": material_change_proven,
+        "candidate_archive_distinct_from_source": archive_distinct_from_source,
         "prototype_only": prototype_only,
         "probe_only_entropy_signal": probe_only,
         "saved_bytes": saved_bytes,

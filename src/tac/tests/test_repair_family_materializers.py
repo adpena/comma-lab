@@ -1840,6 +1840,41 @@ def test_repair_exact_ready_bridge_emits_blocked_source_queue(
     assert "submission_dir_missing_for_runtime_content_tree_custody" in source_row["dispatch_blockers"]
 
 
+def test_repair_exact_ready_bridge_refuses_non_archive_bound_rows(
+    tmp_path: Path,
+) -> None:
+    exact_handoff_plan = {
+        "schema": REPAIR_FAMILY_EXACT_HANDOFF_PLAN_SCHEMA,
+        "candidate_count": 1,
+        "archive_bound_candidate_count": 0,
+        "archive_bound_custody_complete": False,
+        "rows": [
+            {
+                "schema": REPAIR_FAMILY_EXACT_HANDOFF_CANDIDATE_ROW_SCHEMA,
+                "candidate_id": "noop_candidate",
+                "archive_bound_custody_complete": False,
+                "archive_bound_exact_handoff_candidate": False,
+                "blockers": ["archive_bound_candidate_material_change_not_proven"],
+                **_false_authority(),
+            }
+        ],
+        "archive_bound_rows": [],
+        "blockers": ["archive_bound_exact_handoff_candidate_missing"],
+        **_false_authority(),
+    }
+
+    bridge = build_repair_family_exact_ready_bridge(
+        exact_handoff_plan=exact_handoff_plan,
+        exact_handoff_plan_path=tmp_path / "repair_family_exact_handoff_plan.json",
+        repo_root=tmp_path,
+    )
+
+    assert bridge["bridge_report"]["candidate_count"] == 0
+    assert bridge["source_optimizer_queue"]["top_k"] == []
+    assert bridge["blocked_exact_ready_queue"]["top_k"] == []
+    assert "repair_family_exact_handoff_rows_missing" in bridge["bridge_report"]["blockers"]
+
+
 def test_repair_exact_ready_bridge_rejects_stale_archive_contract_row(
     tmp_path: Path,
 ) -> None:

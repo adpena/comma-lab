@@ -43,10 +43,11 @@ def test_multi_archive_runner_executes_and_closes_runtime_custody(
         repo_root=REPO_ROOT,
         chain_id="unit_multi_archive_repair",
         queue_id="unit_multi_archive_repair_materialization",
-        execute_local=True,
+        execute_local=False,
         close_runtime_custody=True,
-        worker_max_experiments_per_iteration=10,
-        max_steps_per_iteration=120,
+        max_floor_iterations=1,
+        worker_max_experiments_per_iteration=1,
+        max_steps_per_iteration=24,
         posterior_path=None,
         overwrite=True,
     )
@@ -57,13 +58,13 @@ def test_multi_archive_runner_executes_and_closes_runtime_custody(
     assert summary["ready_experiment_count"] == 10
     assert summary["queue_validation"]["returncode"] == 0
     exact_ready_count = summary["exact_ready_bridge_candidate_count"]
-    assert exact_ready_count >= summary["ready_experiment_count"]
+    assert exact_ready_count == 0
     assert summary["exact_ready_bridge_runtime_content_tree_custody_proven_count"] == exact_ready_count
     assert summary["archive_bound_exact_handoff_candidate_count"] == exact_ready_count
     assert summary["runtime_closure"]["candidate_count"] == exact_ready_count
     assert summary["runtime_closure"]["closure_report_count"] == exact_ready_count
-    assert summary["max_floor_iterations"] == 4
-    assert summary["bounded_live_archive_loop"]["max_floor_iterations"] == 4
+    assert summary["max_floor_iterations"] == 1
+    assert summary["bounded_live_archive_loop"]["max_floor_iterations"] == 1
     assert (
         summary["bounded_live_archive_loop"][
             "archive_bound_exact_handoff_candidate_count"

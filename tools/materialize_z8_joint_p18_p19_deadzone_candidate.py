@@ -21,7 +21,12 @@ from tac.substrates.z8_hierarchical_predictive_coding.joint_coefficient_waterfil
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--archive-bin", required=True, type=Path)
-    parser.add_argument("--surface", required=True, type=Path)
+    parser.add_argument(
+        "--surface",
+        type=Path,
+        default=None,
+        help="Fresh P18/P19 surface. Required unless --no-mutate-coefficients is set.",
+    )
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--repo-root", type=Path, default=None)
     parser.add_argument("--joint-weight-quantile", type=float, default=0.35)
@@ -89,7 +94,12 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> int:
     args = build_parser().parse_args()
-    surface = load_joint_p18_p19_surface_file(args.surface)
+    if args.surface is None:
+        if not args.no_mutate_coefficients:
+            raise SystemExit("--surface is required unless --no-mutate-coefficients is set")
+        surface = None
+    else:
+        surface = load_joint_p18_p19_surface_file(args.surface)
     entropy_detail_quantization_steps = load_entropy_detail_quantization_steps_json(
         args.entropy_detail_quantization_steps_json
     )
