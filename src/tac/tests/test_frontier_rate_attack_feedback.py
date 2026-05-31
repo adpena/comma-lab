@@ -100,6 +100,9 @@ from comma_lab.scheduler.repair_campaign_score_queue import (
     REPAIR_CAMPAIGN_SCORE_QUEUE_METADATA_SCHEMA,
 )
 from tac.fec6_selector_operator_space import FEC6_FIXED_K16_MODE_IDS
+from tac.optimization.archive_bound_candidate_contract import (
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
+)
 from tac.optimization.repair_dynamics_palette_probe import (
     REPAIR_DYNAMICS_PALETTE_PROBE_MATRIX_SCHEMA,
 )
@@ -4593,6 +4596,101 @@ def test_targeted_component_correction_materialization_requests_group_responses(
         "many_op_plan_to_component_replay_and_exact_readiness_bridge"
         in first_chain["next_queue_edges"]
     )
+
+
+def test_repair_materializer_binding_propagates_archive_bound_contract(
+    tmp_path: Path,
+) -> None:
+    candidate_archive = tmp_path / "candidate.zip"
+    candidate_archive.write_bytes(b"candidate archive bytes")
+    candidate_sha = hashlib.sha256(candidate_archive.read_bytes()).hexdigest()
+    source_archive = tmp_path / "source.zip"
+    source_archive.write_bytes(b"source archive bytes")
+    source_sha = hashlib.sha256(source_archive.read_bytes()).hexdigest()
+    proof_path = _write_json(
+        tmp_path / "runtime_consumption_proof.json",
+        {
+            "schema": "unit_runtime_consumption_proof.v1",
+            **_false_authority(),
+            "candidate_archive": {"sha256": candidate_sha},
+            "runtime_consumption_proof_passed": True,
+            "receiver_contract_satisfied": True,
+            "blockers": [],
+        },
+    )
+    plan = {
+        "schema": REPAIR_BUDGET_MATERIALIZATION_PLAN_SCHEMA,
+        **_false_authority(),
+        "chain_id": "unit_chain",
+        "parent_candidate_chain_id": "parent_chain",
+        "candidate_chain_rows": [
+            {
+                "schema": REPAIR_BUDGET_MATERIALIZATION_PLAN_ROW_SCHEMA,
+                **_false_authority(),
+                "candidate_chain_id": "parent_chain",
+                "candidate_kind": "rate_only_floor_parent",
+                "chain_id": "unit_chain",
+                "materialization_order": 1,
+                "operator_action_terms": [],
+                "candidate_archive_materialized": False,
+                "receiver_consumed": False,
+            }
+        ],
+    }
+    manifest = {
+        "schema": "unit_materializer_manifest.v1",
+        **_false_authority(),
+        "materializer_id": "packet_member_merge_unit",
+        "target_kind": "packet_member_merge_v1",
+        "candidate_chain_id": "parent_chain",
+        "byte_closed_candidate_emitted": True,
+        "candidate_archive": {
+            "path": candidate_archive.as_posix(),
+            "sha256": candidate_sha,
+            "bytes": candidate_archive.stat().st_size,
+        },
+        "source_archive": {
+            "path": source_archive.as_posix(),
+            "sha256": source_sha,
+            "bytes": source_archive.stat().st_size,
+        },
+        "runtime_consumption_proof_path": proof_path.as_posix(),
+        "receiver_contract_kind": "packet_member_merge_v1",
+        "receiver_contract_satisfied": True,
+        "runtime_adapter_ready": True,
+        "readiness_blockers": [],
+    }
+
+    binding_report = build_frontier_repair_budget_materializer_binding_report(
+        repo_root=tmp_path,
+        repair_budget_materialization_plan=plan,
+        materializer_manifests=[manifest],
+    )
+
+    row = binding_report["binding_rows"][0]
+    assert row["candidate_archive_materialized"] is True
+    assert row["archive_bound_candidate_contract_schema"] == (
+        ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+    )
+    contract = row["archive_bound_candidate_contract"]
+    assert contract["schema"] == ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+    assert contract["candidate_archive"]["sha256"] == candidate_sha
+    assert contract["archive_bound_candidate_ready"] is True
+    assert contract["ready_for_exact_eval_dispatch"] is False
+    assert contract["score_claim"] is False
+    assert binding_report["candidate_archive_materialized"] is True
+    _assert_false_authority(binding_report)
+
+    execution_report = build_frontier_repair_budget_materialization_execution_report(
+        repair_budget_materialization_plan=plan,
+        materializer_binding_report=binding_report,
+    )
+    execution_row = execution_report["execution_rows"][0]
+    assert execution_row["archive_bound_candidate_contract"]["candidate_archive"][
+        "sha256"
+    ] == candidate_sha
+    assert execution_row["ready_for_exact_eval_dispatch"] is False
+    _assert_false_authority(execution_report)
 
 
 def test_repair_waterfill_work_order_builds_typed_response_ledger(

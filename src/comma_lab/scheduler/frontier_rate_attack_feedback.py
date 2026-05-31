@@ -17,6 +17,9 @@ from tac.hnerv_lowlevel_packer import (
     HnervLowlevelPackError,
     read_strict_single_member_zip,
 )
+from tac.optimization.archive_bound_candidate_contract import (
+    archive_bound_candidate_contract_fields_for_row,
+)
 from tac.optimization.dqs1_materializer_feedback_bridge import (
     DQS1_OBSERVATION_SOURCE_SCHEMA,
     DQS1_OBSERVATION_SWEEP_CONFIG_ID,
@@ -9343,7 +9346,7 @@ def _materializer_manifest_record(
         and not proof_blockers
         and not receiver_blockers
     )
-    return {
+    record = {
         "schema": "frontier_rate_attack_materializer_manifest_binding_input.v1",
         "manifest_path": str(manifest_path or ""),
         "manifest_schema": manifest.get("schema"),
@@ -9381,6 +9384,49 @@ def _materializer_manifest_record(
         "receiver_consumed": receiver_consumed,
         **FALSE_AUTHORITY,
     }
+    record.update(
+        archive_bound_candidate_contract_fields_for_row(
+            {
+                "archive_native_transform_kind": manifest.get("target_kind")
+                or manifest.get("materializer_id")
+                or manifest.get("schema")
+                or "frontier_rate_attack_materializer_manifest",
+                "target_kind": manifest.get("target_kind"),
+                "materializer_id": manifest.get("materializer_id"),
+                "candidate_id": ",".join(record["candidate_chain_ids"]),
+                "candidate_archive_path": candidate_archive_path or "",
+                "candidate_archive_sha256": candidate_archive_sha or "",
+                "candidate_archive_bytes": candidate_archive_bytes,
+                "source_archive_path": source_archive.get("path"),
+                "source_archive_sha256": source_archive.get("sha256"),
+                "source_archive_bytes": source_archive.get("bytes"),
+                "byte_closed_candidate_emitted": byte_closed,
+                "byte_closed_candidate_materialized": record[
+                    "candidate_archive_materialized"
+                ],
+                "candidate_archive_materialized": record[
+                    "candidate_archive_materialized"
+                ],
+                "runtime_consumption_proof_ready": runtime_proof_present,
+                "runtime_consumption_proof_path": runtime_proof_path or "",
+                "receiver_contract_kind": manifest.get("receiver_contract_kind"),
+                "receiver_contract_satisfied": receiver_consumed,
+                "runtime_adapter_ready": manifest.get("runtime_adapter_ready") is True,
+                "readiness_blockers": readiness_blockers,
+                **FALSE_AUTHORITY,
+            },
+            repo_root=repo_root,
+            selected_transform_kind=str(
+                manifest.get("target_kind")
+                or manifest.get("materializer_id")
+                or manifest.get("schema")
+                or "frontier_rate_attack_materializer_manifest"
+            ),
+            family_id="frontier_rate_attack_materializer_manifest",
+            candidate_chain_id=",".join(record["candidate_chain_ids"]),
+        )
+    )
+    return record
 
 
 def _load_materializer_manifest_records(
@@ -9602,6 +9648,18 @@ def _repair_budget_materializer_binding_row(
                 "runtime_consumption_proof_revalidation"
             ),
             "receiver_consumed": True,
+            "archive_bound_candidate_contract_schema": plan_row.get(
+                "archive_bound_candidate_contract_schema"
+            ),
+            "archive_bound_candidate_contract": plan_row.get(
+                "archive_bound_candidate_contract"
+            ),
+            "archive_bound_candidate_contract_surface_schema": plan_row.get(
+                "archive_bound_candidate_contract_surface_schema"
+            ),
+            "archive_bound_candidate_contract_surface": plan_row.get(
+                "archive_bound_candidate_contract_surface"
+            ),
             "repair_dynamics_prior": {},
             **FALSE_AUTHORITY,
         }
@@ -9697,6 +9755,18 @@ def _repair_budget_materializer_binding_row(
         "candidate_archive_path": selected.get("candidate_archive_path"),
         "candidate_archive_sha256": selected.get("candidate_archive_sha256"),
         "candidate_archive_bytes": selected.get("candidate_archive_bytes"),
+        "archive_bound_candidate_contract_schema": selected.get(
+            "archive_bound_candidate_contract_schema"
+        ),
+        "archive_bound_candidate_contract": selected.get(
+            "archive_bound_candidate_contract"
+        ),
+        "archive_bound_candidate_contract_surface_schema": selected.get(
+            "archive_bound_candidate_contract_surface_schema"
+        ),
+        "archive_bound_candidate_contract_surface": selected.get(
+            "archive_bound_candidate_contract_surface"
+        ),
         "runtime_consumption_proof_path": selected.get(
             "runtime_consumption_proof_path"
         ),
@@ -9971,6 +10041,12 @@ def _repair_budget_materialization_execution_row(
     archive_sha = str(row.get("candidate_archive_sha256") or "").strip()
     archive_bytes = row.get("candidate_archive_bytes")
     archive_materialized = row.get("candidate_archive_materialized") is True
+    archive_bound_contract_schema = row.get("archive_bound_candidate_contract_schema")
+    archive_bound_contract = row.get("archive_bound_candidate_contract")
+    archive_bound_contract_surface_schema = row.get(
+        "archive_bound_candidate_contract_surface_schema"
+    )
+    archive_bound_contract_surface = row.get("archive_bound_candidate_contract_surface")
     runtime_proof_present = row.get("runtime_consumption_proof_present") is True
     receiver_consumed = row.get("receiver_consumed") is True
     component_replayed = row.get("component_response_replayed") is True
@@ -9992,6 +10068,22 @@ def _repair_budget_materialization_execution_row(
         archive_materialized = (
             archive_materialized
             or binding_row.get("candidate_archive_materialized") is True
+        )
+        archive_bound_contract_schema = (
+            binding_row.get("archive_bound_candidate_contract_schema")
+            or archive_bound_contract_schema
+        )
+        archive_bound_contract = (
+            binding_row.get("archive_bound_candidate_contract")
+            or archive_bound_contract
+        )
+        archive_bound_contract_surface_schema = (
+            binding_row.get("archive_bound_candidate_contract_surface_schema")
+            or archive_bound_contract_surface_schema
+        )
+        archive_bound_contract_surface = (
+            binding_row.get("archive_bound_candidate_contract_surface")
+            or archive_bound_contract_surface
         )
         runtime_proof_present = (
             binding_row.get("runtime_consumption_proof_present") is True
@@ -10068,6 +10160,12 @@ def _repair_budget_materialization_execution_row(
         "candidate_archive_sha256": archive_sha or None,
         "candidate_archive_bytes": archive_bytes,
         "candidate_archive_materialized": archive_materialized,
+        "archive_bound_candidate_contract_schema": archive_bound_contract_schema,
+        "archive_bound_candidate_contract": archive_bound_contract,
+        "archive_bound_candidate_contract_surface_schema": (
+            archive_bound_contract_surface_schema
+        ),
+        "archive_bound_candidate_contract_surface": archive_bound_contract_surface,
         "runtime_consumption_proof_present": runtime_proof_present,
         "receiver_consumed": receiver_consumed,
         "component_response_replayed": component_replayed,
