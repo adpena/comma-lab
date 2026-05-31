@@ -6,6 +6,9 @@ from pathlib import Path
 
 import pytest
 
+from tac.optimization.archive_bound_candidate_contract import (
+    archive_bound_candidate_contracts_from_payload,
+)
 from tac.optimization.pr95_muon_local_training_integration import (
     CANDIDATE_PAYLOAD_SCHEMA,
     PLAN_SCHEMA,
@@ -99,6 +102,14 @@ def test_pr95_manifest_adapter_stamps_false_authority(tmp_path: Path) -> None:
     assert row["charged_bits_changed"] is False
     assert validate_proxy_candidate(row) == []
     assert row["consumer_payload"]["schema"] == CANDIDATE_PAYLOAD_SCHEMA
+    contract = archive_bound_candidate_contracts_from_payload(row)[0]
+    assert contract["archive_bound_candidate_ready"] is False
+    assert contract["byte_closed_candidate_materialized"] is True
+    assert "archive_bound_candidate_file_missing" in contract["blockers"]
+    assert "neural_archive" in contract["archive_substrate_tags"]
+    assert row["consumer_payload"]["archive_bound_candidate_contract"][
+        "contract_key"
+    ] == contract["contract_key"]
     assert row["consumer_payload"]["pr95_muon_local_training"]["muon_partition"][
         "hidden_2d_plus_weights"
     ] == "Muon"

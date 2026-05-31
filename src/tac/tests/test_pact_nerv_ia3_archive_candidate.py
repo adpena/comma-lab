@@ -5,6 +5,9 @@ from pathlib import Path
 
 import torch
 
+from tac.optimization.archive_bound_candidate_contract import (
+    archive_bound_candidate_contracts_from_payload,
+)
 from tac.optimization.runtime_adapter_identity import runtime_adapter_identity_blockers
 from tac.repo_io import write_json
 from tac.substrates.pact_nerv_ia3.architecture import (
@@ -12,6 +15,7 @@ from tac.substrates.pact_nerv_ia3.architecture import (
     PactNervIa3Substrate,
 )
 from tac.substrates.pact_nerv_ia3.archive_candidate import (
+    PACT_NERV_IA3_ARCHIVE_BOUND_FAMILY,
     PACT_NERV_IA3_BYTE_CLOSED_CANDIDATE_SCHEMA,
     PACT_NERV_IA3_RECEIVER_INFLATE_PROOF_SCHEMA,
     materialize_pact_nerv_ia3_byte_closed_candidate,
@@ -91,6 +95,20 @@ def test_pact_nerv_ia3_byte_closed_candidate_emits_receiver_proof(tmp_path: Path
     assert manifest["runtime_consumption_proof_sha256"]
     assert manifest["score_claim"] is False
     assert manifest["ready_for_exact_eval_dispatch"] is False
+    package = manifest["archive_bound_candidate_adapter_package"]
+    assert package["candidate_family"] == PACT_NERV_IA3_ARCHIVE_BOUND_FAMILY
+    assert package["ready_contract_count"] == 1
+    assert package["receiver_proof_gate_passed_count"] == 1
+    assert Path(
+        REPO_ROOT / manifest["archive_bound_candidate_runtime_bridge_path"]
+    ).is_file()
+    contract = manifest["archive_bound_candidate_contract"]
+    assert contract["archive_bound_candidate_ready"] is True
+    assert contract["runtime_consumption_proof_ready"] is True
+    assert contract["receiver_contract_satisfied"] is True
+    assert "pact_nerv" in contract["archive_substrate_tags"]
+    contracts = archive_bound_candidate_contracts_from_payload(manifest)
+    assert contracts[0]["contract_key"] == contract["contract_key"]
     assert manifest["receiver_verification"]["runtime_adapter_ready"] is True
     assert not list(runtime_path.rglob("__pycache__"))
     assert (

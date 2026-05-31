@@ -13,6 +13,9 @@ from typing import Any
 
 import torch
 
+from tac.optimization.archive_bound_candidate_runtime_bridge import (
+    build_archive_bound_candidate_runtime_package,
+)
 from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY
 from tac.optimization.proxy_candidate_contract import require_no_truthy_authority_fields
 from tac.repo_io import repo_relative, sha256_bytes, sha256_file, tree_sha256
@@ -25,6 +28,11 @@ from tac.substrates.pact_nerv_ia3.inflate import inflate_one_video
 
 PACT_NERV_IA3_BYTE_CLOSED_CANDIDATE_SCHEMA = "pact_nerv_ia3_byte_closed_candidate.v1"
 PACT_NERV_IA3_RECEIVER_INFLATE_PROOF_SCHEMA = "pact_nerv_ia3_receiver_inflate_proof.v1"
+PACT_NERV_IA3_ARCHIVE_BOUND_ADAPTER_ID = "pact_nerv_ia3_archive_bound_runtime_adapter.v1"
+PACT_NERV_IA3_ARCHIVE_BOUND_FAMILY = "pact_nerv_ia3"
+PACT_NERV_IA3_ARCHIVE_BOUND_TRANSFORM_KIND = (
+    "pact_nerv_ia3_byte_closed_archive_runtime_adapter"
+)
 
 
 class PactNervIa3ArchiveCandidateError(ValueError):
@@ -273,6 +281,54 @@ def materialize_pact_nerv_ia3_byte_closed_candidate(
         json.dumps(proof_payload, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
+    receiver_proof_for_bridge = {
+        **proof_payload,
+        "runtime_consumption_proof_ready": proof_payload[
+            "runtime_consumption_proof_passed"
+        ],
+        "receiver_contract_satisfied": proof_payload[
+            "receiver_contract_satisfied"
+        ],
+        "blockers": (
+            []
+            if proof_payload["passed"]
+            else ["pact_nerv_ia3_receiver_inflate_proof_failed"]
+        ),
+    }
+    bridge_dir = out_dir / "archive_bound_candidate_runtime_bridge"
+    runtime_bridge = build_archive_bound_candidate_runtime_package(
+        adapter_id=PACT_NERV_IA3_ARCHIVE_BOUND_ADAPTER_ID,
+        candidate_family=PACT_NERV_IA3_ARCHIVE_BOUND_FAMILY,
+        candidate_id_prefix="pact_nerv_ia3",
+        transform_kind=PACT_NERV_IA3_ARCHIVE_BOUND_TRANSFORM_KIND,
+        archive_zip_path=archive_zip_path,
+        archive_sha256=sha256_file(archive_zip_path),
+        archive_bytes=archive_zip_path.stat().st_size,
+        submission_dir=submission_dir,
+        output_dir=bridge_dir,
+        repo_root=root,
+        receiver_proof=receiver_proof_for_bridge,
+        receiver_contract_kind="pact_nerv_ia3_inflate_sh_png_frame_tree",
+        runtime_adapter_manifest_extra={
+            "substrate": "pact_nerv_ia3",
+            "candidate_runtime_dir": runtime_dir_ref,
+            "candidate_runtime_tree_sha256": runtime_tree_sha,
+            "expected_candidate_runtime_tree_sha256": runtime_tree_sha,
+            "receiver_output_tree_sha256": receiver_tree_sha,
+            "reference_output_tree_sha256": reference_tree_sha,
+            "expected_frame_count": expected_frame_count,
+        },
+        input_artifacts=[
+            repo_relative(archive_zip_path, root),
+            repo_relative(bin_path, root),
+            repo_relative(submission_dir, root),
+            repo_relative(proof_path, root),
+            repo_relative(pt_path, root),
+            repo_relative(report_path, root),
+        ],
+    )
+    adapter_package = runtime_bridge["archive_bound_candidate_adapter_package"]
+    adapter_row = adapter_package["candidate_rows"][0]
 
     manifest: dict[str, Any] = {
         "schema": PACT_NERV_IA3_BYTE_CLOSED_CANDIDATE_SCHEMA,
@@ -310,6 +366,14 @@ def materialize_pact_nerv_ia3_byte_closed_candidate(
         },
         "receiver_inflate_proof_path": repo_relative(proof_path, root),
         "receiver_inflate_proof_sha256": sha256_file(proof_path),
+        "archive_bound_candidate_runtime_bridge_schema": runtime_bridge["schema"],
+        "archive_bound_candidate_runtime_bridge_path": repo_relative(
+            bridge_dir / "archive_bound_candidate_adapter_package.json",
+            root,
+        ),
+        "archive_bound_candidate_runtime_bridge": runtime_bridge,
+        "archive_bound_candidate_adapter_package_schema": adapter_package["schema"],
+        "archive_bound_candidate_adapter_package": adapter_package,
         "byte_tax": {
             "raw_state_dict_bytes": pt_path.stat().st_size,
             "pia3_0_bin_bytes": len(bin_bytes),
@@ -327,6 +391,19 @@ def materialize_pact_nerv_ia3_byte_closed_candidate(
         "ready_for_exact_eval_dispatch": False,
         **FALSE_AUTHORITY,
     }
+    for key in (
+        "archive_bound_candidate_contract_schema",
+        "archive_bound_candidate_contract",
+        "archive_bound_candidate_contract_surface_schema",
+        "archive_bound_candidate_contract_surface",
+    ):
+        manifest[key] = adapter_row[key]
+    manifest["archive_bound_candidate_contract_key"] = manifest[
+        "archive_bound_candidate_contract"
+    ]["contract_key"]
+    manifest["archive_bound_candidate_contract_blockers"] = manifest[
+        "archive_bound_candidate_contract"
+    ]["blockers"]
     require_no_truthy_authority_fields(
         manifest,
         context="pact_nerv_ia3_byte_closed_candidate",
@@ -335,6 +412,9 @@ def materialize_pact_nerv_ia3_byte_closed_candidate(
 
 
 __all__ = [
+    "PACT_NERV_IA3_ARCHIVE_BOUND_ADAPTER_ID",
+    "PACT_NERV_IA3_ARCHIVE_BOUND_FAMILY",
+    "PACT_NERV_IA3_ARCHIVE_BOUND_TRANSFORM_KIND",
     "PACT_NERV_IA3_BYTE_CLOSED_CANDIDATE_SCHEMA",
     "PACT_NERV_IA3_RECEIVER_INFLATE_PROOF_SCHEMA",
     "PactNervIa3ArchiveCandidateError",

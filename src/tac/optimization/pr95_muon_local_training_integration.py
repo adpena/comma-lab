@@ -14,6 +14,9 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from tac.optimization.archive_bound_candidate_contract import (
+    archive_bound_candidate_contract_fields_for_row,
+)
 from tac.optimization.local_training_runtime_profile import (
     LocalTrainingRuntimeProfileError,
     runtime_profile_summary_from_training_manifest,
@@ -346,6 +349,20 @@ def adapt_pr95_local_training_manifest_to_candidate(
         "candidate_archive_path": archive_zip.get("path"),
         "candidate_archive_sha256": archive_zip.get("sha256"),
         "candidate_archive_bytes": archive_zip.get("bytes"),
+        "archive_native_transform_kind": (
+            "pr95_hnerv_muon_local_training_archive_export"
+        ),
+        "byte_closed_candidate_emitted": has_archive,
+        "byte_closed_candidate_materialized": has_archive,
+        "candidate_archive_materialized": has_archive,
+        "runtime_consumption_proof_status": "blocked",
+        "runtime_consumption_proof_ready": False,
+        "receiver_contract_kind": (
+            "pr95_hnerv_muon_training_archive_requires_runtime_proof"
+        ),
+        "receiver_contract_satisfied": False,
+        "runtime_adapter_ready": False,
+        "contest_runtime_decoder_adapter_ready": False,
         "score_affecting_payload_changed": bool(has_archive),
         "charged_bits_changed": bool(has_archive),
         "score_affecting_runtime_changed": bool(has_archive),
@@ -371,7 +388,30 @@ def adapt_pr95_local_training_manifest_to_candidate(
         "evidence_semantics": "pr95_hnerv_muon_local_training_proxy_not_exact_auth_eval",
         "evidence_grade": "local_training_portability_probe_advisory",
     }
-    return apply_proxy_evidence_boundary(row, dispatch_blockers=blockers)
+    bounded_row = apply_proxy_evidence_boundary(row, dispatch_blockers=blockers)
+    if has_archive:
+        bounded_row.update(
+            archive_bound_candidate_contract_fields_for_row(
+                bounded_row,
+                repo_root=repo_root,
+                selected_transform_kind=(
+                    "pr95_hnerv_muon_local_training_archive_export"
+                ),
+                family_id="pr95_hnerv_muon_training_probe",
+                candidate_chain_id=candidate_id,
+            )
+        )
+        for key in (
+            "archive_bound_candidate_contract_schema",
+            "archive_bound_candidate_contract",
+            "archive_bound_candidate_contract_surface_schema",
+            "archive_bound_candidate_contract_surface",
+        ):
+            consumer_payload[key] = bounded_row[key]
+        consumer_payload["pr95_muon_local_training"]["archive_export"][
+            "archive_bound_candidate_contract_key"
+        ] = bounded_row["archive_bound_candidate_contract"]["contract_key"]
+    return bounded_row
 
 
 __all__ = [

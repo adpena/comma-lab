@@ -78,6 +78,9 @@ from tac.local_acceleration.pr95_hnerv_mlx_training import (  # noqa: E402
     run_pr95_mlx_source_faithful_smoke,
     run_pr95_mlx_source_video_preprocess_smoke,
 )
+from tac.optimization.archive_bound_candidate_contract import (  # noqa: E402
+    archive_bound_candidate_contract_fields_for_row,
+)
 from tac.optimization.local_training_runtime_profile import (  # noqa: E402
     validate_runtime_profile_observation,
 )
@@ -94,6 +97,10 @@ SOURCE_VIDEO_LOADER_UNWIRED_BLOCKER = (
 )
 PR95_ARCHIVE_EXPORT_NOT_RUNTIME_CONSUMED_BLOCKER = (
     "pr95_archive_export_is_byte_closed_but_not_runtime_consumed"
+)
+PR95_PUBLIC_ARCHIVE_EXPORT_TRANSFORM_KIND = "pr95_hnerv_mlx_public_archive_export"
+PR95_PUBLIC_ARCHIVE_EXPORT_RECEIVER_CONTRACT_KIND = (
+    "pr95_hnerv_public_inflate_sh_archive_dir_to_raw_rgb"
 )
 
 
@@ -226,6 +233,88 @@ def _mark_public_archive_export_runtime_consumed(
         for blocker in blockers
         if blocker != PR95_ARCHIVE_EXPORT_NOT_RUNTIME_CONSUMED_BLOCKER
     ]
+
+
+def _refresh_public_archive_export_archive_bound_contract(
+    public_archive_export: dict[str, Any],
+    *,
+    manifest: dict[str, Any],
+) -> None:
+    proof_ready = (
+        public_archive_export.get("runtime_consumption_proven") is True
+        or manifest.get("runtime_consumption_proven") is True
+    )
+    receiver_ok = (
+        public_archive_export.get("receiver_contract_satisfied") is True
+        or manifest.get("receiver_contract_satisfied") is True
+    )
+    runtime_manifest = {
+        "schema": "pr95_public_archive_export_runtime_adapter_manifest.v1",
+        "runtime_adapter_ready": proof_ready,
+        "contest_runtime_decoder_adapter_ready": proof_ready,
+        "source_public_pr": 95,
+        "runtime_consumption_proof_path": (
+            public_archive_export.get("runtime_consumption_proof_path")
+            or manifest.get("runtime_consumption_proof_path")
+        ),
+    }
+    row = {
+        **public_archive_export,
+        "candidate_id": str(
+            manifest.get("candidate_id")
+            or f"pr95_public_archive_export_{public_archive_export.get('sha256', '')[:12]}"
+        ),
+        "candidate_family": "pr95_hnerv_mlx_reproduction_timing_smoke",
+        "archive_native_transform_kind": PR95_PUBLIC_ARCHIVE_EXPORT_TRANSFORM_KIND,
+        "candidate_archive_path": public_archive_export.get("archive_path")
+        or public_archive_export.get("path"),
+        "candidate_archive_sha256": public_archive_export.get("archive_sha256")
+        or public_archive_export.get("sha256"),
+        "candidate_archive_bytes": public_archive_export.get("archive_bytes")
+        or public_archive_export.get("bytes"),
+        "byte_closed_candidate_emitted": True,
+        "byte_closed_candidate_materialized": True,
+        "candidate_archive_materialized": True,
+        "runtime_consumption_proof_status": "present" if proof_ready else "blocked",
+        "runtime_consumption_proof_ready": proof_ready,
+        "runtime_consumption_proof_path": (
+            public_archive_export.get("runtime_consumption_proof_path")
+            or manifest.get("runtime_consumption_proof_path")
+        ),
+        "receiver_contract_kind": PR95_PUBLIC_ARCHIVE_EXPORT_RECEIVER_CONTRACT_KIND,
+        "receiver_contract_satisfied": receiver_ok,
+        "runtime_adapter_ready": proof_ready,
+        "contest_runtime_decoder_adapter_ready": proof_ready,
+        "runtime_adapter_manifest": runtime_manifest,
+        "blockers": list(
+            public_archive_export.get("exact_readiness_refusal", {}).get(
+                "blockers",
+                [],
+            )
+        ),
+    }
+    row.update(
+        archive_bound_candidate_contract_fields_for_row(
+            row,
+            repo_root=REPO_ROOT,
+            selected_transform_kind=PR95_PUBLIC_ARCHIVE_EXPORT_TRANSFORM_KIND,
+            family_id="pr95_hnerv_mlx_reproduction_timing_smoke",
+            candidate_chain_id=str(row["candidate_id"]),
+        )
+    )
+    for key in (
+        "archive_bound_candidate_contract_schema",
+        "archive_bound_candidate_contract",
+        "archive_bound_candidate_contract_surface_schema",
+        "archive_bound_candidate_contract_surface",
+    ):
+        public_archive_export[key] = row[key]
+    public_archive_export["archive_bound_candidate_contract_key"] = row[
+        "archive_bound_candidate_contract"
+    ]["contract_key"]
+    public_archive_export["archive_bound_candidate_contract_blockers"] = row[
+        "archive_bound_candidate_contract"
+    ]["blockers"]
 
 
 def _mark_public_archive_export_full_frame_parity(
@@ -2928,6 +3017,10 @@ def main(argv: list[str] | None = None) -> int:
         manifest["archive_path"] = public_archive_export["archive_path"]
         manifest["archive_bytes"] = public_archive_export["archive_bytes"]
         manifest["archive_sha256"] = public_archive_export["archive_sha256"]
+        _refresh_public_archive_export_archive_bound_contract(
+            public_archive_export,
+            manifest=manifest,
+        )
         _write_json(output_dir / "pr95_public_archive_export.json", public_archive_export)
 
     torch_decoder_cls: Any | None = None
@@ -3114,6 +3207,10 @@ def main(argv: list[str] | None = None) -> int:
             proof_path=proof_path,
             runtime_consumption_proof=runtime_consumption_proof,
         )
+        _refresh_public_archive_export_archive_bound_contract(
+            public_archive_export,
+            manifest=manifest,
+        )
         _write_json(output_dir / "pr95_public_archive_export.json", public_archive_export)
         manifest["runtime_profile"]["packet_compiler_bridge"][
             "runtime_consumption_proof_present"
@@ -3207,6 +3304,10 @@ def main(argv: list[str] | None = None) -> int:
             public_archive_export,
             proof_path=proof_path,
             full_frame_inflate_parity_proof=full_frame_inflate_parity_proof,
+        )
+        _refresh_public_archive_export_archive_bound_contract(
+            public_archive_export,
+            manifest=manifest,
         )
         _write_json(output_dir / "pr95_public_archive_export.json", public_archive_export)
 

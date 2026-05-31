@@ -25,6 +25,9 @@ from tac.local_acceleration.pr95_hnerv_mlx_contract import (
     PR95_SOURCE_VIDEO_RGB_YUV6_NOT_FULL_SCORER_BLOCKER,
     PR95_YUV6_SCORER_LOSS_UNWIRED_BLOCKER,
 )
+from tac.optimization.archive_bound_candidate_contract import (
+    archive_bound_candidate_contracts_from_payload,
+)
 from tac.optimization.representation_training_probe_integration import (
     adapt_representation_training_manifest_to_candidate,
     validate_representation_training_manifest,
@@ -142,6 +145,11 @@ def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path
     )
     assert export_summary["runtime_consumption_proof_present"] is True
     assert export_summary["runtime_consumption_proven"] is True
+    export_contract = archive_bound_candidate_contracts_from_payload(export_summary)[0]
+    assert export_contract["archive_bound_candidate_ready"] is True
+    assert export_contract["runtime_consumption_proof_ready"] is True
+    assert export_contract["receiver_contract_satisfied"] is True
+    assert "neural_archive" in export_contract["archive_substrate_tags"]
     assert runtime_proof["work_dir_preserved"] is False
     assert runtime_proof["raw_output_path"] is None
     assert not (output_dir / "runtime_consumption_work").exists()
