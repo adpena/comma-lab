@@ -29,18 +29,16 @@ except ModuleNotFoundError:  # pragma: no cover
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
-from tac.analysis.segnet_boundary_marginals import (  # noqa: E402
-    boundary_mask_from_labels,
-    logit_margin,
-)
+from tac.analysis.segnet_boundary_marginals import logit_margin  # noqa: E402
 from tac.analysis.segnet_semantic_bridge import (  # noqa: E402
     FALSE_AUTHORITY,
     GENERALIZATION_MODES,
+    SEGNET_SEMANTIC_SURFACE_ARTIFACTS_SCHEMA,
     SegnetSemanticBridgeError,
     SemanticBridgeConfig,
     build_segnet_semantic_bridge,
-    crammer_singer_hinge_for_targets,
     top2_class_indices,
+    write_segnet_semantic_surface_npz,
 )
 from tac.repo_io import (  # noqa: E402
     ArtifactWriteError,
@@ -247,7 +245,7 @@ def build_live_bridge(
     }
     if surface_out is not None:
         surface_path = _resolve(surface_out)
-        surface_record = _write_surface_npz(
+        surface_record = write_segnet_semantic_surface_npz(
             source_logits=source_logits_all,
             candidate_logits=candidate_logits_all,
             sample_ids=sample_ids,
@@ -257,7 +255,7 @@ def build_live_bridge(
             allow_overwrite=allow_overwrite,
         )
         bridge["semantic_surface_artifacts"] = {
-            "schema": "segnet_semantic_bridge_surface_artifacts.v1",
+            "schema": SEGNET_SEMANTIC_SURFACE_ARTIFACTS_SCHEMA,
             "argmax_margin_boundary_npz": surface_record,
             "false_authority": True,
             **FALSE_AUTHORITY,
@@ -279,67 +277,6 @@ def build_live_bridge(
             }
         }
     return bridge
-
-
-def _write_surface_npz(
-    *,
-    source_logits: np.ndarray,
-    candidate_logits: np.ndarray,
-    sample_ids: list[int],
-    boundary_dilation: int,
-    hinge_margin: float,
-    path: Path,
-    allow_overwrite: bool,
-) -> dict[str, Any]:
-    if path.exists() and not allow_overwrite:
-        raise SegnetSemanticBridgeError(f"refusing to overwrite existing surface: {path}")
-    source_labels = source_logits.argmax(axis=1).astype(np.uint8)
-    candidate_labels = candidate_logits.argmax(axis=1).astype(np.uint8)
-    source_top2 = top2_class_indices(source_logits).astype(np.uint8)
-    source_margins = logit_margin(source_logits).astype(np.float32)
-    candidate_margins = logit_margin(candidate_logits).astype(np.float32)
-    wrong_mask = (source_labels != candidate_labels).astype(np.uint8)
-    boundary_mask = boundary_mask_from_labels(
-        source_labels.astype(np.int64),
-        dilation=boundary_dilation,
-    ).astype(np.uint8)
-    hinge_map = crammer_singer_hinge_for_targets(
-        candidate_logits,
-        source_labels.astype(np.int64),
-        margin=hinge_margin,
-    ).astype(np.float32)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    np.savez_compressed(
-        path,
-        source_argmax=source_labels,
-        candidate_argmax=candidate_labels,
-        source_top2=source_top2,
-        source_margin=source_margins,
-        candidate_margin=candidate_margins,
-        boundary_mask=boundary_mask,
-        wrong_mask=wrong_mask,
-        hinge_map=hinge_map,
-        sample_ids=np.asarray(sample_ids, dtype=np.int64),
-    )
-    return {
-        "path": str(path),
-        "bytes": path.stat().st_size,
-        "sha256": sha256_file(path),
-        "arrays": [
-            "source_argmax",
-            "candidate_argmax",
-            "source_top2",
-            "source_margin",
-            "candidate_margin",
-            "boundary_mask",
-            "wrong_mask",
-            "hinge_map",
-            "sample_ids",
-        ],
-        "score_claim": False,
-        "promotion_eligible": False,
-        "ready_for_exact_eval_dispatch": False,
-    }
 
 
 def _load_pair_component_rows(path: Path) -> dict[int, Mapping[str, Any]]:

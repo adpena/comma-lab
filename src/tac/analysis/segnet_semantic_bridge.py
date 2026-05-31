@@ -9,8 +9,10 @@ rules, and selector codecs can consume without reinterpreting readiness fields.
 
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Mapping
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Final
 
 import numpy as np
@@ -26,6 +28,20 @@ from tac.semantic_label_contract import (
 )
 
 SEGNET_SEMANTIC_BRIDGE_SCHEMA: Final[str] = "segnet_semantic_bridge.v1"
+SEGNET_SEMANTIC_SURFACE_ARTIFACTS_SCHEMA: Final[str] = (
+    "segnet_semantic_bridge_surface_artifacts.v1"
+)
+SEGNET_SEMANTIC_SURFACE_ARRAY_NAMES: Final[tuple[str, ...]] = (
+    "source_argmax",
+    "candidate_argmax",
+    "source_top2",
+    "source_margin",
+    "candidate_margin",
+    "boundary_mask",
+    "wrong_mask",
+    "hinge_map",
+    "sample_ids",
+)
 
 FALSE_AUTHORITY: Final[dict[str, bool]] = {
     "score_claim": False,
@@ -308,6 +324,109 @@ def crammer_singer_hinge_for_targets(
     )
     max_impostor = impostor_logits.max(axis=1)
     return np.maximum(0.0, max_impostor - target_logits + float(margin))
+
+
+def build_segnet_semantic_surface_arrays(
+    *,
+    source_logits: np.ndarray,
+    candidate_logits: np.ndarray,
+    sample_ids: list[int] | None = None,
+    boundary_dilation: int = 5,
+    hinge_margin: float = 0.25,
+) -> dict[str, np.ndarray]:
+    """Return executable per-pixel surfaces consumed by repair/adapters.
+
+    This is deliberately a TAC library primitive rather than a CLI helper so
+    queue builders, MLX training rows, deterministic postfilters, and review
+    tests all share the same semantic contract.
+    """
+
+    source = _logits4(source_logits, "source_logits")
+    candidate = _logits4(candidate_logits, "candidate_logits")
+    if source.shape != candidate.shape:
+        raise SegnetSemanticBridgeError(
+            f"source_logits shape {source.shape} != candidate_logits shape {candidate.shape}"
+        )
+    if source.shape[1] != NUM_CONTEST_SEGNET_CLASSES:
+        raise SegnetSemanticBridgeError(
+            f"expected {NUM_CONTEST_SEGNET_CLASSES} SegNet classes; got {source.shape[1]}"
+        )
+    if boundary_dilation < 1:
+        raise SegnetSemanticBridgeError("boundary_dilation must be >= 1")
+    if hinge_margin <= 0.0:
+        raise SegnetSemanticBridgeError("hinge_margin must be > 0")
+    sample_ids_arr = (
+        np.arange(source.shape[0], dtype=np.int64)
+        if sample_ids is None
+        else np.asarray(sample_ids, dtype=np.int64)
+    )
+    if sample_ids_arr.shape != (source.shape[0],):
+        raise SegnetSemanticBridgeError(
+            f"sample_ids length {sample_ids_arr.size} does not match N={source.shape[0]}"
+        )
+
+    source_labels = source.argmax(axis=1).astype(np.uint8)
+    candidate_labels = candidate.argmax(axis=1).astype(np.uint8)
+    source_labels_i64 = source_labels.astype(np.int64)
+    return {
+        "source_argmax": source_labels,
+        "candidate_argmax": candidate_labels,
+        "source_top2": top2_class_indices(source).astype(np.uint8),
+        "source_margin": logit_margin(source).astype(np.float32),
+        "candidate_margin": logit_margin(candidate).astype(np.float32),
+        "boundary_mask": boundary_mask_from_labels(
+            source_labels_i64,
+            dilation=boundary_dilation,
+        ).astype(np.uint8),
+        "wrong_mask": (source_labels != candidate_labels).astype(np.uint8),
+        "hinge_map": crammer_singer_hinge_for_targets(
+            candidate,
+            source_labels_i64,
+            margin=hinge_margin,
+        ).astype(np.float32),
+        "sample_ids": sample_ids_arr,
+    }
+
+
+def write_segnet_semantic_surface_npz(
+    *,
+    source_logits: np.ndarray,
+    candidate_logits: np.ndarray,
+    sample_ids: list[int] | None,
+    boundary_dilation: int,
+    hinge_margin: float,
+    path: str | Path,
+    allow_overwrite: bool = False,
+) -> dict[str, Any]:
+    """Write canonical per-pixel semantic surfaces and return a custody record."""
+
+    surface_path = Path(path)
+    if surface_path.exists() and not allow_overwrite:
+        raise SegnetSemanticBridgeError(
+            f"refusing to overwrite existing surface: {surface_path}"
+        )
+    arrays = build_segnet_semantic_surface_arrays(
+        source_logits=source_logits,
+        candidate_logits=candidate_logits,
+        sample_ids=sample_ids,
+        boundary_dilation=boundary_dilation,
+        hinge_margin=hinge_margin,
+    )
+    surface_path.parent.mkdir(parents=True, exist_ok=True)
+    np.savez_compressed(surface_path, **arrays)
+    return {
+        "path": str(surface_path),
+        "bytes": surface_path.stat().st_size,
+        "sha256": _sha256_file(surface_path),
+        "arrays": list(SEGNET_SEMANTIC_SURFACE_ARRAY_NAMES),
+        "array_shapes": {
+            name: list(arrays[name].shape)
+            for name in SEGNET_SEMANTIC_SURFACE_ARRAY_NAMES
+        },
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
 
 
 def _logits4(value: np.ndarray, name: str) -> np.ndarray:
@@ -681,13 +800,25 @@ def _ratio(numerator: int, denominator: int) -> float:
     return float(numerator) / float(denominator)
 
 
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 __all__ = [
     "FALSE_AUTHORITY",
     "GENERALIZATION_MODES",
     "SEGNET_SEMANTIC_BRIDGE_SCHEMA",
+    "SEGNET_SEMANTIC_SURFACE_ARRAY_NAMES",
+    "SEGNET_SEMANTIC_SURFACE_ARTIFACTS_SCHEMA",
     "SegnetSemanticBridgeError",
     "SemanticBridgeConfig",
     "build_segnet_semantic_bridge",
+    "build_segnet_semantic_surface_arrays",
     "crammer_singer_hinge_for_targets",
     "top2_class_indices",
+    "write_segnet_semantic_surface_npz",
 ]

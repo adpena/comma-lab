@@ -20,6 +20,7 @@ from comma_lab.scheduler.repair_cascade_mlx_probe_queue import (
     build_repair_cascade_mlx_probe_queue,
     build_repair_cascade_mlx_probe_result,
     build_repair_cascade_mlx_probe_spec,
+    repair_cascade_rows_from_payload,
 )
 from tac.optimization.repair_campaign_learning_signal import (
     REPAIR_CAMPAIGN_LEARNING_SIGNAL_SCHEMA,
@@ -395,6 +396,46 @@ def test_repair_cascade_probe_spec_names_deterministic_bridge_materializers(
     )
     assert repair_spec["score_claim"] is False
     assert postfilter_spec["ready_for_exact_eval_dispatch"] is False
+
+
+def test_repair_cascade_ignores_incompatible_semantic_bridge_backlog_rows(
+    tmp_path: Path,
+) -> None:
+    semantic_bridge = {
+        "schema": "segnet_semantic_bridge.v1",
+        "candidate_id": "fleet_bridge",
+        "generalization_mode": "fleet_adaptable",
+        "summary": {
+            "argmax_disagreement_rate": 0.125,
+            "error_is_out_of_pair_spread_fraction": 0.25,
+        },
+        "class_rows": [],
+        "executable_backlog": [
+            {
+                "family_id": "deterministic_boundary_postfilter",
+                "generalization_mode": "contest_fixed_dataset",
+                "enqueueable_under_requested_generalization_mode": False,
+                "compatibility_blockers": [
+                    "contest_fixed_dataset_lane_not_enqueueable_for_fleet_adaptable_bridge"
+                ],
+                "score_authority": False,
+            },
+            {
+                "family_id": "fleet_adaptable_boundary_rule_induction",
+                "generalization_mode": "fleet_adaptable",
+                "enqueueable_under_requested_generalization_mode": True,
+                "score_authority": False,
+            },
+        ],
+        **_false_authority(),
+    }
+
+    rows = repair_cascade_rows_from_payload(semantic_bridge)
+
+    assert [row["repair_candidate_family_id"] for row in rows] == [
+        "fleet_adaptable_boundary_rule_induction"
+    ]
+    assert rows[0]["repair_candidate_generalization_mode"] == "fleet_adaptable"
 
 
 def test_repair_cascade_learning_signal_preserves_semantic_family_features(

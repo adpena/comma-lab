@@ -1,14 +1,19 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 
 from tac.analysis.segnet_semantic_bridge import (
     FALSE_AUTHORITY,
+    SEGNET_SEMANTIC_SURFACE_ARRAY_NAMES,
     SemanticBridgeConfig,
     build_segnet_semantic_bridge,
+    build_segnet_semantic_surface_arrays,
     crammer_singer_hinge_for_targets,
     top2_class_indices,
+    write_segnet_semantic_surface_npz,
 )
 
 
@@ -155,3 +160,52 @@ def test_bridge_exposes_all_parallel_generalization_lanes() -> None:
         bridge["contest_overfit_policy"]["allowed_for_contest_fixed_dataset"]
         is False
     )
+    contest_rows = [
+        row
+        for row in bridge["executable_backlog"]
+        if row["generalization_mode"] == "contest_fixed_dataset"
+    ]
+    assert contest_rows
+    assert all(
+        row["enqueueable_under_requested_generalization_mode"] is False
+        for row in contest_rows
+    )
+    assert all(row["compatibility_blockers"] for row in contest_rows)
+
+
+def test_surface_npz_writer_is_canonical_repair_input(tmp_path: Path) -> None:
+    labels = np.array([[[0, 1], [2, 3]]], dtype=np.int64)
+    source_logits = _logits_from_labels(labels)
+    candidate_logits = _logits_from_labels((labels + 1) % 5)
+
+    arrays = build_segnet_semantic_surface_arrays(
+        source_logits=source_logits,
+        candidate_logits=candidate_logits,
+        sample_ids=[99],
+        boundary_dilation=1,
+        hinge_margin=0.5,
+    )
+
+    assert tuple(arrays) == SEGNET_SEMANTIC_SURFACE_ARRAY_NAMES
+    assert arrays["source_argmax"].dtype == np.uint8
+    assert arrays["candidate_argmax"].shape == labels.shape
+    assert arrays["wrong_mask"].sum() == labels.size
+    assert arrays["hinge_map"].dtype == np.float32
+    assert arrays["sample_ids"].tolist() == [99]
+
+    surface_path = tmp_path / "bridge.semantic_surfaces.npz"
+    record = write_segnet_semantic_surface_npz(
+        source_logits=source_logits,
+        candidate_logits=candidate_logits,
+        sample_ids=[99],
+        boundary_dilation=1,
+        hinge_margin=0.5,
+        path=surface_path,
+    )
+
+    assert record["arrays"] == list(SEGNET_SEMANTIC_SURFACE_ARRAY_NAMES)
+    assert record["array_shapes"]["hinge_map"] == list(labels.shape)
+    assert record["ready_for_exact_eval_dispatch"] is False
+    with np.load(surface_path) as loaded:
+        assert set(loaded.files) == set(SEGNET_SEMANTIC_SURFACE_ARRAY_NAMES)
+        np.testing.assert_array_equal(loaded["wrong_mask"], arrays["wrong_mask"])
