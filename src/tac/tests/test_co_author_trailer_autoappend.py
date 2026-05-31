@@ -1,14 +1,17 @@
 # SPDX-License-Identifier: MIT
-"""Unit tests for FIX-3 Co-Authored-By trailer auto-append (META-META 2026-05-08).
+"""Unit tests for the NO-co-author-trailer contract (operator NON-NEGOTIABLE 2026-05-31).
 
-The serializer auto-appends the canonical Co-Authored-By trailer to every commit
-message unless --no-co-author is passed. The transformation must be idempotent
-so that subagents that retry a failed commit don't accumulate duplicate trailers.
+Operator NON-NEGOTIABLE 2026-05-31 verbatim: "there should be no co-author
+trailer ever in our commit history."
 
-Bug class: feedback_meta_meta_commit_machinery_protections_20260508 — three
-recent commits (00896b43, c6d09bbb, 89d6eba2) shipped without the Co-Authored-By
-trailer because subagents forgot to add it manually. Auto-append + idempotency
-makes the trailer a structural property of every serialized commit.
+This INVERTS the prior FIX-3 auto-append behavior (META-META 2026-05-08): the
+serializer NO LONGER appends any Co-Authored-By trailer. ``_append_co_author_trailer``
+is now a no-op kept only for backward-compat with callers/tests that import it;
+``final_message`` in the serializer is the operator's message verbatim.
+
+Catalog #119 was inverted from require-trailer to forbid-trailer
+(``check_subagent_commits_have_no_co_author_trailer``); these tests pin the
+serializer side of that contract.
 """
 from __future__ import annotations
 
@@ -29,54 +32,42 @@ def _load_serializer():
     return module
 
 
-def test_trailer_appended_to_message_without_one() -> None:
+def test_append_helper_is_noop_for_message_without_trailer() -> None:
+    """The trailer-append helper must be a no-op (operator NON-NEGOTIABLE 2026-05-31)."""
     mod = _load_serializer()
     out = mod._append_co_author_trailer("fix: bug")
-    assert out.endswith("Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>\n")
-    assert "fix: bug" in out
+    assert out == "fix: bug"
+    assert "Co-Authored-By" not in out
 
 
-def test_trailer_idempotent_when_already_present() -> None:
-    mod = _load_serializer()
-    msg_with_trailer = "fix: bug\n\n" + mod.CO_AUTHOR_TRAILER + "\n"
-    out = mod._append_co_author_trailer(msg_with_trailer)
-    # Exactly one trailer line, no duplication.
-    assert out.count(mod.CO_AUTHOR_TRAILER) == 1
-    assert out == msg_with_trailer
-
-
-def test_trailer_separator_two_newlines_when_no_trailing_newline() -> None:
+def test_append_helper_does_not_introduce_trailer_for_subject_only() -> None:
     mod = _load_serializer()
     out = mod._append_co_author_trailer("subject only")
-    assert "subject only\n\n" + mod.CO_AUTHOR_TRAILER + "\n" == out
+    assert out == "subject only"
+    assert "Co-Authored-By" not in out
 
 
-def test_trailer_keeps_blank_line_when_message_already_ends_in_newline() -> None:
+def test_append_helper_preserves_message_ending_in_newline() -> None:
     mod = _load_serializer()
     out = mod._append_co_author_trailer("subject only\n")
-    # Git convention: body and trailers are separated by a blank line, i.e.
-    # two consecutive newlines. The implementation collapses to a single
-    # extra "\n" when the message already ends in one.
-    assert "subject only\n\n" + mod.CO_AUTHOR_TRAILER + "\n" == out
+    assert out == "subject only\n"
+    assert "Co-Authored-By" not in out
 
 
-def test_trailer_canonical_value_pinned() -> None:
+def test_append_helper_does_not_strip_an_existing_trailer() -> None:
+    """No-op means verbatim: it must not append, but it also must not edit/strip.
+
+    A pre-existing operator-typed trailer would be flagged by Catalog #119 at
+    commit-scan time, not silently rewritten here.
+    """
     mod = _load_serializer()
-    # Pinned canonical value — must match CLAUDE.md commit guidance and
-    # subagent prompt templates exactly.
-    assert mod.CO_AUTHOR_TRAILER == (
-        "Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
-    )
+    pre = "fix: bug\n\nCo-Authored-By: somebody <x@y.z>\n"
+    out = mod._append_co_author_trailer(pre)
+    assert out == pre
 
 
-def test_trailer_present_anywhere_treated_idempotent() -> None:
-    """Idempotency must hold even if trailer is buried mid-body (operator-edited)."""
+def test_append_helper_idempotent_under_repeat_application() -> None:
     mod = _load_serializer()
-    msg = (
-        "fix: complex change\n\n"
-        + mod.CO_AUTHOR_TRAILER + "\n\n"
-        + "Additional note from operator after trailer.\n"
-    )
-    out = mod._append_co_author_trailer(msg)
-    assert out == msg
-    assert out.count(mod.CO_AUTHOR_TRAILER) == 1
+    once = mod._append_co_author_trailer("fix: bug")
+    twice = mod._append_co_author_trailer(once)
+    assert once == twice == "fix: bug"

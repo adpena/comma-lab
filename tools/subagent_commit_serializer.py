@@ -216,17 +216,16 @@ def _expected_content_sha256_check(
 
 
 def _append_co_author_trailer(message: str) -> str:
-    """Auto-append the canonical Co-Authored-By trailer (FIX-3 2026-05-08).
+    """NO-OP per operator NON-NEGOTIABLE 2026-05-31: "there should be no co-author
+    trailer ever in our commit history."
 
-    Idempotent: if the trailer is already present, return unchanged. Otherwise
-    append two newlines + the canonical trailer line. Subagents flagged this
-    as a recurring miss across multiple commits this session (FIX-1 00896b43,
-    FIX-3+4 c6d09bbb, FIX-5 89d6eba2, etc.).
+    Returns the message UNCHANGED — no Co-Authored-By trailer is ever appended.
+    Retained as a no-op shim so any legacy caller is structurally neutralised
+    rather than removed (back-compat). The prior FIX-3 (2026-05-08) auto-append
+    behaviour is superseded by this newer explicit operator directive.
+    Self-protected by Catalog #119 (now FORBID-trailer; was require-trailer).
     """
-    if CO_AUTHOR_TRAILER in message:
-        return message
-    sep = "\n\n" if not message.endswith("\n") else "\n"
-    return message + sep + CO_AUTHOR_TRAILER + "\n"
+    return message
 
 # How many seconds to wait for the lock before giving up. The pre-commit
 # hook runs full preflight (~5-10s) so 120s easily accommodates 5+ queued
@@ -673,11 +672,10 @@ def main() -> int:
     if not args.no_concurrent_edit_check and not args.no_stage and files:
         pre_lock_hashes = _hash_working_tree_files(files)
 
-    # Auto-append Co-Authored-By trailer (FIX-3, idempotent).
-    final_message = (
-        args.message if args.no_co_author
-        else _append_co_author_trailer(args.message)
-    )
+    # Operator NON-NEGOTIABLE 2026-05-31: NO co-author trailer EVER. The message
+    # is committed verbatim — never append a Co-Authored-By line. (`--no-co-author`
+    # is now a no-op since the trailer is never appended regardless.)
+    final_message = args.message
 
     # Catalog #340 STAGING-surface PREVENT: check that no sister subagent
     # has declared the same files as "in_progress" in its checkpoint within

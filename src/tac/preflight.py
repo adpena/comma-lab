@@ -1822,13 +1822,17 @@ def preflight_all(
             strict=False,
         )
         check_claude_md_catalog_no_duplicate_numbers(strict=True, verbose=verbose)
+        # Catalog #119 INVERTED 2026-05-31 (operator NON-NEGOTIABLE): commits
+        # must NOT carry a Co-Authored-By trailer. STRICT-from-flip per the
+        # "Strict-flip atomicity rule" — historical trailer commits are
+        # grandfathered by the cutoff so live count is 0 going forward.
         _parallel.run(
-            "check_subagent_commits_have_co_author_trailer",
-            "[subagent-co-author-trailer]",
-            lambda: check_subagent_commits_have_co_author_trailer(
+            "check_subagent_commits_have_no_co_author_trailer",
+            "[no-co-author-trailer]",
+            lambda: check_subagent_commits_have_no_co_author_trailer(
                 strict=False, verbose=verbose,
             ),
-            strict=False,
+            strict=True,
         )
         # 2026-05-14 Catalog #206 - subagent crash-resume checkpoint discipline.
         # Empirical anchor: Wyner-Ziv subagent crashed mid-session
@@ -37719,32 +37723,51 @@ _CO_AUTHOR_LINE = (
     "Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 )
 
+# Operator NON-NEGOTIABLE 2026-05-31 verbatim: "there should be no co-author
+# trailer ever in our commit history." Catalog #119 is INVERTED from
+# require-trailer to FORBID-trailer. Commits committed BEFORE the cutoff
+# carried the trailer and are unrewritable; they are grandfathered. Every
+# commit committed AT-OR-AFTER the cutoff MUST NOT carry any Co-Authored-By
+# line. The canonical serializer (`tools/subagent_commit_serializer.py`) never
+# appends a trailer; this gate refuses re-introduction of the trailer at any
+# commit surface (including the bare `git add` + `git commit` slash-command).
+_CO_AUTHOR_FORBIDDEN_DIRECTIVE_CUTOFF_UTC = "2026-05-31T11:43:00Z"
 
-def check_subagent_commits_have_co_author_trailer(
+# Any Co-Authored-By trailer is forbidden going forward (generic — not just the
+# historical Claude line). Match the canonical trailer key.
+_CO_AUTHOR_FORBIDDEN_TOKEN = "Co-Authored-By:"
+
+
+def check_subagent_commits_have_no_co_author_trailer(
     *,
     strict: bool = False,
     verbose: bool = False,
     last_n_commits: int = 50,
 ) -> list[str]:
-    """Catalog #119 - subagent commits must include Co-Authored-By trailer.
+    """Catalog #119 - commits MUST NOT carry a Co-Authored-By trailer.
 
-    Scans the last ``last_n_commits`` commits. Commits whose AuthorEmail
-    matches the operator/main-session pattern AND whose message lacks the
-    canonical trailer are flagged. Allowlist via ``# NO_CO_AUTHOR_OK:<reason>``
-    in the commit body.
+    Operator NON-NEGOTIABLE 2026-05-31: "there should be no co-author trailer
+    ever in our commit history." This gate was INVERTED from require-trailer
+    to forbid-trailer. Commits committed BEFORE
+    ``_CO_AUTHOR_FORBIDDEN_DIRECTIVE_CUTOFF_UTC`` carried the trailer and are
+    grandfathered (unrewritable history); commits at-or-after the cutoff that
+    carry any ``Co-Authored-By:`` line are flagged. Allowlist via
+    ``# CO_AUTHOR_TRAILER_OK:<reason>`` in the commit body for the rare
+    operator-authored attribution (should essentially never be used).
 
-    Bug class fixed: 3 subagents (FIX-1, FIX-3+4, FIX-5) flagged that the
-    serializer wasn't auto-appending the trailer. FIX-3 made it automatic;
-    THIS gate enforces it on commits going forward.
+    Scans the last ``last_n_commits`` commits with committer date in UTC so
+    the cutoff comparison is lexicographically correct.
     """
     repo_root = REPO_ROOT
     try:
         result = subprocess.run(
             [
                 "git", "log", f"-{last_n_commits}",
-                "--format=%H%x09%ae%x09%B%x1f",
+                "--date=format-local:%Y-%m-%dT%H:%M:%SZ",
+                "--format=%H%x09%cd%x09%B%x1f",
             ],
             cwd=repo_root, capture_output=True, text=True, timeout=10,
+            env={**os.environ, "TZ": "UTC"},
         )
     except (subprocess.TimeoutExpired, FileNotFoundError):
         return []
@@ -37752,45 +37775,62 @@ def check_subagent_commits_have_co_author_trailer(
         return []
     violations: list[str] = []
     scanned = 0
+    skipped_pre_cutoff = 0
     for raw in result.stdout.split("\x1f"):
         raw = raw.strip()
         if not raw:
             continue
-        scanned += 1
         parts = raw.split("\t", 2)
         if len(parts) < 3:
             continue
-        full_sha, _author_email, body = parts
+        full_sha, committed_utc, body = parts
         short_sha = full_sha[:7]
-        if "NO_CO_AUTHOR_OK" in body:
+        # Grandfather commits before the operator directive (unrewritable).
+        if committed_utc < _CO_AUTHOR_FORBIDDEN_DIRECTIVE_CUTOFF_UTC:
+            skipped_pre_cutoff += 1
             continue
-        if _CO_AUTHOR_LINE in body:
+        scanned += 1
+        if "CO_AUTHOR_TRAILER_OK" in body:
             continue
-        violations.append(
-            f"commit {short_sha} missing Co-Authored-By trailer "
-            f"({_CO_AUTHOR_LINE!r}). Add via subagent_commit_serializer "
-            f"(now auto-appends per FIX-3) or include "
-            f"`# NO_CO_AUTHOR_OK:<reason>` to allowlist."
-        )
+        if _CO_AUTHOR_FORBIDDEN_TOKEN in body:
+            violations.append(
+                f"commit {short_sha} (committed {committed_utc}) carries a "
+                f"forbidden Co-Authored-By trailer. Per operator NON-NEGOTIABLE "
+                f"2026-05-31 there must be NO co-author trailer ever in commit "
+                f"history. Re-commit without the trailer (the canonical "
+                f"serializer never appends one) OR allowlist with "
+                f"`# CO_AUTHOR_TRAILER_OK:<reason>`."
+            )
     if violations and strict:
         msg = (
-            f"check_subagent_commits_have_co_author_trailer: "
-            f"{len(violations)} commit(s) missing trailer in last "
-            f"{last_n_commits}; first 3:\n  "
+            f"check_subagent_commits_have_no_co_author_trailer: "
+            f"{len(violations)} commit(s) carry a forbidden Co-Authored-By "
+            f"trailer in last {last_n_commits} (post-cutoff "
+            f"{_CO_AUTHOR_FORBIDDEN_DIRECTIVE_CUTOFF_UTC}); first 3:\n  "
             + "\n  ".join(violations[:3])
         )
         raise PreflightError(msg)
     if verbose:
         if violations:
             print(
-                f"  [co-author-trailer] WARN: {len(violations)}/{scanned} "
-                f"commit(s) missing trailer (strict={strict})"
+                f"  [no-co-author-trailer] WARN: {len(violations)}/{scanned} "
+                f"post-cutoff commit(s) carry a forbidden trailer "
+                f"(skipped_pre_cutoff={skipped_pre_cutoff}, strict={strict})"
             )
         else:
             print(
-                f"  [co-author-trailer] OK ({scanned} commit(s) scanned)"
+                f"  [no-co-author-trailer] OK ({scanned} post-cutoff "
+                f"commit(s) scanned, skipped_pre_cutoff={skipped_pre_cutoff})"
             )
     return violations
+
+
+# Backward-compat alias (deprecated): the gate was renamed when the operator
+# NON-NEGOTIABLE 2026-05-31 inverted it from require-trailer to forbid-trailer.
+# Existing callers / tests that import the old name still resolve.
+check_subagent_commits_have_co_author_trailer = (
+    check_subagent_commits_have_no_co_author_trailer
+)
 
 
 # ---------------------------------------------------------------------------
@@ -37811,7 +37851,7 @@ def check_subagent_commits_have_co_author_trailer(
 # verifier path / 6-hook declaration / journal-grade ledger reference /
 # checkpoint discipline waiver / explicit subject-only justification).
 # Sister of Catalog #117 (`check_subagent_commit_serializer_uses_lock`),
-# Catalog #119 (`check_subagent_commits_have_co_author_trailer`), and
+# Catalog #119 (`check_subagent_commits_have_no_co_author_trailer`), and
 # Catalog #206 (`check_subagent_dispatches_use_checkpoint_discipline`).
 #
 # Initial wire-in is warn-only per CLAUDE.md "Strict-flip atomicity rule"
@@ -37822,9 +37862,12 @@ def check_subagent_commits_have_co_author_trailer(
 _CHECK_234_DISCIPLINE_CUTOFF_UTC = "2026-05-14T22:00:00Z"
 
 _CHECK_234_BODY_MARKER_TOKENS = (
-    # Canonical body markers — at least ONE must appear in addition to
-    # the Co-Authored-By trailer for a non-trivial subagent commit.
-    "Co-Authored-By",  # Catalog #119 trailer
+    # Canonical body markers — at least ONE must appear for a non-trivial
+    # subagent commit. NOTE: the Co-Authored-By token below is HISTORICAL —
+    # the trailer is FORBIDDEN going forward (Catalog #119 inverted
+    # 2026-05-31); it remains accepted here only so pre-cutoff grandfathered
+    # commits that carried it still satisfy #234's body-richness check.
+    "Co-Authored-By",  # historical: pre-2026-05-31 trailer (now forbidden)
     "subagent_checkpoint.py",  # Catalog #206 checkpoint
     "subagent_progress.jsonl",  # Catalog #206 ledger
     "checkpoint discipline",  # Catalog #206 prose
