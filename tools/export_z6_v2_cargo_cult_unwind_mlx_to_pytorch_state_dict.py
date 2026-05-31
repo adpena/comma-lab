@@ -49,18 +49,23 @@ decision per layer):
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+from tac.local_acceleration.mlx_to_pytorch_export import (
+    MLX_BRIDGE_FALSE_AUTHORITY_BLOCKERS,
+    assign_mlx_param_by_dotted_name,
+    hash_file_sha256,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 Z6V2_BRIDGE_SCHEMA = "z6_v2_cargo_cult_unwind_mlx_pytorch_export_bridge.v1"
 
 
 def _hash_file(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    return hash_file_sha256(path)
 
 
 def export_z6_v2_cargo_cult_unwind_mlx_to_pytorch(
@@ -251,11 +256,7 @@ def export_z6_v2_cargo_cult_unwind_mlx_to_pytorch(
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "promotable": False,
-        "blockers": [
-            "predicted_axis_not_contest_authority_per_catalog_127_192_317_341",
-            "requires_paired_contest_cpu_plus_cuda_for_score_claim",
-            "bridge_export_step_does_not_change_evidence_grade",
-        ],
+        "blockers": list(MLX_BRIDGE_FALSE_AUTHORITY_BLOCKERS),
         "operator_routable_next_step": (
             "Pack Z6V2CU1 archive via tac.substrates.z6_v2_cargo_cult_unwind.archive.pack_archive, "
             "then route through tools/gate_mlx_candidate_contest_equivalence_z6_v2.py (Catalog #1265), "
@@ -276,23 +277,7 @@ def export_z6_v2_cargo_cult_unwind_mlx_to_pytorch(
 
 def _assign_mlx_param(mlx_model: Any, dotted_name: str, np_arr: Any) -> None:
     """Walk dotted name + assign a numpy array onto MLX param (MLX layout preserved)."""
-    from tac.framework_agnostic import require_mlx_core
-
-    mx = require_mlx_core()
-
-    parts = dotted_name.split(".")
-    obj: Any = mlx_model
-    for part in parts[:-1]:
-        obj = obj[int(part)] if part.isdigit() else getattr(obj, part)
-    leaf = parts[-1]
-    new_val = mx.array(np_arr)
-    if hasattr(obj, "update"):
-        try:
-            obj.update({leaf: new_val})
-            return
-        except Exception:
-            pass
-    setattr(obj, leaf, new_val)
+    assign_mlx_param_by_dotted_name(mlx_model, dotted_name, np_arr)
 
 
 def main(argv: list[str] | None = None) -> int:

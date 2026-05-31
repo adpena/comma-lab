@@ -58,12 +58,18 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from tac.local_acceleration.mlx_to_pytorch_export import (
+    MLX_BRIDGE_FALSE_AUTHORITY_BLOCKERS,
+    assign_mlx_param_by_dotted_name,
+    hash_file_sha256,
+)
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PVQ_BRIDGE_SCHEMA = "pact_nerv_vq_mlx_pytorch_export_bridge.v1"
 
 
 def _hash_file(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    return hash_file_sha256(path)
 
 
 def export_pact_nerv_vq_mlx_to_pytorch(
@@ -290,11 +296,7 @@ def export_pact_nerv_vq_mlx_to_pytorch(
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "promotable": False,
-        "blockers": [
-            "predicted_axis_not_contest_authority_per_catalog_127_192_317_341",
-            "requires_paired_contest_cpu_plus_cuda_for_score_claim",
-            "bridge_export_step_does_not_change_evidence_grade",
-        ],
+        "blockers": list(MLX_BRIDGE_FALSE_AUTHORITY_BLOCKERS),
         "operator_routable_next_step": (
             "Pack PVQ archive via tac.substrates.pact_nerv_vq.archive.pack_archive, "
             "then route through tools/gate_mlx_candidate_contest_equivalence_pact_nerv_vq.py "
@@ -321,33 +323,16 @@ def _assign_mlx_param(mlx_model: Any, dotted_name: str, np_arr: Any) -> None:
     ``_ema_cluster_size`` / ``_ema_w``) on the MLX quantizer; the assignment
     routes through the underscore-prefixed name.
     """
-    from tac.framework_agnostic import require_mlx_core
-
-    mx = require_mlx_core()
-
-    parts = dotted_name.split(".")
-    obj: Any = mlx_model
-    for part in parts[:-1]:
-        obj = obj[int(part)] if part.isdigit() else getattr(obj, part)
-    leaf = parts[-1]
-    new_val = mx.array(np_arr)
-    # VQ buffer assignment: codebook / ema_cluster_size / ema_w are stored
-    # as private attributes on the MLX quantizer (NOT MLX params, so .update
-    # is not appropriate).
-    if dotted_name.startswith("quantizer.") and leaf in (
-        "codebook",
-        "ema_cluster_size",
-        "ema_w",
-    ):
-        setattr(obj, f"_{leaf}", new_val)
-        return
-    if hasattr(obj, "update"):
-        try:
-            obj.update({leaf: new_val})
-            return
-        except Exception:
-            pass
-    setattr(obj, leaf, new_val)
+    assign_mlx_param_by_dotted_name(
+        mlx_model,
+        dotted_name,
+        np_arr,
+        leaf_name_overrides={
+            "quantizer.codebook": "_codebook",
+            "quantizer.ema_cluster_size": "_ema_cluster_size",
+            "quantizer.ema_w": "_ema_w",
+        },
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
