@@ -2434,10 +2434,59 @@ def _archive_variant_materializer_backlog(
             if coder_family in {"range", "ans"}
             else {}
         )
+        runtime_adapter_scope = (
+            target_variant.get("runtime_adapter_scope")
+            or runtime_adapter_manifest.get("runtime_adapter_scope")
+        )
+        contest_runtime_decoder_adapter_ready = (
+            target_variant.get("contest_runtime_decoder_adapter_ready") is True
+            or runtime_adapter_manifest.get("contest_runtime_decoder_adapter_ready") is True
+        )
+        contest_runtime_adapter_integrated = (
+            target_variant.get("contest_runtime_adapter_integrated") is True
+            or target_variant.get("contest_runtime_decoder_adapter_integrated") is True
+            or runtime_adapter_manifest.get("contest_runtime_adapter_integrated") is True
+        )
+        member_decode_helper_ready = bool(runtime_adapter_manifest) and (
+            runtime_adapter_scope == "member_decode_helper_only"
+        )
+        byte_closed_candidate_materialized = (
+            materializer_status == "byte_closed_candidate_materialized"
+        )
+        contest_runtime_adapter_integration_required = (
+            byte_closed_candidate_materialized
+            and member_decode_helper_ready
+            and not contest_runtime_decoder_adapter_ready
+            and not contest_runtime_adapter_integrated
+        )
+        contest_runtime_adapter_integration_blockers = ordered_unique(
+            [
+                *_string_list(runtime_adapter_manifest.get("readiness_blockers")),
+                *[
+                    blocker
+                    for blocker in _string_list(target_variant.get("blockers"))
+                    if "contest_runtime" in blocker or "runtime_adapter" in blocker
+                ],
+                *(
+                    ["contest_runtime_decoder_adapter_integration_missing"]
+                    if contest_runtime_adapter_integration_required
+                    else []
+                ),
+            ]
+        )
+        if not target_kind:
+            next_materializer_action = "blocked_no_materializer_target"
+        elif contest_runtime_adapter_integration_required:
+            next_materializer_action = "integrate_contest_runtime_decoder_adapter"
+        elif not byte_closed_candidate_materialized:
+            next_materializer_action = f"materialize_{target_kind}"
+        else:
+            next_materializer_action = "candidate_ready_for_exact_axis_gate"
         blockers = ordered_unique(
             [
                 *_string_list(signal.get("blockers")),
                 *_string_list(target_variant.get("blockers")),
+                *contest_runtime_adapter_integration_blockers,
                 *([] if target_variant else ["target_entropy_coder_prototype_missing"]),
                 *(
                     []
@@ -2455,6 +2504,7 @@ def _archive_variant_materializer_backlog(
             "target_archive_transform_kind": target_kind or None,
             "coder_family": coder_family,
             "materializer_action": f"materialize_{target_kind}" if target_kind else "blocked_no_materializer_target",
+            "next_materializer_action": next_materializer_action,
             "materializer_status": materializer_status,
             "source_entropy_probe_path": signal.get("entropy_probe_path"),
             "selected_member_name": signal.get("selected_member_name"),
@@ -2464,20 +2514,31 @@ def _archive_variant_materializer_backlog(
             "byte_closed_candidate_path": target_variant.get("path"),
             "byte_closed_candidate_sha256": target_variant.get("sha256"),
             "byte_closed_candidate_bytes": target_variant.get("bytes"),
-            "byte_closed_candidate_materialized": (
-                materializer_status == "byte_closed_candidate_materialized"
-            ),
+            "byte_closed_candidate_materialized": byte_closed_candidate_materialized,
             "runtime_consumption_proof_path": target_variant.get("runtime_consumption_proof_path"),
             "runtime_consumption_proof_ready": (
                 target_variant.get("runtime_consumption_proof_ready") is True
             ),
             "runtime_adapter_manifest": runtime_adapter_manifest,
             "runtime_adapter_ready": bool(runtime_adapter_manifest),
+            "runtime_adapter_scope": runtime_adapter_scope,
+            "member_decode_helper_ready": member_decode_helper_ready,
+            "contest_runtime_decoder_adapter_ready": contest_runtime_decoder_adapter_ready,
+            "contest_runtime_adapter_integrated": contest_runtime_adapter_integrated,
+            "contest_runtime_adapter_integration_required": (
+                contest_runtime_adapter_integration_required
+            ),
+            "contest_runtime_adapter_integration_blockers": (
+                contest_runtime_adapter_integration_blockers
+            ),
             "receiver_contract_kind": target_variant.get("receiver_contract_kind"),
             "receiver_contract_satisfied": (
                 target_variant.get("receiver_contract_satisfied") is True
             ),
             "smallest_byte_closed_materializer_task": True,
+            "smallest_contest_runtime_adapter_task": (
+                contest_runtime_adapter_integration_required
+            ),
             "opened_by_pipeline": True,
             "queue_owned": True,
             "blockers": blockers,
@@ -2511,6 +2572,17 @@ def _archive_variant_materializer_backlog(
         ),
         "runtime_adapter_ready_task_count": sum(
             1 for row in rows if row.get("runtime_adapter_ready") is True
+        ),
+        "contest_runtime_adapter_ready_task_count": sum(
+            1 for row in rows if row.get("contest_runtime_decoder_adapter_ready") is True
+        ),
+        "contest_runtime_adapter_integration_required_count": sum(
+            1
+            for row in rows
+            if row.get("contest_runtime_adapter_integration_required") is True
+        ),
+        "smallest_contest_runtime_adapter_task_count": sum(
+            1 for row in rows if row.get("smallest_contest_runtime_adapter_task") is True
         ),
         "probe_only_signal_count": sum(
             1

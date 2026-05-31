@@ -777,6 +777,9 @@ def test_byte_transform_executor_mutates_fec6_selector_payload_when_detected(
     assert backlog["executable_task_count"] == 2
     assert backlog["byte_closed_materialized_task_count"] == 2
     assert backlog["runtime_adapter_ready_task_count"] == 2
+    assert backlog["contest_runtime_adapter_ready_task_count"] == 0
+    assert backlog["contest_runtime_adapter_integration_required_count"] == 2
+    assert backlog["smallest_contest_runtime_adapter_task_count"] == 2
     assert backlog["opened_by_pipeline"] is True
     assert backlog["pipeline_consumer"] == ("repair_campaign_entropy_stage_materializer_work_order_bundle")
     backlog_rows = {row["target_archive_transform_kind"]: row for row in backlog["task_rows"]}
@@ -792,6 +795,16 @@ def test_byte_transform_executor_mutates_fec6_selector_payload_when_detected(
         assert row["byte_closed_candidate_materialized"] is True
         assert row["runtime_consumption_proof_ready"] is True
         assert row["runtime_adapter_ready"] is True
+        assert row["runtime_adapter_scope"] == "member_decode_helper_only"
+        assert row["member_decode_helper_ready"] is True
+        assert row["contest_runtime_decoder_adapter_ready"] is False
+        assert row["contest_runtime_adapter_integrated"] is False
+        assert row["contest_runtime_adapter_integration_required"] is True
+        assert row["smallest_contest_runtime_adapter_task"] is True
+        assert row["next_materializer_action"] == "integrate_contest_runtime_decoder_adapter"
+        assert "contest_runtime_decoder_adapter_integration_missing" in row[
+            "contest_runtime_adapter_integration_blockers"
+        ]
         assert row["receiver_contract_satisfied"] is True
         assert row["score_claim"] is False
         assert row["promotion_eligible"] is False
