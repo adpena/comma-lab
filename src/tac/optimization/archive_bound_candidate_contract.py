@@ -605,6 +605,25 @@ def archive_substrate_tags_for_transform_kind(transform_kind: str) -> list[str]:
         tags.extend(["zip_ordering", "zip_container"])
     if "packet_member" in kind:
         tags.extend(["zip_member", "member_payload"])
+    neural_predictive_archive = (
+        "z7" in kind
+        or "mamba" in kind
+        or "predictive_coding" in kind
+        or "neural_archive" in kind
+        or "ssd_reference" in kind
+        or ("mlx" in kind and ("archive" in kind or "substrate" in kind))
+    )
+    if neural_predictive_archive:
+        tags.extend(
+            [
+                "neural_archive",
+                "predictive_coding",
+                "mlx_substrate",
+                "z7_mamba2",
+            ]
+        )
+        if "ssd" in kind or "ssd_reference" in kind:
+            tags.append("ssd_reference")
     if "prototype" in kind:
         tags.append("receiver_adapter")
     if not tags:
@@ -623,6 +642,16 @@ def entropy_position_label_for_transform_kind(transform_kind: str) -> str:
     if "zip_order" in kind:
         return "after_entropy_coder"
     if "dqs1" in kind or "pairset" in kind or "selector" in kind or "fec" in kind:
+        return "before_entropy_coder"
+    neural_predictive_archive = (
+        "z7" in kind
+        or "mamba" in kind
+        or "predictive_coding" in kind
+        or "neural_archive" in kind
+        or "ssd_reference" in kind
+        or ("mlx" in kind and ("archive" in kind or "substrate" in kind))
+    )
+    if neural_predictive_archive:
         return "before_entropy_coder"
     if any(
         token in kind

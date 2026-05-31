@@ -75,6 +75,9 @@ def test_z7_mamba2_mlx_canonical_ssd_backend_uses_helper_and_exports_bridge(
         parse_archive,
     )
     from tac.substrates.time_traveler_l5_z7_mamba2.archive_candidate import (
+        Z7_MAMBA2_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
+        Z7_MAMBA2_MLX_ARCHIVE_CANDIDATE_FAMILY,
+        Z7_MAMBA2_MLX_ARCHIVE_TRANSFORM_KIND,
         export_z7_mamba2_mlx_archive,
         pack_archive_from_exported_state_dict,
     )
@@ -151,6 +154,35 @@ def test_z7_mamba2_mlx_canonical_ssd_backend_uses_helper_and_exports_bridge(
     assert archive_size == archive_zip.stat().st_size
 
     submission_dir = archive_zip.parent / "submission"
+    adapter_package_path = archive_zip.parent / "archive_bound_candidate_adapter_package.json"
+    assert adapter_package_path.is_file()
+    adapter_package = json.loads(adapter_package_path.read_text(encoding="utf-8"))
+    assert adapter_package["schema"] == Z7_MAMBA2_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA
+    receiver_proof = adapter_package["receiver_proof"]
+    assert receiver_proof["runtime_consumption_proof_ready"] is True
+    assert receiver_proof["receiver_contract_satisfied"] is True
+    assert receiver_proof["receiver_output_retained"] is False
+    assert receiver_proof["receiver_output_sha256"]
+    assert not (archive_zip.parent / "receiver_proof" / "runtime_out" / "0").exists()
+    shared_package = adapter_package["archive_bound_candidate_adapter_package"]
+    assert shared_package["candidate_family"] == Z7_MAMBA2_MLX_ARCHIVE_CANDIDATE_FAMILY
+    assert shared_package["ready_contract_count"] == 1
+    assert shared_package["receiver_proof_gate_passed_count"] == 1
+    assert shared_package["mlx_triage_ready_count"] == 0
+    contract = shared_package["candidate_rows"][0]["archive_bound_candidate_contract"]
+    assert contract["archive_native_transform_kind"] == Z7_MAMBA2_MLX_ARCHIVE_TRANSFORM_KIND
+    assert contract["entropy_position_label"] == "before_entropy_coder"
+    assert "z7_mamba2" in contract["archive_substrate_tags"]
+    assert "mlx_substrate" in contract["archive_substrate_tags"]
+    assert contract["runtime_adapter_ready"] is True
+    assert contract["contest_runtime_decoder_adapter_ready"] is True
+    assert contract["archive_bound_candidate_ready_for_exact_handoff"] is True
+    assert contract["ready_for_exact_eval_dispatch"] is False
+    exact_blockers = shared_package["exact_axis_blockers"][0]["blockers"]
+    assert "canonical_ssd_mlx_exact_cpu_cuda_replay_required" in exact_blockers
+    assert "contest_cpu_or_cuda_authority_required" in exact_blockers
+    assert "lane_preclaim_required_before_exact_eval" in exact_blockers
+
     file_list = tmp_path / "file_list.txt"
     file_list.write_text("0.mkv\n", encoding="utf-8")
     runtime_out = tmp_path / "runtime_out"

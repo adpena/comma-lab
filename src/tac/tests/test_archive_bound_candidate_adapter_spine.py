@@ -20,6 +20,8 @@ from tac.optimization.archive_bound_candidate_contract import (
     ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA,
     ArchiveBoundCandidateContractError,
     archive_bound_candidate_contracts_from_payload,
+    archive_substrate_tags_for_transform_kind,
+    entropy_position_label_for_transform_kind,
 )
 from tac.optimization.cross_family_candidate_portfolio import (
     CrossFamilyCandidatePortfolioError,
@@ -182,6 +184,29 @@ def test_archive_bound_adapter_spine_emits_full_pipeline_package(
     assert package["posterior_update_hooks"][0]["schema"] == (ARCHIVE_BOUND_CANDIDATE_POSTERIOR_HOOK_SCHEMA)
     extracted = archive_bound_candidate_contracts_from_payload(package)
     assert [contract["contract_key"] for contract in extracted] == [contract["contract_key"]]
+
+
+def test_archive_contract_classifies_z7_mlx_predictive_coding_as_before_coder() -> None:
+    transform_kind = "z7_mamba2_mlx_ssd_predictive_coding_archive"
+
+    assert entropy_position_label_for_transform_kind(transform_kind) == (
+        "before_entropy_coder"
+    )
+    tags = archive_substrate_tags_for_transform_kind(transform_kind)
+    assert "neural_archive" in tags
+    assert "predictive_coding" in tags
+    assert "mlx_substrate" in tags
+    assert "z7_mamba2" in tags
+    assert "ssd_reference" in tags
+
+    reference_tags = archive_substrate_tags_for_transform_kind(
+        "z7_mamba2_mlx_reference_s6_predictive_coding_archive"
+    )
+    assert entropy_position_label_for_transform_kind(
+        "z7_mamba2_mlx_reference_s6_predictive_coding_archive"
+    ) == "before_entropy_coder"
+    assert "z7_mamba2" in reference_tags
+    assert "ssd_reference" not in reference_tags
 
 
 def test_archive_contract_consumes_nested_runtime_adapter_manifest(
