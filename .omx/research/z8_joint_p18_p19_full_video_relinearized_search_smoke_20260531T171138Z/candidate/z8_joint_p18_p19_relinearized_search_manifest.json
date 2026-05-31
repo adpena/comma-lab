@@ -1,0 +1,507 @@
+{
+  "accepted_candidates": [
+    {
+      "coefficient_deadzone_quantile": 0.5,
+      "coefficient_summary": {
+        "dead_zoned_coefficients": 11520,
+        "dead_zoned_fraction": 0.5,
+        "eligible_coefficients": 23040,
+        "eligible_fraction": 1.0,
+        "mutated_pair_count": 4,
+        "pair_count": 4,
+        "total_detail_coefficients": 23040
+      },
+      "cumulative_distortion_report": {
+        "mae": 0.023923634697554735,
+        "max_abs_delta": 0.20456412434577942,
+        "mse": 0.0010739210557132825,
+        "receiver_tensor_values": 24576,
+        "small_receiver_distortion_measured": true
+      },
+      "dispatch_attempted": false,
+      "full_video_surface_coverage_report": {
+        "archive_num_pairs": 4,
+        "blocker": null,
+        "full_video_surface_coverage": true,
+        "joint_surface_declared_pair_count": 4,
+        "joint_surface_shape": [
+          4,
+          2,
+          16,
+          16,
+          3
+        ],
+        "max_pairs": null,
+        "rate_attack_deadzone_mask_declared_pair_count": 4,
+        "rate_attack_deadzone_mask_shape": [
+          4,
+          2,
+          16,
+          16,
+          3
+        ],
+        "required_pair_count": 4,
+        "schema": "z8_joint_p18_p19_full_video_surface_coverage.v1"
+      },
+      "gpu_launched": false,
+      "guard_ok": true,
+      "incremental_distortion_report": {
+        "mae": 0.023923634697554735,
+        "max_abs_delta": 0.20456412434577942,
+        "mse": 0.0010739210557132825,
+        "receiver_tensor_values": 24576,
+        "small_receiver_distortion_measured": true
+      },
+      "iteration_index": 0,
+      "joint_weight_quantile": 1.0,
+      "mutated_archive_sha256": "da7d02a1ac6f2eb1ae92b4be0031bb8ebd38c893858542f5c815d497014b318b",
+      "promotable": false,
+      "promotion_eligible": false,
+      "proxy_objective": 24.46706928325535,
+      "quantization_step": 0.25,
+      "rank_or_kill_eligible": false,
+      "rate_report": {
+        "after_archive_bytes": 11047,
+        "after_wavelet_blob_bytes": 10210,
+        "archive_byte_delta": -81361,
+        "archive_rate_ratio": 0.11954592675958792,
+        "before_archive_bytes": 92408,
+        "before_wavelet_blob_bytes": 91951,
+        "wavelet_blob_byte_delta": -81741,
+        "wavelet_blob_rate_ratio": 0.11103740035453666
+      },
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "z8_joint_p18_p19_relinearized_candidate.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "surface_digest": "c7ad8958b625cd6d86758e7a4995c17000dcc8812a1be46905dc0ceeef6c06b9"
+    },
+    {
+      "coefficient_deadzone_quantile": 0.5,
+      "coefficient_summary": {
+        "dead_zoned_coefficients": 22375,
+        "dead_zoned_fraction": 0.9711371527777778,
+        "eligible_coefficients": 23040,
+        "eligible_fraction": 1.0,
+        "mutated_pair_count": 4,
+        "pair_count": 4,
+        "total_detail_coefficients": 23040
+      },
+      "cumulative_distortion_report": {
+        "mae": 0.023923634697554735,
+        "max_abs_delta": 0.20456412434577942,
+        "mse": 0.0010739210557132825,
+        "receiver_tensor_values": 24576,
+        "small_receiver_distortion_measured": true
+      },
+      "dispatch_attempted": false,
+      "full_video_surface_coverage_report": {
+        "archive_num_pairs": 4,
+        "blocker": null,
+        "full_video_surface_coverage": true,
+        "joint_surface_declared_pair_count": 4,
+        "joint_surface_shape": [
+          4,
+          2,
+          16,
+          16,
+          3
+        ],
+        "max_pairs": null,
+        "rate_attack_deadzone_mask_declared_pair_count": 4,
+        "rate_attack_deadzone_mask_shape": [
+          4,
+          2,
+          16,
+          16,
+          3
+        ],
+        "required_pair_count": 4,
+        "schema": "z8_joint_p18_p19_full_video_surface_coverage.v1"
+      },
+      "gpu_launched": false,
+      "guard_ok": true,
+      "incremental_distortion_report": {
+        "mae": 0.0,
+        "max_abs_delta": 0.0,
+        "mse": 0.0,
+        "receiver_tensor_values": 24576,
+        "small_receiver_distortion_measured": true
+      },
+      "iteration_index": 1,
+      "joint_weight_quantile": 1.0,
+      "mutated_archive_sha256": "5af02a3cabf7ca14fa712a74d48dfaed507f79e4b4b651b4c81aebb44c842049",
+      "promotable": false,
+      "promotion_eligible": false,
+      "proxy_objective": 28.243962978604717,
+      "quantization_step": 0.25,
+      "rank_or_kill_eligible": false,
+      "rate_report": {
+        "after_archive_bytes": 7735,
+        "after_wavelet_blob_bytes": 6898,
+        "archive_byte_delta": -3312,
+        "archive_rate_ratio": 0.7001900968588757,
+        "before_archive_bytes": 11047,
+        "before_wavelet_blob_bytes": 10210,
+        "wavelet_blob_byte_delta": -3312,
+        "wavelet_blob_rate_ratio": 0.6756121449559256
+      },
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "z8_joint_p18_p19_relinearized_candidate.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "surface_digest": "7c3e03314666ba72fb7dd42593f881b1d232a34d321bb2d7040b87de20ed86c3"
+    }
+  ],
+  "allowed_use": "local_z8_rate_attack_acquisition_and_materialization_signal",
+  "archive_zip_bytes": 119687,
+  "archive_zip_path": "/Users/adpena/Projects/pact/.omx/research/z8_joint_p18_p19_full_video_relinearized_search_smoke_20260531T171138Z/candidate/archive.zip",
+  "archive_zip_sha256": "a3de209080be085f32ed45522c6aa01434be4c7ae138e7975b627b72bcd6ed9b",
+  "axis_tag": "[macOS-CPU advisory]",
+  "candidate_bin_bytes": 7735,
+  "candidate_bin_path": ".omx/research/z8_joint_p18_p19_full_video_relinearized_search_smoke_20260531T171138Z/candidate/0.bin",
+  "candidate_bin_sha256": "5af02a3cabf7ca14fa712a74d48dfaed507f79e4b4b651b4c81aebb44c842049",
+  "candidate_count": 4,
+  "candidate_grid": [
+    {
+      "coefficient_deadzone_quantile": 0.5,
+      "coefficient_summary": {
+        "dead_zoned_coefficients": 11520,
+        "dead_zoned_fraction": 0.5,
+        "eligible_coefficients": 23040,
+        "eligible_fraction": 1.0,
+        "mutated_pair_count": 4,
+        "pair_count": 4,
+        "total_detail_coefficients": 23040
+      },
+      "cumulative_distortion_report": {
+        "mae": 0.023923634697554735,
+        "max_abs_delta": 0.20456412434577942,
+        "mse": 0.0010739210557132825,
+        "receiver_tensor_values": 24576,
+        "small_receiver_distortion_measured": true
+      },
+      "dispatch_attempted": false,
+      "full_video_surface_coverage_report": {
+        "archive_num_pairs": 4,
+        "blocker": null,
+        "full_video_surface_coverage": true,
+        "joint_surface_declared_pair_count": 4,
+        "joint_surface_shape": [
+          4,
+          2,
+          16,
+          16,
+          3
+        ],
+        "max_pairs": null,
+        "rate_attack_deadzone_mask_declared_pair_count": 4,
+        "rate_attack_deadzone_mask_shape": [
+          4,
+          2,
+          16,
+          16,
+          3
+        ],
+        "required_pair_count": 4,
+        "schema": "z8_joint_p18_p19_full_video_surface_coverage.v1"
+      },
+      "gpu_launched": false,
+      "guard_ok": true,
+      "incremental_distortion_report": {
+        "mae": 0.023923634697554735,
+        "max_abs_delta": 0.20456412434577942,
+        "mse": 0.0010739210557132825,
+        "receiver_tensor_values": 24576,
+        "small_receiver_distortion_measured": true
+      },
+      "iteration_index": 0,
+      "joint_weight_quantile": 1.0,
+      "mutated_archive_sha256": "da7d02a1ac6f2eb1ae92b4be0031bb8ebd38c893858542f5c815d497014b318b",
+      "promotable": false,
+      "promotion_eligible": false,
+      "proxy_objective": 24.46706928325535,
+      "quantization_step": 0.25,
+      "rank_or_kill_eligible": false,
+      "rate_report": {
+        "after_archive_bytes": 11047,
+        "after_wavelet_blob_bytes": 10210,
+        "archive_byte_delta": -81361,
+        "archive_rate_ratio": 0.11954592675958792,
+        "before_archive_bytes": 92408,
+        "before_wavelet_blob_bytes": 91951,
+        "wavelet_blob_byte_delta": -81741,
+        "wavelet_blob_rate_ratio": 0.11103740035453666
+      },
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "z8_joint_p18_p19_relinearized_candidate.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "surface_digest": "c7ad8958b625cd6d86758e7a4995c17000dcc8812a1be46905dc0ceeef6c06b9"
+    },
+    {
+      "coefficient_deadzone_quantile": 1.0,
+      "coefficient_summary": {
+        "dead_zoned_coefficients": 23040,
+        "dead_zoned_fraction": 1.0,
+        "eligible_coefficients": 23040,
+        "eligible_fraction": 1.0,
+        "mutated_pair_count": 4,
+        "pair_count": 4,
+        "total_detail_coefficients": 23040
+      },
+      "cumulative_distortion_report": {
+        "mae": 0.028669421002975173,
+        "max_abs_delta": 0.8287017792463303,
+        "mse": 0.0023139107733749554,
+        "receiver_tensor_values": 24576,
+        "small_receiver_distortion_measured": true
+      },
+      "dispatch_attempted": false,
+      "full_video_surface_coverage_report": {
+        "archive_num_pairs": 4,
+        "blocker": null,
+        "full_video_surface_coverage": true,
+        "joint_surface_declared_pair_count": 4,
+        "joint_surface_shape": [
+          4,
+          2,
+          16,
+          16,
+          3
+        ],
+        "max_pairs": null,
+        "rate_attack_deadzone_mask_declared_pair_count": 4,
+        "rate_attack_deadzone_mask_shape": [
+          4,
+          2,
+          16,
+          16,
+          3
+        ],
+        "required_pair_count": 4,
+        "schema": "z8_joint_p18_p19_full_video_surface_coverage.v1"
+      },
+      "gpu_launched": false,
+      "guard_ok": true,
+      "incremental_distortion_report": {
+        "mae": 0.028669421002975173,
+        "max_abs_delta": 0.8287017792463303,
+        "mse": 0.0023139107733749554,
+        "receiver_tensor_values": 24576,
+        "small_receiver_distortion_measured": true
+      },
+      "iteration_index": 0,
+      "joint_weight_quantile": 1.0,
+      "mutated_archive_sha256": "8a20dc10bcecc8e0f27218692e9d23985def6c6e666c65231801745035ce0833",
+      "promotable": false,
+      "promotion_eligible": false,
+      "proxy_objective": 48.08217183491318,
+      "quantization_step": 0.25,
+      "rank_or_kill_eligible": false,
+      "rate_report": {
+        "after_archive_bytes": 6668,
+        "after_wavelet_blob_bytes": 5831,
+        "archive_byte_delta": -85740,
+        "archive_rate_ratio": 0.07215825469656306,
+        "before_archive_bytes": 92408,
+        "before_wavelet_blob_bytes": 91951,
+        "wavelet_blob_byte_delta": -86120,
+        "wavelet_blob_rate_ratio": 0.06341420974214527
+      },
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "z8_joint_p18_p19_relinearized_candidate.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "surface_digest": "c7ad8958b625cd6d86758e7a4995c17000dcc8812a1be46905dc0ceeef6c06b9"
+    },
+    {
+      "coefficient_deadzone_quantile": 0.5,
+      "coefficient_summary": {
+        "dead_zoned_coefficients": 22375,
+        "dead_zoned_fraction": 0.9711371527777778,
+        "eligible_coefficients": 23040,
+        "eligible_fraction": 1.0,
+        "mutated_pair_count": 4,
+        "pair_count": 4,
+        "total_detail_coefficients": 23040
+      },
+      "cumulative_distortion_report": {
+        "mae": 0.023923634697554735,
+        "max_abs_delta": 0.20456412434577942,
+        "mse": 0.0010739210557132825,
+        "receiver_tensor_values": 24576,
+        "small_receiver_distortion_measured": true
+      },
+      "dispatch_attempted": false,
+      "full_video_surface_coverage_report": {
+        "archive_num_pairs": 4,
+        "blocker": null,
+        "full_video_surface_coverage": true,
+        "joint_surface_declared_pair_count": 4,
+        "joint_surface_shape": [
+          4,
+          2,
+          16,
+          16,
+          3
+        ],
+        "max_pairs": null,
+        "rate_attack_deadzone_mask_declared_pair_count": 4,
+        "rate_attack_deadzone_mask_shape": [
+          4,
+          2,
+          16,
+          16,
+          3
+        ],
+        "required_pair_count": 4,
+        "schema": "z8_joint_p18_p19_full_video_surface_coverage.v1"
+      },
+      "gpu_launched": false,
+      "guard_ok": true,
+      "incremental_distortion_report": {
+        "mae": 0.0,
+        "max_abs_delta": 0.0,
+        "mse": 0.0,
+        "receiver_tensor_values": 24576,
+        "small_receiver_distortion_measured": true
+      },
+      "iteration_index": 1,
+      "joint_weight_quantile": 1.0,
+      "mutated_archive_sha256": "5af02a3cabf7ca14fa712a74d48dfaed507f79e4b4b651b4c81aebb44c842049",
+      "promotable": false,
+      "promotion_eligible": false,
+      "proxy_objective": 28.243962978604717,
+      "quantization_step": 0.25,
+      "rank_or_kill_eligible": false,
+      "rate_report": {
+        "after_archive_bytes": 7735,
+        "after_wavelet_blob_bytes": 6898,
+        "archive_byte_delta": -3312,
+        "archive_rate_ratio": 0.7001900968588757,
+        "before_archive_bytes": 11047,
+        "before_wavelet_blob_bytes": 10210,
+        "wavelet_blob_byte_delta": -3312,
+        "wavelet_blob_rate_ratio": 0.6756121449559256
+      },
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "z8_joint_p18_p19_relinearized_candidate.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "surface_digest": "7c3e03314666ba72fb7dd42593f881b1d232a34d321bb2d7040b87de20ed86c3"
+    },
+    {
+      "coefficient_deadzone_quantile": 1.0,
+      "coefficient_summary": {
+        "dead_zoned_coefficients": 23040,
+        "dead_zoned_fraction": 1.0,
+        "eligible_coefficients": 23040,
+        "eligible_fraction": 1.0,
+        "mutated_pair_count": 4,
+        "pair_count": 4,
+        "total_detail_coefficients": 23040
+      },
+      "cumulative_distortion_report": {
+        "mae": 0.028669421002975173,
+        "max_abs_delta": 0.8287017792463303,
+        "mse": 0.0023139107733749554,
+        "receiver_tensor_values": 24576,
+        "small_receiver_distortion_measured": true
+      },
+      "dispatch_attempted": false,
+      "full_video_surface_coverage_report": {
+        "archive_num_pairs": 4,
+        "blocker": null,
+        "full_video_surface_coverage": true,
+        "joint_surface_declared_pair_count": 4,
+        "joint_surface_shape": [
+          4,
+          2,
+          16,
+          16,
+          3
+        ],
+        "max_pairs": null,
+        "rate_attack_deadzone_mask_declared_pair_count": 4,
+        "rate_attack_deadzone_mask_shape": [
+          4,
+          2,
+          16,
+          16,
+          3
+        ],
+        "required_pair_count": 4,
+        "schema": "z8_joint_p18_p19_full_video_surface_coverage.v1"
+      },
+      "gpu_launched": false,
+      "guard_ok": true,
+      "incremental_distortion_report": {
+        "mae": 0.018008017453372178,
+        "max_abs_delta": 0.8086880445480347,
+        "mse": 0.001931244683418689,
+        "receiver_tensor_values": 24576,
+        "small_receiver_distortion_measured": true
+      },
+      "iteration_index": 1,
+      "joint_weight_quantile": 1.0,
+      "mutated_archive_sha256": "8a20dc10bcecc8e0f27218692e9d23985def6c6e666c65231801745035ce0833",
+      "promotable": false,
+      "promotion_eligible": false,
+      "proxy_objective": 50.62907461254787,
+      "quantization_step": 0.25,
+      "rank_or_kill_eligible": false,
+      "rate_report": {
+        "after_archive_bytes": 6668,
+        "after_wavelet_blob_bytes": 5831,
+        "archive_byte_delta": -4379,
+        "archive_rate_ratio": 0.6036027880872635,
+        "before_archive_bytes": 11047,
+        "before_wavelet_blob_bytes": 10210,
+        "wavelet_blob_byte_delta": -4379,
+        "wavelet_blob_rate_ratio": 0.5711067580803134
+      },
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "z8_joint_p18_p19_relinearized_candidate.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "surface_digest": "7c3e03314666ba72fb7dd42593f881b1d232a34d321bb2d7040b87de20ed86c3"
+    }
+  ],
+  "cumulative_rate_report": {
+    "archive_byte_delta": -84673,
+    "archive_rate_ratio": 0.08370487403687993,
+    "final_archive_bytes": 7735,
+    "original_archive_bytes": 92408
+  },
+  "dispatch_attempted": false,
+  "exact_axis_blocker": "receiver_proof_and_contest_cpu_cuda_eval_not_executed",
+  "final_archive_sha256": "5af02a3cabf7ca14fa712a74d48dfaed507f79e4b4b651b4c81aebb44c842049",
+  "final_blocker": null,
+  "final_distortion_report": {
+    "mae": 0.023923634697554735,
+    "max_abs_delta": 0.20456412434577942,
+    "mse": 0.0010739210557132825,
+    "receiver_tensor_values": 24576,
+    "small_receiver_distortion_measured": true
+  },
+  "forbidden_use": "score_claim_or_exact_promotion_without_contest_eval",
+  "full_video_surface_contract": "joint_and_pose_null_surfaces_must_cover_the_full_archive_pair_grid",
+  "gpu_launched": false,
+  "interaction_penalty": "penalize_cumulative_mse_increase_between_relinearization_steps",
+  "iterations_accepted": 2,
+  "iterations_requested": 2,
+  "manifest_path": ".omx/research/z8_joint_p18_p19_full_video_relinearized_search_smoke_20260531T171138Z/candidate/z8_joint_p18_p19_relinearized_search_manifest.json",
+  "pose_guard": "pose_null_mask_and_mahalanobis_ail_weights_consumed",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_proof_executed": false,
+  "role": "project_joint_p18_p19_pixel_pair_surface_to_mallat_detail_subbands_then_dead_zone_low_joint_weight_pose_null_coefficients",
+  "schema": "z8_joint_p18_p19_coefficient_relinearized_search.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "ste_boundary": "straight_through_deadzone_quantization_proxy",
+  "surface_refresh_contract": "fresh_joint_p18_p19_surface_per_iteration_from_mlx_scorer_vjp"
+}

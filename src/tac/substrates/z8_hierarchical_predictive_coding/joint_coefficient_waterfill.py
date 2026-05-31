@@ -75,6 +75,7 @@ class Z8JointCoefficientWaterfillConfig:
     max_pairs: int | None = None
     emit_archive_zip: bool = True
     emit_receiver_proof: bool = False
+    require_full_video_surface_coverage: bool = True
 
     def __post_init__(self) -> None:
         for name, value in (
@@ -114,6 +115,7 @@ class Z8JointCoefficientRelinearizationSearchConfig:
     max_pairs: int | None = None
     emit_archive_zip: bool = True
     emit_receiver_proof: bool = False
+    require_full_video_surface_coverage: bool = True
 
     def __post_init__(self) -> None:
         if self.max_iterations <= 0:
@@ -196,6 +198,42 @@ def load_joint_p18_p19_surface_file(path: str | Path) -> tuple[Any, Any | None]:
     if "joint_weight" not in payload:
         raise ValueError(f"{p} JSON must contain joint_weight")
     return payload["joint_weight"], payload.get("rate_attack_deadzone_mask")
+
+
+def _declared_pair_count(arr: np.ndarray | None) -> int | None:
+    if arr is None:
+        return None
+    # Full-video surfaces are pair-indexed. Plain (H,W[,C]) maps are useful for
+    # exploratory smokes but are broadcast surfaces, not full-video gradients.
+    if arr.ndim in {4, 5}:
+        return int(arr.shape[0])
+    return None
+
+
+def _full_video_surface_coverage_report(
+    *,
+    joint_surface: np.ndarray,
+    safe_mask: np.ndarray | None,
+    archive_num_pairs: int,
+    max_pairs: int | None,
+) -> dict[str, Any]:
+    required_pair_count = int(archive_num_pairs) if max_pairs is None else min(int(archive_num_pairs), int(max_pairs))
+    joint_pair_count = _declared_pair_count(joint_surface)
+    safe_pair_count = _declared_pair_count(safe_mask)
+    joint_ok = joint_pair_count is not None and joint_pair_count >= required_pair_count
+    mask_ok = safe_mask is None or (safe_pair_count is not None and safe_pair_count >= required_pair_count)
+    return {
+        "schema": "z8_joint_p18_p19_full_video_surface_coverage.v1",
+        "required_pair_count": required_pair_count,
+        "archive_num_pairs": int(archive_num_pairs),
+        "max_pairs": max_pairs,
+        "joint_surface_shape": list(joint_surface.shape),
+        "joint_surface_declared_pair_count": joint_pair_count,
+        "rate_attack_deadzone_mask_shape": (list(safe_mask.shape) if safe_mask is not None else None),
+        "rate_attack_deadzone_mask_declared_pair_count": safe_pair_count,
+        "full_video_surface_coverage": bool(joint_ok and mask_ok),
+        "blocker": (None if joint_ok and mask_ok else "joint_p18_p19_surface_does_not_cover_full_archive_pair_grid"),
+    }
 
 
 def _surface_slice_for_pair_frame(
@@ -473,6 +511,14 @@ def apply_joint_p18_p19_deadzone_to_z8_archive(
     if safe_mask is not None and safe_mask.shape != joint_surface.shape and safe_mask.size != 1:
         raise ValueError("rate_attack_deadzone_mask must match joint_weight shape or be scalar")
     arc = parse_archive(archive_bytes)
+    coverage_report = _full_video_surface_coverage_report(
+        joint_surface=joint_surface,
+        safe_mask=safe_mask,
+        archive_num_pairs=arc.num_pairs,
+        max_pairs=cfg.max_pairs,
+    )
+    if cfg.require_full_video_surface_coverage and not coverage_report["full_video_surface_coverage"]:
+        raise ValueError(str(coverage_report["blocker"]))
     pair_pyramids = parse_pair_blobs_from_wavelet_blob(arc.wavelet_coeffs_blob)
     mutated_pyramids, coeff_report = _mutate_pair_pyramids(
         pair_pyramids,
@@ -496,6 +542,7 @@ def apply_joint_p18_p19_deadzone_to_z8_archive(
                 "coefficient_deadzone_quantile": float(cfg.coefficient_deadzone_quantile),
                 "quantization_step": float(cfg.quantization_step),
                 "pose_null_required": bool(cfg.pose_null_required),
+                "require_full_video_surface_coverage": bool(cfg.require_full_video_surface_coverage),
             },
         },
         num_levels=arc.num_levels,
@@ -532,6 +579,7 @@ def apply_joint_p18_p19_deadzone_to_z8_archive(
         "coefficient_report": coeff_report,
         "rate_report": rate_report,
         "distortion_report": distortion,
+        "full_video_surface_coverage_report": coverage_report,
         "axis_tag": "[macOS-CPU advisory]",
         "allowed_use": "local_z8_rate_attack_materialization_and_acquisition_signal",
         "forbidden_use": "score_claim_or_exact_promotion_without_contest_eval",
@@ -638,6 +686,7 @@ def run_joint_p18_p19_relinearized_deadzone_search(
                         max_pairs=cfg.max_pairs,
                         emit_archive_zip=False,
                         emit_receiver_proof=False,
+                        require_full_video_surface_coverage=bool(cfg.require_full_video_surface_coverage),
                     )
                     result = apply_joint_p18_p19_deadzone_to_z8_archive(
                         current,
@@ -667,6 +716,7 @@ def run_joint_p18_p19_relinearized_deadzone_search(
                         "rate_report": result["rate_report"],
                         "incremental_distortion_report": result["distortion_report"],
                         "cumulative_distortion_report": cumulative_distortion,
+                        "full_video_surface_coverage_report": result["full_video_surface_coverage_report"],
                         "coefficient_summary": {
                             key: value for key, value in result["coefficient_report"].items() if key != "subband_stats"
                         },
@@ -696,6 +746,7 @@ def run_joint_p18_p19_relinearized_deadzone_search(
         "role": Z8_JOINT_COEFFICIENT_RATE_ATTACK_ROLE,
         "ste_boundary": "straight_through_deadzone_quantization_proxy",
         "surface_refresh_contract": ("fresh_joint_p18_p19_surface_per_iteration_from_mlx_scorer_vjp"),
+        "full_video_surface_contract": ("joint_and_pose_null_surfaces_must_cover_the_full_archive_pair_grid"),
         "pose_guard": "pose_null_mask_and_mahalanobis_ail_weights_consumed",
         "interaction_penalty": ("penalize_cumulative_mse_increase_between_relinearization_steps"),
         "iterations_requested": int(cfg.max_iterations),

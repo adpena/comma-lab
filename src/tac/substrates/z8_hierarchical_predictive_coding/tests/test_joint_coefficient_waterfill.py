@@ -6,6 +6,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from tac.substrates.z8_hierarchical_predictive_coding.archive import parse_archive
 from tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_binding import (
@@ -29,14 +30,14 @@ from tac.substrates.z8_hierarchical_predictive_coding.mlx_renderer import (
 )
 
 
-def _cfg() -> Z8HierarchicalConfig:
+def _cfg(*, num_pairs: int = 1) -> Z8HierarchicalConfig:
     return Z8HierarchicalConfig(
         num_levels=3,
         num_groups_per_level=(4, 3, 2),
         num_categories_per_level=(16, 8, 4),
         base_channels=8,
         decoder_latent_dim=12,
-        num_pairs=1,
+        num_pairs=num_pairs,
         deterministic_state_dim=16,
         gumbel_temperature=1.0,
         use_straight_through=True,
@@ -44,11 +45,11 @@ def _cfg() -> Z8HierarchicalConfig:
     )
 
 
-def _archive_bytes() -> bytes:
+def _archive_bytes(*, num_pairs: int = 1) -> bytes:
     rng = np.random.RandomState(19)
-    f0 = rng.uniform(0, 1, size=(1, 16, 16, 3)).astype(np.float32)
-    f1 = rng.uniform(0, 1, size=(1, 16, 16, 3)).astype(np.float32)
-    binding = build_canonical_quadruple_binding_from_z8_config(_cfg())
+    f0 = rng.uniform(0, 1, size=(num_pairs, 16, 16, 3)).astype(np.float32)
+    f1 = rng.uniform(0, 1, size=(num_pairs, 16, 16, 3)).astype(np.float32)
+    binding = build_canonical_quadruple_binding_from_z8_config(_cfg(num_pairs=num_pairs))
     return build_z8hpc1_archive_bytes_from_canonical_quadruple(binding, f0, f1)
 
 
@@ -119,6 +120,25 @@ def test_joint_p18_p19_deadzone_materializer_emits_byte_closed_archive(
     assert manifest["exact_axis_blocker"] == ("receiver_proof_and_contest_cpu_cuda_eval_not_executed")
     assert manifest["score_claim"] is False
     assert manifest["ready_for_exact_eval_dispatch"] is False
+
+
+def test_joint_p18_p19_deadzone_rejects_pair_broadcast_surface_for_full_video() -> None:
+    archive_bytes = _archive_bytes(num_pairs=2)
+    joint_weight = np.zeros((1, 2, 16, 16, 3), dtype=np.float32)
+    pose_null_mask = np.ones_like(joint_weight, dtype=bool)
+
+    with pytest.raises(ValueError, match="full_archive_pair_grid"):
+        apply_joint_p18_p19_deadzone_to_z8_archive(
+            archive_bytes,
+            joint_weight=joint_weight,
+            rate_attack_deadzone_mask=pose_null_mask,
+            config=Z8JointCoefficientWaterfillConfig(
+                joint_weight_quantile=1.0,
+                coefficient_deadzone_quantile=1.0,
+                quantization_step=0.25,
+                require_full_video_surface_coverage=True,
+            ),
+        )
 
 
 def test_relinearized_search_requires_fresh_surfaces() -> None:

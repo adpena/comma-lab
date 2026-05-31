@@ -54,7 +54,9 @@ def test_joint_variational_metadata_is_non_authority_and_score_grounded() -> Non
         joint["executable_materializer"]["surface_refresh_contract"]
         == "fresh_joint_p18_p19_surface_per_iteration_from_mlx_scorer_vjp"
     )
+    assert joint["executable_materializer"]["full_video_surface_coverage_required"] is True
     assert joint["iterative_search"]["fresh_surface_required"] is True
+    assert joint["iterative_search"]["full_video_surface_coverage_required"] is True
     assert "straight_through" in joint["iterative_search"]["ste_boundary"]
     assert joint["forbidden_policy"] == "segnet_only_waterfill"
     assert joint["segnet_surface"]["stage"] == "P18"

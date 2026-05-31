@@ -154,6 +154,7 @@ def build_z8_joint_p18_p19_gradient_waterfill_contract() -> dict[str, Any]:
             "archive_target": "z8hpc1_wavelet_coeffs_blob",
             "mutation": "deterministic_detail_subband_deadzone_quantization",
             "surface_refresh_contract": ("fresh_joint_p18_p19_surface_per_iteration_from_mlx_scorer_vjp"),
+            "full_video_surface_coverage_required": True,
         },
         "segnet_surface": {
             "stage": "P18",
@@ -175,6 +176,7 @@ def build_z8_joint_p18_p19_gradient_waterfill_contract() -> dict[str, Any]:
             "ste_boundary": "straight_through_deadzone_quantization_proxy",
             "interaction_penalty": ("penalize_cumulative_mse_increase_between_relinearization_steps"),
             "fresh_surface_required": True,
+            "full_video_surface_coverage_required": True,
         },
         "forbidden_policy": "segnet_only_waterfill",
         "allowed_use": "local_mlx_joint_acquisition_routing_only",

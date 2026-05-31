@@ -26,6 +26,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--quantization-step", type=float, default=1.0 / 255.0)
     parser.add_argument("--max-pairs", type=int, default=None)
     parser.add_argument("--allow-without-pose-null-mask", action="store_true")
+    parser.add_argument(
+        "--allow-broadcast-surface",
+        action="store_true",
+        help="Allow exploratory pair-broadcast surfaces; exact acquisition keeps this off.",
+    )
     parser.add_argument("--no-archive-zip", action="store_true")
     parser.add_argument("--emit-receiver-proof", action="store_true")
     return parser
@@ -42,6 +47,7 @@ def main() -> int:
         max_pairs=args.max_pairs,
         emit_archive_zip=not args.no_archive_zip,
         emit_receiver_proof=args.emit_receiver_proof,
+        require_full_video_surface_coverage=not args.allow_broadcast_surface,
     )
     manifest = materialize_joint_p18_p19_deadzone_candidate(
         args.archive_bin.read_bytes(),
