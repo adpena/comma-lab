@@ -100,3 +100,63 @@ Lane: `lane_z8_detail_coeff_entropy_headroom_report_20260531`. Mission contribut
 codec). Sister of the Z8 dead-zone rate attack (`ad73c2863`) + the joint P18/P19
 gradient water-fill solver architecture (`joint_p18_p19_gradient_waterfill_solver_
 architecture_20260531.md`).
+
+---
+
+## APPEND-ONLY footer 2026-05-31 — range-coder recovery + 30-min decode budget (Catalog #110/#113)
+
+`[macOS-CPU advisory]` **NON-PROMOTABLE** ($0, no GPU, no PR). Operator directive
+verbatim: *"5-10% is worth it but we need to remember we have a 30 minute auth eval
+window and may need rust or assembly if we pursue that; continue with all."* Both axes
+measured on the REAL baseline Z8HPC1 archive (6 pairs, 414,720 detail coeffs). **The
+5-10% recovery does NOT exist, and the 30-min decode is NOT a problem** — verdict below.
+
+### Axis 1 — is there a recoverable 5-10% from a better entropy coder? NO.
+
+The codec's per-subband `argmin(bytes)` (`qi16_dense` / `qi16_zero_rle` /
+`qi16_constriction_range` Rust range coder / `zigzag_u16_byteplane`) **already selects
+the range coder where it wins.** Forcing the Rust `constriction` range coder GLOBALLY:
+
+| operating point | live codec (per-subband argmin) | force range-coder everywhere | recovery |
+|---|---:|---:|---:|
+| Δ=0.0625 (dead-zone, 10–33% nonzero) | 43,736 B | 45,442 B | **−3.9 %** (worse) |
+| Δ=0.03125 (fidelity, dense) | 87,090 B | 87,600 B | **−0.6 %** (worse) |
+| Δ=0.015625 (fidelity, dense) | 136,116 B | 136,828 B | **−0.5 %** (worse) |
+
+At the score-preserving small-Δ operating point the live codec **already selects
+`qi16_constriction_range` for every subband** — the Rust range coder IS the winning mode
+there. Forcing it standalone is a tiny per-call-overhead loss. At large-Δ sparse subbands
+`zero-RLE`+brotli-LZ77 beat a memoryless range coder, so forcing range loses 3.9%. The
+v2 codec is **at/below the achievable structured floor everywhere**; the ~2% "gap"
+reported earlier is to an *idealized order-0 floor* that is unachievable on sparse
+subbands (where RLE+LZ structure-exploitation dominates). **Earlier "5-10% recoverable"
+was WRONG; this corrects it.** DEFER (not KILL per "Forbidden premature KILL") the
+"better entropy coder" direction — the surface is entropy-saturated.
+
+### Axis 2 — does the decode fit the 30-min T4 auth-eval window? YES, trivially.
+
+The Rust `constriction` range coder is already a hard dep (Catalog #203) and is wired.
+Benchmarked decode of the FULL 600-pair detail blob (extrapolated ×100 from the 6-pair
+sample):
+
+| decoder | 6-pair decode | full-archive (×100) | % of 1800 s T4 window |
+|---|---:|---:|---:|
+| constriction (Rust) range | 9.19 ms (45.1 M sym/s) | **0.92 s** | **0.051 %** |
+| zero-RLE (pure-Python) | 65.35 ms (6.35 M sym/s) | 6.53 s | 0.363 % |
+
+**No Rust or assembly is needed** beyond what's already present — the Rust coder decodes
+the entire blob in <1 s (0.05% of budget), and even the pure-Python `zero-RLE` fallback
+fits in 6.5 s (0.36%). The operator's "may need rust or assembly" concern is moot: the
+Rust path is already wired, fast, and per-subband-selected where it wins.
+
+### Net verdict (preserves signal per "no signal loss")
+
+Both the byte axis and the time axis say the same thing: the v2 per-subband-argmin codec
+is the optimal achievable entropy wrapper, with the Rust range coder already on the
+critical path at the fidelity operating point and decoding in <1 s. **The only remaining
+rate lever is the per-subband Δ operating point** — the RD-optimal allocation the joint
+P18/P19 gradient water-fill (#1591/#1592) solves. This footer extincts the wasted-effort
+risk of chasing a non-existent entropy-coder gain or a non-existent decode-time wall.
+JSON artifacts: `.omx/research/z8_detail_entropy_headroom_rangecoder_20260531T190429Z.json`
+(Δ=0.0625 force-range measurement) + decode-budget bench (inline above, reproducible via
+the canonical `parse_archive`→`parse_pair_blobs_from_wavelet_blob`→`_decode_qi16_*` path).
