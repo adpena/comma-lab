@@ -15,7 +15,6 @@ from .lock import submission_lock
 from .paths import default_upstream_root, repo_root
 from .tracks.exact_current import create_minimal_archive
 
-
 REPORT_PATTERNS = {
     "pose": re.compile(r"Average PoseNet Distortion:\s*([0-9.]+)"),
     "seg": re.compile(r"Average SegNet Distortion:\s*([0-9.]+)"),
@@ -155,7 +154,11 @@ def evaluate_submission(
             ], cwd=root, env=env)
             inflated_dir_cleanup = "pending_success_cleanup"
         except BaseException:
-            inflated_dir_cleanup = "retained_after_failed_evaluation"
+            if keep_inflated:
+                inflated_dir_cleanup = "retained_after_failed_evaluation_by_request"
+            else:
+                shutil.rmtree(inflated_dir, ignore_errors=True)
+                inflated_dir_cleanup = "deleted_after_failed_evaluation"
             raise
 
         report_path = submission_dir / "report.txt"

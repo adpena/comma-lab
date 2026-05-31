@@ -1,0 +1,168 @@
+{
+  "artifacts": [
+    {
+      "bytes": 16171,
+      "label": "queue",
+      "path": ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/per_subband_delta_schedule_codex/materialized_rd_waterfill_full600_max_weighted_mse_5e-5/z8_mlx_prefilter_gate_queue.json",
+      "sha256": "47581e27f6553b4d73e07de612608de3305be3e639573c4e533da4a7a55a5459"
+    },
+    {
+      "bytes": 2593,
+      "label": "storage_plan",
+      "path": ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/per_subband_delta_schedule_codex/materialized_rd_waterfill_full600_max_weighted_mse_5e-5/z8_mlx_prefilter_gate_queue.json.storage_plan.json",
+      "sha256": "c27f9777480dc7337a1e26a8df6d417a39c2b43ecef057a345b518943217e0d6"
+    },
+    {
+      "bytes": 876,
+      "label": "idle_worker_report",
+      "path": ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/per_subband_delta_schedule_codex/materialized_rd_waterfill_full600_max_weighted_mse_5e-5/z8_mlx_prefilter_gate_worker_report_20260531T2125Z.json",
+      "sha256": "2bf5e70cff5f26ab02300854fab6cb887f20cba2626016b5a14b421f9f08538b"
+    },
+    {
+      "bytes": 1707,
+      "label": "mlx_replay",
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/full_video_mlx_replay.json",
+      "sha256": "d14b3cc79c5c7c36593a432d7cdbff85fa5b2964933f075debd48c2c5437f483"
+    },
+    {
+      "bytes": 2020,
+      "label": "gate",
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/mlx_prefilter_exact_auth_gate.json",
+      "sha256": "1aadedb862b4684f8215faf25f2a8e9039129f6a97bf86f3633dff5d91f440f6"
+    },
+    {
+      "bytes": 4207,
+      "label": "learning_signal",
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/mlx_prefilter_gate_learning_signal.json",
+      "sha256": "7d90bdf33d6c0c1a3e47fe9b1dda17a2a3f8ae5689527d17f5676488a6b46186"
+    },
+    {
+      "bytes": 6595,
+      "label": "cleanup",
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/artifact_retention_cleanup.json",
+      "sha256": "0cbc2d2a824eba50180275a9b866bd8d73ff10896819f3424ebd138950c29a83"
+    },
+    {
+      "bytes": 1251,
+      "label": "cleanup_journal",
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/artifact_retention_cleanup.json.journal.jsonl",
+      "sha256": "89fcdf8f91747e1a1f09f249b20d20025e070f251bf0d924a6a23cac72a06f78"
+    }
+  ],
+  "candidate_id": "rd_waterfill_full600_max_weighted_mse_5e_5",
+  "cleanup": {
+    "candidate_count": 0,
+    "execution": {
+      "action": "move",
+      "cold_store_contract": null,
+      "cold_store_contracts": [
+        {
+          "device_id": 16777242,
+          "free_bytes": 1444808855552,
+          "path": "/Volumes/VertigoDataTier/pact/cold_store",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "repo_device_id": 16777234,
+          "repo_root": "/Users/adpena/Projects/pact",
+          "required_bytes": 42949672960,
+          "reserve_bytes": 42949672960,
+          "same_device_as_repo": false,
+          "schema": "comma_lab.artifact_retention_cold_store_contract.v1",
+          "score_claim": false,
+          "tier_index": 0,
+          "write_probe_passed": true
+        },
+        {
+          "device_id": 16777237,
+          "free_bytes": 1488867033088,
+          "path": "/Volumes/APDataStore/pact/cold_store",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "repo_device_id": 16777234,
+          "repo_root": "/Users/adpena/Projects/pact",
+          "required_bytes": 42949672960,
+          "reserve_bytes": 42949672960,
+          "same_device_as_repo": false,
+          "schema": "comma_lab.artifact_retention_cold_store_contract.v1",
+          "score_claim": false,
+          "tier_index": 1,
+          "write_probe_passed": true
+        }
+      ],
+      "cold_store_reserve_bytes": 42949672960,
+      "cold_store_root": null,
+      "cold_store_roots": [
+        "/Volumes/VertigoDataTier/pact/cold_store",
+        "/Volumes/APDataStore/pact/cold_store"
+      ],
+      "executed_bytes": 0,
+      "executed_count": 0,
+      "generated_at_utc": "2026-05-31T21:25:22.667867+00:00",
+      "journal_path": "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/artifact_retention_cleanup.json.journal.jsonl",
+      "local_bytes_reclaimed": 0,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "rows": [],
+      "schema": "comma_lab.artifact_retention_execution.v1",
+      "score_claim": false,
+      "skipped_count": 0,
+      "tiered_cold_store": true
+    },
+    "schema": "comma_lab.artifact_retention_plan.v1",
+    "total_reclaimable_bytes": 0
+  },
+  "contest_cuda_auth_eval": false,
+  "created_at_utc": "2026-05-31T21:27:03Z",
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "external_output_root": "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5",
+  "family_id": "z8_hierarchical_predictive_coding",
+  "gate": {
+    "blockers": [
+      "local_replay_required_for_exact_auth",
+      "mlx_prefilter_action_not_below_target"
+    ],
+    "exact_auth_dispatch_recommended": false,
+    "mlx_action_proxy": 17.42269727711851,
+    "mlx_target_action": 0.1919853363,
+    "next_required_action": "do_not_run_local_cpu_replay",
+    "schema": "local_candidate_exact_auth_gate.v1",
+    "warnings": [
+      "mlx_axis_is_research_signal_cpu_replay_still_required"
+    ]
+  },
+  "gpu_launched": false,
+  "learning": {
+    "blockers": [
+      "local_replay_required_for_exact_auth",
+      "mlx_prefilter_action_not_below_target"
+    ],
+    "priority_delta": "decrease",
+    "recommended_acquisition_policy": "demote_candidate_for_archive_until_allocator_or_actuator_changes",
+    "schema": "local_exact_auth_gate_learning_signal.v1",
+    "signal_id": "ef51f23243e6d3a6da21255c7968c1df2b971e0ffd9f0cbcd213e10ff64f7c2a"
+  },
+  "mlx_replay": {
+    "archive_bytes": null,
+    "contest_action_proxy": 17.42269727711851,
+    "d_pose": 0.07498849550636605,
+    "d_seg": 0.0019393836127387153,
+    "full_video_local_replay_executed": true,
+    "local_axis": "[macOS-MLX research-signal]",
+    "rate": 0.6545119974333001,
+    "schema": "z8_full_video_mlx_replay.v1"
+  },
+  "promotion_eligible": false,
+  "queue_id": "z8_rd_waterfill_full600_mlx_prefilter_gate",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "reproducibility_provenance": {
+    "artifact_sha256s_are_authority_for_this_summary": true,
+    "queue_state_path": ".omx/state/experiment_queue_z8_rd_waterfill_full600_mlx_prefilter_gate.sqlite",
+    "schema": "z8_mlx_prefilter_gate_execution_reproducibility.v1"
+  },
+  "schema": "z8_mlx_prefilter_gate_execution_summary.v1",
+  "score_claim": false,
+  "steps_executed_successfully_before_worker_report_clobber_refusal": 4,
+  "worker_report_clobber_refusal_preserved_prior_report": true
+}

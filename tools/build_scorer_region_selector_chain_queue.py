@@ -23,6 +23,18 @@ from comma_lab.scheduler.scorer_region_selector_chain_queue import (  # noqa: E4
 from tac.repo_io import ArtifactWriteError, json_text, sha256_file, write_json_artifact  # noqa: E402
 
 
+def _class_rgb_delta(value: str) -> tuple[int, tuple[int, int, int]]:
+    class_text, sep, delta_text = value.partition(":")
+    if not sep:
+        raise argparse.ArgumentTypeError(
+            "--receiver-patch-class-rgb-delta must be CLASS_ID:R,G,B"
+        )
+    parts = [int(part.strip()) for part in delta_text.split(",")]
+    if len(parts) != 3:
+        raise argparse.ArgumentTypeError("delta must have three comma-separated ints")
+    return int(class_text.strip()), (parts[0], parts[1], parts[2])
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--queue-out", required=True, type=Path)
@@ -44,6 +56,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--receiver-patch-max-pairs", type=int, default=12)
     parser.add_argument("--receiver-patch-regions-per-pair", type=int, default=1)
     parser.add_argument("--receiver-patch-rgb-delta", default="-1,-1,-1")
+    parser.add_argument(
+        "--receiver-patch-class-rgb-delta",
+        type=_class_rgb_delta,
+        action="append",
+        default=[],
+        metavar="CLASS_ID:R,G,B",
+        help=(
+            "Class-conditioned receiver bulk-fill delta; repeat for multiple "
+            "SegNet class ids. The uniform receiver-patch-rgb-delta remains fallback."
+        ),
+    )
     parser.add_argument("--prove-receiver-patch-output-change", action="store_true")
     parser.add_argument(
         "--receiver-patch-output-change-file-list-entry",
@@ -64,6 +87,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--receiver-patch-output-change-contest-full-sample-claim",
         action="store_true",
     )
+    parser.add_argument("--receiver-patch-output-change-left-cache-dir", type=Path)
+    parser.add_argument("--receiver-patch-output-change-right-cache-dir", type=Path)
     parser.add_argument("--include-local-component-loop", action="store_true")
     parser.add_argument("--local-component-upstream-dir", type=Path, default=Path("upstream"))
     parser.add_argument(
@@ -159,6 +184,7 @@ def main(argv: list[str] | None = None) -> int:
             receiver_patch_rgb_delta=tuple(
                 int(part.strip()) for part in args.receiver_patch_rgb_delta.split(",")
             ),
+            receiver_patch_class_rgb_deltas=dict(args.receiver_patch_class_rgb_delta),
             prove_receiver_patch_output_change=args.prove_receiver_patch_output_change,
             receiver_patch_output_change_file_list_entries=tuple(
                 args.receiver_patch_output_change_file_list_entry
@@ -178,6 +204,12 @@ def main(argv: list[str] | None = None) -> int:
             ),
             receiver_patch_output_change_contest_full_sample_claim=(
                 args.receiver_patch_output_change_contest_full_sample_claim
+            ),
+            receiver_patch_output_change_left_cache_dir=(
+                args.receiver_patch_output_change_left_cache_dir
+            ),
+            receiver_patch_output_change_right_cache_dir=(
+                args.receiver_patch_output_change_right_cache_dir
             ),
             include_local_component_loop=args.include_local_component_loop,
             local_component_upstream_dir=args.local_component_upstream_dir,

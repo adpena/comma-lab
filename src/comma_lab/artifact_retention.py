@@ -20,6 +20,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from comma_lab.operator_storage_waterfall import DEFAULT_WORK_TIER_ORDER
+
 SCHEMA = "comma_lab.artifact_retention_plan.v1"
 EXECUTION_SCHEMA = "comma_lab.artifact_retention_execution.v1"
 EXECUTION_JOURNAL_SCHEMA = "comma_lab.artifact_retention_execution_journal.v1"
@@ -1395,7 +1397,7 @@ def _orphaned_eval_raw_reason(path: Path, repo_root: Path) -> str | None:
     ):
         return "reports_raw_inflated_scratch"
     if (
-        path.name in {"inflated", "out_dir", "output_dir"}
+        path.name in {"inflated", "out_dir", "output_dir", "runtime_out"}
         and len(rel_parts) >= 2
         and rel_parts[0] == ".omx"
         and rel_parts[1] == "research"
@@ -1412,12 +1414,40 @@ def _orphaned_eval_raw_reason(path: Path, repo_root: Path) -> str | None:
     return None
 
 
+def _external_work_tier_raw_reason(path: Path) -> str | None:
+    """Classify raw scratch under operator external work tiers.
+
+    External tiers are intentionally generous capacity, but raw inflate outputs
+    are still rebuildable scratch. This keeps the same certificate discipline as
+    repo-local scratch while allowing `/Volumes/.../pact` work roots.
+    """
+
+    try:
+        resolved = path.resolve(strict=False)
+    except OSError:
+        resolved = path
+    for tier_name, raw_root in DEFAULT_WORK_TIER_ORDER:
+        root = Path(raw_root).expanduser().resolve(strict=False)
+        try:
+            rel = resolved.relative_to(root)
+        except ValueError:
+            continue
+        parts = set(rel.parts)
+        if path.name in {"inflated", "out_dir", "output_dir", "runtime_out"}:
+            return f"external_work_tier_{tier_name}_raw_scratch"
+        if path.name == "raw" and "runtime_consumption_work" in parts:
+            return f"external_work_tier_{tier_name}_runtime_consumption_raw_scratch"
+    return None
+
+
 def _certify_orphaned_eval_raw_scratch(
     path: Path,
     repo_root: Path,
 ) -> RetentionCandidate | None:
     if path.is_file() and path.suffix == ".raw":
         reason = _orphaned_eval_raw_reason(path.parent, repo_root)
+        if reason is None:
+            reason = _external_work_tier_raw_reason(path.parent)
         if reason is None:
             return None
         blockers: list[str] = []
@@ -1468,6 +1498,8 @@ def _certify_orphaned_eval_raw_scratch(
     if not raw_files:
         return None
     reason = _orphaned_eval_raw_reason(path, repo_root)
+    if reason is None:
+        reason = _external_work_tier_raw_reason(path)
     if reason is None:
         return None
     blockers: list[str] = []

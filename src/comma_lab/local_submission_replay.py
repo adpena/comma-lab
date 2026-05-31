@@ -178,14 +178,14 @@ def run_local_submission_replay(
         if proc.returncode != 0:
             blockers.append(f"local_replay_returncode:{proc.returncode}")
 
-    if keep_inflated or not passed:
-        inflated_cleanup = "retained_by_request" if keep_inflated else "retained_after_failed_replay"
-        archive_cleanup = "retained_after_failed_replay" if not passed else "retained_by_request"
+    if keep_inflated:
+        inflated_cleanup = "retained_by_request"
+        archive_cleanup = "retained_by_request"
     else:
         shutil.rmtree(inflated_dir, ignore_errors=True)
         shutil.rmtree(archive_extract_dir, ignore_errors=True)
-        inflated_cleanup = "deleted_after_success"
-        archive_cleanup = "deleted_after_success"
+        inflated_cleanup = "deleted_after_success" if passed else "deleted_after_failed_replay"
+        archive_cleanup = "deleted_after_success" if passed else "deleted_after_failed_replay"
 
     return LocalSubmissionReplaySummary(
         schema="local_submission_replay.v1",

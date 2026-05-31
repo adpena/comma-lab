@@ -13,6 +13,7 @@ from comma_lab.local_exact_auth_gate import (
     build_local_exact_auth_gate_report,
     load_json_object,
 )
+from tac.repo_io import ArtifactWriteError, write_text_artifact
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -28,6 +29,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--mlx-target-action", type=float, default=None)
     parser.add_argument("--expected-mlx-axis-tag", default="[macOS-MLX research-signal]")
     parser.add_argument("--out-json", required=True, type=Path)
+    parser.add_argument(
+        "--success-on-blocked",
+        action="store_true",
+        help="Return 0 after writing a fail-closed blocked report; useful for queue-owned classifiers.",
+    )
     return parser
 
 
@@ -61,10 +67,9 @@ def main() -> int:
             expected_mlx_axis_tag=args.expected_mlx_axis_tag,
         ),
     )
-    args.out_json.parent.mkdir(parents=True, exist_ok=True)
-    args.out_json.write_text(report.to_json() + "\n", encoding="utf-8")
+    write_text_artifact(args.out_json, report.to_json() + "\n")
     print(report.to_json())
-    return 0 if report.exact_auth_dispatch_recommended else 2
+    return 0 if report.exact_auth_dispatch_recommended or args.success_on_blocked else 2
 
 
 if __name__ == "__main__":  # pragma: no cover
@@ -72,4 +77,6 @@ if __name__ == "__main__":  # pragma: no cover
         raise SystemExit(main())
     except Exception as exc:
         print(f"gate_local_candidate_for_exact_auth failed: {exc}", file=sys.stderr)
+        if isinstance(exc, ArtifactWriteError):
+            raise SystemExit(2) from exc
         raise

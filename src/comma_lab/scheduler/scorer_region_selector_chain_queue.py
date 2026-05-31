@@ -88,6 +88,41 @@ def _string_list(value: Any) -> list[str]:
     return [text] if text else []
 
 
+def _normalize_class_rgb_deltas(
+    value: Mapping[int | str, Sequence[int]] | None,
+) -> dict[int, tuple[int, int, int]]:
+    if value is None:
+        return {}
+    normalized: dict[int, tuple[int, int, int]] = {}
+    for key, delta in value.items():
+        try:
+            class_id = int(key)
+        except (TypeError, ValueError) as exc:
+            raise ScorerRegionSelectorChainQueueError(
+                f"receiver_patch_class_rgb_deltas key must be an integer class id, got {key!r}"
+            ) from exc
+        normalized[class_id] = tuple(int(v) for v in delta)
+    return dict(sorted(normalized.items()))
+
+
+def _class_rgb_delta_flags(
+    class_deltas: Mapping[int, Sequence[int]],
+) -> tuple[str, ...]:
+    flags: list[str] = []
+    for class_id, delta in sorted(class_deltas.items()):
+        if len(delta) != 3:
+            raise ScorerRegionSelectorChainQueueError(
+                f"receiver_patch_class_rgb_deltas[{class_id}] must contain exactly 3 values"
+            )
+        flags.extend(
+            [
+                "--class-rgb-delta",
+                f"{class_id}:{delta[0]},{delta[1]},{delta[2]}",
+            ]
+        )
+    return tuple(flags)
+
+
 def _file_status(key: str, path: str | Path | None, *, repo_root: str | Path) -> dict[str, Any]:
     text = str(path or "").strip()
     resolved = _resolve(text, repo_root) if text else None
@@ -410,6 +445,7 @@ def build_scorer_region_selector_chain_queue(
     receiver_patch_max_pairs: int = 12,
     receiver_patch_regions_per_pair: int = 1,
     receiver_patch_rgb_delta: tuple[int, int, int] = (-1, -1, -1),
+    receiver_patch_class_rgb_deltas: Mapping[int | str, Sequence[int]] | None = None,
     prove_receiver_patch_output_change: bool = False,
     receiver_patch_output_change_file_list_entries: Sequence[str] = ("0.raw",),
     receiver_patch_output_change_expected_file_list_sha256: str | None = None,
@@ -418,6 +454,7 @@ def build_scorer_region_selector_chain_queue(
     receiver_patch_output_change_parity_scope_kind: str = "contest_full_sample",
     receiver_patch_output_change_contest_full_sample_claim: bool = False,
     receiver_patch_output_change_left_cache_dir: str | Path | None = None,
+    receiver_patch_output_change_right_cache_dir: str | Path | None = None,
     include_local_component_loop: bool = False,
     local_component_upstream_dir: str | Path = "upstream",
     local_component_video_names_file: str | Path = "upstream/public_test_video_names.txt",
@@ -472,6 +509,12 @@ def build_scorer_region_selector_chain_queue(
                 "materialize_upstream_artifacts requires: " + ", ".join(missing)
             )
     root = _resolve(output_root, repo_root)
+    receiver_patch_class_delta_table = _normalize_class_rgb_deltas(
+        receiver_patch_class_rgb_deltas,
+    )
+    receiver_patch_class_delta_flags = _class_rgb_delta_flags(
+        receiver_patch_class_delta_table,
+    )
     context_path = root / "chain_context.json"
     p19_posenet_null_pairs = root / "p19_posenet_null_pairs.json"
     p18_segnet_region_waterfill = root / "p18_segnet_region_waterfill.json"
@@ -494,6 +537,9 @@ def build_scorer_region_selector_chain_queue(
     receiver_patch_output_change_dir = receiver_patch_dir / "full_frame_output_change_proof"
     receiver_patch_output_change_proof = (
         receiver_patch_output_change_dir / "shell_inflate_output_change.json"
+    )
+    receiver_patch_preinflated_right_out_dir = (
+        receiver_patch_output_change_dir / "scratch" / "right_out"
     )
 
     context_ref = _repo_rel(context_path, repo_root)
@@ -518,6 +564,10 @@ def build_scorer_region_selector_chain_queue(
     )
     receiver_patch_output_change_proof_ref = _repo_rel(
         receiver_patch_output_change_proof,
+        repo_root,
+    )
+    receiver_patch_preinflated_right_out_ref = _repo_rel(
+        receiver_patch_preinflated_right_out_dir,
         repo_root,
     )
     source_submission_ref = _repo_rel(_resolve(source_submission_dir, repo_root), repo_root)
@@ -604,6 +654,19 @@ def build_scorer_region_selector_chain_queue(
     if local_component_retention_action not in {"move", "delete"}:
         raise ScorerRegionSelectorChainQueueError(
             "local_component_retention_action must be 'move' or 'delete'"
+        )
+    mlx_first_preinflated_from_receiver_proof = bool(
+        mlx_first_acquisition and prove_receiver_patch_output_change
+    )
+    effective_receiver_patch_output_change_right_cache_dir: Path | None = None
+    if receiver_patch_output_change_right_cache_dir is not None:
+        effective_receiver_patch_output_change_right_cache_dir = _resolve(
+            receiver_patch_output_change_right_cache_dir,
+            repo_root,
+        )
+    elif mlx_first_preinflated_from_receiver_proof:
+        effective_receiver_patch_output_change_right_cache_dir = (
+            root / "_shell_inflate_right_cache"
         )
 
     context_cmd = [
@@ -704,6 +767,18 @@ def build_scorer_region_selector_chain_queue(
                 ),
             ]
         )
+    if effective_receiver_patch_output_change_right_cache_dir is not None:
+        receiver_patch_output_change_cmd.extend(
+            [
+                "--right-cache-dir",
+                _repo_rel(
+                    effective_receiver_patch_output_change_right_cache_dir,
+                    repo_root,
+                ),
+            ]
+        )
+    if mlx_first_preinflated_from_receiver_proof:
+        receiver_patch_output_change_cmd.append("--keep-scratch")
     for entry in output_change_entries:
         receiver_patch_output_change_cmd.extend(["--file-list-entry", entry])
     if receiver_patch_output_change_contest_full_sample_claim:
@@ -953,8 +1028,35 @@ def build_scorer_region_selector_chain_queue(
                 if prove_receiver_patch_output_change
                 else None
             ),
+            "receiver_patch_output_change_right_cache_dir": (
+                _repo_rel(
+                    effective_receiver_patch_output_change_right_cache_dir,
+                    repo_root,
+                )
+                if effective_receiver_patch_output_change_right_cache_dir is not None
+                else None
+            ),
+            "mlx_first_preinflated_receiver_output_dir": (
+                receiver_patch_preinflated_right_out_ref
+                if mlx_first_preinflated_from_receiver_proof
+                else None
+            ),
             "materialize_upstream_artifacts": bool(materialize_upstream_artifacts),
             "materialize_receiver_patch": bool(materialize_receiver_patch),
+            "receiver_patch_bulk_fill_policy": {
+                "schema": "scorer_region_receiver_patch_bulk_fill_policy.v1",
+                "segnet_class_conditioned": bool(receiver_patch_class_delta_flags),
+                "uniform_rgb_delta_fallback": [int(v) for v in receiver_patch_rgb_delta],
+                "class_rgb_delta_table": {
+                    str(int(key)): [int(v) for v in delta]
+                    for key, delta in receiver_patch_class_delta_table.items()
+                },
+                "pose_guard": "P19_posenet_null_pairs",
+                "region_surface": "P18_segnet_class_region_waterfill",
+                "boundary_repair_overlay": (
+                    "use_boundary_repair_runtime_materializer_for_argmax_boundary_pixels"
+                ),
+            },
             "prove_receiver_patch_output_change": bool(
                 prove_receiver_patch_output_change
             ),
@@ -1346,6 +1448,7 @@ def build_scorer_region_selector_chain_queue(
                                     str(int(receiver_patch_regions_per_pair)),
                                     "--rgb-delta="
                                     + ",".join(str(int(v)) for v in receiver_patch_rgb_delta),
+                                    *receiver_patch_class_delta_flags,
                                     "--overwrite",
                                 ],
                                 "resources": {"kind": "local_cpu"},
@@ -1565,6 +1668,14 @@ def build_scorer_region_selector_chain_queue(
                                         mlx_first_work_ref,
                                         "--report-output",
                                         mlx_first_cache_report_ref,
+                                        *(
+                                            [
+                                                "--preinflated-output-dir",
+                                                receiver_patch_preinflated_right_out_ref,
+                                            ]
+                                            if mlx_first_preinflated_from_receiver_proof
+                                            else []
+                                        ),
                                         "--inflate-timeout",
                                         str(int(local_component_inflate_timeout_seconds)),
                                         "--batch-pairs",
@@ -1579,7 +1690,10 @@ def build_scorer_region_selector_chain_queue(
                                                 "--local-acquisition-max-pairs",
                                                 str(int(mlx_max_pairs)),
                                             ]
-                                            if mlx_max_pairs is not None
+                                            if (
+                                                mlx_max_pairs is not None
+                                                and not mlx_first_preinflated_from_receiver_proof
+                                            )
                                             else []
                                         ),
                                         "--allow-large-tensor-cache",

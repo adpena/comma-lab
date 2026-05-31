@@ -872,32 +872,80 @@ def _copy_submission_tree(source_dir: Path, output_dir: Path, *, overwrite: bool
     )
 
 
+def _normalize_rgb_delta(value: Sequence[int], *, label: str) -> tuple[int, int, int]:
+    if len(value) != 3:
+        raise ScorerRegionWaterfillError(f"{label} must contain exactly 3 values")
+    return tuple(int(v) for v in value)
+
+
+def _normalize_class_rgb_delta_table(
+    table: Mapping[int | str, Sequence[int]] | None,
+) -> dict[int, tuple[int, int, int]]:
+    if table is None:
+        return {}
+    normalized: dict[int, tuple[int, int, int]] = {}
+    for key, value in table.items():
+        try:
+            class_id = int(key)
+        except (TypeError, ValueError) as exc:
+            raise ScorerRegionWaterfillError(
+                f"class_rgb_delta_table key must be an integer class id, got {key!r}"
+            ) from exc
+        if class_id < 0:
+            raise ScorerRegionWaterfillError(
+                f"class_rgb_delta_table class id must be >= 0, got {class_id}"
+            )
+        normalized[class_id] = _normalize_rgb_delta(
+            value,
+            label=f"class_rgb_delta_table[{class_id}]",
+        )
+    return dict(sorted(normalized.items()))
+
+
 def _runtime_patch_rows(
     p18: Mapping[str, Any],
     *,
     max_pairs: int,
     regions_per_pair: int,
-) -> list[tuple[int, list[tuple[float, float, float, float]]]]:
-    rows: list[tuple[int, list[tuple[float, float, float, float]]]] = []
+    rgb_delta: tuple[int, int, int],
+    class_rgb_delta_table: Mapping[int, tuple[int, int, int]],
+) -> list[tuple[int, list[tuple[float, float, float, float, tuple[int, int, int], int | None]]]]:
+    rows: list[
+        tuple[int, list[tuple[float, float, float, float, tuple[int, int, int], int | None]]]
+    ] = []
     for row in p18.get("rows") or []:
         if len(rows) >= max_pairs:
             break
         if not isinstance(row, Mapping):
             continue
         pair_id = int(row.get("pair_id", -1))
-        boxes: list[tuple[float, float, float, float]] = []
+        boxes: list[
+            tuple[float, float, float, float, tuple[int, int, int], int | None]
+        ] = []
         for region in (row.get("regions256") or [])[:regions_per_pair]:
             if not isinstance(region, Mapping):
                 continue
             box = region.get("box")
             if not isinstance(box, Mapping):
                 continue
+            class_id_value = region.get("class_id")
+            try:
+                class_id = int(class_id_value) if class_id_value is not None else None
+            except (TypeError, ValueError):
+                class_id = None
+            delta = (
+                class_rgb_delta_table.get(class_id, rgb_delta)
+                if class_id is not None
+                else rgb_delta
+            )
             boxes.append(
                 (
                     float(box["x0"]),
                     float(box["y0"]),
                     float(box["x1"]),
                     float(box["y1"]),
+                    delta,
+                    class_id,
                 )
             )
         if pair_id >= 0 and boxes:
@@ -908,16 +956,15 @@ def _runtime_patch_rows(
 
 
 def _region_patch_module_source(
-    rows: Sequence[tuple[int, list[tuple[float, float, float, float]]]],
-    *,
-    rgb_delta: tuple[int, int, int],
+    rows: Sequence[
+        tuple[int, list[tuple[float, float, float, float, tuple[int, int, int], int | None]]]
+    ],
 ) -> str:
     return (
         "# SPDX-License-Identifier: MIT\n"
         '"""Archive-bound frame-1 region waterfill receiver patch."""\n\n'
         "from __future__ import annotations\n\n"
         f"REGION_WATERFILL_ROWS = {list(rows)!r}\n"
-        f"RGB_DELTA = {tuple(int(v) for v in rgb_delta)!r}\n\n"
         "def apply_region_waterfill(frames_bchw, *, pair_start: int):\n"
         "    if frames_bchw.shape[0] % 2 != 0:\n"
         "        raise ValueError('region waterfill expects complete frame pairs')\n"
@@ -929,16 +976,16 @@ def _region_patch_module_source(
         "        if local < 0 or local >= n_pairs:\n"
         "            continue\n"
         "        frame_offset = local * 2 + 1\n"
-        "        for x0, y0, x1, y1 in boxes:\n"
+        "        for x0, y0, x1, y1, rgb_delta, _class_id in boxes:\n"
         "            xx0 = max(0, min(width, round(float(x0) * width)))\n"
         "            yy0 = max(0, min(height, round(float(y0) * height)))\n"
         "            xx1 = max(0, min(width, round(float(x1) * width)))\n"
         "            yy1 = max(0, min(height, round(float(y1) * height)))\n"
         "            if xx1 <= xx0 or yy1 <= yy0:\n"
         "                continue\n"
-        "            out[frame_offset, 0, yy0:yy1, xx0:xx1].add_(RGB_DELTA[0])\n"
-        "            out[frame_offset, 1, yy0:yy1, xx0:xx1].add_(RGB_DELTA[1])\n"
-        "            out[frame_offset, 2, yy0:yy1, xx0:xx1].add_(RGB_DELTA[2])\n"
+        "            out[frame_offset, 0, yy0:yy1, xx0:xx1].add_(int(rgb_delta[0]))\n"
+        "            out[frame_offset, 1, yy0:yy1, xx0:xx1].add_(int(rgb_delta[1]))\n"
+        "            out[frame_offset, 2, yy0:yy1, xx0:xx1].add_(int(rgb_delta[2]))\n"
         "    return out.clamp_(0.0, 255.0).round_()\n\n"
         "__all__ = ['apply_region_waterfill']\n"
     )
@@ -1014,6 +1061,7 @@ def build_frame1_region_waterfill_runtime_patch(
     max_pairs: int = 12,
     regions_per_pair: int = 1,
     rgb_delta: tuple[int, int, int] = (-1, -1, -1),
+    class_rgb_delta_table: Mapping[int | str, Sequence[int]] | None = None,
     overwrite: bool = False,
 ) -> dict[str, Any]:
     """Materialize a receiver-closed frame-1 region patch from P18/P19 waterfill rows."""
@@ -1029,8 +1077,8 @@ def build_frame1_region_waterfill_runtime_patch(
         raise ScorerRegionWaterfillError("p18 schema mismatch")
     if not (source_dir / "inflate.py").is_file() or not (source_dir / "archive.zip").is_file():
         raise ScorerRegionWaterfillError("source submission must contain inflate.py and archive.zip")
-    if len(rgb_delta) != 3:
-        raise ScorerRegionWaterfillError("rgb_delta must contain exactly 3 values")
+    rgb_delta = _normalize_rgb_delta(rgb_delta, label="rgb_delta")
+    class_deltas = _normalize_class_rgb_delta_table(class_rgb_delta_table)
     if candidate_archive_path is not None and not candidate_archive_path.is_file():
         raise ScorerRegionWaterfillError(
             f"candidate archive override missing: {candidate_archive_path}"
@@ -1040,6 +1088,8 @@ def build_frame1_region_waterfill_runtime_patch(
         p18,
         max_pairs=max(1, int(max_pairs)),
         regions_per_pair=max(1, int(regions_per_pair)),
+        rgb_delta=rgb_delta,
+        class_rgb_delta_table=class_deltas,
     )
     _copy_submission_tree(source_dir, output_dir, overwrite=overwrite)
     if candidate_archive_path is not None:
@@ -1047,7 +1097,7 @@ def build_frame1_region_waterfill_runtime_patch(
     patch_path = output_dir / "src" / "region_waterfill_patch.py"
     patch_path.parent.mkdir(parents=True, exist_ok=True)
     patch_path.write_text(
-        _region_patch_module_source(rows, rgb_delta=rgb_delta),
+        _region_patch_module_source(rows),
         encoding="utf-8",
     )
     inflate_path = output_dir / "inflate.py"
@@ -1084,6 +1134,26 @@ def build_frame1_region_waterfill_runtime_patch(
         "patched_pair_count": len(rows),
         "regions_per_pair": max(1, int(regions_per_pair)),
         "rgb_delta": [int(v) for v in rgb_delta],
+        "class_rgb_delta_table": {
+            str(key): [int(v) for v in value]
+            for key, value in class_deltas.items()
+        },
+        "bulk_fill_policy": {
+            "schema": "frame1_region_waterfill_bulk_fill_policy.v1",
+            "operator_family": "class_conditioned_segnet_region_bulk_fill",
+            "selection_surface": "p18_segnet_region_waterfill_regions256",
+            "pose_guard_surface": "p19_posenet_null_pairs",
+            "value_selection": (
+                "segnet_class_id_to_rgb_delta_table"
+                if class_deltas
+                else "uniform_rgb_delta_fallback"
+            ),
+            "boundary_repair_status": (
+                "separate_boundary_repair_runtime_materializer_required_for_argmax_boundary_overlay"
+            ),
+            "operation_timing": "after_selector_transform_before_uint8_output",
+            "segnet_class_conditioned": bool(class_deltas),
+        },
         "receiver_contract_target": "frame1_region_waterfill_runtime_patch_v1",
         "runtime_consumption_proof_present": False,
         "inflated_output_change_proof_present": False,

@@ -766,6 +766,43 @@ def test_retention_can_delete_certified_external_source_under_plan_root(
     assert not inflated.exists()
 
 
+def test_retention_certifies_omx_research_runtime_out_raw_scratch(tmp_path: Path) -> None:
+    raw_dir = tmp_path / ".omx" / "research" / "candidate" / "receiver_proof" / "runtime_out"
+    _write(raw_dir / "0.raw", b"r" * 8)
+
+    plan = build_retention_plan([tmp_path / ".omx" / "research"], repo_root=tmp_path, min_bytes=1)
+
+    assert plan.blocked_candidates == []
+    assert len(plan.candidates) == 1
+    assert plan.candidates[0].path == raw_dir.relative_to(tmp_path).as_posix()
+    assert plan.candidates[0].kind == "orphaned_eval_raw_scratch"
+    assert plan.candidates[0].certificate["reason"] == "omx_research_inflate_scratch"
+
+
+def test_retention_certifies_external_work_tier_raw_scratch(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    external_root = tmp_path / "VertigoDataTier" / "pact"
+    raw_dir = external_root / "experiments" / "results" / "candidate" / "inflated"
+    _write(raw_dir / "0.raw", b"r" * 8)
+    monkeypatch.setattr(
+        retention,
+        "DEFAULT_WORK_TIER_ORDER",
+        (("vertigo", str(external_root)),),
+    )
+
+    plan = build_retention_plan([external_root], repo_root=repo, min_bytes=1)
+
+    assert plan.blocked_candidates == []
+    assert len(plan.candidates) == 1
+    assert Path(plan.candidates[0].path).is_absolute()
+    assert plan.candidates[0].certificate["reason"] == (
+        "external_work_tier_vertigo_raw_scratch"
+    )
+
+
 def test_retention_blocks_mutated_locality_raw_after_manifest(tmp_path: Path) -> None:
     inflated = _write_locality_candidate(tmp_path)
     (inflated / "0.raw").write_bytes(b"mutated")

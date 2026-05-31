@@ -1,0 +1,30 @@
+{
+  "allow_cloud": false,
+  "claim_refused_count": 0,
+  "execute": true,
+  "failure_count": 0,
+  "idle_cycles": 1,
+  "max_experiments": null,
+  "max_parallel": 3,
+  "noncanonical_state_rationale": null,
+  "orphaned_state_rationale": null,
+  "planned_steps": [],
+  "queue_id": "z8_rd_waterfill_full600_mlx_prefilter_gate",
+  "requested_max_parallel": 0,
+  "resource_limits": {
+    "local_cpu": 1,
+    "local_io_heavy": 1,
+    "local_mlx": 1
+  },
+  "schema": "experiment_queue_worker_result.v1",
+  "skip_count": 0,
+  "stale_running_reconciliations": [],
+  "started_at_utc": "2026-05-31T21:25:41Z",
+  "started_experiment_ids": [],
+  "state": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_z8_rd_waterfill_full600_mlx_prefilter_gate.sqlite",
+  "step_results": [],
+  "steps_started": 0,
+  "stop_reason": "idle_limit_reached",
+  "stop_signals": [],
+  "success_count": 0
+}

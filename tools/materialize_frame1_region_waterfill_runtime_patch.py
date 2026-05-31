@@ -31,6 +31,19 @@ def _rgb_delta(value: str) -> tuple[int, int, int]:
     return (parts[0], parts[1], parts[2])
 
 
+def _class_rgb_delta(value: str) -> tuple[int, tuple[int, int, int]]:
+    class_text, sep, delta_text = value.partition(":")
+    if not sep:
+        raise argparse.ArgumentTypeError(
+            "--class-rgb-delta must be CLASS_ID:R,G,B"
+        )
+    try:
+        class_id = int(class_text.strip())
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("CLASS_ID must be an integer") from exc
+    return class_id, _rgb_delta(delta_text)
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source-submission-dir", required=True, type=Path)
@@ -51,6 +64,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--max-pairs", type=int, default=12)
     parser.add_argument("--regions-per-pair", type=int, default=1)
     parser.add_argument("--rgb-delta", type=_rgb_delta, default=(-1, -1, -1))
+    parser.add_argument(
+        "--class-rgb-delta",
+        type=_class_rgb_delta,
+        action="append",
+        default=[],
+        metavar="CLASS_ID:R,G,B",
+        help=(
+            "Class-conditioned SegNet bulk-fill delta. May be repeated; "
+            "--rgb-delta remains the fallback for classes not listed."
+        ),
+    )
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args(argv)
 
@@ -87,6 +111,7 @@ def main(argv: list[str] | None = None) -> int:
             max_pairs=args.max_pairs,
             regions_per_pair=args.regions_per_pair,
             rgb_delta=args.rgb_delta,
+            class_rgb_delta_table=dict(args.class_rgb_delta),
             overwrite=args.overwrite,
         )
         output = _resolve(args.output_manifest)

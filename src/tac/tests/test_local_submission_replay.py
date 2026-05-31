@@ -9,12 +9,13 @@ from comma_lab.local_submission_replay import (
 )
 
 
-def _write_fake_upstream(root: Path) -> None:
+def _write_fake_upstream(root: Path, *, fail_after_raw: bool = False) -> None:
     (root / ".venv" / "bin").mkdir(parents=True)
     python_bin = root / ".venv" / "bin" / "python"
     python_bin.write_text("#!/usr/bin/env sh\nexit 0\n", encoding="utf-8")
     python_bin.chmod(0o755)
     (root / "public_test_video_names.txt").write_text("0.mkv\n", encoding="utf-8")
+    fail_block = "exit 17" if fail_after_raw else ""
     (root / "evaluate.sh").write_text(
         """#!/usr/bin/env bash
 set -euo pipefail
@@ -29,6 +30,7 @@ while [[ $# -gt 0 ]]; do
 done
 mkdir -p "$SUBMISSION_DIR/inflated" "$SUBMISSION_DIR/archive"
 printf raw > "$SUBMISSION_DIR/inflated/0.raw"
+FAIL_BLOCK
 cat > "$SUBMISSION_DIR/report.txt" <<'EOF'
 === Evaluation results over 1 samples ===
   Average PoseNet Distortion: 0.00040000
@@ -38,7 +40,7 @@ cat > "$SUBMISSION_DIR/report.txt" <<'EOF'
   Compression Rate: 0.12340000
   Final score: 100*segnet_dist + sqrt(10*posenet_dist) + 25*rate = 3.25
 EOF
-""",
+""".replace("FAIL_BLOCK", fail_block),
         encoding="utf-8",
     )
     (root / "evaluate.sh").chmod(0o755)
@@ -98,3 +100,39 @@ def test_run_local_submission_replay_cleans_raw_scratch(tmp_path: Path, monkeypa
     assert summary.axis_tag == "[macOS-CPU advisory]"
     assert summary.score_claim is False
     assert summary.ready_for_exact_eval_dispatch is False
+
+
+def test_run_local_submission_replay_cleans_raw_scratch_after_failure(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    fake_repo = tmp_path / "repo"
+    fake_repo.mkdir()
+    monkeypatch.setattr("comma_lab.local_submission_replay.repo_root", lambda: fake_repo)
+    upstream = tmp_path / "upstream"
+    _write_fake_upstream(upstream, fail_after_raw=True)
+
+    runtime = tmp_path / "runtime"
+    runtime.mkdir()
+    (runtime / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    archive = tmp_path / "archive.zip"
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr("0.bin", b"payload")
+    submission = stage_local_replay_submission(
+        runtime_submission_dir=runtime,
+        archive_zip_path=archive,
+        output_dir=tmp_path / "replay",
+    )
+
+    summary = run_local_submission_replay(
+        submission_dir=submission,
+        source_runtime_submission_dir=runtime,
+        archive_zip_path=archive,
+        upstream_root=upstream,
+    )
+
+    assert summary.evaluation_passed is False
+    assert "local_replay_returncode:17" in summary.blockers
+    assert summary.inflated_dir_cleanup == "deleted_after_failed_replay"
+    assert not Path(summary.inflated_dir).exists()
+    assert summary.archive_extract_dir_cleanup == "deleted_after_failed_replay"

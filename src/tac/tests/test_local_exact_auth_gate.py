@@ -165,3 +165,31 @@ def test_cli_writes_fail_closed_report_for_non_winner(tmp_path: Path) -> None:
     assert report["exact_auth_dispatch_recommended"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
     assert "local_score_not_below_auth_target" in report["blockers"]
+
+
+def test_cli_can_classify_blocked_candidate_successfully_for_queue(tmp_path: Path) -> None:
+    local_path = tmp_path / "local.json"
+    out_path = tmp_path / "gate.json"
+    local_path.write_text(json.dumps(_local_summary(score=22.5)), encoding="utf-8")
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(TOOL_PATH),
+            "--local-replay-summary-json",
+            str(local_path),
+            "--auth-frontier-score",
+            "0.1919853363",
+            "--out-json",
+            str(out_path),
+            "--success-on-blocked",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert proc.returncode == 0
+    report = json.loads(out_path.read_text(encoding="utf-8"))
+    assert report["exact_auth_dispatch_recommended"] is False
+    assert report["next_required_action"] == "do_not_dispatch_exact_auth"

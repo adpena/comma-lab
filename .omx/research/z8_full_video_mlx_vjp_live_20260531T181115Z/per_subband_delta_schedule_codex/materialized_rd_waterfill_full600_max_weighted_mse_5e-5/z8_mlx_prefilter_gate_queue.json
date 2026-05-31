@@ -1,0 +1,328 @@
+{
+  "controls": {
+    "local_first": true,
+    "max_concurrency": {
+      "local_cpu": 1,
+      "local_io_heavy": 1,
+      "local_mlx": 1
+    },
+    "mode": "running"
+  },
+  "experiments": [
+    {
+      "id": "z8_mlx_prefilter_0000_rd_waterfill_full600_max_weighted_mse_5e_5",
+      "lane_id": "z8_mlx_prefilter_gate",
+      "metadata": {
+        "archive_zip": {
+          "bytes": 24573973,
+          "path": ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/per_subband_delta_schedule_codex/materialized_rd_waterfill_full600_max_weighted_mse_5e-5/archive.zip",
+          "sha256": "df32840163a48b632f0e5d171a3caee3910e56f94dbce86fb236bc4e038521bb"
+        },
+        "artifact_retention_cleanup_json": "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/artifact_retention_cleanup.json",
+        "auth_frontier_score": 0.1919853363,
+        "auto_cleanup_enabled": true,
+        "candidate_archive_bin": {
+          "bytes": 24475266,
+          "path": ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/per_subband_delta_schedule_codex/materialized_rd_waterfill_full600_max_weighted_mse_5e-5/0.bin",
+          "sha256": "a725297c92f164857c6e76f04bd28e268e06888c86b781610ed129d3e77601e3"
+        },
+        "candidate_count": 1,
+        "candidate_id": "rd_waterfill_full600_max_weighted_mse_5e_5",
+        "charged_bits_changed": false,
+        "cleanup_cold_store_roots": [
+          "/Volumes/VertigoDataTier/pact/cold_store",
+          "/Volumes/APDataStore/pact/cold_store"
+        ],
+        "cleanup_min_bytes": "100MiB",
+        "contest_cuda_auth_eval": false,
+        "cpu_replay_allowed_only_after_gate_action": "run_local_cpu_replay",
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "family_id": "z8_hierarchical_predictive_coding",
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "learning_posterior_path": null,
+        "learning_signal_enabled": true,
+        "local_first": true,
+        "mlx_before_cpu": true,
+        "mlx_prefilter_gate_json": "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/mlx_prefilter_exact_auth_gate.json",
+        "mlx_prefilter_gate_learning_signal_json": "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/mlx_prefilter_gate_learning_signal.json",
+        "mlx_replay_json": "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/full_video_mlx_replay.json",
+        "mlx_target_action": 0.1919853363,
+        "output_root": "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate",
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "reference_pairs_npy": {
+          "bytes": 176947328,
+          "path": ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/reference_pairs_rgb255.npy",
+          "sha256": "96aef7910e00943c9bc39b9746c474a0e11b7890a2d51f370c69da4734ffc6fe"
+        },
+        "reproducibility_contract": {
+          "candidate_inputs_hashed": true,
+          "exact_auth_required_before_promotion": true,
+          "gate_learning_identity_uses_artifact_sha256_not_wall_clock": true,
+          "queue_steps_have_file_backed_postconditions": true,
+          "raw_scratch_cleanup_is_queue_owned": true,
+          "schema": "z8_mlx_prefilter_gate_reproducibility_contract.v1"
+        },
+        "requires_exact_eval_before_promotion": true,
+        "schema": "z8_mlx_prefilter_gate_queue_metadata.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "tool": "comma_lab.scheduler.z8_mlx_prefilter_gate_queue"
+      },
+      "priority": 10,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/replay_z8_full_video_mlx_candidate.py",
+            "--candidate-archive-bin",
+            ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/per_subband_delta_schedule_codex/materialized_rd_waterfill_full600_max_weighted_mse_5e-5/0.bin",
+            "--reference-pairs-npy",
+            ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/reference_pairs_rgb255.npy",
+            "--out-json",
+            "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/full_video_mlx_replay.json",
+            "--upstream-dir",
+            "upstream",
+            "--pair-chunk-size",
+            "32",
+            "--scorer-hw",
+            "384,512",
+            "--device",
+            "cpu",
+            "--archive-zip",
+            ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/per_subband_delta_schedule_codex/materialized_rd_waterfill_full600_max_weighted_mse_5e-5/archive.zip"
+          ],
+          "id": "run_z8_full_video_mlx_replay",
+          "kind": "command",
+          "on_postcondition_failure": "failed",
+          "postconditions": [
+            {
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/full_video_mlx_replay.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "z8_full_video_mlx_replay.v1",
+              "key": "schema",
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/full_video_mlx_replay.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/full_video_mlx_replay.json",
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_mlx"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/full_video_mlx_replay.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/per_subband_delta_schedule_codex/materialized_rd_waterfill_full600_max_weighted_mse_5e-5/0.bin",
+              ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/reference_pairs_rgb255.npy",
+              ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/per_subband_delta_schedule_codex/materialized_rd_waterfill_full600_max_weighted_mse_5e-5/archive.zip"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false,
+            "schema": "z8_mlx_prefilter_replay_step_telemetry.v1"
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/gate_local_candidate_for_exact_auth.py",
+            "--mlx-prefilter-summary-json",
+            "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/full_video_mlx_replay.json",
+            "--auth-frontier-score",
+            "0.1919853363",
+            "--mlx-target-action",
+            "0.1919853363",
+            "--out-json",
+            "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/mlx_prefilter_exact_auth_gate.json",
+            "--success-on-blocked"
+          ],
+          "id": "gate_mlx_prefilter_for_exact_auth",
+          "kind": "command",
+          "on_postcondition_failure": "failed",
+          "postconditions": [
+            {
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/mlx_prefilter_exact_auth_gate.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "local_candidate_exact_auth_gate.v1",
+              "key": "schema",
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/mlx_prefilter_exact_auth_gate.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/mlx_prefilter_exact_auth_gate.json",
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "run_z8_full_video_mlx_replay"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/mlx_prefilter_exact_auth_gate.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/full_video_mlx_replay.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false,
+            "schema": "z8_mlx_prefilter_gate_step_telemetry.v1"
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/record_local_exact_auth_gate_learning.py",
+            "--gate-report-json",
+            "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/mlx_prefilter_exact_auth_gate.json",
+            "--replay-summary-json",
+            "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/full_video_mlx_replay.json",
+            "--candidate-id",
+            "rd_waterfill_full600_max_weighted_mse_5e_5",
+            "--lane-id",
+            "z8_mlx_prefilter_gate",
+            "--family-id",
+            "z8_hierarchical_predictive_coding",
+            "--out-json",
+            "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/mlx_prefilter_gate_learning_signal.json"
+          ],
+          "id": "record_mlx_prefilter_gate_learning",
+          "kind": "command",
+          "on_postcondition_failure": "failed",
+          "postconditions": [
+            {
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/mlx_prefilter_gate_learning_signal.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "local_exact_auth_gate_learning_signal.v1",
+              "key": "schema",
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/mlx_prefilter_gate_learning_signal.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/mlx_prefilter_gate_learning_signal.json",
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "gate_mlx_prefilter_for_exact_auth"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/mlx_prefilter_gate_learning_signal.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/full_video_mlx_replay.json",
+              "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/mlx_prefilter_exact_auth_gate.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false,
+            "schema": "z8_mlx_prefilter_gate_learning_step_telemetry.v1"
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/compact_experiment_artifacts.py",
+            "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5",
+            "--min-bytes",
+            "100MiB",
+            "--json-output",
+            "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/artifact_retention_cleanup.json",
+            "--journal-output",
+            "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/artifact_retention_cleanup.json.journal.jsonl",
+            "--execute",
+            "--action",
+            "move",
+            "--cold-store-reserve-gb",
+            "40.0",
+            "--cold-store-root",
+            "/Volumes/VertigoDataTier/pact/cold_store",
+            "--cold-store-root",
+            "/Volumes/APDataStore/pact/cold_store"
+          ],
+          "id": "cleanup_rebuildable_raw_scratch",
+          "kind": "command",
+          "on_postcondition_failure": "failed",
+          "postconditions": [
+            {
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/artifact_retention_cleanup.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "comma_lab.artifact_retention_plan.v1",
+              "key": "plan.schema",
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/artifact_retention_cleanup.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [],
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/artifact_retention_cleanup.json",
+              "required_false": [
+                "plan.score_claim",
+                "plan.promotion_eligible",
+                "plan.ready_for_exact_eval_dispatch"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "record_mlx_prefilter_gate_learning"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/artifact_retention_cleanup.json",
+              "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5/artifact_retention_cleanup.json.journal.jsonl"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "/Volumes/VertigoDataTier/pact/experiments/results/z8_mlx_prefilter_gate/rd_waterfill_full600_max_weighted_mse_5e_5"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": true,
+            "schema": "z8_mlx_prefilter_cleanup_step_telemetry.v1"
+          },
+          "timeout_seconds": 0
+        }
+      ],
+      "tags": []
+    }
+  ],
+  "queue_id": "z8_rd_waterfill_full600_mlx_prefilter_gate",
+  "schema": "experiment_queue.v1"
+}
