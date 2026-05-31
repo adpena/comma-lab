@@ -95,6 +95,14 @@ experiments/results/**/*.pt
 .omx/research/pr95_mlx_*/0.bin
 .omx/research/**/submission/archive/
 .omx/research/**/submission/inflated/
+# Local replay/materializer candidate trees are rebuildable payload/runtime
+# copies. Preserve their compact manifests/memos; keep raw packets out of git.
+.omx/research/**/candidate/0.bin
+.omx/research/**/candidate/submission/
+.omx/research/**/materialized_*/0.bin
+.omx/research/**/materialized_*/submission/
+.omx/research/**/materialized_*/receiver_proof/
+.omx/research/**/local_full_replay_*/submission/
 # Large generated materializer portfolio debug products stay local. Keep compact
 # summaries, manifests, and work queues tracked when intentionally curated.
 .omx/research/codex_many_materializer_autonomous_portfolio_*/action_summary.json
