@@ -181,6 +181,22 @@ def test_adapter_satisfies_protocol() -> None:
 
 
 @mlx_only
+def test_adapter_artifact_metadata_records_score_aware_objective() -> None:
+    bundle = _tiny_dreamer_bundle(distill=0.5)
+    bundle.segnet_distillation_objective = "boundary_argmax_hinge"
+    bundle.segnet_tau_boundary = 2.0
+    bundle.segnet_hinge_margin = 0.5
+    adapter = MlxScoreAwareAdapter(bundle, substrate_id="dreamer_v3_rssm")
+
+    metadata = adapter.artifact_metadata()
+    objective = metadata["score_aware_training"]
+    assert objective["segnet_distillation_objective"] == "boundary_argmax_hinge"
+    assert objective["segnet_tau_boundary"] == 2.0
+    assert objective["segnet_hinge_margin"] == 0.5
+    assert objective["allow_mock_scorer_teacher"] is True
+
+
+@mlx_only
 def test_adapter_optimizer_step_raises_style_a_stub() -> None:
     adapter = MlxScoreAwareAdapter(
         _tiny_dreamer_bundle(), substrate_id="dreamer_v3_rssm"

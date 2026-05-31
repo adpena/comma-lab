@@ -248,7 +248,26 @@ class MlxScoreAwareAdapter:
         authority remain owned by ``TrainingArtifact`` itself; the bundle
         refuses those duplicate keys at construction.
         """
-        return dict(self.bundle.substrate_artifact_metadata)
+        metadata = dict(self.bundle.substrate_artifact_metadata)
+        if "score_aware_training" in metadata:
+            metadata["substrate_supplied_score_aware_training"] = metadata.pop(
+                "score_aware_training"
+            )
+        metadata["score_aware_training"] = {
+            "schema": "mlx_score_aware_training_objective.v1",
+            "segnet_distillation_objective": self.bundle.segnet_distillation_objective,
+            "segnet_tau_boundary": float(self.bundle.segnet_tau_boundary),
+            "segnet_hinge_margin": float(self.bundle.segnet_hinge_margin),
+            "segnet_teacher_frame_index": int(self.bundle.segnet_teacher_frame_index),
+            "segnet_distillation_weight": float(self.bundle.distillation_weight),
+            "pose_distillation_weight": float(self.bundle.pose_distillation_weight),
+            "pose_dims": int(self.bundle.pose_dims),
+            "has_real_segnet_teacher": self.bundle.scorer_teacher is not None,
+            "has_real_posenet_teacher": self.bundle.pose_scorer_teacher is not None,
+            "allow_mock_scorer_teacher": bool(self.bundle.allow_mock_scorer_teacher),
+            "allow_segnet_only_research": bool(self.bundle.allow_segnet_only_research),
+        }
+        return metadata
 
     def sample_batch(self, batch_size: int, seed: int) -> Any:
         """Sample a deterministic batch of pair indices (Catalog #229 PV)."""

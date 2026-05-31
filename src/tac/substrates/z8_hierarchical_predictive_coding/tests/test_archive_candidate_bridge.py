@@ -18,6 +18,8 @@ from tac.substrates.z8_hierarchical_predictive_coding.archive_candidate import (
     Z8_HPC_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
     Z8_HPC_ARCHIVE_CANDIDATE_FAMILY,
     Z8_HPC_ARCHIVE_TRANSFORM_KIND,
+    Z8_HPC_PIXEL_CONSUMED_ARCHIVE_SECTIONS,
+    Z8_HPC_STACK_CUSTODY_NOT_YET_PIXEL_CONSUMED_SECTIONS,
     export_z8hpc1_archive_bytes,
 )
 from tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_binding import (
@@ -97,6 +99,17 @@ def test_z8_archive_bound_package_stays_false_authority_when_receiver_blocked(
     monkeypatch: Any,
 ) -> None:
     def fake_emit_runtime_package(**kwargs: Any) -> dict[str, Any]:
+        manifest_extra = kwargs["runtime_adapter_manifest_extra"]
+        assert manifest_extra["full_stack_pixel_consumption_claim"] is False
+        assert manifest_extra["pixel_consumed_archive_sections"] == list(
+            Z8_HPC_PIXEL_CONSUMED_ARCHIVE_SECTIONS
+        )
+        assert manifest_extra["stack_custody_not_yet_pixel_consumed_sections"] == list(
+            Z8_HPC_STACK_CUSTODY_NOT_YET_PIXEL_CONSUMED_SECTIONS
+        )
+        assert "mamba_mallat_dreamer_wyner_ziv_stack" not in (
+            manifest_extra["predictive_coding_family"]
+        )
         proof = {
             "proof_path": "receiver_proof/fake_z8_receiver_proof.json",
             "inflate_argv": [
@@ -151,6 +164,8 @@ def test_z8_archive_bound_package_stays_false_authority_when_receiver_blocked(
     assert wrapped["adapter_id"] == Z8_HPC_ARCHIVE_BOUND_ADAPTER_ID
     assert row["candidate_family"] == Z8_HPC_ARCHIVE_CANDIDATE_FAMILY
     assert row["target_kind"] == Z8_HPC_ARCHIVE_TRANSFORM_KIND
+    assert "mamba_mallat_dreamer_wyner_ziv" not in row["target_kind"]
+    assert "wavelet_pixel_consumed" in row["target_kind"]
     assert row["byte_closed_candidate_materialized"] is True
     assert row["candidate_archive_sha256"]
     assert row["score_claim"] is False

@@ -43,16 +43,16 @@ inflate-time consumer. The per-pair per-level learned logits (training only)
 are REDUCED to argmax indices for archive serialization (canonical sister A
 DreamerV3 pattern; HNeRV parity L4 budget discipline).
 
-Per Catalog #139 + #105 + #272 distinguishing-feature contract:
-- decoder_blob bytes ARE frame-affecting at inflate (multi-level decoder consumed)
-- indices_blob bytes ARE frame-affecting at inflate (per-level cat samples consumed;
-  DISTINGUISHING FEATURE #1 — DreamerV3 RSSM per-level)
+Per Catalog #139 + #105 + #272 distinguishing-feature contract, the CURRENT
+runtime has exactly one proven pixel-consuming distinguishing surface:
 - wavelet_blob bytes ARE frame-affecting at inflate (per-level Mallat inverse;
   DISTINGUISHING FEATURE #2 — Mallat wavelet codec)
-- wyner_ziv_blob bytes ARE frame-affecting at inflate (top-level WZ decode consumed;
-  DISTINGUISHING FEATURE #3 — Wyner-Ziv side-info coder)
-- dreamer_state_blob bytes ARE frame-affecting at inflate (GRU state init consumed;
-  DISTINGUISHING FEATURE #4 — DreamerV3 latent dynamics)
+- decoder_blob, indices_blob, wyner_ziv_blob, and dreamer_state_blob are
+  archive-bound stack custody/provenance sections in the current runtime, but
+  are NOT yet promoted as pixel-consuming distinguishing features until their
+  byte-mutation proofs land. This fail-closed wording prevents full-stack
+  Mamba/Dreamer/Wyner-Ziv overclaim while preserving the bytes for the next
+  validated stack-runtime adapter.
 - header + meta bytes are parse/config gates (control_or_metadata role)
 
 CLAUDE.md compliance:
@@ -72,7 +72,6 @@ from typing import Any
 
 import brotli  # type: ignore[import-not-found]
 import numpy as np
-
 
 Z8HPC1_MAGIC: bytes = b"Z8HPC1\x00\x00"
 """Z8 Hierarchical Predictive Coding variant 1 archive magic (8 bytes)."""

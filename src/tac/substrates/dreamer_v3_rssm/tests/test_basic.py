@@ -48,8 +48,6 @@ def test_module_imports_and_archive_grammar_declared() -> None:
         DEFAULT_K,
         EVAL_HW,
         NUM_PAIRS,
-        DreamerV3RSSMConfig,
-        DreamerV3RSSMSubstrateMLX,
         RSSMC1_HEADER_SIZE,
     )
 
@@ -201,10 +199,10 @@ def test_archive_round_trip_byte_determinism() -> None:
 def test_archive_grammar_section_offsets() -> None:
     """parse_rssmc1_archive_bytes returns correct section offsets per Catalog #139."""
     from tac.substrates.dreamer_v3_rssm import (
-        DreamerV3RSSMConfig,
-        DreamerV3RSSMSubstrateMLX,
         RSSMC1_HEADER_SIZE,
         RSSMC1_MAGIC,
+        DreamerV3RSSMConfig,
+        DreamerV3RSSMSubstrateMLX,
         pack_archive,
         parse_rssmc1_archive_bytes,
     )
@@ -254,6 +252,8 @@ def test_mlx_pytorch_decoder_parity_at_archive_boundary() -> None:
     Target: ``max_abs < 1e-2`` (sub-uint8-rounding-step at the inflate boundary
     per the corrected #1258 empirical anchor 2026-05-26 |S_MLX-S_PT|=0.000011).
     """
+    import torch
+
     from tac.substrates.dreamer_v3_rssm import (
         DreamerV3RSSMConfig,
         DreamerV3RSSMSubstrateMLX,
@@ -261,7 +261,6 @@ def test_mlx_pytorch_decoder_parity_at_archive_boundary() -> None:
         parse_archive,
     )
     from tac.substrates.dreamer_v3_rssm.inflate import DreamerV3RSSMDecoderTorch
-    import torch
 
     cfg = DreamerV3RSSMConfig(num_pairs=2)
     mlx_mod = DreamerV3RSSMSubstrateMLX(cfg)
@@ -410,6 +409,69 @@ def test_end_to_end_mlx_train_archive_pytorch_inflate() -> None:
     )
     assert bytes_written == expected_bytes, (
         f"output bytes drift: got {bytes_written}, expected {expected_bytes}"
+    )
+
+
+def test_archive_bound_export_uses_num_pair_receiver_byte_contract(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Archive-bound receiver proof sizing must match the actual archive pair count.
+
+    The full 600-pair constant is correct for contest submissions, but smoke and
+    MLX-local candidate rows often emit smaller archives. Those rows must be
+    byte-closed against their own archive grammar, not falsely blocked by a
+    1200-frame receiver byte expectation.
+    """
+    import tac.substrates.dreamer_v3_rssm.archive_candidate as archive_candidate
+    from tac.substrates.dreamer_v3_rssm import (
+        DreamerV3RSSMConfig,
+        DreamerV3RSSMSubstrateMLX,
+        expected_receiver_output_bytes_for_pairs,
+        export_dreamer_v3_rssm_mlx_archive,
+    )
+
+    captured: dict[str, object] = {}
+
+    def _capture_runtime_package(**kwargs):
+        captured.update(kwargs)
+        return {
+            "schema": "captured_archive_bound_package.v1",
+            "archive_bound_candidate_adapter_package": {"rows": []},
+        }
+
+    monkeypatch.setattr(
+        archive_candidate,
+        "emit_archive_bound_candidate_runtime_package",
+        _capture_runtime_package,
+    )
+
+    cfg = DreamerV3RSSMConfig(num_pairs=2, num_groups=2, num_categories=4)
+    model = DreamerV3RSSMSubstrateMLX(cfg)
+    archive_path, archive_sha256, archive_bytes = export_dreamer_v3_rssm_mlx_archive(
+        model,
+        tmp_path,
+        repo_root=Path(__file__).resolve().parents[5],
+        meta={
+            "score_aware_training": {
+                "schema": "test_score_aware_training.v1",
+                "segnet_distillation_objective": "boundary_argmax_hinge",
+            }
+        },
+    )
+
+    assert archive_path.is_file()
+    assert len(archive_sha256) == 64
+    assert archive_bytes == archive_path.stat().st_size
+    expected_bytes = expected_receiver_output_bytes_for_pairs(2)
+    assert captured["expected_receiver_output_bytes"] == expected_bytes
+    runtime_extra = captured["runtime_adapter_manifest_extra"]
+    assert isinstance(runtime_extra, dict)
+    assert runtime_extra["rssm_num_pairs"] == 2
+    assert runtime_extra["receiver_expected_raw_bytes"] == expected_bytes
+    assert (
+        runtime_extra["score_aware_training"]["segnet_distillation_objective"]
+        == "boundary_argmax_hinge"
     )
 
 

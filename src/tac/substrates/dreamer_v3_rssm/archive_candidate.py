@@ -33,6 +33,8 @@ DREAMER_V3_RSSM_MLX_ARCHIVE_TRANSFORM_KIND = (
     "dreamer_v3_rssm_mlx_categorical_predictive_coding_archive"
 )
 DREAMER_V3_RSSM_MLX_CONTEST_RAW_BYTES = 1164 * 874 * 1200 * 3
+DREAMER_V3_RSSM_CAMERA_H = 874
+DREAMER_V3_RSSM_CAMERA_W = 1164
 
 
 def _repo_root_from_here() -> Path:
@@ -89,6 +91,35 @@ def dreamer_v3_rssm_meta_from_config(cfg: Any) -> dict[str, object]:
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
+
+
+def expected_receiver_output_bytes_for_pairs(num_pairs: int) -> int:
+    """Return raw receiver bytes for a Dreamer archive with ``num_pairs`` pairs."""
+
+    if not isinstance(num_pairs, int) or num_pairs < 1:
+        raise ValueError(f"num_pairs must be a positive int; got {num_pairs!r}")
+    return int(num_pairs) * 2 * DREAMER_V3_RSSM_CAMERA_H * DREAMER_V3_RSSM_CAMERA_W * 3
+
+
+def _runtime_manifest_extra_from_model(
+    model: Any,
+    *,
+    expected_receiver_output_bytes: int,
+    meta: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    runtime_extra: dict[str, Any] = {
+        "schema": "dreamer_v3_rssm_mlx_runtime_adapter_manifest.v1",
+        "predictive_coding_family": "dreamer_v3_categorical_rssm",
+        "rssm_num_pairs": int(model.cfg.num_pairs),
+        "rssm_num_groups": int(model.cfg.num_groups),
+        "rssm_num_categories": int(model.cfg.num_categories),
+        "receiver_expected_raw_bytes": int(expected_receiver_output_bytes),
+    }
+    archive_meta = dict(meta or {})
+    score_aware = archive_meta.get("score_aware_training")
+    if isinstance(score_aware, Mapping):
+        runtime_extra["score_aware_training"] = dict(score_aware)
+    return runtime_extra
 
 
 def exported_decoder_state_dict_from_model(model: Any) -> dict[str, np.ndarray]:
@@ -201,6 +232,7 @@ def export_dreamer_v3_rssm_mlx_archive(
     )
     archive_sha256 = sha256_file(archive_zip_path)
     archive_bytes = archive_zip_path.stat().st_size
+    expected_raw_bytes = expected_receiver_output_bytes_for_pairs(int(model.cfg.num_pairs))
     if emit_archive_bound_candidate_package:
         emit_archive_bound_candidate_runtime_package(
             adapter_id=DREAMER_V3_RSSM_MLX_ARCHIVE_BOUND_ADAPTER_ID,
@@ -219,14 +251,13 @@ def export_dreamer_v3_rssm_mlx_archive(
             proof_schema=DREAMER_V3_RSSM_MLX_RECEIVER_PROOF_SCHEMA,
             proof_filename="dreamer_v3_rssm_mlx_receiver_proof.json",
             candidate_label="dreamer_v3_rssm",
-            expected_receiver_output_bytes=DREAMER_V3_RSSM_MLX_CONTEST_RAW_BYTES,
+            expected_receiver_output_bytes=expected_raw_bytes,
             retain_receiver_output=retain_receiver_proof_output,
-            runtime_adapter_manifest_extra={
-                "schema": "dreamer_v3_rssm_mlx_runtime_adapter_manifest.v1",
-                "predictive_coding_family": "dreamer_v3_categorical_rssm",
-                "rssm_num_groups": int(model.cfg.num_groups),
-                "rssm_num_categories": int(model.cfg.num_categories),
-            },
+            runtime_adapter_manifest_extra=_runtime_manifest_extra_from_model(
+                model,
+                expected_receiver_output_bytes=expected_raw_bytes,
+                meta=meta,
+            ),
             candidate_row_schema="dreamer_v3_rssm_mlx_archive_bound_candidate_row.v1",
             wrapper_schema=DREAMER_V3_RSSM_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
             mlx_triage_argv=mlx_triage_argv,
@@ -255,6 +286,7 @@ def export_dreamer_v3_rssm_mlx_archive_bound_candidate_package(
         meta=meta,
     )
     root, out_dir = _resolve_output_dir(output_dir, repo_root=repo_root)
+    expected_raw_bytes = expected_receiver_output_bytes_for_pairs(int(model.cfg.num_pairs))
     return emit_archive_bound_candidate_runtime_package(
         adapter_id=DREAMER_V3_RSSM_MLX_ARCHIVE_BOUND_ADAPTER_ID,
         candidate_family=DREAMER_V3_RSSM_MLX_ARCHIVE_CANDIDATE_FAMILY,
@@ -272,14 +304,13 @@ def export_dreamer_v3_rssm_mlx_archive_bound_candidate_package(
         proof_schema=DREAMER_V3_RSSM_MLX_RECEIVER_PROOF_SCHEMA,
         proof_filename="dreamer_v3_rssm_mlx_receiver_proof.json",
         candidate_label="dreamer_v3_rssm",
-        expected_receiver_output_bytes=DREAMER_V3_RSSM_MLX_CONTEST_RAW_BYTES,
+        expected_receiver_output_bytes=expected_raw_bytes,
         retain_receiver_output=retain_receiver_proof_output,
-        runtime_adapter_manifest_extra={
-            "schema": "dreamer_v3_rssm_mlx_runtime_adapter_manifest.v1",
-            "predictive_coding_family": "dreamer_v3_categorical_rssm",
-            "rssm_num_groups": int(model.cfg.num_groups),
-            "rssm_num_categories": int(model.cfg.num_categories),
-        },
+        runtime_adapter_manifest_extra=_runtime_manifest_extra_from_model(
+            model,
+            expected_receiver_output_bytes=expected_raw_bytes,
+            meta=meta,
+        ),
         candidate_row_schema="dreamer_v3_rssm_mlx_archive_bound_candidate_row.v1",
         wrapper_schema=DREAMER_V3_RSSM_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
         mlx_triage_argv=mlx_triage_argv,
@@ -295,6 +326,7 @@ __all__ = [
     "DREAMER_V3_RSSM_MLX_RECEIVER_PROOF_SCHEMA",
     "category_indices_from_model",
     "dreamer_v3_rssm_meta_from_config",
+    "expected_receiver_output_bytes_for_pairs",
     "export_dreamer_v3_rssm_mlx_archive",
     "export_dreamer_v3_rssm_mlx_archive_bound_candidate_package",
     "exported_decoder_state_dict_from_model",

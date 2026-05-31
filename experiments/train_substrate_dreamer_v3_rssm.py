@@ -82,6 +82,7 @@ from tac.substrates.dreamer_v3_rssm import (
     CANONICAL_EQUATION_IDS,
     DreamerV3RSSMConfig,
     DreamerV3RSSMSubstrateMLX,
+    export_dreamer_v3_rssm_mlx_archive,
     pack_archive,
 )
 
@@ -390,6 +391,78 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     return p
+
+
+# ---------------------------------------------------------------------------
+# Replay surface
+# ---------------------------------------------------------------------------
+
+
+def _full_replay_argv(args: argparse.Namespace) -> list[str]:
+    """Return deterministic argv for replaying a Dreamer MLX-local full run."""
+
+    argv = [
+        ".venv/bin/python",
+        "experiments/train_substrate_dreamer_v3_rssm.py",
+        "--output-dir",
+        str(args.output_dir),
+        "--epochs",
+        str(int(args.epochs)),
+        "--num-pairs",
+        str(int(args.num_pairs)),
+        "--num-groups",
+        str(int(args.num_groups)),
+        "--num-categories",
+        str(int(args.num_categories)),
+        "--base-channels",
+        str(int(args.base_channels)),
+        "--video-path",
+        str(args.video_path),
+        "--full-lr",
+        str(float(args.full_lr)),
+        "--distillation-weight",
+        str(float(args.distillation_weight)),
+        "--pose-distillation-weight",
+        str(float(args.pose_distillation_weight)),
+        "--seg-distill-objective",
+        str(args.seg_distill_objective),
+        "--seg-tau-boundary",
+        str(float(args.seg_tau_boundary)),
+        "--seg-hinge-margin",
+        str(float(args.seg_hinge_margin)),
+        "--seed",
+        str(int(args.seed)),
+        "--gumbel-temperature",
+        str(float(args.gumbel_temperature)),
+        "--gumbel-temperature-final",
+        str(float(args.gumbel_temperature_final)),
+        "--warmup-epochs",
+        str(int(args.warmup_epochs)),
+        "--weight-decay",
+        str(float(args.weight_decay)),
+        "--optimizer-kind",
+        str(args.optimizer_kind),
+        "--grad-clip-max-norm",
+        str(float(args.grad_clip_max_norm)),
+        "--cosine-decay-min-lr-ratio",
+        str(float(args.cosine_decay_min_lr_ratio)),
+    ]
+    if bool(getattr(args, "tau_anneal_enabled", False)):
+        argv.append("--tau-anneal-enabled")
+    if bool(getattr(args, "cosine_decay_enabled", False)):
+        argv.append("--cosine-decay-enabled")
+    if bool(getattr(args, "allow_mock_scorer_teacher", False)):
+        argv.append("--allow-mock-scorer-teacher")
+    if bool(getattr(args, "pr95_faithful_curriculum_enabled", False)):
+        argv.append("--pr95-faithful-curriculum-enabled")
+    if getattr(args, "pr95_curriculum_total_epochs", None) is not None:
+        argv.extend(
+            [
+                "--pr95-curriculum-total-epochs",
+                str(int(args.pr95_curriculum_total_epochs)),
+            ]
+        )
+    return argv
 
 
 # ---------------------------------------------------------------------------
@@ -746,6 +819,43 @@ def _full_main(args: argparse.Namespace) -> int:
         )
         pose_distillation_weight = float(args.pose_distillation_weight)
 
+    score_aware_training_metadata = {
+        "schema": "dreamer_v3_rssm_score_aware_training_objective.v1",
+        "segnet_distillation_objective": str(args.seg_distill_objective),
+        "segnet_tau_boundary": float(args.seg_tau_boundary),
+        "segnet_hinge_margin": float(args.seg_hinge_margin),
+        "segnet_distillation_weight": float(args.distillation_weight),
+        "pose_distillation_weight": float(pose_distillation_weight),
+        "teacher_binding": (
+            "real_segnet_posenet"
+            if scorer_teacher is not None and pose_scorer_teacher is not None
+            else "explicit_mock_reconstruction_proxy"
+        ),
+        "mathematical_target": (
+            "raw-logit Crammer-Singer multiclass hinge; zero iff "
+            "target_logit >= max_impostor_logit + margin"
+            if str(args.seg_distill_objective) == "boundary_argmax_hinge"
+            else str(args.seg_distill_objective)
+        ),
+        "axis_tag": "[macOS-MLX research-signal]",
+    }
+    replay_argv = _full_replay_argv(args)
+
+    def _export_dreamer_archive(
+        trained_model: DreamerV3RSSMSubstrateMLX,
+        archive_output_dir: Path,
+    ) -> tuple[Path, str, int]:
+        return export_dreamer_v3_rssm_mlx_archive(
+            trained_model,
+            archive_output_dir,
+            repo_root=REPO_ROOT,
+            mlx_triage_argv=replay_argv,
+            meta={
+                "score_aware_training": score_aware_training_metadata,
+                "training_replay_argv": replay_argv,
+            },
+        )
+
     bundle = RendererBundle(
         model=model,
         target_rgb_0=target_rgb_0,
@@ -768,6 +878,19 @@ def _full_main(args: argparse.Namespace) -> int:
         learnable_pose_student_head=learnable_pose_student_head,
         pose_dims=DEFAULT_POSE_DIMS,
         allow_mock_scorer_teacher=bool(args.allow_mock_scorer_teacher),
+        export_archive_fn=_export_dreamer_archive,
+        substrate_artifact_metadata={
+            "schema": "dreamer_v3_rssm_full_mlx_training_metadata.v1",
+            "predictive_hierarchy_member": "dreamer_v3_categorical_posterior",
+            "score_aware_training": score_aware_training_metadata,
+            "archive_bridge": "dreamer_v3_rssm_mlx_archive_bound_runtime_bridge",
+            "archive_bridge_outputs": [
+                "archive.zip",
+                "submission/inflate.sh",
+                "archive_bound_candidate_adapter_package.json",
+                "receiver_proof/dreamer_v3_rssm_mlx_receiver_proof.json",
+            ],
+        },
     )
 
     # Wave N+11 stabilizer recipe (sister of Z7-Mamba-2): grad-clip +
@@ -808,13 +931,16 @@ def _full_main(args: argparse.Namespace) -> int:
         notes=(
             "DreamerV3 RSSM MLX-first score-aware full training via canonical "
             "mlx_score_aware_full_main harness; real contest video + "
-            "reconstruction + REAL Hinton-distilled SegNet (KL T=2.0) + REAL "
-            "PoseNet (pose-MSE) teachers (sister of Z7-Mamba-2 real-Hinton "
+            "reconstruction + configured REAL SegNet scorer objective "
+            f"({args.seg_distill_objective}) + REAL PoseNet (pose-MSE) "
+            "teachers (sister of Z7-Mamba-2 real-Hinton "
             "commit 8fa8fcfda; pose-axis NON-ZERO) + Wave N+11 stabilizer "
             "(grad-clip + warmup + weight-decay + adamw + EMA 0.997); "
+            "archive-bound export emits RSSMC1 archive.zip + generated "
+            "inflate.sh receiver proof via shared runtime bridge; "
             "non-promotable [macOS-MLX research-signal] per Catalog "
             "#192/#317/#341; MLX->PyTorch bridge + paired CUDA/CPU anchor "
-            "DEFERRED to sister L2."
+            "still required before score authority."
         ),
     )
     print(

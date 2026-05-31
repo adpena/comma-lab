@@ -40,7 +40,14 @@ Z8_HPC_RECEIVER_PROOF_SCHEMA = (
 Z8_HPC_ARCHIVE_BOUND_ADAPTER_ID = "z8_hierarchical_predictive_coding_archive_export"
 Z8_HPC_ARCHIVE_CANDIDATE_FAMILY = "z8_hierarchical_predictive_coding"
 Z8_HPC_ARCHIVE_TRANSFORM_KIND = (
-    "z8_hpc1_mamba_mallat_dreamer_wyner_ziv_predictive_coding_archive"
+    "z8_hpc1_mallat_wavelet_pixel_consumed_predictive_stack_archive"
+)
+Z8_HPC_PIXEL_CONSUMED_ARCHIVE_SECTIONS: tuple[str, ...] = ("wavelet_coeffs_blob",)
+Z8_HPC_STACK_CUSTODY_NOT_YET_PIXEL_CONSUMED_SECTIONS: tuple[str, ...] = (
+    "decoder_blob",
+    "indices_blob",
+    "wyner_ziv_blob",
+    "dreamer_state_blob",
 )
 
 Z8_RUNTIME_MODULE_FILES: tuple[str, ...] = (
@@ -98,6 +105,27 @@ def _write_z8_runtime(
     (submission_dir / "0.bin").write_bytes(bin_bytes)
 
 
+def _z8_runtime_adapter_manifest_extra() -> dict[str, Any]:
+    return {
+        "schema": "z8_hpc1_runtime_adapter_manifest.v1",
+        "predictive_coding_family": (
+            "z8_hpc1_mallat_wavelet_pixel_consumed_predictive_stack_custody"
+        ),
+        "pixel_consumed_archive_sections": list(Z8_HPC_PIXEL_CONSUMED_ARCHIVE_SECTIONS),
+        "stack_custody_not_yet_pixel_consumed_sections": list(
+            Z8_HPC_STACK_CUSTODY_NOT_YET_PIXEL_CONSUMED_SECTIONS
+        ),
+        "full_stack_pixel_consumption_claim": False,
+        "mamba_dreamer_wyner_ziv_runtime_consumption_status": (
+            "archive_bound_custody_only_pending_distinguishing_feature_mutation_proofs"
+        ),
+        "runtime_module_files": list(Z8_RUNTIME_MODULE_FILES),
+        "vendored_tac_subpackages": [
+            subpkg for subpkg, _files in Z8_RUNTIME_EXTRA_TAC_SUBPACKAGES
+        ],
+    }
+
+
 def export_z8hpc1_archive_bytes(
     archive_bytes: bytes,
     output_dir: str | Path,
@@ -147,16 +175,7 @@ def export_z8hpc1_archive_bytes(
             candidate_label="z8_hpc1",
             expected_receiver_output_bytes=CONTEST_RAW_BYTES,
             retain_receiver_output=retain_receiver_proof_output,
-            runtime_adapter_manifest_extra={
-                "schema": "z8_hpc1_runtime_adapter_manifest.v1",
-                "predictive_coding_family": (
-                    "mamba_mallat_dreamer_wyner_ziv_stack"
-                ),
-                "runtime_module_files": list(Z8_RUNTIME_MODULE_FILES),
-                "vendored_tac_subpackages": [
-                    subpkg for subpkg, _files in Z8_RUNTIME_EXTRA_TAC_SUBPACKAGES
-                ],
-            },
+            runtime_adapter_manifest_extra=_z8_runtime_adapter_manifest_extra(),
             candidate_row_schema="z8_hpc1_archive_bound_candidate_row.v1",
             wrapper_schema=Z8_HPC_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
             mlx_triage_argv=mlx_triage_argv,
@@ -227,14 +246,7 @@ def export_z8hpc1_archive_bound_candidate_package(
         candidate_label="z8_hpc1",
         expected_receiver_output_bytes=CONTEST_RAW_BYTES,
         retain_receiver_output=retain_receiver_proof_output,
-        runtime_adapter_manifest_extra={
-            "schema": "z8_hpc1_runtime_adapter_manifest.v1",
-            "predictive_coding_family": "mamba_mallat_dreamer_wyner_ziv_stack",
-            "runtime_module_files": list(Z8_RUNTIME_MODULE_FILES),
-            "vendored_tac_subpackages": [
-                subpkg for subpkg, _files in Z8_RUNTIME_EXTRA_TAC_SUBPACKAGES
-            ],
-        },
+        runtime_adapter_manifest_extra=_z8_runtime_adapter_manifest_extra(),
         candidate_row_schema="z8_hpc1_archive_bound_candidate_row.v1",
         wrapper_schema=Z8_HPC_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
         mlx_triage_argv=mlx_triage_argv,
@@ -246,7 +258,9 @@ __all__ = [
     "Z8_HPC_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA",
     "Z8_HPC_ARCHIVE_CANDIDATE_FAMILY",
     "Z8_HPC_ARCHIVE_TRANSFORM_KIND",
+    "Z8_HPC_PIXEL_CONSUMED_ARCHIVE_SECTIONS",
     "Z8_HPC_RECEIVER_PROOF_SCHEMA",
+    "Z8_HPC_STACK_CUSTODY_NOT_YET_PIXEL_CONSUMED_SECTIONS",
     "Z8_RUNTIME_EXTRA_TAC_SUBPACKAGES",
     "Z8_RUNTIME_MODULE_FILES",
     "export_z8hpc1_archive_bound_candidate_package",

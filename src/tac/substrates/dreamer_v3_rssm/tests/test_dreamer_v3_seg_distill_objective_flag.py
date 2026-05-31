@@ -289,6 +289,43 @@ def test_trainer_source_threads_objective_into_renderer_bundle():
     assert "segnet_hinge_margin=float(args.seg_hinge_margin)" in src
 
 
+def test_trainer_threads_objective_into_archive_export_and_metadata():
+    """No signal loss: full training must export the selected objective into both
+    the archive-bound bridge and the canonical training artifact metadata."""
+    src = _TRAINER_PATH.read_text(encoding="utf-8")
+    assert "export_archive_fn=_export_dreamer_archive" in src
+    assert "export_dreamer_v3_rssm_mlx_archive(" in src
+    assert '"score_aware_training": score_aware_training_metadata' in src
+    assert "mlx_triage_argv=replay_argv" in src
+    assert "archive_bound_candidate_adapter_package.json" in src
+
+
+def test_full_replay_argv_preserves_boundary_hinge_flags():
+    """Replay bundles must preserve the mathematically selected objective."""
+    mod = _load_trainer_module()
+    ns = mod._build_parser().parse_args(
+        [
+            *_REQUIRED_ARGV,
+            "--seg-distill-objective",
+            "boundary_argmax_hinge",
+            "--seg-tau-boundary",
+            "2.0",
+            "--seg-hinge-margin",
+            "0.5",
+            "--tau-anneal-enabled",
+            "--cosine-decay-enabled",
+        ]
+    )
+
+    argv = mod._full_replay_argv(ns)
+    assert "--smoke" not in argv
+    assert argv[argv.index("--seg-distill-objective") + 1] == "boundary_argmax_hinge"
+    assert argv[argv.index("--seg-tau-boundary") + 1] == "2.0"
+    assert argv[argv.index("--seg-hinge-margin") + 1] == "0.5"
+    assert "--tau-anneal-enabled" in argv
+    assert "--cosine-decay-enabled" in argv
+
+
 # ---------------------------------------------------------------------------
 # (B) HEADLINE behavioral NO-FAKE guard — objective selection is NOT a no-op.
 # Identical bundles (same renderer / targets / teacher / heads / seeds) except
