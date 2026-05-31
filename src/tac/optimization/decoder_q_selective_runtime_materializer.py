@@ -17,6 +17,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from tac.optimization.archive_bound_candidate_contract import (
+    archive_bound_candidate_contract_fields_for_row,
+)
 from tac.optimization.decoder_q_selective_runtime_packet import (
     BRIDGE_SCHEMA,
     FALSE_AUTHORITY,
@@ -784,9 +787,14 @@ def materialize_selective_runtime_candidate(
                 dqs1_payload=dqs1_payload,
                 candidate_member=candidate_member,
             )
-            write_json(transaction.staging / "selective_runtime_manifest.json", manifest)
     except ArtifactWriteError as exc:
         raise DecoderQSelectiveRuntimeMaterializerError(str(exc)) from exc
+    _attach_archive_bound_candidate_contract(
+        manifest=manifest,
+        repo_root=repo_root,
+        output_dir=output_dir,
+    )
+    write_json(output_dir / "selective_runtime_manifest.json", manifest)
     return manifest
 
 
@@ -844,6 +852,69 @@ def _materialization_manifest(
             "exact contest auth eval not run",
         ],
     }
+
+
+def _attach_archive_bound_candidate_contract(
+    *,
+    manifest: dict[str, Any],
+    repo_root: Path,
+    output_dir: Path,
+) -> None:
+    materialized = manifest["materialized_archive"]
+    base_archive = manifest["base_archive"]
+    contract_row = {
+        "schema": manifest["schema"],
+        "candidate_id": f"dqs1_selective_runtime_{materialized['zip_sha256'][:16]}",
+        "candidate_family": "dqs1_selective_runtime",
+        "archive_native_transform_kind": "dqs1_pairset_selective_runtime_materialized_archive",
+        "candidate_archive_path": str(output_dir / "archive.zip"),
+        "candidate_archive_sha256": materialized["zip_sha256"],
+        "candidate_archive_bytes": materialized["zip_bytes"],
+        "source_archive_path": base_archive["path"],
+        "source_archive_sha256": base_archive["zip_sha256"],
+        "source_archive_bytes": base_archive["zip_bytes"],
+        "byte_closed_candidate_emitted": True,
+        "byte_closed_candidate_materialized": True,
+        "candidate_archive_materialized": True,
+        "runtime_consumption_proof_ready": False,
+        "runtime_consumption_proof_status": "blocked",
+        "receiver_contract_kind": "dqs1_selective_runtime_locality_control",
+        "receiver_contract_satisfied": False,
+        "runtime_adapter_ready": True,
+        "contest_runtime_decoder_adapter_ready": True,
+        "runtime_adapter_manifest": {
+            "schema": "dqs1_selective_runtime_adapter_manifest.v1",
+            "runtime_adapter_ready": True,
+            "contest_runtime_decoder_adapter_ready": True,
+            "decode_only_receiver_contract": True,
+            "submission_dir": str(output_dir),
+            "inflate_runtime": str(output_dir / "inflate.py"),
+            "runtime_consumption_proof_path": None,
+        },
+        "semantic_payload_changed": True,
+        "score_affecting_payload_changed": True,
+        "exact_axis_score_affecting_adjudication_required": True,
+        "charged_bits_changed": True,
+        "readiness_blockers": manifest["dispatch_blockers"],
+        "dispatch_blockers": manifest["dispatch_blockers"],
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "gpu_launched": False,
+    }
+    manifest.update(
+        archive_bound_candidate_contract_fields_for_row(
+            contract_row,
+            repo_root=repo_root,
+            family_id="dqs1_selective_runtime",
+            candidate_chain_id=str(contract_row["candidate_id"]),
+            entropy_position_label="before_entropy_coder",
+        )
+    )
 
 
 __all__ = [

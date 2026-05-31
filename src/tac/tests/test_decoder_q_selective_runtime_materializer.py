@@ -5,6 +5,10 @@ from pathlib import Path
 
 import pytest
 
+from tac.optimization.archive_bound_candidate_contract import (
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
+    archive_bound_candidate_contracts_from_payload,
+)
 from tac.optimization.decoder_q_selective_runtime_materializer import (
     build_selective_inflate_py,
     dqs1_payload_from_packet_plan,
@@ -216,6 +220,21 @@ def test_materialize_appends_dqs1_inside_stored_member_and_keeps_authority_false
     assert manifest["ready_for_exact_eval_dispatch"] is False
     assert manifest["archive_member_delta"]["all_selective_bytes_inside_member_x"] is True
     assert manifest["archive_member_delta"]["external_sidecars_required_at_inflate_time"] is False
+    assert manifest["archive_bound_candidate_contract_schema"] == (
+        ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+    )
+    contracts = archive_bound_candidate_contracts_from_payload(manifest)
+    assert len(contracts) == 1
+    contract = contracts[0]
+    assert contract["candidate_archive"]["sha256"] == manifest["materialized_archive"][
+        "zip_sha256"
+    ]
+    assert contract["byte_closed_candidate_materialized"] is True
+    assert contract["archive_bound_candidate_ready"] is False
+    assert contract["runtime_consumption_proof_ready"] is False
+    assert contract["receiver_contract_satisfied"] is False
+    assert contract["ready_for_exact_eval_dispatch"] is False
+    assert "dqs1" in contract["archive_substrate_tags"]
 
     with zipfile.ZipFile(out_dir / "archive.zip") as zf:
         infos = zf.infolist()
