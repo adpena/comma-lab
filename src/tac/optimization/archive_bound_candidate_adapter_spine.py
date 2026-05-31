@@ -30,6 +30,9 @@ ARCHIVE_BOUND_CANDIDATE_MLX_TRIAGE_REQUEST_SCHEMA = "tac_archive_bound_candidate
 ARCHIVE_BOUND_CANDIDATE_RECEIVER_PROOF_GATE_SCHEMA = "tac_archive_bound_candidate_receiver_proof_gate.v1"
 ARCHIVE_BOUND_CANDIDATE_EXACT_BLOCKER_SCHEMA = "tac_archive_bound_candidate_exact_axis_blocker.v1"
 ARCHIVE_BOUND_CANDIDATE_POSTERIOR_HOOK_SCHEMA = "tac_archive_bound_candidate_posterior_update_hook.v1"
+ARCHIVE_BOUND_CANDIDATE_RUNTIME_PAYLOAD_BACKLOG_SCHEMA = (
+    "tac_archive_bound_candidate_runtime_payload_materializer_backlog_row.v1"
+)
 _MLX_TRIAGE_IGNORED_EXACT_AXIS_BLOCKERS: frozenset[str] = frozenset(
     {
         "contest_cpu_or_cuda_exact_axis_payload_required",
@@ -236,6 +239,46 @@ def _posterior_hook(row: Mapping[str, Any], *, index: int) -> dict[str, Any]:
     }
 
 
+def _runtime_payload_materializer_backlog(
+    row: Mapping[str, Any],
+    *,
+    index: int,
+) -> list[dict[str, Any]]:
+    contract = _contract(row)
+    runtime_payload = _mapping(contract.get("runtime_payload_consumption"))
+    tasks = _string_list(runtime_payload.get("next_materializer_tasks"))
+    if not tasks:
+        return []
+    candidate_id = _row_id(row, index)
+    base = {
+        "schema": ARCHIVE_BOUND_CANDIDATE_RUNTIME_PAYLOAD_BACKLOG_SCHEMA,
+        "candidate_id": candidate_id,
+        "contract_key": contract.get("contract_key"),
+        "family_id": contract.get("family_id"),
+        "archive_native_transform_kind": contract.get(
+            "archive_native_transform_kind"
+        ),
+        "runtime_payload_consumption": dict(runtime_payload),
+        "work_selection_kind": "runtime_payload_materializer_or_blocker_work",
+        "required_output_contract_schema": "tac_archive_bound_candidate_contract.v1",
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        "allowed_use": "bounded_runner_runtime_payload_materializer_backlog_only",
+        "forbidden_use": "score_claim_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    return [
+        {
+            **base,
+            "task_index": task_index,
+            "runtime_payload_materializer_task": task,
+            "blocked_exact_promotion_until_task_lands": True,
+        }
+        for task_index, task in enumerate(tasks)
+    ]
+
+
 def build_archive_bound_candidate_adapter_package(
     adapter: ArchiveBoundCandidateAdapter,
     *,
@@ -280,6 +323,11 @@ def build_archive_bound_candidate_adapter_package(
     receiver_proof_gates = [_receiver_proof_gate(row, index=index) for index, row in enumerate(rows)]
     exact_axis_blockers = [_exact_axis_blocker(row, index=index) for index, row in enumerate(rows)]
     posterior_hooks = [_posterior_hook(row, index=index) for index, row in enumerate(rows)]
+    runtime_payload_backlog = [
+        backlog_row
+        for index, row in enumerate(rows)
+        for backlog_row in _runtime_payload_materializer_backlog(row, index=index)
+    ]
     package = {
         "schema": ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA,
         "adapter_id": adapter.adapter_id,
@@ -292,9 +340,11 @@ def build_archive_bound_candidate_adapter_package(
         "receiver_proof_gates": receiver_proof_gates,
         "exact_axis_blockers": exact_axis_blockers,
         "posterior_update_hooks": posterior_hooks,
+        "runtime_payload_materializer_backlog": runtime_payload_backlog,
         "ready_contract_count": sum(
             1 for row in rows if _contract(row).get("archive_bound_candidate_ready_for_exact_handoff") is True
         ),
+        "runtime_payload_materializer_backlog_count": len(runtime_payload_backlog),
         "mlx_triage_ready_count": sum(
             1 for row in mlx_triage_requests if row.get("ready_for_mlx_local_triage") is True
         ),
@@ -319,6 +369,7 @@ __all__ = [
     "ARCHIVE_BOUND_CANDIDATE_POSTERIOR_HOOK_SCHEMA",
     "ARCHIVE_BOUND_CANDIDATE_RECEIVER_PROOF_GATE_SCHEMA",
     "ARCHIVE_BOUND_CANDIDATE_REPLAY_BUNDLE_SCHEMA",
+    "ARCHIVE_BOUND_CANDIDATE_RUNTIME_PAYLOAD_BACKLOG_SCHEMA",
     "ArchiveBoundCandidateAdapter",
     "ArchiveBoundCandidateAdapterError",
     "build_archive_bound_candidate_adapter_package",

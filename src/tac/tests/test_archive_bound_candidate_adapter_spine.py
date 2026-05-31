@@ -14,6 +14,7 @@ from tac.optimization.archive_bound_candidate_adapter_spine import (
     ARCHIVE_BOUND_CANDIDATE_POSTERIOR_HOOK_SCHEMA,
     ARCHIVE_BOUND_CANDIDATE_RECEIVER_PROOF_GATE_SCHEMA,
     ARCHIVE_BOUND_CANDIDATE_REPLAY_BUNDLE_SCHEMA,
+    ARCHIVE_BOUND_CANDIDATE_RUNTIME_PAYLOAD_BACKLOG_SCHEMA,
     build_archive_bound_candidate_adapter_package,
 )
 from tac.optimization.archive_bound_candidate_contract import (
@@ -389,6 +390,15 @@ def test_archive_contract_demotes_partial_predictive_stack_runtime(
         "wire_wyner_ziv_blob_decode_into_receiver_pixel_output"
         in runtime_consumption["next_materializer_tasks"]
     )
+    backlog = package["runtime_payload_materializer_backlog"]
+    assert package["runtime_payload_materializer_backlog_count"] == len(backlog)
+    assert len(backlog) == len(runtime_consumption["next_materializer_tasks"])
+    assert backlog[0]["schema"] == ARCHIVE_BOUND_CANDIDATE_RUNTIME_PAYLOAD_BACKLOG_SCHEMA
+    assert backlog[0]["work_selection_kind"] == (
+        "runtime_payload_materializer_or_blocker_work"
+    )
+    assert backlog[0]["budget_spend_allowed"] is False
+    assert backlog[0]["blocked_exact_promotion_until_task_lands"] is True
 
     portfolio = build_cross_family_candidate_portfolio(
         incumbent_score=0.2,
