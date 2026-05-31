@@ -44,8 +44,11 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-from tac.canonical_equations import update_equation_with_empirical_anchor
-from tac.canonical_equations.contract import EmpiricalAnchor
+from tac.canonical_equations import (
+    EmpiricalAnchor,
+    get_equation_by_id,
+    update_equation_with_empirical_anchor,
+)
 from tac.provenance import build_provenance_for_mps_proxy
 
 EQUATION_ID = "categorical_posterior_capacity_vs_continuous_gaussian_v1"
@@ -114,34 +117,58 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     now = _utc_now()
-    prov = build_provenance_for_mps_proxy(
-        captured_at_utc=now,
-        source_substrate="dreamer_v3_rssm",
-        notes=(
-            "DreamerV3 RSSM real-Hinton long MLX run pose-axis reduction anchor; "
-            "REAL SegNet (KL T=2.0) + PoseNet (pose-MSE) teachers; non-promotable "
-            "[macOS-MLX research-signal] per Catalog #192/#317/#341."
-        ),
+    import hashlib
+
+    artifact = args.run_dir / "training_artifact.json"
+    artifact_sha = (
+        hashlib.sha256(artifact.read_bytes()).hexdigest()
+        if artifact.is_file()
+        else ""
     )
+    telemetry_rel = args.run_dir / "telemetry.jsonl"
+    try:
+        source_path = str(telemetry_rel.resolve().relative_to(REPO_ROOT))
+    except ValueError:
+        source_path = str(telemetry_rel)
+    prov = build_provenance_for_mps_proxy(
+        source_path=source_path,
+        artifact_sha256=artifact_sha,
+        captured_at_utc=now,
+        in_domain_context="dreamer_v3_rssm_real_hinton_teacher_600pair_long_mlx",
+    )
+    residual = float(args.predicted_reduction) - float(reduction)
     anchor = EmpiricalAnchor(
         anchor_id=f"dreamer_v3_rssm_real_hinton_pose_axis_{args.run_dir.name}",
-        measurement_utc=now,
         predicted_value=float(args.predicted_reduction),
-        empirical_value=float(reduction),
-        predicted_vs_empirical_residual=(
-            float(args.predicted_reduction) - float(reduction)
+        measured_value=float(reduction),
+        measurement_residual=residual,
+        measurement_method=(
+            "real_hinton_segnet_posenet_teacher_600pair_long_mlx_local_"
+            "pose_axis_reduction_fraction"
         ),
-        measurement_method="macos_mlx_research_signal",
+        evidence_path=source_path,
         provenance=prov,
-        source_artifact_path=str(args.run_dir / "telemetry.jsonl"),
+        empirical_verification_status="VERIFIED_VIA_EMPIRICAL_ANCHOR",
         notes=(
-            "REAL SegNet+PoseNet Hinton-distilled teacher; pose-axis NON-ZERO "
-            "(mock leaves pose=0). DreamerV3 categorical-posterior (192-bit) "
-            "convergence under the real scorer-bound gradient."
+            "FIRST REAL-teacher pose-axis anchor for the DreamerV3 categorical-"
+            "posterior (the dreamer member of the hierarchical-PC stack-of-"
+            "stacks). REAL SegNet KL T=2.0 + REAL PoseNet pose-MSE Hinton-"
+            f"distilled teachers (NO mock flag); pose-axis {poses[0]:.4g} -> "
+            f"{poses[-1]:.4g} ({reduction:.1%} reduction) over {len(poses)} "
+            "epochs at 600pair MLX-LOCAL with Wave N+11 stabilizer (grad-clip "
+            "1.0 + warmup 5 + weight_decay 1e-4 + adamw + EMA 0.997). Mock "
+            "leaves pose=0 (phantom-provenance per Catalog #322). Non-promotable "
+            "[macOS-MLX research-signal] per Catalog #192/#317/#341; paired "
+            "Linux x86_64 CPU/CUDA replay DEFERRED."
         ),
     )
-    eq = update_equation_with_empirical_anchor(EQUATION_ID, anchor)
-    print(f"registered anchor; equation now has {len(eq.empirical_anchors)} anchors")
+    update_equation_with_empirical_anchor(EQUATION_ID, anchor)
+    eq = get_equation_by_id(EQUATION_ID)
+    print(
+        f"registered anchor; equation now has {len(eq.empirical_anchors)} anchors "
+        f"(predicted={args.predicted_reduction} empirical={reduction:.4f} "
+        f"residual={residual:.4f})"
+    )
     return 0
 
 
