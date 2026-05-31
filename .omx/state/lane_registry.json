@@ -64203,6 +64203,88 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_d3_d4_consolidated_apparatus_hardening_recovery_20260530",
+      "name": "D3+D4 consolidated apparatus hardening (recovery respawn)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "CLAUDE.md D4 line 363 + D3 line 1018 prose non-negotiable sections; +132 insertions 0 deletions; D7/D8/D9 untouched count=3"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_d3_d4_consolidated_apparatus_hardening_recovery_landed_20260530.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_canonical_equation_falsification_ratification_wave_n6_triple_wave_n11_quad_recovery_20260530",
+      "name": "Canonical equation falsification ratification Wave N+11 QUAD HALT anchor (recovery)",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "appended wave_n11_quad_halt_phantom_provenance_pre_check_failed anchor to triple_substrate_composition_orthogonal_pose_axis_savings_v1; .omx/state/canonical_equations_registry.jsonl anchors 3->4; Wave N+6 falsification verified already-ratified not duplicated"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "test_wave_n6_n11_composition_falsification.py 17 tests pass; full canonical_equations suite 98 pass; gates 344/371/185 = 0 violations"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/canonical_equation_falsification_ratification_wave_n6_triple_wave_n11_quad_recovery_landed_20260530.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -64212,5 +64294,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-31T00:15:41Z"
+  "updated_at": "2026-05-31T01:39:17Z"
 }
