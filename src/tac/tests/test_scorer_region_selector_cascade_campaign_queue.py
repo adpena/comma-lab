@@ -117,15 +117,28 @@ def test_campaign_queue_builds_independent_variants_and_harvest_dependency(
     variant_experiments = [
         exp
         for exp in queue["experiments"]
-        if exp["id"] not in {"campaign_harvest", "campaign_acquisition_policy"}
+        if exp["id"]
+        not in {
+            "archive_master_gradient_hydration",
+            "campaign_harvest",
+            "campaign_acquisition_policy",
+            "campaign_dynamic_followup_queue",
+        }
     ]
     assert len(variant_experiments) == 2
+    hydration_experiment = next(
+        exp for exp in queue["experiments"] if exp["id"] == "archive_master_gradient_hydration"
+    )
+    assert hydration_experiment["steps"][0]["id"] == "hydrate_archive_specific_master_gradient"
     for experiment in variant_experiments:
         assert experiment["metadata"]["schema"] == "scorer_region_selector_cascade_variant.v1"
         assert "grouped-cascade-campaign" in experiment["tags"]
         step_ids = [step["id"] for step in experiment["steps"]]
         assert "materialize_p19_posenet_null_pairs" in step_ids
         by_id = {step["id"]: step for step in experiment["steps"]}
+        assert by_id["materialize_p19_posenet_null_pairs"]["requires"] == [
+            "archive_master_gradient_hydration.hydrate_archive_specific_master_gradient"
+        ]
         assert by_id["local_cpu_component_spot_check"]["requires"] == ["mlx_cpu_spend_gate"]
         assert "build_scorer_response_dataset" in step_ids
         patch_step = next(
@@ -146,7 +159,22 @@ def test_campaign_queue_builds_independent_variants_and_harvest_dependency(
     assert policy_step["id"] == "build_campaign_acquisition_policy"
     assert policy_step["requires"] == ["campaign_harvest.harvest_campaign_learning_surface"]
     assert "--master-gradient-tensor" in policy_step["command"]
+    assert "--archive-master-gradient-hydration" in policy_step["command"]
     assert "--pixel-gradient-cache" in policy_step["command"]
+    followup_experiment = next(
+        exp for exp in queue["experiments"] if exp["id"] == "campaign_dynamic_followup_queue"
+    )
+    followup_step = followup_experiment["steps"][0]
+    assert followup_step["id"] == "compile_dynamic_followup_campaign_queue"
+    assert followup_step["requires"] == [
+        "campaign_acquisition_policy.build_campaign_acquisition_policy"
+    ]
+    assert "tools/build_scorer_region_selector_cascade_queue_from_policy.py" in followup_step["command"]
+    assert "--mlx-first-acquisition" in followup_step["command"]
+    assert queue["metadata"]["full_video_mlx_first_acquisition"] is True
+    assert queue["metadata"]["dynamic_followup_queue_path"].endswith(
+        "dynamic_followup_campaign_queue.json"
+    )
 
 
 def test_campaign_report_harvests_variant_learning_rows(tmp_path: Path) -> None:

@@ -15,6 +15,7 @@ from typing import Any
 
 import numpy as np
 
+from tac.optimization.contest_space_action import RATE_SCORE_PER_BYTE
 from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY
 from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
@@ -34,9 +35,19 @@ from tac.repo_io import sha256_file
 
 P19_POSENET_NULL_PAIRS_SCHEMA = "p19_posenet_null_pair_detection.v1"
 P18_SEGNET_REGION_WATERFILL_SCHEMA = "p18_segnet_region_waterfill.v1"
+SCORER_REGION_ARCHIVE_MASTER_GRADIENT_HYDRATION_SCHEMA = (
+    "scorer_region_archive_master_gradient_hydration.v1"
+)
 DISTORTION_BUDGET_ATTACK_PLAN_SCHEMA = "receiver_closed_distortion_budget_attack_plan.v1"
 FRAME1_REGION_WATERFILL_RUNTIME_PATCH_SCHEMA = "frame1_region_waterfill_runtime_patch.v1"
 SCORER_REGION_SELECTOR_CHAIN_REPORT_SCHEMA = "scorer_region_selector_chain_report.v1"
+
+FULL600_MLX_OPERATING_POINT = {
+    "d_seg": 0.0012223561610638473,
+    "d_pose": 0.0017157510650319333,
+    "rate": 0.004754685709380427,
+    "score": 0.37208944003527994,
+}
 
 
 class ScorerRegionWaterfillError(ValueError):
@@ -76,6 +87,277 @@ def _read_json(path: str | Path, *, repo_root: str | Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ScorerRegionWaterfillError(f"JSON artifact must be an object: {path}")
     return payload
+
+
+def _score_pose_marginal(d_pose: float) -> float:
+    if d_pose <= 0.0 or not math.isfinite(d_pose):
+        raise ScorerRegionWaterfillError(
+            f"d_pose must be positive finite for score marginal, got {d_pose!r}"
+        )
+    return 5.0 / math.sqrt(10.0 * d_pose)
+
+
+def _same_path(
+    left: str | Path | None,
+    right: str | Path,
+    *,
+    repo_root: str | Path,
+) -> bool:
+    if left is None or not str(left).strip():
+        return False
+    return _resolve(left, repo_root).resolve(strict=False) == _resolve(
+        right,
+        repo_root,
+    ).resolve(strict=False)
+
+
+def _anchor_sha_matches(row: Mapping[str, Any], archive_sha256: str) -> bool:
+    for key in ("archive_sha256", "scored_archive_sha256", "gradient_subject_sha256"):
+        value = row.get(key)
+        if isinstance(value, str) and value.lower() == archive_sha256.lower():
+            return True
+    return False
+
+
+def _anchor_summary(row: Mapping[str, Any], *, repo_root: str | Path) -> dict[str, Any]:
+    path = row.get("gradient_array_path")
+    return {
+        "schema_version": row.get("schema_version"),
+        "archive_sha256": row.get("archive_sha256"),
+        "scored_archive_sha256": row.get("scored_archive_sha256"),
+        "gradient_subject_sha256": row.get("gradient_subject_sha256"),
+        "gradient_array_path": (
+            _repo_rel(_resolve(path, repo_root), repo_root)
+            if isinstance(path, str) and path.strip()
+            else None
+        ),
+        "gradient_tensor_kind": row.get("gradient_tensor_kind"),
+        "measurement_axis": row.get("measurement_axis"),
+        "measurement_hardware": row.get("measurement_hardware"),
+        "measurement_method": row.get("measurement_method"),
+        "measurement_utc": row.get("measurement_utc"),
+        "n_bytes": row.get("n_bytes"),
+        "n_pairs_total": row.get("n_pairs_total"),
+        "n_pairs_used": row.get("n_pairs_used"),
+        "operating_point": row.get("operating_point"),
+    }
+
+
+def _anchor_rows(
+    path: str | Path,
+    *,
+    repo_root: str | Path,
+) -> list[dict[str, Any]]:
+    resolved = _resolve(path, repo_root)
+    if not resolved.is_file():
+        return []
+    rows: list[dict[str, Any]] = []
+    for line_no, line in enumerate(resolved.read_text(encoding="utf-8").splitlines(), 1):
+        text = line.strip()
+        if not text:
+            continue
+        try:
+            payload = json.loads(text)
+        except json.JSONDecodeError as exc:
+            raise ScorerRegionWaterfillError(
+                f"master-gradient anchor ledger corrupt at line {line_no}: {exc}"
+            ) from exc
+        if isinstance(payload, dict):
+            rows.append(payload)
+    return rows
+
+
+def _operating_point_from_anchor_rows(
+    rows: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    for row in rows:
+        op = row.get("operating_point")
+        if isinstance(op, Mapping) and isinstance(op.get("d_pose"), (int, float)):
+            return dict(op)
+    return dict(FULL600_MLX_OPERATING_POINT)
+
+
+def build_scorer_region_archive_master_gradient_hydration(
+    *,
+    repo_root: str | Path,
+    source_submission_dir: str | Path,
+    master_gradient_tensor: str | Path,
+    anchor_ledger_path: str | Path = ".omx/state/master_gradient_anchors.jsonl",
+    max_preview_pairs: int = 64,
+    chunk_byte_rows: int = 4096,
+) -> dict[str, Any]:
+    """Hydrate archive-specific pair priors from a per-byte master-gradient tensor.
+
+    This is an acquisition artifact, not score authority. It only becomes a
+    ready pair source when the source archive SHA is represented in the
+    canonical anchor ledger. Otherwise downstream P19 selection records the
+    blocker and falls back to selector-mode proxy ordering.
+    """
+
+    source_dir = _resolve(source_submission_dir, repo_root)
+    archive = source_dir / "archive.zip"
+    if not archive.is_file():
+        raise ScorerRegionWaterfillError(f"missing source archive: {archive}")
+    source_sha = sha256_file(archive)
+    tensor = _resolve(master_gradient_tensor, repo_root)
+    blockers: list[str] = []
+    tensor_exists = tensor.is_file()
+    if not tensor_exists:
+        blockers.append("master_gradient_tensor_missing")
+
+    anchors = _anchor_rows(anchor_ledger_path, repo_root=repo_root)
+    exact_anchor_rows = [
+        row for row in anchors if _anchor_sha_matches(row, source_sha)
+    ]
+    tensor_anchor_rows = [
+        row
+        for row in anchors
+        if _same_path(row.get("gradient_array_path"), tensor, repo_root=repo_root)
+    ]
+    exact_tensor_anchor_rows = [
+        row
+        for row in exact_anchor_rows
+        if _same_path(row.get("gradient_array_path"), tensor, repo_root=repo_root)
+    ]
+    archive_exact_match = bool(exact_tensor_anchor_rows or exact_anchor_rows)
+    tensor_anchor_match = bool(exact_tensor_anchor_rows)
+    if not archive_exact_match:
+        blockers.append("archive_specific_master_gradient_anchor_missing_for_current_campaign")
+    if exact_anchor_rows and not tensor_anchor_match:
+        blockers.append("configured_master_gradient_tensor_not_the_archive_anchor_tensor")
+
+    operating_point = _operating_point_from_anchor_rows(
+        exact_tensor_anchor_rows or exact_anchor_rows or tensor_anchor_rows
+    )
+    try:
+        pose_coeff = _score_pose_marginal(float(operating_point["d_pose"]))
+    except (KeyError, TypeError, ValueError):
+        operating_point = dict(FULL600_MLX_OPERATING_POINT)
+        pose_coeff = _score_pose_marginal(float(operating_point["d_pose"]))
+
+    result: dict[str, Any] = {
+        "schema": SCORER_REGION_ARCHIVE_MASTER_GRADIENT_HYDRATION_SCHEMA,
+        "generated_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "source_submission_dir": _repo_rel(source_dir, repo_root),
+        "source_archive": _artifact_record(archive, repo_root=repo_root),
+        "master_gradient_tensor": {
+            "path": _repo_rel(tensor, repo_root),
+            "exists": tensor_exists,
+            "bytes": tensor.stat().st_size if tensor_exists else None,
+            "sha256": None,
+            "sha256_status": "not_computed_large_tensor_queue_hydration",
+        },
+        "anchor_ledger_path": _repo_rel(_resolve(anchor_ledger_path, repo_root), repo_root),
+        "archive_exact_match": archive_exact_match,
+        "configured_tensor_anchor_match": tensor_anchor_match,
+        "exact_anchor_row_count": len(exact_anchor_rows),
+        "configured_tensor_anchor_row_count": len(tensor_anchor_rows),
+        "exact_tensor_anchor_row_count": len(exact_tensor_anchor_rows),
+        "exact_anchor_rows_preview": [
+            _anchor_summary(row, repo_root=repo_root) for row in exact_anchor_rows[:4]
+        ],
+        "configured_tensor_anchor_rows_preview": [
+            _anchor_summary(row, repo_root=repo_root) for row in tensor_anchor_rows[:4]
+        ],
+        "operating_point": operating_point,
+        "score_marginal_coefficients": {
+            "seg": 100.0,
+            "pose": float(pose_coeff),
+            "rate_per_byte": RATE_SCORE_PER_BYTE,
+        },
+        "source_axis": "[macOS-MLX research-signal]",
+        "authority_boundary": (
+            "archive-bound acquisition prior only; receiver proof, local CPU gate, "
+            "and exact auth eval remain required before any score or dispatch claim"
+        ),
+        "blockers": ordered_unique(blockers),
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
+    }
+    if not tensor_exists:
+        require_no_truthy_authority_fields(
+            result,
+            context="scorer_region_archive_master_gradient_hydration",
+        )
+        return result
+
+    try:
+        arr = np.load(tensor, mmap_mode="r")
+    except OSError as exc:
+        raise ScorerRegionWaterfillError(f"failed loading master-gradient tensor: {exc}") from exc
+    if arr.ndim != 3 or int(arr.shape[2]) != 3:
+        result["blockers"] = ordered_unique(
+            [*blockers, "master_gradient_tensor_not_per_pair_per_byte_axes3"]
+        )
+        result["master_gradient_tensor"]["shape"] = [int(dim) for dim in arr.shape]
+        require_no_truthy_authority_fields(
+            result,
+            context="scorer_region_archive_master_gradient_hydration",
+        )
+        return result
+
+    n_bytes, n_pairs, _ = (int(arr.shape[0]), int(arr.shape[1]), int(arr.shape[2]))
+    chunk_rows = max(1, int(chunk_byte_rows))
+    pair_axis_l1 = np.zeros((n_pairs, 3), dtype=np.float64)
+    nonzero_byte_rows = 0
+    for start in range(0, n_bytes, chunk_rows):
+        chunk = np.asarray(arr[start : start + chunk_rows], dtype=np.float64)
+        abs_chunk = np.abs(chunk)
+        pair_axis_l1 += abs_chunk.sum(axis=0)
+        nonzero_byte_rows += int(np.any(abs_chunk > 0.0, axis=(1, 2)).sum())
+
+    coeffs = np.asarray([100.0, pose_coeff, RATE_SCORE_PER_BYTE], dtype=np.float64)
+    pose_l1 = pair_axis_l1[:, 1]
+    score_l1 = pair_axis_l1 @ coeffs
+    pose_null_order = np.argsort(pose_l1, kind="stable")
+    score_null_order = np.argsort(score_l1, kind="stable")
+    pose_vulnerable_order = np.argsort(-pose_l1, kind="stable")
+    preview_k = max(1, min(int(max_preview_pairs), n_pairs))
+    result.update(
+        {
+            "master_gradient_tensor": {
+                **result["master_gradient_tensor"],
+                "shape": [n_bytes, n_pairs, 3],
+                "dtype": str(arr.dtype),
+            },
+            "n_bytes": n_bytes,
+            "n_pairs": n_pairs,
+            "nonzero_byte_rows": nonzero_byte_rows,
+            "pose_l1_quantiles": {
+                str(q): float(np.quantile(pose_l1, q))
+                for q in (0.0, 0.1, 0.25, 0.5, 0.75, 0.9, 1.0)
+            },
+            "pair_score_l1_quantiles": {
+                str(q): float(np.quantile(score_l1, q))
+                for q in (0.0, 0.1, 0.25, 0.5, 0.75, 0.9, 1.0)
+            },
+            "pose_null_pair_indices_full_order": [
+                int(idx) for idx in pose_null_order
+            ],
+            "score_null_pair_indices_full_order": [
+                int(idx) for idx in score_null_order
+            ],
+            "pose_vulnerable_pair_indices_full_order": [
+                int(idx) for idx in pose_vulnerable_order
+            ],
+            "pose_null_pair_indices_preview": [
+                int(idx) for idx in pose_null_order[:preview_k]
+            ],
+            "score_null_pair_indices_preview": [
+                int(idx) for idx in score_null_order[:preview_k]
+            ],
+            "pose_vulnerable_pair_indices_preview": [
+                int(idx) for idx in pose_vulnerable_order[:preview_k]
+            ],
+        }
+    )
+    require_no_truthy_authority_fields(
+        result,
+        context="scorer_region_archive_master_gradient_hydration",
+    )
+    return result
 
 
 def selected_archive_from_scorer_region_chain_report(
@@ -193,6 +475,7 @@ def build_p19_posenet_null_pairs(
     repo_root: str | Path,
     source_submission_dir: str | Path,
     pose_null_modes_artifact: str | Path,
+    master_gradient_hydration: str | Path | None = None,
     null_fraction: float = 0.10,
     include_identity: bool = True,
 ) -> dict[str, Any]:
@@ -210,6 +493,49 @@ def build_p19_posenet_null_pairs(
         raise ScorerRegionWaterfillError("selector code outside active mode palette")
     n_pairs = len(codes)
     target_count = max(1, math.ceil(float(null_fraction) * n_pairs))
+    gradient_rank: dict[int, int] = {}
+    gradient_blockers: list[str] = []
+    gradient_hydration_record: dict[str, Any] | None = None
+    pair_selection_mode = "selector_pose_proxy"
+    if master_gradient_hydration is not None and str(master_gradient_hydration).strip():
+        hydration = _read_json(master_gradient_hydration, repo_root=repo_root)
+        if hydration.get("schema") != SCORER_REGION_ARCHIVE_MASTER_GRADIENT_HYDRATION_SCHEMA:
+            raise ScorerRegionWaterfillError("master-gradient hydration schema mismatch")
+        require_no_truthy_authority_fields(
+            hydration,
+            context="p19_master_gradient_hydration_input",
+        )
+        gradient_hydration_record = _artifact_record(
+            master_gradient_hydration,
+            repo_root=repo_root,
+        )
+        gradient_blockers = [
+            str(item) for item in hydration.get("blockers") or [] if str(item)
+        ]
+        pair_order = hydration.get("pose_null_pair_indices_full_order")
+        gradient_ready = (
+            hydration.get("archive_exact_match") is True
+            and isinstance(pair_order, Sequence)
+            and not isinstance(pair_order, (str, bytes, bytearray))
+            and not gradient_blockers
+        )
+        if gradient_ready:
+            for rank, pair_id in enumerate(pair_order):
+                try:
+                    pair_id_int = int(pair_id)
+                except (TypeError, ValueError):
+                    continue
+                if 0 <= pair_id_int < n_pairs and pair_id_int not in gradient_rank:
+                    gradient_rank[pair_id_int] = rank
+            if gradient_rank:
+                pair_selection_mode = "archive_master_gradient_pose_null_then_selector_pose_proxy"
+        else:
+            gradient_blockers = ordered_unique(
+                [
+                    *gradient_blockers,
+                    "master_gradient_hydration_not_ready_fallback_to_selector_proxy",
+                ]
+            )
     rows: list[dict[str, Any]] = []
     all_candidate_rows: list[dict[str, Any]] = []
     for pair_id, code in enumerate(codes):
@@ -220,20 +546,51 @@ def build_p19_posenet_null_pairs(
             "selector_code": int(code),
             "mode_id": mode_id,
             "abs_pose_delta_proxy": score,
+            "master_gradient_pose_null_rank": gradient_rank.get(pair_id),
             "axis_tag": "[macOS-CPU advisory]",
         }
         if mode_id in mode_scores:
             all_candidate_rows.append(row)
         rows.append(row)
-    selected = sorted(rows, key=lambda row: (float(row["abs_pose_delta_proxy"]), int(row["pair_id"])))[:target_count]
+    if gradient_rank:
+        def gradient_sort_key(row: Mapping[str, Any]) -> tuple[bool, int, float, int]:
+            pair_id = int(row["pair_id"])
+            rank = row.get("master_gradient_pose_null_rank")
+            rank_key = int(rank) if rank is not None else n_pairs + pair_id
+            return (
+                rank is None,
+                rank_key,
+                float(row["abs_pose_delta_proxy"]),
+                pair_id,
+            )
+
+        selected = sorted(
+            rows,
+            key=gradient_sort_key,
+        )[:target_count]
+    else:
+        selected = sorted(
+            rows,
+            key=lambda row: (float(row["abs_pose_delta_proxy"]), int(row["pair_id"])),
+        )[:target_count]
     selected_pair_ids = [int(row["pair_id"]) for row in selected]
     histogram = Counter(active_modes[int(code)] for code in codes)
+    selected_gradient_overlap_count = sum(
+        1 for row in selected if row.get("master_gradient_pose_null_rank") is not None
+    )
     payload = {
         "schema": P19_POSENET_NULL_PAIRS_SCHEMA,
         "generated_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "source_submission_dir": _repo_rel(source_dir, repo_root),
         "source_archive": _artifact_record(source_dir / "archive.zip", repo_root=repo_root),
         "pose_null_modes_artifact": _artifact_record(pose_null_modes_artifact, repo_root=repo_root),
+        "master_gradient_hydration_artifact": gradient_hydration_record,
+        "master_gradient_pair_source_ready": bool(gradient_rank),
+        "master_gradient_pair_source_blockers": gradient_blockers,
+        "pair_selection_mode": pair_selection_mode,
+        "selected_pair_ids_from_master_gradient_overlap_count": (
+            selected_gradient_overlap_count
+        ),
         "axis_tag": "[macOS-CPU advisory]",
         "evidence_grade": "selector_mode_proxy_detection_only",
         "n_pairs": n_pairs,
@@ -248,6 +605,7 @@ def build_p19_posenet_null_pairs(
         "selector_mode_histogram": dict(sorted(histogram.items())),
         "null_mode_scores": dict(sorted(mode_scores.items())),
         "blockers": [
+            *gradient_blockers,
             "p19_pair_detection_is_local_proxy_not_score_authority",
             "receiver_closed_distortion_budget_materializer_required_before_score_use",
             "exact_auth_eval_required_before_score_or_promotion_claim",
@@ -749,11 +1107,13 @@ __all__ = [
     "FRAME1_REGION_WATERFILL_RUNTIME_PATCH_SCHEMA",
     "P18_SEGNET_REGION_WATERFILL_SCHEMA",
     "P19_POSENET_NULL_PAIRS_SCHEMA",
+    "SCORER_REGION_ARCHIVE_MASTER_GRADIENT_HYDRATION_SCHEMA",
     "ScorerRegionWaterfillError",
     "active_selector_mode_ids",
     "build_frame1_region_waterfill_runtime_patch",
     "build_p18_segnet_region_waterfill",
     "build_p19_posenet_null_pairs",
     "build_receiver_closed_distortion_budget_attack_plan",
+    "build_scorer_region_archive_master_gradient_hydration",
     "decode_selector_codes",
 ]

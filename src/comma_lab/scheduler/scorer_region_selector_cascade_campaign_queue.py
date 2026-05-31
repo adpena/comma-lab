@@ -32,6 +32,9 @@ from tac.optimization.proxy_candidate_contract import (
 from tac.optimization.scorer_region_operator_contract import (
     build_scorer_region_operator_contract,
 )
+from tac.optimization.scorer_region_waterfill import (
+    SCORER_REGION_ARCHIVE_MASTER_GRADIENT_HYDRATION_SCHEMA,
+)
 from tac.repo_io import sha256_file
 from tac.substrates.uniward_per_pixel_distortion.weight_map import (
     compute_per_pixel_uniward_weight_map_numpy,
@@ -338,6 +341,7 @@ def _campaign_acquisition_policy_command(
     output_root: Path,
     master_gradient_tensor_path: str | Path | None,
     pixel_gradient_cache_path: str | Path | None,
+    archive_master_gradient_hydration_path: str | Path | None = None,
 ) -> list[str]:
     command = [
         ".venv/bin/python",
@@ -350,8 +354,179 @@ def _campaign_acquisition_policy_command(
     ]
     if master_gradient_tensor_path is not None:
         command.extend(["--master-gradient-tensor", _repo_rel(_resolve(master_gradient_tensor_path, repo_root), repo_root)])
+    if archive_master_gradient_hydration_path is not None:
+        command.extend(
+            [
+                "--archive-master-gradient-hydration",
+                _repo_rel(
+                    _resolve(archive_master_gradient_hydration_path, repo_root),
+                    repo_root,
+                ),
+            ]
+        )
     if pixel_gradient_cache_path is not None:
         command.extend(["--pixel-gradient-cache", _repo_rel(_resolve(pixel_gradient_cache_path, repo_root), repo_root)])
+    return command
+
+
+def _archive_master_gradient_hydration_command(
+    *,
+    repo_root: str | Path,
+    source_submission_dir: str | Path,
+    output_path: Path,
+    master_gradient_tensor_path: str | Path,
+    anchor_ledger_path: str | Path,
+) -> list[str]:
+    return [
+        ".venv/bin/python",
+        "tools/build_scorer_region_archive_master_gradient_hydration.py",
+        "--source-submission-dir",
+        _repo_rel(_resolve(source_submission_dir, repo_root), repo_root),
+        "--master-gradient-tensor",
+        _repo_rel(_resolve(master_gradient_tensor_path, repo_root), repo_root),
+        "--anchor-ledger-path",
+        _repo_rel(_resolve(anchor_ledger_path, repo_root), repo_root),
+        "--output",
+        _repo_rel(output_path, repo_root),
+        "--overwrite",
+    ]
+
+
+def _dynamic_followup_queue_command(
+    *,
+    repo_root: str | Path,
+    source_submission_dir: str | Path,
+    pose_null_modes_artifact: str | Path,
+    segnet_softmax_16: str | Path,
+    segnet_softmax_256: str | Path,
+    acquisition_policy_path: Path,
+    queue_out: Path,
+    queue_id: str,
+    output_root: Path,
+    source_waterfill_work_order: str | Path | None,
+    full_frame_inflate_parity_proof: str | Path | None,
+    include_local_component_loop: bool,
+    local_component_upstream_dir: str | Path,
+    local_component_video_names_file: str | Path,
+    local_component_inflate_timeout_seconds: int,
+    local_component_evaluate_timeout_seconds: int,
+    include_mlx_component_response: bool,
+    mlx_first_acquisition: bool,
+    mlx_cpu_gate_max_score_delta: float,
+    mlx_reference_cache_dir: str | Path,
+    mlx_device: str,
+    mlx_cache_batch_pairs: int,
+    mlx_batch_pairs: int,
+    include_scorer_response_dataset: bool,
+    scorer_response_baseline_score: float | None,
+    scorer_response_baseline_archive_bytes: int | None,
+    include_local_component_retention_plan: bool,
+    execute_local_component_retention: bool,
+    local_component_retention_action: str,
+    local_component_retention_min_bytes: str,
+    local_component_retention_cold_store_roots: Sequence[str | Path],
+    local_component_retention_cold_store_reserve_gb: float,
+    max_concurrency_local_cpu: int,
+    max_concurrency_local_mlx: int,
+    max_concurrency_local_io_heavy: int,
+    master_gradient_tensor_path: str | Path | None,
+    master_gradient_anchor_ledger_path: str | Path,
+    pixel_gradient_cache_path: str | Path | None,
+) -> list[str]:
+    command = [
+        ".venv/bin/python",
+        "tools/build_scorer_region_selector_cascade_queue_from_policy.py",
+        "--acquisition-policy",
+        _repo_rel(acquisition_policy_path, repo_root),
+        "--queue-out",
+        _repo_rel(queue_out, repo_root),
+        "--queue-id",
+        queue_id,
+        "--source-submission-dir",
+        _repo_rel(_resolve(source_submission_dir, repo_root), repo_root),
+        "--output-root",
+        _repo_rel(output_root, repo_root),
+        "--pose-null-modes-artifact",
+        _repo_rel(_resolve(pose_null_modes_artifact, repo_root), repo_root),
+        "--segnet-softmax-16",
+        _repo_rel(_resolve(segnet_softmax_16, repo_root), repo_root),
+        "--segnet-softmax-256",
+        _repo_rel(_resolve(segnet_softmax_256, repo_root), repo_root),
+        "--mlx-cpu-gate-max-score-delta",
+        str(float(mlx_cpu_gate_max_score_delta)),
+        "--mlx-reference-cache-dir",
+        _repo_rel(_resolve(mlx_reference_cache_dir, repo_root), repo_root),
+        "--mlx-device",
+        str(mlx_device),
+        "--mlx-cache-batch-pairs",
+        str(int(mlx_cache_batch_pairs)),
+        "--mlx-batch-pairs",
+        str(int(mlx_batch_pairs)),
+        "--local-component-upstream-dir",
+        _repo_rel(_resolve(local_component_upstream_dir, repo_root), repo_root),
+        "--local-component-video-names-file",
+        _repo_rel(_resolve(local_component_video_names_file, repo_root), repo_root),
+        "--local-component-inflate-timeout-seconds",
+        str(int(local_component_inflate_timeout_seconds)),
+        "--local-component-evaluate-timeout-seconds",
+        str(int(local_component_evaluate_timeout_seconds)),
+        "--local-component-retention-action",
+        str(local_component_retention_action),
+        "--local-component-retention-min-bytes",
+        str(local_component_retention_min_bytes),
+        "--local-component-retention-cold-store-reserve-gb",
+        str(float(local_component_retention_cold_store_reserve_gb)),
+        "--max-concurrency-local-cpu",
+        str(int(max_concurrency_local_cpu)),
+        "--max-concurrency-local-mlx",
+        str(int(max_concurrency_local_mlx)),
+        "--max-concurrency-local-io-heavy",
+        str(int(max_concurrency_local_io_heavy)),
+        "--overwrite",
+    ]
+    optional_paths = (
+        ("--source-waterfill-work-order", source_waterfill_work_order),
+        ("--full-frame-inflate-parity-proof", full_frame_inflate_parity_proof),
+        ("--master-gradient-tensor", master_gradient_tensor_path),
+        ("--pixel-gradient-cache", pixel_gradient_cache_path),
+    )
+    for flag, value in optional_paths:
+        if value is not None and str(value).strip():
+            command.extend([flag, _repo_rel(_resolve(value, repo_root), repo_root)])
+    command.extend(
+        [
+            "--master-gradient-anchor-ledger-path",
+            _repo_rel(_resolve(master_gradient_anchor_ledger_path, repo_root), repo_root),
+        ]
+    )
+    if include_local_component_loop:
+        command.append("--include-local-component-loop")
+    if include_mlx_component_response:
+        command.append("--include-mlx-component-response")
+    if mlx_first_acquisition:
+        command.append("--mlx-first-acquisition")
+    if include_scorer_response_dataset:
+        command.append("--include-scorer-response-dataset")
+    if include_local_component_retention_plan:
+        command.append("--include-local-component-retention-plan")
+    if execute_local_component_retention:
+        command.append("--execute-local-component-retention")
+    if scorer_response_baseline_score is not None:
+        command.extend(["--scorer-response-baseline-score", str(float(scorer_response_baseline_score))])
+    if scorer_response_baseline_archive_bytes is not None:
+        command.extend(
+            [
+                "--scorer-response-baseline-archive-bytes",
+                str(int(scorer_response_baseline_archive_bytes)),
+            ]
+        )
+    for root_path in local_component_retention_cold_store_roots:
+        command.extend(
+            [
+                "--local-component-retention-cold-store-root",
+                _repo_rel(_resolve(root_path, repo_root), repo_root),
+            ]
+        )
     return command
 
 
@@ -435,7 +610,7 @@ def build_scorer_region_selector_cascade_campaign_queue(
     mlx_device: str = "gpu",
     mlx_cache_batch_pairs: int = 1,
     mlx_batch_pairs: int = 1,
-    mlx_max_pairs: int | None = 12,
+    mlx_max_pairs: int | None = None,
     include_scorer_response_dataset: bool = False,
     scorer_response_baseline_score: float | None = None,
     scorer_response_baseline_archive_bytes: int | None = None,
@@ -450,7 +625,12 @@ def build_scorer_region_selector_cascade_campaign_queue(
     max_concurrency_local_io_heavy: int = 1,
     append_campaign_harvest: bool = True,
     append_campaign_acquisition_policy: bool = True,
+    append_master_gradient_hydration: bool = True,
+    append_dynamic_followup_queue: bool = True,
+    dynamic_followup_queue_out: str | Path | None = None,
+    dynamic_followup_output_root: str | Path | None = None,
     master_gradient_tensor_path: str | Path | None = DEFAULT_MASTER_GRADIENT_TENSOR_PATH,
+    master_gradient_anchor_ledger_path: str | Path = ".omx/state/master_gradient_anchors.jsonl",
     pixel_gradient_cache_path: str | Path | None = DEFAULT_PIXEL_GRADIENT_CACHE_PATH,
 ) -> dict[str, Any]:
     """Return a queue-owned grouped cascade search over scorer-null budget spends."""
@@ -473,6 +653,85 @@ def build_scorer_region_selector_cascade_campaign_queue(
 
     experiments: list[dict[str, Any]] = []
     variant_metadata: list[dict[str, Any]] = []
+    master_gradient_hydration_path = root / "archive_master_gradient_hydration.json"
+    master_gradient_hydration_ref = _repo_rel(master_gradient_hydration_path, repo_root)
+    hydrate_master_gradient = bool(
+        append_master_gradient_hydration and master_gradient_tensor_path is not None
+    )
+    if hydrate_master_gradient and master_gradient_tensor_path is not None:
+        experiments.append(
+            {
+                "id": "archive_master_gradient_hydration",
+                "priority": 1,
+                "status": "queued",
+                "tags": [
+                    "frontier-rate-attack",
+                    "cascade-c",
+                    "archive-master-gradient-hydration",
+                    "p19-pair-prior",
+                    "no-score-authority",
+                ],
+                "metadata": {
+                    "schema": "scorer_region_archive_master_gradient_hydration_step_metadata.v1",
+                    "source_submission_dir": _repo_rel(
+                        _resolve(source_submission_dir, repo_root),
+                        repo_root,
+                    ),
+                    "source_archive": _archive_record(source_archive, repo_root=repo_root),
+                    "master_gradient_tensor_path": _repo_rel(
+                        _resolve(master_gradient_tensor_path, repo_root),
+                        repo_root,
+                    ),
+                    "anchor_ledger_path": _repo_rel(
+                        _resolve(master_gradient_anchor_ledger_path, repo_root),
+                        repo_root,
+                    ),
+                    "hydration_path": master_gradient_hydration_ref,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                "steps": [
+                    {
+                        "id": "hydrate_archive_specific_master_gradient",
+                        "kind": "command",
+                        "command": _archive_master_gradient_hydration_command(
+                            repo_root=repo_root,
+                            source_submission_dir=source_submission_dir,
+                            output_path=master_gradient_hydration_path,
+                            master_gradient_tensor_path=master_gradient_tensor_path,
+                            anchor_ledger_path=master_gradient_anchor_ledger_path,
+                        ),
+                        "resources": {"kind": "local_cpu"},
+                        "timeout_seconds": 900,
+                        "postconditions": [
+                            {
+                                "type": "json_equals",
+                                "path": master_gradient_hydration_ref,
+                                "key": "schema",
+                                "equals": SCORER_REGION_ARCHIVE_MASTER_GRADIENT_HYDRATION_SCHEMA,
+                            },
+                            {
+                                "type": "json_false_authority",
+                                "path": master_gradient_hydration_ref,
+                            },
+                        ],
+                        "telemetry": {
+                            "artifact_paths": [master_gradient_hydration_ref],
+                            "input_artifact_paths": [
+                                _repo_rel(source_archive, repo_root),
+                                _repo_rel(
+                                    _resolve(master_gradient_tensor_path, repo_root),
+                                    repo_root,
+                                ),
+                            ],
+                            "include_postcondition_paths": True,
+                        },
+                    }
+                ],
+            }
+        )
     terminal_step = _terminal_step_id(
         include_local_component_retention_plan=include_local_component_retention_plan,
         include_scorer_response_dataset=include_scorer_response_dataset,
@@ -493,6 +752,9 @@ def build_scorer_region_selector_cascade_campaign_queue(
             pose_null_modes_artifact=pose_null_modes_artifact,
             segnet_softmax_16=segnet_softmax_16,
             segnet_softmax_256=segnet_softmax_256,
+            master_gradient_hydration=(
+                master_gradient_hydration_path if hydrate_master_gradient else None
+            ),
             materialize_upstream_artifacts=True,
             materialize_receiver_patch=True,
             null_fraction=variant.null_fraction,
@@ -559,7 +821,17 @@ def build_scorer_region_selector_cascade_campaign_queue(
         )
         child_experiment = dict(child["experiments"][0])
         child_experiment["id"] = variant.variant_id
-        child_experiment["priority"] = index + 1
+        child_experiment["priority"] = index + 2 if hydrate_master_gradient else index + 1
+        if hydrate_master_gradient:
+            for step in child_experiment.get("steps", []):
+                if step.get("id") == "materialize_p19_posenet_null_pairs":
+                    step["requires"] = ordered_unique(
+                        [
+                            "archive_master_gradient_hydration.hydrate_archive_specific_master_gradient",
+                            *[str(item) for item in step.get("requires", []) if str(item)],
+                        ]
+                    )
+                    break
         child_experiment["tags"] = ordered_unique(
             [
                 *child_experiment.get("tags", []),
@@ -577,6 +849,17 @@ def build_scorer_region_selector_cascade_campaign_queue(
 
     harvest_path = root / "campaign_report.json"
     acquisition_policy_path = root / "acquisition_policy.json"
+    followup_queue_path = (
+        _resolve(dynamic_followup_queue_out, repo_root)
+        if dynamic_followup_queue_out is not None
+        else root / "dynamic_followup_campaign_queue.json"
+    )
+    followup_output_root = (
+        _resolve(dynamic_followup_output_root, repo_root)
+        if dynamic_followup_output_root is not None
+        else root / "dynamic_followup_campaign"
+    )
+    followup_queue_id = f"{queue_id}_dynamic_followup"
     if append_campaign_harvest:
         experiments.append(
             {
@@ -678,6 +961,11 @@ def build_scorer_region_selector_cascade_campaign_queue(
                             repo_root=repo_root,
                             output_root=root,
                             master_gradient_tensor_path=master_gradient_tensor_path,
+                            archive_master_gradient_hydration_path=(
+                                master_gradient_hydration_path
+                                if hydrate_master_gradient
+                                else None
+                            ),
                             pixel_gradient_cache_path=pixel_gradient_cache_path,
                         ),
                         "resources": {"kind": "local_cpu"},
@@ -697,6 +985,131 @@ def build_scorer_region_selector_cascade_campaign_queue(
                         "telemetry": {
                             "artifact_paths": [_repo_rel(acquisition_policy_path, repo_root)],
                             "input_artifact_paths": [_repo_rel(harvest_path, repo_root)],
+                            "include_postcondition_paths": True,
+                        },
+                    }
+                ],
+            }
+        )
+    if (
+        append_campaign_harvest
+        and append_campaign_acquisition_policy
+        and append_dynamic_followup_queue
+    ):
+        experiments.append(
+            {
+                "id": "campaign_dynamic_followup_queue",
+                "priority": len(experiments) + 1,
+                "status": "queued",
+                "tags": [
+                    "frontier-rate-attack",
+                    "cascade-c",
+                    "dynamic-followup-queue",
+                    "closed-loop-acquisition",
+                    "no-score-authority",
+                ],
+                "metadata": {
+                    "schema": "scorer_region_selector_cascade_dynamic_followup_queue_step_metadata.v1",
+                    "acquisition_policy_path": _repo_rel(acquisition_policy_path, repo_root),
+                    "followup_queue_path": _repo_rel(followup_queue_path, repo_root),
+                    "followup_output_root": _repo_rel(followup_output_root, repo_root),
+                    "followup_queue_id": followup_queue_id,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                "steps": [
+                    {
+                        "id": "compile_dynamic_followup_campaign_queue",
+                        "kind": "command",
+                        "requires": [
+                            "campaign_acquisition_policy.build_campaign_acquisition_policy"
+                        ],
+                        "command": _dynamic_followup_queue_command(
+                            repo_root=repo_root,
+                            source_submission_dir=source_submission_dir,
+                            pose_null_modes_artifact=pose_null_modes_artifact,
+                            segnet_softmax_16=segnet_softmax_16,
+                            segnet_softmax_256=segnet_softmax_256,
+                            acquisition_policy_path=acquisition_policy_path,
+                            queue_out=followup_queue_path,
+                            queue_id=followup_queue_id,
+                            output_root=followup_output_root,
+                            source_waterfill_work_order=source_waterfill_work_order,
+                            full_frame_inflate_parity_proof=full_frame_inflate_parity_proof,
+                            include_local_component_loop=include_local_component_loop,
+                            local_component_upstream_dir=local_component_upstream_dir,
+                            local_component_video_names_file=local_component_video_names_file,
+                            local_component_inflate_timeout_seconds=(
+                                local_component_inflate_timeout_seconds
+                            ),
+                            local_component_evaluate_timeout_seconds=(
+                                local_component_evaluate_timeout_seconds
+                            ),
+                            include_mlx_component_response=include_mlx_component_response,
+                            mlx_first_acquisition=mlx_first_acquisition,
+                            mlx_cpu_gate_max_score_delta=mlx_cpu_gate_max_score_delta,
+                            mlx_reference_cache_dir=mlx_reference_cache_dir,
+                            mlx_device=mlx_device,
+                            mlx_cache_batch_pairs=mlx_cache_batch_pairs,
+                            mlx_batch_pairs=mlx_batch_pairs,
+                            include_scorer_response_dataset=include_scorer_response_dataset,
+                            scorer_response_baseline_score=scorer_response_baseline_score,
+                            scorer_response_baseline_archive_bytes=(
+                                scorer_response_baseline_archive_bytes
+                            ),
+                            include_local_component_retention_plan=(
+                                include_local_component_retention_plan
+                            ),
+                            execute_local_component_retention=(
+                                execute_local_component_retention
+                            ),
+                            local_component_retention_action=(
+                                local_component_retention_action
+                            ),
+                            local_component_retention_min_bytes=(
+                                local_component_retention_min_bytes
+                            ),
+                            local_component_retention_cold_store_roots=(
+                                local_component_retention_cold_store_roots
+                            ),
+                            local_component_retention_cold_store_reserve_gb=(
+                                local_component_retention_cold_store_reserve_gb
+                            ),
+                            max_concurrency_local_cpu=max_concurrency_local_cpu,
+                            max_concurrency_local_mlx=max_concurrency_local_mlx,
+                            max_concurrency_local_io_heavy=(
+                                max_concurrency_local_io_heavy
+                            ),
+                            master_gradient_tensor_path=master_gradient_tensor_path,
+                            master_gradient_anchor_ledger_path=(
+                                master_gradient_anchor_ledger_path
+                            ),
+                            pixel_gradient_cache_path=pixel_gradient_cache_path,
+                        ),
+                        "resources": {"kind": "local_cpu"},
+                        "timeout_seconds": 300,
+                        "postconditions": [
+                            {
+                                "type": "json_equals",
+                                "path": _repo_rel(followup_queue_path, repo_root),
+                                "key": "schema",
+                                "equals": QUEUE_SCHEMA,
+                            },
+                            {
+                                "type": "json_false_authority",
+                                "path": _repo_rel(followup_queue_path, repo_root),
+                                "required_false": [],
+                            },
+                        ],
+                        "telemetry": {
+                            "artifact_paths": [
+                                _repo_rel(followup_queue_path, repo_root),
+                            ],
+                            "input_artifact_paths": [
+                                _repo_rel(acquisition_policy_path, repo_root),
+                            ],
                             "include_postcondition_paths": True,
                         },
                     }
@@ -730,6 +1143,25 @@ def build_scorer_region_selector_cascade_campaign_queue(
             "output_root": _repo_rel(root, repo_root),
             "campaign_report_path": _repo_rel(harvest_path, repo_root),
             "acquisition_policy_path": _repo_rel(acquisition_policy_path, repo_root),
+            "dynamic_followup_queue_path": (
+                _repo_rel(followup_queue_path, repo_root)
+                if append_dynamic_followup_queue
+                else None
+            ),
+            "dynamic_followup_output_root": (
+                _repo_rel(followup_output_root, repo_root)
+                if append_dynamic_followup_queue
+                else None
+            ),
+            "dynamic_followup_queue_id": (
+                followup_queue_id if append_dynamic_followup_queue else None
+            ),
+            "archive_master_gradient_hydration_path": (
+                master_gradient_hydration_ref if hydrate_master_gradient else None
+            ),
+            "full_video_mlx_first_acquisition": (
+                bool(mlx_first_acquisition) and mlx_max_pairs is None
+            ),
             "variant_count": len(variants),
             "variant_grid_truncated": max_variants is not None,
             "variant_grid_max_variants": max_variants,
@@ -765,11 +1197,20 @@ def build_scorer_region_selector_cascade_campaign_queue(
                     if master_gradient_tensor_path is not None
                     else None
                 ),
+                "archive_master_gradient_hydration_path": (
+                    master_gradient_hydration_ref if hydrate_master_gradient else None
+                ),
+                "archive_master_gradient_hydration_schema": (
+                    SCORER_REGION_ARCHIVE_MASTER_GRADIENT_HYDRATION_SCHEMA
+                    if hydrate_master_gradient
+                    else None
+                ),
                 "pixel_gradient_cache_path": (
                     _repo_rel(_resolve(pixel_gradient_cache_path, repo_root), repo_root)
                     if pixel_gradient_cache_path is not None
                     else None
                 ),
+                "dynamic_followup_queue_compilation": bool(append_dynamic_followup_queue),
             },
             "budget_spend_allowed": False,
             "ready_for_budget_spend": False,
@@ -1470,12 +1911,82 @@ def _prior_blockers(prior: Mapping[str, Any], *, source_name: str) -> list[str]:
     return ordered_unique(blockers)
 
 
+def _read_archive_master_gradient_hydration(
+    *,
+    repo_root: str | Path,
+    path: str | Path | None,
+) -> dict[str, Any] | None:
+    if path is None or not str(path).strip():
+        return None
+    resolved = _resolve(path, repo_root)
+    if not resolved.is_file():
+        return {
+            "schema": SCORER_REGION_ARCHIVE_MASTER_GRADIENT_HYDRATION_SCHEMA,
+            "available": False,
+            "path": _repo_rel(resolved, repo_root),
+            "blockers": ["archive_master_gradient_hydration_missing"],
+            **FALSE_AUTHORITY,
+        }
+    payload = json.loads(resolved.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ScorerRegionSelectorCascadeCampaignQueueError(
+            f"archive master-gradient hydration must be a JSON object: {resolved}"
+        )
+    if payload.get("schema") != SCORER_REGION_ARCHIVE_MASTER_GRADIENT_HYDRATION_SCHEMA:
+        raise ScorerRegionSelectorCascadeCampaignQueueError(
+            "archive master-gradient hydration schema mismatch"
+        )
+    require_no_truthy_authority_fields(
+        payload,
+        context="scorer_region_archive_master_gradient_hydration_policy_input",
+    )
+    return {
+        **payload,
+        "available": True,
+        "artifact": {
+            "path": _repo_rel(resolved, repo_root),
+            "bytes": resolved.stat().st_size,
+            "sha256": sha256_file(resolved),
+        },
+    }
+
+
 def _build_selection_manifest(
     *,
     master_gradient: Mapping[str, Any],
     pixel_gradient: Mapping[str, Any],
+    archive_master_gradient_hydration: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    master_blockers = _prior_blockers(master_gradient, source_name="master_gradient")
+    hydration = archive_master_gradient_hydration
+    hydration_blockers = (
+        [str(item) for item in hydration.get("blockers") or [] if str(item)]
+        if isinstance(hydration, Mapping)
+        else []
+    )
+    hydration_ready = (
+        isinstance(hydration, Mapping)
+        and hydration.get("available") is True
+        and hydration.get("archive_exact_match") is True
+        and not hydration_blockers
+    )
+    master_blockers = (
+        []
+        if hydration_ready
+        else ordered_unique(
+            [
+                *(
+                    hydration_blockers
+                    if isinstance(hydration, Mapping)
+                    else _prior_blockers(master_gradient, source_name="master_gradient")
+                ),
+                *(
+                    ["archive_master_gradient_hydration_not_ready"]
+                    if isinstance(hydration, Mapping)
+                    else []
+                ),
+            ]
+        )
+    )
     pixel_blockers = _prior_blockers(pixel_gradient, source_name="pixel_gradient")
     pose_pair_source_ready = not master_blockers
     region_source_ready = not pixel_blockers
@@ -1486,7 +1997,7 @@ def _build_selection_manifest(
         "selection_ready": selection_ready,
         "selection_ready_blockers": blockers,
         "pose_pair_source": (
-            "master_gradient_pose_null_bottom_decile"
+            "archive_master_gradient_hydration_pose_null_full_order"
             if pose_pair_source_ready
             else "blocked_until_archive_specific_master_gradient_manifest"
         ),
@@ -1502,6 +2013,13 @@ def _build_selection_manifest(
         "master_gradient_prior_path": master_gradient.get("path"),
         "master_gradient_prior_sha256": master_gradient.get("sha256"),
         "master_gradient_prior_shape": master_gradient.get("shape"),
+        "archive_master_gradient_hydration_artifact": (
+            hydration.get("artifact") if isinstance(hydration, Mapping) else None
+        ),
+        "archive_master_gradient_hydration_ready": hydration_ready,
+        "archive_master_gradient_hydration_pair_count": (
+            hydration.get("n_pairs") if isinstance(hydration, Mapping) else None
+        ),
         "pixel_gradient_prior_path": pixel_gradient.get("path"),
         "pixel_gradient_prior_sha256": pixel_gradient.get("sha256"),
         "pixel_gradient_prior_shape": pixel_gradient.get("shape"),
@@ -1531,6 +2049,7 @@ def build_scorer_region_selector_cascade_acquisition_policy(
     repo_root: str | Path,
     campaign_report: Mapping[str, Any],
     master_gradient_tensor_path: str | Path | None = DEFAULT_MASTER_GRADIENT_TENSOR_PATH,
+    archive_master_gradient_hydration_path: str | Path | None = None,
     pixel_gradient_cache_path: str | Path | None = DEFAULT_PIXEL_GRADIENT_CACHE_PATH,
 ) -> dict[str, Any]:
     """Compile campaign learning into the next scorer-region acquisition policy."""
@@ -1585,6 +2104,10 @@ def build_scorer_region_selector_cascade_acquisition_policy(
         repo_root=repo_root,
         tensor_path=master_gradient_tensor_path,
     )
+    archive_master_gradient_hydration = _read_archive_master_gradient_hydration(
+        repo_root=repo_root,
+        path=archive_master_gradient_hydration_path,
+    )
     pixel_gradient = _summarize_pixel_gradient_cache(
         repo_root=repo_root,
         cache_path=pixel_gradient_cache_path,
@@ -1592,6 +2115,7 @@ def build_scorer_region_selector_cascade_acquisition_policy(
     selection_manifest = _build_selection_manifest(
         master_gradient=master_gradient,
         pixel_gradient=pixel_gradient,
+        archive_master_gradient_hydration=archive_master_gradient_hydration,
     )
     all_cpu_observed_failed = bool(local_cpu_rows) and not passed_rows
     if passed_rows:
@@ -1606,6 +2130,23 @@ def build_scorer_region_selector_cascade_acquisition_policy(
     else:
         next_mode = "complete_missing_local_cpu_gates"
         family_status = "incomplete_evidence"
+    if isinstance(archive_master_gradient_hydration, Mapping):
+        prior_gradient_blockers = (
+            archive_master_gradient_hydration.get("blockers")
+            if isinstance(archive_master_gradient_hydration.get("blockers"), list)
+            else []
+        )
+    else:
+        prior_gradient_blockers = (
+            master_gradient.get("blockers")
+            if isinstance(master_gradient.get("blockers"), list)
+            else []
+        )
+    pixel_gradient_blockers = (
+        pixel_gradient.get("blockers")
+        if isinstance(pixel_gradient.get("blockers"), list)
+        else []
+    )
     blockers = ordered_unique(
         [
             "exact_auth_eval_required_before_score_or_promotion_claim",
@@ -1619,16 +2160,8 @@ def build_scorer_region_selector_cascade_acquisition_policy(
                 if split_count
                 else []
             ),
-            *(
-                master_gradient.get("blockers", [])
-                if isinstance(master_gradient.get("blockers"), list)
-                else []
-            ),
-            *(
-                pixel_gradient.get("blockers", [])
-                if isinstance(pixel_gradient.get("blockers"), list)
-                else []
-            ),
+            *prior_gradient_blockers,
+            *pixel_gradient_blockers,
         ]
     )
     payload = {
@@ -1662,6 +2195,7 @@ def build_scorer_region_selector_cascade_acquisition_policy(
         "rate_credit_rows": action_rows,
         "contest_space_action_functional": contest_action_functional,
         "master_gradient_prior": master_gradient,
+        "archive_master_gradient_hydration": archive_master_gradient_hydration,
         "pixel_gradient_prior": pixel_gradient,
         "selection_manifest": selection_manifest,
         "next_queue_policy": {

@@ -35,6 +35,7 @@ from tac.optimization.scorer_region_waterfill import (
     FRAME1_REGION_WATERFILL_RUNTIME_PATCH_SCHEMA,
     P18_SEGNET_REGION_WATERFILL_SCHEMA,
     P19_POSENET_NULL_PAIRS_SCHEMA,
+    SCORER_REGION_ARCHIVE_MASTER_GRADIENT_HYDRATION_SCHEMA,
 )
 from tac.packet_compiler.feca_selector_reparameterize import (
     FECA_REPARAMETERIZATION_MANIFEST_SCHEMA,
@@ -398,6 +399,7 @@ def build_scorer_region_selector_chain_queue(
     posenet_null_pairs: str | Path | None = None,
     segnet_region_masks: str | Path | None = None,
     selector_region_bits: str | Path | None = None,
+    master_gradient_hydration: str | Path | None = None,
     pose_null_modes_artifact: str | Path | None = None,
     segnet_softmax_16: str | Path | None = None,
     segnet_softmax_256: str | Path | None = None,
@@ -519,6 +521,11 @@ def build_scorer_region_selector_chain_queue(
     )
     source_submission_ref = _repo_rel(_resolve(source_submission_dir, repo_root), repo_root)
     output_root_ref = _repo_rel(root, repo_root)
+    master_gradient_hydration_ref = (
+        _repo_rel(_resolve(master_gradient_hydration, repo_root), repo_root)
+        if master_gradient_hydration is not None and str(master_gradient_hydration).strip()
+        else None
+    )
 
     effective_posenet_null_pairs = (
         p19_posenet_null_pairs if materialize_upstream_artifacts else posenet_null_pairs
@@ -873,6 +880,12 @@ def build_scorer_region_selector_chain_queue(
                     else None
                 )
             ),
+            "master_gradient_hydration_path": master_gradient_hydration_ref,
+            "master_gradient_hydration_schema": (
+                SCORER_REGION_ARCHIVE_MASTER_GRADIENT_HYDRATION_SCHEMA
+                if master_gradient_hydration_ref is not None
+                else None
+            ),
             "p18_segnet_region_waterfill_path": (
                 p18_segnet_region_waterfill_ref
                 if materialize_upstream_artifacts
@@ -1030,6 +1043,14 @@ def build_scorer_region_selector_chain_queue(
                                     p19_posenet_null_pairs_ref,
                                     "--null-fraction",
                                     str(float(null_fraction)),
+                                    *(
+                                        [
+                                            "--master-gradient-hydration",
+                                            master_gradient_hydration_ref,
+                                        ]
+                                        if master_gradient_hydration_ref is not None
+                                        else []
+                                    ),
                                     "--overwrite",
                                 ],
                                 "resources": {"kind": "local_cpu"},
@@ -1045,7 +1066,14 @@ def build_scorer_region_selector_chain_queue(
                                 ],
                                 "telemetry": {
                                     "artifact_paths": [p19_posenet_null_pairs_ref],
-                                    "input_artifact_paths": [source_submission_ref],
+                                    "input_artifact_paths": [
+                                        source_submission_ref,
+                                        *(
+                                            [master_gradient_hydration_ref]
+                                            if master_gradient_hydration_ref is not None
+                                            else []
+                                        ),
+                                    ],
                                     "include_postcondition_paths": True,
                                 },
                             },

@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Build a grouped P18/P19/P11/P15 cascade campaign experiment queue."""
+"""Compile the next scorer-region cascade queue from an acquisition policy."""
 
 from __future__ import annotations
 
 import argparse
+import json
 import sys
+from collections.abc import Mapping, Sequence
 from pathlib import Path
+from typing import Any
 
 try:
     from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
@@ -17,12 +20,16 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from comma_lab.scheduler.scorer_region_selector_cascade_campaign_queue import (  # noqa: E402
+    DEFAULT_MASTER_GRADIENT_TENSOR_PATH,
+    DEFAULT_PIXEL_GRADIENT_CACHE_PATH,
+    SCORER_REGION_SELECTOR_CASCADE_ACQUISITION_POLICY_SCHEMA,
     ScorerRegionSelectorCascadeCampaignQueueError,
     build_scorer_region_selector_cascade_campaign_queue,
 )
 from comma_lab.scheduler.scorer_region_selector_chain_queue import (  # noqa: E402
     ScorerRegionSelectorChainQueueError,
 )
+from tac.optimization.proxy_candidate_contract import require_no_truthy_authority_fields  # noqa: E402
 from tac.repo_io import ArtifactWriteError, json_text, sha256_file, write_json_artifact  # noqa: E402
 
 
@@ -42,6 +49,7 @@ def _csv_group(value: str) -> tuple[str, ...]:
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--acquisition-policy", required=True, type=Path)
     parser.add_argument("--queue-out", required=True, type=Path)
     parser.add_argument("--queue-id", required=True)
     parser.add_argument("--source-submission-dir", required=True, type=Path)
@@ -51,10 +59,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--pose-null-modes-artifact", required=True, type=Path)
     parser.add_argument("--segnet-softmax-16", required=True, type=Path)
     parser.add_argument("--segnet-softmax-256", required=True, type=Path)
-    parser.add_argument("--null-fraction", action="append", type=float, default=[])
-    parser.add_argument("--top-regions-per-pair", action="append", type=int, default=[])
-    parser.add_argument("--receiver-patch-max-pairs", action="append", type=int, default=[])
-    parser.add_argument("--receiver-patch-regions-per-pair", action="append", type=int, default=[])
+    parser.add_argument("--policy-null-fraction", action="append", type=float, default=[])
+    parser.add_argument("--fallback-null-fraction", action="append", type=float, default=[])
     parser.add_argument("--receiver-patch-rgb-delta", action="append", type=_triple, default=[])
     parser.add_argument("--receiver-patch-yuv-delta", action="append", type=_triple, default=[])
     parser.add_argument(
@@ -62,31 +68,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="append",
         type=_csv_group,
         default=[],
-        help="Comma-separated codec family group; may repeat.",
+        help="Override policy codec groups with comma-separated families; may repeat.",
     )
     parser.add_argument("--scale", action="append", type=int, default=[])
     parser.add_argument("--alpha", action="append", type=int, default=[])
-    parser.add_argument(
-        "--repack-order",
-        action="append",
-        default=[],
-        help="Currently supported: p11_then_p15_then_receiver_patch.",
-    )
-    parser.add_argument("--max-variants", type=int, default=32)
-    parser.add_argument("--exhaustive-grid", action="store_true")
-    parser.add_argument("--prove-receiver-patch-output-change", action="store_true")
-    parser.add_argument("--receiver-patch-output-change-file-list-entry", action="append", default=[])
-    parser.add_argument("--receiver-patch-output-change-expected-file-list-sha256")
-    parser.add_argument("--receiver-patch-output-change-expected-entry-count", type=int)
-    parser.add_argument("--receiver-patch-output-change-file-list-source")
-    parser.add_argument(
-        "--receiver-patch-output-change-parity-scope-kind",
-        default="contest_full_sample",
-    )
-    parser.add_argument(
-        "--receiver-patch-output-change-contest-full-sample-claim",
-        action="store_true",
-    )
+    parser.add_argument("--max-variants", type=int, default=48)
     parser.add_argument("--include-local-component-loop", action="store_true")
     parser.add_argument("--local-component-upstream-dir", type=Path, default=Path("upstream"))
     parser.add_argument(
@@ -97,11 +83,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--local-component-inflate-timeout-seconds", type=int, default=1800)
     parser.add_argument("--local-component-evaluate-timeout-seconds", type=int, default=1800)
     parser.add_argument("--include-mlx-component-response", action="store_true")
-    parser.add_argument(
-        "--mlx-first-acquisition",
-        action="store_true",
-        help="Run MLX response before full local CPU and gate CPU spend from MLX.",
-    )
+    parser.add_argument("--mlx-first-acquisition", action="store_true")
     parser.add_argument("--mlx-cpu-gate-max-score-delta", type=float, default=0.0)
     parser.add_argument(
         "--mlx-reference-cache-dir",
@@ -113,8 +95,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--mlx-device", choices=("cpu", "gpu"), default="gpu")
     parser.add_argument("--mlx-cache-batch-pairs", type=int, default=1)
     parser.add_argument("--mlx-batch-pairs", type=int, default=1)
-    parser.add_argument("--mlx-max-pairs", type=int)
-    parser.add_argument("--mlx-full-sample", action="store_true")
     parser.add_argument("--include-scorer-response-dataset", action="store_true")
     parser.add_argument("--scorer-response-baseline-score", type=float)
     parser.add_argument("--scorer-response-baseline-archive-bytes", type=int)
@@ -136,31 +116,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--max-concurrency-local-cpu", type=int, default=2)
     parser.add_argument("--max-concurrency-local-mlx", type=int, default=1)
     parser.add_argument("--max-concurrency-local-io-heavy", type=int, default=1)
-    parser.add_argument("--no-campaign-harvest", action="store_true")
-    parser.add_argument("--no-master-gradient-hydration", action="store_true")
-    parser.add_argument("--no-dynamic-followup-queue", action="store_true")
-    parser.add_argument("--dynamic-followup-queue-out", type=Path)
-    parser.add_argument("--dynamic-followup-output-root", type=Path)
-    parser.add_argument(
-        "--master-gradient-tensor",
-        type=Path,
-        default=Path(
-            ".omx/state/master_gradient_fec6_frontier_mlx_per_pair_full600_20260527.npy"
-        ),
-    )
+    parser.add_argument("--master-gradient-tensor", type=Path, default=DEFAULT_MASTER_GRADIENT_TENSOR_PATH)
     parser.add_argument(
         "--master-gradient-anchor-ledger-path",
         type=Path,
         default=Path(".omx/state/master_gradient_anchors.jsonl"),
     )
-    parser.add_argument(
-        "--pixel-gradient-cache",
-        type=Path,
-        default=Path(
-            ".omx/research/uniward_per_pixel_n_plus_1_artifacts_20260526/"
-            "real_scorer_gradients_cache.npz"
-        ),
-    )
+    parser.add_argument("--pixel-gradient-cache", type=Path, default=DEFAULT_PIXEL_GRADIENT_CACHE_PATH)
+    parser.add_argument("--no-dynamic-followup-queue", action="store_true")
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args(argv)
 
@@ -169,9 +132,100 @@ def _resolve(path: Path) -> Path:
     return path if path.is_absolute() else REPO_ROOT / path
 
 
+def _optional_path(path: Path | None) -> Path | None:
+    if path is None:
+        return None
+    return None if str(path).strip().lower() == "none" else path
+
+
+def _preferred_grid(policy: Mapping[str, Any]) -> Mapping[str, Any]:
+    next_policy = policy.get("next_queue_policy")
+    if not isinstance(next_policy, Mapping):
+        return {}
+    preferred = next_policy.get("preferred_next_grid")
+    return preferred if isinstance(preferred, Mapping) else {}
+
+
+def _int_sequence(value: Any, default: Sequence[int]) -> tuple[int, ...]:
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        parsed: list[int] = []
+        for item in value:
+            if isinstance(item, bool):
+                continue
+            try:
+                parsed.append(int(item))
+            except (TypeError, ValueError):
+                continue
+        if parsed:
+            return tuple(dict.fromkeys(parsed))
+    return tuple(default)
+
+
+def _codec_groups(value: Any, default: Sequence[Sequence[str]]) -> tuple[tuple[str, ...], ...]:
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        out: list[tuple[str, ...]] = []
+        for group in value:
+            if isinstance(group, Sequence) and not isinstance(group, (str, bytes, bytearray)):
+                normalized = tuple(str(item).strip() for item in group if str(item).strip())
+                if normalized:
+                    out.append(normalized)
+            elif str(group).strip():
+                out.append((str(group).strip(),))
+        if out:
+            return tuple(out)
+    return tuple(tuple(item) for item in default)
+
+
+def _repack_orders(value: Any) -> tuple[str, ...]:
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        orders = tuple(str(item).strip() for item in value if str(item).strip())
+        if orders:
+            return orders
+    return ("p11_then_p15_then_receiver_patch",)
+
+
+def _null_fractions(policy: Mapping[str, Any], args: argparse.Namespace) -> tuple[float, ...]:
+    if args.policy_null_fraction:
+        return tuple(float(item) for item in args.policy_null_fraction)
+    selection = policy.get("selection_manifest")
+    selection_ready = isinstance(selection, Mapping) and selection.get("selection_ready") is True
+    if selection_ready:
+        return (0.02, 0.05, 0.10)
+    if args.fallback_null_fraction:
+        return tuple(float(item) for item in args.fallback_null_fraction)
+    return (0.05, 0.10)
+
+
+def _rgb_deltas(args: argparse.Namespace) -> tuple[tuple[int, int, int], ...]:
+    return tuple(
+        args.receiver_patch_rgb_delta
+        or [
+            (-1, -1, -1),
+            (1, 1, 1),
+            (0, -1, 1),
+            (0, 1, -1),
+        ]
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     try:
+        policy_path = _resolve(args.acquisition_policy)
+        policy = json.loads(policy_path.read_text(encoding="utf-8"))
+        if not isinstance(policy, dict):
+            raise ScorerRegionSelectorCascadeCampaignQueueError(
+                f"acquisition policy must be a JSON object: {policy_path}"
+            )
+        if policy.get("schema") != SCORER_REGION_SELECTOR_CASCADE_ACQUISITION_POLICY_SCHEMA:
+            raise ScorerRegionSelectorCascadeCampaignQueueError(
+                "acquisition policy schema mismatch"
+            )
+        require_no_truthy_authority_fields(
+            policy,
+            context="scorer_region_selector_cascade_queue_from_policy",
+        )
+        preferred = _preferred_grid(policy)
         queue = build_scorer_region_selector_cascade_campaign_queue(
             repo_root=REPO_ROOT,
             queue_id=args.queue_id,
@@ -182,54 +236,34 @@ def main(argv: list[str] | None = None) -> int:
             pose_null_modes_artifact=args.pose_null_modes_artifact,
             segnet_softmax_16=args.segnet_softmax_16,
             segnet_softmax_256=args.segnet_softmax_256,
-            null_fractions=tuple(args.null_fraction or [0.05, 0.10, 0.20]),
-            top_regions_per_pair_values=tuple(args.top_regions_per_pair or [2, 4]),
-            receiver_patch_max_pair_values=tuple(args.receiver_patch_max_pairs or [12, 24, 48]),
-            receiver_patch_regions_per_pair_values=tuple(
-                args.receiver_patch_regions_per_pair or [1, 2]
+            null_fractions=_null_fractions(policy, args),
+            top_regions_per_pair_values=_int_sequence(
+                preferred.get("top_regions_per_pair"),
+                (1, 2),
             ),
-            receiver_patch_rgb_deltas=tuple(
-                args.receiver_patch_rgb_delta or [(-1, -1, -1), (1, 1, 1)]
+            receiver_patch_max_pair_values=_int_sequence(
+                preferred.get("receiver_patch_max_pairs"),
+                (4, 8, 12),
             ),
+            receiver_patch_regions_per_pair_values=_int_sequence(
+                preferred.get("receiver_patch_regions_per_pair"),
+                (1,),
+            ),
+            receiver_patch_rgb_deltas=_rgb_deltas(args),
             receiver_patch_yuv_deltas=tuple(args.receiver_patch_yuv_delta),
-            selector_codec_family_groups=tuple(
-                args.selector_codec_family_set
-                or [
+            selector_codec_family_groups=tuple(args.selector_codec_family_set)
+            or _codec_groups(
+                preferred.get("selector_codec_family_groups"),
+                (
                     ("fec10_adaptive_blend",),
                     ("fec8_markov_static_order1",),
-                    ("fec8_markov_adaptive_order1",),
-                    (
-                        "fec10_adaptive_blend",
-                        "fec8_markov_static_order1",
-                        "fec8_markov_adaptive_order1",
-                        "fec8_markov_static_order2",
-                    ),
-                ]
+                    ("fec10_adaptive_blend", "fec8_markov_static_order1"),
+                ),
             ),
             scales=tuple(args.scale or [32, 64, 128, 256]),
             alphas=tuple(args.alpha or [1, 2, 4]),
-            repack_orders=tuple(args.repack_order or ["p11_then_p15_then_receiver_patch"]),
-            max_variants=None if args.exhaustive_grid else args.max_variants,
-            prove_receiver_patch_output_change=args.prove_receiver_patch_output_change,
-            receiver_patch_output_change_file_list_entries=tuple(
-                args.receiver_patch_output_change_file_list_entry
-            )
-            or ("0.raw",),
-            receiver_patch_output_change_expected_file_list_sha256=(
-                args.receiver_patch_output_change_expected_file_list_sha256
-            ),
-            receiver_patch_output_change_expected_entry_count=(
-                args.receiver_patch_output_change_expected_entry_count
-            ),
-            receiver_patch_output_change_file_list_source=(
-                args.receiver_patch_output_change_file_list_source
-            ),
-            receiver_patch_output_change_parity_scope_kind=(
-                args.receiver_patch_output_change_parity_scope_kind
-            ),
-            receiver_patch_output_change_contest_full_sample_claim=(
-                args.receiver_patch_output_change_contest_full_sample_claim
-            ),
+            repack_orders=_repack_orders(preferred.get("repack_order")),
+            max_variants=args.max_variants,
             include_local_component_loop=args.include_local_component_loop,
             local_component_upstream_dir=args.local_component_upstream_dir,
             local_component_video_names_file=args.local_component_video_names_file,
@@ -246,7 +280,7 @@ def main(argv: list[str] | None = None) -> int:
             mlx_device=args.mlx_device,
             mlx_cache_batch_pairs=args.mlx_cache_batch_pairs,
             mlx_batch_pairs=args.mlx_batch_pairs,
-            mlx_max_pairs=None if args.mlx_full_sample else args.mlx_max_pairs,
+            mlx_max_pairs=None,
             include_scorer_response_dataset=args.include_scorer_response_dataset,
             scorer_response_baseline_score=args.scorer_response_baseline_score,
             scorer_response_baseline_archive_bytes=(
@@ -267,14 +301,10 @@ def main(argv: list[str] | None = None) -> int:
             max_concurrency_local_cpu=args.max_concurrency_local_cpu,
             max_concurrency_local_mlx=args.max_concurrency_local_mlx,
             max_concurrency_local_io_heavy=args.max_concurrency_local_io_heavy,
-            append_campaign_harvest=not args.no_campaign_harvest,
-            append_master_gradient_hydration=not args.no_master_gradient_hydration,
             append_dynamic_followup_queue=not args.no_dynamic_followup_queue,
-            dynamic_followup_queue_out=args.dynamic_followup_queue_out,
-            dynamic_followup_output_root=args.dynamic_followup_output_root,
-            master_gradient_tensor_path=args.master_gradient_tensor,
+            master_gradient_tensor_path=_optional_path(args.master_gradient_tensor),
             master_gradient_anchor_ledger_path=args.master_gradient_anchor_ledger_path,
-            pixel_gradient_cache_path=args.pixel_gradient_cache,
+            pixel_gradient_cache_path=_optional_path(args.pixel_gradient_cache),
         )
         queue_out = _resolve(args.queue_out)
         expected_existing_sha256 = (
@@ -289,16 +319,17 @@ def main(argv: list[str] | None = None) -> int:
     except (
         ArtifactWriteError,
         OSError,
+        json.JSONDecodeError,
         ScorerRegionSelectorCascadeCampaignQueueError,
         ScorerRegionSelectorChainQueueError,
         ValueError,
     ) as exc:
-        print(f"FATAL: scorer-region cascade campaign queue failed: {exc}", file=sys.stderr)
+        print(f"FATAL: scorer-region follow-up queue compile failed: {exc}", file=sys.stderr)
         return 2
     print(
         json_text(
             {
-                "schema": "scorer_region_selector_cascade_campaign_queue_cli_result.v1",
+                "schema": "scorer_region_selector_cascade_queue_from_policy_cli_result.v1",
                 "queue_out": str(args.queue_out),
                 "queue_id": queue["queue_id"],
                 "experiment_count": len(queue["experiments"]),

@@ -37,6 +37,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Per-byte/per-pair master-gradient tensor; pass 'none' to disable.",
     )
     parser.add_argument(
+        "--archive-master-gradient-hydration",
+        type=Path,
+        help="Archive-bound master-gradient hydration artifact; pass 'none' to disable.",
+    )
+    parser.add_argument(
         "--pixel-gradient-cache",
         type=Path,
         default=DEFAULT_PIXEL_GRADIENT_CACHE_PATH,
@@ -67,6 +72,11 @@ def main(argv: list[str] | None = None) -> int:
             repo_root=REPO_ROOT,
             campaign_report=report,
             master_gradient_tensor_path=_optional_path(args.master_gradient_tensor),
+            archive_master_gradient_hydration_path=_optional_path(
+                args.archive_master_gradient_hydration
+            )
+            if args.archive_master_gradient_hydration is not None
+            else None,
             pixel_gradient_cache_path=_optional_path(args.pixel_gradient_cache),
         )
         output = _resolve(args.output)

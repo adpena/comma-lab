@@ -25,14 +25,17 @@ from tac.optimization.scorer_region_waterfill import (
     FRAME1_REGION_WATERFILL_RUNTIME_PATCH_SCHEMA,
     P18_SEGNET_REGION_WATERFILL_SCHEMA,
     P19_POSENET_NULL_PAIRS_SCHEMA,
+    SCORER_REGION_ARCHIVE_MASTER_GRADIENT_HYDRATION_SCHEMA,
     build_frame1_region_waterfill_runtime_patch,
     build_p18_segnet_region_waterfill,
     build_p19_posenet_null_pairs,
     build_receiver_closed_distortion_budget_attack_plan,
+    build_scorer_region_archive_master_gradient_hydration,
 )
 from tac.packet_compiler.feca_selector_reparameterize import (
     FECA_REPARAMETERIZATION_MANIFEST_SCHEMA,
 )
+from tac.repo_io import sha256_file
 
 
 def _write_zip(path: Path) -> None:
@@ -151,7 +154,17 @@ def test_chain_queue_can_materialize_upstream_p18_p19_artifacts(
     pose_null = tmp_path / "pose_null.json"
     soft16 = tmp_path / "soft16.npy"
     soft256 = tmp_path / "soft256.npy"
+    hydration = tmp_path / "hydration.json"
     _write_json(pose_null, {"analysis": {"pose_null_decile": []}, **FALSE_AUTHORITY})
+    _write_json(
+        hydration,
+        {
+            "schema": SCORER_REGION_ARCHIVE_MASTER_GRADIENT_HYDRATION_SCHEMA,
+            "archive_exact_match": False,
+            "blockers": ["test_blocker"],
+            **FALSE_AUTHORITY,
+        },
+    )
     soft16.write_bytes(b"fake-npy")
     soft256.write_bytes(b"fake-npy")
 
@@ -164,6 +177,7 @@ def test_chain_queue_can_materialize_upstream_p18_p19_artifacts(
         pose_null_modes_artifact=pose_null,
         segnet_softmax_16=soft16,
         segnet_softmax_256=soft256,
+        master_gradient_hydration=hydration,
         materialize_upstream_artifacts=True,
         scales=(64,),
         alphas=(1,),
@@ -181,7 +195,11 @@ def test_chain_queue_can_materialize_upstream_p18_p19_artifacts(
         "emit_receiver_closed_distortion_budget_attack_plan",
     ]
     assert steps[2]["requires"] == ["materialize_p18_segnet_region_waterfill"]
+    assert "--master-gradient-hydration" in steps[0]["command"]
     assert queue["metadata"]["materialize_upstream_artifacts"] is True
+    assert queue["metadata"]["master_gradient_hydration_schema"] == (
+        SCORER_REGION_ARCHIVE_MASTER_GRADIENT_HYDRATION_SCHEMA
+    )
 
 
 def test_chain_queue_can_materialize_receiver_patch(
@@ -665,6 +683,87 @@ def test_p18_p19_artifacts_promote_rate_credit_without_authority(
     assert plan["rate_saved_bytes"] == 16
     assert plan["budget_pair_count"] == 2
     assert plan["budget_spend_allowed"] is False
+
+
+def test_p19_selection_uses_archive_master_gradient_hydration_when_ready(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    import numpy as np
+
+    submission = _source_submission(tmp_path)
+    (submission / "inflate.py").write_text(
+        'FEC6_FIXED_K16_MODE_IDS = ("none", "mode_a", "mode_b")\n',
+        encoding="utf-8",
+    )
+    pose_null = tmp_path / "pose_null.json"
+    _write_json(
+        pose_null,
+        {
+            "analysis": {
+                "ranked_top_n_by_abs_pose": [
+                    {"mode_id": "mode_a", "abs_pose_delta": 0.2},
+                    {"mode_id": "mode_b", "abs_pose_delta": 0.8},
+                ]
+            },
+            **FALSE_AUTHORITY,
+        },
+    )
+    tensor = tmp_path / "mg.npy"
+    arr = np.zeros((3, 4, 3), dtype=np.float32)
+    arr[:, 0, 1] = 10.0
+    arr[:, 1, 1] = 0.2
+    arr[:, 2, 1] = 0.0
+    arr[:, 3, 1] = 4.0
+    np.save(tensor, arr)
+    archive_sha = sha256_file(submission / "archive.zip")
+    ledger = tmp_path / "anchors.jsonl"
+    ledger.write_text(
+        json.dumps(
+            {
+                "schema_version": "master_gradient_anchor_v1",
+                "archive_sha256": archive_sha,
+                "scored_archive_sha256": archive_sha,
+                "gradient_array_path": str(tensor),
+                "n_bytes": 3,
+                "n_pairs_total": 4,
+                "n_pairs_used": 4,
+                "operating_point": {"d_pose": 0.001, "d_seg": 0.001, "rate": 0.0},
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    hydration = build_scorer_region_archive_master_gradient_hydration(
+        repo_root=tmp_path,
+        source_submission_dir=submission,
+        master_gradient_tensor=tensor,
+        anchor_ledger_path=ledger,
+    )
+    assert hydration["schema"] == SCORER_REGION_ARCHIVE_MASTER_GRADIENT_HYDRATION_SCHEMA
+    assert hydration["archive_exact_match"] is True
+    assert hydration["blockers"] == []
+    hydration_path = tmp_path / "hydration.json"
+    _write_json(hydration_path, hydration)
+
+    import tac.optimization.scorer_region_waterfill as waterfill
+
+    monkeypatch.setattr(waterfill, "decode_selector_codes", lambda _source: [2, 0, 1, 2])
+    p19 = build_p19_posenet_null_pairs(
+        repo_root=tmp_path,
+        source_submission_dir=submission,
+        pose_null_modes_artifact=pose_null,
+        master_gradient_hydration=hydration_path,
+        null_fraction=0.5,
+    )
+
+    assert p19["pair_selection_mode"] == (
+        "archive_master_gradient_pose_null_then_selector_pose_proxy"
+    )
+    assert p19["selected_pair_ids"] == [2, 1]
+    assert p19["selected_pair_ids_from_master_gradient_overlap_count"] == 2
+    assert p19["master_gradient_pair_source_ready"] is True
+    assert p19["ready_for_exact_eval_dispatch"] is False
 
 
 def test_frame1_region_waterfill_runtime_patch_materializes_submission(
