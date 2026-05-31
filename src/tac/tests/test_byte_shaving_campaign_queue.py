@@ -1468,6 +1468,9 @@ def test_compile_dqs1_byte_shaving_plan_preserves_explicit_target_kind(
 def test_compile_dqs1_byte_shaving_plan_materializes_pairset_selector_units(
     tmp_path: Path,
 ) -> None:
+    source_unit_archive = tmp_path / "source_unit_candidate.zip"
+    source_unit_archive.write_bytes(b"source unit archive")
+    source_unit_archive_sha = hashlib.sha256(source_unit_archive.read_bytes()).hexdigest()
     surface = {
         "schema": SIGNAL_SURFACE_SCHEMA,
         "campaign_id": "dqs1_pairset_selector_fixture",
@@ -1483,6 +1486,9 @@ def test_compile_dqs1_byte_shaving_plan_materializes_pairset_selector_units(
                 "candidate_saved_bytes": 2,
                 "predicted_quality_score_cost": 0.0,
                 "confidence": 0.7,
+                "candidate_archive_path": source_unit_archive.as_posix(),
+                "candidate_archive_sha256": source_unit_archive_sha,
+                "candidate_archive_bytes": source_unit_archive.stat().st_size,
                 "blockers": [
                     "dqs1_pairset_acquisition_unit_is_planning_only",
                     "requires_local_dqs1_materialization_and_locality_controls",
@@ -1532,11 +1538,27 @@ def test_compile_dqs1_byte_shaving_plan_materializes_pairset_selector_units(
     assert row["selected_pair_indices"] == [101, 501]
     assert row["materialization_blockers"] == []
     assert row["source_units"][0]["blockers"] == []
+    source_unit_contract = row["source_units"][0]["archive_bound_candidate_contract"]
+    assert row["source_units"][0]["archive_bound_candidate_contract_schema"] == (
+        ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+    )
+    assert source_unit_contract["schema"] == ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+    assert source_unit_contract["candidate_archive"]["sha256"] == (
+        source_unit_archive_sha
+    )
+    assert source_unit_contract["score_claim"] is False
+    assert "archive_bound_receiver_runtime_proof_missing" in (
+        row["source_units"][0]["archive_bound_candidate_contract_blockers"]
+    )
     assert row["materializer_resolutions"][0]["selected_operation_blockers"] == []
     assert row["score_claim"] is False
     portfolio_row = next(
         item for item in compiled["portfolio"]["operator_action_rows"] if item["candidate_id"] == row["candidate_id"]
     )
+    portfolio_source_unit = portfolio_row["source_metadata"]["source_units"][0]
+    assert portfolio_source_unit["archive_bound_candidate_contract"]["candidate_archive"][
+        "sha256"
+    ] == source_unit_archive_sha
     assert portfolio_row["source_metadata"]["allowed_use"] == ("dqs1_local_first_materialization_only")
     assert portfolio_row["ready_for_exact_eval_dispatch"] is False
 

@@ -861,8 +861,33 @@ def normalize_unit_signal(unit: Mapping[str, Any]) -> dict[str, Any]:
         "evidence_semantics": unit.get("evidence_semantics"),
         "source_paths": _as_list(unit.get("source_paths")),
         "source_candidate_id": unit.get("source_candidate_id"),
-        "candidate_archive_sha256": unit.get("candidate_archive_sha256"),
-        "candidate_archive_bytes": unit.get("candidate_archive_bytes"),
+        "candidate_archive_path": (
+            unit.get("candidate_archive_path")
+            or unit.get("archive_path")
+            or _mapping(unit.get("candidate_archive")).get("path")
+        ),
+        "candidate_archive_sha256": (
+            unit.get("candidate_archive_sha256")
+            or unit.get("archive_sha256")
+            or _mapping(unit.get("candidate_archive")).get("sha256")
+        ),
+        "candidate_archive_bytes": (
+            unit.get("candidate_archive_bytes")
+            or unit.get("archive_bytes")
+            or _mapping(unit.get("candidate_archive")).get("bytes")
+        ),
+        "archive_bound_candidate_contract_schema": unit.get(
+            "archive_bound_candidate_contract_schema"
+        ),
+        "archive_bound_candidate_contract": unit.get(
+            "archive_bound_candidate_contract"
+        ),
+        "archive_bound_candidate_contract_surface_schema": unit.get(
+            "archive_bound_candidate_contract_surface_schema"
+        ),
+        "archive_bound_candidate_contract_surface": unit.get(
+            "archive_bound_candidate_contract_surface"
+        ),
         "local_axis": unit.get("local_axis"),
         "target_axis": unit.get("target_axis"),
         "local_score": unit.get("local_score"),
@@ -2477,8 +2502,33 @@ def build_signal_surface_from_candidate_queue(
                 "evidence_semantics": row.get("evidence_semantics"),
                 "source_paths": _as_list(row.get("source_paths")),
                 "source_candidate_id": row.get("source_candidate_id"),
-                "candidate_archive_sha256": row.get("candidate_archive_sha256") or row.get("archive_sha256"),
-                "candidate_archive_bytes": row.get("candidate_archive_bytes") or row.get("archive_bytes"),
+                "candidate_archive_path": (
+                    row.get("candidate_archive_path")
+                    or row.get("archive_path")
+                    or _mapping(row.get("candidate_archive")).get("path")
+                ),
+                "candidate_archive_sha256": (
+                    row.get("candidate_archive_sha256")
+                    or row.get("archive_sha256")
+                    or _mapping(row.get("candidate_archive")).get("sha256")
+                ),
+                "candidate_archive_bytes": (
+                    row.get("candidate_archive_bytes")
+                    or row.get("archive_bytes")
+                    or _mapping(row.get("candidate_archive")).get("bytes")
+                ),
+                "archive_bound_candidate_contract_schema": row.get(
+                    "archive_bound_candidate_contract_schema"
+                ),
+                "archive_bound_candidate_contract": row.get(
+                    "archive_bound_candidate_contract"
+                ),
+                "archive_bound_candidate_contract_surface_schema": row.get(
+                    "archive_bound_candidate_contract_surface_schema"
+                ),
+                "archive_bound_candidate_contract_surface": row.get(
+                    "archive_bound_candidate_contract_surface"
+                ),
                 "candidate_trust_region_blockers": _as_list(row.get("candidate_trust_region_blockers")),
                 "local_axis": row.get("local_axis"),
                 "target_axis": row.get("target_axis"),

@@ -23,6 +23,9 @@ from tac.hnerv_lowlevel_packer import (
     HnervLowlevelPackError,
     read_strict_single_member_zip,
 )
+from tac.optimization.archive_bound_candidate_contract import (
+    archive_bound_candidate_contract_fields_for_row,
+)
 from tac.optimization.byte_range_entropy_recode_chain import (
     CHAIN_MANIFEST_NAME,
     CHAIN_SCHEMA,
@@ -5593,6 +5596,100 @@ def build_materializer_execution_queue(
     )
 
 
+def _source_unit_archive_contract_fields(
+    unit: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    target_kind: str | None,
+    unit_id: str,
+    unit_kind: str,
+) -> dict[str, Any]:
+    propagated = {
+        key: unit.get(key)
+        for key in (
+            "archive_bound_candidate_contract_schema",
+            "archive_bound_candidate_contract",
+            "archive_bound_candidate_contract_surface_schema",
+            "archive_bound_candidate_contract_surface",
+        )
+        if unit.get(key) is not None
+    }
+    if propagated:
+        propagated["archive_bound_candidate_contract_blockers"] = []
+        return propagated
+
+    candidate_archive = _as_mapping(unit.get("candidate_archive"))
+    archive_path = str(
+        unit.get("candidate_archive_path")
+        or unit.get("archive_path")
+        or candidate_archive.get("path")
+        or ""
+    ).strip()
+    archive_sha = str(
+        unit.get("candidate_archive_sha256")
+        or unit.get("archive_sha256")
+        or candidate_archive.get("sha256")
+        or candidate_archive.get("archive_sha256")
+        or ""
+    ).strip()
+    archive_bytes = _finite_int(
+        unit.get("candidate_archive_bytes")
+        or unit.get("archive_bytes")
+        or candidate_archive.get("bytes")
+        or candidate_archive.get("archive_bytes")
+    )
+    has_archive_signal = bool(
+        archive_path or archive_sha or archive_bytes is not None or candidate_archive
+    )
+    if not has_archive_signal:
+        return {"archive_bound_candidate_contract_blockers": []}
+
+    blockers: list[str] = []
+    if not archive_path:
+        blockers.append("source_unit_archive_bound_candidate_contract_path_missing")
+    if not archive_sha:
+        blockers.append("source_unit_archive_bound_candidate_contract_sha256_missing")
+    if archive_bytes is None:
+        blockers.append("source_unit_archive_bound_candidate_contract_bytes_missing")
+    if blockers:
+        return {
+            "archive_bound_candidate_contract_schema": None,
+            "archive_bound_candidate_contract": None,
+            "archive_bound_candidate_contract_surface_schema": None,
+            "archive_bound_candidate_contract_surface": None,
+            "archive_bound_candidate_contract_blockers": ordered_unique(blockers),
+        }
+
+    fields = archive_bound_candidate_contract_fields_for_row(
+        {
+            "archive_native_transform_kind": target_kind or unit_kind,
+            "target_kind": target_kind,
+            "candidate_id": unit_id,
+            "candidate_archive_path": archive_path,
+            "candidate_archive_sha256": archive_sha,
+            "candidate_archive_bytes": archive_bytes,
+            "byte_closed_candidate_emitted": True,
+            "byte_closed_candidate_materialized": True,
+            "candidate_archive_materialized": True,
+            "runtime_consumption_proof_ready": False,
+            "receiver_contract_kind": target_kind,
+            "receiver_contract_satisfied": False,
+            "runtime_adapter_ready": False,
+            "readiness_blockers": ["source_unit_receiver_contract_not_bound"],
+            **FALSE_AUTHORITY,
+        },
+        repo_root=repo_root,
+        selected_transform_kind=target_kind or unit_kind,
+        family_id="byte_shaving_source_unit",
+        candidate_chain_id=unit_id,
+    )
+    contract = _as_mapping(fields.get("archive_bound_candidate_contract"))
+    fields["archive_bound_candidate_contract_blockers"] = ordered_unique(
+        contract.get("blockers") or []
+    )
+    return fields
+
+
 def _materialize_row(
     *,
     payload: Mapping[str, Any],
@@ -5600,6 +5697,7 @@ def _materialize_row(
     kind: str,
     base_pairs: tuple[int, ...] | None,
     units_by_id: Mapping[str, Mapping[str, Any]],
+    repo_root: Path,
     rank: int,
 ) -> dict[str, Any]:
     selection_id = _selection_id(kind, row)
@@ -5688,6 +5786,13 @@ def _materialize_row(
             pass
         else:
             unit_kind = str(unit.get("unit_kind") or "")
+            unit_archive_contract_fields = _source_unit_archive_contract_fields(
+                unit,
+                repo_root=repo_root,
+                target_kind=resolution.target_kind,
+                unit_id=unit_id,
+                unit_kind=unit_kind,
+            )
             unit_blockers = ordered_unique(
                 [
                     *[str(item) for item in _as_list(unit.get("blockers"))],
@@ -5708,8 +5813,22 @@ def _materialize_row(
                     "score_axis": unit.get("score_axis"),
                     "source_paths": unit.get("source_paths"),
                     "source_candidate_id": unit.get("source_candidate_id"),
-                    "candidate_archive_sha256": unit.get("candidate_archive_sha256"),
-                    "candidate_archive_bytes": unit.get("candidate_archive_bytes"),
+                    "candidate_archive_path": (
+                        unit.get("candidate_archive_path")
+                        or unit.get("archive_path")
+                        or _as_mapping(unit.get("candidate_archive")).get("path")
+                    ),
+                    "candidate_archive_sha256": (
+                        unit.get("candidate_archive_sha256")
+                        or unit.get("archive_sha256")
+                        or _as_mapping(unit.get("candidate_archive")).get("sha256")
+                    ),
+                    "candidate_archive_bytes": (
+                        unit.get("candidate_archive_bytes")
+                        or unit.get("archive_bytes")
+                        or _as_mapping(unit.get("candidate_archive")).get("bytes")
+                    ),
+                    **unit_archive_contract_fields,
                     "operation_params": operation_params,
                     "candidate_trust_region_blockers": unit.get("candidate_trust_region_blockers"),
                     "blockers": unit_blockers,
@@ -5920,6 +6039,7 @@ def compile_dqs1_byte_shaving_campaign(
                 kind=kind,
                 base_pairs=base_pairs,
                 units_by_id=units_by_id,
+                repo_root=repo,
                 rank=rank,
             )
         )
