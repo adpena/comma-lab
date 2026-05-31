@@ -180,3 +180,47 @@ def test_accepts_canonical_conventions_with_defaults() -> None:
         assert b.segnet_teacher_frame_index == 1
         assert b.pose_distillation_weight == 0.0
         assert b.pose_dims == 6
+
+
+def test_substrate_artifact_metadata_accepts_non_authority_lineage() -> None:
+    bundle = RendererBundle(
+        model=object(),
+        target_rgb_0=None,
+        target_rgb_1=None,
+        num_pairs=4,
+        substrate_artifact_metadata={
+            "schema": "mlx_substrate_backend_lineage.v1",
+            "backend_lineage": "reference_s6_mlx",
+            "backend_claim_blockers": ["canonical_ssd_mlx_backend_not_wired"],
+        },
+    )
+
+    assert bundle.substrate_artifact_metadata["backend_lineage"] == "reference_s6_mlx"
+
+
+def test_substrate_artifact_metadata_rejects_duplicate_authority_keys() -> None:
+    with pytest.raises(
+        MlxScoreAwareHarnessError,
+        match="canonical authority/readiness key",
+    ):
+        RendererBundle(
+            model=object(),
+            target_rgb_0=None,
+            target_rgb_1=None,
+            num_pairs=4,
+            substrate_artifact_metadata={"ready_for_exact_eval_dispatch": False},
+        )
+
+    with pytest.raises(
+        MlxScoreAwareHarnessError,
+        match="canonical authority/readiness key",
+    ):
+        RendererBundle(
+            model=object(),
+            target_rgb_0=None,
+            target_rgb_1=None,
+            num_pairs=4,
+            substrate_artifact_metadata={
+                "nested": {"ready_for_exact_eval_dispatch": False}
+            },
+        )

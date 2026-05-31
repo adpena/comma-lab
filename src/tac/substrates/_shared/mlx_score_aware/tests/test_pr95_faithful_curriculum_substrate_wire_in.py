@@ -37,6 +37,7 @@ import ast
 import json
 from collections.abc import Mapping
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -44,9 +45,10 @@ import pytest
 from tac.training.long_training_canonical import (
     CurriculumStage,
     LongTrainingConfig,
+    TrainingArtifact,
+    _emit_canonical_posterior_anchor,
     run_long_training,
 )
-
 
 # ---------------------------------------------------------------------------
 # Mock adapter that records notify_global_epoch invocations
@@ -240,6 +242,100 @@ def test_run_long_training_notify_global_epoch_failure_does_not_crash(
     # Slot EEE NO FAKE: the run must complete even if notify raises every epoch.
     result = run_long_training(adapter, config)
     assert result is not None
+
+
+def test_run_long_training_threads_adapter_artifact_metadata(
+    tmp_path: Path,
+) -> None:
+    """Adapter metadata lands in TrainingArtifact JSON without authority fields."""
+
+    class _MetadataAdapter(_NotifyRecordingAdapter):
+        def artifact_metadata(self) -> Mapping[str, Any]:
+            return {
+                "schema": "mlx_substrate_backend_lineage.v1",
+                "backend_lineage": "reference_s6_mlx",
+                "backend_claim_blockers": ["canonical_ssd_mlx_backend_not_wired"],
+            }
+
+    adapter = _MetadataAdapter()
+    config = _make_config(tmp_path, epochs=2)
+    artifact = run_long_training(adapter, config)
+    artifact_json = json.loads((tmp_path / "training_artifact.json").read_text())
+
+    assert artifact.substrate_artifact_metadata["backend_lineage"] == (
+        "reference_s6_mlx"
+    )
+    assert artifact_json["substrate_artifact_metadata"] == {
+        "schema": "mlx_substrate_backend_lineage.v1",
+        "backend_lineage": "reference_s6_mlx",
+        "backend_claim_blockers": ["canonical_ssd_mlx_backend_not_wired"],
+    }
+    assert artifact_json["ready_for_exact_eval_dispatch"] is False
+
+
+def test_run_long_training_rejects_adapter_metadata_authority_keys(
+    tmp_path: Path,
+) -> None:
+    """Metadata cannot become a second stale readiness surface."""
+
+    class _BadMetadataAdapter(_NotifyRecordingAdapter):
+        def artifact_metadata(self) -> Mapping[str, Any]:
+            return {"nested": {"ready_for_exact_eval_dispatch": False}}
+
+    adapter = _BadMetadataAdapter()
+    config = _make_config(tmp_path, epochs=1)
+    with pytest.raises(ValueError, match="canonical authority/readiness key"):
+        run_long_training(adapter, config)
+
+
+def test_posterior_anchor_threads_substrate_artifact_metadata(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Archive-bearing MLX artifacts preserve substrate metadata in posterior rows."""
+    captured: dict[str, Any] = {}
+
+    def _fake_emit(**kwargs: Any) -> Any:
+        captured.update(kwargs)
+        return SimpleNamespace(
+            posterior_update=SimpleNamespace(
+                accepted=True,
+                refusal_reason=None,
+            )
+        )
+
+    import tac.substrates._shared.posterior_emission_helper as helper
+
+    monkeypatch.setattr(helper, "emit_substrate_landing_posterior_anchor", _fake_emit)
+    artifact = TrainingArtifact(
+        substrate_id="wire_in_test_substrate",
+        lane_id="lane_test_wire_in_test_substrate_20260530",
+        config_snapshot={"device": "mlx", "evidence_grade": "[macOS-MLX research-signal]"},
+        ema_shadow_checkpoint_path=tmp_path / "ema.npsd",
+        archive_path=tmp_path / "0.bin",
+        archive_sha256="a" * 64,
+        archive_bytes=7,
+        per_epoch_metrics=(),
+        total_wall_clock_seconds=0.01,
+        total_epochs_completed=1,
+        canonical_provenance={},
+        telemetry_path=tmp_path / "telemetry.jsonl",
+        substrate_artifact_metadata={
+            "schema": "mlx_substrate_backend_lineage.v1",
+            "backend_lineage": "reference_s6_mlx",
+            "backend_claim_blockers": ["canonical_ssd_mlx_backend_not_wired"],
+        },
+    )
+
+    accepted, refusal = _emit_canonical_posterior_anchor(artifact)
+
+    assert accepted is True
+    assert refusal is None
+    assert captured["extra_manifest_fields"]["substrate_artifact_metadata"] == {
+        "schema": "mlx_substrate_backend_lineage.v1",
+        "backend_lineage": "reference_s6_mlx",
+        "backend_claim_blockers": ["canonical_ssd_mlx_backend_not_wired"],
+    }
 
 
 # ---------------------------------------------------------------------------

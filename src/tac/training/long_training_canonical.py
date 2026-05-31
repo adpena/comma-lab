@@ -164,6 +164,13 @@ CANONICAL_NON_PROMOTABLE_MARKERS: dict[str, bool] = {
     "promotable": False,
 }
 
+_SUBSTRATE_ARTIFACT_METADATA_FORBIDDEN_AUTHORITY_KEYS: frozenset[str] = frozenset(
+    {
+        *CANONICAL_NON_PROMOTABLE_MARKERS,
+        "score_claim_valid",
+    }
+)
+
 # Canonical defaults (operator overridable via LongTrainingConfig).
 DEFAULT_CHECKPOINT_INTERVAL_EPOCHS: int = 100
 DEFAULT_EARLY_STOPPING_PATIENCE: int = 200
@@ -236,6 +243,69 @@ def _utc_now_iso() -> str:
 def _sha256_text(payload: str) -> str:
     """Hex sha256 of a text payload."""
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _validate_substrate_artifact_metadata(
+    metadata: Mapping[str, Any],
+    field_name: str = "substrate_artifact_metadata",
+) -> dict[str, Any]:
+    """Validate optional adapter-supplied metadata for artifact emission.
+
+    This metadata channel is deliberately non-authoritative. It can carry
+    substrate-local facts (backend lineage, math-fidelity blockers, portable
+    export notes), but cannot carry duplicate score/readiness keys. The
+    canonical ``TrainingArtifact`` false-authority fields remain the only
+    custody surface downstream consumers should read.
+    """
+    if not isinstance(metadata, Mapping):
+        raise TypeError(
+            f"{field_name} must be Mapping; got {type(metadata).__name__}"
+        )
+    def _reject_authority_keys(value: Any, path: str) -> None:
+        if isinstance(value, Mapping):
+            for key, child in value.items():
+                if not isinstance(key, str) or not key:
+                    raise ValueError(
+                        f"{field_name} keys must be non-empty str; got "
+                        f"{key!r} at {path}"
+                    )
+                child_path = f"{path}.{key}"
+                if key in _SUBSTRATE_ARTIFACT_METADATA_FORBIDDEN_AUTHORITY_KEYS:
+                    raise ValueError(
+                        f"{field_name} cannot carry canonical "
+                        f"authority/readiness key {key!r} at {child_path}; "
+                        f"use TrainingArtifact.{key} as the single custody "
+                        "surface."
+                    )
+                _reject_authority_keys(child, child_path)
+        elif isinstance(value, (list, tuple)):
+            for index, child in enumerate(value):
+                _reject_authority_keys(child, f"{path}[{index}]")
+
+    _reject_authority_keys(metadata, field_name)
+    normalized = dict(metadata)
+    try:
+        json.dumps(normalized, sort_keys=True)
+    except TypeError as exc:
+        raise TypeError(
+            f"{field_name} must be JSON-serializable; {exc}"
+        ) from exc
+    return normalized
+
+
+def _collect_adapter_artifact_metadata(
+    adapter: Any,
+) -> dict[str, Any]:
+    """Collect optional adapter metadata, failing closed on malformed output."""
+    metadata_fn = getattr(adapter, "artifact_metadata", None)
+    if metadata_fn is None:
+        return {}
+    if not callable(metadata_fn):
+        raise TypeError("adapter.artifact_metadata exists but is not callable")
+    metadata = metadata_fn()
+    if metadata is None:
+        return {}
+    return _validate_substrate_artifact_metadata(metadata, "adapter.artifact_metadata")
 
 
 # ---------------------------------------------------------------------------
@@ -736,6 +806,10 @@ class TrainingArtifact:
         posterior_update_accepted: whether the canonical posterior anchor
             was accepted by the posterior_update_locked custody validator.
         posterior_refusal_reason: reason for refusal if not accepted.
+        substrate_artifact_metadata: optional non-authority adapter metadata
+            such as backend lineage or substrate-local blockers. Canonical
+            score/readiness keys are rejected here to prevent stale duplicate
+            custody readers.
         telemetry_path: canonical telemetry JSONL path.
         schema_version: canonical schema version for downstream consumers.
         captured_at_utc: ISO-8601 UTC timestamp of artifact emission.
@@ -752,6 +826,7 @@ class TrainingArtifact:
     telemetry_path: Path
     captured_at_utc: str = field(default_factory=_utc_now_iso)
     schema_version: str = TRAINING_ARTIFACT_SCHEMA_VERSION
+    substrate_artifact_metadata: Mapping[str, Any] = field(default_factory=dict)
     live_checkpoint_path: Path | None = None
     archive_path: Path | None = None
     archive_sha256: str | None = None
@@ -782,6 +857,7 @@ class TrainingArtifact:
             raise ValueError("rank_or_kill_eligible=True forbidden.")
         if self.promotable:
             raise ValueError("promotable=True forbidden.")
+        _validate_substrate_artifact_metadata(self.substrate_artifact_metadata)
         # archive_sha256 ↔ archive_bytes coherence
         if (self.archive_sha256 is None) != (self.archive_bytes is None):
             raise ValueError(
@@ -819,6 +895,7 @@ class TrainingArtifact:
             "total_epochs_completed": int(self.total_epochs_completed),
             "early_stopped": bool(self.early_stopped),
             "early_stop_reason": self.early_stop_reason,
+            "substrate_artifact_metadata": dict(self.substrate_artifact_metadata),
             "canonical_provenance": dict(self.canonical_provenance),
             "posterior_update_accepted": bool(self.posterior_update_accepted),
             "posterior_refusal_reason": self.posterior_refusal_reason,
@@ -923,6 +1000,10 @@ class SubstrateLongTrainingAdapter(Protocol):
             same dict shape as loss_fn (REQUIRED ``"total"`` key).
             Used by MLX adapters where ``mlx.nn.value_and_grad`` requires
             closure over both forward + backward.
+        artifact_metadata() -> Mapping[str, Any] | None:
+            optional non-authority metadata threaded into TrainingArtifact
+            JSON and MLX posterior rows. This may carry substrate lineage or
+            blocker facts, but canonical score/readiness keys are rejected.
     """
 
     substrate_id: str
@@ -1739,7 +1820,12 @@ def _build_canonical_provenance_for_artifact(
         from tac.provenance import build_provenance_for_predicted
 
         inputs_payload = json.dumps(
-            dict(artifact.config_snapshot),
+            {
+                "config_snapshot": dict(artifact.config_snapshot),
+                "substrate_artifact_metadata": dict(
+                    artifact.substrate_artifact_metadata
+                ),
+            },
             sort_keys=True,
         )
         inputs_sha256 = _sha256_text(inputs_payload)
@@ -1776,7 +1862,15 @@ def _build_canonical_provenance_for_artifact(
             "score_claim_valid": False,
             "source_path": f"<long_training_canonical:{artifact.substrate_id}>",
             "source_sha256": _sha256_text(
-                json.dumps(dict(artifact.config_snapshot), sort_keys=True)
+                json.dumps(
+                    {
+                        "config_snapshot": dict(artifact.config_snapshot),
+                        "substrate_artifact_metadata": dict(
+                            artifact.substrate_artifact_metadata
+                        ),
+                    },
+                    sort_keys=True,
+                )
             ),
             "canonical_helper_invocation": "tac.training.long_training_canonical.run_long_training",
             "captured_at_utc": _utc_now_iso(),
@@ -1830,6 +1924,18 @@ def _emit_canonical_posterior_anchor(
             emit_substrate_landing_posterior_anchor,
         )
 
+        extra_manifest_fields: dict[str, Any] = {
+            "long_training_canonical_helper": "tac.training.long_training_canonical.run_long_training",
+            "long_training_lane_id": artifact.lane_id,
+            "long_training_schema_version": artifact.schema_version,
+            "long_training_epochs_completed": int(artifact.total_epochs_completed),
+            "long_training_early_stopped": bool(artifact.early_stopped),
+        }
+        if artifact.substrate_artifact_metadata:
+            extra_manifest_fields["substrate_artifact_metadata"] = dict(
+                artifact.substrate_artifact_metadata
+            )
+
         anchor = emit_substrate_landing_posterior_anchor(
             substrate_id=artifact.substrate_id,
             archive_sha256=artifact.archive_sha256,
@@ -1842,13 +1948,7 @@ def _emit_canonical_posterior_anchor(
                 f"epochs_completed={artifact.total_epochs_completed}; "
                 f"non-promotable per CLAUDE.md MLX/CPU-research-signal discipline."
             ),
-            extra_manifest_fields={
-                "long_training_canonical_helper": "tac.training.long_training_canonical.run_long_training",
-                "long_training_lane_id": artifact.lane_id,
-                "long_training_schema_version": artifact.schema_version,
-                "long_training_epochs_completed": int(artifact.total_epochs_completed),
-                "long_training_early_stopped": bool(artifact.early_stopped),
-            },
+            extra_manifest_fields=extra_manifest_fields,
         )
         return bool(anchor.posterior_update.accepted), anchor.posterior_update.refusal_reason
     except ImportError as exc:
@@ -2202,6 +2302,7 @@ def run_long_training(
         print(f"[long_training_canonical] WARN: archive export failed: {exc!r}")
 
     telemetry_sink.close()
+    substrate_artifact_metadata = _collect_adapter_artifact_metadata(adapter)
 
     # 11) Build canonical Provenance + emit canonical posterior anchor.
     artifact_pre_provenance = TrainingArtifact(
@@ -2218,6 +2319,7 @@ def run_long_training(
         total_epochs_completed=total_epochs_completed,
         canonical_provenance={},  # filled below
         telemetry_path=config.resolved_telemetry_path(),
+        substrate_artifact_metadata=substrate_artifact_metadata,
         early_stopped=early_stopped,
         early_stop_reason=early_stop_reason,
     )
@@ -2238,6 +2340,7 @@ def run_long_training(
         total_epochs_completed=total_epochs_completed,
         canonical_provenance=provenance,
         telemetry_path=config.resolved_telemetry_path(),
+        substrate_artifact_metadata=substrate_artifact_metadata,
         early_stopped=early_stopped,
         early_stop_reason=early_stop_reason,
     )
@@ -2258,6 +2361,7 @@ def run_long_training(
         total_epochs_completed=total_epochs_completed,
         canonical_provenance=provenance,
         telemetry_path=config.resolved_telemetry_path(),
+        substrate_artifact_metadata=substrate_artifact_metadata,
         early_stopped=early_stopped,
         early_stop_reason=early_stop_reason,
         posterior_update_accepted=posterior_accepted,

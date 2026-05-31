@@ -30,6 +30,40 @@ FORWARD_CONVENTIONS: frozenset[str] = frozenset(
     {"reconstruct_pair_nchw01", "call_b2chw_255"}
 )
 
+_SUBSTRATE_METADATA_FORBIDDEN_AUTHORITY_KEYS: frozenset[str] = frozenset(
+    {
+        "score_claim",
+        "promotion_eligible",
+        "ready_for_exact_eval_dispatch",
+        "rank_or_kill_eligible",
+        "promotable",
+        "score_claim_valid",
+    }
+)
+
+
+def _reject_metadata_authority_keys(value: Any, path: str) -> None:
+    """Reject score/readiness keys anywhere inside substrate metadata."""
+    if isinstance(value, Mapping):
+        for key, child in value.items():
+            if not isinstance(key, str) or not key:
+                raise MlxScoreAwareHarnessError(
+                    "substrate_artifact_metadata keys must be non-empty str; "
+                    f"got {key!r} at {path}"
+                )
+            child_path = f"{path}.{key}"
+            if key in _SUBSTRATE_METADATA_FORBIDDEN_AUTHORITY_KEYS:
+                raise MlxScoreAwareHarnessError(
+                    "substrate_artifact_metadata cannot carry canonical "
+                    f"authority/readiness key {key!r} at {child_path}; use "
+                    "the canonical TrainingArtifact fields as the single "
+                    "custody surface."
+                )
+            _reject_metadata_authority_keys(child, child_path)
+    elif isinstance(value, (list, tuple)):
+        for index, child in enumerate(value):
+            _reject_metadata_authority_keys(child, f"{path}[{index}]")
+
 
 @runtime_checkable
 class MlxRenderer(Protocol):
@@ -221,6 +255,12 @@ class RendererBundle:
         export_archive_fn: optional ``(model, output_dir) -> (path, sha, bytes)``
             numpy-portable archive builder; threaded into the adapter's
             ``export_archive``.
+        substrate_artifact_metadata: optional JSON-safe substrate metadata
+            threaded into the canonical long-training artifact. This is for
+            non-authority facts such as backend lineage, math fidelity class,
+            or substrate-local blockers. Canonical readiness/score authority
+            fields are refused here so downstream consumers do not grow a
+            second stale readiness reader.
     """
 
     model: Any
@@ -246,6 +286,7 @@ class RendererBundle:
     export_archive_fn: (
         Callable[[Any, Path], tuple[Path, str, int] | None] | None
     ) = None
+    substrate_artifact_metadata: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if self.forward_convention not in FORWARD_CONVENTIONS:
@@ -257,6 +298,15 @@ class RendererBundle:
             raise MlxScoreAwareHarnessError(
                 f"num_pairs must be >= 1; got {self.num_pairs}"
             )
+        if not isinstance(self.substrate_artifact_metadata, Mapping):
+            raise MlxScoreAwareHarnessError(
+                "substrate_artifact_metadata must be a Mapping; got "
+                f"{type(self.substrate_artifact_metadata).__name__}"
+            )
+        _reject_metadata_authority_keys(
+            self.substrate_artifact_metadata,
+            "substrate_artifact_metadata",
+        )
         if self.distillation_weight < 0.0:
             raise MlxScoreAwareHarnessError(
                 f"distillation_weight must be >= 0 (0.0 disables); got "

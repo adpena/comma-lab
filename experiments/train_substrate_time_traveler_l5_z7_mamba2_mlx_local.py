@@ -239,6 +239,19 @@ def _full_main(args: argparse.Namespace) -> int:
         output_height=out_h,
         output_width=out_w,
     )
+    z7_substrate_artifact_metadata = {
+        "schema": "mlx_substrate_backend_lineage.v1",
+        "substrate_id": "time_traveler_l5_z7_mamba2_mlx_local",
+        "mamba2_mlx_backend_lineage": cfg.mamba2_mlx_backend_lineage,
+        "canonical_ssd_mlx_backend_wired": bool(
+            cfg.canonical_ssd_mlx_backend_wired
+        ),
+        "backend_claim_blockers": [cfg.canonical_ssd_mlx_blocker],
+        "math_fidelity_scope": (
+            "trainable_mlx_score_aware_z7_mamba2_module_with_reference_s6_"
+            "recurrence; canonical_mamba2_ssd_backend_not_claimed"
+        ),
+    }
 
     # Canonical Hinton-distilled scorer surrogate wiring per sister Z6-v2
     # commit `c26647891` + V2/V4/VQ sister cascade commit `1860ea2ac` +
@@ -317,6 +330,7 @@ def _full_main(args: argparse.Namespace) -> int:
         pose_dims=DEFAULT_POSE_DIMS,
         allow_mock_scorer_teacher=bool(args.allow_mock_scorer_teacher),
         export_archive_fn=export_z7_mamba2_mlx_archive,
+        substrate_artifact_metadata=z7_substrate_artifact_metadata,
     )
     # Wave N+11 stabilizer recipe per task #1481:
     #   - grad_clip_max_norm = 1.0 (Mamba-2 canonical per Gu+Dao 2023)

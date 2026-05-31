@@ -240,6 +240,16 @@ class MlxScoreAwareAdapter:
         self._pose_head_optimizer: Any = None
         self._pose_head_optimizer_lr: float | None = None
 
+    def artifact_metadata(self) -> Mapping[str, Any]:
+        """Return non-authority substrate metadata for TrainingArtifact JSON.
+
+        This is the canonical MLX harness bridge for substrate-local facts
+        such as backend lineage or math-fidelity blockers. Readiness and score
+        authority remain owned by ``TrainingArtifact`` itself; the bundle
+        refuses those duplicate keys at construction.
+        """
+        return dict(self.bundle.substrate_artifact_metadata)
+
     def sample_batch(self, batch_size: int, seed: int) -> Any:
         """Sample a deterministic batch of pair indices (Catalog #229 PV)."""
         import numpy as np
