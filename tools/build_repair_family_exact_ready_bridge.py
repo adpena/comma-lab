@@ -24,6 +24,7 @@ ensure_repo_imports(REPO_ROOT)
 
 from tac.optimization.repair_family_exact_ready_bridge import (  # noqa: E402
     RepairFamilyExactReadyBridgeError,
+    build_repair_family_exact_handoff_plan_from_archive_bound_payloads,
     build_repair_family_exact_ready_bridge,
 )
 from tac.repo_io import (  # noqa: E402
@@ -36,10 +37,22 @@ from tac.repo_io import (  # noqa: E402
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--exact-handoff-plan", required=True, type=Path)
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument("--exact-handoff-plan", type=Path)
+    source.add_argument(
+        "--archive-bound-payload",
+        action="append",
+        default=[],
+        type=Path,
+        help=(
+            "Materializer manifest, adapter package, contract surface, or "
+            "standalone tac_archive_bound_candidate_contract.v1 payload. Repeatable."
+        ),
+    )
     parser.add_argument("--source-queue-out", required=True, type=Path)
     parser.add_argument("--blocked-exact-ready-queue-out", required=True, type=Path)
     parser.add_argument("--bridge-report-out", required=True, type=Path)
+    parser.add_argument("--exact-handoff-plan-out", type=Path)
     parser.add_argument("--submission-dir", action="append", default=[], type=Path)
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args(argv)
@@ -80,10 +93,27 @@ def _write(path: Path, payload: object, *, overwrite: bool) -> int:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     try:
-        handoff_plan_path = _resolve(args.exact_handoff_plan)
+        if args.exact_handoff_plan is not None:
+            handoff_plan_path = _resolve(args.exact_handoff_plan)
+            exact_handoff_plan = _load_json(handoff_plan_path)
+            exact_handoff_plan_path = args.exact_handoff_plan
+        else:
+            payload_paths = tuple(args.archive_bound_payload)
+            exact_handoff_plan = build_repair_family_exact_handoff_plan_from_archive_bound_payloads(
+                archive_bound_payloads=tuple(_load_json(_resolve(path)) for path in payload_paths),
+                archive_bound_payload_paths=payload_paths,
+                repo_root=REPO_ROOT,
+            )
+            exact_handoff_plan_path = args.exact_handoff_plan_out
+            if args.exact_handoff_plan_out is not None:
+                _write(
+                    args.exact_handoff_plan_out,
+                    exact_handoff_plan,
+                    overwrite=bool(args.overwrite),
+                )
         result = build_repair_family_exact_ready_bridge(
-            exact_handoff_plan=_load_json(handoff_plan_path),
-            exact_handoff_plan_path=args.exact_handoff_plan,
+            exact_handoff_plan=exact_handoff_plan,
+            exact_handoff_plan_path=exact_handoff_plan_path,
             submission_dirs=tuple(args.submission_dir),
             repo_root=REPO_ROOT,
         )
@@ -116,18 +146,16 @@ def main(argv: list[str] | None = None) -> int:
             {
                 "schema": "repair_family_exact_ready_bridge_cli_result.v1",
                 "candidate_count": report["candidate_count"],
-                "archive_custody_proven_count": report[
-                    "archive_custody_proven_count"
-                ],
-                "runtime_proof_custody_proven_count": report[
-                    "runtime_proof_custody_proven_count"
-                ],
-                "runtime_content_tree_custody_proven_count": report[
-                    "runtime_content_tree_custody_proven_count"
-                ],
+                "archive_custody_proven_count": report["archive_custody_proven_count"],
+                "runtime_proof_custody_proven_count": report["runtime_proof_custody_proven_count"],
+                "runtime_content_tree_custody_proven_count": report["runtime_content_tree_custody_proven_count"],
                 "source_queue_out": str(args.source_queue_out),
                 "blocked_exact_ready_queue_out": str(args.blocked_exact_ready_queue_out),
                 "bridge_report_out": str(args.bridge_report_out),
+                "exact_handoff_plan_out": (
+                    None if args.exact_handoff_plan_out is None else str(args.exact_handoff_plan_out)
+                ),
+                "source_archive_bound_payload_paths": [str(path) for path in args.archive_bound_payload],
                 "bytes_written": source_bytes + blocked_bytes + report_bytes,
                 "score_claim": False,
                 "promotion_eligible": False,

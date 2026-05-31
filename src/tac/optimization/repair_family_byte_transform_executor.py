@@ -3048,6 +3048,29 @@ def build_repair_family_byte_transform_execution_report(
                         candidate_archive.get("sha256") or ""
                     ),
                     "candidate_archive_bytes": candidate_archive.get("bytes"),
+                    "byte_closed_candidate_emitted": (
+                        candidate_archive.get("materialized") is True
+                    ),
+                    "byte_closed_candidate_materialized": (
+                        candidate_archive.get("materialized") is True
+                    ),
+                    "candidate_archive_materialized": (
+                        candidate_archive.get("materialized") is True
+                    ),
+                    "runtime_consumption_proof_ready": (
+                        candidate_archive.get("runtime_consumption_proof_ready")
+                        is True
+                    ),
+                    "receiver_contract_satisfied": (
+                        candidate_archive.get("receiver_contract_satisfied") is True
+                    ),
+                    "runtime_adapter_ready": (
+                        candidate_archive.get("runtime_adapter_ready") is True
+                    ),
+                    "contest_runtime_decoder_adapter_ready": (
+                        candidate_archive.get("contest_runtime_decoder_adapter_ready")
+                        is True
+                    ),
                     "replay_argv": _string_list(replay_argv),
                     "input_artifacts": adapter_input_artifacts,
                 },

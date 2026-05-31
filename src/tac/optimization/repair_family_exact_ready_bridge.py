@@ -8,6 +8,8 @@ from pathlib import Path
 from typing import Any
 
 from tac.optimization.archive_bound_candidate_contract import (
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA,
     ArchiveBoundCandidateContractError,
     archive_bound_candidate_contract_fields_for_row,
     archive_bound_candidate_contracts_from_payload,
@@ -228,6 +230,11 @@ def _contract_source_archive(contract: Mapping[str, Any]) -> Mapping[str, Any]:
     return archive if isinstance(archive, Mapping) else {}
 
 
+def _handoff_source_archive(row: Mapping[str, Any]) -> Mapping[str, Any]:
+    archive = row.get("source_archive")
+    return archive if isinstance(archive, Mapping) else {}
+
+
 def _contract_runtime_proof_row(contract: Mapping[str, Any]) -> Mapping[str, Any]:
     proof_path = contract.get("runtime_consumption_proof_path")
     if isinstance(proof_path, str) and proof_path.strip():
@@ -293,14 +300,13 @@ def _submission_runtime_custody(
             local_blockers.append("submission_archive_manifest_missing")
         else:
             try:
-                archive_manifest = read_json(archive_manifest_path)
+                read_json(archive_manifest_path)
             except (OSError, ValueError) as exc:
-                archive_manifest = {}
                 local_blockers.append(f"submission_archive_manifest_read_failed:{exc}")
-            if candidate_id and isinstance(archive_manifest, Mapping):
-                manifest_candidate_id = str(archive_manifest.get("candidate_id") or "")
-                if manifest_candidate_id and manifest_candidate_id != candidate_id:
-                    local_blockers.append("submission_archive_manifest_candidate_id_mismatch")
+            # Some materializer manifests name the source closure in
+            # ``candidate_id``.  The exact archive SHA/byte match above is the
+            # runtime-dir custody proof, so do not let a descriptive manifest id
+            # override it.
         if not report_txt.is_file():
             local_blockers.append("submission_report_txt_missing")
         if not inflate_sh.is_file():
@@ -432,9 +438,21 @@ def _bridge_row(
         and not proof_payload_blockers
         and proof_payload.get("receiver_contract_satisfied") is True
     )
+    runtime_consumption_proof_passed = (
+        proof_payload.get("runtime_consumption_proof_passed") is True
+        or proof_payload.get("passed") is True
+        or (
+            receiver_contract_satisfied
+            and proof_payload.get("runtime_consumption_proof_ready") is True
+            and proof_payload.get("returncode") in (0, None)
+        )
+    )
     source_archive = _merged_mapping(
         _candidate_source_archive(proof_payload),
-        _contract_source_archive(handoff_archive_bound_contract),
+        _merged_mapping(
+            _contract_source_archive(handoff_archive_bound_contract),
+            _handoff_source_archive(handoff_row),
+        ),
     )
     candidate_archive = {
         "path": archive_custody.get("path"),
@@ -516,9 +534,7 @@ def _bridge_row(
         "runtime_consumption_proof_sha256": proof_custody.get("sha256"),
         "runtime_consumption_proof_required": True,
         "runtime_consumption_proof_schema": proof_payload.get("schema"),
-        "runtime_consumption_proof_passed": (
-            proof_payload.get("runtime_consumption_proof_passed") is True or proof_payload.get("passed") is True
-        ),
+        "runtime_consumption_proof_passed": runtime_consumption_proof_passed,
         "runtime_consumption_proof_status": (
             "archive_bound_proof_custody_present"
             if proof_custody.get("custody_complete") is True
@@ -635,6 +651,202 @@ def _bridge_row(
     return bridge
 
 
+def _source_path_record(path: str | Path | None, repo_root: str | Path) -> dict[str, Any]:
+    if path is None:
+        return {"path": None, "present": False, "sha256": None, "bytes": None}
+    resolved = _resolve(path, repo_root)
+    if not resolved.is_file():
+        return {
+            "path": _repo_rel(resolved, repo_root),
+            "present": False,
+            "sha256": None,
+            "bytes": None,
+        }
+    return {
+        "path": _repo_rel(resolved, repo_root),
+        "present": True,
+        "sha256": sha256_file(resolved),
+        "bytes": resolved.stat().st_size,
+    }
+
+
+def _archive_bound_handoff_row_from_contract(
+    *,
+    contract: Mapping[str, Any],
+    payload: Mapping[str, Any],
+    payload_path: str | Path | None,
+    repo_root: str | Path,
+) -> dict[str, Any]:
+    identity = _mapping(contract.get("contract_identity"))
+    candidate_archive = _contract_candidate_archive(contract)
+    runtime_proof_path = (
+        str(contract.get("runtime_consumption_proof_path") or "").strip()
+        or str(identity.get("runtime_consumption_proof_path") or "").strip()
+    )
+    family_id = str(
+        contract.get("family_id")
+        or identity.get("family_id")
+        or payload.get("family_id")
+        or payload.get("strategy")
+        or "archive_bound_candidate"
+    )
+    typed_response_id = str(
+        contract.get("typed_response_id")
+        or identity.get("typed_response_id")
+        or payload.get("typed_response_id")
+        or payload.get("candidate_id")
+        or ""
+    )
+    candidate_chain_id = str(
+        contract.get("candidate_chain_id")
+        or identity.get("candidate_chain_id")
+        or payload.get("candidate_chain_id")
+        or payload.get("candidate_id")
+        or "archive_bound_candidate"
+    )
+    row = {
+        "schema": "repair_family_exact_handoff_candidate_row.v1",
+        "source_archive_bound_payload": _source_path_record(
+            payload_path,
+            repo_root=repo_root,
+        ),
+        "source_archive_bound_payload_schema": payload.get("schema"),
+        "family_id": family_id,
+        "typed_response_id": typed_response_id,
+        "candidate_chain_id": candidate_chain_id,
+        "candidate_chain_ids": [candidate_chain_id],
+        "candidate_archive": dict(candidate_archive),
+        "source_archive": dict(_mapping(payload.get("source_archive"))),
+        "runtime_consumption_proof": ({"path": runtime_proof_path} if runtime_proof_path else {}),
+        "archive_native_transform_kind": contract.get("archive_native_transform_kind"),
+        "target_kind": payload.get("target_kind"),
+        "entropy_position_label": contract.get("entropy_position_label"),
+        "entropy_stage_order": contract.get("entropy_stage_order"),
+        "archive_bound_candidate_contract_schema": ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
+        "archive_bound_candidate_contract": dict(contract),
+        "archive_bound_candidate_contract_surface_schema": (ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA),
+        "archive_bound_candidate_contract_surface": {
+            "schema": ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA,
+            "candidate_contracts": [dict(contract)],
+            "selected_contract_key": contract.get("contract_key"),
+            "source": "archive_bound_payload_exact_ready_bridge",
+        },
+        "archive_bound_custody_complete": (contract.get("archive_bound_candidate_ready_for_exact_handoff") is True),
+        "archive_bound_exact_handoff_candidate": (
+            contract.get("archive_bound_candidate_ready_for_exact_handoff") is True
+        ),
+        "target_modes": ["contest_exact_eval"],
+        "component_response_axis": "[macOS-MLX research-signal]",
+        "local_mlx_rows_are_advisory_only": True,
+        "eligible_for_exact_eval_handoff": False,
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        "allowed_use": "archive_bound_contract_exact_handoff_planning_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        "blockers": ordered_unique(
+            [
+                *_string_list(contract.get("blockers")),
+                "materializer_exact_eval_dispatch_plan_or_exact_ready_queue_required",
+                "contest_cpu_or_cuda_exact_axis_payload_required",
+                "lane_dispatch_claim_required_before_exact_eval",
+            ]
+        ),
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        row,
+        context=f"archive_bound_payload_exact_handoff_row:{candidate_chain_id}",
+    )
+    return row
+
+
+def build_repair_family_exact_handoff_plan_from_archive_bound_payloads(
+    *,
+    archive_bound_payloads: Sequence[Mapping[str, Any]],
+    archive_bound_payload_paths: Sequence[str | Path | None] = (),
+    repo_root: str | Path,
+) -> dict[str, Any]:
+    """Build an exact-handoff plan from shared archive-bound candidate contracts."""
+
+    if archive_bound_payload_paths and len(archive_bound_payloads) != len(archive_bound_payload_paths):
+        raise RepairFamilyExactReadyBridgeError(
+            "archive_bound_payloads and archive_bound_payload_paths length mismatch"
+        )
+    paths: tuple[str | Path | None, ...] = (
+        tuple(archive_bound_payload_paths)
+        if archive_bound_payload_paths
+        else tuple([None] * len(archive_bound_payloads))
+    )
+    rows: list[dict[str, Any]] = []
+    for payload_index, (payload, payload_path) in enumerate(zip(archive_bound_payloads, paths, strict=True)):
+        try:
+            contracts = archive_bound_candidate_contracts_from_payload(
+                payload,
+                label=f"repair_family_exact_ready_archive_bound_payload[{payload_index}]",
+            )
+        except ArchiveBoundCandidateContractError as exc:
+            raise RepairFamilyExactReadyBridgeError(str(exc)) from exc
+        rows.extend(
+            _archive_bound_handoff_row_from_contract(
+                contract=contract,
+                payload=payload,
+                payload_path=payload_path,
+                repo_root=repo_root,
+            )
+            for contract in contracts
+        )
+    archive_bound_rows = [row for row in rows if row.get("archive_bound_exact_handoff_candidate") is True]
+    blockers = ordered_unique(
+        [
+            *([] if archive_bound_rows else ["archive_bound_exact_handoff_candidate_missing"]),
+            "materializer_exact_eval_dispatch_plan_or_exact_ready_queue_required",
+            "contest_cpu_or_cuda_exact_axis_payload_required",
+            "lane_dispatch_claim_required_before_exact_eval",
+        ]
+    )
+    plan = {
+        "schema": REPAIR_FAMILY_EXACT_HANDOFF_PLAN_SCHEMA,
+        "source": "archive_bound_candidate_contract_payloads",
+        "source_archive_bound_payload_paths": [None if path is None else str(path) for path in paths],
+        "source_stack_plan_path": None,
+        "source_stack_plan_schema": None,
+        "source_chain_execution_bundle_schema": None,
+        "execution_report_count": len(archive_bound_payloads),
+        "entropy_stage_chain_candidate_count": 0,
+        "entropy_stage_chain_archive_bound_candidate_count": 0,
+        "candidate_count": len(rows),
+        "archive_bound_candidate_count": len(archive_bound_rows),
+        "archive_bound_custody_complete": bool(archive_bound_rows),
+        "rows": rows,
+        "archive_bound_rows": archive_bound_rows,
+        "handoff_contract": {
+            "schema": "repair_family_exact_handoff_contract.v1",
+            "source": "archive_bound_candidate_contract_payloads",
+            "adapter_artifact_only": True,
+            "next_authoritative_gate": ("materializer_exact_eval_dispatch_plan_or_exact_ready_queue"),
+            "mlx_local_rows_are_advisory_only": True,
+            "receiver_must_remain_decode_only": True,
+            "budget_spend_allowed": False,
+            "ready_for_exact_eval_dispatch": False,
+            **FALSE_AUTHORITY,
+        },
+        "blockers": blockers,
+        "eligible_for_exact_eval_handoff": False,
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        "allowed_use": "operator_visible_archive_bound_contract_exact_handoff_planning",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        plan,
+        context="archive_bound_payload_exact_handoff_plan",
+    )
+    return plan
+
+
 def build_repair_family_exact_ready_bridge(
     *,
     exact_handoff_plan: Mapping[str, Any],
@@ -670,6 +882,9 @@ def build_repair_family_exact_ready_bridge(
         "schema": REPAIR_FAMILY_EXACT_READY_SOURCE_QUEUE_SCHEMA,
         "tool": "tac.optimization.repair_family_exact_ready_bridge",
         "source_exact_handoff_plan_path": (None if exact_handoff_plan_path is None else str(exact_handoff_plan_path)),
+        "source_archive_bound_payload_paths": _string_list(
+            exact_handoff_plan.get("source_archive_bound_payload_paths")
+        ),
         "top_k": source_queue_rows,
         "dispatch_ready": [],
         "dispatch_ready_count": 0,
@@ -683,6 +898,9 @@ def build_repair_family_exact_ready_bridge(
         "schema": EXACT_READY_QUEUE_SCHEMA,
         "tool": "tac.optimization.repair_family_exact_ready_bridge",
         "source_exact_handoff_plan_path": (None if exact_handoff_plan_path is None else str(exact_handoff_plan_path)),
+        "source_archive_bound_payload_paths": _string_list(
+            exact_handoff_plan.get("source_archive_bound_payload_paths")
+        ),
         "n_candidates": len(source_queue_rows),
         "top_k_count": len(source_queue_rows),
         "dispatch_ready_count": 0,
@@ -713,6 +931,9 @@ def build_repair_family_exact_ready_bridge(
     report = {
         "schema": REPAIR_FAMILY_EXACT_READY_BRIDGE_REPORT_SCHEMA,
         "source_exact_handoff_plan_path": (None if exact_handoff_plan_path is None else str(exact_handoff_plan_path)),
+        "source_archive_bound_payload_paths": _string_list(
+            exact_handoff_plan.get("source_archive_bound_payload_paths")
+        ),
         "source_exact_handoff_plan_schema": exact_handoff_plan.get("schema"),
         "candidate_count": len(bridge_rows),
         "archive_custody_proven_count": archive_count,
@@ -751,5 +972,6 @@ __all__ = [
     "REPAIR_FAMILY_EXACT_READY_BRIDGE_ROW_SCHEMA",
     "REPAIR_FAMILY_EXACT_READY_SOURCE_QUEUE_SCHEMA",
     "RepairFamilyExactReadyBridgeError",
+    "build_repair_family_exact_handoff_plan_from_archive_bound_payloads",
     "build_repair_family_exact_ready_bridge",
 ]

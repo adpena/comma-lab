@@ -64,6 +64,7 @@ from tac.optimization.repair_family_byte_transform_executor import (
 from tac.optimization.repair_family_exact_ready_bridge import (
     REPAIR_FAMILY_EXACT_READY_BRIDGE_REPORT_SCHEMA,
     RepairFamilyExactReadyBridgeError,
+    build_repair_family_exact_handoff_plan_from_archive_bound_payloads,
     build_repair_family_exact_ready_bridge,
 )
 from tac.optimization.repair_family_materializers import (
@@ -1999,6 +2000,103 @@ def test_repair_exact_ready_bridge_consumes_contract_only_custody(
     assert source_row["candidate_archive_sha256"] == candidate_sha
     assert source_row["source_archive_sha256"] == source_sha
     assert "archive_bound_candidate_contract_missing" not in source_row["dispatch_blockers"]
+
+
+def test_repair_exact_ready_bridge_consumes_archive_bound_payload_manifest(
+    tmp_path: Path,
+) -> None:
+    source_archive = _write_zip(tmp_path / "source_archive.zip", {"0.bin": b"source"})
+    source_sha = hashlib.sha256(source_archive.read_bytes()).hexdigest()
+    candidate_archive = _write_zip(
+        tmp_path / "candidate_archive.zip",
+        {"0.bin": b"candidate"},
+    )
+    candidate_sha = hashlib.sha256(candidate_archive.read_bytes()).hexdigest()
+    proof_path = _write_json(
+        tmp_path / "receiver_proof.json",
+        {
+            "schema": "fixture_runtime_consumption_proof.v1",
+            "receiver_contract_satisfied": True,
+            "runtime_consumption_proof_ready": True,
+            "returncode": 0,
+            **_false_authority(),
+        },
+    )
+    payload_row: dict[str, object] = {
+        **_false_authority(),
+        "family_id": "segnet_boundary_source_pixel_patch",
+        "typed_response_id": "",
+        "candidate_chain_id": "boundary_repair_live",
+        "candidate_archive": {
+            "path": str(candidate_archive),
+            "sha256": candidate_sha,
+            "bytes": candidate_archive.stat().st_size,
+        },
+        "runtime_consumption_proof_path": str(proof_path),
+        "runtime_consumption_proof_ready": True,
+        "receiver_contract_satisfied": True,
+        "runtime_adapter_ready": True,
+        "contest_runtime_decoder_adapter_ready": True,
+        "byte_closed_candidate_emitted": True,
+        "byte_closed_candidate_materialized": True,
+        "candidate_archive_materialized": True,
+        "score_affecting_payload_changed": True,
+        "charged_bits_changed": True,
+    }
+    payload_row.update(
+        archive_bound_candidate_contract_fields_for_row(
+            payload_row,
+            repo_root=tmp_path,
+            selected_transform_kind="segnet_boundary_source_pixel_patch_runtime_overlay",
+            family_id="segnet_boundary_source_pixel_patch",
+            typed_response_id="",
+            candidate_chain_id="boundary_repair_live",
+        )
+    )
+    payload = {
+        **_false_authority(),
+        "schema": "segnet_boundary_repair_runtime_materializer.v1",
+        "source_archive": {
+            "path": str(source_archive),
+            "sha256": source_sha,
+            "bytes": source_archive.stat().st_size,
+        },
+        "archive_bound_candidate_adapter_package": {
+            **_false_authority(),
+            "schema": ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA,
+            "candidate_rows": [payload_row],
+            "archive_bound_candidate_contract_surfaces": [
+                payload_row["archive_bound_candidate_contract_surface"]
+            ],
+            "candidate_row_count": 1,
+            "ready_contract_count": 1,
+        },
+    }
+    payload_path = _write_json(tmp_path / "materializer_manifest.json", payload)
+
+    exact_handoff_plan = (
+        build_repair_family_exact_handoff_plan_from_archive_bound_payloads(
+            archive_bound_payloads=[payload],
+            archive_bound_payload_paths=[payload_path],
+            repo_root=tmp_path,
+        )
+    )
+    bridge = build_repair_family_exact_ready_bridge(
+        exact_handoff_plan=exact_handoff_plan,
+        repo_root=tmp_path,
+    )
+
+    assert exact_handoff_plan["candidate_count"] == 1
+    assert exact_handoff_plan["archive_bound_candidate_count"] == 1
+    assert bridge["bridge_report"]["candidate_count"] == 1
+    source_row = bridge["source_optimizer_queue"]["top_k"][0]
+    assert source_row["candidate_archive_sha256"] == candidate_sha
+    assert source_row["source_archive_sha256"] == source_sha
+    assert source_row["runtime_consumption_proof_passed"] is True
+    assert source_row["ready_for_exact_eval_dispatch"] is False
+    assert bridge["source_optimizer_queue"]["source_archive_bound_payload_paths"] == [
+        str(payload_path)
+    ]
 
 
 def test_materialization_gate_learning_signal_updates_posterior(
