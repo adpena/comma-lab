@@ -10,7 +10,8 @@ false-authority candidate row.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+import json
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -24,6 +25,9 @@ from tac.repo_io import sha256_file
 from tac.substrates._shared.pact_nerv_full_main import (
     build_archive_zip,
     write_contest_runtime,
+)
+from tac.substrates.z8_hierarchical_predictive_coding.byte_mutation_proof import (
+    probe_z8_archive_distinguishing_feature,
 )
 from tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_binding import (
     Z8CanonicalQuadrupleBinding,
@@ -84,6 +88,17 @@ def _resolve_output_dir(
     return root, out_dir
 
 
+def _repo_relative(path: Path, repo_root: Path) -> str:
+    try:
+        return (
+            path.resolve(strict=False)
+            .relative_to(repo_root.resolve(strict=False))
+            .as_posix()
+        )
+    except ValueError:
+        return path.as_posix()
+
+
 def _write_z8_runtime(
     *,
     submission_dir: Path,
@@ -105,8 +120,12 @@ def _write_z8_runtime(
     (submission_dir / "0.bin").write_bytes(bin_bytes)
 
 
-def _z8_runtime_adapter_manifest_extra() -> dict[str, Any]:
-    return {
+def _z8_runtime_adapter_manifest_extra(
+    *,
+    byte_mutation_proof: Mapping[str, Any] | None = None,
+    repo_root: Path | None = None,
+) -> dict[str, Any]:
+    manifest = {
         "schema": "z8_hpc1_runtime_adapter_manifest.v1",
         "predictive_coding_family": (
             "z8_hpc1_mallat_wavelet_pixel_consumed_predictive_stack_custody"
@@ -124,6 +143,32 @@ def _z8_runtime_adapter_manifest_extra() -> dict[str, Any]:
             subpkg for subpkg, _files in Z8_RUNTIME_EXTRA_TAC_SUBPACKAGES
         ],
     }
+    if byte_mutation_proof is not None:
+        proof_path = str(byte_mutation_proof.get("proof_path") or "")
+        if proof_path and repo_root is not None:
+            proof_path = _repo_relative(Path(proof_path), repo_root)
+        manifest["byte_mutation_consumption_proof"] = {
+            "schema": byte_mutation_proof.get("schema_version"),
+            "proof_path": proof_path or None,
+            "distinguishing_feature": byte_mutation_proof.get(
+                "distinguishing_feature"
+            ),
+            "distinguishing_feature_consumed": bool(
+                byte_mutation_proof.get("distinguishing_feature_consumed")
+            ),
+            "pixel_consumed_sections": list(
+                byte_mutation_proof.get("pixel_consumed_sections") or []
+            ),
+            "custody_only_sections": list(
+                byte_mutation_proof.get("custody_only_sections") or []
+            ),
+            "mamba_dreamer_wyner_ziv_pixel_consumption_proven": bool(
+                byte_mutation_proof.get(
+                    "mamba_dreamer_wyner_ziv_pixel_consumption_proven"
+                )
+            ),
+        }
+    return manifest
 
 
 def export_z8hpc1_archive_bytes(
@@ -132,6 +177,7 @@ def export_z8hpc1_archive_bytes(
     *,
     repo_root: str | Path | None = None,
     emit_archive_bound_candidate_package: bool = True,
+    emit_byte_mutation_proof: bool = True,
     retain_receiver_proof_output: bool = False,
     mlx_triage_argv: Sequence[str] | None = None,
 ) -> tuple[Path, str, int]:
@@ -155,7 +201,25 @@ def export_z8hpc1_archive_bytes(
     )
     archive_sha256 = sha256_file(archive_zip_path)
     archive_bytes_count = archive_zip_path.stat().st_size
+    byte_mutation_proof: dict[str, Any] | None = None
+    byte_mutation_proof_path = out_dir / "z8_hpc1_byte_mutation_proof.json"
+    if emit_byte_mutation_proof:
+        byte_mutation_proof = probe_z8_archive_distinguishing_feature(
+            out_dir / "0.bin",
+            proof_out=byte_mutation_proof_path,
+        )
+        if byte_mutation_proof.get("distinguishing_feature_consumed") is not True:
+            raise RuntimeError(
+                "Z8HPC1 archive-bound export failed byte-mutation proof: "
+                "wavelet_blob did not produce pixel-changing output"
+            )
     if emit_archive_bound_candidate_package:
+        input_artifacts = [
+            _repo_relative(archive_zip_path, root),
+            _repo_relative(submission_dir / "0.bin", root),
+        ]
+        if byte_mutation_proof is not None:
+            input_artifacts.append(_repo_relative(byte_mutation_proof_path, root))
         emit_archive_bound_candidate_runtime_package(
             adapter_id=Z8_HPC_ARCHIVE_BOUND_ADAPTER_ID,
             candidate_family=Z8_HPC_ARCHIVE_CANDIDATE_FAMILY,
@@ -175,9 +239,13 @@ def export_z8hpc1_archive_bytes(
             candidate_label="z8_hpc1",
             expected_receiver_output_bytes=CONTEST_RAW_BYTES,
             retain_receiver_output=retain_receiver_proof_output,
-            runtime_adapter_manifest_extra=_z8_runtime_adapter_manifest_extra(),
+            runtime_adapter_manifest_extra=_z8_runtime_adapter_manifest_extra(
+                byte_mutation_proof=byte_mutation_proof,
+                repo_root=root,
+            ),
             candidate_row_schema="z8_hpc1_archive_bound_candidate_row.v1",
             wrapper_schema=Z8_HPC_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
+            input_artifacts=input_artifacts,
             mlx_triage_argv=mlx_triage_argv,
         )
     return (archive_zip_path, archive_sha256, archive_bytes_count)
@@ -191,6 +259,7 @@ def export_z8hpc1_archive_from_canonical_quadruple(
     *,
     repo_root: str | Path | None = None,
     emit_archive_bound_candidate_package: bool = True,
+    emit_byte_mutation_proof: bool = True,
     retain_receiver_proof_output: bool = False,
     mlx_triage_argv: Sequence[str] | None = None,
 ) -> tuple[Path, str, int]:
@@ -206,6 +275,7 @@ def export_z8hpc1_archive_from_canonical_quadruple(
         output_dir,
         repo_root=repo_root,
         emit_archive_bound_candidate_package=emit_archive_bound_candidate_package,
+        emit_byte_mutation_proof=emit_byte_mutation_proof,
         retain_receiver_proof_output=retain_receiver_proof_output,
         mlx_triage_argv=mlx_triage_argv,
     )
@@ -229,6 +299,18 @@ def export_z8hpc1_archive_bound_candidate_package(
     )
     root, out_dir = _resolve_output_dir(output_dir, repo_root=repo_root)
     submission_dir = out_dir / "submission"
+    byte_mutation_proof_path = out_dir / "z8_hpc1_byte_mutation_proof.json"
+    byte_mutation_proof = (
+        json.loads(byte_mutation_proof_path.read_text(encoding="utf-8"))
+        if byte_mutation_proof_path.is_file()
+        else None
+    )
+    input_artifacts = [
+        _repo_relative(archive_zip_path, root),
+        _repo_relative(submission_dir / "0.bin", root),
+    ]
+    if byte_mutation_proof_path.is_file():
+        input_artifacts.append(_repo_relative(byte_mutation_proof_path, root))
     return emit_archive_bound_candidate_runtime_package(
         adapter_id=Z8_HPC_ARCHIVE_BOUND_ADAPTER_ID,
         candidate_family=Z8_HPC_ARCHIVE_CANDIDATE_FAMILY,
@@ -246,9 +328,13 @@ def export_z8hpc1_archive_bound_candidate_package(
         candidate_label="z8_hpc1",
         expected_receiver_output_bytes=CONTEST_RAW_BYTES,
         retain_receiver_output=retain_receiver_proof_output,
-        runtime_adapter_manifest_extra=_z8_runtime_adapter_manifest_extra(),
+        runtime_adapter_manifest_extra=_z8_runtime_adapter_manifest_extra(
+            byte_mutation_proof=byte_mutation_proof,
+            repo_root=root,
+        ),
         candidate_row_schema="z8_hpc1_archive_bound_candidate_row.v1",
         wrapper_schema=Z8_HPC_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
+        input_artifacts=input_artifacts,
         mlx_triage_argv=mlx_triage_argv,
     )
 

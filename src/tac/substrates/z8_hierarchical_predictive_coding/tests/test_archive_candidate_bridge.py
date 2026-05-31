@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -64,6 +65,13 @@ def test_z8_archive_export_emits_runtime_tree_without_mlx_import(tmp_path: Path)
     assert archive_zip.is_file()
     assert len(archive_sha) == 64
     assert archive_bytes == archive_zip.stat().st_size
+    byte_mutation_proof_path = tmp_path / "z8_hpc1_byte_mutation_proof.json"
+    assert byte_mutation_proof_path.is_file()
+    proof = json.loads(byte_mutation_proof_path.read_text(encoding="utf-8"))
+    assert proof["distinguishing_feature_consumed"] is True
+    assert "wavelet_blob" in proof["pixel_consumed_sections"]
+    assert "dreamer_state_blob" in proof["custody_only_sections"]
+    assert proof["mamba_dreamer_wyner_ziv_pixel_consumption_proven"] is False
     submission = tmp_path / "submission"
     assert (submission / "0.bin").is_file()
     assert (submission / "inflate.sh").is_file()
@@ -107,6 +115,14 @@ def test_z8_archive_bound_package_stays_false_authority_when_receiver_blocked(
         assert manifest_extra["stack_custody_not_yet_pixel_consumed_sections"] == list(
             Z8_HPC_STACK_CUSTODY_NOT_YET_PIXEL_CONSUMED_SECTIONS
         )
+        mutation_proof = manifest_extra["byte_mutation_consumption_proof"]
+        assert mutation_proof["distinguishing_feature_consumed"] is True
+        assert mutation_proof["pixel_consumed_sections"] == ["wavelet_blob"]
+        assert "dreamer_state_blob" in mutation_proof["custody_only_sections"]
+        assert (
+            mutation_proof["mamba_dreamer_wyner_ziv_pixel_consumption_proven"]
+            is False
+        )
         assert "mamba_mallat_dreamer_wyner_ziv_stack" not in (
             manifest_extra["predictive_coding_family"]
         )
@@ -138,6 +154,7 @@ def test_z8_archive_bound_package_stays_false_authority_when_receiver_blocked(
             runtime_adapter_manifest_extra=kwargs["runtime_adapter_manifest_extra"],
             candidate_row_schema=kwargs["candidate_row_schema"],
             wrapper_schema=kwargs["wrapper_schema"],
+            input_artifacts=kwargs["input_artifacts"],
             mlx_triage_argv=kwargs["mlx_triage_argv"],
         )
 
@@ -171,3 +188,7 @@ def test_z8_archive_bound_package_stays_false_authority_when_receiver_blocked(
     assert row["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
     assert "archive_bound_candidate_contract" in row
+    assert any(
+        str(path).endswith("z8_hpc1_byte_mutation_proof.json")
+        for path in row["input_artifacts"]
+    )
