@@ -1046,6 +1046,21 @@ def _archive_contract_candidate_rows(
             source_blockers.add("archive_contract_not_ready_for_exact_handoff")
         if matching_demotions:
             source_blockers.add("posterior_negative_demoted_archive_contract")
+        runtime_payload_consumption = (
+            contract.get("runtime_payload_consumption")
+            if isinstance(contract.get("runtime_payload_consumption"), Mapping)
+            else {}
+        )
+        runtime_payload_tasks = _string_list(
+            runtime_payload_consumption.get("next_materializer_tasks")
+        )
+        if (
+            runtime_payload_consumption.get("incomplete_predictive_stack_runtime")
+            is True
+        ):
+            source_blockers.add(
+                "predictive_stack_runtime_payload_consumption_incomplete"
+            )
         source_metadata = {
             "archive_bound_candidate_contract": dict(contract),
             "contract_key": contract_key,
@@ -1060,6 +1075,8 @@ def _archive_contract_candidate_rows(
             "entropy_stage_penalty_score": stage_penalty,
             "posterior_demotion_penalty_score": posterior_penalty,
             "posterior_demotion_rows": matching_demotions,
+            "runtime_payload_consumption": dict(runtime_payload_consumption),
+            "runtime_payload_next_materializer_tasks": runtime_payload_tasks,
         }
         out.append(
             _candidate(
@@ -2801,6 +2818,8 @@ def _operator_action_for_row(row: Mapping[str, Any]) -> str:
     if source_kind == "archive_bound_candidate_contract":
         if "posterior_negative_demoted_archive_contract" in blockers:
             return "hold_archive_contract_until_new_evidence_or_repair"
+        if "predictive_stack_runtime_payload_consumption_incomplete" in blockers:
+            return "build_predictive_stack_runtime_payload_adapter_before_exact_promotion"
         if "archive_contract_not_ready_for_exact_handoff" in blockers:
             return "repair_or_materialize_archive_contract_candidate"
         return "promote_archive_contract_to_receiver_exact_bridge"

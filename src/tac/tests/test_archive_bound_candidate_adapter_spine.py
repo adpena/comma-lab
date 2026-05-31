@@ -390,6 +390,23 @@ def test_archive_contract_demotes_partial_predictive_stack_runtime(
         in runtime_consumption["next_materializer_tasks"]
     )
 
+    portfolio = build_cross_family_candidate_portfolio(
+        incumbent_score=0.2,
+        archive_contract_surfaces=[package],
+    )
+    portfolio_row = portfolio["ranked_rows"][0]
+    assert portfolio_row["operator_next_action"] == (
+        "build_predictive_stack_runtime_payload_adapter_before_exact_promotion"
+    )
+    assert (
+        "predictive_stack_runtime_payload_consumption_incomplete"
+        in portfolio_row["source_dispatch_blockers"]
+    )
+    assert (
+        portfolio_row["source_metadata"]["runtime_payload_next_materializer_tasks"]
+        == runtime_consumption["next_materializer_tasks"]
+    )
+
 
 def test_mlx_triage_fails_closed_on_incomplete_archive_custody(
     tmp_path: Path,
