@@ -14,6 +14,7 @@ import tac.substrates.z8_hierarchical_predictive_coding.archive_candidate as z8_
 from tac.optimization.archive_bound_candidate_runtime_bridge import (
     build_archive_bound_candidate_runtime_package,
 )
+from tac.substrates.z8_hierarchical_predictive_coding.archive import parse_archive
 from tac.substrates.z8_hierarchical_predictive_coding.archive_candidate import (
     Z8_HPC_ARCHIVE_BOUND_ADAPTER_ID,
     Z8_HPC_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
@@ -26,9 +27,15 @@ from tac.substrates.z8_hierarchical_predictive_coding.archive_candidate import (
 from tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_binding import (
     build_canonical_quadruple_binding_from_z8_config,
     build_z8hpc1_archive_bytes_from_canonical_quadruple,
+    parse_pair_blobs_from_wavelet_blob,
+    reconstruct_pair_rgb_from_pyramid,
 )
 from tac.substrates.z8_hierarchical_predictive_coding.mlx_renderer import (
     Z8HierarchicalConfig,
+)
+from tac.substrates.z8_hierarchical_predictive_coding.runtime_payload_bridge import (
+    decode_wyner_ziv_top_states_from_archive,
+    project_decoded_top_states_into_pair_pyramids,
 )
 
 
@@ -55,6 +62,28 @@ def _archive_bytes() -> bytes:
     return build_z8hpc1_archive_bytes_from_canonical_quadruple(binding, f0, f1)
 
 
+def test_z8_runtime_payload_projection_changes_frame1_pixels() -> None:
+    archive_bytes = _archive_bytes()
+    arc = parse_archive(archive_bytes)
+    binding = build_canonical_quadruple_binding_from_z8_config(_cfg())
+    pair_pyramids = parse_pair_blobs_from_wavelet_blob(arc.wavelet_coeffs_blob)
+    decoded = decode_wyner_ziv_top_states_from_archive(archive_bytes)
+
+    projected, stats = project_decoded_top_states_into_pair_pyramids(
+        pair_pyramids,
+        decoded,
+    )
+
+    assert stats["projection_target"] == "frame_1_top_ll"
+    assert stats["projected_pair_changed_count"] == 1
+    base_f0, base_f1 = reconstruct_pair_rgb_from_pyramid(binding, pair_pyramids[0])
+    projected_f0, projected_f1 = reconstruct_pair_rgb_from_pyramid(
+        binding, projected[0]
+    )
+    np.testing.assert_allclose(projected_f0, base_f0)
+    assert float(np.max(np.abs(projected_f1 - base_f1))) > 0.0
+
+
 def test_z8_archive_export_emits_runtime_tree_without_mlx_import(tmp_path: Path) -> None:
     archive_zip, archive_sha, archive_bytes = export_z8hpc1_archive_bytes(
         _archive_bytes(),
@@ -77,7 +106,9 @@ def test_z8_archive_export_emits_runtime_tree_without_mlx_import(tmp_path: Path)
     bridge_report = json.loads(bridge_report_path.read_text(encoding="utf-8"))
     assert bridge_report["wyner_ziv_top_state_decode_ready"] is True
     assert bridge_report["wyner_ziv_top_state_count"] == 1
-    assert bridge_report["state_to_pixel_projection_ready"] is False
+    assert bridge_report["state_to_pixel_projection_ready"] is True
+    assert bridge_report["state_to_pixel_projection"]["projected_pair_count"] == 1
+    assert bridge_report["state_to_pixel_projection"]["projected_pair_changed_count"] == 1
     assert bridge_report["pixel_consumption_proven"] is False
     submission = tmp_path / "submission"
     assert (submission / "0.bin").is_file()
@@ -86,6 +117,12 @@ def test_z8_archive_export_emits_runtime_tree_without_mlx_import(tmp_path: Path)
     assert "import inflate_one_video" in inflate_source
 
     runtime_root = submission / "src" / "tac"
+    assert (
+        runtime_root
+        / "substrates"
+        / "z8_hierarchical_predictive_coding"
+        / "runtime_payload_bridge.py"
+    ).is_file()
     assert (
         runtime_root
         / "substrates"
@@ -119,8 +156,12 @@ def test_z8_archive_bound_package_stays_false_authority_when_receiver_blocked(
         assert manifest_extra["pixel_consumed_archive_sections"] == list(
             Z8_HPC_PIXEL_CONSUMED_ARCHIVE_SECTIONS
         )
+        assert "wyner_ziv_blob" in manifest_extra["pixel_consumed_archive_sections"]
         assert manifest_extra["stack_custody_not_yet_pixel_consumed_sections"] == list(
             Z8_HPC_STACK_CUSTODY_NOT_YET_PIXEL_CONSUMED_SECTIONS
+        )
+        assert "wyner_ziv_blob" not in (
+            manifest_extra["stack_custody_not_yet_pixel_consumed_sections"]
         )
         mutation_proof = manifest_extra["byte_mutation_consumption_proof"]
         assert mutation_proof["distinguishing_feature_consumed"] is True
@@ -139,10 +180,10 @@ def test_z8_archive_bound_package_stays_false_authority_when_receiver_blocked(
         bridge_report = manifest_extra["runtime_payload_bridge_report"]
         assert bridge_report["wyner_ziv_top_state_decode_ready"] is True
         assert bridge_report["wyner_ziv_top_state_count"] == 1
-        assert bridge_report["state_to_pixel_projection_ready"] is False
+        assert bridge_report["state_to_pixel_projection_ready"] is True
         assert bridge_report["pixel_consumption_proven"] is False
         assert bridge_report["next_required_task"] == (
-            "fit_and_archive_state_to_top_ll_projection"
+            "run_valid_wyner_ziv_payload_mutation_receiver_proof"
         )
         assert "mamba_mallat_dreamer_wyner_ziv_stack" not in (
             manifest_extra["predictive_coding_family"]
@@ -204,7 +245,7 @@ def test_z8_archive_bound_package_stays_false_authority_when_receiver_blocked(
     assert row["target_kind"] == Z8_HPC_ARCHIVE_TRANSFORM_KIND
     assert "partial_predictive_stack" in row["target_kind"]
     assert "mamba_mallat_dreamer_wyner_ziv" not in row["target_kind"]
-    assert "wavelet_pixel_consumed" in row["target_kind"]
+    assert "wyner_ziv_top_ll_pixel_driver" in row["target_kind"]
     assert row["byte_closed_candidate_materialized"] is True
     assert row["candidate_archive_sha256"]
     assert row["score_claim"] is False

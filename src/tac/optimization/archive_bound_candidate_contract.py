@@ -164,6 +164,13 @@ def _canonical_anti_pattern_ids(candidate: Mapping[str, Any]) -> list[str]:
     custody_only_sections = _string_list(
         runtime_manifest.get("stack_custody_not_yet_pixel_consumed_sections")
     )
+    pixel_consumed_sections = _string_list(
+        runtime_manifest.get("pixel_consumed_archive_sections")
+    )
+    non_wavelet_pixel_driver = any(
+        section not in {"wavelet_blob", "wavelet_coeffs_blob"}
+        for section in pixel_consumed_sections
+    )
     full_stack_claim = runtime_manifest.get("full_stack_pixel_consumption_claim") is True
     byte_mutation_proof = _mapping(runtime_manifest.get("byte_mutation_consumption_proof"))
     mamba_dreamer_wz_proven = (
@@ -188,7 +195,10 @@ def _canonical_anti_pattern_ids(candidate: Mapping[str, Any]) -> list[str]:
             ),
             *(
                 ["partial_predictive_stack_wavelet_only_runtime_v1"]
-                if predictive_stack and custody_only_sections and not full_stack_claim
+                if predictive_stack
+                and custody_only_sections
+                and not full_stack_claim
+                and not non_wavelet_pixel_driver
                 else []
             ),
             *(

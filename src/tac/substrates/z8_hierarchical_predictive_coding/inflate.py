@@ -58,6 +58,10 @@ from tac.substrates.z8_hierarchical_predictive_coding.archive import (
     Z8HierarchicalArchive,
     parse_archive,
 )
+from tac.substrates.z8_hierarchical_predictive_coding.runtime_payload_bridge import (
+    decode_wyner_ziv_top_states_from_archive,
+    project_decoded_top_states_into_pair_pyramids,
+)
 
 # Canonical contest contract per Catalog #146 + Catalog #367 (raw bytes
 # per video = 1164 * 874 * 1200 * 3 = 3,662,409,600).
@@ -146,6 +150,11 @@ def inflate_one_video_from_archive_bytes(
         raise ValueError(
             "Z8 wavelet_coeffs_blob carried zero pairs; cannot inflate"
         )
+    decoded_top_states = decode_wyner_ziv_top_states_from_archive(archive_bytes)
+    pair_pyramids, _projection_stats = project_decoded_top_states_into_pair_pyramids(
+        pair_pyramids,
+        decoded_top_states,
+    )
 
     output_raw_path.parent.mkdir(parents=True, exist_ok=True)
     num_trained_pairs = len(pair_pyramids)

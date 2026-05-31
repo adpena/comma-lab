@@ -47,13 +47,15 @@ Z8_HPC_RECEIVER_PROOF_SCHEMA = (
 Z8_HPC_ARCHIVE_BOUND_ADAPTER_ID = "z8_hierarchical_predictive_coding_archive_export"
 Z8_HPC_ARCHIVE_CANDIDATE_FAMILY = "z8_hierarchical_predictive_coding"
 Z8_HPC_ARCHIVE_TRANSFORM_KIND = (
-    "z8_hpc1_mallat_wavelet_pixel_consumed_partial_predictive_stack_archive"
+    "z8_hpc1_mallat_wavelet_plus_mamba_wyner_ziv_top_ll_pixel_driver_partial_predictive_stack_archive"
 )
-Z8_HPC_PIXEL_CONSUMED_ARCHIVE_SECTIONS: tuple[str, ...] = ("wavelet_coeffs_blob",)
+Z8_HPC_PIXEL_CONSUMED_ARCHIVE_SECTIONS: tuple[str, ...] = (
+    "wavelet_coeffs_blob",
+    "wyner_ziv_blob",
+)
 Z8_HPC_STACK_CUSTODY_NOT_YET_PIXEL_CONSUMED_SECTIONS: tuple[str, ...] = (
     "decoder_blob",
     "indices_blob",
-    "wyner_ziv_blob",
     "dreamer_state_blob",
 )
 
@@ -65,6 +67,7 @@ Z8_RUNTIME_MODULE_FILES: tuple[str, ...] = (
     "loss.py",
     "mallat_dwt_adapter.py",
     "mamba2_adapter.py",
+    "runtime_payload_bridge.py",
     "scorer_sensitivity_map.py",
     "wyner_ziv_coder.py",
 )
