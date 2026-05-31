@@ -109,7 +109,9 @@ def test_source_pixel_patch_candidate_is_byte_closed_and_receiver_proven(tmp_pat
     assert manifest["byte_closed_candidate_materialized"] is True
     package = manifest["archive_bound_candidate_adapter_package"]
     contracts = archive_bound_candidate_contracts_from_payload(package)
+    manifest_contracts = archive_bound_candidate_contracts_from_payload(manifest)
     assert contracts[0]["archive_bound_candidate_ready"] is True
+    assert manifest_contracts[0]["contract_key"] == contracts[0]["contract_key"]
     assert contracts[0]["receiver_contract_satisfied"] is True
     with zipfile.ZipFile(tmp_path / "candidate" / "submission" / "archive.zip") as zf:
         assert zf.namelist() == ["boundary_repair_overlay.json", "x"]
@@ -167,4 +169,7 @@ def test_masked_local_median_candidate_uses_runtime_overlay_without_source_pixel
     contracts = archive_bound_candidate_contracts_from_payload(
         manifest["archive_bound_candidate_adapter_package"]
     )
+    assert archive_bound_candidate_contracts_from_payload(manifest)[0][
+        "contract_key"
+    ] == contracts[0]["contract_key"]
     assert contracts[0]["archive_bound_candidate_ready"] is True

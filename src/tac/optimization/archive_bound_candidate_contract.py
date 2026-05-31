@@ -26,6 +26,7 @@ ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA = (
 ARCHIVE_BOUND_CANDIDATE_CONTRACT_PAYLOAD_KEYS = frozenset(
     {
         "archive_bound_candidate_contract",
+        "archive_bound_candidate_adapter_package",
         "archive_bound_candidate_contract_surface",
         "archive_bound_candidate_contract_schema",
         "archive_bound_candidate_contract_surface_schema",
@@ -377,6 +378,22 @@ def archive_bound_candidate_contracts_from_payload(
     """Extract validated archive-bound contracts from any shared payload shape."""
 
     _require_no_truthy_contract_authority(payload, context=label)
+    nested_package = _optional_mapping(payload.get("archive_bound_candidate_adapter_package"))
+    if nested_package is not None:
+        contracts = archive_bound_candidate_contracts_from_payload(
+            nested_package,
+            label=f"{label} archive_bound_candidate_adapter_package",
+        )
+        if contracts:
+            stale = archive_bound_candidate_contract_stale_field_blockers(
+                payload,
+                contract=contracts[0],
+            )
+            if stale:
+                raise ArchiveBoundCandidateContractError(
+                    f"{label}: {', '.join(stale)}"
+                )
+        return contracts
     schema = payload.get("schema")
     if schema == ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA:
         rows = payload.get("candidate_rows")

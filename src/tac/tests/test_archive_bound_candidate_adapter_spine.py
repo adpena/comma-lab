@@ -22,6 +22,8 @@ from tac.optimization.archive_bound_candidate_contract import (
     archive_bound_candidate_contracts_from_payload,
     archive_substrate_tags_for_transform_kind,
     entropy_position_label_for_transform_kind,
+    has_archive_bound_candidate_contract_payload,
+    selected_archive_bound_candidate_contract_from_payload,
 )
 from tac.optimization.cross_family_candidate_portfolio import (
     CrossFamilyCandidatePortfolioError,
@@ -184,6 +186,64 @@ def test_archive_bound_adapter_spine_emits_full_pipeline_package(
     assert package["posterior_update_hooks"][0]["schema"] == (ARCHIVE_BOUND_CANDIDATE_POSTERIOR_HOOK_SCHEMA)
     extracted = archive_bound_candidate_contracts_from_payload(package)
     assert [contract["contract_key"] for contract in extracted] == [contract["contract_key"]]
+
+
+def test_archive_contract_reader_consumes_runtime_wrapper_package(
+    tmp_path: Path,
+) -> None:
+    package = build_archive_bound_candidate_adapter_package(
+        _FixtureArchiveAdapter(tmp_path),
+        repo_root=tmp_path,
+    )
+    wrapper = {
+        "schema": "tac_archive_bound_candidate_runtime_adapter_package.v1",
+        "archive_bound_candidate_adapter_package": package,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "gpu_launched": False,
+    }
+
+    assert has_archive_bound_candidate_contract_payload(wrapper) is True
+    extracted = archive_bound_candidate_contracts_from_payload(wrapper)
+    selected = selected_archive_bound_candidate_contract_from_payload(wrapper)
+
+    assert len(extracted) == 1
+    assert selected is not None
+    assert selected["archive_bound_candidate_ready_for_exact_handoff"] is True
+    assert selected["candidate_archive"]["path"] == "candidate.zip"
+
+
+def test_archive_contract_reader_rejects_stale_wrapper_duplicates(
+    tmp_path: Path,
+) -> None:
+    package = build_archive_bound_candidate_adapter_package(
+        _FixtureArchiveAdapter(tmp_path),
+        repo_root=tmp_path,
+    )
+    wrapper = {
+        "schema": "tac_archive_bound_candidate_runtime_adapter_package.v1",
+        "archive_bound_candidate_adapter_package": package,
+        "candidate_archive": {
+            "path": "candidate.zip",
+            "sha256": "0" * 64,
+            "bytes": 80,
+        },
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "gpu_launched": False,
+    }
+
+    with pytest.raises(
+        ArchiveBoundCandidateContractError,
+        match="archive_bound_contract_stale_duplicate_field:candidate_archive_sha256",
+    ):
+        archive_bound_candidate_contracts_from_payload(wrapper)
 
 
 def test_archive_contract_classifies_z7_mlx_predictive_coding_as_before_coder() -> None:
