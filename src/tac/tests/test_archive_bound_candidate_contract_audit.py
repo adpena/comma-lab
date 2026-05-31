@@ -117,6 +117,27 @@ def test_archive_bound_contract_audit_surfaces_missing_contract_migration(
         "contest_space_grounding_requirements"
     ]
     assert "posterior_budget_route_updated" in group["acquisition_spend_preconditions"]
+    queue = payload["migration_backlog_queue"]
+    assert queue["schema"] == "tac_archive_bound_candidate_contract_migration_backlog_queue.v1"
+    assert queue["row_count"] == 1
+    assert queue["acquisition_contract"] == {
+        "schema": "archive_bound_contract_migration_acquisition_guard.v1",
+        "shared_contract_surface_required": True,
+        "posterior_ledger_surface_required": True,
+        "migration_rows_may_not_spend_budget": True,
+        "migration_rows_may_only_open_materializer_or_blocker_work": True,
+    }
+    row = queue["rows"][0]
+    assert row["schema"] == "tac_archive_bound_candidate_contract_migration_backlog_row.v1"
+    assert row["family"] == "pr95"
+    assert row["stage"] == "receiver_proof"
+    assert row["contract_required_before_acquisition_spend"] is True
+    assert row["posterior_ledger_required_before_acquisition_spend"] is True
+    assert row["budget_spend_allowed"] is False
+    assert row["ready_for_budget_spend"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+    assert row["required_output_contract_schema"] == ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+    assert row["work_selection_kind"] == "contract_migration_or_blocker_work"
 
 
 def test_archive_bound_contract_audit_can_ignore_untracked_scratch(

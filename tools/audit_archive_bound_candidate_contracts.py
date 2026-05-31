@@ -65,6 +65,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Scan only files tracked by git under the selected paths.",
     )
     parser.add_argument("--output-json", help="Write the audit payload to a file.")
+    parser.add_argument(
+        "--output-backlog-json",
+        help=(
+            "Write only the executable migration backlog queue compiled from "
+            "migration-required findings."
+        ),
+    )
     parser.add_argument("--format", choices=("text", "json"), default="text")
     parser.add_argument("--limit", type=int, default=12, help="Text finding limit.")
     return parser.parse_args(argv)
@@ -86,6 +93,14 @@ def main(argv: list[str] | None = None) -> int:
         out = Path(args.output_json)
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    if args.output_backlog_json:
+        out = Path(args.output_backlog_json)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(
+            json.dumps(payload["migration_backlog_queue"], indent=2, sort_keys=True)
+            + "\n",
+            encoding="utf-8",
+        )
     if args.format == "json":
         print(json.dumps(payload, indent=2, sort_keys=True))
     else:

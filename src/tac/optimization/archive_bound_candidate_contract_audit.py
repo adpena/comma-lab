@@ -28,6 +28,12 @@ from tac.optimization.archive_bound_candidate_contract import (
 )
 
 ARCHIVE_BOUND_CONTRACT_AUDIT_SCHEMA = "tac_archive_bound_candidate_contract_audit.v1"
+ARCHIVE_BOUND_CONTRACT_MIGRATION_BACKLOG_QUEUE_SCHEMA = (
+    "tac_archive_bound_candidate_contract_migration_backlog_queue.v1"
+)
+ARCHIVE_BOUND_CONTRACT_MIGRATION_BACKLOG_ROW_SCHEMA = (
+    "tac_archive_bound_candidate_contract_migration_backlog_row.v1"
+)
 
 _CONTRACT_SCHEMAS = frozenset(
     {
@@ -149,6 +155,9 @@ class ArchiveBoundContractAuditResult:
         migration_backlog_groups = archive_bound_migration_backlog_groups(
             self.migration_required_findings
         )
+        migration_backlog_queue = archive_bound_migration_backlog_queue_from_groups(
+            migration_backlog_groups
+        )
         return {
             "schema": ARCHIVE_BOUND_CONTRACT_AUDIT_SCHEMA,
             "passed": self.passed,
@@ -172,6 +181,7 @@ class ArchiveBoundContractAuditResult:
             ],
             "migration_backlog_group_count": len(migration_backlog_groups),
             "migration_backlog_groups": migration_backlog_groups,
+            "migration_backlog_queue": migration_backlog_queue,
             "advisory_findings": [
                 asdict(finding) for finding in self.advisory_findings
             ],
@@ -427,6 +437,95 @@ def archive_bound_migration_backlog_groups(
     return sorted(
         groups.values(),
         key=lambda row: (-int(row["finding_count"]), row["group_key"]),
+    )
+
+
+def archive_bound_migration_backlog_queue_from_groups(
+    groups: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Compile migration groups into false-authority executable backlog rows.
+
+    The queue is deliberately not a dispatch queue.  Its rows are the smallest
+    byte-closed contract-migration tasks acquisition is allowed to route before
+    spending budget on a family/stage/scope again.
+    """
+
+    rows: list[dict[str, Any]] = []
+    for index, group in enumerate(groups):
+        group_key = str(group.get("group_key") or "")
+        family = str(group.get("family") or "archive_candidate")
+        stage = str(group.get("stage") or "contract_migration")
+        scope = str(group.get("scope") or "archive")
+        entropy_position = str(
+            group.get("entropy_position_label")
+            or "archive_entropy_position_unknown"
+        )
+        row_id = (
+            "archive_bound_contract_migration__"
+            f"{index:04d}__{family}__{stage}__{scope}__{entropy_position}"
+        )
+        rows.append(
+            {
+                "schema": ARCHIVE_BOUND_CONTRACT_MIGRATION_BACKLOG_ROW_SCHEMA,
+                "row_id": row_id,
+                "group_key": group_key,
+                "family": family,
+                "stage": stage,
+                "scope": scope,
+                "entropy_position_label": entropy_position,
+                "finding_count": int(group.get("finding_count") or 0),
+                "source_paths": list(group.get("paths") or []),
+                "source_sample_pointers": list(group.get("sample_pointers") or []),
+                "work_selection_kind": "contract_migration_or_blocker_work",
+                "smallest_executable_task": group.get("smallest_executable_task"),
+                "required_output_contract_schema": (
+                    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+                ),
+                "required_evidence": list(
+                    group.get("contest_space_grounding_requirements") or []
+                ),
+                "acquisition_spend_preconditions": list(
+                    group.get("acquisition_spend_preconditions") or []
+                ),
+                "contract_required_before_acquisition_spend": True,
+                "posterior_ledger_required_before_acquisition_spend": True,
+                "budget_spend_allowed": False,
+                "ready_for_budget_spend": False,
+                "allowed_use": "migration_backlog_routing_only",
+                "forbidden_use": (
+                    "score_claim_or_budget_spend_or_promotion_or_dispatch_authority"
+                ),
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        )
+    return {
+        "schema": ARCHIVE_BOUND_CONTRACT_MIGRATION_BACKLOG_QUEUE_SCHEMA,
+        "row_count": len(rows),
+        "rows": rows,
+        "acquisition_contract": {
+            "schema": "archive_bound_contract_migration_acquisition_guard.v1",
+            "shared_contract_surface_required": True,
+            "posterior_ledger_surface_required": True,
+            "migration_rows_may_not_spend_budget": True,
+            "migration_rows_may_only_open_materializer_or_blocker_work": True,
+        },
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def archive_bound_migration_backlog_queue(
+    findings: Sequence[ArchiveBoundContractAuditFinding],
+) -> dict[str, Any]:
+    """Compile missing-contract findings directly into backlog queue rows."""
+
+    return archive_bound_migration_backlog_queue_from_groups(
+        archive_bound_migration_backlog_groups(findings)
     )
 
 
@@ -713,6 +812,10 @@ def format_archive_bound_candidate_contract_audit(
         ),
         f"blocking_findings: {len(result.blocking_findings)}",
         f"migration_required_findings: {len(result.migration_required_findings)}",
+        (
+            "migration_backlog_groups: "
+            f"{len(archive_bound_migration_backlog_groups(result.migration_required_findings))}"
+        ),
         f"advisory_findings: {len(result.advisory_findings)}",
         f"skipped_paths: {len(result.skipped_paths)}",
     ]
