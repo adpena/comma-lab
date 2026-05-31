@@ -1,0 +1,100 @@
+from __future__ import annotations
+
+import zipfile
+from pathlib import Path
+
+from comma_lab.local_submission_replay import (
+    run_local_submission_replay,
+    stage_local_replay_submission,
+)
+
+
+def _write_fake_upstream(root: Path) -> None:
+    (root / ".venv" / "bin").mkdir(parents=True)
+    python_bin = root / ".venv" / "bin" / "python"
+    python_bin.write_text("#!/usr/bin/env sh\nexit 0\n", encoding="utf-8")
+    python_bin.chmod(0o755)
+    (root / "public_test_video_names.txt").write_text("0.mkv\n", encoding="utf-8")
+    (root / "evaluate.sh").write_text(
+        """#!/usr/bin/env bash
+set -euo pipefail
+SUBMISSION_DIR=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --submission-dir) SUBMISSION_DIR="$2"; shift 2 ;;
+    --video-names-file) shift 2 ;;
+    --device) shift 2 ;;
+    *) shift ;;
+  esac
+done
+mkdir -p "$SUBMISSION_DIR/inflated" "$SUBMISSION_DIR/archive"
+printf raw > "$SUBMISSION_DIR/inflated/0.raw"
+cat > "$SUBMISSION_DIR/report.txt" <<'EOF'
+=== Evaluation results over 1 samples ===
+  Average PoseNet Distortion: 0.00040000
+  Average SegNet Distortion: 0.00100000
+  Submission file size: 1,234 bytes
+  Original uncompressed size: 10,000 bytes
+  Compression Rate: 0.12340000
+  Final score: 100*segnet_dist + sqrt(10*posenet_dist) + 25*rate = 3.25
+EOF
+""",
+        encoding="utf-8",
+    )
+    (root / "evaluate.sh").chmod(0o755)
+
+
+def test_stage_local_replay_submission_copies_runtime_and_archive(tmp_path: Path) -> None:
+    runtime = tmp_path / "runtime"
+    runtime.mkdir()
+    (runtime / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    (runtime / "inflate.py").write_text("print('inflate')\n", encoding="utf-8")
+    archive = tmp_path / "archive.zip"
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr("0.bin", b"payload")
+
+    submission = stage_local_replay_submission(
+        runtime_submission_dir=runtime,
+        archive_zip_path=archive,
+        output_dir=tmp_path / "replay",
+    )
+
+    assert (submission / "inflate.sh").is_file()
+    assert (submission / "inflate.py").is_file()
+    assert (submission / "archive.zip").read_bytes() == archive.read_bytes()
+
+
+def test_run_local_submission_replay_cleans_raw_scratch(tmp_path: Path, monkeypatch) -> None:
+    fake_repo = tmp_path / "repo"
+    fake_repo.mkdir()
+    monkeypatch.setattr("comma_lab.local_submission_replay.repo_root", lambda: fake_repo)
+    upstream = tmp_path / "upstream"
+    _write_fake_upstream(upstream)
+
+    runtime = tmp_path / "runtime"
+    runtime.mkdir()
+    (runtime / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    archive = tmp_path / "archive.zip"
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr("0.bin", b"payload")
+    submission = stage_local_replay_submission(
+        runtime_submission_dir=runtime,
+        archive_zip_path=archive,
+        output_dir=tmp_path / "replay",
+    )
+
+    summary = run_local_submission_replay(
+        submission_dir=submission,
+        source_runtime_submission_dir=runtime,
+        archive_zip_path=archive,
+        upstream_root=upstream,
+    )
+
+    assert summary.evaluation_passed is True
+    assert summary.inflated_dir_cleanup == "deleted_after_success"
+    assert not Path(summary.inflated_dir).exists()
+    assert summary.archive_extract_dir_cleanup == "deleted_after_success"
+    assert summary.local_score_estimate is not None
+    assert summary.axis_tag == "[macOS-CPU advisory]"
+    assert summary.score_claim is False
+    assert summary.ready_for_exact_eval_dispatch is False

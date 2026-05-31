@@ -523,7 +523,7 @@ def write_contest_runtime(
         f'"""{substrate_pkg_name} contest-compliant inflate runtime.\n'
         "\n"
         "Reads archive_dir/0.bin via the packaged substrate parser, then for\n"
-        "each base in file_list writes per-frame .png under output_dir/<base>/.\n"
+        "each video in file_list writes contest raw bytes under output_dir/*.raw.\n"
         "No scorer-network imports (strict-scorer-rule contract).\n"
         '"""\n'
         "import sys\n"
@@ -546,8 +546,10 @@ def write_contest_runtime(
         "        line = line.strip()\n"
         "        if not line:\n"
         "            continue\n"
-        "        base = line.rsplit('.', 1)[0]\n"
-        "        inflate_one_video(archive_bytes, output_dir / base, device='cpu')\n"
+        "        rel = Path(line).with_suffix('.raw')\n"
+        "        if rel.is_absolute() or any(part in {'', '..'} for part in rel.parts):\n"
+        "            raise ValueError(f'unsafe file_list entry: {line!r}')\n"
+        "        inflate_one_video(archive_bytes, output_dir / rel, device='cpu')\n"
         "    return 0\n"
         "\n"
         "if __name__ == '__main__':\n"

@@ -227,6 +227,8 @@ def test_z8_archive_export_emits_runtime_tree_without_mlx_import(tmp_path: Path)
     assert (submission / "inflate.sh").is_file()
     inflate_source = (submission / "inflate.py").read_text(encoding="utf-8")
     assert "import inflate_one_video" in inflate_source
+    assert "with_suffix('.raw')" in inflate_source
+    assert "output_dir / rel" in inflate_source
 
     runtime_root = submission / "src" / "tac"
     assert (

@@ -40,6 +40,8 @@ import argparse
 import hashlib
 import json
 import math
+import os
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -250,6 +252,7 @@ def build_report(
     quant_steps: list[float],
     measure_static_range: bool,
     static_range_sample_cap: int,
+    workers: int = 1,
 ) -> dict[str, Any]:
     archive_bytes = archive_path.read_bytes()
     parsed = parse_archive(archive_bytes)
@@ -271,18 +274,23 @@ def build_report(
                         sub = sub[0]
                     buckets.setdefault(f"L{level_idx}_{orient}", []).append(sub.reshape(-1))
 
-    subbands: list[_SubbandReport] = []
-    for key in sorted(buckets):
-        coeffs = np.concatenate(buckets[key])
-        subbands.append(
-            measure_subband(
-                coeffs,
-                quant_steps=quant_steps,
-                measure_static_range=measure_static_range,
-                static_range_sample_cap=static_range_sample_cap,
-                key=key,
-            )
+    work_items = [(key, np.concatenate(buckets[key])) for key in sorted(buckets)]
+
+    def _measure(item: tuple[str, np.ndarray]) -> _SubbandReport:
+        key, coeffs = item
+        return measure_subband(
+            coeffs,
+            quant_steps=quant_steps,
+            measure_static_range=measure_static_range,
+            static_range_sample_cap=static_range_sample_cap,
+            key=key,
         )
+
+    if workers > 1 and len(work_items) > 1:
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            subbands = list(executor.map(_measure, work_items))
+    else:
+        subbands = [_measure(item) for item in work_items]
 
     # Headline: at each quant step, the aggregate detail-band bytes/coeff under the
     # current default (raw f32 -> brotli) vs the live v2 codec, plus the distortion.
@@ -337,6 +345,7 @@ def build_report(
         "total_detail_coeffs_measured": total_coeffs,
         "quant_steps": quant_steps,
         "static_range_measured": measure_static_range,
+        "workers": workers,
         "headline_by_quant_step": headline_by_step,
         "per_subband": [sb.as_dict() for sb in subbands],
         "interpretation": {
@@ -363,6 +372,17 @@ def _parse_quant_steps(raw: str) -> list[float]:
     return steps
 
 
+def _parse_workers(raw: str, *, item_count_hint: int = 12) -> int:
+    value = raw.strip().lower()
+    if value == "auto":
+        cpu = os.cpu_count() or 1
+        return max(1, min(cpu, item_count_hint))
+    workers = int(value)
+    if workers < 1:
+        raise ValueError("workers must be >= 1")
+    return workers
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument(
@@ -384,6 +404,11 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     ap.add_argument("--static-range-sample-cap", type=int, default=20000)
+    ap.add_argument(
+        "--workers",
+        default="1",
+        help="Subband measurement workers. Use 'auto' to saturate independent subbands.",
+    )
     ap.add_argument("--out-json", default=None, help="Optional path to write the report JSON.")
     args = ap.parse_args(argv)
 
@@ -397,6 +422,7 @@ def main(argv: list[str] | None = None) -> int:
         quant_steps=_parse_quant_steps(args.quant_steps),
         measure_static_range=bool(args.measure_static_range),
         static_range_sample_cap=int(args.static_range_sample_cap),
+        workers=_parse_workers(args.workers),
     )
 
     print(f"[z8-headroom] archive={archive_path.name} [macOS-CPU advisory] NON-PROMOTABLE", flush=True)
@@ -406,6 +432,7 @@ def main(argv: list[str] | None = None) -> int:
         f"wavelet_blob={report['wavelet_blob_bytes']:,}B",
         flush=True,
     )
+    print(f"[z8-headroom] workers={report['workers']}", flush=True)
     print("[z8-headroom] headline (detail-band bytes for the sampled pairs):", flush=True)
     for h in report["headline_by_quant_step"]:
         print(
