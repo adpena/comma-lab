@@ -32,11 +32,24 @@ Catalog #272 + Catalog #105/#139 no-op detector contracts verify.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
+
+from tac.optimization.archive_bound_candidate_runtime_bridge import (
+    emit_archive_bound_candidate_runtime_package,
+)
+from tac.repo_io import sha256_file
+from tac.substrates._shared.pact_nerv_full_main import (
+    build_archive_zip,
+    write_contest_runtime,
+)
 
 from .archive import Z4ATR_SCHEMA_VERSION, pack_archive
+from .inflate import CONTEST_RAW_BYTES
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     import torch
 
     from .architecture import Z4AtickRedlichConfig, Z4AtickRedlichSubstrate
@@ -51,6 +64,11 @@ DECODER_EXCLUDED_KEYS: frozenset[str] = frozenset(
         "decorrelator.proj.bias",
     }
 )
+Z4_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA = "z4_archive_bound_adapter_package.v1"
+Z4_RECEIVER_PROOF_SCHEMA = "z4_generated_receiver_proof.v1"
+Z4_ARCHIVE_BOUND_ADAPTER_ID = "z4_atick_redlich_archive_export"
+Z4_ARCHIVE_CANDIDATE_FAMILY = "time_traveler_l5_z4_atick_redlich"
+Z4_ARCHIVE_TRANSFORM_KIND = "z4_atick_redlich_cooperative_receiver_neural_archive"
 
 
 def extract_decoder_state_dict(
@@ -130,9 +148,148 @@ def build_archive_bytes(
     )
 
 
+def export_z4_archive(
+    model: Z4AtickRedlichSubstrate,
+    output_dir: str | Path,
+    *,
+    repo_root: str | Path | None = None,
+    emit_archive_bound_candidate_package: bool = True,
+    retain_receiver_proof_output: bool = False,
+    mlx_triage_argv: Sequence[str] | None = None,
+) -> tuple[Path, str, int]:
+    """Export a Z4 model as a contest-shaped ``archive.zip``.
+
+    This is the runtime bridge counterpart to ``build_archive_bytes``: the
+    emitted archive, packaged inflate runtime, receiver proof, exact blocker,
+    replay bundle, and posterior hook all flow through the shared
+    archive-bound candidate contract. Local/MLX training outputs stay advisory
+    until contest CPU/CUDA authority consumes the resulting packet.
+    """
+
+    root = (
+        Path(repo_root)
+        if repo_root is not None
+        else Path(__file__).resolve().parents[4]
+    )
+    out_dir = Path(output_dir)
+    if not out_dir.is_absolute():
+        out_dir = root / out_dir
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    bin_bytes = build_archive_bytes(model)
+    bin_path = out_dir / "0.bin"
+    bin_path.write_bytes(bin_bytes)
+
+    submission_dir = out_dir / "submission"
+    write_contest_runtime(
+        submission_dir,
+        substrate_pkg_name="time_traveler_l5_z4",
+        repo_root=root,
+        vendor_shared_inflate_runtime=True,
+    )
+    (submission_dir / "0.bin").write_bytes(bin_bytes)
+    archive_zip_path = out_dir / "archive.zip"
+    build_archive_zip(
+        archive_zip_path,
+        bin_bytes=bin_bytes,
+        submission_dir=submission_dir,
+    )
+    archive_sha256 = sha256_file(archive_zip_path)
+    archive_bytes = archive_zip_path.stat().st_size
+    if emit_archive_bound_candidate_package:
+        emit_archive_bound_candidate_runtime_package(
+            adapter_id=Z4_ARCHIVE_BOUND_ADAPTER_ID,
+            candidate_family=Z4_ARCHIVE_CANDIDATE_FAMILY,
+            candidate_id_prefix="z4_atick_redlich",
+            transform_kind=Z4_ARCHIVE_TRANSFORM_KIND,
+            archive_zip_path=archive_zip_path,
+            archive_sha256=archive_sha256,
+            archive_bytes=archive_bytes,
+            submission_dir=submission_dir,
+            output_dir=out_dir,
+            repo_root=root,
+            receiver_contract_kind="z4_generated_inflate_sh_decode_only_receiver",
+            proof_schema=Z4_RECEIVER_PROOF_SCHEMA,
+            proof_filename="z4_receiver_proof.json",
+            candidate_label="z4",
+            expected_receiver_output_bytes=CONTEST_RAW_BYTES,
+            retain_receiver_output=retain_receiver_proof_output,
+            runtime_adapter_manifest_extra={
+                "schema": "z4_runtime_adapter_manifest.v1",
+                "cooperative_receiver_family": "atick_redlich_spatial_decorrelation",
+                "cooperative_receiver_beta": float(
+                    model.cfg.cooperative_receiver_beta
+                ),
+            },
+            candidate_row_schema="z4_archive_bound_candidate_row.v1",
+            wrapper_schema=Z4_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
+            mlx_triage_argv=mlx_triage_argv,
+        )
+    return (archive_zip_path, archive_sha256, archive_bytes)
+
+
+def export_z4_archive_bound_candidate_package(
+    model: Z4AtickRedlichSubstrate,
+    output_dir: str | Path,
+    *,
+    repo_root: str | Path | None = None,
+    retain_receiver_proof_output: bool = False,
+    mlx_triage_argv: Sequence[str] | None = None,
+) -> dict[str, Any]:
+    """Export Z4 bytes and emit the shared archive-bound package."""
+
+    archive_zip_path, archive_sha256, archive_bytes = export_z4_archive(
+        model,
+        output_dir,
+        repo_root=repo_root,
+        emit_archive_bound_candidate_package=False,
+    )
+    root = (
+        Path(repo_root)
+        if repo_root is not None
+        else Path(__file__).resolve().parents[4]
+    )
+    out_dir = Path(output_dir)
+    if not out_dir.is_absolute():
+        out_dir = root / out_dir
+    return emit_archive_bound_candidate_runtime_package(
+        adapter_id=Z4_ARCHIVE_BOUND_ADAPTER_ID,
+        candidate_family=Z4_ARCHIVE_CANDIDATE_FAMILY,
+        candidate_id_prefix="z4_atick_redlich",
+        transform_kind=Z4_ARCHIVE_TRANSFORM_KIND,
+        archive_zip_path=archive_zip_path,
+        archive_sha256=archive_sha256,
+        archive_bytes=archive_bytes,
+        submission_dir=out_dir / "submission",
+        output_dir=out_dir,
+        repo_root=root,
+        receiver_contract_kind="z4_generated_inflate_sh_decode_only_receiver",
+        proof_schema=Z4_RECEIVER_PROOF_SCHEMA,
+        proof_filename="z4_receiver_proof.json",
+        candidate_label="z4",
+        expected_receiver_output_bytes=CONTEST_RAW_BYTES,
+        retain_receiver_output=retain_receiver_proof_output,
+        runtime_adapter_manifest_extra={
+            "schema": "z4_runtime_adapter_manifest.v1",
+            "cooperative_receiver_family": "atick_redlich_spatial_decorrelation",
+            "cooperative_receiver_beta": float(model.cfg.cooperative_receiver_beta),
+        },
+        candidate_row_schema="z4_archive_bound_candidate_row.v1",
+        wrapper_schema=Z4_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
+        mlx_triage_argv=mlx_triage_argv,
+    )
+
+
 __all__ = [
     "DECODER_EXCLUDED_KEYS",
+    "Z4_ARCHIVE_BOUND_ADAPTER_ID",
+    "Z4_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA",
+    "Z4_ARCHIVE_CANDIDATE_FAMILY",
+    "Z4_ARCHIVE_TRANSFORM_KIND",
+    "Z4_RECEIVER_PROOF_SCHEMA",
     "build_archive_bytes",
     "build_meta",
+    "export_z4_archive",
+    "export_z4_archive_bound_candidate_package",
     "extract_decoder_state_dict",
 ]

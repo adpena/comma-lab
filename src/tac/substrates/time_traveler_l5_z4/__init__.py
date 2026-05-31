@@ -102,8 +102,15 @@ from tac.substrates.time_traveler_l5_z4.archive import (
 )
 from tac.substrates.time_traveler_l5_z4.archive_candidate import (
     DECODER_EXCLUDED_KEYS,
+    Z4_ARCHIVE_BOUND_ADAPTER_ID,
+    Z4_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
+    Z4_ARCHIVE_CANDIDATE_FAMILY,
+    Z4_ARCHIVE_TRANSFORM_KIND,
+    Z4_RECEIVER_PROOF_SCHEMA,
     build_archive_bytes,
     build_meta,
+    export_z4_archive,
+    export_z4_archive_bound_candidate_package,
     extract_decoder_state_dict,
 )
 from tac.substrates.time_traveler_l5_z4.inflate import (
@@ -131,6 +138,11 @@ __all__ = [
     "Z4ATR_HEADER_SIZE",
     "Z4ATR_MAGIC",
     "Z4ATR_SCHEMA_VERSION",
+    "Z4_ARCHIVE_BOUND_ADAPTER_ID",
+    "Z4_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA",
+    "Z4_ARCHIVE_CANDIDATE_FAMILY",
+    "Z4_ARCHIVE_TRANSFORM_KIND",
+    "Z4_RECEIVER_PROOF_SCHEMA",
     "Z4ATRArchive",
     "Z4AtickRedlichConfig",
     "Z4AtickRedlichScoreAwareLoss",
@@ -138,6 +150,8 @@ __all__ = [
     "Z4AtickRedlichSubstrate",
     "build_archive_bytes",
     "build_meta",
+    "export_z4_archive",
+    "export_z4_archive_bound_candidate_package",
     "extract_decoder_state_dict",
     "inflate_one_video",
     "main_cli",

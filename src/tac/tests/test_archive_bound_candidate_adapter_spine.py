@@ -217,6 +217,17 @@ def test_archive_contract_classifies_z7_mlx_predictive_coding_as_before_coder() 
     assert "z6_v2" in z6_tags
     assert "z7_mamba2" not in z6_tags
 
+    z4_transform_kind = "z4_atick_redlich_cooperative_receiver_neural_archive"
+    z4_tags = archive_substrate_tags_for_transform_kind(z4_transform_kind)
+    assert entropy_position_label_for_transform_kind(z4_transform_kind) == (
+        "before_entropy_coder"
+    )
+    assert "neural_archive" in z4_tags
+    assert "z4" in z4_tags
+    assert "cooperative_receiver" in z4_tags
+    assert "predictive_coding" not in z4_tags
+    assert "z7_mamba2" not in z4_tags
+
 
 def test_archive_contract_consumes_nested_runtime_adapter_manifest(
     tmp_path: Path,

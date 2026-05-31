@@ -93,6 +93,36 @@ def test_z5_export_emits_shared_archive_bound_package_fail_closed(tmp_path: Path
     )
 
 
+def test_z4_export_emits_shared_archive_bound_package_fail_closed(tmp_path: Path) -> None:
+    from tac.substrates.time_traveler_l5_z4.architecture import (
+        Z4AtickRedlichConfig,
+        Z4AtickRedlichSubstrate,
+    )
+    from tac.substrates.time_traveler_l5_z4.archive_candidate import (
+        Z4_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
+        Z4_ARCHIVE_CANDIDATE_FAMILY,
+        export_z4_archive,
+    )
+
+    cfg = Z4AtickRedlichConfig(num_pairs=1, output_height=8, output_width=8)
+    torch.manual_seed(4)
+    model = Z4AtickRedlichSubstrate(cfg)
+
+    archive_zip, sha, size = export_z4_archive(model, tmp_path / "z4_export")
+
+    assert archive_zip.is_file()
+    assert len(sha) == 64
+    assert size == archive_zip.stat().st_size
+    package = _load_package(archive_zip.parent)
+    _assert_fail_closed_package(
+        package,
+        wrapper_schema=Z4_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
+        family=Z4_ARCHIVE_CANDIDATE_FAMILY,
+        required_tags={"neural_archive", "z4", "cooperative_receiver"},
+        forbidden_tags={"z5", "z6_v2", "z7_mamba2", "pact_nerv"},
+    )
+
+
 def test_selector_v2_export_emits_shared_archive_bound_package_fail_closed(
     tmp_path: Path,
 ) -> None:
