@@ -64036,6 +64036,130 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_pr110_opt11_multi_mode_per_pair_composition_l0_scaffold_20260530",
+      "name": "PR110-OPT-11 multi-mode-per-pair composition L0 SCAFFOLD",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_wave_n31_diamond_hunt_historical_defer_orphan_reactivation_audit_20260530",
+      "name": "Wave N+31 DIAMOND-HUNT historical DEFER/orphan reactivation audit",
+      "phase": 4.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "READ-ONLY DIAMOND-HUNT audit per task #1491; research_only=true; corpus=87 blocking probes + 7 SHOULD_BE_RESYMPOSIUM pre-rigor inventory + 12 deferred memos; 5-axis evaluation per Catalog #307/#311/#308/#324/#325"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "",
+      "research_only": true
+    },
+    {
+      "id": "lane_wave_n11_quad_composition_sub015_cascade_20260530",
+      "name": "Wave N+11 QUAD composition sub-0.15 cascade HALT per Catalog #321/#322 phantom-provenance",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/wave_n11_quad_composition_sub015_cascade_halt_phantom_provenance_pre_check_failed_landed_20260530.md HALT verdict per Catalog #321/#322 phantom-provenance pre-check FAILED on all 4 substrates"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/wave_n11_quad_composition_sub015_cascade_halt_phantom_provenance_pre_check_failed_landed_20260530.md + retroactive_sweep_for_wave_n11_quad_composition_halt_20260530.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -64045,5 +64169,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-30T23:48:53Z"
+  "updated_at": "2026-05-31T00:05:29Z"
 }
