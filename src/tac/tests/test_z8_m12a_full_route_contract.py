@@ -85,6 +85,9 @@ def test_z8_full_parser_exposes_real_pose_and_stabilizer_flags() -> None:
     assert "--gumbel-tau-min" in flag_names
     assert "--cosine-lr-decay-enabled" in flag_names
     assert "--cosine-lr-min-ratio" in flag_names
+    assert "--disable-joint-variational-driver" in flag_names
+    assert "--joint-archive-rate-weight" in flag_names
+    assert "--joint-argmax-commitment-weight" in flag_names
 
 
 def test_z8_full_main_wires_real_segnet_posenet_teachers() -> None:
@@ -104,6 +107,9 @@ def test_z8_full_main_wires_real_segnet_posenet_teachers() -> None:
         "pose_scorer_teacher",
         "learnable_pose_student_head",
         "allow_mock_scorer_teacher",
+        "extra_loss_terms",
+        "extra_loss_weights",
+        "export_archive_fn",
         "substrate_artifact_metadata",
     }
     assert any(required_bundle_kwargs <= kws for kws in bundle_kw_sets)
@@ -124,6 +130,9 @@ def test_z8_full_main_wires_real_segnet_posenet_teachers() -> None:
     text = TRAINER.read_text(encoding="utf-8")
     for key in (
         "z8_mlx_schedule_provenance",
+        "z8_runtime_custody_contract",
+        "trained_mlx_renderer_archive_export_ready=False",
+        "archive_bound_candidate_package_emitted=joint_variational_enabled",
         "gumbel_tau_anneal_enabled",
         "gumbel_tau_start",
         "gumbel_tau_min",
@@ -131,6 +140,13 @@ def test_z8_full_main_wires_real_segnet_posenet_teachers() -> None:
         "cosine_lr_decay_enabled",
         "cosine_lr_min_ratio",
         "cosine_lr_expected_final",
+        "Z8JointVariationalDriverConfig",
+        "build_z8_joint_variational_extra_loss_terms",
+        "export_trained_mlx_rendered_z8hpc1_archive",
+        "z8_joint_variational_driver",
+        "joint_archive_rate_score",
+        "joint_argmax_commitment",
+        "authority_fields_omitted_from_training_metadata",
     ):
         assert key in text
 

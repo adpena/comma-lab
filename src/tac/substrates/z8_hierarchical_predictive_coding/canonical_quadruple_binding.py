@@ -103,6 +103,9 @@ from tac.substrates.z8_hierarchical_predictive_coding.mamba2_adapter import (
     Z8Mamba2DeterministicStateUpdate,
     build_z8_mamba2_adapter_for_level,
 )
+from tac.substrates.z8_hierarchical_predictive_coding.runtime_custody import (
+    build_z8_runtime_custody_contract,
+)
 from tac.substrates.z8_hierarchical_predictive_coding.scorer_sensitivity_map import (
     ScorerSensitivityMapSource,
     Z8ScorerSensitivityMap,
@@ -1652,6 +1655,12 @@ def build_z8hpc1_archive_bytes_from_canonical_quadruple(
         "eval_height": eval_h,
         "eval_width": eval_w,
         "num_pairs": num_pairs,
+        "runtime_custody_contract": build_z8_runtime_custody_contract(
+            source="z8_m9_canonical_quadruple_archive_meta",
+            section_name_style="archive_parser",
+            archive_bound_candidate_package_emitted=True,
+            trained_mlx_renderer_archive_export_ready=False,
+        ),
         "schema": "z8hpc1_m10_canonical_quadruple_archive_v1",
         "wavelet_basis": "daubechies_db2",
     }

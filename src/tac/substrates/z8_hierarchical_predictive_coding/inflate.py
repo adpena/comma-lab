@@ -46,7 +46,6 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from types import SimpleNamespace
 
 import torch
 
@@ -60,8 +59,7 @@ from tac.substrates.z8_hierarchical_predictive_coding.archive import (
     parse_archive,
 )
 from tac.substrates.z8_hierarchical_predictive_coding.runtime_payload_bridge import (
-    decode_wyner_ziv_top_states_from_archive,
-    project_decoded_top_states_into_pair_pyramids,
+    projected_pair_pyramids_from_archive_bytes,
 )
 
 # Canonical contest contract per Catalog #146 + Catalog #367 (raw bytes
@@ -119,44 +117,24 @@ def inflate_one_video_from_archive_bytes(
     Writes ``CONTEST_NUM_FRAMES // 2`` pairs (600) at camera resolution
     (874×1164) per Catalog #367 contest raw-bytes contract.
     """
-    arc = parse_and_validate_archive(archive_bytes)
+    parse_and_validate_archive(archive_bytes)
     _render_device = select_inflate_device(device)
-    eval_h = int(arc.meta.get("eval_height", 32))
-    eval_w = int(arc.meta.get("eval_width", 32))
 
     # Import the canonical compose-pattern module here (lazy) so a Mallat
     # adapter import failure surfaces at inflate-time rather than module
-    # import-time. The canonical M10 helpers are sister-defined in
-    # canonical_quadruple_binding.py (M5 reuse).
+    # import-time. The runtime payload bridge owns archive-byte consumption for
+    # WZ plus decoder/index/Dreamer stack context.
     from tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_binding import (
-        build_canonical_quadruple_binding_from_z8_config,
-        parse_pair_blobs_from_wavelet_blob,
         reconstruct_pair_rgb_from_pyramid,
     )
 
-    # Rebuild the binding from the archive's grammar so the M5 Mallat
-    # inverse chain is the SAME adapter the trainer used. The canonical
-    # config fields are determined by the archive header / meta.
-    cfg = SimpleNamespace(
-        num_levels=arc.num_levels,
-        num_groups_per_level=tuple(arc.num_groups_per_level),
-        num_categories_per_level=tuple(arc.num_categories_per_level),
-        num_pairs=arc.num_pairs,
-        deterministic_state_dim=16,  # M9 canonical default
-        ego_motion_dim=6,
-        eval_size=(eval_h, eval_w),
+    binding, pair_pyramids, _projection_stats = projected_pair_pyramids_from_archive_bytes(
+        archive_bytes
     )
-    binding = build_canonical_quadruple_binding_from_z8_config(cfg)
-    pair_pyramids = parse_pair_blobs_from_wavelet_blob(arc.wavelet_coeffs_blob)
     if not pair_pyramids:
         raise ValueError(
             "Z8 wavelet_coeffs_blob carried zero pairs; cannot inflate"
         )
-    decoded_top_states = decode_wyner_ziv_top_states_from_archive(archive_bytes)
-    pair_pyramids, _projection_stats = project_decoded_top_states_into_pair_pyramids(
-        pair_pyramids,
-        decoded_top_states,
-    )
 
     output_raw_path.parent.mkdir(parents=True, exist_ok=True)
     num_trained_pairs = len(pair_pyramids)

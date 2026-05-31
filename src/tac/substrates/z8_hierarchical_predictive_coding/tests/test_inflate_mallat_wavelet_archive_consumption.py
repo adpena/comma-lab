@@ -177,11 +177,11 @@ def test_inflate_imports_canonical_select_inflate_device_catalog_205() -> None:
 
 
 def test_inflate_imports_mallat_wavelet_reconstruction_helpers() -> None:
-    """M10 closure is Mallat wavelet pixel consumption, not full-stack decode."""
+    """Inflate routes archive bytes through the runtime payload bridge."""
     inflate_path = Path(__file__).resolve().parents[1] / "inflate.py"
     source = inflate_path.read_text(encoding="utf-8")
     assert "canonical_quadruple_binding" in source
-    assert "parse_pair_blobs_from_wavelet_blob" in source
+    assert "projected_pair_pyramids_from_archive_bytes" in source
     assert "reconstruct_pair_rgb_from_pyramid" in source
 
 

@@ -7,15 +7,14 @@ Path 3 substrate-class-shift candidate F MLX trainer. Per CLAUDE.md
 "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY" non-negotiable + the
 operator's MLX-first directive 2026-05-26.
 
-L0 SCAFFOLD scope:
+MLX-local scope:
 
 - MLX-local smoke ONLY (axis_tag=``[macOS-MLX research-signal]``); no paid CUDA.
 - Smoke ≤5 epochs ≤8 pairs (smoke-only mode); demonstrates the multi-level
   RSSM + per-level Gumbel-Softmax STE + Rao-Ballard residual L2 training step
   converges monotonically on synthetic targets.
-- ``_full_main raises NotImplementedError`` per Catalog #240 acceptance
-  cascade (c) pre-build substrate-engineering: full training path is
-  council-gated.
+- ``_full_main`` runs the MLX score-aware harness, but remains advisory until a
+  trained MLX renderer state is serialized into Z8HPC1 archive/runtime custody.
 - All artifacts carry ``[macOS-MLX research-signal]`` + ``score_claim=false``
   + ``promotion_eligible=false`` + ``ready_for_exact_eval_dispatch=false``
   per Catalog #127 + #192 + #317 + #341.
@@ -321,6 +320,34 @@ def _build_parser() -> argparse.ArgumentParser:
         default=1e-2,
         help="End-of-decay LR = peak_lr * ratio (default 1e-2).",
     )
+    parser.add_argument(
+        "--disable-joint-variational-driver",
+        action="store_true",
+        default=False,
+        help=(
+            "Disable the Z8 joint variational MLX driver. Default ON trains "
+            "renderer weights, categorical allocation, argmax commitment, "
+            "and archive-rate proxy in one score-domain loss."
+        ),
+    )
+    parser.add_argument(
+        "--joint-archive-rate-weight",
+        type=float,
+        default=1.0,
+        help=(
+            "Weight on the differentiable expected categorical archive-rate "
+            "score term in the joint variational driver."
+        ),
+    )
+    parser.add_argument(
+        "--joint-argmax-commitment-weight",
+        type=float,
+        default=1e-3,
+        help=(
+            "Weight on the categorical argmax-commitment term that aligns "
+            "the MLX gradient path with byte-packed archive indices."
+        ),
+    )
     return parser
 
 
@@ -598,9 +625,18 @@ def _full_main(args: argparse.Namespace) -> int:
         build_learnable_pose_student_head,
         build_learnable_student_head,
     )
+    from tac.substrates.z8_hierarchical_predictive_coding.joint_variational_driver import (
+        Z8JointVariationalDriverConfig,
+        build_z8_joint_variational_driver_metadata,
+        build_z8_joint_variational_extra_loss_terms,
+        export_trained_mlx_rendered_z8hpc1_archive,
+    )
     from tac.substrates.z8_hierarchical_predictive_coding.mlx_renderer import (
         Z8HierarchicalConfig,
         Z8HierarchicalPredictiveCoderMLX,
+    )
+    from tac.substrates.z8_hierarchical_predictive_coding.runtime_custody import (
+        build_z8_runtime_custody_contract,
     )
 
     cfg = Z8HierarchicalConfig(
@@ -727,12 +763,56 @@ def _full_main(args: argparse.Namespace) -> int:
         "pose_distillation_weight": float(args.pose_distillation_weight),
         "axis_tag": "[macOS-MLX research-signal]",
     }
+    joint_variational_enabled = not bool(
+        getattr(args, "disable_joint_variational_driver", False)
+    )
+    joint_config = Z8JointVariationalDriverConfig(
+        archive_rate_weight=float(args.joint_archive_rate_weight),
+        argmax_commitment_weight=float(args.joint_argmax_commitment_weight),
+    )
+    joint_extra_terms = (
+        build_z8_joint_variational_extra_loss_terms(joint_config)
+        if joint_variational_enabled
+        else None
+    )
+    joint_extra_weights = (
+        {
+            "joint_archive_rate_score": float(joint_config.archive_rate_weight),
+            "joint_argmax_commitment": float(
+                joint_config.argmax_commitment_weight
+            ),
+        }
+        if joint_variational_enabled
+        else {}
+    )
+    joint_export_fn = (
+        export_trained_mlx_rendered_z8hpc1_archive
+        if joint_variational_enabled
+        else None
+    )
+    runtime_custody_contract = build_z8_runtime_custody_contract(
+        source="z8_m12a_mlx_full_training_artifact",
+        section_name_style="candidate_manifest",
+        archive_bound_candidate_package_emitted=joint_variational_enabled,
+        trained_mlx_renderer_archive_export_ready=False,
+    )
+    for authority_key in (
+        "score_claim",
+        "promotion_eligible",
+        "ready_for_exact_eval_dispatch",
+    ):
+        runtime_custody_contract.pop(authority_key, None)
+    runtime_custody_contract[
+        "authority_fields_omitted_from_training_metadata"
+    ] = True
     bundle = RendererBundle(
         model=model,
         target_rgb_0=target_rgb_0,
         target_rgb_1=target_rgb_1,
         num_pairs=int(args.num_pairs),
         forward_convention="call_b2chw_255",
+        extra_loss_terms=joint_extra_terms,
+        extra_loss_weights=joint_extra_weights,
         distillation_weight=float(args.distillation_weight),
         scorer_teacher=scorer_teacher,
         learnable_student_head=learnable_student_head,
@@ -744,6 +824,7 @@ def _full_main(args: argparse.Namespace) -> int:
         learnable_pose_student_head=learnable_pose_student_head,
         pose_dims=DEFAULT_POSE_DIMS,
         allow_mock_scorer_teacher=bool(args.allow_mock_scorer_teacher),
+        export_archive_fn=joint_export_fn,
         substrate_artifact_metadata={
             "m12a_score_binding": (
                 "real_segnet_posenet_hinton_t2"
@@ -753,6 +834,11 @@ def _full_main(args: argparse.Namespace) -> int:
             "z8_trainer_mode": "full",
             "z8_mlx_schedule_provenance": z8_schedule_metadata,
             "score_aware_training": score_aware_training_metadata,
+            "z8_joint_variational_driver": build_z8_joint_variational_driver_metadata(
+                joint_config,
+                archive_export_enabled=joint_variational_enabled,
+            ),
+            "z8_runtime_custody_contract": runtime_custody_contract,
         },
     )
     grad_clip = float(args.grad_clip_max_norm)

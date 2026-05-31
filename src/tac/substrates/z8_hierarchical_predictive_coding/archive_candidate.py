@@ -34,6 +34,11 @@ from tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_bindin
     build_z8hpc1_archive_bytes_from_canonical_quadruple,
 )
 from tac.substrates.z8_hierarchical_predictive_coding.inflate import CONTEST_RAW_BYTES
+from tac.substrates.z8_hierarchical_predictive_coding.runtime_custody import (
+    Z8_HPC_ARCHIVE_CANDIDATE_PIXEL_CONSUMED_SECTIONS,
+    Z8_HPC_STACK_CUSTODY_NOT_YET_PIXEL_CONSUMED_SECTIONS,
+    build_z8_runtime_custody_contract,
+)
 from tac.substrates.z8_hierarchical_predictive_coding.runtime_payload_bridge import (
     build_runtime_payload_bridge_report,
 )
@@ -49,14 +54,8 @@ Z8_HPC_ARCHIVE_CANDIDATE_FAMILY = "z8_hierarchical_predictive_coding"
 Z8_HPC_ARCHIVE_TRANSFORM_KIND = (
     "z8_hpc1_mallat_wavelet_plus_mamba_wyner_ziv_top_ll_pixel_driver_partial_predictive_stack_archive"
 )
-Z8_HPC_PIXEL_CONSUMED_ARCHIVE_SECTIONS: tuple[str, ...] = (
-    "wavelet_coeffs_blob",
-    "wyner_ziv_blob",
-)
-Z8_HPC_STACK_CUSTODY_NOT_YET_PIXEL_CONSUMED_SECTIONS: tuple[str, ...] = (
-    "decoder_blob",
-    "indices_blob",
-    "dreamer_state_blob",
+Z8_HPC_PIXEL_CONSUMED_ARCHIVE_SECTIONS = (
+    Z8_HPC_ARCHIVE_CANDIDATE_PIXEL_CONSUMED_SECTIONS
 )
 
 Z8_RUNTIME_MODULE_FILES: tuple[str, ...] = (
@@ -67,6 +66,7 @@ Z8_RUNTIME_MODULE_FILES: tuple[str, ...] = (
     "loss.py",
     "mallat_dwt_adapter.py",
     "mamba2_adapter.py",
+    "runtime_custody.py",
     "runtime_payload_bridge.py",
     "scorer_sensitivity_map.py",
     "wyner_ziv_coder.py",
@@ -153,6 +153,12 @@ def _z8_runtime_adapter_manifest_extra(
         )
     manifest = {
         "schema": "z8_hpc1_runtime_adapter_manifest.v1",
+        "runtime_custody_contract": build_z8_runtime_custody_contract(
+            source="z8_hpc1_runtime_adapter_manifest",
+            section_name_style="candidate_manifest",
+            archive_bound_candidate_package_emitted=True,
+            trained_mlx_renderer_archive_export_ready=False,
+        ),
         "predictive_coding_family": (
             "z8_hpc1_mallat_wavelet_plus_wyner_ziv_top_state_pixel_consumed"
             "_predictive_stack_custody"
@@ -223,6 +229,12 @@ def _z8_runtime_adapter_manifest_extra(
                 byte_mutation_proof.get(
                     "mamba_dreamer_wyner_ziv_pixel_consumption_proven"
                 )
+            ),
+            "wyner_ziv_payload_pixel_consumption_proven": bool(
+                byte_mutation_proof.get("wyner_ziv_payload_pixel_consumption_proven")
+            ),
+            "stack_context_pixel_consumption_proven": bool(
+                byte_mutation_proof.get("stack_context_pixel_consumption_proven")
             ),
         }
     return manifest

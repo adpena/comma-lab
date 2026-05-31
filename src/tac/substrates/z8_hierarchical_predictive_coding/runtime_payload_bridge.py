@@ -33,6 +33,8 @@ from tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_bindin
 Z8_RUNTIME_PAYLOAD_BRIDGE_REPORT_SCHEMA = "z8_hpc1_runtime_payload_bridge_report.v1"
 Z8_STATE_TO_TOP_LL_PROJECTION_GAIN = 1.0 / 64.0
 Z8_STATE_TO_TOP_LL_PROJECTION_SEED = 23
+Z8_STACK_CONTEXT_TO_TOP_LL_PROJECTION_GAIN = 1.0 / 128.0
+Z8_STACK_CONTEXT_TO_TOP_LL_PROJECTION_SEED = 29
 FALSE_AUTHORITY: dict[str, bool] = {
     "score_claim": False,
     "score_claim_valid": False,
@@ -115,6 +117,33 @@ def _top_ll_side_info(
     return side_info.astype(np.float32, copy=False)
 
 
+def _flatten_state_dict_values(state_dict: dict[str, Any]) -> list[np.ndarray]:
+    vectors: list[np.ndarray] = []
+    for key in sorted(state_dict):
+        value = np.asarray(state_dict[key], dtype=np.float32).reshape(-1)
+        if value.size:
+            vectors.append(value)
+    return vectors
+
+
+def stack_context_vector_from_archive(arc: Z8HierarchicalArchive) -> np.ndarray:
+    """Return decoder/index/Dreamer numeric context consumed by receiver pixels."""
+
+    vectors: list[np.ndarray] = []
+    vectors.extend(_flatten_state_dict_values(arc.decoder_state_dict))
+    for level_idx, indices in enumerate(arc.per_level_category_indices):
+        categories = max(int(arc.num_categories_per_level[level_idx]) - 1, 1)
+        normalized = np.asarray(indices, dtype=np.float32).reshape(-1) / float(
+            categories
+        )
+        if normalized.size:
+            vectors.append(normalized)
+    vectors.extend(_flatten_state_dict_values(arc.dreamer_state_blob))
+    if not vectors:
+        return np.zeros((0,), dtype=np.float32)
+    return np.concatenate(vectors).astype(np.float32, copy=False)
+
+
 def decode_wyner_ziv_top_states_from_archive(
     archive_bytes: bytes,
 ) -> list[np.ndarray]:
@@ -185,11 +214,55 @@ def _state_to_top_ll_delta(
     ).astype(np.float32, copy=False)
 
 
+def _vector_to_top_ll_delta(
+    vector: np.ndarray,
+    top_ll_hwc: np.ndarray,
+    *,
+    projection_gain: float,
+    projection_seed: int,
+) -> np.ndarray:
+    top_ll = np.asarray(top_ll_hwc, dtype=np.float32)
+    context = np.asarray(vector, dtype=np.float32).reshape(-1)
+    if top_ll.ndim != 3:
+        raise ValueError(f"top_ll_hwc must be HWC; got {top_ll.shape}")
+    if context.size == 0:
+        return np.zeros_like(top_ll, dtype=np.float32)
+    context = np.where(np.isfinite(context), context, 0.0)
+    centered = context - float(context.mean())
+    norm = float(np.sqrt(np.mean(centered.astype(np.float64) ** 2)))
+    if norm <= 1e-12:
+        centered = context
+        norm = float(np.sqrt(np.mean(centered.astype(np.float64) ** 2)))
+    if norm <= 1e-12:
+        return np.zeros_like(top_ll, dtype=np.float32)
+    normalized = (centered / norm).astype(np.float32, copy=False)
+    channels = int(top_ll.shape[-1])
+    rng = np.random.RandomState(int(projection_seed))
+    projection = rng.standard_normal((normalized.size, channels)).astype(np.float32)
+    projection /= max(float(normalized.size) ** 0.5, 1.0)
+    channel_delta = normalized @ projection
+    max_abs = float(np.max(np.abs(channel_delta))) if channel_delta.size else 0.0
+    if max_abs > 0.0:
+        channel_delta = channel_delta / max_abs
+    vertical = np.linspace(0.75, 1.0, int(top_ll.shape[0]), dtype=np.float32)[:, None]
+    horizontal = np.linspace(1.0, 0.75, int(top_ll.shape[1]), dtype=np.float32)[
+        None, :
+    ]
+    envelope = (vertical * horizontal).astype(np.float32)
+    return (
+        float(projection_gain)
+        * envelope[:, :, None]
+        * channel_delta.reshape(1, 1, channels)
+    ).astype(np.float32, copy=False)
+
+
 def project_decoded_top_states_into_pair_pyramids(
     pair_pyramids: list[dict[str, Any]],
     decoded_top_states: list[np.ndarray],
     *,
     projection_gain: float = Z8_STATE_TO_TOP_LL_PROJECTION_GAIN,
+    stack_context_vector: np.ndarray | None = None,
+    stack_context_projection_gain: float = Z8_STACK_CONTEXT_TO_TOP_LL_PROJECTION_GAIN,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Return pair pyramids whose frame-1 top LL consumes decoded WZ states.
 
@@ -216,6 +289,13 @@ def project_decoded_top_states_into_pair_pyramids(
             frame_1_top_ll,
             projection_gain=projection_gain,
         )
+        if stack_context_vector is not None:
+            delta = delta + _vector_to_top_ll_delta(
+                stack_context_vector,
+                frame_1_top_ll,
+                projection_gain=stack_context_projection_gain,
+                projection_seed=Z8_STACK_CONTEXT_TO_TOP_LL_PROJECTION_SEED,
+            )
         top_ll_projected = (frame_1_top_ll + delta).astype(np.float32, copy=False)
         actual_delta = top_ll_projected - frame_1_top_ll
         if np.any(actual_delta != 0.0):
@@ -230,6 +310,21 @@ def project_decoded_top_states_into_pair_pyramids(
         "projection_target": "frame_1_top_ll",
         "projection_gain": float(projection_gain),
         "projection_seed": Z8_STATE_TO_TOP_LL_PROJECTION_SEED,
+        "stack_context_projection_gain": (
+            float(stack_context_projection_gain)
+            if stack_context_vector is not None
+            else 0.0
+        ),
+        "stack_context_projection_seed": (
+            Z8_STACK_CONTEXT_TO_TOP_LL_PROJECTION_SEED
+            if stack_context_vector is not None
+            else None
+        ),
+        "stack_context_vector_length": (
+            int(np.asarray(stack_context_vector).size)
+            if stack_context_vector is not None
+            else 0
+        ),
         "projected_pair_count": len(projected),
         "projected_pair_changed_count": changed_pairs,
         "max_abs_projected_top_ll_delta": max_abs_delta,
@@ -264,9 +359,11 @@ def projected_pair_pyramids_from_archive_bytes(
         )
         for payload, pyramid in zip(payloads, pair_pyramids, strict=True)
     ]
+    stack_context = stack_context_vector_from_archive(arc)
     projected, stats = project_decoded_top_states_into_pair_pyramids(
         pair_pyramids,
         decoded,
+        stack_context_vector=stack_context,
     )
     return binding, projected, stats
 
@@ -382,6 +479,122 @@ def mutate_valid_wyner_ziv_payload_in_archive(
     }
 
 
+def mutate_valid_stack_context_payload_in_archive(
+    archive_bytes: bytes,
+    section: str,
+    *,
+    pair_index: int = 0,
+) -> tuple[bytes, dict[str, Any]]:
+    """Return a valid archive mutation for decoder/index/Dreamer context."""
+
+    arc = parse_archive(archive_bytes)
+    decoder_state_dict = dict(arc.decoder_state_dict)
+    dreamer_state_dict = dict(arc.dreamer_state_blob)
+    per_level_indices = [np.array(a, copy=True) for a in arc.per_level_category_indices]
+    target_pair = int(pair_index) % max(int(arc.num_pairs), 1)
+    if section == "decoder_blob":
+        decoder_state_dict["runtime_stack_context_delta"] = np.array(
+            [1.0], dtype=np.float32
+        )
+    elif section == "dreamer_state_blob":
+        dreamer_state_dict["runtime_stack_context_delta"] = np.array(
+            [1.0], dtype=np.float32
+        )
+    elif section == "indices_blob":
+        if not per_level_indices:
+            raise ValueError("indices_blob mutation requires at least one level")
+        categories = max(int(arc.num_categories_per_level[0]), 1)
+        per_level_indices[0][target_pair, 0] = (
+            int(per_level_indices[0][target_pair, 0]) + 1
+        ) % categories
+    else:
+        raise ValueError(f"unsupported stack context section: {section}")
+    mutated_archive = pack_archive(
+        decoder_state_dict,
+        per_level_indices,
+        arc.wavelet_coeffs_blob,
+        arc.wyner_ziv_top_blob,
+        dreamer_state_dict,
+        arc.meta,
+        num_levels=arc.num_levels,
+        num_groups_per_level=arc.num_groups_per_level,
+        num_categories_per_level=arc.num_categories_per_level,
+        num_pairs=arc.num_pairs,
+        decoder_latent_dim=arc.decoder_latent_dim,
+        base_channels=arc.base_channels,
+        wavelet_basis_id=arc.wavelet_basis_id,
+        schema_version=arc.schema_version,
+    )
+    return mutated_archive, {
+        "mutated_section": section,
+        "mutated_pair_index": target_pair,
+        "original_archive_sha256": hashlib.sha256(archive_bytes).hexdigest(),
+        "mutated_archive_sha256": hashlib.sha256(mutated_archive).hexdigest(),
+        "mutation_kind": "valid_semantic_stack_context_payload_mutation",
+    }
+
+
+def build_stack_context_payload_mutation_receiver_proofs(
+    archive_bytes: bytes,
+    *,
+    sections: tuple[str, ...] = (
+        "decoder_blob",
+        "indices_blob",
+        "dreamer_state_blob",
+    ),
+    pair_index: int = 0,
+) -> dict[str, Any]:
+    """Prove valid decoder/index/Dreamer mutations change receiver pixels."""
+
+    base_rgb_0, base_rgb_1 = reconstruct_projected_pair_rgb_from_archive_bytes(
+        archive_bytes,
+        pair_index=pair_index,
+    )
+    per_section: dict[str, dict[str, Any]] = {}
+    for section in sections:
+        mutated_archive, mutation = mutate_valid_stack_context_payload_in_archive(
+            archive_bytes,
+            section,
+            pair_index=pair_index,
+        )
+        mutated_rgb_0, mutated_rgb_1 = reconstruct_projected_pair_rgb_from_archive_bytes(
+            mutated_archive,
+            pair_index=pair_index,
+        )
+        frame0_delta = float(np.max(np.abs(mutated_rgb_0 - base_rgb_0)))
+        frame1_delta = float(np.max(np.abs(mutated_rgb_1 - base_rgb_1)))
+        per_section[section] = {
+            "section": section,
+            "valid_semantic_payload_mutation": True,
+            "section_pixel_consumption_proven": frame1_delta > 0.0,
+            "frame_0_max_abs_delta": frame0_delta,
+            "frame_1_max_abs_delta": frame1_delta,
+            "expected_changed_frame": "frame_1",
+            "mutation": mutation,
+        }
+    proven_sections = [
+        section
+        for section, proof in per_section.items()
+        if proof["section_pixel_consumption_proven"] is True
+    ]
+    return {
+        "schema": "z8_hpc1_stack_context_payload_mutation_receiver_proofs.v1",
+        "receiver_runtime_path": (
+            "projected_pair_pyramids_from_archive_bytes"
+            "->stack_context_vector_from_archive"
+            "->project_decoded_top_states_into_pair_pyramids"
+            "->reconstruct_pair_rgb_from_pyramid"
+        ),
+        "archive_member_byte_closed": True,
+        "valid_semantic_stack_context_payload_mutations": True,
+        "stack_context_sections_pixel_consumed": proven_sections,
+        "per_section": per_section,
+        "axis_tag": "[macOS-CPU advisory]",
+        "evidence_grade": "receiver-runtime-local-proof",
+        **FALSE_AUTHORITY,
+    }
+
+
 def build_wyner_ziv_payload_mutation_receiver_proof(
     archive_bytes: bytes,
     *,
@@ -447,6 +660,7 @@ def build_runtime_payload_bridge_report(
     _binding, _projected, projection_stats = projected_pair_pyramids_from_archive_bytes(
         archive_bytes
     )
+    stack_proofs = build_stack_context_payload_mutation_receiver_proofs(archive_bytes)
     pixel_consumption_proven = (
         int(projection_stats.get("projected_pair_changed_count") or 0) > 0
     )
@@ -464,9 +678,13 @@ def build_runtime_payload_bridge_report(
         "side_info_source": "frame_0_top_ll_per_channel_spatial_mean",
         "state_to_pixel_projection_ready": True,
         "state_to_pixel_projection": projection_stats,
+        "stack_context_payload_mutation_receiver_proofs": stack_proofs,
+        "stack_context_sections_pixel_consumed": stack_proofs[
+            "stack_context_sections_pixel_consumed"
+        ],
         "pixel_consumption_proven": pixel_consumption_proven,
         "next_required_task": (
-            "extend_decoder_indices_dreamer_runtime_pixel_bridge"
+            "serialize_trained_mlx_renderer_state_into_z8hpc1_archive"
             if pixel_consumption_proven
             else "run_valid_wyner_ziv_payload_mutation_receiver_proof"
         ),
@@ -486,10 +704,13 @@ def build_runtime_payload_bridge_report(
 
 __all__ = [
     "Z8_RUNTIME_PAYLOAD_BRIDGE_REPORT_SCHEMA",
+    "Z8_STACK_CONTEXT_TO_TOP_LL_PROJECTION_GAIN",
     "Z8_STATE_TO_TOP_LL_PROJECTION_GAIN",
     "build_runtime_payload_bridge_report",
+    "build_stack_context_payload_mutation_receiver_proofs",
     "build_wyner_ziv_payload_mutation_receiver_proof",
     "decode_wyner_ziv_top_states_from_archive",
+    "mutate_valid_stack_context_payload_in_archive",
     "mutate_valid_wyner_ziv_payload_in_archive",
     "project_decoded_top_states_into_pair_pyramids",
     "projected_pair_pyramids_from_archive_bytes",

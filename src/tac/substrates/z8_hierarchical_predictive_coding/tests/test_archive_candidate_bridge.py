@@ -33,9 +33,15 @@ from tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_bindin
 from tac.substrates.z8_hierarchical_predictive_coding.mlx_renderer import (
     Z8HierarchicalConfig,
 )
+from tac.substrates.z8_hierarchical_predictive_coding.runtime_custody import (
+    Z8_HPC_RUNTIME_CUSTODY_CONTRACT_SCHEMA,
+    Z8_HPC_TRAINED_MLX_EXPORT_BLOCKER,
+)
 from tac.substrates.z8_hierarchical_predictive_coding.runtime_payload_bridge import (
+    build_stack_context_payload_mutation_receiver_proofs,
     build_wyner_ziv_payload_mutation_receiver_proof,
     decode_wyner_ziv_top_states_from_archive,
+    mutate_valid_stack_context_payload_in_archive,
     mutate_valid_wyner_ziv_payload_in_archive,
     project_decoded_top_states_into_pair_pyramids,
 )
@@ -62,6 +68,33 @@ def _archive_bytes() -> bytes:
     f1 = rng.uniform(0, 1, size=(1, 16, 16, 3)).astype(np.float32)
     binding = build_canonical_quadruple_binding_from_z8_config(_cfg())
     return build_z8hpc1_archive_bytes_from_canonical_quadruple(binding, f0, f1)
+
+
+def test_z8_archive_meta_carries_fail_closed_runtime_custody_contract() -> None:
+    archive = parse_archive(_archive_bytes())
+    contract = archive.meta["runtime_custody_contract"]
+
+    assert contract["schema"] == Z8_HPC_RUNTIME_CUSTODY_CONTRACT_SCHEMA
+    assert contract["source"] == "z8_m9_canonical_quadruple_archive_meta"
+    assert contract["section_name_style"] == "archive_parser"
+    assert contract["pixel_consumed_archive_sections"] == [
+        "decoder_blob",
+        "indices_blob",
+        "wavelet_blob",
+        "wyner_ziv_blob",
+        "dreamer_state_blob",
+    ]
+    assert contract["stack_semantic_pixel_consumed_sections"] == [
+        "decoder_blob",
+        "indices_blob",
+        "dreamer_state_blob",
+    ]
+    assert contract["stack_custody_not_yet_pixel_consumed_sections"] == []
+    assert contract["full_stack_pixel_consumption_claim"] is False
+    assert contract["trained_mlx_renderer_archive_export_ready"] is False
+    assert Z8_HPC_TRAINED_MLX_EXPORT_BLOCKER in contract["blockers"]
+    assert contract["score_claim"] is False
+    assert contract["ready_for_exact_eval_dispatch"] is False
 
 
 def test_z8_runtime_payload_projection_changes_frame1_pixels() -> None:
@@ -105,6 +138,35 @@ def test_z8_valid_wyner_ziv_payload_mutation_changes_frame1_pixels() -> None:
     assert proof["ready_for_exact_eval_dispatch"] is False
 
 
+def test_z8_valid_stack_context_payload_mutations_change_frame1_pixels() -> None:
+    archive_bytes = _archive_bytes()
+    for section in ("decoder_blob", "indices_blob", "dreamer_state_blob"):
+        mutated_archive, mutation = mutate_valid_stack_context_payload_in_archive(
+            archive_bytes,
+            section,
+        )
+        assert mutated_archive != archive_bytes
+        assert mutation["mutated_section"] == section
+        assert mutation["mutated_archive_sha256"] != mutation["original_archive_sha256"]
+
+    proof = build_stack_context_payload_mutation_receiver_proofs(archive_bytes)
+
+    assert proof["archive_member_byte_closed"] is True
+    assert proof["valid_semantic_stack_context_payload_mutations"] is True
+    assert proof["stack_context_sections_pixel_consumed"] == [
+        "decoder_blob",
+        "indices_blob",
+        "dreamer_state_blob",
+    ]
+    for section in proof["stack_context_sections_pixel_consumed"]:
+        section_proof = proof["per_section"][section]
+        assert section_proof["section_pixel_consumption_proven"] is True
+        assert section_proof["frame_0_max_abs_delta"] == 0.0
+        assert section_proof["frame_1_max_abs_delta"] > 0.0
+    assert proof["score_claim"] is False
+    assert proof["ready_for_exact_eval_dispatch"] is False
+
+
 def test_z8_archive_export_emits_runtime_tree_without_mlx_import(tmp_path: Path) -> None:
     archive_zip, archive_sha, archive_bytes = export_z8hpc1_archive_bytes(
         _archive_bytes(),
@@ -121,10 +183,15 @@ def test_z8_archive_export_emits_runtime_tree_without_mlx_import(tmp_path: Path)
     assert proof["distinguishing_feature_consumed"] is True
     assert "wavelet_blob" in proof["pixel_consumed_sections"]
     assert "wyner_ziv_blob" in proof["pixel_consumed_sections"]
-    assert "dreamer_state_blob" in proof["custody_only_sections"]
+    assert proof["custody_only_sections"] == []
     assert proof["mamba_dreamer_wyner_ziv_pixel_consumption_proven"] is True
     semantic_wz = proof["wyner_ziv_semantic_payload_mutation_receiver_proof"]
     assert semantic_wz["wyner_ziv_top_state_pixel_consumption_proven"] is True
+    assert proof["wyner_ziv_payload_pixel_consumption_proven"] is True
+    assert proof["stack_context_pixel_consumption_proven"] is True
+    for section in ("decoder_blob", "indices_blob", "dreamer_state_blob"):
+        assert section in proof["pixel_consumed_sections"]
+        assert section not in proof["custody_only_sections"]
     bridge_report_path = tmp_path / "z8_hpc1_runtime_payload_bridge_report.json"
     assert bridge_report_path.is_file()
     bridge_report = json.loads(bridge_report_path.read_text(encoding="utf-8"))
@@ -133,6 +200,12 @@ def test_z8_archive_export_emits_runtime_tree_without_mlx_import(tmp_path: Path)
     assert bridge_report["state_to_pixel_projection_ready"] is True
     assert bridge_report["state_to_pixel_projection"]["projected_pair_count"] == 1
     assert bridge_report["state_to_pixel_projection"]["projected_pair_changed_count"] == 1
+    assert bridge_report["state_to_pixel_projection"]["stack_context_vector_length"] > 0
+    assert bridge_report["stack_context_sections_pixel_consumed"] == [
+        "decoder_blob",
+        "indices_blob",
+        "dreamer_state_blob",
+    ]
     assert bridge_report["pixel_consumption_proven"] is True
     submission = tmp_path / "submission"
     assert (submission / "0.bin").is_file()
@@ -141,6 +214,12 @@ def test_z8_archive_export_emits_runtime_tree_without_mlx_import(tmp_path: Path)
     assert "import inflate_one_video" in inflate_source
 
     runtime_root = submission / "src" / "tac"
+    assert (
+        runtime_root
+        / "substrates"
+        / "z8_hierarchical_predictive_coding"
+        / "runtime_custody.py"
+    ).is_file()
     assert (
         runtime_root
         / "substrates"
@@ -176,24 +255,37 @@ def test_z8_archive_bound_package_stays_false_authority_when_receiver_blocked(
 ) -> None:
     def fake_emit_runtime_package(**kwargs: Any) -> dict[str, Any]:
         manifest_extra = kwargs["runtime_adapter_manifest_extra"]
+        custody = manifest_extra["runtime_custody_contract"]
+        assert custody["schema"] == Z8_HPC_RUNTIME_CUSTODY_CONTRACT_SCHEMA
+        assert custody["source"] == "z8_hpc1_runtime_adapter_manifest"
+        assert custody["section_name_style"] == "candidate_manifest"
+        assert Z8_HPC_TRAINED_MLX_EXPORT_BLOCKER in custody["blockers"]
         assert manifest_extra["full_stack_pixel_consumption_claim"] is False
         assert manifest_extra["pixel_consumed_archive_sections"] == list(
             Z8_HPC_PIXEL_CONSUMED_ARCHIVE_SECTIONS
         )
+        assert "decoder_blob" in manifest_extra["pixel_consumed_archive_sections"]
         assert "wyner_ziv_blob" in manifest_extra["pixel_consumed_archive_sections"]
         assert manifest_extra["stack_custody_not_yet_pixel_consumed_sections"] == list(
             Z8_HPC_STACK_CUSTODY_NOT_YET_PIXEL_CONSUMED_SECTIONS
         )
+        assert manifest_extra["stack_custody_not_yet_pixel_consumed_sections"] == []
         assert "wyner_ziv_blob" not in (
             manifest_extra["stack_custody_not_yet_pixel_consumed_sections"]
         )
         mutation_proof = manifest_extra["byte_mutation_consumption_proof"]
         assert mutation_proof["distinguishing_feature_consumed"] is True
-        assert mutation_proof["pixel_consumed_sections"] == [
+        for section in (
             "wavelet_blob",
             "wyner_ziv_blob",
-        ]
-        assert "dreamer_state_blob" in mutation_proof["custody_only_sections"]
+            "decoder_blob",
+            "indices_blob",
+            "dreamer_state_blob",
+        ):
+            assert section in mutation_proof["pixel_consumed_sections"]
+        assert mutation_proof["custody_only_sections"] == []
+        assert mutation_proof["wyner_ziv_payload_pixel_consumption_proven"] is True
+        assert mutation_proof["stack_context_pixel_consumption_proven"] is True
         assert (
             mutation_proof["mamba_dreamer_wyner_ziv_pixel_consumption_proven"]
             is True
@@ -206,7 +298,7 @@ def test_z8_archive_bound_package_stays_false_authority_when_receiver_blocked(
         assert bridge_report["state_to_pixel_projection_ready"] is True
         assert bridge_report["pixel_consumption_proven"] is True
         assert bridge_report["next_required_task"] == (
-            "extend_decoder_indices_dreamer_runtime_pixel_bridge"
+            "serialize_trained_mlx_renderer_state_into_z8hpc1_archive"
         )
         assert "mamba_mallat_dreamer_wyner_ziv_stack" not in (
             manifest_extra["predictive_coding_family"]

@@ -156,10 +156,14 @@ def probe_z8_archive_distinguishing_feature(
         for section in Z8_BYTE_MUTATION_PROBED_SECTIONS
     }
     from tac.substrates.z8_hierarchical_predictive_coding.runtime_payload_bridge import (
+        build_stack_context_payload_mutation_receiver_proofs,
         build_wyner_ziv_payload_mutation_receiver_proof,
     )
 
     semantic_wz_proof = build_wyner_ziv_payload_mutation_receiver_proof(archive_bytes)
+    stack_context_proofs = build_stack_context_payload_mutation_receiver_proofs(
+        archive_bytes
+    )
     pixel_consumed_sections = [
         name for name, verdict in sections.items() if verdict.get("verdict") == "PIXEL_CONSUMED"
     ]
@@ -168,6 +172,9 @@ def probe_z8_archive_distinguishing_feature(
         and "wyner_ziv_blob" not in pixel_consumed_sections
     ):
         pixel_consumed_sections.append("wyner_ziv_blob")
+    for section in stack_context_proofs.get("stack_context_sections_pixel_consumed") or []:
+        if section not in pixel_consumed_sections:
+            pixel_consumed_sections.append(str(section))
     custody_only_sections = [
         name
         for name in Z8_STACK_CUSTODY_SECTION_TO_MEMBER
@@ -187,16 +194,27 @@ def probe_z8_archive_distinguishing_feature(
         "custody_only_sections": custody_only_sections,
         "mamba_dreamer_wyner_ziv_pixel_consumption_proven": bool(
             semantic_wz_proof.get("wyner_ziv_top_state_pixel_consumption_proven")
+            and stack_context_proofs.get("stack_context_sections_pixel_consumed")
+        ),
+        "wyner_ziv_payload_pixel_consumption_proven": bool(
+            semantic_wz_proof.get("wyner_ziv_top_state_pixel_consumption_proven")
+        ),
+        "stack_context_pixel_consumption_proven": bool(
+            stack_context_proofs.get("stack_context_sections_pixel_consumed")
         ),
         "wyner_ziv_semantic_payload_mutation_receiver_proof": semantic_wz_proof,
+        "stack_context_semantic_payload_mutation_receiver_proofs": (
+            stack_context_proofs
+        ),
         "sections": sections,
         "custody_section_to_member": dict(Z8_STACK_CUSTODY_SECTION_TO_MEMBER),
         "honest_architecture_note": (
             "Z8 contest inflate reconstructs pixels from wavelet_blob via Mallat "
             "perfect reconstruction and consumes wyner_ziv_blob by projecting "
             "the decoded top state into frame_1 top-LL. Decoder, indices, and "
-            "Dreamer sections remain parsed/custodied but non-pixel-consuming "
-            "until future runtime adapters prove valid mutations change pixels."
+            "Dreamer sections are consumed by the deterministic stack-context "
+            "projection path; trained MLX renderer export remains a separate "
+            "promotion blocker."
         ),
         "axis_tag": "[macOS-CPU advisory]",
         "evidence_grade": "advisory",
