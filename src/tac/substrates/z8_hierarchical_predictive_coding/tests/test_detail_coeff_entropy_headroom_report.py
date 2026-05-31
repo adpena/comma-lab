@@ -137,6 +137,7 @@ def test_measure_subband_headroom_positive_and_round_trips() -> None:
             "qi16_dense",
             "qi16_zero_rle",
             "qi16_static_range",
+            "qi16_constriction_range",
             "zigzag_u16_byteplane",
         }
 

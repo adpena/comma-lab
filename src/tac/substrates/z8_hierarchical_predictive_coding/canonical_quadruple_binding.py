@@ -80,6 +80,7 @@ from __future__ import annotations
 
 import struct
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -1273,9 +1274,412 @@ def load_real_video_targets_numpy(
 _PAIR_BLOB_SCHEMA_VERSION: int = 1
 """Per-pair wavelet-pyramid blob schema version (bump on grammar change)."""
 
+_PAIR_BLOB_QUANTIZED_DETAIL_SCHEMA_VERSION: int = 2
+"""Per-pair schema with quantized entropy-coded detail coefficients."""
+
+_PAIR_BLOB_LOSSLESS_PRECONDITIONED_DETAIL_SCHEMA_VERSION: int = 3
+"""Per-pair schema with lossless Brotli-friendly float32 detail preconditioning."""
+
+_DETAIL_CODEC_QI16_DENSE: int = 1
+_DETAIL_CODEC_QI16_ZERO_RLE: int = 2
+_DETAIL_CODEC_QI16_STATIC_RANGE: int = 3
+_DETAIL_CODEC_ZZ16_BYTEPLANE: int = 4
+_DETAIL_CODEC_QI16_CONSTRICTION_RANGE: int = 5
+_DETAIL_CODEC_F32_BYTE_SHUFFLE: int = 11
+_RANGE_CODER_FREQUENCY_TOTAL: int = 1 << 15
+_MAX_STATIC_RANGE_DETAIL_SYMBOLS: int = 0
+"""Legacy pure-Python static-range codec selection cap.
+
+The decoder still accepts method 3 for historical artifacts, but live Z8
+subbands use method 5 (``qi16_constriction_range``), which is backed by the
+Rust constriction extension and has its own payload grammar.
+"""
+_DETAIL_PAYLOAD_SELECTION_BROTLI_QUALITY: int = 1
+"""Fast proxy for pair-level Brotli cost inside per-subband mode selection.
+
+The final authority remains the byte-closed ``archive.zip``. Using q=11 inside
+every candidate subband made full-video sweeps spend minutes inside Brotli
+Zopfli search; q=1 preserves the "outer compression matters" signal cheaply.
+"""
+_DETAIL_CODEC_NAMES: dict[int, str] = {
+    _DETAIL_CODEC_QI16_DENSE: "qi16_dense",
+    _DETAIL_CODEC_QI16_ZERO_RLE: "qi16_zero_rle",
+    _DETAIL_CODEC_QI16_STATIC_RANGE: "qi16_static_range",
+    _DETAIL_CODEC_ZZ16_BYTEPLANE: "zigzag_u16_byteplane",
+    _DETAIL_CODEC_QI16_CONSTRICTION_RANGE: "qi16_constriction_range",
+    _DETAIL_CODEC_F32_BYTE_SHUFFLE: "f32_byte_shuffle",
+}
+
+
+def _encode_uvarint(value: int) -> bytes:
+    if value < 0:
+        raise ValueError("uvarint value must be non-negative")
+    out = bytearray()
+    while value >= 0x80:
+        out.append((value & 0x7F) | 0x80)
+        value >>= 7
+    out.append(value)
+    return bytes(out)
+
+
+def _decode_uvarint(raw: bytes, pos: int) -> tuple[int, int]:
+    shift = 0
+    value = 0
+    while True:
+        if pos >= len(raw):
+            raise ValueError("truncated uvarint in quantized detail stream")
+        byte = raw[pos]
+        pos += 1
+        value |= (byte & 0x7F) << shift
+        if not (byte & 0x80):
+            return value, pos
+        shift += 7
+        if shift > 63:
+            raise ValueError("uvarint too large in quantized detail stream")
+
+
+def _zigzag_encode_i16(value: int) -> int:
+    if value < -32768 or value > 32767:
+        raise ValueError(f"i16 value out of range: {value}")
+    return (value << 1) ^ (value >> 15)
+
+
+def _zigzag_decode_i16(value: int) -> int:
+    decoded = (value >> 1) ^ -(value & 1)
+    if decoded < -32768 or decoded > 32767:
+        raise ValueError(f"decoded i16 value out of range: {decoded}")
+    return int(decoded)
+
+
+def _zigzag_encode_i16_array(values: np.ndarray) -> np.ndarray:
+    i32 = np.asarray(values, dtype=np.int32)
+    return ((i32 << 1) ^ (i32 >> 15)).astype("<u2", copy=False)
+
+
+def _zigzag_decode_u16_array(values: np.ndarray) -> np.ndarray:
+    u32 = np.asarray(values, dtype=np.uint32)
+    decoded = ((u32 >> 1) ^ (-(u32 & 1))).astype(np.int32, copy=False)
+    if np.any(decoded < -32768) or np.any(decoded > 32767):
+        raise ValueError("decoded zigzag byte-plane value outside i16 range")
+    return decoded.astype("<i2", copy=False)
+
+
+def _encode_qi16_zero_rle(q: np.ndarray) -> bytes:
+    flat = np.asarray(q, dtype="<i2").reshape(-1)
+    out = bytearray()
+    pos = 0
+    n = int(flat.size)
+    while pos < n:
+        zero_start = pos
+        while pos < n and int(flat[pos]) == 0:
+            pos += 1
+        out.extend(_encode_uvarint(pos - zero_start))
+        literal_start = pos
+        while pos < n and int(flat[pos]) != 0:
+            pos += 1
+        literal_count = pos - literal_start
+        out.extend(_encode_uvarint(literal_count))
+        for value in flat[literal_start:pos]:
+            out.extend(_encode_uvarint(_zigzag_encode_i16(int(value))))
+    return bytes(out)
+
+
+def _decode_qi16_zero_rle(payload: bytes, count: int) -> np.ndarray:
+    values = np.zeros(int(count), dtype="<i2")
+    pos = 0
+    out_pos = 0
+    while out_pos < count:
+        zero_run, pos = _decode_uvarint(payload, pos)
+        out_pos += zero_run
+        if out_pos > count:
+            raise ValueError("zero-RLE detail stream overran target shape")
+        literal_count, pos = _decode_uvarint(payload, pos)
+        if out_pos + literal_count > count:
+            raise ValueError("literal run in zero-RLE detail stream overran target shape")
+        for _ in range(literal_count):
+            encoded, pos = _decode_uvarint(payload, pos)
+            values[out_pos] = _zigzag_decode_i16(encoded)
+            out_pos += 1
+    if pos != len(payload):
+        raise ValueError(
+            f"zero-RLE detail stream trailing bytes (pos={pos} len={len(payload)})"
+        )
+    return values
+
+
+def _encode_zz16_byteplane(q: np.ndarray) -> bytes:
+    """Losslessly arrange quantized symbols into brotli-friendly byte planes."""
+
+    zz = _zigzag_encode_i16_array(np.asarray(q, dtype="<i2")).reshape(-1)
+    raw = zz.view(np.uint8).reshape(-1, 2)
+    return raw[:, 0].tobytes(order="C") + raw[:, 1].tobytes(order="C")
+
+
+def _decode_zz16_byteplane(payload: bytes, count: int) -> np.ndarray:
+    expected = int(count) * 2
+    if len(payload) != expected:
+        raise ValueError(
+            f"zigzag byte-plane detail payload length {len(payload)} != expected {expected}"
+        )
+    count_i = int(count)
+    raw = np.empty((count_i, 2), dtype=np.uint8)
+    raw[:, 0] = np.frombuffer(payload[:count_i], dtype=np.uint8, count=count_i)
+    raw[:, 1] = np.frombuffer(payload[count_i:], dtype=np.uint8, count=count_i)
+    return _zigzag_decode_u16_array(raw.reshape(-1).view("<u2"))
+
+
+def _detail_payload_selection_score(payload: bytes) -> tuple[int, int]:
+    """Estimate the cost a detail payload contributes after pair-level Brotli.
+
+    The Z8 pair blob applies Brotli after the per-subband detail payloads are
+    serialized. A range-coded substream can look excellent by raw byte length
+    while being nearly incompressible to the outer Brotli pass; sparse/RLE
+    streams can look larger raw but collapse after Brotli. Select on the object
+    the archive actually pays for.
+    """
+
+    import brotli  # type: ignore[import-not-found]
+
+    return (
+        len(brotli.compress(payload, quality=_DETAIL_PAYLOAD_SELECTION_BROTLI_QUALITY)),
+        len(payload),
+    )
+
+
+def _encode_quantized_detail_payload(
+    sub: np.ndarray,
+    *,
+    quantization_step: float,
+) -> tuple[int, bytes]:
+    if quantization_step <= 0.0 or not np.isfinite(quantization_step):
+        raise ValueError("detail quantization_step must be finite and positive")
+    scaled = np.nan_to_num(sub.astype(np.float32, copy=False) / np.float32(quantization_step))
+    q = np.rint(scaled)
+    q = np.clip(q, -32768, 32767).astype("<i2", copy=False)
+    dense = q.tobytes(order="C")
+    sparse = _encode_qi16_zero_rle(q)
+    byteplane = _encode_zz16_byteplane(q)
+    method_payloads = [
+        (_DETAIL_CODEC_QI16_DENSE, dense),
+        (_DETAIL_CODEC_QI16_ZERO_RLE, sparse),
+        (_DETAIL_CODEC_ZZ16_BYTEPLANE, byteplane),
+    ]
+    try:
+        method_payloads.append(
+            (
+                _DETAIL_CODEC_QI16_CONSTRICTION_RANGE,
+                _encode_qi16_constriction_range(q),
+            )
+        )
+    except Exception:
+        # Keep compression-side probes usable in partial environments. Runtime
+        # archives only select this mode when constriction produced bytes here.
+        pass
+    if q.size <= _MAX_STATIC_RANGE_DETAIL_SYMBOLS:
+        method_payloads.append(
+            (
+                _DETAIL_CODEC_QI16_STATIC_RANGE,
+                _encode_qi16_static_range(q),
+            )
+        )
+    preference = {
+        _DETAIL_CODEC_QI16_CONSTRICTION_RANGE: 0,
+        _DETAIL_CODEC_QI16_STATIC_RANGE: 0,
+        _DETAIL_CODEC_QI16_ZERO_RLE: 1,
+        _DETAIL_CODEC_ZZ16_BYTEPLANE: 2,
+        _DETAIL_CODEC_QI16_DENSE: 3,
+    }
+    return min(
+        method_payloads,
+        key=lambda item: (
+            *_detail_payload_selection_score(item[1]),
+            preference[item[0]],
+        ),
+    )
+
+
+def _decode_quantized_detail_payload(
+    *,
+    method: int,
+    payload: bytes,
+    shape: tuple[int, int, int],
+    quantization_step: float,
+) -> np.ndarray:
+    if quantization_step <= 0.0 or not np.isfinite(quantization_step):
+        raise ValueError("detail quantization_step must be finite and positive")
+    count = int(np.prod(shape))
+    if method == _DETAIL_CODEC_QI16_DENSE:
+        expected = count * 2
+        if len(payload) != expected:
+            raise ValueError(
+                f"dense quantized detail payload length {len(payload)} != expected {expected}"
+            )
+        q = np.frombuffer(payload, dtype="<i2", count=count)
+    elif method == _DETAIL_CODEC_QI16_ZERO_RLE:
+        q = _decode_qi16_zero_rle(payload, count)
+    elif method == _DETAIL_CODEC_QI16_STATIC_RANGE:
+        q = _decode_qi16_static_range(payload, count)
+    elif method == _DETAIL_CODEC_ZZ16_BYTEPLANE:
+        q = _decode_zz16_byteplane(payload, count)
+    elif method == _DETAIL_CODEC_QI16_CONSTRICTION_RANGE:
+        q = _decode_qi16_constriction_range(payload, count)
+    else:
+        raise ValueError(f"unsupported quantized detail codec method: {method}")
+    return (q.astype(np.float32).reshape(shape) * np.float32(quantization_step)).astype(
+        np.float32,
+        copy=False,
+    )
+
+
+def _encode_f32_byteshuffle_payload(sub: np.ndarray) -> bytes:
+    values = np.asarray(sub, dtype="<f4")
+    byte_view = values.reshape(-1).view(np.uint8).reshape(-1, 4)
+    return np.ascontiguousarray(byte_view.T).tobytes(order="C")
+
+
+def _decode_f32_byteshuffle_payload(payload: bytes, shape: tuple[int, int, int]) -> np.ndarray:
+    count = int(np.prod(shape))
+    expected = count * 4
+    if len(payload) != expected:
+        raise ValueError(
+            f"byte-shuffled float32 detail payload length {len(payload)} != expected {expected}"
+        )
+    planes = np.frombuffer(payload, dtype=np.uint8).reshape(4, count)
+    dense = np.ascontiguousarray(planes.T).reshape(count, 4)
+    return dense.view("<f4").reshape(shape).astype(np.float32, copy=True)
+
+
+def _encode_qi16_static_range(q: np.ndarray) -> bytes:
+    from tac.lossless.range_coder import encode_static_symbols, normalize_probabilities
+
+    flat = np.asarray(q, dtype="<i2").reshape(-1)
+    if flat.size > (1 << 32) - 1:
+        raise ValueError("too many symbols for v2 static range detail stream")
+    symbols, inverse, counts = np.unique(
+        flat,
+        return_inverse=True,
+        return_counts=True,
+    )
+    if symbols.size == 0 or symbols.size > 0xFFFF:
+        raise ValueError("unsupported static range symbol table size")
+    frequencies = normalize_probabilities(
+        counts.astype(np.float64),
+        total=_RANGE_CODER_FREQUENCY_TOTAL,
+    )
+    stream = encode_static_symbols(inverse.astype(np.int64, copy=False), frequencies=frequencies)
+    return b"".join(
+        [
+            struct.pack("<HI", int(symbols.size), len(stream)),
+            np.asarray(symbols, dtype="<i2").tobytes(order="C"),
+            np.asarray(frequencies, dtype="<u2").tobytes(order="C"),
+            stream,
+        ]
+    )
+
+
+def _decode_qi16_static_range(payload: bytes, count: int) -> np.ndarray:
+    if len(payload) < 6:
+        raise ValueError("static range detail payload too short")
+    from tac.lossless.range_coder import decode_static_symbols
+
+    table_size, stream_len = struct.unpack("<HI", payload[:6])
+    pos = 6
+    if table_size <= 0:
+        raise ValueError("static range detail table must not be empty")
+    symbols_bytes = int(table_size) * 2
+    freqs_bytes = int(table_size) * 2
+    if pos + symbols_bytes + freqs_bytes + stream_len != len(payload):
+        raise ValueError("static range detail payload length mismatch")
+    symbols = np.frombuffer(payload[pos : pos + symbols_bytes], dtype="<i2").copy()
+    pos += symbols_bytes
+    frequencies = np.frombuffer(payload[pos : pos + freqs_bytes], dtype="<u2").astype(int).tolist()
+    pos += freqs_bytes
+    stream = payload[pos : pos + stream_len]
+    indices = decode_static_symbols(stream, count=int(count), frequencies=frequencies)
+    return symbols[np.asarray(indices, dtype=np.int64)].astype("<i2", copy=False)
+
+
+def _encode_qi16_constriction_range(q: np.ndarray) -> bytes:
+    """Encode quantized i16 symbols with constriction's native range coder."""
+
+    import constriction
+
+    flat = np.asarray(q, dtype="<i2").reshape(-1)
+    if flat.size > (1 << 32) - 1:
+        raise ValueError("too many symbols for v2 constriction range detail stream")
+    symbols, inverse, counts = np.unique(
+        flat,
+        return_inverse=True,
+        return_counts=True,
+    )
+    if symbols.size == 0 or symbols.size > 0xFFFF:
+        raise ValueError("unsupported constriction range symbol table size")
+    symbols_i16 = np.asarray(symbols, dtype="<i2")
+    counts_u32 = np.asarray(counts, dtype="<u4")
+    if symbols_i16.size == 1:
+        stream = b""
+    else:
+        probabilities = counts.astype(np.float64)
+        probabilities /= float(probabilities.sum())
+        model = constriction.stream.model.Categorical(probabilities, perfect=False)
+        encoder = constriction.stream.queue.RangeEncoder()
+        encoder.encode(inverse.astype(np.int32, copy=False), model)
+        stream = np.asarray(encoder.get_compressed(), dtype="<u4").tobytes(order="C")
+    return b"".join(
+        [
+            struct.pack("<HI", int(symbols_i16.size), len(stream)),
+            symbols_i16.tobytes(order="C"),
+            counts_u32.tobytes(order="C"),
+            stream,
+        ]
+    )
+
+
+def _decode_qi16_constriction_range(payload: bytes, count: int) -> np.ndarray:
+    """Decode :func:`_encode_qi16_constriction_range`."""
+
+    import constriction
+
+    if len(payload) < 6:
+        raise ValueError("constriction range detail payload too short")
+    table_size, stream_len = struct.unpack("<HI", payload[:6])
+    pos = 6
+    if table_size <= 0:
+        raise ValueError("constriction range detail table must not be empty")
+    symbols_bytes = int(table_size) * 2
+    counts_bytes = int(table_size) * 4
+    if pos + symbols_bytes + counts_bytes + stream_len != len(payload):
+        raise ValueError("constriction range detail payload length mismatch")
+    symbols = np.frombuffer(payload[pos : pos + symbols_bytes], dtype="<i2").copy()
+    pos += symbols_bytes
+    counts = np.frombuffer(payload[pos : pos + counts_bytes], dtype="<u4").astype(
+        np.float64
+    )
+    pos += counts_bytes
+    if np.any(counts <= 0.0):
+        raise ValueError("constriction range detail counts must be positive")
+    if int(table_size) == 1:
+        if stream_len != 0:
+            raise ValueError("single-symbol constriction range stream must be empty")
+        return np.full(int(count), int(symbols[0]), dtype="<i2")
+    if stream_len % 4 != 0:
+        raise ValueError("constriction range stream must be uint32-aligned")
+    stream = payload[pos : pos + stream_len]
+    probabilities = counts / float(counts.sum())
+    model = constriction.stream.model.Categorical(probabilities, perfect=False)
+    decoder = constriction.stream.queue.RangeDecoder(
+        np.frombuffer(stream, dtype=np.uint32).copy()
+    )
+    indices = decoder.decode(model, int(count)).astype(np.int64, copy=False)
+    return symbols[indices].astype("<i2", copy=False)
+
 
 def _serialize_pair_wavelet_pyramid(
     pair_pyramid: dict[str, Any],
+    *,
+    detail_quantization_step: float | None = None,
+    detail_quantization_steps: Mapping[tuple[str, int, str], float] | None = None,
+    detail_lossless_preconditioner: bool = False,
 ) -> bytes:
     """Serialize one pair's wavelet-pyramid into deterministic bytes.
 
@@ -1298,8 +1702,19 @@ def _serialize_pair_wavelet_pyramid(
     """
     import brotli  # type: ignore[import-not-found]
 
+    if detail_quantization_step is not None and detail_quantization_steps is not None:
+        raise ValueError("detail_quantization_step and detail_quantization_steps are mutually exclusive")
+    if (detail_quantization_step is not None or detail_quantization_steps is not None) and detail_lossless_preconditioner:
+        raise ValueError("detail quantization and detail_lossless_preconditioner are mutually exclusive")
+
     parts: list[bytes] = []
-    parts.append(struct.pack("<B", _PAIR_BLOB_SCHEMA_VERSION))
+    if detail_quantization_step is not None or detail_quantization_steps is not None:
+        schema_version = _PAIR_BLOB_QUANTIZED_DETAIL_SCHEMA_VERSION
+    elif detail_lossless_preconditioner:
+        schema_version = _PAIR_BLOB_LOSSLESS_PRECONDITIONED_DETAIL_SCHEMA_VERSION
+    else:
+        schema_version = _PAIR_BLOB_SCHEMA_VERSION
+    parts.append(struct.pack("<B", schema_version))
     for frame_key in ("frame_0_top_ll", "frame_1_top_ll"):
         top_ll = np.asarray(pair_pyramid[frame_key], dtype=np.float32)
         if top_ll.ndim != 3:
@@ -1311,7 +1726,7 @@ def _serialize_pair_wavelet_pyramid(
     for details_key in ("frame_0_details", "frame_1_details"):
         details = pair_pyramid[details_key]
         parts.append(struct.pack("<B", len(details)))
-        for detail in details:
+        for level_idx, detail in enumerate(details):
             for subband_key in ("lh", "hl", "hh"):
                 sub = np.asarray(
                     getattr(detail, subband_key), dtype=np.float32
@@ -1332,7 +1747,41 @@ def _serialize_pair_wavelet_pyramid(
                         f"after batch-strip; got shape {sub.shape}"
                     )
                 parts.append(struct.pack("<HHH", *sub.shape))
-                parts.append(sub.tobytes(order="C"))
+                if detail_quantization_step is None and detail_quantization_steps is None:
+                    if detail_lossless_preconditioner:
+                        payload = _encode_f32_byteshuffle_payload(sub)
+                        parts.append(
+                            struct.pack(
+                                "<BI",
+                                _DETAIL_CODEC_F32_BYTE_SHUFFLE,
+                                len(payload),
+                            )
+                        )
+                        parts.append(payload)
+                    else:
+                        parts.append(sub.tobytes(order="C"))
+                else:
+                    if detail_quantization_steps is not None:
+                        step_key = (details_key, int(level_idx), subband_key)
+                        if step_key not in detail_quantization_steps:
+                            raise ValueError(f"missing detail quantization step for {step_key}")
+                        active_detail_quantization_step = float(detail_quantization_steps[step_key])
+                    else:
+                        assert detail_quantization_step is not None
+                        active_detail_quantization_step = float(detail_quantization_step)
+                    method, payload = _encode_quantized_detail_payload(
+                        sub,
+                        quantization_step=active_detail_quantization_step,
+                    )
+                    parts.append(
+                        struct.pack(
+                            "<BfI",
+                            method,
+                            active_detail_quantization_step,
+                            len(payload),
+                        )
+                    )
+                    parts.append(payload)
     raw = b"".join(parts)
     # L32 canonical PR95-family q=11 (was q=9). Per CLAUDE.md HNeRV parity
     # L32 + canonical equation pr95_family_l32_brotli_quality_11_max_v1.
@@ -1351,10 +1800,16 @@ def _deserialize_pair_wavelet_pyramid(blob: bytes) -> dict[str, Any]:
     pos = 0
     (version,) = struct.unpack("<B", raw[pos : pos + 1])
     pos += 1
-    if version != _PAIR_BLOB_SCHEMA_VERSION:
+    if version not in {
+        _PAIR_BLOB_SCHEMA_VERSION,
+        _PAIR_BLOB_QUANTIZED_DETAIL_SCHEMA_VERSION,
+        _PAIR_BLOB_LOSSLESS_PRECONDITIONED_DETAIL_SCHEMA_VERSION,
+    }:
         raise ValueError(
-            f"pair wavelet-pyramid schema_version {version} != canonical "
-            f"{_PAIR_BLOB_SCHEMA_VERSION}"
+            f"pair wavelet-pyramid schema_version {version} not in supported "
+            f"versions {{{_PAIR_BLOB_SCHEMA_VERSION}, "
+            f"{_PAIR_BLOB_QUANTIZED_DETAIL_SCHEMA_VERSION}, "
+            f"{_PAIR_BLOB_LOSSLESS_PRECONDITIONED_DETAIL_SCHEMA_VERSION}}}"
         )
     out: dict[str, Any] = {}
     for frame_key in ("frame_0_top_ll", "frame_1_top_ll"):
@@ -1377,13 +1832,37 @@ def _deserialize_pair_wavelet_pyramid(blob: bytes) -> dict[str, Any]:
             for subband_key in ("lh", "hl", "hh"):
                 h, w, c = struct.unpack("<HHH", raw[pos : pos + 6])
                 pos += 6
-                n = h * w * c * 4
-                sub = (
-                    np.frombuffer(raw[pos : pos + n], dtype=np.float32)
-                    .reshape(h, w, c)
-                    .copy()
-                )
-                pos += n
+                shape = (int(h), int(w), int(c))
+                if version == _PAIR_BLOB_SCHEMA_VERSION:
+                    n = h * w * c * 4
+                    sub = (
+                        np.frombuffer(raw[pos : pos + n], dtype=np.float32)
+                        .reshape(h, w, c)
+                        .copy()
+                    )
+                    pos += n
+                elif version == _PAIR_BLOB_QUANTIZED_DETAIL_SCHEMA_VERSION:
+                    method, quantization_step, payload_len = struct.unpack(
+                        "<BfI",
+                        raw[pos : pos + 9],
+                    )
+                    pos += 9
+                    payload = raw[pos : pos + payload_len]
+                    pos += payload_len
+                    sub = _decode_quantized_detail_payload(
+                        method=int(method),
+                        payload=payload,
+                        shape=shape,
+                        quantization_step=float(quantization_step),
+                    ).copy()
+                else:
+                    method, payload_len = struct.unpack("<BI", raw[pos : pos + 5])
+                    pos += 5
+                    payload = raw[pos : pos + payload_len]
+                    pos += payload_len
+                    if int(method) != _DETAIL_CODEC_F32_BYTE_SHUFFLE:
+                        raise ValueError(f"unsupported lossless detail preconditioner method: {method}")
+                    sub = _decode_f32_byteshuffle_payload(payload, shape)
                 subbands[subband_key] = sub
             per_level.append(
                 WaveletDetail2D(
@@ -1706,8 +2185,105 @@ def parse_pair_blobs_from_wavelet_blob(
     return pyramids
 
 
+def summarize_wavelet_blob_detail_codecs(wavelet_blob: bytes) -> dict[str, Any]:
+    """Inspect detail codec choices without reconstructing frames."""
+
+    import brotli  # type: ignore[import-not-found]
+
+    pos = 0
+    (num_pairs,) = struct.unpack("<I", wavelet_blob[pos : pos + 4])
+    pos += 4
+    schema_counts: dict[str, int] = {}
+    method_counts: dict[str, int] = {}
+    method_payload_bytes: dict[str, int] = {}
+    total_detail_subbands = 0
+    total_detail_coefficients = 0
+    total_detail_payload_bytes = 0
+    for _pair_idx in range(num_pairs):
+        (blob_len,) = struct.unpack("<I", wavelet_blob[pos : pos + 4])
+        pos += 4
+        pair_blob = wavelet_blob[pos : pos + blob_len]
+        pos += blob_len
+        raw = brotli.decompress(pair_blob)
+        raw_pos = 0
+        (version,) = struct.unpack("<B", raw[raw_pos : raw_pos + 1])
+        raw_pos += 1
+        schema_counts[str(int(version))] = schema_counts.get(str(int(version)), 0) + 1
+        if version not in {
+            _PAIR_BLOB_SCHEMA_VERSION,
+            _PAIR_BLOB_QUANTIZED_DETAIL_SCHEMA_VERSION,
+            _PAIR_BLOB_LOSSLESS_PRECONDITIONED_DETAIL_SCHEMA_VERSION,
+        }:
+            raise ValueError(f"unsupported pair blob schema version {version}")
+        for _frame_key in ("frame_0_top_ll", "frame_1_top_ll"):
+            h, w, c = struct.unpack("<HHH", raw[raw_pos : raw_pos + 6])
+            raw_pos += 6 + int(h) * int(w) * int(c) * 4
+        for _details_key in ("frame_0_details", "frame_1_details"):
+            (num_levels,) = struct.unpack("<B", raw[raw_pos : raw_pos + 1])
+            raw_pos += 1
+            for _level_idx in range(num_levels):
+                for _subband_key in ("lh", "hl", "hh"):
+                    h, w, c = struct.unpack("<HHH", raw[raw_pos : raw_pos + 6])
+                    raw_pos += 6
+                    count = int(h) * int(w) * int(c)
+                    total_detail_coefficients += count
+                    total_detail_subbands += 1
+                    if version == _PAIR_BLOB_SCHEMA_VERSION:
+                        method_name = "float32_raw"
+                        payload_len = count * 4
+                        raw_pos += payload_len
+                    elif version == _PAIR_BLOB_QUANTIZED_DETAIL_SCHEMA_VERSION:
+                        method, _q_step, payload_len = struct.unpack(
+                            "<BfI", raw[raw_pos : raw_pos + 9]
+                        )
+                        raw_pos += 9 + int(payload_len)
+                        method_name = _DETAIL_CODEC_NAMES.get(
+                            int(method),
+                            f"unknown_{int(method)}",
+                        )
+                    else:
+                        method, payload_len = struct.unpack("<BI", raw[raw_pos : raw_pos + 5])
+                        raw_pos += 5 + int(payload_len)
+                        method_name = _DETAIL_CODEC_NAMES.get(
+                            int(method),
+                            f"unknown_{int(method)}",
+                        )
+                    method_counts[method_name] = method_counts.get(method_name, 0) + 1
+                    method_payload_bytes[method_name] = (
+                        method_payload_bytes.get(method_name, 0) + int(payload_len)
+                    )
+                    total_detail_payload_bytes += int(payload_len)
+        if raw_pos != len(raw):
+            raise ValueError(
+                f"pair wavelet-pyramid raw blob trailing bytes (pos={raw_pos} len={len(raw)})"
+            )
+    if pos != len(wavelet_blob):
+        raise ValueError(
+            f"wavelet_blob trailing bytes (pos={pos} len={len(wavelet_blob)})"
+        )
+    float32_count = method_counts.get("float32_raw", 0)
+    return {
+        "schema": "z8_wavelet_detail_codec_summary.v1",
+        "num_pairs": int(num_pairs),
+        "pair_blob_schema_counts": schema_counts,
+        "detail_codec_method_counts": method_counts,
+        "detail_codec_payload_bytes": method_payload_bytes,
+        "total_detail_subbands": int(total_detail_subbands),
+        "total_detail_coefficients": int(total_detail_coefficients),
+        "total_detail_payload_bytes": int(total_detail_payload_bytes),
+        "float32_detail_subband_count": int(float32_count),
+        "quantized_or_preconditioned_detail_subband_count": int(
+            total_detail_subbands - float32_count
+        ),
+    }
+
+
 def pack_pair_pyramids_to_wavelet_blob(
     pair_pyramids: list[dict[str, Any]],
+    *,
+    detail_quantization_step: float | None = None,
+    detail_quantization_steps: Mapping[tuple[str, int, str], float] | None = None,
+    detail_lossless_preconditioner: bool = False,
 ) -> bytes:
     """Pack per-pair wavelet pyramids into the Z8HPC1 wavelet blob.
 
@@ -1715,11 +2291,26 @@ def pack_pair_pyramids_to_wavelet_blob(
     Rate-attack materializers use it after modifying Mallat detail-band
     coefficients so they can rebuild byte-closed archives without duplicating
     the length-prefix grammar.
+
+    ``detail_quantization_step`` activates schema v2 for detail subbands:
+    deterministic i16 quantization followed by the smallest self-contained
+    payload among dense i16, zero-run literal coding, native constriction
+    range coding, and zigzag byte-plane layout. The byte-plane path is lossless
+    relative to the quantized symbols and exists to give the outer brotli pass
+    high-byte zero planes plus low-byte Laplacian structure instead of mixed
+    signed bytes.
+    ``detail_quantization_steps`` is the per-frame/level/subband variant keyed
+    by ``("frame_0_details"|"frame_1_details", level_idx, "lh"|"hl"|"hh")``.
     """
 
     wavelet_blob_parts: list[bytes] = [struct.pack("<I", len(pair_pyramids))]
     for pyramid in pair_pyramids:
-        pair_blob = _serialize_pair_wavelet_pyramid(pyramid)
+        pair_blob = _serialize_pair_wavelet_pyramid(
+            pyramid,
+            detail_quantization_step=detail_quantization_step,
+            detail_quantization_steps=detail_quantization_steps,
+            detail_lossless_preconditioner=detail_lossless_preconditioner,
+        )
         wavelet_blob_parts.append(struct.pack("<I", len(pair_blob)))
         wavelet_blob_parts.append(pair_blob)
     return b"".join(wavelet_blob_parts)
@@ -1743,4 +2334,5 @@ __all__ = [
     "parse_pair_blobs_from_wavelet_blob",
     "reconstruct_pair_rgb_from_pyramid",
     "run_canonical_quadruple_training_loop",
+    "summarize_wavelet_blob_detail_codecs",
 ]

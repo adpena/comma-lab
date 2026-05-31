@@ -52,7 +52,7 @@ from tac.substrates.z8_hierarchical_predictive_coding.archive import parse_archi
 from tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_binding import (
     _DETAIL_CODEC_NAMES,
     _encode_f32_byteshuffle_payload,
-    _encode_qi16_static_range,
+    _encode_qi16_constriction_range,
     _encode_quantized_detail_payload,
     parse_pair_blobs_from_wavelet_blob,
 )
@@ -214,14 +214,14 @@ def measure_subband(
 
         static_range_bpc: float | None = None
         if measure_static_range and n > 0:
-            # The static range coder is format-supported but gated OFF for live runtime
-            # (pure-Python loop too slow over 600 pairs). Measure it on a capped sample
-            # to quantify what the "too slow" tradeoff costs per subband.
+            # Measure the native Rust-backed constriction range path on a capped sample
+            # to quantify the residual gap between the selected live mode and a
+            # fractional-bit entropy coder.
             sample = q.astype("<i2", copy=False)
             if sample.size > static_range_sample_cap:
                 sample = sample[:static_range_sample_cap]
             try:
-                rng_bytes = len(_encode_qi16_static_range(sample.reshape(-1, 1, 1)))
+                rng_bytes = len(_encode_qi16_constriction_range(sample.reshape(-1, 1, 1)))
                 static_range_bpc = rng_bytes / sample.size
             except Exception:  # pragma: no cover - defensive; range coder is fixture-grade
                 static_range_bpc = None
@@ -341,9 +341,9 @@ def build_report(
             "headroom_definition": "current_detail_bytes - v2_codec_detail_bytes at matched distortion",
             "v2_vs_floor_gap": "how far the live per-subband mode is above the structured Shannon floor",
             "static_range_note": (
-                "static range coder is format-supported but gated OFF for live runtime "
-                "(pure-Python loop too slow over 600 pairs); static_range_bytes_per_coeff "
-                "quantifies what a native/vectorized range backend would recover per subband"
+                "static_range_bytes_per_coeff measures the native Rust-backed constriction "
+                "range coder on a capped sample; compare it against the selected live mode "
+                "to decide whether fractional-bit coding beats Brotli-aware RLE/byte-plane modes"
             ),
             "no_signal_loss": "quantization is the ONLY lossy step; all coders round-trip bijectively; LL stays float32",
         },
@@ -375,7 +375,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "--measure-static-range",
         action="store_true",
-        help="Also measure the gated static range coder (slow; capped sample).",
+        help=(
+            "Also measure the native constriction range coder on a capped sample "
+            "(flag name retained for backwards-compatible reports)."
+        ),
     )
     ap.add_argument("--static-range-sample-cap", type=int, default=20000)
     ap.add_argument("--out-json", default=None, help="Optional path to write the report JSON.")

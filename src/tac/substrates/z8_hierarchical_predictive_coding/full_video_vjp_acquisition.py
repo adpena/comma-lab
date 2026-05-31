@@ -634,6 +634,7 @@ def build_z8_full_video_mlx_replay_evaluator(
                 repo_root=repo_root,
                 emit_archive_bound_candidate_package=False,
                 emit_byte_mutation_proof=False,
+                emit_runtime_payload_bridge_report=False,
                 retain_receiver_proof_output=False,
             )
             return int(archive_zip_bytes), archive_zip_path.as_posix(), str(archive_zip_sha)
@@ -645,6 +646,7 @@ def build_z8_full_video_mlx_replay_evaluator(
                 repo_root=repo_root,
                 emit_archive_bound_candidate_package=False,
                 emit_byte_mutation_proof=False,
+                emit_runtime_payload_bridge_report=False,
                 retain_receiver_proof_output=False,
             )
             return int(archive_zip_bytes), archive_zip_path.as_posix(), str(archive_zip_sha)

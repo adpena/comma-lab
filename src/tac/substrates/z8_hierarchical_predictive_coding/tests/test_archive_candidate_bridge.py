@@ -264,6 +264,24 @@ def test_z8_archive_export_emits_runtime_tree_without_mlx_import(tmp_path: Path)
     assert "src/tac/symposium_impls/daubechies_wavelet_codec.py" in names
 
 
+def test_z8_archive_export_can_measure_rate_without_runtime_bridge_report(
+    tmp_path: Path,
+) -> None:
+    archive_zip, archive_sha, archive_bytes = export_z8hpc1_archive_bytes(
+        _archive_bytes(),
+        tmp_path,
+        emit_archive_bound_candidate_package=False,
+        emit_byte_mutation_proof=False,
+        emit_runtime_payload_bridge_report=False,
+    )
+
+    assert archive_zip.is_file()
+    assert len(archive_sha) == 64
+    assert archive_bytes == archive_zip.stat().st_size
+    assert not (tmp_path / "z8_hpc1_runtime_payload_bridge_report.json").exists()
+    assert not (tmp_path / "z8_hpc1_byte_mutation_proof.json").exists()
+
+
 def test_z8_archive_bound_package_stays_false_authority_when_receiver_blocked(
     tmp_path: Path,
     monkeypatch: Any,

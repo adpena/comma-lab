@@ -37,6 +37,7 @@ from tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_bindin
     pack_pair_pyramids_to_wavelet_blob,
     parse_pair_blobs_from_wavelet_blob,
     reconstruct_pair_rgb_from_pyramid,
+    summarize_wavelet_blob_detail_codecs,
 )
 from tac.substrates.z8_hierarchical_predictive_coding.mallat_dwt_adapter import (
     WaveletDetail2D,
@@ -81,6 +82,12 @@ class Z8JointCoefficientWaterfillConfig:
     require_full_video_surface_coverage: bool = True
     require_surface_archive_freshness: bool = True
     require_exact_full_video_gradient_reduction: bool = True
+    measure_receiver_distortion: bool = True
+    mutate_coefficients: bool = True
+    entropy_code_quantized_details: bool = False
+    entropy_detail_quantization_step: float | None = None
+    entropy_detail_quantization_steps: Mapping[str, float] | None = None
+    lossless_brotli_precondition_details: bool = False
 
     def __post_init__(self) -> None:
         for name, value in (
@@ -93,6 +100,16 @@ class Z8JointCoefficientWaterfillConfig:
             raise ValueError("quantization_step must be >= 0")
         if self.max_pairs is not None and self.max_pairs <= 0:
             raise ValueError("max_pairs must be positive when provided")
+        if self.entropy_detail_quantization_step is not None and self.entropy_detail_quantization_step <= 0.0:
+            raise ValueError("entropy_detail_quantization_step must be positive when provided")
+        if self.entropy_detail_quantization_steps is not None:
+            for key, value in self.entropy_detail_quantization_steps.items():
+                if value <= 0.0:
+                    raise ValueError(f"entropy_detail_quantization_steps[{key!r}] must be positive")
+            if self.entropy_detail_quantization_step is not None:
+                raise ValueError("entropy_detail_quantization_step and entropy_detail_quantization_steps are exclusive")
+        if self.entropy_code_quantized_details and self.lossless_brotli_precondition_details:
+            raise ValueError("entropy_code_quantized_details and lossless_brotli_precondition_details are exclusive")
 
 
 @dataclass(frozen=True)
@@ -123,6 +140,14 @@ class Z8JointCoefficientRelinearizationSearchConfig:
     require_full_video_surface_coverage: bool = True
     require_surface_archive_freshness: bool = True
     require_exact_full_video_gradient_reduction: bool = True
+    local_replay_prefilter_top_k: int | None = None
+    skip_receiver_mse_proxy_when_full_video_replay: bool = True
+    mutate_coefficients: bool = True
+    entropy_code_quantized_details: bool = False
+    entropy_detail_quantization_step: float | None = None
+    entropy_detail_quantization_steps: Mapping[str, float] | None = None
+    measure_receiver_mse_proxy: bool = True
+    lossless_brotli_precondition_details: bool = False
 
     def __post_init__(self) -> None:
         if self.max_iterations <= 0:
@@ -150,6 +175,18 @@ class Z8JointCoefficientRelinearizationSearchConfig:
             raise ValueError("interaction_penalty_weight must be >= 0")
         if self.max_pairs is not None and self.max_pairs <= 0:
             raise ValueError("max_pairs must be positive when provided")
+        if self.local_replay_prefilter_top_k is not None and self.local_replay_prefilter_top_k <= 0:
+            raise ValueError("local_replay_prefilter_top_k must be positive when provided")
+        if self.entropy_detail_quantization_step is not None and self.entropy_detail_quantization_step <= 0.0:
+            raise ValueError("entropy_detail_quantization_step must be positive when provided")
+        if self.entropy_detail_quantization_steps is not None:
+            for key, value in self.entropy_detail_quantization_steps.items():
+                if value <= 0.0:
+                    raise ValueError(f"entropy_detail_quantization_steps[{key!r}] must be positive")
+            if self.entropy_detail_quantization_step is not None:
+                raise ValueError("entropy_detail_quantization_step and entropy_detail_quantization_steps are exclusive")
+        if self.entropy_code_quantized_details and self.lossless_brotli_precondition_details:
+            raise ValueError("entropy_code_quantized_details and lossless_brotli_precondition_details are exclusive")
 
 
 def _as_bool_mask(value: Any | None) -> np.ndarray | None:
@@ -521,10 +558,8 @@ def _quantize_selected(
 def _mutate_detail(
     detail: WaveletDetail2D,
     *,
-    joint_surface: np.ndarray,
-    safe_mask: np.ndarray | None,
-    pair_idx: int,
-    frame_idx: int,
+    projected_joint: np.ndarray,
+    projected_safe: np.ndarray | None,
     level_idx: int,
     config: Z8JointCoefficientWaterfillConfig,
 ) -> tuple[WaveletDetail2D, list[dict[str, Any]]]:
@@ -532,22 +567,10 @@ def _mutate_detail(
     stats: list[dict[str, Any]] = []
     for subband_name in ("lh", "hl", "hh"):
         coeff = np.asarray(getattr(detail, subband_name), dtype=np.float32)
-        projected_joint = _project_surface_to_subband(
-            joint_surface,
-            pair_idx=pair_idx,
-            frame_idx=frame_idx,
-            subband_shape=coeff.shape,
-        )
-        projected_safe = (
-            _project_surface_to_subband(
-                safe_mask,
-                pair_idx=pair_idx,
-                frame_idx=frame_idx,
-                subband_shape=coeff.shape,
-            )
-            if safe_mask is not None
-            else None
-        )
+        if projected_joint.shape != coeff.shape:
+            raise ValueError(f"projected_joint shape {projected_joint.shape} != coeff shape {coeff.shape}")
+        if projected_safe is not None and projected_safe.shape != coeff.shape:
+            raise ValueError(f"projected_safe shape {projected_safe.shape} != coeff shape {coeff.shape}")
         next_coeff, sub_stats = _quantize_selected(
             coeff,
             projected_joint=projected_joint,
@@ -557,8 +580,6 @@ def _mutate_detail(
         mutated[subband_name] = next_coeff
         sub_stats.update(
             {
-                "pair_index": int(pair_idx),
-                "frame_index": int(frame_idx),
                 "level_index": int(level_idx),
                 "subband": subband_name,
             }
@@ -592,16 +613,34 @@ def _mutate_pair_pyramids(
         for frame_idx, details_key in enumerate(("frame_0_details", "frame_1_details")):
             next_details: list[WaveletDetail2D] = []
             for level_idx, detail in enumerate(pyramid[details_key]):
-                mutated, stats = _mutate_detail(
-                    detail,
-                    joint_surface=joint_surface,
-                    safe_mask=safe_mask,
+                first_subband = np.asarray(detail.lh, dtype=np.float32)
+                projected_joint = _project_surface_to_subband(
+                    joint_surface,
                     pair_idx=pair_idx,
                     frame_idx=frame_idx,
+                    subband_shape=first_subband.shape,
+                )
+                projected_safe = (
+                    _project_surface_to_subband(
+                        safe_mask,
+                        pair_idx=pair_idx,
+                        frame_idx=frame_idx,
+                        subband_shape=first_subband.shape,
+                    )
+                    if safe_mask is not None
+                    else None
+                )
+                mutated, stats = _mutate_detail(
+                    detail,
+                    projected_joint=projected_joint,
+                    projected_safe=projected_safe,
                     level_idx=level_idx,
                     config=config,
                 )
                 next_details.append(mutated)
+                for row in stats:
+                    row["pair_index"] = int(pair_idx)
+                    row["frame_index"] = int(frame_idx)
                 subband_stats.extend(stats)
             next_pyramid[details_key] = next_details
         out.append(next_pyramid)
@@ -619,6 +658,82 @@ def _mutate_pair_pyramids(
         "dead_zoned_fraction": float(zeroed / total) if total else 0.0,
         "subband_stats": subband_stats,
     }
+
+
+def _identity_pair_pyramid_report(
+    pair_pyramids: list[dict[str, Any]],
+    *,
+    max_pairs: int | None,
+) -> dict[str, Any]:
+    pair_limit = len(pair_pyramids) if max_pairs is None else min(len(pair_pyramids), int(max_pairs))
+    subband_stats: list[dict[str, Any]] = []
+    total = 0
+    for pair_idx, pyramid in enumerate(pair_pyramids[:pair_limit]):
+        for frame_idx, details_key in enumerate(("frame_0_details", "frame_1_details")):
+            for level_idx, detail in enumerate(pyramid[details_key]):
+                for subband_name in ("lh", "hl", "hh"):
+                    coeff = np.asarray(getattr(detail, subband_name), dtype=np.float32)
+                    count = int(coeff.size)
+                    total += count
+                    subband_stats.append(
+                        {
+                            "pair_index": int(pair_idx),
+                            "frame_index": int(frame_idx),
+                            "level_index": int(level_idx),
+                            "subband": subband_name,
+                            "water_level": None,
+                            "deadzone_abs_threshold": None,
+                            "eligible_coefficients": 0,
+                            "dead_zoned_coefficients": 0,
+                            "total_coefficients": count,
+                            "max_abs_coeff_delta": 0.0,
+                            "mean_abs_coeff_delta": 0.0,
+                        }
+                    )
+    return {
+        "pair_count": len(pair_pyramids),
+        "mutated_pair_count": 0,
+        "total_detail_coefficients": int(total),
+        "eligible_coefficients": 0,
+        "dead_zoned_coefficients": 0,
+        "eligible_fraction": 0.0,
+        "dead_zoned_fraction": 0.0,
+        "subband_stats": subband_stats,
+    }
+
+
+def _parse_entropy_detail_step_key(key: str) -> tuple[str, int, str]:
+    parts = str(key).split(":")
+    if len(parts) != 3:
+        raise ValueError(
+            "entropy detail step keys must be frame_0_details|frame_1_details:level:lh|hl|hh"
+        )
+    details_key, level_text, subband = parts
+    if details_key not in {"frame_0_details", "frame_1_details"}:
+        raise ValueError(f"unsupported entropy detail frame key: {details_key}")
+    if subband not in {"lh", "hl", "hh"}:
+        raise ValueError(f"unsupported entropy detail subband key: {subband}")
+    try:
+        level_idx = int(level_text)
+    except ValueError as exc:
+        raise ValueError(f"entropy detail level must be an integer: {level_text}") from exc
+    if level_idx < 0:
+        raise ValueError("entropy detail level must be non-negative")
+    return (details_key, level_idx, subband)
+
+
+def _normalize_entropy_detail_steps(
+    raw: Mapping[str, float] | None,
+) -> dict[tuple[str, int, str], float] | None:
+    if raw is None:
+        return None
+    out: dict[tuple[str, int, str], float] = {}
+    for key, value in raw.items():
+        step = float(value)
+        if step <= 0.0 or not np.isfinite(step):
+            raise ValueError(f"entropy detail step for {key!r} must be finite and positive")
+        out[_parse_entropy_detail_step_key(str(key))] = step
+    return out
 
 
 def _small_receiver_tensor(archive_bytes: bytes) -> np.ndarray:
@@ -650,6 +765,17 @@ def _distortion_report(before_archive: bytes, after_archive: bytes) -> dict[str,
         "mse": float(np.mean(delta * delta, dtype=np.float64)) if delta.size else 0.0,
         "mae": float(np.mean(np.abs(delta), dtype=np.float64)) if delta.size else 0.0,
         "max_abs_delta": float(np.max(np.abs(delta))) if delta.size else 0.0,
+    }
+
+
+def _skipped_distortion_report(reason: str) -> dict[str, Any]:
+    return {
+        "small_receiver_distortion_measured": False,
+        "receiver_tensor_values": None,
+        "mse": 0.0,
+        "mae": None,
+        "max_abs_delta": None,
+        "blocker": reason,
     }
 
 
@@ -738,13 +864,38 @@ def apply_joint_p18_p19_deadzone_to_z8_archive(
     ):
         raise ValueError(",".join(str(item) for item in gradient_reduction_report["blockers"]))
     pair_pyramids = parse_pair_blobs_from_wavelet_blob(arc.wavelet_coeffs_blob)
-    mutated_pyramids, coeff_report = _mutate_pair_pyramids(
-        pair_pyramids,
-        joint_surface=joint_surface,
-        safe_mask=safe_mask,
-        config=cfg,
+    if cfg.mutate_coefficients:
+        mutated_pyramids, coeff_report = _mutate_pair_pyramids(
+            pair_pyramids,
+            joint_surface=joint_surface,
+            safe_mask=safe_mask,
+            config=cfg,
+        )
+    else:
+        mutated_pyramids = pair_pyramids
+        coeff_report = _identity_pair_pyramid_report(
+            pair_pyramids,
+            max_pairs=cfg.max_pairs,
+        )
+    entropy_detail_steps = _normalize_entropy_detail_steps(cfg.entropy_detail_quantization_steps)
+    entropy_detail_step = (
+        None
+        if entropy_detail_steps is not None
+        else (
+            float(cfg.entropy_detail_quantization_step)
+            if cfg.entropy_detail_quantization_step is not None
+            else float(cfg.quantization_step)
+        )
     )
-    mutated_wavelet_blob = pack_pair_pyramids_to_wavelet_blob(mutated_pyramids)
+    if not cfg.entropy_code_quantized_details:
+        entropy_detail_step = None
+        entropy_detail_steps = None
+    mutated_wavelet_blob = pack_pair_pyramids_to_wavelet_blob(
+        mutated_pyramids,
+        detail_quantization_step=entropy_detail_step,
+        detail_quantization_steps=entropy_detail_steps,
+        detail_lossless_preconditioner=bool(cfg.lossless_brotli_precondition_details),
+    )
     mutated_archive = pack_archive(
         arc.decoder_state_dict,
         arc.per_level_category_indices,
@@ -760,7 +911,12 @@ def apply_joint_p18_p19_deadzone_to_z8_archive(
                 "coefficient_deadzone_quantile": float(cfg.coefficient_deadzone_quantile),
                 "quantization_step": float(cfg.quantization_step),
                 "pose_null_required": bool(cfg.pose_null_required),
+                "mutate_coefficients": bool(cfg.mutate_coefficients),
                 "require_full_video_surface_coverage": bool(cfg.require_full_video_surface_coverage),
+                "entropy_code_quantized_details": bool(cfg.entropy_code_quantized_details),
+                "entropy_detail_quantization_step": entropy_detail_step,
+                "entropy_detail_quantization_steps": dict(cfg.entropy_detail_quantization_steps or {}),
+                "lossless_brotli_precondition_details": bool(cfg.lossless_brotli_precondition_details),
             },
         },
         num_levels=arc.num_levels,
@@ -775,6 +931,8 @@ def apply_joint_p18_p19_deadzone_to_z8_archive(
     before_wavelet_len = len(arc.wavelet_coeffs_blob)
     after_arc = parse_archive(mutated_archive)
     after_wavelet_len = len(after_arc.wavelet_coeffs_blob)
+    before_detail_codec_summary = summarize_wavelet_blob_detail_codecs(arc.wavelet_coeffs_blob)
+    after_detail_codec_summary = summarize_wavelet_blob_detail_codecs(after_arc.wavelet_coeffs_blob)
     before_archive_len = len(archive_bytes)
     after_archive_len = len(mutated_archive)
     rate_report = {
@@ -786,8 +944,18 @@ def apply_joint_p18_p19_deadzone_to_z8_archive(
         "after_wavelet_blob_bytes": after_wavelet_len,
         "wavelet_blob_byte_delta": after_wavelet_len - before_wavelet_len,
         "wavelet_blob_rate_ratio": (float(after_wavelet_len / before_wavelet_len) if before_wavelet_len else 1.0),
+        "entropy_code_quantized_details": bool(cfg.entropy_code_quantized_details),
+        "entropy_detail_quantization_step": entropy_detail_step,
+        "entropy_detail_quantization_steps": dict(cfg.entropy_detail_quantization_steps or {}),
+        "lossless_brotli_precondition_details": bool(cfg.lossless_brotli_precondition_details),
+        "mutate_coefficients": bool(cfg.mutate_coefficients),
+        "before_detail_codec_summary": before_detail_codec_summary,
+        "after_detail_codec_summary": after_detail_codec_summary,
     }
-    distortion = _distortion_report(archive_bytes, mutated_archive)
+    if cfg.measure_receiver_distortion:
+        distortion = _distortion_report(archive_bytes, mutated_archive)
+    else:
+        distortion = _skipped_distortion_report("receiver_mse_proxy_skipped_by_full_video_local_replay")
     return {
         "schema": Z8_JOINT_COEFFICIENT_WATERFILL_SCHEMA,
         "role": Z8_JOINT_COEFFICIENT_RATE_ATTACK_ROLE,
@@ -840,6 +1008,7 @@ def materialize_joint_p18_p19_deadzone_candidate(
             repo_root=repo_root,
             emit_archive_bound_candidate_package=cfg.emit_receiver_proof,
             emit_byte_mutation_proof=False,
+            emit_runtime_payload_bridge_report=cfg.emit_receiver_proof,
             retain_receiver_proof_output=False,
         )
     manifest = {
@@ -908,6 +1077,11 @@ def run_joint_p18_p19_relinearized_deadzone_search(
         seen_surface_digests.add(digest)
 
         iteration_candidates: list[dict[str, Any]] = []
+        measure_receiver_proxy = bool(cfg.measure_receiver_mse_proxy) and not (
+            local_replay_evaluator is not None
+            and cfg.skip_receiver_mse_proxy_when_full_video_replay
+            and cfg.max_cumulative_mse is None
+        )
         best: dict[str, Any] | None = None
         for joint_q in cfg.joint_weight_quantiles:
             for deadzone_q in cfg.coefficient_deadzone_quantiles:
@@ -925,6 +1099,12 @@ def run_joint_p18_p19_relinearized_deadzone_search(
                         require_exact_full_video_gradient_reduction=bool(
                             cfg.require_exact_full_video_gradient_reduction
                         ),
+                        measure_receiver_distortion=measure_receiver_proxy,
+                        mutate_coefficients=bool(cfg.mutate_coefficients),
+                        entropy_code_quantized_details=bool(cfg.entropy_code_quantized_details),
+                        entropy_detail_quantization_step=cfg.entropy_detail_quantization_step,
+                        entropy_detail_quantization_steps=cfg.entropy_detail_quantization_steps,
+                        lossless_brotli_precondition_details=bool(cfg.lossless_brotli_precondition_details),
                     )
                     result = apply_joint_p18_p19_deadzone_to_z8_archive(
                         current,
@@ -932,9 +1112,17 @@ def run_joint_p18_p19_relinearized_deadzone_search(
                         config=waterfill_cfg,
                     )
                     mutated = bytes(result["mutated_archive_bytes"])
-                    cumulative_distortion = _distortion_report(original, mutated)
+                    if measure_receiver_proxy:
+                        cumulative_distortion = _distortion_report(original, mutated)
+                    else:
+                        cumulative_distortion = _skipped_distortion_report(
+                            "cumulative_receiver_mse_proxy_skipped_by_full_video_local_replay"
+                        )
                     cumulative_mse = float(cumulative_distortion.get("mse", float("inf")))
-                    guard_ok = cfg.max_cumulative_mse is None or cumulative_mse <= float(cfg.max_cumulative_mse)
+                    guard_ok = cfg.max_cumulative_mse is None or (
+                        cumulative_distortion.get("small_receiver_distortion_measured") is True
+                        and cumulative_mse <= float(cfg.max_cumulative_mse)
+                    )
                     candidate_proxy_objective = _candidate_proxy_objective(
                         result=result,
                         cumulative_distortion=cumulative_distortion,
@@ -943,30 +1131,14 @@ def run_joint_p18_p19_relinearized_deadzone_search(
                     )
                     objective = candidate_proxy_objective
                     objective_source = "receiver_mse_rate_proxy"
-                    local_replay_report: dict[str, Any] | None = None
-                    local_replay_blockers: list[str] = []
-                    if local_replay_evaluator is not None:
-                        local_replay_report = dict(
-                            local_replay_evaluator(
-                                candidate_archive_bytes=mutated,
-                                source_archive_bytes=original,
-                                current_archive_bytes=current,
-                                iteration_index=iteration_index,
-                                candidate_index=len(iteration_candidates),
-                                candidate_metadata={
-                                    "joint_weight_quantile": float(joint_q),
-                                    "coefficient_deadzone_quantile": float(deadzone_q),
-                                    "quantization_step": float(q_step),
-                                    "mutated_archive_sha256": result["mutated_archive_sha256"],
-                                },
-                            )
-                        )
-                        local_replay_blockers = _local_replay_blockers(local_replay_report)
-                        local_objective = _local_replay_objective(local_replay_report)
-                        if local_objective is not None:
-                            objective = local_objective
-                            objective_source = "full_video_local_replay"
-                        guard_ok = bool(guard_ok and not local_replay_blockers)
+                    if local_replay_evaluator is not None and not measure_receiver_proxy:
+                        objective_source = "rate_proxy_prefilter_before_full_video_local_replay"
+                    candidate_metadata = {
+                        "joint_weight_quantile": float(joint_q),
+                        "coefficient_deadzone_quantile": float(deadzone_q),
+                        "quantization_step": float(q_step),
+                        "mutated_archive_sha256": result["mutated_archive_sha256"],
+                    }
                     row = {
                         "schema": "z8_joint_p18_p19_relinearized_candidate.v1",
                         "iteration_index": int(iteration_index),
@@ -979,9 +1151,11 @@ def run_joint_p18_p19_relinearized_deadzone_search(
                         "objective_source": objective_source,
                         "guard_ok": bool(guard_ok),
                         "full_video_local_replay_required": local_replay_evaluator is not None,
-                        "full_video_local_replay_report": local_replay_report,
-                        "full_video_local_replay_blockers": local_replay_blockers,
-                        "hard_archive_projection_replay_executed": local_replay_evaluator is not None,
+                        "full_video_local_replay_prefilter_top_k": cfg.local_replay_prefilter_top_k,
+                        "full_video_local_replay_report": None,
+                        "full_video_local_replay_blockers": [],
+                        "hard_archive_projection_replay_executed": False,
+                        "receiver_mse_proxy_measured": bool(measure_receiver_proxy),
                         "rate_report": result["rate_report"],
                         "incremental_distortion_report": result["distortion_report"],
                         "cumulative_distortion_report": cumulative_distortion,
@@ -992,12 +1166,59 @@ def run_joint_p18_p19_relinearized_deadzone_search(
                             key: value for key, value in result["coefficient_report"].items() if key != "subband_stats"
                         },
                         "mutated_archive_sha256": result["mutated_archive_sha256"],
+                        "_candidate_metadata": candidate_metadata,
+                        "_mutated_archive_bytes": mutated,
                         **FALSE_AUTHORITY,
                     }
                     iteration_candidates.append(row)
-                    all_candidates.append(row)
-                    if guard_ok and (best is None or objective < best["proxy_objective"]):
-                        best = {**row, "_mutated_archive_bytes": mutated}
+        if local_replay_evaluator is not None:
+            replay_candidates = [
+                (idx, row)
+                for idx, row in enumerate(iteration_candidates)
+                if row.get("guard_ok") is True
+            ]
+            if cfg.local_replay_prefilter_top_k is None:
+                replay_indices = {idx for idx, _row in replay_candidates}
+            else:
+                replay_indices = {
+                    idx
+                    for idx, _row in sorted(
+                        replay_candidates,
+                        key=lambda item: float(item[1].get("receiver_proxy_objective", float("inf"))),
+                    )[: int(cfg.local_replay_prefilter_top_k)]
+                }
+            for idx, row in enumerate(iteration_candidates):
+                if idx not in replay_indices:
+                    row["full_video_local_replay_blockers"] = [
+                        "full_video_local_replay_skipped_by_prefilter"
+                    ]
+                    row["guard_ok"] = False
+                    continue
+                local_replay_report = dict(
+                    local_replay_evaluator(
+                        candidate_archive_bytes=bytes(row["_mutated_archive_bytes"]),
+                        source_archive_bytes=original,
+                        current_archive_bytes=current,
+                        iteration_index=iteration_index,
+                        candidate_index=idx,
+                        candidate_metadata=dict(row["_candidate_metadata"]),
+                    )
+                )
+                local_replay_blockers = _local_replay_blockers(local_replay_report)
+                local_objective = _local_replay_objective(local_replay_report)
+                if local_objective is not None:
+                    row["proxy_objective"] = float(local_objective)
+                    row["objective_source"] = "full_video_local_replay"
+                row["full_video_local_replay_report"] = local_replay_report
+                row["full_video_local_replay_blockers"] = local_replay_blockers
+                row["hard_archive_projection_replay_executed"] = True
+                row["guard_ok"] = bool(row["guard_ok"] and not local_replay_blockers)
+        for row in iteration_candidates:
+            mutated = bytes(row.pop("_mutated_archive_bytes"))
+            row.pop("_candidate_metadata", None)
+            all_candidates.append(row)
+            if row.get("guard_ok") is True and (best is None or row["proxy_objective"] < best["proxy_objective"]):
+                best = {**row, "_mutated_archive_bytes": mutated}
         if best is None:
             final_blocker = f"all_candidates_failed_cumulative_distortion_guard_at_iteration_{iteration_index}"
             break
@@ -1076,6 +1297,7 @@ def materialize_joint_p18_p19_relinearized_deadzone_search(
             repo_root=repo_root,
             emit_archive_bound_candidate_package=cfg.emit_receiver_proof,
             emit_byte_mutation_proof=False,
+            emit_runtime_payload_bridge_report=cfg.emit_receiver_proof,
             retain_receiver_proof_output=False,
         )
 

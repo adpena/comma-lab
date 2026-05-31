@@ -268,6 +268,7 @@ def export_z8hpc1_archive_bytes(
     repo_root: str | Path | None = None,
     emit_archive_bound_candidate_package: bool = True,
     emit_byte_mutation_proof: bool = True,
+    emit_runtime_payload_bridge_report: bool = True,
     retain_receiver_proof_output: bool = False,
     mlx_triage_argv: Sequence[str] | None = None,
 ) -> tuple[Path, str, int]:
@@ -296,9 +297,13 @@ def export_z8hpc1_archive_bytes(
     runtime_payload_bridge_report_path = (
         out_dir / "z8_hpc1_runtime_payload_bridge_report.json"
     )
-    runtime_payload_bridge_report = build_runtime_payload_bridge_report(
-        bin_bytes,
-        report_out=runtime_payload_bridge_report_path,
+    runtime_payload_bridge_report = (
+        build_runtime_payload_bridge_report(
+            bin_bytes,
+            report_out=runtime_payload_bridge_report_path,
+        )
+        if emit_runtime_payload_bridge_report
+        else None
     )
     if emit_byte_mutation_proof:
         byte_mutation_proof = probe_z8_archive_distinguishing_feature(
@@ -317,9 +322,10 @@ def export_z8hpc1_archive_bytes(
         ]
         if byte_mutation_proof is not None:
             input_artifacts.append(_repo_relative(byte_mutation_proof_path, root))
-        input_artifacts.append(
-            _repo_relative(runtime_payload_bridge_report_path, root)
-        )
+        if runtime_payload_bridge_report is not None:
+            input_artifacts.append(
+                _repo_relative(runtime_payload_bridge_report_path, root)
+            )
         emit_archive_bound_candidate_runtime_package(
             adapter_id=Z8_HPC_ARCHIVE_BOUND_ADAPTER_ID,
             candidate_family=Z8_HPC_ARCHIVE_CANDIDATE_FAMILY,
@@ -361,6 +367,7 @@ def export_z8hpc1_archive_from_canonical_quadruple(
     repo_root: str | Path | None = None,
     emit_archive_bound_candidate_package: bool = True,
     emit_byte_mutation_proof: bool = True,
+    emit_runtime_payload_bridge_report: bool = True,
     retain_receiver_proof_output: bool = False,
     mlx_triage_argv: Sequence[str] | None = None,
 ) -> tuple[Path, str, int]:
@@ -377,6 +384,7 @@ def export_z8hpc1_archive_from_canonical_quadruple(
         repo_root=repo_root,
         emit_archive_bound_candidate_package=emit_archive_bound_candidate_package,
         emit_byte_mutation_proof=emit_byte_mutation_proof,
+        emit_runtime_payload_bridge_report=emit_runtime_payload_bridge_report,
         retain_receiver_proof_output=retain_receiver_proof_output,
         mlx_triage_argv=mlx_triage_argv,
     )

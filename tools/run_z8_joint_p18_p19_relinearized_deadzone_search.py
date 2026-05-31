@@ -22,6 +22,16 @@ def _float_tuple(raw: str) -> tuple[float, ...]:
     return values
 
 
+def _load_entropy_detail_steps(path: Path | None) -> dict[str, float] | None:
+    if path is None:
+        return None
+    payload = json.loads(path.read_text())
+    raw_steps = payload.get("entropy_detail_quantization_steps", payload)
+    if not isinstance(raw_steps, dict):
+        raise ValueError("entropy detail step JSON must be an object or contain entropy_detail_quantization_steps")
+    return {str(key): float(value) for key, value in raw_steps.items()}
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--archive-bin", required=True, type=Path)
@@ -54,6 +64,28 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--rate-weight", type=float, default=25.0)
     parser.add_argument("--distortion-weight", type=float, default=10_000.0)
     parser.add_argument("--interaction-penalty-weight", type=float, default=10_000.0)
+    parser.add_argument(
+        "--local-replay-prefilter-top-k",
+        type=int,
+        default=None,
+        help=(
+            "When MLX full-video replay is enabled, replay only the top-k "
+            "receiver/rate proxy rows and mark skipped rows blocked."
+        ),
+    )
+    parser.add_argument(
+        "--measure-receiver-mse-proxy-with-mlx-replay",
+        action="store_true",
+        help=(
+            "Keep the expensive receiver-MSE proxy even when full-video MLX "
+            "replay will be the accept/reject authority."
+        ),
+    )
+    parser.add_argument(
+        "--skip-receiver-mse-proxy",
+        action="store_true",
+        help="Skip archive reconstruction MSE proxy; useful for rate-only entropy headroom probes.",
+    )
     parser.add_argument("--allow-reused-surface", action="store_true")
     parser.add_argument(
         "--allow-stale-surfaces",
@@ -72,6 +104,46 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--no-archive-zip", action="store_true")
     parser.add_argument("--emit-receiver-proof", action="store_true")
+    parser.add_argument(
+        "--no-mutate-coefficients",
+        action="store_true",
+        help=(
+            "Run storage-layout-only variants. Useful for lossless "
+            "Brotli preconditioning probes where coefficient signal must not change."
+        ),
+    )
+    parser.add_argument(
+        "--entropy-code-quantized-details",
+        action="store_true",
+        help="Store Z8 wavelet detail bands with the v2 quantized entropy codec.",
+    )
+    parser.add_argument(
+        "--entropy-detail-quantization-step",
+        type=float,
+        default=None,
+        help=(
+            "Storage quantization step for the v2 detail entropy codec. "
+            "Defaults to the candidate quantization step when omitted."
+        ),
+    )
+    parser.add_argument(
+        "--entropy-detail-quantization-steps-json",
+        type=Path,
+        default=None,
+        help=(
+            "JSON object or schedule report containing entropy_detail_quantization_steps "
+            "keyed as frame_0_details:level:lh. Mutually exclusive with "
+            "--entropy-detail-quantization-step."
+        ),
+    )
+    parser.add_argument(
+        "--lossless-brotli-precondition-details",
+        action="store_true",
+        help=(
+            "Store float32 detail bands in byte-shuffled planes before Brotli. "
+            "This is reversible and preserves coefficient signal exactly."
+        ),
+    )
     parser.add_argument(
         "--mlx-reference-pairs-npy",
         type=Path,
@@ -106,11 +178,12 @@ def _parse_hw(text: str) -> tuple[int, int]:
 def main() -> int:
     args = build_parser().parse_args()
     surfaces = [load_joint_p18_p19_surface_file(path) for path in args.surface]
+    entropy_detail_quantization_steps = _load_entropy_detail_steps(
+        args.entropy_detail_quantization_steps_json
+    )
     surface_provider = None
     local_replay_evaluator = None
     if args.mlx_reference_pairs_npy:
-        if surfaces:
-            raise SystemExit("--surface cannot be combined with --mlx-reference-pairs-npy")
         import numpy as np
 
         from tac.local_acceleration.mlx_scorer_adapters import (
@@ -124,18 +197,19 @@ def main() -> int:
 
         reference_pairs = np.load(args.mlx_reference_pairs_npy)
         mlx_scorer = load_mlx_distortion_scorer_adapter_from_upstream(args.upstream_dir, device="cpu")
-        surface_provider = build_z8_full_video_mlx_surface_provider(
-            reference_pairs_rgb=reference_pairs,
-            mlx_scorer=mlx_scorer,
-            acquisition_config=Z8FullVideoVjpAcquisitionConfig(
-                pair_chunk_size=int(args.mlx_pair_chunk_size),
-            ),
-            rgb_value_range=float(args.mlx_rgb_value_range),
-            scorer_hw=_parse_hw(args.mlx_scorer_hw),
-            seg_margin_delta=float(args.mlx_seg_margin_delta),
-            pose_null_threshold=float(args.mlx_pose_null_threshold),
-            artifact_dir=args.mlx_artifact_dir,
-        )
+        if not surfaces:
+            surface_provider = build_z8_full_video_mlx_surface_provider(
+                reference_pairs_rgb=reference_pairs,
+                mlx_scorer=mlx_scorer,
+                acquisition_config=Z8FullVideoVjpAcquisitionConfig(
+                    pair_chunk_size=int(args.mlx_pair_chunk_size),
+                ),
+                rgb_value_range=float(args.mlx_rgb_value_range),
+                scorer_hw=_parse_hw(args.mlx_scorer_hw),
+                seg_margin_delta=float(args.mlx_seg_margin_delta),
+                pose_null_threshold=float(args.mlx_pose_null_threshold),
+                artifact_dir=args.mlx_artifact_dir,
+            )
         local_replay_evaluator = build_z8_full_video_mlx_replay_evaluator(
             reference_pairs_rgb=reference_pairs,
             mlx_scorer=mlx_scorer,
@@ -164,6 +238,14 @@ def main() -> int:
         emit_receiver_proof=args.emit_receiver_proof,
         require_full_video_surface_coverage=not args.allow_broadcast_surface,
         require_surface_archive_freshness=not args.allow_stale_surfaces,
+        local_replay_prefilter_top_k=args.local_replay_prefilter_top_k,
+        skip_receiver_mse_proxy_when_full_video_replay=not args.measure_receiver_mse_proxy_with_mlx_replay,
+        mutate_coefficients=not args.no_mutate_coefficients,
+        entropy_code_quantized_details=bool(args.entropy_code_quantized_details),
+        entropy_detail_quantization_step=args.entropy_detail_quantization_step,
+        entropy_detail_quantization_steps=entropy_detail_quantization_steps,
+        measure_receiver_mse_proxy=not args.skip_receiver_mse_proxy,
+        lossless_brotli_precondition_details=bool(args.lossless_brotli_precondition_details),
     )
     manifest = materialize_joint_p18_p19_relinearized_deadzone_search(
         args.archive_bin.read_bytes(),

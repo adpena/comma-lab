@@ -12,9 +12,14 @@ import pytest
 
 from tac.substrates.z8_hierarchical_predictive_coding.archive import parse_archive
 from tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_binding import (
+    _DETAIL_CODEC_QI16_CONSTRICTION_RANGE,
+    _decode_quantized_detail_payload,
+    _encode_qi16_constriction_range,
     build_canonical_quadruple_binding_from_z8_config,
     build_z8hpc1_archive_bytes_from_canonical_quadruple,
+    pack_pair_pyramids_to_wavelet_blob,
     parse_pair_blobs_from_wavelet_blob,
+    summarize_wavelet_blob_detail_codecs,
 )
 from tac.substrates.z8_hierarchical_predictive_coding.joint_coefficient_waterfill import (
     FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION,
@@ -145,6 +150,205 @@ def test_joint_p18_p19_deadzone_materializer_emits_byte_closed_archive(
     assert manifest["exact_axis_blocker"] == ("receiver_proof_and_contest_cpu_cuda_eval_not_executed")
     assert manifest["score_claim"] is False
     assert manifest["ready_for_exact_eval_dispatch"] is False
+
+
+def test_quantized_detail_entropy_codec_roundtrips_pair_pyramids() -> None:
+    archive_bytes = _archive_bytes()
+    original = parse_archive(archive_bytes)
+    pyramids = parse_pair_blobs_from_wavelet_blob(original.wavelet_coeffs_blob)
+
+    quantized_blob = pack_pair_pyramids_to_wavelet_blob(
+        pyramids,
+        detail_quantization_step=0.25,
+    )
+    decoded = parse_pair_blobs_from_wavelet_blob(quantized_blob)
+    summary = summarize_wavelet_blob_detail_codecs(quantized_blob)
+
+    assert len(decoded) == len(pyramids)
+    assert quantized_blob != original.wavelet_coeffs_blob
+    assert decoded[0]["frame_0_top_ll"].shape == pyramids[0]["frame_0_top_ll"].shape
+    assert decoded[0]["frame_0_details"][0].lh.shape == pyramids[0]["frame_0_details"][0].lh.shape
+    assert decoded[0]["frame_1_details"][0].hh.dtype == np.float32
+    assert summary["float32_detail_subband_count"] == 0
+    assert summary["quantized_or_preconditioned_detail_subband_count"] > 0
+
+
+def _all_detail_step_keys(pair_pyramid: dict[str, Any], step: float) -> dict[str, float]:
+    steps: dict[str, float] = {}
+    for details_key in ("frame_0_details", "frame_1_details"):
+        for level_idx, _detail in enumerate(pair_pyramid[details_key]):
+            for subband in ("lh", "hl", "hh"):
+                steps[f"{details_key}:{level_idx}:{subband}"] = float(step)
+    return steps
+
+
+def test_per_subband_detail_quantization_steps_do_not_fall_back_to_float32() -> None:
+    archive_bytes = _archive_bytes()
+    original = parse_archive(archive_bytes)
+    pyramids = parse_pair_blobs_from_wavelet_blob(original.wavelet_coeffs_blob)
+    step_map = {
+        (details_key, int(level_idx), subband): step
+        for raw_key, step in _all_detail_step_keys(pyramids[0], 0.25).items()
+        for details_key, level_idx, subband in [raw_key.split(":")]
+    }
+
+    quantized_blob = pack_pair_pyramids_to_wavelet_blob(
+        pyramids,
+        detail_quantization_steps=step_map,
+    )
+    summary = summarize_wavelet_blob_detail_codecs(quantized_blob)
+
+    assert summary["float32_detail_subband_count"] == 0
+    assert summary["quantized_or_preconditioned_detail_subband_count"] == (
+        summary["total_detail_subbands"]
+    )
+
+
+def test_native_constriction_range_detail_codec_roundtrips_i16_symbols() -> None:
+    values = np.array(
+        [-17, 0, 0, 2, 2, 2, 9, -17, 300, -301, 0, 2],
+        dtype=np.int16,
+    ).reshape(2, 2, 3)
+
+    payload = _encode_qi16_constriction_range(values)
+    decoded = _decode_quantized_detail_payload(
+        method=_DETAIL_CODEC_QI16_CONSTRICTION_RANGE,
+        payload=payload,
+        shape=values.shape,
+        quantization_step=0.25,
+    )
+
+    np.testing.assert_array_equal(decoded, values.astype(np.float32) * 0.25)
+
+
+def test_quantized_detail_selector_roundtrips_sparse_streams() -> None:
+    coeff = np.zeros((64, 64, 1), dtype=np.float32)
+    coeff.reshape(-1)[::97] = 0.25
+
+    from tac.substrates.z8_hierarchical_predictive_coding import (
+        canonical_quadruple_binding as cqb,
+    )
+
+    method, payload = cqb._encode_quantized_detail_payload(
+        coeff,
+        quantization_step=0.25,
+    )
+
+    assert method in cqb._DETAIL_CODEC_NAMES
+    decoded = _decode_quantized_detail_payload(
+        method=method,
+        payload=payload,
+        shape=coeff.shape,
+        quantization_step=0.25,
+    )
+    np.testing.assert_array_equal(decoded, coeff)
+
+
+def test_lossless_brotli_preconditioned_detail_codec_roundtrips_exactly() -> None:
+    archive_bytes = _archive_bytes()
+    original = parse_archive(archive_bytes)
+    pyramids = parse_pair_blobs_from_wavelet_blob(original.wavelet_coeffs_blob)
+
+    preconditioned_blob = pack_pair_pyramids_to_wavelet_blob(
+        pyramids,
+        detail_lossless_preconditioner=True,
+    )
+    decoded = parse_pair_blobs_from_wavelet_blob(preconditioned_blob)
+    summary = summarize_wavelet_blob_detail_codecs(preconditioned_blob)
+
+    assert preconditioned_blob != original.wavelet_coeffs_blob
+    assert summary["detail_codec_method_counts"] == {
+        "f32_byte_shuffle": summary["total_detail_subbands"]
+    }
+    np.testing.assert_array_equal(decoded[0]["frame_0_top_ll"], pyramids[0]["frame_0_top_ll"])
+    np.testing.assert_array_equal(decoded[0]["frame_1_top_ll"], pyramids[0]["frame_1_top_ll"])
+    for details_key in ("frame_0_details", "frame_1_details"):
+        for got, expected in zip(decoded[0][details_key], pyramids[0][details_key], strict=True):
+            np.testing.assert_array_equal(got.lh, expected.lh)
+            np.testing.assert_array_equal(got.hl, expected.hl)
+            np.testing.assert_array_equal(got.hh, expected.hh)
+
+
+def test_joint_p18_p19_entropy_codes_quantized_surviving_details() -> None:
+    archive_bytes = _archive_bytes()
+    joint_weight = np.zeros((1, 2, 16, 16, 3), dtype=np.float32)
+    pose_null_mask = np.ones_like(joint_weight, dtype=bool)
+
+    result = apply_joint_p18_p19_deadzone_to_z8_archive(
+        archive_bytes,
+        joint_weight=_surface_for_archive(archive_bytes, joint_weight, pose_null_mask),
+        config=Z8JointCoefficientWaterfillConfig(
+            joint_weight_quantile=1.0,
+            coefficient_deadzone_quantile=1.0,
+            quantization_step=0.25,
+            entropy_code_quantized_details=True,
+            entropy_detail_quantization_step=0.25,
+        ),
+    )
+
+    assert result["rate_report"]["entropy_code_quantized_details"] is True
+    assert result["rate_report"]["entropy_detail_quantization_step"] == 0.25
+    assert result["rate_report"]["after_detail_codec_summary"]["float32_detail_subband_count"] == 0
+    assert result["coefficient_report"]["dead_zoned_coefficients"] > 0
+    assert result["rate_report"]["after_wavelet_blob_bytes"] < result["rate_report"]["before_wavelet_blob_bytes"]
+    parsed = parse_archive(result["mutated_archive_bytes"])
+    decoded = parse_pair_blobs_from_wavelet_blob(parsed.wavelet_coeffs_blob)
+    assert decoded[0]["frame_0_details"][0].lh.shape == (8, 8, 3)
+
+
+def test_joint_p18_p19_accepts_per_subband_entropy_steps_without_global_step() -> None:
+    archive_bytes = _archive_bytes()
+    original = parse_archive(archive_bytes)
+    pyramids = parse_pair_blobs_from_wavelet_blob(original.wavelet_coeffs_blob)
+    joint_weight = np.zeros((1, 2, 16, 16, 3), dtype=np.float32)
+    pose_null_mask = np.ones_like(joint_weight, dtype=bool)
+
+    result = apply_joint_p18_p19_deadzone_to_z8_archive(
+        archive_bytes,
+        joint_weight=_surface_for_archive(archive_bytes, joint_weight, pose_null_mask),
+        config=Z8JointCoefficientWaterfillConfig(
+            joint_weight_quantile=1.0,
+            coefficient_deadzone_quantile=1.0,
+            quantization_step=0.25,
+            entropy_code_quantized_details=True,
+            entropy_detail_quantization_steps=_all_detail_step_keys(pyramids[0], 0.25),
+        ),
+    )
+
+    assert result["rate_report"]["entropy_detail_quantization_step"] is None
+    assert result["rate_report"]["entropy_detail_quantization_steps"]
+    assert result["rate_report"]["after_detail_codec_summary"]["float32_detail_subband_count"] == 0
+
+
+def test_joint_p18_p19_can_emit_lossless_brotli_preconditioned_details() -> None:
+    archive_bytes = _archive_bytes()
+    joint_weight = np.ones((1, 2, 16, 16, 3), dtype=np.float32)
+    pose_null_mask = np.zeros_like(joint_weight, dtype=bool)
+
+    result = apply_joint_p18_p19_deadzone_to_z8_archive(
+        archive_bytes,
+        joint_weight=_surface_for_archive(archive_bytes, joint_weight, pose_null_mask),
+        config=Z8JointCoefficientWaterfillConfig(
+            joint_weight_quantile=0.0,
+            coefficient_deadzone_quantile=0.0,
+            quantization_step=0.0,
+            mutate_coefficients=False,
+            lossless_brotli_precondition_details=True,
+        ),
+    )
+
+    assert result["coefficient_report"]["mutated_pair_count"] == 0
+    assert result["coefficient_report"]["dead_zoned_coefficients"] == 0
+    assert result["rate_report"]["mutate_coefficients"] is False
+    assert result["rate_report"]["lossless_brotli_precondition_details"] is True
+    assert result["rate_report"]["entropy_code_quantized_details"] is False
+    assert result["rate_report"]["after_detail_codec_summary"]["detail_codec_method_counts"] == {
+        "f32_byte_shuffle": result["rate_report"]["after_detail_codec_summary"]["total_detail_subbands"]
+    }
+    assert result["distortion_report"]["max_abs_delta"] == 0.0
+    parsed = parse_archive(result["mutated_archive_bytes"])
+    decoded = parse_pair_blobs_from_wavelet_blob(parsed.wavelet_coeffs_blob)
+    assert decoded[0]["frame_1_details"][0].hh.dtype == np.float32
 
 
 def test_joint_p18_p19_deadzone_rejects_pair_broadcast_surface_for_full_video() -> None:
@@ -285,6 +489,81 @@ def test_relinearized_search_uses_full_video_local_replay_for_accept_reject() ->
     assert accepted["coefficient_deadzone_quantile"] == 0.25
     assert accepted["full_video_local_replay_report"]["contest_action_proxy"] == 1.25
     assert accepted["score_claim"] is False
+
+
+def test_relinearized_search_can_prefilter_before_expensive_full_video_replay() -> None:
+    archive_bytes = _archive_bytes()
+    joint_weight = np.zeros((1, 2, 16, 16, 3), dtype=np.float32)
+    pose_null_mask = np.ones_like(joint_weight, dtype=bool)
+    replay_calls: list[dict[str, Any]] = []
+
+    def local_replay_evaluator(**kwargs: Any) -> dict[str, Any]:
+        replay_calls.append(dict(kwargs["candidate_metadata"]))
+        return {
+            "schema": "unit_full_video_local_replay.v1",
+            "full_video_local_replay_executed": True,
+            "full_video_local_replay_scope": "full_video",
+            "replay_ok": True,
+            "contest_action_proxy": 0.5,
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+    result = run_joint_p18_p19_relinearized_deadzone_search(
+        archive_bytes,
+        surfaces=[_surface_for_archive(archive_bytes, joint_weight, pose_null_mask)],
+        local_replay_evaluator=local_replay_evaluator,
+        config=Z8JointCoefficientRelinearizationSearchConfig(
+            joint_weight_quantiles=(1.0,),
+            coefficient_deadzone_quantiles=(0.25, 0.5, 1.0),
+            quantization_steps=(0.25,),
+            max_iterations=1,
+            local_replay_prefilter_top_k=1,
+        ),
+    )
+
+    assert len(replay_calls) == 1
+    assert result["candidate_count"] == 3
+    replayed = [row for row in result["candidate_grid"] if row["hard_archive_projection_replay_executed"]]
+    skipped = [row for row in result["candidate_grid"] if not row["hard_archive_projection_replay_executed"]]
+    assert len(replayed) == 1
+    assert len(skipped) == 2
+    assert replayed[0]["objective_source"] == "full_video_local_replay"
+    assert replayed[0]["receiver_mse_proxy_measured"] is False
+    assert all(row["guard_ok"] is False for row in skipped)
+    assert all(
+        row["full_video_local_replay_blockers"] == ["full_video_local_replay_skipped_by_prefilter"]
+        for row in skipped
+    )
+    assert result["iterations_accepted"] == 1
+
+
+def test_relinearized_search_can_run_rate_only_entropy_headroom_probe() -> None:
+    archive_bytes = _archive_bytes()
+    joint_weight = np.zeros((1, 2, 16, 16, 3), dtype=np.float32)
+    pose_null_mask = np.ones_like(joint_weight, dtype=bool)
+
+    result = run_joint_p18_p19_relinearized_deadzone_search(
+        archive_bytes,
+        surfaces=[_surface_for_archive(archive_bytes, joint_weight, pose_null_mask)],
+        config=Z8JointCoefficientRelinearizationSearchConfig(
+            joint_weight_quantiles=(1.0,),
+            coefficient_deadzone_quantiles=(1.0,),
+            quantization_steps=(0.25,),
+            max_iterations=1,
+            measure_receiver_mse_proxy=False,
+            entropy_code_quantized_details=True,
+            entropy_detail_quantization_step=0.25,
+        ),
+    )
+
+    assert result["iterations_accepted"] == 1
+    row = result["accepted_candidates"][0]
+    assert row["receiver_mse_proxy_measured"] is False
+    assert row["incremental_distortion_report"]["blocker"] == (
+        "receiver_mse_proxy_skipped_by_full_video_local_replay"
+    )
+    assert row["rate_report"]["entropy_code_quantized_details"] is True
 
 
 def test_joint_p18_p19_deadzone_rejects_stale_surface() -> None:
