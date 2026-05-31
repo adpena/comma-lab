@@ -65352,6 +65352,88 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_z8_top_ll_clamp_fix_render_faithfulness_remeasure_20260531",
+      "name": "Z8 top-LL clamp fix + render faithfulness re-measure",
+      "phase": 2.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/z8_top_ll_clamp_fix_render_faithfulness_remeasure.py + 4 NO-FAKE tests pass"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "[macOS-MLX research-signal] FAITHFUL_CONTEST_VALID_UNLOCK 64pair archive e839712a: recon 23.82/19.32 vs GT 24.01/19.57, d_seg 0.012913 vs chance 0.508, experiments/results/z8_top_ll_clamp_fix_render_faithfulness_remeasure/result.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "4 NO-FAKE tests pass (codec-domain-clamp regression guard + final-pixel-clip + real-frame FAITHFUL + WZ-mutation-drives-frame-1); ruff clean"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_z8_top_ll_clamp_fix_render_faithfulness_remeasure_landed_20260531.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_detector_informed_lever_magnitude_high_dseg_surface_20260531",
+      "name": "Detector-informed lever magnitude test on high-d_seg render",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -65361,5 +65443,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-31T15:55:27Z"
+  "updated_at": "2026-05-31T16:10:28Z"
 }
